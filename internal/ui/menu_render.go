@@ -219,7 +219,7 @@ func DrawMenuBarSpinnerOnly(screen tcell.Screen, layout Layout, model Model, sty
 	if !showSpinner || last < rect.X || last >= rect.X+rect.Width {
 		return false
 	}
-	screen.SetContent(last, rect.Y, MenuBarSpinnerGlyph(model.SpinPhase), nil, styles.MenuSpinner)
+	screen.SetContent(last, rect.Y, MenuBarSpinnerIcon(model.SpinPhase), nil, styles.MenuSpinner)
 	return true
 }
 
@@ -238,7 +238,7 @@ func drawMenuBarRightTail(screen tcell.Screen, rect Rect, attention, perm string
 	last := rect.X + rect.Width - menuBarPermRightMargin - 1
 	if showMenuBarSpinner {
 		if last >= rect.X && last < rect.X+rect.Width {
-			screen.SetContent(last, rect.Y, MenuBarSpinnerGlyph(spinPhase), nil, spinnerStyle)
+			screen.SetContent(last, rect.Y, MenuBarSpinnerIcon(spinPhase), nil, spinnerStyle)
 		}
 		last--
 		if permW > 0 {
@@ -281,7 +281,7 @@ func drawMenuBarRightTail(screen tcell.Screen, rect Rect, attention, perm string
 
 // drawRunesClipped paints runes starting at column startX on row y, skipping cells left of
 // rect and stopping at the first cell at or past rect's right edge, moved out of
-// drawMenuBarRightTail's two identical bounds-checked attention-glyph paint loops.
+// drawMenuBarRightTail's two identical bounds-checked attention-icon paint loops.
 func drawRunesClipped(screen tcell.Screen, startX, y int, runes []rune, rect Rect, style tcell.Style) {
 	for i, r := range runes {
 		x := startX + i
@@ -307,7 +307,7 @@ func drawMenuBarLabel(screen tcell.Screen, x, y, width int, label string, shortc
 		}
 		nextStyle := style
 		if !highlighted && menuOpen && shortcut != 0 && unicode.ToLower(r) == unicode.ToLower(shortcut) {
-			nextStyle = dialog.AccentGlyphStyle(style, accent)
+			nextStyle = dialog.AccentIconStyle(style, accent)
 			highlighted = true
 		}
 		screen.SetContent(x+column, y, r, nil, nextStyle)
@@ -387,7 +387,7 @@ func drawMenuLabel(screen tcell.Screen, x, y, width int, item menu.Item, style, 
 		}
 		nextStyle := style
 		if !highlighted && item.Shortcut != 0 && unicode.ToLower(r) == unicode.ToLower(item.Shortcut) {
-			nextStyle = dialog.AccentGlyphStyle(style, accent)
+			nextStyle = dialog.AccentIconStyle(style, accent)
 			highlighted = true
 		}
 		screen.SetContent(x+column, y, r, nil, nextStyle)

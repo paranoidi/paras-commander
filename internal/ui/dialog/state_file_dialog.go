@@ -52,9 +52,9 @@ type FileDialogField struct {
 	// The first printable character clears and replaces; Backspace/arrow/home/end/delete
 	// commits the suggestion so the user edits it in place.
 	PrefillPending bool
-	// PathPicker enables a trailing glyph and path-picker sub-focus on the input row.
+	// PathPicker enables a trailing icon and path-picker sub-focus on the input row.
 	PathPicker bool
-	// PickerFocused is true when the trailing path-picker glyph has sub-focus (file dialogs).
+	// PickerFocused is true when the trailing path-picker icon has sub-focus (file dialogs).
 	PickerFocused bool
 	// InputInvalid paints the row with dialog.input.*.error (e.g. mass rename regexp compile error or no matches).
 	InputInvalid bool

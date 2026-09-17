@@ -42,7 +42,7 @@ type DrawParams struct {
 	// panel's real border column here, since their own rect stops one column short of it.
 	HasScrollGutterX bool
 	ScrollGutterX    int
-	// ScrollbarRailStyle, when non-zero, styles the scrollbar's non-thumb rail glyph
+	// ScrollbarRailStyle, when non-zero, styles the scrollbar's non-thumb rail icon
 	// (e.g. a Chroma Comment-token tint), overriding the plain border/frame style.
 	ScrollbarRailStyle tcell.Style
 }
@@ -280,11 +280,11 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 
 	// ChromeBlocked (a dialog or menu covers this pane) skips the image entirely rather than
 	// drawing it: a locked cursor-relative placement would visually clash with whatever's drawn
-	// on top of it, and a Unicode-placeholder image is worse — its glyph cells are ordinary text
+	// on top of it, and a Unicode-placeholder image is worse — its icon cells are ordinary text
 	// as far as tcell is concerned, so with nothing here to stop it, this pane keeps redrawing
 	// them every frame regardless of what opened on top, while the app layer (which does know a
-	// dialog is open) separately deletes the transmitted image data those glyphs reference —
-	// leaving raw, undecodable placeholder glyphs visible through/around the dialog under tmux
+	// dialog is open) separately deletes the transmitted image data those icons reference —
+	// leaving raw, undecodable placeholder icons visible through/around the dialog under tmux
 	// (outside tmux, cursor-relative mode's own suppression already hid the image cleanly, which
 	// is why this was tmux-only). Not calling drawImageBody also means TakeFrameImage() finds no
 	// placement for this frame, matching the app layer's own suppression instead of relying on

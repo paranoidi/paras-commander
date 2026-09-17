@@ -14,7 +14,7 @@ import (
 )
 
 // carouselPrefetchMarkPainted renders a carousel panel over root with the given display config
-// and reports whether the prefetch loading glyph appears anywhere in the panel.
+// and reports whether the prefetch loading icon appears anywhere in the panel.
 func carouselPrefetchMarkPainted(t *testing.T, root string, loading map[string]struct{}) bool {
 	t.Helper()
 	state, err := panel.New(root)
@@ -39,7 +39,7 @@ func carouselPrefetchMarkPainted(t *testing.T, root string, loading map[string]s
 		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
 		PanelDisplayConfig{ShowIcons: true, CarouselLayout: panelcarousel.DefaultLayout(), PreviewPrefetchLoading: loading})
 
-	want := styles.SymbolFilelistPreviewLoading()
+	want := styles.IconFilelistPreviewLoading()
 	for y := rect.Y; y < rect.Y+rect.Height; y++ {
 		for x := rect.X; x < rect.X+rect.Width; x++ {
 			ch, _, _ := screen.Get(x, y)
@@ -64,9 +64,9 @@ func TestCarouselRowPaintsPrefetchLoadingMark(t *testing.T) {
 	}
 
 	if carouselPrefetchMarkPainted(t, root, nil) {
-		t.Fatal("prefetch loading glyph painted with no in-flight prefetch")
+		t.Fatal("prefetch loading icon painted with no in-flight prefetch")
 	}
 	if !carouselPrefetchMarkPainted(t, root, map[string]struct{}{image: {}}) {
-		t.Fatal("prefetch loading glyph missing on carousel row for in-flight prefetch")
+		t.Fatal("prefetch loading icon missing on carousel row for in-flight prefetch")
 	}
 }

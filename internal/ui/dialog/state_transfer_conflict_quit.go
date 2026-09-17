@@ -38,7 +38,7 @@ const (
 	TransferPhaseSelfCopyRename
 )
 
-// Destination sub-focus for path input row (text vs trailing path-picker glyph).
+// Destination sub-focus for path input row (text vs trailing path-picker icon).
 const (
 	TransferDestSubFocusText = iota
 	TransferDestSubFocusPicker

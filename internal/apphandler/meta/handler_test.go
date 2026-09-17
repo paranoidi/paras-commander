@@ -22,7 +22,7 @@ func (f *fakeHost) SetTransientMessage(text string, _ ui.MessageUrgency) {
 }
 func (f *fakeHost) SetErrorMessage(_ string, _ error) {}
 func (f *fakeHost) PanelByID(int) *panel.State        { return nil }
-func (f *fakeHost) SymbolMetaRunning() string         { return "*" }
+func (f *fakeHost) IconMetaRunning() string           { return "*" }
 func (f *fakeHost) OpenFileInExternalEditor(path string) error {
 	f.editedPath = path
 	return f.editErr

@@ -32,7 +32,7 @@ func (h *Handler) ensurePrefetch() {
 		// [preview].tmux_sixel_max_edge_px while every other combination uses
 		// [preview].image_max_edge_px). Keeping the old value means prefetch warms one
 		// LoadStill key while the live preview asks for another: every image then re-decodes on
-		// first selection (visible as the prefetch loading glyph flashing on an entry the warm
+		// first selection (visible as the prefetch loading icon flashing on an entry the warm
 		// tint already called preloaded). Restart so both sides agree on the keys again.
 		h.stopPrefetch()
 	}

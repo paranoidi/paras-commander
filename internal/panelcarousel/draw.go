@@ -11,8 +11,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-// JobMarkFunc returns a job-queue glyph, status, and read/write role for an absolute path, if any.
-type JobMarkFunc func(absPath string) (glyph rune, status string, write bool, ok bool)
+// JobMarkFunc returns a job-queue icon, status, and read/write role for an absolute path, if any.
+type JobMarkFunc func(absPath string) (icon rune, status string, write bool, ok bool)
 
 // NewFileMarkFunc reports the new-file suffix tier for an entry.
 type NewFileMarkFunc func(entry localfs.Entry) panellist.NewFileMarkTier
@@ -208,12 +208,12 @@ func drawCarouselColumn(cp carouselColumnParams) {
 			}
 			return style
 		}
-		var jobGlyph rune
+		var jobIcon rune
 		var jobStatus string
 		var jobWrite bool
 		if p.JobMark != nil {
 			if g, st, write, ok := p.JobMark(entry.Path); ok {
-				jobGlyph = g
+				jobIcon = g
 				jobStatus = st
 				jobWrite = write
 			}
@@ -227,7 +227,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		if c.Active && p.RenameMark != nil {
 			renameMark = p.RenameMark(entry)
 		}
-		rowSuffix := panellist.NewRowSuffix(jobGlyph, newFileTier, renameMark, subtree, jobWrite)
+		rowSuffix := panellist.NewRowSuffix(jobIcon, newFileTier, renameMark, subtree, jobWrite)
 		var diskSrc DiskUsageSource
 		if p.DiskUsage.Active {
 			diskSrc = p.DiskUsage.Source

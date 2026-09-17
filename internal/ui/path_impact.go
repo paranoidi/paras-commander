@@ -24,7 +24,7 @@ func PathsDeleteImpact(
 	return files, bytes, pending
 }
 
-// FormatDeleteImpactSummary formats "1 file (512 B)" / "1,234 files (1.2 GiB)" with optional working glyph.
+// FormatDeleteImpactSummary formats "1 file (512 B)" / "1,234 files (1.2 GiB)" with optional working icon.
 func FormatDeleteImpactSummary(files, bytes int64, pending bool, workingSym string) string {
 	word := "files"
 	if files == 1 {

@@ -59,7 +59,7 @@ func TestSubtreeSelectionMarkUsesSelectedForeground(t *testing.T) {
 	cols := SplitColumns(frame, true, DefaultLayout(), [3]int{})
 	centerCol := cols[1]
 	rowY := centerCol.Y
-	wantMark := styles.SymbolFilelistSelectionSubtree()
+	wantMark := styles.IconFilelistSelectionSubtree()
 	markCol := -1
 	for col := centerCol.X; col < centerCol.X+centerCol.Width; col++ {
 		ch, _, _ := screen.Get(col, rowY)
@@ -174,7 +174,7 @@ func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
 	for row := 0; row < geom.PanelListRows(frame); row++ {
 		ch, _, _ := screen.Get(sbX, cols[1].Y+row)
 		r, _ := utf8.DecodeRuneInString(ch)
-		if r == '│' || r == styles.SymbolScrollbarThumb() {
+		if r == '│' || r == styles.IconScrollbarThumb() {
 			t.Fatalf("two-column DrawBody should not paint scrollbar at center column edge, got %q", ch)
 		}
 	}
@@ -255,7 +255,7 @@ func TestCarouselNoScrollbarLaneWhenListFits(t *testing.T) {
 	rightX := col.X + col.Width - 1
 	cell, style, _ := screen.Get(rightX, rowY)
 	r, _ := utf8.DecodeRuneInString(cell)
-	if r == '│' || r == styles.SymbolScrollbarThumb() {
+	if r == '│' || r == styles.IconScrollbarThumb() {
 		t.Fatalf("center column right edge at (%d,%d) is scrollbar %q", rightX, rowY, cell)
 	}
 	_, surfaceBG, _ := styles.PanelActiveSurface.Decompose()

@@ -8,7 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// DisplayRune is one glyph in the listing name column; NameIdx is -1 for decorations.
+// DisplayRune is one icon in the listing name column; NameIdx is -1 for decorations.
 type DisplayRune struct {
 	Rune    rune
 	NameIdx int
@@ -25,24 +25,24 @@ const (
 
 // RowSuffix selects which trailing indicators to reserve and paint on a listing row.
 type RowSuffix struct {
-	JobGlyph         rune
+	JobIcon          rune
 	NewFileTier      NewFileMarkTier
 	RenameMark       bool
 	SubtreeSelection bool
-	// JobWrite is true when JobGlyph marks a job's write (destination) tree rather
+	// JobWrite is true when JobIcon marks a job's write (destination) tree rather
 	// than its read (source) tree; see Theme.PanelJobMarkStyle.
 	JobWrite bool
 	// Working marks a directory whose async navigation load has been pending longer than the
-	// working-indicator delay; see Theme.SymbolFilelistWorking.
+	// working-indicator delay; see Theme.IconFilelistWorking.
 	Working bool
-	// Pinned marks an entry present in the app's pin list; see Theme.SymbolPin.
+	// Pinned marks an entry present in the app's pin list; see Theme.IconPin.
 	Pinned bool
 }
 
 // SuffixDecorationLen returns how many trailing runes are reserved for row suffix indicators.
 func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th theme.Theme) int {
 	n := 0
-	if suffix.JobGlyph != 0 && width > n+2 {
+	if suffix.JobIcon != 0 && width > n+2 {
 		n += 2
 	}
 	if suffix.NewFileTier != NewFileMarkNone && width > n+2 {
@@ -67,7 +67,7 @@ func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th th
 	return n
 }
 
-// EntryDisplayRunes builds the display rune slice for an entry name, including decorations and suffix glyphs.
+// EntryDisplayRunes builds the display rune slice for an entry name, including decorations and suffix icons.
 func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffix RowSuffix, th theme.Theme) []DisplayRune {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
 	suffixLen := SuffixDecorationLen(width, suffix, entry, th)
@@ -116,41 +116,41 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 	out := make([]DisplayRune, 0, len(core)+suffixLen)
 	out = append(out, core...)
 	used := 0
-	if suffix.JobGlyph != 0 && width > used+2 {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobGlyph, NameIdx: -1})
+	if suffix.JobIcon != 0 && width > used+2 {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobIcon, NameIdx: -1})
 		used += 2
 	}
 	if suffix.NewFileTier != NewFileMarkNone && width > used+2 {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistNew(), NameIdx: -1})
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistNew(), NameIdx: -1})
 		used += 2
 	}
 	if suffix.RenameMark && width > used+2 {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistRenamed(), NameIdx: -1})
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistRenamed(), NameIdx: -1})
 		used += 2
 	}
 	if suffix.Working && width > used+2 {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistWorking(), NameIdx: -1})
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistWorking(), NameIdx: -1})
 		used += 2
 	}
 	if suffix.Pinned && width > used+2 {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: pinSymbolRune(th), NameIdx: -1})
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: pinIconRune(th), NameIdx: -1})
 		used += 2
 	}
 	if subtree && width > used+2 {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistSelectionSubtree(), NameIdx: -1})
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistSelectionSubtree(), NameIdx: -1})
 		used += 2
 	}
 	if entry.AccessDenied && width > used+2 {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistNoPermission(), NameIdx: -1})
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistNoPermission(), NameIdx: -1})
 	}
 	return out
 }
 
-// pinSymbolRune returns th.SymbolPinRune() for row-suffix glyph slots, which are always one
-// rune wide (SymbolPin itself is a string since it is shared with the multi-rune-capable
+// pinIconRune returns th.IconPinRune() for row-suffix icon slots, which are always one
+// rune wide (IconPin itself is a string since it is shared with the multi-rune-capable
 // menubar pin badge).
-func pinSymbolRune(th theme.Theme) rune {
-	return th.SymbolPinRune()
+func pinIconRune(th theme.Theme) rune {
+	return th.IconPinRune()
 }
 
 // RunesFromDisplay extracts runes from a display slice.
@@ -162,39 +162,39 @@ func RunesFromDisplay(display []DisplayRune) []rune {
 	return runes
 }
 
-// SuffixSpanStyle returns foreground style for one suffix glyph rune.
+// SuffixSpanStyle returns foreground style for one suffix icon rune.
 func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, cursorStyleKey string, th theme.Theme, chromeBlocked bool) (tcell.Style, bool) {
 	switch {
-	case r == suffix.JobGlyph && suffix.JobGlyph != 0:
+	case r == suffix.JobIcon && suffix.JobIcon != 0:
 		base := th.PanelJobMarkStyle(jobStatus, suffix.JobWrite)
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
-	case r == th.SymbolFilelistNew() && suffix.NewFileTier != NewFileMarkNone:
+	case r == th.IconFilelistNew() && suffix.NewFileTier != NewFileMarkNone:
 		base := th.PanelRowMarkNew
 		if suffix.NewFileTier == NewFileMarkPrevious {
 			base = th.PanelRowMarkNewPrevious
 		}
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
-	case r == th.SymbolFilelistRenamed() && suffix.RenameMark:
+	case r == th.IconFilelistRenamed() && suffix.RenameMark:
 		base := th.PanelRowMarkRenamed
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
-	case r == th.SymbolFilelistWorking() && suffix.Working:
+	case r == th.IconFilelistWorking() && suffix.Working:
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelIconFolderScanning)), true
-	case r == pinSymbolRune(th) && suffix.Pinned:
+	case r == pinIconRune(th) && suffix.Pinned:
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelRowMarkPinned)), true
-	case r == th.SymbolFilelistSelectionSubtree() && suffix.SubtreeSelection:
+	case r == th.IconFilelistSelectionSubtree() && suffix.SubtreeSelection:
 		base := th.PanelRowMarkSelectionSubtree
 		if chromeBlocked {
 			base = th.PanelBlockedRowSelected
 		}
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
-	case r == th.SymbolFilelistNoPermission() && entry.AccessDenied:
+	case r == th.IconFilelistNoPermission() && entry.AccessDenied:
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelRowMarkNoPermission)), true
 	default:
 		return tcell.StyleDefault, false
 	}
 }
 
-// ListingSuffixSpans returns styled spans for trailing row suffix glyphs.
+// ListingSuffixSpans returns styled spans for trailing row suffix icons.
 func ListingSuffixSpans(
 	entry localfs.Entry,
 	nameWidth int,
@@ -207,7 +207,7 @@ func ListingSuffixSpans(
 	nameBGAt func(displayIndex int) tcell.Style,
 ) []primitive.Span {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
-	if suffix.JobGlyph == 0 && suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree &&
+	if suffix.JobIcon == 0 && suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree &&
 		!suffix.Working && !suffix.Pinned && !entry.AccessDenied {
 		return nil
 	}

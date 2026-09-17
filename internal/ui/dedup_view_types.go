@@ -335,7 +335,7 @@ func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot) 
 				DupCount:    dupCount,
 				WastedBytes: wasted,
 				// No trailing slash: FitPathForWidth would strip it anyway, and the
-				// expander glyph already marks the row as a directory.
+				// expander icon already marks the row as a directory.
 				Display: name,
 			},
 			Children: children,

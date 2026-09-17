@@ -447,7 +447,7 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 	h.runGen[panelID]++
 	gen := h.runGen[panelID]
 
-	runningMarker := h.host.SymbolMetaRunning()
+	runningMarker := h.host.IconMetaRunning()
 
 	for i, cmdDef := range cmdDefs {
 		results := make(map[string]string, len(entries))

@@ -135,7 +135,7 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 }
 
 // Status icons match AGENTS.md (Nerd Font / PUA codepoints).
-// Input-required glyph from AGENTS.md is "\U000f02d7" (cyan) when a phase waits on user input.
+// Input-required icon from AGENTS.md is "\U000f02d7" (cyan) when a phase waits on user input.
 const (
 	iconStatusOngoing = "\U0000f144" //  ongoing (green when running)
 	iconStatusPaused  = "\U0000f28b" //  paused (yellow)

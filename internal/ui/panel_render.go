@@ -134,16 +134,16 @@ type PanelContext struct {
 	TitlePath string
 	// TitleEndLabel, when non-empty, replaces volume free-space on the title end (title style).
 	TitleEndLabel string
-	// QuickViewIndicator marks this panel's cursor row with a one-cell arrow glyph overlapping
+	// QuickViewIndicator marks this panel's cursor row with a one-cell arrow icon overlapping
 	// the border, pointing toward the quick-view preview panel. QuickViewIndicatorRight selects
-	// which border/glyph: true draws U+E0B0 on the right border, false draws U+E0B2 on the left.
+	// which border/icon: true draws U+E0B0 on the right border, false draws U+E0B2 on the left.
 	QuickViewIndicator      bool
 	QuickViewIndicatorRight bool
 }
 
 const (
-	quickViewIndicatorGlyphRight rune = ''
-	quickViewIndicatorGlyphLeft  rune = ''
+	quickViewIndicatorIconRight rune = ''
+	quickViewIndicatorIconLeft  rune = ''
 )
 
 // PanelDisplayConfig carries feature-flag and data inputs to drawPanel.
@@ -158,7 +158,7 @@ type PanelDisplayConfig struct {
 	PreviewPrefetchLoading          map[string]struct{}
 	PreviewPrefetchWarm             map[string]struct{}
 	// PinnedPaths lists absolute paths currently in the app's pin list, for the row-suffix pin
-	// glyph; see ui.PinnedPathSet.
+	// icon; see ui.PinnedPathSet.
 	PinnedPaths           map[string]struct{}
 	MetaColumns           []MetaColumnState
 	ShrunkenShowsNameOnly bool
@@ -189,7 +189,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			&state,
 			state.Path.IsRemote(),
 			display.Painter,
-			panelStyle.Styles.SymbolWorking(),
+			panelStyle.Styles.IconWorking(),
 		)
 	}
 	jobWriteMark, jobWriteStatus := PanelInsideJobWriteTree(state.PathString(), display.JobMarks)
@@ -359,9 +359,9 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	}
 }
 
-// drawPanelQuickViewIndicator paints the cursor row's border-overlap arrow glyph pointing
+// drawPanelQuickViewIndicator paints the cursor row's border-overlap arrow icon pointing
 // toward the quick-view preview panel. It paints last — after the scrollbar, which shares the
-// same border column for every visible row — so its track/thumb glyph never overdraws it.
+// same border column for every visible row — so its track/thumb icon never overdraws it.
 func drawPanelQuickViewIndicator(screen tcell.Screen, rect Rect, state panel.State, ctx PanelContext, styles theme.Theme, borderStyle tcell.Style, visibleRows int) {
 	entry, _, ok := state.VisibleEntry(state.Cursor)
 	if !ok {
@@ -371,15 +371,15 @@ func drawPanelQuickViewIndicator(screen tcell.Screen, rect Rect, state panel.Sta
 	if row < 0 || row >= visibleRows {
 		return
 	}
-	glyph := quickViewIndicatorGlyphLeft
+	icon := quickViewIndicatorIconLeft
 	x := rect.X
 	if ctx.QuickViewIndicatorRight {
-		glyph = quickViewIndicatorGlyphRight
+		icon = quickViewIndicatorIconRight
 		x = rect.X + rect.Width - 1
 	}
 	style, _ := panelRowStyle(entry, state.Cursor, state, ctx, styles)
 	_, rowBG, _ := style.Decompose()
-	screen.SetContent(x, rect.Y+2+row, glyph, nil, borderStyle.Foreground(rowBG))
+	screen.SetContent(x, rect.Y+2+row, icon, nil, borderStyle.Foreground(rowBG))
 }
 
 // panelCarouselParams carries drawPanel's locals needed to paint the carousel-mode
@@ -465,7 +465,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var jobMark bool
 	var jobStatus string
 	var jobWrite bool
-	var jobMarkGlyph rune
+	var jobMarkIcon rune
 	var rowSuffix panellist.RowSuffix
 
 	// Tree-mode gutter (ancestor guide lines + folder expander) is prepended before the
@@ -501,16 +501,16 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		renameMark = state.IsRenameMarked(entry)
 		jobMark, jobStatus, jobWrite = EntryPathJobMarkStatus(entry.Path, display.JobMarks)
 		if jobMark {
-			jobMarkGlyph = panelStyle.Styles.SymbolFilelistJob()
+			jobMarkIcon = panelStyle.Styles.IconFilelistJob()
 		} else {
-			jobMarkGlyph = 0
+			jobMarkIcon = 0
 		}
 		metaText := ""
 		if showMetaEffective {
 			metaText = MetaRowText(metaLayouts, entry.Path)
 		}
-		rowSuffix = panellist.NewRowSuffix(jobMarkGlyph, newFileTier, renameMark, subtreeMark, jobWrite)
-		rowSuffix.Working = state.ShowLoadingGlyph && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath
+		rowSuffix = panellist.NewRowSuffix(jobMarkIcon, newFileTier, renameMark, subtreeMark, jobWrite)
+		rowSuffix.Working = state.ShowLoadingIcon && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath
 		_, rowSuffix.Pinned = display.PinnedPaths[entry.Path]
 		rowOpts.Suffix = rowSuffix
 		text = formatEntry(entry, effTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
@@ -747,7 +747,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 			if !marked {
 				return 0, "", false, false
 			}
-			return panelStyle.Styles.SymbolFilelistJob(), st, write, true
+			return panelStyle.Styles.IconFilelistJob(), st, write, true
 		},
 		PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
 			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles,

@@ -144,7 +144,7 @@ func TestCollectPanelBottomIndicatorsDotfilesHiddenVisible(t *testing.T) {
 	if len(physical) != 1 || physical[0].ID != PanelBottomIndicatorDotfilesHidden {
 		t.Fatalf("physical = %+v, want dotfiles_hidden only", physical)
 	}
-	want := " " + styles.SymbolHiddenDotfiles() + " "
+	want := " " + styles.IconHiddenDotfiles() + " "
 	if physical[0].Label != want {
 		t.Fatalf("label = %q, want %q", physical[0].Label, want)
 	}
@@ -203,7 +203,7 @@ func TestCollectPanelBottomIndicatorsJobWriteVisible(t *testing.T) {
 	if seg == nil {
 		t.Fatal("job_write segment not present when JobWriteMark is true")
 	}
-	wantLabel := " " + string(styles.SymbolFilelistJob()) + " "
+	wantLabel := " " + string(styles.IconFilelistJob()) + " "
 	if seg.Label != wantLabel {
 		t.Fatalf("label = %q, want %q", seg.Label, wantLabel)
 	}

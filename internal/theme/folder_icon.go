@@ -2,7 +2,7 @@ package theme
 
 import "github.com/gdamore/tcell/v2"
 
-// FolderIconKind identifies which directory icon-strip glyph and color apply to a listing row.
+// FolderIconKind identifies which directory icon-strip icon and color apply to a listing row.
 type FolderIconKind int
 
 const (
@@ -14,19 +14,19 @@ const (
 	FolderIconTreeExpanded
 )
 
-// FolderIconGlyph returns the icon-strip glyph for the given folder icon kind.
-func (t Theme) FolderIconGlyph(kind FolderIconKind) string {
+// FolderIcon returns the icon-strip icon for the given folder icon kind.
+func (t Theme) FolderIcon(kind FolderIconKind) string {
 	switch kind {
 	case FolderIconExcluded:
-		return t.foldersSymbol(SymbolKeyFoldersExcluded, "\uf114")
+		return t.folderIconValue(IconKeyFoldersExcluded, "\uf114")
 	case FolderIconScanning:
-		return t.foldersSymbol(SymbolKeyFoldersScanning, "\U000F0D0B")
+		return t.folderIconValue(IconKeyFoldersScanning, "\U000F0D0B")
 	case FolderIconOpen, FolderIconTreeExpanded:
-		return t.foldersSymbol(SymbolKeyFoldersOpen, "\U000F0770")
+		return t.folderIconValue(IconKeyFoldersOpen, "\U000F0770")
 	case FolderIconMount:
-		return t.foldersSymbol(SymbolKeyFoldersMount, "\U000F0256")
+		return t.folderIconValue(IconKeyFoldersMount, "\U000F0256")
 	default:
-		return t.foldersSymbol(SymbolKeyFoldersFolder, "\U000F024B")
+		return t.folderIconValue(IconKeyFoldersFolder, "\U000F024B")
 	}
 }
 

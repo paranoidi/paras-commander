@@ -441,12 +441,12 @@ func TestDrawDedupViewTitleBarKeepsFrameDashesAfterTitle(t *testing.T) {
 			style := cellStyleAt(screen, tc.x, rect.Y)
 			if tc.wantDash {
 				if ch != "─" {
-					t.Fatalf("glyph = %q, want frame dash", ch)
+					t.Fatalf("icon = %q, want frame dash", ch)
 				}
 			} else if ch == "─" || ch == "" || ch == " " {
-				// title cells should be non-dash glyphs
+				// title cells should be non-dash icons
 				if strings.TrimSpace(ch) == "" && ch != " " {
-					t.Fatalf("glyph = %q, want title text", ch)
+					t.Fatalf("icon = %q, want title text", ch)
 				}
 			}
 			_, bg, _ := style.Decompose()
@@ -817,7 +817,7 @@ func TestDrawDedupViewDirRowShowsSubtreeMarkIndicator(t *testing.T) {
 	}
 	markX := contentX + len([]rune(dedupTreePrefix(styles, meadowRow))) + 1 + len("meadow")
 	r, style, _ := screen.Get(markX, dirRowY)
-	if r != string(styles.SymbolFilelistSelectionSubtree()) {
+	if r != string(styles.IconFilelistSelectionSubtree()) {
 		t.Fatalf("rune at (%d,%d) = %q, want subtree indicator", markX, dirRowY, r)
 	}
 	fg, _, _ := style.Decompose()
@@ -879,7 +879,7 @@ func TestDrawDedupViewDirRowShowsRedSubtreeMarkWhenGroupFullyMarked(t *testing.T
 	}
 	markX := contentX + len([]rune(dedupTreePrefix(styles, meadowRow))) + 1 + len("meadow")
 	r, style, _ := screen.Get(markX, dirRowY)
-	if r != string(styles.SymbolFilelistSelectionSubtree()) {
+	if r != string(styles.IconFilelistSelectionSubtree()) {
 		t.Fatalf("rune at (%d,%d) = %q, want subtree indicator", markX, dirRowY, r)
 	}
 	fg, _, _ := style.Decompose()
@@ -930,8 +930,8 @@ func TestDrawDedupViewNestedRowShowsTreeConnectors(t *testing.T) {
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	wantConnectorFG, _, _ := styles.PanelRowTreeConnector.Decompose()
-	branch := styles.SymbolTreeBranch()
-	endGlyph := styles.SymbolTreeEnd()
+	branch := styles.IconTreeBranch()
+	endIcon := styles.IconTreeEnd()
 
 	var nestedRow DedupRow
 	var nestedY int
@@ -958,8 +958,8 @@ func TestDrawDedupViewNestedRowShowsTreeConnectors(t *testing.T) {
 	}
 
 	prefix := dedupTreeConnectorPrefix(styles, nestedRow)
-	if !strings.Contains(prefix, branch) && !strings.Contains(prefix, endGlyph) {
-		t.Fatalf("connector prefix %q, want branch %q or end %q", prefix, branch, endGlyph)
+	if !strings.Contains(prefix, branch) && !strings.Contains(prefix, endIcon) {
+		t.Fatalf("connector prefix %q, want branch %q or end %q", prefix, branch, endIcon)
 	}
 }
 
@@ -972,9 +972,9 @@ func TestDedupTreeConnectorLastChildUsesEnd(t *testing.T) {
 		LastChild:   true,
 	}
 	prefix := dedupTreeConnectorPrefix(styles, row)
-	endGlyph := styles.SymbolTreeEnd()
-	if !strings.HasPrefix(prefix, endGlyph) {
-		t.Fatalf("prefix %q, want end %q when last child even if expanded", prefix, endGlyph)
+	endIcon := styles.IconTreeEnd()
+	if !strings.HasPrefix(prefix, endIcon) {
+		t.Fatalf("prefix %q, want end %q when last child even if expanded", prefix, endIcon)
 	}
 
 	child := DedupRow{
@@ -983,7 +983,7 @@ func TestDedupTreeConnectorLastChildUsesEnd(t *testing.T) {
 		AncestorHasNext: []bool{false},
 	}
 	childPrefix := dedupTreeConnectorPrefix(styles, child)
-	want := "   " + styles.SymbolTreeEnd() + " "
+	want := "   " + styles.IconTreeEnd() + " "
 	if childPrefix != want {
 		t.Fatalf("child prefix %q, want %q", childPrefix, want)
 	}
@@ -998,7 +998,7 @@ func TestDedupTreeConnectorNonLastChildUsesBranch(t *testing.T) {
 		LastChild:   false,
 	}
 	prefix := dedupTreeConnectorPrefix(styles, row)
-	branch := styles.SymbolTreeBranch()
+	branch := styles.IconTreeBranch()
 	if !strings.HasPrefix(prefix, branch) {
 		t.Fatalf("prefix %q, want branch %q when not last child", prefix, branch)
 	}
@@ -1009,7 +1009,7 @@ func TestDedupTreeConnectorNonLastChildUsesBranch(t *testing.T) {
 		AncestorHasNext: []bool{true},
 	}
 	childPrefix := dedupTreeConnectorPrefix(styles, child)
-	want := styles.SymbolTreeContinue() + "  " + styles.SymbolTreeEnd() + " "
+	want := styles.IconTreeContinue() + "  " + styles.IconTreeEnd() + " "
 	if childPrefix != want {
 		t.Fatalf("child prefix %q, want %q", childPrefix, want)
 	}
@@ -1046,11 +1046,11 @@ func TestDedupTreeConnectorTwoRootsOnlyChildDir(t *testing.T) {
 		t.Fatalf("basic LastChild = false, want true (only child under test-relocate-new)")
 	}
 	basicPrefix := dedupTreeConnectorPrefix(styles, basicRow)
-	if !strings.HasPrefix(basicPrefix, styles.SymbolTreeEnd()) {
+	if !strings.HasPrefix(basicPrefix, styles.IconTreeEnd()) {
 		t.Fatalf("basic prefix %q, want end connector", basicPrefix)
 	}
 	imgPrefix := dedupTreeConnectorPrefix(styles, imgRow)
-	wantImg := "   " + styles.SymbolTreeEnd() + " "
+	wantImg := "   " + styles.IconTreeEnd() + " "
 	if imgPrefix != wantImg {
 		t.Fatalf("img prefix %q, want %q", imgPrefix, wantImg)
 	}
@@ -1115,7 +1115,7 @@ func TestDrawDedupViewCopiesPaneEmptyTextStartsAtContentColumn(t *testing.T) {
 
 	ch, _, _ := screen.Get(contentX, emptyY)
 	if ch != "S" {
-		t.Fatalf("first empty-text glyph at x=%d is %q, want %q", contentX, ch, "S")
+		t.Fatalf("first empty-text icon at x=%d is %q, want %q", contentX, ch, "S")
 	}
 	for i, wantR := range []rune(want) {
 		ch, _, _ := screen.Get(contentX+i, emptyY)
@@ -1319,7 +1319,7 @@ func TestDrawDedupViewFileTreePaneDirUsesSelectionStyleWhenFullyMarked(t *testin
 	}
 }
 
-func TestDrawDedupViewShowsPinGlyphOnFileAndDirRows(t *testing.T) {
+func TestDrawDedupViewShowsPinIconOnFileAndDirRows(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -1359,27 +1359,27 @@ func TestDrawDedupViewShowsPinGlyphOnFileAndDirRows(t *testing.T) {
 
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, rowMarks)
 
-	pinGlyph := []rune(styles.SymbolPin())[0]
-	rowHasGlyph := func(idx int) bool {
+	pinIcon := []rune(styles.IconPin())[0]
+	rowHasIcon := func(idx int) bool {
 		y := firstLineY + idx
 		for x := contentX; x < rect.X+rect.Width-2; x++ {
 			str, _, _ := screen.Get(x, y)
 			r, _ := utf8.DecodeRuneInString(str)
-			if r == pinGlyph {
+			if r == pinIcon {
 				return true
 			}
 		}
 		return false
 	}
-	if !rowHasGlyph(fileIdx) {
-		t.Error("expected pin glyph on pinned file row")
+	if !rowHasIcon(fileIdx) {
+		t.Error("expected pin icon on pinned file row")
 	}
-	if !rowHasGlyph(dirIdx) {
-		t.Error("expected pin glyph on pinned dir row")
+	if !rowHasIcon(dirIdx) {
+		t.Error("expected pin icon on pinned dir row")
 	}
 	for i, row := range list {
-		if i != fileIdx && i != dirIdx && row.Value.Kind == DedupRowFile && rowHasGlyph(i) {
-			t.Errorf("row %d: unexpected pin glyph on unpinned row", i)
+		if i != fileIdx && i != dirIdx && row.Value.Kind == DedupRowFile && rowHasIcon(i) {
+			t.Errorf("row %d: unexpected pin icon on unpinned row", i)
 		}
 	}
 }

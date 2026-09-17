@@ -25,7 +25,7 @@ func thumbPaintedRowRange(t *testing.T, screen tcell.Screen, rect Rect, state pa
 	visible := PanelListRows(rect)
 	minRow = visible
 	maxRow = -1
-	thumbRune := styles.SymbolScrollbarThumb()
+	thumbRune := styles.IconScrollbarThumb()
 	for row := rect.Y + 2; row < rect.Y+2+visible; row++ {
 		cell, _, _ := screen.Get(borderX, row)
 		r, _ := utf8.DecodeRuneInString(cell)

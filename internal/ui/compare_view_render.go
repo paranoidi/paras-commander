@@ -15,7 +15,7 @@ import (
 
 const (
 	compareStatusCol  = 2
-	comparePathGapCol = 1 // blank column between each path column and the status glyph
+	comparePathGapCol = 1 // blank column between each path column and the status icon
 )
 
 // compareViewData groups the data inputs to drawCompareView.
@@ -146,8 +146,8 @@ func drawCompareView(
 			}
 		}
 		primitive.Text(screen, contentX+leftPathW, lineY, comparePathGapCol, "", lineStyle)
-		glyph := compareGlyphCentered(compareRowGlyph(styles, entry))
-		primitive.Text(screen, statusX, lineY, compareStatusCol, glyph, compareGlyphStyle(styles, entry, lineStyle))
+		icon := compareIconCentered(compareRowIcon(styles, entry))
+		primitive.Text(screen, statusX, lineY, compareStatusCol, icon, compareIconStyle(styles, entry, lineStyle))
 		primitive.Text(screen, rightX-1, lineY, 1, "", rightStyle)
 		if rightPath == "" {
 			effectiveRight := absentStyle
@@ -176,8 +176,8 @@ func drawCompareView(
 	legend := ""
 	if view.Selected >= 0 && view.Selected < len(rows) {
 		row := rows[view.Selected]
-		glyph := compareRowGlyph(styles, row)
-		legend = comparepkg.RowLegend(row, glyph)
+		icon := compareRowIcon(styles, row)
+		legend = comparepkg.RowLegend(row, icon)
 		if row.Err != "" {
 			legend = primitive.FitPathForWidth(row.Err, rect.Width-4)
 		}
@@ -267,8 +267,8 @@ func compareEmptyMessage(snap comparepkg.Snapshot) string {
 	}
 }
 
-func compareGlyphCentered(glyph string) string {
-	runes := []rune(glyph)
+func compareIconCentered(icon string) string {
+	runes := []rune(icon)
 	if len(runes) == 0 {
 		return ""
 	}
@@ -277,37 +277,37 @@ func compareGlyphCentered(glyph string) string {
 	}
 	pad := compareStatusCol - len(runes)
 	left := pad / 2
-	return strings.Repeat(" ", left) + glyph + strings.Repeat(" ", pad-left)
+	return strings.Repeat(" ", left) + icon + strings.Repeat(" ", pad-left)
 }
 
-// compareGlyphStyle colors the pending disk glyph green while a worker is actively
+// compareIconStyle colors the pending disk icon green while a worker is actively
 // hashing that row; queued pending rows keep the ordinary row style.
-func compareGlyphStyle(styles theme.Theme, row comparepkg.Row, lineStyle tcell.Style) tcell.Style {
+func compareIconStyle(styles theme.Theme, row comparepkg.Row, lineStyle tcell.Style) tcell.Style {
 	if !row.Hashing || !comparepkg.RowPending(row) {
 		return lineStyle
 	}
 	return styles.CompareHashingOn(lineStyle)
 }
 
-func compareRowGlyph(styles theme.Theme, row comparepkg.Row) string {
+func compareRowIcon(styles theme.Theme, row comparepkg.Row) string {
 	if comparepkg.RowPending(row) {
-		return styles.SymbolComparePending()
+		return styles.IconComparePending()
 	}
 	if row.Err != "" {
-		return styles.SymbolCompareError()
+		return styles.IconCompareError()
 	}
 	switch row.Kind {
 	case comparepkg.KindEqual:
-		return styles.SymbolCompareEqual()
+		return styles.IconCompareEqual()
 	case comparepkg.KindRelocated:
-		return styles.SymbolCompareRelocated()
+		return styles.IconCompareRelocated()
 	case comparepkg.KindPrimaryOnly:
-		return styles.SymbolComparePrimaryOnly()
+		return styles.IconComparePrimaryOnly()
 	case comparepkg.KindSecondaryOnly:
-		return styles.SymbolCompareSecondaryOnly()
+		return styles.IconCompareSecondaryOnly()
 	case comparepkg.KindContentDiff:
-		return styles.SymbolCompareContentDiff()
+		return styles.IconCompareContentDiff()
 	default:
-		return styles.SymbolCompareError()
+		return styles.IconCompareError()
 	}
 }

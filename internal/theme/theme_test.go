@@ -25,24 +25,24 @@ func TestDefaultMatchesEmbeddedTheme(t *testing.T) {
 		t.Fatalf("Name = %q, want %q", got.Name, embedded.Name)
 	}
 
-	assertSymbolRuneEqual(t, "SymbolFilelistSelectionSubtree", got.SymbolFilelistSelectionSubtree(), embedded.SymbolFilelistSelectionSubtree())
-	assertSymbolRuneEqual(t, "SymbolFilelistNew", got.SymbolFilelistNew(), embedded.SymbolFilelistNew())
-	assertSymbolRuneEqual(t, "SymbolFilelistNoPermission", got.SymbolFilelistNoPermission(), embedded.SymbolFilelistNoPermission())
-	assertSymbolStrEqual(t, "FolderIconDefault", got.FolderIconGlyph(FolderIconDefault), embedded.FolderIconGlyph(FolderIconDefault))
-	assertSymbolStrEqual(t, "FolderIconOpen", got.FolderIconGlyph(FolderIconOpen), embedded.FolderIconGlyph(FolderIconOpen))
-	assertSymbolStrEqual(t, "FolderIconScanning", got.FolderIconGlyph(FolderIconScanning), embedded.FolderIconGlyph(FolderIconScanning))
-	assertSymbolStrEqual(t, "FolderIconMount", got.FolderIconGlyph(FolderIconMount), embedded.FolderIconGlyph(FolderIconMount))
-	assertSymbolStrEqual(t, "FolderIconExcluded", got.FolderIconGlyph(FolderIconExcluded), embedded.FolderIconGlyph(FolderIconExcluded))
-	assertSymbolRuneEqual(t, "SymbolScrollbarThumb", got.SymbolScrollbarThumb(), embedded.SymbolScrollbarThumb())
+	assertIconRuneEqual(t, "IconFilelistSelectionSubtree", got.IconFilelistSelectionSubtree(), embedded.IconFilelistSelectionSubtree())
+	assertIconRuneEqual(t, "IconFilelistNew", got.IconFilelistNew(), embedded.IconFilelistNew())
+	assertIconRuneEqual(t, "IconFilelistNoPermission", got.IconFilelistNoPermission(), embedded.IconFilelistNoPermission())
+	assertIconStrEqual(t, "FolderIconDefault", got.FolderIcon(FolderIconDefault), embedded.FolderIcon(FolderIconDefault))
+	assertIconStrEqual(t, "FolderIconOpen", got.FolderIcon(FolderIconOpen), embedded.FolderIcon(FolderIconOpen))
+	assertIconStrEqual(t, "FolderIconScanning", got.FolderIcon(FolderIconScanning), embedded.FolderIcon(FolderIconScanning))
+	assertIconStrEqual(t, "FolderIconMount", got.FolderIcon(FolderIconMount), embedded.FolderIcon(FolderIconMount))
+	assertIconStrEqual(t, "FolderIconExcluded", got.FolderIcon(FolderIconExcluded), embedded.FolderIcon(FolderIconExcluded))
+	assertIconRuneEqual(t, "IconScrollbarThumb", got.IconScrollbarThumb(), embedded.IconScrollbarThumb())
 
 	for _, status := range []string{
 		"scanning", "queued", "running", "paused", "canceled", "failed", "decision", "completed",
 	} {
-		label := "SymbolJobsList(" + status + ")"
-		assertSymbolStrEqual(t, label, got.SymbolJobsList(status), embedded.SymbolJobsList(status))
+		label := "IconJobsList(" + status + ")"
+		assertIconStrEqual(t, label, got.IconJobsList(status), embedded.IconJobsList(status))
 	}
-	assertSymbolStrEqual(t, "SymbolWorking", got.SymbolWorking(), embedded.SymbolWorking())
-	assertSymbolStrEqual(t, "SymbolSearchIcon", got.SymbolSearchIcon(), embedded.SymbolSearchIcon())
+	assertIconStrEqual(t, "IconWorking", got.IconWorking(), embedded.IconWorking())
+	assertIconStrEqual(t, "IconSearchIcon", got.IconSearchIcon(), embedded.IconSearchIcon())
 
 	assertStyleEqual(t, "PanelRowMarkNew", got.PanelRowMarkNew, embedded.PanelRowMarkNew)
 	assertStyleEqual(t, "PanelRowMarkNewPrevious", got.PanelRowMarkNewPrevious, embedded.PanelRowMarkNewPrevious)
@@ -54,14 +54,14 @@ func TestDefaultMatchesEmbeddedTheme(t *testing.T) {
 	assertStyleEqual(t, "DialogSearchIcon", got.DialogSearchIcon, embedded.DialogSearchIcon)
 }
 
-func assertSymbolRuneEqual(t *testing.T, label string, got, want rune) {
+func assertIconRuneEqual(t *testing.T, label string, got, want rune) {
 	t.Helper()
 	if got != want {
 		t.Fatalf("%s = %q, want %q", label, string(got), string(want))
 	}
 }
 
-func assertSymbolStrEqual(t *testing.T, label, got, want string) {
+func assertIconStrEqual(t *testing.T, label, got, want string) {
 	t.Helper()
 	if got != want {
 		t.Fatalf("%s = %q, want %q", label, got, want)
@@ -381,8 +381,8 @@ func TestParseLeaderMenuStyles(t *testing.T) {
 	if th.LeaderMenuGroup == (tcell.Style{}) {
 		t.Fatal("LeaderMenuGroup should be set")
 	}
-	if th.SymbolLeaderMenuArrow() == 0 {
-		t.Fatal("SymbolLeaderMenuArrow should have a default")
+	if th.IconLeaderMenuArrow() == 0 {
+		t.Fatal("IconLeaderMenuArrow should have a default")
 	}
 }
 

@@ -198,10 +198,10 @@ type State struct {
 	// remove/rename/insert). Async and periodic applies that started against an older epoch are
 	// dropped so a pre-mutation ReadDir cannot resurrect rows the UI already pruned.
 	ListingEpoch uint64
-	// ShowLoadingGlyph is set by the app once a pending load has been in flight longer than its
+	// ShowLoadingIcon is set by the app once a pending load has been in flight longer than its
 	// working-indicator delay; render checks this (not just ListingPending) so nothing is drawn
 	// before that threshold.
-	ShowLoadingGlyph bool
+	ShowLoadingIcon bool
 	// OnAsyncLoadPending is called once whenever ListingPending transitions to true (set by the
 	// app; nil = no-op). Same pattern as OnDirectoryChange.
 	OnAsyncLoadPending func()

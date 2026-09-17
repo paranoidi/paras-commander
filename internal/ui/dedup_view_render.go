@@ -332,7 +332,7 @@ func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d DedupRowData) string {
 // drawDedupPathColumn paints the tree connector, expand/collapse gutter, fitted path text, the
 // trailing pin/in-progress-job marks, and subtree-mark suffix for one row, moved out of
 // drawDedupTreePane's per-row path column block. Pin/job marks are painted before the subtree
-// glyph, matching panellist's job/pin-before-subtree suffix ordering.
+// icon, matching panellist's job/pin-before-subtree suffix ordering.
 func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked bool) {
 	connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
 	gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked)
@@ -384,7 +384,7 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 			base = styles.PanelRowMarkSelectionSubtree
 		}
 		markStyle := lineStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
-		primitive.Text(screen, markX, lineY, 1, string(styles.SymbolFilelistSelectionSubtree()), markStyle)
+		primitive.Text(screen, markX, lineY, 1, string(styles.IconFilelistSelectionSubtree()), markStyle)
 	}
 }
 
@@ -440,23 +440,23 @@ func dedupTreeGutter(
 ) (string, tcell.Style) {
 	if entry.HasChildren {
 		if entry.Value.Kind == DedupRowDir {
-			// Dedup tree rows use jobs.row as line text; folder glyphs always use directory
+			// Dedup tree rows use jobs.row as line text; folder icons always use directory
 			// blue (panel.row.directory), never jobs.row grey, open-folder cyan, or cursor/selection FG.
 			// dedup always wants the *closed*-kind foreground even when expanded, so it can't
-			// reuse panellist.TreeExpanderGlyph's FG (which switches to open-folder color); it
-			// only reuses the glyph text.
+			// reuse panellist.TreeExpanderIcon's FG (which switches to open-folder color); it
+			// only reuses the icon text.
 			kind := theme.FolderIconDefault
 			if entry.Expanded {
 				kind = theme.FolderIconOpen
 			}
-			gutter := styles.FolderIconGlyph(kind)
+			gutter := styles.FolderIcon(kind)
 			iconRowStyle := styles.PanelListingEntryStyle(localfs.EntryDirectory, chromeBlocked)
 			iconFG := styles.FolderIconForeground(theme.FolderIconDefault, "", iconRowStyle)
 			return gutter, lineStyle.Foreground(iconFG)
 		}
-		gutter := string(styles.SymbolTreeExpand())
+		gutter := string(styles.IconTreeExpand())
 		if entry.Expanded {
-			gutter = string(styles.SymbolTreeCollapse())
+			gutter = string(styles.IconTreeCollapse())
 		}
 		return gutter, lineStyle
 	}

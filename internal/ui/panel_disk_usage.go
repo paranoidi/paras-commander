@@ -8,8 +8,8 @@ import (
 
 var menuBarSpinnerRunes = []rune("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
 
-// MenuBarSpinnerGlyph picks the braille-pattern spinner frame from spinPhase.
-func MenuBarSpinnerGlyph(spinPhase uint8) rune {
+// MenuBarSpinnerIcon picks the braille-pattern spinner frame from spinPhase.
+func MenuBarSpinnerIcon(spinPhase uint8) rune {
 	if len(menuBarSpinnerRunes) == 0 {
 		return '?'
 	}

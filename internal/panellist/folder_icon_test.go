@@ -16,8 +16,8 @@ func TestResolveFolderIconKindPriority(t *testing.T) {
 	if !ok || kind != theme.FolderIconOpen {
 		t.Fatalf("open kind = %v ok=%v, want FolderIconOpen", kind, ok)
 	}
-	if th.FolderIconGlyph(kind) != th.FolderIconGlyph(theme.FolderIconOpen) {
-		t.Fatalf("open glyph mismatch")
+	if th.FolderIcon(kind) != th.FolderIcon(theme.FolderIconOpen) {
+		t.Fatalf("open icon mismatch")
 	}
 
 	ctx = FolderIconContext{OtherPanelPath: "/tmp/alpha", DiskPending: true, DiskUsageChrome: true}
@@ -31,8 +31,8 @@ func TestResolveFolderIconKindPriority(t *testing.T) {
 	if !ok || kind != theme.FolderIconDefault {
 		t.Fatalf("default kind = %v, want FolderIconDefault", kind)
 	}
-	if th.FolderIconGlyph(kind) != th.FolderIconGlyph(theme.FolderIconDefault) {
-		t.Fatalf("default folder glyph mismatch")
+	if th.FolderIcon(kind) != th.FolderIcon(theme.FolderIconDefault) {
+		t.Fatalf("default folder icon mismatch")
 	}
 
 	ctx = FolderIconContext{DiskExcluded: true, DiskUsageChrome: true}
@@ -40,8 +40,8 @@ func TestResolveFolderIconKindPriority(t *testing.T) {
 	if !ok || kind != theme.FolderIconExcluded {
 		t.Fatalf("excluded kind = %v, want FolderIconExcluded", kind)
 	}
-	if th.FolderIconGlyph(kind) != th.FolderIconGlyph(theme.FolderIconExcluded) {
-		t.Fatalf("excluded glyph = %q, want %q", th.FolderIconGlyph(kind), th.FolderIconGlyph(theme.FolderIconExcluded))
+	if th.FolderIcon(kind) != th.FolderIcon(theme.FolderIconExcluded) {
+		t.Fatalf("excluded icon = %q, want %q", th.FolderIcon(kind), th.FolderIcon(theme.FolderIconExcluded))
 	}
 }
 
@@ -54,8 +54,8 @@ func TestResolveFolderIconKindTreeExpanded(t *testing.T) {
 	if !ok || kind != theme.FolderIconTreeExpanded {
 		t.Fatalf("tree-expanded kind = %v ok=%v, want FolderIconTreeExpanded", kind, ok)
 	}
-	if th.FolderIconGlyph(kind) != th.FolderIconGlyph(theme.FolderIconOpen) {
-		t.Fatalf("tree-expanded glyph mismatch with FolderIconOpen")
+	if th.FolderIcon(kind) != th.FolderIcon(theme.FolderIconOpen) {
+		t.Fatalf("tree-expanded icon mismatch with FolderIconOpen")
 	}
 
 	// Open-in-other-panel is the stronger signal and wins when both apply.

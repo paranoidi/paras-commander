@@ -481,7 +481,7 @@ func cellStyleAt(screen tcell.SimulationScreen, x, y int) tcell.Style {
 	return style
 }
 
-func TestDrawCompareViewActiveHashingGlyphIsGreen(t *testing.T) {
+func TestDrawCompareViewActiveHashingIconIsGreen(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -526,22 +526,22 @@ func TestDrawCompareViewActiveHashingGlyphIsGreen(t *testing.T) {
 	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: rows}, styles, false, "", SplitHorizontal)
 
 	wantFG, _, _ := styles.CompareHashing.Decompose()
-	// Pending disk glyph is a Nerd Font private-use rune; the simulation screen often
+	// Pending disk icon is a Nerd Font private-use rune; the simulation screen often
 	// reports it as a space cell — read the status column origin directly.
 	_, activeStyle, _ := screen.Get(statusX, lineY)
 	activeFG, _, _ := activeStyle.Decompose()
 	if activeFG != wantFG {
-		t.Fatalf("active hashing glyph fg = %v, want compare.hashing %v", activeFG, wantFG)
+		t.Fatalf("active hashing icon fg = %v, want compare.hashing %v", activeFG, wantFG)
 	}
 
 	_, queuedStyle, _ := screen.Get(statusX, lineY+1)
 	queuedFG, _, _ := queuedStyle.Decompose()
 	if queuedFG == wantFG {
-		t.Fatalf("queued pending glyph should not use compare.hashing green")
+		t.Fatalf("queued pending icon should not use compare.hashing green")
 	}
 }
 
-func TestDrawCompareViewShowsPinGlyphOnlyOnPinnedSide(t *testing.T) {
+func TestDrawCompareViewShowsPinIconOnlyOnPinnedSide(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -584,21 +584,21 @@ func TestDrawCompareViewShowsPinGlyphOnlyOnPinnedSide(t *testing.T) {
 
 	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: rows, RowMarks: rowMarks}, styles, false, "", SplitHorizontal)
 
-	pinGlyph := []rune(styles.SymbolPin())[0]
-	hasGlyph := func(xStart, xEnd int) bool {
+	pinIcon := []rune(styles.IconPin())[0]
+	hasIcon := func(xStart, xEnd int) bool {
 		for x := xStart; x < xEnd; x++ {
 			str, _, _ := screen.Get(x, lineY)
 			r, _ := utf8.DecodeRuneInString(str)
-			if r == pinGlyph {
+			if r == pinIcon {
 				return true
 			}
 		}
 		return false
 	}
-	if !hasGlyph(leftX, leftX+pathW) {
-		t.Error("expected pin glyph on pinned primary (left) column")
+	if !hasIcon(leftX, leftX+pathW) {
+		t.Error("expected pin icon on pinned primary (left) column")
 	}
-	if hasGlyph(rightX, rightX+pathW+1) {
-		t.Error("did not expect pin glyph on unpinned secondary (right) column")
+	if hasIcon(rightX, rightX+pathW+1) {
+		t.Error("did not expect pin icon on unpinned secondary (right) column")
 	}
 }

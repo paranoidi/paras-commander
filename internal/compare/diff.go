@@ -118,7 +118,7 @@ func Classify(primary, secondary []FileRecord, pHash, sHash map[string][32]byte,
 
 	// Unpaired files without a hash yet: still hashing only when a same-size unpaired
 	// peer exists on the other side (hashJobsNeeded). Otherwise hashing was skipped —
-	// mark HashDone so the pending glyph does not stick forever (e.g. unique-size or
+	// mark HashDone so the pending icon does not stick forever (e.g. unique-size or
 	// sole-side empty files).
 	pUnpairedSizes := unpairedSizeSet(pByRel, sByRel, pConsumed)
 	sUnpairedSizes := unpairedSizeSet(sByRel, pByRel, sConsumed)

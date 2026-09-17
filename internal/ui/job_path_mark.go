@@ -5,7 +5,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// JobPathMark is the minimal job snapshot needed for file-list trailing glyphs in the browser.
+// JobPathMark is the minimal job snapshot needed for file-list trailing icons in the browser.
 type JobPathMark struct {
 	ID          string
 	Type        string

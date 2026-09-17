@@ -108,7 +108,7 @@ func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	pan := a.panelByID(p.panelID)
 	pan.ListingPending = false
 	pan.ListingPendingPath = ""
-	pan.ShowLoadingGlyph = false
+	pan.ShowLoadingIcon = false
 	a.invalidateDirLoadingIndicator(p.panelID)
 	if p.err != nil {
 		if p.req.Rollback != nil {

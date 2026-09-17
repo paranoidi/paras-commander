@@ -48,7 +48,7 @@ func drawRunForEachHistoryPickerContent(screen tcell.Screen, rect Rect, st RunFo
 		return
 	}
 	queryFocused := st.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, y, innerWidth, draw.ScrollingInputState{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, queryFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, y, innerWidth, draw.ScrollingInputState{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, queryFocused, false, styles)
 	y++
 	if y >= innerBottom {
 		return

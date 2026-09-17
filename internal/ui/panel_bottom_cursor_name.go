@@ -33,7 +33,7 @@ func entryDisplayBodyLen(entry localfs.Entry, showFileIcons bool) int {
 	return n
 }
 
-// entryListingFullName is the full name glyph sequence shown in the name column (prefix + name + symlink @).
+// entryListingFullName is the full name icon sequence shown in the name column (prefix + name + symlink @).
 func entryListingFullName(entry localfs.Entry, showFileIcons bool) string {
 	prefix := " "
 	if entry.Type == localfs.EntryDirectory && !showFileIcons {
@@ -164,7 +164,7 @@ func cursorNameHintFallbackOut(fileListActive bool, out *CursorNameHintFallback)
 }
 
 // paintPanelBottomCursorNameOverlay paints fullName centered in [startX, endX] on bottom row y:
-// name glyphs first, then border dashes for any remaining span cells (clears a longer prior overlay).
+// name icons first, then border dashes for any remaining span cells (clears a longer prior overlay).
 func paintPanelBottomCursorNameOverlay(
 	screen tcell.Screen,
 	startX, endX, y int,
@@ -321,12 +321,12 @@ func drawPanelCursorNameHintForState(
 	}
 	subtreeMark := entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
 	jobMark, _, jobWrite := EntryPathJobMarkStatus(entry.Path, jobMarks)
-	var jobMarkGlyph rune
+	var jobMarkIcon rune
 	if jobMark {
-		jobMarkGlyph = ctx.Styles.SymbolFilelistJob()
+		jobMarkIcon = ctx.Styles.IconFilelistJob()
 	}
 	suffix := panellist.RowSuffix{
-		JobGlyph:         jobMarkGlyph,
+		JobIcon:          jobMarkIcon,
 		NewFileTier:      state.NewFileMarkTier(entry),
 		SubtreeSelection: subtreeMark,
 		JobWrite:         jobWrite,

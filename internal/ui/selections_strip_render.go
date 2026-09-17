@@ -34,7 +34,7 @@ type SelectionsStripOpts struct {
 
 // drawSelectionsStrip renders the per-panel list of selected paths outside the current directory.
 // The title is always "Selections"; stripFocused only affects title active vs inactive color.
-// When the selections span multiple parent directories, the multi-location glyph is painted
+// When the selections span multiple parent directories, the multi-location icon is painted
 // at the right end of the top border (… ─ x ─┐).
 func drawSelectionsStrip(
 	screen tcell.Screen,
@@ -56,7 +56,7 @@ func drawSelectionsStrip(
 
 	endLabel := ""
 	if _, multiDir, _ := state.SelectionsCommonRoot(); multiDir {
-		endLabel = " " + styles.SymbolSelectionsMultiLocation() + " "
+		endLabel = " " + styles.IconSelectionsMultiLocation() + " "
 	}
 	filterUI := stripFocused && (state.StripFilter.Active || state.StripFilter.Editing)
 	title := panelSelectionsChromePadded
@@ -78,7 +78,7 @@ func drawSelectionsStrip(
 			&state,
 			state.Path.IsRemote(),
 			painter,
-			styles.SymbolWorking(),
+			styles.IconWorking(),
 		); ok {
 			endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, stripFocused, chromeBlocked)
 			paintSelectionsStripBottomSize(screen, rect, raw, endStyle, chrome.Chrome.Frame)
@@ -105,7 +105,7 @@ func drawSelectionsStrip(
 		markSource = styles.PanelBlockedRowSelected
 	}
 
-	mark := styles.SymbolFilelistSelectionSubtree()
+	mark := styles.IconFilelistSelectionSubtree()
 	selectionsStripMarkPrefix := " " + string(mark) + " "
 	markCols := utf8.RuneCountInString(selectionsStripMarkPrefix)
 	markStart := 1

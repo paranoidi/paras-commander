@@ -39,7 +39,7 @@ func TestDrawInputFieldScrollsHorizontallyForLongValue(t *testing.T) {
 	}
 }
 
-func TestDrawPathInputRowInvalidGhostAndGlyphAvoidErrorStyle(t *testing.T) {
+func TestDrawPathInputRowInvalidGhostAndIconAvoidErrorStyle(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -86,15 +86,15 @@ func TestDrawPathInputRowInvalidGhostAndGlyphAvoidErrorStyle(t *testing.T) {
 		t.Fatalf("ghost char %q not found in %q", "Z", tcelltest.TextAt(screen, 1, 1, textW))
 	}
 
-	wantGlyph := styles.DialogInputBaseStyle(true, false)
-	_, glyphSt, _ := screen.Get(1+textW, 1)
-	if glyphSt == styles.DialogInputActiveError {
-		t.Fatal("path-picker glyph must not use error style")
+	wantIcon := styles.DialogInputBaseStyle(true, false)
+	_, iconSt, _ := screen.Get(1+textW, 1)
+	if iconSt == styles.DialogInputActiveError {
+		t.Fatal("path-picker icon must not use error style")
 	}
-	gotFG, gotBG, gotAttr := glyphSt.Decompose()
-	wantFG, wantBG, wantAttr := wantGlyph.Decompose()
+	gotFG, gotBG, gotAttr := iconSt.Decompose()
+	wantFG, wantBG, wantAttr := wantIcon.Decompose()
 	if gotFG != wantFG || gotBG != wantBG || gotAttr != wantAttr {
-		t.Fatalf("glyph style fg=%v bg=%v attr=%v want fg=%v bg=%v attr=%v",
+		t.Fatalf("icon style fg=%v bg=%v attr=%v want fg=%v bg=%v attr=%v",
 			gotFG, gotBG, gotAttr, wantFG, wantBG, wantAttr)
 	}
 }

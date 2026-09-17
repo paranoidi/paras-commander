@@ -9,7 +9,7 @@ import (
 )
 
 // dirLoadingIndicatorDelayMS is how long a panel navigation load must be pending before its row
-// gets a working-indicator glyph (symbols.working). Not exposed via config.toml — nothing has
+// gets a working-indicator icon (icons.working). Not exposed via config.toml — nothing has
 // asked for it to be tunable; add a config field if that changes.
 const dirLoadingIndicatorDelayMS = 500
 
@@ -41,7 +41,7 @@ func (a *App) applyDirLoadingIndicator(panelID int, epoch uint64) {
 	}
 	p := a.panelByID(panelID)
 	if p.ListingPending {
-		p.ShowLoadingGlyph = true
+		p.ShowLoadingIcon = true
 	}
 }
 

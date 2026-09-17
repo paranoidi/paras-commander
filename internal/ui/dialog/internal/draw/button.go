@@ -52,7 +52,7 @@ func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune
 	for _, r := range label {
 		style := baseStyle
 		if !highlighted && (r == shortcut || r == unicode.ToUpper(shortcut) || r == unicode.ToLower(shortcut)) {
-			style = AccentGlyphStyle(baseStyle, styles.DialogAccent)
+			style = AccentIconStyle(baseStyle, styles.DialogAccent)
 			highlighted = true
 		}
 		screen.SetContent(out, y, r, nil, style)

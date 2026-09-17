@@ -191,7 +191,7 @@ func (f *FileDialogField) commitPrefill() {
 }
 
 // CommitPrefill clears PrefillPending while keeping Value (placeholder becomes committed text).
-// Used when Right should accept the suggestion before a second Right moves to the path-picker glyph.
+// Used when Right should accept the suggestion before a second Right moves to the path-picker icon.
 func (f *FileDialogField) CommitPrefill() {
 	if f == nil {
 		return
@@ -241,7 +241,7 @@ func TryDialogInputFieldActions(ev *tcell.EventKey, f *FileDialogField, keysDial
 
 // TryDialogInputRestore handles just the ui.input.restore-default chord for a focused field
 // (narrower than TryDialogInputFieldActions: word-motion/kill-word chords are left unhandled,
-// for contexts where the field has no text cursor, e.g. the path-picker glyph focused instead
+// for contexts where the field has no text cursor, e.g. the path-picker icon focused instead
 // of the text). Returns true when the chord matched and the field state changed.
 func TryDialogInputRestore(ev *tcell.EventKey, f *FileDialogField, keysDialogInput *keymap.Map) bool {
 	if keysDialogInput == nil || f == nil {

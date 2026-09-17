@@ -72,32 +72,32 @@ func TestDrawRowMarksSuffixPaintsJobBeforePin(t *testing.T) {
 		t.Fatalf("used = %d, want 4", used)
 	}
 
-	wantJobGlyph := styles.SymbolFilelistJob()
-	wantPinGlyph := rowMarksPinRune(styles)
+	wantJobIcon := styles.IconFilelistJob()
+	wantPinIcon := rowMarksPinRune(styles)
 
 	if r := cellRune(screen, 2, 1); r != ' ' {
-		t.Fatalf("cell 2 = %q, want leading space before job glyph", r)
+		t.Fatalf("cell 2 = %q, want leading space before job icon", r)
 	}
-	if r := cellRune(screen, 3, 1); r != wantJobGlyph {
-		t.Fatalf("cell 3 = %q, want job glyph %q", r, wantJobGlyph)
+	if r := cellRune(screen, 3, 1); r != wantJobIcon {
+		t.Fatalf("cell 3 = %q, want job icon %q", r, wantJobIcon)
 	}
 	if r := cellRune(screen, 4, 1); r != ' ' {
-		t.Fatalf("cell 4 = %q, want leading space before pin glyph", r)
+		t.Fatalf("cell 4 = %q, want leading space before pin icon", r)
 	}
-	if r := cellRune(screen, 5, 1); r != wantPinGlyph {
-		t.Fatalf("cell 5 = %q, want pin glyph %q", r, wantPinGlyph)
+	if r := cellRune(screen, 5, 1); r != wantPinIcon {
+		t.Fatalf("cell 5 = %q, want pin icon %q", r, wantPinIcon)
 	}
 
 	jobFG, _, _ := styles.PanelJobMarkStyle(m.JobStatus, m.JobWrite).Decompose()
 	_, jobStyle, _ := screen.Get(3, 1)
 	if fg, _, _ := jobStyle.Decompose(); fg != jobFG {
-		t.Fatalf("job glyph fg = %v, want %v", fg, jobFG)
+		t.Fatalf("job icon fg = %v, want %v", fg, jobFG)
 	}
 
 	pinFG, _, _ := styles.PanelRowMarkPinned.Decompose()
 	_, pinStyle, _ := screen.Get(5, 1)
 	if fg, _, _ := pinStyle.Decompose(); fg != pinFG {
-		t.Fatalf("pin glyph fg = %v, want %v", fg, pinFG)
+		t.Fatalf("pin icon fg = %v, want %v", fg, pinFG)
 	}
 }
 
@@ -112,7 +112,7 @@ func TestDrawRowMarksSuffixTruncatesToMaxWidth(t *testing.T) {
 	if used != 2 {
 		t.Fatalf("used = %d, want 2", used)
 	}
-	if r := cellRune(screen, 3, 1); r != styles.SymbolFilelistJob() {
-		t.Fatalf("cell 3 = %q, want job glyph", r)
+	if r := cellRune(screen, 3, 1); r != styles.IconFilelistJob() {
+		t.Fatalf("cell 3 = %q, want job icon", r)
 	}
 }

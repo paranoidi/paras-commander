@@ -14,7 +14,7 @@ func TestSuffixSpanStyleFilelistUsesCursorIconOnCursorRow(t *testing.T) {
 		"panel.active.row.cursor": tcell.NewRGBColor(1, 2, 3),
 	}
 	suffix := RowSuffix{NewFileTier: NewFileMarkLatest, SubtreeSelection: true}
-	st, ok := SuffixSpanStyle(th.SymbolFilelistNew(), suffix, localfs.Entry{}, "", "panel.active.row.cursor", th, false)
+	st, ok := SuffixSpanStyle(th.IconFilelistNew(), suffix, localfs.Entry{}, "", "panel.active.row.cursor", th, false)
 	if !ok {
 		t.Fatal("expected new-file suffix style")
 	}
@@ -23,7 +23,7 @@ func TestSuffixSpanStyleFilelistUsesCursorIconOnCursorRow(t *testing.T) {
 	if fg != want {
 		t.Fatalf("new suffix fg = %v, want cursor icon %v", fg, want)
 	}
-	stSub, ok := SuffixSpanStyle(th.SymbolFilelistSelectionSubtree(), suffix, localfs.Entry{}, "", "panel.active.row.cursor", th, false)
+	stSub, ok := SuffixSpanStyle(th.IconFilelistSelectionSubtree(), suffix, localfs.Entry{}, "", "panel.active.row.cursor", th, false)
 	if !ok {
 		t.Fatal("expected subtree suffix style")
 	}
@@ -36,7 +36,7 @@ func TestSuffixSpanStyleFilelistUsesCursorIconOnCursorRow(t *testing.T) {
 func TestSuffixSpanStyleNewFilePreviousUsesPreviousIndicatorColor(t *testing.T) {
 	th := theme.Default()
 	suffix := RowSuffix{NewFileTier: NewFileMarkPrevious}
-	st, ok := SuffixSpanStyle(th.SymbolFilelistNew(), suffix, localfs.Entry{}, "", "", th, false)
+	st, ok := SuffixSpanStyle(th.IconFilelistNew(), suffix, localfs.Entry{}, "", "", th, false)
 	if !ok {
 		t.Fatal("expected style")
 	}
@@ -50,7 +50,7 @@ func TestSuffixSpanStyleNewFilePreviousUsesPreviousIndicatorColor(t *testing.T) 
 func TestSuffixSpanStyleFilelistFallsBackOffCursorRow(t *testing.T) {
 	th := theme.Default()
 	suffix := RowSuffix{NewFileTier: NewFileMarkLatest}
-	st, ok := SuffixSpanStyle(th.SymbolFilelistNew(), suffix, localfs.Entry{}, "", "", th, false)
+	st, ok := SuffixSpanStyle(th.IconFilelistNew(), suffix, localfs.Entry{}, "", "", th, false)
 	if !ok {
 		t.Fatal("expected style")
 	}
@@ -64,7 +64,7 @@ func TestSuffixSpanStyleFilelistFallsBackOffCursorRow(t *testing.T) {
 func TestSuffixSpanStyleNoPermission(t *testing.T) {
 	th := theme.Default()
 	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile, AccessDenied: true}
-	stPerm, ok := SuffixSpanStyle(th.SymbolFilelistNoPermission(), RowSuffix{}, entry, "", "", th, false)
+	stPerm, ok := SuffixSpanStyle(th.IconFilelistNoPermission(), RowSuffix{}, entry, "", "", th, false)
 	if !ok {
 		t.Fatal("expected no-permission suffix style")
 	}
@@ -93,28 +93,28 @@ func TestSuffixDecorationLenReservesPinnedMark(t *testing.T) {
 	}
 }
 
-func TestEntryDisplayRunesAppendsPinGlyph(t *testing.T) {
+func TestEntryDisplayRunesAppendsPinIcon(t *testing.T) {
 	th := theme.Default()
 	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile}
 	display := EntryDisplayRunes(entry, 20, true, RowSuffix{Pinned: true}, th)
 	runes := RunesFromDisplay(display)
-	wantGlyph := pinSymbolRune(th)
+	wantIcon := pinIconRune(th)
 	found := false
 	for _, r := range runes {
-		if r == wantGlyph {
+		if r == wantIcon {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Fatalf("display runes %q missing pin glyph %q", string(runes), string(wantGlyph))
+		t.Fatalf("display runes %q missing pin icon %q", string(runes), string(wantIcon))
 	}
 }
 
 func TestSuffixSpanStylePinned(t *testing.T) {
 	th := theme.Default()
 	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile}
-	st, ok := SuffixSpanStyle(pinSymbolRune(th), RowSuffix{Pinned: true}, entry, "", "", th, false)
+	st, ok := SuffixSpanStyle(pinIconRune(th), RowSuffix{Pinned: true}, entry, "", "", th, false)
 	if !ok {
 		t.Fatal("expected pinned suffix style")
 	}
@@ -123,7 +123,7 @@ func TestSuffixSpanStylePinned(t *testing.T) {
 	if fg != wantFG {
 		t.Fatalf("fg = %v, want panel.row.mark.pinned %v", fg, wantFG)
 	}
-	_, ok = SuffixSpanStyle(pinSymbolRune(th), RowSuffix{Pinned: false}, entry, "", "", th, false)
+	_, ok = SuffixSpanStyle(pinIconRune(th), RowSuffix{Pinned: false}, entry, "", "", th, false)
 	if ok {
 		t.Fatal("expected no style when not pinned")
 	}
@@ -136,7 +136,7 @@ func TestListingSuffixSpansPinnedOnlyReturnsSpan(t *testing.T) {
 		return tcell.StyleDefault
 	})
 	if len(spans) != 1 {
-		t.Fatalf("spans len = %d, want 1 pin glyph", len(spans))
+		t.Fatalf("spans len = %d, want 1 pin icon", len(spans))
 	}
 }
 
@@ -151,7 +151,7 @@ func TestListingSuffixSpansCursorIconOnCursorRow(t *testing.T) {
 		return th.PanelCursorActive
 	})
 	if len(spans) != 1 {
-		t.Fatalf("spans len = %d, want 1 new-file glyph", len(spans))
+		t.Fatalf("spans len = %d, want 1 new-file icon", len(spans))
 	}
 	fg, _, _ := spans[0].Style.Decompose()
 	if fg != tcell.PaletteColor(0) {

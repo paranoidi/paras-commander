@@ -66,7 +66,7 @@ type diskIdleSortPayload struct {
 // diskUsageRedrawPayload flushes debounced disk-usage cache/paint updates while a scan is busy.
 type diskUsageRedrawPayload struct{}
 
-// dirLoadingIndicatorPayload arms the row working-indicator glyph for one panel's pending
+// dirLoadingIndicatorPayload arms the row working-indicator icon for one panel's pending
 // navigation load once it has been in flight longer than dirLoadingIndicatorDelayMS.
 type dirLoadingIndicatorPayload struct {
 	PanelID int
@@ -260,7 +260,7 @@ type App struct {
 	// arrival — or the deadline — releases it. See renderAfterAsyncApply and carousel_async.go.
 	carouselPaintDefer [2]carouselPaintDeferState
 
-	// dirLoadIndicatorTimer/dirLoadIndicatorEpoch arm the row working-indicator glyph for a
+	// dirLoadIndicatorTimer/dirLoadIndicatorEpoch arm the row working-indicator icon for a
 	// panel navigation load pending longer than dirLoadingIndicatorDelayMS; indexed by
 	// ui.PrimaryPanel/ui.SecondaryPanel. See dir_loading_indicator.go.
 	dirLoadIndicatorTimer [2]*time.Timer

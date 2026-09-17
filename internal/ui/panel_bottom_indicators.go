@@ -34,7 +34,7 @@ const (
 	// physical right on SecondaryPanel). Used for cross-directory Selections.
 	PanelBottomEdgeStart PanelBottomEdge = iota
 	// PanelBottomEdgePhysicalLeft chains segments from the physical left interior column
-	// (dotfiles-hidden glyph, Gitignore, stash, and trailing frame dashes on both panels).
+	// (dotfiles-hidden icon, Gitignore, stash, and trailing frame dashes on both panels).
 	PanelBottomEdgePhysicalLeft
 	// PanelBottomEdgeEnd is the panel-relative end corner (sync, quick view, hidden other path).
 	PanelBottomEdgeEnd
@@ -149,14 +149,14 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 		if n == 0 {
 			return ""
 		}
-		sym := ctx.Styles.SymbolStash()
+		sym := ctx.Styles.IconStash()
 		word := "selection"
 		if n != 1 {
 			word = "selections"
 		}
 		return fmt.Sprintf(" %s %d %s stashed ", sym, n, word)
 	case PanelBottomIndicatorJobWrite:
-		return " " + string(ctx.Styles.SymbolFilelistJob()) + " "
+		return " " + string(ctx.Styles.IconFilelistJob()) + " "
 	case PanelBottomIndicatorEntryFilter:
 		if f := ctx.State.ActiveEntryFilter; f != nil {
 			return " " + f.Label + " "
@@ -174,7 +174,7 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 }
 
 func panelDotfilesHiddenChromePadded(styles theme.Theme) string {
-	return " " + styles.SymbolHiddenDotfiles() + " "
+	return " " + styles.IconHiddenDotfiles() + " "
 }
 
 // panelBottomPhysicalLeftChainStartX is the first column for the physical-left chain after any

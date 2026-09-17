@@ -70,7 +70,7 @@ func paintGitGap(screen tcell.Screen, x, y int, style tcell.Style) {
 }
 
 func paintGitHeader(screen tcell.Screen, x, y int, headerStyle tcell.Style, styles theme.Theme) {
-	primitive.Text(screen, x, y, panelListGitCells, styles.SymbolGit(), headerStyle)
+	primitive.Text(screen, x, y, panelListGitCells, styles.IconGit(), headerStyle)
 	paintGitGap(screen, x, y, headerStyle)
 }
 
@@ -81,7 +81,7 @@ func paintGitStripBlank(screen tcell.Screen, x, y int, style tcell.Style) {
 	}
 }
 
-// paintGitRowTrailingGap paints the separator after status glyphs on data rows.
+// paintGitRowTrailingGap paints the separator after status icons on data rows.
 func paintGitRowTrailingGap(screen tcell.Screen, x, y int, style tcell.Style) {
 	paintGitGap(screen, x, y, style)
 }

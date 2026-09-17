@@ -11,9 +11,9 @@ type Host interface {
 	host.MessageHost
 
 	PanelByID(panelID int) *panel.State
-	// SymbolMetaRunning returns the theme glyph shown for a meta command still in flight.
+	// IconMetaRunning returns the theme icon shown for a meta command still in flight.
 	// Fetched per call (not snapshotted) because the active theme can change at runtime.
-	SymbolMetaRunning() string
+	IconMetaRunning() string
 	OpenFileInExternalEditor(path string) error
 	MessageLogWrapCols() int
 	AppendTransientMessageLines(banner string, lines []string, urgency ui.MessageUrgency)

@@ -52,12 +52,12 @@ func TestDrawPanelInfoColumnUsesPanelRowInfoFG(t *testing.T) {
 	nameX := rect.X + 2
 	sizeX := rect.X + 1 + nameWidth + 1
 	// Size is right-aligned in panelListSizeCells; skip leading pad spaces.
-	sizeGlyphX := sizeX
+	sizeIconX := sizeX
 	for x := sizeX; x < sizeX+panelListSizeCells; x++ {
 		ch, _, _ := screen.Get(x, rowY)
 		r, _ := utf8.DecodeRuneInString(ch)
 		if r != ' ' && r != 0 {
-			sizeGlyphX = x
+			sizeIconX = x
 			break
 		}
 	}
@@ -72,10 +72,10 @@ func TestDrawPanelInfoColumnUsesPanelRowInfoFG(t *testing.T) {
 		t.Fatalf("name FG = %v, want panel.row.file %v", nameFG, wantFileFG)
 	}
 
-	sizeCh, sizeStyle, _ := screen.Get(sizeGlyphX, rowY)
+	sizeCh, sizeStyle, _ := screen.Get(sizeIconX, rowY)
 	sr, _ := utf8.DecodeRuneInString(sizeCh)
 	if !strings.ContainsRune("4.9K", sr) {
-		t.Fatalf("size cell = %q, want a size glyph", sizeCh)
+		t.Fatalf("size cell = %q, want a size icon", sizeCh)
 	}
 	sizeFG, _, _ := sizeStyle.Decompose()
 	if sizeFG != wantInfoFG {

@@ -62,7 +62,7 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 	inputWidth := rect.Width - 4
 
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, false, styles)
 
 	sepBeforeList := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)

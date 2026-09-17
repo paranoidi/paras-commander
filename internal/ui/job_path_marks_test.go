@@ -508,7 +508,7 @@ func TestPanelInsideJobWriteTree_destinationContainmentShortCircuit(t *testing.T
 }
 
 // TestEntryPathJobMarkStatus_matchesRowsForVeryLargeSourceLists guards the ancestor index:
-// per-row source and destination glyphs must keep working for a job built from a huge
+// per-row source and destination icons must keep working for a job built from a huge
 // multi-select, since matching walks the row path's ancestors rather than the source list.
 func TestEntryPathJobMarkStatus_matchesRowsForVeryLargeSourceLists(t *testing.T) {
 	t.Parallel()

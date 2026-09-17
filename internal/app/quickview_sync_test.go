@@ -892,24 +892,24 @@ func TestQuickViewDirDoesNotMoveOpenInOtherPanelIndicator(t *testing.T) {
 	app.reconcileAfterEvent()
 	app.render()
 
-	openGlyph := app.styles.FolderIconGlyph(theme.FolderIconOpen)
+	openIcon := app.styles.FolderIcon(theme.FolderIconOpen)
 	w, _ := screen.Size()
 	leftHalf := w / 2
 	var childRowHasOpen, alphaRowHasOpen bool
 	for y := 1; y < 20; y++ {
 		row := screenLine(screen, y, leftHalf)
-		if strings.Contains(row, "child") && strings.Contains(row, openGlyph) {
+		if strings.Contains(row, "child") && strings.Contains(row, openIcon) {
 			childRowHasOpen = true
 		}
-		if strings.Contains(row, "alpha") && strings.Contains(row, openGlyph) {
+		if strings.Contains(row, "alpha") && strings.Contains(row, openIcon) {
 			alphaRowHasOpen = true
 		}
 	}
 	if !childRowHasOpen {
-		t.Fatal("open-in-other-panel glyph should stay on child row matching real inactive path")
+		t.Fatal("open-in-other-panel icon should stay on child row matching real inactive path")
 	}
 	if alphaRowHasOpen {
-		t.Fatal("open-in-other-panel glyph should not move to alpha row while quick view previews alpha on inactive column")
+		t.Fatal("open-in-other-panel icon should not move to alpha row while quick view previews alpha on inactive column")
 	}
 }
 

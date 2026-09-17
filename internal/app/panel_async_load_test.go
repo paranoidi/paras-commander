@@ -69,7 +69,7 @@ func TestAsyncLoadSchedulerTimesOutStuckFetch(t *testing.T) {
 	}
 }
 
-// TestDirLoadingIndicatorArmsAfterDelayThenClears proves the working-indicator glyph (see
+// TestDirLoadingIndicatorArmsAfterDelayThenClears proves the working-indicator icon (see
 // dir_loading_indicator.go) only arms once a pending navigation load has run longer than
 // dirLoadingIndicatorDelayMS, targets the entry actually being navigated into, and clears once
 // the load lands.
@@ -101,19 +101,19 @@ func TestDirLoadingIndicatorArmsAfterDelayThenClears(t *testing.T) {
 		t.Fatalf("NavigateTo: %v", err)
 	}
 	<-started
-	if pan.ShowLoadingGlyph {
-		t.Fatal("ShowLoadingGlyph should not be set before the indicator delay elapses")
+	if pan.ShowLoadingIcon {
+		t.Fatal("ShowLoadingIcon should not be set before the indicator delay elapses")
 	}
 
-	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return pan.ShowLoadingGlyph })
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return pan.ShowLoadingIcon })
 	if got := pan.ListingPendingPath; got != sub {
 		t.Fatalf("ListingPendingPath = %q, want %q", got, sub)
 	}
 
 	close(block)
 	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return !pan.ListingPending })
-	if pan.ShowLoadingGlyph {
-		t.Fatal("ShowLoadingGlyph should clear once the load applies")
+	if pan.ShowLoadingIcon {
+		t.Fatal("ShowLoadingIcon should clear once the load applies")
 	}
 	if pan.ListingPendingPath != "" {
 		t.Fatalf("ListingPendingPath = %q, want cleared", pan.ListingPendingPath)

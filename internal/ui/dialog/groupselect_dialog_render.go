@@ -132,10 +132,10 @@ func groupSelectPreviewText(state GroupSelectState, styles theme.Theme) string {
 	}
 	var parts []string
 	if state.PreviewFiles > 0 {
-		parts = append(parts, fmt.Sprintf("%d %s", state.PreviewFiles, styles.SymbolFile()))
+		parts = append(parts, fmt.Sprintf("%d %s", state.PreviewFiles, styles.IconFile()))
 	}
 	if state.PreviewFolders > 0 {
-		parts = append(parts, fmt.Sprintf("%d %s", state.PreviewFolders, styles.SymbolFolder()))
+		parts = append(parts, fmt.Sprintf("%d %s", state.PreviewFolders, styles.IconFolder()))
 	}
 	return strings.Join(parts, " ")
 }

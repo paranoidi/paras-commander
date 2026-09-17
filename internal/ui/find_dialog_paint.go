@@ -47,7 +47,7 @@ func PaintFindDialog(
 	if state == nil || !state.Open {
 		return
 	}
-	selectionLabel := FindDialogSelectionSizePadded(state, painter, styles.SymbolWorking())
+	selectionLabel := FindDialogSelectionSizePadded(state, painter, styles.IconWorking())
 	ctx := dialog.DialogRenderContext{
 		Styles:         styles,
 		ShowIcons:      showIcons,

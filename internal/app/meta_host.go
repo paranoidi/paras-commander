@@ -12,7 +12,7 @@ type metaHost struct {
 
 func (h metaHost) PanelByID(panelID int) *panel.State { return h.app.panelByID(panelID) }
 
-func (h metaHost) SymbolMetaRunning() string { return h.app.styles.SymbolMetaRunning() }
+func (h metaHost) IconMetaRunning() string { return h.app.styles.IconMetaRunning() }
 
 func (h metaHost) OpenFileInExternalEditor(path string) error {
 	return h.app.openFileInExternalEditor(path)

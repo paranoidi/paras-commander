@@ -29,7 +29,7 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	listH := metrics.ListH
 
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, false, styles)
 
 	// Separator before list.
 	listTop := rect.Y + 2

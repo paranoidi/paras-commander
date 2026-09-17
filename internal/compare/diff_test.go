@@ -77,7 +77,7 @@ func TestClassifyUniqueSizePrimaryOnlyIsHashDone(t *testing.T) {
 	for _, r := range rows {
 		if r.Kind == KindPrimaryOnly && r.PrimaryRel == "empty.txt" {
 			if !r.HashDone {
-				t.Fatal("unique-size primary-only empty file must be HashDone (no pending glyph)")
+				t.Fatal("unique-size primary-only empty file must be HashDone (no pending icon)")
 			}
 			return
 		}

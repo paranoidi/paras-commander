@@ -250,7 +250,7 @@ func TestPaintPanelBottomCursorNameOverlayClearsStaleLongerName(t *testing.T) {
 
 	got := tcelltest.TextAt(screen, startX, y, endX-startX+1)
 	if strings.Contains(got, strings.Repeat("w", 8)) {
-		t.Fatalf("overlay = %q, want no stale long-name glyphs", got)
+		t.Fatalf("overlay = %q, want no stale long-name icons", got)
 	}
 	if !strings.Contains(got, strings.TrimSpace(shortName)) {
 		t.Fatalf("overlay = %q, want short name", got)

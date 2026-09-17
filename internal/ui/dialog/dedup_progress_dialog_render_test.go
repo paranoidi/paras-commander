@@ -50,12 +50,12 @@ func TestDrawDedupProgressDialogHashBarAndLabel(t *testing.T) {
 		t.Fatalf("bar line = %q, count must not be overlaid on bar", line)
 	}
 
-	// The bar is carried by cell backgrounds (no block glyphs): fill on the
-	// left, track to the right edge, and no glyph texture anywhere.
+	// The bar is carried by cell backgrounds (no block icons): fill on the
+	// left, track to the right edge, and no icon texture anywhere.
 	for col := textX; col < textX+textW; col++ {
 		ch, _, _ := screen.Get(col, barY)
 		if ch == "█" || ch == "░" {
-			t.Fatalf("col %d = %q, bar must not use block glyphs", col, ch)
+			t.Fatalf("col %d = %q, bar must not use block icons", col, ch)
 		}
 	}
 	_, wantFillBG, _ := styles.DialogProgressFill.Decompose()

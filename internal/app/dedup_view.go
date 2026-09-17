@@ -52,7 +52,7 @@ func (a *App) openDedupDeleteDialog() {
 	fd := dialog.FileDialogState{
 		Open:          true,
 		DialogType:    dialog.FileDialogDelete,
-		DeleteSummary: ui.FormatDeleteImpactSummary(int64(st.MarkedCount), st.MarkedReclaimBytes, false, a.styles.SymbolWorking()),
+		DeleteSummary: ui.FormatDeleteImpactSummary(int64(st.MarkedCount), st.MarkedReclaimBytes, false, a.styles.IconWorking()),
 		DeleteEntries: entries,
 		FocusedField:  1, // No (safe default); Yes stays index 0.
 	}

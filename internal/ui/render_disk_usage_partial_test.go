@@ -259,7 +259,7 @@ func TestPaintBrowserListNavPanelOnlyTransferTargetBorderColor(t *testing.T) {
 // TestPaintBrowserListNavPanelOnlyShowsQuickViewIndicator guards against the cheaper
 // single-panel partial repaint (the path App.renderBrowserListNavUpdate falls into while a nav
 // key is held down and quick-view coalescing is active — see browserListNavPartialRenderEligible
-// in internal/app/render.go) losing the quick-view cursor-row indicator glyph. It has its own
+// in internal/app/render.go) losing the quick-view cursor-row indicator icon. It has its own
 // PanelContext construction, separate from drawBrowserPanel's, so it needs the same wiring.
 func TestPaintBrowserListNavPanelOnlyShowsQuickViewIndicator(t *testing.T) {
 	t.Parallel()
@@ -305,8 +305,8 @@ func TestPaintBrowserListNavPanelOnlyShowsQuickViewIndicator(t *testing.T) {
 	x, y := layout.Primary.X+layout.Primary.Width-1, layout.Primary.Y+2+model.Primary.Cursor
 	ch, _, _ := screen.Get(x, y)
 	r, _ := utf8.DecodeRuneInString(ch)
-	if r != quickViewIndicatorGlyphRight {
-		t.Fatalf("indicator glyph at (%d,%d) = %q, want %q — partial nav repaint must carry the same QuickViewIndicator wiring as the full render", x, y, r, quickViewIndicatorGlyphRight)
+	if r != quickViewIndicatorIconRight {
+		t.Fatalf("indicator icon at (%d,%d) = %q, want %q — partial nav repaint must carry the same QuickViewIndicator wiring as the full render", x, y, r, quickViewIndicatorIconRight)
 	}
 }
 

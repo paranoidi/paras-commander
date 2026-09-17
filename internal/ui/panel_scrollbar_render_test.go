@@ -35,7 +35,7 @@ func TestDrawPanelPaintsThumbScrollbarOnBorder(t *testing.T) {
 	}
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 12}
 	styles := theme.Default()
-	wantThumb := styles.SymbolScrollbarThumb()
+	wantThumb := styles.IconScrollbarThumb()
 	drawPanel(screen, rect, state,
 		PanelStyleConfig{Styles: styles, ScrollbarStyle: uiscrollbar.StyleThumb},
 		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
@@ -79,7 +79,7 @@ func TestDrawPanelCarouselTwoColumnScrollbarOnBorder(t *testing.T) {
 	rect := Rect{X: 0, Y: 0, Width: 92, Height: 18}
 	screen.SetSize(rect.Width, rect.Height)
 	styles := theme.Default()
-	wantThumb := styles.SymbolScrollbarThumb()
+	wantThumb := styles.IconScrollbarThumb()
 	drawPanel(screen, rect, state,
 		PanelStyleConfig{Styles: styles, ScrollbarStyle: uiscrollbar.StyleThumb},
 		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},

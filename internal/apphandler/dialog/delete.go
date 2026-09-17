@@ -61,7 +61,7 @@ func (h *Handler) deleteDialogSummaryFromPruned(p *panel.State, pruned []string)
 	byPath := p.EntriesByPath()
 	remote := p.Path.IsRemote()
 	files, bytes, pending := ui.PathsDeleteImpact(pruned, byPath, remote, h.diskUsage)
-	return ui.FormatDeleteImpactSummary(files, bytes, pending, h.host.Styles().SymbolWorking())
+	return ui.FormatDeleteImpactSummary(files, bytes, pending, h.host.Styles().IconWorking())
 }
 
 func (h *Handler) invalidateDeleteDialogDiskCache(p *panel.State, source ops.Source) {

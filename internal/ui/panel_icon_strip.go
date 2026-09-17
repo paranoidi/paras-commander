@@ -21,7 +21,7 @@ type PanelIconStripContext struct {
 	CursorStyleKey string
 	ChromeBlocked  bool
 	Folder         panellist.FolderIconContext
-	// PreviewLoading replaces the file icon with the prefetch-loading glyph (magenta like
+	// PreviewLoading replaces the file icon with the prefetch-loading icon (magenta like
 	// panel.icon.folder.scanning). Ignored for directories.
 	PreviewLoading bool
 	// PreviewWarm tints the file icon bright magenta (warm/preloaded) vs standard magenta (not
@@ -97,7 +97,7 @@ func paintPanelIconStrip(
 			icon = " "
 			fg, _, _ = rowStyle.Decompose()
 		} else {
-			icon = th.FolderIconGlyph(kind)
+			icon = th.FolderIcon(kind)
 			if ctx.ChromeBlocked {
 				fg = fileDeviconForeground(rowStyle, "", th, ctx.CursorStyleKey, true)
 			} else {
@@ -105,7 +105,7 @@ func paintPanelIconStrip(
 			}
 		}
 	} else if ctx.PreviewLoading {
-		icon = string(th.SymbolFilelistPreviewLoading())
+		icon = string(th.IconFilelistPreviewLoading())
 		if icon == "" {
 			icon = " "
 		}

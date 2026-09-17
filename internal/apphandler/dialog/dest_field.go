@@ -49,7 +49,7 @@ func (h *Handler) DestFieldNav(
 		if c > len(runes) {
 			c = len(runes)
 		}
-		// First Right on a pending placeholder commits it; second Right at EOT moves to the glyph.
+		// First Right on a pending placeholder commits it; second Right at EOT moves to the icon.
 		if field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill && c >= len(runes) {
 			field.CommitPrefill()
 			return true

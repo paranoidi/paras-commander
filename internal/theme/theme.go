@@ -96,7 +96,7 @@ type Theme struct {
 	PanelRowMarkJob         tcell.Style
 	PanelRowMarkJobRead     tcell.Style
 	PanelRowMarkJobDecision tcell.Style
-	// PanelRowTreeConnector styles tree branch/continuation glyphs in tree-style lists.
+	// PanelRowTreeConnector styles tree branch/continuation icons in tree-style lists.
 	PanelRowTreeConnector tcell.Style
 	// PanelIconFolderOpen styles the open-folder icon strip when the other panel is in that directory.
 	PanelIconFolderOpen tcell.Style
@@ -181,7 +181,7 @@ type Theme struct {
 	// theme's values.
 	MenuSpeedCap  tcell.Style
 	MenuSpeedText tcell.Style
-	// MenuJob* styles one-cell queue glyph per live job status in the menu bar.
+	// MenuJob* styles one-cell queue icon per live job status in the menu bar.
 	MenuJobScanning                  tcell.Style
 	MenuJobQueued                    tcell.Style
 	MenuJobRunning                   tcell.Style
@@ -275,16 +275,16 @@ type Theme struct {
 	JobsIconsDecision  tcell.Style
 	JobsIconsCompleted tcell.Style
 
-	// CompareHashing styles the compare-view pending disk glyph while a file is
+	// CompareHashing styles the compare-view pending disk icon while a file is
 	// actively being content-hashed (queued pending rows keep the row style).
 	CompareHashing tcell.Style
 
-	// Symbols holds global glyphs (e.g. Nerd Font job status icons) referenced by the UI
-	// from the [symbols] section of the theme file.
-	Symbols map[string]string
+	// Icons holds global icons (e.g. Nerd Font job status icons) referenced by the UI
+	// from the [icons] section of the theme file.
+	Icons map[string]string
 
 	// UseNerdfontIcons is set at runtime from config.UI.UseNerdfontIcons; when false,
-	// dialogs use plain ASCII markers (forcing legacy mode regardless of theme symbols).
+	// dialogs use plain ASCII markers (forcing legacy mode regardless of theme icons).
 	UseNerdfontIcons bool
 
 	FooterKey        tcell.Style
@@ -307,7 +307,7 @@ func (t Theme) TerminalTextStyle() tcell.Style {
 }
 
 // DialogSearchIconStyle returns the styled foreground/background for the leading search-icon
-// glyph painted inside filter/search input rows. Falls back to base (the row's own style) when
+// icon painted inside filter/search input rows. Falls back to base (the row's own style) when
 // the theme omits dialog.search_icon, so themes without it render identically to before this
 // style existed.
 func (t Theme) DialogSearchIconStyle(base tcell.Style) tcell.Style {
@@ -318,7 +318,7 @@ func (t Theme) DialogSearchIconStyle(base tcell.Style) tcell.Style {
 }
 
 // PanelRowIconForeground returns the foreground for cursor-row adornment icons: file-list
-// suffix glyphs, folder icon strip, and file devicons when the matching panel.*.row.cursor
+// suffix icons, folder icon strip, and file devicons when the matching panel.*.row.cursor
 // style defines icon; otherwise the base indicator style foreground is used.
 func (t Theme) PanelRowIconForeground(cursorStyleKey string, base tcell.Style) tcell.Color {
 	if cursorStyleKey != "" && t.PanelFileIconFG != nil {
@@ -330,7 +330,7 @@ func (t Theme) PanelRowIconForeground(cursorStyleKey string, base tcell.Style) t
 	return fg
 }
 
-// DialogInputPair returns base (row fill + committed text) and placeholder glyph styles.
+// DialogInputPair returns base (row fill + committed text) and placeholder icon styles.
 func (t Theme) DialogInputPair(focused bool) (base, placeholder tcell.Style) {
 	if focused {
 		return t.DialogInputActive, t.DialogInputActivePlaceholder
@@ -398,7 +398,7 @@ func (t Theme) DialogProgressLabelOnBar(onFill bool) tcell.Style {
 	return mergeForegroundOnBar(t.DialogProgressLabelOnTrack, t.DialogProgressTrack)
 }
 
-// CompareHashingOn returns the compare-view hashing-glyph foreground merged onto lineStyle's background.
+// CompareHashingOn returns the compare-view hashing-icon foreground merged onto lineStyle's background.
 func (t Theme) CompareHashingOn(lineStyle tcell.Style) tcell.Style {
 	return mergeForegroundOnSurface(t.CompareHashing, lineStyle)
 }
@@ -532,195 +532,195 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 	}
 }
 
-// Symbol keys in the [symbols] table (optional entries — see accessors for defaults).
+// Icon keys in the [icons] table (optional entries — see accessors for defaults).
 const (
-	SymbolKeyPathPicker               = "path_picker"
-	SymbolKeyFile                     = "file"
-	SymbolKeyFolder                   = "folder"
-	SymbolKeyGit                      = "git"
-	SymbolKeyStash                    = "stash"
-	SymbolKeyPin                      = "pin"
-	SymbolKeyWorking                  = "working"
-	SymbolKeyHiddenDotfiles           = "hidden_dotfiles"
-	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
-	SymbolKeyFilelistNew              = "filelist.new"
-	SymbolKeyFilelistRenamed          = "filelist.renamed"
-	SymbolKeyFilelistJob              = "filelist.job"
-	SymbolKeyFilelistNoPermission     = "filelist.no_permission"
-	SymbolKeyFilelistPreviewLoading   = "filelist.preview_loading"
-	SymbolKeyFoldersFolder            = "folders.folder"
-	SymbolKeyFoldersOpen              = "folders.open"
-	SymbolKeyFoldersScanning          = "folders.scanning"
-	SymbolKeyFoldersMount             = "folders.mount"
-	SymbolKeyFoldersExcluded          = "folders.excluded"
-	SymbolKeyScrollbarThumb           = "scrollbar.thumb"
-	SymbolKeyMetaRunning              = "meta.running"
-	SymbolKeyTreeExpand               = "tree.expand"
-	SymbolKeyTreeCollapse             = "tree.collapse"
-	SymbolKeyTreeContinue             = "tree.continue"
-	SymbolKeyTreeBranch               = "tree.branch"
-	SymbolKeyTreeEnd                  = "tree.end"
-	SymbolKeyTreeLeaf                 = "tree.leaf"
-	SymbolKeySelectionsMultiLocation  = "selections.multi_location"
+	IconKeyPathPicker               = "path_picker"
+	IconKeyFile                     = "file"
+	IconKeyFolder                   = "folder"
+	IconKeyGit                      = "git"
+	IconKeyStash                    = "stash"
+	IconKeyPin                      = "pin"
+	IconKeyWorking                  = "working"
+	IconKeyHiddenDotfiles           = "hidden_dotfiles"
+	IconKeyFilelistSelectionSubtree = "filelist.selection_subtree"
+	IconKeyFilelistNew              = "filelist.new"
+	IconKeyFilelistRenamed          = "filelist.renamed"
+	IconKeyFilelistJob              = "filelist.job"
+	IconKeyFilelistNoPermission     = "filelist.no_permission"
+	IconKeyFilelistPreviewLoading   = "filelist.preview_loading"
+	IconKeyFoldersFolder            = "folders.folder"
+	IconKeyFoldersOpen              = "folders.open"
+	IconKeyFoldersScanning          = "folders.scanning"
+	IconKeyFoldersMount             = "folders.mount"
+	IconKeyFoldersExcluded          = "folders.excluded"
+	IconKeyScrollbarThumb           = "scrollbar.thumb"
+	IconKeyMetaRunning              = "meta.running"
+	IconKeyTreeExpand               = "tree.expand"
+	IconKeyTreeCollapse             = "tree.collapse"
+	IconKeyTreeContinue             = "tree.continue"
+	IconKeyTreeBranch               = "tree.branch"
+	IconKeyTreeEnd                  = "tree.end"
+	IconKeyTreeLeaf                 = "tree.leaf"
+	IconKeySelectionsMultiLocation  = "selections.multi_location"
 )
 
-// Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
+// Menu-bar jobs strip icon keys ([icons] table); optional — see IconMenuJob / IconMenuProgress*.
 const (
-	SymbolKeyLeaderMenuArrow       = "leader_menu.arrow"
-	SymbolKeyMenuProgressDone      = "menu.progress.done"
-	SymbolKeyMenuProgressRemaining = "menu.progress.remaining"
-	SymbolKeyMenuJobScanning       = "menu.job.scanning"
-	SymbolKeyMenuJobQueued         = "menu.job.queued"
-	SymbolKeyMenuJobRunning        = "menu.job.running"
-	SymbolKeyMenuJobPaused         = "menu.job.paused"
-	SymbolKeyMenuJobFailed         = "menu.job.failed"
-	SymbolKeyMenuJobDecision       = "menu.job.decision"
-	SymbolKeyMenuJobCompleted      = "menu.job.completed"
-	SymbolKeyMenuSpeedLeft         = "menu.speed.left"
-	SymbolKeyMenuSpeedRight        = "menu.speed.right"
+	IconKeyLeaderMenuArrow       = "leader_menu.arrow"
+	IconKeyMenuProgressDone      = "menu.progress.done"
+	IconKeyMenuProgressRemaining = "menu.progress.remaining"
+	IconKeyMenuJobScanning       = "menu.job.scanning"
+	IconKeyMenuJobQueued         = "menu.job.queued"
+	IconKeyMenuJobRunning        = "menu.job.running"
+	IconKeyMenuJobPaused         = "menu.job.paused"
+	IconKeyMenuJobFailed         = "menu.job.failed"
+	IconKeyMenuJobDecision       = "menu.job.decision"
+	IconKeyMenuJobCompleted      = "menu.job.completed"
+	IconKeyMenuSpeedLeft         = "menu.speed.left"
+	IconKeyMenuSpeedRight        = "menu.speed.right"
 )
 
-// SymbolWorking returns the in-progress glyph appended to selection-size indicators.
-func (t Theme) SymbolWorking() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeyWorking]); s != "" {
+// IconWorking returns the in-progress icon appended to selection-size indicators.
+func (t Theme) IconWorking() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeyWorking]); s != "" {
 			return s
 		}
 	}
 	return "\uf017"
 }
 
-// SymbolFile returns the generic file glyph (e.g. group-select result preview counts) from
-// [symbols] file.
-func (t Theme) SymbolFile() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeyFile]); s != "" {
+// IconFile returns the generic file icon (e.g. group-select result preview counts) from
+// [icons] file.
+func (t Theme) IconFile() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeyFile]); s != "" {
 			return s
 		}
 	}
 	return ""
 }
 
-// SymbolFolder returns the generic folder glyph (e.g. group-select result preview counts) from
-// [symbols] folder.
-func (t Theme) SymbolFolder() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeyFolder]); s != "" {
+// IconFolder returns the generic folder icon (e.g. group-select result preview counts) from
+// [icons] folder.
+func (t Theme) IconFolder() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeyFolder]); s != "" {
 			return s
 		}
 	}
 	return ""
 }
 
-// SymbolHiddenDotfiles returns the dotfiles-hidden bottom-indicator glyph from [symbols] hidden_dotfiles.
-func (t Theme) SymbolHiddenDotfiles() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeyHiddenDotfiles]); s != "" {
+// IconHiddenDotfiles returns the dotfiles-hidden bottom-indicator icon from [icons] hidden_dotfiles.
+func (t Theme) IconHiddenDotfiles() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeyHiddenDotfiles]); s != "" {
 			return s
 		}
 	}
 	return "\U000F06D1" // nf-md-eye_off_outline (Material Design / Nerd Fonts PUA)
 }
 
-// SymbolMetaRunning returns the glyph shown in the meta column while a command is executing.
-func (t Theme) SymbolMetaRunning() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeyMetaRunning]); s != "" {
+// IconMetaRunning returns the icon shown in the meta column while a command is executing.
+func (t Theme) IconMetaRunning() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeyMetaRunning]); s != "" {
 			return s
 		}
 	}
 	return "\uf141"
 }
 
-// SymbolStash returns the selection-stash bottom-indicator glyph from [symbols] stash.
-func (t Theme) SymbolStash() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeyStash]); s != "" {
+// IconStash returns the selection-stash bottom-indicator icon from [icons] stash.
+func (t Theme) IconStash() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeyStash]); s != "" {
 			return s
 		}
 	}
 	return "\ue73d"
 }
 
-// SymbolPin returns the menu-bar pin-count badge glyph from [symbols] pin.
-func (t Theme) SymbolPin() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeyPin]); s != "" {
+// IconPin returns the menu-bar pin-count badge icon from [icons] pin.
+func (t Theme) IconPin() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeyPin]); s != "" {
 			return s
 		}
 	}
 	return "\U000F0403"
 }
 
-// SymbolPinRune returns SymbolPin() as a single rune (zero-alloc), for row-suffix glyph
+// IconPinRune returns IconPin() as a single rune (zero-alloc), for row-suffix icon
 // slots that are always one rune wide.
-func (t Theme) SymbolPinRune() rune {
-	return t.filelistSymbolRune(SymbolKeyPin, '\U000F0403')
+func (t Theme) IconPinRune() rune {
+	return t.filelistIconRune(IconKeyPin, '\U000F0403')
 }
 
-// SymbolGit returns the panel Git column header glyph from [symbols] git.
-func (t Theme) SymbolGit() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeyGit]); s != "" {
+// IconGit returns the panel Git column header icon from [icons] git.
+func (t Theme) IconGit() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeyGit]); s != "" {
 			return s
 		}
 	}
 	return "\uf1d3" // Font Awesome git (Nerd Fonts)
 }
 
-// SymbolSelectionsMultiLocation returns the glyph prepended to the selections strip title
+// IconSelectionsMultiLocation returns the icon prepended to the selections strip title
 // when the panel's selections span multiple parent directories.
-func (t Theme) SymbolSelectionsMultiLocation() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeySelectionsMultiLocation]); s != "" {
+func (t Theme) IconSelectionsMultiLocation() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeySelectionsMultiLocation]); s != "" {
 			return s
 		}
 	}
 	return "\uef81"
 }
 
-// SymbolFilelistSelectionSubtree returns the directory nested-selection suffix glyph.
-func (t Theme) SymbolFilelistSelectionSubtree() rune {
-	return t.filelistSymbolRune(SymbolKeyFilelistSelectionSubtree, '\u25cb') // ○
+// IconFilelistSelectionSubtree returns the directory nested-selection suffix icon.
+func (t Theme) IconFilelistSelectionSubtree() rune {
+	return t.filelistIconRune(IconKeyFilelistSelectionSubtree, '\u25cb') // ○
 }
 
-// SymbolFilelistNew returns the recently-transferred file suffix glyph.
-func (t Theme) SymbolFilelistNew() rune {
-	return t.filelistSymbolRune(SymbolKeyFilelistNew, '\uea7f')
+// IconFilelistNew returns the recently-transferred file suffix icon.
+func (t Theme) IconFilelistNew() rune {
+	return t.filelistIconRune(IconKeyFilelistNew, '\uea7f')
 }
 
-// SymbolFilelistRenamed returns the recently-renamed file suffix glyph.
-func (t Theme) SymbolFilelistRenamed() rune {
-	return t.filelistSymbolRune(SymbolKeyFilelistRenamed, '\U000f11e8')
+// IconFilelistRenamed returns the recently-renamed file suffix icon.
+func (t Theme) IconFilelistRenamed() rune {
+	return t.filelistIconRune(IconKeyFilelistRenamed, '\U000f11e8')
 }
 
-// SymbolFilelistJob returns the file-list job mark glyph (role/status colored via
+// IconFilelistJob returns the file-list job mark icon (role/status colored via
 // Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
-func (t Theme) SymbolFilelistJob() rune {
-	return t.filelistSymbolRune(SymbolKeyFilelistJob, '\U000f02ca')
+func (t Theme) IconFilelistJob() rune {
+	return t.filelistIconRune(IconKeyFilelistJob, '\U000f02ca')
 }
 
-// SymbolFilelistWorking returns the row-suffix glyph for a directory whose async navigation
+// IconFilelistWorking returns the row-suffix icon for a directory whose async navigation
 // load has been pending longer than the working-indicator delay (colored via
 // Theme.PanelIconFolderScanning, the same style used for disk-scan-pending folder icons).
-func (t Theme) SymbolFilelistWorking() rune {
-	return t.filelistSymbolRune(SymbolKeyWorking, '')
+func (t Theme) IconFilelistWorking() rune {
+	return t.filelistIconRune(IconKeyWorking, '')
 }
 
-// SymbolFilelistPreviewLoading returns the glyph that replaces the leading file icon while a
+// IconFilelistPreviewLoading returns the icon that replaces the leading file icon while a
 // still/video thumb is prefetching (colored via panel.icon.folder.scanning).
-func (t Theme) SymbolFilelistPreviewLoading() rune {
-	return t.filelistSymbolRune(SymbolKeyFilelistPreviewLoading, '\uf03e')
+func (t Theme) IconFilelistPreviewLoading() rune {
+	return t.filelistIconRune(IconKeyFilelistPreviewLoading, '\uf03e')
 }
 
-// SymbolFilelistNoPermission returns the suffix glyph for entries the current user cannot access.
-func (t Theme) SymbolFilelistNoPermission() rune {
-	return t.filelistSymbolRune(SymbolKeyFilelistNoPermission, '\uf023')
+// IconFilelistNoPermission returns the suffix icon for entries the current user cannot access.
+func (t Theme) IconFilelistNoPermission() rune {
+	return t.filelistIconRune(IconKeyFilelistNoPermission, '\uf023')
 }
 
-// SymbolLeaderMenuArrow returns the separator glyph between shortcut key and label in the leader menu.
-func (t Theme) SymbolLeaderMenuArrow() rune {
-	if s := strings.TrimSpace(t.Symbols[SymbolKeyLeaderMenuArrow]); s != "" {
+// IconLeaderMenuArrow returns the separator icon between shortcut key and label in the leader menu.
+func (t Theme) IconLeaderMenuArrow() rune {
+	if s := strings.TrimSpace(t.Icons[IconKeyLeaderMenuArrow]); s != "" {
 		for _, r := range s {
 			return r
 		}
@@ -728,45 +728,45 @@ func (t Theme) SymbolLeaderMenuArrow() rune {
 	return '\uea9c'
 }
 
-// SymbolTreeExpand returns the collapsed-node expander glyph for tree-style lists
+// IconTreeExpand returns the collapsed-node expander icon for tree-style lists
 // (duplicates view; the file-list tree layout later).
-func (t Theme) SymbolTreeExpand() rune {
-	return t.filelistSymbolRune(SymbolKeyTreeExpand, '▶') // ▶
+func (t Theme) IconTreeExpand() rune {
+	return t.filelistIconRune(IconKeyTreeExpand, '▶') // ▶
 }
 
-// SymbolTreeCollapse returns the expanded-node expander glyph for tree-style lists.
-func (t Theme) SymbolTreeCollapse() rune {
-	return t.filelistSymbolRune(SymbolKeyTreeCollapse, '▼') // ▼
+// IconTreeCollapse returns the expanded-node expander icon for tree-style lists.
+func (t Theme) IconTreeCollapse() rune {
+	return t.filelistIconRune(IconKeyTreeCollapse, '▼') // ▼
 }
 
-// SymbolTreeLeaf returns the leaf-row gutter glyph for tree-style lists.
-func (t Theme) SymbolTreeLeaf() rune {
-	return t.filelistSymbolRune(SymbolKeyTreeLeaf, '·') // ·
+// IconTreeLeaf returns the leaf-row gutter icon for tree-style lists.
+func (t Theme) IconTreeLeaf() rune {
+	return t.filelistIconRune(IconKeyTreeLeaf, '·') // ·
 }
 
-// SymbolTreeContinue returns the ancestor continuation glyph for tree-style lists.
-func (t Theme) SymbolTreeContinue() string {
-	return t.treeSymbol(SymbolKeyTreeContinue, "│")
+// IconTreeContinue returns the ancestor continuation icon for tree-style lists.
+func (t Theme) IconTreeContinue() string {
+	return t.treeIcon(IconKeyTreeContinue, "│")
 }
 
-// SymbolTreeBranch returns the non-last-sibling branch glyph for tree-style lists.
-func (t Theme) SymbolTreeBranch() string {
-	return t.treeSymbol(SymbolKeyTreeBranch, "├─")
+// IconTreeBranch returns the non-last-sibling branch icon for tree-style lists.
+func (t Theme) IconTreeBranch() string {
+	return t.treeIcon(IconKeyTreeBranch, "├─")
 }
 
-// SymbolTreeEnd returns the last-sibling branch glyph for tree-style lists.
-func (t Theme) SymbolTreeEnd() string {
-	return t.treeSymbol(SymbolKeyTreeEnd, "└─")
+// IconTreeEnd returns the last-sibling branch icon for tree-style lists.
+func (t Theme) IconTreeEnd() string {
+	return t.treeIcon(IconKeyTreeEnd, "└─")
 }
 
-// SymbolScrollbarThumb returns the panel scrollbar thumb-style position glyph.
-func (t Theme) SymbolScrollbarThumb() rune {
-	return t.filelistSymbolRune(SymbolKeyScrollbarThumb, '\u25cf') // ●
+// IconScrollbarThumb returns the panel scrollbar thumb-style position icon.
+func (t Theme) IconScrollbarThumb() rune {
+	return t.filelistIconRune(IconKeyScrollbarThumb, '\u25cf') // ●
 }
 
-func (t Theme) filelistSymbolRune(key string, fallback rune) rune {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[key]); s != "" {
+func (t Theme) filelistIconRune(key string, fallback rune) rune {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[key]); s != "" {
 			for _, r := range s {
 				return r
 			}
@@ -775,72 +775,72 @@ func (t Theme) filelistSymbolRune(key string, fallback rune) rune {
 	return fallback
 }
 
-func (t Theme) foldersSymbol(key, fallback string) string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[key]); s != "" {
+func (t Theme) folderIconValue(key, fallback string) string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[key]); s != "" {
 			return s
 		}
 	}
 	return fallback
 }
 
-func (t Theme) treeSymbol(key, fallback string) string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[key]); s != "" {
+func (t Theme) treeIcon(key, fallback string) string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[key]); s != "" {
 			return s
 		}
 	}
 	return fallback
 }
 
-// SymbolPathPicker returns the trailing path-picker glyph from the theme, with a default
+// IconPathPicker returns the trailing path-picker icon from the theme, with a default
 // Nerd-Font private-use fallback when the key is absent.
-func (t Theme) SymbolPathPicker() string {
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[SymbolKeyPathPicker]); s != "" {
+func (t Theme) IconPathPicker() string {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[IconKeyPathPicker]); s != "" {
 			return s
 		}
 	}
 	return "\uef0d"
 }
 
-// SymbolMenuProgressDone returns the filled segment glyph for the menu-bar progress bar.
-func (t Theme) SymbolMenuProgressDone() rune {
-	if g := t.menuBarSymbolTrim(SymbolKeyMenuProgressDone); g != 0 {
+// IconMenuProgressDone returns the filled segment icon for the menu-bar progress bar.
+func (t Theme) IconMenuProgressDone() rune {
+	if g := t.menuBarIconTrim(IconKeyMenuProgressDone); g != 0 {
 		return g
 	}
 	return '\u25cf' // ●
 }
 
-// SymbolMenuProgressRemaining returns the empty segment glyph for the menu-bar progress bar.
-func (t Theme) SymbolMenuProgressRemaining() rune {
-	if g := t.menuBarSymbolTrim(SymbolKeyMenuProgressRemaining); g != 0 {
+// IconMenuProgressRemaining returns the empty segment icon for the menu-bar progress bar.
+func (t Theme) IconMenuProgressRemaining() rune {
+	if g := t.menuBarIconTrim(IconKeyMenuProgressRemaining); g != 0 {
 		return g
 	}
 	return '\u25cb' // ○
 }
 
-// SymbolMenuSpeedLeft returns the left cap glyph for the menu-bar transfer-speed pill.
-func (t Theme) SymbolMenuSpeedLeft() rune {
-	if g := t.menuBarSymbolTrim(SymbolKeyMenuSpeedLeft); g != 0 {
+// IconMenuSpeedLeft returns the left cap icon for the menu-bar transfer-speed pill.
+func (t Theme) IconMenuSpeedLeft() rune {
+	if g := t.menuBarIconTrim(IconKeyMenuSpeedLeft); g != 0 {
 		return g
 	}
 	return '['
 }
 
-// SymbolMenuSpeedRight returns the right cap glyph for the menu-bar transfer-speed pill.
-func (t Theme) SymbolMenuSpeedRight() rune {
-	if g := t.menuBarSymbolTrim(SymbolKeyMenuSpeedRight); g != 0 {
+// IconMenuSpeedRight returns the right cap icon for the menu-bar transfer-speed pill.
+func (t Theme) IconMenuSpeedRight() rune {
+	if g := t.menuBarIconTrim(IconKeyMenuSpeedRight); g != 0 {
 		return g
 	}
 	return ']'
 }
 
-func (t Theme) menuBarSymbolTrim(key string) rune {
-	if t.Symbols == nil {
+func (t Theme) menuBarIconTrim(key string) rune {
+	if t.Icons == nil {
 		return 0
 	}
-	s := strings.TrimSpace(t.Symbols[key])
+	s := strings.TrimSpace(t.Icons[key])
 	if s == "" {
 		return 0
 	}
@@ -850,12 +850,12 @@ func (t Theme) menuBarSymbolTrim(key string) rune {
 	return 0
 }
 
-// SymbolMenuJob returns the queue glyph for a job status string (e.g. "queued", "running").
-// Uses [symbols] menu.job.<status> when set, otherwise compact Unicode (does not fall back to
-// the jobs-list Nerd Font keys like symbols.running — those are too wide/noisy on the menu bar).
-func (t Theme) SymbolMenuJob(status string) rune {
+// IconMenuJob returns the queue icon for a job status string (e.g. "queued", "running").
+// Uses [icons] menu.job.<status> when set, otherwise compact Unicode (does not fall back to
+// the jobs-list Nerd Font keys like icons.running — those are too wide/noisy on the menu bar).
+func (t Theme) IconMenuJob(status string) rune {
 	key := "menu.job." + status
-	if g := t.menuBarSymbolTrim(key); g != 0 {
+	if g := t.menuBarIconTrim(key); g != 0 {
 		return g
 	}
 	switch status {
@@ -1330,7 +1330,7 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, fmt.Errorf("[styles] is not supported; use [menu], [panel], [dialog], [jobs], [message], [footer], and [fuzzy] sections")
 	}
 	for key := range raw {
-		if key == "name" || key == "palette" || key == "symbols" {
+		if key == "name" || key == "palette" || key == "icons" {
 			continue
 		}
 		if styleSectionRootSet[key] {
@@ -1376,7 +1376,7 @@ func parse(data []byte) (Theme, error) {
 		}
 	}
 
-	symbols, err := symbolsField(raw)
+	icons, err := iconsField(raw)
 	if err != nil {
 		return Theme{}, err
 	}
@@ -1635,7 +1635,7 @@ func parse(data []byte) (Theme, error) {
 
 		CompareHashing: styles["compare.hashing"],
 
-		Symbols: symbols,
+		Icons: icons,
 
 		FooterKey:        styles["footer.key"],
 		FooterLabel:      styles["footer.label"],
@@ -1657,54 +1657,54 @@ func stringField(raw map[string]any, key string) (string, error) {
 	return text, nil
 }
 
-func symbolsField(raw map[string]any) (map[string]string, error) {
-	value, ok := raw["symbols"]
+func iconsField(raw map[string]any) (map[string]string, error) {
+	value, ok := raw["icons"]
 	if !ok {
 		return map[string]string{}, nil
 	}
 	table, ok := value.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("symbols must be a table")
+		return nil, fmt.Errorf("icons must be a table")
 	}
-	symbols := map[string]string{}
+	icons := map[string]string{}
 	for name, rawValue := range table {
-		if err := collectSymbolEntry(name, rawValue, symbols); err != nil {
+		if err := collectIconEntry(name, rawValue, icons); err != nil {
 			return nil, err
 		}
 	}
-	return symbols, nil
+	return icons, nil
 }
 
-// collectSymbolEntry stores one leaf string at fullKey, or recurses into nested tables.
-// A value of { symbol = "…" } (only key) remains supported as a leaf for a single entry.
-func collectSymbolEntry(fullKey string, rawValue any, symbols map[string]string) error {
+// collectIconEntry stores one leaf string at fullKey, or recurses into nested tables.
+// A value of { icon = "…" } (only key) remains supported as a leaf for a single entry.
+func collectIconEntry(fullKey string, rawValue any, icons map[string]string) error {
 	switch v := rawValue.(type) {
 	case string:
-		symbols[fullKey] = v
+		icons[fullKey] = v
 		return nil
 	case map[string]any:
 		if len(v) == 0 {
-			return fmt.Errorf("symbols.%s: empty table", fullKey)
+			return fmt.Errorf("icons.%s: empty table", fullKey)
 		}
-		if sym, ok := v["symbol"]; ok {
+		if icon, ok := v["icon"]; ok {
 			if len(v) != 1 {
-				return fmt.Errorf("symbols.%s: use nested tables when defining multiple keys; { symbol = \"...\" } must be the only entry", fullKey)
+				return fmt.Errorf("icons.%s: use nested tables when defining multiple keys; { icon = \"...\" } must be the only entry", fullKey)
 			}
-			symStr, ok := sym.(string)
+			iconStr, ok := icon.(string)
 			if !ok {
-				return fmt.Errorf("symbols.%s.symbol must be a string", fullKey)
+				return fmt.Errorf("icons.%s.icon must be a string", fullKey)
 			}
-			symbols[fullKey] = symStr
+			icons[fullKey] = iconStr
 			return nil
 		}
 		for childName, childVal := range v {
-			if err := collectSymbolEntry(fullKey+"."+childName, childVal, symbols); err != nil {
+			if err := collectIconEntry(fullKey+"."+childName, childVal, icons); err != nil {
 				return err
 			}
 		}
 		return nil
 	default:
-		return fmt.Errorf("symbols.%s: must be a string, nested table of strings, or inline { symbol = \"...\" }", fullKey)
+		return fmt.Errorf("icons.%s: must be a string, nested table of strings, or inline { icon = \"...\" }", fullKey)
 	}
 }
 

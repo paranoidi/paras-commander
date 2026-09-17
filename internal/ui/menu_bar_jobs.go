@@ -9,7 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// MenuBarJobGroup is one status group in the menu-bar jobs strip: a glyph plus a decimal count.
+// MenuBarJobGroup is one status group in the menu-bar jobs strip: a icon plus a decimal count.
 type MenuBarJobGroup struct {
 	Status string
 	Count  int
@@ -46,15 +46,15 @@ const menuBarSpeedTextMaxWidth = 8
 const menuBarSpeedSlotWidth = 1 + 1 + menuBarSpeedTextMaxWidth + 1 + 1
 
 // MenuBarJobsGroupsWidth measures the cell width of the rendered group strip: each group is
-// "<glyph> <count>", groups separated by one space.
+// "<icon> <count>", groups separated by one space.
 func MenuBarJobsGroupsWidth(groups []MenuBarJobGroup, styles theme.Theme) int {
 	w := 0
 	for i, g := range groups {
 		if i > 0 {
 			w++
 		}
-		glyph := styles.SymbolMenuJob(g.Status)
-		w += runewidth.RuneWidth(glyph) + 1 + decimalDigits(g.Count)
+		icon := styles.IconMenuJob(g.Status)
+		w += runewidth.RuneWidth(icon) + 1 + decimalDigits(g.Count)
 	}
 	return w
 }
@@ -141,9 +141,9 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 				}
 			}
 			style := styles.MenuJobStyle(g.Status)
-			glyph := styles.SymbolMenuJob(g.Status)
-			screen.SetContent(x, y, glyph, nil, style)
-			x += runewidth.RuneWidth(glyph)
+			icon := styles.IconMenuJob(g.Status)
+			screen.SetContent(x, y, icon, nil, style)
+			x += runewidth.RuneWidth(icon)
 			if x >= end {
 				break
 			}
@@ -168,8 +168,8 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 		}
 		x += speedW + 1 // slot + one-space margin before the bar
 	}
-	doneSym := styles.SymbolMenuProgressDone()
-	remSym := styles.SymbolMenuProgressRemaining()
+	doneSym := styles.IconMenuProgressDone()
+	remSym := styles.IconMenuProgressRemaining()
 	doneStyle := styles.MenuProgressDone
 	remStyle := styles.MenuProgressRemaining
 	gfx := styles.MenuProgressDoneGfx
@@ -234,7 +234,7 @@ func drawMenuBarSpeedPill(screen tcell.Screen, slotX, y, slotW int, speed string
 	px := slotX + slotW - pillW
 	capStyle := styles.MenuSpeedCap
 	textStyle := styles.MenuSpeedText
-	screen.SetContent(px, y, styles.SymbolMenuSpeedLeft(), nil, capStyle)
+	screen.SetContent(px, y, styles.IconMenuSpeedLeft(), nil, capStyle)
 	px++
 	screen.SetContent(px, y, ' ', nil, textStyle)
 	px++
@@ -244,7 +244,7 @@ func drawMenuBarSpeedPill(screen tcell.Screen, slotX, y, slotW int, speed string
 	}
 	screen.SetContent(px, y, ' ', nil, textStyle)
 	px++
-	screen.SetContent(px, y, styles.SymbolMenuSpeedRight(), nil, capStyle)
+	screen.SetContent(px, y, styles.IconMenuSpeedRight(), nil, capStyle)
 }
 
 // menuBarProgressCutoff returns the number of filled (done) cells for frac across progW cells.

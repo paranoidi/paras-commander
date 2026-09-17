@@ -60,7 +60,7 @@ func TestThroughputDetailLinesGraphShape(t *testing.T) {
 	}
 	for _, row := range lines {
 		if strings.ContainsRune(row, '█') {
-			t.Fatalf("did not expect block glyph: %q", row)
+			t.Fatalf("did not expect block icon: %q", row)
 		}
 	}
 	if !strings.HasPrefix(lines[0], " ") {

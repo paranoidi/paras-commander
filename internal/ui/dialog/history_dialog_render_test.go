@@ -43,7 +43,7 @@ func TestDrawHistoryDialogSmoke(t *testing.T) {
 	}
 }
 
-func TestDrawHistoryDialogShowsPinGlyphOnlyForPinnedRow(t *testing.T) {
+func TestDrawHistoryDialogShowsPinIconOnlyForPinnedRow(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init: %v", err)
@@ -66,31 +66,31 @@ func TestDrawHistoryDialogShowsPinGlyphOnlyForPinnedRow(t *testing.T) {
 	}
 	DrawHistoryDialog(screen, layout, state, styles, rowMarks)
 
-	pinGlyph := []rune(styles.SymbolPin())[0]
-	rowContainingHasGlyph := func(needle string) bool {
+	pinIcon := []rune(styles.IconPin())[0]
+	rowContainingHasIcon := func(needle string) bool {
 		for y := 0; y < 24; y++ {
 			row := ""
-			hasGlyph := false
+			hasIcon := false
 			for x := 0; x < 80; x++ {
 				str, _, _ := screen.Get(x, y)
 				row += str
 				r, _ := utf8.DecodeRuneInString(str)
-				if r == pinGlyph {
-					hasGlyph = true
+				if r == pinIcon {
+					hasIcon = true
 				}
 			}
 			if strings.Contains(row, needle) {
-				return hasGlyph
+				return hasIcon
 			}
 		}
 		t.Fatalf("row containing %q not found on screen", needle)
 		return false
 	}
-	if !rowContainingHasGlyph("pinned-alpha") {
-		t.Error("expected pin glyph on pinned row")
+	if !rowContainingHasIcon("pinned-alpha") {
+		t.Error("expected pin icon on pinned row")
 	}
-	if rowContainingHasGlyph("other-bravo") {
-		t.Error("did not expect pin glyph on unpinned row")
+	if rowContainingHasIcon("other-bravo") {
+		t.Error("did not expect pin icon on unpinned row")
 	}
 }
 

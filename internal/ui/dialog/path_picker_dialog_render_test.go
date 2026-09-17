@@ -92,7 +92,7 @@ func TestDrawPathPickerDialogInvalidPathRowStyle(t *testing.T) {
 	}
 }
 
-func TestDrawPathPickerDialogShowsPinGlyphOnlyForPinnedRow(t *testing.T) {
+func TestDrawPathPickerDialogShowsPinIconOnlyForPinnedRow(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init: %v", err)
@@ -118,31 +118,31 @@ func TestDrawPathPickerDialogShowsPinGlyphOnlyForPinnedRow(t *testing.T) {
 	}
 	DrawPathPickerDialog(screen, layout, state, styles, rowMarks)
 
-	pinGlyph := []rune(styles.SymbolPin())[0]
-	rowContainingHasGlyph := func(needle string) bool {
+	pinIcon := []rune(styles.IconPin())[0]
+	rowContainingHasIcon := func(needle string) bool {
 		for y := layout.Menu.Height; y < 24; y++ {
 			row := ""
-			hasGlyph := false
+			hasIcon := false
 			for x := 0; x < 80; x++ {
 				cell, _, _ := screen.Get(x, y)
 				row += cell
 				r, _ := utf8.DecodeRuneInString(cell)
-				if r == pinGlyph {
-					hasGlyph = true
+				if r == pinIcon {
+					hasIcon = true
 				}
 			}
 			if strings.Contains(row, needle) {
-				return hasGlyph
+				return hasIcon
 			}
 		}
 		t.Fatalf("row containing %q not found on screen", needle)
 		return false
 	}
-	if !rowContainingHasGlyph("alpha") {
-		t.Error("expected pin glyph on pinned row")
+	if !rowContainingHasIcon("alpha") {
+		t.Error("expected pin icon on pinned row")
 	}
-	if rowContainingHasGlyph("bravo") {
-		t.Error("did not expect pin glyph on unpinned row")
+	if rowContainingHasIcon("bravo") {
+		t.Error("did not expect pin icon on unpinned row")
 	}
 }
 

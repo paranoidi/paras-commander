@@ -26,14 +26,14 @@ func TestDiskUsageFillColumns(t *testing.T) {
 	}
 }
 
-func TestMenuBarSpinnerGlyphDistinctFrames(t *testing.T) {
-	if MenuBarSpinnerGlyph(0) == MenuBarSpinnerGlyph(1) {
+func TestMenuBarSpinnerIconDistinctFrames(t *testing.T) {
+	if MenuBarSpinnerIcon(0) == MenuBarSpinnerIcon(1) {
 		t.Fatal("want distinct frames")
 	}
 	if len(menuBarSpinnerRunes) != 10 {
 		t.Fatalf("unexpected frame count %d", len(menuBarSpinnerRunes))
 	}
-	if MenuBarSpinnerGlyph(12) != MenuBarSpinnerGlyph(2) {
+	if MenuBarSpinnerIcon(12) != MenuBarSpinnerIcon(2) {
 		t.Fatal("want phase modulo frame count")
 	}
 }
@@ -90,7 +90,7 @@ func TestMenuBarRightTailJobsAttentionPaddingAndSpinnerGap(t *testing.T) {
 		}
 	}
 
-	// Verify attention glyphs (handling double-width Nerd Font glyph).
+	// Verify attention icons (handling double-width Nerd Font icon).
 	var attentionText []rune
 	for col := attStart; col < attStart+len(paddedRunes); {
 		ch, _, cw := screen.Get(col, 0)

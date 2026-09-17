@@ -15,7 +15,7 @@ func TestFindDialogTitleIndexingWorkers(t *testing.T) {
 	th := theme.Default()
 	st := FindDialogState{Indexing: true, IndexedCount: 123, WalkWorkers: 4}
 	got := findDialogTitle(st, th)
-	icon := string(th.SymbolMenuJob("scanning"))
+	icon := string(th.IconMenuJob("scanning"))
 	want := "Find (123…) 4 " + icon
 	if got != want {
 		t.Fatalf("title = %q, want %q", got, want)
@@ -82,7 +82,7 @@ func TestFindDialogTitleIndexingNoWorkerSuffixWord(t *testing.T) {
 	}
 }
 
-func TestDrawFindDialogShowsPinGlyphOnlyForPinnedRow(t *testing.T) {
+func TestDrawFindDialogShowsPinIconOnlyForPinnedRow(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init: %v", err)
@@ -119,21 +119,21 @@ func TestDrawFindDialogShowsPinGlyphOnlyForPinnedRow(t *testing.T) {
 	sepAfterCheckbox := rect.Y + 3 + checkboxRows
 	listTop := sepAfterCheckbox + 1
 
-	pinGlyph := []rune(styles.SymbolPin())[0]
-	rowHasGlyph := func(y int) bool {
+	pinIcon := []rune(styles.IconPin())[0]
+	rowHasIcon := func(y int) bool {
 		for x := rect.X + 1; x < rect.X+rect.Width-1; x++ {
 			str, _, _ := screen.Get(x, y)
 			r, _ := utf8.DecodeRuneInString(str)
-			if r == pinGlyph {
+			if r == pinIcon {
 				return true
 			}
 		}
 		return false
 	}
-	if !rowHasGlyph(listTop) {
-		t.Error("expected pin glyph on pinned row")
+	if !rowHasIcon(listTop) {
+		t.Error("expected pin icon on pinned row")
 	}
-	if rowHasGlyph(listTop + 1) {
-		t.Error("did not expect pin glyph on unpinned row")
+	if rowHasIcon(listTop + 1) {
+		t.Error("did not expect pin icon on unpinned row")
 	}
 }

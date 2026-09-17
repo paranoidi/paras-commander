@@ -15,21 +15,21 @@ func TreeConnectorPrefix(depth int, lastChild bool, ancestorHasNext []bool, styl
 		return ""
 	}
 	var b strings.Builder
-	continueGlyph := styles.SymbolTreeContinue()
-	branchGlyph := styles.SymbolTreeBranch()
-	endGlyph := styles.SymbolTreeEnd()
+	continueIcon := styles.IconTreeContinue()
+	branchIcon := styles.IconTreeBranch()
+	endIcon := styles.IconTreeEnd()
 	for i := range depth - 1 {
 		if ancestorHasNext[i] {
-			b.WriteString(continueGlyph)
+			b.WriteString(continueIcon)
 			b.WriteString("  ")
 		} else {
 			b.WriteString("   ")
 		}
 	}
 	if lastChild {
-		b.WriteString(endGlyph)
+		b.WriteString(endIcon)
 	} else {
-		b.WriteString(branchGlyph)
+		b.WriteString(branchIcon)
 	}
 	b.WriteString(" ")
 	return b.String()

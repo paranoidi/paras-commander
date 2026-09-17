@@ -42,7 +42,7 @@ func TestDraw_thumbOnBorder(t *testing.T) {
 
 	thumbRow := listTop + m.ThumbDotRow
 	got, _, _ := screen.Get(x, thumbRow)
-	wantThumb := styles.SymbolScrollbarThumb()
+	wantThumb := styles.IconScrollbarThumb()
 	gotR, _ := utf8.DecodeRuneInString(got)
 	if gotR != wantThumb {
 		t.Fatalf("thumb cell = %q, want %q", got, string(wantThumb))

@@ -342,7 +342,7 @@ func (a *App) menuBarSpinnerVisible() bool {
 // disk-usage scans, running commands, and directory loads.
 func (a *App) menuBarOtherActivity() bool {
 	return a.diskUsageScanBusy() || a.commandsCtrl.HasRunning() ||
-		a.model.Primary.ShowLoadingGlyph || a.model.Secondary.ShowLoadingGlyph
+		a.model.Primary.ShowLoadingIcon || a.model.Secondary.ShowLoadingIcon
 }
 
 const (

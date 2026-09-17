@@ -22,7 +22,7 @@ type jobPathIndex struct {
 // newJobPathIndex resolves each source's destination the same way ops.ResolveDestination does
 // for a fixed dest-is-dir flag (jobs.Job.DestIsDir, decided by a single Stat at enqueue), so no
 // filesystem call happens here or on the render path.
-// ponytail: basename-only approximation for in-flight glyphs; batch-relative names
+// ponytail: basename-only approximation for in-flight icons; batch-relative names
 // (ops.TransferDestName) would need a common-root walk per source.
 func newJobPathIndex(m JobPathMark) *jobPathIndex {
 	idx := &jobPathIndex{

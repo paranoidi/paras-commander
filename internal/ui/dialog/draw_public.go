@@ -28,9 +28,9 @@ var ShouldPreemptiveScrollRevealOnErase = draw.ShouldPreemptiveScrollRevealOnEra
 // AdjustScrollRevealOnErase decreases scroll after deletions to reveal hidden prefix text.
 var AdjustScrollRevealOnErase = draw.AdjustScrollRevealOnErase
 
-// AccentGlyphStyle applies menu/dialog shortcut accent styling on top of a base row or label style.
-func AccentGlyphStyle(base, accent tcell.Style) tcell.Style {
-	return draw.AccentGlyphStyle(base, accent)
+// AccentIconStyle applies menu/dialog shortcut accent styling on top of a base row or label style.
+func AccentIconStyle(base, accent tcell.Style) tcell.Style {
+	return draw.AccentIconStyle(base, accent)
 }
 
 // DrawDialogHSeparator draws a horizontal rule inside a dialog frame (re-export for callers outside package dialog).

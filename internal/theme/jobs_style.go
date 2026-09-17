@@ -6,23 +6,23 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// Jobs list symbol keys ([symbols.jobs.list] in TOML — flattened as jobs.list.<status>).
+// Jobs list icon keys ([icons.jobs.list] in TOML — flattened as jobs.list.<status>).
 const (
-	SymbolKeyJobsListScanning  = "jobs.list.scanning"
-	SymbolKeyJobsListQueued    = "jobs.list.queued"
-	SymbolKeyJobsListRunning   = "jobs.list.running"
-	SymbolKeyJobsListPaused    = "jobs.list.paused"
-	SymbolKeyJobsListCanceled  = "jobs.list.canceled"
-	SymbolKeyJobsListFailed    = "jobs.list.failed"
-	SymbolKeyJobsListDecision  = "jobs.list.decision"
-	SymbolKeyJobsListCompleted = "jobs.list.completed"
+	IconKeyJobsListScanning  = "jobs.list.scanning"
+	IconKeyJobsListQueued    = "jobs.list.queued"
+	IconKeyJobsListRunning   = "jobs.list.running"
+	IconKeyJobsListPaused    = "jobs.list.paused"
+	IconKeyJobsListCanceled  = "jobs.list.canceled"
+	IconKeyJobsListFailed    = "jobs.list.failed"
+	IconKeyJobsListDecision  = "jobs.list.decision"
+	IconKeyJobsListCompleted = "jobs.list.completed"
 )
 
-// SymbolJobsList returns the Nerd Font glyph for a job status in the jobs list column.
-func (t Theme) SymbolJobsList(status string) string {
+// IconJobsList returns the Nerd Font icon for a job status in the jobs list column.
+func (t Theme) IconJobsList(status string) string {
 	key := "jobs.list." + status
-	if t.Symbols != nil {
-		if s := strings.TrimSpace(t.Symbols[key]); s != "" {
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[key]); s != "" {
 			return s
 		}
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func TestDrawPanelRowShowsPinGlyphForPinnedEntry(t *testing.T) {
+func TestDrawPanelRowShowsPinIconForPinnedEntry(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -43,12 +43,12 @@ func TestDrawPanelRowShowsPinGlyphForPinnedEntry(t *testing.T) {
 			PinnedPaths: map[string]struct{}{pinnedPath: {}},
 		})
 
-	wantGlyph := []rune(styles.SymbolPin())[0]
-	rowHasGlyph := func(rowY int) bool {
+	wantIcon := []rune(styles.IconPin())[0]
+	rowHasIcon := func(rowY int) bool {
 		for col := rect.X + 1; col < rect.X+rect.Width-1; col++ {
 			ch, _, _ := screen.Get(col, rowY)
 			r, _ := utf8.DecodeRuneInString(ch)
-			if r == wantGlyph {
+			if r == wantIcon {
 				return true
 			}
 		}
@@ -57,11 +57,11 @@ func TestDrawPanelRowShowsPinGlyphForPinnedEntry(t *testing.T) {
 
 	pinnedRowY := rect.Y + 2
 	otherRowY := rect.Y + 3
-	if !rowHasGlyph(pinnedRowY) {
-		t.Fatal("pin glyph not found on pinned entry's row")
+	if !rowHasIcon(pinnedRowY) {
+		t.Fatal("pin icon not found on pinned entry's row")
 	}
-	if rowHasGlyph(otherRowY) {
-		t.Fatal("pin glyph unexpectedly found on non-pinned entry's row")
+	if rowHasIcon(otherRowY) {
+		t.Fatal("pin icon unexpectedly found on non-pinned entry's row")
 	}
 }
 

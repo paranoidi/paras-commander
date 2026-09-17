@@ -205,7 +205,7 @@ frame = { fg = "white" }
 surface = { fg = "white", bg = "bright_black" }
 text = { fg = "white" }
 title = { bold = true }
-# bg matters for the path-picker trailing glyph when that control is focused; shortcut letters use fg+bold only.
+# bg matters for the path-picker trailing icon when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "white", bg = "black", bold = true }
 search_icon = { fg = "black", bg = "bright_black" }
 
@@ -283,7 +283,7 @@ canceled = { fg = "bright_red", bold = true }
 [compare]
 hashing = { fg = "bright_green", bold = true }
 
-[symbols]
+[icons]
 working = "\uf017"
 path_picker = "\uf0ca"
 file = "\uf15b"
@@ -294,15 +294,15 @@ pin = "\U000F0403"
 # U+F06D1 (nf-md-eye_off_outline); use 8-digit escape — \uf06d1 is U+F06D + "1"
 hidden_dotfiles = "\U000F06D1"
 
-[symbols.dialog.checkbox]
+[icons.dialog.checkbox]
 checked = "\U000F0856"
 unchecked = "\U000F0131"
 
-[symbols.dialog.radio]
+[icons.dialog.radio]
 selected = "\U000F043E"
 unselected = "\U000F043D"
 
-[symbols.jobs.list]
+[icons.jobs.list]
 scanning = "\uf110"
 queued = "\uf017"
 running = "\uf144"
@@ -312,7 +312,7 @@ failed = "\uf06a"
 decision = "\uf059"
 completed = "\uf05d"
 
-[symbols.filelist]
+[icons.filelist]
 selection_subtree = ""
 new = "\uea7f"
 renamed = "\U000f11e8"
@@ -320,34 +320,34 @@ no_permission = "\uf023"
 job = "\U000f02ca"
 preview_loading = "\uf03e"
 
-[symbols.folders]
+[icons.folders]
 folder = "\U000F024B"
 open = "\U000F0770"
 scanning = "\U000F0D0B"
 mount = "\U000F0256"
 excluded = "\uf114"
 
-[symbols.scrollbar]
+[icons.scrollbar]
 thumb = "┃"
 
-[symbols.tree]
+[icons.tree]
 continue = "│"
 branch = "├─"
 end = "└─"
 leaf = "·"
 
-[symbols.meta]
+[icons.meta]
 running = "\uf141"
 
-[symbols.menu.progress]
+[icons.menu.progress]
 done = "■"
 remaining = "■"
 
-[symbols.menu.speed]
+[icons.menu.speed]
 left = ""   # powerline left half-circle
 right = ""  # powerline right half-circle
 
-[symbols.menu.job]
+[icons.menu.job]
 scanning = "\U000f02ca"
 completed = ""
 failed = ""
@@ -356,16 +356,16 @@ paused = ""
 running = ""
 queued = ""
 
-[symbols.selections]
+[icons.selections]
 multi_location = "\uef81"
 
-[symbols.leader_menu]
+[icons.leader_menu]
 arrow = "\uea9c"
 
-[symbols.search]
+[icons.search]
 icon = "\uf002"
 
-[symbols.compare]
+[icons.compare]
 equal = "="
 relocated = "\u2194"
 primary_only = "<"

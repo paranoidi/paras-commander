@@ -94,13 +94,13 @@ func TestFindMarkedSelectionSizeLabelPendingDirs(t *testing.T) {
 			return false, 0, false
 		},
 	}
-	working := theme.Default().SymbolWorking()
+	working := theme.Default().IconWorking()
 	got, ok := st.MarkedSelectionSizeLabel(false, stubMarkedSelectionPainter{}, working)
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
 	if got != "1 item (0 B) "+working {
-		t.Fatalf("label = %q, want pending glyph", got)
+		t.Fatalf("label = %q, want pending icon", got)
 	}
 	st.InvalidateMarkedSelectionSizeLabel()
 	painter := stubMarkedSelectionPainter{sizes: map[string]int64{dir: 1024}}
@@ -109,7 +109,7 @@ func TestFindMarkedSelectionSizeLabelPendingDirs(t *testing.T) {
 		t.Fatal("ok2 = false after disk refresh")
 	}
 	if got2 != "1 item (1 KiB)" {
-		t.Fatalf("label after refresh = %q, want 1 KiB without glyph", got2)
+		t.Fatalf("label after refresh = %q, want 1 KiB without icon", got2)
 	}
 }
 

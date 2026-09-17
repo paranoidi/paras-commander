@@ -54,7 +54,7 @@ func TestDrawPinDialogSmoke(t *testing.T) {
 	// blank row before it, no clipping.
 	borderCell, _, _ := screen.Get(rect.X, rect.Y+rect.Height-1)
 	if borderCell != "└" {
-		t.Fatalf("expected bottom-left border glyph at row %d, got %q", rect.Y+rect.Height-1, borderCell)
+		t.Fatalf("expected bottom-left border icon at row %d, got %q", rect.Y+rect.Height-1, borderCell)
 	}
 }
 

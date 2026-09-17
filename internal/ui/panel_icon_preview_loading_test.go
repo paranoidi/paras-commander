@@ -24,9 +24,9 @@ func TestPaintPanelIconStripPreviewLoadingUsesScanningColor(t *testing.T) {
 
 	main, style, _ := screen.Get(0, 1)
 	gotRune, _ := utf8.DecodeRuneInString(main)
-	wantGlyph := th.SymbolFilelistPreviewLoading()
-	if gotRune != wantGlyph {
-		t.Fatalf("icon rune = %q, want preview_loading %q", string(gotRune), string(wantGlyph))
+	wantIcon := th.IconFilelistPreviewLoading()
+	if gotRune != wantIcon {
+		t.Fatalf("icon rune = %q, want preview_loading %q", string(gotRune), string(wantIcon))
 	}
 	gotFG, _, _ := style.Decompose()
 	wantFG, _, _ := th.PanelIconFolderScanning.Decompose()

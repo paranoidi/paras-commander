@@ -3,7 +3,7 @@ package compare
 import "testing"
 
 func TestRowLegendPendingAndHashing(t *testing.T) {
-	glyph := "*"
+	icon := "*"
 	cases := []struct {
 		name string
 		row  Row
@@ -42,7 +42,7 @@ func TestRowLegendPendingAndHashing(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := RowLegend(tc.row, glyph); got != tc.want {
+			if got := RowLegend(tc.row, icon); got != tc.want {
 				t.Fatalf("RowLegend = %q, want %q", got, tc.want)
 			}
 		})

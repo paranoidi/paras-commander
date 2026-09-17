@@ -76,7 +76,7 @@ func findDialogTitle(state FindDialogState, styles theme.Theme) string {
 	if state.Indexing {
 		title = fmt.Sprintf("Find (%s%s)", count, string(primitive.Ellipsis))
 		if state.WalkWorkers > 0 {
-			icon := styles.SymbolMenuJob("scanning")
+			icon := styles.IconMenuJob("scanning")
 			title = fmt.Sprintf("%s %d %c", title, state.WalkWorkers, icon)
 		}
 	} else if state.IndexDone && state.IndexedCount > 0 {
@@ -110,7 +110,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	fileListWidth := inputWidth
 
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, false, styles)
 
 	sepAfterFilter := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepAfterFilter, borderStyle)

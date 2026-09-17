@@ -10,7 +10,7 @@ import (
 
 const throughputGraphBodyRows = 5
 
-// brailleGraphUp matches btop Symbols::graph_symbols "braille_up" (index = a*5+b, a,b in 0..4).
+// brailleGraphUp matches btop Icons::graph_symbols "braille_up" (index = a*5+b, a,b in 0..4).
 // See btop/src/btop_draw.cpp Draw::Graph::_create.
 var brailleGraphUp = [25]rune{
 	' ', '⢀', '⢠', '⢰', '⢸',
@@ -74,7 +74,7 @@ func clampInt(v, lo, hi int) int {
 	return v
 }
 
-// throughputGraphBodyBraille renders throughput buckets using btop-style braille_up glyphs
+// throughputGraphBodyBraille renders throughput buckets using btop-style braille_up icons
 // (two consecutive 0..100 samples per column: baseline 0 then each bucket, same width as bucket count).
 func throughputGraphBodyBraille(bucketMax []float64, graphHeight int) []string {
 	width := len(bucketMax)

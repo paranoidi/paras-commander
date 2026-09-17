@@ -156,7 +156,7 @@ func CalibrationMarginMS() int {
 	return config.DebounceCalibrationMarginMS
 }
 
-// CalibrationProgressBar renders a ████░░░░ bar for collected samples (no frame glyphs).
+// CalibrationProgressBar renders a ████░░░░ bar for collected samples (no frame icons).
 func CalibrationProgressBar(width, collected, required int) string {
 	if width < 1 {
 		width = 1

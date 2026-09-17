@@ -25,7 +25,7 @@ func (c Cell) Effective() Status {
 	return combineStatus(c.Staged, c.Unstaged)
 }
 
-// Rune returns the display glyph for s (eza notation).
+// Rune returns the display icon for s (eza notation).
 func (s Status) Rune() rune {
 	switch s {
 	case New:

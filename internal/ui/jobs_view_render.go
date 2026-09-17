@@ -190,8 +190,8 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 			statusStyle = lineStyle
 			iconRenderStyle = lineStyle
 		}
-		iconGlyph := styles.SymbolJobsList(entry.Status)
-		primitive.Text(screen, contentX, y, jobsListColIcon, iconGlyph, iconRenderStyle)
+		iconIcon := styles.IconJobsList(entry.Status)
+		primitive.Text(screen, contentX, y, jobsListColIcon, iconIcon, iconRenderStyle)
 		line := fmt.Sprintf("%-*s ", jobsListColTypeRunes, truncateRunes(entry.Type, jobsListColTypeRunes))
 		primitive.Text(screen, contentX+jobsListColIcon, y, jobsListColTypeCell, line, lineStyle)
 		xStatus := contentX + jobsListColPrefix
@@ -476,7 +476,7 @@ func jobPercentDone(j JobEntry) float64 {
 }
 
 // drawJobsProgressBar paints a progress strip where remaining width after fixed columns is used.
-// The percentage label is centered; glyphs over the filled portion use labelOnFill, else labelOnTrack.
+// The percentage label is centered; icons over the filled portion use labelOnFill, else labelOnTrack.
 func drawJobsProgressBar(screen tcell.Screen, x, y, width int, pct float64,
 	fillStyle, trackStyle, labelOnFill, labelOnTrack tcell.Style,
 ) {

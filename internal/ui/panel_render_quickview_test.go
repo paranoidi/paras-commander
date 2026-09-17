@@ -13,7 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-// TestDrawPanelRowQuickViewIndicatorSurvivesScrollbar guards against the indicator glyph and the
+// TestDrawPanelRowQuickViewIndicatorSurvivesScrollbar guards against the indicator icon and the
 // panel scrollbar sharing the same border column: the scrollbar paints its whole track/thumb
 // after the row loop, so the indicator must be painted after the scrollbar too or it gets
 // overdrawn as soon as a directory has more entries than fit on screen.
@@ -47,32 +47,32 @@ func TestDrawPanelRowQuickViewIndicatorSurvivesScrollbar(t *testing.T) {
 	x, cursorRowY := rect.X+rect.Width-1, rect.Y+2
 	ch, _, _ := screen.Get(x, cursorRowY)
 	r, _ := utf8.DecodeRuneInString(ch)
-	if r != quickViewIndicatorGlyphRight {
-		t.Fatalf("indicator glyph at (%d,%d) = %q, want %q (scrollbar likely overdrew it)", x, cursorRowY, r, quickViewIndicatorGlyphRight)
+	if r != quickViewIndicatorIconRight {
+		t.Fatalf("indicator icon at (%d,%d) = %q, want %q (scrollbar likely overdrew it)", x, cursorRowY, r, quickViewIndicatorIconRight)
 	}
 }
 
-func TestDrawPanelRowQuickViewIndicatorGlyph(t *testing.T) {
+func TestDrawPanelRowQuickViewIndicatorIcon(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name       string
 		right      bool
-		wantGlyph  rune
+		wantIcon   rune
 		wantColX   func(rect Rect) int
 		unwantColX func(rect Rect) int
 	}{
 		{
 			name:       "right",
 			right:      true,
-			wantGlyph:  quickViewIndicatorGlyphRight,
+			wantIcon:   quickViewIndicatorIconRight,
 			wantColX:   func(rect Rect) int { return rect.X + rect.Width - 1 },
 			unwantColX: func(rect Rect) int { return rect.X },
 		},
 		{
 			name:       "left",
 			right:      false,
-			wantGlyph:  quickViewIndicatorGlyphLeft,
+			wantIcon:   quickViewIndicatorIconLeft,
 			wantColX:   func(rect Rect) int { return rect.X },
 			unwantColX: func(rect Rect) int { return rect.X + rect.Width - 1 },
 		},
@@ -114,8 +114,8 @@ func TestDrawPanelRowQuickViewIndicatorGlyph(t *testing.T) {
 
 			ch, gotStyle, _ := screen.Get(tc.wantColX(rect), cursorRowY)
 			r, _ := utf8.DecodeRuneInString(ch)
-			if r != tc.wantGlyph {
-				t.Fatalf("cursor row border glyph = %q, want %q", r, tc.wantGlyph)
+			if r != tc.wantIcon {
+				t.Fatalf("cursor row border icon = %q, want %q", r, tc.wantIcon)
 			}
 
 			cursorState, _ := panelRowStyle(state.Entries[0], 0, state,
@@ -123,21 +123,21 @@ func TestDrawPanelRowQuickViewIndicatorGlyph(t *testing.T) {
 			_, wantBG, _ := cursorState.Decompose()
 			gotFG, _, _ := gotStyle.Decompose()
 			if gotFG != wantBG {
-				t.Fatalf("glyph foreground = %v, want cursor row background %v", gotFG, wantBG)
+				t.Fatalf("icon foreground = %v, want cursor row background %v", gotFG, wantBG)
 			}
 
 			if ch2, _, _ := screen.Get(tc.unwantColX(rect), cursorRowY); func() bool {
 				r2, _ := utf8.DecodeRuneInString(ch2)
-				return r2 == tc.wantGlyph
+				return r2 == tc.wantIcon
 			}() {
-				t.Fatalf("glyph unexpectedly found on the non-facing border")
+				t.Fatalf("icon unexpectedly found on the non-facing border")
 			}
 
 			if ch3, _, _ := screen.Get(tc.wantColX(rect), otherRowY); func() bool {
 				r3, _ := utf8.DecodeRuneInString(ch3)
-				return r3 == tc.wantGlyph
+				return r3 == tc.wantIcon
 			}() {
-				t.Fatalf("glyph unexpectedly found on a non-cursor row")
+				t.Fatalf("icon unexpectedly found on a non-cursor row")
 			}
 		})
 	}

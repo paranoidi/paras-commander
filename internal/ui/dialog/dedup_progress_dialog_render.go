@@ -111,7 +111,7 @@ func dedupFrac(done, total int64) float64 {
 }
 
 // drawDedupBar paints a full-width meter whose fill/track are carried by the
-// cell background (no block glyphs — a glyph shows its foreground and made the
+// cell background (no block icons — a icon shows its foreground and made the
 // bar look patchy), with the label overlaid on top. The label is fitted as a
 // path (middle-ellipsized segments) to the bar width.
 func drawDedupBar(screen tcell.Screen, x, y, width int, frac float64, label string, styles theme.Theme) {

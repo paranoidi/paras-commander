@@ -86,7 +86,7 @@ func DrawPinDialog(screen tcell.Screen, layout Layout, state PinDialogState, ite
 	primaryCol := draw.DialogTextX(rect)
 	rowWidth := draw.DialogContentWidth(rect)
 
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, rowWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, true, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, rowWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, true, false, styles)
 
 	sepBeforeList := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
@@ -130,25 +130,25 @@ func DrawPinDialog(screen tcell.Screen, layout Layout, state PinDialogState, ite
 	}
 }
 
-// drawPinRow renders one pin row as "<glyph> <path>", the path fuzzy-highlighted and
-// fit (middle-ellipsized) to whatever width remains after the glyph and its trailing
-// space. The glyph itself carries no highlight — matches are keyed against Path text.
+// drawPinRow renders one pin row as "<icon> <path>", the path fuzzy-highlighted and
+// fit (middle-ellipsized) to whatever width remains after the icon and its trailing
+// space. The icon itself carries no highlight — matches are keyed against Path text.
 func drawPinRow(screen tcell.Screen, x, y, rowWidth int, item PinDialogItem, ranges []search.Range, baseStyle, matchStyle tcell.Style, styles theme.Theme) {
-	glyph := styles.SymbolFile()
+	icon := styles.IconFile()
 	if item.IsDir {
-		glyph = styles.SymbolFolder()
+		icon = styles.IconFolder()
 	}
-	if glyph == "" {
+	if icon == "" {
 		text, spans := fuzzyRowContent(item.Path, ranges, rowWidth, matchStyle, true)
 		primitive.StyledText(screen, x, y, rowWidth, text, baseStyle, spans)
 		return
 	}
-	glyphW := runewidth.RuneWidth([]rune(glyph)[0])
-	prefixW := glyphW + 1
+	iconW := runewidth.RuneWidth([]rune(icon)[0])
+	prefixW := iconW + 1
 	if prefixW > rowWidth {
 		prefixW = rowWidth
 	}
-	primitive.Text(screen, x, y, prefixW, glyph+" ", baseStyle)
+	primitive.Text(screen, x, y, prefixW, icon+" ", baseStyle)
 	pathWidth := rowWidth - prefixW
 	if pathWidth <= 0 {
 		return

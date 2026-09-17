@@ -430,7 +430,7 @@ func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuSta
 	}
 	primitive.Fill(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: rect.Height}, ' ', surface)
 
-	arrow := styles.SymbolLeaderMenuArrow()
+	arrow := styles.IconLeaderMenuArrow()
 	arrowStyle := styles.LeaderMenuArrow
 	if _, ab, _ := arrowStyle.Decompose(); ab == tcell.ColorDefault {
 		arrowStyle = arrowStyle.Background(surfBG)

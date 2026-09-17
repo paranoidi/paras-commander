@@ -74,7 +74,7 @@ func TestFormatEntryFileIconsOmitsDirectorySlash(t *testing.T) {
 
 func TestFormatEntrySubtreeSelectionMark(t *testing.T) {
 	th := theme.Default()
-	mark := string(th.SymbolFilelistSelectionSubtree())
+	mark := string(th.IconFilelistSelectionSubtree())
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
 	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
 	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
@@ -92,11 +92,11 @@ func TestFormatEntrySubtreeSelectionMark(t *testing.T) {
 func TestFormatEntryJobQueueMark(t *testing.T) {
 	th := theme.Default()
 	entry := localfs.Entry{Name: "file.txt", Path: "/tmp/file.txt", Type: localfs.EntryFile}
-	glyph := th.SymbolFilelistJob()
-	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobGlyph: glyph}, ListFmt: panel.ListFormatMtime}, th, nil, "")
+	icon := th.IconFilelistJob()
+	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobIcon: icon}, ListFmt: panel.ListFormatMtime}, th, nil, "")
 	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
-	want := " file.txt " + string(glyph)
+	want := " file.txt " + string(icon)
 	if nameColumn != want {
 		t.Fatalf("name column = %q, want %q", nameColumn, want)
 	}
@@ -121,7 +121,7 @@ func TestRenderDrawsOpenInOtherPanelIcon(t *testing.T) {
 	const width, height = 80, 12
 	screen.SetSize(width, height)
 
-	openGlyph := theme.Default().FolderIconGlyph(theme.FolderIconOpen)
+	openIcon := theme.Default().FolderIcon(theme.FolderIconOpen)
 	model := Model{
 		Primary: panel.State{
 			Path: pathloc.MustParse("/tmp"),
@@ -138,20 +138,20 @@ func TestRenderDrawsOpenInOtherPanelIcon(t *testing.T) {
 
 	leftHalf := width / 2
 	row := tcelltest.TextAt(screen, 1, 3, leftHalf-2)
-	if !strings.Contains(row, openGlyph) {
-		t.Fatalf("left listing row = %q, want open-in-other-panel icon %q", strings.TrimRight(row, " "), openGlyph)
+	if !strings.Contains(row, openIcon) {
+		t.Fatalf("left listing row = %q, want open-in-other-panel icon %q", strings.TrimRight(row, " "), openIcon)
 	}
 }
 
 func TestFormatEntryJobQueueMarkBeforeSubtreeSelectionMark(t *testing.T) {
 	th := theme.Default()
-	mark := string(th.SymbolFilelistSelectionSubtree())
+	mark := string(th.IconFilelistSelectionSubtree())
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
-	glyph := th.SymbolFilelistJob()
-	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobGlyph: glyph, SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
+	icon := th.IconFilelistJob()
+	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobIcon: icon, SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
 	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
-	want := "/sub " + string(glyph) + " " + mark
+	want := "/sub " + string(icon) + " " + mark
 	if nameColumn != want {
 		t.Fatalf("name column = %q, want %q", nameColumn, want)
 	}
@@ -861,7 +861,7 @@ func TestRenderMenuBarShowsActivitySpinnerAfterPermission(t *testing.T) {
 	Render(screen, model, styles)
 
 	spinnerCol := width - permRightMargin - 1
-	wantSpinner := MenuBarSpinnerGlyph(0)
+	wantSpinner := MenuBarSpinnerIcon(0)
 	rCell, st, _ := screen.Get(spinnerCol, 0)
 	rFirst, _ := utf8.DecodeRuneInString(rCell)
 	if rFirst != wantSpinner {
@@ -1962,7 +1962,7 @@ func TestRenderDrawsDotfilesHiddenBottomHint(t *testing.T) {
 	screen.SetSize(width, height)
 
 	styles := theme.Default()
-	sym := styles.SymbolHiddenDotfiles()
+	sym := styles.IconHiddenDotfiles()
 	left := panel.State{
 		Path:                 pathloc.MustParse("/tmp"),
 		Entries:              []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
@@ -1979,7 +1979,7 @@ func TestRenderDrawsDotfilesHiddenBottomHint(t *testing.T) {
 	bottomY := height - 2
 	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if !strings.Contains(leftBottom, sym) {
-		t.Fatalf("left bottom = %q, want dotfiles-hidden glyph %q", leftBottom, sym)
+		t.Fatalf("left bottom = %q, want dotfiles-hidden icon %q", leftBottom, sym)
 	}
 }
 
@@ -1993,7 +1993,7 @@ func TestRenderOmitsDotfilesHiddenBottomHintWhenShowHidden(t *testing.T) {
 	screen.SetSize(width, height)
 
 	styles := theme.Default()
-	sym := styles.SymbolHiddenDotfiles()
+	sym := styles.IconHiddenDotfiles()
 	left := panel.State{
 		Path:                 pathloc.MustParse("/tmp"),
 		Entries:              []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
@@ -2011,7 +2011,7 @@ func TestRenderOmitsDotfilesHiddenBottomHintWhenShowHidden(t *testing.T) {
 	bottomY := height - 2
 	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, sym) {
-		t.Fatalf("left bottom = %q, want no dotfiles-hidden glyph when show hidden is on", leftBottom)
+		t.Fatalf("left bottom = %q, want no dotfiles-hidden icon when show hidden is on", leftBottom)
 	}
 }
 
@@ -2025,7 +2025,7 @@ func TestRenderOmitsDotfilesHiddenBottomHintWhenInactive(t *testing.T) {
 	screen.SetSize(width, height)
 
 	styles := theme.Default()
-	sym := styles.SymbolHiddenDotfiles()
+	sym := styles.IconHiddenDotfiles()
 	left := panel.State{
 		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
@@ -2041,7 +2041,7 @@ func TestRenderOmitsDotfilesHiddenBottomHintWhenInactive(t *testing.T) {
 	bottomY := height - 2
 	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, sym) {
-		t.Fatalf("left bottom = %q, want no dotfiles-hidden glyph when inactive", leftBottom)
+		t.Fatalf("left bottom = %q, want no dotfiles-hidden icon when inactive", leftBottom)
 	}
 }
 

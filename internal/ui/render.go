@@ -90,7 +90,7 @@ type Model struct {
 	ViewMode                     ViewMode
 	JobsView                     JobsViewState
 	JobsList                     []JobEntry
-	// JobPathMarks is the browser file-list job glyph snapshot (progress fields omitted).
+	// JobPathMarks is the browser file-list job icon snapshot (progress fields omitted).
 	JobPathMarks []JobPathMark
 	// PreviewPrefetchLoading lists absolute paths currently being decoded/thumbnailed by prefetch.
 	PreviewPrefetchLoading map[string]struct{}
@@ -159,9 +159,9 @@ type Model struct {
 	DiskUsageDescendIntoMountPoints bool
 	// DiskUsageGoduIgnore is optional basename ignore (~/.goduignore); nil if unavailable.
 	DiskUsageGoduIgnore func(string) bool
-	// MenuBarActivitySpinner requests the busy spinner glyph at the menu-bar trailing edge (set by App.render).
+	// MenuBarActivitySpinner requests the busy spinner icon at the menu-bar trailing edge (set by App.render).
 	MenuBarActivitySpinner bool
-	// SpinPhase advances while the menu-bar activity spinner animates (braille glyph sequence).
+	// SpinPhase advances while the menu-bar activity spinner animates (braille icon sequence).
 	SpinPhase               uint8
 	Menu                    menu.State
 	MenuDefinitions         []menu.Definition
@@ -593,7 +593,7 @@ type browserPanelSide struct {
 
 // quickViewIndicatorSide reports whether quick view is currently displaying (active) and, if so,
 // whether the preview panel sits physically to the right of the driver (right) — the cursor-row
-// arrow glyph paints on whichever border faces it. Takes the driver and other panel's already
+// arrow icon paints on whichever border faces it. Takes the driver and other panel's already
 // swap-resolved file rects (layout.Primary/Secondary post-SwapPanes) rather than re-deriving the
 // swap logic, so it's a plain rect-X comparison. Shared by the full render (drawBrowserView) and
 // the partial nav/disk-usage repaints (paintBrowserPanelsInScope), which build their own
@@ -793,7 +793,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		selectionLabel := FindDialogSelectionSizePadded(
 			&model.FindDialog,
 			model.DiskUsage,
-			styles.SymbolWorking(),
+			styles.IconWorking(),
 		)
 		dialog.DrawFindDialog(screen, layout, model.FindDialog, dialogRenderContext(model, styles), PaintFindDialogRowIcon, selectionLabel, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	}

@@ -55,7 +55,7 @@ func TestPaintPanelIconStripOpenDirectory(t *testing.T) {
 		Folder: panellist.FolderIconContext{OtherPanelPath: "/tmp/child"},
 	})
 
-	openRune := []rune(th.FolderIconGlyph(theme.FolderIconOpen))[0]
+	openRune := []rune(th.FolderIcon(theme.FolderIconOpen))[0]
 	main, style, _ := screen.Get(0, 1)
 	gotRune, _ := utf8.DecodeRuneInString(main)
 	if gotRune != openRune {
@@ -81,7 +81,7 @@ func TestPaintPanelIconStripDefaultDirectory(t *testing.T) {
 	rowStyle := th.PanelListingEntryStyle(localfs.EntryDirectory, false)
 	paintPanelIconStrip(screen, 0, 1, entry, rowStyle, th, PanelIconStripContext{})
 
-	folderRune := []rune(th.FolderIconGlyph(theme.FolderIconDefault))[0]
+	folderRune := []rune(th.FolderIcon(theme.FolderIconDefault))[0]
 	main, _, _ := screen.Get(0, 1)
 	gotRune, _ := utf8.DecodeRuneInString(main)
 	if gotRune != folderRune {
@@ -104,8 +104,8 @@ func TestPaintPanelIconStripFileStillUsesDevicon(t *testing.T) {
 
 	main, _, _ := screen.Get(0, 1)
 	gotRune, _ := utf8.DecodeRuneInString(main)
-	if gotRune == []rune(th.FolderIconGlyph(theme.FolderIconDefault))[0] {
-		t.Fatal("file row should not use folder theme glyph")
+	if gotRune == []rune(th.FolderIcon(theme.FolderIconDefault))[0] {
+		t.Fatal("file row should not use folder theme icon")
 	}
 }
 
@@ -146,7 +146,7 @@ func TestPaintPanelIconStripBlockedOpenDirectoryUsesRowForeground(t *testing.T) 
 		Folder:        panellist.FolderIconContext{OtherPanelPath: "/tmp/child"},
 	})
 
-	openRune := []rune(th.FolderIconGlyph(theme.FolderIconOpen))[0]
+	openRune := []rune(th.FolderIcon(theme.FolderIconOpen))[0]
 	main, style, _ := screen.Get(0, 1)
 	gotRune, _ := utf8.DecodeRuneInString(main)
 	if gotRune != openRune {

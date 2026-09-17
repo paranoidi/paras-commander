@@ -66,7 +66,7 @@ func TestCarouselSizeNotOverlappedByScrollbar(t *testing.T) {
 		rowY := col.Y + 5
 		sbCell, _, _ := screen.Get(sbX, rowY)
 		sbRune, _ := utf8.DecodeRuneInString(sbCell)
-		if sbRune != '│' && sbRune != '█' && sbRune != '░' && sbRune != styles.SymbolScrollbarThumb() {
+		if sbRune != '│' && sbRune != '█' && sbRune != '░' && sbRune != styles.IconScrollbarThumb() {
 			continue
 		}
 		sizeCell, _, _ := screen.Get(sbX-1, rowY)

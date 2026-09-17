@@ -46,7 +46,7 @@ func drawThumb(p DrawParams, thumbStyle, frameStyle tcell.Style) {
 	for row := 0; row < p.Visible; row++ {
 		y := p.ListTopY + row
 		if row == thumbRow {
-			p.Screen.SetContent(p.X, y, p.Theme.SymbolScrollbarThumb(), nil, thumbStyle)
+			p.Screen.SetContent(p.X, y, p.Theme.IconScrollbarThumb(), nil, thumbStyle)
 		} else {
 			p.Screen.SetContent(p.X, y, '│', nil, frameStyle)
 		}

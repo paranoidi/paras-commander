@@ -144,7 +144,7 @@ func TestMarkedPathsSelectionSizeLabelFiles(t *testing.T) {
 	}
 }
 
-func TestSelectionSizeLabelPendingWorkingGlyph(t *testing.T) {
+func TestSelectionSizeLabelPendingWorkingIcon(t *testing.T) {
 	t.Parallel()
 	dir := "/tmp/bigdir"
 	state := panel.State{
@@ -155,13 +155,13 @@ func TestSelectionSizeLabelPendingWorkingGlyph(t *testing.T) {
 		SelectedPaths: map[string]bool{dir: true},
 	}
 	painter := stubSelectionSizePainter{sizes: map[string]int64{}}
-	working := theme.Default().SymbolWorking()
+	working := theme.Default().IconWorking()
 	got, ok := SelectionSizeLabel(&state, false, painter, working)
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
 	if !strings.HasSuffix(got, " "+working) {
-		t.Fatalf("label = %q, want working glyph suffix", got)
+		t.Fatalf("label = %q, want working icon suffix", got)
 	}
 	if !strings.Contains(got, "1 item") {
 		t.Fatalf("label = %q, want item count", got)

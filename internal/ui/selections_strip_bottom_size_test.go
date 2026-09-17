@@ -41,6 +41,6 @@ func TestPaintSelectionsStripBottomSizeFrameDashBeforeCorner(t *testing.T) {
 	}
 	mid, _, _ := screen.Get(lastIn-3, y)
 	if mid == "─" || mid == "┘" || mid == "" {
-		t.Fatalf("expected size glyphs before trailing space, got %q", mid)
+		t.Fatalf("expected size icons before trailing space, got %q", mid)
 	}
 }

@@ -441,7 +441,7 @@ func TestDrawBoxedPreviewScrollbarVisibleRegardlessOfFocus(t *testing.T) {
 	// Quick view's boxed preview usually renders unfocused (the user is browsing the
 	// *other* panel), so the thumb must still show — hiding it here was the reported bug.
 	contentH := panelHeight - 2
-	hasThumbGlyph := func() bool {
+	hasThumbIcon := func() bool {
 		for row := 0; row < contentH; row++ {
 			c, _, _ := screen.Get(gutterX, rect.Y+1+row)
 			if c != "│" {
@@ -452,13 +452,13 @@ func TestDrawBoxedPreviewScrollbarVisibleRegardlessOfFocus(t *testing.T) {
 	}
 
 	draw(true)
-	if !hasThumbGlyph() {
-		t.Fatal("no scrollbar thumb glyph found while focused, want one distinct from the plain border")
+	if !hasThumbIcon() {
+		t.Fatal("no scrollbar thumb icon found while focused, want one distinct from the plain border")
 	}
 
 	draw(false)
-	if !hasThumbGlyph() {
-		t.Fatal("no scrollbar thumb glyph found while unfocused (quick view), want it to still be visible")
+	if !hasThumbIcon() {
+		t.Fatal("no scrollbar thumb icon found while unfocused (quick view), want it to still be visible")
 	}
 }
 
@@ -568,7 +568,7 @@ func TestDrawEmbeddedPreviewScrollGutterXOverridesToPanelBorder(t *testing.T) {
 		}
 	}
 	if !foundThumb {
-		t.Fatal("no scrollbar glyph found at overridden ScrollGutterX column")
+		t.Fatal("no scrollbar icon found at overridden ScrollGutterX column")
 	}
 	// The rect's own margin column (one left of the override) must stay a plain blank
 	// margin — the scrollbar must not also paint there.
@@ -596,7 +596,7 @@ func TestDrawFullscreenPreviewScrollbarRailStyleOverride(t *testing.T) {
 	railStyle := tcell.StyleDefault.Foreground(tcell.NewRGBColor(0x75, 0x71, 0x5e))
 
 	// Overflowing content so the scrollbar actually paints; the non-thumb rows use the
-	// plain rail glyph ('│'), which should carry the override style.
+	// plain rail icon ('│'), which should carry the override style.
 	Draw(screen, rect, State{
 		Open:             true,
 		TitleBase:        "sample.go",
@@ -623,7 +623,7 @@ func TestDrawFullscreenPreviewScrollbarRailStyleOverride(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("no plain rail glyph found to check style against (content should overflow but not fill every row)")
+		t.Fatal("no plain rail icon found to check style against (content should overflow but not fill every row)")
 	}
 }
 
@@ -687,9 +687,9 @@ func TestDrawImageRecordsPlacementAndBlanksBody(t *testing.T) {
 
 // TestDrawSkipsImageWhenChromeBlocked covers the actual reported bug: a dialog/menu covering
 // the preview pane (ChromeBlocked) must stop Draw from recording an image placement or writing
-// Unicode-placeholder glyph cells — otherwise a placeholder image keeps redrawing those cells
+// Unicode-placeholder icon cells — otherwise a placeholder image keeps redrawing those cells
 // every frame regardless of what's drawn on top of them, and once the app layer (which knows a
-// dialog is open, unlike this package) deletes the transmitted image data those glyphs
+// dialog is open, unlike this package) deletes the transmitted image data those icons
 // reference, they render as raw undecodable characters visible through/around the dialog.
 func TestDrawSkipsImageWhenChromeBlocked(t *testing.T) {
 	_ = TakeFrameImage() // clear any prior frame
@@ -725,12 +725,12 @@ func TestDrawSkipsImageWhenChromeBlocked(t *testing.T) {
 		t.Fatalf("TakeFrameImage() = %+v, want nil while ChromeBlocked", plan)
 	}
 
-	// No placeholder glyph cell should have been written anywhere in the pane.
+	// No placeholder icon cell should have been written anywhere in the pane.
 	for y := rect.Y; y < rect.Y+rect.Height; y++ {
 		for x := rect.X; x < rect.X+rect.Width; x++ {
 			main, _, _ := screen.Get(x, y)
 			if main == string(unicodePlaceholderChar) {
-				t.Fatalf("found placeholder glyph at (%d,%d) while ChromeBlocked", x, y)
+				t.Fatalf("found placeholder icon at (%d,%d) while ChromeBlocked", x, y)
 			}
 		}
 	}

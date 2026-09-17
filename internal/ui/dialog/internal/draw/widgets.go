@@ -10,8 +10,8 @@ import (
 )
 
 // CheckboxText returns the ASCII marker+label string for width calculations.
-// Always uses ASCII markers unconditionally; DrawDialogCheckbox renders the actual glyphs from the theme.
-// Since ASCII markers are always the same width or wider than icon glyphs, this remains a safe upper bound.
+// Always uses ASCII markers unconditionally; DrawDialogCheckbox renders the actual icons from the theme.
+// Since ASCII markers are always the same width or wider than icon icons, this remains a safe upper bound.
 func CheckboxText(label string, checked bool) string {
 	if checked {
 		return "[x] " + label
@@ -20,8 +20,8 @@ func CheckboxText(label string, checked bool) string {
 }
 
 // RadioText returns the ASCII marker+label string for width calculations.
-// Always uses ASCII markers unconditionally; DrawDialogRadio renders the actual glyphs from the theme.
-// Since ASCII markers are always the same width or wider than icon glyphs, this remains a safe upper bound.
+// Always uses ASCII markers unconditionally; DrawDialogRadio renders the actual icons from the theme.
+// Since ASCII markers are always the same width or wider than icon icons, this remains a safe upper bound.
 func RadioText(label string, selected bool) string {
 	if selected {
 		return " (*) " + label
@@ -46,7 +46,7 @@ func DrawDialogCheckbox(
 		style = styles.DialogOptionDisabledStyle()
 		accent = style
 	}
-	marker := " " + styles.SymbolDialogCheckbox(checked) + " "
+	marker := " " + styles.IconDialogCheckbox(checked) + " "
 	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
 	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, accent)
 }
@@ -62,7 +62,7 @@ func DrawDialogRadio(
 	styles theme.Theme,
 ) {
 	style := styles.DialogOptionRowStyle(focused, selected)
-	marker := " " + styles.SymbolDialogRadio(selected) + " "
+	marker := " " + styles.IconDialogRadio(selected) + " "
 	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
 	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, styles.DialogAccent)
 }
@@ -73,7 +73,7 @@ func drawDialogItem(screen tcell.Screen, x, y int, label string, shortcut rune, 
 	for _, r := range label {
 		style := baseStyle
 		if !highlighted && unicode.ToLower(r) == unicode.ToLower(shortcut) {
-			style = AccentGlyphStyle(baseStyle, accentStyle)
+			style = AccentIconStyle(baseStyle, accentStyle)
 			highlighted = true
 		}
 		screen.SetContent(x+col, y, r, nil, style)

@@ -164,14 +164,14 @@ func (a *App) openUserMenuLevel(entries []usermenu.MenuEntry) {
 }
 
 // userMenuLeaderMenuItems maps visible user-menu entries to leader-menu rows. Submenu rows
-// get the tree-expand glyph appended to their label so they're visually distinguishable
+// get the tree-expand icon appended to their label so they're visually distinguishable
 // from runnable ones.
 func userMenuLeaderMenuItems(entries []usermenu.MenuEntry, styles theme.Theme) []ui.LeaderMenuItem {
 	items := make([]ui.LeaderMenuItem, len(entries))
 	for i, e := range entries {
 		label := e.Title
 		if e.IsSubmenu() {
-			label += " " + string(styles.SymbolTreeExpand())
+			label += " " + string(styles.IconTreeExpand())
 		}
 		items[i] = ui.LeaderMenuItem{Key: dialog.ConfiguredKeyRune(e.Key), Label: label}
 	}

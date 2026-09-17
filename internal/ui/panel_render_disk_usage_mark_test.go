@@ -70,7 +70,7 @@ func TestSubtreeSelectionMarkUsesDiskUsageBarBackground(t *testing.T) {
 		PanelDisplayConfig{Painter: painter, ShowDiskUsage: true, ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 
 	rowY := rect.Y + 2
-	wantMark := styles.SymbolFilelistSelectionSubtree()
+	wantMark := styles.IconFilelistSelectionSubtree()
 	markCol := -1
 	for col := rect.X + 1; col < rect.X+rect.Width-1; col++ {
 		ch, _, _ := screen.Get(col, rowY)

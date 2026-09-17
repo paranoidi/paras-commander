@@ -68,7 +68,7 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 
 	filterFocused := state.Focus == 0
 	inputInvalid := state.QueryPathInvalid && !state.QueryPathCheckPending
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, CompletionSuffix: state.QueryCompletionSuffix, LeadingSymbol: styles.SymbolSearchIcon()}, filterFocused, inputInvalid, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, CompletionSuffix: state.QueryCompletionSuffix, LeadingIcon: styles.IconSearchIcon()}, filterFocused, inputInvalid, styles)
 
 	sepBeforeList := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)

@@ -69,7 +69,7 @@ func CommentColor(styleName string) (fg tcell.Color, ok bool) {
 }
 
 // CommentFrameStyle tints frame's foreground with the Chroma Comment token's color, keeping
-// frame's background — used for muted/secondary chrome (e.g. a scrollbar rail glyph) that
+// frame's background — used for muted/secondary chrome (e.g. a scrollbar rail icon) that
 // should read as dimmer than the frame/border color itself.
 func CommentFrameStyle(frame tcell.Style, styleName string) tcell.Style {
 	fg, ok := CommentColor(styleName)

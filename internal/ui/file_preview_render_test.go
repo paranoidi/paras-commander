@@ -90,6 +90,6 @@ func TestDrawFilePreviewPanelEmbeddedScrollbarRailUsesOverrideNotChromaFrame(t *
 		}
 	}
 	if !found {
-		t.Fatal("no plain rail glyph found at the overridden gutter column")
+		t.Fatal("no plain rail icon found at the overridden gutter column")
 	}
 }

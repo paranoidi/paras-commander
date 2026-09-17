@@ -50,7 +50,7 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 	})
 
 	rowY := rect.Y + 1
-	wantMark := styles.SymbolFilelistSelectionSubtree()
+	wantMark := styles.IconFilelistSelectionSubtree()
 	markCol := -1
 	for col := rect.X + 1; col < rect.X+rect.Width-1; col++ {
 		ch, _, _ := screen.Get(col, rowY)
@@ -111,7 +111,7 @@ func TestSelectionsStripMarkOnCursorRow(t *testing.T) {
 	})
 
 	rowY := rect.Y + 1
-	wantMark := styles.SymbolFilelistSelectionSubtree()
+	wantMark := styles.IconFilelistSelectionSubtree()
 	markCol := -1
 	for col := rect.X + 1; col < rect.X+rect.Width-1; col++ {
 		ch, _, _ := screen.Get(col, rowY)
@@ -215,8 +215,8 @@ func TestSelectionsStripTitleShowsMultiLocationIcon(t *testing.T) {
 		SelectedPaths:        map[string]bool{alphaFile: true, bravoFile: true},
 	}
 	drawSelectionsStrip(screen, rect, multiState, true, false, opts)
-	icon := styles.SymbolSelectionsMultiLocation()
-	// The glyph is an end label on the top border, one frame dash before the corner: … ─ x ─┐
+	icon := styles.IconSelectionsMultiLocation()
+	// The icon is an end label on the top border, one frame dash before the corner: … ─ x ─┐
 	iconX := rect.X + rect.Width - 4
 	if got, _, _ := screen.Get(iconX, rect.Y); got != icon {
 		t.Fatalf("top border col %d = %q, want multi-location icon %q", iconX, got, icon)

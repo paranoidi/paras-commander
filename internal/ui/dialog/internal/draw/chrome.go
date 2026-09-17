@@ -383,14 +383,14 @@ func AdjustScrollRevealOnErase(value string, cursor, scroll, width, suffixLen in
 // textFocused controls caret reverse-video highlighting.
 // valueAsPlaceholder, when true and not invalid, paints the committed value runes in the
 // placeholder/ghost style too (for pending-prefill/suggested-default rendering).
-// leadingSymbol, when non-empty, paints that glyph plus one separator space at the start of the
+// leadingIcon, when non-empty, paints that icon plus one separator space at the start of the
 // row (in the row's own base style) and narrows the scrolling text area to the remaining columns.
 func PaintScrollingInputContent(
 	screen tcell.Screen, x, y, width int,
 	value, completionSuffix string,
 	cursor, scroll int,
 	textFocused, invalid, focused, valueAsPlaceholder bool,
-	leadingSymbol string,
+	leadingIcon string,
 	styles theme.Theme,
 ) (int, int) {
 	if width <= 0 {
@@ -400,11 +400,11 @@ func PaintScrollingInputContent(
 	markerStyle := styles.DialogInputBaseStyle(focused, false)
 	_, ghostStyle := styles.DialogInputPair(focused)
 
-	if leadingSymbol != "" {
+	if leadingIcon != "" {
 		iconStyle := styles.DialogSearchIconStyle(committedStyle)
-		iconCols := runewidth.StringWidth(leadingSymbol) + 1
+		iconCols := runewidth.StringWidth(leadingIcon) + 1
 		col := 0
-		for _, r := range leadingSymbol {
+		for _, r := range leadingIcon {
 			w := runewidth.RuneWidth(r)
 			if w < 1 {
 				w = 1
@@ -488,9 +488,9 @@ type ScrollingInputState struct {
 	Value            string
 	Cursor, Scroll   int
 	CompletionSuffix string
-	// LeadingSymbol, when set, is painted (plus one separator space) at the start of the input
+	// LeadingIcon, when set, is painted (plus one separator space) at the start of the input
 	// row instead of a separate label row above it. Zero value means no icon.
-	LeadingSymbol string
+	LeadingIcon string
 }
 
 // DrawScrollingDialogInput paints a dialog input row with horizontal scrolling.
@@ -498,7 +498,7 @@ func DrawScrollingDialogInput(screen tcell.Screen, x, y, width int, input Scroll
 	if width <= 0 {
 		return
 	}
-	PaintScrollingInputContent(screen, x, y, width, input.Value, input.CompletionSuffix, input.Cursor, input.Scroll, focused, invalid, focused, false, input.LeadingSymbol, styles)
+	PaintScrollingInputContent(screen, x, y, width, input.Value, input.CompletionSuffix, input.Cursor, input.Scroll, focused, invalid, focused, false, input.LeadingIcon, styles)
 }
 
 // DialogButtonSpec describes one rendered dialog button (label, Alt shortcut, focus).

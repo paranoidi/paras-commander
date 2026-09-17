@@ -27,7 +27,7 @@ func (s *State) collectAllJobsUnlocked() []*Job {
 	return all
 }
 
-// collectMenuBarStripJobsUnlocked gathers jobs for the menu-bar glyph strip (finished first, then in-flight buckets).
+// collectMenuBarStripJobsUnlocked gathers jobs for the menu-bar icon strip (finished first, then in-flight buckets).
 // Caller must hold s.mu.
 func (s *State) collectMenuBarStripJobsUnlocked() []*Job {
 	var all []*Job

@@ -11,18 +11,18 @@ import (
 func TestMenuBarJobsGroupsWidth(t *testing.T) {
 	t.Parallel()
 	styles := theme.Default()
-	runningGlyphW := runewidth.RuneWidth(styles.SymbolMenuJob("running"))
-	queuedGlyphW := runewidth.RuneWidth(styles.SymbolMenuJob("queued"))
-	// "<glyph> <count>" per group, one-space separators between groups.
+	runningIconW := runewidth.RuneWidth(styles.IconMenuJob("running"))
+	queuedIconW := runewidth.RuneWidth(styles.IconMenuJob("queued"))
+	// "<icon> <count>" per group, one-space separators between groups.
 	one := MenuBarJobsGroupsWidth([]MenuBarJobGroup{{Status: "running", Count: 3}}, styles)
-	if want := runningGlyphW + 1 + 1; one != want {
+	if want := runningIconW + 1 + 1; one != want {
 		t.Fatalf("single group width = %d, want %d", one, want)
 	}
 	two := MenuBarJobsGroupsWidth([]MenuBarJobGroup{
 		{Status: "running", Count: 3},
 		{Status: "queued", Count: 12},
 	}, styles)
-	if want := (runningGlyphW + 1 + 1) + 1 + (queuedGlyphW + 1 + 2); two != want {
+	if want := (runningIconW + 1 + 1) + 1 + (queuedIconW + 1 + 2); two != want {
 		t.Fatalf("two group width = %d, want %d", two, want)
 	}
 	if w := MenuBarJobsGroupsWidth(nil, styles); w != 0 {
@@ -220,8 +220,8 @@ func TestDrawMenuBarJobsGapHidesZeroCountGroups(t *testing.T) {
 func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
 	t.Parallel()
 	styles := theme.Default()
-	doneSym := string(styles.SymbolMenuProgressDone())
-	remSym := string(styles.SymbolMenuProgressRemaining())
+	doneSym := string(styles.IconMenuProgressDone())
+	remSym := string(styles.IconMenuProgressRemaining())
 
 	newScreen := func(t *testing.T) tcell.SimulationScreen {
 		t.Helper()
@@ -277,8 +277,8 @@ func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
 
 			// Pill hugs the right edge of the slot: right cap at the last slot cell.
 			rightCapX := menuBarSpeedSlotWidth - 1
-			if str, style, _ := screen.Get(rightCapX, 0); str != string(styles.SymbolMenuSpeedRight()) || style != styles.MenuSpeedCap {
-				t.Fatalf("Speed %q: right cap at %d = %q/%v, want %q/%v", speed, rightCapX, str, style, styles.SymbolMenuSpeedRight(), styles.MenuSpeedCap)
+			if str, style, _ := screen.Get(rightCapX, 0); str != string(styles.IconMenuSpeedRight()) || style != styles.MenuSpeedCap {
+				t.Fatalf("Speed %q: right cap at %d = %q/%v, want %q/%v", speed, rightCapX, str, style, styles.IconMenuSpeedRight(), styles.MenuSpeedCap)
 			}
 			// First text-run cell (left cap + one space in) carries MenuSpeedText.
 			textX := rightCapX - 1 - len([]rune(speed))
@@ -287,8 +287,8 @@ func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
 			}
 			// Left cap sits right-aligned before the text run.
 			leftCapX := textX - 2
-			if str, style, _ := screen.Get(leftCapX, 0); str != string(styles.SymbolMenuSpeedLeft()) || style != styles.MenuSpeedCap {
-				t.Fatalf("Speed %q: left cap at %d = %q/%v, want %q/%v", speed, leftCapX, str, style, styles.SymbolMenuSpeedLeft(), styles.MenuSpeedCap)
+			if str, style, _ := screen.Get(leftCapX, 0); str != string(styles.IconMenuSpeedLeft()) || style != styles.MenuSpeedCap {
+				t.Fatalf("Speed %q: left cap at %d = %q/%v, want %q/%v", speed, leftCapX, str, style, styles.IconMenuSpeedLeft(), styles.MenuSpeedCap)
 			}
 		})
 	}

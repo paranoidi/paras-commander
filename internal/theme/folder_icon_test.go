@@ -6,11 +6,11 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func TestFolderIconTreeExpandedGlyphMatchesOpen(t *testing.T) {
+func TestFolderIconTreeExpandedIconMatchesOpen(t *testing.T) {
 	th := Default()
-	if th.FolderIconGlyph(FolderIconTreeExpanded) != th.FolderIconGlyph(FolderIconOpen) {
-		t.Fatalf("FolderIconTreeExpanded glyph = %q, want same as FolderIconOpen %q",
-			th.FolderIconGlyph(FolderIconTreeExpanded), th.FolderIconGlyph(FolderIconOpen))
+	if th.FolderIcon(FolderIconTreeExpanded) != th.FolderIcon(FolderIconOpen) {
+		t.Fatalf("FolderIconTreeExpanded icon = %q, want same as FolderIconOpen %q",
+			th.FolderIcon(FolderIconTreeExpanded), th.FolderIcon(FolderIconOpen))
 	}
 }
 

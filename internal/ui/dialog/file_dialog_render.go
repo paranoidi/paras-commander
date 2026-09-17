@@ -268,7 +268,7 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 	}
 	if mkdirHasActions(state) {
 		// Radios render as " (*) Label" with a leading marker; reserve room for the
-		// widest label plus the marker glyphs and outer dialog padding (1+marker+label+1+border).
+		// widest label plus the marker icons and outer dialog padding (1+marker+label+1+border).
 		for _, r := range MkdirActionRadioSpecs() {
 			lw := utf8.RuneCountInString(r.Label) + 8
 			if lw > minWidth {
@@ -518,7 +518,7 @@ func DrawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 	drawInputField(screen, x, y, width, field, focused, styles)
 }
 
-// drawPathInputRow draws text in the first width-2 cells, the path-picker glyph in the
+// drawPathInputRow draws text in the first width-2 cells, the path-picker icon in the
 // next cell, and leaves the rightmost cell blank (row background).
 // When pathInvalid is true, uses dialog.input.*.error for the row (see Theme.DialogInputBaseStyle).
 // The text area scrolls horizontally to keep the caret visible; overflow markers (◀/▶) appear on
@@ -548,20 +548,20 @@ func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogFiel
 		styles,
 	)
 
-	glyphX := x + textW
-	symStr := styles.SymbolPathPicker()
-	symR := ' '
-	if sr := []rune(symStr); len(sr) > 0 {
-		symR = sr[0]
+	iconX := x + textW
+	iconStr := styles.IconPathPicker()
+	iconR := ' '
+	if sr := []rune(iconStr); len(sr) > 0 {
+		iconR = sr[0]
 	}
-	glyphStyle := rowStyle
+	iconStyle := rowStyle
 	if prefillPending && !pathInvalid {
-		glyphStyle = placeholderStyle
+		iconStyle = placeholderStyle
 	}
 	if rowFocused && pickerFocused {
-		glyphStyle = styles.DialogAccent
+		iconStyle = styles.DialogAccent
 	}
-	screen.SetContent(glyphX, y, symR, nil, glyphStyle)
+	screen.SetContent(iconX, y, iconR, nil, iconStyle)
 
 	tailX := x + width - 1
 	screen.SetContent(tailX, y, ' ', nil, rowStyle)

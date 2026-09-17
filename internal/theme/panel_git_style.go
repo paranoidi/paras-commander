@@ -2,7 +2,7 @@ package theme
 
 import "github.com/gdamore/tcell/v2"
 
-// PanelGitStyle returns foreground style for one eza-style Git status glyph.
+// PanelGitStyle returns foreground style for one eza-style Git status icon.
 func (t Theme) PanelGitStyle(statusKey string) tcell.Style {
 	switch statusKey {
 	case "panel.git.new":

@@ -84,7 +84,7 @@ func TestMenuBarStripStatusesDedupesOverlappingBuckets(t *testing.T) {
 
 	got := s.MenuBarStripStatuses()
 	if len(got) != 1 {
-		t.Fatalf("MenuBarStripStatuses() = %#v, want one glyph", got)
+		t.Fatalf("MenuBarStripStatuses() = %#v, want one icon", got)
 	}
 	if got[0] != string(StatusWaitingDecision) {
 		t.Fatalf("status = %q, want %q", got[0], StatusWaitingDecision)

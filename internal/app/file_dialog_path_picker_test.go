@@ -11,7 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func TestSymlinkDialogRightAtEndFocusesPathPickerGlyph(t *testing.T) {
+func TestSymlinkDialogRightAtEndFocusesPathPickerIcon(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "a.txt"))
 
@@ -38,18 +38,18 @@ func TestSymlinkDialogRightAtEndFocusesPathPickerGlyph(t *testing.T) {
 		t.Fatal("symlink target field should have PathPicker enabled")
 	}
 	if f.PickerFocused {
-		t.Fatal("picker glyph should not be focused initially")
+		t.Fatal("picker icon should not be focused initially")
 	}
 
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if !f.PickerFocused {
-		t.Fatal("Right at end should focus path-picker glyph")
+		t.Fatal("Right at end should focus path-picker icon")
 	}
 
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if f.PickerFocused {
-		t.Fatal("Left from glyph should return focus to text")
+		t.Fatal("Left from icon should return focus to text")
 	}
 }
 
@@ -99,7 +99,7 @@ func TestSymlinkDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 	}
 }
 
-func TestSymlinkDialogOpensPathPickerFromGlyph(t *testing.T) {
+func TestSymlinkDialogOpensPathPickerFromIcon(t *testing.T) {
 	root := t.TempDir()
 	dst := filepath.Join(root, "dst")
 	if err := os.MkdirAll(dst, 0o755); err != nil {
@@ -138,7 +138,7 @@ func TestSymlinkDialogOpensPathPickerFromGlyph(t *testing.T) {
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if !f.PickerFocused {
-		t.Fatal("picker glyph should be focused")
+		t.Fatal("picker icon should be focused")
 	}
 
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))

@@ -16,12 +16,12 @@ func TestTreeConnectorPrefixDepthZero(t *testing.T) {
 func TestTreeConnectorPrefixDepthOne(t *testing.T) {
 	th := theme.Default()
 	last := TreeConnectorPrefix(1, true, nil, th)
-	if last != th.SymbolTreeEnd()+" " {
-		t.Fatalf("last-child depth 1 prefix = %q, want %q", last, th.SymbolTreeEnd()+" ")
+	if last != th.IconTreeEnd()+" " {
+		t.Fatalf("last-child depth 1 prefix = %q, want %q", last, th.IconTreeEnd()+" ")
 	}
 	notLast := TreeConnectorPrefix(1, false, nil, th)
-	if notLast != th.SymbolTreeBranch()+" " {
-		t.Fatalf("non-last depth 1 prefix = %q, want %q", notLast, th.SymbolTreeBranch()+" ")
+	if notLast != th.IconTreeBranch()+" " {
+		t.Fatalf("non-last depth 1 prefix = %q, want %q", notLast, th.IconTreeBranch()+" ")
 	}
 }
 
@@ -30,7 +30,7 @@ func TestTreeConnectorPrefixNestedMixedAncestors(t *testing.T) {
 	// Depth 3, last child, with ancestor[0] having younger siblings (continue guide) and
 	// ancestor[1] not (blank guide).
 	got := TreeConnectorPrefix(3, true, []bool{true, false}, th)
-	want := th.SymbolTreeContinue() + "  " + "   " + th.SymbolTreeEnd() + " "
+	want := th.IconTreeContinue() + "  " + "   " + th.IconTreeEnd() + " "
 	if got != want {
 		t.Fatalf("nested prefix = %q, want %q", got, want)
 	}
