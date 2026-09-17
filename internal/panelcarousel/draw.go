@@ -49,6 +49,7 @@ type BodyParams struct {
 	InactiveFrameStyle    tcell.Style
 	Layout                Layout
 	MeasuredFitWidth      [3]int
+	Meta                  Meta
 }
 
 // DrawBody paints the column header row and three listing columns.
@@ -118,12 +119,12 @@ func drawCarouselHeader(screen tcell.Screen, hp carouselHeaderParams) {
 			if !showSize {
 				sizeTitle = ""
 			}
-			hdr = briefHeader(centerName, sizeTitle, listTextWidth, showSize)
+			hdr = briefHeader(centerName, sizeTitle, listTextWidth, showSize, p.Meta.Width, p.Meta.Header)
 		case 0:
 			if !p.Parent.Populated {
 				continue
 			}
-			hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize)
+			hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize, 0, "")
 		case 2:
 			if !p.ShowChildColumn {
 				continue
@@ -134,7 +135,7 @@ func drawCarouselHeader(screen tcell.Screen, hp carouselHeaderParams) {
 			if !p.Child.Populated {
 				continue
 			}
-			hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize)
+			hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize, 0, "")
 		}
 		hdrStyle := p.HeaderCarouselStyle
 		if i == 1 {
@@ -233,13 +234,20 @@ func drawCarouselColumn(cp carouselColumnParams) {
 			diskSrc = p.DiskUsage.Source
 		}
 		showSize := p.Layout.ShowSize[colIdx]
-		text := formatBriefRow(entry, col.Width, p.ShowIcons, showSize, rowSuffix, p.Styles, diskSrc, reserve)
+		metaW, metaText := 0, ""
+		if colIdx == 1 && p.Meta.Width > 0 {
+			metaW = p.Meta.Width
+			if p.Meta.Row != nil {
+				metaText = p.Meta.Row(entry.Path)
+			}
+		}
+		text := formatBriefRow(entry, col.Width, p.ShowIcons, showSize, rowSuffix, p.Styles, diskSrc, reserve, metaW, metaText)
 		listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
 		nameColOffset := listStart - col.X
-		nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve, showSize)
+		nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve, showSize, metaW)
 		var spans []primitive.Span
 		if c.Active && (p.Center.Filter.Active || p.Center.Filter.Editing) {
-			spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, showSize, rowSuffix, reserve, func(di int) tcell.Style {
+			spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, showSize, rowSuffix, reserve, metaW, func(di int) tcell.Style {
 				return blendCell(nameColOffset + di)
 			})
 		}

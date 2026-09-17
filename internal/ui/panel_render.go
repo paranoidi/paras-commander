@@ -711,7 +711,8 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		return false
 	}
 	parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
-	measuredFitWidth := panelcarousel.MeasureFitColumnWidths(display.CarouselLayout, parent, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows)
+	meta := CarouselMeta(display.MetaColumns)
+	measuredFitWidth := panelcarousel.MeasureFitColumnWidths(display.CarouselLayout, parent, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, meta.Width)
 	carouselDisk := panelcarousel.DiskUsage{
 		Active:                 display.ShowDiskUsage,
 		PanelID:                ctx.PanelID,
@@ -742,6 +743,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		InactiveFrameStyle:    panelStyle.Styles.PanelInactiveFrame,
 		Layout:                display.CarouselLayout,
 		MeasuredFitWidth:      measuredFitWidth,
+		Meta:                  meta,
 		JobMark: func(path string) (rune, string, bool, bool) {
 			marked, st, write := EntryPathJobMarkStatus(path, display.JobMarks)
 			if !marked {
@@ -782,7 +784,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 	if selectionSizeLabel != "" {
 		drawPanelBottomSelectionSize(screen, rect, ctx.PanelID, bottomCtx)
 	} else {
-		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, measuredFitWidth), display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
+		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows, measuredFitWidth, meta.Width), display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
 	}
 	return true
 }

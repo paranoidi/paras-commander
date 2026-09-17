@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
@@ -47,6 +48,21 @@ func MetaHeaderText(layouts []MetaColumnLayout) string {
 		parts[i] = padMetaLineToWidth(lay.Title, lay.Width)
 	}
 	return strings.Join(parts, "  ")
+}
+
+// CarouselMeta lays out active meta columns for the carousel center column.
+func CarouselMeta(cols []MetaColumnState) panelcarousel.Meta {
+	layouts, totalWidth := LayoutMetaColumns(cols)
+	if len(layouts) == 0 {
+		return panelcarousel.Meta{}
+	}
+	return panelcarousel.Meta{
+		Width:  totalWidth,
+		Header: MetaHeaderText(layouts),
+		Row: func(path string) string {
+			return MetaRowText(layouts, path)
+		},
+	}
 }
 
 // MetaRowText returns the padded meta segment for one file row.

@@ -355,7 +355,7 @@ func TestFitModeColumnHeaderNeverTruncatesWithShortNames(t *testing.T) {
 	parent := Column{Kind: ColumnParent, Populated: true, Snapshot: panel.ListingSnapshot{Entries: entries}}
 	visibleRows := frame.Height - 2
 
-	measured := MeasureFitColumnWidths(layout, parent, center, false, true, uiscrollbar.StyleThumb, visibleRows)
+	measured := MeasureFitColumnWidths(layout, parent, center, false, true, uiscrollbar.StyleThumb, visibleRows, 0)
 
 	DrawBody(screen, BodyParams{
 		Frame:                 frame,
@@ -388,5 +388,82 @@ func TestFitModeColumnHeaderNeverTruncatesWithShortNames(t *testing.T) {
 	}
 	if !strings.Contains(hdr, "Size") {
 		t.Fatalf("parent header %q does not contain full %q", hdr, "Size")
+	}
+}
+
+// rowText reads one screen row into a string over [x, x+w).
+func rowText(screen tcell.Screen, x, y, w int) string {
+	var sb []rune
+	for i := 0; i < w; i++ {
+		ch, _, _ := screen.Get(x+i, y)
+		r, _ := utf8.DecodeRuneInString(ch)
+		sb = append(sb, r)
+	}
+	return string(sb)
+}
+
+func TestDrawBodyRendersMetaInCenterColumnOnly(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	frame := geom.Rect{X: 0, Y: 0, Width: 100, Height: 18}
+	screen.SetSize(frame.Width, frame.Height)
+	styles := theme.Default()
+
+	centerEntries := []localfs.Entry{{Name: "lantern", Path: "/vol/lantern", Type: localfs.EntryFile}}
+	parentEntries := []localfs.Entry{{Name: "walnut", Path: "/root/walnut", Type: localfs.EntryFile}}
+	center := panel.State{Path: pathloc.MustParse("/vol"), Entries: centerEntries}
+	parent := Column{Kind: ColumnParent, Populated: true, Snapshot: panel.ListingSnapshot{Entries: parentEntries}}
+
+	const metaHeader = "Status"
+	const metaVal = "ready"
+	meta := Meta{
+		Width:  len(metaHeader),
+		Header: metaHeader,
+		Row: func(path string) string {
+			if path == "/vol/lantern" {
+				return fmt.Sprintf("%-*s", len(metaHeader), metaVal)
+			}
+			return strings.Repeat(" ", len(metaHeader))
+		},
+	}
+
+	DrawBody(screen, BodyParams{
+		Frame:               frame,
+		Center:              center,
+		Parent:              parent,
+		Styles:              styles,
+		FileListActive:      true,
+		HeaderStyle:         styles.PanelActiveHeader,
+		HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
+		SurfaceStyle:        styles.PanelActiveSurface,
+		ShowChildColumn:     false,
+		Layout:              DefaultLayout(),
+		Meta:                meta,
+	})
+
+	cols := SplitColumns(frame, false, DefaultLayout(), [3]int{})
+	headerY := frame.Y + 1
+	rowY := cols[1].Y
+
+	centerHdr := rowText(screen, cols[1].X, headerY, cols[1].Width)
+	centerRow := rowText(screen, cols[1].X, rowY, cols[1].Width)
+	parentHdr := rowText(screen, cols[0].X, headerY, cols[0].Width)
+	parentRow := rowText(screen, cols[0].X, rowY, cols[0].Width)
+
+	if !strings.Contains(centerHdr, metaHeader) {
+		t.Fatalf("center header %q should contain meta header %q", centerHdr, metaHeader)
+	}
+	if !strings.Contains(centerRow, metaVal) {
+		t.Fatalf("center row %q should contain meta value %q", centerRow, metaVal)
+	}
+	if strings.Contains(parentHdr, metaHeader) {
+		t.Fatalf("parent header %q should not contain meta header %q", parentHdr, metaHeader)
+	}
+	if strings.Contains(parentRow, metaVal) {
+		t.Fatalf("parent row %q should not contain meta value %q", parentRow, metaVal)
 	}
 }

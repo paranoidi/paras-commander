@@ -116,7 +116,7 @@ func TestBuildColumnsPaintsStaleParentForContinuity(t *testing.T) {
 
 	layout := DefaultLayout()
 	layout.Splits[0] = ColumnSplitSpec{Kind: SplitFitChars, Value: 64}
-	if got := MeasureFitColumnWidths(layout, parent, state, false, true, uiscrollbar.StyleThumb, 10); got[0] == 0 {
+	if got := MeasureFitColumnWidths(layout, parent, state, false, true, uiscrollbar.StyleThumb, 10, 0); got[0] == 0 {
 		t.Fatal("stale parent must still be measured; an unmeasured fit column resolves to its cap")
 	}
 }

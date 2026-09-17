@@ -17,21 +17,28 @@ import (
 
 const listSizeCells = 5
 
-// formatBriefRow formats icon+name+size for carousel columns.
-func formatBriefRow(entry localfs.Entry, width int, showIcons bool, showSize bool, suffix panellist.RowSuffix, styles theme.Theme, disk DiskUsageSource, scrollbarReserve int) string {
+// Meta is the center column's pre-laid-out meta segment (from ui.LayoutMetaColumns).
+// Width 0 means no meta columns are active.
+type Meta struct {
+	Width  int                      // total cells incl. inter-column gaps
+	Header string                   // padded header segment
+	Row    func(path string) string // padded row segment for an entry path
+}
+
+// formatBriefRow formats icon+name+[meta]+size for carousel columns. metaW is the pre-laid-out
+// meta segment width (0 = none, center column only) and metaText its already-padded text.
+func formatBriefRow(entry localfs.Entry, width int, showIcons bool, showSize bool, suffix panellist.RowSuffix, styles theme.Theme, disk DiskUsageSource, scrollbarReserve int, metaW int, metaText string) string {
 	rowTextWidth := columnListTextWidth(width, showIcons, scrollbarReserve)
-	nameWidth := rowTextWidth
-	if showSize {
-		nameWidth = rowTextWidth - 1 - listSizeCells
-		if nameWidth < 1 {
-			nameWidth = 1
-		}
-	}
-	if nameWidth < 1 {
-		nameWidth = 1
-	}
+	nameWidth := nameWidthFromRowText(rowTextWidth, showSize, metaW)
 	display := panellist.EntryDisplayRunes(entry, nameWidth, showIcons, suffix, styles)
 	name := string(panellist.RunesFromDisplay(display))
+	if metaW > 0 {
+		metaPadded := fmt.Sprintf("%-*s", metaW, metaText)
+		if !showSize {
+			return fmt.Sprintf("%-*s  %s", nameWidth, name, metaPadded)
+		}
+		return fmt.Sprintf("%-*s  %s %*s", nameWidth, name, metaPadded, listSizeCells, formatListedSize(entry, disk))
+	}
 	if !showSize {
 		return fmt.Sprintf("%-*s", nameWidth, name)
 	}
@@ -159,34 +166,42 @@ func columnScrollbarReserve(hasLane, showSB bool, style uiscrollbar.Style, total
 	return 0
 }
 
-func briefHeader(nameTitle, sizeTitle string, rowTextWidth int, showSize bool) string {
-	nameWidth := rowTextWidth
-	if showSize {
-		nameWidth = rowTextWidth - 1 - listSizeCells
-		if nameWidth < 1 {
-			nameWidth = 1
+// briefHeader formats the icon+name+[meta]+size header segment. metaW/metaText mirror
+// formatBriefRow's (0/"" for the parent and child columns, which never carry meta).
+func briefHeader(nameTitle, sizeTitle string, rowTextWidth int, showSize bool, metaW int, metaText string) string {
+	nameWidth := nameWidthFromRowText(rowTextWidth, showSize, metaW)
+	if metaW > 0 {
+		metaPadded := fmt.Sprintf("%-*s", metaW, metaText)
+		if !showSize {
+			return fmt.Sprintf("%-*s  %s", nameWidth, nameTitle, metaPadded)
 		}
-		return fmt.Sprintf("%-*s %*s", nameWidth, nameTitle, listSizeCells, sizeTitle)
+		return fmt.Sprintf("%-*s  %s %*s", nameWidth, nameTitle, metaPadded, listSizeCells, sizeTitle)
 	}
-	if nameWidth < 1 {
-		nameWidth = 1
+	if !showSize {
+		return fmt.Sprintf("%-*s", nameWidth, nameTitle)
 	}
-	return fmt.Sprintf("%-*s", nameWidth, nameTitle)
+	return fmt.Sprintf("%-*s %*s", nameWidth, nameTitle, listSizeCells, sizeTitle)
 }
 
-func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int, showSize bool) int {
-	rowTextWidth := columnListTextWidth(colWidth, showIcons, scrollbarReserve)
-	if !showSize {
-		if rowTextWidth < 1 {
-			return 1
-		}
-		return rowTextWidth
+// nameWidthFromRowText is the single arithmetic source for how much of a row's text width goes
+// to the name once size and meta segments (each with their leading gap) are reserved.
+func nameWidthFromRowText(rowTextWidth int, showSize bool, metaW int) int {
+	nw := rowTextWidth
+	if showSize {
+		nw -= 1 + listSizeCells
 	}
-	nw := rowTextWidth - 1 - listSizeCells
+	if metaW > 0 {
+		nw -= 2 + metaW
+	}
 	if nw < 1 {
 		return 1
 	}
 	return nw
+}
+
+func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int, showSize bool, metaW int) int {
+	rowTextWidth := columnListTextWidth(colWidth, showIcons, scrollbarReserve)
+	return nameWidthFromRowText(rowTextWidth, showSize, metaW)
 }
 
 // fitEntryTextLen returns one entry's rendered name-text rune length (leading prefix rune +
@@ -259,7 +274,7 @@ func fitListingTextLen(entries []localfs.Entry) int {
 // just the visible window) so width doesn't jitter while scrolling. Call ONCE per render pass;
 // thread the same result into SplitColumns (via DrawBody / ChildPreviewPaintRect) and
 // CenterNameWidth so all three agree on the same frame's column geometry.
-func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int) [3]int {
+func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int, metaW int) [3]int {
 	var out [3]int
 	for i := 0; i < 2; i++ {
 		if k := layout.Splits[i].Kind; k != SplitFitChars && k != SplitFitPercent {
@@ -305,6 +320,9 @@ func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, sh
 		if layout.ShowSize[i] {
 			w += 1 + listSizeCells
 		}
+		if i == 1 && metaW > 0 {
+			w += 2 + metaW
+		}
 		w++ // 1-char right margin so content doesn't touch the next column
 		w += reserve
 		out[i] = w
@@ -313,7 +331,7 @@ func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, sh
 }
 
 // CenterNameWidth returns the name-column width for the carousel center column.
-func CenterNameWidth(frame geom.Rect, layout Layout, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int, measuredFitWidth [3]int) int {
+func CenterNameWidth(frame geom.Rect, layout Layout, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int, measuredFitWidth [3]int, metaW int) int {
 	cols := SplitColumns(frame, showChild, layout, measuredFitWidth)
 	if len(cols) < 2 {
 		return 1
@@ -322,5 +340,5 @@ func CenterNameWidth(frame geom.Rect, layout Layout, center panel.State, showIco
 	hasLane := columnHasScrollbarLane(c, false, showChild)
 	total, offset := columnListingMetrics(c, center)
 	reserve := columnScrollbarReserve(hasLane, true, style, total, visibleRows, offset)
-	return nameWidthForColumn(cols[1].Width, showIcons, reserve, layout.ShowSize[1])
+	return nameWidthForColumn(cols[1].Width, showIcons, reserve, layout.ShowSize[1], metaW)
 }
