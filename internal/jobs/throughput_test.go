@@ -27,11 +27,39 @@ func TestFormatThroughput(t *testing.T) {
 		}
 	}
 
-	// Widest output must fit the menu-bar speed pill's fixed text slot (8 cells).
+	// Widest output is "99.9MB/s" (8 cells); the jobs view Speed column relies on that.
 	const maxWidth = 8
 	for bps := 1.0; bps <= 999*1024*1024*1024; bps *= 1.7 {
 		if got := FormatThroughput(bps); len(got) > maxWidth {
 			t.Fatalf("FormatThroughput(%v) = %q (len %d), want len <= %d", bps, got, len(got), maxWidth)
+		}
+	}
+}
+
+func TestFormatThroughputWhole(t *testing.T) {
+	const mb = 1024 * 1024
+	tests := []struct {
+		bps  float64
+		want string
+	}{
+		{0, "—"},
+		{1536, "2KB/s"},
+		{1023.6 * 1024, "1MB/s"},
+		{97.2 * mb, "97MB/s"},
+		{99.6 * mb, "100MB/s"},
+		{150 * mb, "150MB/s"},
+	}
+	for _, tt := range tests {
+		if got := FormatThroughputWhole(tt.bps); got != tt.want {
+			t.Fatalf("FormatThroughputWhole(%v) = %q, want %q", tt.bps, got, tt.want)
+		}
+	}
+
+	// Widest output must fit the menu-bar speed pill's fixed text width (7 cells).
+	const maxWidth = 7
+	for bps := 1.0; bps <= 999*1024*1024*1024; bps *= 1.7 {
+		if got := FormatThroughputWhole(bps); len(got) > maxWidth {
+			t.Fatalf("FormatThroughputWhole(%v) = %q (len %d), want len <= %d", bps, got, len(got), maxWidth)
 		}
 	}
 }

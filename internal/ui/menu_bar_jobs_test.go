@@ -246,9 +246,9 @@ func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
 		return -1
 	}
 
-	const totalWidth = 20 // >= 12 (slot) + 1 (margin) + 3 (min bar) + queueW(0), room to spare
+	const totalWidth = 20 // >= 11 (slot) + 1 (margin) + 3 (min bar) + queueW(0), room to spare
 
-	for _, speed := range []string{"120MB/s", "1.5KB/s", "99.9MB/s", ""} {
+	for _, speed := range []string{"120MB/s", "2KB/s", "99MB/s", "100MB/s", ""} {
 		t.Run("speed_"+speed, func(t *testing.T) {
 			t.Parallel()
 			screen := newScreen(t)
@@ -275,20 +275,24 @@ func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
 				return
 			}
 
-			// Pill hugs the right edge of the slot: right cap at the last slot cell.
+			// The pill always fills the whole slot: caps at both slot edges regardless of text
+			// length, so the pill never changes size between e.g. 99MB/s and 100MB/s.
+			if str, style, _ := screen.Get(0, 0); str != string(styles.IconMenuSpeedLeft()) || style != styles.MenuSpeedCap {
+				t.Fatalf("Speed %q: left cap at 0 = %q/%v, want %q/%v", speed, str, style, styles.IconMenuSpeedLeft(), styles.MenuSpeedCap)
+			}
 			rightCapX := menuBarSpeedSlotWidth - 1
 			if str, style, _ := screen.Get(rightCapX, 0); str != string(styles.IconMenuSpeedRight()) || style != styles.MenuSpeedCap {
 				t.Fatalf("Speed %q: right cap at %d = %q/%v, want %q/%v", speed, rightCapX, str, style, styles.IconMenuSpeedRight(), styles.MenuSpeedCap)
 			}
-			// First text-run cell (left cap + one space in) carries MenuSpeedText.
+			// Text is right-aligned inside the pill; the padding to its left is pill fill.
 			textX := rightCapX - 1 - len([]rune(speed))
 			if str, style, _ := screen.Get(textX, 0); str != speed[:1] || style != styles.MenuSpeedText {
 				t.Fatalf("Speed %q: text cell at %d = %q/%v, want %q/%v", speed, textX, str, style, speed[:1], styles.MenuSpeedText)
 			}
-			// Left cap sits right-aligned before the text run.
-			leftCapX := textX - 2
-			if str, style, _ := screen.Get(leftCapX, 0); str != string(styles.IconMenuSpeedLeft()) || style != styles.MenuSpeedCap {
-				t.Fatalf("Speed %q: left cap at %d = %q/%v, want %q/%v", speed, leftCapX, str, style, styles.IconMenuSpeedLeft(), styles.MenuSpeedCap)
+			for x := 1; x < textX; x++ {
+				if str, style, _ := screen.Get(x, 0); str != " " || style != styles.MenuSpeedText {
+					t.Fatalf("Speed %q: pad cell %d = %q/%v, want blank MenuSpeedText", speed, x, str, style)
+				}
 			}
 		})
 	}

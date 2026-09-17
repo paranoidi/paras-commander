@@ -6,36 +6,27 @@ import (
 	"time"
 )
 
-// FormatThroughput renders bytes/sec compactly for the jobs UI (e.g. "82MB/s", "640KB/s").
-func FormatThroughput(bps float64) string {
+// FormatThroughput renders bytes/sec compactly for the jobs UI (e.g. "82MB/s", "1.5KB/s").
+func FormatThroughput(bps float64) string { return formatThroughput(bps, true) }
+
+// FormatThroughputWhole is FormatThroughput without decimals ("97MB/s"), for the menu-bar speed
+// pill. Output is at most 7 cells ("999MB/s"): a value rounding to 1024 moves to the next unit.
+func FormatThroughputWhole(bps float64) string { return formatThroughput(bps, false) }
+
+func formatThroughput(bps float64, decimals bool) string {
 	if bps <= 0 || math.IsNaN(bps) || math.IsInf(bps, 0) {
 		return "—"
 	}
-	const kb = 1024.0
-	const mb = kb * 1024
-	const gb = mb * 1024
-	switch {
-	case bps >= gb:
-		v := bps / gb
-		if v >= 100 || isNearInt(v) {
-			return fmt.Sprintf("%.0fGB/s", v)
-		}
-		return fmt.Sprintf("%.1fGB/s", v)
-	case bps >= mb:
-		v := bps / mb
-		if v >= 100 || isNearInt(v) {
-			return fmt.Sprintf("%.0fMB/s", v)
-		}
-		return fmt.Sprintf("%.1fMB/s", v)
-	case bps >= kb:
-		v := bps / kb
-		if v >= 100 || isNearInt(v) {
-			return fmt.Sprintf("%.0fKB/s", v)
-		}
-		return fmt.Sprintf("%.1fKB/s", v)
-	default:
-		return fmt.Sprintf("%.0fB/s", bps)
+	units := [...]string{"B/s", "KB/s", "MB/s", "GB/s", "TB/s"}
+	i := 0
+	for i < len(units)-1 && math.Round(bps) >= 1024 {
+		bps /= 1024
+		i++
 	}
+	if decimals && i > 0 && bps < 100 && !isNearInt(bps) {
+		return fmt.Sprintf("%.1f%s", bps, units[i])
+	}
+	return fmt.Sprintf("%.0f%s", bps, units[i])
 }
 
 func isNearInt(v float64) bool {

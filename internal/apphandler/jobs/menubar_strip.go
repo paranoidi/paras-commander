@@ -91,7 +91,7 @@ func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 		if prog.Status == jobs.StatusRunning && !strip.Deleting {
 			bps := jobs.EffectiveDisplayThroughputBPS(prog.Status, prog.StartedAt, time.Now(), prog.DoneBytes, prog.DisplaySpeedBPS)
 			if bps > 0 {
-				strip.Speed = jobs.FormatThroughput(bps)
+				strip.Speed = jobs.FormatThroughputWhole(bps)
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 
@@ -39,8 +40,8 @@ type MenuBarJobsStrip struct {
 
 const menuBarJobsProgressMinWidth = 3
 
-// menuBarSpeedTextMaxWidth is the widest jobs.FormatThroughput output ("99.9MB/s" = 8 cells).
-const menuBarSpeedTextMaxWidth = 8
+// menuBarSpeedTextMaxWidth is the widest jobs.FormatThroughputWhole output ("999MB/s" = 7 cells).
+const menuBarSpeedTextMaxWidth = 7
 
 // menuBarSpeedSlotWidth is the fixed-width speed-pill slot: cap, space, text, space, cap.
 const menuBarSpeedSlotWidth = 1 + 1 + menuBarSpeedTextMaxWidth + 1 + 1
@@ -164,7 +165,7 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 	}
 	if speedW > 0 {
 		if strip.Speed != "" {
-			drawMenuBarSpeedPill(screen, x, y, speedW, strip.Speed, styles)
+			drawMenuBarSpeedPill(screen, x, y, strip.Speed, styles)
 		}
 		x += speedW + 1 // slot + one-space margin before the bar
 	}
@@ -222,23 +223,22 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 	return len(gfx) > 0 && strip.LightbarHead >= cutoff+len(gfx)-1
 }
 
-// drawMenuBarSpeedPill draws the transfer-speed pill right-aligned in a slotW-wide slot starting
-// at slotX (hugging the progress bar), leaving unused slot cells at their already-cleared
-// MenuBarInactive fill.
-func drawMenuBarSpeedPill(screen tcell.Screen, slotX, y, slotW int, speed string, styles theme.Theme) {
+// drawMenuBarSpeedPill draws the transfer-speed pill filling the whole slotW-wide slot at slotX
+// (hugging the progress bar). The text is left-padded to menuBarSpeedTextMaxWidth inside the
+// pill, so the pill never changes width as the speed fluctuates (e.g. 99MB/s vs 100MB/s).
+func drawMenuBarSpeedPill(screen tcell.Screen, slotX, y int, speed string, styles theme.Theme) {
 	text := []rune(speed)
 	if len(text) > menuBarSpeedTextMaxWidth {
 		text = text[:menuBarSpeedTextMaxWidth]
 	}
-	pillW := 1 + 1 + runewidth.StringWidth(string(text)) + 1 + 1
-	px := slotX + slotW - pillW
 	capStyle := styles.MenuSpeedCap
 	textStyle := styles.MenuSpeedText
+	px := slotX
 	screen.SetContent(px, y, styles.IconMenuSpeedLeft(), nil, capStyle)
 	px++
 	screen.SetContent(px, y, ' ', nil, textStyle)
 	px++
-	for _, r := range text {
+	for _, r := range fmt.Sprintf("%*s", menuBarSpeedTextMaxWidth, string(text)) {
 		screen.SetContent(px, y, r, nil, textStyle)
 		px += runewidth.RuneWidth(r)
 	}
