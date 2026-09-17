@@ -1194,8 +1194,8 @@ func (a *App) handleFilterKey(event *tcell.EventKey) {
 			activePanel.AcceptFilter(viewportRows)
 		}
 	case tcell.KeyInsert:
-		activePanel.ToggleSelection()
-		activePanel.CycleFilterMatch(1, viewportRows)
+		activePanel.CancelFilter(viewportRows)
+		activePanel.ToggleSelectionAndAdvance(viewportRows)
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if event.Modifiers()&tcell.ModCtrl != 0 {
 			activePanel.ClearFilter(viewportRows)

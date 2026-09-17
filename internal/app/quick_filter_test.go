@@ -268,7 +268,7 @@ func TestQuickFilterEnterOpensDirectoryAndClearsQuery(t *testing.T) {
 	}
 }
 
-func TestQuickFilterInsertSelectsAndAdvancesCursor(t *testing.T) {
+func TestQuickFilterInsertSelectsClearsFilterAndAdvancesCursor(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "alpha.txt"))
 	writeFile(t, filepath.Join(dir, "alpine.txt"))
@@ -293,14 +293,14 @@ func TestQuickFilterInsertSelectsAndAdvancesCursor(t *testing.T) {
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
-	if !app.model.Primary.Filter.Active {
-		t.Fatal("filter closed after Insert, want open for multi-select")
+	if app.model.Primary.Filter.Active || app.model.Primary.Filter.Query != "" {
+		t.Fatal("filter still active after Insert, want cleared")
 	}
 	if !app.model.Primary.SelectedPaths[entryPath] {
 		t.Fatal("alpha.txt not selected after Insert, want selected")
 	}
 	if app.model.Primary.Cursor != 1 {
-		t.Fatalf("cursor=%d after Insert, want 1 (moved down past filtered entry)", app.model.Primary.Cursor)
+		t.Fatalf("cursor=%d after Insert, want 1 (moved down to next row)", app.model.Primary.Cursor)
 	}
 }
 
