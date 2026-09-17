@@ -29,13 +29,13 @@ func (h *Handler) OpenRunForEachDialog() {
 	}
 	entries := append([]localfs.Entry(nil), src.Entries...)
 	dir := active.PathString()
-	msg := "Runs once per selected item. Command must include %f (iterated item path).\n" +
+	msg := "Runs once per selected item. Default mode must include %f (iterated item path).\n" +
 		"Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.\n" +
 		"Do not wrap % macros in quotes.\n" +
-		">> | && etc. run via sh -c; otherwise argv is parsed without a shell.\n" +
+		">> | && etc. run via sh -c; otherwise argv is parsed without a shell.\n\n" +
 		"Check \"Run in each selected directory\" (Alt+R) to cd into each selected directory " +
-		"instead (directories only; %f becomes optional).\n" +
-		"F3 opens command history."
+		"instead.\n" +
+		"If enabled; %f becomes optional."
 	fields := []dialog.FileDialogField{{Label: "Command", Value: "", Cursor: 0}}
 	h.model.FileDialog = dialog.FileDialogState{
 		Open:              true,
