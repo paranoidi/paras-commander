@@ -50,16 +50,6 @@ var FunctionKeys = []FunctionKey{
 	{Key: tcell.KeyF10, KeyLabel: "F10", HintShiftPrefix: "Now", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 }
 
-// FunctionKeyLabelByKey returns the F-key label for a tcell.Key, e.g. tcell.KeyF5 → "F5".
-func FunctionKeyLabelByKey(k tcell.Key) (string, bool) {
-	for _, fk := range FunctionKeys {
-		if fk.Key == k {
-			return fk.KeyLabel, true
-		}
-	}
-	return "", false
-}
-
 // FunctionKeysJobs is the footer legend while the jobs view is active.
 var FunctionKeysJobs = []FunctionKey{
 	FooterEscClose,
@@ -198,20 +188,4 @@ func FKeyNum(k tcell.Key) (int, bool) {
 // KeyLabel returns the F-key label for a numeric key, e.g. 5 → "F5".
 func KeyLabel(n int) string {
 	return "F" + strconv.Itoa(n)
-}
-
-// FindItemByFKeyLabel returns the first non-separator item whose KeyLabel equals label (e.g. "F5").
-func FindItemByFKeyLabel(defs []Definition, label string) (def Definition, item Item, ok bool) {
-	if label == "" {
-		return Definition{}, Item{}, false
-	}
-	for _, d := range defs {
-		for _, it := range d.Items {
-			if it.Separator || it.KeyLabel != label {
-				continue
-			}
-			return d, it, true
-		}
-	}
-	return Definition{}, Item{}, false
 }

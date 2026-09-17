@@ -831,17 +831,12 @@ func (a *App) browserListNavPartialRenderEligibleFor(actionID string) bool {
 }
 
 // handleFilterLeaderKey handles the InputModeFilter case in handleKey. handled=false means
-// neither a function key nor a filter key matched, so the caller falls through to normal
+// neither a bound action nor a filter key matched, so the caller falls through to normal
 // action dispatch.
 func (a *App) handleFilterLeaderKey(event *tcell.EventKey, resolvedAction string) (quit, rendered, handled bool) {
-	// Function keys in filter mode dismiss the filter and run the menu action.
-	if _, ok := menu.FunctionKeyLabelByKey(event.Key()); ok {
-		quit := a.handleQuickFilterFunctionKey(event)
-		a.render()
-		return quit, true, true
-	}
-	// Bound actions (same keymap as normal browser mode) dismiss the filter unless
-	// the key is filter-local (typing, match cycling, Insert, etc.).
+	// Bound actions (same keymap as normal browser mode, F-keys included so modifiers
+	// like Shift+F6 keep their own binding) dismiss the filter unless the key is
+	// filter-local (typing, match cycling, Insert, etc.).
 	if resolvedAction != "" && !a.quickFilterRetainsKey(event, resolvedAction) {
 		a.cancelActiveQuickFilter()
 		fqQuit, fqRendered := a.finishResolvedKeyboardAction(resolvedAction)

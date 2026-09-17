@@ -31,23 +31,6 @@ func wrap(value, count int) int {
 	return value
 }
 
-func (a *App) handleQuickFilterFunctionKey(event *tcell.EventKey) bool {
-	a.cancelActiveQuickFilter()
-	if event.Key() == tcell.KeyF9 {
-		a.openMenu()
-		return false
-	}
-	label, _ := menu.FunctionKeyLabelByKey(event.Key())
-	if def, item, ok := menu.FindItemByFKeyLabel(menu.ActiveDefinitions(a.model.MenuDefinitions), label); ok {
-		return a.activateMenuSelection(def, item)
-	}
-	if id, ok := a.keys.Global.Lookup(event); ok && id == keymap.ActionAppUserMenu {
-		a.toggleUserMenu()
-		return false
-	}
-	return false
-}
-
 func (a *App) handleMenuKey(event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyCtrlLeftSq:

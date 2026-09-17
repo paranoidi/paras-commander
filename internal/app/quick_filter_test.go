@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestQuickFilterFunctionKeyClosesFuzzyAndRunsFullscreenFileView(t *testing.T) {
@@ -499,5 +500,36 @@ func TestQuickFilterCtrlBackspaceClearsQuery(t *testing.T) {
 	}
 	if app.model.Primary.Filter.Active {
 		t.Fatal("Ctrl+Backspace should deactivate filter")
+	}
+}
+
+func TestQuickFilterShiftF6OpensRenameNotMove(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app := newTestApp(t, screen, testOptions(dir))
+
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
+
+	// Shift+F6 must resolve through the keymap (file.rename), not degrade to plain F6 (file.move).
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModShift)); quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Primary.Filter.Editing || app.model.Primary.Filter.Active {
+		t.Fatal("filter should be cleared after Shift+F6")
+	}
+	if app.model.TransferDialog.Open {
+		t.Fatal("TransferDialog.Open = true, want rename dialog instead of move")
+	}
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogRename {
+		t.Fatalf("FileDialog open=%v type=%v, want open rename dialog", app.model.FileDialog.Open, app.model.FileDialog.DialogType)
 	}
 }
