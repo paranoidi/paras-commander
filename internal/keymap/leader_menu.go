@@ -84,6 +84,7 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileRunForEach,
 		ActionFileExtract,
 		ActionFileFlatten,
+		ActionAppUserMenu,
 	},
 	LeaderMenuGroupNavigation: {
 		ActionPanelHistoryDialog,

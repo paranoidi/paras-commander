@@ -218,6 +218,25 @@ func TestBuiltinLeaderMenuExtractKey(t *testing.T) {
 	}
 }
 
+func TestBuiltinLeaderMenuUserMenuKey(t *testing.T) {
+	dir := t.TempDir()
+	writeUserMenuFile(t, filepath.Join(dir, config.DefaultUserMenuFileName), `[lazygit]
+key = "g"
+title = "lazygit"
+command = "lazygit"
+`)
+	app := testUserMenuApp(t, dir, dir)
+	app.model.ViewMode = ui.ViewBrowser
+	app.openBuiltinLeaderMenu()
+
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'X', tcell.ModNone))
+
+	st := app.model.LeaderMenu
+	if !st.Open || !st.UserMenu {
+		t.Fatalf("leader menu = open %v user %v, want F2 user menu open after X", st.Open, st.UserMenu)
+	}
+}
+
 func TestBuiltinLeaderMenuF9Noop(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser

@@ -135,7 +135,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"F2"},
 			PreferredKey: "F2",
 			Keywords:     []string{"menu.toml", "custom commands"},
-			LeaderKey:    "s",
+			LeaderKey:    "X",
 		},
 		{
 			ID:           ActionAppLeaderMenu,
