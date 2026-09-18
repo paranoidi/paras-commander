@@ -6,7 +6,7 @@ import "strings"
 func DefaultDedupOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionDedupClose:       {"esc"},
-		ActionDedupToggleSort:  {"C-s"}, // match the file-list sort shortcut (panel.sort-dialog)
+		ActionDedupToggleSort:  {"M-s"}, // match the file-list sort shortcut (panel.sort-dialog)
 		ActionDedupToggleEmpty: {"M-e"},
 		ActionDedupToggleNode:  {"right", "M-right"},
 		ActionDedupCollapse:    {"left", "M-left"}, // collapse node, or jump to parent

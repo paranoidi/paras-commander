@@ -268,8 +268,8 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Focus selections panel",
 			Section:      "Navigation",
-			DefaultKeys:  []string{"M-s"},
-			PreferredKey: "M-s",
+			DefaultKeys:  []string{"C-s"},
+			PreferredKey: "C-s",
 			Keywords:     []string{"selections", "strip"},
 		},
 		{
@@ -773,9 +773,10 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Sort dialog",
 			Section:      "View",
-			DefaultKeys:  []string{"C-s"},
-			PreferredKey: "C-s",
+			DefaultKeys:  []string{"M-s"},
+			PreferredKey: "M-s",
 			Keywords:     []string{"order"},
+			LeaderKey:    "s",
 		},
 		{
 			ID:          ActionPanelListingFormatDialog,

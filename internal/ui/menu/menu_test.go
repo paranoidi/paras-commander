@@ -185,7 +185,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 
 	assertMenuItemKeyLabels(t, left, map[string]string{
 		"Quick view":    "S-F3",
-		"Sort...":       "C-s",
+		"Sort...":       "M-s",
 		"Toggle hidden": "M-.",
 		"Refresh":       "C-y",
 		"Disk usage":    "M-d",

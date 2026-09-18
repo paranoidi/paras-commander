@@ -190,8 +190,8 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, '-', tcell.ModNone), ActionPanelUnselectGroup, true},
 		{tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModNone), ActionPanelSelectGroup, true},
 		{tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModShift), ActionPanelSelectGroup, true},
-		{tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModNone), ActionPanelSortDialog, true},
-		{tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModCtrl), ActionPanelSortDialog, true},
+		{tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModNone), ActionPanelFocusSelections, true},
+		{tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModCtrl), ActionPanelFocusSelections, true},
 		{tcell.NewEventKey(tcell.KeyRune, '*', tcell.ModNone), ActionPanelInvertSelection, true},
 		{tcell.NewEventKey(tcell.KeyRune, '*', tcell.ModShift), ActionPanelInvertSelection, true},
 		{tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone), ActionFileView, true},
@@ -221,7 +221,7 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta|tcell.ModAlt), ActionPanelOpenDirInOther, true},
 		{tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift), ActionPanelOpenDirInOther, true},
 		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift), ActionPanelOpenActivePathInOther, true},
-		{tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt), ActionPanelFocusSelections, true},
+		{tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt), ActionPanelSortDialog, true},
 		{tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModAlt), ActionPanelOpenSelectionsRoot, true},
 		{tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt|tcell.ModCtrl), ActionPanelOpenSelectionsRoot, true},
 		{tcell.NewEventKey(tcell.KeyRune, ',', tcell.ModAlt|tcell.ModShift), ActionPanelMetaEdit, true},
@@ -656,8 +656,8 @@ func TestMenuBindingLabelUsesDefaultsAndPreferredKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Default() error = %v", err)
 	}
-	if got := m.MenuBindingLabel(ActionPanelSortDialog); got != "C-s" {
-		t.Fatalf("sort dialog = %q, want C-s", got)
+	if got := m.MenuBindingLabel(ActionPanelSortDialog); got != "M-s" {
+		t.Fatalf("sort dialog = %q, want M-s", got)
 	}
 	if got := m.MenuBindingLabel(ActionRemoteSFTPLink); got != "M-r" {
 		t.Fatalf("SFTP dialog = %q, want M-r", got)

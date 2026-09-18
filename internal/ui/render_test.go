@@ -322,8 +322,8 @@ func TestRenderDrawsPrimaryPanelPulldownWithKeymapLabels(t *testing.T) {
 		t.Fatalf("quick view row = %q, want Quick view with S-F3", rowQuick)
 	}
 	rowSort := strings.TrimSpace(tcelltest.TextAt(screen, 1, 3, 72))
-	if !strings.Contains(rowSort, "Sort") || !strings.Contains(rowSort, "C-s") {
-		t.Fatalf("sort row = %q, want Sort with C-s", rowSort)
+	if !strings.Contains(rowSort, "Sort") || !strings.Contains(rowSort, "M-s") {
+		t.Fatalf("sort row = %q, want Sort with M-s", rowSort)
 	}
 	rowHidden := strings.TrimSpace(tcelltest.TextAt(screen, 1, 4, 72))
 	if !strings.Contains(rowHidden, "Toggle hidden") || !strings.Contains(rowHidden, "M-.") {

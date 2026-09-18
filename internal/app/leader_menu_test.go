@@ -702,13 +702,13 @@ func TestColonKeyTogglesPerViewLeaderMenuClosed(t *testing.T) {
 	}
 }
 
-func TestCtrlSOpensSortDialog(t *testing.T) {
+func TestAltSOpensSortDialog(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser
 
-	app.handleKey(tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
 
 	if !app.model.SortDialog.Open {
-		t.Fatal("expected sort dialog after Ctrl+S")
+		t.Fatal("expected sort dialog after Alt+S")
 	}
 }
