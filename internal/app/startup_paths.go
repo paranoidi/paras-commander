@@ -88,7 +88,8 @@ func (a *App) applyStartPaths(rawPaths []string) error {
 		}
 		if err := localfs.CheckFilePreviewable(r.path); err != nil &&
 			!errors.Is(err, localfs.ErrFilePreviewImage) &&
-			!errors.Is(err, localfs.ErrFilePreviewMedia) {
+			!errors.Is(err, localfs.ErrFilePreviewMedia) &&
+			!errors.Is(err, localfs.ErrFilePreviewArchive) {
 			return fmt.Errorf("preview %s: %w", r.path, err)
 		}
 		if err := a.model.Primary.NavigateTo(

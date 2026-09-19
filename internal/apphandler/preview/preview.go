@@ -836,7 +836,8 @@ func (h *Handler) dispatchFilePreviewCheck(path string, req previewrun.Request, 
 	}
 	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
 	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
-	if err != nil && !isImage && !isMedia {
+	isArchive := errors.Is(err, localfs.ErrFilePreviewArchive)
+	if err != nil && !isImage && !isMedia && !isArchive {
 		switch {
 		case errors.Is(err, localfs.ErrFilePreviewBinary):
 			patchMessage(filepath.Base(path), notTextMsg)
@@ -1109,6 +1110,7 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 		WorkDir:   workDir,
 		Preview:   h.host.Config().Preview,
 		BaseStyle: ui.FilePreviewBodyStyle(h.host.Styles(), chromeBlocked),
+		Theme:     h.host.Styles(),
 		IsDir:     isDir,
 	}
 	// Computed unconditionally (not just for image/media paths) so a [[preview.commands]] rule
@@ -1342,7 +1344,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 		st.Source = res.Source
 		st.CombinedText = res.CombinedText
 		st.SetHighlightedCells(res.HighlightedCells)
-		if res.Source == ui.PreviewSourceInternalHighlighted {
+		if res.Source == ui.PreviewSourceInternalHighlighted && !res.IsArchive {
 			st.ChromaStyle = req.Preview.Style
 		} else {
 			st.ChromaStyle = ""

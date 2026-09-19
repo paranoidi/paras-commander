@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/archive"
 )
 
 // PreviewSniffBytes is how many leading bytes are read to decide if a file is previewable as text.
@@ -23,6 +25,10 @@ var ErrFilePreviewImage = errors.New("image file")
 
 // ErrFilePreviewMedia indicates the path is a video/audio extension eligible for media preview.
 var ErrFilePreviewMedia = errors.New("media file")
+
+// ErrFilePreviewArchive indicates the path is a listable archive (tar/zip/rar/7z, not a
+// single-stream compressor) eligible for a path-listing preview instead of a text/binary sniff.
+var ErrFilePreviewArchive = errors.New("archive file")
 
 // imageMagickExtensions lists image extensions Go's stdlib image package cannot decode
 // natively. These route through ImageMagick conversion (see internal/preview/imagemagick.go)
@@ -80,6 +86,7 @@ func IsMediaPath(path string) bool {
 // internal/preview's decodeSource transcodes it via a Windows-1252 fallback at render time.
 // Image paths return ErrFilePreviewImage without opening the file.
 // Media paths return ErrFilePreviewMedia without opening the file.
+// Listable archive paths return ErrFilePreviewArchive without opening the file.
 func CheckFilePreviewable(path string) error {
 	fi, err := os.Stat(path)
 	if err != nil {
@@ -93,6 +100,9 @@ func CheckFilePreviewable(path string) error {
 	}
 	if IsMediaPath(path) {
 		return ErrFilePreviewMedia
+	}
+	if archive.ListableName(path) {
+		return ErrFilePreviewArchive
 	}
 	f, err := os.Open(path)
 	if err != nil {

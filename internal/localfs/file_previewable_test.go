@@ -110,6 +110,35 @@ func TestCheckFilePreviewableMedia(t *testing.T) {
 	}
 }
 
+func TestCheckFilePreviewableArchive(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"garden.zip", "garden.tar.gz", "garden.7z", "garden.rar", "garden.jar"} {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte{0x00, 0x01}, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		err := CheckFilePreviewable(p)
+		if !errors.Is(err, ErrFilePreviewArchive) {
+			t.Fatalf("%s: err = %v want ErrFilePreviewArchive", name, err)
+		}
+	}
+}
+
+func TestCheckFilePreviewableSingleStreamCompressorNotArchiveGated(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "notes.txt.gz")
+	if err := os.WriteFile(p, []byte("a\x00b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	err := CheckFilePreviewable(p)
+	if errors.Is(err, ErrFilePreviewArchive) {
+		t.Fatalf("single-stream .gz should not be archive-gated, got %v", err)
+	}
+	if !errors.Is(err, ErrFilePreviewBinary) {
+		t.Fatalf("err = %v want ErrFilePreviewBinary (binary sniff fallback)", err)
+	}
+}
+
 func TestIsMediaPathExtensions(t *testing.T) {
 	cases := map[string]bool{
 		"a.mkv": true, "b.mp4": true, "c.webm": true, "d.mp3": true, "e.flac": true,

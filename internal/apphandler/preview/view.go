@@ -385,7 +385,8 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 	err := localfs.CheckFilePreviewable(path)
 	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
 	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
-	if err != nil && !isImage && !isMedia {
+	isArchive := errors.Is(err, localfs.ErrFilePreviewArchive)
+	if err != nil && !isImage && !isMedia && !isArchive {
 		switch {
 		case errors.Is(err, localfs.ErrFilePreviewBinary):
 			h.host.SetTransientMessage("View: not a text file", ui.MessageUrgencyWarn)

@@ -10,11 +10,13 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/preview/chromaformat"
 	"github.com/paranoidi/paras-commander/internal/preview/mdformat"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 	"golang.org/x/text/encoding/charmap"
 )
@@ -85,6 +87,8 @@ type Request struct {
 	WorkDir   string
 	Preview   config.PreviewConfig
 	BaseStyle tcell.Style
+	// Theme supplies panel tree-connector glyphs/styles for archive listings.
+	Theme theme.Theme
 	// GitDiff, when true, shows git diff output instead of file content.
 	GitDiff   bool
 	GitStatus *gitstatus.Cell // nil when not in a git repo or file is unmodified
@@ -134,6 +138,11 @@ type Result struct {
 	Truncated        bool
 	// IsDiff is true when this result came from a git diff run.
 	IsDiff bool
+	// IsArchive is true when this result is an archive member-path listing (runArchiveList).
+	// It reuses SourceInternalHighlighted for wrapping/scrolling but carries no Chroma style,
+	// so callers must not tint chrome (border/scrollbar rail) with the text-preview Chroma
+	// style for it.
+	IsArchive bool
 	// IsMarkdown is true when content was produced by the rendered-markdown formatter
 	// (mdformat) rather than raw/diff/chroma text. Drives the fullscreen preview's
 	// left/right margin (see previewpanel.State.IsMarkdown).
@@ -180,6 +189,11 @@ func Run(ctx context.Context, req Request) Result {
 	}
 	if req.Media {
 		return runMedia(ctx, req)
+	}
+	// ponytail: archive listing wins over preview.mode=external and GitDiff so a dirty repo
+	// does not route an archive into git diff.
+	if f, ok := archive.FormatForName(req.Path); ok && f.Listable() {
+		return runArchiveList(ctx, req, f)
 	}
 	if req.GitDiff {
 		return runGitDiff(ctx, req)
