@@ -238,6 +238,11 @@ type App struct {
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
 
+	// panelRefreshNotBefore holds, per panel, the unix-nanos earliest start time for the next
+	// periodic refresh (see config.DefaultPanelRefreshSlowBackoffFactor). Written by the refresh
+	// goroutine, read on the main goroutine in schedulePanelListingRefresh, hence atomic.
+	panelRefreshNotBefore [2]atomic.Int64
+
 	statusCmdText    string
 	statusCmdRunning atomic.Bool
 	statusCmdStopCh  chan struct{}

@@ -51,6 +51,12 @@ const (
 	// DefaultRefreshIntervalMS is how often both file panels re-read their directories from disk (0 disables).
 	DefaultRefreshIntervalMS = 2500
 
+	// DefaultPanelRefreshSlowBackoffFactor sets the start-to-start spacing enforced on periodic
+	// panel refreshes: a refresh that started at start and took elapsed may next start no sooner
+	// than start + factor * elapsed. A 5ms local refresh yields a 20ms deadline (invisible under
+	// the 2.5s tick) while a 3s network refresh is retried every ~12s instead of back-to-back.
+	DefaultPanelRefreshSlowBackoffFactor = 4
+
 	// RefreshIntervalMinMS / RefreshIntervalMaxMS clamp active refresh_interval_ms in Config.Validate.
 	RefreshIntervalMinMS = 200
 	RefreshIntervalMaxMS = 60_000

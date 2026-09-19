@@ -5,11 +5,16 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
+
+// fetchListingForPanelRefresh is panel.FetchListing behind a package-level seam so tests can
+// substitute a fake (e.g. one that blocks) without touching the real filesystem.
+var fetchListingForPanelRefresh = panel.FetchListing
 
 type panelRefreshTickPayload struct{}
 
@@ -59,6 +64,11 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 		// A job is already saturating this volume; the next tick retries.
 		return
 	}
+	// A prior slow refresh for this panel set a start-to-start deadline; skipped ticks must
+	// never flip the in-flight flag, since nothing will clear it for them.
+	if time.Now().UnixNano() < a.panelRefreshNotBefore[panelID].Load() {
+		return
+	}
 	if !a.panelRefreshInFlight[panelID].CompareAndSwap(false, true) {
 		return
 	}
@@ -67,8 +77,18 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 	epoch := p.ListingEpoch
 	baseline := panel.BackendEntriesFromPanel(p.Entries)
 	go func(panelID int, snap panel.ListingRefreshSnapshot, path pathloc.Path, epoch uint64, baseline []fsbackend.Entry) {
-		defer a.panelRefreshInFlight[panelID].Store(false)
-		entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err := panel.FetchListing(context.Background(), snap)
+		start := time.Now()
+		defer func() {
+			// Record the earliest next start (start-to-start, not gap-to-gap) before clearing
+			// in-flight, so a tick that fires the instant this goroutine finishes still sees the
+			// deadline. A newly navigated directory deliberately inherits this deadline rather
+			// than resetting it: the directory was just explicitly listed by the navigation
+			// itself, and resetting here would race this deferred write.
+			elapsed := time.Since(start)
+			a.panelRefreshNotBefore[panelID].Store(start.Add(time.Duration(config.DefaultPanelRefreshSlowBackoffFactor) * elapsed).UnixNano())
+			a.panelRefreshInFlight[panelID].Store(false)
+		}()
+		entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err := fetchListingForPanelRefresh(context.Background(), snap)
 		if err != nil {
 			return
 		}

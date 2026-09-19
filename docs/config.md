@@ -84,7 +84,7 @@ File panel browsing, sorting, and listing.
 | `default_listing_format` | string | `"brief"` | Default listing column layout: `"mtime"` (modified time), `"perm"` (permissions), or `"brief"` (minimal columns). |
 | `sort_reverse` | bool | `false` | Reverse the default sort order. |
 | `directories_first` | bool | `true` | List directories before files regardless of sort order. |
-| `refresh_interval_ms` | int | `2500` | How often panels re-read their directory from disk in the background. `0` disables automatic refresh; non-zero values are clamped to 200–60000. |
+| `refresh_interval_ms` | int | `2500` | How often panels re-read their directory from disk in the background. `0` disables automatic refresh; non-zero values are clamped to 200–60000. A panel's next refresh starts no sooner than 4x the duration of its previous one (start-to-start), so a slow network directory isn't re-read continuously; fast directories are unaffected. |
 | `open_files_externally` | bool | `true` | Open non-executable files with the OS-associated external application on Enter. |
 | `run_executables_on_enter` | bool | `true` | Run executable files directly when pressing Enter on them. |
 | `execute_rules` | array of tables | see below | Per-pattern rules choosing background vs. foreground mode for Enter-executed files — see below. |
