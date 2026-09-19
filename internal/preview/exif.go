@@ -78,7 +78,7 @@ func exifLines(path, level string) []string {
 	if !ok {
 		return nil
 	}
-	tags, err := decodeExifTags(path, format)
+	tags, err := decodeExifTags(path, format, func(tag string) bool { return exifWantedTags[tag] })
 	if err != nil {
 		return nil
 	}
@@ -159,9 +159,10 @@ func exifLines(path, level string) []string {
 	return lines
 }
 
-// decodeExifTags opens path and decodes its EXIF tags with a 2s timeout — good enough for a
-// local file read; a hung decode should never be able to stall a preview indefinitely.
-func decodeExifTags(path string, format imagemeta.ImageFormat) (imagemeta.Tags, error) {
+// decodeExifTags opens path and decodes the EXIF tags for which want returns true, with a 2s
+// timeout — good enough for a local file read; a hung decode should never be able to stall a
+// preview indefinitely.
+func decodeExifTags(path string, format imagemeta.ImageFormat, want func(tag string) bool) (imagemeta.Tags, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return imagemeta.Tags{}, err
@@ -174,7 +175,7 @@ func decodeExifTags(path string, format imagemeta.ImageFormat) (imagemeta.Tags, 
 		ImageFormat: format,
 		Sources:     imagemeta.EXIF,
 		ShouldHandleTag: func(t imagemeta.TagInfo) bool {
-			return exifWantedTags[t.Tag]
+			return want(t.Tag)
 		},
 		HandleTag: func(t imagemeta.TagInfo) error {
 			tags.Add(t)
@@ -183,6 +184,24 @@ func decodeExifTags(path string, format imagemeta.ImageFormat) (imagemeta.Tags, 
 		Timeout: 2 * time.Second,
 	})
 	return tags, err
+}
+
+// exifOrientation returns the EXIF Orientation tag (1-8) for path, or 1 (normal) when the format
+// has no EXIF, the file can't be decoded, or the tag is missing/out of range.
+func exifOrientation(path string) int {
+	const normal = 1
+	format, ok := exifImageFormat(path)
+	if !ok {
+		return normal
+	}
+	tags, err := decodeExifTags(path, format, func(tag string) bool { return tag == "Orientation" })
+	if err != nil {
+		return normal
+	}
+	if v, ok := exifInt(tags.EXIF(), "Orientation"); ok && v >= 1 && v <= 8 {
+		return v
+	}
+	return normal
 }
 
 // cameraLabel joins make/model, dropping a make prefix duplicated in model (e.g. make

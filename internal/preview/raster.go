@@ -76,6 +76,7 @@ func DecodeStillMaxEdgePNG(ctx context.Context, path string, maxEdge int, metaLe
 	if maxEdge > 0 {
 		img = fitImage(img, maxEdge, maxEdge)
 	}
+	img = applyExifOrientation(img, exifOrientation(path))
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, "", err

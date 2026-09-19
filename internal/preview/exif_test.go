@@ -134,6 +134,39 @@ func buildTestTIFFExif() []byte {
 // buildTestTIFFExif) right after the SOI marker, then writes it to path.
 func writeTestJPEGWithEXIF(t *testing.T, path string, w, h int) {
 	t.Helper()
+	writeTestJPEGWithExifBytes(t, path, w, h, buildTestTIFFExif())
+}
+
+// buildTestTIFFExifOrientation assembles a minimal little-endian TIFF/EXIF blob containing only
+// an Orientation tag in IFD0 — a SHORT value fits inline, so no external-data area is needed.
+func buildTestTIFFExifOrientation(orientation uint16) []byte {
+	ifd0 := []tiffEntry{tiffShortEntry(0x0112, orientation)}
+	var buf bytes.Buffer
+	buf.WriteString("II")
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(42))
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(8))
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(len(ifd0)))
+	for _, e := range ifd0 {
+		_ = binary.Write(&buf, binary.LittleEndian, e.tag)
+		_ = binary.Write(&buf, binary.LittleEndian, e.typ)
+		_ = binary.Write(&buf, binary.LittleEndian, e.count)
+		buf.Write(e.inline[:])
+	}
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(0)) // next IFD offset: none
+	return buf.Bytes()
+}
+
+// writeTestJPEGWithOrientation encodes a small JPEG and splices an APP1 Exif segment carrying
+// only the given Orientation tag value.
+func writeTestJPEGWithOrientation(t *testing.T, path string, w, h int, orientation uint16) {
+	t.Helper()
+	writeTestJPEGWithExifBytes(t, path, w, h, buildTestTIFFExifOrientation(orientation))
+}
+
+// writeTestJPEGWithExifBytes encodes a small JPEG (distinct-colored pixels per coordinate) and
+// splices an APP1 Exif segment wrapping tiff right after the SOI marker, then writes it to path.
+func writeTestJPEGWithExifBytes(t *testing.T, path string, w, h int, tiff []byte) {
+	t.Helper()
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -149,7 +182,6 @@ func writeTestJPEGWithEXIF(t *testing.T, path string, w, h int) {
 		t.Fatalf("encoded image missing JPEG SOI marker")
 	}
 
-	tiff := buildTestTIFFExif()
 	payload := append([]byte("Exif\x00\x00"), tiff...)
 	length := len(payload) + 2
 	app1 := []byte{0xFF, 0xE1, byte(length >> 8), byte(length)}

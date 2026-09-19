@@ -193,6 +193,11 @@ without EXIF support, still shows the base format/dimensions/size line at any le
 above `"off"`. Reading EXIF never fails a preview — a decode error just means no extra
 detail lines are shown.
 
+Rotated camera photos display upright: the EXIF Orientation tag is read and applied to the
+decoded image before it's shown, independently of the metadata caption level above (this
+happens even when `image_metadata` is `"off"`). The caption's "W × H px" always reports the
+file's stored pixel dimensions, not the displayed (possibly rotated) ones.
+
 The panel reserves the caption's wrapped row count (plus one blank separator row) out of
 the image's pixel budget before rendering, so the image shrinks to make room rather than
 overlapping the text. Set the level from the M-F3 Preview settings dialog, or write
