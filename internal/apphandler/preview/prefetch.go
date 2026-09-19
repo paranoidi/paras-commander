@@ -28,12 +28,14 @@ func (h *Handler) ensurePrefetch() {
 		}
 		// A settings dialog changed something the running engine froze at construction — most
 		// importantly the still-decode max edge, which moves with the image protocol (the M-F3
-		// image-capabilities dialog switches that at runtime, and Sixel under tmux clamps to
+		// preview settings dialog switches that at runtime, and Sixel under tmux clamps to
 		// [preview].tmux_sixel_max_edge_px while every other combination uses
-		// [preview].image_max_edge_px). Keeping the old value means prefetch warms one
-		// LoadStill key while the live preview asks for another: every image then re-decodes on
-		// first selection (visible as the prefetch loading icon flashing on an entry the warm
-		// tint already called preloaded). Restart so both sides agree on the keys again.
+		// [preview].image_max_edge_px), and the image-metadata level, whose still-tier cached
+		// caption embeds the level it was rendered at. Keeping an old value means prefetch warms
+		// one LoadStill/LoadRender key while the live preview asks for another: every image then
+		// re-decodes on first selection (visible as the prefetch loading icon flashing on an
+		// entry the warm tint already called preloaded). Restart so both sides agree on the keys
+		// again.
 		h.stopPrefetch()
 	}
 	h.prefetchCfg = want
@@ -44,8 +46,8 @@ func (h *Handler) ensurePrefetch() {
 }
 
 // prefetchEngineConfig derives the engine config from live preview settings. The two max-edge
-// values resolve exactly as a live request's do (previewRequest → runImageCtx), so prefetched
-// entries share the cache keys the foreground path will look up.
+// values and the image-metadata level resolve exactly as a live request's do (previewRequest →
+// runImageCtx), so prefetched entries share the cache keys the foreground path will look up.
 func prefetchEngineConfig(cfg config.PreviewConfig) prefetch.Config {
 	protocol := previewrun.ResolveImageProtocol(cfg, os.Getenv)
 	inTmux := os.Getenv("TMUX") != ""
@@ -59,6 +61,7 @@ func prefetchEngineConfig(cfg config.PreviewConfig) prefetch.Config {
 		VideoThumbCols:    cfg.VideoThumbCols,
 		VideoThumbRows:    cfg.VideoThumbRows,
 		VideoThumbWorkers: cfg.VideoThumbWorkers,
+		ImageMetadata:     cfg.ImageMetadata,
 	}
 }
 
@@ -198,6 +201,8 @@ func (h *Handler) activeRenderBox(quickView bool) *prefetch.RenderBox {
 		InTmux:             os.Getenv("TMUX") != "",
 		MaxPxW:             tw * cw,
 		MaxPxH:             contentH * ch,
+		TextWidth:          tw,
+		CellPxH:            ch,
 	}
 }
 

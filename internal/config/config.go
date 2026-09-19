@@ -298,6 +298,15 @@ type PreviewConfig struct {
 	TerminalSixel            string `toml:"terminal_sixel"`
 	TerminalKitty            string `toml:"terminal_kitty"`
 	TerminalKittyPlaceholder string `toml:"terminal_kitty_placeholder"`
+	// ImageMetadata selects how much EXIF detail is shown under a still-image preview: "off"
+	// (image only), "basic" (camera + date), "essentials" (+ lens, exposure, ISO, focal length,
+	// GPS; default), or "full" (+ software, 35mm eq., EV bias, flash, program, white balance).
+	// Unknown values normalize to DefaultPreviewImageMetadata. Set via the M-F3 preview
+	// settings dialog.
+	ImageMetadata string `toml:"image_metadata"`
+	// VideoMetadata shows the ffprobe metadata line under video thumbnail grids (default true).
+	// When false, only the thumbnail grid (or "Generating thumbnails…") is shown.
+	VideoMetadata bool `toml:"video_metadata"`
 	// VideoThumbCols / VideoThumbRows set the video thumbnail grid size (default 2×2).
 	VideoThumbCols int `toml:"video_thumb_cols"`
 	VideoThumbRows int `toml:"video_thumb_rows"`
@@ -702,6 +711,8 @@ func Default() Config {
 			TerminalSixel:                 DefaultPreviewTerminalSixel,
 			TerminalKitty:                 DefaultPreviewTerminalKitty,
 			TerminalKittyPlaceholder:      DefaultPreviewTerminalKittyPlaceholder,
+			ImageMetadata:                 DefaultPreviewImageMetadata,
+			VideoMetadata:                 DefaultPreviewVideoMetadata,
 			VideoThumbCols:                DefaultPreviewVideoThumbCols,
 			VideoThumbRows:                DefaultPreviewVideoThumbRows,
 			VideoThumbWorkers:             DefaultPreviewVideoThumbWorkers,
@@ -1331,6 +1342,12 @@ func (c *Config) validatePreview(builtin *Config) {
 	c.Preview.TerminalSixel = validateTerminalCapability(c.Preview.TerminalSixel, builtin.Preview.TerminalSixel)
 	c.Preview.TerminalKitty = validateTerminalCapability(c.Preview.TerminalKitty, builtin.Preview.TerminalKitty)
 	c.Preview.TerminalKittyPlaceholder = validateTerminalCapability(c.Preview.TerminalKittyPlaceholder, builtin.Preview.TerminalKittyPlaceholder)
+	switch strings.ToLower(strings.TrimSpace(c.Preview.ImageMetadata)) {
+	case PreviewImageMetadataOff, PreviewImageMetadataBasic, PreviewImageMetadataEssentials, PreviewImageMetadataFull:
+		c.Preview.ImageMetadata = strings.ToLower(strings.TrimSpace(c.Preview.ImageMetadata))
+	default:
+		c.Preview.ImageMetadata = builtin.Preview.ImageMetadata
+	}
 	if c.Preview.VideoThumbCols < PreviewVideoThumbGridMin || c.Preview.VideoThumbCols > PreviewVideoThumbGridMax {
 		c.Preview.VideoThumbCols = builtin.Preview.VideoThumbCols
 	}

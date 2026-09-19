@@ -441,7 +441,7 @@ func TestOptionsMenuKeepsThemeChoicesOutOfPulldown(t *testing.T) {
 	if len(items) != 4 {
 		t.Fatalf("options items len = %d, want configuration, configure graphics, calibrate debounce, and theme entries", len(items))
 	}
-	if items[0].Action != keymap.ActionUIOpenConfig || items[1].Action != keymap.ActionPreviewImageCapabilityDialog || items[2].Action != keymap.ActionUICalibrateDebounce || items[3].Action != keymap.ActionUIOpenTheme {
+	if items[0].Action != keymap.ActionUIOpenConfig || items[1].Action != keymap.ActionPreviewSettingsDialog || items[2].Action != keymap.ActionUICalibrateDebounce || items[3].Action != keymap.ActionUIOpenTheme {
 		t.Fatalf("unexpected Options actions: %+v / %+v / %+v / %+v", items[0].Action, items[1].Action, items[2].Action, items[3].Action)
 	}
 }

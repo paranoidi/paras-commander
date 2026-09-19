@@ -358,6 +358,16 @@ const (
 	DefaultPreviewTerminalSixel            = PreviewTerminalCapabilityAuto
 	DefaultPreviewTerminalKitty            = PreviewTerminalCapabilityAuto
 	DefaultPreviewTerminalKittyPlaceholder = PreviewTerminalCapabilityAuto
+	// PreviewImageMetadataOff/Basic/Essentials/Full are the [preview].image_metadata levels
+	// controlling how much EXIF detail is shown under a still-image preview.
+	PreviewImageMetadataOff        = "off"
+	PreviewImageMetadataBasic      = "basic"
+	PreviewImageMetadataEssentials = "essentials"
+	PreviewImageMetadataFull       = "full"
+	// DefaultPreviewImageMetadata is the default [preview].image_metadata level.
+	DefaultPreviewImageMetadata = PreviewImageMetadataEssentials
+	// DefaultPreviewVideoMetadata enables the ffprobe metadata line under video thumbnail grids.
+	DefaultPreviewVideoMetadata = true
 	// DefaultPreviewVideoThumbCols / Rows are the default video thumbnail grid size.
 	DefaultPreviewVideoThumbCols = 2
 	DefaultPreviewVideoThumbRows = 2

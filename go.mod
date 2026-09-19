@@ -5,6 +5,7 @@ go 1.26.2
 require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/alecthomas/chroma/v2 v2.27.0
+	github.com/bep/imagemeta v1.0.1
 	github.com/creack/pty v1.1.24
 	github.com/epilande/go-devicons v0.0.0-20250505162540-0661cab71a28
 	github.com/gdamore/tcell/v2 v2.13.9
@@ -19,7 +20,7 @@ require (
 	golang.org/x/image v0.44.0
 	golang.org/x/sys v0.45.0
 	golang.org/x/term v0.43.0
-	golang.org/x/text v0.40.0
+	golang.org/x/text v0.41.0
 )
 
 require (

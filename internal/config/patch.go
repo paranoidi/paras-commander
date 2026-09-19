@@ -8,10 +8,11 @@ import (
 	"strings"
 )
 
-// previewTerminalKeyOrder are the 4 known scalar string keys PatchPreviewTerminalKeys edits
-// inside [preview]. Order controls the order any newly appended keys are written in.
-var previewTerminalKeyOrder = []string{
+// previewPatchKeyOrder are the 6 known scalar keys PatchPreviewKeys edits inside [preview].
+// Order controls the order any newly appended keys are written in.
+var previewPatchKeyOrder = []string{
 	"terminal_sixel", "terminal_kitty", "terminal_kitty_placeholder", "image_protocol",
+	"image_metadata", "video_metadata",
 }
 
 // previewTableHeaderRe matches a `[preview]` table header line, exact after trimming trailing
@@ -31,35 +32,32 @@ func previewKeyLineRe(key string) *regexp.Regexp {
 	return regexp.MustCompile(`^(\s*` + regexp.QuoteMeta(key) + `\s*=\s*)(?:"[^"]*"|'[^']*'|[a-z_]+)(.*)$`)
 }
 
-// PatchPreviewTerminalKeysForPaths resolves paths to config.toml and calls PatchPreviewTerminalKeys.
-func PatchPreviewTerminalKeysForPaths(paths Paths, sixel, kitty, kittyPlaceholder, imageProtocol string) error {
+// PatchPreviewKeysForPaths resolves paths to config.toml and calls PatchPreviewKeys.
+func PatchPreviewKeysForPaths(paths Paths, values map[string]string) error {
 	configFile, err := resolvePersistPaths(paths)
 	if err != nil {
 		return err
 	}
-	return PatchPreviewTerminalKeys(configFile, sixel, kitty, kittyPlaceholder, imageProtocol)
+	return PatchPreviewKeys(configFile, values)
 }
 
-// PatchPreviewTerminalKeys rewrites exactly the 4 known [preview] scalar keys
-// (terminal_sixel, terminal_kitty, terminal_kitty_placeholder, image_protocol) in the TOML file
-// at path, preserving every other line — comments, formatting, unrelated tables — untouched.
-// It is intentionally narrow (4 known scalar string keys, no general TOML AST editor): the M-F3
-// image-capabilities dialog is its only caller.
+// PatchPreviewKeys rewrites the given keys (a subset of previewPatchKeyOrder — terminal_sixel,
+// terminal_kitty, terminal_kitty_placeholder, image_protocol, image_metadata, video_metadata) in
+// the [preview] table of the TOML file at path, preserving every other line — comments,
+// formatting, unrelated tables — untouched. It is intentionally narrow (known scalar keys, no
+// general TOML AST editor): the M-F3 preview settings dialog is its only caller.
+//
+// values holds already-formatted TOML literals (quoted strings via strconv.Quote, bare
+// true/false via strconv.FormatBool) — PatchPreviewKeys does not add its own quoting.
 //
 // Existing key lines are edited in place, keeping any trailing inline comment. Keys not found
-// inside an existing [preview] table are appended at the end of that table. If [preview] itself
-// doesn't exist, a new table with all 4 keys is appended at end of file. If the file doesn't
-// exist yet, it's created with just a [preview] table holding the 4 keys. The write is atomic
-// (temp file + rename, via the same atomicWrite helper WriteMergedPartial uses) so a crash
-// mid-write can't truncate the user's config.toml.
-func PatchPreviewTerminalKeys(path string, sixel, kitty, kittyPlaceholder, imageProtocol string) error {
-	values := map[string]string{
-		"terminal_sixel":             sixel,
-		"terminal_kitty":             kitty,
-		"terminal_kitty_placeholder": kittyPlaceholder,
-		"image_protocol":             imageProtocol,
-	}
-
+// inside an existing [preview] table are appended at the end of that table, in
+// previewPatchKeyOrder order. If [preview] itself doesn't exist, a new table with the given keys
+// is appended at end of file. If the file doesn't exist yet, it's created with just a [preview]
+// table holding the given keys. The write is atomic (temp file + rename, via the same
+// atomicWrite helper WriteMergedPartial uses) so a crash mid-write can't truncate the user's
+// config.toml.
+func PatchPreviewKeys(path string, values map[string]string) error {
 	var lines []string
 	raw, err := os.ReadFile(path)
 	switch {
@@ -76,13 +74,15 @@ func PatchPreviewTerminalKeys(path string, sixel, kitty, kittyPlaceholder, image
 
 	tableStart, tableEnd, hasTable := findPreviewTable(lines)
 
-	missing := make(map[string]bool, len(previewTerminalKeyOrder))
-	for _, key := range previewTerminalKeyOrder {
-		missing[key] = true
+	missing := make(map[string]bool, len(values))
+	for _, key := range previewPatchKeyOrder {
+		if _, ok := values[key]; ok {
+			missing[key] = true
+		}
 	}
 	if hasTable {
 		for i := tableStart + 1; i < tableEnd; i++ {
-			for _, key := range previewTerminalKeyOrder {
+			for key := range missing {
 				if !missing[key] {
 					continue
 				}
@@ -91,22 +91,22 @@ func PatchPreviewTerminalKeys(path string, sixel, kitty, kittyPlaceholder, image
 				if m == nil {
 					continue
 				}
-				lines[i] = m[1] + `"` + values[key] + `"` + m[2]
+				lines[i] = m[1] + values[key] + m[2]
 				missing[key] = false
 			}
 		}
 	}
 
 	var newKeyLines []string
-	for _, key := range previewTerminalKeyOrder {
+	for _, key := range previewPatchKeyOrder {
 		if missing[key] {
-			newKeyLines = append(newKeyLines, fmt.Sprintf("%s = %q", key, values[key]))
+			newKeyLines = append(newKeyLines, fmt.Sprintf("%s = %s", key, values[key]))
 		}
 	}
 
 	switch {
 	case len(newKeyLines) == 0:
-		// All 4 keys already existed and were rewritten in place.
+		// All requested keys already existed and were rewritten in place.
 	case hasTable:
 		out := make([]string, 0, len(lines)+len(newKeyLines))
 		out = append(out, lines[:tableEnd]...)

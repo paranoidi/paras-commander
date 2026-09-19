@@ -14,7 +14,7 @@ import (
 // TestToggleKittySupportedClearsPlaceholder covers unchecking Kitty support also clearing the
 // (now-inconsistent) placeholder checkbox, since placeholder display requires Kitty protocol.
 func TestToggleKittySupportedClearsPlaceholder(t *testing.T) {
-	st := &dialog.ImageCapabilityDialogState{KittySupported: true, KittyPlaceholderSupported: true}
+	st := &dialog.PreviewSettingsDialogState{KittySupported: true, KittyPlaceholderSupported: true}
 	toggleKittySupported(st)
 	if st.KittySupported {
 		t.Fatal("KittySupported should be false after toggling from true")
@@ -35,7 +35,7 @@ func TestToggleKittySupportedClearsPlaceholder(t *testing.T) {
 // TestToggleKittyPlaceholderSupportedImpliesKitty covers checking placeholder support also
 // implicitly checking Kitty support, since placeholder is a Kitty-only display mode.
 func TestToggleKittyPlaceholderSupportedImpliesKitty(t *testing.T) {
-	st := &dialog.ImageCapabilityDialogState{}
+	st := &dialog.PreviewSettingsDialogState{}
 	toggleKittyPlaceholderSupported(st)
 	if !st.KittyPlaceholderSupported {
 		t.Fatal("KittyPlaceholderSupported should be true after toggling from false")
@@ -53,7 +53,7 @@ func TestToggleKittyPlaceholderSupportedImpliesKitty(t *testing.T) {
 	}
 }
 
-func TestOptionsMenuOpensImageCapabilityDialog(t *testing.T) {
+func TestOptionsMenuOpensPreviewSettingsDialog(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -75,7 +75,7 @@ func TestOptionsMenuOpensImageCapabilityDialog(t *testing.T) {
 	app.dispatch(keymap.ActionAppOpenMenu)
 	app.moveMenu(3) // File → Command → Display → Options
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
 
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
@@ -83,12 +83,12 @@ func TestOptionsMenuOpensImageCapabilityDialog(t *testing.T) {
 	if app.model.Menu.Open {
 		t.Fatal("menu open = true, want closed")
 	}
-	if !app.model.ImageCapabilityDialog.Open {
-		t.Fatal("image capability dialog open = false, want true")
+	if !app.model.PreviewSettingsDialog.Open {
+		t.Fatal("preview settings dialog open = false, want true")
 	}
 }
 
-func TestImageCapabilityDialogApplyPersists(t *testing.T) {
+func TestPreviewSettingsDialogApplyPersists(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -99,7 +99,7 @@ func TestImageCapabilityDialogApplyPersists(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-image-capability")}.WithResolvedLocations()
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-preview-settings")}.WithResolvedLocations()
 	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -109,17 +109,19 @@ func TestImageCapabilityDialogApplyPersists(t *testing.T) {
 		Theme:  theme.Default(),
 	})
 
-	app.openImageCapabilityDialog()
-	app.handleImageCapabilityDialogKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
-	app.handleImageCapabilityDialogKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
-	app.handleImageCapabilityDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	app.openPreviewSettingsDialog()
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'u', tcell.ModNone))
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
-	if app.model.ImageCapabilityDialog.Open {
-		t.Fatal("image capability dialog should close after apply")
+	if app.model.PreviewSettingsDialog.Open {
+		t.Fatal("preview settings dialog should close after apply")
 	}
 	if app.config.Preview.TerminalKitty != config.PreviewTerminalCapabilityYes {
 		t.Fatalf("TerminalKitty = %q, want %q", app.config.Preview.TerminalKitty, config.PreviewTerminalCapabilityYes)
@@ -129,6 +131,12 @@ func TestImageCapabilityDialogApplyPersists(t *testing.T) {
 	}
 	if app.config.Preview.ImageProtocol != config.PreviewImageProtocolKitty {
 		t.Fatalf("ImageProtocol = %q, want %q", app.config.Preview.ImageProtocol, config.PreviewImageProtocolKitty)
+	}
+	if app.config.Preview.ImageMetadata != config.PreviewImageMetadataFull {
+		t.Fatalf("ImageMetadata = %q, want %q", app.config.Preview.ImageMetadata, config.PreviewImageMetadataFull)
+	}
+	if app.config.Preview.VideoMetadata != !config.DefaultPreviewVideoMetadata {
+		t.Fatalf("VideoMetadata = %v, want %v (toggled from default)", app.config.Preview.VideoMetadata, !config.DefaultPreviewVideoMetadata)
 	}
 
 	reloaded, err := config.LoadFromPaths(appPaths)
@@ -143,5 +151,11 @@ func TestImageCapabilityDialogApplyPersists(t *testing.T) {
 	}
 	if reloaded.Preview.ImageProtocol != config.PreviewImageProtocolKitty {
 		t.Fatalf("persisted image_protocol = %q, want %q", reloaded.Preview.ImageProtocol, config.PreviewImageProtocolKitty)
+	}
+	if reloaded.Preview.ImageMetadata != config.PreviewImageMetadataFull {
+		t.Fatalf("persisted image_metadata = %q, want %q", reloaded.Preview.ImageMetadata, config.PreviewImageMetadataFull)
+	}
+	if reloaded.Preview.VideoMetadata != !config.DefaultPreviewVideoMetadata {
+		t.Fatalf("persisted video_metadata = %v, want %v", reloaded.Preview.VideoMetadata, !config.DefaultPreviewVideoMetadata)
 	}
 }

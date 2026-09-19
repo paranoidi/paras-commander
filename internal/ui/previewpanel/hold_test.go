@@ -42,3 +42,24 @@ func TestMergeDrawWithHoldKeepsInternalCells(t *testing.T) {
 		t.Fatalf("HighlightedCells len = %d, want 2", len(draw.HighlightedCells))
 	}
 }
+
+// TestMergeDrawWithHoldKeepsImageFirst guards against a held still/video preview flipping its
+// caption above the image during stale-while-revalidate: ImageFirst must carry over from hold
+// just like every other image/caption field.
+func TestMergeDrawWithHoldKeepsImageFirst(t *testing.T) {
+	t.Parallel()
+	hold := State{
+		Open: true, Phase: PhaseDone, Source: SourceExternalANSI,
+		ImagePayload: "payload", CombinedText: "caption", ImageFirst: true,
+	}
+	live := State{
+		Open: true, Phase: PhasePending, Path: "/tmp/new.jpg", TitleBase: "new.jpg",
+	}
+	draw := MergeDrawWithHold(live, hold)
+	if !draw.BodyHeld {
+		t.Fatal("BodyHeld = false, want true")
+	}
+	if !draw.ImageFirst {
+		t.Fatal("ImageFirst = false, want true (carried over from hold)")
+	}
+}

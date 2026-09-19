@@ -7,7 +7,18 @@ import (
 	"testing"
 )
 
-func TestPatchPreviewTerminalKeys(t *testing.T) {
+// terminalKV builds the 4-key values map PatchPreviewKeys expects, quoting each value the way
+// the real caller (the preview settings dialog) does for string fields.
+func terminalKV(sixel, kitty, kittyPlaceholder, imageProtocol string) map[string]string {
+	return map[string]string{
+		"terminal_sixel":             `"` + sixel + `"`,
+		"terminal_kitty":             `"` + kitty + `"`,
+		"terminal_kitty_placeholder": `"` + kittyPlaceholder + `"`,
+		"image_protocol":             `"` + imageProtocol + `"`,
+	}
+}
+
+func TestPatchPreviewKeys(t *testing.T) {
 	cases := []struct {
 		name    string
 		initial string // "" means the file is not created at all
@@ -154,8 +165,8 @@ func TestPatchPreviewTerminalKeys(t *testing.T) {
 				}
 			}
 
-			if err := PatchPreviewTerminalKeys(path, "yes", "no", "yes", "kitty"); err != nil {
-				t.Fatalf("PatchPreviewTerminalKeys: %v", err)
+			if err := PatchPreviewKeys(path, terminalKV("yes", "no", "yes", "kitty")); err != nil {
+				t.Fatalf("PatchPreviewKeys: %v", err)
 			}
 
 			got, err := os.ReadFile(path)
@@ -177,10 +188,51 @@ func TestPatchPreviewTerminalKeys(t *testing.T) {
 	}
 }
 
-// TestPatchPreviewTerminalKeysIndentedKeys guards against the regex requiring flush-left keys:
+// TestPatchPreviewKeysBareBoolInPlace guards the boolean keys (image_metadata is a quoted
+// string, video_metadata a bare true/false): an existing bare `video_metadata = false` line
+// must be rewritten to a bare `true`/`false`, not quoted, and image_metadata quoted alongside it.
+func TestPatchPreviewKeysBareBoolInPlace(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	initial := strings.Join([]string{
+		`[preview]`,
+		`image_metadata = "off"`,
+		`video_metadata = false`,
+		``,
+	}, "\n")
+	if err := os.WriteFile(path, []byte(initial), 0o644); err != nil {
+		t.Fatalf("seed file: %v", err)
+	}
+
+	if err := PatchPreviewKeys(path, map[string]string{
+		"image_metadata": `"full"`,
+		"video_metadata": "true",
+	}); err != nil {
+		t.Fatalf("PatchPreviewKeys: %v", err)
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read patched file: %v", err)
+	}
+	gotStr := string(got)
+	for _, want := range []string{
+		`image_metadata = "full"`,
+		`video_metadata = true`,
+	} {
+		if !strings.Contains(gotStr, want) {
+			t.Errorf("output missing %q\n--- got ---\n%s", want, gotStr)
+		}
+	}
+	if strings.Contains(gotStr, `video_metadata = "true"`) {
+		t.Errorf("video_metadata was quoted instead of left bare:\n%s", gotStr)
+	}
+}
+
+// TestPatchPreviewKeysIndentedKeys guards against the regex requiring flush-left keys:
 // WriteDefaultStub/EncodeDefaultStub (the real config.toml generator) indents keys two spaces
 // under their table header, e.g. `  image_protocol = "auto"`, not `image_protocol = "auto"`.
-func TestPatchPreviewTerminalKeysIndentedKeys(t *testing.T) {
+func TestPatchPreviewKeysIndentedKeys(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
 	initial := strings.Join([]string{
@@ -199,8 +251,8 @@ func TestPatchPreviewTerminalKeysIndentedKeys(t *testing.T) {
 		t.Fatalf("seed file: %v", err)
 	}
 
-	if err := PatchPreviewTerminalKeys(path, "yes", "no", "yes", "kitty"); err != nil {
-		t.Fatalf("PatchPreviewTerminalKeys: %v", err)
+	if err := PatchPreviewKeys(path, terminalKV("yes", "no", "yes", "kitty")); err != nil {
+		t.Fatalf("PatchPreviewKeys: %v", err)
 	}
 
 	got, err := os.ReadFile(path)
@@ -222,19 +274,19 @@ func TestPatchPreviewTerminalKeysIndentedKeys(t *testing.T) {
 	}
 }
 
-// TestPatchPreviewTerminalKeysAgainstGeneratedStub is an end-to-end smoke test against the real
+// TestPatchPreviewKeysAgainstGeneratedStub is an end-to-end smoke test against the real
 // config.toml produced by EncodeDefaultStub (same generator WriteDefaultStub/-config-stub use),
 // guarding against the patcher's line-scanning assumptions (indentation, key ordering, other
 // [preview] keys like video_thumb_cols) drifting out of sync with the actual stub format.
-func TestPatchPreviewTerminalKeysAgainstGeneratedStub(t *testing.T) {
+func TestPatchPreviewKeysAgainstGeneratedStub(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
 	if err := WriteDefaultStub(path); err != nil {
 		t.Fatalf("WriteDefaultStub: %v", err)
 	}
 
-	if err := PatchPreviewTerminalKeys(path, "yes", "no", "yes", "kitty"); err != nil {
-		t.Fatalf("PatchPreviewTerminalKeys: %v", err)
+	if err := PatchPreviewKeys(path, terminalKV("yes", "no", "yes", "kitty")); err != nil {
+		t.Fatalf("PatchPreviewKeys: %v", err)
 	}
 
 	got, err := os.ReadFile(path)
@@ -262,16 +314,16 @@ func TestPatchPreviewTerminalKeysAgainstGeneratedStub(t *testing.T) {
 	}
 }
 
-// TestPatchPreviewTerminalKeysDoesNotDuplicateOnRepeatedCalls guards against a key being
-// re-appended (duplicated) on a second patch after the file already has it in place.
-func TestPatchPreviewTerminalKeysDoesNotDuplicateOnRepeatedCalls(t *testing.T) {
+// TestPatchPreviewKeysDoesNotDuplicateOnRepeatedCalls guards against a key being re-appended
+// (duplicated) on a second patch after the file already has it in place.
+func TestPatchPreviewKeysDoesNotDuplicateOnRepeatedCalls(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
 
-	if err := PatchPreviewTerminalKeys(path, "auto", "auto", "auto", "auto"); err != nil {
+	if err := PatchPreviewKeys(path, terminalKV("auto", "auto", "auto", "auto")); err != nil {
 		t.Fatalf("first patch: %v", err)
 	}
-	if err := PatchPreviewTerminalKeys(path, "yes", "no", "yes", "kitty"); err != nil {
+	if err := PatchPreviewKeys(path, terminalKV("yes", "no", "yes", "kitty")); err != nil {
 		t.Fatalf("second patch: %v", err)
 	}
 
@@ -291,9 +343,9 @@ func TestPatchPreviewTerminalKeysDoesNotDuplicateOnRepeatedCalls(t *testing.T) {
 	}
 }
 
-// TestPatchPreviewTerminalKeysAtomicWrite guards against a truncated file if something goes
-// wrong mid-write: it must always write through a temp file + rename, never in place.
-func TestPatchPreviewTerminalKeysAtomicWrite(t *testing.T) {
+// TestPatchPreviewKeysAtomicWrite guards against a truncated file if something goes wrong
+// mid-write: it must always write through a temp file + rename, never in place.
+func TestPatchPreviewKeysAtomicWrite(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
 	if err := os.WriteFile(path, []byte("theme = \"default\"\n"), 0o644); err != nil {
@@ -304,7 +356,7 @@ func TestPatchPreviewTerminalKeysAtomicWrite(t *testing.T) {
 		t.Fatalf("stat before: %v", err)
 	}
 
-	if err := PatchPreviewTerminalKeys(path, "auto", "auto", "auto", "auto"); err != nil {
+	if err := PatchPreviewKeys(path, terminalKV("auto", "auto", "auto", "auto")); err != nil {
 		t.Fatalf("patch: %v", err)
 	}
 
@@ -326,9 +378,9 @@ func TestPatchPreviewTerminalKeysAtomicWrite(t *testing.T) {
 	}
 }
 
-// TestPatchPreviewTerminalKeysSingleQuotedAndBareValues guards against the regex only matching
+// TestPatchPreviewKeysSingleQuotedAndBareValues guards against the regex only matching
 // double-quoted values: hand-edited configs may use single quotes or bare identifiers.
-func TestPatchPreviewTerminalKeysSingleQuotedAndBareValues(t *testing.T) {
+func TestPatchPreviewKeysSingleQuotedAndBareValues(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
 	initial := strings.Join([]string{
@@ -343,8 +395,8 @@ func TestPatchPreviewTerminalKeysSingleQuotedAndBareValues(t *testing.T) {
 		t.Fatalf("seed file: %v", err)
 	}
 
-	if err := PatchPreviewTerminalKeys(path, "yes", "yes", "yes", "kitty"); err != nil {
-		t.Fatalf("PatchPreviewTerminalKeys: %v", err)
+	if err := PatchPreviewKeys(path, terminalKV("yes", "yes", "yes", "kitty")); err != nil {
+		t.Fatalf("PatchPreviewKeys: %v", err)
 	}
 
 	got, err := os.ReadFile(path)
@@ -369,11 +421,11 @@ func TestPatchPreviewTerminalKeysSingleQuotedAndBareValues(t *testing.T) {
 	}
 }
 
-func TestPatchPreviewTerminalKeysForPaths(t *testing.T) {
+func TestPatchPreviewKeysForPaths(t *testing.T) {
 	dir := t.TempDir()
 	paths := Paths{ConfigDir: dir}.WithResolvedLocations()
-	if err := PatchPreviewTerminalKeysForPaths(paths, "yes", "no", "yes", "kitty"); err != nil {
-		t.Fatalf("PatchPreviewTerminalKeysForPaths: %v", err)
+	if err := PatchPreviewKeysForPaths(paths, terminalKV("yes", "no", "yes", "kitty")); err != nil {
+		t.Fatalf("PatchPreviewKeysForPaths: %v", err)
 	}
 	got, err := os.ReadFile(paths.ConfigFile)
 	if err != nil {

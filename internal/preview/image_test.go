@@ -40,7 +40,7 @@ func TestRunImageEncodesSixelWithinBudget(t *testing.T) {
 
 	res := Run(context.Background(), Request{
 		Path:          path,
-		Preview:       config.PreviewConfig{Images: true},
+		Preview:       config.PreviewConfig{Images: true, ImageMetadata: config.PreviewImageMetadataOff},
 		Image:         true,
 		ImageMaxPxW:   20,
 		ImageMaxPxH:   15,
@@ -59,7 +59,46 @@ func TestRunImageEncodesSixelWithinBudget(t *testing.T) {
 		t.Fatalf("scaled = %d×%d, want ≤ 20×15", res.ImagePxW, res.ImagePxH)
 	}
 	if res.CombinedText != "" {
-		t.Fatalf("CombinedText = %q, want empty on successful still-image encode", res.CombinedText)
+		t.Fatalf("CombinedText = %q, want empty when image_metadata = off (image only)", res.CombinedText)
+	}
+}
+
+// TestRunImageWithMetadataShowsCaptionBelowShrunkImage covers a configured (non-off)
+// image_metadata level: the still tier's caption becomes the caption drawn under the image
+// (ImageFirst), and the image's pixel budget is pre-shrunk by the caption's row count so the two
+// never overlap.
+func TestRunImageWithMetadataShowsCaptionBelowShrunkImage(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "garden.png")
+	writeTestPNG(t, path, 40, 30)
+
+	const cellPxH = 20
+	req := Request{
+		Path:          path,
+		Preview:       config.PreviewConfig{Images: true, ImageMetadata: config.PreviewImageMetadataBasic},
+		Image:         true,
+		ImageMaxPxW:   200,
+		ImageMaxPxH:   400,
+		ImageCellPxH:  cellPxH,
+		TextWidth:     40,
+		ImageProtocol: previewpanel.ImageProtocolSixel,
+	}
+	res := Run(context.Background(), req)
+	if res.ErrorMsg != "" {
+		t.Fatalf("ErrorMsg = %q", res.ErrorMsg)
+	}
+	if !strings.HasPrefix(res.ImagePayload, "\x1bP") {
+		t.Fatalf("ImagePayload prefix = %q, want \\x1bP…", res.ImagePayload[:min(8, len(res.ImagePayload))])
+	}
+	if res.CombinedText == "" {
+		t.Fatal("CombinedText empty, want the PNG format/dims/size caption")
+	}
+	if !res.ImageFirst {
+		t.Fatal("ImageFirst = false, want true (image above, caption below)")
+	}
+	budget := ImageRenderBudgetPxH(req.ImageMaxPxH, cellPxH, req.TextWidth, res.CombinedText)
+	if res.ImagePxH > budget {
+		t.Fatalf("ImagePxH = %d, want ≤ budget %d", res.ImagePxH, budget)
 	}
 }
 

@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
@@ -490,5 +492,51 @@ func TestScheduleWithNilRenderBoxSkipsRenderWarming(t *testing.T) {
 	key := renderKey(path, mtime, size, previewpanel.ImageProtocolKitty, false, false, 20, 20)
 	if _, _, ok := e.cache.render.get(key); ok {
 		t.Fatal("render cache warmed despite nil RenderBox; expected eager warming to be skipped")
+	}
+}
+
+// TestScheduleWithMetadataShrinksRenderBoxByCaption confirms runJob warms the render-payload
+// cache at the same caption-shrunk box the foreground render path (runImageCtx) would ask for —
+// not the surface's raw, unshrunk pixel box — and that isImageWarm agrees once that's done.
+func TestScheduleWithMetadataShrinksRenderBoxByCaption(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "meadow.png")
+	const w, h = 40, 40
+	writeSolidPNG(t, path, w, h)
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mtime, size := fi.ModTime().UnixNano(), fi.Size()
+
+	const imageMaxEdgePx = 64
+	e := NewEngine(context.Background(), Config{Workers: 1, ImageMaxEdgePx: imageMaxEdgePx, ImageMetadata: config.PreviewImageMetadataBasic}, nil)
+	t.Cleanup(e.Close)
+
+	box := &RenderBox{Proto: previewpanel.ImageProtocolKitty, MaxPxW: 200, MaxPxH: 400, TextWidth: 40, CellPxH: 20}
+	e.Schedule([]Item{{Path: path, Kind: KindImage, Mtime: mtime, Size: size}}, 0, 0, 5, box)
+
+	// The still tier's caption (base "PNG image / 40 × 40 px / …" line; no EXIF on a plain PNG)
+	// determines how much the render box shrinks — compute it the same way ImageCaption does so
+	// this test doesn't hardcode a byte count that could drift.
+	caption := previewrun.ImageCaption(path, "PNG", w, h, fi.Size(), config.PreviewImageMetadataBasic)
+	if caption == "" {
+		t.Fatal("expected a non-empty base caption at image_metadata = basic")
+	}
+	budgetH := previewrun.ImageRenderBudgetPxH(box.MaxPxH, box.CellPxH, box.TextWidth, caption)
+	if budgetH >= box.MaxPxH {
+		t.Fatalf("budgetH = %d, want < raw MaxPxH %d (caption must reserve some rows)", budgetH, box.MaxPxH)
+	}
+
+	shrunkKey := renderKey(path, mtime, size, box.Proto, box.UnicodePlaceholder, box.InTmux, box.MaxPxW, budgetH)
+	waitRenderWarm(t, e, shrunkKey)
+
+	rawKey := renderKey(path, mtime, size, box.Proto, box.UnicodePlaceholder, box.InTmux, box.MaxPxW, box.MaxPxH)
+	if _, _, ok := e.cache.render.get(rawKey); ok {
+		t.Fatal("render cache warmed at the raw unshrunk box; expected only the caption-shrunk box to be warmed")
+	}
+
+	if !e.isImageWarm(path, mtime, size, box) {
+		t.Fatal("isImageWarm = false after runJob warmed the caption-shrunk box; expected it to peek the same shrink and agree")
 	}
 }

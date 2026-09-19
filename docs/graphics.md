@@ -21,7 +21,7 @@ image_protocol = "auto"   # recommended: "auto", "sixel", or "kitty"
 |---|---|---|
 | `images` | `true` | When `false`, image files show format / dimensions / size text only. |
 | `image_protocol` | `"auto"` | Which graphics protocol to use (see below). |
-| `terminal_sixel` / `terminal_kitty` / `terminal_kitty_placeholder` | `"auto"` | Tri-state (`"auto"`/`"yes"`/`"no"`) user confirmations for graphics capabilities detection can't always answer on its own — set via the **M-F3** image terminal-capabilities dialog (also reachable from the top menu: **Options → Configure graphics**), not by hand. **F5** in that dialog re-checks the boxes from a fresh best-guess (same environment/tmux introspection `image_protocol = "auto"` itself uses) without touching the Auto/Sixel/Kitty radio; it never guesses `terminal_kitty_placeholder` for anything but Kitty/Ghostty, since that's precisely the capability this dialog exists to let you confirm by hand. `terminal_kitty_placeholder` is the WezTerm-under-tmux case; see [Confirming Kitty Unicode placeholders under tmux](#confirming-kitty-unicode-placeholders-under-tmux) below. |
+| `terminal_sixel` / `terminal_kitty` / `terminal_kitty_placeholder` | `"auto"` | Tri-state (`"auto"`/`"yes"`/`"no"`) user confirmations for graphics capabilities detection can't always answer on its own — set via the **M-F3** Preview settings dialog (also reachable from the top menu: **Options → Preview settings**), not by hand. **F5** in that dialog re-checks the boxes from a fresh best-guess (same environment/tmux introspection `image_protocol = "auto"` itself uses) without touching the Auto/Sixel/Kitty radio; it never guesses `terminal_kitty_placeholder` for anything but Kitty/Ghostty, since that's precisely the capability this dialog exists to let you confirm by hand. `terminal_kitty_placeholder` is the WezTerm-under-tmux case; see [Confirming Kitty Unicode placeholders under tmux](#confirming-kitty-unicode-placeholders-under-tmux) below. |
 
 Leave `image_protocol` at `"auto"` unless you have a reason to force a protocol.
 Forcing `"kitty"` on a terminal that only speaks Sixel (or that lacks Kitty Unicode
@@ -33,7 +33,7 @@ placeholders under tmux) often produces missing or misplaced images.
 |---|---|---|
 | **Kitty** | Kitty protocol, cursor-relative | Kitty protocol, Unicode placeholders (always trusted) |
 | **Ghostty** | Kitty protocol, cursor-relative | Kitty protocol, Unicode placeholders (always trusted) |
-| **WezTerm** | Kitty protocol, cursor-relative | Kitty protocol, cursor-relative by default; Unicode placeholders once confirmed via the M-F3 dialog (see below) |
+| **WezTerm** | Kitty protocol, cursor-relative | Kitty protocol, cursor-relative by default; Unicode placeholders once confirmed via the M-F3 Preview settings dialog (see below) |
 | Other Sixel-capable terminals (e.g. foot, many iTerm2 builds) | Sixel | Sixel, native if tmux recognizes the terminal as sixel-capable, else passthrough |
 
 With `image_protocol = "auto"`:
@@ -50,7 +50,7 @@ With `image_protocol = "auto"`:
   this; other terminals (WezTerm included) are trusted only once confirmed via
   `terminal_kitty_placeholder` (see next section). Whenever a capability is still
   unconfirmed and detection can't settle it either, a hint appears at the bottom-left
-  of the file preview panel's border — press **M-F3** to open the dialog and confirm it.
+  of the file preview panel's border — press **M-F3** to open the Preview settings dialog and confirm it.
 
 ## Required tmux configuration
 
@@ -120,15 +120,15 @@ explicitly once you've verified your attached build actually supports it:
 1. Confirm support in your WezTerm build (check your WezTerm release notes/changelog
    for Kitty Unicode-placeholder / `U=1` virtual placement support, or test it with
    `kitten icat` directly against WezTerm under tmux).
-2. Open an image preview under tmux, press **M-F3** to open the image
-   terminal-capabilities dialog, and check **Kitty placeholder supported**, then OK.
+2. Open an image preview under tmux, press **M-F3** to open the Preview settings
+   dialog, and check **Kitty placeholder supported**, then OK.
    This sets `[preview].terminal_kitty_placeholder = "yes"` in memory and persists it
    to `config.toml` immediately — no restart needed.
 3. Confirm it renders and repositions cleanly (resize the pane, switch windows and
    back).
 
 If images render as scrambled colored text instead of a picture, your attached WezTerm
-build doesn't actually support placeholders — reopen the M-F3 dialog and uncheck
+build doesn't actually support placeholders — reopen the M-F3 Preview settings dialog and uncheck
 **Kitty placeholder supported** again.
 
 ### Optional: large Sixel previews (tmux 3.6+)
@@ -173,7 +173,30 @@ Prefer `"auto"`. It already picks Kitty for WezTerm both outside and under tmux;
 whether that's cursor-relative or Unicode-placeholder under tmux is controlled by
 `terminal_kitty_placeholder` (see [Confirming Kitty Unicode placeholders under
 tmux](#confirming-kitty-unicode-placeholders-under-tmux) above). The Active protocol
-radio in the M-F3 dialog writes this same `image_protocol` key directly.
+radio in the M-F3 Preview settings dialog writes this same `image_protocol` key directly.
+
+## Image metadata
+
+A still-image preview draws a metadata caption **below** the image: the format,
+dimensions, and file size, plus EXIF detail read directly from the file (no external
+tools). The detail level is `[preview].image_metadata`:
+
+| Level | Shows |
+|---|---|
+| `"off"` | Image only — no caption at all. |
+| `"basic"` | Format/dimensions/size, then camera (make + model) and the date taken. |
+| `"essentials"` (default) | + lens, aperture, shutter speed, ISO, focal length, and GPS coordinates (when present). |
+| `"full"` | + software, 35mm-equivalent focal length, exposure-compensation (EV) bias, flash, exposure program, and white balance. |
+
+EXIF is read in-process (JPEG, TIFF, PNG, WebP); a file with no EXIF data, or a format
+without EXIF support, still shows the base format/dimensions/size line at any level
+above `"off"`. Reading EXIF never fails a preview — a decode error just means no extra
+detail lines are shown.
+
+The panel reserves the caption's wrapped row count (plus one blank separator row) out of
+the image's pixel budget before rendering, so the image shrinks to make room rather than
+overlapping the text. Set the level from the M-F3 Preview settings dialog, or write
+`image_metadata` directly in `config.toml`.
 
 ## Checklist
 
@@ -188,10 +211,11 @@ radio in the M-F3 dialog writes this same `image_protocol` key directly.
 
 ## Video thumbnails
 
-Video files show text metadata first, then a thumbnail grid below it (default 2×2,
-configurable via `video_thumb_cols` / `video_thumb_rows`) when graphics are enabled.
-While frames are extracted, a `Generating thumbnails…` line appears under the metadata
-so the text does not jump when the grid arrives. Grids are downscaled to
+Video files show a thumbnail grid (default 2×2, configurable via `video_thumb_cols` /
+`video_thumb_rows`) when graphics are enabled, with ffprobe text metadata below it —
+same layout as a still image's EXIF caption. While frames are extracted, a `Generating
+thumbnails…` line appears where the metadata will land. Set `[preview].video_metadata =
+false` to show the grid only, with no metadata line at all. Grids are downscaled to
 `image_max_edge_px` (default 1024) before the final cell-budget fit. Composed thumbnails
 are stored under `$XDG_CACHE_HOME/pc/video-thumbs/` (cap `video_thumb_cache_max_mb`,
 default 512). With `prefetch` enabled (default), nearby videos are warmed in the

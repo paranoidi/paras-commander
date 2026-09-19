@@ -60,7 +60,15 @@ func runImageCtx(ctx context.Context, req Request) Result {
 			return Result{ErrorMsg: err.Error()}
 		}
 	}
-	meta := formatImageMeta(format, cfg.Width, cfg.Height, fi.Size())
+	// captionOrBase renders the metadata caption at the configured level, but never fully
+	// suppresses it for the text-only paths below (too large / images off / no protocol),
+	// where the caption is the only thing the pane has left to show: level "off" still shows
+	// the base "FORMAT image / W × H px / size" line there.
+	captionOrBase := func() string {
+		return ImageCaption(req.Path, format, cfg.Width, cfg.Height, fi.Size(), boostedMetadataLevel(req.Preview.ImageMetadata))
+	}
+
+	meta := captionOrBase()
 	metaResult := Result{
 		Source:       previewpanel.SourceExternalANSI,
 		CombinedText: meta,
@@ -80,7 +88,7 @@ func runImageCtx(ctx context.Context, req Request) Result {
 	}
 
 	load := func(ctx context.Context) ([]byte, string, error) {
-		return DecodeStillMaxEdgePNG(ctx, req.Path, maxEdge)
+		return DecodeStillMaxEdgePNG(ctx, req.Path, maxEdge, req.Preview.ImageMetadata)
 	}
 	var pngBytes []byte
 	if req.Cache != nil {
@@ -95,16 +103,26 @@ func runImageCtx(ctx context.Context, req Request) Result {
 		}
 		return Result{ErrorMsg: err.Error()}
 	}
-	if meta == "" {
-		meta = formatImageMeta(format, cfg.Width, cfg.Height, fi.Size())
-	}
+	// meta may legitimately be "" here (image_metadata = "off"): DecodeStillMaxEdgePNG uses the
+	// raw configured level, unlike captionOrBase above, so a successfully rendered image shows
+	// no caption at all at that level — see ImageCaption's doc comment.
 	metaResult.CombinedText = meta
+
+	cellH := req.ImageCellPxH
+	if cellH < 1 {
+		cellH = 20
+	}
+	budgetH := ImageRenderBudgetPxH(req.ImageMaxPxH, cellH, req.TextWidth, meta)
+	if meta != "" && budgetH < cellH {
+		// The caption alone eats the whole pane: show text only, no room left for the image.
+		return metaResult
+	}
 
 	// fitAndEncode is the expensive part — decode + cell-fit resize + protocol encode (plus the
 	// tmux sixel shrink-retry loop) — cached whole by LoadRender keyed on the exact pixel box,
 	// so a re-render of an already-seen box skips straight to the cached payload.
 	fitAndEncode := func(context.Context) ([]byte, int, int, error) {
-		return EncodeRenderPayload(pngBytes, req.ImageMaxPxW, req.ImageMaxPxH, req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux)
+		return EncodeRenderPayload(pngBytes, req.ImageMaxPxW, budgetH, req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux)
 	}
 
 	var payload []byte
@@ -112,19 +130,21 @@ func runImageCtx(ctx context.Context, req Request) Result {
 	if req.Cache != nil {
 		payload, pxW, pxH, err = req.Cache.LoadRender(ctx, req.Path, fi.ModTime().UnixNano(), fi.Size(),
 			req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux,
-			req.ImageMaxPxW, req.ImageMaxPxH, fitAndEncode)
+			req.ImageMaxPxW, budgetH, fitAndEncode)
 	} else {
 		payload, pxW, pxH, err = fitAndEncode(ctx)
 	}
 	if err != nil {
 		if err == errRenderTmuxTooLarge {
-			metaResult.CombinedText = meta + " / too large for tmux"
+			// No image will be shown after all: fall back to at-least-basic, like the other
+			// text-only paths above.
+			metaResult.CombinedText = captionOrBase() + " / too large for tmux"
 		}
 		return metaResult
 	}
 	return Result{
 		Source:                   previewpanel.SourceExternalANSI,
-		CombinedText:             "", // caption unused for still images (Draw would show it below)
+		CombinedText:             meta,
 		ImagePayload:             string(payload),
 		ImagePxW:                 pxW,
 		ImagePxH:                 pxH,
@@ -132,6 +152,7 @@ func runImageCtx(ctx context.Context, req Request) Result {
 		ImageUnicodePlaceholder:  req.ImageUnicodePlaceholder,
 		ImageInTmux:              req.ImageInTmux,
 		ImageCapabilityUncertain: req.ImageCapabilityUncertain,
+		ImageFirst:               true,
 	}
 }
 

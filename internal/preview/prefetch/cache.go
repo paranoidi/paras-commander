@@ -142,6 +142,17 @@ func (c *Cache) HasStill(path string, mtime, size int64, maxEdge int) bool {
 	return c.mem.has(key) || c.isFailed(key)
 }
 
+// StillMeta peeks the cached still-tier caption (the metadata text DecodeStillMaxEdgePNG
+// returned alongside the maxEdge PNG) without marking in-flight or affecting LRU order beyond
+// the read touch memoryLRU.get already does. Used by the prefetch engine to derive the same
+// caption-shrunk render-payload box the foreground render path uses, so HasRender warmness
+// checks agree with what the foreground path actually asks for.
+func (c *Cache) StillMeta(path string, mtime, size int64, maxEdge int) (string, bool) {
+	key := stillKey(path, mtime, size, maxEdge)
+	_, meta, ok := c.mem.get(key)
+	return meta, ok
+}
+
 // HasVideo reports a warm memory/disk hit, or a previously recorded permanent decode failure,
 // without marking in-flight.
 func (c *Cache) HasVideo(path string, mtime, size int64, maxEdge, cols, rows int) bool {

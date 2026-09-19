@@ -34,7 +34,7 @@ func TestExtractFramePNGAndMediaThumbs(t *testing.T) {
 
 	req := Request{
 		Path:          clip,
-		Preview:       config.PreviewConfig{Images: true, VideoThumbCols: 2, VideoThumbRows: 2},
+		Preview:       config.PreviewConfig{Images: true, VideoThumbCols: 2, VideoThumbRows: 2, VideoMetadata: true},
 		Media:         true,
 		ImageMaxPxW:   200,
 		ImageMaxPxH:   400,
@@ -60,6 +60,9 @@ func TestExtractFramePNGAndMediaThumbs(t *testing.T) {
 	}
 	if res.ImagePayload == "" {
 		t.Fatal("want ImagePayload")
+	}
+	if !res.ImageFirst {
+		t.Fatal("want ImageFirst (grid, then metadata below)")
 	}
 	wantFrames := req.Preview.VideoThumbCols * req.Preview.VideoThumbRows
 	wantSteps := wantFrames + 1 // +1 for the final compositing step

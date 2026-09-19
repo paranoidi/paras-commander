@@ -1272,7 +1272,7 @@ func (h *Handler) runMediaPreview(ctx context.Context, req previewrun.Request, t
 	if work != nil {
 		if !mediaThumbWarm(req) {
 			pending := meta
-			pending.CombinedText = meta.CombinedText + "\n\n" + previewrun.GeneratingThumbnailsLabel + " ..."
+			pending.CombinedText = previewrun.JoinMediaText(meta.CombinedText, previewrun.GeneratingThumbnailsLabel+" ...")
 			// Phase=Done so MergeDrawWithHold does not replace this body with a prior hold.
 			h.applyPreviewResult(req, target, runGen, pending)
 		}
@@ -1294,7 +1294,7 @@ func (h *Handler) runMediaPreview(ctx context.Context, req previewrun.Request, t
 				if !st.Open || st.Path != req.Path {
 					return
 				}
-				st.CombinedText = metaText + "\n\n" + fmt.Sprintf("%s (%d/%d) ...", previewrun.GeneratingThumbnailsLabel, done, total)
+				st.CombinedText = previewrun.JoinMediaText(metaText, fmt.Sprintf("%s (%d/%d) ...", previewrun.GeneratingThumbnailsLabel, done, total))
 				applied = true
 			})
 			if applied && runGen == gen.Load() {

@@ -226,11 +226,11 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 			labels: []string{"Destination:", "Transfer:", "Operation:"},
 		},
 		{
-			name: "image capabilities",
+			name: "preview settings",
 			draw: func(screen tcell.Screen) {
-				DrawImageCapabilityDialog(screen, layout, ImageCapabilityDialogState{Open: true}, styles)
+				DrawPreviewSettingsDialog(screen, layout, PreviewSettingsDialogState{Open: true}, styles)
 			},
-			labels: []string{"Confirm terminal capabilities:", "Active protocol:"},
+			labels: []string{"Confirm terminal capabilities:", "Active protocol:", "Image metadata:"},
 		},
 		{
 			name: "calibrate debounce",

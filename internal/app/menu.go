@@ -228,8 +228,8 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 			a.openThemeDialog()
 		case keymap.ActionUIOpenConfig:
 			a.openConfigDialog()
-		case keymap.ActionPreviewImageCapabilityDialog:
-			a.openImageCapabilityDialog()
+		case keymap.ActionPreviewSettingsDialog:
+			a.openPreviewSettingsDialog()
 		case keymap.ActionUICalibrateDebounce:
 			a.openDebounceCalibrateDialog()
 		default:

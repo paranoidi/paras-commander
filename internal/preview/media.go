@@ -110,6 +110,14 @@ func RunMediaMeta(ctx context.Context, req Request) (res Result, work *MediaThum
 	if thumbMaxH < cellH {
 		return res, nil
 	}
+
+	if !req.Preview.VideoMetadata {
+		// There will be thumbnail work: nothing to show above the grid while it generates, so
+		// blank both the result text and the work's stashed meta — RunMediaThumbs' pending/
+		// success text then stays empty (grid only) too.
+		meta = ""
+		res.CombinedText = ""
+	}
 	return res, &MediaThumbWork{meta: meta, duration: duration}
 }
 
@@ -146,7 +154,10 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork, onPr
 	if cellH < 1 {
 		cellH = 20
 	}
-	metaRows := strings.Count(metaText, "\n") + 1 + 1 // lines + blank separator above image
+	metaRows := 0
+	if metaText != "" {
+		metaRows = strings.Count(metaText, "\n") + 1 + 1 // lines + blank separator above image
+	}
 	thumbMaxH := req.ImageMaxPxH - metaRows*cellH
 	if thumbMaxH < cellH {
 		return metaResult
@@ -155,7 +166,7 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork, onPr
 	maxEdge := EffectiveVideoThumbMaxEdge(req.Preview, req.ImageProtocol, req.ImageInTmux)
 	fi, err := os.Stat(req.Path)
 	if err != nil {
-		metaResult.CombinedText = metaText + "\n\n(thumbnails failed)"
+		metaResult.CombinedText = JoinMediaText(metaText, "(thumbnails failed)")
 		return metaResult
 	}
 	load := func(c context.Context, notify func(done, total int)) ([]byte, error) {
@@ -172,16 +183,16 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork, onPr
 			return Result{ErrorMsg: "Canceled"}
 		}
 		if strings.Contains(err.Error(), "executable file not found") {
-			metaResult.CombinedText = metaText + "\n\n(ffmpeg not found; thumbnails skipped)"
+			metaResult.CombinedText = JoinMediaText(metaText, "(ffmpeg not found; thumbnails skipped)")
 		} else {
-			metaResult.CombinedText = metaText + "\n\n(thumbnails failed)"
+			metaResult.CombinedText = JoinMediaText(metaText, "(thumbnails failed)")
 		}
 		return metaResult
 	}
 
 	grid, err := DecodePNGBytes(pngBytes)
 	if err != nil {
-		metaResult.CombinedText = metaText + "\n\n(thumbnails failed)"
+		metaResult.CombinedText = JoinMediaText(metaText, "(thumbnails failed)")
 		return metaResult
 	}
 	grid = fitImage(grid, req.ImageMaxPxW, thumbMaxH)
@@ -206,6 +217,7 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork, onPr
 		ImageUnicodePlaceholder:  req.ImageUnicodePlaceholder,
 		ImageInTmux:              req.ImageInTmux,
 		ImageCapabilityUncertain: req.ImageCapabilityUncertain,
+		ImageFirst:               true,
 	}
 }
 

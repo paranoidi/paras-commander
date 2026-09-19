@@ -1595,12 +1595,12 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"settings", "toml"},
 		},
 		{
-			ID:          ActionPreviewImageCapabilityDialog,
+			ID:          ActionPreviewSettingsDialog,
 			Views:       HelpBrowser | HelpFilePreview,
-			Title:       "Image terminal capabilities",
+			Title:       "Preview settings",
 			Section:     "Preview",
 			DefaultKeys: []string{"M-F3"},
-			Keywords:    []string{"sixel", "kitty", "placeholder", "wezterm", "graphics", "image"},
+			Keywords:    []string{"sixel", "kitty", "placeholder", "wezterm", "graphics", "image", "exif", "metadata"},
 		},
 		{
 			ID:           ActionDialogInputRestoreDefault,

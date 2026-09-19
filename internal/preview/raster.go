@@ -18,8 +18,8 @@ import (
 var errImageTooLarge = fmt.Errorf("image too large")
 
 // DecodeStillMaxEdgePNG decodes path, clamps the longest edge to maxEdge, and returns PNG bytes
-// plus the metadata caption string used by still-image previews.
-func DecodeStillMaxEdgePNG(ctx context.Context, path string, maxEdge int) (pngBytes []byte, meta string, err error) {
+// plus the metadata caption string (base line + EXIF, at metaLevel) used by still-image previews.
+func DecodeStillMaxEdgePNG(ctx context.Context, path string, maxEdge int, metaLevel string) (pngBytes []byte, meta string, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, "", err
@@ -36,7 +36,7 @@ func DecodeStillMaxEdgePNG(ctx context.Context, path string, maxEdge int) (pngBy
 		}
 		b := img.Bounds()
 		format := strings.ToUpper(strings.TrimPrefix(filepath.Ext(path), "."))
-		meta = formatImageMeta(format, b.Dx(), b.Dy(), fi.Size())
+		meta = ImageCaption(path, format, b.Dx(), b.Dy(), fi.Size(), metaLevel)
 		if maxEdge > 0 {
 			img = fitImage(img, maxEdge, maxEdge)
 		}
@@ -57,13 +57,14 @@ func DecodeStillMaxEdgePNG(ctx context.Context, path string, maxEdge int) (pngBy
 	if err != nil {
 		return nil, "", err
 	}
-	meta = formatImageMeta(format, cfg.Width, cfg.Height, fi.Size())
-
 	pixels := int64(cfg.Width) * int64(cfg.Height)
 	maxPixels := int64(config.DefaultPreviewImageMaxDecodeMegapixels) * 1_000_000
 	if pixels > maxPixels {
-		return nil, meta + " / too large", errImageTooLarge
+		// No image will be shown: boost level "off" up to "basic" so the pane isn't left blank.
+		tooLarge := ImageCaption(path, format, cfg.Width, cfg.Height, fi.Size(), boostedMetadataLevel(metaLevel))
+		return nil, tooLarge + " / too large", errImageTooLarge
 	}
+	meta = ImageCaption(path, format, cfg.Width, cfg.Height, fi.Size(), metaLevel)
 
 	if _, err := f.Seek(0, 0); err != nil {
 		return nil, "", err

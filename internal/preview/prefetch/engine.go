@@ -42,6 +42,10 @@ type Config struct {
 	VideoThumbRows    int
 	VideoThumbWorkers int
 	DiskDir           string
+	// ImageMetadata is [preview].image_metadata — part of the comparable Config so a level
+	// change (via the M-F3 preview settings dialog) makes ensurePrefetch restart the engine:
+	// the still tier's cached meta string embeds the caption for the level it was decoded at.
+	ImageMetadata string
 }
 
 // RenderBox is the exact on-screen pixel box the currently active preview surface would render
@@ -54,6 +58,10 @@ type RenderBox struct {
 	UnicodePlaceholder bool
 	InTmux             bool
 	MaxPxW, MaxPxH     int
+	// TextWidth / CellPxH are the surface's wrap width and cell pixel height, needed to derive
+	// the caption-shrunk render budget (previewrun.ImageRenderBudgetPxH) identically to the
+	// foreground render path.
+	TextWidth, CellPxH int
 }
 
 // Engine owns the worker pool and shared Cache.
@@ -231,12 +239,21 @@ func (e *Engine) Schedule(items []Item, dir, pageSize, window int, box *RenderBo
 // isImageWarm reports whether path's prefetch cache is warm for an image: both the intermediate
 // decode tier (HasStill) and, when box is known, the render-payload tier for that exact box
 // (HasRender). Shared by Schedule's dedup filter and IsEntryWarm so the two-tier warmness rule
-// can't drift between them.
+// can't drift between them. The render-payload check uses the same caption-shrunk box runJob
+// warms (via the still tier's cached caption, peeked through Cache.StillMeta) so a caption that
+// eats into the image's pixel budget can't make an already-decoded item look permanently cold.
 func (e *Engine) isImageWarm(path string, mtime, size int64, box *RenderBox) bool {
 	if !e.cache.HasStill(path, mtime, size, e.cfg.ImageMaxEdgePx) {
 		return false
 	}
-	return box == nil || e.cache.HasRender(path, mtime, size, box.Proto, box.UnicodePlaceholder, box.InTmux, box.MaxPxW, box.MaxPxH)
+	if box == nil {
+		return true
+	}
+	shrunkBox := *box
+	if caption, ok := e.cache.StillMeta(path, mtime, size, e.cfg.ImageMaxEdgePx); ok {
+		shrunkBox.MaxPxH = previewrun.ImageRenderBudgetPxH(box.MaxPxH, box.CellPxH, box.TextWidth, caption)
+	}
+	return e.cache.HasRender(path, mtime, size, shrunkBox.Proto, shrunkBox.UnicodePlaceholder, shrunkBox.InTmux, shrunkBox.MaxPxW, shrunkBox.MaxPxH)
 }
 
 // prefetchNearRadius is the "immediate" cursor band highest non-exact
@@ -396,8 +413,8 @@ func (e *Engine) runJob(it Item) {
 	ctx := e.ctx
 	switch it.Kind {
 	case KindImage:
-		pngBytes, _, err := e.cache.LoadStill(ctx, it.Path, it.Mtime, it.Size, e.cfg.ImageMaxEdgePx, func(c context.Context) ([]byte, string, error) {
-			return previewrun.DecodeStillMaxEdgePNG(c, it.Path, e.cfg.ImageMaxEdgePx)
+		pngBytes, caption, err := e.cache.LoadStill(ctx, it.Path, it.Mtime, it.Size, e.cfg.ImageMaxEdgePx, func(c context.Context) ([]byte, string, error) {
+			return previewrun.DecodeStillMaxEdgePNG(c, it.Path, e.cfg.ImageMaxEdgePx, e.cfg.ImageMetadata)
 		})
 		if err != nil {
 			return
@@ -406,9 +423,13 @@ func (e *Engine) runJob(it Item) {
 		if box == nil {
 			return
 		}
-		_, _, _, _ = e.cache.LoadRender(ctx, it.Path, it.Mtime, it.Size, box.Proto, box.UnicodePlaceholder, box.InTmux, box.MaxPxW, box.MaxPxH,
+		// Shrink the render box by the caption's row count exactly like the foreground render
+		// path (runImageCtx) does, so this warms the same render-payload cache key the
+		// foreground path will actually ask for — see isImageWarm's doc comment.
+		budgetH := previewrun.ImageRenderBudgetPxH(box.MaxPxH, box.CellPxH, box.TextWidth, caption)
+		_, _, _, _ = e.cache.LoadRender(ctx, it.Path, it.Mtime, it.Size, box.Proto, box.UnicodePlaceholder, box.InTmux, box.MaxPxW, budgetH,
 			func(c context.Context) ([]byte, int, int, error) {
-				return previewrun.EncodeRenderPayload(pngBytes, box.MaxPxW, box.MaxPxH, box.Proto, box.UnicodePlaceholder, box.InTmux)
+				return previewrun.EncodeRenderPayload(pngBytes, box.MaxPxW, budgetH, box.Proto, box.UnicodePlaceholder, box.InTmux)
 			})
 	case KindVideo:
 		maxEdge := e.cfg.VideoMaxEdgePx

@@ -23,7 +23,7 @@ const (
 	InputModeSortDialog
 	InputModeListingFormatDialog
 	InputModeConfigDialog
-	InputModeImageCapabilityDialog
+	InputModePreviewSettingsDialog
 	InputModeDebounceCalibrateDialog
 	InputModeGroupSelect
 	InputModeFilterDialog
@@ -90,8 +90,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeListingFormatDialog
 	case a.model.ConfigDialog.Open:
 		return InputModeConfigDialog
-	case a.model.ImageCapabilityDialog.Open:
-		return InputModeImageCapabilityDialog
+	case a.model.PreviewSettingsDialog.Open:
+		return InputModePreviewSettingsDialog
 	case a.model.DebounceCalibrateDialog.Open:
 		return InputModeDebounceCalibrateDialog
 	case a.model.HostKeyDialog.Open:
@@ -267,7 +267,7 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Reset to defaults"}}, rest...)
 		}
 	}
-	if a.model.ImageCapabilityDialog.Open {
+	if a.model.PreviewSettingsDialog.Open {
 		rest = append([]menu.FunctionKey{{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Auto detect"}}, rest...)
 	}
 	if hints := a.dialogCtrl.FlattenDialogOverlayFooterKeys(a.keys.FlattenDialog); len(hints) > 0 {
@@ -623,8 +623,8 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 		a.handleConfigDialogKey(ev)
 		return false
 	},
-	InputModeImageCapabilityDialog: func(a *App, ev *tcell.EventKey) bool {
-		a.handleImageCapabilityDialogKey(ev)
+	InputModePreviewSettingsDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handlePreviewSettingsDialogKey(ev)
 		return false
 	},
 	InputModeDebounceCalibrateDialog: func(a *App, ev *tcell.EventKey) bool {
@@ -1141,8 +1141,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openThemeDialog()
 	case keymap.ActionUIOpenConfig:
 		a.openConfigDialog()
-	case keymap.ActionPreviewImageCapabilityDialog:
-		a.openImageCapabilityDialog()
+	case keymap.ActionPreviewSettingsDialog:
+		a.openPreviewSettingsDialog()
 	case keymap.ActionUICalibrateDebounce:
 		a.openDebounceCalibrateDialog()
 	case keymap.ActionPanelViMotionToggle:

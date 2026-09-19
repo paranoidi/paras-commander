@@ -170,7 +170,7 @@ type Model struct {
 	MenuDefinitions         []menu.Definition
 	ThemeDialog             dialog.ThemeDialogState
 	ConfigDialog            dialog.ConfigDialogState
-	ImageCapabilityDialog   dialog.ImageCapabilityDialogState
+	PreviewSettingsDialog   dialog.PreviewSettingsDialogState
 	DebounceCalibrateDialog dialog.DebounceCalibrateDialogState
 	SortDialog              dialog.SortDialogState
 	ListingFormatDialog     dialog.ListingFormatDialogState
@@ -280,7 +280,7 @@ func (m *Model) PrimaryModal() dialog.PrimaryModal {
 // "a dialog owns the keyboard" checks.
 func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
-		m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
+		m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
 		m.FindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
 }
@@ -456,7 +456,7 @@ func (m *Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -471,7 +471,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.PinDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
-		m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
+		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open ||
 		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupEmptyDirsConfirm.Open
 }
@@ -802,8 +802,8 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	if model.ConfigDialog.Open {
 		dialog.DrawConfigDialog(screen, layout, model.ConfigDialog, styles)
 	}
-	if model.ImageCapabilityDialog.Open {
-		dialog.DrawImageCapabilityDialog(screen, layout, model.ImageCapabilityDialog, styles)
+	if model.PreviewSettingsDialog.Open {
+		dialog.DrawPreviewSettingsDialog(screen, layout, model.PreviewSettingsDialog, styles)
 	}
 	if model.DebounceCalibrateDialog.Open {
 		dialog.DrawDebounceCalibrateDialog(screen, layout, model.DebounceCalibrateDialog, styles)

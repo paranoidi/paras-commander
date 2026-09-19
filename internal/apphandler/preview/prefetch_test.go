@@ -271,3 +271,36 @@ func TestEnsurePrefetch_RestartsWhenStillMaxEdgeChanges(t *testing.T) {
 		t.Fatal("restart left the skip-rebuild guard armed; fresh engine would stay idle")
 	}
 }
+
+// TestEnsurePrefetch_RestartsWhenImageMetadataChanges guards the still tier's cached caption
+// staying in sync with the M-F3 preview settings dialog: the caption embeds the configured
+// image_metadata level, so a level change must restart the engine (dropping the now-stale
+// cache) exactly like a protocol change does.
+func TestEnsurePrefetch_RestartsWhenImageMetadataChanges(t *testing.T) {
+	handler, fh := newTestHandler(t, 80, 24)
+	t.Cleanup(handler.stopPrefetch)
+
+	fh.cfg.Preview.ImageMetadata = config.PreviewImageMetadataOff
+	handler.ensurePrefetch()
+	offEngine := handler.prefetch
+	if offEngine == nil {
+		t.Fatal("ensurePrefetch: no engine started")
+	}
+
+	handler.ensurePrefetch()
+	if handler.prefetch != offEngine {
+		t.Fatal("ensurePrefetch restarted the engine with unchanged config")
+	}
+
+	fh.cfg.Preview.ImageMetadata = config.PreviewImageMetadataFull
+	handler.ensurePrefetch()
+	if handler.prefetch == offEngine {
+		t.Fatal("ensurePrefetch kept the old engine after image_metadata changed")
+	}
+	if got := handler.prefetchCfg.ImageMetadata; got != config.PreviewImageMetadataFull {
+		t.Fatalf("prefetchCfg.ImageMetadata = %q, want %q", got, config.PreviewImageMetadataFull)
+	}
+	if handler.prefetchLastSurfaceActive {
+		t.Fatal("restart left the skip-rebuild guard armed; fresh engine would stay idle")
+	}
+}
