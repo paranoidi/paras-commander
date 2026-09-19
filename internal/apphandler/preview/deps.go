@@ -81,6 +81,11 @@ type Handler struct {
 	// quickViewDirNavPath tracks the last-seen cwd per panel (indexed by ui.PrimaryPanel/
 	// ui.SecondaryPanel) so HandlePanelDirChanged only reacts to an actual directory change.
 	quickViewDirNavPath [2]string
+	// quickViewSlow fires panel.LoadingIndicatorDelay after a quick-view preview (file or
+	// directory overlay) is dispatched; if that load is still in flight the driver's row gets the
+	// icons.working indicator (Model.QuickViewSlowPath) and a held stale overlay listing is
+	// cleared. Re-armed by every dispatch, so only the current target can ever be flagged.
+	quickViewSlow sched.Debouncer
 
 	// carouselPreviewDebounceGen invalidates in-flight carousel side-preview debounce callbacks.
 	carouselPreviewDebounceGen atomic.Uint64
@@ -180,6 +185,10 @@ type CarouselPreviewFlushPayload struct{ gen uint64 }
 
 // StylePickerFlushPayload re-runs F3 preview highlighting after style-picker debounce.
 type StylePickerFlushPayload struct{ gen uint64 }
+
+// QuickViewSlowPayload is posted when a quick-view preview for path has been loading longer than
+// panel.LoadingIndicatorDelay (ApplyQuickViewSlow checks it is still in flight).
+type QuickViewSlowPayload struct{ Path string }
 
 // QuickViewDirRuleDeclinedPayload signals that every [[preview.commands]] rule matching the
 // directory currently open in quick view declined (non-zero exit), or the async run raced past

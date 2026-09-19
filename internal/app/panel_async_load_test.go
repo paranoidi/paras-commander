@@ -71,7 +71,7 @@ func TestAsyncLoadSchedulerTimesOutStuckFetch(t *testing.T) {
 
 // TestDirLoadingIndicatorArmsAfterDelayThenClears proves the working-indicator icon (see
 // dir_loading_indicator.go) only arms once a pending navigation load has run longer than
-// dirLoadingIndicatorDelayMS, targets the entry actually being navigated into, and clears once
+// panel.LoadingIndicatorDelay, targets the entry actually being navigated into, and clears once
 // the load lands.
 func TestDirLoadingIndicatorArmsAfterDelayThenClears(t *testing.T) {
 	screen := newScreen(t, 80, 24)

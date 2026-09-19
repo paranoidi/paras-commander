@@ -102,7 +102,7 @@ func (a *App) applyStartPaths(rawPaths []string) error {
 		a.model.ActivePanel = ui.PrimaryPanel
 		a.launchedFileViewer = true
 		a.primeGitStatusForCLIPreview(r.path)
-		return a.previewCtrl.OpenFullscreenFilePreviewAt(r.path)
+		return a.previewCtrl.OpenFullscreenFilePreviewAt(r.path, false)
 	}
 
 	filePanel := -1

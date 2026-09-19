@@ -63,8 +63,9 @@ func MediaThumbDuration(work *MediaThumbWork) float64 {
 
 // RunMediaMeta probes the file and returns text metadata. When work is non-nil,
 // the caller should show GeneratingThumbnailsLabel under the meta, then call RunMediaThumbs.
-func RunMediaMeta(req Request) (res Result, work *MediaThumbWork) {
-	raw, err := ffprobeJSON(req.Path)
+// A nil ctx runs the ffprobe subprocess unbounded (context.Background()).
+func RunMediaMeta(ctx context.Context, req Request) (res Result, work *MediaThumbWork) {
+	raw, err := ffprobeJSON(ctx, req.Path)
 	if err != nil {
 		msg := err.Error()
 		if strings.Contains(msg, "executable file not found") || strings.Contains(msg, "ffprobe") {
@@ -209,7 +210,7 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork, onPr
 }
 
 func runMedia(ctx context.Context, req Request) Result {
-	meta, work := RunMediaMeta(req)
+	meta, work := RunMediaMeta(ctx, req)
 	if meta.ErrorMsg != "" || work == nil {
 		return meta
 	}

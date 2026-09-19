@@ -20,6 +20,7 @@ type panelRefreshApplyPayload struct {
 	GitignoreActive      bool
 	DotfilesHiddenActive bool
 	ListingEpoch         uint64
+	Probes               *panel.PathProbes
 }
 
 func (a *App) runPanelRefreshTicker(interval time.Duration, stop <-chan struct{}) {
@@ -74,6 +75,7 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 		if fsbackend.EntriesListingEqual(entries, baseline) {
 			return
 		}
+		probes := a.probeListingPath(listingLoc)
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(panelRefreshApplyPayload{
 			PanelID:              panelID,
 			Path:                 listingLoc,
@@ -81,6 +83,7 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 			GitignoreActive:      gitignoreActive,
 			DotfilesHiddenActive: dotfilesHiddenActive,
 			ListingEpoch:         epoch,
+			Probes:               probes,
 		}))
 	}(panelID, snap, path, epoch, baseline)
 }
@@ -101,7 +104,7 @@ func (a *App) applyPanelListingRefresh(p panelRefreshApplyPayload) bool {
 	}
 	pan.GitignoreActive = p.GitignoreActive
 	pan.DotfilesHiddenActive = p.DotfilesHiddenActive
-	dirty, err := pan.ApplyPeriodicRefresh(p.Path, p.Entries, a.panelViewportRows(p.PanelID))
+	dirty, err := pan.ApplyPeriodicRefresh(p.Path, p.Entries, a.panelViewportRows(p.PanelID), p.Probes)
 	if err != nil {
 		return false
 	}

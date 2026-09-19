@@ -89,6 +89,7 @@ func paintBrowserPanelsInScope(
 			CursorNameHintPinnedOut:   model.CursorNameHintPinOutPrimary,
 			QuickViewIndicator:        quickViewIndicatorActive && model.ActivePanel == PrimaryPanel,
 			QuickViewIndicatorRight:   quickViewIndicatorRight,
+			WorkingRowPath:            model.QuickViewSlowRowPath(PrimaryPanel),
 		}
 		if titlePath, endLabel, ok := model.quickViewDirOverlayTitleChrome(PrimaryPanel, model.Primary.PathString()); ok {
 			primaryCtx.TitlePath = titlePath
@@ -131,6 +132,7 @@ func paintBrowserPanelsInScope(
 			CursorNameHintPinnedOut:   model.CursorNameHintPinOutSecondary,
 			QuickViewIndicator:        quickViewIndicatorActive && model.ActivePanel == SecondaryPanel,
 			QuickViewIndicatorRight:   quickViewIndicatorRight,
+			WorkingRowPath:            model.QuickViewSlowRowPath(SecondaryPanel),
 		}
 		if titlePath, endLabel, ok := model.quickViewDirOverlayTitleChrome(SecondaryPanel, model.Secondary.PathString()); ok {
 			secondaryCtx.TitlePath = titlePath

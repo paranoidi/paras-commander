@@ -153,8 +153,7 @@ func (c *Cache) HasVideo(path string, mtime, size int64, maxEdge, cols, rows int
 		return false
 	}
 	dk := videoDiskKey(path, mtime, size, maxEdge, cols, rows)
-	_, ok := c.disk.get(dk)
-	return ok
+	return c.disk.has(dk)
 }
 
 // HasRender reports a warm memory hit for the exact render-payload box, without marking in-flight.

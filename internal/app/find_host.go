@@ -53,8 +53,8 @@ func (h findHost) OpenGroupSelectDialog(mode findctrl.GroupSelectMode, forFind b
 	h.app.openGroupSelect(string(mode), context)
 }
 
-func (h findHost) OpenFullscreenFilePreviewAt(path string) error {
-	return h.app.previewCtrl.OpenFullscreenFilePreviewAt(path)
+func (h findHost) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
+	return h.app.previewCtrl.OpenFullscreenFilePreviewAt(path, isDir)
 }
 
 func (h findHost) PinTogglePath(name, path string, isDir bool) {

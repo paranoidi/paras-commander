@@ -2,15 +2,20 @@ package preview
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os/exec"
 	"strconv"
 )
 
-// ffprobeJSON runs ffprobe and returns the JSON document (format + streams).
-func ffprobeJSON(path string) (string, error) {
-	cmd := exec.Command("ffprobe", "-show_format", "-show_streams", "-of", "json", path)
+// ffprobeJSON runs ffprobe and returns the JSON document (format + streams). A nil ctx runs
+// unbounded (context.Background()).
+func ffprobeJSON(ctx context.Context, path string) (string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	cmd := exec.CommandContext(ctx, "ffprobe", "-show_format", "-show_streams", "-of", "json", path)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -20,10 +25,15 @@ func ffprobeJSON(path string) (string, error) {
 	return stdout.String(), nil
 }
 
-// ffmpegFramePNG seeks to timeSec and writes one PNG frame to stdout.
-func ffmpegFramePNG(videoPath string, timeSec float64) ([]byte, error) {
+// ffmpegFramePNG seeks to timeSec and writes one PNG frame to stdout. A nil ctx runs unbounded
+// (context.Background()).
+func ffmpegFramePNG(ctx context.Context, videoPath string, timeSec float64) ([]byte, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	// image2pipe is required for stdout; plain image2 exits 0 with an empty pipe.
-	cmd := exec.Command(
+	cmd := exec.CommandContext(
+		ctx,
 		"ffmpeg",
 		"-ss", strconv.FormatFloat(timeSec, 'f', -1, 64),
 		"-i", videoPath,

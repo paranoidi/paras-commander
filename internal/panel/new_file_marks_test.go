@@ -69,7 +69,7 @@ func TestApplyPeriodicRefreshMarksExternallyCreatedFileAsNew(t *testing.T) {
 		{Name: "alpha.txt", Type: fsbackend.EntryFile},
 		{Name: "gamma.txt", Type: fsbackend.EntryFile},
 	}
-	if _, err := s.ApplyPeriodicRefresh(loc, fresh, 5); err != nil {
+	if _, err := s.ApplyPeriodicRefresh(loc, fresh, 5, nil); err != nil {
 		t.Fatalf("ApplyPeriodicRefresh: %v", err)
 	}
 	gamma := localfs.Entry{Name: "gamma.txt", Type: localfs.EntryFile}

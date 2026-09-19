@@ -156,19 +156,19 @@ func (a *App) scheduleCarouselSnapshot(panelID int, isChild bool, loc pathloc.Pa
 	gen := a.carouselSnapshotGenSlot(panelID, isChild).Add(1)
 	timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 	snap := a.panelByID(panelID).ListingRefreshSnapshot(loc, timeout)
-	a.raceAsyncListingFetch(snap, timeout, func(resolvedLoc pathloc.Path, entries []fsbackend.Entry, _, _ bool, err error) {
+	a.raceAsyncListingFetch(snap, timeout, false, func(res asyncListingResult) {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(carouselSnapshotPayload{
 			panelID:        panelID,
 			isChild:        isChild,
 			gen:            gen,
 			target:         target,
-			loc:            resolvedLoc,
-			entries:        entries,
+			loc:            res.loc,
+			entries:        res.entries,
 			selectedName:   selectedName,
 			indexFallback:  indexFallback,
 			viewportRows:   viewportRows,
 			centerRecalled: centerRecalled,
-			err:            err,
+			err:            res.err,
 		}))
 	})
 }

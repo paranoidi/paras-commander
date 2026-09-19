@@ -206,6 +206,11 @@ type Model struct {
 	QuickViewDirOverlayActive bool
 	// QuickViewDirOverlayPanelID is PrimaryPanel or SecondaryPanel for the inactive column, or -1 when inactive.
 	QuickViewDirOverlayPanelID int
+	// QuickViewSlowPath is the driver-panel entry whose quick-view preview (file preview or
+	// directory overlay) has been loading longer than panel.LoadingIndicatorDelay; set by the
+	// preview handler's slow-indicator timer. QuickViewSlowRowPath gates it on the load still
+	// being in flight, so it never needs explicit clearing when the preview lands.
+	QuickViewSlowPath string
 	// FullscreenFilePreview is the full-screen file view state (mutate only under App.commandsMu).
 	FullscreenFilePreview FilePreviewState
 	// FullscreenFilePreviewDraw is a snapshot for ViewFilePreview rendering.
@@ -388,6 +393,29 @@ func (m *Model) PanelForFileListRender(panelID int) panel.State {
 	}
 }
 
+// QuickViewSlowRowPath returns the path of panelID's row that should carry the working
+// (icons.working) indicator because its quick-view preview is still loading past
+// panel.LoadingIndicatorDelay, or "" when there is nothing slow to show on that panel. Only the
+// quick-view driver panel (the active one) ever gets it; the indicator disappears by itself as
+// soon as the directory overlay's listing or the file preview lands.
+func (m *Model) QuickViewSlowRowPath(panelID int) string {
+	if m.QuickViewSlowPath == "" || !m.QuickViewDisplayActive() || panelID != m.ActivePanel {
+		return ""
+	}
+	if m.QuickViewDirOverlayActive {
+		ov := &m.QuickViewDirOverlay
+		if ov.ListingPending && ov.ListingPendingPath == m.QuickViewSlowPath {
+			return m.QuickViewSlowPath
+		}
+		return ""
+	}
+	st := m.FilePreviewDraw
+	if st.Open && st.Path == m.QuickViewSlowPath && st.Phase != FilePreviewPhaseDone {
+		return m.QuickViewSlowPath
+	}
+	return ""
+}
+
 // quickViewDirOverlayTitleChrome returns left path + right basename for the inactive-column
 // title while a quick-view directory overlay (or visual hold) is painted.
 func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (titlePath, endLabel string, ok bool) {
@@ -397,7 +425,12 @@ func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (tit
 	var ovPath string
 	switch {
 	case m.QuickViewDirOverlayActive && panelID == m.QuickViewDirOverlayPanelID:
+		// While a fresh overlay listing is still loading the body holds the previous directory's
+		// rows (stale-while-revalidate), so the title must name the directory being loaded.
 		ovPath = m.QuickViewDirOverlay.PathString()
+		if m.QuickViewDirOverlay.ListingPending && m.QuickViewDirOverlay.ListingPendingPath != "" {
+			ovPath = m.QuickViewDirOverlay.ListingPendingPath
+		}
 	default:
 		return "", "", false
 	}
@@ -652,6 +685,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			CursorNameHintPinnedOut:   side.CursorNameHintPinnedOut,
 			QuickViewIndicator:        side.QuickViewIndicatorActive,
 			QuickViewIndicatorRight:   side.QuickViewIndicatorRight,
+			WorkingRowPath:            model.QuickViewSlowRowPath(side.PanelID),
 		}
 		if titlePath, endLabel, ok := model.quickViewDirOverlayTitleChrome(side.PanelID, ownState.PathString()); ok {
 			panelCtx.TitlePath = titlePath

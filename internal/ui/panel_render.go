@@ -137,6 +137,11 @@ type PanelContext struct {
 	// which border/icon: true draws U+E0B0 on the right border, false draws U+E0B2 on the left.
 	QuickViewIndicator      bool
 	QuickViewIndicatorRight bool
+	// WorkingRowPath, when non-empty, is a row that gets the icons.working suffix because
+	// background work behind it (a quick-view preview or directory overlay load, see
+	// Model.QuickViewSlowRowPath) has been pending past panel.LoadingIndicatorDelay — the same
+	// indicator a slow navigation load paints via state.ShowLoadingIcon.
+	WorkingRowPath string
 }
 
 const (
@@ -508,7 +513,8 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			metaText = MetaRowText(metaLayouts, entry.Path)
 		}
 		rowSuffix = panellist.NewRowSuffix(jobMarkIcon, newFileTier, renameMark, subtreeMark, jobWrite)
-		rowSuffix.Working = state.ShowLoadingIcon && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath
+		rowSuffix.Working = (state.ShowLoadingIcon && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath) ||
+			(ctx.WorkingRowPath != "" && entry.Path == ctx.WorkingRowPath)
 		_, rowSuffix.Pinned = display.PinnedPaths[entry.Path]
 		rowOpts.Suffix = rowSuffix
 		text = formatEntry(entry, effTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)

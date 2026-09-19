@@ -24,7 +24,7 @@ func TestExtractFramePNGAndMediaThumbs(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("ffmpeg generate: %v\n%s", err, out)
 	}
-	img, err := extractFramePNG(clip, 1.0)
+	img, err := extractFramePNG(context.Background(), clip, 1.0)
 	if err != nil {
 		t.Fatalf("extractFramePNG: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestExtractFramePNGAndMediaThumbs(t *testing.T) {
 		ImageCellPxH:  20,
 		ImageProtocol: previewpanel.ImageProtocolSixel,
 	}
-	meta, work := RunMediaMeta(req)
+	meta, work := RunMediaMeta(context.Background(), req)
 	if meta.ErrorMsg != "" {
 		t.Fatalf("RunMediaMeta: %s", meta.ErrorMsg)
 	}

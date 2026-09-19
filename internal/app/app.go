@@ -67,7 +67,7 @@ type diskIdleSortPayload struct {
 type diskUsageRedrawPayload struct{}
 
 // dirLoadingIndicatorPayload arms the row working-indicator icon for one panel's pending
-// navigation load once it has been in flight longer than dirLoadingIndicatorDelayMS.
+// navigation load once it has been in flight longer than panel.LoadingIndicatorDelay.
 type dirLoadingIndicatorPayload struct {
 	PanelID int
 	Epoch   uint64
@@ -261,7 +261,7 @@ type App struct {
 	carouselPaintDefer [2]carouselPaintDeferState
 
 	// dirLoadIndicatorTimer/dirLoadIndicatorEpoch arm the row working-indicator icon for a
-	// panel navigation load pending longer than dirLoadingIndicatorDelayMS; indexed by
+	// panel navigation load pending longer than panel.LoadingIndicatorDelay; indexed by
 	// ui.PrimaryPanel/ui.SecondaryPanel. See dir_loading_indicator.go.
 	dirLoadIndicatorTimer [2]*time.Timer
 	dirLoadIndicatorEpoch [2]uint64
@@ -1120,6 +1120,11 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 		}
 	case previewctrl.QuickViewDirRuleDeclinedPayload:
 		if a.previewCtrl.ApplyQuickViewDirRuleDeclined(d) {
+			a.render()
+			out.didRender = true
+		}
+	case previewctrl.QuickViewSlowPayload:
+		if a.previewCtrl.ApplyQuickViewSlow(d) {
 			a.render()
 			out.didRender = true
 		}

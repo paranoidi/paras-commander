@@ -40,8 +40,8 @@ func calculateTimeMarks(durationSec float64, n int) []float64 {
 	return marks
 }
 
-func extractFramePNG(videoPath string, timeSec float64) (image.Image, error) {
-	pngBytes, err := ffmpegFramePNG(videoPath, timeSec)
+func extractFramePNG(ctx context.Context, videoPath string, timeSec float64) (image.Image, error) {
+	pngBytes, err := ffmpegFramePNG(ctx, videoPath, timeSec)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func extractThumbFrames(ctx context.Context, videoPath string, durationSec float
 		wg.Add(1)
 		go func(i int, t float64) {
 			defer wg.Done()
-			img, err := extractFramePNG(videoPath, t)
+			img, err := extractFramePNG(runCtx, videoPath, t)
 			pool.Release() // free the slot immediately — bookkeeping/callback below don't need it
 			if err != nil {
 				mu.Lock()

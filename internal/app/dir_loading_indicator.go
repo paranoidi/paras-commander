@@ -5,13 +5,9 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
-
-// dirLoadingIndicatorDelayMS is how long a panel navigation load must be pending before its row
-// gets a working-indicator icon (icons.working). Not exposed via config.toml — nothing has
-// asked for it to be tunable; add a config field if that changes.
-const dirLoadingIndicatorDelayMS = 500
 
 // armDirLoadingIndicatorTimer starts (or restarts) the working-indicator delay for panelID's
 // currently pending navigation load. Mirrors armIdleDiskSortTimer's arm/epoch pattern.
@@ -24,7 +20,7 @@ func (a *App) armDirLoadingIndicatorTimer(panelID int) {
 	}
 	a.dirLoadIndicatorEpoch[panelID]++
 	epoch := a.dirLoadIndicatorEpoch[panelID]
-	a.dirLoadIndicatorTimer[panelID] = time.AfterFunc(dirLoadingIndicatorDelayMS*time.Millisecond, func() {
+	a.dirLoadIndicatorTimer[panelID] = time.AfterFunc(panel.LoadingIndicatorDelay, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(dirLoadingIndicatorPayload{PanelID: panelID, Epoch: epoch}))
 	})
 }

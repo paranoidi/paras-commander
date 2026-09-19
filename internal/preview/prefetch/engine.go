@@ -413,7 +413,7 @@ func (e *Engine) runJob(it Item) {
 	case KindVideo:
 		maxEdge := e.cfg.VideoMaxEdgePx
 		// Duration probe via meta path; skip if no video duration.
-		metaRes, work := previewrun.RunMediaMeta(previewrun.Request{
+		metaRes, work := previewrun.RunMediaMeta(ctx, previewrun.Request{
 			Path:          it.Path,
 			Preview:       config.PreviewConfig{Images: true, VideoThumbCols: e.cfg.VideoThumbCols, VideoThumbRows: e.cfg.VideoThumbRows, ImageMaxEdgePx: maxEdge},
 			ImageMaxPxW:   maxEdge,

@@ -1,15 +1,12 @@
 package preview
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/localfs"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -370,7 +367,7 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 			// every matching rule declines, this falls through into the internal preview path
 			// below and errors reading the directory as a file (EISDIR) — shown as a plain
 			// error message in the pane. Add a proper fallback if that proves annoying in practice.
-			if err := h.OpenFullscreenFilePreviewAt(dirPath); err != nil {
+			if err := h.OpenFullscreenFilePreviewAt(dirPath, true); err != nil {
 				h.host.SetTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
 			}
 			return
@@ -382,29 +379,18 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 		h.host.SetTransientMessage("View: select a file", ui.MessageUrgencyWarn)
 		return
 	}
-	err := localfs.CheckFilePreviewable(path)
-	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
-	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
-	isArchive := errors.Is(err, localfs.ErrFilePreviewArchive)
-	if err != nil && !isImage && !isMedia && !isArchive {
-		switch {
-		case errors.Is(err, localfs.ErrFilePreviewBinary):
-			h.host.SetTransientMessage("View: not a text file", ui.MessageUrgencyWarn)
-		case errors.Is(err, localfs.ErrFilePreviewIsDir):
-			h.host.SetTransientMessage("View: not a file", ui.MessageUrgencyWarn)
-		default:
-			h.host.SetErrorMessage("View", err)
-		}
-		return
-	}
-	if err := h.OpenFullscreenFilePreviewAt(path); err != nil {
+	if err := h.OpenFullscreenFilePreviewAt(path, false); err != nil {
 		h.host.SetTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
 	}
 }
 
-// OpenFullscreenFilePreviewAt opens the full-screen file view for path.
-// Caller must ensure path is a previewable regular file.
-func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
+// OpenFullscreenFilePreviewAt opens the full-screen file view for path. isDir is the caller's
+// already-known answer to "is this a directory" (a browser F3 on a highlighted directory, vs.
+// every other caller passing a regular file) — this function does not stat path itself. Whether
+// path is actually previewable as text is checked asynchronously (see dispatchFilePreviewCheck
+// below): a binary/unreadable file still opens the view, showing the reason in the pane instead
+// of blocking the caller on a synchronous stat+open+read.
+func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 	path = filepath.Clean(path)
 	w, ht := h.screen.Size()
 	lay := h.host.LayoutForTerminalSize(w, ht)
@@ -412,8 +398,6 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 		return fmt.Errorf("terminal too small")
 	}
 	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, h.host.EffectivePaneSplitOrientation())
-	info, statErr := os.Stat(path)
-	isDir := statErr == nil && info.IsDir()
 	panelPath := filepath.Dir(path)
 	if active := h.host.ActivePanel(); active != nil && active.PathString() != "" {
 		panelPath = active.PathString()
@@ -464,11 +448,48 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 	}
 	gen := h.filePreviewRunGen.Add(1)
 	h.postRenderWake()
-	go h.runPreview(
-		h.ctx,
-		h.previewRequest(path, tw, contentH, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen, isDir),
-		previewTargetFullscreen,
-		gen,
-	)
+	req := h.previewRequest(path, tw, contentH, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen, isDir)
+	if isDir {
+		go h.runPreview(h.ctx, req, previewTargetFullscreen, gen)
+		return nil
+	}
+	go h.dispatchFilePreviewCheck(path, req, previewTargetFullscreen, gen,
+		"View: not a text file", "View: not a file", h.patchFullscreenPreviewMessage)
 	return nil
+}
+
+// patchFullscreenPreviewMessage sets the fullscreen preview to a terminal "done" state showing
+// msg in place of file content — used by dispatchFilePreviewCheck when path turns out not to be
+// previewable as text. Clears the same body/image fields as applyPreviewResult's ErrorMsg branch;
+// unlike quick view's patchColumnPreviewMessage it leaves Path alone, since the fullscreen state
+// already has Path/TitleBase set from the pending placeholder OpenFullscreenFilePreviewAt painted.
+func (h *Handler) patchFullscreenPreviewMessage(titleBase, msg string) {
+	h.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Phase = ui.FilePreviewPhaseDone
+		if titleBase != "" {
+			st.TitleBase = titleBase
+		}
+		st.ErrorMsg = msg
+		st.ExitCode = 0
+		st.CombinedText = ""
+		st.SetHighlightedCells(nil)
+		st.IsDiff = false
+		st.IsMarkdown = false
+		st.DiffHunkLines = nil
+		st.GitStatusText = ""
+		st.GitStatusThemeKey = ""
+		st.ImagePayload = ""
+		st.ImagePxW = 0
+		st.ImagePxH = 0
+		st.ImageProtocol = 0
+		st.ImageUnicodePlaceholder = false
+		st.ImageInTmux = false
+		st.ImageCapabilityUncertain = false
+		st.ImageFirst = false
+		if st.Search.Active {
+			st.RecomputeSearch()
+		}
+	})
+	h.postRenderWake()
+	h.postPreviewClamp(previewTargetFullscreen)
 }

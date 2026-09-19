@@ -1,7 +1,6 @@
 package find
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scan"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -802,20 +800,8 @@ func (h *Handler) OpenSelectedFullscreenPreview() {
 		h.host.SetTransientMessage("View: not a file", ui.MessageUrgencyWarn)
 		return
 	}
-	err := localfs.CheckFilePreviewable(path)
-	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
-	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
-	isArchive := errors.Is(err, localfs.ErrFilePreviewArchive)
-	if err != nil && !isImage && !isMedia && !isArchive {
-		if errors.Is(err, localfs.ErrFilePreviewBinary) {
-			h.host.SetTransientMessage("View: not a text file", ui.MessageUrgencyWarn)
-		} else {
-			h.host.SetErrorMessage("View", err)
-		}
-		return
-	}
 	h.CloseDialog()
-	if err := h.host.OpenFullscreenFilePreviewAt(path); err != nil {
+	if err := h.host.OpenFullscreenFilePreviewAt(path, false); err != nil {
 		h.host.SetTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
 	}
 }

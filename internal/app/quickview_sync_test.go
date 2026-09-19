@@ -1,13 +1,19 @@
 package app
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -92,6 +98,9 @@ func TestQuickViewDirRecallsFromInactivePanelHistory(t *testing.T) {
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
 
 	entry, ok := app.model.QuickViewDirOverlay.CurrentEntry()
 	if !ok {
@@ -99,6 +108,150 @@ func TestQuickViewDirRecallsFromInactivePanelHistory(t *testing.T) {
 	}
 	if entry.Name != "b.txt" {
 		t.Fatalf("overlay cursor entry = %q, want b.txt from inactive panel history", entry.Name)
+	}
+}
+
+// TestQuickViewDirOverlayLoadDoesNotBlockOnSlowFetch proves highlighting a directory with quick
+// view latched never blocks the UI goroutine on the directory listing fetch (the regression this
+// package's directory overlay was rewritten to always load asynchronously to fix): with the
+// listing fetch wedged, reconcileAfterEvent (which synchronously arms the quick-view preview when
+// UI.KeyRepeatDebounceMS <= 0) must still return promptly, leaving the overlay pending rather than
+// hanging until the fetch unblocks.
+func TestQuickViewDirOverlayLoadDoesNotBlockOnSlowFetch(t *testing.T) {
+	root := t.TempDir()
+	orchard := filepath.Join(root, "orchard")
+	if err := os.Mkdir(orchard, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.KeyRepeatDebounceMS = 0
+
+	block := make(chan struct{})
+	var closeBlockOnce sync.Once
+	closeBlock := func() { closeBlockOnce.Do(func() { close(block) }) }
+	t.Cleanup(closeBlock)
+	started := make(chan struct{})
+	var startedOnce sync.Once
+	swapFetchListingForAsyncLoad(t, func(ctx context.Context, snap panel.ListingRefreshSnapshot) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
+		startedOnce.Do(func() { close(started) })
+		<-block // wedged fetch, like a stalled network mount
+		return panel.FetchListing(ctx, snap)
+	})
+
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "orchard")
+	app.model.QuickViewEnabled = true
+
+	done := make(chan struct{})
+	go func() {
+		app.reconcileAfterEvent()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("reconcileAfterEvent blocked on the directory overlay fetch")
+	}
+	<-started // the fetch goroutine has been invoked
+
+	if !app.model.QuickViewDirOverlayActive {
+		t.Fatal("quick view dir overlay should be active immediately")
+	}
+	if !app.model.QuickViewDirOverlay.ListingPending {
+		t.Fatal("overlay listing should be pending while the fetch is blocked")
+	}
+	if got := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()); got == filepath.Clean(orchard) {
+		t.Fatal("overlay path should not be set until the blocked fetch lands")
+	}
+
+	closeBlock()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
+	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(orchard); got != want {
+		t.Fatalf("overlay path after fetch unblocks = %q, want %q", got, want)
+	}
+}
+
+// TestQuickViewDirOverlayHoldsPreviousListingUntilSlow: moving the highlight from one directory
+// to another keeps the previous directory's rows painted while the new listing loads (no empty
+// flash); once the slow-indicator delay fires with the load still pending the stale rows are
+// cleared and the driver's row gets the working indicator, which disappears when the load lands.
+func TestQuickViewDirOverlayHoldsPreviousListingUntilSlow(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	quarry := filepath.Join(root, "quarry")
+	for _, d := range []string{meadow, quarry} {
+		if err := os.Mkdir(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFile(t, filepath.Join(meadow, "clover.txt"))
+	writeFile(t, filepath.Join(quarry, "granite.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.KeyRepeatDebounceMS = 0
+
+	app.model.ActivePanel = ui.PrimaryPanel
+	left := app.panelByID(ui.PrimaryPanel)
+	selectPanelEntryByName(t, left, "meadow")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending && len(app.model.QuickViewDirOverlay.Entries) > 0
+	})
+
+	block := make(chan struct{})
+	var closeBlockOnce sync.Once
+	closeBlock := func() { closeBlockOnce.Do(func() { close(block) }) }
+	t.Cleanup(closeBlock)
+	swapFetchListingForAsyncLoad(t, func(ctx context.Context, snap panel.ListingRefreshSnapshot) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
+		<-block
+		return panel.FetchListing(ctx, snap)
+	})
+	selectPanelEntryByName(t, left, "quarry")
+	app.reconcileAfterEvent()
+
+	ov := &app.model.QuickViewDirOverlay
+	if !ov.ListingPending {
+		t.Fatal("overlay listing should be pending while the quarry fetch is blocked")
+	}
+	if entry, ok := ov.CurrentEntry(); !ok || entry.Name != "clover.txt" {
+		t.Fatalf("overlay should still hold meadow's rows while quarry loads, cursor entry = %+v (%v)", entry, ok)
+	}
+	if got := app.model.QuickViewSlowRowPath(ui.PrimaryPanel); got != "" {
+		t.Fatalf("no slow indicator expected before the delay fires, got %q", got)
+	}
+	if got, want := ov.ListingPendingPath, filepath.Clean(quarry); got != want {
+		t.Fatalf("overlay pending path (used for the title) = %q, want %q", got, want)
+	}
+
+	if app.previewCtrl.ApplyQuickViewSlow(previewctrl.QuickViewSlowPayload{Path: filepath.Clean(meadow)}) {
+		t.Fatal("slow payload for a superseded target must be ignored")
+	}
+	if !app.previewCtrl.ApplyQuickViewSlow(previewctrl.QuickViewSlowPayload{Path: filepath.Clean(quarry)}) {
+		t.Fatal("slow payload for the pending overlay target should apply")
+	}
+	if len(ov.Entries) != 0 {
+		t.Fatalf("stale rows should be cleared once the slow indicator applies, got %d rows", len(ov.Entries))
+	}
+	if got, want := app.model.QuickViewSlowRowPath(ui.PrimaryPanel), filepath.Clean(quarry); got != want {
+		t.Fatalf("slow row path = %q, want %q", got, want)
+	}
+	if got := app.model.QuickViewSlowRowPath(ui.SecondaryPanel); got != "" {
+		t.Fatalf("only the driver panel carries the indicator, secondary got %q", got)
+	}
+
+	closeBlock()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
+	if entry, ok := ov.CurrentEntry(); !ok || entry.Name != "granite.txt" {
+		t.Fatalf("overlay should show quarry once its listing lands, cursor entry = %+v (%v)", entry, ok)
+	}
+	if got := app.model.QuickViewSlowRowPath(ui.PrimaryPanel); got != "" {
+		t.Fatalf("slow indicator should clear itself once the listing lands, got %q", got)
 	}
 }
 
@@ -166,6 +319,9 @@ func TestQuickViewDirRecallsLastSelectedEntry(t *testing.T) {
 	selectPanelEntryByName(t, left, "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
 
 	entry, ok := app.model.QuickViewDirOverlay.CurrentEntry()
 	if !ok {
@@ -211,6 +367,9 @@ func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 	selectPanelEntryByName(t, left, "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("overlay path = %q, want %q", got, want)
 	}
@@ -237,6 +396,9 @@ func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionPanelSwitch)
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
 
 	if app.model.ActivePanel != ui.PrimaryPanel {
 		t.Fatalf("ActivePanel = %d, want left panel after second Tab", app.model.ActivePanel)
@@ -318,6 +480,9 @@ func TestQuickViewDirOverlayPageScrollWithCtrlJK(t *testing.T) {
 	if !app.model.QuickViewDirOverlayActive {
 		t.Fatal("expected directory overlay for orchard")
 	}
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
 	ov := &app.model.QuickViewDirOverlay
 	ov.Cursor = 0
 	ov.ScrollOffset = 0
@@ -644,6 +809,9 @@ func TestQuickViewFollowsDirectoryHighlight(t *testing.T) {
 	inactiveBefore := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String())
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
 
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("overlay path = %q, want %q", got, want)
@@ -677,6 +845,9 @@ func TestQuickViewFollowsCursorBetweenSubdirectories(t *testing.T) {
 	inactiveBefore := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String())
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("overlay after alpha = %q, want %q", got, want)
 	}
@@ -686,6 +857,9 @@ func TestQuickViewFollowsCursorBetweenSubdirectories(t *testing.T) {
 
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "beta")
 	app.reconcileAfterEvent()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return filepath.Clean(app.model.QuickViewDirOverlay.Path.String()) == filepath.Clean(beta) && !app.model.QuickViewDirOverlay.ListingPending
+	})
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(beta); got != want {
 		t.Fatalf("overlay after beta = %q, want %q", got, want)
 	}
@@ -838,6 +1012,7 @@ func TestQuickViewOffRestoresInactivePanelState(t *testing.T) {
 	if err := app.panelByID(ui.SecondaryPanel).Load(child); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Secondary enters child (settle before quick view tracks it)
 	rightBefore := app.panelByID(ui.SecondaryPanel)
 	inactivePathBefore := filepath.Clean(rightBefore.Path.String())
 	inactiveCursorBefore := rightBefore.Cursor
@@ -846,6 +1021,9 @@ func TestQuickViewOffRestoresInactivePanelState(t *testing.T) {
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("overlay during quick view = %q, want %q", got, want)
 	}

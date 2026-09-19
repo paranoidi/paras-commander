@@ -440,7 +440,7 @@ func TestFilePreviewFullscreenClosedNoopWhenNotLaunchedFromPin(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	if err := app.previewCtrl.OpenFullscreenFilePreviewAt(target); err != nil {
+	if err := app.previewCtrl.OpenFullscreenFilePreviewAt(target, false); err != nil {
 		t.Fatalf("OpenFullscreenFilePreviewAt: %v", err)
 	}
 

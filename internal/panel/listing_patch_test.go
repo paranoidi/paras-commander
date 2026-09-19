@@ -300,7 +300,7 @@ func TestRemoveEntriesByPathThenStaleReloadDoesNotMarkReappearanceAsNew(t *testi
 	// Simulate a stale periodic-refresh read landing before the delete/move job's real op
 	// completes: the file is still physically present.
 	staleListing := []fsbackend.Entry{{Name: "departing.txt", Type: fsbackend.EntryFile}}
-	if _, err := state.ApplyPeriodicRefresh(pathloc.MustParse(dir), staleListing, 10); err != nil {
+	if _, err := state.ApplyPeriodicRefresh(pathloc.MustParse(dir), staleListing, 10, nil); err != nil {
 		t.Fatalf("ApplyPeriodicRefresh: %v", err)
 	}
 

@@ -40,13 +40,13 @@ func (f *fakeFindHost) HandleScrollingQueryKey(*tcell.EventKey, bool, ScrollingQ
 func (f *fakeFindHost) FindDialogScrollingQuery(*dialog.FindDialogState, int, func()) ScrollingQueryEdit {
 	return ScrollingQueryEdit{}
 }
-func (f *fakeFindHost) FindDialogQueryWidth() int                     { return 0 }
-func (f *fakeFindHost) DiskUsageIgnore() diskusage.ShouldIgnoreFolder { return nil }
-func (f *fakeFindHost) GitignoreCache() *gitignore.Cache              { return nil }
-func (f *fakeFindHost) PanelViewportRows(int) int                     { return 0 }
-func (f *fakeFindHost) OpenGroupSelectDialog(GroupSelectMode, bool)   {}
-func (f *fakeFindHost) OpenFullscreenFilePreviewAt(string) error      { return nil }
-func (f *fakeFindHost) PinTogglePath(string, string, bool)            {}
+func (f *fakeFindHost) FindDialogQueryWidth() int                      { return 0 }
+func (f *fakeFindHost) DiskUsageIgnore() diskusage.ShouldIgnoreFolder  { return nil }
+func (f *fakeFindHost) GitignoreCache() *gitignore.Cache               { return nil }
+func (f *fakeFindHost) PanelViewportRows(int) int                      { return 0 }
+func (f *fakeFindHost) OpenGroupSelectDialog(GroupSelectMode, bool)    {}
+func (f *fakeFindHost) OpenFullscreenFilePreviewAt(string, bool) error { return nil }
+func (f *fakeFindHost) PinTogglePath(string, string, bool)             {}
 
 func newTestFindHandler(host *fakeFindHost, model *ui.Model) *Handler {
 	return &Handler{

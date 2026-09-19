@@ -1,7 +1,6 @@
 package pin
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -9,7 +8,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -183,13 +181,14 @@ func (h *Handler) RemoveAll() {
 }
 
 // ViewSelected opens the highlighted pin in the fullscreen file viewer (F3): a directory
-// selection shows a transient warning and leaves the dialog open; a non-previewable file
-// shows an error and leaves the dialog open. On success the Pin dialog is hidden (Open =
-// false, not CloseDialog — its Query/Selected/ListScroll are preserved) and the fullscreen
-// preview opens directly via h.preview; reopenAfterPreview is armed so
+// selection shows a transient warning and leaves the dialog open. On success the Pin dialog
+// is hidden (Open = false, not CloseDialog — its Query/Selected/ListScroll are preserved) and
+// the fullscreen preview opens directly via h.preview; reopenAfterPreview is armed so
 // ReopenAfterPreviewClose reopens the dialog, restored exactly, once the preview later
-// closes. If opening the preview itself fails, there is no preview session to close later,
-// so the dialog is restored immediately.
+// closes. If opening the preview itself fails (e.g. terminal too small), there is no preview
+// session to close later, so the dialog is restored immediately. Whether item.Path is actually
+// previewable as text is checked asynchronously by the preview itself; a non-previewable file
+// still opens the viewer, showing the reason inside the pane.
 func (h *Handler) ViewSelected() {
 	_, item, ok := h.selectedItem()
 	if !ok {
@@ -199,21 +198,9 @@ func (h *Handler) ViewSelected() {
 		h.host.SetTransientMessage("View: not a file", ui.MessageUrgencyWarn)
 		return
 	}
-	err := localfs.CheckFilePreviewable(item.Path)
-	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
-	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
-	isArchive := errors.Is(err, localfs.ErrFilePreviewArchive)
-	if err != nil && !isImage && !isMedia && !isArchive {
-		if errors.Is(err, localfs.ErrFilePreviewBinary) {
-			h.host.SetTransientMessage("View: not a text file", ui.MessageUrgencyWarn)
-		} else {
-			h.host.SetErrorMessage("View", err)
-		}
-		return
-	}
 	st := &h.model.PinDialog
 	st.Open = false
-	if err := h.preview.OpenFullscreenFilePreviewAt(item.Path); err != nil {
+	if err := h.preview.OpenFullscreenFilePreviewAt(item.Path, false); err != nil {
 		st.Open = true
 		h.host.SetTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
 		return

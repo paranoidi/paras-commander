@@ -1,8 +1,6 @@
 package panel
 
 import (
-	"errors"
-
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -53,36 +51,25 @@ func (s *State) SnapshotChild() (ListingSnapshot, bool) {
 	return s.CarouselSideCache.Child, s.CarouselSideCache.ChildOK
 }
 
-// SnapshotDirectory builds a sorted listing for dir using s for list/sort/backend settings and
-// recallSources for HistoryCursorByPath (same highlight rules as Enter / carousel child pane).
-func (s *State) SnapshotDirectory(dir string, viewportRows int, recallSources ...*State) (ListingSnapshot, error) {
+// PreviewCursorRecall computes the cursor to highlight when opening dir in a preview/overlay
+// listing, mirroring the recall rules used for Enter / carousel child pane: a per-panel
+// remembered cursor from sources' navigation history first (BestRecalledCursor), then a
+// fallback to a selected path under dir, checked against sources in order. Pure and IO-free.
+func PreviewCursorRecall(dir string, sources ...*State) (name string, idx int) {
 	canonical := cleanPathString(dir)
-	if canonical == "" {
-		return ListingSnapshot{}, errors.New("empty directory path")
+	name, idx, _ = BestRecalledCursor(canonical, sources...)
+	if name != "" || idx != noIndexCursorFallback {
+		return name, idx
 	}
-	loc, err := pathloc.Parse(canonical)
-	if err != nil {
-		return ListingSnapshot{}, err
-	}
-	name, idx, recalled := BestRecalledCursor(canonical, recallSources...)
-	if name == "" && idx == noIndexCursorFallback {
-		if n, ok := selectionBasenameUnderDirectory(s, canonical); ok {
-			name = n
-			recalled = true
-		} else {
-			for _, st := range recallSources {
-				if st == nil {
-					continue
-				}
-				if n, ok := selectionBasenameUnderDirectory(st, canonical); ok {
-					name = n
-					recalled = true
-					break
-				}
-			}
+	for _, st := range sources {
+		if st == nil {
+			continue
+		}
+		if n, ok := selectionBasenameUnderDirectory(st, canonical); ok {
+			return n, idx
 		}
 	}
-	return s.buildListingSnapshot(loc, name, idx, viewportRows, recalled)
+	return name, idx
 }
 
 func selectionBasenameUnderDirectory(st *State, dir string) (string, bool) {

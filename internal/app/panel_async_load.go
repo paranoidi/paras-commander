@@ -17,41 +17,68 @@ import (
 // substitute a fake (e.g. one that blocks forever) without touching the real filesystem.
 var fetchListingForAsyncLoad = panel.FetchListing
 
+// asyncListingResult is what raceAsyncListingFetch hands to onResult: the fetched listing plus,
+// when requested, the directory's filesystem probes (panel.PathProbes) computed on the same
+// background goroutine — so applying the result on the UI goroutine needs no filesystem calls.
+type asyncListingResult struct {
+	loc                  pathloc.Path
+	entries              []fsbackend.Entry
+	gitignoreActive      bool
+	dotfilesHiddenActive bool
+	probes               *panel.PathProbes
+	err                  error
+}
+
 // raceAsyncListingFetch runs snap's fetch off the UI thread, racing it against a give-up timer
 // (timeout). Go cannot cancel a goroutine parked inside a real blocking syscall, so whichever of
 // {fetch, timeout} finishes first "wins" and calls onResult exactly once, with err set to a
 // timeout error for the timer side; the loser's outcome (a stuck fetch that does eventually
 // return) is silently dropped, and the timer is stopped once the fetch wins so it doesn't sit in
-// the runtime's timer heap for the rest of its duration.
-func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout time.Duration, onResult func(loc pathloc.Path, entries []fsbackend.Entry, gitignoreActive, dotfilesHiddenActive bool, err error)) {
+// the runtime's timer heap for the rest of its duration. withProbes additionally runs
+// panel.ProbeListingPath (statfs, device stat, git work-tree lookup — each a round trip on a
+// network mount) on the fetch goroutine, for callers that go on to ApplyListing the result; the
+// heavy volume probes are skipped while a job saturates that volume, matching what
+// ApplyListing's SuppressHeavyPathProbes gate would decide.
+func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout time.Duration, withProbes bool, onResult func(asyncListingResult)) {
 	var settled atomic.Bool
 	var timer atomic.Pointer[time.Timer] // set right after time.AfterFunc below; both post() callers only ever run after that
-	post := func(loc pathloc.Path, entries []fsbackend.Entry, gitignoreActive, dotfilesHiddenActive bool, err error) {
+	post := func(res asyncListingResult) {
 		if settled.CompareAndSwap(false, true) {
 			if t := timer.Load(); t != nil {
 				t.Stop()
 			}
-			onResult(loc, entries, gitignoreActive, dotfilesHiddenActive, err)
+			onResult(res)
 		}
 	}
 	timer.Store(time.AfterFunc(timeout, func() {
-		post(pathloc.Path{}, nil, false, false, fmt.Errorf("listing timed out after %s", timeout))
+		post(asyncListingResult{err: fmt.Errorf("listing timed out after %s", timeout)})
 	}))
 	go func() {
 		entries, loc, gitignoreActive, dotfilesHiddenActive, err := fetchListingForAsyncLoad(context.Background(), snap)
-		post(loc, entries, gitignoreActive, dotfilesHiddenActive, err)
+		res := asyncListingResult{loc: loc, entries: entries, gitignoreActive: gitignoreActive, dotfilesHiddenActive: dotfilesHiddenActive, err: err}
+		if err == nil && withProbes {
+			res.probes = a.probeListingPath(loc)
+		}
+		post(res)
 	}()
 }
 
+// probeListingPath runs panel.ProbeListingPath for loc off the UI goroutine, skipping the heavy
+// volume probes when a job is saturating that volume (the same rule as suppressHeavyPathProbes).
+func (a *App) probeListingPath(loc pathloc.Path) *panel.PathProbes {
+	includeVolume := true
+	if host, err := loc.FilePath(); err == nil && a.pathVolumeContendsWithActiveJob(host) {
+		includeVolume = false
+	}
+	pr := panel.ProbeListingPath(loc, includeVolume)
+	return &pr
+}
+
 type panelAsyncLoadPayload struct {
-	panelID              int
-	gen                  uint64
-	req                  panel.AsyncLoadRequest
-	loc                  pathloc.Path
-	entries              []fsbackend.Entry
-	gitignoreActive      bool
-	dotfilesHiddenActive bool
-	err                  error
+	panelID int
+	gen     uint64
+	req     panel.AsyncLoadRequest
+	res     asyncListingResult
 }
 
 func (a *App) wireAsyncPanelLoaders() {
@@ -72,16 +99,12 @@ func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 		gen := a.panelAsyncLoadGen[panelID].Add(1)
 		timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 		snap := a.panelByID(panelID).ListingRefreshSnapshot(req.Loc, timeout)
-		a.raceAsyncListingFetch(snap, timeout, func(loc pathloc.Path, entries []fsbackend.Entry, gitignoreActive, dotfilesHiddenActive bool, err error) {
+		a.raceAsyncListingFetch(snap, timeout, true, func(res asyncListingResult) {
 			_ = a.screen.PostEvent(tcell.NewEventInterrupt(panelAsyncLoadPayload{
-				panelID:              panelID,
-				gen:                  gen,
-				req:                  req,
-				loc:                  loc,
-				entries:              entries,
-				gitignoreActive:      gitignoreActive,
-				dotfilesHiddenActive: dotfilesHiddenActive,
-				err:                  err,
+				panelID: panelID,
+				gen:     gen,
+				req:     req,
+				res:     res,
 			}))
 		})
 		return true
@@ -110,12 +133,19 @@ func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	pan.ListingPendingPath = ""
 	pan.ShowLoadingIcon = false
 	a.invalidateDirLoadingIndicator(p.panelID)
-	if p.err != nil {
+	if p.res.err != nil {
 		if p.req.Rollback != nil {
 			p.req.Rollback()
 		}
-		if !isOverlay {
-			a.setErrorMessage("List failed", p.err)
+		if isOverlay {
+			// The overlay held the previous directory's rows while this load was in flight
+			// (stale-while-revalidate); don't leave them masquerading as the failed target.
+			pan.Path = p.req.Loc
+			pan.Entries = nil
+			pan.Cursor = 0
+			pan.ScrollOffset = 0
+		} else {
+			a.setErrorMessage("List failed", p.res.err)
 		}
 		return true
 	}
@@ -125,9 +155,9 @@ func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	if p.req.Loc.Equal(pan.Path) && p.req.ListingEpoch != pan.ListingEpoch {
 		return true
 	}
-	pan.GitignoreActive = p.gitignoreActive
-	pan.DotfilesHiddenActive = p.dotfilesHiddenActive
-	if err := pan.ApplyListing(p.loc, p.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback, p.req.CenterRecalledCursor); err != nil {
+	pan.GitignoreActive = p.res.gitignoreActive
+	pan.DotfilesHiddenActive = p.res.dotfilesHiddenActive
+	if err := pan.ApplyListingWithProbes(p.res.loc, p.res.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback, p.req.CenterRecalledCursor, p.res.probes); err != nil {
 		if p.req.Rollback != nil {
 			p.req.Rollback()
 		}

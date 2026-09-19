@@ -588,8 +588,11 @@ func (h *Handler) ClearQuickViewDirOverlay() {
 }
 
 // populateQuickViewDirOverlay fills the inactive-column directory overlay. When driver or
-// follower already lists the target directory, the live cursor is mirrored. Otherwise the
-// listing is built with the same snapshot path as carousel child preview (history recall).
+// follower already lists the target directory, the live cursor is mirrored synchronously.
+// Otherwise the listing is always loaded asynchronously through panel.State.Load (same
+// non-blocking, timeout-guarded path a real panel uses when navigating), with the cursor to
+// restore computed up front via panel.PreviewCursorRecall so the async load lands on the right
+// entry instead of jumping after the fact. Nothing here touches the filesystem on the UI goroutine.
 func (h *Handler) populateQuickViewDirOverlay(ov *panel.State, driver, follower *panel.State, dir string, panelID int) error {
 	canonical := panel.CleanPathString(dir)
 	if canonical == "" {
@@ -605,48 +608,8 @@ func (h *Handler) populateQuickViewDirOverlay(ov *panel.State, driver, follower 
 		return nil
 	}
 	vr := h.host.PanelViewportRows(panelID)
-	if h.host.PathVolumeContendsWithActiveJob(canonical) {
-		// The synchronous SnapshotDirectory below can block the UI goroutine for seconds on a
-		// volume an active job is saturating, so skip the instant first frame and rely solely on
-		// the async load dispatched by ov.Load — same non-blocking, timeout-guarded path a real
-		// panel uses when navigating into a contended directory.
-		return ov.Load(canonical)
-	}
-	snap, err := driver.SnapshotDirectory(canonical, vr, driver, follower)
-	if err != nil {
-		return err
-	}
-	if err := ov.Load(canonical); err != nil {
-		return err
-	}
-	ov.Path = snap.Path
-	ov.Entries = snap.Entries
-	ov.Cursor = snap.Cursor
-	ov.ScrollOffset = snap.Scroll
-	h.primeQuickViewGitColumn(ov, canonical)
-	ov.EnsureCursorInViewport(vr)
-	return nil
-}
-
-// primeQuickViewGitColumn reserves the git status column on the overlay's first synchronous
-// frame (a cheap, cache-backed work-tree check — no git subprocess) so the listing doesn't flash
-// without the column while the real async listing load (dispatched by ov.Load above) is still in
-// flight. Cell content is filled in immediately from a synchronous cache peek when available,
-// otherwise it stays blank until the async git-status fetch that ApplyListing/prepareGitColumn
-// dispatches once the async listing lands.
-func (h *Handler) primeQuickViewGitColumn(ov *panel.State, dir string) {
-	workRoot := gitignore.ValidWorkTreeRoot(dir)
-	ov.GitColumnActive = workRoot != ""
-	if !ov.GitColumnActive {
-		return
-	}
-	paths := make([]gitstatus.ListingPaths, len(ov.Entries))
-	for i, e := range ov.Entries {
-		paths[i] = gitstatus.ListingPaths{AbsPath: filepath.Clean(e.Path), IsDir: e.Type == localfs.EntryDirectory}
-	}
-	if byPath, ok := h.host.PeekGitStatus(workRoot, dir, paths); ok {
-		ov.GitByPath = byPath
-	}
+	name, idx := panel.PreviewCursorRecall(canonical, driver, follower)
+	return ov.LoadWithViewport(canonical, name, vr, idx)
 }
 
 // initQuickViewDirOverlayFromFollower prepares QuickViewDirOverlay for a directory preview load.
@@ -656,6 +619,7 @@ func (h *Handler) primeQuickViewGitColumn(ov *panel.State, dir string) {
 // (the real inactive panel this overlay stands in for) is only used for viewport-row sizing,
 // which must keep following the real follower panel's layout slot, not the overlay's.
 func (h *Handler) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, follower *panel.State, followerID int) {
+	prev := *ov
 	*ov = panel.State{
 		Sort:                       driver.Sort,
 		Filter:                     driver.Filter,
@@ -674,6 +638,12 @@ func (h *Handler) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, f
 		ScheduleGitStatus:          h.host.GitStatusScheduler(ui.QuickViewOverlayPanel),
 	}
 	ov.FileListViewportRows = func() int { return h.host.PanelViewportRows(followerID) }
+	// Stale-while-revalidate: keep the previous overlay's rows painted until the new directory's
+	// async listing lands (or the slow indicator fires and clears them), instead of flashing an
+	// empty column on every directory-to-directory highlight move.
+	if len(prev.Entries) > 0 {
+		ov.CloneListingFrom(&prev)
+	}
 }
 
 // quickViewFollowDirectory loads the highlighted directory into the inactive-column overlay
@@ -704,6 +674,56 @@ func (h *Handler) quickViewFollowDirectory() {
 		return
 	}
 	h.model.QuickViewDirOverlayActive = true
+	if ov.ListingPending {
+		h.armQuickViewSlowIndicator(targetPath)
+	} else {
+		h.clearQuickViewSlowIndicator()
+	}
+}
+
+// armQuickViewSlowIndicator (re)starts the slow-preview timer for path, the driver row whose
+// quick-view preview was just dispatched. Any previous target's pending timer is superseded.
+func (h *Handler) armQuickViewSlowIndicator(path string) {
+	h.model.QuickViewSlowPath = ""
+	h.quickViewSlow.Arm(panel.LoadingIndicatorDelay, func() {
+		_ = h.screen.PostEvent(tcell.NewEventInterrupt(QuickViewSlowPayload{Path: path}))
+	})
+}
+
+// clearQuickViewSlowIndicator cancels a pending slow-preview timer and drops the indicator, for
+// quick-view outcomes that complete synchronously (cloned listing, message, empty file).
+func (h *Handler) clearQuickViewSlowIndicator() {
+	h.quickViewSlow.Invalidate()
+	h.model.QuickViewSlowPath = ""
+}
+
+// ApplyQuickViewSlow marks the driver row for p.path with the working indicator when its
+// quick-view preview is still loading. For a directory overlay the held stale listing is cleared
+// at the same time, so a genuinely slow directory shows an empty column plus the indicator rather
+// than the previous directory's rows. Returns true when a repaint is needed.
+func (h *Handler) ApplyQuickViewSlow(p QuickViewSlowPayload) bool {
+	if !h.model.QuickViewDisplayActive() {
+		return false
+	}
+	if h.model.QuickViewDirOverlayActive {
+		ov := &h.model.QuickViewDirOverlay
+		if !ov.ListingPending || ov.ListingPendingPath != p.Path {
+			return false
+		}
+		ov.Entries = nil
+		ov.Cursor = 0
+		ov.ScrollOffset = 0
+		h.model.QuickViewSlowPath = p.Path
+		return true
+	}
+	h.mu.RLock()
+	st := h.model.FilePreview
+	h.mu.RUnlock()
+	if !st.Open || st.Path != p.Path || st.Phase == ui.FilePreviewPhaseDone {
+		return false
+	}
+	h.model.QuickViewSlowPath = p.Path
+	return true
 }
 
 // activeDirRuleTarget reports the active panel's synced directory when a [[preview.commands]]
@@ -731,6 +751,7 @@ func (h *Handler) dispatchQuickViewDirPreview(dirPath string) {
 	gen := h.filePreviewRunGen.Add(1)
 	// WorkDir is dirPath itself, so a rule command like "eza --tree ." works without needing %f.
 	req := h.previewRequest(dirPath, tw, contentH, dirPath, h.inactivePreviewChromeBlocked(), nil, previewTargetInactive, true)
+	h.armQuickViewSlowIndicator(dirPath)
 	go h.runDirPreviewRules(h.ctx, req, gen)
 }
 
@@ -786,12 +807,14 @@ func (h *Handler) applyQuickViewPreviewNow() {
 	switch mode {
 	case quickViewWantNone:
 		h.ClearQuickViewDirOverlay()
+		h.clearQuickViewSlowIndicator()
 		h.patchColumnPreviewMessage("", "Quick view: no file")
 	case quickViewWantEmpty:
 		// Invalidate any in-flight quick-view subprocess so a late completion cannot
 		// overwrite the empty-file message.
 		h.filePreviewRunGen.Add(1)
 		h.ClearQuickViewDirOverlay()
+		h.clearQuickViewSlowIndicator()
 		h.patchColumnPreviewMessage("", "Quick view: empty file")
 	case quickViewWantDir:
 		if dirPath, ok := h.activeDirRuleTarget(); ok {
@@ -801,6 +824,7 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		}
 	case quickViewWantStatErr:
 		h.ClearQuickViewDirOverlay()
+		h.clearQuickViewSlowIndicator()
 		h.patchColumnPreviewMessage("", "Quick view: cannot read selection")
 	case quickViewWantFile:
 		h.ClearQuickViewDirOverlay()
@@ -813,6 +837,7 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		h.patchFilePreviewPending(previewTargetInactive, path, false)
 		gen := h.filePreviewRunGen.Add(1)
 		req := h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive, false)
+		h.armQuickViewSlowIndicator(path)
 		go h.dispatchQuickViewFilePreview(path, req, gen)
 	}
 }
@@ -1239,7 +1264,7 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 }
 
 func (h *Handler) runMediaPreview(ctx context.Context, req previewrun.Request, target previewTarget, runGen uint64) {
-	meta, work := previewrun.RunMediaMeta(req)
+	meta, work := previewrun.RunMediaMeta(ctx, req)
 	if meta.ErrorMsg != "" {
 		h.applyPreviewResult(req, target, runGen, meta)
 		return

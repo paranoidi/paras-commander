@@ -44,6 +44,15 @@ func (d *diskCache) get(key string) ([]byte, bool) {
 	return b, true
 }
 
+// has reports whether key is present on disk without reading the file's contents, for callers
+// (e.g. HasVideo) that only need an existence check.
+func (d *diskCache) has(key string) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	info, err := os.Stat(d.pathFor(key))
+	return err == nil && info.Size() > 0
+}
+
 func (d *diskCache) put(key string, png []byte) error {
 	if len(png) == 0 {
 		return nil

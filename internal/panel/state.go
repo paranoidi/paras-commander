@@ -7,10 +7,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
-	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
-	"github.com/paranoidi/paras-commander/internal/fsvol"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -20,6 +19,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
+
+// LoadingIndicatorDelay is how long background work behind a row (a navigation load, a quick-view
+// preview or directory overlay) must be pending before that row gets the icons.working indicator.
+// The single source for every "slow" row indicator; not exposed via config.toml.
+const LoadingIndicatorDelay = 500 * time.Millisecond
 
 const maxNavHistory = 200
 
@@ -198,8 +202,8 @@ type State struct {
 	// remove/rename/insert). Async and periodic applies that started against an older epoch are
 	// dropped so a pre-mutation ReadDir cannot resurrect rows the UI already pruned.
 	ListingEpoch uint64
-	// ShowLoadingIcon is set by the app once a pending load has been in flight longer than its
-	// working-indicator delay; render checks this (not just ListingPending) so nothing is drawn
+	// ShowLoadingIcon is set by the app once a pending load has been in flight longer than
+	// LoadingIndicatorDelay; render checks this (not just ListingPending) so nothing is drawn
 	// before that threshold.
 	ShowLoadingIcon bool
 	// OnAsyncLoadPending is called once whenever ListingPending transitions to true (set by the
@@ -392,7 +396,7 @@ func (s *State) RefreshOrNavigateToExistingAncestorWithHook(viewportRows int, on
 
 // ApplyPeriodicRefresh commits a same-directory listing when content changed.
 // Selection is restored by name (else prior index). Scroll centers when the restore would move the viewport.
-func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, viewportRows int) (bool, error) {
+func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, viewportRows int, probes *PathProbes) (bool, error) {
 	if fsbackend.EntriesListingEqual(backendEntries, BackendEntriesFromPanel(s.Entries)) {
 		return false, nil
 	}
@@ -402,7 +406,7 @@ func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []f
 	if ok {
 		selectedName = entry.Name
 	}
-	if err := s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, priorCursor, false); err != nil {
+	if err := s.ApplyListingWithProbes(listingLoc, backendEntries, selectedName, viewportRows, priorCursor, false, probes); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -1452,6 +1456,13 @@ func DirectoryExists(loc pathloc.Path) bool {
 
 // ApplyListing commits backend entries into panel state (used after sync or async remote list).
 func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int, centerRecalled bool) error {
+	return s.ApplyListingWithProbes(listingLoc, backendEntries, selectedName, viewportRows, indexFallback, centerRecalled, nil)
+}
+
+// ApplyListingWithProbes is ApplyListing with the directory's filesystem probes (volume space,
+// device id, git work-tree root) supplied by the caller — normally computed off the UI goroutine
+// by ProbeListingPath right after the listing fetch. A nil probes runs them synchronously here.
+func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int, centerRecalled bool, probes *PathProbes) error {
 	localEntries, err := fsbackend.ToPanelEntries(backendEntries)
 	if err != nil {
 		return err
@@ -1495,16 +1506,25 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		s.VolumeAvailBytes = 0
 		s.VolumeTotalBytes = 0
 		s.ListingDeviceValid = false
-	} else if s.SuppressHeavyPathProbes == nil || !s.SuppressHeavyPathProbes(listingLoc) {
-		s.refreshVolumeSpace(listingLoc)
-		host := listingLoc.FilePathMust()
-		dev, devOK := diskusage.PathDevice(host)
-		s.ListingDevice = dev
-		s.ListingDeviceValid = devOK
 	} else {
-		s.ListingDeviceValid = false
+		heavy := s.SuppressHeavyPathProbes == nil || !s.SuppressHeavyPathProbes(listingLoc)
+		if probes == nil {
+			pr := ProbeListingPath(listingLoc, heavy)
+			probes = &pr
+		}
+		if heavy {
+			s.VolumeSpaceOK = probes.VolumeOK
+			s.VolumeAvailBytes, s.VolumeTotalBytes = 0, 0
+			if probes.VolumeOK {
+				s.VolumeAvailBytes, s.VolumeTotalBytes = probes.VolumeAvail, probes.VolumeTotal
+			}
+			s.ListingDevice = probes.Device
+			s.ListingDeviceValid = probes.DeviceOK
+		} else {
+			s.ListingDeviceValid = false
+		}
 	}
-	s.prepareGitColumn(listingLoc, localEntries)
+	s.prepareGitColumn(listingLoc, localEntries, probes)
 	s.ClearFilterIfInapplicable()
 	s.Entries = localEntries
 	if len(newlyAppeared) > 0 {
@@ -1592,7 +1612,9 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	return nil
 }
 
-func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entry) {
+// probes, when non-nil, supplies the already-resolved work-tree root (see PathProbes); nil
+// resolves it here.
+func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entry, probes *PathProbes) {
 	// Any tree-child git-status fetches still in flight belong to the directory being left; their
 	// eventual arrival will be rejected by applyGitStatusLoad's isWithinDir/GitColumnActive checks
 	// anyway, so stop waiting on them rather than leaving the counter stuck non-zero forever.
@@ -1607,7 +1629,12 @@ func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entr
 		s.GitByPath = nil
 		return
 	}
-	workRoot := gitignore.ValidWorkTreeRoot(host)
+	workRoot := ""
+	if probes != nil {
+		workRoot = probes.WorkRoot
+	} else {
+		workRoot = gitignore.ValidWorkTreeRoot(host)
+	}
 	s.GitColumnActive = workRoot != ""
 	s.gitWorkRoot = workRoot
 	s.GitByPath = nil
@@ -1680,34 +1707,6 @@ func cleanPathString(p string) string {
 		return ""
 	}
 	return loc.String()
-}
-
-func (s *State) refreshVolumeSpace(forPath pathloc.Path) {
-	if forPath.IsRemote() {
-		s.VolumeSpaceOK = false
-		s.VolumeAvailBytes = 0
-		s.VolumeTotalBytes = 0
-		return
-	}
-	host, err := forPath.FilePath()
-	if err != nil {
-		s.VolumeSpaceOK = false
-		return
-	}
-	avail, total, ok := fsvol.VolumeBytes(host)
-	s.VolumeSpaceOK = ok
-	if ok {
-		s.VolumeAvailBytes = avail
-		s.VolumeTotalBytes = total
-		return
-	}
-	s.VolumeAvailBytes = 0
-	s.VolumeTotalBytes = 0
-}
-
-// RefreshVolumeSpace re-samples free/total bytes for the volume containing Path without reloading the directory listing.
-func (s *State) RefreshVolumeSpace() {
-	s.refreshVolumeSpace(s.Path)
 }
 
 func (s *State) notifyChdir(oldPath, newPath pathloc.Path) {

@@ -25,7 +25,7 @@ func TestFullscreenPreviewTextWidthReservesScrollbarGutterForPlainContent(t *tes
 	writeFileForPreviewView(t, filepath.Join(dir, "a.txt"))
 
 	h, _ := newTestHandler(t, 80, 20)
-	if err := h.OpenFullscreenFilePreviewAt(filepath.Join(dir, "a.txt")); err != nil {
+	if err := h.OpenFullscreenFilePreviewAt(filepath.Join(dir, "a.txt"), false); err != nil {
 		t.Fatalf("OpenFullscreenFilePreviewAt: %v", err)
 	}
 
@@ -182,7 +182,7 @@ func TestFileViewCloseActionReturnsToBrowserNormally(t *testing.T) {
 	path := filepath.Join(dir, "notes.txt")
 	writeFileForPreviewView(t, path)
 	h, _ := newTestHandler(t, 80, 20)
-	if err := h.OpenFullscreenFilePreviewAt(path); err != nil {
+	if err := h.OpenFullscreenFilePreviewAt(path, false); err != nil {
 		t.Fatalf("OpenFullscreenFilePreviewAt: %v", err)
 	}
 
@@ -204,7 +204,7 @@ func TestFileViewCloseActionQuitsWhenLaunchedAsFileViewer(t *testing.T) {
 	writeFileForPreviewView(t, path)
 	h, fh := newTestHandler(t, 80, 20)
 	fh.launchedAsFileViewer = true
-	if err := h.OpenFullscreenFilePreviewAt(path); err != nil {
+	if err := h.OpenFullscreenFilePreviewAt(path, false); err != nil {
 		t.Fatalf("OpenFullscreenFilePreviewAt: %v", err)
 	}
 
