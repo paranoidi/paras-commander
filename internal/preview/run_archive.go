@@ -4,12 +4,16 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
+	devicons "github.com/epilande/go-devicons"
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/panellist"
@@ -24,6 +28,22 @@ type archiveEntry struct {
 	Name  string
 	IsDir bool
 }
+
+// archiveFileInfo adapts archiveEntry to fs.FileInfo for go-devicons.
+type archiveFileInfo struct {
+	entry archiveEntry
+}
+
+func (e archiveFileInfo) Name() string       { return e.entry.Name }
+func (e archiveFileInfo) Size() int64        { return 0 }
+func (e archiveFileInfo) Mode() fs.FileMode  { return 0 }
+func (e archiveFileInfo) ModTime() time.Time { return time.Time{} }
+func (e archiveFileInfo) IsDir() bool        { return e.entry.IsDir }
+func (e archiveFileInfo) Sys() interface{}   { return nil }
+
+// archiveTreeIconCells is the fixed terminal cell width reserved for the icon column, mirroring
+// panelIconStripCells (internal/ui/panel_icon_strip.go).
+const archiveTreeIconCells = 2
 
 // runArchiveList lists a listable archive's member paths as a fully expanded path tree, using
 // the same external toolchain the extract dialog uses (internal/archive).
@@ -75,12 +95,57 @@ func renderArchiveTree(paths []string, th theme.Theme, base tcell.Style) []previ
 	for _, row := range rows {
 		prefix := panellist.TreeConnectorPrefix(row.Depth, row.LastChild, row.AncestorHasNext, th)
 		cells = appendRunes(cells, prefix, connStyle)
+		if th.UseNerdfontIcons {
+			cells = appendArchiveTreeIcon(cells, row.Value, th, base)
+		}
 		nameStyle := base
 		if row.Value.IsDir {
 			nameStyle = bold
 		}
 		cells = appendRunes(cells, row.Value.Name, nameStyle)
 		cells = append(cells, previewpanel.AnsiCell{R: '\n', St: base})
+	}
+	return cells
+}
+
+// appendArchiveTreeIcon renders one entry's devicon/folder-icon into a fixed
+// archiveTreeIconCells-wide column, matching paintPanelIconStrip's budget
+// (internal/ui/panel_icon_strip.go).
+func appendArchiveTreeIcon(cells []previewpanel.AnsiCell, entry archiveEntry, th theme.Theme, base tcell.Style) []previewpanel.AnsiCell {
+	var icon string
+	var fg tcell.Color
+	if entry.IsDir {
+		icon = th.FolderIcon(theme.FolderIconDefault)
+		fg = th.FolderIconForeground(theme.FolderIconDefault, "", base)
+	} else {
+		st := devicons.IconForInfo(archiveFileInfo{entry: entry})
+		icon = st.Icon
+		if icon == "" {
+			icon = " "
+		}
+		var err error
+		fg, err = theme.ParseHexColor(st.Color)
+		if err != nil {
+			fg, _, _ = base.Decompose()
+		}
+	}
+	iconStyle := base.Foreground(fg)
+
+	col := 0
+	for _, r := range icon {
+		w := runewidth.RuneWidth(r)
+		if w < 1 {
+			w = 1
+		}
+		if col+w > archiveTreeIconCells {
+			break
+		}
+		cells = append(cells, previewpanel.AnsiCell{R: r, St: iconStyle})
+		col += w
+	}
+	for col < archiveTreeIconCells {
+		cells = append(cells, previewpanel.AnsiCell{R: ' ', St: base})
+		col++
 	}
 	return cells
 }

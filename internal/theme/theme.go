@@ -1734,7 +1734,7 @@ func parsePaletteEntry(rawValue any) (tcell.Color, error) {
 		if strings.EqualFold(strings.TrimSpace(v), "default") {
 			return tcell.ColorDefault, nil
 		}
-		return parseHexColor(v)
+		return ParseHexColor(v)
 	case int64:
 		if v < 0 || v > 255 {
 			return tcell.ColorDefault, fmt.Errorf("ANSI palette index must be 0-255, got %d", v)
@@ -1946,7 +1946,7 @@ func buildStyle(spec styleSpec, palette map[string]tcell.Color) (tcell.Style, er
 
 func resolveColor(value string, palette map[string]tcell.Color) (tcell.Color, error) {
 	if strings.HasPrefix(value, "#") {
-		return parseHexColor(value)
+		return ParseHexColor(value)
 	}
 	if strings.EqualFold(strings.TrimSpace(value), "default") {
 		return tcell.ColorDefault, nil
@@ -1958,7 +1958,7 @@ func resolveColor(value string, palette map[string]tcell.Color) (tcell.Color, er
 	return color, nil
 }
 
-func parseHexColor(value string) (tcell.Color, error) {
+func ParseHexColor(value string) (tcell.Color, error) {
 	if len(value) != 7 || value[0] != '#' {
 		return tcell.ColorDefault, fmt.Errorf("expected #RRGGBB, got %q", value)
 	}

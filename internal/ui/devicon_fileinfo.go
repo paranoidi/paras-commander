@@ -2,11 +2,11 @@ package ui
 
 import (
 	"io/fs"
-	"strconv"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 // entryFileInfo adapts localfs.Entry to fs.FileInfo for go-devicons.
@@ -27,17 +27,9 @@ func (e entryFileInfo) Sys() interface{}   { return nil }
 
 // deviconHexForeground parses "#RRGGBB" into a tcell color. Returns ok false if invalid or empty.
 func deviconHexForeground(hex string) (tcell.Color, bool) {
-	if len(hex) != 7 || hex[0] != '#' {
+	c, err := theme.ParseHexColor(hex)
+	if err != nil {
 		return tcell.ColorDefault, false
 	}
-	var rgb [3]int32
-	for i := range rgb {
-		part := hex[1+i*2 : 3+i*2]
-		parsed, err := strconv.ParseUint(part, 16, 8)
-		if err != nil {
-			return tcell.ColorDefault, false
-		}
-		rgb[i] = int32(parsed)
-	}
-	return tcell.NewRGBColor(rgb[0], rgb[1], rgb[2]), true
+	return c, true
 }
