@@ -36,7 +36,8 @@ const (
 	// PanelBottomEdgePhysicalLeft chains segments from the physical left interior column
 	// (dotfiles-hidden icon, Gitignore, stash, and trailing frame dashes on both panels).
 	PanelBottomEdgePhysicalLeft
-	// PanelBottomEdgeEnd is the panel-relative end corner (sync, quick view, hidden other path).
+	// PanelBottomEdgeEnd is the panel-relative end corner (sync, quick view, hidden other path,
+	// job_write).
 	PanelBottomEdgeEnd
 )
 
@@ -82,7 +83,7 @@ var panelBottomIndicatorRegistry = []panelBottomIndicatorSpec{
 	{ID: PanelBottomIndicatorDotfilesHidden, Edge: PanelBottomEdgePhysicalLeft, Order: 0},
 	{ID: PanelBottomIndicatorGitignore, Edge: PanelBottomEdgePhysicalLeft, Order: 1},
 	{ID: PanelBottomIndicatorStash, Edge: PanelBottomEdgePhysicalLeft, Order: 2},
-	{ID: PanelBottomIndicatorJobWrite, Edge: PanelBottomEdgePhysicalLeft, Order: 3},
+	{ID: PanelBottomIndicatorJobWrite, Edge: PanelBottomEdgeEnd, Order: 2},
 	{ID: PanelBottomIndicatorEntryFilter, Edge: PanelBottomEdgePhysicalLeft, Order: 4},
 	{ID: PanelBottomIndicatorSync, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorQuickView, Edge: PanelBottomEdgeEnd, Order: 0},
