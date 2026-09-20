@@ -28,7 +28,12 @@ type pooledConn struct {
 	sftpClient    *gosftp.Client
 	lastUsed      time.Time
 	idleTimer     *time.Timer
+	activeOps     int
 	activeStreams int
+}
+
+func (c *pooledConn) inUse() bool {
+	return c.activeOps > 0 || c.activeStreams > 0
 }
 
 // Pool reuses SSH/SFTP sessions keyed by sftp host part (user@host:port).
@@ -62,32 +67,32 @@ func Configure(settings Settings, prompts Prompts) error {
 
 // Touch ensures a connection exists for loc's host (used before list/stat).
 func (p *Pool) Touch(ctx context.Context, loc pathloc.Path) error {
-	_, err := p.withSFTP(ctx, loc)
+	_, release, err := p.withSFTP(ctx, loc)
+	if release != nil {
+		release()
+	}
 	return err
 }
 
-func (p *Pool) withSFTP(ctx context.Context, loc pathloc.Path) (*gosftp.Client, error) {
+func (p *Pool) withSFTP(ctx context.Context, loc pathloc.Path) (*gosftp.Client, func(), error) {
 	hostPart, err := pathloc.SFTPHostPart(loc)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	p.mu.Lock()
 	if c, ok := p.conns[hostPart]; ok {
-		c.lastUsed = time.Now()
-		if c.idleTimer != nil {
-			c.idleTimer.Reset(p.settings.IdleTimeout)
-		}
+		p.holdOpLocked(c)
 		client := c.sftpClient
 		p.mu.Unlock()
-		return client, nil
+		return client, p.releaseOpFunc(hostPart), nil
 	}
 	p.mu.Unlock()
 
 	client, err := p.dial(ctx, loc, hostPart)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return client, nil
+	return client, p.releaseOpFunc(hostPart), nil
 }
 
 func (p *Pool) dial(ctx context.Context, loc pathloc.Path, hostPart string) (*gosftp.Client, error) {
@@ -139,10 +144,7 @@ func (p *Pool) dial(ctx context.Context, loc pathloc.Path, hostPart string) (*go
 	if existing, ok := p.conns[hostPart]; ok {
 		_ = sftpClient.Close()
 		_ = client.Close()
-		existing.lastUsed = time.Now()
-		if existing.idleTimer != nil {
-			existing.idleTimer.Reset(p.settings.IdleTimeout)
-		}
+		p.holdOpLocked(existing)
 		return existing.sftpClient, nil
 	}
 	pc := &pooledConn{
@@ -156,8 +158,54 @@ func (p *Pool) dial(ctx context.Context, loc pathloc.Path, hostPart string) (*go
 			p.closeHost(hostPart)
 		})
 	}
+	p.holdOpLocked(pc)
 	p.conns[hostPart] = pc
 	return sftpClient, nil
+}
+
+func (p *Pool) holdOpLocked(c *pooledConn) {
+	c.activeOps++
+	c.lastUsed = time.Now()
+	if c.idleTimer != nil {
+		c.idleTimer.Stop()
+	}
+}
+
+func (p *Pool) releaseOpFunc(hostPart string) func() {
+	var once sync.Once
+	return func() {
+		once.Do(func() { p.releaseOp(hostPart) })
+	}
+}
+
+func (p *Pool) releaseOp(hostPart string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	c, ok := p.conns[hostPart]
+	if !ok {
+		return
+	}
+	if c.activeOps > 0 {
+		c.activeOps--
+	}
+	c.lastUsed = time.Now()
+	p.armIdleLocked(c)
+}
+
+func (p *Pool) convertOpToStream(hostPart string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	c, ok := p.conns[hostPart]
+	if !ok {
+		return
+	}
+	if c.activeOps > 0 {
+		c.activeOps--
+	}
+	c.activeStreams++
+	if c.idleTimer != nil {
+		c.idleTimer.Stop()
+	}
 }
 
 func (p *Pool) leaseStream(hostPart string) {
@@ -173,6 +221,20 @@ func (p *Pool) leaseStream(hostPart string) {
 	}
 }
 
+func (p *Pool) armIdleLocked(c *pooledConn) {
+	if c.inUse() || p.settings.IdleTimeout <= 0 {
+		return
+	}
+	if c.idleTimer == nil {
+		hostPart := c.hostPart
+		c.idleTimer = time.AfterFunc(p.settings.IdleTimeout, func() {
+			p.closeHost(hostPart)
+		})
+		return
+	}
+	c.idleTimer.Reset(p.settings.IdleTimeout)
+}
+
 func (p *Pool) releaseStream(hostPart string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -184,9 +246,7 @@ func (p *Pool) releaseStream(hostPart string) {
 		c.activeStreams--
 	}
 	c.lastUsed = time.Now()
-	if c.activeStreams == 0 && p.settings.IdleTimeout > 0 && c.idleTimer != nil {
-		c.idleTimer.Reset(p.settings.IdleTimeout)
-	}
+	p.armIdleLocked(c)
 }
 
 func (p *Pool) handshakeSSH(ctx context.Context, raw net.Conn, addr, user, connectHost, resolvedHost, port string, openSSH sshconfig.Config, allowPassword bool) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
@@ -221,15 +281,8 @@ func (p *Pool) closeHost(hostPart string) {
 		p.mu.Unlock()
 		return
 	}
-	if c.activeStreams > 0 {
-		if p.settings.IdleTimeout > 0 {
-			if c.idleTimer != nil {
-				c.idleTimer.Stop()
-			}
-			c.idleTimer = time.AfterFunc(p.settings.IdleTimeout, func() {
-				p.closeHost(hostPart)
-			})
-		}
+	if c.inUse() {
+		p.armIdleLocked(c)
 		p.mu.Unlock()
 		return
 	}

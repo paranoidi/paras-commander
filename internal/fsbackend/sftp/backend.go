@@ -32,28 +32,31 @@ func (b *Backend) Scheme() pathloc.Scheme {
 	return pathloc.SchemeSFTP
 }
 
-func (b *Backend) withResolvedRemote(ctx context.Context, loc pathloc.Path) (*pkgsftp.Client, string, error) {
-	client, err := b.pool.withSFTP(ctx, loc)
+func (b *Backend) withResolvedRemote(ctx context.Context, loc pathloc.Path) (*pkgsftp.Client, string, func(), error) {
+	client, release, err := b.pool.withSFTP(ctx, loc)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 	remote, err := pathloc.SFTPRemotePath(loc)
 	if err != nil {
-		return nil, "", err
+		release()
+		return nil, "", nil, err
 	}
 	resolved, err := resolveRemotePath(client, remote)
 	if err != nil {
-		return nil, "", err
+		release()
+		return nil, "", nil, err
 	}
-	return client, resolved, nil
+	return client, resolved, release, nil
 }
 
 // List implements fsbackend.Backend.
 func (b *Backend) List(ctx context.Context, dir pathloc.Path) ([]fsbackend.Entry, error) {
-	client, remoteDir, err := b.withResolvedRemote(ctx, dir)
+	client, remoteDir, release, err := b.withResolvedRemote(ctx, dir)
 	if err != nil {
 		return nil, err
 	}
+	defer release()
 	infos, err := client.ReadDir(remoteDir)
 	if err != nil {
 		return nil, fmt.Errorf("sftp readdir %s: %w", remoteDir, err)
@@ -75,10 +78,11 @@ func (b *Backend) List(ctx context.Context, dir pathloc.Path) ([]fsbackend.Entry
 
 // Stat implements fsbackend.Backend.
 func (b *Backend) Stat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
-	client, remote, err := b.withResolvedRemote(ctx, loc)
+	client, remote, release, err := b.withResolvedRemote(ctx, loc)
 	if err != nil {
 		return fsbackend.Entry{}, err
 	}
+	defer release()
 	info, err := client.Lstat(remote)
 	if err != nil {
 		return fsbackend.Entry{}, fmt.Errorf("sftp stat %s: %w", remote, err)
@@ -88,10 +92,15 @@ func (b *Backend) Stat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, 
 
 // OpenRead implements fsbackend.Backend.
 func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadCloser, error) {
-	client, remote, err := b.withResolvedRemote(ctx, loc)
+	client, remote, release, err := b.withResolvedRemote(ctx, loc)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if release != nil {
+			release()
+		}
+	}()
 	f, err := client.Open(remote)
 	if err != nil {
 		return nil, err
@@ -101,17 +110,23 @@ func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadCloser
 		_ = f.Close()
 		return nil, err
 	}
-	b.pool.leaseStream(hostPart)
+	b.pool.convertOpToStream(hostPart)
+	release = nil
 	return &leasedReadCloser{ReadCloser: f, pool: b.pool, hostPart: hostPart}, nil
 }
 
 // OpenWrite implements fsbackend.Backend.
 func (b *Backend) OpenWrite(ctx context.Context, loc pathloc.Path, size int64, opts fsbackend.CreateOpts) (io.WriteCloser, error) {
 	_ = size
-	client, remote, err := b.withResolvedRemote(ctx, loc)
+	client, remote, release, err := b.withResolvedRemote(ctx, loc)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if release != nil {
+			release()
+		}
+	}()
 	flags := os.O_WRONLY | os.O_CREATE
 	if opts.Truncate {
 		flags |= os.O_TRUNC
@@ -128,25 +143,28 @@ func (b *Backend) OpenWrite(ctx context.Context, loc pathloc.Path, size int64, o
 		_ = f.Close()
 		return nil, err
 	}
-	b.pool.leaseStream(hostPart)
+	b.pool.convertOpToStream(hostPart)
+	release = nil
 	return &leasedWriteCloser{WriteCloser: f, pool: b.pool, hostPart: hostPart}, nil
 }
 
 // Mkdir implements fsbackend.Backend.
 func (b *Backend) Mkdir(ctx context.Context, dir pathloc.Path, perm fs.FileMode) error {
-	client, remote, err := b.withResolvedRemote(ctx, dir)
+	client, remote, release, err := b.withResolvedRemote(ctx, dir)
 	if err != nil {
 		return err
 	}
+	defer release()
 	return client.Mkdir(remote)
 }
 
 // Remove implements fsbackend.Backend.
 func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
-	client, remote, err := b.withResolvedRemote(ctx, loc)
+	client, remote, release, err := b.withResolvedRemote(ctx, loc)
 	if err != nil {
 		return err
 	}
+	defer release()
 	info, err := client.Lstat(remote)
 	if err != nil {
 		return err
@@ -159,10 +177,11 @@ func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
 
 // Rename implements fsbackend.Backend.
 func (b *Backend) Rename(ctx context.Context, oldLoc, newLoc pathloc.Path) error {
-	client, err := b.pool.withSFTP(ctx, oldLoc)
+	client, release, err := b.pool.withSFTP(ctx, oldLoc)
 	if err != nil {
 		return err
 	}
+	defer release()
 	oldRemote, err := pathloc.SFTPRemotePath(oldLoc)
 	if err != nil {
 		return err
@@ -184,19 +203,21 @@ func (b *Backend) Rename(ctx context.Context, oldLoc, newLoc pathloc.Path) error
 
 // ReadSymlink implements fsbackend.Backend.
 func (b *Backend) ReadSymlink(ctx context.Context, loc pathloc.Path) (string, error) {
-	client, remote, err := b.withResolvedRemote(ctx, loc)
+	client, remote, release, err := b.withResolvedRemote(ctx, loc)
 	if err != nil {
 		return "", err
 	}
+	defer release()
 	return client.ReadLink(remote)
 }
 
 // Symlink implements fsbackend.Backend.
 func (b *Backend) Symlink(ctx context.Context, loc pathloc.Path, target string) error {
-	client, remote, err := b.withResolvedRemote(ctx, loc)
+	client, remote, release, err := b.withResolvedRemote(ctx, loc)
 	if err != nil {
 		return err
 	}
+	defer release()
 	return client.Symlink(target, remote)
 }
 
