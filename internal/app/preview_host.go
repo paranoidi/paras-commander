@@ -8,7 +8,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -152,18 +151,6 @@ func (h previewHost) ApplyPreviewStyle(name string) bool {
 	}
 	h.app.setTransientMessage(msg, urgency)
 	return true
-}
-
-func (h previewHost) SyncFilteredListRanks(lines []string, query string, matchRangeSlots int, caseInsensitive bool) (ranked []int, matchRanges [][]search.Range) {
-	return syncFilteredListRanks(lines, query, matchRangeSlots, caseInsensitive)
-}
-
-func (h previewHost) ClampFilteredListSelection(selected *int, rankedLen int) {
-	clampFilteredListSelection(selected, rankedLen)
-}
-
-func (h previewHost) HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool {
-	return handleFilteredListSelectionKey(ev, focus, selected, rankedLen, listRows, ensureScroll)
 }
 
 var _ previewctrl.Host = previewHost{}

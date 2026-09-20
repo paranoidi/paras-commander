@@ -6,7 +6,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -79,11 +78,4 @@ type Host interface {
 	SetPreviewStyle(style string)
 	// ApplyPreviewStyle validates, persists, and reports the final Chroma style selection.
 	ApplyPreviewStyle(name string) bool
-
-	// SyncFilteredListRanks, ClampFilteredListSelection, and HandleFilteredListSelectionKey
-	// forward to the shared filtered-list ranking helpers in internal/app (also used by the
-	// history, path-picker, and SFTP-connect dialogs), keeping ranking logic single-sourced.
-	SyncFilteredListRanks(lines []string, query string, matchRangeSlots int, caseInsensitive bool) (ranked []int, matchRanges [][]search.Range)
-	ClampFilteredListSelection(selected *int, rankedLen int)
-	HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool
 }

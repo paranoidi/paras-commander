@@ -9,7 +9,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -142,52 +141,6 @@ func (f *fakeHost) SetPreviewStyle(style string)                { f.cfg.Preview.
 func (f *fakeHost) ApplyPreviewStyle(name string) bool {
 	f.cfg.Preview.Style = config.NormalizePreviewStyle(name)
 	return true
-}
-func (f *fakeHost) SyncFilteredListRanks(lines []string, query string, matchRangeSlots int, caseInsensitive bool) (ranked []int, matchRanges [][]search.Range) {
-	q := search.Parse(query)
-	opts := search.Options{CaseInsensitive: caseInsensitive}
-	results := q.Rank(lines, opts)
-	ranked = make([]int, len(results))
-	matchRanges = make([][]search.Range, matchRangeSlots)
-	for i, r := range results {
-		ranked[i] = r.Index
-		if r.Index >= 0 && r.Index < matchRangeSlots {
-			matchRanges[r.Index] = r.Result.Ranges
-		}
-	}
-	return ranked, matchRanges
-}
-func (f *fakeHost) ClampFilteredListSelection(selected *int, rankedLen int) {
-	if *selected >= rankedLen {
-		if rankedLen == 0 {
-			*selected = 0
-		} else {
-			*selected = rankedLen - 1
-		}
-	}
-	if *selected < 0 {
-		*selected = 0
-	}
-}
-func (f *fakeHost) HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool {
-	if focus != 0 || rankedLen <= 0 {
-		return false
-	}
-	switch ev.Key() {
-	case tcell.KeyUp:
-		if *selected > 0 {
-			*selected--
-		}
-		ensureScroll()
-		return true
-	case tcell.KeyDown:
-		if *selected < rankedLen-1 {
-			*selected++
-		}
-		ensureScroll()
-		return true
-	}
-	return false
 }
 
 // newTestHandler builds a Handler wired to a fakeHost and a simulation screen, for tests that

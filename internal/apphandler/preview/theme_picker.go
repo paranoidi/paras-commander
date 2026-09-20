@@ -3,6 +3,7 @@ package preview
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/filterlist"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -149,8 +150,8 @@ func (h *Handler) syncFilePreviewThemePickerRanks() {
 	}
 	lines := filePreviewThemePickerDisplayLines(st)
 	st.DisplayLines = lines
-	st.Ranked, st.MatchRanges = h.host.SyncFilteredListRanks(lines, st.Query, len(lines), h.host.Config().Filter.CaseInsensitive)
-	h.host.ClampFilteredListSelection(&st.Selected, len(st.Ranked))
+	st.Ranked, st.MatchRanges = filterlist.SyncRanks(lines, st.Query, len(lines), h.host.Config().Filter.CaseInsensitive)
+	filterlist.ClampSelection(&st.Selected, len(st.Ranked))
 	rect := h.filePreviewThemePickerRect()
 	dialog.EnsureFilePreviewThemePickerListScroll(st, ui.FilePreviewThemePickerListRows(rect))
 }
@@ -218,7 +219,7 @@ func (h *Handler) handleFilePreviewThemePickerKey(event *tcell.EventKey) bool {
 	ensureScroll := func() {
 		dialog.EnsureFilePreviewThemePickerListScroll(st, h.filePreviewThemePickerListRows())
 	}
-	if h.host.HandleFilteredListSelectionKey(event, 0, &st.Selected, len(st.Ranked), h.filePreviewThemePickerListRows, ensureScroll) {
+	if filterlist.HandleSelectionKey(event, 0, &st.Selected, len(st.Ranked), h.filePreviewThemePickerListRows, ensureScroll) {
 		h.previewFilePreviewThemePickerSelection()
 		return true
 	}
