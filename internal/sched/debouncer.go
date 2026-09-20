@@ -23,8 +23,12 @@ func (d *Debouncer) Stop() {
 }
 
 // Invalidate stops a pending timer and bumps generation so scheduled callbacks are ignored.
+// Stop and the generation bump share one lock so a firing callback cannot pass its
+// generation check in between.
 func (d *Debouncer) Invalidate() {
-	d.Stop()
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.stopLocked()
 	d.gen.Add(1)
 }
 
@@ -47,14 +51,22 @@ func (d *Debouncer) Arm(delay time.Duration, fn func()) {
 	d.stopLocked()
 	gen := d.gen.Add(1)
 	d.timer = time.AfterFunc(delay, func() {
-		d.mu.Lock()
-		d.timer = nil
-		d.mu.Unlock()
-		if d.gen.Load() != gen {
-			return
-		}
-		fn()
+		d.fire(gen, fn)
 	})
+}
+
+func (d *Debouncer) fire(gen uint64, fn func()) {
+	d.mu.Lock()
+	if d.gen.Load() != gen {
+		d.mu.Unlock()
+		return
+	}
+	d.timer = nil
+	d.mu.Unlock()
+	if d.gen.Load() != gen {
+		return
+	}
+	fn()
 }
 
 func (d *Debouncer) stopLocked() {
