@@ -946,13 +946,10 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 	}
 	isImageOrMedia := localfs.IsImagePath(path) || localfs.IsMediaPath(path)
 	// tmux frees every natively-stored Sixel image on any pane resize unconditionally
-	// (screen_resize_cursor -> image_free_all in tmux's screen.c) — it does not retain or
-	// redraw them itself afterward (verified against tmux source and by a real WezTerm+tmux
-	// capture: a one-shot `chafa --format sixel` image is lost on resize and never comes
-	// back). Skipping the eager re-encode+resend here means a bare-native-sixel preview simply
-	// goes blank after a resize under tmux, matching what a one-shot sender like chafa does,
-	// until something else reloads it — instead of a guaranteed extra decode/encode/transmit on
-	// every single resize event.
+	// (screen_resize_cursor -> image_free_all in tmux's screen.c). Skip the eager
+	// re-decode/re-encode here — the overlay marks the cached payload lost and retransmits
+	// it once (resetImageOverlayForResize / reconcileImageBeforeShow) if placement is
+	// still valid.
 	skipNativeSixelResizeRefresh := isImageOrMedia && previewrun.TmuxSupportsNativeSixel(os.Getenv)
 	// Image/media pixel budget depends on height too; bypass the width-equality skip.
 	if !ok || (tw == h.previewLastWidth[target] && !isImageOrMedia) || skipNativeSixelResizeRefresh {

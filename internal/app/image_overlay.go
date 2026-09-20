@@ -91,6 +91,11 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 		cols == a.image.lastCols &&
 		rows == a.image.lastRows {
 		a.image.last.Path = plan.Path
+		if a.image.pendingEmit {
+			// tmux freed the native image on resize; retransmit the cached payload once.
+			imageTrace("reconcile: unchanged plan after resize, retransmit cached payload")
+			return true
+		}
 		imageTrace("reconcile: unchanged plan, keeping locked region")
 		return false
 	}
@@ -309,15 +314,15 @@ func (a *App) resetImageOverlay() {
 // unconditionally clears the tracked placement, which forces the next reconcileImageBeforeShow
 // to treat the image as brand new and always retransmit it — even when its content and
 // position turn out to be unchanged by the resize. For a bare-native-sixel image under tmux,
-// this leaves the tracked placement alone instead, so the normal payload/position comparison
-// decides whether anything actually needs to move: tmux frees its own copy of the image on
-// resize (see internal/apphandler/preview.refreshPreviewTargetAfterResize, which under the same
-// condition also skips regenerating the payload itself), so the preview simply goes blank until
-// something else reloads it, instead of paying for an eager re-decode/re-encode/retransmit on
-// every single resize event. Passthrough Sixel and Kitty always reset here regardless: tmux
-// never stores those, and a resize-driven Sync can otherwise leave them undisplayed.
+// the cached placement is kept (refreshPreviewTargetAfterResize skips re-decode for the same
+// reason) but pendingEmit is set: tmux frees every natively-stored sixel on pane resize
+// (screen_resize_cursor → image_free_all), so the next reconcile/emit must retransmit that
+// cached payload once. An unchanged placement is otherwise the documented no-retransmit
+// case. Passthrough Sixel and Kitty always reset here regardless: tmux never stores those,
+// and a resize-driven Sync can otherwise leave them undisplayed.
 func (a *App) resetImageOverlayForResize() {
 	if a.image.lastSet && a.nativeSixelTransport(a.image.last.Protocol) {
+		a.image.pendingEmit = true
 		return
 	}
 	a.resetImageOverlay()

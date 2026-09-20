@@ -5,8 +5,16 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
+
+func stubNativeSixel(t *testing.T, native bool) {
+	t.Helper()
+	orig := preview.TmuxSupportsNativeSixel
+	t.Cleanup(func() { preview.TmuxSupportsNativeSixel = orig })
+	preview.TmuxSupportsNativeSixel = func(func(string) string) bool { return native }
+}
 
 // fakeTmuxEnv is a TMUX value that can never resolve to a real tmux socket (unlike e.g.
 // "/tmp/tmux-1000/default,..." which collides with the actual default socket a developer
@@ -239,5 +247,120 @@ func TestResetImageOverlayClearsPlaceholderState(t *testing.T) {
 	a.resetImageOverlay()
 	if a.placeholderImg.sent || a.placeholderImg.payload != "" {
 		t.Fatalf("resetImageOverlay() left placeholderImg = %+v, want zero value", a.placeholderImg)
+	}
+}
+
+func TestResetImageOverlayForResizeMarksNativeSixelLost(t *testing.T) {
+	stubNativeSixel(t, true)
+	t.Setenv("TMUX", fakeTmuxEnv)
+	const payload = "\x1bPqtest\x1b\\"
+	a := &App{
+		image: imageOverlay{
+			last: previewpanel.ImagePlacement{
+				Payload:  payload,
+				Protocol: previewpanel.ImageProtocolSixel,
+				X:        2,
+				Y:        3,
+			},
+			lastSet:  true,
+			lastCols: 10,
+			lastRows: 5,
+		},
+	}
+
+	a.resetImageOverlayForResize()
+	if !a.image.lastSet {
+		t.Fatal("resetImageOverlayForResize cleared the native placement, want cached")
+	}
+	if a.image.last.Payload != payload {
+		t.Fatalf("payload = %q, want cached sixel", a.image.last.Payload)
+	}
+	if !a.image.pendingEmit {
+		t.Fatal("pendingEmit = false after tmux resize, want true so the cached payload is retransmitted once")
+	}
+}
+
+func TestResetImageOverlayForResizeClearsNonNative(t *testing.T) {
+	stubNativeSixel(t, false)
+	t.Setenv("TMUX", fakeTmuxEnv)
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("screen.Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	a := &App{
+		screen: screen,
+		image: imageOverlay{
+			last: previewpanel.ImagePlacement{
+				Payload:  "\x1bPqtest\x1b\\",
+				Protocol: previewpanel.ImageProtocolSixel,
+			},
+			lastSet: true,
+		},
+	}
+
+	a.resetImageOverlayForResize()
+	if a.image.lastSet || a.image.pendingEmit {
+		t.Fatalf("non-native resize left lastSet=%v pendingEmit=%v, want full reset", a.image.lastSet, a.image.pendingEmit)
+	}
+}
+
+func TestReconcileImageBeforeShowRetransmitsNativeSixelAfterResize(t *testing.T) {
+	stubNativeSixel(t, true)
+	t.Setenv("TMUX", fakeTmuxEnv)
+	sim := tcell.NewSimulationScreen("UTF-8")
+	if err := sim.Init(); err != nil {
+		t.Fatalf("screen.Init() error = %v", err)
+	}
+	defer sim.Fini()
+	sim.SetSize(80, 24)
+	screen := &screenWithTty{Screen: sim, tty: &fakeTty{}}
+	a := &App{screen: screen}
+
+	plan := &previewpanel.ImagePlacement{
+		Payload:  "\x1bPqtest\x1b\\",
+		Path:     "/tmp/a.png",
+		Protocol: previewpanel.ImageProtocolSixel,
+		X:        2,
+		Y:        3,
+		PxW:      20,
+		PxH:      40,
+		MaxCols:  40,
+		MaxRows:  20,
+	}
+	if force := a.reconcileImageBeforeShow(plan); !force {
+		t.Fatal("first reconcile = false, want true")
+	}
+	a.emitImageAfterShow()
+	if a.image.pendingEmit {
+		t.Fatal("pendingEmit still set after first emit")
+	}
+
+	if force := a.reconcileImageBeforeShow(plan); force {
+		t.Fatal("unchanged plan forced a retransmit before resize")
+	}
+
+	a.resetImageOverlayForResize()
+	if !a.image.pendingEmit {
+		t.Fatal("pendingEmit = false after resize, want true")
+	}
+	if force := a.reconcileImageBeforeShow(plan); !force {
+		t.Fatal("unchanged plan after resize = false, want forceShow so the cached payload is retransmitted")
+	}
+	if !a.image.pendingEmit {
+		t.Fatal("pendingEmit cleared during reconcile; emitImageAfterShow would skip the retransmit")
+	}
+
+	screen.tty.Reset()
+	a.emitImageAfterShow()
+	if screen.tty.Len() == 0 {
+		t.Fatal("resize retransmit did not write the cached payload")
+	}
+	if a.image.pendingEmit {
+		t.Fatal("pendingEmit still set after resize retransmit")
+	}
+	if force := a.reconcileImageBeforeShow(plan); force {
+		t.Fatal("second unchanged reconcile after resize retransmit forced another send")
 	}
 }

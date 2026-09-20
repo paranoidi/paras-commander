@@ -214,7 +214,11 @@ var tmuxImageSupport = sync.OnceValue(func() string {
 // Passthrough-wrapped sixel never reaches tmux's image path: tmux only recognizes a bare
 // `DCS q` introducer, blind-forwards anything wrapped in `DCS tmux;`, and cannot re-send
 // content it never parsed. environ is typically os.Getenv.
-func TmuxSupportsNativeSixel(environ func(string) string) bool {
+//
+// The var is replaced in tests that need a fixed capability answer without shelling out.
+var TmuxSupportsNativeSixel = tmuxSupportsNativeSixel
+
+func tmuxSupportsNativeSixel(environ func(string) string) bool {
 	if environ == nil || environ("TMUX") == "" {
 		return false
 	}

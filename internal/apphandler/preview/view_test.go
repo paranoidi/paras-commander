@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -252,6 +253,40 @@ func TestRefreshPreviewTargetAfterResizeReRunsOnlyOnWidthChange(t *testing.T) {
 	}
 	if h.previewLastWidth[previewTargetInactive] != tw {
 		t.Fatalf("previewLastWidth[inactive] = %d, want %d recorded from the new request", h.previewLastWidth[previewTargetInactive], tw)
+	}
+}
+
+// TestRefreshPreviewTargetAfterResizeSkipsNativeSixelReencode keeps the cached image
+// payload on a native-sixel resize: tmux freed the displayed image, but re-decode is
+// out of scope — the overlay retransmits the already-encoded payload.
+func TestRefreshPreviewTargetAfterResizeSkipsNativeSixelReencode(t *testing.T) {
+	orig := previewrun.TmuxSupportsNativeSixel
+	t.Cleanup(func() { previewrun.TmuxSupportsNativeSixel = orig })
+	previewrun.TmuxSupportsNativeSixel = func(func(string) string) bool { return true }
+
+	h, _ := newTestHandler(t, 100, 30)
+	const cached = "cached-sixel"
+	h.mu.Lock()
+	h.model.FilePreview.Open = true
+	h.model.FilePreview.Phase = ui.FilePreviewPhaseDone
+	h.model.FilePreview.Path = filepath.Join(t.TempDir(), "harbor.png")
+	h.model.FilePreview.ImagePayload = cached
+	h.mu.Unlock()
+	tw, _, ok := h.inactivePanelPreviewLayoutMetrics(true)
+	if !ok {
+		t.Fatal("inactivePanelPreviewLayoutMetrics() ok = false, want true")
+	}
+	h.previewLastWidth[previewTargetInactive] = tw + 1
+	genBefore := h.filePreviewRunGen.Load()
+	h.refreshPreviewTargetAfterResize(previewTargetInactive)
+	if got := h.filePreviewRunGen.Load(); got != genBefore {
+		t.Fatalf("filePreviewRunGen = %d, want unchanged %d (no re-decode on native sixel resize)", got, genBefore)
+	}
+	h.mu.RLock()
+	payload := h.model.FilePreview.ImagePayload
+	h.mu.RUnlock()
+	if payload != cached {
+		t.Fatalf("ImagePayload = %q, want cached %q", payload, cached)
 	}
 }
 
