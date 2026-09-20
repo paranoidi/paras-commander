@@ -3,7 +3,9 @@ package panel
 import (
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -468,5 +470,94 @@ func TestApplyTreeChildLoadSkipsGitStatusWhenColumnInactive(t *testing.T) {
 	}
 	if called {
 		t.Fatal("ScheduleGitStatus was invoked while GitColumnActive is false")
+	}
+}
+
+// TestRestoreLocalTreeExpansionsUsesChildScheduler proves ApplyListing restores a remembered
+// local expansion through ScheduleTreeChildLoad instead of ReadDir on the caller: a blocking
+// scheduler must not stall ApplyListing, the first frame keeps the directory collapsed-but-loading,
+// and applying the child result restores the expansion and reattaches the cursor.
+func TestRestoreLocalTreeExpansionsUsesChildScheduler(t *testing.T) {
+	root := t.TempDir()
+	harbor := filepath.Join(root, "harbor")
+	if err := os.Mkdir(harbor, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(harbor, "willow.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "cinder.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	s, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !s.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow: %v", err)
+	}
+	if !s.SelectVisibleEntry("willow.txt") {
+		t.Fatal("SelectVisibleEntry(willow.txt) = false, want true")
+	}
+	if err := s.NavigateTo(other, "", 10); err != nil {
+		t.Fatalf("NavigateTo other: %v", err)
+	}
+
+	var started atomic.Bool
+	var captured TreeChildLoadRequest
+	s.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		captured = req
+		started.Store(true)
+		return true
+	}
+
+	rootLoc := pathloc.MustParse(root)
+	entries, listingLoc, _, _, err := FetchListing(t.Context(), s.ListingRefreshSnapshot(rootLoc, 0))
+	if err != nil {
+		t.Fatalf("FetchListing: %v", err)
+	}
+	selectedName, indexFallback, centerRecalled := s.resolveLoadCursor(rootLoc, "", noIndexCursorFallback)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- s.ApplyListing(listingLoc, entries, selectedName, 10, indexFallback, centerRecalled)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("ApplyListing: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("ApplyListing blocked on local child I/O (restore must use the child scheduler)")
+	}
+	if !started.Load() {
+		t.Fatal("ScheduleTreeChildLoad was not invoked for a local remembered expansion")
+	}
+	if captured.DirID != harbor {
+		t.Fatalf("child load DirID = %q, want %q", captured.DirID, harbor)
+	}
+	if got := s.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount while restore load is in flight = %d, want 2 (harbor + beacon.txt)", got)
+	}
+	if !s.ApplyTreeChildLoad(harbor, []localfs.Entry{
+		{Name: "willow.txt", Path: filepath.Join(harbor, "willow.txt"), Type: localfs.EntryFile},
+	}, nil, 10) {
+		t.Fatal("ApplyTreeChildLoad returned false, want true")
+	}
+	if !s.TreeExpanded[harbor] {
+		t.Fatalf("TreeExpanded[%s] = false after child apply, want true", harbor)
+	}
+	entry, ok := s.CurrentEntry()
+	if !ok || entry.Name != "willow.txt" {
+		t.Fatalf("CurrentEntry after restore = %+v ok=%v, want willow.txt (cursor reattached)", entry, ok)
 	}
 }

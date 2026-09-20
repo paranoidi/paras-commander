@@ -1570,7 +1570,7 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 		// content is never reused — but the *set* of which dirs were expanded carries over: from
 		// the live in-memory state on a same-directory refresh, or from the per-path recall
 		// snapshot on navigation. restoreTreeExpansions re-fetches each remembered dir's children
-		// (below, after cursor selection needs treeRows populated). Reseeded after ApplySort (not
+		// via setTreeNodeExpanded (async when a child scheduler is wired). Reseeded after ApplySort (not
 		// before) so depth-0 tree rows reflect the panel's sort setting instead of raw backend
 		// order.
 		var keep map[string]bool
@@ -1605,6 +1605,7 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 		switch {
 		case sameDirReload && priorTreeCursorID != "":
 			s.selectVisibleEntryByPath(priorTreeCursorID)
+			s.treeCursorID = priorTreeCursorID
 		case !sameDirReload && centerRecalled:
 			if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok && snap.CursorPath != "" {
 				s.selectVisibleEntryByPath(snap.CursorPath)

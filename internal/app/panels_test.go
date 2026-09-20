@@ -3,9 +3,13 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -107,5 +111,62 @@ func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 	}
 	if got := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()); got != filepath.Clean(beta) {
 		t.Fatalf("overlay path = %q, want next highlight %q", got, beta)
+	}
+}
+
+// TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive covers returning to a previously
+// expanded local tree: ApplyListing must dispatch ScheduleTreeChildLoad instead of ReadDir on
+// the event goroutine, so a still-blocked child fetch cannot stall further input.
+func TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
+	root := t.TempDir()
+	harbor := filepath.Join(root, "harbor")
+	if err := os.Mkdir(harbor, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(harbor, "willow.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "cinder.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	left := app.panelByID(ui.PrimaryPanel)
+	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleTree)
+	applyNextInterruptEvent(t, app, screen) // tree child load for harbor
+	if !left.TreeExpanded[harbor] {
+		t.Fatal("expected harbor expanded before leaving")
+	}
+	if err := left.NavigateTo(other, "", 20); err != nil {
+		t.Fatalf("NavigateTo other: %v", err)
+	}
+	applyNextInterruptEvent(t, app, screen)
+
+	var scheduled atomic.Bool
+	left.ScheduleTreeChildLoad = func(req panel.TreeChildLoadRequest) bool {
+		scheduled.Store(true)
+		return true
+	}
+
+	if err := left.NavigateTo(root, "", 20); err != nil {
+		t.Fatalf("NavigateTo root: %v", err)
+	}
+	applyNextInterruptEvent(t, app, screen) // listing apply + restore dispatch
+	if !scheduled.Load() {
+		t.Fatal("returning to a locally expanded tree must use ScheduleTreeChildLoad")
+	}
+	if got := left.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount while restore is in flight = %d, want 2", got)
+	}
+
+	prior := left.Cursor
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if left.Cursor == prior {
+		t.Fatal("Down during in-flight local tree restore did not move the cursor")
 	}
 }
