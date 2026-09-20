@@ -256,6 +256,10 @@ type GitStatusRequest struct {
 	WorkRoot string
 	ListDir  string
 	Paths    []gitstatus.ListingPaths
+	// SessionEpoch is State.ListingEpoch when this fetch was dispatched. Tree-child results
+	// whose epoch no longer matches are dropped so a pre-refresh child cannot merge over
+	// newer CWD data. Concurrent children of the same listing share one epoch.
+	SessionEpoch uint64
 }
 
 // GitStatusScheduler returns true when a background git status fetch was started.

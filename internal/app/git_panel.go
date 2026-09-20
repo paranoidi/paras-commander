@@ -19,12 +19,13 @@ var gitStatusForListing = func(c *gitstatus.Cache, ctx context.Context, workRoot
 }
 
 type gitStatusPayload struct {
-	panelID  int
-	gen      uint64
-	cwdLevel bool
-	listDir  string
-	byPath   map[string]gitstatus.Cell
-	err      error
+	panelID      int
+	gen          uint64
+	cwdLevel     bool
+	sessionEpoch uint64
+	listDir      string
+	byPath       map[string]gitstatus.Cell
+	err          error
 }
 
 // primeGitStatusForCLIPreview synchronously resolves Git status for path's directory and merges
@@ -105,12 +106,13 @@ func (a *App) gitStatusScheduler(panelID int) panel.GitStatusScheduler {
 		go func() {
 			byPath, err := gitStatusForListing(a.gitStatusCache, context.Background(), workRoot, listDir, paths)
 			p := gitStatusPayload{
-				panelID:  panelID,
-				gen:      gen,
-				cwdLevel: cwdLevel,
-				listDir:  listDir,
-				byPath:   byPath,
-				err:      err,
+				panelID:      panelID,
+				gen:          gen,
+				cwdLevel:     cwdLevel,
+				sessionEpoch: req.SessionEpoch,
+				listDir:      listDir,
+				byPath:       byPath,
+				err:          err,
 			}
 			if asyncWakes(a).git.push(p) {
 				postGuaranteedWake(a.screen, gitStatusPayload{})
@@ -168,6 +170,9 @@ func (a *App) applyOneGitStatusLoad(p gitStatusPayload) bool {
 			return true
 		}
 	} else {
+		if p.sessionEpoch != pan.ListingEpoch {
+			return false
+		}
 		if !pan.GitColumnActive || !isWithinDir(p.listDir, host) {
 			return false
 		}

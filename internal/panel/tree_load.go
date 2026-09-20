@@ -138,9 +138,10 @@ func (s *State) scheduleTreeChildGitStatus(dirID string, entries []localfs.Entry
 		}
 	}
 	if s.ScheduleGitStatus(GitStatusRequest{
-		WorkRoot: s.gitWorkRoot,
-		ListDir:  dirID,
-		Paths:    paths,
+		WorkRoot:     s.gitWorkRoot,
+		ListDir:      dirID,
+		Paths:        paths,
+		SessionEpoch: s.ListingEpoch,
 	}) {
 		s.gitStatusChildPending++
 	}
