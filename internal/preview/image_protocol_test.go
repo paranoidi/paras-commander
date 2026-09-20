@@ -195,8 +195,11 @@ func TestTmuxSupportsKittyUnicodePlaceholders(t *testing.T) {
 }
 
 func TestTmuxSupportsNativeSixel(t *testing.T) {
-	orig := tmuxClientTermFeatures
-	t.Cleanup(func() { tmuxClientTermFeatures = orig })
+	origFeatures, origSupport := tmuxClientTermFeatures, tmuxImageSupport
+	t.Cleanup(func() {
+		tmuxClientTermFeatures = origFeatures
+		tmuxImageSupport = origSupport
+	})
 
 	env := func(m map[string]string) func(string) string {
 		return func(k string) string { return m[k] }
@@ -211,19 +214,43 @@ func TestTmuxSupportsNativeSixel(t *testing.T) {
 	}
 
 	tmuxClientTermFeatures = func() string { return "256,rgb,sixel,sync" }
+	tmuxImageSupport = func() string { return "" }
 	if !TmuxSupportsNativeSixel(env(tmuxEnv)) {
 		t.Fatal("client_termfeatures has sixel: want true")
 	}
 
 	tmuxClientTermFeatures = func() string { return "256,rgb,sync" }
+	tmuxImageSupport = func() string { return "" }
 	if TmuxSupportsNativeSixel(env(tmuxEnv)) {
 		t.Fatal("client_termfeatures without sixel: want false")
 	}
 
 	// Outside tmux, client_termfeatures is irrelevant — this is a tmux-only path.
 	tmuxClientTermFeatures = func() string { return "sixel" }
+	tmuxImageSupport = func() string { return "1" }
 	if TmuxSupportsNativeSixel(env(nil)) {
 		t.Fatal("sixel feature outside tmux: want false")
+	}
+
+	// #{image_support}: "1" allows native; "0" vetoes (tmux built without image
+	// support); empty keeps the client_termfeatures-only rule for older tmux.
+	tmuxClientTermFeatures = func() string { return "256,rgb,sixel,sync" }
+	tmuxImageSupport = func() string { return "1" }
+	if !TmuxSupportsNativeSixel(env(tmuxEnv)) {
+		t.Fatal(`image_support "1" with sixel feature: want true`)
+	}
+	tmuxImageSupport = func() string { return "0" }
+	if TmuxSupportsNativeSixel(env(tmuxEnv)) {
+		t.Fatal(`image_support "0" must veto native transport`)
+	}
+	tmuxImageSupport = func() string { return "" }
+	if !TmuxSupportsNativeSixel(env(tmuxEnv)) {
+		t.Fatal("empty image_support with sixel feature: want true (older tmux)")
+	}
+	tmuxClientTermFeatures = func() string { return "256,rgb,sync" }
+	tmuxImageSupport = func() string { return "1" }
+	if TmuxSupportsNativeSixel(env(tmuxEnv)) {
+		t.Fatal("image_support 1 without sixel feature: want false")
 	}
 }
 
@@ -290,8 +317,11 @@ func TestCapabilityUncertain(t *testing.T) {
 }
 
 func TestDetectTerminalCapabilities(t *testing.T) {
-	origType, origFeatures := tmuxClientTermType, tmuxClientTermFeatures
-	t.Cleanup(func() { tmuxClientTermType, tmuxClientTermFeatures = origType, origFeatures })
+	origType, origFeatures, origSupport := tmuxClientTermType, tmuxClientTermFeatures, tmuxImageSupport
+	t.Cleanup(func() {
+		tmuxClientTermType, tmuxClientTermFeatures, tmuxImageSupport = origType, origFeatures, origSupport
+	})
+	tmuxImageSupport = func() string { return "" }
 
 	env := func(m map[string]string) func(string) string {
 		return func(k string) string { return m[k] }

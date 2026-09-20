@@ -193,32 +193,52 @@ var tmuxClientTermFeatures = sync.OnceValue(func() string {
 	return strings.ToLower(strings.TrimSpace(string(out)))
 })
 
-// TmuxSupportsNativeSixel reports whether, under tmux, the attached outer terminal's resolved
-// features include sixel. When true, tmux parses a bare (unwrapped) sixel DCS sent to it,
-// stores the image, and redraws it itself after every tmux-side invalidate (status tick,
-// window switch, etc.) — see tmux-wrap.md. Passthrough-wrapped sixel never reaches that path:
-// tmux only recognizes a bare `DCS q` introducer, blind-forwards anything wrapped in
-// `DCS tmux;`, and cannot re-send content it never parsed. environ is typically os.Getenv.
+// tmuxImageSupport returns tmux's `#{image_support}`: "1" when this tmux was built with
+// image support, "0" when it was not, and empty when the format is unknown (tmux too old
+// to report it). Cached for the process lifetime, same rationale as tmuxClientTermFeatures.
+var tmuxImageSupport = sync.OnceValue(func() string {
+	out, err := exec.Command("tmux", "display-message", "-p", "#{image_support}").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+})
+
+// TmuxSupportsNativeSixel reports whether, under tmux, a bare sixel DCS should be written
+// so tmux parses, stores, and redraws it. That requires both:
+//   - `#{client_termfeatures}` contains `sixel` (the attached outer terminal is sixel-capable
+//     according to tmux's own feature database — see tmux-wrap.md), and
+//   - `#{image_support}` is not `"0"`. `"0"` means this tmux was built without image support
+//     and will parse a bare DCS then drop it. Empty keeps the client_termfeatures-only rule
+//     for older tmux that does not report the format.
+// Passthrough-wrapped sixel never reaches tmux's image path: tmux only recognizes a bare
+// `DCS q` introducer, blind-forwards anything wrapped in `DCS tmux;`, and cannot re-send
+// content it never parsed. environ is typically os.Getenv.
 func TmuxSupportsNativeSixel(environ func(string) string) bool {
 	if environ == nil || environ("TMUX") == "" {
 		return false
 	}
-	return strings.Contains(tmuxClientTermFeatures(), "sixel")
+	if !strings.Contains(tmuxClientTermFeatures(), "sixel") {
+		return false
+	}
+	return tmuxImageSupport() != "0"
 }
 
 // WarmTmuxCaches kicks off tmux's `display-message` capability probes
-// (tmuxClientTermType, tmuxClientTermFeatures) in the background as soon as tmux is detected,
-// so the first image preview doesn't pay for the `tmux` subprocess synchronously on the render
-// path (ResolveImageProtocol / TmuxSupportsKittyUnicodePlaceholders / TmuxSupportsNativeSixel
-// all block on these the first time they're called, then hit the sync.OnceValue cache forever
-// after). No-op outside tmux. Call once at app startup; safe from any goroutine since
-// sync.OnceValue serializes concurrent first calls. environ is typically os.Getenv.
+// (tmuxClientTermType, tmuxClientTermFeatures, tmuxImageSupport) in the background as soon as
+// tmux is detected, so the first image preview doesn't pay for the `tmux` subprocess
+// synchronously on the render path (ResolveImageProtocol / TmuxSupportsKittyUnicodePlaceholders
+// / TmuxSupportsNativeSixel all block on these the first time they're called, then hit the
+// sync.OnceValue cache forever after). No-op outside tmux. Call once at app startup; safe
+// from any goroutine since sync.OnceValue serializes concurrent first calls. environ is
+// typically os.Getenv.
 func WarmTmuxCaches(environ func(string) string) {
 	if environ == nil || environ("TMUX") == "" {
 		return
 	}
 	go tmuxClientTermType()
 	go tmuxClientTermFeatures()
+	go tmuxImageSupport()
 }
 
 // kittyOrGhosttyConfirmedByEnv is like kittyGraphicsConfirmedByEnv but deliberately excludes
