@@ -147,6 +147,7 @@ func (h *Handler) OpenRenameDialog(p *panel.State) {
 		Open:                     true,
 		DialogType:               dialog.FileDialogRename,
 		Fields:                   fields,
+		RenameSource:             entry.Path,
 		RenamePhase:              dialog.RenamePhaseMain,
 		RenameSlugifySep:         dialog.RenameSlugifyDot,
 		RenameFocusAfter:         h.host.Config().Operations.RenameFocusAfter,
@@ -197,6 +198,14 @@ func (h *Handler) OpenDeleteDialog(p *panel.State) {
 			Path: e.Path,
 			Type: e.Type,
 		}
+	}
+	if !h.host.Config().Operations.ConfirmDelete {
+		h.model.FileDialog = dialog.FileDialogState{
+			DialogType:    dialog.FileDialogDelete,
+			DeleteEntries: entries,
+		}
+		h.ExecuteDelete()
+		return
 	}
 	pruned := panel.PruneNestedPaths(ops.SourcePaths(source))
 	h.ClearDeleteDialogReconcileCache()
@@ -411,7 +420,12 @@ func (h *Handler) executeRename() {
 		return
 	}
 	newName := d.Fields[0].Value
-	entry, err := ops.ResolveSourceSingle(p)
+	sourcePath := d.RenameSource
+	if sourcePath == "" {
+		h.CloseFileDialog()
+		return
+	}
+	entry, err := localfs.EntryFromPath(sourcePath)
 	if err != nil {
 		h.host.SetErrorMessage("Rename source", err)
 		h.CloseFileDialog()
@@ -591,14 +605,21 @@ func (h *Handler) ExecuteDelete() {
 		return
 	}
 	p := h.host.ActivePanel()
-	source, err := ops.ResolveSource(p)
-	if err != nil {
-		h.host.SetErrorMessage("Delete source", err)
+	listed := h.model.FileDialog.DeleteEntries
+	if len(listed) == 0 {
+		h.host.SetErrorMessage("Delete source", ops.SourceError("no entries to delete"))
 		h.CloseFileDialog()
 		return
 	}
+	opsEntries := make([]localfs.Entry, len(listed))
+	sources := make([]string, len(listed))
+	for i, e := range listed {
+		opsEntries[i] = localfs.Entry{Name: e.Name, Path: e.Path, Type: e.Type}
+		sources[i] = e.Path
+	}
+	source := ops.Source{Kind: ops.SourceCursor, Entries: opsEntries}
 	cfg := h.host.Config()
-	_, err = ops.PlanDelete(source, cfg.Operations.ConfirmDelete)
+	_, err := ops.PlanDelete(source, cfg.Operations.ConfirmDelete)
 	if err != nil {
 		h.host.SetErrorMessage("Delete", err)
 		h.CloseFileDialog()
@@ -606,10 +627,6 @@ func (h *Handler) ExecuteDelete() {
 	}
 	p.ClearSelection()
 	h.CloseFileDialog()
-	sources := make([]string, len(source.Entries))
-	for i, e := range source.Entries {
-		sources[i] = e.Path
-	}
 	h.jobs.EnqueueDeleteJob(sources, false, true)
 	n := len(sources)
 	delNoun := "items"

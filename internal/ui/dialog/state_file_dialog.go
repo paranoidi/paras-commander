@@ -156,6 +156,9 @@ type FileDialogState struct {
 
 	// DuplicateSource is the directory path copied by FileDialogDuplicate.
 	DuplicateSource string
+	// RenameSource is the file or directory path renamed by FileDialogRename
+	// (canonical path snapshotted when the dialog opens).
+	RenameSource string
 
 	// RenamePhase and the following fields apply when DialogType uses rename-like phases
 	// (FileDialogRename, FileDialogDuplicate).
