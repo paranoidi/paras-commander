@@ -38,6 +38,12 @@ type State struct {
 	// keeping every dequeued job here ensures AllJobs() stays complete until each runJob claims s.active.
 	pendingDequeued []*Job
 
+	// workerCtx is canceled when the worker stop channel fires. Every runJob context is derived
+	// from it so a lease-waiting transfer aborts instead of entering TransferFunc after shutdown.
+	workerCtx    context.Context
+	workerCancel context.CancelFunc
+	jobWg        sync.WaitGroup
+
 	// TransferFunc is called by the worker to copy/move files, allowing tests to inject
 	// custom implementations. emit must be used for all job-related UI events (same path as State.emit).
 	TransferFunc func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error
@@ -576,7 +582,12 @@ func (s *State) CancelJob(id string) bool {
 			s.pendingDequeued = append(s.pendingDequeued[:i], s.pendingDequeued[i+1:]...)
 			job.Status = StatusCanceled
 			job.FinishedAt = time.Now()
+			cancel := s.cancelRun[id]
+			delete(s.cancelRun, id)
 			s.mu.Unlock()
+			if cancel != nil {
+				cancel()
+			}
 			s.emit(Event{
 				Type:   EventCanceled,
 				JobID:  id,
@@ -611,11 +622,22 @@ func (s *State) CancelJob(id string) bool {
 // StartWorker launches the background worker goroutine. It returns immediately.
 // The worker dequeues jobs and runs each on its own goroutine; only one transfer holds the lease at a time.
 func (s *State) StartWorker(stop <-chan struct{}) {
+	ctx, cancel := context.WithCancel(context.Background())
+	s.mu.Lock()
+	s.workerCtx = ctx
+	s.workerCancel = cancel
+	s.mu.Unlock()
 	go s.runWorker(stop)
 }
 
 func (s *State) runWorker(stop <-chan struct{}) {
 	for {
+		select {
+		case <-stop:
+			s.workerShutdown()
+			return
+		default:
+		}
 		job := s.dequeueJob()
 		if job == nil {
 			select {
@@ -626,7 +648,11 @@ func (s *State) runWorker(stop <-chan struct{}) {
 			}
 			continue
 		}
-		go s.runJob(job, stop)
+		s.jobWg.Add(1)
+		go func(job *Job) {
+			defer s.jobWg.Done()
+			s.runJob(job, stop)
+		}(job)
 	}
 }
 
@@ -682,13 +708,16 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		job.PendingBlocker = nil
 		s.addActiveUnlocked(job)
 		job.Status = StatusRunning
+		stopped := s.workerCtx != nil && s.workerCtx.Err() != nil
 		s.mu.Unlock()
 
-		s.emit(Event{
-			Type:   EventJobResumed,
-			JobID:  job.ID,
-			Status: StatusRunning,
-		})
+		if !stopped {
+			s.emit(Event{
+				Type:   EventJobResumed,
+				JobID:  job.ID,
+				Status: StatusRunning,
+			})
+		}
 
 		if req.Kind == BlockerKindConflict {
 			_, _, _, policy = ApplyDecision(policy, d)
@@ -696,17 +725,36 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		return d
 	}
 
+	s.mu.Lock()
+	parent := s.workerCtx
+	if parent == nil {
+		parent = context.Background()
+	}
+	if job.Status.IsFinished() {
+		s.removePendingDequeuedByID(job.ID)
+		s.mu.Unlock()
+		return
+	}
+	jobCtx, cancel := context.WithCancel(parent)
+	s.cancelRun[job.ID] = cancel
+	s.mu.Unlock()
+	defer cancel()
+
 	if job.holdsTransferLease() {
 		s.transferLease.Lock()
 		defer s.transferLease.Unlock()
 	}
 
-	jobCtx, cancel := context.WithCancel(context.Background())
 	s.mu.Lock()
+	if job.Status.IsFinished() || jobCtx.Err() != nil {
+		delete(s.cancelRun, job.ID)
+		s.removePendingDequeuedByID(job.ID)
+		s.mu.Unlock()
+		return
+	}
 	job.Status = StatusRunning
 	s.removePendingDequeuedByID(job.ID)
 	s.addActiveUnlocked(job)
-	s.cancelRun[job.ID] = cancel
 	s.mu.Unlock()
 
 	s.emit(Event{
@@ -739,7 +787,13 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		s.finished = append(s.finished, job)
 	}
 	job.PendingBlocker = nil
+	stopped := s.workerCtx != nil && s.workerCtx.Err() != nil
 	s.mu.Unlock()
+
+	if stopped {
+		// Shutdown join must not block on Events() being drained by the UI.
+		return
+	}
 
 	switch {
 	case errors.Is(transferErr, context.Canceled) || errors.Is(transferErr, ErrUserCanceled):
@@ -767,6 +821,9 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 
 func (s *State) workerShutdown() {
 	s.mu.Lock()
+	if s.workerCancel != nil {
+		s.workerCancel()
+	}
 	cancels := make([]context.CancelFunc, 0, len(s.cancelRun))
 	for _, cancel := range s.cancelRun {
 		cancels = append(cancels, cancel)
@@ -803,6 +860,7 @@ func (s *State) workerShutdown() {
 		}
 	}
 	s.mu.Unlock()
+	s.jobWg.Wait()
 }
 
 // QueueTestEvent enqueues ev on the events channel (for tests).

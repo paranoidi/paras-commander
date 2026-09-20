@@ -936,3 +936,186 @@ func TestRetryJobRequeuesFailedJob(t *testing.T) {
 		t.Fatal("RetryJob() = true, want false for a completed job")
 	}
 }
+
+// waitPendingDequeuedCount waits until exactly n jobs sit in pendingDequeued (dequeued, not yet
+// holding the transfer lease).
+func waitPendingDequeuedCount(t *testing.T, s *State, n int) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		s.mu.Lock()
+		got := len(s.pendingDequeued)
+		s.mu.Unlock()
+		if got == n {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	s.mu.Lock()
+	got := len(s.pendingDequeued)
+	s.mu.Unlock()
+	t.Fatalf("timeout waiting pendingDequeued len=%d (got %d)", n, got)
+}
+
+func jobStatusLocked(s *State, job *Job) Status {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return job.Status
+}
+
+// assertPendingNeverStarted fails if a lease-waiting job entered TransferFunc or left StatusCanceled
+// after the holder released the lease (the R04-001 race window).
+func assertPendingNeverStarted(t *testing.T, s *State, enteredIDs *sync.Map, pending ...*Job) {
+	t.Helper()
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		for _, job := range pending {
+			if _, saw := enteredIDs.Load(job.ID); saw {
+				t.Fatalf("TransferFunc entered for %s after cancel/stop", job.ID)
+			}
+			st := jobStatusLocked(s, job)
+			if st != StatusCanceled {
+				t.Fatalf("%s status = %q, want %q (started after cancel/stop)", job.ID, st, StatusCanceled)
+			}
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	for _, job := range pending {
+		if _, saw := enteredIDs.Load(job.ID); saw {
+			t.Fatalf("TransferFunc entered for %s after cancel/stop", job.ID)
+		}
+		if st := jobStatusLocked(s, job); st != StatusCanceled {
+			t.Fatalf("%s status = %q, want %q", job.ID, st, StatusCanceled)
+		}
+	}
+}
+
+// TestCancelJobPendingDequeuedNeverEntersTransferFunc covers R04-001 for ordinary CancelJob:
+// two transfers waiting on the lease must not enter TransferFunc after they are canceled,
+// and their runJob goroutines must exit once the holder releases the lease.
+func TestCancelJobPendingDequeuedNeverEntersTransferFunc(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	release := make(chan struct{})
+	holderEntered := make(chan struct{})
+	holderLeft := make(chan struct{})
+	var enteredIDs sync.Map
+	var extraEntries atomic.Int32
+
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		if _, loaded := enteredIDs.LoadOrStore(job.ID, true); loaded {
+			extraEntries.Add(1)
+		}
+		if job.ID == "holder" {
+			close(holderEntered)
+			<-release
+			close(holderLeft)
+			return nil
+		}
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	before := runtime.NumGoroutine()
+	holder := &Job{ID: "holder", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/alpha"), Destination: pathloc.MustParse("/bravo")}
+	s.AddJob(holder)
+	select {
+	case <-holderEntered:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for lease holder to enter TransferFunc")
+	}
+
+	pendA := &Job{ID: "pend-a", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/charlie"), Destination: pathloc.MustParse("/delta")}
+	pendB := &Job{ID: "pend-b", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/echo"), Destination: pathloc.MustParse("/foxtrot")}
+	s.AddJob(pendA)
+	s.AddJob(pendB)
+	waitPendingDequeuedCount(t, s, 2)
+
+	if !s.CancelJob("pend-a") {
+		t.Fatal("CancelJob(pend-a) = false, want true")
+	}
+	if !s.CancelJob("pend-b") {
+		t.Fatal("CancelJob(pend-b) = false, want true")
+	}
+
+	close(release)
+	select {
+	case <-holderLeft:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for lease holder to leave TransferFunc")
+	}
+	assertPendingNeverStarted(t, s, &enteredIDs, pendA, pendB)
+
+	if extraEntries.Load() != 0 {
+		t.Fatalf("duplicate TransferFunc entries = %d, want 0", extraEntries.Load())
+	}
+
+	var after int
+	for i := 0; i < 40; i++ {
+		after = runtime.NumGoroutine()
+		if after <= before+3 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("NumGoroutine() after cancel = %d, want <= %d (before=%d)", after, before+3, before)
+}
+
+// TestShutdownPendingDequeuedNeverEntersTransferFunc covers R04-001 for worker stop:
+// lease-waiting transfers must not start after shutdown, and all runJob goroutines must exit
+// once the holder releases the lease.
+func TestShutdownPendingDequeuedNeverEntersTransferFunc(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	release := make(chan struct{})
+	holderEntered := make(chan struct{})
+	holderLeft := make(chan struct{})
+	var enteredIDs sync.Map
+
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		enteredIDs.Store(job.ID, true)
+		if job.ID == "holder" {
+			close(holderEntered)
+			<-release
+			close(holderLeft)
+			return nil
+		}
+		return nil
+	})
+	s.StartWorker(stop)
+
+	before := runtime.NumGoroutine()
+	holder := &Job{ID: "holder", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/golf"), Destination: pathloc.MustParse("/hotel")}
+	s.AddJob(holder)
+	select {
+	case <-holderEntered:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for lease holder to enter TransferFunc")
+	}
+
+	pendA := &Job{ID: "pend-a", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/india"), Destination: pathloc.MustParse("/juliet")}
+	pendB := &Job{ID: "pend-b", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/kilo"), Destination: pathloc.MustParse("/lima")}
+	s.AddJob(pendA)
+	s.AddJob(pendB)
+	waitPendingDequeuedCount(t, s, 2)
+
+	close(stop)
+	close(release)
+	select {
+	case <-holderLeft:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for lease holder to leave TransferFunc")
+	}
+	assertPendingNeverStarted(t, s, &enteredIDs, pendA, pendB)
+
+	var after int
+	for i := 0; i < 40; i++ {
+		after = runtime.NumGoroutine()
+		if after <= before+3 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("NumGoroutine() after stop = %d, want <= %d (before=%d)", after, before+3, before)
+}
