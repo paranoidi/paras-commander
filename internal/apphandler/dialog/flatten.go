@@ -3,11 +3,9 @@ package dialog
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -78,6 +76,7 @@ func (h *Handler) flattenSourceErrorToast(err error) {
 // CloseFlattenDialog closes the flatten dialog and clears its destination-target panel markers.
 func (h *Handler) CloseFlattenDialog() {
 	h.InvalidateTransferDestValidate()
+	h.invalidateRemoteFileOp()
 	h.model.FlattenDialog = dialog.FlattenDialogState{}
 	h.model.DestinationTargetPrimary = false
 	h.model.DestinationTargetSecondary = false
@@ -221,6 +220,20 @@ func (h *Handler) confirmFlatten() {
 		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return
 	}
+	st := flattenProbeApply{
+		dest: destLoc.String(), removeEmpty: d.RemoveEmpty, dirRoots: d.DirRoots,
+	}
+	remote := destLoc.IsRemote()
+	for _, root := range roots {
+		if root.IsRemote() {
+			remote = true
+			break
+		}
+	}
+	if h.useRemoteFileOp() || remote {
+		h.startRemoteFlattenProbe(st, destLoc, roots, d.Recursive)
+		return
+	}
 	sources, err := ops.CollectFlattenSources(context.Background(), roots, destLoc, d.Recursive)
 	if err != nil {
 		var opsErr *ops.Error
@@ -231,31 +244,11 @@ func (h *Handler) confirmFlatten() {
 		}
 		return
 	}
-	if len(sources) == 0 {
-		h.host.SetTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
-		return
-	}
 	srcLocs := make([]pathloc.Path, len(sources))
 	for i, src := range sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	nSelf := ops.SelfTargetCount(srcLocs, destLoc, true)
-	if nSelf > 0 {
-		if len(sources) > 1 {
-			h.host.SetTransientMessage("Cannot flatten when some items would overwrite themselves", ui.MessageUrgencyWarn)
-			return
-		}
-		h.host.SetTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
-		return
-	}
-	h.CloseFlattenDialog()
-	h.host.ActivePanel().ClearSelection()
-	h.jobs.AddFlattenJob(jobsctrl.FlattenJobRequest{
-		Sources: sources, Dest: destLoc.String(), RemoveEmpty: d.RemoveEmpty, FlattenRoots: d.DirRoots,
-	})
-	noun := "items"
-	if len(sources) == 1 {
-		noun = "item"
-	}
-	h.host.SetTransientMessage(fmt.Sprintf("Flatten queued (%d %s)", len(sources), noun), ui.MessageUrgencyInfo)
+	st.sources = sources
+	st.nSelf = ops.SelfTargetCount(srcLocs, destLoc, true)
+	h.finishFlattenEnqueue(st)
 }

@@ -23,6 +23,7 @@ import (
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/sched"
@@ -205,6 +206,17 @@ type Handler struct {
 	// check (which of its directories still need a background disk-usage scan) to a background
 	// goroutine instead of running it inline in ReconcileDeleteDialogScans on the main goroutine.
 	deleteDialogScanDebounce sched.Debouncer
+
+	// remoteFileOpGen tags background remote mkdir/rename/dest-probe workers; ApplyRemoteFileOp
+	// drops a payload whose Gen no longer matches (dialog cancelled or a newer op started).
+	remoteFileOpGen uint64
+	// enqueueDestIsDir, when set, is the dest-is-directory fact from a just-finished remote
+	// dest probe (or a mkdir that created the dest). AddTransferJob consumes it so it does not
+	// Stat a remote destination on the UI goroutine.
+	enqueueDestIsDir *bool
+	// testRemote, when set, replaces Stat/Mkdir/Rename/List used by remote workers so tests
+	// can request an SFTP password without dialing SSH.
+	testRemote fsbackend.Backend
 }
 
 // New constructs a Handler.

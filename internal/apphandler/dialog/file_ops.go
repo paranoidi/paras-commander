@@ -425,13 +425,27 @@ func (h *Handler) executeRename() {
 		h.CloseFileDialog()
 		return
 	}
+	focusAfter := d.RenameFocusAfter
+	panelDir := p.Path
+	panelID := h.model.ActivePanel
+	panelPath := p.PathString()
+	if h.useRemoteFileOp(sourcePath, panelPath) {
+		entry := localfs.Entry{Name: sourcePath, Path: sourcePath}
+		if loc, err := pathloc.Parse(sourcePath); err == nil {
+			entry.Name = loc.Base()
+		}
+		h.startRemoteRename(renameApply{
+			entry: entry, focusAfter: focusAfter, panelDir: panelDir, panelID: panelID,
+		}, newName, panelPath)
+		return
+	}
 	entry, err := localfs.EntryFromPath(sourcePath)
 	if err != nil {
 		h.host.SetErrorMessage("Rename source", err)
 		h.CloseFileDialog()
 		return
 	}
-	plan, err := ops.PlanRename(entry, newName, p.PathString())
+	plan, err := ops.PlanRename(entry, newName, panelPath)
 	if err != nil {
 		h.host.SetErrorMessage("Rename", err)
 		h.CloseFileDialog()
@@ -442,20 +456,24 @@ func (h *Handler) executeRename() {
 		h.CloseFileDialog()
 		return
 	}
-	focusAfter := h.model.FileDialog.RenameFocusAfter
-	panelDir := p.Path
-	panelID := h.model.ActivePanel
 	h.CloseFileDialog()
-	p.RenameEntry(entry.Path, plan.NewName, h.host.PanelViewportRows(panelID))
-	if focusAfter {
-		h.RefreshBothPanelsWithFocus(panelID, func() {
-			h.host.PanelByID(panelID).SelectVisibleEntryCentered(plan.NewName, h.host.PanelViewportRows(panelID))
+	h.applyRenameSuccess(renameApply{
+		plan: plan, entry: entry, focusAfter: focusAfter, panelDir: panelDir, panelID: panelID,
+	})
+}
+
+func (h *Handler) applyRenameSuccess(st renameApply) {
+	p := h.host.ActivePanel()
+	p.RenameEntry(st.entry.Path, st.plan.NewName, h.host.PanelViewportRows(st.panelID))
+	if st.focusAfter {
+		h.RefreshBothPanelsWithFocus(st.panelID, func() {
+			h.host.PanelByID(st.panelID).SelectVisibleEntryCentered(st.plan.NewName, h.host.PanelViewportRows(st.panelID))
 		})
 	} else {
 		h.RefreshBothPanels()
 	}
-	h.host.ActivePanel().AddRenameMarks(panelDir, []string{plan.NewName})
-	h.host.SetTransientMessage(fmt.Sprintf("Renamed to %s", plan.NewName), ui.MessageUrgencyInfo)
+	h.host.ActivePanel().AddRenameMarks(st.panelDir, []string{st.plan.NewName})
+	h.host.SetTransientMessage(fmt.Sprintf("Renamed to %s", st.plan.NewName), ui.MessageUrgencyInfo)
 }
 
 func (h *Handler) executeMkdir() {
@@ -475,44 +493,72 @@ func (h *Handler) executeMkdir() {
 	if entry, ok := p.CurrentEntry(); ok {
 		priorEntryName = entry.Name
 	}
+	panelPath := p.PathString()
+	panelID := h.model.ActivePanel
 
-	plan, err := ops.PlanMkdir(input, p.PathString())
+	// For copy/move post-actions, resolve sources up-front so a missing/empty
+	// selection fails fast without leaving an empty directory behind. Remote
+	// panels use the listing snapshot (no Stat) so reauth cannot deadlock the loop.
+	var sources []string
+	if action == dialog.MkdirActionCreateCopySelect || action == dialog.MkdirActionCreateMoveSelect {
+		if p.Path.IsRemote() {
+			sources = selectedPanelSources(p)
+			if len(sources) == 0 {
+				h.host.SetErrorMessage("Mkdir", &ops.Error{Op: "mkdir", Text: "no files selected for transfer"})
+				h.CloseFileDialog()
+				return
+			}
+		} else {
+			src, srcErr := ops.ResolveSource(p)
+			if srcErr != nil {
+				h.host.SetErrorMessage("Mkdir source", srcErr)
+				h.CloseFileDialog()
+				return
+			}
+			if src.Kind != ops.SourceSelected {
+				h.host.SetErrorMessage("Mkdir", &ops.Error{Op: "mkdir", Text: "no files selected for transfer"})
+				h.CloseFileDialog()
+				return
+			}
+			sources = ops.SourcePaths(src)
+		}
+	}
+
+	st := mkdirApply{
+		plan:           ops.MkdirPlan{Name: input},
+		action:         action,
+		sources:        sources,
+		openInInactive: openInInactive,
+		priorEntryName: priorEntryName,
+		panelID:        panelID,
+	}
+	if h.useRemoteFileOp(panelPath, input) {
+		h.startRemoteMkdir(st)
+		return
+	}
+
+	plan, err := ops.PlanMkdir(input, panelPath)
 	if err != nil {
 		h.host.SetErrorMessage("Mkdir", err)
 		h.CloseFileDialog()
 		return
 	}
-
-	// For copy/move post-actions, resolve sources up-front so a missing/empty
-	// selection fails fast without leaving an empty directory behind.
-	var sources []string
-	if action == dialog.MkdirActionCreateCopySelect || action == dialog.MkdirActionCreateMoveSelect {
-		src, srcErr := ops.ResolveSource(p)
-		if srcErr != nil {
-			h.host.SetErrorMessage("Mkdir source", srcErr)
-			h.CloseFileDialog()
-			return
-		}
-		if src.Kind != ops.SourceSelected {
-			h.host.SetErrorMessage("Mkdir", &ops.Error{Op: "mkdir", Text: "no files selected for transfer"})
-			h.CloseFileDialog()
-			return
-		}
-		sources = ops.SourcePaths(src)
-	}
-
 	if err := ops.ExecuteMkdir(plan); err != nil {
 		h.host.SetErrorMessage("Mkdir failed", err)
 		h.CloseFileDialog()
 		return
 	}
+	st.plan = plan
+	h.CloseFileDialog()
+	h.applyMkdirSuccess(st)
+}
 
+func (h *Handler) applyMkdirSuccess(st mkdirApply) {
+	plan := st.plan
 	createdName := plan.Name
 	if loc, err := pathloc.Parse(plan.Path); err == nil {
 		createdName = loc.Base()
 	}
-	panelID := h.model.ActivePanel
-	h.CloseFileDialog()
 	active := h.host.ActivePanel()
 	viewportRows := h.host.ActiveViewportRows()
 	active.InsertEntry(localfs.Entry{
@@ -522,9 +568,9 @@ func (h *Handler) executeMkdir() {
 		Mode: 0o755,
 	}, viewportRows)
 	focusName := ""
-	if openInInactive {
-		if priorEntryName != "" && priorEntryName != createdName {
-			focusName = priorEntryName
+	if st.openInInactive {
+		if st.priorEntryName != "" && st.priorEntryName != createdName {
+			focusName = st.priorEntryName
 		}
 		// The createdName-under-cursor fallback (step off the just-created directory before
 		// reload) still runs synchronously below on the panel's pre-reload cursor state — no
@@ -533,13 +579,13 @@ func (h *Handler) executeMkdir() {
 		focusName = createdName
 	}
 	if focusName != "" {
-		h.RefreshBothPanelsWithFocus(panelID, func() {
-			h.host.PanelByID(panelID).SelectVisibleEntryInViewport(focusName, h.host.PanelViewportRows(panelID))
+		h.RefreshBothPanelsWithFocus(st.panelID, func() {
+			h.host.PanelByID(st.panelID).SelectVisibleEntryInViewport(focusName, h.host.PanelViewportRows(st.panelID))
 		})
 	} else {
 		h.RefreshBothPanels()
 	}
-	if openInInactive {
+	if st.openInInactive {
 		if entry, ok := active.CurrentEntry(); ok && entry.Name == createdName {
 			if !active.SelectVisibleEntry("..") {
 				for i := 0; i < active.VisibleEntryCount(); i++ {
@@ -558,17 +604,19 @@ func (h *Handler) executeMkdir() {
 		}
 	}
 
-	switch action {
+	switch st.action {
 	case dialog.MkdirActionCreate:
 		h.host.SetTransientMessage(fmt.Sprintf("Created directory %s", plan.Name), ui.MessageUrgencyInfo)
 	case dialog.MkdirActionCreateCopySelect:
 		h.host.ActivePanel().ClearSelection()
-		h.AddTransferJob(jobs.TypeCopy, sources, plan.Path, false, h.TransferPreserveFromConfig())
-		h.host.SetTransientMessage(fmt.Sprintf("Created %s; copy queued (%d %s)", plan.Name, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
+		h.setEnqueueDestIsDir(true)
+		h.AddTransferJob(jobs.TypeCopy, st.sources, plan.Path, false, h.TransferPreserveFromConfig())
+		h.host.SetTransientMessage(fmt.Sprintf("Created %s; copy queued (%d %s)", plan.Name, len(st.sources), jobbridge.Plural(len(st.sources), "file", "files")), ui.MessageUrgencyInfo)
 	case dialog.MkdirActionCreateMoveSelect:
 		h.host.ActivePanel().ClearSelection()
-		h.AddTransferJob(jobs.TypeMove, sources, plan.Path, false, h.TransferPreserveFromConfig())
-		h.host.SetTransientMessage(fmt.Sprintf("Created %s; move queued (%d %s)", plan.Name, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
+		h.setEnqueueDestIsDir(true)
+		h.AddTransferJob(jobs.TypeMove, st.sources, plan.Path, false, h.TransferPreserveFromConfig())
+		h.host.SetTransientMessage(fmt.Sprintf("Created %s; move queued (%d %s)", plan.Name, len(st.sources), jobbridge.Plural(len(st.sources), "file", "files")), ui.MessageUrgencyInfo)
 	}
 }
 

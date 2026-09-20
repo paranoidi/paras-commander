@@ -41,7 +41,7 @@ func (h *Handler) scheduleTransferOtherPanelFocus(panelID int, listDir string, c
 // panel's current directory and [operations].focus_other_panel_after_transfer is enabled.
 // Called after jobs.AddTransferJob; snapCursorPath captures the inactive panel's cursor path at
 // enqueue time, before the job has actually run.
-func (h *Handler) maybeScheduleTransferOtherPanelFocus(jobType jobs.Type, sources []string, dest string, preserve jobs.TransferPreserve) {
+func (h *Handler) maybeScheduleTransferOtherPanelFocus(jobType jobs.Type, sources []string, dest string, preserve jobs.TransferPreserve, destIsDir bool) {
 	if jobType != jobs.TypeCopy && jobType != jobs.TypeMove {
 		return
 	}
@@ -52,7 +52,6 @@ func (h *Handler) maybeScheduleTransferOtherPanelFocus(jobType jobs.Type, source
 	if err != nil {
 		return
 	}
-	destIsDir := ops.DestinationIsDirAtEnqueue(destLoc)
 	destDir := destLoc
 	if !destIsDir {
 		destDir = destLoc.Parent()

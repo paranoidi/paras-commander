@@ -170,6 +170,7 @@ func (h *Handler) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, abs
 // debounced destination-path validation.
 func (h *Handler) CloseTransferDialog() {
 	h.InvalidateTransferDestValidate()
+	h.invalidateRemoteFileOp()
 	h.model.TransferDialog = dialog.TransferDialogState{}
 	h.model.DestinationTargetPrimary = false
 	h.model.DestinationTargetSecondary = false
@@ -435,33 +436,6 @@ func (h *Handler) confirmTransferEnqueue(startPaused bool) {
 		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return
 	}
-	absDest := destLoc.String()
-
-	srcLocs := make([]pathloc.Path, len(sources))
-	for i, src := range sources {
-		srcLocs[i] = pathloc.MustParse(src)
-	}
-	flat := d.MultiLocation() && d.FlattenIntoDest
-	nSelf := ops.SelfTargetCount(srcLocs, destLoc, flat)
-	if nSelf > 0 {
-		if len(sources) > 1 {
-			h.host.SetTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
-			return
-		}
-		d.Phase = dialog.TransferPhaseSelfCopyRename
-		d.SelfCopyDestDir = absDest
-		base := filepath.Base(sources[0])
-		d.SelfCopyOrigBasename = base
-		d.SelfCopyNewName = transferSelfCopyNewNamePrefilled(base)
-		d.FocusField = 0
-		h.transferDestValidate.Invalidate()
-		d.DestPathInvalid = false
-		d.DestPathCheckPending = false
-		h.model.DestinationTargetPrimary = false
-		h.model.DestinationTargetSecondary = false
-		return
-	}
-
 	var jobType jobs.Type
 	switch d.Kind {
 	case dialog.TransferKindCopy:
@@ -472,17 +446,32 @@ func (h *Handler) confirmTransferEnqueue(startPaused bool) {
 		h.CloseTransferDialog()
 		return
 	}
-	sourcesCopy := append([]string(nil), sources...)
-	h.host.ActivePanel().ClearSelection()
+	flat := d.MultiLocation() && d.FlattenIntoDest
 	preserve := jobs.TransferPreserve{
 		PreservePermissions: d.PreservePermissions,
 		PreserveTimestamps:  d.PreserveTimestamps,
 		FlattenIntoDest:     flat,
 		DereferenceSymlinks: d.DereferenceSymlinks,
 	}
-	h.AddTransferJob(jobType, sourcesCopy, dest, startPaused, preserve)
-	h.CloseTransferDialog()
-	h.setTransferQueuedMessage(jobType, startPaused)
+	st := transferProbeApply{
+		sources:     sources,
+		dest:        dest,
+		destLoc:     destLoc,
+		flat:        flat,
+		startPaused: startPaused,
+		jobType:     jobType,
+		preserve:    preserve,
+	}
+	if h.useRemoteFileOp(dest, destLoc.String()) {
+		h.startRemoteTransferProbe(st)
+		return
+	}
+	srcLocs := make([]pathloc.Path, len(sources))
+	for i, src := range sources {
+		srcLocs[i] = pathloc.MustParse(src)
+	}
+	nSelf := ops.SelfTargetCount(srcLocs, destLoc, flat)
+	h.finishTransferEnqueue(st, nSelf, false, false)
 }
 
 func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bool) {

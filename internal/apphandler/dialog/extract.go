@@ -55,28 +55,21 @@ func (h *Handler) ExecuteExtract() {
 	}
 	dest := strings.TrimSpace(field.Value)
 	sources := append([]string(nil), fd.ExtractSources...)
-	h.CloseFileDialog()
 	if len(sources) == 0 {
+		h.CloseFileDialog()
 		h.host.SetTransientMessage("No archives to extract", ui.MessageUrgencyWarn)
 		return
 	}
+	if h.useRemoteFileOp(dest) {
+		h.startRemoteExtractProbe(sources, dest)
+		return
+	}
+	h.CloseFileDialog()
 	tc := archive.ProbeToolchain()
 	plan, skipped, err := ops.PlanExtract(sources, dest, tc)
 	if err != nil {
 		h.host.OpenMessageDialog("Extract", err.Error())
 		return
 	}
-	p := h.host.ActivePanel()
-	p.ClearSelection()
-	h.jobs.EnqueueExtractJob(ops.ExtractItemPaths(plan.Items), plan.Destination)
-	n := len(plan.Items)
-	noun := "archives"
-	if n == 1 {
-		noun = "archive"
-	}
-	msg := fmt.Sprintf("Extract queued (%d %s)", n, noun)
-	if len(skipped) > 0 {
-		msg += fmt.Sprintf("; %d skipped (unsupported or missing tool)", len(skipped))
-	}
-	h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
+	h.finishExtractEnqueue(plan, skipped)
 }

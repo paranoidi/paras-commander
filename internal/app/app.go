@@ -1097,6 +1097,11 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		a.render()
 		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
 	}
+	if p, ok := data.(dialogctrl.RemoteFileOpPayload); ok {
+		a.dialogCtrl.ApplyRemoteFileOp(p)
+		a.render()
+		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
+	}
 	return eventOutcome{}, false
 }
 
