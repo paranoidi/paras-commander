@@ -52,6 +52,16 @@ type Handler struct {
 	findNavActive bool
 
 	lastIndexCountRenderAt time.Time
+
+	sizeMu            sync.Mutex
+	fileSizeLookupGen uint64
+	pendingFileSizes  *findFileSizeUpdate
+}
+
+type findFileSizeUpdate struct {
+	lookupGen uint64
+	selGen    uint64
+	sizes     map[string]int64
 }
 
 // rankResult carries match output applied on the main thread.

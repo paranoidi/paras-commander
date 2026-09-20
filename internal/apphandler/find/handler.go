@@ -73,6 +73,10 @@ func rootGitignoreExcluded(gi *gitignore.Cache, root string) bool {
 func (h *Handler) CloseDialog() {
 	h.stopFindIndexer()
 	h.cancelPendingRank()
+	h.sizeMu.Lock()
+	h.fileSizeLookupGen++
+	h.pendingFileSizes = nil
+	h.sizeMu.Unlock()
 	h.model.FindDialog = dialog.FindDialogState{}
 }
 
@@ -519,8 +523,9 @@ func (h *Handler) ApplyPendingRank() bool {
 	if !st.Open {
 		return false
 	}
+	sizesApplied := h.applyPendingFindFileSizes()
 	if h.findNavActive {
-		return false // nav-idle debounce: wait until user stops scrolling
+		return sizesApplied // nav-idle debounce: wait until user stops scrolling
 	}
 	h.rankMu.Lock()
 	gen := h.rankGen
@@ -529,7 +534,7 @@ func (h *Handler) ApplyPendingRank() bool {
 	h.rankMu.Unlock()
 
 	if result == nil || result.gen != gen {
-		return false
+		return sizesApplied
 	}
 
 	var selectedRelLine string
@@ -580,6 +585,103 @@ func (h *Handler) ApplyPendingRank() bool {
 	dialog.CenterFindListScroll(st, h.findDialogListRows())
 	st.RankPending = false
 	return true
+}
+
+func (h *Handler) noteFindMarksChanged(st *dialog.FindDialogState) {
+	st.InvalidateMarkedSelectionDerived()
+	h.scheduleFindMarkedFileSizes(st)
+}
+
+func (h *Handler) scheduleFindMarkedFileSizes(st *dialog.FindDialogState) {
+	if !st.Open || len(st.MarkedPaths) == 0 {
+		return
+	}
+	selGen := st.MarkedSelGen()
+	missing := make([]string, 0)
+	for path, on := range st.MarkedPaths {
+		if !on {
+			continue
+		}
+		path = filepath.Clean(path)
+		idx, ok := st.PathIndexLookup(path)
+		if !ok {
+			continue
+		}
+		e := st.Entries[idx]
+		if e.IsDir || e.Size > 0 {
+			continue
+		}
+		missing = append(missing, path)
+	}
+	if len(missing) == 0 {
+		return
+	}
+	h.sizeMu.Lock()
+	h.fileSizeLookupGen++
+	lookupGen := h.fileSizeLookupGen
+	h.sizeMu.Unlock()
+	stat := findPathStat
+	go func() {
+		sizes := make(map[string]int64, len(missing))
+		for _, p := range missing {
+			info, err := stat(p)
+			if err != nil {
+				continue
+			}
+			sizes[p] = info.Size()
+		}
+		h.sizeMu.Lock()
+		if lookupGen == h.fileSizeLookupGen {
+			h.pendingFileSizes = &findFileSizeUpdate{
+				lookupGen: lookupGen,
+				selGen:    selGen,
+				sizes:     sizes,
+			}
+		}
+		h.sizeMu.Unlock()
+		if h.screen != nil {
+			_ = h.screen.PostEvent(tcell.NewEventInterrupt(RankWakePayload{}))
+		}
+	}()
+}
+
+func (h *Handler) applyPendingFindFileSizes() bool {
+	h.sizeMu.Lock()
+	upd := h.pendingFileSizes
+	h.pendingFileSizes = nil
+	h.sizeMu.Unlock()
+	if upd == nil {
+		return false
+	}
+	st := &h.model.FindDialog
+	if !st.Open || st.MarkedSelGen() != upd.selGen {
+		return false
+	}
+	h.sizeMu.Lock()
+	alive := upd.lookupGen == h.fileSizeLookupGen
+	h.sizeMu.Unlock()
+	if !alive {
+		return false
+	}
+	changed := false
+	for path, size := range upd.sizes {
+		idx, ok := st.PathIndexLookup(filepath.Clean(path))
+		if !ok {
+			continue
+		}
+		if st.Entries[idx].IsDir {
+			continue
+		}
+		if st.Entries[idx].Size == size {
+			continue
+		}
+		st.Entries[idx].Size = size
+		changed = true
+	}
+	if changed {
+		st.InvalidateMarkedSelectionSizeLabel()
+	}
+	return changed
 }
 
 func (h *Handler) findDialogListRows() int {
@@ -886,7 +988,7 @@ func (h *Handler) findDialogSelectAllEmptyQuery(st *dialog.FindDialogState) {
 	if conflicts {
 		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 	}
-	st.InvalidateMarkedSelectionDerived()
+	h.noteFindMarksChanged(st)
 }
 
 func (h *Handler) findDialogSelectAllIndices(st *dialog.FindDialogState, indices []int) {
@@ -919,7 +1021,7 @@ func (h *Handler) findDialogSelectAllIndices(st *dialog.FindDialogState, indices
 	if conflicts {
 		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 	}
-	st.InvalidateMarkedSelectionDerived()
+	h.noteFindMarksChanged(st)
 }
 
 func (h *Handler) findDialogUnselectAll() {
@@ -928,7 +1030,7 @@ func (h *Handler) findDialogUnselectAll() {
 		return
 	}
 	st.MarkedPaths = nil
-	st.InvalidateMarkedSelectionDerived()
+	h.noteFindMarksChanged(st)
 }
 
 func (h *Handler) findDialogToggleSelectionAndAdvance() {
@@ -959,7 +1061,7 @@ func (h *Handler) findDialogToggleSelectionAndAdvance() {
 		st.Selected++
 		dialog.EnsureFindListScroll(st, h.findDialogListRows())
 	}
-	st.InvalidateMarkedSelectionDerived()
+	h.noteFindMarksChanged(st)
 }
 
 // ToggleStayOnVolume toggles stay-on-volume and restarts indexing when needed.
@@ -1359,7 +1461,7 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 		default:
 			h.host.SetTransientMessage(fmt.Sprintf("Selected matching %q", pattern), ui.MessageUrgencyInfo)
 		}
-		st.InvalidateMarkedSelectionDerived()
+		h.noteFindMarksChanged(st)
 		return
 	}
 	unmatched, _ := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
@@ -1369,7 +1471,7 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 	if len(st.MarkedPaths) == 0 {
 		st.MarkedPaths = nil
 	}
-	st.InvalidateMarkedSelectionDerived()
+	h.noteFindMarksChanged(st)
 	if len(unmatched) == 0 {
 		h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
 	} else {

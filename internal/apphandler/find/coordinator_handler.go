@@ -80,14 +80,12 @@ func lookupFindPathMeta(st *dialog.FindDialogState, absPath string) (isDir bool,
 	if e.IsDir {
 		return true, 0, true
 	}
-	if e.Size > 0 {
-		return false, e.Size, true
-	}
-	if info, err := os.Stat(absPath); err == nil {
-		return false, info.Size(), true
-	}
-	return false, 0, true
+	return false, e.Size, true
 }
+
+// findPathStat is the metadata seam for file size lookups. Tests replace it
+// with a blocking or stub Stat.
+var findPathStat = os.Stat
 
 func dialogEntriesFromScan(batch []scan.Entry) []dialog.FindEntry {
 	if len(batch) == 0 {
