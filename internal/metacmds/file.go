@@ -124,6 +124,7 @@ func Decode(data []byte) (*MetaFile, error) {
 	if raw.ShellPatterns != nil && raw.ShellPatterns.Set {
 		out.ShellPatterns = raw.ShellPatterns.Value
 	}
+	seenNames := make(map[string]int, len(raw.Entry))
 	for i, e := range raw.Entry {
 		if strings.TrimSpace(e.Name) == "" {
 			return nil, fmt.Errorf("meta.toml: entry %d: name is required", i)
@@ -157,6 +158,10 @@ func Decode(data []byte) (*MetaFile, error) {
 			workers = metaEntryWorkersMax
 		}
 		name := strings.TrimSpace(e.Name)
+		if prev, ok := seenNames[name]; ok {
+			return nil, fmt.Errorf("meta.toml: entry %d: duplicate name %q (entry %d)", i, name, prev)
+		}
+		seenNames[name] = i
 		column := strings.TrimSpace(e.Column)
 		if column == "" {
 			column = name

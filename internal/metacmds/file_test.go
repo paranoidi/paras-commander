@@ -38,6 +38,24 @@ file = "wc -l < %f | tr -d ' '"
 	}
 }
 
+func TestDecode_duplicateName(t *testing.T) {
+	toml := `
+[[entry]]
+name = "size"
+description = "Disk size"
+file = "echo a"
+
+[[entry]]
+name = "size"
+description = "Line count"
+file = "echo b"
+`
+	_, err := metacmds.Decode([]byte(toml))
+	if err == nil {
+		t.Fatal("expected error for duplicate name, got nil")
+	}
+}
+
 func TestDecode_missingName(t *testing.T) {
 	toml := `
 [[entry]]

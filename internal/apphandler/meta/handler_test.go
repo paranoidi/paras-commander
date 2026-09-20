@@ -318,6 +318,32 @@ func TestScheduleRenderDebounced_burstWakesCoalesceWithoutRace(t *testing.T) {
 	}
 }
 
+func TestLoadMetaFile_duplicateNamesAreError(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "meta.toml"), []byte(`
+[[entry]]
+name = "size"
+description = "Disk size"
+file = "echo a"
+
+[[entry]]
+name = "size"
+description = "Line count"
+file = "echo b"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	fh := &fakeHost{panels: [2]*panel.State{testPanel(t, dir, nil)}}
+	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
+	if mf := h.loadMetaFile(0); mf != nil {
+		t.Fatal("expected load to fail on duplicate names")
+	}
+	if len(fh.messages) == 0 {
+		t.Fatal("expected a transient error for duplicate names")
+	}
+}
+
 func TestApplyWakeResult_updatesCorrectColumn(t *testing.T) {
 	h := &Handler{model: &ui.Model{}}
 	h.model.MetaResults[0] = []ui.MetaColumnState{
