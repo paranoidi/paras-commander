@@ -201,15 +201,16 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 
 		argv := append([]string(nil), argvPrefix...)
 
-		h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
-			e.Phase = ui.CommandRunRunning
-			e.TargetPath = abs
-			e.UserCommandLine = userLine
-		})
-		h.PostRenderWake()
-
 		var release func()
 		if strings.TrimSpace(spec.PoolName) != "" {
+			// Stay Pending through Acquire so terminate/kill can tell "no process
+			// yet" from a live subprocess. Target/line are filled so the waiting
+			// row still names the command.
+			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
+				e.TargetPath = abs
+				e.UserCommandLine = userLine
+			})
+			h.PostRenderWake()
 			var err error
 			release, err = h.workPools.Acquire(ctx, spec.PoolName)
 			if err != nil {
@@ -228,6 +229,13 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 				continue
 			}
 		}
+
+		h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
+			e.Phase = ui.CommandRunRunning
+			e.TargetPath = abs
+			e.UserCommandLine = userLine
+		})
+		h.PostRenderWake()
 
 		workDir := spec.WorkDir
 		if spec.PerEntryWorkDir {

@@ -5,11 +5,14 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pools"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/workpool"
 )
 
 func TestRunForEachUnifiedBatchPerEntryWorkDir(t *testing.T) {
@@ -77,5 +80,153 @@ func TestSummarizeRunForEachIssuesOK(t *testing.T) {
 	_, _, _, ok := summarizeRunForEachIssues("Run for each", []ui.CommandRunEntry{{ExitCode: 0}})
 	if ok {
 		t.Fatal("expected no summary for all-success batch")
+	}
+}
+
+func TestRunForEachPoolWaitingStaysPending(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+
+	dir := t.TempDir()
+	entry := []localfs.Entry{{Name: "harbor", Path: dir, Type: localfs.EntryDirectory}}
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	h := &Handler{
+		screen:    screen,
+		model:     &ui.Model{},
+		mu:        &sync.RWMutex{},
+		ctx:       ctx,
+		workPools: workpool.NewRegistry([]pools.Def{{Name: "one", MaxParallel: 1}}),
+	}
+
+	hold := RunForEachBatchSpec{
+		Entries:    entry,
+		AllowDirs:  true,
+		WorkDir:    dir,
+		PoolName:   "one",
+		Background: true,
+		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+			return RunForEachBuiltItem{Argv: []string{"sleep", "2"}, UserLine: "sleep 2"}, nil
+		},
+	}
+	wait := hold
+	wait.BuildItem = func(localfs.Entry) (RunForEachBuiltItem, error) {
+		return RunForEachBuiltItem{Argv: []string{"true"}, UserLine: "true"}, nil
+	}
+
+	h.StartRunForEachBatch(hold)
+	h.StartRunForEachBatch(wait)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		h.mu.RLock()
+		running, pending := 0, 0
+		for _, e := range h.model.CommandsList {
+			switch e.Phase {
+			case ui.CommandRunRunning:
+				running++
+			case ui.CommandRunPending:
+				pending++
+			}
+		}
+		h.mu.RUnlock()
+		if running == 1 && pending == 1 {
+			cancel()
+			waitBatchesIdle(t, h)
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("expected one Running and one Pending while the one-slot pool is held")
+}
+
+func waitBatchesIdle(t *testing.T, h *Handler) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if !h.HasRunning() {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("timed out waiting for command batches to finish")
+}
+
+func TestRunForEachCancelWhilePoolWaiting(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+
+	dir := t.TempDir()
+	reg := workpool.NewRegistry([]pools.Def{{Name: "one", MaxParallel: 1}})
+	release, err := reg.Acquire(context.Background(), "one")
+	if err != nil {
+		t.Fatalf("Acquire: %v", err)
+	}
+	defer release()
+
+	h := &Handler{
+		screen:    screen,
+		model:     &ui.Model{CommandsList: []ui.CommandRunEntry{{Phase: ui.CommandRunPending, ExitCode: -1}}},
+		mu:        &sync.RWMutex{},
+		ctx:       context.Background(),
+		workPools: reg,
+	}
+	spec := RunForEachBatchSpec{
+		Entries:   []localfs.Entry{{Name: "lantern", Path: dir, Type: localfs.EntryDirectory}},
+		AllowDirs: true,
+		WorkDir:   dir,
+		PoolName:  "one",
+		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+			return RunForEachBuiltItem{Argv: []string{"true"}, UserLine: "true"}, nil
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		h.runForEachUnifiedBatch(ctx, 0, spec)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	seenPending := false
+	for time.Now().Before(deadline) {
+		h.mu.RLock()
+		e := h.model.CommandsList[0]
+		h.mu.RUnlock()
+		if e.Phase == ui.CommandRunRunning {
+			t.Fatal("pool-waiting row flipped to Running before Acquire returned")
+		}
+		if e.Phase == ui.CommandRunPending && e.UserCommandLine == "true" {
+			seenPending = true
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !seenPending {
+		t.Fatal("expected Pending while waiting for a pool slot")
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("batch did not return after cancel while waiting for a pool slot")
+	}
+
+	h.mu.RLock()
+	e := h.model.CommandsList[0]
+	h.mu.RUnlock()
+	if e.Phase != ui.CommandRunDone {
+		t.Fatalf("phase = %v, want Done", e.Phase)
+	}
+	if e.ErrorMsg != "Canceled" {
+		t.Fatalf("ErrorMsg = %q, want Canceled", e.ErrorMsg)
 	}
 }
