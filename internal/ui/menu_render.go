@@ -170,7 +170,7 @@ func DrawMenuBarJobsGapOnly(screen tcell.Screen, layout Layout, model Model, men
 	rect := layout.Menu
 	clipEx := menuBarMenusClipExclusive(rect, tailW)
 	var gapStart, gapWidth int
-	if model.ModalDialogOpen() || model.ViewMode == ViewFilePreview {
+	if model.ModalDialogOpen() {
 		gapStart = rect.X
 	} else {
 		gapStart = menuBarMenusEndX(rect, menus, tailW)
@@ -210,17 +210,26 @@ func DrawMenuBarPermissionTailOnly(screen tcell.Screen, layout Layout, model Mod
 
 // DrawMenuBarSpinnerOnly updates the single activity-spinner cell on the menu row without a full repaint.
 func DrawMenuBarSpinnerOnly(screen tcell.Screen, layout Layout, model Model, styles theme.Theme) bool {
+	if model.ViewMode == ViewFilePreview {
+		return drawFullscreenPreviewSpinner(screen, layout, model, styles)
+	}
 	if !model.MenuBarLayoutReserved() || layout.Menu.Width <= 0 {
 		return false
 	}
-	showSpinner := model.MenuBarActivitySpinner
 	rect := layout.Menu
-	last := rect.X + rect.Width - menuBarPermRightMargin - 1
-	if !showSpinner || last < rect.X || last >= rect.X+rect.Width {
+	last, ok := menuBarSpinnerX(rect)
+	if !model.MenuBarActivitySpinner || !ok {
 		return false
 	}
 	screen.SetContent(last, rect.Y, MenuBarSpinnerIcon(model.SpinPhase), nil, styles.MenuSpinner)
 	return true
+}
+
+// menuBarSpinnerX is the activity spinner's column at rect's trailing edge (inside the
+// permission-tail right margin); ok is false when rect is too narrow to hold it.
+func menuBarSpinnerX(rect Rect) (x int, ok bool) {
+	x = rect.X + rect.Width - menuBarPermRightMargin - 1
+	return x, x >= rect.X && x < rect.X+rect.Width
 }
 
 func drawMenuBarRightTail(screen tcell.Screen, rect Rect, attention, perm string, alertStyle, detailStyle, spinnerStyle tcell.Style, showMenuBarSpinner bool, spinPhase uint8) {
@@ -235,9 +244,9 @@ func drawMenuBarRightTail(screen tcell.Screen, rect Rect, attention, perm string
 		return
 	}
 
-	last := rect.X + rect.Width - menuBarPermRightMargin - 1
+	last, spinnerFits := menuBarSpinnerX(rect)
 	if showMenuBarSpinner {
-		if last >= rect.X && last < rect.X+rect.Width {
+		if spinnerFits {
 			screen.SetContent(last, rect.Y, MenuBarSpinnerIcon(spinPhase), nil, spinnerStyle)
 		}
 		last--

@@ -27,7 +27,7 @@ func TestDraw_thumbOnBorder(t *testing.T) {
 		t.Fatal("expected metrics")
 	}
 	styles := theme.Default()
-	frame := styles.PanelActiveFrame
+	frame := styles.PanelActiveFrame.Background(tcell.ColorFuchsia)
 	Draw(DrawParams{
 		Screen:     screen,
 		X:          x,
@@ -41,20 +41,26 @@ func TestDraw_thumbOnBorder(t *testing.T) {
 	})
 
 	thumbRow := listTop + m.ThumbDotRow
-	got, _, _ := screen.Get(x, thumbRow)
+	got, thumbStyle, _ := screen.Get(x, thumbRow)
 	wantThumb := styles.IconScrollbarThumb()
 	gotR, _ := utf8.DecodeRuneInString(got)
 	if gotR != wantThumb {
 		t.Fatalf("thumb cell = %q, want %q", got, string(wantThumb))
 	}
+	if _, bg, _ := thumbStyle.Decompose(); bg != tcell.ColorFuchsia {
+		t.Fatalf("thumb bg = %v, want rail bg %v", bg, tcell.ColorFuchsia)
+	}
 	trackRow := listTop
 	if trackRow == thumbRow && visible > 1 {
 		trackRow = listTop + 1
 	}
-	got, _, _ = screen.Get(x, trackRow)
+	got, trackStyle, _ := screen.Get(x, trackRow)
 	gotR, _ = utf8.DecodeRuneInString(got)
 	if gotR != '│' {
 		t.Fatalf("track cell at %d = %q, want │", trackRow, got)
+	}
+	if _, bg, _ := trackStyle.Decompose(); bg != tcell.ColorFuchsia {
+		t.Fatalf("track bg = %v, want rail bg %v", bg, tcell.ColorFuchsia)
 	}
 }
 

@@ -3,6 +3,7 @@ package chromaformat_test
 import (
 	"testing"
 
+	"github.com/alecthomas/chroma/v2"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/preview/chromaformat"
 )
@@ -61,7 +62,7 @@ func TestFrameStyleFromChromaAppliesBackground(t *testing.T) {
 }
 
 func TestCommentColorMonokai(t *testing.T) {
-	fg, ok := chromaformat.CommentColor("monokai")
+	fg, ok := chromaformat.TokenColor("monokai", chroma.Comment)
 	if !ok {
 		t.Fatal("expected monokai Comment color")
 	}
@@ -72,14 +73,14 @@ func TestCommentColorMonokai(t *testing.T) {
 }
 
 func TestCommentColorEmptyName(t *testing.T) {
-	if _, ok := chromaformat.CommentColor(""); ok {
+	if _, ok := chromaformat.TokenColor("", chroma.Comment); ok {
 		t.Fatal("empty style name should not ok")
 	}
 }
 
-func TestCommentFrameStyleAppliesCommentForegroundKeepsBackground(t *testing.T) {
+func TestTokenFrameStyleAppliesForegroundKeepsBackground(t *testing.T) {
 	themeFrame := tcell.StyleDefault.Foreground(tcell.ColorBlue).Background(tcell.ColorBlack)
-	out := chromaformat.CommentFrameStyle(themeFrame, "monokai")
+	out := chromaformat.TokenFrameStyle(themeFrame, "monokai", chroma.Comment)
 	fg, bg, _ := out.Decompose()
 	r, g, b := rgb(fg)
 	if r != 0x75 || g != 0x71 || b != 0x5e {
@@ -90,9 +91,9 @@ func TestCommentFrameStyleAppliesCommentForegroundKeepsBackground(t *testing.T) 
 	}
 }
 
-func TestCommentFrameStyleUnknownStyleReturnsFrameUnchanged(t *testing.T) {
+func TestTokenFrameStyleUnknownStyleReturnsFrameUnchanged(t *testing.T) {
 	themeFrame := tcell.StyleDefault.Foreground(tcell.ColorBlue)
-	out := chromaformat.CommentFrameStyle(themeFrame, "")
+	out := chromaformat.TokenFrameStyle(themeFrame, "", chroma.Comment)
 	if out != themeFrame {
 		t.Fatal("empty style name should return frame unchanged")
 	}

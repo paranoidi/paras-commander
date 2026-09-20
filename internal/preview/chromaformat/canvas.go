@@ -50,9 +50,9 @@ func FrameStyleFromChroma(themeFrame tcell.Style, styleName string) tcell.Style 
 	return out
 }
 
-// CommentColor returns the Chroma Comment token's foreground as a tcell color.
-// ok is false when the style is missing or Comment defines no foreground.
-func CommentColor(styleName string) (fg tcell.Color, ok bool) {
+// TokenColor returns a Chroma token type's foreground as a tcell color.
+// ok is false when the style is missing or the token defines no foreground.
+func TokenColor(styleName string, tok chroma.TokenType) (fg tcell.Color, ok bool) {
 	name := strings.TrimSpace(styleName)
 	if name == "" {
 		return tcell.ColorDefault, false
@@ -61,18 +61,19 @@ func CommentColor(styleName string) (fg tcell.Color, ok bool) {
 	if style == nil {
 		return tcell.ColorDefault, false
 	}
-	entry := style.Get(chroma.Comment)
+	entry := style.Get(tok)
 	if !entry.Colour.IsSet() {
 		return tcell.ColorDefault, false
 	}
 	return chromaColourToTcell(entry.Colour), true
 }
 
-// CommentFrameStyle tints frame's foreground with the Chroma Comment token's color, keeping
-// frame's background — used for muted/secondary chrome (e.g. a scrollbar rail icon) that
-// should read as dimmer than the frame/border color itself.
-func CommentFrameStyle(frame tcell.Style, styleName string) tcell.Style {
-	fg, ok := CommentColor(styleName)
+// TokenFrameStyle tints frame's foreground with a Chroma token's color, keeping frame's
+// background and attributes — used for chrome painted over a syntax-tinted surface (e.g. a
+// scrollbar rail icon in the Comment tint, the activity spinner in the LiteralNumber tint).
+// Returns frame unchanged when the style or token color is unavailable.
+func TokenFrameStyle(frame tcell.Style, styleName string, tok chroma.TokenType) tcell.Style {
+	fg, ok := TokenColor(styleName, tok)
 	if !ok {
 		return frame
 	}

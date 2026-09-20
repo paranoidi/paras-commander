@@ -3,12 +3,53 @@ package ui
 import (
 	"strings"
 
+	"github.com/alecthomas/chroma/v2"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/preview/chromaformat"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
+
+// fullscreenPreviewRects derives the fullscreen preview panel and (when open) theme-picker
+// rects from layout+model. Shared by Render's ViewFilePreview branch and the partial spinner
+// painter so both agree on where row 0's trailing edge is.
+func fullscreenPreviewRects(layout Layout, model Model) (previewRect, pickerRect Rect) {
+	union := MergeTwinPanelRects(layout.Primary, layout.Secondary, model.SplitOrientation)
+	return SplitFullscreenPreviewRects(union, model.FilePreviewThemePicker.Open, model.FilePreviewThemePicker.Choices)
+}
+
+// filePreviewChromaStyleName returns st's Chroma style name, blanked when the preview shows an
+// error message (which has no syntax-highlighted body, so border/spinner chrome tint is suppressed).
+func filePreviewChromaStyleName(st FilePreviewState) string {
+	if strings.TrimSpace(st.ErrorMsg) != "" {
+		return ""
+	}
+	return st.ChromaStyle
+}
+
+// drawFullscreenPreviewSpinner draws the activity spinner at the trailing edge of the fullscreen
+// preview's filename row — the only menu-bar element that survives in ViewFilePreview, since
+// MenuBarLayoutReserved is false there and no other menu-bar content is painted. Returns false
+// (nothing drawn) when the spinner isn't active or the F9 theme picker is open.
+func drawFullscreenPreviewSpinner(screen tcell.Screen, layout Layout, model Model, styles theme.Theme) bool {
+	if model.ViewMode != ViewFilePreview || !model.MenuBarActivitySpinner || model.FilePreviewThemePicker.Open {
+		return false
+	}
+	previewRect, _ := fullscreenPreviewRects(layout, model)
+	x, ok := menuBarSpinnerX(previewRect)
+	if !ok {
+		return false
+	}
+	chromeBlocked := model.PanelsChromeBlocked()
+	chromaStyleName := filePreviewChromaStyleName(model.FullscreenFilePreviewDraw)
+	frame := filePreviewFrameStyle(styles, true, chromeBlocked, false, chromaStyleName)
+	header := previewpanel.ContentPadStyle(frame, styles.PanelChrome(true, chromeBlocked).Surface, FilePreviewBodyStyle(styles, chromeBlocked))
+	fg, _, attrs := styles.MenuSpinner.Decompose()
+	style := chromaformat.TokenFrameStyle(header.Foreground(fg).Attributes(attrs), chromaStyleName, chroma.LiteralNumber)
+	screen.SetContent(x, previewRect.Y, MenuBarSpinnerIcon(model.SpinPhase), nil, style)
+	return true
+}
 
 // drawFilePreviewPanel paints a file preview panel (quick view, fullscreen, or carousel child).
 // scrollGutterX overrides the scrollbar's target column when >= 0 (see previewpanel.DrawParams);
@@ -19,17 +60,13 @@ import (
 // to use the mode's default (frame color, or a dimmed Chroma "Comment" tint in fullscreen).
 func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome, embedded, borderless bool, panelPath, userHomeDir string, scrollbarStyle uiscrollbar.Style, scrollGutterX int, scrollbarRailStyle tcell.Style) {
 	// Use the style stored with the content so border and body always match.
-	// ErrorMsg states have no syntax-highlighted body, so suppress chroma border tint.
-	chromaStyleName := st.ChromaStyle
-	if strings.TrimSpace(st.ErrorMsg) != "" {
-		chromaStyleName = ""
-	}
+	chromaStyleName := filePreviewChromaStyleName(st)
 	frame := filePreviewFrameStyle(styles, previewFocused, chromeBlocked, embedded, chromaStyleName)
 	// Fullscreen's scrollbar rail reads as a dimmed Chroma "Comment" tint rather than the
 	// full frame color, so it doesn't compete visually with the syntax-highlighted body.
 	railStyle := frame
 	if borderless && chromaStyleName != "" && !chromeBlocked {
-		railStyle = chromaformat.CommentFrameStyle(frame, chromaStyleName)
+		railStyle = chromaformat.TokenFrameStyle(frame, chromaStyleName, chroma.Comment)
 	}
 	if scrollbarRailStyle != (tcell.Style{}) {
 		railStyle = scrollbarRailStyle

@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/alecthomas/chroma/v2"
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
@@ -17,6 +18,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/preview/chromaformat"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -663,7 +665,90 @@ func TestMenuBarInteractiveFalseWhenFullscreenFilePreview(t *testing.T) {
 	}
 }
 
-func TestRenderBlankMenuBarRowWhenFullscreenFilePreview(t *testing.T) {
+// fullscreenPreviewSpinnerModel is a fullscreen preview of a monokai-tinted file with the
+// activity spinner on, for the row-0 rendering tests below.
+func fullscreenPreviewSpinnerModel(name string) Model {
+	return Model{
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
+		ViewMode:    ViewFilePreview,
+		FullscreenFilePreviewDraw: FilePreviewState{
+			Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n",
+			TitleBase: name, ChromaStyle: "monokai",
+		},
+		MenuBarActivitySpinner: true,
+		SpinPhase:              2,
+	}
+}
+
+func TestRenderFullscreenFilePreviewRowZeroIsFilenameAndSpinner(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 12)
+	const width = 80
+	const name = "config.toml"
+
+	styles := theme.Default()
+	model := fullscreenPreviewSpinnerModel(name)
+	model.MenuBarJobs = MenuBarJobsStrip{
+		Groups:       []MenuBarJobGroup{{Status: "queued", Count: 2}},
+		HasProgress:  true,
+		ProgressFrac: 0.5,
+	}
+	model.MenuBarPermission = "-rw-r--r--"
+	model.MenuDefinitions = testBrowserMenuDefinitions(t)
+
+	Render(screen, model, styles)
+
+	top := tcelltest.TextAt(screen, 0, 0, width)
+	if !strings.Contains(top, name) {
+		t.Fatalf("row 0 = %q, want filename %q", top, name)
+	}
+	if strings.Contains(top, "File") || strings.Contains(top, "Left") {
+		t.Fatalf("row 0 = %q, want no pulldown menu labels", top)
+	}
+	if strings.Contains(top, "-rw-r--r--") {
+		t.Fatalf("row 0 = %q, want no permission text", top)
+	}
+	jobIcon := string(styles.IconMenuJob("queued"))
+	if strings.Contains(top, jobIcon) {
+		t.Fatalf("row 0 = %q, want no job-group icon %q", top, jobIcon)
+	}
+
+	spinnerIcon := MenuBarSpinnerIcon(model.SpinPhase)
+	spinnerX := width - 2
+	gotR, gotStyle, _ := screen.Get(spinnerX, 0)
+	r, _ := utf8.DecodeRuneInString(gotR)
+	if r != spinnerIcon {
+		t.Fatalf("cell (%d,0) = %q, want spinner %q", spinnerX, gotR, string(spinnerIcon))
+	}
+	_, wantStyle, _ := screen.Get(0, 0)
+	_, wantBG, _ := wantStyle.Decompose()
+	_, gotBG, _ := gotStyle.Decompose()
+	if gotBG != wantBG {
+		t.Fatalf("spinner bg = %v, want row-0 bg %v", gotBG, wantBG)
+	}
+	wantFG, ok := chromaformat.TokenColor("monokai", chroma.LiteralNumber)
+	if !ok {
+		t.Fatal("expected monokai LiteralNumber color")
+	}
+	gotFG, _, _ := gotStyle.Decompose()
+	if gotFG != wantFG {
+		t.Fatalf("spinner fg = %v, want monokai LiteralNumber %v", gotFG, wantFG)
+	}
+
+	stripped := strings.ReplaceAll(top, name, "")
+	stripped = strings.ReplaceAll(stripped, string(spinnerIcon), "")
+	if strings.TrimSpace(stripped) != "" {
+		t.Fatalf("row 0 has unexpected extra glyphs: %q (full row %q)", stripped, top)
+	}
+}
+
+func TestRenderFullscreenFilePreviewSpinnerHiddenWhileThemePickerOpen(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -673,19 +758,18 @@ func TestRenderBlankMenuBarRowWhenFullscreenFilePreview(t *testing.T) {
 	const width = 80
 
 	styles := theme.Default()
-	model := Model{
-		Primary:                   panel.State{Path: pathloc.MustParse("/tmp")},
-		Secondary:                 panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:               PrimaryPanel,
-		ViewMode:                  ViewFilePreview,
-		FullscreenFilePreviewDraw: FilePreviewState{Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n"},
+	model := fullscreenPreviewSpinnerModel("config.toml")
+	model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{
+		Open:    true,
+		Choices: []dialog.ThemeChoice{{Name: "monokai", Label: "Monokai"}},
 	}
 
 	Render(screen, model, styles)
 
 	top := tcelltest.TextAt(screen, 0, 0, width)
-	if strings.Contains(top, "File") || strings.Contains(top, "Left") {
-		t.Fatalf("menu row = %q, want blank (no pulldown menu labels)", top)
+	spinnerIcon := string(MenuBarSpinnerIcon(model.SpinPhase))
+	if strings.Contains(top, spinnerIcon) {
+		t.Fatalf("row 0 = %q, want no spinner glyph while theme picker is open", top)
 	}
 }
 

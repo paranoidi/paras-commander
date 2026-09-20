@@ -164,7 +164,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 			statusSuffix = " (" + st.GitStatusText + ")"
 		}
 		// Fill the row with the preview theme (syntax) background, filename centered.
-		headerStyle := contentPadStyle(borderStyle, chrome.Surface, p.BodyStyle)
+		headerStyle := ContentPadStyle(borderStyle, chrome.Surface, p.BodyStyle)
 		primitive.Text(screen, rect.X, rect.Y, rect.Width, "", headerStyle)
 		full := name + statusSuffix
 		start := rect.X + (rect.Width-runewidth.StringWidth(full))/2
@@ -224,7 +224,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	// Embedded: margins at X and X+Width-1 (outer edges; title row is skipped since contentTop=Y+1).
 	_, borderBG, _ := borderStyle.Decompose()
 	_, surfaceBG, _ := chrome.Surface.Decompose()
-	padStyle := contentPadStyle(borderStyle, chrome.Surface, body)
+	padStyle := ContentPadStyle(borderStyle, chrome.Surface, body)
 	marginStyle := chrome.Surface
 	if borderBG != surfaceBG {
 		marginStyle = borderStyle
@@ -235,7 +235,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		leftMarginX, rightMarginX = rect.X, rect.X+rect.Width-1
 		paintLeftMargin, paintRightMargin = rect.Width >= 2, rect.Width >= 2
 	} else if borderlessMarkdown {
-		// Margin must match the text row background exactly (contentPadStyle), not the
+		// Margin must match the text row background exactly (ContentPadStyle), not the
 		// chrome/frame color: borderless has no visible frame, so a mismatched fill here
 		// reads as a stray border where none is drawn.
 		leftMarginX, rightMarginX = rect.X, rect.X+rect.Width-1
@@ -402,7 +402,11 @@ func paintCapabilityUncertainIndicator(screen tcell.Screen, rect Rect, uncertain
 	}
 }
 
-func contentPadStyle(borderStyle, surfaceStyle, bodyStyle tcell.Style) tcell.Style {
+// ContentPadStyle is the style for preview chrome rows painted on the panel surface (the
+// borderless fullscreen filename row, text-row margins): bodyStyle's text attributes on
+// borderStyle's background (the Chroma background when the preview is syntax-tinted), or
+// bodyStyle unchanged when border and surface backgrounds already match.
+func ContentPadStyle(borderStyle, surfaceStyle, bodyStyle tcell.Style) tcell.Style {
 	_, borderBG, _ := borderStyle.Decompose()
 	_, surfaceBG, _ := surfaceStyle.Decompose()
 	if borderBG == surfaceBG {

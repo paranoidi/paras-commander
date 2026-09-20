@@ -26,6 +26,12 @@ func Draw(p DrawParams) {
 		return
 	}
 	track, thumb := p.Theme.PanelScrollbarStyles(p.Active, p.Blocked)
+	// The indicator always sits on the rail/border column, so its background must match the
+	// rail's, not the theme's (unset) scrollbar background — otherwise it shows the terminal
+	// default against a themed rail (file list, carousel, dialog, preview all share this rail).
+	_, railBG, _ := p.FrameStyle.Decompose()
+	track = track.Background(railBG)
+	thumb = thumb.Background(railBG)
 	switch style {
 	case StyleThumb:
 		drawThumb(p, thumb, p.FrameStyle)

@@ -334,7 +334,7 @@ func (a *App) menuBarSpinnerBusy() bool {
 // bar replaces the spinner for jobs, while disk-usage scans, running commands, and directory
 // loads still show it.
 func (a *App) menuBarSpinnerVisible() bool {
-	lightbarShown := a.config.Jobs.ProgressLightbar && a.model.MenuBarJobs.HasProgress
+	lightbarShown := a.config.Jobs.ProgressLightbar && a.model.MenuBarJobs.HasProgress && a.model.MenuBarLayoutReserved()
 	return a.menuBarOtherActivity() || (a.jobState.HasUnfinishedWork() && !lightbarShown)
 }
 

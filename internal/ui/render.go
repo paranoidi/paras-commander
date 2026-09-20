@@ -483,15 +483,16 @@ func (m *Model) AuxiliaryViewDialogKeysBlocked() bool {
 	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.DedupEmptyDirsConfirm.Open || m.Menu.Open
 }
 
-// MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config show_menu_bar).
+// MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config
+// show_menu_bar and not the fullscreen file preview, which reclaims row 0 for the filename).
 func (m *Model) MenuBarLayoutReserved() bool {
-	return !m.HideMenuBar
+	return !m.HideMenuBar && m.ViewMode != ViewFilePreview
 }
 
 // MenuBarInteractive is true when menu labels and pulldown may be shown (blocked by modal dialogs
 // and the fullscreen file preview, which has no pulldown menus).
 func (m *Model) MenuBarInteractive() bool {
-	return !m.HideMenuBar && !m.ModalDialogOpen() && m.ViewMode != ViewFilePreview
+	return m.MenuBarLayoutReserved() && !m.ModalDialogOpen()
 }
 
 // statusCmdWidth returns the columns to reserve for model.StatusCommandText at the
@@ -509,7 +510,7 @@ func statusCmdWidth(model Model, reserveMenu bool) int {
 func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	width, height := screen.Size()
 	// Fullscreen file preview hides the menu entirely and reclaims its row (filename sits there, borderless).
-	reserveMenu := model.MenuBarLayoutReserved() && model.ViewMode != ViewFilePreview
+	reserveMenu := model.MenuBarLayoutReserved()
 	// Full-screen views reclaim the terminal strip (must match App.terminalLayoutRows).
 	terminalRows := 0
 	if model.TerminalPanel.Visible && model.ViewMode == ViewBrowser {
@@ -555,14 +556,14 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	chromeBlocked := model.PanelsChromeBlocked()
 	switch model.ViewMode {
 	case ViewFilePreview:
-		union := MergeTwinPanelRects(layout.Primary, layout.Secondary, model.SplitOrientation)
-		previewRect, pickerRect := SplitFullscreenPreviewRects(union, model.FilePreviewThemePicker.Open, model.FilePreviewThemePicker.Choices)
+		previewRect, pickerRect := fullscreenPreviewRects(layout, model)
 		if model.FullscreenFilePreviewDraw.Search.Editing {
 			if previewRect.Height > 0 {
 				previewRect.Height--
 			}
 		}
 		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, true, "", "", model.PanelScrollbar, -1, tcell.Style{})
+		drawFullscreenPreviewSpinner(screen, layout, model, styles)
 		if model.FullscreenFilePreviewDraw.Search.Editing && layout.Footer.Height > 0 {
 			search := model.FullscreenFilePreviewDraw.Search
 			noMatch := model.FullscreenFilePreviewSearchField.Value != "" && len(search.Matches) == 0
