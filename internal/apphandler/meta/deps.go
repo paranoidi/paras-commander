@@ -7,12 +7,12 @@ import (
 	"context"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
+	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -45,9 +45,9 @@ type Handler struct {
 	// loadGen is a monotonically increasing generation counter per panel for async meta file loads.
 	// Stale loads (navigated away before load finished) are discarded by the wake handler.
 	loadGen [2]uint64
-	// renderTimer debounces meta result renders; posted events call scheduleRenderDebounced
-	// instead of rendering directly so burst results (large dirs) coalesce into few repaints.
-	renderTimer *time.Timer
+	// renderDebounce coalesces meta result renders at ~60 fps. The timer callback only
+	// posts RenderFlushPayload; HandleRenderFlush consumes it on the event loop.
+	renderDebounce sched.Debouncer
 	// cache stores computed meta results by [cmdName][absPath] for entries with cache = true.
 	// Nil until first caching write. Protected by cacheMu.
 	cache   map[string]map[string]string

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -248,6 +249,62 @@ func killPIDFile(path string) {
 
 func processAlive(pid int) bool {
 	return syscall.Kill(pid, 0) == nil
+}
+
+func TestScheduleRenderDebounced_burstWakesCoalesceWithoutRace(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+
+	h := &Handler{screen: screen, model: &ui.Model{}}
+	h.model.MetaResults[0] = []ui.MetaColumnState{
+		{EntryName: "size", Results: map[string]string{"/p": ""}},
+	}
+	h.runGen[0] = 1
+
+	wake := func() {
+		h.HandleWake(WakePayload{
+			PanelID:   0,
+			EntryName: "size",
+			Path:      "/p",
+			Value:     "ok",
+			Gen:       1,
+		})
+	}
+
+	for range 40 {
+		wake()
+	}
+
+	// Straddle the ~16ms timer expiry so the callback races HandleWake's
+	// timer-field access if the callback still writes Handler state.
+	deadline := time.Now().Add(40 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		wake()
+		time.Sleep(time.Millisecond)
+	}
+	time.Sleep(25 * time.Millisecond)
+
+	flushes := 0
+	for screen.HasPendingEvent() {
+		ev := screen.PollEvent()
+		ie, ok := ev.(*tcell.EventInterrupt)
+		if !ok {
+			continue
+		}
+		if _, ok := ie.Data().(RenderFlushPayload); ok {
+			flushes++
+			h.HandleRenderFlush()
+		}
+	}
+	if flushes < 1 {
+		t.Fatal("expected at least one coalesced RenderFlushPayload")
+	}
+	if flushes > 8 {
+		t.Fatalf("flushes = %d, want ~60fps coalescing, not one per wake", flushes)
+	}
 }
 
 func TestApplyWakeResult_updatesCorrectColumn(t *testing.T) {

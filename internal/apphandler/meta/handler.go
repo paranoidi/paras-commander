@@ -419,15 +419,20 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 	h.runForPanel(d.PanelID, sorted, cols)
 }
 
+// HandleRenderFlush consumes a coalesced repaint. Called from the event loop
+// (or tests simulating RenderFlushPayload) so timer state is not written from AfterFunc.
+func (h *Handler) HandleRenderFlush() {
+	h.renderDebounce.Stop()
+}
+
 // scheduleRenderDebounced arms a short timer to coalesce rapid WakePayload events
 // (one per entry in large directories) into a single screen repaint at ~60 fps.
 func (h *Handler) scheduleRenderDebounced() {
-	if h.renderTimer != nil {
+	if h.renderDebounce.Armed() {
 		return
 	}
 	const debounce = 16 * time.Millisecond
-	h.renderTimer = time.AfterFunc(debounce, func() {
-		h.renderTimer = nil
+	h.renderDebounce.Arm(debounce, func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(RenderFlushPayload{}))
 	})
 }
