@@ -19,7 +19,7 @@ type State struct {
 	mu    sync.Mutex
 	queue *Queue
 	// active is the set of currently running jobs (at most one holding the transfer lease, plus
-	// any number of concurrent delete jobs — see Job.holdsTransferLease).
+	// any number of concurrent delete jobs that do not overlap that transfer — see Job.holdsTransferLease).
 	active []*Job
 	// waitingBlocker holds jobs that yielded the lease while awaiting user blocker input (FIFO).
 	waitingBlocker []*Job
@@ -223,7 +223,7 @@ func (s *State) removeActiveUnlocked(id string) bool {
 // leaseHolderUnlocked returns the running job holding the transfer lease, or nil. Caller must hold s.mu.
 func (s *State) leaseHolderUnlocked() *Job {
 	for _, j := range s.active {
-		if j != nil && j.holdsTransferLease() {
+		if j != nil && j.holdsTransferLease(nil) {
 			return j
 		}
 	}
@@ -760,10 +760,12 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	}
 	jobCtx, cancel := context.WithCancel(parent)
 	s.cancelRun[job.ID] = cancel
+	holder := s.leaseHolderUnlocked()
+	needLease := job.holdsTransferLease(holder)
 	s.mu.Unlock()
 	defer cancel()
 
-	if job.holdsTransferLease() {
+	if needLease {
 		s.transferLease.Lock()
 		defer s.transferLease.Unlock()
 	}

@@ -217,7 +217,34 @@ func (j *Job) RetryClone() *Job {
 }
 
 // holdsTransferLease reports whether the job must serialize on the single transfer lease.
+// Copy/move/flatten/extract always take the lease. A delete takes it only when its source
+// roots overlap other (an active transfer's sources or destination). other may be nil.
 // ponytail: global lease; becomes a per-device lane key when device queues land
-func (j *Job) holdsTransferLease() bool {
-	return j.Type != TypeDelete
+func (j *Job) holdsTransferLease(other *Job) bool {
+	if j == nil {
+		return false
+	}
+	if j.Type != TypeDelete {
+		return true
+	}
+	return deleteOverlapsTransfer(j, other)
+}
+
+// deleteOverlapsTransfer reports whether del's source roots share a tree with
+// transfer's sources or destination.
+func deleteOverlapsTransfer(del, transfer *Job) bool {
+	if del == nil || transfer == nil {
+		return false
+	}
+	for _, root := range del.Sources {
+		for _, src := range transfer.Sources {
+			if pathloc.TreesOverlap(root, src) {
+				return true
+			}
+		}
+		if !transfer.Destination.IsZero() && pathloc.TreesOverlap(root, transfer.Destination) {
+			return true
+		}
+	}
+	return false
 }

@@ -36,7 +36,7 @@ func TestWorkerSkipsPausedJobInFavorOfQueued(t *testing.T) {
 	}
 }
 
-func TestDeleteJobRunsWhileTransferHoldsLease(t *testing.T) {
+func TestDisjointDeleteJobRunsWhileTransferHoldsLease(t *testing.T) {
 	s := NewState()
 	stop := make(chan struct{})
 	release := make(chan struct{})
@@ -51,7 +51,7 @@ func TestDeleteJobRunsWhileTransferHoldsLease(t *testing.T) {
 	s.StartWorker(stop)
 	defer close(stop)
 
-	s.AddJob(&Job{ID: "copy-1", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
+	s.AddJob(&Job{ID: "copy-1", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/willow"), Destination: pathloc.MustParse("/maple")})
 
 	select {
 	case id := <-started:
@@ -62,7 +62,7 @@ func TestDeleteJobRunsWhileTransferHoldsLease(t *testing.T) {
 		t.Fatal("timeout waiting for copy to start")
 	}
 
-	s.AddJob(&Job{ID: "del-1", Type: TypeDelete, Status: StatusQueued, Sources: pathloc.PathsForTest("/z")})
+	s.AddJob(&Job{ID: "del-1", Type: TypeDelete, Status: StatusQueued, Sources: pathloc.PathsForTest("/birch")})
 
 	select {
 	case id := <-started:
@@ -70,7 +70,7 @@ func TestDeleteJobRunsWhileTransferHoldsLease(t *testing.T) {
 			t.Fatalf("second started = %q, want del-1", id)
 		}
 	case <-time.After(3 * time.Second):
-		t.Fatal("timeout waiting for delete to run while copy is blocked")
+		t.Fatal("timeout waiting for disjoint delete to run while copy is blocked")
 	}
 
 	// The delete's status flip to StatusCompleted happens on the worker goroutine after
@@ -108,11 +108,194 @@ func TestDeleteJobRunsWhileTransferHoldsLease(t *testing.T) {
 		t.Fatal("AllJobs() never listed both copy and delete jobs during the overlap")
 	}
 	if !deleteCompleted {
-		t.Fatal("delete job never reached StatusCompleted while the copy job was still holding the transfer lease")
+		t.Fatal("disjoint delete job never reached StatusCompleted while the copy job was still holding the transfer lease")
 	}
 	if !copyStillRunning {
-		t.Fatal("copy job should still be running (blocked) while the delete job completed")
+		t.Fatal("copy job should still be running (blocked) while the disjoint delete job completed")
 	}
+}
+
+func TestOverlappingDeleteWaitsForTransferLease(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	release := make(chan struct{})
+	started := make(chan string, 2)
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		started <- job.ID
+		if job.Type == TypeCopy {
+			<-release
+		}
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	s.AddJob(&Job{ID: "copy-1", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/willow/branch"), Destination: pathloc.MustParse("/maple/trunk")})
+
+	select {
+	case id := <-started:
+		if id != "copy-1" {
+			t.Fatalf("first started = %q, want copy-1", id)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for copy to start")
+	}
+
+	s.AddJob(&Job{ID: "del-1", Type: TypeDelete, Status: StatusQueued, Sources: pathloc.PathsForTest("/willow/branch")})
+	waitPendingDequeuedCount(t, s, 1)
+
+	select {
+	case id := <-started:
+		t.Fatalf("overlapping delete started while transfer held the lease: %s", id)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(release)
+	select {
+	case id := <-started:
+		if id != "del-1" {
+			t.Fatalf("after transfer released, started = %q, want del-1", id)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for overlapping delete after transfer released the lease")
+	}
+}
+
+func TestOverlappingDeleteOfTransferDestWaitsForLease(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	release := make(chan struct{})
+	started := make(chan string, 2)
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		started <- job.ID
+		if job.Type == TypeCopy {
+			<-release
+		}
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	s.AddJob(&Job{ID: "copy-1", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/cedar"), Destination: pathloc.MustParse("/oak")})
+
+	select {
+	case id := <-started:
+		if id != "copy-1" {
+			t.Fatalf("first started = %q, want copy-1", id)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for copy to start")
+	}
+
+	s.AddJob(&Job{ID: "del-1", Type: TypeDelete, Status: StatusQueued, Sources: pathloc.PathsForTest("/oak/leaf.txt")})
+	waitPendingDequeuedCount(t, s, 1)
+
+	select {
+	case id := <-started:
+		t.Fatalf("dest-overlapping delete started while transfer held the lease: %s", id)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(release)
+	select {
+	case id := <-started:
+		if id != "del-1" {
+			t.Fatalf("after transfer released, started = %q, want del-1", id)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for dest-overlapping delete after transfer released the lease")
+	}
+}
+
+func TestOverlappingDeleteAncestorWaitsForTransferLease(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	release := make(chan struct{})
+	started := make(chan string, 2)
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		started <- job.ID
+		if job.Type == TypeCopy {
+			<-release
+		}
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	s.AddJob(&Job{ID: "copy-1", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/willow/branch/leaf.txt"), Destination: pathloc.MustParse("/maple")})
+
+	select {
+	case id := <-started:
+		if id != "copy-1" {
+			t.Fatalf("first started = %q, want copy-1", id)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for copy to start")
+	}
+
+	s.AddJob(&Job{ID: "del-1", Type: TypeDelete, Status: StatusQueued, Sources: pathloc.PathsForTest("/willow")})
+	waitPendingDequeuedCount(t, s, 1)
+
+	select {
+	case id := <-started:
+		t.Fatalf("ancestor-overlapping delete started while transfer held the lease: %s", id)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(release)
+	select {
+	case id := <-started:
+		if id != "del-1" {
+			t.Fatalf("after transfer released, started = %q, want del-1", id)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for ancestor-overlapping delete after transfer released the lease")
+	}
+}
+
+func TestOverlappingDeleteCanceledWhileWaitingForLease(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	release := make(chan struct{})
+	holderEntered := make(chan struct{})
+	holderLeft := make(chan struct{})
+	var enteredIDs sync.Map
+
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		enteredIDs.Store(job.ID, true)
+		if job.ID == "copy-1" {
+			close(holderEntered)
+			<-release
+			close(holderLeft)
+			return nil
+		}
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	s.AddJob(&Job{ID: "copy-1", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/willow"), Destination: pathloc.MustParse("/maple")})
+	select {
+	case <-holderEntered:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for lease holder to enter TransferFunc")
+	}
+
+	del := &Job{ID: "del-1", Type: TypeDelete, Status: StatusQueued, Sources: pathloc.PathsForTest("/willow/branch")}
+	s.AddJob(del)
+	waitPendingDequeuedCount(t, s, 1)
+
+	if !s.CancelJob("del-1") {
+		t.Fatal("CancelJob(del-1) = false, want true")
+	}
+
+	close(release)
+	select {
+	case <-holderLeft:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for lease holder to leave TransferFunc")
+	}
+	assertPendingNeverStarted(t, s, &enteredIDs, del)
 }
 
 func TestWorkerYieldsTransferLeaseWhileWaitingConflictDecision(t *testing.T) {
