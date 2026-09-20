@@ -66,6 +66,11 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 			height = renameToolDialogHeight()
 		} else if len(state.Fields) > 0 {
 			height = len(state.Fields)*3 + 4 // +1 separator row above buttons
+			if state.DialogType == FileDialogExtract {
+				if msg := strings.TrimSpace(state.Message); msg != "" {
+					height += strings.Count(state.Message, "\n") + 1
+				}
+			}
 		} else {
 			height = 5
 		}
@@ -465,6 +470,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 }
 
 func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState, styles theme.Theme) {
+	_, dbg, _ := styles.DialogSurface.Decompose()
 	fieldStartY := rect.Y + 1
 	for i, field := range state.Fields {
 		y := fieldStartY + i*3
@@ -479,7 +485,6 @@ func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		if state.Message != "" && i == state.FocusedField {
 			fieldStyle = styles.MessageWarn
 		}
-		_, dbg, _ := styles.DialogSurface.Decompose()
 		fieldStyle = fieldStyle.Background(dbg)
 		primitive.Text(screen, rect.X+2, y, labelWidth, field.Label+":", fieldStyle)
 
@@ -489,6 +494,23 @@ func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			continue
 		}
 		drawInputField(screen, rect.X+2, inputY, rect.Width-4, field, i == state.FocusedField, styles)
+	}
+	if state.DialogType == FileDialogExtract {
+		if msg := strings.TrimSpace(state.Message); msg != "" && len(state.Fields) > 0 {
+			y := fieldStartY + (len(state.Fields)-1)*3 + 2
+			warn := styles.MessageWarn.Background(dbg)
+			innerW := draw.DialogContentWidth(rect)
+			textX := draw.DialogTextX(rect)
+			for _, line := range strings.Split(state.Message, "\n") {
+				if y >= rect.Y+rect.Height-3 {
+					break
+				}
+				if innerW > 0 {
+					primitive.Text(screen, textX, y, innerW, line, warn)
+				}
+				y++
+			}
+		}
 	}
 }
 
