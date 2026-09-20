@@ -12,7 +12,7 @@ const flattenDialogNumContent = 3
 // DrawFlattenDialog paints the flatten confirmation modal.
 func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogState, styles theme.Theme) {
 	width := PreferredFormDialogWidth
-	height := 9
+	height := 10
 	rect := draw.CenteredDialogRect(layout, width, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Flatten", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()

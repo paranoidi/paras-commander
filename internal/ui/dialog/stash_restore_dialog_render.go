@@ -12,19 +12,22 @@ func DrawStashRestoreDialog(screen tcell.Screen, layout Layout, state StashResto
 	if width < 44 {
 		width = min(44, layout.Width-2)
 	}
-	height := 9
+	height := 7
 	rect := draw.CenteredDialogRect(layout, width, height)
 
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Stash restore", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
+	textX, textW := draw.DialogTextX(rect), draw.DialogContentWidth(rect)
+	textStyle := styles.DialogText.Background(dbg)
 
-	msg := "Panel has live selections and a non-empty stash."
-	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, msg, styles.DialogText.Background(dbg))
-	msg2 := "Choose how to resolve:"
-	primitive.Text(screen, rect.X+2, rect.Y+2, rect.Width-4, msg2, styles.DialogText.Background(dbg))
-
-	sepY := rect.Y + 3
-	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
+	y := rect.Y + 1
+	primitive.Text(screen, textX, y, textW, "Panel has live selections and a non-empty stash.", textStyle)
+	y++
+	primitive.Text(screen, textX, y, textW, "Choose how to resolve:", textStyle)
+	y++
+	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
+	y++
+	y++ // surface-only blank row above buttons
 
 	buttonSpecs := []struct {
 		label    string
@@ -44,10 +47,5 @@ func DrawStashRestoreDialog(screen tcell.Screen, layout Layout, state StashResto
 			Focused:  state.Focus == b.idx,
 		}
 	}
-	btnY := rect.Y + rect.Height - 2
-	draw.DrawDialogHSeparator(screen, rect, btnY-1, borderStyle)
-	draw.DrawDialogButtonRowCentered(screen, rect, btnY, row, styles)
-
-	help := "Left/Right select  Enter confirm  Esc drop stash "
-	primitive.Text(screen, rect.X+2, rect.Y+rect.Height-2, rect.Width-4, help, styles.DialogText.Background(dbg))
+	draw.DrawDialogButtonRowCentered(screen, rect, y, row, styles)
 }

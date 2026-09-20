@@ -20,13 +20,14 @@ func deleteDialogWarningLines(state FileDialogState) int {
 	return 0
 }
 
-// deleteDialogChromeRows is interior rows not used by the scrollable name list (footer block + button row).
+// deleteDialogChromeRows is interior rows not used by the scrollable name list
+// (footer block + blank + button row).
 func deleteDialogChromeRows(state FileDialogState) int {
-	return 6 + deleteDialogWarningLines(state)
+	return 7 + deleteDialogWarningLines(state)
 }
 
 func deleteDialogSummarySepY(rect Rect, state FileDialogState) int {
-	return rect.Y + rect.Height - 5 - deleteDialogWarningLines(state)
+	return rect.Y + rect.Height - 6 - deleteDialogWarningLines(state)
 }
 
 func deleteDialogMaxHeight(layoutHeight int) int {

@@ -35,7 +35,7 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 	case FileDialogDelete:
 		height = fileDeleteDialogHeight(layout.Height, state)
 	case FileDialogAddBookmark:
-		height = 9
+		height = 10
 	case FileDialogRunForEach:
 		if state.RunForEachHistoryOpen {
 			height = runForEachHistoryPickerDialogHeight(layout.Height)
@@ -45,8 +45,9 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 		if msg := strings.TrimSpace(state.Message); msg != "" {
 			helpLines = strings.Count(state.Message, "\n") + 1
 		}
-		// Help block + separator + command block + separator + 2 checkboxes + optional pool section + separator + buttons row.
-		height = helpLines + 1 + runForEachCommandFieldRows(state) + 3 + 4
+		// Help block + separator + command block + separator + 2 checkboxes + optional pool
+		// section + separator + blank + buttons row.
+		height = helpLines + 1 + runForEachCommandFieldRows(state) + 3 + 5
 		if runForEachHasPoolSelector(state) {
 			// Separator + label + pool radios ("No pool" + one per pool).
 			height += 1 + 1 + (1 + len(state.RunForEachPools))
@@ -75,11 +76,11 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 			height = 5
 		}
 		if mkdirHasActions(state) {
-			// Separator + 3 radio rows added above the buttons separator.
-			height += 1 + mkdirActionRowCount
+			// Separator + 3 radio rows + blank row above the shared button strip.
+			height += 1 + mkdirActionRowCount + 1
 		}
 		if renameHasFocusCheckbox(state) {
-			height += 1 + renameFocusCheckboxRowCount
+			height += 1 + renameFocusCheckboxRowCount + 1
 		}
 	}
 	if height > layout.Height-2 {
@@ -144,9 +145,10 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, c
 		}
 	}
 
-	// Draw buttons at the bottom.
+	// Draw buttons at the bottom. Separator ends on buttonY-2; buttonY-1 is the
+	// mandatory surface-only blank row (a separator is not that row).
 	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
 	if state.DialogType == FileDialogDelete {
 		drawDeleteButtons(screen, rect, buttonY, state, styles)
 	} else {
@@ -158,7 +160,7 @@ func renameToolActive(state FileDialogState) bool {
 	return FileDialogHasRenamePhase(state.DialogType) && state.RenamePhase != RenamePhaseMain
 }
 
-func renameToolDialogHeight() int { return 9 }
+func renameToolDialogHeight() int { return 10 }
 
 func fileDialogOuterTitle(state FileDialogState) string {
 	if FileDialogHasRenamePhase(state.DialogType) {

@@ -45,10 +45,10 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 	case listH < 4:
 		listH = 4
 	}
-	height := 6 + listH
+	height := 7 + listH
 	if height > layout.Height-2 {
 		height = layout.Height - 2
-		listH = height - 6
+		listH = height - 7
 		if listH < 4 {
 			return
 		}

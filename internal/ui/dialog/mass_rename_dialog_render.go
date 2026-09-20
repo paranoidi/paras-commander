@@ -66,7 +66,7 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	// 4 radios + options checkbox row + sep before the fields section (always sized as if
 	// Simple/Regex regardless of the actual mode, per the doc comment above).
 	fixed := 4 + 1 + 1 + massRenameFieldsSectionRows(state)
-	height := 1 + fixed + vp + 3 // top pad + body + sep-above-buttons + buttons row + bottom border
+	height := 1 + fixed + vp + 4 // top pad + body + sep + blank + buttons row + bottom border
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
 	}
@@ -81,9 +81,9 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 // Used only to pick how tall to make the dialog before its final height is known; not accurate
 // enough for scroll paging or the scrollbar — see MassRenamePreviewViewportRows for that.
 func massRenameSizingMaxPreviewRows(layoutHeight int) int {
-	// 1 top pad + (4 radios + options row + sep + 2 fields x2 rows + sep) + sep-above-buttons +
+	// 1 top pad + (4 radios + options row + sep + 2 fields x2 rows + sep) + sep + blank +
 	// buttons row + bottom border.
-	maxBody := layoutHeight - 15
+	maxBody := layoutHeight - 16
 	if maxBody < 3 {
 		maxBody = 3
 	}
@@ -138,9 +138,9 @@ func massRenameFixedRows(state FileDialogState) int {
 // massRenamePreviewViewportRowsForHeight returns the preview row count visible in a mass
 // rename dialog of dialogHeight for state — the exact geometry drawMassRenameDialog paints.
 func massRenamePreviewViewportRowsForHeight(dialogHeight int, state FileDialogState) int {
-	// 4 = top pad (1) + sep-above-buttons + buttons row + bottom border (3), mirroring
-	// massRenameDialogHeight's "1 + fixed + vp + 3" (dialogHeight already bakes in fixed).
-	vp := dialogHeight - 4 - massRenameFixedRows(state)
+	// 5 = top pad (1) + sep + blank + buttons row + bottom border (4), mirroring
+	// massRenameDialogHeight's "1 + fixed + vp + 4" (dialogHeight already bakes in fixed).
+	vp := dialogHeight - 5 - massRenameFixedRows(state)
 	if vp < 1 {
 		vp = 1
 	}

@@ -20,7 +20,7 @@ func runForEachHistoryPickerDialogHeight(layoutHeight int) int {
 	case listH < 4:
 		listH = 4
 	}
-	height := 6 + listH
+	height := 7 + listH
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
 	}
@@ -56,11 +56,11 @@ func drawRunForEachHistoryPickerContent(screen tcell.Screen, rect Rect, st RunFo
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 
-	vp := innerBottom - y - 1 // row innerBottom-1 is the shared separator above the button row
+	vp := innerBottom - y - 2 // reserve separator (innerBottom-2) and blank (innerBottom-1) above buttons
 	if vp < 1 {
 		vp = 1
 	}
-	for row := 0; row < vp && y < innerBottom; row++ {
+	for row := 0; row < vp && y < innerBottom-2; row++ {
 		idxInRank := st.ListScroll + row
 		baseStyle := styles.DialogText.Background(dbg)
 		line := ""
