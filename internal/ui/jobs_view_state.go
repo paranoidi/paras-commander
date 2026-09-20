@@ -57,33 +57,42 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 	return entries
 }
 
-// EnsureSelectionVisible clamps the selected job row and scroll offset.
-func (s *JobsViewState) EnsureSelectionVisible(total int, visibleRows int) {
+func ensureSelectionVisible(selected *int, listScroll *int, total int, visibleRows int) {
 	if total == 0 {
-		s.Selected = 0
-		s.ListScroll = 0
+		*selected = 0
+		*listScroll = 0
 		return
 	}
-	if s.Selected >= total {
-		s.Selected = total - 1
+	if *selected >= total {
+		*selected = total - 1
 	}
-	if s.Selected < 0 {
-		s.Selected = 0
+	if *selected < 0 {
+		*selected = 0
 	}
 	if visibleRows <= 0 {
 		return
 	}
-	if s.Selected < s.ListScroll {
-		s.ListScroll = s.Selected
+	if *selected < *listScroll {
+		*listScroll = *selected
 	}
-	if s.Selected >= s.ListScroll+visibleRows {
-		s.ListScroll = s.Selected - visibleRows + 1
+	if *selected >= *listScroll+visibleRows {
+		*listScroll = *selected - visibleRows + 1
 	}
 	maxScroll := max(0, total-visibleRows)
-	if s.ListScroll > maxScroll {
-		s.ListScroll = maxScroll
+	if *listScroll > maxScroll {
+		*listScroll = maxScroll
 	}
-	if s.ListScroll < 0 {
-		s.ListScroll = 0
+	if *listScroll < 0 {
+		*listScroll = 0
 	}
+}
+
+// EnsureSelectionVisible clamps the selected job row and scroll offset.
+func (s *JobsViewState) EnsureSelectionVisible(total int, visibleRows int) {
+	ensureSelectionVisible(&s.Selected, &s.ListScroll, total, visibleRows)
+}
+
+// EnsureSelectionVisible clamps the selected compare row and scroll offset.
+func (s *CompareViewState) EnsureSelectionVisible(total int, visibleRows int) {
+	ensureSelectionVisible(&s.Selected, &s.ListScroll, total, visibleRows)
 }

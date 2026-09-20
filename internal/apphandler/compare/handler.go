@@ -239,36 +239,7 @@ func (h *Handler) EnsureSelectionVisible(visibleRows int) {
 }
 
 func (h *Handler) ensureSelectionVisible(visibleRows int) {
-	rows := h.FilteredRows()
-	n := len(rows)
-	st := &h.model.CompareView
-	if n == 0 {
-		st.Selected = 0
-		st.ListScroll = 0
-		return
-	}
-	if st.Selected < 0 {
-		st.Selected = 0
-	}
-	if st.Selected >= n {
-		st.Selected = n - 1
-	}
-	if visibleRows <= 0 {
-		return
-	}
-	if st.ListScroll > st.Selected {
-		st.ListScroll = st.Selected
-	}
-	if st.Selected >= st.ListScroll+visibleRows {
-		st.ListScroll = st.Selected - visibleRows + 1
-	}
-	maxScroll := max(0, n-visibleRows)
-	if st.ListScroll > maxScroll {
-		st.ListScroll = maxScroll
-	}
-	if st.ListScroll < 0 {
-		st.ListScroll = 0
-	}
+	h.model.CompareView.EnsureSelectionVisible(len(h.FilteredRows()), visibleRows)
 }
 
 // MoveColumnFocus shifts primary/secondary column focus (sticky across row navigation).

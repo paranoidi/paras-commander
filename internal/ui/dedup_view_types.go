@@ -429,33 +429,7 @@ func DedupNextDirRowIndex(rows []DedupRow, from int) int {
 
 // EnsureSelectionVisible clamps the pane's selected row and scroll offset.
 func (p *DedupPane) EnsureSelectionVisible(total int, visibleRows int) {
-	if total == 0 {
-		p.Selected = 0
-		p.ListScroll = 0
-		return
-	}
-	if p.Selected >= total {
-		p.Selected = total - 1
-	}
-	if p.Selected < 0 {
-		p.Selected = 0
-	}
-	if visibleRows <= 0 {
-		return
-	}
-	if p.Selected < p.ListScroll {
-		p.ListScroll = p.Selected
-	}
-	if p.Selected >= p.ListScroll+visibleRows {
-		p.ListScroll = p.Selected - visibleRows + 1
-	}
-	maxScroll := max(0, total-visibleRows)
-	if p.ListScroll > maxScroll {
-		p.ListScroll = maxScroll
-	}
-	if p.ListScroll < 0 {
-		p.ListScroll = 0
-	}
+	ensureSelectionVisible(&p.Selected, &p.ListScroll, total, visibleRows)
 }
 
 // DedupGroupFullyMarked reports whether every file in the group is marked for deletion.
