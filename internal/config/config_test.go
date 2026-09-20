@@ -11,6 +11,25 @@ import (
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 )
 
+func TestDefaultIdleSortDelayMSUsesBuiltinConstant(t *testing.T) {
+	if got := Default().DiskUsage.IdleSortDelayMS; got != DefaultDiskUsageIdleSortDelayMS {
+		t.Fatalf("IdleSortDelayMS = %d, want %d", got, DefaultDiskUsageIdleSortDelayMS)
+	}
+}
+
+func TestValidateNonPositiveIdleSortDelayMSUsesBuiltinConstant(t *testing.T) {
+	for _, v := range []int{0, -1} {
+		cfg := Default()
+		cfg.DiskUsage.IdleSortDelayMS = v
+		if err := cfg.Validate(); err != nil {
+			t.Fatalf("Validate(IdleSortDelayMS=%d): %v", v, err)
+		}
+		if cfg.DiskUsage.IdleSortDelayMS != DefaultDiskUsageIdleSortDelayMS {
+			t.Fatalf("IdleSortDelayMS = %d after Validate(%d), want %d", cfg.DiskUsage.IdleSortDelayMS, v, DefaultDiskUsageIdleSortDelayMS)
+		}
+	}
+}
+
 func TestDefaultDedupHashConfirmBytes(t *testing.T) {
 	if got := Default().Dedup.HashConfirmBytes; got != DefaultDedupHashConfirmBytes {
 		t.Fatalf("Dedup.HashConfirmBytes = %d, want %d", got, DefaultDedupHashConfirmBytes)

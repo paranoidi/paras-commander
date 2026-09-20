@@ -39,6 +39,11 @@ const (
 	// KeyRepeatDebounceMaxMS upper clamp for key_repeat_debounce_ms in Config.Validate.
 	KeyRepeatDebounceMaxMS = 10_000
 
+	// DefaultDiskUsageIdleSortDelayMS is how long the cursor must stay idle before the
+	// disk-usage idle re-sort runs. Non-positive [disk_usage].idle_sort_delay_ms values
+	// mean "use this default," not "disable."
+	DefaultDiskUsageIdleSortDelayMS = 500
+
 	// DefaultFSWalkInitialWorkers is the starting concurrent directory branches for find and disk-usage walks.
 	DefaultFSWalkInitialWorkers = 1
 	// DefaultFSWalkMaxWorkers caps adaptive walk concurrency for find and disk-usage walks.

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -211,7 +212,7 @@ func (a *App) armIdleDiskSortTimer(panelID int) {
 	}
 	delayMS := a.config.DiskUsage.IdleSortDelayMS
 	if delayMS <= 0 {
-		delayMS = 500
+		delayMS = config.DefaultDiskUsageIdleSortDelayMS
 	}
 	delay := time.Duration(delayMS) * time.Millisecond
 	epochSnap := ps.epoch

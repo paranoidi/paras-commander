@@ -590,7 +590,7 @@ func Default() Config {
 		},
 		DiskUsage: DiskUsageConfig{
 			IdleSizeSort:           true,
-			IdleSortDelayMS:        500,
+			IdleSortDelayMS:        DefaultDiskUsageIdleSortDelayMS,
 			DescendIntoMountPoints: false,
 		},
 		FSWalk: FSWalkConfig{
@@ -1025,7 +1025,7 @@ func (c *Config) validateGeneral(builtin *Config) {
 		c.DiskUsage.IdleSizeSort = true
 	}
 	if c.DiskUsage.IdleSortDelayMS <= 0 {
-		c.DiskUsage.IdleSortDelayMS = 500
+		c.DiskUsage.IdleSortDelayMS = DefaultDiskUsageIdleSortDelayMS
 	}
 	if c.Panels.RefreshIntervalMS < 0 {
 		c.Panels.RefreshIntervalMS = DefaultRefreshIntervalMS
