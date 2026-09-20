@@ -69,11 +69,10 @@ func (a *App) dropToShell() {
 		}
 		defer func() { _ = os.Chdir(prevWd) }()
 
-		runErr := dropToShellRunner(context.Background(), argv)
-		if a.config.Shell.SyncCwdOnReturn {
-			a.syncPanelCwdAfterShell()
-		}
-		return runErr
+		// One-shot shells are a child process; their cwd is not visible to the
+		// parent after exit. [shell].sync_cwd_on_return applies only to the
+		// persistent PTY session (see syncPanelFromSubshellCwd).
+		return dropToShellRunner(context.Background(), argv)
 	}); err != nil {
 		a.setErrorMessage("Shell", err)
 	}
@@ -86,14 +85,6 @@ func (a *App) shellArgv() ([]string, error) {
 		return cmdrun.ParseCommandArgv(cmdLine)
 	}
 	return shell.ShellArgv(shell.ResolveShell()), nil
-}
-
-func (a *App) syncPanelCwdAfterShell() {
-	shellWd, err := os.Getwd()
-	if err != nil {
-		return
-	}
-	a.syncActivePanelToDir(shellWd)
 }
 
 // syncActivePanelToDir navigates the active panel to shellWd unless it already shows it.
@@ -323,8 +314,8 @@ func (a *App) closeSubshell() {
 }
 
 // refreshAfterDropToShell re-lists the active panel's directory after returning from the shell,
-// in case files changed while the user was away. If syncPanelCwdAfterShell (above, when
-// SyncCwdOnReturn is on) already scheduled a navigation for this panel, State.Refresh is a no-op
+// in case files changed while the user was away. Persistent-shell cwd sync
+// (syncPanelFromSubshellCwd) may already have scheduled a navigation; State.Refresh is a no-op
 // while that's still in flight — see its doc comment.
 func (a *App) refreshAfterDropToShell() {
 	if a.model.ViewMode != ui.ViewBrowser {

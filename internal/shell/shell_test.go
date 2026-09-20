@@ -1,7 +1,9 @@
 package shell
 
 import (
+	"context"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -21,6 +23,24 @@ func TestResolveShellFallbackWithoutEnv(t *testing.T) {
 	}
 	if _, err := os.Stat(got); err != nil && got != defaultShell {
 		t.Fatalf("ResolveShell() = %q, not executable and not default", got)
+	}
+}
+
+func TestRunInteractiveChildCdDoesNotChangeParentCwd(t *testing.T) {
+	parent, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	other := t.TempDir()
+	if err := RunInteractive(context.Background(), []string{"sh", "-c", "cd -- " + other}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Clean(got) != filepath.Clean(parent) {
+		t.Fatalf("parent cwd = %q, want %q", got, parent)
 	}
 }
 

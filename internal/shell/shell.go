@@ -32,7 +32,9 @@ func ShellArgv(shell string) []string {
 }
 
 // RunInteractive runs argv with stdin/stdout/stderr attached to the terminal.
-// The process inherits the current working directory of the parent.
+// The process inherits the current working directory of the parent. The child's
+// cwd after it exits is not observable here — one-shot callers cannot implement
+// [shell].sync_cwd_on_return (that option is persistent-shell only).
 // A non-zero shell exit status is not reported as an error.
 func RunInteractive(ctx context.Context, argv []string) error {
 	if len(argv) == 0 {

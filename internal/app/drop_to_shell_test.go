@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/shell"
 )
 
 func TestDropToShellBlocksRemotePanel(t *testing.T) {
@@ -64,7 +65,39 @@ func TestDropToShellStartsInPanelDirectory(t *testing.T) {
 	}
 }
 
-func TestDropToShellSyncsPanelCwdOnReturn(t *testing.T) {
+func TestDropToShellOneShotIgnoresSyncCwdOnReturn(t *testing.T) {
+	root := t.TempDir()
+	panelDir := filepath.Join(root, "alpha")
+	otherDir := filepath.Join(root, "beta")
+	for _, d := range []string{panelDir, otherDir} {
+		if err := os.Mkdir(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root) // helper disables Shell.Persistent (one-shot path)
+	app.config.Shell.SyncCwdOnReturn = true
+	if err := app.model.Primary.Load(panelDir); err != nil {
+		t.Fatal(err)
+	}
+	applyNextInterruptEvent(t, app, screen) // async load, Primary enters alpha
+
+	// Real child: cd is invisible to the parent after exit. An in-process Chdir
+	// would fake a protocol that one-shot shells do not have.
+	app.config.Shell.Command = "sh -c 'cd -- " + otherDir + "'"
+	prev := dropToShellRunner
+	dropToShellRunner = func(ctx context.Context, argv []string) error {
+		return shell.RunInteractive(ctx, argv)
+	}
+	t.Cleanup(func() { dropToShellRunner = prev })
+
+	app.dropToShell()
+	if got := filepath.Clean(app.model.Primary.PathString()); got != panelDir {
+		t.Fatalf("panel path = %q, want unchanged %q (one-shot cannot observe child cwd)", got, panelDir)
+	}
+}
+
+func TestDropToShellOneShotIgnoresInProcessChdir(t *testing.T) {
 	root := t.TempDir()
 	panelDir := filepath.Join(root, "alpha")
 	otherDir := filepath.Join(root, "beta")
@@ -75,10 +108,11 @@ func TestDropToShellSyncsPanelCwdOnReturn(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
+	app.config.Shell.SyncCwdOnReturn = true
 	if err := app.model.Primary.Load(panelDir); err != nil {
 		t.Fatal(err)
 	}
-	applyNextInterruptEvent(t, app, screen) // async load, Primary enters alpha
+	applyNextInterruptEvent(t, app, screen)
 
 	prev := dropToShellRunner
 	dropToShellRunner = func(_ context.Context, _ []string) error {
@@ -87,9 +121,11 @@ func TestDropToShellSyncsPanelCwdOnReturn(t *testing.T) {
 	t.Cleanup(func() { dropToShellRunner = prev })
 
 	app.dropToShell()
-	applyNextInterruptEvent(t, app, screen) // async load, syncPanelCwdAfterShell navigates to otherDir
-	if got := filepath.Clean(app.model.Primary.PathString()); got != otherDir {
-		t.Fatalf("panel path = %q, want %q", got, otherDir)
+	if screen.HasPendingEvent() {
+		applyNextInterruptEvent(t, app, screen)
+	}
+	if got := filepath.Clean(app.model.Primary.PathString()); got != panelDir {
+		t.Fatalf("panel path = %q, want unchanged %q", got, panelDir)
 	}
 }
 
