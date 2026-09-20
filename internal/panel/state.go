@@ -1474,8 +1474,10 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 	sameDirReload := previousPath.Equal(listingLoc)
 	priorCursor := s.Cursor
 	priorTreeCursorID := ""
-	if s.ListLayout == ListLayoutTree && sameDirReload && priorCursor >= 0 && priorCursor < len(s.treeRows) {
-		priorTreeCursorID = s.treeRows[priorCursor].ID
+	if s.ListLayout == ListLayoutTree && sameDirReload {
+		if rawIdx, ok := s.rawIndexForCursor(); ok && rawIdx >= 0 && rawIdx < len(s.treeRows) {
+			priorTreeCursorID = s.treeRows[rawIdx].ID
+		}
 	}
 	priorScroll := s.ScrollOffset
 	wasCentered := false

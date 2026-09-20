@@ -1822,6 +1822,67 @@ func TestNavigateBackRestoresTreeExpandAllDepth(t *testing.T) {
 	}
 }
 
+// TestTreeRefreshKeepsFilteredCursorIdentity is the characterizing test for capturing
+// priorTreeCursorID from treeRows[displayIndex]: a filter that hides an earlier same-name
+// row makes Cursor a display index, so indexing treeRows with it restores the hidden path
+// (or a neighbor) instead of the visible cursor's path.
+func TestTreeRefreshKeepsFilteredCursorIdentity(t *testing.T) {
+	root := t.TempDir()
+	amber := filepath.Join(root, "amber.txt")
+	harbor := filepath.Join(root, "harbor.txt")
+	notes := filepath.Join(root, "notes.txt")
+	for _, path := range []string{amber, harbor, notes} {
+		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	state.SetEntryFilter(&EntryFilter{
+		ID:    "hide-amber",
+		Label: "hide amber",
+		Match: func(e localfs.Entry, _ *State) bool {
+			return e.Path != amber
+		},
+	})
+	state.selectVisibleEntryByPath(notes)
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Path != notes {
+		t.Fatalf("cursor before refresh = %+v ok=%v, want %q", entry, ok, notes)
+	}
+	raw, rawOK := state.rawIndexForCursor()
+	if !rawOK || raw == state.Cursor {
+		t.Fatalf("filter should make display cursor %d differ from raw index %d", state.Cursor, raw)
+	}
+	if state.Cursor >= len(state.treeRows) || state.treeRows[state.Cursor].ID == notes {
+		t.Fatalf("treeRows[displayCursor] must be a different path so the bug is observable")
+	}
+	priorScroll := state.ScrollOffset
+	priorCursor := state.Cursor
+
+	if err := state.Refresh(10); err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+
+	got, ok := state.CurrentEntry()
+	if !ok || got.Path != notes {
+		t.Fatalf("cursor after refresh = %q ok=%v, want %q (filtered display index must not pick treeRows[Cursor])", got.Path, ok, notes)
+	}
+	if state.Cursor != priorCursor {
+		t.Fatalf("display cursor = %d, want %d", state.Cursor, priorCursor)
+	}
+	if state.ScrollOffset != priorScroll {
+		t.Fatalf("ScrollOffset = %d, want %d", state.ScrollOffset, priorScroll)
+	}
+}
+
 // TestSameDirRefreshPreservesExpansionAndRefetchesChildren covers the same-directory-reload path
 // (periodic refresh, post-file-op reload): an expanded directory must stay expanded across a
 // refresh, and its children must be re-fetched from disk rather than served from the stale cache
