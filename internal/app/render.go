@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -14,12 +16,30 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
+// lastFullRenderToast is the Model.Message last committed by a full render, keyed by App.
+// Partial painters consult it so a shorter replacement cannot leave fragments of the
+// previous banner. Stored here because App's field list lives in a hub this batch cannot edit.
+var lastFullRenderToast sync.Map
+
+func (a *App) toastNeedsFullRender() bool {
+	last, _ := lastFullRenderToast.Load(a)
+	lastMsg, _ := last.(string)
+	return strings.TrimSpace(a.model.Message) != lastMsg
+}
+
+func (a *App) recordFullRenderToast() {
+	lastFullRenderToast.Store(a, strings.TrimSpace(a.model.Message))
+}
+
 // paintFindDialogOverlay repaints only the find dialog without redrawing panels or the footer.
 // Find-only paint is allowed only while Find is the top input layer; a higher overlay
 // (Group Select opened from Find, a message dialog, …) must go through a full render so
 // that layer stays on top.
 func (a *App) paintFindDialogOverlay() bool {
 	if !a.model.FindDialog.Open || a.inputMode() != InputModeFindDialog {
+		return false
+	}
+	if a.toastNeedsFullRender() {
 		return false
 	}
 	w, h := a.screen.Size()
@@ -39,6 +59,9 @@ func (a *App) paintFindDialogOverlay() bool {
 // callers fall back to a full render.
 func (a *App) paintFileDialogOverlay() bool {
 	if !a.model.FileDialog.Open {
+		return false
+	}
+	if a.toastNeedsFullRender() {
 		return false
 	}
 	w, h := a.screen.Size()
@@ -146,6 +169,10 @@ func (a *App) renderAfterAsyncApply(panelID int) {
 // renderBrowserListNavUpdate repaints panelID's file-list column and menu-bar permission tail
 // without redrawing the other panel (avoids disk-usage row work on the other column during scans).
 func (a *App) renderBrowserListNavUpdate(panelID int) {
+	if a.toastNeedsFullRender() {
+		a.render()
+		return
+	}
 	a.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	a.syncCursorNameHintNavCoalesceFlags()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
@@ -176,6 +203,9 @@ func (a *App) renderBrowserListNavUpdate(panelID int) {
 // without a full twin-panel render. Returns false when ui.Render is required instead.
 func (a *App) paintDiskUsageBrowserUpdate() bool {
 	if a.model.ViewMode != ui.ViewBrowser || a.panelOnlyPaintBlocked() {
+		return false
+	}
+	if a.toastNeedsFullRender() {
 		return false
 	}
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerVisible()
@@ -265,6 +295,7 @@ func (a *App) render() {
 // identical consecutive frames skip Show() to reduce redundant terminal traffic.
 // Terminal images are locked before Show and emitted after; a changed placement forces Show.
 func (a *App) emitScreenAfterFullRender() {
+	a.recordFullRenderToast()
 	plan := previewpanel.TakeFrameImage()
 	if a.imageOverlaySuppressed() {
 		plan = nil
