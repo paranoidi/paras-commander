@@ -2,8 +2,12 @@ package keymap
 
 import (
 	"bytes"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -1253,6 +1257,47 @@ func TestEncodeDefaultStubHeaderListsOverlayAllowedActions(t *testing.T) {
 				t.Errorf("stub header omits [%s] allowed action %q", spec.TableName, id)
 			}
 		}
+	}
+}
+
+func TestActionStringConstantsAreUnique(t *testing.T) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "actions.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parse actions.go: %v", err)
+	}
+	seen := map[string]string{}
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			vs, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, name := range vs.Names {
+				if i >= len(vs.Values) {
+					continue
+				}
+				lit, ok := vs.Values[i].(*ast.BasicLit)
+				if !ok || lit.Kind != token.STRING {
+					continue
+				}
+				id, err := strconv.Unquote(lit.Value)
+				if err != nil {
+					t.Fatalf("unquote %s: %v", name.Name, err)
+				}
+				if other, dup := seen[id]; dup {
+					t.Errorf("action ID %q is declared as both %s and %s", id, other, name.Name)
+				}
+				seen[id] = name.Name
+			}
+		}
+	}
+	if len(seen) == 0 {
+		t.Fatal("parsed no action string constants from actions.go")
 	}
 }
 

@@ -219,10 +219,6 @@ const (
 	ActionMessagesClear = "messages.clear"
 
 	// UI dialog controls (handled internally, not in keybindings.toml)
-	ActionUIConfirm   = "ui.confirm"
-	ActionUICancel    = "ui.cancel"
-	ActionUINextField = "ui.next-field"
-	ActionUIPrevField = "ui.prev-field"
 	ActionUILeft      = "ui.left"
 	ActionUIRight     = "ui.right"
 	ActionUIActivate  = "ui.activate"
