@@ -492,12 +492,12 @@ func (s *State) ApplyEvent(ev Event) {
 			j.RemovingSources = true
 		}
 	case EventCompleted:
-		s.finalizeJob(ev.JobID, StatusCompleted, "")
+		s.finalizeJob(ev.JobID, StatusCompleted, "", ev.DoneFiles, ev.DoneBytes)
 	case EventFailed:
-		s.finalizeJob(ev.JobID, StatusFailed, ev.Error)
+		s.finalizeJob(ev.JobID, StatusFailed, ev.Error, ev.DoneFiles, ev.DoneBytes)
 	case EventCanceled:
 		s.removeWaitingBlockerUnlocked(ev.JobID)
-		s.finalizeJob(ev.JobID, StatusCanceled, "")
+		s.finalizeJob(ev.JobID, StatusCanceled, "", ev.DoneFiles, ev.DoneBytes)
 	}
 }
 
@@ -505,10 +505,14 @@ func (s *State) ApplyEvent(ev Event) {
 // a terminal status, collapsing the shared "update active job + update finished copy" shape of
 // EventCompleted/EventFailed/EventCanceled. errMsg is only set for EventFailed (Completed and
 // Canceled pass ""); a non-empty errMsg overwrites the active job's error and fills the job
-// record's error only when still unset (first error wins).
-func (s *State) finalizeJob(jobID string, status Status, errMsg string) {
+// record's error only when still unset (first error wins). doneFiles/doneBytes are the
+// authoritative final totals from the terminal event and are applied with the status so a
+// dropped EventProgress cannot leave the job permanently incomplete.
+func (s *State) finalizeJob(jobID string, status Status, errMsg string, doneFiles int, doneBytes int64) {
 	if j := s.activeByIDUnlocked(jobID); j != nil {
 		j.Status = status
+		j.DoneFiles = doneFiles
+		j.DoneBytes = doneBytes
 		if errMsg != "" {
 			j.Error = errMsg
 		}
@@ -518,6 +522,8 @@ func (s *State) finalizeJob(jobID string, status Status, errMsg string) {
 	}
 	if j := s.findJobUnlocked(jobID); j != nil {
 		j.Status = status
+		j.DoneFiles = doneFiles
+		j.DoneBytes = doneBytes
 		j.PendingBlocker = nil
 		if errMsg != "" && j.Error == "" {
 			j.Error = errMsg
@@ -788,9 +794,19 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		Status: StatusRunning,
 	})
 
+	var lastDoneFiles int
+	var lastDoneBytes int64
+	emit := func(ev Event) {
+		if ev.Type == EventProgress {
+			lastDoneFiles = ev.DoneFiles
+			lastDoneBytes = ev.DoneBytes
+		}
+		s.emit(ev)
+	}
+
 	var transferErr error
 	if s.TransferFunc != nil {
-		transferErr = s.TransferFunc(jobCtx, job, s.emit, waitBlocker)
+		transferErr = s.TransferFunc(jobCtx, job, emit, waitBlocker)
 	}
 
 	cancel()
@@ -805,6 +821,8 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	default:
 		job.Status = StatusCompleted
 	}
+	job.DoneFiles = lastDoneFiles
+	job.DoneBytes = lastDoneBytes
 	job.FinishedAt = time.Now()
 
 	delete(s.cancelRun, job.ID)
@@ -823,23 +841,29 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	switch {
 	case errors.Is(transferErr, context.Canceled) || errors.Is(transferErr, ErrUserCanceled):
 		s.emit(Event{
-			Type:   EventCanceled,
-			JobID:  job.ID,
-			Status: StatusCanceled,
+			Type:      EventCanceled,
+			JobID:     job.ID,
+			Status:    StatusCanceled,
+			DoneFiles: lastDoneFiles,
+			DoneBytes: lastDoneBytes,
 		})
 	case transferErr != nil:
 		s.emit(Event{
-			Type:   EventFailed,
-			JobID:  job.ID,
-			Status: StatusFailed,
-			Error:  ops.RootFirstErrorText(transferErr),
-			Err:    transferErr,
+			Type:      EventFailed,
+			JobID:     job.ID,
+			Status:    StatusFailed,
+			DoneFiles: lastDoneFiles,
+			DoneBytes: lastDoneBytes,
+			Error:     ops.RootFirstErrorText(transferErr),
+			Err:       transferErr,
 		})
 	default:
 		s.emit(Event{
-			Type:   EventCompleted,
-			JobID:  job.ID,
-			Status: StatusCompleted,
+			Type:      EventCompleted,
+			JobID:     job.ID,
+			Status:    StatusCompleted,
+			DoneFiles: lastDoneFiles,
+			DoneBytes: lastDoneBytes,
 		})
 	}
 }

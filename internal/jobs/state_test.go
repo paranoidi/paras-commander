@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"runtime"
@@ -892,6 +893,123 @@ func TestEmitDropsProgressWhenChannelFull(t *testing.T) {
 	}
 	if len(s.events) != cap(s.events) {
 		t.Fatalf("channel len = %d, want full %d", len(s.events), cap(s.events))
+	}
+}
+
+func TestTerminalEventAppliesFinalTotalsAfterDroppedProgress(t *testing.T) {
+	t.Parallel()
+	s := NewState()
+	job := &Job{
+		ID:          "j1",
+		Type:        TypeCopy,
+		Status:      StatusQueued,
+		Sources:     pathloc.PathsForTest("/willow"),
+		Destination: pathloc.MustParse("/maple"),
+	}
+	s.AddJob(job)
+	<-s.Events() // drain EventEnqueued
+	s.ApplyEvent(Event{Type: EventStarted, JobID: job.ID})
+
+	const wantFiles = 42
+	const wantBytes int64 = 9999
+	for i := 0; i < cap(s.events); i++ {
+		s.emit(Event{Type: EventProgress, JobID: job.ID, Status: StatusRunning, DoneFiles: 1, DoneBytes: 10})
+	}
+
+	sent := make(chan struct{})
+	go func() {
+		s.emit(Event{Type: EventCompleted, JobID: job.ID, Status: StatusCompleted, DoneFiles: wantFiles, DoneBytes: wantBytes})
+		close(sent)
+	}()
+
+	deadline := time.After(3 * time.Second)
+	var sawCompleted bool
+	for !sawCompleted {
+		select {
+		case ev := <-s.Events():
+			s.ApplyEvent(ev)
+			if ev.Type == EventCompleted {
+				if ev.DoneFiles != wantFiles || ev.DoneBytes != wantBytes {
+					t.Fatalf("EventCompleted totals = %d/%d, want %d/%d", ev.DoneFiles, ev.DoneBytes, wantFiles, wantBytes)
+				}
+				sawCompleted = true
+			}
+		case <-deadline:
+			t.Fatal("timeout draining full event channel")
+		}
+	}
+	<-sent
+	for {
+		select {
+		case ev := <-s.Events():
+			s.ApplyEvent(ev)
+		default:
+			snap := s.Snapshot()
+			if len(snap) != 1 {
+				t.Fatalf("snapshot len = %d, want 1", len(snap))
+			}
+			if snap[0].Status != StatusCompleted {
+				t.Fatalf("status = %q, want %q", snap[0].Status, StatusCompleted)
+			}
+			if snap[0].DoneFiles != wantFiles {
+				t.Fatalf("DoneFiles = %d, want %d after dropped progress", snap[0].DoneFiles, wantFiles)
+			}
+			if snap[0].DoneBytes != wantBytes {
+				t.Fatalf("DoneBytes = %d, want %d after dropped progress", snap[0].DoneBytes, wantBytes)
+			}
+			return
+		}
+	}
+}
+
+func TestRunJobTerminalEventCarriesTotalsWhenProgressDropped(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	defer close(stop)
+
+	const wantFiles = 42
+	const wantBytes int64 = 9999
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		for i := 0; i < cap(s.events)+5; i++ {
+			emit(Event{Type: EventProgress, JobID: job.ID, Status: StatusRunning, DoneFiles: 1, DoneBytes: 10})
+		}
+		emit(Event{Type: EventProgress, JobID: job.ID, Status: StatusRunning, DoneFiles: wantFiles, DoneBytes: wantBytes})
+		return nil
+	})
+	s.StartWorker(stop)
+
+	job := &Job{ID: "j1", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/willow"), Destination: pathloc.MustParse("/maple")}
+	errCh := make(chan string, 1)
+	go func() {
+		deadline := time.After(5 * time.Second)
+		for {
+			select {
+			case ev := <-s.Events():
+				s.ApplyEvent(ev)
+				if ev.Type == EventCompleted && ev.JobID == job.ID {
+					if ev.DoneFiles != wantFiles || ev.DoneBytes != wantBytes {
+						errCh <- fmt.Sprintf("EventCompleted totals = %d/%d, want %d/%d", ev.DoneFiles, ev.DoneBytes, wantFiles, wantBytes)
+						return
+					}
+					errCh <- ""
+					return
+				}
+			case <-deadline:
+				errCh <- "timeout waiting for EventCompleted"
+				return
+			}
+		}
+	}()
+	s.AddJob(job)
+	if msg := <-errCh; msg != "" {
+		t.Fatal(msg)
+	}
+	snap := s.Snapshot()
+	if len(snap) != 1 {
+		t.Fatalf("snapshot len = %d, want 1", len(snap))
+	}
+	if snap[0].DoneFiles != wantFiles || snap[0].DoneBytes != wantBytes {
+		t.Fatalf("job totals = %d/%d, want %d/%d", snap[0].DoneFiles, snap[0].DoneBytes, wantFiles, wantBytes)
 	}
 }
 

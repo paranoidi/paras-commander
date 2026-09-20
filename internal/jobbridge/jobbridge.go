@@ -279,22 +279,22 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rat
 			})
 		}
 
-		// runTransfer executes tc and, on success, emits the final DoneFiles/DoneBytes tally
-		// through emit (like every other progress update in this function) rather than writing
-		// job fields directly: job.Status transitions and ApplyEvent-driven field writes are the
-		// app event loop's job, not the worker's — direct writes here would race the event loop
-		// reading the same job via AllJobs()/Snapshot().
+		// runTransfer executes tc and emits the final DoneFiles/DoneBytes tally through emit
+		// (like every other progress update in this function) rather than writing job fields
+		// directly: job.Status transitions and ApplyEvent-driven field writes are the app
+		// event loop's job, not the worker's — direct writes here would race the event loop
+		// reading the same job via AllJobs()/Snapshot(). The emit is still EventProgress
+		// (droppable when the UI channel is full); the worker copies this tally onto the
+		// non-droppable terminal event so a lost sample cannot freeze incomplete totals.
 		runTransfer := func(tc transferExecCtx) error {
 			doneFiles, doneBytes, err := executeJobByType(tc)
-			if err == nil {
-				emit(jobs.Event{
-					Type:      jobs.EventProgress,
-					JobID:     job.ID,
-					Status:    jobs.StatusRunning,
-					DoneFiles: doneFiles,
-					DoneBytes: doneBytes,
-				})
-			}
+			emit(jobs.Event{
+				Type:      jobs.EventProgress,
+				JobID:     job.ID,
+				Status:    jobs.StatusRunning,
+				DoneFiles: doneFiles,
+				DoneBytes: doneBytes,
+			})
 			return mapOpsCanceled(err)
 		}
 
