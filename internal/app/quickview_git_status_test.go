@@ -6,30 +6,16 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// TestQuickViewDirOverlayLoadsGitStatus is a regression test: populateQuickViewDirOverlay's
-// fresh-snapshot path (internal/apphandler/preview) used to build the overlay via panel.State.Load
-// without ever wiring ScheduleGitStatus, so GitColumnActive/GitPending were set but the async fetch
-// never dispatched and GitByPath stayed nil forever (state.go prepareGitColumn no-ops when
-// ScheduleGitStatus is nil).
+// TestQuickViewDirOverlayLoadsGitStatus checks that a Quick View directory overlay
+// on a path neither panel currently lists schedules its own git-status fetch through
+// ui.QuickViewOverlayPanel and paints the overlay's GitByPath, not a real panel's.
 func TestQuickViewDirOverlayLoadsGitStatus(t *testing.T) {
-	// BUG (pre-existing, exposed by making local navigation async): populateQuickViewDirOverlay's
-	// fresh-snapshot path (internal/apphandler/preview/preview.go, populateQuickViewDirOverlay's
-	// ov.Load(canonical) call around line 561) only hits when neither driver nor follower already
-	// lists the target directory (the ListingAtPath fast paths above it are skipped in that case).
-	// ov.ScheduleAsyncLoad is a verbatim copy of follower.ScheduleAsyncLoad
-	// (initQuickViewDirOverlayFromFollower), which closes over the *real* follower panelID. So
-	// ov.Load's async completion posts a panelAsyncLoadPayload tagged with the real follower's
-	// panelID, and applyPanelAsyncLoad (internal/app/panel_async_load.go) applies it onto the real
-	// follower panel.State, never onto ov — ov.GitColumnActive/GitPending/GitByPath (set inside
-	// ApplyListing/prepareGitColumn) are never touched, so the overlay's own git status never
-	// dispatches. Previously unreachable because ScheduleRemoteLoad only ever fired for sftp://
-	// paths, so this fresh-snapshot overlay path never aliased a real panel's async load locally.
-	t.Skip("quick-view overlay aliases the real panel's ScheduleAsyncLoad panelID on its fresh-snapshot path — needs its own identity in internal/apphandler/preview or internal/app/panel_async_load.go before this is reliable")
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not in PATH")
 	}
@@ -63,25 +49,14 @@ func TestQuickViewDirOverlayLoadsGitStatus(t *testing.T) {
 	if !app.model.QuickViewDirOverlayActive {
 		t.Fatal("quick view dir overlay should be active")
 	}
+	// Overlay listing and git status are both async under ui.QuickViewOverlayPanel; the
+	// primary panel's own cwd (also a Git work tree) schedules its own fetch alongside.
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		ov := app.model.QuickViewDirOverlay
+		return ov.GitColumnActive && !ov.GitPending
+	})
+
 	ov := &app.model.QuickViewDirOverlay
-	if !ov.GitColumnActive {
-		t.Fatal("overlay GitColumnActive = false, want true inside Git work tree")
-	}
-	if !ov.GitPending {
-		t.Fatal("overlay GitPending = false, want true before async status completes")
-	}
-
-	// The primary panel's own cwd (root, also a Git work tree) schedules its own async git
-	// status fetch alongside the overlay's, so drain interrupts until the overlay settles
-	// instead of assuming the overlay's event arrives first.
-	for i := 0; i < 10 && app.model.QuickViewDirOverlay.GitPending; i++ {
-		applyNextInterruptEvent(t, app, screen)
-	}
-
-	ov = &app.model.QuickViewDirOverlay
-	if ov.GitPending {
-		t.Fatal("overlay GitPending still true after draining async git status events")
-	}
 	cell, ok := ov.GitByPath[fresh]
 	if !ok {
 		t.Fatalf("overlay GitByPath missing entry for %q, got %v", fresh, ov.GitByPath)

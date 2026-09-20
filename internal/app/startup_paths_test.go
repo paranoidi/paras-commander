@@ -271,22 +271,6 @@ func TestStartPathsTwoDirectories(t *testing.T) {
 }
 
 func TestStartPathsFileThenDirectoryEnablesQuickViewOnPrimary(t *testing.T) {
-	// BUG (pre-existing, exposed by making local navigation async): the quick-view directory
-	// overlay's panel.State borrows follower.ScheduleAsyncLoad verbatim (see
-	// initQuickViewDirOverlayFromFollower in internal/apphandler/preview/preview.go), which
-	// closes over the *real* panel's panelID. Its own unrelated overlay load therefore bumps
-	// that real panel's a.panelAsyncLoadGen slot and posts a panelAsyncLoadPayload tagged with
-	// the real panelID, indistinguishable from a genuine navigation at applyPanelAsyncLoad. That
-	// can (a) supersede-and-drop the real navigation's own in-flight result, and/or (b) apply the
-	// overlay's fetched listing onto the real panel. Confirmed via instrumented run: with
-	// StartPaths={file, rightDir}, three panelAsyncLoadPayload events fire — the two real
-	// navigations plus a third aliased one (ViewportRows:0, Rollback:nil, SyncHistoryHead:false —
-	// the tell for an overlay-driven panel.State.Load, not a real NavigateTo) reusing the
-	// Secondary panel's generation slot to load Primary's own directory. Their relative arrival
-	// order is a real goroutine race, not just "drain one more event" — this was previously
-	// unreachable because ScheduleRemoteLoad only ever fired for sftp:// paths, so a local-only
-	// quick-view overlay never aliased a real panel's async load.
-	t.Skip("quick-view overlay aliases the real panel's ScheduleAsyncLoad generation/panelID — needs its own identity in internal/apphandler/preview or internal/app/panel_async_load.go before this is reliable")
 	root := t.TempDir()
 	leftDir := filepath.Join(root, "canyon")
 	rightDir := filepath.Join(root, "delta")
@@ -334,10 +318,6 @@ func TestStartPathsFileThenDirectoryEnablesQuickViewOnPrimary(t *testing.T) {
 }
 
 func TestStartPathsDirectoryThenFileEnablesQuickViewOnSecondary(t *testing.T) {
-	// BUG: same quick-view overlay ScheduleAsyncLoad aliasing race as
-	// TestStartPathsFileThenDirectoryEnablesQuickViewOnPrimary above, mirrored onto Primary's
-	// generation slot this time. See that test's comment for the full explanation.
-	t.Skip("quick-view overlay aliases the real panel's ScheduleAsyncLoad generation/panelID — needs its own identity in internal/apphandler/preview or internal/app/panel_async_load.go before this is reliable")
 	root := t.TempDir()
 	leftDir := filepath.Join(root, "echo")
 	rightDir := filepath.Join(root, "fjord")
