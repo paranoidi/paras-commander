@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -117,22 +118,65 @@ func (h *Handler) HandleExecFailed(d ExecFailedPayload) {
 	h.host.AppendTransientMessageLines(banner, lines, urgency)
 }
 
-// loadMetaFile resolves and loads the meta.toml for the given panel path.
-// Returns nil when no file is found (not an error). Warnings are shown as transient messages.
-func (h *Handler) loadMetaFile(panelID int) *metacmds.MetaFile {
-	path, warns := metacmds.ResolveMetaTOML(h.config, h.model.UserHomeDir, h.configDir, h.host.PanelByID(panelID).PathString())
-	for _, w := range warns {
-		h.host.SetTransientMessage(w, ui.MessageUrgencyWarn)
-	}
+type loadedMetaFile struct {
+	MF      *metacmds.MetaFile
+	Warns   []string
+	LoadErr string
+}
+
+func (h *Handler) fetchMetaFile(panelPath string) loadedMetaFile {
+	path, warns := metacmds.ResolveMetaTOML(h.config, h.model.UserHomeDir, h.configDir, panelPath)
 	if path == "" {
-		return nil
+		return loadedMetaFile{Warns: warns}
 	}
 	mf, err := metacmds.LoadFile(path)
 	if err != nil {
-		h.host.SetTransientMessage("meta: "+err.Error(), ui.MessageUrgencyCritical)
+		return loadedMetaFile{Warns: warns, LoadErr: "meta: " + err.Error()}
+	}
+	return loadedMetaFile{MF: mf, Warns: warns}
+}
+
+// loadMetaFile resolves and loads the meta.toml for the given panel path on the caller
+// goroutine. Used by dialog/editor paths that already released the terminal.
+// Returns nil when no file is found (not an error). Warnings are shown as transient messages.
+func (h *Handler) loadMetaFile(panelID int) *metacmds.MetaFile {
+	res := h.fetchMetaFile(h.host.PanelByID(panelID).PathString())
+	for _, w := range res.Warns {
+		h.host.SetTransientMessage(w, ui.MessageUrgencyWarn)
+	}
+	if res.LoadErr != "" {
+		h.host.SetTransientMessage(res.LoadErr, ui.MessageUrgencyCritical)
 		return nil
 	}
-	return mf
+	return res.MF
+}
+
+func (h *Handler) startAsyncLoad(panelID int, activeNames []string) {
+	h.loadGen[panelID]++
+	loadGen := h.loadGen[panelID]
+	h.loadPending[panelID] = true
+	names := append([]string(nil), activeNames...)
+	cur := filepath.Clean(h.host.PanelByID(panelID).PathString())
+	go func() {
+		res := h.fetchMetaFile(cur)
+		if h.screen == nil {
+			return
+		}
+		_ = h.screen.PostEvent(tcell.NewEventInterrupt(LoadPayload{
+			PanelID:     panelID,
+			LoadGen:     loadGen,
+			Path:        cur,
+			MF:          res.MF,
+			ActiveNames: names,
+			Warns:       res.Warns,
+			LoadErr:     res.LoadErr,
+		}))
+	}()
+}
+
+func (h *Handler) invalidatePendingLoads(panelID int) {
+	h.loadGen[panelID]++
+	h.loadPending[panelID] = false
 }
 
 func (h *Handler) ensureGlobalStub() (path string, err error) {
@@ -156,6 +200,7 @@ func (h *Handler) rerunSinglePanel(panelID int) {
 	if len(h.activeEntries[panelID]) == 0 {
 		return
 	}
+	h.invalidatePendingLoads(panelID)
 	mf := h.loadMetaFile(panelID)
 	if mf == nil {
 		return
@@ -195,13 +240,16 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 	if cols[0].Results == nil {
 		return
 	}
+	if h.loadPending[panelID] {
+		return
+	}
 	p := h.host.PanelByID(panelID)
 	if p == nil {
 		return
 	}
 	for _, e := range p.Entries {
 		if _, ok := cols[0].Results[e.Path]; !ok {
-			h.rerunSinglePanel(panelID)
+			h.startAsyncLoad(panelID, h.activeEntries[panelID])
 			return
 		}
 	}
@@ -307,6 +355,7 @@ func (h *Handler) ActivateSelection() {
 	}
 
 	if len(activeNames) == 0 {
+		h.invalidatePendingLoads(panelID)
 		if h.cancel[panelID] != nil {
 			h.cancel[panelID]()
 			h.cancel[panelID] = nil
@@ -317,32 +366,31 @@ func (h *Handler) ActivateSelection() {
 		return
 	}
 
-	mf := h.loadMetaFile(panelID)
-	if mf == nil {
-		return
-	}
-
 	maxCols := config.DefaultMetaMaxActiveColumns
 	if len(activeNames) > maxCols {
 		h.host.SetTransientMessage(fmt.Sprintf("meta: showing first %d of %d selected columns", maxCols, len(activeNames)), ui.MessageUrgencyWarn)
 		activeNames = activeNames[:maxCols]
 	}
 
-	sorted := metacmds.SortEntriesForDisplay(activeNames, mf)
-	names := make([]string, len(sorted))
-	cols := make([]ui.MetaColumnState, len(sorted))
-	for i, e := range sorted {
-		names[i] = e.Name
+	if h.cancel[panelID] != nil {
+		h.cancel[panelID]()
+		h.cancel[panelID] = nil
+	}
+	h.runGen[panelID]++
+
+	names := append([]string(nil), activeNames...)
+	cols := make([]ui.MetaColumnState, len(names))
+	for i, name := range names {
 		cols[i] = ui.MetaColumnState{
-			EntryName:   e.Name,
-			ColumnTitle: e.Column,
-			Order:       e.Order,
+			EntryName:   name,
+			ColumnTitle: name,
 			Results:     nil,
 		}
 	}
 	h.activeEntries[panelID] = names
 	h.navPath[panelID] = filepath.Clean(h.host.PanelByID(panelID).PathString())
-	h.runForPanel(panelID, sorted, cols)
+	h.model.MetaResults[panelID] = cols
+	h.startAsyncLoad(panelID, names)
 }
 
 // HandlePanelDirChanged re-runs active meta commands when the panel navigates to a new directory.
@@ -359,32 +407,7 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 		return
 	}
 	h.navPath[panelID] = cur
-
-	h.loadGen[panelID]++
-	loadGen := h.loadGen[panelID]
-	activeNames := append([]string(nil), h.activeEntries[panelID]...)
-	cfg := h.config
-	homeDir := h.model.UserHomeDir
-	configDir := h.configDir
-
-	go func() {
-		path, warns := metacmds.ResolveMetaTOML(cfg, homeDir, configDir, cur)
-		p := LoadPayload{
-			PanelID:     panelID,
-			LoadGen:     loadGen,
-			ActiveNames: activeNames,
-			Warns:       warns,
-		}
-		if path != "" {
-			mf, err := metacmds.LoadFile(path)
-			if err != nil {
-				p.LoadErr = "meta: " + err.Error()
-			} else {
-				p.MF = mf
-			}
-		}
-		_ = h.screen.PostEvent(tcell.NewEventInterrupt(p))
-	}()
+	h.startAsyncLoad(panelID, h.activeEntries[panelID])
 }
 
 // HandleLoad is called on the UI goroutine when an async meta file load completes.
@@ -393,6 +416,7 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 	if d.LoadGen != h.loadGen[d.PanelID] {
 		return
 	}
+	h.loadPending[d.PanelID] = false
 	for _, w := range d.Warns {
 		h.host.SetTransientMessage(w, ui.MessageUrgencyWarn)
 	}
@@ -401,6 +425,16 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 		return
 	}
 	if d.MF == nil {
+		return
+	}
+	panel := h.host.PanelByID(d.PanelID)
+	if panel == nil {
+		return
+	}
+	if d.Path != "" && filepath.Clean(d.Path) != filepath.Clean(panel.PathString()) {
+		return
+	}
+	if !slices.Equal(d.ActiveNames, h.activeEntries[d.PanelID]) {
 		return
 	}
 	sorted := metacmds.SortEntriesForDisplay(d.ActiveNames, d.MF)

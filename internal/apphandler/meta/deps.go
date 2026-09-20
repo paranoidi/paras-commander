@@ -45,6 +45,8 @@ type Handler struct {
 	// loadGen is a monotonically increasing generation counter per panel for async meta file loads.
 	// Stale loads (navigated away before load finished) are discarded by the wake handler.
 	loadGen [2]uint64
+	// loadPending is true while an async meta.toml load is in flight for that panel.
+	loadPending [2]bool
 	// renderDebounce coalesces meta result renders at ~60 fps. The timer callback only
 	// posts RenderFlushPayload; HandleRenderFlush consumes it on the event loop.
 	renderDebounce sched.Debouncer
@@ -84,6 +86,7 @@ type RenderFlushPayload struct{}
 type LoadPayload struct {
 	PanelID     int
 	LoadGen     uint64
+	Path        string // panel path when the load started
 	MF          *metacmds.MetaFile
 	ActiveNames []string
 	Warns       []string
