@@ -642,15 +642,6 @@ func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 			},
 		},
 		{
-			name:    "path filter",
-			content: "[filter]\nmatch_path_segments = true\n",
-			testFn: func(t *testing.T, cfg Config) {
-				if cfg.Filter.MatchPathSegments {
-					t.Fatal("MatchPathSegments = true, want clamped to false")
-				}
-			},
-		},
-		{
 			name:    "filter cycle_matches invalid",
 			content: "[filter]\ncycle_matches = \"nope\"\n",
 			testFn: func(t *testing.T, cfg Config) {
@@ -716,6 +707,27 @@ func TestDefaultPathsUsesXDGConfigHome(t *testing.T) {
 	}
 	if paths.ConfigFile != filepath.Join(wantDir, fileName) {
 		t.Fatalf("ConfigFile = %q, want config.toml under config dir", paths.ConfigFile)
+	}
+}
+
+func TestEncodeDefaultStubOmitsMatchPathSegments(t *testing.T) {
+	var buffer bytes.Buffer
+	if err := EncodeDefaultStub(&buffer); err != nil {
+		t.Fatalf("EncodeDefaultStub() error = %v", err)
+	}
+	if strings.Contains(buffer.String(), "match_path_segments") {
+		t.Fatal("default stub still mentions unused match_path_segments")
+	}
+}
+
+func TestLoadFromPathsRejectsMatchPathSegments(t *testing.T) {
+	path := writeConfig(t, "[filter]\nmatch_path_segments = true\n")
+	_, err := LoadFromPaths(Paths{ConfigFile: path})
+	if err == nil {
+		t.Fatal("LoadFromPaths() error = nil, want unknown field error")
+	}
+	if !strings.Contains(err.Error(), "unknown field") {
+		t.Fatalf("LoadFromPaths() error = %v, want unknown field", err)
 	}
 }
 

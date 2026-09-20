@@ -208,7 +208,6 @@ Panel quick-filter behavior.
 |---|---|---|---|
 | `mode` | string | `"fuzzy"` | Quick-filter matching mode. Currently only `"fuzzy"` is supported. |
 | `syntax` | string | `"subset-fzf"` | Quick-filter query syntax. Currently only `"subset-fzf"` is supported. |
-| `match_path_segments` | bool | `false` | Match filter terms against full path segments instead of just the file name. |
 | `cycle_matches` | string | `"visual"` | How Up/Down move among quick-filter matches: `"visual"` (panel row order) or `"ranked"` (best fuzzy match first). |
 | `case_insensitive` | bool | `true` | Match panel quick-filter and find queries case-insensitively. |
 

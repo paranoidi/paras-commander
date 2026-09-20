@@ -463,9 +463,8 @@ type UIStatusConfig struct {
 }
 
 type FilterConfig struct {
-	Mode              string `toml:"mode"`
-	Syntax            string `toml:"syntax"`
-	MatchPathSegments bool   `toml:"match_path_segments"`
+	Mode   string `toml:"mode"`
+	Syntax string `toml:"syntax"`
 	// CycleMatches controls Up/Down among quick-filter matches: "visual" (default) or "ranked".
 	CycleMatches string `toml:"cycle_matches"`
 	// CaseInsensitive controls case sensitivity of the quick filter and find dialog.
@@ -640,11 +639,10 @@ func Default() Config {
 			},
 		},
 		Filter: FilterConfig{
-			Mode:              FilterModeFuzzy,
-			Syntax:            FilterSyntaxFZF,
-			MatchPathSegments: false,
-			CycleMatches:      FilterCycleMatchesVisual,
-			CaseInsensitive:   true,
+			Mode:            FilterModeFuzzy,
+			Syntax:          FilterSyntaxFZF,
+			CycleMatches:    FilterCycleMatchesVisual,
+			CaseInsensitive: true,
 		},
 		Jobs: JobsConfig{
 			ShowFinished:                true,
@@ -1178,9 +1176,6 @@ func (c *Config) validateFilter(builtin *Config) {
 	}
 	if c.Filter.Syntax != FilterSyntaxFZF {
 		c.Filter.Syntax = builtin.Filter.Syntax
-	}
-	if c.Filter.MatchPathSegments {
-		c.Filter.MatchPathSegments = builtin.Filter.MatchPathSegments
 	}
 	cm := strings.ToLower(strings.TrimSpace(c.Filter.CycleMatches))
 	switch cm {
