@@ -11,8 +11,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-// JobMarkFunc returns a job-queue icon, status, and read/write role for an absolute path, if any.
-type JobMarkFunc func(absPath string) (icon rune, status string, write bool, ok bool)
+// JobMarkFunc returns the job suffix icons (<job><queued><operation>) and the matched job's
+// status for an absolute path; a zero JobSuffix means no unfinished job touches it.
+type JobMarkFunc func(absPath string) (job panellist.JobSuffix, status string)
 
 // NewFileMarkFunc reports the new-file suffix tier for an entry.
 type NewFileMarkFunc func(entry localfs.Entry) panellist.NewFileMarkTier
@@ -209,15 +210,10 @@ func drawCarouselColumn(cp carouselColumnParams) {
 			}
 			return style
 		}
-		var jobIcon rune
+		var jobSuffix panellist.JobSuffix
 		var jobStatus string
-		var jobWrite bool
 		if p.JobMark != nil {
-			if g, st, write, ok := p.JobMark(entry.Path); ok {
-				jobIcon = g
-				jobStatus = st
-				jobWrite = write
-			}
+			jobSuffix, jobStatus = p.JobMark(entry.Path)
 		}
 		subtree := entry.Type == localfs.EntryDirectory && selState.HasSelectionInSubtree(entry.Path)
 		newFileTier := panellist.NewFileMarkNone
@@ -228,7 +224,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		if c.Active && p.RenameMark != nil {
 			renameMark = p.RenameMark(entry)
 		}
-		rowSuffix := panellist.NewRowSuffix(jobIcon, newFileTier, renameMark, subtree, jobWrite)
+		rowSuffix := panellist.NewRowSuffix(jobSuffix, newFileTier, renameMark, subtree)
 		var diskSrc DiskUsageSource
 		if p.DiskUsage.Active {
 			diskSrc = p.DiskUsage.Source

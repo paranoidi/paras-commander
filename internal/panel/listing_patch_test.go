@@ -5,83 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
-	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
-
-func TestRemoveEntriesByPathDropsRowsAndBumpsEpoch(t *testing.T) {
-	dir := t.TempDir()
-	keep := filepath.Join(dir, "harbor.txt")
-	gone := filepath.Join(dir, "willow.txt")
-	if err := os.WriteFile(keep, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(gone, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	state, err := New(dir)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	epoch := state.ListingEpoch
-	if !state.SelectVisibleEntry("willow.txt") {
-		t.Fatal("select willow")
-	}
-
-	if !state.RemoveEntriesByPath([]string{gone}, 10) {
-		t.Fatal("RemoveEntriesByPath = false, want true")
-	}
-	if state.ListingEpoch <= epoch {
-		t.Fatalf("ListingEpoch = %d, want > %d", state.ListingEpoch, epoch)
-	}
-	if state.SelectVisibleEntry("willow.txt") {
-		t.Fatal("willow should be gone")
-	}
-	entry, ok := state.CurrentEntry()
-	if !ok || entry.Name != "harbor.txt" {
-		name := ""
-		if ok {
-			name = entry.Name
-		}
-		t.Fatalf("after removing focused row, cursor entry = %q, want harbor.txt", name)
-	}
-}
-
-func TestRemoveEntriesByPathKeepsFocusedEntryByPath(t *testing.T) {
-	dir := t.TempDir()
-	// Lexical order: alpha, meadow, zebra — focus meadow, remove alpha (above) and zebra (below).
-	names := []string{"alpha.txt", "meadow.txt", "zebra.txt"}
-	paths := make([]string, len(names))
-	for i, name := range names {
-		p := filepath.Join(dir, name)
-		paths[i] = p
-		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	state, err := New(dir)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	if !state.SelectVisibleEntry("meadow.txt") {
-		t.Fatal("select meadow")
-	}
-	priorIdx := state.Cursor
-
-	if !state.RemoveEntriesByPath([]string{paths[0], paths[2]}, 10) {
-		t.Fatal("RemoveEntriesByPath = false, want true")
-	}
-	entry, ok := state.CurrentEntry()
-	if !ok || entry.Name != "meadow.txt" {
-		name := ""
-		if ok {
-			name = entry.Name
-		}
-		t.Fatalf("cursor entry = %q (idx %d), want meadow.txt (had idx %d before prune)", name, state.Cursor, priorIdx)
-	}
-}
 
 func TestInsertEntryOnlyWhenParentMatches(t *testing.T) {
 	dir := t.TempDir()
@@ -199,33 +125,6 @@ func TestRenameEntryUpdatesPathAndSelection(t *testing.T) {
 	}
 }
 
-func TestStaleEpochPreventsResurrectionContract(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "harbor.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "willow.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	state, err := New(dir)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	snapEpoch := state.ListingEpoch
-	gone := filepath.Join(dir, "willow.txt")
-	_ = state.RemoveEntriesByPath([]string{gone}, 10)
-	if state.ListingEpoch == snapEpoch {
-		t.Fatal("epoch should bump on remove")
-	}
-	// App layer must refuse ApplyListing when req.ListingEpoch != state.ListingEpoch.
-	if snapEpoch == state.ListingEpoch {
-		t.Fatal("stale snapshot epoch should not match after prune")
-	}
-	if state.SelectVisibleEntry("willow.txt") {
-		t.Fatal("willow should stay pruned until a matching-epoch listing applies")
-	}
-}
-
 func TestRefreshSupersedesSameDirPendingLoad(t *testing.T) {
 	dir := t.TempDir()
 	state := &State{Path: pathloc.MustParse(dir)}
@@ -274,38 +173,5 @@ func TestRefreshDoesNotClobberCrossDirNavigation(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("calls = %d, want 1 (cross-dir pending must not schedule refresh)", calls)
-	}
-}
-
-// TestRemoveEntriesByPathThenStaleReloadDoesNotMarkReappearanceAsNew reproduces the delete/move
-// race: RemoveEntriesByPath prunes a row optimistically when the job is enqueued, but a reload
-// that lands before the physical filesystem op completes still sees the file on disk. That
-// reappearance must not be flagged as newly created (it would show a spurious new-file icon
-// alongside the in-flight job's own icon).
-func TestRemoveEntriesByPathThenStaleReloadDoesNotMarkReappearanceAsNew(t *testing.T) {
-	dir := t.TempDir()
-	gone := filepath.Join(dir, "departing.txt")
-	if err := os.WriteFile(gone, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	state, err := New(dir)
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-
-	if !state.RemoveEntriesByPath([]string{gone}, 10) {
-		t.Fatal("RemoveEntriesByPath = false, want true")
-	}
-
-	// Simulate a stale periodic-refresh read landing before the delete/move job's real op
-	// completes: the file is still physically present.
-	staleListing := []fsbackend.Entry{{Name: "departing.txt", Type: fsbackend.EntryFile}}
-	if _, err := state.ApplyPeriodicRefresh(pathloc.MustParse(dir), staleListing, 10, nil); err != nil {
-		t.Fatalf("ApplyPeriodicRefresh: %v", err)
-	}
-
-	departing := localfs.Entry{Name: "departing.txt", Type: localfs.EntryFile}
-	if got := state.NewFileMarkTier(departing); got != panellist.NewFileMarkNone {
-		t.Fatalf("tier = %v, want none (reappearance during in-flight removal must not be new)", got)
 	}
 }

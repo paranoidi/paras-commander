@@ -23,15 +23,29 @@ const (
 	NewFileMarkPrevious
 )
 
-// RowSuffix selects which trailing indicators to reserve and paint on a listing row.
-type RowSuffix struct {
-	JobIcon          rune
-	NewFileTier      NewFileMarkTier
-	RenameMark       bool
-	SubtreeSelection bool
+// JobSuffix is the job part of RowSuffix, painted after the name as <job><queued><operation>.
+type JobSuffix struct {
+	// JobIcon is icons.filelist.job; zero means the row is not under any unfinished job.
+	JobIcon rune
+	// JobQueuedIcon is the jobs-list queued icon, set while the matched job's status is
+	// still queued; zero otherwise.
+	JobQueuedIcon rune
+	// JobOpIcon is icons.filelist.move (move/flatten) or icons.filelist.delete (delete); zero
+	// for copy/extract jobs.
+	JobOpIcon rune
+	// JobOpStyle is the foreground style for JobOpIcon (panel.row.mark.job.move / .delete).
+	JobOpStyle tcell.Style
 	// JobWrite is true when JobIcon marks a job's write (destination) tree rather
 	// than its read (source) tree; see Theme.PanelJobMarkStyle.
 	JobWrite bool
+}
+
+// RowSuffix selects which trailing indicators to reserve and paint on a listing row.
+type RowSuffix struct {
+	JobSuffix
+	NewFileTier      NewFileMarkTier
+	RenameMark       bool
+	SubtreeSelection bool
 	// Working marks a directory whose async navigation load has been pending longer than the
 	// working-indicator delay; see Theme.IconFilelistWorking.
 	Working bool
@@ -43,6 +57,12 @@ type RowSuffix struct {
 func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th theme.Theme) int {
 	n := 0
 	if suffix.JobIcon != 0 && width > n+2 {
+		n += 2
+	}
+	if suffix.JobQueuedIcon != 0 && width > n+2 {
+		n += 2
+	}
+	if suffix.JobOpIcon != 0 && width > n+2 {
 		n += 2
 	}
 	if suffix.NewFileTier != NewFileMarkNone && width > n+2 {
@@ -120,6 +140,14 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobIcon, NameIdx: -1})
 		used += 2
 	}
+	if suffix.JobQueuedIcon != 0 && width > used+2 {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobQueuedIcon, NameIdx: -1})
+		used += 2
+	}
+	if suffix.JobOpIcon != 0 && width > used+2 {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobOpIcon, NameIdx: -1})
+		used += 2
+	}
 	if suffix.NewFileTier != NewFileMarkNone && width > used+2 {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistNew(), NameIdx: -1})
 		used += 2
@@ -168,6 +196,12 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 	case r == suffix.JobIcon && suffix.JobIcon != 0:
 		base := th.PanelJobMarkStyle(jobStatus, suffix.JobWrite)
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
+	case r == suffix.JobQueuedIcon && suffix.JobQueuedIcon != 0:
+		fg, _, _ := th.JobsIconStyle("queued").Decompose()
+		base := tcell.StyleDefault.Foreground(fg)
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
+	case r == suffix.JobOpIcon && suffix.JobOpIcon != 0:
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, suffix.JobOpStyle)), true
 	case r == th.IconFilelistNew() && suffix.NewFileTier != NewFileMarkNone:
 		base := th.PanelRowMarkNew
 		if suffix.NewFileTier == NewFileMarkPrevious {

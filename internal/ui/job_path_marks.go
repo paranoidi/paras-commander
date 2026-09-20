@@ -137,22 +137,28 @@ func longestMatchingRootLen(j JobPathMark, absPath string) (maxLen int, isDest b
 	return j.index().rootMatch(absPath)
 }
 
-// EntryPathJobMarkStatus returns the status of the best non-finished job that
-// affects absPath, whether any such job was found, and whether the matched role is
-// a write (destination, or any delete-type job — deletes mutate their sources and
-// have no destination). When several jobs match, delete is preferred over move over
-// copy; among jobs of the same type, the match with the longest source/destination
-// root wins; further ties keep the earliest job in jobList.
-func EntryPathJobMarkStatus(absPath string, jobMarks []JobPathMark) (bool, string, bool) {
+// JobRowMark is the best non-finished job matching a row's path, per EntryPathJobMark.
+type JobRowMark struct {
+	Status string
+	Type   string
+	Write  bool
+}
+
+// EntryPathJobMark returns the best non-finished job that affects absPath (whether any such
+// job was found, and its status/type/write role). When several jobs match, delete is preferred
+// over move over copy; among jobs of the same type, the match with the longest
+// source/destination root wins; further ties keep the earliest job in jobMarks. Write is true
+// when the matched role is a write (destination, or any delete-type job — deletes mutate their
+// sources and have no destination).
+func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool) {
 	if absPath == "" || len(jobMarks) == 0 {
-		return false, "", false
+		return JobRowMark{}, false
 	}
 	p := absPath
 	bestPri := -1
 	bestLen := -1
 	bestIdx := -1
-	var bestStatus string
-	var bestWrite bool
+	var best JobRowMark
 	for i, j := range jobMarks {
 		if jobs.Status(j.Status).IsFinished() {
 			continue
@@ -168,14 +174,26 @@ func EntryPathJobMarkStatus(absPath string, jobMarks []JobPathMark) (bool, strin
 			bestIdx = i
 			bestPri = pri
 			bestLen = rootLen
-			bestStatus = j.Status
-			bestWrite = isDest || jobs.Type(j.Type) == jobs.TypeDelete
+			best = JobRowMark{
+				Status: j.Status,
+				Type:   j.Type,
+				Write:  isDest || jobs.Type(j.Type) == jobs.TypeDelete,
+			}
 		}
 	}
 	if bestIdx < 0 {
-		return false, "", false
+		return JobRowMark{}, false
 	}
-	return true, bestStatus, bestWrite
+	return best, true
+}
+
+// EntryPathJobMarkStatus returns the status of the best non-finished job that
+// affects absPath, whether any such job was found, and whether the matched role is
+// a write (destination, or any delete-type job — deletes mutate their sources and
+// have no destination). See EntryPathJobMark.
+func EntryPathJobMarkStatus(absPath string, jobMarks []JobPathMark) (bool, string, bool) {
+	m, ok := EntryPathJobMark(absPath, jobMarks)
+	return ok, m.Status, m.Write
 }
 
 // EntryPathMarkedByJobs reports whether absPath is a source or destination tree root

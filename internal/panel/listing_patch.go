@@ -8,88 +8,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 )
 
-// RemoveEntriesByPath drops matching rows from the in-memory listing immediately (no disk I/O).
-// Used when enqueueing move/delete/flatten so selected names vanish before the async reload lands.
-// Returns true when anything was removed.
-func (s *State) RemoveEntriesByPath(paths []string, viewportRows int) bool {
-	if s == nil || len(paths) == 0 {
-		return false
-	}
-	drop := make(map[string]bool, len(paths))
-	for _, p := range paths {
-		if p == "" {
-			continue
-		}
-		drop[filepath.Clean(p)] = true
-	}
-	if len(drop) == 0 {
-		return false
-	}
-
-	// Prefer retaining the highlighted entry by path (not index): pruning rows above the
-	// cursor must not leave the highlight on a different name. If the focused row itself
-	// was removed, fall back to the prior visible index (clamped).
-	priorCursor := s.Cursor
-	focusPath := ""
-	if entry, ok := s.CurrentEntry(); ok {
-		focusPath = entry.Path
-	}
-
-	kept := make([]localfs.Entry, 0, len(s.Entries))
-	removedNames := make([]string, 0, len(drop))
-	removed := false
-	for _, e := range s.Entries {
-		if drop[filepath.Clean(e.Path)] {
-			removed = true
-			removedNames = append(removedNames, e.Name)
-			continue
-		}
-		kept = append(kept, e)
-	}
-	if !removed && s.ListLayout != ListLayoutTree {
-		return false
-	}
-
-	s.Entries = kept
-	treeRemoved := false
-	if s.ListLayout == ListLayoutTree {
-		treeRemoved = s.pruneTreeByPaths(drop)
-	}
-	if !removed && !treeRemoved {
-		return false
-	}
-	if len(removedNames) > 0 {
-		// A stale reload can land after this optimistic prune but before the job's real
-		// filesystem op completes, still seeing the file on disk — without this, that
-		// reappearance reads as newly created (see newlyAppearedNames / rename_marks.go).
-		s.MarkPendingRemoval(s.Path, removedNames)
-	}
-
-	s.ListingEpoch++
-	s.rebuildListingByPath()
-	s.recomputeSelectionListedBytes()
-	s.ApplySort()
-	if s.ListLayout == ListLayoutTree {
-		s.resyncTreeOrder()
-	}
-	s.rebuildFilter()
-
-	restored := false
-	if focusPath != "" && !drop[filepath.Clean(focusPath)] {
-		s.selectVisibleEntryByPath(focusPath)
-		if entry, ok := s.CurrentEntry(); ok && filepath.Clean(entry.Path) == filepath.Clean(focusPath) {
-			restored = true
-		}
-	}
-	if !restored {
-		s.Cursor = priorCursor
-		s.clampCursor()
-	}
-	s.EnsureCursorInViewport(s.viewportRowsOr(viewportRows))
-	s.syncTreeCursorIDToCursor()
-	return true
-}
-
 // RenameEntry renames a row in the in-memory listing (same parent directory). Returns true when
 // the entry was found and updated.
 func (s *State) RenameEntry(oldPath, newName string, viewportRows int) bool {
@@ -147,13 +65,12 @@ func (s *State) InsertEntry(entry localfs.Entry, viewportRows int) bool {
 	return s.InsertEntries([]localfs.Entry{entry}, viewportRows)
 }
 
-// InsertEntries adds multiple entries to the in-memory listing in one batch: entries whose
-// parent directory isn't this panel's Path, or that already exist, are skipped, and the
-// expensive index rebuild/sort/filter passes run once for the whole batch rather than once per
-// entry — inserting one at a time (each doing its own O(entries) duplicate scan and full
-// ApplySort) is O(n²) and stalls the UI when a job's optimistic listing update touches many
-// individually selected sources (e.g. select-all across a large directory). Returns true when
-// anything was inserted.
+// InsertEntries adds multiple entries to the in-memory listing in one batch (used by mkdir and
+// duplicate via InsertEntry): entries whose parent directory isn't this panel's Path, or that
+// already exist, are skipped, and the expensive index rebuild/sort/filter passes run once for
+// the whole batch rather than once per entry — inserting one at a time (each doing its own
+// O(entries) duplicate scan and full ApplySort) is O(n²) and stalls the UI on a large batch.
+// Returns true when anything was inserted.
 func (s *State) InsertEntries(entries []localfs.Entry, viewportRows int) bool {
 	if s == nil || s.Path.IsZero() || len(entries) == 0 {
 		return false
@@ -207,40 +124,6 @@ func (s *State) viewportRowsOr(viewportRows int) int {
 		return s.FileListViewportRows()
 	}
 	return 0
-}
-
-func (s *State) pruneTreeByPaths(drop map[string]bool) bool {
-	if s.ListLayout != ListLayoutTree || len(s.TreeRoots) == 0 {
-		return false
-	}
-	beforeRoots := len(s.TreeRoots)
-	beforeRows := len(s.treeRows)
-	s.TreeRoots = pruneTreeNodes(s.TreeRoots, drop)
-	for id := range s.TreeExpanded {
-		if drop[id] {
-			delete(s.TreeExpanded, id)
-		}
-	}
-	s.rebuildTreeRows()
-	return len(s.TreeRoots) != beforeRoots || len(s.treeRows) != beforeRows
-}
-
-func pruneTreeNodes(nodes []treeflat.Node[TreeEntry], drop map[string]bool) []treeflat.Node[TreeEntry] {
-	if len(nodes) == 0 {
-		return nodes
-	}
-	out := make([]treeflat.Node[TreeEntry], 0, len(nodes))
-	for _, n := range nodes {
-		id := filepath.Clean(n.ID)
-		if drop[id] || drop[filepath.Clean(n.Value.Entry.Path)] {
-			continue
-		}
-		if n.Children != nil {
-			n.Children = pruneTreeNodes(n.Children, drop)
-		}
-		out = append(out, n)
-	}
-	return out
 }
 
 func renameTreeNode(nodes []treeflat.Node[TreeEntry], oldPath, newName, newPath string) bool {

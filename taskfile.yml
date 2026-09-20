@@ -69,6 +69,11 @@ tasks:
     cmds:
       - go test ./...
 
+  race:
+    desc: Run Go race tests
+    cmds:
+      - go test -race ./...
+
   build:
     desc: Build pc binary
     cmds:

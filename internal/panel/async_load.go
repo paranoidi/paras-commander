@@ -22,7 +22,7 @@ type AsyncLoadRequest struct {
 	// SyncHistoryHead, when true, sets History[0] to Path after a successful load (NavigateToPath).
 	SyncHistoryHead bool
 	// ListingEpoch is State.ListingEpoch at schedule time. Same-directory applies whose epoch no
-	// longer matches are dropped (optimistic mutations bumped the panel's epoch meanwhile).
+	// longer matches are dropped (a rename/mkdir insert bumped the panel's epoch meanwhile).
 	ListingEpoch uint64
 }
 

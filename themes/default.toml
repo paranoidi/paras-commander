@@ -92,6 +92,8 @@ pinned = { fg = "magenta" }
 job = { fg = "green" }
 job.read = { fg = "yellow" }
 job.decision = { fg = "red" }
+job.move = { fg = "red" }
+job.delete = { fg = "red" }
 
 [panel.icon.folder]          # folder icon colors
 open = { fg = "bright_cyan" }
@@ -318,6 +320,8 @@ new = "\uea7f"
 renamed = "\U000f11e8"
 no_permission = "\uf023"
 job = "\U000f02ca"
+move = "\U000f0ab9"
+delete = "\U000f09e7"
 preview_loading = "\uf03e"
 
 [icons.folders]

@@ -39,3 +39,21 @@ conflict prompt on retry.
 `Ctrl+R` (**Jobs → Resume / retry job**) is the same key used to resume a
 paused job; it resumes when the selected job is paused and retries when it
 is failed.
+
+## File list indicators
+
+While a job is waiting or running, every file-list row it touches (a source, a
+destination, or anything inside those directories) gets small icons after its
+name, in this order:
+
+1. **Job icon** — always shown. Green when the row is on the job's writing side
+   (a destination), yellow when it is being read (a source), red while the job
+   is waiting for you to resolve a conflict.
+2. **Clock** — shown only while the job is still queued and has not started.
+3. **Operation icon** — a red *move* glyph for moves (and flatten), a red
+   *delete* glyph for deletes. Copies and extracts show none.
+
+The listing itself does not change until the job has actually finished and the
+panel reloads, so a queued move or delete is visible as icons rather than as
+rows disappearing. The rows also appear in the carousel view and in the
+bottom-border name hint for the highlighted row.

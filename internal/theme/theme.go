@@ -96,6 +96,11 @@ type Theme struct {
 	PanelRowMarkJob         tcell.Style
 	PanelRowMarkJobRead     tcell.Style
 	PanelRowMarkJobDecision tcell.Style
+	// PanelRowMarkJobMove and PanelRowMarkJobDelete style the file-list operation icon
+	// (icons.filelist.move / .delete) appended after the job/queued icons for move-or-flatten
+	// and delete jobs respectively.
+	PanelRowMarkJobMove   tcell.Style
+	PanelRowMarkJobDelete tcell.Style
 	// PanelRowTreeConnector styles tree branch/continuation icons in tree-style lists.
 	PanelRowTreeConnector tcell.Style
 	// PanelIconFolderOpen styles the open-folder icon strip when the other panel is in that directory.
@@ -546,6 +551,8 @@ const (
 	IconKeyFilelistNew              = "filelist.new"
 	IconKeyFilelistRenamed          = "filelist.renamed"
 	IconKeyFilelistJob              = "filelist.job"
+	IconKeyFilelistMove             = "filelist.move"
+	IconKeyFilelistDelete           = "filelist.delete"
 	IconKeyFilelistNoPermission     = "filelist.no_permission"
 	IconKeyFilelistPreviewLoading   = "filelist.preview_loading"
 	IconKeyFoldersFolder            = "folders.folder"
@@ -698,6 +705,18 @@ func (t Theme) IconFilelistRenamed() rune {
 // Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
 func (t Theme) IconFilelistJob() rune {
 	return t.filelistIconRune(IconKeyFilelistJob, '\U000f02ca')
+}
+
+// IconFilelistMove returns the file-list operation suffix icon for move/flatten jobs
+// (styled via Theme.PanelRowMarkJobMove).
+func (t Theme) IconFilelistMove() rune {
+	return t.filelistIconRune(IconKeyFilelistMove, '\U000f0ab9')
+}
+
+// IconFilelistDelete returns the file-list operation suffix icon for delete jobs
+// (styled via Theme.PanelRowMarkJobDelete).
+func (t Theme) IconFilelistDelete() rune {
+	return t.filelistIconRune(IconKeyFilelistDelete, '\U000f09e7')
 }
 
 // IconFilelistWorking returns the row-suffix icon for a directory whose async navigation
@@ -965,6 +984,8 @@ var requiredStyleKeys = []string{
 	"panel.row.mark.job",
 	"panel.row.mark.job.read",
 	"panel.row.mark.job.decision",
+	"panel.row.mark.job.move",
+	"panel.row.mark.job.delete",
 	"panel.row.tree.connector",
 	"panel.icon.folder.open",
 	"panel.icon.folder.mount",
@@ -1489,6 +1510,8 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkJob:                     styles["panel.row.mark.job"],
 		PanelRowMarkJobRead:                 styles["panel.row.mark.job.read"],
 		PanelRowMarkJobDecision:             styles["panel.row.mark.job.decision"],
+		PanelRowMarkJobMove:                 styles["panel.row.mark.job.move"],
+		PanelRowMarkJobDelete:               styles["panel.row.mark.job.delete"],
 		PanelRowTreeConnector:               styles["panel.row.tree.connector"],
 		PanelIconFolderOpen:                 styles["panel.icon.folder.open"],
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],

@@ -198,9 +198,9 @@ type State struct {
 	// still hold the pre-navigation listing until the load applies, so this is how a renderer
 	// identifies which row in that old listing the in-flight load corresponds to.
 	ListingPendingPath string
-	// ListingEpoch increments on every in-memory listing mutation (ApplyListing, optimistic
-	// remove/rename/insert). Async and periodic applies that started against an older epoch are
-	// dropped so a pre-mutation ReadDir cannot resurrect rows the UI already pruned.
+	// ListingEpoch increments on every in-memory listing mutation (ApplyListing, rename/insert
+	// via RenameEntry/InsertEntry/InsertEntries). Async and periodic applies that started
+	// against an older epoch are dropped so a pre-mutation ReadDir cannot overwrite newer rows.
 	ListingEpoch uint64
 	// ShowLoadingIcon is set by the app once a pending load has been in flight longer than
 	// LoadingIndicatorDelay; render checks this (not just ListingPending) so nothing is drawn
@@ -1492,7 +1492,6 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 	hadPriorListing := s.listingApplied || len(s.Entries) > 0
 	if sameDirReload && hadPriorListing && s.entriesShowHidden == s.ShowHidden {
 		newlyAppeared = newlyAppearedNames(s.Entries, localEntries)
-		newlyAppeared = s.filterPendingRemoval(listingLoc, newlyAppeared, localEntries)
 	}
 	s.entriesShowHidden = s.ShowHidden
 	s.listingApplied = true

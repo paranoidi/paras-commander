@@ -320,16 +320,11 @@ func drawPanelCursorNameHintForState(
 		return
 	}
 	subtreeMark := entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
-	jobMark, _, jobWrite := EntryPathJobMarkStatus(entry.Path, jobMarks)
-	var jobMarkIcon rune
-	if jobMark {
-		jobMarkIcon = ctx.Styles.IconFilelistJob()
-	}
+	jobSuffix, _ := jobRowSuffix(entry.Path, jobMarks, ctx.Styles)
 	suffix := panellist.RowSuffix{
-		JobIcon:          jobMarkIcon,
+		JobSuffix:        jobSuffix,
 		NewFileTier:      state.NewFileMarkTier(entry),
 		SubtreeSelection: subtreeMark,
-		JobWrite:         jobWrite,
 	}
 	drawPanelBottomCursorNameHint(screen, rect, panelID, state, ctx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, suffix, ctx.Styles, fallbackOut, pinnedOut)
 }

@@ -149,9 +149,10 @@ func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
 		}
 		return true
 	}
-	// Same-directory listing that started before an optimistic mutation: drop it so pruned
-	// rows are not resurrected. Navigation applies (loc != Path) still land even if epoch
-	// moved — Path is still the old directory until ApplyListing.
+	// Same-directory listing that started before an in-memory listing mutation (rename/mkdir
+	// insert): drop it so a stale pre-mutation snapshot doesn't overwrite the newer rows.
+	// Navigation applies (loc != Path) still land even if epoch moved — Path is still the old
+	// directory until ApplyListing.
 	if p.req.Loc.Equal(pan.Path) && p.req.ListingEpoch != pan.ListingEpoch {
 		return true
 	}

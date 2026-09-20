@@ -1004,7 +1004,6 @@ func (h *Handler) commitJob(job *jobs.Job) {
 	h.state.AddJob(job)
 	h.SyncJobsList()
 	h.SyncJobPathMarks()
-	h.applyOptimisticListingForJob(job)
 }
 
 type transferEnqueueOpts struct {

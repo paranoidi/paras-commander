@@ -158,3 +158,17 @@ func TestListingSuffixSpansCursorIconOnCursorRow(t *testing.T) {
 		t.Fatalf("span fg = %v, want cursor icon color", fg)
 	}
 }
+
+func TestEntryDisplayRunesJobSuffixOrderIsJobQueuedOperation(t *testing.T) {
+	th := theme.Default()
+	suffix := RowSuffix{JobSuffix: JobSuffix{JobIcon: 'J', JobQueuedIcon: 'Q', JobOpIcon: 'M'}}
+	got := RunesFromDisplay(EntryDisplayRunes(localfs.Entry{Name: "harbor.txt", Type: localfs.EntryFile}, 40, true, suffix, th))
+	want := []rune{' ', 'J', ' ', 'Q', ' ', 'M'}
+	tail := got[len(got)-len(want):]
+	if string(tail) != string(want) {
+		t.Fatalf("suffix tail = %q, want %q", string(tail), string(want))
+	}
+	if n := SuffixDecorationLen(40, suffix, localfs.Entry{}, th); n != 6 {
+		t.Fatalf("SuffixDecorationLen = %d, want 6", n)
+	}
+}

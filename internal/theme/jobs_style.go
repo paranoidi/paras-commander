@@ -48,6 +48,12 @@ func (t Theme) IconJobsList(status string) string {
 	}
 }
 
+// IconFilelistQueued returns the file-list row-suffix icon shown while a matched job is still
+// queued (the same glyph as the jobs list's queued status icon, jobs.list.queued).
+func (t Theme) IconFilelistQueued() rune {
+	return t.filelistIconRune(IconKeyJobsListQueued, '\uf017')
+}
+
 // JobsIconStyle returns the themed style for the leading icon of a job status in the jobs list.
 func (t Theme) JobsIconStyle(status string) tcell.Style {
 	switch status {

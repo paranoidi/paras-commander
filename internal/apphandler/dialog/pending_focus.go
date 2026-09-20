@@ -39,7 +39,8 @@ func (h *Handler) scheduleTransferOtherPanelFocus(panelID int, listDir string, c
 
 // maybeScheduleTransferOtherPanelFocus arms pending focus when a copy/move lands in the inactive
 // panel's current directory and [operations].focus_other_panel_after_transfer is enabled.
-// Called after jobs.AddTransferJob so optimistic listing has already updated the inactive cursor.
+// Called after jobs.AddTransferJob; snapCursorPath captures the inactive panel's cursor path at
+// enqueue time, before the job has actually run.
 func (h *Handler) maybeScheduleTransferOtherPanelFocus(jobType jobs.Type, sources []string, dest string, preserve jobs.TransferPreserve) {
 	if jobType != jobs.TypeCopy && jobType != jobs.TypeMove {
 		return

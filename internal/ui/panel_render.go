@@ -465,10 +465,8 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var subtreeMark bool
 	var newFileTier panellist.NewFileMarkTier
 	var renameMark bool
-	var jobMark bool
+	var jobSuffix panellist.JobSuffix
 	var jobStatus string
-	var jobWrite bool
-	var jobMarkIcon rune
 	var rowSuffix panellist.RowSuffix
 
 	// Tree-mode gutter (ancestor guide lines + folder expander) is prepended before the
@@ -502,17 +500,12 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		subtreeMark = entry.Type == localfs.EntryDirectory && effNameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
 		newFileTier = state.NewFileMarkTier(entry)
 		renameMark = state.IsRenameMarked(entry)
-		jobMark, jobStatus, jobWrite = EntryPathJobMarkStatus(entry.Path, display.JobMarks)
-		if jobMark {
-			jobMarkIcon = panelStyle.Styles.IconFilelistJob()
-		} else {
-			jobMarkIcon = 0
-		}
+		jobSuffix, jobStatus = jobRowSuffix(entry.Path, display.JobMarks, panelStyle.Styles)
 		metaText := ""
 		if showMetaEffective {
 			metaText = MetaRowText(metaLayouts, entry.Path)
 		}
-		rowSuffix = panellist.NewRowSuffix(jobMarkIcon, newFileTier, renameMark, subtreeMark, jobWrite)
+		rowSuffix = panellist.NewRowSuffix(jobSuffix, newFileTier, renameMark, subtreeMark)
 		rowSuffix.Working = (state.ShowLoadingIcon && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath) ||
 			(ctx.WorkingRowPath != "" && entry.Path == ctx.WorkingRowPath)
 		_, rowSuffix.Pinned = display.PinnedPaths[entry.Path]
@@ -748,12 +741,8 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		Layout:                display.CarouselLayout,
 		MeasuredFitWidth:      measuredFitWidth,
 		Meta:                  meta,
-		JobMark: func(path string) (rune, string, bool, bool) {
-			marked, st, write := EntryPathJobMarkStatus(path, display.JobMarks)
-			if !marked {
-				return 0, "", false, false
-			}
-			return panelStyle.Styles.IconFilelistJob(), st, write, true
+		JobMark: func(path string) (panellist.JobSuffix, string) {
+			return jobRowSuffix(path, display.JobMarks, panelStyle.Styles)
 		},
 		PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
 			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles,
