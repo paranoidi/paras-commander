@@ -605,14 +605,9 @@ func TestPlanChownValid(t *testing.T) {
 	entry := localfs.Entry{Name: "a.txt", Path: filePath}
 	source := Source{Kind: SourceCursor, Entries: []localfs.Entry{entry}}
 
-	// Use current user/group (should work without privileges when staying same? actually chown requires privileges)
-	// Just test planning, not execution.
-	plan, err := PlanChown(source, "", "")
-	if err != nil {
-		t.Fatalf("PlanChown() error = %v", err)
-	}
-	if plan.UID != -1 || plan.GID != -1 {
-		t.Fatalf("blank fields should give -1, got uid=%d gid=%d", plan.UID, plan.GID)
+	_, err := PlanChown(source, "", "")
+	if err == nil {
+		t.Fatal("PlanChown() error = nil, want error for empty user and group")
 	}
 }
 

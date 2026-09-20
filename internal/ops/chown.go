@@ -1,6 +1,8 @@
 package ops
 
 import (
+	"strings"
+
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
@@ -17,6 +19,12 @@ type ChownPlan struct {
 func PlanChown(source Source, user, group string) (ChownPlan, error) {
 	if len(source.Entries) == 0 {
 		return ChownPlan{}, &Error{Op: "chown", Text: "no entries to change"}
+	}
+
+	user = strings.TrimSpace(user)
+	group = strings.TrimSpace(group)
+	if user == "" && group == "" {
+		return ChownPlan{}, &Error{Op: "chown", Text: "user or group is required"}
 	}
 
 	// Resolve user.
