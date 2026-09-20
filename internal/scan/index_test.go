@@ -3,7 +3,9 @@ package scan
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestIndexDedupByRelLine(t *testing.T) {
@@ -36,6 +38,71 @@ func TestIndexReplaceEntriesRebuildsDedup(t *testing.T) {
 	}
 	if _, ok := idx.EntryMetaForAbs("/root", "/root/x.txt"); !ok {
 		t.Fatal("expected x.txt")
+	}
+}
+
+func TestIndexAppendCompletesWhileMatchRanksSnapshot(t *testing.T) {
+	idx := newIndex()
+	idx.Append("", []Entry{
+		{RelLine: "alpha.txt"},
+		{RelLine: "beta.txt"},
+	})
+	snapLen := idx.Len()
+
+	inRank := make(chan struct{})
+	release := make(chan struct{})
+	testHoldMatch = func() {
+		close(inRank)
+		<-release
+	}
+	defer func() { testHoldMatch = nil }()
+
+	var matchOut MatchOutput
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		matchOut = idx.RunMatch(MatchRequest{Query: "a", MaxResults: 10}, nil)
+	}()
+
+	select {
+	case <-inRank:
+	case <-time.After(2 * time.Second):
+		t.Fatal("match did not reach ranking")
+	}
+
+	done := make(chan struct{})
+	go func() {
+		idx.Append("", []Entry{{RelLine: "gamma.txt"}})
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(500 * time.Millisecond):
+		close(release)
+		wg.Wait()
+		t.Fatal("Append blocked while match ranked")
+	}
+
+	if idx.Len() != snapLen+1 {
+		t.Fatalf("len after Append = %d, want %d", idx.Len(), snapLen+1)
+	}
+
+	close(release)
+	wg.Wait()
+
+	for _, i := range matchOut.Ranked {
+		if i < 0 || i >= snapLen {
+			t.Fatalf("ranked index %d outside snapshot len %d", i, snapLen)
+		}
+	}
+	for _, i := range matchOut.FullRanked {
+		if i < 0 || i >= snapLen {
+			t.Fatalf("full ranked index %d outside snapshot len %d", i, snapLen)
+		}
+	}
+	if matchOut.EntriesLen != snapLen {
+		t.Fatalf("EntriesLen = %d, want snapshot %d", matchOut.EntriesLen, snapLen)
 	}
 }
 

@@ -8,7 +8,14 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
+// testHoldMatch, if set, runs at the start of runMatchInPlace so tests can
+// observe whether Index.RunMatch still holds the corpus lock while ranking.
+var testHoldMatch func()
+
 func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool) MatchOutput {
+	if testHoldMatch != nil {
+		testHoldMatch()
+	}
 	n := len(entries)
 	q := search.Parse(req.Query)
 	maxResults := req.MaxResults

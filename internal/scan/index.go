@@ -80,8 +80,9 @@ func (idx *Index) ReplaceEntries(displayRoot string, batch []Entry) {
 
 func (idx *Index) RunMatch(req MatchRequest, shouldCancel func() bool) MatchOutput {
 	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-	return runMatchInPlace(idx.entries, req, shouldCancel)
+	entries := append([]Entry(nil), idx.entries...)
+	idx.mu.RUnlock()
+	return runMatchInPlace(entries, req, shouldCancel)
 }
 
 // View calls fn with entry slices under read lock.
