@@ -968,9 +968,11 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		a.render()
 		out.didRender = true
 	case dialogctrl.PathPickerValidatePayload:
+		a.dialogCtrl.ApplyPathPickerValidatePayload(d)
 		a.render()
 		out.didRender = true
 	case dialogctrl.TransferDestValidatePayload:
+		a.dialogCtrl.ApplyTransferDestValidatePayload(d)
 		a.render()
 		out.didRender = true
 	case dialogctrl.DeleteDialogScanNeedPayload:

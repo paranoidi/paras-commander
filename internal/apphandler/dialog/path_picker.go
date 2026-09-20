@@ -19,6 +19,7 @@ import (
 // sharing that debouncer closes.
 func (h *Handler) InvalidateTransferDestValidate() {
 	h.transferDestValidate.Invalidate()
+	h.transferDestValidateSeq++
 }
 
 // PathPickerValidateArmed reports whether the path-picker filter's debounced validation is
@@ -39,6 +40,7 @@ func (h *Handler) PathPickerValidateGeneration() uint64 {
 func (h *Handler) ClosePathPicker() {
 	purpose := h.model.PathPicker.Purpose
 	h.pathPickerValidate.Invalidate()
+	h.pathPickerValidateSeq++
 	h.pathPickerMissingGen++
 	h.model.PathPicker = dialog.PathPickerState{}
 	if h.model.TransferDialog.Open && h.model.TransferDialog.Phase == dialog.TransferPhaseDestination &&
@@ -522,34 +524,60 @@ func (h *Handler) OpenPathPickerForFileFieldHistory(fieldIndex int) {
 }
 
 // ArmPathPickerValidateTimer (re)arms the debounced "does the typed query resolve to an
-// existing path" check for the open path picker.
+// existing path" check for the open path picker. The timer goroutine only computes an
+// immutable result; ApplyPathPickerValidatePayload mutates ui.Model on the event loop.
 func (h *Handler) ArmPathPickerValidateTimer() {
 	if !h.model.PathPicker.Open {
 		return
 	}
 	st := &h.model.PathPicker
 	st.QueryPathCheckPending = true
+	h.pathPickerValidateSeq++
+	seq := h.pathPickerValidateSeq
+	query := st.Query
+	panelPath := h.host.ActivePanel().PathString()
+	home := h.model.UserHomeDir
+	existsFn := h.pathExistsFn
+	screen := h.screen
 	cfg := h.host.Config()
 	delay := time.Duration(cfg.UI.PathPickerValidateDelayMS) * time.Millisecond
 	h.pathPickerValidate.Arm(delay, func() {
-		if !h.model.PathPicker.Open {
+		invalid := pathExists(existsFn, panelPath, home, query)
+		if screen == nil {
 			return
 		}
-		h.ApplyPathPickerPathValidation()
-		_ = h.screen.PostEvent(tcell.NewEventInterrupt(PathPickerValidatePayload{}))
+		_ = screen.PostEvent(tcell.NewEventInterrupt(PathPickerValidatePayload{
+			Gen:     seq,
+			Query:   query,
+			Invalid: invalid,
+		}))
 	})
 }
 
-// ApplyPathPickerPathValidation applies the debounced path-existence check to the open path
-// picker's query.
+// ApplyPathPickerPathValidation runs the path-picker existence check for the current query
+// on the caller goroutine and applies it (used by tests that drive validation synchronously).
 func (h *Handler) ApplyPathPickerPathValidation() {
 	st := &h.model.PathPicker
 	if !st.Open {
 		return
 	}
-	st.QueryPathCheckPending = false
 	p := h.host.ActivePanel()
-	st.QueryPathInvalid = pathpick.TypedDoesNotExist(p.PathString(), h.model.UserHomeDir, st.Query)
+	h.ApplyPathPickerValidatePayload(PathPickerValidatePayload{
+		Gen:     h.pathPickerValidateSeq,
+		Query:   st.Query,
+		Invalid: pathExists(h.pathExistsFn, p.PathString(), h.model.UserHomeDir, st.Query),
+	})
+}
+
+// ApplyPathPickerValidatePayload applies a background path-picker existence check unless the
+// picker closed, a newer check was armed, or the typed query no longer matches.
+func (h *Handler) ApplyPathPickerValidatePayload(d PathPickerValidatePayload) {
+	st := &h.model.PathPicker
+	if !st.Open || d.Gen != h.pathPickerValidateSeq || d.Query != st.Query {
+		return
+	}
+	st.QueryPathCheckPending = false
+	st.QueryPathInvalid = d.Invalid
 	h.SyncOpenPathInputsAfterFSChange()
 }
 
@@ -561,29 +589,23 @@ func (h *Handler) ArmTransferDestinationValidateTimer() {
 	}
 	d := &h.model.TransferDialog
 	d.DestPathCheckPending = true
-	cfg := h.host.Config()
-	delay := time.Duration(cfg.UI.PathPickerValidateDelayMS) * time.Millisecond
-	h.transferDestValidate.Arm(delay, func() {
-		if !h.model.TransferDialog.Open || h.model.TransferDialog.Phase != dialog.TransferPhaseDestination {
-			return
-		}
-		h.ApplyTransferDestinationPathValidation()
-		_ = h.screen.PostEvent(tcell.NewEventInterrupt(TransferDestValidatePayload{}))
-	})
+	h.armTransferDestValidate(d.Destination.Value, false)
 }
 
-// ApplyTransferDestinationPathValidation applies the debounced path-existence check to the
-// open transfer dialog's destination field, and updates which panel(s) it currently targets.
+// ApplyTransferDestinationPathValidation runs the transfer destination existence check for
+// the current field value on the caller goroutine and applies it (used by tests that drive
+// validation synchronously).
 func (h *Handler) ApplyTransferDestinationPathValidation() {
 	d := &h.model.TransferDialog
 	if !d.Open || d.Phase != dialog.TransferPhaseDestination {
 		return
 	}
-	d.DestPathCheckPending = false
 	p := h.host.ActivePanel()
-	d.DestPathInvalid = pathpick.TypedDoesNotExist(p.PathString(), h.model.UserHomeDir, d.Destination.Value)
-	h.updateDestinationTargetPanels(p.PathString(), d.Destination.Value)
-	h.SyncOpenPathInputsAfterFSChange()
+	h.ApplyTransferDestValidatePayload(TransferDestValidatePayload{
+		Gen:     h.transferDestValidateSeq,
+		Query:   d.Destination.Value,
+		Invalid: pathExists(h.pathExistsFn, p.PathString(), h.model.UserHomeDir, d.Destination.Value),
+	})
 }
 
 // ArmFlattenDestinationValidateTimer (re)arms the debounced "does the typed destination
@@ -594,29 +616,81 @@ func (h *Handler) ArmFlattenDestinationValidateTimer() {
 	}
 	d := &h.model.FlattenDialog
 	d.DestPathCheckPending = true
-	cfg := h.host.Config()
-	delay := time.Duration(cfg.UI.PathPickerValidateDelayMS) * time.Millisecond
-	h.transferDestValidate.Arm(delay, func() {
-		if !h.model.FlattenDialog.Open {
-			return
-		}
-		h.ApplyFlattenDestinationPathValidation()
-		_ = h.screen.PostEvent(tcell.NewEventInterrupt(TransferDestValidatePayload{}))
-	})
+	h.armTransferDestValidate(d.Destination.Value, true)
 }
 
-// ApplyFlattenDestinationPathValidation applies the debounced path-existence check to the
-// open flatten dialog's destination field, and updates which panel(s) it currently targets.
+// ApplyFlattenDestinationPathValidation runs the flatten destination existence check for
+// the current field value on the caller goroutine and applies it (used by tests that drive
+// validation synchronously).
 func (h *Handler) ApplyFlattenDestinationPathValidation() {
 	d := &h.model.FlattenDialog
 	if !d.Open {
 		return
 	}
-	d.DestPathCheckPending = false
 	p := h.host.ActivePanel()
-	d.DestPathInvalid = pathpick.TypedDoesNotExist(p.PathString(), h.model.UserHomeDir, d.Destination.Value)
-	h.updateDestinationTargetPanels(p.PathString(), d.Destination.Value)
+	h.ApplyTransferDestValidatePayload(TransferDestValidatePayload{
+		Gen:     h.transferDestValidateSeq,
+		Query:   d.Destination.Value,
+		Invalid: pathExists(h.pathExistsFn, p.PathString(), h.model.UserHomeDir, d.Destination.Value),
+		Flatten: true,
+	})
+}
+
+// ApplyTransferDestValidatePayload applies a background transfer/flatten destination existence
+// check unless that dialog closed, a newer check was armed, or the typed destination changed.
+func (h *Handler) ApplyTransferDestValidatePayload(d TransferDestValidatePayload) {
+	if d.Flatten {
+		st := &h.model.FlattenDialog
+		if !st.Open || d.Gen != h.transferDestValidateSeq || d.Query != st.Destination.Value {
+			return
+		}
+		st.DestPathCheckPending = false
+		st.DestPathInvalid = d.Invalid
+		p := h.host.ActivePanel()
+		h.updateDestinationTargetPanels(p.PathString(), st.Destination.Value)
+		h.SyncOpenPathInputsAfterFSChange()
+		return
+	}
+	st := &h.model.TransferDialog
+	if !st.Open || st.Phase != dialog.TransferPhaseDestination ||
+		d.Gen != h.transferDestValidateSeq || d.Query != st.Destination.Value {
+		return
+	}
+	st.DestPathCheckPending = false
+	st.DestPathInvalid = d.Invalid
+	p := h.host.ActivePanel()
+	h.updateDestinationTargetPanels(p.PathString(), st.Destination.Value)
 	h.SyncOpenPathInputsAfterFSChange()
+}
+
+func (h *Handler) armTransferDestValidate(query string, flatten bool) {
+	h.transferDestValidateSeq++
+	seq := h.transferDestValidateSeq
+	panelPath := h.host.ActivePanel().PathString()
+	home := h.model.UserHomeDir
+	existsFn := h.pathExistsFn
+	screen := h.screen
+	cfg := h.host.Config()
+	delay := time.Duration(cfg.UI.PathPickerValidateDelayMS) * time.Millisecond
+	h.transferDestValidate.Arm(delay, func() {
+		invalid := pathExists(existsFn, panelPath, home, query)
+		if screen == nil {
+			return
+		}
+		_ = screen.PostEvent(tcell.NewEventInterrupt(TransferDestValidatePayload{
+			Gen:     seq,
+			Query:   query,
+			Invalid: invalid,
+			Flatten: flatten,
+		}))
+	})
+}
+
+func pathExists(fn func(panelPath, home, raw string) bool, panelPath, home, raw string) bool {
+	if fn != nil {
+		return fn(panelPath, home, raw)
+	}
+	return pathpick.TypedDoesNotExist(panelPath, home, raw)
 }
 
 // updateDestinationTargetPanels resolves typed (the Copy/Move/Flatten destination text,

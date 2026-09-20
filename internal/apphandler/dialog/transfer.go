@@ -169,7 +169,7 @@ func (h *Handler) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, abs
 // CloseTransferDialog closes the unified transfer (copy/move) dialog and invalidates its
 // debounced destination-path validation.
 func (h *Handler) CloseTransferDialog() {
-	h.transferDestValidate.Invalidate()
+	h.InvalidateTransferDestValidate()
 	h.model.TransferDialog = dialog.TransferDialogState{}
 	h.model.DestinationTargetPrimary = false
 	h.model.DestinationTargetSecondary = false

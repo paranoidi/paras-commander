@@ -29,12 +29,25 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// PathPickerValidatePayload wakes PollEvent after debounced path-picker filter validation.
-type PathPickerValidatePayload struct{}
+// PathPickerValidatePayload carries a background path-picker filter existence check back to
+// the main goroutine. Gen/Query identify the Arm that produced it; ApplyPathPickerValidatePayload
+// discards the result if the picker closed, a newer check was armed, or the query has changed.
+type PathPickerValidatePayload struct {
+	Gen     uint64
+	Query   string
+	Invalid bool
+}
 
-// TransferDestValidatePayload wakes PollEvent after debounced copy/move/flatten destination
-// path validation.
-type TransferDestValidatePayload struct{}
+// TransferDestValidatePayload carries a background copy/move/flatten destination existence
+// check back to the main goroutine. Flatten selects which dialog the Arm targeted; Gen/Query
+// identify that Arm. ApplyTransferDestValidatePayload discards the result if that dialog
+// closed, a newer check was armed, or the typed destination has changed.
+type TransferDestValidatePayload struct {
+	Gen     uint64
+	Query   string
+	Invalid bool
+	Flatten bool
+}
 
 // DeleteDialogScanNeedPayload carries the result of a background diskusage.DirectoriesNeedingScan
 // pass (the per-directory mount-exclusion stat check) for the open delete confirmation dialog
@@ -172,10 +185,18 @@ type Handler struct {
 
 	// pathPickerValidate / transferDestValidate debounce the path-picker filter's and the
 	// transfer/flatten destination field's "does this path exist" background check; each Arm
-	// posts a PathPickerValidatePayload / TransferDestValidatePayload interrupt through Screen
-	// so Run() re-renders once the check lands.
+	// snapshots the typed query and posts a PathPickerValidatePayload / TransferDestValidatePayload
+	// (gen, query, result) through Screen so Run() applies it on the event loop.
 	pathPickerValidate   sched.Debouncer
 	transferDestValidate sched.Debouncer
+	// pathPickerValidateSeq / transferDestValidateSeq identify the Arm that is allowed to
+	// mutate dialog state; bumped on every Arm and on close/Invalidate so an in-flight
+	// existence check cannot land on a superseded query or a reopened dialog.
+	pathPickerValidateSeq   uint64
+	transferDestValidateSeq uint64
+	// pathExistsFn, when set, replaces pathpick.TypedDoesNotExist for those checks. Tests inject
+	// a delayed fake so a slower check can be released after a newer one has been armed.
+	pathExistsFn func(panelPath, home, raw string) bool
 	// pathPickerMissingGen guards ApplyPathPickerMissing against a stale background missing-path
 	// scan (StartPathsMissingScan) landing after the picker closed or reopened with a new item
 	// set; bumped by startPathPickerMissingScan and ClosePathPicker.
