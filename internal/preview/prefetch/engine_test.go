@@ -396,6 +396,89 @@ func TestScheduleFromListingExcludesDeadZoneBetweenCursorAndLandingWindows(t *te
 	}
 }
 
+func TestScheduleFromListingDoesNotStatOnCaller(t *testing.T) {
+	blocked := make(chan struct{})
+	orig := ResolveStat
+	t.Cleanup(func() { ResolveStat = orig })
+	ResolveStat = func(string) (os.FileInfo, error) {
+		<-blocked
+		return nil, os.ErrNotExist
+	}
+
+	e := &Engine{cache: NewCache(1<<20, 0, 1<<20, "")}
+	e.cond = sync.NewCond(&e.mu)
+	entries := []localfs.Entry{
+		{Path: prefetchTestWords[0] + ".png", Type: localfs.EntryFile},
+		{Path: prefetchTestWords[1] + ".png", Type: localfs.EntryFile},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		e.ScheduleFromListing(entries, 0, 5, 0, 0, nil)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("ScheduleFromListing blocked on Stat; unknown listing metadata must resolve in the worker")
+	}
+	close(blocked)
+	if len(e.pending) != 2 {
+		t.Fatalf("pending len = %d, want 2 (zero-meta image entries still scheduled)", len(e.pending))
+	}
+}
+
+func TestRunJobResolvesUnknownMetaForCacheKey(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "meadow.png")
+	writeSolidPNG(t, path, 40, 40)
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mtime, size := fi.ModTime().UnixNano(), fi.Size()
+
+	e := NewEngine(context.Background(), Config{Workers: 1, ImageMaxEdgePx: 64}, nil)
+	t.Cleanup(e.Close)
+
+	ent := localfs.Entry{Path: path, Type: localfs.EntryFile} // listing omitted mtime/size
+	e.ScheduleFromListing([]localfs.Entry{ent}, 0, 5, 0, 0, nil)
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if e.IsEntryWarm(ent, nil) && e.cache.HasStill(path, mtime, size, 64) {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("worker did not resolve listing metadata and warm the cache under the real mtime/size key")
+}
+
+func TestIsEntryWarmDoesNotStatOnCaller(t *testing.T) {
+	blocked := make(chan struct{})
+	orig := ResolveStat
+	t.Cleanup(func() { ResolveStat = orig })
+	ResolveStat = func(string) (os.FileInfo, error) {
+		<-blocked
+		return nil, os.ErrNotExist
+	}
+
+	e := &Engine{cache: NewCache(1<<20, 0, 1<<20, "")}
+	ent := localfs.Entry{Path: prefetchTestWords[0] + ".png", Type: localfs.EntryFile}
+
+	done := make(chan struct{})
+	go func() {
+		_ = e.IsEntryWarm(ent, nil)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("IsEntryWarm blocked on Stat; unknown listing metadata must not Stat on the caller")
+	}
+	close(blocked)
+}
+
 func TestScheduleFromListingWithoutPageSizeDoesNotPanic(t *testing.T) {
 	e := &Engine{cache: NewCache(1<<20, 0, 1<<20, "")}
 	e.cond = sync.NewCond(&e.mu)

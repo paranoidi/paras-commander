@@ -13,6 +13,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
+// ResolveStat is the stat used when a listing omitted mtime/size. Tests replace
+// this with a blocking fake to prove ScheduleFromListing / IsEntryWarm do not
+// call it on the caller's goroutine.
+var ResolveStat = os.Stat
+
 // Kind classifies a prefetch job.
 type Kind int
 
@@ -28,6 +33,9 @@ type Item struct {
 	Offset int // signed distance from the caret: negative = before, positive = after
 	Mtime  int64
 	Size   int64
+	// NeedStat is true when the listing omitted mtime/size. The worker stats
+	// before touching cache keys; the UI/schedule path must not.
+	NeedStat bool
 }
 
 // Config configures the prefetch engine.
@@ -71,11 +79,16 @@ type Engine struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mu        sync.Mutex
-	pending   []Item
-	renderBox *RenderBox
-	cond      *sync.Cond
-	wg        sync.WaitGroup
+	mu           sync.Mutex
+	pending      []Item
+	renderBox    *RenderBox
+	cond         *sync.Cond
+	wg           sync.WaitGroup
+	resolvedMeta map[string]resolvedMtimeSize
+}
+
+type resolvedMtimeSize struct {
+	mtime, size int64
 }
 
 // currentRenderBox returns the render box passed to the most recent Schedule call.
@@ -336,30 +349,74 @@ func (e *Engine) ScheduleFromListing(entries []localfs.Entry, cursorIdx, window,
 		default:
 			continue
 		}
-		mtime, size := resolveMtimeSize(ent)
+		mtime, size := e.resolveMtimeSize(ent)
 		items = append(items, Item{
-			Path:   path,
-			Kind:   kind,
-			Offset: offset,
-			Mtime:  mtime,
-			Size:   size,
+			Path:     path,
+			Kind:     kind,
+			Offset:   offset,
+			Mtime:    mtime,
+			Size:     size,
+			NeedStat: metaNeedsLiveStat(ent) && !e.hasResolvedMeta(path),
 		})
 	}
 	e.Schedule(items, dir, pageSize, window, box)
 }
 
-// resolveMtimeSize returns ent's mtime/size, falling back to a live stat when the listing didn't
-// populate them (some listings omit ModifiedAt/Size).
-func resolveMtimeSize(ent localfs.Entry) (mtime, size int64) {
+func metaNeedsLiveStat(ent localfs.Entry) bool {
+	return ent.ModifiedAt.IsZero() || ent.Size == 0
+}
+
+// resolveMtimeSize returns listing mtime/size, or a previously worker-resolved
+// pair. It never stats — unknown metadata is resolved in runJob.
+func (e *Engine) resolveMtimeSize(ent localfs.Entry) (mtime, size int64) {
 	mtime = ent.ModifiedAt.UnixNano()
 	size = ent.Size
-	if ent.ModifiedAt.IsZero() || size == 0 {
-		if fi, err := os.Stat(ent.Path); err == nil {
-			mtime = fi.ModTime().UnixNano()
-			size = fi.Size()
-		}
+	if !metaNeedsLiveStat(ent) {
+		return mtime, size
+	}
+	if m, ok := e.lookupResolvedMeta(ent.Path); ok {
+		return m.mtime, m.size
 	}
 	return mtime, size
+}
+
+func (e *Engine) lookupResolvedMeta(path string) (resolvedMtimeSize, bool) {
+	if e == nil {
+		return resolvedMtimeSize{}, false
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	m, ok := e.resolvedMeta[path]
+	return m, ok
+}
+
+func (e *Engine) hasResolvedMeta(path string) bool {
+	_, ok := e.lookupResolvedMeta(path)
+	return ok
+}
+
+func (e *Engine) storeResolvedMeta(path string, mtime, size int64) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.resolvedMeta == nil {
+		e.resolvedMeta = make(map[string]resolvedMtimeSize)
+	}
+	e.resolvedMeta[path] = resolvedMtimeSize{mtime: mtime, size: size}
+}
+
+func (e *Engine) liveMtimeSize(it Item) Item {
+	if !it.NeedStat {
+		return it
+	}
+	fi, err := ResolveStat(it.Path)
+	if err != nil {
+		return it
+	}
+	it.Mtime = fi.ModTime().UnixNano()
+	it.Size = fi.Size()
+	it.NeedStat = false
+	e.storeResolvedMeta(it.Path, it.Mtime, it.Size)
+	return it
 }
 
 // IsEntryWarm reports whether ent's prefetch cache is currently warm — both the intermediate
@@ -368,7 +425,7 @@ func resolveMtimeSize(ent localfs.Entry) (mtime, size int64) {
 // the debug preloaded/not-preloaded icon tint (internal/ui/panel_icon_strip.go), not scheduling
 // itself. box == nil means no render box is currently known, so only the decode tier is checked.
 func (e *Engine) IsEntryWarm(ent localfs.Entry, box *RenderBox) bool {
-	mtime, size := resolveMtimeSize(ent)
+	mtime, size := e.resolveMtimeSize(ent)
 	switch {
 	case localfs.IsImagePath(ent.Path):
 		return e.isImageWarm(ent.Path, mtime, size, box)
@@ -410,6 +467,7 @@ func (e *Engine) worker() {
 }
 
 func (e *Engine) runJob(it Item) {
+	it = e.liveMtimeSize(it)
 	ctx := e.ctx
 	switch it.Kind {
 	case KindImage:

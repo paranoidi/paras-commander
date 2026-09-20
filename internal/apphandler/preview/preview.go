@@ -564,6 +564,11 @@ const (
 	quickViewWantStatErr
 )
 
+// stripStat is the stat used when the selections-strip highlight has no listing
+// metadata. Tests replace this with a blocking fake to prove quickViewWantFile
+// does not call it on the UI goroutine.
+var stripStat = os.Stat
+
 // quickViewWantFile returns an absolute file path to preview when mode == quickViewWantFile
 // or quickViewWantEmpty. Empty (0-byte) files are skipped by inactive-column quick view but
 // remain valid targets for explicit F3 / file.view.
@@ -579,16 +584,23 @@ func (h *Handler) quickViewWantFile() (path string, workDir string, mode quickVi
 		if selPath == "" || selPath == "." {
 			return "", workDir, quickViewWantNone
 		}
-		fi, err := os.Stat(selPath)
-		if err != nil {
-			return "", workDir, quickViewWantStatErr
-		}
-		if fi.IsDir() {
+		if p.SelectedDirPaths[selPath] {
 			return "", workDir, quickViewWantDir
 		}
-		if fi.Size() == 0 {
-			return selPath, workDir, quickViewWantEmpty
+		for _, e := range p.Entries {
+			if e.Path != selPath {
+				continue
+			}
+			if e.Type == localfs.EntryDirectory {
+				return "", workDir, quickViewWantDir
+			}
+			if e.Size == 0 {
+				return selPath, workDir, quickViewWantEmpty
+			}
+			return selPath, workDir, quickViewWantFile
 		}
+		// Off-listing strip row: do not Stat on the UI goroutine. Missing or
+		// unreadable paths are reported by the async preview gate.
 		return selPath, workDir, quickViewWantFile
 	}
 	entry, ok := p.CurrentEntry()
