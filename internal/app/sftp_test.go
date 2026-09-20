@@ -3,11 +3,14 @@ package app
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	sftpb "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -314,4 +317,88 @@ func waitSFTPHostKeyWait(t *testing.T, app *App) {
 		time.Sleep(time.Millisecond)
 	}
 	t.Fatal("timeout waiting for host-key waiter")
+}
+
+func TestStartSFTPConnectStaleResultDoesNotOverwrite(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newTestApp(t, screen, testOptions(t.TempDir()))
+	app.config.UI.Status.MessageTTLSeconds = 0
+	app.config.SFTP.DialTimeoutSecs = 30
+
+	orig := sftpTouchConn
+	t.Cleanup(func() { sftpTouchConn = orig })
+
+	locA := pathloc.MustParse("sftp://host-a.example/")
+	locB := pathloc.MustParse("sftp://host-b.example/")
+	startedA := make(chan struct{})
+	releaseA := make(chan struct{})
+	sftpTouchConn = func(_ context.Context, loc pathloc.Path) error {
+		if strings.Contains(loc.String(), "host-a.example") {
+			close(startedA)
+			<-releaseA
+			return errors.New("from A")
+		}
+		return errors.New("from B")
+	}
+
+	app.startSFTPConnect(ui.PrimaryPanel, locA)
+	select {
+	case <-startedA:
+	case <-time.After(2 * time.Second):
+		t.Fatal("connect A did not start")
+	}
+	app.startSFTPConnect(ui.PrimaryPanel, locB)
+	applyNextInterruptEvent(t, app, screen)
+	if !strings.Contains(app.model.Message, "from B") {
+		t.Fatalf("after B: message = %q, want from B", app.model.Message)
+	}
+	msgB := app.model.Message
+	close(releaseA)
+	applyNextInterruptEvent(t, app, screen)
+	if strings.Contains(app.model.Message, "from A") {
+		t.Fatalf("stale connect A overwrote later connect B: %q", app.model.Message)
+	}
+	if app.model.Message != msgB {
+		t.Fatalf("message changed after stale A: %q -> %q", msgB, app.model.Message)
+	}
+}
+
+func TestSFTPConnectGenerationIsPerPanel(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newTestApp(t, screen, testOptions(t.TempDir()))
+	app.config.UI.Status.MessageTTLSeconds = 0
+	app.config.SFTP.DialTimeoutSecs = 30
+
+	orig := sftpTouchConn
+	t.Cleanup(func() { sftpTouchConn = orig })
+
+	locA := pathloc.MustParse("sftp://host-a.example/")
+	locB := pathloc.MustParse("sftp://host-b.example/")
+	startedA := make(chan struct{})
+	releaseA := make(chan struct{})
+	sftpTouchConn = func(_ context.Context, loc pathloc.Path) error {
+		if strings.Contains(loc.String(), "host-a.example") {
+			close(startedA)
+			<-releaseA
+			return errors.New("from A")
+		}
+		return errors.New("from B")
+	}
+
+	app.startSFTPConnect(ui.PrimaryPanel, locA)
+	select {
+	case <-startedA:
+	case <-time.After(2 * time.Second):
+		t.Fatal("connect A did not start")
+	}
+	app.startSFTPConnect(ui.SecondaryPanel, locB)
+	applyNextInterruptEvent(t, app, screen)
+	if !strings.Contains(app.model.Message, "from B") {
+		t.Fatalf("after secondary B: message = %q", app.model.Message)
+	}
+	close(releaseA)
+	applyNextInterruptEvent(t, app, screen)
+	if !strings.Contains(app.model.Message, "from A") {
+		t.Fatalf("primary connect A should still apply, message = %q", app.model.Message)
+	}
 }

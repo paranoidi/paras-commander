@@ -49,14 +49,19 @@ type sftpConnectPayload struct {
 	panelID int
 	uri     string
 	err     error
+	gen     uint64
 }
 
 type sftpAppExtra struct {
-	promptSem chan struct{}
-	promptID  atomic.Uint64
+	promptSem  chan struct{}
+	promptID   atomic.Uint64
+	connectGen [2]atomic.Uint64
 }
 
-var sftpAppExtraByApp sync.Map // *App -> *sftpAppExtra
+var (
+	sftpAppExtraByApp sync.Map // *App -> *sftpAppExtra
+	sftpTouchConn     = sftpb.TouchConn
+)
 
 func (a *App) sftpExtra() *sftpAppExtra {
 	if v, ok := sftpAppExtraByApp.Load(a); ok {
@@ -86,6 +91,29 @@ func (a *App) unlockSFTPPrompt() {
 
 func (a *App) nextSFTPPromptID() uint64 {
 	return a.sftpExtra().promptID.Add(1)
+}
+
+func sftpConnectPanelIndex(panelID int) (int, bool) {
+	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+		return 0, false
+	}
+	return panelID, true
+}
+
+func (a *App) nextSFTPConnectGen(panelID int) uint64 {
+	idx, ok := sftpConnectPanelIndex(panelID)
+	if !ok {
+		idx = ui.PrimaryPanel
+	}
+	return a.sftpExtra().connectGen[idx].Add(1)
+}
+
+func (a *App) currentSFTPConnectGen(panelID int) uint64 {
+	idx, ok := sftpConnectPanelIndex(panelID)
+	if !ok {
+		return 0
+	}
+	return a.sftpExtra().connectGen[idx].Load()
 }
 
 func (a *App) configureSFTP() error {
@@ -126,20 +154,25 @@ func (a *App) executeSFTPConnectURI(panelID int, raw string) {
 }
 
 func (a *App) startSFTPConnect(panelID int, loc pathloc.Path) {
+	gen := a.nextSFTPConnectGen(panelID)
 	a.setTransientMessage("Connecting to "+loc.Display(48)+"...", ui.MessageUrgencyInfo)
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.config.SFTP.DialTimeoutSecs)*time.Second)
 		defer cancel()
-		err := sftpb.TouchConn(ctx, loc)
+		err := sftpTouchConn(ctx, loc)
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(sftpConnectPayload{
 			panelID: panelID,
 			uri:     loc.String(),
 			err:     err,
+			gen:     gen,
 		}))
 	}()
 }
 
 func (a *App) applySFTPConnect(payload sftpConnectPayload) {
+	if payload.gen != a.currentSFTPConnectGen(payload.panelID) {
+		return
+	}
 	if payload.err != nil {
 		a.setErrorMessage("SFTP connect", payload.err)
 		a.render()
