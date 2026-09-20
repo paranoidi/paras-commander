@@ -88,6 +88,30 @@ func transferEntryLabel(e DeleteListEntry, flatten bool) string {
 	return e.Name
 }
 
+// transferDestinationFrameWidth is the outer dialog width DrawTransferDialog paints:
+// PreferredFormDialogWidth, or the expanded multi-location width when MultiLocation().
+func transferDestinationFrameWidth(layout Layout, state TransferDialogState, userHomeDir string, iconLead int) int {
+	width := PreferredFormDialogWidth
+	if state.MultiLocation() {
+		width = transferMultiDialogWidth(layout, state, userHomeDir, iconLead)
+	}
+	if width > layout.Width {
+		width = layout.Width
+	}
+	return width
+}
+
+// TransferDestinationTextWidth is the painted destination input text width (content width
+// minus the path-picker icon column and trailing blank). Completion and scroll use this
+// so FileDialogField.Scroll matches the row that is actually drawn.
+func TransferDestinationTextWidth(layout Layout, state TransferDialogState, userHomeDir string, iconLead int) int {
+	w := transferDestinationFrameWidth(layout, state, userHomeDir, iconLead) - 4 - 2
+	if w < 1 {
+		return 1
+	}
+	return w
+}
+
 // transferMultiDialogWidth computes the multi-location dialog width from the common-root
 // path and the entry structure labels (always un-flattened, so the dialog never resizes
 // when Flatten into destination is toggled).
@@ -116,7 +140,7 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		return
 	}
 
-	width := PreferredFormDialogWidth
+	width := transferDestinationFrameWidth(layout, state, "", 0)
 	height := 11
 	title := "Copy"
 	if state.Kind == TransferKindMove {
@@ -162,7 +186,7 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, destLabel, styles.DialogText.Background(dbg))
 
 	inputY := rect.Y + 2
-	inputWidth := rect.Width - 4
+	inputWidth := TransferDestinationTextWidth(layout, state, "", 0) + 2
 	rowFocused := state.FocusField == 0
 	pickerFocused := rowFocused && state.DestSubFocus == TransferDestSubFocusPicker
 	destInvalid := state.Phase == TransferPhaseDestination && state.DestPathInvalid && !state.DestPathCheckPending
@@ -206,7 +230,7 @@ func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state T
 	if state.Kind == TransferKindMove {
 		title = "Move"
 	}
-	width := transferMultiDialogWidth(layout, state, userHomeDir, iconLead)
+	width := transferDestinationFrameWidth(layout, state, userHomeDir, iconLead)
 	vp := TransferListViewportRows(layout, state)
 	height := vp + transferMultiChromeRows(state.Kind) + 2
 
@@ -232,7 +256,8 @@ func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state T
 	rowFocused := state.FocusField == 0
 	pickerFocused := rowFocused && state.DestSubFocus == TransferDestSubFocusPicker
 	destInvalid := state.DestPathInvalid && !state.DestPathCheckPending
-	drawPathInputRow(screen, textX, y, contentW, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
+	inputWidth := TransferDestinationTextWidth(layout, state, userHomeDir, iconLead) + 2
+	drawPathInputRow(screen, textX, y, inputWidth, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
 	y++
 
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
