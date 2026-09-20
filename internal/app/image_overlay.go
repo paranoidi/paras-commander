@@ -214,14 +214,6 @@ func (a *App) nativeSixelTransport(proto previewpanel.ImageProtocol) bool {
 	if proto != previewpanel.ImageProtocolSixel {
 		return false
 	}
-	// ponytail: env override instead of a config field + dialog radios, for A/B testing the two
-	// transports under tmux. Promote to a real setting once one of them is shown to win.
-	switch os.Getenv("PC_SIXEL_TRANSPORT") {
-	case "passthrough":
-		return false
-	case "native":
-		return true
-	}
 	return preview.TmuxSupportsNativeSixel(os.Getenv)
 }
 

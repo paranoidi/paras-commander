@@ -60,6 +60,25 @@ func TestWriteKittyDeleteUnderTmuxIsWrapped(t *testing.T) {
 	}
 }
 
+// TestNativeSixelTransportIgnoresEnvOverride pins the production transport to
+// preview.TmuxSupportsNativeSixel only: PC_SIXEL_TRANSPORT must not force native
+// when capability detection says no (fake TMUX cannot reach a real server).
+func TestNativeSixelTransportIgnoresEnvOverride(t *testing.T) {
+	t.Setenv("TMUX", fakeTmuxEnv)
+	t.Setenv("PC_SIXEL_TRANSPORT", "native")
+	a := &App{}
+	if a.nativeSixelTransport(previewpanel.ImageProtocolSixel) {
+		t.Fatal("PC_SIXEL_TRANSPORT=native must not force native when TmuxSupportsNativeSixel is false")
+	}
+	t.Setenv("PC_SIXEL_TRANSPORT", "passthrough")
+	if a.nativeSixelTransport(previewpanel.ImageProtocolSixel) {
+		t.Fatal("PC_SIXEL_TRANSPORT=passthrough must not change a false capability result")
+	}
+	if a.nativeSixelTransport(previewpanel.ImageProtocolKitty) {
+		t.Fatal("Kitty protocol is never native Sixel transport")
+	}
+}
+
 func TestWriteImagePayloadOutsideTmuxIsUnwrapped(t *testing.T) {
 	t.Setenv("TMUX", "")
 	payload := "\x1bPq...sixel-data...\x1b\\"
