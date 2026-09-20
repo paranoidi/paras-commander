@@ -85,6 +85,13 @@ func (s *hostKeyStore) reloadBaseLocked() error {
 }
 
 func (s *hostKeyStore) callback() ssh.HostKeyCallback {
+	return s.callbackWithContext(context.Background())
+}
+
+func (s *hostKeyStore) callbackWithContext(ctx context.Context) ssh.HostKeyCallback {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 		hostPart := hostname
 		if h, err := sshHostPartFromHostname(hostname); err == nil && h != "" {
@@ -112,7 +119,7 @@ func (s *hostKeyStore) callback() ssh.HostKeyCallback {
 		if s.prompts.HostKey == nil {
 			return fmt.Errorf("unknown host key for %s", hostPart)
 		}
-		decision, err := s.prompts.HostKey(context.Background(), HostKeyPrompt{
+		decision, err := s.prompts.HostKey(ctx, HostKeyPrompt{
 			Host:        hostPart,
 			RemoteAddr:  remoteLabel,
 			KeyType:     key.Type(),

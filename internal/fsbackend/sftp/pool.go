@@ -109,7 +109,7 @@ func (p *Pool) dial(ctx context.Context, loc pathloc.Path, hostPart string) (*go
 		return nil, wrapDialError(addr, err, diag)
 	}
 	enableTCPKeepAlive(raw)
-	sshConn, chans, reqs, err := p.handshakeSSH(raw, addr, user, diag.URIHost, host, port, openSSH, false)
+	sshConn, chans, reqs, err := p.handshakeSSH(ctx, raw, addr, user, diag.URIHost, host, port, openSSH, false)
 	if err != nil {
 		_ = raw.Close()
 		if p.prompts.Password != nil && isSSHAuthError(err) {
@@ -118,7 +118,7 @@ func (p *Pool) dial(ctx context.Context, loc pathloc.Path, hostPart string) (*go
 				return nil, wrapDialError(addr, err, diag)
 			}
 			enableTCPKeepAlive(raw)
-			sshConn, chans, reqs, err = p.handshakeSSH(raw, addr, user, diag.URIHost, host, port, openSSH, true)
+			sshConn, chans, reqs, err = p.handshakeSSH(ctx, raw, addr, user, diag.URIHost, host, port, openSSH, true)
 		}
 		if err != nil {
 			if raw != nil {
@@ -189,8 +189,8 @@ func (p *Pool) releaseStream(hostPart string) {
 	}
 }
 
-func (p *Pool) handshakeSSH(raw net.Conn, addr, user, connectHost, resolvedHost, port string, openSSH sshconfig.Config, allowPassword bool) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
-	auth, agentSess, _, err := buildAuthMethods(user, connectHost, resolvedHost, port, openSSH, p.prompts, allowPassword)
+func (p *Pool) handshakeSSH(ctx context.Context, raw net.Conn, addr, user, connectHost, resolvedHost, port string, openSSH sshconfig.Config, allowPassword bool) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
+	auth, agentSess, _, err := buildAuthMethods(ctx, user, connectHost, resolvedHost, port, openSSH, p.prompts, allowPassword)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -200,7 +200,7 @@ func (p *Pool) handshakeSSH(raw net.Conn, addr, user, connectHost, resolvedHost,
 	clientCfg := &ssh.ClientConfig{
 		User:            user,
 		Auth:            auth,
-		HostKeyCallback: p.hostKeys.callback(),
+		HostKeyCallback: p.hostKeys.callbackWithContext(ctx),
 		Timeout:         0,
 	}
 	return ssh.NewClientConn(raw, addr, clientCfg)

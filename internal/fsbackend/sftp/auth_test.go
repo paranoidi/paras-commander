@@ -68,7 +68,7 @@ func TestBuildAuthMethodsPubkeyOnlyPhaseHasSigners(t *testing.T) {
 		Alias: "rhasspy", HostName: "192.168.50.10", User: "pi",
 		IdentityFiles: []string{keyPath}, IdentityAgent: "none",
 	}}}
-	methods, _, report, err := buildAuthMethods("pi", "rhasspy", "192.168.50.10", "22", cfg, Prompts{
+	methods, _, report, err := buildAuthMethods(context.Background(), "pi", "rhasspy", "192.168.50.10", "22", cfg, Prompts{
 		Password: func(context.Context, PasswordPrompt) (string, error) {
 			t.Fatal("password must not be registered on pubkey-only handshake")
 			return "", nil
@@ -94,7 +94,7 @@ func TestBuildAuthMethodsPublicKeyBeforePassword(t *testing.T) {
 		IdentityFiles: []string{keyPath}, IdentityAgent: "none",
 	}}}
 
-	methods, _, report, err := buildAuthMethods("pi", "rhasspy", "192.168.50.10", "22", cfg, Prompts{
+	methods, _, report, err := buildAuthMethods(context.Background(), "pi", "rhasspy", "192.168.50.10", "22", cfg, Prompts{
 		Password: func(context.Context, PasswordPrompt) (string, error) {
 			t.Fatal("password callback must not run during method construction")
 			return "", nil
@@ -118,7 +118,7 @@ func TestBuildAuthMethodsNoPasswordWithoutPrompt(t *testing.T) {
 	keyPath := filepath.Join(dir, "id_test")
 	writeTestRSAPrivateKey(t, keyPath)
 
-	methods, _, _, err := buildAuthMethods("", "host", "host", "22", sshconfig.Config{
+	methods, _, _, err := buildAuthMethods(context.Background(), "", "host", "host", "22", sshconfig.Config{
 		Entries: []sshconfig.HostEntry{{Alias: "host", IdentityAgent: "none", IdentitiesOnly: "yes"}},
 	}, Prompts{}, true)
 	if err == nil {
@@ -126,7 +126,7 @@ func TestBuildAuthMethodsNoPasswordWithoutPrompt(t *testing.T) {
 	}
 	_ = methods
 
-	methods, _, report, err := buildAuthMethods("", "host", "host", "22", sshconfig.Config{
+	methods, _, report, err := buildAuthMethods(context.Background(), "", "host", "host", "22", sshconfig.Config{
 		Entries: []sshconfig.HostEntry{{Alias: "host", IdentityAgent: "none", IdentitiesOnly: "yes"}},
 	}, Prompts{
 		Password: func(context.Context, PasswordPrompt) (string, error) { return "secret", nil },
@@ -138,7 +138,7 @@ func TestBuildAuthMethodsNoPasswordWithoutPrompt(t *testing.T) {
 		t.Fatalf("signers=%d methods=%d, want password-only", report.SignerCount, len(methods))
 	}
 
-	methods, _, report, err = buildAuthMethods("pi", "rhasspy", "192.168.50.10", "22", sshconfig.Config{Entries: []sshconfig.HostEntry{{
+	methods, _, report, err = buildAuthMethods(context.Background(), "pi", "rhasspy", "192.168.50.10", "22", sshconfig.Config{Entries: []sshconfig.HostEntry{{
 		Alias: "rhasspy", HostName: "192.168.50.10", User: "pi",
 		IdentityFiles: []string{keyPath}, IdentityAgent: "none",
 	}}}, Prompts{}, false)

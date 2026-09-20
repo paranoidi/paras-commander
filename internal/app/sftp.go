@@ -2,7 +2,10 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -14,20 +17,75 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
+// sftpPromptDismissSentinel is posted through the existing host-key/password open
+// payloads so a cancelled wait can close its dialog on the UI goroutine.
+const sftpPromptDismissSentinel = "\x00dismiss"
+
+var errSFTPPromptCanceled = errors.New("sftp prompt canceled")
+
 type sftpHostKeyWait struct {
+	id     uint64
 	prompt sftpb.HostKeyPrompt
-	reply  chan sftpb.HostKeyDecision
+	reply  chan sftpHostKeyReply
+}
+
+type sftpHostKeyReply struct {
+	decision sftpb.HostKeyDecision
+	err      error
 }
 
 type sftpPasswordWait struct {
+	id     uint64
 	prompt sftpb.PasswordPrompt
-	reply  chan string
+	reply  chan sftpPasswordReply
+}
+
+type sftpPasswordReply struct {
+	password string
+	err      error
 }
 
 type sftpConnectPayload struct {
 	panelID int
 	uri     string
 	err     error
+}
+
+type sftpAppExtra struct {
+	promptSem chan struct{}
+	promptID  atomic.Uint64
+}
+
+var sftpAppExtraByApp sync.Map // *App -> *sftpAppExtra
+
+func (a *App) sftpExtra() *sftpAppExtra {
+	if v, ok := sftpAppExtraByApp.Load(a); ok {
+		return v.(*sftpAppExtra)
+	}
+	extra := &sftpAppExtra{promptSem: make(chan struct{}, 1)}
+	extra.promptSem <- struct{}{}
+	actual, _ := sftpAppExtraByApp.LoadOrStore(a, extra)
+	return actual.(*sftpAppExtra)
+}
+
+func (a *App) lockSFTPPrompt(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	select {
+	case <-a.sftpExtra().promptSem:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (a *App) unlockSFTPPrompt() {
+	a.sftpExtra().promptSem <- struct{}{}
+}
+
+func (a *App) nextSFTPPromptID() uint64 {
+	return a.sftpExtra().promptID.Add(1)
 }
 
 func (a *App) configureSFTP() error {
@@ -96,24 +154,77 @@ func (a *App) applySFTPConnect(payload sftpConnectPayload) {
 }
 
 func (a *App) promptSFTPHostKey(ctx context.Context, p sftpb.HostKeyPrompt) (sftpb.HostKeyDecision, error) {
-	_ = ctx // interactive approval is not cancelled by SSH dial context (may be nil from host key callback)
-	reply := make(chan sftpb.HostKeyDecision, 1)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := a.lockSFTPPrompt(ctx); err != nil {
+		return sftpb.HostKeyReject, err
+	}
+	defer a.unlockSFTPPrompt()
+
+	reply := make(chan sftpHostKeyReply, 1)
+	id := a.nextSFTPPromptID()
 	a.sftp.mu.Lock()
-	a.sftp.hostKeyWait = &sftpHostKeyWait{prompt: p, reply: reply}
+	if old := a.sftp.hostKeyWait; old != nil {
+		a.sftp.hostKeyWait = nil
+		old.reply <- sftpHostKeyReply{decision: sftpb.HostKeyReject, err: errSFTPPromptCanceled}
+	}
+	a.sftp.hostKeyWait = &sftpHostKeyWait{id: id, prompt: p, reply: reply}
 	a.sftp.mu.Unlock()
 	_ = a.screen.PostEvent(tcell.NewEventInterrupt(sftpHostKeyOpenPayload{prompt: p}))
-	d := <-reply
-	return d, nil
+	select {
+	case r := <-reply:
+		return r.decision, r.err
+	case <-ctx.Done():
+		if a.takeHostKeyWait(id) != nil {
+			_ = a.screen.PostEvent(tcell.NewEventInterrupt(sftpHostKeyOpenPayload{
+				prompt: sftpb.HostKeyPrompt{Host: sftpPromptDismissSentinel},
+			}))
+		}
+		select {
+		case r := <-reply:
+			return r.decision, r.err
+		default:
+			return sftpb.HostKeyReject, ctx.Err()
+		}
+	}
 }
 
 func (a *App) promptSFTPPassword(ctx context.Context, p sftpb.PasswordPrompt) (string, error) {
-	_ = ctx // same as host key: wait for user input on the main thread
-	reply := make(chan string, 1)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := a.lockSFTPPrompt(ctx); err != nil {
+		return "", err
+	}
+	defer a.unlockSFTPPrompt()
+
+	reply := make(chan sftpPasswordReply, 1)
+	id := a.nextSFTPPromptID()
 	a.sftp.mu.Lock()
-	a.sftp.passwordWait = &sftpPasswordWait{prompt: p, reply: reply}
+	if old := a.sftp.passwordWait; old != nil {
+		a.sftp.passwordWait = nil
+		old.reply <- sftpPasswordReply{err: errSFTPPromptCanceled}
+	}
+	a.sftp.passwordWait = &sftpPasswordWait{id: id, prompt: p, reply: reply}
 	a.sftp.mu.Unlock()
 	_ = a.screen.PostEvent(tcell.NewEventInterrupt(sftpPasswordOpenPayload{prompt: p}))
-	return <-reply, nil
+	select {
+	case r := <-reply:
+		return r.password, r.err
+	case <-ctx.Done():
+		if a.takePasswordWait(id) != nil {
+			_ = a.screen.PostEvent(tcell.NewEventInterrupt(sftpPasswordOpenPayload{
+				prompt: sftpb.PasswordPrompt{Host: sftpPromptDismissSentinel},
+			}))
+		}
+		select {
+		case r := <-reply:
+			return r.password, r.err
+		default:
+			return "", ctx.Err()
+		}
+	}
 }
 
 type sftpHostKeyOpenPayload struct {
@@ -125,6 +236,10 @@ type sftpPasswordOpenPayload struct {
 }
 
 func (a *App) openHostKeyDialog(p sftpb.HostKeyPrompt) {
+	if p.Host == sftpPromptDismissSentinel {
+		a.closeHostKeyDialog()
+		return
+	}
 	a.model.HostKeyDialog = dialog.HostKeyDialogState{
 		Open:        true,
 		Host:        p.Host,
@@ -138,18 +253,43 @@ func (a *App) closeHostKeyDialog() {
 	a.model.HostKeyDialog = dialog.HostKeyDialogState{}
 }
 
-func (a *App) finishHostKeyDialog(decision sftpb.HostKeyDecision) {
+func (a *App) takeHostKeyWait(id uint64) *sftpHostKeyWait {
 	a.sftp.mu.Lock()
+	defer a.sftp.mu.Unlock()
 	wait := a.sftp.hostKeyWait
+	if wait == nil || (id != 0 && wait.id != id) {
+		return nil
+	}
 	a.sftp.hostKeyWait = nil
-	a.sftp.mu.Unlock()
+	return wait
+}
+
+func (a *App) takePasswordWait(id uint64) *sftpPasswordWait {
+	a.sftp.mu.Lock()
+	defer a.sftp.mu.Unlock()
+	wait := a.sftp.passwordWait
+	if wait == nil || (id != 0 && wait.id != id) {
+		return nil
+	}
+	a.sftp.passwordWait = nil
+	return wait
+}
+
+func (a *App) finishHostKeyDialog(decision sftpb.HostKeyDecision) {
+	wait := a.takeHostKeyWait(0)
 	a.closeHostKeyDialog()
 	if wait != nil {
-		wait.reply <- decision
+		wait.reply <- sftpHostKeyReply{decision: decision}
 	}
 }
 
 func (a *App) openSFTPPasswordDialog(p sftpb.PasswordPrompt) {
+	if p.Host == sftpPromptDismissSentinel {
+		if a.model.FileDialog.DialogType == dialog.FileDialogSFTPPassword {
+			a.dialogCtrl.CloseFileDialog()
+		}
+		return
+	}
 	label := "Password for " + p.User + "@" + p.Host
 	a.model.FileDialog = dialog.FileDialogState{
 		Open:       true,
@@ -164,12 +304,28 @@ func (a *App) openSFTPPasswordDialog(p sftpb.PasswordPrompt) {
 }
 
 func (a *App) finishSFTPPassword(password string) {
-	a.sftp.mu.Lock()
-	wait := a.sftp.passwordWait
-	a.sftp.passwordWait = nil
-	a.sftp.mu.Unlock()
+	wait := a.takePasswordWait(0)
 	if wait != nil {
-		wait.reply <- password
+		wait.reply <- sftpPasswordReply{password: password}
+	}
+}
+
+func (a *App) cancelSFTPPassword() {
+	wait := a.takePasswordWait(0)
+	if a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogSFTPPassword {
+		a.dialogCtrl.CloseFileDialog()
+	}
+	if wait != nil {
+		wait.reply <- sftpPasswordReply{err: errSFTPPromptCanceled}
+	}
+}
+
+func (a *App) handleSFTPPasswordCancelKey(ev *tcell.EventKey) {
+	if ev == nil {
+		return
+	}
+	if ev.Key() == tcell.KeyEsc || dialog.AltDialogCancel(ev) {
+		a.cancelSFTPPassword()
 	}
 }
 

@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"errors"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -142,6 +144,46 @@ func TestHostKeyTrustSessionDoesNotWriteKnownHosts(t *testing.T) {
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatal("session trust must not create known_hosts")
+	}
+}
+
+func TestHostKeyPromptObservesDialContext(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "known_hosts")
+	key := testSSHPublicKey(t)
+	hostname := "127.0.0.1:22"
+	remote := testTCPAddr(t, hostname)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	blocked := make(chan struct{})
+	store, err := newHostKeyStore(path, Prompts{
+		HostKey: func(ctx context.Context, _ HostKeyPrompt) (HostKeyDecision, error) {
+			close(blocked)
+			<-ctx.Done()
+			return HostKeyReject, ctx.Err()
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		done <- store.callbackWithContext(ctx)(hostname, remote, key)
+	}()
+	select {
+	case <-blocked:
+	case <-time.After(2 * time.Second):
+		t.Fatal("host-key callback did not prompt")
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("callback err = %v, want context.Canceled", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("host-key prompt ignored originating context")
 	}
 }
 

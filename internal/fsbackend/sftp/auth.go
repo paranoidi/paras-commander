@@ -64,7 +64,7 @@ func (s *sshAgentSession) Close() error {
 	return err
 }
 
-func buildAuthMethods(user, connectHost, resolvedHost, port string, cfg sshconfig.Config, prompts Prompts, allowPassword bool) ([]ssh.AuthMethod, *sshAgentSession, signerLoadReport, error) {
+func buildAuthMethods(ctx context.Context, user, connectHost, resolvedHost, port string, cfg sshconfig.Config, prompts Prompts, allowPassword bool) ([]ssh.AuthMethod, *sshAgentSession, signerLoadReport, error) {
 	opts := cfg.ConnectAuthOptionsFor(user, connectHost, resolvedHost, port)
 	signers, agentSess, report := loadSigners(opts)
 	report.SignerCount = len(signers)
@@ -83,8 +83,11 @@ func buildAuthMethods(user, connectHost, resolvedHost, port string, cfg sshconfi
 		if port != "" && port != "22" {
 			hostLabel = net.JoinHostPort(resolvedHost, port)
 		}
+		if ctx == nil {
+			ctx = context.Background()
+		}
 		methods = append(methods, ssh.PasswordCallback(func() (string, error) {
-			return prompts.Password(context.Background(), PasswordPrompt{User: user, Host: hostLabel})
+			return prompts.Password(ctx, PasswordPrompt{User: user, Host: hostLabel})
 		}))
 	}
 	if len(methods) == 0 {
