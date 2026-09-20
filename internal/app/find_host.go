@@ -3,7 +3,6 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
-	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -39,8 +38,6 @@ func (h findHost) FindDialogScrollingQuery(st *dialog.FindDialogState, width int
 
 func (h findHost) FindDialogQueryWidth() int { return h.app.findDialogQueryWidth() }
 
-func (h findHost) DiskUsageIgnore() diskusage.ShouldIgnoreFolder { return h.app.disk.ignore }
-
 func (h findHost) GitignoreCache() *gitignore.Cache { return h.app.gitignoreCache }
 
 func (h findHost) PanelViewportRows(panelID int) int { return h.app.panelViewportRows(panelID) }
@@ -60,3 +57,5 @@ func (h findHost) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 func (h findHost) PinTogglePath(name, path string, isDir bool) {
 	h.app.pinCtrl.TogglePath(name, path, isDir)
 }
+
+var _ findctrl.Host = findHost{}

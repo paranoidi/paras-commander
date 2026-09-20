@@ -3,7 +3,6 @@ package find
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
-	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -22,7 +21,6 @@ type Host interface {
 	HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, edit ScrollingQueryEdit) bool
 	FindDialogScrollingQuery(st *dialog.FindDialogState, width int, onChange func()) ScrollingQueryEdit
 	FindDialogQueryWidth() int
-	DiskUsageIgnore() diskusage.ShouldIgnoreFolder
 	GitignoreCache() *gitignore.Cache
 	PanelViewportRows(panelID int) int
 	OpenGroupSelectDialog(mode GroupSelectMode, forFind bool)

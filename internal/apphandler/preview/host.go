@@ -15,8 +15,12 @@ import (
 // Host supplies cross-cutting app services the preview handler cannot import from internal/app.
 type Host interface {
 	host.LayoutHost
-	host.MessageHost
-	host.ShellHost
+
+	SetTransientMessage(text string, urgency ui.MessageUrgency)
+	HandleQuit() bool
+	HandleQuitImmediate() bool
+	Dispatch(actionID string)
+	ActionFromKeyEvent(ev *tcell.EventKey) string
 
 	ActivePanel() *panel.State
 	PanelByID(panelID int) *panel.State
@@ -66,7 +70,6 @@ type Host interface {
 	// wasn't launched from such a caller.
 	FilePreviewFullscreenClosed()
 	HandleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.FileDialogField, afterEdit func()) bool
-	PersistPartial(patch map[string]interface{}) error
 
 	// Config and Styles return the App's live config/theme (not a snapshot): both are mutable at
 	// runtime from the settings and theme dialogs, so the handler must re-read them on every use

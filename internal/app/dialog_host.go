@@ -28,10 +28,6 @@ func (h dialogHost) ActiveViewportRows() int { return h.app.activeViewportRows()
 
 func (h dialogHost) PanelViewportRows(panelID int) int { return h.app.panelViewportRows(panelID) }
 
-func (h dialogHost) PathVolumeContendsWithActiveJob(path string) bool {
-	return h.app.pathVolumeContendsWithActiveJob(path)
-}
-
 func (h dialogHost) FilterJobContendedPaths(paths []string) []string {
 	return h.app.filterJobContendedPaths(paths)
 }

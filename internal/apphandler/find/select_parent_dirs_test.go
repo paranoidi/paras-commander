@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -41,12 +40,13 @@ func (f *fakeFindHost) FindDialogScrollingQuery(*dialog.FindDialogState, int, fu
 	return ScrollingQueryEdit{}
 }
 func (f *fakeFindHost) FindDialogQueryWidth() int                      { return 0 }
-func (f *fakeFindHost) DiskUsageIgnore() diskusage.ShouldIgnoreFolder  { return nil }
 func (f *fakeFindHost) GitignoreCache() *gitignore.Cache               { return nil }
 func (f *fakeFindHost) PanelViewportRows(int) int                      { return 0 }
 func (f *fakeFindHost) OpenGroupSelectDialog(GroupSelectMode, bool)    {}
 func (f *fakeFindHost) OpenFullscreenFilePreviewAt(string, bool) error { return nil }
 func (f *fakeFindHost) PinTogglePath(string, string, bool)             {}
+
+var _ Host = (*fakeFindHost)(nil)
 
 func newTestFindHandler(host *fakeFindHost, model *ui.Model) *Handler {
 	return &Handler{

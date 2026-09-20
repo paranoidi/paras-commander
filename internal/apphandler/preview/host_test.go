@@ -57,16 +57,10 @@ func (f *fakeHost) layout(w, h int) ui.Layout {
 func (f *fakeHost) SetTransientMessage(text string, _ ui.MessageUrgency) {
 	f.messages = append(f.messages, text)
 }
-func (f *fakeHost) SetErrorMessage(_ string, _ error)         {}
 func (f *fakeHost) HandleQuit() bool                          { return true }
 func (f *fakeHost) HandleQuitImmediate() bool                 { return true }
-func (f *fakeHost) OpenMenu()                                 {}
-func (f *fakeHost) OpenMenuByShortcut(rune) bool              { return false }
 func (f *fakeHost) Dispatch(string)                           {}
-func (f *fakeHost) TryDispatchAuxiliaryScreens(string) bool   { return false }
 func (f *fakeHost) ActionFromKeyEvent(*tcell.EventKey) string { return "" }
-func (f *fakeHost) ToggleLeaderMenu()                         {}
-func (f *fakeHost) DispatchLeaderLetter(*tcell.EventKey) bool { return false }
 func (f *fakeHost) ActivePanel() *panel.State {
 	if f.model.ActivePanel == ui.SecondaryPanel {
 		return &f.model.Secondary
@@ -134,10 +128,9 @@ func (f *fakeHost) FilePreviewFullscreenClosed()              {}
 func (f *fakeHost) HandleFileDialogFieldKey(*tcell.EventKey, *dialog.FileDialogField, func()) bool {
 	return false
 }
-func (f *fakeHost) PersistPartial(map[string]interface{}) error { return nil }
-func (f *fakeHost) Config() config.Config                       { return f.cfg }
-func (f *fakeHost) Styles() theme.Theme                         { return f.styles }
-func (f *fakeHost) SetPreviewStyle(style string)                { f.cfg.Preview.Style = style }
+func (f *fakeHost) Config() config.Config        { return f.cfg }
+func (f *fakeHost) Styles() theme.Theme          { return f.styles }
+func (f *fakeHost) SetPreviewStyle(style string) { f.cfg.Preview.Style = style }
 func (f *fakeHost) ApplyPreviewStyle(name string) bool {
 	f.cfg.Preview.Style = config.NormalizePreviewStyle(name)
 	return true

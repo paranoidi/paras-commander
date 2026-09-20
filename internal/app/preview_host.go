@@ -124,10 +124,6 @@ func (h previewHost) HandleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.File
 	return dialog.HandleFileDialogFieldKey(ev, f, h.app.keys.DialogInput, afterEdit)
 }
 
-func (h previewHost) PersistPartial(patch map[string]interface{}) error {
-	return h.app.persistPartial(patch)
-}
-
 func (h previewHost) Config() config.Config { return h.app.config }
 
 func (h previewHost) Styles() theme.Theme { return h.app.styles }
