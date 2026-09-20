@@ -331,27 +331,13 @@ func EncodeDefaultStub(w io.Writer) error {
 		"#\n" +
 		"# View overlays ([jobs], [commands], [messages], [file_preview], [terminal]) take precedence over\n" +
 		"# [main] while that view is focused.\n" +
-		"#\n" +
-		"# [terminal] — terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell\n" +
-		"# (applies while the embedded terminal panel has focus).\n" +
-		"#\n" +
 		"# Dialog overlays ([dialog.input], [dialog.rename], …) apply only while\n" +
 		"# the matching dialog context is focused.\n" +
 		"#\n" +
 		"# Fuzzy path picker on copy/move destination or symlink/hardlink path rows\n" +
 		"# uses the same chords as bookmark.open under [main].\n" +
 		"#\n" +
-		"# [dialog.input] — ui.input.* only (e.g. restore default placeholder).\n" +
-		"# [dialog.rename] — file.rename.open-sanitize and file.rename.open-slugify.\n" +
-		"# [dialog.mass_rename] — file.mass-rename.save-pattern, file.mass-rename.load-pattern, file.mass-rename.delete-pattern.\n" +
-		"# [dialog.mkdir] — file.mkdir.extract-common-name.\n" +
-		"# [dialog.bookmark] — bookmark.delete (fzf-marks only).\n" +
-		"# [dialog.find] — find.select-all, find.unselect-all, find.select-group, find.unselect-group.\n" +
-		"# [dialog.history] — panel.history-both-panels.\n" +
-		"# [dialog.flatten] — ui.destination-active and ui.destination-inactive.\n" +
-		"# [dialog.transfer] — ui.destination-active and ui.destination-inactive (copy/move dialog).\n" +
-		"# [dialog.run_for_each] — file.run-for-each.history.\n" +
-		"# [dialog.pin] — pin.open-primary, pin.open-secondary, pin.remove.\n" +
+		overlayStubHeaderComments() +
 		"#\n" +
 		"# [leader_key] — Esc function-menu keys (case-sensitive: f and F may differ; ?, comma, period allowed; empty omits).\n" +
 		"# [copy_menu] — `\"` copy-menu keys (letters only; empty omits).\n" +

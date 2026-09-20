@@ -1,163 +1,39 @@
 package keymap
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
 
 // OverlaySpec describes one keymap overlay table (e.g. [jobs]).
 type OverlaySpec struct {
 	TableName string
 	Defaults  func() map[string][]string
 	Allowed   func(actionID string) bool
-	// DisallowedActionError formats a validation error when Allowed rejects an action.
-	DisallowedActionError func(source, action string) error
 }
 
 // overlayRegistry is the single source of overlay table metadata and ordering.
 // Order matches Bundle overlay field assignment in buildBundle.
 var overlayRegistry = []OverlaySpec{
-	{
-		TableName: JobsShortcutsTable,
-		Defaults:  DefaultJobsOverlayKeys,
-		Allowed:   AllowedInJobsOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [jobs] action %q is not allowed (jobs.* only)", source, action)
-		},
-	},
-	{
-		TableName: CommandsShortcutsTable,
-		Defaults:  DefaultCommandsOverlayKeys,
-		Allowed:   AllowedInCommandsOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [commands] action %q is not allowed (commands.* only)", source, action)
-		},
-	},
-	{
-		TableName: MessagesShortcutsTable,
-		Defaults:  DefaultMessagesOverlayKeys,
-		Allowed:   AllowedInMessagesOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [messages] action %q is not allowed (messages.* only)", source, action)
-		},
-	},
-	{
-		TableName: FilePreviewShortcutsTable,
-		Defaults:  DefaultFilePreviewOverlayKeys,
-		Allowed:   AllowedInFilePreviewOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [file_preview] action %q is not allowed (file.view.* only)", source, action)
-		},
-	},
-	{
-		TableName: DialogInputShortcutsTable,
-		Defaults:  DefaultDialogInputOverlayKeys,
-		Allowed:   AllowedInDialogInputOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.input] action %q is not allowed (ui.input.* only)", source, action)
-		},
-	},
-	{
-		TableName: DialogRenameShortcutsTable,
-		Defaults:  DefaultRenameDialogOverlayKeys,
-		Allowed:   AllowedInRenameDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.rename] action %q is not allowed (file.rename.open-* only)", source, action)
-		},
-	},
-	{
-		TableName: DialogMkdirShortcutsTable,
-		Defaults:  DefaultMkdirDialogOverlayKeys,
-		Allowed:   AllowedInMkdirDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.mkdir] action %q is not allowed (file.mkdir.extract-common-name only)", source, action)
-		},
-	},
-	{
-		TableName: DialogBookmarkShortcutsTable,
-		Defaults:  DefaultBookmarkDialogOverlayKeys,
-		Allowed:   AllowedInBookmarkDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.bookmark] action %q is not allowed (bookmark.delete only)", source, action)
-		},
-	},
-	{
-		TableName: DialogFindShortcutsTable,
-		Defaults:  DefaultFindDialogOverlayKeys,
-		Allowed:   AllowedInFindDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.find] action %q is not allowed (find.select-all, find.unselect-all, find.select-group, find.unselect-group only)", source, action)
-		},
-	},
-	{
-		TableName: DialogHistoryShortcutsTable,
-		Defaults:  DefaultHistoryDialogOverlayKeys,
-		Allowed:   AllowedInHistoryDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.history] action %q is not allowed (panel.history-both-panels only)", source, action)
-		},
-	},
-	{
-		TableName: DialogFlattenShortcutsTable,
-		Defaults:  DefaultFlattenDialogOverlayKeys,
-		Allowed:   AllowedInFlattenDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.flatten] action %q is not allowed (ui.destination-active, ui.destination-inactive only)", source, action)
-		},
-	},
-	{
-		TableName: DialogTransferShortcutsTable,
-		Defaults:  DefaultTransferDialogOverlayKeys,
-		Allowed:   AllowedInTransferDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.transfer] action %q is not allowed (ui.destination-active, ui.destination-inactive only)", source, action)
-		},
-	},
-	{
-		TableName: CompareShortcutsTable,
-		Defaults:  DefaultCompareOverlayKeys,
-		Allowed:   AllowedInCompareOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [compare] action %q is not allowed (compare.* only)", source, action)
-		},
-	},
-	{
-		TableName: DedupShortcutsTable,
-		Defaults:  DefaultDedupOverlayKeys,
-		Allowed:   AllowedInDedupOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dedup] action %q is not allowed (dedup.* only)", source, action)
-		},
-	},
-	{
-		TableName: TerminalShortcutsTable,
-		Defaults:  DefaultTerminalOverlayKeys,
-		Allowed:   AllowedInTerminalOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [terminal] action %q is not allowed (terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell only)", source, action)
-		},
-	},
-	{
-		TableName: DialogMassRenameShortcutsTable,
-		Defaults:  DefaultMassRenameDialogOverlayKeys,
-		Allowed:   AllowedInMassRenameDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.mass_rename] action %q is not allowed (file.mass-rename.save-pattern, file.mass-rename.load-pattern, file.mass-rename.delete-pattern only)", source, action)
-		},
-	},
-	{
-		TableName: DialogRunForEachShortcutsTable,
-		Defaults:  DefaultRunForEachDialogOverlayKeys,
-		Allowed:   AllowedInRunForEachDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.run_for_each] action %q is not allowed (file.run-for-each.history only)", source, action)
-		},
-	},
-	{
-		TableName: DialogPinShortcutsTable,
-		Defaults:  DefaultPinDialogOverlayKeys,
-		Allowed:   AllowedInPinDialogOverlay,
-		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.pin] action %q is not allowed (pin.open-primary, pin.open-secondary, pin.remove only)", source, action)
-		},
-	},
+	{TableName: JobsShortcutsTable, Defaults: DefaultJobsOverlayKeys, Allowed: AllowedInJobsOverlay},
+	{TableName: CommandsShortcutsTable, Defaults: DefaultCommandsOverlayKeys, Allowed: AllowedInCommandsOverlay},
+	{TableName: MessagesShortcutsTable, Defaults: DefaultMessagesOverlayKeys, Allowed: AllowedInMessagesOverlay},
+	{TableName: FilePreviewShortcutsTable, Defaults: DefaultFilePreviewOverlayKeys, Allowed: AllowedInFilePreviewOverlay},
+	{TableName: DialogInputShortcutsTable, Defaults: DefaultDialogInputOverlayKeys, Allowed: AllowedInDialogInputOverlay},
+	{TableName: DialogRenameShortcutsTable, Defaults: DefaultRenameDialogOverlayKeys, Allowed: AllowedInRenameDialogOverlay},
+	{TableName: DialogMkdirShortcutsTable, Defaults: DefaultMkdirDialogOverlayKeys, Allowed: AllowedInMkdirDialogOverlay},
+	{TableName: DialogBookmarkShortcutsTable, Defaults: DefaultBookmarkDialogOverlayKeys, Allowed: AllowedInBookmarkDialogOverlay},
+	{TableName: DialogFindShortcutsTable, Defaults: DefaultFindDialogOverlayKeys, Allowed: AllowedInFindDialogOverlay},
+	{TableName: DialogHistoryShortcutsTable, Defaults: DefaultHistoryDialogOverlayKeys, Allowed: AllowedInHistoryDialogOverlay},
+	{TableName: DialogFlattenShortcutsTable, Defaults: DefaultFlattenDialogOverlayKeys, Allowed: AllowedInFlattenDialogOverlay},
+	{TableName: DialogTransferShortcutsTable, Defaults: DefaultTransferDialogOverlayKeys, Allowed: AllowedInTransferDialogOverlay},
+	{TableName: CompareShortcutsTable, Defaults: DefaultCompareOverlayKeys, Allowed: AllowedInCompareOverlay},
+	{TableName: DedupShortcutsTable, Defaults: DefaultDedupOverlayKeys, Allowed: AllowedInDedupOverlay},
+	{TableName: TerminalShortcutsTable, Defaults: DefaultTerminalOverlayKeys, Allowed: AllowedInTerminalOverlay},
+	{TableName: DialogMassRenameShortcutsTable, Defaults: DefaultMassRenameDialogOverlayKeys, Allowed: AllowedInMassRenameDialogOverlay},
+	{TableName: DialogRunForEachShortcutsTable, Defaults: DefaultRunForEachDialogOverlayKeys, Allowed: AllowedInRunForEachDialogOverlay},
+	{TableName: DialogPinShortcutsTable, Defaults: DefaultPinDialogOverlayKeys, Allowed: AllowedInPinDialogOverlay},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -184,47 +60,42 @@ func validateOverlayKeysFromFile(keys map[string][]string, label string, spec Ov
 	return nil
 }
 
+func overlayAllowedActionIDs(spec OverlaySpec) []string {
+	if spec.Allowed == nil {
+		return nil
+	}
+	ids := make([]string, 0)
+	for id := range KnownActions {
+		if spec.Allowed(id) {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	return ids
+}
+
 func overlayNotAllowedHint(spec OverlaySpec) string {
-	switch spec.TableName {
-	case JobsShortcutsTable:
-		return "jobs.* only"
-	case CommandsShortcutsTable:
-		return "commands.* only"
-	case MessagesShortcutsTable:
-		return "messages.* only"
-	case FilePreviewShortcutsTable:
-		return "file.view.* only"
-	case DialogInputShortcutsTable:
-		return "ui.input.* only"
-	case DialogRenameShortcutsTable:
-		return "file.rename.open-* only"
-	case DialogMkdirShortcutsTable:
-		return "file.mkdir.extract-common-name only"
-	case DialogBookmarkShortcutsTable:
-		return "bookmark.delete only"
-	case DialogFindShortcutsTable:
-		return "find.select-all, find.unselect-all, find.select-group, find.unselect-group only"
-	case DialogHistoryShortcutsTable:
-		return "panel.history-both-panels only"
-	case DialogFlattenShortcutsTable:
-		return "ui.destination-active, ui.destination-inactive only"
-	case DialogTransferShortcutsTable:
-		return "ui.destination-active, ui.destination-inactive only"
-	case CompareShortcutsTable:
-		return "compare.* only"
-	case DedupShortcutsTable:
-		return "dedup.* only"
-	case TerminalShortcutsTable:
-		return "terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell only"
-	case DialogMassRenameShortcutsTable:
-		return "file.mass-rename.save-pattern, file.mass-rename.load-pattern, file.mass-rename.delete-pattern only"
-	case DialogRunForEachShortcutsTable:
-		return "file.run-for-each.history only"
-	case DialogPinShortcutsTable:
-		return "pin.open-primary, pin.open-secondary, pin.remove only"
-	default:
+	ids := overlayAllowedActionIDs(spec)
+	if len(ids) == 0 {
 		return "not allowed"
 	}
+	return strings.Join(ids, ", ") + " only"
+}
+
+func overlayStubHeaderComments() string {
+	var b strings.Builder
+	for _, spec := range overlayRegistry {
+		ids := overlayAllowedActionIDs(spec)
+		if len(ids) == 0 {
+			continue
+		}
+		b.WriteString("# [")
+		b.WriteString(spec.TableName)
+		b.WriteString("] — ")
+		b.WriteString(strings.Join(ids, ", "))
+		b.WriteString(".\n")
+	}
+	return b.String()
 }
 
 func defaultOverlayLayers() []map[string][]string {

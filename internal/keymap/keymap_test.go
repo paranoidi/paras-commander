@@ -1,6 +1,7 @@
 package keymap
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1216,6 +1217,41 @@ func TestMenuBindingLabelStableAcrossCalls(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		if got := m.MenuBindingLabel(ActionCompareClose); got != first {
 			t.Fatalf("iteration %d: label = %q, want %q", i, got, first)
+		}
+	}
+}
+
+func TestOverlayErrorHintsListEveryAllowedAction(t *testing.T) {
+	for _, spec := range overlayRegistry {
+		hint := overlayNotAllowedHint(spec)
+		for id := range KnownActions {
+			if spec.Allowed == nil || !spec.Allowed(id) {
+				continue
+			}
+			if !strings.Contains(hint, id) {
+				t.Errorf("[%s] hint %q omits allowed action %q", spec.TableName, hint, id)
+			}
+		}
+	}
+}
+
+func TestEncodeDefaultStubHeaderListsOverlayAllowedActions(t *testing.T) {
+	var buf bytes.Buffer
+	if err := EncodeDefaultStub(&buf); err != nil {
+		t.Fatalf("EncodeDefaultStub: %v", err)
+	}
+	header := buf.String()
+	if idx := strings.Index(header, "\n["); idx >= 0 {
+		header = header[:idx]
+	}
+	for _, spec := range overlayRegistry {
+		for id := range KnownActions {
+			if spec.Allowed == nil || !spec.Allowed(id) {
+				continue
+			}
+			if !strings.Contains(header, id) {
+				t.Errorf("stub header omits [%s] allowed action %q", spec.TableName, id)
+			}
 		}
 	}
 }
