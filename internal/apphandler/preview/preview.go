@@ -38,6 +38,8 @@ func (h *Handler) previewRunGenFor(target previewTarget) *atomic.Uint64 {
 	switch target {
 	case previewTargetCarousel:
 		return &h.carouselFilePreviewRunGen
+	case previewTargetFullscreen:
+		return &h.fullscreenFilePreviewRunGen
 	default:
 		return &h.filePreviewRunGen
 	}

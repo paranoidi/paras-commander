@@ -71,11 +71,11 @@ func TestPreviewStylePickerDebounceDefersRefreshUntilFlush(t *testing.T) {
 	fh.cfg.UI.KeyRepeatDebounceMS = 500
 	h.openFilePreviewThemePicker()
 
-	genAfterOpen := h.filePreviewRunGen.Load()
+	genAfterOpen := h.previewRunGenFor(previewTargetFullscreen).Load()
 	styleAfterOpen := fh.cfg.Preview.Style
 	h.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 
-	if h.filePreviewRunGen.Load() != genAfterOpen {
+	if h.previewRunGenFor(previewTargetFullscreen).Load() != genAfterOpen {
 		t.Fatal("debounced style change should not start preview immediately")
 	}
 	// Border and content are both gated by the debounce: style unchanged until flush.
@@ -85,7 +85,7 @@ func TestPreviewStylePickerDebounceDefersRefreshUntilFlush(t *testing.T) {
 	if !h.FlushStylePickerPreviewNow() {
 		t.Fatal("FlushStylePickerPreviewNow should run deferred preview")
 	}
-	if h.filePreviewRunGen.Load() == genAfterOpen {
+	if h.previewRunGenFor(previewTargetFullscreen).Load() == genAfterOpen {
 		t.Fatal("flush should start preview refresh")
 	}
 	if fh.cfg.Preview.Style == styleAfterOpen {

@@ -26,7 +26,7 @@ func openFullscreenPreviewSync(t *testing.T, h *Handler, path string) {
 	if !ok {
 		t.Fatal("fullscreenFilePreviewLayoutMetrics() ok = false")
 	}
-	gen := h.filePreviewRunGen.Add(1)
+	gen := h.previewRunGenFor(previewTargetFullscreen).Add(1)
 	req := h.previewRequest(path, tw, ch, filepath.Dir(path), false, nil, previewTargetFullscreen, false)
 	h.runPreview(context.Background(), req, previewTargetFullscreen, gen)
 }

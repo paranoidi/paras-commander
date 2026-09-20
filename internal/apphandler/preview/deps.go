@@ -55,8 +55,12 @@ type Handler struct {
 	mu              *sync.RWMutex
 	ctx             context.Context
 
-	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale RenderWake).
+	// filePreviewRunGen invalidates in-flight inactive-column (quick view) preview completions.
 	filePreviewRunGen atomic.Uint64
+	// fullscreenFilePreviewRunGen invalidates in-flight F3 fullscreen preview completions.
+	// Independent of filePreviewRunGen so a resize while F3 is open cannot drop a
+	// hidden quick-view refresh (the two surfaces are not mutually exclusive).
+	fullscreenFilePreviewRunGen atomic.Uint64
 	// previewRunMu / previewRunCancel own the per-target cancel func for the current
 	// runPreview/runMediaPreview. Generation is bumped before cancel so a stale
 	// ctx.Done() write cannot land in a newer state.
