@@ -6,11 +6,34 @@ import (
 	"fmt"
 	"io/fs"
 	"sort"
+	"sync"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
+
+var (
+	collectFlattenTestHookMu sync.Mutex
+	collectFlattenTestHook   func(context.Context)
+)
+
+// SetCollectFlattenTestHook installs a test-only callback invoked at the start of
+// CollectFlattenSources so tests can block or cancel while the walk is planned.
+func SetCollectFlattenTestHook(fn func(context.Context)) {
+	collectFlattenTestHookMu.Lock()
+	collectFlattenTestHook = fn
+	collectFlattenTestHookMu.Unlock()
+}
+
+func runCollectFlattenTestHook(ctx context.Context) {
+	collectFlattenTestHookMu.Lock()
+	fn := collectFlattenTestHook
+	collectFlattenTestHookMu.Unlock()
+	if fn != nil {
+		fn(ctx)
+	}
+}
 
 // ValidateFlattenSource requires a non-empty directory-only source (selection or cursor).
 // Mixed files and directories return a dedicated error message.
@@ -55,6 +78,10 @@ func CollectFlattenSources(ctx context.Context, roots []pathloc.Path, dest pathl
 	if dest.IsZero() {
 		return nil, &Error{Op: "flatten", Text: "invalid destination"}
 	}
+	runCollectFlattenTestHook(ctx)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	for _, root := range roots {
 		if destStrictlyUnderRoot(dest, root) {
 			return nil, &Error{Op: "flatten", Text: "destination cannot be inside a selected directory"}
@@ -62,6 +89,9 @@ func CollectFlattenSources(ctx context.Context, roots []pathloc.Path, dest pathl
 	}
 	out := make([]string, 0)
 	for _, root := range roots {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		var part []string
 		var err error
 		if recursive {
@@ -105,6 +135,9 @@ func flattenDestEqualsRoot(ctx context.Context, child, dest pathloc.Path, roots 
 }
 
 func collectNonRecursiveFlattenSources(ctx context.Context, dir, dest pathloc.Path, roots []pathloc.Path) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	be, err := backendFor(dir)
 	if err != nil {
 		return nil, err
@@ -138,6 +171,9 @@ func collectNonRecursiveFlattenSources(ctx context.Context, dir, dest pathloc.Pa
 }
 
 func collectRecursiveFlattenFiles(ctx context.Context, dir pathloc.Path) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	be, err := backendFor(dir)
 	if err != nil {
 		return nil, err

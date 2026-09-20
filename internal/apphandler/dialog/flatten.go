@@ -1,7 +1,6 @@
 package dialog
 
 import (
-	"context"
 	"errors"
 	"strings"
 
@@ -223,32 +222,5 @@ func (h *Handler) confirmFlatten() {
 	st := flattenProbeApply{
 		dest: destLoc.String(), removeEmpty: d.RemoveEmpty, dirRoots: d.DirRoots,
 	}
-	remote := destLoc.IsRemote()
-	for _, root := range roots {
-		if root.IsRemote() {
-			remote = true
-			break
-		}
-	}
-	if h.useRemoteFileOp() || remote {
-		h.startRemoteFlattenProbe(st, destLoc, roots, d.Recursive)
-		return
-	}
-	sources, err := ops.CollectFlattenSources(context.Background(), roots, destLoc, d.Recursive)
-	if err != nil {
-		var opsErr *ops.Error
-		if errors.As(err, &opsErr) {
-			h.host.SetTransientMessage(opsErr.Text, ui.MessageUrgencyWarn)
-		} else {
-			h.host.SetErrorMessage("Flatten", err)
-		}
-		return
-	}
-	srcLocs := make([]pathloc.Path, len(sources))
-	for i, src := range sources {
-		srcLocs[i] = pathloc.MustParse(src)
-	}
-	st.sources = sources
-	st.nSelf = ops.SelfTargetCount(srcLocs, destLoc, true)
-	h.finishFlattenEnqueue(st)
+	h.startRemoteFlattenProbe(st, destLoc, roots, d.Recursive)
 }

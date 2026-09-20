@@ -2,6 +2,8 @@ package ops
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -198,6 +200,32 @@ func TestCollectFlattenSourcesRecursive(t *testing.T) {
 	}
 	if filepath.Base(got[0]) != "lima.txt" {
 		t.Fatalf("source = %q, want lima.txt", got[0])
+	}
+}
+
+func TestCollectFlattenSourcesHonorsCancelOnLargeTree(t *testing.T) {
+	dir := t.TempDir()
+	root := filepath.Join(dir, "harbor")
+	dest := filepath.Join(dir, "meadow")
+	nested := filepath.Join(root, "lantern")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(dest, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 200; i++ {
+		name := filepath.Join(nested, fmt.Sprintf("willow-%03d.txt", i))
+		if err := os.WriteFile(name, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	SetCollectFlattenTestHook(func(context.Context) { cancel() })
+	t.Cleanup(func() { SetCollectFlattenTestHook(nil) })
+	_, err := CollectFlattenSources(ctx, []pathloc.Path{pathloc.MustParse(root)}, pathloc.MustParse(dest), true)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
 	}
 }
 
