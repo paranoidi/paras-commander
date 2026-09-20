@@ -24,7 +24,7 @@ func TestBuildArgv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"/bin/tar", "-C", dest, "-xvzf", archive}
+	want := []string{"/bin/tar", "-C", dest, "-k", "-xvzf", archive}
 	if len(argv) != len(want) {
 		t.Fatalf("argv = %v, want %v", argv, want)
 	}
@@ -38,7 +38,7 @@ func TestBuildArgv(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if argv[0] != "/bin/unzip" || argv[1] != "-o" {
+	if argv[0] != "/bin/unzip" || argv[1] != "-n" {
 		t.Fatalf("zip argv = %v", argv)
 	}
 
@@ -81,6 +81,77 @@ func TestBuildArgvMissingTool(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when unzip missing")
 	}
+}
+
+func TestBuildArgvNoninteractiveNoOverwrite(t *testing.T) {
+	tc := Toolchain{
+		Tar:    "/bin/tar",
+		Unzip:  "/bin/unzip",
+		SevenZ: "/bin/7z",
+		Unrar:  "/bin/unrar",
+	}
+	archive := "/src/harbor.zip"
+	dest := "/dst/thicket"
+
+	zipArgv, err := BuildArgv(FormatZip, archive, dest, tc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if argvHasExact(zipArgv, "-o") {
+		t.Fatalf("zip argv = %v, must not pass unzip -o (overwrite)", zipArgv)
+	}
+	if !argvHasExact(zipArgv, "-n") {
+		t.Fatalf("zip argv = %v, want unzip -n (never overwrite)", zipArgv)
+	}
+
+	jarArgv, err := BuildArgv(FormatJar, "/src/meadow.jar", dest, tc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if argvHasExact(jarArgv, "-o") || !argvHasExact(jarArgv, "-n") {
+		t.Fatalf("jar argv = %v, want unzip -n without -o", jarArgv)
+	}
+
+	sevenArgv, err := BuildArgv(FormatSevenZ, "/src/harbor.7z", dest, tc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if argvHasExact(sevenArgv, "-y") {
+		t.Fatalf("7z argv = %v, must not pass -y (assume-yes overwrite)", sevenArgv)
+	}
+	if !argvHasExact(sevenArgv, "-aos") {
+		t.Fatalf("7z argv = %v, want -aos (skip existing)", sevenArgv)
+	}
+
+	rarArgv, err := BuildArgv(FormatRar, "/src/harbor.rar", dest, tc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if argvHasExact(rarArgv, "-o+") {
+		t.Fatalf("unrar argv = %v, must not pass -o+ (overwrite)", rarArgv)
+	}
+	if !argvHasExact(rarArgv, "-o-") {
+		t.Fatalf("unrar argv = %v, want -o- (do not overwrite)", rarArgv)
+	}
+
+	for _, f := range []Format{FormatTar, FormatTarGz, FormatTarBz2, FormatTarXz, FormatTarZst, FormatTgz, FormatTbz2} {
+		argv, err := BuildArgv(f, "/src/harbor"+f.Suffix(), dest, tc)
+		if err != nil {
+			t.Fatalf("%v: %v", f, err)
+		}
+		if !argvHasExact(argv, "-k") && !argvHasExact(argv, "--keep-old-files") {
+			t.Fatalf("%v argv = %v, want -k/--keep-old-files", f, argv)
+		}
+	}
+}
+
+func argvHasExact(argv []string, flag string) bool {
+	for _, a := range argv {
+		if a == flag {
+			return true
+		}
+	}
+	return false
 }
 
 func TestFormatAvailable(t *testing.T) {

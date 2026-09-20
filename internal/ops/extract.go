@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
+
+var errExtractSkipped = errors.New("extract skipped")
+
+type extractCancelError struct{ err error }
+
+func (e *extractCancelError) Error() string { return e.err.Error() }
+func (e *extractCancelError) Unwrap() error { return e.err }
 
 // ExtractItem is one archive scheduled for extraction.
 type ExtractItem struct {
@@ -24,10 +32,16 @@ type ExtractPlan struct {
 	Items       []ExtractItem
 	Destination string
 	Toolchain   archive.Toolchain
+	// Conflict is consulted when a stream extract would replace an existing file.
+	// A nil resolver fails that item without replacing the file. Returning false
+	// skips the item. Returning an error cancels remaining archives.
+	Conflict ConflictResolver
 }
 
 // PlanExtract builds an extract plan from source paths and destination directory.
-// Skips non-files and unknown formats; returns error when no runnable archives remain.
+// Skips non-files, unknown formats, existing stream outputs, and later stream items
+// whose output basename collides with an earlier item. Returns error when no
+// runnable archives remain.
 func PlanExtract(paths []string, destDir string, tc archive.Toolchain) (ExtractPlan, []string, error) {
 	destDir = filepath.Clean(destDir)
 	if destDir == "" {
@@ -44,6 +58,7 @@ func PlanExtract(paths []string, destDir string, tc archive.Toolchain) (ExtractP
 	var skipped []string
 	var items []ExtractItem
 	var unavailable []string
+	claimedStream := make(map[string]string)
 
 	for _, p := range paths {
 		p = filepath.Clean(p)
@@ -63,6 +78,10 @@ func PlanExtract(paths []string, destDir string, tc archive.Toolchain) (ExtractP
 		}
 		if !f.Available(tc) {
 			unavailable = append(unavailable, fmt.Sprintf("%s: %s not found", filepath.Base(p), f.RequiredToolName()))
+			continue
+		}
+		if reason, skip := streamOutputConflict(p, f, destDir, claimedStream); skip {
+			skipped = append(skipped, reason)
 			continue
 		}
 		items = append(items, ExtractItem{Path: p, Format: f})
@@ -90,17 +109,46 @@ type ExtractProgress func(archivePath string, doneFiles int)
 
 // ExecuteExtract runs extraction for each item in plan.
 // progress is called after each archive attempt. Returns cumulative done count and
-// an error if any archive failed (remaining archives still run).
+// an error if any archive failed (remaining archives still run unless Conflict
+// cancels). Existing stream outputs are not replaced unless Conflict returns true.
 func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgress) (int, error) {
 	var done int
 	var firstErr error
 	var failCount int
+	claimedStream := make(map[string]string)
 
 	for _, item := range plan.Items {
 		if err := ctx.Err(); err != nil {
 			return done, err
 		}
-		err := extractOne(ctx, item, plan.Destination, plan.Toolchain)
+		if item.Format.NeedsStdoutSink() {
+			name := archive.OutputBasename(item.Path, item.Format)
+			if prev, ok := claimedStream[name]; ok {
+				failCount++
+				if firstErr == nil {
+					firstErr = fmt.Errorf("%s: output %q collides with %s", filepath.Base(item.Path), name, filepath.Base(prev))
+				}
+				if progress != nil {
+					progress(item.Path, done)
+				}
+				continue
+			}
+			claimedStream[name] = item.Path
+		}
+		err := extractOne(ctx, item, plan.Destination, plan.Toolchain, plan.Conflict)
+		if errors.Is(err, errExtractSkipped) {
+			if progress != nil {
+				progress(item.Path, done)
+			}
+			continue
+		}
+		var canceled *extractCancelError
+		if errors.As(err, &canceled) {
+			if progress != nil {
+				progress(item.Path, done)
+			}
+			return done, fmt.Errorf("%s: %w", filepath.Base(item.Path), err)
+		}
 		if err != nil {
 			failCount++
 			if firstErr == nil {
@@ -122,13 +170,13 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 	return done, nil
 }
 
-func extractOne(ctx context.Context, item ExtractItem, destDir string, tc archive.Toolchain) error {
+func extractOne(ctx context.Context, item ExtractItem, destDir string, tc archive.Toolchain, resolver ConflictResolver) error {
 	argv, err := archive.BuildArgv(item.Format, item.Path, destDir, tc)
 	if err != nil {
 		return err
 	}
 	if item.Format.NeedsStdoutSink() {
-		return extractViaStdout(ctx, argv, item, destDir)
+		return extractViaStdout(ctx, argv, item, destDir, resolver)
 	}
 	res := cmdrun.Run(ctx, argv, filepath.Dir(item.Path), cmdrun.MaxStreamBytes)
 	if res.LaunchErr != nil {
@@ -147,12 +195,61 @@ func extractOne(ctx context.Context, item ExtractItem, destDir string, tc archiv
 	return nil
 }
 
-func extractViaStdout(ctx context.Context, argv []string, item ExtractItem, destDir string) error {
+func streamOutputConflict(archivePath string, f archive.Format, destDir string, claimed map[string]string) (string, bool) {
+	if !f.NeedsStdoutSink() {
+		return "", false
+	}
+	name := archive.OutputBasename(archivePath, f)
+	if prev, ok := claimed[name]; ok {
+		return fmt.Sprintf("%s: output %q collides with %s", filepath.Base(archivePath), name, prev), true
+	}
+	destPath := filepath.Join(destDir, name)
+	_, err := os.Lstat(destPath)
+	if err == nil {
+		return fmt.Sprintf("%s: output %q already exists", filepath.Base(archivePath), name), true
+	}
+	if !os.IsNotExist(err) {
+		return fmt.Sprintf("%s: %v", filepath.Base(archivePath), err), true
+	}
+	claimed[name] = filepath.Base(archivePath)
+	return "", false
+}
+
+func decideStreamOverwrite(src, dst string, resolver ConflictResolver) (bool, error) {
+	if resolver == nil {
+		return false, fmt.Errorf("destination %q already exists", dst)
+	}
+	facts, err := StatFileConflictFacts(src, dst)
+	if err != nil {
+		return false, err
+	}
+	overwrite, err := resolver(src, dst, facts)
+	if err != nil {
+		return false, &extractCancelError{err: err}
+	}
+	return overwrite, nil
+}
+
+func extractViaStdout(ctx context.Context, argv []string, item ExtractItem, destDir string, resolver ConflictResolver) error {
 	outPath := filepath.Join(destDir, archive.OutputBasename(item.Path, item.Format))
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	flags := os.O_CREATE | os.O_WRONLY | os.O_EXCL
+	_, statErr := os.Lstat(outPath)
+	if statErr == nil {
+		overwrite, err := decideStreamOverwrite(item.Path, outPath, resolver)
+		if err != nil {
+			return err
+		}
+		if !overwrite {
+			return errExtractSkipped
+		}
+		flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+	} else if !os.IsNotExist(statErr) {
+		return statErr
+	}
+	f, err := os.OpenFile(outPath, flags, 0o644)
 	if err != nil {
 		return err
 	}
