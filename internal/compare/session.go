@@ -120,6 +120,10 @@ func (s *Session) run(ctx context.Context) {
 	case sRes = <-sCh:
 	}
 
+	if ctx.Err() != nil {
+		s.publish(Snapshot{PrimaryRoot: s.primaryRoot, SecondaryRoot: s.secondaryRoot, Phase: PhaseCanceled})
+		return
+	}
 	if pRes.err != nil {
 		s.publish(Snapshot{
 			PrimaryRoot:   s.primaryRoot,
