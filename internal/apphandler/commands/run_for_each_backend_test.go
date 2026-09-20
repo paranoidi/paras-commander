@@ -2,6 +2,9 @@ package commands
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -91,6 +94,7 @@ func TestRunForEachPoolWaitingStaysPending(t *testing.T) {
 	defer screen.Fini()
 
 	dir := t.TempDir()
+	gate := filepath.Join(dir, "release")
 	entry := []localfs.Entry{{Name: "harbor", Path: dir, Type: localfs.EntryDirectory}}
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -109,7 +113,8 @@ func TestRunForEachPoolWaitingStaysPending(t *testing.T) {
 		PoolName:   "one",
 		Background: true,
 		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
-			return RunForEachBuiltItem{Argv: []string{"sleep", "2"}, UserLine: "sleep 2"}, nil
+			script := "while [ ! -f " + strconv.Quote(gate) + " ]; do sleep 0.05; done"
+			return RunForEachBuiltItem{Argv: []string{"sh", "-c", script}, UserLine: "hold"}, nil
 		},
 	}
 	wait := hold
@@ -118,6 +123,7 @@ func TestRunForEachPoolWaitingStaysPending(t *testing.T) {
 	}
 
 	h.StartRunForEachBatch(hold)
+	waitCommandPhase(t, h, 0, ui.CommandRunRunning)
 	h.StartRunForEachBatch(wait)
 
 	deadline := time.Now().Add(2 * time.Second)
@@ -134,13 +140,63 @@ func TestRunForEachPoolWaitingStaysPending(t *testing.T) {
 		}
 		h.mu.RUnlock()
 		if running == 1 && pending == 1 {
+			if err := os.WriteFile(gate, []byte("1"), 0o644); err != nil {
+				t.Fatal(err)
+			}
 			cancel()
 			waitBatchesIdle(t, h)
 			return
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	t.Fatal("expected one Running and one Pending while the one-slot pool is held")
+	h.mu.RLock()
+	dump := append([]ui.CommandRunEntry(nil), h.model.CommandsList...)
+	h.mu.RUnlock()
+	t.Fatalf("expected one Running and one Pending while the one-slot pool is held; rows=%v", dumpPhases(dump))
+}
+
+func waitCommandPhase(t *testing.T, h *Handler, idx int, want ui.CommandRunPhase) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		h.mu.RLock()
+		ok := idx < len(h.model.CommandsList) && h.model.CommandsList[idx].Phase == want
+		h.mu.RUnlock()
+		if ok {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	h.mu.RLock()
+	dump := append([]ui.CommandRunEntry(nil), h.model.CommandsList...)
+	h.mu.RUnlock()
+	t.Fatalf("timed out waiting for row %d phase %v; rows=%v", idx, want, dumpPhases(dump))
+}
+
+func dumpPhases(entries []ui.CommandRunEntry) string {
+	var b strings.Builder
+	for i, e := range entries {
+		if i > 0 {
+			b.WriteString("; ")
+		}
+		b.WriteString(e.UserCommandLine)
+		b.WriteString(" phase=")
+		switch e.Phase {
+		case ui.CommandRunPending:
+			b.WriteString("pending")
+		case ui.CommandRunRunning:
+			b.WriteString("running")
+		case ui.CommandRunDone:
+			b.WriteString("done")
+		default:
+			b.WriteString("?")
+		}
+		if e.ErrorMsg != "" {
+			b.WriteString(" err=")
+			b.WriteString(e.ErrorMsg)
+		}
+	}
+	return b.String()
 }
 
 func waitBatchesIdle(t *testing.T, h *Handler) {
