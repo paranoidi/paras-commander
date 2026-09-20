@@ -2,9 +2,11 @@ package ops
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -410,4 +412,135 @@ func pathDev(path string) (uint64, bool) {
 		return 0, false
 	}
 	return uint64(st.Dev), true
+}
+
+// TestMoveOverwriteRollbackRestoresDestOnCancel is the R04-004 case: source one overwrites
+// an existing destination, then source two cancels. Both original sources and the original
+// dest-one contents must survive.
+func TestMoveOverwriteRollbackRestoresDestOnCancel(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+
+	srcAlpha := filepath.Join(srcDir, "alpha.txt")
+	srcBeta := filepath.Join(srcDir, "beta.txt")
+	if err := os.WriteFile(srcAlpha, []byte("new-alpha"), 0o644); err != nil {
+		t.Fatalf("write src alpha: %v", err)
+	}
+	if err := os.WriteFile(srcBeta, []byte("new-beta"), 0o644); err != nil {
+		t.Fatalf("write src beta: %v", err)
+	}
+	dstAlpha := filepath.Join(dstDir, "alpha.txt")
+	dstBeta := filepath.Join(dstDir, "beta.txt")
+	if err := os.WriteFile(dstAlpha, []byte("old-alpha"), 0o644); err != nil {
+		t.Fatalf("write dest alpha: %v", err)
+	}
+	if err := os.WriteFile(dstBeta, []byte("old-beta"), 0o644); err != nil {
+		t.Fatalf("write dest beta: %v", err)
+	}
+
+	calls := 0
+	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+		_ = src
+		_ = dst
+		_ = facts
+		calls++
+		if calls == 1 {
+			return true, nil
+		}
+		return false, fmt.Errorf("canceled by user")
+	}
+
+	_, _, err := ExecuteMove(context.Background(), MustPaths(srcAlpha, srcBeta), MustPath(dstDir), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, resolver, nil)
+	if err == nil {
+		t.Fatal("ExecuteMove error = nil, want cancel error")
+	}
+	if calls != 2 {
+		t.Fatalf("resolver calls = %d, want 2", calls)
+	}
+	if got := readFileContent(t, srcAlpha); got != "new-alpha" {
+		t.Fatalf("source alpha = %q, want new-alpha", got)
+	}
+	if got := readFileContent(t, srcBeta); got != "new-beta" {
+		t.Fatalf("source beta = %q, want new-beta", got)
+	}
+	if got := readFileContent(t, dstAlpha); got != "old-alpha" {
+		t.Fatalf("dest alpha = %q, want old-alpha restored", got)
+	}
+	if got := readFileContent(t, dstBeta); got != "old-beta" {
+		t.Fatalf("dest beta = %q, want old-beta untouched", got)
+	}
+}
+
+// TestMoveOverwriteRollbackRestoresDestOnFallback covers overwrite then cross-device
+// fallback: rename phase must restore the overwritten dest before copy starts.
+func TestMoveOverwriteRollbackRestoresDestOnFallback(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+	crossParent, ok := otherDeviceDir(t, dstDir)
+	if !ok {
+		t.Skip("no other-device directory available for fallback overwrite rollback")
+	}
+
+	srcAlpha := filepath.Join(srcDir, "alpha.txt")
+	if err := os.WriteFile(srcAlpha, []byte("new-alpha"), 0o644); err != nil {
+		t.Fatalf("write src alpha: %v", err)
+	}
+	srcCross := filepath.Join(crossParent, "harbor.txt")
+	if err := os.WriteFile(srcCross, []byte("harbor-content"), 0o644); err != nil {
+		t.Fatalf("write cross source: %v", err)
+	}
+	dstAlpha := filepath.Join(dstDir, "alpha.txt")
+	if err := os.WriteFile(dstAlpha, []byte("old-alpha"), 0o644); err != nil {
+		t.Fatalf("write dest alpha: %v", err)
+	}
+
+	_, _, fallback, err := executeMoveRenamePhase(context.Background(), MustPaths(srcAlpha, srcCross), MustPath(dstDir), nil, true, ProgressEmitThrottle{}, overwriteAllResolver(), nil)
+	if err != nil {
+		t.Fatalf("executeMoveRenamePhase error = %v", err)
+	}
+	if !fallback {
+		t.Fatal("expected copy fallback after cross-device source")
+	}
+	if got := readFileContent(t, srcAlpha); got != "new-alpha" {
+		t.Fatalf("source alpha = %q, want restored new-alpha", got)
+	}
+	if got := readFileContent(t, srcCross); got != "harbor-content" {
+		t.Fatalf("cross source = %q, want harbor-content still in place", got)
+	}
+	if got := readFileContent(t, dstAlpha); got != "old-alpha" {
+		t.Fatalf("dest alpha = %q, want old-alpha restored before copy fallback", got)
+	}
+}
+
+func TestMoveOverwriteCommitsAndRemovesStash(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+	srcAlpha := filepath.Join(srcDir, "alpha.txt")
+	if err := os.WriteFile(srcAlpha, []byte("new-alpha"), 0o644); err != nil {
+		t.Fatalf("write src: %v", err)
+	}
+	dstAlpha := filepath.Join(dstDir, "alpha.txt")
+	if err := os.WriteFile(dstAlpha, []byte("old-alpha"), 0o644); err != nil {
+		t.Fatalf("write dest: %v", err)
+	}
+
+	_, _, err := ExecuteMove(context.Background(), MustPaths(srcAlpha), MustPath(dstDir), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, overwriteAllResolver(), nil)
+	if err != nil {
+		t.Fatalf("ExecuteMove error = %v", err)
+	}
+	if _, err := os.Stat(srcAlpha); !os.IsNotExist(err) {
+		t.Fatalf("source should be gone after overwrite move: %v", err)
+	}
+	if got := readFileContent(t, dstAlpha); got != "new-alpha" {
+		t.Fatalf("dest alpha = %q, want new-alpha", got)
+	}
+	entries, err := os.ReadDir(dstDir)
+	if err != nil {
+		t.Fatalf("ReadDir dest: %v", err)
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".paras-move-stash-") {
+			t.Fatalf("leftover stash %q after committed overwrite", e.Name())
+		}
+	}
 }

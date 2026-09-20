@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -21,19 +22,111 @@ func MovePlanTotals(sources []pathloc.Path, destination pathloc.Path) (totalFile
 
 type renamePair struct {
 	src, dst string
+	// staged is the sibling path holding the original destination when this rename
+	// overwrote an existing dest. Empty when dest did not exist.
+	staged string
 }
 
-func renamePairsRollback(pairs []renamePair) {
+func renamePairsRollback(pairs []renamePair) error {
+	var errs []error
 	for i := len(pairs) - 1; i >= 0; i-- {
-		srcLoc, err1 := pathloc.Parse(pairs[i].src)
-		dstLoc, err2 := pathloc.Parse(pairs[i].dst)
-		if err1 == nil && err2 == nil && srcLoc.IsRemote() {
-			if be, err := backendFor(dstLoc); err == nil {
-				_ = be.Rename(context.Background(), dstLoc, srcLoc)
-			}
+		if err := rollbackRenamePair(pairs[i]); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func rollbackRenamePair(p renamePair) error {
+	srcLoc, err1 := pathloc.Parse(p.src)
+	dstLoc, err2 := pathloc.Parse(p.dst)
+	if err1 != nil || err2 != nil {
+		return fmt.Errorf("rollback parse %q -> %q: %v; %v", p.src, p.dst, err1, err2)
+	}
+	var renameErr error
+	if srcLoc.IsRemote() {
+		if be, err := backendFor(dstLoc); err == nil {
+			renameErr = be.Rename(context.Background(), dstLoc, srcLoc)
+		} else {
+			renameErr = err
+		}
+	} else {
+		renameErr = os.Rename(p.dst, p.src)
+	}
+	if renameErr != nil {
+		return fmt.Errorf("rollback rename %q -> %q: %w", p.dst, p.src, renameErr)
+	}
+	if p.staged == "" {
+		return nil
+	}
+	stagedLoc, err := pathloc.Parse(p.staged)
+	if err != nil {
+		return fmt.Errorf("rollback parse staged %q: %w", p.staged, err)
+	}
+	return restoreStagedDest(context.Background(), dstLoc, stagedLoc)
+}
+
+func rollbackRenames(pairs []renamePair, err error) error {
+	if rbErr := renamePairsRollback(pairs); rbErr != nil {
+		return fmt.Errorf("%w (rollback: %v)", err, rbErr)
+	}
+	return err
+}
+
+func stageExistingDest(ctx context.Context, dst pathloc.Path) (pathloc.Path, error) {
+	staged, err := pickMoveStashSibling(ctx, dst)
+	if err != nil {
+		return pathloc.Path{}, err
+	}
+	ok, err := RenameFastPath(dst, staged)
+	if err != nil {
+		return pathloc.Path{}, fmt.Errorf("stage existing %q: %w", dst, err)
+	}
+	if !ok {
+		return pathloc.Path{}, fmt.Errorf("stage existing %q: cannot rename aside for overwrite", dst)
+	}
+	return staged, nil
+}
+
+func pickMoveStashSibling(ctx context.Context, dst pathloc.Path) (pathloc.Path, error) {
+	parent := dst.Parent()
+	for i := 0; i < 1_000_000; i++ {
+		cand, err := parent.Join(fmt.Sprintf(".paras-move-stash-%d", i))
+		if err != nil {
+			return pathloc.Path{}, err
+		}
+		_, statErr := statEntry(ctx, cand)
+		if isNotExist(statErr) {
+			return cand, nil
+		}
+		if statErr != nil {
+			return pathloc.Path{}, statErr
+		}
+	}
+	return pathloc.Path{}, fmt.Errorf("could not allocate stash name for %q", dst)
+}
+
+func restoreStagedDest(ctx context.Context, dst, staged pathloc.Path) error {
+	ok, err := RenameFastPath(staged, dst)
+	if err != nil {
+		return fmt.Errorf("restore staged %q -> %q: %w", staged, dst, err)
+	}
+	if !ok {
+		return fmt.Errorf("restore staged %q -> %q: cannot rename", staged, dst)
+	}
+	return nil
+}
+
+func discardStagedDests(ctx context.Context, pairs []renamePair) {
+	for _, p := range pairs {
+		if p.staged == "" {
 			continue
 		}
-		_ = os.Rename(pairs[i].dst, pairs[i].src)
+		loc, err := pathloc.Parse(p.staged)
+		if err != nil {
+			continue
+		}
+		_ = removePathRecursive(ctx, loc)
 	}
 }
 
@@ -91,35 +184,48 @@ func countTransferNodesAfterRenameWithProgress(ctx context.Context, dst string, 
 // renameSourceForMove handles conflict resolution then RenameFastPath for one source.
 // Returns renamed when the path was moved, skipped when the user chose not to overwrite,
 // fallbackCopy when cross-device (or non-fast) rename requires copy+delete for the batch.
-func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (renamed, skipped, fallbackCopy bool, err error) {
+// staged is the parked original destination after an overwrite; empty otherwise.
+func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (renamed, skipped, fallbackCopy bool, staged string, err error) {
 	if err := ctx.Err(); err != nil {
-		return false, false, false, err
+		return false, false, false, "", err
 	}
 	_, statErr := statEntry(ctx, dst)
 	if isNotExist(statErr) {
-		return renameFastPathOrFallback(src, dst)
+		renamed, skipped, fallbackCopy, err = renameFastPathOrFallback(src, dst)
+		return renamed, skipped, fallbackCopy, "", err
 	}
 	if statErr != nil {
-		return false, false, false, fmt.Errorf("stat destination %q: %w", dst, statErr)
+		return false, false, false, "", fmt.Errorf("stat destination %q: %w", dst, statErr)
 	}
 	if resolver == nil {
-		return false, false, false, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
+		return false, false, false, "", fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
 	}
 	facts, err := statConflictFacts(ctx, src, dst)
 	if err != nil {
-		return false, false, false, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
+		return false, false, false, "", fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
 	}
 	overwrite, err := resolver(src.String(), dst.String(), facts)
 	if err != nil {
-		return false, false, false, err
+		return false, false, false, "", err
 	}
 	if !overwrite {
-		return false, true, false, nil
+		return false, true, false, "", nil
 	}
-	if err := removePathRecursive(ctx, dst); err != nil {
-		return false, false, false, fmt.Errorf("remove existing %q for overwrite: %w", dst, err)
+	stagedLoc, stageErr := stageExistingDest(ctx, dst)
+	if stageErr != nil {
+		return false, false, false, "", stageErr
 	}
-	return renameFastPathOrFallback(src, dst)
+	renamed, skipped, fallbackCopy, err = renameFastPathOrFallback(src, dst)
+	if err != nil || fallbackCopy || skipped || !renamed {
+		if restoreErr := restoreStagedDest(ctx, dst, stagedLoc); restoreErr != nil {
+			if err != nil {
+				return false, skipped, fallbackCopy, "", fmt.Errorf("%w (restore staged dest: %v)", err, restoreErr)
+			}
+			return false, skipped, fallbackCopy, "", restoreErr
+		}
+		return false, skipped, fallbackCopy, "", err
+	}
+	return true, false, false, stagedLoc.String(), nil
 }
 
 func renameFastPathOrFallback(src, dst pathloc.Path) (renamed, skipped, fallbackCopy bool, err error) {
@@ -148,31 +254,30 @@ func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destina
 	}
 	for _, src := range sources {
 		if err := ctx.Err(); err != nil {
-			renamePairsRollback(renamed)
-			return 0, 0, false, err
+			return 0, 0, false, rollbackRenames(renamed, err)
 		}
 		name := TransferDestName(src, nameRoot)
 		dst := ResolveDestinationNamed(destination, name)
 		if strings.ContainsAny(name, `/\`) {
 			if err := ensureParentDirs(ctx, dst); err != nil {
-				renamePairsRollback(renamed)
-				return 0, 0, false, fmt.Errorf("create parent for %q: %w", dst, err)
+				return 0, 0, false, rollbackRenames(renamed, fmt.Errorf("create parent for %q: %w", dst, err))
 			}
 		}
-		didRename, skipped, needCopy, renameErr := renameSourceForMove(ctx, src, dst, resolver)
+		didRename, skipped, needCopy, staged, renameErr := renameSourceForMove(ctx, src, dst, resolver)
 		if renameErr != nil {
-			renamePairsRollback(renamed)
-			return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, renameErr)
+			return 0, 0, false, rollbackRenames(renamed, fmt.Errorf("rename %q -> %q: %w", src, dst, renameErr))
 		}
 		if needCopy {
-			renamePairsRollback(renamed)
+			if rbErr := renamePairsRollback(renamed); rbErr != nil {
+				return 0, 0, false, fmt.Errorf("move rename fallback rollback: %w", rbErr)
+			}
 			return 0, 0, true, nil
 		}
 		if skipped {
 			continue
 		}
 		if didRename {
-			pair := renamePair{src.String(), dst.String()}
+			pair := renamePair{src: src.String(), dst: dst.String(), staged: staged}
 			renamed = append(renamed, pair)
 			if usePlan {
 				nf, nb := SummarizePlanForSource(plan, src)
@@ -184,6 +289,8 @@ func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destina
 			}
 		}
 	}
+
+	discardStagedDests(ctx, renamed)
 
 	if usePlan {
 		return cumulativeFiles, cumulativeBytes, false, nil
