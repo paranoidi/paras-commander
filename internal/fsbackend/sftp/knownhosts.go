@@ -108,10 +108,11 @@ func (s *hostKeyStore) callbackWithContext(ctx context.Context) ssh.HostKeyCallb
 			s.mu.Unlock()
 			return nil
 		}
+		base := s.base
 		s.mu.Unlock()
 
-		if s.base != nil {
-			if err := s.base(hostname, remote, key); err == nil {
+		if base != nil {
+			if err := base(hostname, remote, key); err == nil {
 				return nil
 			}
 		}

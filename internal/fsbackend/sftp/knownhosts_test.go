@@ -9,10 +9,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 func testSSHPublicKey(t *testing.T) ssh.PublicKey {
@@ -185,6 +187,55 @@ func TestHostKeyPromptObservesDialContext(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("host-key prompt ignored originating context")
 	}
+}
+
+func TestHostKeyReloadConcurrentWithCallback(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "known_hosts")
+	key := testSSHPublicKey(t)
+	hostname := "127.0.0.1:22"
+	remote := testTCPAddr(t, hostname)
+	line := knownhosts.Line([]string{hostname}, key)
+	if err := os.WriteFile(path, []byte(line+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	store, err := newHostKeyStore(path, Prompts{
+		HostKey: func(context.Context, HostKeyPrompt) (HostKeyDecision, error) {
+			return HostKeyTrustPersist, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const goroutines = 8
+	const iters = 80
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 2)
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iters; j++ {
+				store.mu.Lock()
+				if err := store.reloadBaseLocked(); err != nil {
+					t.Errorf("reloadBaseLocked: %v", err)
+				}
+				store.mu.Unlock()
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			cb := store.callback()
+			for j := 0; j < iters; j++ {
+				if err := cb(hostname, remote, key); err != nil {
+					t.Errorf("callback: %v", err)
+				}
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func TestResolveKnownHostsPathTilde(t *testing.T) {
