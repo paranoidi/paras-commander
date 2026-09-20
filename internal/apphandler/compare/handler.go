@@ -54,10 +54,8 @@ type Handler struct {
 	diskIgnore  diskusage.ShouldIgnoreFolder
 	jobsCtrl    *jobsctrl.Handler
 
-	session       *comparepkg.Session
-	wake          host.WakeCoalescer
-	sessionCtx    context.Context
-	sessionCancel context.CancelFunc
+	session *comparepkg.Session
+	wake    host.WakeCoalescer
 
 	// Open arguments replayed by Refresh; onClose is the return hook fired once
 	// by Close (dedup detour), never by Refresh.
@@ -143,11 +141,7 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 
 	hs := hashwalk.FromCompareConfig(h.config.Compare, h.diskIgnore, volGate)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	h.sessionCtx = ctx
-	h.sessionCancel = cancel
-
-	h.session = comparepkg.Start(ctx, primary, secondary, comparepkg.Options{
+	h.session = comparepkg.Start(context.Background(), primary, secondary, comparepkg.Options{
 		Walk: comparepkg.WalkOptions{
 			ShowHidden:    showHidden,
 			Gitignore:     h.gitignore,
@@ -177,14 +171,10 @@ func (h *Handler) DiscardReturn() { h.onClose = nil }
 // teardown cancels the session and clears compare view state. It never touches
 // onClose, so Refresh (which reopens via open → teardown) keeps the return hook.
 func (h *Handler) teardown() {
-	if h.sessionCancel != nil {
-		h.sessionCancel()
-	}
 	if h.session != nil {
 		h.session.Close()
 		h.session = nil
 	}
-	h.sessionCancel = nil
 	if h.model.ViewMode == ui.ViewCompare {
 		h.model.ViewMode = ui.ViewBrowser
 		h.model.MenuDefinitions = h.host.BrowserMenuDefinitions()

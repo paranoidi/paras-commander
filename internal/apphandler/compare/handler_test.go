@@ -2,6 +2,8 @@ package compare
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 
@@ -215,6 +217,34 @@ func TestRefreshClearsFilterDialog(t *testing.T) {
 		t.Fatalf("ViewMode = %v, want compare", model.ViewMode)
 	}
 	h.Close()
+}
+
+func TestRefreshReplacesSessionAndCloseJoins(t *testing.T) {
+	left := t.TempDir()
+	right := t.TempDir()
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("willow-%02d.txt", i)
+		if err := os.WriteFile(filepath.Join(left, name), []byte(name), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(right, name), []byte(name+"-b"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	model := &ui.Model{
+		Primary:   panelStateAt(pathloc.MustParse(left)),
+		Secondary: panelStateAt(pathloc.MustParse(right)),
+	}
+	h := New(Deps{Host: compareHandlerHost{}, Model: model})
+	h.Open()
+	h.Refresh()
+	if model.ViewMode != ui.ViewCompare {
+		t.Fatalf("ViewMode = %v, want compare after refresh", model.ViewMode)
+	}
+	h.Close()
+	if model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want browser after close", model.ViewMode)
+	}
 }
 
 func TestEnsureSelectionVisibleClampsMaxScroll(t *testing.T) {
