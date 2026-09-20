@@ -121,7 +121,7 @@ Disk-usage view and background walk.
 
 ## `[fs_walk]`
 
-Adaptive concurrency shared by recursive **find** indexing and **disk-usage** tree walks. Each walk starts at `initial_workers`, measures throughput over `adapt_interval_ms`, increases concurrency while the rate improves, then freezes at the best limit for that walk.
+Adaptive concurrency for **disk-usage** tree walks only. Find indexing is sequential and does not read this table. Each disk-usage walk starts at `initial_workers`, measures throughput over `adapt_interval_ms`, increases concurrency while the rate improves, then freezes at the best limit for that walk.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

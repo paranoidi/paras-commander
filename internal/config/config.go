@@ -146,7 +146,7 @@ type DiskUsageConfig struct {
 	DescendIntoMountPoints bool `toml:"descend_into_mount_points"`
 }
 
-// FSWalkConfig controls adaptive concurrency for recursive filesystem walks (find + disk-usage).
+// FSWalkConfig controls adaptive concurrency for disk-usage tree walks.
 type FSWalkConfig struct {
 	InitialWorkers  int `toml:"initial_workers"`
 	MaxWorkers      int `toml:"max_workers"`

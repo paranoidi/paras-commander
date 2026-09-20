@@ -26,6 +26,7 @@ type WalkOptions struct {
 type RootWalk = rootWalk
 
 // StartRootWalk begins indexing root. Call Close when finished.
+// The fswalk.Params argument is unused: find walks are sequential.
 func StartRootWalk(ctx context.Context, root string, opts WalkOptions, _ fswalk.Params) *RootWalk {
 	return startRootWalk(ctx, root, opts)
 }

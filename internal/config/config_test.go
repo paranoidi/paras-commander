@@ -740,6 +740,32 @@ func TestLoadFromPathsRejectsMatchPathSegments(t *testing.T) {
 	}
 }
 
+func TestConfigDocsFSWalkIsDiskUsageOnly(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "docs", "config.md"))
+	if err != nil {
+		t.Fatalf("read docs/config.md: %v", err)
+	}
+	text := string(data)
+	const heading = "## `[fs_walk]`"
+	start := strings.Index(text, heading)
+	if start < 0 {
+		t.Fatal("docs/config.md missing [fs_walk] section")
+	}
+	rest := text[start+len(heading):]
+	end := strings.Index(rest, "\n## ")
+	if end < 0 {
+		t.Fatal("docs/config.md [fs_walk] section has no following heading")
+	}
+	section := rest[:end]
+	lower := strings.ToLower(section)
+	if strings.Contains(lower, "shared by") && strings.Contains(lower, "find") {
+		t.Fatalf("[fs_walk] docs still claim find shares this table:\n%s", section)
+	}
+	if !strings.Contains(lower, "disk-usage") && !strings.Contains(lower, "disk usage") {
+		t.Fatalf("[fs_walk] docs do not say the table is for disk-usage:\n%s", section)
+	}
+}
+
 func TestEncodeDefaultStubWritesLoadableDefaults(t *testing.T) {
 	var buffer bytes.Buffer
 	if err := EncodeDefaultStub(&buffer); err != nil {
