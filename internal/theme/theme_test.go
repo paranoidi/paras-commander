@@ -564,6 +564,24 @@ func TestResolveSkipsBrokenSiblingTomlFiles(t *testing.T) {
 	}
 }
 
+func TestPanelBottomIndicatorUsesDedicatedGitignoreAndDotfilesStyles(t *testing.T) {
+	t.Parallel()
+	status := tcell.StyleDefault.Foreground(tcell.ColorRed)
+	frame := tcell.StyleDefault.Foreground(tcell.ColorBlue)
+	th := Theme{
+		PanelStatusGitignore:      status,
+		PanelStatusDotfilesHidden: status,
+		PanelActiveFrame:          frame,
+		PanelInactiveFrame:        frame,
+	}
+	if got := th.PanelBottomIndicator(PanelBottomIndicatorKeyGitignore, true, false); got != status {
+		t.Fatalf("gitignore = %v, want dedicated status %v (not frame %v)", got, status, frame)
+	}
+	if got := th.PanelBottomIndicator(PanelBottomIndicatorKeyDotfilesHidden, true, false); got != status {
+		t.Fatalf("dotfiles_hidden = %v, want dedicated status %v (not frame %v)", got, status, frame)
+	}
+}
+
 func testTheme(t *testing.T, name string, skip map[string]bool, overrides map[string]string) []byte {
 	return TestThemeBytesNamed(t, name, skip, overrides)
 }

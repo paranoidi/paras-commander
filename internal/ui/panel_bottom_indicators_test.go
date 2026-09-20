@@ -3,6 +3,7 @@ package ui
 import (
 	"testing"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -93,6 +94,28 @@ func TestPanelBottomEndEdgeSegmentsOrdersOtherPanelLast(t *testing.T) {
 	}
 }
 
+func TestPanelBottomIndicatorStyleHonorsGitignoreAndDotfilesTheme(t *testing.T) {
+	t.Parallel()
+	status := tcell.StyleDefault.Foreground(tcell.ColorRed)
+	frame := tcell.StyleDefault.Foreground(tcell.ColorBlue)
+	styles := theme.Default()
+	styles.PanelStatusGitignore = status
+	styles.PanelStatusDotfilesHidden = status
+	styles.PanelActiveFrame = frame
+	styles.PanelInactiveFrame = frame
+	ctx := PanelBottomIndicatorContext{
+		FileListActive: true,
+		BorderStyle:    frame,
+		Styles:         styles,
+	}
+	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorGitignore); got != status {
+		t.Fatalf("gitignore style = %v, want status %v (not frame %v)", got, status, frame)
+	}
+	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorDotfilesHidden); got != status {
+		t.Fatalf("dotfiles_hidden style = %v, want status %v (not frame %v)", got, status, frame)
+	}
+}
+
 func TestPanelBottomIndicatorStyleUsesThemeAndFrame(t *testing.T) {
 	t.Parallel()
 	styles := theme.Default()
@@ -106,8 +129,9 @@ func TestPanelBottomIndicatorStyleUsesThemeAndFrame(t *testing.T) {
 	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorSelections); got != wantSel {
 		t.Fatalf("selections style = %v, want %v", got, wantSel)
 	}
-	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorGitignore); got != frame {
-		t.Fatalf("gitignore style = %v, want frame %v", got, frame)
+	wantGit := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeyGitignore, true, false)
+	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorGitignore); got != wantGit {
+		t.Fatalf("gitignore style = %v, want %v", got, wantGit)
 	}
 }
 
