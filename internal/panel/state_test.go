@@ -6,9 +6,11 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -276,6 +278,89 @@ func TestRefreshOrNavigateToExistingAncestorWalksUpOnce(t *testing.T) {
 	want := filepath.Clean(parent)
 	if got := state.Path.String(); got != want {
 		t.Fatalf("Path = %q, want %q", got, want)
+	}
+}
+
+// TestRefreshOrNavigateToExistingAncestorDoesNotStatOnCaller proves a deleted cwd is
+// scheduled as the same-path refresh (existence climb happens inside the listing fetch),
+// so a blocking Stat cannot stall the caller, and Path stays on the vanished dir until apply.
+func TestRefreshOrNavigateToExistingAncestorDoesNotStatOnCaller(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "harbor")
+	child := filepath.Join(parent, "pruned")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	state, err := New(child)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if err := os.RemoveAll(child); err != nil {
+		t.Fatal(err)
+	}
+
+	var started atomic.Bool
+	var captured AsyncLoadRequest
+	block := make(chan struct{})
+	state.ScheduleAsyncLoad = func(req AsyncLoadRequest) bool {
+		captured = req
+		started.Store(true)
+		go func() { <-block }()
+		return true
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- state.RefreshOrNavigateToExistingAncestor(5)
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("RefreshOrNavigateToExistingAncestor: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("RefreshOrNavigateToExistingAncestor blocked (must not Stat on the caller)")
+	}
+	close(block)
+	if !started.Load() {
+		t.Fatal("ScheduleAsyncLoad was not invoked")
+	}
+	if !captured.Loc.Equal(state.Path) {
+		t.Fatalf("scheduled Loc = %q, want vanished cwd %q (climb belongs in the listing fetch)", captured.Loc.String(), state.Path.String())
+	}
+	if got := state.Path.String(); got != filepath.Clean(child) {
+		t.Fatalf("Path after schedule = %q, want vanished cwd %q (must not navigate from a Stat probe)", got, child)
+	}
+}
+
+func TestApplyListingClimbHighlightsMissingChild(t *testing.T) {
+	parent := pathloc.MustParse("/harbor")
+	child, err := parent.Join("pruned")
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf, err := child.Join("leaf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := State{
+		Path:                leaf,
+		ancestorClimbOrigin: leaf,
+		Sort:                defaultSortState(),
+	}
+	entries := []fsbackend.Entry{
+		{Name: "pruned", Loc: child, Type: fsbackend.EntryDirectory},
+		{Name: "beacon.txt", Loc: pathloc.MustParse("/harbor/beacon.txt"), Type: fsbackend.EntryFile},
+	}
+	if err := state.ApplyListing(parent, entries, "", 5, noIndexCursorFallback, false); err != nil {
+		t.Fatalf("ApplyListing: %v", err)
+	}
+	if !state.Path.Equal(parent) {
+		t.Fatalf("Path = %q, want %q", state.Path.String(), parent.String())
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "pruned" {
+		t.Fatalf("CurrentEntry = %+v ok=%v, want pruned (first missing child)", entry, ok)
 	}
 }
 

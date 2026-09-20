@@ -1,6 +1,8 @@
 package panel
 
 import (
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -153,5 +155,60 @@ func TestApplyPeriodicRefreshMinimalScrollWhenHighlightUnchanged(t *testing.T) {
 	}
 	if state.ScrollOffset != priorScroll {
 		t.Fatalf("ScrollOffset = %d, want %d (minimal scroll)", state.ScrollOffset, priorScroll)
+	}
+}
+
+func TestFetchListingClimbToExistingAncestor(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "harbor")
+	child := filepath.Join(parent, "pruned")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(parent, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(child); err != nil {
+		t.Fatal(err)
+	}
+
+	snap := ListingRefreshSnapshot{
+		Loc:                     pathloc.MustParse(child),
+		ClimbToExistingAncestor: true,
+	}
+	entries, loc, _, _, err := FetchListing(t.Context(), snap)
+	if err != nil {
+		t.Fatalf("FetchListing: %v", err)
+	}
+	if loc.String() != filepath.Clean(parent) {
+		t.Fatalf("listing loc = %q, want ancestor %q", loc.String(), parent)
+	}
+	found := false
+	for _, e := range entries {
+		if e.Name == "beacon.txt" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("ancestor listing = %v, want beacon.txt", entries)
+	}
+}
+
+func TestFirstMissingChildName(t *testing.T) {
+	root := pathloc.MustParse("/harbor")
+	child, err := root.Join("pruned")
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf, err := child.Join("leaf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := firstMissingChildName(root, leaf); got != "pruned" {
+		t.Fatalf("firstMissingChildName(harbor, leaf) = %q, want pruned", got)
+	}
+	if got := firstMissingChildName(child, leaf); got != "leaf" {
+		t.Fatalf("firstMissingChildName(pruned, leaf) = %q, want leaf", got)
 	}
 }

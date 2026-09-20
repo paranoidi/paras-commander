@@ -218,6 +218,12 @@ type State struct {
 	// ScheduleTreeChildLoad runs a tree-mode directory's first-expand child listing off the UI
 	// thread (set by app; nil = synchronous fallback, see setTreeNodeExpanded).
 	ScheduleTreeChildLoad TreeChildLoadScheduler
+	// climbToExistingAncestor is set for the duration of RefreshOrNavigateToExistingAncestor
+	// so ListingRefreshSnapshot can ask FetchListing to Stat-climb on the worker goroutine.
+	climbToExistingAncestor bool
+	// ancestorClimbOrigin is the path RefreshOrNavigateToExistingAncestor started from.
+	// ApplyListing uses it to highlight the first missing child after a climb.
+	ancestorClimbOrigin pathloc.Path
 
 	// ListLayout selects flat rows (default) or an expand/collapse tree for this panel's file list.
 	ListLayout ListLayout
@@ -385,21 +391,23 @@ func (s *State) RefreshOrNavigateToExistingAncestor(viewportRows int) error {
 
 // RefreshOrNavigateToExistingAncestorWithHook is RefreshOrNavigateToExistingAncestor, running
 // onApplied once after the reload (or ancestor navigation) lands.
+//
+// Existence climb is part of the listing fetch (ListingRefreshSnapshot.ClimbToExistingAncestor),
+// not a Stat walk on this goroutine. Path stays on the vanished directory until the listing
+// applies; ApplyListing then highlights the first missing child when the fetch landed on an ancestor.
 func (s *State) RefreshOrNavigateToExistingAncestorWithHook(viewportRows int, onApplied func()) error {
-	if s.Path.IsZero() || DirectoryExists(s.Path) {
+	if s.Path.IsZero() {
 		return s.RefreshWithHook(viewportRows, onApplied)
 	}
-	current := s.Path
-	for {
-		parent := current.Parent()
-		if parent.Equal(current) {
-			return s.RefreshWithHook(viewportRows, onApplied)
-		}
-		if DirectoryExists(parent) {
-			return s.NavigateToPathWithHook(parent, current.Base(), viewportRows, onApplied)
-		}
-		current = parent
+	pendingOther := s.ListingPending && s.ListingPendingPath != "" && s.ListingPendingPath != s.Path.String()
+	s.climbToExistingAncestor = true
+	s.ancestorClimbOrigin = s.Path
+	err := s.RefreshWithHook(viewportRows, onApplied)
+	s.climbToExistingAncestor = false
+	if err != nil || pendingOther {
+		s.ancestorClimbOrigin = pathloc.Path{}
 	}
+	return err
 }
 
 // ApplyPeriodicRefresh commits a same-directory listing when content changed.
@@ -1413,6 +1421,9 @@ func (s *State) loadPathString(path string, selectedName string, viewportRows in
 }
 
 func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, indexFallback int, remote asyncLoadOpts) error {
+	if !s.climbToExistingAncestor {
+		s.ancestorClimbOrigin = pathloc.Path{}
+	}
 	if !loc.Equal(s.Path) {
 		s.rememberCursorForPath(s.Path.String())
 		s.dropNewFileMarks(s.Path.String())
@@ -1489,6 +1500,13 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 	s.ListingEpoch++
 
 	previousPath := s.Path
+	climbOrigin := s.ancestorClimbOrigin
+	s.ancestorClimbOrigin = pathloc.Path{}
+	if !climbOrigin.IsZero() && previousPath.Equal(climbOrigin) && !listingLoc.Equal(climbOrigin) && climbOrigin.HasPrefix(listingLoc) {
+		if name := firstMissingChildName(listingLoc, climbOrigin); name != "" {
+			selectedName = name
+		}
+	}
 	sameDirReload := previousPath.Equal(listingLoc)
 	priorCursor := s.Cursor
 	priorTreeCursorID := ""
