@@ -15,8 +15,11 @@ import (
 )
 
 // paintFindDialogOverlay repaints only the find dialog without redrawing panels or the footer.
+// Find-only paint is allowed only while Find is the top input layer; a higher overlay
+// (Group Select opened from Find, a message dialog, …) must go through a full render so
+// that layer stays on top.
 func (a *App) paintFindDialogOverlay() bool {
-	if !a.model.FindDialog.Open {
+	if !a.model.FindDialog.Open || a.inputMode() != InputModeFindDialog {
 		return false
 	}
 	w, h := a.screen.Size()
