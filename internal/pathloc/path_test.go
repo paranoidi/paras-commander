@@ -3,6 +3,9 @@ package pathloc
 import (
 	"path/filepath"
 	"testing"
+	"unicode/utf8"
+
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 func TestParseFileAbsolute(t *testing.T) {
@@ -158,6 +161,50 @@ func TestParentFile(t *testing.T) {
 	if parent.String() != "/tmp/a" {
 		t.Fatalf("parent = %q", parent.String())
 	}
+}
+
+func TestPathDisplaySlicesRunesNotBytes(t *testing.T) {
+	t.Parallel()
+	p := FileMust("/tmp/日本語")
+	if !utf8.ValidString(p.String()) {
+		t.Fatal("fixture path is not valid UTF-8")
+	}
+	got := p.Display(6)
+	if !utf8.ValidString(got) {
+		t.Fatalf("Display(6) = %q is invalid UTF-8", got)
+	}
+	if utf8.RuneCountInString(got) != 6 {
+		t.Fatalf("Display(6) = %q rune count %d, want 6", got, utf8.RuneCountInString(got))
+	}
+	if got[:3] != p.String()[:3] {
+		t.Fatalf("Display head = %q, want first 3 runes of %q", got, p.String())
+	}
+	if !containsRune(got, primitive.Ellipsis) {
+		t.Fatalf("Display(6) = %q, want middle ellipsis", got)
+	}
+}
+
+func TestPathDisplayFitsAndUnlimited(t *testing.T) {
+	t.Parallel()
+	p := FileMust("/tmp/日本語")
+	if got := p.Display(0); got != p.String() {
+		t.Fatalf("Display(0) = %q, want full path", got)
+	}
+	if got := p.Display(utf8.RuneCountInString(p.String())); got != p.String() {
+		t.Fatalf("Display(exact) = %q, want full path", got)
+	}
+	if got := p.Display(2); utf8.RuneCountInString(got) != 2 || !utf8.ValidString(got) {
+		t.Fatalf("Display(2) = %q", got)
+	}
+}
+
+func containsRune(s string, r rune) bool {
+	for _, got := range s {
+		if got == r {
+			return true
+		}
+	}
+	return false
 }
 
 func TestEqual(t *testing.T) {

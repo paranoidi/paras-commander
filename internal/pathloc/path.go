@@ -207,15 +207,16 @@ func (p Path) FilePathMust() string {
 // Display truncates the canonical string for status UI (0 = no limit).
 func (p Path) Display(maxRunes int) string {
 	s := p.s
-	if maxRunes <= 0 || len(s) <= maxRunes {
+	runes := []rune(s)
+	if maxRunes <= 0 || len(runes) <= maxRunes {
 		return s
 	}
 	if maxRunes <= 3 {
-		return s[:maxRunes]
+		return string(runes[:maxRunes])
 	}
 	head := maxRunes / 2
 	tail := maxRunes - head - 1
-	return s[:head] + string(primitive.Ellipsis) + s[len(s)-tail:]
+	return string(runes[:head]) + string(primitive.Ellipsis) + string(runes[len(runes)-tail:])
 }
 
 func parseFile(raw string) (Path, error) {

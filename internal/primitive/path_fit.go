@@ -3,7 +3,8 @@ package primitive
 import (
 	"path/filepath"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/mattn/go-runewidth"
 )
 
 // FitPathForWidth formats path for display within maxRunes terminal cells.
@@ -33,7 +34,7 @@ func FitPathForWidth(path string, maxRunes int) string {
 		return truncateMiddleEllipsis("/", maxRunes)
 	case prefix == "~/" && len(segs) == 0:
 		t := "~/"
-		if utf8.RuneCountInString(t) <= maxRunes {
+		if runewidth.StringWidth(t) <= maxRunes {
 			return t
 		}
 		return truncateMiddleEllipsis(t, maxRunes)
@@ -47,18 +48,18 @@ func FitPathForWidth(path string, maxRunes int) string {
 	dirs := segs[:len(segs)-1]
 
 	full := joinPathParts(prefix, dirs, base)
-	if utf8.RuneCountInString(full) <= maxRunes {
+	if runewidth.StringWidth(full) <= maxRunes {
 		return full
 	}
 
-	if utf8.RuneCountInString(base) > maxRunes {
+	if runewidth.StringWidth(base) > maxRunes {
 		return truncateMiddleEllipsis(full, maxRunes)
 	}
 
 	repr := append([]string(nil), dirs...)
 	for {
 		candidate := joinPathParts(prefix, repr, base)
-		if utf8.RuneCountInString(candidate) <= maxRunes {
+		if runewidth.StringWidth(candidate) <= maxRunes {
 			return candidate
 		}
 		bestI := -1
@@ -67,7 +68,7 @@ func FitPathForWidth(path string, maxRunes int) string {
 			if _, ok := nextShorterSegmentForm(s); !ok {
 				continue
 			}
-			l := utf8.RuneCountInString(s)
+			l := runewidth.StringWidth(s)
 			if l > bestLen || (l == bestLen && (bestI < 0 || i < bestI)) {
 				bestLen = l
 				bestI = i
@@ -138,17 +139,5 @@ func nextShorterSegmentForm(seg string) (string, bool) {
 }
 
 func truncateMiddleEllipsis(value string, width int) string {
-	if width <= 0 {
-		return ""
-	}
-	if utf8.RuneCountInString(value) <= width {
-		return value
-	}
-	runes := []rune(value)
-	if width <= 3 {
-		return string(runes[:width])
-	}
-	prefixLen := (width - 1) / 2
-	suffixLen := width - prefixLen - 1
-	return string(runes[:prefixLen]) + string(Ellipsis) + string(runes[len(runes)-suffixLen:])
+	return TruncateMiddle(value, width)
 }

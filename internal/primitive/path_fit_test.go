@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/mattn/go-runewidth"
 )
 
 func TestFitPathForWidthPreservesBasenameTypicalColumn(t *testing.T) {
@@ -70,6 +72,16 @@ func TestFitPathForWidthEllipsisInTruncation(t *testing.T) {
 	got := FitPathForWidth("aaaa/bbbb/cccc", 7)
 	if utf8.RuneCountInString(got) != 7 {
 		t.Fatalf("len=%d got %q", utf8.RuneCountInString(got), got)
+	}
+}
+
+func TestFitPathForWidthCountsTerminalCells(t *testing.T) {
+	got := FitPathForWidth("dir/中文文件.txt", 8)
+	if runewidth.StringWidth(got) > 8 {
+		t.Fatalf("cell width %d > 8: %q", runewidth.StringWidth(got), got)
+	}
+	if !strings.HasSuffix(got, ".txt") {
+		t.Fatalf("basename lost: %q", got)
 	}
 }
 

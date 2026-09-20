@@ -3,7 +3,6 @@ package app
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/testutil"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/uitest"
@@ -198,15 +198,7 @@ func newApp(t *testing.T, screen tcell.SimulationScreen, dir string) *App {
 }
 
 func screenLine(screen tcell.SimulationScreen, y, width int) string {
-	var builder strings.Builder
-	for x := range width {
-		cell, _, _ := screen.Get(x, y)
-		if cell == "" {
-			cell = " "
-		}
-		builder.WriteString(cell)
-	}
-	return builder.String()
+	return tcelltest.TextAt(screen, 0, y, width)
 }
 
 func writeFile(t *testing.T, path string) {
