@@ -396,7 +396,8 @@ type UIConfig struct {
 	// directories for background disk-usage size (stats each one to check mount boundaries).
 	// Default DefaultSelectionSizeScanDebounceMS. Use 0 to run on the next scheduler tick.
 	SelectionSizeScanDebounceMS int `toml:"selection_size_scan_debounce_ms"`
-	// SelectionsPanelMaxRows caps visible rows in the cross-directory selections strip (0 = default 5).
+	// SelectionsPanelMaxRows caps visible rows in the cross-directory selections strip
+	// (0 = DefaultSelectionsPanelMaxRows).
 	SelectionsPanelMaxRows int `toml:"selections_panel_max_rows"`
 	// SelectionsPanelActivePercent is the strip share of panel height when focused in side-by-side
 	// layout, and of panel width when the strip is shown in stacked layout (default 50; clamped 10–90).

@@ -11,6 +11,15 @@ import (
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 )
 
+func TestSelectionsPanelMaxRowsSentinelUsesExportedDefault(t *testing.T) {
+	if DefaultSelectionsPanelMaxRows <= 0 {
+		t.Fatalf("DefaultSelectionsPanelMaxRows = %d, want a positive effective default", DefaultSelectionsPanelMaxRows)
+	}
+	if got := Default().UI.SelectionsPanelMaxRows; got != 0 {
+		t.Fatalf("Default SelectionsPanelMaxRows = %d, want 0 sentinel (effective %d)", got, DefaultSelectionsPanelMaxRows)
+	}
+}
+
 func TestDefaultIdleSortDelayMSUsesBuiltinConstant(t *testing.T) {
 	if got := Default().DiskUsage.IdleSortDelayMS; got != DefaultDiskUsageIdleSortDelayMS {
 		t.Fatalf("IdleSortDelayMS = %d, want %d", got, DefaultDiskUsageIdleSortDelayMS)

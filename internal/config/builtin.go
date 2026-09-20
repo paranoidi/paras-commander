@@ -249,6 +249,10 @@ const (
 	// DefaultPaneSplitOrientation is the default twin-pane layout (primary left, secondary right).
 	DefaultPaneSplitOrientation = PaneSplitSideBySide
 
+	// DefaultSelectionsPanelMaxRows is the effective selections-strip row cap when
+	// [ui].selections_panel_max_rows is 0 (sentinel meaning "use this default").
+	DefaultSelectionsPanelMaxRows = 5
+
 	// DefaultSelectionsPanelActivePercent is the strip share of panel height (side-by-side, focused)
 	// or width (stacked) when the selections strip has keyboard focus / is shown stacked.
 	DefaultSelectionsPanelActivePercent = 50
