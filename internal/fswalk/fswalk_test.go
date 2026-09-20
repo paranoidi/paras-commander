@@ -70,6 +70,20 @@ func TestDynSemSetLimitShrink(t *testing.T) {
 	sem.Release()
 }
 
+func TestDynSemAcquireRejectsCanceledCtxWhenCapacityRemains(t *testing.T) {
+	t.Parallel()
+	sem := fswalk.NewDynSem(2)
+	ctx, cancel := context.WithCancel(context.Background())
+	if err := sem.Acquire(ctx); err != nil {
+		t.Fatal(err)
+	}
+	cancel()
+	if err := sem.Acquire(ctx); err == nil {
+		t.Fatal("Acquire must fail after cancel even when a slot is free")
+	}
+	sem.Release()
+}
+
 func TestDynSemAcquireCancel(t *testing.T) {
 	t.Parallel()
 	sem := fswalk.NewDynSem(1)

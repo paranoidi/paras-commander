@@ -132,6 +132,9 @@ func walkSubFolderConcurrently(
 		result.Name = filepath.Join(dirName, leafName)
 	}
 
+	if ctx.Err() != nil {
+		return result
+	}
 	entries, err := readDir(path)
 	adapt.Bump()
 	if err != nil {
@@ -145,6 +148,9 @@ func walkSubFolderConcurrently(
 
 	var mu sync.Mutex
 	for _, entry := range entries {
+		if ctx.Err() != nil {
+			break
+		}
 		if entry.IsDir() {
 			numSubFolders++
 			subFolderPath := filepath.Join(path, entry.Name())

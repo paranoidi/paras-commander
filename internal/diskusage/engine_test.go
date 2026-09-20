@@ -1,11 +1,14 @@
 package diskusage
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 )
 
 func TestPathIsOrUnder(t *testing.T) {
@@ -397,4 +400,121 @@ func waitUntil(t *testing.T, cond func() bool, d time.Duration, msg string) {
 	if !cond() {
 		t.Fatal(msg)
 	}
+}
+
+type fakeDirInfo struct {
+	name  string
+	isDir bool
+	size  int64
+}
+
+func (f fakeDirInfo) Name() string { return f.name }
+func (f fakeDirInfo) Size() int64  { return f.size }
+func (f fakeDirInfo) Mode() fs.FileMode {
+	if f.isDir {
+		return fs.ModeDir | 0o755
+	}
+	return 0o644
+}
+func (f fakeDirInfo) ModTime() time.Time { return time.Time{} }
+func (f fakeDirInfo) IsDir() bool        { return f.isDir }
+func (f fakeDirInfo) Sys() any           { return nil }
+
+// TestAbortCancelsActiveWalkAndNextRequestStarts proves Abort cancels WalkFolder instead of
+// waiting for the stale subtree: a blocked child ReadDir is released, siblings are not
+// descended into, post-abort results stay uncached, and a replacement scan starts.
+func TestAbortCancelsActiveWalkAndNextRequestStarts(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	dirA := filepath.Join(root, "dirA")
+	dirB := filepath.Join(root, "dirB")
+	dirC := filepath.Join(root, "dirC")
+	next := t.TempDir()
+	children := map[string][]fs.FileInfo{
+		filepath.Clean(root): {
+			fakeDirInfo{name: "dirA", isDir: true},
+			fakeDirInfo{name: "dirB", isDir: true},
+			fakeDirInfo{name: "dirC", isDir: true},
+		},
+		filepath.Clean(next): {
+			fakeDirInfo{name: "leaf.dat", isDir: false, size: 4},
+		},
+	}
+
+	var mu sync.Mutex
+	var reads []string
+	enteredChild := make(chan struct{})
+	blockChild := make(chan struct{})
+	nextStarted := make(chan struct{})
+
+	e := New()
+	e.fsWalk = fswalk.Params{InitialWorkers: 1, MaxWorkers: 1, AdaptIntervalMS: 60000}
+	e.walkReadDir = func(path string) ([]fs.FileInfo, error) {
+		clean := filepath.Clean(path)
+		mu.Lock()
+		reads = append(reads, clean)
+		isFirstChild := clean != filepath.Clean(root) && clean != filepath.Clean(next) && len(reads) == 2
+		mu.Unlock()
+
+		switch clean {
+		case filepath.Clean(next):
+			close(nextStarted)
+		default:
+			if isFirstChild {
+				close(enteredChild)
+				<-blockChild
+			}
+		}
+
+		if entries, ok := children[clean]; ok {
+			return entries, nil
+		}
+		return nil, nil
+	}
+
+	e.StartScanFromListing([]string{root}, nil, 0, ListingVolumeGate{})
+
+	select {
+	case <-enteredChild:
+	case <-time.After(2 * time.Second):
+		t.Fatal("walk did not reach blocking child ReadDir")
+	}
+
+	e.Abort()
+	e.StartScanFromListing([]string{next}, nil, 0, ListingVolumeGate{})
+	close(blockChild)
+
+	select {
+	case <-nextStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("next request did not start after abort released the stale walk")
+	}
+
+	waitUntil(t, func() bool { return !e.DiskScanBusy() }, 2*time.Second, "want idle after replacement scan")
+
+	mu.Lock()
+	got := append([]string(nil), reads...)
+	mu.Unlock()
+	firstChild := firstReadUnder(got, root)
+	for _, p := range got {
+		if p == dirA || p == dirB || p == dirC {
+			if p != firstChild {
+				t.Fatalf("stale walk kept descending after abort: reads=%v", got)
+			}
+		}
+	}
+	if _, ok := e.Size(root); ok {
+		t.Fatal("aborted walk result must be rejected by generation check")
+	}
+}
+
+func firstReadUnder(reads []string, root string) string {
+	root = filepath.Clean(root)
+	for _, p := range reads {
+		if p != root {
+			return p
+		}
+	}
+	return ""
 }

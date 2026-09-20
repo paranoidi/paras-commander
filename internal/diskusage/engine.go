@@ -62,6 +62,13 @@ type Engine struct {
 	// runPlannerHook, when non-nil (tests only), replaces runPlanner in the worker.
 	runPlannerHook func(sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int)
 
+	// walkReadDir, when non-nil (tests only), replaces ReadDirInfos inside WalkFolder.
+	walkReadDir ReadDir
+
+	// sessionCancel cancels the WalkFolder context of the job the worker is processing.
+	// Stored under jobMu; nil when the worker is idle between jobs.
+	sessionCancel context.CancelFunc
+
 	// workerBusy is true while the worker is executing a dequeued scan job (runPlanner or hook).
 	workerBusy atomic.Bool
 
@@ -113,6 +120,9 @@ func (e *Engine) workerLoop() {
 		}
 		e.curJobRoots = roots
 		e.curJobSourcePanel = job.sourcePanel
+		sess := e.gen.Add(1)
+		ctx, cancel := context.WithCancel(context.Background())
+		e.sessionCancel = cancel
 		// Flip busy under jobMu so DiskScanBusy never observes "queue empty, worker idle"
 		// between the pop and the start of the walk.
 		e.workerBusy.Store(true)
@@ -120,19 +130,20 @@ func (e *Engine) workerLoop() {
 
 		func() {
 			defer func() {
+				cancel()
 				e.jobMu.Lock()
 				e.curJobRoots = nil
 				e.curJobSourcePanel = -1
+				e.sessionCancel = nil
 				e.jobMu.Unlock()
 			}()
 			defer e.workerBusy.Store(false)
 
-			sess := e.gen.Add(1)
 			combined := ComposeListingVolumeIgnore(job.ignore, job.listingVolGate)
 			if e.runPlannerHook != nil {
 				e.runPlannerHook(sess, job.childAbs, combined, job.sourcePanel)
 			} else {
-				e.runPlanner(sess, job.childAbs, combined, job.sourcePanel)
+				e.runPlanner(ctx, sess, job.childAbs, combined, job.sourcePanel)
 			}
 		}()
 	}
@@ -374,8 +385,12 @@ func (e *Engine) Abort() {
 	e.queue = nil
 	e.curJobRoots = nil
 	e.curJobSourcePanel = -1
+	cancel := e.sessionCancel
 	e.jobMu.Unlock()
 	e.jobCond.Broadcast()
+	if cancel != nil {
+		cancel()
+	}
 
 	e.mu.Lock()
 	for p := range e.activeWalkRoots {
@@ -401,7 +416,7 @@ func (e *Engine) StartScanFromListing(childAbs []string, shouldIgnore ShouldIgno
 	e.jobMu.Unlock()
 }
 
-func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int) {
+func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int) {
 	if len(childAbs) == 0 {
 		if e.gen.Load() == sess {
 			e.signalJobFinished(sess)
@@ -433,7 +448,7 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 
 	for _, grp := range passes {
 		for _, job := range grp {
-			if e.gen.Load() != sess {
+			if e.gen.Load() != sess || ctx.Err() != nil {
 				return
 			}
 
@@ -474,7 +489,7 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 				continue
 			}
 
-			tree := WalkFolder(context.Background(), jobPath, nil, shouldIgnore, nil, e.fsWalk)
+			tree := WalkFolder(ctx, jobPath, e.walkReadDir, shouldIgnore, nil, e.fsWalk)
 
 			if e.gen.Load() != sess {
 				e.mu.Lock()

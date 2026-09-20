@@ -46,6 +46,11 @@ func (d *DynSem) Acquire(ctx context.Context) error {
 		infl := d.inFlight.Load()
 		if infl < lim {
 			if d.inFlight.CompareAndSwap(infl, infl+1) {
+				if err := ctx.Err(); err != nil {
+					d.inFlight.Add(-1)
+					d.poke()
+					return err
+				}
 				if d.inFlight.Load() <= d.limit.Load() {
 					return nil
 				}

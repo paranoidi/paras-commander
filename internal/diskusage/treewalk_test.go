@@ -2,9 +2,12 @@ package diskusage_test
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
@@ -37,6 +40,94 @@ func TestWalkFolderUnreadableDirCachesZeroNotDot(t *testing.T) {
 		t.Fatal(`cache must not contain "." — unreadable root was not named properly`)
 	}
 }
+
+func TestWalkFolderCancelStopsFurtherReads(t *testing.T) {
+	t.Parallel()
+
+	const (
+		root = "/walk-root"
+		dirA = "/walk-root/dirA"
+		dirB = "/walk-root/dirB"
+	)
+	enteredChild := make(chan struct{})
+	blockChild := make(chan struct{})
+	var mu sync.Mutex
+	var reads []string
+
+	readDir := func(path string) ([]fs.FileInfo, error) {
+		clean := filepath.Clean(path)
+		mu.Lock()
+		reads = append(reads, clean)
+		isFirstChild := clean != root && len(reads) == 2
+		mu.Unlock()
+		if isFirstChild {
+			close(enteredChild)
+			<-blockChild
+		}
+		if clean == root {
+			return []fs.FileInfo{
+				walkFakeInfo{name: "dirA", isDir: true},
+				walkFakeInfo{name: "dirB", isDir: true},
+			}, nil
+		}
+		return nil, nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = diskusage.WalkFolder(ctx, root, readDir, nil, nil, fswalk.Params{
+			InitialWorkers:  1,
+			MaxWorkers:      1,
+			AdaptIntervalMS: 60000,
+		})
+	}()
+
+	select {
+	case <-enteredChild:
+	case <-time.After(2 * time.Second):
+		t.Fatal("did not reach blocking child ReadDir")
+	}
+	cancel()
+	close(blockChild)
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("WalkFolder did not return after cancel")
+	}
+
+	mu.Lock()
+	got := append([]string(nil), reads...)
+	mu.Unlock()
+	var childReads int
+	for _, p := range got {
+		if p == dirA || p == dirB {
+			childReads++
+		}
+	}
+	if childReads != 1 {
+		t.Fatalf("WalkFolder kept descending after cancel: reads=%v", got)
+	}
+}
+
+type walkFakeInfo struct {
+	name  string
+	isDir bool
+}
+
+func (f walkFakeInfo) Name() string { return f.name }
+func (f walkFakeInfo) Size() int64  { return 0 }
+func (f walkFakeInfo) Mode() fs.FileMode {
+	if f.isDir {
+		return fs.ModeDir | 0o755
+	}
+	return 0o644
+}
+func (f walkFakeInfo) ModTime() time.Time { return time.Time{} }
+func (f walkFakeInfo) IsDir() bool        { return f.isDir }
+func (f walkFakeInfo) Sys() any           { return nil }
 
 func TestWalkFolderFlatSizes(t *testing.T) {
 	t.Parallel()
