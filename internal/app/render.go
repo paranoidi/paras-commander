@@ -149,7 +149,11 @@ func (a *App) renderBrowserListNavUpdate(panelID int) {
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerVisible()
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
+	// Copy under commandsMu: preview goroutines mutate FilePreview/CarouselFilePreview/
+	// FullscreenFilePreview under this lock; a value copy without it races (same contract as render).
+	a.commandsMu.RLock()
 	model := a.model
+	a.commandsMu.RUnlock()
 	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
 	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
@@ -157,8 +161,8 @@ func (a *App) renderBrowserListNavUpdate(panelID int) {
 		a.render()
 		return
 	}
-	ui.DrawMenuBarPermissionTailOnly(a.screen, layout, a.model, a.styles)
-	ui.PaintTransientStatusMessage(a.screen, layout, a.model, a.styles)
+	ui.DrawMenuBarPermissionTailOnly(a.screen, layout, model, a.styles)
+	ui.PaintTransientStatusMessage(a.screen, layout, model, a.styles)
 	a.emitScreenAfterPartialPaint()
 	if a.diskUsageScanBusy() {
 		a.disk.deferPoll.Store(true)
@@ -177,14 +181,16 @@ func (a *App) paintDiskUsageBrowserUpdate() bool {
 	if layout.TooSmall {
 		return false
 	}
+	a.commandsMu.RLock()
 	model := a.model
+	a.commandsMu.RUnlock()
 	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
 	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
 	if !ui.PaintDiskUsageBrowserPanelsOnly(a.screen, layout, model, a.styles) {
 		return false
 	}
-	ui.PaintTransientStatusMessage(a.screen, layout, a.model, a.styles)
+	ui.PaintTransientStatusMessage(a.screen, layout, model, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true
 }
