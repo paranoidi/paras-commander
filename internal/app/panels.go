@@ -3,8 +3,6 @@ package app
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -282,22 +280,13 @@ func (a *App) navigateFromSelectionsStrip() {
 	if !ok {
 		return
 	}
-	abs := filepath.Clean(selPath)
-	info, err := os.Stat(abs)
+	dirLoc, selectName, err := p.StripNavTarget(selPath)
 	if err != nil {
 		a.setErrorMessage("Cannot open path", err)
 		return
 	}
-	var dirToLoad string
-	var selectName string
-	if info.IsDir() {
-		dirToLoad = abs
-	} else {
-		dirToLoad = filepath.Clean(filepath.Dir(abs))
-		selectName = filepath.Base(abs)
-	}
 	vr := a.activeViewportRows()
-	if err := p.NavigateTo(dirToLoad, selectName, vr); err != nil {
+	if err := p.NavigateToPath(dirLoc, selectName, vr); err != nil {
 		a.setErrorMessage("Open failed", err)
 		return
 	}
@@ -403,29 +392,15 @@ func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 		if p == "" {
 			return "", false
 		}
-		if a.pathVolumeContendsWithActiveJob(p) {
-			parent := panel.CleanPathString(filepath.Dir(p))
-			if parent != "" && parent != p {
-				return parent, true
-			}
-			return p, true
-		}
-		fi, err := os.Stat(p)
+		dirLoc, _, err := driver.StripNavTarget(p)
 		if err != nil {
 			return "", false
 		}
-		if fi.IsDir() {
-			return p, true
-		}
-		// Strip row is a file: mirror its parent directory (common "work here" intent).
-		parent := panel.CleanPathString(filepath.Dir(p))
-		if parent == "" || parent == p {
+		target := panel.CleanPathString(dirLoc.String())
+		if target == "" {
 			return "", false
 		}
-		if fi2, err2 := os.Stat(parent); err2 != nil || !fi2.IsDir() {
-			return "", false
-		}
-		return parent, true
+		return target, true
 	}
 	entry, ok := driver.CurrentEntry()
 	if !ok || entry.Type != localfs.EntryDirectory {
@@ -458,13 +433,13 @@ func (a *App) syncFollowFromActive() {
 	}
 	followerID := a.inactivePanelID()
 	follower := a.panelByID(followerID)
-	if filepath.Clean(follower.PathString()) == targetPath {
+	if panel.CleanPathString(follower.PathString()) == targetPath {
 		return
 	}
 	// A load to targetPath already in flight is left alone: re-issuing it every reconcile pass
 	// would bump the async-load generation and drop each result before it lands, so a slow
 	// follower listing could never complete while any other event kept the loop busy.
-	if follower.ListingPending && filepath.Clean(follower.ListingPendingPath) == targetPath {
+	if follower.ListingPending && panel.CleanPathString(follower.ListingPendingPath) == targetPath {
 		return
 	}
 	if a.pathVolumeContendsWithActiveJob(targetPath) {

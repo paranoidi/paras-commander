@@ -1,9 +1,10 @@
 package panel
 
 import (
-	"path/filepath"
+	"errors"
 	"sort"
 
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -72,7 +73,7 @@ func (s *State) patchSelectionDerivedAfterAdd(path string, isDir bool) {
 	s.addSubtreeAncestorsForPath(path)
 	if len(s.selDerivedCache.stripPaths) > 0 {
 		s.appendStripPathIfNeeded(path)
-	} else if cleanPathString(filepath.Dir(path)) != cur {
+	} else if parent, ok := selectionParentDir(path); !ok || parent != cur {
 		// Strip just became visible: it lists every selection, so rebuild.
 		s.rebuildSelectionDerived()
 		return
@@ -307,12 +308,80 @@ func (s *State) buildSelectionsStripPaths(cur string) []string {
 }
 
 func selectionsOutsideDir(selected map[string]bool, dir string) bool {
+	dir = cleanPathString(dir)
 	for p, on := range selected {
-		if on && cleanPathString(filepath.Dir(p)) != dir {
+		if !on {
+			continue
+		}
+		parent, ok := selectionParentDir(p)
+		if !ok {
+			if cleanPathString(p) != dir {
+				return true
+			}
+			continue
+		}
+		if parent != dir {
 			return true
 		}
 	}
 	return false
+}
+
+// selectionParentDir is the immediate parent of path using pathloc so sftp:// URIs
+// resolve correctly. False when the path cannot be parsed or is already the root.
+func selectionParentDir(path string) (string, bool) {
+	loc, err := pathloc.Parse(path)
+	if err != nil {
+		return "", false
+	}
+	parent := loc.Parent()
+	if parent.Equal(loc) || parent.IsZero() {
+		return "", false
+	}
+	return cleanPathString(parent.String()), true
+}
+
+// knownSelectionIsDir reports whether path is a directory from listing or selection
+// metadata (SelectedDirPaths). known is false only when the path is not a current
+// selection and is not in the listing — callers must not Stat on the UI goroutine.
+func (s *State) knownSelectionIsDir(path string) (isDir bool, known bool) {
+	path = cleanPathString(path)
+	if path == "" {
+		return false, false
+	}
+	if e, ok := s.listingEntry(path); ok {
+		return e.Type == localfs.EntryDirectory, true
+	}
+	if s.SelectedDirPaths != nil && s.SelectedDirPaths[path] {
+		return true, true
+	}
+	if s.SelectedPaths != nil && s.SelectedPaths[path] {
+		return false, true
+	}
+	return false, false
+}
+
+// StripNavTarget returns the directory to open for a selected strip path and, when
+// the path is a file, the basename to highlight. Type comes from listing or
+// SelectedDirPaths; a selected path that is not marked as a directory is treated
+// as a file. No filepath.Dir / os.Stat — sftp:// URIs stay backend-neutral.
+func (s *State) StripNavTarget(raw string) (dir pathloc.Path, selectName string, err error) {
+	loc, err := pathloc.Parse(raw)
+	if err != nil {
+		return pathloc.Path{}, "", err
+	}
+	isDir, known := s.knownSelectionIsDir(loc.String())
+	if !known {
+		isDir = false
+	}
+	if isDir {
+		return loc, "", nil
+	}
+	parent := loc.Parent()
+	if parent.Equal(loc) || parent.IsZero() {
+		return pathloc.Path{}, "", errors.New("cannot open parent of root")
+	}
+	return parent, loc.Base(), nil
 }
 
 func (s *State) buildPrunedSelectionRoots() []string {

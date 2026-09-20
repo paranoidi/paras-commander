@@ -219,6 +219,50 @@ func BenchmarkBulkAddSelections1500Files(b *testing.B) {
 	}
 }
 
+func TestSelectionsOutsideDirSFTPURI(t *testing.T) {
+	t.Parallel()
+	cwd := "sftp://user@example.com/harbor"
+	inCwd := "sftp://user@example.com/harbor/willow.txt"
+	other := "sftp://user@example.com/meadow/ember.txt"
+	if selectionsOutsideDir(map[string]bool{inCwd: true}, cwd) {
+		t.Fatal("sftp file in the current directory must not show the strip")
+	}
+	if !selectionsOutsideDir(map[string]bool{other: true}, cwd) {
+		t.Fatal("sftp file in another directory must show the strip")
+	}
+	if !selectionsOutsideDir(map[string]bool{inCwd: true, other: true}, cwd) {
+		t.Fatal("mixed sftp selection must show the strip")
+	}
+}
+
+func TestStripNavTargetSFTPUsesTypeMetadata(t *testing.T) {
+	t.Parallel()
+	cwd := pathloc.MustParse("sftp://user@example.com/harbor")
+	dir := "sftp://user@example.com/meadow"
+	file := "sftp://user@example.com/meadow/ember.txt"
+	s := &State{
+		Path:             cwd,
+		SelectedPaths:    map[string]bool{dir: true, file: true},
+		SelectedDirPaths: map[string]bool{dir: true},
+	}
+
+	gotDir, name, err := s.StripNavTarget(dir)
+	if err != nil {
+		t.Fatalf("StripNavTarget(dir): %v", err)
+	}
+	if gotDir.String() != dir || name != "" {
+		t.Fatalf("dir target = %q name=%q, want dir itself", gotDir.String(), name)
+	}
+
+	gotDir, name, err = s.StripNavTarget(file)
+	if err != nil {
+		t.Fatalf("StripNavTarget(file): %v", err)
+	}
+	if gotDir.String() != dir || name != "ember.txt" {
+		t.Fatalf("file target = %q name=%q, want parent %q + ember.txt", gotDir.String(), name, dir)
+	}
+}
+
 func BenchmarkHasSelectionInSubtree1500(b *testing.B) {
 	root := b.TempDir()
 	sub := filepath.Join(root, "sub")

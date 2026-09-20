@@ -159,6 +159,86 @@ func TestRefreshBothPanelsStaleClimbDoesNotNavigate(t *testing.T) {
 	}
 }
 
+func setupSFTPStripPanel(t *testing.T) (*App, *panel.State) {
+	t.Helper()
+	root := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	left := app.panelByID(ui.PrimaryPanel)
+	left.Path = pathloc.MustParse("sftp://user@example.com/harbor")
+	return app, left
+}
+
+func TestNavigateFromSelectionsStripSFTPDirectory(t *testing.T) {
+	app, left := setupSFTPStripPanel(t)
+	dir := "sftp://user@example.com/meadow"
+	left.SelectedPaths = map[string]bool{dir: true}
+	left.SelectedDirPaths = map[string]bool{dir: true}
+	left.SelectionsStripOrder = []string{dir}
+	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	left.SelectionsStripCursor = 0
+
+	var captured pathloc.Path
+	left.ScheduleAsyncLoad = func(req panel.AsyncLoadRequest) bool {
+		captured = req.Loc
+		return true
+	}
+
+	app.navigateFromSelectionsStrip()
+	if captured.String() != dir {
+		t.Fatalf("NavigateTo loc = %q, want sftp directory %q (must not os.Stat / filepath.Dir)", captured.String(), dir)
+	}
+	if app.model.ActiveSubFocus != ui.SubFocusFileList {
+		t.Fatalf("ActiveSubFocus = %d, want file list", app.model.ActiveSubFocus)
+	}
+}
+
+func TestNavigateFromSelectionsStripSFTPFile(t *testing.T) {
+	app, left := setupSFTPStripPanel(t)
+	file := "sftp://user@example.com/meadow/ember.txt"
+	parent := "sftp://user@example.com/meadow"
+	left.SelectedPaths = map[string]bool{file: true}
+	left.SelectionsStripOrder = []string{file}
+	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	left.SelectionsStripCursor = 0
+
+	var captured panel.AsyncLoadRequest
+	left.ScheduleAsyncLoad = func(req panel.AsyncLoadRequest) bool {
+		captured = req
+		return true
+	}
+
+	app.navigateFromSelectionsStrip()
+	if captured.Loc.String() != parent {
+		t.Fatalf("NavigateTo loc = %q, want sftp parent %q", captured.Loc.String(), parent)
+	}
+	if captured.SelectedName != "ember.txt" {
+		t.Fatalf("SelectedName = %q, want ember.txt", captured.SelectedName)
+	}
+}
+
+func TestSyncFollowTargetPathSFTPStripRow(t *testing.T) {
+	app, left := setupSFTPStripPanel(t)
+	dir := "sftp://user@example.com/meadow"
+	file := "sftp://user@example.com/meadow/ember.txt"
+	left.SelectedPaths = map[string]bool{dir: true, file: true}
+	left.SelectedDirPaths = map[string]bool{dir: true}
+	left.SelectionsStripOrder = []string{dir, file}
+	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+
+	left.SelectionsStripCursor = 0
+	got, ok := app.syncFollowTargetPath(left)
+	if !ok || got != dir {
+		t.Fatalf("sync dir row = %q ok=%v, want %q", got, ok, dir)
+	}
+
+	left.SelectionsStripCursor = 1
+	got, ok = app.syncFollowTargetPath(left)
+	if !ok || got != dir {
+		t.Fatalf("sync file row = %q ok=%v, want parent %q", got, ok, dir)
+	}
+}
+
 func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")
