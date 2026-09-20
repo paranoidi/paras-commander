@@ -48,6 +48,11 @@ type ScanWalkHooks struct {
 	// OnWarning reports a non-fatal per-item issue during the walk (e.g. a symlink relinked
 	// instead of dereferenced). Optional.
 	OnWarning func(string)
+	// BufferDeliveryPlan, when true, lets the delivery walk finish reading the source tree
+	// without a PlanCh consumer: the producer buffers items and only then offers them on
+	// Items. Move and flatten-move need this so they can wait for Done without deadlocking
+	// on an unbuffered Items channel that nobody is reading yet.
+	BufferDeliveryPlan bool
 }
 
 // ScanFunc starts a background plan walk for sources/destination and returns immediately with a
@@ -127,6 +132,7 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 	hooks := ScanWalkHooks{
 		FlatDestNames:       job.FlatDestNames(),
 		DereferenceSymlinks: job.DereferenceSymlinks,
+		BufferDeliveryPlan:  job.WaitsForDeliveryPlan(),
 		OnWarning: func(msg string) {
 			s.mu.Lock()
 			job.Warnings = append(job.Warnings, msg)
@@ -214,9 +220,12 @@ waitLoop:
 		case <-producer.Done:
 			break waitLoop
 		case <-firstItemCh:
-			// As soon as the first item is known to have arrived, let the job start
-			// transferring while the walk keeps running in the background.
-			flipToRunnable()
+			// Copy pipelines as soon as the first item is known. Move and flatten-move
+			// wait for Done: renaming a source while a walk still reads that path races
+			// enumeration (R04-003).
+			if !job.WaitsForDeliveryPlan() {
+				flipToRunnable()
+			}
 			firstItemCh = nil
 		case <-totalsDoneCh:
 			s.mu.Lock()

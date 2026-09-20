@@ -37,6 +37,25 @@ func TestJobLifecycle(t *testing.T) {
 	}
 }
 
+func TestWaitsForDeliveryPlan(t *testing.T) {
+	t.Parallel()
+	if (&Job{Type: TypeCopy}).WaitsForDeliveryPlan() {
+		t.Fatal("TypeCopy must keep first-item pipelining")
+	}
+	if (&Job{Type: TypeCopy, FlattenIntoDest: true}).WaitsForDeliveryPlan() {
+		t.Fatal("flatten-into-dest copy must keep first-item pipelining")
+	}
+	if !(&Job{Type: TypeMove}).WaitsForDeliveryPlan() {
+		t.Fatal("TypeMove must wait for the delivery plan")
+	}
+	if !(&Job{Type: TypeFlatten}).WaitsForDeliveryPlan() {
+		t.Fatal("TypeFlatten must wait for the delivery plan")
+	}
+	if (*Job)(nil).WaitsForDeliveryPlan() {
+		t.Fatal("nil job must not wait")
+	}
+}
+
 func TestFinishedStatuses(t *testing.T) {
 	for _, s := range FinishedStatuses() {
 		if !s.IsFinished() {

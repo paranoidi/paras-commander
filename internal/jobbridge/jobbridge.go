@@ -57,6 +57,9 @@ func EventUpdatesMarks(t jobs.EventType) bool {
 // slow/stalled transfer consumer — a large file mid-copy stalls the relay's handoff to items,
 // but the counting walk keeps enumerating and Totals keeps growing regardless. Both walks start
 // immediately; ScanFunc returns without blocking for the source tree to be fully enumerated.
+// When hooks.BufferDeliveryPlan is set (move/flatten-move), the delivery relay buffers the
+// whole walk so Done can fire without an Items consumer; rename must not start while a walk
+// still reads those source paths.
 //
 // The counting walk additionally runs an adaptive contention probe (see scan_throttle.go) unless
 // jobsCfg.ScanDisableAdaptiveThrottle is set: it periodically pauses the counting walk and
@@ -122,6 +125,36 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 				close(deliveryDone)
 			}
 			firstItemSeen := false
+			if hooks.BufferDeliveryPlan {
+				// Buffer every delivery item so the filesystem walk can finish without a
+				// PlanCh consumer. Move/flatten jobs wait for Done before becoming runnable;
+				// without this buffer the unbuffered Items send deadlocks that wait.
+				var buf []ops.PlanItem
+				for {
+					select {
+					case it, ok := <-raw:
+						if !ok {
+							finish()
+							for _, it := range buf {
+								select {
+								case items <- it:
+								case <-ctx.Done():
+									return
+								}
+							}
+							return
+						}
+						if !firstItemSeen {
+							firstItemSeen = true
+							close(firstItem)
+						}
+						buf = append(buf, it)
+					case <-ctx.Done():
+						finish()
+						return
+					}
+				}
+			}
 			for {
 				select {
 				case it, ok := <-raw:

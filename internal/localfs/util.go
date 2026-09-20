@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 // pathErrorReason returns pathErr.Err when err is *os.PathError so wrappers that
@@ -296,6 +297,36 @@ func copySymlink(src, dst string, dir bool) error {
 	return nil
 }
 
+// walkAfterDirMu guards walkAfterDir, the optional test hook invoked after a
+// directory's visitor returns and before that directory is ReadDir'd.
+var walkAfterDirMu sync.Mutex
+var walkAfterDir func(path string) error
+
+// SetWalkAfterDirHook installs fn as a callback after each directory visit and
+// before os.ReadDir on that path. Tests use it to pause a walk after the root
+// entry has been emitted. The returned function restores the previous hook.
+func SetWalkAfterDirHook(fn func(path string) error) (restore func()) {
+	walkAfterDirMu.Lock()
+	prev := walkAfterDir
+	walkAfterDir = fn
+	walkAfterDirMu.Unlock()
+	return func() {
+		walkAfterDirMu.Lock()
+		walkAfterDir = prev
+		walkAfterDirMu.Unlock()
+	}
+}
+
+func callWalkAfterDir(path string) error {
+	walkAfterDirMu.Lock()
+	fn := walkAfterDir
+	walkAfterDirMu.Unlock()
+	if fn == nil {
+		return nil
+	}
+	return fn(path)
+}
+
 // WalkDirRecursive walks a directory recursively, calling fn for every file,
 // directory, and symlink including the root. It returns entries in deterministic order.
 func WalkDirRecursive(root string, fn func(path string, info fs.FileInfo) error) error {
@@ -315,6 +346,9 @@ func walkDirRecursive(path string, info fs.FileInfo, fn func(string, fs.FileInfo
 	}
 	if !info.IsDir() {
 		return nil
+	}
+	if err := callWalkAfterDir(path); err != nil {
+		return err
 	}
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -389,6 +423,9 @@ func walkDirRecursiveDeref(path string, lstatInfo fs.FileInfo, ancestors []fs.Fi
 	}
 	if !nodeInfo.IsDir() {
 		return nil
+	}
+	if err := callWalkAfterDir(path); err != nil {
+		return err
 	}
 	entries, err := os.ReadDir(path)
 	if err != nil {

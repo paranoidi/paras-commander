@@ -47,6 +47,42 @@ func TestWalkDirRecursivePlainUnaffectedByDerefRefactor(t *testing.T) {
 	}
 }
 
+func TestWalkAfterDirHookRunsBeforeReadDir(t *testing.T) {
+	root := t.TempDir()
+	child := filepath.Join(root, "meadow")
+	if err := os.Mkdir(child, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	var order []string
+	restore := SetWalkAfterDirHook(func(path string) error {
+		if path == root {
+			order = append(order, "after-root")
+			if _, err := os.Stat(child); err != nil {
+				t.Errorf("child must still be readable at AfterDir: %v", err)
+			}
+		}
+		return nil
+	})
+	defer restore()
+
+	if err := WalkDirRecursive(root, func(path string, info fs.FileInfo) error {
+		if path == root {
+			order = append(order, "visit-root")
+		}
+		if path == child {
+			order = append(order, "visit-child")
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("WalkDirRecursive error = %v", err)
+	}
+	want := []string{"visit-root", "after-root", "visit-child"}
+	if strings.Join(order, ",") != strings.Join(want, ",") {
+		t.Fatalf("order = %v, want %v", order, want)
+	}
+}
+
 func TestWalkDirRecursiveDerefFollowsSymlinkToDir(t *testing.T) {
 	root := t.TempDir()
 	realDir := filepath.Join(root, "thicket")

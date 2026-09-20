@@ -309,34 +309,47 @@ func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []pathloc
 }
 
 // ExecuteMoveWithPlanChan mirrors ExecuteMoveWithPlan but consumes a streamed plan channel (from
-// BuildPlanStreamCtx) for its copy-fallback phase instead of a pre-built slice, so a cross-device
-// move's transfer can start before the whole source tree is enumerated. The rename fast path
-// (executeMoveRenamePhase) renames each top-level source directly and never needs the plan, so it
-// runs exactly as ExecuteMove's does — planCh is only consumed once a fallback is actually needed.
+// BuildPlanStreamCtx). The rename fast path must not start until that delivery walk has finished
+// reading the source paths: renaming a directory while WalkDirRecursive still ReadDir's it
+// produces self-inflicted enumeration errors and an incomplete plan for mixed-device fallback.
 func ExecuteMoveWithPlanChan(ctx context.Context, planCh <-chan PlanItem, planErr func() error, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, 0, err
 	}
 
-	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, nil, opts.FlatDestNames, throttle, resolver, progress)
+	plan, err := collectPlanChan(ctx, planCh, planErr)
 	if err != nil {
 		return 0, 0, err
 	}
-	if !fallbackToCopy {
-		// ponytail: rename fast path never touches the plan; drain and discard whatever the
-		// background producer still has in flight so its goroutine can finish and exit instead
-		// of blocking forever on a channel nobody reads. Bails out early on ctx cancellation —
-		// state.go's cancelJobScan backstops the producer's own context in that case.
-		drainPlanChanDiscard(ctx, planCh)
-		return doneFiles, doneBytes, nil
-	}
+	drainPlanChanDiscard(ctx, planCh)
+	return ExecuteMoveWithPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
+}
 
-	// No upfront EnsureDiskSpace(tb) here: total bytes aren't known until the streamed plan
-	// finishes. The per-file EnsureDiskSpace check inside copyRegularItem is the safety net,
-	// same trade-off jobbridge makes for streaming copy jobs (see llm-docs/jobs.md).
-	copyFiles, copyBytes, transferred, err := executeCopyIter(ctx, planIterChan(ctx, planCh, planErr), destination, opts, throttle, progress, resolver, diskWait)
-	if err != nil {
-		return copyFiles, copyBytes, fmt.Errorf("move copy phase: %w", err)
+// collectPlanChan drains planCh until it closes and then returns planErr() (if any). A move's
+// rename phase uses the collected plan only after this returns, so source paths stay stable
+// for the duration of the delivery walk.
+func collectPlanChan(ctx context.Context, planCh <-chan PlanItem, planErr func() error) ([]PlanItem, error) {
+	if planCh == nil {
+		if planErr != nil {
+			return nil, planErr()
+		}
+		return nil, nil
 	}
-	return finishMoveCopyPhase(ctx, sources, transferred, copyFiles, copyBytes, opts.OnRemoveSources)
+	var plan []PlanItem
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case it, ok := <-planCh:
+			if !ok {
+				if planErr != nil {
+					if err := planErr(); err != nil {
+						return plan, err
+					}
+				}
+				return plan, nil
+			}
+			plan = append(plan, it)
+		}
+	}
 }

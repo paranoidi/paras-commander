@@ -182,6 +182,17 @@ func (j *Job) NeedsPreScan() bool {
 	return j.Type == TypeCopy || j.Type == TypeMove || j.Type == TypeFlatten
 }
 
+// WaitsForDeliveryPlan reports whether the job must finish source enumeration before
+// becoming runnable. Move and flatten-move rename the source tree; starting them on
+// FirstItem would race still-running delivery and counting walks. Copy (including
+// flatten-into-dest copy) keeps first-item pipelining.
+func (j *Job) WaitsForDeliveryPlan() bool {
+	if j == nil {
+		return false
+	}
+	return j.Type == TypeMove || j.Type == TypeFlatten
+}
+
 // RetryClone returns a fresh Job with the same ID and only the enqueue-time spec fields
 // copied from j — everything else (progress, ETA, PlanCh, Error, timestamps, PendingBlocker)
 // starts zero, mirroring how AddTransferJob/EnqueueDeleteJob/EnqueueExtractJob/AddFlattenJob
