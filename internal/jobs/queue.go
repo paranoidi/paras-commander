@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-// Queue is a thread-safe FIFO job queue.
+// Queue is an ordered pointer store for jobs. mu guards the slice only.
+// When a Queue is owned by State, Job.Status and Job.FinishedAt are written
+// and snapshotted under State.mu — the methods below are structural primitives
+// invoked while that lock is held (lock order: State.mu, then Queue.mu).
 type Queue struct {
 	mu   sync.Mutex
 	jobs []*Job
@@ -42,6 +45,12 @@ func (q *Queue) Dequeue() *Job {
 func (q *Queue) DequeueRunnable() *Job {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	return q.dequeueRunnableUnlocked()
+}
+
+// dequeueRunnableUnlocked is the structural primitive for DequeueRunnable.
+// Caller must hold q.mu, and State.mu when this queue is owned by State.
+func (q *Queue) dequeueRunnableUnlocked() *Job {
 	for i, job := range q.jobs {
 		if job != nil && job.Status == StatusQueued {
 			q.jobs = append(q.jobs[:i], q.jobs[i+1:]...)
@@ -55,6 +64,12 @@ func (q *Queue) DequeueRunnable() *Job {
 func (q *Queue) PauseQueuedJob(id string) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	return q.pauseQueuedJobUnlocked(id)
+}
+
+// pauseQueuedJobUnlocked is the structural primitive for PauseQueuedJob.
+// Caller must hold q.mu, and State.mu when this queue is owned by State.
+func (q *Queue) pauseQueuedJobUnlocked(id string) bool {
 	for _, job := range q.jobs {
 		if job != nil && job.ID == id && job.Status == StatusQueued {
 			job.Status = StatusPaused
@@ -68,6 +83,12 @@ func (q *Queue) PauseQueuedJob(id string) bool {
 func (q *Queue) ResumePausedJob(id string) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	return q.resumePausedJobUnlocked(id)
+}
+
+// resumePausedJobUnlocked is the structural primitive for ResumePausedJob.
+// Caller must hold q.mu, and State.mu when this queue is owned by State.
+func (q *Queue) resumePausedJobUnlocked(id string) bool {
 	for _, job := range q.jobs {
 		if job != nil && job.ID == id && job.Status == StatusPaused {
 			job.Status = StatusQueued
@@ -92,6 +113,12 @@ func (q *Queue) Peek() *Job {
 func (q *Queue) CancelQueuedJobByID(id string) bool {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	return q.cancelQueuedJobByIDUnlocked(id)
+}
+
+// cancelQueuedJobByIDUnlocked is the structural primitive for CancelQueuedJobByID.
+// Caller must hold q.mu, and State.mu when this queue is owned by State.
+func (q *Queue) cancelQueuedJobByIDUnlocked(id string) bool {
 	for _, job := range q.jobs {
 		if job == nil || job.ID != id {
 			continue
@@ -213,6 +240,12 @@ func (q *Queue) ClearFinished() []*Job {
 func (q *Queue) AllJobs() []*Job {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	return q.allJobsUnlocked()
+}
+
+// allJobsUnlocked snapshots the pointer slice. Caller must hold q.mu, and
+// State.mu when this queue is owned by State and the caller will read lifecycle fields.
+func (q *Queue) allJobsUnlocked() []*Job {
 	snapshot := make([]*Job, len(q.jobs))
 	copy(snapshot, q.jobs)
 	return snapshot

@@ -1,8 +1,9 @@
 package jobs
 
 // collectAllJobsUnlocked gathers job pointers from every ownership bucket in display order.
-// Caller must hold s.mu. The same job ID may appear in more than one bucket during races
-// (e.g. active not cleared yet while entering waitingBlocker); use dedupeJobsByID before UI use.
+// Caller must hold s.mu and s.queue.mu. The same job ID may appear in more than one bucket
+// during transitions (e.g. active not cleared yet while entering waitingBlocker); use
+// dedupeJobsByID before UI use.
 func (s *State) collectAllJobsUnlocked() []*Job {
 	var all []*Job
 	for _, j := range s.active {
@@ -20,7 +21,7 @@ func (s *State) collectAllJobsUnlocked() []*Job {
 			all = append(all, j)
 		}
 	}
-	all = append(all, s.queue.AllJobs()...)
+	all = append(all, s.queue.allJobsUnlocked()...)
 	if len(s.finished) > 0 {
 		all = append(all, s.finished...)
 	}
@@ -28,7 +29,7 @@ func (s *State) collectAllJobsUnlocked() []*Job {
 }
 
 // collectMenuBarStripJobsUnlocked gathers jobs for the menu-bar icon strip (finished first, then in-flight buckets).
-// Caller must hold s.mu.
+// Caller must hold s.mu and s.queue.mu.
 func (s *State) collectMenuBarStripJobsUnlocked() []*Job {
 	var all []*Job
 	for _, j := range s.finished {
@@ -51,7 +52,7 @@ func (s *State) collectMenuBarStripJobsUnlocked() []*Job {
 			all = append(all, j)
 		}
 	}
-	for _, j := range s.queue.AllJobs() {
+	for _, j := range s.queue.allJobsUnlocked() {
 		if j != nil && !j.Status.IsFinished() {
 			all = append(all, j)
 		}

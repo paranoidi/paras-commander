@@ -12,6 +12,10 @@ import (
 
 // State provides a thread-safe view of all tracked jobs for the UI layer.
 type State struct {
+	// mu is the sole lock for Job lifecycle fields (Status, FinishedAt) and the
+	// ownership buckets (active, waitingBlocker, pendingDequeued, finished).
+	// Queue methods that read or write those fields are structural primitives
+	// called while mu is held (lock order: mu, then Queue.mu for the pointer slice).
 	mu    sync.Mutex
 	queue *Queue
 	// active is the set of currently running jobs (at most one holding the transfer lease, plus
@@ -156,7 +160,9 @@ func (s *State) SetEmitHook(fn func(Event)) {
 func (s *State) dequeueJob() *Job {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	job := s.queue.DequeueRunnable()
+	s.queue.mu.Lock()
+	job := s.queue.dequeueRunnableUnlocked()
+	s.queue.mu.Unlock()
 	if job != nil {
 		s.appendPendingDequeuedUnlocked(job)
 	}
@@ -315,7 +321,12 @@ func (s *State) HasUnfinishedWork() bool {
 
 // ResumeJob resumes a paused queued job. Returns false if the job was not found or not paused.
 func (s *State) ResumeJob(id string) bool {
-	if !s.queue.ResumePausedJob(id) {
+	s.mu.Lock()
+	s.queue.mu.Lock()
+	ok := s.queue.resumePausedJobUnlocked(id)
+	s.queue.mu.Unlock()
+	s.mu.Unlock()
+	if !ok {
 		return false
 	}
 	s.signalWorker()
@@ -324,7 +335,11 @@ func (s *State) ResumeJob(id string) bool {
 
 // PauseQueuedJob pauses a queued job still waiting in the FIFO. Returns false if not found or not StatusQueued.
 func (s *State) PauseQueuedJob(id string) bool {
-	return s.queue.PauseQueuedJob(id)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.queue.mu.Lock()
+	defer s.queue.mu.Unlock()
+	return s.queue.pauseQueuedJobUnlocked(id)
 }
 
 // RetryJob re-queues a failed job as a fresh run with the same ID and spec.
@@ -354,9 +369,12 @@ func (s *State) RetryJob(id string) bool {
 // Each job ID appears at most once even if internal buckets overlap during worker transitions.
 // Returned jobs are copies (same convention as ActiveJob/FirstWaitingBlockerJob) so callers can
 // read them after releasing s.mu without racing the worker goroutine's in-place mutations.
+// Status and FinishedAt are copied while holding s.mu (and the queue slice lock).
 func (s *State) AllJobs() []*Job {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.queue.mu.Lock()
+	defer s.queue.mu.Unlock()
 	deduped := dedupeJobsByID(s.collectAllJobsUnlocked())
 	out := make([]*Job, len(deduped))
 	for i, j := range deduped {
@@ -373,6 +391,8 @@ func (s *State) AllJobs() []*Job {
 func (s *State) MenuBarStripStatuses() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.queue.mu.Lock()
+	defer s.queue.mu.Unlock()
 	jobs := dedupeJobsByID(s.collectMenuBarStripJobsUnlocked())
 	out := make([]string, 0, len(jobs))
 	for _, j := range jobs {
@@ -605,7 +625,10 @@ func (s *State) CancelJob(id string) bool {
 		s.mu.Unlock()
 		return true
 	}
-	if s.queue.CancelQueuedJobByID(id) {
+	s.queue.mu.Lock()
+	canceled := s.queue.cancelQueuedJobByIDUnlocked(id)
+	s.queue.mu.Unlock()
+	if canceled {
 		s.mu.Unlock()
 		s.emit(Event{
 			Type:   EventCanceled,
