@@ -133,13 +133,13 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 	h.onClose = onClose
 
 	h.model.ViewMode = ui.ViewCompare
-	h.model.MenuDefinitions = h.host.CompareMenuDefinitions()
-	h.model.Menu.ActiveMenu = 0
 	h.model.CompareView = ui.CompareViewState{
 		Filter:      comparepkg.FilterAll,
 		FocusColumn: ui.CompareColumnPrimary,
 		IgnoreEmpty: true,
 	}
+	h.model.MenuDefinitions = h.host.CompareMenuDefinitions()
+	h.model.Menu.ActiveMenu = menu.DefaultIndexCompare()
 
 	hs := hashwalk.FromCompareConfig(h.config.Compare, h.diskIgnore, volGate)
 
@@ -233,6 +233,7 @@ func (h *Handler) ToggleIgnoreEmpty() {
 	}
 	st := &h.model.CompareView
 	st.IgnoreEmpty = !st.IgnoreEmpty
+	h.model.MenuDefinitions = h.host.CompareMenuDefinitions()
 	h.ensureSelectionVisible(0)
 }
 

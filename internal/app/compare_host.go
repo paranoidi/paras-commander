@@ -28,7 +28,11 @@ func (h compareHost) ClearTransientMessage() {
 }
 
 func (h compareHost) CompareMenuDefinitions() []menu.Definition {
-	return h.app.browserMenuDefinitions()
+	return h.app.compareMenuDefinitions()
+}
+
+func (a *App) compareMenuDefinitions() []menu.Definition {
+	return menu.CompareDefinitions(a.keys.Global, a.keys.Compare, a.model.CompareView.IgnoreEmpty)
 }
 
 func (h compareHost) BrowserMenuDefinitions() []menu.Definition {

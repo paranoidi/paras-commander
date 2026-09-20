@@ -13,6 +13,7 @@ const (
 	TopJobs       TopID = "top.jobs"
 	TopCommands   TopID = "top.commands-screen"
 	TopMessages   TopID = "top.messages-screen"
+	TopCompare    TopID = "top.compare"
 	TopDedup      TopID = "top.dedup"
 	TopDev        TopID = "top.dev"
 )

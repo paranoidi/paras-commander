@@ -141,6 +141,9 @@ func TestMenuItemsHaveStableActions(t *testing.T) {
 	t.Run("jobs", func(t *testing.T) {
 		checkDefs(t, DefinitionsJobs(), "jobs")
 	})
+	t.Run("compare", func(t *testing.T) {
+		checkDefs(t, DefinitionsCompare(true), "compare")
+	})
 }
 
 func assertMenuItemKeyLabels(t *testing.T, def *Definition, want map[string]string) {
@@ -315,6 +318,59 @@ func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	})
 }
 
+func TestCompareDefinitionsFillsMenuKeyLabels(t *testing.T) {
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	defs := CompareDefinitions(bundle.Global, bundle.Compare, true)
+	if defs[0].ID != TopCompare {
+		t.Fatalf("first menu = %s, want TopCompare", defs[0].ID)
+	}
+	assertMenuItemKeyLabels(t, &defs[0], map[string]string{
+		"Back to file view": "Esc",
+		"Category":          "F3",
+		"Refresh":           "M-r",
+		"Merge":             "F5",
+		"Show empty files":  "M-e",
+	})
+	for _, item := range defs[0].Items {
+		switch item.Action {
+		case "file.edit", "file.view", "copy", "move":
+			t.Fatalf("compare view menu includes browser file op %q", item.Label)
+		}
+	}
+}
+
+func TestCompareDefinitionsPrefersOverlayKeyLabels(t *testing.T) {
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	overlay, err := keymap.Build(map[string][]string{
+		keymap.ActionCompareClose: {"F12"},
+	})
+	if err != nil {
+		t.Fatalf("Build overlay: %v", err)
+	}
+	defs := CompareDefinitions(bundle.Global, overlay, false)
+	assertMenuItemKeyLabels(t, &defs[0], map[string]string{
+		"Back to file view": "F12",
+	})
+	if got := dedupMenuItemLabel(defs, keymap.ActionCompareToggleEmpty); got != "Ignore empty files" {
+		t.Fatalf("ignoreEmpty=false label = %q", got)
+	}
+}
+
+func TestCompareToggleEmptyMenuLabel(t *testing.T) {
+	if got := CompareToggleEmptyMenuLabel(true); got != "Show empty files" {
+		t.Fatalf("ignoreEmpty=true label = %q, want Show empty files", got)
+	}
+	if got := CompareToggleEmptyMenuLabel(false); got != "Ignore empty files" {
+		t.Fatalf("ignoreEmpty=false label = %q, want Ignore empty files", got)
+	}
+}
+
 func dedupMenuItemLabel(defs []Definition, action string) string {
 	for _, item := range defs[0].Items {
 		if item.Action == action {
@@ -382,6 +438,7 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 		"commands": CommandsDefinitions(bundle.Global, bundle.Commands),
 		"messages": MessagesDefinitions(bundle.Global, bundle.Messages),
 		"dedup":    DedupDefinitions(bundle.Global, bundle.Dedup, true, true),
+		"compare":  CompareDefinitions(bundle.Global, bundle.Compare, true),
 	} {
 		t.Run(name, func(t *testing.T) {
 			var display *Definition

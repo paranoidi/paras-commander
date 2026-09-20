@@ -182,6 +182,61 @@ func TestCompareViewOpenUsesPrimaryColumnFocus(t *testing.T) {
 	}
 }
 
+func TestCompareViewF9OpensCompareMenu(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	left := pathloc.MustParse(t.TempDir())
+	right := pathloc.MustParse(t.TempDir())
+	app.model.Primary.Path = left
+	app.model.Secondary.Path = right
+	app.openComparePanels()
+
+	defs := menu.ActiveDefinitions(app.model.MenuDefinitions)
+	if len(defs) == 0 {
+		t.Fatal("compare view has no menu definitions")
+	}
+	if defs[0].ID != menu.TopCompare {
+		t.Fatalf("open first menu = %s, want TopCompare", defs[0].ID)
+	}
+	for _, def := range defs {
+		switch def.ID {
+		case menu.TopPanelLeft, menu.TopPanelRight, menu.TopCommand, menu.TopOptions:
+			t.Fatalf("compare view menu bar includes unavailable top menu %q", def.Label)
+		}
+		for _, item := range def.Items {
+			switch item.Action {
+			case keymap.ActionFileEdit, keymap.ActionFileView, keymap.ActionCopy, keymap.ActionMove:
+				t.Fatalf("compare view menu includes browser file op %q", item.Label)
+			}
+		}
+	}
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	if !app.model.Menu.Open {
+		t.Fatal("F9/open-menu did not open the compare menu bar")
+	}
+	if app.model.Menu.ActiveMenu != menu.DefaultIndexCompare() {
+		t.Fatalf("ActiveMenu = %d, want DefaultIndexCompare", app.model.Menu.ActiveMenu)
+	}
+
+	var closeItem menu.Item
+	var foundClose bool
+	for _, item := range defs[0].Items {
+		if item.Action == keymap.ActionCompareClose {
+			closeItem = item
+			foundClose = true
+			break
+		}
+	}
+	if !foundClose {
+		t.Fatal("compare actions menu missing close")
+	}
+	app.activateMenuSelection(defs[0], closeItem)
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("activating close: ViewMode = %v, want browser", app.model.ViewMode)
+	}
+}
+
 func TestCompareViewKeyRightVisuallyFocusesRightColumn(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
