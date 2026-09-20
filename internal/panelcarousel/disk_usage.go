@@ -9,7 +9,8 @@ import (
 type DiskUsageSource interface {
 	ByteSize(absPath string) (n int64, ok bool)
 	PendingForPanel(absPath string, panelID int) bool
-	DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool
+	// IsKnownExcluded is the paint-path exclusion check (cache only; no Stat).
+	IsKnownExcluded(absPath string) bool
 }
 
 // DiskUsage configures proportional disk-usage bars in carousel columns.

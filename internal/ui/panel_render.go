@@ -552,11 +552,11 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var diskExcluded bool
 	if hasEntry {
 		// Mount-boundary / godu-excluded folder icons and tints are disk-usage UI only.
-		// DiskScanExcluded Stat's each directory row; on a network panel that runs even when the
-		// user navigates the other column and dominates latency during background copy I/O.
+		// Exclusion is classified off-thread (MarkExcluded) and painted from cache only —
+		// DiskScanExcluded Stats and must not run on the render path.
 		if display.ShowDiskUsage && display.Painter != nil && cur.Type == localfs.EntryDirectory {
 			diskPending = display.Painter.PendingForPanel(cur.Path, ctx.PanelID)
-			diskExcluded = display.Painter.DiskScanExcluded(cur.Path, display.DiskUsageDescendIntoMountPoints, state.ListingDevice, state.ListingDeviceValid, display.DiskUsageGoduIgnore)
+			diskExcluded = display.Painter.IsKnownExcluded(cur.Path)
 		}
 	}
 	if showGit {

@@ -446,6 +446,9 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 
 	passes := [][]stage{passUnknown, passKnown}
 
+	e.classifyListingExclusions(childAbs, shouldIgnore)
+	walkIgnore := e.markingIgnore(shouldIgnore)
+
 	for _, grp := range passes {
 		for _, job := range grp {
 			if e.gen.Load() != sess || ctx.Err() != nil {
@@ -489,7 +492,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 				continue
 			}
 
-			tree := WalkFolder(ctx, jobPath, e.walkReadDir, shouldIgnore, nil, e.fsWalk)
+			tree := WalkFolder(ctx, jobPath, e.walkReadDir, walkIgnore, nil, e.fsWalk)
 
 			if e.gen.Load() != sess {
 				e.mu.Lock()
@@ -548,5 +551,32 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 	}
 	if e.gen.Load() == sess {
 		e.signalJobFinished(sess)
+	}
+}
+
+// classifyListingExclusions records scan-root paths that the ignore/volume gate would skip,
+// so panel paint can use IsKnownExcluded without Stat'ing.
+func (e *Engine) classifyListingExclusions(childAbs []string, shouldIgnore ShouldIgnoreFolder) {
+	if e == nil || shouldIgnore == nil {
+		return
+	}
+	for _, raw := range childAbs {
+		p := filepath.Clean(raw)
+		if shouldIgnore(p) {
+			e.MarkExcluded(p)
+		}
+	}
+}
+
+func (e *Engine) markingIgnore(base ShouldIgnoreFolder) ShouldIgnoreFolder {
+	if base == nil {
+		return nil
+	}
+	return func(abs string) bool {
+		if !base(abs) {
+			return false
+		}
+		e.MarkExcluded(abs)
+		return true
 	}
 }

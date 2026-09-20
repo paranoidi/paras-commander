@@ -368,13 +368,7 @@ func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp
 			diskExcluded := false
 			if p.DiskUsage.Active && p.DiskUsage.Source != nil && rp.Entry.Type == localfs.EntryDirectory {
 				diskPending = p.DiskUsage.Source.PendingForPanel(rp.Entry.Path, p.DiskUsage.PanelID)
-				diskExcluded = p.DiskUsage.Source.DiskScanExcluded(
-					rp.Entry.Path,
-					p.DiskUsage.DescendIntoMountPoints,
-					p.DiskUsage.ListingDevice,
-					p.DiskUsage.ListingDeviceValid,
-					p.DiskUsage.GoduIgnore,
-				)
+				diskExcluded = p.DiskUsage.Source.IsKnownExcluded(rp.Entry.Path)
 			}
 			p.PaintIcon(screen, col.X+leftGutter, rp.Y, rp.Entry, rp.BlendCell(leftGutter), key, diskPending, diskExcluded)
 		}

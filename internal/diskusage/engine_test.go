@@ -509,6 +509,40 @@ func TestAbortCancelsActiveWalkAndNextRequestStarts(t *testing.T) {
 	}
 }
 
+func TestStartScanClassifiesIgnoredListingChildren(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	skip := filepath.Join(root, "node_modules")
+	keep := filepath.Join(root, "src")
+	nestedSkip := filepath.Join(keep, "node_modules")
+	for _, dir := range []string{skip, keep, nestedSkip} {
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(keep, "main.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ignore := func(abs string) bool {
+		return filepath.Base(abs) == "node_modules"
+	}
+	e := New()
+	e.StartScanFromListing([]string{skip, keep}, ignore, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool { return !e.DiskScanBusy() }, 5*time.Second, "scan should finish")
+
+	if !e.IsKnownExcluded(skip) {
+		t.Fatal("listing child matching ignore must be classified excluded")
+	}
+	if !e.IsKnownExcluded(nestedSkip) {
+		t.Fatal("nested ignore match must be classified during the walk")
+	}
+	if e.IsKnownExcluded(keep) {
+		t.Fatal("unignored listing child must not be classified excluded")
+	}
+}
+
 func firstReadUnder(reads []string, root string) string {
 	root = filepath.Clean(root)
 	for _, p := range reads {
