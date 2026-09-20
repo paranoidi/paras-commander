@@ -50,7 +50,7 @@ func BuildInvocation(spec InvocationSpec) (InvocationResult, error) {
 	}
 	useShell := spec.ForceShell || spec.Mode == ModeShellScript
 	if !useShell && spec.Mode != ModeExecParsed {
-		useShell = NeedsShellFromLine(expanded)
+		useShell = NeedsShellFromLine(template)
 	}
 	if useShell {
 		return InvocationResult{
@@ -59,16 +59,35 @@ func BuildInvocation(spec InvocationSpec) (InvocationResult, error) {
 			Display:  display,
 		}, nil
 	}
-	argv, err := ParseCommandArgv(expanded)
+	argv, err := expandInvocationArgv(template, spec.Ctx)
 	if err != nil {
 		return InvocationResult{}, err
-	}
-	if len(argv) == 0 {
-		return InvocationResult{}, fmt.Errorf("command is empty after parsing")
 	}
 	return InvocationResult{
 		Argv:     argv,
 		Expanded: expanded,
 		Display:  display,
 	}, nil
+}
+
+func expandInvocationArgv(template string, ctx cmdmacro.Context) ([]string, error) {
+	argv, err := ParseCommandArgv(template)
+	if err != nil {
+		return nil, err
+	}
+	if len(argv) == 0 {
+		return nil, fmt.Errorf("command is empty after parsing")
+	}
+	out := make([]string, 0, len(argv))
+	for _, tok := range argv {
+		parts, err := cmdmacro.ExpandArgvToken(tok, ctx)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, parts...)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("command is empty after parsing")
+	}
+	return out, nil
 }

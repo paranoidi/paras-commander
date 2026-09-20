@@ -47,6 +47,36 @@ func TestRunCommand_expandsF(t *testing.T) {
 	}
 }
 
+func TestRunCommand_hostilePathMacros(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cases := []struct {
+		name string
+		base string
+	}{
+		{"command substitution", "beacon$(echo INJECTED)"},
+		{"backticks", "lantern`echo INJECTED`"},
+		{"dollar home", "meadow$HOME"},
+		{"double quotes", `harbor "quoted"`},
+		{"single quote", "harbor's-lantern"},
+		{"spaces", "orchard meadow.txt"},
+		{"embedded newline", "meadow\norchard"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			path := dir + "/" + tc.base
+			out, err := runCommand(context.Background(), "printf '%s\\n' %f", path, dir)
+			if err != nil {
+				t.Fatalf("runCommand: %v", err)
+			}
+			if out != path {
+				t.Fatalf("out = %q, want %q", out, path)
+			}
+		})
+	}
+}
+
 func TestRunCommand_success(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

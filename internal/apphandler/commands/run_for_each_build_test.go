@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestBuildRunForEachItemExpandsFAndUsesShell(t *testing.T) {
 	if len(got.Argv) != 3 || got.Argv[0] == "" || got.Argv[1] != "-c" {
 		t.Fatalf("argv = %#v, want sh -c script", got.Argv)
 	}
-	if want := `echo "/work/proj/alpha.txt" >> /tmp/out`; got.Argv[2] != want {
+	if want := `echo '/work/proj/alpha.txt' >> /tmp/out`; got.Argv[2] != want {
 		t.Fatalf("script = %q want %q", got.Argv[2], want)
 	}
 }
@@ -70,5 +71,50 @@ func TestBuildRunForEachItemNoFRequiredWhenNotRequired(t *testing.T) {
 	}
 	if len(got.Argv) != 2 || got.Argv[0] != "git" || got.Argv[1] != "pull" {
 		t.Fatalf("argv = %#v", got.Argv)
+	}
+}
+
+func TestBuildRunForEachItemHostilePathMacros(t *testing.T) {
+	active := &panel.State{Path: pathloc.MustParse("/work/proj")}
+	cases := []struct {
+		name string
+		path string
+	}{
+		{"command substitution", "/work/proj/beacon$(echo INJECTED)"},
+		{"backticks", "/work/proj/lantern`echo INJECTED`"},
+		{"dollar home", "/work/proj/meadow$HOME"},
+		{"double quotes", `/work/proj/harbor "quoted"`},
+		{"single quote", "/work/proj/harbor's-lantern"},
+		{"spaces", "/work/proj/orchard meadow.txt"},
+		{"embedded newline", "/work/proj/meadow\norchard"},
+	}
+	for _, tc := range cases {
+		t.Run("shell/"+tc.name, func(t *testing.T) {
+			ent := localfs.Entry{Name: "harbor", Path: tc.path, Type: localfs.EntryFile}
+			got, err := BuildRunForEachItem(`printf '%s\n' %f | cat`, ent, active, nil, false, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Argv) != 3 || got.Argv[1] != "-c" {
+				t.Fatalf("argv = %#v, want sh -c", got.Argv)
+			}
+			out, err := exec.Command(got.Argv[0], got.Argv[1:]...).Output()
+			if err != nil {
+				t.Fatalf("run: %v\nscript=%q", err, got.Argv[2])
+			}
+			if gotOut := strings.TrimRight(string(out), "\n"); gotOut != tc.path {
+				t.Fatalf("stdout = %q want %q (script %q)", gotOut, tc.path, got.Argv[2])
+			}
+		})
+		t.Run("argv/"+tc.name, func(t *testing.T) {
+			ent := localfs.Entry{Name: "harbor", Path: tc.path, Type: localfs.EntryFile}
+			got, err := BuildRunForEachItem(`gzip -9 %f`, ent, active, nil, false, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Argv) != 3 || got.Argv[0] != "gzip" || got.Argv[1] != "-9" || got.Argv[2] != tc.path {
+				t.Fatalf("argv = %#v", got.Argv)
+			}
+		})
 	}
 }

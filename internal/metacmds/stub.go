@@ -59,7 +59,7 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 # workers         int      optional   default: meta.default_entry_workers (2)
 #   Number of concurrent background goroutines for this entry. Clamped to 64.
 #
-# Do not wrap %f in quotes in the script — the app quotes the path when expanding.
+# Do not wrap %f in quotes in the script — the app POSIX-single-quotes the path when expanding.
 #
 # Examples:
 #
