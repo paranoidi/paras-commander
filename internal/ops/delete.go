@@ -2,7 +2,11 @@ package ops
 
 import (
 	"context"
+	"errors"
+	"os"
+	"path/filepath"
 
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -76,7 +80,10 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 			return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to stat " + loc.Base(), Err: err}
 		}
 		size := ent.Size
-		if err := removePathRecursive(ctx, loc); err != nil {
+		if err := deletePathRecursive(ctx, loc); err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return doneFiles, doneBytes, err
+			}
 			return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to delete " + ent.Name, Err: err}
 		}
 		doneFiles++
@@ -86,4 +93,90 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 		}
 	}
 	return doneFiles, doneBytes, nil
+}
+
+// deletePathRecursive removes loc and its descendants, checking ctx before each
+// child so a cancel stops the current tree instead of finishing it.
+func deletePathRecursive(ctx context.Context, loc pathloc.Path) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	ent, err := statEntry(ctx, loc)
+	if err != nil {
+		if isNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if ent.Type != fsbackend.EntryDirectory {
+		be, err := backendFor(loc)
+		if err != nil {
+			return err
+		}
+		return be.Remove(ctx, loc)
+	}
+	if loc.Scheme() == pathloc.SchemeFile {
+		host, err := loc.FilePath()
+		if err != nil {
+			return err
+		}
+		return removeLocalTree(ctx, host)
+	}
+	be, err := backendFor(loc)
+	if err != nil {
+		return err
+	}
+	children, err := be.List(ctx, loc)
+	if err != nil {
+		return err
+	}
+	for _, child := range children {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if child.Name == "." || child.Name == ".." {
+			continue
+		}
+		if err := deletePathRecursive(ctx, child.Loc); err != nil {
+			return err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return be.Remove(ctx, loc)
+}
+
+// removeLocalTree walks the host tree with os.ReadDir so hidden children are
+// removed (backend List hides them) and checks ctx between each child.
+func removeLocalTree(ctx context.Context, host string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	info, err := os.Lstat(host)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if !info.IsDir() {
+		return localfs.Remove(host)
+	}
+	entries, err := os.ReadDir(host)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := removeLocalTree(ctx, filepath.Join(host, e.Name())); err != nil {
+			return err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return localfs.Remove(host)
 }
