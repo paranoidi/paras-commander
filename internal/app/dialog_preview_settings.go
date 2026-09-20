@@ -74,6 +74,19 @@ func toggleKittyPlaceholderSupported(st *dialog.PreviewSettingsDialogState) {
 	}
 }
 
+// persistTerminalCapability maps a capability checkbox back to the persisted tri-state.
+// Checked is always "yes". Unchecked keeps an explicit "no" so open-and-save does not
+// rewrite it to "auto"; any other original (including "auto") stays "auto".
+func persistTerminalCapability(checked bool, original string) string {
+	if checked {
+		return config.PreviewTerminalCapabilityYes
+	}
+	if original == config.PreviewTerminalCapabilityNo {
+		return config.PreviewTerminalCapabilityNo
+	}
+	return config.PreviewTerminalCapabilityAuto
+}
+
 // applyPreviewSettingsDialog writes the dialog's checkbox/radio state into a.config.Preview in
 // memory (takes effect on the next preview request, same as every other settings dialog) and
 // persists the same 6 keys to config.toml via config.PatchPreviewKeys. Unlike other settings
@@ -82,15 +95,9 @@ func toggleKittyPlaceholderSupported(st *dialog.PreviewSettingsDialogState) {
 // config.toml — see internal/config/patch.go.
 func (a *App) applyPreviewSettingsDialog() {
 	st := a.model.PreviewSettingsDialog
-	tri := func(checked bool) string {
-		if checked {
-			return config.PreviewTerminalCapabilityYes
-		}
-		return config.PreviewTerminalCapabilityAuto
-	}
-	sixel := tri(st.SixelSupported)
-	kitty := tri(st.KittySupported)
-	placeholder := tri(st.KittyPlaceholderSupported)
+	sixel := persistTerminalCapability(st.SixelSupported, a.config.Preview.TerminalSixel)
+	kitty := persistTerminalCapability(st.KittySupported, a.config.Preview.TerminalKitty)
+	placeholder := persistTerminalCapability(st.KittyPlaceholderSupported, a.config.Preview.TerminalKittyPlaceholder)
 	protocol := effectiveImageProtocol(st.Protocol)
 	imageMetadata := effectiveImageMetadata(st.ImageMetadata)
 

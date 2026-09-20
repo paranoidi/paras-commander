@@ -88,6 +88,82 @@ func TestOptionsMenuOpensPreviewSettingsDialog(t *testing.T) {
 	}
 }
 
+func TestPreviewSettingsOpenAndSavePreservesCapabilityTriState(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	fields := []struct {
+		name string
+		set  func(*config.PreviewConfig, string)
+		get  func(config.PreviewConfig) string
+	}{
+		{
+			name: "terminal_sixel",
+			set:  func(p *config.PreviewConfig, v string) { p.TerminalSixel = v },
+			get:  func(p config.PreviewConfig) string { return p.TerminalSixel },
+		},
+		{
+			name: "terminal_kitty",
+			set:  func(p *config.PreviewConfig, v string) { p.TerminalKitty = v },
+			get:  func(p config.PreviewConfig) string { return p.TerminalKitty },
+		},
+		{
+			name: "terminal_kitty_placeholder",
+			set:  func(p *config.PreviewConfig, v string) { p.TerminalKittyPlaceholder = v },
+			get:  func(p config.PreviewConfig) string { return p.TerminalKittyPlaceholder },
+		},
+	}
+	values := []string{
+		config.PreviewTerminalCapabilityAuto,
+		config.PreviewTerminalCapabilityYes,
+		config.PreviewTerminalCapabilityNo,
+	}
+
+	for _, field := range fields {
+		for _, value := range values {
+			t.Run(field.name+"/"+value, func(t *testing.T) {
+				screen := tcell.NewSimulationScreen("UTF-8")
+				if err := screen.Init(); err != nil {
+					t.Fatalf("Init() error = %v", err)
+				}
+				defer screen.Fini()
+				screen.SetSize(80, 20)
+
+				cfg := config.Default()
+				field.set(&cfg.Preview, value)
+				appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "preview-tristate")}.WithResolvedLocations()
+				app := newTestApp(t, screen, Options{
+					CWD: func() (string, error) {
+						return dir, nil
+					},
+					Config: cfg,
+					Paths:  appPaths,
+					Theme:  theme.Default(),
+				})
+
+				app.openPreviewSettingsDialog()
+				quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
+				if quit {
+					t.Fatal("handleKey() quit = true, want false")
+				}
+				if app.model.PreviewSettingsDialog.Open {
+					t.Fatal("preview settings dialog should close after apply")
+				}
+				if got := field.get(app.config.Preview); got != value {
+					t.Fatalf("in-memory %s = %q, want %q", field.name, got, value)
+				}
+				reloaded, err := config.LoadFromPaths(appPaths)
+				if err != nil {
+					t.Fatalf("LoadFromPaths after persist: %v", err)
+				}
+				if got := field.get(reloaded.Preview); got != value {
+					t.Fatalf("persisted %s = %q, want %q", field.name, got, value)
+				}
+			})
+		}
+	}
+}
+
 func TestPreviewSettingsDialogApplyPersists(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
