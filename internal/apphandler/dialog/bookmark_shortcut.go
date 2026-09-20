@@ -102,6 +102,7 @@ func (h *Handler) BookmarkDialogOpenOtherFooterEligible() bool {
 }
 
 // deleteSelectedBookmark removes the selected fzf-marks entry from disk and the open list.
+// The atomic write runs on a worker; ApplyBookmarkIO updates the list when it completes.
 // Returns true when the shortcut was handled (including errors shown to the user).
 func (h *Handler) deleteSelectedBookmark() bool {
 	if !h.bookmarkDialogDeleteEligible() {
@@ -117,18 +118,25 @@ func (h *Handler) deleteSelectedBookmark() bool {
 		return true
 	}
 	m := bookmarks.Mark{Name: item.Name, Path: item.Path, Origin: bookmarks.OriginFZFMarks}
-	if err := bookmarks.Remove(marksPath, m); err != nil {
-		h.host.SetErrorMessage("Delete bookmark", err)
-		return true
-	}
 	st := &h.model.PathPicker
 	entIdx := st.Ranked[st.Selected]
-	st.Items = append(st.Items[:entIdx], st.Items[entIdx+1:]...)
-	h.SyncPathPickerRanks()
 	label := item.Name
 	if label == "" {
 		label = item.Path
 	}
-	h.host.SetTransientMessage(fmt.Sprintf("Bookmark removed: %s", label), ui.MessageUrgencyInfo)
+	gen := h.nextRemoteFileOpGen()
+	result := make(chan BookmarkIOPayload, 1)
+	go func() {
+		stallBookmarkFileIO()
+		err := bookmarks.Remove(marksPath, m)
+		p := BookmarkIOPayload{
+			Gen: gen, Err: err, Label: label, RemoveIndex: entIdx, kind: bookmarkIORemove,
+		}
+		result <- p
+		h.postBookmarkIO(p)
+	}()
+	if bookmarkIOInline() {
+		h.ApplyBookmarkIO(<-result)
+	}
 	return true
 }
