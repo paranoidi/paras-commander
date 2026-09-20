@@ -194,9 +194,6 @@ const (
 	// Jobs dialog
 	ActionJobsOpen          = "jobs.open"
 	ActionJobsClose         = "jobs.close"
-	ActionJobsNext          = "jobs.next"
-	ActionJobsPrev          = "jobs.prev"
-	ActionJobsDetails       = "jobs.details"
 	ActionJobsClearFinished = "jobs.clear-finished"
 	ActionJobsCancel        = "jobs.cancel"
 	ActionJobsPause         = "jobs.pause"
@@ -444,9 +441,6 @@ var KnownActions = map[string]struct{}{
 
 	ActionJobsOpen:          {},
 	ActionJobsClose:         {},
-	ActionJobsNext:          {},
-	ActionJobsPrev:          {},
-	ActionJobsDetails:       {},
 	ActionJobsClearFinished: {},
 	ActionJobsCancel:        {},
 	ActionJobsPause:         {},

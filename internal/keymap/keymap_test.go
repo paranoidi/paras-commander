@@ -1220,6 +1220,47 @@ func TestMenuBindingLabelStableAcrossCalls(t *testing.T) {
 	}
 }
 
+func TestKnownActionsExcludeUndispatchedJobsActions(t *testing.T) {
+	for _, id := range []string{"jobs.next", "jobs.prev", "jobs.details"} {
+		if _, ok := KnownActions[id]; ok {
+			t.Errorf("%q is in KnownActions but has no dispatch", id)
+		}
+	}
+}
+
+func TestKnownActionsHaveSpecOrAreReserved(t *testing.T) {
+	overlayDefaults := map[string]struct{}{}
+	for _, spec := range overlayRegistry {
+		if spec.Defaults == nil {
+			continue
+		}
+		for id := range spec.Defaults() {
+			overlayDefaults[id] = struct{}{}
+		}
+	}
+	reserved := map[string]struct{}{
+		ActionDialogConfirm: {},
+		ActionDialogCancel:  {},
+		ActionDialogNext:    {},
+		ActionDialogPrev:    {},
+		ActionUILeft:        {},
+		ActionUIRight:       {},
+		ActionUIActivate:    {},
+	}
+	for id := range KnownActions {
+		if _, ok := SpecForAction(id); ok {
+			continue
+		}
+		if _, ok := overlayDefaults[id]; ok {
+			continue
+		}
+		if _, ok := reserved[id]; ok {
+			continue
+		}
+		t.Errorf("KnownActions %q has no ActionSpec, overlay default, or reserved entry", id)
+	}
+}
+
 func writeFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0o644)
 }
