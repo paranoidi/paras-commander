@@ -132,8 +132,8 @@ func TestFileDialogFocusFormTabsBetweenInputs(t *testing.T) {
 	}
 }
 
-// TestFileDialogFocusFormSingleInputTabsToButtons locks in the unchanged group jump for dialogs
-// with one text input plus extra option rows: Tab leaves the whole content block at once.
+// TestFileDialogFocusFormSingleInputTabsToButtons: one text input plus option rows are
+// separate Tab groups — the name field, then the option block, then the buttons.
 func TestFileDialogFocusFormSingleInputTabsToButtons(t *testing.T) {
 	st := FileDialogState{
 		DialogType:       FileDialogMkdir,
@@ -141,10 +141,140 @@ func TestFileDialogFocusFormSingleInputTabsToButtons(t *testing.T) {
 		Fields:           []FileDialogField{{}},
 	}
 	form := FileDialogFocusForm(st)
-	if nf, ok := form.MoveFocus(0, tcell.KeyTab); !ok || nf != form.OKIndex() {
-		t.Fatalf("Tab from name field: focus = %d ok=%v want %d", nf, ok, form.OKIndex())
+	if nf, ok := form.MoveFocus(0, tcell.KeyTab); !ok || nf != 1 {
+		t.Fatalf("Tab from name field: focus = %d ok=%v want 1 (first radio)", nf, ok)
 	}
 	if nf, ok := form.MoveFocus(2, tcell.KeyTab); !ok || nf != form.OKIndex() {
 		t.Fatalf("Tab from radio row: focus = %d ok=%v want %d", nf, ok, form.OKIndex())
+	}
+}
+
+// TestFileDialogFocusFormTabVisitsOptionGroups covers Tab/Backtab per named single-input
+// dialog: each leading input is its own group, option rows (radios/checkboxes) are the next
+// group, and buttons are last. Up/Down still step item-by-item.
+func TestFileDialogFocusFormTabVisitsOptionGroups(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		state FileDialogState
+		from  int
+		key   tcell.Key
+		want  int
+	}{
+		{
+			name: "mkdir Tab from name to radios",
+			state: FileDialogState{
+				DialogType: FileDialogMkdir, MkdirShowActions: true, Fields: []FileDialogField{{}},
+			},
+			from: 0, key: tcell.KeyTab, want: 1,
+		},
+		{
+			name: "mkdir Tab from radio to OK",
+			state: FileDialogState{
+				DialogType: FileDialogMkdir, MkdirShowActions: true, Fields: []FileDialogField{{}},
+			},
+			from: 2, key: tcell.KeyTab, want: 4,
+		},
+		{
+			name: "mkdir Backtab from OK to radios",
+			state: FileDialogState{
+				DialogType: FileDialogMkdir, MkdirShowActions: true, Fields: []FileDialogField{{}},
+			},
+			from: 4, key: tcell.KeyBacktab, want: 1,
+		},
+		{
+			name: "mkdir Down still walks items",
+			state: FileDialogState{
+				DialogType: FileDialogMkdir, MkdirShowActions: true, Fields: []FileDialogField{{}},
+			},
+			from: 0, key: tcell.KeyDown, want: 1,
+		},
+		{
+			name: "rename Tab from name to checkbox",
+			state: FileDialogState{
+				DialogType: FileDialogRename, RenamePhase: RenamePhaseMain, Fields: []FileDialogField{{}},
+			},
+			from: 0, key: tcell.KeyTab, want: 1,
+		},
+		{
+			name: "rename Tab from checkbox to OK",
+			state: FileDialogState{
+				DialogType: FileDialogRename, RenamePhase: RenamePhaseMain, Fields: []FileDialogField{{}},
+			},
+			from: 1, key: tcell.KeyTab, want: 2,
+		},
+		{
+			name: "rename Backtab from OK to checkbox",
+			state: FileDialogState{
+				DialogType: FileDialogRename, RenamePhase: RenamePhaseMain, Fields: []FileDialogField{{}},
+			},
+			from: 2, key: tcell.KeyBacktab, want: 1,
+		},
+		{
+			name: "duplicate Tab from name to checkbox",
+			state: FileDialogState{
+				DialogType: FileDialogDuplicate, RenamePhase: RenamePhaseMain, Fields: []FileDialogField{{}},
+			},
+			from: 0, key: tcell.KeyTab, want: 1,
+		},
+		{
+			name: "duplicate Tab from checkbox to OK",
+			state: FileDialogState{
+				DialogType: FileDialogDuplicate, RenamePhase: RenamePhaseMain, Fields: []FileDialogField{{}},
+			},
+			from: 1, key: tcell.KeyTab, want: 2,
+		},
+		{
+			name: "run-for-each Tab from command to checkboxes",
+			state: FileDialogState{
+				DialogType: FileDialogRunForEach, Fields: []FileDialogField{{}},
+			},
+			from: 0, key: tcell.KeyTab, want: 1,
+		},
+		{
+			name: "run-for-each Tab from checkbox to OK",
+			state: FileDialogState{
+				DialogType: FileDialogRunForEach, Fields: []FileDialogField{{}},
+			},
+			from: 2, key: tcell.KeyTab, want: 3,
+		},
+		{
+			name: "run-for-each Backtab from OK to checkboxes",
+			state: FileDialogState{
+				DialogType: FileDialogRunForEach, Fields: []FileDialogField{{}},
+			},
+			from: 3, key: tcell.KeyBacktab, want: 1,
+		},
+		{
+			name: "run-for-each pools Tab from command to options",
+			state: FileDialogState{
+				DialogType: FileDialogRunForEach, Fields: []FileDialogField{{}}, RunForEachPools: []string{"thicket", "meadow"},
+			},
+			from: 0, key: tcell.KeyTab, want: 1,
+		},
+		{
+			name: "run-for-each pools Tab from pool radio to OK",
+			state: FileDialogState{
+				DialogType: FileDialogRunForEach, Fields: []FileDialogField{{}}, RunForEachPools: []string{"thicket", "meadow"},
+			},
+			from: 4, key: tcell.KeyTab, want: 6,
+		},
+		{
+			name: "run-for-each Down still walks items",
+			state: FileDialogState{
+				DialogType: FileDialogRunForEach, Fields: []FileDialogField{{}},
+			},
+			from: 1, key: tcell.KeyDown, want: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			form := FileDialogFocusForm(tt.state)
+			if nf, ok := form.MoveFocus(tt.from, tt.key); !ok || nf != tt.want {
+				t.Fatalf("MoveFocus(%d, %v) = %d,%v want %d,true (OK=%d)",
+					tt.from, tt.key, nf, ok, tt.want, form.OKIndex())
+			}
+		})
 	}
 }

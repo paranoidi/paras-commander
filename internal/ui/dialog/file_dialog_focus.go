@@ -16,9 +16,6 @@ func FileDialogFocusForm(state FileDialogState) DialogTrailingButtonsForm {
 		return form
 	}
 	inputs := fileDialogInputRowCount(state)
-	if inputs < 2 {
-		return form.WithSegments(0, okIdx)
-	}
 	segs := make([]int, 0, inputs+2)
 	for i := range inputs {
 		segs = append(segs, i)
