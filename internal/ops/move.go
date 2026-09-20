@@ -14,6 +14,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
+// lookupMoveBackend resolves the filesystem backend for move dest-stat, rename,
+// and rollback. Tests replace this with a blocking fake.
+var lookupMoveBackend = backendFor
+
 // MovePlanTotals returns a file/byte estimate consistent with the copy fallback path.
 // Rename fast path does not read bytes; totals still give a useful upper bound for UI.
 func MovePlanTotals(sources []pathloc.Path, destination pathloc.Path) (totalFiles int, totalBytes int64, err error) {
@@ -27,17 +31,17 @@ type renamePair struct {
 	staged string
 }
 
-func renamePairsRollback(pairs []renamePair) error {
+func renamePairsRollback(ctx context.Context, pairs []renamePair) error {
 	var errs []error
 	for i := len(pairs) - 1; i >= 0; i-- {
-		if err := rollbackRenamePair(pairs[i]); err != nil {
+		if err := rollbackRenamePair(ctx, pairs[i]); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	return errors.Join(errs...)
 }
 
-func rollbackRenamePair(p renamePair) error {
+func rollbackRenamePair(ctx context.Context, p renamePair) error {
 	srcLoc, err1 := pathloc.Parse(p.src)
 	dstLoc, err2 := pathloc.Parse(p.dst)
 	if err1 != nil || err2 != nil {
@@ -45,10 +49,11 @@ func rollbackRenamePair(p renamePair) error {
 	}
 	var renameErr error
 	if srcLoc.IsRemote() {
-		if be, err := backendFor(dstLoc); err == nil {
-			renameErr = be.Rename(context.Background(), dstLoc, srcLoc)
-		} else {
+		ok, err := RenameFastPathCtx(ctx, dstLoc, srcLoc)
+		if err != nil {
 			renameErr = err
+		} else if !ok {
+			renameErr = errors.New("cannot rename")
 		}
 	} else {
 		renameErr = os.Rename(p.dst, p.src)
@@ -63,14 +68,81 @@ func rollbackRenamePair(p renamePair) error {
 	if err != nil {
 		return fmt.Errorf("rollback parse staged %q: %w", p.staged, err)
 	}
-	return restoreStagedDest(context.Background(), dstLoc, stagedLoc)
+	return restoreStagedDest(ctx, dstLoc, stagedLoc)
 }
 
-func rollbackRenames(pairs []renamePair, err error) error {
-	if rbErr := renamePairsRollback(pairs); rbErr != nil {
+func rollbackRenames(ctx context.Context, pairs []renamePair, err error) error {
+	if rbErr := renamePairsRollback(ctx, pairs); rbErr != nil {
 		return fmt.Errorf("%w (rollback: %v)", err, rbErr)
 	}
 	return err
+}
+
+func moveStat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
+	be, err := lookupMoveBackend(loc)
+	if err != nil {
+		return fsbackend.Entry{}, err
+	}
+	return be.Stat(ctx, loc)
+}
+
+func moveDestinationIsDir(ctx context.Context, dest pathloc.Path) (bool, error) {
+	ent, err := moveStat(ctx, dest)
+	if err != nil {
+		if isNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return ent.Type == fsbackend.EntryDirectory, nil
+}
+
+// resolveMoveDestination is ResolveDestinationNamed using the job context and
+// lookupMoveBackend so a canceled dest Stat unwinds the rename phase.
+func resolveMoveDestination(ctx context.Context, dest pathloc.Path, name string) (pathloc.Path, error) {
+	if err := ctx.Err(); err != nil {
+		return pathloc.Path{}, err
+	}
+	isDir, err := moveDestinationIsDir(ctx, dest)
+	if err != nil {
+		if ctx.Err() != nil {
+			return pathloc.Path{}, ctx.Err()
+		}
+		return dest, nil
+	}
+	if isDir {
+		child, err := dest.Join(name)
+		if err != nil {
+			return dest, nil
+		}
+		return child, nil
+	}
+	return dest, nil
+}
+
+// RenameFastPathCtx is RenameFastPath with a caller context for remote backends.
+// Local os.Rename is not context-aware.
+func RenameFastPathCtx(ctx context.Context, src, dest pathloc.Path) (ok bool, err error) {
+	if src.Scheme() != dest.Scheme() {
+		return false, nil
+	}
+	if src.IsRemote() {
+		if !sameSFTPHost(src, dest) {
+			return false, nil
+		}
+		be, err := lookupMoveBackend(src)
+		if err != nil {
+			return false, err
+		}
+		if renameErr := be.Rename(ctx, src, dest); renameErr != nil {
+			if errors.Is(renameErr, context.Canceled) || errors.Is(renameErr, context.DeadlineExceeded) {
+				return false, renameErr
+			}
+			return false, nil
+		}
+		return true, nil
+	}
+	return RenameFastPath(src, dest)
 }
 
 func stageExistingDest(ctx context.Context, dst pathloc.Path) (pathloc.Path, error) {
@@ -78,7 +150,7 @@ func stageExistingDest(ctx context.Context, dst pathloc.Path) (pathloc.Path, err
 	if err != nil {
 		return pathloc.Path{}, err
 	}
-	ok, err := RenameFastPath(dst, staged)
+	ok, err := RenameFastPathCtx(ctx, dst, staged)
 	if err != nil {
 		return pathloc.Path{}, fmt.Errorf("stage existing %q: %w", dst, err)
 	}
@@ -95,7 +167,7 @@ func pickMoveStashSibling(ctx context.Context, dst pathloc.Path) (pathloc.Path, 
 		if err != nil {
 			return pathloc.Path{}, err
 		}
-		_, statErr := statEntry(ctx, cand)
+		_, statErr := moveStat(ctx, cand)
 		if isNotExist(statErr) {
 			return cand, nil
 		}
@@ -107,7 +179,7 @@ func pickMoveStashSibling(ctx context.Context, dst pathloc.Path) (pathloc.Path, 
 }
 
 func restoreStagedDest(ctx context.Context, dst, staged pathloc.Path) error {
-	ok, err := RenameFastPath(staged, dst)
+	ok, err := RenameFastPathCtx(ctx, staged, dst)
 	if err != nil {
 		return fmt.Errorf("restore staged %q -> %q: %w", staged, dst, err)
 	}
@@ -189,9 +261,9 @@ func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, resolver Co
 	if err := ctx.Err(); err != nil {
 		return false, false, false, "", err
 	}
-	_, statErr := statEntry(ctx, dst)
+	_, statErr := moveStat(ctx, dst)
 	if isNotExist(statErr) {
-		renamed, skipped, fallbackCopy, err = renameFastPathOrFallback(src, dst)
+		renamed, skipped, fallbackCopy, err = renameFastPathOrFallback(ctx, src, dst)
 		return renamed, skipped, fallbackCopy, "", err
 	}
 	if statErr != nil {
@@ -215,7 +287,7 @@ func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, resolver Co
 	if stageErr != nil {
 		return false, false, false, "", stageErr
 	}
-	renamed, skipped, fallbackCopy, err = renameFastPathOrFallback(src, dst)
+	renamed, skipped, fallbackCopy, err = renameFastPathOrFallback(ctx, src, dst)
 	if err != nil || fallbackCopy || skipped || !renamed {
 		if restoreErr := restoreStagedDest(ctx, dst, stagedLoc); restoreErr != nil {
 			if err != nil {
@@ -228,8 +300,8 @@ func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, resolver Co
 	return true, false, false, stagedLoc.String(), nil
 }
 
-func renameFastPathOrFallback(src, dst pathloc.Path) (renamed, skipped, fallbackCopy bool, err error) {
-	ok, err := RenameFastPath(src, dst)
+func renameFastPathOrFallback(ctx context.Context, src, dst pathloc.Path) (renamed, skipped, fallbackCopy bool, err error) {
+	ok, err := RenameFastPathCtx(ctx, src, dst)
 	if err != nil {
 		return false, false, false, err
 	}
@@ -254,21 +326,24 @@ func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destina
 	}
 	for _, src := range sources {
 		if err := ctx.Err(); err != nil {
-			return 0, 0, false, rollbackRenames(renamed, err)
+			return 0, 0, false, rollbackRenames(ctx, renamed, err)
 		}
 		name := TransferDestName(src, nameRoot)
-		dst := ResolveDestinationNamed(destination, name)
+		dst, destErr := resolveMoveDestination(ctx, destination, name)
+		if destErr != nil {
+			return 0, 0, false, rollbackRenames(ctx, renamed, destErr)
+		}
 		if strings.ContainsAny(name, `/\`) {
 			if err := ensureParentDirs(ctx, dst); err != nil {
-				return 0, 0, false, rollbackRenames(renamed, fmt.Errorf("create parent for %q: %w", dst, err))
+				return 0, 0, false, rollbackRenames(ctx, renamed, fmt.Errorf("create parent for %q: %w", dst, err))
 			}
 		}
 		didRename, skipped, needCopy, staged, renameErr := renameSourceForMove(ctx, src, dst, resolver)
 		if renameErr != nil {
-			return 0, 0, false, rollbackRenames(renamed, fmt.Errorf("rename %q -> %q: %w", src, dst, renameErr))
+			return 0, 0, false, rollbackRenames(ctx, renamed, fmt.Errorf("rename %q -> %q: %w", src, dst, renameErr))
 		}
 		if needCopy {
-			if rbErr := renamePairsRollback(renamed); rbErr != nil {
+			if rbErr := renamePairsRollback(ctx, renamed); rbErr != nil {
 				return 0, 0, false, fmt.Errorf("move rename fallback rollback: %w", rbErr)
 			}
 			return 0, 0, true, nil
