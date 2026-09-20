@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -586,20 +585,29 @@ func runCommand(ctx context.Context, cmd, path, dir string) (string, error) {
 	if err != nil {
 		return "", &runFailure{ExitCode: -1, Stderr: err.Error(), err: err}
 	}
-	c := exec.CommandContext(ctx, built.Argv[0], built.Argv[1:]...)
-	c.Dir = dir
-	out, err := c.Output()
-	if err != nil {
-		var exitErr *exec.ExitError
-		exitCode := -1
-		var stderr string
-		if errors.As(err, &exitErr) {
-			exitCode = exitErr.ExitCode()
-			stderr = strings.TrimSpace(string(exitErr.Stderr))
-		}
-		return "", &runFailure{ExitCode: exitCode, Stderr: stderr, ConfCmd: cmd, ExpandedCmd: built.Expanded, err: err}
+	res := cmdrun.Run(ctx, built.Argv, dir, cmdrun.MaxStreamBytes)
+	if ctx.Err() != nil {
+		return "", ctx.Err()
 	}
-	return strings.TrimRight(string(out), "\r\n"), nil
+	if res.LaunchErr != nil {
+		return "", &runFailure{
+			ExitCode:    res.ExitCode,
+			Stderr:      strings.TrimSpace(string(res.Stderr)),
+			ConfCmd:     cmd,
+			ExpandedCmd: built.Expanded,
+			err:         res.LaunchErr,
+		}
+	}
+	if res.ExitCode != 0 {
+		return "", &runFailure{
+			ExitCode:    res.ExitCode,
+			Stderr:      strings.TrimSpace(string(res.Stderr)),
+			ConfCmd:     cmd,
+			ExpandedCmd: built.Expanded,
+			err:         fmt.Errorf("exit status %d", res.ExitCode),
+		}
+	}
+	return strings.TrimRight(string(res.Stdout), "\r\n"), nil
 }
 
 // HandleDialogKey routes a key event to the open meta checkbox dialog.

@@ -3,9 +3,17 @@ package meta
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
+	"syscall"
 	"testing"
+	"time"
 
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -107,6 +115,139 @@ func TestRunCommand_cancelled(t *testing.T) {
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v, want context.Canceled", err)
 	}
+}
+
+func TestRunCommand_oversizedStdout(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("head /dev/zero not available on Windows")
+	}
+	dir := t.TempDir()
+	out, err := runCommand(context.Background(), "head -c 600000 /dev/zero", dir+"/file", dir)
+	if err != nil {
+		t.Fatalf("runCommand: %v", err)
+	}
+	if len(out) > cmdrun.MaxStreamBytes {
+		t.Fatalf("stdout %d bytes, want <= %d (bounded capture)", len(out), cmdrun.MaxStreamBytes)
+	}
+}
+
+func TestRunCommand_parentExitsWhileChildLives(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("process-group capture is Unix-only")
+	}
+	dir := t.TempDir()
+	pidFile := filepath.Join(dir, "child.pid")
+	t.Cleanup(func() { killPIDFile(pidFile) })
+
+	script := fmt.Sprintf(`set +m; (trap "" HUP; exec sleep 120) & echo $! > %q; echo done`, pidFile)
+	start := time.Now()
+	out, err := runCommandOrTimeout(t, context.Background(), script, dir+"/file", dir)
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Fatalf("runCommand blocked %v waiting on a descendant pipe", elapsed)
+	}
+	if err != nil {
+		t.Fatalf("runCommand: %v", err)
+	}
+	if out != "done" {
+		t.Fatalf("out = %q, want done", out)
+	}
+}
+
+func TestRunCommand_cancelKillsProcessGroup(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("process-group cancel is Unix-only")
+	}
+	dir := t.TempDir()
+	pidFile := filepath.Join(dir, "child.pid")
+	t.Cleanup(func() { killPIDFile(pidFile) })
+
+	script := fmt.Sprintf(`set +m; (trap "" HUP; exec sleep 120) & echo $! > %q; exec sleep 120`, pidFile)
+	ctx, cancel := context.WithCancel(context.Background())
+	type result struct {
+		out string
+		err error
+	}
+	done := make(chan result, 1)
+	go func() {
+		out, err := runCommand(ctx, script, dir+"/file", dir)
+		done <- result{out, err}
+	}()
+
+	childPID := waitPIDFile(t, pidFile, 5*time.Second)
+	cancel()
+
+	select {
+	case res := <-done:
+		if res.err == nil {
+			t.Fatal("cancelled run succeeded; want the deadline to stop the process group")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("runCommand did not return after cancel")
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for processAlive(childPID) {
+		if time.Now().After(deadline) {
+			t.Fatalf("descendant pid %d still alive after cancel", childPID)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+func runCommandOrTimeout(t *testing.T, ctx context.Context, cmd, path, dir string) (string, error) {
+	t.Helper()
+	type result struct {
+		out string
+		err error
+	}
+	done := make(chan result, 1)
+	go func() {
+		out, err := runCommand(ctx, cmd, path, dir)
+		done <- result{out, err}
+	}()
+	select {
+	case res := <-done:
+		return res.out, res.err
+	case <-time.After(3 * time.Second):
+		t.Fatal("runCommand did not return within 3s; a descendant is likely pinning the output pipes")
+	}
+	return "", nil
+}
+
+func waitPIDFile(t *testing.T, path string, timeout time.Duration) int {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		b, err := os.ReadFile(path)
+		if err == nil {
+			pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
+			if err == nil && pid > 0 {
+				return pid
+			}
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("pid file %s not written", path)
+	return 0
+}
+
+func killPIDFile(path string) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
+	if err != nil || pid <= 0 {
+		return
+	}
+	_ = syscall.Kill(pid, syscall.SIGKILL)
+}
+
+func processAlive(pid int) bool {
+	return syscall.Kill(pid, 0) == nil
 }
 
 func TestApplyWakeResult_updatesCorrectColumn(t *testing.T) {
