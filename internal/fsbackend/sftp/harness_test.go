@@ -184,14 +184,12 @@ func (s *loopbackSFTP) handleConn(tcp net.Conn) {
 func (s *loopbackSFTP) handleSession(ch ssh.Channel, requests <-chan *ssh.Request) {
 	defer func() { _ = ch.Close() }()
 	for req := range requests {
-		ok := false
 		if req.Type == "subsystem" && len(req.Payload) >= 4 && string(req.Payload[4:]) == "sftp" {
-			ok = true
 			_ = req.Reply(true, nil)
 			s.serveSFTP(ch)
 			return
 		}
-		_ = req.Reply(ok, nil)
+		_ = req.Reply(false, nil)
 	}
 }
 

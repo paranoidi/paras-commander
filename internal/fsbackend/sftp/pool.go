@@ -133,11 +133,12 @@ func (p *Pool) dial(ctx context.Context, loc pathloc.Path, hostPart string) (*go
 		}
 	}
 	client := ssh.NewClient(sshConn, chans, reqs)
-	sftpClient, err := gosftp.NewClient(client)
+	sftpClient, err := p.openSFTP(ctx, client)
 	if err != nil {
 		_ = client.Close()
 		return nil, fmt.Errorf("sftp session %s: %w", addr, err)
 	}
+	_ = raw.SetDeadline(time.Time{})
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -208,19 +209,6 @@ func (p *Pool) convertOpToStream(hostPart string) {
 	}
 }
 
-func (p *Pool) leaseStream(hostPart string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	c, ok := p.conns[hostPart]
-	if !ok {
-		return
-	}
-	c.activeStreams++
-	if c.idleTimer != nil {
-		c.idleTimer.Stop()
-	}
-}
-
 func (p *Pool) armIdleLocked(c *pooledConn) {
 	if c.inUse() || p.settings.IdleTimeout <= 0 {
 		return
@@ -261,9 +249,85 @@ func (p *Pool) handshakeSSH(ctx context.Context, raw net.Conn, addr, user, conne
 		User:            user,
 		Auth:            auth,
 		HostKeyCallback: p.hostKeys.callbackWithContext(ctx),
-		Timeout:         0,
+		Timeout:         p.settings.DialTimeout,
 	}
-	return ssh.NewClientConn(raw, addr, clientCfg)
+	if dl := handshakeDeadline(ctx, p.settings.DialTimeout); !dl.IsZero() {
+		_ = raw.SetDeadline(dl)
+	}
+	return waitClientConn(ctx, raw, addr, clientCfg)
+}
+
+func handshakeDeadline(ctx context.Context, timeout time.Duration) time.Time {
+	var deadline time.Time
+	if timeout > 0 {
+		deadline = time.Now().Add(timeout)
+	}
+	if d, ok := ctx.Deadline(); ok {
+		if deadline.IsZero() || d.Before(deadline) {
+			deadline = d
+		}
+	}
+	return deadline
+}
+
+func waitClientConn(ctx context.Context, raw net.Conn, addr string, cfg *ssh.ClientConfig) (ssh.Conn, <-chan ssh.NewChannel, <-chan *ssh.Request, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, nil, nil, err
+	}
+	type result struct {
+		conn  ssh.Conn
+		chans <-chan ssh.NewChannel
+		reqs  <-chan *ssh.Request
+		err   error
+	}
+	done := make(chan result, 1)
+	go func() {
+		c, chans, reqs, err := ssh.NewClientConn(raw, addr, cfg)
+		done <- result{conn: c, chans: chans, reqs: reqs, err: err}
+	}()
+	select {
+	case <-ctx.Done():
+		_ = raw.Close()
+		res := <-done
+		if res.conn != nil {
+			_ = res.conn.Close()
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, nil, nil, err
+		}
+		return nil, nil, nil, res.err
+	case res := <-done:
+		return res.conn, res.chans, res.reqs, res.err
+	}
+}
+
+func (p *Pool) openSFTP(ctx context.Context, client *ssh.Client) (*gosftp.Client, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	type result struct {
+		c   *gosftp.Client
+		err error
+	}
+	done := make(chan result, 1)
+	go func() {
+		c, err := gosftp.NewClient(client)
+		done <- result{c: c, err: err}
+	}()
+	select {
+	case <-ctx.Done():
+		_ = client.Close()
+		res := <-done
+		if res.c != nil {
+			_ = res.c.Close()
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		return nil, res.err
+	case res := <-done:
+		return res.c, res.err
+	}
 }
 
 func wrapDialError(addr string, err error, diag sshconfig.EndpointDiagnostics) error {
@@ -316,11 +380,11 @@ func (p *Pool) evictClient(hostPart string, client *gosftp.Client) {
 	sftpClient := c.sftpClient
 	sshClient := c.sshClient
 	p.mu.Unlock()
-	if sftpClient != nil {
-		_ = sftpClient.Close()
-	}
 	if sshClient != nil {
 		_ = sshClient.Close()
+	}
+	if sftpClient != nil {
+		_ = sftpClient.Close()
 	}
 }
 

@@ -53,7 +53,7 @@ func (b *Backend) withResolvedRemote(ctx context.Context, loc pathloc.Path) (*pk
 }
 
 func isTransportError(err error) bool {
-	if err == nil {
+	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return false
 	}
 	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, net.ErrClosed) {
@@ -111,11 +111,47 @@ func (b *Backend) withClient(ctx context.Context, loc pathloc.Path, retryable bo
 	return last
 }
 
+func (b *Backend) readDir(ctx context.Context, loc pathloc.Path, client *pkgsftp.Client, remoteDir string) ([]os.FileInfo, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	type result struct {
+		infos []os.FileInfo
+		err   error
+	}
+	done := make(chan result, 1)
+	go func() {
+		infos, err := client.ReadDirContext(ctx, remoteDir)
+		done <- result{infos: infos, err: err}
+	}()
+	select {
+	case res := <-done:
+		return res.infos, res.err
+	case <-ctx.Done():
+		select {
+		case res := <-done:
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			return res.infos, res.err
+		default:
+			if hostPart, err := pathloc.SFTPHostPart(loc); err == nil {
+				b.pool.evictClient(hostPart, client)
+			}
+			res := <-done
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			return res.infos, res.err
+		}
+	}
+}
+
 // List implements fsbackend.Backend.
 func (b *Backend) List(ctx context.Context, dir pathloc.Path) ([]fsbackend.Entry, error) {
 	var out []fsbackend.Entry
 	err := b.withClient(ctx, dir, true, func(client *pkgsftp.Client, remoteDir string) error {
-		infos, err := client.ReadDir(remoteDir)
+		infos, err := b.readDir(ctx, dir, client, remoteDir)
 		if err != nil {
 			return fmt.Errorf("sftp readdir %s: %w", remoteDir, err)
 		}
