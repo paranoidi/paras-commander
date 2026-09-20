@@ -2,13 +2,17 @@ package sftp
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"io/fs"
+	"net"
+	"os"
+	"strings"
+
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	pkgsftp "github.com/pkg/sftp"
-	"io"
-	"io/fs"
-	"os"
 )
 
 func init() {
@@ -39,80 +43,148 @@ func (b *Backend) withResolvedRemote(ctx context.Context, loc pathloc.Path) (*pk
 	}
 	remote, err := pathloc.SFTPRemotePath(loc)
 	if err != nil {
-		release()
-		return nil, "", nil, err
+		return client, "", release, err
 	}
 	resolved, err := resolveRemotePath(client, remote)
 	if err != nil {
-		release()
-		return nil, "", nil, err
+		return client, "", release, err
 	}
 	return client, resolved, release, nil
 }
 
+func isTransportError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, net.ErrClosed) {
+		return true
+	}
+	if errors.Is(err, pkgsftp.ErrSSHFxConnectionLost) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "connection lost") ||
+		strings.Contains(msg, "connection reset") ||
+		strings.Contains(msg, "broken pipe") ||
+		strings.Contains(msg, "use of closed network connection")
+}
+
+func (b *Backend) completeCall(loc pathloc.Path, client *pkgsftp.Client, release func(), err error) {
+	if isTransportError(err) {
+		if hostPart, herr := pathloc.SFTPHostPart(loc); herr == nil {
+			b.pool.evictClient(hostPart, client)
+		}
+	}
+	if release != nil {
+		release()
+	}
+}
+
+func (b *Backend) withClient(ctx context.Context, loc pathloc.Path, retryable bool, fn func(*pkgsftp.Client, string) error) error {
+	attempts := 1
+	if retryable {
+		attempts = 2
+	}
+	var last error
+	for i := 0; i < attempts; i++ {
+		client, remote, release, err := b.withResolvedRemote(ctx, loc)
+		if err != nil {
+			last = err
+			canRetry := retryable && client != nil && isTransportError(err)
+			b.completeCall(loc, client, release, err)
+			if canRetry {
+				continue
+			}
+			return last
+		}
+		last = fn(client, remote)
+		canRetry := retryable && isTransportError(last)
+		b.completeCall(loc, client, release, last)
+		if last == nil || !canRetry {
+			return last
+		}
+	}
+	return last
+}
+
 // List implements fsbackend.Backend.
 func (b *Backend) List(ctx context.Context, dir pathloc.Path) ([]fsbackend.Entry, error) {
-	client, remoteDir, release, err := b.withResolvedRemote(ctx, dir)
-	if err != nil {
-		return nil, err
-	}
-	defer release()
-	infos, err := client.ReadDir(remoteDir)
-	if err != nil {
-		return nil, fmt.Errorf("sftp readdir %s: %w", remoteDir, err)
-	}
-	out := make([]fsbackend.Entry, 0, len(infos))
-	for _, info := range infos {
-		name := info.Name()
-		if name == "." {
-			continue
-		}
-		child, err := dir.Join(name)
+	var out []fsbackend.Entry
+	err := b.withClient(ctx, dir, true, func(client *pkgsftp.Client, remoteDir string) error {
+		infos, err := client.ReadDir(remoteDir)
 		if err != nil {
-			return nil, err
+			return fmt.Errorf("sftp readdir %s: %w", remoteDir, err)
 		}
-		out = append(out, entryFromInfo(child, info))
-	}
-	return out, nil
+		next := make([]fsbackend.Entry, 0, len(infos))
+		for _, info := range infos {
+			name := info.Name()
+			if name == "." {
+				continue
+			}
+			child, err := dir.Join(name)
+			if err != nil {
+				return err
+			}
+			next = append(next, entryFromInfo(child, info))
+		}
+		out = next
+		return nil
+	})
+	return out, err
 }
 
 // Stat implements fsbackend.Backend.
 func (b *Backend) Stat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
-	client, remote, release, err := b.withResolvedRemote(ctx, loc)
-	if err != nil {
-		return fsbackend.Entry{}, err
-	}
-	defer release()
-	info, err := client.Lstat(remote)
-	if err != nil {
-		return fsbackend.Entry{}, fmt.Errorf("sftp stat %s: %w", remote, err)
-	}
-	return entryFromInfo(loc, info), nil
+	var entry fsbackend.Entry
+	err := b.withClient(ctx, loc, true, func(client *pkgsftp.Client, remote string) error {
+		info, err := client.Lstat(remote)
+		if err != nil {
+			return fmt.Errorf("sftp stat %s: %w", remote, err)
+		}
+		entry = entryFromInfo(loc, info)
+		return nil
+	})
+	return entry, err
 }
 
 // OpenRead implements fsbackend.Backend.
 func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadCloser, error) {
-	client, remote, release, err := b.withResolvedRemote(ctx, loc)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if release != nil {
-			release()
+	var last error
+	for attempt := 0; attempt < 2; attempt++ {
+		client, remote, release, err := b.withResolvedRemote(ctx, loc)
+		if err != nil {
+			last = err
+			canRetry := client != nil && isTransportError(err)
+			b.completeCall(loc, client, release, err)
+			if canRetry {
+				continue
+			}
+			return nil, last
 		}
-	}()
-	f, err := client.Open(remote)
-	if err != nil {
-		return nil, err
+		f, err := client.Open(remote)
+		if err != nil {
+			last = err
+			canRetry := isTransportError(err)
+			b.completeCall(loc, client, release, err)
+			if canRetry && attempt == 0 {
+				continue
+			}
+			return nil, last
+		}
+		hostPart, err := pathloc.SFTPHostPart(loc)
+		if err != nil {
+			_ = f.Close()
+			b.completeCall(loc, client, release, err)
+			return nil, err
+		}
+		b.pool.convertOpToStream(hostPart)
+		return &leasedReadCloser{ReadCloser: f, pool: b.pool, hostPart: hostPart}, nil
 	}
-	hostPart, err := pathloc.SFTPHostPart(loc)
-	if err != nil {
-		_ = f.Close()
-		return nil, err
-	}
-	b.pool.convertOpToStream(hostPart)
-	release = nil
-	return &leasedReadCloser{ReadCloser: f, pool: b.pool, hostPart: hostPart}, nil
+	return nil, last
 }
 
 // OpenWrite implements fsbackend.Backend.
@@ -120,13 +192,9 @@ func (b *Backend) OpenWrite(ctx context.Context, loc pathloc.Path, size int64, o
 	_ = size
 	client, remote, release, err := b.withResolvedRemote(ctx, loc)
 	if err != nil {
+		b.completeCall(loc, client, release, err)
 		return nil, err
 	}
-	defer func() {
-		if release != nil {
-			release()
-		}
-	}()
 	flags := os.O_WRONLY | os.O_CREATE
 	if opts.Truncate {
 		flags |= os.O_TRUNC
@@ -136,89 +204,89 @@ func (b *Backend) OpenWrite(ctx context.Context, loc pathloc.Path, size int64, o
 	}
 	f, err := client.OpenFile(remote, flags)
 	if err != nil {
+		b.completeCall(loc, client, release, err)
 		return nil, err
 	}
 	hostPart, err := pathloc.SFTPHostPart(loc)
 	if err != nil {
 		_ = f.Close()
+		b.completeCall(loc, client, release, err)
 		return nil, err
 	}
 	b.pool.convertOpToStream(hostPart)
-	release = nil
 	return &leasedWriteCloser{WriteCloser: f, pool: b.pool, hostPart: hostPart}, nil
 }
 
 // Mkdir implements fsbackend.Backend.
 func (b *Backend) Mkdir(ctx context.Context, dir pathloc.Path, perm fs.FileMode) error {
-	client, remote, release, err := b.withResolvedRemote(ctx, dir)
-	if err != nil {
-		return err
-	}
-	defer release()
-	return client.Mkdir(remote)
+	_ = perm
+	return b.withClient(ctx, dir, false, func(client *pkgsftp.Client, remote string) error {
+		return client.Mkdir(remote)
+	})
 }
 
 // Remove implements fsbackend.Backend.
 func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
-	client, remote, release, err := b.withResolvedRemote(ctx, loc)
-	if err != nil {
-		return err
-	}
-	defer release()
-	info, err := client.Lstat(remote)
-	if err != nil {
-		return err
-	}
-	if info.IsDir() {
-		return client.RemoveDirectory(remote)
-	}
-	return client.Remove(remote)
+	return b.withClient(ctx, loc, false, func(client *pkgsftp.Client, remote string) error {
+		info, err := client.Lstat(remote)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return client.RemoveDirectory(remote)
+		}
+		return client.Remove(remote)
+	})
 }
 
 // Rename implements fsbackend.Backend.
 func (b *Backend) Rename(ctx context.Context, oldLoc, newLoc pathloc.Path) error {
 	client, release, err := b.pool.withSFTP(ctx, oldLoc)
 	if err != nil {
+		b.completeCall(oldLoc, client, release, err)
 		return err
 	}
-	defer release()
 	oldRemote, err := pathloc.SFTPRemotePath(oldLoc)
 	if err != nil {
+		b.completeCall(oldLoc, client, release, err)
 		return err
 	}
 	oldRemote, err = resolveRemotePath(client, oldRemote)
 	if err != nil {
+		b.completeCall(oldLoc, client, release, err)
 		return err
 	}
 	newRemote, err := pathloc.SFTPRemotePath(newLoc)
 	if err != nil {
+		b.completeCall(oldLoc, client, release, err)
 		return err
 	}
 	newRemote, err = resolveRemotePath(client, newRemote)
 	if err != nil {
+		b.completeCall(oldLoc, client, release, err)
 		return err
 	}
-	return client.Rename(oldRemote, newRemote)
+	err = client.Rename(oldRemote, newRemote)
+	b.completeCall(oldLoc, client, release, err)
+	return err
 }
 
 // ReadSymlink implements fsbackend.Backend.
 func (b *Backend) ReadSymlink(ctx context.Context, loc pathloc.Path) (string, error) {
-	client, remote, release, err := b.withResolvedRemote(ctx, loc)
-	if err != nil {
-		return "", err
-	}
-	defer release()
-	return client.ReadLink(remote)
+	var target string
+	err := b.withClient(ctx, loc, true, func(client *pkgsftp.Client, remote string) error {
+		var rerr error
+		target, rerr = client.ReadLink(remote)
+		return rerr
+	})
+	return target, err
 }
 
 // Symlink implements fsbackend.Backend.
 func (b *Backend) Symlink(ctx context.Context, loc pathloc.Path, target string) error {
-	client, remote, release, err := b.withResolvedRemote(ctx, loc)
-	if err != nil {
-		return err
-	}
-	defer release()
-	return client.Symlink(target, remote)
+	return b.withClient(ctx, loc, false, func(client *pkgsftp.Client, remote string) error {
+		return client.Symlink(target, remote)
+	})
 }
 
 func entryFromInfo(loc pathloc.Path, info os.FileInfo) fsbackend.Entry {

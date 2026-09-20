@@ -39,6 +39,7 @@ type loopbackSFTP struct {
 	stop  chan struct{}
 	wg    sync.WaitGroup
 
+	accepts        atomic.Int64
 	stallHandshake atomic.Bool
 	listGate       <-chan struct{}
 	listEntered    chan struct{}
@@ -135,6 +136,7 @@ func (s *loopbackSFTP) serve() {
 			s.mu.Lock()
 			s.conns = append(s.conns, tcp)
 			s.mu.Unlock()
+			s.accepts.Add(1)
 			if s.stallHandshake.Load() {
 				continue
 			}

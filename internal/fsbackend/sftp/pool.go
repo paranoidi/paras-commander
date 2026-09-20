@@ -299,6 +299,31 @@ func (p *Pool) closeHost(hostPart string) {
 	p.mu.Unlock()
 }
 
+func (p *Pool) evictClient(hostPart string, client *gosftp.Client) {
+	if hostPart == "" || client == nil {
+		return
+	}
+	p.mu.Lock()
+	c, ok := p.conns[hostPart]
+	if !ok || c.sftpClient != client {
+		p.mu.Unlock()
+		return
+	}
+	delete(p.conns, hostPart)
+	if c.idleTimer != nil {
+		c.idleTimer.Stop()
+	}
+	sftpClient := c.sftpClient
+	sshClient := c.sshClient
+	p.mu.Unlock()
+	if sftpClient != nil {
+		_ = sftpClient.Close()
+	}
+	if sshClient != nil {
+		_ = sshClient.Close()
+	}
+}
+
 // CloseAll disconnects every pooled session.
 func (p *Pool) CloseAll() {
 	p.mu.Lock()
