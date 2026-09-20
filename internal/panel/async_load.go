@@ -24,6 +24,11 @@ type AsyncLoadRequest struct {
 	// ListingEpoch is State.ListingEpoch at schedule time. Same-directory applies whose epoch no
 	// longer matches are dropped (a rename/mkdir insert bumped the panel's epoch meanwhile).
 	ListingEpoch uint64
+	// HistoryVisit/HistoryPath identify the recordVisit performed when this navigation was
+	// scheduled. A stale apply (superseded generation) undoes that visit so A→B→C cannot leave
+	// B in the timeline when B never landed.
+	HistoryVisit uint64
+	HistoryPath  string
 }
 
 // AsyncLoadScheduler starts an off-thread listing for req.
@@ -35,25 +40,31 @@ type asyncLoadOpts struct {
 	rollback        func()
 	onApplied       func()
 	syncHistoryHead bool
+	historyVisit    uint64
+	historyPath     string
 }
 
-func (s *State) revertRecordedVisit(attempted string) {
-	target := cleanPathString(attempted)
-	if target == "" {
+// RevertHistoryVisit removes the visit recorded under token if it is still the latest visit
+// for target. Used when an async navigation is superseded before it applies.
+func (s *State) RevertHistoryVisit(target string, token uint64) {
+	s.revertHistoryVisit(target, token)
+}
+
+func (s *State) revertHistoryVisit(target string, token uint64) {
+	target = cleanPathString(target)
+	if token == 0 || target == "" {
 		return
 	}
-	cur := cleanPathString(s.Path.String())
-	if len(s.History) == 0 || s.HistoryIndex != 0 {
+	if s.historyVisitToken[target] != token {
 		return
 	}
-	if cleanPathString(s.History[0]) != target {
-		return
-	}
-	if cur != "" && cur != target {
-		s.History[0] = cur
-		return
-	}
-	if len(s.History) > 1 {
-		s.History = s.History[1:]
+	delete(s.historyVisitToken, target)
+	s.History = removePathFromSlice(s.History, target)
+	if s.HistoryIndex >= len(s.History) {
+		if len(s.History) == 0 {
+			s.HistoryIndex = 0
+		} else {
+			s.HistoryIndex = len(s.History) - 1
+		}
 	}
 }

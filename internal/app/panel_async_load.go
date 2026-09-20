@@ -193,6 +193,11 @@ func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
 
 func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	if a.panelAsyncLoadGen[p.panelID].Load() != p.gen {
+		if p.req.HistoryVisit != 0 {
+			if pan := a.panelByID(p.panelID); pan != nil {
+				pan.RevertHistoryVisit(p.req.HistoryPath, p.req.HistoryVisit)
+			}
+		}
 		return false
 	}
 	isOverlay := p.panelID == ui.QuickViewOverlayPanel

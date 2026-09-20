@@ -61,6 +61,10 @@ type State struct {
 	// 0 = newest/current slot in the list (matches Path after navigation).
 	History      []string
 	HistoryIndex int
+	// historyVisitSeq / historyVisitToken identify each recordVisit so a superseded async
+	// navigation can remove that visit even when it is no longer History[0].
+	historyVisitSeq   uint64
+	historyVisitToken map[string]uint64
 	// HistoryCursorByPath maps canonical directory paths to the last highlighted entry when leaving.
 	HistoryCursorByPath map[string]historyCursorSnapshot
 	SelectedPaths       map[string]bool
@@ -774,11 +778,13 @@ func (s *State) NavigateToPath(loc pathloc.Path, selectedName string, viewportRo
 // NavigateToPathWithHook is NavigateToPath, running onApplied once after the reload lands (sync or async).
 func (s *State) NavigateToPathWithHook(loc pathloc.Path, selectedName string, viewportRows int, onApplied func()) error {
 	target := loc.String()
-	s.recordVisit(target)
+	token := s.recordVisit(target)
 	if err := s.load(loc, selectedName, viewportRows, noIndexCursorFallback, asyncLoadOpts{
-		rollback:        func() { s.revertRecordedVisit(target) },
+		rollback:        func() { s.revertHistoryVisit(target, token) },
 		onApplied:       onApplied,
 		syncHistoryHead: true,
+		historyVisit:    token,
+		historyPath:     target,
 	}); err != nil {
 		return err
 	}
@@ -846,14 +852,14 @@ func historySkipWarning(skipped []string) string {
 	}
 }
 
-func (s *State) recordVisit(target string) {
+func (s *State) recordVisit(target string) uint64 {
 	target = cleanPathString(target)
 	if target == "" {
-		return
+		return 0
 	}
 	cur := cleanPathString(s.Path.String())
 	if target == cur {
-		return
+		return 0
 	}
 	var base []string
 	if len(s.History) > 0 && s.HistoryIndex < len(s.History) {
@@ -867,7 +873,13 @@ func (s *State) recordVisit(target string) {
 	}
 	s.History = hist
 	s.HistoryIndex = 0
+	s.historyVisitSeq++
+	if s.historyVisitToken == nil {
+		s.historyVisitToken = make(map[string]uint64)
+	}
+	s.historyVisitToken[target] = s.historyVisitSeq
 	s.pruneHistoryCursors()
+	return s.historyVisitSeq
 }
 
 func (s *State) rememberCursorForPath(dir string) {
@@ -1418,6 +1430,8 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 			OnApplied:            remote.onApplied,
 			SyncHistoryHead:      remote.syncHistoryHead,
 			ListingEpoch:         s.ListingEpoch,
+			HistoryVisit:         remote.historyVisit,
+			HistoryPath:          remote.historyPath,
 		}) {
 			s.ListingPending = true
 			s.ListingPendingPath = loc.String()
