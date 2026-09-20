@@ -40,8 +40,8 @@ func calculateTimeMarks(durationSec float64, n int) []float64 {
 	return marks
 }
 
-func extractFramePNG(ctx context.Context, videoPath string, timeSec float64) (image.Image, error) {
-	pngBytes, err := ffmpegFramePNG(ctx, videoPath, timeSec)
+func extractFramePNG(ctx context.Context, videoPath string, timeSec float64, maxEdge int) (image.Image, error) {
+	pngBytes, err := ffmpegFramePNG(ctx, videoPath, timeSec, maxEdge)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func extractFramePNG(ctx context.Context, videoPath string, timeSec float64) (im
 // concurrently. onFrame, if non-nil, is called once per completed frame with a monotonically
 // increasing done count, serialized so calls always land in strict 1..n order — even though
 // frames land in the returned slice at their own timestamp index regardless of completion order.
-func extractThumbFrames(ctx context.Context, videoPath string, durationSec float64, cols, rows, workers int, onFrame func(done int)) ([]image.Image, error) {
+func extractThumbFrames(ctx context.Context, videoPath string, durationSec float64, cols, rows, workers, maxEdge int, onFrame func(done int)) ([]image.Image, error) {
 	n := cols * rows
 	marks := calculateTimeMarks(durationSec, n)
 	if len(marks) == 0 {
@@ -87,7 +87,7 @@ func extractThumbFrames(ctx context.Context, videoPath string, durationSec float
 		wg.Add(1)
 		go func(i int, t float64) {
 			defer wg.Done()
-			img, err := extractFramePNG(runCtx, videoPath, t)
+			img, err := extractFramePNG(runCtx, videoPath, t, maxEdge)
 			pool.Release() // free the slot immediately — bookkeeping/callback below don't need it
 			if err != nil {
 				mu.Lock()
@@ -203,7 +203,7 @@ func buildVideoThumbGrid(ctx context.Context, path string, durationSec float64, 
 			onFrame(done, totalSteps)
 		}
 	}
-	frames, err := extractThumbFrames(ctx, path, durationSec, cols, rows, workers, frameProgress)
+	frames, err := extractThumbFrames(ctx, path, durationSec, cols, rows, workers, max(maxW, maxH), frameProgress)
 	if err != nil {
 		return nil, err
 	}

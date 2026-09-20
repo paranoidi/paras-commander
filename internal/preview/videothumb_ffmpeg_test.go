@@ -24,7 +24,7 @@ func TestExtractFramePNGAndMediaThumbs(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("ffmpeg generate: %v\n%s", err, out)
 	}
-	img, err := extractFramePNG(context.Background(), clip, 1.0)
+	img, err := extractFramePNG(context.Background(), clip, 1.0, 0)
 	if err != nil {
 		t.Fatalf("extractFramePNG: %v", err)
 	}
