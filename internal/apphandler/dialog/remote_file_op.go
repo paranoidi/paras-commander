@@ -30,6 +30,7 @@ const (
 	RemoteFileOpTransferProbe
 	RemoteFileOpFlattenProbe
 	RemoteFileOpExtractProbe
+	RemoteFileOpAttr
 )
 
 // RemoteFileOpPayload carries a background remote mkdir/rename or transfer/extract/flatten
@@ -45,6 +46,7 @@ type RemoteFileOpPayload struct {
 	transfer transferProbeApply
 	flatten  flattenProbeApply
 	extract  extractProbeApply
+	attr     attrOpApply
 }
 
 type mkdirApply struct {
@@ -132,6 +134,8 @@ func (h *Handler) ApplyRemoteFileOp(p RemoteFileOpPayload) {
 		h.applyRemoteFlattenProbe(p)
 	case RemoteFileOpExtractProbe:
 		h.applyRemoteExtractProbe(p)
+	case RemoteFileOpAttr:
+		h.applyAttrOp(p)
 	}
 }
 

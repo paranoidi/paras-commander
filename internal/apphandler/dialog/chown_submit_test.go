@@ -72,6 +72,9 @@ func TestExecuteChownEmptyFieldsAreRejected(t *testing.T) {
 				},
 			}
 			h.executeChown()
+			if !tt.wantErr {
+				h.ApplyRemoteFileOp(waitRemoteFileOp(t, screen))
+			}
 			joinedErr := strings.Join(fh.errors, "\n")
 			joinedMsg := strings.Join(fh.messages, "\n")
 			if tt.wantErr {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/filenameenc"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
@@ -684,6 +685,44 @@ func (h *Handler) ExecuteDelete() {
 	h.host.SetTransientMessage(fmt.Sprintf("Delete queued (%d %s)", n, delNoun), ui.MessageUrgencyInfo)
 }
 
+// attrOpTestHook, when set, runs immediately before ExecuteChmod/ExecuteChown so tests
+// can block the batch or remove a path after planning.
+var attrOpTestHook func()
+
+type attrOpApply struct {
+	title      string
+	successMsg string
+}
+
+func (h *Handler) startAttrOp(title, successMsg string, exec func() error) {
+	gen := h.nextRemoteFileOpGen()
+	h.CloseFileDialog()
+	screen := h.screen
+	hook := attrOpTestHook
+	go func() {
+		if hook != nil {
+			hook()
+		}
+		err := exec()
+		if screen == nil {
+			return
+		}
+		_ = screen.PostEvent(tcell.NewEventInterrupt(RemoteFileOpPayload{
+			Gen: gen, Kind: RemoteFileOpAttr, Err: err,
+			attr: attrOpApply{title: title, successMsg: successMsg},
+		}))
+	}()
+}
+
+func (h *Handler) applyAttrOp(p RemoteFileOpPayload) {
+	h.RefreshBothPanels()
+	if p.Err != nil {
+		h.host.SetErrorMessage(p.attr.title+" failed", p.Err)
+		return
+	}
+	h.host.SetTransientMessage(p.attr.successMsg, ui.MessageUrgencyInfo)
+}
+
 func (h *Handler) executeChmod() {
 	p := h.host.ActivePanel()
 	field := h.FocusedField()
@@ -703,14 +742,9 @@ func (h *Handler) executeChmod() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteChmod(plan); err != nil {
-		h.host.SetErrorMessage("Chmod failed", err)
-		h.CloseFileDialog()
-		return
-	}
-	h.CloseFileDialog()
-	h.RefreshBothPanels()
-	h.host.SetTransientMessage(fmt.Sprintf("Changed mode to %s on %d item(s)", plan.ModeStr, len(plan.Entries)), ui.MessageUrgencyInfo)
+	h.startAttrOp("Chmod", fmt.Sprintf("Changed mode to %s on %d item(s)", plan.ModeStr, len(plan.Entries)), func() error {
+		return ops.ExecuteChmod(plan)
+	})
 }
 
 func (h *Handler) executeChown() {
@@ -733,14 +767,9 @@ func (h *Handler) executeChown() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteChown(plan); err != nil {
-		h.host.SetErrorMessage("Chown failed", err)
-		h.CloseFileDialog()
-		return
-	}
-	h.CloseFileDialog()
-	h.RefreshBothPanels()
-	h.host.SetTransientMessage(fmt.Sprintf("Changed owner on %d item(s)", len(plan.Entries)), ui.MessageUrgencyInfo)
+	h.startAttrOp("Chown", fmt.Sprintf("Changed owner on %d item(s)", len(plan.Entries)), func() error {
+		return ops.ExecuteChown(plan)
+	})
 }
 
 func (h *Handler) executeSymlink() {
