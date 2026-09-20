@@ -85,26 +85,21 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 		return merged[i].Result.Score > merged[j].Result.Score
 	})
 
-	out.FullRanked = filterRankIndicesInPlace(entries, indicesFromResults(merged), req.OnlyDirs, req.OnlyFiles)
+	filtered := filterRankedResults(entries, merged, req.OnlyDirs, req.OnlyFiles)
+	out.FullRanked = indicesFromResults(filtered)
 
-	raw := merged
-	if maxResults > 0 && len(raw) > maxResults {
-		raw = raw[:maxResults]
+	display := filtered
+	if maxResults > 0 && len(display) > maxResults {
+		display = display[:maxResults]
 	}
-	out.Ranked = filterRankIndicesInPlace(entries, indicesFromResults(raw), req.OnlyDirs, req.OnlyFiles)
+	out.Ranked = indicesFromResults(display)
 	out.DisplayRelLines = relLinesForIndicesInPlace(entries, out.Ranked)
 
-	if len(raw) > 0 {
+	if len(display) > 0 {
 		out.MatchRanges = make(map[int][]search.Range)
-		for _, r := range raw {
+		for _, r := range display {
 			idx := r.Index
 			if idx < 0 || idx >= n || len(r.Result.Ranges) == 0 {
-				continue
-			}
-			if req.OnlyDirs && !entries[idx].IsDir {
-				continue
-			}
-			if req.OnlyFiles && entries[idx].IsDir {
 				continue
 			}
 			out.MatchRanges[idx] = r.Result.Ranges
@@ -116,20 +111,13 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 	return out
 }
 
-func indicesFromResults(raw []search.RankedResult) []int {
-	out := make([]int, len(raw))
-	for i, r := range raw {
-		out[i] = r.Index
-	}
-	return out
-}
-
-func filterRankIndicesInPlace(entries []Entry, indices []int, onlyDirs, onlyFiles bool) []int {
+func filterRankedResults(entries []Entry, raw []search.RankedResult, onlyDirs, onlyFiles bool) []search.RankedResult {
 	if !onlyDirs && !onlyFiles {
-		return append([]int(nil), indices...)
+		return raw
 	}
-	filtered := make([]int, 0, len(indices))
-	for _, idx := range indices {
+	filtered := make([]search.RankedResult, 0, len(raw))
+	for _, r := range raw {
+		idx := r.Index
 		if idx < 0 || idx >= len(entries) {
 			continue
 		}
@@ -139,9 +127,17 @@ func filterRankIndicesInPlace(entries []Entry, indices []int, onlyDirs, onlyFile
 		if onlyFiles && entries[idx].IsDir {
 			continue
 		}
-		filtered = append(filtered, idx)
+		filtered = append(filtered, r)
 	}
 	return filtered
+}
+
+func indicesFromResults(raw []search.RankedResult) []int {
+	out := make([]int, len(raw))
+	for i, r := range raw {
+		out[i] = r.Index
+	}
+	return out
 }
 
 func emptyDisplayIndicesInPlace(entries []Entry, onlyDirs, onlyFiles bool, maxResults int) []int {
