@@ -21,6 +21,9 @@ type HostEntry struct {
 	IdentityFiles  []string
 	IdentitiesOnly string // "yes", "no", or empty (unset)
 	IdentityAgent  string
+	// negated holds Host patterns that began with !; the stanza is skipped
+	// when any of them matches the destination host.
+	negated []string
 }
 
 // Config holds parsed host entries from a config file.
@@ -260,6 +263,9 @@ func (e HostEntry) MatchesHost(user, host string) bool {
 	if host == "" {
 		return false
 	}
+	if hostMatchesAnyPattern(e.negated, host) {
+		return false
+	}
 	matched := hostMatchesPattern(e.Alias, host)
 	if !matched {
 		rh := e.ResolvedHost()
@@ -280,6 +286,9 @@ func (e HostEntry) MatchesEndpoint(user, host, port string) bool {
 		port = "22"
 	}
 	host = strings.TrimSpace(host)
+	if hostMatchesAnyPattern(e.negated, host) {
+		return false
+	}
 	matched := hostMatchesPattern(e.Alias, host)
 	if !matched {
 		rh := e.ResolvedHost()
@@ -386,6 +395,7 @@ func padRunesRight(s string, minWidth int) string {
 
 type stanza struct {
 	patterns       []string
+	negated        []string
 	hostName       string
 	user           string
 	port           string
@@ -427,15 +437,23 @@ func parse(content string, home string) ([]HostEntry, error) {
 				val = strings.TrimSpace(strings.Join(matchFields[1:], " "))
 			}
 			var patterns []string
+			var negated []string
 			for _, p := range strings.Fields(val) {
-				p = strings.TrimSpace(p)
-				if p == "" || strings.HasPrefix(p, "!") {
+				p = unquoteSSHConfigValue(strings.TrimSpace(p))
+				if p == "" {
+					continue
+				}
+				if strings.HasPrefix(p, "!") {
+					n := unquoteSSHConfigValue(strings.TrimSpace(strings.TrimPrefix(p, "!")))
+					if n != "" {
+						negated = append(negated, n)
+					}
 					continue
 				}
 				patterns = append(patterns, p)
 			}
 			if len(patterns) > 0 {
-				cur = &stanza{patterns: patterns}
+				cur = &stanza{patterns: patterns, negated: negated}
 			}
 			continue
 		}
@@ -503,24 +521,35 @@ func unquoteSSHConfigValue(val string) string {
 
 // stanzasToEntries merges duplicate Host aliases using OpenSSH first-wins per keyword.
 func stanzasToEntries(stanzas []stanza) []HostEntry {
-	byAlias := make(map[string]*HostEntry)
+	byKey := make(map[string]*HostEntry)
 	order := make([]string, 0, len(stanzas))
 	for _, s := range stanzas {
 		for _, alias := range s.patterns {
-			e, ok := byAlias[alias]
+			key := hostEntryMergeKey(alias, s.negated)
+			e, ok := byKey[key]
 			if !ok {
-				e = &HostEntry{Alias: alias}
-				byAlias[alias] = e
-				order = append(order, alias)
+				e = &HostEntry{
+					Alias:   alias,
+					negated: append([]string(nil), s.negated...),
+				}
+				byKey[key] = e
+				order = append(order, key)
 			}
 			mergeStanzaFirstWins(e, s)
 		}
 	}
 	out := make([]HostEntry, len(order))
-	for i, alias := range order {
-		out[i] = *byAlias[alias]
+	for i, key := range order {
+		out[i] = *byKey[key]
 	}
 	return out
+}
+
+func hostEntryMergeKey(alias string, negated []string) string {
+	if len(negated) == 0 {
+		return alias
+	}
+	return alias + "\x00!" + strings.Join(negated, "\x00!")
 }
 
 func mergeStanzaFirstWins(e *HostEntry, s stanza) {
@@ -628,6 +657,15 @@ func expandConfigPath(raw, home string) (string, error) {
 		return filepath.Clean(filepath.Join(home, strings.TrimPrefix(raw, "~"))), nil
 	}
 	return filepath.Clean(raw), nil
+}
+
+func hostMatchesAnyPattern(patterns []string, host string) bool {
+	for _, p := range patterns {
+		if hostMatchesPattern(p, host) {
+			return true
+		}
+	}
+	return false
 }
 
 func hostMatchesPattern(pattern, host string) bool {
