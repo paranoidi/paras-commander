@@ -86,7 +86,7 @@ func TestDispatchQuickViewFilePreviewStaleGenSkipsPatch(t *testing.T) {
 	h.filePreviewRunGen.Add(1)
 
 	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive, false)
-	h.dispatchQuickViewFilePreview(path, req, staleGen)
+	h.dispatchQuickViewFilePreview(context.Background(), path, req, staleGen)
 
 	h.mu.RLock()
 	ph := h.model.FilePreview.Phase
@@ -110,7 +110,7 @@ func TestDispatchQuickViewFilePreviewCurrentGenAppliesPreview(t *testing.T) {
 	h.mu.Unlock()
 	gen := h.filePreviewRunGen.Add(1)
 	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive, false)
-	h.dispatchQuickViewFilePreview(path, req, gen)
+	h.dispatchQuickViewFilePreview(context.Background(), path, req, gen)
 
 	h.mu.RLock()
 	st := h.model.FilePreview
@@ -138,7 +138,7 @@ func TestDispatchQuickViewFilePreviewCurrentGenAppliesNotPreviewableMessage(t *t
 	h.mu.Unlock()
 	gen := h.filePreviewRunGen.Add(1)
 	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive, false)
-	h.dispatchQuickViewFilePreview(path, req, gen)
+	h.dispatchQuickViewFilePreview(context.Background(), path, req, gen)
 
 	h.mu.RLock()
 	st := h.model.FilePreview

@@ -43,6 +43,33 @@ func (h *Handler) previewRunGenFor(target previewTarget) *atomic.Uint64 {
 	}
 }
 
+// beginPreviewRun advances target's run generation, cancels any previous run for
+// that target, and returns a child context the new run must honor. Gen is bumped
+// before cancel so a stale cancel cannot write into the newer state.
+func (h *Handler) beginPreviewRun(target previewTarget) (context.Context, uint64) {
+	gen := h.previewRunGenFor(target).Add(1)
+	h.previewRunMu.Lock()
+	if c := h.previewRunCancel[target]; c != nil {
+		c()
+	}
+	ctx, cancel := context.WithCancel(h.ctx)
+	h.previewRunCancel[target] = cancel
+	h.previewRunMu.Unlock()
+	return ctx, gen
+}
+
+// cancelPreviewRun invalidates in-flight work for target without starting a
+// replacement (close, empty-file message). Gen is bumped before cancel.
+func (h *Handler) cancelPreviewRun(target previewTarget) {
+	h.previewRunGenFor(target).Add(1)
+	h.previewRunMu.Lock()
+	if c := h.previewRunCancel[target]; c != nil {
+		c()
+		h.previewRunCancel[target] = nil
+	}
+	h.previewRunMu.Unlock()
+}
+
 // patchFilePreviewPending resets target's preview state to the "opening path" placeholder: title
 // and phase paint synchronously so quick view and the carousel child preview never sit blank while
 // the (possibly slow — ffprobe/ffmpeg for video, a preview.commands rule, etc.) body loads,
@@ -72,6 +99,7 @@ func (h *Handler) patchFilePreviewPending(target previewTarget, path string, isD
 
 // CloseFilePreview closes the inactive-column (quick view) preview.
 func (h *Handler) CloseFilePreview() {
+	h.cancelPreviewRun(previewTargetInactive)
 	h.mu.Lock()
 	h.model.FilePreview = ui.FilePreviewState{}
 	h.mu.Unlock()
@@ -748,11 +776,11 @@ func (h *Handler) dispatchQuickViewDirPreview(dirPath string) {
 		tw = 1
 	}
 	h.patchFilePreviewPending(previewTargetInactive, dirPath, true)
-	gen := h.filePreviewRunGen.Add(1)
+	ctx, gen := h.beginPreviewRun(previewTargetInactive)
 	// WorkDir is dirPath itself, so a rule command like "eza --tree ." works without needing %f.
 	req := h.previewRequest(dirPath, tw, contentH, dirPath, h.inactivePreviewChromeBlocked(), nil, previewTargetInactive, true)
 	h.armQuickViewSlowIndicator(dirPath)
-	go h.runDirPreviewRules(h.ctx, req, gen)
+	go h.runDirPreviewRules(ctx, req, gen)
 }
 
 // runDirPreviewRules runs previewrun.RunRules for a directory preview off the UI goroutine. A
@@ -812,7 +840,7 @@ func (h *Handler) applyQuickViewPreviewNow() {
 	case quickViewWantEmpty:
 		// Invalidate any in-flight quick-view subprocess so a late completion cannot
 		// overwrite the empty-file message.
-		h.filePreviewRunGen.Add(1)
+		h.cancelPreviewRun(previewTargetInactive)
 		h.ClearQuickViewDirOverlay()
 		h.clearQuickViewSlowIndicator()
 		h.patchColumnPreviewMessage("", "Quick view: empty file")
@@ -835,16 +863,16 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		// Keep ImagePayload* so the previous image stays on screen until the new encode
 		// finishes (stale-while-revalidate); patchFilePreviewPending doesn't touch it.
 		h.patchFilePreviewPending(previewTargetInactive, path, false)
-		gen := h.filePreviewRunGen.Add(1)
+		ctx, gen := h.beginPreviewRun(previewTargetInactive)
 		req := h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive, false)
 		h.armQuickViewSlowIndicator(path)
-		go h.dispatchQuickViewFilePreview(path, req, gen)
+		go h.dispatchQuickViewFilePreview(ctx, path, req, gen)
 	}
 }
 
 // dispatchQuickViewFilePreview is dispatchFilePreviewCheck for the inactive-column quick view.
-func (h *Handler) dispatchQuickViewFilePreview(path string, req previewrun.Request, gen uint64) {
-	h.dispatchFilePreviewCheck(path, req, previewTargetInactive, gen,
+func (h *Handler) dispatchQuickViewFilePreview(ctx context.Context, path string, req previewrun.Request, gen uint64) {
+	h.dispatchFilePreviewCheck(ctx, path, req, previewTargetInactive, gen,
 		"Quick view: not a text file", "Quick view: not a file", h.patchColumnPreviewMessage)
 }
 
@@ -854,7 +882,7 @@ func (h *Handler) dispatchQuickViewFilePreview(path string, req previewrun.Reque
 // set synchronously by the caller. gen guards against a superseded dispatch (the user already
 // moved on to another file) clobbering fresher preview content once its slow I/O finally
 // completes. notTextMsg/notFileMsg are target's wording for the two not-previewable cases.
-func (h *Handler) dispatchFilePreviewCheck(path string, req previewrun.Request, target previewTarget, gen uint64, notTextMsg, notFileMsg string, patchMessage func(titleBase, msg string)) {
+func (h *Handler) dispatchFilePreviewCheck(ctx context.Context, path string, req previewrun.Request, target previewTarget, gen uint64, notTextMsg, notFileMsg string, patchMessage func(titleBase, msg string)) {
 	err := localfs.CheckFilePreviewable(path)
 	if gen != h.previewRunGenFor(target).Load() {
 		return
@@ -873,7 +901,7 @@ func (h *Handler) dispatchFilePreviewCheck(path string, req previewrun.Request, 
 		}
 		return
 	}
-	h.runPreview(h.ctx, req, target, gen)
+	h.runPreview(ctx, req, target, gen)
 }
 
 // refreshInactiveFilePreview re-runs the current inactive-column (quick view) preview at its
@@ -899,9 +927,9 @@ func (h *Handler) refreshInactiveFilePreview() {
 	}
 	workDir := h.host.ActivePanel().PathString()
 	req := h.previewRequest(st.Path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive, false)
-	gen := h.filePreviewRunGen.Add(1)
+	ctx, gen := h.beginPreviewRun(previewTargetInactive)
 	h.postRenderWake()
-	go h.runPreview(h.ctx, req, previewTargetInactive, gen)
+	go h.runPreview(ctx, req, previewTargetInactive, gen)
 }
 
 // RefreshPreviewsAfterResize re-runs any open preview target whose current computed text width
@@ -1244,6 +1272,11 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 		}
 		return
 	default:
+	}
+
+	if exec := currentPreviewExec(); exec != nil {
+		h.applyPreviewResult(req, target, runGen, exec(ctx, req))
+		return
 	}
 
 	if res, matched := previewrun.RunRules(ctx, req); matched {

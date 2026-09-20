@@ -137,9 +137,9 @@ func (h *Handler) refreshFullscreenFilePreview() {
 	}
 	req := h.previewRequest(st.Path, tw, contentH, h.host.ActivePanel().PathString(), h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetFullscreen, st.IsDir)
 	req.RawMarkdown = h.model.FullscreenFilePreviewRawMarkdown
-	gen := h.filePreviewRunGen.Add(1)
+	ctx, gen := h.beginPreviewRun(previewTargetFullscreen)
 	h.postRenderWake()
-	go h.runPreview(h.ctx, req, previewTargetFullscreen, gen)
+	go h.runPreview(ctx, req, previewTargetFullscreen, gen)
 }
 
 func (h *Handler) syncFilePreviewThemePickerRanks() {

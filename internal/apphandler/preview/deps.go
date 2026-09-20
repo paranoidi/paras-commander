@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/prefetch"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -56,6 +57,11 @@ type Handler struct {
 
 	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale RenderWake).
 	filePreviewRunGen atomic.Uint64
+	// previewRunMu / previewRunCancel own the per-target cancel func for the current
+	// runPreview/runMediaPreview. Generation is bumped before cancel so a stale
+	// ctx.Done() write cannot land in a newer state.
+	previewRunMu     sync.Mutex
+	previewRunCancel [3]context.CancelFunc
 	// filePreviewHold keeps the last completed inactive-column preview for stale-while-revalidate draws.
 	filePreviewHold ui.FilePreviewState
 	// fullscreenFilePreviewHold keeps the last completed F3 preview body while the next file loads.
@@ -136,6 +142,27 @@ type Handler struct {
 	// decode/render) into a single rebuildPrefetchWarmMap call shortly after the burst settles,
 	// instead of doing a full window rescan on every individual completion.
 	prefetchWarmMapDebounce sched.Debouncer
+}
+
+// previewExec, when non-nil, replaces RunRules/Run/runMediaPreview inside runPreview.
+// Tests install a blocking fake that waits on ctx.Done() to assert cancel-on-supersede
+// and cancel-on-close. Production leaves this nil. previewExecMu guards the var so
+// tests can restore it without racing a run that is still reading the hook.
+var (
+	previewExecMu sync.Mutex
+	previewExec   func(context.Context, previewrun.Request) previewrun.Result
+)
+
+func setPreviewExec(fn func(context.Context, previewrun.Request) previewrun.Result) {
+	previewExecMu.Lock()
+	previewExec = fn
+	previewExecMu.Unlock()
+}
+
+func currentPreviewExec() func(context.Context, previewrun.Request) previewrun.Result {
+	previewExecMu.Lock()
+	defer previewExecMu.Unlock()
+	return previewExec
 }
 
 // New constructs a Handler.

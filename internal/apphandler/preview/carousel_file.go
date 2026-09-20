@@ -1,6 +1,7 @@
 package preview
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
 
@@ -13,11 +14,11 @@ import (
 
 // CloseCarouselFilePreview closes the carousel child-column preview.
 func (h *Handler) CloseCarouselFilePreview() {
+	h.cancelPreviewRun(previewTargetCarousel)
 	h.mu.Lock()
 	h.model.CarouselFilePreview = ui.FilePreviewState{}
 	h.mu.Unlock()
 	h.clearFilePreviewHold(previewTargetCarousel)
-	h.carouselFilePreviewRunGen.Add(1)
 	h.carouselFilePreviewLastFingerprint = ""
 }
 
@@ -269,14 +270,14 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 	// Keep ImagePayload* until the new encode finishes (stale-while-revalidate);
 	// patchFilePreviewPending doesn't touch it.
 	h.patchFilePreviewPending(previewTargetCarousel, path, false)
-	gen := h.carouselFilePreviewRunGen.Add(1)
+	ctx, gen := h.beginPreviewRun(previewTargetCarousel)
 	req := h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel, false)
-	go h.dispatchCarouselFilePreview(path, req, gen)
+	go h.dispatchCarouselFilePreview(ctx, path, req, gen)
 }
 
 // dispatchCarouselFilePreview is dispatchFilePreviewCheck for the carousel side preview.
-func (h *Handler) dispatchCarouselFilePreview(path string, req previewrun.Request, gen uint64) {
-	h.dispatchFilePreviewCheck(path, req, previewTargetCarousel, gen,
+func (h *Handler) dispatchCarouselFilePreview(ctx context.Context, path string, req previewrun.Request, gen uint64) {
+	h.dispatchFilePreviewCheck(ctx, path, req, previewTargetCarousel, gen,
 		"Not a text file", "Not a file", h.patchCarouselFilePreviewMessage)
 }
 
@@ -296,9 +297,9 @@ func (h *Handler) refreshCarouselFilePreview() {
 	}
 	workDir := h.host.ActivePanel().PathString()
 	req := h.previewRequest(st.Path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel, false)
-	gen := h.carouselFilePreviewRunGen.Add(1)
+	ctx, gen := h.beginPreviewRun(previewTargetCarousel)
 	h.postRenderWake()
-	go h.runPreview(h.ctx, req, previewTargetCarousel, gen)
+	go h.runPreview(ctx, req, previewTargetCarousel, gen)
 }
 
 // ReconcileCarouselFilePreview reapplies the carousel child-column file preview when its

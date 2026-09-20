@@ -57,6 +57,7 @@ func (h *Handler) closeOrQuitFilePreview() bool {
 
 // CloseFilePreviewFullscreen exits the F3 fullscreen preview view back to the browser.
 func (h *Handler) CloseFilePreviewFullscreen() {
+	h.cancelPreviewRun(previewTargetFullscreen)
 	h.mu.Lock()
 	h.model.FullscreenFilePreview = ui.FilePreviewState{}
 	h.model.FullscreenFilePreviewSearchField = dialog.FileDialogField{}
@@ -446,14 +447,14 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 			contentH = 0
 		}
 	}
-	gen := h.filePreviewRunGen.Add(1)
+	ctx, gen := h.beginPreviewRun(previewTargetFullscreen)
 	h.postRenderWake()
 	req := h.previewRequest(path, tw, contentH, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen, isDir)
 	if isDir {
-		go h.runPreview(h.ctx, req, previewTargetFullscreen, gen)
+		go h.runPreview(ctx, req, previewTargetFullscreen, gen)
 		return nil
 	}
-	go h.dispatchFilePreviewCheck(path, req, previewTargetFullscreen, gen,
+	go h.dispatchFilePreviewCheck(ctx, path, req, previewTargetFullscreen, gen,
 		"View: not a text file", "View: not a file", h.patchFullscreenPreviewMessage)
 	return nil
 }
