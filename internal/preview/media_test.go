@@ -1,9 +1,15 @@
 package preview
 
 import (
+	"context"
 	"image"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
 func TestCalculateTimeMarks(t *testing.T) {
@@ -116,5 +122,68 @@ func TestComposeThumbGridNoBlackMargins(t *testing.T) {
 		if r == 0 && g == 0 && bl == 0 {
 			t.Fatalf("pixel at %v is black (margin)", pt)
 		}
+	}
+}
+
+// videoPNGCache is a MediaCache that serves a prebuilt video-grid PNG so RunMediaThumbs
+// can be tested without ffmpeg.
+type videoPNGCache struct {
+	png []byte
+}
+
+func (c videoPNGCache) LoadStill(context.Context, string, int64, int64, int, func(context.Context) ([]byte, string, error)) ([]byte, string, error) {
+	return nil, "", nil
+}
+func (c videoPNGCache) LoadRender(context.Context, string, int64, int64, previewpanel.ImageProtocol, bool, bool, int, int, func(context.Context) ([]byte, int, int, error)) ([]byte, int, int, error) {
+	return nil, 0, 0, nil
+}
+func (c videoPNGCache) LoadVideo(_ context.Context, _ string, _, _ int64, _, _, _ int, _ func(int, int), _ func(context.Context, func(int, int)) ([]byte, error)) ([]byte, error) {
+	return c.png, nil
+}
+func (c videoPNGCache) HasVideo(string, int64, int64, int, int, int) bool { return true }
+func (c videoPNGCache) InFlight(string) bool                             { return false }
+func (c videoPNGCache) SnapshotInFlight() []string                       { return nil }
+
+// TestRunMediaThumbsSixelUnderTmuxShrinksToFit covers a high-entropy video grid whose first
+// encode exceeds tmux's sixel byte cap: it must shrink (or fall back with an explicit
+// "too large for tmux" caption), same as stills — not silently drop the image.
+func TestRunMediaThumbsSixelUnderTmuxShrinksToFit(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "grid.png")
+	writeNoisyTestPNG(t, path, 700, 700)
+	pngBytes, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := Request{
+		Path:          path,
+		Preview:       config.PreviewConfig{Images: true, VideoThumbCols: 2, VideoThumbRows: 2, VideoMetadata: true},
+		Media:         true,
+		ImageMaxPxW:   700,
+		ImageMaxPxH:   700,
+		ImageCellPxH:  20,
+		ImageProtocol: previewpanel.ImageProtocolSixel,
+		ImageInTmux:   true,
+		Cache:         videoPNGCache{png: pngBytes},
+	}
+	res := RunMediaThumbs(context.Background(), req, &MediaThumbWork{meta: "Media / test clip", duration: 10}, nil)
+	if res.ErrorMsg != "" {
+		t.Fatalf("ErrorMsg = %q", res.ErrorMsg)
+	}
+	if res.ImagePayload == "" {
+		if !strings.Contains(res.CombinedText, "too large for tmux") {
+			t.Fatalf("ImagePayload empty without explicit fallback, CombinedText = %q", res.CombinedText)
+		}
+		return
+	}
+	if len(res.ImagePayload) >= config.DefaultPreviewTmuxSixelMaxBytes {
+		t.Fatalf("ImagePayload len = %d, want < %d", len(res.ImagePayload), config.DefaultPreviewTmuxSixelMaxBytes)
+	}
+	if res.ImagePxW <= 0 || res.ImagePxH <= 0 {
+		t.Fatalf("ImagePxW/H = %d/%d, want positive", res.ImagePxW, res.ImagePxH)
+	}
+	if res.ImagePxW >= 700 || res.ImagePxH >= 700 {
+		t.Fatalf("ImagePxW/H = %d/%d, want smaller than the unshrunk 700x700 fit", res.ImagePxW, res.ImagePxH)
 	}
 }

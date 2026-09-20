@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
@@ -190,29 +189,22 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork, onPr
 		return metaResult
 	}
 
-	grid, err := DecodePNGBytes(pngBytes)
+	payload, pxW, pxH, err := EncodeRenderPayload(pngBytes, req.ImageMaxPxW, thumbMaxH, req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux)
 	if err != nil {
-		metaResult.CombinedText = JoinMediaText(metaText, "(thumbnails failed)")
-		return metaResult
-	}
-	grid = fitImage(grid, req.ImageMaxPxW, thumbMaxH)
-
-	bounds := grid.Bounds()
-	payload, err := encodeImagePayload(grid, req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux)
-	if err != nil || payload == "" {
-		return metaResult
-	}
-	if req.ImageProtocol == previewpanel.ImageProtocolSixel && req.ImageInTmux &&
-		len(payload) >= config.DefaultPreviewTmuxSixelMaxBytes {
+		if err == errRenderTmuxTooLarge {
+			metaResult.CombinedText = JoinMediaText(metaText, "too large for tmux")
+		} else {
+			metaResult.CombinedText = JoinMediaText(metaText, "(thumbnails failed)")
+		}
 		return metaResult
 	}
 
 	return Result{
 		Source:                   previewpanel.SourceExternalANSI,
 		CombinedText:             metaText,
-		ImagePayload:             payload,
-		ImagePxW:                 bounds.Dx(),
-		ImagePxH:                 bounds.Dy(),
+		ImagePayload:             string(payload),
+		ImagePxW:                 pxW,
+		ImagePxH:                 pxH,
 		ImageProtocol:            req.ImageProtocol,
 		ImageUnicodePlaceholder:  req.ImageUnicodePlaceholder,
 		ImageInTmux:              req.ImageInTmux,
