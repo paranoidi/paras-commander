@@ -181,8 +181,8 @@ func (h *Handler) killSelectedCommand() {
 // terminate-vs-kill collapsing the embedded shell panel already relies on. Returns false when
 // idx isn't a live PTY row, so callers fall back to the ordinary os.Process signal path.
 func (h *Handler) closeSelectedPTYRow(idx int) bool {
-	sess := h.currentEntryPTY()
-	if sess == nil || sess.idx != idx {
+	sess := h.entryPTYByIndex(idx)
+	if sess == nil {
 		return false
 	}
 	_ = sess.sub.Close()

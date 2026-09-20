@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
-	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/textutil"
@@ -89,14 +88,13 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 }
 
 func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec RunForEachBatchSpec) {
+	var panelOwner int64
+	acquired := false
 	defer func() {
 		h.EndBatch()
-		if spec.PTY && !spec.Background {
-			h.mu.Lock()
-			h.model.TerminalPanel.Visible = false
-			h.model.TerminalPanel.Focused = false
-			h.model.TerminalPanel.Drawer = nil
-			h.mu.Unlock()
+		if acquired {
+			h.postPanelWakeAndWait(ctx, WakePayload{TerminalPanelHide: true})
+			h.releaseForegroundPanel(panelOwner)
 		}
 		var snap []ui.CommandRunEntry
 		h.mu.RLock()
@@ -124,16 +122,14 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 	allowFilter := spec.AllowFiles || spec.AllowDirs
 
 	if spec.PTY && !spec.Background {
-		h.mu.Lock()
-		h.model.ViewMode = ui.ViewBrowser
-		tp := &h.model.TerminalPanel
-		if tp.Rows < config.MinShellTerminalPanelHeight {
-			tp.Rows = config.DefaultShellTerminalPanelHeight
+		panelOwner = h.ptyOwnerSeq.Add(1)
+		if !h.acquireForegroundPanel(ctx, panelOwner) {
+			h.markCommandsCanceled(start, len(spec.Entries))
+			h.PostRenderWake()
+			return
 		}
-		tp.Visible = true
-		tp.Focused = true
-		h.mu.Unlock()
-		h.PostRenderWake()
+		acquired = true
+		h.postPanelWakeAndWait(ctx, WakePayload{TerminalPanelShow: true})
 	}
 
 	for i, ent := range spec.Entries {
@@ -243,7 +239,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 		}
 		var res cmdrun.RunResult
 		if spec.PTY {
-			res = h.runEntryPTY(ctx, idx, argv, workDir, spec.Background)
+			res = h.runEntryPTY(ctx, idx, argv, workDir, panelOwner)
 		} else {
 			res = cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 				h.SetProcess(idx, p)
@@ -271,11 +267,9 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 
 // runEntryPTY runs argv attached to a live pseudo-TTY shown in the bottom terminal panel
 // (the same strip Alt+P uses), blocking until it exits. Falls back silently to the ordinary
-// cmdrun.RunTracked path when PTY sessions aren't supported on this platform. When background
-// is true (RunForEachBatchSpec.Background) the command still runs on a real PTY (so tools that
-// open /dev/tty for prompts work) but the panel is left untouched — background batches must not
-// steal the screen.
-func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workDir string, background bool) cmdrun.RunResult {
+// cmdrun.RunTracked path when PTY sessions aren't supported on this platform. panelOwner is
+// the foreground batch lease id (0 for background): only the owning batch installs a drawer.
+func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workDir string, panelOwner int64) cmdrun.RunResult {
 	sub, err := subshell.StartArgv(argv, workDir)
 	if err != nil {
 		if errors.Is(err, subshell.ErrUnsupportedPlatform) {
@@ -298,12 +292,11 @@ func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workD
 		return cmdrun.RunResult{LaunchErr: err, ExitCode: -1}
 	}
 
-	h.setEntryPTY(&entryPTYSession{idx: idx, sub: sub, feed: feed})
-	if !background {
-		h.mu.Lock()
-		h.model.TerminalPanel.Drawer = &subshell.PanelDrawer{Sub: sub, Feed: feed, Style: h.host.Styles().TerminalTextStyle()}
-		h.mu.Unlock()
-		h.PostRenderWake()
+	sess := &entryPTYSession{idx: idx, sub: sub, feed: feed}
+	h.registerEntryPTY(panelOwner, sess)
+	if panelOwner != 0 {
+		drawer := &subshell.PanelDrawer{Sub: sub, Feed: feed, Style: h.host.Styles().TerminalTextStyle()}
+		h.postPanelWakeAndWait(ctx, WakePayload{TerminalPanelDrawer: drawer})
 	}
 
 	// Unlike cmdrun.RunTracked (exec.CommandContext, killed automatically on ctx cancel),
@@ -318,12 +311,9 @@ func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workD
 	exitCode := sub.ExitCode()
 	stdout := feed.SnapshotText()
 	_ = sub.Close()
-	h.setEntryPTY(nil)
-	if !background {
-		h.mu.Lock()
-		h.model.TerminalPanel.Drawer = nil
-		h.mu.Unlock()
-		h.PostRenderWake()
+	h.unregisterEntryPTY(idx)
+	if panelOwner != 0 {
+		h.PostWake(WakePayload{TerminalPanelClearDrawer: true})
 	}
 
 	return cmdrun.RunResult{ExitCode: exitCode, Stdout: []byte(stdout)}
