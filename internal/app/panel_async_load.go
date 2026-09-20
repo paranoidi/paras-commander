@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -12,6 +13,59 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
+
+// coalescingQueue holds async completions so a burst of goroutines posts at most one tcell
+// interrupt (see treeChildResultQueue). tcell's event channel is a fixed 10-slot buffer;
+// PostEvent is silently dropped when it is full.
+type coalescingQueue[T any] struct {
+	mu      sync.Mutex
+	pending []T
+	posted  bool
+}
+
+func (q *coalescingQueue[T]) push(p T) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.pending = append(q.pending, p)
+	if q.posted {
+		return false
+	}
+	q.posted = true
+	return true
+}
+
+func (q *coalescingQueue[T]) drain() []T {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	items := q.pending
+	q.pending = nil
+	q.posted = false
+	return items
+}
+
+// asyncWakeQueues is per-App storage for the listing/git/carousel coalescing queues. The queues
+// cannot live on App (app.go is an unowned hub); a pointer-keyed map keeps them isolated across
+// parallel tests.
+type asyncWakeQueues struct {
+	panel    [3]coalescingQueue[panelAsyncLoadPayload]
+	git      coalescingQueue[gitStatusPayload]
+	carousel [3]coalescingQueue[carouselSnapshotPayload]
+}
+
+var asyncWakesByApp sync.Map // *App -> *asyncWakeQueues
+
+func asyncWakes(a *App) *asyncWakeQueues {
+	actual, _ := asyncWakesByApp.LoadOrStore(a, &asyncWakeQueues{})
+	return actual.(*asyncWakeQueues)
+}
+
+func postGuaranteedWake(screen tcell.Screen, payload any) {
+	// PostEventWait is deprecated as "unsafe" (it can block indefinitely if the main loop stalls)
+	// but blocking here is safe: at most one goroutine is ever inside this call per queue, and
+	// guaranteed delivery is required so the queue's posted flag cannot get stuck true with
+	// nothing to drain it. See treeChildResultQueue.
+	screen.PostEventWait(tcell.NewEventInterrupt(payload)) //nolint:staticcheck // SA1019: guaranteed delivery required, see comment above
+}
 
 // fetchListingForAsyncLoad is panel.FetchListing behind a package-level seam so tests can
 // substitute a fake (e.g. one that blocks forever) without touching the real filesystem.
@@ -100,12 +154,15 @@ func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 		timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 		snap := a.panelByID(panelID).ListingRefreshSnapshot(req.Loc, timeout)
 		a.raceAsyncListingFetch(snap, timeout, true, func(res asyncListingResult) {
-			_ = a.screen.PostEvent(tcell.NewEventInterrupt(panelAsyncLoadPayload{
+			p := panelAsyncLoadPayload{
 				panelID: panelID,
 				gen:     gen,
 				req:     req,
 				res:     res,
-			}))
+			}
+			if asyncWakes(a).panel[panelID].push(p) {
+				postGuaranteedWake(a.screen, panelAsyncLoadPayload{panelID: panelID})
+			}
 		})
 		return true
 	}
@@ -121,6 +178,20 @@ func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 // real panels — can go from "the thing this load was for" to "not currently shown" without any
 // new load being scheduled to bump the generation counter.
 func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
+	items := asyncWakes(a).panel[p.panelID].drain()
+	if len(items) == 0 {
+		return a.applyOnePanelAsyncLoad(p)
+	}
+	changed := false
+	for _, item := range items {
+		if a.applyOnePanelAsyncLoad(item) {
+			changed = true
+		}
+	}
+	return changed
+}
+
+func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	if a.panelAsyncLoadGen[p.panelID].Load() != p.gen {
 		return false
 	}

@@ -1,17 +1,21 @@
 package app
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -355,5 +359,58 @@ func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
 	after := app.model.Primary.CarouselSideCache.Child
 	if !app.model.Primary.CarouselSideCache.ChildOK || after.Path.String() != oak {
 		t.Fatalf("child cache after flush = %+v ok=%v, want oak", after, app.model.Primary.CarouselSideCache.ChildOK)
+	}
+}
+
+// TestCarouselSnapshotSurvivesSaturatedEventQueue is the characterizing test for dropped
+// carousel completions: with tcell's queue full, the parent snapshot still lands exactly once.
+func TestCarouselSnapshotSurvivesSaturatedEventQueue(t *testing.T) {
+	root := t.TempDir()
+	inner := filepath.Join(root, "willow")
+	if err := os.Mkdir(inner, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 160, 30)
+	app := newApp(t, screen, inner)
+	app.config.SFTP.ListTimeoutSecs = 5
+	app.model.Primary.CarouselMode = true
+	drainScreenInterrupts(app, screen)
+
+	parentLoc, err := pathloc.File(root)
+	if err != nil {
+		t.Fatalf("pathloc.File: %v", err)
+	}
+
+	block := make(chan struct{})
+	started := make(chan struct{})
+	var startOnce sync.Once
+	swapFetchListingForAsyncLoad(t, func(ctx context.Context, snap panel.ListingRefreshSnapshot) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
+		startOnce.Do(func() { close(started) })
+		<-block
+		return nil, parentLoc, false, false, nil
+	})
+
+	left := app.panelByID(ui.PrimaryPanel)
+	app.scheduleCarouselParentSnapshot(ui.PrimaryPanel, 20)
+	<-started
+	if left.CarouselParentCacheValid() {
+		t.Fatal("parent cache should be invalid while the fetch is held")
+	}
+
+	app.screen = dropPostEventScreen{SimulationScreen: screen}
+	saturateSimulationEventQueue(t, screen)
+	close(block)
+
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return left.CarouselParentCacheValid() })
+	if !left.CarouselParentCacheValid() {
+		t.Fatal("parent cache should become valid once even when the tcell queue was full")
+	}
+	if !left.CarouselSideCache.ParentOK {
+		t.Fatal("ParentOK should be true after the single apply")
+	}
+
+	drainScreenInterrupts(app, screen)
+	if !left.CarouselParentCacheValid() || !left.CarouselSideCache.ParentOK {
+		t.Fatal("second drain must not clear the landed parent snapshot")
 	}
 }

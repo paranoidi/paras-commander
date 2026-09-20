@@ -6,12 +6,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
+
+// gitStatusForListing is gitstatus.Cache.StatusesForListing behind a package-level seam so tests
+// can hold a fetch until the tcell queue is saturated.
+var gitStatusForListing = func(c *gitstatus.Cache, ctx context.Context, workRoot, listDir string, paths []gitstatus.ListingPaths) (map[string]gitstatus.Cell, error) {
+	return c.StatusesForListing(ctx, workRoot, listDir, paths)
+}
 
 type gitStatusPayload struct {
 	panelID  int
@@ -98,15 +103,18 @@ func (a *App) gitStatusScheduler(panelID int) panel.GitStatusScheduler {
 		paths := append([]gitstatus.ListingPaths(nil), req.Paths...)
 		workRoot := req.WorkRoot
 		go func() {
-			byPath, err := a.gitStatusCache.StatusesForListing(context.Background(), workRoot, listDir, paths)
-			_ = a.screen.PostEvent(tcell.NewEventInterrupt(gitStatusPayload{
+			byPath, err := gitStatusForListing(a.gitStatusCache, context.Background(), workRoot, listDir, paths)
+			p := gitStatusPayload{
 				panelID:  panelID,
 				gen:      gen,
 				cwdLevel: cwdLevel,
 				listDir:  listDir,
 				byPath:   byPath,
 				err:      err,
-			}))
+			}
+			if asyncWakes(a).git.push(p) {
+				postGuaranteedWake(a.screen, gitStatusPayload{})
+			}
 		}()
 		return true
 	}
@@ -124,6 +132,20 @@ func (a *App) gitStatusScheduler(panelID int) panel.GitStatusScheduler {
 // the two real panels, the overlay can go from "the thing this fetch was for" to "not currently
 // shown" without any new fetch being scheduled to bump the generation counter.
 func (a *App) applyGitStatusLoad(p gitStatusPayload) bool {
+	items := asyncWakes(a).git.drain()
+	if len(items) == 0 {
+		return a.applyOneGitStatusLoad(p)
+	}
+	changed := false
+	for _, item := range items {
+		if a.applyOneGitStatusLoad(item) {
+			changed = true
+		}
+	}
+	return changed
+}
+
+func (a *App) applyOneGitStatusLoad(p gitStatusPayload) bool {
 	if p.panelID == ui.QuickViewOverlayPanel && !a.model.QuickViewDirOverlayActive {
 		return false
 	}

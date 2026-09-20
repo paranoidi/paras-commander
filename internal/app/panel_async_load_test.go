@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -152,5 +154,99 @@ func TestAsyncLoadSchedulerAppliesFastResult(t *testing.T) {
 	}
 	if got := pan.PathString(); got != sub {
 		t.Fatalf("panel path = %q, want %q", got, sub)
+	}
+}
+
+// dropPostEventScreen simulates a saturated tcell queue: PostEvent always fails with
+// ErrEventQFull (the production drop path), while PostEventWait still delivers onto the
+// wrapped simulation screen.
+type dropPostEventScreen struct {
+	tcell.SimulationScreen
+}
+
+func (s dropPostEventScreen) PostEvent(tcell.Event) error {
+	return tcell.ErrEventQFull
+}
+
+// saturateSimulationEventQueue fills tcell's 10-slot interrupt queue so a later PostEvent is
+// dropped (ErrEventQFull). Callers must drain leftover startup posts first.
+func saturateSimulationEventQueue(t *testing.T, screen tcell.SimulationScreen) {
+	t.Helper()
+	for i := 0; i < 10; i++ {
+		if err := screen.PostEvent(tcell.NewEventInterrupt(struct{ n int }{n: i})); err != nil {
+			t.Fatalf("saturating PostEvent(%d): %v", i, err)
+		}
+	}
+	if err := screen.PostEvent(tcell.NewEventInterrupt(struct{}{})); err != tcell.ErrEventQFull {
+		t.Fatalf("queue should be full, PostEvent = %v, want ErrEventQFull", err)
+	}
+}
+
+func drainScreenInterrupts(app *App, screen tcell.SimulationScreen) {
+	for screen.HasPendingEvent() {
+		ev := screen.PollEvent()
+		if ie, ok := ev.(*tcell.EventInterrupt); ok {
+			app.handleInterruptPayload(ie.Data())
+		}
+	}
+}
+
+// TestPanelAsyncLoadSurvivesSaturatedEventQueue is the characterizing test for dropped listing
+// completions: tcell's 10-slot queue is filled, then the fetch finishes. The result must still
+// apply exactly once (ListingPending clears, path lands, OnDirectoryChange fires once).
+func TestPanelAsyncLoadSurvivesSaturatedEventQueue(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	root := t.TempDir()
+	app := newApp(t, screen, root)
+	app.config.SFTP.ListTimeoutSecs = 5
+	drainScreenInterrupts(app, screen)
+
+	sub := filepath.Join(root, "harbor")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	loc, err := pathloc.File(sub)
+	if err != nil {
+		t.Fatalf("pathloc.File: %v", err)
+	}
+
+	block := make(chan struct{})
+	started := make(chan struct{})
+	var startOnce sync.Once
+	swapFetchListingForAsyncLoad(t, func(ctx context.Context, snap panel.ListingRefreshSnapshot) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
+		startOnce.Do(func() { close(started) })
+		<-block
+		return nil, loc, false, false, nil
+	})
+
+	pan := app.panelByID(ui.PrimaryPanel)
+	var applies int
+	pan.OnDirectoryChange = func() { applies++ }
+	if err := pan.NavigateTo(sub, "", app.activeViewportRows()); err != nil {
+		t.Fatalf("NavigateTo: %v", err)
+	}
+	<-started
+	if !pan.ListingPending {
+		t.Fatal("ListingPending should be true while the fetch is held")
+	}
+
+	app.screen = dropPostEventScreen{SimulationScreen: screen}
+	saturateSimulationEventQueue(t, screen)
+	close(block)
+
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return !pan.ListingPending })
+	if pan.ListingPending {
+		t.Fatal("ListingPending should clear once even when the tcell queue was full")
+	}
+	if got := pan.PathString(); got != sub {
+		t.Fatalf("panel path = %q, want %q", got, sub)
+	}
+	if applies != 1 {
+		t.Fatalf("OnDirectoryChange fired %d times, want 1", applies)
+	}
+
+	drainScreenInterrupts(app, screen)
+	if applies != 1 {
+		t.Fatalf("second drain re-applied the listing (%d OnDirectoryChange calls)", applies)
 	}
 }

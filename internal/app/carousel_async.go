@@ -66,7 +66,16 @@ func (a *App) clearCarouselPaintDefer(panelID int) {
 // on the child's arrival would produce exactly the two-phase relayout the deferral exists to avoid.
 // The carouselPaintDeferMaxMS deadline still guarantees release if the parent fetch never lands.
 func (a *App) applyCarouselSnapshotAndRender(d carouselSnapshotPayload) bool {
-	applied := a.applyCarouselSnapshot(d)
+	items := asyncWakes(a).carousel[d.panelID].drain()
+	if len(items) == 0 {
+		items = []carouselSnapshotPayload{d}
+	}
+	applied := false
+	for _, item := range items {
+		if a.applyCarouselSnapshot(item) {
+			applied = true
+		}
+	}
 	deferred := a.carouselPaintDefer[d.panelID].active
 	if deferred && a.carouselParentPaintPending(d.panelID) {
 		return false
@@ -157,7 +166,7 @@ func (a *App) scheduleCarouselSnapshot(panelID int, isChild bool, loc pathloc.Pa
 	timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 	snap := a.panelByID(panelID).ListingRefreshSnapshot(loc, timeout)
 	a.raceAsyncListingFetch(snap, timeout, false, func(res asyncListingResult) {
-		_ = a.screen.PostEvent(tcell.NewEventInterrupt(carouselSnapshotPayload{
+		p := carouselSnapshotPayload{
 			panelID:        panelID,
 			isChild:        isChild,
 			gen:            gen,
@@ -169,7 +178,10 @@ func (a *App) scheduleCarouselSnapshot(panelID int, isChild bool, loc pathloc.Pa
 			viewportRows:   viewportRows,
 			centerRecalled: centerRecalled,
 			err:            res.err,
-		}))
+		}
+		if asyncWakes(a).carousel[panelID].push(p) {
+			postGuaranteedWake(a.screen, carouselSnapshotPayload{panelID: panelID})
+		}
 	})
 }
 
