@@ -86,11 +86,10 @@ func (h *Handler) RunUserMenuCommandDialog(ctx context.Context, argv []string, w
 		} else {
 			dialogTitle = fmt.Sprintf("exit %d", res.ExitCode)
 		}
-		stderr := strings.TrimSpace(string(res.Stderr))
-		if stderr != "" {
-			lines = append(lines, "--- stderr ---")
-			lines = append(lines, strings.Split(stderr, "\n")...)
-		}
+	}
+	if stderr := strings.TrimSpace(string(res.Stderr)); stderr != "" {
+		lines = append(lines, "--- stderr ---")
+		lines = append(lines, strings.Split(stderr, "\n")...)
 	}
 
 	st := dialog.CommandOutputDialogState{
