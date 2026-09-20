@@ -10,7 +10,7 @@ Once new feature is implemented update llm-docs/index.md for agents to later ref
 
 llm-docs must always describe the current state of the code, never the history of how it got there. Don't write "used to be X, now Y", "was later renamed", "previously", "bug fixed:", or changelog-style entries — just document what's true now. When updating an existing llm-docs section for a change, rewrite it to read as if it were written fresh today, not as a diff appended to the old explanation.
 
-Leave compiled binary after running tests. Build with `go build -o pc ./cmd/pc` — the binary must be named `pc`, not `paras-commander` (the module/repo directory name).
+Leave compiled binary after running tests. Build with `go build -o pc ./cmd/pc` — the binary must be named `pc`, not `paras-commander` (the module/repo directory name). Merge-ready verification is `golangci-lint run ./...` (v2.12.1) plus `go test -race ./...`, matching CI; `task test` is the fast non-race inner loop and `task verify` runs lint + race + that `pc` build.
 
 When user request shortcut to be added it needs to be configurable in `keybindings.toml`. Check if requested shortcut works in terminal. Many shortcut combinations do not. If user requests a shortcut that is already taken in that context, choose a reasonable next best option and notify the user.
 
@@ -223,8 +223,13 @@ Logic lives in `internal/ui/dialog_field.go`. When opening a dialog with a sugge
 
 # Verification
 
-Changes must pass `golangci-lint run ./...` with the repo `.golangci.yml` (see https://golangci-lint.run/).
-Changes must pass `go test ./...`.
+Merge-ready (same as CI, plus the local artifact):
+
+- `golangci-lint run ./...` with the repo `.golangci.yml` and **golangci-lint v2.12.1** (see https://golangci-lint.run/).
+- `go test -race ./...`
+- `go build -o pc ./cmd/pc` (binary must be named `pc`)
+
+`task verify` runs that sequence. `task test` / `go test ./...` is the fast non-race inner loop only. `govulncheck` is optional and is not a merge requirement.
 
 # File deletions
 

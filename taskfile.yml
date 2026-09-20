@@ -65,16 +65,23 @@ tasks:
       - "{{.BIN_DIR}}/govulncheck ./..."
 
   test:
-    desc: Run Go tests
+    desc: Fast inner-loop Go tests (no race detector)
     cmds:
       - go test ./...
 
   race:
-    desc: Run Go race tests
+    desc: Run Go tests with the race detector (same suite CI runs)
     cmds:
       - go test -race ./...
 
   build:
-    desc: Build pc binary
+    desc: Build the pc binary in the repo root
     cmds:
       - go build -o pc ./cmd/pc
+
+  verify:
+    desc: Merge-ready local gate (lint + race tests + pc artifact)
+    cmds:
+      - task: lint
+      - task: race
+      - task: build

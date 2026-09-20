@@ -51,10 +51,10 @@ To install from a specific version tag or commit, replace `@latest` with that re
 ## Build
 
 ```bash
-go build ./cmd/pc
+go build -o pc ./cmd/pc
 ```
 
-This produces a `pc` binary in the repo root.
+This produces a `pc` binary in the repo root. The artifact must be named `pc`, not `paras-commander`.
 
 ## Run
 
@@ -136,25 +136,38 @@ C-p = [
 ]
 ```
 
-## Test
+## Test and lint
+
+CI (and a merge-ready local run) is **golangci-lint v2.12.1** plus **`go test -race ./...`**. A local `pc` artifact is **`go build -o pc ./cmd/pc`**. `govulncheck` is optional and is not a merge gate.
+
+Fast inner loop (no race detector):
 
 ```bash
 go test ./...
+# or: task test
 ```
 
-## Lint
-
-Requires [go-task](https://taskfile.dev). Install tools into `./bin`, then lint:
+Merge-ready / pre-push (same guarantees as CI, plus the local `pc` binary):
 
 ```bash
-task setup   # install golangci-lint, errcheck, ineffassign, gocyclo into ./bin
-task lint    # golangci-lint (includes errcheck, ineffassign, gocyclo)
-task errcheck
-task ineffassign
-task gocyclo
+golangci-lint run ./...
+go test -race ./...
+go build -o pc ./cmd/pc
+# or: task verify
 ```
 
-Or, if [golangci-lint](https://golangci-lint.run/welcome/install/) (v2) is already on your PATH:
+Requires [go-task](https://taskfile.dev) for the Taskfile targets. Install tools into `./bin`, then lint:
+
+```bash
+task setup   # install golangci-lint v2.12.1, errcheck, ineffassign, gocyclo into ./bin
+task lint    # golangci-lint (includes errcheck, ineffassign, gocyclo)
+task race    # go test -race ./...
+task verify  # lint + race + go build -o pc ./cmd/pc
+```
+
+`task errcheck`, `task ineffassign`, and `task gocyclo` are optional debug helpers; `task lint` already covers them. `task govulncheck` is optional.
+
+Or, if [golangci-lint](https://golangci-lint.run/welcome/install/) **v2.12.1** is already on your PATH:
 
 ```bash
 golangci-lint run ./...
