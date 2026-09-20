@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
 // tryDispatchAuxiliaryScreens switches between Jobs, Commands, and Messages screens.
@@ -10,6 +11,13 @@ import (
 func (a *App) tryDispatchAuxiliaryScreens(actionID string) bool {
 	switch actionID {
 	case keymap.ActionJobsOpen, keymap.ActionCommandsOpen, keymap.ActionMessagesOpen:
+		switch a.model.ViewMode {
+		case ui.ViewCompare:
+			a.compareCtrl.DiscardReturn()
+			a.compareCtrl.Close()
+		case ui.ViewDedup:
+			a.dedupCtrl.Close()
+		}
 		a.dispatch(actionID)
 		return true
 	default:

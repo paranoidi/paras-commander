@@ -182,6 +182,41 @@ func TestEnsureSelectionVisibleScrollsWhenCursorPastViewport(t *testing.T) {
 	}
 }
 
+func TestCloseClearsFilterDialog(t *testing.T) {
+	model := &ui.Model{
+		Primary:   panelStateAt(pathloc.MustParse("/alpha")),
+		Secondary: panelStateAt(pathloc.MustParse("/beta")),
+	}
+	h := New(Deps{Host: compareHandlerHost{}, Model: model})
+	h.Open()
+	h.OpenFilterDialog()
+	if !model.CompareFilterDialog.Open {
+		t.Fatal("filter dialog did not open")
+	}
+	h.Close()
+	if model.CompareFilterDialog.Open {
+		t.Fatal("filter dialog still open after Close")
+	}
+}
+
+func TestRefreshClearsFilterDialog(t *testing.T) {
+	model := &ui.Model{
+		Primary:   panelStateAt(pathloc.MustParse("/alpha")),
+		Secondary: panelStateAt(pathloc.MustParse("/beta")),
+	}
+	h := New(Deps{Host: compareHandlerHost{}, Model: model})
+	h.Open()
+	h.OpenFilterDialog()
+	h.Refresh()
+	if model.CompareFilterDialog.Open {
+		t.Fatal("filter dialog still open after Refresh")
+	}
+	if model.ViewMode != ui.ViewCompare {
+		t.Fatalf("ViewMode = %v, want compare", model.ViewMode)
+	}
+	h.Close()
+}
+
 func TestEnsureSelectionVisibleClampsMaxScroll(t *testing.T) {
 	rows := make([]comparepkg.Row, 10)
 	for i := range rows {

@@ -193,6 +193,7 @@ func (h *Handler) teardown() {
 	h.model.CompareView = ui.CompareViewState{}
 	h.model.CompareSnapshot = comparepkg.Snapshot{}
 	h.model.CompareMergeDialog = dialog.CompareMergeDialogState{}
+	h.model.CompareFilterDialog = dialog.CompareFilterDialogState{}
 }
 
 // PollUpdates applies the latest session snapshot. Returns true when UI should repaint.
