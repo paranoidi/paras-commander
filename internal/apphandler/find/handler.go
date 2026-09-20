@@ -908,6 +908,24 @@ func (h *Handler) OpenSelectedFullscreenPreview() {
 	}
 }
 
+// testOnRankFindCorpus, if set, runs on a FullRanked cache miss (tests assert
+// a cached zero-match result does not take this path).
+var testOnRankFindCorpus func()
+
+func findFullRankedCacheValid(st *dialog.FindDialogState, gen int) bool {
+	return st.FullRankedGen == gen &&
+		st.FullRankedEntriesLen == len(st.Entries) &&
+		st.FullRankedOnlyDirs == st.OnlyDirectories &&
+		st.FullRankedOnlyFiles == st.OnlyFiles
+}
+
+func nonNilFindIndices(indices []int) []int {
+	if indices == nil {
+		return []int{}
+	}
+	return indices
+}
+
 func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
 	q := search.Parse(st.Query)
 	if q.Empty() {
@@ -916,28 +934,16 @@ func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
 	h.rankMu.Lock()
 	gen := h.rankGen
 	h.rankMu.Unlock()
-	if st.FullRankedGen == gen &&
-		st.FullRankedEntriesLen == len(st.Entries) &&
-		st.FullRankedOnlyDirs == st.OnlyDirectories &&
-		st.FullRankedOnlyFiles == st.OnlyFiles &&
-		len(st.FullRanked) > 0 {
-		return st.FullRanked
+	if findFullRankedCacheValid(st, gen) {
+		return nonNilFindIndices(st.FullRanked)
 	}
-	return h.rankFindCorpusIndices(st)
-}
-
-func (h *Handler) rankFindCorpusIndices(st *dialog.FindDialogState) []int {
-	if len(st.Entries) == 0 {
-		return nil
+	if testOnRankFindCorpus != nil {
+		testOnRankFindCorpus()
 	}
-	ranked, _ := dialog.RankFindEntries(
-		st.Entries,
-		st.Query,
-		st.OnlyDirectories,
-		st.OnlyFiles,
-		h.config.Filter.CaseInsensitive,
-	)
-	return ranked
+	if !st.RankPending {
+		h.scheduleFindRank(0)
+	}
+	return []int{}
 }
 
 func (h *Handler) findDialogSelectAll() {
