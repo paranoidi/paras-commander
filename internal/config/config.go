@@ -238,7 +238,8 @@ type ShellConfig struct {
 	// Empty uses $SHELL then bash fallback. Setting it forces the one-shot shell even when
 	// Persistent is true (a custom argv is incompatible with the persistent PTY session).
 	Command string `toml:"command"`
-	// SyncCwdOnReturn navigates the active panel to the shell cwd after returning from the shell.
+	// SyncCwdOnReturn navigates the active panel to the persistent shell's cwd after returning from that session.
+	// Has no effect on the one-shot shell (the child process cwd is not visible to the parent).
 	SyncCwdOnReturn bool `toml:"sync_cwd_on_return"`
 	// Persistent keeps one MC-style shell session alive across Ctrl+O toggles (Linux only;
 	// falls back to the one-shot shell elsewhere or when the PTY cannot start).
