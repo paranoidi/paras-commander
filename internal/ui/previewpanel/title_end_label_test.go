@@ -50,7 +50,7 @@ func TestTitleEndLabelLayout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			contentCols := tt.innerRight - titleX + 1
-			got := titleEndLabelLayout(titleX, tt.innerRight, contentCols, tt.endRunes, margin, gap)
+			got := TitleEndLabelLayout(titleX, tt.innerRight, contentCols, tt.endRunes, margin, gap)
 			if got.ShowEnd != tt.wantShow {
 				t.Fatalf("ShowEnd = %v, want %v", got.ShowEnd, tt.wantShow)
 			}

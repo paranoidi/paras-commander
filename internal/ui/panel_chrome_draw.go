@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
 // AuxPanelChromeLayout is the shared chrome layout for jobs/commands/messages auxiliary panels.
@@ -69,27 +70,12 @@ func auxPanelBodyText(styles theme.Theme, blocked bool, contentBG tcell.Color) t
 	return styles.PanelText.Background(contentBG)
 }
 
-// titleEndLabelSlots is the shared top-border title / end-label placement used by
-// aux chrome and file-panel title rows (same layout as previewpanel.paintQuickViewTitleRow).
-type titleEndLabelSlots struct {
-	ShowEnd      bool
-	EndStartX    int
-	PathSlotCols int
-}
+type titleEndLabelSlots = previewpanel.TitleEndLabelSlots
 
+// titleEndLabelLayout is the ui name for previewpanel.TitleEndLabelLayout so
+// aux chrome and paintPanelTopTitleRow share that helper without a second copy.
 func titleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforeEnd int) titleEndLabelSlots {
-	showEnd := endRunes > 0 && contentCols >= endRunes+gapBeforeEnd+endRightMargin+3
-	endStartX := 0
-	pathSlotCols := contentCols
-	if showEnd {
-		endStartX = innerRight - endRunes + 1 - endRightMargin
-		pathSlotCols = endStartX - titleX - gapBeforeEnd
-		if pathSlotCols < 3 {
-			showEnd = false
-			pathSlotCols = contentCols
-		}
-	}
-	return titleEndLabelSlots{ShowEnd: showEnd, EndStartX: endStartX, PathSlotCols: pathSlotCols}
+	return previewpanel.TitleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforeEnd)
 }
 
 // paintAuxPanelTopRow paints the top border row with a title, optional end label, and frame dashes elsewhere.

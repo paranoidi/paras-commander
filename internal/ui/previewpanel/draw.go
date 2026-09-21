@@ -49,15 +49,16 @@ type DrawParams struct {
 
 const gapBeforePanelTitleEnd = 2
 
-// titleEndLabelSlots is the shared top-border title / end-label placement used by
-// quick view (and the equivalent panel/aux chrome callers).
-type titleEndLabelSlots struct {
+// TitleEndLabelSlots is top-border title / end-label placement: whether the end
+// label fits, its start column, and how many columns the title/path may use.
+type TitleEndLabelSlots struct {
 	ShowEnd      bool
 	EndStartX    int
 	PathSlotCols int
 }
 
-func titleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforeEnd int) titleEndLabelSlots {
+// TitleEndLabelLayout is the shared title / end-label clip, gap, and right-margin helper.
+func TitleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforeEnd int) TitleEndLabelSlots {
 	showEnd := endRunes > 0 && contentCols >= endRunes+gapBeforeEnd+endRightMargin+3
 	endStartX := 0
 	pathSlotCols := contentCols
@@ -69,7 +70,7 @@ func titleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMarg
 			pathSlotCols = contentCols
 		}
 	}
-	return titleEndLabelSlots{ShowEnd: showEnd, EndStartX: endStartX, PathSlotCols: pathSlotCols}
+	return TitleEndLabelSlots{ShowEnd: showEnd, EndStartX: endStartX, PathSlotCols: pathSlotCols}
 }
 
 // ImageProtocol identifies the terminal graphics protocol used for an image payload.
@@ -469,7 +470,7 @@ func paintQuickViewTitleRow(screen tcell.Screen, titleX, innerRight, contentCols
 	// paintAuxPanelTopRow / plain panel title end labels).
 	const endRightMargin = 1
 	endRunes := utf8.RuneCountInString(endLabel)
-	slots := titleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforePanelTitleEnd)
+	slots := TitleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforePanelTitleEnd)
 	showEnd := slots.ShowEnd
 	endStartX := slots.EndStartX
 	pathSlotCols := slots.PathSlotCols
