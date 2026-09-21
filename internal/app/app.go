@@ -957,6 +957,7 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 	case metactrl.WakePayload:
 		a.metaCtrl.HandleWake(d)
 	case metactrl.RenderFlushPayload:
+		a.metaCtrl.HandleRenderFlush()
 		a.render()
 		out.didRender = true
 	case metactrl.LoadPayload:
@@ -1099,6 +1100,11 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 	}
 	if p, ok := data.(dialogctrl.RemoteFileOpPayload); ok {
 		a.dialogCtrl.ApplyRemoteFileOp(p)
+		a.render()
+		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
+	}
+	if p, ok := data.(dialogctrl.BookmarkIOPayload); ok {
+		a.dialogCtrl.ApplyBookmarkIO(p)
 		a.render()
 		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
 	}
