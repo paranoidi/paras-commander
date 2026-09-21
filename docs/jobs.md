@@ -52,8 +52,9 @@ name, in this order:
    being read (a source), red while the job is waiting for you to resolve a
    conflict.
 2. **Clock** — shown only while the job is still queued and has not started.
-3. **Operation icon** — a red *move* glyph for moves (and flatten), a red
-   *delete* glyph for deletes. Copies and extracts show none.
+3. **Operation icon** — a red *move* glyph on the source rows of moves (and
+   flatten; destination rows show none), a red *delete* glyph for deletes.
+   Copies and extracts show none.
 
 Source rows keep their listing entries for the whole job (queued move/delete
 show icons rather than vanishing early). Destination names appear in a panel

@@ -32,8 +32,8 @@ type JobSuffix struct {
 	// JobQueuedIcon is the jobs-list queued icon, set while the matched job's status is
 	// still queued; zero otherwise.
 	JobQueuedIcon rune
-	// JobOpIcon is icons.filelist.move (move/flatten) or icons.filelist.delete (delete); zero
-	// for copy/extract jobs.
+	// JobOpIcon is icons.filelist.move (move/flatten, source rows only) or icons.filelist.delete
+	// (delete); zero for copy/extract jobs.
 	JobOpIcon rune
 	// JobOpStyle is the foreground style for JobOpIcon (panel.row.mark.job.move / .delete).
 	JobOpStyle tcell.Style

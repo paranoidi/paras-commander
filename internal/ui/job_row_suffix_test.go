@@ -22,6 +22,10 @@ func TestJobRowSuffixIconsByTypeAndStatus(t *testing.T) {
 	if s.JobIcon != th.IconFilelistJob() || s.JobQueuedIcon != 0 || s.JobOpIcon != th.IconFilelistMove() {
 		t.Fatalf("scanning move: %+v", s)
 	}
+	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeMove, jobs.StatusRunning), th)
+	if s.JobIcon != th.IconFilelistJob() || !s.JobWrite || s.JobOpIcon != 0 {
+		t.Fatalf("running move destination: %+v", s)
+	}
 	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeCopy, jobs.StatusPaused), th)
 	if s.JobIcon != 0 || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 || s.JobWrite {
 		t.Fatalf("paused copy: %+v", s)
