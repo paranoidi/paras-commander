@@ -73,7 +73,7 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Theme", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	// Layout columns.
-	primaryCol := rect.X + 2 // 1 space margin at left
+	primaryCol := draw.DialogTextX(rect)
 	listRightEdge := primaryCol + listWidth
 	sepCol := listRightEdge + 2 // space before vertical separator
 	previewLeft := sepCol + 1   // after vertical line

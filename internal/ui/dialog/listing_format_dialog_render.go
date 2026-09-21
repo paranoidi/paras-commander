@@ -19,13 +19,13 @@ func DrawListingFormatDialog(screen tcell.Screen, layout Layout, state ListingFo
 	}
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Listing format", styles)
 
-	primaryCol := rect.X + 2
+	optionCol := draw.DialogOptionX(rect)
 	y := rect.Y + 1
 
 	lf := panel.EffectiveListFormat(state.ListFormat)
 	radios := panel.ListFormatDialogRadios()
 	for i, r := range radios {
-		draw.DrawDialogRadio(screen, primaryCol, y, r.Label, r.Shortcut, lf == r.Format, state.Focus == i, styles)
+		draw.DrawDialogRadio(screen, optionCol, y, r.Label, r.Shortcut, lf == r.Format, state.Focus == i, styles)
 		y++
 	}
 

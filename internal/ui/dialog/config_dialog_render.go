@@ -50,7 +50,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	primaryCol := draw.DialogTextX(rect)
 	leftOptionCol := draw.DialogOptionX(rect)
 	y := rect.Y + 1
-	primitive.Text(screen, primaryCol, y, rect.Width-4, "View options:", styles.DialogText.Background(dbg))
+	primitive.Text(screen, primaryCol, y, draw.DialogContentWidth(rect), "View options:", styles.DialogText.Background(dbg))
 	y++
 	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Use nerdfont icons", 'd', state.UseNerdfontIcons, state.Focus == 0, false, styles)
 	y++
@@ -91,7 +91,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 
-	primitive.Text(screen, primaryCol, y, rect.Width-4, "Default listing format:", styles.DialogText.Background(dbg))
+	primitive.Text(screen, primaryCol, y, draw.DialogContentWidth(rect), "Default listing format:", styles.DialogText.Background(dbg))
 	y++
 
 	lf := panel.EffectiveListFormat(state.ListFormat)
