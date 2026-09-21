@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
@@ -177,6 +178,10 @@ func TestFlattenConfirmQueuesJob(t *testing.T) {
 
 	app.dialogCtrl.OpenFlattenDialog()
 	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	// Enter starts RemoteFileOpFlattenProbe; apply it before asserting close/job.
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.FlattenDialog.Open
+	})
 
 	if app.model.FlattenDialog.Open {
 		t.Fatal("dialog should close after Enter on OK")
