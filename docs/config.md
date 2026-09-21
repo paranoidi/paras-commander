@@ -384,6 +384,8 @@ Open shell (suspend the TUI, run an interactive shell, resume).
 
 Meta column command definitions (custom computed panel columns).
 
+`[[entry]]` names in `meta.toml` must be unique; a second block with the same trimmed `name` is a decode error.
+
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `file` | string | `""` | Path to the global `meta.toml`. Empty uses `<config dir>/meta.toml`. |
