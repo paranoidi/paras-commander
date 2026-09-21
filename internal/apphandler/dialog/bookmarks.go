@@ -83,6 +83,11 @@ func (h *Handler) applyBookmarkLoad(p BookmarkIOPayload) {
 		h.host.SetErrorMessage("Bookmarks", p.Err)
 		return
 	}
+	if len(p.Items) == 0 && h.model.PathPicker.Purpose != dialog.PathPickerPurposeNavigate {
+		h.ClosePathPicker()
+		h.host.SetTransientMessage("No bookmarks", ui.MessageUrgencyInfo)
+		return
+	}
 	h.model.PathPicker.Items = p.Items
 	h.SyncPathPickerRanks()
 	h.startPathPickerMissingScan()
@@ -125,19 +130,12 @@ func (h *Handler) OpenBookmarkDialog() {
 	if h.host.InQuickFilterUI() {
 		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
 	}
-	h.pathPickerMissingGen++
-	gen := h.pathPickerMissingGen
-	h.model.PathPicker = dialog.PathPickerState{
-		Open:       true,
-		Title:      "Bookmarks",
-		Purpose:    dialog.PathPickerPurposeNavigate,
-		Query:      "",
-		Focus:      0,
-		Selected:   0,
-		ListScroll: 0,
-	}
-	h.SyncPathPickerRanks()
+	h.openBookmarkPathPicker(dialog.PathPickerPurposeNavigate, 0)
+}
 
+// startBookmarkListLoad reads fzf-marks/GTK bookmarks on a worker and posts a
+// BookmarkIOPayload so ApplyBookmarkIO can fill the open picker on the event loop.
+func (h *Handler) startBookmarkListLoad(gen uint64) {
 	result := make(chan BookmarkIOPayload, 1)
 	go func() {
 		stallBookmarkFileIO()

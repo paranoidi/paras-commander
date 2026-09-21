@@ -437,15 +437,16 @@ const (
 )
 
 func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pathPickerListKind, fileFieldIndex int) {
+	if kind == pathPickerListBookmarks {
+		h.openBookmarkPathPicker(purpose, fileFieldIndex)
+		return
+	}
 	var (
 		items                     []dialog.PathPickerItem
 		err                       error
 		title, emptyMsg, errTitle string
 	)
 	switch kind {
-	case pathPickerListBookmarks:
-		title, emptyMsg, errTitle = "Bookmarks", "No bookmarks", "Bookmarks"
-		items, err = h.PathPickerItemsBookmarks()
 	case pathPickerListHistory:
 		title, emptyMsg, errTitle = "History", "No paths in history", "History"
 		items, err = h.PathPickerItemsHistory()
@@ -474,6 +475,26 @@ func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pat
 	}
 	h.SyncPathPickerRanks()
 	h.startPathPickerMissingScan()
+}
+
+// openBookmarkPathPicker opens the bookmarks path picker immediately and fills it via
+// startBookmarkListLoad / ApplyBookmarkIO. bookmarks.LoadAll runs on a worker, not the
+// UI goroutine; history and pinned lists stay synchronous in openPathPickerApply.
+func (h *Handler) openBookmarkPathPicker(purpose dialog.PathPickerPurpose, fileFieldIndex int) {
+	h.pathPickerMissingGen++
+	gen := h.pathPickerMissingGen
+	h.model.PathPicker = dialog.PathPickerState{
+		Open:           true,
+		Title:          "Bookmarks",
+		Purpose:        purpose,
+		FileFieldIndex: fileFieldIndex,
+		Query:          "",
+		Focus:          0,
+		Selected:       0,
+		ListScroll:     0,
+	}
+	h.SyncPathPickerRanks()
+	h.startBookmarkListLoad(gen)
 }
 
 // OpenPathPickerForFlattenBookmarks opens the bookmarks path picker to apply the flatten
