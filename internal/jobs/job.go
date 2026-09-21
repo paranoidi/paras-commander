@@ -41,6 +41,12 @@ func (s Status) IsFinished() bool {
 	return s == StatusCompleted || s == StatusFailed || s == StatusCanceled
 }
 
+// IsActive reports whether a worker is currently touching the job's trees: pre-scanning,
+// transferring, or mid-transfer blocked on a user decision. Queued and paused jobs are not active.
+func (s Status) IsActive() bool {
+	return s == StatusScanning || s == StatusRunning || s == StatusWaitingDecision
+}
+
 // Job represents a single background filesystem operation.
 type Job struct {
 	ID          string

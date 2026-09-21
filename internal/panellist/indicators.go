@@ -25,7 +25,9 @@ const (
 
 // JobSuffix is the job part of RowSuffix, painted after the name as <job><queued><operation>.
 type JobSuffix struct {
-	// JobIcon is icons.filelist.job; zero means the row is not under any unfinished job.
+	// JobIcon is icons.filelist.job; zero means no active (scanning/running/decision) job is
+	// working on the row. A queued or paused job leaves it zero but may still set
+	// JobQueuedIcon / JobOpIcon.
 	JobIcon rune
 	// JobQueuedIcon is the jobs-list queued icon, set while the matched job's status is
 	// still queued; zero otherwise.
@@ -241,7 +243,8 @@ func ListingSuffixSpans(
 	nameBGAt func(displayIndex int) tcell.Style,
 ) []primitive.Span {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
-	if suffix.JobIcon == 0 && suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree &&
+	if suffix.JobIcon == 0 && suffix.JobQueuedIcon == 0 && suffix.JobOpIcon == 0 &&
+		suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree &&
 		!suffix.Working && !suffix.Pinned && !entry.AccessDenied {
 		return nil
 	}

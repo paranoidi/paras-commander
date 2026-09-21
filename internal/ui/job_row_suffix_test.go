@@ -15,8 +15,16 @@ func TestJobRowSuffixIconsByTypeAndStatus(t *testing.T) {
 	}
 
 	s, st := jobRowSuffix("/src/willow.txt", mark(jobs.TypeMove, jobs.StatusQueued), th)
-	if st != string(jobs.StatusQueued) || s.JobIcon != th.IconFilelistJob() || s.JobQueuedIcon != th.IconFilelistQueued() || s.JobOpIcon != th.IconFilelistMove() || s.JobWrite {
+	if st != string(jobs.StatusQueued) || s.JobIcon != 0 || s.JobQueuedIcon != th.IconFilelistQueued() || s.JobOpIcon != th.IconFilelistMove() || s.JobWrite {
 		t.Fatalf("queued move: %+v status=%q", s, st)
+	}
+	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeMove, jobs.StatusScanning), th)
+	if s.JobIcon != th.IconFilelistJob() || s.JobQueuedIcon != 0 || s.JobOpIcon != th.IconFilelistMove() {
+		t.Fatalf("scanning move: %+v", s)
+	}
+	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeCopy, jobs.StatusPaused), th)
+	if s.JobIcon != 0 || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 || s.JobWrite {
+		t.Fatalf("paused copy: %+v", s)
 	}
 	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeDelete, jobs.StatusRunning), th)
 	if s.JobQueuedIcon != 0 || s.JobOpIcon != th.IconFilelistDelete() || !s.JobWrite {

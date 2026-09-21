@@ -46,9 +46,11 @@ While a job is waiting or running, every file-list row it touches (a source, a
 destination, or anything inside those directories) gets small icons after its
 name, in this order:
 
-1. **Job icon** — always shown. Green when the row is on the job's writing side
-   (a destination), yellow when it is being read (a source), red while the job
-   is waiting for you to resolve a conflict.
+1. **Job icon** — shown only while a job is actually working on the row
+   (scanning or transferring); hidden while the job is queued or paused. Green
+   when the row is on the job's writing side (a destination), yellow when it is
+   being read (a source), red while the job is waiting for you to resolve a
+   conflict.
 2. **Clock** — shown only while the job is still queued and has not started.
 3. **Operation icon** — a red *move* glyph for moves (and flatten), a red
    *delete* glyph for deletes. Copies and extracts show none.
