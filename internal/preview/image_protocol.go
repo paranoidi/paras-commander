@@ -211,6 +211,7 @@ var tmuxImageSupport = sync.OnceValue(func() string {
 //   - `#{image_support}` is not `"0"`. `"0"` means this tmux was built without image support
 //     and will parse a bare DCS then drop it. Empty keeps the client_termfeatures-only rule
 //     for older tmux that does not report the format.
+//
 // Passthrough-wrapped sixel never reaches tmux's image path: tmux only recognizes a bare
 // `DCS q` introducer, blind-forwards anything wrapped in `DCS tmux;`, and cannot re-send
 // content it never parsed. environ is typically os.Getenv.

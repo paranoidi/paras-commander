@@ -251,6 +251,9 @@ func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bo
 	case keymap.ActionFileViewMenu:
 		h.host.OpenPreviewLeaderMenu()
 		return false, true
+	case keymap.ActionAppCopyMenu:
+		h.host.OpenPreviewCopyMenu()
+		return false, true
 	case keymap.ActionFileViewThemePicker:
 		h.toggleFilePreviewThemePicker()
 		return false, true

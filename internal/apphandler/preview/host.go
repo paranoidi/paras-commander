@@ -67,6 +67,7 @@ type Host interface {
 	EditFullscreenPreviewFile()
 	OpenDeleteDialogForPreviewedFile()
 	OpenPreviewLeaderMenu()
+	OpenPreviewCopyMenu()
 	// FilePreviewFullscreenClosed is called at the end of CloseFilePreviewFullscreen, once
 	// the view mode is already back to the browser, so app-side callers can restore any
 	// dialog the F3 preview was launched from (e.g. the Pin dialog). No-op when the preview

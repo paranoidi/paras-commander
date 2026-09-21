@@ -151,6 +151,7 @@ func (f *identityTestHost) EditActiveFile()                           {}
 func (f *identityTestHost) EditFullscreenPreviewFile()                {}
 func (f *identityTestHost) OpenDeleteDialogForPreviewedFile()         {}
 func (f *identityTestHost) OpenPreviewLeaderMenu()                    {}
+func (f *identityTestHost) OpenPreviewCopyMenu()                      {}
 func (f *identityTestHost) FilePreviewFullscreenClosed()              {}
 func (f *identityTestHost) HandleFileDialogFieldKey(*tcell.EventKey, *uidialog.FileDialogField, func()) bool {
 	return false

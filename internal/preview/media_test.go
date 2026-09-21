@@ -141,8 +141,8 @@ func (c videoPNGCache) LoadVideo(_ context.Context, _ string, _, _ int64, _, _, 
 	return c.png, nil
 }
 func (c videoPNGCache) HasVideo(string, int64, int64, int, int, int) bool { return true }
-func (c videoPNGCache) InFlight(string) bool                             { return false }
-func (c videoPNGCache) SnapshotInFlight() []string                       { return nil }
+func (c videoPNGCache) InFlight(string) bool                              { return false }
+func (c videoPNGCache) SnapshotInFlight() []string                        { return nil }
 
 // TestRunMediaThumbsSixelUnderTmuxShrinksToFit covers a high-entropy video grid whose first
 // encode exceeds tmux's sixel byte cap: it must shrink (or fall back with an explicit

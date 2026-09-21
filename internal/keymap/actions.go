@@ -219,9 +219,9 @@ const (
 	ActionMessagesClear = "messages.clear"
 
 	// UI dialog controls (handled internally, not in keybindings.toml)
-	ActionUILeft      = "ui.left"
-	ActionUIRight     = "ui.right"
-	ActionUIActivate  = "ui.activate"
+	ActionUILeft     = "ui.left"
+	ActionUIRight    = "ui.right"
+	ActionUIActivate = "ui.activate"
 
 	ActionUIOpenTheme         = "ui.open-theme"
 	ActionUIOpenConfig        = "ui.open-config"

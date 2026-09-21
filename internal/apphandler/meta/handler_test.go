@@ -42,7 +42,7 @@ func (f *fakeHost) PanelByID(id int) *panel.State {
 	}
 	return f.panels[id]
 }
-func (f *fakeHost) IconMetaRunning() string           { return "*" }
+func (f *fakeHost) IconMetaRunning() string { return "*" }
 func (f *fakeHost) OpenFileInExternalEditor(path string) error {
 	f.editedPath = path
 	return f.editErr

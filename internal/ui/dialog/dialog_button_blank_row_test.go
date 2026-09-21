@@ -138,9 +138,9 @@ func TestPathPickerHasBlankRowAboveButtons(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
 	DrawPathPickerDialog(screen, layout, PathPickerState{
-		Open:  true,
-		Title: "Bookmarks",
-		Items: []PathPickerItem{{Source: "fzf-marks", Name: "harbor", Path: "/tmp/harbor"}},
+		Open:   true,
+		Title:  "Bookmarks",
+		Items:  []PathPickerItem{{Source: "fzf-marks", Name: "harbor", Path: "/tmp/harbor"}},
 		Ranked: []int{0},
 	}, theme.Default(), nil)
 	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))

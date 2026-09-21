@@ -249,6 +249,10 @@ func (a *App) dispatchAuxiliaryViewCommonKeys(event *tcell.EventKey, nextAction 
 		a.toggleBuiltinLeaderMenu()
 		return false, true
 	}
+	if nextAction == keymap.ActionAppCopyMenu {
+		a.toggleCopyMenu()
+		return false, true
+	}
 	if a.dispatchLeaderLetterDirectFire(event) {
 		return false, true
 	}

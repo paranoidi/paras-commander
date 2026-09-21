@@ -1,10 +1,12 @@
 package app
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/clipboard"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -14,7 +16,9 @@ func (a *App) toggleCopyMenu() {
 		a.closeLeaderMenu()
 		return
 	}
-	if a.model.ViewMode != ui.ViewBrowser {
+	switch a.model.ViewMode {
+	case ui.ViewBrowser, ui.ViewFilePreview, ui.ViewCompare, ui.ViewDedup:
+	default:
 		return
 	}
 	if a.keys == nil {
@@ -34,13 +38,45 @@ func (a *App) toggleCopyMenu() {
 	a.openLeaderMenuDispatch(items, actions, false, true, "Copy menu", a.dispatchActionLikeKeyboardShortcut)
 }
 
+// singleCopyTarget builds the paths/entries/dirPath triple for a copy-menu
+// invocation targeting one file (preview, compare, dedup selections).
+func singleCopyTarget(path string) ([]string, []localfs.Entry, string) {
+	return []string{canonicalTargetPath(path)}, []localfs.Entry{{Name: filepath.Base(path)}}, filepath.Dir(path)
+}
+
 func (a *App) copyToClipboard(actionID string) {
-	if a.model.ViewMode != ui.ViewBrowser {
+	var paths []string
+	var entries []localfs.Entry
+	var dirPath string
+	switch a.model.ViewMode {
+	case ui.ViewBrowser:
+		p := a.activePanel()
+		paths = panelTargetPaths(p)
+		entries = panelTargetEntries(p)
+		dirPath = p.PathString()
+	case ui.ViewFilePreview:
+		path := a.model.FullscreenFilePreview.Path
+		if path == "" {
+			return
+		}
+		paths, entries, dirPath = singleCopyTarget(path)
+	case ui.ViewCompare:
+		path, ok := a.compareCtrl.SelectedColumnPinTarget()
+		if !ok {
+			a.setTransientMessage("Copy: no file selected", ui.MessageUrgencyWarn)
+			return
+		}
+		paths, entries, dirPath = singleCopyTarget(path)
+	case ui.ViewDedup:
+		path, _, ok := a.dedupCtrl.SelectedPinTarget()
+		if !ok {
+			a.setTransientMessage("Copy: no file selected", ui.MessageUrgencyWarn)
+			return
+		}
+		paths, entries, dirPath = singleCopyTarget(path)
+	default:
 		return
 	}
-	p := a.activePanel()
-	paths := panelTargetPaths(p)
-	entries := panelTargetEntries(p)
 
 	var text string
 	switch actionID {
@@ -51,7 +87,7 @@ func (a *App) copyToClipboard(actionID string) {
 		}
 		text = clipboard.BuildFileURLs(paths)
 	case keymap.ActionClipboardCopyDirURL:
-		text = clipboard.BuildDirURLs(paths, p.PathString())
+		text = clipboard.BuildDirURLs(paths, dirPath)
 		if text == "" {
 			a.setTransientMessage("Copy: no directory available", ui.MessageUrgencyWarn)
 			return
