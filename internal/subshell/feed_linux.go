@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -307,11 +308,26 @@ func readStaticInput(in io.Reader) (data []byte, ok bool, err error) {
 
 func watchWinchResize(ptyMaster, sizeFrom *os.File) (stop func()) {
 	ch := make(chan os.Signal, 1)
+	done := make(chan struct{})
+	exited := make(chan struct{})
 	signal.Notify(ch, syscall.SIGWINCH)
 	go func() {
-		for range ch {
-			_, _ = syncPTYSize(ptyMaster, sizeFrom)
+		defer close(exited)
+		for {
+			select {
+			case <-done:
+				return
+			case <-ch:
+				_, _ = syncPTYSize(ptyMaster, sizeFrom)
+			}
 		}
 	}()
-	return func() { signal.Stop(ch) }
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			signal.Stop(ch)
+			close(done)
+			<-exited
+		})
+	}
 }
