@@ -2013,11 +2013,17 @@ func TestMkdirOpenInInactiveOpensOtherPanelAfterCreate(t *testing.T) {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Primary
-	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Secondary (superseded below)
-	applyNextInterruptEvent(t, app, screen) // async load, Secondary opens otherdir
 
 	wantOther := filepath.Join(dir, "otherdir")
+	// RefreshBothPanels reloads both sides, then NavigatePanelToPath reloads Secondary into
+	// otherdir. Those Secondary wakes coalesce, so a fixed third applyNextInterruptEvent
+	// times out when only two events arrive.
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String())
+		entry, ok := left.CurrentEntry()
+		return got == filepath.Clean(wantOther) && ok && entry.Name == "keep-cursor.txt"
+	})
+
 	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != filepath.Clean(wantOther) {
 		t.Fatalf("inactive panel path = %q want %q", got, wantOther)
 	}
