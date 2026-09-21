@@ -1165,6 +1165,27 @@ func clampScrollKeepingCursorVisible(preferredScroll, cursor, viewportRows, entr
 	return scroll
 }
 
+// firstSurvivingNameAfterCursor returns the name of the first entry below the cursor (in the
+// current visible order) that is still present in fresh, or "" when none is. Used on a
+// same-directory reload so a deleted cursor entry hands the highlight to its next neighbour
+// rather than to whatever now sits at the old row index.
+func (s *State) firstSurvivingNameAfterCursor(fresh []localfs.Entry) string {
+	names := make(map[string]struct{}, len(fresh))
+	for i := range fresh {
+		names[fresh[i].Name] = struct{}{}
+	}
+	for i := s.Cursor + 1; i < s.VisibleEntryCount(); i++ {
+		entry, _, ok := s.VisibleEntry(i)
+		if !ok {
+			continue
+		}
+		if _, ok := names[entry.Name]; ok {
+			return entry.Name
+		}
+	}
+	return ""
+}
+
 // finishSameDirectoryReloadScroll applies scroll policy after a same-directory listing reload.
 func (s *State) finishSameDirectoryReloadScroll(priorCursor, priorScroll, viewportRows int, wasCentered bool) {
 	vr := s.effectiveFileListViewportRows(viewportRows)
@@ -1175,12 +1196,13 @@ func (s *State) finishSameDirectoryReloadScroll(priorCursor, priorScroll, viewpo
 		s.applyHighlightScroll(viewportRows, true)
 		return
 	}
-	if s.Cursor == priorCursor {
-		s.ScrollOffset = clampScrollKeepingCursorVisible(priorScroll, s.Cursor, vr, n)
+	if wasCentered {
+		s.applyHighlightScroll(viewportRows, true)
 		return
 	}
-	center := wasCentered || s.Cursor != priorCursor
-	s.applyHighlightScroll(viewportRows, center)
+	// Keep the highlight on the same viewport row it occupied before the reload, even when
+	// its index shifted (entries above it removed/added), so a delete doesn't jump the view.
+	s.ScrollOffset = clampScrollKeepingCursorVisible(s.Cursor-(priorCursor-priorScroll), s.Cursor, vr, n)
 }
 
 // EnsureCursorVisible updates ScrollOffset so Cursor is in the viewport.
@@ -1517,8 +1539,10 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 	}
 	priorScroll := s.ScrollOffset
 	wasCentered := false
+	var nextSurvivor string
 	if sameDirReload {
 		wasCentered = s.cursorAppearsCentered(s.effectiveFileListViewportRows(viewportRows))
+		nextSurvivor = s.firstSurvivingNameAfterCursor(localEntries)
 	}
 	var newlyAppeared []string
 	// hadPriorListing is false only before the very first listing lands on a panel built by
@@ -1611,6 +1635,9 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 	found := false
 	if selectedName != "" {
 		found = s.SelectVisibleEntry(selectedName)
+	}
+	if !found && nextSurvivor != "" {
+		found = s.SelectVisibleEntry(nextSurvivor)
 	}
 	if !found && indexFallback >= 0 && len(s.Entries) > 0 {
 		if indexFallback >= len(s.Entries) {

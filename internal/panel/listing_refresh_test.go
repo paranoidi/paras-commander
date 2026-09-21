@@ -69,7 +69,7 @@ func TestApplyPeriodicRefreshKeepsSelectionByNameWhenNewFileAppears(t *testing.T
 	}
 }
 
-func TestApplyPeriodicRefreshCentersWhenCursorIndexShifts(t *testing.T) {
+func TestApplyPeriodicRefreshKeepsCursorRowWhenCursorIndexShifts(t *testing.T) {
 	const viewportRows = 5
 	t0 := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
 	loc := pathloc.MustParse("/tmp")
@@ -97,6 +97,8 @@ func TestApplyPeriodicRefreshCentersWhenCursorIndexShifts(t *testing.T) {
 			break
 		}
 	}
+	state.ScrollOffset = state.Cursor - 3 // highlight on viewport row 3
+	priorRow := state.Cursor - state.ScrollOffset
 	applied, err := state.ApplyPeriodicRefresh(loc, fresh, viewportRows, nil)
 	if err != nil {
 		t.Fatalf("ApplyPeriodicRefresh: %v", err)
@@ -112,8 +114,8 @@ func TestApplyPeriodicRefreshCentersWhenCursorIndexShifts(t *testing.T) {
 		}
 		t.Fatalf("highlight = %q ok=%v, want 7.dat", name, ok)
 	}
-	if !state.cursorAppearsCentered(viewportRows) {
-		t.Fatalf("scroll=%d cursor=%d, want centered after index shift", state.ScrollOffset, state.Cursor)
+	if row := state.Cursor - state.ScrollOffset; row != priorRow {
+		t.Fatalf("scroll=%d cursor=%d row=%d, want row %d kept after index shift", state.ScrollOffset, state.Cursor, row, priorRow)
 	}
 }
 

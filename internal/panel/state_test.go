@@ -130,6 +130,66 @@ func TestRefreshPreservesScrollWhenCursorIndexUnchanged(t *testing.T) {
 	}
 }
 
+// deleteRefreshFixture lists 30 files, puts the cursor on cursorName at viewport row 3 (scroll
+// 12, viewport 10), removes del from disk, refreshes, and returns the state.
+func deleteRefreshFixture(t *testing.T, cursorName string, del []string) *State {
+	t.Helper()
+	dir := t.TempDir()
+	for i := 0; i < 30; i++ {
+		testutil.WriteFile(t, filepath.Join(dir, fmt.Sprintf("%02d.dat", i)))
+	}
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	state.ScrollMode = ScrollModeEdge
+	if !state.SelectVisibleEntry(cursorName) {
+		t.Fatalf("precondition: %s not listed", cursorName)
+	}
+	state.ScrollOffset = 12
+	for _, d := range del {
+		if err := os.Remove(filepath.Join(dir, d)); err != nil {
+			t.Fatalf("Remove: %v", err)
+		}
+	}
+	if err := state.Refresh(10); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
+	}
+	return &state
+}
+
+func TestRefreshKeepsCursorRowWhenEntriesAboveCursorRemoved(t *testing.T) {
+	state := deleteRefreshFixture(t, "15.dat", []string{"11.dat", "12.dat"})
+	if ent, ok := state.CurrentEntry(); !ok || ent.Name != "15.dat" {
+		t.Fatalf("CurrentEntry = %v ok=%v, want 15.dat", ent, ok)
+	}
+	if row := state.Cursor - state.ScrollOffset; row != 3 {
+		t.Fatalf("cursor row = %d (cursor=%d scroll=%d), want 3 kept", row, state.Cursor, state.ScrollOffset)
+	}
+}
+
+func TestRefreshSelectsNextSurvivorWhenCursorAndEntriesAboveRemoved(t *testing.T) {
+	state := deleteRefreshFixture(t, "15.dat", []string{"12.dat", "15.dat"})
+	if ent, ok := state.CurrentEntry(); !ok || ent.Name != "16.dat" {
+		t.Fatalf("CurrentEntry = %v ok=%v, want 16.dat (next surviving neighbour)", ent, ok)
+	}
+	if row := state.Cursor - state.ScrollOffset; row != 3 {
+		t.Fatalf("cursor row = %d (cursor=%d scroll=%d), want 3 kept", row, state.Cursor, state.ScrollOffset)
+	}
+}
+
+func TestRefreshKeepsCursorRowWhenLastEntryRemoved(t *testing.T) {
+	state := deleteRefreshFixture(t, "29.dat", []string{"29.dat"})
+	if ent, ok := state.CurrentEntry(); !ok || ent.Name != "28.dat" {
+		t.Fatalf("CurrentEntry = %v ok=%v, want 28.dat", ent, ok)
+	}
+	// Row 17 was off-screen for a 10-row viewport; the cursor must land on the bottom row rather
+	// than be recentered.
+	if state.ScrollOffset != state.Cursor-9 {
+		t.Fatalf("scroll=%d cursor=%d, want cursor on bottom viewport row", state.ScrollOffset, state.Cursor)
+	}
+}
+
 func TestRefreshAdjustsScrollWhenListShrinksBelowPriorOffset(t *testing.T) {
 	const viewportRows = 5
 	dir := t.TempDir()
