@@ -22,14 +22,14 @@ func (a *App) openPreviewSettingsDialog() {
 	a.clearTransientMessage()
 	p := a.config.Preview
 	a.model.PreviewSettingsDialog = dialog.PreviewSettingsDialogState{
-		Open:                      true,
-		SixelSupported:            p.TerminalSixel == config.PreviewTerminalCapabilityYes,
-		KittySupported:            p.TerminalKitty == config.PreviewTerminalCapabilityYes,
-		KittyPlaceholderSupported: p.TerminalKittyPlaceholder == config.PreviewTerminalCapabilityYes,
-		Protocol:                  effectiveImageProtocol(p.ImageProtocol),
-		ImageMetadata:             effectiveImageMetadata(p.ImageMetadata),
-		VideoMetadata:             p.VideoMetadata,
-		Focus:                     0,
+		Open:             true,
+		Sixel:            effectiveTerminalCapability(p.TerminalSixel),
+		Kitty:            effectiveTerminalCapability(p.TerminalKitty),
+		KittyPlaceholder: effectiveTerminalCapability(p.TerminalKittyPlaceholder),
+		Protocol:         effectiveImageProtocol(p.ImageProtocol),
+		ImageMetadata:    effectiveImageMetadata(p.ImageMetadata),
+		VideoMetadata:    p.VideoMetadata,
+		Focus:            0,
 	}
 }
 
@@ -51,40 +51,65 @@ func effectiveImageMetadata(v string) string {
 	}
 }
 
+func effectiveTerminalCapability(v string) string {
+	switch v {
+	case config.PreviewTerminalCapabilityYes, config.PreviewTerminalCapabilityNo:
+		return v
+	default:
+		return config.PreviewTerminalCapabilityAuto
+	}
+}
+
+func cycleTerminalCapability(v string) string {
+	switch effectiveTerminalCapability(v) {
+	case config.PreviewTerminalCapabilityAuto:
+		return config.PreviewTerminalCapabilityYes
+	case config.PreviewTerminalCapabilityYes:
+		return config.PreviewTerminalCapabilityNo
+	default:
+		return config.PreviewTerminalCapabilityAuto
+	}
+}
+
+func capabilityRadioFocus(first int, v string) int {
+	switch effectiveTerminalCapability(v) {
+	case config.PreviewTerminalCapabilityAuto:
+		return first
+	case config.PreviewTerminalCapabilityYes:
+		return first + 1
+	default:
+		return first + 2
+	}
+}
+
 func (a *App) closePreviewSettingsDialog() {
 	a.model.PreviewSettingsDialog.Open = false
 }
 
-// toggleKittySupported flips Kitty support and, since Unicode-placeholder display requires
-// Kitty protocol support, clears the (now-inconsistent) placeholder checkbox whenever Kitty
-// support is unchecked.
-func toggleKittySupported(st *dialog.PreviewSettingsDialogState) {
-	st.KittySupported = !st.KittySupported
-	if !st.KittySupported {
-		st.KittyPlaceholderSupported = false
+// setKittyCapability writes the Kitty radio and, since Unicode-placeholder display requires
+// Kitty protocol support, drops a "yes" placeholder whenever Kitty is not "yes".
+func setKittyCapability(st *dialog.PreviewSettingsDialogState, v string) {
+	st.Kitty = effectiveTerminalCapability(v)
+	if st.Kitty != config.PreviewTerminalCapabilityYes && st.KittyPlaceholder == config.PreviewTerminalCapabilityYes {
+		st.KittyPlaceholder = st.Kitty
 	}
 }
 
-// toggleKittyPlaceholderSupported flips placeholder support and, since it implies Kitty
-// protocol support, checks the Kitty checkbox whenever placeholder support is checked.
-func toggleKittyPlaceholderSupported(st *dialog.PreviewSettingsDialogState) {
-	st.KittyPlaceholderSupported = !st.KittyPlaceholderSupported
-	if st.KittyPlaceholderSupported {
-		st.KittySupported = true
+// setKittyPlaceholderCapability writes the placeholder radio and, since it implies Kitty
+// protocol support, forces Kitty to "yes" whenever placeholder is "yes".
+func setKittyPlaceholderCapability(st *dialog.PreviewSettingsDialogState, v string) {
+	st.KittyPlaceholder = effectiveTerminalCapability(v)
+	if st.KittyPlaceholder == config.PreviewTerminalCapabilityYes {
+		st.Kitty = config.PreviewTerminalCapabilityYes
 	}
 }
 
-// persistTerminalCapability maps a capability checkbox back to the persisted tri-state.
-// Checked is always "yes". Unchecked keeps an explicit "no" so open-and-save does not
-// rewrite it to "auto"; any other original (including "auto") stays "auto".
-func persistTerminalCapability(checked bool, original string) string {
-	if checked {
-		return config.PreviewTerminalCapabilityYes
-	}
-	if original == config.PreviewTerminalCapabilityNo {
-		return config.PreviewTerminalCapabilityNo
-	}
-	return config.PreviewTerminalCapabilityAuto
+func cycleKittyCapability(st *dialog.PreviewSettingsDialogState) {
+	setKittyCapability(st, cycleTerminalCapability(st.Kitty))
+}
+
+func cycleKittyPlaceholderCapability(st *dialog.PreviewSettingsDialogState) {
+	setKittyPlaceholderCapability(st, cycleTerminalCapability(st.KittyPlaceholder))
 }
 
 // applyPreviewSettingsDialog writes the dialog's checkbox/radio state into a.config.Preview in
@@ -95,9 +120,9 @@ func persistTerminalCapability(checked bool, original string) string {
 // config.toml — see internal/config/patch.go.
 func (a *App) applyPreviewSettingsDialog() {
 	st := a.model.PreviewSettingsDialog
-	sixel := persistTerminalCapability(st.SixelSupported, a.config.Preview.TerminalSixel)
-	kitty := persistTerminalCapability(st.KittySupported, a.config.Preview.TerminalKitty)
-	placeholder := persistTerminalCapability(st.KittyPlaceholderSupported, a.config.Preview.TerminalKittyPlaceholder)
+	sixel := effectiveTerminalCapability(st.Sixel)
+	kitty := effectiveTerminalCapability(st.Kitty)
+	placeholder := effectiveTerminalCapability(st.KittyPlaceholder)
 	protocol := effectiveImageProtocol(st.Protocol)
 	imageMetadata := effectiveImageMetadata(st.ImageMetadata)
 
@@ -132,14 +157,25 @@ func (a *App) applyPreviewSettingsDialog() {
 	a.setTransientMessage(msg, urgency)
 }
 
-// autoDetectPreviewSettingsDialog seeds the dialog's checkboxes from
+func capabilityFromDetect(detected bool) string {
+	if detected {
+		return config.PreviewTerminalCapabilityYes
+	}
+	return config.PreviewTerminalCapabilityAuto
+}
+
+// autoDetectPreviewSettingsDialog seeds the dialog's capability radios from
 // preview.DetectTerminalCapabilities (F5 "Auto detect"): a best-guess snapshot from the
 // environment/tmux introspection alone, ignoring any existing tri-state confirmations in config.
+// Detected capabilities become "yes"; undetected stay "auto" (detection never writes "no").
 // Does not touch the Protocol radio, nor the image/video metadata controls — F5 only fills in
 // what can be guessed about terminal capabilities.
 func (a *App) autoDetectPreviewSettingsDialog() {
 	st := &a.model.PreviewSettingsDialog
-	st.SixelSupported, st.KittySupported, st.KittyPlaceholderSupported = preview.DetectTerminalCapabilities(os.Getenv)
+	sixel, kitty, placeholder := preview.DetectTerminalCapabilities(os.Getenv)
+	st.Sixel = capabilityFromDetect(sixel)
+	setKittyCapability(st, capabilityFromDetect(kitty))
+	setKittyPlaceholderCapability(st, capabilityFromDetect(placeholder))
 }
 
 func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
@@ -149,12 +185,16 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 		return
 	}
 	form := dialog.PreviewSettingsDialogForm()
+	capabilityRadios := dialog.PreviewSettingsDialogCapabilityRadios()
 	protocolRadios := dialog.PreviewSettingsDialogProtocolRadios()
 	metadataRadios := dialog.PreviewSettingsDialogImageMetadataRadios()
 	const (
-		protocolFocusFirst = 3
-		metadataFocusFirst = 6
-		videoFocus         = 10
+		sixelFocusFirst       = 0
+		kittyFocusFirst       = 3
+		placeholderFocusFirst = 6
+		protocolFocusFirst    = 9
+		metadataFocusFirst    = 12
+		videoFocus            = 16
 	)
 	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
 		Focus:              &st.Focus,
@@ -178,14 +218,14 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 			}
 			switch r {
 			case 's', 'S':
-				st.SixelSupported = !st.SixelSupported
-				st.Focus = 0
+				st.Sixel = cycleTerminalCapability(st.Sixel)
+				st.Focus = capabilityRadioFocus(sixelFocusFirst, st.Sixel)
 			case 'k', 'K':
-				toggleKittySupported(st)
-				st.Focus = 1
+				cycleKittyCapability(st)
+				st.Focus = capabilityRadioFocus(kittyFocusFirst, st.Kitty)
 			case 'p', 'P':
-				toggleKittyPlaceholderSupported(st)
-				st.Focus = 2
+				cycleKittyPlaceholderCapability(st)
+				st.Focus = capabilityRadioFocus(placeholderFocusFirst, st.KittyPlaceholder)
 			case 'v', 'V':
 				st.VideoMetadata = !st.VideoMetadata
 				st.Focus = videoFocus
@@ -196,12 +236,12 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 		},
 		OnSpace: func(focus int) bool {
 			switch {
-			case focus == 0:
-				st.SixelSupported = !st.SixelSupported
-			case focus == 1:
-				toggleKittySupported(st)
-			case focus == 2:
-				toggleKittyPlaceholderSupported(st)
+			case focus >= sixelFocusFirst && focus < kittyFocusFirst:
+				st.Sixel = capabilityRadios[focus-sixelFocusFirst].Value
+			case focus >= kittyFocusFirst && focus < placeholderFocusFirst:
+				setKittyCapability(st, capabilityRadios[focus-kittyFocusFirst].Value)
+			case focus >= placeholderFocusFirst && focus < protocolFocusFirst:
+				setKittyPlaceholderCapability(st, capabilityRadios[focus-placeholderFocusFirst].Value)
 			case focus >= protocolFocusFirst && focus < protocolFocusFirst+len(protocolRadios):
 				st.Protocol = protocolRadios[focus-protocolFocusFirst].Value
 			case focus >= metadataFocusFirst && focus < metadataFocusFirst+len(metadataRadios):

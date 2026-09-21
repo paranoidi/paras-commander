@@ -11,45 +11,51 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// TestToggleKittySupportedClearsPlaceholder covers unchecking Kitty support also clearing the
-// (now-inconsistent) placeholder checkbox, since placeholder display requires Kitty protocol.
-func TestToggleKittySupportedClearsPlaceholder(t *testing.T) {
-	st := &dialog.PreviewSettingsDialogState{KittySupported: true, KittyPlaceholderSupported: true}
-	toggleKittySupported(st)
-	if st.KittySupported {
-		t.Fatal("KittySupported should be false after toggling from true")
+// TestSetKittyCapabilityClearsPlaceholderYes covers setting Kitty to anything other than
+// "yes" also dropping a "yes" placeholder, since placeholder display requires Kitty protocol.
+func TestSetKittyCapabilityClearsPlaceholderYes(t *testing.T) {
+	st := &dialog.PreviewSettingsDialogState{
+		Kitty:            config.PreviewTerminalCapabilityYes,
+		KittyPlaceholder: config.PreviewTerminalCapabilityYes,
 	}
-	if st.KittyPlaceholderSupported {
-		t.Fatal("KittyPlaceholderSupported should be cleared when Kitty support is unchecked")
+	setKittyCapability(st, config.PreviewTerminalCapabilityNo)
+	if st.Kitty != config.PreviewTerminalCapabilityNo {
+		t.Fatalf("Kitty = %q, want %q", st.Kitty, config.PreviewTerminalCapabilityNo)
+	}
+	if st.KittyPlaceholder != config.PreviewTerminalCapabilityNo {
+		t.Fatalf("KittyPlaceholder = %q, want %q when Kitty is no", st.KittyPlaceholder, config.PreviewTerminalCapabilityNo)
 	}
 
-	toggleKittySupported(st)
-	if !st.KittySupported {
-		t.Fatal("KittySupported should be true after toggling from false")
+	setKittyCapability(st, config.PreviewTerminalCapabilityYes)
+	if st.Kitty != config.PreviewTerminalCapabilityYes {
+		t.Fatalf("Kitty = %q, want %q", st.Kitty, config.PreviewTerminalCapabilityYes)
 	}
-	if st.KittyPlaceholderSupported {
-		t.Fatal("KittyPlaceholderSupported should stay unchecked when only Kitty support is re-checked")
+	if st.KittyPlaceholder != config.PreviewTerminalCapabilityNo {
+		t.Fatalf("KittyPlaceholder = %q, want to stay %q", st.KittyPlaceholder, config.PreviewTerminalCapabilityNo)
 	}
 }
 
-// TestToggleKittyPlaceholderSupportedImpliesKitty covers checking placeholder support also
-// implicitly checking Kitty support, since placeholder is a Kitty-only display mode.
-func TestToggleKittyPlaceholderSupportedImpliesKitty(t *testing.T) {
-	st := &dialog.PreviewSettingsDialogState{}
-	toggleKittyPlaceholderSupported(st)
-	if !st.KittyPlaceholderSupported {
-		t.Fatal("KittyPlaceholderSupported should be true after toggling from false")
+// TestSetKittyPlaceholderCapabilityImpliesKittyYes covers setting placeholder to "yes"
+// also forcing Kitty to "yes", since placeholder is a Kitty-only display mode.
+func TestSetKittyPlaceholderCapabilityImpliesKittyYes(t *testing.T) {
+	st := &dialog.PreviewSettingsDialogState{
+		Kitty:            config.PreviewTerminalCapabilityAuto,
+		KittyPlaceholder: config.PreviewTerminalCapabilityAuto,
 	}
-	if !st.KittySupported {
-		t.Fatal("KittySupported should be implicitly checked when placeholder support is checked")
+	setKittyPlaceholderCapability(st, config.PreviewTerminalCapabilityYes)
+	if st.KittyPlaceholder != config.PreviewTerminalCapabilityYes {
+		t.Fatalf("KittyPlaceholder = %q, want %q", st.KittyPlaceholder, config.PreviewTerminalCapabilityYes)
+	}
+	if st.Kitty != config.PreviewTerminalCapabilityYes {
+		t.Fatalf("Kitty = %q, want %q when placeholder is yes", st.Kitty, config.PreviewTerminalCapabilityYes)
 	}
 
-	toggleKittyPlaceholderSupported(st)
-	if st.KittyPlaceholderSupported {
-		t.Fatal("KittyPlaceholderSupported should be false after toggling from true")
+	setKittyPlaceholderCapability(st, config.PreviewTerminalCapabilityNo)
+	if st.KittyPlaceholder != config.PreviewTerminalCapabilityNo {
+		t.Fatalf("KittyPlaceholder = %q, want %q", st.KittyPlaceholder, config.PreviewTerminalCapabilityNo)
 	}
-	if !st.KittySupported {
-		t.Fatal("KittySupported should remain checked when only placeholder support is unchecked")
+	if st.Kitty != config.PreviewTerminalCapabilityYes {
+		t.Fatalf("Kitty = %q, want to stay %q", st.Kitty, config.PreviewTerminalCapabilityYes)
 	}
 }
 
@@ -161,6 +167,75 @@ func TestPreviewSettingsOpenAndSavePreservesCapabilityTriState(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestPreviewSettingsDialogCanPersistCapabilityNo(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	fields := []struct {
+		name  string
+		cycle rune
+		get   func(config.PreviewConfig) string
+	}{
+		{
+			name:  "terminal_sixel",
+			cycle: 's',
+			get:   func(p config.PreviewConfig) string { return p.TerminalSixel },
+		},
+		{
+			name:  "terminal_kitty",
+			cycle: 'k',
+			get:   func(p config.PreviewConfig) string { return p.TerminalKitty },
+		},
+		{
+			name:  "terminal_kitty_placeholder",
+			cycle: 'p',
+			get:   func(p config.PreviewConfig) string { return p.TerminalKittyPlaceholder },
+		},
+	}
+
+	for _, field := range fields {
+		t.Run(field.name, func(t *testing.T) {
+			screen := tcell.NewSimulationScreen("UTF-8")
+			if err := screen.Init(); err != nil {
+				t.Fatalf("Init() error = %v", err)
+			}
+			defer screen.Fini()
+			screen.SetSize(80, 20)
+
+			appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "preview-set-no")}.WithResolvedLocations()
+			app := newTestApp(t, screen, Options{
+				CWD: func() (string, error) {
+					return dir, nil
+				},
+				Config: config.Default(),
+				Paths:  appPaths,
+				Theme:  theme.Default(),
+			})
+
+			app.openPreviewSettingsDialog()
+			app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, field.cycle, tcell.ModNone))
+			app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, field.cycle, tcell.ModNone))
+			quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
+			if quit {
+				t.Fatal("handleKey() quit = true, want false")
+			}
+			if app.model.PreviewSettingsDialog.Open {
+				t.Fatal("preview settings dialog should close after apply")
+			}
+			if got := field.get(app.config.Preview); got != config.PreviewTerminalCapabilityNo {
+				t.Fatalf("in-memory %s = %q, want %q", field.name, got, config.PreviewTerminalCapabilityNo)
+			}
+			reloaded, err := config.LoadFromPaths(appPaths)
+			if err != nil {
+				t.Fatalf("LoadFromPaths after persist: %v", err)
+			}
+			if got := field.get(reloaded.Preview); got != config.PreviewTerminalCapabilityNo {
+				t.Fatalf("persisted %s = %q, want %q", field.name, got, config.PreviewTerminalCapabilityNo)
+			}
+		})
 	}
 }
 

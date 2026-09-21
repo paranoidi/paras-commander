@@ -69,24 +69,23 @@ type ConfigDialogState struct {
 }
 
 // PreviewSettingsDialogState is the M-F3 preview settings modal: three tri-state terminal
-// capability confirmations (persisted as "auto"/"yes"/"no" in [preview]), a radio forcing the
+// capability radio groups (persisted as "auto"/"yes"/"no" in [preview]), a radio forcing the
 // active graphics protocol ([preview].image_protocol), an image-metadata detail-level radio
 // ([preview].image_metadata), and a video-metadata checkbox ([preview].video_metadata).
 type PreviewSettingsDialogState struct {
 	Open bool
-	// SixelSupported / KittySupported / KittyPlaceholderSupported reflect the checkbox state:
-	// checked means the corresponding [preview].terminal_* key is persisted as "yes", unchecked
-	// as "auto" (there is no "no" state in this dialog — see ApplyPreviewSettingsDialog).
-	SixelSupported            bool
-	KittySupported            bool
-	KittyPlaceholderSupported bool
+	// Sixel / Kitty / KittyPlaceholder are config.PreviewTerminalCapabilityAuto/Yes/No for
+	// [preview].terminal_sixel / terminal_kitty / terminal_kitty_placeholder.
+	Sixel            string
+	Kitty            string
+	KittyPlaceholder string
 	// Protocol is one of config.PreviewImageProtocolAuto/Sixel/Kitty.
 	Protocol string
 	// ImageMetadata is one of config.PreviewImageMetadataOff/Basic/Essentials/Full.
 	ImageMetadata string
 	// VideoMetadata reflects the Video metadata checkbox ([preview].video_metadata).
 	VideoMetadata bool
-	Focus         int // 0-2=checkboxes, 3-5=protocol radios, 6-9=metadata radios, 10=video checkbox, 11=OK, 12=Cancel
+	Focus         int // 0-8=capability radios, 9-11=protocol, 12-15=metadata, 16=video, 17=OK, 18=Cancel
 }
 
 // SortDialogState is the renderable state for the sort configuration modal.

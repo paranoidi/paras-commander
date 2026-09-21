@@ -36,27 +36,37 @@ func PreviewSettingsDialogImageMetadataRadios() []PreviewSettingsDialogRadio {
 	}
 }
 
+// PreviewSettingsDialogCapabilityRadios returns the Auto/Yes/No rows shared by the three
+// terminal-capability groups (Sixel, Kitty, Placeholder).
+func PreviewSettingsDialogCapabilityRadios() []PreviewSettingsDialogRadio {
+	return []PreviewSettingsDialogRadio{
+		{config.PreviewTerminalCapabilityAuto, "auto", 0},
+		{config.PreviewTerminalCapabilityYes, "yes", 0},
+		{config.PreviewTerminalCapabilityNo, "no", 0},
+	}
+}
+
 const (
-	previewSettingsDialogFocusSixelCheckbox = 0
-	previewSettingsDialogFocusKittyCheckbox = 1
-	previewSettingsDialogFocusPlaceholder   = 2
-	previewSettingsDialogFocusProtocolFirst = 3
-	previewSettingsDialogFocusMetadataFirst = 6
-	previewSettingsDialogFocusVideoMetadata = 10
-	previewSettingsDialogFocusOK            = 11
-	previewSettingsDialogFocusCancel        = 12
+	previewSettingsDialogFocusSixelFirst       = 0
+	previewSettingsDialogFocusKittyFirst       = 3
+	previewSettingsDialogFocusPlaceholderFirst = 6
+	previewSettingsDialogFocusProtocolFirst    = 9
+	previewSettingsDialogFocusMetadataFirst    = 12
+	previewSettingsDialogFocusVideoMetadata    = 16
+	previewSettingsDialogFocusOK               = 17
+	previewSettingsDialogFocusCancel           = 18
 )
 
-// PreviewSettingsDialogForm is the dialog's checkbox/radio/button focus layout, shared by the
-// render and key-handling code: checkboxes(0-2) | protocol radios(3-5) | metadata radios(6-9) |
-// video checkbox(10) | buttons(11-12).
+// PreviewSettingsDialogForm is the dialog's radio/checkbox/button focus layout, shared by the
+// render and key-handling code: sixel(0-2) | kitty(3-5) | placeholder(6-8) | protocol(9-11) |
+// metadata(12-15) | video(16) | buttons(17-18).
 func PreviewSettingsDialogForm() DialogLinearForm {
-	return NewDialogLinearForm(11).WithSegments(0, 3, 6, 10)
+	return NewDialogLinearForm(17).WithSegments(0, 3, 6, 9, 12, 16)
 }
 
 // DrawPreviewSettingsDialog renders the M-F3 preview settings modal.
 func DrawPreviewSettingsDialog(screen tcell.Screen, layout Layout, state PreviewSettingsDialogState, styles theme.Theme) {
-	const width, height = 46, 22
+	const width, height = 46, 28
 	rect := draw.CenteredDialogRect(layout, width, height)
 
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Preview settings", styles)
@@ -67,12 +77,9 @@ func DrawPreviewSettingsDialog(screen tcell.Screen, layout Layout, state Preview
 	y := rect.Y + 1
 	primitive.Text(screen, textX, y, textW, "Confirm terminal capabilities:", textStyle)
 	y++
-	draw.DrawDialogCheckbox(screen, optionX, y, "Sixel supported", 's', state.SixelSupported, state.Focus == previewSettingsDialogFocusSixelCheckbox, false, styles)
-	y++
-	draw.DrawDialogCheckbox(screen, optionX, y, "Kitty supported", 'k', state.KittySupported, state.Focus == previewSettingsDialogFocusKittyCheckbox, false, styles)
-	y++
-	draw.DrawDialogCheckbox(screen, optionX, y, "Kitty placeholder supported", 'p', state.KittyPlaceholderSupported, state.Focus == previewSettingsDialogFocusPlaceholder, false, styles)
-	y++
+	y = drawPreviewSettingsCapabilityGroup(screen, optionX, y, "Sixel", state.Sixel, state.Focus, previewSettingsDialogFocusSixelFirst, styles)
+	y = drawPreviewSettingsCapabilityGroup(screen, optionX, y, "Kitty", state.Kitty, state.Focus, previewSettingsDialogFocusKittyFirst, styles)
+	y = drawPreviewSettingsCapabilityGroup(screen, optionX, y, "Placeholder", state.KittyPlaceholder, state.Focus, previewSettingsDialogFocusPlaceholderFirst, styles)
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 
@@ -103,4 +110,21 @@ func DrawPreviewSettingsDialog(screen tcell.Screen, layout Layout, state Preview
 	okFocused := state.Focus == previewSettingsDialogFocusOK
 	cancelFocused := state.Focus == previewSettingsDialogFocusCancel
 	draw.DrawOKCancelButtonRow(screen, rect, y, okFocused, cancelFocused, styles)
+}
+
+func drawPreviewSettingsCapabilityGroup(
+	screen tcell.Screen,
+	optionX int,
+	y int,
+	prefix string,
+	value string,
+	focus int,
+	focusFirst int,
+	styles theme.Theme,
+) int {
+	for i, r := range PreviewSettingsDialogCapabilityRadios() {
+		draw.DrawDialogRadio(screen, optionX, y, prefix+" "+r.Label, r.Shortcut, value == r.Value, focus == focusFirst+i, styles)
+		y++
+	}
+	return y
 }

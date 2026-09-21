@@ -1,5 +1,7 @@
 package geom
 
+import "github.com/paranoidi/paras-commander/internal/config"
+
 // Rect describes a terminal region.
 type Rect struct {
 	X      int
@@ -37,7 +39,6 @@ type Layout struct {
 }
 
 const (
-	defaultSelectionsPanelMaxRows = 5
 	// MinFileListContentRows is the default minimum file-list content rows when splitting with a selections strip.
 	MinFileListContentRows = 3
 	// filePanelListChromeRows is non-list lines in drawPanel (title + column header + bottom frame).
@@ -260,7 +261,7 @@ func SelectionsStripListRows(rect Rect) int {
 // EffectiveSelectionsPanelMaxRows returns the configured cap, or the built-in default when n <= 0.
 func EffectiveSelectionsPanelMaxRows(n int) int {
 	if n <= 0 {
-		return defaultSelectionsPanelMaxRows
+		return config.DefaultSelectionsPanelMaxRows
 	}
 	return n
 }

@@ -376,7 +376,7 @@ Open shell (suspend the TUI, run an interactive shell, resume).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `command` | string | `""` | Optional shell command/argv to run instead of an interactive shell. Empty uses `$SHELL`, falling back to `bash`. Setting this forces the one-shot shell even when `persistent` is `true` (a custom command is incompatible with the persistent session). |
-| `sync_cwd_on_return` | bool | `true` | Navigate the active panel to the shell's working directory after returning from the shell. |
+| `sync_cwd_on_return` | bool | `true` | Navigate the active panel to the persistent shell's working directory after returning from that session. Has no effect on the one-shot shell (the child process cwd is not visible to the parent). |
 | `persistent` | bool | `true` | Keep one Midnight-Commander-style shell session alive across repeated shell toggles, instead of starting a new shell each time. Linux only; falls back to the one-shot shell elsewhere or if the persistent session can't start. |
 | `terminal_panel_height` | int | `10` | Row count of the embedded terminal panel's content area, excluding the separator row (minimum 3). |
 
@@ -457,4 +457,4 @@ Notable dual bindings:
 | Refresh | `C-n` | — |
 | Open bookmarks | `C-b` | legacy `C-g`, `C-e` retained |
 
-Relocated non-leader actions (when a letter chord was needed): carousel `M-v`, disk-usage scan `M-d`, disk-usage clear `M-S-d` (also aborts in-flight scans), SFTP `M-r`, external browser `M-x`. Quick-view preview page down stays `C-j` (jobs.open uses `M-j`). See `consolidate-leader-keys.md` for the full mapping plan.
+Relocated non-leader actions (when a letter chord was needed): carousel `M-v`, disk-usage scan `M-d`, disk-usage clear `M-S-d` (also aborts in-flight scans), SFTP `M-r`, external browser `M-x`. Quick-view preview page down stays `C-j` (jobs.open uses `M-j`). See `shortcuts.md` for chord syntax and how to generate the default keybindings.

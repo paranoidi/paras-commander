@@ -1,6 +1,10 @@
 package geom
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/config"
+)
 
 func TestCalculateLayoutSplitsScreenIntoExpectedRegions(t *testing.T) {
 	layout := CalculateLayout(100, 30, true, PanelWidthSplit{})
@@ -544,5 +548,17 @@ func TestMergePaneRectsStacked(t *testing.T) {
 	want := Rect{X: 0, Y: 1, Width: 100, Height: 28}
 	if got != want {
 		t.Fatalf("MergePaneRects = %+v want %+v", got, want)
+	}
+}
+
+func TestEffectiveSelectionsPanelMaxRowsUsesConfigDefault(t *testing.T) {
+	if got := EffectiveSelectionsPanelMaxRows(0); got != config.DefaultSelectionsPanelMaxRows {
+		t.Fatalf("EffectiveSelectionsPanelMaxRows(0) = %d, want config.DefaultSelectionsPanelMaxRows (%d)", got, config.DefaultSelectionsPanelMaxRows)
+	}
+	if got := EffectiveSelectionsPanelMaxRows(-1); got != config.DefaultSelectionsPanelMaxRows {
+		t.Fatalf("EffectiveSelectionsPanelMaxRows(-1) = %d, want config.DefaultSelectionsPanelMaxRows (%d)", got, config.DefaultSelectionsPanelMaxRows)
+	}
+	if got := EffectiveSelectionsPanelMaxRows(7); got != 7 {
+		t.Fatalf("EffectiveSelectionsPanelMaxRows(7) = %d, want 7", got)
 	}
 }
