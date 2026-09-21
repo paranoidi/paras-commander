@@ -20,9 +20,12 @@ func defaultRegistry() *fsbackend.Registry {
 	return fsbackend.Default()
 }
 
-func backendFor(loc pathloc.Path) (fsbackend.Backend, error) {
+func backendForDefault(loc pathloc.Path) (fsbackend.Backend, error) {
 	return defaultRegistry().Backend(loc)
 }
+
+// backendFor resolves the filesystem backend for loc. Tests replace this.
+var backendFor = backendForDefault
 
 func useLocalFastPath(src, dst pathloc.Path) bool {
 	return src.Scheme() == pathloc.SchemeFile && dst.Scheme() == pathloc.SchemeFile
@@ -144,6 +147,9 @@ func removePathRecursive(ctx context.Context, loc pathloc.Path) error {
 		return err
 	}
 	for _, child := range children {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if child.Name == "." || child.Name == ".." {
 			continue
 		}

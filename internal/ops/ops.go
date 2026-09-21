@@ -4,6 +4,7 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -270,10 +271,10 @@ func DestinationIsDirAtEnqueue(dest pathloc.Path) bool {
 }
 
 // RenameFastPath attempts a backend rename and returns true on success.
-// If the rename fails due to a cross-device link (local), it returns false and nil error
-// so the caller can fall back to copy+delete.
-// Other errors are returned as-is.
-func RenameFastPath(src, dest pathloc.Path) (ok bool, err error) {
+// If the rename fails due to a cross-device link (local) or a non-context remote
+// error, it returns false and nil so the caller can fall back to copy+delete.
+// Remote backends use ctx; local os.Rename is not context-aware.
+func RenameFastPath(ctx context.Context, src, dest pathloc.Path) (ok bool, err error) {
 	if src.Scheme() != dest.Scheme() {
 		return false, nil
 	}
@@ -285,10 +286,13 @@ func RenameFastPath(src, dest pathloc.Path) (ok bool, err error) {
 		if err != nil {
 			return false, err
 		}
-		if err := be.Rename(context.Background(), src, dest); err == nil {
-			return true, nil
+		if renameErr := be.Rename(ctx, src, dest); renameErr != nil {
+			if errors.Is(renameErr, context.Canceled) || errors.Is(renameErr, context.DeadlineExceeded) {
+				return false, renameErr
+			}
+			return false, nil
 		}
-		return false, err
+		return true, nil
 	}
 	srcHost, err := src.FilePath()
 	if err != nil {

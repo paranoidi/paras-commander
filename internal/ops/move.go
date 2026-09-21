@@ -142,7 +142,7 @@ func RenameFastPathCtx(ctx context.Context, src, dest pathloc.Path) (ok bool, er
 		}
 		return true, nil
 	}
-	return RenameFastPath(src, dest)
+	return RenameFastPath(ctx, src, dest)
 }
 
 func stageExistingDest(ctx context.Context, dst pathloc.Path) (pathloc.Path, error) {
