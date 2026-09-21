@@ -54,7 +54,7 @@ func TestExpandCommandEchoDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := `echo "/home/u/proj"`; got != want {
+	if want := `echo '/home/u/proj'`; got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}
 }
