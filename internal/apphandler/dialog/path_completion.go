@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"github.com/paranoidi/paras-commander/internal/pathpick"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -61,16 +62,15 @@ func (h *Handler) SyncOpenPathInputsAfterFSChange() {
 	}
 }
 
-// TransferDestinationTextWidth returns the visible width of the transfer/flatten/file-dialog
-// destination text row (constant across those dialogs since they share PreferredFormDialogWidth).
+// TransferDestinationTextWidth returns the visible width of the transfer destination
+// text row as painted, so Tab-complete scroll matches the drawn input.
 func (h *Handler) TransferDestinationTextWidth() int {
-	termW, _ := h.screen.Size()
-	frameW := dialog.PreferredFormDialogWidth
-	if frameW > termW-4 {
-		frameW = termW - 4
-	}
-	if frameW < 36 {
-		frameW = 36
-	}
-	return frameW - 4 - 2
+	termW, termH := h.screen.Size()
+	layout := h.host.LayoutForTerminalSize(termW, termH)
+	return dialog.TransferDestinationTextWidth(
+		layout,
+		h.model.TransferDialog,
+		h.model.UserHomeDir,
+		ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons),
+	)
 }
