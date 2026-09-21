@@ -80,6 +80,14 @@ func (s *State) SetScanFunc(fn ScanFunc) {
 	s.scanFunc = fn
 }
 
+// SetSourceSizeSink sets the callback that receives a single-source local-directory copy job's
+// final counting-walk total (see runJobScan).
+func (s *State) SetSourceSizeSink(fn func(absPath string, bytes int64)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sourceSizeSink = fn
+}
+
 func (s *State) startJobScan(job *Job) {
 	if job == nil || !job.NeedsPreScan() {
 		return
@@ -108,6 +116,7 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 	job.ScanStartedAt = time.Now()
 	cfg := s.scanConfig
 	scanFn := s.scanFunc
+	sink := s.sourceSizeSink
 	s.mu.Unlock()
 
 	if scanFn == nil {
@@ -264,6 +273,20 @@ waitLoop:
 	job.PlanComplete = true
 	job.TotalsComplete = true
 	s.mu.Unlock()
+
+	// ponytail: single-source copy only — multi-source copies come from a selection, which the
+	// Insert path already scans; move/flatten delete the source so a cached total would go
+	// stale, and dereferenced walks include link-target bytes the disk-usage walk excludes. The
+	// counting walk also skips symlink entries' own sizes and ignores .goduignore where the
+	// disk-usage walk does the opposite, so the cached total can be off by a few bytes — not
+	// worth reconciling.
+	if sink != nil && job.Type == TypeCopy && !job.DereferenceSymlinks && len(job.Sources) == 1 && !job.Sources[0].IsRemote() {
+		if p, err := job.Sources[0].FilePath(); err == nil {
+			_, _, bytes := producer.Totals()
+			sink(p, bytes)
+		}
+	}
+
 	writeTotalsAndEmit()
 }
 

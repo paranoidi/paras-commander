@@ -64,6 +64,11 @@ type State struct {
 	scanMu     sync.Mutex
 	scanCancel map[string]context.CancelFunc
 
+	// sourceSizeSink, when set, receives a single-source copy job's final counting-walk total
+	// (see runJobScan in scan.go), letting the caller feed it into an external cache (e.g. the
+	// disk-usage engine) without jobs importing that package.
+	sourceSizeSink func(absPath string, bytes int64)
+
 	// rateLimiter throttles transfer throughput; a global, session-only setting (not per-job,
 	// not persisted). Zero limit means unlimited.
 	rateLimiter *RateLimiter

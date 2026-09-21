@@ -287,6 +287,18 @@ func (e *Engine) ByteSize(absPath string) (int64, bool) {
 	return e.Size(absPath)
 }
 
+// SetSize records an externally computed subtree size (e.g. a copy job's counting walk).
+func (e *Engine) SetSize(absPath string, size int64) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	e.cache[filepath.Clean(absPath)] = size
+	e.cacheVersion.Add(1)
+	e.mu.Unlock()
+	e.poke()
+}
+
 // FileCount returns cached recursive file count for absPath when present.
 func (e *Engine) FileCount(absPath string) (int64, bool) {
 	if e == nil {

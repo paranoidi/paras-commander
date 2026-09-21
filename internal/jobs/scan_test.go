@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -367,6 +368,92 @@ func TestScanMoveStaysScanningUntilDone(t *testing.T) {
 					t.Fatalf("timeout waiting StatusQueued after Done; last seen: %+v", all)
 				case <-time.After(5 * time.Millisecond):
 				}
+			}
+		})
+	}
+}
+
+// TestScanSourceSizeSinkFiresOnlyForSingleSourceLocalCopy covers the copy pre-scan -> disk-usage
+// cache feeder: a single-source local-directory copy job's sink fires once with the source path
+// and the counting walk's final byte total; a move job (source gets deleted, so a cached total
+// would go stale) never fires it.
+func TestScanSourceSizeSinkFiresOnlyForSingleSourceLocalCopy(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		jobType  Type
+		wantSink bool
+	}{
+		{"copy", TypeCopy, true},
+		{"move", TypeMove, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := NewState()
+			s.SetScanConfig(ScanConfig{ProgressMinInterval: 10 * time.Millisecond})
+
+			type sinkCall struct {
+				path  string
+				bytes int64
+			}
+			var mu sync.Mutex
+			var calls []sinkCall
+			s.SetSourceSizeSink(func(absPath string, bytes int64) {
+				mu.Lock()
+				calls = append(calls, sinkCall{absPath, bytes})
+				mu.Unlock()
+			})
+
+			doneCh := make(chan struct{})
+			s.SetScanFunc(func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks ScanWalkHooks) PlanProducer {
+				return PlanProducer{
+					Items:     make(chan ops.PlanItem),
+					FirstItem: make(chan struct{}), // never fires; drive straight to Done
+					Totals:    func() (int, int, int64) { return 3, 0, 12345 },
+					Done:      doneCh,
+					Err:       func() error { return nil },
+				}
+			})
+
+			job := &Job{ID: "sink-job-" + tc.name, Type: tc.jobType, Status: StatusScanning, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
+			s.AddJob(job)
+
+			deadline := time.After(3 * time.Second)
+			select {
+			case ev := <-s.Events():
+				if ev.Type != EventEnqueued {
+					t.Fatalf("first event = %v, want EventEnqueued", ev.Type)
+				}
+			case <-deadline:
+				t.Fatal("timeout waiting EventEnqueued")
+			}
+
+			close(doneCh)
+
+			deadline = time.After(3 * time.Second)
+			for {
+				all := s.AllJobs()
+				if len(all) == 1 && all[0].PlanComplete {
+					break
+				}
+				select {
+				case <-deadline:
+					t.Fatalf("timeout waiting PlanComplete=true; last seen: %+v", all)
+				case <-time.After(5 * time.Millisecond):
+				}
+			}
+
+			mu.Lock()
+			got := append([]sinkCall(nil), calls...)
+			mu.Unlock()
+
+			if tc.wantSink {
+				if len(got) != 1 {
+					t.Fatalf("sink calls = %d, want 1: %+v", len(got), got)
+				}
+				if got[0].path != "/a" || got[0].bytes != 12345 {
+					t.Fatalf("sink call = %+v, want {/a 12345}", got[0])
+				}
+			} else if len(got) != 0 {
+				t.Fatalf("sink calls = %d, want 0: %+v", len(got), got)
 			}
 		})
 	}

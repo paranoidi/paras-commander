@@ -566,6 +566,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		ProgressMinInterval: time.Duration(cfg.Jobs.ScanProgressMinIntervalMS) * time.Millisecond,
 	})
 	jobState.SetScanFunc(jobbridge.ScanFunc(cfg.Jobs))
+	jobState.SetSourceSizeSink(duEngine.SetSize)
 	jobState.StartWorker(app.jobStopCh)
 	suppressHeavyPathProbes := func(loc pathloc.Path) bool {
 		if loc.IsRemote() {

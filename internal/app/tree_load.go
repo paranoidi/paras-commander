@@ -130,6 +130,7 @@ func (a *App) applyTreeChildResults() bool {
 	items := a.treeChildResults.drain()
 	changed := false
 	touchedPanel := -1
+	var need []string
 	for _, p := range items {
 		touchedPanel = p.panelID
 		pan := a.panelByID(p.panelID)
@@ -139,6 +140,20 @@ func (a *App) applyTreeChildResults() bool {
 				a.setErrorMessage("Expand failed", p.err)
 			}
 		}
+		if p.err == nil && a.disk.engine != nil && !pan.Path.IsRemote() {
+			if _, ok := a.disk.engine.ByteSize(p.dirID); !ok && !a.disk.engine.PendingForPanel(p.dirID, p.panelID) {
+				need = append(need, p.dirID)
+			}
+		}
+	}
+	// ponytail: items landing in the same drain are not pruned against each other, so a child
+	// that arrives in the same batch as its ancestor gets a redundant walk instead of a cache
+	// hit off the ancestor's result. Cascade levels land in separate drains in practice, so this
+	// is rare; revisit only if a wide expand-all is seen queuing duplicate scans.
+	if need = a.filterJobContendedPaths(need); len(need) > 0 && touchedPanel >= 0 {
+		pan := a.panelByID(touchedPanel)
+		a.disk.engine.StartScanFromListing(need, a.disk.ignore, touchedPanel,
+			listingVolumeGateForScan(pan, a.config.DiskUsage.DescendIntoMountPoints))
 	}
 	if !changed && touchedPanel >= 0 {
 		pan := a.panelByID(touchedPanel)
