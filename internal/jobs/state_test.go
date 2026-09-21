@@ -1264,6 +1264,31 @@ func jobStatusLocked(s *State, job *Job) Status {
 	return job.Status
 }
 
+// waitJobsCanceled waits until every job is StatusCanceled (workerShutdown's
+// pending-job mark, which is asynchronous after close(stop)).
+func waitJobsCanceled(t *testing.T, s *State, jobs ...*Job) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		allCanceled := true
+		for _, job := range jobs {
+			if jobStatusLocked(s, job) != StatusCanceled {
+				allCanceled = false
+				break
+			}
+		}
+		if allCanceled {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	for _, job := range jobs {
+		if st := jobStatusLocked(s, job); st != StatusCanceled {
+			t.Fatalf("timeout waiting for %s to be canceled (status=%q)", job.ID, st)
+		}
+	}
+}
+
 // assertPendingNeverStarted fails if a lease-waiting job entered TransferFunc or left StatusCanceled
 // after the holder released the lease (the R04-001 race window).
 func assertPendingNeverStarted(t *testing.T, s *State, enteredIDs *sync.Map, pending ...*Job) {
@@ -1402,6 +1427,9 @@ func TestShutdownPendingDequeuedNeverEntersTransferFunc(t *testing.T) {
 	waitPendingDequeuedCount(t, s, 2)
 
 	close(stop)
+	// Shutdown marks pending jobs canceled asynchronously. Wait for that before
+	// releasing the lease so assertPendingNeverStarted does not race the worker.
+	waitJobsCanceled(t, s, pendA, pendB)
 	close(release)
 	select {
 	case <-holderLeft:
