@@ -287,13 +287,16 @@ func (e *Engine) ByteSize(absPath string) (int64, bool) {
 	return e.Size(absPath)
 }
 
-// SetSize records an externally computed subtree size (e.g. a copy job's counting walk).
-func (e *Engine) SetSize(absPath string, size int64) {
+// SetSize records an externally computed subtree total (e.g. a copy job's counting walk), writing
+// byte size and file count together the same way a walk does so FileCount stays consistent.
+func (e *Engine) SetSize(absPath string, files int, bytes int64) {
 	if e == nil {
 		return
 	}
+	p := filepath.Clean(absPath)
 	e.mu.Lock()
-	e.cache[filepath.Clean(absPath)] = size
+	e.cache[p] = bytes
+	e.fileCounts[p] = int64(files)
 	e.cacheVersion.Add(1)
 	e.mu.Unlock()
 	e.poke()

@@ -82,7 +82,7 @@ func (s *State) SetScanFunc(fn ScanFunc) {
 
 // SetSourceSizeSink sets the callback that receives a single-source local-directory copy job's
 // final counting-walk total (see runJobScan).
-func (s *State) SetSourceSizeSink(fn func(absPath string, bytes int64)) {
+func (s *State) SetSourceSizeSink(fn func(absPath string, files int, bytes int64)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sourceSizeSink = fn
@@ -282,8 +282,8 @@ waitLoop:
 	// worth reconciling.
 	if sink != nil && job.Type == TypeCopy && !job.DereferenceSymlinks && len(job.Sources) == 1 && !job.Sources[0].IsRemote() {
 		if p, err := job.Sources[0].FilePath(); err == nil {
-			_, _, bytes := producer.Totals()
-			sink(p, bytes)
+			files, _, bytes := producer.Totals()
+			sink(p, files, bytes)
 		}
 	}
 

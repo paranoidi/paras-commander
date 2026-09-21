@@ -392,13 +392,14 @@ func TestScanSourceSizeSinkFiresOnlyForSingleSourceLocalCopy(t *testing.T) {
 
 			type sinkCall struct {
 				path  string
+				files int
 				bytes int64
 			}
 			var mu sync.Mutex
 			var calls []sinkCall
-			s.SetSourceSizeSink(func(absPath string, bytes int64) {
+			s.SetSourceSizeSink(func(absPath string, files int, bytes int64) {
 				mu.Lock()
-				calls = append(calls, sinkCall{absPath, bytes})
+				calls = append(calls, sinkCall{absPath, files, bytes})
 				mu.Unlock()
 			})
 
@@ -449,8 +450,8 @@ func TestScanSourceSizeSinkFiresOnlyForSingleSourceLocalCopy(t *testing.T) {
 				if len(got) != 1 {
 					t.Fatalf("sink calls = %d, want 1: %+v", len(got), got)
 				}
-				if got[0].path != "/a" || got[0].bytes != 12345 {
-					t.Fatalf("sink call = %+v, want {/a 12345}", got[0])
+				if got[0].path != "/a" || got[0].files != 3 || got[0].bytes != 12345 {
+					t.Fatalf("sink call = %+v, want {/a 3 12345}", got[0])
 				}
 			} else if len(got) != 0 {
 				t.Fatalf("sink calls = %d, want 0: %+v", len(got), got)
