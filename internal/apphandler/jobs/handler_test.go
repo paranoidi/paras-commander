@@ -402,6 +402,72 @@ func TestApplyRefreshesReloadsPanelsAndSyncsJobPathMarks(t *testing.T) {
 	}
 }
 
+type jobsHostPanelsStub struct {
+	jobsHostStub
+	primary   *panel.State
+	secondary *panel.State
+}
+
+func (h jobsHostPanelsStub) PrimaryPanel() *panel.State   { return h.primary }
+func (h jobsHostPanelsStub) SecondaryPanel() *panel.State { return h.secondary }
+
+func TestApplyRefreshesReloadsJobWriteDestinationPanels(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+
+	srcPanel := &panel.State{Path: pathloc.MustParse("/src")}
+	dstPanel := &panel.State{Path: pathloc.MustParse("/dst")}
+	var srcLoads, dstLoads int
+	srcPanel.ScheduleAsyncLoad = func(panel.AsyncLoadRequest) bool {
+		srcLoads++
+		return true
+	}
+	dstPanel.ScheduleAsyncLoad = func(panel.AsyncLoadRequest) bool {
+		dstLoads++
+		return true
+	}
+
+	model := &ui.Model{
+		JobPathMarks: []ui.JobPathMark{{
+			Type:        string(jobs.TypeCopy),
+			Status:      string(jobs.StatusRunning),
+			Sources:     []string{"/src/willow.txt"},
+			Destination: "/dst",
+			DestIsDir:   true,
+		}},
+	}
+	h := New(Deps{
+		Host:   jobsHostPanelsStub{primary: srcPanel, secondary: dstPanel},
+		Screen: screen,
+		Model:  model,
+		State:  jobs.NewState(),
+		Config: config.Default(),
+	})
+	h.refreshDestListing = true
+	if h.ApplyRefreshes() {
+		t.Fatal("non-terminal ApplyRefreshes should return false")
+	}
+	if dstLoads != 1 {
+		t.Fatalf("destination panel loads = %d, want 1", dstLoads)
+	}
+	if srcLoads != 0 {
+		t.Fatalf("source panel loads = %d, want 0", srcLoads)
+	}
+
+	// Unrelated panel path: no reload.
+	dstLoads = 0
+	model.JobPathMarks[0].Destination = "/other"
+	h.refreshDestListing = true
+	_ = h.ApplyRefreshes()
+	if dstLoads != 0 {
+		t.Fatalf("unrelated dest: destination panel loads = %d, want 0", dstLoads)
+	}
+}
+
 // TestAddTransferJobMoveNeverSetsDereferenceSymlinks guards the enforcement choke point:
 // a Move request must never carry DereferenceSymlinks through onto the resulting Job, even
 // when the request (transfer dialog / TransferPreserve) asked for it — the option only makes

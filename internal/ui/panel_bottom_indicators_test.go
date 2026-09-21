@@ -1,11 +1,14 @@
 package ui
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -227,6 +230,9 @@ func TestCollectPanelBottomIndicatorsJobWriteVisible(t *testing.T) {
 	if seg == nil {
 		t.Fatal("job_write segment not present when JobWriteMark is true")
 	}
+	if seg.Edge != PanelBottomEdgePhysicalRight {
+		t.Fatalf("job_write edge = %v, want PhysicalRight", seg.Edge)
+	}
 	wantLabel := " " + string(styles.IconFilelistJob()) + " "
 	if seg.Label != wantLabel {
 		t.Fatalf("label = %q, want %q", seg.Label, wantLabel)
@@ -235,7 +241,7 @@ func TestCollectPanelBottomIndicatorsJobWriteVisible(t *testing.T) {
 
 func TestPanelBottomIndicatorRegistryIncludesEndEdgeIndicators(t *testing.T) {
 	t.Parallel()
-	var hasSync, hasQuickView, hasOther bool
+	var hasSync, hasQuickView, hasOther, hasJobWrite bool
 	for _, spec := range panelBottomIndicatorRegistry {
 		switch spec.ID {
 		case PanelBottomIndicatorSync:
@@ -244,9 +250,61 @@ func TestPanelBottomIndicatorRegistryIncludesEndEdgeIndicators(t *testing.T) {
 			hasQuickView = spec.Edge == PanelBottomEdgeEnd
 		case PanelBottomIndicatorOtherPanel:
 			hasOther = spec.Edge == PanelBottomEdgeEnd
+		case PanelBottomIndicatorJobWrite:
+			hasJobWrite = spec.Edge == PanelBottomEdgePhysicalRight
 		}
 	}
 	if !hasSync || !hasQuickView || !hasOther {
 		t.Fatalf("registry end edge: sync=%v quick_view=%v other_panel=%v", hasSync, hasQuickView, hasOther)
+	}
+	if !hasJobWrite {
+		t.Fatal("job_write must be on PhysicalRight")
+	}
+}
+
+func TestDrawPanelBottomIndicatorsJobWriteOnPhysicalRight(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	icon := styles.IconFilelistJob()
+	label := " " + string(icon) + " "
+	labelW := len([]rune(label))
+
+	for _, panelID := range []int{PrimaryPanel, SecondaryPanel} {
+		t.Run(fmt.Sprintf("panel_%d", panelID), func(t *testing.T) {
+			screen := tcell.NewSimulationScreen("UTF-8")
+			if err := screen.Init(); err != nil {
+				t.Fatalf("Init: %v", err)
+			}
+			defer screen.Fini()
+			const width, height = 40, 8
+			screen.SetSize(width, height)
+			rect := Rect{X: 0, Y: 0, Width: width, Height: height}
+			ctx := PanelBottomIndicatorContext{
+				PanelID:                panelID,
+				SyncDriverPanelID:      -1,
+				QuickViewDriverPanelID: -1,
+				State:                  panel.State{Path: pathloc.MustParse("/tmp")},
+				Styles:                 styles,
+				BorderStyle:            styles.PanelActiveFrame,
+				JobWriteMark:           true,
+				JobWriteStatus:         "running",
+				SplitOrientation:       SplitHorizontal,
+			}
+			finalizeBottomCtx(rect, &ctx)
+			drawPanelBottomIndicators(screen, rect, ctx)
+
+			bottomY := height - 1
+			lastIn := width - 2
+			row := tcelltest.TextAt(screen, 1, bottomY, width-2)
+			idx := strings.LastIndex(row, label)
+			if idx < 0 {
+				t.Fatalf("panel %d bottom = %q, want job_write label %q on physical right", panelID, row, label)
+			}
+			// idx is relative to TextAt start at column 1; glyph should end at lastIn.
+			rightmost := 1 + idx + labelW - 1
+			if rightmost != lastIn {
+				t.Fatalf("panel %d job_write ends at col %d, want lastIn %d (row=%q)", panelID, rightmost, lastIn, row)
+			}
+		})
 	}
 }

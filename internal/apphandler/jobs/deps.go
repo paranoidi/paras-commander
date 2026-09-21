@@ -38,8 +38,9 @@ type Handler struct {
 	wakeMu    sync.Mutex
 	wakeTimer *time.Timer
 
-	refreshTerminal bool
-	refreshProgress bool
+	refreshTerminal    bool
+	refreshProgress    bool
+	refreshDestListing bool
 
 	affectVisible             bool
 	lastBatchMenuBarStripOnly bool

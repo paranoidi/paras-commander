@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -849,8 +850,16 @@ func (h *Handler) applyJobEventBatch(batch []jobs.Event) {
 	if flags.Terminal {
 		h.refreshTerminal = true
 		h.refreshProgress = false
-	} else if flags.Progress && !h.refreshTerminal {
-		h.refreshProgress = true
+		h.refreshDestListing = false
+	} else {
+		if flags.Progress && !h.refreshTerminal {
+			h.refreshProgress = true
+		}
+		// MarkUpdate (started/resumed/…) and progress both need a dest-panel readdir so
+		// newly written names appear in the file list with job icons while the job runs.
+		if (flags.Progress || flags.MarkUpdate) && !h.refreshTerminal {
+			h.refreshDestListing = true
+		}
 	}
 	if flags.MarkUpdate {
 		h.SyncJobPathMarks()
@@ -944,19 +953,43 @@ func (h *Handler) ApplyRefreshes() bool {
 	case h.refreshTerminal:
 		h.refreshTerminal = false
 		h.refreshProgress = false
+		h.refreshDestListing = false
 		h.applyJobsRetention()
 		h.SyncJobPathMarks()
 		h.host.RefreshBothPanels()
 		h.promptDanglingDirsIfAny()
 		return true
-	case h.refreshProgress:
+	default:
+		didProgress := h.refreshProgress
+		reloadDest := didProgress || h.refreshDestListing
 		h.refreshProgress = false
-		if h.config.Jobs.FreeSpaceOnProgressWake {
+		h.refreshDestListing = false
+		if didProgress && h.config.Jobs.FreeSpaceOnProgressWake {
 			h.host.RequestBothPanelsVolumeSpaceRefreshAsync()
 		}
+		if reloadDest {
+			h.reloadJobWriteDestinationPanels()
+		}
 		return false
-	default:
-		return false
+	}
+}
+
+// reloadJobWriteDestinationPanels re-lists panels whose cwd sits inside a non-finished job's
+// write (destination) tree so names appear in the file list as soon as they exist on disk.
+// Uses panel.Refresh (async when a scheduler is wired); progress wakes are already debounced
+// via progress_ui_wake_debounce_ms, and same-directory loads supersede in-flight ones.
+func (h *Handler) reloadJobWriteDestinationPanels() {
+	marks := h.model.JobPathMarks
+	if len(marks) == 0 {
+		return
+	}
+	for _, pan := range []*panel.State{h.host.PrimaryPanel(), h.host.SecondaryPanel()} {
+		if pan == nil {
+			continue
+		}
+		if marked, _ := ui.PanelInsideJobWriteTree(pan.PathString(), marks); marked {
+			_ = pan.Refresh(0)
+		}
 	}
 }
 

@@ -55,7 +55,13 @@ name, in this order:
 3. **Operation icon** — a red *move* glyph for moves (and flatten), a red
    *delete* glyph for deletes. Copies and extracts show none.
 
-The listing itself does not change until the job has actually finished and the
-panel reloads, so a queued move or delete is visible as icons rather than as
-rows disappearing. The rows also appear in the carousel view and in the
-bottom-border name hint for the highlighted row.
+Source rows keep their listing entries for the whole job (queued move/delete
+show icons rather than vanishing early). Destination names appear in a panel
+as soon as that panel's directory listing refreshes during an active write —
+progress and job-start wakes re-list panels whose cwd is inside the job's
+destination tree — and then carry the green job icon while the transfer is
+active. The same icons appear in the carousel view and in the bottom-border
+name hint for the highlighted row.
+
+A panel whose current directory is inside a job's write (destination) tree
+also shows the job icon on the **physical-right** corner of its bottom border.

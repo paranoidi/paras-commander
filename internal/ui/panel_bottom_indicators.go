@@ -36,8 +36,11 @@ const (
 	// PanelBottomEdgePhysicalLeft chains segments from the physical left interior column
 	// (dotfiles-hidden icon, Gitignore, stash, and trailing frame dashes on both panels).
 	PanelBottomEdgePhysicalLeft
-	// PanelBottomEdgeEnd is the panel-relative end corner (sync, quick view, hidden other path,
-	// job_write).
+	// PanelBottomEdgePhysicalRight chains segments from the physical right interior column
+	// on the bottom row of both panels (job_write). Unlike End, this is never the inner-left
+	// edge of Secondary and never moves to the top row in a vertical split.
+	PanelBottomEdgePhysicalRight
+	// PanelBottomEdgeEnd is the panel-relative end corner (sync, quick view, hidden other path).
 	PanelBottomEdgeEnd
 )
 
@@ -83,8 +86,8 @@ var panelBottomIndicatorRegistry = []panelBottomIndicatorSpec{
 	{ID: PanelBottomIndicatorDotfilesHidden, Edge: PanelBottomEdgePhysicalLeft, Order: 0},
 	{ID: PanelBottomIndicatorGitignore, Edge: PanelBottomEdgePhysicalLeft, Order: 1},
 	{ID: PanelBottomIndicatorStash, Edge: PanelBottomEdgePhysicalLeft, Order: 2},
-	{ID: PanelBottomIndicatorJobWrite, Edge: PanelBottomEdgeEnd, Order: 2},
 	{ID: PanelBottomIndicatorEntryFilter, Edge: PanelBottomEdgePhysicalLeft, Order: 4},
+	{ID: PanelBottomIndicatorJobWrite, Edge: PanelBottomEdgePhysicalRight, Order: 0},
 	{ID: PanelBottomIndicatorSync, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorQuickView, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorOtherPanel, Edge: PanelBottomEdgeEnd, Order: 1},
@@ -188,9 +191,17 @@ func panelBottomPhysicalLeftChainStartX(rect Rect, selectionsBottomHint bool) in
 }
 
 func panelBottomEndEdgeSegments(ctx PanelBottomIndicatorContext) []panelBottomIndicatorSegment {
-	var end []panelBottomIndicatorSegment
+	return panelBottomEdgeSegments(ctx, PanelBottomEdgeEnd)
+}
+
+func panelBottomPhysicalRightSegments(ctx PanelBottomIndicatorContext) []panelBottomIndicatorSegment {
+	return panelBottomEdgeSegments(ctx, PanelBottomEdgePhysicalRight)
+}
+
+func panelBottomEdgeSegments(ctx PanelBottomIndicatorContext, edge PanelBottomEdge) []panelBottomIndicatorSegment {
+	var out []panelBottomIndicatorSegment
 	for _, spec := range panelBottomIndicatorRegistry {
-		if spec.Edge != PanelBottomEdgeEnd {
+		if spec.Edge != edge {
 			continue
 		}
 		if !panelBottomIndicatorVisible(spec.ID, ctx) {
@@ -200,7 +211,7 @@ func panelBottomEndEdgeSegments(ctx PanelBottomIndicatorContext) []panelBottomIn
 		if label == "" {
 			continue
 		}
-		end = append(end, panelBottomIndicatorSegment{
+		out = append(out, panelBottomIndicatorSegment{
 			ID:    spec.ID,
 			Edge:  spec.Edge,
 			Order: spec.Order,
@@ -208,16 +219,25 @@ func panelBottomEndEdgeSegments(ctx PanelBottomIndicatorContext) []panelBottomIn
 			Style: panelBottomIndicatorStyle(ctx, spec.ID),
 		})
 	}
-	sort.SliceStable(end, func(i, j int) bool {
-		return end[i].Order < end[j].Order
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].Order < out[j].Order
 	})
-	return end
+	return out
 }
 
 // panelBottomEndEdgeTotalWidth returns rune width reserved on the End edge for all visible segments.
 func panelBottomEndEdgeTotalWidth(ctx PanelBottomIndicatorContext) int {
+	return panelBottomSegmentsTotalWidth(panelBottomEndEdgeSegments(ctx))
+}
+
+// panelBottomPhysicalRightTotalWidth returns rune width of all visible PhysicalRight segments.
+func panelBottomPhysicalRightTotalWidth(ctx PanelBottomIndicatorContext) int {
+	return panelBottomSegmentsTotalWidth(panelBottomPhysicalRightSegments(ctx))
+}
+
+func panelBottomSegmentsTotalWidth(segs []panelBottomIndicatorSegment) int {
 	total := 0
-	for _, seg := range panelBottomEndEdgeSegments(ctx) {
+	for _, seg := range segs {
 		total += utf8.RuneCountInString(seg.Label)
 	}
 	return total
@@ -232,31 +252,39 @@ func panelBottomEdgeAvailableWidth(rect Rect, ctx PanelBottomIndicatorContext) i
 	return max(0, w)
 }
 
-// panelBottomEndEdgeReservedStart returns the first column (inclusive) still available on the
-// bottom interior row before End-edge indicator overlays on that row.
-func panelBottomEndEdgeReservedStart(rect Rect, ctx PanelBottomIndicatorContext) int {
+// panelBottomPhysicalRightLastFree returns the last interior column that left/center content may
+// use before PhysicalRight overlays (always on the bottom row for both panels).
+func panelBottomPhysicalRightLastFree(rect Rect, ctx PanelBottomIndicatorContext) int {
 	lastIn := rect.X + rect.Width - 2
-	if !panelEndEdgeOnBottomRow(ctx.PanelID, ctx.SplitOrientation) {
+	labelW := panelBottomPhysicalRightTotalWidth(ctx)
+	if labelW == 0 || labelW > rect.Width-2 {
 		return lastIn
+	}
+	return lastIn - labelW
+}
+
+// panelBottomEndEdgeReservedStart returns the last column physical-left / center content may use
+// on the bottom interior row before End-edge (and PhysicalRight) overlays. For Secondary when End
+// paints on the left, the return is the last column of those left End overlays (callers that need
+// the right-side free limit also consult panelBottomPhysicalRightLastFree).
+func panelBottomEndEdgeReservedStart(rect Rect, ctx PanelBottomIndicatorContext) int {
+	rightFree := panelBottomPhysicalRightLastFree(rect, ctx)
+	if !panelEndEdgeOnBottomRow(ctx.PanelID, ctx.SplitOrientation) {
+		return rightFree
 	}
 	labelW := panelBottomEndEdgeTotalWidth(ctx)
 	if labelW == 0 || labelW > rect.Width-2 {
-		return lastIn
+		return rightFree
 	}
 	var endReserved int
 	if ctx.PanelID == SecondaryPanel {
 		endReserved = rect.X + labelW
 	} else {
-		endReserved = lastIn - labelW
+		// Primary End sits immediately left of PhysicalRight.
+		endReserved = rightFree - labelW
 	}
-	if ctx.SelectionSizeCenterStart > 0 {
-		if ctx.PanelID == SecondaryPanel {
-			if endReserved > ctx.SelectionSizeCenterStart-1 {
-				endReserved = ctx.SelectionSizeCenterStart - 1
-			}
-		} else if endReserved > ctx.SelectionSizeCenterStart-1 {
-			endReserved = ctx.SelectionSizeCenterStart - 1
-		}
+	if ctx.SelectionSizeCenterStart > 0 && endReserved > ctx.SelectionSizeCenterStart-1 {
+		endReserved = ctx.SelectionSizeCenterStart - 1
 	}
 	return endReserved
 }
@@ -274,7 +302,7 @@ func finalizeBottomCtx(rect Rect, ctx *PanelBottomIndicatorContext) {
 		}
 	}
 	avail := panelBottomEdgeAvailableWidth(rect, *ctx)
-	fixed := 0
+	fixed := panelBottomPhysicalRightTotalWidth(*ctx)
 	for _, spec := range panelBottomIndicatorRegistry {
 		if spec.Edge != PanelBottomEdgeEnd || spec.ID == PanelBottomIndicatorOtherPanel {
 			continue
@@ -381,8 +409,13 @@ func drawPanelEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID int, ctx
 		}
 		return
 	}
-	// Primary panel: anchor at physical right; higher Order is rightmost (at the corner).
-	x := rect.X + rect.Width - 1
+	// Primary panel: anchor left of PhysicalRight (or at physical right when none); higher Order
+	// is rightmost within the End block.
+	prW := 0
+	if y == rect.Y+rect.Height-1 {
+		prW = panelBottomPhysicalRightTotalWidth(ctx)
+	}
+	x := rect.X + rect.Width - 1 - prW
 	for i := len(segs) - 1; i >= 0; i-- {
 		seg := segs[i]
 		w := utf8.RuneCountInString(seg.Label)
@@ -410,7 +443,39 @@ func drawPanelTopEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID int, 
 	drawPanelEndEdgeIndicators(screen, rect, panelID, ctx, rect.Y)
 }
 
-// drawPanelBottomIndicators paints Start-edge, PhysicalLeft-edge, and End-edge registry segments.
+// drawPanelPhysicalRightIndicators paints PhysicalRight registry segments on the bottom frame row
+// of both panels (physical right interior, independent of End-edge secondary-top behavior).
+func drawPanelPhysicalRightIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIndicatorContext) {
+	if ctx.ChromeBlocked {
+		return
+	}
+	segs := panelBottomPhysicalRightSegments(ctx)
+	if len(segs) == 0 {
+		return
+	}
+	available := panelBottomEdgeAvailableWidth(rect, ctx)
+	totalW := panelBottomPhysicalRightTotalWidth(ctx)
+	if totalW > available {
+		segs = dropPanelBottomIndicatorsForWidth(segs, available, false)
+	}
+	if len(segs) == 0 {
+		return
+	}
+	y := rect.Y + rect.Height - 1
+	// Anchor at physical right border; higher Order is rightmost (at the corner).
+	x := rect.X + rect.Width - 1
+	for i := len(segs) - 1; i >= 0; i-- {
+		seg := segs[i]
+		w := utf8.RuneCountInString(seg.Label)
+		x -= w
+		if x < rect.X+1 {
+			return
+		}
+		primitive.TextOverlay(screen, x, y, w, seg.Label, seg.Style)
+	}
+}
+
+// drawPanelBottomIndicators paints Start-edge, PhysicalLeft-edge, End-edge, and PhysicalRight segments.
 func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIndicatorContext) {
 	if rect.Width <= 4 || rect.Height < 2 {
 		return
@@ -418,7 +483,11 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 	all := collectPanelBottomIndicators(ctx)
 	y := rect.Y + rect.Height - 1
 	lastIn := rect.X + rect.Width - 2
-	endX := panelBottomEndEdgeReservedStart(rect, ctx)
+	// Physical-left dash fill stops before End (Primary) / PhysicalRight (both).
+	leftMax := panelBottomEndEdgeReservedStart(rect, ctx)
+	if ctx.PanelID == SecondaryPanel {
+		leftMax = panelBottomPhysicalRightLastFree(rect, ctx)
+	}
 
 	var startEdge, physicalLeft []panelBottomIndicatorSegment
 	for _, seg := range all {
@@ -434,37 +503,32 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 
 	if len(physicalLeft) > 0 {
 		x := panelBottomPhysicalLeftChainStartX(rect, ctx.SelectionsBottomHint)
-		if x <= endX {
+		if x <= leftMax {
 			leadingDash := !ctx.SelectionsBottomHint
-			maxCols := endX - x + 1
+			maxCols := leftMax - x + 1
 			if ctx.SelectionSizeCenterStart > 0 {
 				maxCols = min(maxCols, ctx.SelectionSizeCenterStart-x)
 			}
 			physicalLeft = dropPanelBottomIndicatorsForWidth(physicalLeft, maxCols, leadingDash)
 			if len(physicalLeft) > 0 {
-				if ctx.SelectionsBottomHint {
-					screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
-					x++
-				} else {
-					screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
-					x++
-				}
+				screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
+				x++
 				for i, seg := range physicalLeft {
 					if i > 0 {
-						if x > endX {
+						if x > leftMax {
 							break
 						}
 						screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
 						x++
 					}
 					padW := utf8.RuneCountInString(seg.Label)
-					if x+padW-1 > endX {
+					if x+padW-1 > leftMax {
 						break
 					}
 					primitive.TextOverlay(screen, x, y, padW, seg.Label, seg.Style)
 					x += padW
 				}
-				for xi := x; xi <= endX; xi++ {
+				for xi := x; xi <= leftMax; xi++ {
 					screen.SetContent(xi, y, '─', nil, ctx.BorderStyle)
 				}
 			}
@@ -473,6 +537,7 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 
 	drawPanelBottomEndEdgeIndicators(screen, rect, ctx.PanelID, ctx)
 	drawPanelTopEndEdgeIndicators(screen, rect, ctx.PanelID, ctx)
+	drawPanelPhysicalRightIndicators(screen, rect, ctx)
 }
 
 // drawPanelBottomStartEdgeIndicators paints corner-anchored segments (Selections).
@@ -482,6 +547,7 @@ func drawPanelBottomStartEdgeIndicators(screen tcell.Screen, rect Rect, ctx Pane
 	}
 	available := panelBottomEdgeAvailableWidth(rect, ctx)
 	segs = dropPanelBottomIndicatorsForWidth(segs, available, true)
+	prW := panelBottomPhysicalRightTotalWidth(ctx)
 	for _, seg := range segs {
 		padW := utf8.RuneCountInString(seg.Label)
 		need := 1 + padW
@@ -489,9 +555,15 @@ func drawPanelBottomStartEdgeIndicators(screen tcell.Screen, rect Rect, ctx Pane
 			continue
 		}
 		if ctx.PanelID == SecondaryPanel {
-			xTitle := lastIn - padW
+			// Physical right outer corner holds job_write; Selections sits just left of it.
+			xTitle := lastIn - padW - prW
+			if xTitle < rect.X+1 {
+				continue
+			}
 			primitive.TextOverlay(screen, xTitle, y, padW, seg.Label, seg.Style)
-			screen.SetContent(lastIn, y, '─', nil, ctx.BorderStyle)
+			if prW == 0 {
+				screen.SetContent(lastIn, y, '─', nil, ctx.BorderStyle)
+			}
 			continue
 		}
 		x0 := rect.X + 1
