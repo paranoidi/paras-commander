@@ -502,22 +502,6 @@ func (h *Handler) finishFlattenEnqueue(st flattenProbeApply) {
 	h.host.SetTransientMessage(fmt.Sprintf("Flatten queued (%d %s)", len(st.sources), noun), ui.MessageUrgencyInfo)
 }
 
-func (h *Handler) finishExtractEnqueue(plan ops.ExtractPlan, skipped []string) {
-	p := h.host.ActivePanel()
-	p.ClearSelection()
-	h.jobs.EnqueueExtractJob(ops.ExtractItemPaths(plan.Items), plan.Destination)
-	n := len(plan.Items)
-	noun := "archives"
-	if n == 1 {
-		noun = "archive"
-	}
-	msg := fmt.Sprintf("Extract queued (%d %s)", n, noun)
-	if len(skipped) > 0 {
-		msg += fmt.Sprintf("; %d skipped (unsupported or missing tool)", len(skipped))
-	}
-	h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
-}
-
 func selectedPanelSources(p *panel.State) []string {
 	if p == nil || len(p.SelectedPaths) == 0 {
 		return nil

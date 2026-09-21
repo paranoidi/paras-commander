@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -67,9 +68,73 @@ func (h *Handler) ExecuteExtract() {
 	h.CloseFileDialog()
 	tc := archive.ProbeToolchain()
 	plan, skipped, err := ops.PlanExtract(sources, dest, tc)
-	if err != nil {
+	if extractPlanDestFailed(err) {
 		h.host.OpenMessageDialog("Extract", err.Error())
 		return
 	}
-	h.finishExtractEnqueue(plan, skipped)
+	if len(plan.Items) == 0 && !extractSkipsIncludeKeepExisting(skipped) {
+		if err != nil {
+			h.host.OpenMessageDialog("Extract", err.Error())
+			return
+		}
+		h.host.SetTransientMessage("No archives to extract", ui.MessageUrgencyWarn)
+		return
+	}
+	// Queue the dialog's archives, including stream outputs PlanExtract skipped
+	// as existing/colliding, so the extract job's Conflict resolver can keep
+	// existing files or open the overwrite blocker.
+	h.finishExtractEnqueueSources(sources, dest, skipped)
+}
+
+func extractPlanDestFailed(err error) bool {
+	if err == nil {
+		return false
+	}
+	var opErr *ops.Error
+	if !errors.As(err, &opErr) {
+		return false
+	}
+	return strings.HasPrefix(opErr.Text, "destination")
+}
+
+func extractSkipIsKeepExisting(reason string) bool {
+	return strings.Contains(reason, "already exists") || strings.Contains(reason, "collides")
+}
+
+func extractSkipsIncludeKeepExisting(skipped []string) bool {
+	for _, s := range skipped {
+		if extractSkipIsKeepExisting(s) {
+			return true
+		}
+	}
+	return false
+}
+
+func extractQueuedMessage(n int, skipped []string) string {
+	noun := "archives"
+	if n == 1 {
+		noun = "archive"
+	}
+	msg := fmt.Sprintf("Extract queued (%d %s)", n, noun)
+	other := 0
+	for _, s := range skipped {
+		if !extractSkipIsKeepExisting(s) {
+			other++
+		}
+	}
+	if other > 0 {
+		msg += fmt.Sprintf("; %d skipped (unsupported or missing tool)", other)
+	}
+	return msg
+}
+
+func (h *Handler) finishExtractEnqueueSources(sources []string, dest string, skipped []string) {
+	p := h.host.ActivePanel()
+	p.ClearSelection()
+	h.jobs.EnqueueExtractJob(sources, dest)
+	h.host.SetTransientMessage(extractQueuedMessage(len(sources), skipped), ui.MessageUrgencyInfo)
+}
+
+func (h *Handler) finishExtractEnqueue(plan ops.ExtractPlan, skipped []string) {
+	h.finishExtractEnqueueSources(ops.ExtractItemPaths(plan.Items), plan.Destination, skipped)
 }

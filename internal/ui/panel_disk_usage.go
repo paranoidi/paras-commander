@@ -26,11 +26,20 @@ type DiskUsagePainter interface {
 	PendingForPanel(absPath string, panelID int) bool
 	// DiskScanBusy is true while a disk usage scan is queued or walking the filesystem.
 	DiskScanBusy() bool
-	// DiskScanExcluded is true when a directory would not be descended into by disk-usage traversal for this listing (godu + listing-volume gate). Stat's absPath — avoid calling this per path in a loop over a large selection; use IsKnownExcluded there instead.
+	// DiskScanExcluded is true when a directory would not be descended into by disk-usage traversal for this listing (godu + listing-volume gate). Stat's absPath — background classification only; paint and UI-goroutine classification must use IsKnownExcluded / diskUsagePaintExcluded.
 	DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool
 	// IsKnownExcluded reports whether a background pass already determined absPath is excluded
 	// (via MarkExcluded), with no filesystem access. False just means "not known yet", not "not excluded".
 	IsKnownExcluded(absPath string) bool
+}
+
+// diskUsagePaintExcluded reports cached exclusion for row paint and UI classification.
+// It never calls DiskScanExcluded, so Stat stays off the UI goroutine.
+func diskUsagePaintExcluded(painter DiskUsagePainter, absPath string) bool {
+	if painter == nil || absPath == "" {
+		return false
+	}
+	return painter.IsKnownExcluded(absPath)
 }
 
 func entryDiskUsageBytes(entry localfs.Entry, show bool, painter DiskUsagePainter) int64 {

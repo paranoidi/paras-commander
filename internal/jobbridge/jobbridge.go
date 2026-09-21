@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -602,7 +603,17 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 			TotalBytes: 0,
 		})
 		toolchain := archive.ProbeToolchain()
-		plan, _, extractPlanErr := ops.PlanExtract(pathloc.Strings(job.Sources), job.Destination.String(), toolchain)
+		dest := job.Destination.String()
+		plan, _, extractPlanErr := ops.PlanExtract(pathloc.Strings(job.Sources), dest, toolchain)
+		// PlanExtract drops existing/colliding stream outputs. Put those archives
+		// back so Conflict (the jobs overwrite blocker) can keep-existing or replace.
+		if items := extractPlanItems(job.Sources, dest, toolchain); len(items) > 0 {
+			plan.Items = items
+			plan.Destination = dest
+			plan.Toolchain = toolchain
+			extractPlanErr = nil
+		}
+		plan.Conflict = tc.resolver
 		if extractPlanErr != nil {
 			err = extractPlanErr
 		} else {
@@ -631,6 +642,43 @@ func Plural(n int, singular, plural string) string {
 		return singular
 	}
 	return plural
+}
+
+// extractDestUsable reports whether dest is a directory extract can write into.
+func extractDestUsable(dest string) bool {
+	dest = filepath.Clean(dest)
+	if dest == "" {
+		return false
+	}
+	info, err := os.Stat(dest)
+	return err == nil && info.IsDir()
+}
+
+// extractPlanItems builds extract items for every runnable archive in sources.
+// Unlike PlanExtract it keeps stream archives whose output already exists so
+// ExtractPlan.Conflict can honor overwrite vs keep-existing.
+func extractPlanItems(sources []pathloc.Path, dest string, tc archive.Toolchain) []ops.ExtractItem {
+	if !extractDestUsable(dest) {
+		return nil
+	}
+	items := make([]ops.ExtractItem, 0, len(sources))
+	for _, src := range sources {
+		p, err := src.FilePath()
+		if err != nil {
+			continue
+		}
+		p = filepath.Clean(p)
+		fi, err := os.Stat(p)
+		if err != nil || !fi.Mode().IsRegular() {
+			continue
+		}
+		f, ok := archive.FormatForName(p)
+		if !ok || !f.Available(tc) {
+			continue
+		}
+		items = append(items, ops.ExtractItem{Path: p, Format: f})
+	}
+	return items
 }
 
 // uniqueParents returns the distinct parent directories of paths, in first-seen order.

@@ -5,8 +5,63 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
+
+type panicStatDiskPainter struct {
+	sizes    map[string]int64
+	excluded map[string]bool
+}
+
+func (p panicStatDiskPainter) ByteSize(path string) (int64, bool) {
+	n, ok := p.sizes[path]
+	return n, ok
+}
+func (panicStatDiskPainter) FileCount(string) (int64, bool)   { return 0, false }
+func (panicStatDiskPainter) PendingForPanel(string, int) bool { return false }
+func (panicStatDiskPainter) DiskScanBusy() bool               { return false }
+func (panicStatDiskPainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
+	panic("DiskScanExcluded must not run during paint/classification")
+}
+func (p panicStatDiskPainter) IsKnownExcluded(path string) bool {
+	return p.excluded[path]
+}
+
+func TestDiskUsagePaintExcludedUsesCacheOnly(t *testing.T) {
+	t.Parallel()
+	painter := panicStatDiskPainter{excluded: map[string]bool{"/mnt/nas/harbor": true}}
+	if !diskUsagePaintExcluded(painter, "/mnt/nas/harbor") {
+		t.Fatal("cached exclusion must be true")
+	}
+	if diskUsagePaintExcluded(painter, "/mnt/nas/meadow") {
+		t.Fatal("unknown path must not be treated as excluded")
+	}
+	if diskUsagePaintExcluded(nil, "/mnt/nas/harbor") {
+		t.Fatal("nil painter must not be excluded")
+	}
+}
+
+func TestEntryDiskUsageBytesDoesNotCallDiskScanExcluded(t *testing.T) {
+	t.Parallel()
+	painter := panicStatDiskPainter{
+		sizes:    map[string]int64{"/mnt/nas/harbor": 42},
+		excluded: map[string]bool{"/mnt/nas/harbor": true},
+	}
+	entries := []localfs.Entry{
+		{Name: "harbor", Path: "/mnt/nas/harbor", Type: localfs.EntryDirectory},
+		{Name: "meadow", Path: "/mnt/nas/meadow", Type: localfs.EntryDirectory},
+	}
+	if got := entryDiskUsageBytes(entries[0], true, painter); got != 42 {
+		t.Fatalf("excluded cached size = %d, want 42", got)
+	}
+	if got := entryDiskUsageBytes(entries[1], true, painter); got != 0 {
+		t.Fatalf("unknown dir size = %d, want 0", got)
+	}
+	if got := panelDiskUsageDenom(true, painter, entries); got != 42 {
+		t.Fatalf("denom = %d, want 42", got)
+	}
+}
 
 func TestDiskUsageFillColumns(t *testing.T) {
 	if got := diskUsageFillColumns(500, 1000, 10); got != 5 {
