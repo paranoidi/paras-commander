@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -16,19 +15,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-// lastFullRenderToast is the Model.Message last committed by a full render, keyed by App.
-// Partial painters consult it so a shorter replacement cannot leave fragments of the
-// previous banner. Stored here because App's field list lives in a hub this batch cannot edit.
-var lastFullRenderToast sync.Map
-
 func (a *App) toastNeedsFullRender() bool {
-	last, _ := lastFullRenderToast.Load(a)
-	lastMsg, _ := last.(string)
-	return strings.TrimSpace(a.model.Message) != lastMsg
+	return strings.TrimSpace(a.model.Message) != a.lastFullRenderToast
 }
 
 func (a *App) recordFullRenderToast() {
-	lastFullRenderToast.Store(a, strings.TrimSpace(a.model.Message))
+	a.lastFullRenderToast = strings.TrimSpace(a.model.Message)
 }
 
 // paintFindDialogOverlay repaints only the find dialog without redrawing panels or the footer.

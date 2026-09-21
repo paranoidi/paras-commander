@@ -43,20 +43,15 @@ func (q *coalescingQueue[T]) drain() []T {
 	return items
 }
 
-// asyncWakeQueues is per-App storage for the listing/git/carousel coalescing queues. The queues
-// cannot live on App (app.go is an unowned hub); a pointer-keyed map keeps them isolated across
-// parallel tests.
+// asyncWakeQueues is per-App storage for the listing/git/carousel coalescing queues.
 type asyncWakeQueues struct {
 	panel    [3]coalescingQueue[panelAsyncLoadPayload]
 	git      coalescingQueue[gitStatusPayload]
 	carousel [3]coalescingQueue[carouselSnapshotPayload]
 }
 
-var asyncWakesByApp sync.Map // *App -> *asyncWakeQueues
-
 func asyncWakes(a *App) *asyncWakeQueues {
-	actual, _ := asyncWakesByApp.LoadOrStore(a, &asyncWakeQueues{})
-	return actual.(*asyncWakeQueues)
+	return &a.asyncWakes
 }
 
 func postGuaranteedWake(screen tcell.Screen, payload any) {

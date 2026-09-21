@@ -97,14 +97,19 @@ type diskUsageState struct {
 	deferPoll atomic.Bool
 }
 
-// sftpState groups SFTP connection-prompt state (host-key/password waiters) and the
-// SFTP connect dialog's target panel and host list.
+// sftpState groups SFTP connection-prompt state (host-key/password waiters),
+// prompt serialization and per-panel connect generations, and the SFTP connect
+// dialog's target panel and host list.
 type sftpState struct {
 	mu                 sync.Mutex
 	hostKeyWait        *sftpHostKeyWait
 	passwordWait       *sftpPasswordWait
 	connectTargetPanel int
 	connectHosts       []sshconfig.HostEntry
+	promptOnce         sync.Once
+	promptSem          chan struct{}
+	promptID           atomic.Uint64
+	connectGen         [2]atomic.Uint64
 }
 
 // syncFollowNavFlushPayload applies latched panel sync after file-list cursor debounce elapses.
@@ -234,6 +239,12 @@ type App struct {
 	// of concurrent fetches) posts at most one pending tcell interrupt at a time instead of one per
 	// fetch. See treeChildResultQueue in tree_load.go.
 	treeChildResults treeChildResultQueue
+	// asyncWakes coalesces listing, git-status, and carousel snapshot completions so a burst
+	// of goroutines posts at most one tcell interrupt per queue. See asyncWakeQueues.
+	asyncWakes asyncWakeQueues
+	// lastFullRenderToast is the Model.Message last committed by a full render. Partial
+	// painters consult it so a shorter replacement cannot leave fragments of the previous banner.
+	lastFullRenderToast string
 
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool

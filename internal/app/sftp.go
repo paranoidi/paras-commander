@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -52,25 +50,14 @@ type sftpConnectPayload struct {
 	gen     uint64
 }
 
-type sftpAppExtra struct {
-	promptSem  chan struct{}
-	promptID   atomic.Uint64
-	connectGen [2]atomic.Uint64
-}
+var sftpTouchConn = sftpb.TouchConn
 
-var (
-	sftpAppExtraByApp sync.Map // *App -> *sftpAppExtra
-	sftpTouchConn     = sftpb.TouchConn
-)
-
-func (a *App) sftpExtra() *sftpAppExtra {
-	if v, ok := sftpAppExtraByApp.Load(a); ok {
-		return v.(*sftpAppExtra)
-	}
-	extra := &sftpAppExtra{promptSem: make(chan struct{}, 1)}
-	extra.promptSem <- struct{}{}
-	actual, _ := sftpAppExtraByApp.LoadOrStore(a, extra)
-	return actual.(*sftpAppExtra)
+func (s *sftpState) ensurePromptSem() chan struct{} {
+	s.promptOnce.Do(func() {
+		s.promptSem = make(chan struct{}, 1)
+		s.promptSem <- struct{}{}
+	})
+	return s.promptSem
 }
 
 func (a *App) lockSFTPPrompt(ctx context.Context) error {
@@ -78,7 +65,7 @@ func (a *App) lockSFTPPrompt(ctx context.Context) error {
 		ctx = context.Background()
 	}
 	select {
-	case <-a.sftpExtra().promptSem:
+	case <-a.sftp.ensurePromptSem():
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
@@ -86,11 +73,11 @@ func (a *App) lockSFTPPrompt(ctx context.Context) error {
 }
 
 func (a *App) unlockSFTPPrompt() {
-	a.sftpExtra().promptSem <- struct{}{}
+	a.sftp.ensurePromptSem() <- struct{}{}
 }
 
 func (a *App) nextSFTPPromptID() uint64 {
-	return a.sftpExtra().promptID.Add(1)
+	return a.sftp.promptID.Add(1)
 }
 
 func sftpConnectPanelIndex(panelID int) (int, bool) {
@@ -105,7 +92,7 @@ func (a *App) nextSFTPConnectGen(panelID int) uint64 {
 	if !ok {
 		idx = ui.PrimaryPanel
 	}
-	return a.sftpExtra().connectGen[idx].Add(1)
+	return a.sftp.connectGen[idx].Add(1)
 }
 
 func (a *App) currentSFTPConnectGen(panelID int) uint64 {
@@ -113,7 +100,7 @@ func (a *App) currentSFTPConnectGen(panelID int) uint64 {
 	if !ok {
 		return 0
 	}
-	return a.sftpExtra().connectGen[idx].Load()
+	return a.sftp.connectGen[idx].Load()
 }
 
 func (a *App) configureSFTP() error {
