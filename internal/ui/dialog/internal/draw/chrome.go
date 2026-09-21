@@ -2,7 +2,6 @@ package draw
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
@@ -94,8 +93,8 @@ func DrawDialogHSeparatorWithCenteredLabel(screen tcell.Screen, rect Rect, y int
 }
 
 // DrawSimpleDialogInput paints a full-width input row with dialog input styles (no DialogSurface override)
-// and shows focus with a reversed cell at the logical cursor (end of value), per AGENTS.md.
-func DrawSimpleDialogInput(screen tcell.Screen, x, y, width int, value string, focused, invalid bool, styles theme.Theme) {
+// and shows focus with a reversed cell at the given cursor rune position.
+func DrawSimpleDialogInput(screen tcell.Screen, x, y, width int, value string, cursor int, focused, invalid bool, styles theme.Theme) {
 	if width <= 0 {
 		return
 	}
@@ -103,7 +102,7 @@ func DrawSimpleDialogInput(screen tcell.Screen, x, y, width int, value string, f
 	display := primitive.TruncateRight(value, width)
 	runes := []rune(display)
 
-	cursorPos := utf8.RuneCountInString(value)
+	cursorPos := cursor
 	if cursorPos > width-1 {
 		cursorPos = width - 1
 	}

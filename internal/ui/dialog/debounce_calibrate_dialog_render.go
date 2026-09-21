@@ -44,7 +44,7 @@ func DrawDebounceCalibrateDialog(screen tcell.Screen, layout Layout, state Debou
 
 	primitive.Text(screen, textX, y, textW, "Debounce (ms):", styles.DialogText.Background(dbg))
 	y++
-	draw.DrawSimpleDialogInput(screen, textX, y, textW, state.Value, state.Focus == 0, false, styles)
+	draw.DrawSimpleDialogInput(screen, textX, y, textW, state.Value, state.Cursor, state.Focus == 0, false, styles)
 	y++
 	hint := "Used for file-list scroll, quick view, carousel etc."
 	primitive.Text(screen, textX, y, textW, hint, styles.DialogText.Background(dbg))
@@ -59,7 +59,7 @@ func DrawDebounceCalibrateDialog(screen tcell.Screen, layout Layout, state Debou
 	y++
 	primitive.Text(screen, textX, y, textW, "Image preview debounce (ms):", styles.DialogText.Background(dbg))
 	y++
-	draw.DrawSimpleDialogInput(screen, textX, y, textW, state.ImageValue, state.Focus == 1, false, styles)
+	draw.DrawSimpleDialogInput(screen, textX, y, textW, state.ImageValue, state.ImageCursor, state.Focus == 1, false, styles)
 
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
