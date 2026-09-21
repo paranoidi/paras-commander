@@ -19,6 +19,10 @@ type previewHost struct {
 	appShellHost
 }
 
+func (h previewHost) ActionForPreviewMenuKey(r rune) (string, bool) {
+	return h.app.keys.ActionForPreviewMenuKey(r)
+}
+
 func (h previewHost) PanelByID(panelID int) *panel.State { return h.app.panelByID(panelID) }
 
 func (h previewHost) InactivePanelID() int { return h.app.inactivePanelID() }

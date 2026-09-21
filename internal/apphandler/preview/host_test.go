@@ -57,10 +57,11 @@ func (f *fakeHost) layout(w, h int) ui.Layout {
 func (f *fakeHost) SetTransientMessage(text string, _ ui.MessageUrgency) {
 	f.messages = append(f.messages, text)
 }
-func (f *fakeHost) HandleQuit() bool                          { return true }
-func (f *fakeHost) HandleQuitImmediate() bool                 { return true }
-func (f *fakeHost) Dispatch(string)                           {}
-func (f *fakeHost) ActionFromKeyEvent(*tcell.EventKey) string { return "" }
+func (f *fakeHost) HandleQuit() bool                            { return true }
+func (f *fakeHost) HandleQuitImmediate() bool                   { return true }
+func (f *fakeHost) Dispatch(string)                             {}
+func (f *fakeHost) ActionFromKeyEvent(*tcell.EventKey) string   { return "" }
+func (f *fakeHost) ActionForPreviewMenuKey(rune) (string, bool) { return "", false }
 func (f *fakeHost) ActivePanel() *panel.State {
 	if f.model.ActivePanel == ui.SecondaryPanel {
 		return &f.model.Secondary

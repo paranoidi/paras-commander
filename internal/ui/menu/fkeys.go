@@ -129,7 +129,10 @@ func FunctionKeysFilePreviewStylePicker() []FunctionKey {
 // file.view.toggle-raw would no-op on (non-markdown, or a git diff), in which case the F6 entry
 // is omitted entirely rather than advertising an action that does nothing. F3 is reserved for
 // toggling direct-key chord hints in the `:` leader menu (menu.FunctionKeyLeaderMenuToggleChords),
-// matching the file-list view, so it is not listed here.
+// matching the file-list view, so it is not listed here. F1 Help, / Search, and F10 Quit carry no
+// ActionID so their labels survive vi-motion mode: / is the standard search key, and
+// q in the preview is bound to file.view.close via the leader-menu overlay, so labelling Quit
+// with a vi-motion letter would show a letter that doesn't actually quit.
 func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer, showToggleRaw bool) []FunctionKey {
 	toggleHint := "Raw"
 	if rawMarkdown {
@@ -142,15 +145,15 @@ func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer, showToggleRa
 	out = append(out,
 		FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
 		FunctionKey{Key: tcell.KeyRune, KeyLabel: "/", Hint: "Search"},
-		FunctionKey{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
-		FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Reload"},
+		FunctionKey{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit", ActionID: keymap.ActionFileEdit},
+		FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Reload", ActionID: keymap.ActionFileViewReload},
 	)
 	if showToggleRaw {
-		out = append(out, FunctionKey{Key: tcell.KeyF6, KeyLabel: "F6", Hint: toggleHint})
+		out = append(out, FunctionKey{Key: tcell.KeyF6, KeyLabel: "F6", Hint: toggleHint, ActionID: keymap.ActionFileViewToggleRaw})
 	}
 	return append(out,
-		FunctionKey{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete this"},
-		FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Style"},
+		FunctionKey{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete this", ActionID: keymap.ActionFileDelete},
+		FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Style", ActionID: keymap.ActionFileViewThemePicker},
 		FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 	)
 }

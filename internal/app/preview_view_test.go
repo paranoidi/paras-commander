@@ -547,3 +547,60 @@ func TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc(t *testing.T) {
 		t.Fatalf("ViewMode = %v, want ViewBrowser after second Esc", app.model.ViewMode)
 	}
 }
+
+// TestFullscreenFilePreviewViMotionKeys covers vi-motion mode in the F3 fullscreen preview:
+// j/k scroll, a preview-menu letter (t) fires its action directly, and h closes the view.
+func TestFullscreenFilePreviewViMotionKeys(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "meadow.txt")
+	writeFile(t, path)
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app := newTestApp(t, screen, testOptions(dir))
+	app.model.ViMotionMode = true
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Path = path
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.CombinedText = strings.Repeat("x\n", 200)
+	app.model.FullscreenFilePreview.Scroll = 0
+	app.commandsMu.Unlock()
+
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
+	app.commandsMu.RLock()
+	scroll := app.model.FullscreenFilePreview.Scroll
+	app.commandsMu.RUnlock()
+	if scroll != 1 {
+		t.Fatalf("FullscreenFilePreview.Scroll = %d, want 1 after 'j'", scroll)
+	}
+
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
+	app.commandsMu.RLock()
+	scroll = app.model.FullscreenFilePreview.Scroll
+	app.commandsMu.RUnlock()
+	if scroll != 0 {
+		t.Fatalf("FullscreenFilePreview.Scroll = %d, want 0 after 'k'", scroll)
+	}
+
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	if !app.model.FilePreviewThemePicker.Open {
+		t.Fatal("FilePreviewThemePicker.Open = false, want true after 't'")
+	}
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.FilePreviewThemePicker.Open {
+		t.Fatal("FilePreviewThemePicker.Open = true, want false after Esc")
+	}
+
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
+	if app.model.ViewMode == ui.ViewFilePreview {
+		t.Fatalf("ViewMode = %v, want not ViewFilePreview after 'h'", app.model.ViewMode)
+	}
+}

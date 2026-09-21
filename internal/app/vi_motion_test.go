@@ -203,3 +203,40 @@ func TestViMotionAuxiliaryFooterKeysSwapLetters(t *testing.T) {
 		t.Fatalf("vi-motion on: Term KeyLabel = %+v, want t (commands.terminate leader letter)", term)
 	}
 }
+
+// TestViMotionFilePreviewFooterKeysSwapLetters verifies the F3 fullscreen preview footer
+// switches Edit/Style to their preview-menu letters while vi-motion mode is on, and leaves
+// Quit labeled F10 (q in the preview closes the view, not the app).
+func TestViMotionFilePreviewFooterKeysSwapLetters(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.model.ViewMode = ui.ViewFilePreview
+	app.model.ViMotionMode = true
+
+	findByHint := func(keys []menu.FunctionKey, hint string) (menu.FunctionKey, bool) {
+		for _, fk := range keys {
+			if fk.Hint == hint {
+				return fk, true
+			}
+		}
+		return menu.FunctionKey{}, false
+	}
+
+	keys, ok := app.auxiliaryViewFooterKeys()
+	if !ok {
+		t.Fatal("expected FilePreview view footer")
+	}
+	edit, ok := findByHint(keys, "Edit")
+	if !ok || edit.KeyLabel != "e" {
+		t.Fatalf("vi-motion on: Edit KeyLabel = %+v, want e (file.edit preview-menu letter)", edit)
+	}
+	style, ok := findByHint(keys, "Style")
+	if !ok || style.KeyLabel != "t" {
+		t.Fatalf("vi-motion on: Style KeyLabel = %+v, want t (file.view.theme-picker preview-menu letter)", style)
+	}
+	quit, ok := findByHint(keys, "Quit")
+	if !ok || quit.KeyLabel != "F10" {
+		t.Fatalf("vi-motion on: Quit KeyLabel = %+v, want F10 (unbound, q closes the view instead)", quit)
+	}
+}

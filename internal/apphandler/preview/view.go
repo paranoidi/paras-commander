@@ -177,6 +177,9 @@ func (h *Handler) HandleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 	if h.model.FullscreenFilePreview.Search.Editing {
 		return h.handleFilePreviewSearchTypingKey(event)
 	}
+	if h.model.ViMotionMode {
+		event = keymap.RemapViMotionKey(event)
+	}
 	nextAction := h.host.ActionFromKeyEvent(event)
 	if quit, handled := h.tryFilePreviewAction(nextAction); handled {
 		return quit
@@ -224,6 +227,11 @@ func (h *Handler) HandleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 		}
 		h.host.Dispatch(nextAction)
 		return false
+	}
+	if h.model.ViMotionMode && keymap.IsPlainPrintableRune(event) {
+		if id, ok := h.host.ActionForPreviewMenuKey(event.Rune()); ok {
+			return h.TryFilePreviewMenuAction(id)
+		}
 	}
 	return false
 }

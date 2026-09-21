@@ -105,6 +105,20 @@ func TestFilePreviewOverlayMapsColonToPreviewMenu(t *testing.T) {
 	}
 }
 
+func TestActionForPreviewMenuKey(t *testing.T) {
+	b, err := DefaultBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id, ok := b.ActionForPreviewMenuKey('e'); !ok || id != ActionFileEdit {
+		t.Fatalf("ActionForPreviewMenuKey('e') = (%q, %v), want (%q, true)", id, ok, ActionFileEdit)
+	}
+	var nilBundle *Bundle
+	if _, ok := nilBundle.ActionForPreviewMenuKey('e'); ok {
+		t.Fatal("nil bundle ActionForPreviewMenuKey should return ok=false")
+	}
+}
+
 func TestFilePreviewOverlayMapsQToClose(t *testing.T) {
 	keys := DefaultFilePreviewOverlayKeys()
 	chords, ok := keys[ActionFileViewClose]

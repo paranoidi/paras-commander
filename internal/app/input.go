@@ -218,19 +218,20 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		return menu.FunctionKeysSelectionsStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
 	}
 	if a.model.ViMotionMode {
-		return viMotionFooterKeys(menu.FunctionKeys, a.keys)
+		return viMotionFooterKeys(menu.FunctionKeys, a.keys.LeaderKey)
 	}
 	return menu.FunctionKeys
 }
 
-// viMotionFooterKeys swaps each entry's KeyLabel for its vi-motion leader letter (when the
-// bound action has one) and drops HintShiftPrefix — Shift-alternative hints don't apply once
-// bare letters dispatch actions directly in vi-motion mode.
-func viMotionFooterKeys(fkeys []menu.FunctionKey, bundle *keymap.Bundle) []menu.FunctionKey {
+// viMotionFooterKeys swaps each entry's KeyLabel for its vi-motion direct-fire letter (looked up
+// by ActionID in letters, when the bound action has one) and drops HintShiftPrefix —
+// Shift-alternative hints don't apply once bare letters dispatch actions directly in vi-motion
+// mode.
+func viMotionFooterKeys(fkeys []menu.FunctionKey, letters map[string]string) []menu.FunctionKey {
 	out := make([]menu.FunctionKey, len(fkeys))
 	for i, fk := range fkeys {
 		fk.HintShiftPrefix = ""
-		if letter, ok := bundle.LeaderKey[fk.ActionID]; ok {
+		if letter, ok := letters[fk.ActionID]; ok {
 			fk.KeyLabel = letter
 		}
 		out[i] = fk
@@ -359,11 +360,15 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		if a.model.FilePreviewThemePicker.Open {
 			return menu.FunctionKeysFilePreviewStylePicker(), true
 		}
-		return menu.FunctionKeysFilePreviewView(
+		out := menu.FunctionKeysFilePreviewView(
 			a.model.FullscreenFilePreviewRawMarkdown,
 			a.launchedFileViewer,
 			a.previewCtrl.FilePreviewToggleRawFooterEligible(),
-		), true
+		)
+		if a.model.ViMotionMode {
+			out = viMotionFooterKeys(out, a.keys.PreviewMenuKey)
+		}
+		return out, true
 	}
 	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
 		rest := compareViewFooterKeys(a.keys.Compare, a.model.CompareView.Filter, a.model.CompareView.IgnoreEmpty)
@@ -404,7 +409,7 @@ func (a *App) viMotionAuxiliaryFooterKeys(keys []menu.FunctionKey) []menu.Functi
 	if !a.model.ViMotionMode {
 		return keys
 	}
-	return viMotionFooterKeys(keys, a.keys)
+	return viMotionFooterKeys(keys, a.keys.LeaderKey)
 }
 
 func footerWithEscClose(rest []menu.FunctionKey) []menu.FunctionKey {

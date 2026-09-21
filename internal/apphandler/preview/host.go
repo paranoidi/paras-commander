@@ -21,6 +21,9 @@ type Host interface {
 	HandleQuitImmediate() bool
 	Dispatch(actionID string)
 	ActionFromKeyEvent(ev *tcell.EventKey) string
+	// ActionForPreviewMenuKey reverse-looks-up the action bound to `:` preview-menu letter r, for
+	// vi-motion mode's "every preview-menu letter fires directly" shortcut.
+	ActionForPreviewMenuKey(r rune) (string, bool)
 
 	ActivePanel() *panel.State
 	PanelByID(panelID int) *panel.State

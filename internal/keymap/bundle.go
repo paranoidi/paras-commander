@@ -62,6 +62,20 @@ func (b *Bundle) ActionForLeaderKeyInView(r rune, vm HelpViews) (string, bool) {
 	return b.actionForLeaderKeyInScope(r, flattenGroupActions(spec.actions))
 }
 
+// ActionForPreviewMenuKey returns the action ID bound to fullscreen-preview-menu letter r, if
+// any (reverse lookup over PreviewMenuKey, which maps action ID → letter).
+func (b *Bundle) ActionForPreviewMenuKey(r rune) (string, bool) {
+	if b == nil {
+		return "", false
+	}
+	for actionID, letter := range b.PreviewMenuKey {
+		if letter == string(r) {
+			return actionID, true
+		}
+	}
+	return "", false
+}
+
 // actionForLeaderKeyInScope is the shared reverse lookup behind ActionForLeaderKey and
 // ActionForLeaderKeyInView: the action ID within scope bound to leader-menu letter r, if any.
 func (b *Bundle) actionForLeaderKeyInScope(r rune, scope map[string]struct{}) (string, bool) {

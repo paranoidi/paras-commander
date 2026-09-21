@@ -104,12 +104,13 @@ func (f *identityTestHost) Dispatch(string)              {}
 func (f *identityTestHost) TryDispatchAuxiliaryScreens(string) bool {
 	return false
 }
-func (f *identityTestHost) ActionFromKeyEvent(*tcell.EventKey) string { return "" }
-func (f *identityTestHost) ToggleLeaderMenu()                         {}
-func (f *identityTestHost) DispatchLeaderLetter(*tcell.EventKey) bool { return false }
-func (f *identityTestHost) SetUnsupportedMessage(string)              {}
-func (f *identityTestHost) RefreshBothPanels()                        {}
-func (f *identityTestHost) RequestBothPanelsVolumeSpaceRefreshAsync() {}
+func (f *identityTestHost) ActionFromKeyEvent(*tcell.EventKey) string   { return "" }
+func (f *identityTestHost) ActionForPreviewMenuKey(rune) (string, bool) { return "", false }
+func (f *identityTestHost) ToggleLeaderMenu()                           {}
+func (f *identityTestHost) DispatchLeaderLetter(*tcell.EventKey) bool   { return false }
+func (f *identityTestHost) SetUnsupportedMessage(string)                {}
+func (f *identityTestHost) RefreshBothPanels()                          {}
+func (f *identityTestHost) RequestBothPanelsVolumeSpaceRefreshAsync()   {}
 func (f *identityTestHost) OpenTransferDialogSelfCopyRename(uidialog.TransferKind, string, string) {
 }
 func (f *identityTestHost) SetJobFailedTransientMessage(error, string) {}
