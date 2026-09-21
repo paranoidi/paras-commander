@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -126,6 +127,38 @@ func TestWithTerminalReleasedTwice(t *testing.T) {
 	if calls != 2 {
 		t.Fatalf("run calls = %d, want 2", calls)
 	}
+}
+
+func TestWithTerminalReleasedResumesAfterPanic(t *testing.T) {
+	dir := t.TempDir()
+	inner := newScreen(t, 80, 24)
+	screen := &countingResumeScreen{SimulationScreen: inner}
+	app := newApp(t, inner, dir)
+	app.screen = screen
+
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Fatal("expected callback panic")
+			}
+		}()
+		_ = app.withTerminalReleased(func() error {
+			panic("editor boom")
+		})
+	}()
+	if screen.resumes != 1 {
+		t.Fatalf("Resume calls = %d, want 1", screen.resumes)
+	}
+}
+
+type countingResumeScreen struct {
+	tcell.SimulationScreen
+	resumes int
+}
+
+func (s *countingResumeScreen) Resume() error {
+	s.resumes++
+	return s.SimulationScreen.Resume()
 }
 
 func TestClassifyEditPath(t *testing.T) {

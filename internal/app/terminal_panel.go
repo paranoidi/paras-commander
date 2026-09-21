@@ -172,7 +172,9 @@ func (a *App) syncPanelFromSubshellCwd() {
 // postTerminalWake runs on the PTY reader goroutine; coalesced via terminalWakePending.
 func (a *App) postTerminalWake() {
 	if a.terminalWakePending.CompareAndSwap(false, true) {
-		_ = a.screen.PostEvent(tcell.NewEventInterrupt(terminalWakePayload{}))
+		if err := a.screen.PostEvent(tcell.NewEventInterrupt(terminalWakePayload{})); err != nil {
+			a.terminalWakePending.Store(false)
+		}
 	}
 }
 
@@ -233,11 +235,15 @@ func (a *App) resizeTerminalPanel(delta int) {
 // When the layout omits the strip (screen too small) the panel stays Visible and
 // returns automatically once the screen grows; focus falls back to the files.
 func (a *App) resizeTerminalFeedToLayout() {
-	if a.terminalFeed == nil || !a.model.TerminalPanel.Visible {
+	if !a.model.TerminalPanel.Visible {
 		return
 	}
 	if cols, rows, ok := a.terminalPanelContentDims(); ok {
-		a.terminalFeed.Resize(cols, rows)
+		if _, feed, sessOK := a.commandsCtrl.ActivePTYSession(); sessOK && feed != nil {
+			feed.Resize(cols, rows)
+		} else if a.terminalFeed != nil {
+			a.terminalFeed.Resize(cols, rows)
+		}
 	} else {
 		a.model.TerminalPanel.Focused = false
 	}

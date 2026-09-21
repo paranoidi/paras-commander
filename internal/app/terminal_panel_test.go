@@ -3,11 +3,16 @@
 package app
 
 import (
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/subshell"
+	"golang.org/x/sys/unix"
 )
 
 // newTerminalPanelApp returns an app with the persistent subshell enabled on a stub
@@ -223,4 +228,142 @@ func containsOutput(haystack, needle string) bool {
 	}
 	// Echo of the typed line plus the command's own output.
 	return count >= 2
+}
+
+func TestResizeTerminalFeedToLayoutUpdatesRunForEachPTY(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 100, 40)
+	app := newApp(t, screen, dir)
+	stopPump := startAppWakePump(t, app, screen)
+	t.Cleanup(func() {
+		if sub, _, ok := app.commandsCtrl.ActivePTYSession(); ok && sub != nil {
+			_ = sub.Close()
+		}
+	})
+
+	app.commandsCtrl.StartRunForEachBatch(commandsctrl.RunForEachBatchSpec{
+		Entries:   []localfs.Entry{{Name: "willow", Path: dir, Type: localfs.EntryDirectory}},
+		AllowDirs: true,
+		WorkDir:   dir,
+		PTY:       true,
+		BuildItem: func(localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
+			return commandsctrl.RunForEachBuiltItem{Argv: []string{"sleep", "60"}, UserLine: "sleep 60"}, nil
+		},
+	})
+
+	var sub *subshell.Subshell
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		var ok bool
+		sub, _, ok = app.commandsCtrl.ActivePTYSession()
+		if ok && sub != nil {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	stopPump()
+	if sub == nil {
+		t.Fatal("timed out waiting for run-for-each ActivePTYSession")
+	}
+	if !app.model.TerminalPanel.Visible {
+		t.Fatal("run-for-each PTY should own a visible terminal panel")
+	}
+	if app.terminalFeed != nil {
+		t.Fatal("persistent terminalFeed must stay nil so resize uses ActivePTYSession")
+	}
+
+	before, err := unix.IoctlGetWinsize(sub.PTYFd(), unix.TIOCGWINSZ)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	screen.SetSize(140, 50)
+	wantCols, wantRows, ok := app.terminalPanelContentDims()
+	if !ok {
+		t.Fatal("layout omitted the terminal strip after screen resize")
+	}
+	app.resizeTerminalFeedToLayout()
+
+	after, err := unix.IoctlGetWinsize(sub.PTYFd(), unix.TIOCGWINSZ)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if int(after.Col) != wantCols || int(after.Row) != wantRows {
+		t.Fatalf("PTY size after layout resize = %dx%d, want %dx%d (before %dx%d)",
+			after.Col, after.Row, wantCols, wantRows, before.Col, before.Row)
+	}
+}
+
+func TestPostTerminalWakeClearsPendingWhenPostEventFails(t *testing.T) {
+	dir := t.TempDir()
+	inner := newScreen(t, 80, 24)
+	app := newApp(t, inner, dir)
+	screen := &failOncePostScreen{SimulationScreen: inner, failsLeft: 1}
+	app.screen = screen
+
+	app.postTerminalWake()
+	if app.terminalWakePending.Load() {
+		t.Fatal("failed PostEvent must clear terminalWakePending")
+	}
+
+	app.postTerminalWake()
+	if !app.terminalWakePending.Load() {
+		t.Fatal("successful PostEvent should leave pending set until handleTerminalWake")
+	}
+	if !inner.HasPendingEvent() {
+		t.Fatal("second post should queue a terminal wake")
+	}
+	ev := inner.PollEvent()
+	interrupt, ok := ev.(*tcell.EventInterrupt)
+	if !ok {
+		t.Fatalf("queued event is %T, want *tcell.EventInterrupt", ev)
+	}
+	if _, ok := interrupt.Data().(terminalWakePayload); !ok {
+		t.Fatalf("payload is %T, want terminalWakePayload", interrupt.Data())
+	}
+}
+
+type failOncePostScreen struct {
+	tcell.SimulationScreen
+	failsLeft int
+}
+
+func (s *failOncePostScreen) PostEvent(ev tcell.Event) error {
+	if s.failsLeft > 0 {
+		s.failsLeft--
+		return tcell.ErrEventQFull
+	}
+	return s.SimulationScreen.PostEvent(ev)
+}
+
+func startAppWakePump(t *testing.T, app *App, screen tcell.SimulationScreen) func() {
+	t.Helper()
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	var once sync.Once
+	go func() {
+		defer close(done)
+		for {
+			ev := screen.PollEvent()
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			interrupt, ok := ev.(*tcell.EventInterrupt)
+			if !ok || interrupt.Data() == nil {
+				continue
+			}
+			app.handleInterruptPayload(interrupt.Data())
+		}
+	}()
+	stopPump := func() {
+		once.Do(func() {
+			close(stop)
+			_ = screen.PostEvent(tcell.NewEventInterrupt(nil))
+			<-done
+		})
+	}
+	t.Cleanup(stopPump)
+	return stopPump
 }

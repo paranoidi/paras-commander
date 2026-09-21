@@ -28,8 +28,17 @@ func (a *App) withTerminalReleased(fn func() error) error {
 	if err := a.screen.Suspend(); err != nil {
 		return fmt.Errorf("suspend terminal: %w", err)
 	}
+	resumed := false
+	doResume := func() error {
+		if resumed {
+			return nil
+		}
+		resumed = true
+		return a.screen.Resume()
+	}
+	defer func() { _ = doResume() }()
 	runErr := fn()
-	if resumeErr := a.screen.Resume(); resumeErr != nil {
+	if resumeErr := doResume(); resumeErr != nil {
 		if runErr != nil {
 			return fmt.Errorf("resume terminal: %w (editor: %v)", resumeErr, runErr)
 		}
