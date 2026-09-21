@@ -87,6 +87,8 @@ type flattenProbeApply struct {
 }
 
 type extractProbeApply struct {
+	sources []string
+	dest    string
 	plan    ops.ExtractPlan
 	skipped []string
 }
@@ -286,17 +288,16 @@ func (h *Handler) startRemoteExtractProbe(sources []string, dest string) {
 		}
 		_ = screen.PostEvent(tcell.NewEventInterrupt(RemoteFileOpPayload{
 			Gen: gen, Kind: RemoteFileOpExtractProbe, Err: err,
-			extract: extractProbeApply{plan: plan, skipped: skipped},
+			extract: extractProbeApply{
+				sources: sources, dest: dest, plan: plan, skipped: skipped,
+			},
 		}))
 	}()
 }
 
 func (h *Handler) applyRemoteExtractProbe(p RemoteFileOpPayload) {
-	if p.Err != nil {
-		h.host.OpenMessageDialog("Extract", p.Err.Error())
-		return
-	}
-	h.finishExtractEnqueue(p.extract.plan, p.extract.skipped)
+	st := p.extract
+	h.enqueueExtractFromPlan(st.sources, st.dest, st.plan, st.skipped, p.Err)
 }
 
 func remotePlanAndMkdir(backend fsbackend.Backend, input, panelPath string) (ops.MkdirPlan, error) {

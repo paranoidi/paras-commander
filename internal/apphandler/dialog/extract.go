@@ -68,6 +68,13 @@ func (h *Handler) ExecuteExtract() {
 	h.CloseFileDialog()
 	tc := archive.ProbeToolchain()
 	plan, skipped, err := ops.PlanExtract(sources, dest, tc)
+	h.enqueueExtractFromPlan(sources, dest, plan, skipped, err)
+}
+
+// enqueueExtractFromPlan queues the dialog's archives after PlanExtract, including stream
+// outputs the planner skipped as existing/colliding, so the extract job's Conflict resolver
+// can keep existing files or open the overwrite blocker.
+func (h *Handler) enqueueExtractFromPlan(sources []string, dest string, plan ops.ExtractPlan, skipped []string, err error) {
 	if extractPlanDestFailed(err) {
 		h.host.OpenMessageDialog("Extract", err.Error())
 		return
@@ -80,9 +87,6 @@ func (h *Handler) ExecuteExtract() {
 		h.host.SetTransientMessage("No archives to extract", ui.MessageUrgencyWarn)
 		return
 	}
-	// Queue the dialog's archives, including stream outputs PlanExtract skipped
-	// as existing/colliding, so the extract job's Conflict resolver can keep
-	// existing files or open the overwrite blocker.
 	h.finishExtractEnqueueSources(sources, dest, skipped)
 }
 
@@ -133,8 +137,4 @@ func (h *Handler) finishExtractEnqueueSources(sources []string, dest string, ski
 	p.ClearSelection()
 	h.jobs.EnqueueExtractJob(sources, dest)
 	h.host.SetTransientMessage(extractQueuedMessage(len(sources), skipped), ui.MessageUrgencyInfo)
-}
-
-func (h *Handler) finishExtractEnqueue(plan ops.ExtractPlan, skipped []string) {
-	h.finishExtractEnqueueSources(ops.ExtractItemPaths(plan.Items), plan.Destination, skipped)
 }
