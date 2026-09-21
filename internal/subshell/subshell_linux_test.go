@@ -5,6 +5,7 @@ package subshell
 import (
 	"bytes"
 	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -132,4 +133,45 @@ func TestSpikeStartRequiresShell(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = sub.Close() })
 	readUntil(t, sub.pty, "sub-ok", 2*time.Second)
+}
+
+func TestVisibleSessionOutputWritesHostTTYNotStdout(t *testing.T) {
+	host, err := os.CreateTemp(t.TempDir(), "host-tty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = host.Close() })
+	redirected, err := os.CreateTemp(t.TempDir(), "stdout")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = redirected.Close() })
+	prev := os.Stdout
+	os.Stdout = redirected
+	t.Cleanup(func() { os.Stdout = prev })
+
+	out := visibleSessionOutput(host, nil)
+	if _, err := out.Write([]byte("visible-marker")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := host.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+	got, err := io.ReadAll(host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "visible-marker" {
+		t.Fatalf("hostTTY = %q, want visible-marker", got)
+	}
+	if _, err := redirected.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+	stolen, err := io.ReadAll(redirected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stolen) != 0 {
+		t.Fatalf("redirected stdout captured %q, want empty", stolen)
+	}
 }

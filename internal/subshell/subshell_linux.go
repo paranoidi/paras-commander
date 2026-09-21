@@ -209,12 +209,14 @@ func (s *Subshell) RunVisible(screen tcell.Screen) (toggledBack bool, err error)
 	// Sole-reader invariant: park the panel feed's PTY reader for the whole visible
 	// session; tee the feed loop's output into its emulator so panel state stays
 	// current. The reader restarts on every exit path (defer runs last); the app
-	// restores panel dims afterwards via PanelFeed.Resize.
-	out := io.Writer(os.Stdout)
-	if feed := s.panelFeed(); feed != nil {
-		feed.Pause()
-		defer feed.startReader()
-		out = io.MultiWriter(os.Stdout, feed.teeWriter())
+	// restores panel dims afterwards via PanelFeed.Resize. Output goes to the
+	// controlling TTY (same as input), not os.Stdout — a redirected stdout must
+	// not steal the visible session.
+	var feed *PanelFeed
+	if f := s.panelFeed(); f != nil {
+		f.Pause()
+		defer f.startReader()
+		feed = f
 	}
 
 	hostTTY, err := openControllingTTY()
@@ -254,7 +256,7 @@ func (s *Subshell) RunVisible(screen tcell.Screen) (toggledBack bool, err error)
 	registerVisibleRestore(restoreHost)
 
 	resized, _ := syncPTYSize(s.pty, hostTTY)
-	if feed := s.panelFeed(); feed != nil {
+	if feed != nil {
 		feed.syncVTToPTY()
 		// The emulator is the source of truth for the shell's screen (the real
 		// terminal still shows whatever the previous visible session left).
@@ -269,6 +271,7 @@ func (s *Subshell) RunVisible(screen tcell.Screen) (toggledBack bool, err error)
 	stopResize := watchWinchResize(s.pty, hostTTY)
 	defer stopResize()
 
+	out := visibleSessionOutput(hostTTY, feed)
 	toggledBack, err = runVisibleFeed(s.pty, hostTTY, out, s.dead)
 	if err != nil {
 		return toggledBack, err
@@ -294,6 +297,16 @@ func (s *Subshell) RunVisible(screen tcell.Screen) (toggledBack bool, err error)
 	screen.Sync()
 	debugLog("tcell resumed")
 	return toggledBack, nil
+}
+
+// visibleSessionOutput writes PTY bytes to the controlling TTY and, when a panel
+// feed is active, tees them into the emulator. os.Stdout is never used: a
+// redirected process stdout would otherwise steal the visible session.
+func visibleSessionOutput(hostTTY *os.File, feed *PanelFeed) io.Writer {
+	if feed != nil {
+		return io.MultiWriter(hostTTY, feed.teeWriter())
+	}
+	return hostTTY
 }
 
 // RunVisibleFeed is like [Subshell.RunVisible] but uses explicit streams (tests).
