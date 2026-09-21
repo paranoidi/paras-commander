@@ -158,17 +158,46 @@ func (a *App) carouselParentPaintPending(panelID int) bool {
 // always released: raceAsyncListingFetch posts a result for every dispatch, timeouts included, and
 // the carouselSnapshotPayload arm renders on arrival whether or not the snapshot applied cleanly.
 func (a *App) renderAfterAsyncApply(panelID int) {
-	if a.carouselParentPaintPending(panelID) {
-		a.carouselPaintDefer[panelID].active = true
-		a.armCarouselPaintDeferTimer(panelID)
+	if a.holdBrowserPaintForCarouselParent(panelID) {
 		return
 	}
 	a.renderPanelAsyncResult(panelID)
 }
 
+// holdBrowserPaintForCarouselParent defers a panel paint while the carousel parent-column
+// snapshot is still catching up. Shared by async-apply and keyboard folder-change partial paints.
+func (a *App) holdBrowserPaintForCarouselParent(panelID int) bool {
+	if !a.carouselParentPaintPending(panelID) {
+		return false
+	}
+	a.carouselPaintDefer[panelID].active = true
+	a.armCarouselPaintDeferTimer(panelID)
+	return true
+}
+
+// snapshotModelForBrowserPaint copies a.model under commandsMu and applies the pin-out /
+// autohide / terminal-focus rules both list-nav and disk-usage partial paints need so they
+// agree with a full render's drawBrowserView plan.
+func (a *App) snapshotModelForBrowserPaint() ui.Model {
+	a.commandsMu.RLock()
+	model := a.model
+	a.commandsMu.RUnlock()
+	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
+	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
+	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
+	// Match ui.Model.renderSubFocus: suppress panel/strip focus while the terminal owns input.
+	if model.TerminalPanel.Visible && model.TerminalPanel.Focused {
+		model.ActiveSubFocus = -1
+	}
+	return model
+}
+
 // renderBrowserListNavUpdate repaints panelID's file-list column and menu-bar permission tail
 // without redrawing the other panel (avoids disk-usage row work on the other column during scans).
 func (a *App) renderBrowserListNavUpdate(panelID int) {
+	if a.holdBrowserPaintForCarouselParent(panelID) {
+		return
+	}
 	if a.toastNeedsFullRender() {
 		a.render()
 		return
@@ -179,14 +208,7 @@ func (a *App) renderBrowserListNavUpdate(panelID int) {
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerVisible()
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
-	// Copy under commandsMu: preview goroutines mutate FilePreview/CarouselFilePreview/
-	// FullscreenFilePreview under this lock; a value copy without it races (same contract as render).
-	a.commandsMu.RLock()
-	model := a.model
-	a.commandsMu.RUnlock()
-	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
-	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
-	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
+	model := a.snapshotModelForBrowserPaint()
 	if layout.TooSmall || !ui.PaintBrowserListNavPanelOnly(a.screen, layout, model, a.styles, panelID) {
 		a.render()
 		return
@@ -214,12 +236,7 @@ func (a *App) paintDiskUsageBrowserUpdate() bool {
 	if layout.TooSmall {
 		return false
 	}
-	a.commandsMu.RLock()
-	model := a.model
-	a.commandsMu.RUnlock()
-	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
-	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
-	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
+	model := a.snapshotModelForBrowserPaint()
 	if !ui.PaintDiskUsageBrowserPanelsOnly(a.screen, layout, model, a.styles) {
 		return false
 	}
