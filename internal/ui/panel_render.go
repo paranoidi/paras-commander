@@ -793,7 +793,6 @@ type panelTitleStyles struct {
 // (volume overview with decorative dashes, or a plain title-styled suffix such as a filename).
 func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols, y int,
 	panelPath, userHomeDir string, ts panelTitleStyles, endLabel string, volumeDecorated bool) {
-	pathSlotCols := contentCols
 	endRunes := utf8.RuneCountInString(endLabel)
 	// Plain end labels (filename / QV dir basename) leave one frame-dash before the corner;
 	// volume labels already include a trailer " ─".
@@ -801,16 +800,10 @@ func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols,
 	if !volumeDecorated {
 		endRightMargin = 1
 	}
-	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+endRightMargin+3
-	endStartX := 0
-	if showEnd {
-		endStartX = innerRight - endRunes + 1 - endRightMargin
-		pathSlotCols = endStartX - titleX - gapBeforePanelTitleEnd
-		if pathSlotCols < 3 {
-			showEnd = false
-			pathSlotCols = contentCols
-		}
-	}
+	slots := titleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforePanelTitleEnd)
+	showEnd := slots.ShowEnd
+	endStartX := slots.EndStartX
+	pathSlotCols := slots.PathSlotCols
 	pathMax := pathSlotCols - 2
 	if pathMax < 0 {
 		pathMax = 0

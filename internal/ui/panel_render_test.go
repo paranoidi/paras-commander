@@ -6,8 +6,11 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 func TestFormatByteSizeListedFitsPanelColumn(t *testing.T) {
@@ -123,5 +126,80 @@ func TestPanelListHeaderIconsLeadingSpaceMatchesNamePrefix(t *testing.T) {
 	}
 	if nameField != want {
 		t.Fatalf("icons header name column = %q, want %q (before right-pad)", nameField, want)
+	}
+}
+
+func TestPaintPanelTopTitleRowEndLabelCases(t *testing.T) {
+	styles := theme.Default()
+	chrome := styles.PanelChrome(true, false)
+	home := "/home/user"
+	path := "/home/user/projects/harborlantern"
+	endLabel := " README.md "
+
+	tests := []struct {
+		name      string
+		width     int
+		endLabel  string
+		wantEnd   bool
+		wantTitle string
+	}{
+		{
+			name:      "absent",
+			width:     40,
+			endLabel:  "",
+			wantEnd:   false,
+			wantTitle: "projects",
+		},
+		{
+			name:     "narrow",
+			width:    16,
+			endLabel: endLabel,
+			wantEnd:  false,
+		},
+		{
+			name:     "exact-fit",
+			width:    28,
+			endLabel: endLabel,
+			wantEnd:  true,
+		},
+		{
+			name:     "clipped",
+			width:    40,
+			endLabel: endLabel,
+			wantEnd:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			screen := tcell.NewSimulationScreen("UTF-8")
+			if err := screen.Init(); err != nil {
+				t.Fatalf("Init() error = %v", err)
+			}
+			defer screen.Fini()
+			screen.SetSize(tt.width, 4)
+			titleX, innerRight, contentCols, y := panelTitleRowGeom(tt.width)
+			for col := 0; col < contentCols; col++ {
+				screen.SetContent(titleX+col, y, '─', nil, chrome.Frame)
+			}
+			paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, y,
+				path, home,
+				panelTitleStyles{Path: chrome.Title, End: chrome.Title, Border: chrome.Frame},
+				tt.endLabel, false)
+			got := tcelltest.TextAt(screen, titleX, y, contentCols)
+			if tt.wantEnd {
+				if !strings.Contains(got, tt.endLabel) {
+					t.Fatalf("row = %q, want padded end label %q", got, tt.endLabel)
+				}
+				trail := tcelltest.TextAt(screen, innerRight, y, 1)
+				if trail != "─" {
+					t.Fatalf("trailing cell = %q, want ─ (one space of padding before the corner)", trail)
+				}
+			} else if tt.endLabel != "" && strings.Contains(got, strings.TrimSpace(tt.endLabel)) {
+				t.Fatalf("row = %q, want end label hidden", got)
+			}
+			if tt.wantTitle != "" && !strings.Contains(got, tt.wantTitle) {
+				t.Fatalf("row = %q, want title %q", got, tt.wantTitle)
+			}
+		})
 	}
 }

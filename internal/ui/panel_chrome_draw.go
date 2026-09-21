@@ -69,23 +69,39 @@ func auxPanelBodyText(styles theme.Theme, blocked bool, contentBG tcell.Color) t
 	return styles.PanelText.Background(contentBG)
 }
 
+// titleEndLabelSlots is the shared top-border title / end-label placement used by
+// aux chrome and file-panel title rows (same layout as previewpanel.paintQuickViewTitleRow).
+type titleEndLabelSlots struct {
+	ShowEnd      bool
+	EndStartX    int
+	PathSlotCols int
+}
+
+func titleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforeEnd int) titleEndLabelSlots {
+	showEnd := endRunes > 0 && contentCols >= endRunes+gapBeforeEnd+endRightMargin+3
+	endStartX := 0
+	pathSlotCols := contentCols
+	if showEnd {
+		endStartX = innerRight - endRunes + 1 - endRightMargin
+		pathSlotCols = endStartX - titleX - gapBeforeEnd
+		if pathSlotCols < 3 {
+			showEnd = false
+			pathSlotCols = contentCols
+		}
+	}
+	return titleEndLabelSlots{ShowEnd: showEnd, EndStartX: endStartX, PathSlotCols: pathSlotCols}
+}
+
 // paintAuxPanelTopRow paints the top border row with a title, optional end label, and frame dashes elsewhere.
 func paintAuxPanelTopRow(screen tcell.Screen, titleX, innerRight, contentCols, y int, leftTitle, endLabel string, titleStyle, endStyle, borderStyle tcell.Style) {
 	// Leave one frame-dash column between the end label and the right border so the
 	// indicator (compare filter / dedup sort) isn't flush against the corner.
 	const endRightMargin = 1
 	endRunes := utf8.RuneCountInString(endLabel)
-	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+endRightMargin+3
-	endStartX := 0
-	pathSlotCols := contentCols
-	if showEnd {
-		endStartX = innerRight - endRunes + 1 - endRightMargin
-		pathSlotCols = endStartX - titleX - gapBeforePanelTitleEnd
-		if pathSlotCols < 3 {
-			showEnd = false
-			pathSlotCols = contentCols
-		}
-	}
+	slots := titleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforePanelTitleEnd)
+	showEnd := slots.ShowEnd
+	endStartX := slots.EndStartX
+	pathSlotCols := slots.PathSlotCols
 	left := primitive.TruncateRight(leftTitle, pathSlotCols)
 	leftRunes := []rune(left)
 	endLabelRunes := []rune(endLabel)
