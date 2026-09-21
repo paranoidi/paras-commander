@@ -18,7 +18,4 @@ type Host interface {
 	MessageLogWrapCols() int
 	AppendTransientMessageLines(banner string, lines []string, urgency ui.MessageUrgency)
 	ClearTransientMessage()
-	// Render repaints the screen. Used after synchronous main-thread work (dialog actions,
-	// editor round-trips) that changes model state outside the normal input-handling render.
-	Render()
 }

@@ -52,7 +52,6 @@ func (f *fakeHost) AppendTransientMessageLines(banner string, _ []string, _ ui.M
 	f.messages = append(f.messages, banner)
 }
 func (f *fakeHost) ClearTransientMessage() {}
-func (f *fakeHost) Render()                {}
 
 func TestRunCommand_expandsF(t *testing.T) {
 	t.Parallel()

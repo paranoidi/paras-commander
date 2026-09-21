@@ -275,7 +275,6 @@ func (h *Handler) OpenFileEditor(path string) bool {
 	} else {
 		h.host.SetTransientMessage("Meta commands: edited "+path, ui.MessageUrgencyInfo)
 	}
-	h.host.Render()
 	return true
 }
 

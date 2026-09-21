@@ -25,5 +25,3 @@ func (h metaHost) AppendTransientMessageLines(banner string, lines []string, urg
 }
 
 func (h metaHost) ClearTransientMessage() { h.app.clearTransientMessage() }
-
-func (h metaHost) Render() { h.app.render() }
