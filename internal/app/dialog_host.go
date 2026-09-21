@@ -38,7 +38,17 @@ func (h dialogHost) Config() config.Config { return h.app.config }
 
 func (h dialogHost) Styles() theme.Theme { return h.app.styles }
 
-func (h dialogHost) ExecuteSFTPPassword() { h.app.executeSFTPPassword() }
+func (h dialogHost) ExecuteSFTPPassword() {
+	var pw string
+	if fields := h.app.model.FileDialog.Fields; len(fields) > 0 {
+		pw = fields[0].Value
+	}
+	// Complete the waiter before CloseFileDialog, which cancels any remaining password wait.
+	h.app.finishSFTPPassword(pw)
+	h.app.executeSFTPPassword()
+}
+
+func (h dialogHost) CancelSFTPPassword() { h.app.cancelSFTPPassword() }
 
 func (h dialogHost) OpenMessageDialog(title, message string) { h.app.openMessageDialog(title, message) }
 

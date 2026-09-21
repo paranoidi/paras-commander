@@ -51,6 +51,10 @@ type Host interface {
 	// dialogs and their state remain owned by internal/app.
 	ExecuteSFTPPassword()
 
+	// CancelSFTPPassword releases the SFTP password waiter when FileDialogSFTPPassword is
+	// dismissed (Esc, Alt+C, or CloseFileDialog).
+	CancelSFTPPassword()
+
 	// HandlePathPickerScrollingQueryKey handles a focused edit key on the path picker's query
 	// row through internal/app's shared scrollquery glue (internal/app/scrolling_query.go).
 	HandlePathPickerScrollingQueryKey(ev *tcell.EventKey) bool

@@ -52,6 +52,7 @@ func (f *fakeMassRenamePatternHost) OpenMessageDialog(string, string)           
 func (f *fakeMassRenamePatternHost) InQuickFilterUI() bool                         { return false }
 func (f *fakeMassRenamePatternHost) OpenFileInExternalEditor(string) error         { return nil }
 func (f *fakeMassRenamePatternHost) ExecuteSFTPPassword()                          {}
+func (f *fakeMassRenamePatternHost) CancelSFTPPassword()                           {}
 func (f *fakeMassRenamePatternHost) HandlePathPickerScrollingQueryKey(*tcell.EventKey) bool {
 	return false
 }

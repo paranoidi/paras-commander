@@ -18,9 +18,14 @@ import (
 )
 
 // CloseFileDialog closes the file dialog and clears its disk-usage scan reconcile cache.
+// Closing FileDialogSFTPPassword also releases the SFTP password waiter.
 func (h *Handler) CloseFileDialog() {
+	wasSFTPPassword := h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogSFTPPassword
 	h.ClearDeleteDialogReconcileCache()
 	h.model.FileDialog = dialog.FileDialogState{}
+	if wasSFTPPassword {
+		h.host.CancelSFTPPassword()
+	}
 }
 
 // TryDispatchFileOps handles file-operation dialog openers and copy/move/duplicate actions.
