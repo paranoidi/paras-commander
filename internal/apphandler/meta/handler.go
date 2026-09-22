@@ -339,7 +339,12 @@ func entriesFromFile(mf *metacmds.MetaFile) []dialog.MetaEntry {
 	sorted := metacmds.SortedEntries(mf)
 	out := make([]dialog.MetaEntry, len(sorted))
 	for i, e := range sorted {
-		out[i] = dialog.MetaEntry{Name: e.Name, Description: e.Description}
+		out[i] = dialog.MetaEntry{
+			Name:             e.Name,
+			Description:      e.Description,
+			SortOnActivation: e.SortOnActivation,
+			SortReverse:      e.SortReverse,
+		}
 	}
 	return out
 }
@@ -350,6 +355,7 @@ func entriesFromFile(mf *metacmds.MetaFile) []dialog.MetaEntry {
 func (h *Handler) ActivateSelection() {
 	st := h.model.MetaDialog
 	panelID := st.PanelID
+	prevActive := append([]string(nil), h.activeEntries[panelID]...)
 	checked := append([]bool(nil), st.Checked...)
 	entries := append([]dialog.MetaEntry(nil), st.Entries...)
 	h.closeDialog()
@@ -386,6 +392,28 @@ func (h *Handler) ActivateSelection() {
 	if len(activeNames) > maxCols {
 		h.host.SetTransientMessage(fmt.Sprintf("meta: showing first %d of %d selected columns", maxCols, len(activeNames)), ui.MessageUrgencyWarn)
 		activeNames = activeNames[:maxCols]
+	}
+
+	if p := h.host.PanelByID(panelID); p != nil {
+		wasActive := make(map[string]bool, len(prevActive))
+		for _, n := range prevActive {
+			wasActive[n] = true
+		}
+	nameLoop:
+		for _, name := range activeNames {
+			if wasActive[name] {
+				continue
+			}
+			for _, e := range entries {
+				if e.Name == name && e.SortOnActivation {
+					p.Sort.Mode = panel.SortMeta
+					p.Sort.MetaColumn = name
+					p.Sort.Reverse = e.SortReverse
+					h.host.ResortPanel(panelID)
+					break nameLoop
+				}
+			}
+		}
 	}
 
 	if h.cancel[panelID] != nil {

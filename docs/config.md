@@ -80,7 +80,7 @@ File panel browsing, sorting, and listing.
 |---|---|---|---|
 | `show_hidden` | bool | `false` | Show dotfiles and other hidden entries in panel listings on startup. |
 | `respect_gitignore` | bool | `true` | Hide files matched by `.gitignore` in panel listings. |
-| `default_sort` | string | `"name"` | Default panel sort order: `"name"`, `"extension"`, `"size"`, or `"mtime"`. Panels can also be sorted by an active meta column (see `[meta]`) from the in-app Sort dialog, showing up to 4 active columns; this is not settable here since meta columns are only known once a panel activates them. A meta-column value is compared numerically when it parses as a number, and sorts last when empty, missing, or still running. A column whose values are all numeric sorts high-first (e.g. a 0–10 score lists 10 first); other columns sort A→Z. The header sort arrow points toward the larger values: `↓` when they grow down the list, `↑` when they shrink. Once every value for the sorted column has arrived, the panel re-sorts after `[disk_usage] idle_sort_delay_ms` of inactivity rather than reshuffling live as results stream in. |
+| `default_sort` | string | `"name"` | Default panel sort order: `"name"`, `"extension"`, `"size"`, or `"mtime"`. Panels can also be sorted by an active meta column (see `[meta]`) from the in-app Sort dialog, showing up to 4 active columns; this is not settable here since meta columns are only known once a panel activates them (a meta.toml entry can request it automatically via `sort_on_activation`, see `[meta]`). A meta-column value is compared numerically when it parses as a number, and sorts last when empty, missing, or still running. A column whose values are all numeric sorts high-first (e.g. a 0–10 score lists 10 first); other columns sort A→Z. The header sort arrow points toward the larger values: `↓` when they grow down the list, `↑` when they shrink. Once every value for the sorted column has arrived, the panel re-sorts after `[disk_usage] idle_sort_delay_ms` of inactivity rather than reshuffling live as results stream in. |
 | `default_listing_format` | string | `"brief"` | Default listing column layout: `"mtime"` (modified time), `"perm"` (permissions), or `"brief"` (minimal columns). |
 | `sort_reverse` | bool | `false` | Reverse the default sort order (for meta columns, relative to each column's own default: high-first for numeric, A→Z for text). |
 | `directories_first` | bool | `true` | List directories before files regardless of sort order. |
@@ -391,6 +391,8 @@ Meta column command definitions (custom computed panel columns).
 | `file` | string | `""` | Path to the global `meta.toml`. Empty uses `<config dir>/meta.toml`. |
 | `local_names` | array of strings | `["meta.toml"]` | Basenames probed in the active panel directory (for a per-directory meta file) before falling back to the global file. |
 | `default_entry_workers` | int | `2` | Number of concurrent background workers used per meta column entry that doesn't specify its own worker count (clamped 1–64). |
+
+A `meta.toml` `[[entry]]` can set `sort_on_activation` (bool, default `false`) to switch the panel's sort to that column when the entry is newly activated from the meta picker, and `sort_reverse` (bool, default `false`, ignored without `sort_on_activation`) to reverse that sort. Re-OKing the picker with the column already active does not re-apply or override a sort you changed manually afterward.
 
 ## `[pools]`
 

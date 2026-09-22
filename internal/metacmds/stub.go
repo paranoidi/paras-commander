@@ -59,6 +59,13 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 # workers         int      optional   default: meta.default_entry_workers (2)
 #   Number of concurrent background goroutines for this entry. Clamped to 64.
 #
+# sort_on_activation  bool   optional   default: false
+#   Switch the panel's sort to this column when the entry is newly activated
+#   from the meta picker. Does not override a sort you change manually afterward.
+#
+# sort_reverse    bool     optional   default: false
+#   Reverse the sort applied by sort_on_activation. Ignored without it.
+#
 # Do not wrap %f in quotes in the script — the app POSIX-single-quotes the path when expanding.
 #
 # Examples:

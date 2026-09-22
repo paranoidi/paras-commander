@@ -263,6 +263,11 @@ type HistoryDialogState struct {
 type MetaEntry struct {
 	Name        string
 	Description string
+	// SortOnActivation switches the panel's sort to this column when the entry is newly
+	// activated from the meta picker.
+	SortOnActivation bool
+	// SortReverse reverses that sort. Ignored when SortOnActivation is false.
+	SortReverse bool
 }
 
 // MetaDialogState is the checkbox picker for toggling meta columns on panel entries.

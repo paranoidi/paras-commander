@@ -354,6 +354,32 @@ file = "stat -c '%s' %f"
 	}
 }
 
+func TestDecode_sortOnActivation(t *testing.T) {
+	toml := `
+[[entry]]
+name = "score"
+description = "Score"
+sort_on_activation = true
+sort_reverse = true
+file = "echo 7"
+
+[[entry]]
+name = "size"
+description = "Size"
+file = "echo 1"
+`
+	mf, err := metacmds.Decode([]byte(toml))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !mf.Entries[0].SortOnActivation || !mf.Entries[0].SortReverse {
+		t.Errorf("entry 0: got SortOnActivation=%v SortReverse=%v, want both true", mf.Entries[0].SortOnActivation, mf.Entries[0].SortReverse)
+	}
+	if mf.Entries[1].SortOnActivation || mf.Entries[1].SortReverse {
+		t.Errorf("entry 1: expected SortOnActivation=false SortReverse=false (default)")
+	}
+}
+
 func TestDecode_workersNegative(t *testing.T) {
 	toml := `
 [[entry]]

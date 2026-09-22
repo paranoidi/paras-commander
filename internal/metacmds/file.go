@@ -36,6 +36,11 @@ type MetaEntry struct {
 	// Workers is the number of concurrent background goroutines for this entry.
 	// 0 means use the global default from [meta] default_entry_workers in the main config.
 	Workers int
+	// SortOnActivation switches the panel's sort to this column when the entry is newly
+	// activated from the meta picker.
+	SortOnActivation bool
+	// SortReverse reverses that sort. Ignored when SortOnActivation is false.
+	SortReverse bool
 }
 
 type metaFileRaw struct {
@@ -44,16 +49,18 @@ type metaFileRaw struct {
 }
 
 type metaEntryRaw struct {
-	Name          string     `toml:"name"`
-	Description   string     `toml:"description"`
-	Column        string     `toml:"column"`
-	Order         int        `toml:"order"`
-	File          string     `toml:"file"`
-	Dirs          string     `toml:"dirs"`
-	When          *whenField `toml:"when"`
-	Cache         bool       `toml:"cache"`
-	ShellPatterns *boolField `toml:"shell_patterns"`
-	Workers       int        `toml:"workers"`
+	Name             string     `toml:"name"`
+	Description      string     `toml:"description"`
+	Column           string     `toml:"column"`
+	Order            int        `toml:"order"`
+	File             string     `toml:"file"`
+	Dirs             string     `toml:"dirs"`
+	When             *whenField `toml:"when"`
+	Cache            bool       `toml:"cache"`
+	ShellPatterns    *boolField `toml:"shell_patterns"`
+	Workers          int        `toml:"workers"`
+	SortOnActivation bool       `toml:"sort_on_activation"`
+	SortReverse      bool       `toml:"sort_reverse"`
 }
 
 // boolField decodes MC-style 0/1 or a TOML boolean.
@@ -167,16 +174,18 @@ func Decode(data []byte) (*MetaFile, error) {
 			column = name
 		}
 		out.Entries = append(out.Entries, MetaEntry{
-			Name:          name,
-			Description:   strings.TrimSpace(e.Description),
-			Column:        column,
-			Order:         e.Order,
-			File:          strings.TrimSpace(e.File),
-			Dirs:          strings.TrimSpace(e.Dirs),
-			When:          whenList,
-			Cache:         e.Cache,
-			ShellPatterns: resolveShellPatterns(out.ShellPatterns, e.ShellPatterns),
-			Workers:       workers,
+			Name:             name,
+			Description:      strings.TrimSpace(e.Description),
+			Column:           column,
+			Order:            e.Order,
+			File:             strings.TrimSpace(e.File),
+			Dirs:             strings.TrimSpace(e.Dirs),
+			When:             whenList,
+			Cache:            e.Cache,
+			ShellPatterns:    resolveShellPatterns(out.ShellPatterns, e.ShellPatterns),
+			Workers:          workers,
+			SortOnActivation: e.SortOnActivation,
+			SortReverse:      e.SortReverse,
 		})
 	}
 	return out, nil

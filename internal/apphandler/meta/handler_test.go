@@ -589,3 +589,42 @@ func TestActivateSelection_invalidatesPendingLoad(t *testing.T) {
 		t.Fatalf("pending load restored %q, want new-col", got)
 	}
 }
+
+func TestActivateSelection_sortOnActivation(t *testing.T) {
+	dir := t.TempDir()
+	newDialog := func() dialog.MetaDialogState {
+		return dialog.MetaDialogState{
+			Open:    true,
+			PanelID: 0,
+			Entries: []dialog.MetaEntry{
+				{Name: "score", Description: "Score", SortOnActivation: true, SortReverse: true},
+			},
+			Checked: []bool{true},
+		}
+	}
+
+	fh := &fakeHost{panels: [2]*panel.State{testPanel(t, dir, nil)}}
+	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
+	h.model.MetaDialog = newDialog()
+
+	h.ActivateSelection()
+
+	p := fh.panels[0]
+	if p.Sort.Mode != panel.SortMeta || p.Sort.MetaColumn != "score" || !p.Sort.Reverse {
+		t.Fatalf("Sort = %+v, want Mode=SortMeta MetaColumn=score Reverse=true", p.Sort)
+	}
+	if len(fh.resortCalls) != 1 || fh.resortCalls[0] != 0 {
+		t.Fatalf("resortCalls = %v, want [0]", fh.resortCalls)
+	}
+
+	// Re-activating with the column already active must not clobber a sort the user
+	// changed manually in the meantime.
+	p.Sort = panel.SortState{Mode: panel.SortName}
+	h.model.MetaDialog = newDialog()
+
+	h.ActivateSelection()
+
+	if p.Sort.Mode != panel.SortName {
+		t.Fatalf("Sort.Mode = %v after re-activation, want SortName (manual choice preserved)", p.Sort.Mode)
+	}
+}
