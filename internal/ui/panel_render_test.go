@@ -120,7 +120,7 @@ func TestPanelListHeaderIconsLeadingSpaceMatchesNamePrefix(t *testing.T) {
 	nameW := panelListNameWidth(rowText, panel.ListFormatMtime, false, false)
 	hdr := panelListHeader(rowText, panel.State{}, true, false, nil, false, false)
 	nameField := strings.TrimRight(hdr[:nameW], " ")
-	want := "↑Name"
+	want := "↓Name"
 	if len(want) > nameW {
 		want = want[:nameW]
 	}

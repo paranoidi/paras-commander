@@ -859,7 +859,7 @@ func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cur
 	return "panel.inactive.row.cursor"
 }
 
-// metaSortArrowLayouts sets ↑/↓ on the meta column layout whose EntryName is the panel's
+// metaSortArrowLayouts sets panel.SortArrow on the meta column layout whose EntryName is the panel's
 // active SortMeta target, leaving layouts untouched otherwise. Returns a copy so the caller's
 // own metaLayouts slice (also used to render entry rows) is never mutated.
 func metaSortArrowLayouts(layouts []MetaColumnLayout, sort panel.SortState) []MetaColumnLayout {
@@ -871,10 +871,7 @@ func metaSortArrowLayouts(layouts []MetaColumnLayout, sort panel.SortState) []Me
 			continue
 		}
 		out := append([]MetaColumnLayout(nil), layouts...)
-		out[i].SortArrow = '↑'
-		if sort.Reverse {
-			out[i].SortArrow = '↓'
-		}
+		out[i].SortArrow = panel.SortArrow(sort.MetaAscending(out[i].Numeric))
 		return out
 	}
 	return layouts

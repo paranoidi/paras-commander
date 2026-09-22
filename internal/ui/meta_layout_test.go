@@ -216,8 +216,8 @@ func TestLayoutMetaColumns_pendingCellsDoNotShiftHeader(t *testing.T) {
 
 func TestPanelListHeader_metaSortArrowSpillsIntoGap(t *testing.T) {
 	layouts := []MetaColumnLayout{
-		{EntryName: "rating", Title: "Tmdb", Width: 4, RightAlign: true},
-		{EntryName: "votes", Title: "Votes", Width: 5, RightAlign: true},
+		{EntryName: "rating", Title: "Tmdb", Width: 4, RightAlign: true, Numeric: true},
+		{EntryName: "votes", Title: "Votes", Width: 5, RightAlign: true, Numeric: true},
 	}
 	titles := map[string]string{"rating": "Tmdb", "votes": "Votes"}
 	st := panel.State{}
@@ -243,6 +243,14 @@ func TestPanelListHeader_metaSortArrowSpillsIntoGap(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestMetaSortArrowLayouts_textColumnAscendingPointsDown(t *testing.T) {
+	layouts := []MetaColumnLayout{{EntryName: "genre", Title: "Genre", Width: 8}}
+	out := metaSortArrowLayouts(layouts, panel.SortState{Mode: panel.SortMeta, MetaColumn: "genre"})
+	if out[0].SortArrow != '↓' {
+		t.Fatalf("text column arrow = %q, want ↓", out[0].SortArrow)
 	}
 }
 

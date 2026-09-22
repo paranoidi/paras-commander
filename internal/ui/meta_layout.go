@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 )
@@ -18,6 +19,8 @@ type MetaColumnLayout struct {
 	Width      int
 	Formatted  map[string]string
 	RightAlign bool
+	// Numeric mirrors panel.MetaValuesNumeric: numeric columns sort high-first by default.
+	Numeric bool
 	// SortArrow is ↑/↓ when the panel sorts by this column, 0 otherwise.
 	SortArrow rune
 }
@@ -37,6 +40,7 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 			Width:      w,
 			Formatted:  formatted,
 			RightAlign: rightAlign,
+			Numeric:    panel.MetaValuesNumeric(col.Results, col.Pending),
 		}
 		if i > 0 {
 			totalWidth += 2

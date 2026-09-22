@@ -74,8 +74,8 @@ func TestApplyMetaIdleSort_reordersOnceResolved(t *testing.T) {
 			EntryName: "info",
 			Pending:   "*",
 			Results: map[string]string{
-				aPath: "9",
-				bPath: "1",
+				aPath: "1",
+				bPath: "9",
 			},
 		},
 	}
@@ -87,6 +87,6 @@ func TestApplyMetaIdleSort_reordersOnceResolved(t *testing.T) {
 		t.Fatalf("expected 2 entries, got %d", len(left.Entries))
 	}
 	if left.Entries[0].Name != "bramble.txt" {
-		t.Fatalf("Entries[0] = %q, want bramble.txt (meta value 1 before 9)", left.Entries[0].Name)
+		t.Fatalf("Entries[0] = %q, want bramble.txt (numeric meta sorts high-first: 9 before 1)", left.Entries[0].Name)
 	}
 }

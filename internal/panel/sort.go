@@ -108,8 +108,11 @@ func SortEntries(entries []localfs.Entry, sortState SortState, diskSorter func(s
 	}
 
 	var metaKeys map[string]metaSortKey
+	metaDesc := false
 	if !useDiskPrimary && sortState.Mode == SortMeta {
-		metaKeys = buildMetaSortKeys(entries, sortState.MetaColumn, metaValue)
+		var numeric bool
+		metaKeys, numeric = buildMetaSortKeys(entries, sortState.MetaColumn, metaValue)
+		metaDesc = !sortState.MetaAscending(numeric)
 	}
 
 	sort.SliceStable(entries, func(i, j int) bool {
@@ -138,7 +141,7 @@ func SortEntries(entries []localfs.Entry, sortState SortState, diskSorter func(s
 				return cmp < 0
 			}
 		case sortState.Mode == SortMeta:
-			cmp = compareMetaKeys(metaKeys[left.Path], metaKeys[right.Path], reverse)
+			cmp = compareMetaKeys(metaKeys[left.Path], metaKeys[right.Path], metaDesc)
 			if cmp != 0 {
 				return cmp < 0
 			}
@@ -240,11 +243,46 @@ type metaSortKey struct {
 	str     string // lowercased, only meaningful when !numeric && !missing
 }
 
+// SortArrow returns the header arrow for a sort order: it points toward the larger values,
+// so ↓ when values grow down the list (ascending) and ↑ when they shrink.
+func SortArrow(ascending bool) rune {
+	if ascending {
+		return '↓'
+	}
+	return '↑'
+}
+
+// MetaAscending reports whether a meta column sorts ascending: numeric columns sort
+// high-first by default, text columns A→Z; Reverse flips either.
+func (s SortState) MetaAscending(numeric bool) bool {
+	return numeric == s.Reverse
+}
+
+// MetaValuesNumeric reports whether a meta column is numeric: at least one value is set and
+// every set value (non-blank, not the pending placeholder) parses as a float.
+func MetaValuesNumeric(values map[string]string, pending string) bool {
+	found := false
+	for _, v := range values {
+		if pending != "" && v == pending {
+			continue
+		}
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		if _, err := strconv.ParseFloat(v, 64); err != nil {
+			return false
+		}
+		found = true
+	}
+	return found
+}
+
 // buildMetaSortKeys resolves col's values once via metaValue and precomputes each entry's sort
 // key (numeric parse, lowercased string, or missing) so compareMetaKeys never touches the raw
-// string map or strconv during the sort itself.
-func buildMetaSortKeys(entries []localfs.Entry, col string, metaValue func(column string) (values map[string]string, pending string, ok bool)) map[string]metaSortKey {
-	keys := make(map[string]metaSortKey, len(entries))
+// string map or strconv during the sort itself. numeric reports MetaValuesNumeric for the column.
+func buildMetaSortKeys(entries []localfs.Entry, col string, metaValue func(column string) (values map[string]string, pending string, ok bool)) (keys map[string]metaSortKey, numeric bool) {
+	keys = make(map[string]metaSortKey, len(entries))
 	var values map[string]string
 	var pending string
 	var ok bool
@@ -272,7 +310,7 @@ func buildMetaSortKeys(entries []localfs.Entry, col string, metaValue func(colum
 		}
 		keys[e.Path] = metaSortKey{str: strings.ToLower(v)}
 	}
-	return keys
+	return keys, MetaValuesNumeric(values, pending)
 }
 
 // compareMetaKeys orders two precomputed meta sort keys: numeric compare when both are numeric,
@@ -319,20 +357,18 @@ func listNameColumnTitle(showIcons bool, arrow rune) string {
 	return "Name"
 }
 
-// ListColumnTitles builds panel header labels with ↑/↓ on the active sort column.
+// ListColumnTitles builds panel header labels with the SortArrow on the active sort column.
 func (s State) ListColumnTitles(showIcons bool) (nameTitle, sizeTitle, thirdTitle string) {
-	const asc = '↑'
-	const desc = '↓'
 	nameBase := listNameColumnTitle(showIcons, 0)
 	f := EffectiveListFormat(s.ListFormat)
 	if s.primarySortUsesDiskTotals() {
 		switch f {
 		case ListFormatBrief:
-			return nameBase, fmt.Sprintf("%cSize", desc), ""
+			return nameBase, fmt.Sprintf("%cSize", SortArrow(false)), ""
 		case ListFormatPerm:
-			return nameBase, fmt.Sprintf("%cSize", desc), "Permissions"
+			return nameBase, fmt.Sprintf("%cSize", SortArrow(false)), "Permissions"
 		default:
-			return nameBase, fmt.Sprintf("%cSize", desc), "Modified"
+			return nameBase, fmt.Sprintf("%cSize", SortArrow(false)), "Modified"
 		}
 	}
 	const lblMod = "Modified"
@@ -349,10 +385,7 @@ func (s State) ListColumnTitles(showIcons bool) (nameTitle, sizeTitle, thirdTitl
 			return nameBase, "Size", lblMod
 		}
 	}
-	arrow := asc
-	if s.Sort.Reverse {
-		arrow = desc
-	}
+	arrow := SortArrow(!s.Sort.Reverse)
 	if f == ListFormatBrief {
 		switch s.Sort.Mode {
 		case SortName, SortExtension:

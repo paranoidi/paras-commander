@@ -16,8 +16,8 @@ func checkNames(t *testing.T, entries []localfs.Entry, want []string) {
 	}
 }
 
-// TestSortEntries_MetaNumeric sorts a meta column whose values all parse as numbers, ascending
-// by numeric value rather than lexical string order ("10" > "9").
+// TestSortEntries_MetaNumeric sorts a meta column whose values all parse as numbers by numeric
+// value rather than lexical string order ("10" > "9"): high-first by default, low-first reversed.
 func TestSortEntries_MetaNumeric(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "lantern.txt", Path: "/d/lantern.txt"},
@@ -33,7 +33,26 @@ func TestSortEntries_MetaNumeric(t *testing.T) {
 		return values, "", true
 	}
 	SortEntries(entries, SortState{Mode: SortMeta, MetaColumn: "size"}, nil, false, metaValue)
-	checkNames(t, entries, []string{"harbor.txt", "lantern.txt", "meadow.txt"}) // 5.6 < 9 < 10
+	checkNames(t, entries, []string{"meadow.txt", "lantern.txt", "harbor.txt"}) // 10 > 9 > 5.6
+	SortEntries(entries, SortState{Mode: SortMeta, MetaColumn: "size", Reverse: true}, nil, false, metaValue)
+	checkNames(t, entries, []string{"harbor.txt", "lantern.txt", "meadow.txt"})
+}
+
+// TestListColumnTitles_ArrowPointsToLargerValues: ascending shows ↓, descending ↑, and the
+// largest-first disk-usage sort ↑.
+func TestListColumnTitles_ArrowPointsToLargerValues(t *testing.T) {
+	s := State{Sort: SortState{Mode: SortName}}
+	if name, _, _ := s.ListColumnTitles(false); name != "↓Name" {
+		t.Fatalf("ascending name = %q, want ↓Name", name)
+	}
+	s.Sort.Reverse = true
+	if name, _, _ := s.ListColumnTitles(false); name != "↑Name" {
+		t.Fatalf("reversed name = %q, want ↑Name", name)
+	}
+	s = State{Sort: SortState{DiskUsageIdleSizeSort: true}, IdleDiskTotalsSort: true}
+	if _, size, _ := s.ListColumnTitles(false); size != "↑Size" {
+		t.Fatalf("disk totals size = %q, want ↑Size", size)
+	}
 }
 
 // TestSortEntries_MetaMixedNumericText places all-numeric values before non-numeric text,
@@ -130,7 +149,7 @@ func TestListColumnTitles_MtimeArrowOnModifiedInDefaultFormat(t *testing.T) {
 	}
 
 	_, size, third := s.ListColumnTitles(false)
-	if size != "Size" || third != "↑Modified" {
+	if size != "Size" || third != "↓Modified" {
 		t.Fatalf("Mtime format/SortMtime: want plain Size and arrowed Modified, got size=%q third=%q", size, third)
 	}
 }
