@@ -195,6 +195,15 @@ func (s *State) primarySortUsesDiskTotals() bool {
 	return s.Sort.DiskUsageIdleSizeSort && s.IdleDiskTotalsSort
 }
 
+// ActiveMetaSortColumn returns the meta column entries are actually ordered by, or "" when
+// the sort is not by a meta column or the disk-usage size sort has taken over (see SortEntries).
+func (s *State) ActiveMetaSortColumn() string {
+	if s.Sort.Mode != SortMeta || s.primarySortUsesDiskTotals() {
+		return ""
+	}
+	return s.Sort.MetaColumn
+}
+
 // compareDiskUsagePrimary orders by cached subtree or file aggregates from diskSorter.
 // Unknown paths sort after any known path. Larger sizes sort first when reverse is false.
 func compareDiskUsagePrimary(left, right localfs.Entry, diskSorter func(string) (int64, bool), reverse bool) int {

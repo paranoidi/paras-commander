@@ -862,16 +862,17 @@ func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cur
 // metaSortArrowLayouts sets panel.SortArrow on the meta column layout whose EntryName is the panel's
 // active SortMeta target, leaving layouts untouched otherwise. Returns a copy so the caller's
 // own metaLayouts slice (also used to render entry rows) is never mutated.
-func metaSortArrowLayouts(layouts []MetaColumnLayout, sort panel.SortState) []MetaColumnLayout {
-	if sort.Mode != panel.SortMeta || sort.MetaColumn == "" {
+func metaSortArrowLayouts(layouts []MetaColumnLayout, state panel.State) []MetaColumnLayout {
+	col := state.ActiveMetaSortColumn()
+	if col == "" {
 		return layouts
 	}
 	for i := range layouts {
-		if layouts[i].EntryName != sort.MetaColumn {
+		if layouts[i].EntryName != col {
 			continue
 		}
 		out := append([]MetaColumnLayout(nil), layouts...)
-		out[i].SortArrow = panel.SortArrow(sort.MetaAscending(out[i].Numeric))
+		out[i].SortArrow = panel.SortArrow(state.Sort.MetaAscending(out[i].Numeric))
 		return out
 	}
 	return layouts
@@ -898,7 +899,7 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	if showMeta {
 		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaTotalW, listFmt, false, false)
 	}
-	metaHdr := MetaHeaderText(metaSortArrowLayouts(metaLayouts, state.Sort))
+	metaHdr := MetaHeaderText(metaSortArrowLayouts(metaLayouts, state))
 	if showMeta && runewidth.StringWidth(metaHdr) > metaTotalW {
 		nameWidth-- // first meta column's sort arrow spills into the name→meta gap
 	}

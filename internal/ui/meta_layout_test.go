@@ -248,9 +248,24 @@ func TestPanelListHeader_metaSortArrowSpillsIntoGap(t *testing.T) {
 
 func TestMetaSortArrowLayouts_textColumnAscendingPointsDown(t *testing.T) {
 	layouts := []MetaColumnLayout{{EntryName: "genre", Title: "Genre", Width: 8}}
-	out := metaSortArrowLayouts(layouts, panel.SortState{Mode: panel.SortMeta, MetaColumn: "genre"})
+	out := metaSortArrowLayouts(layouts, panel.State{Sort: panel.SortState{Mode: panel.SortMeta, MetaColumn: "genre"}})
 	if out[0].SortArrow != '↓' {
 		t.Fatalf("text column arrow = %q, want ↓", out[0].SortArrow)
+	}
+}
+
+// With "Disk usage" checked and totals cached, entries are ordered by size only, so the arrow
+// belongs to Size and the meta column must not carry one too.
+func TestPanelListHeader_diskUsageSortOwnsTheArrow(t *testing.T) {
+	layouts := []MetaColumnLayout{{EntryName: "rating", Title: "Tmdb", Width: 4, RightAlign: true, Numeric: true}}
+	st := panel.State{Sort: panel.SortState{Mode: panel.SortMeta, MetaColumn: "rating", DiskUsageIdleSizeSort: true}}
+	if hdr := panelListHeader(80, st, false, true, layouts, false, false); !strings.Contains(hdr, "↑Tmdb") || strings.Contains(hdr, "↑Size") {
+		t.Fatalf("totals not cached: header %q, want ↑Tmdb only", hdr)
+	}
+	st.IdleDiskTotalsSort = true
+	hdr := panelListHeader(80, st, false, true, layouts, false, false)
+	if strings.ContainsAny(strings.ReplaceAll(hdr, "↑Size", ""), "↑↓") || !strings.Contains(hdr, "↑Size") {
+		t.Fatalf("totals cached: header %q, want ↑Size only", hdr)
 	}
 }
 
