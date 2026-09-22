@@ -814,9 +814,11 @@ func (s *State) rebuildTreeRows() {
 	s.rebuildFilter()
 }
 
-// reattachTreeCursorByID keeps the cursor on the same node (by ID) after a rebuild when
-// possible, else clamps to a valid row.
+// reattachTreeCursorByID keeps the cursor on the same node (by ID) and on the same viewport row
+// (the row it occupied before the rebuild) after a rebuild when possible, else clamps to a valid
+// row.
 func (s *State) reattachTreeCursorByID(id string, viewportRows int) {
+	priorCursor, priorScroll := s.Cursor, s.ScrollOffset
 	for i := range s.treeRows {
 		if s.treeRows[i].ID == id {
 			// When the row is filtered out, fall through to clampCursor below instead of
@@ -827,8 +829,7 @@ func (s *State) reattachTreeCursorByID(id string, viewportRows int) {
 			break
 		}
 	}
-	s.clampCursor()
-	s.EnsureCursorInViewport(viewportRows)
+	s.finishSameDirectoryReloadScroll(priorCursor, priorScroll, viewportRows, false)
 }
 
 // TreeRowShape returns the tree-shape fields for VisibleEntry(index) when in tree mode: depth,

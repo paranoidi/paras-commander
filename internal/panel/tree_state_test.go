@@ -1107,6 +1107,86 @@ func TestExpandAllTreeShallowAsyncCoalescesRedrawAndKeepsCursor(t *testing.T) {
 	}
 }
 
+// TestExpandAllTreeAsyncKeepsCursorViewportRow is the regression test for reattachTreeCursorByID
+// walking the highlight down the screen: when an expand-all level inserts new rows above the
+// cursor's node, the cursor must stay on the same visual viewport row (Cursor - ScrollOffset),
+// not just somewhere in the viewport.
+func TestExpandAllTreeAsyncKeepsCursorViewportRow(t *testing.T) {
+	root := t.TempDir()
+	dirs := []string{"apple", "birch", "cedar", "dune", "elm", "fern", "gorse", "holly"}
+	for _, name := range dirs {
+		dir := filepath.Join(root, name)
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatalf("Mkdir: %v", err)
+		}
+		for _, leaf := range []string{"leaf.txt", "twig.txt"} {
+			if err := os.WriteFile(filepath.Join(dir, leaf), []byte("x"), 0o644); err != nil {
+				t.Fatalf("WriteFile: %v", err)
+			}
+		}
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	vr := 5
+	if !state.SetListLayout(ListLayoutTree, vr) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if got := state.VisibleEntryCount(); got != len(dirs) {
+		t.Fatalf("VisibleEntryCount = %d, want %d", got, len(dirs))
+	}
+
+	// Put the cursor on "gorse" (index 6), scrolled so it sits on viewport row 3.
+	state.Cursor = 6
+	state.ScrollOffset = 3
+	wantRow := state.Cursor - state.ScrollOffset
+	wantEntry, _, ok := state.VisibleEntry(state.Cursor)
+	if !ok || filepath.Base(wantEntry.Path) != "gorse" {
+		t.Fatalf("cursor entry = %+v ok=%v, want gorse", wantEntry, ok)
+	}
+	wantID := wantEntry.Path
+
+	var scheduled []string
+	state.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		scheduled = append(scheduled, req.DirID)
+		return true
+	}
+	if err := state.ExpandAllTreeShallow(vr); err != nil {
+		t.Fatalf("ExpandAllTreeShallow: %v", err)
+	}
+	if len(scheduled) != len(dirs) {
+		t.Fatalf("scheduled = %v, want %d dirs", scheduled, len(dirs))
+	}
+
+	// Apply every scheduled directory's children, alphabetically-earlier ones first, so rows land
+	// above the anchor before the coalesced rebuild fires on the last apply.
+	for i, dirID := range scheduled {
+		des, err := os.ReadDir(dirID)
+		if err != nil {
+			t.Fatalf("ReadDir(%s): %v", dirID, err)
+		}
+		var entries []localfs.Entry
+		for _, de := range des {
+			entries = append(entries, localfs.Entry{Name: de.Name(), Path: filepath.Join(dirID, de.Name()), Type: localfs.EntryFile})
+		}
+		redrew := state.ApplyTreeChildLoad(dirID, entries, nil, vr)
+		want := i == len(scheduled)-1
+		if redrew != want {
+			t.Fatalf("ApplyTreeChildLoad(%s) = %v, want %v", dirID, redrew, want)
+		}
+	}
+
+	gotEntry, _, ok := state.VisibleEntry(state.Cursor)
+	if !ok || gotEntry.Path != wantID {
+		t.Fatalf("cursor entry after expand = %+v ok=%v, want %q", gotEntry, ok, wantID)
+	}
+	if gotRow := state.Cursor - state.ScrollOffset; gotRow != wantRow {
+		t.Fatalf("viewport row after expand = %d, want %d (Cursor=%d ScrollOffset=%d)", gotRow, wantRow, state.Cursor, state.ScrollOffset)
+	}
+}
+
 // TestExpandAllTreeFullyAsyncCascadesThroughLevels covers Alt+Shift+Right when
 // ScheduleTreeChildLoad is wired: each level's expand dispatches async loads, and
 // finishTreeChildLoadApply must drive the next level automatically as those loads land, until the
