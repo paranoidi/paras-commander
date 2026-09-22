@@ -236,10 +236,10 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 			name: "calibrate debounce",
 			draw: func(screen tcell.Screen) {
 				DrawDebounceCalibrateDialog(screen, layout, DebounceCalibrateDialogState{
-					Open: true, Value: "120", ImageValue: "250",
+					Open: true, Value: "120", PreviewValue: "250",
 				}, styles)
 			},
-			labels: []string{"Debounce (ms):", "Image preview debounce (ms):"},
+			labels: []string{"Debounce (ms):", "Preview debounce (ms):"},
 		},
 		{
 			name: "dedup progress",

@@ -1061,26 +1061,41 @@ func (h *Handler) ClearNavCoalesces() {
 	h.clearCarouselPreviewDebounce()
 }
 
-// previewDebounceDelay returns the coalesce delay for a preview target. Image and media targets
-// decode, scale and re-emit a sixel/Kitty payload to the TTY, which is far more expensive than a
-// text reload, so they get their own longer delay.
+// debounceDelay returns the coalesce delay. preview is true when the coalesced target is a
+// preview (any file, a [[preview.commands]] rule, a style-picker re-highlight) and false when
+// it is a directory listing or a plain message: previews spawn subprocesses or re-emit
+// sixel/Kitty payloads, so they wait PreviewDebounceMS instead of KeyRepeatDebounceMS.
 //
 // ponytail: this only picks the delay — KeyRepeatDebounceMS <= 0 still short-circuits the whole
-// coalesce machinery at the call sites, so image targets are not debounced either in that case.
-// Making the image delay fully independent means reworking those early-outs (notably
+// coalesce machinery at the call sites, so previews are not debounced either in that case.
+// Making the preview delay fully independent means reworking those early-outs (notably
 // BeginCarouselPreviewNavCoalesce, which would otherwise arm nothing and strand the preview).
-func (h *Handler) previewDebounceDelay(path string) time.Duration {
+func (h *Handler) debounceDelay(preview bool) time.Duration {
 	cfg := h.host.Config().UI
 	ms := cfg.KeyRepeatDebounceMS
-	if localfs.IsGraphicalPreviewPath(path) {
-		ms = cfg.ImagePreviewDebounceMS
+	if preview {
+		ms = cfg.PreviewDebounceMS
 	}
 	return time.Duration(ms) * time.Millisecond
 }
 
+// quickViewDebounceDelay classifies the current quick-view target for debounceDelay from the
+// listing entry type alone — no stat on the UI goroutine.
+func (h *Handler) quickViewDebounceDelay() time.Duration {
+	_, _, mode := h.quickViewWantFile()
+	switch mode {
+	case quickViewWantFile:
+		return h.debounceDelay(true)
+	case quickViewWantDir:
+		_, rule := h.activeDirRuleTarget()
+		return h.debounceDelay(rule)
+	default:
+		return h.debounceDelay(false)
+	}
+}
+
 func (h *Handler) scheduleQuickViewDebounceTimer(gen uint64) {
-	path, _, _ := h.quickViewWantFile()
-	delay := h.previewDebounceDelay(path)
+	delay := h.quickViewDebounceDelay()
 	h.quickViewDebounce.Arm(delay, func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(QuickViewFlushPayload{gen: gen}))
 	})

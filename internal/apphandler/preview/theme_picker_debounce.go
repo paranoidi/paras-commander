@@ -1,8 +1,6 @@
 package preview
 
 import (
-	"time"
-
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -12,8 +10,7 @@ func (h *Handler) clearPreviewStylePickerDebounce() {
 }
 
 func (h *Handler) schedulePreviewStylePickerDebounceTimer(gen uint64) {
-	delay := time.Duration(h.host.Config().UI.KeyRepeatDebounceMS) * time.Millisecond
-	h.previewStylePickerDebounce.Arm(delay, func() {
+	h.previewStylePickerDebounce.Arm(h.debounceDelay(true), func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(StylePickerFlushPayload{gen: gen}))
 	})
 }

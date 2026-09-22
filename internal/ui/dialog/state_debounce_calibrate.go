@@ -11,9 +11,9 @@ type DebounceCalibrateDialogState struct {
 	Value  string
 	Cursor int
 
-	// Image/media preview debounce (focus 1); not calibrated.
-	ImageValue  string
-	ImageCursor int
+	// Preview debounce (focus 1); not calibrated.
+	PreviewValue  string
+	PreviewCursor int
 
 	Status string
 

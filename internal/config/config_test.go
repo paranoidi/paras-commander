@@ -1006,23 +1006,23 @@ func TestValidateKeyRepeatDebounceMS(t *testing.T) {
 	}
 }
 
-func TestValidateImagePreviewDebounceMS(t *testing.T) {
+func TestValidatePreviewDebounceMS(t *testing.T) {
 	cfg := Default()
-	if cfg.UI.ImagePreviewDebounceMS != DefaultImagePreviewDebounceMS {
-		t.Fatalf("default ImagePreviewDebounceMS = %d, want %d", cfg.UI.ImagePreviewDebounceMS, DefaultImagePreviewDebounceMS)
+	if cfg.UI.PreviewDebounceMS != DefaultPreviewDebounceMS {
+		t.Fatalf("default PreviewDebounceMS = %d, want %d", cfg.UI.PreviewDebounceMS, DefaultPreviewDebounceMS)
 	}
-	cfg.UI.ImagePreviewDebounceMS = -1
+	cfg.UI.PreviewDebounceMS = -1
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.ImagePreviewDebounceMS != DefaultImagePreviewDebounceMS {
-		t.Fatalf("ImagePreviewDebounceMS = %d, want default %d", cfg.UI.ImagePreviewDebounceMS, DefaultImagePreviewDebounceMS)
+	if cfg.UI.PreviewDebounceMS != DefaultPreviewDebounceMS {
+		t.Fatalf("PreviewDebounceMS = %d, want default %d", cfg.UI.PreviewDebounceMS, DefaultPreviewDebounceMS)
 	}
-	cfg.UI.ImagePreviewDebounceMS = 20_000
+	cfg.UI.PreviewDebounceMS = 20_000
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.ImagePreviewDebounceMS != KeyRepeatDebounceMaxMS {
-		t.Fatalf("ImagePreviewDebounceMS = %d, want clamp %d", cfg.UI.ImagePreviewDebounceMS, KeyRepeatDebounceMaxMS)
+	if cfg.UI.PreviewDebounceMS != KeyRepeatDebounceMaxMS {
+		t.Fatalf("PreviewDebounceMS = %d, want clamp %d", cfg.UI.PreviewDebounceMS, KeyRepeatDebounceMaxMS)
 	}
 }

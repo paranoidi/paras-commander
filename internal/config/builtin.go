@@ -15,16 +15,17 @@ const (
 	// blocking input handling.
 	DefaultSelectionSizeScanDebounceMS = 100
 
-	// DefaultKeyRepeatDebounceMS coalesces rapid file-list cursor steps, quick view preview reloads,
-	// carousel child preview reloads, and F3 style-picker re-highlighting. Terminals do not report
-	// key-up; after this many milliseconds without another qualifying step, deferred work runs once.
-	// Zero disables coalescing (immediate per-event behavior).
+	// DefaultKeyRepeatDebounceMS coalesces rapid file-list cursor steps and directory-listing reloads
+	// (quick view directory overlay, carousel child listing, panel sync follow). Terminals do not
+	// report key-up; after this many milliseconds without another qualifying step, deferred work
+	// runs once. Zero disables coalescing everywhere (immediate per-event behavior).
 	DefaultKeyRepeatDebounceMS = 45
 
-	// DefaultImagePreviewDebounceMS replaces DefaultKeyRepeatDebounceMS when the coalesced preview
-	// target is an image or media file. Those previews decode, scale and re-emit a sixel/Kitty
-	// payload to the TTY, which is far more expensive than a text reload, so they wait longer.
-	DefaultImagePreviewDebounceMS = 500
+	// DefaultPreviewDebounceMS replaces DefaultKeyRepeatDebounceMS when the coalesced target is a
+	// preview (text/image/media file, [[preview.commands]] rule, F3 style-picker re-highlight)
+	// rather than a directory listing: previews spawn subprocesses or re-emit sixel/Kitty payloads,
+	// far more expensive than listing a directory, so they wait longer.
+	DefaultPreviewDebounceMS = 500
 
 	// DebounceCalibrationMarginMS is added to the measured key-repeat interval when calibrating.
 	DebounceCalibrationMarginMS = 10

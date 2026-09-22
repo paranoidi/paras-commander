@@ -16,15 +16,15 @@ import (
 func (a *App) openDebounceCalibrateDialog() {
 	a.clearTransientMessage()
 	value := dialog.FormatDebounceMS(a.config.UI.KeyRepeatDebounceMS)
-	imageValue := dialog.FormatDebounceMS(a.config.UI.ImagePreviewDebounceMS)
+	previewValue := dialog.FormatDebounceMS(a.config.UI.PreviewDebounceMS)
 	a.model.DebounceCalibrateDialog = dialog.DebounceCalibrateDialogState{
-		Open:        true,
-		Phase:       dialog.DebounceCalibrateEdit,
-		Focus:       0,
-		Value:       value,
-		Cursor:      utf8.RuneCountInString(value),
-		ImageValue:  imageValue,
-		ImageCursor: utf8.RuneCountInString(imageValue),
+		Open:          true,
+		Phase:         dialog.DebounceCalibrateEdit,
+		Focus:         0,
+		Value:         value,
+		Cursor:        utf8.RuneCountInString(value),
+		PreviewValue:  previewValue,
+		PreviewCursor: utf8.RuneCountInString(previewValue),
 	}
 }
 
@@ -41,21 +41,21 @@ func (a *App) applyDebounceCalibrateDialog() {
 		st.Status = fmt.Sprintf("Enter 0–%d", config.KeyRepeatDebounceMaxMS)
 		return
 	}
-	imageMS, err := dialog.ParseDebounceMSInput(st.ImageValue)
+	previewMS, err := dialog.ParseDebounceMSInput(st.PreviewValue)
 	if err != nil {
 		st.Focus = 1
 		// The status row sits under the first field, so name the field this one is about.
-		st.Status = fmt.Sprintf("Image preview: enter 0–%d", config.KeyRepeatDebounceMaxMS)
+		st.Status = fmt.Sprintf("Preview: enter 0–%d", config.KeyRepeatDebounceMaxMS)
 		return
 	}
 	a.config.UI.KeyRepeatDebounceMS = ms
-	a.config.UI.ImagePreviewDebounceMS = imageMS
+	a.config.UI.PreviewDebounceMS = previewMS
 	a.closeDebounceCalibrateDialog()
-	msg := fmt.Sprintf("Debounce set to %d ms (images %d ms)", ms, imageMS)
+	msg := fmt.Sprintf("Debounce set to %d ms (previews %d ms)", ms, previewMS)
 	patch := map[string]interface{}{
 		"ui": map[string]interface{}{
-			"key_repeat_debounce_ms":    ms,
-			"image_preview_debounce_ms": imageMS,
+			"key_repeat_debounce_ms": ms,
+			"preview_debounce_ms":    previewMS,
 		},
 	}
 	if err := a.persistPartial(patch); err != nil {
@@ -183,7 +183,7 @@ func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 			return
 		}
 	case 1:
-		if a.handleDebounceCalibrateInputKey(event, &st.ImageValue, &st.ImageCursor) {
+		if a.handleDebounceCalibrateInputKey(event, &st.PreviewValue, &st.PreviewCursor) {
 			return
 		}
 	}

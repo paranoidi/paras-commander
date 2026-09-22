@@ -382,14 +382,14 @@ type UIConfig struct {
 	// ScreenRenderHashCache, when true, hashes the logical cell buffer after each full render and skips
 	// screen.Show when unchanged from the last flush. Default DefaultScreenRenderHashCache.
 	ScreenRenderHashCache bool `toml:"screen_render_hash_cache"`
-	// KeyRepeatDebounceMS coalesces rapid file-list cursor steps, quick view preview reloads,
-	// carousel child preview reloads, and F3 style-picker re-highlighting. Zero disables debouncing.
-	// Default DefaultKeyRepeatDebounceMS.
+	// KeyRepeatDebounceMS coalesces rapid file-list cursor steps and directory-listing reloads
+	// (quick view directory overlay, carousel child listing, panel sync follow). Zero disables
+	// debouncing everywhere. Default DefaultKeyRepeatDebounceMS.
 	KeyRepeatDebounceMS int `toml:"key_repeat_debounce_ms"`
-	// ImagePreviewDebounceMS replaces KeyRepeatDebounceMS when the coalesced preview target is an
-	// image or media file. Only selects the delay: KeyRepeatDebounceMS = 0 disables debouncing
-	// entirely. Default DefaultImagePreviewDebounceMS.
-	ImagePreviewDebounceMS int `toml:"image_preview_debounce_ms"`
+	// PreviewDebounceMS replaces KeyRepeatDebounceMS when the coalesced target is a preview (any
+	// file, a [[preview.commands]] rule, F3 style-picker re-highlight). Only selects the delay:
+	// KeyRepeatDebounceMS = 0 disables debouncing entirely. Default DefaultPreviewDebounceMS.
+	PreviewDebounceMS int `toml:"preview_debounce_ms"`
 	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
 	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
 	PathPickerValidateDelayMS int `toml:"path_picker_validate_delay_ms"`
@@ -611,7 +611,7 @@ func Default() Config {
 			ShrunkenShowsNameOnly:        DefaultShrunkenShowsNameOnly,
 			ScreenRenderHashCache:        DefaultScreenRenderHashCache,
 			KeyRepeatDebounceMS:          DefaultKeyRepeatDebounceMS,
-			ImagePreviewDebounceMS:       DefaultImagePreviewDebounceMS,
+			PreviewDebounceMS:            DefaultPreviewDebounceMS,
 			PathPickerValidateDelayMS:    DefaultPathPickerValidateDelayMS,
 			SelectionSizeScanDebounceMS:  DefaultSelectionSizeScanDebounceMS,
 			SelectionsPanelMaxRows:       0,
@@ -1111,11 +1111,11 @@ func (c *Config) validateUI(builtin *Config) {
 	if c.UI.KeyRepeatDebounceMS > KeyRepeatDebounceMaxMS {
 		c.UI.KeyRepeatDebounceMS = KeyRepeatDebounceMaxMS
 	}
-	if c.UI.ImagePreviewDebounceMS < 0 {
-		c.UI.ImagePreviewDebounceMS = builtin.UI.ImagePreviewDebounceMS
+	if c.UI.PreviewDebounceMS < 0 {
+		c.UI.PreviewDebounceMS = builtin.UI.PreviewDebounceMS
 	}
-	if c.UI.ImagePreviewDebounceMS > KeyRepeatDebounceMaxMS {
-		c.UI.ImagePreviewDebounceMS = KeyRepeatDebounceMaxMS
+	if c.UI.PreviewDebounceMS > KeyRepeatDebounceMaxMS {
+		c.UI.PreviewDebounceMS = KeyRepeatDebounceMaxMS
 	}
 	if c.UI.Find.QueryDebounceMS < 0 {
 		c.UI.Find.QueryDebounceMS = builtin.UI.Find.QueryDebounceMS

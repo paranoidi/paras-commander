@@ -46,7 +46,7 @@ func DrawDebounceCalibrateDialog(screen tcell.Screen, layout Layout, state Debou
 	y++
 	draw.DrawSimpleDialogInput(screen, textX, y, textW, state.Value, state.Cursor, state.Focus == 0, false, styles)
 	y++
-	hint := "Used for file-list scroll, quick view, carousel etc."
+	hint := "Used for file-list scroll and directory listings."
 	primitive.Text(screen, textX, y, textW, hint, styles.DialogText.Background(dbg))
 	y++
 	// Reserved whether painted or not (see the fixed height above). Sits under the first field
@@ -57,9 +57,9 @@ func DrawDebounceCalibrateDialog(screen tcell.Screen, layout Layout, state Debou
 	y++
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
-	primitive.Text(screen, textX, y, textW, "Image preview debounce (ms):", styles.DialogText.Background(dbg))
+	primitive.Text(screen, textX, y, textW, "Preview debounce (ms):", styles.DialogText.Background(dbg))
 	y++
-	draw.DrawSimpleDialogInput(screen, textX, y, textW, state.ImageValue, state.ImageCursor, state.Focus == 1, false, styles)
+	draw.DrawSimpleDialogInput(screen, textX, y, textW, state.PreviewValue, state.PreviewCursor, state.Focus == 1, false, styles)
 
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
