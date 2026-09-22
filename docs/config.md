@@ -343,7 +343,7 @@ when = ["t d"]
 command = "eza --tree --level=2 %f"
 ```
 
-`when` uses the same predicate language as `[[entry]]` in `meta.toml` (see `[meta]` below):
+`when` uses the same predicate language as `[[entry]]` in `meta.toml` (see `[meta]` below; full reference in [predicates.md](predicates.md)):
 `f <pattern>` matches the file name, `d <pattern>` matches a directory name, `t <letters>`
 matches by type (`r` regular file, `d` directory, `l` symlink, `n` anything but a directory), and
 predicates combine with `!`/`&`/`|`. Rules are tried top-to-bottom; for each rule whose `when`
@@ -393,6 +393,8 @@ Meta column command definitions (custom computed panel columns).
 | `default_entry_workers` | int | `2` | Number of concurrent background workers used per meta column entry that doesn't specify its own worker count (clamped 1–64). |
 
 A `meta.toml` `[[entry]]` can set `sort_on_activation` (bool, default `false`) to switch the panel's sort to that column when the entry is newly activated from the meta picker, and `sort_reverse` (bool, default `false`, ignored without `sort_on_activation`) to reverse that sort. Re-OKing the picker with the column already active does not re-apply or override a sort you changed manually afterward.
+
+An `[[entry]]`'s `when` filters every row it is dispatched against, files and directories alike, using the same predicate language as `[[preview.commands]]` above (`f <pattern>` for the row name, `d <pattern>` for the panel directory, `t <letters>` for type, combined with `!`/`&`/`|`). A bare pattern like `"*.py"` is shorthand for `f *.py`, which also filters out directory rows; an entry that sets both `file` and `dirs` should add `t d` to its `when` (e.g. `["*.mkv", "t d"]`) to keep directories matching. To run only in one directory, combine predicates: `when = "t d & d ^/storage/movies/?$"` with `shell_patterns = false` (meta patterns default to globs, `[[preview.commands]]` to regex).
 
 ## `[pools]`
 

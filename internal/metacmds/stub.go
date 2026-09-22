@@ -46,8 +46,15 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 # dirs            string   optional
 #   Shell script for directories. %f = absolute path.
 #
-# when            string | [string]   optional   default: run for every file row
-#   File-row filter; OR semantics across list items (e.g. ["*.py", "*.go"]).
+# when            string | [string]   optional   default: run for every row
+#   Filters both file and directory rows. OR semantics across list items
+#   (e.g. ["*.py", "*.go"]). Uses the same predicate language as
+#   [[preview.commands]] in config.toml: "f <pattern>" matches the row name,
+#   "d <pattern>" matches the panel directory, "t <letters>" matches by type
+#   (r file, d dir, l symlink, x executable, ...), combined with !/&/| and
+#   parentheses. A bare pattern like "*.py" means "f *.py" — since that also
+#   filters directory rows, an entry with both file and dirs should add
+#   "t d" to its when to keep directories matching.
 #
 # shell_patterns  bool     optional   default: file-level (else true)
 #   Override file default for this entry's when= patterns.
@@ -90,6 +97,14 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 #     /Pixel/{if(/width/)w=$NF;else h=$NF}
 #     END{print dur"\t"w"x"h}'
 # """
+#
+# [[entry]]
+# name = "movie-info"
+# description = "Movie info for directories under movies/"
+# shell_patterns = false
+# when = "t d & d ^/storage/movies/?$"
+# cache = true
+# dirs = "movie-info %f"
 #
 # [[entry]]
 # name = "line-count"

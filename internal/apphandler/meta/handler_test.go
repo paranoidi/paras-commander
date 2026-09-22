@@ -628,3 +628,47 @@ func TestActivateSelection_sortOnActivation(t *testing.T) {
 		t.Fatalf("Sort.Mode = %v after re-activation, want SortName (manual choice preserved)", p.Sort.Mode)
 	}
 }
+
+func TestEntryCmd_whenFiltersDirRows(t *testing.T) {
+	cmdDef := metacmds.MetaEntry{
+		Name: "films",
+		Dirs: "x %f",
+		When: []string{"t d & d ^/lib/films$"},
+	}
+	h := &Handler{}
+
+	cases := []struct {
+		name string
+		e    localfs.Entry
+		dir  string
+		want bool
+	}{
+		{
+			name: "dir in matching panel dir",
+			e:    localfs.Entry{Name: "harbor", Path: "/lib/films/harbor", Type: localfs.EntryDirectory},
+			dir:  "/lib/films",
+			want: true,
+		},
+		{
+			name: "dir in non-matching panel dir",
+			e:    localfs.Entry{Name: "harbor", Path: "/lib/shows/harbor", Type: localfs.EntryDirectory},
+			dir:  "/lib/shows",
+			want: false,
+		},
+		{
+			name: "file row has no file command",
+			e:    localfs.Entry{Name: "harbor.txt", Path: "/lib/films/harbor.txt", Type: localfs.EntryFile},
+			dir:  "/lib/films",
+			want: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, ok := h.entryCmd(cmdDef, tc.e, tc.dir)
+			if ok != tc.want {
+				t.Fatalf("entryCmd() ok = %v, want %v", ok, tc.want)
+			}
+		})
+	}
+}

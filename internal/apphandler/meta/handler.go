@@ -661,16 +661,16 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 }
 
 // entryCmd returns the shell command to run for entry e under cmdDef.
-// File rows are filtered via when only; directories use dirs.
+// when filters every row; files use file, directories use dirs.
 // Returns ("", false) when the entry should not be dispatched (filtered, no command, or cached).
 func (h *Handler) entryCmd(cmdDef metacmds.MetaEntry, e localfs.Entry, dir string) (cmd string, ok bool) {
+	matched, err := cmdDef.MatchesRow(e, dir)
+	if err != nil || !matched {
+		return "", false
+	}
 	if e.Type == localfs.EntryDirectory {
 		cmd = cmdDef.Dirs
 	} else {
-		ok, err := cmdDef.MatchesRow(e, dir)
-		if err != nil || !ok {
-			return "", false
-		}
 		cmd = cmdDef.File
 	}
 	if cmd == "" {
