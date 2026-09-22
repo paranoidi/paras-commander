@@ -1,5 +1,11 @@
 version: "3"
 
+includes:
+  local:
+    taskfile: ./taskfile.local.yml
+    optional: true
+    flatten: true
+
 vars:
   BIN_DIR: "{{.ROOT_DIR}}/bin"
   GOLANGCI_LINT_VERSION: v2.12.1

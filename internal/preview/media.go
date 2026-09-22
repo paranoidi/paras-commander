@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/text/language"
 
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
@@ -37,6 +40,10 @@ type ffprobeStream struct {
 	Disposition        *struct {
 		AttachedPic int `json:"attached_pic"`
 	} `json:"disposition"`
+	Tags struct {
+		Language string `json:"language"`
+		Title    string `json:"title"`
+	} `json:"tags"`
 }
 
 type ffprobeFormat struct {
@@ -258,41 +265,226 @@ func formatMediaMeta(doc ffprobeDoc) string {
 	b.WriteByte('\n')
 
 	for _, s := range doc.Streams {
-		switch s.CodecType {
-		case "video":
-			if s.Width <= 0 {
-				continue
-			}
-			if s.Disposition != nil && s.Disposition.AttachedPic != 0 {
-				continue
-			}
-			fmt.Fprintf(&b, "Video: %s", nonEmpty(s.CodecName, "unknown"))
-			fmt.Fprintf(&b, " / %d×%d", s.Width, s.Height)
-			if fps := parseFrameRate(s.RFrameRate); fps > 0 {
-				fmt.Fprintf(&b, " / %.2f fps", fps)
-			}
-			if s.PixFmt != "" {
-				fmt.Fprintf(&b, " / %s", s.PixFmt)
-			}
-			if s.DisplayAspectRatio != "" && s.DisplayAspectRatio != "0:1" {
-				fmt.Fprintf(&b, " / DAR %s", s.DisplayAspectRatio)
-			}
-			b.WriteByte('\n')
-		case "audio":
-			fmt.Fprintf(&b, "Audio: %s", nonEmpty(s.CodecName, "unknown"))
-			if s.SampleRate != "" {
-				fmt.Fprintf(&b, " / %s Hz", s.SampleRate)
-			}
-			if s.Channels > 0 {
-				fmt.Fprintf(&b, " / %d ch", s.Channels)
-			}
-			if br := parseInt64(s.BitRate); br > 0 {
-				fmt.Fprintf(&b, " / %s", formatBitRate(br))
-			}
-			b.WriteByte('\n')
+		if s.CodecType != "video" || s.Width <= 0 {
+			continue
 		}
+		if s.Disposition != nil && s.Disposition.AttachedPic != 0 {
+			continue
+		}
+		fmt.Fprintf(&b, "Video: %s", nonEmpty(s.CodecName, "unknown"))
+		fmt.Fprintf(&b, " / %d×%d", s.Width, s.Height)
+		if fps := parseFrameRate(s.RFrameRate); fps > 0 {
+			fmt.Fprintf(&b, " / %.2f fps", fps)
+		}
+		if s.PixFmt != "" {
+			fmt.Fprintf(&b, " / %s", s.PixFmt)
+		}
+		if s.DisplayAspectRatio != "" && s.DisplayAspectRatio != "0:1" {
+			fmt.Fprintf(&b, " / DAR %s", s.DisplayAspectRatio)
+		}
+		b.WriteByte('\n')
+	}
+
+	if subs := formatSubtitleLangs(doc); subs != "" {
+		fmt.Fprintf(&b, "Subtitles: %s\n", subs)
+	}
+	if ext := externalSubs(doc.Format.Filename); ext != "" {
+		fmt.Fprintf(&b, "Subtitles (ext): %s\n", ext)
+	}
+
+	audioHeader := false
+	for _, s := range doc.Streams {
+		if s.CodecType != "audio" {
+			continue
+		}
+		if !audioHeader {
+			b.WriteString("Audio:\n")
+			audioHeader = true
+		}
+		fmt.Fprintf(&b, "- %s / %s", langCode(s.Tags.Language), nonEmpty(s.CodecName, "unknown"))
+		if s.Channels > 0 {
+			fmt.Fprintf(&b, " / %d ch", s.Channels)
+		}
+		if br := parseInt64(s.BitRate); br > 0 {
+			fmt.Fprintf(&b, " / %s", formatBitRate(br))
+		}
+		if title := strings.TrimSpace(s.Tags.Title); title != "" {
+			fmt.Fprintf(&b, " — %s", title)
+		}
+		b.WriteByte('\n')
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+// formatSubtitleLangs lists subtitle track languages in first-seen order, collapsing
+// repeats into "EN×2". Empty when the file carries no subtitle tracks.
+func formatSubtitleLangs(doc ffprobeDoc) string {
+	var order []string
+	counts := map[string]int{}
+	for _, s := range doc.Streams {
+		if s.CodecType != "subtitle" {
+			continue
+		}
+		code := langCode(s.Tags.Language)
+		if counts[code] == 0 {
+			order = append(order, code)
+		}
+		counts[code]++
+	}
+	parts := make([]string, 0, len(order))
+	for _, code := range order {
+		if n := counts[code]; n > 1 {
+			code = fmt.Sprintf("%s×%d", code, n)
+		}
+		parts = append(parts, code)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// langCode maps an ffprobe language tag to an uppercase two-letter code ("dut" \u2192 "NL",
+// "en-US" \u2192 "EN"). Untagged or undetermined tracks report "UND"; anything x/text cannot
+// resolve is uppercased as-is.
+func langCode(raw string) string {
+	raw = strings.ToLower(strings.TrimSpace(raw))
+	// language.Parse("und") resolves to base "en" at low confidence, so guard it first.
+	if raw == "" || raw == "und" {
+		return "UND"
+	}
+	tag, err := language.Parse(raw)
+	if err != nil {
+		return strings.ToUpper(raw)
+	}
+	base, conf := tag.Base()
+	if conf == language.No {
+		return strings.ToUpper(raw)
+	}
+	return strings.ToUpper(base.String())
+}
+
+// subtitleExts are the sidecar subtitle formats reported next to a video file.
+var subtitleExts = map[string]bool{
+	".srt": true, ".ass": true, ".ssa": true, ".vtt": true, ".sub": true,
+	".sup": true, ".smi": true, ".ttml": true, ".dfxp": true,
+}
+
+// subtitleJunkTokens are filename tokens that look like a language code but never are
+// (".forced", ".sdh", ".sub"). "und" is here too: language.Parse resolves it to English.
+var subtitleJunkTokens = map[string]bool{
+	"forced": true, "sdh": true, "cc": true, "sub": true, "subs": true,
+	"subtitle": true, "subtitles": true, "default": true, "full": true, "und": true,
+}
+
+// subKey is one external-subtitle bucket: a language code and a file format.
+type subKey struct{ lang, ext string }
+
+// externalSubs lists sidecar subtitle files for videoPath — beside it, and in a
+// Subs/ or Subtitles/ subdirectory — as `EN (srt), FI×2 (ass)`. Empty when none.
+func externalSubs(videoPath string) string {
+	if videoPath == "" {
+		return ""
+	}
+	dir := filepath.Dir(videoPath)
+	stem := strings.TrimSuffix(filepath.Base(videoPath), filepath.Ext(videoPath))
+
+	var order []subKey
+	counts := map[subKey]int{}
+	scan := func(d string, descend bool) []string {
+		var subDirs []string
+		entries, err := os.ReadDir(d)
+		if err != nil {
+			return nil
+		}
+		for _, e := range entries {
+			name := e.Name()
+			if e.IsDir() {
+				if lower := strings.ToLower(name); descend && (lower == "subs" || lower == "subtitles") {
+					subDirs = append(subDirs, filepath.Join(d, name))
+				}
+				continue
+			}
+			ext := strings.ToLower(filepath.Ext(name))
+			if !subtitleExts[ext] {
+				continue
+			}
+			k := subKey{lang: subtitleFileLang(name, stem), ext: strings.TrimPrefix(ext, ".")}
+			if counts[k] == 0 {
+				order = append(order, k)
+			}
+			counts[k]++
+		}
+		return subDirs
+	}
+	for _, d := range scan(dir, true) {
+		scan(d, false)
+	}
+
+	parts := make([]string, 0, len(order))
+	for _, k := range order {
+		lang := k.lang
+		if n := counts[k]; n > 1 {
+			lang = fmt.Sprintf("%s×%d", lang, n)
+		}
+		parts = append(parts, fmt.Sprintf("%s (%s)", lang, k.ext))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// subtitleFileLang derives a language code from a subtitle filename, e.g.
+// "Movie.2015.en.forced.srt" (video stem "Movie.2015") → "EN", "Subs/2_English.srt" →
+// "EN". Tokens are read right to left; "UND" when none of them names a language.
+func subtitleFileLang(name, videoStem string) string {
+	base := strings.TrimSuffix(name, filepath.Ext(name))
+	if videoStem != "" && len(base) > len(videoStem) && strings.EqualFold(base[:len(videoStem)], videoStem) {
+		base = base[len(videoStem):]
+	}
+	tokens := strings.FieldsFunc(base, func(r rune) bool {
+		return strings.ContainsRune("._- []()", r)
+	})
+	for i := len(tokens) - 1; i >= 0; i-- {
+		if code, ok := subtitleLangToken(strings.ToLower(tokens[i])); ok {
+			return code
+		}
+	}
+	// Multi-word display names ("brazilian portuguese") survive tokenization only as a whole.
+	if code, ok := subtitleLangNames[strings.ToLower(strings.Join(tokens, " "))]; ok {
+		return code
+	}
+	return "UND"
+}
+
+// subtitleLangToken resolves one filename token to an uppercase language code,
+// accepting both codes ("en", "eng", "dut") and English names ("english").
+func subtitleLangToken(tok string) (string, bool) {
+	if subtitleJunkTokens[tok] {
+		return "", false
+	}
+	if len(tok) == 2 || len(tok) == 3 {
+		if tag, err := language.Parse(tok); err == nil {
+			if base, conf := tag.Base(); conf != language.No {
+				return strings.ToUpper(base.String()), true
+			}
+		}
+	}
+	code, ok := subtitleLangNames[tok]
+	return code, ok
+}
+
+// subtitleLangNames maps English language names as they appear in subtitle
+// filenames ("Subs/2_English.srt") to their code. Codes themselves are resolved by
+// x/text; this covers only the names common in subtitle releases.
+var subtitleLangNames = map[string]string{
+	"english": "EN", "spanish": "ES", "french": "FR", "german": "DE",
+	"italian": "IT", "portuguese": "PT", "brazilian portuguese": "PT",
+	"dutch": "NL", "danish": "DA", "swedish": "SV", "norwegian": "NO",
+	"finnish": "FI", "icelandic": "IS", "polish": "PL", "czech": "CS",
+	"slovak": "SK", "hungarian": "HU", "romanian": "RO", "bulgarian": "BG",
+	"greek": "EL", "russian": "RU", "ukrainian": "UK", "turkish": "TR",
+	"arabic": "AR", "hebrew": "HE", "hindi": "HI", "chinese": "ZH",
+	"simplified chinese": "ZH", "traditional chinese": "ZH", "japanese": "JA",
+	"korean": "KO", "thai": "TH", "vietnamese": "VI", "indonesian": "ID",
+	"malay": "MS", "croatian": "HR", "serbian": "SR", "slovenian": "SL",
+	"estonian": "ET", "latvian": "LV", "lithuanian": "LT", "persian": "FA",
+	"farsi": "FA",
 }
 
 func nonEmpty(s, fallback string) string {

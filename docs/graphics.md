@@ -218,7 +218,17 @@ overlapping the text. Set the level from the M-F3 Preview settings dialog, or wr
 
 Video files show a thumbnail grid (default 2×2, configurable via `video_thumb_cols` /
 `video_thumb_rows`) when graphics are enabled, with ffprobe text metadata below it —
-same layout as a still image's EXIF caption. While frames are extracted, a `Generating
+same layout as a still image's EXIF caption. The metadata lists container size/duration/
+bitrate, the video stream, a `Subtitles:` line of embedded subtitle languages (repeats
+collapsed, e.g. `EN×2, FI`), a `Subtitles (ext):` line for sidecar subtitle files
+(see below), and an `Audio:` list with one row per track
+(`- EN / eac3 / 6 ch / 640 kbps — Atmos`); tracks with no language tag show `UND`.
+
+Sidecar subtitles are picked up from the video's own directory and from a `Subs/` or
+`Subtitles/` subdirectory, in srt, ass, ssa, vtt, sub, sup, smi, ttml and dfxp format,
+and are shown with their format: `Subtitles (ext): EN (srt), FI×2 (ass)`. The
+language is read from the filename — `Example.Movie.2015.en.srt` or
+`Subs/2_English.srt`; files that name no language show `UND`. While frames are extracted, a `Generating
 thumbnails…` line appears where the metadata will land. Set `[preview].video_metadata =
 false` to show the grid only, with no metadata line at all. Grids are downscaled to
 `image_max_edge_px` (default 1024) before the final cell-budget fit. Composed thumbnails
