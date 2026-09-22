@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -47,6 +48,9 @@ func (h *Handler) postExecFailed(panelID int, gen uint64, exitCode int, stderr, 
 func (h *Handler) HandleWake(d WakePayload) {
 	if d.Gen == h.runGen[d.PanelID] {
 		h.applyWakeResult(d)
+		if p := h.host.PanelByID(d.PanelID); p != nil && p.Sort.Mode == panel.SortMeta && p.Sort.MetaColumn == d.EntryName {
+			h.resortPending[d.PanelID] = true
+		}
 	}
 	h.scheduleRenderDebounced()
 }
@@ -60,7 +64,11 @@ func (h *Handler) applyWakeResult(d WakePayload) {
 		if cols[i].Results == nil {
 			cols[i].Results = make(map[string]string)
 		}
+		old, hadOld := cols[i].Results[d.Path]
 		cols[i].Results[d.Path] = d.Value
+		if hadOld && cols[i].Pending != "" && old == cols[i].Pending && d.Value != cols[i].Pending {
+			cols[i].PendingCount--
+		}
 		return
 	}
 }
@@ -362,6 +370,15 @@ func (h *Handler) ActivateSelection() {
 		h.model.MetaResults[panelID] = nil
 		h.activeEntries[panelID] = nil
 		h.navPath[panelID] = ""
+		h.resortPending[panelID] = false
+		if p := h.host.PanelByID(panelID); p != nil && p.Sort.Mode == panel.SortMeta {
+			// The sorted-on column no longer exists — fall back to Name immediately (like an
+			// explicit Sort dialog apply), rather than leaving the panel sorted by a column
+			// that just vanished from the header.
+			p.Sort.Mode = panel.SortName
+			p.Sort.MetaColumn = ""
+			h.host.ResortPanel(panelID)
+		}
 		return
 	}
 
@@ -454,8 +471,40 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 
 // HandleRenderFlush consumes a coalesced repaint. Called from the event loop
 // (or tests simulating RenderFlushPayload) so timer state is not written from AfterFunc.
+// For any panel whose active SortMeta column received new values since the last flush, this
+// only *signals* the host once the column is fully resolved (ColumnResolved) — it never sorts
+// directly. The host (App) decides when to actually apply the re-sort, deferred behind the same
+// idle-delay/user-activity hold as the disk-usage idle sort, so the listing does not reshuffle
+// under the user while they are still scrolling/typing.
 func (h *Handler) HandleRenderFlush() {
 	h.renderDebounce.Stop()
+	for panelID := range h.resortPending {
+		if !h.resortPending[panelID] {
+			continue
+		}
+		h.resortPending[panelID] = false
+		if h.ColumnResolved(panelID) {
+			h.host.NoteMetaColumnResolved(panelID)
+		}
+	}
+}
+
+// ColumnResolved reports whether panelID currently sorts by a meta column (Sort.Mode ==
+// SortMeta) whose command has finished for every dispatched entry (PendingCount == 0). Used both
+// when this handler signals a column just finished (HandleRenderFlush) and by the App-side idle
+// re-sort scheduler re-arming its timer on user activity (deferMetaIdleSortOnUserActivity), so it
+// can recheck without waiting for another wake event. O(1): PendingCount is kept in sync by
+// runForPanel/applyWakeResult rather than scanning Results here.
+func (h *Handler) ColumnResolved(panelID int) bool {
+	p := h.host.PanelByID(panelID)
+	if p == nil || p.Sort.Mode != panel.SortMeta || p.Sort.MetaColumn == "" {
+		return false
+	}
+	col, ok := ui.MetaColumnByName(h.model.MetaResults[panelID], p.Sort.MetaColumn)
+	if !ok {
+		return false
+	}
+	return col.PendingCount == 0
 }
 
 // scheduleRenderDebounced arms a short timer to coalesce rapid WakePayload events
@@ -505,14 +554,17 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 			h.cacheMu.RUnlock()
 		}
 
+		pendingCount := 0
 		for _, e := range entries {
 			if _, ok := h.entryCmd(cmdDef, e, dir); !ok {
 				continue
 			}
 			results[e.Path] = runningMarker
+			pendingCount++
 		}
 		cols[i].Results = results
 		cols[i].Pending = runningMarker
+		cols[i].PendingCount = pendingCount
 	}
 
 	h.model.MetaResults[panelID] = cols

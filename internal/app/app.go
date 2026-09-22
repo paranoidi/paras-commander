@@ -57,10 +57,38 @@ type statusMessageExpiryPayload struct {
 // spinnerTickPayload is posted periodically to animate the menu-bar activity spinner.
 type spinnerTickPayload struct{}
 
-// diskIdleSortPayload applies deferred disk-total sort for one panel after idle delay.
-type diskIdleSortPayload struct {
+// idleSortKind distinguishes which idle re-sort timer fired. Disk-usage and meta-column idle
+// sort post the identically-shaped {PanelID, Epoch} payload and share one interrupt-switch case
+// (see handleInterruptPayload) rather than each getting its own arm — that switch is already at
+// the gocyclo complexity cap, and the two mechanisms (timer/epoch staleness guard, arm/invalidate
+// on user activity and directory change) are otherwise identical; see disk_usage.go and
+// meta_idle_sort.go.
+type idleSortKind uint8
+
+const (
+	idleSortKindDisk idleSortKind = iota
+	idleSortKindMeta
+)
+
+// idleSortPayload applies a deferred idle re-sort for one panel after the idle delay, for
+// whichever mechanism Kind names.
+type idleSortPayload struct {
+	Kind    idleSortKind
 	PanelID int
 	Epoch   uint64
+}
+
+// applyIdleSortPayload dispatches an idleSortPayload to the disk-usage or meta-column idle
+// re-sort applier per Kind. Split out from handleInterruptPayload's switch (a single case there)
+// so the dispatch's own branching doesn't count toward that function's already-capped cyclomatic
+// complexity.
+func (a *App) applyIdleSortPayload(d idleSortPayload) {
+	switch d.Kind {
+	case idleSortKindDisk:
+		a.applyIdleDiskSort(d.PanelID, d.Epoch)
+	case idleSortKindMeta:
+		a.applyMetaIdleSort(d.PanelID, d.Epoch)
+	}
 }
 
 // diskUsageRedrawPayload flushes debounced disk-usage cache/paint updates while a scan is busy.
@@ -162,6 +190,7 @@ type App struct {
 	jobStopCh      chan struct{}
 	jobStopOnce    bool
 	disk           diskUsageState
+	metaSort       metaIdleSortState
 	gitignoreCache *gitignore.Cache
 	gitStatusCache *gitstatus.Cache
 	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.
@@ -581,6 +610,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	app.model.Primary.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.model.Secondary.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.wireFileListViewportRows()
+	app.wireMetaValueLookup()
 	app.jobsCtrl = jobsctrl.New(jobsctrl.Deps{
 		Host:     jobsHost{appShellHost: appShellHost{app: app}},
 		Screen:   screen,
@@ -927,8 +957,8 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			}
 			out.didRender = true
 		}
-	case diskIdleSortPayload:
-		a.applyIdleDiskSort(d.PanelID, d.Epoch)
+	case idleSortPayload:
+		a.applyIdleSortPayload(d)
 		a.render()
 		out.didRender = true
 	case dirLoadingIndicatorPayload:

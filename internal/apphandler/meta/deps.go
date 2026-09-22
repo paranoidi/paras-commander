@@ -50,6 +50,10 @@ type Handler struct {
 	// renderDebounce coalesces meta result renders at ~60 fps. The timer callback only
 	// posts RenderFlushPayload; HandleRenderFlush consumes it on the event loop.
 	renderDebounce sched.Debouncer
+	// resortPending marks panels whose SortMeta sort target column received a new value since
+	// the last render flush; HandleRenderFlush re-sorts those panels once, coalesced with the
+	// same 16ms debounce as the repaint itself.
+	resortPending [2]bool
 	// cache stores computed meta results by [cmdName][absPath] for entries with cache = true.
 	// Nil until first caching write. Protected by cacheMu.
 	cache   map[string]map[string]string

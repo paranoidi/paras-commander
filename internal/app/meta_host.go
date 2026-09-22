@@ -12,6 +12,16 @@ type metaHost struct {
 
 func (h metaHost) PanelByID(panelID int) *panel.State { return h.app.panelByID(panelID) }
 
+func (h metaHost) ResortPanel(panelID int) {
+	p := h.app.panelByID(panelID)
+	p.ApplySortFromDialog(p.Sort, h.app.panelViewportRows(panelID))
+	h.app.invalidateMetaIdleSortPanel(panelID)
+}
+
+func (h metaHost) NoteMetaColumnResolved(panelID int) {
+	h.app.maybeScheduleMetaIdleSort(panelID)
+}
+
 func (h metaHost) IconMetaRunning() string { return h.app.styles.IconMetaRunning() }
 
 func (h metaHost) OpenFileInExternalEditor(path string) error {

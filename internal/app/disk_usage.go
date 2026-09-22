@@ -6,7 +6,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 
-	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -155,100 +154,65 @@ func (a *App) diskIdleSortPanelEligible(p *panel.State) bool {
 		!p.IdleDiskTotalsSort
 }
 
-func (a *App) maybeScheduleIdleDiskSortBothPanels() {
-	a.maybeScheduleIdleDiskSort(ui.PrimaryPanel)
-	a.maybeScheduleIdleDiskSort(ui.SecondaryPanel)
+// diskIdleSortSpec builds the idleSortSpec for disk-usage idle sort. eligible is deliberately the
+// coarse view-mode + Sort-toggle check only (not diskIdleSortPanelEligible's fuller condition,
+// which also requires DiskUsageShown and !IdleDiskTotalsSort): dirChanged uses eligible alone to
+// decide whether to invalidate a stale timer, and a directory change must invalidate regardless
+// of whether the panel had already latched into disk-totals ordering for the directory it just
+// left. Those fuller disk-specific conditions (DiskUsageShown, the IdleDiskTotalsSort latch) live
+// in resolved instead, alongside ListingFullyDiskCached — ready() (eligible && resolved) still
+// requires all of them together for arm/apply/schedule, same as before.
+func (a *App) diskIdleSortSpec() idleSortSpec {
+	return idleSortSpec{
+		kind:        idleSortKindDisk,
+		slots:       &a.disk.idleSort,
+		idleNavPath: &a.disk.idleNavPath,
+		eligible: func(panelID int) bool {
+			p := a.panelByID(panelID)
+			return a.model.ViewMode == ui.ViewBrowser && p.Sort.DiskUsageIdleSizeSort
+		},
+		resolved: func(panelID int) bool {
+			p := a.panelByID(panelID)
+			return a.diskIdleSortPanelEligible(p) && p.ListingFullyDiskCached()
+		},
+		apply: func(panelID int) {
+			p := a.panelByID(panelID)
+			p.DiskUsageIdleSortActivated = true
+			p.IdleDiskTotalsSort = true
+			p.RefreshDiskUsageOrdering(a.panelViewportRows(panelID), true)
+		},
+	}
 }
 
-func (a *App) maybeScheduleIdleDiskSort(panelID int) {
-	p := a.panelByID(panelID)
-	if !a.diskIdleSortPanelEligible(p) {
-		return
-	}
-	if !p.ListingFullyDiskCached() {
-		return
-	}
-	a.armIdleDiskSortTimer(panelID)
+func (a *App) maybeScheduleIdleDiskSortBothPanels() {
+	a.idleSortMaybeSchedule(a.diskIdleSortSpec(), ui.PrimaryPanel)
+	a.idleSortMaybeSchedule(a.diskIdleSortSpec(), ui.SecondaryPanel)
 }
 
 func (a *App) applyIdleDiskSort(panelID int, epoch uint64) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
-		return
-	}
-	ps := &a.disk.idleSort[panelID]
-	if ps.epoch != epoch {
-		return
-	}
-	if a.model.ViewMode != ui.ViewBrowser {
-		return
-	}
-	p := a.panelByID(panelID)
-	if !a.diskIdleSortPanelEligible(p) || p.IdleDiskTotalsSort {
-		return
-	}
-	if !p.ListingFullyDiskCached() {
-		return
-	}
-	p.DiskUsageIdleSortActivated = true
-	p.IdleDiskTotalsSort = true
-	p.RefreshDiskUsageOrdering(a.panelViewportRows(panelID), true)
+	a.idleSortApplyPayload(a.diskIdleSortSpec(), panelID, epoch)
 }
 
 func (a *App) armIdleDiskSortTimer(panelID int) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
-		return
-	}
-	ps := &a.disk.idleSort[panelID]
-	if ps.timer != nil {
-		ps.timer.Stop()
-		ps.timer = nil
-	}
-	p := a.panelByID(panelID)
-	if !a.diskIdleSortPanelEligible(p) {
-		return
-	}
-	if !p.ListingFullyDiskCached() {
-		return
-	}
-	delayMS := a.config.DiskUsage.IdleSortDelayMS
-	if delayMS <= 0 {
-		delayMS = config.DefaultDiskUsageIdleSortDelayMS
-	}
-	delay := time.Duration(delayMS) * time.Millisecond
-	epochSnap := ps.epoch
-	pid := panelID
-	ps.timer = time.AfterFunc(delay, func() {
-		ps.timer = nil
-		_ = a.screen.PostEvent(tcell.NewEventInterrupt(diskIdleSortPayload{PanelID: pid, Epoch: epochSnap}))
-	})
+	a.idleSortArm(a.diskIdleSortSpec(), panelID)
 }
 
 func (a *App) invalidateIdleDiskSortPanel(panelID int) {
-	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
-		return
-	}
-	ps := &a.disk.idleSort[panelID]
-	if ps.timer != nil {
-		ps.timer.Stop()
-		ps.timer = nil
-	}
-	ps.epoch++
+	a.idleSortInvalidate(a.diskIdleSortSpec(), panelID)
 }
 
 func (a *App) invalidateIdleDiskSortBothPanels() {
-	a.invalidateIdleDiskSortPanel(ui.PrimaryPanel)
-	a.invalidateIdleDiskSortPanel(ui.SecondaryPanel)
+	a.idleSortInvalidateBoth(a.diskIdleSortSpec())
 }
 
+// deferDiskIdleSortOnUserActivity is called on every key press (see handleKey) to keep pushing
+// the idle-sort timer out while the user is active. Disk-specific: a busy scan never (re)arms it,
+// since disk-usage idle sort only fires after a scan settles.
 func (a *App) deferDiskIdleSortOnUserActivity() {
-	if a.model.ViewMode != ui.ViewBrowser {
-		return
-	}
 	if a.diskUsageScanBusy() {
 		return
 	}
-	a.maybeScheduleIdleDiskSort(ui.PrimaryPanel)
-	a.maybeScheduleIdleDiskSort(ui.SecondaryPanel)
+	a.idleSortDeferOnUserActivity(a.diskIdleSortSpec())
 }
 
 func (a *App) startDiskUsageScan() {
@@ -403,11 +367,7 @@ func (a *App) handlePanelDirChanged(panelID int) {
 	if !p.Sort.DiskUsageIdleSizeSort {
 		return
 	}
-	cur := filepath.Clean(p.PathString())
-	if a.disk.idleNavPath[panelID] != cur {
-		a.invalidateIdleDiskSortPanel(panelID)
-		a.disk.idleNavPath[panelID] = cur
-	}
+	a.idleSortDirChanged(a.diskIdleSortSpec(), panelID)
 	if !a.model.DiskUsageShown {
 		return
 	}

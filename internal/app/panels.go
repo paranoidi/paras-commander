@@ -159,6 +159,26 @@ func (a *App) wireFileListViewportRows() {
 	a.model.Secondary.FileListViewportRows = func() int { return a.panelViewportRows(ui.SecondaryPanel) }
 }
 
+// wireMetaValueLookup wires each panel's MetaValue to read live meta-column results from
+// a.model.MetaResults, so Sort.Mode == SortMeta always sees the latest command output rather
+// than a stale snapshot. The returned values map still holds Pending-marker cells for in-flight
+// commands; callers treat a cell equal to the returned pending marker as missing, same as no
+// value at all.
+func (a *App) wireMetaValueLookup() {
+	a.model.Primary.MetaValue = a.metaValueFor(ui.PrimaryPanel)
+	a.model.Secondary.MetaValue = a.metaValueFor(ui.SecondaryPanel)
+}
+
+func (a *App) metaValueFor(panelID int) func(column string) (map[string]string, string, bool) {
+	return func(column string) (map[string]string, string, bool) {
+		col, ok := ui.MetaColumnByName(a.model.MetaResults[panelID], column)
+		if !ok {
+			return nil, "", false
+		}
+		return col.Results, col.Pending, true
+	}
+}
+
 func (a *App) selectionsStripSplitParams(panelID, stripN int) ui.SelectionsStripSplitParams {
 	return ui.SelectionsStripSplitParams{
 		StripItemCount:     stripN,
@@ -362,6 +382,8 @@ func (a *App) reconcileAfterEvent() {
 	a.updateGroupSelectPreview()
 	a.handlePanelDirChanged(ui.PrimaryPanel)
 	a.handlePanelDirChanged(ui.SecondaryPanel)
+	a.handleMetaIdleSortPanelDirChanged(ui.PrimaryPanel)
+	a.handleMetaIdleSortPanelDirChanged(ui.SecondaryPanel)
 	a.metaCtrl.HandlePanelDirChanged(ui.PrimaryPanel)
 	a.metaCtrl.HandlePanelDirChanged(ui.SecondaryPanel)
 	a.metaCtrl.ReconcileForPanel(ui.PrimaryPanel)

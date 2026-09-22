@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -27,12 +28,30 @@ func (a *App) openSortDialog() {
 func (a *App) openSortDialogForPanel(panelID int) {
 	a.closeListingFormatDialog()
 	target := a.panelByID(panelID)
+	cols := a.model.MetaResults[panelID]
+	n := min(len(cols), len(panel.SortDialogRadios()))
+	metaRadios := make([]dialog.SortDialogMetaRadio, n)
+	metaNames := make([]string, n)
+	for i := 0; i < n; i++ {
+		metaRadios[i] = dialog.SortDialogMetaRadio{Title: cols[i].ColumnTitle, Name: cols[i].EntryName}
+		metaNames[i] = cols[i].EntryName
+	}
+	sortMode := target.Sort.Mode
+	metaColumn := target.Sort.MetaColumn
+	if sortMode == panel.SortMeta && !slices.Contains(metaNames, metaColumn) {
+		// The panel's current meta sort column isn't among the (capped) dialog list — fall
+		// back to Name rather than show a radio selection with nothing checked.
+		sortMode = panel.SortName
+		metaColumn = ""
+	}
 	a.model.SortDialog = dialog.SortDialogState{
 		Open:                  true,
-		SortMode:              target.Sort.Mode,
+		SortMode:              sortMode,
 		SortReverse:           target.Sort.Reverse,
 		DirectoriesFirst:      target.Sort.DirectoriesFirst,
 		DiskUsageIdleSizeSort: target.Sort.DiskUsageIdleSizeSort,
+		MetaRadios:            metaRadios,
+		MetaColumn:            metaColumn,
 		Focus:                 0,
 		PanelID:               panelID,
 	}
@@ -49,17 +68,24 @@ func (a *App) applySortDialog() {
 		Reverse:               a.model.SortDialog.SortReverse,
 		DirectoriesFirst:      a.model.SortDialog.DirectoriesFirst,
 		DiskUsageIdleSizeSort: a.model.SortDialog.DiskUsageIdleSizeSort,
+		MetaColumn:            a.model.SortDialog.MetaColumn,
 	}, a.panelViewportRows(a.model.SortDialog.PanelID))
+	// An explicit apply always sorts immediately; any meta idle-resort timer left over from
+	// before this apply (same or different column, resolved or not) is now stale.
+	a.invalidateMetaIdleSortPanel(a.model.SortDialog.PanelID)
 	a.setTransientMessage(fmt.Sprintf("Sort: %s", target.Sort.Mode.String()), ui.MessageUrgencyInfo)
 	a.closeSortDialog()
 }
 
 func (a *App) handleSortDialogKey(event *tcell.EventKey) {
-	// Segments: sort mode radios(0-3) | options checkboxes(4-6) | buttons(7).
-	form := dialog.NewDialogLinearForm(7).WithSegments(0, 4, 7)
 	st := &a.model.SortDialog
+	n := st.MetaCount()
+	cb := st.CheckboxFocus() // first checkbox: disk usage idle sort
+	// Segments: sort mode + meta radios(0..cb-1) | options checkboxes(cb..cb+2) | buttons(cb+3..cb+4).
+	form := dialog.NewDialogLinearForm(cb+3).WithSegments(0, cb, cb+3)
 	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
 		Focus:              &st.Focus,
+		OnMoveFocus:        st.MoveFocus,
 		OnApply:            a.applySortDialog,
 		OnCancel:           a.closeSortDialog,
 		AllowPlainOKCancel: true,
@@ -74,13 +100,13 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 			switch r {
 			case 'u', 'U':
 				st.DiskUsageIdleSizeSort = !st.DiskUsageIdleSizeSort
-				st.Focus = 4
+				st.Focus = cb
 			case 'r', 'R':
 				st.SortReverse = !st.SortReverse
-				st.Focus = 5
+				st.Focus = cb + 1
 			case 'd', 'D':
 				st.DirectoriesFirst = !st.DirectoriesFirst
-				st.Focus = 6
+				st.Focus = cb + 2
 			default:
 				return false
 			}
@@ -92,16 +118,23 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 				st.SortMode = radios[focus].Mode
 				return true
 			}
-			switch focus {
-			case 4:
+			if focus >= len(radios) && focus < len(radios)+n {
+				// No mnemonics for meta radios: shortcut letters are already taken by the
+				// built-in radios, and meta column names are user-defined.
+				st.SortMode = panel.SortMeta
+				st.MetaColumn = st.MetaRadios[focus-len(radios)].Name
+				return true
+			}
+			switch {
+			case focus == cb:
 				st.DiskUsageIdleSizeSort = !st.DiskUsageIdleSizeSort
-			case 5:
+			case focus == cb+1:
 				st.SortReverse = !st.SortReverse
-			case 6:
+			case focus == cb+2:
 				st.DirectoriesFirst = !st.DirectoriesFirst
-			case form.OKIndex():
+			case focus == form.OKIndex():
 				a.applySortDialog()
-			case form.CancelIndex():
+			case focus == form.CancelIndex():
 				a.closeSortDialog()
 			default:
 				return false

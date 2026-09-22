@@ -151,6 +151,7 @@ func (s *State) BuildListingSnapshotFromEntries(loc pathloc.Path, rawEntries []f
 		Sort:               s.Sort,
 		IdleDiskTotalsSort: s.IdleDiskTotalsSort,
 		DiskSorter:         s.DiskSorter,
+		MetaValue:          s.MetaValue,
 	}
 	temp.ApplySort()
 	temp.Cursor = 0

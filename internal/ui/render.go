@@ -59,6 +59,22 @@ type MetaColumnState struct {
 	// theme's meta-running icon). Layout ignores such cells when deciding column alignment so the
 	// header does not shift once real values replace them.
 	Pending string
+	// PendingCount is the number of Results cells still equal to Pending (dispatched but not yet
+	// resolved). Kept in sync by the meta handler (runForPanel sets it when marking cells running,
+	// applyWakeResult decrements it as each one resolves) so ColumnResolved is an O(1) check
+	// instead of a full scan of Results on every call.
+	PendingCount int
+}
+
+// MetaColumnByName finds the column with the given EntryName in cols. Shared by every lookup
+// that scans a panel's active meta columns by name (sort-value resolution, resolved-count checks).
+func MetaColumnByName(cols []MetaColumnState, name string) (*MetaColumnState, bool) {
+	for i := range cols {
+		if cols[i].EntryName == name {
+			return &cols[i], true
+		}
+	}
+	return nil, false
 }
 
 // Model is the renderable subset of application state.

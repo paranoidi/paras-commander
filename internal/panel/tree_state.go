@@ -145,7 +145,7 @@ func (s *State) resyncTreeChildOrder(nodes []treeflat.Node[TreeEntry]) {
 		for j, c := range nodes[i].Children {
 			entries[j] = c.Value.Entry
 		}
-		SortEntries(entries, s.Sort, s.DiskSorter, false)
+		SortEntries(entries, s.Sort, s.DiskSorter, false, s.MetaValue)
 		byID := make(map[string]treeflat.Node[TreeEntry], len(nodes[i].Children))
 		for _, c := range nodes[i].Children {
 			byID[c.ID] = c

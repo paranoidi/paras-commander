@@ -131,7 +131,11 @@ type State struct {
 	filteredTreeShape []treeConnectorShape
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	DiskSorter func(absPath string) (int64, bool)
-	Sort       SortState
+	// MetaValue resolves column to its raw per-path results map and pending marker, and false
+	// when the column itself is missing. Used only when Sort.Mode == SortMeta, and resolved once
+	// per sort rather than per comparison (see SortEntries).
+	MetaValue func(column string) (values map[string]string, pending string, ok bool)
+	Sort      SortState
 	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
 	ListFormat ListFormat
 	// ScrollMode mirrors [ui.scroll].mode: minimal, center, or edge scroll policy.

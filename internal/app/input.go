@@ -679,6 +679,7 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 
 func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	a.deferDiskIdleSortOnUserActivity()
+	a.deferMetaIdleSortOnUserActivity()
 	resolvedAction := a.actionFromKeyEvent(event)
 	if handled, iquit, irendered := a.handleGlobalKeyIntercepts(event, resolvedAction); handled {
 		return iquit, irendered

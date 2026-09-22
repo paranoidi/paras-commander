@@ -42,7 +42,7 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 	// useDiskPrimary is forced false here (unlike ApplySort's s.primarySortUsesDiskTotals()):
 	// disk-usage idle-primary sort stays off for tree children regardless of the panel's
 	// current flat-mode sort state — an original Phase 1 design decision, not new scope.
-	SortEntries(entries, s.Sort, s.DiskSorter, false)
+	SortEntries(entries, s.Sort, s.DiskSorter, false, s.MetaValue)
 	node.Children = treeRootsFromEntries(entries)
 	if s.TreeExpanded == nil {
 		s.TreeExpanded = make(map[string]bool)

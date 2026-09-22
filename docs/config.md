@@ -80,7 +80,7 @@ File panel browsing, sorting, and listing.
 |---|---|---|---|
 | `show_hidden` | bool | `false` | Show dotfiles and other hidden entries in panel listings on startup. |
 | `respect_gitignore` | bool | `true` | Hide files matched by `.gitignore` in panel listings. |
-| `default_sort` | string | `"name"` | Default panel sort order: `"name"`, `"extension"`, `"size"`, or `"mtime"`. |
+| `default_sort` | string | `"name"` | Default panel sort order: `"name"`, `"extension"`, `"size"`, or `"mtime"`. Panels can also be sorted by an active meta column (see `[meta]`) from the in-app Sort dialog, showing up to 4 active columns; this is not settable here since meta columns are only known once a panel activates them. A meta-column value is compared numerically when it parses as a number, and sorts last when empty, missing, or still running. Once every value for the sorted column has arrived, the panel re-sorts after `[disk_usage] idle_sort_delay_ms` of inactivity rather than reshuffling live as results stream in. |
 | `default_listing_format` | string | `"brief"` | Default listing column layout: `"mtime"` (modified time), `"perm"` (permissions), or `"brief"` (minimal columns). |
 | `sort_reverse` | bool | `false` | Reverse the default sort order. |
 | `directories_first` | bool | `true` | List directories before files regardless of sort order. |
@@ -116,7 +116,7 @@ Disk-usage view and background walk.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `idle_size_sort` | bool | `true` | While a disk-usage scan is running, re-sort by size once the cursor has been idle for a moment instead of resorting on every update. |
-| `idle_sort_delay_ms` | int | `500` | How long the cursor must be idle before the disk-usage idle re-sort (above) triggers. |
+| `idle_sort_delay_ms` | int | `500` | How long the cursor must be idle before the disk-usage idle re-sort (above) triggers. Also used as the idle delay before a panel sorted by a meta column (see `[panels] default_sort`) re-sorts once that column's values finish arriving — the two idle re-sorts share this single delay rather than each having their own. |
 | `descend_into_mount_points` | bool | `false` | Let a disk-usage scan cross into other mounted filesystems instead of stopping at mount boundaries. |
 
 ## `[fs_walk]`

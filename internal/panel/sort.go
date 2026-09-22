@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -15,6 +16,8 @@ type SortState struct {
 	Reverse               bool
 	DirectoriesFirst      bool
 	DiskUsageIdleSizeSort bool // After a disk-usage scan finishes, sort by cached sizes largest-first once idle (see config delay).
+	// MetaColumn is the active meta column's EntryName when Mode is SortMeta.
+	MetaColumn string
 }
 
 // SortMode describes the sort key for panel entries.
@@ -25,6 +28,9 @@ const (
 	SortExtension
 	SortSize
 	SortMtime
+	// SortMeta sorts by an active meta column's value (SortState.MetaColumn). Not settable via
+	// config default_sort — meta columns are only known once a panel activates them.
+	SortMeta
 )
 
 // String returns the display label for the sort mode.
@@ -38,6 +44,8 @@ func (m SortMode) String() string {
 		return "Size"
 	case SortMtime:
 		return "Modified"
+	case SortMeta:
+		return "Meta"
 	default:
 		return "Name"
 	}
@@ -84,17 +92,24 @@ func SortDialogRadios() []SortDialogRadio {
 // ApplySort sorts s.Entries in-place using the current sort state, then (in tree mode) resyncs
 // TreeRoots/treeRows so the visible tree order matches — see resyncTreeOrder for why that's needed.
 func (s *State) ApplySort() {
-	SortEntries(s.Entries, s.Sort, s.DiskSorter, s.primarySortUsesDiskTotals())
+	SortEntries(s.Entries, s.Sort, s.DiskSorter, s.primarySortUsesDiskTotals(), s.MetaValue)
 	s.resyncTreeOrder()
 }
 
 // SortEntries sorts entries in place per sortState, tie-breaking by name then path.
 // useDiskPrimary switches the primary sort key to diskSorter's cached totals (used for the
 // idle disk-usage sort in flat mode); callers that never want this (e.g. tree-mode child
-// loads) pass false regardless of the panel's own DiskUsageIdleSizeSort setting.
-func SortEntries(entries []localfs.Entry, sortState SortState, diskSorter func(string) (int64, bool), useDiskPrimary bool) {
+// loads) pass false regardless of the panel's own DiskUsageIdleSizeSort setting. metaValue
+// resolves a meta column's raw value for a path (used only when sortState.Mode == SortMeta);
+// nil is fine when meta sorting is never used by the caller.
+func SortEntries(entries []localfs.Entry, sortState SortState, diskSorter func(string) (int64, bool), useDiskPrimary bool, metaValue func(column string) (values map[string]string, pending string, ok bool)) {
 	if len(entries) == 0 {
 		return
+	}
+
+	var metaKeys map[string]metaSortKey
+	if !useDiskPrimary && sortState.Mode == SortMeta {
+		metaKeys = buildMetaSortKeys(entries, sortState.MetaColumn, metaValue)
 	}
 
 	sort.SliceStable(entries, func(i, j int) bool {
@@ -115,13 +130,19 @@ func SortEntries(entries []localfs.Entry, sortState SortState, diskSorter func(s
 
 		// Primary sort key
 		var cmp int
-		if useDiskPrimary {
+		switch {
+		case useDiskPrimary:
 			cmp = compareDiskUsagePrimary(left, right, diskSorter, false)
 			if cmp != 0 {
 				// Largest cached totals first; unknown sizes stay last (handled inside compareDiskUsagePrimary).
 				return cmp < 0
 			}
-		} else {
+		case sortState.Mode == SortMeta:
+			cmp = compareMetaKeys(metaKeys[left.Path], metaKeys[right.Path], reverse)
+			if cmp != 0 {
+				return cmp < 0
+			}
+		default:
 			cmp = compareByMode(left, right, sortState.Mode)
 			if cmp != 0 {
 				if reverse {
@@ -210,6 +231,81 @@ func compareDiskUsagePrimary(left, right localfs.Entry, diskSorter func(string) 
 	return intCompare(rv, lv)
 }
 
+// metaSortKey is one entry's precomputed sort key for an active meta column, resolved once per
+// sort (see buildMetaSortKeys) instead of re-parsing the raw string on every comparison.
+type metaSortKey struct {
+	missing bool // no value, or blank/pending after trimming; always sorts last
+	numeric bool
+	num     float64
+	str     string // lowercased, only meaningful when !numeric && !missing
+}
+
+// buildMetaSortKeys resolves col's values once via metaValue and precomputes each entry's sort
+// key (numeric parse, lowercased string, or missing) so compareMetaKeys never touches the raw
+// string map or strconv during the sort itself.
+func buildMetaSortKeys(entries []localfs.Entry, col string, metaValue func(column string) (values map[string]string, pending string, ok bool)) map[string]metaSortKey {
+	keys := make(map[string]metaSortKey, len(entries))
+	var values map[string]string
+	var pending string
+	var ok bool
+	if metaValue != nil {
+		values, pending, ok = metaValue(col)
+	}
+	for _, e := range entries {
+		if !ok {
+			keys[e.Path] = metaSortKey{missing: true}
+			continue
+		}
+		v, exists := values[e.Path]
+		if !exists || (pending != "" && v == pending) {
+			keys[e.Path] = metaSortKey{missing: true}
+			continue
+		}
+		v = strings.TrimSpace(v)
+		if v == "" {
+			keys[e.Path] = metaSortKey{missing: true}
+			continue
+		}
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			keys[e.Path] = metaSortKey{numeric: true, num: f}
+			continue
+		}
+		keys[e.Path] = metaSortKey{str: strings.ToLower(v)}
+	}
+	return keys
+}
+
+// compareMetaKeys orders two precomputed meta sort keys: numeric compare when both are numeric,
+// numbers before text when only one is, otherwise case-insensitive string compare. Missing keys
+// sort last regardless of reverse, same rule as compareDiskUsagePrimary's unknown sizes; reverse
+// only flips the ordering between two known values.
+func compareMetaKeys(l, r metaSortKey, reverse bool) int {
+	if l.missing && r.missing {
+		return 0
+	}
+	if l.missing {
+		return 1
+	}
+	if r.missing {
+		return -1
+	}
+	var cmp int
+	switch {
+	case l.numeric && r.numeric:
+		cmp = floatCompare(l.num, r.num)
+	case l.numeric:
+		cmp = -1
+	case r.numeric:
+		cmp = 1
+	default:
+		cmp = stringsCompare(l.str, r.str)
+	}
+	if reverse {
+		return -cmp
+	}
+	return cmp
+}
+
 // listNameColumnTitle returns the name-column header. With icons, a leading space
 // aligns "Name" with entry names (icon strip is separate). The sort arrow replaces
 // that space so "↑Name" lines up with " filename", not "↑ Name".
@@ -239,12 +335,24 @@ func (s State) ListColumnTitles(showIcons bool) (nameTitle, sizeTitle, thirdTitl
 			return nameBase, fmt.Sprintf("%cSize", desc), "Modified"
 		}
 	}
+	const lblMod = "Modified"
+	const lblPerm = "Permissions"
+	if s.Sort.Mode == SortMeta {
+		// No arrow on the built-in Name/Size/Modified/Permissions columns; the meta column
+		// header carries the arrow instead (see panelListHeader).
+		switch f {
+		case ListFormatBrief:
+			return nameBase, "Size", ""
+		case ListFormatPerm:
+			return nameBase, "Size", lblPerm
+		default:
+			return nameBase, "Size", lblMod
+		}
+	}
 	arrow := asc
 	if s.Sort.Reverse {
 		arrow = desc
 	}
-	const lblMod = "Modified"
-	const lblPerm = "Permissions"
 	if f == ListFormatBrief {
 		switch s.Sort.Mode {
 		case SortName, SortExtension:
@@ -304,6 +412,16 @@ func stringsCompare(a, b string) int {
 }
 
 func intCompare(a, b int64) int {
+	if a < b {
+		return -1
+	}
+	if a > b {
+		return 1
+	}
+	return 0
+}
+
+func floatCompare(a, b float64) int {
 	if a < b {
 		return -1
 	}

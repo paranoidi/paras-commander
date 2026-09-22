@@ -1837,7 +1837,7 @@ func TestSortEntriesDirectMatchesApplySort(t *testing.T) {
 		{Name: "a.txt", Path: "/tmp/a.txt"},
 		{Name: "m.txt", Path: "/tmp/m.txt"},
 	}
-	SortEntries(entries, SortState{Mode: SortName, Reverse: true}, nil, false)
+	SortEntries(entries, SortState{Mode: SortName, Reverse: true}, nil, false, nil)
 
 	names := entryNames(entries)
 	want := []string{"z.txt", "m.txt", "a.txt"}
@@ -1864,7 +1864,7 @@ func TestSortEntriesUseDiskPrimaryFalseIgnoresDiskSorter(t *testing.T) {
 		}
 		return 1, true
 	}
-	SortEntries(entries, SortState{Mode: SortSize}, diskSorter, false)
+	SortEntries(entries, SortState{Mode: SortSize}, diskSorter, false, nil)
 
 	names := entryNames(entries)
 	want := []string{"small.txt", "large.txt"} // by Size ascending, diskSorter ignored

@@ -11,6 +11,9 @@ import (
 
 // MetaColumnLayout is a rendered meta column ready for panel list rows.
 type MetaColumnLayout struct {
+	// EntryName identifies the source meta column (MetaColumnState.EntryName), used to match
+	// the panel's SortState.MetaColumn when drawing the sort arrow on the right header.
+	EntryName  string
 	Title      string
 	Width      int
 	Formatted  map[string]string
@@ -27,6 +30,7 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 	for i, col := range cols {
 		w, formatted, rightAlign := layoutMetaCells(col.Results, col.Pending)
 		layouts[i] = MetaColumnLayout{
+			EntryName:  col.EntryName,
 			Title:      col.ColumnTitle,
 			Width:      w,
 			Formatted:  formatted,

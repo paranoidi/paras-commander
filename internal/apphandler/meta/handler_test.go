@@ -26,10 +26,13 @@ import (
 
 // fakeHost is a minimal Host stub for handler-logic tests that don't need a real *App.
 type fakeHost struct {
-	editedPath string
-	editErr    error
-	messages   []string
-	panels     [2]*panel.State
+	editedPath  string
+	editErr     error
+	messages    []string
+	panels      [2]*panel.State
+	resortCalls []int
+	// resolvedCalls records NoteMetaColumnResolved panelIDs, in call order.
+	resolvedCalls []int
 }
 
 func (f *fakeHost) SetTransientMessage(text string, _ ui.MessageUrgency) {
@@ -41,6 +44,15 @@ func (f *fakeHost) PanelByID(id int) *panel.State {
 		return nil
 	}
 	return f.panels[id]
+}
+func (f *fakeHost) ResortPanel(id int) {
+	f.resortCalls = append(f.resortCalls, id)
+	if p := f.PanelByID(id); p != nil {
+		p.ApplySortFromDialog(p.Sort, 1000)
+	}
+}
+func (f *fakeHost) NoteMetaColumnResolved(id int) {
+	f.resolvedCalls = append(f.resolvedCalls, id)
 }
 func (f *fakeHost) IconMetaRunning() string { return "*" }
 func (f *fakeHost) OpenFileInExternalEditor(path string) error {
@@ -268,7 +280,7 @@ func TestScheduleRenderDebounced_burstWakesCoalesceWithoutRace(t *testing.T) {
 	}
 	t.Cleanup(screen.Fini)
 
-	h := &Handler{screen: screen, model: &ui.Model{}}
+	h := &Handler{screen: screen, model: &ui.Model{}, host: &fakeHost{panels: [2]*panel.State{{}, {}}}}
 	h.model.MetaResults[0] = []ui.MetaColumnState{
 		{EntryName: "size", Results: map[string]string{"/p": ""}},
 	}
@@ -355,6 +367,34 @@ func TestApplyWakeResult_updatesCorrectColumn(t *testing.T) {
 	}
 	if got := h.model.MetaResults[0][0].Results["/p"]; got != "" {
 		t.Fatalf("column a = %q, want empty", got)
+	}
+}
+
+// TestHandleRenderFlush_notifiesHostOnlyWhenColumnResolved confirms the coalesced render flush
+// never sorts directly (there is no Sort call to assert against, since the fake host's ResortPanel
+// is only used for the meta-columns-cleared path) and signals NoteMetaColumnResolved exactly once
+// per panel, only once every dispatched cell has stopped reading the Pending marker.
+func TestHandleRenderFlush_notifiesHostOnlyWhenColumnResolved(t *testing.T) {
+	fh := &fakeHost{panels: [2]*panel.State{
+		{Sort: panel.SortState{Mode: panel.SortMeta, MetaColumn: "info"}},
+		{},
+	}}
+	h := &Handler{host: fh, model: &ui.Model{}}
+	h.model.MetaResults[0] = []ui.MetaColumnState{
+		{EntryName: "info", Pending: "*", PendingCount: 1, Results: map[string]string{"/a": "*", "/b": "1"}},
+	}
+	h.runGen[0] = 1
+
+	h.HandleWake(WakePayload{PanelID: 0, EntryName: "info", Path: "/b", Value: "1", Gen: 1})
+	h.HandleRenderFlush()
+	if len(fh.resolvedCalls) != 0 {
+		t.Fatalf("resolvedCalls = %v, want none while /a is still pending", fh.resolvedCalls)
+	}
+
+	h.HandleWake(WakePayload{PanelID: 0, EntryName: "info", Path: "/a", Value: "2", Gen: 1})
+	h.HandleRenderFlush()
+	if len(fh.resolvedCalls) != 1 || fh.resolvedCalls[0] != 0 {
+		t.Fatalf("resolvedCalls = %v, want [0] once the column fully resolved", fh.resolvedCalls)
 	}
 }
 

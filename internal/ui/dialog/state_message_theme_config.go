@@ -88,6 +88,14 @@ type PreviewSettingsDialogState struct {
 	Focus         int // 0-8=capability radios, 9-11=protocol, 12-15=metadata, 16=video, 17=OK, 18=Cancel
 }
 
+// SortDialogMetaRadio is one active meta column offered as a sort-target radio in the sort
+// dialog. Title is the display title shown on the radio row; Name is the matching EntryName
+// (SortState.MetaColumn identifies the sort target by Name, not by Title).
+type SortDialogMetaRadio struct {
+	Title string
+	Name  string
+}
+
 // SortDialogState is the renderable state for the sort configuration modal.
 type SortDialogState struct {
 	Open                  bool
@@ -95,9 +103,36 @@ type SortDialogState struct {
 	SortReverse           bool
 	DirectoriesFirst      bool
 	DiskUsageIdleSizeSort bool
-	Focus                 int // 0-3=radios, 4=disk idle sort, 5=reverse, 6=dirs first, 7=OK, 8=Cancel
-	PanelID               int // PrimaryPanel or SecondaryPanel
+	// MetaRadios holds the active meta columns, capped at len(panel.SortDialogRadios()) (one row
+	// per built-in radio) so the dialog height never grows.
+	MetaRadios []SortDialogMetaRadio
+	// MetaColumn is the EntryName of the meta column selected in the dialog (SortMode == SortMeta).
+	MetaColumn string
+	// Focus: 0..len(panel.SortDialogRadios())-1=built-in radios, then meta radios, then disk idle
+	// sort, reverse, dirs first checkboxes, OK, Cancel. See CheckboxFocus/OKFocus/CancelFocus.
+	Focus   int
+	PanelID int // PrimaryPanel or SecondaryPanel
 }
+
+// MetaCount returns the number of meta radios to show: len(MetaRadios) capped at
+// len(panel.SortDialogRadios()).
+func (s SortDialogState) MetaCount() int {
+	n := len(s.MetaRadios)
+	if cap := len(panel.SortDialogRadios()); n > cap {
+		n = cap
+	}
+	return n
+}
+
+// CheckboxFocus returns the focus index of the first checkbox (disk usage idle sort), the row
+// immediately after the built-in and meta radios.
+func (s SortDialogState) CheckboxFocus() int { return len(panel.SortDialogRadios()) + s.MetaCount() }
+
+// OKFocus returns the focus index of the OK button.
+func (s SortDialogState) OKFocus() int { return s.CheckboxFocus() + 3 }
+
+// CancelFocus returns the focus index of the Cancel button.
+func (s SortDialogState) CancelFocus() int { return s.OKFocus() + 1 }
 
 // ListingFormatDialogState is the renderable state for the panel listing format modal.
 type ListingFormatDialogState struct {

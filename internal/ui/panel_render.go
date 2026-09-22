@@ -858,6 +858,28 @@ func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cur
 	return "panel.inactive.row.cursor"
 }
 
+// metaSortArrowLayouts prefixes ↑/↓ on the meta column layout whose EntryName is the panel's
+// active SortMeta target, leaving layouts untouched otherwise. Returns a copy so the caller's
+// own metaLayouts slice (also used to render entry rows) is never mutated.
+func metaSortArrowLayouts(layouts []MetaColumnLayout, sort panel.SortState) []MetaColumnLayout {
+	if sort.Mode != panel.SortMeta || sort.MetaColumn == "" {
+		return layouts
+	}
+	for i := range layouts {
+		if layouts[i].EntryName != sort.MetaColumn {
+			continue
+		}
+		out := append([]MetaColumnLayout(nil), layouts...)
+		arrow := '↑'
+		if sort.Reverse {
+			arrow = '↓'
+		}
+		out[i].Title = string(arrow) + out[i].Title
+		return out
+	}
+	return layouts
+}
+
 func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaLayouts []MetaColumnLayout, nameOnly, showGit bool) string {
 	if nameOnly {
 		nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
@@ -882,7 +904,7 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 	nameTitle = truncateHeaderRunes(nameWidth, nameTitle)
 	sizeTitle = truncateHeaderRunes(panellist.SizeCells, sizeTitle)
-	metaHdr := MetaHeaderText(metaLayouts)
+	metaHdr := MetaHeaderText(metaSortArrowLayouts(metaLayouts, state.Sort))
 	if tw == 0 {
 		return panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true)
 	}

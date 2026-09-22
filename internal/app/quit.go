@@ -49,6 +49,7 @@ func (a *App) stopWorker() {
 	a.stopSpinnerRedrawTimer()
 	a.stopDiskUsageRedrawDebounce()
 	a.invalidateIdleDiskSortBothPanels()
+	a.invalidateMetaIdleSortBothPanels()
 	if a.disk.engine != nil {
 		a.disk.engine.Abort()
 	}
