@@ -358,7 +358,7 @@ failed = ""
 decision = ""
 paused = ""
 running = ""
-queued = ""
+queued = ""
 
 [icons.selections]
 multi_location = "\uef81"
