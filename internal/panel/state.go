@@ -218,6 +218,10 @@ type State struct {
 	// ScheduleTreeChildLoad runs a tree-mode directory's first-expand child listing off the UI
 	// thread (set by app; nil = synchronous fallback, see setTreeNodeExpanded).
 	ScheduleTreeChildLoad TreeChildLoadScheduler
+	// CancelTreeChildLoads cancels every in-flight child fetch previously dispatched via
+	// ScheduleTreeChildLoad (set by app; nil-safe, same convention as ScheduleTreeChildLoad — nil
+	// in tests). Called by abandonTreeChildLoads.
+	CancelTreeChildLoads func()
 	// climbToExistingAncestor is set for the duration of RefreshOrNavigateToExistingAncestor
 	// so ListingRefreshSnapshot can ask FetchListing to Stat-climb on the worker goroutine.
 	climbToExistingAncestor bool
@@ -253,12 +257,6 @@ type State struct {
 	// is reached. Reset alongside treeExpandAllDepth wherever that gets reset, so a cascade orphaned
 	// by mid-flight navigation can never misfire on a later, unrelated single-row expand.
 	treeExpandAllAuto bool
-	// treeCollapseGen bumps on every CollapseAllTree/CollapseAllTreeFully call. Each tree node's
-	// async child-load dispatch captures the generation at dispatch time (TreeEntry.LoadGen);
-	// ApplyTreeChildLoad compares it against the current value to drop stragglers — fetches
-	// dispatched before the user's last whole-tree collapse, landing after it — instead of letting
-	// them silently re-expand a directory the user just asked to collapse.
-	treeCollapseGen int
 }
 
 // GitStatusRequest describes one async git status fetch for the current listing.
@@ -1626,6 +1624,9 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 			s.treeExpandAllDepth = 0
 			s.treeExpandAllAuto = false
 		}
+		// Every location change (and same-dir refresh) discards the old TreeRoots and re-fetches
+		// remembered dirs, so anything still in flight is dead work.
+		s.abandonTreeChildLoads()
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
 		s.TreeExpanded = keep
 		s.restoreTreeExpansions()

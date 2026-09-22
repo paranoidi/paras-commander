@@ -1523,16 +1523,15 @@ func TestCollapseAllTreeOnUnevenTreeCollapsesEveryBranchFrontier(t *testing.T) {
 	}
 }
 
-// TestCollapseAllTreeIgnoresStragglerLoadDispatchedBeforeCollapse is the regression test for a
-// tree-child fetch that was in flight (dispatched by an ExpandAllTreeFully cascade, or any
-// expand) when the user pressed collapse, landing only after the collapse already ran. Without
-// gating ApplyTreeChildLoad on treeCollapseGen, such a straggler would still set
-// TreeExpanded[dirID] = true on arrival — invisible if its parent is also collapsed (hidden
-// either way), but if the parent is still expanded elsewhere in the tree, this silently
-// reintroduces newly visible content well after the user asked to collapse everything, which is
-// what "collapse does nothing for a few presses, then more collapsing is needed" looks like from
-// the keyboard.
-func TestCollapseAllTreeIgnoresStragglerLoadDispatchedBeforeCollapse(t *testing.T) {
+// TestCollapseAllTreeAbandonsInFlightLoads is the regression test for a tree-child fetch that was
+// in flight (dispatched by an ExpandAllTreeFully cascade, or any expand) when the user pressed
+// collapse. CollapseAllTree must abandon it outright — clear Loading on every in-flight node,
+// reset the coalesce counter, and cancel the goroutine via CancelTreeChildLoads — rather than
+// merely gate its late result: without abandoning it, a straggler landing after the collapse
+// could still set TreeExpanded[dirID] = true, invisible if its parent is also collapsed, but if
+// the parent is still expanded elsewhere in the tree, silently reintroducing newly visible content
+// well after the user asked to collapse everything.
+func TestCollapseAllTreeAbandonsInFlightLoads(t *testing.T) {
 	root := t.TempDir()
 	meadow := filepath.Join(root, "meadow")
 	alpha := filepath.Join(meadow, "alpha")
@@ -1555,6 +1554,8 @@ func TestCollapseAllTreeIgnoresStragglerLoadDispatchedBeforeCollapse(t *testing.
 		scheduled = append(scheduled, req.DirID)
 		return true
 	}
+	var cancels int
+	state.CancelTreeChildLoads = func() { cancels++ }
 	drain := func(dirID string) {
 		t.Helper()
 		des, err := os.ReadDir(dirID)
@@ -1598,10 +1599,39 @@ func TestCollapseAllTreeIgnoresStragglerLoadDispatchedBeforeCollapse(t *testing.
 	if state.TreeExpanded[meadow] {
 		t.Fatal("meadow should be collapsed after CollapseAllTree")
 	}
+	if got := findTreeNode(state.TreeRoots, alpha); got == nil || got.Value.Loading {
+		t.Fatalf("alpha node Loading = %v (found=%v), want false after CollapseAllTree abandons it",
+			got != nil && got.Value.Loading, got != nil)
+	}
+	if got := findTreeNode(state.TreeRoots, bravo); got == nil || got.Value.Loading {
+		t.Fatalf("bravo node Loading = %v (found=%v), want false after CollapseAllTree abandons it",
+			got != nil && got.Value.Loading, got != nil)
+	}
+	if state.treeExpandQuiet != 0 {
+		t.Fatalf("treeExpandQuiet = %d after CollapseAllTree, want 0", state.treeExpandQuiet)
+	}
+	if cancels != 1 {
+		t.Fatalf("CancelTreeChildLoads called %d times, want 1", cancels)
+	}
 
-	// The straggler loads for alpha/bravo land now, after the collapse.
+	// The straggler loads for alpha/bravo land now, after the collapse — Loading was already
+	// cleared by the abandon above, so ApplyTreeChildLoad must reject them as stale.
 	for _, d := range stragglers {
-		drain(d)
+		des, err := os.ReadDir(d)
+		if err != nil {
+			t.Fatalf("ReadDir(%s): %v", d, err)
+		}
+		var entries []localfs.Entry
+		for _, de := range des {
+			typ := localfs.EntryFile
+			if de.IsDir() {
+				typ = localfs.EntryDirectory
+			}
+			entries = append(entries, localfs.Entry{Name: de.Name(), Path: filepath.Join(d, de.Name()), Type: typ})
+		}
+		if changed := state.ApplyTreeChildLoad(d, entries, nil, 10); changed {
+			t.Fatalf("ApplyTreeChildLoad(%s) = true after abandon, want false (stale)", d)
+		}
 	}
 	if state.TreeExpanded[alpha] || state.TreeExpanded[bravo] {
 		t.Fatalf("alpha/bravo = %v/%v after straggler loads landed post-collapse, want both still false",
@@ -1899,6 +1929,63 @@ func TestNavigateBackRestoresTreeExpandAllDepth(t *testing.T) {
 	}
 	if state.treeExpandAllDepth != 3 {
 		t.Fatalf("treeExpandAllDepth after third deepen = %d, want 3", state.treeExpandAllDepth)
+	}
+}
+
+// TestApplyListingAbandonsInFlightTreeLoads is the regression test for navigating away (or
+// refreshing) while a tree-mode child fetch is still in flight: ApplyListing re-roots TreeRoots
+// from the freshly-fetched listing before restoring remembered expansions, so anything still
+// dispatched against the old TreeRoots is dead work and must be abandoned rather than left to
+// land on a tree that no longer contains its node.
+func TestApplyListingAbandonsInFlightTreeLoads(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "willow.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "cinder.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	var scheduled []string
+	state.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		scheduled = append(scheduled, req.DirID)
+		return true // never lands — left in flight
+	}
+	var cancels int
+	state.CancelTreeChildLoads = func() { cancels++ }
+
+	if err := state.ExpandAllTreeFully(10); err != nil {
+		t.Fatalf("ExpandAllTreeFully: %v", err)
+	}
+	if len(scheduled) == 0 {
+		t.Fatal("no load scheduled — test setup didn't leave meadow in flight")
+	}
+	inFlight := scheduled[0]
+
+	if err := state.NavigateTo(other, "", 10); err != nil {
+		t.Fatalf("NavigateTo(%s): %v", other, err)
+	}
+	if cancels != 1 {
+		t.Fatalf("CancelTreeChildLoads called %d times after navigating away, want 1", cancels)
+	}
+	if state.treeExpandQuiet != 0 {
+		t.Fatalf("treeExpandQuiet = %d after navigating away, want 0", state.treeExpandQuiet)
+	}
+	if changed := state.ApplyTreeChildLoad(inFlight, nil, nil, 10); changed {
+		t.Fatalf("ApplyTreeChildLoad(%s) = true after navigating away, want false (stale)", inFlight)
 	}
 }
 

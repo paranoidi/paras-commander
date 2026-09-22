@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // TestTreeExpandEnqueuesDiskUsageScan covers the tree-expand -> disk-usage feeder in
@@ -47,5 +48,38 @@ func TestTreeExpandEnqueuesDiskUsageScan(t *testing.T) {
 	})
 	if size != int64(len(content)) {
 		t.Fatalf("ByteSize(%q) = %d, want %d", meadow, size, len(content))
+	}
+}
+
+// TestCancelTreeChildLoadsDropsInFlightFetch covers the ctx-cancellation half of
+// treeChildLoader: calling CancelTreeChildLoads (as State.abandonTreeChildLoads does on
+// collapse-all/re-root/leaving tree mode) right after a fetch is dispatched must stop that
+// fetch's result from ever reaching treeChildResults, even though the goroutine itself still
+// runs to completion.
+func TestCancelTreeChildLoadsDropsInFlightFetch(t *testing.T) {
+	dir := t.TempDir()
+	meadow := filepath.Join(dir, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	loc, err := pathloc.Parse(meadow)
+	if err != nil {
+		t.Fatalf("pathloc.Parse: %v", err)
+	}
+	if ok := app.model.Primary.ScheduleTreeChildLoad(panel.TreeChildLoadRequest{DirID: meadow, Loc: loc}); !ok {
+		t.Fatal("ScheduleTreeChildLoad returned false")
+	}
+	app.model.Primary.CancelTreeChildLoads()
+
+	deadline := time.Now().Add(200 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		if len(app.treeChildResults.drain()) != 0 {
+			t.Fatal("canceled fetch still delivered a result to treeChildResults")
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 }

@@ -23,8 +23,9 @@ type TreeChildLoadScheduler func(req TreeChildLoadRequest) bool
 // ApplyTreeChildLoad applies the result of an async child fetch dispatched via
 // ScheduleTreeChildLoad; call on the main thread. Returns false if the result is stale (the node
 // no longer exists — e.g. ApplyListing re-rooted TreeRoots on navigation — or is no longer marked
-// Loading, e.g. a superseded duplicate callback) and was silently dropped, or when the apply is
-// part of an ExpandAllTreeShallow coalesce (treeExpandQuiet > 0 after decrement) that should not
+// Loading, e.g. a superseded duplicate callback, or because abandonTreeChildLoads cleared it on a
+// whole-tree collapse/re-root/mode switch) and was silently dropped, or when the apply is part of
+// an ExpandAllTreeShallow coalesce (treeExpandQuiet > 0 after decrement) that should not
 // rebuild/redraw yet. Returns true when the visible tree was rebuilt and the UI should redraw.
 func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err error, viewportRows int) bool {
 	node := findTreeNode(s.TreeRoots, dirID)
@@ -43,15 +44,6 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 	// current flat-mode sort state — an original Phase 1 design decision, not new scope.
 	SortEntries(entries, s.Sort, s.DiskSorter, false)
 	node.Children = treeRootsFromEntries(entries)
-	// A straggler: this fetch was dispatched before the user's last whole-tree collapse
-	// (CollapseAllTree/CollapseAllTreeFully bump treeCollapseGen) and is only landing now. The
-	// children are still cached above so a later manual re-expand won't need to re-fetch, but the
-	// directory must not silently pop back open — that's exactly the "collapse looks like it did
-	// nothing, then more collapsing needed later" symptom once a sibling directory whose parent is
-	// still expanded elsewhere in the tree gets new visible content from a late arrival like this.
-	if node.Value.LoadGen != s.treeCollapseGen {
-		return s.finishTreeChildLoadApply(dirID, viewportRows)
-	}
 	if s.TreeExpanded == nil {
 		s.TreeExpanded = make(map[string]bool)
 	}

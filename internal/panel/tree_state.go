@@ -19,14 +19,6 @@ type TreeEntry struct {
 	// successful fetch. The directory stays collapsed (TreeExpanded never set) while set, so a
 	// later expand attempt naturally retries.
 	LoadErr error
-	// LoadGen captures State.treeCollapseGen at the moment this node's async child fetch was
-	// dispatched (see setTreeNodeExpanded). ApplyTreeChildLoad compares it against the current
-	// generation to detect a straggler: a fetch dispatched before the user's last whole-tree
-	// collapse (CollapseAllTree/CollapseAllTreeFully), landing after it. Without this, such a
-	// fetch would still set TreeExpanded[dirID] = true on arrival — silently re-expanding a
-	// directory (or, if its parent is still expanded elsewhere in the tree, introducing newly
-	// visible content) moments after the user asked to collapse everything.
-	LoadGen int
 }
 
 // ListLayout selects how a panel's file list renders.
@@ -90,6 +82,8 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 		s.treeExpandAllAuto = false
 		s.rebuildTreeRows()
 	} else {
+		// Leaving tree mode: any in-flight child fetch would never be shown, so abandon it.
+		s.abandonTreeChildLoads()
 		// filteredIdx was last built against treeRows; rebuild it against Entries (flat mode's
 		// backing space) before translating cursorAncestorID's raw Entries index below.
 		s.rebuildFilter()
@@ -378,7 +372,9 @@ func (s *State) collapseTreeRow(id string, depth int, viewportRows int) error {
 // after ExpandAllTreeFully, since each branch expands as deep as it independently goes) still
 // shows a visible change in every branch on every press, not just whichever branch is deepest.
 // Also disarms any in-progress ExpandAllTreeFully cascade, so a still-loading "expand to max
-// depth" can't re-expand what this collapse just closed. treeExpandAllDepth decrements by one per
+// depth" can't re-expand what this collapse just closed, and abandons every in-flight child fetch
+// (abandonTreeChildLoads) so a straggler can never silently re-expand a directory the user just
+// asked to collapse. treeExpandAllDepth decrements by one per
 // press; collapseExpandedLeaves also reports whether anything is left expanded in scope, and once
 // nothing is, the counter snaps to 0 immediately rather than drifting above 0 on a tree that
 // bottomed out shallower than MaxExpandAllShallowDepth. No-op outside tree mode. The cursor stays
@@ -388,7 +384,7 @@ func (s *State) CollapseAllTree(viewportRows int) {
 		return
 	}
 	s.treeExpandAllAuto = false
-	s.treeCollapseGen++
+	s.abandonTreeChildLoads()
 	if s.treeExpandAllDepth == 0 {
 		s.CollapseAllTreeFully(viewportRows)
 		return
@@ -458,14 +454,16 @@ func (s *State) collapseExpandedLeaves(nodes []treeflat.Node[TreeEntry], depth i
 	return collapsedAny, remainingAny
 }
 
-// CollapseAllTreeFully clears all expand state and resets the expand-all deepen counter.
+// CollapseAllTreeFully clears all expand state and resets the expand-all deepen counter, and
+// abandons every in-flight child fetch (abandonTreeChildLoads) so a straggler can never silently
+// re-expand a directory the user just asked to collapse.
 // No-op outside tree mode. The cursor lands on the cursor row's depth-0 ancestor (or the row
 // itself if already at depth 0).
 func (s *State) CollapseAllTreeFully(viewportRows int) {
 	if s.ListLayout != ListLayoutTree {
 		return
 	}
-	s.treeCollapseGen++
+	s.abandonTreeChildLoads()
 	if len(s.TreeExpanded) == 0 && s.treeExpandAllDepth == 0 {
 		return
 	}
@@ -480,6 +478,28 @@ func (s *State) CollapseAllTreeFully(viewportRows int) {
 	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
+}
+
+// abandonTreeChildLoads drops every in-flight child fetch dispatched via ScheduleTreeChildLoad:
+// clearing Loading on every node makes ApplyTreeChildLoad reject any late result via its existing
+// !node.Value.Loading check, the coalesce counter resets so nothing waits on results that will
+// never come, and the app cancels the goroutines.
+func (s *State) abandonTreeChildLoads() {
+	abandonTreeChildLoadsIn(s.TreeRoots)
+	s.treeExpandQuiet = 0
+	if s.CancelTreeChildLoads != nil {
+		s.CancelTreeChildLoads()
+	}
+}
+
+// abandonTreeChildLoadsIn recursively clears Loading on every node in nodes and its descendants.
+func abandonTreeChildLoadsIn(nodes []treeflat.Node[TreeEntry]) {
+	for i := range nodes {
+		nodes[i].Value.Loading = false
+		if nodes[i].Children != nil {
+			abandonTreeChildLoadsIn(nodes[i].Children)
+		}
+	}
 }
 
 // treeRootAncestorID returns the ID of the cursor row's depth-0 ancestor (or the cursor row's own
@@ -666,7 +686,6 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet boo
 				return nil // already loading; don't dispatch a second concurrent fetch
 			}
 			node.Value.Loading = true
-			node.Value.LoadGen = s.treeCollapseGen
 			if s.ScheduleTreeChildLoad != nil {
 				loc, err := pathloc.Parse(id)
 				if err != nil {
