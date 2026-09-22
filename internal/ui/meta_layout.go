@@ -18,6 +18,8 @@ type MetaColumnLayout struct {
 	Width      int
 	Formatted  map[string]string
 	RightAlign bool
+	// SortArrow is ↑/↓ when the panel sorts by this column, 0 otherwise.
+	SortArrow rune
 }
 
 // LayoutMetaColumns formats each active meta column and returns layouts plus total terminal width
@@ -49,11 +51,28 @@ func MetaHeaderText(layouts []MetaColumnLayout) string {
 	if len(layouts) == 0 {
 		return ""
 	}
-	parts := make([]string, len(layouts))
+	var b strings.Builder
 	for i, lay := range layouts {
-		parts[i] = padMetaLineToWidth(lay.Title, lay.Width, lay.RightAlign)
+		sep := "  "
+		cell := padMetaLineToWidth(lay.Title, lay.Width, lay.RightAlign)
+		if lay.SortArrow != 0 {
+			arrowed := string(lay.SortArrow) + lay.Title
+			if runewidth.StringWidth(arrowed) <= lay.Width {
+				cell = padMetaLineToWidth(arrowed, lay.Width, lay.RightAlign)
+			} else {
+				// No room inside the column: the arrow takes the last cell of the gap before it.
+				// For the first column the header grows one cell; panelListHeader eats that
+				// from the name→meta gap.
+				sep = " "
+				cell = string(lay.SortArrow) + cell
+			}
+		}
+		if i > 0 {
+			b.WriteString(sep)
+		}
+		b.WriteString(cell)
 	}
-	return strings.Join(parts, "  ")
+	return b.String()
 }
 
 // CarouselMeta lays out active meta columns for the carousel center column.

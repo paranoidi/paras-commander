@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -858,7 +859,7 @@ func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cur
 	return "panel.inactive.row.cursor"
 }
 
-// metaSortArrowLayouts prefixes ↑/↓ on the meta column layout whose EntryName is the panel's
+// metaSortArrowLayouts sets ↑/↓ on the meta column layout whose EntryName is the panel's
 // active SortMeta target, leaving layouts untouched otherwise. Returns a copy so the caller's
 // own metaLayouts slice (also used to render entry rows) is never mutated.
 func metaSortArrowLayouts(layouts []MetaColumnLayout, sort panel.SortState) []MetaColumnLayout {
@@ -870,11 +871,10 @@ func metaSortArrowLayouts(layouts []MetaColumnLayout, sort panel.SortState) []Me
 			continue
 		}
 		out := append([]MetaColumnLayout(nil), layouts...)
-		arrow := '↑'
+		out[i].SortArrow = '↑'
 		if sort.Reverse {
-			arrow = '↓'
+			out[i].SortArrow = '↓'
 		}
-		out[i].Title = string(arrow) + out[i].Title
 		return out
 	}
 	return layouts
@@ -901,10 +901,13 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	if showMeta {
 		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaTotalW, listFmt, false, false)
 	}
+	metaHdr := MetaHeaderText(metaSortArrowLayouts(metaLayouts, state.Sort))
+	if showMeta && runewidth.StringWidth(metaHdr) > metaTotalW {
+		nameWidth-- // first meta column's sort arrow spills into the name→meta gap
+	}
 	nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 	nameTitle = truncateHeaderRunes(nameWidth, nameTitle)
 	sizeTitle = truncateHeaderRunes(panellist.SizeCells, sizeTitle)
-	metaHdr := MetaHeaderText(metaSortArrowLayouts(metaLayouts, state.Sort))
 	if tw == 0 {
 		return panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true)
 	}

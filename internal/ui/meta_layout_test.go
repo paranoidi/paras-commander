@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
@@ -210,5 +211,44 @@ func TestLayoutMetaColumns_pendingCellsDoNotShiftHeader(t *testing.T) {
 	done, _ := LayoutMetaColumns(cols)
 	if hdr := MetaHeaderText(done); hdr != hdrBefore {
 		t.Fatalf("header moved after completion: %q -> %q", hdrBefore, hdr)
+	}
+}
+
+func TestPanelListHeader_metaSortArrowSpillsIntoGap(t *testing.T) {
+	layouts := []MetaColumnLayout{
+		{EntryName: "rating", Title: "Tmdb", Width: 4, RightAlign: true},
+		{EntryName: "votes", Title: "Votes", Width: 5, RightAlign: true},
+	}
+	titles := map[string]string{"rating": "Tmdb", "votes": "Votes"}
+	st := panel.State{}
+	plain := panelListHeader(80, st, false, true, layouts, false, false)
+	col := func(s, sub string) int { return runewidth.StringWidth(s[:strings.Index(s, sub)]) }
+	for entry, title := range titles {
+		for _, rev := range []bool{false, true} {
+			st.Sort = panel.SortState{Mode: panel.SortMeta, MetaColumn: entry, Reverse: rev}
+			hdr := panelListHeader(80, st, false, true, layouts, false, false)
+			if runewidth.StringWidth(hdr) != runewidth.StringWidth(plain) {
+				t.Fatalf("%s rev=%v: width changed\n%q\n%q", entry, rev, hdr, plain)
+			}
+			arrow := "↑"
+			if rev {
+				arrow = "↓"
+			}
+			if !strings.Contains(hdr, arrow+title) {
+				t.Fatalf("%s rev=%v: header %q lacks %q", entry, rev, hdr, arrow+title)
+			}
+			for _, w := range titles {
+				if col(hdr, w) != col(plain, w) {
+					t.Fatalf("%s rev=%v: %q moved\n%q\n%q", entry, rev, w, hdr, plain)
+				}
+			}
+		}
+	}
+}
+
+func TestMetaHeaderText_sortArrowFitsInsidePadding(t *testing.T) {
+	layouts := []MetaColumnLayout{{Title: "LC", Width: 4, RightAlign: true, SortArrow: '↑'}}
+	if hdr := MetaHeaderText(layouts); hdr != " ↑LC" {
+		t.Fatalf("header = %q", hdr)
 	}
 }
