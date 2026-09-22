@@ -280,9 +280,9 @@ func TestActionFromKeyMapsCtrlFToFindDialog(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsShiftAltDToClearDiskUsageData(t *testing.T) {
+func TestActionFromKeyMapsCtrlAltDToClearDiskUsageData(t *testing.T) {
 	km := defaultKeymap(t)
-	ev := tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt|tcell.ModShift)
+	ev := tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModAlt|tcell.ModCtrl)
 	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionPanelDiskUsageClear {
 		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelDiskUsageClear", got)

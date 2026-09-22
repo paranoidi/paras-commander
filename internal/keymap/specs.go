@@ -698,7 +698,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:       HelpBrowser,
 			Title:       "Abort and clear disk usage",
 			Section:     "View",
-			DefaultKeys: []string{"M-S-d"},
+			DefaultKeys: []string{"M-C-d"},
 			Keywords:    []string{"abort", "cancel", "stop", "reset", "forget", "cache"},
 		},
 

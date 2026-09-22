@@ -463,4 +463,4 @@ Notable dual bindings:
 | Refresh | `C-n` | — |
 | Open bookmarks | `C-b` | legacy `C-g`, `C-e` retained |
 
-Relocated non-leader actions (when a letter chord was needed): carousel `M-v`, disk-usage scan `M-d`, disk-usage clear `M-S-d` (also aborts in-flight scans), SFTP `M-r`, external browser `M-x`. Quick-view preview page down stays `C-j` (jobs.open uses `M-j`). See `shortcuts.md` for chord syntax and how to generate the default keybindings.
+Relocated non-leader actions (when a letter chord was needed): carousel `M-v`, disk-usage scan `M-d`, disk-usage clear `M-C-d` (also aborts in-flight scans), SFTP `M-r`, external browser `M-x`. Quick-view preview page down stays `C-j` (jobs.open uses `M-j`). See `shortcuts.md` for chord syntax and how to generate the default keybindings.

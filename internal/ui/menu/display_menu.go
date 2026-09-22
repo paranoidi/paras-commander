@@ -8,7 +8,6 @@ func DisplayDefinition() Definition {
 		ID:         TopDisplay,
 		PanelScope: PanelScopeNone,
 		Label:      "Display",
-		Shortcut:   'd',
 		Items: []Item{
 			{Action: keymap.ActionCommandsOpen, Label: "Commands", Shortcut: 'c'},
 			{Action: keymap.ActionMessagesOpen, Label: "Messages", Shortcut: 'm'},
