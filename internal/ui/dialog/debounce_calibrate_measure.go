@@ -52,9 +52,9 @@ func ValidCalibrationRepeatMS(ms int64) bool {
 	return ms >= config.DebounceCalibrationMinRepeatMS && ms <= config.DebounceCalibrationMaxRepeatMS
 }
 
-// ValidCalibrationSampleMS is an alias kept for tests referencing the old name.
-func ValidCalibrationSampleMS(ms int64) bool {
-	return ValidCalibrationRepeatMS(ms)
+// ValidCalibrationDelayMS reports whether a press-to-first-repeat delay is plausible.
+func ValidCalibrationDelayMS(ms int64) bool {
+	return ms >= config.DebounceCalibrationMinDelayMS && ms <= config.DebounceCalibrationMaxDelayMS
 }
 
 // RepeatCalibrationHold tracks one continuous hold sample stream.
@@ -62,11 +62,13 @@ type RepeatCalibrationHold struct {
 	PressKey    string
 	LastEventAt time.Time
 	EventCount  int
+	Delay       int64 // press-to-first-repeat interval; 0 = not captured yet
 	Samples     []int64
 }
 
-// RecordRepeatCalibrationEvent ingests one key event while sampling repeat speed.
-// The interval from initial press to first repeat is ignored; later intervals are repeat-speed samples.
+// RecordRepeatCalibrationEvent ingests one key event while sampling repeat speed. The interval from
+// initial press to first repeat (EventCount reaches 2) is the delay sample; later intervals are
+// repeat-speed samples.
 func RecordRepeatCalibrationEvent(h RepeatCalibrationHold, fp string, now time.Time) RepeatCalibrationHold {
 	if h.PressKey == "" {
 		h.PressKey = fp
@@ -80,15 +82,21 @@ func RecordRepeatCalibrationEvent(h RepeatCalibrationHold, fp string, now time.T
 	delta := now.Sub(h.LastEventAt).Milliseconds()
 	h.LastEventAt = now
 	h.EventCount++
-	if h.EventCount >= 3 && ValidCalibrationRepeatMS(delta) {
+	switch {
+	case h.EventCount == 2:
+		if ValidCalibrationDelayMS(delta) {
+			h.Delay = delta
+		}
+	case h.EventCount >= 3 && ValidCalibrationRepeatMS(delta):
 		h.Samples = append(h.Samples, delta)
 	}
 	return h
 }
 
-// RepeatCalibrationReleaseReady reports whether enough repeat intervals were collected.
-func RepeatCalibrationReleaseReady(samples []int64) bool {
-	return len(samples) >= MeasureMinRepeatSamples()
+// RepeatCalibrationReleaseReady reports whether a hold captured a delay sample and enough repeat
+// intervals to finish.
+func RepeatCalibrationReleaseReady(delay int64, samples []int64) bool {
+	return delay > 0 && len(samples) >= MeasureMinRepeatSamples()
 }
 
 // AverageRepeatIntervalMS rounds the arithmetic mean of repeat intervals.
@@ -108,6 +116,23 @@ func AverageRepeatIntervalMS(samples []int64) int64 {
 func RecommendedDebounceMS(avgMS int64, marginMS int) int {
 	ms := int(avgMS) + marginMS
 	return ClampDebounceMS(ms)
+}
+
+// MaxCalibrationDelayMS returns the largest delay sample, or 0 when none.
+func MaxCalibrationDelayMS(delays []int64) int64 {
+	var max int64
+	for _, d := range delays {
+		if d > max {
+			max = d
+		}
+	}
+	return max
+}
+
+// RecommendedPreviewDebounceMS derives the preview debounce from the worst-case (max, not
+// average) measured delay, since the debounce must outlast the delay on every hold.
+func RecommendedPreviewDebounceMS(delays []int64) int {
+	return ClampDebounceMS(int(MaxCalibrationDelayMS(delays)) + config.DebounceCalibrationPreviewMarginMS)
 }
 
 // ClampDebounceMS clamps to 0..KeyRepeatDebounceMaxMS.
@@ -146,14 +171,30 @@ func MeasureMinRepeatSamples() int {
 	return config.DebounceCalibrationMinRepeatSamples
 }
 
-// MeasureReleaseIdle returns idle duration used to infer key release.
+// MeasureReleaseIdle returns idle duration used to infer key release once repeats are flowing.
 func MeasureReleaseIdle() time.Duration {
 	return time.Duration(config.DebounceCalibrationReleaseIdleMS) * time.Millisecond
 }
 
-// CalibrationMarginMS returns the hardcoded margin added after measurement.
+// MeasureFirstRepeatWait returns how long to wait after the initial press for the first repeat,
+// before an idle timeout would otherwise be mistaken for a release.
+func MeasureFirstRepeatWait() time.Duration {
+	return time.Duration(config.DebounceCalibrationMaxDelayMS) * time.Millisecond
+}
+
+// MeasureHolds returns how many press-and-hold rounds Calibrate Debounce runs.
+func MeasureHolds() int {
+	return config.DebounceCalibrationHolds
+}
+
+// CalibrationMarginMS returns the margin added to the averaged repeat interval.
 func CalibrationMarginMS() int {
 	return config.DebounceCalibrationMarginMS
+}
+
+// CalibrationPreviewMarginMS returns the margin added to the max measured delay.
+func CalibrationPreviewMarginMS() int {
+	return config.DebounceCalibrationPreviewMarginMS
 }
 
 // CalibrationProgressBar renders a ████░░░░ bar for collected samples (no frame icons).

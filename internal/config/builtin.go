@@ -27,15 +27,25 @@ const (
 	// far more expensive than listing a directory, so they wait longer.
 	DefaultPreviewDebounceMS = 500
 
+	// DebounceCalibrationHolds is how many separate press-and-hold rounds Calibrate Debounce runs.
+	DebounceCalibrationHolds = 3
 	// DebounceCalibrationMarginMS is added to the measured key-repeat interval when calibrating.
-	DebounceCalibrationMarginMS = 10
+	DebounceCalibrationMarginMS = 20
+	// DebounceCalibrationPreviewMarginMS is added to the largest measured repeat delay to derive
+	// the preview debounce: it must outlast the delay on every hold, not just on average.
+	DebounceCalibrationPreviewMarginMS = 80
 	// DebounceCalibrationMinRepeatSamples is how many repeat intervals one hold must yield.
-	DebounceCalibrationMinRepeatSamples = 8
-	// DebounceCalibrationReleaseIdleMS infers key release after hold sampling (no key-up events).
+	DebounceCalibrationMinRepeatSamples = 4
+	// DebounceCalibrationReleaseIdleMS infers key release once repeats are flowing (no key-up events).
 	DebounceCalibrationReleaseIdleMS = 200
 	// DebounceCalibrationMinRepeatMS / DebounceCalibrationMaxRepeatMS reject outlier repeat intervals.
 	DebounceCalibrationMinRepeatMS = 10
 	DebounceCalibrationMaxRepeatMS = 500
+	// DebounceCalibrationMinDelayMS / DebounceCalibrationMaxDelayMS reject outlier press-to-first-repeat
+	// delays; the upper bound also sizes the release timer armed right after the initial press, since a
+	// slow key-repeat delay setting must not look like a release.
+	DebounceCalibrationMinDelayMS = 100
+	DebounceCalibrationMaxDelayMS = 1500
 
 	// KeyRepeatDebounceMaxMS upper clamp for key_repeat_debounce_ms in Config.Validate.
 	KeyRepeatDebounceMaxMS = 10_000

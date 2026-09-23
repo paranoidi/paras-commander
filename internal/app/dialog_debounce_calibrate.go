@@ -67,9 +67,14 @@ func (a *App) applyDebounceCalibrateDialog() {
 func (a *App) beginDebounceCalibrateMeasuring() {
 	st := &a.model.DebounceCalibrateDialog
 	st.InputSnapshot = st.Value
+	st.PreviewSnapshot = st.PreviewValue
 	st.Phase = dialog.DebounceCalibrateMeasuring
 	st.MeasureStep = dialog.MeasureAwaitPress
+	st.HoldIndex = 0
 	st.Samples = nil
+	st.Delays = nil
+	st.HoldSamples = 0
+	st.HoldDelay = 0
 	st.PressKey = ""
 	st.EventCount = 0
 	st.Status = ""
@@ -82,12 +87,37 @@ func (a *App) abortDebounceCalibrateMeasuring() {
 	st.Phase = dialog.DebounceCalibrateEdit
 	st.Value = st.InputSnapshot
 	st.Cursor = utf8.RuneCountInString(st.Value)
+	st.PreviewValue = st.PreviewSnapshot
+	st.PreviewCursor = utf8.RuneCountInString(st.PreviewValue)
 	st.Focus = dialog.NewDialogTrailingButtonsForm(2, 3).MiddleButtonIndex()
 	st.Status = ""
 	st.MeasureStep = dialog.MeasureAwaitPress
+	st.HoldIndex = 0
 	st.Samples = nil
+	st.Delays = nil
+	st.HoldSamples = 0
+	st.HoldDelay = 0
 	st.PressKey = ""
 	st.EventCount = 0
+}
+
+// completeDebounceCalibrateHold commits the current hold's delay sample and either starts the next
+// hold or, once all holds are done, finishes measuring.
+func (a *App) completeDebounceCalibrateHold() {
+	st := &a.model.DebounceCalibrateDialog
+	a.clearDebounceCalibrateReleaseTimer()
+	st.Delays = append(st.Delays, st.HoldDelay)
+	st.HoldIndex++
+	if st.HoldIndex >= dialog.MeasureHolds() {
+		a.finishDebounceCalibrateMeasuring()
+		return
+	}
+	st.HoldSamples = len(st.Samples)
+	st.HoldDelay = 0
+	st.PressKey = ""
+	st.EventCount = 0
+	st.MeasureStep = dialog.MeasureAwaitPress
+	st.Status = ""
 }
 
 func (a *App) finishDebounceCalibrateMeasuring() {
@@ -95,13 +125,22 @@ func (a *App) finishDebounceCalibrateMeasuring() {
 	a.clearDebounceCalibrateReleaseTimer()
 	avg := dialog.AverageRepeatIntervalMS(st.Samples)
 	ms := dialog.RecommendedDebounceMS(avg, dialog.CalibrationMarginMS())
+	maxDelay := dialog.MaxCalibrationDelayMS(st.Delays)
+	previewMS := dialog.RecommendedPreviewDebounceMS(st.Delays)
 	st.Phase = dialog.DebounceCalibrateEdit
 	st.Value = dialog.FormatDebounceMS(ms)
 	st.Cursor = utf8.RuneCountInString(st.Value)
+	st.PreviewValue = dialog.FormatDebounceMS(previewMS)
+	st.PreviewCursor = utf8.RuneCountInString(st.PreviewValue)
 	st.Focus = 0
-	st.Status = fmt.Sprintf("Repeat interval %d ms; margin %d ms.", avg, dialog.CalibrationMarginMS())
+	st.Status = fmt.Sprintf("Repeat %d ms, delay %d ms (margins %d/%d ms).",
+		avg, maxDelay, dialog.CalibrationMarginMS(), dialog.CalibrationPreviewMarginMS())
 	st.MeasureStep = dialog.MeasureAwaitPress
+	st.HoldIndex = 0
 	st.Samples = nil
+	st.Delays = nil
+	st.HoldSamples = 0
+	st.HoldDelay = 0
 	st.PressKey = ""
 	st.EventCount = 0
 }
@@ -109,10 +148,11 @@ func (a *App) finishDebounceCalibrateMeasuring() {
 func (a *App) failDebounceCalibrateMeasuringTooSoon() {
 	st := &a.model.DebounceCalibrateDialog
 	a.clearDebounceCalibrateReleaseTimer()
-	st.MeasureStep = dialog.MeasureAwaitPress
-	st.Samples = nil
+	st.Samples = st.Samples[:st.HoldSamples]
+	st.HoldDelay = 0
 	st.PressKey = ""
 	st.EventCount = 0
+	st.MeasureStep = dialog.MeasureAwaitPress
 	st.Status = fmt.Sprintf("Released too soon; hold until %d/%d on the bar.", 0, dialog.MeasureMinRepeatSamples())
 }
 
@@ -121,7 +161,14 @@ func (a *App) clearDebounceCalibrateReleaseTimer() {
 }
 
 func (a *App) armDebounceCalibrateReleaseTimer() {
-	a.debounceCalibrateRelease.Arm(dialog.MeasureReleaseIdle(), func() {
+	a.armDebounceCalibrateReleaseTimerFor(dialog.MeasureReleaseIdle())
+}
+
+// armDebounceCalibrateReleaseTimerFor arms the release-inference timer with an explicit duration:
+// the longer MeasureFirstRepeatWait right after the initial press (waiting for the first repeat,
+// which can itself take up to the max delay), the shorter MeasureReleaseIdle once repeats flow.
+func (a *App) armDebounceCalibrateReleaseTimerFor(d time.Duration) {
+	a.debounceCalibrateRelease.Arm(d, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(debounceCalibrateReleasePayload{}))
 	})
 }
@@ -133,8 +180,8 @@ func (a *App) applyDebounceCalibrateReleasePayload() bool {
 	if !st.Open || st.Phase != dialog.DebounceCalibrateMeasuring || st.MeasureStep != dialog.MeasureCollecting {
 		return false
 	}
-	if dialog.RepeatCalibrationReleaseReady(st.Samples) {
-		a.finishDebounceCalibrateMeasuring()
+	if dialog.RepeatCalibrationReleaseReady(st.HoldDelay, st.Samples[st.HoldSamples:]) {
+		a.completeDebounceCalibrateHold()
 		return true
 	}
 	a.failDebounceCalibrateMeasuringTooSoon()
@@ -265,10 +312,9 @@ func (a *App) handleDebounceCalibrateMeasuringKey(event *tcell.EventKey) {
 		st.PressKey = fp
 		st.LastEventAt = now
 		st.EventCount = 1
-		st.Samples = nil
 		st.MeasureStep = dialog.MeasureCollecting
 		st.Status = ""
-		a.armDebounceCalibrateReleaseTimer()
+		a.armDebounceCalibrateReleaseTimerFor(dialog.MeasureFirstRepeatWait())
 	case dialog.MeasureCollecting:
 		if fp != st.PressKey {
 			return
@@ -277,11 +323,13 @@ func (a *App) handleDebounceCalibrateMeasuringKey(event *tcell.EventKey) {
 			PressKey:    st.PressKey,
 			LastEventAt: st.LastEventAt,
 			EventCount:  st.EventCount,
+			Delay:       st.HoldDelay,
 			Samples:     st.Samples,
 		}, fp, now)
 		st.PressKey = hold.PressKey
 		st.LastEventAt = hold.LastEventAt
 		st.EventCount = hold.EventCount
+		st.HoldDelay = hold.Delay
 		st.Samples = hold.Samples
 		a.clearDebounceCalibrateReleaseTimer()
 		a.armDebounceCalibrateReleaseTimer()

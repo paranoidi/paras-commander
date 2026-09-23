@@ -73,12 +73,14 @@ func DrawDebounceCalibrateDialog(screen tcell.Screen, layout Layout, state Debou
 
 func drawDebounceCalibrateMeasuringBody(screen tcell.Screen, rect draw.Rect, textX, textW, y int, state DebounceCalibrateDialogState, status string, styles theme.Theme, dbg tcell.Color) {
 	required := MeasureMinRepeatSamples()
+	holdSamples := state.Samples[state.HoldSamples:]
 	// Sampling keeps running while the key is held, so cap the readout at the target: a full bar
 	// next to "17/8" reads as a bug, and the wider label shifts the centered row as it grows.
-	collected := min(len(state.Samples), required)
-	line := "Hold a letter or arrow key."
+	collected := min(len(holdSamples), required)
+	progress := fmt.Sprintf("(%d/%d)", state.HoldIndex+1, MeasureHolds())
+	line := "Hold a letter or arrow key " + progress + "."
 	if state.MeasureStep == MeasureCollecting {
-		line = "Keep holding" + string(primitive.Ellipsis)
+		line = "Keep holding" + string(primitive.Ellipsis) + " " + progress
 	}
 	primitive.Text(screen, textX, y, textW, line, styles.DialogText.Background(dbg))
 	y += 2

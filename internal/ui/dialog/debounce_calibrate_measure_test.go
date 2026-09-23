@@ -41,20 +41,31 @@ func TestValidCalibrationRepeatMS(t *testing.T) {
 	}
 }
 
-func TestRecordRepeatCalibrationEventSkipsFirstInterval(t *testing.T) {
+func TestRecordRepeatCalibrationEventCapturesDelayThenRepeats(t *testing.T) {
 	fp := `rune:'a'`
 	t0 := time.Now()
 	h := RecordRepeatCalibrationEvent(RepeatCalibrationHold{}, fp, t0)
-	if h.EventCount != 1 || len(h.Samples) != 0 {
-		t.Fatalf("press: eventCount=%d samples=%d", h.EventCount, len(h.Samples))
+	if h.EventCount != 1 || h.Delay != 0 || len(h.Samples) != 0 {
+		t.Fatalf("press: eventCount=%d delay=%d samples=%d", h.EventCount, h.Delay, len(h.Samples))
 	}
 	h = RecordRepeatCalibrationEvent(h, fp, t0.Add(400*time.Millisecond))
-	if h.EventCount != 2 || len(h.Samples) != 0 {
-		t.Fatalf("first repeat: eventCount=%d samples=%d, want no sample for initial delay", h.EventCount, len(h.Samples))
+	if h.EventCount != 2 || h.Delay != 400 || len(h.Samples) != 0 {
+		t.Fatalf("first repeat: eventCount=%d delay=%d samples=%d, want delay=400 no repeat sample",
+			h.EventCount, h.Delay, len(h.Samples))
 	}
 	h = RecordRepeatCalibrationEvent(h, fp, t0.Add(450*time.Millisecond))
 	if len(h.Samples) != 1 || h.Samples[0] != 50 {
 		t.Fatalf("second repeat interval = %v, want [50]", h.Samples)
+	}
+}
+
+func TestRecordRepeatCalibrationEventRejectsOutOfRangeDelay(t *testing.T) {
+	fp := `rune:'a'`
+	t0 := time.Now()
+	h := RecordRepeatCalibrationEvent(RepeatCalibrationHold{}, fp, t0)
+	h = RecordRepeatCalibrationEvent(h, fp, t0.Add(2*time.Second)) // above DebounceCalibrationMaxDelayMS
+	if h.Delay != 0 {
+		t.Fatalf("out-of-range delay should be rejected, got %d", h.Delay)
 	}
 }
 
@@ -67,23 +78,38 @@ func TestAverageRepeatIntervalMS(t *testing.T) {
 func TestRepeatCalibrationReleaseReady(t *testing.T) {
 	min := MeasureMinRepeatSamples()
 	samples := make([]int64, min-1)
-	if RepeatCalibrationReleaseReady(samples) {
+	if RepeatCalibrationReleaseReady(400, samples) {
 		t.Fatal("should not be ready below minimum")
 	}
 	samples = append(samples, 50)
-	if !RepeatCalibrationReleaseReady(samples) {
-		t.Fatal("should be ready at minimum")
+	if RepeatCalibrationReleaseReady(0, samples) {
+		t.Fatal("should not be ready without a delay sample")
+	}
+	if !RepeatCalibrationReleaseReady(400, samples) {
+		t.Fatal("should be ready at minimum with a delay sample")
 	}
 }
 
 func TestRecommendedDebounceMS(t *testing.T) {
 	got := RecommendedDebounceMS(40, config.DebounceCalibrationMarginMS)
-	if got != 50 {
-		t.Fatalf("recommended = %d, want 50", got)
+	if want := 40 + config.DebounceCalibrationMarginMS; got != want {
+		t.Fatalf("recommended = %d, want %d", got, want)
 	}
 	got = RecommendedDebounceMS(20_000, config.DebounceCalibrationMarginMS)
 	if got != config.KeyRepeatDebounceMaxMS {
 		t.Fatalf("recommended = %d, want clamp %d", got, config.KeyRepeatDebounceMaxMS)
+	}
+}
+
+func TestRecommendedPreviewDebounceMSUsesMax(t *testing.T) {
+	got := RecommendedPreviewDebounceMS([]int64{300, 500, 400})
+	want := 500 + config.DebounceCalibrationPreviewMarginMS
+	if got != want {
+		t.Fatalf("recommended preview = %d, want %d", got, want)
+	}
+	got = RecommendedPreviewDebounceMS([]int64{20_000})
+	if got != config.KeyRepeatDebounceMaxMS {
+		t.Fatalf("recommended preview = %d, want clamp %d", got, config.KeyRepeatDebounceMaxMS)
 	}
 }
 
