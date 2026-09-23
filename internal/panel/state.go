@@ -2227,16 +2227,7 @@ func (s *State) groupMatchedPaths(pattern string, filesOnly, dirsOnly, caseSensi
 		if dirsOnly && !entry.IsDir() {
 			continue
 		}
-		matched := !meta.OnlyMeta && matcher.Match(entry.Name)
-		if !matched {
-			for _, col := range meta.Cols {
-				if v, ok := col[entry.Path]; ok && v != "" && matcher.Match(v) {
-					matched = true
-					break
-				}
-			}
-		}
-		if matched {
+		if meta.Match(matcher, entry) {
 			paths = append(paths, entry.Path)
 			isDir[entry.Path] = entry.IsDir()
 		}
@@ -2269,7 +2260,9 @@ func (s *State) CountGroupMatches(pattern string, filesOnly, dirsOnly, caseSensi
 // CountPatternMatches reports how many visible entries match pattern under the given filters,
 // split into files and directories — a plain total count (unlike CountGroupMatches, which counts
 // only matches whose selection state would flip). Used by the Filter dialog's live preview.
-func (s *State) CountPatternMatches(pattern string, mode GroupPatternMode, caseSensitive, filesOnly, dirsOnly bool) (files, dirs int, err error) {
+// meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips
+// filename matching (zero value matches by filename only, as before).
+func (s *State) CountPatternMatches(pattern string, mode GroupPatternMode, caseSensitive, filesOnly, dirsOnly bool, meta GroupSelectMeta) (files, dirs int, err error) {
 	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
 	if err != nil {
 		return 0, 0, err
@@ -2285,7 +2278,7 @@ func (s *State) CountPatternMatches(pattern string, mode GroupPatternMode, caseS
 		if dirsOnly && !entry.IsDir() {
 			continue
 		}
-		if !matcher.Match(entry.Name) {
+		if !meta.Match(matcher, entry) {
 			continue
 		}
 		if entry.IsDir() {

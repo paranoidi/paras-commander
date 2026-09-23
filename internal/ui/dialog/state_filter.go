@@ -15,7 +15,12 @@ type FilterDialogState struct {
 	FilesOnly     bool
 	DirsOnly      bool
 	CaseSensitive bool
-	Focus         int // 0-2=mode radios, 3=pattern, 4=files only, 5=dirs only, 6=case sensitive, then OK, Cancel
+	// MetaColumnCount is the active panel's meta column count at dialog-open time; 0 hides the
+	// meta checkbox row entirely.
+	MetaColumnCount    int
+	IncludeMetaColumns bool
+	OnlyMetaColumns    bool
+	Focus              int // 0-2=mode radios, 3=pattern, 4=files only, 5=dirs only, 6=case sensitive, 7-8=meta (when shown), then OK, Cancel
 
 	// Live match-count preview shown right-aligned on the Pattern row, recomputed on every state
 	// change. PreviewShow is false while the pattern is empty or fails to compile.

@@ -377,13 +377,20 @@ func (h *Handler) ActivateSelection() {
 		h.activeEntries[panelID] = nil
 		h.navPath[panelID] = ""
 		h.resortPending[panelID] = false
-		if p := h.host.PanelByID(panelID); p != nil && p.Sort.Mode == panel.SortMeta {
-			// The sorted-on column no longer exists — fall back to Name immediately (like an
-			// explicit Sort dialog apply), rather than leaving the panel sorted by a column
-			// that just vanished from the header.
-			p.Sort.Mode = panel.SortName
-			p.Sort.MetaColumn = ""
-			h.host.ResortPanel(panelID)
+		if p := h.host.PanelByID(panelID); p != nil {
+			if p.Sort.Mode == panel.SortMeta {
+				// The sorted-on column no longer exists — fall back to Name immediately (like an
+				// explicit Sort dialog apply), rather than leaving the panel sorted by a column
+				// that just vanished from the header.
+				p.Sort.Mode = panel.SortName
+				p.Sort.MetaColumn = ""
+				h.host.ResortPanel(panelID)
+			}
+			if p.ActiveEntryFilter != nil && p.ActiveEntryFilter.ID == panel.PatternMetaFilterID {
+				// Meta columns just went away: the filter's closure now reads an empty
+				// MetaResults, so re-run it immediately rather than waiting for the next flush.
+				p.RefreshEntryFilter()
+			}
 		}
 		return
 	}
@@ -514,6 +521,20 @@ func (h *Handler) HandleRenderFlush() {
 		if h.ColumnResolved(panelID) {
 			h.host.NoteMetaColumnResolved(panelID)
 		}
+	}
+	h.refreshMetaPatternFilters()
+}
+
+// refreshMetaPatternFilters re-runs the active entry filter on any panel whose filter matches
+// live meta values (panel.PatternMetaFilterID), so rows appear/disappear as meta results resolve.
+// ponytail: O(n) rebuild per flush (already coalesced to ~16ms); coalesce further if huge dirs stutter.
+func (h *Handler) refreshMetaPatternFilters() {
+	for panelID := ui.PrimaryPanel; panelID <= ui.SecondaryPanel; panelID++ {
+		p := h.host.PanelByID(panelID)
+		if p == nil || p.ActiveEntryFilter == nil || p.ActiveEntryFilter.ID != panel.PatternMetaFilterID {
+			continue
+		}
+		p.RefreshEntryFilter()
 	}
 }
 

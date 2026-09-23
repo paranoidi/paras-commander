@@ -5,12 +5,30 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
 // GroupSelectMeta carries optional meta-column data for group select/unselect matching.
 type GroupSelectMeta struct {
 	Cols     []map[string]string // per-column abs-path → value maps (nil = no meta matching)
 	OnlyMeta bool                // when true, skip filename matching; match only via Cols
+}
+
+// Match reports whether e matches under matcher, honoring m's meta-column data: the basename is
+// checked first unless OnlyMeta is set, then any non-empty column value at e.Path. Shared by
+// group select/unselect matching (groupMatchedPaths) and the Filter dialog's meta-aware pattern
+// filter/preview.
+func (m GroupSelectMeta) Match(matcher GroupMatcher, e localfs.Entry) bool {
+	if !m.OnlyMeta && matcher.Match(e.Name) {
+		return true
+	}
+	for _, col := range m.Cols {
+		if v, ok := col[e.Path]; ok && v != "" && matcher.Match(v) {
+			return true
+		}
+	}
+	return false
 }
 
 // GroupPatternMode selects shell glob, regexp, or simple substring matching for group select.

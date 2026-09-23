@@ -85,7 +85,8 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 		}
 	}
 
-	col2X := optionX + utf8.RuneCountInString(draw.CheckboxText("Files only", false)) + 3 // +1 pad +2 gap
+	// col2X aligns the second checkbox on every two-column row.
+	col2X := optionX + utf8.RuneCountInString(draw.CheckboxText("Include meta columns", false)) + 3 // +1 pad +2 gap
 	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'F', state.FilesOnly, state.Focus == FilterFocusFilesOnly, false, styles)
 	draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", 'D', state.DirsOnly, state.Focus == FilterFocusDirsOnly, false, styles)
 	y++
@@ -101,9 +102,22 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 		return
 	}
 
+	if state.MetaColumnCount > 0 {
+		draw.DrawDialogCheckbox(screen, optionX, y, "Include meta columns", 'M', state.IncludeMetaColumns, state.Focus == FilterFocusIncludeMeta, false, styles)
+		draw.DrawDialogCheckbox(screen, col2X, y, "Only meta columns", 'N', state.OnlyMetaColumns, state.Focus == FilterFocusOnlyMeta, false, styles)
+		y++
+		if y >= innerBottom {
+			return
+		}
+	}
+
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 
-	form := NewDialogLinearForm(7)
+	numContent := 7
+	if state.MetaColumnCount > 0 {
+		numContent += 2
+	}
+	form := NewDialogLinearForm(numContent)
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawOKCancelButtonRow(screen, rect, buttonY, state.Focus == form.OKIndex(), state.Focus == form.CancelIndex(), styles)
 }

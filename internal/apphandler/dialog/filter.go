@@ -14,10 +14,13 @@ import (
 // OpenFilterDialog opens the panel Filter modal with an empty pattern (no prefill from any
 // filter already active on the panel).
 func (h *Handler) OpenFilterDialog() {
+	metaCount := len(h.model.MetaResults[h.model.ActivePanel])
 	h.model.FilterDialog = dialog.FilterDialogState{
-		Open:        true,
-		PatternMode: panel.GroupPatternShell,
-		Focus:       dialog.FilterFocusPattern,
+		Open:               true,
+		PatternMode:        panel.GroupPatternShell,
+		MetaColumnCount:    metaCount,
+		IncludeMetaColumns: metaCount > 0,
+		Focus:              dialog.FilterFocusPattern,
 	}
 }
 
@@ -37,7 +40,8 @@ func (h *Handler) updateFilterDialogPreview() {
 		fd.PreviewShow = false
 		return
 	}
-	files, dirs, err := h.host.ActivePanel().CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly)
+	meta := ui.MetaMatchData(h.model.MetaResults[h.model.ActivePanel], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
+	files, dirs, err := h.host.ActivePanel().CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly, meta)
 	if err != nil {
 		fd.PreviewShow = false
 		return
@@ -48,7 +52,11 @@ func (h *Handler) updateFilterDialogPreview() {
 }
 
 func (h *Handler) filterDialogForm() dialog.DialogLinearForm {
-	return dialog.NewDialogLinearForm(7)
+	n := 7
+	if h.model.FilterDialog.MetaColumnCount > 0 {
+		n += 2
+	}
+	return dialog.NewDialogLinearForm(n)
 }
 
 func (h *Handler) filterDialogQueryWidth() int {
@@ -105,6 +113,7 @@ func (h *Handler) tryRejectFilterDialogOK() bool {
 func (h *Handler) executeFilterDialog() {
 	fd := &h.model.FilterDialog
 	p := h.host.ActivePanel()
+	panelID := h.model.ActivePanel
 	if fd.Text == "" {
 		p.SetEntryFilter(nil)
 		h.CloseFilterDialog()
@@ -113,12 +122,22 @@ func (h *Handler) executeFilterDialog() {
 	if h.tryRejectFilterDialogOK() {
 		return
 	}
-	filter, err := panel.PatternFilter(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly)
+	var metaFn func() panel.GroupSelectMeta
+	if fd.IncludeMetaColumns {
+		only := fd.OnlyMetaColumns
+		// Closure re-reads live MetaResults on every filter rebuild rather than snapshotting: meta
+		// results arrive asynchronously and the underlying maps are replaced on a directory change.
+		metaFn = func() panel.GroupSelectMeta {
+			return ui.MetaMatchData(h.model.MetaResults[panelID], true, only)
+		}
+	}
+	filter, err := panel.PatternFilter(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly, metaFn)
 	if err != nil {
 		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
 		return
 	}
-	files, dirs, _ := p.CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly)
+	meta := ui.MetaMatchData(h.model.MetaResults[panelID], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
+	files, dirs, _ := p.CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly, meta)
 	p.SetEntryFilter(filter)
 	h.CloseFilterDialog()
 	if files == 0 && dirs == 0 {
@@ -213,6 +232,14 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusCase) {
 					fd.Focus = dialog.FilterFocusCase
 				}
+			case 'm', 'M':
+				if h.toggleFilterDialogField(fd, dialog.FilterFocusIncludeMeta) {
+					fd.Focus = dialog.FilterFocusIncludeMeta
+				}
+			case 'n', 'N':
+				if h.toggleFilterDialogField(fd, dialog.FilterFocusOnlyMeta) {
+					fd.Focus = dialog.FilterFocusOnlyMeta
+				}
 			}
 			return false
 		}
@@ -232,7 +259,7 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 			return false
 		}
 	}
-	if focus, ok := dialog.FilterMoveFocus(fd.Focus, event.Key(), fd.PatternMode); ok {
+	if focus, ok := dialog.FilterMoveFocus(fd.Focus, event.Key(), fd.PatternMode, fd.MetaColumnCount); ok {
 		fd.Focus = focus
 	}
 	return false
@@ -266,6 +293,22 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 			return false
 		}
 		fd.CaseSensitive = !fd.CaseSensitive
+	case dialog.FilterFocusIncludeMeta:
+		if fd.MetaColumnCount <= 0 {
+			return false
+		}
+		fd.IncludeMetaColumns = !fd.IncludeMetaColumns
+		if !fd.IncludeMetaColumns {
+			fd.OnlyMetaColumns = false
+		}
+	case dialog.FilterFocusOnlyMeta:
+		if fd.MetaColumnCount <= 0 {
+			return false
+		}
+		fd.OnlyMetaColumns = !fd.OnlyMetaColumns
+		if fd.OnlyMetaColumns {
+			fd.IncludeMetaColumns = true
+		}
 	default:
 		return false
 	}
@@ -275,7 +318,7 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 
 func filterAltIsDialogMnemonic(r rune) bool {
 	switch r {
-	case 'f', 'F', 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I':
+	case 'f', 'F', 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N':
 		return true
 	default:
 		return false

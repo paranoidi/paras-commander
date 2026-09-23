@@ -596,16 +596,7 @@ func (a *App) closeGroupSelect() {
 // from its current include/only-meta checkboxes. Shared by executeGroupSelect and
 // updateGroupSelectPreview so the two stay in sync.
 func (a *App) groupSelectMeta(gs *dialog.GroupSelectState) panel.GroupSelectMeta {
-	var meta panel.GroupSelectMeta
-	if gs.IncludeMetaColumns && gs.MetaColumnCount > 0 {
-		for _, col := range a.model.MetaResults[a.model.ActivePanel] {
-			if col.Results != nil {
-				meta.Cols = append(meta.Cols, col.Results)
-			}
-		}
-		meta.OnlyMeta = gs.OnlyMetaColumns
-	}
-	return meta
+	return ui.MetaMatchData(a.model.MetaResults[a.model.ActivePanel], gs.IncludeMetaColumns, gs.OnlyMetaColumns)
 }
 
 // updateGroupSelectPreview recomputes the group-select dialog's live result preview (matched

@@ -77,6 +77,23 @@ func MetaColumnByName(cols []MetaColumnState, name string) (*MetaColumnState, bo
 	return nil, false
 }
 
+// MetaMatchData builds the panel.GroupSelectMeta for meta-aware pattern matching (group
+// select/unselect, the Filter dialog) from a panel's active meta columns. include gates whether
+// meta values are consulted at all; only sets GroupSelectMeta.OnlyMeta. Shared by
+// App.groupSelectMeta and the Filter dialog handler so both stay in sync.
+func MetaMatchData(cols []MetaColumnState, include, only bool) panel.GroupSelectMeta {
+	var meta panel.GroupSelectMeta
+	if include && len(cols) > 0 {
+		for _, col := range cols {
+			if col.Results != nil {
+				meta.Cols = append(meta.Cols, col.Results)
+			}
+		}
+		meta.OnlyMeta = only
+	}
+	return meta
+}
+
 // Model is the renderable subset of application state.
 type Model struct {
 	Primary        panel.State
