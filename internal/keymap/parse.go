@@ -78,6 +78,12 @@ func ParseKey(s string) (Chord, error) {
 	if len(restRunes) == 1 {
 		r := restRunes[0]
 		if unicode.IsPrint(r) {
+			// Terminals deliver Shift+letter as the uppercase rune ("M-S-d" arrives as Alt+'D'),
+			// so fold Shift into the rune; Map.Lookup strips any redundant Shift on the event.
+			if mod&tcell.ModShift != 0 && unicode.IsLetter(r) {
+				r = unicode.ToUpper(r)
+				mod &^= tcell.ModShift
+			}
 			return Chord{Key: tcell.KeyRune, Rune: r, Mod: mod}, nil
 		}
 	}

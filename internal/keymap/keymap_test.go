@@ -117,6 +117,9 @@ func TestParseKeyNamedAndModifiers(t *testing.T) {
 		{input: "C-down", want: Chord{Key: tcell.KeyDown, Mod: tcell.ModCtrl}},
 		{input: "S-tab", want: Chord{Key: tcell.KeyBacktab}},
 		{input: "delete", want: Chord{Key: tcell.KeyDelete}},
+		{input: "S-d", want: Chord{Key: tcell.KeyRune, Rune: 'D'}},
+		{input: "M-S-d", want: Chord{Key: tcell.KeyRune, Rune: 'D', Mod: tcell.ModAlt}},
+		{input: "M-S-D", want: Chord{Key: tcell.KeyRune, Rune: 'D', Mod: tcell.ModAlt}},
 	}
 	for _, tt := range tests {
 		got, err := ParseKey(tt.input)
@@ -1344,4 +1347,22 @@ func TestKnownActionsHaveSpecOrAreReserved(t *testing.T) {
 
 func writeFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0o644)
+}
+
+func TestShiftLetterBindingMatchesTerminalEvents(t *testing.T) {
+	m, err := Build(map[string][]string{ActionPanelDiskUsageClear: {"M-S-d"}})
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	for _, ev := range []*tcell.EventKey{
+		tcell.NewEventKey(tcell.KeyRune, 'D', tcell.ModAlt),                // legacy ESC D
+		tcell.NewEventKey(tcell.KeyRune, 'D', tcell.ModAlt|tcell.ModShift), // CSI-u
+	} {
+		if id, ok := m.Lookup(ev); !ok || id != ActionPanelDiskUsageClear {
+			t.Fatalf("Lookup(%v) = %q, %v; want %q", ev.Modifiers(), id, ok, ActionPanelDiskUsageClear)
+		}
+	}
+	if _, ok := m.Lookup(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt)); ok {
+		t.Fatal("unshifted Alt+d must not match M-S-d")
+	}
 }
