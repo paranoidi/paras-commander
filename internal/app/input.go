@@ -1088,6 +1088,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openPanelPathInExternalBrowser(a.model.ActivePanel)
 	case keymap.ActionPanelDiskUsageScan:
 		a.startDiskUsageScan()
+	case keymap.ActionPanelDirSize:
+		a.scanCursorDirSize()
 	case keymap.ActionPanelSwitch:
 		if a.model.QuickViewEnabled {
 			a.switchPanel()

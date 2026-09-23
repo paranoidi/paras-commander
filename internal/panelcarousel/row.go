@@ -22,12 +22,16 @@ type Meta struct {
 
 // formatBriefRow formats icon+name+[meta]+size for carousel columns. metaW is the pre-laid-out
 // meta segment width (0 = none, center column only) and metaText its text, already padded to metaW.
-func formatBriefRow(entry localfs.Entry, width int, showIcons bool, showSize bool, suffix panellist.RowSuffix, styles theme.Theme, disk DiskUsageSource, scrollbarReserve int, metaW int, metaText string) string {
+func formatBriefRow(entry localfs.Entry, width int, showIcons bool, showSize bool, suffix panellist.RowSuffix, styles theme.Theme, disk DiskUsageSource, scrollbarReserve int, metaW int, metaText string, sizePending bool) string {
 	rowTextWidth := columnListTextWidth(width, showIcons, scrollbarReserve)
 	nameWidth := nameWidthFromRowText(rowTextWidth, showSize, metaW)
 	display := panellist.EntryDisplayRunes(entry, nameWidth, showIcons, suffix, styles)
 	name := string(panellist.RunesFromDisplay(display))
-	return panellist.JoinRow(nameWidth, name, metaText, metaW > 0, panellist.FormatListedSize(entry, disk), showSize)
+	pendingIcon := ""
+	if sizePending {
+		pendingIcon = styles.IconMetaRunning()
+	}
+	return panellist.JoinRow(nameWidth, name, metaText, metaW > 0, panellist.FormatListedSize(entry, disk, pendingIcon), showSize)
 }
 
 func listNameHeaderTitle(showIcons bool) string {

@@ -3,10 +3,13 @@ package diskusage
 import "path/filepath"
 
 // ListingVolumeGate skips descending into directories whose device differs from RefDev when Enabled && Valid.
+// FromRoot resolves RefDev from the scan root itself (off the UI goroutine) so an explicitly
+// requested scan of a mount point counts that mount while still not crossing nested mounts.
 type ListingVolumeGate struct {
-	Enabled bool
-	RefDev  uint64
-	Valid   bool
+	Enabled  bool
+	RefDev   uint64
+	Valid    bool
+	FromRoot bool
 }
 
 // ComposeListingVolumeIgnore wraps base (e.g. ~/.goduignore) with listing-volume skipping for WalkFolder.

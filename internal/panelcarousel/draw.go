@@ -237,7 +237,8 @@ func drawCarouselColumn(cp carouselColumnParams) {
 				metaText = p.Meta.Row(entry.Path)
 			}
 		}
-		text := formatBriefRow(entry, col.Width, p.ShowIcons, showSize, rowSuffix, p.Styles, diskSrc, reserve, metaW, metaText)
+		sizePending := diskSrc != nil && entry.Type == localfs.EntryDirectory && diskSrc.PendingForPanel(entry.Path, p.DiskUsage.PanelID)
+		text := formatBriefRow(entry, col.Width, p.ShowIcons, showSize, rowSuffix, p.Styles, diskSrc, reserve, metaW, metaText, sizePending)
 		listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
 		nameColOffset := listStart - col.X
 		nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve, showSize, metaW)

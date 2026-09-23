@@ -19,16 +19,17 @@ type ByteSizer interface {
 }
 
 // FormatListedSize renders entry's size cell: a directory shows its cached disk-usage size (via
-// disk, if non-nil and the cache has an entry) or "" when unavailable; a file shows its compact
-// byte size at SizeCells width.
-func FormatListedSize(entry localfs.Entry, disk ByteSizer) string {
+// disk, if non-nil and the cache has an entry), or pendingIcon while that size is still being
+// calculated (queued or walking), or "" when neither applies; a file shows its compact byte
+// size at SizeCells width.
+func FormatListedSize(entry localfs.Entry, disk ByteSizer, pendingIcon string) string {
 	if entry.Type == localfs.EntryDirectory {
 		if disk != nil {
 			if sz, ok := disk.ByteSize(entry.Path); ok {
 				return FormatByteSizeCompact(sz, SizeCells)
 			}
 		}
-		return ""
+		return pendingIcon
 	}
 	return FormatByteSizeCompact(entry.Size, SizeCells)
 }

@@ -701,6 +701,14 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: []string{"M-C-d"},
 			Keywords:    []string{"abort", "cancel", "stop", "reset", "forget", "cache"},
 		},
+		{
+			ID:          ActionPanelDirSize,
+			Views:       HelpBrowser,
+			Title:       "Calculate directory size",
+			Section:     "View",
+			DefaultKeys: []string{"M-space"},
+			Keywords:    []string{"size", "du", "directory", "space"},
+		},
 
 		// ── Selection ──
 		{

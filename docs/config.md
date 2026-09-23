@@ -117,7 +117,7 @@ Disk-usage view and background walk.
 |---|---|---|---|
 | `idle_size_sort` | bool | `true` | While a disk-usage scan is running, re-sort by size once the cursor has been idle for a moment instead of resorting on every update. |
 | `idle_sort_delay_ms` | int | `500` | How long the cursor must be idle before the disk-usage idle re-sort (above) triggers. Also used as the idle delay before a panel sorted by a meta column (see `[panels] default_sort`) re-sorts once that column's values finish arriving — the two idle re-sorts share this single delay rather than each having their own. |
-| `descend_into_mount_points` | bool | `false` | Let a disk-usage scan cross into other mounted filesystems instead of stopping at mount boundaries. |
+| `descend_into_mount_points` | bool | `false` | Let a disk-usage scan cross into other mounted filesystems instead of stopping at mount boundaries. `panel.dir-size` (`M-space`) always counts the directory under the cursor, even when it is itself a mount point; this setting still controls whether it crosses mounts nested inside it. |
 
 ## `[fs_walk]`
 
@@ -463,4 +463,4 @@ Notable dual bindings:
 | Refresh | `C-n` | — |
 | Open bookmarks | `C-b` | legacy `C-g`, `C-e` retained |
 
-Relocated non-leader actions (when a letter chord was needed): carousel `M-v`, disk-usage scan `M-d`, disk-usage clear `M-C-d` (also aborts in-flight scans), SFTP `M-r`, external browser `M-x`. Quick-view preview page down stays `C-j` (jobs.open uses `M-j`). See `shortcuts.md` for chord syntax and how to generate the default keybindings.
+Relocated non-leader actions (when a letter chord was needed): carousel `M-v`, disk-usage scan `M-d`, disk-usage clear `M-C-d` (also aborts in-flight scans), directory size under cursor `M-space`, SFTP `M-r`, external browser `M-x`. Quick-view preview page down stays `C-j` (jobs.open uses `M-j`). See `shortcuts.md` for chord syntax and how to generate the default keybindings.

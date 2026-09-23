@@ -281,6 +281,34 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 	a.setTransientMessage("Disk usage scan started ("+filepath.Clean(p.PathString())+")", ui.MessageUrgencyInfo)
 }
 
+// scanCursorDirSize walks the directory under the cursor (like Insert's selection-size scan,
+// without selecting it) and advances the cursor.
+func (a *App) scanCursorDirSize() {
+	if a.disk.engine == nil || a.disk.ignore == nil || a.model.ViewMode != ui.ViewBrowser {
+		return
+	}
+	p := a.activePanel()
+	if p.Path.IsRemote() {
+		a.setTransientMessage("Disk usage is not available on remote panels", ui.MessageUrgencyWarn)
+		return
+	}
+	entry, ok := p.CurrentEntry()
+	if !ok {
+		return
+	}
+	if entry.IsDir() && entry.Name != ".." {
+		// Explicit request: count the directory even when it is itself a mount point.
+		a.disk.engine.StartScanFromListing([]string{filepath.Clean(entry.Path)}, a.disk.ignore,
+			a.model.ActivePanel, diskusage.ListingVolumeGate{
+				Enabled:  !a.config.DiskUsage.DescendIntoMountPoints,
+				FromRoot: true,
+			})
+	}
+	if p.Cursor < p.VisibleEntryCount()-1 {
+		p.Move(1, a.activeViewportRows())
+	}
+}
+
 func (a *App) diskUsageScanBusy() bool {
 	if a.model.DiskUsage == nil {
 		return false

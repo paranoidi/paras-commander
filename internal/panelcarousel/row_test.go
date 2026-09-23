@@ -30,7 +30,7 @@ func TestCarouselHeaderAlignsWithRowText(t *testing.T) {
 	showIcons := true
 	listW := columnListTextWidth(colWidth, showIcons, 0)
 	hdr := briefHeader(listNameHeaderTitle(showIcons), "Size", listW, true, 0, "")
-	row := formatBriefRow(localfs.Entry{Name: "another", Type: localfs.EntryDirectory}, colWidth, showIcons, true, panellist.RowSuffix{}, theme.Default(), nil, 0, 0, "")
+	row := formatBriefRow(localfs.Entry{Name: "another", Type: localfs.EntryDirectory}, colWidth, showIcons, true, panellist.RowSuffix{}, theme.Default(), nil, 0, 0, "", false)
 	if len([]rune(hdr)) != listW {
 		t.Fatalf("header rune width %d, want list text width %d", len([]rune(hdr)), listW)
 	}
@@ -74,7 +74,7 @@ func TestFormatBriefRowAndHeaderWithMeta(t *testing.T) {
 	listW := columnListTextWidth(colWidth, showIcons, 0)
 
 	hdr := briefHeader(listNameHeaderTitle(showIcons), "Size", listW, true, metaW, "Status")
-	row := formatBriefRow(localfs.Entry{Name: "otter", Type: localfs.EntryFile}, colWidth, showIcons, true, panellist.RowSuffix{}, theme.Default(), nil, 0, metaW, metaText)
+	row := formatBriefRow(localfs.Entry{Name: "otter", Type: localfs.EntryFile}, colWidth, showIcons, true, panellist.RowSuffix{}, theme.Default(), nil, 0, metaW, metaText, false)
 
 	wantHdr := fmt.Sprintf("%-*s  %-*s %*s", nameWidthForColumn(colWidth, showIcons, 0, true, metaW), "Name", metaW, "Status", panellist.SizeCells, "Size")
 	if hdr != wantHdr {

@@ -89,6 +89,7 @@ const (
 	ActionBookmarkOpenOther           = "bookmark.open-other"
 	ActionPanelDiskUsageScan          = "panel.disk-usage-scan"
 	ActionPanelDiskUsageClear         = "panel.disk-usage-clear"
+	ActionPanelDirSize                = "panel.dir-size"
 	ActionPanelFocusSelections        = "panel.focus-selections"
 	ActionPanelOpenSelectionsRoot     = "panel.open-selections-root"
 	ActionPanelSelectParentDirs       = "panel.select-parent-dirs"
@@ -345,6 +346,7 @@ var KnownActions = map[string]struct{}{
 	ActionBookmarkOpenOther:           {},
 	ActionPanelDiskUsageScan:          {},
 	ActionPanelDiskUsageClear:         {},
+	ActionPanelDirSize:                {},
 	ActionPanelFocusSelections:        {},
 	ActionPanelOpenSelectionsRoot:     {},
 	ActionPanelSelectParentDirs:       {},

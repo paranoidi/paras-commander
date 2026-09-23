@@ -241,6 +241,18 @@ func TestFormatEntryDirectorySizeEmptyWithoutCache(t *testing.T) {
 	}
 }
 
+func TestFormatEntryDirectorySizePendingShowsRunningIcon(t *testing.T) {
+	const rowW = 50
+	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
+	dir := localfs.Entry{Name: "orchard", Path: "/home/u/orchard", Type: localfs.EntryDirectory}
+	styles := theme.Default()
+	got := formatEntry(dir, rowW, panelRowOpts{ListFmt: panel.ListFormatMtime, SizePending: true}, styles, nil, "")
+	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/orchard", panellist.SizeCells, styles.IconMetaRunning(), panelListModTimeCells, "")
+	if got != want {
+		t.Fatalf("full row = %q, want %q", got, want)
+	}
+}
+
 func TestRenderUsesYellowForegroundForSelectedEntry(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

@@ -139,7 +139,11 @@ func (e *Engine) workerLoop() {
 			}()
 			defer e.workerBusy.Store(false)
 
-			combined := ComposeListingVolumeIgnore(job.ignore, job.listingVolGate)
+			gate := job.listingVolGate
+			if gate.FromRoot && len(job.childAbs) == 1 {
+				gate.RefDev, gate.Valid = pathStatDevice(filepath.Clean(job.childAbs[0]))
+			}
+			combined := ComposeListingVolumeIgnore(job.ignore, gate)
 			if e.runPlannerHook != nil {
 				e.runPlannerHook(sess, job.childAbs, combined, job.sourcePanel)
 			} else {

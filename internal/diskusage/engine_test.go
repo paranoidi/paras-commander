@@ -552,3 +552,31 @@ func firstReadUnder(reads []string, root string) string {
 	}
 	return ""
 }
+
+// A FromRoot gate compares against the scan root's own device, so an explicit scan of a
+// directory on another volume than the listing (e.g. a mount point) still descends into it.
+func TestFromRootVolumeGateUsesScanRootDevice(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	child := filepath.Join(root, "lantern")
+	if err := os.Mkdir(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got := make(chan bool, 1)
+	e := New()
+	e.runPlannerHook = func(_ uint64, _ []string, ignore ShouldIgnoreFolder, _ int) {
+		got <- ignore(child)
+	}
+
+	// RefDev 0 never matches a real device: without FromRoot every child would be skipped.
+	e.StartScanFromListing([]string{root}, nil, 0, ListingVolumeGate{Enabled: true, Valid: true, FromRoot: true})
+	select {
+	case ignored := <-got:
+		if ignored {
+			t.Fatal("child on the scan root's own volume must not be ignored")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("planner not invoked")
+	}
+}

@@ -511,6 +511,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			(ctx.WorkingRowPath != "" && entry.Path == ctx.WorkingRowPath)
 		_, rowSuffix.Pinned = display.PinnedPaths[entry.Path]
 		rowOpts.Suffix = rowSuffix
+		rowOpts.SizePending = entry.Type == localfs.EntryDirectory && display.Painter != nil && display.Painter.PendingForPanel(entry.Path, ctx.PanelID)
 		text = formatEntry(entry, effTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
 		nameWidth = effNameWidth
 		listTextWidth = effTextWidth
@@ -922,6 +923,9 @@ type panelRowOpts struct {
 	ListFmt   panel.ListFormat
 	NameOnly  bool
 	ShowGit   bool
+	// SizePending is true when the row's directory size is still being calculated (queued or
+	// walking) and has no cached value yet, so the size column shows the meta.running icon.
+	SizePending bool
 }
 
 func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme.Theme, painter DiskUsagePainter, metaText string) string {
@@ -936,7 +940,11 @@ func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme
 	if opts.NameOnly {
 		return fmt.Sprintf("%-*s", width, name)
 	}
-	size := panellist.FormatListedSize(entry, painter)
+	pendingIcon := ""
+	if opts.SizePending {
+		pendingIcon = styles.IconMetaRunning()
+	}
+	size := panellist.FormatListedSize(entry, painter, pendingIcon)
 	metaPadded := padMetaLineToWidth(metaText, opts.MetaColW, false)
 	if tw == 0 {
 		return panellist.JoinRow(nameWidth, name, metaPadded, opts.ShowMeta, size, true)
