@@ -414,7 +414,10 @@ func (m *Model) inactivePanelID() int {
 // unchanged for cross-panel open indicators and for restore when quick view is turned off.
 func (m *Model) PanelForFileListRender(panelID int) panel.State {
 	if m.QuickViewDisplayActive() && m.QuickViewDirOverlayActive && panelID == m.QuickViewDirOverlayPanelID {
-		return m.QuickViewDirOverlay
+		ov := m.QuickViewDirOverlay
+		// Paint-only listing: Tab does not activate it, so there is no cursor row to show.
+		ov.Cursor = -1
+		return ov
 	}
 	switch panelID {
 	case PrimaryPanel:
