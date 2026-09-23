@@ -639,6 +639,7 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 		var wg sync.WaitGroup
 		var notifyExecFailed sync.Once
 
+	dispatch:
 		for _, cmdDef := range cmdDefs {
 			cmdDef := cmdDef
 			workers := cmdDef.Workers
@@ -658,8 +659,14 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 			sem := make(chan struct{}, workers)
 			for _, item := range items {
 				item := item
+				// Stop queueing once cancelled (navigated away / rerun) so a large backlog is
+				// dropped instead of spinning up a goroutine per remaining row.
+				select {
+				case sem <- struct{}{}:
+				case <-ctx.Done():
+					break dispatch
+				}
 				wg.Add(1)
-				sem <- struct{}{}
 				go func() {
 					defer wg.Done()
 					defer func() { <-sem }()
