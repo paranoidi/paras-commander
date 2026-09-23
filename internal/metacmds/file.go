@@ -63,7 +63,7 @@ type metaEntryRaw struct {
 	SortReverse      bool       `toml:"sort_reverse"`
 }
 
-// boolField decodes MC-style 0/1 or a TOML boolean.
+// boolField decodes a TOML boolean, tracking whether it was set.
 type boolField struct {
 	Set   bool
 	Value bool
@@ -71,18 +71,11 @@ type boolField struct {
 
 func (s *boolField) UnmarshalTOML(data interface{}) error {
 	s.Set = true
-	switch v := data.(type) {
-	case bool:
-		s.Value = v
-	case int64:
-		s.Value = v != 0
-	case uint64:
-		s.Value = v != 0
-	case float64:
-		s.Value = v != 0
-	default:
-		return fmt.Errorf("expected bool or numeric 0/1, got %T", data)
+	v, ok := data.(bool)
+	if !ok {
+		return fmt.Errorf("expected bool, got %T", data)
 	}
+	s.Value = v
 	return nil
 }
 

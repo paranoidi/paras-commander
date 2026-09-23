@@ -5,39 +5,6 @@ import (
 	"testing"
 )
 
-func TestDecodeShellPatternsIntegerMCStyle(t *testing.T) {
-	mf, err := Decode([]byte(`shell_patterns = 0
-
-[a]
-key = "a"
-title = "A"
-command = "true"
-`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if mf.ShellPatterns {
-		t.Fatalf("shell_patterns = 0: got ShellPatterns true, want false")
-	}
-	if mf.Entries[0].ShellPatterns {
-		t.Fatalf("entry should inherit file shell_patterns false")
-	}
-
-	mf, err = Decode([]byte(`shell_patterns = 1
-
-[a]
-key = "a"
-title = "A"
-command = "true"
-`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !mf.ShellPatterns {
-		t.Fatalf("shell_patterns = 1: got ShellPatterns false, want true")
-	}
-}
-
 func TestDecodeShellPatternsBool(t *testing.T) {
 	mf, err := Decode([]byte(`shell_patterns = false
 
@@ -95,7 +62,7 @@ func TestDecodeEntryInteractiveDetach(t *testing.T) {
 key = "g"
 title = "lazygit"
 command = "lazygit"
-interactive = 1
+interactive = true
 
 [open]
 key = "p"
@@ -135,7 +102,7 @@ func TestDecodeEntryBackground(t *testing.T) {
 key = "b"
 title = "Background"
 command = "true"
-background = 1
+background = true
 `))
 	if err != nil {
 		t.Fatal(err)

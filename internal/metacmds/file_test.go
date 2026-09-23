@@ -227,7 +227,7 @@ file = "stat -c '%s' %f"
 }
 
 func TestDecode_shellPatterns(t *testing.T) {
-	mf, err := metacmds.Decode([]byte(`shell_patterns = 0
+	mf, err := metacmds.Decode([]byte(`shell_patterns = false
 [[entry]]
 name = "x"
 description = "y"
