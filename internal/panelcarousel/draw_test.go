@@ -467,3 +467,43 @@ func TestDrawBodyRendersMetaInCenterColumnOnly(t *testing.T) {
 		t.Fatalf("parent row %q should not contain meta value %q", parentRow, metaVal)
 	}
 }
+
+// Switching the child between file and directory must never leave its header row unpainted
+// (the gap flickers until the async preview or listing repaints it).
+func TestChildHeaderBarPaintedWhileChildPending(t *testing.T) {
+	t.Parallel()
+	for _, kind := range []ChildPreviewKind{ChildPreviewFile, ChildPreviewDirectoryListing} {
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init: %v", err)
+		}
+		const width, height = 80, 10
+		screen.SetSize(width, height)
+		styles := theme.Default()
+		frame := geom.Rect{X: 0, Y: 0, Width: width, Height: height}
+		DrawBody(screen, BodyParams{
+			Frame: frame,
+			Center: panel.State{
+				Path:    pathloc.MustParse("/vol"),
+				Entries: []localfs.Entry{{Name: "harbor.txt", Path: "/vol/harbor.txt", Type: localfs.EntryFile}},
+			},
+			Styles:              styles,
+			FileListActive:      true,
+			HeaderStyle:         styles.PanelActiveHeader,
+			HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
+			SurfaceStyle:        styles.PanelActiveSurface,
+			ShowChildColumn:     true,
+			ChildPreviewKind:    kind, // Child left unpopulated: listing still loading.
+			Layout:              DefaultLayout(),
+		})
+		child := SplitColumns(frame, true, DefaultLayout(), [3]int{})[2]
+		_, want, _ := styles.PanelActiveHeaderCarousel.Decompose()
+		for x := child.X; x < child.X+child.Width; x++ {
+			_, st, _ := screen.Get(x, frame.Y+1)
+			if _, bg, _ := st.Decompose(); bg != want {
+				t.Fatalf("kind %d: header cell x=%d bg = %v, want %v", kind, x, bg, want)
+			}
+		}
+		screen.Fini()
+	}
+}

@@ -130,13 +130,12 @@ func drawCarouselHeader(screen tcell.Screen, hp carouselHeaderParams) {
 			if !p.ShowChildColumn {
 				continue
 			}
-			if p.ChildPreviewKind == ChildPreviewFile {
-				continue
+			// File previews and not-yet-loaded listings still get the blank header bar, so
+			// switching the child between file and directory never erases it (flicker) —
+			// the file preview paints its own title over it.
+			if p.ChildPreviewKind != ChildPreviewFile && p.Child.Populated {
+				hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize, 0, "")
 			}
-			if !p.Child.Populated {
-				continue
-			}
-			hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize, 0, "")
 		}
 		hdrStyle := p.HeaderCarouselStyle
 		if i == 1 {
