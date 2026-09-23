@@ -32,14 +32,15 @@ func (b *Backend) Scheme() pathloc.Scheme {
 	return pathloc.SchemeFile
 }
 
-// List implements fsbackend.Backend.
+// List implements fsbackend.Backend. It returns every entry, dotfiles included;
+// panel listings apply hidden/gitignore filtering through ListWithOptions.
 func (b *Backend) List(ctx context.Context, dir pathloc.Path) ([]fsbackend.Entry, error) {
 	_ = ctx
 	host, err := dir.FilePath()
 	if err != nil {
 		return nil, err
 	}
-	listing, err := localfs.ListDir(host, localfs.ListOptions{})
+	listing, err := localfs.ListDir(host, localfs.ListOptions{ShowHidden: true})
 	if err != nil {
 		return nil, err
 	}

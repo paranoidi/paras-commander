@@ -275,3 +275,39 @@ func TestValidateFlattenSourceDirectoryOnly(t *testing.T) {
 		t.Fatalf("roots = %d, want 1", len(roots))
 	}
 }
+
+func TestCollectFlattenSourcesIncludesDotfiles(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	root := filepath.Join(dir, "mike")
+	dest := filepath.Join(dir, "november")
+	if err := os.MkdirAll(filepath.Join(root, ".oscar"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".papa"), []byte("1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".oscar", "quebec.txt"), []byte("1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(dest, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	roots := []pathloc.Path{pathloc.MustParse(root)}
+	destLoc := pathloc.MustParse(dest)
+	for _, tc := range []struct {
+		recursive bool
+		want      []string
+	}{
+		{false, []string{filepath.Join(root, ".oscar"), filepath.Join(root, ".papa")}},
+		{true, []string{filepath.Join(root, ".oscar", "quebec.txt"), filepath.Join(root, ".papa")}},
+	} {
+		got, err := CollectFlattenSources(context.Background(), roots, destLoc, tc.recursive)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(got, tc.want) {
+			t.Fatalf("recursive=%v: sources = %v, want %v", tc.recursive, got, tc.want)
+		}
+	}
+}
