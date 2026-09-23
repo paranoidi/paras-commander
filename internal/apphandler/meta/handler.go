@@ -79,7 +79,7 @@ func (h *Handler) HandleExecFailed(d ExecFailedPayload) {
 	if d.Gen != h.runGen[d.PanelID] {
 		return
 	}
-	const urgency = ui.MessageUrgencyCritical
+	const urgency = ui.MessageUrgencyWarn
 	banner := "meta: command failed to execute"
 
 	wrapCols := h.host.MessageLogWrapCols()
