@@ -629,6 +629,86 @@ func TestActivateSelection_sortOnActivation(t *testing.T) {
 	}
 }
 
+// TestRunForPanel_fullyCachedRunSignalsResolvedWithoutWake covers a run that dispatches nothing
+// for the sorted column (every entry already cached): runForPanel must signal
+// NoteMetaColumnResolved itself, since no command runs and so no WakePayload ever arrives to
+// trigger HandleRenderFlush's own check.
+func TestRunForPanel_fullyCachedRunSignalsResolvedWithoutWake(t *testing.T) {
+	dir := t.TempDir()
+	orchard := filepath.Join(dir, "orchard.txt")
+	lantern := filepath.Join(dir, "lantern.txt")
+	entries := []localfs.Entry{
+		{Name: "orchard.txt", Path: orchard, Type: localfs.EntryFile},
+		{Name: "lantern.txt", Path: lantern, Type: localfs.EntryFile},
+	}
+	p := testPanel(t, dir, entries)
+	p.Sort = panel.SortState{Mode: panel.SortMeta, MetaColumn: "wordcount"}
+
+	fh := &fakeHost{panels: [2]*panel.State{p}}
+	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
+	h.cache = map[string]map[string]string{
+		"wordcount": {orchard: "3", lantern: "5"},
+	}
+
+	cmdDef := metacmds.MetaEntry{Name: "wordcount", File: "wc -w %f", Cache: true}
+	cols := []ui.MetaColumnState{{EntryName: "wordcount", ColumnTitle: "wordcount"}}
+	h.runForPanel(0, []metacmds.MetaEntry{cmdDef}, cols)
+
+	if len(fh.resolvedCalls) != 1 || fh.resolvedCalls[0] != 0 {
+		t.Fatalf("resolvedCalls = %v, want [0] since every entry was already cached", fh.resolvedCalls)
+	}
+	if got := h.model.MetaResults[0][0].PendingCount; got != 0 {
+		t.Fatalf("PendingCount = %d, want 0 (nothing dispatched)", got)
+	}
+}
+
+// TestHandlePanelDirChanged_cancelsStaleRunAndRejectsOldWakes covers a directory change while a
+// meta run is in flight: HandlePanelDirChanged must cancel the old run and bump its generation so
+// a WakePayload carrying the old generation is dropped instead of writing into the new
+// directory's (not-yet-resolved) column, and ColumnResolved reports false in the meantime.
+func TestHandlePanelDirChanged_cancelsStaleRunAndRejectsOldWakes(t *testing.T) {
+	dir := t.TempDir()
+	other := t.TempDir()
+
+	p := testPanel(t, dir, nil)
+	p.Sort = panel.SortState{Mode: panel.SortMeta, MetaColumn: "info"}
+
+	fh := &fakeHost{panels: [2]*panel.State{p}}
+	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
+	h.activeEntries[0] = []string{"info"}
+	h.navPath[0] = filepath.Clean(dir)
+	h.model.MetaResults[0] = []ui.MetaColumnState{
+		{EntryName: "info", Pending: "*", PendingCount: 1, Results: map[string]string{"/old": "*"}},
+	}
+	h.runGen[0] = 1
+	cancelled := false
+	h.cancel[0] = func() { cancelled = true }
+
+	p.Path = testPanel(t, other, nil).Path
+
+	h.HandlePanelDirChanged(0)
+
+	if !cancelled {
+		t.Fatal("expected the in-flight run to be cancelled")
+	}
+	if h.cancel[0] != nil {
+		t.Fatal("expected cancel to be cleared after HandlePanelDirChanged")
+	}
+	if h.ColumnResolved(0) {
+		t.Fatal("ColumnResolved = true right after a directory change, want false")
+	}
+
+	staleGen := uint64(1)
+	if h.runGen[0] == staleGen {
+		t.Fatalf("runGen = %d, want it bumped past the stale generation", h.runGen[0])
+	}
+	h.HandleWake(WakePayload{PanelID: 0, EntryName: "info", Path: "/old", Value: "done", Gen: staleGen})
+	h.HandleRenderFlush() // stops the debounce timer HandleWake armed; h.screen is nil in this test
+	if got := h.model.MetaResults[0][0].Results["/old"]; got != "*" {
+		t.Fatalf("stale-gen wake modified results: got %q, want unchanged %q", got, "*")
+	}
+}
+
 func TestEntryCmd_whenFiltersDirRows(t *testing.T) {
 	cmdDef := metacmds.MetaEntry{
 		Name: "films",

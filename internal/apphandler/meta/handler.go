@@ -458,6 +458,11 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 		return
 	}
 	h.navPath[panelID] = cur
+	if h.cancel[panelID] != nil {
+		h.cancel[panelID]()
+		h.cancel[panelID] = nil
+	}
+	h.runGen[panelID]++
 	h.startAsyncLoad(panelID, h.activeEntries[panelID])
 }
 
@@ -539,12 +544,17 @@ func (h *Handler) refreshMetaPatternFilters() {
 }
 
 // ColumnResolved reports whether panelID currently sorts by a meta column (Sort.Mode ==
-// SortMeta) whose command has finished for every dispatched entry (PendingCount == 0). Used both
-// when this handler signals a column just finished (HandleRenderFlush) and by the App-side idle
-// re-sort scheduler re-arming its timer on user activity (deferMetaIdleSortOnUserActivity), so it
-// can recheck without waiting for another wake event. O(1): PendingCount is kept in sync by
-// runForPanel/applyWakeResult rather than scanning Results here.
+// SortMeta) whose command has finished for every dispatched entry (PendingCount == 0), and no
+// meta.toml reload is pending for the panel (a pending reload can still replace the active
+// columns, so it never counts as resolved). Used both when this handler signals a column just
+// finished (HandleRenderFlush) and by the App-side idle re-sort scheduler re-arming its timer on
+// user activity (deferMetaIdleSortOnUserActivity), so it can recheck without waiting for another
+// wake event. O(1): PendingCount is kept in sync by runForPanel/applyWakeResult rather than
+// scanning Results here.
 func (h *Handler) ColumnResolved(panelID int) bool {
+	if h.loadPending[panelID] {
+		return false
+	}
 	p := h.host.PanelByID(panelID)
 	if p == nil || p.Sort.Mode != panel.SortMeta || p.Sort.MetaColumn == "" {
 		return false
@@ -617,6 +627,13 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 	}
 
 	h.model.MetaResults[panelID] = cols
+
+	// A run that dispatches nothing for the sorted column (every entry cached or filtered out
+	// by `when`) never posts a wake, so HandleWake/HandleRenderFlush never get a chance to
+	// signal resolution — check it here too.
+	if h.ColumnResolved(panelID) {
+		h.host.NoteMetaColumnResolved(panelID)
+	}
 
 	go func() {
 		var wg sync.WaitGroup

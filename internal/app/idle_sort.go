@@ -60,8 +60,10 @@ func (a *App) idleSortArm(s idleSortSpec, panelID int) {
 	epochSnap := ps.epoch
 	kind := s.kind
 	pid := panelID
+	// ponytail: don't clear ps.timer here — this callback runs on the timer goroutine while
+	// the event loop reads/writes ps.timer, and a Stop() on an already-fired timer is a
+	// harmless no-op. The epoch check in idleSortApplyPayload discards stale payloads instead.
 	ps.timer = time.AfterFunc(delay, func() {
-		ps.timer = nil
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(idleSortPayload{Kind: kind, PanelID: pid, Epoch: epochSnap}))
 	})
 }
