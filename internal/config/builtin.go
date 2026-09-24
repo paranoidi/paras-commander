@@ -309,9 +309,9 @@ const (
 	MinCarouselFilePreviewColumnWidth = 32
 
 	// DefaultCarouselSplit is the default carousel column width spec (parent | center | child).
-	// Parent uses "<<33%" (fit with outlier ignore); center uses plain "<33%" fit.
-	DefaultCarouselSplit0 = "<<33%"
-	DefaultCarouselSplit1 = "<33%"
+	// Parent uses "<<22%" (fit with outlier ignore); center uses plain "<44%" fit.
+	DefaultCarouselSplit0 = "<<22%"
+	DefaultCarouselSplit1 = "<44%"
 	DefaultCarouselSplit2 = "*"
 
 	// DefaultCarouselAutohideInactivePanel hides the inactive twin panel while the active
