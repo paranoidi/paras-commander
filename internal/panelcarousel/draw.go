@@ -199,9 +199,20 @@ func drawCarouselColumn(cp carouselColumnParams) {
 			continue
 		}
 		entry, selState, entryIndex, isCursor, selected, style := ce.Entry, ce.SelState, ce.EntryIndex, ce.IsCursor, ce.Selected, ce.Style
+		showSize := p.Layout.ShowSize[colIdx]
+		metaW, metaText := 0, ""
+		if colIdx == 1 && p.Meta.Width > 0 {
+			metaW = p.Meta.Width
+			if p.Meta.Row != nil {
+				metaText = p.Meta.Row(entry.Path)
+			}
+		}
+		listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
+		nameColOffset := listStart - col.X
+		nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve, showSize, metaW)
 		fillCols := 0
 		if !p.ChromeBlocked && diskDenom > 0 {
-			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, p.DiskUsage.Source), diskDenom, col.Width)
+			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, p.DiskUsage.Source), diskDenom, nameColOffset+nameWidth)
 		}
 		blendCell := func(absCol int) tcell.Style {
 			if fillCols > 0 && absCol >= 0 && absCol < fillCols {
@@ -228,19 +239,8 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		if p.DiskUsage.Active {
 			diskSrc = p.DiskUsage.Source
 		}
-		showSize := p.Layout.ShowSize[colIdx]
-		metaW, metaText := 0, ""
-		if colIdx == 1 && p.Meta.Width > 0 {
-			metaW = p.Meta.Width
-			if p.Meta.Row != nil {
-				metaText = p.Meta.Row(entry.Path)
-			}
-		}
 		sizePending := diskSrc != nil && entry.Type == localfs.EntryDirectory && diskSrc.PendingForPanel(entry.Path, p.DiskUsage.PanelID)
 		text := formatBriefRow(entry, col.Width, p.ShowIcons, showSize, rowSuffix, p.Styles, diskSrc, reserve, metaW, metaText, sizePending)
-		listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
-		nameColOffset := listStart - col.X
-		nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve, showSize, metaW)
 		var spans []primitive.Span
 		if c.Active && (p.Center.Filter.Active || p.Center.Filter.Editing) {
 			spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, showSize, rowSuffix, reserve, metaW, func(di int) tcell.Style {

@@ -391,6 +391,89 @@ func TestFitModeColumnHeaderNeverTruncatesWithShortNames(t *testing.T) {
 	}
 }
 
+// fakeDiskUsageSource reports a fixed byte size for one path; everything else reads as unknown.
+type fakeDiskUsageSource struct {
+	sizes map[string]int64
+}
+
+func (f fakeDiskUsageSource) ByteSize(absPath string) (int64, bool) {
+	n, ok := f.sizes[absPath]
+	return n, ok
+}
+
+func (fakeDiskUsageSource) PendingForPanel(string, int) bool { return false }
+func (fakeDiskUsageSource) IsKnownExcluded(string) bool      { return false }
+
+// TestDiskUsageBarStopsBeforeSizeColumn is the carousel-view regression companion to
+// internal/ui's panel_render.go fix (commit d6ed200d): the disk-usage bar must be scaled
+// against the name column only, never the size column, or it paints its background over the
+// size text.
+func TestDiskUsageBarStopsBeforeSizeColumn(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	const width, height = 80, 10
+	screen.SetSize(width, height)
+	styles := theme.Default()
+
+	const dirPath = "/vol/parsnip"
+	center := panel.State{
+		Path:    pathloc.MustParse("/vol"),
+		Entries: []localfs.Entry{{Name: "parsnip", Path: dirPath, Type: localfs.EntryDirectory}},
+	}
+	frame := geom.Rect{X: 0, Y: 0, Width: width, Height: height}
+	layout := DefaultLayout()
+
+	DrawBody(screen, BodyParams{
+		Frame:               frame,
+		Center:              center,
+		Styles:              styles,
+		FileListActive:      true,
+		ShowIcons:           false,
+		HeaderStyle:         styles.PanelActiveHeader,
+		HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
+		SurfaceStyle:        styles.PanelActiveSurface,
+		Layout:              layout,
+		DiskUsage: DiskUsage{
+			Active: true,
+			Source: fakeDiskUsageSource{sizes: map[string]int64{dirPath: 1000}}, // sole entry: 100% of denom
+		},
+	})
+
+	cols := SplitColumns(frame, false, layout, [3]int{})
+	col := cols[1]
+	rowY := col.Y
+	listStart, _ := columnListContentOrigin(col.X, col.Width, false, 0)
+	nameColOffset := listStart - col.X
+	nameWidth := nameWidthForColumn(col.Width, false, 0, layout.ShowSize[1], 0)
+	boundary := col.X + nameColOffset + nameWidth
+
+	// Sole entry sits at cursor (index 0, default Cursor 0).
+	_, barBG, _ := styles.DiskUsageBarStyle(true, true, false).Decompose()
+
+	beforeFound := false
+	for x := col.X; x < boundary; x++ {
+		_, st, _ := screen.Get(x, rowY)
+		if _, bg, _ := st.Decompose(); bg == barBG {
+			beforeFound = true
+			break
+		}
+	}
+	if !beforeFound {
+		t.Fatal("expected at least one cell before the size column to carry the disk-usage bar background")
+	}
+
+	for x := boundary; x < col.X+col.Width; x++ {
+		_, st, _ := screen.Get(x, rowY)
+		if _, bg, _ := st.Decompose(); bg == barBG {
+			t.Fatalf("cell x=%d at/after size column (boundary=%d) carries the disk-usage bar background, want it capped at the name column", x, boundary)
+		}
+	}
+}
+
 // rowText reads one screen row into a string over [x, x+w).
 func rowText(screen tcell.Screen, x, y, w int) string {
 	var sb []rune
