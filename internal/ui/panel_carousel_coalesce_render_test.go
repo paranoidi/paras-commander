@@ -174,3 +174,69 @@ func TestDrawCarouselFilePreviewDuringQuickFilter(t *testing.T) {
 		t.Fatal("carousel child preview body not painted while quick filter is active")
 	}
 }
+
+// Regression: while a carousel nav-coalesce debounce is pending (state.CarouselChildPreviewCoalesce),
+// an already-open file preview must keep covering the child column even though the cursor now sits
+// on a directory — otherwise the child column flips to a directory listing mid key-repeat instead of
+// waiting for the debounce flush to settle it.
+func TestDrawCarouselFilePreviewDuringNavCoalesce(t *testing.T) {
+	root := t.TempDir()
+	cedarwood := filepath.Join(root, "cedarwood")
+	if err := os.Mkdir(cedarwood, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(cedarwood, "birch"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	state, err := panel.New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.CarouselMode = true
+	if !state.SelectVisibleEntry("cedarwood") {
+		t.Fatal("cedarwood not found")
+	}
+	// Cursor is on a directory with a subdirectory (so the child column would otherwise become a
+	// directory listing), but a nav-coalesce debounce is pending.
+	state.CarouselChildPreviewCoalesce = true
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	const width, height = 100, 20
+	screen.SetSize(width, height)
+
+	rect := Rect{X: 0, Y: 1, Width: width, Height: height - 3}
+	styles := theme.Default()
+	preview := FilePreviewState{
+		Open:         true,
+		Phase:        FilePreviewPhaseDone,
+		TitleBase:    "amber.txt",
+		Path:         filepath.Join(root, "amber.txt"),
+		CombinedText: "zephyr wind\n",
+	}
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: styles},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SelectionsBottomHint: true},
+		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout(), CarouselFilePreview: preview})
+
+	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout(), [3]int{})
+	childCol := cols[2]
+	found := false
+	for y := childCol.Y; y < childCol.Y+childCol.Height; y++ {
+		for x := childCol.X; x < childCol.X+childCol.Width; x++ {
+			ch, _, _ := screen.Get(x, y)
+			r, _ := utf8.DecodeRuneInString(ch)
+			if r == 'z' {
+				found = true
+				break
+			}
+		}
+	}
+	if !found {
+		t.Fatal("carousel child preview body not painted during pending nav coalesce onto a directory")
+	}
+}

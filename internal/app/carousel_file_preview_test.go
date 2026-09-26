@@ -257,6 +257,67 @@ func TestReconcileCarouselFilePreviewShowsTitleImmediatelyFromDirectory(t *testi
 	t.Fatal("carousel file preview never completed after debounce flush")
 }
 
+// Regression: holding Up from a text file onto a directory must not swap the child column from
+// the file preview to a directory listing mid key-repeat — it must wait for the nav debounce.
+func TestReconcileCarouselFilePreviewPreservesOpenDuringNavCoalesce(t *testing.T) {
+	root := t.TempDir()
+	brook := filepath.Join(root, "brook.txt")
+	if err := os.WriteFile(brook, []byte("river delta\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cedar := filepath.Join(root, "cedar")
+	if err := os.Mkdir(cedar, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(cedar, "maple"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 200, 30)
+	app := newApp(t, screen, root)
+	app.config.UI.KeyRepeatDebounceMS = 10000 // large enough the timer never fires in this test
+	app.model.HideInactivePanel = true
+	app.model.Primary.CarouselMode = true
+	if !app.model.Primary.SelectVisibleEntry("brook.txt") {
+		t.Fatal("brook.txt not found")
+	}
+	app.previewCtrl.ReconcileCarouselFilePreview()
+	app.commandsMu.Lock()
+	app.model.CarouselFilePreview.Open = true
+	app.model.CarouselFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.CarouselFilePreview.Path = brook
+	app.model.CarouselFilePreview.CombinedText = "river delta\n"
+	app.commandsMu.Unlock()
+
+	// Move onto the directory the way list navigation does (Up/Down key-repeat): arms nav coalesce.
+	app.doListNav(func() {
+		if !app.model.Primary.SelectVisibleEntry("cedar") {
+			t.Fatal("cedar not found")
+		}
+	})
+	if !app.previewCtrl.CarouselPreviewNavSkipSnapshot() {
+		t.Fatal("carouselPreviewNavSkipSnapshot not set; nav coalesce was not armed")
+	}
+
+	// While the debounce is pending, the file preview must be preserved, not closed mid-repeat.
+	app.previewCtrl.ReconcileCarouselFilePreview()
+	app.commandsMu.RLock()
+	openDuringCoalesce := app.model.CarouselFilePreview.Open
+	app.commandsMu.RUnlock()
+	if !openDuringCoalesce {
+		t.Fatal("CarouselFilePreview.Open = false during nav coalesce, want preserved until debounce flush")
+	}
+
+	// Flushing the debounce settles the child column onto the directory listing.
+	app.previewCtrl.FlushCarouselPreviewNow()
+	app.previewCtrl.ReconcileCarouselFilePreview()
+	app.commandsMu.RLock()
+	openAfterFlush := app.model.CarouselFilePreview.Open
+	app.commandsMu.RUnlock()
+	if openAfterFlush {
+		t.Fatal("CarouselFilePreview.Open = true after debounce flush onto directory, want closed")
+	}
+}
+
 func TestCarouselPreviewPageScrollWithCtrlJK(t *testing.T) {
 	root := t.TempDir()
 	scroll := filepath.Join(root, "scroll.txt")

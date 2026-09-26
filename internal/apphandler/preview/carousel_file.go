@@ -322,6 +322,12 @@ func (h *Handler) ReconcileCarouselFilePreview() {
 			// Preserve existing preview while user navigates with a filter active.
 			return
 		}
+		if h.carouselPreviewNavSkipSnapshot.Load() {
+			// Nav coalesce pending: keep the file preview until the debounce flush, same as
+			// quick view — otherwise holding a repeat key from a file onto a directory swaps
+			// the child column mid key-repeat instead of waiting for the debounce.
+			return
+		}
 		h.mu.RLock()
 		open := h.model.CarouselFilePreview.Open
 		h.mu.RUnlock()

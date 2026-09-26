@@ -759,7 +759,10 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 	})
 	paintCarouselFilePreview := display.CarouselFilePreview.Open && showChildCol &&
 		(childKind == panelcarousel.ChildPreviewFile ||
-			ctx.FileListActive && (state.Filter.Active || state.Filter.Editing))
+			ctx.FileListActive && (state.Filter.Active || state.Filter.Editing) ||
+			// Nav coalesce pending: keep the open file preview covering the child column
+			// until the debounce flush decides whether the child becomes a directory listing.
+			state.CarouselChildPreviewCoalesce)
 	if paintCarouselFilePreview {
 		if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol, display.CarouselLayout, measuredFitWidth); ok {
 			// The child preview's own rect stops one column short of the panel's real
