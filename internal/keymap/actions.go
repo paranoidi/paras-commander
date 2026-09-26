@@ -168,16 +168,16 @@ const (
 	ActionFileHardlink                 = "file.hardlink"
 	ActionFileExtract                  = "file.extract"
 	ActionFileView                     = "file.view"
-	ActionFileViewMenu                 = "file.view.menu"
-	ActionFileViewThemePicker          = "file.view.theme-picker"
-	ActionFileViewToggleRaw            = "file.view.toggle-raw"
-	ActionFileViewReload               = "file.view.reload"
-	ActionFileViewDiffNextHunk         = "file.view.diff-next-hunk"
-	ActionFileViewDiffPrevHunk         = "file.view.diff-prev-hunk"
-	ActionFileViewSearchStart          = "file.view.search-start"
-	ActionFileViewSearchNext           = "file.view.search-next"
-	ActionFileViewSearchPrev           = "file.view.search-prev"
-	ActionFileViewClose                = "file.view.close"
+	ActionPreviewMenu                  = "preview.menu"
+	ActionPreviewThemePicker           = "preview.theme-picker"
+	ActionPreviewToggleRaw             = "preview.toggle-raw"
+	ActionPreviewReload                = "preview.reload"
+	ActionPreviewDiffNextHunk          = "preview.diff-next-hunk"
+	ActionPreviewDiffPrevHunk          = "preview.diff-prev-hunk"
+	ActionPreviewSearchStart           = "preview.search-start"
+	ActionPreviewSearchNext            = "preview.search-next"
+	ActionPreviewSearchPrev            = "preview.search-prev"
+	ActionPreviewClose                 = "preview.close"
 	ActionFileQuickView                = "file.quick-view"
 	ActionFileQuickViewPreviewPageUp   = "file.quick-view.preview-page-up"
 	ActionFileQuickViewPreviewPageDown = "file.quick-view.preview-page-down"
@@ -413,16 +413,16 @@ var KnownActions = map[string]struct{}{
 	ActionFileHardlink:                 {},
 	ActionFileExtract:                  {},
 	ActionFileView:                     {},
-	ActionFileViewMenu:                 {},
-	ActionFileViewThemePicker:          {},
-	ActionFileViewToggleRaw:            {},
-	ActionFileViewReload:               {},
-	ActionFileViewDiffNextHunk:         {},
-	ActionFileViewDiffPrevHunk:         {},
-	ActionFileViewSearchStart:          {},
-	ActionFileViewSearchNext:           {},
-	ActionFileViewSearchPrev:           {},
-	ActionFileViewClose:                {},
+	ActionPreviewMenu:                  {},
+	ActionPreviewThemePicker:           {},
+	ActionPreviewToggleRaw:             {},
+	ActionPreviewReload:                {},
+	ActionPreviewDiffNextHunk:          {},
+	ActionPreviewDiffPrevHunk:          {},
+	ActionPreviewSearchStart:           {},
+	ActionPreviewSearchNext:            {},
+	ActionPreviewSearchPrev:            {},
+	ActionPreviewClose:                 {},
 	ActionFileQuickView:                {},
 	ActionFileQuickViewPreviewPageUp:   {},
 	ActionFileQuickViewPreviewPageDown: {},

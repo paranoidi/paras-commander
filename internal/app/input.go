@@ -712,7 +712,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 			a.render()
 			return false, true
 		}
-		if resolvedAction == keymap.ActionFileViewMenu && a.previewLeaderMenuOpen() {
+		if resolvedAction == keymap.ActionPreviewMenu && a.previewLeaderMenuOpen() {
 			a.closeLeaderMenu()
 			a.render()
 			return false, true

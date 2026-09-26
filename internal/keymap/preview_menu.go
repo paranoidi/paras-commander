@@ -6,12 +6,12 @@ import (
 )
 
 var previewMenuActionOrder = []string{
-	ActionFileViewThemePicker,
-	ActionFileViewToggleRaw,
-	ActionFileViewReload,
-	ActionFileViewSearchStart,
-	ActionFileViewDiffNextHunk,
-	ActionFileViewDiffPrevHunk,
+	ActionPreviewThemePicker,
+	ActionPreviewToggleRaw,
+	ActionPreviewReload,
+	ActionPreviewSearchStart,
+	ActionPreviewDiffNextHunk,
+	ActionPreviewDiffPrevHunk,
 	ActionFileEdit,
 	ActionFileDelete,
 	ActionAppQuit,

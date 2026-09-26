@@ -50,7 +50,7 @@ With `image_protocol = "auto"`:
   this; other terminals (WezTerm included) are trusted only once confirmed via
   `terminal_kitty_placeholder` (see next section). Whenever a capability is still
   unconfirmed and detection can't settle it either, a hint appears at the bottom-left
-  of the file preview panel's border — press **M-F3** to open the Preview settings dialog and confirm it.
+  of the preview panel's border — press **M-F3** to open the Preview settings dialog and confirm it.
 
 ## Required tmux configuration
 
@@ -113,7 +113,7 @@ guarantee for "WezTerm" as a name, and `#{client_termtype}` can't tell a
 placeholder-capable build from an older/stock one that will only render garbage
 diacritic glyphs if placeholder mode is forced on it. So Paras Commander does **not**
 assume WezTerm (or any terminal beyond Kitty/Ghostty) supports placeholders by default.
-While unconfirmed, an "M-F3" hint appears at the bottom-left of the file preview panel's
+While unconfirmed, an "M-F3" hint appears at the bottom-left of the preview panel's
 border (plain border color, no highlight) whenever an image preview is shown; confirm it
 explicitly once you've verified your attached build actually supports it:
 

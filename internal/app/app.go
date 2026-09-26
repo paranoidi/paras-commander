@@ -802,7 +802,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.BookmarkDialog, keymap.DefaultBookmarkDialogOverlayKeys, "bookmark dialog overlay"},
 		{&rk.FindDialog, keymap.DefaultFindDialogOverlayKeys, "find dialog overlay"},
 		{&rk.HistoryDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
-		{&rk.FilePreview, keymap.DefaultFilePreviewOverlayKeys, "file preview overlay"},
+		{&rk.FilePreview, keymap.DefaultFilePreviewOverlayKeys, "preview overlay"},
 		{&rk.FlattenDialog, keymap.DefaultFlattenDialogOverlayKeys, "flatten dialog overlay"},
 		{&rk.TransferDialog, keymap.DefaultTransferDialogOverlayKeys, "transfer dialog overlay"},
 		{&rk.Compare, keymap.DefaultCompareOverlayKeys, "compare overlay"},

@@ -13,14 +13,14 @@ func TestFilePreviewOverlayMapsF9ToThemePicker(t *testing.T) {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
 	id, ok := bundle.FilePreview.Lookup(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
-	if !ok || id != keymap.ActionFileViewThemePicker {
-		t.Fatalf("FilePreview.Lookup(F9) = %q %v, want %s", id, ok, keymap.ActionFileViewThemePicker)
+	if !ok || id != keymap.ActionPreviewThemePicker {
+		t.Fatalf("FilePreview.Lookup(F9) = %q %v, want %s", id, ok, keymap.ActionPreviewThemePicker)
 	}
 }
 
 func TestFilePreviewThemePickerFooterWhileOpen(t *testing.T) {
 	app, _ := newFilePreviewThemePickerTestApp(t)
-	app.previewCtrl.TryDispatchFileView(keymap.ActionFileViewThemePicker)
+	app.previewCtrl.TryDispatchFileView(keymap.ActionPreviewThemePicker)
 	keys := app.activeFooterKeys()
 	if len(keys) != 3 {
 		t.Fatalf("footer len = %d, want Esc Close + Enter Save + F10 Quit", len(keys))

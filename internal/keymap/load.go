@@ -222,7 +222,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 				}
 			}
 		default:
-			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, leader_key, copy_menu, preview_menu, jobs, commands, messages, file_preview, compare, dedup, terminal, dialog)", label, k)
+			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, leader_key, copy_menu, preview_menu, jobs, commands, messages, preview, compare, dedup, terminal, dialog)", label, k)
 		}
 	}
 	return nil
@@ -329,7 +329,7 @@ func EncodeDefaultStub(w io.Writer) error {
 	header := "# Global shortcuts under [main]. Each value is a list of\n" +
 		"# chord strings (single-stroke). See docs/keybindings.md for syntax.\n" +
 		"#\n" +
-		"# View overlays ([jobs], [commands], [messages], [file_preview], [terminal]) take precedence over\n" +
+		"# View overlays ([jobs], [commands], [messages], [preview], [terminal]) take precedence over\n" +
 		"# [main] while that view is focused.\n" +
 		"# Dialog overlays ([dialog.input], [dialog.rename], …) apply only while\n" +
 		"# the matching dialog context is focused.\n" +
@@ -342,7 +342,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		"# [leader_key] — Esc function-menu keys (case-sensitive: f and F may differ; ?, comma, period allowed; empty omits).\n" +
 		"# [copy_menu] — `\"` copy-menu keys (letters only; empty omits).\n" +
 		"# [preview_menu] — `:` fullscreen-preview-menu keys (letters only; empty omits;\n" +
-		"# applies only while the F3 fullscreen file view is focused).\n\n"
+		"# applies only while the F3 fullscreen preview is focused).\n\n"
 	if _, err := io.WriteString(w, header); err != nil {
 		return fmt.Errorf("encode keybindings stub header: %w", err)
 	}
@@ -354,7 +354,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		Jobs        map[string][]string `toml:"jobs"`
 		Commands    map[string][]string `toml:"commands"`
 		Messages    map[string][]string `toml:"messages"`
-		FilePreview map[string][]string `toml:"file_preview"`
+		FilePreview map[string][]string `toml:"preview"`
 		Compare     map[string][]string `toml:"compare"`
 		Dedup       map[string][]string `toml:"dedup"`
 		Terminal    map[string][]string `toml:"terminal"`

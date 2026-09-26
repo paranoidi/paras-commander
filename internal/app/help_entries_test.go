@@ -139,9 +139,9 @@ func TestPreviewHelpUsesPreviewSectionAndExcludesBrowserActions(t *testing.T) {
 		byID[e.ActionID] = e
 	}
 	for _, id := range []string{
-		keymap.ActionFileViewThemePicker,
-		keymap.ActionFileViewToggleRaw,
-		keymap.ActionFileViewSearchStart,
+		keymap.ActionPreviewThemePicker,
+		keymap.ActionPreviewToggleRaw,
+		keymap.ActionPreviewSearchStart,
 		keymap.ActionFileEdit,
 		keymap.ActionFileQuickViewPreviewPageUp,
 	} {

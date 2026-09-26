@@ -47,8 +47,8 @@ func TestColonOpensPreviewMenuOnlyInFilePreview(t *testing.T) {
 
 	// Fullscreen preview: ':' resolves to the preview menu instead.
 	openFullscreenPreviewForMenuTest(t, app, path, "hello\n")
-	if id := app.actionFromKeyEvent(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone)); id != keymap.ActionFileViewMenu {
-		t.Fatalf("preview ':' resolves to %q, want %q", id, keymap.ActionFileViewMenu)
+	if id := app.actionFromKeyEvent(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone)); id != keymap.ActionPreviewMenu {
+		t.Fatalf("preview ':' resolves to %q, want %q", id, keymap.ActionPreviewMenu)
 	}
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
 	if !app.model.LeaderMenu.Open || !app.model.LeaderMenu.PreviewMenu {

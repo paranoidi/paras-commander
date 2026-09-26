@@ -23,8 +23,8 @@ var ErrFilePreviewIsDir = errors.New("is a directory")
 // ErrFilePreviewImage indicates the path is an image extension eligible for sixel preview.
 var ErrFilePreviewImage = errors.New("image file")
 
-// ErrFilePreviewMedia indicates the path is a video/audio extension eligible for media preview.
-var ErrFilePreviewMedia = errors.New("media file")
+// ErrFilePreviewAudioVideo indicates the path is a video/audio extension eligible for media preview.
+var ErrFilePreviewAudioVideo = errors.New("media file")
 
 // ErrFilePreviewArchive indicates the path is a listable archive (tar/zip/rar/7z, not a
 // single-stream compressor) eligible for a path-listing preview instead of a text/binary sniff.
@@ -66,9 +66,9 @@ func IsVideoPath(path string) bool {
 	}
 }
 
-// IsMediaPath reports whether path has a supported video/audio extension (case-insensitive).
-// Single source of truth for media preview eligibility by name.
-func IsMediaPath(path string) bool {
+// IsAudioVideoPath reports whether path has a supported video/audio extension (case-insensitive).
+// Single source of truth for video/audio preview eligibility by name.
+func IsAudioVideoPath(path string) bool {
 	if IsVideoPath(path) {
 		return true
 	}
@@ -85,7 +85,7 @@ func IsMediaPath(path string) bool {
 // detection). Non-UTF-8 text (e.g. legacy DOS/Windows codepages) is still previewable —
 // internal/preview's decodeSource transcodes it via a Windows-1252 fallback at render time.
 // Image paths return ErrFilePreviewImage without opening the file.
-// Media paths return ErrFilePreviewMedia without opening the file.
+// Video/audio paths return ErrFilePreviewAudioVideo without opening the file.
 // Listable archive paths return ErrFilePreviewArchive without opening the file.
 func CheckFilePreviewable(path string) error {
 	fi, err := os.Stat(path)
@@ -98,8 +98,8 @@ func CheckFilePreviewable(path string) error {
 	if IsImagePath(path) {
 		return ErrFilePreviewImage
 	}
-	if IsMediaPath(path) {
-		return ErrFilePreviewMedia
+	if IsAudioVideoPath(path) {
+		return ErrFilePreviewAudioVideo
 	}
 	if archive.ListableName(path) {
 		return ErrFilePreviewArchive
@@ -123,8 +123,9 @@ func CheckFilePreviewable(path string) error {
 	return nil
 }
 
-// IsGraphicalPreviewPath reports whether path is previewed through the terminal graphics path
-// (sixel/Kitty) rather than as text. Single source of truth for that branch.
-func IsGraphicalPreviewPath(path string) bool {
-	return IsImagePath(path) || IsMediaPath(path)
+// IsMediaPath reports whether path is an image or video/audio file: previewed through the
+// terminal graphics path (sixel/Kitty) rather than as text, and gated by the slower media
+// preview debounce. Single source of truth for that check.
+func IsMediaPath(path string) bool {
+	return IsImagePath(path) || IsAudioVideoPath(path)
 }

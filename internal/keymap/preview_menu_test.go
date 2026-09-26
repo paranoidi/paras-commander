@@ -11,15 +11,15 @@ func TestDefaultPreviewMenuKeysUnique(t *testing.T) {
 func TestDefaultPreviewMenuKeysLetters(t *testing.T) {
 	keys := DefaultPreviewMenuKeys()
 	want := map[string]string{
-		ActionFileViewThemePicker:  "t",
-		ActionFileViewToggleRaw:    "r",
-		ActionFileViewReload:       "R",
-		ActionFileViewSearchStart:  "s",
-		ActionFileViewDiffNextHunk: "n",
-		ActionFileViewDiffPrevHunk: "p",
-		ActionFileEdit:             "e",
-		ActionFileDelete:           "d",
-		ActionAppQuit:              "q",
+		ActionPreviewThemePicker:  "t",
+		ActionPreviewToggleRaw:    "r",
+		ActionPreviewReload:       "R",
+		ActionPreviewSearchStart:  "s",
+		ActionPreviewDiffNextHunk: "n",
+		ActionPreviewDiffPrevHunk: "p",
+		ActionFileEdit:            "e",
+		ActionFileDelete:          "d",
+		ActionAppQuit:             "q",
 	}
 	for action, key := range want {
 		if got := keys[action]; got != key {
@@ -37,12 +37,12 @@ func TestBuildPreviewMenuEntriesOrder(t *testing.T) {
 		t.Fatalf("len = %d, want 9", len(entries))
 	}
 	want := []string{
-		ActionFileViewThemePicker,
-		ActionFileViewToggleRaw,
-		ActionFileViewReload,
-		ActionFileViewSearchStart,
-		ActionFileViewDiffNextHunk,
-		ActionFileViewDiffPrevHunk,
+		ActionPreviewThemePicker,
+		ActionPreviewToggleRaw,
+		ActionPreviewReload,
+		ActionPreviewSearchStart,
+		ActionPreviewDiffNextHunk,
+		ActionPreviewDiffPrevHunk,
 		ActionFileEdit,
 		ActionFileDelete,
 		ActionAppQuit,
@@ -56,12 +56,12 @@ func TestBuildPreviewMenuEntriesOrder(t *testing.T) {
 
 func TestPreviewMenuKeysMergeOverrideAndOmit(t *testing.T) {
 	user := map[string]string{
-		ActionFileViewThemePicker: "z",
-		ActionFileDelete:          "",
+		ActionPreviewThemePicker: "z",
+		ActionFileDelete:         "",
 	}
 	merged := mergePreviewMenuKeys(DefaultPreviewMenuKeys(), user)
-	if merged[ActionFileViewThemePicker] != "z" {
-		t.Fatalf("theme picker key = %q, want z", merged[ActionFileViewThemePicker])
+	if merged[ActionPreviewThemePicker] != "z" {
+		t.Fatalf("theme picker key = %q, want z", merged[ActionPreviewThemePicker])
 	}
 	if _, ok := merged[ActionFileDelete]; ok {
 		t.Fatalf("delete should be omitted, still in map: %v", merged[ActionFileDelete])
@@ -99,9 +99,9 @@ func TestDefaultBundlePreviewMenuKey(t *testing.T) {
 
 func TestFilePreviewOverlayMapsColonToPreviewMenu(t *testing.T) {
 	keys := DefaultFilePreviewOverlayKeys()
-	chords, ok := keys[ActionFileViewMenu]
+	chords, ok := keys[ActionPreviewMenu]
 	if !ok || len(chords) != 1 || chords[0] != ":" {
-		t.Fatalf("DefaultFilePreviewOverlayKeys()[ActionFileViewMenu] = %v, want [\":\"]", chords)
+		t.Fatalf("DefaultFilePreviewOverlayKeys()[ActionPreviewMenu] = %v, want [\":\"]", chords)
 	}
 }
 
@@ -121,8 +121,8 @@ func TestActionForPreviewMenuKey(t *testing.T) {
 
 func TestFilePreviewOverlayMapsQToClose(t *testing.T) {
 	keys := DefaultFilePreviewOverlayKeys()
-	chords, ok := keys[ActionFileViewClose]
+	chords, ok := keys[ActionPreviewClose]
 	if !ok || len(chords) != 1 || chords[0] != "q" {
-		t.Fatalf("DefaultFilePreviewOverlayKeys()[ActionFileViewClose] = %v, want [\"q\"]", chords)
+		t.Fatalf("DefaultFilePreviewOverlayKeys()[ActionPreviewClose] = %v, want [\"q\"]", chords)
 	}
 }

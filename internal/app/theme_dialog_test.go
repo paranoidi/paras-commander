@@ -213,7 +213,7 @@ func TestFilePreviewThemePickerNavigatePreviewsWithoutPersist(t *testing.T) {
 	app, appPaths := newFilePreviewThemePickerTestApp(t)
 	initial := app.config.Preview.Style
 	uiTheme := app.config.Theme
-	app.previewCtrl.TryDispatchFileView(keymap.ActionFileViewThemePicker)
+	app.previewCtrl.TryDispatchFileView(keymap.ActionPreviewThemePicker)
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	// Style is debounced: config must not change until flush fires.
 	if app.config.Preview.Style != initial {
@@ -237,7 +237,7 @@ func TestFilePreviewThemePickerNavigatePreviewsWithoutPersist(t *testing.T) {
 
 func TestFilePreviewThemePickerEnterClosePersists(t *testing.T) {
 	app, appPaths := newFilePreviewThemePickerTestApp(t)
-	app.previewCtrl.TryDispatchFileView(keymap.ActionFileViewThemePicker)
+	app.previewCtrl.TryDispatchFileView(keymap.ActionPreviewThemePicker)
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	// Read selection from picker state before Enter flushes it.
 	selected := app.previewCtrl.SelectedPreviewStyleName()
@@ -263,7 +263,7 @@ func TestFilePreviewThemePickerEnterClosePersists(t *testing.T) {
 func TestFilePreviewThemePickerEscReverts(t *testing.T) {
 	app, _ := newFilePreviewThemePickerTestApp(t)
 	initial := app.config.Preview.Style
-	app.previewCtrl.TryDispatchFileView(keymap.ActionFileViewThemePicker)
+	app.previewCtrl.TryDispatchFileView(keymap.ActionPreviewThemePicker)
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	// Simulate the debounce firing so the style actually changes before Esc.
 	app.previewCtrl.FlushStylePickerPreviewNow()

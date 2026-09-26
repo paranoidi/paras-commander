@@ -187,7 +187,7 @@ func TestFileViewCloseActionReturnsToBrowserNormally(t *testing.T) {
 		t.Fatalf("OpenFullscreenFilePreviewAt: %v", err)
 	}
 
-	quit, handled := h.tryFilePreviewAction(keymap.ActionFileViewClose)
+	quit, handled := h.tryFilePreviewAction(keymap.ActionPreviewClose)
 	if !handled {
 		t.Fatal("handled = false, want true")
 	}
@@ -209,7 +209,7 @@ func TestFileViewCloseActionQuitsWhenLaunchedAsFileViewer(t *testing.T) {
 		t.Fatalf("OpenFullscreenFilePreviewAt: %v", err)
 	}
 
-	quit, handled := h.tryFilePreviewAction(keymap.ActionFileViewClose)
+	quit, handled := h.tryFilePreviewAction(keymap.ActionPreviewClose)
 	if !handled {
 		t.Fatal("handled = false, want true")
 	}

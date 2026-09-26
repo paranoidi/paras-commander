@@ -297,8 +297,8 @@ func TestFilePreviewOverlayMapsF6ToToggleRaw(t *testing.T) {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
 	id, ok := bundle.FilePreview.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
-	if !ok || id != keymap.ActionFileViewToggleRaw {
-		t.Fatalf("FilePreview.Lookup(F6) = %q %v, want %s", id, ok, keymap.ActionFileViewToggleRaw)
+	if !ok || id != keymap.ActionPreviewToggleRaw {
+		t.Fatalf("FilePreview.Lookup(F6) = %q %v, want %s", id, ok, keymap.ActionPreviewToggleRaw)
 	}
 }
 
@@ -308,8 +308,8 @@ func TestFilePreviewOverlayMapsF5ToReload(t *testing.T) {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
 	id, ok := bundle.FilePreview.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
-	if !ok || id != keymap.ActionFileViewReload {
-		t.Fatalf("FilePreview.Lookup(F5) = %q %v, want %s", id, ok, keymap.ActionFileViewReload)
+	if !ok || id != keymap.ActionPreviewReload {
+		t.Fatalf("FilePreview.Lookup(F5) = %q %v, want %s", id, ok, keymap.ActionPreviewReload)
 	}
 }
 

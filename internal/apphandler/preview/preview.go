@@ -381,13 +381,13 @@ func (h *Handler) TryDispatchFileView(actionID string) bool {
 	switch actionID {
 	case keymap.ActionFileView:
 		h.OpenFilePreviewFullscreen()
-	case keymap.ActionFileViewThemePicker:
+	case keymap.ActionPreviewThemePicker:
 		h.toggleFilePreviewThemePicker()
-	case keymap.ActionFileViewToggleRaw:
+	case keymap.ActionPreviewToggleRaw:
 		h.toggleFilePreviewRawMarkdown()
-	case keymap.ActionFileViewDiffNextHunk:
+	case keymap.ActionPreviewDiffNextHunk:
 		h.hunkNavigate(previewTargetInactive, 1)
-	case keymap.ActionFileViewDiffPrevHunk:
+	case keymap.ActionPreviewDiffPrevHunk:
 		h.hunkNavigate(previewTargetInactive, -1)
 	case keymap.ActionFileQuickView:
 		h.HandleQuickViewToggle()
@@ -907,9 +907,9 @@ func (h *Handler) dispatchFilePreviewCheck(ctx context.Context, path string, req
 		return
 	}
 	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
-	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
+	isAudioVideo := errors.Is(err, localfs.ErrFilePreviewAudioVideo)
 	isArchive := errors.Is(err, localfs.ErrFilePreviewArchive)
-	if err != nil && !isImage && !isMedia && !isArchive {
+	if err != nil && !isImage && !isAudioVideo && !isArchive {
 		switch {
 		case errors.Is(err, localfs.ErrFilePreviewBinary):
 			patchMessage(filepath.Base(path), notTextMsg)
@@ -991,7 +991,7 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 	default:
 		tw, _, ok = h.inactivePanelPreviewLayoutMetrics(true)
 	}
-	isImageOrMedia := localfs.IsImagePath(path) || localfs.IsMediaPath(path)
+	isImageOrMedia := localfs.IsMediaPath(path)
 	// tmux frees every natively-stored Sixel image on any pane resize unconditionally
 	// (screen_resize_cursor -> image_free_all in tmux's screen.c). Skip the eager
 	// re-decode/re-encode here — the overlay marks the cached payload lost and retransmits
@@ -1086,12 +1086,12 @@ func (h *Handler) debounceDelay(preview bool) time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
 
-// heavyFilePreview reports whether path takes the slower MediaPreviewDebounceMS gate: images/media
-// re-emit terminal graphics, and a matching [[preview.commands]] rule spawns a subprocess. Text
-// (internal Chroma highlighting, or an external `command` like bat) takes the faster
-// key-repeat delay instead.
-func (h *Handler) heavyFilePreview(path string, typ localfs.EntryType, panelDir string) bool {
-	return localfs.IsImagePath(path) || localfs.IsMediaPath(path) ||
+// mediaPreviewDebounce reports whether path takes the slower MediaPreviewDebounceMS gate:
+// images/media re-emit terminal graphics, and a matching [[preview.commands]] rule spawns a
+// subprocess. Text (internal Chroma highlighting, or an external `command` like bat) takes the
+// faster key-repeat delay instead.
+func (h *Handler) mediaPreviewDebounce(path string, typ localfs.EntryType, panelDir string) bool {
+	return localfs.IsMediaPath(path) ||
 		previewrun.MatchAnyCommandRule(h.host.Config().Preview, path, typ, panelDir)
 }
 
@@ -1109,7 +1109,7 @@ func (h *Handler) quickViewDebounceDelay() time.Duration {
 				entryType = entry.Type
 			}
 		}
-		return h.debounceDelay(h.heavyFilePreview(path, entryType, workDir))
+		return h.debounceDelay(h.mediaPreviewDebounce(path, entryType, workDir))
 	case quickViewWantDir:
 		_, rule := h.activeDirRuleTarget()
 		return h.debounceDelay(rule)
@@ -1222,8 +1222,8 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 	req.ImageMaxPxW = textW * cw
 	req.ImageMaxPxH = contentH * ch
 	req.ImageCellPxH = ch
-	isMedia := localfs.IsMediaPath(path)
-	if localfs.IsGraphicalPreviewPath(path) {
+	isMedia := localfs.IsAudioVideoPath(path)
+	if localfs.IsMediaPath(path) {
 		req.ImageInTmux = os.Getenv("TMUX") != ""
 		if _, ok := h.screen.Tty(); !ok {
 			req.ImageProtocol = previewpanel.ImageProtocolNone

@@ -1194,7 +1194,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionFileView,
 			Views:        HelpBrowser,
-			Title:        "Full screen file view",
+			Title:        "Full screen preview",
 			Section:      "File",
 			DefaultKeys:  []string{"F3", "C-v"},
 			PreferredKey: "F3",
@@ -1202,7 +1202,7 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "v",
 		},
 		{
-			ID:          ActionFileViewMenu,
+			ID:          ActionPreviewMenu,
 			Views:       HelpFilePreview,
 			Title:       "Preview menu",
 			Section:     "Preview",
@@ -1210,16 +1210,16 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"preview menu", "colon", "menu"},
 		},
 		{
-			ID:             ActionFileViewThemePicker,
+			ID:             ActionPreviewThemePicker,
 			Views:          HelpFilePreview,
-			Title:          "Theme picker in file view",
+			Title:          "Theme picker in preview",
 			Section:        "Preview",
 			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
 			Keywords:       []string{"theme", "preview", "view", "f9"},
 			PreviewMenuKey: "t",
 		},
 		{
-			ID:             ActionFileViewToggleRaw,
+			ID:             ActionPreviewToggleRaw,
 			Views:          HelpFilePreview,
 			Title:          "Toggle raw/rendered markdown",
 			Section:        "Preview",
@@ -1228,16 +1228,16 @@ func DefaultActionSpecs() []ActionSpec {
 			PreviewMenuKey: "r",
 		},
 		{
-			ID:             ActionFileViewReload,
+			ID:             ActionPreviewReload,
 			Views:          HelpFilePreview,
-			Title:          "Reload file view",
+			Title:          "Reload preview",
 			Section:        "Preview",
 			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
 			Keywords:       []string{"reload", "refresh", "f5"},
 			PreviewMenuKey: "R",
 		},
 		{
-			ID:             ActionFileViewDiffNextHunk,
+			ID:             ActionPreviewDiffNextHunk,
 			Views:          HelpBrowser | HelpFilePreview,
 			Title:          "Next diff change",
 			Section:        "Preview",
@@ -1246,7 +1246,7 @@ func DefaultActionSpecs() []ActionSpec {
 			PreviewMenuKey: "n",
 		},
 		{
-			ID:             ActionFileViewDiffPrevHunk,
+			ID:             ActionPreviewDiffPrevHunk,
 			Views:          HelpBrowser | HelpFilePreview,
 			Title:          "Previous diff change",
 			Section:        "Preview",
@@ -1255,24 +1255,24 @@ func DefaultActionSpecs() []ActionSpec {
 			PreviewMenuKey: "p",
 		},
 		{
-			ID:             ActionFileViewSearchStart,
+			ID:             ActionPreviewSearchStart,
 			Views:          HelpFilePreview,
-			Title:          "Search in file view",
+			Title:          "Search in preview",
 			Section:        "Preview",
 			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
 			Keywords:       []string{"search", "find", "incremental"},
 			PreviewMenuKey: "s",
 		},
 		{
-			ID:          ActionFileViewClose,
+			ID:          ActionPreviewClose,
 			Views:       HelpFilePreview,
-			Title:       "Close file view",
+			Title:       "Close preview",
 			Section:     "Preview",
 			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
 			Keywords:    []string{"close", "quit", "back", "browser", "esc"},
 		},
 		{
-			ID:          ActionFileViewSearchNext,
+			ID:          ActionPreviewSearchNext,
 			Views:       HelpFilePreview,
 			Title:       "Next search match",
 			Section:     "Preview",
@@ -1280,7 +1280,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"search", "find", "next", "match"},
 		},
 		{
-			ID:          ActionFileViewSearchPrev,
+			ID:          ActionPreviewSearchPrev,
 			Views:       HelpFilePreview,
 			Title:       "Previous search match",
 			Section:     "Preview",

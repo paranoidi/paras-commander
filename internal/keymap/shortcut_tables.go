@@ -6,7 +6,7 @@ const (
 	JobsShortcutsTable             = "jobs"
 	CommandsShortcutsTable         = "commands"
 	MessagesShortcutsTable         = "messages"
-	FilePreviewShortcutsTable      = "file_preview"
+	FilePreviewShortcutsTable      = "preview"
 	DialogShortcutsGroup           = "dialog"
 	DialogInputShortcutsTable      = "dialog.input"
 	DialogRenameShortcutsTable     = "dialog.rename"

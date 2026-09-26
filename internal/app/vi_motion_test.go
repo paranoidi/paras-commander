@@ -233,7 +233,7 @@ func TestViMotionFilePreviewFooterKeysSwapLetters(t *testing.T) {
 	}
 	style, ok := findByHint(keys, "Style")
 	if !ok || style.KeyLabel != "t" {
-		t.Fatalf("vi-motion on: Style KeyLabel = %+v, want t (file.view.theme-picker preview-menu letter)", style)
+		t.Fatalf("vi-motion on: Style KeyLabel = %+v, want t (preview.theme-picker preview-menu letter)", style)
 	}
 	quit, ok := findByHint(keys, "Quit")
 	if !ok || quit.KeyLabel != "F10" {

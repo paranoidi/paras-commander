@@ -15,7 +15,7 @@ import (
 
 // toggleFilePreviewRawMarkdown flips the fullscreen preview of a markdown file between
 // rendered markdown and raw Chroma-highlighted source. No-op for non-markdown files and
-// while showing a git diff (IsDiff), per file.view.toggle-raw.
+// while showing a git diff (IsDiff), per preview.toggle-raw.
 func (h *Handler) toggleFilePreviewRawMarkdown() {
 	h.mu.RLock()
 	st := h.model.FullscreenFilePreview
@@ -246,36 +246,36 @@ func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bo
 		return h.host.HandleQuit(), true
 	case keymap.ActionAppQuitImmediate:
 		return h.host.HandleQuitImmediate(), true
-	case keymap.ActionFileViewClose:
+	case keymap.ActionPreviewClose:
 		return h.closeOrQuitFilePreview(), true
-	case keymap.ActionFileViewMenu:
+	case keymap.ActionPreviewMenu:
 		h.host.OpenPreviewLeaderMenu()
 		return false, true
 	case keymap.ActionAppCopyMenu:
 		h.host.OpenPreviewCopyMenu()
 		return false, true
-	case keymap.ActionFileViewThemePicker:
+	case keymap.ActionPreviewThemePicker:
 		h.toggleFilePreviewThemePicker()
 		return false, true
-	case keymap.ActionFileViewToggleRaw:
+	case keymap.ActionPreviewToggleRaw:
 		h.toggleFilePreviewRawMarkdown()
 		return false, true
-	case keymap.ActionFileViewReload:
+	case keymap.ActionPreviewReload:
 		h.refreshFullscreenFilePreview()
 		return false, true
-	case keymap.ActionFileViewDiffNextHunk:
+	case keymap.ActionPreviewDiffNextHunk:
 		h.hunkNavigate(previewTargetFullscreen, 1)
 		return false, true
-	case keymap.ActionFileViewDiffPrevHunk:
+	case keymap.ActionPreviewDiffPrevHunk:
 		h.hunkNavigate(previewTargetFullscreen, -1)
 		return false, true
-	case keymap.ActionFileViewSearchStart:
+	case keymap.ActionPreviewSearchStart:
 		h.startFilePreviewSearch()
 		return false, true
-	case keymap.ActionFileViewSearchNext:
+	case keymap.ActionPreviewSearchNext:
 		h.filePreviewSearchNav(1)
 		return false, true
-	case keymap.ActionFileViewSearchPrev:
+	case keymap.ActionPreviewSearchPrev:
 		h.filePreviewSearchNav(-1)
 		return false, true
 	case keymap.ActionFileEdit:

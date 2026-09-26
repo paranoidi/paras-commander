@@ -250,12 +250,12 @@ type Model struct {
 	FullscreenFilePreviewDraw FilePreviewState
 	// FullscreenFilePreviewSearchField is the "/" query editor while Search.Editing is true.
 	FullscreenFilePreviewSearchField dialog.FileDialogField
-	// FullscreenFilePreviewRawMarkdown is true while file.view.toggle-raw has switched the
+	// FullscreenFilePreviewRawMarkdown is true while preview.toggle-raw has switched the
 	// fullscreen preview of a markdown file to raw Chroma-highlighted source instead of
 	// rendered markdown. Reset to false whenever a new fullscreen preview opens. Only affects
 	// the fullscreen target — quick view and carousel previews always render.
 	FullscreenFilePreviewRawMarkdown bool
-	// FilePreviewThemePicker is the inline theme list on the right side of F3 file view.
+	// FilePreviewThemePicker is the inline theme list on the right side of F3 preview.
 	FilePreviewThemePicker dialog.FilePreviewThemePickerState
 	HelpView               dialog.HelpViewState
 	FileDialog             dialog.FileDialogState

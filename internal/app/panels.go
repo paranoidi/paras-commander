@@ -959,11 +959,11 @@ func (a *App) expandAllTreeFullyForPanel(target *panel.State, viewportRows int) 
 	return false
 }
 
-// toggleZoomActivePanelGuarded toggles active-panel zoom unless quick view/file preview is
+// toggleZoomActivePanelGuarded toggles active-panel zoom unless quick view/preview is
 // active, carousel mode is on, or the terminal size is below the configured zoom threshold.
 func (a *App) toggleZoomActivePanelGuarded() {
 	if a.previewCtrl.FilePreviewOpen() || a.model.QuickViewDisplayActive() {
-		a.setTransientMessage("Zoom disabled while quick view or file view is active", ui.MessageUrgencyInfo)
+		a.setTransientMessage("Zoom disabled while quick view or preview is active", ui.MessageUrgencyInfo)
 		return
 	}
 	activePanel := a.activePanel()

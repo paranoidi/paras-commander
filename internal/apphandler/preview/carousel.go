@@ -67,7 +67,7 @@ func (h *Handler) scheduleCarouselPreviewDebounceTimer(gen uint64) {
 		if entry, ok := p.CurrentEntry(); ok {
 			entryType = entry.Type
 		}
-		heavy = h.heavyFilePreview(path, entryType, p.PathString())
+		heavy = h.mediaPreviewDebounce(path, entryType, p.PathString())
 	}
 	delay := h.debounceDelay(heavy)
 	h.carouselPreviewDebounce.Arm(delay, func() {

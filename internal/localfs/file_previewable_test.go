@@ -93,7 +93,7 @@ func TestIsImageMagickPath(t *testing.T) {
 	}
 }
 
-func TestCheckFilePreviewableMedia(t *testing.T) {
+func TestCheckFilePreviewableAudioVideo(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"clip.mkv", "song.MP3", "movie.mp4"} {
 		p := filepath.Join(dir, name)
@@ -101,8 +101,11 @@ func TestCheckFilePreviewableMedia(t *testing.T) {
 			t.Fatal(err)
 		}
 		err := CheckFilePreviewable(p)
-		if !errors.Is(err, ErrFilePreviewMedia) {
-			t.Fatalf("%s: err = %v want ErrFilePreviewMedia", name, err)
+		if !errors.Is(err, ErrFilePreviewAudioVideo) {
+			t.Fatalf("%s: err = %v want ErrFilePreviewAudioVideo", name, err)
+		}
+		if !IsAudioVideoPath(p) {
+			t.Fatalf("IsAudioVideoPath(%q) = false", p)
 		}
 		if !IsMediaPath(p) {
 			t.Fatalf("IsMediaPath(%q) = false", p)
@@ -139,10 +142,22 @@ func TestCheckFilePreviewableSingleStreamCompressorNotArchiveGated(t *testing.T)
 	}
 }
 
-func TestIsMediaPathExtensions(t *testing.T) {
+func TestIsAudioVideoPathExtensions(t *testing.T) {
 	cases := map[string]bool{
 		"a.mkv": true, "b.mp4": true, "c.webm": true, "d.mp3": true, "e.flac": true,
 		"f.txt": false, "g.png": false, "h.go": false,
+	}
+	for name, want := range cases {
+		if got := IsAudioVideoPath(name); got != want {
+			t.Fatalf("IsAudioVideoPath(%q) = %v, want %v", name, got, want)
+		}
+	}
+}
+
+func TestIsMediaPathIsImageOrAudioVideo(t *testing.T) {
+	cases := map[string]bool{
+		"a.mkv": true, "b.png": true, "c.mp3": true,
+		"d.txt": false, "e.go": false,
 	}
 	for name, want := range cases {
 		if got := IsMediaPath(name); got != want {
