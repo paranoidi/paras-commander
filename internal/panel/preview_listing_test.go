@@ -1,10 +1,12 @@
 package panel
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -328,5 +330,63 @@ func TestSnapshotChildRecallsCursor(t *testing.T) {
 	}
 	if snap.Cursor < 0 || snap.Cursor >= len(snap.Entries) || snap.Entries[snap.Cursor].Name != "birch.log" {
 		t.Fatalf("cursor index %d entries = %v, want birch.log", snap.Cursor, snap.Entries)
+	}
+}
+
+func listingSnapshotWithEntries(n int) ListingSnapshot {
+	entries := make([]localfs.Entry, n)
+	for i := range entries {
+		entries[i] = localfs.Entry{Name: fmt.Sprintf("entry-%02d", i)}
+	}
+	return ListingSnapshot{Entries: entries}
+}
+
+func TestListingSnapshotPagePagesDownAndUp(t *testing.T) {
+	snap := listingSnapshotWithEntries(20)
+	snap.Cursor = 3
+	const viewportRows = 5
+
+	snap.Page(1, viewportRows)
+	if snap.Cursor != 3 || snap.Scroll != 5 {
+		t.Fatalf("after page down: cursor=%d scroll=%d, want cursor=3 scroll=5", snap.Cursor, snap.Scroll)
+	}
+
+	snap.Page(1, viewportRows)
+	if snap.Cursor != 3 || snap.Scroll != 10 {
+		t.Fatalf("after second page down: cursor=%d scroll=%d, want cursor=3 scroll=10", snap.Cursor, snap.Scroll)
+	}
+
+	snap.Page(-1, viewportRows)
+	if snap.Cursor != 3 || snap.Scroll != 5 {
+		t.Fatalf("after page up: cursor=%d scroll=%d, want cursor=3 scroll=5", snap.Cursor, snap.Scroll)
+	}
+}
+
+func TestListingSnapshotPageClampsAtEnds(t *testing.T) {
+	snap := listingSnapshotWithEntries(20)
+	snap.Cursor = 3
+	const viewportRows = 5
+
+	snap.Page(-1, viewportRows)
+	if snap.Cursor != 3 || snap.Scroll != 0 {
+		t.Fatalf("page up at start: cursor=%d scroll=%d, want cursor=3 scroll=0", snap.Cursor, snap.Scroll)
+	}
+
+	for range 6 {
+		snap.Page(1, viewportRows)
+	}
+	if snap.Cursor != 3 {
+		t.Fatalf("page down past end must not move cursor: cursor=%d, want 3", snap.Cursor)
+	}
+	if snap.Scroll != len(snap.Entries)-viewportRows {
+		t.Fatalf("page down past end: scroll=%d, want %d", snap.Scroll, len(snap.Entries)-viewportRows)
+	}
+}
+
+func TestListingSnapshotPageEmptyIsNoop(t *testing.T) {
+	var snap ListingSnapshot
+	snap.Page(1, 5)
+	if snap.Cursor != 0 || snap.Scroll != 0 {
+		t.Fatalf("paging an empty snapshot changed state: cursor=%d scroll=%d", snap.Cursor, snap.Scroll)
 	}
 }

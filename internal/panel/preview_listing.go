@@ -14,6 +14,28 @@ type ListingSnapshot struct {
 	Scroll  int
 }
 
+// Page moves the visible window by a viewport-sized delta, for interactive paging (Ctrl+J/K) of
+// a cached carousel child-column listing. Cursor is deliberately left untouched: it marks the
+// entry that would actually be selected on navigating into this directory (recalled from history,
+// see PreviewCursorRecall), not a live selection the user is moving — paging just lets them look
+// further into the listing without changing that answer.
+func (s *ListingSnapshot) Page(delta, viewportRows int) {
+	if len(s.Entries) == 0 {
+		return
+	}
+	if viewportRows < 1 {
+		viewportRows = 1
+	}
+	maxOffset := max(len(s.Entries)-viewportRows, 0)
+	s.Scroll += delta * viewportRows
+	if s.Scroll < 0 {
+		s.Scroll = 0
+	}
+	if s.Scroll > maxOffset {
+		s.Scroll = maxOffset
+	}
+}
+
 // SnapshotParent returns the cached parent-directory preview for carousel mode. It never touches
 // the filesystem: the cache is populated asynchronously (see internal/app's carousel snapshot
 // dispatch, triggered on center-directory change) and this is a pure read, so painting the

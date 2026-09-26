@@ -315,8 +315,9 @@ func (h *Handler) quickViewFilePreviewScrollable() bool {
 }
 
 // TryDispatchQuickViewPreviewScroll handles Ctrl+J/Ctrl+K preview page keys.
-// Scrolls carousel child preview, inactive quick-view file preview, or the quick-view
-// directory overlay when available; otherwise pages the active file list while quick view is latched.
+// Scrolls carousel child file preview, carousel child directory-listing preview, inactive
+// quick-view file preview, or the quick-view directory overlay when available; otherwise pages
+// the active file list while quick view is latched.
 func (h *Handler) TryDispatchQuickViewPreviewScroll(actionID string) bool {
 	var pageDir int
 	switch actionID {
@@ -337,6 +338,10 @@ func (h *Handler) TryDispatchQuickViewPreviewScroll(actionID string) bool {
 			step = 1
 		}
 		h.carouselPreviewScrollBy(pageDir * step)
+		return true
+	}
+	if h.carouselChildListingScrollable() {
+		h.pageCarouselChildListing(pageDir)
 		return true
 	}
 	if !h.model.QuickViewEnabled {

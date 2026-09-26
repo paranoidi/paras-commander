@@ -36,6 +36,26 @@ func (h *Handler) carouselPreviewNavCoalesceContext() bool {
 	return kind == panelcarousel.ChildPreviewDirectoryListing || kind == panelcarousel.ChildPreviewFile
 }
 
+// carouselChildListingScrollable reports whether the carousel child column is currently showing
+// a directory listing that Ctrl+J/K can page.
+func (h *Handler) carouselChildListingScrollable() bool {
+	if !h.carouselPreviewNavCoalesceContext() {
+		return false
+	}
+	p := h.host.ActivePanel()
+	eligible := h.carouselFilePreviewEligible()
+	if panelcarousel.ChildPreviewKindFor(*p, h.model.QuickViewDisplayActive(), eligible) != panelcarousel.ChildPreviewDirectoryListing {
+		return false
+	}
+	return p.CarouselSideCache.ChildOK
+}
+
+// pageCarouselChildListing pages the cached child directory listing in place.
+func (h *Handler) pageCarouselChildListing(pageDir int) {
+	p := h.host.ActivePanel()
+	p.CarouselSideCache.Child.Page(pageDir, h.host.ActiveViewportRows())
+}
+
 func (h *Handler) scheduleCarouselPreviewDebounceTimer(gen uint64) {
 	// ok is false for directory targets, so the child-listing coalesce keeps the key-repeat delay.
 	_, isFile := h.carouselFilePreviewWantPath()

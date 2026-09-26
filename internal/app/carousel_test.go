@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -216,6 +217,59 @@ func TestCarouselChildSnapshotDispatchedWithoutNavKey(t *testing.T) {
 	}
 	if _, ok := left.SnapshotChild(); !ok {
 		t.Fatal("SnapshotChild = false, want the child column populated without a nav keypress")
+	}
+}
+
+// TestCarouselChildListingPagesWithCtrlJK verifies Ctrl+J/K scrolls the carousel child column's
+// directory-listing preview in place, without moving its highlighted "would be selected" cursor
+// or the center panel's own cursor.
+func TestCarouselChildListingPagesWithCtrlJK(t *testing.T) {
+	root := t.TempDir()
+	maple := filepath.Join(root, "maple")
+	if err := os.Mkdir(maple, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for i := range 40 {
+		name := filepath.Join(maple, fmt.Sprintf("leaf-%02d.txt", i))
+		if err := os.WriteFile(name, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 160, 30)
+	app := newApp(t, screen, root)
+	app.config.UI.KeyRepeatDebounceMS = 0
+	app.model.Primary.CarouselMode = true
+
+	left := app.panelByID(ui.PrimaryPanel)
+	selectPanelEntryByName(t, left, "maple")
+	app.scheduleCarouselChildSnapshot(ui.PrimaryPanel, 20)
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
+		return left.CarouselSideCache.ChildOK
+	})
+
+	centerCursorBefore := left.Cursor
+	childCursorBefore := left.CarouselSideCache.Child.Cursor
+	childScrollBefore := left.CarouselSideCache.Child.Scroll
+
+	app.dispatch(keymap.ActionFileQuickViewPreviewPageDown)
+	childScrollAfterDown := left.CarouselSideCache.Child.Scroll
+	if childScrollAfterDown <= childScrollBefore {
+		t.Fatalf("child listing scroll = %d, want > %d after page down", childScrollAfterDown, childScrollBefore)
+	}
+	if left.CarouselSideCache.Child.Cursor != childCursorBefore {
+		t.Fatalf("child listing cursor moved from %d to %d; page down must only scroll, not change what would be selected", childCursorBefore, left.CarouselSideCache.Child.Cursor)
+	}
+	if left.Cursor != centerCursorBefore {
+		t.Fatalf("center panel cursor moved from %d to %d; page down must only page the child listing", centerCursorBefore, left.Cursor)
+	}
+
+	app.dispatch(keymap.ActionFileQuickViewPreviewPageUp)
+	childScrollAfterUp := left.CarouselSideCache.Child.Scroll
+	if childScrollAfterUp >= childScrollAfterDown {
+		t.Fatalf("child listing scroll = %d, want < %d after page up", childScrollAfterUp, childScrollAfterDown)
+	}
+	if left.CarouselSideCache.Child.Cursor != childCursorBefore {
+		t.Fatalf("child listing cursor moved from %d to %d; page up must only scroll, not change what would be selected", childCursorBefore, left.CarouselSideCache.Child.Cursor)
 	}
 }
 
