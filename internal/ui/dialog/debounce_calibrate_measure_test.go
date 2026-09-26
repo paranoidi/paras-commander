@@ -101,13 +101,13 @@ func TestRecommendedDebounceMS(t *testing.T) {
 	}
 }
 
-func TestRecommendedPreviewDebounceMSUsesMax(t *testing.T) {
-	got := RecommendedPreviewDebounceMS([]int64{300, 500, 400})
-	want := 500 + config.DebounceCalibrationPreviewMarginMS
+func TestRecommendedMediaPreviewDebounceMSUsesMax(t *testing.T) {
+	got := RecommendedMediaPreviewDebounceMS([]int64{300, 500, 400})
+	want := 500 + config.DebounceCalibrationMediaPreviewMarginMS
 	if got != want {
 		t.Fatalf("recommended preview = %d, want %d", got, want)
 	}
-	got = RecommendedPreviewDebounceMS([]int64{20_000})
+	got = RecommendedMediaPreviewDebounceMS([]int64{20_000})
 	if got != config.KeyRepeatDebounceMaxMS {
 		t.Fatalf("recommended preview = %d, want clamp %d", got, config.KeyRepeatDebounceMaxMS)
 	}

@@ -386,10 +386,11 @@ type UIConfig struct {
 	// (quick view directory overlay, carousel child listing, panel sync follow). Zero disables
 	// debouncing everywhere. Default DefaultKeyRepeatDebounceMS.
 	KeyRepeatDebounceMS int `toml:"key_repeat_debounce_ms"`
-	// PreviewDebounceMS replaces KeyRepeatDebounceMS when the coalesced target is a preview (any
-	// file, a [[preview.commands]] rule, F3 style-picker re-highlight). Only selects the delay:
-	// KeyRepeatDebounceMS = 0 disables debouncing entirely. Default DefaultPreviewDebounceMS.
-	PreviewDebounceMS int `toml:"preview_debounce_ms"`
+	// MediaPreviewDebounceMS replaces KeyRepeatDebounceMS when the coalesced target is a heavy media
+	// preview (image/media file, a [[preview.commands]] rule match, F3 style-picker re-highlight).
+	// Text files always use KeyRepeatDebounceMS instead. Only selects the delay:
+	// KeyRepeatDebounceMS = 0 disables debouncing entirely. Default DefaultMediaPreviewDebounceMS.
+	MediaPreviewDebounceMS int `toml:"media_preview_debounce_ms"`
 	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
 	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
 	PathPickerValidateDelayMS int `toml:"path_picker_validate_delay_ms"`
@@ -611,7 +612,7 @@ func Default() Config {
 			ShrunkenShowsNameOnly:        DefaultShrunkenShowsNameOnly,
 			ScreenRenderHashCache:        DefaultScreenRenderHashCache,
 			KeyRepeatDebounceMS:          DefaultKeyRepeatDebounceMS,
-			PreviewDebounceMS:            DefaultPreviewDebounceMS,
+			MediaPreviewDebounceMS:       DefaultMediaPreviewDebounceMS,
 			PathPickerValidateDelayMS:    DefaultPathPickerValidateDelayMS,
 			SelectionSizeScanDebounceMS:  DefaultSelectionSizeScanDebounceMS,
 			SelectionsPanelMaxRows:       0,
@@ -1111,11 +1112,11 @@ func (c *Config) validateUI(builtin *Config) {
 	if c.UI.KeyRepeatDebounceMS > KeyRepeatDebounceMaxMS {
 		c.UI.KeyRepeatDebounceMS = KeyRepeatDebounceMaxMS
 	}
-	if c.UI.PreviewDebounceMS < 0 {
-		c.UI.PreviewDebounceMS = builtin.UI.PreviewDebounceMS
+	if c.UI.MediaPreviewDebounceMS < 0 {
+		c.UI.MediaPreviewDebounceMS = builtin.UI.MediaPreviewDebounceMS
 	}
-	if c.UI.PreviewDebounceMS > KeyRepeatDebounceMaxMS {
-		c.UI.PreviewDebounceMS = KeyRepeatDebounceMaxMS
+	if c.UI.MediaPreviewDebounceMS > KeyRepeatDebounceMaxMS {
+		c.UI.MediaPreviewDebounceMS = KeyRepeatDebounceMaxMS
 	}
 	if c.UI.Find.QueryDebounceMS < 0 {
 		c.UI.Find.QueryDebounceMS = builtin.UI.Find.QueryDebounceMS

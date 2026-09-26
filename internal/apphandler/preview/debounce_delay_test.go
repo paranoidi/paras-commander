@@ -9,16 +9,17 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
-// quickViewDebounceDelay must pick PreviewDebounceMS for every target that runs a preview (any
-// file, a directory served by a [[preview.commands]] rule) and KeyRepeatDebounceMS for directory
-// listings and plain messages. Paths are synthetic: the decision must come from the listing entry
-// type alone, never from a stat on the UI goroutine.
+// quickViewDebounceDelay must pick MediaPreviewDebounceMS for every heavy target (images/media, a
+// directory or file served by a [[preview.commands]] rule) and KeyRepeatDebounceMS for text
+// files, directory listings, and plain messages. Paths are synthetic: the decision must come
+// from the listing entry type alone, never from a stat on the UI goroutine.
 func TestQuickViewDebounceDelayPicksPreviewDelay(t *testing.T) {
 	h, fh := newTestHandler(t, 120, 30)
 	fh.cfg.UI.KeyRepeatDebounceMS = 45
-	fh.cfg.UI.PreviewDebounceMS = 500
+	fh.cfg.UI.MediaPreviewDebounceMS = 500
 	fh.cfg.Preview.Commands = []config.PreviewCommandRule{
 		{When: []string{"t d & d ^/harbor/movies(|/$)"}, Command: "movie-info %f"},
+		{When: []string{`f \.epub$`}, Command: "epub-info %f"},
 	}
 	fh.syncFollowTargetPath = func(p *panel.State) (string, bool) {
 		e, ok := p.CurrentEntry()
@@ -31,7 +32,9 @@ func TestQuickViewDebounceDelayPicksPreviewDelay(t *testing.T) {
 		want  time.Duration
 	}{
 		{"image file", localfs.Entry{Name: "meadow.png", Path: "/harbor/lantern/meadow.png", Type: localfs.EntryFile, Size: 9}, 500 * time.Millisecond},
-		{"text file", localfs.Entry{Name: "cobble.txt", Path: "/harbor/lantern/cobble.txt", Type: localfs.EntryFile, Size: 9}, 500 * time.Millisecond},
+		{"video file", localfs.Entry{Name: "beacon.mkv", Path: "/harbor/lantern/beacon.mkv", Type: localfs.EntryFile, Size: 9}, 500 * time.Millisecond},
+		{"text file", localfs.Entry{Name: "cobble.txt", Path: "/harbor/lantern/cobble.txt", Type: localfs.EntryFile, Size: 9}, 45 * time.Millisecond},
+		{"text file matched by a file rule", localfs.Entry{Name: "reader.epub", Path: "/harbor/lantern/reader.epub", Type: localfs.EntryFile, Size: 9}, 500 * time.Millisecond},
 		{"empty file (message)", localfs.Entry{Name: "pennant", Path: "/harbor/lantern/pennant", Type: localfs.EntryFile}, 45 * time.Millisecond},
 		{"directory listing", localfs.Entry{Name: "quarry", Path: "/harbor/lantern/quarry", Type: localfs.EntryDirectory}, 45 * time.Millisecond},
 		{"directory served by a rule", localfs.Entry{Name: "thistle", Path: "/harbor/movies/thistle", Type: localfs.EntryDirectory}, 500 * time.Millisecond},

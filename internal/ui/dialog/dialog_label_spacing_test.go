@@ -239,7 +239,7 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 					Open: true, Value: "120", PreviewValue: "250",
 				}, styles)
 			},
-			labels: []string{"Debounce (ms):", "Preview debounce (ms):"},
+			labels: []string{"Debounce (ms):", "Media preview debounce (ms):"},
 		},
 		{
 			name: "dedup progress",

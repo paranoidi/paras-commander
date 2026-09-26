@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
@@ -198,13 +199,13 @@ func TestMatchAnyCommandRuleTypeAndPattern(t *testing.T) {
 			{When: []string{"t d"}},
 		},
 	}
-	if !MatchAnyCommandRule(cfg, "/somewhere/book.epub", false, "/somewhere") {
+	if !MatchAnyCommandRule(cfg, "/somewhere/book.epub", localfs.EntryFile, "/somewhere") {
 		t.Fatal("expected a file rule match for *.epub")
 	}
-	if MatchAnyCommandRule(cfg, "/somewhere/notes.txt", false, "/somewhere") {
+	if MatchAnyCommandRule(cfg, "/somewhere/notes.txt", localfs.EntryFile, "/somewhere") {
 		t.Fatal("expected no match for a .txt file against *.epub/t d rules")
 	}
-	if !MatchAnyCommandRule(cfg, "/somewhere/nested", true, "/somewhere") {
+	if !MatchAnyCommandRule(cfg, "/somewhere/nested", localfs.EntryDirectory, "/somewhere") {
 		t.Fatal("expected the \"t d\" rule to match a directory")
 	}
 }
@@ -214,7 +215,7 @@ func TestMatchAnyCommandRuleGlobVsRegex(t *testing.T) {
 		ShellPatterns: true,
 		Commands:      []config.PreviewCommandRule{{When: []string{"f *.md"}}},
 	}
-	if !MatchAnyCommandRule(globCfg, "/x/readme.md", false, "/x") {
+	if !MatchAnyCommandRule(globCfg, "/x/readme.md", localfs.EntryFile, "/x") {
 		t.Fatal("expected shell-glob match for *.md")
 	}
 
@@ -222,10 +223,10 @@ func TestMatchAnyCommandRuleGlobVsRegex(t *testing.T) {
 		ShellPatterns: false,
 		Commands:      []config.PreviewCommandRule{{When: []string{`f \.md$`}}},
 	}
-	if !MatchAnyCommandRule(regexCfg, "/x/readme.md", false, "/x") {
+	if !MatchAnyCommandRule(regexCfg, "/x/readme.md", localfs.EntryFile, "/x") {
 		t.Fatal("expected regex match for \\.md$")
 	}
-	if MatchAnyCommandRule(regexCfg, "/x/readme.mdx", false, "/x") {
+	if MatchAnyCommandRule(regexCfg, "/x/readme.mdx", localfs.EntryFile, "/x") {
 		t.Fatal("regex \\.md$ must not match readme.mdx")
 	}
 }

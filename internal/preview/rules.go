@@ -49,12 +49,12 @@ func RunRules(ctx context.Context, req Request) (Result, bool) {
 // MatchAnyCommandRule is a cheap, synchronous "would any rule's when fire" pre-check — it runs
 // no subprocess. Used before dispatching a directory through the async rule-run path, so the
 // caller only leaves the built-in directory listing when a rule could plausibly take over.
-func MatchAnyCommandRule(cfg config.PreviewConfig, path string, isDir bool, panelDir string) bool {
+func MatchAnyCommandRule(cfg config.PreviewConfig, path string, typ localfs.EntryType, panelDir string) bool {
 	if len(cfg.Commands) == 0 {
 		return false
 	}
 	entCtx := &entrymatch.Context{
-		Row:           &localfs.Entry{Name: filepath.Base(path), Type: entryTypeFor(path, isDir)},
+		Row:           &localfs.Entry{Name: filepath.Base(path), Type: typ},
 		PanelDir:      panelDir,
 		ShellPatterns: cfg.ShellPatterns,
 	}

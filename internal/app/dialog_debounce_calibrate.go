@@ -16,7 +16,7 @@ import (
 func (a *App) openDebounceCalibrateDialog() {
 	a.clearTransientMessage()
 	value := dialog.FormatDebounceMS(a.config.UI.KeyRepeatDebounceMS)
-	previewValue := dialog.FormatDebounceMS(a.config.UI.PreviewDebounceMS)
+	previewValue := dialog.FormatDebounceMS(a.config.UI.MediaPreviewDebounceMS)
 	a.model.DebounceCalibrateDialog = dialog.DebounceCalibrateDialogState{
 		Open:          true,
 		Phase:         dialog.DebounceCalibrateEdit,
@@ -45,17 +45,17 @@ func (a *App) applyDebounceCalibrateDialog() {
 	if err != nil {
 		st.Focus = 1
 		// The status row sits under the first field, so name the field this one is about.
-		st.Status = fmt.Sprintf("Preview: enter 0–%d", config.KeyRepeatDebounceMaxMS)
+		st.Status = fmt.Sprintf("Media preview: enter 0–%d", config.KeyRepeatDebounceMaxMS)
 		return
 	}
 	a.config.UI.KeyRepeatDebounceMS = ms
-	a.config.UI.PreviewDebounceMS = previewMS
+	a.config.UI.MediaPreviewDebounceMS = previewMS
 	a.closeDebounceCalibrateDialog()
-	msg := fmt.Sprintf("Debounce set to %d ms (previews %d ms)", ms, previewMS)
+	msg := fmt.Sprintf("Debounce set to %d ms (media previews %d ms)", ms, previewMS)
 	patch := map[string]interface{}{
 		"ui": map[string]interface{}{
-			"key_repeat_debounce_ms": ms,
-			"preview_debounce_ms":    previewMS,
+			"key_repeat_debounce_ms":    ms,
+			"media_preview_debounce_ms": previewMS,
 		},
 	}
 	if err := a.persistPartial(patch); err != nil {
@@ -126,7 +126,7 @@ func (a *App) finishDebounceCalibrateMeasuring() {
 	avg := dialog.AverageRepeatIntervalMS(st.Samples)
 	ms := dialog.RecommendedDebounceMS(avg, dialog.CalibrationMarginMS())
 	maxDelay := dialog.MaxCalibrationDelayMS(st.Delays)
-	previewMS := dialog.RecommendedPreviewDebounceMS(st.Delays)
+	previewMS := dialog.RecommendedMediaPreviewDebounceMS(st.Delays)
 	st.Phase = dialog.DebounceCalibrateEdit
 	st.Value = dialog.FormatDebounceMS(ms)
 	st.Cursor = utf8.RuneCountInString(st.Value)
@@ -134,7 +134,7 @@ func (a *App) finishDebounceCalibrateMeasuring() {
 	st.PreviewCursor = utf8.RuneCountInString(st.PreviewValue)
 	st.Focus = 0
 	st.Status = fmt.Sprintf("Repeat %d ms, delay %d ms (margins %d/%d ms).",
-		avg, maxDelay, dialog.CalibrationMarginMS(), dialog.CalibrationPreviewMarginMS())
+		avg, maxDelay, dialog.CalibrationMarginMS(), dialog.CalibrationMediaPreviewMarginMS())
 	st.MeasureStep = dialog.MeasureAwaitPress
 	st.HoldIndex = 0
 	st.Samples = nil

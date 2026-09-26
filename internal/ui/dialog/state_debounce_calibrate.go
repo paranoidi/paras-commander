@@ -11,7 +11,7 @@ type DebounceCalibrateDialogState struct {
 	Value  string
 	Cursor int
 
-	// Preview debounce (focus 1); derived from the largest measured key-repeat delay when calibrated.
+	// Media preview debounce (focus 1); derived from the largest measured key-repeat delay when calibrated.
 	PreviewValue  string
 	PreviewCursor int
 

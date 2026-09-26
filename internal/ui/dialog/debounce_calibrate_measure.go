@@ -129,10 +129,10 @@ func MaxCalibrationDelayMS(delays []int64) int64 {
 	return max
 }
 
-// RecommendedPreviewDebounceMS derives the preview debounce from the worst-case (max, not
+// RecommendedMediaPreviewDebounceMS derives the preview debounce from the worst-case (max, not
 // average) measured delay, since the debounce must outlast the delay on every hold.
-func RecommendedPreviewDebounceMS(delays []int64) int {
-	return ClampDebounceMS(int(MaxCalibrationDelayMS(delays)) + config.DebounceCalibrationPreviewMarginMS)
+func RecommendedMediaPreviewDebounceMS(delays []int64) int {
+	return ClampDebounceMS(int(MaxCalibrationDelayMS(delays)) + config.DebounceCalibrationMediaPreviewMarginMS)
 }
 
 // ClampDebounceMS clamps to 0..KeyRepeatDebounceMaxMS.
@@ -192,9 +192,9 @@ func CalibrationMarginMS() int {
 	return config.DebounceCalibrationMarginMS
 }
 
-// CalibrationPreviewMarginMS returns the margin added to the max measured delay.
-func CalibrationPreviewMarginMS() int {
-	return config.DebounceCalibrationPreviewMarginMS
+// CalibrationMediaPreviewMarginMS returns the margin added to the max measured delay.
+func CalibrationMediaPreviewMarginMS() int {
+	return config.DebounceCalibrationMediaPreviewMarginMS
 }
 
 // CalibrationProgressBar renders a ████░░░░ bar for collected samples (no frame icons).

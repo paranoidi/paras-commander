@@ -21,19 +21,20 @@ const (
 	// runs once. Zero disables coalescing everywhere (immediate per-event behavior).
 	DefaultKeyRepeatDebounceMS = 45
 
-	// DefaultPreviewDebounceMS replaces DefaultKeyRepeatDebounceMS when the coalesced target is a
-	// preview (text/image/media file, [[preview.commands]] rule, F3 style-picker re-highlight)
-	// rather than a directory listing: previews spawn subprocesses or re-emit sixel/Kitty payloads,
-	// far more expensive than listing a directory, so they wait longer.
-	DefaultPreviewDebounceMS = 500
+	// DefaultMediaPreviewDebounceMS replaces DefaultKeyRepeatDebounceMS when the coalesced target is a
+	// heavy preview (image/media file, a [[preview.commands]] rule match, F3 style-picker
+	// re-highlight) rather than a directory listing or a text file: these spawn subprocesses or
+	// re-emit sixel/Kitty payloads, far more expensive than listing a directory or highlighting
+	// text in-process, so they wait longer.
+	DefaultMediaPreviewDebounceMS = 500
 
 	// DebounceCalibrationHolds is how many separate press-and-hold rounds Calibrate Debounce runs.
 	DebounceCalibrationHolds = 3
 	// DebounceCalibrationMarginMS is added to the measured key-repeat interval when calibrating.
 	DebounceCalibrationMarginMS = 20
-	// DebounceCalibrationPreviewMarginMS is added to the largest measured repeat delay to derive
+	// DebounceCalibrationMediaPreviewMarginMS is added to the largest measured repeat delay to derive
 	// the preview debounce: it must outlast the delay on every hold, not just on average.
-	DebounceCalibrationPreviewMarginMS = 80
+	DebounceCalibrationMediaPreviewMarginMS = 80
 	// DebounceCalibrationMinRepeatSamples is how many repeat intervals one hold must yield.
 	DebounceCalibrationMinRepeatSamples = 4
 	// DebounceCalibrationReleaseIdleMS infers key release once repeats are flowing (no key-up events).

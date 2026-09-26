@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -58,8 +59,17 @@ func (h *Handler) pageCarouselChildListing(pageDir int) {
 
 func (h *Handler) scheduleCarouselPreviewDebounceTimer(gen uint64) {
 	// ok is false for directory targets, so the child-listing coalesce keeps the key-repeat delay.
-	_, isFile := h.carouselFilePreviewWantPath()
-	delay := h.debounceDelay(isFile)
+	path, isFile := h.carouselFilePreviewWantPath()
+	heavy := false
+	if isFile {
+		p := h.host.ActivePanel()
+		entryType := localfs.EntryFile
+		if entry, ok := p.CurrentEntry(); ok {
+			entryType = entry.Type
+		}
+		heavy = h.heavyFilePreview(path, entryType, p.PathString())
+	}
+	delay := h.debounceDelay(heavy)
 	h.carouselPreviewDebounce.Arm(delay, func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(CarouselPreviewFlushPayload{gen: gen}))
 	})

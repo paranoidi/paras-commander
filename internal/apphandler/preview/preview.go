@@ -778,7 +778,7 @@ func (h *Handler) ApplyQuickViewSlow(p QuickViewSlowPayload) bool {
 // directory-listing overlay.
 func (h *Handler) activeDirRuleTarget() (string, bool) {
 	dirPath, ok := h.host.SyncFollowTargetPath(h.host.ActivePanel())
-	if !ok || !previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, true, filepath.Dir(dirPath)) {
+	if !ok || !previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, localfs.EntryDirectory, filepath.Dir(dirPath)) {
 		return "", false
 	}
 	return dirPath, true
@@ -1066,10 +1066,12 @@ func (h *Handler) ClearNavCoalesces() {
 	h.clearCarouselPreviewDebounce()
 }
 
-// debounceDelay returns the coalesce delay. preview is true when the coalesced target is a
-// preview (any file, a [[preview.commands]] rule, a style-picker re-highlight) and false when
-// it is a directory listing or a plain message: previews spawn subprocesses or re-emit
-// sixel/Kitty payloads, so they wait PreviewDebounceMS instead of KeyRepeatDebounceMS.
+// debounceDelay returns the coalesce delay. preview is true when the coalesced target is a heavy
+// file preview (images/media, a [[preview.commands]] rule match, a style-picker re-highlight) and
+// false for a directory listing, a plain message, or a text file: heavy previews spawn
+// subprocesses or re-emit sixel/Kitty payloads, so they wait MediaPreviewDebounceMS instead of the
+// faster KeyRepeatDebounceMS. Text is highlighted in-process by Chroma and always gets the
+// key-repeat delay, even under mode="external" — the external command is expected to be fast.
 //
 // ponytail: this only picks the delay — KeyRepeatDebounceMS <= 0 still short-circuits the whole
 // coalesce machinery at the call sites, so previews are not debounced either in that case.
@@ -1079,18 +1081,35 @@ func (h *Handler) debounceDelay(preview bool) time.Duration {
 	cfg := h.host.Config().UI
 	ms := cfg.KeyRepeatDebounceMS
 	if preview {
-		ms = cfg.PreviewDebounceMS
+		ms = cfg.MediaPreviewDebounceMS
 	}
 	return time.Duration(ms) * time.Millisecond
+}
+
+// heavyFilePreview reports whether path takes the slower MediaPreviewDebounceMS gate: images/media
+// re-emit terminal graphics, and a matching [[preview.commands]] rule spawns a subprocess. Text
+// (internal Chroma highlighting, or an external `command` like bat) takes the faster
+// key-repeat delay instead.
+func (h *Handler) heavyFilePreview(path string, typ localfs.EntryType, panelDir string) bool {
+	return localfs.IsImagePath(path) || localfs.IsMediaPath(path) ||
+		previewrun.MatchAnyCommandRule(h.host.Config().Preview, path, typ, panelDir)
 }
 
 // quickViewDebounceDelay classifies the current quick-view target for debounceDelay from the
 // listing entry type alone — no stat on the UI goroutine.
 func (h *Handler) quickViewDebounceDelay() time.Duration {
-	_, _, mode := h.quickViewWantFile()
+	path, workDir, mode := h.quickViewWantFile()
 	switch mode {
 	case quickViewWantFile:
-		return h.debounceDelay(true)
+		// The strip path can point at an off-listing selection, so CurrentEntry (the file-list
+		// cursor's entry) is only trustworthy as the type source outside strip focus.
+		entryType := localfs.EntryFile
+		if h.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
+			if entry, ok := h.host.ActivePanel().CurrentEntry(); ok {
+				entryType = entry.Type
+			}
+		}
+		return h.debounceDelay(h.heavyFilePreview(path, entryType, workDir))
 	case quickViewWantDir:
 		_, rule := h.activeDirRuleTarget()
 		return h.debounceDelay(rule)
