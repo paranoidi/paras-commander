@@ -83,7 +83,7 @@ tasks:
   build:
     desc: Build the pc binary in the repo root
     cmds:
-      - go build -o pc ./cmd/pc
+      - CGO_ENABLED=0 go build -ldflags="-s -w" -o pc ./cmd/pc
 
   verify:
     desc: Merge-ready local gate (lint + race tests + pc artifact)
