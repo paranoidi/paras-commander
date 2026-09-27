@@ -15,13 +15,13 @@ func (a *App) pathPickerScrollingQuery() scrollquery.Edit {
 		Width: width,
 		EnsureVisible: func() {
 			valueLen := len([]rune(q.Value))
-			suffixLen := len([]rune(st.QueryCompletionSuffix))
+			suffixLen := len([]rune(st.Completion.GhostSuffix(q.Value)))
 			q.Cursor, q.Scroll = dialog.EnsurePathInputScroll(valueLen, q.Cursor, q.Scroll, width, suffixLen)
 		},
 	}
 	edit.ApplyVisibleAfterErase = func() {
 		valueLen := len([]rune(q.Value))
-		suffixLen := len([]rune(st.QueryCompletionSuffix))
+		suffixLen := len([]rune(st.Completion.GhostSuffix(q.Value)))
 		if dialog.ScrollContentLen(valueLen, q.Cursor) <= width {
 			q.Scroll = 0
 		} else if q.Scroll > 0 {

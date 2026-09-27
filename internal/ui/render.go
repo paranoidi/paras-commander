@@ -828,7 +828,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	case dialog.PrimaryModalTransfer:
 		dialog.DrawTransferDialog(screen, layout, model.TransferDialog, dialogRenderContext(model, styles), PaintDeleteDialogRowIcon)
 	case dialog.PrimaryModalFlatten:
-		dialog.DrawFlattenDialog(screen, layout, model.FlattenDialog, styles)
+		dialog.DrawFlattenDialog(screen, layout, model.FlattenDialog, styles, model.PanelScrollbar)
 	case dialog.PrimaryModalConflict:
 		dialog.DrawConflictDialog(screen, layout, model.ConflictDialog, styles, model.UserHomeDir)
 	case dialog.PrimaryModalQuit:
@@ -852,7 +852,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)
 	}
 	if model.PathPicker.Open {
-		dialog.DrawPathPickerDialog(screen, layout, model.PathPicker, styles, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+		dialog.DrawPathPickerDialog(screen, layout, model.PathPicker, styles, model.PanelScrollbar, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	}
 	if model.HistoryDialog.Open {
 		dialog.DrawHistoryDialog(screen, layout, model.HistoryDialog, styles, rowMarksResolver(model.PinnedItems, model.JobPathMarks))

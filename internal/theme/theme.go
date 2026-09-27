@@ -249,6 +249,10 @@ type Theme struct {
 	DialogMassRenameAfterError     tcell.Style
 	DialogHelpSection              tcell.Style
 	DialogHelpKey                  tcell.Style
+	DialogCompletionItem           tcell.Style
+	DialogCompletionItemSelected   tcell.Style
+	DialogCompletionMatch          tcell.Style
+	DialogCompletionMatchSelected  tcell.Style
 
 	LeaderMenuSurface tcell.Style
 	LeaderMenuGroup   tcell.Style
@@ -1070,6 +1074,10 @@ var requiredStyleKeys = []string{
 	"dialog.massrename.after.error",
 	"dialog.help.section",
 	"dialog.help.key",
+	"dialog.completion.item",
+	"dialog.completion.item.selected",
+	"dialog.completion.match",
+	"dialog.completion.match.selected",
 	"leader_menu.surface",
 	"leader_menu.group",
 	"leader_menu.key",
@@ -1626,6 +1634,10 @@ func parse(data []byte) (Theme, error) {
 		DialogMassRenameAfterError:     styles["dialog.massrename.after.error"],
 		DialogHelpSection:              styles["dialog.help.section"],
 		DialogHelpKey:                  styles["dialog.help.key"],
+		DialogCompletionItem:           styles["dialog.completion.item"],
+		DialogCompletionItemSelected:   styles["dialog.completion.item.selected"],
+		DialogCompletionMatch:          styles["dialog.completion.match"],
+		DialogCompletionMatchSelected:  styles["dialog.completion.match.selected"],
 
 		LeaderMenuSurface: styles["leader_menu.surface"],
 		LeaderMenuGroup:   styles["leader_menu.group"],

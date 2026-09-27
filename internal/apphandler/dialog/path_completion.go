@@ -1,32 +1,39 @@
 package dialog
 
 import (
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/pathpick"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// SyncPathFieldCompletion updates filesystem completion ghost text on a path input field.
-func (h *Handler) SyncPathFieldCompletion(f *dialog.FileDialogField, textWidth int) {
+// syncPathCompletion recomputes filesystem completion candidates for a path input's value.
+func (h *Handler) syncPathCompletion(c *dialog.PathCompletion, value string, cursor int, dirsOnly bool) {
+	start, cands, ok := pathpick.Suggest(h.host.ActivePanel().PathString(), h.model.UserHomeDir, value, cursor, h.host.Config().Panels.ShowHidden, dirsOnly)
+	if !ok {
+		c.Clear()
+		return
+	}
+	c.Set(value, start, cands)
+}
+
+// resyncPathFieldCompletion recomputes filesystem completion for a path input field. A
+// still-pending prefill offers no completion.
+func (h *Handler) resyncPathFieldCompletion(f *dialog.FileDialogField, textWidth int) {
 	if f == nil {
 		return
 	}
 	if f.Prefill != "" && f.PrefillPending && f.Value == f.Prefill {
-		f.ClearCompletion()
-		h.syncPathFieldScroll(f, textWidth)
-		return
+		f.Completion.Clear()
+	} else {
+		h.syncPathCompletion(&f.Completion, f.Value, f.Cursor, f.CompletionDirsOnly)
 	}
-	panel := h.host.ActivePanel()
-	cfg := h.host.Config()
-	c, ok := pathpick.SuggestAtCursor(panel.PathString(), h.model.UserHomeDir, f.Value, f.Cursor, cfg.Panels.ShowHidden)
-	if !ok {
-		f.ClearCompletion()
-		h.syncPathFieldScroll(f, textWidth)
-		return
-	}
-	f.CompletionSuffix = c.Suffix
-	f.CompletionIsDir = c.IsDir
 	h.syncPathFieldScroll(f, textWidth)
+}
+
+// SyncPathFieldCompletion updates filesystem completion dropdown state on a path input field.
+func (h *Handler) SyncPathFieldCompletion(f *dialog.FileDialogField, textWidth int) {
+	h.resyncPathFieldCompletion(f, textWidth)
 }
 
 func (h *Handler) syncPathFieldScroll(f *dialog.FileDialogField, textWidth int) {
@@ -34,8 +41,33 @@ func (h *Handler) syncPathFieldScroll(f *dialog.FileDialogField, textWidth int) 
 		return
 	}
 	valueLen := len([]rune(f.Value))
-	suffixLen := len([]rune(f.CompletionSuffix))
+	suffixLen := len([]rune(f.Completion.GhostSuffix(f.Value)))
 	f.Cursor, f.Scroll = dialog.EnsurePathInputScroll(valueLen, f.Cursor, f.Scroll, textWidth, suffixLen)
+}
+
+// tryPathFieldCompletionKey handles Tab/Up/Down/Enter/Esc for the completion dropdown on a
+// path field's text sub-focus. Returns true when the key was consumed by the dropdown. Callers
+// are responsible for gating on their own "text sub-focus, not the picker icon" condition
+// (file_input.go: f.PathPicker && !f.PickerFocused; dest_field.go's DestFieldTryCompletionKey:
+// focusField == 0 && subFocus == textSub) since transfer/flatten's Destination field never sets
+// FileDialogField.PathPicker (that flag only drives the generic file-dialog trailing icon).
+// afterAccept (dialog-type-specific extras, e.g. mass-rename preview recompute, or arming the
+// destination-validate timer) runs after a successful accept, before the completion is re-synced.
+func (h *Handler) tryPathFieldCompletionKey(event *tcell.EventKey, f *dialog.FileDialogField, textWidth int, afterAccept func()) bool {
+	if f == nil {
+		return false
+	}
+	handled, accepted := dialog.HandlePathCompletionKey(event, &f.Completion, &f.Value, &f.Cursor)
+	if !handled {
+		return false
+	}
+	if accepted {
+		if afterAccept != nil {
+			afterAccept()
+		}
+		h.resyncPathFieldCompletion(f, textWidth)
+	}
+	return true
 }
 
 // SyncOpenPathInputsAfterFSChange refreshes filesystem completion on open path fields

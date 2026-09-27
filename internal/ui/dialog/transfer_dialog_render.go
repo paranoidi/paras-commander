@@ -191,6 +191,8 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 	pickerFocused := rowFocused && state.DestSubFocus == TransferDestSubFocusPicker
 	destInvalid := state.Phase == TransferPhaseDestination && state.DestPathInvalid && !state.DestPathCheckPending
 	drawPathInputRow(screen, rect.X+2, inputY, inputWidth, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
+	// Deferred so the dropdown paints over the checkboxes and buttons drawn below.
+	defer drawPathCompletionDropdown(screen, rect.X+2, inputY+1, state.Destination.Scroll, state.Destination.Completion, ctx.ScrollbarStyle, styles)
 
 	if state.Kind == TransferKindCopy {
 		sep1Y := rect.Y + 3
@@ -257,6 +259,7 @@ func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state T
 	pickerFocused := rowFocused && state.DestSubFocus == TransferDestSubFocusPicker
 	destInvalid := state.DestPathInvalid && !state.DestPathCheckPending
 	inputWidth := TransferDestinationTextWidth(layout, state, userHomeDir, iconLead) + 2
+	destInputY := y
 	drawPathInputRow(screen, textX, y, inputWidth, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
 	y++
 
@@ -323,4 +326,5 @@ func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state T
 	y++ // blank row above buttons
 
 	drawTransferButtons(screen, rect, y, state, styles)
+	drawPathCompletionDropdown(screen, textX, destInputY+1, state.Destination.Scroll, state.Destination.Completion, ctx.ScrollbarStyle, styles)
 }

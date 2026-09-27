@@ -69,24 +69,19 @@ func (h *Handler) SyncPathPickerRanks() {
 	dialog.EnsurePathPickerListScroll(st, h.PathPickerListRows())
 }
 
-// SyncPathPickerCompletion updates the path picker query's filesystem completion ghost text.
-func (h *Handler) SyncPathPickerCompletion() {
+// resyncPathPickerCompletion recomputes filesystem completion for the path picker's query.
+func (h *Handler) resyncPathPickerCompletion() {
 	st := &h.model.PathPicker
 	if !st.Open {
 		return
 	}
-	p := h.host.ActivePanel()
-	cfg := h.host.Config()
-	c, ok := pathpick.SuggestAtCursor(p.PathString(), h.model.UserHomeDir, st.Query, st.QueryCursor, cfg.Panels.ShowHidden)
-	if !ok {
-		st.QueryCompletionSuffix = ""
-		st.QueryCompletionIsDir = false
-		h.SyncPathPickerScroll()
-		return
-	}
-	st.QueryCompletionSuffix = c.Suffix
-	st.QueryCompletionIsDir = c.IsDir
+	h.syncPathCompletion(&st.Completion, st.Query, st.QueryCursor, false)
 	h.SyncPathPickerScroll()
+}
+
+// SyncPathPickerCompletion updates the path picker query's filesystem completion dropdown state.
+func (h *Handler) SyncPathPickerCompletion() {
+	h.resyncPathPickerCompletion()
 }
 
 // SyncPathPickerScroll re-clamps the query input's cursor/scroll to keep the caret visible.
@@ -97,56 +92,8 @@ func (h *Handler) SyncPathPickerScroll() {
 	}
 	width := h.PathPickerQueryWidth()
 	valueLen := len([]rune(st.Query))
-	suffixLen := len([]rune(st.QueryCompletionSuffix))
+	suffixLen := len([]rune(st.Completion.GhostSuffix(st.Query)))
 	st.QueryCursor, st.QueryScroll = dialog.EnsurePathInputScroll(valueLen, st.QueryCursor, st.QueryScroll, width, suffixLen)
-}
-
-// pathPickerScrollToCaret re-clamps the query input's cursor/scroll after AcceptPathPickerCompletion
-// inserts a suggestion, keeping the caret visible.
-func (h *Handler) pathPickerScrollToCaret() {
-	st := &h.model.PathPicker
-	if !st.Open {
-		return
-	}
-	width := h.PathPickerQueryWidth()
-	valueLen := len([]rune(st.Query))
-	suffixLen := len([]rune(st.QueryCompletionSuffix))
-	st.QueryCursor, st.QueryScroll = dialog.EnsurePathInputScroll(valueLen, st.QueryCursor, st.QueryScroll, width, suffixLen)
-}
-
-// AcceptPathPickerCompletion inserts the current completion suggestion at the cursor.
-func (h *Handler) AcceptPathPickerCompletion() {
-	st := &h.model.PathPicker
-	if st.QueryCompletionSuffix == "" {
-		return
-	}
-	runes := []rune(st.Query)
-	pos := st.QueryCursor
-	if pos < 0 {
-		pos = 0
-	}
-	if pos > len(runes) {
-		pos = len(runes)
-	}
-	suffix := []rune(st.QueryCompletionSuffix)
-	newRunes := make([]rune, 0, len(runes)+len(suffix)+1)
-	newRunes = append(newRunes, runes[:pos]...)
-	newRunes = append(newRunes, suffix...)
-	newRunes = append(newRunes, runes[pos:]...)
-	st.Query = string(newRunes)
-	if st.QueryCompletionIsDir {
-		st.Query += "/"
-	}
-	st.QueryCursor = len([]rune(st.Query))
-	st.QueryCompletionSuffix = ""
-	st.QueryCompletionIsDir = false
-	h.pathPickerScrollToCaret()
-
-	h.SyncPathPickerRanks()
-	h.SyncPathPickerCompletion()
-	h.ArmPathPickerValidateTimer()
-	st.Selected = 0
-	dialog.EnsurePathPickerListScroll(st, h.PathPickerListRows())
 }
 
 // PathPickerListRows returns how many rows the path picker's fuzzy list currently shows.
@@ -238,6 +185,18 @@ func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 	if h.TryBookmarkDialogShortcut(event) {
 		return
 	}
+	if st.Focus == 0 {
+		if handled, accepted := dialog.HandlePathCompletionKey(event, &st.Completion, &st.Query, &st.QueryCursor); handled {
+			if accepted {
+				h.resyncPathPickerCompletion()
+				h.SyncPathPickerRanks()
+				h.ArmPathPickerValidateTimer()
+				st.Selected = 0
+				dialog.EnsurePathPickerListScroll(st, h.PathPickerListRows())
+			}
+			return
+		}
+	}
 	if dialog.TryStandardDialogActions(event, h.activatePathPickerSelection, h.ClosePathPicker, nil) {
 		return
 	}
@@ -257,10 +216,6 @@ func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 			h.activatePathPickerSelection()
 		}
 	case tcell.KeyTab:
-		if st.Focus == 0 && st.QueryCompletionSuffix != "" {
-			h.AcceptPathPickerCompletion()
-			return
-		}
 		if nf, ok := pathPickerNavFocus(st.Purpose, st.Focus, event.Key()); ok {
 			st.Focus = nf
 		}

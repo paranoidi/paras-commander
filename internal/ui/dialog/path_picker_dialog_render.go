@@ -2,10 +2,12 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // EnsurePathPickerListScroll keeps Selected row visible in a list of height listRows.
@@ -29,7 +31,7 @@ func EnsurePathPickerListScroll(state *PathPickerState, listRows int) {
 	}
 }
 
-func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerState, styles theme.Theme, rowMarks RowMarksFunc) {
+func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerState, styles theme.Theme, scrollbarStyle uiscrollbar.Style, rowMarks RowMarksFunc) {
 	width := 78
 	if width > layout.Width-4 {
 		width = layout.Width - 4
@@ -68,7 +70,9 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 
 	filterFocused := state.Focus == 0
 	inputInvalid := state.QueryPathInvalid && !state.QueryPathCheckPending
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, CompletionSuffix: state.QueryCompletionSuffix, LeadingIcon: styles.IconSearchIcon()}, filterFocused, inputInvalid, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, CompletionSuffix: state.Completion.GhostSuffix(state.Query), Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, inputInvalid, styles)
+	// Deferred so the dropdown paints over the list and buttons drawn below.
+	defer drawPathCompletionDropdown(screen, primaryCol+runewidth.StringWidth(styles.IconSearchIcon())+1, rect.Y+2, state.QueryScroll, state.Completion, scrollbarStyle, styles)
 
 	sepBeforeList := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)

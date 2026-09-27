@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/pathpick"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -38,13 +39,15 @@ func TestPathPickerAcceptLongCompletionScrollsToEnd(t *testing.T) {
 	st := &app.model.PathPicker
 
 	long := "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/value"
+	longRunes := []rune(long)
 	st.Query = long
-	st.QueryCursor = len([]rune(long))
-	st.QueryCompletionSuffix = "EXTRA"
-	st.QueryCompletionIsDir = false
+	st.QueryCursor = len(longRunes)
+	partial := "value"
+	start := len(longRunes) - len([]rune(partial))
+	st.Completion.Set(long, start, []pathpick.Candidate{{Name: partial + "EXTRA"}})
 	st.QueryScroll = 0
 
-	app.dialogCtrl.AcceptPathPickerCompletion()
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 	wantCursor := len([]rune(long + "EXTRA"))
 	if st.QueryCursor != wantCursor {
 		t.Fatalf("cursor = %d want %d", st.QueryCursor, wantCursor)

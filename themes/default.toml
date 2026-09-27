@@ -252,6 +252,12 @@ label = { fg = "white" }
 section = { fg = "cyan", bold = true }
 key     = { fg = "magenta", bold = true }
 
+[dialog.completion]        # path completion dropdown (see docs/path-completion.md)
+item          = { fg = "white", bg = "black" }
+item.selected = { fg = "black", bg = "cyan", bold = true }
+match         = { fg = "yellow", bg = "black", bold = true }
+match.selected = { fg = "black", bg = "cyan", bold = true, underline = true }
+
 [dialog.massrename]
 before = { fg = "white" }
 before.removed = { fg = "red", bold = true }

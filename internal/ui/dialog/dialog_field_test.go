@@ -1,17 +1,16 @@
 package dialog
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/pathpick"
+)
 
 func TestFileDialogFieldAcceptCompletion(t *testing.T) {
-	field := FileDialogField{
-		Value:            "/tmp/f",
-		Cursor:           6,
-		CompletionSuffix: "oo",
-		CompletionIsDir:  true,
-	}
-	if !field.AcceptCompletion() {
-		t.Fatal("AcceptCompletion = false, want true")
-	}
+	field := FileDialogField{Value: "/tmp/f", Cursor: 6}
+	field.Completion.Set(field.Value, 5, []pathpick.Candidate{{Name: "foo", IsDir: true}})
+	newValue, newCursor := field.Completion.Accept(field.Value)
+	field.Value, field.Cursor = newValue, newCursor
 	want := "/tmp/foo/"
 	if field.Value != want {
 		t.Fatalf("Value = %q want %q", field.Value, want)
@@ -19,8 +18,8 @@ func TestFileDialogFieldAcceptCompletion(t *testing.T) {
 	if field.Cursor != len([]rune(want)) {
 		t.Fatalf("Cursor = %d want %d", field.Cursor, len([]rune(want)))
 	}
-	if field.CompletionSuffix != "" {
-		t.Fatalf("CompletionSuffix = %q want empty", field.CompletionSuffix)
+	if field.Completion.Open || len(field.Completion.Items) != 0 {
+		t.Fatalf("Completion = %+v, want cleared", field.Completion)
 	}
 }
 

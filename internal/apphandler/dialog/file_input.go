@@ -147,14 +147,10 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 
-	if f := h.FocusedField(); f != nil && f.PathPicker && !f.PickerFocused &&
-		event.Key() == tcell.KeyTab && f.CompletionSuffix != "" {
-		if f.AcceptCompletion() {
-			if after := h.fileDialogFieldAfterEdit(); after != nil {
-				after()
-			}
+	if f := h.FocusedField(); f != nil && f.PathPicker && !f.PickerFocused {
+		if h.tryPathFieldCompletionKey(event, f, h.TransferDestinationTextWidth(), h.fileDialogExtra()) {
+			return false
 		}
-		return false
 	}
 
 	onRadio := h.fileDialogOnRadio()

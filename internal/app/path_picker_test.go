@@ -259,10 +259,10 @@ func TestPathPickerTabAcceptsFilesystemCompletion(t *testing.T) {
 	for _, r := range prefix {
 		app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	if st.QueryCompletionSuffix != "oo" {
-		t.Fatalf("suffix = %q want oo", st.QueryCompletionSuffix)
+	if len(st.Completion.Items) != 1 || st.Completion.Items[0].Name != "foo" {
+		t.Fatalf("Completion.Items = %+v, want single foo candidate", st.Completion.Items)
 	}
-	if !st.QueryCompletionIsDir {
+	if !st.Completion.Items[0].IsDir {
 		t.Fatal("expected directory completion")
 	}
 
@@ -274,8 +274,8 @@ func TestPathPickerTabAcceptsFilesystemCompletion(t *testing.T) {
 	if st.QueryCursor != len([]rune(want)) {
 		t.Fatalf("QueryCursor = %d want %d", st.QueryCursor, len([]rune(want)))
 	}
-	if st.QueryCompletionSuffix != "" {
-		t.Fatalf("suffix should be cleared after accept, got %q", st.QueryCompletionSuffix)
+	if len(st.Completion.Items) != 0 {
+		t.Fatalf("completion items should be cleared/re-evaluated after accept, got %+v", st.Completion.Items)
 	}
 }
 

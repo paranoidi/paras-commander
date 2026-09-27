@@ -88,8 +88,8 @@ func TestSymlinkDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 	f.Value = prefix
 	f.Cursor = len([]rune(prefix))
 	app.dialogCtrl.SyncPathFieldCompletion(f, app.dialogCtrl.TransferDestinationTextWidth())
-	if f.CompletionSuffix != "oo" {
-		t.Fatalf("suffix = %q want oo", f.CompletionSuffix)
+	if len(f.Completion.Items) != 1 || f.Completion.Items[0].Name != "foo" {
+		t.Fatalf("Completion.Items = %+v, want single foo candidate", f.Completion.Items)
 	}
 
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))

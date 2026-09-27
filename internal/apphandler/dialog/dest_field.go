@@ -69,20 +69,11 @@ func (h *Handler) DestFieldNav(
 	return false
 }
 
-// DestFieldAcceptCompletion accepts Tab completion on the destination text sub-focus.
-func (h *Handler) DestFieldAcceptCompletion(field *dialog.FileDialogField, subFocus, focusField, textSub int, onAccepted func()) bool {
+// DestFieldTryCompletionKey handles Tab/Up/Down/Enter/Esc for the completion dropdown on a
+// destination path field's text sub-focus. Shared by the transfer and flatten dialogs.
+func (h *Handler) DestFieldTryCompletionKey(event *tcell.EventKey, field *dialog.FileDialogField, subFocus, focusField, textSub int, armValidate func()) bool {
 	if focusField != 0 || subFocus != textSub || field == nil {
 		return false
 	}
-	if field.CompletionSuffix == "" {
-		return false
-	}
-	if field.AcceptCompletion() {
-		h.SyncPathFieldCompletion(field, h.TransferDestinationTextWidth())
-		if onAccepted != nil {
-			onAccepted()
-		}
-		return true
-	}
-	return true
+	return h.tryPathFieldCompletionKey(event, field, h.TransferDestinationTextWidth(), armValidate)
 }

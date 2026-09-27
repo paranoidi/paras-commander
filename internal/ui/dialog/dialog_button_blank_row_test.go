@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 const buttonBlankRowTermW, buttonBlankRowTermH = 80, 24
@@ -130,7 +131,7 @@ func TestFlattenDialogHasBlankRowAboveButtons(t *testing.T) {
 	DrawFlattenDialog(screen, layout, FlattenDialogState{
 		Open:        true,
 		Destination: FileDialogField{Value: "/home/user/meadow", PathPicker: true},
-	}, theme.Default())
+	}, theme.Default(), uiscrollbar.StyleThumb)
 	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
 }
 
@@ -142,7 +143,7 @@ func TestPathPickerHasBlankRowAboveButtons(t *testing.T) {
 		Title:  "Bookmarks",
 		Items:  []PathPickerItem{{Source: "fzf-marks", Name: "harbor", Path: "/tmp/harbor"}},
 		Ranked: []int{0},
-	}, theme.Default(), nil)
+	}, theme.Default(), uiscrollbar.StyleThumb, nil)
 	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
 }
 

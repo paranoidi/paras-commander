@@ -188,7 +188,7 @@ func matchTerm(term term, value string, opts Options) Result {
 	case termEqual:
 		return matchEqual(term.Text, value, opts)
 	default:
-		return matchFuzzy(term.Text, value, opts)
+		return Fuzzy(term.Text, value, opts)
 	}
 }
 
@@ -348,7 +348,11 @@ func runesEqualAt(value []rune, start int, needle []rune, opts Options) bool {
 	return true
 }
 
-func matchFuzzy(needle, value string, opts Options) Result {
+// Fuzzy runs the plain (non-fzf-syntax) fuzzy matcher directly against value, bypassing
+// Parse/Query. Callers matching raw filenames (which can legitimately contain ^ $ ! ' or
+// spaces) must use this instead of Parse, which would otherwise interpret those characters
+// as query syntax.
+func Fuzzy(needle, value string, opts Options) Result {
 	needleRunes := normalizeRunes(needle, opts)
 	if len(needleRunes) == 0 {
 		return Result{Matched: true}

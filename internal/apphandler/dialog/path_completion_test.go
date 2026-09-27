@@ -65,7 +65,7 @@ func TestTransferDestinationTextWidthUsesPaintedMultiLocationWidth(t *testing.T)
 	}
 
 	destLen := len([]rune(dest))
-	_, prefScroll := uidialog.EnsurePathInputScroll(destLen, destLen, 0, preferredText, 0)
+	_, prefScroll := uidialog.EnsureScrollInputVisible(destLen, destLen, 0, preferredText)
 	if prefScroll == 0 {
 		t.Fatal("preferred width unexpectedly fits dest (test setup)")
 	}

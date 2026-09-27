@@ -58,10 +58,11 @@ type FileDialogField struct {
 	PickerFocused bool
 	// InputInvalid paints the row with dialog.input.*.error (e.g. mass rename regexp compile error or no matches).
 	InputInvalid bool
-	// CompletionSuffix is ghost filesystem completion after the caret (Tab accepts).
-	CompletionSuffix string
-	// CompletionIsDir is true when accepting completion should append a trailing slash.
-	CompletionIsDir bool
+	// Completion holds the filesystem-completion dropdown state for a PathPicker field.
+	Completion PathCompletion
+	// CompletionDirsOnly limits Completion to directories (copy/move of a directory or a
+	// multi-selection, flatten destination).
+	CompletionDirsOnly bool
 	// Scroll is the first visible rune offset for path rows with horizontal overflow.
 	Scroll int
 }

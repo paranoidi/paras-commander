@@ -68,6 +68,10 @@ func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 	if kind == dialog.TransferKindCopy {
 		h.applyCopyDefaults(&st)
 	}
+	// A file can't land on another file when copying a directory or several entries.
+	if source, err := ops.ResolveSource(h.host.ActivePanel()); err == nil {
+		st.Destination.CompletionDirsOnly = len(source.Entries) > 1 || source.Entries[0].IsDir()
+	}
 	if root, ok := h.multiDirSelectionCommonRoot(); ok {
 		st.CommonRoot = root
 		st.Entries = h.transferPreviewEntries(root)
@@ -322,6 +326,10 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 	if h.handleTransferAltShortcut(event) {
 		return
 	}
+	if d.Phase == dialog.TransferPhaseDestination &&
+		h.DestFieldTryCompletionKey(event, &d.Destination, d.DestSubFocus, d.FocusField, dialog.TransferDestSubFocusText, h.ArmTransferDestinationValidateTimer) {
+		return
+	}
 	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
 	if dialog.TryStandardDialogActions(event, h.confirmTransfer, h.CloseTransferDialog, []dialog.ExtraMnemonic{
 		{Rune: 'p', Fn: h.confirmTransferPaused},
@@ -346,10 +354,6 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if h.TryTransferDialogDestinationShortcut(event) {
-		return
-	}
-	if d.Phase == dialog.TransferPhaseDestination && event.Key() == tcell.KeyTab &&
-		h.DestFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.TransferDestSubFocusText, h.ArmTransferDestinationValidateTimer) {
 		return
 	}
 	if d.FocusField == 0 && d.Phase == dialog.TransferPhaseSelfCopyRename {

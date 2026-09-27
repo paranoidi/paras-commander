@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // DeleteRowIconPainter draws file-list devicons for one delete dialog row; nil skips icons.
@@ -109,6 +110,9 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, c
 
 	borderStyle := draw.DrawDialogFrame(screen, rect, dialogTitle, styles)
 
+	// drawDropdown paints an open path-completion dropdown last, over the buttons.
+	var drawDropdown func(uiscrollbar.Style)
+
 	switch state.DialogType {
 	case FileDialogDelete:
 		drawFileDeleteDialogContent(screen, rect, state, borderStyle, styles, showIcons, deleteIconLead, paintDeleteIcon)
@@ -135,7 +139,7 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, c
 		if renameToolActive(state) {
 			drawRenameToolContent(screen, rect, state, borderStyle, styles)
 		} else if len(state.Fields) > 0 {
-			drawMultiFieldDialog(screen, rect, state, styles)
+			drawDropdown = drawMultiFieldDialog(screen, rect, state, styles)
 		}
 		if mkdirHasActions(state) {
 			drawMkdirActionRows(screen, rect, state, borderStyle, styles)
@@ -153,6 +157,10 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, c
 		drawDeleteButtons(screen, rect, buttonY, state, styles)
 	} else {
 		drawOkCancelButtons(screen, rect, buttonY, state, styles)
+	}
+
+	if drawDropdown != nil {
+		drawDropdown(ctx.ScrollbarStyle)
 	}
 }
 
@@ -471,7 +479,9 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 	}
 }
 
-func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState, styles theme.Theme) {
+// drawMultiFieldDialog returns a non-nil func that paints the open path-completion dropdown;
+// the caller runs it after everything else so nothing overdraws it.
+func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState, styles theme.Theme) (drawDropdown func(uiscrollbar.Style)) {
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	fieldStartY := rect.Y + 1
 	for i, field := range state.Fields {
@@ -496,6 +506,12 @@ func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			continue
 		}
 		drawInputField(screen, rect.X+2, inputY, rect.Width-4, field, i == state.FocusedField, styles)
+		if field.PathPicker && field.Completion.Open {
+			x, y, scroll, comp := rect.X+2, inputY+1, field.Scroll, field.Completion
+			drawDropdown = func(sb uiscrollbar.Style) {
+				drawPathCompletionDropdown(screen, x, y, scroll, comp, sb, styles)
+			}
+		}
 	}
 	if state.DialogType == FileDialogExtract {
 		if msg := strings.TrimSpace(state.Message); msg != "" && len(state.Fields) > 0 {
@@ -514,6 +530,7 @@ func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			}
 		}
 	}
+	return drawDropdown
 }
 
 func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField, focused bool, styles theme.Theme) {
@@ -556,16 +573,16 @@ func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogFiel
 	_, placeholderStyle := styles.DialogInputPair(rowFocused)
 	prefillPending := field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill
 	textFocused := rowFocused && !pickerFocused
+	ghostSuffix := ""
+	if !prefillPending {
+		ghostSuffix = field.Completion.GhostSuffix(field.Value)
+	}
 
 	primitive.Text(screen, x, y, width, "", rowStyle)
 
-	suffix := field.CompletionSuffix
-	if prefillPending {
-		suffix = ""
-	}
 	draw.PaintScrollingInputContent(
 		screen, x, y, textW,
-		field.Value, suffix,
+		field.Value, ghostSuffix,
 		field.Cursor, field.Scroll,
 		textFocused, pathInvalid, rowFocused, prefillPending,
 		"",

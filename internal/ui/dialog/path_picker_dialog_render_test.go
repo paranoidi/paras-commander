@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 func TestDrawPathPickerDialogSmoke(t *testing.T) {
@@ -37,7 +38,7 @@ func TestDrawPathPickerDialogSmoke(t *testing.T) {
 		ListScroll: 0,
 		Focus:      0,
 	}
-	DrawPathPickerDialog(screen, layout, state, styles, nil)
+	DrawPathPickerDialog(screen, layout, state, styles, uiscrollbar.StyleThumb, nil)
 	cell, _, _ := screen.Get(4, layout.Menu.Height+4)
 	if cell == "" || cell == " " {
 		t.Fatal("expected filter row content")
@@ -67,7 +68,7 @@ func TestDrawPathPickerDialogInvalidPathRowStyle(t *testing.T) {
 		ListScroll: 0,
 		Focus:      1, // OK focused, list row not active
 	}
-	DrawPathPickerDialog(screen, layout, state, styles, nil)
+	DrawPathPickerDialog(screen, layout, state, styles, uiscrollbar.StyleThumb, nil)
 
 	listY := -1
 	nameCol := -1
@@ -116,7 +117,7 @@ func TestDrawPathPickerDialogShowsPinIconOnlyForPinnedRow(t *testing.T) {
 	rowMarks := func(absPath string) RowMarks {
 		return RowMarks{Pinned: absPath == "/tmp/pinned-alpha"}
 	}
-	DrawPathPickerDialog(screen, layout, state, styles, rowMarks)
+	DrawPathPickerDialog(screen, layout, state, styles, uiscrollbar.StyleThumb, rowMarks)
 
 	pinIcon := []rune(styles.IconPin())[0]
 	rowContainingHasIcon := func(needle string) bool {

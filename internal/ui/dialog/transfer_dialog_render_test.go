@@ -118,11 +118,11 @@ func TestTransferDestinationTextWidthUsesMultiLocationPaintedWidth(t *testing.T)
 	if destLen > painted {
 		t.Fatalf("dest len %d should fit painted %d", destLen, painted)
 	}
-	_, scroll := EnsurePathInputScroll(destLen, destLen, 0, painted, 0)
+	_, scroll := EnsureScrollInputVisible(destLen, destLen, 0, painted)
 	if scroll != 0 {
 		t.Fatalf("scroll = %d, want 0 when dest fits painted multi-location width", scroll)
 	}
-	_, prefScroll := EnsurePathInputScroll(destLen, destLen, 0, preferredText, 0)
+	_, prefScroll := EnsureScrollInputVisible(destLen, destLen, 0, preferredText)
 	if prefScroll == 0 {
 		t.Fatal("preferred width unexpectedly fits dest (test setup)")
 	}
@@ -134,7 +134,7 @@ func TestTransferMultiLocationDestinationRendersWithoutScrollWhenExpandedFits(t 
 	preferredText := PreferredFormDialogWidth - 4 - 2
 	dest := "/home/user/" + strings.Repeat("x", preferredText)
 	state := multiLocationWideState(dest)
-	_, scroll := EnsurePathInputScroll(len([]rune(dest)), len([]rune(dest)), 0, TransferDestinationTextWidth(layout, state, "", 0), 0)
+	_, scroll := EnsureScrollInputVisible(len([]rune(dest)), len([]rune(dest)), 0, TransferDestinationTextWidth(layout, state, "", 0))
 	state.Destination.Scroll = scroll
 
 	screen := tcell.NewSimulationScreen("UTF-8")

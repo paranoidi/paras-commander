@@ -71,10 +71,8 @@ type PathPickerState struct {
 	QueryPathInvalid bool
 	// QueryPathCheckPending is true until debounced validation runs after Query changed.
 	QueryPathCheckPending bool
-	// QueryCompletionSuffix is ghost text after the caret (Tab accepts into Query).
-	QueryCompletionSuffix string
-	// QueryCompletionIsDir is true when accepting should append a trailing slash.
-	QueryCompletionIsDir bool
+	// Completion holds the filesystem-completion dropdown state for Query.
+	Completion PathCompletion
 }
 
 // FindEntry is one indexed path in the recursive find dialog.

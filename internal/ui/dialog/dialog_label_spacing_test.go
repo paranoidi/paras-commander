@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // TestDialogLabelsAreFollowedByContentRow guards the project's dialog layout standard: a label
@@ -190,7 +191,7 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 				DrawFlattenDialog(screen, layout, FlattenDialogState{
 					Open:        true,
 					Destination: FileDialogField{Value: "/home/user/meadow", PathPicker: true},
-				}, styles)
+				}, styles, uiscrollbar.StyleThumb)
 			},
 			labels: []string{"Destination:"},
 		},

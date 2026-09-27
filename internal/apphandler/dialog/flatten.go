@@ -43,9 +43,11 @@ func (h *Handler) OpenFlattenDialog() {
 			}
 		}
 	}
+	dest := TransferPrefilledDestination(destPanel.PathString())
+	dest.CompletionDirsOnly = true
 	h.model.FlattenDialog = dialog.FlattenDialogState{
 		Open:         true,
-		Destination:  TransferPrefilledDestination(destPanel.PathString()),
+		Destination:  dest,
 		DestSubFocus: dialog.FlattenDestSubFocusText,
 		Recursive:    h.host.Config().Operations.FlattenRecursive,
 		RemoveEmpty:  h.host.Config().Operations.FlattenRemoveEmptyDirs,
@@ -138,6 +140,9 @@ func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 	if h.tryFlattenToggle(event) {
 		return
 	}
+	if h.DestFieldTryCompletionKey(event, &d.Destination, d.DestSubFocus, d.FocusField, dialog.FlattenDestSubFocusText, h.ArmFlattenDestinationValidateTimer) {
+		return
+	}
 	if dialog.TryStandardDialogActions(event, h.confirmFlatten, h.CloseFlattenDialog, nil) {
 		return
 	}
@@ -149,10 +154,6 @@ func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if h.TryFlattenDialogDestinationShortcut(event) {
-		return
-	}
-	if event.Key() == tcell.KeyTab &&
-		h.DestFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.FlattenDestSubFocusText, h.ArmFlattenDestinationValidateTimer) {
 		return
 	}
 	if h.handleFlattenDestNavKey(event) {

@@ -5,12 +5,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 const flattenDialogNumContent = 3
 
 // DrawFlattenDialog paints the flatten confirmation modal.
-func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogState, styles theme.Theme) {
+func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogState, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
 	width := PreferredFormDialogWidth
 	height := 10
 	rect := draw.CenteredDialogRect(layout, width, height)
@@ -38,6 +39,8 @@ func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogSt
 	tform := NewFlattenDialogLinearForm()
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawOKCancelButtonRow(screen, rect, buttonY, state.FocusField == tform.OKIndex(), state.FocusField == tform.CancelIndex(), styles)
+
+	drawPathCompletionDropdown(screen, draw.DialogTextX(rect), inputY+1, state.Destination.Scroll, state.Destination.Completion, scrollbarStyle, styles)
 }
 
 // FlattenDialogLinearForm is the flatten dialog focus layout (destination + 2 checkboxes + OK/Cancel).
