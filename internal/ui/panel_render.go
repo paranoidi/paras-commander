@@ -116,7 +116,7 @@ type PanelContext struct {
 	SelectionsBottomHint      bool
 	ShowSelectionSizeOnBottom bool
 	// IsTransferTarget marks this panel as the resolved Copy/Move/Flatten destination
-	// (its border is painted with theme.PanelTargetFrame instead of the normal frame).
+	// (its border and path title are painted with theme.PanelTargetFrame / PanelTargetTitle).
 	IsTransferTarget bool
 	// ViMotionActive marks this panel as the active panel while vi-motion mode is on
 	// (its border is painted with theme.PanelViMotionFrame instead of the normal frame,
@@ -177,12 +177,13 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	}
 	chrome := panelStyle.Styles.PanelChrome(ctx.FileListActive, ctx.ChromeBlocked)
 	borderStyle := chrome.Frame
+	titleStyle := chrome.Title
 	if ctx.IsTransferTarget {
 		borderStyle = panelStyle.Styles.PanelTargetFrame
+		titleStyle = panelStyle.Styles.PanelTargetTitle
 	} else if ctx.ViMotionActive {
 		borderStyle = panelStyle.Styles.PanelViMotionFrame
 	}
-	titleStyle := chrome.Title
 	headerStyle := chrome.Header
 	headerCarouselStyle := chrome.HeaderCarousel
 

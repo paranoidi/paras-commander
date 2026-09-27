@@ -254,6 +254,12 @@ func TestPaintBrowserListNavPanelOnlyTransferTargetBorderColor(t *testing.T) {
 	if priFG == notWantFG {
 		t.Fatal("active panel border should not use the plain active frame color while it is the transfer target")
 	}
+	// The path title ("┌─ /local/home") starts three cells in from the corner.
+	wantTitleFG, _, _ := styles.PanelTargetTitle.Decompose()
+	r, titleStyle, _ := screen.Get(layout.Primary.X+3, layout.Primary.Y)
+	if titleFG, _, _ := titleStyle.Decompose(); r != "/" || titleFG != wantTitleFG {
+		t.Fatalf("title cell = %q fg %v, want \"/\" in transfer-target title fg %v", r, titleFG, wantTitleFG)
+	}
 }
 
 // TestPaintBrowserListNavPanelOnlyShowsQuickViewIndicator guards against the cheaper
