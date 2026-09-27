@@ -132,8 +132,11 @@ func (h *Handler) deleteSelectedBookmark() bool {
 		p := BookmarkIOPayload{
 			Gen: gen, Err: err, Label: label, RemoveIndex: entIdx, kind: bookmarkIORemove,
 		}
-		result <- p
-		h.postBookmarkIO(p)
+		if bookmarkIOInline() {
+			result <- p
+		} else {
+			h.postBookmarkIO(p)
+		}
 	}()
 	if bookmarkIOInline() {
 		h.ApplyBookmarkIO(<-result)

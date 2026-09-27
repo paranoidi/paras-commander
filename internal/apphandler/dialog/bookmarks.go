@@ -141,8 +141,11 @@ func (h *Handler) startBookmarkListLoad(gen uint64) {
 		stallBookmarkFileIO()
 		items, err := h.PathPickerItemsBookmarks()
 		p := BookmarkIOPayload{Gen: gen, Err: err, Items: items, kind: bookmarkIOLoad}
-		result <- p
-		h.postBookmarkIO(p)
+		if bookmarkIOInline() {
+			result <- p
+		} else {
+			h.postBookmarkIO(p)
+		}
 	}()
 	if bookmarkIOInline() {
 		h.ApplyBookmarkIO(<-result)
@@ -241,8 +244,11 @@ func (h *Handler) ExecuteAddBookmark() {
 		stallBookmarkFileIO()
 		err := bookmarks.Append(marksPath, bookmarks.Mark{Name: name, Path: path})
 		p := BookmarkIOPayload{Gen: gen, Err: err, Name: name, MarksPath: marksPath, kind: bookmarkIOAppend}
-		result <- p
-		h.postBookmarkIO(p)
+		if bookmarkIOInline() {
+			result <- p
+		} else {
+			h.postBookmarkIO(p)
+		}
 	}()
 	if bookmarkIOInline() {
 		h.ApplyBookmarkIO(<-result)
