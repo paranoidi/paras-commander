@@ -46,13 +46,13 @@ func (h *Handler) syncPathFieldScroll(f *dialog.FileDialogField, textWidth int) 
 }
 
 // tryPathFieldCompletionKey handles Tab/Up/Down/Enter/Esc for the completion dropdown on a
-// path field's text sub-focus. Returns true when the key was consumed by the dropdown. Callers
-// are responsible for gating on their own "text sub-focus, not the picker icon" condition
-// (file_input.go: f.PathPicker && !f.PickerFocused; dest_field.go's DestFieldTryCompletionKey:
-// focusField == 0 && subFocus == textSub) since transfer/flatten's Destination field never sets
-// FileDialogField.PathPicker (that flag only drives the generic file-dialog trailing icon).
-// afterAccept (dialog-type-specific extras, e.g. mass-rename preview recompute, or arming the
-// destination-validate timer) runs after a successful accept, before the completion is re-synced.
+// path field. Returns true when the key was consumed by the dropdown. Callers gate on their own
+// focus condition (file_input.go: f.PathPicker; dest_field.go's DestFieldTryCompletionKey:
+// focusField == 0) since transfer/flatten's Destination field never sets
+// FileDialogField.PathPicker (that flag only drives the generic file-dialog completion/shortcut
+// gating). afterAccept (dialog-type-specific extras, e.g. mass-rename preview recompute, or
+// arming the destination-validate timer) runs after a successful accept, before the completion
+// is re-synced.
 func (h *Handler) tryPathFieldCompletionKey(event *tcell.EventKey, f *dialog.FileDialogField, textWidth int, afterAccept func()) bool {
 	if f == nil {
 		return false

@@ -11,7 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func TestSymlinkDialogRightAtEndFocusesPathPickerIcon(t *testing.T) {
+func TestSymlinkDialogRightAtEndIsNoOp(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "a.txt"))
 
@@ -37,19 +37,12 @@ func TestSymlinkDialogRightAtEndFocusesPathPickerIcon(t *testing.T) {
 	if f == nil || !f.PathPicker {
 		t.Fatal("symlink target field should have PathPicker enabled")
 	}
-	if f.PickerFocused {
-		t.Fatal("picker icon should not be focused initially")
-	}
 
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	cursorAtEnd := f.Cursor
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
-	if !f.PickerFocused {
-		t.Fatal("Right at end should focus path-picker icon")
-	}
-
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
-	if f.PickerFocused {
-		t.Fatal("Left from icon should return focus to text")
+	if f.Cursor != cursorAtEnd {
+		t.Fatalf("Right at end should stay at end: cursor = %d, want %d", f.Cursor, cursorAtEnd)
 	}
 }
 
@@ -99,7 +92,7 @@ func TestSymlinkDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 	}
 }
 
-func TestSymlinkDialogOpensPathPickerFromIcon(t *testing.T) {
+func TestSymlinkDialogBookmarkShortcutOpensPathPicker(t *testing.T) {
 	root := t.TempDir()
 	dst := filepath.Join(root, "dst")
 	if err := os.MkdirAll(dst, 0o755); err != nil {
@@ -135,13 +128,13 @@ func TestSymlinkDialogOpensPathPickerFromIcon(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileSymlink)
 	f := app.dialogCtrl.FocusedField()
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
-	if !f.PickerFocused {
-		t.Fatal("picker icon should be focused")
+	if f == nil || !f.PathPicker {
+		t.Fatal("symlink target field should have PathPicker enabled")
 	}
 
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	// The bookmarks path-picker keyboard shortcut (default Ctrl+B) opens the picker directly
+	// on a path-picker-capable field; there is no trailing icon to focus first.
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl))
 	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != dialog.PathPickerPurposeApplyFileDialogField {
 		t.Fatalf("path picker = open %v purpose %v, want ApplyFileDialogField",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)

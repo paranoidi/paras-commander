@@ -41,7 +41,7 @@ func TestDrawInputFieldScrollsHorizontallyForLongValue(t *testing.T) {
 	}
 }
 
-func TestDrawPathInputRowInvalidDoesNotRenderCompletionAndIconAvoidsErrorStyle(t *testing.T) {
+func TestDrawInputFieldPathPickerInvalidDoesNotRenderCompletion(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -54,7 +54,6 @@ func TestDrawPathInputRowInvalidDoesNotRenderCompletionAndIconAvoidsErrorStyle(t
 	value := "/tmp/x"
 	cursor := len([]rune(value))
 	const width = 22
-	textW := width - 2
 	field := FileDialogField{
 		Value:      value,
 		Cursor:     cursor,
@@ -66,30 +65,18 @@ func TestDrawPathInputRowInvalidDoesNotRenderCompletionAndIconAvoidsErrorStyle(t
 	// showing ghost text in the row.
 	field.Completion.Set(value, cursor-1, []pathpick.Candidate{{Name: "xYZ"}, {Name: "xAB"}})
 
-	drawPathInputRow(screen, 1, 1, width, field, true, false, true, styles)
+	drawInputFieldInvalid(screen, 1, 1, width, field, true, true, styles)
 
-	got := tcelltest.TextAt(screen, 1, 1, textW)
+	got := tcelltest.TextAt(screen, 1, 1, width)
 	if strings.Contains(got, "Z") {
 		t.Fatalf("input row must render only the typed value, got %q", got)
 	}
 	if !strings.HasPrefix(got, value) {
 		t.Fatalf("input row = %q, want it to start with typed value %q", got, value)
 	}
-
-	wantIcon := styles.DialogInputBaseStyle(true, false)
-	_, iconSt, _ := screen.Get(1+textW, 1)
-	if iconSt == styles.DialogInputActiveError {
-		t.Fatal("path-picker icon must not use error style")
-	}
-	gotFG, gotBG, gotAttr := iconSt.Decompose()
-	wantFG, wantBG, wantAttr := wantIcon.Decompose()
-	if gotFG != wantFG || gotBG != wantBG || gotAttr != wantAttr {
-		t.Fatalf("icon style fg=%v bg=%v attr=%v want fg=%v bg=%v attr=%v",
-			gotFG, gotBG, gotAttr, wantFG, wantBG, wantAttr)
-	}
 }
 
-func TestDrawPathInputRowShowsGhostSuffixForSinglePrefixCandidateNoDropdown(t *testing.T) {
+func TestDrawInputFieldShowsGhostSuffixForSinglePrefixCandidateNoDropdown(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -101,16 +88,15 @@ func TestDrawPathInputRowShowsGhostSuffixForSinglePrefixCandidateNoDropdown(t *t
 	value := "/tmp/lant"
 	cursor := len([]rune(value))
 	const width = 30
-	textW := width - 2
 	field := FileDialogField{Value: value, Cursor: cursor, PathPicker: true}
 	field.Completion.Set(value, 5, []pathpick.Candidate{{Name: "lantern", IsDir: true}})
 	if field.Completion.Open {
 		t.Fatal("a single prefix candidate must not open the dropdown")
 	}
 
-	drawPathInputRow(screen, 1, 1, width, field, true, false, false, styles)
+	drawInputField(screen, 1, 1, width, field, true, styles)
 
-	got := tcelltest.TextAt(screen, 1, 1, textW)
+	got := tcelltest.TextAt(screen, 1, 1, width)
 	const suffix = "ern"
 	if !strings.Contains(got, suffix) {
 		t.Fatalf("expected ghost suffix %q in row %q", suffix, got)
@@ -125,15 +111,15 @@ func TestDrawPathInputRowShowsGhostSuffixForSinglePrefixCandidateNoDropdown(t *t
 	}
 
 	// The dropdown itself is a no-op while only ghost text is showing (Open is false).
-	before := tcelltest.TextAt(screen, 1, 2, textW)
+	before := tcelltest.TextAt(screen, 1, 2, width)
 	drawPathCompletionDropdown(screen, 1, 2, 0, field.Completion, uiscrollbar.StyleThumb, styles)
-	after := tcelltest.TextAt(screen, 1, 2, textW)
+	after := tcelltest.TextAt(screen, 1, 2, width)
 	if before != after {
 		t.Fatalf("drawPathCompletionDropdown painted something while Open=false: before %q after %q", before, after)
 	}
 }
 
-func TestDrawPathInputRowScrollsHorizontallyForLongValue(t *testing.T) {
+func TestDrawInputFieldPathPickerScrollsHorizontallyForLongValue(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -143,7 +129,7 @@ func TestDrawPathInputRowScrollsHorizontallyForLongValue(t *testing.T) {
 
 	styles := theme.Default()
 	value := "/home/user/very/long/path/to/something"
-	const width = 22 // textW = 20
+	const width = 20
 	field := FileDialogField{
 		Value:      value,
 		Cursor:     len([]rune(value)),
@@ -151,9 +137,9 @@ func TestDrawPathInputRowScrollsHorizontallyForLongValue(t *testing.T) {
 		PathPicker: true,
 	}
 
-	drawPathInputRow(screen, 1, 1, width, field, true, false, false, styles)
+	drawInputField(screen, 1, 1, width, field, true, styles)
 
-	got := tcelltest.TextAt(screen, 1, 1, width-2)
+	got := tcelltest.TextAt(screen, 1, 1, width)
 	if strings.Contains(got, "~") {
 		t.Fatalf("did not expect ~ truncation marker, got %q", got)
 	}

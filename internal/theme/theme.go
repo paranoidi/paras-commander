@@ -543,7 +543,6 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 
 // Icon keys in the [icons] table (optional entries — see accessors for defaults).
 const (
-	IconKeyPathPicker               = "path_picker"
 	IconKeyFile                     = "file"
 	IconKeyFolder                   = "folder"
 	IconKeyGit                      = "git"
@@ -814,17 +813,6 @@ func (t Theme) treeIcon(key, fallback string) string {
 		}
 	}
 	return fallback
-}
-
-// IconPathPicker returns the trailing path-picker icon from the theme, with a default
-// Nerd-Font private-use fallback when the key is absent.
-func (t Theme) IconPathPicker() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeyPathPicker]); s != "" {
-			return s
-		}
-	}
-	return "\uef0d"
 }
 
 // IconMenuProgressDone returns the filled segment icon for the menu-bar progress bar.

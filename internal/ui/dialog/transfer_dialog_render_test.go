@@ -95,7 +95,7 @@ func TestTransferDestinationTextWidthPlainUsesPreferredWidth(t *testing.T) {
 	layout := Layout{Width: 120, Height: 24}
 	state := TransferDialogState{Kind: TransferKindCopy, Phase: TransferPhaseDestination}
 	got := TransferDestinationTextWidth(layout, state, "", 0)
-	want := PreferredFormDialogWidth - 4 - 2
+	want := PreferredFormDialogWidth - 4
 	if got != want {
 		t.Fatalf("plain transfer text width = %d, want %d", got, want)
 	}
@@ -103,7 +103,7 @@ func TestTransferDestinationTextWidthPlainUsesPreferredWidth(t *testing.T) {
 
 func TestTransferDestinationTextWidthUsesMultiLocationPaintedWidth(t *testing.T) {
 	layout := Layout{Width: 120, Height: 40}
-	preferredText := PreferredFormDialogWidth - 4 - 2
+	preferredText := PreferredFormDialogWidth - 4
 	// Longer than the preferred-width text row, shorter than the expanded multi-location row.
 	dest := "/home/user/" + strings.Repeat("x", preferredText)
 	state := multiLocationWideState(dest)
@@ -131,7 +131,7 @@ func TestTransferDestinationTextWidthUsesMultiLocationPaintedWidth(t *testing.T)
 func TestTransferMultiLocationDestinationRendersWithoutScrollWhenExpandedFits(t *testing.T) {
 	const w, h = 120, 40
 	layout := Layout{Width: w, Height: h}
-	preferredText := PreferredFormDialogWidth - 4 - 2
+	preferredText := PreferredFormDialogWidth - 4
 	dest := "/home/user/" + strings.Repeat("x", preferredText)
 	state := multiLocationWideState(dest)
 	_, scroll := EnsureScrollInputVisible(len([]rune(dest)), len([]rune(dest)), 0, TransferDestinationTextWidth(layout, state, "", 0))

@@ -282,9 +282,6 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 	if d.Destination.Cursor != startCursor-1 {
 		t.Fatalf("Left: cursor = %d, want %d", d.Destination.Cursor, startCursor-1)
 	}
-	if d.DestSubFocus != dialog.TransferDestSubFocusText {
-		t.Fatalf("Left changed sub-focus to %v, want text", d.DestSubFocus)
-	}
 
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if d.Destination.Cursor != startCursor-2 {

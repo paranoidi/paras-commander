@@ -45,7 +45,7 @@ func TestTransferDestinationTextWidthUsesPaintedMultiLocationWidth(t *testing.T)
 	const termW, termH = 120, 40
 	h := newPathCompletionHandler(t, termW, termH)
 
-	preferredText := uidialog.PreferredFormDialogWidth - 4 - 2
+	preferredText := uidialog.PreferredFormDialogWidth - 4
 	dest := "/home/user/" + strings.Repeat("x", preferredText)
 	h.model.TransferDialog = multiLocationWideTransfer(dest)
 
@@ -87,7 +87,7 @@ func TestTransferDestinationTextWidthPlainUsesPreferredWidth(t *testing.T) {
 	}
 
 	got := h.TransferDestinationTextWidth()
-	want := uidialog.PreferredFormDialogWidth - 4 - 2
+	want := uidialog.PreferredFormDialogWidth - 4
 	if got != want {
 		t.Fatalf("plain TransferDestinationTextWidth() = %d, want %d", got, want)
 	}

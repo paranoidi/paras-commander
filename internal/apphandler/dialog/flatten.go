@@ -46,13 +46,12 @@ func (h *Handler) OpenFlattenDialog() {
 	dest := TransferPrefilledDestination(destPanel.PathString())
 	dest.CompletionDirsOnly = true
 	h.model.FlattenDialog = dialog.FlattenDialogState{
-		Open:         true,
-		Destination:  dest,
-		DestSubFocus: dialog.FlattenDestSubFocusText,
-		Recursive:    h.host.Config().Operations.FlattenRecursive,
-		RemoveEmpty:  h.host.Config().Operations.FlattenRemoveEmptyDirs,
-		FocusField:   0,
-		DirRoots:     rootStrs,
+		Open:        true,
+		Destination: dest,
+		Recursive:   h.host.Config().Operations.FlattenRecursive,
+		RemoveEmpty: h.host.Config().Operations.FlattenRemoveEmptyDirs,
+		FocusField:  0,
+		DirRoots:    rootStrs,
 	}
 	h.host.ClearTransientMessage()
 	if inactiveIsSource {
@@ -124,14 +123,12 @@ func (h *Handler) tryFlattenToggle(event *tcell.EventKey) bool {
 	return false
 }
 
-// handleFlattenDestNavKey handles Left/Right cursor movement and picker sub-focus
-// navigation on the destination field while it is focused. Returns true when the key was
-// handled (caller should return); false to fall through to the generic focus-move / Enter
-// handling below.
+// handleFlattenDestNavKey handles Left/Right cursor movement on the destination field while
+// it is focused. Returns true when the key was handled (caller should return); false to fall
+// through to the generic focus-move / Enter handling below.
 func (h *Handler) handleFlattenDestNavKey(event *tcell.EventKey) bool {
 	d := &h.model.FlattenDialog
-	return h.DestFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
-		dialog.FlattenDestSubFocusText, dialog.FlattenDestSubFocusPicker, h.OpenPathPickerForFlattenBookmarks)
+	return h.DestFieldNav(event, &d.Destination, d.FocusField)
 }
 
 // HandleFlattenDialogKey dispatches a key event to the open flatten dialog.
@@ -140,7 +137,7 @@ func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 	if h.tryFlattenToggle(event) {
 		return
 	}
-	if h.DestFieldTryCompletionKey(event, &d.Destination, d.DestSubFocus, d.FocusField, dialog.FlattenDestSubFocusText, h.ArmFlattenDestinationValidateTimer) {
+	if h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusField, h.ArmFlattenDestinationValidateTimer) {
 		return
 	}
 	if dialog.TryStandardDialogActions(event, h.confirmFlatten, h.CloseFlattenDialog, nil) {
@@ -160,16 +157,12 @@ func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if focus, ok := dialog.FlattenDialogMoveFocus(d.FocusField, event.Key()); ok {
-		prev := d.FocusField
 		d.FocusField = focus
-		if prev == 0 && focus != 0 {
-			d.DestSubFocus = dialog.FlattenDestSubFocusText
-		}
 		return
 	}
 	if event.Key() == tcell.KeyEnter {
 		tform := dialog.NewFlattenDialogLinearForm()
-		if d.FocusField == 0 && d.DestSubFocus == dialog.FlattenDestSubFocusText {
+		if d.FocusField == 0 {
 			h.confirmFlatten()
 			return
 		}

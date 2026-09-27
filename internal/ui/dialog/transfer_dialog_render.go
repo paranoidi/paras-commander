@@ -101,11 +101,11 @@ func transferDestinationFrameWidth(layout Layout, state TransferDialogState, use
 	return width
 }
 
-// TransferDestinationTextWidth is the painted destination input text width (content width
-// minus the path-picker icon column and trailing blank). Completion and scroll use this
-// so FileDialogField.Scroll matches the row that is actually drawn.
+// TransferDestinationTextWidth is the painted destination input text width (full content
+// width). Completion and scroll use this so FileDialogField.Scroll matches the row that is
+// actually drawn.
 func TransferDestinationTextWidth(layout Layout, state TransferDialogState, userHomeDir string, iconLead int) int {
-	w := transferDestinationFrameWidth(layout, state, userHomeDir, iconLead) - 4 - 2
+	w := transferDestinationFrameWidth(layout, state, userHomeDir, iconLead) - 4
 	if w < 1 {
 		return 1
 	}
@@ -186,11 +186,10 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, destLabel, styles.DialogText.Background(dbg))
 
 	inputY := rect.Y + 2
-	inputWidth := TransferDestinationTextWidth(layout, state, "", 0) + 2
+	inputWidth := TransferDestinationTextWidth(layout, state, "", 0)
 	rowFocused := state.FocusField == 0
-	pickerFocused := rowFocused && state.DestSubFocus == TransferDestSubFocusPicker
 	destInvalid := state.Phase == TransferPhaseDestination && state.DestPathInvalid && !state.DestPathCheckPending
-	drawPathInputRow(screen, rect.X+2, inputY, inputWidth, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
+	drawInputFieldInvalid(screen, rect.X+2, inputY, inputWidth, state.Destination, rowFocused, destInvalid, styles)
 	// Deferred so the dropdown paints over the checkboxes and buttons drawn below.
 	defer drawPathCompletionDropdown(screen, rect.X+2, inputY+1, state.Destination.Scroll, state.Destination.Completion, ctx.ScrollbarStyle, styles)
 
@@ -256,11 +255,10 @@ func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state T
 	y++
 
 	rowFocused := state.FocusField == 0
-	pickerFocused := rowFocused && state.DestSubFocus == TransferDestSubFocusPicker
 	destInvalid := state.DestPathInvalid && !state.DestPathCheckPending
-	inputWidth := TransferDestinationTextWidth(layout, state, userHomeDir, iconLead) + 2
+	inputWidth := TransferDestinationTextWidth(layout, state, userHomeDir, iconLead)
 	destInputY := y
-	drawPathInputRow(screen, textX, y, inputWidth, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
+	drawInputFieldInvalid(screen, textX, y, inputWidth, state.Destination, rowFocused, destInvalid, styles)
 	y++
 
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)

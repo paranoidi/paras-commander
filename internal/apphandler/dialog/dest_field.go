@@ -5,39 +5,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// DestFieldNav handles Left/Right cursor movement and text/picker sub-focus on a
-// destination path field while FocusField is 0. Shared by the transfer and flatten dialogs.
-// openPicker runs when Enter is pressed with picker sub-focus.
+// DestFieldNav handles Left/Right cursor movement on a destination path field while
+// FocusField is 0. Shared by the transfer and flatten dialogs.
 // Returns true when the key was handled (caller should return).
-func (h *Handler) DestFieldNav(
-	event *tcell.EventKey,
-	field *dialog.FileDialogField,
-	subFocus *int,
-	focusField *int,
-	textSub, pickerSub int,
-	openPicker func(),
-) bool {
-	if focusField == nil || *focusField != 0 || field == nil || subFocus == nil {
+func (h *Handler) DestFieldNav(event *tcell.EventKey, field *dialog.FileDialogField, focusField int) bool {
+	if focusField != 0 || field == nil {
 		return false
-	}
-	if *subFocus == pickerSub {
-		switch event.Key() {
-		case tcell.KeyLeft:
-			*subFocus = textSub
-			runes := []rune(field.Value)
-			field.Cursor = len(runes)
-			return true
-		case tcell.KeyEnter:
-			if openPicker != nil {
-				openPicker()
-			}
-			return true
-		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
-			*subFocus = textSub
-			return false
-		default:
-			return true
-		}
 	}
 	switch event.Key() {
 	case tcell.KeyRight:
@@ -49,13 +22,12 @@ func (h *Handler) DestFieldNav(
 		if c > len(runes) {
 			c = len(runes)
 		}
-		// First Right on a pending placeholder commits it; second Right at EOT moves to the icon.
+		// Right on a pending placeholder commits it; otherwise Right at end-of-text is a no-op.
 		if field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill && c >= len(runes) {
 			field.CommitPrefill()
 			return true
 		}
 		if c >= len(runes) {
-			*subFocus = pickerSub
 			return true
 		}
 		field.MoveCursor(1)
@@ -70,9 +42,9 @@ func (h *Handler) DestFieldNav(
 }
 
 // DestFieldTryCompletionKey handles Tab/Up/Down/Enter/Esc for the completion dropdown on a
-// destination path field's text sub-focus. Shared by the transfer and flatten dialogs.
-func (h *Handler) DestFieldTryCompletionKey(event *tcell.EventKey, field *dialog.FileDialogField, subFocus, focusField, textSub int, armValidate func()) bool {
-	if focusField != 0 || subFocus != textSub || field == nil {
+// destination path field. Shared by the transfer and flatten dialogs.
+func (h *Handler) DestFieldTryCompletionKey(event *tcell.EventKey, field *dialog.FileDialogField, focusField int, armValidate func()) bool {
+	if focusField != 0 || field == nil {
 		return false
 	}
 	return h.tryPathFieldCompletionKey(event, field, h.TransferDestinationTextWidth(), armValidate)

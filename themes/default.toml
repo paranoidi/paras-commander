@@ -293,7 +293,6 @@ hashing = { fg = "bright_green", bold = true }
 
 [icons]
 working = "\uf017"
-path_picker = "\uf0ca"
 file = "\uf15b"
 folder = "\uf07b"
 git = "\uf1d3"

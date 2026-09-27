@@ -247,7 +247,7 @@ func fileDialogTitle(dialogType FileDialogType) string {
 
 func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead int) int {
 	minWidth := fileDialogBaseMinWidth
-	// Field row width follows labels only; values scroll in drawInputField / drawPathInputRow.
+	// Field row width follows labels only; values scroll in drawInputField.
 	for _, field := range state.Fields {
 		fw := utf8.RuneCountInString(field.Label) + 6
 		if fw > minWidth {
@@ -533,20 +533,27 @@ func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	return drawDropdown
 }
 
+// drawInputField paints a dialog text input row, including the filesystem-completion ghost
+// suffix when the field has one. drawInputFieldInvalid takes the error style explicitly (path
+// validation); drawInputField uses field.InputInvalid.
+// The text area scrolls horizontally to keep the caret visible; overflow markers (◀/▶) appear on
+// the edge text cells when content is hidden in that direction.
 func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField, focused bool, styles theme.Theme) {
-	if field.PathPicker && width > 2 {
-		pickerFocused := field.PickerFocused && focused
-		drawPathInputRow(screen, x, y, width, field, focused, pickerFocused, false, styles)
-		return
-	}
+	drawInputFieldInvalid(screen, x, y, width, field, focused, field.InputInvalid, styles)
+}
+
+func drawInputFieldInvalid(screen tcell.Screen, x, y, width int, field FileDialogField, focused, invalid bool, styles theme.Theme) {
 	if width <= 0 {
 		return
 	}
-	invalid := field.InputInvalid
 	prefillPending := field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill
+	ghostSuffix := "" // empty for fields without path completion
+	if !prefillPending {
+		ghostSuffix = field.Completion.GhostSuffix(field.Value)
+	}
 	draw.PaintScrollingInputContent(
 		screen, x, y, width,
-		field.Value, "",
+		field.Value, ghostSuffix,
 		field.Cursor, field.Scroll,
 		focused, invalid, focused, prefillPending,
 		"",
@@ -557,55 +564,6 @@ func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 // DrawInputField paints a single dialog text input row (shared by file dialogs and inline query bars).
 func DrawInputField(screen tcell.Screen, x, y, width int, field FileDialogField, focused bool, styles theme.Theme) {
 	drawInputField(screen, x, y, width, field, focused, styles)
-}
-
-// drawPathInputRow draws text in the first width-2 cells, the path-picker icon in the
-// next cell, and leaves the rightmost cell blank (row background).
-// When pathInvalid is true, uses dialog.input.*.error for the row (see Theme.DialogInputBaseStyle).
-// The text area scrolls horizontally to keep the caret visible; overflow markers (◀/▶) appear on
-// the edge text cells when content is hidden in that direction.
-func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogField, rowFocused bool, pickerFocused bool, pathInvalid bool, styles theme.Theme) {
-	if width <= 2 {
-		return
-	}
-	textW := width - 2
-	rowStyle := styles.DialogInputBaseStyle(rowFocused, false)
-	_, placeholderStyle := styles.DialogInputPair(rowFocused)
-	prefillPending := field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill
-	textFocused := rowFocused && !pickerFocused
-	ghostSuffix := ""
-	if !prefillPending {
-		ghostSuffix = field.Completion.GhostSuffix(field.Value)
-	}
-
-	primitive.Text(screen, x, y, width, "", rowStyle)
-
-	draw.PaintScrollingInputContent(
-		screen, x, y, textW,
-		field.Value, ghostSuffix,
-		field.Cursor, field.Scroll,
-		textFocused, pathInvalid, rowFocused, prefillPending,
-		"",
-		styles,
-	)
-
-	iconX := x + textW
-	iconStr := styles.IconPathPicker()
-	iconR := ' '
-	if sr := []rune(iconStr); len(sr) > 0 {
-		iconR = sr[0]
-	}
-	iconStyle := rowStyle
-	if prefillPending && !pathInvalid {
-		iconStyle = placeholderStyle
-	}
-	if rowFocused && pickerFocused {
-		iconStyle = styles.DialogAccent
-	}
-	screen.SetContent(iconX, y, iconR, nil, iconStyle)
-
-	tailX := x + width - 1
-	screen.SetContent(tailX, y, ' ', nil, rowStyle)
 }
 
 // fileDialogFocusIndex returns the focus index for the OK/Yes button.

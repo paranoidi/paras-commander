@@ -34,9 +34,6 @@ func (h *Handler) DialogInputRestoreFooterEligible() bool {
 		case dialog.TransferPhaseSelfCopyRename:
 			return d.SelfCopyNewName.Prefill != ""
 		case dialog.TransferPhaseDestination:
-			if d.DestSubFocus != dialog.TransferDestSubFocusText {
-				return false
-			}
 			return d.Destination.Prefill != ""
 		default:
 			return false

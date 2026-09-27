@@ -38,19 +38,12 @@ const (
 	TransferPhaseSelfCopyRename
 )
 
-// Destination sub-focus for path input row (text vs trailing path-picker icon).
-const (
-	TransferDestSubFocusText = iota
-	TransferDestSubFocusPicker
-)
-
 // TransferDialogState holds the copy/move destination dialog (shared chrome and navigation).
 type TransferDialogState struct {
 	Open                 bool
 	Kind                 TransferKind
 	Phase                TransferDialogPhase
 	Destination          FileDialogField
-	DestSubFocus         int  // TransferDestSubFocus* when Phase==TransferPhaseDestination and FocusField==0
 	PreservePermissions  bool // copy only
 	PreserveTimestamps   bool // copy only
 	DereferenceSymlinks  bool // copy only

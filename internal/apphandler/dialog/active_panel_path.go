@@ -69,7 +69,6 @@ func (h *Handler) TryTransferDialogDestinationShortcut(ev *tcell.EventKey) bool 
 func (h *Handler) applyTransferDestinationFromActivePanel() {
 	d := &h.model.TransferDialog
 	d.Destination = TransferPrefilledDestination(h.host.ActivePanel().PathString())
-	d.DestSubFocus = dialog.TransferDestSubFocusText
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmTransferDestinationValidateTimer()
 }
@@ -77,7 +76,6 @@ func (h *Handler) applyTransferDestinationFromActivePanel() {
 func (h *Handler) applyTransferDestinationFromInactivePanel() {
 	d := &h.model.TransferDialog
 	d.Destination = TransferPrefilledDestination(h.host.InactivePanel().PathString())
-	d.DestSubFocus = dialog.TransferDestSubFocusText
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmTransferDestinationValidateTimer()
 }
@@ -103,7 +101,6 @@ func (h *Handler) TryFlattenDialogDestinationShortcut(ev *tcell.EventKey) bool {
 func (h *Handler) applyFlattenDestinationFromActivePanel() {
 	d := &h.model.FlattenDialog
 	d.Destination = TransferPrefilledDestination(h.host.ActivePanel().PathString())
-	d.DestSubFocus = dialog.FlattenDestSubFocusText
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmFlattenDestinationValidateTimer()
 }
@@ -111,7 +108,6 @@ func (h *Handler) applyFlattenDestinationFromActivePanel() {
 func (h *Handler) applyFlattenDestinationFromInactivePanel() {
 	d := &h.model.FlattenDialog
 	d.Destination = TransferPrefilledDestination(h.host.InactivePanel().PathString())
-	d.DestSubFocus = dialog.FlattenDestSubFocusText
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmFlattenDestinationValidateTimer()
 }

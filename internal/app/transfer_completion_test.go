@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -114,7 +115,6 @@ func TestTransferDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 			Value:  prefix,
 			Cursor: len([]rune(prefix)),
 		}
-		d.DestSubFocus = dialog.TransferDestSubFocusText
 		d.FocusField = 0
 		app.dialogCtrl.SyncPathFieldCompletion(&d.Destination, app.dialogCtrl.TransferDestinationTextWidth())
 		if len(d.Destination.Completion.Items) != 1 || d.Destination.Completion.Items[0].Name != "foo" {
@@ -160,7 +160,6 @@ func TestTransferDialogSinglePrefixCompletionGhostTabAccepts(t *testing.T) {
 	if !d.Open {
 		t.Fatal("transfer dialog should be open")
 	}
-	d.DestSubFocus = dialog.TransferDestSubFocusText
 	d.FocusField = 0
 
 	partial := filepath.Join(root, "lantern-o")
@@ -222,7 +221,6 @@ func TestTransferDialogEnterOverGhostTextConfirmsNotAccepts(t *testing.T) {
 	if !d.Open {
 		t.Fatal("transfer dialog should be open")
 	}
-	d.DestSubFocus = dialog.TransferDestSubFocusText
 	d.FocusField = 0
 
 	partial := filepath.Join(dir, "lantern-o")
@@ -274,7 +272,6 @@ func TestTransferDialogFuzzyCompletionDropdownDownEnter(t *testing.T) {
 	if !d.Open {
 		t.Fatal("transfer dialog should be open")
 	}
-	d.DestSubFocus = dialog.TransferDestSubFocusText
 	d.FocusField = 0
 
 	partial := filepath.Join(targetRoot, "gully")
@@ -360,4 +357,41 @@ func TestTransferDialogCompletionDirsOnlyForMultiSelection(t *testing.T) {
 	if got := complete(map[string]bool{filePath: true}); len(got) != 2 {
 		t.Fatalf("single-file completion = %v, want both entries", got)
 	}
+}
+
+// TestTransferDialogTypedSinglePrefixPaintsGhost confirms that typing into the Destination
+// field paints the single prefix candidate's remainder as ghost text on screen.
+func TestTransferDialogTypedSinglePrefixPaintsGhost(t *testing.T) {
+	root := t.TempDir()
+	for _, n := range []string{"velvet-compass", "velour-garden", "copper-kettle"} {
+		if err := os.Mkdir(filepath.Join(root, n), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(120, 30)
+	app := newTestApp(t, screen, testOptions(root))
+	app.dialogCtrl.OpenCopyDialog()
+	typed := filepath.Join(root, "velvet-co")
+	for _, r := range typed {
+		app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.render()
+
+	cells, w, h := screen.GetContents()
+	want := "/velvet-compass" // the long temp path may scroll; panels list the name without "/"
+	for y := range h {
+		var sb strings.Builder
+		for x := range w {
+			sb.WriteString(string(cells[y*w+x].Runes))
+		}
+		if strings.Contains(sb.String(), want) {
+			return
+		}
+	}
+	t.Fatalf("no screen row shows %q (typed %q plus ghost suffix)", want, typed)
 }

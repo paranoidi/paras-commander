@@ -145,7 +145,6 @@ func (h *Handler) activatePathPickerSelection() {
 		d.Destination.Cursor = len(rn)
 		d.Destination.Prefill = ""
 		d.Destination.PrefillPending = false
-		d.DestSubFocus = dialog.TransferDestSubFocusText
 		h.ClosePathPicker()
 	case dialog.PathPickerPurposeApplyFlattenDestination:
 		d := &h.model.FlattenDialog
@@ -154,7 +153,6 @@ func (h *Handler) activatePathPickerSelection() {
 		d.Destination.Cursor = len(rn)
 		d.Destination.Prefill = ""
 		d.Destination.PrefillPending = false
-		d.DestSubFocus = dialog.FlattenDestSubFocusText
 		h.ClosePathPicker()
 	case dialog.PathPickerPurposeApplyFileDialogField:
 		idx := st.FileFieldIndex
@@ -167,7 +165,6 @@ func (h *Handler) activatePathPickerSelection() {
 		f.Cursor = len([]rune(path))
 		f.Prefill = ""
 		f.PrefillPending = false
-		f.PickerFocused = false
 		h.ClosePathPicker()
 	default:
 		h.ClosePathPicker()

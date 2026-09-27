@@ -59,11 +59,10 @@ func TransferPrefilledDestination(path string) dialog.FileDialogField {
 func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 	passive := h.host.InactivePanel()
 	st := dialog.TransferDialogState{
-		Open:         true,
-		Kind:         kind,
-		Destination:  TransferPrefilledDestination(passive.PathString()),
-		DestSubFocus: dialog.TransferDestSubFocusText,
-		FocusField:   0, // destination path row
+		Open:        true,
+		Kind:        kind,
+		Destination: TransferPrefilledDestination(passive.PathString()),
+		FocusField:  0, // destination path row
 	}
 	if kind == dialog.TransferKindCopy {
 		h.applyCopyDefaults(&st)
@@ -157,7 +156,6 @@ func (h *Handler) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, abs
 		Kind:                 kind,
 		Phase:                dialog.TransferPhaseSelfCopyRename,
 		Destination:          dialog.FileDialogField{},
-		DestSubFocus:         dialog.TransferDestSubFocusText,
 		SelfCopyDestDir:      absDestDir,
 		SelfCopyOrigBasename: base,
 		SelfCopyNewName:      transferSelfCopyNewNamePrefilled(base),
@@ -231,17 +229,15 @@ func (h *Handler) handleTransferAltShortcut(event *tcell.EventKey) bool {
 	return false
 }
 
-// handleTransferDestinationNav handles Left/Right cursor movement and picker sub-focus
-// navigation on the destination field while it is focused. Returns true when the key was
-// handled (caller should return); false to fall through to the generic focus-move / Enter
-// handling below.
+// handleTransferDestinationNav handles Left/Right cursor movement on the destination field
+// while it is focused. Returns true when the key was handled (caller should return); false to
+// fall through to the generic focus-move / Enter handling below.
 func (h *Handler) handleTransferDestinationNav(event *tcell.EventKey) bool {
 	d := &h.model.TransferDialog
 	if d.Phase != dialog.TransferPhaseDestination {
 		return false
 	}
-	return h.DestFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
-		dialog.TransferDestSubFocusText, dialog.TransferDestSubFocusPicker, h.OpenPathPickerForTransferBookmarks)
+	return h.DestFieldNav(event, &d.Destination, d.FocusField)
 }
 
 // handleTransferEnter handles Enter on the transfer dialog: confirm from the destination
@@ -254,7 +250,7 @@ func (h *Handler) handleTransferEnter(event *tcell.EventKey) bool {
 		return false
 	}
 	tf := dialog.NewTransferDialogLinearForm(dialog.TransferDialogEffectiveNumContent(*d))
-	if d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0 && d.DestSubFocus == dialog.TransferDestSubFocusText {
+	if d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0 {
 		h.confirmTransfer()
 		return true
 	}
@@ -327,7 +323,7 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if d.Phase == dialog.TransferPhaseDestination &&
-		h.DestFieldTryCompletionKey(event, &d.Destination, d.DestSubFocus, d.FocusField, dialog.TransferDestSubFocusText, h.ArmTransferDestinationValidateTimer) {
+		h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusField, h.ArmTransferDestinationValidateTimer) {
 		return
 	}
 	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
@@ -365,11 +361,7 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if focus, ok := dialog.TransferDialogMoveFocus(*d, d.FocusField, event.Key()); ok {
-		prev := d.FocusField
 		d.FocusField = focus
-		if prev == 0 && focus != 0 {
-			d.DestSubFocus = dialog.TransferDestSubFocusText
-		}
 		return
 	}
 	if h.handleTransferEnter(event) {

@@ -147,7 +147,7 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 
-	if f := h.FocusedField(); f != nil && f.PathPicker && !f.PickerFocused {
+	if f := h.FocusedField(); f != nil && f.PathPicker {
 		if h.tryPathFieldCompletionKey(event, f, h.TransferDestinationTextWidth(), h.fileDialogExtra()) {
 			return false
 		}
@@ -157,13 +157,8 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	onCheckbox := h.fileDialogOnAnyCheckbox()
 
 	f := h.FocusedField()
-	skipEarlyFieldKey := f != nil && f.PathPicker && !f.PickerFocused && event.Key() == tcell.KeyRight
 	if !onRadio && !onCheckbox && f != nil {
-		if f.PathPicker && f.PickerFocused {
-			if dialog.TryDialogInputRestore(event, f, h.keysDialogInput) {
-				return false
-			}
-		} else if !skipEarlyFieldKey && dialog.HandleFileDialogFieldKey(event, f, h.keysDialogInput, h.fileDialogFieldAfterEdit()) {
+		if dialog.HandleFileDialogFieldKey(event, f, h.keysDialogInput, h.fileDialogFieldAfterEdit()) {
 			return false
 		}
 	}
@@ -183,45 +178,11 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 		if h.fileDialogMoveFocusKey(event) {
 			return false
 		}
-	case tcell.KeyLeft:
-		// On button: move between buttons; on radio: no-op; on field: move cursor
+	case tcell.KeyLeft, tcell.KeyRight:
+		// On button: move between buttons; on radio/checkbox: no-op; field cursor movement
+		// (including PathPicker fields) is handled by HandleFileDialogFieldKey above.
 		if h.FileDialogOnButton() {
 			h.fileDialogMoveFocusKey(event)
-		} else if onRadio || onCheckbox {
-			return false
-		} else if f := h.FocusedField(); f != nil && f.PathPicker && f.PickerFocused {
-			f.PickerFocused = false
-			runes := []rune(f.Value)
-			f.Cursor = len(runes)
-		} else if f := h.FocusedField(); f != nil {
-			dialog.HandleFileDialogFieldKey(event, f, h.keysDialogInput, h.fileDialogFieldAfterEdit())
-		}
-		return false
-	case tcell.KeyRight:
-		if h.FileDialogOnButton() {
-			h.fileDialogMoveFocusKey(event)
-		} else if onRadio || onCheckbox {
-			return false
-		} else if f := h.FocusedField(); f != nil && f.PathPicker && !f.PickerFocused {
-			runes := []rune(f.Value)
-			c := f.Cursor
-			if c < 0 {
-				c = 0
-			}
-			if c > len(runes) {
-				c = len(runes)
-			}
-			if f.Prefill != "" && f.PrefillPending && f.Value == f.Prefill && c >= len(runes) {
-				f.CommitPrefill()
-				return false
-			}
-			if c >= len(runes) {
-				f.PickerFocused = true
-			} else {
-				dialog.HandleFileDialogFieldKey(event, f, h.keysDialogInput, h.fileDialogFieldAfterEdit())
-			}
-		} else if f := h.FocusedField(); f != nil {
-			dialog.HandleFileDialogFieldKey(event, f, h.keysDialogInput, h.fileDialogFieldAfterEdit())
 		}
 		return false
 	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete, tcell.KeyCtrlL:
@@ -252,8 +213,8 @@ func (h *Handler) fileDialogPassFieldEditKey(event *tcell.EventKey, onRadio, onC
 	return false
 }
 
-// handleFileDialogEnter handles Enter on the file dialog: delete confirmation, path-picker
-// open, mass-rename/run-for-each radio commit, checkbox toggles, mkdir radio commit, and
+// handleFileDialogEnter handles Enter on the file dialog: delete confirmation,
+// mass-rename/run-for-each radio commit, checkbox toggles, mkdir radio commit, and
 // button/default activation.
 func (h *Handler) handleFileDialogEnter() {
 	d := &h.model.FileDialog
@@ -263,10 +224,6 @@ func (h *Handler) handleFileDialogEnter() {
 		} else {
 			h.CloseFileDialog()
 		}
-		return
-	}
-	if f := h.FocusedField(); f != nil && f.PathPicker && f.PickerFocused {
-		h.OpenPathPickerForFileFieldBookmarks(d.FocusedField)
 		return
 	}
 	if h.fileDialogOnMassRenameRadio() {
@@ -541,12 +498,6 @@ func (h *Handler) FocusedField() *dialog.FileDialogField {
 	return &d.Fields[d.FocusedField]
 }
 
-func (h *Handler) clearFileDialogPickerSubfocus() {
-	for i := range h.model.FileDialog.Fields {
-		h.model.FileDialog.Fields[i].PickerFocused = false
-	}
-}
-
 // massRenameMoveFocusKey handles Tab/Backtab segment jumps, Left/Right on the options
 // checkbox row, and Down/Up visual-order transitions (focus indices don't match visual
 // order: Seg 0 = mode radios(0-3) + options row, Seg 1 = find+replace (Simple/Regex) or
@@ -582,12 +533,10 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 	if key == tcell.KeyRight {
 		switch d.FocusedField {
 		case showModifiedIdx:
-			h.clearFileDialogPickerSubfocus()
 			d.FocusedField = stripIdx
 			return true
 		case stripIdx:
 			if caseIdx >= 0 {
-				h.clearFileDialogPickerSubfocus()
 				d.FocusedField = caseIdx
 				return true
 			}
@@ -596,18 +545,15 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 	if key == tcell.KeyLeft {
 		switch d.FocusedField {
 		case stripIdx:
-			h.clearFileDialogPickerSubfocus()
 			d.FocusedField = showModifiedIdx
 			return true
 		case caseIdx:
-			h.clearFileDialogPickerSubfocus()
 			d.FocusedField = stripIdx
 			return true
 		}
 	}
 
 	if key == tcell.KeyTab || key == tcell.KeyBacktab {
-		h.clearFileDialogPickerSubfocus()
 		if key == tcell.KeyTab {
 			switch {
 			case onRadio || onOptionsRow:
@@ -650,12 +596,10 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 	}
 	// Down/Up use visual order (options row is above the fields but has higher focus indices).
 	if key == tcell.KeyDown && d.FocusedField == 3 {
-		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = showModifiedIdx
 		return true
 	}
 	if key == tcell.KeyDown && onOptionsRow {
-		h.clearFileDialogPickerSubfocus()
 		switch d.MassRenameMode {
 		case dialog.MassRenameModeUIExternalEditor:
 			d.FocusedField = okIdx
@@ -667,33 +611,27 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 		return true
 	}
 	if key == tcell.KeyUp && d.FocusedField == dialog.MassRenameFindFieldFocus && !externalMode && !capitalizeMode {
-		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = showModifiedIdx
 		return true
 	}
 	if key == tcell.KeyDown && d.FocusedField == dialog.MassRenameFindFieldFocus+1 && !externalMode && !capitalizeMode {
 		// Replace → OK (skip options-row indices that sit above the fields visually).
-		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = okIdx
 		return true
 	}
 	if key == tcell.KeyUp && capitalizeMode && d.FocusedField == capEachWordIdx {
-		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = showModifiedIdx
 		return true
 	}
 	if key == tcell.KeyDown && capitalizeMode && d.FocusedField == capPunctIdx {
-		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = okIdx
 		return true
 	}
 	if key == tcell.KeyUp && onOptionsRow {
-		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = 3
 		return true
 	}
 	if key == tcell.KeyUp && onButton {
-		h.clearFileDialogPickerSubfocus()
 		switch d.MassRenameMode {
 		case dialog.MassRenameModeUIExternalEditor:
 			d.FocusedField = showModifiedIdx
@@ -716,7 +654,6 @@ func (h *Handler) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
 
 	form := dialog.FileDialogFocusForm(*d)
 	if nf, ok := form.MoveFocus(d.FocusedField, event.Key()); ok {
-		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = nf
 		return true
 	}
