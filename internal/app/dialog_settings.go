@@ -579,17 +579,34 @@ func (a *App) openGroupSelect(mode string, context string) {
 		FilesOnly:          false,
 		DirsOnly:           false,
 		CaseSensitive:      false,
+		FullPath:           false,
 		MetaColumnCount:    metaCount,
 		IncludeMetaColumns: metaCount > 0,
 		Focus:              dialog.GroupSelectFocusPattern,
 	}
+	a.groupSelectPreviewKey = groupSelectPreviewKey{}
 }
 
 func (a *App) closeGroupSelect() {
+	a.findCtrl.StopGroupCount()
 	a.model.GroupSelect.Open = false
 	a.model.GroupSelect.Text = ""
 	a.model.GroupSelect.PatternCompileHint = ""
 	a.model.GroupSelect.PreviewShow = false
+	a.groupSelectPreviewKey = groupSelectPreviewKey{}
+}
+
+// groupSelectPreviewKey is the comparable subset of dialog.GroupSelectState that determines
+// the find-context live preview count, used by updateGroupSelectPreview to skip re-arming the
+// async count debounce when nothing that affects matching has changed (e.g. cursor movement).
+type groupSelectPreviewKey struct {
+	Text          string
+	Mode          string
+	PatternMode   panel.GroupPatternMode
+	FilesOnly     bool
+	DirsOnly      bool
+	CaseSensitive bool
+	FullPath      bool
 }
 
 // groupSelectMeta builds the meta-column match data for the panel-context group-select dialog
@@ -607,10 +624,12 @@ func (a *App) updateGroupSelectPreview() {
 	gs := &a.model.GroupSelect
 	if !gs.Open || gs.Text == "" {
 		gs.PreviewShow = false
+		a.groupSelectPreviewKey = groupSelectPreviewKey{}
 		return
 	}
 	if _, err := panel.NewGroupMatcher(gs.Text, gs.PatternMode, gs.CaseSensitive); err != nil {
 		gs.PreviewShow = false
+		a.groupSelectPreviewKey = groupSelectPreviewKey{}
 		return
 	}
 	selectMode := gs.Mode == "select"
@@ -618,32 +637,68 @@ func (a *App) updateGroupSelectPreview() {
 	if context == "" {
 		context = "panel"
 	}
-	var files, dirs int
 	if context == "find" {
-		files, dirs = a.findCtrl.CountGroupMatches(findctrl.GroupSelectRequest{
+		key := groupSelectPreviewKey{
+			Text:          gs.Text,
+			Mode:          gs.Mode,
+			PatternMode:   gs.PatternMode,
+			FilesOnly:     gs.FilesOnly,
+			DirsOnly:      gs.DirsOnly,
+			CaseSensitive: gs.CaseSensitive,
+			FullPath:      gs.FullPath,
+		}
+		if key == a.groupSelectPreviewKey {
+			if files, dirs, changed := a.findCtrl.ExtendGroupCount(); changed {
+				gs.PreviewFiles = files
+				gs.PreviewFolders = dirs
+				gs.PreviewShow = true
+			}
+			return
+		}
+		a.groupSelectPreviewKey = key
+		gs.PreviewShow = false
+		a.findCtrl.StartGroupCount(findctrl.GroupSelectRequest{
 			Mode:          findctrl.GroupSelectMode(gs.Mode),
 			Pattern:       gs.Text,
 			FilesOnly:     gs.FilesOnly,
 			DirsOnly:      gs.DirsOnly,
 			CaseSensitive: gs.CaseSensitive,
+			FullPath:      gs.FullPath,
 			PatternMode:   gs.PatternMode,
 		}, !selectMode)
-	} else {
-		p := a.activePanel()
-		f, d, err := p.CountGroupMatches(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, a.groupSelectMeta(gs), !selectMode)
-		if err != nil {
-			gs.PreviewShow = false
-			return
-		}
-		files, dirs = f, d
+		return
+	}
+	p := a.activePanel()
+	files, dirs, err := p.CountGroupMatches(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, a.groupSelectMeta(gs), !selectMode)
+	if err != nil {
+		gs.PreviewShow = false
+		return
 	}
 	gs.PreviewFiles = files
 	gs.PreviewFolders = dirs
 	gs.PreviewShow = true
 }
 
+// applyGroupCountPayload applies an async find-context group-select count (StartGroupCount)
+// result. Returns false (no redraw needed) when the dialog has since closed, switched away
+// from find context, or the payload is stale (superseded by a newer StartGroupCount call).
+func (a *App) applyGroupCountPayload(p findctrl.GroupCountPayload) bool {
+	gs := &a.model.GroupSelect
+	if !gs.Open || gs.Context != "find" {
+		return false
+	}
+	files, dirs, ok := a.findCtrl.HandleGroupCount(p)
+	if !ok {
+		return false
+	}
+	gs.PreviewFiles = files
+	gs.PreviewFolders = dirs
+	gs.PreviewShow = true
+	return true
+}
+
 func (a *App) groupSelectForm() dialog.DialogLinearForm {
-	n := 7
+	n := 8
 	if a.model.GroupSelect.MetaColumnCount > 0 {
 		n += 2 // IncludeMeta + OnlyMeta
 	}
@@ -704,6 +759,7 @@ func (a *App) executeGroupSelect() {
 			FilesOnly:     gs.FilesOnly,
 			DirsOnly:      gs.DirsOnly,
 			CaseSensitive: gs.CaseSensitive,
+			FullPath:      gs.FullPath,
 			PatternMode:   gs.PatternMode,
 		})
 	default:
@@ -831,6 +887,10 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusOnlyMeta) {
 					gs.Focus = dialog.GroupSelectFocusOnlyMeta
 				}
+			case 'a', 'A':
+				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusFullPath) {
+					gs.Focus = dialog.GroupSelectFocusFullPath
+				}
 			}
 			break
 		}
@@ -850,7 +910,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			break
 		}
 	}
-	if focus, ok := dialog.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.PatternMode, gs.MetaColumnCount); ok {
+	if focus, ok := dialog.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.PatternMode, gs.MetaColumnCount, dialog.GroupSelectShowsFullPath(*gs)); ok {
 		gs.Focus = focus
 	}
 }
@@ -887,6 +947,11 @@ func (a *App) toggleGroupSelectField(gs *dialog.GroupSelectState, focus int) boo
 			return false
 		}
 		gs.CaseSensitive = !gs.CaseSensitive
+	case dialog.GroupSelectFocusFullPath:
+		if !dialog.GroupSelectShowsFullPath(*gs) {
+			return false
+		}
+		gs.FullPath = !gs.FullPath
 	case dialog.GroupSelectFocusIncludeMeta:
 		if gs.MetaColumnCount <= 0 {
 			return false
@@ -911,7 +976,7 @@ func (a *App) toggleGroupSelectField(gs *dialog.GroupSelectState, focus int) boo
 
 func groupSelectAltIsDialogMnemonic(r rune) bool {
 	switch r {
-	case 'f', 'F', 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N':
+	case 'f', 'F', 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N', 'a', 'A':
 		return true
 	default:
 		return false

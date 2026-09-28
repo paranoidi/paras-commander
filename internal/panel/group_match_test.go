@@ -79,3 +79,36 @@ func TestGroupMatcherSimpleCaseSensitive(t *testing.T) {
 		t.Fatal("Main_test.go should not match case-sensitively")
 	}
 }
+
+func TestGroupMatcherFullPathShellDoesNotCrossSeparatorByDefault(t *testing.T) {
+	m, err := NewGroupMatcher("*src*", GroupPatternShell, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Match("project/src/main.go") {
+		t.Fatal("basename matcher should not see the directory component")
+	}
+}
+
+func TestGroupMatcherFullPathShellCrossesSeparator(t *testing.T) {
+	m, err := NewGroupMatcherFullPath("*src*", GroupPatternShell, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.Match("project/src/main.go") {
+		t.Fatal("*src* should match a directory component in full-path mode")
+	}
+	if m.Match("project/lib/main.go") {
+		t.Fatal("no src component should not match")
+	}
+}
+
+func TestGroupMatcherFullPathRegexMatchesDirComponent(t *testing.T) {
+	m, err := NewGroupMatcherFullPath(`/src/`, GroupPatternRegex, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.Match("project/src/main.go") {
+		t.Fatal("regex full-path should match a directory component")
+	}
+}

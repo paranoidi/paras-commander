@@ -17,5 +17,6 @@ type GroupSelectRequest struct {
 	FilesOnly     bool
 	DirsOnly      bool
 	CaseSensitive bool
+	FullPath      bool
 	PatternMode   panel.GroupPatternMode
 }

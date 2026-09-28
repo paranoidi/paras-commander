@@ -1,6 +1,7 @@
 package find
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/scan"
+	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -56,6 +58,21 @@ type Handler struct {
 	sizeMu            sync.Mutex
 	fileSizeLookupGen uint64
 	pendingFileSizes  *findFileSizeUpdate
+
+	// groupCount debounces and runs the group-select dialog's live match count off the main
+	// goroutine (find context only — see group_count.go). groupCountMu serializes the
+	// counting goroutine's "am I still wanted" check against StopGroupCount's cancel, so a
+	// count that's already committed to running is always waited for, and one that isn't
+	// never touches the map (avoiding a concurrent read of MarkedPaths while it's mutated).
+	// groupCountAcc holds the accumulated count/watermark that ExtendGroupCount advances
+	// inline between full StartGroupCount runs, so the preview keeps up with entries still
+	// arriving from indexing without a full async recount on every batch.
+	groupCount       sched.Debouncer
+	groupCountMu     sync.Mutex
+	groupCountCancel context.CancelFunc
+	groupCountWG     sync.WaitGroup
+	groupCountGen    uint64
+	groupCountAcc    groupCountAccum
 }
 
 type findFileSizeUpdate struct {

@@ -208,6 +208,10 @@ type App struct {
 	findDialogSelectionScanGen uint64
 	// findDialogSelectionScanDebounce is the find-dialog equivalent of selectionSizeScanDebounce.
 	findDialogSelectionScanDebounce sched.Debouncer
+	// groupSelectPreviewKey is the last set of group-select dialog options updateGroupSelectPreview
+	// started an async find-context count for; unchanged options are a no-op so retyping the same
+	// text (e.g. moving the cursor) doesn't re-arm the debounce.
+	groupSelectPreviewKey groupSelectPreviewKey
 	// historyMissingGen guards applyHistoryDialogMissing against a stale background missing-path
 	// scan (StartPathsMissingScan) landing after the History dialog closed or its path list was
 	// rebuilt (toggleHistoryDialogBothPanels); bumped by openHistoryDialog, closeHistoryDialog,
@@ -1149,6 +1153,14 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		a.dialogCtrl.ApplyBookmarkIO(p)
 		a.render()
 		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
+	}
+	if p, ok := data.(findctrl.GroupCountPayload); ok {
+		out := eventOutcome{pollDiskUsageAfter: true}
+		if a.applyGroupCountPayload(p) {
+			a.render()
+			out.didRender = true
+		}
+		return out, true
 	}
 	return eventOutcome{}, false
 }

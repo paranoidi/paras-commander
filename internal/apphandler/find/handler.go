@@ -1,6 +1,7 @@
 package find
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -946,6 +947,37 @@ func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
 	return []int{}
 }
 
+// findResultIndicesCovered returns the find dialog's current query-filtered result indices
+// along with how many of Entries that result set covers. Unlike findDialogResultIndices, it
+// treats a FullRanked cache computed for the current query generation (rankGen) as usable even
+// when entries have since been appended (indexing still running): covered reports the smaller,
+// already-ranked entry count instead of discarding the whole result. Used by the group-select
+// live count (StartGroupCount/ExtendGroupCount) and ApplyGroupSelect, which both want "results
+// over what's indexed so far" rather than "nothing until indexing finishes".
+//
+//   - empty query: indices=nil (all of Entries), covered=len(Entries).
+//   - non-empty query, FullRanked computed for the current rank generation and current
+//     OnlyDirs/OnlyFiles: FullRanked, covered=FullRankedEntriesLen (may be < len(Entries)).
+//   - no usable FullRanked yet: empty indices, covered=0 (schedules a rank if none is pending,
+//     same as findDialogResultIndices).
+func (h *Handler) findResultIndicesCovered(st *dialog.FindDialogState) (indices []int, covered int) {
+	if search.Parse(st.Query).Empty() {
+		return nil, len(st.Entries)
+	}
+	h.rankMu.Lock()
+	gen := h.rankGen
+	h.rankMu.Unlock()
+	if st.FullRankedGen == gen &&
+		st.FullRankedOnlyDirs == st.OnlyDirectories &&
+		st.FullRankedOnlyFiles == st.OnlyFiles {
+		return nonNilFindIndices(st.FullRanked), st.FullRankedEntriesLen
+	}
+	if !st.RankPending {
+		h.scheduleFindRank(0)
+	}
+	return []int{}, 0
+}
+
 func (h *Handler) findDialogSelectAll() {
 	st := &h.model.FindDialog
 	if search.Parse(st.Query).Empty() {
@@ -1339,12 +1371,19 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	}
 }
 
-// matchingFindPaths returns the absolute paths of entries at indices whose basename
-// matches matcher, honoring filesOnly/dirsOnly, along with an isDir map built in the
-// same pass (mirroring panel.State.groupMatchedPaths) so callers never need a separate
-// per-path PathMeta lookup. Shared filter pipeline for both ApplyGroupSelect branches
-// (select also filters out already-marked paths itself).
-func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dirsOnly bool, matcher panel.GroupMatcher) ([]string, map[string]bool) {
+// matchingFindPaths returns the absolute paths of entries at indices whose basename (or full
+// path, when fullPath is set — find dialog "Match full path" option) matches matcher, honoring
+// filesOnly/dirsOnly, along with an isDir map built in the same pass (mirroring
+// panel.State.groupMatchedPaths) so callers never need a separate per-path PathMeta lookup.
+// Shared filter pipeline for both ApplyGroupSelect branches (select also filters out
+// already-marked paths itself).
+func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dirsOnly, fullPath bool, matcher panel.GroupMatcher) ([]string, map[string]bool) {
+	matchName := func(path string) string {
+		if fullPath {
+			return path
+		}
+		return filepath.Base(path)
+	}
 	if indices == nil {
 		paths := make([]string, 0, 256)
 		isDir := make(map[string]bool, 256)
@@ -1360,7 +1399,7 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 				continue
 			}
 			path := findEntryAbsPath(st, ent)
-			if path == "" || !matcher.Match(filepath.Base(path)) {
+			if path == "" || !matcher.Match(matchName(path)) {
 				continue
 			}
 			paths = append(paths, path)
@@ -1385,7 +1424,7 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 		if path == "" {
 			continue
 		}
-		if !matcher.Match(filepath.Base(path)) {
+		if !matcher.Match(matchName(path)) {
 			continue
 		}
 		paths = append(paths, path)
@@ -1394,53 +1433,65 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 	return paths, isDir
 }
 
-// CountGroupMatches reports how many find results matching req.Pattern have marked state equal
-// to marked — i.e. how many results ApplyGroupSelect(select) (marked=false) or (unselect)
-// (marked=true) would actually change, split into files and directories, for the group-select
-// dialog's live result preview. Returns (0, 0) for an empty or invalid pattern.
+// newGroupMatcherForRequest builds the matcher for req, using full-path matching when
+// req.FullPath is set (find dialog "Match full path" option).
+func newGroupMatcherForRequest(pattern string, mode panel.GroupPatternMode, caseSensitive, fullPath bool) (panel.GroupMatcher, error) {
+	if fullPath {
+		return panel.NewGroupMatcherFullPath(pattern, mode, caseSensitive)
+	}
+	return panel.NewGroupMatcher(pattern, mode, caseSensitive)
+}
+
+// CountGroupMatches synchronously reports how many find results matching req.Pattern have
+// marked state equal to marked, split into files and directories. Returns (0, 0) for an empty
+// or invalid pattern. The live group-select dialog preview uses the async StartGroupCount
+// instead, since a synchronous pass over a 1M-row corpus on every keystroke is too slow; this
+// stays for tests that exercise the find-result indices/cache directly.
 func (h *Handler) CountGroupMatches(req GroupSelectRequest, marked bool) (files, dirs int) {
 	if req.Pattern == "" {
 		return 0, 0
 	}
-	matcher, err := panel.NewGroupMatcher(req.Pattern, req.PatternMode, req.CaseSensitive)
+	matcher, err := newGroupMatcherForRequest(req.Pattern, req.PatternMode, req.CaseSensitive, req.FullPath)
 	if err != nil {
 		return 0, 0
 	}
 	st := &h.model.FindDialog
-	indices := h.findDialogResultIndices(st)
-	matched, isDir := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
-	for _, path := range matched {
-		if st.MarkedPaths[path] != marked {
-			continue
-		}
-		if isDir[path] {
-			dirs++
-		} else {
-			files++
-		}
+	snap := groupCountSnapshot{
+		entries:   st.Entries,
+		indices:   h.findDialogResultIndices(st),
+		rootPath:  st.RootPath,
+		marks:     st.MarkedPaths,
+		filesOnly: req.FilesOnly,
+		dirsOnly:  req.DirsOnly,
+		fullPath:  req.FullPath,
+		matched:   marked,
+		matcher:   matcher,
 	}
+	files, dirs, _ = countGroupMatchesSnapshot(context.Background(), snap)
 	return files, dirs
 }
 
-// ApplyGroupSelect marks or unmarks full-corpus find results whose basename matches pattern.
+// ApplyGroupSelect marks or unmarks full-corpus find results whose basename (or full path, with
+// FullPath set) matches pattern.
 func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
+	h.StopGroupCount()
 	st := &h.model.FindDialog
 	pattern := req.Pattern
 	if pattern == "" {
 		return
 	}
-	matcher, err := panel.NewGroupMatcher(pattern, req.PatternMode, req.CaseSensitive)
+	matcher, err := newGroupMatcherForRequest(pattern, req.PatternMode, req.CaseSensitive, req.FullPath)
 	if err != nil {
 		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
 		return
 	}
-	indices := h.findDialogResultIndices(st)
+	indices, _ := h.findResultIndicesCovered(st)
 	if req.Mode == GroupSelectModeSelect {
 		walkOrder := len(st.MarkedPaths) == 0
 		if st.MarkedPaths == nil {
 			st.MarkedPaths = make(map[string]bool, len(indices))
 		}
-		matched, isDir := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
+		matched, isDir := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, req.FullPath, matcher)
 		paths := make([]string, 0, len(matched))
 		for _, path := range matched {
 			if !st.MarkedPaths[path] {
@@ -1470,7 +1521,7 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 		h.noteFindMarksChanged(st)
 		return
 	}
-	unmatched, _ := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
+	unmatched, _ := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, req.FullPath, matcher)
 	for _, path := range unmatched {
 		delete(st.MarkedPaths, path)
 	}

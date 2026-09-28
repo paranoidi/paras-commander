@@ -45,11 +45,28 @@ type GroupMatcher struct {
 	mode          GroupPatternMode
 	pattern       string
 	caseSensitive bool
+	fullPath      bool
 	rx            *regexp.Regexp
 }
 
-// NewGroupMatcher builds a matcher for the given pattern and options.
+// NewGroupMatcher builds a matcher for the given pattern and options, matching against a
+// basename.
 func NewGroupMatcher(pattern string, mode GroupPatternMode, caseSensitive bool) (GroupMatcher, error) {
+	return newGroupMatcher(pattern, mode, caseSensitive, false)
+}
+
+// NewGroupMatcherFullPath is like NewGroupMatcher but matches the full path instead of a
+// basename (find dialog "Match full path" option). filepath.Match's '*' doesn't cross '/',
+// which would make full-path shell patterns like "*src*" useless, so in shell mode '/' is
+// swapped for a NUL byte (never legal in a path) in both the compiled pattern and the matched
+// value, letting '*' span directory separators.
+// ponytail: the NUL-byte swap sidesteps filepath.Match's separator-awareness instead of a
+// custom glob engine; revisit if patterns ever need '/'-aware wildcards (e.g. "**").
+func NewGroupMatcherFullPath(pattern string, mode GroupPatternMode, caseSensitive bool) (GroupMatcher, error) {
+	return newGroupMatcher(pattern, mode, caseSensitive, true)
+}
+
+func newGroupMatcher(pattern string, mode GroupPatternMode, caseSensitive bool, fullPath bool) (GroupMatcher, error) {
 	pattern = strings.TrimSpace(pattern)
 	if pattern == "" {
 		return GroupMatcher{}, fmt.Errorf("pattern is empty")
@@ -58,13 +75,17 @@ func NewGroupMatcher(pattern string, mode GroupPatternMode, caseSensitive bool) 
 		mode:          mode,
 		pattern:       pattern,
 		caseSensitive: caseSensitive,
+		fullPath:      fullPath,
 	}
 	if !caseSensitive && mode != GroupPatternRegex {
 		m.pattern = strings.ToLower(pattern)
 	}
 	switch mode {
 	case GroupPatternShell:
-		if _, err := filepath.Match(pattern, "x"); err != nil {
+		if fullPath {
+			m.pattern = strings.ReplaceAll(m.pattern, "/", "\x00")
+		}
+		if _, err := filepath.Match(m.pattern, "x"); err != nil {
 			return GroupMatcher{}, fmt.Errorf("invalid shell pattern: %w", err)
 		}
 	case GroupPatternRegex:
@@ -80,13 +101,17 @@ func NewGroupMatcher(pattern string, mode GroupPatternMode, caseSensitive bool) 
 	return m, nil
 }
 
-// Match reports whether name matches the compiled pattern.
+// Match reports whether name matches the compiled pattern. name is a basename, or a full path
+// when the matcher was built with NewGroupMatcherFullPath.
 func (m GroupMatcher) Match(name string) bool {
 	switch m.mode {
 	case GroupPatternShell:
 		value := name
 		if !m.caseSensitive {
 			value = strings.ToLower(value)
+		}
+		if m.fullPath {
+			value = strings.ReplaceAll(value, "/", "\x00")
 		}
 		matched, _ := filepath.Match(m.pattern, value)
 		return matched

@@ -102,6 +102,9 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	if GroupSelectShowsCaseSensitive(state) {
 		draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == GroupSelectFocusCase, false, styles)
 	}
+	if state.Context == "find" {
+		draw.DrawDialogCheckbox(screen, col2X, y, "Match full path", 'A', state.FullPath, state.Focus == GroupSelectFocusFullPath, false, styles)
+	}
 	y++
 	if y >= innerBottom {
 		return
@@ -118,7 +121,11 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 
-	form := NewDialogLinearForm(7)
+	n := 8
+	if state.MetaColumnCount > 0 {
+		n += 2
+	}
+	form := NewDialogLinearForm(n)
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawOKCancelButtonRow(screen, rect, buttonY, state.Focus == form.OKIndex(), state.Focus == form.CancelIndex(), styles)
 }
