@@ -83,6 +83,23 @@ func TestRankPrefersContiguousMatchOverEarlierLooseMatch(t *testing.T) {
 	}
 }
 
+func TestRankPrefersContiguousMatchOverEarlierScatteredMatch(t *testing.T) {
+	// "Duck And Morty": a5 n6 d7 o10 r11 (loose, span 7) vs
+	// "Paw Wars Andor": stray a1, then contiguous "Andor" at A9 n10 d11 o12 r13.
+	results := Parse("andor").Rank([]string{
+		"Duck And Morty",
+		"Paw Wars Andor",
+	}, Options{CaseInsensitive: true})
+
+	if len(results) != 2 {
+		t.Fatalf("len(results) = %d, want 2", len(results))
+	}
+	if results[0].Index != 1 {
+		t.Fatalf("best result index = %d, want 1 for contiguous match in Paw Wars Andor", results[0].Index)
+	}
+	assertRanges(t, results[0].Result.Ranges, []Range{{Start: 9, End: 14}})
+}
+
 func TestEmptyQueryMatchesInOriginalOrder(t *testing.T) {
 	results := Parse("   ").Rank([]string{"b", "a"}, Options{CaseInsensitive: true})
 	if len(results) != 2 {

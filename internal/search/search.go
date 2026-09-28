@@ -357,39 +357,75 @@ func Fuzzy(needle, value string, opts Options) Result {
 	if len(needleRunes) == 0 {
 		return Result{Matched: true}
 	}
+	valueRunes := []rune(value)
 
+	best, ok := fuzzyFrom(needleRunes, valueRunes, 0, opts)
+	if !ok {
+		return Result{}
+	}
+	if len(best.Ranges) == 1 && best.Ranges[0].End-best.Ranges[0].Start == len(needleRunes) {
+		return best // fast path: fully contiguous, can't do better
+	}
+
+	// A single greedy scan can latch onto a stray early letter ("andor" grabbing an 'a' before
+	// the contiguous "Andor"), so retry from each later occurrence of the first needle rune.
+	// ponytail: greedy-per-start, not a full DP matcher (fzf v2); upgrade if it still misranks.
+	first := best.Ranges[0].Start
+	for i := first + 1; i < len(valueRunes); i++ {
+		if lowerRune(valueRunes[i], opts.CaseInsensitive) != needleRunes[0] {
+			continue
+		}
+		result, ok := fuzzyFrom(needleRunes, valueRunes, i, opts)
+		if !ok {
+			break // less string remains from here on; no later start can match either
+		}
+		if result.Score > best.Score {
+			best = result
+		}
+	}
+	return best
+}
+
+// fuzzyFrom runs the greedy left-to-right scan shared by Fuzzy's retries: it takes the first
+// occurrence of each needleRune in order, starting the search at rune index startRune. Value
+// runes before startRune are never matched, but the real preceding rune is still used as
+// prevRune for the first hit's boundaryBonus. ok is false when needleRunes could not be
+// completed from startRune onward.
+func fuzzyFrom(needleRunes, valueRunes []rune, startRune int, opts Options) (Result, bool) {
 	// hit records one matched needle rune and its context for scoring.
 	type hit struct {
 		runeIdx  int
-		prevRune rune // rune before this position (-1 if at start)
+		prevRune rune // rune before this position (-1 if at start of value)
 		currRune rune // rune at this position (original casing, for boundary detection)
 	}
 	hits := make([]hit, 0, len(needleRunes))
 
 	ni := 0
-	runePos := 0
 	prevRune := rune(-1)
-	for _, r := range value {
+	if startRune > 0 {
+		prevRune = valueRunes[startRune-1]
+	}
+	for i := startRune; i < len(valueRunes); i++ {
+		r := valueRunes[i]
 		if lowerRune(r, opts.CaseInsensitive) == needleRunes[ni] {
-			hits = append(hits, hit{runePos, prevRune, r})
+			hits = append(hits, hit{i, prevRune, r})
 			ni++
 			if ni >= len(needleRunes) {
 				break
 			}
 		}
 		prevRune = r
-		runePos++
 	}
 	if ni < len(needleRunes) {
-		return Result{}
-	}
-	if len(hits) == 0 {
-		return Result{Matched: true}
+		return Result{}, false
 	}
 
 	first := hits[0].runeIdx
 	span := hits[len(hits)-1].runeIdx - first + 1
 	score := 1000 - first*5 - span*10 + len(hits)*10
+	if span == len(needleRunes) {
+		score += 60 // all hits consecutive: reward a tight, contiguous match
+	}
 
 	ranges := make([]Range, 0, len(hits))
 	for i, h := range hits {
@@ -399,7 +435,7 @@ func Fuzzy(needle, value string, opts Options) Result {
 		}
 		ranges = append(ranges, Range{Start: h.runeIdx, End: h.runeIdx + 1})
 	}
-	return Result{Matched: true, Score: score, Ranges: mergeRanges(ranges)}
+	return Result{Matched: true, Score: score, Ranges: mergeRanges(ranges)}, true
 }
 
 // lowerRune returns unicode.ToLower(r) when ci is true, otherwise r unchanged.
