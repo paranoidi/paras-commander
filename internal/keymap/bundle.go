@@ -22,6 +22,7 @@ type Bundle struct {
 	MassRenameDialog *Map // mass-rename dialog (save/load/delete pattern shortcuts)
 	RunForEachDialog *Map // run-for-each dialog (command history shortcut)
 	PinDialog        *Map // pin dialog (open-primary/open-secondary/remove shortcuts)
+	HelpDialog       *Map // F1 help dialog (switch to text-edit keys page)
 	// LeaderKey maps action ID → single-letter Esc function-menu leader key (merged defaults + user).
 	LeaderKey map[string]string
 	// CopyMenuKey maps action ID → single-letter `"` copy-menu key (merged defaults + user).

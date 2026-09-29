@@ -241,7 +241,7 @@ func (f *FileDialogField) KillLineForward() {
 	f.Cursor = pos
 }
 
-// Yank inserts the kill buffer (last C-w deletion) at the cursor.
+// Yank inserts the kill buffer (last killed text) at the cursor.
 func (f *FileDialogField) Yank() {
 	if f == nil {
 		return

@@ -301,4 +301,5 @@ type HelpViewState struct {
 	Selected    int              // index into Ranked
 	ListScroll  int              // first visible row index into Ranked
 	Focus       int              // 0=list+fiter, 1=Close button
+	TextEdit    bool             // true on the dialog text-input editing keys page
 }

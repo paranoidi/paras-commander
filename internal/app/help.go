@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 // helpContext describes what the F1 help dialog shows for a given ui.ViewMode.
@@ -61,6 +62,70 @@ func (a *App) openHelpDialog() {
 		Focus:      0,
 	}
 	a.syncHelpRanks()
+}
+
+// textEditHelpPrefix selects the dialog text-input editing actions ([dialog.input]).
+const textEditHelpPrefix = "ui.input."
+
+// buildTextEditHelpEntries lists the dialog text-input editing shortcuts.
+func (a *App) buildTextEditHelpEntries() []dialog.HelpEntry {
+	entries := []dialog.HelpEntry{}
+	defaults := keymap.DefaultDialogInputOverlayKeys()
+	for _, spec := range keymap.DefaultActionSpecs() {
+		if !strings.HasPrefix(spec.ID, textEditHelpPrefix) {
+			continue
+		}
+		var keys []string
+		if a.keys.DialogInput != nil {
+			keys = a.keys.DialogInput.BindingsForAction(spec.ID)
+		}
+		if len(keys) == 0 {
+			keys = defaults[spec.ID]
+		}
+		if len(keys) == 0 {
+			continue
+		}
+		entries = append(entries, dialog.HelpEntry{
+			ActionID:   spec.ID,
+			Title:      spec.Title,
+			Keys:       helpkeys.JoinDisplay(keys, spec.PreferredKey),
+			Section:    "Text editing",
+			FuzzyExtra: strings.TrimSpace(spec.ID + helpkeys.ConcatKeywords(spec.Keywords)),
+		})
+	}
+	sortHelpEntriesBySection(entries)
+	return entries
+}
+
+// toggleHelpTextEdit switches the help dialog between the contextual page and the
+// text-editing keys page, resetting query, selection and scroll.
+func (a *App) toggleHelpTextEdit() {
+	if a.model.HelpView.TextEdit {
+		a.openHelpDialog()
+		return
+	}
+	a.model.HelpView = dialog.HelpViewState{
+		Open:     true,
+		Title:    "Help — Text editing",
+		Entries:  a.buildTextEditHelpEntries(),
+		TextEdit: true,
+	}
+	a.syncHelpRanks()
+}
+
+// helpDialogOverlayFooterKeys returns the footer item that switches help pages.
+func helpDialogOverlayFooterKeys(keys *keymap.Map, textEdit bool) []menu.FunctionKey {
+	if keys == nil {
+		return nil
+	}
+	hint := "Text edit keys"
+	if textEdit {
+		hint = "All keys"
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionHelpTextEditKeys); lbl != "" {
+		return []menu.FunctionKey{{KeyLabel: lbl, Hint: hint}}
+	}
+	return nil
 }
 
 func (a *App) closeHelpDialog() {
@@ -252,6 +317,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if a.keys.HistoryDialog != nil {
 		add(a.keys.HistoryDialog.BindingsForAction(actionID))
 	}
+	if a.keys.HelpDialog != nil {
+		add(a.keys.HelpDialog.BindingsForAction(actionID))
+	}
 	if a.keys.FlattenDialog != nil {
 		add(a.keys.FlattenDialog.BindingsForAction(actionID))
 	}
@@ -281,6 +349,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 		add(od)
 	}
 	if od := keymap.DefaultHistoryDialogOverlayKeys()[actionID]; len(od) > 0 {
+		add(od)
+	}
+	if od := keymap.DefaultHelpDialogOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
 	if od := keymap.DefaultFlattenDialogOverlayKeys()[actionID]; len(od) > 0 {
@@ -536,6 +607,13 @@ func (a *App) activateDedupHelpAction(actionID string) bool {
 func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	st := &a.model.HelpView
 
+	if a.keys.HelpDialog != nil {
+		if id, ok := a.keys.HelpDialog.Lookup(event); ok && id == keymap.ActionHelpTextEditKeys {
+			a.toggleHelpTextEdit()
+			return false
+		}
+	}
+
 	if st.Focus == 0 {
 		onChange := func() {
 			st.Selected = 0
@@ -572,6 +650,9 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		entIdx := st.Ranked[st.Selected]
 		if entIdx < 0 || entIdx >= len(st.Entries) {
 			a.closeHelpDialog()
+			return false
+		}
+		if st.TextEdit {
 			return false
 		}
 		actionID := st.Entries[entIdx].ActionID

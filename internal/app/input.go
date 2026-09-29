@@ -208,9 +208,9 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		return keys
 	}
 	if a.model.HelpView.Open {
-		return footerWithEscClose([]menu.FunctionKey{
-			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
-		})
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		rest = append(helpDialogOverlayFooterKeys(a.keys.HelpDialog, a.model.HelpView.TextEdit), rest...)
+		return footerWithEscClose(rest)
 	}
 	if a.model.ViewMode == ui.ViewBrowser &&
 		a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip &&

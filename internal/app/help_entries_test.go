@@ -175,3 +175,38 @@ func TestPreviewHelpUsesPreviewSectionAndExcludesBrowserActions(t *testing.T) {
 		}
 	}
 }
+
+func TestHelpF2TogglesTextEditPage(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	a.openHelpDialog()
+	normalTitle := a.model.HelpView.Title
+	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, false); len(lbl) != 1 || lbl[0].KeyLabel != "F2" || lbl[0].Hint != "Text edit keys" {
+		t.Fatalf("footer = %+v", lbl)
+	}
+	f2 := tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone)
+	a.handleHelpDialogKey(f2)
+	st := a.model.HelpView
+	if !st.TextEdit || st.Title != "Help — Text editing" {
+		t.Fatalf("state = %+v", st)
+	}
+	found := false
+	for _, e := range st.Entries {
+		if e.ActionID == keymap.ActionDialogInputYank && strings.Contains(e.Keys, "Y") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("yank entry missing: %+v", st.Entries)
+	}
+	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, true); len(lbl) != 1 || lbl[0].Hint != "All keys" {
+		t.Fatalf("footer = %+v", lbl)
+	}
+	a.handleHelpDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if !a.model.HelpView.Open {
+		t.Fatal("Enter closed text-edit page")
+	}
+	a.handleHelpDialogKey(f2)
+	if a.model.HelpView.TextEdit || a.model.HelpView.Title != normalTitle {
+		t.Fatalf("state = %+v", a.model.HelpView)
+	}
+}

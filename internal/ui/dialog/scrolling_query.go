@@ -209,7 +209,7 @@ func (q *ScrollingQuery) KillLineForward() {
 	q.Cursor = pos
 }
 
-// Yank inserts the kill buffer (last C-w deletion) at the caret.
+// Yank inserts the kill buffer (last killed text) at the caret.
 func (q *ScrollingQuery) Yank() {
 	if q == nil {
 		return

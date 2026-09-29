@@ -31,22 +31,24 @@ const (
 	ActionTerminalGrow   = "terminal.grow"
 	ActionTerminalShrink = "terminal.shrink"
 
-	ActionPanelSwitch                 = "panel.switch"
-	ActionPanelViMotionToggle         = "panel.vi-motion-toggle"
-	ActionNavUp                       = "nav.up"
-	ActionNavDown                     = "nav.down"
-	ActionNavPageUp                   = "nav.page-up"
-	ActionNavPageDown                 = "nav.page-down"
-	ActionNavTop                      = "nav.top"
-	ActionNavBottom                   = "nav.bottom"
-	ActionNavOpen                     = "nav.open"
-	ActionNavParent                   = "nav.parent"
-	ActionNavHome                     = "nav.home"
-	ActionNavForward                  = "nav.forward"
-	ActionNavBackward                 = "nav.backward"
-	ActionPanelHistoryDialog          = "panel.history-dialog"
-	ActionPanelGitFilterMenu          = "panel.git-filter-menu"
-	ActionPanelHistoryBothPanels      = "panel.history-both-panels"
+	ActionPanelSwitch            = "panel.switch"
+	ActionPanelViMotionToggle    = "panel.vi-motion-toggle"
+	ActionNavUp                  = "nav.up"
+	ActionNavDown                = "nav.down"
+	ActionNavPageUp              = "nav.page-up"
+	ActionNavPageDown            = "nav.page-down"
+	ActionNavTop                 = "nav.top"
+	ActionNavBottom              = "nav.bottom"
+	ActionNavOpen                = "nav.open"
+	ActionNavParent              = "nav.parent"
+	ActionNavHome                = "nav.home"
+	ActionNavForward             = "nav.forward"
+	ActionNavBackward            = "nav.backward"
+	ActionPanelHistoryDialog     = "panel.history-dialog"
+	ActionPanelGitFilterMenu     = "panel.git-filter-menu"
+	ActionPanelHistoryBothPanels = "panel.history-both-panels"
+	// ActionHelpTextEditKeys is bound via [dialog.help], not [main].
+	ActionHelpTextEditKeys            = "help.text-edit-keys"
 	ActionPanelFindDialog             = "panel.find-dialog"
 	ActionFindView                    = "find.view"
 	ActionFindSelectAll               = "find.select-all"
@@ -250,7 +252,7 @@ const (
 	// ActionDialogInputKillLineForward deletes from the caret to the line end into the kill
 	// buffer (readline C-k).
 	ActionDialogInputKillLineForward = "ui.input.kill-line-forward"
-	// ActionDialogInputYank inserts the last killed word at the caret (readline C-y).
+	// ActionDialogInputYank inserts the last killed text (C-w, M-d, C-u, C-k, C-l) at the caret (readline C-y).
 	ActionDialogInputYank = "ui.input.yank"
 	// ActionDialogInputBackwardWord moves the cursor to the previous word boundary (readline M-b).
 	ActionDialogInputBackwardWord = "ui.input.backward-word"
@@ -327,6 +329,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelHistoryDialog:          {},
 	ActionPanelGitFilterMenu:          {},
 	ActionPanelHistoryBothPanels:      {},
+	ActionHelpTextEditKeys:            {},
 	ActionPanelFindDialog:             {},
 	ActionFindView:                    {},
 	ActionFindSelectAll:               {},

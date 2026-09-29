@@ -65,6 +65,7 @@ var HelpSectionOrder = []string{
 	"App",
 	"Find",
 	"Pin",
+	"Text editing",
 	"Find duplicates",
 	"Jobs",
 	"Commands",
@@ -423,6 +424,14 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  nil, // overlay: DefaultHistoryDialogOverlayKeys
 			PreferredKey: "F5",
 			Keywords:     []string{"history dialog", "merge", "both panels", "toggle"},
+		},
+		{
+			ID:           ActionHelpTextEditKeys,
+			Title:        "Text edit keys",
+			Section:      "Navigation",
+			DefaultKeys:  nil, // overlay: DefaultHelpDialogOverlayKeys
+			PreferredKey: "F2",
+			Keywords:     []string{"help dialog", "text editing", "input", "readline"},
 		},
 		{
 			ID:           ActionPanelFindDialog,
@@ -1660,11 +1669,11 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionDialogInputYank,
-			Title:        "Paste last deleted word in dialog input",
+			Title:        "Paste last deleted text in dialog input",
 			Section:      "UI",
 			DefaultKeys:  nil,
 			PreferredKey: "C-y",
-			Keywords:     []string{"yank", "paste", "kill", "word", "input"},
+			Keywords:     []string{"yank", "paste", "kill", "word", "line", "input"},
 		},
 		{
 			ID:           ActionDialogInputBackwardWord,
