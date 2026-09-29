@@ -1530,6 +1530,13 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 		if name := firstMissingChildName(listingLoc, climbOrigin); name != "" {
 			selectedName = name
 		}
+		// indexFallback is the cursor inside the vanished dir, meaningless here. Fall back to
+		// where the cursor sat when we last left this ancestor: with the missing child gone
+		// that index lands on the entry after it.
+		indexFallback = noIndexCursorFallback
+		if _, idx, ok := s.recalledCursorFor(listingLoc.String()); ok {
+			indexFallback = idx
+		}
 	}
 	sameDirReload := previousPath.Equal(listingLoc)
 	priorCursor := s.Cursor

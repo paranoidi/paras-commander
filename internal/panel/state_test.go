@@ -341,6 +341,37 @@ func TestRefreshOrNavigateToExistingAncestorWalksUpOnce(t *testing.T) {
 	}
 }
 
+// A deleted cwd climbs to the parent and lands on the entry after the vanished dir,
+// not on the cursor index the panel had inside the vanished dir.
+func TestRefreshOrNavigateToExistingAncestorSelectsNextAfterVanishedDir(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"apple", "banana", "cherry", "damson"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if !state.SelectVisibleEntry("cherry") {
+		t.Fatal("cherry not listed")
+	}
+	if err := state.NavigateTo(filepath.Join(root, "cherry"), "", 5); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(root, "cherry")); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.RefreshOrNavigateToExistingAncestor(5); err != nil {
+		t.Fatal(err)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "damson" {
+		t.Fatalf("cursor on %q, want damson", entry.Name)
+	}
+}
+
 // TestRefreshOrNavigateToExistingAncestorDoesNotStatOnCaller proves a deleted cwd is
 // scheduled as the same-path refresh (existence climb happens inside the listing fetch),
 // so a blocking Stat cannot stall the caller, and Path stays on the vanished dir until apply.
