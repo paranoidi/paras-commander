@@ -119,6 +119,14 @@ func TryDialogInputActions(dialogInputKeys *keymap.Map, ev *tcell.EventKey, e Ed
 		e.Q.KillLine()
 		e.Apply()
 		return true
+	case keymap.ActionDialogInputKillLineBackward:
+		e.Q.KillLineBackward()
+		e.applyAfterErase()
+		return true
+	case keymap.ActionDialogInputKillLineForward:
+		e.Q.KillLineForward()
+		e.applyAfterErase()
+		return true
 	case keymap.ActionDialogInputYank:
 		e.Q.Yank()
 		e.applyAfterErase()

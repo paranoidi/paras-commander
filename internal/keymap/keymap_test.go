@@ -372,7 +372,8 @@ func TestDialogInputOverlayDefaultsResolveCtrlRAndCtrlD(t *testing.T) {
 		want string
 	}{
 		{"ctrl-w", tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone), ActionDialogInputKillWordBackward},
-		{"ctrl-u", tcell.NewEventKey(tcell.KeyCtrlU, 0, tcell.ModNone), ActionDialogInputKillLine},
+		{"ctrl-u", tcell.NewEventKey(tcell.KeyCtrlU, 0, tcell.ModNone), ActionDialogInputKillLineBackward},
+		{"ctrl-k", tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModNone), ActionDialogInputKillLineForward},
 		{"ctrl-l", tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone), ActionDialogInputKillLine},
 		{"ctrl-y", tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModNone), ActionDialogInputYank},
 		{"alt-b", tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt), ActionDialogInputBackwardWord},

@@ -140,6 +140,38 @@ func (q *ScrollingQuery) KillLine() {
 	q.Clear()
 }
 
+// KillLineBackward stores the text before the caret in the kill buffer and deletes it
+// (readline C-u). No-op at the start of the query.
+func (q *ScrollingQuery) KillLineBackward() {
+	if q == nil {
+		return
+	}
+	runes := []rune(q.Value)
+	pos := lineedit.ClampRuneCursor(q.Cursor, len(runes))
+	if pos == 0 {
+		return
+	}
+	lineedit.SetKillBuffer(runes[:pos])
+	q.Value = string(runes[pos:])
+	q.Cursor = 0
+}
+
+// KillLineForward stores the text from the caret to the end in the kill buffer and
+// deletes it (readline C-k). No-op at the end of the query.
+func (q *ScrollingQuery) KillLineForward() {
+	if q == nil {
+		return
+	}
+	runes := []rune(q.Value)
+	pos := lineedit.ClampRuneCursor(q.Cursor, len(runes))
+	if pos == len(runes) {
+		return
+	}
+	lineedit.SetKillBuffer(runes[pos:])
+	q.Value = string(runes[:pos])
+	q.Cursor = pos
+}
+
 // Yank inserts the kill buffer (last C-w deletion) at the caret.
 func (q *ScrollingQuery) Yank() {
 	if q == nil {

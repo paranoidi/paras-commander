@@ -44,3 +44,29 @@ func TestScrollingQueryKillLineThenYank(t *testing.T) {
 		t.Fatalf("got %q %d", q.Value, q.Cursor)
 	}
 }
+
+func TestScrollingQueryKillLineBackwardThenYank(t *testing.T) {
+	q := &ScrollingQuery{Value: "foo bar", Cursor: 4}
+	q.KillLineBackward()
+	if q.Value != "bar" || q.Cursor != 0 {
+		t.Fatalf("after kill %q %d", q.Value, q.Cursor)
+	}
+	q.KillLineBackward() // at start: buffer untouched
+	q.Yank()
+	if q.Value != "foo bar" || q.Cursor != 4 {
+		t.Fatalf("after yank %q %d", q.Value, q.Cursor)
+	}
+}
+
+func TestScrollingQueryKillLineForwardThenYank(t *testing.T) {
+	q := &ScrollingQuery{Value: "foo bar", Cursor: 3}
+	q.KillLineForward()
+	if q.Value != "foo" || q.Cursor != 3 {
+		t.Fatalf("after kill %q %d", q.Value, q.Cursor)
+	}
+	q.KillLineForward() // at end: buffer untouched
+	q.Yank()
+	if q.Value != "foo bar" || q.Cursor != 7 {
+		t.Fatalf("after yank %q %d", q.Value, q.Cursor)
+	}
+}

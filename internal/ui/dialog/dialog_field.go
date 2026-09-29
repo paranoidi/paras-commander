@@ -167,6 +167,40 @@ func (f *FileDialogField) KillLine() {
 	f.Clear()
 }
 
+// KillLineBackward stores the text before the cursor in the kill buffer and deletes it
+// (readline C-u). No-op at the start of the field.
+func (f *FileDialogField) KillLineBackward() {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+	runes := []rune(f.Value)
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
+	if pos == 0 {
+		return
+	}
+	lineedit.SetKillBuffer(runes[:pos])
+	f.Value = string(runes[pos:])
+	f.Cursor = 0
+}
+
+// KillLineForward stores the text from the cursor to the end in the kill buffer and
+// deletes it (readline C-k). No-op at the end of the field.
+func (f *FileDialogField) KillLineForward() {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+	runes := []rune(f.Value)
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
+	if pos == len(runes) {
+		return
+	}
+	lineedit.SetKillBuffer(runes[pos:])
+	f.Value = string(runes[:pos])
+	f.Cursor = pos
+}
+
 // Yank inserts the kill buffer (last C-w deletion) at the cursor.
 func (f *FileDialogField) Yank() {
 	if f == nil {
@@ -225,6 +259,12 @@ func TryDialogInputFieldActions(ev *tcell.EventKey, f *FileDialogField, keysDial
 		return true
 	case keymap.ActionDialogInputKillLine:
 		f.KillLine()
+		return true
+	case keymap.ActionDialogInputKillLineBackward:
+		f.KillLineBackward()
+		return true
+	case keymap.ActionDialogInputKillLineForward:
+		f.KillLineForward()
 		return true
 	case keymap.ActionDialogInputYank:
 		f.Yank()

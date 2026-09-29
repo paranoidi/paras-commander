@@ -11,7 +11,9 @@ func DefaultDialogInputOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionDialogInputRestoreDefault:   {"C-r", "C-d"},
 		ActionDialogInputKillWordBackward: {"C-w"},
-		ActionDialogInputKillLine:         {"C-u", "C-l"},
+		ActionDialogInputKillLine:         {"C-l"},
+		ActionDialogInputKillLineBackward: {"C-u"},
+		ActionDialogInputKillLineForward:  {"C-k"},
 		ActionDialogInputYank:             {"C-y"},
 		ActionDialogInputBackwardWord:     {"M-b"},
 		ActionDialogInputForwardWord:      {"M-f"},
