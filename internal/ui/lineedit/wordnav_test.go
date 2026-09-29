@@ -64,3 +64,15 @@ func TestKillWordBackwardNoOpAtBOL(t *testing.T) {
 		t.Fatalf("want no-op at BOL, got %q %d", string(newR), c)
 	}
 }
+
+func TestYank(t *testing.T) {
+	SetKillBuffer(nil)
+	r := []rune("ab")
+	if out, pos := Yank(r, 1); string(out) != "ab" || pos != 1 {
+		t.Fatalf("empty buffer: %q %d", string(out), pos)
+	}
+	SetKillBuffer([]rune("XY"))
+	if out, pos := Yank(r, 1); string(out) != "aXYb" || pos != 3 {
+		t.Fatalf("mid insert: %q %d", string(out), pos)
+	}
+}

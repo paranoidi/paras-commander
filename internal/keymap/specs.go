@@ -1627,6 +1627,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"backward", "kill", "word", "path", "input"},
 		},
 		{
+			ID:           ActionDialogInputYank,
+			Title:        "Paste last deleted word in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "C-y",
+			Keywords:     []string{"yank", "paste", "kill", "word", "input"},
+		},
+		{
 			ID:           ActionDialogInputBackwardWord,
 			Title:        "Move backward by word in dialog input",
 			Section:      "UI",

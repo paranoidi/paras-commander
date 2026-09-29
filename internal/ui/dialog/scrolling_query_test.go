@@ -25,3 +25,12 @@ func TestScrollingQueryKillWordBackward(t *testing.T) {
 		t.Fatalf("kill word: value=%q cursor=%d", q.Value, q.Cursor)
 	}
 }
+
+func TestScrollingQueryKillThenYank(t *testing.T) {
+	q := &ScrollingQuery{Value: "foo bar", Cursor: 7}
+	q.KillWordBackward()
+	q.Yank()
+	if q.Value != "foo bar" || q.Cursor != 7 {
+		t.Fatalf("got %q %d", q.Value, q.Cursor)
+	}
+}

@@ -148,6 +148,21 @@ func (f *FileDialogField) KillWordBackward() {
 	runes := []rune(f.Value)
 	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
 	newRunes, newPos := lineedit.KillWordBackward(runes, pos)
+	if newPos < pos {
+		lineedit.SetKillBuffer(runes[newPos:pos])
+	}
+	f.Value = string(newRunes)
+	f.Cursor = newPos
+}
+
+// Yank inserts the kill buffer (last C-w deletion) at the cursor.
+func (f *FileDialogField) Yank() {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+	runes := []rune(f.Value)
+	newRunes, newPos := lineedit.Yank(runes, lineedit.ClampRuneCursor(f.Cursor, len(runes)))
 	f.Value = string(newRunes)
 	f.Cursor = newPos
 }
@@ -195,6 +210,9 @@ func TryDialogInputFieldActions(ev *tcell.EventKey, f *FileDialogField, keysDial
 		return f.RestorePrefill()
 	case keymap.ActionDialogInputKillWordBackward:
 		f.KillWordBackward()
+		return true
+	case keymap.ActionDialogInputYank:
+		f.Yank()
 		return true
 	case keymap.ActionDialogInputBackwardWord:
 		f.MoveWordBackward()

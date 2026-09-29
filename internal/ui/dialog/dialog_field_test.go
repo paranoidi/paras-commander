@@ -185,3 +185,15 @@ func TestFileDialogFieldMoveWordForward(t *testing.T) {
 		t.Fatalf("cursor = %d, want 2", field.Cursor)
 	}
 }
+
+func TestFileDialogFieldKillThenYank(t *testing.T) {
+	f := &FileDialogField{Value: "foo bar", Cursor: 7}
+	f.KillWordBackward()
+	if f.Value != "foo " {
+		t.Fatalf("after kill %q", f.Value)
+	}
+	f.Yank()
+	if f.Value != "foo bar" || f.Cursor != 7 {
+		t.Fatalf("after yank %q %d", f.Value, f.Cursor)
+	}
+}

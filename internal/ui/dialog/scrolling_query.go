@@ -121,6 +121,20 @@ func (q *ScrollingQuery) KillWordBackward() {
 	runes := []rune(q.Value)
 	pos := lineedit.ClampRuneCursor(q.Cursor, len(runes))
 	newRunes, newPos := lineedit.KillWordBackward(runes, pos)
+	if newPos < pos {
+		lineedit.SetKillBuffer(runes[newPos:pos])
+	}
+	q.Value = string(newRunes)
+	q.Cursor = newPos
+}
+
+// Yank inserts the kill buffer (last C-w deletion) at the caret.
+func (q *ScrollingQuery) Yank() {
+	if q == nil {
+		return
+	}
+	runes := []rune(q.Value)
+	newRunes, newPos := lineedit.Yank(runes, lineedit.ClampRuneCursor(q.Cursor, len(runes)))
 	q.Value = string(newRunes)
 	q.Cursor = newPos
 }

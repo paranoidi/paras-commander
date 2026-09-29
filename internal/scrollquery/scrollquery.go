@@ -115,6 +115,10 @@ func TryDialogInputActions(dialogInputKeys *keymap.Map, ev *tcell.EventKey, e Ed
 		e.Q.KillWordBackward()
 		e.applyAfterErase()
 		return true
+	case keymap.ActionDialogInputYank:
+		e.Q.Yank()
+		e.applyAfterErase()
+		return true
 	case keymap.ActionDialogInputBackwardWord:
 		e.Q.MoveWordBackward()
 		e.applyVisibleOnly()

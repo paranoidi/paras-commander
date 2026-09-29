@@ -1,6 +1,42 @@
 package lineedit
 
-import "unicode"
+import (
+	"sync"
+	"unicode"
+)
+
+var (
+	killMu     sync.Mutex
+	killBuffer []rune
+)
+
+// SetKillBuffer stores the text last removed by a kill (shared by all fields, like a shell kill ring).
+func SetKillBuffer(r []rune) {
+	killMu.Lock()
+	killBuffer = append([]rune(nil), r...)
+	killMu.Unlock()
+}
+
+// KillBuffer returns a copy of the kill buffer.
+func KillBuffer() []rune {
+	killMu.Lock()
+	defer killMu.Unlock()
+	return append([]rune(nil), killBuffer...)
+}
+
+// Yank inserts the kill buffer at pos and returns the new runes and cursor (end of inserted text).
+func Yank(runes []rune, pos int) ([]rune, int) {
+	buf := KillBuffer()
+	if len(buf) == 0 {
+		return runes, ClampRuneCursor(pos, len(runes))
+	}
+	pos = ClampRuneCursor(pos, len(runes))
+	out := make([]rune, 0, len(runes)+len(buf))
+	out = append(out, runes[:pos]...)
+	out = append(out, buf...)
+	out = append(out, runes[pos:]...)
+	return out, pos + len(buf)
+}
 
 // ClampRuneCursor clamps pos to [0, length] for rune-indexed cursors.
 func ClampRuneCursor(pos, length int) int {
