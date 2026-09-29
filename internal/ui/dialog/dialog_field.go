@@ -184,6 +184,17 @@ func (f *FileDialogField) CaseWordForward(upper bool) {
 	f.Cursor = newPos
 }
 
+// CapitalizeWordForward capitalizes the next word and moves the cursor past it.
+func (f *FileDialogField) CapitalizeWordForward() {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+	newRunes, newPos := lineedit.CapitalizeWordForward([]rune(f.Value), f.Cursor)
+	f.Value = string(newRunes)
+	f.Cursor = newPos
+}
+
 // KillLine stores the whole value in the kill buffer and clears the field. An empty
 // field leaves the buffer untouched.
 func (f *FileDialogField) KillLine() {
@@ -312,6 +323,9 @@ func TryDialogInputFieldActions(ev *tcell.EventKey, f *FileDialogField, keysDial
 		return true
 	case keymap.ActionDialogInputDowncaseWord:
 		f.CaseWordForward(false)
+		return true
+	case keymap.ActionDialogInputCapitalizeWord:
+		f.CapitalizeWordForward()
 		return true
 	case keymap.ActionDialogInputLineStart:
 		f.MoveCursorStart()

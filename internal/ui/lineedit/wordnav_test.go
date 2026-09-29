@@ -106,3 +106,14 @@ func TestCaseWordForward(t *testing.T) {
 		t.Fatalf("EOL no-op = %q, %d", string(same), c)
 	}
 }
+
+func TestCapitalizeWordForward(t *testing.T) {
+	out, c := CapitalizeWordForward([]rune("fOO bAR"), 3)
+	if string(out) != "fOO Bar" || c != 7 {
+		t.Fatalf("capitalize next word = %q, %d", string(out), c)
+	}
+	out, c = CapitalizeWordForward([]rune("fOO"), 1)
+	if string(out) != "fOo" || c != 3 {
+		t.Fatalf("capitalize mid-word = %q, %d", string(out), c)
+	}
+}

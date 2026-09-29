@@ -151,6 +151,10 @@ func TryDialogInputActions(dialogInputKeys *keymap.Map, ev *tcell.EventKey, e Ed
 		e.Q.CaseWordForward(false)
 		e.Apply()
 		return true
+	case keymap.ActionDialogInputCapitalizeWord:
+		e.Q.CapitalizeWordForward()
+		e.Apply()
+		return true
 	case keymap.ActionDialogInputLineStart:
 		e.Q.MoveCursorStart()
 		e.applyVisibleOnly()

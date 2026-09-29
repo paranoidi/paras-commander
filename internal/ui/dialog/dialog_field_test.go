@@ -262,3 +262,11 @@ func TestFileDialogFieldCaseWordForward(t *testing.T) {
 		t.Fatalf("after downcase %q %d", f.Value, f.Cursor)
 	}
 }
+
+func TestFileDialogFieldCapitalizeWordForward(t *testing.T) {
+	f := &FileDialogField{Value: "hELLO world", Cursor: 0}
+	f.CapitalizeWordForward()
+	if f.Value != "Hello world" || f.Cursor != 5 {
+		t.Fatalf("after capitalize %q %d", f.Value, f.Cursor)
+	}
+}

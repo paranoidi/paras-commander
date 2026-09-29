@@ -104,6 +104,28 @@ func CaseWordForward(runes []rune, pos int, upper bool) ([]rune, int) {
 	return out, end
 }
 
+// CapitalizeWordForward uppercases the first word rune at or after pos and lowercases the
+// rest of that word (readline capitalize-word). It returns the new slice and the cursor
+// after the word.
+func CapitalizeWordForward(runes []rune, pos int) ([]rune, int) {
+	pos = ClampRuneCursor(pos, len(runes))
+	end := ForwardWordIndex(runes, pos)
+	out := append([]rune(nil), runes...)
+	first := true
+	for i := pos; i < end; i++ {
+		if !IsWordRune(out[i]) {
+			continue
+		}
+		if first {
+			out[i] = unicode.ToUpper(out[i])
+			first = false
+		} else {
+			out[i] = unicode.ToLower(out[i])
+		}
+	}
+	return out, end
+}
+
 // KillWordForward removes the runes from pos up to the forward-word boundary (readline M-d).
 // It returns the new rune slice and the cursor (unchanged pos).
 func KillWordForward(runes []rune, pos int) ([]rune, int) {

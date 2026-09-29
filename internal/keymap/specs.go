@@ -1714,6 +1714,14 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "M-l",
 			Keywords:     []string{"lower", "case", "word", "input"},
 		},
+		{
+			ID:           ActionDialogInputCapitalizeWord,
+			Title:        "Capitalize word in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "M-S-u",
+			Keywords:     []string{"capitalize", "title", "case", "word", "input"},
+		},
 
 		// ── Filter (unbound by default) ──
 		{

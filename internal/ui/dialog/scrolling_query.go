@@ -155,6 +155,16 @@ func (q *ScrollingQuery) CaseWordForward(upper bool) {
 	q.Cursor = newPos
 }
 
+// CapitalizeWordForward capitalizes the next word and moves the caret past it.
+func (q *ScrollingQuery) CapitalizeWordForward() {
+	if q == nil {
+		return
+	}
+	newRunes, newPos := lineedit.CapitalizeWordForward([]rune(q.Value), q.Cursor)
+	q.Value = string(newRunes)
+	q.Cursor = newPos
+}
+
 // KillLine stores the whole value in the kill buffer and clears the query. An empty
 // query leaves the buffer untouched.
 func (q *ScrollingQuery) KillLine() {

@@ -385,6 +385,8 @@ func TestDialogInputOverlayDefaultsResolveCtrlRAndCtrlD(t *testing.T) {
 		{"ctrl-e", tcell.NewEventKey(tcell.KeyCtrlE, 0, tcell.ModCtrl), ActionDialogInputLineEnd},
 		{"alt-u", tcell.NewEventKey(tcell.KeyRune, 'u', tcell.ModAlt), ActionDialogInputUpcaseWord},
 		{"alt-l", tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt), ActionDialogInputDowncaseWord},
+		{"alt-shift-u", tcell.NewEventKey(tcell.KeyRune, 'U', tcell.ModAlt), ActionDialogInputCapitalizeWord},
+		{"alt-shift-u-modshift", tcell.NewEventKey(tcell.KeyRune, 'U', tcell.ModAlt|tcell.ModShift), ActionDialogInputCapitalizeWord},
 	}
 	for _, tc := range wordCases {
 		id, ok := bundle.DialogInput.Lookup(tc.ev)
