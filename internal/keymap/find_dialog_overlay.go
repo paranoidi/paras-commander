@@ -5,7 +5,7 @@ func DefaultFindDialogOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionFindView:             {"F3"},
 		ActionFindUnselectAll:      {"F4"},
-		ActionFindSelectAll:        {"F5", "C-a"},
+		ActionFindSelectAll:        {"F5", "M-a"},
 		ActionFindSelectGroup:      {"F6"},
 		ActionFindUnselectGroup:    {"F7"},
 		ActionFindSelectParentDirs: {"F2"},

@@ -1682,6 +1682,22 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "M-f",
 			Keywords:     []string{"forward", "word", "path", "input"},
 		},
+		{
+			ID:           ActionDialogInputLineStart,
+			Title:        "Move to line start in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "C-a",
+			Keywords:     []string{"home", "beginning", "line", "input"},
+		},
+		{
+			ID:           ActionDialogInputLineEnd,
+			Title:        "Move to line end in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "C-e",
+			Keywords:     []string{"end", "line", "input"},
+		},
 
 		// ── Filter (unbound by default) ──
 		{

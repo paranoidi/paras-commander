@@ -295,6 +295,12 @@ func TryDialogInputFieldActions(ev *tcell.EventKey, f *FileDialogField, keysDial
 	case keymap.ActionDialogInputForwardWord:
 		f.MoveWordForward()
 		return true
+	case keymap.ActionDialogInputLineStart:
+		f.MoveCursorStart()
+		return true
+	case keymap.ActionDialogInputLineEnd:
+		f.MoveCursorEnd()
+		return true
 	default:
 		return false
 	}

@@ -381,6 +381,8 @@ func TestDialogInputOverlayDefaultsResolveCtrlRAndCtrlD(t *testing.T) {
 		{"ctrl-y", tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModNone), ActionDialogInputYank},
 		{"alt-b", tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt), ActionDialogInputBackwardWord},
 		{"alt-f", tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt), ActionDialogInputForwardWord},
+		{"ctrl-a", tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl), ActionDialogInputLineStart},
+		{"ctrl-e", tcell.NewEventKey(tcell.KeyCtrlE, 0, tcell.ModCtrl), ActionDialogInputLineEnd},
 	}
 	for _, tc := range wordCases {
 		id, ok := bundle.DialogInput.Lookup(tc.ev)
@@ -638,9 +640,9 @@ func TestDefaultBundleFindDialogOverlayF5CtrlA(t *testing.T) {
 	if !ok || id != ActionFindSelectAll {
 		t.Fatalf("FindDialog F5 = %q %v, want %q", id, ok, ActionFindSelectAll)
 	}
-	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
+	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 	if !ok || id != ActionFindSelectAll {
-		t.Fatalf("FindDialog Ctrl+A = %q %v, want %q", id, ok, ActionFindSelectAll)
+		t.Fatalf("FindDialog Alt+A = %q %v, want %q", id, ok, ActionFindSelectAll)
 	}
 	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
 	if !ok || id != ActionFindSelectGroup {

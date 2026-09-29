@@ -623,12 +623,12 @@ func TestFindDialogSelectAllMarksFullCorpusResults(t *testing.T) {
 	}
 
 	app.model.FindDialog.MarkedPaths = nil
-	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl)); !ok || id != keymap.ActionFindSelectAll {
-		t.Fatalf("Ctrl+A lookup = %q ok=%v", id, ok)
+	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt)); !ok || id != keymap.ActionFindSelectAll {
+		t.Fatalf("Alt+A lookup = %q ok=%v", id, ok)
 	}
-	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 	if !app.model.FindDialog.MarkedPaths[filepath.Clean(aPath)] || !app.model.FindDialog.MarkedPaths[filepath.Clean(bPath)] {
-		t.Fatalf("Ctrl+A select all marks = %v", app.model.FindDialog.MarkedPaths)
+		t.Fatalf("Alt+A select all marks = %v", app.model.FindDialog.MarkedPaths)
 	}
 }
 

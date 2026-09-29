@@ -143,6 +143,14 @@ func TryDialogInputActions(dialogInputKeys *keymap.Map, ev *tcell.EventKey, e Ed
 		e.Q.MoveWordForward()
 		e.applyVisibleOnly()
 		return true
+	case keymap.ActionDialogInputLineStart:
+		e.Q.MoveCursorStart()
+		e.applyVisibleOnly()
+		return true
+	case keymap.ActionDialogInputLineEnd:
+		e.Q.MoveCursorEnd()
+		e.applyVisibleOnly()
+		return true
 	case keymap.ActionDialogInputRestoreDefault:
 		return false
 	default:
@@ -179,14 +187,6 @@ func HandleKey(dialogInputKeys *keymap.Map, ev *tcell.EventKey, inputFocused boo
 		if ev.Modifiers()&tcell.ModCtrl != 0 {
 			return false
 		}
-		e.Q.MoveCursorEnd()
-		e.applyVisibleOnly()
-		return true
-	case tcell.KeyCtrlA:
-		e.Q.MoveCursorStart()
-		e.applyVisibleOnly()
-		return true
-	case tcell.KeyCtrlE:
 		e.Q.MoveCursorEnd()
 		e.applyVisibleOnly()
 		return true

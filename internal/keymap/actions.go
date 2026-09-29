@@ -256,6 +256,10 @@ const (
 	ActionDialogInputBackwardWord = "ui.input.backward-word"
 	// ActionDialogInputForwardWord moves the cursor past the next word (readline M-f).
 	ActionDialogInputForwardWord = "ui.input.forward-word"
+	// ActionDialogInputLineStart moves the cursor to the start of the line (readline C-a).
+	ActionDialogInputLineStart = "ui.input.line-start"
+	// ActionDialogInputLineEnd moves the cursor to the end of the line (readline C-e).
+	ActionDialogInputLineEnd = "ui.input.line-end"
 
 	// ActionDestinationActivePanel / ActionDestinationInactivePanel set a dialog's destination
 	// path field to the active/inactive panel path. Bound via [dialog.flatten] and
@@ -488,6 +492,8 @@ var KnownActions = map[string]struct{}{
 	ActionDialogInputYank:             {},
 	ActionDialogInputBackwardWord:     {},
 	ActionDialogInputForwardWord:      {},
+	ActionDialogInputLineStart:        {},
+	ActionDialogInputLineEnd:          {},
 
 	ActionDestinationActivePanel:   {},
 	ActionDestinationInactivePanel: {},
