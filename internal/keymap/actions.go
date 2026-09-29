@@ -240,6 +240,8 @@ const (
 	ActionDialogInputRestoreDefault = "ui.input.restore-default"
 	// ActionDialogInputKillWordBackward deletes back to the previous word boundary (readline C-w).
 	ActionDialogInputKillWordBackward = "ui.input.kill-word-backward"
+	// ActionDialogInputKillLine deletes the whole line into the kill buffer (readline C-u).
+	ActionDialogInputKillLine = "ui.input.kill-line"
 	// ActionDialogInputYank inserts the last killed word at the caret (readline C-y).
 	ActionDialogInputYank = "ui.input.yank"
 	// ActionDialogInputBackwardWord moves the cursor to the previous word boundary (readline M-b).
@@ -471,6 +473,7 @@ var KnownActions = map[string]struct{}{
 	ActionDialogInputRestoreDefault: {},
 
 	ActionDialogInputKillWordBackward: {},
+	ActionDialogInputKillLine:         {},
 	ActionDialogInputYank:             {},
 	ActionDialogInputBackwardWord:     {},
 	ActionDialogInputForwardWord:      {},

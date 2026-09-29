@@ -58,4 +58,4 @@ There are **no** dedicated user pages for panel compare, SFTP browsing, or the p
 - bash ≥ 5.1: array-style `PROMPT_COMMAND` uses the string-append form for the cwd hook.
 - Smoke: Ctrl+O, `cd` through a symlink, toggle out; Alt+Enter on a selection in fish.
 
-In dialog text inputs, `C-w` (`ui.input.kill-word-backward`) deletes the previous word and stores it in a process-wide kill buffer; `C-y` (`ui.input.yank`, `[dialog.input]`) re-inserts it at the caret. Outside a focused input `C-y` still refreshes the panel.
+In dialog text inputs, `C-w` (`ui.input.kill-word-backward`) deletes the previous word and stores it in a process-wide kill buffer; `C-y` (`ui.input.yank`, `[dialog.input]`) re-inserts it at the caret. Outside a focused input `C-y` still refreshes the panel. `C-u` and `C-l` (`ui.input.kill-line`) delete the whole line into the same kill buffer, so `C-y` restores it; an empty line leaves the buffer untouched.

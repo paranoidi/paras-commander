@@ -69,15 +69,6 @@ func (h *Handler) handleFilePreviewSearchTypingKey(event *tcell.EventKey) (quit 
 	field := h.model.FullscreenFilePreviewSearchField
 	h.mu.RUnlock()
 
-	switch event.Key() {
-	case tcell.KeyCtrlU, tcell.KeyCtrlL:
-		if field.Value != "" {
-			field.Clear()
-			h.applyFilePreviewSearchFieldEdit(field)
-		}
-		return false
-	}
-
 	if h.host.HandleFileDialogFieldKey(event, &field, func() {
 		h.applyFilePreviewSearchFieldEdit(field)
 	}) {

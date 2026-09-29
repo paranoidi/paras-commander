@@ -34,3 +34,13 @@ func TestScrollingQueryKillThenYank(t *testing.T) {
 		t.Fatalf("got %q %d", q.Value, q.Cursor)
 	}
 }
+
+func TestScrollingQueryKillLineThenYank(t *testing.T) {
+	q := &ScrollingQuery{Value: "foo bar", Cursor: 3}
+	q.KillLine()
+	q.KillLine() // empty: buffer untouched
+	q.Yank()
+	if q.Value != "foo bar" || q.Cursor != 7 {
+		t.Fatalf("got %q %d", q.Value, q.Cursor)
+	}
+}

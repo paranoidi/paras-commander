@@ -197,3 +197,16 @@ func TestFileDialogFieldKillThenYank(t *testing.T) {
 		t.Fatalf("after yank %q %d", f.Value, f.Cursor)
 	}
 }
+
+func TestFileDialogFieldKillLineThenYank(t *testing.T) {
+	f := &FileDialogField{Value: "foo bar", Cursor: 3}
+	f.KillLine()
+	if f.Value != "" {
+		t.Fatalf("after kill %q", f.Value)
+	}
+	f.KillLine() // empty: buffer untouched
+	f.Yank()
+	if f.Value != "foo bar" || f.Cursor != 7 {
+		t.Fatalf("after yank %q %d", f.Value, f.Cursor)
+	}
+}

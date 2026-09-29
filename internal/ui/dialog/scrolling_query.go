@@ -128,6 +128,18 @@ func (q *ScrollingQuery) KillWordBackward() {
 	q.Cursor = newPos
 }
 
+// KillLine stores the whole value in the kill buffer and clears the query. An empty
+// query leaves the buffer untouched.
+func (q *ScrollingQuery) KillLine() {
+	if q == nil {
+		return
+	}
+	if q.Value != "" {
+		lineedit.SetKillBuffer([]rune(q.Value))
+	}
+	q.Clear()
+}
+
 // Yank inserts the kill buffer (last C-w deletion) at the caret.
 func (q *ScrollingQuery) Yank() {
 	if q == nil {

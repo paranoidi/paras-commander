@@ -185,7 +185,7 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 			h.fileDialogMoveFocusKey(event)
 		}
 		return false
-	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete, tcell.KeyCtrlL:
+	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete:
 		return h.fileDialogPassFieldEditKey(event, onRadio, onCheckbox)
 	case tcell.KeyTab:
 		h.fileDialogMoveFocusKey(event)
@@ -200,7 +200,7 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	return false
 }
 
-// fileDialogPassFieldEditKey routes Home/End/Backspace/Delete/Ctrl+L to the focused
+// fileDialogPassFieldEditKey routes Home/End/Backspace/Delete to the focused
 // field's edit handler, unless focus is on a radio or checkbox row (no-op there).
 // Always returns false: these keys are always fully consumed by the file dialog.
 func (h *Handler) fileDialogPassFieldEditKey(event *tcell.EventKey, onRadio, onCheckbox bool) bool {

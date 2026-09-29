@@ -225,6 +225,10 @@ func (h *Handler) handleMassRenameSavePromptKey(event *tcell.EventKey) bool {
 		return &d.Fields[idx]
 	}
 
+	if d.FocusedField < okIdx && dialog.TryDialogInputFieldActions(event, fieldAt(d.FocusedField), h.keysDialogInput) {
+		return false
+	}
+
 	switch event.Key() {
 	case tcell.KeyEsc:
 		h.closeMassRenameSavePrompt()
@@ -265,7 +269,7 @@ func (h *Handler) handleMassRenameSavePromptKey(event *tcell.EventKey) bool {
 			dialog.HandleFileDialogFieldKey(event, fieldAt(d.FocusedField), h.keysDialogInput, nil)
 		}
 		return false
-	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete, tcell.KeyCtrlL:
+	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete:
 		if d.FocusedField < okIdx {
 			dialog.HandleFileDialogFieldKey(event, fieldAt(d.FocusedField), h.keysDialogInput, nil)
 		}

@@ -155,6 +155,18 @@ func (f *FileDialogField) KillWordBackward() {
 	f.Cursor = newPos
 }
 
+// KillLine stores the whole value in the kill buffer and clears the field. An empty
+// field leaves the buffer untouched.
+func (f *FileDialogField) KillLine() {
+	if f == nil {
+		return
+	}
+	if f.Value != "" {
+		lineedit.SetKillBuffer([]rune(f.Value))
+	}
+	f.Clear()
+}
+
 // Yank inserts the kill buffer (last C-w deletion) at the cursor.
 func (f *FileDialogField) Yank() {
 	if f == nil {
@@ -210,6 +222,9 @@ func TryDialogInputFieldActions(ev *tcell.EventKey, f *FileDialogField, keysDial
 		return f.RestorePrefill()
 	case keymap.ActionDialogInputKillWordBackward:
 		f.KillWordBackward()
+		return true
+	case keymap.ActionDialogInputKillLine:
+		f.KillLine()
 		return true
 	case keymap.ActionDialogInputYank:
 		f.Yank()
@@ -273,9 +288,6 @@ func HandleFileDialogFieldKey(ev *tcell.EventKey, f *FileDialogField, keysDialog
 		edited = true
 	case tcell.KeyDelete:
 		f.Delete()
-		edited = true
-	case tcell.KeyCtrlL:
-		f.Clear()
 		edited = true
 	case tcell.KeyRune:
 		if isDialogInputRune(ev) {

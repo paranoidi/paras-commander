@@ -115,6 +115,10 @@ func TryDialogInputActions(dialogInputKeys *keymap.Map, ev *tcell.EventKey, e Ed
 		e.Q.KillWordBackward()
 		e.applyAfterErase()
 		return true
+	case keymap.ActionDialogInputKillLine:
+		e.Q.KillLine()
+		e.Apply()
+		return true
 	case keymap.ActionDialogInputYank:
 		e.Q.Yank()
 		e.applyAfterErase()
@@ -181,13 +185,6 @@ func HandleKey(dialogInputKeys *keymap.Map, ev *tcell.EventKey, inputFocused boo
 	case tcell.KeyDelete:
 		e.Q.Delete()
 		e.applyAfterErase()
-		return true
-	case tcell.KeyCtrlL, tcell.KeyCtrlU:
-		if e.Q.Value == "" {
-			return true
-		}
-		e.Q.Clear()
-		e.Apply()
 		return true
 	case tcell.KeyRune:
 		if IsDialogInputRune(ev) {
