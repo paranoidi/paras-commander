@@ -168,6 +168,11 @@ type FileDialogState struct {
 	RenameSlugifySep          RenameSlugifySep
 	// RenameFocusAfter selects and centers the renamed entry after OK (single-file rename main dialog only).
 	RenameFocusAfter bool
+	// RenameSourceIsDir is true when the single-file rename source resolves to a directory;
+	// it gates the open-in-other-panel checkbox.
+	RenameSourceIsDir bool
+	// RenameOpenInOther navigates the inactive panel to the renamed directory after OK.
+	RenameOpenInOther bool
 	// RenameEncodingCandidates / RenameEncodingSelected apply when opening rename with detectable legacy encodings.
 	RenameEncodingCandidates []RenameEncodingCandidate
 	RenameEncodingSelected   int

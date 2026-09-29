@@ -246,6 +246,10 @@ func (h *Handler) handleFileDialogEnter() {
 		d.RenameFocusAfter = !d.RenameFocusAfter
 		return
 	}
+	if h.fileDialogOnRenameOpenOtherCheckbox() {
+		d.RenameOpenInOther = !d.RenameOpenInOther
+		return
+	}
 	if h.fileDialogOnRunForEachInDirsCheckbox() {
 		d.RunForEachInDirs = !d.RunForEachInDirs
 		h.commands.RecomputeRunForEachValidation()
@@ -298,6 +302,12 @@ func (h *Handler) handleFileDialogRune(event *tcell.EventKey) {
 	if h.fileDialogOnRenameFocusCheckbox() {
 		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
 			d.RenameFocusAfter = !d.RenameFocusAfter
+		}
+		return
+	}
+	if h.fileDialogOnRenameOpenOtherCheckbox() {
+		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
+			d.RenameOpenInOther = !d.RenameOpenInOther
 		}
 		return
 	}
@@ -432,10 +442,17 @@ func (h *Handler) tryRenameFocusAltShortcut(r rune) bool {
 	if !dialog.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != dialog.RenamePhaseMain {
 		return false
 	}
-	if r != 'a' && r != 'A' {
+	switch r {
+	case 'a', 'A':
+		d.RenameFocusAfter = !d.RenameFocusAfter
+	case 'p', 'P':
+		if d.DialogType != dialog.FileDialogRename || !d.RenameSourceIsDir {
+			return false
+		}
+		d.RenameOpenInOther = !d.RenameOpenInOther
+	default:
 		return false
 	}
-	d.RenameFocusAfter = !d.RenameFocusAfter
 	return true
 }
 
@@ -676,6 +693,7 @@ func (h *Handler) mkdirExtraFocusRows() int {
 func (h *Handler) fileDialogOnAnyCheckbox() bool {
 	return h.fileDialogOnMassRenameAnyCheckbox() ||
 		h.fileDialogOnRenameFocusCheckbox() ||
+		h.fileDialogOnRenameOpenOtherCheckbox() ||
 		h.fileDialogOnRunForEachInDirsCheckbox() ||
 		h.fileDialogOnRunForEachPTYCheckbox()
 }
@@ -793,6 +811,16 @@ func (h *Handler) fileDialogOnRenameFocusCheckbox() bool {
 		d.RenamePhase == dialog.RenamePhaseMain &&
 		len(d.Fields) > 0 &&
 		d.FocusedField == len(d.Fields)
+}
+
+// fileDialogOnRenameOpenOtherCheckbox returns true when focus is on the open-in-other-panel
+// checkbox (directory rename only), the row right after focus-after-rename.
+func (h *Handler) fileDialogOnRenameOpenOtherCheckbox() bool {
+	d := &h.model.FileDialog
+	return d.DialogType == dialog.FileDialogRename &&
+		d.RenamePhase == dialog.RenamePhaseMain &&
+		d.RenameSourceIsDir &&
+		d.FocusedField == len(d.Fields)+1
 }
 
 // fileDialogOnRunForEachInDirsCheckbox returns true when focus is on the "Run in each

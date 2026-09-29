@@ -81,7 +81,7 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 			height += 1 + mkdirActionRowCount + 1
 		}
 		if renameHasFocusCheckbox(state) {
-			height += 1 + renameFocusCheckboxRowCount + 1
+			height += 1 + renameFocusCheckboxRowCount + renameOpenOtherRows(state) + 1
 		}
 	}
 	if height > layout.Height-2 {
@@ -293,6 +293,9 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 	}
 	if renameHasFocusCheckbox(state) {
 		lw := utf8.RuneCountInString(draw.CheckboxText(renameFocusCheckboxLabel(state), true)) + 4
+		if renameHasOpenOtherCheckbox(state) {
+			lw = max(lw, utf8.RuneCountInString(draw.CheckboxText(renameOpenOtherLabel, true))+4)
+		}
 		if lw > minWidth {
 			minWidth = lw
 		}
@@ -734,7 +737,22 @@ func renameHasFocusCheckbox(state FileDialogState) bool {
 // rename focus checkbox, or 0 when not applicable.
 func renameExtraFocusRows(state FileDialogState) int {
 	if renameHasFocusCheckbox(state) {
-		return renameFocusCheckboxRowCount
+		return renameFocusCheckboxRowCount + renameOpenOtherRows(state)
+	}
+	return 0
+}
+
+const renameOpenOtherLabel = "Open in the other panel after rename"
+
+// renameHasOpenOtherCheckbox reports whether the rename dialog offers the open-in-other-panel
+// checkbox (single directory rename only).
+func renameHasOpenOtherCheckbox(state FileDialogState) bool {
+	return state.DialogType == FileDialogRename && state.RenamePhase == RenamePhaseMain && state.RenameSourceIsDir
+}
+
+func renameOpenOtherRows(state FileDialogState) int {
+	if renameHasOpenOtherCheckbox(state) {
+		return 1
 	}
 	return 0
 }
@@ -780,6 +798,9 @@ func drawRenameFocusCheckbox(screen tcell.Screen, rect Rect, state FileDialogSta
 		return
 	}
 	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, renameFocusCheckboxLabel(state), 'A', state.RenameFocusAfter, state.FocusedField == len(state.Fields), false, styles)
+	if renameHasOpenOtherCheckbox(state) && y+1 < rect.Y+rect.Height-2 {
+		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y+1, renameOpenOtherLabel, 'p', state.RenameOpenInOther, state.FocusedField == len(state.Fields)+1, false, styles)
+	}
 }
 
 // drawMkdirActionRows draws the radio button section under the directory-name input

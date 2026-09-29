@@ -157,6 +157,7 @@ func (h *Handler) OpenRenameDialog(p *panel.State) {
 		RenamePhase:              dialog.RenamePhaseMain,
 		RenameSlugifySep:         dialog.RenameSlugifyDot,
 		RenameFocusAfter:         h.host.Config().Operations.RenameFocusAfter,
+		RenameSourceIsDir:        entry.ResolvesToDir(),
 		RenameEncodingCandidates: renameEnc,
 		RenameEncodingSelected:   0,
 	}
@@ -432,6 +433,7 @@ func (h *Handler) executeRename() {
 		return
 	}
 	focusAfter := d.RenameFocusAfter
+	openInOther := d.RenameOpenInOther && d.RenameSourceIsDir
 	panelDir := p.Path
 	panelID := h.model.ActivePanel
 	panelPath := p.PathString()
@@ -441,7 +443,7 @@ func (h *Handler) executeRename() {
 			entry.Name = loc.Base()
 		}
 		h.startRemoteRename(renameApply{
-			entry: entry, focusAfter: focusAfter, panelDir: panelDir, panelID: panelID,
+			entry: entry, focusAfter: focusAfter, openInOther: openInOther, panelDir: panelDir, panelID: panelID,
 		}, newName, panelPath)
 		return
 	}
@@ -464,7 +466,7 @@ func (h *Handler) executeRename() {
 	}
 	h.CloseFileDialog()
 	h.applyRenameSuccess(renameApply{
-		plan: plan, entry: entry, focusAfter: focusAfter, panelDir: panelDir, panelID: panelID,
+		plan: plan, entry: entry, focusAfter: focusAfter, openInOther: openInOther, panelDir: panelDir, panelID: panelID,
 	})
 }
 
@@ -479,6 +481,15 @@ func (h *Handler) applyRenameSuccess(st renameApply) {
 		h.RefreshBothPanels()
 	}
 	h.host.ActivePanel().AddRenameMarks(st.panelDir, []string{st.plan.NewName})
+	if st.openInOther {
+		if target, err := st.panelDir.Join(st.plan.NewName); err == nil {
+			err = h.host.NavigatePanelToPath(h.host.InactivePanelID(), target.String(), "")
+			if err != nil {
+				h.host.SetErrorMessage("Rename", err)
+				return
+			}
+		}
+	}
 	h.host.SetTransientMessage(fmt.Sprintf("Renamed to %s", st.plan.NewName), ui.MessageUrgencyInfo)
 }
 

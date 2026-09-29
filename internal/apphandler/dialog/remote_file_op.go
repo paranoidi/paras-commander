@@ -59,11 +59,12 @@ type mkdirApply struct {
 }
 
 type renameApply struct {
-	plan       ops.RenamePlan
-	entry      localfs.Entry
-	focusAfter bool
-	panelDir   pathloc.Path
-	panelID    int
+	plan        ops.RenamePlan
+	entry       localfs.Entry
+	focusAfter  bool
+	openInOther bool
+	panelDir    pathloc.Path
+	panelID     int
 }
 
 type transferProbeApply struct {
