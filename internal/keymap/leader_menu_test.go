@@ -3,6 +3,7 @@ package keymap
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -121,6 +122,12 @@ func TestBuildLeaderMenuEntriesGroupColumns(t *testing.T) {
 	if colFor(LeaderMenuGroupNavigation) != 2 || colFor(LeaderMenuGroupDisplay) != 3 || colFor(LeaderMenuGroupApp) != 3 {
 		t.Fatalf("columns = nav %d display %d app %d, want 2 3 3", colFor(LeaderMenuGroupNavigation), colFor(LeaderMenuGroupDisplay), colFor(LeaderMenuGroupApp))
 	}
+	if colFor(LeaderMenuGroupAddMark) != 3 {
+		t.Fatalf("add mark column = %d, want 3", colFor(LeaderMenuGroupAddMark))
+	}
+	if slices.Index(leaderMenuGroupOrder, LeaderMenuGroupAddMark)+1 != slices.Index(leaderMenuGroupOrder, LeaderMenuGroupDisplay) {
+		t.Fatal("Add mark group must sit directly above Display")
+	}
 }
 
 func TestLeaderMenuKeysOverrideAndOmit(t *testing.T) {
@@ -188,8 +195,8 @@ func TestDefaultBundleLeaderKey(t *testing.T) {
 			t.Fatalf("invalid entry: %+v", e)
 		}
 	}
-	if actions != 37 {
-		t.Fatalf("action entries = %d, want 37", actions)
+	if actions != 39 {
+		t.Fatalf("action entries = %d, want 39", actions)
 	}
 }
 

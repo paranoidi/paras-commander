@@ -451,7 +451,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"M-n"},
 			PreferredKey: "M-n",
 			Keywords:     []string{"pin", "pinned", "bookmark", "jump", "quick access"},
-			LeaderKey:    "n",
+			LeaderKey:    "N",
 		},
 		{
 			ID:           ActionPanelRefresh,
@@ -782,6 +782,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"M-insert"},
 			PreferredKey: "M-insert",
 			Keywords:     []string{"pin", "bookmark", "mark", "quick access"},
+			LeaderKey:    "n",
 		},
 
 		// ── Sort & display ──
@@ -965,12 +966,12 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionBookmarkOpen,
 			Views:        HelpBrowser,
-			Title:        "Open bookmarks",
+			Title:        "Bookmarks",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-b", "C-g", "C-e"},
 			PreferredKey: "C-b",
 			Keywords:     []string{"fzf-marks", "marks", "picker", "path-picker", "history", "destination"},
-			LeaderKey:    "b",
+			LeaderKey:    "B",
 		},
 		{
 			ID:          ActionBookmarkAdd,
@@ -979,6 +980,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Navigation",
 			DefaultKeys: []string{"C-M-b"},
 			Keywords:    []string{"mark", "save"},
+			LeaderKey:   "b",
 		},
 		{
 			ID:          ActionBookmarkDelete,
