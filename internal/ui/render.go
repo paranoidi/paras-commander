@@ -906,6 +906,6 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawDedupProgressDialog(screen, layout, model.DedupProgressDialog, model.DedupSnapshot, styles, model.UserHomeDir)
 	}
 	if model.CommandOutputDialog.Open {
-		dialog.DrawCommandOutputDialog(screen, layout, model.CommandOutputDialog, styles)
+		dialog.DrawCommandOutputDialog(screen, layout, model.CommandOutputDialog, styles, model.PanelScrollbar)
 	}
 }

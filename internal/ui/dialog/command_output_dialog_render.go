@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // CommandOutputDialogMetrics holds computed geometry for the output dialog.
@@ -94,7 +95,7 @@ func CommandOutputDialogListH(layout Layout, state CommandOutputDialogState) int
 }
 
 // DrawCommandOutputDialog renders the command output modal overlay.
-func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOutputDialogState, styles theme.Theme) {
+func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOutputDialogState, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
 	if !state.Open {
 		return
 	}
@@ -123,6 +124,7 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 		}
 		primitive.Text(screen, contentX, y, contentW, line, lineStyle)
 	}
+	draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, listH, len(state.Lines), state.Scroll, scrollbarStyle, borderStyle, styles)
 
 	// separator at buttonY-2, blank row at buttonY-1 (DrawDialogFrame fills surface), button at buttonY
 	buttonY := rect.Y + rect.Height - 2
