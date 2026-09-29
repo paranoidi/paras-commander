@@ -128,6 +128,22 @@ func (q *ScrollingQuery) KillWordBackward() {
 	q.Cursor = newPos
 }
 
+// KillWordForward deletes from the caret up to the forward-word boundary into the kill
+// buffer (readline M-d).
+func (q *ScrollingQuery) KillWordForward() {
+	if q == nil {
+		return
+	}
+	runes := []rune(q.Value)
+	pos := lineedit.ClampRuneCursor(q.Cursor, len(runes))
+	newRunes, newPos := lineedit.KillWordForward(runes, pos)
+	if len(newRunes) != len(runes) {
+		lineedit.SetKillBuffer(runes[pos : pos+len(runes)-len(newRunes)])
+	}
+	q.Value = string(newRunes)
+	q.Cursor = newPos
+}
+
 // KillLine stores the whole value in the kill buffer and clears the query. An empty
 // query leaves the buffer untouched.
 func (q *ScrollingQuery) KillLine() {

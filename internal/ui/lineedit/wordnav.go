@@ -88,6 +88,20 @@ func ForwardWordIndex(runes []rune, pos int) int {
 	return i
 }
 
+// KillWordForward removes the runes from pos up to the forward-word boundary (readline M-d).
+// It returns the new rune slice and the cursor (unchanged pos).
+func KillWordForward(runes []rune, pos int) ([]rune, int) {
+	pos = ClampRuneCursor(pos, len(runes))
+	end := ForwardWordIndex(runes, pos)
+	if end == pos {
+		return runes, pos
+	}
+	out := make([]rune, 0, len(runes)-(end-pos))
+	out = append(out, runes[:pos]...)
+	out = append(out, runes[end:]...)
+	return out, pos
+}
+
 // KillWordBackward removes the runes from the backward-word boundary up to (but not including) pos.
 // It returns the new rune slice and the new cursor (start of deleted region).
 func KillWordBackward(runes []rune, pos int) ([]rune, int) {

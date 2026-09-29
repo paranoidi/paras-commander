@@ -150,15 +150,15 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 		t.Fatalf("focus = %d want 0 after Alt+V", st.Focus)
 	}
 
-	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModAlt))
 	if !st.OnlyDirectories {
-		t.Fatal("Alt+D should toggle only-directories while typing filter")
+		t.Fatal("Alt+N should toggle only-directories while typing filter")
 	}
 	if st.OnlyFiles {
-		t.Fatal("Alt+D should not enable only-files")
+		t.Fatal("Alt+N should not enable only-files")
 	}
 	if st.Focus != 0 {
-		t.Fatalf("focus = %d want 0 after Alt+D", st.Focus)
+		t.Fatalf("focus = %d want 0 after Alt+N", st.Focus)
 	}
 
 	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt))
@@ -230,11 +230,12 @@ func TestFindDialogHandleKeyAltDDoesNotStartDiskUsageScan(t *testing.T) {
 			t.Fatal("handleKey quit while typing find query")
 		}
 	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt)); quit {
 		t.Fatal("handleKey quit on Alt+D")
 	}
-	if !st.OnlyDirectories {
-		t.Fatal("Alt+D via handleKey should toggle only-directories")
+	if st.Query != "" || st.OnlyDirectories {
+		t.Fatalf("Alt+D should kill the next query word: query=%q onlyDirs=%v", st.Query, st.OnlyDirectories)
 	}
 	if !app.model.DiskUsageShown {
 		t.Fatal("disk usage should remain shown after Find Alt+D")
@@ -280,6 +281,12 @@ func TestFindDialogQueryAltBAltFCtrlL(t *testing.T) {
 	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
 	if st.QueryCursor != 7 {
 		t.Fatalf("after Alt+f: cursor=%d want 7", st.QueryCursor)
+	}
+
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt))
+	if st.Query != "foo " || st.QueryCursor != 4 {
+		t.Fatalf("after Alt+d: query=%q cursor=%d", st.Query, st.QueryCursor)
 	}
 
 	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))

@@ -116,7 +116,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	draw.DrawDialogHSeparator(screen, rect, sepAfterFilter, borderStyle)
 
 	cbY := rect.Y + 3
-	draw.DrawDialogRadio(screen, cbCol, cbY, "Only directories", 'D', state.OnlyDirectories, state.Focus == state.FindDialogOnlyDirsFocus(), styles)
+	draw.DrawDialogRadio(screen, cbCol, cbY, "Only directories", 'N', state.OnlyDirectories, state.Focus == state.FindDialogOnlyDirsFocus(), styles)
 	radio1W := utf8.RuneCountInString(draw.RadioText("Only directories", state.OnlyDirectories)) + 1
 	const cbGap = 4
 	draw.DrawDialogRadio(screen, cbCol+radio1W+cbGap, cbY, "Only files", 'L', state.OnlyFiles, state.Focus == state.FindDialogOnlyFilesFocus(), styles)

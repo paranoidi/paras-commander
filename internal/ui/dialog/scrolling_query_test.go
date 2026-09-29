@@ -70,3 +70,15 @@ func TestScrollingQueryKillLineForwardThenYank(t *testing.T) {
 		t.Fatalf("after yank %q %d", q.Value, q.Cursor)
 	}
 }
+
+func TestScrollingQueryKillWordForwardThenYank(t *testing.T) {
+	q := &ScrollingQuery{Value: "foo bar", Cursor: 3}
+	q.KillWordForward()
+	if q.Value != "foo" || q.Cursor != 3 {
+		t.Fatalf("after kill %q %d", q.Value, q.Cursor)
+	}
+	q.Yank()
+	if q.Value != "foo bar" || q.Cursor != 7 {
+		t.Fatalf("after yank %q %d", q.Value, q.Cursor)
+	}
+}

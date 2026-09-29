@@ -869,10 +869,10 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	case tcell.KeyRune:
 		if keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
-			case 'f', 'F':
+			case 'l', 'L':
 				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusFilesOnly)
 				gs.Focus = dialog.GroupSelectFocusFilesOnly
-			case 'd', 'D':
+			case 't', 'T':
 				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusDirsOnly)
 				gs.Focus = dialog.GroupSelectFocusDirsOnly
 			case 'e', 'E':
@@ -976,7 +976,7 @@ func (a *App) toggleGroupSelectField(gs *dialog.GroupSelectState, focus int) boo
 
 func groupSelectAltIsDialogMnemonic(r rune) bool {
 	switch r {
-	case 'f', 'F', 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N', 'a', 'A':
+	case 'l', 'L', 't', 'T', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N', 'a', 'A':
 		return true
 	default:
 		return false

@@ -1176,7 +1176,7 @@ func findToggleFieldForRune(r rune) findToggleField {
 		return findToggleStayOnVolume
 	case 'i', 'I':
 		return findToggleIncludeHidden
-	case 'd', 'D':
+	case 'n', 'N':
 		return findToggleOnlyDirs
 	case 'l', 'L':
 		return findToggleOnlyFiles

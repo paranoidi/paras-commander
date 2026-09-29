@@ -1627,6 +1627,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"backward", "kill", "word", "path", "input"},
 		},
 		{
+			ID:           ActionDialogInputKillWordForward,
+			Title:        "Delete next word in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "M-d",
+			Keywords:     []string{"forward", "kill", "word", "path", "input"},
+		},
+		{
 			ID:           ActionDialogInputKillLine,
 			Title:        "Delete whole line in dialog input",
 			Section:      "UI",

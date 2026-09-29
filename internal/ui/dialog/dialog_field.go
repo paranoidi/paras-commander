@@ -155,6 +155,23 @@ func (f *FileDialogField) KillWordBackward() {
 	f.Cursor = newPos
 }
 
+// KillWordForward deletes from the cursor up to the forward-word boundary into the kill
+// buffer (readline M-d).
+func (f *FileDialogField) KillWordForward() {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+	runes := []rune(f.Value)
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
+	newRunes, newPos := lineedit.KillWordForward(runes, pos)
+	if len(newRunes) != len(runes) {
+		lineedit.SetKillBuffer(runes[pos : pos+len(runes)-len(newRunes)])
+	}
+	f.Value = string(newRunes)
+	f.Cursor = newPos
+}
+
 // KillLine stores the whole value in the kill buffer and clears the field. An empty
 // field leaves the buffer untouched.
 func (f *FileDialogField) KillLine() {
@@ -256,6 +273,9 @@ func TryDialogInputFieldActions(ev *tcell.EventKey, f *FileDialogField, keysDial
 		return f.RestorePrefill()
 	case keymap.ActionDialogInputKillWordBackward:
 		f.KillWordBackward()
+		return true
+	case keymap.ActionDialogInputKillWordForward:
+		f.KillWordForward()
 		return true
 	case keymap.ActionDialogInputKillLine:
 		f.KillLine()

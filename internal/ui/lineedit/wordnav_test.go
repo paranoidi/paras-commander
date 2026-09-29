@@ -76,3 +76,18 @@ func TestYank(t *testing.T) {
 		t.Fatalf("mid insert: %q %d", string(out), pos)
 	}
 }
+
+func TestKillWordForward(t *testing.T) {
+	r := []rune("foo bar")
+	newR, c := KillWordForward(r, 0)
+	if string(newR) != " bar" || c != 0 {
+		t.Fatalf("KillWordForward BOL = %q, %d", string(newR), c)
+	}
+	newR, c = KillWordForward(newR, 0)
+	if string(newR) != "" || c != 0 {
+		t.Fatalf("KillWordForward skips separators = %q, %d", string(newR), c)
+	}
+	if newR, c = KillWordForward(r, len(r)); string(newR) != "foo bar" || c != 7 {
+		t.Fatalf("KillWordForward EOL = %q, %d", string(newR), c)
+	}
+}
