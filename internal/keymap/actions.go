@@ -260,6 +260,10 @@ const (
 	ActionDialogInputLineStart = "ui.input.line-start"
 	// ActionDialogInputLineEnd moves the cursor to the end of the line (readline C-e).
 	ActionDialogInputLineEnd = "ui.input.line-end"
+	// ActionDialogInputUpcaseWord uppercases up to the next word end (readline M-u).
+	ActionDialogInputUpcaseWord = "ui.input.upcase-word"
+	// ActionDialogInputDowncaseWord lowercases up to the next word end (readline M-l).
+	ActionDialogInputDowncaseWord = "ui.input.downcase-word"
 
 	// ActionDestinationActivePanel / ActionDestinationInactivePanel set a dialog's destination
 	// path field to the active/inactive panel path. Bound via [dialog.flatten] and
@@ -494,6 +498,8 @@ var KnownActions = map[string]struct{}{
 	ActionDialogInputForwardWord:      {},
 	ActionDialogInputLineStart:        {},
 	ActionDialogInputLineEnd:          {},
+	ActionDialogInputUpcaseWord:       {},
+	ActionDialogInputDowncaseWord:     {},
 
 	ActionDestinationActivePanel:   {},
 	ActionDestinationInactivePanel: {},

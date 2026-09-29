@@ -1698,6 +1698,22 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "C-e",
 			Keywords:     []string{"end", "line", "input"},
 		},
+		{
+			ID:           ActionDialogInputUpcaseWord,
+			Title:        "Uppercase word in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "M-u",
+			Keywords:     []string{"upper", "case", "capitalize", "word", "input"},
+		},
+		{
+			ID:           ActionDialogInputDowncaseWord,
+			Title:        "Lowercase word in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "M-l",
+			Keywords:     []string{"lower", "case", "word", "input"},
+		},
 
 		// ── Filter (unbound by default) ──
 		{

@@ -249,3 +249,16 @@ func TestFileDialogFieldKillWordForwardThenYank(t *testing.T) {
 		t.Fatalf("after yank %q %d", f.Value, f.Cursor)
 	}
 }
+
+func TestFileDialogFieldCaseWordForward(t *testing.T) {
+	f := &FileDialogField{Value: "foo bar", Cursor: 0}
+	f.CaseWordForward(true)
+	if f.Value != "FOO bar" || f.Cursor != 3 {
+		t.Fatalf("after upcase %q %d", f.Value, f.Cursor)
+	}
+	f.Cursor = 0
+	f.CaseWordForward(false)
+	if f.Value != "foo bar" || f.Cursor != 3 {
+		t.Fatalf("after downcase %q %d", f.Value, f.Cursor)
+	}
+}

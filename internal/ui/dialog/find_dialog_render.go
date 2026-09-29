@@ -119,7 +119,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	draw.DrawDialogRadio(screen, cbCol, cbY, "Only directories", 'N', state.OnlyDirectories, state.Focus == state.FindDialogOnlyDirsFocus(), styles)
 	radio1W := utf8.RuneCountInString(draw.RadioText("Only directories", state.OnlyDirectories)) + 1
 	const cbGap = 4
-	draw.DrawDialogRadio(screen, cbCol+radio1W+cbGap, cbY, "Only files", 'L', state.OnlyFiles, state.Focus == state.FindDialogOnlyFilesFocus(), styles)
+	draw.DrawDialogRadio(screen, cbCol+radio1W+cbGap, cbY, "Only files", 'Y', state.OnlyFiles, state.Focus == state.FindDialogOnlyFilesFocus(), styles)
 	radio2W := utf8.RuneCountInString(draw.RadioText("Only files", state.OnlyFiles)) + 1
 	volumeX := cbCol + radio1W + cbGap + radio2W + cbGap
 	draw.DrawDialogCheckbox(screen, volumeX, cbY, "Stay on current volume", 'V', state.StayOnCurrentVolume, state.Focus == state.FindDialogStayOnVolumeFocus(), false, styles)

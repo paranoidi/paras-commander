@@ -383,6 +383,8 @@ func TestDialogInputOverlayDefaultsResolveCtrlRAndCtrlD(t *testing.T) {
 		{"alt-f", tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt), ActionDialogInputForwardWord},
 		{"ctrl-a", tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl), ActionDialogInputLineStart},
 		{"ctrl-e", tcell.NewEventKey(tcell.KeyCtrlE, 0, tcell.ModCtrl), ActionDialogInputLineEnd},
+		{"alt-u", tcell.NewEventKey(tcell.KeyRune, 'u', tcell.ModAlt), ActionDialogInputUpcaseWord},
+		{"alt-l", tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt), ActionDialogInputDowncaseWord},
 	}
 	for _, tc := range wordCases {
 		id, ok := bundle.DialogInput.Lookup(tc.ev)

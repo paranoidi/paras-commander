@@ -20,6 +20,8 @@ func DefaultDialogInputOverlayKeys() map[string][]string {
 		ActionDialogInputForwardWord:      {"M-f"},
 		ActionDialogInputLineStart:        {"C-a"},
 		ActionDialogInputLineEnd:          {"C-e"},
+		ActionDialogInputUpcaseWord:       {"M-u"},
+		ActionDialogInputDowncaseWord:     {"M-l"},
 	}
 }
 

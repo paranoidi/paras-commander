@@ -161,15 +161,15 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 		t.Fatalf("focus = %d want 0 after Alt+N", st.Focus)
 	}
 
-	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt))
 	if !st.OnlyFiles {
-		t.Fatal("Alt+L should toggle only-files while typing filter")
+		t.Fatal("Alt+Y should toggle only-files while typing filter")
 	}
 	if st.OnlyDirectories {
-		t.Fatal("Alt+L should clear only-directories")
+		t.Fatal("Alt+Y should clear only-directories")
 	}
 	if st.Focus != 0 {
-		t.Fatalf("focus = %d want 0 after Alt+L", st.Focus)
+		t.Fatalf("focus = %d want 0 after Alt+Y", st.Focus)
 	}
 
 	if st.IncludeHidden {

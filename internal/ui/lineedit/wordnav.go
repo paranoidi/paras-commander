@@ -88,6 +88,22 @@ func ForwardWordIndex(runes []rune, pos int) int {
 	return i
 }
 
+// CaseWordForward upper- or lowercases the runes from pos to the forward-word boundary
+// (readline M-u / M-l). It returns the new rune slice and the cursor after the word.
+func CaseWordForward(runes []rune, pos int, upper bool) ([]rune, int) {
+	pos = ClampRuneCursor(pos, len(runes))
+	end := ForwardWordIndex(runes, pos)
+	out := append([]rune(nil), runes...)
+	for i := pos; i < end; i++ {
+		if upper {
+			out[i] = unicode.ToUpper(out[i])
+		} else {
+			out[i] = unicode.ToLower(out[i])
+		}
+	}
+	return out, end
+}
+
 // KillWordForward removes the runes from pos up to the forward-word boundary (readline M-d).
 // It returns the new rune slice and the cursor (unchanged pos).
 func KillWordForward(runes []rune, pos int) ([]rune, int) {

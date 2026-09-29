@@ -91,3 +91,18 @@ func TestKillWordForward(t *testing.T) {
 		t.Fatalf("KillWordForward EOL = %q, %d", string(newR), c)
 	}
 }
+
+func TestCaseWordForward(t *testing.T) {
+	r := []rune("foo bar")
+	up, c := CaseWordForward(r, 1, true)
+	if string(up) != "fOO bar" || c != 3 {
+		t.Fatalf("upcase mid-word = %q, %d", string(up), c)
+	}
+	down, c := CaseWordForward([]rune("FOO BAR"), 3, false)
+	if string(down) != "FOO bar" || c != 7 {
+		t.Fatalf("downcase skips separator = %q, %d", string(down), c)
+	}
+	if same, c := CaseWordForward(r, len(r), true); string(same) != "foo bar" || c != 7 {
+		t.Fatalf("EOL no-op = %q, %d", string(same), c)
+	}
+}

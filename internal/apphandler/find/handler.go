@@ -1178,7 +1178,7 @@ func findToggleFieldForRune(r rune) findToggleField {
 		return findToggleIncludeHidden
 	case 'n', 'N':
 		return findToggleOnlyDirs
-	case 'l', 'L':
+	case 'y', 'Y':
 		return findToggleOnlyFiles
 	case 's', 'S':
 		return findToggleSelections

@@ -144,6 +144,17 @@ func (q *ScrollingQuery) KillWordForward() {
 	q.Cursor = newPos
 }
 
+// CaseWordForward upper- or lowercases up to the next word end and moves the caret past
+// it (readline M-u / M-l).
+func (q *ScrollingQuery) CaseWordForward(upper bool) {
+	if q == nil {
+		return
+	}
+	newRunes, newPos := lineedit.CaseWordForward([]rune(q.Value), q.Cursor, upper)
+	q.Value = string(newRunes)
+	q.Cursor = newPos
+}
+
 // KillLine stores the whole value in the kill buffer and clears the query. An empty
 // query leaves the buffer untouched.
 func (q *ScrollingQuery) KillLine() {

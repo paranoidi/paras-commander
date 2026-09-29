@@ -82,3 +82,11 @@ func TestScrollingQueryKillWordForwardThenYank(t *testing.T) {
 		t.Fatalf("after yank %q %d", q.Value, q.Cursor)
 	}
 }
+
+func TestScrollingQueryCaseWordForward(t *testing.T) {
+	q := &ScrollingQuery{Value: "foo bar", Cursor: 3}
+	q.CaseWordForward(true)
+	if q.Value != "foo BAR" || q.Cursor != 7 {
+		t.Fatalf("got %q %d", q.Value, q.Cursor)
+	}
+}
