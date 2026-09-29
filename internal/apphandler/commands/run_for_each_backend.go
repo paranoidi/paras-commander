@@ -226,12 +226,14 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			}
 		}
 
-		h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
-			e.Phase = ui.CommandRunRunning
-			e.TargetPath = abs
-			e.UserCommandLine = userLine
-		})
-		h.PostRenderWake()
+		markRunning := func() {
+			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
+				e.Phase = ui.CommandRunRunning
+				e.TargetPath = abs
+				e.UserCommandLine = userLine
+			})
+			h.PostRenderWake()
+		}
 
 		workDir := spec.WorkDir
 		if spec.PerEntryWorkDir {
@@ -239,8 +241,14 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 		}
 		var res cmdrun.RunResult
 		if spec.PTY {
-			res = h.runEntryPTY(ctx, idx, argv, workDir, panelOwner)
+			// Stays Pending while the PTY starts; name the row now so it isn't blank.
+			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
+				e.TargetPath = abs
+				e.UserCommandLine = userLine
+			})
+			res = h.runEntryPTY(ctx, idx, argv, workDir, panelOwner, markRunning)
 		} else {
+			markRunning()
 			res = cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 				h.SetProcess(idx, p)
 			})
@@ -269,10 +277,13 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 // (the same strip Alt+P uses), blocking until it exits. Falls back silently to the ordinary
 // cmdrun.RunTracked path when PTY sessions aren't supported on this platform. panelOwner is
 // the foreground batch lease id (0 for background): only the owning batch installs a drawer.
-func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workDir string, panelOwner int64) cmdrun.RunResult {
+// markRunning flips the row to Running only once the session is registered, so terminate/kill
+// on a Running row always finds the PTY to close.
+func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workDir string, panelOwner int64, markRunning func()) cmdrun.RunResult {
 	sub, err := subshell.StartArgv(argv, workDir)
 	if err != nil {
 		if errors.Is(err, subshell.ErrUnsupportedPlatform) {
+			markRunning()
 			res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 				h.SetProcess(idx, p)
 			})
@@ -294,6 +305,7 @@ func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workD
 
 	sess := &entryPTYSession{idx: idx, sub: sub, feed: feed}
 	h.registerEntryPTY(panelOwner, sess)
+	markRunning()
 	if panelOwner != 0 {
 		drawer := &subshell.PanelDrawer{Sub: sub, Feed: feed, Style: h.host.Styles().TerminalTextStyle()}
 		h.postPanelWakeAndWait(ctx, WakePayload{TerminalPanelDrawer: drawer})

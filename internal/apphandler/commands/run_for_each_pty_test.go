@@ -179,7 +179,6 @@ func TestForegroundPTYOwnershipIsBatchLevel(t *testing.T) {
 		spec.Background = true
 		h.StartRunForEachBatch(spec)
 		waitCommandPhase(t, h, 0, ui.CommandRunRunning)
-		waitEntryPTY(t, h, 0)
 
 		if h.OwnsTerminalPanel() {
 			t.Fatal("background PTY must not own the terminal panel")
@@ -239,7 +238,6 @@ func TestForegroundPTYViewAndPanelChangeOnlyOnEventLoop(t *testing.T) {
 	if view != ui.ViewBrowser {
 		t.Fatalf("ViewMode = %v after ApplyWake, want ViewBrowser", view)
 	}
-	waitEntryPTY(t, h, 0)
 	if !h.closeSelectedPTYRow(0) {
 		t.Fatal("expected to close the PTY after the show wake was applied")
 	}
@@ -399,21 +397,6 @@ func waitActivePTY(t *testing.T, h *Handler) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatal("timed out waiting for ActivePTYSession")
-}
-
-// waitEntryPTY waits until row idx has a registered PTY session. A row turns Running before
-// runEntryPTY starts and registers its session, so closeSelectedPTYRow right after
-// waitCommandPhase(Running) can find nothing to close.
-func waitEntryPTY(t *testing.T, h *Handler, idx int) {
-	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if h.entryPTYByIndex(idx) != nil {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatalf("timed out waiting for row %d PTY session", idx)
 }
 
 func waitTerminalDrawer(t *testing.T, h *Handler) ui.TerminalDrawer {
