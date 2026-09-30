@@ -271,6 +271,11 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if visibleRows == 0 {
 		return
 	}
+	if ctx.QuickViewIndicator {
+		// Deferred so it paints last on both the carousel and classic paths — after the scrollbar,
+		// which shares the same border column.
+		defer drawPanelQuickViewIndicator(screen, rect, state, ctx, panelStyle.Styles, borderStyle, visibleRows)
+	}
 
 	if state.CarouselMode {
 		if drawPanelCarousel(screen, panelCarouselParams{
@@ -357,10 +362,6 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		drawPanelBottomSelectionSize(screen, rect, ctx.PanelID, bottomCtx)
 	} else {
 		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, nameWidth, display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
-	}
-
-	if ctx.QuickViewIndicator {
-		drawPanelQuickViewIndicator(screen, rect, state, ctx, panelStyle.Styles, borderStyle, visibleRows)
 	}
 }
 

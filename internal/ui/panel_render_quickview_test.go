@@ -142,3 +142,46 @@ func TestDrawPanelRowQuickViewIndicatorIcon(t *testing.T) {
 		})
 	}
 }
+
+// TestDrawPanelCarouselQuickViewIndicator guards the carousel path: drawPanelCarousel returns
+// early from drawPanel, and the cursor-row indicator must still be painted there.
+func TestDrawPanelCarouselQuickViewIndicator(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	const width, height = 120, 10
+	screen.SetSize(width, height)
+
+	root := "/vol"
+	state := panel.State{
+		Path: pathloc.MustParse(root),
+		Entries: []localfs.Entry{
+			{Name: "lantern.txt", Path: root + "/lantern.txt", Type: localfs.EntryFile},
+			{Name: "harbor.txt", Path: root + "/harbor.txt", Type: localfs.EntryFile},
+		},
+		Cursor:       1,
+		CarouselMode: true,
+	}
+	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
+	layout := panelcarousel.DefaultLayout()
+	if !panelcarousel.LayoutFits(rect, layout, false) {
+		t.Fatal("carousel layout does not fit; test would exercise the classic list instead")
+	}
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: theme.Default()},
+		PanelContext{
+			PanelID: PrimaryPanel, FileListActive: true, CursorRowActive: true, ActivePanel: PrimaryPanel,
+			SyncDriverPanelID: -1, QuickViewDriverPanelID: PrimaryPanel,
+			QuickViewIndicator: true, QuickViewIndicatorRight: true,
+		},
+		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: layout})
+
+	x, cursorRowY := rect.X+rect.Width-1, rect.Y+2+1
+	ch, _, _ := screen.Get(x, cursorRowY)
+	if r, _ := utf8.DecodeRuneInString(ch); r != quickViewIndicatorIconRight {
+		t.Fatalf("carousel indicator icon at (%d,%d) = %q, want %q", x, cursorRowY, r, quickViewIndicatorIconRight)
+	}
+}
