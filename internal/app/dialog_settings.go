@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
@@ -13,6 +15,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/dialogform"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -251,6 +254,11 @@ func (a *App) openConfigDialog() {
 		ListFormat:             panel.EffectiveListFormat(lf),
 		Focus:                  0,
 	}
+	def := config.DefaultCarouselSplit()
+	for i := range a.model.ConfigDialog.Split {
+		v := a.config.Carousel.Split[i]
+		a.model.ConfigDialog.Split[i] = dialog.FileDialogField{Value: v, Prefill: def[i], Cursor: utf8.RuneCountInString(v)}
+	}
 }
 
 func (a *App) closeConfigDialog() {
@@ -258,6 +266,20 @@ func (a *App) closeConfigDialog() {
 }
 
 func (a *App) applyConfigDialog() {
+	split := make([]string, len(a.model.ConfigDialog.Split))
+	for i, f := range a.model.ConfigDialog.Split {
+		split[i] = strings.TrimSpace(f.Value)
+	}
+	if _, err := panelcarousel.ParseLayout(split, a.config.Carousel.ShowSize); err != nil {
+		for i, tok := range split {
+			if !panelcarousel.ValidSplitToken(tok, i) {
+				a.model.ConfigDialog.Focus = 12 + i
+				break
+			}
+		}
+		a.setErrorMessage("Carousel split", err)
+		return
+	}
 	a.zoomActivePanelOverride = nil
 	a.paneSplitOrientationOverride = nil
 	val := a.model.ConfigDialog.UseNerdfontIcons
@@ -276,6 +298,8 @@ func (a *App) applyConfigDialog() {
 	a.config.UI.Scroll.Mode = scrollMode
 	a.config.UI.Scroll.Scrollbar = sb
 	a.config.Panels.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
+	a.config.Carousel.Split = split
+	a.model.CarouselLayout = carouselLayoutFromConfig(a.config.Carousel)
 	a.model.UseNerdfontIcons = val
 	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(a.model.ConfigDialog.PanelScrollbar)
 	a.model.Primary.ListFormat = lf
@@ -298,6 +322,7 @@ func (a *App) applyConfigDialog() {
 		"panels": map[string]any{
 			"default_listing_format": panel.ListingFormatTOMLValue(lf),
 		},
+		"carousel": map[string]any{"split": split},
 	}
 	if err := a.persistPartial(patch); err != nil {
 		msg = fmt.Sprintf("Configuration saved (could not write config: %v)", err)
@@ -325,8 +350,13 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		st.ResetDefaultsConfirmFocus = 0
 		return
 	}
-	// Segments: view checkboxes(0-2) | scroll section(3-8) | listing radios(9-11) | buttons(12).
-	form := dialog.NewDialogLinearForm(12).WithSegments(0, 3, 9, 12)
+	if i, ok := dialog.ConfigDialogSplitIndex(st.Focus); ok && !dialog.AltDialogOK(event) && !dialog.AltDialogCancel(event) {
+		if dialog.HandleFileDialogFieldKey(event, &st.Split[i], a.keys.DialogInput, nil) {
+			return
+		}
+	}
+	// Segments: view checkboxes(0-2) | scroll section(3-8) | listing radios(9-11) | split inputs(12,13,14 each) | buttons(15).
+	form := dialog.NewDialogLinearForm(15).WithSegments(0, 3, 9, 12, 13, 14, 15)
 	listRadios := panel.ListFormatDialogRadios()
 	scrollRadios := panel.ScrollModeDialogRadios()
 	sbRadios := uiscrollbar.DialogRadios()

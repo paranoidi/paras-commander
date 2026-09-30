@@ -69,6 +69,12 @@ func ParseLayout(split []string, showSize []bool) (Layout, error) {
 	return out, nil
 }
 
+// ValidSplitToken reports whether tok is a valid carousel split token for column idx.
+func ValidSplitToken(tok string, idx int) bool {
+	_, err := parseSplitToken(strings.TrimSpace(tok), idx)
+	return err == nil
+}
+
 func parseSplitToken(tok string, index int) (ColumnSplitSpec, error) {
 	if tok == "*" {
 		return ColumnSplitSpec{Kind: SplitFlex}, nil

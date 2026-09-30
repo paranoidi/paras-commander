@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -453,5 +454,64 @@ func TestOptionsMenuOpensThemeDialog(t *testing.T) {
 	}
 	if app.model.ThemeDialog.Selected != 0 {
 		t.Fatalf("theme dialog selected = %d, want current theme index 0", app.model.ThemeDialog.Selected)
+	}
+}
+
+func TestConfigDialogApplyCarouselSplit(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 30)
+
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-split")}.WithResolvedLocations()
+	app := newTestApp(t, screen, Options{
+		CWD:    func() (string, error) { return dir, nil },
+		Config: config.Default(),
+		Paths:  appPaths,
+		Theme:  theme.Default(),
+	})
+	typeInto := func(idx int, text string) {
+		st := &app.model.ConfigDialog
+		st.Focus = 12 + idx
+		st.Split[idx].Clear()
+		for _, r := range text {
+			app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		}
+	}
+
+	app.openConfigDialog()
+	typeInto(2, "<5")
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
+	if !app.model.ConfigDialog.Open || app.model.ConfigDialog.Focus != 14 {
+		t.Fatalf("invalid split: open=%v focus=%d, want open focus 14", app.model.ConfigDialog.Open, app.model.ConfigDialog.Focus)
+	}
+	if got := app.config.Carousel.Split[2]; got != "*" {
+		t.Fatalf("config split[2] = %q, want unchanged", got)
+	}
+
+	typeInto(2, "*")
+	typeInto(1, "<30%")
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
+	if app.model.ConfigDialog.Open {
+		t.Fatal("dialog should close after valid apply")
+	}
+	if got := app.config.Carousel.Split[1]; got != "<30%" {
+		t.Fatalf("config split[1] = %q, want <30%%", got)
+	}
+	want, _ := panelcarousel.ParseLayout(app.config.Carousel.Split, app.config.Carousel.ShowSize)
+	if app.model.CarouselLayout != want {
+		t.Fatalf("CarouselLayout = %+v, want %+v", app.model.CarouselLayout, want)
+	}
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths: %v", err)
+	}
+	if reloaded.Carousel.Split[1] != "<30%" {
+		t.Fatalf("persisted split = %v", reloaded.Carousel.Split)
 	}
 }

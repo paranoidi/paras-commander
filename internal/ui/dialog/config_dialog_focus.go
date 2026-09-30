@@ -10,9 +10,19 @@ const (
 	configDialogFocusListingLast     = 11
 	configDialogFocusViewLast        = configDialogFocusHorizontalSplit
 	configDialogFocusScrollCenter    = 7
-	configDialogFocusOK              = 12
-	configDialogFocusCancel          = 13
+	configDialogFocusSplitFirst      = 12
+	configDialogFocusSplitLast       = 14
+	configDialogFocusOK              = 15
+	configDialogFocusCancel          = 16
 )
+
+// ConfigDialogSplitIndex maps a focus index to a carousel-split input (0..2).
+func ConfigDialogSplitIndex(focus int) (int, bool) {
+	if focus < configDialogFocusSplitFirst || focus > configDialogFocusSplitLast {
+		return 0, false
+	}
+	return focus - configDialogFocusSplitFirst, true
+}
 
 // ConfigDialogScrollModeFocus returns the focus index for scroll-mode row (0..2).
 func ConfigDialogScrollModeFocus(row int) int {
@@ -48,9 +58,25 @@ func ConfigDialogInScrollSection(focus int) bool {
 // ConfigDialogMoveScrollFocus applies column-aware Up/Down/Left/Right within the scroll radio block
 // and listing-format Up from the first row back to scroll-mode Center.
 func ConfigDialogMoveScrollFocus(focus int, key tcell.Key) (int, bool) {
+	// The split inputs share one row, so Up from the buttons lands on its first input.
+	if key == tcell.KeyUp && (focus == configDialogFocusOK || focus == configDialogFocusCancel) {
+		return configDialogFocusSplitFirst, true
+	}
+	if _, ok := ConfigDialogSplitIndex(focus); ok {
+		switch key {
+		case tcell.KeyUp:
+			return configDialogFocusListingLast, true
+		case tcell.KeyDown:
+			return configDialogFocusOK, true
+		}
+		return focus, false
+	}
 	if focus >= configDialogFocusListingFirst && focus <= configDialogFocusListingLast {
 		if key == tcell.KeyUp && focus == configDialogFocusListingFirst {
 			return configDialogFocusScrollCenter, true
+		}
+		if key == tcell.KeyDown && focus == configDialogFocusListingLast {
+			return configDialogFocusSplitFirst, true
 		}
 		return focus, false
 	}

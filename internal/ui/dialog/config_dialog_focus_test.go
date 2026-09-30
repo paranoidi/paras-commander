@@ -100,3 +100,26 @@ func TestConfigDialogMoveScrollFocus(t *testing.T) {
 		t.Fatal("Tab should not be handled by scroll mover")
 	}
 }
+
+func TestConfigDialogSplitFocus(t *testing.T) {
+	t.Parallel()
+	if got, ok := ConfigDialogMoveScrollFocus(configDialogFocusListingLast, tcell.KeyDown); !ok || got != configDialogFocusSplitFirst {
+		t.Fatalf("listing last Down = %d,%v, want split0", got, ok)
+	}
+	for f := configDialogFocusSplitFirst; f <= configDialogFocusSplitLast; f++ {
+		if got, ok := ConfigDialogMoveScrollFocus(f, tcell.KeyUp); !ok || got != configDialogFocusListingLast {
+			t.Fatalf("split %d Up = %d,%v", f, got, ok)
+		}
+		if got, ok := ConfigDialogMoveScrollFocus(f, tcell.KeyDown); !ok || got != configDialogFocusOK {
+			t.Fatalf("split %d Down = %d,%v", f, got, ok)
+		}
+	}
+	for _, f := range []int{configDialogFocusOK, configDialogFocusCancel} {
+		if got, ok := ConfigDialogMoveScrollFocus(f, tcell.KeyUp); !ok || got != configDialogFocusSplitFirst {
+			t.Fatalf("button %d Up = %d,%v, want split0", f, got, ok)
+		}
+	}
+	if i, ok := ConfigDialogSplitIndex(14);!ok || i != 2 {
+		t.Fatalf("ConfigDialogSplitIndex(14) = %d,%v", i, ok)
+	}
+}

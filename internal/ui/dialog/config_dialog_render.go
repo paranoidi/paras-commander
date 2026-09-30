@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
@@ -24,6 +25,23 @@ func configDialogScrollbarColumns(rect draw.Rect) (labelCol, optionCol int) {
 	return labelCol, optionCol
 }
 
+const (
+	configDialogSplitLabel  = "Carousel split (parent / center / child):"
+	configDialogSplitInputW = 6
+)
+
+// configDialogSplitColumns returns the x of each carousel-split input, spread evenly from the
+// left text margin to the right content margin, and whether the leftover width is odd (the
+// caller then widens the dialog by one cell so both gaps are equal).
+func configDialogSplitColumns(rect draw.Rect) (cols [3]int, odd bool) {
+	rem := draw.DialogContentWidth(rect) - 3*configDialogSplitInputW
+	gap := rem / 2
+	for i := range cols {
+		cols[i] = draw.DialogTextX(rect) + i*(configDialogSplitInputW+gap)
+	}
+	return cols, rem%2 != 0
+}
+
 const configDialogHorizontalSplitLabel = "Start in horizontal split mode"
 
 func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogState, styles theme.Theme) {
@@ -38,11 +56,17 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	const (
 		width     = 54
 		minWidth  = 38
-		minHeight = 19
+		minHeight = 22
 	)
 	rect, ok := draw.ClampCenteredDialogRect(layout, width, minHeight, minWidth, minHeight)
 	if !ok {
 		return
+	}
+	if _, odd := configDialogSplitColumns(rect); odd {
+		rect, ok = draw.ClampCenteredDialogRect(layout, rect.Width+1, minHeight, minWidth, minHeight)
+		if !ok {
+			return
+		}
 	}
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Configuration", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
@@ -97,6 +121,15 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	for i, r := range listRadios {
 		draw.DrawDialogRadio(screen, leftOptionCol, y, r.Label, r.Shortcut, lf == r.Format, state.Focus == configDialogFocusListingFirst+i, styles)
 		y++
+	}
+	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
+	y++
+	primitive.Text(screen, primaryCol, y, draw.DialogContentWidth(rect), configDialogSplitLabel, styles.DialogText.Background(dbg))
+	y++
+	splitCols, _ := configDialogSplitColumns(rect)
+	for i, col := range splitCols {
+		focused := state.Focus == configDialogFocusSplitFirst+i
+		drawInputFieldInvalid(screen, col, y, configDialogSplitInputW, state.Split[i], focused, !panelcarousel.ValidSplitToken(state.Split[i].Value, i), styles)
 	}
 
 	buttonY := rect.Y + rect.Height - 2
