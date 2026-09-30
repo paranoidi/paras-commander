@@ -148,7 +148,7 @@ func (a *App) applyGitStatusLoad(p gitStatusPayload) bool {
 }
 
 func (a *App) applyOneGitStatusLoad(p gitStatusPayload) bool {
-	if p.panelID == ui.QuickViewOverlayPanel && !a.model.QuickViewDirOverlayActive {
+	if !a.syntheticPanelActive(p.panelID) {
 		return false
 	}
 	pan := a.panelByID(p.panelID)

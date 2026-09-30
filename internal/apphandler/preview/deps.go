@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/preview/prefetch"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 // Deps wires the preview handler at app construction.
@@ -57,6 +58,10 @@ type Handler struct {
 
 	// filePreviewRunGen invalidates in-flight inactive-column (quick view) preview completions.
 	filePreviewRunGen atomic.Uint64
+	// fullscreenReturnView/fullscreenReturnMenus are the view and menu bar the F3 fullscreen
+	// preview was opened from (browser, dedup, ...), restored on close.
+	fullscreenReturnView  ui.ViewMode
+	fullscreenReturnMenus []menu.Definition
 	// fullscreenFilePreviewRunGen invalidates in-flight F3 fullscreen preview completions.
 	// Independent of filePreviewRunGen so a resize while F3 is open cannot drop a
 	// hidden quick-view refresh (the two surfaces are not mutually exclusive).

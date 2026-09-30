@@ -667,23 +667,9 @@ func (h *Handler) populateQuickViewDirOverlay(ov *panel.State, driver, follower 
 // which must keep following the real follower panel's layout slot, not the overlay's.
 func (h *Handler) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, follower *panel.State, followerID int) {
 	prev := *ov
-	*ov = panel.State{
-		Sort:                       driver.Sort,
-		Filter:                     driver.Filter,
-		ShowHidden:                 driver.ShowHidden,
-		ListFormat:                 driver.ListFormat,
-		ScrollMode:                 driver.ScrollMode,
-		ScrollEdgeMargin:           driver.ScrollEdgeMargin,
-		Gitignore:                  follower.Gitignore,
-		DiskSorter:                 follower.DiskSorter,
-		SuppressHeavyPathProbes:    follower.SuppressHeavyPathProbes,
-		ScheduleAsyncLoad:          h.host.AsyncLoadScheduler(ui.QuickViewOverlayPanel),
-		IdleDiskTotalsSort:         follower.IdleDiskTotalsSort,
-		DiskUsageIdleSortEligible:  follower.DiskUsageIdleSortEligible,
-		DiskUsageIdleSortActivated: follower.DiskUsageIdleSortActivated,
-		HistoryCursorByPath:        panel.MergeHistoryCursorByPath(follower.HistoryCursorByPath, driver.HistoryCursorByPath),
-		ScheduleGitStatus:          h.host.GitStatusScheduler(ui.QuickViewOverlayPanel),
-	}
+	*ov = panel.NewSideListing(driver, follower)
+	ov.ScheduleAsyncLoad = h.host.AsyncLoadScheduler(ui.QuickViewOverlayPanel)
+	ov.ScheduleGitStatus = h.host.GitStatusScheduler(ui.QuickViewOverlayPanel)
 	ov.FileListViewportRows = func() int { return h.host.PanelViewportRows(followerID) }
 	// Stale-while-revalidate: keep the previous overlay's rows painted until the new directory's
 	// async listing lands (or the slow indicator fires and clears them), instead of flashing an

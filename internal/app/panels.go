@@ -178,6 +178,8 @@ func (a *App) panelByID(panelID int) *panel.State {
 		return &a.model.Primary
 	case ui.QuickViewOverlayPanel:
 		return &a.model.QuickViewDirOverlay
+	case ui.DedupBrowsePanel:
+		return &a.model.DedupPanel
 	default:
 		return &a.model.Secondary
 	}
@@ -192,6 +194,9 @@ func (a *App) panelViewportRows(panelID int) int {
 	layout := a.layoutForTerminalSize(width, height)
 	if layout.TooSmall {
 		return 0
+	}
+	if panelID == ui.DedupBrowsePanel {
+		return a.dedupBrowseRows(layout)
 	}
 	col := layout.Primary
 	p := &a.model.Primary
@@ -443,6 +448,7 @@ func (a *App) reconcileAfterEvent() {
 		a.syncFollowFromActive()
 	}
 	a.previewCtrl.SchedulePrefetchFromActivePanel()
+	a.reconcileDedupPanel()
 	a.previewCtrl.ReconcileQuickViewPreview()
 	a.previewCtrl.ReconcileCarouselFilePreview()
 	a.previewCtrl.ReconcileCarouselSidePreview(ui.PrimaryPanel)

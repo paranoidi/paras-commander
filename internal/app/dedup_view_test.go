@@ -462,7 +462,8 @@ func TestDedupViewCopiesPaneTabFocusAndMark(t *testing.T) {
 		t.Fatalf("MarkedCount = %d, want 1 after marking in copies pane", app.model.DedupView.MarkedCount)
 	}
 
-	// Tab returns to the main pane; moving the main cursor rebuilds the copies pane.
+	// Tab passes through the browse panel (Dirs view) back to the main pane.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 	if app.model.DedupView.FocusCopies {
 		t.Fatal("second Tab did not return focus to the main pane")
@@ -750,7 +751,8 @@ func TestDedupViewCopiesPaneSelectAll(t *testing.T) {
 		t.Fatalf("* key = %q %v, want panel.invert-selection", id, ok)
 	}
 
-	// * in main pane is a no-op.
+	// * in main pane is a no-op. Dirs view: Copies -> browse panel -> main.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 	if app.model.DedupView.FocusCopies {
 		t.Fatal("Tab did not return focus to main pane")

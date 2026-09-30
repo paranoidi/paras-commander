@@ -298,9 +298,13 @@ type App struct {
 	image          imageOverlay
 	placeholderImg placeholderImage
 
-	// Indexed by panel ID (ui.PrimaryPanel, ui.SecondaryPanel, ui.QuickViewOverlayPanel).
-	panelAsyncLoadGen [3]atomic.Uint64
-	gitStatusLoadGen  [3]atomic.Uint64
+	// Indexed by panel ID (ui.PrimaryPanel, ui.SecondaryPanel, and the synthetic
+	// ui.QuickViewOverlayPanel / ui.DedupBrowsePanel).
+	panelAsyncLoadGen [ui.PanelIDCount]atomic.Uint64
+	gitStatusLoadGen  [ui.PanelIDCount]atomic.Uint64
+	// dedupBrowseOn / dedupBrowseFP track the dedup Dirs-view browse panel (dedup_browse.go).
+	dedupBrowseOn bool
+	dedupBrowseFP [2]string
 
 	// carouselParentSnapshotGen/carouselChildSnapshotGen guard async carousel side-column
 	// snapshot fetches against a superseded result landing late; indexed by ui.PrimaryPanel/

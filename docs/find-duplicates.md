@@ -15,9 +15,11 @@ Esc cancels the scan.
 
 Rows that are copies of the file under the cursor (and collapsed folders containing such copies) are drawn in the hint color and carry a trailing related-copy icon (theme key `icons.dedup.related`). The icon stays visible on kept (green) and marked (yellow) rows, where the row color shows keep/mark state instead of the hint.
 
+In **View: Dirs** the right column is split: the Copies pane on top and a browse panel below it, a real file list. It shows the directory of the row under the cursor (the directory itself for a folder row, or the file's parent with the cursor on the file), following whichever tree pane's cursor moved last (switching panes with Tab does not reload it). Tab cycles focus main tree, Copies, browse panel, back to main. In the browse panel you can move the cursor, open a folder (Enter/Right), go to the parent (Backspace/Left), view a file (F3, returning to the results) or edit it (F4); selection and file operations are not available there. Moving the cursor in either tree pane (not merely focusing it) re-syncs the panel to the new row, discarding manual navigation. Leaving the results view and coming back keeps the browse panel's focus and location. **View: Groups** has no browse panel.
+
 ## Leaving and returning
 
-Leaving the results view (Esc, Enter to jump to a file, "Back to file view", or switching to Jobs/Commands/Messages) keeps the results in memory and shows `Duplicates kept - Alt+W returns`. Kept results live until the next scan or until pc quits. There are two ways back:
+Leaving the results view (Esc, Alt+W again, Enter to jump to a file, "Back to file view", or switching to Jobs/Commands/Messages) keeps the results in memory and shows `Duplicates kept - Alt+W returns`. Kept results live until the next scan or until pc quits. There are two ways back:
 
 - **Alt+W** (`dedup.open`, Display menu > Duplicates, leader `w`) shows the kept results from the browser or from the Jobs/Commands/Messages views. Without kept results it says so.
 - **Running Find duplicates again.** When the active panel is at or under the scanned root, the view returns instantly with no rescan. From anywhere else a dialog offers **Show** (kept results), **Rescan** (scan the active panel's directory, replacing the kept results) or **Cancel**.

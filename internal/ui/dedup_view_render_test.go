@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -1555,5 +1556,52 @@ func TestDrawDedupViewSubtreeMarkFollowsWideDirName(t *testing.T) {
 	wantX := pathTextX + runewidth.StringWidth(row.Value.Display) + 1
 	if ch, _, _ := screen.Get(wantX, firstLineY+dirIdx); ch != string(styles.IconFilelistSelectionSubtree()) {
 		t.Fatalf("cell %d = %q, want subtree mark right after the double-width name %q", wantX, ch, row.Value.Display)
+	}
+}
+
+func TestDedupSecondaryRects(t *testing.T) {
+	sec := Rect{X: 40, Y: 1, Width: 40, Height: 15}
+	c, b := DedupSecondaryRects(sec, false)
+	if c != sec || b != (Rect{}) {
+		t.Fatalf("groups view: got %v %v, want full copies and empty browse", c, b)
+	}
+	c, b = DedupSecondaryRects(sec, true)
+	if c.Height != 7 || b.Y != c.Y+c.Height || c.Height+b.Height != sec.Height || b.Width != sec.Width {
+		t.Fatalf("dirs view split wrong: copies=%v browse=%v", c, b)
+	}
+}
+
+func TestDrawDedupBrowsePanelOnlyInDirsView(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 20},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 20},
+	}
+	model := Model{DedupSnapshot: comparepkg.DedupSnapshot{Phase: comparepkg.DedupDone}}
+	model.DedupPanel.Path = pathloc.MustParse("/quartz")
+	model.DedupPanel.Entries = []localfs.Entry{{Name: "harbor.txt", Path: "/quartz/harbor.txt"}}
+	_, browse := DedupSecondaryRects(layout.Secondary, true)
+
+	drawDedupBrowsePanel(screen, layout, model, theme.Default(), false)
+	if ch, _, _ := screen.Get(browse.X, browse.Y); strings.TrimSpace(ch) != "" {
+		t.Fatalf("groups view painted browse chrome %q", ch)
+	}
+	model.DedupView.TreeDirs = true
+	drawDedupBrowsePanel(screen, layout, model, theme.Default(), false)
+	if ch, _, _ := screen.Get(browse.X, browse.Y); strings.TrimSpace(ch) == "" {
+		t.Fatal("dirs view: browse border corner not painted")
+	}
+	var row strings.Builder
+	for x := browse.X; x < browse.X+browse.Width; x++ {
+		ch, _, _ := screen.Get(x, browse.Y+2)
+		row.WriteString(ch)
+	}
+	if !strings.Contains(row.String(), "harbor.txt") {
+		t.Fatalf("browse listing row missing entry: %q", row.String())
 	}
 }

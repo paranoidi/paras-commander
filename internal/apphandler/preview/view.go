@@ -66,6 +66,11 @@ func (h *Handler) CloseFilePreviewFullscreen() {
 	h.clearFilePreviewHold(previewTargetFullscreen)
 	h.model.ViewMode = ui.ViewBrowser
 	h.model.MenuDefinitions = h.host.BrowserMenuDefinitions()
+	if h.fullscreenReturnView != ui.ViewBrowser && h.fullscreenReturnMenus != nil {
+		h.model.ViewMode = h.fullscreenReturnView
+		h.model.MenuDefinitions = h.fullscreenReturnMenus
+	}
+	h.fullscreenReturnView, h.fullscreenReturnMenus = ui.ViewBrowser, nil
 	h.model.Menu.ActiveMenu = menu.DefaultIndex()
 	h.host.FilePreviewFullscreenClosed()
 }
@@ -422,6 +427,9 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 	h.captureFilePreviewHold(previewTargetFullscreen)
 	h.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
 	h.model.FullscreenFilePreviewRawMarkdown = false
+	if h.model.ViewMode != ui.ViewFilePreview {
+		h.fullscreenReturnView, h.fullscreenReturnMenus = h.model.ViewMode, h.model.MenuDefinitions
+	}
 	h.model.ViewMode = ui.ViewFilePreview
 	h.clearFilePreviewSearchField()
 	h.model.Menu.Open = false

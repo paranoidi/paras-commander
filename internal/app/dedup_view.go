@@ -230,6 +230,10 @@ func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.Functi
 func (a *App) dedupVisibleRows() int {
 	width, height := a.screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
+	if a.model.DedupView.FocusCopies {
+		copies, _ := ui.DedupSecondaryRects(layout.Secondary, a.model.DedupView.TreeDirs)
+		return ui.PanelListRows(copies)
+	}
 	return ui.PanelListRows(layout.Primary)
 }
 
@@ -242,12 +246,15 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 		return result
 	}
 
+	if nextAction != "" && a.tryDispatchAuxiliaryScreens(nextAction) {
+		return false
+	}
+	if a.model.DedupView.FocusPanel {
+		return a.handleDedupPanelKey(nextAction, event)
+	}
 	visible := a.dedupVisibleRows()
 
 	if nextAction != "" && a.tryDispatchDedup(nextAction) {
-		return false
-	}
-	if nextAction != "" && a.tryDispatchAuxiliaryScreens(nextAction) {
 		return false
 	}
 

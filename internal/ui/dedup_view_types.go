@@ -91,6 +91,7 @@ type DedupViewState struct {
 	Main                  DedupPane
 	Copies                DedupPane
 	FocusCopies           bool            // Tab focus: false = main pane, true = copies pane
+	FocusPanel            bool            // Tab focus is in the Dirs-view browse panel (FocusCopies keeps the source pane)
 	Marked                map[string]bool // absolute paths marked for deletion
 	MarkedCount           int
 	MarkedReclaimBytes    int64

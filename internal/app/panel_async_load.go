@@ -45,9 +45,9 @@ func (q *coalescingQueue[T]) drain() []T {
 
 // asyncWakeQueues is per-App storage for the listing/git/carousel coalescing queues.
 type asyncWakeQueues struct {
-	panel    [3]coalescingQueue[panelAsyncLoadPayload]
+	panel    [ui.PanelIDCount]coalescingQueue[panelAsyncLoadPayload]
 	git      coalescingQueue[gitStatusPayload]
-	carousel [3]coalescingQueue[carouselSnapshotPayload]
+	carousel [ui.PanelIDCount]coalescingQueue[carouselSnapshotPayload]
 }
 
 func asyncWakes(a *App) *asyncWakeQueues {
@@ -195,8 +195,8 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 		}
 		return false
 	}
-	isOverlay := p.panelID == ui.QuickViewOverlayPanel
-	if isOverlay && !a.model.QuickViewDirOverlayActive {
+	isOverlay := p.panelID == ui.QuickViewOverlayPanel || p.panelID == ui.DedupBrowsePanel
+	if !a.syntheticPanelActive(p.panelID) {
 		return false
 	}
 	pan := a.panelByID(p.panelID)

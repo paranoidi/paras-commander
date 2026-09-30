@@ -28,6 +28,12 @@ const (
 	// loop over "the two panels" or derive "the other panel" must keep using
 	// PrimaryPanel/SecondaryPanel explicitly, not a range over this const block.
 	QuickViewOverlayPanel
+	// DedupBrowsePanel is the synthetic panel ID for Model.DedupPanel (the file-list panel under
+	// the dedup view's Copies pane), with the same async-scheduler role and restrictions as
+	// QuickViewOverlayPanel.
+	DedupBrowsePanel
+	// PanelIDCount sizes every array indexed by panel ID, synthetic IDs included.
+	PanelIDCount
 )
 
 func dialogRenderContext(model Model, styles theme.Theme) dialog.DialogRenderContext {
@@ -235,6 +241,8 @@ type Model struct {
 	QuickViewPanel int
 	// QuickViewDirOverlay holds a transient directory listing for quick-view directory preview (paint only).
 	QuickViewDirOverlay panel.State
+	// DedupPanel is the file-list panel under the dedup view's Copies pane (Dirs view; DedupBrowsePanel ID).
+	DedupPanel panel.State
 	// QuickViewDirOverlayActive is true when QuickViewDirOverlay should replace the inactive file list.
 	QuickViewDirOverlayActive bool
 	// QuickViewDirOverlayPanelID is PrimaryPanel or SecondaryPanel for the inactive column, or -1 when inactive.
@@ -632,6 +640,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 	case ViewDedup:
 		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+		drawDedupBrowsePanel(screen, layout, model, styles, chromeBlocked)
 	case ViewMessages:
 		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation)
 	default:

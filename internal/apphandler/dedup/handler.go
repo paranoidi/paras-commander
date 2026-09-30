@@ -535,13 +535,22 @@ func (h *Handler) SelectEdge(last bool) {
 	}
 }
 
-// SwitchPane toggles focus between the main tree and the copies pane (Tab).
+// SwitchPane cycles focus (Tab): main tree -> copies pane (if non-empty) -> browse panel (Dirs
+// view, results ready) -> main tree. FocusCopies keeps naming the source pane while the browse
+// panel is focused.
 func (h *Handler) SwitchPane() {
 	st := &h.model.DedupView
-	if !st.FocusCopies && len(h.model.DedupCopiesList) == 0 {
-		return
+	hasPanel := st.TreeDirs && h.model.DedupSnapshot.Phase == comparepkg.DedupDone
+	switch {
+	case st.FocusPanel:
+		st.FocusPanel, st.FocusCopies = false, false
+	case !st.FocusCopies && len(h.model.DedupCopiesList) > 0:
+		st.FocusCopies = true
+	case hasPanel:
+		st.FocusPanel = true
+	default:
+		st.FocusCopies = false
 	}
-	st.FocusCopies = !st.FocusCopies
 }
 
 // resyncPreservingCursor rebuilds the visible rows and re-locates the main
@@ -1066,13 +1075,8 @@ func (h *Handler) KeepSelection() {
 	h.MoveSelection(1)
 }
 
-// selectedDirAbs returns the absolute directory for navigation from a directory
-// row or the parent of a selected file.
-func (h *Handler) selectedDirAbs() string {
-	row, ok := h.selectedRow()
-	if !ok {
-		return ""
-	}
+// dirAbs returns the absolute directory of a directory row, or the parent of a file row.
+func (h *Handler) dirAbs(row ui.DedupRow) string {
 	if row.Value.Kind == ui.DedupRowDir {
 		root := strings.TrimSuffix(h.model.DedupSnapshot.EffectiveDisplayRoot().String(), "/")
 		return root + "/" + row.Value.DirRel
@@ -1080,18 +1084,36 @@ func (h *Handler) selectedDirAbs() string {
 	return row.Value.File.Abs.Parent().String()
 }
 
-// SelectedPinTarget returns the absolute path and directory-ness of the currently focused-pane
-// row, for pinning. Dir rows reuse selectedDirAbs's directory-path join; file rows use their
-// own absolute path (not the parent, unlike selectedDirAbs which resolves a navigation
-// target). False when nothing is selected or the row is neither a file nor a directory row.
+// selectedDirAbs returns the absolute directory for navigation from the focused row.
+func (h *Handler) selectedDirAbs() string {
+	row, ok := h.selectedRow()
+	if !ok {
+		return ""
+	}
+	return h.dirAbs(row)
+}
+
+// SelectedPinTarget is PaneTarget for the focused pane.
 func (h *Handler) SelectedPinTarget() (path string, isDir bool, ok bool) {
-	row, rowOK := h.selectedRow()
+	return h.PaneTarget(h.model.DedupView.FocusCopies)
+}
+
+// PaneTarget returns the absolute path and directory-ness of the named pane's cursor row
+// (copies or main), for pinning and the browse panel. Dir rows give their directory, file rows
+// their own path. False when the pane has no row or the row is neither a file nor a directory.
+func (h *Handler) PaneTarget(copies bool) (path string, isDir bool, ok bool) {
+	st := &h.model.DedupView
+	pane, rows := &st.Main, h.model.DedupList
+	if copies {
+		pane, rows = &st.Copies, h.model.DedupCopiesList
+	}
+	row, rowOK := h.paneRow(pane, rows)
 	if !rowOK {
 		return "", false, false
 	}
 	switch row.Value.Kind {
 	case ui.DedupRowDir:
-		return h.selectedDirAbs(), true, true
+		return h.dirAbs(row), true, true
 	case ui.DedupRowFile:
 		return row.Value.File.Abs.String(), false, true
 	default:

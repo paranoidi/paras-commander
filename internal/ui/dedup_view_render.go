@@ -80,6 +80,45 @@ func dedupListHeader(pathW, sizeW, countW int, pathLabel string) string {
 	return fmt.Sprintf("%-*s %*s %*s", pathW, pathTitle, countW, countTitle, sizeW, sizeTitle)
 }
 
+// DedupSecondaryRects splits the dedup view's secondary column: the Copies pane, plus (Dirs view
+// only) a browse panel below it. Groups view returns (sec, Rect{}). Single source for drawing,
+// visible-row counts, and browse-panel metrics.
+func DedupSecondaryRects(sec Rect, treeDirs bool) (copies, browse Rect) {
+	if !treeDirs {
+		return sec, Rect{}
+	}
+	top := sec.Height / 2
+	copies = Rect{X: sec.X, Y: sec.Y, Width: sec.Width, Height: top}
+	browse = Rect{X: sec.X, Y: sec.Y + top, Width: sec.Width, Height: sec.Height - top}
+	return copies, browse
+}
+
+// drawDedupBrowsePanel paints the Dirs-view browse panel under Copies: a real file-list panel
+// (Model.DedupPanel) that follows the source row (see internal/app/dedup_browse.go).
+func drawDedupBrowsePanel(screen tcell.Screen, layout Layout, model Model, styles theme.Theme, chromeBlocked bool) {
+	if model.DedupSnapshot.Phase != comparepkg.DedupDone {
+		return
+	}
+	_, rect := DedupSecondaryRects(layout.Secondary, model.DedupView.TreeDirs)
+	if rect.Width <= 0 || rect.Height <= 0 {
+		return
+	}
+	focus := model.DedupView.FocusPanel
+	drawPanel(screen, rect, model.DedupPanel,
+		PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
+		PanelContext{
+			PanelID: DedupBrowsePanel, FileListActive: focus, CursorRowActive: focus,
+			ChromeBlocked: chromeBlocked, ActivePanel: model.ActivePanel,
+			SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SplitOrientation: model.SplitOrientation,
+		},
+		PanelDisplayConfig{
+			ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
+			Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
+			DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, JobMarks: model.JobPathMarks,
+			NarrowPanelsNameOnly: model.NarrowPanelsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
+		})
+}
+
 func drawDedupView(
 	screen tcell.Screen,
 	layout Layout,
@@ -123,7 +162,7 @@ func drawDedupView(
 		Header:           rootHeader,
 		Rows:             list,
 		Pane:             view.Main,
-		Focused:          !view.FocusCopies,
+		Focused:          !view.FocusCopies && !view.FocusPanel,
 		EmptyText:        dedupEmptyMessage(snap),
 		DimByGroup:       !view.TreeDirs,
 		ActiveGroup:      activeGroup,
@@ -141,12 +180,13 @@ func drawDedupView(
 		copiesHeader = sel.Value.File.Rel
 		copiesEmpty = "No other copies"
 	}
-	drawDedupTreePane(screen, layout.Secondary, dedupPaneParams{
+	copiesRect, _ := DedupSecondaryRects(layout.Secondary, view.TreeDirs)
+	drawDedupTreePane(screen, copiesRect, dedupPaneParams{
 		Title:            " Copies ",
 		Header:           copiesHeader,
 		Rows:             copies,
 		Pane:             view.Copies,
-		Focused:          view.FocusCopies,
+		Focused:          view.FocusCopies && !view.FocusPanel,
 		EmptyText:        copiesEmpty,
 		ActiveGroup:      -1,
 		CopiesPane:       true,
