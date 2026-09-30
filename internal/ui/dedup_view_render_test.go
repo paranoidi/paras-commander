@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -1381,5 +1382,178 @@ func TestDrawDedupViewShowsPinIconOnFileAndDirRows(t *testing.T) {
 		if i != fileIdx && i != dirIdx && row.Value.Kind == DedupRowFile && rowHasIcon(i) {
 			t.Errorf("row %d: unexpected pin icon on unpinned row", i)
 		}
+	}
+}
+
+func TestDrawDedupViewKeptSiblingOfCursorShowsRelatedIcon(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	firstLineY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "harbor/lantern.bin", "meadow/lantern.bin"),
+			dedupTestGroup(2, 512, "orchard/pebble.bin", "valley/pebble.bin"),
+		},
+	}
+	view := DedupViewState{TreeDirs: true, IgnoreEmpty: true}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+
+	cursorIdx := DedupRowIndexByID(list, "/root/harbor/lantern.bin")
+	siblingIdx := DedupRowIndexByID(list, "/root/meadow/lantern.bin")
+	unrelatedIdx := DedupRowIndexByID(list, "/root/orchard/pebble.bin")
+	if cursorIdx < 0 || siblingIdx < 0 || unrelatedIdx < 0 {
+		t.Fatalf("rows = %+v, missing expected file rows", list)
+	}
+	view.Main.Selected = cursorIdx
+	view.Kept = map[string]bool{
+		list[siblingIdx].Value.AbsKey:   true,
+		list[unrelatedIdx].Value.AbsKey: true,
+	}
+
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
+
+	icon := styles.IconDedupRelated()
+	rowHasIcon := func(idx int) bool {
+		y := firstLineY + idx
+		for x := rect.X; x < rect.X+rect.Width; x++ {
+			if ch, _, _ := screen.Get(x, y); ch == string(icon) {
+				return true
+			}
+		}
+		return false
+	}
+	if !rowHasIcon(siblingIdx) {
+		t.Fatal("kept sibling of cursor row: related icon missing")
+	}
+	if rowHasIcon(cursorIdx) {
+		t.Fatal("cursor row must not carry the related icon")
+	}
+	if rowHasIcon(unrelatedIdx) {
+		t.Fatal("kept row in another group must not carry the related icon")
+	}
+}
+
+func TestDrawDedupViewRelatedIconIsLastAfterSubtreeMark(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	firstLineY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "anchor.bin", "willow/anchor.bin"),
+		},
+	}
+	view := DedupViewState{TreeDirs: true, IgnoreEmpty: true}
+	fullList, _ := DedupRowsFromSnapshot(snap, view)
+	siblingIdx := DedupRowIndexByID(fullList, "/root/willow/anchor.bin")
+	if siblingIdx < 0 {
+		t.Fatalf("rows = %+v, missing sibling row", fullList)
+	}
+	view.Marked = map[string]bool{fullList[siblingIdx].Value.AbsKey: true}
+	view.Main.Collapsed = DedupCollapsedSet([]string{"d:willow"})
+	list, _ := DedupRowsFromSnapshot(snap, view)
+
+	cursorIdx := DedupRowIndexByID(list, "/root/anchor.bin")
+	dirIdx := DedupRowIndexByID(list, "d:willow")
+	if cursorIdx < 0 || dirIdx < 0 {
+		t.Fatalf("rows = %+v, missing expected rows", list)
+	}
+	view.Main.Selected = cursorIdx
+
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
+
+	subtree := string(styles.IconFilelistSelectionSubtree())
+	related := string(styles.IconDedupRelated())
+	subtreeX, relatedX := -1, -1
+	y := firstLineY + dirIdx
+	for x := rect.X; x < rect.X+rect.Width; x++ {
+		switch ch, _, _ := screen.Get(x, y); ch {
+		case subtree:
+			subtreeX = x
+		case related:
+			relatedX = x
+		}
+	}
+	if subtreeX < 0 || relatedX < 0 {
+		t.Fatalf("subtreeX=%d relatedX=%d, want both icons on the dir row", subtreeX, relatedX)
+	}
+	if relatedX != subtreeX+2 {
+		t.Fatalf("related icon at %d, want last suffix at %d (after subtree mark at %d)", relatedX, subtreeX+2, subtreeX)
+	}
+}
+
+func TestDrawDedupViewSubtreeMarkFollowsWideDirName(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	contentX := rect.X + 2
+	firstLineY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "森林小屋/kettle.bin", "garden/kettle.bin"),
+		},
+	}
+	view := DedupViewState{TreeDirs: true, IgnoreEmpty: true}
+	fullList, _ := DedupRowsFromSnapshot(snap, view)
+	wideIdx := DedupRowIndexByID(fullList, "/root/森林小屋/kettle.bin")
+	if wideIdx < 0 {
+		t.Fatalf("rows = %+v, missing wide-dir file row", fullList)
+	}
+	view.Marked = map[string]bool{fullList[wideIdx].Value.AbsKey: true}
+	view.Main.Collapsed = DedupCollapsedSet([]string{"d:森林小屋"})
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	dirIdx := DedupRowIndexByID(list, "d:森林小屋")
+	if dirIdx < 0 {
+		t.Fatalf("rows = %+v, missing wide dir row", list)
+	}
+	view.Main.Selected = DedupRowIndexByID(list, "/root/garden/kettle.bin")
+
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
+
+	row := list[dirIdx]
+	pathTextX := contentX + len([]rune(dedupTreePrefix(styles, row)))
+	wantX := pathTextX + runewidth.StringWidth(row.Value.Display) + 1
+	if ch, _, _ := screen.Get(wantX, firstLineY+dirIdx); ch != string(styles.IconFilelistSelectionSubtree()) {
+		t.Fatalf("cell %d = %q, want subtree mark right after the double-width name %q", wantX, ch, row.Value.Display)
 	}
 }

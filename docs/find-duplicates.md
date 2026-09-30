@@ -11,6 +11,10 @@ Find duplicates (`Ctrl+Alt+F`, Command menu, leader `P`) scans the active panel'
 
 Esc cancels the scan.
 
+## Results view
+
+Rows that are copies of the file under the cursor (and collapsed folders containing such copies) are drawn in the hint color and carry a trailing related-copy icon (theme key `icons.dedup.related`). The icon stays visible on kept (green) and marked (yellow) rows, where the row color shows keep/mark state instead of the hint.
+
 ## Leaving and returning
 
 Leaving the results view (Esc, Enter to jump to a file, "Back to file view", or switching to Jobs/Commands/Messages) keeps the results in memory and shows `Duplicates kept - Alt+W returns`. Kept results live until the next scan or until pc quits. There are two ways back:

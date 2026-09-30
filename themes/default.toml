@@ -330,6 +330,9 @@ move = "\U000f0ab9"
 delete = "\U000f09e7"
 preview_loading = "\uf03e"
 
+[icons.dedup]
+related = "\uf067"
+
 [icons.folders]
 folder = "\U000F024B"
 open = "\U000F0770"

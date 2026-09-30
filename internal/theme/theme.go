@@ -574,6 +574,7 @@ const (
 	IconKeyTreeEnd                  = "tree.end"
 	IconKeyTreeLeaf                 = "tree.leaf"
 	IconKeySelectionsMultiLocation  = "selections.multi_location"
+	IconKeyDedupRelated             = "dedup.related"
 )
 
 // Menu-bar jobs strip icon keys ([icons] table); optional — see IconMenuJob / IconMenuProgress*.
@@ -694,6 +695,12 @@ func (t Theme) IconSelectionsMultiLocation() string {
 // IconFilelistSelectionSubtree returns the directory nested-selection suffix icon.
 func (t Theme) IconFilelistSelectionSubtree() rune {
 	return t.filelistIconRune(IconKeyFilelistSelectionSubtree, '\u25cb') // ○
+}
+
+// IconDedupRelated returns the dedup view suffix icon for rows that are copies of the
+// cursor row's file (same duplicate group), visible even when kept/marked colors win.
+func (t Theme) IconDedupRelated() rune {
+	return t.filelistIconRune(IconKeyDedupRelated, '\uf067')
 }
 
 // IconFilelistNew returns the recently-transferred file suffix icon.

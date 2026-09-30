@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panellist"
@@ -268,7 +269,8 @@ func drawDedupTreePane(
 				Selected:       marked || dirFullyMarked,
 			})
 		}
-		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked)
+		hinted := dedupRowHinted(p, d, entry, rowSelected)
+		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked, hinted)
 		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
 		drawDedupDetailColumns(screen, cols, d, lineY, lineStyle, dim, rowSelected || kept || groupAllMarked || dirFullyMarked, innerRight)
@@ -289,9 +291,7 @@ type dedupRowFlags struct {
 func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, f dedupRowFlags, chromeBlocked bool, base, dim tcell.Style, bg tcell.Color) tcell.Style {
 	rowBase := base
 	switch {
-	case p.ActiveGroup >= 0 && d.Kind == DedupRowFile && d.GroupIdx == p.ActiveGroup && !f.RowSelected:
-		rowBase = styles.PanelHint.Background(bg)
-	case p.ActiveGroup >= 0 && d.Kind == DedupRowDir && !entry.Expanded && p.HintDirs[d.DirRel]:
+	case dedupRowHinted(p, d, entry, f.RowSelected):
 		rowBase = styles.PanelHint.Background(bg)
 	case p.DimByGroup && d.GroupIdx != p.ActiveGroup:
 		rowBase = dim
@@ -318,6 +318,19 @@ func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry 
 	return lineStyle
 }
 
+// dedupRowHinted reports whether a row relates to the cursor row's duplicate group: a
+// sibling copy in the active group, or a collapsed dir whose subtree contains it. Such rows
+// get panel.hint and the icons.dedup.related suffix (the icon survives kept/marked colors).
+func dedupRowHinted(p dedupPaneParams, d DedupRowData, entry DedupRow, rowSelected bool) bool {
+	if p.ActiveGroup < 0 {
+		return false
+	}
+	if d.Kind == DedupRowFile {
+		return d.GroupIdx == p.ActiveGroup && !rowSelected
+	}
+	return d.Kind == DedupRowDir && !entry.Expanded && p.HintDirs[d.DirRel]
+}
+
 // dedupRowAbsPath returns the absolute path for one dedup row: file rows use their own
 // AbsKey directly; dir rows join snap.EffectiveDisplayRoot() with DirRel, mirroring
 // apphandler/dedup.Handler.selectedDirAbs's directory-path join.
@@ -333,7 +346,7 @@ func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d DedupRowData) string {
 // trailing pin/in-progress-job marks, and subtree-mark suffix for one row, moved out of
 // drawDedupTreePane's per-row path column block. Pin/job marks are painted before the subtree
 // icon, matching panellist's job/pin-before-subtree suffix ordering.
-func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked bool) {
+func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked, hinted bool) {
 	connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
 	gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked)
 	prefix := connectorPrefix
@@ -351,6 +364,9 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	if subtreeMark {
 		fitW -= 2 // room for subtree mark suffix, like panellist.SuffixDecorationLen
 	}
+	if hinted {
+		fitW -= 2 // room for related-copy icon suffix
+	}
 	fitW -= marksW
 	pathText := primitive.FitPathForWidth(d.Display, max(fitW, 4))
 	_, rowBG, _ := lineStyle.Decompose()
@@ -366,7 +382,7 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	} else {
 		primitive.Text(screen, x, lineY, pathW-(x-pathX), pathText, lineStyle)
 	}
-	cursorX := x + len([]rune(pathText))
+	cursorX := x + runewidth.StringWidth(pathText)
 	if marksW > 0 && cursorX+marksW <= pathX+pathW {
 		used := dialog.DrawRowMarksSuffix(screen, cursorX, lineY, marksW, marks, rowBG, styles)
 		cursorX += used
@@ -385,6 +401,11 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 		}
 		markStyle := lineStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
 		primitive.Text(screen, markX, lineY, 1, string(styles.IconFilelistSelectionSubtree()), markStyle)
+		cursorX = markX + 1
+	}
+	// Related-copy icon is always the last suffix on the row.
+	if markX := cursorX + 1; hinted && markX < pathX+pathW {
+		primitive.Text(screen, markX, lineY, 1, string(styles.IconDedupRelated()), styles.PanelHint.Background(rowBG))
 	}
 }
 
