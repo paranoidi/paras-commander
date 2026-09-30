@@ -76,6 +76,9 @@ type Handler struct {
 	carouselFilePreviewRunGen atomic.Uint64
 	// carouselFilePreviewLastFingerprint tracks the last carousel file preview highlight for debouncing.
 	carouselFilePreviewLastFingerprint string
+	// carouselDirRuleDeclined is the directory whose matching preview rules all declined; the
+	// carousel child column shows its listing until the cursor moves elsewhere.
+	carouselDirRuleDeclined string
 	// previewLastWidth records the TextWidth each preview target's content was last requested at
 	// (indexed by previewTarget), so a terminal resize can detect a width change and re-run the
 	// preview (markdown word-wrap/table layout is baked into emitted cells at request time).
@@ -221,8 +224,11 @@ type StylePickerFlushPayload struct{ gen uint64 }
 // panel.LoadingIndicatorDelay (ApplyQuickViewSlow checks it is still in flight).
 type QuickViewSlowPayload struct{ Path string }
 
-// QuickViewDirRuleDeclinedPayload signals that every [[preview.commands]] rule matching the
-// directory currently open in quick view declined (non-zero exit), or the async run raced past
-// a superseded gen. The main goroutine falls back to the built-in directory-overlay listing —
-// see Handler.ApplyQuickViewDirRuleDeclined.
-type QuickViewDirRuleDeclinedPayload struct{ gen uint64 }
+// DirRuleDeclinedPayload signals that every [[preview.commands]] rule matching the directory
+// previewed by target (quick view or carousel child column) declined (non-zero exit). The main
+// goroutine falls back to the built-in directory listing — see Handler.ApplyDirRuleDeclined.
+type DirRuleDeclinedPayload struct {
+	gen    uint64
+	target previewTarget
+	path   string
+}

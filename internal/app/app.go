@@ -677,6 +677,8 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Mu:              &app.commandsMu,
 		Ctx:             app.commandsCtx,
 	})
+	app.model.Primary.PreviewDirRule = app.previewCtrl.CarouselDirRule
+	app.model.Secondary.PreviewDirRule = app.previewCtrl.CarouselDirRule
 	app.dialogCtrl = dialogctrl.New(dialogctrl.Deps{
 		Host:                 dialogHost{appShellHost: appShellHost{app: app}},
 		Screen:               screen,
@@ -1191,8 +1193,8 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 			a.render()
 			out.didRender = true
 		}
-	case previewctrl.QuickViewDirRuleDeclinedPayload:
-		if a.previewCtrl.ApplyQuickViewDirRuleDeclined(d) {
+	case previewctrl.DirRuleDeclinedPayload:
+		if a.previewCtrl.ApplyDirRuleDeclined(d) {
 			a.render()
 			out.didRender = true
 		}

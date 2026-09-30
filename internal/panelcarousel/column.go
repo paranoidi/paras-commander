@@ -36,10 +36,20 @@ func centerCursorOnFile(center panel.State) bool {
 	return ok && entry.Type != localfs.EntryDirectory
 }
 
+// centerCursorOnRuleDir reports whether the cursor is on a directory that a [[preview.commands]]
+// rule previews (panel.State.PreviewDirRule).
+func centerCursorOnRuleDir(center panel.State) bool {
+	entry, ok := center.CurrentEntry()
+	return ok && entry.Type == localfs.EntryDirectory && center.PreviewDirRule != nil && center.PreviewDirRule(entry.Path)
+}
+
 // ChildPreviewKindFor reports what the child column should show for the current center highlight.
 func ChildPreviewKindFor(center panel.State, quickViewEnabled bool, filePreviewEligible bool) ChildPreviewKind {
 	if quickViewEnabled {
 		return ChildPreviewNone
+	}
+	if filePreviewEligible && centerCursorOnRuleDir(center) {
+		return ChildPreviewFile
 	}
 	entry, ok := center.CurrentEntry()
 	if ok && entry.Type == localfs.EntryDirectory {
@@ -73,7 +83,7 @@ func ShowChildPreviewColumn(center panel.State, quickViewEnabled bool, filePrevi
 	if center.CarouselCenterHasSubdirectories() {
 		return true
 	}
-	return filePreviewEligible && centerCursorOnFile(center)
+	return filePreviewEligible && (centerCursorOnFile(center) || centerCursorOnRuleDir(center))
 }
 
 // BuildColumns constructs parent/center/child column descriptors from the live panel state.

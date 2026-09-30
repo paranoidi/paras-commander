@@ -176,6 +176,9 @@ pattern needs its letter: `d ... & *.go` is an error, `d ... & f *.go` is not.
 
 ### Preview: tree view for project directories, plain listing elsewhere
 
+A directory rule applies to quick view and the carousel child column; when every matching rule
+declines (non-zero exit), the plain directory listing is shown.
+
 ```toml
 # config.toml
 [preview]

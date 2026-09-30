@@ -12,7 +12,7 @@ import (
 
 // TestQuickViewDirRuleDeclineFallsBackToOverlay covers the new directory dispatch path end to
 // end: a [[preview.commands]] rule matches the directory ("t d") but declines (non-zero exit),
-// so runDirPreviewRules must post QuickViewDirRuleDeclinedPayload, and applying it must fall
+// so runDirPreviewRules must post DirRuleDeclinedPayload, and applying it must fall
 // back to the built-in directory-overlay listing (quickViewFollowDirectory) rather than leaving
 // the preview stuck. SyncFollowTargetPath is stubbed to report "no target" so the fallback's
 // outcome is deterministic (its "select a folder" message) without needing a real overlay
@@ -34,20 +34,20 @@ func TestQuickViewDirRuleDeclineFallsBackToOverlay(t *testing.T) {
 
 	gen := h.filePreviewRunGen.Add(1)
 	req := h.previewRequest(dirPath, 80, 20, dirPath, false, nil, previewTargetInactive, true)
-	h.runDirPreviewRules(context.Background(), req, gen)
+	h.runDirPreviewRules(context.Background(), req, previewTargetInactive, gen)
 
 	ev := h.screen.PollEvent()
 	interrupt, ok := ev.(*tcell.EventInterrupt)
 	if !ok {
 		t.Fatalf("event = %T, want *tcell.EventInterrupt", ev)
 	}
-	payload, ok := interrupt.Data().(QuickViewDirRuleDeclinedPayload)
+	payload, ok := interrupt.Data().(DirRuleDeclinedPayload)
 	if !ok {
-		t.Fatalf("interrupt data = %T, want QuickViewDirRuleDeclinedPayload", interrupt.Data())
+		t.Fatalf("interrupt data = %T, want DirRuleDeclinedPayload", interrupt.Data())
 	}
 
-	if !h.ApplyQuickViewDirRuleDeclined(payload) {
-		t.Fatal("ApplyQuickViewDirRuleDeclined = false, want true (repaint needed)")
+	if !h.ApplyDirRuleDeclined(payload) {
+		t.Fatal("ApplyDirRuleDeclined = false, want true (repaint needed)")
 	}
 	h.mu.RLock()
 	errMsg := h.model.FilePreview.ErrorMsg
@@ -76,7 +76,7 @@ func TestQuickViewDirRuleMatchAppliesPreviewResult(t *testing.T) {
 
 	gen := h.filePreviewRunGen.Add(1)
 	req := h.previewRequest(dirPath, 80, 20, dirPath, false, nil, previewTargetInactive, true)
-	h.runDirPreviewRules(context.Background(), req, gen)
+	h.runDirPreviewRules(context.Background(), req, previewTargetInactive, gen)
 
 	h.mu.RLock()
 	st := h.model.FilePreview
@@ -89,10 +89,10 @@ func TestQuickViewDirRuleMatchAppliesPreviewResult(t *testing.T) {
 	}
 }
 
-// TestApplyQuickViewDirRuleDeclinedStaleGenIgnored mirrors the gen-guard pattern used elsewhere
+// TestApplyDirRuleDeclinedStaleGenIgnored mirrors the gen-guard pattern used elsewhere
 // in this package (e.g. TestFilePreviewRunGenStaleSkipsRunningPatch): a decline payload from a
 // superseded run must not clobber state for whatever the user has already moved on to.
-func TestApplyQuickViewDirRuleDeclinedStaleGenIgnored(t *testing.T) {
+func TestApplyDirRuleDeclinedStaleGenIgnored(t *testing.T) {
 	h, _ := newTestHandler(t, 80, 24)
 	dirPath := t.TempDir()
 
@@ -105,8 +105,8 @@ func TestApplyQuickViewDirRuleDeclinedStaleGenIgnored(t *testing.T) {
 	staleGen := h.filePreviewRunGen.Add(1)
 	h.filePreviewRunGen.Add(1) // supersede: the user moved on before the decline arrived
 
-	if h.ApplyQuickViewDirRuleDeclined(QuickViewDirRuleDeclinedPayload{gen: staleGen}) {
-		t.Fatal("ApplyQuickViewDirRuleDeclined = true, want false for a superseded gen")
+	if h.ApplyDirRuleDeclined(DirRuleDeclinedPayload{gen: staleGen, target: previewTargetInactive}) {
+		t.Fatal("ApplyDirRuleDeclined = true, want false for a superseded gen")
 	}
 	h.mu.RLock()
 	open := h.model.FilePreview.Open

@@ -147,3 +147,34 @@ func TestShowChildPreviewColumnForFileWhenEligible(t *testing.T) {
 		t.Fatal("want file preview kind")
 	}
 }
+
+func TestChildPreviewFileForRuleDirectory(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "harbor"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	state, err := panel.New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !state.SelectVisibleEntry("harbor") {
+		t.Fatal("harbor not found")
+	}
+	if ChildPreviewKindFor(state, false, true) != ChildPreviewDirectoryListing {
+		t.Fatal("nil hook: directory keeps the listing kind")
+	}
+	state.PreviewDirRule = func(string) bool { return true }
+	if ChildPreviewKindFor(state, false, true) != ChildPreviewFile {
+		t.Fatal("rule directory want file preview kind")
+	}
+	if !ShowChildPreviewColumn(state, false, true) {
+		t.Fatal("rule directory want child column")
+	}
+	if ChildPreviewKindFor(state, false, false) == ChildPreviewFile {
+		t.Fatal("rule directory needs file preview eligibility")
+	}
+	state.PreviewDirRule = func(string) bool { return false }
+	if ChildPreviewKindFor(state, false, true) == ChildPreviewFile {
+		t.Fatal("declining hook falls back to listing behavior")
+	}
+}

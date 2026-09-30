@@ -354,8 +354,9 @@ then `mode`/`command`, then the internal preview. A command's stdout that starts
 or Kitty graphics escape sequence is detected automatically and shown the same way pc's own
 built-in image preview is (bypassing normal text rendering) — no separate flag is needed to
 signal "this output is a graphics payload" vs. plain/ANSI text. `commands` rules apply to both
-files and directories, in both quick view and the F3 fullscreen preview; carousel's parent/child
-directory navigation columns are unaffected (they list directories for navigation, not preview).
+files and directories, in quick view, the F3 fullscreen preview and the carousel child column
+(a directory under the cursor is previewed by its rule instead of listed; the listing is shown when
+every matching rule declines). Carousel's parent column always lists directories.
 
 ## `[sftp]`
 

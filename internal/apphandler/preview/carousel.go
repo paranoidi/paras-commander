@@ -58,10 +58,10 @@ func (h *Handler) pageCarouselChildListing(pageDir int) {
 }
 
 func (h *Handler) scheduleCarouselPreviewDebounceTimer(gen uint64) {
-	// ok is false for directory targets, so the child-listing coalesce keeps the key-repeat delay.
-	path, isFile := h.carouselFilePreviewWantPath()
+	// ok is false for plain directory targets, so the child-listing coalesce keeps the key-repeat delay.
+	path, _, ok := h.carouselFilePreviewWantPath()
 	heavy := false
-	if isFile {
+	if ok {
 		p := h.host.ActivePanel()
 		entryType := localfs.EntryFile
 		if entry, ok := p.CurrentEntry(); ok {

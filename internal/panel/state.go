@@ -135,6 +135,9 @@ type State struct {
 	// when the column itself is missing. Used only when Sort.Mode == SortMeta, and resolved once
 	// per sort rather than per comparison (see SortEntries).
 	MetaValue func(column string) (values map[string]string, pending string, ok bool)
+	// PreviewDirRule reports whether a [[preview.commands]] rule should preview dirPath in the
+	// carousel child column instead of its directory listing. nil means never.
+	PreviewDirRule func(dirPath string) bool
 	Sort      SortState
 	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
 	ListFormat ListFormat

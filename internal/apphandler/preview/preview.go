@@ -787,7 +787,7 @@ func (h *Handler) activeDirRuleTarget() (string, bool) {
 // dispatchQuickViewDirPreview shows a directory via a matching [[preview.commands]] rule instead
 // of the built-in directory-listing overlay (see quickViewFollowDirectory). Only called after
 // previewrun.MatchAnyCommandRule confirms a rule could match; runDirPreviewRules falls back to
-// the overlay via QuickViewDirRuleDeclinedPayload if every matching rule declines.
+// the overlay via DirRuleDeclinedPayload if every matching rule declines.
 func (h *Handler) dispatchQuickViewDirPreview(dirPath string) {
 	h.ClearQuickViewDirOverlay()
 	tw, contentH, layOK := h.inactivePanelPreviewLayoutMetrics(true)
@@ -799,32 +799,38 @@ func (h *Handler) dispatchQuickViewDirPreview(dirPath string) {
 	// WorkDir is dirPath itself, so a rule command like "eza --tree ." works without needing %f.
 	req := h.previewRequest(dirPath, tw, contentH, dirPath, h.inactivePreviewChromeBlocked(), nil, previewTargetInactive, true)
 	h.armQuickViewSlowIndicator(dirPath)
-	go h.runDirPreviewRules(ctx, req, gen)
+	go h.runDirPreviewRules(ctx, req, previewTargetInactive, gen)
 }
 
 // runDirPreviewRules runs previewrun.RunRules for a directory preview off the UI goroutine. A
 // match applies normally via applyPreviewResult; when every matching rule declines, it posts
-// QuickViewDirRuleDeclinedPayload so the main goroutine falls back to the directory overlay.
-func (h *Handler) runDirPreviewRules(ctx context.Context, req previewrun.Request, gen uint64) {
-	if gen != h.filePreviewRunGen.Load() {
+// DirRuleDeclinedPayload so the main goroutine falls back to the built-in directory listing.
+func (h *Handler) runDirPreviewRules(ctx context.Context, req previewrun.Request, target previewTarget, gen uint64) {
+	genPtr := h.previewRunGenFor(target)
+	if gen != genPtr.Load() {
 		return
 	}
 	if res, matched := previewrun.RunRules(ctx, req); matched {
-		h.applyPreviewResult(req, previewTargetInactive, gen, res)
+		h.applyPreviewResult(req, target, gen, res)
 		return
 	}
-	if gen != h.filePreviewRunGen.Load() {
+	if gen != genPtr.Load() {
 		return
 	}
-	_ = h.screen.PostEvent(tcell.NewEventInterrupt(QuickViewDirRuleDeclinedPayload{gen: gen}))
+	_ = h.screen.PostEvent(tcell.NewEventInterrupt(DirRuleDeclinedPayload{gen: gen, target: target, path: req.Path}))
 }
 
-// ApplyQuickViewDirRuleDeclined falls back to the directory-overlay listing after every
-// [[preview.commands]] rule matching the previewed directory declined. Returns true when a
-// repaint is needed.
-func (h *Handler) ApplyQuickViewDirRuleDeclined(p QuickViewDirRuleDeclinedPayload) bool {
-	if p.gen != h.filePreviewRunGen.Load() {
+// ApplyDirRuleDeclined falls back to the built-in directory listing after every
+// [[preview.commands]] rule matching the previewed directory declined: the quick-view overlay,
+// or the carousel child listing. Returns true when a repaint is needed.
+func (h *Handler) ApplyDirRuleDeclined(p DirRuleDeclinedPayload) bool {
+	if p.gen != h.previewRunGenFor(p.target).Load() {
 		return false
+	}
+	if p.target == previewTargetCarousel {
+		h.carouselDirRuleDeclined = p.path
+		h.CloseCarouselFilePreview()
+		return true
 	}
 	h.CloseFilePreview()
 	h.quickViewFollowDirectory()

@@ -192,21 +192,37 @@ func (h *Handler) carouselChildPreviewLayoutMetrics() (textW, contentH int, ok b
 	return tw, listH, true
 }
 
-func (h *Handler) carouselFilePreviewWantPath() (path string, ok bool) {
+// CarouselDirRule reports whether a [[preview.commands]] rule should preview dirPath in the
+// carousel child column (wired as panel.State.PreviewDirRule). False once every matching rule
+// declined that directory, so the child listing shows instead. Config is read live because the
+// settings dialog mutates it in place.
+func (h *Handler) CarouselDirRule(dirPath string) bool {
+	dirPath = filepath.Clean(dirPath)
+	return dirPath != h.carouselDirRuleDeclined &&
+		previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, localfs.EntryDirectory, filepath.Dir(dirPath))
+}
+
+// carouselFilePreviewWantPath returns the path to preview in the child column: the highlighted
+// file, or a highlighted directory that a [[preview.commands]] rule previews.
+func (h *Handler) carouselFilePreviewWantPath() (path string, isDir, ok bool) {
 	p := h.host.ActivePanel()
 	entry, okEntry := p.CurrentEntry()
-	if !okEntry || entry.Type == localfs.EntryDirectory {
-		return "", false
+	if !okEntry {
+		return "", false, false
 	}
 	path = filepath.Clean(entry.Path)
 	if path == "" || path == "." {
-		return "", false
+		return "", false, false
 	}
-	return path, true
+	isDir = entry.Type == localfs.EntryDirectory
+	if isDir && !h.CarouselDirRule(path) {
+		return "", false, false
+	}
+	return path, isDir, true
 }
 
 func (h *Handler) carouselFilePreviewFingerprint() string {
-	path, ok := h.carouselFilePreviewWantPath()
+	path, _, ok := h.carouselFilePreviewWantPath()
 	if !ok {
 		return "none"
 	}
@@ -246,7 +262,7 @@ func (h *Handler) carouselFilePreviewContext() bool {
 	if h.model.ActivePanel != ui.PrimaryPanel && h.model.ActivePanel != ui.SecondaryPanel {
 		return false
 	}
-	if _, ok := h.carouselFilePreviewWantPath(); !ok {
+	if _, _, ok := h.carouselFilePreviewWantPath(); !ok {
 		return false
 	}
 	return true
@@ -257,20 +273,32 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 		h.CloseCarouselFilePreview()
 		return
 	}
-	path, ok := h.carouselFilePreviewWantPath()
+	path, isDir, ok := h.carouselFilePreviewWantPath()
 	if !ok {
 		h.CloseCarouselFilePreview()
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
+	if isDir {
+		// WorkDir is the directory itself, same as quick view's dir rules.
+		workDir = path
+		if h.carouselDirRuleDeclined != path {
+			h.carouselDirRuleDeclined = ""
+		}
+	}
 	tw, contentH, layOK := h.carouselChildPreviewLayoutMetrics()
 	if !layOK {
 		tw = 1
 	}
 	// Keep ImagePayload* until the new encode finishes (stale-while-revalidate);
 	// patchFilePreviewPending doesn't touch it.
-	h.patchFilePreviewPending(previewTargetCarousel, path, false)
+	h.patchFilePreviewPending(previewTargetCarousel, path, isDir)
 	ctx, gen := h.beginPreviewRun(previewTargetCarousel)
+	if isDir {
+		req := h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), nil, previewTargetCarousel, true)
+		go h.runDirPreviewRules(ctx, req, previewTargetCarousel, gen)
+		return
+	}
 	req := h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel, false)
 	go h.dispatchCarouselFilePreview(ctx, path, req, gen)
 }
@@ -289,6 +317,10 @@ func (h *Handler) refreshCarouselFilePreview() {
 	st := h.model.CarouselFilePreview
 	h.mu.RUnlock()
 	if !st.Open || st.Path == "" {
+		return
+	}
+	if st.IsDir {
+		h.applyCarouselFilePreviewNow()
 		return
 	}
 	tw, contentH, ok := h.carouselChildPreviewLayoutMetrics()
@@ -357,8 +389,8 @@ func (h *Handler) ReconcileCarouselFilePreview() {
 		// for the debounce interval, but let the body — ffprobe/ffmpeg for video, a
 		// preview.commands rule, etc. — wait out the same nav debounce as file-to-file moves,
 		// same as quick view (see patchFilePreviewPending / ReconcileQuickViewPreview).
-		if path, ok := h.carouselFilePreviewWantPath(); ok {
-			h.patchFilePreviewPending(previewTargetCarousel, path, false)
+		if path, isDir, ok := h.carouselFilePreviewWantPath(); ok {
+			h.patchFilePreviewPending(previewTargetCarousel, path, isDir)
 		}
 		h.ArmCarouselPreviewNavCoalesceAfterListNav()
 		return
