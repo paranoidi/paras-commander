@@ -257,8 +257,8 @@ func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
 	if got := Default().UI.Zoom.DisabledAboveWidth; got != DefaultZoomActivePanelDisabledAboveWidth {
 		t.Fatalf("Zoom.DisabledAboveWidth = %d, want %d", got, DefaultZoomActivePanelDisabledAboveWidth)
 	}
-	if got := Default().UI.ShrunkenShowsNameOnly; got != DefaultShrunkenShowsNameOnly {
-		t.Fatalf("ShrunkenShowsNameOnly = %v, want %v", got, DefaultShrunkenShowsNameOnly)
+	if got := Default().UI.NarrowPanelsNameOnly; got != DefaultNarrowPanelsNameOnly {
+		t.Fatalf("NarrowPanelsNameOnly = %v, want %v", got, DefaultNarrowPanelsNameOnly)
 	}
 	if got := Default().UI.LeaderMenuShowDirectKeys; got != DefaultLeaderMenuShowDirectKeys {
 		t.Fatalf("LeaderMenuShowDirectKeys = %v, want %v", got, DefaultLeaderMenuShowDirectKeys)

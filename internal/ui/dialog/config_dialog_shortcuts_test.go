@@ -19,7 +19,6 @@ func configDialogMnemonics() []configDialogMnemonic {
 	out = append(out,
 		configDialogMnemonic{"Show file icons", 'f'},
 		configDialogMnemonic{"Zoom active panel", 'z'},
-		configDialogMnemonic{"Shrunken shows only name", 's'},
 		configDialogMnemonic{configDialogHorizontalSplitLabel, 'h'},
 	)
 	for _, r := range panel.ScrollModeDialogRadios() {
@@ -59,14 +58,14 @@ func TestConfigDialogMnemonicsUniqueAndVisible(t *testing.T) {
 			t.Fatalf("%q: shortcut %q does not appear in label %q", m.label, string(m.shortcut), m.label)
 		}
 	}
-	if len(seen) != 13 {
-		t.Fatalf("got %d mnemonics, want 13", len(seen))
+	if len(seen) != 12 {
+		t.Fatalf("got %d mnemonics, want 12", len(seen))
 	}
 }
 
 func TestConfigDialogMnemonicsExpectedSet(t *testing.T) {
 	t.Parallel()
-	want := "fzshietnurmpb"
+	want := "fzhietnurmpb"
 	var got strings.Builder
 	for _, m := range configDialogMnemonics() {
 		got.WriteRune(unicode.ToLower(m.shortcut))

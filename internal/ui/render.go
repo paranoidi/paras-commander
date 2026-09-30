@@ -164,8 +164,8 @@ type Model struct {
 	// PanelZoomActivePercent / PanelZoomInactivePercent mirror [ui] panel_zoom_* (sum 100 when zoom enabled).
 	PanelZoomActivePercent   int
 	PanelZoomInactivePercent int
-	// ShrunkenShowsNameOnly mirrors ui.shrunken_shows_name_only (narrow panels may hide trailing listing columns).
-	ShrunkenShowsNameOnly bool
+	// NarrowPanelsNameOnly mirrors ui.narrow_panels_name_only (narrow panels may hide trailing listing columns).
+	NarrowPanelsNameOnly bool
 	// PanelScrollbar mirrors [ui.scroll].scrollbar (none, thumb, bar).
 	PanelScrollbar uiscrollbar.Style
 	// PanelScrollbarInactive mirrors [ui.scroll].scrollbar_inactive.
@@ -736,7 +736,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(side.PanelID),
 				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, MetaColumns: model.MetaResults[side.PanelID],
-				ShrunkenShowsNameOnly: model.ShrunkenShowsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
+				NarrowPanelsNameOnly: model.NarrowPanelsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})
 	}

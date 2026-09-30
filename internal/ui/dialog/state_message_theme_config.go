@@ -49,13 +49,12 @@ type ConfigDialogState struct {
 	Open                   bool
 	UseNerdfontIcons       bool
 	ZoomActivePanel        bool
-	ShrunkenShowsNameOnly  bool
 	PaneSplitStacked       bool
 	ScrollMode             panel.ScrollMode
 	PanelScrollbar         uiscrollbar.Style
 	PanelScrollbarInactive bool
 	ListFormat             panel.ListFormat
-	Focus                  int // 0=nerdfont icons, 1=zoom, 2=shrunken, 3=horizontal split, 4-9=scroll mode (left) / scrollbar (right), 10-12=listing format, 13=OK, 14=Cancel
+	Focus                  int // 0=nerdfont icons, 1=zoom, 2=horizontal split, 3-8=scroll mode (left) / scrollbar (right), 9-11=listing format, 12=OK, 13=Cancel
 
 	// EditStubConfirm shows the "config.toml does not exist, generate default and open it?"
 	// confirmation, entered via F9 when no config.toml exists yet.

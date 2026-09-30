@@ -244,7 +244,6 @@ func (a *App) openConfigDialog() {
 		Open:                   true,
 		UseNerdfontIcons:       a.config.UI.UseNerdfontIcons,
 		ZoomActivePanel:        a.config.UI.Zoom.ActivePanel,
-		ShrunkenShowsNameOnly:  a.config.UI.ShrunkenShowsNameOnly,
 		PaneSplitStacked:       a.config.UI.Zoom.Orientation == config.PaneSplitStacked,
 		ScrollMode:             panel.EffectiveScrollMode(sm),
 		PanelScrollbar:         uiscrollbar.EffectiveStyle(sb),
@@ -263,7 +262,6 @@ func (a *App) applyConfigDialog() {
 	a.paneSplitOrientationOverride = nil
 	val := a.model.ConfigDialog.UseNerdfontIcons
 	zoom := a.model.ConfigDialog.ZoomActivePanel
-	shrunken := a.model.ConfigDialog.ShrunkenShowsNameOnly
 	paneSplit := config.PaneSplitSideBySide
 	if a.model.ConfigDialog.PaneSplitStacked {
 		paneSplit = config.PaneSplitStacked
@@ -274,13 +272,11 @@ func (a *App) applyConfigDialog() {
 	a.config.UI.UseNerdfontIcons = val
 	a.setStyles(a.styles)
 	a.config.UI.Zoom.ActivePanel = zoom
-	a.config.UI.ShrunkenShowsNameOnly = shrunken
 	a.config.UI.Zoom.Orientation = paneSplit
 	a.config.UI.Scroll.Mode = scrollMode
 	a.config.UI.Scroll.Scrollbar = sb
 	a.config.Panels.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
 	a.model.UseNerdfontIcons = val
-	a.model.ShrunkenShowsNameOnly = shrunken
 	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(a.model.ConfigDialog.PanelScrollbar)
 	a.model.Primary.ListFormat = lf
 	a.model.Secondary.ListFormat = lf
@@ -289,8 +285,7 @@ func (a *App) applyConfigDialog() {
 	msg := "Configuration saved"
 	patch := map[string]any{
 		"ui": map[string]any{
-			"use_nerdfont_icons":       val,
-			"shrunken_shows_name_only": shrunken,
+			"use_nerdfont_icons": val,
 			"zoom": map[string]any{
 				"active_panel": zoom,
 				"orientation":  paneSplit,
@@ -330,8 +325,8 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		st.ResetDefaultsConfirmFocus = 0
 		return
 	}
-	// Segments: view checkboxes(0-3) | scroll section(4-9) | listing radios(10-12) | buttons(13).
-	form := dialog.NewDialogLinearForm(13).WithSegments(0, 4, 10, 13)
+	// Segments: view checkboxes(0-2) | scroll section(3-8) | listing radios(9-11) | buttons(12).
+	form := dialog.NewDialogLinearForm(12).WithSegments(0, 3, 9, 12)
 	listRadios := panel.ListFormatDialogRadios()
 	scrollRadios := panel.ScrollModeDialogRadios()
 	sbRadios := uiscrollbar.DialogRadios()
@@ -353,7 +348,7 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 			for i, row := range listRadios {
 				if unicode.ToLower(r) == unicode.ToLower(row.Shortcut) {
 					st.ListFormat = row.Format
-					st.Focus = 10 + i
+					st.Focus = 9 + i
 					return true
 				}
 			}
@@ -364,12 +359,9 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 			case 'z', 'Z':
 				st.ZoomActivePanel = !st.ZoomActivePanel
 				st.Focus = 1
-			case 's', 'S':
-				st.ShrunkenShowsNameOnly = !st.ShrunkenShowsNameOnly
-				st.Focus = 2
 			case 'h', 'H':
 				st.PaneSplitStacked = !st.PaneSplitStacked
-				st.Focus = 3
+				st.Focus = 2
 			default:
 				return false
 			}
@@ -382,11 +374,9 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 			case 1:
 				st.ZoomActivePanel = !st.ZoomActivePanel
 			case 2:
-				st.ShrunkenShowsNameOnly = !st.ShrunkenShowsNameOnly
-			case 3:
 				st.PaneSplitStacked = !st.PaneSplitStacked
-			case 10, 11, 12:
-				st.ListFormat = listRadios[focus-10].Format
+			case 9, 10, 11:
+				st.ListFormat = listRadios[focus-9].Format
 			case form.OKIndex():
 				a.applyConfigDialog()
 			case form.CancelIndex():

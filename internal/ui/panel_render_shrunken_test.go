@@ -28,18 +28,18 @@ func rowTextWidthForShrinkGate(panelRectWidth int, showFileIcons bool) int {
 func TestShrunkenListingGateHalfOf80WithoutFileIcons(t *testing.T) {
 	const halfW = 80 / 2
 	rowTW := rowTextWidthForShrinkGate(halfW, false)
-	if rowTW >= config.ShrunkenListingRowTextWidthThreshold {
+	if rowTW >= config.NarrowPanelRowTextWidthThreshold {
 		t.Fatalf("rowTextWidth=%d should be < threshold=%d so half of an 80-col terminal counts as shrunken (icons off)",
-			rowTW, config.ShrunkenListingRowTextWidthThreshold)
+			rowTW, config.NarrowPanelRowTextWidthThreshold)
 	}
 }
 
 func TestShrunkenListingGateHalfOf80WithFileIcons(t *testing.T) {
 	const halfW = 80 / 2
 	rowTW := rowTextWidthForShrinkGate(halfW, true)
-	if rowTW >= config.ShrunkenListingRowTextWidthThreshold {
+	if rowTW >= config.NarrowPanelRowTextWidthThreshold {
 		t.Fatalf("rowTextWidth=%d should be < threshold=%d so half of an 80-col terminal counts as shrunken (icons on)",
-			rowTW, config.ShrunkenListingRowTextWidthThreshold)
+			rowTW, config.NarrowPanelRowTextWidthThreshold)
 	}
 }
 
@@ -62,12 +62,12 @@ func TestRenderShrunkenNameOnlyOmitsMtimeOnFirstListRow(t *testing.T) {
 			Entries: []localfs.Entry{entry},
 			Cursor:  0,
 		},
-		Secondary:             panel.State{Path: pathloc.MustParse("/tmp")},
-		ActivePanel:           PrimaryPanel,
-		ActiveSubFocus:        SubFocusFileList,
-		HideMenuBar:           false,
-		UseNerdfontIcons:      false,
-		ShrunkenShowsNameOnly: true,
+		Secondary:            panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel:          PrimaryPanel,
+		ActiveSubFocus:       SubFocusFileList,
+		HideMenuBar:          false,
+		UseNerdfontIcons:     false,
+		NarrowPanelsNameOnly: true,
 	}
 
 	Render(screen, model, theme.Default())

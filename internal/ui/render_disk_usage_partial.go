@@ -103,7 +103,7 @@ func paintBrowserPanelsInScope(
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(PrimaryPanel),
 				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, MetaColumns: model.MetaResults[PrimaryPanel],
-				ShrunkenShowsNameOnly: model.ShrunkenShowsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
+				NarrowPanelsNameOnly: model.NarrowPanelsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})
 		painted = true
@@ -146,7 +146,7 @@ func paintBrowserPanelsInScope(
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(SecondaryPanel),
 				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, MetaColumns: model.MetaResults[SecondaryPanel],
-				ShrunkenShowsNameOnly: model.ShrunkenShowsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
+				NarrowPanelsNameOnly: model.NarrowPanelsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})
 		painted = true

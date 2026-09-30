@@ -165,7 +165,7 @@ type PanelDisplayConfig struct {
 	// icon; see ui.PinnedPathSet.
 	PinnedPaths           map[string]struct{}
 	MetaColumns           []MetaColumnState
-	ShrunkenShowsNameOnly bool
+	NarrowPanelsNameOnly  bool
 	ScrollbarShowInactive bool
 	CarouselLayout        panelcarousel.Layout
 	CarouselFilePreview   FilePreviewState
@@ -675,7 +675,7 @@ func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig)
 		iconStrip = panelIconStripCells
 	}
 	baseListWidth := interior - leftGutter - iconStrip
-	nameOnlyDisplay := display.ShrunkenShowsNameOnly && baseListWidth < config.ShrunkenListingRowTextWidthThreshold
+	nameOnlyDisplay := display.NarrowPanelsNameOnly && baseListWidth < config.NarrowPanelRowTextWidthThreshold
 	showGit := panelListGitColumnActive(state, nameOnlyDisplay)
 	gitStrip := 0
 	if showGit {

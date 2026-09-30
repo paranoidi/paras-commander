@@ -272,9 +272,9 @@ const (
 	SelectionsPanelActivePercentMin = 10
 	SelectionsPanelActivePercentMax = 90
 
-	// DefaultShrunkenShowsNameOnly: when true, file panels whose list row text width is below
-	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
-	DefaultShrunkenShowsNameOnly = true
+	// DefaultNarrowPanelsNameOnly: when true, file panels whose list row text width is below
+	// NarrowPanelRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
+	DefaultNarrowPanelsNameOnly = true
 
 	// DefaultLeaderMenuShowDirectKeys shows the preferred global keybind after each action name
 	// in the Esc function menu (e.g. "Copy F5").
@@ -295,11 +295,11 @@ const (
 	// DefaultScreenRenderHashCache skips terminal Show when the logical screen buffer matches the
 	// last pushed frame (reduces flicker and I/O on slow links). Set [ui].screen_render_hash_cache = false to always flush.
 	DefaultScreenRenderHashCache = true
-	// ShrunkenListingRowTextWidthThreshold is the row text width (cells) below which a panel counts as
-	// "shrunken" for optional name-only listing (see [ui].shrunken_shows_name_only).
+	// NarrowPanelRowTextWidthThreshold is the row text width (cells) below which a panel counts as
+	// "narrow" for optional name-only listing (see [ui].narrow_panels_name_only).
 	// 40 targets a 50/50 split on an 80-column terminal (inner listing width 38) with file icons off;
 	// with icons on, the text budget is three cells narrower so the gate still trips.
-	ShrunkenListingRowTextWidthThreshold = 40
+	NarrowPanelRowTextWidthThreshold = 40
 
 	// MinCarouselPanelInnerWidth is the minimum interior width (cells inside the panel frame) for carousel mode.
 	MinCarouselPanelInnerWidth = 72 // 3 × MinCarouselColumnWidth

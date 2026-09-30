@@ -138,7 +138,7 @@ type State struct {
 	// PreviewDirRule reports whether a [[preview.commands]] rule should preview dirPath in the
 	// carousel child column instead of its directory listing. nil means never.
 	PreviewDirRule func(dirPath string) bool
-	Sort      SortState
+	Sort           SortState
 	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
 	ListFormat ListFormat
 	// ScrollMode mirrors [ui.scroll].mode: minimal, center, or edge scroll policy.

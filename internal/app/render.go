@@ -247,7 +247,7 @@ func (a *App) render() {
 	a.syncCursorNameHintNavCoalesceFlags()
 	a.model.PanelZoomActivePercent = a.config.UI.Zoom.ActivePercent
 	a.model.PanelZoomInactivePercent = a.config.UI.Zoom.InactivePercent
-	a.model.ShrunkenShowsNameOnly = a.config.UI.ShrunkenShowsNameOnly
+	a.model.NarrowPanelsNameOnly = a.config.UI.NarrowPanelsNameOnly
 	sb, _ := uiscrollbar.ParseStyle(a.config.UI.Scroll.Scrollbar)
 	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(sb)
 	a.model.PanelScrollbarInactive = a.config.UI.Scroll.ScrollbarInactive

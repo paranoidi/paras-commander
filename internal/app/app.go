@@ -559,7 +559,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			HideMenuBar:                  !cfg.UI.ShowMenuBar,
 			UseNerdfontIcons:             cfg.UI.UseNerdfontIcons,
 			CarouselLayout:               carouselLayoutFromConfig(cfg.Carousel),
-			ShrunkenShowsNameOnly:        cfg.UI.ShrunkenShowsNameOnly,
+			NarrowPanelsNameOnly:         cfg.UI.NarrowPanelsNameOnly,
 			JobsThroughputChartEnabled:   cfg.Jobs.ThroughputChartEnabled,
 			UserHomeDir:                  homeDir,
 			DiskUsage:                    duEngine,

@@ -38,7 +38,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	const (
 		width     = 54
 		minWidth  = 38
-		minHeight = 20
+		minHeight = 19
 	)
 	rect, ok := draw.ClampCenteredDialogRect(layout, width, minHeight, minWidth, minHeight)
 	if !ok {
@@ -56,9 +56,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	y++
 	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Zoom active panel", 'z', state.ZoomActivePanel, state.Focus == 1, false, styles)
 	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Shrunken shows only name", 's', state.ShrunkenShowsNameOnly, state.Focus == 2, false, styles)
-	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, configDialogHorizontalSplitLabel, 'h', state.PaneSplitStacked, state.Focus == 3, false, styles)
+	draw.DrawDialogCheckbox(screen, leftOptionCol, y, configDialogHorizontalSplitLabel, 'h', state.PaneSplitStacked, state.Focus == 2, false, styles)
 	y++
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++

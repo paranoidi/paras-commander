@@ -376,9 +376,9 @@ type UIConfig struct {
 	UseNerdfontIcons bool `toml:"use_nerdfont_icons"`
 	// LeaderMenuShowDirectKeys shows the preferred global keybind after each action name in the Esc function menu.
 	LeaderMenuShowDirectKeys bool `toml:"leader_menu_show_direct_keys"`
-	// ShrunkenShowsNameOnly: when true, narrow panels hide trailing listing columns and show only names
-	// (sort and default_listing_format are unchanged; see ShrunkenListingRowTextWidthThreshold in builtin.go).
-	ShrunkenShowsNameOnly bool `toml:"shrunken_shows_name_only"`
+	// NarrowPanelsNameOnly: when true, narrow panels hide trailing listing columns and show only names
+	// (sort and default_listing_format are unchanged; see NarrowPanelRowTextWidthThreshold in builtin.go).
+	NarrowPanelsNameOnly bool `toml:"narrow_panels_name_only"`
 	// ScreenRenderHashCache, when true, hashes the logical cell buffer after each full render and skips
 	// screen.Show when unchanged from the last flush. Default DefaultScreenRenderHashCache.
 	ScreenRenderHashCache bool `toml:"screen_render_hash_cache"`
@@ -609,7 +609,7 @@ func Default() Config {
 			ShowMenuBar:                  true,
 			UseNerdfontIcons:             true,
 			LeaderMenuShowDirectKeys:     DefaultLeaderMenuShowDirectKeys,
-			ShrunkenShowsNameOnly:        DefaultShrunkenShowsNameOnly,
+			NarrowPanelsNameOnly:         DefaultNarrowPanelsNameOnly,
 			ScreenRenderHashCache:        DefaultScreenRenderHashCache,
 			KeyRepeatDebounceMS:          DefaultKeyRepeatDebounceMS,
 			MediaPreviewDebounceMS:       DefaultMediaPreviewDebounceMS,
