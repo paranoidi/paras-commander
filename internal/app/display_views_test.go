@@ -194,4 +194,15 @@ func TestAuxiliaryScreensSwitchKeepsDedupResults(t *testing.T) {
 	if app.model.ViewMode != ui.ViewDedup {
 		t.Fatalf("ViewMode = %v, want ViewDedup after dedup.open", app.model.ViewMode)
 	}
+
+	// dedup.open again toggles the view off, keeping results.
+	if !app.tryDispatchAuxiliaryScreens(keymap.ActionDedupOpen) {
+		t.Fatal("dedup.open should be consumed from dedup view")
+	}
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser after toggling dedup off", app.model.ViewMode)
+	}
+	if !app.dedupCtrl.HasResults() {
+		t.Fatal("dedup results should be kept after toggling the view off")
+	}
 }

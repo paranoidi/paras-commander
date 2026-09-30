@@ -12,7 +12,8 @@ func (a *App) tryDispatchAuxiliaryScreens(actionID string) bool {
 	switch actionID {
 	case keymap.ActionJobsOpen, keymap.ActionCommandsOpen, keymap.ActionMessagesOpen, keymap.ActionDedupOpen:
 		if actionID == keymap.ActionDedupOpen && a.model.ViewMode == ui.ViewDedup {
-			return true // already showing it
+			a.closeDedupView() // toggle off, like the other display views
+			return true
 		}
 		switch a.model.ViewMode {
 		case ui.ViewCompare:
