@@ -357,3 +357,46 @@ func TestRefreshRescansKeptRoot(t *testing.T) {
 	}
 	h.Close()
 }
+
+func TestDeleteMarked_keepsCursorNearDeletedRow(t *testing.T) {
+	root := pathloc.MustParse("/scan")
+	group := func(name string) comparepkg.DedupGroup {
+		return comparepkg.DedupGroup{Size: 100, Files: []comparepkg.DedupFile{
+			dedupFile("amber/" + name), dedupFile("cobalt/" + name),
+		}}
+	}
+	snap := comparepkg.DedupSnapshot{
+		Root: root, DisplayRoot: root, Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{group("lantern.txt"), group("meadow.txt"), group("quiver.txt")},
+	}
+	h, model := dedupHandlerWithView(t, snap, ui.DedupViewState{
+		TreeDirs: true, Marked: map[string]bool{}, Kept: map[string]bool{},
+	})
+	deleteAt := func(dir, name string) {
+		t.Helper()
+		i := ui.DedupRowIndexByID(model.DedupList, "/scan/"+dir+"/"+name)
+		if i < 0 {
+			t.Fatalf("row for %s/%s not found", dir, name)
+		}
+		model.DedupView.Main.Selected = i
+		h.setMark("/scan/amber/"+name, 100, true)
+		h.setMark("/scan/cobalt/"+name, 100, true)
+		h.DeleteMarked(false)
+	}
+	selectedID := func() string {
+		row, _ := h.paneRow(&model.DedupView.Main, model.DedupList)
+		return row.ID
+	}
+
+	deleteAt("amber", "meadow.txt") // middle row gone → next surviving row
+	if got := selectedID(); got != "/scan/amber/quiver.txt" {
+		t.Fatalf("after middle delete selected %q, want /scan/amber/quiver.txt", got)
+	}
+	if last := model.DedupList[len(model.DedupList)-1].ID; last != "/scan/cobalt/quiver.txt" {
+		t.Fatalf("last row = %q, want /scan/cobalt/quiver.txt", last)
+	}
+	deleteAt("cobalt", "quiver.txt") // tail rows gone → previous surviving row
+	if got := selectedID(); got != "/scan/cobalt/lantern.txt" {
+		t.Fatalf("after tail delete selected %q, want /scan/cobalt/lantern.txt", got)
+	}
+}

@@ -1197,14 +1197,37 @@ func (h *Handler) DeleteMarked(removeEmptyDirs bool) {
 	h.host.SetTransientMessage(fmt.Sprintf("Delete queued (%d %s)", len(paths), noun), ui.MessageUrgencyInfo)
 	// Optimistically drop the deleted files; groups under two members disappear.
 	// ponytail: no re-walk — if a delete fails the row just vanishes; reopen to rescan.
+	oldRows, oldSel := h.model.DedupList, st.Main.Selected
 	h.model.DedupSnapshot = h.model.DedupSnapshot.WithoutPaths(st.Marked)
 	st.Marked = map[string]bool{}
 	st.MarkedCount = 0
 	st.MarkedReclaimBytes = 0
 	st.Kept = map[string]bool{}
-	st.Main = ui.DedupPane{Collapsed: st.Main.Collapsed}
 	st.FocusCopies = false
 	h.syncDedupList()
+	// Keep the cursor on the same row, else the nearest surviving one (next, then previous).
+	st.Main.Selected = 0
+	for _, i := range dedupNearestOrder(oldSel, len(oldRows)) {
+		if j := ui.DedupRowIndexByID(h.model.DedupList, oldRows[i].ID); j >= 0 {
+			st.Main.Selected = j
+			break
+		}
+	}
+	h.syncCopies()
+	h.ensureSelectionVisible(0)
+}
+
+// dedupNearestOrder lists indexes [0,n) as sel, sel+1..n-1, then sel-1..0.
+func dedupNearestOrder(sel, n int) []int {
+	sel = min(max(sel, 0), n)
+	out := make([]int, 0, n)
+	for i := sel; i < n; i++ {
+		out = append(out, i)
+	}
+	for i := sel - 1; i >= 0; i-- {
+		out = append(out, i)
+	}
+	return out
 }
 
 // NavigateFromSelection opens the selected file's directory (or the selected
