@@ -68,6 +68,16 @@ func (a *App) toggleHideInactivePanel() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
+	if a.carouselQuickViewForcesRightPreview() {
+		// Quick view is borrowing the slot carousel autohide keeps hidden, so the twin panel
+		// counts as hidden: showing it means quick view gives the slot back.
+		a.model.QuickViewEnabled = false
+		a.model.QuickViewPanel = -1
+		a.previewCtrl.DisableQuickViewDisplay()
+		a.carouselAutohideOverride = true
+		a.setTransientMessage("Inactive panel shown — quick view disabled", ui.MessageUrgencyWarn)
+		return
+	}
 	if a.carouselAutohideInactivePanel() && !a.model.HideInactivePanel {
 		a.carouselAutohideOverride = true
 		a.setTransientMessage("Inactive panel shown", ui.MessageUrgencyInfo)
