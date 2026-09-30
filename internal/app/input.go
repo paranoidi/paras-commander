@@ -36,6 +36,7 @@ const (
 	InputModeMessagesView
 	InputModeCompareView
 	InputModeDedupProgressDialog
+	InputModeDedupReturnDialog
 	InputModeDedupView
 	InputModeFilePreviewView
 	InputModePathPicker
@@ -100,6 +101,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeFileDialog
 	case a.model.DedupProgressDialog.Open:
 		return InputModeDedupProgressDialog
+	case a.model.DedupReturnDialog.Open:
+		return InputModeDedupReturnDialog
 	case a.viewActiveForInput(ui.ViewCompare):
 		return InputModeCompareView
 	case a.viewActiveForInput(ui.ViewDedup):
@@ -136,7 +139,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.DedupProgressDialog.Open {
+	if a.model.DedupProgressDialog.Open || a.model.DedupReturnDialog.Open {
 		return footerWithEscClose([]menu.FunctionKey{
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
@@ -660,6 +663,10 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 		a.dedupCtrl.HandleProgressDialogKey(ev)
 		return false
 	},
+	InputModeDedupReturnDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.dedupCtrl.HandleReturnDialogKey(ev)
+		return false
+	},
 	InputModeDedupView: func(a *App, ev *tcell.EventKey) bool {
 		return a.handleDedupViewKey(ev)
 	},
@@ -1072,6 +1079,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openMenu()
 	case keymap.ActionPanelFindDuplicates:
 		a.openFindDuplicates()
+	case keymap.ActionDedupOpen:
+		a.showKeptDuplicates()
 	case keymap.ActionPanelFilterDialog:
 		a.dialogCtrl.OpenFilterDialog()
 	case keymap.ActionAppDropToShell:

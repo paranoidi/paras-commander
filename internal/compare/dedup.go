@@ -19,7 +19,8 @@ import (
 
 // dedupProgressInterval rate-limits dedup walk and hashing progress publishes.
 // ponytail: fixed 500ms; promote to config if someone wants to tune it.
-const dedupProgressInterval = 500 * time.Millisecond
+// A var only so tests can publish every update.
+var dedupProgressInterval = 500 * time.Millisecond
 
 // DedupPhase is the dedup session lifecycle stage.
 type DedupPhase int
@@ -127,7 +128,10 @@ type DedupOptions struct {
 	// (CurrentFile/CurrentFileSize/CurrentFileDone) for tracked files at or
 	// above this size. Zero disables per-file progress.
 	FileProgressBytes int64
-	OnUpdate          func(DedupSnapshot)
+	// CacheFile, when non-empty, persists full-file hashes keyed by path, size
+	// and mtime so later scans skip unchanged files. Empty disables the cache.
+	CacheFile string
+	OnUpdate  func(DedupSnapshot)
 }
 
 // DedupSession walks one root, size-prefilters, hashes candidates, and groups duplicates.
@@ -234,9 +238,50 @@ func (s *DedupSession) run(ctx context.Context) {
 		return
 	}
 
+	// Each size group is resolved by exactly one worker and groups have disjoint
+	// candidate indices, so these slices need no mutex. hashOK is set only for
+	// files read to EOF: partial prefix digests of early-bailed files must never
+	// reach groupByHash (files from different size groups can share a prefix).
+	hashes := make([][32]byte, len(candidates))
+	hashOK := make([]bool, len(candidates))
+	hashers := make([]hash.Hash, len(candidates))
+
+	// Cache hits (same path, size, mtime) are prefilled and never read; only
+	// misses count toward the bytes to hash.
+	var cache map[string]hashCacheEntry
+	var walked map[string]FileRecord
+	hit := make([]bool, len(candidates))
+	hits := 0
+	if s.opts.CacheFile != "" {
+		cache = loadHashCache(s.opts.CacheFile)
+		walked = make(map[string]FileRecord, len(files))
+		for _, f := range files {
+			walked[f.Abs.String()] = f
+		}
+		for idx, f := range candidates {
+			if e, ok := cache[f.Abs.String()]; ok && e.Size == f.Size && e.ModTime == f.ModTime {
+				hit[idx], hashOK[idx], hashes[idx] = true, true, e.Hash
+				hits++
+			}
+		}
+	}
 	var candidateBytes int64
-	for _, f := range candidates {
-		candidateBytes += f.Size
+	for idx, f := range candidates {
+		if !hit[idx] {
+			candidateBytes += f.Size
+		}
+	}
+	saveCache := func() {
+		if s.opts.CacheFile == "" {
+			return
+		}
+		fresh := map[string]hashCacheEntry{}
+		for idx, f := range candidates {
+			if hashOK[idx] {
+				fresh[f.Abs.String()] = hashCacheEntry{Size: f.Size, ModTime: f.ModTime, Hash: hashes[idx]}
+			}
+		}
+		saveHashCache(s.opts.CacheFile, mergeHashCache(cache, s.root.String(), walked, fresh))
 	}
 
 	// Gate the expensive hashing phase behind confirmation for large candidate sets.
@@ -267,18 +312,11 @@ func (s *DedupSession) run(ctx context.Context) {
 		Root:           s.root,
 		Phase:          DedupHashing,
 		Walked:         len(files),
+		Hashed:         hits,
 		HashTotal:      len(candidates),
 		HashBytesTotal: candidateBytes,
 		HashStarted:    hashStarted,
 	})
-
-	// Each size group is resolved by exactly one worker and groups have disjoint
-	// candidate indices, so these slices need no mutex. hashOK is set only for
-	// files read to EOF: partial prefix digests of early-bailed files must never
-	// reach groupByHash (files from different size groups can share a prefix).
-	hashes := make([][32]byte, len(candidates))
-	hashOK := make([]bool, len(candidates))
-	hashers := make([]hash.Hash, len(candidates))
 
 	chunk := s.opts.ChunkBytes
 	if chunk <= 0 {
@@ -290,7 +328,7 @@ func (s *DedupSession) run(ctx context.Context) {
 	// lock per read-buffer chunk per worker, which is negligible.
 	var pubMu sync.Mutex
 	var lastPub time.Time
-	doneFiles := 0
+	doneFiles := hits
 	var doneBytes int64
 	inProgress := map[int]int64{} // candidate idx -> bytes hashed so far
 	publishProgress := func() {
@@ -360,7 +398,13 @@ func (s *DedupSession) run(ctx context.Context) {
 		idxs   []int
 		offset int64
 	}
-	processGroup := func(group []int, buf []byte) {
+	// full forces whole-file digests (chunk = MaxInt64, singletons included) so
+	// uncached members of a partly cached group compare against cached digests.
+	processGroup := func(group []int, buf []byte, full bool) {
+		chunk := chunk
+		if full {
+			chunk = math.MaxInt64
+		}
 		size := candidates[group[0]].Size
 		pubMu.Lock()
 		for _, idx := range group {
@@ -403,7 +447,7 @@ func (s *DedupSession) run(ctx context.Context) {
 				byKey[key] = append(byKey[key], idx)
 			}
 			for _, sub := range byKey {
-				if len(sub) == 1 {
+				if len(sub) == 1 && !full {
 					resolve(sub[0]) // unique prefix: no duplicate possible, skip the rest
 					continue
 				}
@@ -423,7 +467,19 @@ func (s *DedupSession) run(ctx context.Context) {
 				if ctx.Err() != nil {
 					return
 				}
-				processGroup(group, buf)
+				var misses []int
+				for _, idx := range group {
+					if !hit[idx] {
+						misses = append(misses, idx)
+					}
+				}
+				switch {
+				case len(misses) == len(group):
+					processGroup(group, buf, false)
+				case len(misses) > 0:
+					// ponytail: mixed groups lose early-bail for uncached members; cache prefix digests if that bites.
+					processGroup(misses, buf, true)
+				}
 			}
 		}()
 	}
@@ -436,6 +492,8 @@ func (s *DedupSession) run(ctx context.Context) {
 	close(jobCh)
 	wg.Wait()
 
+	// ponytail: last-writer-wins across concurrent pc processes; entries only for files hashed to EOF (duplicates), so the file stays small.
+	saveCache()
 	if ctx.Err() != nil {
 		s.publish(DedupSnapshot{Root: s.root, Phase: DedupCanceled})
 		return

@@ -11,6 +11,7 @@ func DisplayDefinition() Definition {
 		Items: []Item{
 			{Action: keymap.ActionCommandsOpen, Label: "Commands", Shortcut: 'c'},
 			{Action: keymap.ActionMessagesOpen, Label: "Messages", Shortcut: 'm'},
+			{Action: keymap.ActionDedupOpen, Label: "Duplicates", Shortcut: 'd'},
 			{Action: keymap.ActionJobsOpen, Label: "Jobs", Shortcut: 'j'},
 			{Action: keymap.ActionAppDropToShell, Label: "Open shell", Shortcut: 'o'},
 		},

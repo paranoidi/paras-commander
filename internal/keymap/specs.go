@@ -1490,6 +1490,16 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "j",
 		},
 		{
+			ID:           ActionDedupOpen,
+			Views:        helpAllViews,
+			Title:        "Duplicates view",
+			Section:      "Display",
+			DefaultKeys:  []string{"M-w"},
+			PreferredKey: "M-w",
+			Keywords:     []string{"find duplicates", "dedup", "wasted"},
+			LeaderKey:    "w",
+		},
+		{
 			ID:           ActionJobsAnswerBlocker,
 			Views:        HelpBrowser | HelpJobs,
 			Title:        "Answer job blocker",

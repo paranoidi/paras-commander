@@ -35,6 +35,8 @@ type FileRecord struct {
 	Abs  pathloc.Path
 	Rel  string
 	Size int64
+	// ModTime is the file's modification time in UnixNano (hash-cache key).
+	ModTime int64
 }
 
 // Row is one aligned primary/secondary compare result.

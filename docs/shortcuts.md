@@ -6,6 +6,8 @@ Default mode uses Midnight Commander–inspired shortcuts. Arrows navigate, lett
 
 Alt (`M`) combinations generally alter the current view. Ctrl (`C`) combinations issue modifications. Letter mnemonics prefer common actions over rare ones (for example `f` for find, not flatten).
 
+`Alt+W` (`dedup.open`) returns to kept Find duplicates results; see `find-duplicates.md`.
+
 Leader-key commands are available via `:`. The same letters are used in the leader menu and in the Esc function menu where possible. Persistent vi/leader-key mode toggles with Esc and is indicated by a yellow border. This also applies inside the fullscreen preview (F3): `j`/`k` scroll, `h` closes the view, and the footer shows the `[preview_menu]` letters (search stays `/`), which fire their action directly.
 
 ## Syntax

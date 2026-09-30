@@ -92,15 +92,15 @@ func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileR
 		}
 		rel = filepath.ToSlash(rel)
 
-		var size int64
+		var size, modTime int64
 		if fi, infoErr := d.Info(); infoErr == nil {
-			size = fi.Size()
+			size, modTime = fi.Size(), fi.ModTime().UnixNano()
 		}
 		loc, locErr := pathloc.File(filepath.Clean(path))
 		if locErr != nil {
 			return nil
 		}
-		out = append(out, FileRecord{Abs: loc, Rel: rel, Size: size})
+		out = append(out, FileRecord{Abs: loc, Rel: rel, Size: size, ModTime: modTime})
 		if opts.OnFile != nil {
 			opts.OnFile(len(out))
 		}

@@ -268,6 +268,7 @@ type Model struct {
 	StashRestoreDialog     dialog.StashRestoreDialogState
 	MessageDialog          dialog.MessageDialogState
 	DedupProgressDialog    dialog.DedupProgressDialogState
+	DedupReturnDialog      dialog.DedupReturnDialogState
 	CommandOutputDialog    dialog.CommandOutputDialogState
 	Message                string
 	MessageUrgency         MessageUrgency
@@ -492,7 +493,7 @@ func (m *Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -509,7 +510,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open ||
-		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupEmptyDirsConfirm.Open
+		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open
 }
 
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
@@ -904,6 +905,14 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	}
 	if model.DedupProgressDialog.Open {
 		dialog.DrawDedupProgressDialog(screen, layout, model.DedupProgressDialog, model.DedupSnapshot, styles, model.UserHomeDir)
+	}
+	if model.DedupReturnDialog.Open {
+		groups := DedupActiveGroups(model.DedupSnapshot, model.DedupView.IgnoreEmpty)
+		var wasted int64
+		for _, g := range groups {
+			wasted += g.Size * int64(len(g.Files)-1)
+		}
+		dialog.DrawDedupReturnDialog(screen, layout, model.DedupReturnDialog, model.DedupSnapshot.Root.String(), len(groups), wasted, styles, model.UserHomeDir)
 	}
 	if model.CommandOutputDialog.Open {
 		dialog.DrawCommandOutputDialog(screen, layout, model.CommandOutputDialog, styles, model.PanelScrollbar)

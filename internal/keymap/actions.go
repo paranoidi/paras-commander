@@ -196,6 +196,7 @@ const (
 
 	// Jobs dialog
 	ActionJobsOpen          = "jobs.open"
+	ActionDedupOpen         = "dedup.open"
 	ActionJobsClose         = "jobs.close"
 	ActionJobsClearFinished = "jobs.clear-finished"
 	ActionJobsCancel        = "jobs.cancel"
@@ -464,6 +465,7 @@ var KnownActions = map[string]struct{}{
 	ActionMenuFileChattr: {},
 
 	ActionJobsOpen:          {},
+	ActionDedupOpen:         {},
 	ActionJobsClose:         {},
 	ActionJobsClearFinished: {},
 	ActionJobsCancel:        {},

@@ -100,6 +100,7 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionBookmarkAdd,
 	},
 	LeaderMenuGroupDisplay: {
+		ActionDedupOpen,
 		ActionJobsOpen,
 		ActionMessagesOpen,
 		ActionCommandsOpen,
@@ -132,7 +133,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 		order: []string{LeaderMenuGroupCompare, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
 		actions: map[string][]string{
 			LeaderMenuGroupApp:     {ActionAppQuit},
-			LeaderMenuGroupDisplay: {ActionJobsOpen, ActionMessagesOpen, ActionCommandsOpen},
+			LeaderMenuGroupDisplay: {ActionDedupOpen, ActionJobsOpen, ActionMessagesOpen, ActionCommandsOpen},
 			LeaderMenuGroupCompare: {
 				ActionCompareClose,
 				ActionCompareCycleFilter,
@@ -188,7 +189,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 		order: []string{LeaderMenuGroupQueue, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
 		actions: map[string][]string{
 			LeaderMenuGroupApp:     {ActionAppQuit},
-			LeaderMenuGroupDisplay: {ActionMessagesOpen, ActionCommandsOpen},
+			LeaderMenuGroupDisplay: {ActionDedupOpen, ActionMessagesOpen, ActionCommandsOpen},
 			LeaderMenuGroupQueue: {
 				ActionPanelExternalBrowser,
 				ActionJobsAnswerBlocker,
@@ -211,7 +212,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 		order: []string{LeaderMenuGroupCommands, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
 		actions: map[string][]string{
 			LeaderMenuGroupApp:     {ActionAppQuit},
-			LeaderMenuGroupDisplay: {ActionJobsOpen, ActionMessagesOpen},
+			LeaderMenuGroupDisplay: {ActionDedupOpen, ActionJobsOpen, ActionMessagesOpen},
 			LeaderMenuGroupCommands: {
 				ActionPanelExternalBrowser,
 				ActionCommandsClose,
@@ -229,7 +230,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 		order: []string{LeaderMenuGroupMessages, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
 		actions: map[string][]string{
 			LeaderMenuGroupApp:     {ActionAppQuit},
-			LeaderMenuGroupDisplay: {ActionJobsOpen, ActionCommandsOpen},
+			LeaderMenuGroupDisplay: {ActionDedupOpen, ActionJobsOpen, ActionCommandsOpen},
 			LeaderMenuGroupMessages: {
 				ActionMessagesClose,
 				ActionMessagesClear,

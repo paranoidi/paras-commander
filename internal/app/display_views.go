@@ -10,13 +10,16 @@ import (
 // Returns true when actionID is one of the display-screen open actions (consumed).
 func (a *App) tryDispatchAuxiliaryScreens(actionID string) bool {
 	switch actionID {
-	case keymap.ActionJobsOpen, keymap.ActionCommandsOpen, keymap.ActionMessagesOpen:
+	case keymap.ActionJobsOpen, keymap.ActionCommandsOpen, keymap.ActionMessagesOpen, keymap.ActionDedupOpen:
+		if actionID == keymap.ActionDedupOpen && a.model.ViewMode == ui.ViewDedup {
+			return true // already showing it
+		}
 		switch a.model.ViewMode {
 		case ui.ViewCompare:
 			a.compareCtrl.DiscardReturn()
 			a.compareCtrl.Close()
 		case ui.ViewDedup:
-			a.dedupCtrl.Close()
+			a.closeDedupView()
 		}
 		a.dispatch(actionID)
 		return true

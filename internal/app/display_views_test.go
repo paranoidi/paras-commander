@@ -168,7 +168,7 @@ func TestAuxiliaryScreensSwitchFromCompareDropsDedupReturnHook(t *testing.T) {
 	}
 }
 
-func TestAuxiliaryScreensSwitchTearsDownDedup(t *testing.T) {
+func TestAuxiliaryScreensSwitchKeepsDedupResults(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "maple.txt"), []byte("dup"), 0o644); err != nil {
 		t.Fatal(err)
@@ -187,10 +187,11 @@ func TestAuxiliaryScreensSwitchTearsDownDedup(t *testing.T) {
 	if app.model.ViewMode != ui.ViewCommands {
 		t.Fatalf("ViewMode = %v, want ViewCommands", app.model.ViewMode)
 	}
-	if !app.model.DedupSnapshot.Root.IsZero() {
-		t.Fatalf("dedup snapshot root still set: %s", app.model.DedupSnapshot.Root)
+	if !app.dedupCtrl.HasResults() {
+		t.Fatal("dedup results should be kept after switching views")
 	}
-	if len(app.model.DedupList) != 0 {
-		t.Fatalf("dedup list still has %d rows", len(app.model.DedupList))
+	app.dispatch(keymap.ActionDedupOpen)
+	if app.model.ViewMode != ui.ViewDedup {
+		t.Fatalf("ViewMode = %v, want ViewDedup after dedup.open", app.model.ViewMode)
 	}
 }

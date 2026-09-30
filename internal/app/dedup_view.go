@@ -89,7 +89,22 @@ func (a *App) handleDedupEmptyDirsConfirmKey(event *tcell.EventKey) bool {
 	return false
 }
 
-func (a *App) closeDedupView() { a.dedupCtrl.Close() }
+// closeDedupView leaves the view but keeps its results for ActionDedupOpen.
+func (a *App) closeDedupView() {
+	a.dedupCtrl.Leave()
+	if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionDedupOpen); lbl != "" {
+		a.setTransientMessage("Duplicates kept \u2014 "+lbl+" returns", ui.MessageUrgencyInfo)
+	}
+}
+
+// showKeptDuplicates brings the kept results back (ActionDedupOpen).
+func (a *App) showKeptDuplicates() {
+	if !a.dedupCtrl.HasResults() {
+		a.setTransientMessage("No duplicates results \u2014 run Find duplicates first", ui.MessageUrgencyInfo)
+		return
+	}
+	a.dedupCtrl.ShowKept()
+}
 
 func (a *App) pollDedupUpdates(payload dedupctrl.WakePayload) bool {
 	return a.dedupCtrl.PollUpdates(payload)

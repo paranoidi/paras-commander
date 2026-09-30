@@ -85,16 +85,56 @@ func (h *Handler) postWake() {
 	h.wake.Post(h.screen, WakePayload{})
 }
 
-// Open starts scanning the active panel's directory for duplicates.
+func (h *Handler) activePanelPath() pathloc.Path {
+	if h.model.ActivePanel == ui.SecondaryPanel {
+		return h.model.Secondary.Path
+	}
+	return h.model.Primary.Path
+}
+
+// Open brings back kept results when the active panel is at or under their
+// root, offers show/rescan when it is elsewhere, and otherwise scans the
+// active panel's directory for duplicates.
 func (h *Handler) Open() {
 	if ui.IsAuxiliaryView(h.model.ViewMode) && h.model.ViewMode != ui.ViewDedup {
 		return
 	}
-	p := &h.model.Primary
-	if h.model.ActivePanel == ui.SecondaryPanel {
-		p = &h.model.Secondary
+	path := h.activePanelPath()
+	if !h.HasResults() {
+		h.openRoot(path)
+		return
 	}
-	h.openRoot(p.Path)
+	if root := h.model.DedupSnapshot.Root; !path.IsRemote() && !root.IsRemote() {
+		if rel, err := filepath.Rel(root.String(), path.String()); err == nil && rel != ".." && !strings.HasPrefix(rel, "../") {
+			h.ShowKept()
+			return
+		}
+	}
+	h.model.DedupReturnDialog = dialog.DedupReturnDialogState{Open: true}
+}
+
+// HasResults reports whether a finished scan's results are kept in memory.
+func (h *Handler) HasResults() bool {
+	return h.session == nil && h.model.DedupSnapshot.Phase == comparepkg.DedupDone
+}
+
+// ShowKept switches to the dedup view over the kept results; no-op without any.
+func (h *Handler) ShowKept() {
+	if !h.HasResults() {
+		return
+	}
+	h.model.ViewMode = ui.ViewDedup
+	h.model.MenuDefinitions = h.host.DedupMenuDefinitions()
+	h.model.Menu.ActiveMenu = menu.DefaultIndexDedup()
+}
+
+// Leave returns to the browser but keeps the results for Open/ShowKept.
+func (h *Handler) Leave() {
+	if h.model.ViewMode == ui.ViewDedup {
+		h.model.ViewMode = ui.ViewBrowser
+		h.model.MenuDefinitions = h.host.BrowserMenuDefinitions()
+		h.model.Menu.ActiveMenu = menu.DefaultIndex()
+	}
 }
 
 // openRoot cancels any previous scan and starts a new one on root. Walk options
@@ -148,6 +188,7 @@ func (h *Handler) openRoot(root pathloc.Path) {
 		ConfirmHashBytes:  h.config.Dedup.HashConfirmBytes,
 		FileProgressBytes: h.config.Dedup.FileProgressBytes,
 		ChunkBytes:        h.config.Dedup.ChunkBytes,
+		CacheFile:         comparepkg.DefaultHashCachePath(),
 		OnUpdate:          func(_ comparepkg.DedupSnapshot) { h.postWake() },
 	})
 	h.model.DedupSnapshot = h.session.Snapshot()
@@ -166,6 +207,7 @@ func (h *Handler) Close() {
 		h.model.Menu.ActiveMenu = menu.DefaultIndex()
 	}
 	h.model.DedupProgressDialog = dialog.DedupProgressDialogState{}
+	h.model.DedupReturnDialog = dialog.DedupReturnDialogState{}
 	h.model.DedupView = ui.DedupViewState{}
 	h.model.DedupSnapshot = comparepkg.DedupSnapshot{}
 	h.model.DedupList = nil
@@ -208,9 +250,7 @@ func (h *Handler) enterResultsView() {
 		h.host.SetTransientMessage("Duplicates view re-rooted", ui.MessageUrgencyInfo)
 	}
 	h.model.DedupProgressDialog = dialog.DedupProgressDialogState{}
-	h.model.ViewMode = ui.ViewDedup
-	h.model.MenuDefinitions = h.host.DedupMenuDefinitions()
-	h.model.Menu.ActiveMenu = menu.DefaultIndexDedup()
+	h.ShowKept()
 	h.applyPending(snap)
 	h.syncDedupList()
 	h.restorePendingCursor()
@@ -291,12 +331,12 @@ func (h *Handler) Confirm() {
 	}
 }
 
-// Refresh re-runs the scan on the active panel.
+// Refresh re-runs the scan on the view's root.
 func (h *Handler) Refresh() {
 	if h.model.ViewMode != ui.ViewDedup {
 		return
 	}
-	h.Open()
+	h.openRoot(h.model.DedupSnapshot.Root)
 }
 
 // ReopenPreservingState re-scans the previous snapshot root and, once the new

@@ -601,3 +601,125 @@ func TestDedupWithTrimmedDisplayRoot(t *testing.T) {
 		}
 	}
 }
+
+// scanDedupCached runs a scan with the hash cache enabled and returns the Done snapshot.
+func scanDedupCached(t *testing.T, dir, cacheFile string) DedupSnapshot {
+	t.Helper()
+	root, err := pathloc.File(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan DedupSnapshot, 8)
+	sess := StartDedup(context.Background(), root, DedupOptions{
+		HashWorkers: 2,
+		CacheFile:   cacheFile,
+		OnUpdate: func(s DedupSnapshot) {
+			if s.Phase == DedupDone || s.Phase == DedupError {
+				done <- s
+			}
+		},
+	})
+	defer sess.Close()
+	select {
+	case s := <-done:
+		return s
+	case <-time.After(10 * time.Second):
+		t.Fatal("dedup scan timed out")
+		return DedupSnapshot{}
+	}
+}
+
+func TestDedupHashCacheSkipsUnchangedFiles(t *testing.T) {
+	dir := t.TempDir()
+	cache := filepath.Join(t.TempDir(), "hashes.gob")
+	writeFile(t, dir, "maple.txt", "aaaa")
+	writeFile(t, dir, "cedar.txt", "aaaa")
+	if snap := scanDedupCached(t, dir, cache); len(snap.Groups) != 1 {
+		t.Fatalf("first scan groups = %d, want 1", len(snap.Groups))
+	}
+
+	// Same size, same mtime, different bytes: only a cache hit still groups it.
+	target := filepath.Join(dir, "cedar.txt")
+	fi, err := os.Stat(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, dir, "cedar.txt", "bbbb")
+	if err := os.Chtimes(target, fi.ModTime(), fi.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+	snap := scanDedupCached(t, dir, cache)
+	if len(snap.Groups) != 1 {
+		t.Fatalf("cached scan groups = %d, want 1 (cache not used)", len(snap.Groups))
+	}
+	if snap.HashBytesTotal != 0 {
+		t.Fatalf("HashBytesTotal = %d, want 0 for a fully cached scan", snap.HashBytesTotal)
+	}
+
+	// A bumped mtime invalidates the entry, so the changed content drops out.
+	future := fi.ModTime().Add(time.Hour)
+	if err := os.Chtimes(target, future, future); err != nil {
+		t.Fatal(err)
+	}
+	if snap := scanDedupCached(t, dir, cache); len(snap.Groups) != 0 {
+		t.Fatalf("scan after mtime bump groups = %d, want 0", len(snap.Groups))
+	}
+}
+
+func TestDedupHashCacheMixedGroup(t *testing.T) {
+	dir := t.TempDir()
+	cache := filepath.Join(t.TempDir(), "hashes.gob")
+	writeFile(t, dir, "maple.txt", "aaaa")
+	writeFile(t, dir, "cedar.txt", "aaaa")
+	scanDedupCached(t, dir, cache)
+
+	writeFile(t, dir, "birch.txt", "aaaa") // uncached identical copy
+	writeFile(t, dir, "elm.txt", "zzzz")   // uncached, same size, different content
+	snap := scanDedupCached(t, dir, cache)
+	if len(snap.Groups) != 1 || len(snap.Groups[0].Files) != 3 {
+		t.Fatalf("groups = %+v, want one group of 3", snap.Groups)
+	}
+	for _, f := range snap.Groups[0].Files {
+		if f.Rel == "elm.txt" {
+			t.Fatal("elm.txt has different content and must be excluded")
+		}
+	}
+}
+
+func TestDedupHashCachePersistsAfterCancel(t *testing.T) {
+	dir := t.TempDir()
+	cache := filepath.Join(t.TempDir(), "hashes.gob")
+	writeFile(t, dir, "maple.txt", "aaaa")
+	writeFile(t, dir, "cedar.txt", "aaaa")
+	writeFile(t, dir, "birch.txt", "bbbbbbbb")
+	writeFile(t, dir, "elm.txt", "bbbbbbbb")
+	root, err := pathloc.File(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := dedupProgressInterval
+	dedupProgressInterval = 0 // publish every resolve so the trigger below is deterministic
+	t.Cleanup(func() { dedupProgressInterval = old })
+	// One worker; cancel once the first file resolves. A group's duplicates all
+	// reach EOF before the cancel check, so at least one whole group is saved.
+	var once sync.Once
+	resolved := make(chan struct{})
+	sess := StartDedup(context.Background(), root, DedupOptions{
+		HashWorkers: 1,
+		CacheFile:   cache,
+		OnUpdate: func(s DedupSnapshot) {
+			if s.Phase == DedupHashing && s.Hashed >= 1 {
+				once.Do(func() { close(resolved) })
+			}
+		},
+	})
+	select {
+	case <-resolved:
+	case <-time.After(10 * time.Second):
+		t.Fatal("hashing never started")
+	}
+	sess.Close()
+	if got := len(loadHashCache(cache)); got < 2 {
+		t.Fatalf("cache entries = %d, want at least 2", got)
+	}
+}

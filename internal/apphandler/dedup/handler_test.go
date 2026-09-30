@@ -1,6 +1,7 @@
 package dedup
 
 import (
+	"github.com/gdamore/tcell/v2"
 	"testing"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -270,4 +271,89 @@ func TestApplyPending_prunesMarksAndRestoresCollapse(t *testing.T) {
 	if model.DedupView.Copies.Selected != copyIdx {
 		t.Fatalf("copies Selected = %d, want %d", model.DedupView.Copies.Selected, copyIdx)
 	}
+}
+
+func keptHandler(t *testing.T, activePath string) (*Handler, *ui.Model) {
+	t.Helper()
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	root := pathloc.MustParse("/scan")
+	snap := dedupDoneSnapshot(root, dedupFile("alpha/widget.txt"), dedupFile("beta/widget.txt"))
+	h, model := dedupHandlerWithView(t, snap, ui.DedupViewState{
+		TreeDirs: true,
+		Marked:   map[string]bool{},
+		Kept:     map[string]bool{},
+	})
+	model.Primary.Path = pathloc.MustParse(activePath)
+	h.Leave()
+	return h, model
+}
+
+func TestLeaveKeepsResultsAndOpenRestoresView(t *testing.T) {
+	for _, path := range []string{"/scan", "/scan/alpha"} {
+		h, model := keptHandler(t, path)
+		if model.ViewMode != ui.ViewBrowser || !h.HasResults() {
+			t.Fatalf("after Leave: ViewMode=%v HasResults=%v", model.ViewMode, h.HasResults())
+		}
+		h.Open()
+		if model.ViewMode != ui.ViewDedup {
+			t.Fatalf("Open from %s: ViewMode = %v, want ViewDedup", path, model.ViewMode)
+		}
+		if h.session != nil || model.DedupReturnDialog.Open {
+			t.Fatalf("Open from %s started a scan or dialog", path)
+		}
+	}
+}
+
+func TestOpenOutsideRootOffersReturnDialog(t *testing.T) {
+	h, model := keptHandler(t, "/elsewhere")
+	h.Open()
+	if !model.DedupReturnDialog.Open || model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("dialog open=%v ViewMode=%v", model.DedupReturnDialog.Open, model.ViewMode)
+	}
+	h.HandleReturnDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, 0)) // Show is focused first
+	if model.DedupReturnDialog.Open || model.ViewMode != ui.ViewDedup {
+		t.Fatalf("Show: dialog open=%v ViewMode=%v", model.DedupReturnDialog.Open, model.ViewMode)
+	}
+}
+
+func TestReturnDialogRescanStartsSession(t *testing.T) {
+	dir := t.TempDir()
+	h, model := keptHandler(t, dir)
+	h.Open()
+	if !model.DedupReturnDialog.Open {
+		t.Fatal("dialog should open for a path outside the kept root")
+	}
+	h.HandleReturnDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	if model.DedupReturnDialog.Open || h.session == nil {
+		t.Fatalf("Rescan: dialog open=%v session=%v", model.DedupReturnDialog.Open, h.session)
+	}
+	if got := h.session.Snapshot().Root.String(); got != dir {
+		t.Fatalf("rescan root = %q, want %q", got, dir)
+	}
+	h.Close()
+}
+
+func TestShowKeptWithoutResultsIsNoop(t *testing.T) {
+	h := New(Deps{Host: &dedupHandlerHost{}, Model: &ui.Model{ViewMode: ui.ViewBrowser}})
+	h.ShowKept()
+	if h.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser", h.model.ViewMode)
+	}
+}
+
+func TestRefreshRescansKeptRoot(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	root := pathloc.MustParse(dir)
+	snap := dedupDoneSnapshot(root, dedupFile("alpha/widget.txt"), dedupFile("beta/widget.txt"))
+	h, model := dedupHandlerWithView(t, snap, ui.DedupViewState{Marked: map[string]bool{}, Kept: map[string]bool{}})
+	model.Primary.Path = pathloc.MustParse("/elsewhere")
+	h.Refresh()
+	if h.session == nil {
+		t.Fatal("Refresh should start a session")
+	}
+	if got := h.session.Snapshot().Root.String(); got != dir {
+		t.Fatalf("Refresh root = %q, want kept root %q", got, dir)
+	}
+	h.Close()
 }

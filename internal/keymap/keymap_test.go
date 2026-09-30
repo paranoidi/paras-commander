@@ -1379,3 +1379,14 @@ func TestShiftLetterBindingMatchesTerminalEvents(t *testing.T) {
 		t.Fatal("unshifted Alt+d must not match M-S-d")
 	}
 }
+
+func TestDefaultAltWMapsToDedupOpen(t *testing.T) {
+	b, err := DefaultBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, ok := b.Global.Lookup(tcell.NewEventKey(tcell.KeyRune, 'w', tcell.ModAlt))
+	if !ok || got != ActionDedupOpen {
+		t.Fatalf("M-w = %q, %v; want %q", got, ok, ActionDedupOpen)
+	}
+}
