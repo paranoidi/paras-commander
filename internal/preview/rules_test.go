@@ -402,21 +402,30 @@ func TestSplitGraphicsPayload(t *testing.T) {
 	}
 }
 
-func TestRewriteKittyForPlaceholder(t *testing.T) {
+func TestRewriteKittyForPCPlaceholder(t *testing.T) {
 	in := "\x1b_Ga=T,f=100,i=99,t=d,m=1;AAAA\x1b\\\x1b_Gi=99,m=0;BBBB\x1b\\"
-	got := string(rewriteKittyForPlaceholder([]byte(in)))
+	got := string(rewriteKittyForPC([]byte(in), true))
 	want := "\x1b_Ga=T,f=100,t=d,m=1,i=1,U=1,q=2;AAAA\x1b\\\x1b_Gm=0,i=1;BBBB\x1b\\"
 	if got != want {
-		t.Fatalf("rewriteKittyForPlaceholder(%q) = %q, want %q", in, got, want)
+		t.Fatalf("rewriteKittyForPC(%q) = %q, want %q", in, got, want)
 	}
 
 	// A chunk with no pre-existing i= (movie-info's own commands never send one) still ends up
 	// on the fixed placeholder id.
 	in2 := "\x1b_Ga=T,f=100,t=d,m=0;AAAA\x1b\\"
-	got2 := string(rewriteKittyForPlaceholder([]byte(in2)))
+	got2 := string(rewriteKittyForPC([]byte(in2), true))
 	want2 := "\x1b_Ga=T,f=100,t=d,m=0,i=1,U=1,q=2;AAAA\x1b\\"
 	if got2 != want2 {
-		t.Fatalf("rewriteKittyForPlaceholder(%q) = %q, want %q", in2, got2, want2)
+		t.Fatalf("rewriteKittyForPC(%q) = %q, want %q", in2, got2, want2)
+	}
+}
+
+func TestRewriteKittyForPCNonPlaceholder(t *testing.T) {
+	in := "\x1b_Ga=T,f=100,t=d,m=1;AAAA\x1b\\\x1b_Gm=1;BBBB\x1b\\\x1b_Gm=0;CCCC\x1b\\"
+	got := string(rewriteKittyForPC([]byte(in), false))
+	want := "\x1b_Ga=T,f=100,t=d,m=1,i=1,q=2,C=1;AAAA\x1b\\\x1b_Gm=1;BBBB\x1b\\\x1b_Gm=0;CCCC\x1b\\"
+	if got != want {
+		t.Fatalf("rewriteKittyForPC(%q) = %q, want %q", in, got, want)
 	}
 }
 

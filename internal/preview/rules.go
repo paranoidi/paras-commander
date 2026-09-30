@@ -115,8 +115,12 @@ func runRuleCommand(ctx context.Context, req Request, rule config.PreviewCommand
 		// ImagePxH ends up being IS what renders — not a guess that can drift from reality.
 		unicodePlaceholder := proto == previewpanel.ImageProtocolKitty &&
 			TmuxSupportsKittyUnicodePlaceholders(os.Getenv, req.Preview)
-		if unicodePlaceholder {
-			imagePart = rewriteKittyForPlaceholder(imagePart)
+		// Outside placeholder mode the same rewrite still applies (id + quiet + no cursor move):
+		// pc's delete-before-replace (a=d,d=I,i=<id> in image_overlay.go) only removes an image
+		// that carries pc's id, so an id-less rule image would never be cleared when the next
+		// one is drawn into the same cells.
+		if proto == previewpanel.ImageProtocolKitty {
+			imagePart = rewriteKittyForPC(imagePart, unicodePlaceholder)
 		}
 		result := Result{
 			Source:                  previewpanel.SourceExternalANSI,
@@ -441,12 +445,13 @@ func kittyChunkEnd(stdout []byte, start int) (end int, more bool, ok bool) {
 	return end, more, true
 }
 
-// rewriteKittyForPlaceholder rewrites every chunk of a Kitty transmission (imagePart, as
-// produced by splitGraphicsPayload — a whole sequence of consecutive "\x1b_G...\x1b\\" chunks)
-// onto pc's fixed placeholder image id, and adds Unicode-placeholder display flags to the first
-// chunk — see the call site in runRuleCommand for why. Chunks that don't parse (shouldn't happen
-// given they came from splitGraphicsPayload) pass through unchanged.
-func rewriteKittyForPlaceholder(imagePart []byte) []byte {
+// rewriteKittyForPC rewrites every chunk of a Kitty transmission (imagePart, as produced by
+// splitGraphicsPayload — a whole sequence of consecutive "\x1b_G...\x1b\\" chunks) onto pc's
+// fixed image id — see the call site in runRuleCommand for why. With placeholder set, the first
+// chunk also requests Unicode-placeholder display (U=1); otherwise it gets C=1 (cursor does not
+// move), matching encodeKittyAPC. Chunks that don't parse (shouldn't happen given they came from
+// splitGraphicsPayload) pass through unchanged.
+func rewriteKittyForPC(imagePart []byte, placeholder bool) []byte {
 	var out bytes.Buffer
 	rest := imagePart
 	first := true
@@ -456,7 +461,7 @@ func rewriteKittyForPlaceholder(imagePart []byte) []byte {
 			break
 		}
 		chunkEnd := termIdx + len("\x1b\\")
-		out.Write(rewriteKittyChunk(rest[:chunkEnd], first))
+		out.Write(rewriteKittyChunk(rest[:chunkEnd], first, placeholder))
 		rest = rest[chunkEnd:]
 		first = false
 	}
@@ -465,11 +470,11 @@ func rewriteKittyForPlaceholder(imagePart []byte) []byte {
 }
 
 // rewriteKittyChunk rewrites one "\x1b_G<control>;<payload>\x1b\\" chunk's control-data: forces
-// i=<previewpanel.KittyGraphicsImageID> (drawUnicodePlaceholderImage hardcodes that id when it
-// draws the placeholder cells, so the transmitted data must use the same one), and — first only
-// — adds U=1,q=2 to request Unicode-placeholder display instead of cursor-relative auto-display,
-// exactly matching internal/preview/image.go's encodeKittyAPC for pc's own images.
-func rewriteKittyChunk(chunk []byte, first bool) []byte {
+// i=<previewpanel.KittyGraphicsImageID> and q=2 (first chunk), matching internal/preview/image.go's
+// encodeKittyAPC. Placeholder mode adds U=1 on the first chunk and i on every chunk
+// (drawUnicodePlaceholderImage hardcodes that id). Otherwise the first chunk gets C=1 and
+// continuation chunks lose any i/U/C, keeping only m (and q if the command sent one).
+func rewriteKittyChunk(chunk []byte, first, placeholder bool) []byte {
 	body := chunk[len("\x1b_G"):]
 	semi := bytes.IndexByte(body, ';')
 	if semi < 0 {
@@ -484,14 +489,24 @@ func rewriteKittyChunk(chunk []byte, first bool) []byte {
 			continue
 		}
 		switch k {
-		case "i", "U", "q":
+		case "i", "U", "C":
 			continue // overridden below
+		case "q":
+			if first || placeholder {
+				continue
+			}
 		}
 		kept = append(kept, kv)
 	}
-	kept = append(kept, "i="+strconv.Itoa(previewpanel.KittyGraphicsImageID))
-	if first {
-		kept = append(kept, "U=1", "q=2")
+	id := "i=" + strconv.Itoa(previewpanel.KittyGraphicsImageID)
+	switch {
+	case placeholder:
+		kept = append(kept, id)
+		if first {
+			kept = append(kept, "U=1", "q=2")
+		}
+	case first:
+		kept = append(kept, id, "q=2", "C=1")
 	}
 
 	var out bytes.Buffer
