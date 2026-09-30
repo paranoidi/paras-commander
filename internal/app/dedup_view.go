@@ -173,7 +173,11 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		if len(a.dedupCtrl.MarkedPaths()) > 0 {
 			a.openDedupDeleteDialog()
 		} else {
-			a.setTransientMessage("Mark files with Space first", ui.MessageUrgencyInfo)
+			msg := "Mark files to keep first"
+			if lbl := a.keys.Dedup.MenuBindingLabel(keymap.ActionDedupMarkKeep); lbl != "" {
+				msg = "Mark files to keep with " + lbl + " first"
+			}
+			a.setTransientMessage(msg, ui.MessageUrgencyInfo)
 		}
 		return true
 	default:
