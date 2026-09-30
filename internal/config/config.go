@@ -162,7 +162,9 @@ type CarouselConfig struct {
 	ShowSize []bool `toml:"show_size"`
 	// AutohideInactivePanel hides the inactive twin panel while the active panel is in
 	// carousel mode, giving its columns the full width. The panel reappears when Tab makes
-	// it the active panel, and hides again when Tab leaves it. Has no effect outside carousel mode.
+	// it the active panel, and hides again when Tab leaves it. The hide-inactive-panel toggle overrides
+	// it until carousel is off on both panels. With autohide in effect, quick view from a carousel
+	// panel puts the preview in the right (bottom) slot. Has no effect outside carousel mode.
 	AutohideInactivePanel bool `toml:"autohide_inactive_panel"`
 }
 

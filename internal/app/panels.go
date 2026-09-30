@@ -68,6 +68,16 @@ func (a *App) toggleHideInactivePanel() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
+	if a.carouselAutohideInactivePanel() && !a.model.HideInactivePanel {
+		a.carouselAutohideOverride = true
+		a.setTransientMessage("Inactive panel shown", ui.MessageUrgencyInfo)
+		return
+	}
+	if a.carouselAutohideOverride && !a.model.HideInactivePanel && a.carouselAutohideWanted() {
+		a.carouselAutohideOverride = false
+		a.setTransientMessage("Inactive panel hidden", ui.MessageUrgencyInfo)
+		return
+	}
 	if a.model.HideInactivePanel {
 		a.model.HideInactivePanel = false
 		a.setTransientMessage("Inactive panel shown", ui.MessageUrgencyInfo)
@@ -95,6 +105,34 @@ func (a *App) toggleHideInactivePanel() {
 	default:
 		a.setTransientMessage("Inactive panel hidden", ui.MessageUrgencyInfo)
 	}
+}
+
+// toggleCarousel flips carousel mode on one panel. menu is true for the menu path, which makes
+// the panel active when turning on and labels the toast with the panel name.
+func (a *App) toggleCarousel(panelID int, menu bool) {
+	p := a.panelByID(panelID)
+	p.CarouselMode = !p.CarouselMode
+	if p.CarouselMode {
+		p.SetListLayout(panel.ListLayoutFlat, a.panelViewportRows(panelID))
+		if menu {
+			a.model.ActivePanel = panelID
+		}
+	} else {
+		a.previewCtrl.ClearCarouselPreviewNavCoalesce()
+		a.previewCtrl.CloseCarouselFilePreview()
+		if !a.model.Primary.CarouselMode && !a.model.Secondary.CarouselMode {
+			a.carouselAutohideOverride = false
+		}
+	}
+	onOff := "off"
+	if p.CarouselMode {
+		onOff = "on"
+	}
+	msg := fmt.Sprintf("Carousel view: %s", onOff)
+	if menu {
+		msg = fmt.Sprintf("%s carousel view: %s", panelLabel(panelID), onOff)
+	}
+	a.setTransientMessage(msg, ui.MessageUrgencyInfo)
 }
 
 func (a *App) reloadActive(successMessage string) {
@@ -806,18 +844,7 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		activePanel.CycleListingFormat()
 		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelToggleCarousel:
-		activePanel.CarouselMode = !activePanel.CarouselMode
-		if activePanel.CarouselMode {
-			activePanel.SetListLayout(panel.ListLayoutFlat, viewportRows)
-		} else {
-			a.previewCtrl.ClearCarouselPreviewNavCoalesce()
-			a.previewCtrl.CloseCarouselFilePreview()
-		}
-		onOff := "off"
-		if activePanel.CarouselMode {
-			onOff = "on"
-		}
-		a.setTransientMessage(fmt.Sprintf("Carousel view: %s", onOff), ui.MessageUrgencyInfo)
+		a.toggleCarousel(a.model.ActivePanel, false)
 	case keymap.ActionPanelToggleTree:
 		if a.toggleTreeForPanel(activePanel, viewportRows) {
 			a.setTransientMessage("Tree view is not available in carousel view", ui.MessageUrgencyInfo)

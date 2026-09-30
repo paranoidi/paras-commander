@@ -251,6 +251,9 @@ type App struct {
 	// Configuration OK so saved TOML is the sole persisted source of truth. Layout still suppresses
 	// zoom while quick view / file preview is active and when terminal width ≥ cfg.UI.ZoomActivePanelDisabledAboveWidth (when > 0).
 	zoomActivePanelOverride *bool
+	// carouselAutohideOverride is set by the hide-inactive-panel toggle to keep the twin panel
+	// visible despite carousel autohide; cleared once carousel is off on both panels.
+	carouselAutohideOverride bool
 	// paneSplitOrientationOverride is nil → layout uses cfg.UI.PaneSplitOrientation; when non-nil it
 	// forces stacked or side-by-side for this session only (panel.toggle-split-orientation). Cleared on Configuration OK.
 	paneSplitOrientationOverride *ui.SplitOrientation
