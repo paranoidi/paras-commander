@@ -102,7 +102,7 @@ func drawCarouselHeader(screen tcell.Screen, hp carouselHeaderParams) {
 		columnActive := p.FileListActive && c.Active && !inactive
 		showSB := columnActive || p.ScrollbarShowInactive
 		total, offset := columnListingMetrics(c, p.Center)
-		reserve := columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset)
+		reserve := columnTextReserve(columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset), i, p.ShowChildColumn)
 		listTextWidth := columnListTextWidth(col.Width, p.ShowIcons, reserve)
 		var showSize bool
 		switch i {
@@ -177,7 +177,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 	columnActive := p.FileListActive && c.Active && !inactive
 	showSB := columnActive || p.ScrollbarShowInactive
 	total, offset := columnListingMetrics(c, p.Center)
-	reserve := columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset)
+	reserve := columnTextReserve(columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset), colIdx, p.ShowChildColumn)
 	var diskDenom int64
 	if p.DiskUsage.Active && p.DiskUsage.Source != nil {
 		var denomEntries []localfs.Entry
@@ -380,6 +380,11 @@ func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp
 		}
 		return st
 	}, rp.Spans)
+	// Separator cell(s) past the text keep the row's style so the cursor bar spans the column;
+	// the scrollbar, when present, paints over its lane afterwards.
+	for x := rp.ListStart + rp.ListW; x < col.X+col.Width; x++ {
+		screen.SetContent(x, rp.Y, ' ', nil, rp.BlendCell(x-col.X))
+	}
 }
 
 // CursorIconKeyForTest exposes cursor icon theme keys for tests.

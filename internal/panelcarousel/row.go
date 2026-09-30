@@ -67,6 +67,18 @@ func columnListContentOrigin(colX, colWidth int, showIcons bool, scrollbarReserv
 	return colX + leftGutter + iconStrip, columnListTextWidth(colWidth, true, scrollbarReserve)
 }
 
+// columnTextReserve returns the right-edge cells withheld from a column's row text: the
+// scrollbar lane, or — for a column followed by another one — a blank separator cell so a
+// truncated name never runs into the next column's content. The scrollbar already separates,
+// so the two don't stack. Fit-mode widths already include the separator (see
+// MeasureFitColumnWidths), so uncapped fit columns render unchanged.
+func columnTextReserve(scrollbarReserve, colIdx int, showChild bool) int {
+	if colIdx == 0 || (colIdx == 1 && showChild) {
+		return max(scrollbarReserve, 1)
+	}
+	return scrollbarReserve
+}
+
 // columnHasScrollbarLane reports whether a carousel column owns a vertical scrollbar track.
 func columnHasScrollbarLane(c Column, inactive, showChild bool) bool {
 	return c.Populated && (!c.Active || inactive || showChild)
@@ -260,6 +272,6 @@ func CenterNameWidth(frame geom.Rect, layout Layout, center panel.State, showIco
 	c := Column{Kind: ColumnCenter, Populated: true, Active: true}
 	hasLane := columnHasScrollbarLane(c, false, showChild)
 	total, offset := columnListingMetrics(c, center)
-	reserve := columnScrollbarReserve(hasLane, true, style, total, visibleRows, offset)
+	reserve := columnTextReserve(columnScrollbarReserve(hasLane, true, style, total, visibleRows, offset), 1, showChild)
 	return nameWidthForColumn(cols[1].Width, showIcons, reserve, layout.ShowSize[1], metaW)
 }

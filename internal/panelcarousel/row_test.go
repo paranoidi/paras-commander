@@ -357,14 +357,15 @@ func TestCenterNameWidthFitMode(t *testing.T) {
 		t.Fatalf("measured[1] = %d, want %d", measured[1], want)
 	}
 
+	// The +1 margin is the separator cell before the child column, outside the name field.
 	got := CenterNameWidth(frame, layout, center, false, true, uiscrollbar.StyleThumb, 10, measured, 0)
-	if got != want {
-		t.Fatalf("CenterNameWidth = %d, want %d (measured width under the 40-cell cap)", got, want)
+	if got != longest {
+		t.Fatalf("CenterNameWidth = %d, want %d (measured width under the 40-cell cap)", got, longest)
 	}
 
 	// Zero measured width (unmeasured) falls back to the configured cap.
 	gotUnmeasured := CenterNameWidth(frame, layout, center, false, true, uiscrollbar.StyleThumb, 10, [3]int{}, 0)
-	if gotUnmeasured != 40 {
-		t.Fatalf("CenterNameWidth (unmeasured) = %d, want cap 40", gotUnmeasured)
+	if gotUnmeasured != 39 {
+		t.Fatalf("CenterNameWidth (unmeasured) = %d, want cap 40 minus separator", gotUnmeasured)
 	}
 }

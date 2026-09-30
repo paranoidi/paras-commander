@@ -590,3 +590,51 @@ func TestChildHeaderBarPaintedWhileChildPending(t *testing.T) {
 		screen.Fini()
 	}
 }
+
+// TestTruncatedNamesKeepSeparatorBeforeNextColumn: a name too long for its column truncates
+// one cell short of the column edge, so the next column's content never touches it.
+func TestTruncatedNamesKeepSeparatorBeforeNextColumn(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+
+	long := "marmalade-lighthouse-quarterback-velvet-orchestra-pinecone-harbor.txt"
+	entries := []localfs.Entry{{Name: long, Path: "/vol/" + long, Type: localfs.EntryFile}}
+	center := panel.State{Path: pathloc.MustParse("/vol"), Entries: entries}
+	frame := geom.Rect{X: 0, Y: 0, Width: 92, Height: 18}
+	screen.SetSize(frame.Width, frame.Height)
+	styles := theme.Default()
+	layout := DefaultLayout()
+	layout.ShowSize = [3]bool{}
+	snap := panel.ListingSnapshot{Entries: entries}
+
+	DrawBody(screen, BodyParams{
+		Frame:               frame,
+		Center:              center,
+		Parent:              Column{Kind: ColumnParent, Populated: true, Snapshot: snap},
+		Child:               Column{Kind: ColumnChild, Populated: true, Snapshot: snap},
+		Styles:              styles,
+		FileListActive:      true,
+		HeaderStyle:         styles.PanelActiveHeader,
+		HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
+		SurfaceStyle:        styles.PanelActiveSurface,
+		ShowChildColumn:     true,
+		ScrollbarStyle:      uiscrollbar.StyleThumb,
+		InactiveFrameStyle:  styles.PanelInactiveFrame,
+		Layout:              layout,
+	})
+
+	cols := SplitColumns(frame, true, layout, [3]int{})
+	for i := 0; i < 2; i++ {
+		col := cols[i]
+		if got := rowText(screen, col.X, col.Y, col.Width-1); !strings.Contains(got, "…") && len([]rune(got)) >= len(long) {
+			t.Fatalf("col %d: name %q was not truncated; test needs a longer name", i, got)
+		}
+		if last := rowText(screen, col.X+col.Width-1, col.Y, 1); last != " " {
+			t.Fatalf("col %d: last cell before next column is %q, want blank separator", i, last)
+		}
+	}
+}
