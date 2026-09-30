@@ -55,9 +55,10 @@ type DedupSnapshot struct {
 	Walked         int
 	Hashed         int
 	HashTotal      int
-	HashBytesTotal int64  // total bytes among hash candidates (confirm gate + progress context)
-	HashedBytes    int64  // bytes hashed so far: completed candidates + in-progress partial reads
-	Current        string // rel directory of the tracked in-progress file (progress label)
+	HashBytesTotal int64     // total bytes among hash candidates (confirm gate + progress context)
+	HashStarted    time.Time // wall time hashing began, after the confirm gate; basis for the progress ETA
+	HashedBytes    int64     // bytes hashed so far: completed candidates + in-progress partial reads
+	Current        string    // rel directory of the tracked in-progress file (progress label)
 	// CurrentFile is the filename (no path) of the tracked in-progress file,
 	// set only when its size is at least DedupOptions.FileProgressBytes.
 	CurrentFile     string
@@ -261,12 +262,14 @@ func (s *DedupSession) run(ctx context.Context) {
 		bufSize = 256 * 1024
 	}
 
+	hashStarted := time.Now()
 	s.publish(DedupSnapshot{
 		Root:           s.root,
 		Phase:          DedupHashing,
 		Walked:         len(files),
 		HashTotal:      len(candidates),
 		HashBytesTotal: candidateBytes,
+		HashStarted:    hashStarted,
 	})
 
 	// Each size group is resolved by exactly one worker and groups have disjoint
@@ -317,6 +320,7 @@ func (s *DedupSession) run(ctx context.Context) {
 			HashTotal:      len(candidates),
 			HashBytesTotal: candidateBytes,
 			HashedBytes:    hashedBytes,
+			HashStarted:    hashStarted,
 		}
 		if tracked >= 0 {
 			snap.Current = RelDir(candidates[tracked].Rel)

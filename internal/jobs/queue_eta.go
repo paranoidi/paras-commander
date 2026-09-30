@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -137,7 +138,17 @@ func formatETADuration(secs float64) string {
 	if secs < 0 {
 		return "—"
 	}
-	return (time.Duration(secs) * time.Second).Round(time.Second).String()
+	// Zero-padded minutes/seconds keep the width steady between unit boundaries,
+	// so centered ETA labels don't shift every tick.
+	s := int64(secs)
+	switch {
+	case s < 60:
+		return fmt.Sprintf("%ds", s)
+	case s < 3600:
+		return fmt.Sprintf("%dm%02ds", s/60, s%60)
+	default:
+		return fmt.Sprintf("%dh%02dm%02ds", s/3600, s%3600/60, s%60)
+	}
 }
 
 // FormatQueueETA returns the display ETA for one job using precomputed queue offsets.

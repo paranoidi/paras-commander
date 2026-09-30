@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -380,4 +381,35 @@ func cellTextAt(screen tcell.Screen, x, y, w int) string {
 		b.WriteString(ch)
 	}
 	return b.String()
+}
+
+func TestDrawDedupProgressDialogHashingShowsETA(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	layout := Layout{Width: 80, Height: 24}
+	snap := comparepkg.DedupSnapshot{
+		Root:           pathloc.MustParse("/scan/root"),
+		Phase:          comparepkg.DedupHashing,
+		Hashed:         1,
+		HashTotal:      4,
+		HashBytesTotal: 2000,
+		HashedBytes:    1000,
+		HashStarted:    time.Now().Add(-10 * time.Second),
+	}
+	DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, theme.Default(), "")
+
+	rect := draw.CenteredDialogRect(layout, PreferredFormDialogWidth, dedupProgressDialogHeight(snap.Phase))
+	countY, ok := dialogRowContaining(screen, rect, "1/4")
+	if !ok {
+		t.Fatal("count row not found")
+	}
+	line := strings.TrimSpace(cellTextAt(screen, draw.DialogTextX(rect), countY+1, draw.DialogContentWidth(rect)))
+	if !strings.HasPrefix(line, "ETA ") || !strings.Contains(line, "s") {
+		t.Fatalf("row under count = %q, want ETA line", line)
+	}
 }

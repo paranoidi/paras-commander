@@ -67,3 +67,11 @@ func TestComputeQueueETAsScanningShowsDash(t *testing.T) {
 		t.Fatalf("scanning ETA = %q, want —", etas["s"])
 	}
 }
+
+func TestFormatETADurationZeroPads(t *testing.T) {
+	for secs, want := range map[float64]string{0: "0s", 9: "9s", 65: "1m05s", 3665: "1h01m05s", -1: "—"} {
+		if got := formatETADuration(secs); got != want {
+			t.Errorf("formatETADuration(%v) = %q, want %q", secs, got, want)
+		}
+	}
+}

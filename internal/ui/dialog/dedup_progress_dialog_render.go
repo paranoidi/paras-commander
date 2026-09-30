@@ -2,18 +2,21 @@ package dialog
 
 import (
 	"fmt"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 func dedupProgressDialogHeight(phase comparepkg.DedupPhase) int {
-	// Directory label + path + separator + status row (+ per-file bar row
-	// + hash count row when hashing) + blank + buttons + borders.
+	// Directory label + path + separator + status row + blank (hashing adds a
+	// per-file bar row and uses count + ETA rows instead of the blank) +
+	// separator + buttons + borders.
 	if phase == comparepkg.DedupHashing {
 		return 11
 	}
@@ -72,7 +75,10 @@ func DrawDedupProgressDialog(
 			drawDedupBar(screen, textX, y, textW, dedupFrac(snap.CurrentFileDone, snap.CurrentFileSize), snap.CurrentFile, styles)
 		}
 		y++
-		drawDedupHashCountRow(screen, rect, y, snap.Hashed, snap.HashTotal, textStyle)
+		drawDedupCenteredRow(screen, rect, y, fmt.Sprintf("%d/%d", snap.Hashed, snap.HashTotal), textStyle)
+		y++
+		eta := jobs.FormatETA(jobs.StatusRunning, snap.HashStarted, time.Now(), snap.HashBytesTotal, snap.HashedBytes, snap.HashTotal, snap.Hashed, 0, 0)
+		drawDedupCenteredRow(screen, rect, y, "ETA "+eta, textStyle)
 	default:
 		primitive.Text(screen, textX, y, textW, "Scanning"+string(primitive.Ellipsis), textStyle)
 	}
@@ -152,8 +158,7 @@ func dedupBarFilledCols(width int, frac float64) int {
 	return filled
 }
 
-func drawDedupHashCountRow(screen tcell.Screen, rect draw.Rect, y, hashed, total int, textStyle tcell.Style) {
-	label := fmt.Sprintf("%d/%d", hashed, total)
+func drawDedupCenteredRow(screen tcell.Screen, rect draw.Rect, y int, label string, textStyle tcell.Style) {
 	innerW := draw.DialogContentWidth(rect)
 	x := draw.DialogTextX(rect)
 	n := utf8.RuneCountInString(label)
