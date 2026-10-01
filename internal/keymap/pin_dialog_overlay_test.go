@@ -13,11 +13,11 @@ func TestAllowedInPinDialogOverlayRejectsForeignActions(t *testing.T) {
 	if AllowedInPinDialogOverlay(ActionBookmarkDelete) {
 		t.Fatal("AllowedInPinDialogOverlay should reject foreign actions")
 	}
-	if !AllowedInPinDialogOverlay(ActionPinOpenInPrimary) {
-		t.Fatal("AllowedInPinDialogOverlay should accept pin.open-primary")
+	if !AllowedInPinDialogOverlay(ActionOpenInPrimary) {
+		t.Fatal("AllowedInPinDialogOverlay should accept ui.open-primary")
 	}
-	if !AllowedInPinDialogOverlay(ActionPinOpenInSecondary) {
-		t.Fatal("AllowedInPinDialogOverlay should accept pin.open-secondary")
+	if !AllowedInPinDialogOverlay(ActionOpenInSecondary) {
+		t.Fatal("AllowedInPinDialogOverlay should accept ui.open-secondary")
 	}
 	if !AllowedInPinDialogOverlay(ActionPinRemove) {
 		t.Fatal("AllowedInPinDialogOverlay should accept pin.remove")
@@ -47,8 +47,8 @@ func TestDefaultBundlePinDialogOverlayKeys(t *testing.T) {
 		ev   *tcell.EventKey
 		want string
 	}{
-		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift), ActionPinOpenInPrimary},
-		{tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift), ActionPinOpenInSecondary},
+		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift), ActionOpenInPrimary},
+		{tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift), ActionOpenInSecondary},
 		{tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone), ActionPinRemove},
 	}
 	for _, tt := range tests {

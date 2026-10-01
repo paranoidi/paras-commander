@@ -160,6 +160,11 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		a.dedupCtrl.KeepSelection()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
+	case keymap.ActionOpenInPrimary, keymap.ActionOpenInSecondary:
+		if path, isDir, ok := a.dedupCtrl.PaneTarget(a.model.DedupView.FocusCopies); ok {
+			a.dedupCtrl.OpenInPanel(openInPanelID(actionID), path, isDir)
+		}
+		return true
 	case keymap.ActionDedupCompare:
 		if p, s, ok := a.dedupCtrl.CompareDirsFromSelection(); ok {
 			a.compareCtrl.OpenPaths(p, s, a.activePanel().ShowHidden,
@@ -183,6 +188,13 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	default:
 		return false
 	}
+}
+
+func openInPanelID(actionID string) int {
+	if actionID == keymap.ActionOpenInSecondary {
+		return ui.SecondaryPanel
+	}
+	return ui.PrimaryPanel
 }
 
 func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.FunctionKey {
@@ -213,6 +225,12 @@ func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.Functi
 		}
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupCompare); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Compare", ActionID: keymap.ActionDedupCompare})
+		}
+		if lbl := dedup.MenuBindingLabel(keymap.ActionOpenInPrimary); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄", ActionID: keymap.ActionOpenInPrimary})
+		}
+		if lbl := dedup.MenuBindingLabel(keymap.ActionOpenInSecondary); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ►", ActionID: keymap.ActionOpenInSecondary})
 		}
 	}
 	if global != nil {

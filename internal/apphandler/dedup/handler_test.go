@@ -11,11 +11,16 @@ import (
 )
 
 type dedupHandlerHost struct {
-	msg string
+	msg                string
+	navPanel           int
+	navPath, navSelect string
 }
 
-func (h *dedupHandlerHost) NavigatePanelToPath(int, string, string) error { return nil }
-func (h *dedupHandlerHost) EnqueueDeleteJob([]string, bool)               {}
+func (h *dedupHandlerHost) NavigatePanelToPath(p int, path, sel string) error {
+	h.navPanel, h.navPath, h.navSelect = p, path, sel
+	return nil
+}
+func (h *dedupHandlerHost) EnqueueDeleteJob([]string, bool) {}
 func (h *dedupHandlerHost) SetTransientMessage(text string, _ ui.MessageUrgency) {
 	h.msg = text
 }
@@ -398,5 +403,22 @@ func TestDeleteMarked_keepsCursorNearDeletedRow(t *testing.T) {
 	deleteAt("cobalt", "quiver.txt") // tail rows gone → previous surviving row
 	if got := selectedID(); got != "/scan/cobalt/lantern.txt" {
 		t.Fatalf("after tail delete selected %q, want /scan/cobalt/lantern.txt", got)
+	}
+}
+
+func TestOpenInPanel_navigatesAndKeepsView(t *testing.T) {
+	host := &dedupHandlerHost{}
+	model := &ui.Model{ViewMode: ui.ViewDedup}
+	h := New(Deps{Host: host, Model: model})
+	h.OpenInPanel(ui.SecondaryPanel, "/scan/alpha/widget.txt", false)
+	if host.navPanel != ui.SecondaryPanel || host.navPath != "/scan/alpha" || host.navSelect != "widget.txt" {
+		t.Fatalf("nav = %d %q %q", host.navPanel, host.navPath, host.navSelect)
+	}
+	if host.msg != "Opened widget.txt in secondary panel" || model.ViewMode != ui.ViewDedup {
+		t.Fatalf("msg %q view %v", host.msg, model.ViewMode)
+	}
+	h.OpenInPanel(ui.PrimaryPanel, "/scan/alpha", true)
+	if host.navPath != "/scan/alpha" || host.navSelect != "" {
+		t.Fatalf("dir nav = %q %q", host.navPath, host.navSelect)
 	}
 }

@@ -1093,6 +1093,24 @@ func (h *Handler) selectedDirAbs() string {
 	return h.dirAbs(row)
 }
 
+// OpenInPanel points the given panel at path (a directory, or a file's parent with the file
+// selected) and leaves the view open. Single entry point for the tree panes and the browse panel.
+func (h *Handler) OpenInPanel(panelID int, path string, isDir bool) {
+	dir, name := path, ""
+	if !isDir {
+		dir, name = filepath.Dir(path), filepath.Base(path)
+	}
+	if err := h.host.NavigatePanelToPath(panelID, dir, name); err != nil {
+		h.host.SetTransientMessage("Open: "+err.Error(), ui.MessageUrgencyWarn)
+		return
+	}
+	which := "primary"
+	if panelID == ui.SecondaryPanel {
+		which = "secondary"
+	}
+	h.host.SetTransientMessage(fmt.Sprintf("Opened %s in %s panel", filepath.Base(path), which), ui.MessageUrgencyInfo)
+}
+
 // SelectedPinTarget is PaneTarget for the focused pane.
 func (h *Handler) SelectedPinTarget() (path string, isDir bool, ok bool) {
 	return h.PaneTarget(h.model.DedupView.FocusCopies)

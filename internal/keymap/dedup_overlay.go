@@ -4,7 +4,7 @@ import "strings"
 
 // DefaultDedupOverlayKeys holds built-in chords for the find-duplicates view ([dedup]).
 func DefaultDedupOverlayKeys() map[string][]string {
-	return map[string][]string{
+	return withOpenInPanelKeys(map[string][]string{
 		ActionDedupClose:       {"esc"},
 		ActionDedupToggleSort:  {"M-s"}, // match the file-list sort shortcut (panel.sort-dialog)
 		ActionDedupToggleEmpty: {"M-e"},
@@ -17,7 +17,7 @@ func DefaultDedupOverlayKeys() map[string][]string {
 		ActionDedupNextDir:     {"M-down"},
 		ActionDedupMarkKeep:    {"C-k"},
 		ActionDedupCompare:     {"C-M-c"}, // matches global panel.compare-panels; overlay shadows it in-view
-	}
+	})
 }
 
 // AllowedInDedupOverlay reports whether actionID may appear under [dedup].
@@ -25,5 +25,5 @@ func AllowedInDedupOverlay(actionID string) bool {
 	if _, ok := KnownActions[actionID]; !ok {
 		return false
 	}
-	return strings.HasPrefix(actionID, "dedup.")
+	return strings.HasPrefix(actionID, "dedup.") || isOpenInPanelAction(actionID)
 }

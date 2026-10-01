@@ -56,8 +56,6 @@ const (
 	ActionFindSelectGroup             = "find.select-group"
 	ActionFindUnselectGroup           = "find.unselect-group"
 	ActionFindSelectParentDirs        = "find.select-parent-dirs"
-	ActionFindOpenInPrimary           = "find.open-primary"
-	ActionFindOpenInSecondary         = "find.open-secondary"
 	ActionPanelRefresh                = "panel.refresh"
 	ActionPanelSelectToggle           = "panel.select-toggle"
 	ActionPanelSelectGroup            = "panel.select-group"
@@ -108,13 +106,11 @@ const (
 
 	// Pin dialog: an ad-hoc, session-only pin list of files/directories, added/removed from
 	// the main panel, Find dialog, Compare view, and Dedup view.
-	ActionPanelPinDialog     = "panel.pin-dialog"
-	ActionPanelPinToggle     = "panel.pin-toggle"
-	ActionPinOpenInPrimary   = "pin.open-primary"
-	ActionPinOpenInSecondary = "pin.open-secondary"
-	ActionPinRemove          = "pin.remove"
-	ActionPinRemoveAll       = "pin.remove-all"
-	ActionPinView            = "pin.view"
+	ActionPanelPinDialog = "panel.pin-dialog"
+	ActionPanelPinToggle = "panel.pin-toggle"
+	ActionPinRemove      = "pin.remove"
+	ActionPinRemoveAll   = "pin.remove-all"
+	ActionPinView        = "pin.view"
 
 	// Compare view
 	ActionCompareClose       = "compare.close"
@@ -276,6 +272,11 @@ const (
 	// [dialog.transfer], not [main].
 	ActionDestinationActivePanel   = "ui.destination-active"
 	ActionDestinationInactivePanel = "ui.destination-inactive"
+
+	// ActionOpenInPrimary / ActionOpenInSecondary point a panel at the highlighted result in the
+	// find and pin dialogs and the dedup view. Default chords: DefaultOpenInPanelKeys.
+	ActionOpenInPrimary   = "ui.open-primary"
+	ActionOpenInSecondary = "ui.open-secondary"
 )
 
 // Menu routing identifiers for File pulldown entries (bindable in keybindings.toml).
@@ -338,8 +339,6 @@ var KnownActions = map[string]struct{}{
 	ActionFindSelectGroup:             {},
 	ActionFindUnselectGroup:           {},
 	ActionFindSelectParentDirs:        {},
-	ActionFindOpenInPrimary:           {},
-	ActionFindOpenInSecondary:         {},
 	ActionPanelRefresh:                {},
 	ActionPanelSelectToggle:           {},
 	ActionPanelSelectGroup:            {},
@@ -388,13 +387,13 @@ var KnownActions = map[string]struct{}{
 	ActionPanelFindDuplicates:         {},
 	ActionPanelFilterDialog:           {},
 
-	ActionPanelPinDialog:     {},
-	ActionPanelPinToggle:     {},
-	ActionPinOpenInPrimary:   {},
-	ActionPinOpenInSecondary: {},
-	ActionPinRemove:          {},
-	ActionPinRemoveAll:       {},
-	ActionPinView:            {},
+	ActionPanelPinDialog:  {},
+	ActionPanelPinToggle:  {},
+	ActionOpenInPrimary:   {},
+	ActionOpenInSecondary: {},
+	ActionPinRemove:       {},
+	ActionPinRemoveAll:    {},
+	ActionPinView:         {},
 
 	ActionCompareClose:       {},
 	ActionCompareCycleFilter: {},

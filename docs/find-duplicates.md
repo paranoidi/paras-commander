@@ -17,6 +17,8 @@ Rows that are copies of the file under the cursor (and collapsed folders contain
 
 In **View: Dirs** the right column is split: the Copies pane on top and a browse panel below it, a real file list. It shows the directory of the row under the cursor (the directory itself for a folder row, or the file's parent with the cursor on the file), following whichever tree pane's cursor moved last (switching panes with Tab does not reload it). Tab cycles focus main tree, Copies, browse panel, back to main. In the browse panel you can move the cursor, open a folder (Enter/Right), go to the parent (Backspace/Left), view a file (F3, returning to the results) or edit it (F4); selection and file operations are not available there. Moving the cursor in either tree pane (not merely focusing it) re-syncs the panel to the new row, discarding manual navigation. Leaving the results view and coming back keeps the browse panel's focus and location. **View: Groups** has no browse panel.
 
+Shift+Left / Shift+Right (`ui.open-primary` / `ui.open-secondary`, the same actions the Find and Pin dialogs use) point the primary or secondary file panel at the row under the cursor: a folder opens that folder, a file opens its parent with the file selected. This works in both tree panes and in the browse panel, and the results view stays open.
+
 ## Leaving and returning
 
 Leaving the results view (Esc, Alt+W again, Enter to jump to a file, "Back to file view", or switching to Jobs/Commands/Messages) keeps the results in memory and shows `Duplicates kept - Alt+W returns`. Kept results live until the next scan or until pc quits. There are two ways back:

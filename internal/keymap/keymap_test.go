@@ -657,12 +657,12 @@ func TestDefaultBundleFindDialogOverlayF5CtrlA(t *testing.T) {
 		t.Fatalf("FindDialog F7 = %q %v, want %q", id, ok, ActionFindUnselectGroup)
 	}
 	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
-	if !ok || id != ActionFindOpenInPrimary {
-		t.Fatalf("FindDialog Shift+Left = %q %v, want %q", id, ok, ActionFindOpenInPrimary)
+	if !ok || id != ActionOpenInPrimary {
+		t.Fatalf("FindDialog Shift+Left = %q %v, want %q", id, ok, ActionOpenInPrimary)
 	}
 	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
-	if !ok || id != ActionFindOpenInSecondary {
-		t.Fatalf("FindDialog Shift+Right = %q %v, want %q", id, ok, ActionFindOpenInSecondary)
+	if !ok || id != ActionOpenInSecondary {
+		t.Fatalf("FindDialog Shift+Right = %q %v, want %q", id, ok, ActionOpenInSecondary)
 	}
 }
 

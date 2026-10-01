@@ -1046,22 +1046,6 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"find dialog", "containing", "directories", "parent", "convert"},
 		},
 		{
-			ID:           ActionFindOpenInPrimary,
-			Title:        "Open in primary panel",
-			Section:      "Find",
-			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
-			PreferredKey: "S-left",
-			Keywords:     []string{"find dialog", "left panel", "reveal", "cd"},
-		},
-		{
-			ID:           ActionFindOpenInSecondary,
-			Title:        "Open in secondary panel",
-			Section:      "Find",
-			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
-			PreferredKey: "S-right",
-			Keywords:     []string{"find dialog", "right panel", "reveal", "cd"},
-		},
-		{
 			ID:           ActionPinView,
 			Title:        "View",
 			Section:      "Pin",
@@ -1070,20 +1054,22 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"pin dialog", "preview", "quick view", "fullscreen"},
 		},
 		{
-			ID:           ActionPinOpenInPrimary,
+			ID:           ActionOpenInPrimary,
 			Title:        "Open in primary panel",
-			Section:      "Pin",
-			DefaultKeys:  nil, // overlay: DefaultPinDialogOverlayKeys
+			Section:      "Panels",
+			Views:        HelpDedup,
+			DefaultKeys:  nil, // overlays: DefaultOpenInPanelKeys
 			PreferredKey: "S-left",
-			Keywords:     []string{"pin dialog", "left panel", "reveal", "cd"},
+			Keywords:     []string{"find dialog", "pin dialog", "dedup", "left panel", "reveal", "cd"},
 		},
 		{
-			ID:           ActionPinOpenInSecondary,
+			ID:           ActionOpenInSecondary,
 			Title:        "Open in secondary panel",
-			Section:      "Pin",
-			DefaultKeys:  nil, // overlay: DefaultPinDialogOverlayKeys
+			Section:      "Panels",
+			Views:        HelpDedup,
+			DefaultKeys:  nil, // overlays: DefaultOpenInPanelKeys
 			PreferredKey: "S-right",
-			Keywords:     []string{"pin dialog", "right panel", "reveal", "cd"},
+			Keywords:     []string{"find dialog", "pin dialog", "dedup", "right panel", "reveal", "cd"},
 		},
 		{
 			ID:           ActionPinRemove,

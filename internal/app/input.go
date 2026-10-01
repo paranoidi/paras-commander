@@ -445,10 +445,10 @@ func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	if lbl := keys.MenuBindingLabel(keymap.ActionFindUnselectGroup); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect group"})
 	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionFindOpenInPrimary); lbl != "" {
+	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInPrimary); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄"})
 	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionFindOpenInSecondary); lbl != "" {
+	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInSecondary); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ►"})
 	}
 	return out
@@ -462,10 +462,10 @@ func pinDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	if lbl := keys.MenuBindingLabel(keymap.ActionPinView); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "View"})
 	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionPinOpenInPrimary); lbl != "" {
+	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInPrimary); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄"})
 	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionPinOpenInSecondary); lbl != "" {
+	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInSecondary); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ►"})
 	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionPinRemove); lbl != "" {

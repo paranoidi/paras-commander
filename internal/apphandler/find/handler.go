@@ -1268,9 +1268,9 @@ func (h *Handler) tryFindDialogActionKey(event *tcell.EventKey) bool {
 		h.host.OpenGroupSelectDialog(GroupSelectModeUnselect, true)
 	case keymap.ActionFindSelectParentDirs:
 		h.findDialogSelectParentDirs()
-	case keymap.ActionFindOpenInPrimary:
+	case keymap.ActionOpenInPrimary:
 		h.OpenSelectedInPrimary()
-	case keymap.ActionFindOpenInSecondary:
+	case keymap.ActionOpenInSecondary:
 		h.OpenSelectedInSecondary()
 	default:
 		return false
