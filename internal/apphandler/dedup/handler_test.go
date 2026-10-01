@@ -513,3 +513,38 @@ func TestTypeToJumpFilter(t *testing.T) {
 		t.Fatal("switching panes should clear the filter")
 	}
 }
+
+func TestSwitchPanePrevCyclesInReverse(t *testing.T) {
+	root := pathloc.MustParse("/scan")
+	snap := dedupDoneSnapshot(root, dedupFile("alpha/widget.txt"), dedupFile("beta/widget.txt"))
+	h, model := dedupHandlerWithView(t, snap, ui.DedupViewState{TreeDirs: true, Marked: map[string]bool{}, Kept: map[string]bool{}})
+	model.DedupCopiesList = []ui.DedupRow{{}}
+	st := &model.DedupView
+	focus := func() string {
+		switch {
+		case st.FocusPanel:
+			return "panel"
+		case st.FocusCopies:
+			return "copies"
+		}
+		return "main"
+	}
+	for _, want := range []string{"panel", "copies", "main", "panel"} {
+		h.SwitchPanePrev()
+		if got := focus(); got != want {
+			t.Fatalf("SwitchPanePrev focus = %s, want %s", got, want)
+		}
+	}
+	for _, want := range []string{"main", "copies", "panel"} {
+		h.SwitchPane()
+		if got := focus(); got != want {
+			t.Fatalf("SwitchPane focus = %s, want %s", got, want)
+		}
+	}
+	model.DedupCopiesList = nil
+	st.FocusPanel = true
+	h.SwitchPanePrev()
+	if got := focus(); got != "main" {
+		t.Fatalf("SwitchPanePrev without copies = %s, want main", got)
+	}
+}

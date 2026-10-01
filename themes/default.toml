@@ -176,7 +176,7 @@ frame = { fg = "bright_black" }
 header = { fg = "bright_white", bg = "blue", bold = true }
 header.carousel = { fg = "black", bg = "bright_black" }
 row.cursor = { bg = "black" }
-row.cursor.selected = { fg = "yellow", bg = "cyan", bold = true }
+row.cursor.selected = { fg = "yellow", bg = "black", bold = true }
 surface = { fg = "white" }
 title = { fg = "white" }
 usage.cursor = { fg = "white", bg = "black" }

@@ -347,20 +347,20 @@ func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry 
 	}
 	lineStyle := rowBase
 	switch {
-	case f.Kept && f.RowSelected:
+	case f.Kept && f.RowSelected && p.Focused:
 		lineStyle = styles.PanelDedupRowCursorKeep
-	case f.Kept:
-		lineStyle = styles.PanelDedupRowKeep.Background(bg)
-	case f.GroupAllMarked && f.RowSelected:
+	case f.GroupAllMarked && f.RowSelected && p.Focused:
 		lineStyle = styles.PanelDedupRowCursorAllMarked
-	case f.GroupAllMarked:
-		lineStyle = styles.PanelDedupRowAllMarked.Background(bg)
 	case f.RowSelected:
 		lineStyle = styles.PanelListingCursorStyle(rowBase, theme.PanelListingCursorOpts{
 			ChromeBlocked:  chromeBlocked,
 			FileListActive: p.Focused,
 			Selected:       f.Marked || f.DirFullyMarked,
 		})
+	case f.Kept:
+		lineStyle = styles.PanelDedupRowKeep.Background(bg)
+	case f.GroupAllMarked:
+		lineStyle = styles.PanelDedupRowAllMarked.Background(bg)
 	case f.Marked, f.DirFullyMarked:
 		lineStyle = styles.PanelListingSelectedStyle(chromeBlocked).Background(bg)
 	}

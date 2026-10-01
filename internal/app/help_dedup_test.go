@@ -95,8 +95,20 @@ func TestDedupHelpUsesOverlayKeys(t *testing.T) {
 	if idx < 0 {
 		t.Fatal("dedup help missing dedup.mark-keep")
 	}
-	if !strings.Contains(entries[idx].Keys, "Ctrl-K") {
-		t.Fatalf("dedup.mark-keep keys = %q, want Ctrl-K from overlay", entries[idx].Keys)
+	for _, want := range []string{"Space", "Ctrl-K"} {
+		if !strings.Contains(entries[idx].Keys, want) {
+			t.Fatalf("dedup.mark-keep keys = %q, want %s from overlay", entries[idx].Keys, want)
+		}
+	}
+}
+
+func TestHelpFooterOverDedupViewOmitsDedupKeys(t *testing.T) {
+	app := setupDedupViewApp(t)
+	app.openHelpDialog()
+	for _, k := range app.activeFooterKeys() {
+		if k.ActionID == keymap.ActionDedupMarkKeep {
+			t.Fatalf("help footer leaks dedup key %+v", k)
+		}
 	}
 }
 

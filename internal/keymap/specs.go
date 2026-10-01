@@ -683,6 +683,14 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "m",
 		},
 		{
+			ID:          ActionDedupPrevPane,
+			Views:       HelpDedup,
+			Title:       "Previous pane",
+			Section:     "Find duplicates",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"pane", "focus", "previous", "shift-tab", "back"},
+		},
+		{
 			ID:          ActionDedupCompare,
 			Views:       HelpDedup,
 			Title:       "Compare directories",

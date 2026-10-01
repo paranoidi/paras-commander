@@ -266,6 +266,63 @@ func TestDrawDedupViewFullyMarkedGroupUsesRedRowStyle(t *testing.T) {
 	}
 }
 
+func TestDrawDedupViewUnfocusedKeptCursorRowUsesInactiveCursor(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	relA := "alpha/ledger.bin"
+	relB := "beta/ledger.bin"
+	absA := pathloc.MustParse("/scan/root/" + relA)
+	absB := pathloc.MustParse("/scan/root/" + relB)
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{{
+			Size: 1024,
+			Files: []comparepkg.DedupFile{
+				{Rel: relA, Abs: absA},
+				{Rel: relB, Abs: absB},
+			},
+		}},
+	}
+	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
+	copies := DedupCopyRows(snap, list[0], nil)
+	view := DedupViewState{
+		// Keeping A marks its copy B for deletion: the copies-pane cursor sits on a marked row.
+		Kept:   map[string]bool{absA.String(): true},
+		Marked: map[string]bool{absB.String(): true},
+	}
+
+	drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal, nil)
+
+	copiesRect, _ := DedupSecondaryRects(layout.Secondary, view.TreeDirs)
+	_, keepBG, _ := styles.PanelDedupRowCursorKeep.Decompose()
+	_, wantBG, _ := styles.PanelListingCursorStyle(styles.PanelActiveSurface, theme.PanelListingCursorOpts{}).Decompose()
+	if keepBG == wantBG {
+		t.Fatal("test requires distinct keep-cursor and inactive-cursor backgrounds")
+	}
+	found := false
+	for y := copiesRect.Y; y < copiesRect.Y+copiesRect.Height; y++ {
+		_, bg, _ := cellStyleAt(screen, copiesRect.X+3, y).Decompose()
+		if bg == keepBG {
+			t.Fatalf("copies row y=%d uses focused keep-cursor bg in an unfocused pane", y)
+		}
+		found = found || bg == wantBG
+	}
+	if !found {
+		t.Fatalf("no copies row has inactive cursor bg %v", wantBG)
+	}
+}
+
 func TestDrawDedupViewHighlightsDuplicateSiblingsOfCursor(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

@@ -780,20 +780,32 @@ func (h *Handler) SelectEdge(last bool) {
 // SwitchPane cycles focus (Tab): main tree -> copies pane (if non-empty) -> browse panel (Dirs
 // view, results ready) -> main tree. FocusCopies keeps naming the source pane while the browse
 // panel is focused.
-func (h *Handler) SwitchPane() {
+func (h *Handler) SwitchPane() { h.cyclePane(1) }
+
+// SwitchPanePrev cycles focus in reverse: browse panel → copies → main tree → browse panel.
+func (h *Handler) SwitchPanePrev() { h.cyclePane(-1) }
+
+// cyclePane moves focus dir steps through main tree (0), copies (1) and browse panel (2),
+// skipping an empty copies pane and the browse panel when it is not shown.
+func (h *Handler) cyclePane(dir int) {
 	st := &h.model.DedupView
-	hasPanel := st.TreeDirs && h.model.DedupSnapshot.Phase == comparepkg.DedupDone
-	st.Main.Filter, st.Copies.Filter = quickfilter.Filter{}, quickfilter.Filter{}
-	switch {
-	case st.FocusPanel:
-		st.FocusPanel, st.FocusCopies = false, false
-	case !st.FocusCopies && len(h.model.DedupCopiesList) > 0:
-		st.FocusCopies = true
-	case hasPanel:
-		st.FocusPanel = true
-	default:
-		st.FocusCopies = false
+	avail := [3]bool{
+		true,
+		len(h.model.DedupCopiesList) > 0,
+		st.TreeDirs && h.model.DedupSnapshot.Phase == comparepkg.DedupDone,
 	}
+	cur := 0
+	if st.FocusPanel {
+		cur = 2
+	} else if st.FocusCopies {
+		cur = 1
+	}
+	next := (cur + dir + 3) % 3
+	for !avail[next] {
+		next = (next + dir + 3) % 3
+	}
+	st.Main.Filter, st.Copies.Filter = quickfilter.Filter{}, quickfilter.Filter{}
+	st.FocusCopies, st.FocusPanel = next == 1, next == 2
 }
 
 // resyncPreservingCursor rebuilds the visible rows and re-locates the main
@@ -1206,6 +1218,7 @@ func (h *Handler) SelectToggleAndAdvance() {
 		return
 	}
 	if st.Kept[row.Value.AbsKey] {
+		h.host.SetTransientMessage("Kept file can not be selected", ui.MessageUrgencyWarn)
 		return
 	}
 	h.setMark(row.Value.AbsKey, row.Value.Size, !st.Marked[row.Value.AbsKey])

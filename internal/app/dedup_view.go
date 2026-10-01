@@ -175,6 +175,9 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		a.dedupCtrl.MoveToAdjacentDir(1)
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
+	case keymap.ActionDedupPrevPane:
+		a.dedupCtrl.SwitchPanePrev()
+		return true
 	case keymap.ActionDedupMarkKeep:
 		a.dedupCtrl.KeepSelection()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())

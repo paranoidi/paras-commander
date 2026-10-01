@@ -129,6 +129,8 @@ func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 		a.closeDedupView()
 	case keymap.ActionPanelSwitch:
 		a.dedupCtrl.SwitchPane()
+	case keymap.ActionDedupPrevPane:
+		a.dedupCtrl.SwitchPanePrev()
 	case keymap.ActionNavUp:
 		p.Move(-1, rows)
 	case keymap.ActionNavDown:
