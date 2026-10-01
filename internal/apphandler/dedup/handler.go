@@ -15,6 +15,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -755,10 +756,48 @@ func (h *Handler) CollapseAll() {
 	h.ensureSelectionVisible(0)
 }
 
-// ExpandAll clears the focused pane's collapse state.
+// ExpandAll expands the focused pane like the main file list's full expand-all:
+// down to panel.MaxExpandAllShallowDepth levels, and fewer when the result would
+// exceed panel.MaxExpandAllTotalRows rows. Nodes at the cutoff stay collapsed.
 func (h *Handler) ExpandAll() {
+	st := &h.model.DedupView
 	pane, _ := h.focusedPane()
+	var full []ui.DedupRow
+	if st.FocusCopies {
+		sel, _ := h.paneRow(&st.Main, h.model.DedupList)
+		full = ui.DedupCopyRows(h.model.DedupSnapshot, sel, nil)
+	} else {
+		view := *st
+		view.Main.Collapsed = nil
+		full, _ = ui.DedupRowsFromSnapshot(h.model.DedupSnapshot, view)
+	}
+	limit := panel.MaxExpandAllShallowDepth
+	for ; limit > 0; limit-- {
+		n := 0
+		for _, r := range full {
+			if r.Depth <= limit {
+				n++
+			}
+		}
+		if n <= panel.MaxExpandAllTotalRows {
+			break
+		}
+	}
 	pane.Collapsed = nil
+	for _, r := range full {
+		if r.HasChildren && r.Depth >= limit {
+			if pane.Collapsed == nil {
+				pane.Collapsed = map[string]bool{}
+			}
+			pane.Collapsed[r.ID] = true
+		}
+	}
+	switch {
+	case limit < panel.MaxExpandAllShallowDepth:
+		h.host.SetTransientMessage(fmt.Sprintf("Expand all stopped: too many entries (limit %d)", panel.MaxExpandAllTotalRows), ui.MessageUrgencyInfo)
+	case pane.Collapsed != nil:
+		h.host.SetTransientMessage(fmt.Sprintf("Expand all is limited to depth %d", panel.MaxExpandAllShallowDepth), ui.MessageUrgencyInfo)
+	}
 	h.resyncFocused()
 }
 

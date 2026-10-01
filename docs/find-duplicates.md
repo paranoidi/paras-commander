@@ -19,6 +19,8 @@ In **View: Dirs** the right column is split: the Copies pane on top and a browse
 
 Shift+Left / Shift+Right (`ui.open-primary` / `ui.open-secondary`, the same actions the Find and Pin dialogs use) point the primary or secondary file panel at the row under the cursor: a folder opens that folder, a file opens its parent with the file selected. This works in both tree panes and in the browse panel, and the results view stays open.
 
+Alt+Shift+Left / Alt+Shift+Right (`panel.tree-collapse-all-full` / `panel.tree-expand-all-full`, the same keys as the main file list) collapse or expand every folder in the focused tree pane. Expanding is capped like the main file list: at most 5 levels deep (folders at the cutoff stay collapsed, with an info toast), and fewer levels if the result would exceed 20,000 rows.
+
 ## Leaving and returning
 
 Leaving the results view (Esc, Alt+W again, Enter to jump to a file, "Back to file view", or switching to Jobs/Commands/Messages) keeps the results in memory and shows `Duplicates kept - Alt+W returns`. Kept results live until the next scan or until pc quits. There are two ways back:

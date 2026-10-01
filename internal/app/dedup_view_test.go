@@ -10,6 +10,7 @@ import (
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -1444,5 +1445,34 @@ func TestDedupProgressDialogCancelClosesScan(t *testing.T) {
 	}
 	if app.model.ViewMode != ui.ViewBrowser {
 		t.Fatalf("ViewMode = %v, want ViewBrowser after cancel", app.model.ViewMode)
+	}
+}
+
+func TestDedupViewExpandAllStopsAtMainDepthCap(t *testing.T) {
+	dir := t.TempDir()
+	names := []string{"orchard", "meadow", "lantern", "harbor", "willow", "ember", "quartz", "falcon"}
+	deepest := filepath.Join(dir, filepath.Join(names...))
+	if err := os.MkdirAll(deepest, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{filepath.Join(dir, "pebble.txt"), filepath.Join(deepest, "pebble.txt")} {
+		if err := os.WriteFile(p, []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	app.dedupCtrl.CollapseAll()
+	app.dedupCtrl.ExpandAll()
+	maxDepth := 0
+	for _, r := range app.model.DedupList {
+		maxDepth = max(maxDepth, r.Depth)
+	}
+	if maxDepth != panel.MaxExpandAllShallowDepth {
+		t.Fatalf("max visible depth = %d, want %d", maxDepth, panel.MaxExpandAllShallowDepth)
 	}
 }
