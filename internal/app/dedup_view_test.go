@@ -1519,3 +1519,35 @@ func TestDedupViewLevelCollapseExpandStepsOneLevel(t *testing.T) {
 		t.Fatalf("depth after one expand = %d, want %d", got, full-1)
 	}
 }
+
+func TestDedupViewCursorMotionFollowsNavRebind(t *testing.T) {
+	dir := t.TempDir()
+	for _, rel := range []string{"pebble.txt", "ember.txt"} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	keys := keymap.DefaultActionKeys()
+	keys[keymap.ActionNavDown] = []string{"C-n"}
+	m, err := keymap.Build(keys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app.keys.Global = m
+
+	app.model.DedupView.Main.Selected = 0
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if got := app.model.DedupView.Main.Selected; got != 0 {
+		t.Fatalf("Down moved cursor to %d after nav.down was rebound, want 0", got)
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlN, 0, tcell.ModCtrl))
+	if got := app.model.DedupView.Main.Selected; got != 1 {
+		t.Fatalf("rebound key moved cursor to %d, want 1", got)
+	}
+}

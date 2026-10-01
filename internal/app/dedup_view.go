@@ -300,30 +300,25 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	case keymap.ActionPanelSwitch:
 		a.dedupCtrl.SwitchPane()
 		return false
-	}
-
-	switch event.Key() {
-	case tcell.KeyEsc:
-		a.closeDedupView()
-	case tcell.KeyUp:
+	case keymap.ActionNavUp:
 		a.dedupCtrl.MoveSelection(-1)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
-	case tcell.KeyDown:
+	case keymap.ActionNavDown:
 		a.dedupCtrl.MoveSelection(1)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
-	case tcell.KeyPgUp:
+	case keymap.ActionNavPageUp:
 		a.dedupCtrl.MoveSelection(-visible)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
-	case tcell.KeyPgDn:
+	case keymap.ActionNavPageDown:
 		a.dedupCtrl.MoveSelection(visible)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
-	case tcell.KeyHome:
+	case keymap.ActionNavTop:
 		a.dedupCtrl.SelectEdge(false)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
-	case tcell.KeyEnd:
+	case keymap.ActionNavBottom:
 		a.dedupCtrl.SelectEdge(true)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
-	case tcell.KeyEnter:
+	case keymap.ActionNavOpen:
 		a.dedupCtrl.NavigateFromSelection()
 		a.closeDedupView()
 	}
