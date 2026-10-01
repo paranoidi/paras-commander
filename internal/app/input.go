@@ -4,10 +4,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -944,7 +945,7 @@ func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
 }
 
 // filterRetainsKey reports whether an open quick filter f consumes event itself.
-func filterRetainsKey(f panel.FilterState, event *tcell.EventKey, global *keymap.Map) bool {
+func filterRetainsKey(f quickfilter.Filter, event *tcell.EventKey, global *keymap.Map) bool {
 	if keymap.IsPlainPrintableRune(event) {
 		if event.Rune() == ' ' {
 			return true
@@ -978,7 +979,7 @@ func (a *App) stripFilterFocused() bool {
 	return a.model.ViewMode == ui.ViewBrowser && a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip
 }
 
-func (a *App) activeQuickFilter() panel.FilterState {
+func (a *App) activeQuickFilter() quickfilter.Filter {
 	if a.stripFilterFocused() {
 		return a.activePanel().StripFilter
 	}

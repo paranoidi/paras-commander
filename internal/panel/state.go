@@ -8,6 +8,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
+
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
@@ -116,9 +118,9 @@ type State struct {
 	// gitStatusChildPending counts tree-child git-status fetches dispatched by
 	// scheduleTreeChildGitStatus that haven't completed yet — see NoteTreeChildGitStatusApplied.
 	gitStatusChildPending int
-	Filter                FilterState
+	Filter                quickfilter.Filter
 	// StripFilter is the selections-strip quick filter (basename fuzzy match), independent of Filter.
-	StripFilter FilterState
+	StripFilter quickfilter.Filter
 	// ActiveEntryFilter narrows visible entries (e.g. git-status filtering); nil means unfiltered.
 	ActiveEntryFilter *EntryFilter
 	// filteredIdx holds raw (unfiltered) entry indices matching ActiveEntryFilter, in display order.
@@ -128,7 +130,9 @@ type State struct {
 	// recomputeFilteredTreeConnectors. nil outside tree mode or when no filter is active.
 	filteredTreeShape []treeConnectorShape
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
-	DiskSorter func(absPath string) (int64, bool)
+	// FilterOptions supplies the live quick-filter settings on every rank/cycle; nil means zero Options.
+	FilterOptions func() quickfilter.Options
+	DiskSorter    func(absPath string) (int64, bool)
 	// MetaValue resolves column to its raw per-path results map and pending marker, and false
 	// when the column itself is missing. Used only when Sort.Mode == SortMeta, and resolved once
 	// per sort rather than per comparison (see SortEntries).
@@ -319,9 +323,6 @@ func newState(opts localfs.ListOptions, gitignoreCache *gitignore.Cache) State {
 		ScrollOffset: 0,
 		ShowHidden:   opts.ShowHidden,
 		Gitignore:    gitignoreCache,
-		Filter: FilterState{
-			CaseInsensitive: true,
-		},
 		Sort: SortState{
 			Mode:             SortName,
 			Reverse:          false,
@@ -532,14 +533,9 @@ func (s State) VisibleEntries() []localfs.Entry {
 	return out
 }
 
-// FilterHasMatches reports whether the active quick filter has at least one file-name match.
-func (s State) FilterHasMatches() bool {
-	return s.Filter.HasMatches()
-}
-
 // FilterUniqueMatch reports whether the active quick filter has exactly one file-name match.
 func (s State) FilterUniqueMatch() bool {
-	return s.Filter.Active && len(s.Filter.results) == 1
+	return s.Filter.Active && s.Filter.MatchCount() == 1
 }
 
 // MatchRanges returns highlighted rune ranges for the visible entry.
@@ -1258,18 +1254,6 @@ func (s *State) EnsureCursorInViewport(fallbackViewportRows int) {
 	}
 }
 
-// SetFilterCaseInsensitive configures the quick filter case behavior.
-func (s *State) SetFilterCaseInsensitive(value bool, viewportRows int) {
-	s.Filter.CaseInsensitive = value
-	s.StripFilter.CaseInsensitive = value
-	selectedName := s.currentEntryName()
-	s.rebuildFilter()
-	s.rebuildStripFilter()
-	_ = s.SelectVisibleEntry(selectedName)
-	s.clampCursor()
-	s.EnsureCursorInViewport(viewportRows)
-}
-
 // OpenFilter starts editing the panel-local quick filter.
 func (s *State) OpenFilter(viewportRows int) {
 	s.Filter.Editing = true
@@ -1283,7 +1267,7 @@ func (s *State) AcceptFilter(viewportRows int) {
 	s.Filter.Editing = false
 	s.Filter.Active = s.Filter.Query != ""
 	if !s.Filter.Active {
-		s.Filter.clearResults()
+		s.Filter.ClearResults()
 	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
@@ -1325,11 +1309,11 @@ func (s *State) MoveFilterCursorEnd() {
 }
 
 // CycleFilterMatch moves the cursor through fuzzy matches in an order controlled by
-// Filter.CycleMatches ("visual" = row order, "ranked" = score order).
+// Filter.CycleRanked ("visual" = row order, "ranked" = score order).
 // If nothing matches the current filter query, delta is applied as a normal cursor step (see Move).
 // Movement wraps at the first and last matched rows.
 func (s *State) CycleFilterMatch(delta int, viewportRows int) {
-	cur, ok := s.Filter.Cycle(s.Cursor, delta)
+	cur, ok := s.Filter.Cycle(s.Cursor, delta, s.filterOptions())
 	if !ok {
 		s.Move(delta, viewportRows)
 		return
@@ -1942,7 +1926,7 @@ func (s *State) clampCursor() {
 func (s *State) applyFilterQuery(query string, viewportRows int) {
 	s.Filter.Query = query
 	s.rebuildEntryFilter()
-	if cur, ok := s.Filter.Apply(query, s.filterNames()); ok {
+	if cur, ok := s.Filter.Apply(query, s.filterNames(), s.filterOptions()); ok {
 		s.Cursor = cur
 	}
 	s.clampCursor()
@@ -1961,7 +1945,7 @@ func (s *State) filterNames() []string {
 
 func (s *State) rebuildFilter() {
 	s.rebuildEntryFilter()
-	s.Filter.Rebuild(s.filterNames())
+	s.Filter.Rebuild(s.filterNames(), s.filterOptions())
 }
 
 // InvertSelection toggles selection for all visible entries.
@@ -2302,10 +2286,10 @@ func (s *State) ToggleSortReverse(viewportRows int) {
 	s.SetSortMode(s.Sort.Mode, !s.Sort.Reverse, s.Sort.DirectoriesFirst, viewportRows)
 }
 
-func (s State) currentEntryName() string {
-	entry, ok := s.CurrentEntry()
-	if !ok {
-		return ""
+
+func (s *State) filterOptions() quickfilter.Options {
+	if s.FilterOptions == nil {
+		return quickfilter.Options{}
 	}
-	return entry.Name
+	return s.FilterOptions()
 }

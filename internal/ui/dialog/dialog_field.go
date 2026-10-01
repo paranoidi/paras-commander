@@ -21,12 +21,9 @@ func (f *FileDialogField) InsertRune(r rune) {
 	}
 	runes := []rune(f.Value)
 	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
-	newRunes := make([]rune, 0, len(runes)+1)
-	newRunes = append(newRunes, runes[:pos]...)
-	newRunes = append(newRunes, r)
-	newRunes = append(newRunes, runes[pos:]...)
+	newRunes, cur := lineedit.InsertRune(runes, pos, r)
 	f.Value = string(newRunes)
-	f.Cursor = pos + 1
+	f.Cursor = cur
 }
 
 // Backspace removes the rune before the field cursor.
@@ -40,11 +37,9 @@ func (f *FileDialogField) Backspace() {
 	if pos <= 0 || len(runes) == 0 {
 		return
 	}
-	newRunes := make([]rune, 0, len(runes)-1)
-	newRunes = append(newRunes, runes[:pos-1]...)
-	newRunes = append(newRunes, runes[pos:]...)
+	newRunes, cur := lineedit.DeleteBefore(runes, pos)
 	f.Value = string(newRunes)
-	f.Cursor = pos - 1
+	f.Cursor = cur
 }
 
 // Delete removes the rune at the field cursor.
@@ -58,11 +53,9 @@ func (f *FileDialogField) Delete() {
 	if pos >= len(runes) {
 		return
 	}
-	newRunes := make([]rune, 0, len(runes)-1)
-	newRunes = append(newRunes, runes[:pos]...)
-	newRunes = append(newRunes, runes[pos+1:]...)
+	newRunes, cur := lineedit.DeleteAt(runes, pos)
 	f.Value = string(newRunes)
-	f.Cursor = pos
+	f.Cursor = cur
 }
 
 // Clear removes all text from the field.

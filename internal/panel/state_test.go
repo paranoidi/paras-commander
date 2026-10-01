@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
+
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -1413,8 +1415,8 @@ func TestQuickFilterKeepsEntriesVisibleAndMovesCursorToFirstVisibleMatch(t *test
 			{Name: "src", Path: "/tmp/src"},
 			{Name: "zzz.txt", Path: "/tmp/zzz"},
 		},
-		Cursor: 2,
-		Filter: FilterState{CaseInsensitive: true},
+		Cursor:        2,
+		FilterOptions: ciFilterOptions,
 	}
 
 	state.OpenFilter(5)
@@ -1435,7 +1437,7 @@ func TestQuickFilterMultiLetterSelectsBestRankedMatch(t *testing.T) {
 			{Name: "abzzc.txt", Path: "/tmp/abzzc"},
 			{Name: "abc.txt", Path: "/tmp/abc"},
 		},
-		Filter: FilterState{CaseInsensitive: true},
+		FilterOptions: ciFilterOptions,
 	}
 
 	state.OpenFilter(5)
@@ -1454,7 +1456,7 @@ func TestFilterHomeMovesCaretForPrefixInsert(t *testing.T) {
 		Entries: []localfs.Entry{
 			{Name: "notes.txt", Path: "/tmp/notes"},
 		},
-		Filter: FilterState{CaseInsensitive: true},
+		FilterOptions: ciFilterOptions,
 	}
 
 	state.OpenFilter(5)
@@ -1491,7 +1493,7 @@ func TestCycleFilterMatchStepsVisibleMatchesWithoutSkipping(t *testing.T) {
 			{Name: "src", Path: "/p/src"},
 			{Name: "assets", Path: "/p/assets"},
 		},
-		Filter: FilterState{CaseInsensitive: true},
+		FilterOptions: ciFilterOptions,
 	}
 	state.OpenFilter(5)
 	state.AppendFilterRune('s', 5)
@@ -1542,6 +1544,7 @@ func TestCycleFilterMatchStepsVisibleMatchesWithoutSkipping(t *testing.T) {
 }
 
 func TestCycleFilterMatchRankedOrderDiffersFromVisual(t *testing.T) {
+	opts := quickfilter.OptionsFrom(true, "ranked")
 	state := State{
 		Entries: []localfs.Entry{
 			{Name: "aaa_s.txt", Path: "/p/0"},
@@ -1549,10 +1552,7 @@ func TestCycleFilterMatchRankedOrderDiffersFromVisual(t *testing.T) {
 			{Name: "s.txt", Path: "/p/2"},
 			{Name: "zzzzs.txt", Path: "/p/3"},
 		},
-		Filter: FilterState{
-			CaseInsensitive: true,
-			CycleMatches:    "ranked",
-		},
+		FilterOptions: func() quickfilter.Options { return opts },
 	}
 	state.OpenFilter(5)
 	state.AppendFilterRune('s', 5)
@@ -1571,7 +1571,7 @@ func TestCycleFilterMatchRankedOrderDiffersFromVisual(t *testing.T) {
 		t.Fatalf("ranked cycle: after aaa_s want zzzzs.txt, got %q", second.Name)
 	}
 
-	state.Filter.CycleMatches = ""
+	opts = quickfilter.OptionsFrom(true, "")
 	state.Cursor = 0 // aaa_s.txt
 	state.CycleFilterMatch(1, 5)
 	visualSecond, ok := state.CurrentEntry()
@@ -1589,15 +1589,15 @@ func TestCycleFilterMatchWithNoMatchesFallsBackToMove(t *testing.T) {
 			{Name: "alpha.txt", Path: "/p/alpha"},
 			{Name: "beta.txt", Path: "/p/beta"},
 		},
-		Cursor: 0,
-		Filter: FilterState{CaseInsensitive: true},
+		Cursor:        0,
+		FilterOptions: ciFilterOptions,
 	}
 	state.OpenFilter(5)
 	for _, r := range "zzz" {
 		state.AppendFilterRune(r, 5)
 	}
-	if len(state.Filter.results) != 0 {
-		t.Fatalf("want no matches for zzz, got %d", len(state.Filter.results))
+	if state.Filter.MatchCount() != 0 {
+		t.Fatalf("want no matches for zzz, got %d", state.Filter.MatchCount())
 	}
 	state.CycleFilterMatch(1, 5)
 	entry, ok := state.CurrentEntry()
@@ -1612,7 +1612,7 @@ func TestQuickFilterSelectionUsesEntryPath(t *testing.T) {
 			{Name: "alpha.txt", Path: "/tmp/alpha"},
 			{Name: "beta.txt", Path: "/tmp/beta"},
 		},
-		Filter: FilterState{CaseInsensitive: true},
+		FilterOptions: ciFilterOptions,
 	}
 
 	state.OpenFilter(5)
@@ -1635,7 +1635,7 @@ func TestQuickFilterAcceptCancelAndClear(t *testing.T) {
 			{Name: "alpha.txt", Path: "/tmp/alpha"},
 			{Name: "beta.txt", Path: "/tmp/beta"},
 		},
-		Filter: FilterState{CaseInsensitive: true},
+		FilterOptions: ciFilterOptions,
 	}
 
 	state.OpenFilter(5)
@@ -2282,8 +2282,8 @@ func TestLoadAppliesDiskTotalsSortImmediatelyWhenListingFullyCached(t *testing.T
 	}
 
 	state := State{
-		ShowHidden: false,
-		Filter:     FilterState{CaseInsensitive: true},
+		ShowHidden:    false,
+		FilterOptions: ciFilterOptions,
 		Sort: SortState{
 			Mode:                  SortName,
 			Reverse:               false,
@@ -2326,8 +2326,8 @@ func TestLoadDoesNotApplyDiskTotalsSortWithoutAnalysisEligibility(t *testing.T) 
 	}
 
 	state := State{
-		ShowHidden: false,
-		Filter:     FilterState{CaseInsensitive: true},
+		ShowHidden:    false,
+		FilterOptions: ciFilterOptions,
 		Sort: SortState{
 			Mode:                  SortName,
 			Reverse:               false,
@@ -2784,8 +2784,8 @@ func TestQuickFilterStillWorksAfterSortChange(t *testing.T) {
 			{Name: "abeta.txt", Path: "/tmp/abeta.txt"},
 			{Name: "xylophone.txt", Path: "/tmp/xylophone.txt"},
 		},
-		Sort:   SortState{Mode: SortName, DirectoriesFirst: false},
-		Filter: FilterState{CaseInsensitive: true},
+		Sort:          SortState{Mode: SortName, DirectoriesFirst: false},
+		FilterOptions: ciFilterOptions,
 	}
 
 	state.ApplySort()
@@ -2795,8 +2795,8 @@ func TestQuickFilterStillWorksAfterSortChange(t *testing.T) {
 	if !state.Filter.Active {
 		t.Fatal("Filter should be active after typing")
 	}
-	if len(state.Filter.results) != 2 {
-		t.Fatalf("Filter results = %d, want 2 matching 'a'", len(state.Filter.results))
+	if state.Filter.MatchCount() != 2 {
+		t.Fatalf("Filter results = %d, want 2 matching 'a'", state.Filter.MatchCount())
 	}
 	entry, ok := state.CurrentEntry()
 	if !ok {
@@ -2811,13 +2811,13 @@ func TestQuickFilterStillWorksAfterSortChange(t *testing.T) {
 	if !state.Filter.Active {
 		t.Fatal("Filter should remain active after sort change")
 	}
-	if len(state.Filter.results) != 2 {
-		t.Fatalf("Filter results after sort change = %d, want 2", len(state.Filter.results))
+	if state.Filter.MatchCount() != 2 {
+		t.Fatalf("Filter results after sort change = %d, want 2", state.Filter.MatchCount())
 	}
 	expectedNames := map[string]bool{"alpha.txt": true, "abeta.txt": true}
-	for _, res := range state.Filter.results {
-		name := state.Entries[res.Index].Name
-		if !expectedNames[name] {
+	for i, e := range state.Entries {
+		name := e.Name
+		if state.Filter.Ranges(i) != nil && !expectedNames[name] {
 			t.Fatalf("Filter result name = %q, want only alpha.txt or abeta.txt", name)
 		}
 	}
@@ -3108,5 +3108,30 @@ func TestMergeHistoryCursorByPathKeepsNonemptySecondaryName(t *testing.T) {
 	snap, ok := merged[dir]
 	if !ok || snap.EntryName != "b.txt" || snap.Index != 2 {
 		t.Fatalf("merged[%q] = %+v ok=%v, want b.txt index 2", dir, snap, ok)
+	}
+}
+
+func ciFilterOptions() quickfilter.Options { return quickfilter.Options{CaseInsensitive: true} }
+
+func TestFilterOptionsHookIsLive(t *testing.T) {
+	opts := quickfilter.Options{CaseInsensitive: true}
+	state := State{
+		Entries:       []localfs.Entry{{Name: "Harbor.txt", Path: "/p/0"}, {Name: "marble.txt", Path: "/p/1"}},
+		FilterOptions: func() quickfilter.Options { return opts },
+	}
+	state.OpenFilter(5)
+	for _, r := range "harbor" {
+		state.AppendFilterRune(r, 5)
+	}
+	if !state.Filter.HasMatches() {
+		t.Fatal("case-insensitive filter should match Harbor.txt")
+	}
+	opts.CaseInsensitive = false // same State, no rebuild of the hook
+	state.ClearFilter(5)
+	for _, r := range "harbor" {
+		state.AppendFilterRune(r, 5)
+	}
+	if state.Filter.HasMatches() {
+		t.Fatal("case-sensitive filter must not match Harbor.txt after the hook flips")
 	}
 }

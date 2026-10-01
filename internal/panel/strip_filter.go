@@ -7,16 +7,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
-// StripFilterHasMatches reports whether the active strip quick filter has at least one match.
-func (s *State) StripFilterHasMatches() bool {
-	return s.StripFilter.HasMatches()
-}
-
-// StripMatchRanges returns highlighted rune ranges for the strip row (basename match ranges).
-func (s State) StripMatchRanges(index int) []search.Range {
-	return s.StripFilter.Ranges(index)
-}
-
 // OpenStripFilter starts editing the selections-strip quick filter.
 func (s *State) OpenStripFilter(stripViewportRows int) {
 	s.StripFilter.Editing = true
@@ -29,7 +19,7 @@ func (s *State) AcceptStripFilter(stripViewportRows int) {
 	s.StripFilter.Editing = false
 	s.StripFilter.Active = s.StripFilter.Query != ""
 	if !s.StripFilter.Active {
-		s.StripFilter.clearResults()
+		s.StripFilter.ClearResults()
 	}
 	s.EnsureSelectionsStripCursorVisible(stripViewportRows)
 }
@@ -49,24 +39,19 @@ func (s *State) ClearStripFilter(stripViewportRows int) {
 
 // AppendStripFilterRune appends a printable rune to the strip filter query.
 func (s *State) AppendStripFilterRune(value rune, stripViewportRows int) {
-	s.StripFilter.Editing = true
-	s.applyStripFilterQuery(s.StripFilter.Query+string(value), stripViewportRows)
+	s.applyStripFilterQuery(s.StripFilter.InsertRune(value), stripViewportRows)
 }
 
 // BackspaceStripFilter removes the last rune from the strip filter query.
 func (s *State) BackspaceStripFilter(stripViewportRows int) {
-	runes := []rune(s.StripFilter.Query)
-	if len(runes) == 0 {
-		s.StripFilter.Editing = false
-		return
+	if next, changed := s.StripFilter.Backspace(); changed {
+		s.applyStripFilterQuery(next, stripViewportRows)
 	}
-	s.StripFilter.Editing = true
-	s.applyStripFilterQuery(string(runes[:len(runes)-1]), stripViewportRows)
 }
 
 // CycleStripFilterMatch moves the strip cursor through fuzzy matches (or plain Move when none).
 func (s *State) CycleStripFilterMatch(delta int, stripViewportRows int) {
-	cur, ok := s.StripFilter.Cycle(s.SelectionsStripCursor, delta)
+	cur, ok := s.StripFilter.Cycle(s.SelectionsStripCursor, delta, s.filterOptions())
 	if !ok {
 		s.MoveSelectionsStrip(delta, stripViewportRows)
 		return
@@ -76,7 +61,7 @@ func (s *State) CycleStripFilterMatch(delta int, stripViewportRows int) {
 }
 
 func (s *State) applyStripFilterQuery(query string, stripViewportRows int) {
-	if cur, ok := s.StripFilter.Apply(query, s.stripFilterNames()); ok {
+	if cur, ok := s.StripFilter.Apply(query, s.stripFilterNames(), s.filterOptions()); ok {
 		s.SelectionsStripCursor = cur
 	}
 	s.EnsureSelectionsStripCursorVisible(stripViewportRows)
@@ -92,7 +77,7 @@ func (s *State) stripFilterNames() []string {
 }
 
 func (s *State) rebuildStripFilter() {
-	s.StripFilter.Rebuild(s.stripFilterNames())
+	s.StripFilter.Rebuild(s.stripFilterNames(), s.filterOptions())
 }
 
 // StripFilterActiveUI reports whether the strip quick filter is editing or has an active query.

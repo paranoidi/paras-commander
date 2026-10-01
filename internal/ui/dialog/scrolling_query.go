@@ -17,12 +17,9 @@ func (q *ScrollingQuery) InsertRune(r rune) {
 	}
 	runes := []rune(q.Value)
 	pos := lineedit.ClampRuneCursor(q.Cursor, len(runes))
-	newRunes := make([]rune, 0, len(runes)+1)
-	newRunes = append(newRunes, runes[:pos]...)
-	newRunes = append(newRunes, r)
-	newRunes = append(newRunes, runes[pos:]...)
+	newRunes, cur := lineedit.InsertRune(runes, pos, r)
 	q.Value = string(newRunes)
-	q.Cursor = pos + 1
+	q.Cursor = cur
 }
 
 // Backspace removes the rune before the caret.
@@ -35,11 +32,9 @@ func (q *ScrollingQuery) Backspace() {
 	if pos <= 0 || len(runes) == 0 {
 		return
 	}
-	newRunes := make([]rune, 0, len(runes)-1)
-	newRunes = append(newRunes, runes[:pos-1]...)
-	newRunes = append(newRunes, runes[pos:]...)
+	newRunes, cur := lineedit.DeleteBefore(runes, pos)
 	q.Value = string(newRunes)
-	q.Cursor = pos - 1
+	q.Cursor = cur
 }
 
 // Delete removes the rune at the caret.
@@ -52,9 +47,7 @@ func (q *ScrollingQuery) Delete() {
 	if pos >= len(runes) {
 		return
 	}
-	newRunes := make([]rune, 0, len(runes)-1)
-	newRunes = append(newRunes, runes[:pos]...)
-	newRunes = append(newRunes, runes[pos+1:]...)
+	newRunes, _ := lineedit.DeleteAt(runes, pos)
 	q.Value = string(newRunes)
 }
 

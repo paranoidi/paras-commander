@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
+
 	"github.com/gdamore/tcell/v2"
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
@@ -597,6 +599,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		gitignoreCache: giCache,
 		gitStatusCache: gitstatus.NewCache(),
 	}
+	// Live config: the settings dialog replaces app.config in place, so read it on every call.
+	app.model.Primary.FilterOptions = app.quickFilterOptions
+	app.model.Secondary.FilterOptions = app.quickFilterOptions
 	// OnDirectoryChange hooks are intentionally left unset: derived UI invariants
 	// (panel sync, disk-usage idle-sort arming) are reconciled centrally in
 	// App.reconcileAfterEvent(), which runs at the end of every Run-loop iteration.
@@ -894,10 +899,6 @@ func newBrowserPanel(path string, opts browserPanelOptions) (panel.State, error)
 	p.ListFormat = opts.listFormat
 	p.DiskSorter = opts.diskEngine.Size
 	p.ApplySort()
-	p.Filter.CaseInsensitive = opts.cfg.Filter.CaseInsensitive
-	p.Filter.CycleMatches = opts.cfg.Filter.CycleMatches
-	p.StripFilter.CaseInsensitive = opts.cfg.Filter.CaseInsensitive
-	p.StripFilter.CycleMatches = opts.cfg.Filter.CycleMatches
 	p.ScrollMode = opts.scrollMode
 	p.ScrollEdgeMargin = opts.cfg.UI.Scroll.EdgeMargin
 	return p, nil
@@ -1348,4 +1349,9 @@ func carouselLayoutFromConfig(c config.CarouselConfig) panelcarousel.Layout {
 		layout, _ = panelcarousel.ParseLayout(config.DefaultCarouselSplit(), config.DefaultCarouselShowSize())
 	}
 	return layout
+}
+
+// quickFilterOptions reads the live filter settings (never a startup snapshot).
+func (a *App) quickFilterOptions() quickfilter.Options {
+	return quickfilter.OptionsFrom(a.config.Filter.CaseInsensitive, a.config.Filter.CycleMatches)
 }

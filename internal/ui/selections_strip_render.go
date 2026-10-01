@@ -61,16 +61,12 @@ func drawSelectionsStrip(
 	filterUI := stripFocused && (state.StripFilter.Active || state.StripFilter.Editing)
 	title := panelSelectionsChromePadded
 	if filterUI {
-		title = "> " + state.StripFilter.Query
+		title = ""
 		endLabel = "" // filter query owns the top row
 	}
 	chrome := drawAuxPanelChrome(screen, rect, title, endLabel, stripFocused, chromeBlocked, opts.ViMotionActive, styles)
 	if filterUI {
-		inputStyle := styles.FuzzyInput
-		if state.StripFilter.Active && !state.StripFilterHasMatches() {
-			inputStyle = styles.FuzzyInputNomatch
-		}
-		primitive.Text(screen, chrome.TitleX, rect.Y, chrome.TitleWidth, title, inputStyle)
+		drawQuickFilterTitle(screen, chrome.TitleX, rect.Y, chrome.TitleWidth, state.StripFilter, styles)
 	}
 
 	if showSelectionSizeOnBottom {
@@ -156,7 +152,7 @@ func drawSelectionsStrip(
 			}}
 		}
 		if idx < len(paths) {
-			baseRanges := state.StripMatchRanges(idx)
+			baseRanges := state.StripFilter.Ranges(idx)
 			if mapped := panel.MapStripBasenameRangesToDisplay(pathLabel, paths[idx], baseRanges); len(mapped) > 0 {
 				matchStyle := styles.FuzzyHighlight
 				if stripFocused && idx == state.SelectionsStripCursor {

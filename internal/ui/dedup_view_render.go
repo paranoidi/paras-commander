@@ -240,7 +240,7 @@ func drawDedupTreePane(
 	filterUI := p.Focused && p.Pane.Filter.UIActive()
 	title, endLabel := p.Title, p.EndLabel
 	if filterUI {
-		title, endLabel = "> "+p.Pane.Filter.Query, "" // the query owns the top row
+		title, endLabel = "", "" // drawQuickFilterTitle owns the top row
 	}
 	layoutChrome := drawAuxPanelChrome(screen, rect, title, endLabel, p.Focused, chromeBlocked, false, styles)
 	if filterUI {

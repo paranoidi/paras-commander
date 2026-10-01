@@ -143,11 +143,15 @@ func TestNewWithOptionsAppliesFilterCycleMatchesToPanels(t *testing.T) {
 		Config: cfg,
 		Theme:  theme.Default(),
 	})
-	if app.model.Primary.Filter.CycleMatches != config.FilterCycleMatchesRanked {
-		t.Fatalf("Left.Filter.CycleMatches = %q, want ranked", app.model.Primary.Filter.CycleMatches)
+	if !app.model.Primary.FilterOptions().CycleRanked {
+		t.Fatal("Left FilterOptions().CycleRanked = false, want true")
 	}
-	if app.model.Secondary.Filter.CycleMatches != config.FilterCycleMatchesRanked {
-		t.Fatalf("Right.Filter.CycleMatches = %q, want ranked", app.model.Secondary.Filter.CycleMatches)
+	if !app.model.Secondary.FilterOptions().CycleRanked {
+		t.Fatal("Right FilterOptions().CycleRanked = false, want true")
+	}
+	app.config.Filter.CycleMatches = config.FilterCycleMatchesVisual
+	if app.model.Primary.FilterOptions().CycleRanked {
+		t.Fatal("hook must read live config")
 	}
 }
 

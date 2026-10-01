@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/hashwalk"
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
@@ -539,7 +541,7 @@ func (h *Handler) syncDedupList() {
 	st := &h.model.DedupView
 	h.applyDedupCollapsePending()
 	h.model.DedupList, st.IgnoredEmptyCount = ui.DedupRowsFromSnapshot(h.model.DedupSnapshot, *st)
-	refilterPane(&st.Main, h.model.DedupList)
+	h.refilterPane(&st.Main, h.model.DedupList)
 	h.syncCopies()
 }
 
@@ -553,7 +555,7 @@ func (h *Handler) syncCopies() {
 	}
 	sel, _ := h.paneRow(&st.Main, h.model.DedupList)
 	h.model.DedupCopiesList = ui.DedupCopyRows(h.model.DedupSnapshot, sel, st.Copies.Collapsed)
-	refilterPane(&st.Copies, h.model.DedupCopiesList)
+	h.refilterPane(&st.Copies, h.model.DedupCopiesList)
 	if i := ui.DedupRowIndexByID(h.model.DedupCopiesList, prevID); i >= 0 {
 		st.Copies.Selected = i
 	} else {
@@ -623,7 +625,7 @@ func (h *Handler) MoveSelection(delta int) {
 }
 
 // FocusedFilter returns a copy of the focused pane's quick filter state.
-func (h *Handler) FocusedFilter() panel.FilterState {
+func (h *Handler) FocusedFilter() quickfilter.Filter {
 	pane, _ := h.focusedPane()
 	return pane.Filter
 }
@@ -632,19 +634,16 @@ func (h *Handler) FocusedFilter() panel.FilterState {
 // A main-pane jump refreshes the copies pane.
 func (h *Handler) applyFilter(query string) {
 	pane, rows := h.focusedPane()
-	cfg := h.host.Config()
-	pane.Filter.CaseInsensitive = cfg.Filter.CaseInsensitive
-	pane.Filter.CycleMatches = cfg.Filter.CycleMatches
-	if cur, ok := pane.Filter.Apply(query, dedupRowNames(rows)); ok {
+	if cur, ok := pane.Filter.Apply(query, dedupRowNames(rows), h.filterOptions()); ok {
 		h.setSelected(pane, cur)
 	}
 }
 
 // refilterPane re-ranks an open filter after pane's rows were rebuilt, since
 // match results hold row indices.
-func refilterPane(pane *ui.DedupPane, rows []ui.DedupRow) {
+func (h *Handler) refilterPane(pane *ui.DedupPane, rows []ui.DedupRow) {
 	if pane.Filter.Query != "" {
-		pane.Filter.Rebuild(dedupRowNames(rows))
+		pane.Filter.Rebuild(dedupRowNames(rows), h.filterOptions())
 	}
 }
 
@@ -686,14 +685,14 @@ func (h *Handler) ClearFilter() {
 // CancelFilter closes the focused pane's quick filter.
 func (h *Handler) CancelFilter() {
 	pane, _ := h.focusedPane()
-	pane.Filter = panel.FilterState{}
+	pane.Filter = quickfilter.Filter{}
 }
 
 // CycleFilterMatch steps the focused pane's cursor through filter matches, or
 // moves plainly when nothing matches.
 func (h *Handler) CycleFilterMatch(delta int) {
 	pane, _ := h.focusedPane()
-	if cur, ok := pane.Filter.Cycle(pane.Selected, delta); ok {
+	if cur, ok := pane.Filter.Cycle(pane.Selected, delta, h.filterOptions()); ok {
 		h.setSelected(pane, cur)
 		return
 	}
@@ -722,7 +721,7 @@ func (h *Handler) SelectEdge(last bool) {
 func (h *Handler) SwitchPane() {
 	st := &h.model.DedupView
 	hasPanel := st.TreeDirs && h.model.DedupSnapshot.Phase == comparepkg.DedupDone
-	st.Main.Filter, st.Copies.Filter = panel.FilterState{}, panel.FilterState{}
+	st.Main.Filter, st.Copies.Filter = quickfilter.Filter{}, quickfilter.Filter{}
 	switch {
 	case st.FocusPanel:
 		st.FocusPanel, st.FocusCopies = false, false
@@ -1599,4 +1598,9 @@ func (h *Handler) NavigateFromSelection() {
 	f := row.Value.File
 	selectName := filepath.Base(filepath.FromSlash(f.Rel))
 	_ = h.host.NavigatePanelToPath(h.model.ActivePanel, f.Abs.Parent().String(), selectName)
+}
+
+func (h *Handler) filterOptions() quickfilter.Options {
+	f := h.host.Config().Filter
+	return quickfilter.OptionsFrom(f.CaseInsensitive, f.CycleMatches)
 }

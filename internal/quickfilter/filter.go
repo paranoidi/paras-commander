@@ -1,4 +1,4 @@
-package panel
+package quickfilter
 
 import (
 	"slices"
@@ -8,19 +8,32 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
 
-// FilterState tracks quick filter state. It is a self-contained engine over a
-// list of row labels and is shared by the file list, selections strip and dedup view.
-type FilterState struct {
-	Query           string
-	Cursor          int // rune offset within Query where typed/deleted runes apply
-	Active          bool
-	Editing         bool
+// Options are the live settings the engine ranks and cycles with. Callers
+// pass them on every call so config changes apply without rebuilding a Filter.
+type Options struct {
 	CaseInsensitive bool
-	// CycleMatches is "visual" (default) or "ranked"; empty means visual.
-	// It controls Up/Down traversal among quick-filter matches.
-	CycleMatches string
-	results      []filterResult // score order
-	byIndex      []filterResult // results sorted by row index (visual order, row lookups)
+	// CycleRanked cycles matches in score order instead of row order.
+	CycleRanked bool
+}
+
+// OptionsFrom builds Options from the config filter settings; it is the one
+// place the cycle_matches string ("ranked", case-insensitive, trimmed) is parsed.
+func OptionsFrom(caseInsensitive bool, cycleMatches string) Options {
+	return Options{
+		CaseInsensitive: caseInsensitive,
+		CycleRanked:     strings.EqualFold(strings.TrimSpace(cycleMatches), "ranked"),
+	}
+}
+
+// Filter tracks quick filter state. It is a self-contained engine over a
+// list of row labels and is shared by the file list, selections strip and dedup view.
+type Filter struct {
+	Query   string
+	Cursor  int // rune offset within Query where typed/deleted runes apply
+	Active  bool
+	Editing bool
+	results []filterResult // score order
+	byIndex []filterResult // results sorted by row index (visual order, row lookups)
 }
 
 type filterResult struct {
@@ -30,8 +43,8 @@ type filterResult struct {
 }
 
 // Rebuild re-ranks names against the current query.
-func (f *FilterState) Rebuild(names []string) {
-	f.clearResults()
+func (f *Filter) Rebuild(names []string, opts Options) {
+	f.ClearResults()
 	if f.Query == "" {
 		f.Active = false
 		return
@@ -41,7 +54,7 @@ func (f *FilterState) Rebuild(names []string) {
 		f.Active = false
 		return
 	}
-	ranked := query.Rank(names, search.Options{CaseInsensitive: f.CaseInsensitive})
+	ranked := query.Rank(names, search.Options{CaseInsensitive: opts.CaseInsensitive})
 	f.results = make([]filterResult, 0, len(ranked))
 	for _, result := range ranked {
 		f.results = append(f.results, filterResult{
@@ -55,16 +68,17 @@ func (f *FilterState) Rebuild(names []string) {
 	f.Active = true
 }
 
-func (f *FilterState) clearResults() {
+// ClearResults drops the ranked matches.
+func (f *Filter) ClearResults() {
 	f.results, f.byIndex = nil, nil
 }
 
 // Apply sets the query, re-ranks names and returns the row the cursor should jump to.
 // ok is false when nothing matches.
-func (f *FilterState) Apply(query string, names []string) (cursor int, ok bool) {
+func (f *Filter) Apply(query string, names []string, opts Options) (cursor int, ok bool) {
 	f.Query = query
 	f.Cursor = lineedit.ClampRuneCursor(f.Cursor, len([]rune(query)))
-	f.Rebuild(names)
+	f.Rebuild(names, opts)
 	if len(f.results) == 0 {
 		return 0, false
 	}
@@ -72,20 +86,17 @@ func (f *FilterState) Apply(query string, names []string) (cursor int, ok bool) 
 }
 
 // InsertRune returns the query with r inserted at the caret and moves the caret.
-func (f *FilterState) InsertRune(r rune) string {
+func (f *Filter) InsertRune(r rune) string {
 	f.Editing = true
 	runes := []rune(f.Query)
 	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
-	next := make([]rune, 0, len(runes)+1)
-	next = append(next, runes[:pos]...)
-	next = append(next, r)
-	next = append(next, runes[pos:]...)
-	f.Cursor = pos + 1
+	next, cur := lineedit.InsertRune(runes, pos, r)
+	f.Cursor = cur
 	return string(next)
 }
 
 // Backspace returns the query with the rune before the caret removed.
-func (f *FilterState) Backspace() (next string, changed bool) {
+func (f *Filter) Backspace() (next string, changed bool) {
 	runes := []rune(f.Query)
 	if len(runes) == 0 {
 		f.Editing = false
@@ -96,25 +107,26 @@ func (f *FilterState) Backspace() (next string, changed bool) {
 		return f.Query, false
 	}
 	f.Editing = true
-	out := make([]rune, 0, len(runes)-1)
-	out = append(out, runes[:pos-1]...)
-	out = append(out, runes[pos:]...)
-	f.Cursor = pos - 1
+	out, cur := lineedit.DeleteBefore(runes, pos)
+	f.Cursor = cur
 	return string(out), true
 }
 
 // UIActive reports whether the filter is editing or has an active query.
-func (f FilterState) UIActive() bool {
+func (f Filter) UIActive() bool {
 	return f.Active || f.Editing
 }
 
+// MatchCount is the number of matched rows.
+func (f Filter) MatchCount() int { return len(f.results) }
+
 // HasMatches reports whether the query matched at least one row.
-func (f FilterState) HasMatches() bool {
+func (f Filter) HasMatches() bool {
 	return len(f.results) > 0
 }
 
 // Ranges returns the highlighted rune ranges for row index.
-func (f FilterState) Ranges(index int) []search.Range {
+func (f Filter) Ranges(index int) []search.Range {
 	if !f.Active {
 		return nil
 	}
@@ -124,13 +136,13 @@ func (f FilterState) Ranges(index int) []search.Range {
 	return nil
 }
 
-// Cycle moves cursor through matches (order per CycleMatches), wrapping at the ends.
+// Cycle moves cursor through matches (order per opts.CycleRanked), wrapping at the ends.
 // ok is false when there are no matches so the caller falls back to a plain move.
-func (f FilterState) Cycle(cursor, delta int) (int, bool) {
+func (f Filter) Cycle(cursor, delta int, opts Options) (int, bool) {
 	if len(f.results) == 0 {
 		return cursor, false
 	}
-	order := f.cycleOrder()
+	order := f.cycleOrder(opts)
 	n := len(order)
 	cur := -1
 	for i := range order {
@@ -154,15 +166,11 @@ func (f FilterState) Cycle(cursor, delta int) (int, bool) {
 	return order[cur].Index, true
 }
 
-func (f FilterState) cycleOrder() []filterResult {
-	if f.cycleMatchesRanked() {
+func (f Filter) cycleOrder(opts Options) []filterResult {
+	if opts.CycleRanked {
 		return f.results
 	}
 	return f.byIndex
-}
-
-func (f FilterState) cycleMatchesRanked() bool {
-	return strings.EqualFold(strings.TrimSpace(f.CycleMatches), "ranked")
 }
 
 func nextFilterMatchIndex(results []filterResult, cursor int) int {

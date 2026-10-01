@@ -1676,7 +1676,7 @@ func TestQuickFilterMatchesExpandedTreeChild(t *testing.T) {
 		state.AppendFilterRune(r, 10)
 	}
 
-	if !state.FilterHasMatches() {
+	if !state.Filter.HasMatches() {
 		t.Fatal("FilterHasMatches() = false, want true for expanded tree child harbor.txt")
 	}
 	entry, ok := state.CurrentEntry()
@@ -1793,7 +1793,7 @@ func TestFilterResultsStayValidAfterTreeExpandChangesRowLayout(t *testing.T) {
 	for _, r := range "aardvark" {
 		state.AppendFilterRune(r, 10)
 	}
-	if !state.FilterHasMatches() {
+	if !state.Filter.HasMatches() {
 		t.Fatal("FilterHasMatches() = false before expand, want true")
 	}
 
@@ -1810,7 +1810,7 @@ func TestFilterResultsStayValidAfterTreeExpandChangesRowLayout(t *testing.T) {
 		t.Fatalf("VisibleEntryCount after expand = %d, want 3", got)
 	}
 
-	if !state.FilterHasMatches() {
+	if !state.Filter.HasMatches() {
 		t.Fatal("FilterHasMatches() = false after expand, want true (filter must stay in sync)")
 	}
 	if ranges := state.MatchRanges(2); len(ranges) == 0 {

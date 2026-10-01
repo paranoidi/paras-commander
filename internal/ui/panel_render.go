@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"math"
 	"strings"
 	"time"
@@ -1116,7 +1117,7 @@ func formatTime(value time.Time) string {
 
 // drawQuickFilterTitle paints "> query" with a caret while editing, in the fuzzy-input
 // styles (no-match variant when the active query matched nothing).
-func drawQuickFilterTitle(screen tcell.Screen, x, y, w int, f panel.FilterState, styles theme.Theme) {
+func drawQuickFilterTitle(screen tcell.Screen, x, y, w int, f quickfilter.Filter, styles theme.Theme) {
 	inputStyle := styles.FuzzyInput
 	if f.Active && !f.HasMatches() {
 		inputStyle = styles.FuzzyInputNomatch

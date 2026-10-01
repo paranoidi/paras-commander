@@ -9,6 +9,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
+
 	"github.com/alecthomas/chroma/v2"
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -1323,9 +1325,9 @@ func TestRenderDrawsPanelLocalFuzzyInputOverlay(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	left := panel.State{
-		Path:    pathloc.MustParse("/tmp"),
-		Entries: []localfs.Entry{{Name: "main.go", Path: "/tmp/main.go"}},
-		Filter:  panel.FilterState{CaseInsensitive: true},
+		Path:          pathloc.MustParse("/tmp"),
+		Entries:       []localfs.Entry{{Name: "main.go", Path: "/tmp/main.go"}},
+		FilterOptions: func() quickfilter.Options { return quickfilter.Options{CaseInsensitive: true} },
 	}
 	left.OpenFilter(5)
 	for _, r := range "ma" {
@@ -1358,9 +1360,9 @@ func TestRenderFuzzyInputUsesNomatchStyleWhenNoMatches(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	left := panel.State{
-		Path:    pathloc.MustParse("/tmp"),
-		Entries: []localfs.Entry{{Name: "main.go", Path: "/tmp/main.go"}},
-		Filter:  panel.FilterState{CaseInsensitive: true},
+		Path:          pathloc.MustParse("/tmp"),
+		Entries:       []localfs.Entry{{Name: "main.go", Path: "/tmp/main.go"}},
+		FilterOptions: func() quickfilter.Options { return quickfilter.Options{CaseInsensitive: true} },
 	}
 	left.OpenFilter(5)
 	for _, r := range "zzz" {
@@ -1391,9 +1393,9 @@ func TestRenderHighlightsFilterMatches(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	left := panel.State{
-		Path:    pathloc.MustParse("/tmp"),
-		Entries: []localfs.Entry{{Name: "main.go", Path: "/tmp/main.go"}},
-		Filter:  panel.FilterState{CaseInsensitive: true},
+		Path:          pathloc.MustParse("/tmp"),
+		Entries:       []localfs.Entry{{Name: "main.go", Path: "/tmp/main.go"}},
+		FilterOptions: func() quickfilter.Options { return quickfilter.Options{CaseInsensitive: true} },
 	}
 	left.OpenFilter(5)
 	for _, r := range "ma" {

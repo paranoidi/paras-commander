@@ -21,15 +21,15 @@ func TestStripFilterMatchesBasenameAndCycles(t *testing.T) {
 			"/tmp/meadow/crystal.txt",
 			"/tmp/orchard/delta.txt",
 		},
-		StripFilter: FilterState{CaseInsensitive: true},
+		FilterOptions: ciFilterOptions,
 	}
 	if n := state.SelectionsStripCount(); n != 3 {
 		t.Fatalf("strip count = %d, want 3 (paths=%v)", n, state.SelectionsStripPaths())
 	}
 
 	state.AppendStripFilterRune('c', 10)
-	if !state.StripFilter.Active || !state.StripFilterHasMatches() {
-		t.Fatalf("want active strip filter with matches, got %+v results=%d", state.StripFilter, len(state.StripFilter.results))
+	if !state.StripFilter.Active || !state.StripFilter.HasMatches() {
+		t.Fatalf("want active strip filter with matches, got %+v results=%d", state.StripFilter, state.StripFilter.MatchCount())
 	}
 	path, ok := state.SelectedPathAtStripIndex(state.SelectionsStripCursor)
 	if !ok || filepath.Base(path) != "crystal.txt" {

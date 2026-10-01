@@ -25,6 +25,7 @@ Do not open files with GUI applications (`xdg-open`, `xed`, `gedit`, etc.) while
 - **`internal/app/helpkeys`**, **`internal/app/jobbridge`**: stateless helpers extracted from the app layer.
 - **`internal/pathpick`**: path-picker query validation/resolution/completion, independent of `internal/app`.
 - **`internal/scrollquery`**: App-independent core of scrolling-query text fields (cursor/scroll editing, key handling) shared by find/help/history/SFTP-connect/group-select/file-preview-theme-picker/path-picker dialogs. `internal/app/scrolling_query.go` is the thin glue that binds `App` state and calls this package.
+- **`internal/quickfilter`**: type-to-jump quick-filter engine (`Filter`, `Options`) shared by the file list, selections strip and dedup view; settings are passed per call (`panel.State.FilterOptions` hook, dedup handler via `Host.Config()`), and it must not import `panel`, `ui` or `app`.
 - **`internal/dialogform`**: App-independent core of linear-form dialog key handling (focus navigation, mnemonics, space-toggle, apply/cancel) shared by dialogs built on `dialog.DialogLinearForm` (sort, listing-format, config, and similar). `internal/app/dialog_linear_form.go` is the thin glue.
 - **`internal/sched`**: scheduling primitives shared across the app. The package is `Debouncer` (`Arm` / `Stop` / `Invalidate` / `Armed`): each `Arm` increments a generation so stale timers exit without running `fn`; `Invalidate` stops a pending timer and bumps generation so in-flight callbacks are ignored.
 
