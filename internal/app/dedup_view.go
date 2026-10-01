@@ -103,7 +103,7 @@ func (a *App) showKeptDuplicates() {
 		a.setTransientMessage("No duplicates results \u2014 run Find duplicates first", ui.MessageUrgencyInfo)
 		return
 	}
-	a.dedupCtrl.ShowKept()
+	a.dedupCtrl.VerifyAndShowKept()
 }
 
 func (a *App) pollDedupUpdates(payload dedupctrl.WakePayload) bool {

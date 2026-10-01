@@ -191,6 +191,7 @@ func TestAuxiliaryScreensSwitchKeepsDedupResults(t *testing.T) {
 		t.Fatal("dedup results should be kept after switching views")
 	}
 	app.dispatch(keymap.ActionDedupOpen)
+	waitDedupShown(t, app)
 	if app.model.ViewMode != ui.ViewDedup {
 		t.Fatalf("ViewMode = %v, want ViewDedup after dedup.open", app.model.ViewMode)
 	}

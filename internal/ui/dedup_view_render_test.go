@@ -421,7 +421,7 @@ func TestDrawDedupViewTitleBarKeepsFrameDashesAfterTitle(t *testing.T) {
 	view := DedupViewState{}
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
-	title := dedupViewTitle(snap, 0)
+	title := dedupViewTitle(snap, 0, -1)
 	titleRunes := len([]rune(title))
 	_, frameBG, _ := styles.PanelActiveFrame.Decompose()
 	_, titleBG, _ := styles.PanelActiveTitle.Decompose()
@@ -1603,5 +1603,19 @@ func TestDrawDedupBrowsePanelOnlyInDirsView(t *testing.T) {
 	}
 	if !strings.Contains(row.String(), "harbor.txt") {
 		t.Fatalf("browse listing row missing entry: %q", row.String())
+	}
+}
+
+func TestDedupViewTitleRecheckSuffix(t *testing.T) {
+	snap := comparepkg.DedupSnapshot{Groups: make([]comparepkg.DedupGroup, 3)}
+	if got := dedupViewTitle(snap, 2, 42); got != " Duplicates (3 groups · 2 empty hidden · 42%) " {
+		t.Fatalf("title = %q", got)
+	}
+	v := DedupViewState{RecheckTotal: 200, RecheckDone: 84}
+	if got := v.RecheckPercent(); got != 42 {
+		t.Fatalf("percent = %d", got)
+	}
+	if got := (DedupViewState{}).RecheckPercent(); got != -1 {
+		t.Fatalf("idle percent = %d, want -1", got)
 	}
 }

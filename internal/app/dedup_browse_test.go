@@ -101,6 +101,7 @@ func TestDedupBrowsePanelFollowsSourceRowAndTabCycle(t *testing.T) {
 	}
 	app.reconcileAfterEvent()
 	app.dispatch(keymap.ActionDedupOpen)
+	waitDedupShown(t, app)
 	app.reconcileAfterEvent()
 	if app.model.ViewMode != ui.ViewDedup {
 		t.Fatalf("ViewMode = %v after dedup.open, want ViewDedup", app.model.ViewMode)

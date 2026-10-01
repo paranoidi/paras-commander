@@ -157,7 +157,7 @@ func drawDedupView(
 		hintDirs = dedupGroupDirSet(snap.Groups[activeGroup])
 	}
 	drawDedupTreePane(screen, layout.Primary, dedupPaneParams{
-		Title:            dedupViewTitle(snap, view.IgnoredEmptyCount),
+		Title:            dedupViewTitle(snap, view.IgnoredEmptyCount, view.RecheckPercent()),
 		EndLabel:         panelSelectionSizePadded(dedupEndLabel(view)),
 		Header:           rootHeader,
 		Rows:             list,
@@ -481,7 +481,7 @@ func dedupEndLabel(view DedupViewState) string {
 	return modeLabel
 }
 
-func dedupViewTitle(snap comparepkg.DedupSnapshot, ignoredEmpty int) string {
+func dedupViewTitle(snap comparepkg.DedupSnapshot, ignoredEmpty, recheckPct int) string {
 	groups := "groups"
 	if len(snap.Groups) == 1 {
 		groups = "group"
@@ -489,6 +489,9 @@ func dedupViewTitle(snap comparepkg.DedupSnapshot, ignoredEmpty int) string {
 	title := fmt.Sprintf(" Duplicates (%d %s", len(snap.Groups), groups)
 	if ignoredEmpty > 0 {
 		title += fmt.Sprintf(" · %d empty hidden", ignoredEmpty)
+	}
+	if recheckPct >= 0 {
+		title += fmt.Sprintf(" · %d%%", recheckPct)
 	}
 	return title + ") "
 }

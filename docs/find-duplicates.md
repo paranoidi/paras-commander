@@ -26,7 +26,9 @@ Alt+Ctrl+Left / Alt+Ctrl+Right (`panel.tree-collapse-all` / `panel.tree-expand-a
 Leaving the results view (Esc, Alt+W again, Enter to jump to a file, "Back to file view", or switching to Jobs/Commands/Messages) keeps the results in memory and shows `Duplicates kept - Alt+W returns`. Kept results live until the next scan or until pc quits. There are two ways back:
 
 - **Alt+W** (`dedup.open`, Display menu > Duplicates, leader `w`) shows the kept results from the browser or from the Jobs/Commands/Messages views. Without kept results it says so.
-- **Running Find duplicates again.** When the active panel is at or under the scanned root, the view returns instantly with no rescan. From anywhere else a dialog offers **Show** (kept results), **Rescan** (scan the active panel's directory, replacing the kept results) or **Cancel**.
+- **Running Find duplicates again.** When the active panel is exactly the scanned root, a dialog offers **Show** (kept results), **Rescan** (scan again, replacing the kept results) or **Cancel**. In any other directory a fresh scan of that directory starts directly, replacing the kept results.
+
+Whenever kept results are shown again (Alt+W or **Show**), the view opens immediately while the files are re-checked in the background (the title shows `N%`); files that vanished meanwhile are then dropped (with their marks), groups left with fewer than two members disappear, and if nothing remains the view closes with `Duplicates: all files gone`.
 
 **Refresh** inside the view rescans the kept root.
 

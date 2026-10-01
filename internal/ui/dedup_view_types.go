@@ -102,6 +102,16 @@ type DedupViewState struct {
 	TreeDirs              bool            // true = directory hierarchy tree (default); false = duplicate groups tree
 	DirsCollapsePending   bool            // dirs mode: collapse all folders on first DedupDone list build
 	GroupsCollapsePending bool            // groups mode: collapse all group headers on first DedupDone list build
+	RecheckDone           int             // kept results being re-stat'ed on return: files checked so far
+	RecheckTotal          int             // files to re-check; 0 = no check running
+}
+
+// RecheckPercent is the re-check progress for the title, or -1 when no check runs.
+func (v DedupViewState) RecheckPercent() int {
+	if v.RecheckTotal <= 0 {
+		return -1
+	}
+	return v.RecheckDone * 100 / v.RecheckTotal
 }
 
 func dedupGroupID(g comparepkg.DedupGroup) string { return fmt.Sprintf("g:%x", g.Hash) }

@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/hashwalk"
@@ -13,6 +16,7 @@ import (
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -56,6 +60,11 @@ type Handler struct {
 	session *comparepkg.DedupSession
 	wake    host.WakeCoalescer
 	pending *dedupPendingState
+
+	verifyMu   sync.Mutex
+	verifyGen  int
+	verifyProg atomic.Int64    // files checked by the running verify
+	verifyDone map[string]bool // missing paths from the latest finished verify; nil = none ready
 }
 
 // dedupPendingState carries marks/keeps/tree state across a rescan so returning
@@ -93,23 +102,17 @@ func (h *Handler) activePanelPath() pathloc.Path {
 	return h.model.Primary.Path
 }
 
-// Open brings back kept results when the active panel is at or under their
-// root, offers show/rescan when it is elsewhere, and otherwise scans the
-// active panel's directory for duplicates.
+// Open brings back the kept results (via the Show/Rescan dialog) only when the
+// active panel is exactly the scan's root; any other directory starts a fresh
+// scan there, replacing the kept results.
 func (h *Handler) Open() {
 	if ui.IsAuxiliaryView(h.model.ViewMode) && h.model.ViewMode != ui.ViewDedup {
 		return
 	}
 	path := h.activePanelPath()
-	if !h.HasResults() {
+	if !h.HasResults() || !path.Equal(h.model.DedupSnapshot.Root) {
 		h.openRoot(path)
 		return
-	}
-	if root := h.model.DedupSnapshot.Root; !path.IsRemote() && !root.IsRemote() {
-		if rel, err := filepath.Rel(root.String(), path.String()); err == nil && rel != ".." && !strings.HasPrefix(rel, "../") {
-			h.ShowKept()
-			return
-		}
 	}
 	h.model.DedupReturnDialog = dialog.DedupReturnDialogState{Open: true}
 }
@@ -127,6 +130,94 @@ func (h *Handler) ShowKept() {
 	h.model.ViewMode = ui.ViewDedup
 	h.model.MenuDefinitions = h.host.DedupMenuDefinitions()
 	h.model.Menu.ActiveMenu = menu.DefaultIndexDedup()
+}
+
+// VerifyAndShowKept shows the kept results at once and re-stats every file in
+// the background; PollUpdates shows progress in the title and, when the check
+// finishes, drops vanished files.
+func (h *Handler) VerifyAndShowKept() {
+	if !h.HasResults() {
+		return
+	}
+	h.ShowKept()
+	var paths []pathloc.Path
+	for _, g := range h.model.DedupSnapshot.Groups {
+		for _, f := range g.Files {
+			paths = append(paths, f.Abs)
+		}
+	}
+	h.verifyMu.Lock()
+	h.verifyGen++
+	gen := h.verifyGen
+	h.verifyDone = nil
+	h.verifyMu.Unlock()
+	h.verifyProg.Store(0)
+	h.model.DedupView.RecheckDone, h.model.DedupView.RecheckTotal = 0, len(paths)
+	h.syncDedupList()
+	h.ensureSelectionVisible(0)
+	go func() {
+		missing := map[string]bool{}
+		last := time.Now()
+		for i, p := range paths {
+			if _, err := fsbackend.Default().Stat(context.Background(), p); err != nil {
+				missing[p.String()] = true
+			}
+			h.verifyProg.Store(int64(i + 1))
+			if time.Since(last) >= 50*time.Millisecond {
+				last = time.Now()
+				h.postWake()
+			}
+		}
+		h.verifyMu.Lock()
+		if h.verifyGen == gen {
+			h.verifyDone = missing
+		}
+		h.verifyMu.Unlock()
+		h.postWake()
+	}()
+}
+
+// applyVerified publishes check progress and consumes a finished result; true
+// when the view changed.
+func (h *Handler) applyVerified() bool {
+	st := &h.model.DedupView
+	h.verifyMu.Lock()
+	missing := h.verifyDone
+	h.verifyDone = nil
+	h.verifyMu.Unlock()
+	if missing == nil {
+		if st.RecheckTotal > 0 && h.HasResults() {
+			st.RecheckDone = int(h.verifyProg.Load())
+			return true
+		}
+		return false
+	}
+	st.RecheckDone, st.RecheckTotal = 0, 0
+	if !h.HasResults() {
+		return false
+	}
+	for abs := range missing {
+		delete(st.Kept, abs)
+	}
+	h.model.DedupSnapshot = h.model.DedupSnapshot.WithoutPaths(missing)
+	if len(h.model.DedupSnapshot.Groups) == 0 {
+		h.Close()
+		h.host.SetTransientMessage("Duplicates: all files gone", ui.MessageUrgencyInfo)
+		return true
+	}
+	// Re-apply marks for survivors only (WithoutPaths drops whole groups too).
+	oldMarked := st.Marked
+	st.Marked, st.MarkedCount, st.MarkedReclaimBytes = map[string]bool{}, 0, 0
+	for _, g := range h.model.DedupSnapshot.Groups {
+		for _, f := range g.Files {
+			if abs := f.Abs.String(); oldMarked[abs] {
+				h.setMark(abs, g.Size, true)
+			}
+		}
+	}
+	h.syncDedupList()
+	h.ensureSelectionVisible(0)
+	return true
 }
 
 // Leave returns to the browser but keeps the results for Open/ShowKept.
@@ -198,6 +289,10 @@ func (h *Handler) openRoot(root pathloc.Path) {
 // Close cancels the scan and returns to the browser.
 func (h *Handler) Close() {
 	h.pending = nil
+	h.verifyMu.Lock()
+	h.verifyGen++
+	h.verifyDone = nil
+	h.verifyMu.Unlock()
 	if h.session != nil {
 		h.session.Close()
 		h.session = nil
@@ -218,6 +313,9 @@ func (h *Handler) Close() {
 // PollUpdates applies the latest session snapshot. Returns true when the UI should repaint.
 func (h *Handler) PollUpdates(_ WakePayload) bool {
 	_ = h.wake.Take()
+	if h.applyVerified() {
+		return true
+	}
 	if h.session == nil {
 		return false
 	}

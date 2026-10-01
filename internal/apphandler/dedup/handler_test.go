@@ -1,8 +1,10 @@
 package dedup
 
 import (
-	"github.com/gdamore/tcell/v2"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -293,49 +295,76 @@ func keptHandler(t *testing.T, activePath string) (*Handler, *ui.Model) {
 	return h, model
 }
 
-func TestLeaveKeepsResultsAndOpenRestoresView(t *testing.T) {
-	for _, path := range []string{"/scan", "/scan/alpha"} {
-		h, model := keptHandler(t, path)
-		if model.ViewMode != ui.ViewBrowser || !h.HasResults() {
-			t.Fatalf("after Leave: ViewMode=%v HasResults=%v", model.ViewMode, h.HasResults())
-		}
-		h.Open()
-		if model.ViewMode != ui.ViewDedup {
-			t.Fatalf("Open from %s: ViewMode = %v, want ViewDedup", path, model.ViewMode)
-		}
-		if h.session != nil || model.DedupReturnDialog.Open {
-			t.Fatalf("Open from %s started a scan or dialog", path)
-		}
+func TestOpenInKeptRootOffersDialogElsewhereRescans(t *testing.T) {
+	h, model := keptHandler(t, "/scan")
+	if model.ViewMode != ui.ViewBrowser || !h.HasResults() {
+		t.Fatalf("after Leave: ViewMode=%v HasResults=%v", model.ViewMode, h.HasResults())
 	}
-}
-
-func TestOpenOutsideRootOffersReturnDialog(t *testing.T) {
-	h, model := keptHandler(t, "/elsewhere")
 	h.Open()
-	if !model.DedupReturnDialog.Open || model.ViewMode != ui.ViewBrowser {
-		t.Fatalf("dialog open=%v ViewMode=%v", model.DedupReturnDialog.Open, model.ViewMode)
-	}
-	h.HandleReturnDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, 0)) // Show is focused first
-	if model.DedupReturnDialog.Open || model.ViewMode != ui.ViewDedup {
-		t.Fatalf("Show: dialog open=%v ViewMode=%v", model.DedupReturnDialog.Open, model.ViewMode)
-	}
-}
-
-func TestReturnDialogRescanStartsSession(t *testing.T) {
-	dir := t.TempDir()
-	h, model := keptHandler(t, dir)
-	h.Open()
-	if !model.DedupReturnDialog.Open {
-		t.Fatal("dialog should open for a path outside the kept root")
-	}
-	h.HandleReturnDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
-	if model.DedupReturnDialog.Open || h.session == nil {
-		t.Fatalf("Rescan: dialog open=%v session=%v", model.DedupReturnDialog.Open, h.session)
-	}
-	if got := h.session.Snapshot().Root.String(); got != dir {
-		t.Fatalf("rescan root = %q, want %q", got, dir)
+	if !model.DedupReturnDialog.Open || h.session != nil {
+		t.Fatalf("in root: dialog open=%v session=%v", model.DedupReturnDialog.Open, h.session)
 	}
 	h.Close()
+
+	dir := t.TempDir()
+	h, model = keptHandler(t, dir)
+	h.Open()
+	if model.DedupReturnDialog.Open || h.session == nil {
+		t.Fatalf("other dir: dialog open=%v session=%v", model.DedupReturnDialog.Open, h.session)
+	}
+	h.Close()
+}
+
+// verifiedHandler keeps results over real files so verification can stat them.
+func verifiedHandler(t *testing.T, names ...string) (*Handler, *ui.Model, string) {
+	t.Helper()
+	dir := t.TempDir()
+	root := pathloc.MustParse(dir)
+	var files []comparepkg.DedupFile
+	for _, n := range names {
+		if err := os.WriteFile(filepath.Join(dir, n), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, comparepkg.DedupFile{Rel: n, Abs: pathloc.MustParse(filepath.Join(dir, n))})
+	}
+	h, model := dedupHandlerWithView(t, dedupDoneSnapshot(root, files...), ui.DedupViewState{
+		TreeDirs: true, Marked: map[string]bool{}, Kept: map[string]bool{},
+	})
+	model.Primary.Path = root
+	h.Leave()
+	return h, model, dir
+}
+
+func pollVerified(t *testing.T, h *Handler) {
+	t.Helper()
+	h.VerifyAndShowKept()
+	for i := 0; i < 500; i++ {
+		h.PollUpdates(WakePayload{})
+		if h.model.DedupView.RecheckTotal == 0 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("verify never finished")
+}
+
+func TestVerifyDropsVanishedFilesAndCollapsesGroup(t *testing.T) {
+	h, model, dir := verifiedHandler(t, "meadow.txt", "lantern.txt", "orchard.txt")
+	if err := os.Remove(filepath.Join(dir, "orchard.txt")); err != nil {
+		t.Fatal(err)
+	}
+	pollVerified(t, h)
+	if model.ViewMode != ui.ViewDedup || len(model.DedupSnapshot.Groups) != 1 || len(model.DedupSnapshot.Groups[0].Files) != 2 {
+		t.Fatalf("ViewMode=%v snapshot=%+v", model.ViewMode, model.DedupSnapshot.Groups)
+	}
+	h.Leave()
+	if err := os.Remove(filepath.Join(dir, "lantern.txt")); err != nil {
+		t.Fatal(err)
+	}
+	pollVerified(t, h)
+	if model.ViewMode != ui.ViewBrowser || h.HasResults() {
+		t.Fatalf("all gone: ViewMode=%v HasResults=%v", model.ViewMode, h.HasResults())
+	}
 }
 
 func TestShowKeptWithoutResultsIsNoop(t *testing.T) {

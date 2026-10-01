@@ -47,7 +47,7 @@ func (h *Handler) returnDialogActivate(i int) {
 	h.model.DedupReturnDialog = dialog.DedupReturnDialogState{}
 	switch i {
 	case 0:
-		h.ShowKept()
+		h.VerifyAndShowKept()
 	case 1:
 		h.openRoot(h.activePanelPath())
 	}

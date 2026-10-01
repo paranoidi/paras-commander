@@ -31,6 +31,16 @@ func waitDedupDone(t *testing.T, app *App) comparepkg.DedupSnapshot {
 	return comparepkg.DedupSnapshot{}
 }
 
+// waitDedupShown polls until the kept-results verify pass finishes and the view is shown.
+func waitDedupShown(t *testing.T, app *App) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) && (app.model.ViewMode != ui.ViewDedup || app.model.DedupView.RecheckTotal > 0) {
+		app.pollDedupUpdates(dedupctrl.WakePayload{})
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
 func TestDedupViewFindsDuplicates(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("dup"), 0o644); err != nil {
