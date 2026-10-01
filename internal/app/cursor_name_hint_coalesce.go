@@ -12,8 +12,7 @@ type cursorNameHintFlushPayload struct{}
 
 // clearCursorNameHintNavCoalesce stops the pending coalesce so the next paint uses the current cursor name.
 func (a *App) clearCursorNameHintNavCoalesce() {
-	a.cursorNameHintNav.Stop()
-	a.cursorNameHintNavSkip.Store(false)
+	a.cursorNameHintNav.Clear()
 }
 
 // armCursorNameHintNavCoalesceAfterListNav keeps the previous bottom full-name overlay visible while the
@@ -23,16 +22,14 @@ func (a *App) armCursorNameHintNavCoalesceAfterListNav() {
 		return
 	}
 	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
-	a.cursorNameHintNavSkip.Store(true)
 	a.cursorNameHintNav.Arm(delay, func() {
-		a.cursorNameHintNavSkip.Store(false)
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(cursorNameHintFlushPayload{}))
 	})
 }
 
 // syncCursorNameHintNavCoalesceFlags propagates the atomic skip flag into panel state before painting.
 func (a *App) syncCursorNameHintNavCoalesceFlags() {
-	skip := a.cursorNameHintNavSkip.Load()
+	skip := a.cursorNameHintNav.Held()
 	a.model.Primary.CursorNameHintCoalesce = skip && a.model.ActivePanel == ui.PrimaryPanel
 	a.model.Secondary.CursorNameHintCoalesce = skip && a.model.ActivePanel == ui.SecondaryPanel
 }

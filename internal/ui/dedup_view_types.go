@@ -91,6 +91,8 @@ func DedupCollapseNewIDs(pane *DedupPane, prevIDs, newIDs []string) {
 // screen.
 type DedupViewState struct {
 	Main                  DedupPane
+	SourceRow             int  // main-pane row index the Copies pane and group hints reflect; frozen while a held nav key defers the copies rebuild
+	SourceStale           bool // cursor moved off SourceRow during a held nav key; group hints are hidden until the rebuild
 	Copies                DedupPane
 	FocusCopies           bool            // Tab focus: false = main pane, true = copies pane
 	FocusPanel            bool            // Tab focus is in the Dirs-view browse panel (FocusCopies keeps the source pane)

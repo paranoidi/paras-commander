@@ -2,6 +2,7 @@ package app
 
 import (
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -14,11 +15,12 @@ func TestBrowserListNavPartialRenderEligibleSkipsSyncWithoutDebounce(t *testing.
 	app.model.ActiveSubFocus = ui.SubFocusFileList
 	app.model.SyncFollowEnabled = true
 	app.model.SyncFollowPanel = ui.PrimaryPanel
-	app.syncFollowNavSkipReconcile.Store(false)
+	app.syncFollowNav.Clear()
 	if app.browserListNavPartialRenderEligible() {
 		t.Fatal("expected full render when latched sync is not debouncing")
 	}
-	app.syncFollowNavSkipReconcile.Store(true)
+	app.syncFollowNav.Arm(time.Hour, func() {})
+	defer app.syncFollowNav.Clear()
 	if !app.browserListNavPartialRenderEligible() {
 		t.Fatal("expected partial render while sync nav is debouncing")
 	}

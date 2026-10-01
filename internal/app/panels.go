@@ -444,7 +444,7 @@ func (a *App) reconcileAfterEvent() {
 	a.previewCtrl.HandlePanelDirChanged(ui.PrimaryPanel)
 	a.previewCtrl.HandlePanelDirChanged(ui.SecondaryPanel)
 	// Panel sync reads the driver's highlight after idle-sort / meta hooks may adjust cursors.
-	if !a.syncFollowNavSkipReconcile.Load() {
+	if !a.syncFollowNav.Held() {
 		a.syncFollowFromActive()
 	}
 	a.previewCtrl.SchedulePrefetchFromActivePanel()
@@ -527,7 +527,7 @@ func (a *App) syncFollowFromActive() {
 	follower.EnsureCursorInViewport(a.panelViewportRows(followerID))
 }
 
-func panelSyncFollowListNavAction(actionID string) bool {
+func listNavAction(actionID string) bool {
 	switch actionID {
 	case keymap.ActionNavUp, keymap.ActionNavDown,
 		keymap.ActionNavPageUp, keymap.ActionNavPageDown,
@@ -540,7 +540,7 @@ func panelSyncFollowListNavAction(actionID string) bool {
 
 // browserFolderChangeNavAction reports whether actionID changes the active panel's current
 // directory (as opposed to just moving the cursor within it). Kept separate from
-// panelSyncFollowListNavAction, which also drives sync-follow's held-nav debounce — a distinct
+// listNavAction, which also drives the held-nav debounces (sync-follow, dedup view) — a distinct
 // concern that folder-change actions should not affect.
 func browserFolderChangeNavAction(actionID string) bool {
 	switch actionID {
@@ -564,7 +564,7 @@ func (a *App) panelSyncFollowNavCoalesceContext() bool {
 // panelSyncFollowHeldListNav is true when this key event will move the file-list cursor via
 // the normal browser dispatch path (used to extend debounced sync vs clearing it).
 func (a *App) panelSyncFollowHeldListNav(resolvedAction string, event *tcell.EventKey) bool {
-	if !panelSyncFollowListNavAction(resolvedAction) {
+	if !listNavAction(resolvedAction) {
 		return false
 	}
 	if a.inputMode() != InputModeNormal {
@@ -584,9 +584,7 @@ func (a *App) panelSyncFollowHeldListNav(resolvedAction string, event *tcell.Eve
 
 // clearPanelSyncFollowNavCoalesce stops pending follower sync and allows reconcile to mirror again.
 func (a *App) clearPanelSyncFollowNavCoalesce() {
-	a.syncFollowNav.Stop()
-	a.syncFollowNavGen.Add(1)
-	a.syncFollowNavSkipReconcile.Store(false)
+	a.syncFollowNav.Clear()
 }
 
 func (a *App) armPanelSyncFollowNavCoalesceAfterListNav() {
@@ -596,20 +594,17 @@ func (a *App) armPanelSyncFollowNavCoalesceAfterListNav() {
 	if !a.panelSyncFollowNavCoalesceContext() {
 		return
 	}
-	gen := a.syncFollowNavGen.Add(1)
 	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
-	a.syncFollowNavSkipReconcile.Store(true)
 	a.syncFollowNav.Arm(delay, func() {
-		_ = a.screen.PostEvent(tcell.NewEventInterrupt(syncFollowNavFlushPayload{gen: gen}))
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(syncFollowNavFlushPayload{}))
 	})
 }
 
 // applyPanelSyncFollowNavFlush runs after the nav debounce elapses; returns whether a repaint is needed.
-func (a *App) applyPanelSyncFollowNavFlush(p syncFollowNavFlushPayload) bool {
-	if p.gen != a.syncFollowNavGen.Load() {
-		return false
+func (a *App) applyPanelSyncFollowNavFlush() bool {
+	if a.syncFollowNav.Held() {
+		return false // re-armed after this flush was posted
 	}
-	a.syncFollowNavSkipReconcile.Store(false)
 	a.syncFollowFromActive()
 	return true
 }

@@ -170,3 +170,58 @@ func TestDedupBrowsePanelIgnoresPaneSwitch(t *testing.T) {
 		t.Fatalf("after Copies move panel path = %q, want %q", got, want)
 	}
 }
+
+func TestDedupBrowsePanelHeldNavDefersReload(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt"), filepath.Join("meadow", "beacon.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 100, 30)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	dedupBrowseKey(app, tcell.KeyDown) // root file row: panel shows dir
+	dedupBrowseSettle(t, app, screen)
+
+	app.config.UI.KeyRepeatDebounceMS = 200
+	fpBefore := app.dedupBrowseFP
+	dedupBrowseKey(app, tcell.KeyUp) // meadow dir row, first press: applies at once (no hint flicker)
+	if app.model.DedupView.SourceStale || app.model.DedupView.SourceRow != app.model.DedupView.Main.Selected {
+		t.Fatalf("first press deferred: stale=%v src=%d sel=%d",
+			app.model.DedupView.SourceStale, app.model.DedupView.SourceRow, app.model.DedupView.Main.Selected)
+	}
+	if app.dedupBrowseFP == fpBefore {
+		t.Fatal("first press did not retarget the browse panel")
+	}
+	srcBefore := app.model.DedupView.SourceRow
+	fpHeld := app.dedupBrowseFP
+	dedupBrowseKey(app, tcell.KeyDown) // repeat inside the window: back to root file row, deferred
+	if app.model.DedupView.SourceRow != srcBefore {
+		t.Fatalf("copies source changed on repeat: %d->%d", srcBefore, app.model.DedupView.SourceRow)
+	}
+	if !app.model.DedupView.SourceStale {
+		t.Fatal("SourceStale = false on repeat; stale group hints would stay painted")
+	}
+	if app.dedupBrowseFP != fpHeld {
+		t.Fatal("browse panel retargeted on repeat")
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) && (app.model.DedupView.SourceStale || app.model.DedupPanel.PathString() != dir) {
+		drainScreenInterrupts(app, screen)
+		time.Sleep(5 * time.Millisecond)
+	}
+	if got := app.model.DedupPanel.PathString(); got != dir {
+		t.Fatalf("panel path after flush = %q, want %q", got, dir)
+	}
+	if got, want := app.model.DedupView.SourceRow, app.model.DedupView.Main.Selected; got != want {
+		t.Fatalf("SourceRow after flush = %d, want %d", got, want)
+	}
+	if app.model.DedupView.SourceStale {
+		t.Fatal("SourceStale still set after flush")
+	}
+}

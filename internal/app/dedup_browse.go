@@ -66,6 +66,9 @@ func (a *App) reconcileDedupPanel() {
 	if a.model.ViewMode != ui.ViewDedup {
 		return // hidden: keep the panel as-is for the return trip
 	}
+	if a.dedupCtrl.NavHeld() {
+		return // fingerprint stays stale so the flush sees the final cursor move
+	}
 	// Per-pane fingerprints (0 main, 1 copies). Only a cursor move changes one, so switching
 	// panes never reloads the panel; the focused pane wins when both moved.
 	var fp [2]string

@@ -201,3 +201,30 @@ func TestDebouncerConcurrentArmStopInvalidate(t *testing.T) {
 	d.Invalidate()
 	time.Sleep(200 * time.Millisecond)
 }
+
+func TestHold(t *testing.T) {
+	var h Hold
+	ran := make(chan struct{}, 2)
+	h.Arm(10*time.Millisecond, func() { ran <- struct{}{} })
+	if !h.Held() {
+		t.Fatal("expected held after Arm")
+	}
+	select {
+	case <-ran:
+	case <-time.After(time.Second):
+		t.Fatal("fn did not run")
+	}
+	if h.Held() {
+		t.Fatal("expected released after fire")
+	}
+	h.Arm(20*time.Millisecond, func() { ran <- struct{}{} })
+	h.Clear()
+	if h.Held() {
+		t.Fatal("expected released after Clear")
+	}
+	select {
+	case <-ran:
+		t.Fatal("fn ran after Clear")
+	case <-time.After(60 * time.Millisecond):
+	}
+}

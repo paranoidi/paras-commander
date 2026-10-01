@@ -103,7 +103,7 @@ func (a *App) browserListNavPartialRenderEligible() bool {
 	if a.panelOnlyPaintBlocked() {
 		return false
 	}
-	if a.model.SyncFollowEnabled && !a.syncFollowNavSkipReconcile.Load() {
+	if a.model.SyncFollowEnabled && !a.syncFollowNav.Held() {
 		return false
 	}
 	if a.model.QuickViewEnabled && a.model.QuickViewDisplayActive() && !a.previewCtrl.QuickViewNavSkipReconcile() {

@@ -81,3 +81,28 @@ func (d *Debouncer) stopLocked() {
 	}
 	d.timer = nil
 }
+
+// Hold gates follow-up work while a key is held: Arm sets Held and (re)starts the release
+// timer; on fire Held clears, then fn runs (typically posting a flush wake). Clear releases now.
+type Hold struct {
+	d    Debouncer
+	held atomic.Bool
+}
+
+// Arm marks the hold active and (re)starts the release timer.
+func (h *Hold) Arm(delay time.Duration, fn func()) {
+	h.held.Store(true)
+	h.d.Arm(delay, func() {
+		h.held.Store(false)
+		fn()
+	})
+}
+
+// Clear cancels a pending release and drops the hold immediately.
+func (h *Hold) Clear() {
+	h.d.Invalidate()
+	h.held.Store(false)
+}
+
+// Held reports whether the hold is active.
+func (h *Hold) Held() bool { return h.held.Load() }

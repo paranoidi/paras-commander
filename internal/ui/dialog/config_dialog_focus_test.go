@@ -119,7 +119,7 @@ func TestConfigDialogSplitFocus(t *testing.T) {
 			t.Fatalf("button %d Up = %d,%v, want split0", f, got, ok)
 		}
 	}
-	if i, ok := ConfigDialogSplitIndex(14);!ok || i != 2 {
+	if i, ok := ConfigDialogSplitIndex(14); !ok || i != 2 {
 		t.Fatalf("ConfigDialogSplitIndex(14) = %d,%v", i, ok)
 	}
 }

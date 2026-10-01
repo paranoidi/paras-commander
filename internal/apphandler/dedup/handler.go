@@ -23,6 +23,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -52,6 +53,9 @@ type Host interface {
 // WakePayload wakes PollEvent when the dedup session updates.
 type WakePayload struct{}
 
+// NavFlushPayload wakes PollEvent when the held-nav hold releases.
+type NavFlushPayload struct{}
+
 // Handler owns the dedup full-screen view.
 type Handler struct {
 	host       Host
@@ -64,6 +68,13 @@ type Handler struct {
 	session *comparepkg.DedupSession
 	wake    host.WakeCoalescer
 	pending *dedupPendingState
+
+	// nav, while held, defers the copies pane / group hint rebuild (and, via the app, the
+	// browse-panel reload) until the cursor key is released; DedupView.SourceStale marks a
+	// pending rebuild. navRepeat is true when the current key arrived while nav was already
+	// held (a key repeat); the first press is applied immediately.
+	nav       sched.Hold
+	navRepeat bool
 
 	verifyMu   sync.Mutex
 	verifyGen  int
@@ -545,6 +556,62 @@ func (h *Handler) syncDedupList() {
 	h.syncCopies()
 }
 
+// ArmNavHold (re)starts the held-nav window. The first press applies at once (leading edge);
+// presses arriving while the window is still armed are key repeats and defer the
+// copies/hints/browse-panel follow until release.
+func (h *Handler) ArmNavHold() {
+	ms := h.host.Config().UI.KeyRepeatDebounceMS
+	if ms <= 0 {
+		h.navRepeat = false
+		return
+	}
+	h.navRepeat = h.nav.Held()
+	h.nav.Arm(time.Duration(ms)*time.Millisecond, func() {
+		_ = h.screen.PostEvent(tcell.NewEventInterrupt(NavFlushPayload{}))
+	})
+}
+
+// NavHeld reports whether a repeated nav key is deferring follow-up rebuilds.
+func (h *Handler) NavHeld() bool { return h.navRepeat }
+
+// ReleaseNavHold drops the hold now and applies any deferred copies rebuild.
+func (h *Handler) ReleaseNavHold() {
+	h.nav.Clear()
+	h.navRepeat = false
+	h.flushCopies()
+}
+
+// ApplyNavFlush runs when the hold timer fires; true when deferred work was applied (false
+// when a newer key re-armed it or the hold never deferred anything).
+func (h *Handler) ApplyNavFlush() bool {
+	if h.nav.Held() {
+		return false
+	}
+	deferred := h.navRepeat
+	h.navRepeat = false
+	h.flushCopies()
+	return deferred
+}
+
+func (h *Handler) flushCopies() {
+	if h.model.DedupView.SourceStale {
+		h.syncCopies()
+	}
+}
+
+// followMainCursor refreshes the copies pane after a main-pane cursor move, or marks it stale
+// while a nav key is held.
+func (h *Handler) followMainCursor() {
+	if h.model.DedupView.FocusCopies {
+		return
+	}
+	if h.navRepeat {
+		h.model.DedupView.SourceStale = true
+		return
+	}
+	h.syncCopies()
+}
+
 // syncCopies rebuilds the copies pane from the main pane's selected row,
 // preserving the copies cursor by row ID when possible.
 func (h *Handler) syncCopies() {
@@ -553,6 +620,7 @@ func (h *Handler) syncCopies() {
 	if row, ok := h.paneRow(&st.Copies, h.model.DedupCopiesList); ok {
 		prevID = row.ID
 	}
+	st.SourceRow, st.SourceStale = st.Main.Selected, false
 	sel, _ := h.paneRow(&st.Main, h.model.DedupList)
 	h.model.DedupCopiesList = ui.DedupCopyRows(h.model.DedupSnapshot, sel, st.Copies.Collapsed)
 	h.refilterPane(&st.Copies, h.model.DedupCopiesList)
@@ -603,9 +671,7 @@ func (h *Handler) MoveToAdjacentDir(delta int) {
 	for i := pane.Selected + delta; i >= 0 && i < len(rows); i += delta {
 		if rows[i].Value.Kind == ui.DedupRowDir {
 			pane.Selected = i
-			if !h.model.DedupView.FocusCopies {
-				h.syncCopies()
-			}
+			h.followMainCursor()
 			return
 		}
 	}
@@ -619,9 +685,7 @@ func (h *Handler) MoveSelection(delta int) {
 		return
 	}
 	pane.Selected = min(max(pane.Selected+delta, 0), len(rows)-1)
-	if !h.model.DedupView.FocusCopies {
-		h.syncCopies()
-	}
+	h.followMainCursor()
 }
 
 // FocusedFilter returns a copy of the focused pane's quick filter state.
@@ -710,9 +774,7 @@ func (h *Handler) SelectEdge(last bool) {
 	} else {
 		pane.Selected = 0
 	}
-	if !h.model.DedupView.FocusCopies {
-		h.syncCopies()
-	}
+	h.followMainCursor()
 }
 
 // SwitchPane cycles focus (Tab): main tree -> copies pane (if non-empty) -> browse panel (Dirs

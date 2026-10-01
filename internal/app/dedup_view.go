@@ -320,6 +320,11 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	if a.model.DedupView.FocusPanel {
 		return a.handleDedupPanelKey(nextAction, event)
 	}
+	if listNavAction(nextAction) || nextAction == keymap.ActionDedupPrevDir || nextAction == keymap.ActionDedupNextDir {
+		a.dedupCtrl.ArmNavHold()
+	} else {
+		a.dedupCtrl.ReleaseNavHold()
+	}
 	visible := a.dedupVisibleRows()
 	if nextAction == "" && keymap.IsPlainPrintableRune(event) {
 		a.handleDedupFilterKey(event)

@@ -479,10 +479,16 @@ func pinDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	return out
 }
 
-func (a *App) prepareGlobalQuitShortcutCleanup() {
+// clearAllNavCoalesces drops every held-nav debounce (panel sync, previews, name hint, dedup).
+func (a *App) clearAllNavCoalesces() {
 	a.clearPanelSyncFollowNavCoalesce()
 	a.previewCtrl.ClearNavCoalesces()
 	a.clearCursorNameHintNavCoalesce()
+	a.dedupCtrl.ReleaseNavHold()
+}
+
+func (a *App) prepareGlobalQuitShortcutCleanup() {
+	a.clearAllNavCoalesces()
 	if a.inQuickFilterUI() {
 		a.cancelActiveQuickFilter()
 	}
@@ -838,7 +844,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 // browserListNavPartialRenderEligibleFor reports whether actionID's render can repaint only the
 // active panel (cursor-only list nav or a folder change), per browserListNavPartialRenderEligible.
 func (a *App) browserListNavPartialRenderEligibleFor(actionID string) bool {
-	if !panelSyncFollowListNavAction(actionID) && !browserFolderChangeNavAction(actionID) {
+	if !listNavAction(actionID) && !browserFolderChangeNavAction(actionID) {
 		return false
 	}
 	return a.browserListNavPartialRenderEligible()

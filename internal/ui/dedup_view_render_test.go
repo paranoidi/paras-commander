@@ -89,7 +89,7 @@ func TestDrawDedupViewSelectedRowUsesActiveCursorStyle(t *testing.T) {
 		}},
 	}
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
-	view := DedupViewState{Main: DedupPane{Selected: 1}}
+	view := DedupViewState{SourceRow: 1, Main: DedupPane{Selected: 1}}
 
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
@@ -301,6 +301,7 @@ func TestDrawDedupViewHighlightsDuplicateSiblingsOfCursor(t *testing.T) {
 		t.Fatalf("rows = %+v, missing expected file rows", list)
 	}
 	view.Main.Selected = cursorIdx
+	view.SourceRow = view.Main.Selected
 
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
@@ -371,6 +372,7 @@ func TestDrawDedupViewHighlightsCollapsedFolderContainingCursorSibling(t *testin
 		t.Fatalf("rows = %+v, missing expected rows", list)
 	}
 	view.Main.Selected = cursorIdx
+	view.SourceRow = view.Main.Selected
 
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
@@ -490,6 +492,7 @@ func TestDrawDedupViewDirectoryFolderIconUsesDirectoryBlue(t *testing.T) {
 	view := DedupViewState{
 		IgnoreEmpty: true,
 		TreeDirs:    true,
+		SourceRow:   1,
 		Main: DedupPane{
 			Selected:  1,
 			Collapsed: map[string]bool{"d:meadow": true},
@@ -546,6 +549,7 @@ func TestDrawDedupViewOpenFolderIconUsesDirectoryBlue(t *testing.T) {
 	view := DedupViewState{
 		IgnoreEmpty: true,
 		TreeDirs:    true,
+		SourceRow:   1,
 		Main:        DedupPane{Selected: 1},
 	}
 	list, _ := DedupRowsFromSnapshot(snap, view)
@@ -597,6 +601,7 @@ func TestDrawDedupViewCursorSelectedDirFolderIconUsesDirectoryBlue(t *testing.T)
 	view := DedupViewState{
 		IgnoreEmpty: true,
 		TreeDirs:    true,
+		SourceRow:   0,
 		Main:        DedupPane{Selected: 0}, // cursor on meadow dir row
 	}
 	list, _ := DedupRowsFromSnapshot(snap, view)
@@ -805,6 +810,7 @@ func TestDrawDedupViewDirRowShowsSubtreeMarkIndicator(t *testing.T) {
 		TreeDirs:    true,
 		Marked:      map[string]bool{"/scan/root/meadow/lantern.txt": true},
 		MarkedCount: 1,
+		SourceRow:   2,
 		Main:        DedupPane{Selected: 2}, // keep cursor off the dir row
 	}
 	list, _ := DedupRowsFromSnapshot(snap, view)
@@ -867,6 +873,7 @@ func TestDrawDedupViewDirRowShowsRedSubtreeMarkWhenGroupFullyMarked(t *testing.T
 			absRoot.String():   true,
 		},
 		MarkedCount: 2,
+		SourceRow:   3,
 		Main:        DedupPane{Selected: 3}, // keep cursor off the dir row
 	}
 	list, _ := DedupRowsFromSnapshot(snap, view)
@@ -1083,7 +1090,7 @@ func TestDrawDedupViewCopiesPaneEmptyHeaderOmitsPathDot(t *testing.T) {
 	snap := comparepkg.DedupSnapshot{Root: root, Phase: comparepkg.DedupDone}
 	snap.Groups = append(snap.Groups, dedupTestGroup(1, 1024, "alpha.bin"))
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
-	drawDedupView(screen, layout, DedupViewState{Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal, nil)
+	drawDedupView(screen, layout, DedupViewState{SourceRow: -1, Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	ch, _, _ := screen.Get(contentX, headerY)
 	if ch == "." {
@@ -1113,7 +1120,7 @@ func TestDrawDedupViewCopiesPaneEmptyTextStartsAtContentColumn(t *testing.T) {
 	snap := comparepkg.DedupSnapshot{Root: root, Phase: comparepkg.DedupDone}
 	snap.Groups = append(snap.Groups, dedupTestGroup(1, 1024, "alpha.bin"))
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
-	drawDedupView(screen, layout, DedupViewState{Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal, nil)
+	drawDedupView(screen, layout, DedupViewState{SourceRow: -1, Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	ch, _, _ := screen.Get(contentX, emptyY)
 	if ch != "S" {
@@ -1178,7 +1185,8 @@ func TestDrawDedupViewCopiesPaneDirUsesSelectionStyleWhenFullyMarked(t *testing.
 			absBeacon.String():  true,
 			absOrchard.String(): false,
 		},
-		Main: DedupPane{Selected: DedupRowIndexByID(list, mainSel.ID)},
+		SourceRow: DedupRowIndexByID(list, mainSel.ID),
+		Main:      DedupPane{Selected: DedupRowIndexByID(list, mainSel.ID)},
 	}
 	drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal, nil)
 
@@ -1276,7 +1284,8 @@ func TestDrawDedupViewFileTreePaneDirUsesSelectionStyleWhenFullyMarked(t *testin
 			absMeadow.String(): true,
 			absBeacon.String(): true,
 		},
-		Main: DedupPane{Selected: 0},
+		SourceRow: 0,
+		Main:      DedupPane{Selected: 0},
 	}
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
@@ -1420,6 +1429,7 @@ func TestDrawDedupViewKeptSiblingOfCursorShowsRelatedIcon(t *testing.T) {
 		t.Fatalf("rows = %+v, missing expected file rows", list)
 	}
 	view.Main.Selected = cursorIdx
+	view.SourceRow = view.Main.Selected
 	view.Kept = map[string]bool{
 		list[siblingIdx].Value.AbsKey:   true,
 		list[unrelatedIdx].Value.AbsKey: true,
@@ -1487,6 +1497,7 @@ func TestDrawDedupViewRelatedIconIsLastAfterSubtreeMark(t *testing.T) {
 		t.Fatalf("rows = %+v, missing expected rows", list)
 	}
 	view.Main.Selected = cursorIdx
+	view.SourceRow = view.Main.Selected
 
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
@@ -1548,6 +1559,7 @@ func TestDrawDedupViewSubtreeMarkFollowsWideDirName(t *testing.T) {
 		t.Fatalf("rows = %+v, missing wide dir row", list)
 	}
 	view.Main.Selected = DedupRowIndexByID(list, "/root/garden/kettle.bin")
+	view.SourceRow = view.Main.Selected
 
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 

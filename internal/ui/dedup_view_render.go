@@ -146,12 +146,12 @@ func drawDedupView(
 		treeFullyMarkedDirs = dedupSnapshotFullyMarkedDirSet(snap, view.Marked)
 	}
 	var copyFullyMarkedDirs map[string]bool
-	if sel, ok := dedupRowAt(list, view.Main.Selected); ok && sel.Value.Kind == DedupRowFile {
+	if sel, ok := dedupRowAt(list, view.SourceRow); ok && sel.Value.Kind == DedupRowFile {
 		copyFullyMarkedDirs = dedupCopyPaneFullyMarkedDirSet(snap, sel, view.Marked)
 	}
 	activeGroup := -1
-	if view.Main.Selected >= 0 && view.Main.Selected < len(list) {
-		activeGroup = list[view.Main.Selected].Value.GroupIdx
+	if !view.SourceStale && view.SourceRow >= 0 && view.SourceRow < len(list) {
+		activeGroup = list[view.SourceRow].Value.GroupIdx
 	}
 	var hintDirs map[string]bool
 	if view.TreeDirs && activeGroup >= 0 && activeGroup < len(snap.Groups) {
@@ -165,7 +165,7 @@ func drawDedupView(
 		Pane:             view.Main,
 		Focused:          !view.FocusCopies && !view.FocusPanel,
 		EmptyText:        dedupEmptyMessage(snap),
-		DimByGroup:       !view.TreeDirs,
+		DimByGroup:       !view.TreeDirs && !view.SourceStale,
 		ActiveGroup:      activeGroup,
 		HintDirs:         hintDirs,
 		FullyMarkedDirs:  treeFullyMarkedDirs,
@@ -177,7 +177,7 @@ func drawDedupView(
 
 	copiesHeader := ""
 	copiesEmpty := "Select a file to see its copies"
-	if sel, ok := dedupRowAt(list, view.Main.Selected); ok && sel.Value.Kind == DedupRowFile {
+	if sel, ok := dedupRowAt(list, view.SourceRow); ok && sel.Value.Kind == DedupRowFile {
 		copiesHeader = sel.Value.File.Rel
 		copiesEmpty = "No other copies"
 	}

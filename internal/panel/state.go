@@ -2286,7 +2286,6 @@ func (s *State) ToggleSortReverse(viewportRows int) {
 	s.SetSortMode(s.Sort.Mode, !s.Sort.Reverse, s.Sort.DirectoriesFirst, viewportRows)
 }
 
-
 func (s *State) filterOptions() quickfilter.Options {
 	if s.FilterOptions == nil {
 		return quickfilter.Options{}

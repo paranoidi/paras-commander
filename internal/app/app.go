@@ -143,9 +143,7 @@ type sftpState struct {
 }
 
 // syncFollowNavFlushPayload applies latched panel sync after file-list cursor debounce elapses.
-type syncFollowNavFlushPayload struct {
-	gen uint64
-}
+type syncFollowNavFlushPayload struct{}
 
 // selectionScanNeedPayload carries the result of a background diskusage.DirectoriesNeedingScan
 // pass (the per-directory mount-exclusion stat check) for one panel's selection back to the main
@@ -231,12 +229,9 @@ type App struct {
 	menuBarSpeedStale bool
 	// devDeleteBarDemoStart is the wall time when Dev → Delete bar demo began; zero when inactive.
 	devDeleteBarDemoStart time.Time
-	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).
-	syncFollowNavGen atomic.Uint64
-	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent
-	// until the debounce flush runs or coalesce is cleared.
-	syncFollowNavSkipReconcile atomic.Bool
-	syncFollowNav              sched.Debouncer
+	// syncFollowNav, while held, suppresses syncFollowFromActive in reconcileAfterEvent
+	// until the debounce flush runs or the hold is cleared.
+	syncFollowNav sched.Hold
 	// debounceCalibrateRelease infers key release between calibration trials.
 	debounceCalibrateRelease sched.Debouncer
 	// navParentBackspaceGuarded, when true, suppresses nav.parent triggered by backspace.
@@ -244,9 +239,8 @@ type App struct {
 	// (debounce timer fires). Prevents accidental directory navigation after erasing filter text.
 	navParentBackspaceGuarded  atomic.Bool
 	navParentBackspaceDebounce sched.Debouncer
-	// cursorNameHintNavSkip, when true, holds the previous bottom-border full-name overlay during file-list nav debounce.
-	cursorNameHintNavSkip atomic.Bool
-	cursorNameHintNav     sched.Debouncer
+	// cursorNameHintNav, while held, keeps the previous bottom-border full-name overlay during file-list nav debounce.
+	cursorNameHintNav sched.Hold
 
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on
@@ -1043,7 +1037,7 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			out.didRender = true
 		}
 	case syncFollowNavFlushPayload:
-		if a.applyPanelSyncFollowNavFlush(d) {
+		if a.applyPanelSyncFollowNavFlush() {
 			a.render()
 			out.didRender = true
 		}
@@ -1165,6 +1159,14 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		a.render()
 		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
 	}
+	if _, ok := data.(dedupctrl.NavFlushPayload); ok {
+		if !a.dedupCtrl.ApplyNavFlush() {
+			return eventOutcome{pollDiskUsageAfter: true}, true
+		}
+		a.reconcileDedupPanel()
+		a.render()
+		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
+	}
 	if p, ok := data.(findctrl.GroupCountPayload); ok {
 		out := eventOutcome{pollDiskUsageAfter: true}
 		if a.applyGroupCountPayload(p) {
@@ -1246,9 +1248,7 @@ func (a *App) Run() error {
 		switch event := event.(type) {
 		case *tcell.EventResize:
 			pollJobsAfter = true
-			a.clearPanelSyncFollowNavCoalesce()
-			a.previewCtrl.ClearNavCoalesces()
-			a.clearCursorNameHintNavCoalesce()
+			a.clearAllNavCoalesces()
 			a.resetImageOverlayForResize()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
