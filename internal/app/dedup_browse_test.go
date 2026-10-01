@@ -111,11 +111,11 @@ func TestDedupBrowsePanelFollowsSourceRowAndTabCycle(t *testing.T) {
 			app.model.DedupView.FocusPanel, p.PathString(), wantPath)
 	}
 
-	// Groups view has no panel: it is cleared and focus falls back to the main tree.
+	// Groups view keeps the panel and its focus.
 	app.dedupCtrl.ToggleTreeMode()
 	app.reconcileAfterEvent()
-	if app.model.DedupPanel.PathString() != "" || app.model.DedupView.FocusPanel || app.model.DedupView.FocusCopies {
-		t.Fatalf("Groups view kept the browse panel: %+v", app.model.DedupView)
+	if app.model.DedupPanel.PathString() != wantPath || !app.model.DedupView.FocusPanel {
+		t.Fatalf("Groups view lost the browse panel: %+v", app.model.DedupView)
 	}
 }
 

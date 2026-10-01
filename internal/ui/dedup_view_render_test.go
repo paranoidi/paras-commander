@@ -305,7 +305,7 @@ func TestDrawDedupViewUnfocusedKeptCursorRowUsesInactiveCursor(t *testing.T) {
 
 	drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal, nil)
 
-	copiesRect, _ := DedupSecondaryRects(layout.Secondary, view.TreeDirs)
+	copiesRect, _ := DedupSecondaryRects(layout.Secondary)
 	_, keepBG, _ := styles.PanelDedupRowCursorKeep.Decompose()
 	_, wantBG, _ := styles.PanelListingCursorStyle(styles.PanelActiveSurface, theme.PanelListingCursorOpts{}).Decompose()
 	if keepBG == wantBG {
@@ -1631,17 +1631,13 @@ func TestDrawDedupViewSubtreeMarkFollowsWideDirName(t *testing.T) {
 
 func TestDedupSecondaryRects(t *testing.T) {
 	sec := Rect{X: 40, Y: 1, Width: 40, Height: 15}
-	c, b := DedupSecondaryRects(sec, false)
-	if c != sec || b != (Rect{}) {
-		t.Fatalf("groups view: got %v %v, want full copies and empty browse", c, b)
-	}
-	c, b = DedupSecondaryRects(sec, true)
+	c, b := DedupSecondaryRects(sec)
 	if c.Height != 7 || b.Y != c.Y+c.Height || c.Height+b.Height != sec.Height || b.Width != sec.Width {
 		t.Fatalf("dirs view split wrong: copies=%v browse=%v", c, b)
 	}
 }
 
-func TestDrawDedupBrowsePanelOnlyInDirsView(t *testing.T) {
+func TestDrawDedupBrowsePanel(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -1655,16 +1651,11 @@ func TestDrawDedupBrowsePanelOnlyInDirsView(t *testing.T) {
 	model := Model{DedupSnapshot: comparepkg.DedupSnapshot{Phase: comparepkg.DedupDone}}
 	model.DedupPanel.Path = pathloc.MustParse("/quartz")
 	model.DedupPanel.Entries = []localfs.Entry{{Name: "harbor.txt", Path: "/quartz/harbor.txt"}}
-	_, browse := DedupSecondaryRects(layout.Secondary, true)
+	_, browse := DedupSecondaryRects(layout.Secondary)
 
 	drawDedupBrowsePanel(screen, layout, model, theme.Default(), false)
-	if ch, _, _ := screen.Get(browse.X, browse.Y); strings.TrimSpace(ch) != "" {
-		t.Fatalf("groups view painted browse chrome %q", ch)
-	}
-	model.DedupView.TreeDirs = true
-	drawDedupBrowsePanel(screen, layout, model, theme.Default(), false)
 	if ch, _, _ := screen.Get(browse.X, browse.Y); strings.TrimSpace(ch) == "" {
-		t.Fatal("dirs view: browse border corner not painted")
+		t.Fatal("browse border corner not painted")
 	}
 	var row strings.Builder
 	for x := browse.X; x < browse.X+browse.Width; x++ {

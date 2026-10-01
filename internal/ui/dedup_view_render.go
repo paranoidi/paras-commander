@@ -81,26 +81,22 @@ func dedupListHeader(pathW, sizeW, countW int, pathLabel string) string {
 	return fmt.Sprintf("%-*s %*s %*s", pathW, pathTitle, countW, countTitle, sizeW, sizeTitle)
 }
 
-// DedupSecondaryRects splits the dedup view's secondary column: the Copies pane, plus (Dirs view
-// only) a browse panel below it. Groups view returns (sec, Rect{}). Single source for drawing,
-// visible-row counts, and browse-panel metrics.
-func DedupSecondaryRects(sec Rect, treeDirs bool) (copies, browse Rect) {
-	if !treeDirs {
-		return sec, Rect{}
-	}
+// DedupSecondaryRects splits the dedup view's secondary column into the Copies pane and a
+// browse panel below it. Single source for drawing, visible-row counts, and browse-panel metrics.
+func DedupSecondaryRects(sec Rect) (copies, browse Rect) {
 	top := sec.Height / 2
 	copies = Rect{X: sec.X, Y: sec.Y, Width: sec.Width, Height: top}
 	browse = Rect{X: sec.X, Y: sec.Y + top, Width: sec.Width, Height: sec.Height - top}
 	return copies, browse
 }
 
-// drawDedupBrowsePanel paints the Dirs-view browse panel under Copies: a real file-list panel
+// drawDedupBrowsePanel paints the browse panel under Copies: a real file-list panel
 // (Model.DedupPanel) that follows the source row (see internal/app/dedup_browse.go).
 func drawDedupBrowsePanel(screen tcell.Screen, layout Layout, model Model, styles theme.Theme, chromeBlocked bool) {
 	if model.DedupSnapshot.Phase != comparepkg.DedupDone {
 		return
 	}
-	_, rect := DedupSecondaryRects(layout.Secondary, model.DedupView.TreeDirs)
+	_, rect := DedupSecondaryRects(layout.Secondary)
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
@@ -170,7 +166,6 @@ func drawDedupView(
 		Pane:             view.Main,
 		Focused:          !view.FocusCopies && !view.FocusPanel,
 		EmptyText:        dedupEmptyMessage(snap),
-		DimByGroup:       !view.TreeDirs && !view.SourceStale,
 		ActiveGroup:      activeGroup,
 		HintDirs:         hintDirs,
 		TwinDirs:         twinDirs,
@@ -193,7 +188,7 @@ func drawDedupView(
 			copiesEmpty = "No other copies"
 		}
 	}
-	copiesRect, _ := DedupSecondaryRects(layout.Secondary, view.TreeDirs)
+	copiesRect, _ := DedupSecondaryRects(layout.Secondary)
 	drawDedupTreePane(screen, copiesRect, dedupPaneParams{
 		Title:            " Copies ",
 		Header:           copiesHeader,
@@ -227,7 +222,6 @@ type dedupPaneParams struct {
 	Pane             DedupPane
 	Focused          bool
 	EmptyText        string
-	DimByGroup       bool // groups mode: dim rows outside ActiveGroup
 	ActiveGroup      int
 	HintDirs         map[string]bool     // dirs mode: DirRel keys whose subtree contains ActiveGroup or a twin dir (collapsed-folder hint)
 	TwinDirs         map[string]bool     // dirs mode: duplicate-directory twins of the cursor folder (always hinted)
@@ -295,7 +289,7 @@ func drawDedupTreePane(
 	pathX := cols.pathX
 	gapBeforeCountX := cols.gapBeforeCountX
 
-	base := styles.JobsRow.Background(bg)
+	base := styles.PanelRowFile.Background(bg)
 	dim := styles.PanelBlockedText.Background(bg)
 	for row := range visibleRows {
 		idx := scroll + row
@@ -319,7 +313,7 @@ func drawDedupTreePane(
 			GroupAllMarked: groupAllMarked,
 			DirFullyMarked: dirFullyMarked,
 		}
-		lineStyle := dedupRowStyle(styles, p, d, entry, flags, chromeBlocked, base, dim, bg)
+		lineStyle := dedupRowStyle(styles, p, d, entry, flags, chromeBlocked, base, bg)
 
 		primitive.Text(screen, rect.X+1, lineY, 1, "", lineStyle)
 
@@ -350,13 +344,11 @@ type dedupRowFlags struct {
 
 // dedupRowStyle picks the row's base and line styles from precomputed per-row flags, moved out
 // of drawDedupTreePane's two stacked flag→style switches. Pure function of flags.
-func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, f dedupRowFlags, chromeBlocked bool, base, dim tcell.Style, bg tcell.Color) tcell.Style {
+func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, f dedupRowFlags, chromeBlocked bool, base tcell.Style, bg tcell.Color) tcell.Style {
 	rowBase := base
 	switch {
 	case dedupRowHinted(p, d, entry, f.RowSelected):
 		rowBase = styles.PanelHint.Background(bg)
-	case p.DimByGroup && d.GroupIdx != p.ActiveGroup:
-		rowBase = dim
 	}
 	lineStyle := rowBase
 	switch {

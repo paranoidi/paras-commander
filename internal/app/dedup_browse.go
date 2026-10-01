@@ -10,11 +10,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// dedupBrowseWanted reports whether the browse panel should exist: kept Dirs-view results. It
+// dedupBrowseWanted reports whether the browse panel should exist: kept dedup results. It
 // survives leaving the dedup view (focus and navigated location come back on return); only
-// losing the results or switching to Groups view tears it down.
+// losing the results tears it down.
 func (a *App) dedupBrowseWanted() bool {
-	return a.model.DedupView.TreeDirs && a.model.DedupSnapshot.Phase == comparepkg.DedupDone
+	return a.model.DedupSnapshot.Phase == comparepkg.DedupDone
 }
 
 // syntheticPanelActive reports whether an async result for a synthetic panel ID may still land.
@@ -30,7 +30,7 @@ func (a *App) syntheticPanelActive(panelID int) bool {
 }
 
 func (a *App) dedupBrowseRows(layout ui.Layout) int {
-	_, browse := ui.DedupSecondaryRects(layout.Secondary, true)
+	_, browse := ui.DedupSecondaryRects(layout.Secondary)
 	return ui.PanelListRows(browse)
 }
 

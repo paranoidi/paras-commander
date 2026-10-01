@@ -97,7 +97,7 @@ type DedupViewState struct {
 	SourceStale           bool // cursor moved off SourceRow during a held nav key; group hints are hidden until the rebuild
 	Copies                DedupPane
 	FocusCopies           bool            // Tab focus: false = main pane, true = copies pane
-	FocusPanel            bool            // Tab focus is in the Dirs-view browse panel (FocusCopies keeps the source pane)
+	FocusPanel            bool            // Tab focus is in the browse panel (FocusCopies keeps the source pane)
 	Marked                map[string]bool // absolute paths marked for deletion
 	MarkedCount           int
 	MarkedReclaimBytes    int64

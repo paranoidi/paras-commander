@@ -294,7 +294,7 @@ func (a *App) dedupVisibleRows() int {
 	width, height := a.screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
 	if a.model.DedupView.FocusCopies {
-		copies, _ := ui.DedupSecondaryRects(layout.Secondary, a.model.DedupView.TreeDirs)
+		copies, _ := ui.DedupSecondaryRects(layout.Secondary)
 		return ui.PanelListRows(copies)
 	}
 	return ui.PanelListRows(layout.Primary)

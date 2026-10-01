@@ -816,7 +816,7 @@ func (h *Handler) cyclePane(dir int) {
 	avail := [3]bool{
 		true,
 		len(h.model.DedupCopiesList) > 0,
-		st.TreeDirs && h.model.DedupSnapshot.Phase == comparepkg.DedupDone,
+		h.model.DedupSnapshot.Phase == comparepkg.DedupDone,
 	}
 	cur := 0
 	if st.FocusPanel {
