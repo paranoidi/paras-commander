@@ -796,7 +796,87 @@ func (h *Handler) ExpandAll() {
 	case limit < panel.MaxExpandAllShallowDepth:
 		h.host.SetTransientMessage(fmt.Sprintf("Expand all stopped: too many entries (limit %d)", panel.MaxExpandAllTotalRows), ui.MessageUrgencyInfo)
 	case pane.Collapsed != nil:
-		h.host.SetTransientMessage(fmt.Sprintf("Expand all is limited to depth %d", panel.MaxExpandAllShallowDepth), ui.MessageUrgencyInfo)
+		h.toastExpandDepthLimit()
+	}
+	h.resyncFocused()
+}
+
+func (h *Handler) toastExpandDepthLimit() {
+	h.host.SetTransientMessage(fmt.Sprintf("Expand all is limited to depth %d", panel.MaxExpandAllShallowDepth), ui.MessageUrgencyInfo)
+}
+
+// CollapseLevel collapses the focused pane by one level like the main list's
+// panel.tree-collapse-all: every expanded node with no expanded descendant (the
+// deepest open point of its branch) is collapsed. The cursor stays on its row,
+// or moves to its nearest surviving ancestor.
+func (h *Handler) CollapseLevel() {
+	pane, rows := h.focusedPane()
+	var keep []string
+	if row, ok := h.paneRow(pane, rows); ok {
+		keep = append(keep, row.ID)
+		for i, d := pane.Selected-1, row.Depth; i >= 0 && d > 0; i-- {
+			if rows[i].Depth < d {
+				keep = append(keep, rows[i].ID)
+				d = rows[i].Depth
+			}
+		}
+	}
+	changed := false
+	for i, r := range rows {
+		if !r.HasChildren || !r.Expanded {
+			continue
+		}
+		frontier := true
+		for _, c := range rows[i+1:] {
+			if c.Depth <= r.Depth {
+				break
+			}
+			if c.HasChildren && c.Expanded {
+				frontier = false
+				break
+			}
+		}
+		if frontier {
+			pane.SetCollapsed(r.ID, true)
+			changed = true
+		}
+	}
+	if !changed {
+		return
+	}
+	h.resyncFocused()
+	pane, rows = h.focusedPane()
+	for _, id := range keep {
+		if i := ui.DedupRowIndexByID(rows, id); i >= 0 {
+			pane.Selected = i
+			break
+		}
+	}
+	h.ensureSelectionVisible(0)
+}
+
+// ExpandLevel expands the focused pane by one level like the main list's
+// panel.tree-expand-all-shallow: every collapsed node at the shallowest depth
+// that has one. Stops at panel.MaxExpandAllShallowDepth with an info toast.
+func (h *Handler) ExpandLevel() {
+	pane, rows := h.focusedPane()
+	depth := -1
+	for _, r := range rows {
+		if r.HasChildren && !r.Expanded && (depth < 0 || r.Depth < depth) {
+			depth = r.Depth
+		}
+	}
+	if depth < 0 {
+		return
+	}
+	if depth >= panel.MaxExpandAllShallowDepth {
+		h.toastExpandDepthLimit()
+		return
+	}
+	for _, r := range rows {
+		if r.HasChildren && !r.Expanded && r.Depth == depth {
+			pane.SetCollapsed(r.ID, false)
+		}
 	}
 	h.resyncFocused()
 }

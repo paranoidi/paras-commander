@@ -1476,3 +1476,46 @@ func TestDedupViewExpandAllStopsAtMainDepthCap(t *testing.T) {
 		t.Fatalf("max visible depth = %d, want %d", maxDepth, panel.MaxExpandAllShallowDepth)
 	}
 }
+
+func TestDedupViewLevelCollapseExpandStepsOneLevel(t *testing.T) {
+	dir := t.TempDir()
+	deepest := filepath.Join(dir, "orchard", "meadow", "lantern")
+	if err := os.MkdirAll(deepest, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{filepath.Join(dir, "pebble.txt"), filepath.Join(deepest, "pebble.txt")} {
+		if err := os.WriteFile(p, []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	depth := func() int {
+		m := 0
+		for _, r := range app.model.DedupList {
+			m = max(m, r.Depth)
+		}
+		return m
+	}
+	app.dedupCtrl.ExpandAll()
+	full := depth()
+	if full < 2 {
+		t.Fatalf("fully expanded depth = %d, want >= 2", full)
+	}
+	app.dedupCtrl.CollapseLevel()
+	if got := depth(); got != full-1 {
+		t.Fatalf("depth after one collapse = %d, want %d", got, full-1)
+	}
+	app.dedupCtrl.CollapseLevel()
+	if got := depth(); got != full-2 {
+		t.Fatalf("depth after two collapses = %d, want %d", got, full-2)
+	}
+	app.dedupCtrl.ExpandLevel()
+	if got := depth(); got != full-1 {
+		t.Fatalf("depth after one expand = %d, want %d", got, full-1)
+	}
+}

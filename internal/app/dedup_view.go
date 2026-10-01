@@ -140,11 +140,19 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		a.dedupCtrl.ToggleTreeMode()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
-	case keymap.ActionDedupCollapseAll, keymap.ActionPanelTreeCollapseAllFull:
+	case keymap.ActionDedupCollapseAll:
 		a.dedupCtrl.CollapseAll()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
-	case keymap.ActionDedupExpandAll, keymap.ActionPanelTreeExpandAllFull:
+	case keymap.ActionPanelTreeCollapseAll:
+		a.dedupCtrl.CollapseLevel()
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
+	case keymap.ActionPanelTreeExpandAllShallow:
+		a.dedupCtrl.ExpandLevel()
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
+	case keymap.ActionDedupExpandAll:
 		a.dedupCtrl.ExpandAll()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
