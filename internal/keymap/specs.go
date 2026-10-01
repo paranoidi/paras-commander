@@ -133,7 +133,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        helpAllButPreview,
 			Title:        "User menu",
 			Section:      "App",
-			DefaultKeys:  []string{"F2"},
+			DefaultKeys:  []string{"F2", "<"},
 			PreferredKey: "F2",
 			Keywords:     []string{"menu.toml", "custom commands"},
 			LeaderKey:    "X",

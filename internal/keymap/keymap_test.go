@@ -205,6 +205,7 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone), ActionFileView, true},
 		{tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModShift), ActionFileQuickView, true},
 		{tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone), ActionAppUserMenu, true},
+		{tcell.NewEventKey(tcell.KeyRune, '<', tcell.ModShift), ActionAppUserMenu, true},
 		{tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone), ActionAppLeaderMenu, true},
 		{tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModShift), ActionAppUserMenuEdit, true},
 		{tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone), ActionFileEdit, true},

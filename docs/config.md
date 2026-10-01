@@ -32,7 +32,7 @@ These live alongside `config.toml` in the same config directory but are
 | File | Purpose | Referenced from config.toml via |
 |---|---|---|
 | `keybindings.toml` | Keyboard shortcuts. **Warning:** it has its own `[jobs]` and `[dialog.input]` tables that are unrelated to config.toml's `[jobs]` table — same table name, different file, different purpose. | — |
-| `menu.toml` | User menu (F2) command definitions. | `[user_menu].file` |
+| `menu.toml` | User menu (F2 or `<`) command definitions. | `[user_menu].file` |
 | `meta.toml` | Meta column command definitions. | `[meta].file` |
 | `pools.toml` | Worker pool definitions. | `[pools].file` |
 | `patterns.toml` | Saved mass-rename find/replace patterns. | `[mass_rename].file` |
