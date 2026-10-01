@@ -335,6 +335,7 @@ preview_loading = "\uf03e"
 
 [icons.dedup]
 related = "\uf067"
+related_within = "\U000f17a9"
 full_dir = "\uee86"
 hidden = "\uf06e"
 

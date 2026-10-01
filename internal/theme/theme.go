@@ -581,6 +581,7 @@ const (
 	IconKeyTreeLeaf                 = "tree.leaf"
 	IconKeySelectionsMultiLocation  = "selections.multi_location"
 	IconKeyDedupRelated             = "dedup.related"
+	IconKeyDedupRelatedWithin       = "dedup.related_within"
 	IconKeyDedupFullDir             = "dedup.full_dir"
 	IconKeyDedupHidden              = "dedup.hidden"
 )
@@ -709,6 +710,12 @@ func (t Theme) IconFilelistSelectionSubtree() rune {
 // cursor row's file (same duplicate group), visible even when kept/marked colors win.
 func (t Theme) IconDedupRelated() rune {
 	return t.filelistIconRune(IconKeyDedupRelated, '\uf067')
+}
+
+// IconDedupRelatedWithin returns the dedup view suffix icon for collapsed folders
+// that contain a related copy (rather than being one).
+func (t Theme) IconDedupRelatedWithin() rune {
+	return t.filelistIconRune(IconKeyDedupRelatedWithin, '\U000f17a9')
 }
 
 // IconDedupFullDir returns the dedup view suffix icon for directories that exactly

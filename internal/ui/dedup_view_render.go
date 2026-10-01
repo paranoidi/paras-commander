@@ -509,7 +509,11 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	}
 	// Related-copy icon follows the duplicate-directory icon; the hidden-items warning comes last.
 	if markX := cursorX + 1; hinted && markX < pathX+pathW {
-		primitive.Text(screen, markX, lineY, 1, string(styles.IconDedupRelated()), iconStyle(styles.PanelHint))
+		icon := styles.IconDedupRelated()
+		if d.Kind == DedupRowDir && !p.TwinDirs[d.DirRel] {
+			icon = styles.IconDedupRelatedWithin() // collapsed folder hinted for what it contains
+		}
+		primitive.Text(screen, markX, lineY, 1, string(icon), iconStyle(styles.PanelHint))
 		cursorX = markX + 1
 	}
 	if markX := cursorX + 1; d.DirDup != comparepkg.DirNone && d.DirHidden && markX < pathX+pathW {

@@ -1560,7 +1560,7 @@ func TestDrawDedupViewRelatedIconIsLastAfterSubtreeMark(t *testing.T) {
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	subtree := string(styles.IconFilelistSelectionSubtree())
-	related := string(styles.IconDedupRelated())
+	related := string(styles.IconDedupRelatedWithin()) // collapsed dir containing the copy
 	subtreeX, relatedX := -1, -1
 	y := firstLineY + dirIdx
 	for x := rect.X; x < rect.X+rect.Width; x++ {
@@ -1846,5 +1846,49 @@ func TestDrawDedupViewHintsTwinDirOfCursorDir(t *testing.T) {
 	}
 	if !found {
 		t.Error("cursor row: want full-dir icon")
+	}
+}
+
+func TestDrawDedupViewCollapsedAncestorOfTwinGetsWithinIcon(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	snap := comparepkg.DedupSnapshot{
+		Root:   pathloc.MustParse("/scan/root"),
+		Phase:  comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{dedupTestGroup(1, 1024, "harbor/lantern.bin", "attic/meadow/lantern.bin")},
+		DirGroups: []comparepkg.DedupDirGroup{
+			{Kind: comparepkg.DirExact, Size: 1024, Files: 1, Rels: []string{"attic/meadow", "harbor"}, Hidden: []bool{false, false}},
+		},
+	}
+	view := DedupViewState{TreeDirs: true}
+	view.Main.SetCollapsed("d:attic", true)
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	attic := DedupRowIndexByID(list, "d:attic")
+	if attic < 0 || list[attic].Expanded {
+		t.Fatalf("attic row not collapsed (idx %d)", attic)
+	}
+	cur := DedupRowIndexByID(list, "d:harbor")
+	view.SourceRow, view.Main.Selected = cur, cur
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
+
+	y := layout.Primary.Y + 2 + attic
+	var within, related bool
+	for x := layout.Primary.X; x < layout.Primary.X+layout.Primary.Width; x++ {
+		ch, _, _ := screen.Get(x, y)
+		within = within || ch == string(styles.IconDedupRelatedWithin())
+		related = related || ch == string(styles.IconDedupRelated())
+	}
+	if !within || related {
+		t.Errorf("collapsed attic: within=%v related=%v, want within icon only", within, related)
 	}
 }
