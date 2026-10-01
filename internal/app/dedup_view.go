@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -27,6 +28,8 @@ func (h dedupHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool) {
 	// dangling-dirs cleanup.
 	h.app.jobsCtrl.EnqueueDeleteJob(paths, removeEmptyDirs, false)
 }
+
+func (h dedupHost) Config() config.Config { return h.app.config }
 
 func (h dedupHost) DedupMenuDefinitions() []menu.Definition { return h.app.dedupMenuDefinitions() }
 
@@ -295,6 +298,14 @@ func (a *App) dedupVisibleRows() int {
 }
 
 func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
+	// An open type-to-jump filter sees the key before the vi remap so h/j/k/l type into it.
+	if f := a.dedupCtrl.FocusedFilter(); !a.model.DedupView.FocusPanel && f.UIActive() {
+		if !filterRetainsKey(f, event, a.keys.Global) {
+			a.dedupCtrl.CancelFilter()
+		} else if a.handleDedupFilterKey(event) {
+			return false
+		}
+	}
 	if a.model.ViMotionMode {
 		event = keymap.RemapViMotionKey(event)
 	}
@@ -310,6 +321,10 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 		return a.handleDedupPanelKey(nextAction, event)
 	}
 	visible := a.dedupVisibleRows()
+	if nextAction == "" && keymap.IsPlainPrintableRune(event) {
+		a.handleDedupFilterKey(event)
+		return false
+	}
 
 	if nextAction != "" && a.tryDispatchDedup(nextAction) {
 		return false
@@ -357,4 +372,34 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 		a.closeDedupView()
 	}
 	return false
+}
+
+// handleDedupFilterKey edits the focused pane's type-to-jump filter. It reports
+// whether the key was consumed; Enter and Insert close the filter and fall
+// through to their normal action.
+func (a *App) handleDedupFilterKey(event *tcell.EventKey) bool {
+	c := a.dedupCtrl
+	switch event.Key() {
+	case tcell.KeyEnter, tcell.KeyInsert:
+		c.CancelFilter()
+		return false
+	case tcell.KeyEsc:
+		c.CancelFilter()
+	case tcell.KeyUp:
+		c.CycleFilterMatch(-1)
+	case tcell.KeyDown:
+		c.CycleFilterMatch(1)
+	case tcell.KeyBackspace, tcell.KeyBackspace2:
+		if event.Modifiers()&tcell.ModCtrl != 0 {
+			c.ClearFilter()
+		} else {
+			c.BackspaceFilter()
+		}
+	case tcell.KeyCtrlL:
+		c.ClearFilter()
+	case tcell.KeyRune: // filterRetainsKey / the caller only pass plain printable runes
+		c.AppendFilterRune(event.Rune())
+	}
+	c.EnsureSelectionVisible(a.dedupVisibleRows())
+	return true
 }

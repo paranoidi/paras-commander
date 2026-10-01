@@ -3,10 +3,12 @@ package dedup
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -23,6 +25,7 @@ func (h *dedupHandlerHost) NavigatePanelToPath(p int, path, sel string) error {
 	return nil
 }
 func (h *dedupHandlerHost) EnqueueDeleteJob([]string, bool) {}
+func (h *dedupHandlerHost) Config() config.Config           { return config.Default() }
 func (h *dedupHandlerHost) SetTransientMessage(text string, _ ui.MessageUrgency) {
 	h.msg = text
 }
@@ -449,5 +452,64 @@ func TestOpenInPanel_navigatesAndKeepsView(t *testing.T) {
 	h.OpenInPanel(ui.PrimaryPanel, "/scan/alpha", true)
 	if host.navPath != "/scan/alpha" || host.navSelect != "" {
 		t.Fatalf("dir nav = %q %q", host.navPath, host.navSelect)
+	}
+}
+
+func TestTypeToJumpFilter(t *testing.T) {
+	root := pathloc.MustParse("/scan")
+	group := func(name string) comparepkg.DedupGroup {
+		return comparepkg.DedupGroup{Size: 100, Files: []comparepkg.DedupFile{
+			dedupFile("amber/" + name), dedupFile("cobalt/" + name),
+		}}
+	}
+	snap := comparepkg.DedupSnapshot{
+		Root: root, DisplayRoot: root, Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{group("lantern.txt"), group("meadow.txt"), group("quiver.txt")},
+	}
+	h, model := dedupHandlerWithView(t, snap, ui.DedupViewState{
+		TreeDirs: true, Marked: map[string]bool{}, Kept: map[string]bool{},
+	})
+	st := &model.DedupView
+	selID := func() string {
+		row, _ := h.paneRow(&st.Main, model.DedupList)
+		return row.ID
+	}
+
+	for _, r := range "quiv" {
+		h.AppendFilterRune(r)
+	}
+	if !h.FocusedFilter().UIActive() {
+		t.Fatal("filter should be active")
+	}
+	first := selID()
+	if !strings.HasSuffix(first, "quiver.txt") {
+		t.Fatalf("selected %q, want a quiver.txt row", first)
+	}
+	if len(model.DedupCopiesList) == 0 {
+		t.Fatal("copies pane did not resync to the jumped row")
+	}
+
+	h.CycleFilterMatch(1)
+	second := selID()
+	if second == first || !strings.HasSuffix(second, "quiver.txt") {
+		t.Fatalf("cycle moved to %q, want the other quiver.txt row", second)
+	}
+	h.CycleFilterMatch(1)
+	if selID() != first {
+		t.Fatalf("cycle did not wrap back to %q", first)
+	}
+
+	h.CancelFilter()
+	if h.FocusedFilter().UIActive() || st.Main.Filter.Query != "" {
+		t.Fatal("cancel should clear the filter")
+	}
+	if selID() != first {
+		t.Fatal("cancel must keep the cursor")
+	}
+
+	h.AppendFilterRune('m')
+	h.SwitchPane()
+	if st.Main.Filter.UIActive() {
+		t.Fatal("switching panes should clear the filter")
 	}
 }

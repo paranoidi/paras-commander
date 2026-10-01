@@ -6,7 +6,6 @@ import (
 	"maps"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
@@ -17,7 +16,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
-	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
 
 // LoadingIndicatorDelay is how long background work behind a row (a navigation load, a quick-view
@@ -285,25 +283,6 @@ func (s *State) PathString() string {
 	return s.Path.String()
 }
 
-// FilterState tracks panel-local quick filter state.
-type FilterState struct {
-	Query           string
-	Cursor          int // rune offset within Query where typed/deleted runes apply
-	Active          bool
-	Editing         bool
-	CaseInsensitive bool
-	// CycleMatches is "visual" (default) or "ranked"; empty means visual.
-	// It controls Up/Down traversal among quick-filter matches.
-	CycleMatches string
-	results      []filterResult
-}
-
-type filterResult struct {
-	Index  int
-	Score  int
-	Ranges []search.Range
-}
-
 // New loads a panel rooted at path.
 func New(path string) (State, error) {
 	return NewWithOptions(path, localfs.DefaultListOptions(), nil)
@@ -555,7 +534,7 @@ func (s State) VisibleEntries() []localfs.Entry {
 
 // FilterHasMatches reports whether the active quick filter has at least one file-name match.
 func (s State) FilterHasMatches() bool {
-	return len(s.Filter.results) > 0
+	return s.Filter.HasMatches()
 }
 
 // FilterUniqueMatch reports whether the active quick filter has exactly one file-name match.
@@ -568,12 +547,7 @@ func (s State) MatchRanges(index int) []search.Range {
 	if !s.Filter.Active || index < 0 || index >= s.VisibleEntryCount() {
 		return nil
 	}
-	for _, result := range s.Filter.results {
-		if result.Index == index {
-			return result.Ranges
-		}
-	}
-	return nil
+	return s.Filter.Ranges(index)
 }
 
 // AddSelection marks path as selected without changing the file-list cursor.
@@ -1309,7 +1283,7 @@ func (s *State) AcceptFilter(viewportRows int) {
 	s.Filter.Editing = false
 	s.Filter.Active = s.Filter.Query != ""
 	if !s.Filter.Active {
-		s.Filter.results = nil
+		s.Filter.clearResults()
 	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
@@ -1330,34 +1304,14 @@ func (s *State) ClearFilter(viewportRows int) {
 
 // AppendFilterRune inserts a printable rune at the caret.
 func (s *State) AppendFilterRune(value rune, viewportRows int) {
-	s.Filter.Editing = true
-	runes := []rune(s.Filter.Query)
-	pos := lineedit.ClampRuneCursor(s.Filter.Cursor, len(runes))
-	next := make([]rune, 0, len(runes)+1)
-	next = append(next, runes[:pos]...)
-	next = append(next, value)
-	next = append(next, runes[pos:]...)
-	s.Filter.Cursor = pos + 1
-	s.applyFilterQuery(string(next), viewportRows)
+	s.applyFilterQuery(s.Filter.InsertRune(value), viewportRows)
 }
 
 // BackspaceFilter removes the rune before the caret.
 func (s *State) BackspaceFilter(viewportRows int) {
-	runes := []rune(s.Filter.Query)
-	if len(runes) == 0 {
-		s.Filter.Editing = false
-		return
+	if next, changed := s.Filter.Backspace(); changed {
+		s.applyFilterQuery(next, viewportRows)
 	}
-	pos := lineedit.ClampRuneCursor(s.Filter.Cursor, len(runes))
-	if pos == 0 {
-		return
-	}
-	s.Filter.Editing = true
-	next := make([]rune, 0, len(runes)-1)
-	next = append(next, runes[:pos-1]...)
-	next = append(next, runes[pos:]...)
-	s.Filter.Cursor = pos - 1
-	s.applyFilterQuery(string(next), viewportRows)
 }
 
 // MoveFilterCursorHome moves the filter caret to the start of the query.
@@ -1375,68 +1329,14 @@ func (s *State) MoveFilterCursorEnd() {
 // If nothing matches the current filter query, delta is applied as a normal cursor step (see Move).
 // Movement wraps at the first and last matched rows.
 func (s *State) CycleFilterMatch(delta int, viewportRows int) {
-	if len(s.Filter.results) == 0 {
+	cur, ok := s.Filter.Cycle(s.Cursor, delta)
+	if !ok {
 		s.Move(delta, viewportRows)
 		return
 	}
-	order := s.filterResultsCycleOrder()
-	n := len(order)
-	cur := -1
-	for i := range order {
-		if order[i].Index == s.Cursor {
-			cur = i
-			break
-		}
-	}
-	if cur < 0 {
-		if delta > 0 {
-			cur = nextFilterMatchIndex(order, s.Cursor)
-		} else {
-			cur = previousFilterMatchIndex(order, s.Cursor)
-		}
-	} else {
-		cur = (cur + delta) % n
-		if cur < 0 {
-			cur += n
-		}
-	}
-	s.Cursor = order[cur].Index
+	s.Cursor = cur
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
-}
-
-func (s *State) filterResultsCycleOrder() []filterResult {
-	if s.Filter.cycleMatchesRanked() {
-		return s.Filter.results
-	}
-	out := make([]filterResult, len(s.Filter.results))
-	copy(out, s.Filter.results)
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].Index < out[j].Index
-	})
-	return out
-}
-
-func (f FilterState) cycleMatchesRanked() bool {
-	return strings.EqualFold(strings.TrimSpace(f.CycleMatches), "ranked")
-}
-
-func nextFilterMatchIndex(results []filterResult, cursor int) int {
-	for i, result := range results {
-		if result.Index > cursor {
-			return i
-		}
-	}
-	return 0
-}
-
-func previousFilterMatchIndex(results []filterResult, cursor int) int {
-	for i := len(results) - 1; i >= 0; i-- {
-		if results[i].Index < cursor {
-			return i
-		}
-	}
-	return len(results) - 1
 }
 
 func (s *State) loadPathString(path string, selectedName string, viewportRows int, indexFallback int, remote asyncLoadOpts) error {
@@ -2041,68 +1941,27 @@ func (s *State) clampCursor() {
 
 func (s *State) applyFilterQuery(query string, viewportRows int) {
 	s.Filter.Query = query
-	s.Filter.Cursor = lineedit.ClampRuneCursor(s.Filter.Cursor, len([]rune(query)))
-	s.Filter.Active = query != ""
-	s.rebuildFilter()
-	if len(s.Filter.results) > 0 {
-		s.Cursor = primaryFilterMatchIndex(query, s.Filter.results)
+	s.rebuildEntryFilter()
+	if cur, ok := s.Filter.Apply(query, s.filterNames()); ok {
+		s.Cursor = cur
 	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
 }
 
-// primaryFilterMatchIndex picks the cursor row after the query changes.
-// A single typed letter (after trim) uses the first visible match; longer queries use the best ranked match.
-func primaryFilterMatchIndex(query string, ranked []filterResult) int {
-	if len(ranked) == 0 {
-		return 0
-	}
-	q := strings.TrimSpace(query)
-	if q == "" {
-		return ranked[0].Index
-	}
-	if len([]rune(q)) == 1 {
-		best := ranked[0].Index
-		for _, r := range ranked[1:] {
-			if r.Index < best {
-				best = r.Index
-			}
-		}
-		return best
-	}
-	return ranked[0].Index
-}
-
-func (s *State) rebuildFilter() {
-	s.rebuildEntryFilter()
-	s.Filter.results = nil
-	if s.Filter.Query == "" {
-		s.Filter.Active = false
-		return
-	}
-
-	query := search.Parse(s.Filter.Query)
-	if query.Empty() {
-		s.Filter.Active = false
-		return
-	}
-
+func (s *State) filterNames() []string {
 	count := s.VisibleEntryCount()
 	names := make([]string, count)
 	for i := 0; i < count; i++ {
 		entry, _, _ := s.VisibleEntry(i)
 		names[i] = entry.Name
 	}
-	ranked := query.Rank(names, search.Options{CaseInsensitive: s.Filter.CaseInsensitive})
-	s.Filter.results = make([]filterResult, 0, len(ranked))
-	for _, result := range ranked {
-		s.Filter.results = append(s.Filter.results, filterResult{
-			Index:  result.Index,
-			Score:  result.Result.Score,
-			Ranges: result.Result.Ranges,
-		})
-	}
-	s.Filter.Active = true
+	return names
+}
+
+func (s *State) rebuildFilter() {
+	s.rebuildEntryFilter()
+	s.Filter.Rebuild(s.filterNames())
 }
 
 // InvertSelection toggles selection for all visible entries.

@@ -940,12 +940,16 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 }
 
 func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
-	f := a.activeQuickFilter()
+	return filterRetainsKey(a.activeQuickFilter(), event, a.keys.Global)
+}
+
+// filterRetainsKey reports whether an open quick filter f consumes event itself.
+func filterRetainsKey(f panel.FilterState, event *tcell.EventKey, global *keymap.Map) bool {
 	if keymap.IsPlainPrintableRune(event) {
 		if event.Rune() == ' ' {
 			return true
 		}
-		if id, ok := a.keys.Global.Lookup(event); ok {
+		if id, ok := global.Lookup(event); ok {
 			return id == keymap.ActionAppLeaderMenu
 		}
 		return true

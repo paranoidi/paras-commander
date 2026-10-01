@@ -230,24 +230,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		contentCols = 1
 	}
 	if ctx.FileListActive && (state.Filter.Active || state.Filter.Editing) {
-		inputStyle := panelStyle.Styles.FuzzyInput
-		if state.Filter.Active && !state.FilterHasMatches() {
-			inputStyle = panelStyle.Styles.FuzzyInputNomatch
-		}
-		display := "> " + state.Filter.Query
-		if state.Filter.Editing {
-			cursorCol := 2 + state.Filter.Cursor
-			if cursorCol >= len([]rune(display)) {
-				// Widen past end-of-text so the caret span lands on a real cell
-				// (StyledText's trailing pad columns don't apply spans).
-				display += " "
-			}
-			primitive.StyledText(screen, titleX, rect.Y, contentCols, display, inputStyle, []primitive.Span{
-				{Start: cursorCol, End: cursorCol + 1, Style: inputStyle.Reverse(true)},
-			})
-		} else {
-			primitive.Text(screen, titleX, rect.Y, contentCols, display, inputStyle)
-		}
+		drawQuickFilterTitle(screen, titleX, rect.Y, contentCols, state.Filter, panelStyle.Styles)
 	} else {
 		titlePath := state.PathString()
 		if ctx.TitlePath != "" {
@@ -1129,4 +1112,27 @@ func formatTime(value time.Time) string {
 		return ""
 	}
 	return value.Format("2006-01-02 15:04")
+}
+
+// drawQuickFilterTitle paints "> query" with a caret while editing, in the fuzzy-input
+// styles (no-match variant when the active query matched nothing).
+func drawQuickFilterTitle(screen tcell.Screen, x, y, w int, f panel.FilterState, styles theme.Theme) {
+	inputStyle := styles.FuzzyInput
+	if f.Active && !f.HasMatches() {
+		inputStyle = styles.FuzzyInputNomatch
+	}
+	display := "> " + f.Query
+	if !f.Editing {
+		primitive.Text(screen, x, y, w, display, inputStyle)
+		return
+	}
+	cursorCol := 2 + f.Cursor
+	if cursorCol >= len([]rune(display)) {
+		// Widen past end-of-text so the caret span lands on a real cell
+		// (StyledText's trailing pad columns don't apply spans).
+		display += " "
+	}
+	primitive.StyledText(screen, x, y, w, display, inputStyle, []primitive.Span{
+		{Start: cursorCol, End: cursorCol + 1, Style: inputStyle.Reverse(true)},
+	})
 }

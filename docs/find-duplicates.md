@@ -23,6 +23,8 @@ Right / Enter on a **file** row (tree panes and the browse panel) opens it with 
 
 Alt+Ctrl+Left / Alt+Ctrl+Right (`panel.tree-collapse-all` / `panel.tree-expand-all-shallow`, the same keys as the main file list) collapse or expand the focused tree pane by one level per press. Alt+Shift+Left / Alt+Shift+Right (`dedup.collapse-all` / `dedup.expand-all`, matching the main list's full collapse/expand) collapse or expand every folder in the pane. Expanding (both forms) is capped like the main file list: at most 5 levels deep (folders at the cutoff stay collapsed, with an info toast), and fewer levels if the result would exceed 20,000 rows.
 
+**Type to jump:** typing a printable key that has no binding in the focused tree pane (not the browse panel) starts the same fuzzy quick filter as the main file list. `> query` shows in the pane's top border, the cursor jumps to the best match (the Copies pane follows), and matched characters are highlighted. Up/Down cycle through matches (`filter.cycle_matches`, `filter.case_insensitive`), Backspace edits the query, Ctrl+L / Ctrl+Backspace clear it, Esc closes it. Enter and Insert close the filter and then do their normal action; any other key closes it too. Each pane has its own filter, and switching panes clears it.
+
 ## Leaving and returning
 
 Leaving the results view (Esc, Alt+W again, Enter to jump to a file, "Back to file view", or switching to Jobs/Commands/Messages) keeps the results in memory and shows `Duplicates kept - Alt+W returns`. Kept results live until the next scan or until pc quits. There are two ways back:

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 )
 
@@ -42,7 +43,8 @@ type DedupRow = treeflat.Row[DedupRowData]
 type DedupPane struct {
 	Selected   int
 	ListScroll int
-	Collapsed  map[string]bool // collapsed node IDs (absent = expanded)
+	Collapsed  map[string]bool   // collapsed node IDs (absent = expanded)
+	Filter     panel.FilterState // type-to-jump quick filter over this pane's rows
 }
 
 // DedupCollapsedSet builds a collapse map with every listed node ID collapsed.

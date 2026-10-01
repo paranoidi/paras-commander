@@ -43,6 +43,8 @@ type Host interface {
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
 	DedupMenuDefinitions() []menu.Definition
 	BrowserMenuDefinitions() []menu.Definition
+	// Config returns the App's live config; filter case/cycle settings can change at runtime.
+	Config() config.Config
 }
 
 // WakePayload wakes PollEvent when the dedup session updates.
@@ -537,6 +539,7 @@ func (h *Handler) syncDedupList() {
 	st := &h.model.DedupView
 	h.applyDedupCollapsePending()
 	h.model.DedupList, st.IgnoredEmptyCount = ui.DedupRowsFromSnapshot(h.model.DedupSnapshot, *st)
+	refilterPane(&st.Main, h.model.DedupList)
 	h.syncCopies()
 }
 
@@ -550,6 +553,7 @@ func (h *Handler) syncCopies() {
 	}
 	sel, _ := h.paneRow(&st.Main, h.model.DedupList)
 	h.model.DedupCopiesList = ui.DedupCopyRows(h.model.DedupSnapshot, sel, st.Copies.Collapsed)
+	refilterPane(&st.Copies, h.model.DedupCopiesList)
 	if i := ui.DedupRowIndexByID(h.model.DedupCopiesList, prevID); i >= 0 {
 		st.Copies.Selected = i
 	} else {
@@ -618,6 +622,84 @@ func (h *Handler) MoveSelection(delta int) {
 	}
 }
 
+// FocusedFilter returns a copy of the focused pane's quick filter state.
+func (h *Handler) FocusedFilter() panel.FilterState {
+	pane, _ := h.focusedPane()
+	return pane.Filter
+}
+
+// applyFilter sets the focused pane's query and jumps its cursor to the best match.
+// A main-pane jump refreshes the copies pane.
+func (h *Handler) applyFilter(query string) {
+	pane, rows := h.focusedPane()
+	cfg := h.host.Config()
+	pane.Filter.CaseInsensitive = cfg.Filter.CaseInsensitive
+	pane.Filter.CycleMatches = cfg.Filter.CycleMatches
+	if cur, ok := pane.Filter.Apply(query, dedupRowNames(rows)); ok {
+		h.setSelected(pane, cur)
+	}
+}
+
+// refilterPane re-ranks an open filter after pane's rows were rebuilt, since
+// match results hold row indices.
+func refilterPane(pane *ui.DedupPane, rows []ui.DedupRow) {
+	if pane.Filter.Query != "" {
+		pane.Filter.Rebuild(dedupRowNames(rows))
+	}
+}
+
+func dedupRowNames(rows []ui.DedupRow) []string {
+	names := make([]string, len(rows))
+	for i, r := range rows {
+		names[i] = r.Value.Display
+	}
+	return names
+}
+
+// setSelected moves pane's cursor; a main-pane move refreshes the copies pane.
+func (h *Handler) setSelected(pane *ui.DedupPane, index int) {
+	pane.Selected = index
+	if !h.model.DedupView.FocusCopies {
+		h.syncCopies()
+	}
+}
+
+// AppendFilterRune types r into the focused pane's quick filter.
+func (h *Handler) AppendFilterRune(r rune) {
+	pane, _ := h.focusedPane()
+	h.applyFilter(pane.Filter.InsertRune(r))
+}
+
+// BackspaceFilter deletes the rune before the filter caret.
+func (h *Handler) BackspaceFilter() {
+	pane, _ := h.focusedPane()
+	if next, changed := pane.Filter.Backspace(); changed {
+		h.applyFilter(next)
+	}
+}
+
+// ClearFilter empties the query while the filter stays open.
+func (h *Handler) ClearFilter() {
+	h.applyFilter("")
+}
+
+// CancelFilter closes the focused pane's quick filter.
+func (h *Handler) CancelFilter() {
+	pane, _ := h.focusedPane()
+	pane.Filter = panel.FilterState{}
+}
+
+// CycleFilterMatch steps the focused pane's cursor through filter matches, or
+// moves plainly when nothing matches.
+func (h *Handler) CycleFilterMatch(delta int) {
+	pane, _ := h.focusedPane()
+	if cur, ok := pane.Filter.Cycle(pane.Selected, delta); ok {
+		h.setSelected(pane, cur)
+		return
+	}
+	h.MoveSelection(delta)
+}
+
 // SelectEdge moves the focused pane's cursor to the first or last row.
 func (h *Handler) SelectEdge(last bool) {
 	pane, rows := h.focusedPane()
@@ -640,6 +722,7 @@ func (h *Handler) SelectEdge(last bool) {
 func (h *Handler) SwitchPane() {
 	st := &h.model.DedupView
 	hasPanel := st.TreeDirs && h.model.DedupSnapshot.Phase == comparepkg.DedupDone
+	st.Main.Filter, st.Copies.Filter = panel.FilterState{}, panel.FilterState{}
 	switch {
 	case st.FocusPanel:
 		st.FocusPanel, st.FocusCopies = false, false

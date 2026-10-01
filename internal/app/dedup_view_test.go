@@ -279,6 +279,10 @@ func TestDedupViewViMotionHJKLOnlyWhenModeOn(t *testing.T) {
 		t.Fatalf("vi-motion off: 'j' moved selection from %d to %d", before, app.model.DedupView.Main.Selected)
 	}
 
+	if !app.dedupCtrl.FocusedFilter().UIActive() {
+		t.Fatal("vi-motion off: unbound 'j' should open type-to-jump")
+	}
+	app.dedupCtrl.CancelFilter()
 	app.model.ViMotionMode = true
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
 	if app.model.DedupView.Main.Selected != before+1 {
@@ -310,6 +314,7 @@ func TestDedupViewViMotionLeaderLetterOnlyWhenModeOn(t *testing.T) {
 		t.Fatal("vi-motion off: 'v' must not close the dedup view")
 	}
 
+	app.dedupCtrl.CancelFilter() // the plain 'v' opened type-to-jump
 	app.model.ViMotionMode = true
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
 	if app.model.ViewMode != ui.ViewBrowser {

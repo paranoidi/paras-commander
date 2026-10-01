@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -236,7 +237,15 @@ func drawDedupTreePane(
 	styles theme.Theme,
 	chromeBlocked bool,
 ) {
-	layoutChrome := drawAuxPanelChrome(screen, rect, p.Title, p.EndLabel, p.Focused, chromeBlocked, false, styles)
+	filterUI := p.Focused && p.Pane.Filter.UIActive()
+	title, endLabel := p.Title, p.EndLabel
+	if filterUI {
+		title, endLabel = "> "+p.Pane.Filter.Query, "" // the query owns the top row
+	}
+	layoutChrome := drawAuxPanelChrome(screen, rect, title, endLabel, p.Focused, chromeBlocked, false, styles)
+	if filterUI {
+		drawQuickFilterTitle(screen, layoutChrome.TitleX, rect.Y, layoutChrome.TitleWidth, p.Pane.Filter, styles)
+	}
 	bg := layoutChrome.ContentBG
 
 	contentX := rect.X + 2
@@ -310,7 +319,7 @@ func drawDedupTreePane(
 			})
 		}
 		hinted := dedupRowHinted(p, d, entry, rowSelected)
-		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked, hinted)
+		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked, hinted, p.Pane.Filter.Ranges(idx), rowSelected && p.Focused)
 		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
 		drawDedupDetailColumns(screen, cols, d, lineY, lineStyle, dim, rowSelected || kept || groupAllMarked || dirFullyMarked, innerRight)
@@ -386,7 +395,7 @@ func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d DedupRowData) string {
 // trailing pin/in-progress-job marks, and subtree-mark suffix for one row, moved out of
 // drawDedupTreePane's per-row path column block. Pin/job marks are painted before the subtree
 // icon, matching panellist's job/pin-before-subtree suffix ordering.
-func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked, hinted bool) {
+func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked, hinted bool, matchRanges []search.Range, matchCursor bool) {
 	connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
 	gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked)
 	prefix := connectorPrefix
@@ -411,16 +420,31 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	pathText := primitive.FitPathForWidth(d.Display, max(fitW, 4))
 	_, rowBG, _ := lineStyle.Decompose()
 	connectorStyle := styles.PanelRowTreeConnector.Background(rowBG)
+	// ponytail: highlight only when FitPathForWidth didn't truncate; map ranges through the ellipsis if long paths need it.
+	var spans []primitive.Span
+	if pathText == d.Display {
+		matchStyle := styles.FuzzyHighlight
+		if matchCursor {
+			matchStyle = styles.FuzzyHighlightCursor
+		}
+		off := 0
+		if gutter != "" {
+			off = 1 // leading space before pathText
+		}
+		for _, r := range matchRanges {
+			spans = append(spans, primitive.Span{Start: off + r.Start, End: off + r.End, Style: matchStyle.Background(rowBG)})
+		}
+	}
 	x := pathX
 	primitive.Text(screen, x, lineY, pathW, connectorPrefix, connectorStyle)
 	x += len([]rune(connectorPrefix))
 	if gutter != "" {
 		primitive.Text(screen, x, lineY, pathW-(x-pathX), gutter, gutterStyle)
 		x += len([]rune(gutter))
-		primitive.Text(screen, x, lineY, pathW-(x-pathX), " "+pathText, lineStyle)
+		primitive.StyledText(screen, x, lineY, pathW-(x-pathX), " "+pathText, lineStyle, spans)
 		x++ // leading space before pathText
 	} else {
-		primitive.Text(screen, x, lineY, pathW-(x-pathX), pathText, lineStyle)
+		primitive.StyledText(screen, x, lineY, pathW-(x-pathX), pathText, lineStyle, spans)
 	}
 	cursorX := x + runewidth.StringWidth(pathText)
 	if marksW > 0 && cursorX+marksW <= pathX+pathW {
