@@ -79,6 +79,12 @@ type Theme struct {
 	PanelDedupRowCursorKeep tcell.Style
 	// PanelDedupRowMarkKeepSubtree styles the dir-row suffix when a subtree contains kept files.
 	PanelDedupRowMarkKeepSubtree tcell.Style
+	// PanelDedupFullDir styles the exact-duplicate directory suffix icon in the dedup view.
+	PanelDedupFullDir tcell.Style
+	// PanelDedupFullDirContent styles the same-content (names/layout ignored) directory suffix icon.
+	PanelDedupFullDirContent tcell.Style
+	// PanelDedupFullDirHidden styles the hidden/skipped-items warning icon on duplicate directories.
+	PanelDedupFullDirHidden tcell.Style
 	// PanelRowMarkSelectionSubtree styles the file-list suffix on directories with nested selections.
 	PanelRowMarkSelectionSubtree tcell.Style
 	// PanelRowMarkNew styles the file-list suffix for the latest transferred batch.
@@ -575,6 +581,8 @@ const (
 	IconKeyTreeLeaf                 = "tree.leaf"
 	IconKeySelectionsMultiLocation  = "selections.multi_location"
 	IconKeyDedupRelated             = "dedup.related"
+	IconKeyDedupFullDir             = "dedup.full_dir"
+	IconKeyDedupHidden              = "dedup.hidden"
 )
 
 // Menu-bar jobs strip icon keys ([icons] table); optional — see IconMenuJob / IconMenuProgress*.
@@ -701,6 +709,18 @@ func (t Theme) IconFilelistSelectionSubtree() rune {
 // cursor row's file (same duplicate group), visible even when kept/marked colors win.
 func (t Theme) IconDedupRelated() rune {
 	return t.filelistIconRune(IconKeyDedupRelated, '\uf067')
+}
+
+// IconDedupFullDir returns the dedup view suffix icon for directories that exactly
+// duplicate another directory (the content-only tier reuses IconFilelistRenamed).
+func (t Theme) IconDedupFullDir() rune {
+	return t.filelistIconRune(IconKeyDedupFullDir, '\uee86')
+}
+
+// IconDedupHidden returns the dedup view suffix icon warning that a duplicate
+// directory holds entries the scan skipped (hidden, ignored, symlinks, empty dirs).
+func (t Theme) IconDedupHidden() rune {
+	return t.filelistIconRune(IconKeyDedupHidden, '\uf06e')
 }
 
 // IconFilelistNew returns the recently-transferred file suffix icon.
@@ -977,6 +997,9 @@ var requiredStyleKeys = []string{
 	"panel.dedup.row.keep",
 	"panel.dedup.row.cursor.keep",
 	"panel.dedup.row.mark.keep_subtree",
+	"panel.dedup.full_dir",
+	"panel.dedup.full_dir_content",
+	"panel.dedup.full_dir_hidden",
 	"panel.row.mark.selection_subtree",
 	"panel.row.mark.new",
 	"panel.row.mark.new.previous",
@@ -1508,6 +1531,9 @@ func parse(data []byte) (Theme, error) {
 		PanelDedupRowKeep:                   styles["panel.dedup.row.keep"],
 		PanelDedupRowCursorKeep:             styles["panel.dedup.row.cursor.keep"],
 		PanelDedupRowMarkKeepSubtree:        styles["panel.dedup.row.mark.keep_subtree"],
+		PanelDedupFullDir:                   styles["panel.dedup.full_dir"],
+		PanelDedupFullDirContent:            styles["panel.dedup.full_dir_content"],
+		PanelDedupFullDirHidden:             styles["panel.dedup.full_dir_hidden"],
 		PanelRowMarkSelectionSubtree:        styles["panel.row.mark.selection_subtree"],
 		PanelRowMarkNew:                     styles["panel.row.mark.new"],
 		PanelRowMarkNewPrevious:             styles["panel.row.mark.new.previous"],

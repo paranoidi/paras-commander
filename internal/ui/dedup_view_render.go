@@ -153,9 +153,14 @@ func drawDedupView(
 	if !view.SourceStale && view.SourceRow >= 0 && view.SourceRow < len(list) {
 		activeGroup = list[view.SourceRow].Value.GroupIdx
 	}
-	var hintDirs map[string]bool
+	var hintDirs, twinDirs map[string]bool
 	if view.TreeDirs && activeGroup >= 0 && activeGroup < len(snap.Groups) {
 		hintDirs = dedupGroupDirSet(snap.Groups[activeGroup])
+	}
+	if view.TreeDirs && !view.SourceStale {
+		if sel, ok := dedupRowAt(list, view.SourceRow); ok && sel.Value.Kind == DedupRowDir {
+			twinDirs, hintDirs = dedupTwinDirSets(snap, sel.Value.DirRel)
+		}
 	}
 	drawDedupTreePane(screen, layout.Primary, dedupPaneParams{
 		Title:            dedupViewTitle(snap, view.IgnoredEmptyCount, view.RecheckPercent()),
@@ -168,6 +173,7 @@ func drawDedupView(
 		DimByGroup:       !view.TreeDirs && !view.SourceStale,
 		ActiveGroup:      activeGroup,
 		HintDirs:         hintDirs,
+		TwinDirs:         twinDirs,
 		FullyMarkedDirs:  treeFullyMarkedDirs,
 		MarkedDirs:       markedDirs,
 		DangerMarkedDirs: dangerMarkedDirs,
@@ -176,10 +182,16 @@ func drawDedupView(
 	}, snap, view, styles, chromeBlocked)
 
 	copiesHeader := ""
-	copiesEmpty := "Select a file to see its copies"
-	if sel, ok := dedupRowAt(list, view.SourceRow); ok && sel.Value.Kind == DedupRowFile {
-		copiesHeader = sel.Value.File.Rel
-		copiesEmpty = "No other copies"
+	copiesEmpty := "Select a file or duplicate dir"
+	if sel, ok := dedupRowAt(list, view.SourceRow); ok {
+		switch {
+		case sel.Value.Kind == DedupRowFile:
+			copiesHeader = sel.Value.File.Rel
+			copiesEmpty = "No other copies"
+		case sel.Value.DirDup != comparepkg.DirNone:
+			copiesHeader = sel.Value.DirRel + "/"
+			copiesEmpty = "No other copies"
+		}
 	}
 	copiesRect, _ := DedupSecondaryRects(layout.Secondary, view.TreeDirs)
 	drawDedupTreePane(screen, copiesRect, dedupPaneParams{
@@ -217,7 +229,8 @@ type dedupPaneParams struct {
 	EmptyText        string
 	DimByGroup       bool // groups mode: dim rows outside ActiveGroup
 	ActiveGroup      int
-	HintDirs         map[string]bool     // dirs mode: DirRel keys whose subtree contains ActiveGroup (collapsed-folder hint)
+	HintDirs         map[string]bool     // dirs mode: DirRel keys whose subtree contains ActiveGroup or a twin dir (collapsed-folder hint)
+	TwinDirs         map[string]bool     // dirs mode: duplicate-directory twins of the cursor folder (always hinted)
 	CopiesPane       bool                // copies pane: dir rows can show fully-marked copy styling
 	FullyMarkedDirs  map[string]bool     // DirRel keys whose entire descendant duplicate subtree is marked
 	MarkedDirs       map[string]bool     // DirRel keys of dirs whose subtree has a marked file
@@ -367,10 +380,17 @@ func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry 
 	return lineStyle
 }
 
-// dedupRowHinted reports whether a row relates to the cursor row's duplicate group: a
-// sibling copy in the active group, or a collapsed dir whose subtree contains it. Such rows
+// dedupRowHinted reports whether a row relates to the cursor row: a sibling copy in the
+// active group, a twin of the cursor's duplicate directory, or a collapsed dir whose
+// subtree contains either. Such rows
 // get panel.hint and the icons.dedup.related suffix (the icon survives kept/marked colors).
 func dedupRowHinted(p dedupPaneParams, d DedupRowData, entry DedupRow, rowSelected bool) bool {
+	if d.Kind == DedupRowDir && p.TwinDirs[d.DirRel] {
+		return true
+	}
+	if d.Kind == DedupRowDir && p.TwinDirs != nil {
+		return !entry.Expanded && p.HintDirs[d.DirRel]
+	}
 	if p.ActiveGroup < 0 {
 		return false
 	}
@@ -412,6 +432,12 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	fitW := pathW - len([]rune(prefix))
 	if subtreeMark {
 		fitW -= 2 // room for subtree mark suffix, like panellist.SuffixDecorationLen
+	}
+	if d.DirDup != comparepkg.DirNone {
+		fitW -= 2 // room for duplicate-directory icon suffix
+	}
+	if d.DirDup != comparepkg.DirNone && d.DirHidden {
+		fitW -= 2 // room for hidden-items warning icon suffix
 	}
 	if hinted {
 		fitW -= 2 // room for related-copy icon suffix
@@ -467,9 +493,27 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 		primitive.Text(screen, markX, lineY, 1, string(styles.IconFilelistSelectionSubtree()), markStyle)
 		cursorX = markX + 1
 	}
-	// Related-copy icon is always the last suffix on the row.
+	// Suffix icons take the cursor-row icon color on the cursor row, like the main file list.
+	iconStyle := func(base tcell.Style) tcell.Style {
+		return base.Background(rowBG).Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
+	}
+	if d.DirDup != comparepkg.DirNone {
+		icon, style := styles.IconDedupFullDir(), styles.PanelDedupFullDir
+		if d.DirDup == comparepkg.DirContent {
+			icon, style = styles.IconFilelistRenamed(), styles.PanelDedupFullDirContent
+		}
+		if markX := cursorX + 1; markX < pathX+pathW {
+			primitive.Text(screen, markX, lineY, 1, string(icon), iconStyle(style))
+			cursorX = markX + 1
+		}
+	}
+	// Related-copy icon follows the duplicate-directory icon; the hidden-items warning comes last.
 	if markX := cursorX + 1; hinted && markX < pathX+pathW {
-		primitive.Text(screen, markX, lineY, 1, string(styles.IconDedupRelated()), styles.PanelHint.Background(rowBG))
+		primitive.Text(screen, markX, lineY, 1, string(styles.IconDedupRelated()), iconStyle(styles.PanelHint))
+		cursorX = markX + 1
+	}
+	if markX := cursorX + 1; d.DirDup != comparepkg.DirNone && d.DirHidden && markX < pathX+pathW {
+		primitive.Text(screen, markX, lineY, 1, string(styles.IconDedupHidden()), iconStyle(styles.PanelDedupFullDirHidden))
 	}
 }
 

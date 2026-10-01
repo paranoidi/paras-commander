@@ -1219,7 +1219,11 @@ func (h *Handler) SelectToggleAndAdvance() {
 	}
 	st := &h.model.DedupView
 	if st.FocusCopies && row.Value.Kind == ui.DedupRowDir {
-		h.toggleCopiesFolderMarks(row)
+		if h.copiesFollowFile() {
+			h.toggleCopiesFolderMarks(row)
+		} else {
+			h.toggleMainFolderMarks(row) // twin-directory copies: every duplicate under the folder
+		}
 		_, rows := h.focusedPane()
 		next := ui.DedupNextDirRowIndex(rows, st.Copies.Selected)
 		if next >= len(rows) {
@@ -1409,6 +1413,13 @@ func (h *Handler) applyGroupKeep(gi int, keepAbs map[string]bool) (applied bool,
 	return true, replacedKeep
 }
 
+// copiesFollowFile reports whether the copies pane lists one file's duplicate
+// group (main selection is a file) rather than a duplicate directory's twins.
+func (h *Handler) copiesFollowFile() bool {
+	sel, ok := h.paneRow(&h.model.DedupView.Main, h.model.DedupList)
+	return ok && sel.Value.Kind == ui.DedupRowFile
+}
+
 func (h *Handler) notifyDuplicateKeep(replaced bool) {
 	if replaced {
 		h.host.SetTransientMessage("Duplicate keep", ui.MessageUrgencyInfo)
@@ -1436,7 +1447,7 @@ func (h *Handler) KeepSelection() {
 		return
 	}
 	st := &h.model.DedupView
-	if st.FocusCopies && row.Value.Kind == ui.DedupRowDir {
+	if st.FocusCopies && row.Value.Kind == ui.DedupRowDir && h.copiesFollowFile() {
 		h.notifyDuplicateKeep(h.keepCopyFilesUnderDir(row))
 		_, rows := h.focusedPane()
 		next := ui.DedupNextDirRowIndex(rows, st.Copies.Selected)
@@ -1446,7 +1457,7 @@ func (h *Handler) KeepSelection() {
 		st.Copies.Selected = next
 		return
 	}
-	if row.Value.Kind == ui.DedupRowDir && !st.FocusCopies {
+	if row.Value.Kind == ui.DedupRowDir {
 		replaced := false
 		byGroup := ui.DedupSnapshotFilesUnderDir(h.model.DedupSnapshot, row.Value.DirRel)
 		for gi, files := range byGroup {
@@ -1460,15 +1471,7 @@ func (h *Handler) KeepSelection() {
 	if row.Value.Kind != ui.DedupRowFile {
 		return
 	}
-	gi := row.Value.GroupIdx
-	if st.FocusCopies {
-		mainSel, ok := h.paneRow(&st.Main, h.model.DedupList)
-		if !ok {
-			return
-		}
-		gi = mainSel.Value.GroupIdx
-	}
-	_, replaced := h.applyGroupKeep(gi, map[string]bool{row.Value.AbsKey: true})
+	_, replaced := h.applyGroupKeep(row.Value.GroupIdx, map[string]bool{row.Value.AbsKey: true})
 	h.notifyDuplicateKeep(replaced)
 	h.MoveSelection(1)
 }

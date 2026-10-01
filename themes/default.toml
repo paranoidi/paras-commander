@@ -145,6 +145,9 @@ row.cursor.all_marked = { fg = "red", bg = "cyan", bold = true }
 row.keep = { fg = "bright_green", bold = true }
 row.cursor.keep = { fg = "bright_green", bg = "cyan", bold = true }
 row.mark.keep_subtree = { fg = "bright_green" }
+full_dir = { fg = "bright_magenta" }
+full_dir_content = { fg = "yellow" }
+full_dir_hidden = { fg = "red" }
 
 [panel.active]
 disk_usage_overview = { fg = "blue"}
@@ -332,6 +335,8 @@ preview_loading = "\uf03e"
 
 [icons.dedup]
 related = "\uf067"
+full_dir = "\uee86"
+hidden = "\uf06e"
 
 [icons.folders]
 folder = "\U000F024B"

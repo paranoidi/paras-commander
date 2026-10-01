@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -54,6 +55,7 @@ type DedupSnapshot struct {
 	DisplayRoot    pathloc.Path // results view root; zero means same as Root
 	Phase          DedupPhase
 	Groups         []DedupGroup
+	DirGroups      []DedupDirGroup // directories whose whole recursive content duplicates another (Done only)
 	Walked         int
 	Hashed         int
 	HashTotal      int
@@ -70,10 +72,12 @@ type DedupSnapshot struct {
 }
 
 // WithoutPaths returns a copy of the snapshot with the given absolute paths removed;
-// groups that fall below two members are dropped entirely.
+// groups that fall below two members are dropped entirely. Directory groups lose
+// members whose subtree held a removed path.
 func (s DedupSnapshot) WithoutPaths(removed map[string]bool) DedupSnapshot {
 	out := s
 	out.Groups = nil
+	out.DirGroups = s.withoutDirPaths(removed)
 	for _, g := range s.Groups {
 		var kept []DedupFile
 		for _, f := range g.Files {
@@ -90,9 +94,41 @@ func (s DedupSnapshot) WithoutPaths(removed map[string]bool) DedupSnapshot {
 	return out
 }
 
+// withoutDirPaths drops dir-group members containing a removed path and groups left with <2 members.
+// ponytail: no re-run of maximality or of the tiers after removal; a rescan recomputes them.
+func (s DedupSnapshot) withoutDirPaths(removed map[string]bool) []DedupDirGroup {
+	prefix := strings.TrimSuffix(s.EffectiveDisplayRoot().String(), "/") + "/"
+	touched := map[string]bool{}
+	for p := range removed {
+		if rel, ok := strings.CutPrefix(p, prefix); ok {
+			for d := RelDir(rel); d != ""; d = RelDir(d) {
+				touched[d] = true
+			}
+		}
+	}
+	var out []DedupDirGroup
+	for _, g := range s.DirGroups {
+		ng := g
+		ng.Rels, ng.Hidden = nil, nil
+		for i, r := range g.Rels {
+			if !touched[r] {
+				ng.Rels = append(ng.Rels, r)
+				ng.Hidden = append(ng.Hidden, g.Hidden[i])
+			}
+		}
+		if len(ng.Rels) >= 2 {
+			out = append(out, ng)
+		}
+	}
+	return out
+}
+
 func (s *DedupSession) walkRoot(ctx context.Context) ([]FileRecord, error) {
 	walkOpts := s.opts.Walk
 	walkOpts.SkipSymlinks = true
+	s.skipped, s.dirs = map[string]bool{}, map[string]bool{}
+	walkOpts.OnSkip = func(relDir string) { s.skipped[relDir] = true }
+	walkOpts.OnDir = func(rel string) { s.dirs[rel] = true }
 	var pubMu sync.Mutex
 	var lastPub time.Time
 	walkOpts.OnFile = func(walked int) {
@@ -145,6 +181,10 @@ type DedupSession struct {
 
 	confirm     chan struct{}
 	confirmOnce sync.Once
+
+	// skipped/dirs are filled by the (sequential) walk: rel dirs that lost
+	// walk-dropped entries, and every directory entered.
+	skipped, dirs map[string]bool
 
 	snap atomic.Pointer[DedupSnapshot]
 }
@@ -501,10 +541,17 @@ func (s *DedupSession) run(ctx context.Context) {
 		return
 	}
 
+	hashOf := make(map[string][32]byte, len(candidates))
+	for idx, f := range candidates {
+		if hashOK[idx] {
+			hashOf[f.Rel] = hashes[idx]
+		}
+	}
 	s.publish(DedupSnapshot{
 		Root:           s.root,
 		Phase:          DedupDone,
 		Groups:         groupByHash(candidates, hashes, hashOK),
+		DirGroups:      groupDirsByDigest(files, hashOf, s.skipped, s.dirs, s.opts.Walk.Only),
 		Walked:         len(files),
 		Hashed:         len(candidates),
 		HashTotal:      len(candidates),

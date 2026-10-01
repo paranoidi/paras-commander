@@ -29,6 +29,18 @@ Alt+Ctrl+Left / Alt+Ctrl+Right (`panel.tree-collapse-all` / `panel.tree-expand-a
 
 **Type to jump:** typing a printable key that has no binding in the focused tree pane (not the browse panel) starts the same fuzzy quick filter as the main file list. `> query` shows in the pane's top border, the cursor jumps to the best match (the Copies pane follows), and matched characters are highlighted. Up/Down cycle through matches (`filter.cycle_matches`, `filter.case_insensitive`), Backspace edits the query, Ctrl+L / Ctrl+Backspace clear it, Esc closes it. Enter and Insert close the filter and then do their normal action; any other key closes it too. Each pane has its own filter, and switching panes clears it.
 
+## Duplicate directories
+
+In **View: Dirs**, a folder whose whole contents duplicate another folder is marked with a trailing icon, computed in memory from the hashes already taken (no extra file reads). Only the outermost folders are marked, never the scan root, and any folder containing a file that was not fully hashed (unique size, differing prefix, over `max_hash_bytes`, unreadable) is never marked.
+
+- **Exact copy** (`icons.dedup.full_dir`, style `panel.dedup.full_dir`): names, folder structure and file contents all match.
+- **Same content** (the renamed icon `icons.filelist.renamed`, style `panel.dedup.full_dir_content`, yellow): the multiset of file contents matches while names or layout differ. A folder in an exact group shows only the exact icon.
+- **Skipped items** (`icons.dedup.hidden`, style `panel.dedup.full_dir_hidden`, red) is the last icon on a member whose subtree holds entries the verdict did not cover: hidden files when hidden files are off, gitignored or excluded entries, symlinks, unreadable folders, and empty subfolders. The flag is per folder, so one copy may carry it while its twin does not.
+
+With the cursor on a marked folder, its twin folders (and collapsed folders containing them) are drawn in the hint color with the related-copy icon, and the Copies pane lists its twin folders (and their duplicate files) instead of a single file's copies; Insert and keep on a twin folder there act on every duplicate under it.
+
+Deleting files drops folders that held them from their groups. Folders of only zero-byte files follow the ignore-empty toggle. **View: Groups** has no folder rows, so the icons appear only in Dirs view. Icon order is: duplicate-directory icon, related-copy icon, skipped-items icon.
+
 ## Leaving and returning
 
 Leaving the results view (Esc, Alt+W again, Enter to jump to a file, "Back to file view", or switching to Jobs/Commands/Messages) keeps the results in memory and shows `Duplicates kept - Alt+W returns`. Kept results live until the next scan or until pc quits. There are two ways back:

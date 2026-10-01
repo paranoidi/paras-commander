@@ -723,3 +723,136 @@ func TestDedupHashCachePersistsAfterCancel(t *testing.T) {
 		t.Fatalf("cache entries = %d, want at least 2", got)
 	}
 }
+
+func scanDirGroups(t *testing.T, dir string) DedupSnapshot {
+	t.Helper()
+	sess, phases := startDedup(t, dir, 0)
+	defer sess.Close()
+	snap := <-phases
+	if snap.Phase != DedupDone {
+		t.Fatalf("phase = %v, want DedupDone", snap.Phase)
+	}
+	return snap
+}
+
+func dirGroupRels(snap DedupSnapshot, kind DedupDirKind) [][]string {
+	var out [][]string
+	for _, g := range snap.DirGroups {
+		if g.Kind == kind {
+			out = append(out, g.Rels)
+		}
+	}
+	return out
+}
+
+func TestDedupDirGroupsExactMaximal(t *testing.T) {
+	dir := t.TempDir()
+	for _, base := range []string{"maple", "walnut"} {
+		writeFile(t, dir, base+"/lantern.txt", "first body")
+		writeFile(t, dir, base+"/inner/anchor.txt", "second body!")
+	}
+	snap := scanDirGroups(t, dir)
+	exact := dirGroupRels(snap, DirExact)
+	if len(exact) != 1 || strings.Join(exact[0], ",") != "maple,walnut" {
+		t.Fatalf("exact groups = %v, want only maple,walnut (nested inner not separate)", exact)
+	}
+	if got := dirGroupRels(snap, DirContent); len(got) != 0 {
+		t.Fatalf("content groups = %v, want none (exact suppresses)", got)
+	}
+	if snap.DirGroups[0].Hidden[0] || snap.DirGroups[0].Hidden[1] {
+		t.Fatal("unexpected hidden flag")
+	}
+}
+
+func TestDedupDirGroupsDifferingOrUniqueFile(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "maple/lantern.txt", "first body")
+	writeFile(t, dir, "walnut/lantern.txt", "first bodz")
+	writeFile(t, dir, "birch/lantern.txt", "first body")
+	writeFile(t, dir, "birch/unique.txt", "only here, unique size")
+	snap := scanDirGroups(t, dir)
+	if len(snap.DirGroups) != 0 {
+		t.Fatalf("DirGroups = %+v, want none", snap.DirGroups)
+	}
+}
+
+func TestDedupDirGroupsContentTier(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "maple/lantern.txt", "first body")
+	writeFile(t, dir, "maple/anchor.txt", "second body!")
+	writeFile(t, dir, "walnut/lantern.txt", "first body")
+	writeFile(t, dir, "walnut/ribbon.txt", "second body!") // renamed
+	snap := scanDirGroups(t, dir)
+	if got := dirGroupRels(snap, DirExact); len(got) != 0 {
+		t.Fatalf("exact groups = %v, want none", got)
+	}
+	if got := dirGroupRels(snap, DirContent); len(got) != 1 || strings.Join(got[0], ",") != "maple,walnut" {
+		t.Fatalf("content groups = %v, want maple,walnut", got)
+	}
+
+	dir = t.TempDir()
+	writeFile(t, dir, "maple/lantern.txt", "first body")
+	writeFile(t, dir, "maple/deep/anchor.txt", "second body!")
+	writeFile(t, dir, "walnut/lantern.txt", "first body")
+	writeFile(t, dir, "walnut/anchor.txt", "second body!") // different layout
+	snap = scanDirGroups(t, dir)
+	if got := dirGroupRels(snap, DirContent); len(got) != 1 || strings.Join(got[0], ",") != "maple,walnut" {
+		t.Fatalf("layout content groups = %v, want maple,walnut", got)
+	}
+}
+
+func TestDedupDirGroupsHiddenItems(t *testing.T) {
+	dir := t.TempDir()
+	for _, base := range []string{"maple", "walnut"} {
+		writeFile(t, dir, base+"/lantern.txt", "first body")
+	}
+	writeFile(t, dir, "walnut/.secret", "dotfile")
+	snap := scanDirGroups(t, dir)
+	if len(snap.DirGroups) != 1 {
+		t.Fatalf("DirGroups = %+v, want one", snap.DirGroups)
+	}
+	g := snap.DirGroups[0]
+	if g.Rels[0] != "maple" || g.Hidden[0] || !g.Hidden[1] {
+		t.Fatalf("rels %v hidden %v, want hidden only on walnut", g.Rels, g.Hidden)
+	}
+
+	dir = t.TempDir()
+	for _, base := range []string{"maple", "walnut"} {
+		writeFile(t, dir, base+"/lantern.txt", "first body")
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "maple", "hollow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	g = scanDirGroups(t, dir).DirGroups[0]
+	if !g.Hidden[0] || g.Hidden[1] {
+		t.Fatalf("hidden %v, want empty subdir flagged on maple only", g.Hidden)
+	}
+}
+
+func TestDedupDirGroupsWithoutPathsAndTrim(t *testing.T) {
+	dir := t.TempDir()
+	for _, base := range []string{"maple", "walnut", "birch"} {
+		writeFile(t, dir, "outer/"+base+"/lantern.txt", "first body")
+	}
+	snap := scanDirGroups(t, dir)
+	if len(snap.DirGroups) != 1 || len(snap.DirGroups[0].Rels) != 3 {
+		t.Fatalf("DirGroups = %+v, want one 3-member group", snap.DirGroups)
+	}
+	less := snap.WithoutPaths(map[string]bool{filepath.Join(dir, "outer/birch/lantern.txt"): true})
+	if len(less.DirGroups) != 1 || len(less.DirGroups[0].Rels) != 2 || len(less.DirGroups[0].Hidden) != 2 {
+		t.Fatalf("after removal DirGroups = %+v, want 2 members", less.DirGroups)
+	}
+	if len(snap.WithoutPaths(map[string]bool{
+		filepath.Join(dir, "outer/birch/lantern.txt"): true,
+		filepath.Join(dir, "outer/maple/lantern.txt"): true,
+	}).DirGroups) != 0 {
+		t.Fatal("group with <2 members must be dropped")
+	}
+	trimmed := snap.WithTrimmedDisplayRoot()
+	if got := trimmed.DirGroups[0].Rels[0]; got != "birch" {
+		t.Fatalf("trimmed rel = %q, want birch", got)
+	}
+	if snap.DirGroups[0].Rels[0] != "outer/birch" {
+		t.Fatal("trim mutated the original snapshot")
+	}
+}

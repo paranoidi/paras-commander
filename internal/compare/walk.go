@@ -26,6 +26,12 @@ type WalkOptions struct {
 	// Only, when non-empty, limits the walk to these subtrees (slash-separated paths
 	// relative to root); files outside them, including root-level files, are skipped.
 	Only []string
+	// OnSkip, when set, is called with the rel directory ("" = root) that lost an
+	// entry the walk dropped (hidden, gitignored, ShouldSkipDir, symlink,
+	// unreadable). Skips outside Only are not reported.
+	OnSkip func(relDir string)
+	// OnDir, when set, is called with the rel path of every directory the walk enters.
+	OnDir func(rel string)
 }
 
 // walkScope reports whether rel lies in (or is) one of only, and whether it is a
@@ -74,9 +80,6 @@ func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileR
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if err != nil {
-			return nil
-		}
 		if path == host {
 			return nil
 		}
@@ -86,11 +89,28 @@ func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileR
 			return nil
 		}
 		rel = filepath.ToSlash(rel)
+		skipped := func(relDir string) {
+			if opts.OnSkip == nil {
+				return
+			}
+			if inside, _ := walkScope(rel, opts.Only); len(opts.Only) == 0 || inside {
+				opts.OnSkip(relDir)
+			}
+		}
+		if err != nil {
+			if d != nil && d.IsDir() {
+				skipped(rel) // unreadable directory: its content is unknown
+			} else {
+				skipped(RelDir(rel))
+			}
+			return nil
+		}
 
 		name := d.Name()
 		isDir := d.IsDir()
 		if d.Type()&fs.ModeSymlink != 0 {
 			if opts.SkipSymlinks {
+				skipped(RelDir(rel))
 				return nil
 			}
 			if info, statErr := os.Stat(path); statErr == nil {
@@ -110,15 +130,18 @@ func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileR
 			}
 		}
 		if isDir {
-			if !localfs.EntryVisible(name, filepath.Dir(path), true, listOpts) {
+			if !localfs.EntryVisible(name, filepath.Dir(path), true, listOpts) ||
+				(opts.ShouldSkipDir != nil && opts.ShouldSkipDir(path)) {
+				skipped(RelDir(rel))
 				return filepath.SkipDir
 			}
-			if opts.ShouldSkipDir != nil && opts.ShouldSkipDir(path) {
-				return filepath.SkipDir
+			if opts.OnDir != nil {
+				opts.OnDir(rel)
 			}
 			return nil
 		}
 		if !localfs.EntryVisible(name, filepath.Dir(path), false, listOpts) {
+			skipped(RelDir(rel))
 			return nil
 		}
 

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -1171,7 +1172,7 @@ func TestDrawDedupViewCopiesPaneEmptyTextStartsAtContentColumn(t *testing.T) {
 	rect := layout.Secondary
 	contentX := rect.X + 2
 	emptyY := rect.Y + 2
-	want := "Select a file to see its copies"
+	want := "Select a file or duplicate dir"
 
 	root := pathloc.MustParse("/scan/root")
 	snap := comparepkg.DedupSnapshot{Root: root, Phase: comparepkg.DedupDone}
@@ -1686,5 +1687,164 @@ func TestDedupViewTitleRecheckSuffix(t *testing.T) {
 	}
 	if got := (DedupViewState{}).RecheckPercent(); got != -1 {
 		t.Fatalf("idle percent = %d, want -1", got)
+	}
+}
+
+func TestDrawDedupViewFullDirIcons(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	firstLineY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "harbor/lantern.bin", "meadow/lantern.bin"),
+			dedupTestGroup(2, 512, "orchard/pebble.bin", "valley/ribbon.bin"),
+		},
+		DirGroups: []comparepkg.DedupDirGroup{
+			{Kind: comparepkg.DirExact, Size: 1024, Files: 1, Rels: []string{"harbor", "meadow"}, Hidden: []bool{false, true}},
+			{Kind: comparepkg.DirContent, Size: 512, Files: 1, Rels: []string{"orchard", "valley"}, Hidden: []bool{false, false}},
+		},
+	}
+	view := DedupViewState{TreeDirs: true, IgnoreEmpty: true}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	byDir := func(rel string) DedupRowData {
+		i := DedupRowIndexByID(list, "d:"+rel)
+		if i < 0 {
+			t.Fatalf("no dir row %q", rel)
+		}
+		return list[i].Value
+	}
+	if d := byDir("harbor"); d.DirDup != comparepkg.DirExact || d.DirHidden {
+		t.Fatalf("harbor = %+v, want exact, not hidden", d)
+	}
+	if d := byDir("meadow"); d.DirDup != comparepkg.DirExact || !d.DirHidden {
+		t.Fatalf("meadow = %+v, want exact + hidden", d)
+	}
+	if d := byDir("valley"); d.DirDup != comparepkg.DirContent {
+		t.Fatalf("valley = %+v, want content", d)
+	}
+
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
+	rowHas := func(rel string, icon rune) bool {
+		y := firstLineY + DedupRowIndexByID(list, "d:"+rel)
+		for x := rect.X; x < rect.X+rect.Width; x++ {
+			if ch, _, _ := screen.Get(x, y); ch == string(icon) {
+				return true
+			}
+		}
+		return false
+	}
+	if !rowHas("harbor", styles.IconDedupFullDir()) || rowHas("harbor", styles.IconDedupHidden()) {
+		t.Error("harbor: want full-dir icon without hidden icon")
+	}
+	if !rowHas("meadow", styles.IconDedupFullDir()) || !rowHas("meadow", styles.IconDedupHidden()) {
+		t.Error("meadow: want full-dir and hidden icons")
+	}
+	if !rowHas("valley", styles.IconFilelistRenamed()) {
+		t.Error("valley: want content-tier (renamed) icon")
+	}
+}
+
+func TestDedupCopyRowsForDuplicateDir(t *testing.T) {
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "harbor/lantern.bin", "meadow/lantern.bin", "orchard/lantern.bin"),
+			dedupTestGroup(2, 512, "harbor/pebble.bin", "meadow/pebble.bin"),
+		},
+		DirGroups: []comparepkg.DedupDirGroup{
+			{Kind: comparepkg.DirExact, Size: 1536, Files: 2, Rels: []string{"harbor", "meadow"}, Hidden: []bool{false, false}},
+		},
+	}
+	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{TreeDirs: true})
+	sel := list[DedupRowIndexByID(list, "d:harbor")]
+	rows := DedupCopyRows(snap, sel, nil)
+	var got []string
+	for _, r := range rows {
+		got = append(got, r.ID)
+	}
+	want := []string{"d:meadow", "/root/meadow/lantern.bin", "/root/meadow/pebble.bin"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("copy rows = %v, want %v", got, want)
+	}
+	if rows := DedupCopyRows(snap, list[DedupRowIndexByID(list, "d:orchard")], nil); rows != nil {
+		t.Fatalf("non-duplicate dir copy rows = %v, want nil", rows)
+	}
+}
+
+func TestDrawDedupViewHintsTwinDirOfCursorDir(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "harbor/lantern.bin", "meadow/lantern.bin", "orchard/lantern.bin"),
+		},
+		DirGroups: []comparepkg.DedupDirGroup{
+			{Kind: comparepkg.DirExact, Size: 1024, Files: 1, Rels: []string{"harbor", "meadow"}, Hidden: []bool{false, false}},
+		},
+	}
+	view := DedupViewState{TreeDirs: true}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	cur := DedupRowIndexByID(list, "d:harbor")
+	view.SourceRow, view.Main.Selected = cur, cur
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
+
+	rowHasRelated := func(rel string) bool {
+		y := layout.Primary.Y + 2 + DedupRowIndexByID(list, "d:"+rel)
+		for x := layout.Primary.X; x < layout.Primary.X+layout.Primary.Width; x++ {
+			if ch, _, _ := screen.Get(x, y); ch == string(styles.IconDedupRelated()) {
+				return true
+			}
+		}
+		return false
+	}
+	if !rowHasRelated("meadow") {
+		t.Error("twin dir meadow: want related icon")
+	}
+	if rowHasRelated("orchard") {
+		t.Error("non-twin dir orchard: want no related icon")
+	}
+
+	// The cursor row's suffix icon takes the theme's cursor-row icon color.
+	key := styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{FileListActive: true})
+	want := styles.PanelRowIconForeground(key, styles.PanelDedupFullDir)
+	y := layout.Primary.Y + 2 + cur
+	found := false
+	for x := layout.Primary.X; x < layout.Primary.X+layout.Primary.Width; x++ {
+		if ch, st, _ := screen.Get(x, y); ch == string(styles.IconDedupFullDir()) {
+			found = true
+			if fg, _, _ := st.Decompose(); fg != want {
+				t.Errorf("cursor full-dir icon fg = %v, want %v", fg, want)
+			}
+		}
+	}
+	if !found {
+		t.Error("cursor row: want full-dir icon")
 	}
 }

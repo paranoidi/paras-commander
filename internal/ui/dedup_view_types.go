@@ -29,10 +29,12 @@ type DedupRowData struct {
 	GroupIdx    int                  // file rows: index into snapshot Groups; -1 for dirs
 	Size        int64                // file rows: group content size (mark accounting)
 	Copies      int
-	DupCount    int    // dir rows: duplicate files in the subtree
-	WastedBytes int64  // dir rows: reclaimable bytes in the subtree (keep-one-survivor rule)
-	ShowSize    bool   // paint the "size ×N" column on this row
-	Display     string // row text (rel path in groups mode, base name in dirs mode)
+	DirDup      comparepkg.DedupDirKind // dir rows: whole directory duplicates another (exact or content-only)
+	DirHidden   bool                    // dir rows: DirDup member holds entries the scan skipped
+	DupCount    int                     // dir rows: duplicate files in the subtree
+	WastedBytes int64                   // dir rows: reclaimable bytes in the subtree (keep-one-survivor rule)
+	ShowSize    bool                    // paint the "size ×N" column on this row
+	Display     string                  // row text (rel path in groups mode, base name in dirs mode)
 }
 
 // DedupRow is one visible row of the dedup results tree.
@@ -154,7 +156,7 @@ func DedupRowsFromSnapshot(snap comparepkg.DedupSnapshot, view DedupViewState) (
 	}
 	var roots []treeflat.Node[DedupRowData]
 	if view.TreeDirs {
-		roots = dedupDirRoots(snap, idxs, "")
+		roots = dedupDirRoots(snap, idxs, nil)
 	} else {
 		roots = dedupGroupRoots(snap, idxs, view.SortByWasted)
 	}
@@ -166,9 +168,9 @@ func dedupExpandedFn(collapsed map[string]bool) func(string) bool {
 }
 
 // DedupCopyRows builds the copies-pane rows for the main pane's selected row:
-// the directory tree of where the selected file's other copies live. Returns
-// nil when the selection is not a file row (directory rows have no single
-// duplicate group).
+// the directory tree of where the selected file's other copies live, or, for a
+// fully duplicate directory, its twin directories with their contents. Returns
+// nil for any other directory row.
 func DedupCopyRows(snap comparepkg.DedupSnapshot, sel DedupRow, collapsed map[string]bool) []DedupRow {
 	roots := dedupCopyRoots(snap, sel)
 	if roots == nil {
@@ -184,10 +186,56 @@ func DedupCopyExpandableIDs(snap comparepkg.DedupSnapshot, sel DedupRow) []strin
 
 func dedupCopyRoots(snap comparepkg.DedupSnapshot, sel DedupRow) []treeflat.Node[DedupRowData] {
 	d := sel.Value
-	if d.Kind != DedupRowFile || d.GroupIdx < 0 || d.GroupIdx >= len(snap.Groups) {
+	if d.Kind == DedupRowDir {
+		twins := DedupTwinDirs(snap, d.DirRel)
+		if len(twins) == 0 {
+			return nil
+		}
+		idxs := make([]int, len(snap.Groups))
+		for i := range idxs {
+			idxs[i] = i
+		}
+		return dedupDirRoots(snap, idxs, func(f comparepkg.DedupFile) bool {
+			for _, t := range twins {
+				if dedupFileRelUnderDirRel(f.Rel, t) {
+					return true
+				}
+			}
+			return false
+		})
+	}
+	if d.GroupIdx < 0 || d.GroupIdx >= len(snap.Groups) {
 		return nil
 	}
-	return dedupDirRoots(snap, []int{d.GroupIdx}, d.AbsKey)
+	return dedupDirRoots(snap, []int{d.GroupIdx}, func(f comparepkg.DedupFile) bool {
+		return f.Abs.String() != d.AbsKey
+	})
+}
+
+// DedupTwinDirs returns the other members of dirRel's duplicate-directory group
+// (an exact group wins over a content group), or nil when dirRel is not a
+// fully duplicate directory.
+func DedupTwinDirs(snap comparepkg.DedupSnapshot, dirRel string) []string {
+	var best *comparepkg.DedupDirGroup
+	for i := range snap.DirGroups {
+		g := &snap.DirGroups[i]
+		if !slices.Contains(g.Rels, dirRel) {
+			continue
+		}
+		if best == nil || g.Kind == comparepkg.DirExact {
+			best = g
+		}
+	}
+	if best == nil {
+		return nil
+	}
+	out := make([]string, 0, len(best.Rels)-1)
+	for _, r := range best.Rels {
+		if r != dirRel {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // DedupExpandableIDs returns every collapsible node ID for the view's current
@@ -204,7 +252,7 @@ func DedupExpandableIDs(snap comparepkg.DedupSnapshot, view DedupViewState) []st
 		idxs = append(idxs, i)
 	}
 	if view.TreeDirs {
-		return treeflat.ExpandableIDs(dedupDirRoots(snap, idxs, ""))
+		return treeflat.ExpandableIDs(dedupDirRoots(snap, idxs, nil))
 	}
 	return treeflat.ExpandableIDs(dedupGroupRoots(snap, idxs, view.SortByWasted))
 }
@@ -264,14 +312,14 @@ type dedupDirBuild struct {
 }
 
 // dedupDirRoots builds the directory-hierarchy tree: only directories containing
-// duplicate files appear; leaves are the duplicate files themselves. excludeAbs
-// drops one file (the copies pane hides the selected file itself).
-func dedupDirRoots(snap comparepkg.DedupSnapshot, idxs []int, excludeAbs string) []treeflat.Node[DedupRowData] {
+// duplicate files appear; leaves are the duplicate files themselves. keep, when
+// non-nil, filters which files appear (the copies pane hides the selection itself).
+func dedupDirRoots(snap comparepkg.DedupSnapshot, idxs []int, keep func(comparepkg.DedupFile) bool) []treeflat.Node[DedupRowData] {
 	root := &dedupDirBuild{}
 	for _, gi := range idxs {
 		g := snap.Groups[gi]
 		for _, f := range g.Files {
-			if excludeAbs != "" && f.Abs.String() == excludeAbs {
+			if keep != nil && !keep(f) {
 				continue
 			}
 			parts := strings.Split(f.Rel, "/")
@@ -302,8 +350,30 @@ func dedupDirRoots(snap comparepkg.DedupSnapshot, idxs []int, excludeAbs string)
 			})
 		}
 	}
-	nodes, _ := dedupDirNodes(root, "", snap)
+	nodes, _ := dedupDirNodes(root, "", snap, dedupDirMarks(snap))
 	return nodes
+}
+
+type dedupDirMark struct {
+	kind   comparepkg.DedupDirKind
+	hidden bool
+}
+
+// dedupDirMarks maps member dir rel -> duplicate-directory marker; an exact group wins over a content group.
+// ponytail: zero-size dir groups need no IgnoreEmpty check; their zero-byte files are hidden then, so no row exists.
+func dedupDirMarks(snap comparepkg.DedupSnapshot) map[string]dedupDirMark {
+	if len(snap.DirGroups) == 0 {
+		return nil
+	}
+	out := map[string]dedupDirMark{}
+	for _, g := range snap.DirGroups {
+		for i, r := range g.Rels {
+			if m, ok := out[r]; !ok || (m.kind == comparepkg.DirContent && g.Kind == comparepkg.DirExact) {
+				out[r] = dedupDirMark{kind: g.Kind, hidden: g.Hidden[i]}
+			}
+		}
+	}
+	return out
 }
 
 // dedupDirNodes converts a build trie level to sorted tree nodes: directories
@@ -312,7 +382,7 @@ func dedupDirRoots(snap comparepkg.DedupSnapshot, idxs []int, excludeAbs string)
 // DupCount (duplicate files in the subtree) and WastedBytes (reclaimable bytes
 // under the keep-one-survivor rule — all k copies count when the group also
 // lives outside the subtree, k-1 when it lives entirely inside).
-func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot) ([]treeflat.Node[DedupRowData], map[int]int) {
+func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot, marks map[string]dedupDirMark) ([]treeflat.Node[DedupRowData], map[int]int) {
 	names := make([]string, 0, len(b.sub))
 	for name := range b.sub {
 		names = append(names, name)
@@ -329,7 +399,7 @@ func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot) 
 		if rel != "" {
 			childRel = rel + "/" + name
 		}
-		children, childCounts := dedupDirNodes(b.sub[name], childRel, snap)
+		children, childCounts := dedupDirNodes(b.sub[name], childRel, snap, marks)
 		dupCount := 0
 		var wasted int64
 		for gi, k := range childCounts {
@@ -349,6 +419,8 @@ func dedupDirNodes(b *dedupDirBuild, rel string, snap comparepkg.DedupSnapshot) 
 				GroupIdx:    -1,
 				DupCount:    dupCount,
 				WastedBytes: wasted,
+				DirDup:      marks[childRel].kind,
+				DirHidden:   marks[childRel].hidden,
 				// No trailing slash: FitPathForWidth would strip it anyway, and the
 				// expander icon already marks the row as a directory.
 				Display: name,
@@ -542,20 +614,16 @@ func dedupCopyPaneFullyMarkedDirSet(snap comparepkg.DedupSnapshot, mainSel Dedup
 	if len(marked) == 0 {
 		return nil
 	}
-	d := mainSel.Value
-	if d.Kind != DedupRowFile || d.GroupIdx < 0 || d.GroupIdx >= len(snap.Groups) {
-		return nil
-	}
-	excludeAbs := d.AbsKey
-	g := snap.Groups[d.GroupIdx]
-	files := make([]comparepkg.DedupFile, 0, len(g.Files))
-	for _, f := range g.Files {
-		if f.Abs.String() == excludeAbs {
-			continue
+	if mainSel.Value.Kind == DedupRowDir {
+		var files []comparepkg.DedupFile
+		for _, t := range DedupTwinDirs(snap, mainSel.Value.DirRel) {
+			for _, fs := range DedupSnapshotFilesUnderDir(snap, t) {
+				files = append(files, fs...)
+			}
 		}
-		files = append(files, f)
+		return dedupFullyMarkedDirSetForFiles(files, marked)
 	}
-	return dedupFullyMarkedDirSetForFiles(files, marked)
+	return dedupFullyMarkedDirSetForFiles(DedupCopyPaneFiles(snap, mainSel), marked)
 }
 
 // DedupGroupFilesUnderDir returns files in g whose Rel path is under dirRel.
@@ -646,6 +714,23 @@ func dedupMarkedDirSet(snap comparepkg.DedupSnapshot, marked map[string]bool) ma
 
 // dedupGroupDirSet returns ancestor dir rel paths (like DedupRowData.DirRel)
 // whose subtree contains a file from g, for the collapsed-folder cursor-hint.
+// dedupTwinDirSets returns the cursor folder's twin dirs and their strict ancestors
+// (the collapsed-folder hint path), or nils when dirRel has no twins.
+func dedupTwinDirSets(snap comparepkg.DedupSnapshot, dirRel string) (twins, ancestors map[string]bool) {
+	rels := DedupTwinDirs(snap, dirRel)
+	if len(rels) == 0 {
+		return nil, nil
+	}
+	twins, ancestors = map[string]bool{}, map[string]bool{}
+	for _, rel := range rels {
+		twins[rel] = true
+		for rel = comparepkg.RelDir(rel); rel != ""; rel = comparepkg.RelDir(rel) {
+			ancestors[rel] = true
+		}
+	}
+	return twins, ancestors
+}
+
 func dedupGroupDirSet(g comparepkg.DedupGroup) map[string]bool {
 	out := map[string]bool{}
 	for _, f := range g.Files {

@@ -1,6 +1,7 @@
 package compare
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -48,6 +49,14 @@ func (s DedupSnapshot) WithTrimmedDisplayRoot() DedupSnapshot {
 				out.Groups[gi].Files[fi].Rel = rel[len(prefix):]
 			}
 		}
+	}
+	out.DirGroups = make([]DedupDirGroup, len(s.DirGroups))
+	for gi, g := range s.DirGroups {
+		g.Rels = slices.Clone(g.Rels)
+		for i, r := range g.Rels {
+			g.Rels[i] = strings.TrimPrefix(r, prefix)
+		}
+		out.DirGroups[gi] = g
 	}
 	return out
 }
