@@ -2,6 +2,8 @@
 
 Find duplicates (`Ctrl+Alt+F`, Command menu, leader `P`) scans the active panel's directory tree for files with identical content and opens a full-screen results view. It is local-only; remote paths are rejected.
 
+When the active panel has selected directories, a dialog first asks whether to search the current directory (**Directory**) or only the selected directories (**Selected**, the default). Selected-only scans walk just those directory trees (files selected alongside them are ignored), rooted at their closest common parent, and Refresh rescans the same selection.
+
 ## Scan phases
 
 1. **Walking** collects every regular file (symlinks are skipped).

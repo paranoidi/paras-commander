@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -56,5 +57,35 @@ func TestWalkRootSkipsSymlinks(t *testing.T) {
 		if f.Rel != "real1.txt" && f.Rel != "real2.txt" {
 			t.Fatalf("unexpected file %q in skip-symlinks walk", f.Rel)
 		}
+	}
+}
+
+func TestWalkRootOnlyLimitsToSubtrees(t *testing.T) {
+	scan := t.TempDir()
+	for _, d := range []string{"meadow/lantern", "meadow/pebble", "harbor"} {
+		if err := os.MkdirAll(filepath.Join(scan, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFile(t, scan, "orchard.txt", "x")
+	writeFile(t, filepath.Join(scan, "meadow"), "thistle.txt", "x")
+	writeFile(t, filepath.Join(scan, "meadow", "lantern"), "copper.txt", "x")
+	writeFile(t, filepath.Join(scan, "meadow", "pebble"), "willow.txt", "x")
+	writeFile(t, filepath.Join(scan, "harbor"), "anchor.txt", "x")
+	root, err := pathloc.File(scan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recs, err := WalkRoot(context.Background(), root, WalkOptions{Only: []string{"meadow/lantern", "harbor"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, r := range recs {
+		got = append(got, r.Rel)
+	}
+	slices.Sort(got)
+	if want := []string{"harbor/anchor.txt", "meadow/lantern/copper.txt"}; !slices.Equal(got, want) {
+		t.Fatalf("walked %v, want %v", got, want)
 	}
 }

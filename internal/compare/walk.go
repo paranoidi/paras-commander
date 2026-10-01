@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
@@ -22,6 +23,23 @@ type WalkOptions struct {
 	SkipSymlinks bool
 	// OnFile, when set, is called after each regular file is indexed (1-based count).
 	OnFile func(walked int)
+	// Only, when non-empty, limits the walk to these subtrees (slash-separated paths
+	// relative to root); files outside them, including root-level files, are skipped.
+	Only []string
+}
+
+// walkScope reports whether rel lies in (or is) one of only, and whether it is a
+// strict ancestor of one (a directory to pass through on the way there).
+func walkScope(rel string, only []string) (inside, ancestor bool) {
+	for _, o := range only {
+		if rel == o || strings.HasPrefix(rel, o+"/") {
+			return true, false
+		}
+		if strings.HasPrefix(o, rel+"/") {
+			ancestor = true
+		}
+	}
+	return false, ancestor
 }
 
 // WalkRoot indexes regular files under root (local paths only in phase 1).
@@ -63,6 +81,12 @@ func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileR
 			return nil
 		}
 
+		rel, relErr := filepath.Rel(host, path)
+		if relErr != nil {
+			return nil
+		}
+		rel = filepath.ToSlash(rel)
+
 		name := d.Name()
 		isDir := d.IsDir()
 		if d.Type()&fs.ModeSymlink != 0 {
@@ -71,6 +95,18 @@ func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileR
 			}
 			if info, statErr := os.Stat(path); statErr == nil {
 				isDir = info.IsDir()
+			}
+		}
+		if len(opts.Only) > 0 {
+			inside, ancestor := walkScope(rel, opts.Only)
+			switch {
+			case inside:
+			case isDir && ancestor:
+				return nil
+			case isDir:
+				return filepath.SkipDir
+			default:
+				return nil
 			}
 		}
 		if isDir {
@@ -85,12 +121,6 @@ func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileR
 		if !localfs.EntryVisible(name, filepath.Dir(path), false, listOpts) {
 			return nil
 		}
-
-		rel, relErr := filepath.Rel(host, path)
-		if relErr != nil {
-			return nil
-		}
-		rel = filepath.ToSlash(rel)
 
 		var size, modTime int64
 		if fi, infoErr := d.Info(); infoErr == nil {

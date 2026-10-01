@@ -50,6 +50,7 @@ type DedupGroup struct {
 // DedupSnapshot is an immutable dedup result generation.
 type DedupSnapshot struct {
 	Root           pathloc.Path // scan path (unchanged after trim)
+	Scope          []string     // DedupOptions.Walk.Only of the scan; empty = whole Root
 	DisplayRoot    pathloc.Path // results view root; zero means same as Root
 	Phase          DedupPhase
 	Groups         []DedupGroup
@@ -157,7 +158,7 @@ func StartDedup(ctx context.Context, root pathloc.Path, opts DedupOptions) *Dedu
 		cancel:  cancel,
 		confirm: make(chan struct{}),
 	}
-	s.snap.Store(&DedupSnapshot{Root: root, Phase: DedupWalking})
+	s.snap.Store(&DedupSnapshot{Root: root, Scope: opts.Walk.Only, Phase: DedupWalking})
 	s.wg.Add(1)
 	go s.run(ctx)
 	return s
@@ -184,6 +185,7 @@ func (s *DedupSession) Confirm() {
 
 func (s *DedupSession) publish(snap DedupSnapshot) {
 	cp := snap
+	cp.Scope = s.opts.Walk.Only
 	s.snap.Store(&cp)
 	if s.opts.OnUpdate != nil {
 		s.opts.OnUpdate(cp)

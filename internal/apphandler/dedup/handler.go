@@ -4,7 +4,9 @@ package dedup
 import (
 	"context"
 	"fmt"
+	"maps"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -120,13 +122,32 @@ func (h *Handler) activePanelPath() pathloc.Path {
 // Open brings back the kept results (via the Show/Rescan dialog) only when the
 // active panel is exactly the scan's root; any other directory starts a fresh
 // scan there, replacing the kept results.
+//
+// With directories selected in the active (local) panel it first asks whether to
+// scan the current directory or only the selected directories.
 func (h *Handler) Open() {
 	if ui.IsAuxiliaryView(h.model.ViewMode) && h.model.ViewMode != ui.ViewDedup {
 		return
 	}
 	path := h.activePanelPath()
+	p := &h.model.Primary
+	if h.model.ActivePanel == ui.SecondaryPanel {
+		p = &h.model.Secondary
+	}
+	if len(p.SelectedDirPaths) > 0 && !path.IsRemote() {
+		dirs := slices.Sorted(maps.Keys(p.SelectedDirPaths))
+		h.model.DedupReturnDialog = dialog.DedupReturnDialogState{Open: true, Dir: path.String(), ScopeDirs: dirs}
+		return
+	}
+	h.openCurrent()
+}
+
+// openCurrent scans the active panel's directory, or offers the kept results when
+// they are for exactly that directory.
+func (h *Handler) openCurrent() {
+	path := h.activePanelPath()
 	if !h.HasResults() || !path.Equal(h.model.DedupSnapshot.Root) {
-		h.openRoot(path)
+		h.openRoot(path, nil)
 		return
 	}
 	h.model.DedupReturnDialog = dialog.DedupReturnDialogState{Open: true}
@@ -247,7 +268,9 @@ func (h *Handler) Leave() {
 // openRoot cancels any previous scan and starts a new one on root. Walk options
 // (hidden files, volume gate) still come from the active panel — panels cannot
 // navigate while the dedup or compare view is open.
-func (h *Handler) openRoot(root pathloc.Path) {
+// openRoot starts a scan of root; a non-empty only limits it to those subtrees
+// (slash paths relative to root, see compare.WalkOptions.Only).
+func (h *Handler) openRoot(root pathloc.Path, only []string) {
 	h.Close()
 
 	p := &h.model.Primary
@@ -288,6 +311,7 @@ func (h *Handler) openRoot(root pathloc.Path) {
 			ShowHidden:    p.ShowHidden,
 			Gitignore:     h.gitignore,
 			ShouldSkipDir: hs.ShouldSkip,
+			Only:          only,
 		},
 		HashWorkers:       hs.HashWorkers,
 		ReadBuffer:        hs.ReadBuffer,
@@ -450,7 +474,7 @@ func (h *Handler) Refresh() {
 	if h.model.ViewMode != ui.ViewDedup {
 		return
 	}
-	h.openRoot(h.model.DedupSnapshot.Root)
+	h.openRoot(h.model.DedupSnapshot.Root, h.model.DedupSnapshot.Scope)
 }
 
 // ReopenPreservingState re-scans the previous snapshot root and, once the new
@@ -483,7 +507,7 @@ func (h *Handler) ReopenPreservingState() {
 	}
 	// Capture above happens before openRoot (its Close prelude wipes the model);
 	// pending is set after (the same prelude clears h.pending).
-	h.openRoot(root)
+	h.openRoot(root, h.model.DedupSnapshot.Scope)
 	if h.session == nil {
 		return // openRoot refused; message already shown
 	}
