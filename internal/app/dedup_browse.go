@@ -139,9 +139,16 @@ func (a *App) handleDedupPanelKey(action string, event *tcell.EventKey) bool {
 	case keymap.ActionNavBottom:
 		p.Bottom(rows)
 	case keymap.ActionNavOpen, keymap.ActionDedupToggleNode:
-		if _, err := p.Enter(rows); err != nil {
+		entered, err := p.Enter(rows)
+		if err != nil {
 			a.setErrorMessage("Browse", err)
+		} else if !entered {
+			if e, ok := p.CurrentEntry(); ok && !e.ResolvesToDir() {
+				a.openFileExternally(e.Path)
+			}
 		}
+	case keymap.ActionPanelExternalBrowser:
+		a.openDirInExternalBrowser(p.PathString())
 	case keymap.ActionNavParent, keymap.ActionDedupCollapse:
 		if err := p.Parent(rows); err != nil {
 			a.setErrorMessage("Browse", err)

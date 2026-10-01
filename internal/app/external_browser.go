@@ -20,7 +20,12 @@ var runDetachedXDGOpen = func(path string) error {
 
 // openPanelPathInExternalBrowser runs xdg-open on the given panel's directory (freedesktop GUI file manager).
 func (a *App) openPanelPathInExternalBrowser(panelID int) {
-	p := filepath.Clean(a.panelByID(panelID).PathString())
+	a.openDirInExternalBrowser(a.panelByID(panelID).PathString())
+}
+
+// openDirInExternalBrowser is the single entry point for "open this directory in the GUI file manager".
+func (a *App) openDirInExternalBrowser(dir string) {
+	p := filepath.Clean(dir)
 	if p == "" || p == "." {
 		a.setErrorMessage("External browser", fmt.Errorf("no panel path"))
 		return
@@ -39,4 +44,25 @@ func (a *App) openPanelPathInExternalBrowser(panelID int) {
 		return
 	}
 	a.setTransientMessage("Opened folder in external browser", ui.MessageUrgencyInfo)
+}
+
+// openFileExternally opens a regular file with the default opener when open_files_externally is on.
+func (a *App) openFileExternally(path string) {
+	if !a.config.Panels.OpenFilesExternally {
+		return
+	}
+	p := filepath.Clean(path)
+	if p == "" || p == "." {
+		a.setErrorMessage("External open", fmt.Errorf("no path"))
+		return
+	}
+	if _, err := os.Stat(p); err != nil {
+		a.setErrorMessage("External open", err)
+		return
+	}
+	if err := runDetachedXDGOpen(p); err != nil {
+		a.setErrorMessage("External open", err)
+		return
+	}
+	a.setTransientMessage("Opened file externally", ui.MessageUrgencyInfo)
 }

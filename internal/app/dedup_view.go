@@ -1,6 +1,8 @@
 package app
 
 import (
+	"path/filepath"
+
 	"github.com/gdamore/tcell/v2"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -128,7 +130,13 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionDedupToggleEmpty:
 		a.dedupCtrl.ToggleIgnoreEmpty()
 		return true
+	case keymap.ActionPanelExternalBrowser:
+		a.dedupOpenInExternalBrowser()
+		return true
 	case keymap.ActionDedupToggleNode:
+		if a.dedupOpenSelectedFile() {
+			return true
+		}
 		a.dedupCtrl.DescendFromSelection()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
@@ -196,6 +204,29 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	default:
 		return false
 	}
+}
+
+// dedupOpenSelectedFile opens the focused tree/copies row with the default opener when it is a
+// file; reports false for directory and group rows so their own behaviour applies.
+func (a *App) dedupOpenSelectedFile() bool {
+	path, ok := a.dedupCtrl.PaneOpenableFile(a.model.DedupView.FocusCopies)
+	if !ok {
+		return false
+	}
+	a.openFileExternally(path)
+	return true
+}
+
+// dedupOpenInExternalBrowser reveals the focused row's directory (a file's containing directory).
+func (a *App) dedupOpenInExternalBrowser() {
+	path, isDir, ok := a.dedupCtrl.PaneTarget(a.model.DedupView.FocusCopies)
+	if !ok {
+		return
+	}
+	if !isDir {
+		path = filepath.Dir(path)
+	}
+	a.openDirInExternalBrowser(path)
 }
 
 func openInPanelID(actionID string) int {
@@ -319,6 +350,9 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 		a.dedupCtrl.SelectEdge(true)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
 	case keymap.ActionNavOpen:
+		if a.dedupOpenSelectedFile() {
+			return false
+		}
 		a.dedupCtrl.NavigateFromSelection()
 		a.closeDedupView()
 	}

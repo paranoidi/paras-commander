@@ -1356,6 +1356,21 @@ func (h *Handler) PaneTarget(copies bool) (path string, isDir bool, ok bool) {
 	}
 }
 
+// PaneOpenableFile returns the focused-pane file row's path when it is a plain file; group
+// headers (file rows with children) and directories report false.
+func (h *Handler) PaneOpenableFile(copies bool) (string, bool) {
+	st := &h.model.DedupView
+	pane, rows := &st.Main, h.model.DedupList
+	if copies {
+		pane, rows = &st.Copies, h.model.DedupCopiesList
+	}
+	row, ok := h.paneRow(pane, rows)
+	if !ok || row.HasChildren || row.Value.Kind != ui.DedupRowFile {
+		return "", false
+	}
+	return row.Value.File.Abs.String(), true
+}
+
 // ClearMarks unmarks every file and clears keep designations, reusing the
 // file-list clear-selection binding.
 func (h *Handler) ClearMarks() {

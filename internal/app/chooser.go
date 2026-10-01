@@ -91,27 +91,11 @@ func (a *App) handleNavOpen(activePanel *panel.State, viewportRows int) bool {
 		a.runExecutableFromPanel(path)
 		return false
 	}
-	if !a.config.Panels.OpenFilesExternally {
-		return false
-	}
 	entry, ok := activePanel.CurrentEntry()
 	if !ok || entry.Type == localfs.EntryDirectory {
 		return false
 	}
-	p := filepath.Clean(entry.Path)
-	if p == "" || p == "." {
-		a.setErrorMessage("External open", fmt.Errorf("no path"))
-		return false
-	}
-	if _, err := os.Stat(p); err != nil {
-		a.setErrorMessage("External open", err)
-		return false
-	}
-	if err := runDetachedXDGOpen(p); err != nil {
-		a.setErrorMessage("External open", err)
-		return false
-	}
-	a.setTransientMessage("Opened file externally", ui.MessageUrgencyInfo)
+	a.openFileExternally(entry.Path)
 	return false
 }
 

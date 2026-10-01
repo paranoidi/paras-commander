@@ -19,6 +19,8 @@ In **View: Dirs** the right column is split: the Copies pane on top and a browse
 
 Shift+Left / Shift+Right (`ui.open-primary` / `ui.open-secondary`, the same actions the Find and Pin dialogs use) point the primary or secondary file panel at the row under the cursor: a folder opens that folder, a file opens its parent with the file selected. This works in both tree panes and in the browse panel, and the results view stays open.
 
+Right / Enter on a **file** row (tree panes and the browse panel) opens it with the default opener, like the main file list (honours `open_files_externally`); folder and group rows keep their expand/enter behaviour. Alt+x (`panel.external-browser`, the main list's binding, rebindable in `keybindings.toml`) opens the folder of the row in the desktop file manager: a file's containing folder, a folder row itself, or the browse panel's current folder.
+
 Alt+Ctrl+Left / Alt+Ctrl+Right (`panel.tree-collapse-all` / `panel.tree-expand-all-shallow`, the same keys as the main file list) collapse or expand the focused tree pane by one level per press. Alt+Shift+Left / Alt+Shift+Right (`dedup.collapse-all` / `dedup.expand-all`, matching the main list's full collapse/expand) collapse or expand every folder in the pane. Expanding (both forms) is capped like the main file list: at most 5 levels deep (folders at the cutoff stay collapsed, with an info toast), and fewer levels if the result would exceed 20,000 rows.
 
 ## Leaving and returning

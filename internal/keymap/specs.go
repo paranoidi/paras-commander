@@ -465,7 +465,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelExternalBrowser,
-			Views:        HelpBrowser | HelpJobs | HelpCommands | HelpCompare | HelpFilePreview,
+			Views:        HelpBrowser | HelpJobs | HelpCommands | HelpCompare | HelpDedup | HelpFilePreview,
 			Title:        "External browser",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"M-x"},

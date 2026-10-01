@@ -1561,3 +1561,49 @@ func TestDedupViewCursorMotionFollowsNavRebind(t *testing.T) {
 		t.Fatalf("rebound key moved cursor to %d, want 1", got)
 	}
 }
+
+// TestDedupViewOpenFileAndExternalBrowser covers Right/Enter on a file row (default opener, view
+// stays open) and Alt+x (file: containing directory; directory row: the directory itself).
+func TestDedupViewOpenFileAndExternalBrowser(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var opened []string
+	old := runDetachedXDGOpen
+	runDetachedXDGOpen = func(p string) error { opened = append(opened, p); return nil }
+	t.Cleanup(func() { runDetachedXDGOpen = old })
+
+	app := newApp(t, newScreen(t, 80, 24), dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	app.tryDispatchDedup(keymap.ActionDedupToggleTree) // groups mode
+	key := func(k tcell.Key) { app.handleDedupViewKey(tcell.NewEventKey(k, 0, tcell.ModNone)) }
+	key(tcell.KeyRight) // expand group header (not a file: nothing opens)
+	if len(opened) != 0 {
+		t.Fatalf("group row opened %v", opened)
+	}
+	key(tcell.KeyDown) // first copy (file row)
+	path, isDir, ok := app.dedupCtrl.PaneTarget(false)
+	if !ok || isDir {
+		t.Fatalf("cursor not on a file row: %q %v %v", path, isDir, ok)
+	}
+	key(tcell.KeyRight)
+	key(tcell.KeyEnter)
+	if len(opened) != 2 || opened[0] != path || opened[1] != path {
+		t.Fatalf("opened = %v, want %q twice", opened, path)
+	}
+	if app.model.ViewMode != ui.ViewDedup {
+		t.Fatal("opening a file must keep the dedup view")
+	}
+	opened = nil
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModAlt))
+	if len(opened) != 1 || opened[0] != filepath.Dir(path) {
+		t.Fatalf("Alt+x opened %v, want %q", opened, filepath.Dir(path))
+	}
+}
