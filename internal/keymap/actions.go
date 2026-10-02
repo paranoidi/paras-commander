@@ -83,6 +83,8 @@ const (
 	ActionPanelReverseSort            = "panel.reverse-sort"
 	ActionPanelFilterOpen             = "panel.filter-open"
 	ActionPanelToggleHidden           = "panel.toggle-hidden"
+	ActionGitStage                    = "git.stage"
+	ActionGitUnstage                  = "git.unstage"
 	ActionBookmarkOpen                = "bookmark.open"
 	ActionBookmarkAdd                 = "bookmark.add"
 	ActionBookmarkDelete              = "bookmark.delete"
@@ -367,6 +369,8 @@ var KnownActions = map[string]struct{}{
 	ActionPanelReverseSort:            {},
 	ActionPanelFilterOpen:             {},
 	ActionPanelToggleHidden:           {},
+	ActionGitStage:                    {},
+	ActionGitUnstage:                  {},
 	ActionBookmarkOpen:                {},
 	ActionBookmarkAdd:                 {},
 	ActionBookmarkDelete:              {},

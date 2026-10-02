@@ -195,6 +195,8 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelFindDuplicates, true},
 		{tcell.NewEventKey(tcell.KeyRune, 0x06, tcell.ModCtrl), ActionPanelFindDialog, true},
 		{tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone), ActionNavParent, true},
+		{tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModAlt), ActionGitStage, true},
+		{tcell.NewEventKey(tcell.KeyRune, '-', tcell.ModAlt), ActionGitUnstage, true},
 		{tcell.NewEventKey(tcell.KeyRune, '-', tcell.ModNone), ActionPanelUnselectGroup, true},
 		{tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModNone), ActionPanelSelectGroup, true},
 		{tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModShift), ActionPanelSelectGroup, true},

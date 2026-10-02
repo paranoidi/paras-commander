@@ -58,6 +58,7 @@ type ActionSpec struct {
 var HelpSectionOrder = []string{
 	"File",
 	"Selection",
+	"Git",
 	"View",
 	"Tools",
 	"Navigation",
@@ -941,6 +942,22 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "View",
 			DefaultKeys: nil, // unbound by default
 			Keywords:    []string{"order", "direction"},
+		},
+		{
+			ID:          ActionGitStage,
+			Views:       HelpBrowser,
+			Title:       "Git stage",
+			Section:     "Git",
+			DefaultKeys: []string{"M-+"},
+			Keywords:    []string{"git", "add", "stage", "index"},
+		},
+		{
+			ID:          ActionGitUnstage,
+			Views:       HelpBrowser,
+			Title:       "Git unstage",
+			Section:     "Git",
+			DefaultKeys: []string{"M--"},
+			Keywords:    []string{"git", "reset", "unstage", "index"},
 		},
 		{
 			ID:          ActionPanelToggleHidden,

@@ -146,21 +146,20 @@ func (a *App) toggleCarousel(panelID int, menu bool) {
 }
 
 func (a *App) reloadActive(successMessage string) {
-	if a.model.ActivePanel == ui.PrimaryPanel {
-		if err := a.model.Primary.Refresh(a.activeViewportRows()); err != nil {
-			a.setErrorMessage("Refresh failed", err)
-			return
-		}
-		a.requestVolumeSpaceRefreshAsync(ui.SecondaryPanel)
-		a.dialogCtrl.SyncOpenPathInputsAfterFSChange()
-		a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
-		return
+	a.reloadPanel(a.model.ActivePanel, successMessage)
+}
+
+// reloadPanel refreshes the given panel and shows successMessage.
+func (a *App) reloadPanel(panelID int, successMessage string) {
+	other := ui.PrimaryPanel
+	if panelID == ui.PrimaryPanel {
+		other = ui.SecondaryPanel
 	}
-	if err := a.model.Secondary.Refresh(a.activeViewportRows()); err != nil {
+	if err := a.panelByID(panelID).Refresh(a.activeViewportRows()); err != nil {
 		a.setErrorMessage("Refresh failed", err)
 		return
 	}
-	a.requestVolumeSpaceRefreshAsync(ui.PrimaryPanel)
+	a.requestVolumeSpaceRefreshAsync(other)
 	a.dialogCtrl.SyncOpenPathInputsAfterFSChange()
 	a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 }
@@ -809,6 +808,10 @@ func (a *App) tryDispatchSelectionActions(actionID string) bool {
 		if conflicts {
 			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 		}
+	case keymap.ActionGitStage:
+		a.gitStageActive(true)
+	case keymap.ActionGitUnstage:
+		a.gitStageActive(false)
 	case keymap.ActionPanelSelectGroup:
 		a.openGroupSelect("select", "panel")
 	case keymap.ActionPanelUnselectGroup:
