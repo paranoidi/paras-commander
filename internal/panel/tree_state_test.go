@@ -8,6 +8,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/treeflat"
 )
 
 func TestToggleTreeExpandCollapseReusesCachedChildren(t *testing.T) {
@@ -2160,5 +2161,20 @@ func TestReturnToDrasticallyChangedDirectory(t *testing.T) {
 	entry, ok := state.CurrentEntry()
 	if !ok || entry.Name != "granite.txt" {
 		t.Fatalf("CurrentEntry = %+v ok=%v, want granite.txt (nearest-remaining fallback)", entry, ok)
+	}
+}
+
+// A filter that hides a parent but keeps its grandchild makes the filtered depth sequence jump
+// (0 -> 2); connector recomputation must not index past its ancestor stack.
+func TestRecomputeFilteredTreeConnectorsDepthJump(t *testing.T) {
+	s := &State{ListLayout: ListLayoutTree}
+	s.treeRows = []treeflat.Row[TreeEntry]{{Depth: 0}, {Depth: 1}, {Depth: 2}, {Depth: 0}}
+	s.filteredIdx = []int{0, 2, 3}
+	s.recomputeFilteredTreeConnectors()
+	if len(s.filteredTreeShape) != 3 {
+		t.Fatalf("shapes = %d, want 3", len(s.filteredTreeShape))
+	}
+	if !s.filteredTreeShape[1].LastChild {
+		t.Fatal("depth-2 row should be last child")
 	}
 }

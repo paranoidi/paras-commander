@@ -928,12 +928,12 @@ func (s *State) recomputeFilteredTreeConnectors() {
 			ancestorHasNext = append([]bool(nil), stack[1:]...)
 		}
 		shapes[i] = treeConnectorShape{LastChild: isLast[i], AncestorHasNext: ancestorHasNext}
-		hasNext := !isLast[i]
-		if len(stack) == d {
-			stack = append(stack, hasNext)
-		} else {
-			stack[d] = hasNext
+		// A filter can drop intermediate ancestors (depth jumps 0 -> 2); pad their slots as
+		// "no next sibling" so stack[d] is addressable.
+		for len(stack) <= d {
+			stack = append(stack, false)
 		}
+		stack[d] = !isLast[i]
 	}
 	s.filteredTreeShape = shapes
 }
