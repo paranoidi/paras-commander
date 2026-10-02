@@ -41,21 +41,31 @@ func (sn *snapshot) fileCell(path string) Cell {
 
 func (sn *snapshot) dirCell(dir string) Cell {
 	var staged, unstaged Status
+	var hasStaged, hasUnstaged, hasUntracked, noTracked bool
 	sep := string(filepath.Separator)
 	for _, e := range sn.entries {
+		untracked := e.staged == NotModified && e.unstaged == New
 		if e.unstaged == Ignored || e.staged == Ignored {
 			if strings.HasPrefix(dir, e.path+sep) || dir == e.path {
+				noTracked = true
 				staged = combineStatus(staged, Ignored)
 				unstaged = combineStatus(unstaged, Ignored)
 			}
 			continue
 		}
+		if untracked && strings.HasPrefix(dir, e.path+sep) {
+			noTracked, hasUntracked = true, true
+		}
 		if strings.HasPrefix(e.path, dir+sep) || e.path == dir {
 			staged = combineStatus(staged, e.staged)
 			unstaged = combineStatus(unstaged, e.unstaged)
+			hasStaged = hasStaged || (e.staged != NotModified && e.staged != Ignored)
+			hasUnstaged = hasUnstaged || (e.unstaged != NotModified && e.unstaged != New && e.unstaged != Ignored)
+			hasUntracked = hasUntracked || untracked
+			noTracked = noTracked || (untracked && e.path == dir)
 		}
 	}
-	return Cell{Staged: staged, Unstaged: unstaged}
+	return Cell{Staged: staged, Unstaged: unstaged, HasStaged: hasStaged, HasUnstaged: hasUnstaged, HasUntracked: hasUntracked, NoTracked: noTracked}
 }
 
 // MapForListing builds per-entry Git cells for visible listing paths.

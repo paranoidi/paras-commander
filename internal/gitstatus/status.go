@@ -18,6 +18,12 @@ const (
 type Cell struct {
 	Staged   Status
 	Unstaged Status
+
+	// Directory-only summaries (set by dirCell), used by git entry filters.
+	HasStaged    bool // some descendant has a staged change
+	HasUnstaged  bool // some descendant has an unstaged modification (not new/ignored)
+	HasUntracked bool // some descendant (or the dir itself) is untracked
+	NoTracked    bool // the dir has no tracked files (untracked or ignored at/above it)
 }
 
 // Effective returns the more significant of Staged/Unstaged for single-status display.

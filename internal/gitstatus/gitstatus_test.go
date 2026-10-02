@@ -105,3 +105,30 @@ func runGit(t *testing.T, dir string, args ...string) {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 	}
 }
+
+func TestDirCellSummaryFlags(t *testing.T) {
+	root := t.TempDir()
+	p := func(n string) string { return filepath.Join(root, n) }
+	tests := []struct {
+		name    string
+		entries []entry
+		dir     string
+		want    Cell
+	}{
+		{"staged file", []entry{{p("orchard/leaf.go"), Modified, NotModified}}, p("orchard"), Cell{Staged: Modified, HasStaged: true}},
+		{"modified plus untracked", []entry{{p("meadow/a.go"), NotModified, Modified}, {p("meadow/b.go"), NotModified, New}}, p("meadow"),
+			Cell{Unstaged: Modified, HasUnstaged: true, HasUntracked: true}},
+		{"wholly untracked", []entry{{p("canyon"), NotModified, New}}, p("canyon"), Cell{Unstaged: New, HasUntracked: true, NoTracked: true}},
+		{"ignored ancestor", []entry{{p("glacier"), Ignored, Ignored}}, p("glacier/ridge"), Cell{Staged: Ignored, Unstaged: Ignored, NoTracked: true}},
+		{"untracked ancestor", []entry{{p("meadow"), NotModified, New}}, p("meadow/brook"), Cell{HasUntracked: true, NoTracked: true}},
+		{"clean", nil, p("island"), Cell{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sn := &snapshot{entries: tt.entries}
+			if got := sn.dirCell(tt.dir); got != tt.want {
+				t.Fatalf("dirCell = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}

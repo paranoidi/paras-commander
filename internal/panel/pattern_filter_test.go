@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
@@ -155,6 +156,47 @@ func TestEntryFilterKeepsDirectories(t *testing.T) {
 			state, err := New(dir)
 			if err != nil {
 				t.Fatalf("New() error = %v", err)
+			}
+			state.SetEntryFilter(tt.filter)
+			var got []string
+			for i := 0; i < state.VisibleEntryCount(); i++ {
+				if e, _, ok := state.VisibleEntry(i); ok && e.Name != ".." {
+					got = append(got, e.Name)
+				}
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("visible = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGitFiltersHideDirsWithoutMatches(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"harbor", "lantern"} {
+		if err := os.Mkdir(filepath.Join(dir, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	harbor, lantern := filepath.Join(dir, "harbor"), filepath.Join(dir, "lantern")
+	tests := []struct {
+		name   string
+		filter *EntryFilter
+		want   []string
+	}{
+		{"tracked", GitTrackedFilter(), []string{"lantern"}},
+		{"staged", GitStagedFilter(), []string{"lantern"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state, err := New(dir)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+			state.GitColumnActive = true
+			state.GitByPath = map[string]gitstatus.Cell{
+				harbor:  {NoTracked: true},
+				lantern: {HasStaged: true},
 			}
 			state.SetEntryFilter(tt.filter)
 			var got []string
