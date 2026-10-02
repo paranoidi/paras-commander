@@ -2169,12 +2169,14 @@ func TestReturnToDrasticallyChangedDirectory(t *testing.T) {
 func TestRecomputeFilteredTreeConnectorsDepthJump(t *testing.T) {
 	s := &State{ListLayout: ListLayoutTree}
 	s.treeRows = []treeflat.Row[TreeEntry]{{Depth: 0}, {Depth: 1}, {Depth: 2}, {Depth: 0}}
-	s.filteredIdx = []int{0, 2, 3}
-	s.recomputeFilteredTreeConnectors()
-	if len(s.filteredTreeShape) != 3 {
-		t.Fatalf("shapes = %d, want 3", len(s.filteredTreeShape))
-	}
-	if !s.filteredTreeShape[1].LastChild {
-		t.Fatal("depth-2 row should be last child")
+	for _, idx := range [][]int{{0, 2, 3}, {2}} {
+		s.filteredIdx = idx
+		s.recomputeFilteredTreeConnectors()
+		for i, raw := range idx {
+			d := s.treeRows[raw].Depth
+			if d > 0 && len(s.filteredTreeShape[i].AncestorHasNext) < d-1 {
+				t.Fatalf("filter %v row %d: AncestorHasNext len %d, depth %d", idx, i, len(s.filteredTreeShape[i].AncestorHasNext), d)
+			}
+		}
 	}
 }

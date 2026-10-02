@@ -920,19 +920,18 @@ func (s *State) recomputeFilteredTreeConnectors() {
 	shapes := make([]treeConnectorShape, n)
 	var stack []bool
 	for i, d := range depths {
-		if len(stack) > d {
-			stack = stack[:d]
-		}
-		var ancestorHasNext []bool
-		if d > 0 && len(stack) > 1 {
-			ancestorHasNext = append([]bool(nil), stack[1:]...)
-		}
-		shapes[i] = treeConnectorShape{LastChild: isLast[i], AncestorHasNext: ancestorHasNext}
-		// A filter can drop intermediate ancestors (depth jumps 0 -> 2); pad their slots as
-		// "no next sibling" so stack[d] is addressable.
+		// A filter can drop intermediate ancestors (depth jumps 0 -> 2, or a depth-2 row with
+		// no visible ancestors at all); pad their slots as "no next sibling" so the renderer
+		// always gets depth-1 ancestor flags and stack[d] is addressable.
 		for len(stack) <= d {
 			stack = append(stack, false)
 		}
+		stack = stack[:d+1]
+		var ancestorHasNext []bool
+		if d > 1 {
+			ancestorHasNext = append([]bool(nil), stack[1:d]...)
+		}
+		shapes[i] = treeConnectorShape{LastChild: isLast[i], AncestorHasNext: ancestorHasNext}
 		stack[d] = !isLast[i]
 	}
 	s.filteredTreeShape = shapes
