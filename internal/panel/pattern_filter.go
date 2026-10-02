@@ -9,12 +9,13 @@ const PatternMetaFilterID = "pattern-meta"
 
 // PatternFilter builds an EntryFilter that narrows visible entries to those whose basename (or,
 // when meta is non-nil, a meta column value) matches pattern under mode (shell glob / regexp /
-// simple substring), optionally restricted to files only or directories only. meta is nil when
+// simple substring). Directories always stay visible unless dirsOnly is set, in which case
+// directories are filtered by pattern and files are hidden. meta is nil when
 // there are no meta columns to match against; otherwise it is called on every filter rebuild
 // (RefreshEntryFilter) to read the current live GroupSelectMeta — a closure rather than a
 // snapshot because meta results arrive asynchronously and the underlying maps are replaced
 // wholesale on a directory change. Returns an error when pattern fails to compile.
-func PatternFilter(pattern string, mode GroupPatternMode, caseSensitive, filesOnly, dirsOnly bool, meta func() GroupSelectMeta) (*EntryFilter, error) {
+func PatternFilter(pattern string, mode GroupPatternMode, caseSensitive, dirsOnly bool, meta func() GroupSelectMeta) (*EntryFilter, error) {
 	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
 	if err != nil {
 		return nil, err
@@ -24,12 +25,10 @@ func PatternFilter(pattern string, mode GroupPatternMode, caseSensitive, filesOn
 		id = PatternMetaFilterID
 	}
 	return &EntryFilter{
-		ID:    id,
-		Label: "Filter: " + pattern,
+		ID:          id,
+		FiltersDirs: dirsOnly,
+		Label:       "Filter: " + pattern,
 		Match: func(e localfs.Entry, _ *State) bool {
-			if filesOnly && e.IsDir() {
-				return false
-			}
 			if dirsOnly && !e.IsDir() {
 				return false
 			}

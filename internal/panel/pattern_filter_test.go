@@ -3,7 +3,10 @@ package panel
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
 // setupPatternFilterState creates a directory with three files (one matching a pattern by
@@ -29,7 +32,7 @@ func TestPatternFilterIncludeMetaMatchesByNameOrValue(t *testing.T) {
 	meta := func() GroupSelectMeta {
 		return GroupSelectMeta{Cols: []map[string]string{{lanternPath: "beacon tag"}}}
 	}
-	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, false, meta)
+	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -45,7 +48,7 @@ func TestPatternFilterIncludeMetaMatchesByNameOrValue(t *testing.T) {
 
 	// Now match a pattern that only the meta value satisfies: with Include on, basename matching
 	// still runs (finds nothing) and the meta value match adds lantern.txt.
-	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, false, meta)
+	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -66,7 +69,7 @@ func TestPatternFilterOnlyMetaSkipsBasenameMatch(t *testing.T) {
 	}
 	// "thicket" matches thicket.txt's basename, but OnlyMeta suppresses basename matching
 	// entirely, so only meta-value matches count — here, none.
-	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, false, meta)
+	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -76,7 +79,7 @@ func TestPatternFilterOnlyMetaSkipsBasenameMatch(t *testing.T) {
 	}
 
 	// "beacon" matches only lantern.txt's meta value.
-	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, false, meta)
+	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -101,7 +104,7 @@ func TestPatternFilterRefreshPicksUpLiveProviderData(t *testing.T) {
 	meta := func() GroupSelectMeta {
 		return GroupSelectMeta{Cols: []map[string]string{live}}
 	}
-	filter, err := PatternFilter("beacon", GroupPatternSimple, false, false, false, meta)
+	filter, err := PatternFilter("beacon", GroupPatternSimple, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -118,5 +121,51 @@ func TestPatternFilterRefreshPicksUpLiveProviderData(t *testing.T) {
 	entry, _, ok := state.VisibleEntry(0)
 	if !ok || entry.Name != "lantern.txt" {
 		t.Fatalf("VisibleEntry(0) = %+v, ok=%v, want lantern.txt", entry, ok)
+	}
+}
+
+func TestEntryFilterKeepsDirectories(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "harbor"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"match.go", "other.txt"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pattern := func(pat string, dirsOnly bool) *EntryFilter {
+		f, err := PatternFilter(pat, GroupPatternShell, false, dirsOnly, nil)
+		if err != nil {
+			t.Fatalf("PatternFilter() error = %v", err)
+		}
+		return f
+	}
+	tests := []struct {
+		name   string
+		filter *EntryFilter
+		want   []string
+	}{
+		{"pattern keeps dir", pattern("*.go", false), []string{"harbor", "match.go"}},
+		{"dirs only filters dirs", pattern("harb*", true), []string{"harbor"}},
+		{"reject-all keeps dir", &EntryFilter{ID: "none", Match: func(localfs.Entry, *State) bool { return false }}, []string{"harbor"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state, err := New(dir)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+			state.SetEntryFilter(tt.filter)
+			var got []string
+			for i := 0; i < state.VisibleEntryCount(); i++ {
+				if e, _, ok := state.VisibleEntry(i); ok && e.Name != ".." {
+					got = append(got, e.Name)
+				}
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("visible = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

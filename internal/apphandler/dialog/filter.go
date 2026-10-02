@@ -41,7 +41,7 @@ func (h *Handler) updateFilterDialogPreview() {
 		return
 	}
 	meta := ui.MetaMatchData(h.model.MetaResults[h.model.ActivePanel], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
-	files, dirs, err := h.host.ActivePanel().CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly, meta)
+	files, dirs, err := h.host.ActivePanel().CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, false, fd.DirsOnly, meta)
 	if err != nil {
 		fd.PreviewShow = false
 		return
@@ -52,7 +52,7 @@ func (h *Handler) updateFilterDialogPreview() {
 }
 
 func (h *Handler) filterDialogForm() dialog.DialogLinearForm {
-	n := 7
+	n := 6
 	if h.model.FilterDialog.MetaColumnCount > 0 {
 		n += 2
 	}
@@ -131,13 +131,13 @@ func (h *Handler) executeFilterDialog() {
 			return ui.MetaMatchData(h.model.MetaResults[panelID], true, only)
 		}
 	}
-	filter, err := panel.PatternFilter(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly, metaFn)
+	filter, err := panel.PatternFilter(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.DirsOnly, metaFn)
 	if err != nil {
 		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
 		return
 	}
 	meta := ui.MetaMatchData(h.model.MetaResults[panelID], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
-	files, dirs, _ := p.CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly, meta)
+	files, dirs, _ := p.CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, false, fd.DirsOnly, meta)
 	p.SetEntryFilter(filter)
 	h.CloseFilterDialog()
 	if files == 0 && dirs == 0 {
@@ -222,9 +222,6 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 	case tcell.KeyRune:
 		if keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
-			case 'f', 'F':
-				h.toggleFilterDialogField(fd, dialog.FilterFocusFilesOnly)
-				fd.Focus = dialog.FilterFocusFilesOnly
 			case 'd', 'D':
 				h.toggleFilterDialogField(fd, dialog.FilterFocusDirsOnly)
 				fd.Focus = dialog.FilterFocusDirsOnly
@@ -278,16 +275,8 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 		h.filterDialogClampCaseFocus()
 	case dialog.FilterFocusSimpleRadio:
 		fd.PatternMode = panel.GroupPatternSimple
-	case dialog.FilterFocusFilesOnly:
-		fd.FilesOnly = !fd.FilesOnly
-		if fd.FilesOnly {
-			fd.DirsOnly = false
-		}
 	case dialog.FilterFocusDirsOnly:
 		fd.DirsOnly = !fd.DirsOnly
-		if fd.DirsOnly {
-			fd.FilesOnly = false
-		}
 	case dialog.FilterFocusCase:
 		if !dialog.FilterShowsCaseSensitive(*fd) {
 			return false
@@ -318,7 +307,7 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 
 func filterAltIsDialogMnemonic(r rune) bool {
 	switch r {
-	case 'f', 'F', 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N':
+	case 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N':
 		return true
 	default:
 		return false

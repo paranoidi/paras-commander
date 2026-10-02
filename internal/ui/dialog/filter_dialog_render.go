@@ -87,8 +87,7 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 
 	// col2X aligns the second checkbox on every two-column row.
 	col2X := optionX + utf8.RuneCountInString(draw.CheckboxText("Include meta columns", false)) + 3 // +1 pad +2 gap
-	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'F', state.FilesOnly, state.Focus == FilterFocusFilesOnly, false, styles)
-	draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", 'D', state.DirsOnly, state.Focus == FilterFocusDirsOnly, false, styles)
+	draw.DrawDialogCheckbox(screen, optionX, y, "Directories only", 'D', state.DirsOnly, state.Focus == FilterFocusDirsOnly, false, styles)
 	y++
 	if y >= innerBottom {
 		return
@@ -113,7 +112,7 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 
-	numContent := 7
+	numContent := 6
 	if state.MetaColumnCount > 0 {
 		numContent += 2
 	}

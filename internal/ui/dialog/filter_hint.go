@@ -13,11 +13,10 @@ const (
 	FilterFocusRegexRadio  = 1
 	FilterFocusSimpleRadio = 2
 	FilterFocusPattern     = 3
-	FilterFocusFilesOnly   = 4
-	FilterFocusDirsOnly    = 5
-	FilterFocusCase        = 6
-	FilterFocusIncludeMeta = 7
-	FilterFocusOnlyMeta    = 8
+	FilterFocusDirsOnly    = 4
+	FilterFocusCase        = 5
+	FilterFocusIncludeMeta = 6
+	FilterFocusOnlyMeta    = 7
 )
 
 // FilterShowsCaseSensitive reports whether the case-sensitive checkbox is shown.
@@ -106,11 +105,11 @@ func FilterLastContentFocus(mode panel.GroupPatternMode, metaColumnCount int) in
 	return FilterFocusCase
 }
 
-// FilterMoveFocus applies dialog navigation, including 2D checkbox layout: Files only and
-// Directories only share a row (Left/Right); Case sensitive sits below. When metaColumnCount > 0,
+// FilterMoveFocus applies dialog navigation, including 2D checkbox layout: Directories only
+// sits above Case sensitive. When metaColumnCount > 0,
 // "Include meta columns" and "Only meta columns" share a row below case sensitive.
 func FilterMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode, metaColumnCount int) (int, bool) {
-	numContent := 7
+	numContent := 6
 	if metaColumnCount > 0 {
 		numContent += 2 // IncludeMeta + OnlyMeta
 	}
@@ -121,9 +120,6 @@ func FilterMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode, meta
 	okIdx := form.OKIndex()
 	switch key {
 	case tcell.KeyRight:
-		if focus == FilterFocusFilesOnly {
-			return FilterFocusDirsOnly, true
-		}
 		if focus == FilterFocusIncludeMeta && showMeta {
 			return FilterFocusOnlyMeta, true
 		}
@@ -132,9 +128,6 @@ func FilterMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode, meta
 		}
 		return focus, false
 	case tcell.KeyLeft:
-		if focus == FilterFocusDirsOnly {
-			return FilterFocusFilesOnly, true
-		}
 		if focus == FilterFocusOnlyMeta && showMeta {
 			return FilterFocusIncludeMeta, true
 		}
@@ -148,7 +141,7 @@ func FilterMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode, meta
 		case focus < FilterFocusPattern:
 			return FilterFocusPattern, true
 		case focus == FilterFocusPattern:
-			return FilterFocusFilesOnly, true
+			return FilterFocusDirsOnly, true
 		case focus < okIdx:
 			return okIdx, true
 		default:
@@ -164,19 +157,14 @@ func FilterMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode, meta
 		case focus < okIdx:
 			return FilterFocusPattern, true
 		default:
-			return FilterFocusFilesOnly, true
+			return FilterFocusDirsOnly, true
 		}
 	case tcell.KeyDown:
 		switch focus {
-		case FilterFocusFilesOnly:
+		case FilterFocusDirsOnly:
 			if showCase {
 				return FilterFocusCase, true
 			}
-			if showMeta {
-				return FilterFocusIncludeMeta, true
-			}
-			return okIdx, true
-		case FilterFocusDirsOnly:
 			if showMeta {
 				return FilterFocusIncludeMeta, true
 			}
@@ -197,15 +185,15 @@ func FilterMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode, meta
 		}
 	case tcell.KeyUp:
 		switch focus {
-		case FilterFocusFilesOnly, FilterFocusDirsOnly:
+		case FilterFocusDirsOnly:
 			return FilterFocusPattern, true
 		case FilterFocusCase:
-			return FilterFocusFilesOnly, true
+			return FilterFocusDirsOnly, true
 		case FilterFocusIncludeMeta, FilterFocusOnlyMeta:
 			if showCase {
 				return FilterFocusCase, true
 			}
-			return FilterFocusFilesOnly, true
+			return FilterFocusDirsOnly, true
 		case okIdx, form.CancelIndex():
 			return FilterLastContentFocus(mode, metaColumnCount), true
 		default:
