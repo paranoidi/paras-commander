@@ -28,7 +28,9 @@ func (sn *snapshot) fileCell(path string) Cell {
 			}
 			continue
 		}
-		if e.path == path {
+		// Git collapses a dir with no tracked files into one "?? dir/" entry, so a file under
+		// such an ancestor is untracked too.
+		if e.path == path || (e.staged == NotModified && e.unstaged == New && strings.HasPrefix(path, e.path+string(filepath.Separator))) {
 			staged = combineStatus(staged, e.staged)
 			unstaged = combineStatus(unstaged, e.unstaged)
 		}

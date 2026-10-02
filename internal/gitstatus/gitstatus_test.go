@@ -132,3 +132,12 @@ func TestDirCellSummaryFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestFileCellUnderUntrackedDir(t *testing.T) {
+	root := t.TempDir()
+	sn := &snapshot{entries: []entry{{filepath.Join(root, "lagoon"), NotModified, New}}}
+	got := sn.fileCell(filepath.Join(root, "lagoon", "reef", "pebble.txt"))
+	if got != (Cell{Staged: NotModified, Unstaged: New}) {
+		t.Fatalf("file under untracked dir = %+v, want untracked", got)
+	}
+}
