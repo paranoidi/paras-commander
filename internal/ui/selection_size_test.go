@@ -111,6 +111,10 @@ func TestSelectionSizeLabelFilesOnly(t *testing.T) {
 			"/tmp/b.txt": true,
 		},
 	}
+	state.SetOffListingMeta(map[string]localfs.Entry{
+		"/tmp/a.txt": state.Entries[0],
+		"/tmp/b.txt": state.Entries[1],
+	})
 	got, ok := SelectionSizeLabel(&state, false, nil, "")
 	if !ok {
 		t.Fatal("ok = false, want true")
@@ -165,5 +169,68 @@ func TestSelectionSizeLabelPendingWorkingIcon(t *testing.T) {
 	}
 	if !strings.Contains(got, "1 item") {
 		t.Fatalf("label = %q, want item count", got)
+	}
+}
+
+// Tree-child files resolve from the in-memory tree index: removing them from disk after the
+// expand proves the label never stats, and a top-level selected file no longer hides their bytes.
+func TestSelectionSizeLabelTreeChildrenNoStat(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	child := filepath.Join(meadow, "lantern.txt")
+	top := filepath.Join(root, "beacon.txt")
+	for _, f := range []string{child, top} {
+		if err := os.WriteFile(f, make([]byte, 100), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state, err := panel.New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.SetListLayout(panel.ListLayoutTree, 10)
+	if err := state.ToggleTreeExpand(10); err != nil { // cursor starts on meadow
+		t.Fatal(err)
+	}
+	state.TogglePathSelection(top)
+	state.TogglePathSelection(child)
+	if err := os.Remove(child); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(top); err != nil {
+		t.Fatal(err)
+	}
+	got, ok := SelectionSizeLabel(&state, false, nil, "W")
+	if !ok || got != "2 items (200 B)" {
+		t.Fatalf("label = %q ok=%v, want %q", got, ok, "2 items (200 B)")
+	}
+}
+
+func TestSelectionSizeLabelOffListingMissIsPendingNotStat(t *testing.T) {
+	root := t.TempDir()
+	elsewhere := filepath.Join(t.TempDir(), "harbor.txt")
+	if err := os.WriteFile(elsewhere, make([]byte, 50), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	state, err := panel.New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.TogglePathSelection(elsewhere)
+	got, _ := SelectionSizeLabel(&state, false, nil, "W")
+	if got != "1 item (0 B) W" {
+		t.Fatalf("label = %q, want pending without stat", got)
+	}
+	e, err := localfs.EntryFromPath(elsewhere)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.SetOffListingMeta(map[string]localfs.Entry{elsewhere: e})
+	got, _ = SelectionSizeLabel(&state, false, nil, "W")
+	if got != "1 item (50 B)" {
+		t.Fatalf("label = %q, want %q", got, "1 item (50 B)")
 	}
 }

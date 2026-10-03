@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -16,7 +17,7 @@ import (
 // directory not yet cached — for a multi-thousand-directory selection (e.g. select-all) that is
 // too much synchronous work for the main goroutine.
 func (a *App) reconcileSelectionSizeScans(panelID int) {
-	if a.disk.engine == nil || a.model.ViewMode != ui.ViewBrowser {
+	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
 	p := a.panelByID(panelID)
@@ -41,50 +42,87 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 	}
 	a.selectionSizeScanGen[panelID] = gen
 	a.selectionSizeScanPath[panelID] = path
-	if !p.SelectionHasDirs() {
-		a.selectionSizeScanFP[panelID] = ""
-		a.selectionSizeScanDebounce[panelID].Invalidate()
-		return
-	}
 
 	// PrunedSelectionRoots returns a live cache slice that later selection edits mutate in
 	// place, so it must be copied before crossing the goroutine boundary. EntriesByPath already
 	// allocates a fresh map.
 	roots := append([]string(nil), p.PrunedSelectionRoots()...)
+	// Roots outside the listing (selection kept after navigating away) have no metadata for the
+	// selection-size label; the background pass Lstats them so render never has to.
+	var offListing []string
+	for _, r := range roots {
+		if _, ok := p.ListingEntryAt(r); ok {
+			continue
+		}
+		if _, ok := p.OffListingMetaAt(r); !ok {
+			offListing = append(offListing, r)
+		}
+	}
+	hasDirs := p.SelectionHasDirs() && a.disk.engine != nil
+	if !hasDirs && len(offListing) == 0 {
+		a.selectionSizeScanFP[panelID] = ""
+		a.selectionSizeScanDebounce[panelID].Invalidate()
+		return
+	}
 	byPath := p.EntriesByPath()
 	listingDev := p.ListingDevice
 	listingDevValid := p.ListingDeviceValid
 	screen := a.screen
 
+	engine, descend, ignore := a.disk.engine, a.config.DiskUsage.DescendIntoMountPoints, a.disk.ignore
+	var meta map[string]localfs.Entry // written by compute, read by post: same goroutine
 	a.armSelectionSizeScanDebounce(&a.selectionSizeScanDebounce[panelID], func() []string {
-		return diskusage.DirectoriesNeedingScan(
-			roots, byPath, listingDev, listingDevValid,
-			a.disk.engine, a.config.DiskUsage.DescendIntoMountPoints, a.disk.ignore,
-		)
+		if len(offListing) > 0 {
+			meta = make(map[string]localfs.Entry, len(offListing))
+			for _, r := range offListing {
+				if e, err := localfs.EntryFromPath(r); err == nil {
+					meta[r] = e
+				}
+			}
+		}
+		if !hasDirs {
+			return nil
+		}
+		return diskusage.DirectoriesNeedingScan(roots, byPath, listingDev, listingDevValid, engine, descend, ignore)
 	}, func(need []string) {
-		_ = screen.PostEvent(tcell.NewEventInterrupt(selectionScanNeedPayload{PanelID: panelID, Need: need, Gen: gen}))
+		_ = screen.PostEvent(tcell.NewEventInterrupt(selectionScanNeedPayload{PanelID: panelID, Need: need, Meta: meta, Gen: gen}))
 	})
 }
 
 // applySelectionScanNeed applies the result of a background reconcileSelectionSizeScans pass:
 // starts the actual (already-async) disk-usage walk for whatever still needs scanning, unless
 // the selection has changed again since the scan was computed.
-func (a *App) applySelectionScanNeed(d selectionScanNeedPayload) {
-	if a.disk.engine == nil {
-		return
-	}
+// Renders and returns true when off-listing metadata was stored (the selection label changes).
+func (a *App) applySelectionScanNeed(d selectionScanNeedPayload) bool {
 	p := a.panelByID(d.PanelID)
 	if p.SelectionDerivedGen() != d.Gen {
-		return
+		return false
+	}
+	changed := false
+	if len(d.Meta) > 0 {
+		merged := make(map[string]localfs.Entry, len(d.Meta))
+		for _, r := range p.PrunedSelectionRoots() {
+			if e, ok := d.Meta[r]; ok {
+				merged[r] = e
+			} else if e, ok := p.OffListingMetaAt(r); ok {
+				merged[r] = e
+			}
+		}
+		p.SetOffListingMeta(merged)
+		a.render()
+		changed = true
+	}
+	if a.disk.engine == nil {
+		return changed
 	}
 	need := a.filterJobContendedPaths(d.Need)
 	fp := strings.Join(need, "\n")
 	if fp == "" {
 		a.selectionSizeScanFP[d.PanelID] = ""
-		return
+		return changed
 	}
 	if fp == a.selectionSizeScanFP[d.PanelID] {
-		return
+		return changed
 	}
 	a.selectionSizeScanFP[d.PanelID] = fp
 	a.disk.engine.StartScanFromListing(
@@ -93,6 +131,7 @@ func (a *App) applySelectionScanNeed(d selectionScanNeedPayload) {
 		d.PanelID,
 		listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints),
 	)
+	return changed
 }
 
 // armSelectionSizeScanDebounce runs compute (the stat-syscall-heavy "what needs scanning" check)

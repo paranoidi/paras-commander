@@ -14,7 +14,10 @@ func PathsDeleteImpact(
 	painter DiskUsagePainter,
 ) (files, bytes int64, pending bool) {
 	for _, path := range pruned {
-		f, b, pend := pathImpact(path, byPath, remote, painter)
+		f, b, pend := pathImpact(path, func(p string) (localfs.Entry, bool) {
+			e, ok := byPath[p]
+			return e, ok
+		}, true, remote, painter)
 		files += f
 		bytes += b
 		if pend {
@@ -39,12 +42,22 @@ func FormatDeleteImpactSummary(files, bytes int64, pending bool, workingSym stri
 
 func pathImpact(
 	path string,
-	byPath map[string]localfs.Entry,
+	lookup func(string) (localfs.Entry, bool),
+	statOnMiss bool,
 	remote bool,
 	painter DiskUsagePainter,
 ) (files, bytes int64, pending bool) {
-	entry, found := byPath[path]
+	var entry localfs.Entry
+	found := false
+	if lookup != nil {
+		entry, found = lookup(path)
+	}
 	if !found {
+		if !statOnMiss {
+			// Render path: never stat. A background Lstat (reconcileSelectionSizeScans) fills the
+			// off-listing cache; remote panels have no such pass, so a miss there is just unknown.
+			return 0, 0, !remote
+		}
 		var err error
 		entry, err = localfs.EntryFromPath(path)
 		if err != nil {

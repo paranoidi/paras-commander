@@ -103,38 +103,20 @@ func SelectionSizeLabel(
 
 	total := state.SelectionListedBytes()
 	pending := false
-	if state.SelectionHasDirs() {
-		pruned := state.PrunedSelectionRoots()
-		byPath := make(map[string]localfs.Entry, len(state.Entries))
-		for _, e := range state.Entries {
-			byPath[e.Path] = e
+	lookup := func(p string) (localfs.Entry, bool) {
+		if e, ok := state.ListingEntryAt(p); ok {
+			return e, true
 		}
-		for _, p := range pruned {
-			if e, ok := state.ListingEntryAt(p); ok && e.Type != localfs.EntryDirectory {
-				continue
-			}
-			_, b, needScan := pathImpact(p, byPath, remote, painter)
-			total += b
-			if needScan {
-				pending = true
-			}
+		return state.OffListingMetaAt(p)
+	}
+	for _, p := range state.PrunedSelectionRoots() {
+		if e, ok := state.ListingEntryAt(p); ok && e.Type != localfs.EntryDirectory {
+			continue // already counted in SelectionListedBytes
 		}
-	} else if total == 0 && count > 0 {
-		// Selected files may live outside the current listing; sum known sizes once.
-		pruned := state.PrunedSelectionRoots()
-		byPath := make(map[string]localfs.Entry, len(state.Entries))
-		for _, e := range state.Entries {
-			byPath[e.Path] = e
-		}
-		for _, p := range pruned {
-			if _, ok := state.ListingEntryAt(p); ok {
-				continue
-			}
-			_, b, needScan := pathImpact(p, byPath, remote, painter)
-			total += b
-			if needScan {
-				pending = true
-			}
+		_, b, needScan := pathImpact(p, lookup, false, remote, painter)
+		total += b
+		if needScan {
+			pending = true
 		}
 	}
 
@@ -174,7 +156,7 @@ func MarkedPathsSelectionSizeLabel(
 	var total int64
 	pending := false
 	for _, p := range pruned {
-		_, b, needScan := pathImpact(p, nil, remote, painter)
+		_, b, needScan := pathImpact(p, nil, true, remote, painter)
 		total += b
 		if needScan {
 			pending = true

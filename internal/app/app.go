@@ -152,7 +152,9 @@ type syncFollowNavFlushPayload struct{}
 type selectionScanNeedPayload struct {
 	PanelID int
 	Need    []string
-	Gen     uint64
+	// Meta holds Lstat results for selected roots outside the panel's listing.
+	Meta map[string]localfs.Entry
+	Gen  uint64
 }
 
 // findDialogSelectionScanNeedPayload is the find-dialog equivalent of selectionScanNeedPayload.
@@ -1042,7 +1044,7 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			out.didRender = true
 		}
 	case selectionScanNeedPayload:
-		a.applySelectionScanNeed(d)
+		out.didRender = a.applySelectionScanNeed(d)
 	case findDialogSelectionScanNeedPayload:
 		a.applyFindDialogSelectionScanNeed(d)
 	case cursorNameHintFlushPayload:

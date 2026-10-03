@@ -1775,6 +1775,7 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
 			crossDir: true,
 		},
 	}
+	left.SetOffListingMeta(map[string]localfs.Entry{crossDir: {Name: "other.txt", Path: crossDir}})
 	right := panel.State{
 		Path:          pathloc.MustParse("/var"),
 		Entries:       []localfs.Entry{{Name: "other.txt", Path: crossDir}},
@@ -1836,6 +1837,7 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
 			outsideSel: true,
 		},
 	}
+	right.SetOffListingMeta(map[string]localfs.Entry{outsideSel: {Name: "outside.txt", Path: outsideSel}})
 
 	model := Model{
 		Primary:     left,

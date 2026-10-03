@@ -29,11 +29,23 @@ func (s *State) EntriesByPath() map[string]localfs.Entry {
 }
 
 func (s *State) listingEntry(path string) (localfs.Entry, bool) {
-	if s.listingByPath == nil {
-		return localfs.Entry{}, false
+	if e, ok := s.listingByPath[path]; ok {
+		return e, true
 	}
-	e, ok := s.listingByPath[path]
+	e, ok := s.treeByPath[path]
 	return e, ok
+}
+
+// OffListingMetaAt returns metadata for a selected path that is not in the current listing, as
+// filled in by SetOffListingMeta (background Lstat; never touches the filesystem itself).
+func (s *State) OffListingMetaAt(path string) (localfs.Entry, bool) {
+	e, ok := s.offListingMeta[path]
+	return e, ok
+}
+
+// SetOffListingMeta replaces the off-listing metadata cache (see OffListingMetaAt).
+func (s *State) SetOffListingMeta(meta map[string]localfs.Entry) {
+	s.offListingMeta = meta
 }
 
 func (s *State) markSelectedDir(path string) {
@@ -82,6 +94,7 @@ func (s *State) clearSelectionState() {
 	s.SelectedDirPaths = nil
 	s.selectionHasDirs = false
 	s.selectionListedBytes = 0
+	s.offListingMeta = nil
 }
 
 // clearSelectionStrictDescendantsIndexed removes selected paths strictly under parent.
@@ -141,7 +154,7 @@ func (s *State) adjustSelectionListedBytes(path string, add bool) {
 }
 
 func (s *State) recomputeSelectionListedBytes() {
-	if len(s.SelectedPaths) == 0 || s.listingByPath == nil {
+	if len(s.SelectedPaths) == 0 || (s.listingByPath == nil && s.treeByPath == nil) {
 		s.selectionListedBytes = 0
 		return
 	}
@@ -157,8 +170,9 @@ func (s *State) recomputeSelectionListedBytes() {
 	s.selectionListedBytes = total
 }
 
-// ListingEntryAt returns the current listing entry for path when present.
-func (s State) ListingEntryAt(path string) (localfs.Entry, bool) {
+// ListingEntryAt returns the current listing entry for path when present, including loaded
+// tree-mode children.
+func (s *State) ListingEntryAt(path string) (localfs.Entry, bool) {
 	return s.listingEntry(path)
 }
 

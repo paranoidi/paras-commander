@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/treeflat"
 )
 
 // TreeChildLoadRequest describes an async fetch of a directory's immediate children, dispatched
@@ -39,16 +40,11 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 		return s.finishTreeChildLoadApply(dirID, viewportRows)
 	}
 	node.Value.LoadErr = nil
-	// useDiskPrimary is forced false here (unlike ApplySort's s.primarySortUsesDiskTotals()):
-	// disk-usage idle-primary sort stays off for tree children regardless of the panel's
-	// current flat-mode sort state — an original Phase 1 design decision, not new scope.
-	SortEntries(entries, s.Sort, s.DiskSorter, false, s.MetaValue)
-	node.Children = treeRootsFromEntries(entries)
+	s.attachTreeChildren(node, entries)
 	if s.TreeExpanded == nil {
 		s.TreeExpanded = make(map[string]bool)
 	}
 	s.TreeExpanded[dirID] = true
-	s.scheduleTreeChildGitStatus(dirID, entries)
 	// Cascades any remembered-but-not-yet-restored expansion nested under the directory that just
 	// finished loading (e.g. a recalled snapshot with several levels deep on an SFTP panel, where
 	// each level's children only become available after its own async load). Scoped to just
@@ -67,6 +63,31 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 	// exact global cap enforced mid-cascade.
 	s.restoreTreeExpansionsIn(node.Children, 0)
 	return s.finishTreeChildLoadApply(dirID, viewportRows)
+}
+
+// attachTreeChildren installs entries as node's children: sorts them, indexes them in treeByPath
+// (so selection size/bytes resolve tree rows from memory), counts newly-indexed selected files
+// into the selection bytes, and schedules their git status. Shared by the async apply, the
+// synchronous fallback and prefetched child listings.
+func (s *State) attachTreeChildren(node *treeflat.Node[TreeEntry], entries []localfs.Entry) {
+	// useDiskPrimary is forced false here (unlike ApplySort's s.primarySortUsesDiskTotals()):
+	// disk-usage idle-primary sort stays off for tree children regardless of the panel's
+	// current flat-mode sort state — an original Phase 1 design decision, not new scope.
+	SortEntries(entries, s.Sort, s.DiskSorter, false, s.MetaValue)
+	node.Children = treeRootsFromEntries(entries)
+	if s.treeByPath == nil {
+		s.treeByPath = make(map[string]localfs.Entry, len(entries))
+	}
+	for _, e := range entries {
+		if _, seen := s.treeByPath[e.Path]; seen {
+			continue
+		}
+		s.treeByPath[e.Path] = e
+		if s.SelectedPaths[e.Path] && e.Type != localfs.EntryDirectory {
+			s.selectionListedBytes += e.Size
+		}
+	}
+	s.scheduleTreeChildGitStatus(node.ID, entries)
 }
 
 // finishTreeChildLoadApply coalesces ExpandAllTreeShallow async applies: while treeExpandQuiet

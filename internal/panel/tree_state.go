@@ -77,6 +77,8 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 	s.ListLayout = layout
 	if layout == ListLayoutTree {
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
+		s.treeByPath = nil
+		s.recomputeSelectionListedBytes()
 		s.TreeExpanded = make(map[string]bool)
 		s.treeExpandAllDepth = 0
 		s.treeExpandAllAuto = false
@@ -84,6 +86,8 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 	} else {
 		// Leaving tree mode: any in-flight child fetch would never be shown, so abandon it.
 		s.abandonTreeChildLoads()
+		s.treeByPath = nil
+		s.recomputeSelectionListedBytes()
 		// filteredIdx was last built against treeRows; rebuild it against Entries (flat mode's
 		// backing space) before translating cursorAncestorID's raw Entries index below.
 		s.rebuildFilter()
@@ -701,14 +705,14 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet boo
 					return nil
 				}
 			}
-			children, err := s.loadTreeChildren(id)
+			entries, err := s.loadTreeChildren(id)
 			node.Value.Loading = false
 			if err != nil {
 				node.Value.LoadErr = err
 				return err
 			}
 			node.Value.LoadErr = nil
-			node.Children = children
+			s.attachTreeChildren(node, entries)
 		}
 	}
 	s.TreeExpanded[id] = expand
@@ -718,7 +722,7 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet boo
 // loadTreeChildren reads dirPath's immediate children via the same listing path Load/Refresh
 // use (FetchListing + fsbackend.ToPanelEntries), so hidden-file/gitignore options and remote
 // backends behave identically to the flat listing.
-func (s *State) loadTreeChildren(dirPath string) ([]treeflat.Node[TreeEntry], error) {
+func (s *State) loadTreeChildren(dirPath string) ([]localfs.Entry, error) {
 	loc, err := pathloc.Parse(dirPath)
 	if err != nil {
 		return nil, err
@@ -727,11 +731,7 @@ func (s *State) loadTreeChildren(dirPath string) ([]treeflat.Node[TreeEntry], er
 	if err != nil {
 		return nil, err
 	}
-	entries, err := fsbackend.ToPanelEntries(backendEntries)
-	if err != nil {
-		return nil, err
-	}
-	return treeRootsFromEntries(entries), nil
+	return fsbackend.ToPanelEntries(backendEntries)
 }
 
 // restoreTreeExpansions re-expands the directories recorded in TreeExpanded against a freshly

@@ -72,6 +72,11 @@ type State struct {
 	SelectedDirPaths map[string]bool
 	// listingByPath maps entry.Path to listing index; rebuilt when Entries change.
 	listingByPath map[string]localfs.Entry
+	// treeByPath indexes loaded tree-mode children by path (filled by attachTreeChildren, reset
+	// whenever TreeRoots is re-rooted or dropped) so selection lookups never stat tree rows.
+	treeByPath map[string]localfs.Entry
+	// offListingMeta holds background-Lstat metadata for selected paths outside the listing.
+	offListingMeta map[string]localfs.Entry
 	// selectionListedBytes sums file sizes for selected paths present in the current listing.
 	selectionListedBytes int64
 	// selectionDerivedGen bumps on selection mutations; selDerivedCache is rebuilt lazily per cwd.
@@ -1487,6 +1492,7 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 	if len(newlyAppeared) > 0 {
 		s.AddNewFileMarks(listingLoc, newlyAppeared)
 	}
+	s.treeByPath = nil
 	s.rebuildListingByPath()
 	s.recomputeSelectionListedBytes()
 	s.Cursor = 0
@@ -1526,6 +1532,7 @@ func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries [
 		// remembered dirs, so anything still in flight is dead work.
 		s.abandonTreeChildLoads()
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
+		s.treeByPath = nil
 		s.TreeExpanded = keep
 		s.restoreTreeExpansions()
 		s.rebuildTreeRows()
