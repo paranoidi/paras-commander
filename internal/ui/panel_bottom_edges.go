@@ -23,17 +23,21 @@ func panelSyncIndicatorLabel(panelID int, orientation SplitOrientation) string {
 	return " Sync → "
 }
 
-func panelQuickViewIndicatorLabel(panelID int, orientation SplitOrientation) string {
+func panelQuickViewIndicatorLabel(panelID int, orientation SplitOrientation, showIcons bool) string {
+	name := "Quick view"
+	if showIcons {
+		name = "\uf03e"
+	}
 	if panelID == SecondaryPanel {
 		if orientation == SplitVertical {
-			return " ↑ Quick view "
+			return " ↑ " + name + " "
 		}
-		return " ← Quick view "
+		return " ← " + name + " "
 	}
 	if orientation == SplitVertical {
-		return " Quick view ↓ "
+		return " " + name + " ↓ "
 	}
-	return " Quick view → "
+	return " " + name + " → "
 }
 
 func panelOtherPanelIndicatorLabel(panelID int, ctx PanelBottomIndicatorContext) string {

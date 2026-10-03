@@ -57,6 +57,7 @@ type PanelBottomIndicatorContext struct {
 	UserHomeDir            string
 	EndEdgePathMaxRunes    int
 	FileListActive         bool
+	ShowIcons              bool
 	ChromeBlocked          bool
 	BorderStyle            tcell.Style
 	Styles                 theme.Theme
@@ -167,7 +168,7 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 	case PanelBottomIndicatorSync:
 		return panelSyncIndicatorLabel(ctx.PanelID, ctx.SplitOrientation)
 	case PanelBottomIndicatorQuickView:
-		return panelQuickViewIndicatorLabel(ctx.PanelID, ctx.SplitOrientation)
+		return panelQuickViewIndicatorLabel(ctx.PanelID, ctx.SplitOrientation, ctx.ShowIcons)
 	case PanelBottomIndicatorOtherPanel:
 		return panelOtherPanelIndicatorLabel(ctx.PanelID, ctx)
 	default:

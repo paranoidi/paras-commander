@@ -210,6 +210,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		OtherPanelPath:         ctx.OtherPanelPath,
 		UserHomeDir:            display.UserHomeDir,
 		FileListActive:         ctx.FileListActive,
+		ShowIcons:              display.ShowIcons,
 		ChromeBlocked:          ctx.ChromeBlocked,
 		BorderStyle:            borderStyle,
 		Styles:                 panelStyle.Styles,
