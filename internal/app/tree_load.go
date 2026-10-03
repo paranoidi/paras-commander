@@ -159,20 +159,12 @@ func (a *App) applyTreeChildResults() bool {
 				a.setErrorMessage("Expand failed", p.err)
 			}
 		}
-		if p.err == nil && a.disk.engine != nil && !pan.Path.IsRemote() {
-			if _, ok := a.disk.engine.ByteSize(p.dirID); !ok && !a.disk.engine.PendingForPanel(p.dirID, p.panelID) {
-				need = append(need, p.dirID)
-			}
+		if p.err == nil {
+			need = append(need, p.dirID)
 		}
 	}
-	// ponytail: items landing in the same drain are not pruned against each other, so a child
-	// that arrives in the same batch as its ancestor gets a redundant walk instead of a cache
-	// hit off the ancestor's result. Cascade levels land in separate drains in practice, so this
-	// is rare; revisit only if a wide expand-all is seen queuing duplicate scans.
-	if need = a.filterJobContendedPaths(need); len(need) > 0 && touchedPanel >= 0 {
-		pan := a.panelByID(touchedPanel)
-		a.disk.engine.StartScanFromListing(need, a.disk.ignore, touchedPanel,
-			listingVolumeGateForScan(pan, a.config.DiskUsage.DescendIntoMountPoints))
+	if touchedPanel >= 0 {
+		a.startTreeChildDiskScans(touchedPanel, need)
 	}
 	if !changed && touchedPanel >= 0 {
 		pan := a.panelByID(touchedPanel)
@@ -180,4 +172,28 @@ func (a *App) applyTreeChildResults() bool {
 		changed = true
 	}
 	return changed
+}
+
+// startTreeChildDiskScans enqueues disk-usage walks for freshly loaded tree directories dirIDs
+// that have no cached or pending size on panelID.
+//
+// ponytail: dirs landing together are not pruned against each other, so a child that arrives
+// alongside its ancestor gets a redundant walk instead of a cache hit off the ancestor's result.
+// Cascade levels land in separate drains in practice, so this is rare; revisit only if a wide
+// expand-all is seen queuing duplicate scans.
+func (a *App) startTreeChildDiskScans(panelID int, dirIDs []string) {
+	pan := a.panelByID(panelID)
+	if len(dirIDs) == 0 || a.disk.engine == nil || pan.Path.IsRemote() {
+		return
+	}
+	var need []string
+	for _, id := range dirIDs {
+		if _, ok := a.disk.engine.ByteSize(id); !ok && !a.disk.engine.PendingForPanel(id, panelID) {
+			need = append(need, id)
+		}
+	}
+	if need = a.filterJobContendedPaths(need); len(need) > 0 {
+		a.disk.engine.StartScanFromListing(need, a.disk.ignore, panelID,
+			listingVolumeGateForScan(pan, a.config.DiskUsage.DescendIntoMountPoints))
+	}
 }

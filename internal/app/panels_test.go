@@ -288,8 +288,9 @@ func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 }
 
 // TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive covers returning to a previously
-// expanded local tree: ApplyListing must dispatch ScheduleTreeChildLoad instead of ReadDir on
-// the event goroutine, so a still-blocked child fetch cannot stall further input.
+// expanded local tree: a child whose prefetch misses the time budget must go through
+// ScheduleTreeChildLoad instead of ReadDir on the event goroutine, so a still-blocked child
+// fetch cannot stall further input.
 func TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
 	root := t.TempDir()
 	harbor := filepath.Join(root, "harbor")
@@ -320,6 +321,15 @@ func TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
 	}
 	applyNextInterruptEvent(t, app, screen)
 
+	app.config.SFTP.ListTimeoutSecs = 1 // prefetch budget is half of the remaining timeout
+	block := make(chan struct{})
+	t.Cleanup(func() { close(block) })
+	swapFetchListingForAsyncLoad(t, func(ctx context.Context, snap panel.ListingRefreshSnapshot) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
+		if filepath.Clean(snap.Loc.String()) == harbor {
+			<-block // wedged child: the prefetch must give up on it
+		}
+		return panel.FetchListing(ctx, snap)
+	})
 	var scheduled atomic.Bool
 	left.ScheduleTreeChildLoad = func(req panel.TreeChildLoadRequest) bool {
 		scheduled.Store(true)
@@ -329,7 +339,7 @@ func TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
 	if err := left.NavigateTo(root, "", 20); err != nil {
 		t.Fatalf("NavigateTo root: %v", err)
 	}
-	applyNextInterruptEvent(t, app, screen) // listing apply + restore dispatch
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return scheduled.Load() }) // listing apply + restore dispatch
 	if !scheduled.Load() {
 		t.Fatal("returning to a locally expanded tree must use ScheduleTreeChildLoad")
 	}
@@ -341,5 +351,47 @@ func TestLocalTreeRestoreUsesChildSchedulerKeepsLoopResponsive(t *testing.T) {
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if left.Cursor == prior {
 		t.Fatal("Down during in-flight local tree restore did not move the cursor")
+	}
+}
+
+// TestTreeReentryPrefetchesExpandedChildrenInOneApply covers returning to an expanded tree: the
+// remembered subtree is fetched with the root listing, so the single apply shows the whole tree
+// and no per-child async load is dispatched.
+func TestTreeReentryPrefetchesExpandedChildrenInOneApply(t *testing.T) {
+	root := t.TempDir()
+	harbor := filepath.Join(root, "harbor")
+	if err := os.Mkdir(harbor, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{filepath.Join(harbor, "willow.txt"), filepath.Join(root, "beacon.txt")} {
+		if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "cinder.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	left := app.panelByID(ui.PrimaryPanel)
+	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleTree)
+	applyNextInterruptEvent(t, app, screen)
+	if err := left.NavigateTo(other, "", 20); err != nil {
+		t.Fatal(err)
+	}
+	applyNextInterruptEvent(t, app, screen)
+
+	left.ScheduleTreeChildLoad = func(panel.TreeChildLoadRequest) bool {
+		t.Error("ScheduleTreeChildLoad called despite prefetch")
+		return true
+	}
+	if err := left.NavigateTo(root, "", 20); err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return !left.ListingPending })
+	if got := left.VisibleEntryCount(); got != 3 {
+		t.Fatalf("VisibleEntryCount = %d, want 3 (tree fully restored in one apply)", got)
 	}
 }

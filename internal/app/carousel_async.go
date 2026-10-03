@@ -165,7 +165,7 @@ func (a *App) scheduleCarouselSnapshot(panelID int, isChild bool, loc pathloc.Pa
 	gen := a.carouselSnapshotGenSlot(panelID, isChild).Add(1)
 	timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 	snap := a.panelByID(panelID).ListingRefreshSnapshot(loc, timeout)
-	a.raceAsyncListingFetch(snap, timeout, false, func(res asyncListingResult) {
+	a.raceAsyncListingFetch(snap, timeout, false, nil, func(res asyncListingResult) {
 		p := carouselSnapshotPayload{
 			panelID:        panelID,
 			isChild:        isChild,

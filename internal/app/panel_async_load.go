@@ -3,12 +3,14 @@ package app
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -75,7 +77,60 @@ type asyncListingResult struct {
 	gitignoreActive      bool
 	dotfilesHiddenActive bool
 	probes               *panel.PathProbes
-	err                  error
+	// treeChildren holds prefetched child listings for the request's TreePrefetch dirs that
+	// finished within the time budget; the rest fall back to the async per-child path.
+	treeChildren map[string]panel.TreePrefetchResult
+	err          error
+}
+
+// treePrefetchBudgetDivisor splits the time left of the listing timeout: the prefetch waits at
+// most 1/divisor of it, so the give-up timer can never fire while prefetch is still collecting
+// and turn an otherwise good root listing into a timeout error.
+const treePrefetchBudgetDivisor = 2
+
+// prefetchTreeChildren lists ids in parallel (FetchListing + ToPanelEntries, like treeChildLoader)
+// and returns whichever finished within wait. Unfinished directories are omitted.
+func prefetchTreeChildren(snap panel.ListingRefreshSnapshot, ids []string, wait time.Duration) map[string]panel.TreePrefetchResult {
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+	snap.ClimbToExistingAncestor = false
+	snap.ListTimeout = wait
+	fetch := fetchListingForAsyncLoad // read once here: tests swap the package seam
+	var mu sync.Mutex
+	out := make(map[string]panel.TreePrefetchResult, len(ids))
+	var wg sync.WaitGroup
+	for _, id := range ids {
+		loc, err := pathloc.Parse(id)
+		if err != nil {
+			continue
+		}
+		wg.Add(1)
+		childSnap := snap
+		childSnap.Loc = loc
+		go func() {
+			defer wg.Done()
+			backendEntries, _, _, _, err := fetch(ctx, childSnap)
+			var entries []localfs.Entry
+			if err == nil {
+				entries, err = fsbackend.ToPanelEntries(backendEntries)
+			}
+			if ctx.Err() != nil {
+				return // missed the budget; the async child path takes over
+			}
+			mu.Lock()
+			out[id] = panel.TreePrefetchResult{Entries: entries, Err: err}
+			mu.Unlock()
+		}()
+	}
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	return maps.Clone(out)
 }
 
 // raceAsyncListingFetch runs snap's fetch off the UI thread, racing it against a give-up timer
@@ -88,7 +143,8 @@ type asyncListingResult struct {
 // network mount) on the fetch goroutine, for callers that go on to ApplyListing the result; the
 // heavy volume probes are skipped while a job saturates that volume, matching what
 // ApplyListing's SuppressHeavyPathProbes gate would decide.
-func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout time.Duration, withProbes bool, onResult func(asyncListingResult)) {
+func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout time.Duration, withProbes bool, prefetch []string, onResult func(asyncListingResult)) {
+	start := time.Now()
 	var settled atomic.Bool
 	var timer atomic.Pointer[time.Timer] // set right after time.AfterFunc below; both post() callers only ever run after that
 	post := func(res asyncListingResult) {
@@ -107,6 +163,11 @@ func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout t
 		res := asyncListingResult{loc: loc, entries: entries, gitignoreActive: gitignoreActive, dotfilesHiddenActive: dotfilesHiddenActive, err: err}
 		if err == nil && withProbes {
 			res.probes = a.probeListingPath(loc)
+		}
+		if err == nil && len(prefetch) > 0 {
+			if wait := (timeout - time.Since(start)) / treePrefetchBudgetDivisor; wait > 0 {
+				res.treeChildren = prefetchTreeChildren(snap, prefetch, wait)
+			}
 		}
 		post(res)
 	}()
@@ -148,7 +209,7 @@ func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 		gen := a.panelAsyncLoadGen[panelID].Add(1)
 		timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 		snap := a.panelByID(panelID).ListingRefreshSnapshot(req.Loc, timeout)
-		a.raceAsyncListingFetch(snap, timeout, true, func(res asyncListingResult) {
+		a.raceAsyncListingFetch(snap, timeout, true, req.TreePrefetch, func(res asyncListingResult) {
 			p := panelAsyncLoadPayload{
 				panelID: panelID,
 				gen:     gen,
@@ -229,7 +290,7 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	}
 	pan.GitignoreActive = p.res.gitignoreActive
 	pan.DotfilesHiddenActive = p.res.dotfilesHiddenActive
-	if err := pan.ApplyListingWithProbes(p.res.loc, p.res.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback, p.req.CenterRecalledCursor, p.res.probes); err != nil {
+	if err := pan.ApplyListingPrefetched(p.res.loc, p.res.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback, p.req.CenterRecalledCursor, p.res.probes, p.res.treeChildren); err != nil {
 		if p.req.Rollback != nil {
 			p.req.Rollback()
 		}
@@ -238,6 +299,13 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 		}
 		return true
 	}
+	var prefetched []string
+	for id, r := range p.res.treeChildren {
+		if r.Err == nil {
+			prefetched = append(prefetched, id)
+		}
+	}
+	a.startTreeChildDiskScans(p.panelID, prefetched)
 	if p.req.SyncHistoryHead && pan.HistoryIndex == 0 && len(pan.History) > 0 {
 		pan.History[0] = pan.PathString()
 	}

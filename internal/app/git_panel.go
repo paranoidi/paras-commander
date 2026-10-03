@@ -181,8 +181,9 @@ func (a *App) applyOneGitStatusLoad(p gitStatusPayload) bool {
 			// counts as this fetch completing, so the pending counter below stays accurate.
 			if pan.NoteTreeChildGitStatusApplied() {
 				pan.RefreshEntryFilter()
+				return true
 			}
-			return true
+			return false
 		}
 	}
 	if pan.GitByPath == nil {
@@ -197,10 +198,13 @@ func (a *App) applyOneGitStatusLoad(p gitStatusPayload) bool {
 	// cwd-level fetch has no such storm, so it always refreshes.
 	if p.cwdLevel {
 		pan.RefreshEntryFilter()
-	} else if pan.NoteTreeChildGitStatusApplied() {
-		pan.RefreshEntryFilter()
+		return true
 	}
-	return true
+	if pan.NoteTreeChildGitStatusApplied() {
+		pan.RefreshEntryFilter()
+		return true
+	}
+	return false
 }
 
 // isWithinDir reports whether child is parent or a descendant of parent. Both paths must

@@ -77,6 +77,9 @@ type State struct {
 	treeByPath map[string]localfs.Entry
 	// offListingMeta holds background-Lstat metadata for selected paths outside the listing.
 	offListingMeta map[string]localfs.Entry
+	// treePrefetch is the transient prefetched child listings consumed by setTreeNodeExpanded
+	// during ApplyListingPrefetched.
+	treePrefetch map[string]TreePrefetchResult
 	// selectionListedBytes sums file sizes for selected paths present in the current listing.
 	selectionListedBytes int64
 	// selectionDerivedGen bumps on selection mutations; selDerivedCache is rebuilt lazily per cwd.
@@ -1357,6 +1360,7 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 			OnApplied:            remote.onApplied,
 			SyncHistoryHead:      remote.syncHistoryHead,
 			ListingEpoch:         s.ListingEpoch,
+			TreePrefetch:         s.treePrefetchIDs(loc),
 			HistoryVisit:         remote.historyVisit,
 			HistoryPath:          remote.historyPath,
 		}) {
@@ -1408,6 +1412,15 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 // device id, git work-tree root) supplied by the caller — normally computed off the UI goroutine
 // by ProbeListingPath right after the listing fetch. A nil probes runs them synchronously here.
 func (s *State) ApplyListingWithProbes(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int, centerRecalled bool, probes *PathProbes) error {
+	return s.ApplyListingPrefetched(listingLoc, backendEntries, selectedName, viewportRows, indexFallback, centerRecalled, probes, nil)
+}
+
+// ApplyListingPrefetched is ApplyListingWithProbes plus already-fetched child listings
+// (AsyncLoadRequest.TreePrefetch results) that the tree re-expansion consumes synchronously
+// instead of dispatching one async load per remembered directory.
+func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int, centerRecalled bool, probes *PathProbes, prefetch map[string]TreePrefetchResult) error {
+	s.treePrefetch = prefetch
+	defer func() { s.treePrefetch = nil }()
 	localEntries, err := fsbackend.ToPanelEntries(backendEntries)
 	if err != nil {
 		return err

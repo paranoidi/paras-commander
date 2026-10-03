@@ -686,6 +686,16 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet boo
 	}
 	if expand && depth < maxTreeExpandDepth {
 		if node := findTreeNode(s.TreeRoots, id); node != nil && node.Children == nil {
+			if r, ok := s.treePrefetch[id]; ok {
+				if r.Err != nil {
+					node.Value.LoadErr = r.Err
+					return r.Err
+				}
+				node.Value.LoadErr = nil
+				s.attachTreeChildren(node, r.Entries)
+				s.TreeExpanded[id] = expand
+				return nil
+			}
 			if node.Value.Loading {
 				return nil // already loading; don't dispatch a second concurrent fetch
 			}
