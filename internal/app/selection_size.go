@@ -1,6 +1,9 @@
 package app
 
 import (
+	"errors"
+	"fmt"
+	"io/fs"
 	"strings"
 	"time"
 
@@ -35,7 +38,9 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		a.selectionSizeScanDebounce[panelID].Invalidate()
 		return
 	}
-	path := p.Path.String()
+	// The listing epoch is part of the key: a refresh that drops a selected file turns it into an
+	// off-listing root, which needs the background Lstat pass (and vanished-path removal) too.
+	path := fmt.Sprintf("%s\x00%d", p.Path.String(), p.ListingEpoch)
 	gen := p.SelectionDerivedGen()
 	if a.selectionSizeScanGen[panelID] == gen && a.selectionSizeScanPath[panelID] == path {
 		return
@@ -71,12 +76,17 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 
 	engine, descend, ignore := a.disk.engine, a.config.DiskUsage.DescendIntoMountPoints, a.disk.ignore
 	var meta map[string]localfs.Entry // written by compute, read by post: same goroutine
+	var vanished []string             // likewise
 	a.armSelectionSizeScanDebounce(&a.selectionSizeScanDebounce[panelID], func() []string {
 		if len(offListing) > 0 {
 			meta = make(map[string]localfs.Entry, len(offListing))
 			for _, r := range offListing {
-				if e, err := localfs.EntryFromPath(r); err == nil {
+				e, err := localfs.EntryFromPath(r)
+				switch {
+				case err == nil:
 					meta[r] = e
+				case errors.Is(err, fs.ErrNotExist):
+					vanished = append(vanished, r)
 				}
 			}
 		}
@@ -85,20 +95,29 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		}
 		return diskusage.DirectoriesNeedingScan(roots, byPath, listingDev, listingDevValid, engine, descend, ignore)
 	}, func(need []string) {
-		_ = screen.PostEvent(tcell.NewEventInterrupt(selectionScanNeedPayload{PanelID: panelID, Need: need, Meta: meta, Gen: gen}))
+		_ = screen.PostEvent(tcell.NewEventInterrupt(selectionScanNeedPayload{PanelID: panelID, Need: need, Meta: meta, Vanished: vanished, Gen: gen}))
 	})
 }
 
 // applySelectionScanNeed applies the result of a background reconcileSelectionSizeScans pass:
 // starts the actual (already-async) disk-usage walk for whatever still needs scanning, unless
 // the selection has changed again since the scan was computed.
-// Renders and returns true when off-listing metadata was stored (the selection label changes).
+// Selected roots found deleted are deselected with a warning toast. Renders and returns true when
+// that or newly stored off-listing metadata changed the selection label.
 func (a *App) applySelectionScanNeed(d selectionScanNeedPayload) bool {
 	p := a.panelByID(d.PanelID)
 	if p.SelectionDerivedGen() != d.Gen {
 		return false
 	}
 	changed := false
+	if n := p.RemoveVanishedSelections(d.Vanished); n > 0 {
+		word := "items"
+		if n == 1 {
+			word = "item"
+		}
+		a.setTransientMessage(fmt.Sprintf("Removed %d deleted %s from selection", n, word), ui.MessageUrgencyWarn)
+		changed = true
+	}
 	if len(d.Meta) > 0 {
 		merged := make(map[string]localfs.Entry, len(d.Meta))
 		for _, r := range p.PrunedSelectionRoots() {
@@ -109,8 +128,10 @@ func (a *App) applySelectionScanNeed(d selectionScanNeedPayload) bool {
 			}
 		}
 		p.SetOffListingMeta(merged)
-		a.render()
 		changed = true
+	}
+	if changed {
+		a.render()
 	}
 	if a.disk.engine == nil {
 		return changed

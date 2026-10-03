@@ -74,3 +74,43 @@ func TestReconcileSelectionSizeScansIdempotentFingerprint(t *testing.T) {
 		t.Fatal("fingerprint changed without selection change")
 	}
 }
+
+func TestReconcileSelectionSizeScansRemovesVanishedOffListingSelections(t *testing.T) {
+	dir := t.TempDir()
+	other := t.TempDir()
+	kept := filepath.Join(other, "harvest.txt")
+	gone := filepath.Join(other, "lighthouse.txt")
+	if err := os.WriteFile(kept, []byte("abc"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testAppMinimal(t)
+	app.model.ViewMode = ui.ViewBrowser
+	app.model.Primary = panel.State{
+		Path:          pathloc.MustParse(dir),
+		SelectedPaths: map[string]bool{kept: true, gone: true},
+	}
+	app.model.Message = ""
+
+	app.reconcileSelectionSizeScans(ui.PrimaryPanel)
+	screen := app.screen.(tcell.SimulationScreen)
+	deadline := time.Now().Add(2 * time.Second)
+	for app.model.Primary.SelectedPaths[gone] && time.Now().Before(deadline) {
+		for screen.HasPendingEvent() {
+			if ev, ok := screen.PollEvent().(*tcell.EventInterrupt); ok {
+				app.handleInterruptPayload(ev.Data())
+			}
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	p := &app.model.Primary
+	if p.SelectedPaths[gone] || !p.SelectedPaths[kept] {
+		t.Fatalf("SelectedPaths = %v, want only %s", p.SelectedPaths, kept)
+	}
+	if app.model.Message != "Removed 1 deleted item from selection" {
+		t.Fatalf("Message = %q", app.model.Message)
+	}
+	if e, ok := p.OffListingMetaAt(kept); !ok || e.Size != 3 {
+		t.Fatalf("OffListingMetaAt(kept) = %+v ok=%v", e, ok)
+	}
+}

@@ -185,3 +185,22 @@ func (s State) SelectionListedBytes() int64 {
 func (s State) SelectionHasDirs() bool {
 	return s.selectionHasDirs || len(s.SelectedDirPaths) > 0
 }
+
+// RemoveVanishedSelections deselects paths that no longer exist on disk (detected by the
+// background selection-size Lstat pass) and returns how many were still selected and removed.
+func (s *State) RemoveVanishedSelections(paths []string) int {
+	removed := 0
+	for _, p := range paths {
+		p = cleanPathString(p)
+		if !s.SelectedPaths[p] {
+			continue
+		}
+		s.applySelectionRemove(p, s.SelectedDirPaths[p])
+		s.removePathFromSelectionsStripOrder(p)
+		removed++
+	}
+	if removed > 0 {
+		s.normalizeSelectionsStripCursor()
+	}
+	return removed
+}

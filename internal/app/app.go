@@ -154,6 +154,8 @@ type selectionScanNeedPayload struct {
 	Need    []string
 	// Meta holds Lstat results for selected roots outside the panel's listing.
 	Meta map[string]localfs.Entry
+	// Vanished lists selected roots outside the listing that no longer exist on disk.
+	Vanished []string
 	Gen  uint64
 }
 
@@ -197,7 +199,8 @@ type App struct {
 	gitStatusCache *gitstatus.Cache
 	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.
 	selectionSizeScanFP [2]string
-	// selectionSizeScanGen / selectionSizeScanPath skip reconcile work when selection-derived input is unchanged.
+	// selectionSizeScanGen / selectionSizeScanPath (path + listing epoch) skip reconcile work when
+	// selection-derived input is unchanged.
 	selectionSizeScanGen  [2]uint64
 	selectionSizeScanPath [2]string
 	// selectionSizeScanDebounce defers the per-directory mount-exclusion stat check (which
