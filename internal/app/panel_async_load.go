@@ -299,13 +299,7 @@ func (a *App) applyOnePanelAsyncLoad(p panelAsyncLoadPayload) bool {
 		}
 		return true
 	}
-	var prefetched []string
-	for id, r := range p.res.treeChildren {
-		if r.Err == nil {
-			prefetched = append(prefetched, id)
-		}
-	}
-	a.startTreeChildDiskScans(p.panelID, prefetched)
+	a.startPrefetchedTreeDiskScans(p.panelID, p.res.treeChildren)
 	if p.req.SyncHistoryHead && pan.HistoryIndex == 0 && len(pan.History) > 0 {
 		pan.History[0] = pan.PathString()
 	}

@@ -56,8 +56,8 @@ func TestApplyListingPrefetchedRestoresNestedExpansionsWithoutAsyncLoads(t *test
 		t.Error("ScheduleTreeChildLoad called despite prefetched children")
 		return true
 	}
-	if got := s.treePrefetchIDs(s.Path); len(got) != 2 {
-		t.Fatalf("treePrefetchIDs = %v, want meadow and harbor", got)
+	if got := s.TreePrefetchIDs(s.Path); len(got) != 2 {
+		t.Fatalf("TreePrefetchIDs = %v, want meadow and harbor", got)
 	}
 	be, _, _, _, err := FetchListing(context.Background(), s.ListingRefreshSnapshot(s.Path, 0))
 	if err != nil {
@@ -107,5 +107,38 @@ func TestApplyListingPrefetchedErrorCollapsesDirectory(t *testing.T) {
 	// beacon, meadow, harbor (collapsed), lantern
 	if got := s.VisibleEntryCount(); got != 4 {
 		t.Fatalf("VisibleEntryCount = %d, want 4", got)
+	}
+}
+
+func TestApplyPeriodicRefreshPrefetchedRestoresNestedExpansionsWithoutAsyncLoads(t *testing.T) {
+	root, meadow, harbor := prefetchTestTree(t)
+	s, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.SetListLayout(ListLayoutTree, 10)
+	s.TreeExpanded = map[string]bool{meadow: true, harbor: true}
+	s.ScheduleTreeChildLoad = func(TreeChildLoadRequest) bool {
+		t.Error("ScheduleTreeChildLoad called despite prefetched children")
+		return true
+	}
+	if err := os.WriteFile(filepath.Join(root, "orchard.txt"), []byte("z"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	be, _, _, _, err := FetchListing(context.Background(), s.ListingRefreshSnapshot(s.Path, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefetch := map[string]TreePrefetchResult{
+		meadow: prefetchTestChildren(t, &s, meadow),
+		harbor: prefetchTestChildren(t, &s, harbor),
+	}
+	applied, err := s.ApplyPeriodicRefresh(s.Path, be, 10, nil, prefetch)
+	if err != nil || !applied {
+		t.Fatalf("ApplyPeriodicRefresh = %v, %v", applied, err)
+	}
+	// beacon, orchard, meadow, harbor, willow, lantern
+	if got := s.VisibleEntryCount(); got != 6 {
+		t.Fatalf("VisibleEntryCount = %d, want 6", got)
 	}
 }

@@ -45,10 +45,10 @@ type TreePrefetchResult struct {
 	Err     error
 }
 
-// treePrefetchIDs returns the expanded directories under loc that ApplyListingPrefetched will
+// TreePrefetchIDs returns the expanded directories under loc that ApplyListingPrefetched will
 // re-expand (the same expanded set it picks: live TreeExpanded on a same-directory reload,
 // otherwise the recall snapshot), restricted to those whose ancestors up to loc are all expanded.
-func (s *State) treePrefetchIDs(loc pathloc.Path) []string {
+func (s *State) TreePrefetchIDs(loc pathloc.Path) []string {
 	if s.ListLayout != ListLayoutTree {
 		return nil
 	}

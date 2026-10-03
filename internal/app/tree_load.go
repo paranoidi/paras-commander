@@ -197,3 +197,15 @@ func (a *App) startTreeChildDiskScans(panelID int, dirIDs []string) {
 			listingVolumeGateForScan(pan, a.config.DiskUsage.DescendIntoMountPoints))
 	}
 }
+
+// startPrefetchedTreeDiskScans is startTreeChildDiskScans for the successfully prefetched
+// directories of an applied listing.
+func (a *App) startPrefetchedTreeDiskScans(panelID int, children map[string]panel.TreePrefetchResult) {
+	var ids []string
+	for id, r := range children {
+		if r.Err == nil {
+			ids = append(ids, id)
+		}
+	}
+	a.startTreeChildDiskScans(panelID, ids)
+}

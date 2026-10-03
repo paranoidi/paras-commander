@@ -403,9 +403,11 @@ func (s *State) RefreshOrNavigateToExistingAncestorWithHook(viewportRows int, on
 	return err
 }
 
-// ApplyPeriodicRefresh commits a same-directory listing when content changed.
+// ApplyPeriodicRefresh commits a same-directory listing when content changed. prefetch carries
+// already-fetched child listings for the remembered tree expansions (see TreePrefetchIDs) so the
+// tree re-expands in the same apply instead of cascading one async load per directory.
 // Selection is restored by name (else prior index). Scroll centers when the restore would move the viewport.
-func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, viewportRows int, probes *PathProbes) (bool, error) {
+func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, viewportRows int, probes *PathProbes, prefetch map[string]TreePrefetchResult) (bool, error) {
 	if fsbackend.EntriesListingEqual(backendEntries, BackendEntriesFromPanel(s.Entries)) {
 		return false, nil
 	}
@@ -415,7 +417,7 @@ func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []f
 	if ok {
 		selectedName = entry.Name
 	}
-	if err := s.ApplyListingWithProbes(listingLoc, backendEntries, selectedName, viewportRows, priorCursor, false, probes); err != nil {
+	if err := s.ApplyListingPrefetched(listingLoc, backendEntries, selectedName, viewportRows, priorCursor, false, probes, prefetch); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -1360,7 +1362,7 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 			OnApplied:            remote.onApplied,
 			SyncHistoryHead:      remote.syncHistoryHead,
 			ListingEpoch:         s.ListingEpoch,
-			TreePrefetch:         s.treePrefetchIDs(loc),
+			TreePrefetch:         s.TreePrefetchIDs(loc),
 			HistoryVisit:         remote.historyVisit,
 			HistoryPath:          remote.historyPath,
 		}) {

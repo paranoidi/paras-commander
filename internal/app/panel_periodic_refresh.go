@@ -26,6 +26,7 @@ type panelRefreshApplyPayload struct {
 	DotfilesHiddenActive bool
 	ListingEpoch         uint64
 	Probes               *panel.PathProbes
+	TreeChildren         map[string]panel.TreePrefetchResult
 }
 
 func (a *App) runPanelRefreshTicker(interval time.Duration, stop <-chan struct{}) {
@@ -72,7 +73,9 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 	if !a.panelRefreshInFlight[panelID].CompareAndSwap(false, true) {
 		return
 	}
-	snap := p.ListingRefreshSnapshot(p.Path, time.Duration(a.config.SFTP.ListTimeoutSecs)*time.Second)
+	timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
+	snap := p.ListingRefreshSnapshot(p.Path, timeout)
+	prefetch := p.TreePrefetchIDs(p.Path)
 	path := p.Path
 	epoch := p.ListingEpoch
 	baseline := panel.BackendEntriesFromPanel(p.Entries)
@@ -96,6 +99,14 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 			return
 		}
 		probes := a.probeListingPath(listingLoc)
+		// The apply re-roots the tree, so fetch the remembered expansions now (same budget rule as
+		// raceAsyncListingFetch) and the refreshed tree lands in one paint.
+		var children map[string]panel.TreePrefetchResult
+		if len(prefetch) > 0 {
+			if wait := (timeout - time.Since(start)) / treePrefetchBudgetDivisor; wait > 0 {
+				children = prefetchTreeChildren(snap, prefetch, wait)
+			}
+		}
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(panelRefreshApplyPayload{
 			PanelID:              panelID,
 			Path:                 listingLoc,
@@ -104,6 +115,7 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 			DotfilesHiddenActive: dotfilesHiddenActive,
 			ListingEpoch:         epoch,
 			Probes:               probes,
+			TreeChildren:         children,
 		}))
 	}(panelID, snap, path, epoch, baseline)
 }
@@ -124,9 +136,10 @@ func (a *App) applyPanelListingRefresh(p panelRefreshApplyPayload) bool {
 	}
 	pan.GitignoreActive = p.GitignoreActive
 	pan.DotfilesHiddenActive = p.DotfilesHiddenActive
-	dirty, err := pan.ApplyPeriodicRefresh(p.Path, p.Entries, a.panelViewportRows(p.PanelID), p.Probes)
+	dirty, err := pan.ApplyPeriodicRefresh(p.Path, p.Entries, a.panelViewportRows(p.PanelID), p.Probes, p.TreeChildren)
 	if err != nil {
 		return false
 	}
+	a.startPrefetchedTreeDiskScans(p.PanelID, p.TreeChildren)
 	return dirty
 }
