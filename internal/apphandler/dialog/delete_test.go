@@ -3,6 +3,7 @@ package dialog
 import (
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -75,5 +76,21 @@ func TestDeleteDialogOpenExcludesDanglingDirs(t *testing.T) {
 				t.Fatalf("deleteDialogOpen() = %v, want %v", got, tt.wantOpen)
 			}
 		})
+	}
+}
+
+func TestApplyDeleteDialogScanNeedNotJobFiltered(t *testing.T) {
+	t.Parallel()
+	s := newSnapshotHarness(t, true)
+	s.h.diskUsage = diskusage.New()
+	s.h.OpenDeleteDialog(&s.h.model.Primary)
+	p := s.h.host.ActivePanel()
+	s.h.ApplyDeleteDialogScanNeed(DeleteDialogScanNeedPayload{
+		Need: []string{s.dir},
+		Gen:  p.SelectionDerivedGen(),
+		Path: p.PathString(),
+	})
+	if s.h.deleteDialogScanFP == "" {
+		t.Fatal("scan need was dropped; summary would stay pending")
 	}
 }

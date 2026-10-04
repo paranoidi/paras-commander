@@ -59,7 +59,6 @@ func (f *identityTestHost) ActiveViewportRows() int                     { return
 func (f *identityTestHost) PanelViewportRows(int) int                   { return 20 }
 func (f *identityTestHost) SelectionsStripViewportRows(int) int         { return 0 }
 func (f *identityTestHost) PathVolumeContendsWithActiveJob(string) bool { return false }
-func (f *identityTestHost) FilterJobContendedPaths(p []string) []string { return p }
 func (f *identityTestHost) ClearTransientMessage()                      {}
 func (f *identityTestHost) Config() config.Config                       { return f.cfg }
 func (f *identityTestHost) Styles() theme.Theme                         { return theme.Default() }

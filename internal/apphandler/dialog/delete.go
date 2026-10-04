@@ -167,10 +167,10 @@ func (h *Handler) ApplyDeleteDialogScanNeed(d DeleteDialogScanNeedPayload) {
 	if p.SelectionDerivedGen() != d.Gen || p.PathString() != d.Path {
 		return
 	}
-	// Skip directories on a volume an unfinished job is already saturating; the next
-	// selection change reconciles again.
-	need := h.host.FilterJobContendedPaths(d.Need)
-	fp := strings.Join(need, "\n")
+	// The delete confirmation is an explicit request, so job-volume contention filtering
+	// (used by passive scans) deliberately doesn't apply; filtering would leave the summary
+	// pending forever while a job is queued.
+	fp := strings.Join(d.Need, "\n")
 	if fp == "" {
 		h.deleteDialogScanFP = ""
 		h.RefreshDeleteDialogSummary()
@@ -181,7 +181,7 @@ func (h *Handler) ApplyDeleteDialogScanNeed(d DeleteDialogScanNeedPayload) {
 	}
 	h.deleteDialogScanFP = fp
 	h.diskUsage.StartScanFromListing(
-		need,
+		d.Need,
 		h.diskUsageIgnore,
 		h.model.ActivePanel,
 		diskusage.ListingVolumeGate{},
