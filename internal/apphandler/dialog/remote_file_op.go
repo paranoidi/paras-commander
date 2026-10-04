@@ -84,6 +84,7 @@ type flattenProbeApply struct {
 	dest        string
 	removeEmpty bool
 	dirRoots    []string
+	deferred    []string
 	nSelf       int
 }
 
@@ -243,8 +244,9 @@ func (h *Handler) startRemoteFlattenProbe(st flattenProbeApply, destLoc pathloc.
 	screen := h.screen
 	backend := h.testRemote
 	go func() {
-		sources, nSelf, err := remoteCollectFlattenAndSelfTarget(backend, roots, destLoc, recursive)
+		sources, deferred, nSelf, err := remoteCollectFlattenAndSelfTarget(backend, roots, destLoc, recursive)
 		st.sources = sources
+		st.deferred = deferred
 		st.nSelf = nSelf
 		if screen == nil {
 			return
@@ -378,23 +380,23 @@ func remoteSelfTargetAndDestDir(backend fsbackend.Backend, sources []pathloc.Pat
 	return nSelf, destIsDir
 }
 
-func remoteCollectFlattenAndSelfTarget(backend fsbackend.Backend, roots []pathloc.Path, dest pathloc.Path, recursive bool) ([]string, int, error) {
+func remoteCollectFlattenAndSelfTarget(backend fsbackend.Backend, roots []pathloc.Path, dest pathloc.Path, recursive bool) ([]string, []string, int, error) {
 	if backend != nil {
 		if len(roots) > 0 {
 			_, _ = backend.List(context.Background(), roots[0])
 		}
 		nSelf, _ := remoteSelfTargetAndDestDir(backend, roots, dest, true)
-		return nil, nSelf, nil
+		return nil, nil, nSelf, nil
 	}
-	sources, err := ops.CollectFlattenSources(context.Background(), roots, dest, recursive)
+	sources, deferred, err := ops.CollectFlattenSources(context.Background(), roots, dest, recursive)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, 0, err
 	}
 	srcLocs := make([]pathloc.Path, len(sources))
 	for i, src := range sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	return sources, ops.SelfTargetCount(srcLocs, dest, true), nil
+	return sources, deferred, ops.SelfTargetCount(srcLocs, dest, true), nil
 }
 
 func selfTargetCountWithDestDir(sources []pathloc.Path, destDir pathloc.Path, flatDestNames, destIsDir bool) int {
@@ -480,11 +482,26 @@ func (h *Handler) finishTransferEnqueue(st transferProbeApply, nSelf int, destIs
 }
 
 func (h *Handler) finishFlattenEnqueue(st flattenProbeApply) {
-	if len(st.sources) == 0 {
+	if len(st.sources) == 0 && len(st.deferred) == 0 {
 		h.host.SetTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
 		return
 	}
-	if st.nSelf > 0 {
+	if len(st.deferred) > 0 {
+		if !st.removeEmpty {
+			h.host.SetTransientMessage("An item named like its folder can't replace it unless empty dirs are removed", ui.MessageUrgencyWarn)
+			return
+		}
+		seen := make(map[string]bool, len(st.deferred))
+		for _, d := range st.deferred {
+			base := pathloc.MustParse(d).Base()
+			if seen[base] {
+				h.host.SetTransientMessage("Several items would replace the same folder", ui.MessageUrgencyWarn)
+				return
+			}
+			seen[base] = true
+		}
+	}
+	if len(st.sources) > 0 && st.nSelf > 0 {
 		if len(st.sources) > 1 {
 			h.host.SetTransientMessage("Cannot flatten when some items would overwrite themselves", ui.MessageUrgencyWarn)
 			return
@@ -496,12 +513,13 @@ func (h *Handler) finishFlattenEnqueue(st flattenProbeApply) {
 	h.host.ActivePanel().ClearSelection()
 	h.jobs.AddFlattenJob(jobsctrl.FlattenJobRequest{
 		Sources: st.sources, Dest: st.dest, RemoveEmpty: st.removeEmpty, FlattenRoots: st.dirRoots,
+		Deferred: st.deferred,
 	})
 	noun := "items"
-	if len(st.sources) == 1 {
+	if len(st.sources)+len(st.deferred) == 1 {
 		noun = "item"
 	}
-	h.host.SetTransientMessage(fmt.Sprintf("Flatten queued (%d %s)", len(st.sources), noun), ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(fmt.Sprintf("Flatten queued (%d %s)", len(st.sources)+len(st.deferred), noun), ui.MessageUrgencyInfo)
 }
 
 func selectedPanelSources(p *panel.State) []string {

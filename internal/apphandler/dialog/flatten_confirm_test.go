@@ -224,3 +224,60 @@ func TestConfirmFlattenStaleDialogCloseDropsResult(t *testing.T) {
 		t.Fatalf("stale probe queued %d jobs, want 0", n)
 	}
 }
+
+func TestConfirmFlattenRootNamedItem(t *testing.T) {
+	cases := []struct {
+		name        string
+		files       []string
+		removeEmpty bool
+		wantMsg     string
+		wantJobs    int
+	}{
+		{"queued with remove-empty", []string{"orchid", "willow.txt"}, true, "", 1},
+		{"refused without remove-empty", []string{"orchid", "willow.txt"}, false, "An item named like its folder can't replace it unless empty dirs are removed", 0},
+		{"refused on duplicate names", []string{"cedar/orchid", "maple/orchid"}, true, "Several items would replace the same folder", 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			root := filepath.Join(dir, "orchid")
+			for _, f := range tc.files {
+				p := filepath.Join(root, f)
+				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			h, screen, jobState := newFlattenConfirmHarness(t, dir)
+			h.model.FlattenDialog = uidialog.FlattenDialogState{
+				Open:        true,
+				Destination: uidialog.FileDialogField{Value: dir},
+				Recursive:   true,
+				RemoveEmpty: tc.removeEmpty,
+				DirRoots:    []string{root},
+			}
+			h.confirmFlatten()
+			h.ApplyRemoteFileOp(waitRemoteFileOp(t, screen))
+
+			all := jobState.AllJobs()
+			if len(all) != tc.wantJobs {
+				t.Fatalf("jobs = %d, want %d", len(all), tc.wantJobs)
+			}
+			if tc.wantJobs == 1 && len(all[0].FlattenDeferred) != 1 {
+				t.Fatalf("deferred = %v, want 1 item", all[0].FlattenDeferred)
+			}
+			if tc.wantMsg == "" {
+				return
+			}
+			if !h.model.FlattenDialog.Open {
+				t.Fatal("dialog should stay open after refusal")
+			}
+			msgs := h.host.(*identityTestHost).messages
+			if len(msgs) == 0 || msgs[len(msgs)-1] != tc.wantMsg {
+				t.Fatalf("messages = %q, want last %q", msgs, tc.wantMsg)
+			}
+		})
+	}
+}

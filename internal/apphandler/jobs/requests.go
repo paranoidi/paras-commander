@@ -17,4 +17,5 @@ type FlattenJobRequest struct {
 	Dest         string
 	RemoveEmpty  bool
 	FlattenRoots []string
+	Deferred     []string
 }

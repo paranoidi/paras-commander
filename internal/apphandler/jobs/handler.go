@@ -1201,6 +1201,11 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
+	deferredLocs, err := pathloc.ParseAll(req.Deferred)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
+		return
+	}
 	job := &jobs.Job{
 		ID:                 jobs.NewJobID(),
 		Type:               jobs.TypeFlatten,
@@ -1210,6 +1215,7 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		DestIsDir:          ops.DestinationIsDirAtEnqueue(destLoc),
 		FlattenRemoveEmpty: req.RemoveEmpty,
 		FlattenRoots:       rootLocs,
+		FlattenDeferred:    deferredLocs,
 	}
 	h.commitJob(job)
 }

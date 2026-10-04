@@ -565,8 +565,8 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		doneFiles, doneBytes, err = ops.ExecuteCopyFrom(tc.ctx, tc.planSource(), job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeMove, jobs.TypeFlatten:
 		doneFiles, doneBytes, err = ops.ExecuteMoveFrom(tc.ctx, tc.planSource(), job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		if err == nil && job.Type == jobs.TypeFlatten && job.FlattenRemoveEmpty {
-			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, job.FlattenRoots); cleanErr != nil {
+		if err == nil && job.Type == jobs.TypeFlatten && (job.FlattenRemoveEmpty || len(job.FlattenDeferred) > 0) {
+			if cleanErr := ops.FinishFlattenDeferred(tc.ctx, job.FlattenDeferred, job.Destination, job.FlattenRoots, job.FlattenRemoveEmpty); cleanErr != nil {
 				err = cleanErr
 			}
 		}

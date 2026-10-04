@@ -57,7 +57,7 @@ func TestCollectFlattenSourcesImmediate(t *testing.T) {
 	}
 	rootLoc := pathloc.MustParse(root)
 	destLoc := pathloc.MustParse(dest)
-	got, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
+	got, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestCollectFlattenSourcesExpandsSameNameNestedDir(t *testing.T) {
 	}
 	rootLoc := pathloc.MustParse(root)
 	destLoc := pathloc.MustParse(dest)
-	got, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
+	got, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestCollectFlattenSourcesExpandsDeepSameNameChain(t *testing.T) {
 	}
 	rootLoc := pathloc.MustParse(root)
 	destLoc := pathloc.MustParse(dest)
-	got, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
+	got, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestFlattenSameNameNestedDirMove(t *testing.T) {
 	}
 	rootLoc := pathloc.MustParse(root)
 	destLoc := pathloc.MustParse(dest)
-	sources, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
+	sources, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestCollectFlattenSourcesRecursive(t *testing.T) {
 	}
 	rootLoc := pathloc.MustParse(root)
 	destLoc := pathloc.MustParse(dest)
-	got, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, true)
+	got, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +223,7 @@ func TestCollectFlattenSourcesHonorsCancelOnLargeTree(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	SetCollectFlattenTestHook(func(context.Context) { cancel() })
 	t.Cleanup(func() { SetCollectFlattenTestHook(nil) })
-	_, err := CollectFlattenSources(ctx, []pathloc.Path{pathloc.MustParse(root)}, pathloc.MustParse(dest), true)
+	_, _, err := CollectFlattenSources(ctx, []pathloc.Path{pathloc.MustParse(root)}, pathloc.MustParse(dest), true)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v, want context.Canceled", err)
 	}
@@ -302,12 +302,85 @@ func TestCollectFlattenSourcesIncludesDotfiles(t *testing.T) {
 		{false, []string{filepath.Join(root, ".oscar"), filepath.Join(root, ".papa")}},
 		{true, []string{filepath.Join(root, ".oscar", "quebec.txt"), filepath.Join(root, ".papa")}},
 	} {
-		got, err := CollectFlattenSources(context.Background(), roots, destLoc, tc.recursive)
+		got, _, err := CollectFlattenSources(context.Background(), roots, destLoc, tc.recursive)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !slices.Equal(got, tc.want) {
 			t.Fatalf("recursive=%v: sources = %v, want %v", tc.recursive, got, tc.want)
 		}
+	}
+}
+
+func flattenDeferredFixture(t *testing.T, recursive bool) (dir string, rootLoc, destLoc pathloc.Path) {
+	t.Helper()
+	dir = t.TempDir()
+	root := filepath.Join(dir, "lantern")
+	inner := root
+	if recursive {
+		inner = filepath.Join(root, "meadow")
+	}
+	if err := os.MkdirAll(inner, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range map[string]string{"lantern": "same-name", "pebble": "sibling"} {
+		if err := os.WriteFile(filepath.Join(inner, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir, pathloc.MustParse(root), pathloc.MustParse(dir)
+}
+
+func TestCollectFlattenSourcesDefersRootNamedItem(t *testing.T) {
+	t.Parallel()
+	for _, recursive := range []bool{false, true} {
+		dir, rootLoc, destLoc := flattenDeferredFixture(t, recursive)
+		sources, deferred, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, recursive)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(sources) != 1 || filepath.Base(sources[0]) != "pebble" {
+			t.Fatalf("recursive=%v sources = %v, want only pebble", recursive, sources)
+		}
+		if len(deferred) != 1 || filepath.Base(deferred[0]) != "lantern" {
+			t.Fatalf("recursive=%v deferred = %v, want the lantern file", recursive, deferred)
+		}
+
+		// Simulate the main move, then finish.
+		if err := os.Rename(sources[0], filepath.Join(dir, "pebble")); err != nil {
+			t.Fatal(err)
+		}
+		// Pre-existing temp name forces the numbered fallback.
+		if err := os.WriteFile(filepath.Join(dir, "lantern.flatten"), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		def := []pathloc.Path{pathloc.MustParse(deferred[0])}
+		if err := FinishFlattenDeferred(context.Background(), def, destLoc, []pathloc.Path{rootLoc}, true); err != nil {
+			t.Fatal(err)
+		}
+		got, err := os.ReadFile(filepath.Join(dir, "lantern"))
+		if err != nil || string(got) != "same-name" {
+			t.Fatalf("recursive=%v lantern = %q, %v", recursive, got, err)
+		}
+		if _, err := os.Stat(filepath.Join(dir, "lantern.1.flatten")); !os.IsNotExist(err) {
+			t.Fatalf("recursive=%v temp left behind: %v", recursive, err)
+		}
+	}
+}
+
+func TestFinishFlattenDeferredKeepsTempWhenRootRemains(t *testing.T) {
+	t.Parallel()
+	dir, rootLoc, destLoc := flattenDeferredFixture(t, false)
+	_, deferred, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// pebble stays in the root, so the root is not removed.
+	err = FinishFlattenDeferred(context.Background(), []pathloc.Path{pathloc.MustParse(deferred[0])}, destLoc, []pathloc.Path{rootLoc}, true)
+	if err == nil {
+		t.Fatal("want error naming the temp path")
+	}
+	if got, rerr := os.ReadFile(filepath.Join(dir, "lantern.flatten")); rerr != nil || string(got) != "same-name" {
+		t.Fatalf("temp = %q, %v", got, rerr)
 	}
 }

@@ -134,6 +134,8 @@ type Job struct {
 	FlattenRemoveEmpty bool
 	// FlattenRoots are the selected directory roots for flatten cleanup (TypeFlatten only).
 	FlattenRoots []pathloc.Path
+	// FlattenDeferred are items whose final name equals a flatten root; moved last (TypeFlatten only).
+	FlattenDeferred []pathloc.Path
 
 	// DeleteRemoveEmptyDirs enables post-delete removal of directories left empty
 	// under the parent directories of Sources (TypeDelete only).
@@ -220,6 +222,7 @@ func (j *Job) RetryClone() *Job {
 		TotalFiles:            totalFiles,
 		FlattenRemoveEmpty:    j.FlattenRemoveEmpty,
 		FlattenRoots:          j.FlattenRoots,
+		FlattenDeferred:       j.FlattenDeferred,
 		DeleteRemoveEmptyDirs: j.DeleteRemoveEmptyDirs,
 		PromptDanglingDirs:    j.PromptDanglingDirs,
 		PreservePermissions:   j.PreservePermissions,
