@@ -16,6 +16,8 @@ const (
 	// HelpSelectionsStrip is only a leader-menu scope (leaderMenuViewSpecs): no ActionSpec.Views
 	// is tagged with it and it is not in helpAllViews.
 	HelpSelectionsStrip
+	// HelpFindDialog is only a leader-menu scope (leaderMenuViewSpecs), like HelpSelectionsStrip.
+	HelpFindDialog
 )
 
 // Tagging shorthands for DefaultActionSpecs.
@@ -1029,6 +1031,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFindView,
+			LeaderKey:    "v",
 			Title:        "View",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
@@ -1037,6 +1040,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFindUnselectAll,
+			LeaderKey:    "U",
 			Title:        "Unselect all",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
@@ -1045,6 +1049,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFindSelectAll,
+			LeaderKey:    "a",
 			Title:        "Select all",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
@@ -1053,6 +1058,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFindSelectGroup,
+			LeaderKey:    "g",
 			Title:        "Select group",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
@@ -1061,6 +1067,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFindUnselectGroup,
+			LeaderKey:    "u",
 			Title:        "Unselect group",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
@@ -1069,6 +1076,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFindSelectParentDirs,
+			LeaderKey:    "p",
 			Title:        "Select parent dirs",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
@@ -1085,6 +1093,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionOpenInPrimary,
+			LeaderKey:    "l",
 			Title:        "Open in primary panel",
 			Section:      "Panels",
 			Views:        HelpDedup,
@@ -1094,6 +1103,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionOpenInSecondary,
+			LeaderKey:    "o",
 			Title:        "Open in secondary panel",
 			Section:      "Panels",
 			Views:        HelpDedup,

@@ -1329,3 +1329,33 @@ func TestFindDialogScopedMenuUsesPanel(t *testing.T) {
 	}
 	app.findCtrl.CloseDialog()
 }
+
+func TestFindDialogColonOpensFindMenu(t *testing.T) {
+	root := t.TempDir()
+	for _, n := range []string{"alpha.txt", "beta.txt"} {
+		if err := os.WriteFile(filepath.Join(root, n), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
+	waitFindIndexDone(t, app)
+
+	queryBefore := app.model.FindDialog.Query
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("':' in the find dialog should open the Find menu")
+	}
+	if app.model.FindDialog.Query != queryBefore {
+		t.Fatalf("query = %q, want unchanged %q", app.model.FindDialog.Query, queryBefore)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
+	if app.model.LeaderMenu.Open {
+		t.Fatal("leader menu should close after choosing an entry")
+	}
+	if len(app.model.FindDialog.MarkedPaths) != 2 {
+		t.Fatalf("select all marks = %v", app.model.FindDialog.MarkedPaths)
+	}
+}

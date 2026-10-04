@@ -1255,7 +1255,17 @@ func (h *Handler) tryFindDialogActionKey(event *tcell.EventKey) bool {
 	if !ok {
 		return false
 	}
+	return h.RunAction(id)
+}
+
+// RunAction runs a find-dialog action by ID (key bindings and the Find leader menu).
+// Returns false when id is not a find-dialog action.
+func (h *Handler) RunAction(id string) bool {
 	switch id {
+	case keymap.ActionPanelSelectToggle:
+		h.findDialogToggleSelectionAndAdvance()
+	case keymap.ActionPanelPinToggle:
+		h.findDialogPinToggleCursor()
 	case keymap.ActionFindView:
 		h.OpenSelectedFullscreenPreview()
 	case keymap.ActionFindUnselectAll:

@@ -159,6 +159,25 @@ func (a *App) openBuiltinLeaderMenu() {
 	a.openLeaderMenuDispatch(items, actions, false, false, prefix, a.dispatchActionLikeKeyboardShortcut)
 }
 
+// openFindLeaderMenu opens the `:` leader menu scoped to the find dialog.
+func (a *App) openFindLeaderMenu() {
+	if a.keys == nil {
+		return
+	}
+	entries := a.keys.LeaderMenuEntriesForView(keymap.HelpFindDialog)
+	if len(entries) == 0 {
+		a.setTransientMessage("Find menu: no entries configured", ui.MessageUrgencyWarn)
+		return
+	}
+	items, actions := a.buildLeaderMenuItems(entries)
+	a.openLeaderMenuDispatch(items, actions, false, false, "Find menu", func(id string) bool {
+		if a.findCtrl.RunAction(id) {
+			return false
+		}
+		return a.dispatchActionLikeKeyboardShortcut(id)
+	})
+}
+
 // openViewLeaderMenu opens the `:` leader menu scoped to the current auxiliary view's own
 // actions (Compare, Dedup, Jobs, Commands, Messages), built from
 // keymap.Bundle.LeaderMenuEntriesForView. Activation reuses activateHelpAction — the same

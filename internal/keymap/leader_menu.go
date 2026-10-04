@@ -27,6 +27,7 @@ const (
 	LeaderMenuGroupTree       = "Tree"
 	LeaderMenuGroupDuplicates = "Duplicates"
 	LeaderMenuGroupSelections = "Selections"
+	LeaderMenuGroupFind       = "Find"
 )
 
 // leaderMenuGroupColumn assigns each group to a macro column
@@ -130,6 +131,25 @@ type leaderMenuViewSpec struct {
 // (ActionAppUserMenu) only opens from the browser view, so it is omitted from every per-view
 // menu rather than listed as a dead entry.
 var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
+	HelpFindDialog: {
+		order: []string{LeaderMenuGroupFind, LeaderMenuGroupSelection, LeaderMenuGroupApp},
+		actions: map[string][]string{
+			LeaderMenuGroupFind: {ActionFindView, ActionOpenInPrimary, ActionOpenInSecondary, ActionPanelPinToggle},
+			LeaderMenuGroupSelection: {
+				ActionFindSelectAll,
+				ActionFindUnselectAll,
+				ActionFindSelectGroup,
+				ActionFindUnselectGroup,
+				ActionFindSelectParentDirs,
+			},
+			LeaderMenuGroupApp: {ActionAppQuit},
+		},
+		column: map[string]int{
+			LeaderMenuGroupFind:      0,
+			LeaderMenuGroupSelection: 1,
+			LeaderMenuGroupApp:       2,
+		},
+	},
 	HelpSelectionsStrip: {
 		order: []string{LeaderMenuGroupSelections, LeaderMenuGroupFile, LeaderMenuGroupApp},
 		actions: map[string][]string{

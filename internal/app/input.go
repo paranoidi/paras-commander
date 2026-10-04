@@ -76,12 +76,12 @@ func (a *App) inputMode() InputMode {
 		return InputModeGroupSelect
 	case a.model.FilterDialog.Open:
 		return InputModeFilterDialog
+	case a.model.LeaderMenu.Open:
+		return InputModeLeaderMenu
 	case a.model.FindDialog.Open:
 		return InputModeFindDialog
 	case a.model.MetaDialog.Open:
 		return InputModeMetaDialog
-	case a.model.LeaderMenu.Open:
-		return InputModeLeaderMenu
 	case a.model.HelpView.Open:
 		return InputModeHelpView
 	case a.model.ThemeDialog.Open:
@@ -712,6 +712,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 
 	switch mode {
 	case InputModeFindDialog:
+		if resolvedAction == keymap.ActionAppLeaderMenu {
+			a.openFindLeaderMenu()
+			a.render()
+			return false, true
+		}
 		wasOpen := a.model.FindDialog.Open
 		gsWasOpen := a.model.GroupSelect.Open
 		primaryPath := a.model.Primary.PathString()

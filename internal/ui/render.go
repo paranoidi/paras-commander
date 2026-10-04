@@ -487,21 +487,24 @@ func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (tit
 
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
 // styles because a menu or modal has taken focus. The leader menu (Esc built-in / F2 user menu)
-// is excluded: it docks above the footer without taking over navigation context, so the
-// active/inactive panel distinction must stay visible underneath it.
+// on its own is excluded: it docks above the footer without taking over navigation context, so the
+// active/inactive panel distinction must stay visible underneath it. A leader menu opened over
+// another modal (e.g. the find dialog's Find menu) keeps that modal's blocked chrome.
 func (m *Model) PanelsChromeBlocked() bool {
-	if m.Menu.Open {
-		return true
-	}
-	return m.ModalDialogOpen() && !m.LeaderMenu.Open
+	return m.Menu.Open || m.nonLeaderModalOpen()
 }
 
 // ModalDialogOpen reports modals that block normal navigation and hide the menu bar row.
 func (m *Model) ModalDialogOpen() bool {
+	return m.LeaderMenu.Open || m.nonLeaderModalOpen()
+}
+
+// nonLeaderModalOpen is ModalDialogOpen minus the leader menu.
+func (m *Model) nonLeaderModalOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false

@@ -2175,3 +2175,15 @@ func TestRenderOmitsGitignoreBottomHintWhenShowHidden(t *testing.T) {
 		t.Fatalf("left bottom = %q, want no gitignore hint when show hidden is on", leftBottom)
 	}
 }
+
+func TestPanelsChromeBlockedLeaderMenuOverModal(t *testing.T) {
+	var m Model
+	m.LeaderMenu.Open = true
+	if m.PanelsChromeBlocked() {
+		t.Fatal("leader menu alone must not block panel chrome")
+	}
+	m.FindDialog.Open = true
+	if !m.PanelsChromeBlocked() {
+		t.Fatal("leader menu over find dialog must keep panel chrome blocked")
+	}
+}
