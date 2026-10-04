@@ -372,7 +372,7 @@ func (s *State) knownSelectionIsDir(path string) (isDir bool, known bool) {
 	return false, false
 }
 
-// StripNavTarget returns the directory to open for a selected strip path and, when
+// StripNavTarget returns the directory latched sync mirrors for a selected strip path and, when
 // the path is a file, the basename to highlight. Type comes from listing or
 // SelectedDirPaths; a selected path that is not marked as a directory is treated
 // as a file. No filepath.Dir / os.Stat — sftp:// URIs stay backend-neutral.

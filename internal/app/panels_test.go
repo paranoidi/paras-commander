@@ -178,15 +178,18 @@ func TestNavigateFromSelectionsStripSFTPDirectory(t *testing.T) {
 	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
 	left.SelectionsStripCursor = 0
 
-	var captured pathloc.Path
+	var captured panel.AsyncLoadRequest
 	left.ScheduleAsyncLoad = func(req panel.AsyncLoadRequest) bool {
-		captured = req.Loc
+		captured = req
 		return true
 	}
 
 	app.navigateFromSelectionsStrip()
-	if captured.String() != dir {
-		t.Fatalf("NavigateTo loc = %q, want sftp directory %q (must not os.Stat / filepath.Dir)", captured.String(), dir)
+	if want := "sftp://user@example.com/"; captured.Loc.String() != want {
+		t.Fatalf("NavigateTo loc = %q, want containing directory %q (must not os.Stat / filepath.Dir)", captured.Loc.String(), want)
+	}
+	if captured.SelectedName != "meadow" {
+		t.Fatalf("SelectedName = %q, want meadow", captured.SelectedName)
 	}
 	if app.model.ActiveSubFocus != ui.SubFocusFileList {
 		t.Fatalf("ActiveSubFocus = %d, want file list", app.model.ActiveSubFocus)

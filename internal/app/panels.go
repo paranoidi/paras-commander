@@ -364,21 +364,26 @@ func (a *App) selectParentDirs() {
 	a.setTransientMessage(message, ui.MessageUrgencyInfo)
 }
 
-// navigateFromSelectionsStrip opens the directory for the highlighted strip path in the active panel
-// (the directory itself if the path is a directory, otherwise its parent) and focuses the file list.
+// navigateFromSelectionsStrip opens the directory containing the highlighted strip path in the
+// active panel, puts the cursor on that entry (file or directory) and focuses the file list.
 func (a *App) navigateFromSelectionsStrip() {
 	p := a.activePanel()
 	selPath, ok := p.SelectedPathAtStripIndex(p.SelectionsStripCursor)
 	if !ok {
 		return
 	}
-	dirLoc, selectName, err := p.StripNavTarget(selPath)
+	loc, err := pathloc.Parse(selPath)
 	if err != nil {
 		a.setErrorMessage("Cannot open path", err)
 		return
 	}
+	dirLoc := loc.Parent()
+	if dirLoc.Equal(loc) || dirLoc.IsZero() {
+		a.setTransientMessage("Cannot open parent of root", ui.MessageUrgencyWarn)
+		return
+	}
 	vr := a.activeViewportRows()
-	if err := p.NavigateToPath(dirLoc, selectName, vr); err != nil {
+	if err := p.NavigateToPath(dirLoc, loc.Base(), vr); err != nil {
 		a.setErrorMessage("Open failed", err)
 		return
 	}
