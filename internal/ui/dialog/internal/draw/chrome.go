@@ -442,22 +442,48 @@ func PaintScrollingInputContent(
 	} else {
 		cursor, scroll = ensureScrollInputVisible(valueLen, cursor, scroll, width, layoutLen)
 	}
-	lay := ScrollingInputLayoutFor(scroll, width, layoutLen)
+	runeAt := func(idx int) (rune, bool) {
+		switch {
+		case idx >= combinedLen:
+			return ' ', false
+		case idx < cursor:
+			return valueRunes[idx], false
+		case idx < cursor+len(suffixRunes):
+			return suffixRunes[idx-cursor], true
+		default:
+			return valueRunes[idx-len(suffixRunes)], false
+		}
+	}
+	// scroll is a rune index; layout is in terminal cells so 2-cell (CJK) glyphs don't overlap.
+	cellW := func(idx int) int {
+		r, _ := runeAt(idx)
+		return max(1, runewidth.RuneWidth(r))
+	}
+	cells := func(from, to int) int {
+		n := 0
+		for i := from; i < to; i++ {
+			n += cellW(i)
+		}
+		return n
+	}
+	layoutFor := func(scroll int) ScrollingInputLayout {
+		return ScrollingInputLayoutFor(scroll, width, scroll+cells(scroll, layoutLen))
+	}
+	lay := layoutFor(scroll)
+	for scroll < cursor && cells(scroll, cursor+1) > lay.TextCols {
+		scroll++
+		lay = layoutFor(scroll)
+	}
 
-	for i := 0; i < lay.TextCols; i++ {
-		idx := scroll + i
-		ch := ' '
-		ghost := false
-		if idx < combinedLen {
-			switch {
-			case idx < cursor:
-				ch = valueRunes[idx]
-			case idx < cursor+len(suffixRunes):
-				ch = suffixRunes[idx-cursor]
-				ghost = true
-			default:
-				ch = valueRunes[cursor+(idx-cursor-len(suffixRunes))]
+	for idx, col := scroll, 0; col < lay.TextCols; idx++ {
+		ch, ghost := runeAt(idx)
+		w := cellW(idx)
+		if col+w > lay.TextCols {
+			// Wide glyph doesn't fit the last column: pad instead of half-painting it.
+			for ; col < lay.TextCols; col++ {
+				screen.SetContent(x+lay.LeftPad+col, y, ' ', nil, committedStyle)
 			}
+			break
 		}
 		st := committedStyle
 		if ghost {
@@ -470,7 +496,8 @@ func PaintScrollingInputContent(
 				st = committedStyle.Reverse(true)
 			}
 		}
-		screen.SetContent(x+lay.LeftPad+i, y, ch, nil, st)
+		screen.SetContent(x+lay.LeftPad+col, y, ch, nil, st)
+		col += w
 	}
 
 	if lay.LeftPad > 0 {

@@ -87,10 +87,10 @@ func drawMessagesView(
 		if timeShow == "" {
 			timeShow = "        " // align with hh:mm:ss (8 runes)
 		}
-		timeCell := truncateRunes(timeShow+" ", messagesListColTime)
+		timeCell := primitive.TruncateRight(timeShow+" ", messagesListColTime)
 		primitive.Text(screen, contentX, y, messagesListColTime, timeCell, timeStyle)
 
-		shown := truncateRunes(strings.TrimSpace(entry.Text), msgW)
+		shown := primitive.TruncateRight(strings.TrimSpace(entry.Text), msgW)
 		primitive.Text(screen, msgStart, y, msgW, shown, urgStyle)
 	}
 }

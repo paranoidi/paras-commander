@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
@@ -32,5 +33,16 @@ func TestFuzzyPathRowContentMapsHighlightsOntoFittedPath(t *testing.T) {
 	_, spans := fuzzyPathRowContent(line, ranges, 40, tcell.StyleDefault)
 	if len(spans) == 0 {
 		t.Fatal("expected highlight spans on fitted path")
+	}
+}
+
+func TestFuzzyPathRowContentFitsWideGlyphsByCells(t *testing.T) {
+	line := "森の黒魔術/大量の画質/魔術.txt" // 18 runes, 32 cells
+	text, _ := fuzzyPathRowContent(line, nil, 20, tcell.StyleDefault)
+	if w := runewidth.StringWidth(text); w > 20 {
+		t.Fatalf("row %q is %d cells, want <= 20", text, w)
+	}
+	if !strings.HasSuffix(text, "魔術.txt") {
+		t.Fatalf("row %q lost the basename", text)
 	}
 }

@@ -116,7 +116,7 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 		if cmdColW < 1 {
 			cmdColW = 1
 		}
-		cmdShown := truncateRunes(entry.UserCommandLine, cmdColW-1)
+		cmdShown := primitive.TruncateRight(entry.UserCommandLine, cmdColW-1)
 		xCmd := contentX + commandsListColMarker
 		primitive.Text(screen, xCmd, y, cmdColW, cmdShown, lineStyle)
 

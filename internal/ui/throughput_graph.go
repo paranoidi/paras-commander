@@ -136,7 +136,7 @@ func ThroughputDetailLines(strip []float64, width int, running bool) []string {
 	}
 
 	if len(strip) == 0 {
-		return []string{truncateRunes("(collecting samples"+string(primitive.Ellipsis)+")", width)}
+		return []string{primitive.TruncateRight("(collecting samples"+string(primitive.Ellipsis)+")", width)}
 	}
 
 	buckets := jobs.ThroughputChartColumnBuckets(strip, chartCols)

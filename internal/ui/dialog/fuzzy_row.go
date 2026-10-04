@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
@@ -16,7 +17,7 @@ func fuzzyRowContent(line string, ranges []search.Range, width int, matchStyle t
 	orig := []rune(line)
 	var dispStr string
 	switch {
-	case len(orig) <= width:
+	case runewidth.StringWidth(line) <= width:
 		dispStr = line
 	case pathFit:
 		dispStr = primitive.FitPathForWidth(line, width)

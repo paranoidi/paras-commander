@@ -192,15 +192,15 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		}
 		iconIcon := styles.IconJobsList(entry.Status)
 		primitive.Text(screen, contentX, y, jobsListColIcon, iconIcon, iconRenderStyle)
-		line := fmt.Sprintf("%-*s ", jobsListColTypeRunes, truncateRunes(entry.Type, jobsListColTypeRunes))
+		line := fmt.Sprintf("%-*s ", jobsListColTypeRunes, primitive.TruncateRight(entry.Type, jobsListColTypeRunes))
 		primitive.Text(screen, contentX+jobsListColIcon, y, jobsListColTypeCell, line, lineStyle)
 		xStatus := contentX + jobsListColPrefix
-		primitive.Text(screen, xStatus, y, jobsListColStatus, truncateRunes(entry.Status, 9), statusStyle)
+		primitive.Text(screen, xStatus, y, jobsListColStatus, primitive.TruncateRight(entry.Status, 9), statusStyle)
 		xETA := xStatus + jobsListColStatus
-		primitive.Text(screen, xETA, y, jobsListColETA, truncateRunes(eta, 9), lineStyle)
+		primitive.Text(screen, xETA, y, jobsListColETA, primitive.TruncateRight(eta, 9), lineStyle)
 		xSpeed := xETA + jobsListColETA
 		speedLabel := formatJobSpeed(entry, now)
-		primitive.Text(screen, xSpeed, y, jobsListColSpeed, truncateRunes(speedLabel, jobsListColSpeed-1), lineStyle)
+		primitive.Text(screen, xSpeed, y, jobsListColSpeed, primitive.TruncateRight(speedLabel, jobsListColSpeed-1), lineStyle)
 		xProg := xSpeed + jobsListColSpeed
 		barW := rect.X + rect.Width - 1 - xProg // reach the border, no trailing margin
 		if barW < 0 {
@@ -395,12 +395,12 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 		fmt.Sprintf("Status:      %s", j.Status),
 	}
 	if j.Error != "" {
-		lines = append(lines, fmt.Sprintf(prefixError+"%s", truncateMiddle(j.Error, jobsDetailPathBudget(pathMax, prefixError))))
+		lines = append(lines, fmt.Sprintf(prefixError+"%s", primitive.TruncateMiddle(j.Error, jobsDetailPathBudget(pathMax, prefixError))))
 	}
 	if len(j.Warnings) > 0 {
 		lines = append(lines, fmt.Sprintf("Warnings (%d):", len(j.Warnings)))
 		for _, w := range j.Warnings {
-			lines = append(lines, truncateMiddle(w, pathMax))
+			lines = append(lines, primitive.TruncateMiddle(w, pathMax))
 		}
 	}
 	src := "—"
@@ -547,7 +547,7 @@ func formatJobETAFull(j JobEntry, now time.Time) string {
 
 // formatJobETA returns a shortened ETA for the Queue list column (jobsListColETA).
 func formatJobETA(j JobEntry, now time.Time) string {
-	return truncateRunes(formatJobETAFull(j, now), jobsListColETA-1)
+	return primitive.TruncateRight(formatJobETAFull(j, now), jobsListColETA-1)
 }
 
 func formatJobSpeed(j JobEntry, now time.Time) string {
@@ -563,28 +563,4 @@ func formatJobBytes(n int64) string {
 		return fmt.Sprintf("%.1fK", float64(n)/1024)
 	}
 	return fmt.Sprintf("%.1fM", float64(n)/(1024*1024))
-}
-
-func truncateRunes(s string, max int) string {
-	if max <= 0 {
-		return ""
-	}
-	r := []rune(s)
-	if len(r) <= max {
-		return s
-	}
-	if max <= 1 {
-		return string(primitive.Ellipsis)
-	}
-	return string(r[:max-1]) + string(primitive.Ellipsis)
-}
-
-func truncateMiddle(s string, max int) string {
-	r := []rune(s)
-	if len(r) <= max || max <= 3 {
-		return truncateRunes(s, max)
-	}
-	left := max/2 - 1
-	right := max - left - 1
-	return string(r[:left]) + string(primitive.Ellipsis) + string(r[len(r)-right:])
 }
