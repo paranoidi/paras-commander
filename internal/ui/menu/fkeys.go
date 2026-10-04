@@ -164,15 +164,15 @@ func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer, showToggleRa
 // global meaning (open the user-command menu) only in this context.
 func FunctionKeysSelectionsStripView(clearSelectionLabel string) []FunctionKey {
 	out := []FunctionKey{
-		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
-		{Key: tcell.KeyF2, KeyLabel: "F2", Hint: "Parent dirs"},
-		{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "View"},
-		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
+		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
+		{Key: tcell.KeyF2, KeyLabel: "F2", Hint: "Parent dirs", ActionID: keymap.ActionPanelSelectParentDirs},
+		{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "View", ActionID: keymap.ActionFileView},
+		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit", ActionID: keymap.ActionFileEdit},
 	}
 	if clearSelectionLabel != "" {
-		out = append(out, FunctionKey{KeyLabel: clearSelectionLabel, Hint: "Unselect all"})
+		out = append(out, FunctionKey{KeyLabel: clearSelectionLabel, Hint: "Unselect all", ActionID: keymap.ActionPanelClearSelection})
 	}
-	out = append(out, FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
+	out = append(out, FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit})
 	return out
 }
 

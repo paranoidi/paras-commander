@@ -13,6 +13,9 @@ const (
 	HelpCompare
 	HelpDedup
 	HelpFilePreview
+	// HelpSelectionsStrip is only a leader-menu scope (leaderMenuViewSpecs): no ActionSpec.Views
+	// is tagged with it and it is not in helpAllViews.
+	HelpSelectionsStrip
 )
 
 // Tagging shorthands for DefaultActionSpecs.
@@ -278,6 +281,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionPanelOpenSelectionsRoot,
 			Views:        HelpBrowser,
 			Title:        "Go to selections common root",
+			LeaderKey:    "r",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-M-s"},
 			PreferredKey: "C-M-s",
@@ -287,6 +291,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionPanelSelectParentDirs,
 			Views:        HelpBrowser,
 			Title:        "Select parent dirs",
+			LeaderKey:    "p",
 			Section:      "Navigation",
 			PreferredKey: "F2",
 			Keywords:     []string{"selections", "containing", "directories", "parent", "convert", "strip", "F2"},

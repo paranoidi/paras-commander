@@ -666,6 +666,10 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 		a.selectParentDirs()
 	case keymap.ActionPanelToggleSync:
 		return false
+	case keymap.ActionAppLeaderMenu, keymap.ActionPanelSelectParentDirs, keymap.ActionPanelOpenSelectionsRoot,
+		keymap.ActionFileDelete, keymap.ActionFileFlatten, keymap.ActionFileRunForEach:
+		// Handled by dispatch(); they act on the panel selection, which is non-empty here.
+		return false
 	case keymap.ActionPanelViMotionToggle:
 		// Esc (panel.vi-motion-toggle) must still flip vi-motion mode while the strip
 		// is focused — same as the file list. Strip filter Esc cancels the filter first

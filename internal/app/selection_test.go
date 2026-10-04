@@ -419,3 +419,57 @@ func TestSelectionsStripFileViewViaF3(t *testing.T) {
 		t.Fatalf("preview path = %q, want strip file %q", app.model.FullscreenFilePreview.Path, filePath)
 	}
 }
+
+func TestSelectionsStripLeaderMenuParentDirs(t *testing.T) {
+	app, left := setupSelectionsStripFocusTest(t)
+	root := filepath.Dir(left.Path.String())
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("':' with selections strip focused should open the strip menu")
+	}
+	foundParent, foundOpen := false, false
+	for _, it := range app.model.LeaderMenu.Items {
+		foundParent = foundParent || (it.Key == 'p' && it.Label == "Select parent dirs")
+		foundOpen = foundOpen || it.GroupTitle == "Navigation"
+	}
+	if !foundParent || foundOpen {
+		t.Fatalf("items = %+v, want strip-scoped entries", app.model.LeaderMenu.Items)
+	}
+
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
+	if got, _ := left.SelectedPathAtStripIndex(0); got != root {
+		t.Fatalf("strip path after p = %q, want %q", got, root)
+	}
+}
+
+func TestViMotionSelectionsStripLeaderLetters(t *testing.T) {
+	app, left := setupSelectionsStripFocusTest(t)
+	root := filepath.Dir(left.Path.String())
+	app.model.ViMotionMode = true
+
+	got := app.activeFooterKeys()
+	labels := map[string]bool{}
+	for _, fk := range got {
+		labels[fk.KeyLabel] = true
+	}
+	for _, want := range []string{"p", "v", "e", "q", "?"} {
+		if !labels[want] {
+			t.Fatalf("footer labels = %v, missing %q", labels, want)
+		}
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
+	if p, _ := left.SelectedPathAtStripIndex(0); p != root {
+		t.Fatalf("strip path after p = %q, want %q", p, root)
+	}
+}
+
+func TestViMotionSelectionsStripCopyLetter(t *testing.T) {
+	app, _ := setupSelectionsStripFocusTest(t)
+	app.model.ViMotionMode = true
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
+	if !app.model.TransferDialog.Open {
+		t.Fatal("c with selections strip focused in vi-mode should open the copy dialog")
+	}
+}

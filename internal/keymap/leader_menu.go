@@ -26,6 +26,7 @@ const (
 	LeaderMenuGroupMessages   = "Messages"
 	LeaderMenuGroupTree       = "Tree"
 	LeaderMenuGroupDuplicates = "Duplicates"
+	LeaderMenuGroupSelections = "Selections"
 )
 
 // leaderMenuGroupColumn assigns each group to a macro column
@@ -123,12 +124,32 @@ type leaderMenuViewSpec struct {
 }
 
 // leaderMenuViewSpecs is the per-view source of truth for `:` leader-menu content in the
-// Compare, Dedup, Jobs, Commands, and Messages views — parallel to leaderMenuGroupActions
-// for the browser's leader menu. Every view carries the same App/Display actions (Quit and
+// Compare, Dedup, Jobs, Commands, and Messages views and the browser's Selections strip —
+// parallel to leaderMenuGroupActions for the browser's leader menu. Every view carries the same App/Display actions (Quit and
 // links to the other auxiliary views) plus its own view-specific group(s). The F2 user menu
 // (ActionAppUserMenu) only opens from the browser view, so it is omitted from every per-view
 // menu rather than listed as a dead entry.
 var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
+	HelpSelectionsStrip: {
+		order: []string{LeaderMenuGroupSelections, LeaderMenuGroupFile, LeaderMenuGroupApp},
+		actions: map[string][]string{
+			LeaderMenuGroupSelections: {
+				ActionFileView,
+				ActionFileEdit,
+				ActionPanelSelectToggle,
+				ActionPanelSelectParentDirs,
+				ActionPanelOpenSelectionsRoot,
+				ActionPanelClearSelection,
+			},
+			LeaderMenuGroupFile: {ActionCopy, ActionMove, ActionFileDelete, ActionFileFlatten, ActionFileRunForEach},
+			LeaderMenuGroupApp:  {ActionAppShowHelp, ActionAppQuit},
+		},
+		column: map[string]int{
+			LeaderMenuGroupSelections: 0,
+			LeaderMenuGroupFile:       1,
+			LeaderMenuGroupApp:        2,
+		},
+	},
 	HelpCompare: {
 		order: []string{LeaderMenuGroupCompare, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
 		actions: map[string][]string{

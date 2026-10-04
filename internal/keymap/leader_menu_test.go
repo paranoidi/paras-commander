@@ -325,6 +325,10 @@ func TestBuildLeaderMenuEntriesForViewMessages(t *testing.T) {
 	checkLeaderMenuEntriesForView(t, HelpMessages)
 }
 
+func TestBuildLeaderMenuEntriesForViewSelectionsStrip(t *testing.T) {
+	checkLeaderMenuEntriesForView(t, HelpSelectionsStrip)
+}
+
 func TestActionForLeaderKeyInViewScopedPerView(t *testing.T) {
 	saved := leaderMenuViewSpecs
 	defer func() { leaderMenuViewSpecs = saved }()

@@ -219,7 +219,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	if a.model.ViewMode == ui.ViewBrowser &&
 		a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip &&
 		!a.inQuickFilterUI() {
-		return menu.FunctionKeysSelectionsStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
+		keys := menu.FunctionKeysSelectionsStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
+		if a.model.ViMotionMode {
+			return viMotionFooterKeys(keys, a.keys.LeaderKey)
+		}
+		return keys
 	}
 	if a.model.ViMotionMode {
 		return viMotionFooterKeys(menu.FunctionKeys, a.keys.LeaderKey)
@@ -795,7 +799,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 				resolvedAction = keymap.ActionNavOpen
 				viMotionNav = true
 			default:
-				if actionID, ok := a.keys.ActionForLeaderKey(event.Rune()); ok {
+				actionID, ok := a.keys.ActionForLeaderKey(event.Rune())
+				if a.stripFilterFocused() {
+					actionID, ok = a.keys.ActionForLeaderKeyInView(event.Rune(), keymap.HelpSelectionsStrip)
+				}
+				if ok {
 					quit := a.dispatchActionLikeKeyboardShortcut(actionID)
 					a.render()
 					return quit, true

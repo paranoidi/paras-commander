@@ -145,13 +145,18 @@ func (a *App) openBuiltinLeaderMenu() {
 	if a.keys == nil {
 		return
 	}
+	prefix := "Function menu"
 	entries := a.keys.LeaderMenuEntries()
+	if a.stripFilterFocused() {
+		prefix = "Selections menu"
+		entries = a.keys.LeaderMenuEntriesForView(keymap.HelpSelectionsStrip)
+	}
 	if len(entries) == 0 {
-		a.setTransientMessage("Function menu: no entries configured", ui.MessageUrgencyWarn)
+		a.setTransientMessage(prefix+": no entries configured", ui.MessageUrgencyWarn)
 		return
 	}
 	items, actions := a.buildLeaderMenuItems(entries)
-	a.openLeaderMenuDispatch(items, actions, false, false, "Function menu", a.dispatchActionLikeKeyboardShortcut)
+	a.openLeaderMenuDispatch(items, actions, false, false, prefix, a.dispatchActionLikeKeyboardShortcut)
 }
 
 // openViewLeaderMenu opens the `:` leader menu scoped to the current auxiliary view's own
