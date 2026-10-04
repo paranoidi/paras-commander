@@ -1,7 +1,7 @@
 package keymap
 
 // DefaultTransferDialogOverlayKeys holds chords that apply only while the copy/move
-// (transfer) dialog destination row is focused.
+// (transfer) dialog or archive-extract dialog destination row is focused.
 func DefaultTransferDialogOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionDestinationActivePanel:   {"S-left"},

@@ -9,7 +9,7 @@ import (
 
 // DestinationShortcutFooterKeys builds the "Active path"/"Inactive path" footer hints shared by
 // every dialog overlay that binds ActionDestinationActivePanel/ActionDestinationInactivePanel.
-// Shared by the transfer dialog here and the flatten dialog (internal/app).
+// Shared by the transfer, flatten, and extract dialogs.
 func DestinationShortcutFooterKeys(keys *keymap.Map, eligible bool) []menu.FunctionKey {
 	if keys == nil || !eligible {
 		return nil
@@ -26,7 +26,7 @@ func DestinationShortcutFooterKeys(keys *keymap.Map, eligible bool) []menu.Funct
 
 // TryDestinationShortcut applies applyActive/applyInactive when ev matches a chord bound to
 // ActionDestinationActivePanel/ActionDestinationInactivePanel in keys, gated by eligible.
-// Shared by the transfer dialog here and the flatten dialog (internal/app).
+// Shared by the transfer, flatten, and extract dialogs.
 func TryDestinationShortcut(ev *tcell.EventKey, keys *keymap.Map, eligible bool, applyActive, applyInactive func()) bool {
 	if keys == nil || !eligible {
 		return false
@@ -110,4 +110,34 @@ func (h *Handler) applyFlattenDestinationFromInactivePanel() {
 	d.Destination = TransferPrefilledDestination(h.host.InactivePanel().PathString())
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmFlattenDestinationValidateTimer()
+}
+
+// ponytail: extract reuses the [dialog.transfer] overlay; give it its own table if users need
+// different chords there.
+func (h *Handler) extractDialogDestinationFooterEligible() bool {
+	d := h.model.FileDialog
+	return d.Open && d.DialogType == dialog.FileDialogExtract && d.FocusedField == 0
+}
+
+// ExtractDialogOverlayFooterKeys builds the extract dialog's "Active path"/"Inactive path"
+// footer hints when its destination field is focused.
+func (h *Handler) ExtractDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
+	return DestinationShortcutFooterKeys(keys, h.extractDialogDestinationFooterEligible())
+}
+
+// tryExtractDialogDestinationShortcut sets the extract destination to the active or inactive
+// panel path when the user presses a chord from [dialog.transfer] while the destination row is
+// focused.
+func (h *Handler) tryExtractDialogDestinationShortcut(ev *tcell.EventKey) bool {
+	return TryDestinationShortcut(ev, h.keysTransferDialog, h.extractDialogDestinationFooterEligible(),
+		func() { h.applyExtractDestination(h.host.ActivePanel().PathString()) },
+		func() { h.applyExtractDestination(h.host.InactivePanel().PathString()) })
+}
+
+func (h *Handler) applyExtractDestination(path string) {
+	f := &h.model.FileDialog.Fields[0]
+	*f = TransferPrefilledDestination(path)
+	f.Label = "Destination"
+	f.PathPicker = true
+	h.SyncFocusedFileDialogPathFieldCompletion()
 }

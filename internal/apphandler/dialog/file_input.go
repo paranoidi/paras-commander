@@ -123,6 +123,9 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	if h.tryMkdirDialogShortcut(event) {
 		return false
 	}
+	if h.tryExtractDialogDestinationShortcut(event) {
+		return false
+	}
 	if h.tryMassRenameDialogShortcut(event) {
 		return false
 	}

@@ -272,7 +272,7 @@ const (
 
 	// ActionDestinationActivePanel / ActionDestinationInactivePanel set a dialog's destination
 	// path field to the active/inactive panel path. Bound via [dialog.flatten] and
-	// [dialog.transfer], not [main].
+	// [dialog.transfer] (also used by the extract dialog), not [main].
 	ActionDestinationActivePanel   = "ui.destination-active"
 	ActionDestinationInactivePanel = "ui.destination-inactive"
 
