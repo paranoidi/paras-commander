@@ -56,13 +56,10 @@ func (a *App) handleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, e s
 }
 
 func (a *App) findDialogQueryWidth() int {
-	termW, _ := a.screen.Size()
-	width := 117
-	if width > termW-4 {
-		width = termW - 4
-	}
-	if width < 54 {
-		width = 54
+	termW, termH := a.screen.Size()
+	width, _, _, ok := dialog.FindDialogMetrics(a.layoutForTerminalSize(termW, termH), false)
+	if !ok {
+		width = 54 // ponytail: dialog not drawn below this; keep the old floor
 	}
 	return scrollquery.DialogInputWidthFromFrame(width)
 }

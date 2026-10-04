@@ -19,8 +19,8 @@ func FindDialogMetrics(layout Layout, showSearchSelectionsOption bool) (width, h
 
 	listH = layout.Height - 14
 	switch {
-	case listH > 18:
-		listH = 18
+	case listH > 26:
+		listH = 26
 	case listH < 4:
 		listH = 4
 	}

@@ -85,7 +85,7 @@ func findDialogTitle(state FindDialogState, styles theme.Theme) string {
 	return title
 }
 
-const findDialogPreferredWidth = 117 // 50% wider than the history/path picker default (78).
+const findDialogPreferredWidth = 125 // preferred frame width; clamped to the terminal in FindDialogMetrics
 
 // FindRowIconPainter draws file-list devicons for one find dialog row; nil skips icons.
 type FindRowIconPainter func(screen tcell.Screen, x, y int, entry FindEntry, styles theme.Theme)
