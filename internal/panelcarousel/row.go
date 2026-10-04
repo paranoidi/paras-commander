@@ -4,6 +4,8 @@ import (
 	"sort"
 	"unicode/utf8"
 
+	"github.com/mattn/go-runewidth"
+
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
@@ -137,12 +139,12 @@ func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int, show
 	return nameWidthFromRowText(rowTextWidth, showSize, metaW)
 }
 
-// fitEntryTextLen returns one entry's rendered name-text rune length (leading prefix rune +
+// fitEntryTextLen returns one entry's rendered name-text cell width (leading prefix rune +
 // name + '@' suffix for symlinks), matching panellist.EntryDisplayRunes' body construction.
 // Per-row transient decorations (job marks, new-file/rename badges) are excluded on purpose:
 // those change independent of directory content and would make column width flicker.
 func fitEntryTextLen(e localfs.Entry) int {
-	n := 1 + utf8.RuneCountInString(e.Name)
+	n := 1 + runewidth.StringWidth(e.Name)
 	if e.Type == localfs.EntrySymlink {
 		n++
 	}

@@ -5,6 +5,8 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/mattn/go-runewidth"
+
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
@@ -91,14 +93,16 @@ func FormatHumanScaled(v float64, sfx byte, maxW int) string {
 // padded by the caller) follows with a two-space gap when showMeta, and size is right-aligned
 // to SizeCells with a one-space gap when showSize.
 func JoinRow(nameWidth int, name, meta string, showMeta bool, size string, showSize bool) string {
+	// Pad by terminal cells (%-*s counts runes, which overflows on 2-cell CJK glyphs).
+	name = runewidth.FillRight(name, nameWidth)
 	if showMeta {
 		if showSize {
-			return fmt.Sprintf("%-*s  %s %*s", nameWidth, name, meta, SizeCells, size)
+			return fmt.Sprintf("%s  %s %*s", name, meta, SizeCells, size)
 		}
-		return fmt.Sprintf("%-*s  %s", nameWidth, name, meta)
+		return name + "  " + meta
 	}
 	if showSize {
-		return fmt.Sprintf("%-*s %*s", nameWidth, name, SizeCells, size)
+		return fmt.Sprintf("%s %*s", name, SizeCells, size)
 	}
-	return fmt.Sprintf("%-*s", nameWidth, name)
+	return name
 }

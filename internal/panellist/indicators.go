@@ -3,6 +3,7 @@ package panellist
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -117,18 +118,19 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		return nil
 	}
 
+	// Widths are terminal cells, not runes: CJK names have 2-cell glyphs.
 	var core []DisplayRune
-	if len(body) <= innerW {
+	if displayCells(body) <= innerW {
 		core = body
 	} else if innerW <= 3 {
-		core = body[:innerW]
+		core = body[:takeCellsLeft(body, innerW)]
 	} else {
 		prefixWidth := (innerW - 1) / 2
 		suffixWidth := innerW - prefixWidth - 1
-		truncated := make([]DisplayRune, 0, innerW)
-		truncated = append(truncated, body[:prefixWidth]...)
+		truncated := make([]DisplayRune, 0, len(body))
+		truncated = append(truncated, body[:takeCellsLeft(body, prefixWidth)]...)
 		truncated = append(truncated, DisplayRune{Rune: primitive.Ellipsis, NameIdx: -1})
-		truncated = append(truncated, body[len(body)-suffixWidth:]...)
+		truncated = append(truncated, body[takeCellsRight(body, suffixWidth):]...)
 		core = truncated
 	}
 
@@ -174,6 +176,38 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistNoPermission(), NameIdx: -1})
 	}
 	return out
+}
+
+func displayCells(d []DisplayRune) int {
+	n := 0
+	for _, dr := range d {
+		n += runewidth.RuneWidth(dr.Rune)
+	}
+	return n
+}
+
+// takeCellsLeft returns how many leading runes of d fit in width cells.
+func takeCellsLeft(d []DisplayRune, width int) int {
+	used := 0
+	for i, dr := range d {
+		used += runewidth.RuneWidth(dr.Rune)
+		if used > width {
+			return i
+		}
+	}
+	return len(d)
+}
+
+// takeCellsRight returns the start index of the longest tail of d that fits in width cells.
+func takeCellsRight(d []DisplayRune, width int) int {
+	used := 0
+	for i := len(d) - 1; i >= 0; i-- {
+		used += runewidth.RuneWidth(d[i].Rune)
+		if used > width {
+			return i + 1
+		}
+	}
+	return 0
 }
 
 // pinIconRune returns th.IconPinRune() for row-suffix icon slots, which are always one

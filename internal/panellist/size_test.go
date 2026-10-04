@@ -3,6 +3,11 @@ package panellist
 import (
 	"testing"
 	"unicode/utf8"
+
+	"github.com/mattn/go-runewidth"
+
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 func TestJoinRowBranches(t *testing.T) {
@@ -42,5 +47,20 @@ func TestFormatByteSizeCompactExamples(t *testing.T) {
 	}
 	if got := FormatByteSizeCompact(5000, SizeCells); got != "4.9K" {
 		t.Fatalf("FormatByteSizeCompact(5000) = %q, want %q", got, "4.9K")
+	}
+}
+
+func TestJoinRowWideNameKeepsSizeColumn(t *testing.T) {
+	t.Parallel()
+	const nameWidth = 20
+	th := theme.Default()
+	entry := localfs.Entry{Name: "【新サークル発足】森の黒魔術と大量の画質", Type: localfs.EntryFile}
+	name := string(RunesFromDisplay(EntryDisplayRunes(entry, nameWidth, true, RowSuffix{}, th)))
+	if w := runewidth.StringWidth(name); w > nameWidth {
+		t.Fatalf("name cells = %d, want <= %d (%q)", w, nameWidth, name)
+	}
+	row := JoinRow(nameWidth, name, "", false, "12K", true)
+	if w := runewidth.StringWidth(row); w != nameWidth+1+SizeCells {
+		t.Fatalf("row cells = %d, want %d (%q)", w, nameWidth+1+SizeCells, row)
 	}
 }
