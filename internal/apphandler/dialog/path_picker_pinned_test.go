@@ -1,7 +1,11 @@
 package dialog
 
 import (
+	"path/filepath"
 	"testing"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -50,24 +54,66 @@ func TestPathPickerItemsPinnedExcludesFiles(t *testing.T) {
 	}
 }
 
-func TestPathPickerPinnedFooterEligibleTransferOnly(t *testing.T) {
+func TestPathPickerHostFooterEligibleHosts(t *testing.T) {
 	h := &Handler{model: &ui.Model{}}
-
-	if h.PathPickerPinnedFooterEligible() {
+	if h.PathPickerHostFooterEligible() {
 		t.Fatal("no dialog open: want false")
 	}
-
 	h.model.FlattenDialog.Open = true
-	h.model.FlattenDialog.FocusField = 0
-	if h.PathPickerPinnedFooterEligible() {
-		t.Fatal("flatten destination focused: want false (transfer-only)")
+	if !h.PathPickerHostFooterEligible() {
+		t.Fatal("flatten destination focused: want true")
 	}
 	h.model.FlattenDialog.Open = false
-
 	h.model.TransferDialog.Open = true
 	h.model.TransferDialog.Phase = dialog.TransferPhaseDestination
-	h.model.TransferDialog.FocusField = 0
-	if !h.PathPickerPinnedFooterEligible() {
+	if !h.PathPickerHostFooterEligible() {
 		t.Fatal("transfer destination focused: want true")
 	}
+}
+
+func TestPinDialogKeyOpensPinnedPickerInFlattenAndFileField(t *testing.T) {
+	setup := func(t *testing.T) (*Handler, *tcell.EventKey) {
+		h, host := newBookmarkTestHandler(t)
+		h.host = allPickerHost{bookmarkTestHost: host, inactive: &panel.State{Path: pathloc.FileMust(host.active.PathString())}}
+		bundle, err := keymap.DefaultBundle()
+		if err != nil {
+			t.Fatal(err)
+		}
+		h.keysGlobal = bundle.Global
+		h.keysDialogInput = bundle.DialogInput
+		h.model.PinnedItems = []ui.PinnedItem{{Path: filepath.Join(host.active.PathString(), "orchard"), IsDir: true}}
+		ev, ok := bundle.Global.FirstEventKeyForAction(keymap.ActionPanelPinDialog)
+		if !ok {
+			t.Fatal("no pin-dialog binding")
+		}
+		return h, ev
+	}
+
+	t.Run("flatten", func(t *testing.T) {
+		h, ev := setup(t)
+		h.model.FlattenDialog.Open = true
+		if !h.TryPathPickerHostShortcut(ev) {
+			t.Fatal("shortcut not handled")
+		}
+		st := h.model.PathPicker
+		if !st.Open || st.Title != "Pinned" || st.Purpose != dialog.PathPickerPurposeApplyFlattenDestination {
+			t.Fatalf("picker = %+v", st)
+		}
+	})
+	t.Run("symlink field", func(t *testing.T) {
+		h, ev := setup(t)
+		h.model.FileDialog = dialog.FileDialogState{
+			Open:       true,
+			DialogType: dialog.FileDialogSymlink,
+			Fields:     []dialog.FileDialogField{{Label: "Target", PathPicker: true}, {Label: "Link path", PathPicker: true}},
+		}
+		h.model.FileDialog.FocusedField = 1
+		if !h.TryPathPickerHostShortcut(ev) {
+			t.Fatal("shortcut not handled")
+		}
+		st := h.model.PathPicker
+		if !st.Open || st.Title != "Pinned" || st.Purpose != dialog.PathPickerPurposeApplyFileDialogField || st.FileFieldIndex != 1 {
+			t.Fatalf("picker = %+v", st)
+		}
+	})
 }

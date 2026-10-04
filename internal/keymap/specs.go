@@ -1666,6 +1666,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"restore", "default", "placeholder", "prefill", "suggested"},
 		},
 		{
+			ID:           ActionDialogInputPathPickerAll,
+			Title:        "All paths picker (bookmarks, history, pinned)",
+			Section:      "UI",
+			DefaultKeys:  nil, // bound only via [dialog.input] (defaults * and |)
+			PreferredKey: "*",
+			Keywords:     []string{"bookmarks", "history", "pinned", "path", "picker", "all"},
+		},
+		{
 			ID:           ActionDialogInputKillWordBackward,
 			Title:        "Delete previous word in dialog input",
 			Section:      "UI",

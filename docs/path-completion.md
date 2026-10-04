@@ -5,6 +5,15 @@ destination, path fields in dialogs like symlink/hardlink/rename/extract, and
 the fuzzy history/bookmarks path picker's query — shares one filesystem
 completion dropdown.
 
+## Path pickers
+
+Typing `*` (or `|`) in a path input opens a combined picker of bookmarks,
+history and pinned directories, each row tagged with its source; Enter fills
+the field. The single-source pickers (bookmarks, history, pinned) have their
+own shortcuts. Both keys are configurable under `[dialog.input]`
+(`ui.input.path-picker-all`); `|` is a legal filename character, so unbind it
+there if you need to type it.
+
 ## How it works
 
 Typing the final segment of a path (the part after the last `/`) looks up the

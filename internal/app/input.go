@@ -296,10 +296,11 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 		if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionPanelHistoryDialog); lbl != "" {
 			pathHints = append(pathHints, menu.FunctionKey{KeyLabel: lbl, Hint: "History"})
 		}
-		if a.dialogCtrl.PathPickerPinnedFooterEligible() {
-			if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionPanelPinDialog); lbl != "" {
-				pathHints = append(pathHints, menu.FunctionKey{KeyLabel: lbl, Hint: "Pinned"})
-			}
+		if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionPanelPinDialog); lbl != "" {
+			pathHints = append(pathHints, menu.FunctionKey{KeyLabel: lbl, Hint: "Pinned"})
+		}
+		if lbl := a.keys.DialogInput.MenuBindingLabel(keymap.ActionDialogInputPathPickerAll); lbl != "" {
+			pathHints = append(pathHints, menu.FunctionKey{KeyLabel: lbl, Hint: "All"})
 		}
 		if len(pathHints) > 0 {
 			rest = append(pathHints, rest...)

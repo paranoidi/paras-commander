@@ -687,8 +687,8 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
 	}
 	keys := app.activeFooterKeys()
-	if len(keys) != 8 {
-		t.Fatalf("footer len = %d, want Esc + Default + Bookmarks + History + Pinned + Active + Inactive + F10", len(keys))
+	if len(keys) != 9 {
+		t.Fatalf("footer len = %d, want Esc + Default + Bookmarks + History + Pinned + All + Active + Inactive + F10", len(keys))
 	}
 	if keys[1].Hint != "Default" || keys[1].KeyLabel != "C-r" {
 		t.Fatalf("restore footer = %+v, want C-r Default", keys[1])
@@ -701,6 +701,9 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 	}
 	if keys[4].Hint != "Pinned" || keys[4].KeyLabel != "M-n" {
 		t.Fatalf("pinned footer = %+v, want M-n Pinned", keys[4])
+	}
+	if keys[5].Hint != "All" || keys[5].KeyLabel != "*" {
+		t.Fatalf("all footer = %+v, want * All", keys[5])
 	}
 	if !footerHasHint(keys, "Active path ◄", "S-left") {
 		t.Fatalf("footer = %+v, want Active S-left hint", keys)
@@ -715,14 +718,20 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		t.Fatal("symlink dialog should be open")
 	}
 	keys = app.activeFooterKeys()
-	if len(keys) != 4 {
-		t.Fatalf("symlink footer len = %d, want Esc + Bookmarks + History + F10", len(keys))
+	if len(keys) != 6 {
+		t.Fatalf("symlink footer len = %d, want Esc + Bookmarks + History + Pinned + All + F10", len(keys))
 	}
 	if keys[1].Hint != "Bookmarks" {
 		t.Fatalf("symlink footer = %+v, want Bookmarks hint at [1]", keys[1])
 	}
 	if keys[2].Hint != "History" {
 		t.Fatalf("symlink footer = %+v, want History hint at [2]", keys[2])
+	}
+	if keys[3].Hint != "Pinned" {
+		t.Fatalf("symlink footer = %+v, want Pinned hint at [3]", keys[3])
+	}
+	if keys[4].Hint != "All" {
+		t.Fatalf("symlink footer = %+v, want All hint at [4]", keys[4])
 	}
 }
 

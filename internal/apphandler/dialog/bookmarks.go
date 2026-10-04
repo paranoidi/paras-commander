@@ -78,17 +78,34 @@ func (h *Handler) applyBookmarkLoad(p BookmarkIOPayload) {
 	if !h.model.PathPicker.Open || p.Gen != h.pathPickerMissingGen {
 		return
 	}
+	st := &h.model.PathPicker
 	if p.Err != nil {
-		h.ClosePathPicker()
+		if len(st.Items) == 0 {
+			h.ClosePathPicker()
+		}
 		h.host.SetErrorMessage("Bookmarks", p.Err)
 		return
 	}
-	if len(p.Items) == 0 && h.model.PathPicker.Purpose != dialog.PathPickerPurposeNavigate {
+	merged := p.Items
+	bookmarked := make(map[string]struct{}, len(p.Items))
+	for _, it := range p.Items {
+		bookmarked[it.Path] = struct{}{}
+	}
+	for _, it := range st.Items {
+		if _, ok := bookmarked[it.Path]; !ok {
+			merged = append(merged, it)
+		}
+	}
+	if len(merged) == 0 && st.Purpose != dialog.PathPickerPurposeNavigate {
+		msg := "No bookmarks"
+		if st.Title == "All paths" {
+			msg = "No paths"
+		}
 		h.ClosePathPicker()
-		h.host.SetTransientMessage("No bookmarks", ui.MessageUrgencyInfo)
+		h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
 		return
 	}
-	h.model.PathPicker.Items = p.Items
+	st.Items = merged
 	h.SyncPathPickerRanks()
 	h.startPathPickerMissingScan()
 }

@@ -1393,3 +1393,16 @@ func TestDefaultAltWMapsToDedupOpen(t *testing.T) {
 		t.Fatalf("M-w = %q, %v; want %q", got, ok, ActionDedupOpen)
 	}
 }
+
+func TestDialogInputPathPickerAllKeysParse(t *testing.T) {
+	m, err := Build(DefaultDialogInputOverlayKeys())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range []rune{'*', '|'} {
+		id, ok := m.Lookup(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		if !ok || id != ActionDialogInputPathPickerAll {
+			t.Fatalf("Lookup(%q) = %q %v", r, id, ok)
+		}
+	}
+}

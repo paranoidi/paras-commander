@@ -240,6 +240,9 @@ const (
 	// ActionDialogInputRestoreDefault restores a focused dialog input field's suggested default
 	// (Prefill) and is bound via [dialog.input], not [main].
 	ActionDialogInputRestoreDefault = "ui.input.restore-default"
+	// ActionDialogInputPathPickerAll opens the combined bookmarks/history/pinned path picker
+	// from a focused path input and is bound via [dialog.input], not [main].
+	ActionDialogInputPathPickerAll = "ui.input.path-picker-all"
 	// ActionDialogInputKillWordBackward deletes back to the previous word boundary (readline C-w).
 	ActionDialogInputKillWordBackward = "ui.input.kill-word-backward"
 	// ActionDialogInputKillWordForward deletes up to the next word boundary (readline M-d).
@@ -500,6 +503,7 @@ var KnownActions = map[string]struct{}{
 	ActionPreviewSettingsDialog: {},
 
 	ActionDialogInputRestoreDefault: {},
+	ActionDialogInputPathPickerAll:  {},
 
 	ActionDialogInputKillWordBackward: {},
 	ActionDialogInputKillWordForward:  {},

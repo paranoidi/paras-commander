@@ -386,11 +386,16 @@ const (
 	pathPickerListBookmarks pathPickerListKind = iota
 	pathPickerListHistory
 	pathPickerListPinned
+	pathPickerListAll
 )
 
 func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pathPickerListKind, fileFieldIndex int) {
 	if kind == pathPickerListBookmarks {
 		h.openBookmarkPathPicker(purpose, fileFieldIndex)
+		return
+	}
+	if kind == pathPickerListAll {
+		h.openAllPathPicker(purpose, fileFieldIndex)
 		return
 	}
 	var (
@@ -429,6 +434,38 @@ func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pat
 	h.startPathPickerMissingScan()
 }
 
+// openAllPathPicker opens the combined picker: pinned and history items synchronously, then
+// bookmarks merged in by applyBookmarkLoad once the worker read completes.
+func (h *Handler) openAllPathPicker(purpose dialog.PathPickerPurpose, fileFieldIndex int) {
+	pinned, _ := h.PathPickerItemsPinned()
+	history, _ := h.PathPickerItemsHistory()
+	seen := make(map[string]struct{}, len(pinned)+len(history))
+	var items []dialog.PathPickerItem
+	for _, it := range pinned {
+		seen[it.Path] = struct{}{}
+		it.Source = "pinned"
+		items = append(items, it)
+	}
+	for _, it := range history {
+		if _, ok := seen[it.Path]; ok {
+			continue
+		}
+		it.Source = "history"
+		items = append(items, it)
+	}
+	h.pathPickerMissingGen++
+	gen := h.pathPickerMissingGen
+	h.model.PathPicker = dialog.PathPickerState{
+		Open:           true,
+		Title:          "All paths",
+		Purpose:        purpose,
+		FileFieldIndex: fileFieldIndex,
+		Items:          items,
+	}
+	h.SyncPathPickerRanks()
+	h.startBookmarkListLoad(gen)
+}
+
 // openBookmarkPathPicker opens the bookmarks path picker immediately and fills it via
 // startBookmarkListLoad / ApplyBookmarkIO. bookmarks.LoadAll runs on a worker, not the
 // UI goroutine; history and pinned lists stay synchronous in openPathPickerApply.
@@ -449,51 +486,24 @@ func (h *Handler) openBookmarkPathPicker(purpose dialog.PathPickerPurpose, fileF
 	h.startBookmarkListLoad(gen)
 }
 
-// OpenPathPickerForFlattenBookmarks opens the bookmarks path picker to apply the flatten
+// OpenPathPickerForFlatten opens a path picker of the given kind to apply the flatten
 // dialog's destination field.
-func (h *Handler) OpenPathPickerForFlattenBookmarks() {
+func (h *Handler) OpenPathPickerForFlatten(kind pathPickerListKind) {
 	h.transferDestValidate.Invalidate()
-	h.openPathPickerApply(dialog.PathPickerPurposeApplyFlattenDestination, pathPickerListBookmarks, 0)
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyFlattenDestination, kind, 0)
 }
 
-// OpenPathPickerForFlattenHistory opens the history path picker to apply the flatten
-// dialog's destination field.
-func (h *Handler) OpenPathPickerForFlattenHistory() {
-	h.transferDestValidate.Invalidate()
-	h.openPathPickerApply(dialog.PathPickerPurposeApplyFlattenDestination, pathPickerListHistory, 0)
-}
-
-// OpenPathPickerForTransferBookmarks opens the bookmarks path picker to apply the transfer
+// OpenPathPickerForTransfer opens a path picker of the given kind to apply the transfer
 // (copy/move) dialog's destination field.
-func (h *Handler) OpenPathPickerForTransferBookmarks() {
+func (h *Handler) OpenPathPickerForTransfer(kind pathPickerListKind) {
 	h.transferDestValidate.Invalidate()
-	h.openPathPickerApply(dialog.PathPickerPurposeApplyTransferDestination, pathPickerListBookmarks, 0)
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyTransferDestination, kind, 0)
 }
 
-// OpenPathPickerForTransferHistory opens the history path picker to apply the transfer
-// (copy/move) dialog's destination field.
-func (h *Handler) OpenPathPickerForTransferHistory() {
-	h.transferDestValidate.Invalidate()
-	h.openPathPickerApply(dialog.PathPickerPurposeApplyTransferDestination, pathPickerListHistory, 0)
-}
-
-// OpenPathPickerForTransferPinned opens the pinned-directories-only path picker to apply the
-// transfer (copy/move) dialog's destination field.
-func (h *Handler) OpenPathPickerForTransferPinned() {
-	h.transferDestValidate.Invalidate()
-	h.openPathPickerApply(dialog.PathPickerPurposeApplyTransferDestination, pathPickerListPinned, 0)
-}
-
-// OpenPathPickerForFileFieldBookmarks opens the bookmarks path picker to apply a generic
-// file dialog's path-picker field (fieldIndex into FileDialogState.Fields).
-func (h *Handler) OpenPathPickerForFileFieldBookmarks(fieldIndex int) {
-	h.openPathPickerApply(dialog.PathPickerPurposeApplyFileDialogField, pathPickerListBookmarks, fieldIndex)
-}
-
-// OpenPathPickerForFileFieldHistory opens the history path picker to apply a generic file
+// OpenPathPickerForFileField opens a path picker of the given kind to apply a generic file
 // dialog's path-picker field (fieldIndex into FileDialogState.Fields).
-func (h *Handler) OpenPathPickerForFileFieldHistory(fieldIndex int) {
-	h.openPathPickerApply(dialog.PathPickerPurposeApplyFileDialogField, pathPickerListHistory, fieldIndex)
+func (h *Handler) OpenPathPickerForFileField(fieldIndex int, kind pathPickerListKind) {
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyFileDialogField, kind, fieldIndex)
 }
 
 // ArmPathPickerValidateTimer (re)arms the debounced "does the typed query resolve to an
