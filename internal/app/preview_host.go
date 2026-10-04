@@ -35,6 +35,8 @@ func (h previewHost) SelectionsStripViewportRows(panelID int) int {
 	return h.app.selectionsStripViewportRows(panelID)
 }
 
+func (h previewHost) FocusSelectionsStrip() bool { return h.app.focusSelectionsStrip() }
+
 func (h previewHost) InQuickFilterUI() bool { return h.app.inQuickFilterUI() }
 
 func (h previewHost) LaunchedAsFileViewer() bool { return h.app.launchedFileViewer }

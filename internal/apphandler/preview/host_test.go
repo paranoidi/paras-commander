@@ -78,6 +78,7 @@ func (f *fakeHost) InactivePanelID() int                { return f.inactive }
 func (f *fakeHost) ActiveViewportRows() int             { return 20 }
 func (f *fakeHost) PanelViewportRows(int) int           { return 20 }
 func (f *fakeHost) SelectionsStripViewportRows(int) int { return 0 }
+func (f *fakeHost) FocusSelectionsStrip() bool          { return false }
 func (f *fakeHost) InQuickFilterUI() bool               { return false }
 func (f *fakeHost) LaunchedAsFileViewer() bool          { return f.launchedAsFileViewer }
 func (f *fakeHost) SwitchPanel() {

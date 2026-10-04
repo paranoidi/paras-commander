@@ -58,6 +58,7 @@ func (f *identityTestHost) PanelByID(panelID int) *panel.State {
 func (f *identityTestHost) ActiveViewportRows() int                     { return 20 }
 func (f *identityTestHost) PanelViewportRows(int) int                   { return 20 }
 func (f *identityTestHost) SelectionsStripViewportRows(int) int         { return 0 }
+func (f *identityTestHost) FocusSelectionsStrip() bool                  { return false }
 func (f *identityTestHost) PathVolumeContendsWithActiveJob(string) bool { return false }
 func (f *identityTestHost) ClearTransientMessage()                      {}
 func (f *identityTestHost) Config() config.Config                       { return f.cfg }

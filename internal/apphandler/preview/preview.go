@@ -282,10 +282,7 @@ func (h *Handler) TryDispatchFilePreviewFocus(actionID string) bool {
 	case keymap.ActionNavOpen:
 		return true
 	case keymap.ActionPanelFocusSelections:
-		if h.host.ActivePanel().SelectionsStripCount() > 0 {
-			h.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
-			h.host.ActivePanel().EnsureSelectionsStripCursorVisible(h.host.SelectionsStripViewportRows(h.model.ActivePanel))
-		} else {
+		if !h.host.FocusSelectionsStrip() {
 			h.model.ActiveSubFocus = ui.SubFocusFileList
 		}
 		return true

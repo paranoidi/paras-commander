@@ -129,6 +129,9 @@ type State struct {
 	Filter                quickfilter.Filter
 	// StripFilter is the selections-strip quick filter (basename fuzzy match), independent of Filter.
 	StripFilter quickfilter.Filter
+	// StripForced keeps the selections strip visible although every selection is in the
+	// current directory (explicit C-s). Use SetStripForced so the derived cache refreshes.
+	StripForced bool
 	// ActiveEntryFilter narrows visible entries (e.g. git-status filtering); nil means unfiltered.
 	ActiveEntryFilter *EntryFilter
 	// filteredIdx holds raw (unfiltered) entry indices matching ActiveEntryFilter, in display order.

@@ -266,13 +266,27 @@ func (a *App) toggleSelectionsStripFocus() {
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 		return
 	}
-	if a.activePanel().SelectionsStripCount() > 0 {
-		a.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
-		a.activePanel().EnsureSelectionsStripCursorVisible(a.selectionsStripViewportRows(a.model.ActivePanel))
-	}
+	a.focusSelectionsStrip()
 }
 
-// reconcileSelectionsStripFocus drops strip focus back to the file list whenever the
+// focusSelectionsStrip focuses the active panel's strip, forcing it visible when all
+// selections are in the current directory. Warns and returns false with no selection.
+func (a *App) focusSelectionsStrip() bool {
+	p := a.activePanel()
+	if p.SelectionsStripCount() == 0 {
+		if len(p.SelectedPaths) == 0 {
+			a.setTransientMessage("No selected items", ui.MessageUrgencyWarn)
+			return false
+		}
+		p.SetStripForced(true)
+	}
+	a.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	p.EnsureSelectionsStripCursorVisible(a.selectionsStripViewportRows(a.model.ActivePanel))
+	return true
+}
+
+// reconcileSelectionsStripFocus also clears StripForced on every panel that does not
+// currently hold strip focus. It drops strip focus back to the file list whenever the
 // active panel's strip has become empty (every selection now lives inside the panel's
 // current directory, so the strip itself is no longer rendered — see
 // buildSelectionsStripPaths). Any selection mutation can cause this (select-parent-dirs
@@ -282,6 +296,12 @@ func (a *App) toggleSelectionsStripFocus() {
 // site: focus must never point at an invisible, empty strip, or key routing (arrows,
 // Enter, F-keys) silently misfires against it instead of the file list.
 func (a *App) reconcileSelectionsStripFocus() {
+	focused := a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip && a.model.ViewMode == ui.ViewBrowser
+	for id := range 2 {
+		if !focused || id != a.model.ActivePanel {
+			a.panelByID(id).SetStripForced(false)
+		}
+	}
 	if a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
 		return
 	}

@@ -280,3 +280,28 @@ func BenchmarkHasSelectionInSubtree1500(b *testing.B) {
 		_ = s.HasSelectionInSubtree(sub)
 	}
 }
+
+func TestStripForcedShowsLocalSelections(t *testing.T) {
+	t.Parallel()
+	s := makeLargeFlatSelectionState(t, 3)
+	if got := s.SelectionsStripCount(); got != 0 {
+		t.Fatalf("strip count = %d, want 0", got)
+	}
+	s.SetStripForced(true)
+	if got := s.SelectionsStripCount(); got != 3 {
+		t.Fatalf("forced strip count = %d, want 3", got)
+	}
+	extra := filepath.Join(s.Path.String(), "walnut.txt")
+	s.applySelectionAdd(extra, false)
+	if got := s.SelectionsStripCount(); got != 4 {
+		t.Fatalf("after add = %d, want 4", got)
+	}
+	s.applySelectionRemove(extra, false)
+	if got := s.SelectionsStripCount(); got != 3 {
+		t.Fatalf("after remove = %d, want 3", got)
+	}
+	s.SetStripForced(false)
+	if got := s.SelectionsStripCount(); got != 0 {
+		t.Fatalf("unforced strip count = %d, want 0", got)
+	}
+}

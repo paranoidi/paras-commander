@@ -31,6 +31,7 @@ type Host interface {
 	ActiveViewportRows() int
 	PanelViewportRows(panelID int) int
 	SelectionsStripViewportRows(panelID int) int
+	FocusSelectionsStrip() bool
 	InQuickFilterUI() bool
 	LaunchedAsFileViewer() bool
 	SwitchPanel()
