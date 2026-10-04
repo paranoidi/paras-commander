@@ -23,6 +23,8 @@ type MetaColumnLayout struct {
 	Numeric bool
 	// SortArrow is ↑/↓ when the panel sorts by this column, 0 otherwise.
 	SortArrow rune
+	// Pending is the in-flight marker (MetaColumnState.Pending); rows showing it are centered.
+	Pending string
 }
 
 // LayoutMetaColumns formats each active meta column and returns layouts plus total terminal width
@@ -34,6 +36,9 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 	layouts = make([]MetaColumnLayout, len(cols))
 	for i, col := range cols {
 		w, formatted, rightAlign := layoutMetaCells(col.Results, col.Pending)
+		// The title sets a floor so the header is not clipped while cells are still narrow
+		// (e.g. every row showing the pending icon).
+		w = max(w, min(runewidth.StringWidth(col.ColumnTitle), panelListMetaMax))
 		layouts[i] = MetaColumnLayout{
 			EntryName:  col.EntryName,
 			Title:      col.ColumnTitle,
@@ -41,6 +46,7 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 			Formatted:  formatted,
 			RightAlign: rightAlign,
 			Numeric:    panel.MetaValuesNumeric(col.Results, col.Pending),
+			Pending:    col.Pending,
 		}
 		if i > 0 {
 			totalWidth += 2
@@ -107,6 +113,10 @@ func MetaRowText(layouts []MetaColumnLayout, path string) string {
 		if lay.Formatted != nil {
 			text = lay.Formatted[path]
 		}
+		if lay.Pending != "" && text == lay.Pending {
+			parts[i] = centerMetaLine(text, lay.Width)
+			continue
+		}
 		parts[i] = padMetaLineToWidth(text, lay.Width, lay.RightAlign)
 	}
 	return strings.Join(parts, "  ")
@@ -124,9 +134,9 @@ const (
 // in the trimmed payload, the whole string is one legacy cell (width capped by panelListMetaMax).
 // Cells that still overflow after shrinking are clipped with a trailing ellipsis.
 // Column count is the maximum field count across all non-empty rows; shorter rows pad with empty cells.
-// Cells equal to pending (the in-flight marker) are laid out like any other but do not vote on
-// alignment, so a numeric column is right-aligned from the first frame instead of flipping once
-// results arrive.
+// Cells equal to pending (the in-flight marker) are kept verbatim (MetaRowText centers them) and do
+// not vote on alignment, so a numeric column is right-aligned from the first frame instead of
+// flipping once results arrive.
 func layoutMetaCells(metaResults map[string]string, pending string) (metaColW int, formatted map[string]string, rightAlign bool) {
 	formatted = make(map[string]string, len(metaResults))
 	// ponytail: an empty column is treated as numeric (vacuously all-digit) so a numeric
@@ -140,8 +150,8 @@ func layoutMetaCells(metaResults map[string]string, pending string) (metaColW in
 	nCols := 0
 
 	for path, raw := range metaResults {
-		if raw == "" {
-			formatted[path] = ""
+		if raw == "" || (pending != "" && raw == pending) {
+			formatted[path] = raw
 			continue
 		}
 		fields := parseMetaRaw(raw)
@@ -218,10 +228,7 @@ func layoutMetaCells(metaResults map[string]string, pending string) (metaColW in
 	}
 
 	rightAlign = nCols == 1
-	for path, row := range parsed {
-		if pending != "" && metaResults[path] == pending {
-			continue
-		}
+	for _, row := range parsed {
 		if !metaCellAllDigits(row[0]) {
 			rightAlign = false
 			break
@@ -309,6 +316,13 @@ func padMetaLineToWidth(s string, w int, right bool) string {
 		return runewidth.FillLeft(s, w)
 	}
 	return runewidth.FillRight(s, w)
+}
+
+// centerMetaLine centers s within w terminal cells.
+func centerMetaLine(s string, w int) string {
+	s = truncateMetaDisplay(s, w)
+	left := (w - runewidth.StringWidth(s)) / 2
+	return runewidth.FillRight(strings.Repeat(" ", left)+s, w)
 }
 
 func alignMetaCell(s string, colW int, rightDigits bool) string {

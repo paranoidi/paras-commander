@@ -275,3 +275,19 @@ func TestMetaHeaderText_sortArrowFitsInsidePadding(t *testing.T) {
 		t.Fatalf("header = %q", hdr)
 	}
 }
+
+func TestMetaColumnTitleNotClippedWhilePending(t *testing.T) {
+	cols := []MetaColumnState{{
+		EntryName:   "genre",
+		ColumnTitle: "genre",
+		Results:     map[string]string{"/a": "…", "/b": "…"},
+		Pending:     "…",
+	}}
+	layouts, _ := LayoutMetaColumns(cols)
+	if got := MetaHeaderText(layouts); got != "genre" {
+		t.Fatalf("header = %q, want %q", got, "genre")
+	}
+	if got := MetaRowText(layouts, "/a"); got != "  …  " {
+		t.Fatalf("pending row = %q, want centered %q", got, "  …  ")
+	}
+}
