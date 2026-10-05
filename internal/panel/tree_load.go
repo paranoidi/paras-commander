@@ -88,6 +88,37 @@ func (s *State) attachTreeChildren(node *treeflat.Node[TreeEntry], entries []loc
 		}
 	}
 	s.scheduleTreeChildGitStatus(node.ID, entries)
+	if prior, ok := s.treePriorChildren[node.ID]; ok {
+		delete(s.treePriorChildren, node.ID)
+		if dirLoc, err := pathloc.Parse(node.ID); err == nil {
+			s.AddNewFileMarks(dirLoc, newlyAppearedNames(prior, entries))
+		}
+	}
+}
+
+// snapshotTreeChildren records, for every loaded node under nodes, its children's entries by node ID.
+func snapshotTreeChildren(nodes []treeflat.Node[TreeEntry], out map[string][]localfs.Entry) {
+	for _, n := range nodes {
+		if n.Children == nil {
+			continue
+		}
+		es := make([]localfs.Entry, len(n.Children))
+		for i, c := range n.Children {
+			es[i] = c.Value.Entry
+		}
+		out[n.ID] = es
+		snapshotTreeChildren(n.Children, out)
+	}
+}
+
+// LoadedTreeChildren returns every loaded tree node's children by node ID, or nil outside tree layout.
+func (s *State) LoadedTreeChildren() map[string][]localfs.Entry {
+	if s.ListLayout != ListLayoutTree {
+		return nil
+	}
+	out := make(map[string][]localfs.Entry)
+	snapshotTreeChildren(s.TreeRoots, out)
+	return out
 }
 
 // finishTreeChildLoadApply coalesces ExpandAllTreeShallow async applies: while treeExpandQuiet

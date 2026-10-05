@@ -39,7 +39,11 @@ func (s *State) dropRenameMarks(dir string) {
 	if s.RenameMarksByDir == nil {
 		return
 	}
-	delete(s.RenameMarksByDir, cleanPathString(dir))
+	for k := range s.RenameMarksByDir {
+		if keyUnderDir(k, dir) {
+			delete(s.RenameMarksByDir, k)
+		}
+	}
 }
 
 // IsRenameMarked reports whether entry was recently renamed in the current listing.
@@ -47,7 +51,7 @@ func (s *State) IsRenameMarked(entry localfs.Entry) bool {
 	if s.RenameMarksByDir == nil {
 		return false
 	}
-	marks := s.RenameMarksByDir[cleanPathString(s.Path.String())]
+	marks := s.RenameMarksByDir[s.markDirKey(entry)]
 	if marks == nil {
 		return false
 	}

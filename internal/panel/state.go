@@ -75,6 +75,11 @@ type State struct {
 	// treeByPath indexes loaded tree-mode children by path (filled by attachTreeChildren, reset
 	// whenever TreeRoots is re-rooted or dropped) so selection lookups never stat tree rows.
 	treeByPath map[string]localfs.Entry
+	// treePriorChildren snapshots the pre-reload children of each loaded tree dir (by node ID)
+	// across a same-directory re-root, so attachTreeChildren can mark names that newly appeared.
+	treePriorChildren map[string][]localfs.Entry
+	// treeRefreshRR is the round-robin cursor into the off-screen expanded dirs (TreeRefreshPlan).
+	treeRefreshRR int
 	// offListingMeta holds background-Lstat metadata for selected paths outside the listing.
 	offListingMeta map[string]localfs.Entry
 	// treePrefetch is the transient prefetched child listings consumed by setTreeNodeExpanded
@@ -409,9 +414,10 @@ func (s *State) RefreshOrNavigateToExistingAncestorWithHook(viewportRows int, on
 // ApplyPeriodicRefresh commits a same-directory listing when content changed. prefetch carries
 // already-fetched child listings for the remembered tree expansions (see TreePrefetchIDs) so the
 // tree re-expands in the same apply instead of cascading one async load per directory.
+// force applies even when the root listing is unchanged (a nested tree directory changed).
 // Selection is restored by name (else prior index). Scroll centers when the restore would move the viewport.
-func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, viewportRows int, probes *PathProbes, prefetch map[string]TreePrefetchResult) (bool, error) {
-	if fsbackend.EntriesListingEqual(backendEntries, BackendEntriesFromPanel(s.Entries)) {
+func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, viewportRows int, probes *PathProbes, prefetch map[string]TreePrefetchResult, force bool) (bool, error) {
+	if !force && fsbackend.EntriesListingEqual(backendEntries, BackendEntriesFromPanel(s.Entries)) {
 		return false, nil
 	}
 	priorCursor := s.Cursor
@@ -1471,7 +1477,8 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	// having one, and once a listing has been applied an empty directory gaining files still
 	// diffs normally.
 	hadPriorListing := s.listingApplied || len(s.Entries) > 0
-	if sameDirReload && hadPriorListing && s.entriesShowHidden == s.ShowHidden {
+	diffListing := sameDirReload && hadPriorListing && s.entriesShowHidden == s.ShowHidden
+	if diffListing {
 		newlyAppeared = newlyAppearedNames(s.Entries, localEntries)
 	}
 	s.entriesShowHidden = s.ShowHidden
@@ -1549,6 +1556,11 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 		// Every location change (and same-dir refresh) discards the old TreeRoots and re-fetches
 		// remembered dirs, so anything still in flight is dead work.
 		s.abandonTreeChildLoads()
+		s.treePriorChildren = nil
+		if diffListing {
+			s.treePriorChildren = make(map[string][]localfs.Entry)
+			snapshotTreeChildren(s.TreeRoots, s.treePriorChildren)
+		}
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
 		s.treeByPath = nil
 		s.TreeExpanded = keep

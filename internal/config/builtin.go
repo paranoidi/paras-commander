@@ -74,6 +74,14 @@ const (
 	// the 2.5s tick) while a 3s network refresh is retried every ~12s instead of back-to-back.
 	DefaultPanelRefreshSlowBackoffFactor = 4
 
+	// DefaultTreeListWorkers is the app-wide concurrency cap for tree directory listings
+	// (periodic refresh, expand, navigation re-entry).
+	DefaultTreeListWorkers = 2
+
+	// DefaultTreeRefreshOffscreenDirsPerTick is how many expanded tree dirs outside the viewport
+	// and away from the caret each periodic refresh tick re-lists (round-robin).
+	DefaultTreeRefreshOffscreenDirsPerTick = 1
+
 	// RefreshIntervalMinMS / RefreshIntervalMaxMS clamp active refresh_interval_ms in Config.Validate.
 	RefreshIntervalMinMS = 200
 	RefreshIntervalMaxMS = 60_000

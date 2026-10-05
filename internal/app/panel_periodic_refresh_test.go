@@ -7,6 +7,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -111,5 +112,27 @@ func TestPanelListingRefreshRecordsStartToStartDeadline(t *testing.T) {
 	upperBound := after.Add(time.Duration(config.DefaultPanelRefreshSlowBackoffFactor) * maxElapsed)
 	if d.After(upperBound) {
 		t.Fatalf("deadline %v is after upper bound %v", d, upperBound)
+	}
+}
+
+func TestTreeChildrenChanged(t *testing.T) {
+	mod := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
+	file := func(name string) localfs.Entry {
+		return localfs.Entry{Name: name, Type: localfs.EntryFile, Size: 1, ModifiedAt: mod}
+	}
+	baseline := map[string][]localfs.Entry{"/r/alpha": {file("brook.txt")}}
+	tests := []struct {
+		name     string
+		children map[string]panel.TreePrefetchResult
+		want     bool
+	}{
+		{"identical", map[string]panel.TreePrefetchResult{"/r/alpha": {Entries: []localfs.Entry{file("brook.txt")}}}, false},
+		{"added entry", map[string]panel.TreePrefetchResult{"/r/alpha": {Entries: []localfs.Entry{file("brook.txt"), file("meadow.txt")}}}, true},
+		{"missing from result", map[string]panel.TreePrefetchResult{}, false},
+	}
+	for _, tc := range tests {
+		if got := treeChildrenChanged(tc.children, baseline); got != tc.want {
+			t.Errorf("%s: got %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }

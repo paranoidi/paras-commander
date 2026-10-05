@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
@@ -133,12 +134,55 @@ func TestApplyPeriodicRefreshPrefetchedRestoresNestedExpansionsWithoutAsyncLoads
 		meadow: prefetchTestChildren(t, &s, meadow),
 		harbor: prefetchTestChildren(t, &s, harbor),
 	}
-	applied, err := s.ApplyPeriodicRefresh(s.Path, be, 10, nil, prefetch)
+	applied, err := s.ApplyPeriodicRefresh(s.Path, be, 10, nil, prefetch, false)
 	if err != nil || !applied {
 		t.Fatalf("ApplyPeriodicRefresh = %v, %v", applied, err)
 	}
 	// beacon, orchard, meadow, harbor, willow, lantern
 	if got := s.VisibleEntryCount(); got != 6 {
 		t.Fatalf("VisibleEntryCount = %d, want 6", got)
+	}
+}
+
+func TestTreeRefreshPlanTiersAndRoundRobin(t *testing.T) {
+	root := t.TempDir()
+	names := []string{"anchor", "bramble", "cobalt", "dune", "ember"}
+	for _, n := range names {
+		if err := os.MkdirAll(filepath.Join(root, n, "inner"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.SetListLayout(ListLayoutTree, 3)
+	s.TreeExpanded = map[string]bool{}
+	for _, n := range names {
+		s.TreeExpanded[filepath.Join(root, n)] = true
+	}
+	if err := s.Refresh(3); err != nil {
+		t.Fatal(err)
+	}
+	// Rows: anchor, anchor/inner, bramble, bramble/inner, ... Put the cursor on anchor/inner
+	// (caret parent = anchor) with a 3-row viewport showing anchor, anchor/inner, bramble.
+	s.Cursor, s.ScrollOffset = 1, 0
+	abs := func(n string) string { return filepath.Join(root, n) }
+	plan := s.TreeRefreshPlan(3, 1)
+	// bramble is the parent of "bramble/inner" only when that row is visible; row 2 is bramble
+	// itself, whose parent is root (not in the set), so bramble is off-screen.
+	want := []TreeRefreshReq{{abs("anchor"), TreeRefreshCaret}, {abs("bramble"), TreeRefreshOffscreen}}
+	if !slices.Equal(plan, want) {
+		t.Fatalf("plan = %v, want %v", plan, want)
+	}
+	plan = s.TreeRefreshPlan(3, 1)
+	if len(plan) != 2 || plan[1].ID != abs("cobalt") || plan[1].Tier != TreeRefreshOffscreen {
+		t.Fatalf("second plan = %v, want cobalt next", plan)
+	}
+	// Widen the viewport: bramble's child row becomes visible, promoting it to the visible tier.
+	s.ScrollOffset = 0
+	plan = s.TreeRefreshPlan(4, 1)
+	if plan[0].Tier != TreeRefreshCaret || plan[1] != (TreeRefreshReq{abs("bramble"), TreeRefreshVisible}) {
+		t.Fatalf("wide plan = %v, want caret anchor then visible bramble", plan)
 	}
 }

@@ -78,6 +78,7 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 	if layout == ListLayoutTree {
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
 		s.treeByPath = nil
+		s.treePriorChildren = nil
 		s.recomputeSelectionListedBytes()
 		s.TreeExpanded = make(map[string]bool)
 		s.treeExpandAllDepth = 0
@@ -87,6 +88,7 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 		// Leaving tree mode: any in-flight child fetch would never be shown, so abandon it.
 		s.abandonTreeChildLoads()
 		s.treeByPath = nil
+		s.treePriorChildren = nil
 		s.recomputeSelectionListedBytes()
 		// filteredIdx was last built against treeRows; rebuild it against Entries (flat mode's
 		// backing space) before translating cursorAncestorID's raw Entries index below.

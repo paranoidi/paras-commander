@@ -82,6 +82,75 @@ func (s *State) TreePrefetchIDs(loc pathloc.Path) []string {
 	return ids
 }
 
+// TreeRefreshTier ranks how urgently a tree directory's periodic refresh is wanted.
+type TreeRefreshTier int
+
+const (
+	TreeRefreshCaret     TreeRefreshTier = iota // parent of the cursor row (and the cursor row itself when expanded)
+	TreeRefreshVisible                          // parent of any row in the viewport
+	TreeRefreshOffscreen                        // everything else, refreshed round-robin
+)
+
+// TreeRefreshReq is one directory to re-list on a periodic refresh tick.
+type TreeRefreshReq struct {
+	ID   string
+	Tier TreeRefreshTier
+}
+
+// TreeRefreshPlan picks the expanded tree directories (the TreePrefetchIDs set) to re-list this
+// tick: caret-adjacent and on-screen ones every tick, plus offscreenPerTick of the rest in
+// round-robin order so off-screen changes surface eventually without re-listing everything each
+// tick. Nil outside tree layout.
+func (s *State) TreeRefreshPlan(viewportRows, offscreenPerTick int) []TreeRefreshReq {
+	ids := s.TreePrefetchIDs(s.Path)
+	if len(ids) == 0 {
+		return nil
+	}
+	inSet := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		inSet[id] = true
+	}
+	taken := make(map[string]bool)
+	var plan []TreeRefreshReq
+	add := func(id string, tier TreeRefreshTier) {
+		if inSet[id] && !taken[id] {
+			taken[id] = true
+			plan = append(plan, TreeRefreshReq{ID: id, Tier: tier})
+		}
+	}
+	parentID := func(path string) string {
+		if loc, err := pathloc.Parse(path); err == nil {
+			return loc.Parent().String()
+		}
+		return ""
+	}
+	if e, _, ok := s.VisibleEntry(s.Cursor); ok {
+		add(parentID(e.Path), TreeRefreshCaret)
+		if s.TreeExpanded[e.Path] {
+			add(e.Path, TreeRefreshCaret)
+		}
+	}
+	end := min(s.ScrollOffset+max(s.effectiveFileListViewportRows(viewportRows), 0), s.VisibleEntryCount())
+	for i := max(s.ScrollOffset, 0); i < end; i++ {
+		if e, _, ok := s.VisibleEntry(i); ok {
+			add(parentID(e.Path), TreeRefreshVisible)
+		}
+	}
+	var rest []string
+	for _, id := range ids { // ids is sorted
+		if !taken[id] {
+			rest = append(rest, id)
+		}
+	}
+	for i := 0; i < offscreenPerTick && i < len(rest); i++ {
+		plan = append(plan, TreeRefreshReq{ID: rest[(s.treeRefreshRR+i)%len(rest)], Tier: TreeRefreshOffscreen})
+	}
+	if len(rest) > 0 {
+		s.treeRefreshRR = (s.treeRefreshRR + offscreenPerTick) % len(rest)
+	}
+	return plan
+}
+
 // AsyncLoadScheduler starts an off-thread listing for req.
 // Results are applied via ApplyListing on the main event thread. Return false to list synchronously.
 type AsyncLoadScheduler func(req AsyncLoadRequest) bool

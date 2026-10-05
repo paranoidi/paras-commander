@@ -84,7 +84,33 @@ func (s *State) dropNewFileMarks(dir string) {
 	if s.NewFileMarksByDir == nil {
 		return
 	}
-	delete(s.NewFileMarksByDir, cleanPathString(dir))
+	for k := range s.NewFileMarksByDir {
+		if keyUnderDir(k, dir) {
+			delete(s.NewFileMarksByDir, k)
+		}
+	}
+}
+
+// keyUnderDir reports whether mark key is dir itself or a directory nested under it (tree layout
+// keeps marks for expanded subdirectories).
+func keyUnderDir(key, dir string) bool {
+	kp, err1 := pathloc.Parse(key)
+	dp, err2 := pathloc.Parse(cleanPathString(dir))
+	if err1 != nil || err2 != nil {
+		return key == cleanPathString(dir)
+	}
+	return kp.HasPrefix(dp)
+}
+
+// markDirKey returns the mark-map key for entry's containing directory: the entry's parent in tree
+// layout (rows can live in expanded subdirectories), else the listing directory.
+func (s *State) markDirKey(entry localfs.Entry) string {
+	if s.ListLayout == ListLayoutTree && entry.Path != "" {
+		if p, err := pathloc.Parse(entry.Path); err == nil {
+			return cleanPathString(p.Parent().String())
+		}
+	}
+	return cleanPathString(s.Path.String())
 }
 
 // NewFileMarkTier reports which new-file suffix tier entry has in the current listing.
@@ -92,7 +118,7 @@ func (s *State) NewFileMarkTier(entry localfs.Entry) panellist.NewFileMarkTier {
 	if s.NewFileMarksByDir == nil {
 		return panellist.NewFileMarkNone
 	}
-	dm := s.NewFileMarksByDir[cleanPathString(s.Path.String())]
+	dm := s.NewFileMarksByDir[s.markDirKey(entry)]
 	if dm == nil {
 		return panellist.NewFileMarkNone
 	}

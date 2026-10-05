@@ -93,7 +93,10 @@ func (a *App) treeChildLoader(panelID int) (schedule panel.TreeChildLoadSchedule
 	schedule = func(req panel.TreeChildLoadRequest) bool {
 		snap := a.panelByID(panelID).ListingRefreshSnapshot(req.Loc, time.Duration(a.config.SFTP.ListTimeoutSecs)*time.Second)
 		fetchCtx := ctx
-		go func() {
+		a.treeListQ.push(prioUser, func() {
+			if fetchCtx.Err() != nil {
+				return // abandoned while queued
+			}
 			backendEntries, _, _, _, err := panel.FetchListing(fetchCtx, snap)
 			if fetchCtx.Err() != nil {
 				return // abandoned before the fetch finished; drop the result
@@ -117,7 +120,7 @@ func (a *App) treeChildLoader(panelID int) (schedule panel.TreeChildLoadSchedule
 			}) {
 				a.screen.PostEventWait(tcell.NewEventInterrupt(treeChildResultsReadyPayload{})) //nolint:staticcheck // SA1019: guaranteed delivery required, see comment above
 			}
-		}()
+		})
 		return true
 	}
 	cancelAll = func() {

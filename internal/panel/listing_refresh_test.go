@@ -27,7 +27,7 @@ func TestApplyPeriodicRefreshNoOpWhenEntriesEqual(t *testing.T) {
 		Sort:    defaultSortState(),
 		Cursor:  0,
 	}
-	if applied, err := state.ApplyPeriodicRefresh(state.Path, rows, 5, nil, nil); err != nil || applied {
+	if applied, err := state.ApplyPeriodicRefresh(state.Path, rows, 5, nil, nil, false); err != nil || applied {
 		if err != nil {
 			t.Fatalf("ApplyPeriodicRefresh: %v", err)
 		}
@@ -52,7 +52,7 @@ func TestApplyPeriodicRefreshKeepsSelectionByNameWhenNewFileAppears(t *testing.T
 		{Name: "beta.txt", Type: fsbackend.EntryFile, ModifiedAt: t0},
 		{Name: "gamma.txt", Type: fsbackend.EntryFile, ModifiedAt: t0},
 	}
-	applied, err := state.ApplyPeriodicRefresh(loc, fresh, 5, nil, nil)
+	applied, err := state.ApplyPeriodicRefresh(loc, fresh, 5, nil, nil, false)
 	if err != nil {
 		t.Fatalf("ApplyPeriodicRefresh: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestApplyPeriodicRefreshKeepsCursorRowWhenCursorIndexShifts(t *testing.T) {
 	}
 	state.ScrollOffset = state.Cursor - 3 // highlight on viewport row 3
 	priorRow := state.Cursor - state.ScrollOffset
-	applied, err := state.ApplyPeriodicRefresh(loc, fresh, viewportRows, nil, nil)
+	applied, err := state.ApplyPeriodicRefresh(loc, fresh, viewportRows, nil, nil, false)
 	if err != nil {
 		t.Fatalf("ApplyPeriodicRefresh: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestApplyPeriodicRefreshMinimalScrollWhenHighlightUnchanged(t *testing.T) {
 	state.ApplySort()
 	state.Move(0, viewportRows)
 	priorScroll := state.ScrollOffset
-	applied, err := state.ApplyPeriodicRefresh(loc, fresh, viewportRows, nil, nil)
+	applied, err := state.ApplyPeriodicRefresh(loc, fresh, viewportRows, nil, nil, false)
 	if err != nil {
 		t.Fatalf("ApplyPeriodicRefresh: %v", err)
 	}

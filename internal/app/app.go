@@ -156,7 +156,7 @@ type selectionScanNeedPayload struct {
 	Meta map[string]localfs.Entry
 	// Vanished lists selected roots outside the listing that no longer exist on disk.
 	Vanished []string
-	Gen  uint64
+	Gen      uint64
 }
 
 // findDialogSelectionScanNeedPayload is the find-dialog equivalent of selectionScanNeedPayload.
@@ -276,6 +276,8 @@ type App struct {
 	// of concurrent fetches) posts at most one pending tcell interrupt at a time instead of one per
 	// fetch. See treeChildResultQueue in tree_load.go.
 	treeChildResults treeChildResultQueue
+	// treeListQ caps concurrent tree directory listings across both panels and orders them by priority.
+	treeListQ treeListQueue
 	// asyncWakes coalesces listing, git-status, and carousel snapshot completions so a burst
 	// of goroutines posts at most one tcell interrupt per queue. See asyncWakeQueues.
 	asyncWakes asyncWakeQueues

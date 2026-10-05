@@ -88,18 +88,45 @@ type asyncListingResult struct {
 // and turn an otherwise good root listing into a timeout error.
 const treePrefetchBudgetDivisor = 2
 
-// prefetchTreeChildren lists ids in parallel (FetchListing + ToPanelEntries, like treeChildLoader)
-// and returns whichever finished within wait. Unfinished directories are omitted.
-func prefetchTreeChildren(snap panel.ListingRefreshSnapshot, ids []string, wait time.Duration) map[string]panel.TreePrefetchResult {
+// treeRefreshPrio maps a refresh tier to its queue priority.
+func treeRefreshPrio(t panel.TreeRefreshTier) treeListPrio {
+	switch t {
+	case panel.TreeRefreshCaret:
+		return prioCaret
+	case panel.TreeRefreshVisible:
+		return prioVisible
+	}
+	return prioOffscreen
+}
+
+// userTreeRefreshReqs requests ids at user priority (navigation re-entry).
+func userTreeRefreshReqs(ids []string) []treeListReq {
+	reqs := make([]treeListReq, len(ids))
+	for i, id := range ids {
+		reqs[i] = treeListReq{id: id, prio: prioUser}
+	}
+	return reqs
+}
+
+type treeListReq struct {
+	id   string
+	prio treeListPrio
+}
+
+// prefetchTreeChildren lists reqs through the shared tree-list queue (FetchListing +
+// ToPanelEntries, like treeChildLoader) and returns whichever finished within wait. Unfinished
+// directories are omitted; queued jobs that start after the deadline do no I/O.
+func (a *App) prefetchTreeChildren(snap panel.ListingRefreshSnapshot, reqs []treeListReq, wait time.Duration) map[string]panel.TreePrefetchResult {
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
 	snap.ClimbToExistingAncestor = false
 	snap.ListTimeout = wait
 	fetch := fetchListingForAsyncLoad // read once here: tests swap the package seam
 	var mu sync.Mutex
-	out := make(map[string]panel.TreePrefetchResult, len(ids))
+	out := make(map[string]panel.TreePrefetchResult, len(reqs))
 	var wg sync.WaitGroup
-	for _, id := range ids {
+	for _, req := range reqs {
+		id := req.id
 		loc, err := pathloc.Parse(id)
 		if err != nil {
 			continue
@@ -107,8 +134,11 @@ func prefetchTreeChildren(snap panel.ListingRefreshSnapshot, ids []string, wait 
 		wg.Add(1)
 		childSnap := snap
 		childSnap.Loc = loc
-		go func() {
+		a.treeListQ.push(req.prio, func() {
 			defer wg.Done()
+			if ctx.Err() != nil {
+				return
+			}
 			backendEntries, _, _, _, err := fetch(ctx, childSnap)
 			var entries []localfs.Entry
 			if err == nil {
@@ -120,7 +150,7 @@ func prefetchTreeChildren(snap panel.ListingRefreshSnapshot, ids []string, wait 
 			mu.Lock()
 			out[id] = panel.TreePrefetchResult{Entries: entries, Err: err}
 			mu.Unlock()
-		}()
+		})
 	}
 	done := make(chan struct{})
 	go func() { wg.Wait(); close(done) }()
@@ -166,7 +196,7 @@ func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout t
 		}
 		if err == nil && len(prefetch) > 0 {
 			if wait := (timeout - time.Since(start)) / treePrefetchBudgetDivisor; wait > 0 {
-				res.treeChildren = prefetchTreeChildren(snap, prefetch, wait)
+				res.treeChildren = a.prefetchTreeChildren(snap, userTreeRefreshReqs(prefetch), wait)
 			}
 		}
 		post(res)
