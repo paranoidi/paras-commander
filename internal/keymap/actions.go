@@ -269,8 +269,8 @@ const (
 	ActionDialogInputUpcaseWord = "ui.input.upcase-word"
 	// ActionDialogInputDowncaseWord lowercases up to the next word end (readline M-l).
 	ActionDialogInputDowncaseWord = "ui.input.downcase-word"
-	// ActionDialogInputCapitalizeWord capitalizes the next word (readline M-c; bound to M-S-u
-	// because Alt+C is the dialog Cancel mnemonic).
+	// ActionDialogInputCapitalizeWord capitalizes the next word (readline M-c is the dialog
+	// Cancel mnemonic, so it is bound to M-t; M-S-u is indistinguishable from M-u in terminals).
 	ActionDialogInputCapitalizeWord = "ui.input.capitalize-word"
 
 	// ActionDestinationActivePanel / ActionDestinationInactivePanel set a dialog's destination

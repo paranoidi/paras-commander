@@ -67,12 +67,18 @@ func (a *App) openHelpDialog() {
 // textEditHelpPrefix selects the dialog text-input editing actions ([dialog.input]).
 const textEditHelpPrefix = "ui.input."
 
+// notTextEditHelp holds [dialog.input] actions that are not text editing and stay off the page.
+var notTextEditHelp = map[string]bool{
+	keymap.ActionDialogInputRestoreDefault: true,
+	keymap.ActionDialogInputPathPickerAll:  true,
+}
+
 // buildTextEditHelpEntries lists the dialog text-input editing shortcuts.
 func (a *App) buildTextEditHelpEntries() []dialog.HelpEntry {
 	entries := []dialog.HelpEntry{}
 	defaults := keymap.DefaultDialogInputOverlayKeys()
 	for _, spec := range keymap.DefaultActionSpecs() {
-		if !strings.HasPrefix(spec.ID, textEditHelpPrefix) {
+		if !strings.HasPrefix(spec.ID, textEditHelpPrefix) || notTextEditHelp[spec.ID] {
 			continue
 		}
 		var keys []string

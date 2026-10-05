@@ -198,6 +198,11 @@ func TestHelpF2TogglesTextEditPage(t *testing.T) {
 	if !found {
 		t.Fatalf("yank entry missing: %+v", st.Entries)
 	}
+	for _, e := range st.Entries {
+		if e.ActionID == keymap.ActionDialogInputRestoreDefault || e.ActionID == keymap.ActionDialogInputPathPickerAll {
+			t.Fatalf("non-text-edit entry listed: %+v", e)
+		}
+	}
 	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, true); len(lbl) != 1 || lbl[0].Hint != "All keys" {
 		t.Fatalf("footer = %+v", lbl)
 	}
