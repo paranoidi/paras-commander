@@ -12,6 +12,7 @@ type FilterDialogState struct {
 	TextCursor    int // rune offset of caret within Text (0..len(runes))
 	TextScroll    int // first visible rune offset for horizontal scrolling
 	PatternMode   panel.GroupPatternMode
+	FilesOnly     bool // mutually exclusive with DirsOnly
 	DirsOnly      bool
 	CaseSensitive bool
 	// MetaColumnCount is the active panel's meta column count at dialog-open time; 0 hides the
@@ -19,7 +20,7 @@ type FilterDialogState struct {
 	MetaColumnCount    int
 	IncludeMetaColumns bool
 	OnlyMetaColumns    bool
-	Focus              int // 0-2=mode radios, 3=pattern, 4=dirs only, 5=case sensitive, 6-7=meta (when shown), then OK, Cancel
+	Focus              int // 0-2=mode radios, 3=pattern, 4=files only, 5=dirs only, 6=case sensitive, 7-8=meta (when shown), then OK, Cancel
 
 	// Live match-count preview shown right-aligned on the Pattern row, recomputed on every state
 	// change. PreviewShow is false while the pattern is empty or fails to compile.

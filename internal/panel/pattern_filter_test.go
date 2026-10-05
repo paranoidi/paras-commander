@@ -33,7 +33,7 @@ func TestPatternFilterIncludeMetaMatchesByNameOrValue(t *testing.T) {
 	meta := func() GroupSelectMeta {
 		return GroupSelectMeta{Cols: []map[string]string{{lanternPath: "beacon tag"}}}
 	}
-	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, meta)
+	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -49,7 +49,7 @@ func TestPatternFilterIncludeMetaMatchesByNameOrValue(t *testing.T) {
 
 	// Now match a pattern that only the meta value satisfies: with Include on, basename matching
 	// still runs (finds nothing) and the meta value match adds lantern.txt.
-	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, meta)
+	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -70,7 +70,7 @@ func TestPatternFilterOnlyMetaSkipsBasenameMatch(t *testing.T) {
 	}
 	// "thicket" matches thicket.txt's basename, but OnlyMeta suppresses basename matching
 	// entirely, so only meta-value matches count — here, none.
-	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, meta)
+	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -80,7 +80,7 @@ func TestPatternFilterOnlyMetaSkipsBasenameMatch(t *testing.T) {
 	}
 
 	// "beacon" matches only lantern.txt's meta value.
-	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, meta)
+	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -105,7 +105,7 @@ func TestPatternFilterRefreshPicksUpLiveProviderData(t *testing.T) {
 	meta := func() GroupSelectMeta {
 		return GroupSelectMeta{Cols: []map[string]string{live}}
 	}
-	filter, err := PatternFilter("beacon", GroupPatternSimple, false, false, meta)
+	filter, err := PatternFilter("beacon", GroupPatternSimple, false, false, false, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -136,7 +136,7 @@ func TestEntryFilterKeepsDirectories(t *testing.T) {
 		}
 	}
 	pattern := func(pat string, dirsOnly bool) *EntryFilter {
-		f, err := PatternFilter(pat, GroupPatternShell, false, dirsOnly, nil)
+		f, err := PatternFilter(pat, GroupPatternShell, false, false, dirsOnly, nil)
 		if err != nil {
 			t.Fatalf("PatternFilter() error = %v", err)
 		}
@@ -149,6 +149,13 @@ func TestEntryFilterKeepsDirectories(t *testing.T) {
 	}{
 		{"pattern keeps dir", pattern("*.go", false), []string{"harbor", "match.go"}},
 		{"dirs only filters dirs", pattern("harb*", true), []string{"harbor"}},
+		{"files only hides dirs", func() *EntryFilter {
+			f, err := PatternFilter("*", GroupPatternShell, false, true, false, nil)
+			if err != nil {
+				t.Fatalf("PatternFilter() error = %v", err)
+			}
+			return f
+		}(), []string{"match.go", "other.txt"}},
 		{"reject-all keeps dir", &EntryFilter{ID: "none", Match: func(localfs.Entry, *State) bool { return false }}, []string{"harbor"}},
 	}
 	for _, tt := range tests {
