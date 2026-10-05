@@ -18,7 +18,7 @@ func runForEachShowsCommandError(state FileDialogState) bool {
 	return runForEachCommandErrorText(state) != ""
 }
 
-func runForEachCommandErrorStyle(styles theme.Theme, dbg tcell.Color) tcell.Style {
+func dialogErrorTextStyle(styles theme.Theme, dbg tcell.Color) tcell.Style {
 	errFG, _, _ := styles.DialogInputActiveError.Decompose()
 	return styles.DialogText.Foreground(errFG).Background(dbg)
 }

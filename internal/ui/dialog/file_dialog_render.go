@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
@@ -419,7 +420,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 		y++
 		if i == 0 {
 			if hint := runForEachCommandErrorText(state); hint != "" && y < innerBottom {
-				primitive.Text(screen, draw.DialogTextX(rect), y, rect.Width-4, hint, runForEachCommandErrorStyle(styles, dbg))
+				primitive.Text(screen, draw.DialogTextX(rect), y, rect.Width-4, hint, dialogErrorTextStyle(styles, dbg))
 				y++
 			} else if preview := runForEachPreviewText(state); preview != "" && y < innerBottom {
 				primitive.Text(screen, draw.DialogTextX(rect), y, rect.Width-4, "→ "+preview, runForEachPreviewStyle(styles, dbg))
@@ -509,6 +510,9 @@ func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			continue
 		}
 		drawInputField(screen, rect.X+2, inputY, rect.Width-4, field, i == state.FocusedField, styles)
+		if warn := renameWhitespaceWarning(state, i); warn != "" && inputY+1 < rect.Y+rect.Height-3 {
+			primitive.Text(screen, draw.DialogTextX(rect), inputY+1, draw.DialogContentWidth(rect), warn, dialogErrorTextStyle(styles, dbg))
+		}
 		if field.PathPicker && field.Completion.Open {
 			x, y, scroll, comp := rect.X+2, inputY+1, field.Scroll, field.Completion
 			drawDropdown = func(sb uiscrollbar.Style) {
@@ -726,6 +730,26 @@ func mkdirExtraFocusRows(state FileDialogState) int {
 }
 
 const renameFocusCheckboxRowCount = 1
+
+// renameWhitespaceWarning returns the warning shown on the blank row under the rename/duplicate
+// name input (field i) when the name has leading or trailing whitespace and focus has left it.
+func renameWhitespaceWarning(state FileDialogState, i int) string {
+	if !renameHasFocusCheckbox(state) || i != 0 || state.FocusedField == 0 {
+		return ""
+	}
+	v := state.Fields[0].Value
+	lead := strings.TrimLeftFunc(v, unicode.IsSpace) != v
+	trail := strings.TrimRightFunc(v, unicode.IsSpace) != v
+	switch {
+	case lead && trail:
+		return "Name has leading and trailing whitespace"
+	case lead:
+		return "Name has leading whitespace"
+	case trail:
+		return "Name has trailing whitespace"
+	}
+	return ""
+}
 
 // renameHasFocusCheckbox reports whether the single-file rename main dialog
 // should render and accept the focus-after-rename checkbox.
