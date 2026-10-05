@@ -773,3 +773,42 @@ func backgroundWakePayloadForEntry(t *testing.T, app *App, title string) command
 	}
 	return p
 }
+
+func TestUserMenuKeepOpenStaysOpenWithToast(t *testing.T) {
+	for _, tc := range []struct {
+		toast string
+		nerd  bool
+		want  string
+	}{{"", false, "Ran Quartz"}, {"", true, "\uf05d Quartz"}, {"Custom note", true, "Custom note"}} {
+		dir := t.TempDir()
+		cfgDir := filepath.Join(dir, "config")
+		menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+		if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		toastLine := ""
+		if tc.toast != "" {
+			toastLine = "toast = \"" + tc.toast + "\"\n"
+		}
+		writeUserMenuFile(t, menuPath, "[q]\nkey = \"q\"\ntitle = \"Quartz\"\ncommand = \"true\"\ndetach = true\nkeep_open = true\n"+toastLine+
+			"\n[r]\nkey = \"r\"\ntitle = \"Ridge\"\ncommand = \"true\"\ndetach = true\n")
+		app := testUserMenuApp(t, dir, cfgDir)
+		app.styles.UseNerdfontIcons = tc.nerd
+		prev := userMenuDetachRunner
+		userMenuDetachRunner = func([]string, string) error { return nil }
+		t.Cleanup(func() { userMenuDetachRunner = prev })
+
+		app.openUserMenu()
+		app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone))
+		if !app.userMenuOpen() {
+			t.Fatal("menu should stay open")
+		}
+		if app.model.Message != tc.want {
+			t.Fatalf("Message = %q, want %q", app.model.Message, tc.want)
+		}
+		app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
+		if app.userMenuOpen() {
+			t.Fatal("non-keep_open entry should close the menu")
+		}
+	}
+}

@@ -173,6 +173,13 @@ func (a *App) openUserMenuLevel(entries []usermenu.MenuEntry) {
 			a.openUserMenuLevel(entry.Entries)
 			return false
 		}
+		if entry.KeepOpen {
+			// Reopen before running: the strip clears the transient message, which would eat the toast.
+			level := a.userMenuVisible
+			a.openUserMenuLevel(level)
+			a.runUserMenuEntry(entry)
+			return false
+		}
 		a.userMenuStack = nil
 		a.runUserMenuEntry(entry)
 		return false
@@ -206,8 +213,17 @@ func userMenuLeaderMenuItems(entries []usermenu.MenuEntry, styles theme.Theme) [
 func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	active := a.activePanel()
 	other := a.inactivePanel()
+	if entry.KeepOpen && entry.Toast == "" {
+		prefix := "Ran"
+		if a.styles.UseNerdfontIcons {
+			prefix = a.styles.IconJobsList("completed")
+		}
+		entry.Toast = prefix + " " + backgroundRunTitle(entry.Title)
+	}
 	if len(entry.RunForEach) > 0 {
-		a.executeUserMenuRunForEach(entry, active, other)
+		if a.executeUserMenuRunForEach(entry, active, other) && entry.KeepOpen {
+			a.setTransientMessage(entry.Toast, ui.MessageUrgencyInfo)
+		}
 		return
 	}
 
@@ -249,15 +265,16 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	}
 }
 
-func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other *panel.State) {
+// executeUserMenuRunForEach reports whether the batch was started.
+func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other *panel.State) bool {
 	src, err := ops.ResolveSource(active)
 	if err != nil {
 		a.setErrorMessage("User menu", err)
-		return
+		return false
 	}
 	if len(src.Entries) == 0 {
 		a.setTransientMessage("User menu: no paths to run", ui.MessageUrgencyWarn)
-		return
+		return false
 	}
 
 	var allowFiles, allowDirs bool
@@ -290,6 +307,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell, true)
 		},
 	})
+	return true
 }
 
 func (a *App) runUserMenuInteractive(argv []string, workDir, toast string) {

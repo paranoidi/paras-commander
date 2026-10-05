@@ -28,6 +28,7 @@ var menuEntryKeys = map[string]struct{}{
 	"default":        {},
 	"interactive":    {},
 	"detach":         {},
+	"keep_open":      {},
 	"background":     {},
 	"pty":            {},
 	"pool":           {},
@@ -75,6 +76,7 @@ type MenuEntry struct {
 	Default       bool
 	Interactive   bool
 	Detach        bool
+	KeepOpen      bool
 	Background    bool
 	PTY           bool
 	Pool          string
@@ -154,6 +156,7 @@ type menuEntry struct {
 	Default       bool       `toml:"default"`
 	Interactive   *boolField `toml:"interactive"`
 	Detach        *boolField `toml:"detach"`
+	KeepOpen      *boolField `toml:"keep_open"`
 	Background    *boolField `toml:"background"`
 	PTY           *boolField `toml:"pty"`
 	Pool          string     `toml:"pool"`
@@ -436,6 +439,9 @@ func validateSubmenuMutualExclusion(path string, raw menuEntry) error {
 	if raw.Background != nil && raw.Background.Set && raw.Background.Value {
 		return entryError(path, "background "+suffix)
 	}
+	if raw.KeepOpen != nil && raw.KeepOpen.Set && raw.KeepOpen.Value {
+		return entryError(path, "keep_open "+suffix)
+	}
 	if raw.Dialog != nil && raw.Dialog.Set && raw.Dialog.Value {
 		return entryError(path, "dialog "+suffix)
 	}
@@ -588,6 +594,16 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		return MenuEntry{}, err
 	}
 
+	keepOpen := raw.KeepOpen != nil && raw.KeepOpen.Set && raw.KeepOpen.Value
+	if keepOpen {
+		if modes.dialog {
+			return MenuEntry{}, entryError(path, "keep_open cannot be combined with dialog")
+		}
+		if !modes.background && !modes.detach && !modes.interactive {
+			return MenuEntry{}, entryError(path, "keep_open requires background, detach or interactive")
+		}
+	}
+
 	whenList, err := decodeWhenList(path, raw, entryShellPatterns)
 	if err != nil {
 		return MenuEntry{}, err
@@ -603,6 +619,7 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		Default:       raw.Default,
 		Interactive:   modes.interactive,
 		Detach:        modes.detach,
+		KeepOpen:      keepOpen,
 		Background:    modes.background,
 		PTY:           modes.pty,
 		Pool:          pool,

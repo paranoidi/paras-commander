@@ -33,7 +33,7 @@ const MenuStubTOML = `# User function menu
 # A table becomes a submenu once it has its own nested [parent.child] tables
 # instead of a command — submenus can nest arbitrarily deep. A submenu table
 # cannot also set command / run_for_each / pool / toast / interactive /
-# detach / background / dialog (mutually exclusive with being a container).
+# detach / background / keep_open / dialog (mutually exclusive with being a container).
 # key=/default= uniqueness is scoped per menu level, so a key can be reused
 # across sibling submenus but not twice within the same level. A duplicate
 # key= within one level is warned about when the menu is opened; the later
@@ -67,6 +67,8 @@ const MenuStubTOML = `# User function menu
 # toast           string   optional
 #   Message shown in the status bar after the command succeeds.
 #   Suppressed on error. For detach entries it replaces "Started …".
+#   With keep_open it defaults to "Ran <title>" (completed status icon instead
+#   of "Ran" when use_nerdfont_icons is on).
 #
 # key             string   optional   (single letter)
 #   Pin the function-menu activation letter; otherwise derived from title.
@@ -93,6 +95,11 @@ const MenuStubTOML = `# User function menu
 #
 # shell           bool     optional   default: false
 #   Force sh -c even without shell operators (>> | && …).
+#
+# keep_open       bool     optional   default: false
+#   Keep the menu open at the same level after launching, to fire several
+#   entries in a row. Requires background, detach or interactive (also with
+#   run_for_each + background); not combinable with dialog.
 #
 # interactive     bool     optional   default: false
 #   Suspend TUI and attach terminal (vim, lazygit, htop).

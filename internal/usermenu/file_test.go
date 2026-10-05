@@ -684,3 +684,52 @@ command = "true"
 		t.Fatalf("err = %v, want reserved field name error", err)
 	}
 }
+
+func TestDecodeKeepOpen(t *testing.T) {
+	mf, err := Decode([]byte(`[a]
+title = "Alpha"
+command = "true"
+background = true
+keep_open = true
+
+[b]
+title = "Bravo"
+command = "true"
+detach = true
+keep_open = true
+
+[c]
+title = "Charlie"
+command = "true"
+interactive = true
+keep_open = true
+
+[d]
+title = "Delta"
+command = "echo %f"
+run_for_each = ["files"]
+background = true
+keep_open = true
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, e := range mf.Entries {
+		if !e.KeepOpen {
+			t.Fatalf("entry %d: KeepOpen = false", i)
+		}
+	}
+}
+
+func TestDecodeKeepOpenErrors(t *testing.T) {
+	cases := map[string]string{
+		"dialog":  "[a]\ntitle = \"Alpha\"\ncommand = \"true\"\ndialog = true\nkeep_open = true\n",
+		"plain":   "[a]\ntitle = \"Alpha\"\ncommand = \"true\"\nkeep_open = true\n",
+		"submenu": "[a]\ntitle = \"Alpha\"\nkeep_open = true\n\n[a.b]\ntitle = \"Bravo\"\ncommand = \"true\"\n",
+	}
+	for name, src := range cases {
+		if _, err := Decode([]byte(src)); err == nil {
+			t.Errorf("%s: want error", name)
+		}
+	}
+}
