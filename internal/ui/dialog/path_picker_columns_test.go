@@ -12,12 +12,12 @@ import (
 
 func TestPathPickerItemSearchLine(t *testing.T) {
 	item := PathPickerItem{Source: "history", Path: "/tmp/x"}
-	if got := item.SearchLine(); got != "history /tmp/x" {
-		t.Fatalf("SearchLine() = %q, want %q", got, "history /tmp/x")
+	if got := item.SearchLine(); got != "/tmp/x" {
+		t.Fatalf("SearchLine() = %q, want %q", got, "/tmp/x")
 	}
 	item = PathPickerItem{Source: "fzf-marks", Name: "proj", Path: "/tmp/x"}
-	if got := item.SearchLine(); got != "fzf-marks proj /tmp/x" {
-		t.Fatalf("SearchLine() = %q, want %q", got, "fzf-marks proj /tmp/x")
+	if got := item.SearchLine(); got != "proj /tmp/x" {
+		t.Fatalf("SearchLine() = %q, want %q", got, "proj /tmp/x")
 	}
 }
 

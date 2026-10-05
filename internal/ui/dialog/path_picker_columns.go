@@ -19,11 +19,6 @@ type pathPickerFieldRange struct {
 
 func (i PathPickerItem) searchFieldRanges() (source, name, path pathPickerFieldRange) {
 	pos := 0
-	if i.Source != "" {
-		n := utf8.RuneCountInString(i.Source)
-		source = pathPickerFieldRange{text: i.Source, start: pos, end: pos + n}
-		pos = source.end + 1
-	}
 	if i.Name != "" {
 		n := utf8.RuneCountInString(i.Name)
 		name = pathPickerFieldRange{text: i.Name, start: pos, end: pos + n}

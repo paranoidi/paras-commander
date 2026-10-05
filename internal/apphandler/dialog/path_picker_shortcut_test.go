@@ -69,16 +69,13 @@ func TestPathPickerBuildersLeaveShortcutIDsEmpty(t *testing.T) {
 			t.Fatalf("production path-picker item has ID %q; shortcut IDs are not assigned", item.ID)
 		}
 		if got, want := item.SearchLine(), searchLineWithoutID(item); got != want {
-			t.Fatalf("SearchLine() = %q, want %q (Source/Name/Path only)", got, want)
+			t.Fatalf("SearchLine() = %q, want %q (Name/Path only)", got, want)
 		}
 	}
 }
 
 func searchLineWithoutID(item uidialog.PathPickerItem) string {
-	parts := make([]string, 0, 3)
-	if item.Source != "" {
-		parts = append(parts, item.Source)
-	}
+	parts := make([]string, 0, 2)
 	if item.Name != "" {
 		parts = append(parts, item.Name)
 	}

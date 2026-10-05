@@ -32,12 +32,10 @@ type PathPickerItem struct {
 	PathMissing bool
 }
 
-// SearchLine returns the fuzzy-filter key for this item.
+// SearchLine returns the fuzzy-filter key for this item. The source label is a category column,
+// not searchable text.
 func (i PathPickerItem) SearchLine() string {
-	parts := make([]string, 0, 3)
-	if i.Source != "" {
-		parts = append(parts, i.Source)
-	}
+	parts := make([]string, 0, 2)
 	if i.Name != "" {
 		parts = append(parts, i.Name)
 	}
