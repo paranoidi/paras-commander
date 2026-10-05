@@ -334,7 +334,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			y++
 			if fi == 1 && state.MassRenameMode == MassRenameModeUIRegex {
 				if hint := massRenameReplacementHintText(state); hint != "" && y < innerBottom {
-					primitive.Text(screen, primaryCol, y, innerW, hint, massRenameReplacementHintStyle(styles, dbg))
+					primitive.Text(screen, primaryCol, y, innerW, styles.IconDialogInfo()+" "+hint, massRenameReplacementHintStyle(styles, dbg))
 					y++
 				}
 			}

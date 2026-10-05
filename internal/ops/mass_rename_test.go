@@ -277,26 +277,6 @@ func TestMassRenameComputeRegexBackslashGroup(t *testing.T) {
 	}
 }
 
-func TestMassRenameReplacementSyntaxHint(t *testing.T) {
-	rx, err := MassRenameCompileRegex(`(\d)`, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := MassRenameReplacementSyntaxHint(rx); got == "" {
-		t.Fatal("expected hint for capture group pattern")
-	}
-	rxPlain, err := MassRenameCompileRegex(`\.txt$`, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := MassRenameReplacementSyntaxHint(rxPlain); got != "" {
-		t.Fatalf("expected no hint for pattern without groups, got %q", got)
-	}
-	if got := MassRenameReplacementSyntaxHint(nil); got != "" {
-		t.Fatalf("expected no hint for nil rx, got %q", got)
-	}
-}
-
 func TestMassRenameValidateRowsDuplicate(t *testing.T) {
 	dir := t.TempDir()
 	rows := []MassRenameRow{
@@ -745,4 +725,48 @@ func massRenameRangesEqual(a, b []search.Range) bool {
 		}
 	}
 	return true
+}
+
+func TestMassRenameComputeRegexZeroPad(t *testing.T) {
+	tests := []struct {
+		name, pattern, repl, old, want string
+	}{
+		{"one digit", `\d+`, "${0:3}", "walnut 1.txt", "walnut 001.txt"},
+		{"two digits", `\d+`, "${0:3}", "walnut 10.txt", "walnut 010.txt"},
+		{"exact width", `\d+`, "${0:3}", "walnut 100.txt", "walnut 100.txt"},
+		{"wider unchanged", `\d+`, "${0:3}", "walnut 1000.txt", "walnut 1000.txt"},
+		{"adjacent numbers", `\d+`, "${0:3}", "maple1pear2.txt", "maple001pear002.txt"},
+		{"targeted group", `E(\d+)`, "E${1:2}", "S1E5 cedar.txt", "S1E05 cedar.txt"},
+		{"named group", `(?P<n>\d+)`, "${n:2}", "plum 7.txt", "plum 07.txt"},
+		{"mixed template", `(\d+)`, "${1}-${1:3}", "fig 4.txt", "fig 4-004.txt"},
+		{"unmatched group", `a(\d)?b`, "${1:3}", "ab.txt", "000.txt"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rx, err := MassRenameCompileRegex(tc.pattern, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			dir := t.TempDir()
+			entries := []localfs.Entry{{Name: tc.old, Path: filepath.Join(dir, tc.old), Type: localfs.EntryFile}}
+			rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, tc.pattern, tc.repl, false, false, rx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 || rows[0].NewBase != tc.want {
+				t.Fatalf("got %+v, want NewBase %q", rows, tc.want)
+			}
+		})
+	}
+}
+
+func TestMassRenameReplacementRangesZeroPad(t *testing.T) {
+	re, err := MassRenameCompileRegex(`\d+`, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := MassRenameReplacementRanges("walnut 1.txt", MassRenameModeRegex, "", "${0:3}", false, re)
+	if len(got) != 1 || got[0].Start != 7 || got[0].End != 10 {
+		t.Fatalf("got %+v, want one range 7..10", got)
+	}
 }

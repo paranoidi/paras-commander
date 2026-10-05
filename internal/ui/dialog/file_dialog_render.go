@@ -9,6 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
@@ -368,11 +369,12 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 				minWidth = hw
 			}
 		}
-		if h := massRenameReplacementHintText(state); h != "" {
-			hw := utf8.RuneCountInString(h) + 4
-			if hw > minWidth {
-				minWidth = hw
-			}
+		// Reserve the regex-mode replacement hint width in every mode so switching to Regex
+		// doesn't widen the dialog. Rendered as "<info icon> <hint>"; reserve the ASCII
+		// fallback, the widest icon form.
+		hw := utf8.RuneCountInString(theme.IconDialogInfoASCII) + 1 + utf8.RuneCountInString(ops.MassRenameReplacementSyntaxHint) + 4
+		if hw > minWidth {
+			minWidth = hw
 		}
 	}
 	if minWidth > screenWidth-4 {

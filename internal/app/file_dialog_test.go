@@ -1139,30 +1139,6 @@ func TestMassRenameRegexCaptureGroupPreviewWithShiftDollar(t *testing.T) {
 	if len(d.MassRenamePreviewAfter) != 1 || d.MassRenamePreviewAfter[0] != "Season 01" {
 		t.Fatalf("preview after = %v, want Season 01", d.MassRenamePreviewAfter)
 	}
-	if d.MassRenameReplacementSyntaxHint == "" {
-		t.Fatal("expected replacement syntax hint for capture group pattern")
-	}
-}
-
-func TestMassRenameReplacementSyntaxHintHiddenWithoutGroups(t *testing.T) {
-	dir := t.TempDir()
-	aPath := filepath.Join(dir, "x.txt")
-	writeFile(t, aPath)
-
-	screen := newScreen(t, 80, 24)
-	app := newApp(t, screen, dir)
-	p := app.activePanel()
-	p.SelectedPaths = map[string]bool{aPath: true}
-
-	app.dispatch(keymap.ActionFileRename)
-	d := &app.model.FileDialog
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
-	for _, r := range `\.txt$` {
-		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
-	}
-	if d.MassRenameReplacementSyntaxHint != "" {
-		t.Fatalf("hint = %q, want empty for pattern without capture groups", d.MassRenameReplacementSyntaxHint)
-	}
 }
 
 func TestMassRenameRegexpCompileHintForBackslashPattern(t *testing.T) {

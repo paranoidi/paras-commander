@@ -206,8 +206,6 @@ type FileDialogState struct {
 	MassRenameMatchCount int
 	// MassRenamePatternCompileHint is a short regexp compile error shown under the Pattern field (regex mode).
 	MassRenamePatternCompileHint string
-	// MassRenameReplacementSyntaxHint is shown under the Replacement field when the pattern has capture groups.
-	MassRenameReplacementSyntaxHint string
 	// MassRenameExternalNames holds the per-file basenames returned by the external editor (ExternalEditor mode).
 	// Nil means the editor has not been run yet.
 	MassRenameExternalNames []string

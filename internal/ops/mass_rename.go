@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -214,14 +215,9 @@ func MassRenameCompileRegex(pattern string, caseFold bool) (*regexp.Regexp, erro
 	return re, nil
 }
 
-// MassRenameReplacementSyntaxHint returns a one-line replacement-template hint when the
-// compiled pattern has capture groups, or "" when none or rx is nil.
-func MassRenameReplacementSyntaxHint(rx *regexp.Regexp) string {
-	if rx == nil || rx.NumSubexp() == 0 {
-		return ""
-	}
-	return "Replacement: $n or ${n} for groups; ${0} is full match; use ${n} before digits"
-}
+// MassRenameReplacementSyntaxHint is the replacement-template hint shown under the Replacement
+// field for the whole time the dialog is in regex mode, so the dialog height never changes.
+const MassRenameReplacementSyntaxHint = "$n or ${n} for groups; ${0} is full match; ${n:W} zero-pads to W"
 
 // massRenameNormalizeRegexReplacement converts \1–\9 backrefs to ${1}–${9} for Go regexp
 // expansion, and auto-braces bare $N group refs that are immediately followed by a letter
@@ -265,8 +261,60 @@ func massRenameNormalizeRegexReplacement(template string) string {
 	return b.String()
 }
 
+// massRenamePadToken matches the zero-pad replacement token ${group:width}.
+var massRenamePadToken = regexp.MustCompile(`\$\{(\w+):(\d+)\}`)
+
+// massRenamePadMaxWidth caps ${n:W} widths at the NAME_MAX filename limit.
+const massRenamePadMaxWidth = 255
+
+// massRenameExpand expands template for one match (loc from FindStringSubmatchIndex). It is the
+// single expansion point: Go's $n/${n} syntax plus ${n:W}, which left-pads group n with '0' to
+// W runes (n is a group number or name; an unmatched group counts as empty).
+func massRenameExpand(rx *regexp.Regexp, template, src string, loc []int) string {
+	template = massRenameNormalizeRegexReplacement(template)
+	var out []byte
+	last := 0
+	for _, m := range massRenamePadToken.FindAllStringSubmatchIndex(template, -1) {
+		out = rx.ExpandString(out, template[last:m[0]], src, loc)
+		last = m[1]
+		idx, err := strconv.Atoi(template[m[2]:m[3]])
+		if err != nil {
+			idx = rx.SubexpIndex(template[m[2]:m[3]])
+		}
+		val := ""
+		if idx >= 0 && 2*idx+1 < len(loc) && loc[2*idx] >= 0 {
+			val = src[loc[2*idx]:loc[2*idx+1]]
+		}
+		// ponytail: width clamped to NAME_MAX; huge widths are never a valid filename anyway
+		w := min(massRenamePadMaxWidth, atoiClamped(template[m[4]:m[5]]))
+		if n := utf8.RuneCountInString(val); n < w {
+			out = append(out, strings.Repeat("0", w-n)...)
+		}
+		out = append(out, val...)
+	}
+	out = rx.ExpandString(out, template[last:], src, loc)
+	return string(out)
+}
+
+// atoiClamped parses a digit string, saturating instead of failing on overflow.
+func atoiClamped(s string) int {
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return massRenamePadMaxWidth
+	}
+	return n
+}
+
 func massRenameRegexReplace(rx *regexp.Regexp, oldBase, template string) string {
-	return rx.ReplaceAllString(oldBase, massRenameNormalizeRegexReplacement(template))
+	var b strings.Builder
+	last := 0
+	for _, loc := range rx.FindAllStringSubmatchIndex(oldBase, -1) {
+		b.WriteString(oldBase[last:loc[0]])
+		b.WriteString(massRenameExpand(rx, template, oldBase, loc))
+		last = loc[1]
+	}
+	b.WriteString(oldBase[last:])
+	return b.String()
 }
 
 const regexpParseErrPrefix = "error parsing regexp: "
@@ -582,7 +630,7 @@ func massRenameRegexReplacementRanges(oldBase string, rx *regexp.Regexp, replace
 		}
 		start, end := loc[0], loc[1]
 		outPos += utf8.RuneCountInString(oldBase[lastByte:start])
-		repl := string(rx.ExpandString(nil, massRenameNormalizeRegexReplacement(replace), oldBase, loc))
+		repl := massRenameExpand(rx, replace, oldBase, loc)
 		replRunes := utf8.RuneCountInString(repl)
 		ranges = massRenameAppendRange(ranges, outPos, outPos+replRunes)
 		outPos += replRunes

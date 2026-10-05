@@ -43,7 +43,7 @@ func massRenameReplacementHintText(state FileDialogState) string {
 	if state.MassRenameMode != MassRenameModeUIRegex {
 		return ""
 	}
-	return strings.TrimSpace(state.MassRenameReplacementSyntaxHint)
+	return ops.MassRenameReplacementSyntaxHint
 }
 
 func massRenameShowsReplacementHint(state FileDialogState) bool {

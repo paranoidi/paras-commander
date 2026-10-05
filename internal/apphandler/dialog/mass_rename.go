@@ -101,7 +101,6 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	d.MassRenameComputeError = ""
 	d.MassRenameMatchCount = 0
 	d.MassRenamePatternCompileHint = ""
-	d.MassRenameReplacementSyntaxHint = ""
 	if len(d.Fields) > 0 {
 		d.Fields[0].InputInvalid = false
 	}
@@ -158,7 +157,6 @@ func (h *Handler) RecomputeMassRenamePreview() {
 			}
 		}
 	}
-	d.MassRenameReplacementSyntaxHint = ops.MassRenameReplacementSyntaxHint(rx)
 	rows, err := ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, d.MassRenameStripSpaces, rx)
 	if err != nil {
 		setMassRenameComputeError(d, err.Error())

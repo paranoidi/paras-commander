@@ -7,7 +7,22 @@ const (
 	IconKeyDialogCheckboxUnchecked = "dialog.checkbox.unchecked"
 	IconKeyDialogRadioSelected     = "dialog.radio.selected"
 	IconKeyDialogRadioUnselected   = "dialog.radio.unselected"
+	IconKeyDialogInfo              = "dialog.info"
+
+	// IconDialogInfoASCII is the info marker used when Nerd Font icons are disabled; it is
+	// also the widest form, so dialog sizing reserves its width.
+	IconDialogInfoASCII = "[i]"
 )
+
+// IconDialogInfo returns the info marker that prefixes dialog help hints.
+// When UseNerdfontIcons is false, returns IconDialogInfoASCII.
+// Otherwise consults the theme's [icons.dialog] info key or uses the Nerd Font default.
+func (t Theme) IconDialogInfo() string {
+	if !t.UseNerdfontIcons {
+		return IconDialogInfoASCII
+	}
+	return t.dialogIcon(IconKeyDialogInfo, "\uf05a")
+}
 
 // IconDialogCheckbox returns the checkbox marker icon for the given state.
 // When UseNerdfontIcons is false, returns ASCII markers ([x] / [ ]).

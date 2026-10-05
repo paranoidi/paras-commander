@@ -313,3 +313,43 @@ func TestDrawMassRenameDialogShowsRegexpCompileHint(t *testing.T) {
 		t.Fatalf("row %d = %q, want it to end with %q (regexp hint right-aligned on the Pattern label row)", labelY, labelRow, hint)
 	}
 }
+
+// TestMassRenameReplacementHintShownForWholeRegexMode guards against the hint (and the row it
+// occupies) depending on the pattern, which would resize the dialog while typing.
+func TestMassRenameReplacementHintShownForWholeRegexMode(t *testing.T) {
+	for _, pat := range []string{"", `\d+`, `(`} {
+		state := FileDialogState{
+			DialogType:     FileDialogMassRename,
+			MassRenameMode: MassRenameModeUIRegex,
+			Fields:         []FileDialogField{{Label: "Pattern", Value: pat}, {Label: "Replacement"}},
+		}
+		if got := massRenameReplacementHintText(state); got != ops.MassRenameReplacementSyntaxHint {
+			t.Fatalf("pattern %q: hint = %q, want constant hint", pat, got)
+		}
+	}
+	simple := FileDialogState{DialogType: FileDialogMassRename, MassRenameMode: MassRenameModeUISimple}
+	if got := massRenameReplacementHintText(simple); got != "" {
+		t.Fatalf("simple mode hint = %q, want empty", got)
+	}
+}
+
+// TestMassRenameDialogWidthSameAcrossModes guards against the regex-only replacement hint
+// widening the dialog when switching modes.
+func TestMassRenameDialogWidthSameAcrossModes(t *testing.T) {
+	base := FileDialogState{
+		DialogType: FileDialogMassRename,
+		Fields:     []FileDialogField{{Label: "Find"}, {Label: "Replace"}},
+	}
+	want := -1
+	for _, mode := range []MassRenameModeUI{MassRenameModeUISimple, MassRenameModeUIRegex, MassRenameModeUIExternalEditor, MassRenameModeUICapitalize} {
+		st := base
+		st.MassRenameMode = mode
+		got := fileDialogWidth(200, st, 0)
+		if want < 0 {
+			want = got
+		}
+		if got != want {
+			t.Fatalf("mode %d width = %d, want %d (same as Simple)", mode, got, want)
+		}
+	}
+}
