@@ -129,10 +129,10 @@ const MenuStubTOML = `# User function menu
 #     %%  literal % character
 #     %f  basename of the highlighted file on the active panel (run_for_each: iterated absolute path)
 #     %F  basename of the highlighted file on the other panel
-#     %d  directory path of the active panel
-#     %D  directory path of the other panel
-#     %t  tagged files in the active panel's current directory (expanded as quoted tokens)
-#     %T  tagged files in the other panel's current directory (expanded as quoted tokens)
+#     %d  directory of the highlighted row on the active panel (tree view: may be a subdirectory)
+#     %D  directory of the highlighted row on the other panel
+#     %t  tagged files in the active panel's directory, at any depth in tree view (quoted tokens)
+#     %T  tagged files in the other panel's directory, at any depth in tree view (quoted tokens)
 #
 # --- end of documentation ---
 `

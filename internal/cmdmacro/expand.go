@@ -12,7 +12,7 @@ type PanelSnapshot struct {
 	Dir         string
 	CurrentName string
 	HasCurrent  bool
-	TaggedInDir []string // absolute paths tagged in Dir
+	TaggedInDir []string // absolute tagged paths: panel directory (flat) or anywhere under it (tree)
 }
 
 // Context carries state for macro expansion.

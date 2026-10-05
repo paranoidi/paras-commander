@@ -2,6 +2,7 @@ package usermenu
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/entrymatch"
@@ -51,20 +52,27 @@ func panelSnapshot(ps *panel.State) *cmdmacro.PanelSnapshot {
 	if ps == nil {
 		return nil
 	}
-	snap := &cmdmacro.PanelSnapshot{
-		Dir: filepath.Clean(ps.PathString()),
-	}
+	root := filepath.Clean(ps.PathString())
+	snap := &cmdmacro.PanelSnapshot{Dir: root}
 	if ent, ok := ps.CurrentEntry(); ok {
 		snap.HasCurrent = true
 		snap.CurrentName = ent.Path
+		// Tree rows can sit in expanded subdirectories: %d is the directory holding the caret row.
+		if ps.ListLayout == panel.ListLayoutTree && ent.Name != ".." {
+			snap.Dir = filepath.Clean(filepath.Dir(ent.Path))
+		}
 	}
-	if len(ps.SelectedPaths) > 0 {
-		base := snap.Dir
-		for p := range ps.SelectedPaths {
-			if filepath.Clean(filepath.Dir(p)) == base {
-				snap.TaggedInDir = append(snap.TaggedInDir, p)
-			}
+	tree := ps.ListLayout == panel.ListLayoutTree
+	for p, on := range ps.SelectedPaths {
+		// Tree view tags rows at any depth, so %t takes every tag under the root.
+		if on && (filepath.Clean(filepath.Dir(p)) == root || tree && underDir(root, p)) {
+			snap.TaggedInDir = append(snap.TaggedInDir, p)
 		}
 	}
 	return snap
+}
+
+func underDir(dir, p string) bool {
+	rel, err := filepath.Rel(dir, p)
+	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, "../")
 }
