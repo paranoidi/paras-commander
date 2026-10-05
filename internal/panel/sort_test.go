@@ -153,3 +153,37 @@ func TestListColumnTitles_MtimeArrowOnModifiedInDefaultFormat(t *testing.T) {
 		t.Fatalf("Mtime format/SortMtime: want plain Size and arrowed Modified, got size=%q third=%q", size, third)
 	}
 }
+
+// TestListingFullyDiskCached_OnlyDirsNeedTotals proves non-directories (files created after the
+// scan, broken symlinks the walk cannot stat) don't hold off the disk-usage sort, nor do
+// directories the scan is known to skip, while an unscanned directory still does; and that the
+// disk-usage order falls back to an uncached file's listed size.
+func TestListingFullyDiskCached_OnlyDirsNeedTotals(t *testing.T) {
+	t.Parallel()
+	cached := map[string]int64{"/w/harbor": 900}
+	s := &State{
+		Entries: []localfs.Entry{
+			{Name: "harbor", Path: "/w/harbor", Type: localfs.EntryDirectory},
+			{Name: "lantern.bin", Path: "/w/lantern.bin", Type: localfs.EntryFile, Size: 5000},
+			{Name: "orphan", Path: "/w/orphan", Type: localfs.EntrySymlink, Size: 12},
+			{Name: "meadow", Path: "/w/meadow", Type: localfs.EntryDirectory},
+		},
+		DiskSorter: func(p string) (int64, bool) { n, ok := cached[p]; return n, ok },
+	}
+	if s.ListingFullyDiskCached() {
+		t.Fatal("unscanned directory must keep the listing unresolved")
+	}
+	s.DiskExcluded = func(p string) bool { return p == "/w/meadow" }
+	if !s.ListingFullyDiskCached() {
+		t.Fatal("files, broken symlinks and excluded dirs must not block the disk-usage sort")
+	}
+	SortEntries(s.Entries, SortState{}, s.DiskSorter, true, nil)
+	files := &State{Entries: []localfs.Entry{
+		{Name: "lantern.bin", Path: "/w/lantern.bin", Type: localfs.EntryFile, Size: 5000},
+		{Name: "orphan", Path: "/w/orphan", Type: localfs.EntrySymlink, Size: 12},
+	}, DiskSorter: s.DiskSorter}
+	if files.ListingFullyDiskCached() {
+		t.Fatal("files-only listing with nothing cached was never scanned and must stay unresolved")
+	}
+	checkNames(t, s.Entries, []string{"lantern.bin", "harbor", "orphan", "meadow"})
+}

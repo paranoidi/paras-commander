@@ -2742,8 +2742,8 @@ func TestListingFullyDiskCached(t *testing.T) {
 	partial := State{
 		Path: pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{
-			{Name: "a", Path: "/tmp/a"},
-			{Name: "b", Path: "/tmp/b"},
+			{Name: "a", Path: "/tmp/a", Type: localfs.EntryDirectory},
+			{Name: "b", Path: "/tmp/b", Type: localfs.EntryDirectory},
 		},
 		DiskSorter: func(abs string) (int64, bool) {
 			if filepath.Clean(abs) == filepath.Clean("/tmp/a") {

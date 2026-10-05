@@ -204,29 +204,26 @@ func (s *State) ActiveMetaSortColumn() string {
 	return s.Sort.MetaColumn
 }
 
-// compareDiskUsagePrimary orders by cached subtree or file aggregates from diskSorter.
-// Unknown paths sort after any known path. Larger sizes sort first when reverse is false.
+// diskSortSize is e's disk-usage sort key: its cached total, else a non-directory's own listed
+// size (a file's size needs no walk; this covers files created after the scan and broken symlinks
+// the scan cannot stat).
+func diskSortSize(e localfs.Entry, diskSorter func(string) (int64, bool)) (int64, bool) {
+	if diskSorter != nil {
+		if n, ok := diskSorter(filepath.Clean(e.Path)); ok {
+			return n, true
+		}
+	}
+	if e.Type != localfs.EntryDirectory {
+		return e.Size, true
+	}
+	return 0, false
+}
+
+// compareDiskUsagePrimary orders by diskSortSize. Unknown sizes sort after any known one. Larger
+// sizes sort first when reverse is false.
 func compareDiskUsagePrimary(left, right localfs.Entry, diskSorter func(string) (int64, bool), reverse bool) int {
-	leftKey := filepath.Clean(left.Path)
-	rightKey := filepath.Clean(right.Path)
-
-	okL := false
-	var lv int64
-	if diskSorter != nil {
-		if n, ok := diskSorter(leftKey); ok {
-			lv = n
-			okL = true
-		}
-	}
-	okR := false
-	var rv int64
-	if diskSorter != nil {
-		if n, ok := diskSorter(rightKey); ok {
-			rv = n
-			okR = true
-		}
-	}
-
+	lv, okL := diskSortSize(left, diskSorter)
+	rv, okR := diskSortSize(right, diskSorter)
 	if !okL && !okR {
 		return 0
 	}
@@ -236,7 +233,6 @@ func compareDiskUsagePrimary(left, right localfs.Entry, diskSorter func(string) 
 	if !okR {
 		return -1
 	}
-
 	if reverse {
 		return intCompare(lv, rv)
 	}

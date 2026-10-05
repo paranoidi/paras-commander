@@ -145,10 +145,13 @@ type State struct {
 	// parallel to filteredIdx, for tree mode with a filter active — see
 	// recomputeFilteredTreeConnectors. nil outside tree mode or when no filter is active.
 	filteredTreeShape []treeConnectorShape
-	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	// FilterOptions supplies the live quick-filter settings on every rank/cycle; nil means zero Options.
 	FilterOptions func() quickfilter.Options
-	DiskSorter    func(absPath string) (int64, bool)
+	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
+	DiskSorter func(absPath string) (int64, bool)
+	// DiskExcluded reports directories the disk-usage scan is known to skip (mount points, ignore
+	// rules), so ListingFullyDiskCached doesn't wait on a total that never arrives. nil means none.
+	DiskExcluded func(absPath string) bool
 	// MetaValue resolves column to its raw per-path results map and pending marker, and false
 	// when the column itself is missing. Used only when Sort.Mode == SortMeta, and resolved once
 	// per sort rather than per comparison (see SortEntries).
@@ -2258,17 +2261,31 @@ func (s *State) ApplySortFromDialog(sort SortState, viewportRows int) {
 	s.EnsureCursorInViewport(viewportRows)
 }
 
-// ListingFullyDiskCached reports whether every listed entry has a disk-total/file aggregate in DiskSorter.
+// ListingFullyDiskCached reports whether every listed entry has a disk-usage sort key: a cached
+// total in DiskSorter, or for non-directories their listed size (see diskSortSize). Directories
+// the scan is known to skip (DiskExcluded) don't block it; they sort last. Otherwise one broken
+// symlink, mount point, or file created after the scan would hold off the disk-usage sort forever.
+// At least one entry must actually be cached, so a never-scanned files-only listing stays out.
 func (s *State) ListingFullyDiskCached() bool {
 	if s.DiskSorter == nil || len(s.Entries) == 0 {
 		return false
 	}
+	anyCached := false
 	for _, e := range s.Entries {
-		if _, ok := s.DiskSorter(filepath.Clean(e.Path)); !ok {
-			return false
+		key := filepath.Clean(e.Path)
+		if _, ok := s.DiskSorter(key); ok {
+			anyCached = true
+			continue
 		}
+		if e.Type != localfs.EntryDirectory {
+			continue
+		}
+		if s.DiskExcluded != nil && s.DiskExcluded(key) {
+			continue
+		}
+		return false
 	}
-	return true
+	return anyCached
 }
 
 // SetSortMode changes the sort mode, applies it, and preserves the cursor by path.

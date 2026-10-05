@@ -899,6 +899,7 @@ func newBrowserPanel(path string, opts browserPanelOptions) (panel.State, error)
 	p.DiskUsageIdleSortActivated = opts.cfg.DiskUsage.IdleSizeSort
 	p.ListFormat = opts.listFormat
 	p.DiskSorter = opts.diskEngine.Size
+	p.DiskExcluded = opts.diskEngine.IsKnownExcluded
 	p.ApplySort()
 	p.ScrollMode = opts.scrollMode
 	p.ScrollEdgeMargin = opts.cfg.UI.Scroll.EdgeMargin
