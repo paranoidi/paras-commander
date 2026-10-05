@@ -58,6 +58,9 @@ type Engine struct {
 	curJobRoots map[string]struct{}
 	// curJobSourcePanel is the panel that queued the current job (valid while curJobRoots != nil).
 	curJobSourcePanel int
+	// curJob is the job the worker is processing (valid while curJobRoots != nil), kept so
+	// StartPriorityScan can requeue its unfinished roots after preempting it.
+	curJob scanJob
 
 	// runPlannerHook, when non-nil (tests only), replaces runPlanner in the worker.
 	runPlannerHook func(sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int)
@@ -120,6 +123,7 @@ func (e *Engine) workerLoop() {
 		}
 		e.curJobRoots = roots
 		e.curJobSourcePanel = job.sourcePanel
+		e.curJob = job
 		sess := e.gen.Add(1)
 		ctx, cancel := context.WithCancel(context.Background())
 		e.sessionCancel = cancel
@@ -171,8 +175,11 @@ func (e *Engine) poke() {
 }
 
 func (e *Engine) signalJobFinished(sess uint64) {
+	e.jobMu.Lock()
+	empty := len(e.queue) == 0
+	e.jobMu.Unlock()
 	select {
-	case e.events <- Event{Kind: EventJobFinished, Generation: sess}:
+	case e.events <- Event{Kind: EventJobFinished, Generation: sess, QueueEmpty: empty}:
 	default:
 	}
 }
@@ -375,6 +382,25 @@ func (e *Engine) InvalidateSubtree(rootAbs string) {
 	e.poke()
 }
 
+// InvalidateRoots drops the cached size, file count and exclusion mark of each path itself,
+// leaving descendants cached. O(len(paths)), unlike InvalidateSubtree's full cache sweep, so it
+// is cheap enough for the UI goroutine. A rescan of each root overwrites its descendants anyway.
+func (e *Engine) InvalidateRoots(paths []string) {
+	if e == nil || len(paths) == 0 {
+		return
+	}
+	e.mu.Lock()
+	for _, raw := range paths {
+		k := filepath.Clean(raw)
+		delete(e.cache, k)
+		delete(e.fileCounts, k)
+		delete(e.excluded, k)
+	}
+	e.cacheVersion.Add(1)
+	e.mu.Unlock()
+	e.poke()
+}
+
 // ClearCache aborts in-flight scans and removes all cached subtree sizes.
 func (e *Engine) ClearCache() {
 	if e == nil {
@@ -433,6 +459,39 @@ func (e *Engine) StartScanFromListing(childAbs []string, shouldIgnore ShouldIgno
 	e.queue = append([]scanJob{{childAbs: dup, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate}}, e.queue...)
 	e.jobCond.Signal()
 	e.jobMu.Unlock()
+}
+
+// StartPriorityScan is StartScanFromListing for scans the user is actively waiting on (e.g. the
+// delete confirmation's size summary): it preempts the job the worker is running, so the
+// priority job runs next, and requeues that job's unfinished roots right after it. The root
+// that was mid-walk is walked again from scratch.
+func (e *Engine) StartPriorityScan(childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, volGate ListingVolumeGate) {
+	if e == nil {
+		return
+	}
+	jobs := []scanJob{{childAbs: append([]string(nil), childAbs...), ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate}}
+	var cancel context.CancelFunc
+	e.jobMu.Lock()
+	if len(e.curJobRoots) > 0 {
+		rest := e.curJob
+		rest.childAbs = nil
+		for _, raw := range e.curJob.childAbs {
+			if _, ok := e.curJobRoots[filepath.Clean(raw)]; ok {
+				rest.childAbs = append(rest.childAbs, raw)
+			}
+		}
+		jobs = append(jobs, rest)
+		// Bump gen before cancel so the preempted planner drops its partial walk instead of
+		// caching truncated sizes.
+		e.gen.Add(1)
+		cancel = e.sessionCancel
+	}
+	e.queue = append(jobs, e.queue...)
+	e.jobCond.Signal()
+	e.jobMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 }
 
 func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int) {

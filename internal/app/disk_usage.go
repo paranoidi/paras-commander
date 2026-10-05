@@ -36,7 +36,9 @@ func (a *App) pollDiskUsageUpdates() {
 			case diskusage.EventJobFinished:
 				// Last-resort schedule after session completes (subtree events should suffice).
 				idleSortCheckDue = true
-				jobFinishedToast = true
+				// A job finishing with more queued (e.g. a delete-dialog priority scan that
+				// preempted the panel scan) is not the end of the scan.
+				jobFinishedToast = jobFinishedToast || ev.QueueEmpty
 				needRender = true
 			}
 		case <-a.disk.engine.Updates():

@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -578,5 +579,72 @@ func TestFromRootVolumeGateUsesScanRootDevice(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("planner not invoked")
+	}
+}
+
+// TestPriorityScanPreemptsAndRequeuesRest proves StartPriorityScan runs ahead of a walk in
+// progress, then re-walks the preempted root in full and still walks its unstarted siblings.
+func TestPriorityScanPreemptsAndRequeuesRest(t *testing.T) {
+	t.Parallel()
+
+	slow, sibling, prio := t.TempDir(), t.TempDir(), t.TempDir()
+	sub := filepath.Join(slow, "sub")
+	children := map[string][]fs.FileInfo{
+		slow:    {fakeDirInfo{name: "sub", isDir: true}},
+		sub:     {fakeDirInfo{name: "leaf.dat", size: 5}},
+		sibling: {fakeDirInfo{name: "leaf.dat", size: 3}},
+		prio:    {fakeDirInfo{name: "leaf.dat", size: 7}},
+	}
+
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	var mu sync.Mutex
+	var reads []string
+	e := New()
+	e.fsWalk = fswalk.Params{InitialWorkers: 1, MaxWorkers: 1, AdaptIntervalMS: 60000}
+	e.walkReadDir = func(path string) ([]fs.FileInfo, error) {
+		mu.Lock()
+		reads = append(reads, filepath.Clean(path))
+		mu.Unlock()
+		if path == sub {
+			once.Do(func() {
+				close(entered)
+				<-release
+			})
+		}
+		return children[filepath.Clean(path)], nil
+	}
+
+	e.StartScanFromListing([]string{slow, sibling}, nil, 0, ListingVolumeGate{})
+	select {
+	case <-entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("walk did not reach blocking ReadDir")
+	}
+
+	e.StartPriorityScan([]string{prio}, nil, 0, ListingVolumeGate{})
+	close(release)
+
+	waitUntil(t, func() bool { return !e.DiskScanBusy() }, 2*time.Second, "want idle")
+	for path, want := range map[string]int64{prio: 7, slow: 5, sibling: 3} {
+		if got, ok := e.Size(path); !ok || got != want {
+			t.Fatalf("Size(%s) = %d ok=%v want %d", path, got, ok, want)
+		}
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if slices.Index(reads, prio) > slices.Index(reads, sibling) {
+		t.Fatalf("priority root walked after queued sibling: %v", reads)
+	}
+
+	var finished []bool
+	for len(e.events) > 0 {
+		if ev := <-e.events; ev.Kind == EventJobFinished {
+			finished = append(finished, ev.QueueEmpty)
+		}
+	}
+	if !slices.Equal(finished, []bool{false, true}) {
+		t.Fatalf("JobFinished QueueEmpty = %v, want [false true] (priority job, then requeued rest)", finished)
 	}
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
-	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -64,25 +63,14 @@ func (h *Handler) deleteDialogSummaryFromPruned(p *panel.State, pruned []string)
 	return ui.FormatDeleteImpactSummary(files, bytes, pending, h.host.Styles().IconWorking())
 }
 
-func (h *Handler) invalidateDeleteDialogDiskCache(p *panel.State, source ops.Source) {
+// invalidateDeleteDialogDiskCache forces a fresh walk of the delete selection's roots. Only the
+// root keys are dropped (no stat, no full cache sweep): this runs on the UI goroutine, and a
+// subtree sweep over a cache grown by a large running scan stalls the dialog for seconds.
+func (h *Handler) invalidateDeleteDialogDiskCache(p *panel.State, pruned []string) {
 	if h.diskUsage == nil || p.Path.IsRemote() {
 		return
 	}
-	pruned := panel.PruneNestedPaths(ops.SourcePaths(source))
-	byPath := p.EntriesByPath()
-	for _, path := range pruned {
-		entry, found := byPath[path]
-		if !found {
-			var err error
-			entry, err = localfs.EntryFromPath(path)
-			if err != nil || entry.Type != localfs.EntryDirectory {
-				continue
-			}
-		} else if entry.Type != localfs.EntryDirectory {
-			continue
-		}
-		h.diskUsage.InvalidateSubtree(path)
-	}
+	h.diskUsage.InvalidateRoots(pruned)
 }
 
 // RefreshDeleteDialogSummary recomputes the open delete dialog's impact summary from the
@@ -180,7 +168,8 @@ func (h *Handler) ApplyDeleteDialogScanNeed(d DeleteDialogScanNeedPayload) {
 		return
 	}
 	h.deleteDialogScanFP = fp
-	h.diskUsage.StartScanFromListing(
+	// Priority: a running panel-wide scan would otherwise keep the summary pending until it ends.
+	h.diskUsage.StartPriorityScan(
 		d.Need,
 		h.diskUsageIgnore,
 		h.model.ActivePanel,

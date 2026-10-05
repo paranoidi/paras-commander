@@ -216,7 +216,7 @@ func (h *Handler) OpenDeleteDialog(p *panel.State) {
 	}
 	pruned := panel.PruneNestedPaths(ops.SourcePaths(source))
 	h.ClearDeleteDialogReconcileCache()
-	h.invalidateDeleteDialogDiskCache(p, source)
+	h.invalidateDeleteDialogDiskCache(p, pruned)
 	h.deleteDialogSelGen = p.SelectionDerivedGen()
 	h.deleteDialogPanelPath = panelPath
 	h.deleteDialogPrunedPaths = pruned

@@ -18,4 +18,8 @@ type Event struct {
 	RootAbs string
 	// SourcePanel is the initiating panel id (same convention as ui.PrimaryPanel / ui.SecondaryPanel).
 	SourcePanel int
+	// QueueEmpty is set for EventJobFinished when no further scan job was queued at emit time,
+	// i.e. the engine is about to go idle (a preempted job requeued by StartPriorityScan, or any
+	// other queued job, keeps it false).
+	QueueEmpty bool
 }
