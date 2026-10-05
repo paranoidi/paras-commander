@@ -113,7 +113,11 @@ const MenuStubTOML = `# User function menu
 #   refresh panel when done.
 #
 # dialog          bool     optional   default: false
-#   Show command stdout in a modal dialog when the command finishes.
+#   Show command stdout in a modal dialog. The dialog opens immediately with a
+#   running indicator ("Queued" while waiting for its pool slot) and fills in
+#   when the command finishes. The run is
+#   recorded in the Commands view; Background (or Esc) closes the dialog and
+#   keeps the command running there, Cancel kills it.
 #   Mutually exclusive with interactive, detach, background, and run_for_each.
 #
 # dialog_width    string | int   optional   default: 80% of terminal width

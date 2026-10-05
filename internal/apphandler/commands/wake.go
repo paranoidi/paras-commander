@@ -19,6 +19,8 @@ type WakePayload struct {
 	RefreshBrowserPanel  bool
 	ClearActiveSelection bool
 	OpenOutputDialog     *dialog.CommandOutputDialogState
+	// OutputDialogStartedRunID clears the output dialog's Queued state when it shows this run.
+	OutputDialogStartedRunID string
 
 	// TerminalPanelShow / TerminalPanelHide / TerminalPanelDrawer / TerminalPanelClearDrawer
 	// are applied on the event loop so ViewMode and TerminalPanel are never written from a
@@ -45,6 +47,20 @@ func (h *Handler) PostRenderWake() {
 
 // ApplyWake applies a delivered WakePayload's side effects on the main goroutine.
 func (h *Handler) ApplyWake(p WakePayload) {
+	cur := &h.model.CommandOutputDialog
+	if p.OutputDialogStartedRunID != "" && cur.Open && cur.RunID == p.OutputDialogStartedRunID {
+		cur.Queued = false
+	}
+	if p.OpenOutputDialog != nil {
+		if cur.Open && cur.Running && cur.RunID == p.OpenOutputDialog.RunID {
+			// The user is watching this run: show the output instead of a banner/refresh.
+			if cur.Cancel != nil {
+				cur.Cancel() // release the run context
+			}
+			*cur = *p.OpenOutputDialog
+			p.NotifyLog, p.NotifyBanner, p.RefreshBrowserPanel = "", "", false
+		}
+	}
 	if p.ClearActiveSelection {
 		h.host.ActivePanel().ClearSelection()
 	}
@@ -53,9 +69,6 @@ func (h *Handler) ApplyWake(p WakePayload) {
 	}
 	if strings.TrimSpace(p.NotifyLog) != "" {
 		h.host.SetTransientMessageBanner(p.NotifyLog, p.NotifyBanner, p.NotifyUrg)
-	}
-	if p.OpenOutputDialog != nil {
-		h.model.CommandOutputDialog = *p.OpenOutputDialog
 	}
 	h.applyTerminalPanelWake(p)
 	if p.applied != nil {

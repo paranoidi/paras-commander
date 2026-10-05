@@ -116,7 +116,17 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 	lineStyle := styles.DialogText.Background(dbg)
 
 	contentX := draw.DialogTextX(rect)
+	if state.Running {
+		status := styles.IconMetaRunning() + " Running…"
+		if state.Queued {
+			status = styles.IconJobsList("queued") + " Queued…"
+		}
+		primitive.Text(screen, contentX, rect.Y+1, contentW, status, lineStyle)
+	}
 	for row := range listH {
+		if state.Running {
+			break
+		}
 		y := rect.Y + 1 + row
 		line := ""
 		if idx := state.Scroll + row; idx < len(state.Lines) {
@@ -124,12 +134,19 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 		}
 		primitive.Text(screen, contentX, y, contentW, line, lineStyle)
 	}
-	draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, listH, len(state.Lines), state.Scroll, scrollbarStyle, borderStyle, styles)
+	if !state.Running {
+		draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, listH, len(state.Lines), state.Scroll, scrollbarStyle, borderStyle, styles)
+	}
 
 	// separator at buttonY-2, blank row at buttonY-1 (DrawDialogFrame fills surface), button at buttonY
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: true},
-	}, styles)
+	buttons := []draw.DialogButtonSpec{{Label: "OK", Shortcut: 'O', Focused: true}}
+	if state.Running {
+		buttons = []draw.DialogButtonSpec{
+			{Label: "Background", Shortcut: 'B', Focused: state.Focus == 0},
+			{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 1, Destructive: true},
+		}
+	}
+	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, buttons, styles)
 }

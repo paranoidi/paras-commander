@@ -13,6 +13,12 @@ func AltDialogOK(ev *tcell.EventKey) bool {
 		(ev.Rune() == 'o' || ev.Rune() == 'O')
 }
 
+// AltLetter reports Alt+<letter> (either case) for a dialog-specific button mnemonic.
+func AltLetter(ev *tcell.EventKey, letter rune) bool {
+	return ev.Key() == tcell.KeyRune && keymap.AltLetterModifiers(ev.Modifiers()) &&
+		unicode.ToLower(ev.Rune()) == letter
+}
+
 // AltDialogCancel reports Alt+C (standard dialog Cancel mnemonic).
 func AltDialogCancel(ev *tcell.EventKey) bool {
 	return ev.Key() == tcell.KeyRune && keymap.AltLetterModifiers(ev.Modifiers()) &&

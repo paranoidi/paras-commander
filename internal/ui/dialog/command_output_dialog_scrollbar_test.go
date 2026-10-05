@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -43,5 +44,26 @@ func TestCommandOutputDialogScrollbar(t *testing.T) {
 				t.Fatalf("scrollbar drawn = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestCommandOutputDialogRunningButtons(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	layout := Layout{Width: 80, Height: 24}
+	state := CommandOutputDialogState{Open: true, Running: true, Title: "Output"}
+	DrawCommandOutputDialog(screen, layout, state, theme.Default(), uiscrollbar.StyleBar)
+	m, _ := ComputeCommandOutputDialogMetrics(layout, state)
+	row := ""
+	for x := m.Rect.X; x < m.Rect.X+m.Rect.Width; x++ {
+		ch, _, _ := screen.Get(x, m.Rect.Y+m.Rect.Height-2)
+		row += ch
+	}
+	if !strings.Contains(row, "[ Background ]") || !strings.Contains(row, "[ Cancel ]") || strings.Contains(row, "OK") {
+		t.Fatalf("button row = %q", row)
 	}
 }

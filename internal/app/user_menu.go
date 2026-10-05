@@ -247,21 +247,27 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	workDir := active.PathString()
 	switch {
 	case entry.Dialog:
+		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, expanded)
+		ctx, cancel := context.WithCancel(a.commandsCtrl.Context())
+		a.commandsCtrl.OpenRunningOutputDialog(rowID, entry.Title, strings.TrimSpace(entry.Pool) != "", cancel, entry.DialogWidth, entry.DialogHeight)
 		a.commandsCtrl.BeginBatch()
-		go a.commandsCtrl.RunUserMenuCommandDialog(a.commandsCtrl.Context(), argv, workDir, entry.Title, entry.DialogWidth, entry.DialogHeight)
+		go func() {
+			defer cancel()
+			a.runUserMenuCommand(ctx, rowIdx, rowID, argv, workDir, entry)
+		}()
 	case entry.Interactive:
 		a.runUserMenuInteractive(argv, workDir, entry.Toast)
 	case entry.Detach:
 		a.runUserMenuDetached(argv, workDir, entry.Toast)
 	default:
 		cmdLine := entry.Command
-		rowIdx := a.appendUserMenuCommandRow(cmdLine, expanded)
+		rowIdx, rowID := a.appendUserMenuCommandRow(cmdLine, expanded)
 		if !entry.Background {
 			a.commandsCtrl.OpenViewAt(rowIdx)
 		}
 
 		a.commandsCtrl.BeginBatch()
-		go a.runUserMenuCommand(a.commandsCtrl.Context(), rowIdx, argv, workDir, entry.Background, entry.Title, entry.Pool, entry.Toast)
+		go a.runUserMenuCommand(a.commandsCtrl.Context(), rowIdx, rowID, argv, workDir, entry)
 	}
 }
 
@@ -344,26 +350,35 @@ func (a *App) refreshAfterBackgroundCommand() {
 	}
 }
 
-func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) int {
+func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) (int, string) {
+	id := cmdrun.NewRunID()
 	return a.commandsCtrl.AppendEntry(ui.CommandRunEntry{
-		ID:              cmdrun.NewRunID(),
+		ID:              id,
 		Kind:            ui.CommandRunKindUserMenu,
 		UserCommandLine: cmdLine + " → " + expanded,
 		TargetPath:      "",
 		Phase:           ui.CommandRunPending,
 		ExitCode:        -1,
-	})
+	}), id
 }
 
-func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, workDir string, background bool, title, poolName, toast string) {
+// runUserMenuCommand runs a captured user-menu command recorded in Commands row idx/rowID.
+// With entry.Dialog, ctx cancellation means the user pressed Cancel in the output dialog.
+func (a *App) runUserMenuCommand(ctx context.Context, idx int, rowID string, argv []string, workDir string, entry usermenu.MenuEntry) {
 	defer a.commandsCtrl.EndBatch()
+	background, title, toast := entry.Background, entry.Title, entry.Toast
 
 	postBackgroundFinal := func(res cmdrun.RunResult) {
-		if !background {
+		if !background && !entry.Dialog {
 			a.commandsCtrl.PostWake(commandsctrl.WakePayload{ClearActiveSelection: true})
 			return
 		}
 		p := commandsctrl.WakePayload{RefreshBrowserPanel: true, ClearActiveSelection: true}
+		if entry.Dialog {
+			// Applied only if the dialog still shows this run; otherwise it is backgrounded.
+			out := commandsctrl.OutputDialogResult(rowID, title, res, entry.DialogWidth, entry.DialogHeight)
+			p.OpenOutputDialog = &out
+		}
 		if log, banner, urg, ok := backgroundRunNotify("User menu: "+backgroundRunTitle(title), res); ok {
 			p.NotifyLog = log
 			p.NotifyBanner = banner
@@ -383,7 +398,7 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 				e.ErrorMsg = "Canceled"
 			}
 		})
-		if background {
+		if background && !entry.Dialog {
 			a.commandsCtrl.PostWake(commandsctrl.WakePayload{RefreshBrowserPanel: true})
 		} else {
 			a.commandsCtrl.PostRenderWake()
@@ -398,9 +413,9 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 	}
 
 	var release func()
-	if strings.TrimSpace(poolName) != "" {
+	if strings.TrimSpace(entry.Pool) != "" {
 		var err error
-		release, err = a.workPools.Acquire(ctx, poolName)
+		release, err = a.workPools.Acquire(ctx, entry.Pool)
 		if err != nil {
 			a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 				e.Phase = ui.CommandRunDone
@@ -413,7 +428,11 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 					e.ErrorMsg = err.Error()
 				}
 			})
-			postBackgroundFinal(cmdrun.RunResult{})
+			if ctx.Err() != nil && entry.Dialog {
+				a.commandsCtrl.PostRenderWake()
+				return
+			}
+			postBackgroundFinal(cmdrun.RunResult{LaunchErr: err})
 			return
 		}
 		defer release()
@@ -422,12 +441,16 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 	a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunRunning
 	})
-	a.commandsCtrl.PostRenderWake()
+	a.commandsCtrl.PostWake(commandsctrl.WakePayload{OutputDialogStartedRunID: rowID})
 
 	res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 		a.commandsCtrl.SetProcess(idx, p)
 	})
 	a.commandsCtrl.UnregisterProc(idx)
+	if entry.Dialog && ctx.Err() != nil {
+		markCanceled()
+		return
+	}
 	a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunDone
 		e.Stdout = string(res.Stdout)
