@@ -270,6 +270,9 @@ func DestinationIsDirAtEnqueue(dest pathloc.Path) bool {
 	return err == nil && isDir
 }
 
+// osRename is os.Rename; tests replace it to simulate EXDEV.
+var osRename = os.Rename
+
 // RenameFastPath attempts a backend rename and returns true on success.
 // If the rename fails due to a cross-device link (local) or a non-context remote
 // error, it returns false and nil so the caller can fall back to copy+delete.
@@ -302,7 +305,7 @@ func RenameFastPath(ctx context.Context, src, dest pathloc.Path) (ok bool, err e
 	if err != nil {
 		return false, err
 	}
-	err = os.Rename(srcHost, destHost)
+	err = osRename(srcHost, destHost)
 	if err == nil {
 		return true, nil
 	}
