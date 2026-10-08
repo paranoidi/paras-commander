@@ -33,8 +33,14 @@ func TestJobBlockerDialogDecision(t *testing.T) {
 	if d, ok := JobBlockerDialogDecision(conflict, 0); !ok || d != jobs.DecisionOverwrite {
 		t.Fatalf("focus 0 = %q %v, want overwrite", d, ok)
 	}
-	if d, ok := JobBlockerDialogDecision(conflict, 2); !ok || d != jobs.DecisionOverwriteAllSameSize {
-		t.Fatalf("focus 2 = %q %v, want overwrite-all-same-size", d, ok)
+	if d, ok := JobBlockerDialogDecision(conflict, 2); ok {
+		t.Fatalf("focus 2 (Advanced) must not map to a decision, got %q", d)
+	}
+	if !JobBlockerDialogIsAdvanced(conflict, 2) || JobBlockerDialogIsAdvanced(conflict, 0) {
+		t.Fatal("expected focus 2 to be Advanced")
+	}
+	if f, ok := JobBlockerDialogFocusFromShortcut(conflict, 'd'); !ok || f != 2 {
+		t.Fatalf("Alt+D focus = %d %v, want 2", f, ok)
 	}
 	if d, ok := JobBlockerDialogDecision(conflict, 5); !ok || d != jobs.DecisionCancel {
 		t.Fatalf("focus 5 = %q %v, want cancel", d, ok)
@@ -70,7 +76,7 @@ func TestJobBlockerDialogMoveFocusFileConflictRows(t *testing.T) {
 		{"Right from Postpone to Cancel", 6, tcell.KeyRight, 5},
 		{"Right from Cancel stays", 5, tcell.KeyRight, 5},
 		{"Left from Overwrite stays", 0, tcell.KeyLeft, 0},
-		{"Down from Match Size to Postpone", 2, tcell.KeyDown, 6},
+		{"Down from Advanced to Postpone", 2, tcell.KeyDown, 6},
 		{"Down from Skip All to Cancel", 4, tcell.KeyDown, 5},
 		{"Up from Cancel to Skip All", 5, tcell.KeyUp, 4},
 		{"Up from Overwrite stays", 0, tcell.KeyUp, 0},
@@ -86,19 +92,19 @@ func TestJobBlockerDialogMoveFocusFileConflictRows(t *testing.T) {
 
 	// Jobs panel: [Overwrite, Overwrite All, Match Size] [Skip, Skip All, Cancel]
 	if got, _ := JobsBlockerPanelMoveFocus(conflict, 2, tcell.KeyDown); got != 5 {
-		t.Fatalf("panel Down from Match Size = %d, want 5", got)
+		t.Fatalf("panel Down from Advanced = %d, want 5", got)
 	}
 	if got, _ := JobsBlockerPanelMoveFocus(conflict, 5, tcell.KeyUp); got != 2 {
 		t.Fatalf("panel Up from Cancel = %d, want 2", got)
 	}
 }
 
-func TestJobBlockerDialogFocusFromShortcutMatchSize(t *testing.T) {
+func TestJobBlockerDialogFocusFromShortcutAdvanced(t *testing.T) {
 	t.Parallel()
 	conflict := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{}}
-	focus, ok := JobBlockerDialogFocusFromShortcut(conflict, 'm')
+	focus, ok := JobBlockerDialogFocusFromShortcut(conflict, 'd')
 	if !ok || focus != 2 {
-		t.Fatalf("shortcut m = %d %v, want focus 2", focus, ok)
+		t.Fatalf("shortcut d = %d %v, want focus 2", focus, ok)
 	}
 	focus, ok = JobBlockerDialogFocusFromShortcut(conflict, 'C')
 	if !ok || focus != 5 {

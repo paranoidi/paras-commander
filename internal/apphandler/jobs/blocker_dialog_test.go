@@ -183,3 +183,51 @@ func TestJobBlockerNextPayloadStaleGenIgnored(t *testing.T) {
 		t.Fatal("stale gen should not open dialog")
 	}
 }
+
+func TestBlockerDialogAdvancedFlow(t *testing.T) {
+	t.Parallel()
+	h, state := newBlockerTestHandler(t, config.Default())
+	addBlockerTestJob(state, "block-advanced")
+	waitJobsWaitingDecision(t, h, state, 1)
+	h.HandleAnswerBlockerKey()
+
+	key := func(k tcell.Key) { h.HandleBlockerDialogKey(tcell.NewEventKey(k, 0, tcell.ModNone)) }
+
+	h.model.ConflictDialog.Focus = 2 // Advanced…
+	key(tcell.KeyEnter)
+	st := h.model.ConflictDialog
+	if !st.Open || !st.Advanced {
+		t.Fatalf("Enter on Advanced… must open the advanced mode, got %+v", st)
+	}
+	// Esc returns to the main dialog.
+	key(tcell.KeyEsc)
+	if st = h.model.ConflictDialog; !st.Open || st.Advanced {
+		t.Fatalf("Esc in advanced must return to the main dialog, got %+v", st)
+	}
+	// Alt+D reopens with apply-to-all preselected; Down selects the second rule, Tab jumps to the
+	// checkbox, Space toggles it off and back on.
+	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt))
+	if !h.model.ConflictDialog.AdvAll {
+		t.Fatal("apply-to-all must be checked by default")
+	}
+	key(tcell.KeyDown)
+	if h.model.ConflictDialog.AdvRule != 1 {
+		t.Fatalf("AdvRule = %d, want 1", h.model.ConflictDialog.AdvRule)
+	}
+	key(tcell.KeyTab)
+	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	if h.model.ConflictDialog.AdvAll {
+		t.Fatal("Space on the checkbox must clear apply-to-all")
+	}
+	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	if !h.model.ConflictDialog.AdvAll {
+		t.Fatal("Space on the checkbox must set apply-to-all")
+	}
+	if got := h.model.ConflictDialog.ConflictAdvancedDecision(); got != jobs.DecisionOverwriteIfOlder.All() {
+		t.Fatalf("decision = %q", got)
+	}
+	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
+	if h.model.ConflictDialog.Open {
+		t.Fatal("Alt+O must submit and close")
+	}
+}

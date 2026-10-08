@@ -201,30 +201,37 @@ func statConflictFacts(ctx context.Context, src, dst pathloc.Path) (FileConflict
 	}, nil
 }
 
-// resolveDestConflict returns proceed=false when the resolver declined the overwrite.
-func resolveDestConflict(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (proceed bool, err error) {
+// resolveDestConflict returns copyDone with the path to write to (dst, or its free sibling for
+// a rename), or copySkipped/copyIdentical when nothing should be written.
+func resolveDestConflict(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (copyResult, pathloc.Path, error) {
 	if err := ensureParentDirs(ctx, dst); err != nil {
-		return false, fmt.Errorf("create parent for %q: %w", dst, err)
+		return copySkipped, dst, fmt.Errorf("create parent for %q: %w", dst, err)
 	}
 	if _, err := statEntry(ctx, dst); err == nil {
 		facts, ferr := statConflictFacts(ctx, src, dst)
 		if ferr != nil {
-			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, ferr)
+			return copySkipped, dst, fmt.Errorf("conflict stat %q %q: %w", src, dst, ferr)
 		}
-		proceed, perr := resolveOverwriteDecision(src.String(), dst.String(), resolver, facts)
+		action, newDst, perr := resolveConflict(ctx, src, dst, resolver, facts)
 		if perr != nil {
-			return false, perr
+			return copySkipped, dst, perr
 		}
-		if !proceed {
-			return false, nil
+		switch action {
+		case ActionIdentical:
+			return copyIdentical, dst, nil
+		case ActionRename:
+			return copyDone, newDst, nil
+		case ActionOverwrite:
+			if err := removePathRecursive(ctx, dst); err != nil {
+				return copySkipped, dst, fmt.Errorf("remove existing %q: %w", dst, err)
+			}
+			return copyDone, dst, nil
 		}
-		if err := removePathRecursive(ctx, dst); err != nil {
-			return false, fmt.Errorf("remove existing %q: %w", dst, err)
-		}
+		return copySkipped, dst, nil
 	} else if !isNotExist(err) {
-		return false, fmt.Errorf("stat destination %q: %w", dst, err)
+		return copySkipped, dst, fmt.Errorf("stat destination %q: %w", dst, err)
 	}
-	return true, nil
+	return copyDone, dst, nil
 }
 
 // applyTransferMetadata applies permission/timestamp preservation and the
@@ -254,34 +261,33 @@ func applyTransferMetadata(ctx context.Context, src, dst pathloc.Path, srcEnt fs
 	return nil
 }
 
-func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copied bool, err error) {
-	if proceed, err := resolveDestConflict(ctx, src, dst, resolver); err != nil {
-		return false, err
-	} else if !proceed {
-		return false, nil
+func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copyResult, error) {
+	res, dst, err := resolveDestConflict(ctx, src, dst, resolver)
+	if err != nil || res != copyDone {
+		return res, err
 	}
 
 	srcBE, err := backendFor(src)
 	if err != nil {
-		return false, err
+		return copySkipped, err
 	}
 	dstBE, err := backendFor(dst)
 	if err != nil {
-		return false, err
+		return copySkipped, err
 	}
 	srcEnt, err := statEntry(ctx, src)
 	if err != nil {
-		return false, err
+		return copySkipped, err
 	}
 	rc, err := srcBE.OpenRead(ctx, src)
 	if err != nil {
-		return false, err
+		return copySkipped, err
 	}
 	defer func() { _ = rc.Close() }()
 
 	wc, err := dstBE.OpenWrite(ctx, dst, srcEnt.Size, fsbackend.CreateOpts{Truncate: true})
 	if err != nil {
-		return false, err
+		return copySkipped, err
 	}
 
 	bufSize := BufferSize(opts.CopyBufferKiB)
@@ -297,38 +303,37 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 	}
 	if err != nil {
 		removePartialTransferDest(ctx, dst)
-		return false, err
+		return copySkipped, err
 	}
 
 	if err := applyTransferMetadata(ctx, src, dst, srcEnt, opts); err != nil {
-		return false, err
+		return copySkipped, err
 	}
-	return true, nil
+	return copyDone, nil
 }
 
-func copySymlinkTransfer(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (copied bool, err error) {
-	if proceed, err := resolveDestConflict(ctx, src, dst, resolver); err != nil {
-		return false, err
-	} else if !proceed {
-		return false, nil
+func copySymlinkTransfer(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (copyResult, error) {
+	res, dst, err := resolveDestConflict(ctx, src, dst, resolver)
+	if err != nil || res != copyDone {
+		return res, err
 	}
 
 	srcBE, err := backendFor(src)
 	if err != nil {
-		return false, err
+		return copySkipped, err
 	}
 	target, err := srcBE.ReadSymlink(ctx, src)
 	if err != nil {
-		return false, fmt.Errorf("read symlink %q: %w", src, err)
+		return copySkipped, fmt.Errorf("read symlink %q: %w", src, err)
 	}
 	dstBE, err := backendFor(dst)
 	if err != nil {
-		return false, err
+		return copySkipped, err
 	}
 	if err := dstBE.Symlink(ctx, dst, target); err != nil {
-		return false, fmt.Errorf("create symlink %q -> %q: %w", dst, target, err)
+		return copySkipped, fmt.Errorf("create symlink %q -> %q: %w", dst, target, err)
 	}
-	return true, nil
+	return copyDone, nil
 }
 
 func syncLocalPath(path string) error {

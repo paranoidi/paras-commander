@@ -66,3 +66,48 @@ name hint for the highlighted row.
 
 A panel whose current directory is inside a job's write (destination) tree
 also shows the job icon on the **physical-right** corner of its bottom border.
+
+# File conflicts
+
+When a copy, move, flatten or extract finds that the destination already exists, the job waits
+for a decision. It is asked in the quick blocker dialog or in the conflict panel of the jobs view.
+
+| Button | Alt | Effect |
+| --- | --- | --- |
+| Overwrite | O | Replace this file |
+| Overwrite All | A | Replace this and every later conflict in the job |
+| Advanced... | D | Open the "Overwrite advanced" dialog |
+| Skip | S | Keep the existing file |
+| Skip All | L | Skip this and every later conflict in the job |
+| Cancel | C | Abort the job |
+| Postpone | P | Dismiss the quick dialog without answering (quick dialog only) |
+
+## Overwrite advanced
+
+Pick one rule. **Apply to all conflicts** (Alt+A) is checked by default, so OK makes the rule the
+job's policy and later conflicts are decided by it without asking; uncheck it to apply the rule to
+the current file only.
+Cancel (or Esc) goes back to the File exists dialog.
+
+| Rule | Overwrites when, otherwise skips |
+| --- | --- |
+| Overwrite if newer | the source was modified after the existing file |
+| Overwrite if older | the source was modified before the existing file |
+| Overwrite if existing is smaller | the existing file is smaller than the source |
+| Overwrite if size differs | the sizes differ |
+| Overwrite if same size | the sizes are equal |
+| Compare contents | see below |
+| Keep both (rename new file) | never overwrites: the new file is written as `name (1).ext` (first free number) |
+
+### Compare contents
+
+The two files are compared with the same chunked hashing as Find Duplicates
+(`dedup.chunk_bytes`), stopping at the first differing chunk. Files of different size differ
+without being read.
+
+- Identical: nothing is copied. On a copy the source stays; on a move the source is removed, so
+  no identical leftovers remain.
+- Different: the File exists dialog comes back for that file with "Contents differ." and Compare
+  is no longer offered. This happens even when Compare was applied to all conflicts.
+- Compare is not offered when extracting an archive (the archive is not comparable to the
+  extracted output).

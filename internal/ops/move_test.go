@@ -14,20 +14,20 @@ import (
 )
 
 func skipAllResolver() ConflictResolver {
-	return func(src, dst string, facts FileConflictFacts) (bool, error) {
+	return func(_ context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
 		_ = src
 		_ = dst
 		_ = facts
-		return false, nil
+		return ow(false), nil
 	}
 }
 
 func overwriteAllResolver() ConflictResolver {
-	return func(src, dst string, facts FileConflictFacts) (bool, error) {
+	return func(_ context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
 		_ = src
 		_ = dst
 		_ = facts
-		return true, nil
+		return ow(true), nil
 	}
 }
 
@@ -266,12 +266,12 @@ func TestMoveCancelKeepsEarlierRenames(t *testing.T) {
 	}
 
 	calls := 0
-	resolver := func(string, string, FileConflictFacts) (bool, error) {
+	resolver := func(context.Context, string, string, FileConflictFacts) (ConflictResolution, error) {
 		calls++
 		if calls == 1 {
-			return true, nil
+			return ow(true), nil
 		}
-		return false, fmt.Errorf("canceled by user")
+		return ow(false), fmt.Errorf("canceled by user")
 	}
 
 	done, _, err := ExecuteMove(context.Background(), MustPaths(srcAlpha, srcBeta), MustPath(dstDir), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, resolver, nil)
@@ -369,4 +369,12 @@ func TestMoveOverwriteCommitsAndRemovesStash(t *testing.T) {
 			t.Fatalf("leftover stash %q after committed overwrite", e.Name())
 		}
 	}
+}
+
+// ow maps the old overwrite/skip boolean to a resolution.
+func ow(overwrite bool) ConflictResolution {
+	if overwrite {
+		return ConflictResolution{Action: ActionOverwrite}
+	}
+	return ConflictResolution{Action: ActionSkip}
 }

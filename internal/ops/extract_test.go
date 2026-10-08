@@ -211,13 +211,13 @@ func TestExecuteExtractStreamSkipAndCancel(t *testing.T) {
 			},
 			Destination: destDir,
 			Toolchain:   tc,
-			Conflict: func(src, dest string, facts FileConflictFacts) (bool, error) {
+			Conflict: func(_ context.Context, src, dest string, facts FileConflictFacts) (ConflictResolution, error) {
 				_ = src
 				_ = facts
 				if dest == existing {
-					return false, nil
+					return ow(false), nil
 				}
-				return false, fmt.Errorf("unexpected conflict for %q", dest)
+				return ow(false), fmt.Errorf("unexpected conflict for %q", dest)
 			},
 		}
 		done, err := ExecuteExtract(context.Background(), plan, nil)
@@ -263,11 +263,11 @@ func TestExecuteExtractStreamSkipAndCancel(t *testing.T) {
 			},
 			Destination: destDir,
 			Toolchain:   tc,
-			Conflict: func(src, dest string, facts FileConflictFacts) (bool, error) {
+			Conflict: func(_ context.Context, src, dest string, facts FileConflictFacts) (ConflictResolution, error) {
 				_ = src
 				_ = dest
 				_ = facts
-				return false, cancelErr
+				return ow(false), cancelErr
 			},
 		}
 		done, err := ExecuteExtract(context.Background(), plan, nil)

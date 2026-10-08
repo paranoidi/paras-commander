@@ -9,12 +9,6 @@ func TestConflictPolicyDefaults(t *testing.T) {
 	if p.Decision() != "" {
 		t.Fatalf("default decision = %q, want empty", p.Decision())
 	}
-	if p.ShouldOverwrite() {
-		t.Fatal("default should not overwrite")
-	}
-	if p.ShouldSkip() {
-		t.Fatal("default should not skip")
-	}
 }
 
 func TestConflictPolicyOverwrite(t *testing.T) {
@@ -49,9 +43,6 @@ func TestConflictPolicyOverwriteAll(t *testing.T) {
 	if updated.Decision() != DecisionOverwriteAll {
 		t.Fatalf("expected active decision overwrite-all, got %q", updated.Decision())
 	}
-	if !updated.ShouldOverwrite() {
-		t.Fatal("overwrite-all should report should overwrite")
-	}
 }
 
 func TestConflictPolicySkipAll(t *testing.T) {
@@ -71,20 +62,27 @@ func TestConflictPolicySkipAll(t *testing.T) {
 	}
 }
 
-func TestConflictPolicyOverwriteAllSameSize(t *testing.T) {
+func TestConflictPolicyConditionalRuleAll(t *testing.T) {
 	p := NewConflictPolicy()
-	overwrite, skip, cancel, updated := ApplyDecision(p, DecisionOverwriteAllSameSize)
-	if !overwrite {
-		t.Fatal("expected overwrite")
+	_, _, _, updated := ApplyDecision(p, DecisionOverwriteIfNewer.All())
+	if updated.Decision() != DecisionOverwriteIfNewer.All() {
+		t.Fatalf("active decision = %q, want %q", updated.Decision(), DecisionOverwriteIfNewer.All())
 	}
-	if skip {
-		t.Fatal("expected no skip")
+	_, _, _, single := ApplyDecision(p, DecisionOverwriteIfNewer)
+	if single.Decision() != "" {
+		t.Fatalf("single rule set policy %q", single.Decision())
 	}
-	if cancel {
-		t.Fatal("expected no cancel")
+}
+
+func TestDecisionAllBase(t *testing.T) {
+	if DecisionOverwrite.All() != DecisionOverwriteAll || DecisionSkip.All() != DecisionSkipAll {
+		t.Fatal("All() must match the -all constants")
 	}
-	if updated.Decision() != DecisionOverwriteAllSameSize {
-		t.Fatalf("expected active decision overwrite-all-same-size, got %q", updated.Decision())
+	if DecisionKeepBoth.All().Base() != DecisionKeepBoth {
+		t.Fatal("Base() must strip the suffix")
+	}
+	if DecisionKeepBoth.All().All() != DecisionKeepBoth.All() {
+		t.Fatal("All() must be idempotent")
 	}
 }
 
@@ -129,7 +127,8 @@ func TestApplyAll(t *testing.T) {
 	}{
 		{DecisionOverwriteAll, true},
 		{DecisionSkipAll, true},
-		{DecisionOverwriteAllSameSize, true},
+		{DecisionCompare.All(), true},
+		{DecisionKeepBoth, false},
 		{DecisionOverwrite, false},
 		{DecisionSkip, false},
 		{DecisionCancel, false},

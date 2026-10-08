@@ -100,6 +100,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeHostKeyDialog
 	case a.model.FileDialog.Open:
 		return InputModeFileDialog
+	case a.model.ConflictDialog.Open:
+		return InputModeDialog
 	case a.model.DedupProgressDialog.Open:
 		return InputModeDedupProgressDialog
 	case a.model.DedupReturnDialog.Open:
@@ -116,7 +118,7 @@ func (a *App) inputMode() InputMode {
 		return InputModeMessagesView
 	case a.viewActiveForInput(ui.ViewJobs):
 		return InputModeJobsView
-	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.ConflictDialog.Open, a.model.QuitConfirm.Open, a.model.DedupEmptyDirsConfirm.Open, a.model.StashRestoreDialog.Open:
+	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.QuitConfirm.Open, a.model.DedupEmptyDirsConfirm.Open, a.model.StashRestoreDialog.Open:
 		return InputModeDialog
 	case a.model.Menu.Open:
 		return InputModeMenu

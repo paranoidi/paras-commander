@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/archive"
+	"github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -260,13 +261,13 @@ func ActivityFailureLabel(ev jobs.Event) string {
 }
 
 // TransferFunc builds the job worker transfer function from config.
-func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rateWait ops.RateLimiter) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
+func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, dedupChunkBytes int64, rateWait ops.RateLimiter) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
 		opts.OnRemoveSources = func() {
 			emit(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning})
 		}
-		resolver := newConflictResolver(job, waitBlocker)
+		resolver := newConflictResolver(job, waitBlocker, dedupChunkBytes)
 		diskWait := diskWaitFromBlocker(waitBlocker)
 		progress := func(sourcePath, destPath string, doneFiles int, doneBytes int64) {
 			emit(jobs.Event{
@@ -454,9 +455,11 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 
 // newConflictResolver builds the per-file conflict resolver passed to ops.Execute*: it turns a
 // file conflict into a jobs.BlockerRequest, blocks on waitBlocker for the user's decision, and
-// translates that decision into ops' (overwrite bool, error) resolver contract.
-func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) func(src, dst string, facts ops.FileConflictFacts) (bool, error) {
-	return func(src, dst string, facts ops.FileConflictFacts) (bool, error) {
+// evaluates that decision (including the conditional "advanced" rules) into an ops.ConflictResolution.
+// Compare uses compare.SameContent (chunked, bails at the first difference); differing contents
+// ask again with ContentDiffers set.
+func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision, chunkBytes int64) ops.ConflictResolver {
+	return func(ctx context.Context, src, dst string, facts ops.FileConflictFacts) (ops.ConflictResolution, error) {
 		kind := facts.Kind
 		if kind == "" {
 			kind = "file"
@@ -470,26 +473,71 @@ func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jo
 			SourceTime:      ops.FormatConflictTime(facts.SourceMod),
 			DestSize:        ops.FormatConflictSize(facts.DestSize),
 			DestTime:        ops.FormatConflictTime(facts.DestMod),
+			NoCompare:       job.Type == jobs.TypeExtract,
 		}
-		decision := waitBlocker(jobs.BlockerRequest{
-			Kind:     jobs.BlockerKindConflict,
-			Conflict: &req,
-		})
-		switch decision {
-		case jobs.DecisionOverwrite, jobs.DecisionOverwriteAll:
-			return true, nil
-		case jobs.DecisionSkip, jobs.DecisionSkipAll:
-			return false, nil
-		case jobs.DecisionOverwriteAllSameSize:
-			return facts.SourceSize == facts.DestSize, nil
-		case jobs.DecisionCancel:
-			return false, jobs.ErrUserCanceled
-		case jobs.DecisionRetry:
-			return false, fmt.Errorf("unexpected retry decision for file conflict")
-		default:
-			return false, nil
+		overwriteIf := func(ok bool) (ops.ConflictResolution, error) {
+			if ok {
+				return ops.ConflictResolution{Action: ops.ActionOverwrite}, nil
+			}
+			return ops.ConflictResolution{Action: ops.ActionSkip}, nil
+		}
+		for {
+			decision := waitBlocker(jobs.BlockerRequest{
+				Kind:     jobs.BlockerKindConflict,
+				Conflict: &req,
+			})
+			switch decision.Base() {
+			case jobs.DecisionOverwrite:
+				return overwriteIf(true)
+			case jobs.DecisionOverwriteIfNewer:
+				return overwriteIf(facts.SourceMod.After(facts.DestMod))
+			case jobs.DecisionOverwriteIfOlder:
+				return overwriteIf(facts.SourceMod.Before(facts.DestMod))
+			case jobs.DecisionOverwriteIfExistingSmaller:
+				return overwriteIf(facts.DestSize < facts.SourceSize)
+			case jobs.DecisionOverwriteIfSizeDiffers:
+				return overwriteIf(facts.SourceSize != facts.DestSize)
+			case jobs.DecisionOverwriteIfSameSize:
+				return overwriteIf(facts.SourceSize == facts.DestSize)
+			case jobs.DecisionKeepBoth:
+				return ops.ConflictResolution{Action: ops.ActionRename}, nil
+			case jobs.DecisionCompare:
+				if req.ContentDiffers {
+					return overwriteIf(false) // Compare is not offered again; defensive
+				}
+				same, err := sameContent(ctx, src, dst, facts, chunkBytes)
+				if err != nil {
+					return ops.ConflictResolution{}, err
+				}
+				if same {
+					return ops.ConflictResolution{Action: ops.ActionIdentical}, nil
+				}
+				req.ContentDiffers = true
+			case jobs.DecisionCancel:
+				return ops.ConflictResolution{}, jobs.ErrUserCanceled
+			case jobs.DecisionRetry:
+				return ops.ConflictResolution{}, fmt.Errorf("unexpected retry decision for file conflict")
+			default:
+				return overwriteIf(false)
+			}
 		}
 	}
+}
+
+// sameContent reports whether src and dst hold identical bytes; symlinks never compare equal.
+func sameContent(ctx context.Context, src, dst string, facts ops.FileConflictFacts, chunkBytes int64) (bool, error) {
+	if facts.Kind == "symlink" || facts.SourceSize != facts.DestSize {
+		return false, nil
+	}
+	sp, err := pathloc.Parse(src)
+	if err != nil {
+		return false, err
+	}
+	dp, err := pathloc.Parse(dst)
+	if err != nil {
+		return false, err
+	}
+	return compare.SameContent(ctx, sp, dp, chunkBytes, nil)
 }
 
 // transferExecCtx bundles the parameters executeJobByType needs to run the ops.Execute* call
@@ -502,7 +550,7 @@ type transferExecCtx struct {
 	opts     ops.Options
 	throttle ops.ProgressEmitThrottle
 	progress func(sourcePath, destPath string, doneFiles int, doneBytes int64)
-	resolver func(src, dst string, facts ops.FileConflictFacts) (bool, error)
+	resolver ops.ConflictResolver
 	diskWait ops.DiskWaitFunc
 	emit     func(jobs.Event)
 }

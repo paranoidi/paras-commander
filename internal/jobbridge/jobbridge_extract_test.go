@@ -55,7 +55,7 @@ func runExtractTransfer(t *testing.T, src, destDir string, decision jobs.Conflic
 	}
 
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs, nil)
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, nil)
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        jobs.TypeExtract,
@@ -69,6 +69,9 @@ func runExtractTransfer(t *testing.T, src, destDir string, decision jobs.Conflic
 		blockers++
 		if req.Kind != jobs.BlockerKindConflict {
 			t.Fatalf("blocker kind = %q, want %q", req.Kind, jobs.BlockerKindConflict)
+		}
+		if !req.Conflict.NoCompare {
+			t.Fatal("extract conflict must set NoCompare")
 		}
 		return decision
 	})

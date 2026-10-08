@@ -641,3 +641,42 @@ func DedupGroupBySize(a, b DedupGroup) int {
 	}
 	return bytes.Compare(a.Hash[:], b.Hash[:])
 }
+
+// SameContent reports whether a and b hold identical bytes, using the same chunked prefix hashing
+// as the dedup scan and bailing out at the first differing chunk. chunkBytes <= 0 hashes each
+// whole file in one round. Files of different size are different without reading either.
+func SameContent(ctx context.Context, a, b pathloc.Path, chunkBytes int64, buf []byte) (bool, error) {
+	ea, err := fsbackend.Default().Stat(ctx, a)
+	if err != nil {
+		return false, err
+	}
+	eb, err := fsbackend.Default().Stat(ctx, b)
+	if err != nil {
+		return false, err
+	}
+	if ea.Size != eb.Size {
+		return false, nil
+	}
+	if chunkBytes <= 0 {
+		chunkBytes = math.MaxInt64
+	}
+	if len(buf) == 0 {
+		buf = make([]byte, 32*1024)
+	}
+	noProgress := func(int64) {}
+	for offset := int64(0); offset < ea.Size; {
+		n := min(chunkBytes, ea.Size-offset)
+		ha, hb := sha256.New(), sha256.New()
+		if err := hashChunk(ctx, a, ha, buf, offset, n, noProgress); err != nil {
+			return false, err
+		}
+		if err := hashChunk(ctx, b, hb, buf, offset, n, noProgress); err != nil {
+			return false, err
+		}
+		if !bytes.Equal(ha.Sum(nil), hb.Sum(nil)) {
+			return false, nil
+		}
+		offset += n
+	}
+	return true, nil
+}

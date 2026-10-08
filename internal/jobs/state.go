@@ -701,7 +701,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	var policy ConflictPolicy
 	waitBlocker := func(req BlockerRequest) ConflictDecision {
 		if req.Kind == BlockerKindConflict && req.Conflict != nil {
-			if policy.Decision() != "" {
+			if policy.Decision() != "" && !req.Conflict.ContentDiffers {
 				return policy.Decision()
 			}
 		}

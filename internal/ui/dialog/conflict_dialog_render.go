@@ -23,6 +23,10 @@ func DrawConflictDialog(screen tcell.Screen, layout Layout, state ConflictDialog
 		drawConflictDiskSpaceDialog(screen, layout, state, styles, userHomeDir)
 		return
 	}
+	if state.Advanced {
+		drawConflictAdvancedDialog(screen, layout, state, styles, userHomeDir)
+		return
+	}
 	drawConflictFileDialog(screen, layout, state, styles, userHomeDir)
 }
 
@@ -54,14 +58,14 @@ func drawConflictFileDialog(screen tcell.Screen, layout Layout, state ConflictDi
 
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
-	primitive.Text(screen, textX, y, textW, "Overwrite this file?", prompt)
+	primitive.Text(screen, textX, y, textW, ConflictPromptText(c), prompt)
 	y++
 	y++
 
 	row1 := []draw.DialogButtonSpec{
 		{Label: "Overwrite", Shortcut: 'O', Focused: state.Focus == 0, Destructive: true},
 		{Label: "Overwrite All", Shortcut: 'A', Focused: state.Focus == 1, Destructive: true},
-		{Label: "Match Size", Shortcut: 'M', Focused: state.Focus == 2, Destructive: true},
+		{Label: "Advanced…", Shortcut: 'D', Focused: state.Focus == 2, Destructive: true},
 	}
 	row2 := []draw.DialogButtonSpec{
 		{Label: "Skip", Shortcut: 'S', Focused: state.Focus == 3},
@@ -76,6 +80,59 @@ func drawConflictFileDialog(screen tcell.Screen, layout Layout, state ConflictDi
 	draw.DrawDialogButtonRowCentered(screen, rect, y, row2, styles)
 	y++
 	draw.DrawDialogButtonRowCentered(screen, rect, y, row3, styles)
+}
+
+// ConflictPromptText is the question under the file summaries; it notes when Compare found
+// different contents.
+func ConflictPromptText(c *jobs.ConflictEvent) string {
+	if c != nil && c.ContentDiffers {
+		return "Contents differ. Overwrite this file?"
+	}
+	return "Overwrite this file?"
+}
+
+func drawConflictAdvancedDialog(screen tcell.Screen, layout Layout, state ConflictDialogState, styles theme.Theme, userHomeDir string) {
+	c := state.Blocker.Conflict
+	if c == nil {
+		c = &jobs.ConflictEvent{}
+	}
+	rules := ConflictAdvancedRulesFor(c)
+	width := min(layout.Width-4, 76)
+	if width < 48 {
+		width = min(48, layout.Width-2)
+	}
+	// top + new(3) + blank + existing(3) + sep + rules + sep + checkbox + blank + buttons + bottom border
+	height := 1 + 3 + 1 + 3 + 1 + len(rules) + 1 + 1 + 1 + 1 + 1
+	rect := draw.CenteredDialogRect(layout, width, height)
+
+	borderStyle := draw.DrawDialogFrame(screen, rect, "Overwrite advanced", styles)
+	_, dbg, _ := styles.DialogSurface.Decompose()
+	body := styles.DialogText.Background(dbg)
+
+	textX := draw.DialogTextX(rect)
+	textW := draw.DialogContentWidth(rect)
+	y := rect.Y + 1
+
+	y = drawConflictFileGroup(screen, textX, y, textW, conflictDialogLabelNew, c.Source, c.SourceSize, c.SourceTime, body, userHomeDir)
+	y++
+	y = drawConflictFileGroup(screen, textX, y, textW, conflictDialogLabelExisting, c.Destination, c.DestSize, c.DestTime, body, userHomeDir)
+
+	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
+	y++
+	for i, r := range rules {
+		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, r.Label, 0, state.AdvRule == i, state.AdvFocus == i, styles)
+		y++
+	}
+	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
+	y++
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Apply to all conflicts", 'A', state.AdvAll, state.AdvFocus == len(rules), false, styles)
+	y++
+	y++
+	form := ConflictAdvancedForm(len(rules))
+	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
+		{Label: "OK", Shortcut: 'O', Focused: state.AdvFocus == form.OKIndex()},
+		{Label: "Cancel", Shortcut: 'C', Focused: state.AdvFocus == form.CancelIndex()},
+	}, styles)
 }
 
 func drawConflictDiskSpaceDialog(screen tcell.Screen, layout Layout, state ConflictDialogState, styles theme.Theme, userHomeDir string) {

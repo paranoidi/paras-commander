@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 var errExtractSkipped = errors.New("extract skipped")
@@ -215,19 +216,19 @@ func streamOutputConflict(archivePath string, f archive.Format, destDir string, 
 	return "", false
 }
 
-func decideStreamOverwrite(src, dst string, resolver ConflictResolver) (bool, error) {
+func decideStreamOverwrite(ctx context.Context, src, dst string, resolver ConflictResolver) (ConflictAction, error) {
 	if resolver == nil {
-		return false, fmt.Errorf("destination %q already exists", dst)
+		return ActionSkip, fmt.Errorf("destination %q already exists", dst)
 	}
 	facts, err := StatFileConflictFacts(src, dst)
 	if err != nil {
-		return false, err
+		return ActionSkip, err
 	}
-	overwrite, err := resolver(src, dst, facts)
+	res, err := resolver(ctx, src, dst, facts)
 	if err != nil {
-		return false, &extractCancelError{err: err}
+		return ActionSkip, &extractCancelError{err: err}
 	}
-	return overwrite, nil
+	return res.Action, nil
 }
 
 func extractViaStdout(ctx context.Context, argv []string, item ExtractItem, destDir string, resolver ConflictResolver) error {
@@ -238,14 +239,25 @@ func extractViaStdout(ctx context.Context, argv []string, item ExtractItem, dest
 	flags := os.O_CREATE | os.O_WRONLY | os.O_EXCL
 	_, statErr := os.Lstat(outPath)
 	if statErr == nil {
-		overwrite, err := decideStreamOverwrite(item.Path, outPath, resolver)
+		action, err := decideStreamOverwrite(ctx, item.Path, outPath, resolver)
 		if err != nil {
 			return err
 		}
-		if !overwrite {
+		switch action {
+		case ActionOverwrite:
+			flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+		case ActionRename:
+			loc, err := pathloc.Parse(outPath)
+			if err == nil {
+				loc, err = uniqueSiblingName(ctx, loc)
+			}
+			if err != nil {
+				return err
+			}
+			outPath = loc.String()
+		default:
 			return errExtractSkipped
 		}
-		flags = os.O_CREATE | os.O_WRONLY | os.O_TRUNC
 	} else if !os.IsNotExist(statErr) {
 		return statErr
 	}

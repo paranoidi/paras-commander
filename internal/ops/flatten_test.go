@@ -216,9 +216,9 @@ func TestExecuteFlattenSameBasenameAsksResolverOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	calls := 0
-	resolver := func(src, dst string, _ FileConflictFacts) (bool, error) {
+	resolver := func(_ context.Context, src, dst string, _ FileConflictFacts) (ConflictResolution, error) {
 		calls++
-		return false, nil
+		return ow(false), nil
 	}
 	if _, err := runFlatten(t, root, dest, true, true, resolver); err != nil {
 		t.Fatal(err)

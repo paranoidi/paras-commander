@@ -23,9 +23,9 @@ func writeTree(t *testing.T, root string, files map[string]string) {
 func exists(p string) bool { _, err := os.Lstat(p); return err == nil }
 
 func countingResolver(answer bool, calls *[]string) ConflictResolver {
-	return func(src, dst string, _ FileConflictFacts) (bool, error) {
+	return func(_ context.Context, src, dst string, _ FileConflictFacts) (ConflictResolution, error) {
 		*calls = append(*calls, dst)
-		return answer, nil
+		return ow(answer), nil
 	}
 }
 

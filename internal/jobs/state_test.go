@@ -1448,3 +1448,58 @@ func TestShutdownPendingDequeuedNeverEntersTransferFunc(t *testing.T) {
 	}
 	t.Fatalf("NumGoroutine() after stop = %d, want <= %d (before=%d)", after, before+3, before)
 }
+
+func TestWorkerContentDiffersBypassesConflictPolicy(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	second := make(chan ConflictDecision, 1)
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		conflict := func(differs bool) BlockerRequest {
+			return BlockerRequest{
+				Kind:     BlockerKindConflict,
+				Conflict: &ConflictRequest{JobID: job.ID, Source: "/a", Destination: "/b", ContentDiffers: differs},
+			}
+		}
+		_ = waitBlocker(conflict(false)) // user answers Compare-all
+		// A plain conflict is answered by the policy without prompting.
+		if d := waitBlocker(conflict(false)); d != DecisionCompare.All() {
+			t.Errorf("policy answer = %q, want compare-all", d)
+		}
+		// A content-differs conflict must prompt again despite the policy.
+		second <- waitBlocker(conflict(true))
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+	s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
+
+	deadline := time.After(5 * time.Second)
+	requests := 0
+	for requests < 2 {
+		select {
+		case <-deadline:
+			t.Fatalf("timeout after %d blocker requests", requests)
+		case ev := <-s.Events():
+			if ev.Type != EventJobBlockerRequest {
+				continue
+			}
+			requests++
+			if requests == 1 {
+				s.SubmitConflictDecision("job-a", DecisionCompare.All())
+			} else {
+				if ev.Blocker == nil || ev.Blocker.Conflict == nil || !ev.Blocker.Conflict.ContentDiffers {
+					t.Fatalf("second prompt lacks ContentDiffers: %+v", ev.Blocker)
+				}
+				s.SubmitConflictDecision("job-a", DecisionSkip)
+			}
+		}
+	}
+	select {
+	case d := <-second:
+		if d != DecisionSkip {
+			t.Fatalf("second answer = %q, want skip", d)
+		}
+	case <-deadline:
+		t.Fatal("timeout waiting for second answer")
+	}
+}

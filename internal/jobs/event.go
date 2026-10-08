@@ -64,4 +64,8 @@ type ConflictEvent struct {
 	SourceTime string
 	DestSize   string
 	DestTime   string
+	// ContentDiffers: Compare found different contents; the advanced dialog omits Compare.
+	ContentDiffers bool
+	// NoCompare: Compare is meaningless for this conflict (archive extract); the dialog omits it.
+	NoCompare bool
 }

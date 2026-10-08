@@ -102,59 +102,77 @@ func restoreStagedDest(ctx context.Context, dst, staged pathloc.Path) error {
 	return nil
 }
 
-// renameSourceForMove handles conflict resolution then RenameFastPath for one source.
-// Returns renamed when the path was moved, skipped when the user chose not to overwrite,
-// fallbackCopy when cross-device (or non-fast) rename requires copy+delete for the batch.
-// staged is the parked original destination after an overwrite; empty otherwise. dstExists is the
-// caller's stat of dst.
-func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, dstExists bool, resolver ConflictResolver) (renamed, skipped, fallbackCopy bool, staged string, err error) {
+// renameOutcome is renameSourceForMove's result for one source.
+type renameOutcome struct {
+	renamed      bool // moved by rename (including the unique sibling name for keep-both)
+	fallbackCopy bool // cross-device (or non-fast) rename: copy+delete for the batch
+	// keepBoth: the fallback copy must write the source under a free sibling name instead of
+	// asking the resolver again.
+	keepBoth bool
+	staged   string // parked original destination after an overwrite; empty otherwise
+}
+
+// renameSourceForMove handles conflict resolution then RenameFastPath for one source. An
+// identical destination removes the source. dstExists is the caller's stat of dst.
+func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, dstExists bool, resolver ConflictResolver) (renameOutcome, error) {
 	if err := ctx.Err(); err != nil {
-		return false, false, false, "", err
+		return renameOutcome{}, err
 	}
 	if !dstExists {
-		renamed, skipped, fallbackCopy, err = renameFastPathOrFallback(ctx, src, dst)
-		return renamed, skipped, fallbackCopy, "", err
+		return renameFastPathOrFallback(ctx, src, dst)
 	}
 	if resolver == nil {
-		return false, false, false, "", fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
+		return renameOutcome{}, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
 	}
 	facts, err := statConflictFacts(ctx, src, dst)
 	if err != nil {
-		return false, false, false, "", fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
+		return renameOutcome{}, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
 	}
-	overwrite, err := resolver(src.String(), dst.String(), facts)
+	action, newDst, err := resolveConflict(ctx, src, dst, resolver, facts)
 	if err != nil {
-		return false, false, false, "", err
+		return renameOutcome{}, err
 	}
-	if !overwrite {
-		return false, true, false, "", nil
+	switch action {
+	case ActionIdentical:
+		if err := removePathRecursive(ctx, src); err != nil {
+			return renameOutcome{}, fmt.Errorf("remove identical source %q: %w", src, err)
+		}
+		return renameOutcome{renamed: true}, nil // counts as moved
+	case ActionRename:
+		out, err := renameFastPathOrFallback(ctx, src, newDst)
+		out.keepBoth = out.fallbackCopy
+		return out, err
+	case ActionOverwrite:
+	default:
+		return renameOutcome{}, nil // skipped
 	}
 	stagedLoc, stageErr := stageExistingDest(ctx, dst)
 	if stageErr != nil {
-		return false, false, false, "", stageErr
+		return renameOutcome{}, stageErr
 	}
-	renamed, skipped, fallbackCopy, err = renameFastPathOrFallback(ctx, src, dst)
-	if err != nil || fallbackCopy || skipped || !renamed {
+	out, err := renameFastPathOrFallback(ctx, src, dst)
+	if err != nil || out.fallbackCopy || !out.renamed {
 		if restoreErr := restoreStagedDest(ctx, dst, stagedLoc); restoreErr != nil {
 			if err != nil {
-				return false, skipped, fallbackCopy, "", fmt.Errorf("%w (restore staged dest: %v)", err, restoreErr)
+				return renameOutcome{}, fmt.Errorf("%w (restore staged dest: %v)", err, restoreErr)
 			}
-			return false, skipped, fallbackCopy, "", restoreErr
+			return renameOutcome{}, restoreErr
 		}
-		return false, skipped, fallbackCopy, "", err
+		return renameOutcome{fallbackCopy: out.fallbackCopy}, err
 	}
-	return true, false, false, stagedLoc.String(), nil
+	out.staged = stagedLoc.String()
+	return out, nil
 }
 
-func renameFastPathOrFallback(ctx context.Context, src, dst pathloc.Path) (renamed, skipped, fallbackCopy bool, err error) {
+func renameFastPathOrFallback(ctx context.Context, src, dst pathloc.Path) (renameOutcome, error) {
 	ok, err := RenameFastPathCtx(ctx, src, dst)
 	if err != nil {
-		return false, false, false, err
+		return renameOutcome{}, err
 	}
 	if !ok {
-		return false, false, true, nil
+		return renameOutcome{fallbackCopy: true}, nil
 	}
-	return true, false, false, nil
+	return renameOutcome{renamed: true}, nil
 }
 
 // ExecuteMove moves each source to destination, one at a time, in the style of mc: try the O(1)
@@ -235,14 +253,19 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 	if merge {
 		return r.mergeMoveDir(ctx, src, dst, baseFiles, baseBytes)
 	}
-	renamed, _, needCopy, staged, err := renameSourceForMove(ctx, src, dst, dstExists, r.resolver)
+	out, err := renameSourceForMove(ctx, src, dst, dstExists, r.resolver)
 	if err != nil {
 		return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
 	}
 	switch {
-	case needCopy:
+	case out.fallbackCopy:
 		orig := r.progress
 		fb := r
+		if out.keepBoth {
+			fb.resolver = func(context.Context, string, string, FileConflictFacts) (ConflictResolution, error) {
+				return ConflictResolution{Action: ActionRename}, nil
+			}
+		}
 		fb.progress = func(s, d string, f int, b int64) {
 			if orig != nil {
 				orig(s, d, baseFiles+f, baseBytes+b)
@@ -250,9 +273,9 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 		}
 		f, b, err := fb.moveCopyFallback(ctx, src, dst, destination)
 		return f, b, false, err
-	case renamed:
-		if staged != "" {
-			if loc, perr := pathloc.Parse(staged); perr == nil {
+	case out.renamed:
+		if out.staged != "" {
+			if loc, perr := pathloc.Parse(out.staged); perr == nil {
 				_ = removePathRecursive(ctx, loc)
 			}
 		}

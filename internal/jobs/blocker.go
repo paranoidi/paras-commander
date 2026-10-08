@@ -58,6 +58,8 @@ func BlockerDetailsFromRequest(req BlockerRequest) *BlockerDetails {
 				SourceTime:      c.SourceTime,
 				DestSize:        c.DestSize,
 				DestTime:        c.DestTime,
+				ContentDiffers:  c.ContentDiffers,
+				NoCompare:       c.NoCompare,
 			},
 		}
 	case BlockerKindDiskSpace:

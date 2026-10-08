@@ -1051,12 +1051,12 @@ func TestMoveOverwriteExistingDestViaRename(t *testing.T) {
 	}
 
 	resolved := false
-	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+	resolver := func(_ context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
 		_ = src
 		_ = dst
 		_ = facts
 		resolved = true
-		return true, nil
+		return ow(true), nil
 	}
 
 	opts := Options{CopyBufferKiB: 4}
@@ -1104,11 +1104,11 @@ func TestMoveMergesExistingDirViaRename(t *testing.T) {
 		t.Fatalf("write dst file: %v", err)
 	}
 
-	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+	resolver := func(_ context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
 		_ = src
 		_ = dst
 		_ = facts
-		return true, nil
+		return ow(true), nil
 	}
 
 	opts := Options{CopyBufferKiB: 4}
@@ -1172,12 +1172,12 @@ func TestMoveSkipExistingDestViaRename(t *testing.T) {
 	}
 
 	resolved := false
-	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+	resolver := func(_ context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
 		_ = src
 		_ = dst
 		_ = facts
 		resolved = true
-		return false, nil
+		return ow(false), nil
 	}
 
 	opts := Options{CopyBufferKiB: 4}
@@ -1224,12 +1224,12 @@ func TestMoveConflictResolverCancel(t *testing.T) {
 	}
 
 	calls := 0
-	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+	resolver := func(_ context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
 		_ = src
 		_ = dst
 		_ = facts
 		calls++
-		return false, fmt.Errorf("canceled by user")
+		return ow(false), fmt.Errorf("canceled by user")
 	}
 
 	opts := Options{CopyBufferKiB: 4}
@@ -1300,10 +1300,10 @@ func TestConflictResolverOverwrite(t *testing.T) {
 	}
 
 	resolved := false
-	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+	resolver := func(_ context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
 		_ = facts
 		resolved = true
-		return true, nil // overwrite
+		return ow(true), nil // overwrite
 	}
 
 	opts := Options{CopyBufferKiB: 4}
@@ -1344,11 +1344,11 @@ func TestCopySymlinkSkipDoesNotIncrementDoneFiles(t *testing.T) {
 		t.Fatalf("create dest symlink: %v", err)
 	}
 
-	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+	resolver := func(_ context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
 		_ = src
 		_ = dst
 		_ = facts
-		return false, nil
+		return ow(false), nil
 	}
 
 	opts := Options{CopyBufferKiB: 4}
@@ -1382,10 +1382,10 @@ func TestConflictResolverSkip(t *testing.T) {
 	}
 
 	resolved := false
-	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+	resolver := func(_ context.Context, src, dst string, facts FileConflictFacts) (ConflictResolution, error) {
 		_ = facts
 		resolved = true
-		return false, nil // skip
+		return ow(false), nil // skip
 	}
 
 	opts := Options{CopyBufferKiB: 4}

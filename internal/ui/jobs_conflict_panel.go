@@ -71,7 +71,7 @@ func ConflictDecisionFromButtonIndex(idx int) jobs.ConflictDecision {
 	case 1:
 		return jobs.DecisionOverwriteAll
 	case 2:
-		return jobs.DecisionOverwriteAllSameSize
+		return "" // Advanced…: opens the advanced dialog, not a decision
 	case 3:
 		return jobs.DecisionSkip
 	case 4:
@@ -79,6 +79,19 @@ func ConflictDecisionFromButtonIndex(idx int) jobs.ConflictDecision {
 	default:
 		return jobs.DecisionCancel
 	}
+}
+
+// conflictAdvancedFocus is the button index of "Advanced…" in the conflict panel and dialog.
+const conflictAdvancedFocus = 2
+
+// JobBlockerPanelIsAdvanced reports whether panel button focus selects "Advanced…" (not a decision).
+func JobBlockerPanelIsAdvanced(sel JobEntry, btnIdx int) bool {
+	return sel.PendingBlocker != nil && sel.PendingBlocker.Kind != jobs.BlockerKindDiskSpace && btnIdx == conflictAdvancedFocus
+}
+
+// JobBlockerDialogIsAdvanced reports whether dialog focus selects "Advanced…" (not a decision).
+func JobBlockerDialogIsAdvanced(b jobs.BlockerDetails, focus int) bool {
+	return b.Kind != jobs.BlockerKindDiskSpace && focus == conflictAdvancedFocus
 }
 
 // JobBlockerDecisionFromFocus resolves the decision for the blocker pane from button focus.
@@ -125,7 +138,7 @@ func JobBlockerDialogDecision(b jobs.BlockerDetails, focus int) (jobs.ConflictDe
 		}
 		return jobs.DecisionCancel, true
 	}
-	if focus < 0 || focus > 5 {
+	if focus < 0 || focus > 5 || focus == conflictAdvancedFocus {
 		return "", false
 	}
 	return ConflictDecisionFromButtonIndex(focus), true
@@ -149,7 +162,7 @@ func JobBlockerDialogFocusFromShortcut(b jobs.BlockerDetails, r rune) (int, bool
 		return 0, true
 	case 'a', 'A':
 		return 1, true
-	case 'm', 'M':
+	case 'd', 'D':
 		return 2, true
 	case 's', 'S':
 		return 3, true
@@ -367,7 +380,7 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 		y++
 	}
 
-	primitive.Text(screen, textX, y, textW, "Overwrite this file?", prompt)
+	primitive.Text(screen, textX, y, textW, dialog.ConflictPromptText(c), prompt)
 	y++
 	y++
 
@@ -382,7 +395,7 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	row1 := []dialog.DialogButtonSpec{
 		{Label: "Overwrite", Shortcut: 'O', Focused: focused && f == 0, Destructive: true},
 		{Label: "Overwrite All", Shortcut: 'A', Focused: focused && f == 1, Destructive: true},
-		{Label: "Match Size", Shortcut: 'M', Focused: focused && f == 2, Destructive: true},
+		{Label: "Advanced…", Shortcut: 'D', Focused: focused && f == 2, Destructive: true},
 	}
 	row2 := []dialog.DialogButtonSpec{
 		{Label: "Skip", Shortcut: 'S', Focused: focused && f == 3},

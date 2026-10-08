@@ -31,9 +31,18 @@ type PlanBuildOptions struct {
 }
 
 // ConflictResolver is called when a destination path already exists.
-// It receives source and destination paths plus file metadata and returns true to overwrite,
-// false to skip, and an error to abort.
-type ConflictResolver func(src, dest string, facts FileConflictFacts) (overwrite bool, err error)
+// It receives source and destination paths plus file metadata and returns what to do with the
+// destination (overwrite, skip, identical, rename), and an error to abort.
+type ConflictResolver func(ctx context.Context, src, dest string, facts FileConflictFacts) (ConflictResolution, error)
+
+// copyResult is the outcome of copying one file or symlink.
+type copyResult int
+
+const (
+	copySkipped   copyResult = iota // resolver declined; nothing written
+	copyDone                        // written
+	copyIdentical                   // destination already identical; nothing written
+)
 
 // BuildCopyPlanWithTotals prepares the destination (when needed), walks sources, and returns the flat plan plus totals.
 func BuildCopyPlanWithTotals(sources []pathloc.Path, destination pathloc.Path) (plan []PlanItem, totalFiles int, totalBytes int64, err error) {
@@ -281,24 +290,23 @@ func copyDirItem(ctx context.Context, item PlanItem, opts Options, state *copyRu
 func copySymlinkItem(ctx context.Context, item PlanItem, resolver ConflictResolver, state *copyRunState) error {
 	srcStr := item.Src.String()
 	dstStr := item.Dst.String()
-	var copied bool
+	var res copyResult
+	var err error
 	if useLocalFastPath(item.Src, item.Dst) {
-		var err error
-		copied, err = copySymlinkWithConflict(srcStr, dstStr, resolver)
-		if err != nil {
-			return err
-		}
+		res, err = copySymlinkWithConflict(ctx, srcStr, dstStr, resolver)
 	} else {
-		var err error
-		copied, err = copySymlinkTransfer(ctx, item.Src, item.Dst, resolver)
-		if err != nil {
-			return err
-		}
+		res, err = copySymlinkTransfer(ctx, item.Src, item.Dst, resolver)
 	}
-	if !copied {
+	if err != nil {
+		return err
+	}
+	if res == copySkipped {
 		return nil
 	}
 	state.recordTransferred(item.Src)
+	if res == copyIdentical {
+		return nil
+	}
 	state.doneFiles++
 	state.emitMetaProgress(srcStr, dstStr)
 	return nil
@@ -315,10 +323,10 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 		}
 	}
 
-	var copied bool
+	var res copyResult
 	var err error
 	if useLocalFastPath(item.Src, item.Dst) {
-		copied, err = copyFileWithConflict(ctx, srcStr, dstStr, opts, resolver, copyBuf, func(delta int64) {
+		res, err = copyFileWithConflict(ctx, srcStr, dstStr, opts, resolver, copyBuf, func(delta int64) {
 			// ponytail: throttles after each buffer write, so kernel fast-path copies
 			// (reflink/copy_file_range, which report their whole size in one onWritten
 			// call) get throttled as a post-hoc approximation rather than smoothly.
@@ -330,7 +338,7 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 			state.emitProgress(srcStr, dstStr, false)
 		})
 	} else {
-		copied, err = copyFileTransfer(ctx, item.Src, item.Dst, opts, resolver, copyBuf, func(delta int64) {
+		res, err = copyFileTransfer(ctx, item.Src, item.Dst, opts, resolver, copyBuf, func(delta int64) {
 			if opts.RateLimit != nil {
 				_ = opts.RateLimit(ctx, int(delta))
 			}
@@ -342,10 +350,13 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 	if err != nil {
 		return err
 	}
-	if !copied {
+	if res == copySkipped {
 		return nil
 	}
 	state.recordTransferred(item.Src)
+	if res == copyIdentical {
+		return nil
+	}
 
 	if opts.SyncFileDeferred(item.FileSize) && item.Dst.Scheme() == pathloc.SchemeFile {
 		if host, err := item.Dst.FilePath(); err == nil {
@@ -443,62 +454,89 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 	return state.doneFiles, state.doneBytes, state.transferredOut, nil
 }
 
-func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copied bool, err error) {
+func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copyResult, error) {
 	parent := filepath.Dir(dst)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
-		return false, fmt.Errorf("create parent directory %q: %w", parent, err)
+		return copySkipped, fmt.Errorf("create parent directory %q: %w", parent, err)
 	}
 
 	if _, err := os.Stat(dst); err == nil {
 		facts, ferr := StatFileConflictFacts(src, dst)
 		if ferr != nil {
-			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, ferr)
+			return copySkipped, fmt.Errorf("conflict stat %q %q: %w", src, dst, ferr)
 		}
-		proceed, perr := resolveOverwriteDecision(src, dst, resolver, facts)
-		if perr != nil {
-			return false, perr
+		newDst, res, done, perr := resolveLocalConflict(ctx, src, dst, resolver, facts)
+		if perr != nil || done {
+			return res, perr
 		}
-		if !proceed {
-			return false, nil
-		}
+		return copyLocalFile(ctx, src, newDst, opts, buf, onWritten)
 	} else if !os.IsNotExist(err) {
-		return false, fmt.Errorf("stat destination %q: %w", dst, err)
+		return copySkipped, fmt.Errorf("stat destination %q: %w", dst, err)
 	}
-
-	err = localfs.CopyFile(ctx, src, dst, BufferSize(opts.CopyBufferKiB), opts.PreservePermissions, opts.PreserveTimestamps, false, opts.CowFileCloning, opts.LocalCopyFileOpts(buf), onWritten)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
+	return copyLocalFile(ctx, src, dst, opts, buf, onWritten)
 }
 
-func copySymlinkWithConflict(src, dst string, resolver ConflictResolver) (copied bool, err error) {
+func copyLocalFile(ctx context.Context, src, dst string, opts Options, buf []byte, onWritten func(int64)) (copyResult, error) {
+	err := localfs.CopyFile(ctx, src, dst, BufferSize(opts.CopyBufferKiB), opts.PreservePermissions, opts.PreserveTimestamps, false, opts.CowFileCloning, opts.LocalCopyFileOpts(buf), onWritten)
+	if err != nil {
+		return copySkipped, err
+	}
+	return copyDone, nil
+}
+
+// resolveLocalConflict adapts resolveConflict to local string paths. done is true when the
+// caller must stop and return res (skip or identical); otherwise write to the returned dst.
+func resolveLocalConflict(ctx context.Context, src, dst string, resolver ConflictResolver, facts FileConflictFacts) (newDst string, res copyResult, done bool, err error) {
+	sp, err := pathloc.Parse(src)
+	if err != nil {
+		return dst, copySkipped, true, err
+	}
+	dp, err := pathloc.Parse(dst)
+	if err != nil {
+		return dst, copySkipped, true, err
+	}
+	action, np, err := resolveConflict(ctx, sp, dp, resolver, facts)
+	if err != nil {
+		return dst, copySkipped, true, err
+	}
+	switch action {
+	case ActionOverwrite:
+		return dst, copyDone, false, nil
+	case ActionRename:
+		return np.String(), copyDone, false, nil
+	case ActionIdentical:
+		return dst, copyIdentical, true, nil
+	}
+	return dst, copySkipped, true, nil
+}
+
+func copySymlinkWithConflict(ctx context.Context, src, dst string, resolver ConflictResolver) (copyResult, error) {
 	parent := filepath.Dir(dst)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
-		return false, fmt.Errorf("create parent directory %q: %w", parent, err)
+		return copySkipped, fmt.Errorf("create parent directory %q: %w", parent, err)
 	}
 
 	if _, err := os.Lstat(dst); err == nil {
 		facts, ferr := StatFileConflictFacts(src, dst)
 		if ferr != nil {
-			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, ferr)
+			return copySkipped, fmt.Errorf("conflict stat %q %q: %w", src, dst, ferr)
 		}
-		proceed, perr := resolveOverwriteDecision(src, dst, resolver, facts)
-		if perr != nil {
-			return false, perr
+		newDst, res, done, perr := resolveLocalConflict(ctx, src, dst, resolver, facts)
+		if perr != nil || done {
+			return res, perr
 		}
-		if !proceed {
-			return false, nil
+		if newDst == dst {
+			if err := os.Remove(dst); err != nil {
+				return copySkipped, fmt.Errorf("remove existing %q: %w", dst, err)
+			}
 		}
-		if err := os.Remove(dst); err != nil {
-			return false, fmt.Errorf("remove existing %q: %w", dst, err)
-		}
+		dst = newDst
 	} else if !os.IsNotExist(err) {
-		return false, fmt.Errorf("stat destination %q: %w", dst, err)
+		return copySkipped, fmt.Errorf("stat destination %q: %w", dst, err)
 	}
 
 	if err := CopySymlink(src, dst, nil); err != nil {
-		return false, err
+		return copySkipped, err
 	}
-	return true, nil
+	return copyDone, nil
 }

@@ -325,8 +325,8 @@ func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
 		case 'l', 'L':
 			h.submitJobsConflictDecision(jobs.DecisionSkipAll)
 			return false
-		case 'm', 'M':
-			h.submitJobsConflictDecision(jobs.DecisionOverwriteAllSameSize)
+		case 'd', 'D':
+			h.openAdvancedFromPanel(sel)
 			return false
 		case 'c', 'C':
 			h.submitJobsConflictDecision(jobs.DecisionCancel)
@@ -346,6 +346,10 @@ func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
 			h.model.JobsView.ConflictButtonFocus = newFocus
 		}
 	case tcell.KeyEnter:
+		if ui.JobBlockerPanelIsAdvanced(sel, h.model.JobsView.ConflictButtonFocus) {
+			h.openAdvancedFromPanel(sel)
+			return false
+		}
 		d := ui.JobBlockerDecisionFromFocus(sel, h.model.JobsView.ConflictButtonFocus)
 		h.submitJobsConflictDecision(d)
 	}

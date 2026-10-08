@@ -89,6 +89,16 @@ type ConflictDialogState struct {
 	JobID   string
 	Blocker jobs.BlockerDetails
 	Focus   int // button index; see ui.JobBlockerDialogMaxFocus
+
+	// Advanced switches the dialog to "Overwrite advanced": a radio list of ConflictAdvancedRules,
+	// an apply-to-all checkbox and OK/Cancel.
+	Advanced bool
+	AdvFocus int  // see ConflictAdvancedForm
+	AdvRule  int  // index into ConflictAdvancedRulesFor(Blocker.Conflict)
+	AdvAll   bool // apply the rule to all remaining conflicts
+	// OpenedFromPanel: the advanced dialog came from the jobs-view panel, so Cancel closes
+	// instead of returning to the main dialog.
+	OpenedFromPanel bool
 }
 
 // QuitConfirmState holds the quit confirmation dialog.

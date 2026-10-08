@@ -1,25 +1,51 @@
 package jobs
 
+import "strings"
+
 // ConflictDecision is the user's choice for resolving a file conflict.
 type ConflictDecision string
 
 const (
-	DecisionOverwrite    ConflictDecision = "overwrite"
-	DecisionSkip         ConflictDecision = "skip"
-	DecisionOverwriteAll ConflictDecision = "overwrite-all"
-	DecisionSkipAll      ConflictDecision = "skip-all"
-	DecisionCancel       ConflictDecision = "cancel"
+	DecisionOverwrite ConflictDecision = "overwrite"
+	DecisionSkip      ConflictDecision = "skip"
+	DecisionCancel    ConflictDecision = "cancel"
 	// DecisionRetry applies to disk-space blockers only (re-check free space and continue).
 	DecisionRetry ConflictDecision = "retry"
-	// DecisionOverwriteAllSameSize applies to every remaining conflict in the job: overwrite when
-	// source and destination sizes match, skip otherwise. No further prompting once selected.
-	DecisionOverwriteAllSameSize ConflictDecision = "overwrite-all-same-size"
+
+	// Conditional rules from the "Overwrite advanced" dialog. The resolver evaluates them per file.
+	DecisionOverwriteIfNewer           ConflictDecision = "overwrite-if-newer"
+	DecisionOverwriteIfOlder           ConflictDecision = "overwrite-if-older"
+	DecisionOverwriteIfExistingSmaller ConflictDecision = "overwrite-if-existing-smaller"
+	DecisionOverwriteIfSizeDiffers     ConflictDecision = "overwrite-if-size-differs"
+	DecisionOverwriteIfSameSize        ConflictDecision = "overwrite-if-same-size"
+	// DecisionCompare skips identical files (removing the source on move); differing files prompt again.
+	DecisionCompare ConflictDecision = "compare"
+	// DecisionKeepBoth writes the new file under the first free "name (N).ext".
+	DecisionKeepBoth ConflictDecision = "keep-both"
+
+	DecisionOverwriteAll = DecisionOverwrite + allSuffix
+	DecisionSkipAll      = DecisionSkip + allSuffix
 )
+
+const allSuffix = "-all"
+
+// All returns the apply-to-all form of d.
+func (d ConflictDecision) All() ConflictDecision {
+	if d.ApplyAll() {
+		return d
+	}
+	return d + allSuffix
+}
+
+// Base returns d without the apply-to-all suffix.
+func (d ConflictDecision) Base() ConflictDecision {
+	return ConflictDecision(strings.TrimSuffix(string(d), allSuffix))
+}
 
 // ApplyAll reports whether the decision applies to all remaining conflicts
 // in the current job.
 func (d ConflictDecision) ApplyAll() bool {
-	return d == DecisionOverwriteAll || d == DecisionSkipAll || d == DecisionOverwriteAllSameSize
+	return strings.HasSuffix(string(d), allSuffix)
 }
 
 // ConflictRequest represents a user-facing conflict that requires a decision.
@@ -32,6 +58,11 @@ type ConflictRequest struct {
 	SourceTime      string
 	DestSize        string
 	DestTime        string
+	// ContentDiffers marks a repeat prompt after Compare found different contents; the job's
+	// apply-to-all policy is bypassed and Compare is not offered again.
+	ContentDiffers bool
+	// NoCompare hides Compare: the source is not comparable to the destination (archive extract).
+	NoCompare bool
 }
 
 // ConflictPolicy tracks active overwrite/skip decisions within a job.
@@ -54,16 +85,6 @@ func (p *ConflictPolicy) SetDecision(d ConflictDecision) {
 	p.activeDecision = d
 }
 
-// ShouldOverwrite reports whether the current policy says to overwrite.
-func (p ConflictPolicy) ShouldOverwrite() bool {
-	return p.activeDecision == DecisionOverwrite || p.activeDecision == DecisionOverwriteAll
-}
-
-// ShouldSkip reports whether the current policy says to skip.
-func (p ConflictPolicy) ShouldSkip() bool {
-	return p.activeDecision == DecisionSkip || p.activeDecision == DecisionSkipAll
-}
-
 // ApplyDecision determines the effective conflict outcome for a single file
 // given the current policy and a new decision (which may be empty to reuse policy).
 // It returns (shouldOverwrite, shouldSkip, shouldCancel, updatedPolicy).
@@ -73,25 +94,20 @@ func ApplyDecision(policy ConflictPolicy, newDecision ConflictDecision) (overwri
 		decision = policy.activeDecision
 	}
 
-	switch decision {
+	if decision == DecisionRetry {
+		// Not a conflict outcome; must not be routed through ApplyDecision from conflict UI.
+		return false, false, false, policy
+	}
+	if decision.ApplyAll() {
+		policy.activeDecision = decision
+	}
+	switch decision.Base() {
 	case DecisionOverwrite:
 		return true, false, false, policy
 	case DecisionSkip:
 		return false, true, false, policy
-	case DecisionOverwriteAll:
-		policy.activeDecision = DecisionOverwriteAll
-		return true, false, false, policy
-	case DecisionSkipAll:
-		policy.activeDecision = DecisionSkipAll
-		return false, true, false, policy
-	case DecisionOverwriteAllSameSize:
-		policy.activeDecision = DecisionOverwriteAllSameSize
-		return true, false, false, policy
 	case DecisionCancel:
 		return false, false, true, policy
-	case DecisionRetry:
-		// Not a conflict outcome; must not be routed through ApplyDecision from conflict UI.
-		return false, false, false, policy
 	default:
 		return false, false, false, policy
 	}
