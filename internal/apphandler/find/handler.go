@@ -1293,7 +1293,8 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	if h.tryFindDialogActionKey(event) {
 		return
 	}
-	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle {
+	// Plain space is query text here, even though it is globally bound to select-toggle.
+	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle && !keymap.IsPlainPrintableRune(event) {
 		h.findDialogToggleSelectionAndAdvance()
 		return
 	}

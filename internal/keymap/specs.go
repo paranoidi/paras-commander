@@ -749,7 +749,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:       HelpBrowser | HelpCompare | HelpDedup,
 			Title:       "Toggle selection",
 			Section:     "Selection",
-			DefaultKeys: []string{"insert"},
+			DefaultKeys: []string{"insert", "space"},
 			Keywords:    []string{"select", "mark"},
 			LeaderKey:   "S",
 		},
@@ -857,7 +857,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:       HelpBrowser,
 			Title:       "Toggle tree view / expand directory",
 			Section:     "View",
-			DefaultKeys: []string{"space"},
+			DefaultKeys: nil,
 			Keywords:    []string{"tree", "expand", "collapse", "directory", "nested"},
 		},
 		{
