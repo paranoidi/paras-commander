@@ -8,8 +8,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )

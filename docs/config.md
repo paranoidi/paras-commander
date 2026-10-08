@@ -458,6 +458,8 @@ Built-in defaults live in `internal/keymap/specs.go` and are written to `keybind
 
 **`[copy_menu]`** — letter keys for the `"` copy menu (`app.copy-menu` in `[main]`). Defaults: `clipboard.copy-file-url` = `c`, `clipboard.copy-dir-url` = `d`, `clipboard.copy-filename` = `f`, `clipboard.copy-filename-without-ext` = `n`. Empty value omits the row. Keys must be letters and unique within the table. `"` is a single global binding — it also opens from the F3 fullscreen preview, the Compare panels view, and the Find Duplicates view (copying the previewed/highlighted file's info instead of the panel selection), resolved via the same `[main]` entry rather than a separate per-view binding.
 
+**`[preview]`** (keybindings) — keys active only in the F3 fullscreen preview. Besides the menu/search/theme actions, defaults include vim-style navigation: `preview.scroll-down` = `j`, `preview.scroll-up` = `k`, `preview.half-page-down` = `C-d`, `preview.half-page-up` = `C-u`, `preview.page-down` = `C-f`, `preview.page-up` = `C-b`, `preview.top` = `g`, `preview.bottom` = `G`, and `preview.close` = `q`, `h`. Arrow keys, PgUp/PgDn, Space, Home and End keep working.
+
 **`[preview_menu]`** — letter keys for the `:` fullscreen-preview menu (`preview.menu` under `[preview]`), open only while the F3 fullscreen preview is focused. Defaults: `preview.theme-picker` = `t`, `preview.toggle-raw` = `r`, `preview.reload` = `R`, `preview.search-start` = `s`, `preview.diff-next-hunk` = `n`, `preview.diff-prev-hunk` = `p`, `file.edit` = `e`, `file.delete` = `d`, `app.quit` = `q`. `r`/`R` is a deliberate case pair (toggle raw markdown vs. reload). Empty value omits the row. Keys must be letters and unique within the table.
 
 Notable dual bindings:

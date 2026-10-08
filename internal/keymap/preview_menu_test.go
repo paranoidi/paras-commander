@@ -1,6 +1,10 @@
 package keymap
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/gdamore/tcell/v2"
+)
 
 func TestDefaultPreviewMenuKeysUnique(t *testing.T) {
 	if err := validatePreviewMenuKeys(DefaultPreviewMenuKeys()); err != nil {
@@ -122,7 +126,42 @@ func TestActionForPreviewMenuKey(t *testing.T) {
 func TestFilePreviewOverlayMapsQToClose(t *testing.T) {
 	keys := DefaultFilePreviewOverlayKeys()
 	chords, ok := keys[ActionPreviewClose]
-	if !ok || len(chords) != 1 || chords[0] != "q" {
-		t.Fatalf("DefaultFilePreviewOverlayKeys()[ActionPreviewClose] = %v, want [\"q\"]", chords)
+	if !ok || len(chords) != 2 || chords[0] != "q" || chords[1] != "h" {
+		t.Fatalf("DefaultFilePreviewOverlayKeys()[ActionPreviewClose] = %v, want [\"q\" \"h\"]", chords)
+	}
+}
+
+func TestFilePreviewOverlayVimNavigation(t *testing.T) {
+	b, err := DefaultBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rn := func(r rune, m tcell.ModMask) *tcell.EventKey { return tcell.NewEventKey(tcell.KeyRune, r, m) }
+	cases := []struct {
+		name string
+		ev   *tcell.EventKey
+		want string
+	}{
+		{"j", rn('j', tcell.ModNone), ActionPreviewScrollDown},
+		{"k", rn('k', tcell.ModNone), ActionPreviewScrollUp},
+		{"g", rn('g', tcell.ModNone), ActionPreviewTop},
+		{"h", rn('h', tcell.ModNone), ActionPreviewClose},
+		{"G", rn('G', tcell.ModNone), ActionPreviewBottom},
+		{"G shift", rn('G', tcell.ModShift), ActionPreviewBottom},
+		{"C-d", tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModCtrl), ActionPreviewHalfPageDown},
+		{"C-d bare", tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModNone), ActionPreviewHalfPageDown},
+		{"C-u", tcell.NewEventKey(tcell.KeyCtrlU, 0, tcell.ModCtrl), ActionPreviewHalfPageUp},
+		{"C-f", tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModCtrl), ActionPreviewPageDown},
+		{"C-b", tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModCtrl), ActionPreviewPageUp},
+		{"C-d rune", rn('d', tcell.ModCtrl), ActionPreviewHalfPageDown},
+	}
+	for _, tc := range cases {
+		got, ok := b.FilePreview.Lookup(tc.ev)
+		if !ok || got != tc.want {
+			t.Errorf("%s: Lookup = (%q, %v), want %q", tc.name, got, ok, tc.want)
+		}
+	}
+	if id, ok := b.FilePreview.Lookup(rn('l', tcell.ModNone)); ok {
+		t.Errorf("l bound in preview overlay to %q, want unbound", id)
 	}
 }

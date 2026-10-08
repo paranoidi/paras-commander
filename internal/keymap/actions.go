@@ -179,6 +179,14 @@ const (
 	ActionPreviewSearchNext            = "preview.search-next"
 	ActionPreviewSearchPrev            = "preview.search-prev"
 	ActionPreviewClose                 = "preview.close"
+	ActionPreviewScrollDown            = "preview.scroll-down"
+	ActionPreviewScrollUp              = "preview.scroll-up"
+	ActionPreviewHalfPageDown          = "preview.half-page-down"
+	ActionPreviewHalfPageUp            = "preview.half-page-up"
+	ActionPreviewPageDown              = "preview.page-down"
+	ActionPreviewPageUp                = "preview.page-up"
+	ActionPreviewTop                   = "preview.top"
+	ActionPreviewBottom                = "preview.bottom"
 	ActionFileQuickView                = "file.quick-view"
 	ActionFileQuickViewPreviewPageUp   = "file.quick-view.preview-page-up"
 	ActionFileQuickViewPreviewPageDown = "file.quick-view.preview-page-down"
@@ -458,6 +466,14 @@ var KnownActions = map[string]struct{}{
 	ActionPreviewSearchNext:            {},
 	ActionPreviewSearchPrev:            {},
 	ActionPreviewClose:                 {},
+	ActionPreviewScrollDown:            {},
+	ActionPreviewScrollUp:              {},
+	ActionPreviewHalfPageDown:          {},
+	ActionPreviewHalfPageUp:            {},
+	ActionPreviewPageDown:              {},
+	ActionPreviewPageUp:                {},
+	ActionPreviewTop:                   {},
+	ActionPreviewBottom:                {},
 	ActionFileQuickView:                {},
 	ActionFileQuickViewPreviewPageUp:   {},
 	ActionFileQuickViewPreviewPageDown: {},

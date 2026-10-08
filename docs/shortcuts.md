@@ -12,6 +12,8 @@ Alt (`M`) combinations generally alter the current view. Ctrl (`C`) combinations
 
 Leader-key commands are available via `:`. The same letters are used in the leader menu and in the Esc function menu where possible. Persistent vi/leader-key mode toggles with Esc and is indicated by a yellow border. This also applies inside the fullscreen preview (F3): `j`/`k` scroll, `h` closes the view, and the footer shows the `[preview_menu]` letters (search stays `/`), which fire their action directly.
 
+In the fullscreen preview (F3) vim-style keys are always on: `j`/`k` scroll a line, `C-d`/`C-u` half a page, `C-f`/`C-b` a page, `g`/`G` jump to top/bottom, and `q` or `h` closes the view (rebind under `[preview]` in `keybindings.toml`).
+
 ## Syntax
 
 Bindings live in `keybindings.toml` as one chord per string. Spaces (multi-stroke sequences) are rejected.

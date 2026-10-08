@@ -1325,6 +1325,70 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"search", "find", "previous", "match"},
 		},
 		{
+			ID:          ActionPreviewScrollDown,
+			Views:       HelpFilePreview,
+			Title:       "Scroll down one line",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"scroll", "down", "line", "vi", "helix"},
+		},
+		{
+			ID:          ActionPreviewScrollUp,
+			Views:       HelpFilePreview,
+			Title:       "Scroll up one line",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"scroll", "up", "line", "vi", "helix"},
+		},
+		{
+			ID:          ActionPreviewHalfPageDown,
+			Views:       HelpFilePreview,
+			Title:       "Scroll down half a page",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"scroll", "down", "half", "page", "vi", "helix"},
+		},
+		{
+			ID:          ActionPreviewHalfPageUp,
+			Views:       HelpFilePreview,
+			Title:       "Scroll up half a page",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"scroll", "up", "half", "page", "vi", "helix"},
+		},
+		{
+			ID:          ActionPreviewPageDown,
+			Views:       HelpFilePreview,
+			Title:       "Scroll down one page",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"scroll", "down", "page", "vi", "helix"},
+		},
+		{
+			ID:          ActionPreviewPageUp,
+			Views:       HelpFilePreview,
+			Title:       "Scroll up one page",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"scroll", "up", "page", "vi", "helix"},
+		},
+		{
+			ID:          ActionPreviewTop,
+			Views:       HelpFilePreview,
+			Title:       "Go to top of preview",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"top", "start", "first", "home", "vi"},
+		},
+		{
+			ID:          ActionPreviewBottom,
+			Views:       HelpFilePreview,
+			Title:       "Go to bottom of preview",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"bottom", "end", "last", "vi"},
+		},
+		{
 			ID:           ActionFileQuickView,
 			Views:        HelpBrowser,
 			Title:        "Quick view",

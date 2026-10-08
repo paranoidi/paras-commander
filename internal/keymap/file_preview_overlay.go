@@ -6,14 +6,22 @@ import "strings"
 // full-screen preview (F3) is focused ([preview]).
 func DefaultFilePreviewOverlayKeys() map[string][]string {
 	return map[string][]string{
-		ActionPreviewMenu:        {":"},
-		ActionPreviewThemePicker: {"F9"},
-		ActionPreviewToggleRaw:   {"F6"},
-		ActionPreviewReload:      {"F5"},
-		ActionPreviewSearchStart: {"/"},
-		ActionPreviewSearchNext:  {"n"},
-		ActionPreviewSearchPrev:  {"p"},
-		ActionPreviewClose:       {"q"},
+		ActionPreviewMenu:         {":"},
+		ActionPreviewThemePicker:  {"F9"},
+		ActionPreviewToggleRaw:    {"F6"},
+		ActionPreviewReload:       {"F5"},
+		ActionPreviewSearchStart:  {"/"},
+		ActionPreviewSearchNext:   {"n"},
+		ActionPreviewSearchPrev:   {"p"},
+		ActionPreviewClose:        {"q", "h"},
+		ActionPreviewScrollDown:   {"j"},
+		ActionPreviewScrollUp:     {"k"},
+		ActionPreviewHalfPageDown: {"C-d"},
+		ActionPreviewHalfPageUp:   {"C-u"},
+		ActionPreviewPageDown:     {"C-f"},
+		ActionPreviewPageUp:       {"C-b"},
+		ActionPreviewTop:          {"g"},
+		ActionPreviewBottom:       {"G"},
 	}
 }
 

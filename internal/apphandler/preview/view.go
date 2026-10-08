@@ -155,6 +155,11 @@ func (h *Handler) fullscreenPreviewScrollTo(scroll int) {
 	})
 }
 
+func (h *Handler) fullscreenPreviewScrollToEnd() {
+	_, ch, lc := h.fullscreenFilePreviewScrollMetrics()
+	h.fullscreenPreviewScrollTo(max(0, lc-ch))
+}
+
 func (h *Handler) patchFullscreenFilePreview(fn func(*ui.FilePreviewState)) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -291,17 +296,34 @@ func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bo
 			h.host.OpenDeleteDialogForPreviewedFile()
 		}
 		return false, true
-	case keymap.ActionFileQuickViewPreviewPageUp, keymap.ActionFileQuickViewPreviewPageDown:
+	case keymap.ActionFileQuickViewPreviewPageUp, keymap.ActionFileQuickViewPreviewPageDown,
+		keymap.ActionPreviewPageUp, keymap.ActionPreviewPageDown:
 		_, ch, _ := h.fullscreenFilePreviewScrollMetrics()
-		step := ch
-		if step < 1 {
-			step = 1
+		step := max(1, ch)
+		if nextAction == keymap.ActionFileQuickViewPreviewPageUp || nextAction == keymap.ActionPreviewPageUp {
+			step = -step
 		}
-		if nextAction == keymap.ActionFileQuickViewPreviewPageUp {
-			h.fullscreenPreviewScrollBy(-step)
-		} else {
-			h.fullscreenPreviewScrollBy(step)
+		h.fullscreenPreviewScrollBy(step)
+		return false, true
+	case keymap.ActionPreviewScrollDown:
+		h.fullscreenPreviewScrollBy(1)
+		return false, true
+	case keymap.ActionPreviewScrollUp:
+		h.fullscreenPreviewScrollBy(-1)
+		return false, true
+	case keymap.ActionPreviewHalfPageDown, keymap.ActionPreviewHalfPageUp:
+		_, ch, _ := h.fullscreenFilePreviewScrollMetrics()
+		step := max(1, ch/2)
+		if nextAction == keymap.ActionPreviewHalfPageUp {
+			step = -step
 		}
+		h.fullscreenPreviewScrollBy(step)
+		return false, true
+	case keymap.ActionPreviewTop:
+		h.fullscreenPreviewScrollTo(0)
+		return false, true
+	case keymap.ActionPreviewBottom:
+		h.fullscreenPreviewScrollToEnd()
 		return false, true
 	default:
 		return false, false
@@ -351,8 +373,7 @@ func (h *Handler) handleFilePreviewScrollKey(event *tcell.EventKey) bool {
 		h.fullscreenPreviewScrollTo(0)
 		return true
 	case tcell.KeyEnd:
-		_, ch2, lc := h.fullscreenFilePreviewScrollMetrics()
-		h.fullscreenPreviewScrollTo(max(0, lc-ch2))
+		h.fullscreenPreviewScrollToEnd()
 		return true
 	case tcell.KeyRight:
 		// Default binding maps Right to nav.open; consume the unmodified arrow so chord
