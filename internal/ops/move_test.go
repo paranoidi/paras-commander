@@ -199,7 +199,7 @@ func moveViaCopyFallback(ctx context.Context, sources []pathloc.Path, destinatio
 		if err != nil {
 			return files, bytes, err
 		}
-		f, b, err := moveCopyFallback(ctx, src, dst, destination, opts, throttle, progress, resolver, diskWait)
+		f, b, err := moveRun{opts: opts, throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait}.moveCopyFallback(ctx, src, dst, destination)
 		files += f
 		bytes += b
 		if err != nil {

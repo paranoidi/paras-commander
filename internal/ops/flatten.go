@@ -80,7 +80,7 @@ func ExecuteFlatten(ctx context.Context, roots []pathloc.Path, dest pathloc.Path
 	}
 	w := &flattenWalk{
 		roots: roots, dest: dest, destIsDir: destIsDir, recursive: recursive, removeEmpty: removeEmpty,
-		opts: opts, throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait,
+		moveRun: moveRun{opts: opts, throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait},
 	}
 	for _, root := range roots {
 		if err := w.walk(ctx, root); err != nil {
@@ -96,14 +96,10 @@ type flattenWalk struct {
 	dest                   pathloc.Path
 	destIsDir              bool
 	recursive, removeEmpty bool
-	opts                   Options
-	throttle               ProgressEmitThrottle
-	progress               ProgressCallback
-	resolver               ConflictResolver
-	diskWait               DiskWaitFunc
-	doneFiles              int
-	doneBytes              int64
-	deferred               []pathloc.Path
+	moveRun
+	doneFiles int
+	doneBytes int64
+	deferred  []pathloc.Path
 }
 
 // dstFor is the flatten destination of child; dest was resolved once, so no per-entry Stat.
@@ -152,7 +148,7 @@ func (w *flattenWalk) walk(ctx context.Context, dir pathloc.Path) error {
 		case collides:
 			w.deferred = append(w.deferred, e.Loc)
 		default:
-			w.doneFiles, w.doneBytes, err = moveAndCount(ctx, e.Loc, dst, w.dest, w.opts, w.throttle, w.progress, w.doneFiles, w.doneBytes, w.resolver, w.diskWait)
+			w.doneFiles, w.doneBytes, err = w.moveAndCount(ctx, e.Loc, dst, w.dest, w.doneFiles, w.doneBytes)
 			if err != nil {
 				return err
 			}

@@ -190,6 +190,7 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 	if !opts.FlatDestNames {
 		nameRoot = TransferNameRoot(sources)
 	}
+	r := moveRun{opts: opts, throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait}
 	var doneFiles int
 	var doneBytes int64
 	for _, src := range sources {
@@ -206,7 +207,7 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 				return doneFiles, doneBytes, fmt.Errorf("create parent for %q: %w", dst, err)
 			}
 		}
-		doneFiles, doneBytes, err = moveAndCount(ctx, src, dst, destination, opts, throttle, progress, doneFiles, doneBytes, resolver, diskWait)
+		doneFiles, doneBytes, err = r.moveAndCount(ctx, src, dst, destination, doneFiles, doneBytes)
 		if err != nil {
 			return doneFiles, doneBytes, err
 		}
@@ -214,10 +215,19 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 	return doneFiles, doneBytes, nil
 }
 
+// moveRun carries the per-job settings threaded through every per-entry move.
+type moveRun struct {
+	opts     Options
+	throttle ProgressEmitThrottle
+	progress ProgressCallback
+	resolver ConflictResolver
+	diskWait DiskWaitFunc
+}
+
 // moveAndCount runs moveOne and returns the updated done totals, counting a completed rename as one
 // item and reporting it through progress.
-func moveAndCount(ctx context.Context, src, dst, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, doneFiles int, doneBytes int64, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
-	files, bytes, moved, err := moveOne(ctx, src, dst, destination, opts, throttle, progress, doneFiles, doneBytes, resolver, diskWait)
+func (r moveRun) moveAndCount(ctx context.Context, src, dst, destination pathloc.Path, doneFiles int, doneBytes int64) (int, int64, error) {
+	files, bytes, moved, err := r.moveOne(ctx, src, dst, destination, doneFiles, doneBytes)
 	doneFiles += files
 	doneBytes += bytes
 	if err != nil {
@@ -225,8 +235,8 @@ func moveAndCount(ctx context.Context, src, dst, destination pathloc.Path, opts 
 	}
 	if moved {
 		doneFiles++
-		if progress != nil {
-			progress(src.String(), dst.String(), doneFiles, doneBytes)
+		if r.progress != nil {
+			r.progress(src.String(), dst.String(), doneFiles, doneBytes)
 		}
 	}
 	return doneFiles, doneBytes, nil
@@ -237,7 +247,7 @@ func moveAndCount(ctx context.Context, src, dst, destination pathloc.Path, opts 
 // possible, moveCopyFallback. moved reports a completed rename (or fully merged and removed source
 // directory) that counts as one done item; files and bytes are items copied by fallbacks. baseFiles
 // and baseBytes offset fallback progress. destination is the directory dst was resolved against.
-func moveOne(ctx context.Context, src, dst, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, baseFiles int, baseBytes int64, resolver ConflictResolver, diskWait DiskWaitFunc) (files int, bytes int64, moved bool, err error) {
+func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path, baseFiles int, baseBytes int64) (files int, bytes int64, moved bool, err error) {
 	if PathsEquivalent(src, dst) {
 		return 0, 0, false, nil
 	}
@@ -246,20 +256,22 @@ func moveOne(ctx context.Context, src, dst, destination pathloc.Path, opts Optio
 		return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
 	}
 	if merge {
-		return mergeMoveDir(ctx, src, dst, opts, throttle, progress, baseFiles, baseBytes, resolver, diskWait)
+		return r.mergeMoveDir(ctx, src, dst, baseFiles, baseBytes)
 	}
-	renamed, _, needCopy, staged, err := renameSourceForMove(ctx, src, dst, dstExists, resolver)
+	renamed, _, needCopy, staged, err := renameSourceForMove(ctx, src, dst, dstExists, r.resolver)
 	if err != nil {
 		return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
 	}
 	switch {
 	case needCopy:
-		offset := func(s, d string, f int, b int64) {
-			if progress != nil {
-				progress(s, d, baseFiles+f, baseBytes+b)
+		orig := r.progress
+		fb := r
+		fb.progress = func(s, d string, f int, b int64) {
+			if orig != nil {
+				orig(s, d, baseFiles+f, baseBytes+b)
 			}
 		}
-		f, b, err := moveCopyFallback(ctx, src, dst, destination, opts, throttle, offset, resolver, diskWait)
+		f, b, err := fb.moveCopyFallback(ctx, src, dst, destination)
 		return f, b, false, err
 	case renamed:
 		if staged != "" {
@@ -297,7 +309,7 @@ func moveDestState(ctx context.Context, src, dst pathloc.Path) (exists, merge bo
 // mergeMoveDir moves the children of directory src into the existing directory dst, recursing via
 // moveOne so only colliding subtrees are listed. src is removed afterwards when it ended up empty;
 // children the user skipped leave it in place without error.
-func mergeMoveDir(ctx context.Context, src, dst pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, baseFiles int, baseBytes int64, resolver ConflictResolver, diskWait DiskWaitFunc) (files int, bytes int64, moved bool, err error) {
+func (r moveRun) mergeMoveDir(ctx context.Context, src, dst pathloc.Path, baseFiles int, baseBytes int64) (files int, bytes int64, moved bool, err error) {
 	be, err := lookupMoveBackend(src)
 	if err != nil {
 		return 0, 0, false, err
@@ -322,7 +334,7 @@ func mergeMoveDir(ctx context.Context, src, dst pathloc.Path, opts Options, thro
 			return files, bytes, false, err
 		}
 		// dst as "destination" makes a copy fallback target cdst exactly (dst != cdst).
-		f, b, _, err := moveOne(ctx, csrc, cdst, dst, opts, throttle, progress, baseFiles+files, baseBytes+bytes, resolver, diskWait)
+		f, b, _, err := r.moveOne(ctx, csrc, cdst, dst, baseFiles+files, baseBytes+bytes)
 		files += f
 		bytes += b
 		if err != nil {
@@ -337,8 +349,8 @@ func mergeMoveDir(ctx context.Context, src, dst pathloc.Path, opts Options, thro
 // The plan covers only src. dst is the already-resolved destination path of src: unless it is
 // destination itself (a rename-to-new-name move), the plan targets dst's parent with flat names
 // so the nested name resolved by ExecuteMove is reproduced exactly.
-func moveCopyFallback(ctx context.Context, src, dst, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
-	planOpts := PlanBuildOptions{FlatDestNames: opts.FlatDestNames, DereferenceSymlinks: opts.DereferenceSymlinks}
+func (r moveRun) moveCopyFallback(ctx context.Context, src, dst, destination pathloc.Path) (int, int64, error) {
+	planOpts := PlanBuildOptions{FlatDestNames: r.opts.FlatDestNames, DereferenceSymlinks: r.opts.DereferenceSymlinks}
 	planDest := destination
 	if !dst.Equal(destination) {
 		planDest = dst.Parent()
@@ -349,14 +361,14 @@ func moveCopyFallback(ctx context.Context, src, dst, destination pathloc.Path, o
 	if err != nil {
 		return 0, 0, fmt.Errorf("move copy phase plan: %w", err)
 	}
-	if err := EnsureDiskSpace(diskWait, planDest, tb, pathloc.Path{}); err != nil {
+	if err := EnsureDiskSpace(r.diskWait, planDest, tb, pathloc.Path{}); err != nil {
 		return 0, 0, err
 	}
-	doneFiles, doneBytes, transferred, err := executeCopyWithPlan(ctx, plan, sources, planDest, opts, throttle, progress, resolver, diskWait)
+	doneFiles, doneBytes, transferred, err := executeCopyWithPlan(ctx, plan, sources, planDest, r.opts, r.throttle, r.progress, r.resolver, r.diskWait)
 	if err != nil {
 		return doneFiles, doneBytes, fmt.Errorf("move copy phase: %w", err)
 	}
-	return finishMoveCopyPhase(ctx, sources, transferred, doneFiles, doneBytes, opts.OnRemoveSources)
+	return finishMoveCopyPhase(ctx, sources, transferred, doneFiles, doneBytes, r.opts.OnRemoveSources)
 }
 
 // finishMoveCopyPhase removes transferred sources and any now-empty source directory roots
