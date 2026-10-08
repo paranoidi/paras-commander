@@ -182,9 +182,10 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 			return false
 		}
 	case tcell.KeyLeft, tcell.KeyRight:
-		// On button: move between buttons; on radio/checkbox: no-op; field cursor movement
-		// (including PathPicker fields) is handled by HandleFileDialogFieldKey above.
-		if h.FileDialogOnButton() {
+		// On button: move between buttons; on radio/checkbox: no-op (mass rename moves between
+		// its radio/checkbox columns); field cursor movement (including PathPicker fields) is
+		// handled by HandleFileDialogFieldKey above.
+		if h.FileDialogOnButton() || h.model.FileDialog.DialogType == dialog.FileDialogMassRename {
 			h.fileDialogMoveFocusKey(event)
 		}
 		return false
@@ -525,7 +526,7 @@ func (h *Handler) FocusedField() *dialog.FileDialogField {
 }
 
 // massRenameMoveFocusKey handles Tab/Backtab segment jumps, Left/Right on the options
-// checkbox row, and Down/Up visual-order transitions (focus indices don't match visual
+// checkbox row, and Down/Up visual-order transitions (radios and checkboxes share four columns) (focus indices don't match visual
 // order: Seg 0 = mode radios(0-3) + options row, Seg 1 = find+replace (Simple/Regex) or
 // capitalize-each-word/treat-punctuation (Capitalize), Seg 2 = buttons).
 // Returns true when handled; false so the caller can fall through to FileDialogFocusForm.
@@ -556,6 +557,10 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 	onFindOrReplace := !externalMode && !capitalizeMode && (d.FocusedField == dialog.MassRenameFindFieldFocus || d.FocusedField == dialog.MassRenameFindFieldFocus+1)
 	onCapRows := capitalizeMode && (d.FocusedField == capEachWordIdx || d.FocusedField == capPunctIdx)
 	onButton := d.FocusedField >= okIdx
+
+	if h.massRenameColumnNav(key, onRadio, onOptionsRow) {
+		return true
+	}
 
 	if key == tcell.KeyRight {
 		switch d.FocusedField {
@@ -636,10 +641,6 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 		return true
 	}
 	// Down/Up use visual order (options row is above the fields but has higher focus indices).
-	if key == tcell.KeyDown && d.FocusedField == 3 {
-		d.FocusedField = showModifiedIdx
-		return true
-	}
 	if key == tcell.KeyDown && onOptionsRow {
 		switch d.MassRenameMode {
 		case dialog.MassRenameModeUIExternalEditor:
@@ -668,10 +669,6 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 		d.FocusedField = okIdx
 		return true
 	}
-	if key == tcell.KeyUp && onOptionsRow {
-		d.FocusedField = 3
-		return true
-	}
 	if key == tcell.KeyUp && onButton {
 		switch d.MassRenameMode {
 		case dialog.MassRenameModeUIExternalEditor:
@@ -680,6 +677,43 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 			d.FocusedField = capPunctIdx
 		default:
 			d.FocusedField = dialog.MassRenameFindFieldFocus + 1 // Replace
+		}
+		return true
+	}
+	return false
+}
+
+// massRenameColumnNav handles the keys that move between the shared radio/checkbox columns:
+// Left/Right/Up/Down on the radio row, and Up from the options row back to the same column.
+func (h *Handler) massRenameColumnNav(key tcell.Key, onRadio, onOptionsRow bool) bool {
+	d := &h.model.FileDialog
+	cols := dialog.MassRenameColumnFocus(*d)
+	if onRadio {
+		// Radio row: Left/Right step between radios (no wrap, focus only), Down drops to the
+		// checkbox in the same column (else the last visible one), Up does nothing.
+		switch key {
+		case tcell.KeyRight:
+			d.FocusedField = min(d.FocusedField+1, 3)
+			return true
+		case tcell.KeyLeft:
+			d.FocusedField = max(d.FocusedField-1, 0)
+			return true
+		case tcell.KeyUp:
+			return true
+		case tcell.KeyDown:
+			to := cols[d.FocusedField]
+			for c := 3; to < 0 && c >= 0; c-- {
+				to = cols[c]
+			}
+			d.FocusedField = to
+			return true
+		}
+	}
+	if key == tcell.KeyUp && onOptionsRow {
+		for c, fi := range cols {
+			if fi == d.FocusedField {
+				d.FocusedField = c
+			}
 		}
 		return true
 	}

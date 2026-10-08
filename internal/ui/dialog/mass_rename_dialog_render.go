@@ -63,9 +63,9 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	if previewCount < vp {
 		vp = previewCount
 	}
-	// 4 radios + options checkbox row + sep before the fields section (always sized as if
+	// radio row + options checkbox row + sep before the fields section (always sized as if
 	// Simple/Regex regardless of the actual mode, per the doc comment above).
-	fixed := 4 + 1 + 1 + massRenameFieldsSectionRows(state)
+	fixed := 1 + 1 + 1 + massRenameFieldsSectionRows(state)
 	height := 1 + fixed + vp + 4 // top pad + body + sep + blank + buttons row + bottom border
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
@@ -81,9 +81,9 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 // Used only to pick how tall to make the dialog before its final height is known; not accurate
 // enough for scroll paging or the scrollbar — see MassRenamePreviewViewportRows for that.
 func massRenameSizingMaxPreviewRows(layoutHeight int) int {
-	// 1 top pad + (4 radios + options row + sep + 2 fields x2 rows + sep) + sep + blank +
+	// 1 top pad + (radio row + options row + sep + 2 fields x2 rows + sep) + sep + blank +
 	// buttons row + bottom border.
-	maxBody := layoutHeight - 16
+	maxBody := layoutHeight - 13
 	if maxBody < 3 {
 		maxBody = 3
 	}
@@ -123,7 +123,7 @@ func massRenamePatternLabelText(state FileDialogState) string {
 // state's mode: mode radios, options row, separators, and (for Simple/Regex/Capitalize) the
 // fields or checkboxes section, including any visible regex hint rows.
 func massRenameFixedRows(state FileDialogState) int {
-	fixed := 4 + 1 + 1 // mode radios + options row + separator
+	fixed := 1 + 1 + 1 // radio row + options row + separator
 	switch state.MassRenameMode {
 	case MassRenameModeUIExternalEditor:
 		// No fields/checkboxes section.
@@ -234,6 +234,48 @@ func MassRenameCapPunctFocusIdx(state FileDialogState) int {
 	return -1
 }
 
+// MassRenameColumnFocus returns, for each of the four shared radio/checkbox columns, the
+// FocusedField index of the checkbox shown in that column for state's mode (-1 when none).
+// Capitalize moves Ignore extension into column 2 (no Case insensitive there).
+func MassRenameColumnFocus(state FileDialogState) [4]int {
+	cols := [4]int{
+		MassRenameShowModifiedFocusIdx(state),
+		MassRenameStripFocusIdx(state),
+		MassRenameCaseFocusIdx(state),
+		MassRenameIgnoreExtFocusIdx(state),
+	}
+	if state.MassRenameMode == MassRenameModeUICapitalize {
+		cols[2], cols[3] = cols[3], -1
+	}
+	return cols
+}
+
+// massRenameColumns returns each column's x offset from the first radio/checkbox and the total
+// row width. A column is as wide as its widest radio or checkbox (column 2 also fits Ignore
+// extension for Capitalize), plus a 3-cell gap, independent of mode so switching never resizes.
+func massRenameColumns() (off [4]int, total int) {
+	w := func(ss ...string) int {
+		m := 0
+		for _, t := range ss {
+			m = max(m, utf8.RuneCountInString(t))
+		}
+		return m
+	}
+	rb := func(l string) string { return draw.RadioText(l, false) }
+	cb := func(l string) string { return draw.CheckboxText(l, false) }
+	widths := [4]int{
+		w(rb("Simple (replace text)"), cb("Show only modified")),
+		w(rb("Regular expression"), cb("Trim whitespace")),
+		w(rb("External $EDITOR"), cb("Case insensitive"), cb("Ignore extension")),
+		w(rb("Capitalize"), cb("Ignore extension")),
+	}
+	for i, cw := range widths {
+		off[i] = total
+		total += cw + 3
+	}
+	return off, total - 3
+}
+
 func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	labelStyle := styles.DialogText.Background(dbg)
@@ -253,45 +295,47 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	warnStyle := styles.MessageWarn.Background(dbg)
 
 	optX := primaryCol - 1
-	draw.DrawDialogRadio(screen, optX, y, "Simple (replace text)", 'S', state.MassRenameMode == MassRenameModeUISimple, state.FocusedField == 0, false, styles)
-	y++
-	if y >= innerBottom {
-		return
+	colOff, _ := massRenameColumns()
+	radios := [4]struct {
+		label string
+		mnem  rune
+		mode  MassRenameModeUI
+	}{
+		{"Simple (replace text)", 'S', MassRenameModeUISimple},
+		{"Regular expression", 'R', MassRenameModeUIRegex},
+		{"External $EDITOR", 'E', MassRenameModeUIExternalEditor},
+		{"Capitalize", 'z', MassRenameModeUICapitalize},
 	}
-	draw.DrawDialogRadio(screen, optX, y, "Regular expression", 'R', state.MassRenameMode == MassRenameModeUIRegex, state.FocusedField == 1, false, styles)
-	y++
-	if y >= innerBottom {
-		return
+	for i, r := range radios {
+		draw.DrawDialogRadio(screen, optX+colOff[i], y, r.label, r.mnem, state.MassRenameMode == r.mode, state.FocusedField == i, false, styles)
 	}
-	draw.DrawDialogRadio(screen, optX, y, "External $EDITOR", 'E', state.MassRenameMode == MassRenameModeUIExternalEditor, state.FocusedField == 2, false, styles)
-	y++
-	if y >= innerBottom {
-		return
-	}
-	draw.DrawDialogRadio(screen, optX, y, "Capitalize", 'z', state.MassRenameMode == MassRenameModeUICapitalize, state.FocusedField == 3, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
 
-	// Options row: Show only modified | Trim whitespace | Case insensitive (Simple/Regex) | Ignore extension.
-	showModifiedFocusIdx := MassRenameShowModifiedFocusIdx(state)
-	stripFocusIdx := MassRenameStripFocusIdx(state)
-	caseFocusIdx := MassRenameCaseFocusIdx(state)
-	ignoreExtFocusIdx := MassRenameIgnoreExtFocusIdx(state)
-	stripX := optX + utf8.RuneCountInString(draw.CheckboxText("Show only modified", false)) + 3
-	caseX := stripX + utf8.RuneCountInString(draw.CheckboxText("Trim whitespace", false)) + 3
-	ignoreExtX := caseX
-	if caseFocusIdx >= 0 {
-		ignoreExtX += utf8.RuneCountInString(draw.CheckboxText("Case insensitive", false)) + 3
+	// Options row: checkboxes share the radios' columns (see MassRenameColumnFocus).
+	cols := MassRenameColumnFocus(state)
+	checkboxes := [4]struct {
+		label   string
+		mnem    rune
+		checked bool
+	}{
+		{"Show only modified", 'm', state.MassRenameShowOnlyModified},
+		{"Trim whitespace", 't', state.MassRenameStripSpaces},
+		{"Case insensitive", 'i', state.MassRenameCaseFold},
+		{"Ignore extension", 'x', state.MassRenameIgnoreExt},
 	}
-	draw.DrawDialogCheckbox(screen, optX, y, "Show only modified", 'm', state.MassRenameShowOnlyModified, state.FocusedField == showModifiedFocusIdx, false, styles)
-	draw.DrawDialogCheckbox(screen, stripX, y, "Trim whitespace", 't', state.MassRenameStripSpaces, state.FocusedField == stripFocusIdx, false, styles)
-	if caseFocusIdx >= 0 {
-		draw.DrawDialogCheckbox(screen, caseX, y, "Case insensitive", 'i', state.MassRenameCaseFold, state.FocusedField == caseFocusIdx, false, styles)
-	}
-	if ignoreExtFocusIdx >= 0 {
-		draw.DrawDialogCheckbox(screen, ignoreExtX, y, "Ignore extension", 'x', state.MassRenameIgnoreExt, state.FocusedField == ignoreExtFocusIdx, false, styles)
+	for i, fi := range cols {
+		if fi < 0 {
+			continue
+		}
+		// Column 2's checkbox is Case insensitive, or Ignore extension in Capitalize mode.
+		cb := checkboxes[i]
+		if fi == MassRenameIgnoreExtFocusIdx(state) {
+			cb = checkboxes[3]
+		}
+		draw.DrawDialogCheckbox(screen, optX+colOff[i], y, cb.label, cb.mnem, cb.checked, state.FocusedField == fi, false, styles)
 	}
 	y++
 	if y >= innerBottom {

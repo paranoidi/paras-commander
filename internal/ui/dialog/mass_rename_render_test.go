@@ -386,3 +386,56 @@ func TestDrawMassRenameDialogShowsIgnoreExtCheckbox(t *testing.T) {
 		t.Fatalf("Ignore extension checkbox missing:\n%s", dump.String())
 	}
 }
+
+// TestDrawMassRenameRadiosShareRowAndColumnsWithCheckboxes guards the shared column layout: the
+// four mode radios sit on one row directly above the options row, each radio's text starting at
+// the x of its column's checkbox.
+func TestDrawMassRenameRadiosShareRowAndColumnsWithCheckboxes(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(140, 40)
+
+	state := FileDialogState{
+		Open:           true,
+		DialogType:     FileDialogMassRename,
+		Fields:         []FileDialogField{{Label: "Find"}, {Label: "Replace"}},
+		MassRenameMode: MassRenameModeUISimple,
+	}
+	DrawFileDialog(screen, Layout{Width: 140, Height: 40}, state, DialogRenderContext{Styles: theme.Default()}, nil)
+
+	rows := make([]string, 40)
+	for y := range rows {
+		rows[y] = tcelltest.TextAt(screen, 0, y, 140)
+	}
+	radioRow, optRow := -1, -1
+	for y, r := range rows {
+		if strings.Contains(r, "Simple (replace text)") {
+			radioRow = y
+		}
+		if strings.Contains(r, "Show only modified") {
+			optRow = y
+		}
+	}
+	if radioRow < 0 || optRow != radioRow+1 {
+		t.Fatalf("radio row %d, options row %d, want options directly below radios", radioRow, optRow)
+	}
+	x := func(row int, s string) int { return len([]rune(rows[row][:strings.Index(rows[row], s)])) }
+	pairs := [][2]string{
+		{"Simple (replace text)", "Show only modified"},
+		{"Regular expression", "Trim whitespace"},
+		{"External $EDITOR", "Case insensitive"},
+		{"Capitalize", "Ignore extension"},
+	}
+	for _, p := range pairs {
+		if !strings.Contains(rows[radioRow], p[0]) {
+			t.Fatalf("radio %q not on shared row:\n%s", p[0], rows[radioRow])
+		}
+		// Radio text starts after its "( ) " marker, checkbox text after "[ ] ": markers share x.
+		if rx, cx := x(radioRow, p[0]), x(optRow, p[1]); rx != cx {
+			t.Errorf("%q at x=%d, checkbox %q at x=%d, want same column", p[0], rx, p[1], cx)
+		}
+	}
+}

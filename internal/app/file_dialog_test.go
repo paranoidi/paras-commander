@@ -804,12 +804,10 @@ func TestMassRenameRadioFocusDoesNotApplyModeUntilActivated(t *testing.T) {
 	if d.MassRenameMode != dialog.MassRenameModeUISimple {
 		t.Fatalf("initial mode = %v, want simple", d.MassRenameMode)
 	}
-	// Up from Find (4) → showModified (6), Up → Capitalize radio (3), Up → External (2),
-	// Up again → Regex (1)
+	// Up from Find (4) → showModified (6), Up → Simple radio (0), Right → Regex (1)
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if d.FocusedField != 1 {
 		t.Fatalf("FocusedField = %d, want 1 (Regex radio)", d.FocusedField)
 	}
@@ -925,7 +923,7 @@ func TestMassRenameCapitalizeTabCyclesThroughCheckboxes(t *testing.T) {
 
 	// Down steps through the two capitalize checkbox rows individually (mirrors Find/Replace
 	// in Simple/Regex mode), then reaches OK.
-	d.FocusedField = 3 // Capitalize radio
+	d.FocusedField = 0 // Simple radio (column 0 -> Show only modified)
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if want := dialog.MassRenameShowModifiedFocusIdx(*d); d.FocusedField != want || want != 4 {
 		t.Fatalf("Down from radio: focus = %d, want 4 (Show only modified)", d.FocusedField)

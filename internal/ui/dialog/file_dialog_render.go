@@ -322,13 +322,6 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 	}
 	if state.DialogType == FileDialogMassRename {
 		for _, label := range []string{
-			"Simple (replace text)",
-			"Regular expression",
-			"External $EDITOR",
-			"Show only modified",
-			"Trim whitespace",
-			"Case insensitive",
-			"Ignore extension",
 			"Pattern",
 			"Replacement",
 		} {
@@ -337,13 +330,10 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 				minWidth = lw
 			}
 		}
-		// Options row: four checkboxes on one line (Show only modified | Trim whitespace | Case insensitive | Ignore extension).
-		optsRow := utf8.RuneCountInString(draw.CheckboxText("Show only modified", false)) +
-			utf8.RuneCountInString(draw.CheckboxText("Trim whitespace", false)) +
-			utf8.RuneCountInString(draw.CheckboxText("Case insensitive", false)) +
-			utf8.RuneCountInString(draw.CheckboxText("Ignore extension", false)) + 13 // gaps + margins
-		if optsRow > minWidth {
-			minWidth = optsRow
+		// Radio row and options row share four columns.
+		_, rowW := massRenameColumns()
+		if rowW+4 > minWidth {
+			minWidth = rowW + 4
 		}
 		for i := 0; i < len(state.MassRenamePreviewBefore); i++ {
 			lb := state.MassRenamePreviewBefore[i]
