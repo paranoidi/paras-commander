@@ -10,36 +10,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// lookupMoveBackend resolves the filesystem backend for move dest-stat, rename,
-// and rollback. Tests replace this with a blocking fake.
-var lookupMoveBackend = backendFor
-
-func moveStat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
-	be, err := lookupMoveBackend(loc)
-	if err != nil {
-		return fsbackend.Entry{}, err
-	}
-	return be.Stat(ctx, loc)
-}
-
-func moveDestinationIsDir(ctx context.Context, dest pathloc.Path) (bool, error) {
-	ent, err := moveStat(ctx, dest)
-	if err != nil {
-		if isNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return ent.Type == fsbackend.EntryDirectory, nil
-}
-
-// resolveMoveDestination is ResolveDestinationNamed using the job context and
-// lookupMoveBackend so a canceled dest Stat unwinds the rename phase.
+// resolveMoveDestination is ResolveDestinationNamed using the job context, so a canceled dest
+// Stat unwinds the rename phase.
 func resolveMoveDestination(ctx context.Context, dest pathloc.Path, name string) (pathloc.Path, error) {
 	if err := ctx.Err(); err != nil {
 		return pathloc.Path{}, err
 	}
-	isDir, err := moveDestinationIsDir(ctx, dest)
+	isDir, err := destinationIsDir(ctx, dest)
 	if err != nil {
 		if ctx.Err() != nil {
 			return pathloc.Path{}, ctx.Err()
@@ -66,7 +43,7 @@ func RenameFastPathCtx(ctx context.Context, src, dest pathloc.Path) (ok bool, er
 		if !sameSFTPHost(src, dest) {
 			return false, nil
 		}
-		be, err := lookupMoveBackend(src)
+		be, err := backendFor(src)
 		if err != nil {
 			return false, err
 		}
@@ -103,7 +80,7 @@ func pickMoveStashSibling(ctx context.Context, dst pathloc.Path) (pathloc.Path, 
 		if err != nil {
 			return pathloc.Path{}, err
 		}
-		_, statErr := moveStat(ctx, cand)
+		_, statErr := statEntry(ctx, cand)
 		if isNotExist(statErr) {
 			return cand, nil
 		}
@@ -285,11 +262,11 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 }
 
 // moveDestState stats dst once and reports whether it exists and whether src and dst are both real
-// directories (merge). moveStat does not follow symlinks (local Lstat, sftp Lstat), so a symlink on
+// directories (merge). statEntry does not follow symlinks (local Lstat, sftp Lstat), so a symlink on
 // either side reports EntrySymlink: a symlink src is never descended into and a symlink dst (even
 // to a directory) is not merged into, so those collisions go through the conflict resolver.
 func moveDestState(ctx context.Context, src, dst pathloc.Path) (exists, merge bool, err error) {
-	de, err := moveStat(ctx, dst)
+	de, err := statEntry(ctx, dst)
 	if err != nil {
 		if isNotExist(err) {
 			return false, false, nil
@@ -299,7 +276,7 @@ func moveDestState(ctx context.Context, src, dst pathloc.Path) (exists, merge bo
 	if de.Type != fsbackend.EntryDirectory {
 		return true, false, nil
 	}
-	se, err := moveStat(ctx, src)
+	se, err := statEntry(ctx, src)
 	if err != nil {
 		return true, false, fmt.Errorf("stat source %q: %w", src, err)
 	}
@@ -310,7 +287,7 @@ func moveDestState(ctx context.Context, src, dst pathloc.Path) (exists, merge bo
 // moveOne so only colliding subtrees are listed. src is removed afterwards when it ended up empty;
 // children the user skipped leave it in place without error.
 func (r moveRun) mergeMoveDir(ctx context.Context, src, dst pathloc.Path, baseFiles int, baseBytes int64) (files int, bytes int64, moved bool, err error) {
-	be, err := lookupMoveBackend(src)
+	be, err := backendFor(src)
 	if err != nil {
 		return 0, 0, false, err
 	}

@@ -101,18 +101,6 @@ func (b *blockingMoveBackend) Symlink(context.Context, pathloc.Path, string) err
 	return fs.ErrInvalid
 }
 
-func installMoveBackend(t *testing.T, be fsbackend.Backend) {
-	t.Helper()
-	prev := lookupMoveBackend
-	lookupMoveBackend = func(loc pathloc.Path) (fsbackend.Backend, error) {
-		if loc.IsRemote() {
-			return be, nil
-		}
-		return backendFor(loc)
-	}
-	t.Cleanup(func() { lookupMoveBackend = prev })
-}
-
 func waitBlockedThenCancel(t *testing.T, entered <-chan struct{}, cancel context.CancelFunc, done <-chan error, wantPhase string, be *blockingMoveBackend, requireCanceled bool) {
 	t.Helper()
 	select {
@@ -148,7 +136,7 @@ func startRemoteRenamePhase(ctx context.Context, sources []pathloc.Path, dest pa
 
 func TestRemoteMoveRenamePhaseCancelInterruptsBlockedRename(t *testing.T) {
 	be := newBlockingMoveBackend("rename")
-	installMoveBackend(t, be)
+	installOpsBackend(t, be)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -161,7 +149,7 @@ func TestRemoteMoveRenamePhaseCancelInterruptsBlockedRename(t *testing.T) {
 
 func TestRemoteMoveRenamePhaseCancelInterruptsBlockedDestStat(t *testing.T) {
 	be := newBlockingMoveBackend("stat")
-	installMoveBackend(t, be)
+	installOpsBackend(t, be)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
