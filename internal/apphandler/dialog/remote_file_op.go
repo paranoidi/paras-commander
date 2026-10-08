@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobs"
@@ -28,12 +27,11 @@ const (
 	RemoteFileOpMkdir RemoteFileOpKind = iota + 1
 	RemoteFileOpRename
 	RemoteFileOpTransferProbe
-	RemoteFileOpFlattenProbe
 	RemoteFileOpExtractProbe
 	RemoteFileOpAttr
 )
 
-// RemoteFileOpPayload carries a background remote mkdir/rename or transfer/extract/flatten
+// RemoteFileOpPayload carries a background remote mkdir/rename or transfer/extract
 // destination-probe result back to the event loop. Gen identifies the start that produced it;
 // ApplyRemoteFileOp drops stale results so a superseded op cannot mutate UI state.
 type RemoteFileOpPayload struct {
@@ -44,7 +42,6 @@ type RemoteFileOpPayload struct {
 	mkdir    mkdirApply
 	rename   renameApply
 	transfer transferProbeApply
-	flatten  flattenProbeApply
 	extract  extractProbeApply
 	attr     attrOpApply
 }
@@ -77,15 +74,6 @@ type transferProbeApply struct {
 	preserve    jobs.TransferPreserve
 	nSelf       int
 	destIsDir   bool
-}
-
-type flattenProbeApply struct {
-	sources     []string
-	dest        string
-	removeEmpty bool
-	dirRoots    []string
-	deferred    []string
-	nSelf       int
 }
 
 type extractProbeApply struct {
@@ -122,7 +110,7 @@ func (h *Handler) invalidateRemoteFileOp() {
 }
 
 // ApplyRemoteFileOp applies a background remote mkdir/rename/dest-probe unless a newer
-// op was started (or the transfer/flatten dialog was cancelled) in the meantime.
+// op was started (or the transfer dialog was cancelled) in the meantime.
 func (h *Handler) ApplyRemoteFileOp(p RemoteFileOpPayload) {
 	if p.Gen != h.remoteFileOpGen {
 		return
@@ -134,8 +122,6 @@ func (h *Handler) ApplyRemoteFileOp(p RemoteFileOpPayload) {
 		h.applyRemoteRename(p)
 	case RemoteFileOpTransferProbe:
 		h.applyRemoteTransferProbe(p)
-	case RemoteFileOpFlattenProbe:
-		h.applyRemoteFlattenProbe(p)
 	case RemoteFileOpExtractProbe:
 		h.applyRemoteExtractProbe(p)
 	case RemoteFileOpAttr:
@@ -237,40 +223,6 @@ func (h *Handler) applyRemoteTransferProbe(p RemoteFileOpPayload) {
 		return
 	}
 	h.finishTransferEnqueue(st, st.nSelf, st.destIsDir, true)
-}
-
-func (h *Handler) startRemoteFlattenProbe(st flattenProbeApply, destLoc pathloc.Path, roots []pathloc.Path, recursive bool) {
-	gen := h.nextRemoteFileOpGen()
-	screen := h.screen
-	backend := h.testRemote
-	go func() {
-		sources, deferred, nSelf, err := remoteCollectFlattenAndSelfTarget(backend, roots, destLoc, recursive)
-		st.sources = sources
-		st.deferred = deferred
-		st.nSelf = nSelf
-		if screen == nil {
-			return
-		}
-		_ = screen.PostEvent(tcell.NewEventInterrupt(RemoteFileOpPayload{
-			Gen: gen, Kind: RemoteFileOpFlattenProbe, Err: err, flatten: st,
-		}))
-	}()
-}
-
-func (h *Handler) applyRemoteFlattenProbe(p RemoteFileOpPayload) {
-	if !h.model.FlattenDialog.Open {
-		return
-	}
-	if p.Err != nil {
-		var opsErr *ops.Error
-		if errors.As(p.Err, &opsErr) {
-			h.host.SetTransientMessage(opsErr.Text, ui.MessageUrgencyWarn)
-		} else {
-			h.host.SetErrorMessage("Flatten", p.Err)
-		}
-		return
-	}
-	h.finishFlattenEnqueue(p.flatten)
 }
 
 func (h *Handler) startRemoteExtractProbe(sources []string, dest string) {
@@ -380,25 +332,6 @@ func remoteSelfTargetAndDestDir(backend fsbackend.Backend, sources []pathloc.Pat
 	return nSelf, destIsDir
 }
 
-func remoteCollectFlattenAndSelfTarget(backend fsbackend.Backend, roots []pathloc.Path, dest pathloc.Path, recursive bool) ([]string, []string, int, error) {
-	if backend != nil {
-		if len(roots) > 0 {
-			_, _ = backend.List(context.Background(), roots[0])
-		}
-		nSelf, _ := remoteSelfTargetAndDestDir(backend, roots, dest, true)
-		return nil, nil, nSelf, nil
-	}
-	sources, deferred, err := ops.CollectFlattenSources(context.Background(), roots, dest, recursive)
-	if err != nil {
-		return nil, nil, 0, err
-	}
-	srcLocs := make([]pathloc.Path, len(sources))
-	for i, src := range sources {
-		srcLocs[i] = pathloc.MustParse(src)
-	}
-	return sources, deferred, ops.SelfTargetCount(srcLocs, dest, true), nil
-}
-
 func selfTargetCountWithDestDir(sources []pathloc.Path, destDir pathloc.Path, flatDestNames, destIsDir bool) int {
 	var root pathloc.Path
 	if !flatDestNames {
@@ -479,47 +412,6 @@ func (h *Handler) finishTransferEnqueue(st transferProbeApply, nSelf int, destIs
 	h.AddTransferJob(st.jobType, sourcesCopy, st.dest, st.startPaused, st.preserve)
 	h.CloseTransferDialog()
 	h.setTransferQueuedMessage(st.jobType, st.startPaused)
-}
-
-func (h *Handler) finishFlattenEnqueue(st flattenProbeApply) {
-	if len(st.sources) == 0 && len(st.deferred) == 0 {
-		h.host.SetTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
-		return
-	}
-	if len(st.deferred) > 0 {
-		if !st.removeEmpty {
-			h.host.SetTransientMessage("An item named like its folder can't replace it unless empty dirs are removed", ui.MessageUrgencyWarn)
-			return
-		}
-		seen := make(map[string]bool, len(st.deferred))
-		for _, d := range st.deferred {
-			base := pathloc.MustParse(d).Base()
-			if seen[base] {
-				h.host.SetTransientMessage("Several items would replace the same folder", ui.MessageUrgencyWarn)
-				return
-			}
-			seen[base] = true
-		}
-	}
-	if len(st.sources) > 0 && st.nSelf > 0 {
-		if len(st.sources) > 1 {
-			h.host.SetTransientMessage("Cannot flatten when some items would overwrite themselves", ui.MessageUrgencyWarn)
-			return
-		}
-		h.host.SetTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
-		return
-	}
-	h.CloseFlattenDialog()
-	h.host.ActivePanel().ClearSelection()
-	h.jobs.AddFlattenJob(jobsctrl.FlattenJobRequest{
-		Sources: st.sources, Dest: st.dest, RemoveEmpty: st.removeEmpty, FlattenRoots: st.dirRoots,
-		Deferred: st.deferred,
-	})
-	noun := "items"
-	if len(st.sources)+len(st.deferred) == 1 {
-		noun = "item"
-	}
-	h.host.SetTransientMessage(fmt.Sprintf("Flatten queued (%d %s)", len(st.sources)+len(st.deferred), noun), ui.MessageUrgencyInfo)
 }
 
 func selectedPanelSources(p *panel.State) []string {

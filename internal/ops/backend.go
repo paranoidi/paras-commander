@@ -168,46 +168,6 @@ func removePartialTransferDest(ctx context.Context, dst pathloc.Path) {
 	_ = be.Remove(ctx, dst)
 }
 
-func countTransferNodes(ctx context.Context, loc pathloc.Path) (int, error) {
-	ent, err := statEntry(ctx, loc)
-	if err != nil {
-		return 0, err
-	}
-	if ent.Type != fsbackend.EntryDirectory {
-		return 1, nil
-	}
-	n := 0
-	var countDir func(pathloc.Path) error
-	countDir = func(dir pathloc.Path) error {
-		n++
-		be, err := backendFor(dir)
-		if err != nil {
-			return err
-		}
-		children, err := be.List(ctx, dir)
-		if err != nil {
-			return err
-		}
-		for _, c := range children {
-			if c.Name == "." || c.Name == ".." {
-				continue
-			}
-			if c.Type == fsbackend.EntryDirectory {
-				if err := countDir(c.Loc); err != nil {
-					return err
-				}
-			} else {
-				n++
-			}
-		}
-		return nil
-	}
-	if err := countDir(loc); err != nil {
-		return 0, err
-	}
-	return n, nil
-}
-
 func statConflictFacts(ctx context.Context, src, dst pathloc.Path) (FileConflictFacts, error) {
 	if useLocalFastPath(src, dst) {
 		sh, err := src.FilePath()

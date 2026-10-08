@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -213,8 +214,19 @@ func (h *Handler) confirmFlatten() {
 		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return
 	}
-	st := flattenProbeApply{
-		dest: destLoc.String(), removeEmpty: d.RemoveEmpty, dirRoots: d.DirRoots,
+	if err := ops.ValidateFlattenTarget(roots, destLoc); err != nil {
+		var opsErr *ops.Error
+		if errors.As(err, &opsErr) {
+			h.host.SetTransientMessage(opsErr.Text, ui.MessageUrgencyWarn)
+		} else {
+			h.host.SetErrorMessage("Flatten", err)
+		}
+		return
 	}
-	h.startRemoteFlattenProbe(st, destLoc, roots, d.Recursive)
+	h.CloseFlattenDialog()
+	h.host.ActivePanel().ClearSelection()
+	h.jobs.AddFlattenJob(jobsctrl.FlattenJobRequest{
+		Roots: d.DirRoots, Dest: destLoc.String(), Recursive: d.Recursive, RemoveEmpty: d.RemoveEmpty,
+	})
+	h.host.SetTransientMessage("Flatten queued", ui.MessageUrgencyInfo)
 }

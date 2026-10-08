@@ -1134,6 +1134,12 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		DereferenceSymlinks: req.Preserve.DereferenceSymlinks && req.Type == jobs.TypeCopy,
 		PromptDanglingDirs:  req.Type == jobs.TypeMove && h.config.Operations.RemoveDanglingDirs,
 	}
+	if !job.NeedsPreScan() {
+		job.Status = jobs.StatusQueued
+		if req.StartPaused {
+			job.Status = jobs.StatusPaused
+		}
+	}
 	h.commitJob(job)
 }
 
@@ -1186,7 +1192,7 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 
 // AddFlattenJob enqueues a flatten (move children + optional empty-dir cleanup) job.
 func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
-	srcLocs, err := pathloc.ParseAll(req.Sources)
+	srcLocs, err := pathloc.ParseAll(req.Roots)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
@@ -1196,26 +1202,15 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	rootLocs, err := pathloc.ParseAll(req.FlattenRoots)
-	if err != nil {
-		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
-		return
-	}
-	deferredLocs, err := pathloc.ParseAll(req.Deferred)
-	if err != nil {
-		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
-		return
-	}
 	job := &jobs.Job{
 		ID:                 jobs.NewJobID(),
 		Type:               jobs.TypeFlatten,
-		Status:             jobs.StatusScanning,
+		Status:             jobs.StatusQueued,
 		Sources:            srcLocs,
 		Destination:        destLoc,
 		DestIsDir:          ops.DestinationIsDirAtEnqueue(destLoc),
 		FlattenRemoveEmpty: req.RemoveEmpty,
-		FlattenRoots:       rootLocs,
-		FlattenDeferred:    deferredLocs,
+		FlattenRecursive:   req.Recursive,
 	}
 	h.commitJob(job)
 }

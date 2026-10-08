@@ -83,3 +83,15 @@ why they never show the decay described above — and why a move in either can
 delete the source while the destination is still only in RAM. paras-commander
 defaults to the stricter semantics; `sync_after_each_file = false` gives you
 the mc/yazi behaviour if you prefer it.
+
+## Moving onto an existing directory
+
+Move tries a plain rename first. When a moved directory meets a directory of
+the same name at the destination, the two are **merged** rather than one
+replacing the other: no prompt is shown for the directory itself, items that
+exist only in the source are moved in, and sub-directories present on both
+sides are merged the same way. You are asked about a conflict only for the
+colliding items themselves (file over file, or a file and a directory sharing
+a name). Skipping an item keeps it, and its parent directories, in the source.
+Once everything is moved the emptied source directory is removed. A symbolic
+link is never merged into or out of; it is treated as a single item.

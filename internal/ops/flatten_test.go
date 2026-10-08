@@ -3,10 +3,8 @@ package ops
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -41,191 +39,203 @@ func TestValidateFlattenSourceMixedSelection(t *testing.T) {
 	}
 }
 
-func TestCollectFlattenSourcesImmediate(t *testing.T) {
+func writeTestFile(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func runFlatten(t *testing.T, root, dest string, recursive, removeEmpty bool, resolver ConflictResolver) (int, error) {
+	t.Helper()
+	done, _, err := ExecuteFlatten(context.Background(), []pathloc.Path{pathloc.MustParse(root)}, pathloc.MustParse(dest),
+		recursive, removeEmpty, Options{CopyBufferKiB: 4, FlatDestNames: true}, ProgressEmitThrottle{}, nil, resolver, nil)
+	return done, err
+}
+
+func TestExecuteFlattenImmediate(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	root := filepath.Join(dir, "delta")
-	dest := filepath.Join(dir, "echo")
+	root, dest := filepath.Join(dir, "delta"), filepath.Join(dir, "echo")
 	if err := os.MkdirAll(filepath.Join(root, "foxtrot"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "golf.txt"), []byte("1"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestFile(t, filepath.Join(root, "foxtrot", "hotel.txt"), "2")
+	writeTestFile(t, filepath.Join(root, "golf.txt"), "1")
 	if err := os.Mkdir(dest, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	rootLoc := pathloc.MustParse(root)
-	destLoc := pathloc.MustParse(dest)
-	got, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
+	done, err := runFlatten(t, root, dest, false, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("sources = %v, want 2 immediate children", got)
+	if done != 2 {
+		t.Fatalf("done = %d, want 2 immediate children", done)
 	}
-}
-
-func TestCollectFlattenSourcesExpandsSameNameNestedDir(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	root := filepath.Join(dir, "quebec")
-	dest := dir
-	nested := filepath.Join(root, "quebec")
-	innerFile := filepath.Join(nested, "romeo.txt")
-	siblingFile := filepath.Join(root, "sierra.txt")
-	if err := os.MkdirAll(nested, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(innerFile, []byte("1"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(siblingFile, []byte("2"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	rootLoc := pathloc.MustParse(root)
-	destLoc := pathloc.MustParse(dest)
-	got, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []string{filepath.Clean(innerFile), filepath.Clean(siblingFile)}
-	if len(got) != len(want) {
-		t.Fatalf("sources = %v, want %v", got, want)
-	}
-	for _, w := range want {
-		if !slices.Contains(got, w) {
-			t.Fatalf("sources = %v, missing %q", got, w)
+	for _, p := range []string{"golf.txt", filepath.Join("foxtrot", "hotel.txt")} {
+		if !exists(filepath.Join(dest, p)) {
+			t.Fatalf("missing %q in destination", p)
 		}
 	}
-	nestedDir := filepath.Clean(nested)
-	for _, s := range got {
-		if s == nestedDir {
-			t.Fatalf("sources = %v, must not include colliding directory %q", got, nestedDir)
+	if !exists(root) {
+		t.Fatal("root must remain without removeEmpty")
+	}
+}
+
+func TestExecuteFlattenRecursive(t *testing.T) {
+	t.Parallel()
+	for _, removeEmpty := range []bool{false, true} {
+		dir := t.TempDir()
+		root, dest := filepath.Join(dir, "hotel"), filepath.Join(dir, "india")
+		nested := filepath.Join(root, "juliet", "kilo")
+		writeTestFile(t, filepath.Join(nested, "lima.txt"), "1")
+		writeTestFile(t, filepath.Join(root, "mike.txt"), "2")
+		if err := os.Mkdir(dest, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		done, err := runFlatten(t, root, dest, true, removeEmpty, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if done != 2 {
+			t.Fatalf("removeEmpty=%v done = %d, want 2", removeEmpty, done)
+		}
+		for _, name := range []string{"lima.txt", "mike.txt"} {
+			if !exists(filepath.Join(dest, name)) {
+				t.Fatalf("removeEmpty=%v missing %q", removeEmpty, name)
+			}
+		}
+		if got := exists(root); got == removeEmpty {
+			t.Fatalf("removeEmpty=%v root exists = %v", removeEmpty, got)
+		}
+		if got := exists(nested); got == removeEmpty {
+			t.Fatalf("removeEmpty=%v nested exists = %v", removeEmpty, got)
 		}
 	}
 }
 
-func TestCollectFlattenSourcesExpandsDeepSameNameChain(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	root := filepath.Join(dir, "tango")
-	dest := dir
-	leaf := filepath.Join(root, "tango", "tango", "uniform.txt")
-	if err := os.MkdirAll(filepath.Dir(leaf), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(leaf, []byte("1"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	rootLoc := pathloc.MustParse(root)
-	destLoc := pathloc.MustParse(dest)
-	got, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := filepath.Clean(leaf)
-	if len(got) != 1 || got[0] != want {
-		t.Fatalf("sources = %v, want [%q]", got, want)
-	}
-}
-
-func TestFlattenSameNameNestedDirMove(t *testing.T) {
+func TestExecuteFlattenExpandsSameNameNestedDir(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	root := filepath.Join(dir, "victor")
-	dest := dir
-	nested := filepath.Join(root, "victor")
-	innerFile := filepath.Join(nested, "whiskey.txt")
-	siblingFile := filepath.Join(root, "xray.txt")
-	if err := os.MkdirAll(nested, 0o755); err != nil {
+	writeTestFile(t, filepath.Join(root, "victor", "whiskey.txt"), "1")
+	writeTestFile(t, filepath.Join(root, "xray.txt"), "2")
+	if _, err := runFlatten(t, root, dir, false, true, nil); err != nil {
 		t.Fatal(err)
-	}
-	if err := os.WriteFile(innerFile, []byte("1"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(siblingFile, []byte("2"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	rootLoc := pathloc.MustParse(root)
-	destLoc := pathloc.MustParse(dest)
-	sources, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	opts := Options{CopyBufferKiB: 4, FlatDestNames: true}
-	done, _, err := ExecuteMove(context.Background(), MustPaths(sources...), destLoc, opts, ProgressEmitThrottle{}, nil, nil, nil)
-	if err != nil {
-		t.Fatalf("ExecuteMove: %v", err)
-	}
-	if done < 2 {
-		t.Fatalf("done files = %d, want >= 2", done)
 	}
 	for _, name := range []string{"whiskey.txt", "xray.txt"} {
-		if _, err := os.Stat(filepath.Join(dest, name)); err != nil {
-			t.Fatalf("expected %q in destination: %v", name, err)
+		if !exists(filepath.Join(dir, name)) {
+			t.Fatalf("expected %q in destination", name)
 		}
 	}
-	if _, err := os.Stat(innerFile); !os.IsNotExist(err) {
-		t.Fatalf("inner source should be moved: %v", err)
-	}
-	if _, err := os.Stat(siblingFile); !os.IsNotExist(err) {
-		t.Fatalf("sibling source should be moved: %v", err)
+	if exists(root) {
+		t.Fatal("emptied root should be removed")
 	}
 }
 
-func TestCollectFlattenSourcesRecursive(t *testing.T) {
+func TestExecuteFlattenExpandsDeepSameNameChain(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	root := filepath.Join(dir, "hotel")
-	dest := filepath.Join(dir, "india")
-	nested := filepath.Join(root, "juliet", "kilo")
-	if err := os.MkdirAll(nested, 0o755); err != nil {
+	root := filepath.Join(dir, "tango")
+	writeTestFile(t, filepath.Join(root, "tango", "tango", "uniform.txt"), "1")
+	if _, err := runFlatten(t, root, dir, false, true, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(nested, "lima.txt"), []byte("1"), 0o644); err != nil {
+	if !exists(filepath.Join(dir, "uniform.txt")) || exists(root) {
+		t.Fatal("leaf should land in dest and the chain be removed")
+	}
+}
+
+func TestExecuteFlattenIncludesDotfiles(t *testing.T) {
+	t.Parallel()
+	for _, recursive := range []bool{false, true} {
+		dir := t.TempDir()
+		root, dest := filepath.Join(dir, "mike"), filepath.Join(dir, "november")
+		writeTestFile(t, filepath.Join(root, ".papa"), "1")
+		writeTestFile(t, filepath.Join(root, ".oscar", "quebec.txt"), "1")
+		if err := os.Mkdir(dest, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := runFlatten(t, root, dest, recursive, false, nil); err != nil {
+			t.Fatal(err)
+		}
+		want := ".oscar"
+		if recursive {
+			want = "quebec.txt"
+		}
+		if !exists(filepath.Join(dest, ".papa")) || !exists(filepath.Join(dest, want)) {
+			t.Fatalf("recursive=%v dotfiles not moved", recursive)
+		}
+	}
+}
+
+func TestExecuteFlattenRejectsDestUnderRoot(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	root := filepath.Join(dir, "yankee")
+	dest := filepath.Join(root, "zulu")
+	if err := os.MkdirAll(dest, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(dest, 0o755); err != nil {
-		t.Fatal(err)
+	_, err := runFlatten(t, root, dest, true, true, nil)
+	var opsErr *Error
+	if !errors.As(err, &opsErr) || opsErr.Text != "destination cannot be inside a selected directory" {
+		t.Fatalf("err = %v, want dest-inside-root error", err)
 	}
-	rootLoc := pathloc.MustParse(root)
-	destLoc := pathloc.MustParse(dest)
-	got, _, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, true)
+}
+
+func TestExecuteFlattenSkipsItemsAlreadyAtDestination(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	root := filepath.Join(dir, "amber")
+	writeTestFile(t, filepath.Join(root, "birch.txt"), "1")
+	writeTestFile(t, filepath.Join(root, "cedar", "dune.txt"), "2")
+	// dest == root: birch.txt is already at its destination; recursion moves dune.txt up.
+	done, err := runFlatten(t, root, root, true, true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("sources = %v, want 1 file", got)
+	if done != 1 {
+		t.Fatalf("done = %d, want 1", done)
 	}
-	if filepath.Base(got[0]) != "lima.txt" {
-		t.Fatalf("source = %q, want lima.txt", got[0])
+	if !exists(filepath.Join(root, "birch.txt")) || !exists(filepath.Join(root, "dune.txt")) || exists(filepath.Join(root, "cedar")) {
+		t.Fatal("unexpected layout after flatten into own root")
 	}
 }
 
-func TestCollectFlattenSourcesHonorsCancelOnLargeTree(t *testing.T) {
+func TestExecuteFlattenSameBasenameAsksResolverOnce(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
-	root := filepath.Join(dir, "harbor")
-	dest := filepath.Join(dir, "meadow")
-	nested := filepath.Join(root, "lantern")
-	if err := os.MkdirAll(nested, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	root, dest := filepath.Join(dir, "ember"), filepath.Join(dir, "frost")
+	writeTestFile(t, filepath.Join(root, "glade", "heron.txt"), "first")
+	writeTestFile(t, filepath.Join(root, "ivory", "heron.txt"), "second")
 	if err := os.Mkdir(dest, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 200; i++ {
-		name := filepath.Join(nested, fmt.Sprintf("willow-%03d.txt", i))
-		if err := os.WriteFile(name, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
-		}
+	calls := 0
+	resolver := func(src, dst string, _ FileConflictFacts) (bool, error) {
+		calls++
+		return false, nil
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	SetCollectFlattenTestHook(func(context.Context) { cancel() })
-	t.Cleanup(func() { SetCollectFlattenTestHook(nil) })
-	_, _, err := CollectFlattenSources(ctx, []pathloc.Path{pathloc.MustParse(root)}, pathloc.MustParse(dest), true)
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("err = %v, want context.Canceled", err)
+	if _, err := runFlatten(t, root, dest, true, true, resolver); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("resolver calls = %d, want 1", calls)
+	}
+	// glade is listed first, so ivory/heron.txt was skipped and keeps ivory alive.
+	got, err := os.ReadFile(filepath.Join(dest, "heron.txt"))
+	if err != nil || string(got) != "first" {
+		t.Fatalf("dest heron = %q, %v", got, err)
+	}
+	if !exists(filepath.Join(root, "ivory", "heron.txt")) {
+		t.Fatal("skipped file must stay in place")
+	}
+	if exists(filepath.Join(root, "glade")) || !exists(filepath.Join(root, "ivory")) {
+		t.Fatal("emptied dir removed, non-empty dir kept")
 	}
 }
 
@@ -276,107 +286,46 @@ func TestValidateFlattenSourceDirectoryOnly(t *testing.T) {
 	}
 }
 
-func TestCollectFlattenSourcesIncludesDotfiles(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	root := filepath.Join(dir, "mike")
-	dest := filepath.Join(dir, "november")
-	if err := os.MkdirAll(filepath.Join(root, ".oscar"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, ".papa"), []byte("1"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, ".oscar", "quebec.txt"), []byte("1"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir(dest, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	roots := []pathloc.Path{pathloc.MustParse(root)}
-	destLoc := pathloc.MustParse(dest)
-	for _, tc := range []struct {
-		recursive bool
-		want      []string
-	}{
-		{false, []string{filepath.Join(root, ".oscar"), filepath.Join(root, ".papa")}},
-		{true, []string{filepath.Join(root, ".oscar", "quebec.txt"), filepath.Join(root, ".papa")}},
-	} {
-		got, _, err := CollectFlattenSources(context.Background(), roots, destLoc, tc.recursive)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !slices.Equal(got, tc.want) {
-			t.Fatalf("recursive=%v: sources = %v, want %v", tc.recursive, got, tc.want)
-		}
-	}
-}
-
-func flattenDeferredFixture(t *testing.T, recursive bool) (dir string, rootLoc, destLoc pathloc.Path) {
+func flattenDeferredFixture(t *testing.T, recursive bool) (dir, root string) {
 	t.Helper()
 	dir = t.TempDir()
-	root := filepath.Join(dir, "lantern")
+	root = filepath.Join(dir, "lantern")
 	inner := root
 	if recursive {
 		inner = filepath.Join(root, "meadow")
 	}
-	if err := os.MkdirAll(inner, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	for name, body := range map[string]string{"lantern": "same-name", "pebble": "sibling"} {
-		if err := os.WriteFile(filepath.Join(inner, name), []byte(body), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return dir, pathloc.MustParse(root), pathloc.MustParse(dir)
+	writeTestFile(t, filepath.Join(inner, "lantern"), "same-name")
+	writeTestFile(t, filepath.Join(inner, "pebble"), "sibling")
+	return dir, root
 }
 
-func TestCollectFlattenSourcesDefersRootNamedItem(t *testing.T) {
+func TestExecuteFlattenDefersRootNamedItem(t *testing.T) {
 	t.Parallel()
 	for _, recursive := range []bool{false, true} {
-		dir, rootLoc, destLoc := flattenDeferredFixture(t, recursive)
-		sources, deferred, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, recursive)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(sources) != 1 || filepath.Base(sources[0]) != "pebble" {
-			t.Fatalf("recursive=%v sources = %v, want only pebble", recursive, sources)
-		}
-		if len(deferred) != 1 || filepath.Base(deferred[0]) != "lantern" {
-			t.Fatalf("recursive=%v deferred = %v, want the lantern file", recursive, deferred)
-		}
-
-		// Simulate the main move, then finish.
-		if err := os.Rename(sources[0], filepath.Join(dir, "pebble")); err != nil {
-			t.Fatal(err)
-		}
+		dir, root := flattenDeferredFixture(t, recursive)
 		// Pre-existing temp name forces the numbered fallback.
-		if err := os.WriteFile(filepath.Join(dir, "lantern.flatten"), []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		def := []pathloc.Path{pathloc.MustParse(deferred[0])}
-		if err := FinishFlattenDeferred(context.Background(), def, destLoc, []pathloc.Path{rootLoc}, true); err != nil {
+		writeTestFile(t, filepath.Join(dir, "lantern.flatten"), "x")
+		if _, err := runFlatten(t, root, dir, recursive, true, nil); err != nil {
 			t.Fatal(err)
 		}
 		got, err := os.ReadFile(filepath.Join(dir, "lantern"))
 		if err != nil || string(got) != "same-name" {
 			t.Fatalf("recursive=%v lantern = %q, %v", recursive, got, err)
 		}
-		if _, err := os.Stat(filepath.Join(dir, "lantern.1.flatten")); !os.IsNotExist(err) {
-			t.Fatalf("recursive=%v temp left behind: %v", recursive, err)
+		if !exists(filepath.Join(dir, "pebble")) {
+			t.Fatalf("recursive=%v pebble not moved", recursive)
+		}
+		if exists(filepath.Join(dir, "lantern.1.flatten")) {
+			t.Fatalf("recursive=%v temp left behind", recursive)
 		}
 	}
 }
 
-func TestFinishFlattenDeferredKeepsTempWhenRootRemains(t *testing.T) {
+func TestExecuteFlattenKeepsTempWhenRootRemains(t *testing.T) {
 	t.Parallel()
-	dir, rootLoc, destLoc := flattenDeferredFixture(t, false)
-	_, deferred, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// pebble stays in the root, so the root is not removed.
-	err = FinishFlattenDeferred(context.Background(), []pathloc.Path{pathloc.MustParse(deferred[0])}, destLoc, []pathloc.Path{rootLoc}, true)
+	dir, root := flattenDeferredFixture(t, false)
+	// Without removeEmpty the root stays, so the final name is taken.
+	_, err := runFlatten(t, root, dir, false, false, nil)
 	if err == nil {
 		t.Fatal("want error naming the temp path")
 	}

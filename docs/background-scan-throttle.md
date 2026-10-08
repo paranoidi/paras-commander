@@ -1,7 +1,11 @@
 # Background scan throttling
 
-Copy/move/flatten jobs start transferring as soon as the first source item is
-discovered, instead of waiting for the whole source tree to be walked first.
+Copy jobs (including flatten-into-destination copies) start transferring as soon
+as the first source item is discovered, instead of waiting for the whole source
+tree to be walked first. Move and flatten jobs do not pre-scan: they rename each
+source first and only walk and copy a source whose rename is not possible
+(different filesystem or host), so move progress counts top-level items and
+a flatten job shows its moved-item count without a total.
 While the transfer runs, a second background walk counts the remaining files,
 directories, and bytes so the job's totals and ETA keep growing.
 
@@ -42,7 +46,7 @@ not only while a transfer happens to be active. This keeps a large scan from
 ever fully saturating the CPU/scheduler at the terminal UI's expense, even
 before the first item has been found and the job has started transferring.
 
-While a copy/move/flatten job's background counting walk hasn't finished
+While a copy job's background counting walk hasn't finished
 enumerating the source tree yet, its entry in the jobs view **Details**
 panel shows a `(scanning…)` marker next to the progress line, since the
 totals and percentage shown are still provisional and will keep climbing.

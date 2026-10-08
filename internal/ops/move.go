@@ -4,79 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
-	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // lookupMoveBackend resolves the filesystem backend for move dest-stat, rename,
 // and rollback. Tests replace this with a blocking fake.
 var lookupMoveBackend = backendFor
-
-// MovePlanTotals returns a file/byte estimate consistent with the copy fallback path.
-// Rename fast path does not read bytes; totals still give a useful upper bound for UI.
-func MovePlanTotals(sources []pathloc.Path, destination pathloc.Path) (totalFiles int, totalBytes int64, err error) {
-	return CopyPlanTotals(sources, destination)
-}
-
-type renamePair struct {
-	src, dst string
-	// staged is the sibling path holding the original destination when this rename
-	// overwrote an existing dest. Empty when dest did not exist.
-	staged string
-}
-
-func renamePairsRollback(ctx context.Context, pairs []renamePair) error {
-	var errs []error
-	for i := len(pairs) - 1; i >= 0; i-- {
-		if err := rollbackRenamePair(ctx, pairs[i]); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	return errors.Join(errs...)
-}
-
-func rollbackRenamePair(ctx context.Context, p renamePair) error {
-	srcLoc, err1 := pathloc.Parse(p.src)
-	dstLoc, err2 := pathloc.Parse(p.dst)
-	if err1 != nil || err2 != nil {
-		return fmt.Errorf("rollback parse %q -> %q: %v; %v", p.src, p.dst, err1, err2)
-	}
-	var renameErr error
-	if srcLoc.IsRemote() {
-		ok, err := RenameFastPathCtx(ctx, dstLoc, srcLoc)
-		if err != nil {
-			renameErr = err
-		} else if !ok {
-			renameErr = errors.New("cannot rename")
-		}
-	} else {
-		renameErr = os.Rename(p.dst, p.src)
-	}
-	if renameErr != nil {
-		return fmt.Errorf("rollback rename %q -> %q: %w", p.dst, p.src, renameErr)
-	}
-	if p.staged == "" {
-		return nil
-	}
-	stagedLoc, err := pathloc.Parse(p.staged)
-	if err != nil {
-		return fmt.Errorf("rollback parse staged %q: %w", p.staged, err)
-	}
-	return restoreStagedDest(ctx, dstLoc, stagedLoc)
-}
-
-func rollbackRenames(ctx context.Context, pairs []renamePair, err error) error {
-	if rbErr := renamePairsRollback(ctx, pairs); rbErr != nil {
-		return fmt.Errorf("%w (rollback: %v)", err, rbErr)
-	}
-	return err
-}
 
 func moveStat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
 	be, err := lookupMoveBackend(loc)
@@ -189,70 +125,6 @@ func restoreStagedDest(ctx context.Context, dst, staged pathloc.Path) error {
 	return nil
 }
 
-func discardStagedDests(ctx context.Context, pairs []renamePair) {
-	for _, p := range pairs {
-		if p.staged == "" {
-			continue
-		}
-		loc, err := pathloc.Parse(p.staged)
-		if err != nil {
-			continue
-		}
-		_ = removePathRecursive(ctx, loc)
-	}
-}
-
-func countWalkNodesWithProgress(ctx context.Context, root string, baseFiles int, baseBytes int64, srcPath, dstPath string, throttle ProgressEmitThrottle, progress ProgressCallback) (int, error) {
-	th := effectiveProgressThrottle(throttle)
-	n := 0
-	var lastEmit time.Time
-	err := localfs.WalkDirRecursive(root, func(path string, info fs.FileInfo) error {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		_ = path
-		_ = info
-		n++
-		if progress != nil {
-			now := time.Now()
-			if lastEmit.IsZero() || now.Sub(lastEmit) >= th.MinInterval {
-				progress(srcPath, dstPath, baseFiles+n, baseBytes)
-				lastEmit = now
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return 0, err
-	}
-	if progress != nil && n > 0 {
-		progress(srcPath, dstPath, baseFiles+n, baseBytes)
-	}
-	return n, nil
-}
-
-func countTransferNodesAfterRenameWithProgress(ctx context.Context, dst string, baseFiles int, baseBytes int64, srcPath, dstPath string, throttle ProgressEmitThrottle, progress ProgressCallback) (int, error) {
-	loc, err := pathloc.Parse(dst)
-	if err != nil {
-		return countWalkNodesWithProgress(ctx, dst, baseFiles, baseBytes, srcPath, dstPath, throttle, progress)
-	}
-	if loc.IsRemote() {
-		n, countErr := countTransferNodes(ctx, loc)
-		if countErr != nil {
-			return 0, countErr
-		}
-		if progress != nil {
-			progress(srcPath, dstPath, baseFiles+n, baseBytes)
-		}
-		return n, nil
-	}
-	host, err := loc.FilePath()
-	if err != nil {
-		return 0, err
-	}
-	return countWalkNodesWithProgress(ctx, host, baseFiles, baseBytes, srcPath, dstPath, throttle, progress)
-}
-
 // renameSourceForMove handles conflict resolution then RenameFastPath for one source.
 // Returns renamed when the path was moved, skipped when the user chose not to overwrite,
 // fallbackCopy when cross-device (or non-fast) rename requires copy+delete for the batch.
@@ -311,119 +183,191 @@ func renameFastPathOrFallback(ctx context.Context, src, dst pathloc.Path) (renam
 	return true, false, false, nil
 }
 
-// executeMoveRenamePhase tries rename for each source with conflict checks.
-// When fallbackCopy is true, prior renames in this batch were rolled back.
-// When plan is non-nil, per-source progress uses pre-scan counts and post-rename walks are skipped.
-func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, plan []PlanItem, flatNames bool, throttle ProgressEmitThrottle, resolver ConflictResolver, progress ProgressCallback) (doneFiles int, doneBytes int64, fallbackCopy bool, err error) {
-	usePlan := len(plan) > 0
-	var renamed []renamePair
-	var cumulativeFiles int
-	var cumulativeBytes int64
-
+// ExecuteMove moves each source to destination, one at a time, in the style of mc: try the O(1)
+// rename first and only plan, size and copy+delete a source whose rename cannot be used (cross
+// device or cross host). Earlier renames are never rolled back when a later source fails or needs
+// the copy fallback. doneFiles counts top-level sources moved by rename plus the items copied for
+// fallback sources.
+func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
 	var nameRoot pathloc.Path
-	if !flatNames {
+	if !opts.FlatDestNames {
 		nameRoot = TransferNameRoot(sources)
 	}
+	var doneFiles int
+	var doneBytes int64
 	for _, src := range sources {
 		if err := ctx.Err(); err != nil {
-			return 0, 0, false, rollbackRenames(ctx, renamed, err)
+			return doneFiles, doneBytes, err
 		}
 		name := TransferDestName(src, nameRoot)
-		dst, destErr := resolveMoveDestination(ctx, destination, name)
-		if destErr != nil {
-			return 0, 0, false, rollbackRenames(ctx, renamed, destErr)
+		dst, err := resolveMoveDestination(ctx, destination, name)
+		if err != nil {
+			return doneFiles, doneBytes, err
 		}
 		if strings.ContainsAny(name, `/\`) {
 			if err := ensureParentDirs(ctx, dst); err != nil {
-				return 0, 0, false, rollbackRenames(ctx, renamed, fmt.Errorf("create parent for %q: %w", dst, err))
+				return doneFiles, doneBytes, fmt.Errorf("create parent for %q: %w", dst, err)
 			}
 		}
-		didRename, skipped, needCopy, staged, renameErr := renameSourceForMove(ctx, src, dst, resolver)
-		if renameErr != nil {
-			return 0, 0, false, rollbackRenames(ctx, renamed, fmt.Errorf("rename %q -> %q: %w", src, dst, renameErr))
+		doneFiles, doneBytes, err = moveAndCount(ctx, src, dst, destination, opts, throttle, progress, doneFiles, doneBytes, resolver, diskWait)
+		if err != nil {
+			return doneFiles, doneBytes, err
 		}
-		if needCopy {
-			if rbErr := renamePairsRollback(ctx, renamed); rbErr != nil {
-				return 0, 0, false, fmt.Errorf("move rename fallback rollback: %w", rbErr)
+	}
+	return doneFiles, doneBytes, nil
+}
+
+// moveAndCount runs moveOne and returns the updated done totals, counting a completed rename as one
+// item and reporting it through progress.
+func moveAndCount(ctx context.Context, src, dst, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, doneFiles int, doneBytes int64, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+	files, bytes, moved, err := moveOne(ctx, src, dst, destination, opts, throttle, progress, doneFiles, doneBytes, resolver, diskWait)
+	doneFiles += files
+	doneBytes += bytes
+	if err != nil {
+		return doneFiles, doneBytes, err
+	}
+	if moved {
+		doneFiles++
+		if progress != nil {
+			progress(src.String(), dst.String(), doneFiles, doneBytes)
+		}
+	}
+	return doneFiles, doneBytes, nil
+}
+
+// moveOne moves one resolved src to dst. A directory onto an existing directory is merged child by
+// child (mergeMoveDir); everything else goes through renameSourceForMove and, when the rename is not
+// possible, moveCopyFallback. moved reports a completed rename (or fully merged and removed source
+// directory) that counts as one done item; files and bytes are items copied by fallbacks. baseFiles
+// and baseBytes offset fallback progress. destination is the directory dst was resolved against.
+func moveOne(ctx context.Context, src, dst, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, baseFiles int, baseBytes int64, resolver ConflictResolver, diskWait DiskWaitFunc) (files int, bytes int64, moved bool, err error) {
+	if PathsEquivalent(src, dst) {
+		return 0, 0, false, nil
+	}
+	merge, err := bothDirectories(ctx, src, dst)
+	if err != nil {
+		return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
+	}
+	if merge {
+		return mergeMoveDir(ctx, src, dst, opts, throttle, progress, baseFiles, baseBytes, resolver, diskWait)
+	}
+	renamed, skipped, needCopy, staged, err := renameSourceForMove(ctx, src, dst, resolver)
+	if err != nil {
+		return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
+	}
+	switch {
+	case skipped:
+	case needCopy:
+		offset := func(s, d string, f int, b int64) {
+			if progress != nil {
+				progress(s, d, baseFiles+f, baseBytes+b)
 			}
-			return 0, 0, true, nil
 		}
-		if skipped {
+		f, b, err := moveCopyFallback(ctx, src, dst, destination, opts, throttle, offset, resolver, diskWait)
+		return f, b, false, err
+	case renamed:
+		if staged != "" {
+			if loc, perr := pathloc.Parse(staged); perr == nil {
+				_ = removePathRecursive(ctx, loc)
+			}
+		}
+		return 0, 0, true, nil
+	}
+	return 0, 0, false, nil
+}
+
+// bothDirectories reports whether src and dst are both real directories. moveStat does not follow
+// symlinks (local Lstat, sftp Lstat), so a symlink on either side reports EntrySymlink: a symlink
+// src is never descended into and a symlink dst (even to a directory) is not merged into, so those
+// collisions go through the conflict resolver.
+func bothDirectories(ctx context.Context, src, dst pathloc.Path) (bool, error) {
+	de, err := moveStat(ctx, dst)
+	if err != nil {
+		if isNotExist(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("stat destination %q: %w", dst, err)
+	}
+	if de.Type != fsbackend.EntryDirectory {
+		return false, nil
+	}
+	se, err := moveStat(ctx, src)
+	if err != nil {
+		return false, fmt.Errorf("stat source %q: %w", src, err)
+	}
+	return se.Type == fsbackend.EntryDirectory, nil
+}
+
+// mergeMoveDir moves the children of directory src into the existing directory dst, recursing via
+// moveOne so only colliding subtrees are listed. src is removed afterwards when it ended up empty;
+// children the user skipped leave it in place without error.
+func mergeMoveDir(ctx context.Context, src, dst pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, baseFiles int, baseBytes int64, resolver ConflictResolver, diskWait DiskWaitFunc) (files int, bytes int64, moved bool, err error) {
+	be, err := lookupMoveBackend(src)
+	if err != nil {
+		return 0, 0, false, err
+	}
+	children, err := be.List(ctx, src)
+	if err != nil {
+		return 0, 0, false, fmt.Errorf("list %q: %w", src, err)
+	}
+	for _, c := range children {
+		if c.Name == "." || c.Name == ".." {
 			continue
 		}
-		if didRename {
-			pair := renamePair{src: src.String(), dst: dst.String(), staged: staged}
-			renamed = append(renamed, pair)
-			if usePlan {
-				nf, nb := SummarizePlanForSource(plan, src)
-				cumulativeFiles += nf
-				cumulativeBytes += nb
-				if progress != nil {
-					progress(pair.src, pair.dst, cumulativeFiles, cumulativeBytes)
-				}
-			}
-		}
-	}
-
-	discardStagedDests(ctx, renamed)
-
-	if usePlan {
-		return cumulativeFiles, cumulativeBytes, false, nil
-	}
-
-	for _, p := range renamed {
 		if err := ctx.Err(); err != nil {
-			return 0, 0, false, err
+			return files, bytes, false, err
 		}
-		nf, walkErr := countTransferNodesAfterRenameWithProgress(ctx, p.dst, cumulativeFiles, cumulativeBytes, p.src, p.dst, throttle, progress)
-		if walkErr != nil {
-			return 0, 0, false, fmt.Errorf("walk after rename %q: %w", p.dst, walkErr)
+		csrc, err := src.Join(c.Name)
+		if err != nil {
+			return files, bytes, false, err
 		}
-		cumulativeFiles += nf
+		cdst, err := dst.Join(c.Name)
+		if err != nil {
+			return files, bytes, false, err
+		}
+		// dst as "destination" makes a copy fallback target cdst exactly (dst != cdst).
+		f, b, _, err := moveOne(ctx, csrc, cdst, dst, opts, throttle, progress, baseFiles+files, baseBytes+bytes, resolver, diskWait)
+		files += f
+		bytes += b
+		if err != nil {
+			return files, bytes, false, err
+		}
 	}
-	return cumulativeFiles, cumulativeBytes, false, nil
-}
-
-// ExecuteMove moves sources to destination using the rename fast path when
-// possible for every source, falling back to copy + delete for cross-device moves
-// or when any rename in the batch cannot use the fast path.
-func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
-	if err := ctx.Err(); err != nil {
-		return 0, 0, err
-	}
-
-	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, nil, opts.FlatDestNames, throttle, resolver, progress)
+	rest, err := be.List(ctx, src)
 	if err != nil {
-		return 0, 0, err
+		return files, bytes, false, fmt.Errorf("list %q: %w", src, err)
 	}
-	if !fallbackToCopy {
-		return doneFiles, doneBytes, nil
-	}
-
-	return transferRun{
-		ctx: ctx, sources: sources, destination: destination, opts: opts,
-		throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait,
-	}.executeMoveCopyPhase()
-}
-
-func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
-	var plan []PlanItem
-	var tb int64
-	var planErr error
-	if planOptional != nil {
-		plan = planOptional
-		_, _, tb = SummarizePlan(plan)
-	} else {
-		plan, _, _, tb, planErr = BuildCopyPlanWithTotalsCtx(ctx, sources, destination, PlanBuildOptions{FlatDestNames: opts.FlatDestNames, DereferenceSymlinks: opts.DereferenceSymlinks})
-		if planErr != nil {
-			return 0, 0, fmt.Errorf("move copy phase plan: %w", planErr)
+	for _, c := range rest {
+		if c.Name != "." && c.Name != ".." {
+			return files, bytes, false, nil
 		}
 	}
-	if err := EnsureDiskSpace(diskWait, destination, tb, pathloc.Path{}); err != nil {
+	if err := be.Remove(ctx, src); err != nil {
+		return files, bytes, false, fmt.Errorf("remove merged source %q: %w", src, err)
+	}
+	return files, bytes, true, nil
+}
+
+// moveCopyFallback copies one source whose rename was not possible to dst, then removes it.
+// The plan covers only src. dst is the already-resolved destination path of src: unless it is
+// destination itself (a rename-to-new-name move), the plan targets dst's parent with flat names
+// so the nested name resolved by ExecuteMove is reproduced exactly.
+func moveCopyFallback(ctx context.Context, src, dst, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+	planOpts := PlanBuildOptions{FlatDestNames: opts.FlatDestNames, DereferenceSymlinks: opts.DereferenceSymlinks}
+	planDest := destination
+	if !dst.Equal(destination) {
+		planDest = dst.Parent()
+		planOpts.FlatDestNames = true
+	}
+	sources := []pathloc.Path{src}
+	plan, _, _, tb, err := BuildCopyPlanWithTotalsCtx(ctx, sources, planDest, planOpts)
+	if err != nil {
+		return 0, 0, fmt.Errorf("move copy phase plan: %w", err)
+	}
+	if err := EnsureDiskSpace(diskWait, planDest, tb, pathloc.Path{}); err != nil {
 		return 0, 0, err
 	}
-
-	doneFiles, doneBytes, transferred, err := executeCopyWithPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
+	doneFiles, doneBytes, transferred, err := executeCopyWithPlan(ctx, plan, sources, planDest, opts, throttle, progress, resolver, diskWait)
 	if err != nil {
 		return doneFiles, doneBytes, fmt.Errorf("move copy phase: %w", err)
 	}
@@ -431,10 +375,8 @@ func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources 
 }
 
 // finishMoveCopyPhase removes transferred sources and any now-empty source directory roots
-// after a move's copy-fallback phase has copied everything to destination. Shared by the
-// slice-backed (executeMoveCopyPhase) and channel-backed (ExecuteMoveWithPlanChan) fallback
-// phases so this tail logic has one source of truth. onRemove, when non-nil, is called once
-// before the removal loop begins.
+// after a move's copy-fallback phase has copied a source to its destination. onRemove, when
+// non-nil, is called before the removal loop begins.
 func finishMoveCopyPhase(ctx context.Context, sources []pathloc.Path, transferred []pathloc.Path, doneFiles int, doneBytes int64, onRemove func()) (int, int64, error) {
 	if onRemove != nil {
 		onRemove()
@@ -464,74 +406,4 @@ func finishMoveCopyPhase(ctx context.Context, sources []pathloc.Path, transferre
 	}
 
 	return doneFiles, doneBytes, nil
-}
-
-// ExecuteMoveWithPlan tries the rename fast path, then uses plan for the copy+delete fallback without rebuilding it.
-func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
-	if plan == nil {
-		return ExecuteMove(ctx, sources, destination, opts, throttle, progress, resolver, diskWait)
-	}
-	if err := ctx.Err(); err != nil {
-		return 0, 0, err
-	}
-
-	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, plan, opts.FlatDestNames, throttle, resolver, progress)
-	if err != nil {
-		return 0, 0, err
-	}
-	if !fallbackToCopy {
-		return doneFiles, doneBytes, nil
-	}
-
-	return transferRun{
-		ctx: ctx, sources: sources, destination: destination, opts: opts,
-		throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait,
-		planOptional: plan,
-	}.executeMoveCopyPhase()
-}
-
-// ExecuteMoveWithPlanChan mirrors ExecuteMoveWithPlan but consumes a streamed plan channel (from
-// BuildPlanStreamCtx). The rename fast path must not start until that delivery walk has finished
-// reading the source paths: renaming a directory while WalkDirRecursive still ReadDir's it
-// produces self-inflicted enumeration errors and an incomplete plan for mixed-device fallback.
-func ExecuteMoveWithPlanChan(ctx context.Context, planCh <-chan PlanItem, planErr func() error, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
-	if err := ctx.Err(); err != nil {
-		return 0, 0, err
-	}
-
-	plan, err := collectPlanChan(ctx, planCh, planErr)
-	if err != nil {
-		return 0, 0, err
-	}
-	drainPlanChanDiscard(ctx, planCh)
-	return ExecuteMoveWithPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
-}
-
-// collectPlanChan drains planCh until it closes and then returns planErr() (if any). A move's
-// rename phase uses the collected plan only after this returns, so source paths stay stable
-// for the duration of the delivery walk.
-func collectPlanChan(ctx context.Context, planCh <-chan PlanItem, planErr func() error) ([]PlanItem, error) {
-	if planCh == nil {
-		if planErr != nil {
-			return nil, planErr()
-		}
-		return nil, nil
-	}
-	var plan []PlanItem
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case it, ok := <-planCh:
-			if !ok {
-				if planErr != nil {
-					if err := planErr(); err != nil {
-						return plan, err
-					}
-				}
-				return plan, nil
-			}
-			plan = append(plan, it)
-		}
-	}
 }

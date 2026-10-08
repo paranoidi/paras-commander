@@ -23,7 +23,3 @@ type transferRun struct {
 func (r transferRun) executeCopy() (doneFiles int, doneBytes int64, transferred []pathloc.Path, err error) {
 	return executeCopyWithPlan(r.ctx, r.planOptional, r.sources, r.destination, r.opts, r.throttle, r.progress, r.resolver, r.diskWait)
 }
-
-func (r transferRun) executeMoveCopyPhase() (int, int64, error) {
-	return executeMoveCopyPhase(r.ctx, r.planOptional, r.sources, r.destination, r.opts, r.throttle, r.progress, r.resolver, r.diskWait)
-}

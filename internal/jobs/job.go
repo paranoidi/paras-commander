@@ -130,12 +130,12 @@ type Job struct {
 	// saturating (stat on a busy CIFS/NFS mount can block for seconds).
 	VolumeDevs []uint64
 
-	// FlattenRemoveEmpty enables post-move removal of empty directories under FlattenRoots.
+	// FlattenRemoveEmpty removes directories left empty under the flatten roots (Sources) as the
+	// flatten proceeds (TypeFlatten only).
 	FlattenRemoveEmpty bool
-	// FlattenRoots are the selected directory roots for flatten cleanup (TypeFlatten only).
-	FlattenRoots []pathloc.Path
-	// FlattenDeferred are items whose final name equals a flatten root; moved last (TypeFlatten only).
-	FlattenDeferred []pathloc.Path
+	// FlattenRecursive flattens every file under the roots instead of only their immediate
+	// children (TypeFlatten only).
+	FlattenRecursive bool
 
 	// DeleteRemoveEmptyDirs enables post-delete removal of directories left empty
 	// under the parent directories of Sources (TypeDelete only).
@@ -183,22 +183,10 @@ func FinishedStatuses() []Status {
 }
 
 // NeedsPreScan reports whether the job type requires a background plan walk before running.
+// Move and flatten do not: they rename first and plan only the sources that need a cross-device
+// copy fallback (see ops.ExecuteMove). Flatten-into-dest copy is TypeCopy and keeps the pre-scan.
 func (j *Job) NeedsPreScan() bool {
-	if j == nil {
-		return false
-	}
-	return j.Type == TypeCopy || j.Type == TypeMove || j.Type == TypeFlatten
-}
-
-// WaitsForDeliveryPlan reports whether the job must finish source enumeration before
-// becoming runnable. Move and flatten-move rename the source tree; starting them on
-// FirstItem would race still-running delivery and counting walks. Copy (including
-// flatten-into-dest copy) keeps first-item pipelining.
-func (j *Job) WaitsForDeliveryPlan() bool {
-	if j == nil {
-		return false
-	}
-	return j.Type == TypeMove || j.Type == TypeFlatten
+	return j != nil && j.Type == TypeCopy
 }
 
 // RetryClone returns a fresh Job with the same ID and only the enqueue-time spec fields
@@ -221,8 +209,7 @@ func (j *Job) RetryClone() *Job {
 		DestIsDir:             ops.DestinationIsDirAtEnqueue(j.Destination),
 		TotalFiles:            totalFiles,
 		FlattenRemoveEmpty:    j.FlattenRemoveEmpty,
-		FlattenRoots:          j.FlattenRoots,
-		FlattenDeferred:       j.FlattenDeferred,
+		FlattenRecursive:      j.FlattenRecursive,
 		DeleteRemoveEmptyDirs: j.DeleteRemoveEmptyDirs,
 		PromptDanglingDirs:    j.PromptDanglingDirs,
 		PreservePermissions:   j.PreservePermissions,

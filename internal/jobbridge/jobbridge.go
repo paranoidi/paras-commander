@@ -58,9 +58,6 @@ func EventUpdatesMarks(t jobs.EventType) bool {
 // slow/stalled transfer consumer — a large file mid-copy stalls the relay's handoff to items,
 // but the counting walk keeps enumerating and Totals keeps growing regardless. Both walks start
 // immediately; ScanFunc returns without blocking for the source tree to be fully enumerated.
-// When hooks.BufferDeliveryPlan is set (move/flatten-move), the delivery relay buffers the
-// whole walk so Done can fire without an Items consumer; rename must not start while a walk
-// still reads those source paths.
 //
 // The counting walk additionally runs an adaptive contention probe (see scan_throttle.go) unless
 // jobsCfg.ScanDisableAdaptiveThrottle is set: it periodically pauses the counting walk and
@@ -126,36 +123,6 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 				close(deliveryDone)
 			}
 			firstItemSeen := false
-			if hooks.BufferDeliveryPlan {
-				// Buffer every delivery item so the filesystem walk can finish without a
-				// PlanCh consumer. Move/flatten jobs wait for Done before becoming runnable;
-				// without this buffer the unbuffered Items send deadlocks that wait.
-				var buf []ops.PlanItem
-				for {
-					select {
-					case it, ok := <-raw:
-						if !ok {
-							finish()
-							for _, it := range buf {
-								select {
-								case items <- it:
-								case <-ctx.Done():
-									return
-								}
-							}
-							return
-						}
-						if !firstItemSeen {
-							firstItemSeen = true
-							close(firstItem)
-						}
-						buf = append(buf, it)
-					case <-ctx.Done():
-						finish()
-						return
-					}
-				}
-			}
 			for {
 				select {
 				case it, ok := <-raw:
@@ -342,7 +309,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rat
 		// true — ops.copyRegularItem's per-file check (gated by disk_space_check_min_file_bytes)
 		// is the safety net for streamed jobs, same trade-off mc makes (mc has no upfront check
 		// at all); see llm-docs/jobs.md.
-		if job.PlanCh != nil && (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) {
+		if job.PlanCh != nil {
 			return runTransfer(transferExecCtx{
 				ctx:      ctx,
 				job:      job,
@@ -355,14 +322,31 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rat
 			})
 		}
 
-		// Fallback path: job.PlanCh is nil, meaning this job's scan either never ran (delete/
-		// extract) or was bypassed (e.g. a copy/move/flatten job injected directly into
-		// StatusQueued in tests). opsPlan/totalBytes come from job.Plan — the synchronous-
-		// rebuild slice fallback — safe to read unlocked because nothing streams into it.
+		// Fallback path: job.PlanCh is nil. Move never pre-scans (ops.ExecuteMove renames first and
+		// plans only cross-device sources), so it only announces one total per source; flatten
+		// (ops.ExecuteFlatten) walks its roots while running and announces none. Copy reaches here
+		// when its scan was bypassed (e.g. a job injected directly into StatusQueued in tests) and
+		// rebuilds the plan synchronously; job.Plan is safe to read unlocked because nothing streams
+		// into it.
+		if job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten {
+			if job.Type == jobs.TypeMove {
+				emit(jobs.Event{
+					Type:       jobs.EventPlanTotals,
+					JobID:      job.ID,
+					Status:     jobs.StatusRunning,
+					TotalFiles: len(job.Sources),
+					TotalBytes: 0,
+				})
+			}
+			return runTransfer(transferExecCtx{
+				ctx: ctx, job: job, opts: opts, throttle: throttle, progress: progress,
+				resolver: resolver, diskWait: diskWait, emit: emit,
+			})
+		}
 		opsPlan := job.Plan
 		var planErr error
 		totalBytes := job.TotalBytes
-		if (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) && len(opsPlan) == 0 {
+		if job.Type == jobs.TypeCopy && len(opsPlan) == 0 {
 			var tf int
 			// ponytail: no OnWarning here — this synchronous-rebuild fallback only runs when a
 			// job bypassed the streamed pre-scan (job.PlanCh nil; tests or a job injected
@@ -381,12 +365,12 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rat
 				})
 			}
 		}
-		if planErr == nil && (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) {
+		if planErr == nil && job.Type == jobs.TypeCopy {
 			tb := totalBytes
 			if tb <= 0 && len(opsPlan) > 0 {
 				_, _, tb = ops.SummarizePlan(opsPlan)
 			}
-			if job.Type == jobs.TypeCopy && tb > 0 {
+			if tb > 0 {
 				if err := ops.EnsureDiskSpace(diskWait, job.Destination, tb, pathloc.Path{}); err != nil {
 					return mapOpsCanceled(err)
 				}
@@ -541,10 +525,10 @@ type transferExecCtx struct {
 	emit     func(jobs.Event)
 }
 
-// planSource names where tc's plan comes from, for ops.ExecuteCopyFrom/ExecuteMoveFrom: a
-// streaming background producer (job.PlanCh) takes priority when present; otherwise an
-// already-built, non-empty tc.opsPlan is used; otherwise the zero PlanSource tells the Execute*
-// call to build (and, for a prior failed synchronous build, retry building) the plan itself.
+// planSource names where a copy's plan comes from, for ops.ExecuteCopyFrom: a streaming
+// background producer (job.PlanCh) takes priority when present; otherwise an already-built,
+// non-empty tc.opsPlan is used; otherwise the zero PlanSource tells ExecuteCopy to build (and,
+// for a prior failed synchronous build, retry building) the plan itself.
 func (tc transferExecCtx) planSource() ops.PlanSource {
 	if tc.job.PlanCh != nil {
 		return ops.PlanSource{Chan: tc.job.PlanCh, ChanErr: tc.job.PlanErr}
@@ -555,21 +539,18 @@ func (tc transferExecCtx) planSource() ops.PlanSource {
 	return ops.PlanSource{}
 }
 
-// executeJobByType runs the ops.Execute* call matching tc.job.Type (copy/move/flatten dispatch
-// on tc.planSource(); delete/extract build and emit their own PlanTotals since they don't take a
-// shared plan).
+// executeJobByType runs the ops.Execute* call matching tc.job.Type (copy dispatches on
+// tc.planSource(); move/flatten plan per source inside ops.ExecuteMove; delete/extract build and
+// emit their own PlanTotals since they don't take a shared plan).
 func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err error) {
 	job := tc.job
 	switch job.Type {
 	case jobs.TypeCopy:
 		doneFiles, doneBytes, err = ops.ExecuteCopyFrom(tc.ctx, tc.planSource(), job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-	case jobs.TypeMove, jobs.TypeFlatten:
-		doneFiles, doneBytes, err = ops.ExecuteMoveFrom(tc.ctx, tc.planSource(), job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		if err == nil && job.Type == jobs.TypeFlatten && (job.FlattenRemoveEmpty || len(job.FlattenDeferred) > 0) {
-			if cleanErr := ops.FinishFlattenDeferred(tc.ctx, job.FlattenDeferred, job.Destination, job.FlattenRoots, job.FlattenRemoveEmpty); cleanErr != nil {
-				err = cleanErr
-			}
-		}
+	case jobs.TypeMove:
+		doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
+	case jobs.TypeFlatten:
+		doneFiles, doneBytes, err = ops.ExecuteFlatten(tc.ctx, job.Sources, job.Destination, job.FlattenRecursive, job.FlattenRemoveEmpty, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeDelete:
 		tc.emit(jobs.Event{
 			Type:       jobs.EventPlanTotals,

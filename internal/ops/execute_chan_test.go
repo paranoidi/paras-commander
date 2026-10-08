@@ -140,56 +140,8 @@ func TestExecuteCopyUsingPlanChanProducerErrorAfterPartialTransfer(t *testing.T)
 	}
 }
 
-func TestExecuteMoveWithPlanChanRenameFastPathDrainsChannel(t *testing.T) {
-	srcDir := t.TempDir()
-	dstDir := filepath.Join(t.TempDir(), "orchard")
-	fileA := filepath.Join(srcDir, "meadow.txt")
-	if err := os.WriteFile(fileA, []byte("meadow-content"), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-
-	ctx := context.Background()
-	planCh := make(chan PlanItem, 8)
-	go func() {
-		// This producer's items are never needed by the rename fast path (same filesystem,
-		// no fallback), but ExecuteMoveWithPlanChan must still drain and let it finish instead
-		// of leaving it blocked on a full channel.
-		_ = BuildPlanStreamCtx(ctx, MustPaths(srcDir), MustPath(dstDir), true, PlanBuildOptions{}, planCh)
-	}()
-
-	done := make(chan struct{})
-	var doneFiles int
-	var err error
-	go func() {
-		doneFiles, _, err = ExecuteMoveWithPlanChan(ctx, planCh, nil, MustPaths(srcDir), MustPath(dstDir), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, overwriteAllResolver(), nil)
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timeout: ExecuteMoveWithPlanChan should return promptly once rename succeeds, not block on draining the channel")
-	}
-	if err != nil {
-		t.Fatalf("ExecuteMoveWithPlanChan error = %v", err)
-	}
-	// The rename fast path renames srcDir wholesale in one os.Rename, then (since it wasn't
-	// given a pre-built plan — mirroring ExecuteMove's own behavior) walks the destination to
-	// count nodes for progress: the renamed directory itself plus meadow.txt, so 2.
-	if doneFiles != 2 {
-		t.Fatalf("doneFiles = %d, want 2 (renamed dir + meadow.txt)", doneFiles)
-	}
-	if _, statErr := os.Stat(fileA); !os.IsNotExist(statErr) {
-		t.Fatalf("source should be gone after rename: statErr = %v", statErr)
-	}
-	if got := readFileContent(t, filepath.Join(dstDir, "meadow.txt")); got != "meadow-content" {
-		t.Fatalf("moved content = %q, want meadow-content", got)
-	}
-}
-
 // TestMoveCopyFallbackChanParity exercises the same executeCopyIter+finishMoveCopyPhase
-// machinery ExecuteMoveWithPlanChan uses for its cross-device copy-fallback phase (which needs a
-// real second filesystem to trigger via the public API — not available in this test
-// environment), verifying it behaves like the slice-backed executeMoveCopyPhase on an identical
+// machinery a streamed move fallback would use, verifying it behaves like moveCopyFallback on an identical
 // fixture: files land at destination and sources are removed.
 func TestMoveCopyFallbackChanParity(t *testing.T) {
 	srcSlice := buildStreamFixtureTree(t)
@@ -197,9 +149,9 @@ func TestMoveCopyFallbackChanParity(t *testing.T) {
 	dstSlice := filepath.Join(t.TempDir(), "orchard")
 	dstChan := filepath.Join(t.TempDir(), "orchard")
 
-	sliceFiles, sliceBytes, err := executeMoveCopyPhase(context.Background(), nil, MustPaths(srcSlice), MustPath(dstSlice), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, overwriteAllResolver(), nil)
+	sliceFiles, sliceBytes, err := moveViaCopyFallback(context.Background(), MustPaths(srcSlice), MustPath(dstSlice), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, overwriteAllResolver(), nil)
 	if err != nil {
-		t.Fatalf("executeMoveCopyPhase error = %v", err)
+		t.Fatalf("moveViaCopyFallback error = %v", err)
 	}
 
 	planCh := make(chan PlanItem, 8)

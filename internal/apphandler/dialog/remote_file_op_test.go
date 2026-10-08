@@ -210,17 +210,6 @@ func TestRemotePlanningDoesNotBlockPasswordDialog(t *testing.T) {
 			},
 		},
 		{
-			name: "flatten dest probe",
-			start: func(h *Handler) {
-				h.model.FlattenDialog = uidialog.FlattenDialogState{
-					Open:        true,
-					Destination: uidialog.FileDialogField{Value: remoteTestRoot + "/dest"},
-					DirRoots:    []string{remoteTestRoot + "/harbor"},
-				}
-				h.confirmFlatten()
-			},
-		},
-		{
 			name: "extract dest probe",
 			start: func(h *Handler) {
 				h.model.FileDialog = uidialog.FileDialogState{

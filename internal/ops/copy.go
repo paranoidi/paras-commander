@@ -132,20 +132,6 @@ func SummarizePlan(plan []PlanItem) (totalItems, totalDirs int, totalBytes int64
 	return totalItems, totalDirs, totalBytes
 }
 
-// SummarizePlanForSource returns plan item and regular-file byte counts for entries under root.
-func SummarizePlanForSource(plan []PlanItem, root pathloc.Path) (items int, bytes int64) {
-	for _, item := range plan {
-		if !pathloc.EqualOrUnder(root, item.Src) {
-			continue
-		}
-		items++
-		if !item.IsDir && !item.IsSymlink {
-			bytes += item.FileSize
-		}
-	}
-	return items, bytes
-}
-
 // ExecuteCopy copies a set of source paths to a destination.
 // It handles regular files, directories, and symlinks.
 // Returns (doneFiles, doneBytes, error).
@@ -186,7 +172,7 @@ func ExecuteCopyUsingPlanChan(ctx context.Context, planCh <-chan PlanItem, planE
 
 // planIter yields one plan item per call until exhausted. ok is false once iteration ends;
 // err carries the terminal error, if any (nil on a clean end). Shared by the slice-backed
-// (ExecuteCopyUsingPlan/ExecuteMoveWithPlan) and channel-backed (*Chan) executors so the
+// (ExecuteCopyUsingPlan) and channel-backed (*Chan) executors so the
 // per-item copy loop in executeCopyIter is written once.
 type planIter func() (item PlanItem, ok bool, err error)
 
@@ -218,23 +204,6 @@ func planIterChan(ctx context.Context, planCh <-chan PlanItem, planErr func() er
 			return it, true, nil
 		case <-ctx.Done():
 			return PlanItem{}, false, ctx.Err()
-		}
-	}
-}
-
-// drainPlanChanDiscard reads and discards planCh until it closes or ctx is done. Used when a
-// move's rename fast path succeeds and the streamed plan (built for the copy-fallback phase)
-// turns out to be unneeded: something must still drain it so the background producer's blocked
-// channel send can complete and its goroutine exit, rather than leaking until job cancellation.
-func drainPlanChanDiscard(ctx context.Context, planCh <-chan PlanItem) {
-	for {
-		select {
-		case _, ok := <-planCh:
-			if !ok {
-				return
-			}
-		case <-ctx.Done():
-			return
 		}
 	}
 }

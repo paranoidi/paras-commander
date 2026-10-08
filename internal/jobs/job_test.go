@@ -37,22 +37,18 @@ func TestJobLifecycle(t *testing.T) {
 	}
 }
 
-func TestWaitsForDeliveryPlan(t *testing.T) {
+func TestNeedsPreScan(t *testing.T) {
 	t.Parallel()
-	if (&Job{Type: TypeCopy}).WaitsForDeliveryPlan() {
-		t.Fatal("TypeCopy must keep first-item pipelining")
+	if !(&Job{Type: TypeCopy}).NeedsPreScan() || !(&Job{Type: TypeCopy, FlattenIntoDest: true}).NeedsPreScan() {
+		t.Fatal("copy must pre-scan")
 	}
-	if (&Job{Type: TypeCopy, FlattenIntoDest: true}).WaitsForDeliveryPlan() {
-		t.Fatal("flatten-into-dest copy must keep first-item pipelining")
+	for _, typ := range []Type{TypeMove, TypeFlatten, TypeDelete, TypeExtract} {
+		if (&Job{Type: typ}).NeedsPreScan() {
+			t.Fatalf("%s must not pre-scan", typ)
+		}
 	}
-	if !(&Job{Type: TypeMove}).WaitsForDeliveryPlan() {
-		t.Fatal("TypeMove must wait for the delivery plan")
-	}
-	if !(&Job{Type: TypeFlatten}).WaitsForDeliveryPlan() {
-		t.Fatal("TypeFlatten must wait for the delivery plan")
-	}
-	if (*Job)(nil).WaitsForDeliveryPlan() {
-		t.Fatal("nil job must not wait")
+	if (*Job)(nil).NeedsPreScan() {
+		t.Fatal("nil job must not pre-scan")
 	}
 }
 

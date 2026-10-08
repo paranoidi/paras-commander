@@ -5,35 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"sort"
-	"sync"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
-
-var (
-	collectFlattenTestHookMu sync.Mutex
-	collectFlattenTestHook   func(context.Context)
-)
-
-// SetCollectFlattenTestHook installs a test-only callback invoked at the start of
-// CollectFlattenSources so tests can block or cancel while the walk is planned.
-func SetCollectFlattenTestHook(fn func(context.Context)) {
-	collectFlattenTestHookMu.Lock()
-	collectFlattenTestHook = fn
-	collectFlattenTestHookMu.Unlock()
-}
-
-func runCollectFlattenTestHook(ctx context.Context) {
-	collectFlattenTestHookMu.Lock()
-	fn := collectFlattenTestHook
-	collectFlattenTestHookMu.Unlock()
-	if fn != nil {
-		fn(ctx)
-	}
-}
 
 // ValidateFlattenSource requires a non-empty directory-only source (selection or cursor).
 // Mixed files and directories return a dedicated error message.
@@ -66,171 +42,159 @@ func ValidateFlattenSource(p *panel.State) ([]pathloc.Path, error) {
 	return roots, nil
 }
 
-// CollectFlattenSources lists move sources for flatten into dest.
-// When recursive is false, immediate children of each root are returned; child directories
-// whose resolved destination equals a flatten root are expanded to their immediate children
-// (recursively while the collision persists) so same-name nesting does not move onto the root.
-// When recursive is true, every file and symlink under each root is returned (directories are not move roots).
-// Files and symlinks whose destination equals a flatten root (e.g. root/root) cannot be moved while
-// the root exists; they are returned in deferred (not in sources) for FinishFlattenDeferred.
-func CollectFlattenSources(ctx context.Context, roots []pathloc.Path, dest pathloc.Path, recursive bool) (sources, deferred []string, err error) {
+// ValidateFlattenTarget rejects an empty root list, an invalid destination, and a destination
+// inside one of the roots.
+func ValidateFlattenTarget(roots []pathloc.Path, dest pathloc.Path) error {
 	if len(roots) == 0 {
-		return nil, nil, &Error{Op: "flatten", Text: "no directories to flatten"}
+		return &Error{Op: "flatten", Text: "no directories to flatten"}
 	}
 	if dest.IsZero() {
-		return nil, nil, &Error{Op: "flatten", Text: "invalid destination"}
-	}
-	runCollectFlattenTestHook(ctx)
-	if err := ctx.Err(); err != nil {
-		return nil, nil, err
+		return &Error{Op: "flatten", Text: "invalid destination"}
 	}
 	for _, root := range roots {
 		if destStrictlyUnderRoot(dest, root) {
-			return nil, nil, &Error{Op: "flatten", Text: "destination cannot be inside a selected directory"}
+			return &Error{Op: "flatten", Text: "destination cannot be inside a selected directory"}
 		}
 	}
-	out := make([]string, 0)
-	var def []string
-	for _, root := range roots {
-		if err := ctx.Err(); err != nil {
-			return nil, nil, err
-		}
-		var part []string
-		var err error
-		if recursive {
-			part, err = collectRecursiveFlattenFiles(ctx, root, dest, roots, &def)
-		} else {
-			part, err = collectNonRecursiveFlattenSources(ctx, root, dest, roots, &def)
-		}
-		if err != nil {
-			return nil, nil, err
-		}
-		out = append(out, part...)
-	}
-	sort.Strings(def)
-	def = dedupeSortedStrings(def)
-	if len(out) == 0 {
-		return nil, def, nil
-	}
-	sort.Strings(out)
-	return dedupeSortedStrings(out), def, nil
+	return nil
 }
 
-func destStrictlyUnderRoot(dest, root pathloc.Path) bool {
-	if dest.Scheme() != root.Scheme() {
-		return false
+// ExecuteFlatten moves every file and symlink under roots (recursive) or every immediate child of
+// each root (non-recursive) to dest/<name> in a single streaming pass: each entry is listed and
+// moved via moveOne, so nothing is enumerated up front. Conflicts go through resolver; an entry whose
+// destination is the entry itself is left alone. Non-recursive children that are directories whose
+// destination equals a flatten root are expanded to their children (recursively while the collision
+// persists). Files and symlinks whose destination equals a root (e.g. root/root) cannot be moved
+// while the root exists; they are parked as dest/<name>.flatten (or <name>.1.flatten, ... when
+// taken), the roots are removed when removeEmpty leaves them empty, and the parked items are renamed
+// to their final names. If a final path still exists the parked item is left in place and an error
+// names it. With removeEmpty, each directory is removed right after its children are processed when
+// nothing remains in it, roots included.
+func ExecuteFlatten(ctx context.Context, roots []pathloc.Path, dest pathloc.Path, recursive, removeEmpty bool, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+	if err := ValidateFlattenTarget(roots, dest); err != nil {
+		return 0, 0, err
 	}
-	if dest.Equal(root) {
-		return false
-	}
-	return dest.HasPrefix(root)
-}
-
-func flattenDestEqualsRoot(ctx context.Context, child, dest pathloc.Path, roots []pathloc.Path) (bool, error) {
-	resolved, err := ResolveDestinationCtx(ctx, child, dest)
+	destIsDir, err := destinationIsDir(ctx, dest)
 	if err != nil {
-		return false, err
+		return 0, 0, err
+	}
+	w := &flattenWalk{
+		roots: roots, dest: dest, destIsDir: destIsDir, recursive: recursive, removeEmpty: removeEmpty,
+		opts: opts, throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait,
 	}
 	for _, root := range roots {
-		if resolved.Equal(root) {
+		if err := w.walk(ctx, root); err != nil {
+			return w.doneFiles, w.doneBytes, err
+		}
+	}
+	err = w.finishDeferred(ctx)
+	return w.doneFiles, w.doneBytes, err
+}
+
+type flattenWalk struct {
+	roots                  []pathloc.Path
+	dest                   pathloc.Path
+	destIsDir              bool
+	recursive, removeEmpty bool
+	opts                   Options
+	throttle               ProgressEmitThrottle
+	progress               ProgressCallback
+	resolver               ConflictResolver
+	diskWait               DiskWaitFunc
+	doneFiles              int
+	doneBytes              int64
+	deferred               []pathloc.Path
+}
+
+// dstFor is the flatten destination of child; dest was resolved once, so no per-entry Stat.
+func (w *flattenWalk) dstFor(child pathloc.Path) (pathloc.Path, error) {
+	if !w.destIsDir {
+		return w.dest, nil
+	}
+	return w.dest.Join(child.Base())
+}
+
+func (w *flattenWalk) isRoot(p pathloc.Path) bool {
+	for _, root := range w.roots {
+		if p.Equal(root) {
+			return true
+		}
+	}
+	return false
+}
+
+func (w *flattenWalk) walk(ctx context.Context, dir pathloc.Path) error {
+	be, err := backendFor(dir)
+	if err != nil {
+		return err
+	}
+	entries, err := be.List(ctx, dir)
+	if err != nil {
+		return &Error{Op: "flatten", Text: fmt.Sprintf("list %q: %v", dir, err), Err: err}
+	}
+	for _, e := range entries {
+		if e.Name == "." || e.Name == ".." {
+			continue
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		dst, err := w.dstFor(e.Loc)
+		if err != nil {
+			return err
+		}
+		collides := w.isRoot(dst)
+		switch {
+		case e.Type == fsbackend.EntryDirectory && (w.recursive || collides):
+			if err := w.walk(ctx, e.Loc); err != nil {
+				return err
+			}
+		case collides:
+			w.deferred = append(w.deferred, e.Loc)
+		default:
+			w.doneFiles, w.doneBytes, err = moveAndCount(ctx, e.Loc, dst, w.dest, w.opts, w.throttle, w.progress, w.doneFiles, w.doneBytes, w.resolver, w.diskWait)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if w.removeEmpty {
+		_, err = removeDirIfEmpty(ctx, be, dir)
+	}
+	return err
+}
+
+// removeDirIfEmpty removes dir when it holds nothing but dot entries. A directory that no longer
+// exists counts as removed.
+func removeDirIfEmpty(ctx context.Context, be fsbackend.Backend, dir pathloc.Path) (bool, error) {
+	entries, err := be.List(ctx, dir)
+	if err != nil {
+		if isNotExist(err) {
 			return true, nil
 		}
+		return false, &Error{Op: "flatten", Text: fmt.Sprintf("list %q: %v", dir, err), Err: err}
 	}
-	return false, nil
+	if !dirHasOnlyDotEntries(entries) {
+		return false, nil
+	}
+	if err := be.Remove(ctx, dir); err != nil {
+		return false, &Error{Op: "flatten", Text: fmt.Sprintf("remove empty directory %q: %v", dir, err), Err: err}
+	}
+	return true, nil
 }
 
-func collectNonRecursiveFlattenSources(ctx context.Context, dir, dest pathloc.Path, roots []pathloc.Path, deferred *[]string) ([]string, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	be, err := backendFor(dir)
-	if err != nil {
-		return nil, err
-	}
-	entries, err := be.List(ctx, dir)
-	if err != nil {
-		return nil, &Error{Op: "flatten", Text: fmt.Sprintf("list %q: %v", dir, err), Err: err}
-	}
-	out := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if e.Name == "." || e.Name == ".." {
-			continue
-		}
-		collides, err := flattenDestEqualsRoot(ctx, e.Loc, dest, roots)
-		if err != nil {
-			return nil, err
-		}
-		if collides {
-			if e.Type != fsbackend.EntryDirectory {
-				*deferred = append(*deferred, e.Loc.String())
-				continue
-			}
-			part, err := collectNonRecursiveFlattenSources(ctx, e.Loc, dest, roots, deferred)
-			if err != nil {
-				return nil, err
-			}
-			out = append(out, part...)
-			continue
-		}
-		out = append(out, e.Loc.String())
-	}
-	return out, nil
-}
-
-func collectRecursiveFlattenFiles(ctx context.Context, dir, dest pathloc.Path, roots []pathloc.Path, deferred *[]string) ([]string, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	be, err := backendFor(dir)
-	if err != nil {
-		return nil, err
-	}
-	entries, err := be.List(ctx, dir)
-	if err != nil {
-		return nil, &Error{Op: "flatten", Text: fmt.Sprintf("list %q: %v", dir, err), Err: err}
-	}
-	out := make([]string, 0)
-	for _, e := range entries {
-		if e.Name == "." || e.Name == ".." {
-			continue
-		}
-		switch e.Type {
-		case fsbackend.EntryDirectory:
-			part, err := collectRecursiveFlattenFiles(ctx, e.Loc, dest, roots, deferred)
-			if err != nil {
-				return nil, err
-			}
-			out = append(out, part...)
-		default:
-			collides, err := flattenDestEqualsRoot(ctx, e.Loc, dest, roots)
-			if err != nil {
-				return nil, err
-			}
-			if collides {
-				*deferred = append(*deferred, e.Loc.String())
-			} else {
-				out = append(out, e.Loc.String())
-			}
-		}
-	}
-	return out, nil
-}
-
-// FinishFlattenDeferred completes a flatten after the main move. Each deferred item (whose final
-// name equals a flatten root) is parked as dest/<name>.flatten (or <name>.1.flatten, <name>.2.flatten,
-// ... when taken; first free name wins), empty directories under
-// roots are removed when removeEmpty is set, and the parked items are renamed to their final names.
-// If a final path still exists (its root was not removed) the parked item is left in place and an
-// error names it. With no deferred items it only removes empty directories.
-func FinishFlattenDeferred(ctx context.Context, deferred []pathloc.Path, dest pathloc.Path, roots []pathloc.Path, removeEmpty bool) error {
+// finishDeferred parks each deferred item as dest/<name>.flatten, removes the directories that
+// held them when they are now empty (up to and including the root), and renames the parked items to
+// their final names.
+func (w *flattenWalk) finishDeferred(ctx context.Context) error {
 	type parked struct{ temp, final pathloc.Path }
-	var items []parked
-	for _, src := range deferred {
+	items := make([]parked, 0, len(w.deferred))
+	for _, src := range w.deferred {
 		be, err := backendFor(src)
 		if err != nil {
 			return err
 		}
-		final, err := ResolveDestinationCtx(ctx, src, dest)
+		final, err := ResolveDestinationCtx(ctx, src, w.dest)
 		if err != nil {
 			return err
 		}
@@ -243,9 +207,21 @@ func FinishFlattenDeferred(ctx context.Context, deferred []pathloc.Path, dest pa
 		}
 		items = append(items, parked{temp, final})
 	}
-	if removeEmpty {
-		if err := RemoveEmptyDirsUnder(ctx, roots); err != nil {
-			return err
+	if w.removeEmpty {
+		for _, src := range w.deferred {
+			for dir := src.Parent(); ; dir = dir.Parent() {
+				be, err := backendFor(dir)
+				if err != nil {
+					return err
+				}
+				removed, err := removeDirIfEmpty(ctx, be, dir)
+				if err != nil {
+					return err
+				}
+				if !removed || w.isRoot(dir) {
+					break
+				}
+			}
 		}
 	}
 	for _, it := range items {
@@ -259,8 +235,19 @@ func FinishFlattenDeferred(ctx context.Context, deferred []pathloc.Path, dest pa
 		if err := be.Rename(ctx, it.temp, it.final); err != nil {
 			return &Error{Op: "flatten", Text: fmt.Sprintf("rename %q: %v", it.temp, err), Err: err}
 		}
+		w.doneFiles++
 	}
 	return nil
+}
+
+func destStrictlyUnderRoot(dest, root pathloc.Path) bool {
+	if dest.Scheme() != root.Scheme() {
+		return false
+	}
+	if dest.Equal(root) {
+		return false
+	}
+	return dest.HasPrefix(root)
 }
 
 // freeFlattenTemp returns the first of <name>.flatten, <name>.1.flatten, ... that does not exist.
@@ -458,17 +445,4 @@ func climbDanglingChain(ctx context.Context, dir pathloc.Path, candidates map[st
 		}
 		dir = parent
 	}
-}
-
-func dedupeSortedStrings(sorted []string) []string {
-	if len(sorted) == 0 {
-		return nil
-	}
-	out := sorted[:1]
-	for i := 1; i < len(sorted); i++ {
-		if sorted[i] != out[len(out)-1] {
-			out = append(out, sorted[i])
-		}
-	}
-	return out
 }

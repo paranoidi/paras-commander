@@ -12,10 +12,10 @@ type TransferJobRequest struct {
 }
 
 // FlattenJobRequest enqueues a flatten (move children + optional empty-dir cleanup) job.
+// Roots are the selected directories; the job walks them while it runs.
 type FlattenJobRequest struct {
-	Sources      []string
-	Dest         string
-	RemoveEmpty  bool
-	FlattenRoots []string
-	Deferred     []string
+	Roots       []string
+	Dest        string
+	Recursive   bool
+	RemoveEmpty bool
 }

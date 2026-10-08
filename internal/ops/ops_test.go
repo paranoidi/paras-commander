@@ -1085,7 +1085,7 @@ func TestMoveOverwriteExistingDestViaRename(t *testing.T) {
 	}
 }
 
-func TestMoveOverwriteExistingDirViaRename(t *testing.T) {
+func TestMoveMergesExistingDirViaRename(t *testing.T) {
 	srcDir := t.TempDir()
 	dstParent := t.TempDir()
 
@@ -1126,8 +1126,8 @@ func TestMoveOverwriteExistingDirViaRename(t *testing.T) {
 	if string(data) != "from source" {
 		t.Fatalf("content = %q, want from source", string(data))
 	}
-	if _, err := os.Stat(filepath.Join(dstTree, "to-there.txt")); !os.IsNotExist(err) {
-		t.Fatal("old dest file should be replaced with source tree")
+	if got := readFileContent(t, filepath.Join(dstTree, "to-there.txt")); got != "old dest" {
+		t.Fatalf("old dest file should survive the merge, got %q", got)
 	}
 }
 
@@ -1240,14 +1240,11 @@ func TestMoveConflictResolverCancel(t *testing.T) {
 	if calls != 1 {
 		t.Fatalf("resolver calls = %d, want 1", calls)
 	}
-	if _, err := os.Stat(a); err != nil {
-		t.Fatalf("source a should remain after rollback: %v", err)
-	}
 	if _, err := os.Stat(b); err != nil {
 		t.Fatalf("source b should remain: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dstDir, "a.txt")); err == nil {
-		t.Fatal("partial rename of a should have been rolled back")
+	if _, err := os.Stat(filepath.Join(dstDir, "a.txt")); err != nil {
+		t.Fatalf("earlier rename of a is kept (no rollback): %v", err)
 	}
 	data, _ := os.ReadFile(dstB)
 	if string(data) != "old-b" {

@@ -275,108 +275,9 @@ func TestScanDoesNotOverwriteStatusAfterFlipOnLateError(t *testing.T) {
 	}
 }
 
-// TestScanMoveStaysScanningUntilDone is the R04-003 characterizing case: a move (and
-// flatten-move) must not leave StatusScanning when FirstItem fires. Rename of a live
-// source races the still-running walks. Copy keeps first-item pipelining (covered by
-// TestScanFlipsToQueuedAfterFirstItemAndGrowsTotals).
-func TestScanMoveStaysScanningUntilDone(t *testing.T) {
-	for _, jobType := range []Type{TypeMove, TypeFlatten} {
-		t.Run(string(jobType), func(t *testing.T) {
-			s := NewState()
-			s.SetScanConfig(ScanConfig{ProgressMinInterval: 10 * time.Millisecond})
-
-			firstItem := make(chan struct{})
-			totalsDoneCh := make(chan struct{})
-			doneCh := make(chan struct{})
-			var filesN atomic.Int64
-
-			s.SetScanFunc(func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks ScanWalkHooks) PlanProducer {
-				return PlanProducer{
-					Items:     make(chan ops.PlanItem),
-					FirstItem: firstItem,
-					Totals: func() (int, int, int64) {
-						n := int(filesN.Load())
-						return n, 0, int64(n) * 100
-					},
-					TotalsDone: totalsDoneCh,
-					Done:       doneCh,
-					Err:        func() error { return nil },
-				}
-			})
-
-			job := &Job{ID: "move-wait-" + string(jobType), Type: jobType, Status: StatusScanning, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
-			s.AddJob(job)
-
-			deadline := time.After(3 * time.Second)
-			select {
-			case ev := <-s.Events():
-				if ev.Type != EventEnqueued {
-					t.Fatalf("first event = %v, want EventEnqueued", ev.Type)
-				}
-			case <-deadline:
-				t.Fatal("timeout waiting EventEnqueued")
-			}
-
-			filesN.Store(1)
-			close(firstItem)
-
-			// FirstItem must not make a move runnable: the walk is still reading the source.
-			deadline = time.After(200 * time.Millisecond)
-			for {
-				all := s.AllJobs()
-				if len(all) == 1 && all[0].Status != StatusScanning {
-					t.Fatalf("%s status after first item = %q, want StatusScanning until Done", jobType, all[0].Status)
-				}
-				select {
-				case <-deadline:
-					goto stillScanning
-				case <-time.After(5 * time.Millisecond):
-				}
-			}
-		stillScanning:
-
-			filesN.Store(4)
-			close(totalsDoneCh)
-			deadline = time.After(3 * time.Second)
-			for {
-				all := s.AllJobs()
-				if len(all) == 1 && all[0].TotalsComplete {
-					if all[0].Status != StatusScanning {
-						t.Fatalf("%s status after TotalsDone = %q, want StatusScanning until delivery Done", jobType, all[0].Status)
-					}
-					break
-				}
-				select {
-				case <-deadline:
-					t.Fatalf("timeout waiting TotalsComplete; last seen: %+v", all)
-				case <-time.After(5 * time.Millisecond):
-				}
-			}
-
-			close(doneCh)
-			deadline = time.After(3 * time.Second)
-			for {
-				all := s.AllJobs()
-				if len(all) == 1 && all[0].Status == StatusQueued && all[0].PlanComplete {
-					if all[0].TotalFiles != 4 {
-						t.Fatalf("TotalFiles after Done = %d, want 4 (stable)", all[0].TotalFiles)
-					}
-					return
-				}
-				select {
-				case <-deadline:
-					t.Fatalf("timeout waiting StatusQueued after Done; last seen: %+v", all)
-				case <-time.After(5 * time.Millisecond):
-				}
-			}
-		})
-	}
-}
-
 // TestScanSourceSizeSinkFiresOnlyForSingleSourceLocalCopy covers the copy pre-scan -> disk-usage
 // cache feeder: a single-source local-directory copy job's sink fires once with the source path
-// and the counting walk's final byte total; a move job (source gets deleted, so a cached total
-// would go stale) never fires it.
+// and the counting walk's final byte total.
 func TestScanSourceSizeSinkFiresOnlyForSingleSourceLocalCopy(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
@@ -384,7 +285,6 @@ func TestScanSourceSizeSinkFiresOnlyForSingleSourceLocalCopy(t *testing.T) {
 		wantSink bool
 	}{
 		{"copy", TypeCopy, true},
-		{"move", TypeMove, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s := NewState()

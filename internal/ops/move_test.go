@@ -7,12 +7,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"testing"
-	"time"
 
-	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func skipAllResolver() ConflictResolver {
@@ -51,9 +49,8 @@ func TestMoveCopyPhaseSkipAllPreservesSkippedSources(t *testing.T) {
 	}
 
 	opts := Options{CopyBufferKiB: 4}
-	done, doneBytes, err := executeMoveCopyPhase(
+	done, doneBytes, err := moveViaCopyFallback(
 		context.Background(),
-		nil,
 		MustPaths(onlySrc, conflictSrc),
 		MustPath(dstDir),
 		opts,
@@ -63,7 +60,7 @@ func TestMoveCopyPhaseSkipAllPreservesSkippedSources(t *testing.T) {
 		nil,
 	)
 	if err != nil {
-		t.Fatalf("executeMoveCopyPhase error = %v", err)
+		t.Fatalf("moveViaCopyFallback error = %v", err)
 	}
 	if done != 1 {
 		t.Fatalf("done files = %d, want 1 (only non-conflict file)", done)
@@ -104,9 +101,8 @@ func TestMoveCopyPhaseOverwriteAllRemovesSources(t *testing.T) {
 	}
 
 	opts := Options{CopyBufferKiB: 4}
-	_, _, err := executeMoveCopyPhase(
+	_, _, err := moveViaCopyFallback(
 		context.Background(),
-		nil,
 		MustPaths(srcFile),
 		MustPath(dstDir),
 		opts,
@@ -116,7 +112,7 @@ func TestMoveCopyPhaseOverwriteAllRemovesSources(t *testing.T) {
 		nil,
 	)
 	if err != nil {
-		t.Fatalf("executeMoveCopyPhase error = %v", err)
+		t.Fatalf("moveViaCopyFallback error = %v", err)
 	}
 
 	if _, err := os.Stat(srcFile); !os.IsNotExist(err) {
@@ -158,9 +154,8 @@ func TestMoveCopyPhasePartialTreeSkipAll(t *testing.T) {
 	}
 
 	opts := Options{CopyBufferKiB: 4}
-	_, _, err := executeMoveCopyPhase(
+	_, _, err := moveViaCopyFallback(
 		context.Background(),
-		nil,
 		MustPaths(srcDir),
 		MustPath(dstDir),
 		opts,
@@ -170,7 +165,7 @@ func TestMoveCopyPhasePartialTreeSkipAll(t *testing.T) {
 		nil,
 	)
 	if err != nil {
-		t.Fatalf("executeMoveCopyPhase error = %v", err)
+		t.Fatalf("moveViaCopyFallback error = %v", err)
 	}
 
 	if _, err := os.Stat(onlyNested); !os.IsNotExist(err) {
@@ -194,184 +189,24 @@ func TestMoveCopyPhasePartialTreeSkipAll(t *testing.T) {
 	}
 }
 
-func writeMoveWalkTree(t *testing.T, root string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Join(root, "den"), 0o755); err != nil {
-		t.Fatalf("mkdir den: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "otter.txt"), []byte("otter-content"), 0o644); err != nil {
-		t.Fatalf("write otter: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "den", "fox.txt"), []byte("fox-content"), 0o644); err != nil {
-		t.Fatalf("write fox: %v", err)
-	}
-}
-
-func pauseWalkAfterRoot(t *testing.T, root string) (entered <-chan struct{}, release func()) {
-	t.Helper()
-	enteredCh := make(chan struct{})
-	block := make(chan struct{})
-	var enteredOnce, releaseOnce sync.Once
-	restore := localfs.SetWalkAfterDirHook(func(path string) error {
-		if path != root {
-			return nil
+// moveViaCopyFallback drives moveCopyFallback for each source as ExecuteMove does when a rename
+// is not possible, so tests can exercise the copy+delete path on a single filesystem.
+func moveViaCopyFallback(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+	var files int
+	var bytes int64
+	for _, src := range sources {
+		dst, err := resolveMoveDestination(ctx, destination, src.Base())
+		if err != nil {
+			return files, bytes, err
 		}
-		enteredOnce.Do(func() { close(enteredCh) })
-		<-block
-		return nil
-	})
-	release = func() { releaseOnce.Do(func() { close(block) }) }
-	t.Cleanup(release)
-	t.Cleanup(restore)
-	return enteredCh, release
-}
-
-// TestExecuteMoveWithPlanChanWaitsForWalkBeforeRename is the R04-003 ops case: the rename
-// fast path must not relocate a directory while the delivery walk is still between emitting
-// that root and ReadDir of its children.
-func TestExecuteMoveWithPlanChanWaitsForWalkBeforeRename(t *testing.T) {
-	srcParent := t.TempDir()
-	src := filepath.Join(srcParent, "thicket")
-	if err := os.Mkdir(src, 0o755); err != nil {
-		t.Fatalf("mkdir src: %v", err)
-	}
-	writeMoveWalkTree(t, src)
-	dst := t.TempDir()
-
-	entered, release := pauseWalkAfterRoot(t, src)
-
-	planCh := make(chan PlanItem, 8)
-	walkErrCh := make(chan error, 1)
-	go func() {
-		walkErrCh <- BuildPlanStreamCtx(context.Background(), MustPaths(src), MustPath(dst), true, PlanBuildOptions{}, planCh)
-	}()
-
-	moveDone := make(chan struct{})
-	var moveErr error
-	var doneFiles int
-	go func() {
-		doneFiles, _, moveErr = ExecuteMoveWithPlanChan(context.Background(), planCh, func() error {
-			return <-walkErrCh
-		}, MustPaths(src), MustPath(dst), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, overwriteAllResolver(), nil)
-		close(moveDone)
-	}()
-
-	select {
-	case <-entered:
-	case <-time.After(3 * time.Second):
-		t.Fatal("timeout waiting for walk to pause after emitting root")
-	}
-	if _, err := os.Stat(src); err != nil {
-		t.Fatalf("source must still exist while the walk is paused after emitting root: %v", err)
-	}
-	stillThere := time.Now().Add(150 * time.Millisecond)
-	for time.Now().Before(stillThere) {
-		if _, err := os.Stat(src); err != nil {
-			t.Fatalf("source disappeared while the walk was paused after emitting root: %v", err)
+		f, b, err := moveCopyFallback(ctx, src, dst, destination, opts, throttle, progress, resolver, diskWait)
+		files += f
+		bytes += b
+		if err != nil {
+			return files, bytes, err
 		}
-		time.Sleep(10 * time.Millisecond)
 	}
-
-	release()
-
-	select {
-	case <-moveDone:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timeout waiting for ExecuteMoveWithPlanChan")
-	}
-	if moveErr != nil {
-		t.Fatalf("ExecuteMoveWithPlanChan error = %v (old-path traversal after a premature rename)", moveErr)
-	}
-	if doneFiles != 4 {
-		t.Fatalf("doneFiles = %d, want 4 (stable tree: dir + otter.txt + den + fox.txt)", doneFiles)
-	}
-	if _, err := os.Stat(src); !os.IsNotExist(err) {
-		t.Fatalf("source should be gone after rename: %v", err)
-	}
-	if got := readFileContent(t, filepath.Join(dst, "thicket", "otter.txt")); got != "otter-content" {
-		t.Fatalf("otter.txt = %q", got)
-	}
-	if got := readFileContent(t, filepath.Join(dst, "thicket", "den", "fox.txt")); got != "fox-content" {
-		t.Fatalf("fox.txt = %q", got)
-	}
-}
-
-// TestExecuteMoveWithPlanChanMixedDeviceWaitsForWalk covers the mixed same-device / cross-device
-// case: a same-device directory must not be renamed while its walk is live, and a later
-// cross-device source must still be able to fall back to copy using a complete plan.
-func TestExecuteMoveWithPlanChanMixedDeviceWaitsForWalk(t *testing.T) {
-	sameParent := t.TempDir()
-	srcSame := filepath.Join(sameParent, "thicket")
-	if err := os.Mkdir(srcSame, 0o755); err != nil {
-		t.Fatalf("mkdir srcSame: %v", err)
-	}
-	writeMoveWalkTree(t, srcSame)
-	dst := t.TempDir()
-
-	crossParent, ok := otherDeviceDir(t, dst)
-	if !ok {
-		t.Skip("no other-device directory available for mixed same-device/cross-device move")
-	}
-	srcCross := filepath.Join(crossParent, "harbor.txt")
-	if err := os.WriteFile(srcCross, []byte("harbor-content"), 0o644); err != nil {
-		t.Fatalf("write cross source: %v", err)
-	}
-
-	entered, release := pauseWalkAfterRoot(t, srcSame)
-
-	planCh := make(chan PlanItem, 16)
-	walkErrCh := make(chan error, 1)
-	go func() {
-		walkErrCh <- BuildPlanStreamCtx(context.Background(), MustPaths(srcSame, srcCross), MustPath(dst), true, PlanBuildOptions{FlatDestNames: true}, planCh)
-	}()
-
-	moveDone := make(chan struct{})
-	var moveErr error
-	go func() {
-		_, _, moveErr = ExecuteMoveWithPlanChan(context.Background(), planCh, func() error {
-			return <-walkErrCh
-		}, MustPaths(srcSame, srcCross), MustPath(dst), Options{CopyBufferKiB: 4, FlatDestNames: true}, ProgressEmitThrottle{}, nil, overwriteAllResolver(), nil)
-		close(moveDone)
-	}()
-
-	select {
-	case <-entered:
-	case <-time.After(3 * time.Second):
-		t.Fatal("timeout waiting for walk to pause after emitting same-device root")
-	}
-	if _, err := os.Stat(srcSame); err != nil {
-		t.Fatalf("same-device source must still exist while its walk is paused: %v", err)
-	}
-	stillThere := time.Now().Add(150 * time.Millisecond)
-	for time.Now().Before(stillThere) {
-		if _, err := os.Stat(srcSame); err != nil {
-			t.Fatalf("same-device source disappeared while its walk was paused: %v", err)
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	release()
-
-	select {
-	case <-moveDone:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timeout waiting for mixed-device ExecuteMoveWithPlanChan")
-	}
-	if moveErr != nil {
-		t.Fatalf("ExecuteMoveWithPlanChan error = %v", moveErr)
-	}
-	if _, err := os.Stat(srcSame); !os.IsNotExist(err) {
-		t.Fatalf("same-device source should be gone: %v", err)
-	}
-	if _, err := os.Stat(srcCross); !os.IsNotExist(err) {
-		t.Fatalf("cross-device source should be gone: %v", err)
-	}
-	if got := readFileContent(t, filepath.Join(dst, "thicket", "otter.txt")); got != "otter-content" {
-		t.Fatalf("otter.txt = %q", got)
-	}
-	if got := readFileContent(t, filepath.Join(dst, "harbor.txt")); got != "harbor-content" {
-		t.Fatalf("harbor.txt = %q", got)
-	}
+	return files, bytes, nil
 }
 
 func otherDeviceDir(t *testing.T, reference string) (string, bool) {
@@ -414,35 +249,24 @@ func pathDev(path string) (uint64, bool) {
 	return uint64(st.Dev), true
 }
 
-// TestMoveOverwriteRollbackRestoresDestOnCancel is the R04-004 case: source one overwrites
-// an existing destination, then source two cancels. Both original sources and the original
-// dest-one contents must survive.
-func TestMoveOverwriteRollbackRestoresDestOnCancel(t *testing.T) {
+// TestMoveCancelKeepsEarlierRenames: source one overwrites its destination, then source two
+// cancels. Like mc, the finished move of source one stays; source two and its destination are
+// untouched.
+func TestMoveCancelKeepsEarlierRenames(t *testing.T) {
 	srcDir := t.TempDir()
 	dstDir := t.TempDir()
-
 	srcAlpha := filepath.Join(srcDir, "alpha.txt")
 	srcBeta := filepath.Join(srcDir, "beta.txt")
-	if err := os.WriteFile(srcAlpha, []byte("new-alpha"), 0o644); err != nil {
-		t.Fatalf("write src alpha: %v", err)
-	}
-	if err := os.WriteFile(srcBeta, []byte("new-beta"), 0o644); err != nil {
-		t.Fatalf("write src beta: %v", err)
-	}
 	dstAlpha := filepath.Join(dstDir, "alpha.txt")
 	dstBeta := filepath.Join(dstDir, "beta.txt")
-	if err := os.WriteFile(dstAlpha, []byte("old-alpha"), 0o644); err != nil {
-		t.Fatalf("write dest alpha: %v", err)
-	}
-	if err := os.WriteFile(dstBeta, []byte("old-beta"), 0o644); err != nil {
-		t.Fatalf("write dest beta: %v", err)
+	for path, content := range map[string]string{srcAlpha: "new-alpha", srcBeta: "new-beta", dstAlpha: "old-alpha", dstBeta: "old-beta"} {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
 	}
 
 	calls := 0
-	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
-		_ = src
-		_ = dst
-		_ = facts
+	resolver := func(string, string, FileConflictFacts) (bool, error) {
 		calls++
 		if calls == 1 {
 			return true, nil
@@ -450,65 +274,67 @@ func TestMoveOverwriteRollbackRestoresDestOnCancel(t *testing.T) {
 		return false, fmt.Errorf("canceled by user")
 	}
 
-	_, _, err := ExecuteMove(context.Background(), MustPaths(srcAlpha, srcBeta), MustPath(dstDir), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, resolver, nil)
+	done, _, err := ExecuteMove(context.Background(), MustPaths(srcAlpha, srcBeta), MustPath(dstDir), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, resolver, nil)
 	if err == nil {
 		t.Fatal("ExecuteMove error = nil, want cancel error")
 	}
-	if calls != 2 {
-		t.Fatalf("resolver calls = %d, want 2", calls)
+	if done != 1 {
+		t.Fatalf("done = %d, want 1", done)
 	}
-	if got := readFileContent(t, srcAlpha); got != "new-alpha" {
-		t.Fatalf("source alpha = %q, want new-alpha", got)
+	if got := readFileContent(t, dstAlpha); got != "new-alpha" {
+		t.Fatalf("dest alpha = %q, want new-alpha (earlier rename kept)", got)
 	}
 	if got := readFileContent(t, srcBeta); got != "new-beta" {
 		t.Fatalf("source beta = %q, want new-beta", got)
-	}
-	if got := readFileContent(t, dstAlpha); got != "old-alpha" {
-		t.Fatalf("dest alpha = %q, want old-alpha restored", got)
 	}
 	if got := readFileContent(t, dstBeta); got != "old-beta" {
 		t.Fatalf("dest beta = %q, want old-beta untouched", got)
 	}
 }
 
-// TestMoveOverwriteRollbackRestoresDestOnFallback covers overwrite then cross-device
-// fallback: rename phase must restore the overwritten dest before copy starts.
-func TestMoveOverwriteRollbackRestoresDestOnFallback(t *testing.T) {
-	srcDir := t.TempDir()
-	dstDir := t.TempDir()
-	crossParent, ok := otherDeviceDir(t, dstDir)
+// TestMoveMixedDeviceRenamesOneCopiesOther: the same-device source moves by rename, the
+// cross-device one is planned and copied on its own; nothing is rolled back.
+func TestMoveMixedDeviceRenamesOneCopiesOther(t *testing.T) {
+	sameParent := t.TempDir()
+	srcSame := filepath.Join(sameParent, "thicket")
+	if err := os.MkdirAll(filepath.Join(srcSame, "den"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcSame, "den", "fox.txt"), []byte("fox-content"), 0o644); err != nil {
+		t.Fatalf("write fox: %v", err)
+	}
+	dst := t.TempDir()
+	crossParent, ok := otherDeviceDir(t, dst)
 	if !ok {
-		t.Skip("no other-device directory available for fallback overwrite rollback")
+		t.Skip("no other-device directory available for mixed same-device/cross-device move")
+	}
+	srcCross := filepath.Join(crossParent, "harbor")
+	if err := os.MkdirAll(srcCross, 0o755); err != nil {
+		t.Fatalf("mkdir cross: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcCross, "otter.txt"), []byte("otter-content"), 0o644); err != nil {
+		t.Fatalf("write otter: %v", err)
 	}
 
-	srcAlpha := filepath.Join(srcDir, "alpha.txt")
-	if err := os.WriteFile(srcAlpha, []byte("new-alpha"), 0o644); err != nil {
-		t.Fatalf("write src alpha: %v", err)
-	}
-	srcCross := filepath.Join(crossParent, "harbor.txt")
-	if err := os.WriteFile(srcCross, []byte("harbor-content"), 0o644); err != nil {
-		t.Fatalf("write cross source: %v", err)
-	}
-	dstAlpha := filepath.Join(dstDir, "alpha.txt")
-	if err := os.WriteFile(dstAlpha, []byte("old-alpha"), 0o644); err != nil {
-		t.Fatalf("write dest alpha: %v", err)
-	}
-
-	_, _, fallback, err := executeMoveRenamePhase(context.Background(), MustPaths(srcAlpha, srcCross), MustPath(dstDir), nil, true, ProgressEmitThrottle{}, overwriteAllResolver(), nil)
+	var last int
+	progress := func(_, _ string, doneFiles int, _ int64) { last = doneFiles }
+	done, _, err := ExecuteMove(context.Background(), MustPaths(srcSame, srcCross), MustPath(dst), Options{CopyBufferKiB: 4, FlatDestNames: true}, ProgressEmitThrottle{}, progress, overwriteAllResolver(), nil)
 	if err != nil {
-		t.Fatalf("executeMoveRenamePhase error = %v", err)
+		t.Fatalf("ExecuteMove: %v", err)
 	}
-	if !fallback {
-		t.Fatal("expected copy fallback after cross-device source")
+	if done < 2 || last != done {
+		t.Fatalf("done = %d, last progress = %d; want done >= 2 and equal", done, last)
 	}
-	if got := readFileContent(t, srcAlpha); got != "new-alpha" {
-		t.Fatalf("source alpha = %q, want restored new-alpha", got)
+	for _, p := range []string{srcSame, srcCross} {
+		if _, err := os.Stat(p); !os.IsNotExist(err) {
+			t.Fatalf("source %s should be gone: %v", p, err)
+		}
 	}
-	if got := readFileContent(t, srcCross); got != "harbor-content" {
-		t.Fatalf("cross source = %q, want harbor-content still in place", got)
+	if got := readFileContent(t, filepath.Join(dst, "thicket", "den", "fox.txt")); got != "fox-content" {
+		t.Fatalf("fox.txt = %q", got)
 	}
-	if got := readFileContent(t, dstAlpha); got != "old-alpha" {
-		t.Fatalf("dest alpha = %q, want old-alpha restored before copy fallback", got)
+	if got := readFileContent(t, filepath.Join(dst, "harbor", "otter.txt")); got != "otter-content" {
+		t.Fatalf("otter.txt = %q", got)
 	}
 }
 

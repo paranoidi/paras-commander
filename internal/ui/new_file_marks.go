@@ -16,7 +16,7 @@ func TopLevelDestNamesFromJob(j *jobs.Job) (destDir pathloc.Path, names []string
 		return pathloc.Path{}, nil, false
 	}
 	switch j.Type {
-	case jobs.TypeCopy, jobs.TypeMove, jobs.TypeFlatten:
+	case jobs.TypeCopy, jobs.TypeMove:
 	default:
 		return pathloc.Path{}, nil, false
 	}
@@ -27,10 +27,7 @@ func TopLevelDestNamesFromJob(j *jobs.Job) (destDir pathloc.Path, names []string
 	if destDir.IsZero() {
 		return pathloc.Path{}, nil, false
 	}
-	var nameRoot pathloc.Path
-	if j.Type != jobs.TypeFlatten {
-		nameRoot = ops.TransferNameRoot(j.Sources)
-	}
+	nameRoot := ops.TransferNameRoot(j.Sources)
 	seen := make(map[string]struct{})
 	for _, src := range j.Sources {
 		base := j.Destination.Base()

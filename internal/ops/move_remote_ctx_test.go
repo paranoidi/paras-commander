@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -24,7 +23,7 @@ const (
 // so cancel can be shown to unwind the move rename phase.
 type blockingMoveBackend struct {
 	destDir pathloc.Path
-	mode    string // "stat", "rename", "rollback"
+	mode    string // "stat", "rename"
 
 	phase   atomic.Value // string
 	entered chan struct{}
@@ -73,19 +72,10 @@ func (b *blockingMoveBackend) Stat(ctx context.Context, loc pathloc.Path) (fsbac
 }
 
 func (b *blockingMoveBackend) Rename(ctx context.Context, _, _ pathloc.Path) error {
-	n := b.renames.Add(1)
+	b.renames.Add(1)
 	switch b.mode {
 	case "rename":
 		return b.block(ctx, "rename")
-	case "rollback":
-		switch n {
-		case 1:
-			return nil
-		case 2:
-			return errors.New("second source rename failed")
-		default:
-			return b.block(ctx, "rollback")
-		}
 	default:
 		return b.block(ctx, "rename")
 	}
@@ -150,7 +140,7 @@ func waitBlockedThenCancel(t *testing.T, entered <-chan struct{}, cancel context
 func startRemoteRenamePhase(ctx context.Context, sources []pathloc.Path, dest pathloc.Path) <-chan error {
 	done := make(chan error, 1)
 	go func() {
-		_, _, _, err := executeMoveRenamePhase(ctx, sources, dest, nil, true, ProgressEmitThrottle{}, nil, nil)
+		_, _, err := ExecuteMove(ctx, sources, dest, Options{FlatDestNames: true}, ProgressEmitThrottle{}, nil, nil, nil)
 		done <- err
 	}()
 	return done
@@ -180,65 +170,4 @@ func TestRemoteMoveRenamePhaseCancelInterruptsBlockedDestStat(t *testing.T) {
 	dest := pathloc.MustParse(remoteMoveDestRoot)
 	done := startRemoteRenamePhase(ctx, []pathloc.Path{src}, dest)
 	waitBlockedThenCancel(t, be.entered, cancel, done, "stat", be, true)
-}
-
-func TestRemoteMoveRollbackCancelInterruptsBlockedRename(t *testing.T) {
-	be := newBlockingMoveBackend("rollback")
-	installMoveBackend(t, be)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sources := []pathloc.Path{
-		pathloc.MustParse(remoteMoveSrcRoot + "/cedar.txt"),
-		pathloc.MustParse(remoteMoveSrcRoot + "/harbor.txt"),
-	}
-	dest := pathloc.MustParse(remoteMoveDestRoot)
-	done := startRemoteRenamePhase(ctx, sources, dest)
-	waitBlockedThenCancel(t, be.entered, cancel, done, "rollback", be, false)
-}
-
-func TestRemoteMoveRenamePhaseCancelExitsWorker(t *testing.T) {
-	be := newBlockingMoveBackend("rename")
-	installMoveBackend(t, be)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		_, _, _ = ExecuteMove(
-			ctx,
-			[]pathloc.Path{pathloc.MustParse(remoteMoveSrcRoot + "/cedar.txt")},
-			pathloc.MustParse(remoteMoveDestRoot),
-			Options{},
-			ProgressEmitThrottle{},
-			nil,
-			nil,
-			nil,
-		)
-	}()
-
-	select {
-	case <-be.entered:
-	case <-time.After(2 * time.Second):
-		t.Fatal("ExecuteMove never reached blocked remote rename")
-	}
-	cancel()
-
-	finished := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(finished)
-	}()
-	select {
-	case <-finished:
-	case <-time.After(2 * time.Second):
-		t.Fatal("ExecuteMove worker did not exit after cancel")
-	}
-	if got := be.Phase(); got != "rename" {
-		t.Fatalf("blocked phase = %q, want rename", got)
-	}
 }
