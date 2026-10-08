@@ -165,8 +165,14 @@ func (w *flattenWalk) walk(ctx context.Context, dir pathloc.Path) error {
 }
 
 // removeDirIfEmpty removes dir when it holds nothing but dot entries. A directory that no longer
-// exists counts as removed. op labels returned errors.
+// exists counts as removed. op labels returned errors. Callers have usually just emptied dir, so it
+// tries the (non-recursive) Remove first and lists dir only when that fails, to tell "not empty"
+// (false, nil) from a real error without parsing backend-specific error codes.
 func removeDirIfEmpty(ctx context.Context, be fsbackend.Backend, dir pathloc.Path, op string) (bool, error) {
+	removeErr := be.Remove(ctx, dir)
+	if removeErr == nil || isNotExist(removeErr) {
+		return true, nil
+	}
 	entries, err := be.List(ctx, dir)
 	if err != nil {
 		if isNotExist(err) {
@@ -177,10 +183,7 @@ func removeDirIfEmpty(ctx context.Context, be fsbackend.Backend, dir pathloc.Pat
 	if !dirHasOnlyDotEntries(entries) {
 		return false, nil
 	}
-	if err := be.Remove(ctx, dir); err != nil {
-		return false, &Error{Op: op, Text: fmt.Sprintf("remove empty directory %q: %v", dir, err), Err: err}
-	}
-	return true, nil
+	return false, &Error{Op: op, Text: fmt.Sprintf("remove empty directory %q: %v", dir, removeErr), Err: removeErr}
 }
 
 // finishDeferred parks each deferred item as dest/<name>.flatten, removes the directories that
