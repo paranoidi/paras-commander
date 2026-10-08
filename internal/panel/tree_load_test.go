@@ -394,8 +394,8 @@ func TestRestoreCascadesAsyncChildLoads(t *testing.T) {
 	}
 
 	// Move onto child, expand it, deliver its leaf, and highlight it.
-	if !s.SelectVisibleEntry("child") {
-		t.Fatal("SelectVisibleEntry(child) = false, want true")
+	if !s.selectVisibleEntryByPath(child) {
+		t.Fatal("selectVisibleEntryByPath(child) = false, want true")
 	}
 	if err := s.ExpandTreeCursorRow(10); err != nil {
 		t.Fatalf("ExpandTreeCursorRow (child): %v", err)
@@ -406,8 +406,8 @@ func TestRestoreCascadesAsyncChildLoads(t *testing.T) {
 	if !s.ApplyTreeChildLoad(child, []localfs.Entry{{Name: "leaf.txt", Path: leaf, Type: localfs.EntryFile}}, nil, 10) {
 		t.Fatal("ApplyTreeChildLoad(child) returned false, want true")
 	}
-	if !s.SelectVisibleEntry("leaf.txt") {
-		t.Fatal("SelectVisibleEntry(leaf.txt) = false, want true")
+	if !s.selectVisibleEntryByPath(leaf) {
+		t.Fatal("selectVisibleEntryByPath(leaf.txt) = false, want true")
 	}
 
 	// Simulate leaving root (State.load's rememberCursorForPath call) and arriving elsewhere.
@@ -504,8 +504,8 @@ func TestRestoreLocalTreeExpansionsUsesChildScheduler(t *testing.T) {
 	if err := s.ExpandTreeCursorRow(10); err != nil {
 		t.Fatalf("ExpandTreeCursorRow: %v", err)
 	}
-	if !s.SelectVisibleEntry("willow.txt") {
-		t.Fatal("SelectVisibleEntry(willow.txt) = false, want true")
+	if !s.selectVisibleEntryByPath(filepath.Join(harbor, "willow.txt")) {
+		t.Fatal("selectVisibleEntryByPath(willow.txt) = false, want true")
 	}
 	if err := s.NavigateTo(other, "", 10); err != nil {
 		t.Fatalf("NavigateTo other: %v", err)

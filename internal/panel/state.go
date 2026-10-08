@@ -270,6 +270,10 @@ type State struct {
 	// treeCursorID tracks the node ID the cursor should reattach to after a tree rebuild
 	// (expand/collapse, or an async ApplyTreeChildLoad completing).
 	treeCursorID string
+	// treeCursorFallback lists row IDs to land on, in order, when treeCursorID is gone (its row
+	// was deleted): the rows that followed it, then the rows before it nearest first. Set by a
+	// same-directory reload, cleared by any user cursor move.
+	treeCursorFallback []string
 	// treeExpandQuiet is the number of in-flight async child loads coalesced by
 	// ExpandAllTreeShallow: ApplyTreeChildLoad updates node state but skips rebuild/redraw
 	// until this counter reaches zero, then reattaches the cursor to treeCursorID once.
@@ -1460,17 +1464,29 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	sameDirReload := previousPath.Equal(listingLoc)
 	priorCursor := s.Cursor
 	priorTreeCursorID := ""
+	var priorTreeFallback []string
 	if s.ListLayout == ListLayoutTree && sameDirReload {
 		if rawIdx, ok := s.rawIndexForCursor(); ok && rawIdx >= 0 && rawIdx < len(s.treeRows) {
 			priorTreeCursorID = s.treeRows[rawIdx].ID
+			priorTreeFallback = treeNeighbourIDs(s.treeRows, rawIdx)
 		}
 	}
 	priorScroll := s.ScrollOffset
 	wasCentered := false
 	var nextSurvivor string
+	// A tree reload, or a tree history recall, reselects by full row path (treeCursorFallback for
+	// a deleted row) — never by name, which could land on a same-named row in another branch.
+	treeReselect := priorTreeCursorID != ""
+	if s.ListLayout == ListLayoutTree && !sameDirReload && centerRecalled {
+		if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok && snap.CursorPath != "" {
+			treeReselect = true
+		}
+	}
 	if sameDirReload {
 		wasCentered = s.cursorAppearsCentered(s.effectiveFileListViewportRows(viewportRows))
-		nextSurvivor = s.firstSurvivingNameAfterCursor(localEntries)
+		if !treeReselect {
+			nextSurvivor = s.firstSurvivingNameAfterCursor(localEntries)
+		}
 	}
 	var newlyAppeared []string
 	// hadPriorListing is false only before the very first listing lands on a panel built by
@@ -1572,7 +1588,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	}
 	s.rebuildFilter()
 	found := false
-	if selectedName != "" {
+	if selectedName != "" && !treeReselect {
 		found = s.SelectVisibleEntry(selectedName)
 	}
 	if !found && nextSurvivor != "" {
@@ -1586,10 +1602,12 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 		}
 	}
 	if s.ListLayout == ListLayoutTree {
+		s.treeCursorFallback = nil
 		switch {
 		case sameDirReload && priorTreeCursorID != "":
-			s.selectVisibleEntryByPath(priorTreeCursorID)
 			s.treeCursorID = priorTreeCursorID
+			s.treeCursorFallback = priorTreeFallback
+			s.selectTreeCursorRow()
 		case !sameDirReload && centerRecalled:
 			if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok && snap.CursorPath != "" {
 				s.selectVisibleEntryByPath(snap.CursorPath)
@@ -1892,13 +1910,21 @@ func (s *State) ToggleOrRemoveStripSelection() bool {
 	return true
 }
 
+// SelectVisibleEntry moves the cursor onto the row named name in this panel's directory. In tree
+// mode the name is resolved to its full path under Path and matched exactly, so a same-named row
+// in another branch can never be selected; nested rows are selected by path
+// (selectVisibleEntryByPath).
 func (s *State) SelectVisibleEntry(name string) bool {
+	if s.ListLayout == ListLayoutTree {
+		target, err := s.Path.Join(name)
+		if err != nil {
+			return false
+		}
+		return s.selectVisibleEntryByPath(target.String())
+	}
 	for i := 0; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
-		if !ok {
-			continue
-		}
-		if entry.Name == name {
+		if ok && entry.Name == name {
 			s.Cursor = i
 			return true
 		}
@@ -1925,9 +1951,18 @@ func (s *State) SelectVisibleEntryCentered(name string, viewportRows int) bool {
 	return true
 }
 
-func (s *State) selectVisibleEntryByPath(absPath string) {
+// SelectVisibleEntryPathCentered selects the row at absPath (any tree depth) and centers it.
+func (s *State) SelectVisibleEntryPathCentered(absPath string, viewportRows int) bool {
+	if !s.selectVisibleEntryByPath(absPath) {
+		return false
+	}
+	s.applyHighlightScroll(viewportRows, true)
+	return true
+}
+
+func (s *State) selectVisibleEntryByPath(absPath string) bool {
 	if absPath == "" {
-		return
+		return false
 	}
 	wantLoc, wantErr := pathloc.Parse(absPath)
 	for i := 0; i < s.VisibleEntryCount(); i++ {
@@ -1938,14 +1973,15 @@ func (s *State) selectVisibleEntryByPath(absPath string) {
 		if wantErr == nil {
 			if entLoc, err := pathloc.Parse(entry.Path); err == nil && entLoc.Equal(wantLoc) {
 				s.Cursor = i
-				return
+				return true
 			}
 		}
 		if filepath.Clean(entry.Path) == filepath.Clean(absPath) {
 			s.Cursor = i
-			return
+			return true
 		}
 	}
+	return false
 }
 
 func (s *State) clampCursor() {
@@ -2248,14 +2284,10 @@ func (s *State) ApplySortFromDialog(sort SortState, viewportRows int) {
 		s.DiskUsageIdleSortActivated = true
 	}
 	entry, ok := s.CurrentEntry()
-	selectedName := ""
-	if ok {
-		selectedName = entry.Name
-	}
 	s.ApplySort()
 	s.rebuildFilter()
-	if selectedName != "" {
-		_ = s.SelectVisibleEntry(selectedName)
+	if ok {
+		s.selectVisibleEntryByPath(entry.Path)
 	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
@@ -2292,17 +2324,13 @@ func (s *State) ListingFullyDiskCached() bool {
 func (s *State) SetSortMode(mode SortMode, reverse bool, dirsFirst bool, viewportRows int) {
 	s.IdleDiskTotalsSort = false
 	entry, ok := s.CurrentEntry()
-	selectedName := ""
-	if ok {
-		selectedName = entry.Name
-	}
 	s.Sort.Mode = mode
 	s.Sort.Reverse = reverse
 	s.Sort.DirectoriesFirst = dirsFirst
 	s.ApplySort()
 	s.rebuildFilter()
-	if selectedName != "" {
-		_ = s.SelectVisibleEntry(selectedName)
+	if ok {
+		s.selectVisibleEntryByPath(entry.Path)
 	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)

@@ -1854,8 +1854,8 @@ func TestNavigateBackRestoresTreeExpansionAndCursor(t *testing.T) {
 	if err := state.ExpandTreeCursorRow(10); err != nil {
 		t.Fatalf("ExpandTreeCursorRow: %v", err)
 	}
-	if !state.SelectVisibleEntry("willow.txt") {
-		t.Fatal("SelectVisibleEntry(willow.txt) = false, want true")
+	if !state.selectVisibleEntryByPath(filepath.Join(harbor, "willow.txt")) {
+		t.Fatal("selectVisibleEntryByPath(willow.txt) = false, want true")
 	}
 
 	if err := state.NavigateTo(other, "", 10); err != nil {
@@ -2131,8 +2131,8 @@ func TestReturnToDrasticallyChangedDirectory(t *testing.T) {
 	if err := state.ExpandTreeCursorRow(10); err != nil {
 		t.Fatalf("ExpandTreeCursorRow: %v", err)
 	}
-	if !state.SelectVisibleEntry("ember.txt") {
-		t.Fatal("SelectVisibleEntry(ember.txt) = false, want true")
+	if !state.selectVisibleEntryByPath(nested) {
+		t.Fatal("selectVisibleEntryByPath(ember.txt) = false, want true")
 	}
 
 	if err := state.NavigateTo(other, "", 10); err != nil {

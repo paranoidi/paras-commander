@@ -475,7 +475,8 @@ func (h *Handler) applyRenameSuccess(st renameApply) {
 	p.RenameEntry(st.entry.Path, st.plan.NewName, h.host.PanelViewportRows(st.panelID))
 	if st.focusAfter {
 		h.RefreshBothPanelsWithFocus(st.panelID, func() {
-			h.host.PanelByID(st.panelID).SelectVisibleEntryCentered(st.plan.NewName, h.host.PanelViewportRows(st.panelID))
+			newPath := filepath.Join(filepath.Dir(st.entry.Path), st.plan.NewName)
+			h.host.PanelByID(st.panelID).SelectVisibleEntryPathCentered(newPath, h.host.PanelViewportRows(st.panelID))
 		})
 	} else {
 		h.RefreshBothPanels()

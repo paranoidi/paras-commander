@@ -834,6 +834,7 @@ func (s *State) syncTreeCursorIDToCursor() {
 	}
 	if rawIdx, ok := s.rawIndexForCursor(); ok && rawIdx >= 0 && rawIdx < len(s.treeRows) {
 		s.treeCursorID = s.treeRows[rawIdx].ID
+		s.treeCursorFallback = nil
 	}
 }
 
@@ -850,17 +851,50 @@ func (s *State) rebuildTreeRows() {
 // row.
 func (s *State) reattachTreeCursorByID(id string, viewportRows int) {
 	priorCursor, priorScroll := s.Cursor, s.ScrollOffset
-	for i := range s.treeRows {
-		if s.treeRows[i].ID == id {
-			// When the row is filtered out, fall through to clampCursor below instead of
-			// reassigning — same fallback as when id isn't found in treeRows at all.
-			if pos, ok := s.cursorForRawIndex(i); ok {
-				s.Cursor = pos
-			}
-			break
-		}
+	if id == s.treeCursorID {
+		s.selectTreeCursorRow()
+	} else {
+		s.selectTreeRowID(id, nil)
 	}
 	s.finishSameDirectoryReloadScroll(priorCursor, priorScroll, viewportRows, false)
+}
+
+// selectTreeCursorRow moves the cursor onto treeCursorID, or onto the first treeCursorFallback
+// row still visible when that row is gone. Re-run on every rebuild, so as async child loads land
+// the cursor settles on the nearest surviving neighbour of a deleted row.
+func (s *State) selectTreeCursorRow() bool {
+	return s.selectTreeRowID(s.treeCursorID, s.treeCursorFallback)
+}
+
+// selectTreeRowID moves the cursor onto the first visible row among id and then fallback. Leaves
+// the cursor untouched (callers clamp) when none is visible, including when filtered out.
+func (s *State) selectTreeRowID(id string, fallback []string) bool {
+	raw := make(map[string]int, len(s.treeRows))
+	for i := range s.treeRows {
+		raw[s.treeRows[i].ID] = i
+	}
+	for _, want := range append([]string{id}, fallback...) {
+		if i, ok := raw[want]; ok {
+			if pos, ok := s.cursorForRawIndex(i); ok {
+				s.Cursor = pos
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// treeNeighbourIDs returns the IDs of the rows after rawIdx in order, then the rows before it
+// nearest first — the order a deleted cursor row hands the highlight on.
+func treeNeighbourIDs(rows []treeflat.Row[TreeEntry], rawIdx int) []string {
+	ids := make([]string, 0, len(rows)-1)
+	for i := rawIdx + 1; i < len(rows); i++ {
+		ids = append(ids, rows[i].ID)
+	}
+	for i := rawIdx - 1; i >= 0; i-- {
+		ids = append(ids, rows[i].ID)
+	}
+	return ids
 }
 
 // TreeRowShape returns the tree-shape fields for VisibleEntry(index) when in tree mode: depth,
