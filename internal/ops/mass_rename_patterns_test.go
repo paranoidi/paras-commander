@@ -29,7 +29,7 @@ func TestSaveLoadMassRenamePatternsRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "patterns.toml")
 	want := []MassRenamePattern{
-		{Name: "harbor", Description: "strip camera prefix", Mode: "simple", Find: "IMG_", Replace: "", CaseFold: true, StripSpaces: true},
+		{Name: "harbor", Description: "strip camera prefix", Mode: "simple", Find: "IMG_", Replace: "", CaseFold: true, StripSpaces: true, IgnoreExt: true},
 		{Name: "lantern", Description: "regex cleanup", Mode: "regex", Find: `\d+`, Replace: "#", CaseFold: false},
 	}
 	if err := SaveMassRenamePatterns(path, want); err != nil {

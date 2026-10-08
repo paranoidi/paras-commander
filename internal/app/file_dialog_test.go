@@ -919,8 +919,8 @@ func TestMassRenameCapitalizeTabCyclesThroughCheckboxes(t *testing.T) {
 	}
 
 	okIdx := dialog.FileDialogOKFocusIndex(*d)
-	if okIdx != 8 {
-		t.Fatalf("okIdx = %d, want 8", okIdx)
+	if okIdx != 9 {
+		t.Fatalf("okIdx = %d, want 9", okIdx)
 	}
 
 	// Down steps through the two capitalize checkbox rows individually (mirrors Find/Replace

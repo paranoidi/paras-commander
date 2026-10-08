@@ -14,6 +14,11 @@ confirm. Swaps and chains (a to b, b to a) are handled safely.
 
 **Trim whitespace** strips leading and trailing whitespace from the new names.
 
+**Ignore extension** (on by default, `Alt+X`) limits Simple, Regular expression and Capitalize
+to the file name without its extension, so `.` to a space turns `walnut.pear.txt` into
+`walnut pear.txt`. The extension is the part after the last dot; dotfiles such as `.bashrc` and
+directories have none. External $EDITOR ignores this option. The setting is saved with patterns.
+
 ## Zero-padding numbers
 
 In Regular expression mode, `${N:W}` expands group `N` (a number or a group name) left-padded

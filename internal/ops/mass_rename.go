@@ -30,6 +30,30 @@ type MassRenameRow struct {
 	SourcePath string
 	OldBase    string
 	NewBase    string
+	IsDir      bool
+}
+
+// massRenameSplitExt splits base into stem and extension (filepath.Ext). Directories and names
+// whose stem would be empty (dotfiles) have no extension.
+func massRenameSplitExt(base string, isDir bool) (stem, ext string) {
+	if isDir {
+		return base, ""
+	}
+	ext = filepath.Ext(base)
+	if ext == base {
+		return base, ""
+	}
+	return base[:len(base)-len(ext)], ext
+}
+
+// MassRenameMatchBase returns the part of the row's old basename that find/replace operates on:
+// the stem when ignoreExt is set, otherwise the whole basename.
+func MassRenameMatchBase(r MassRenameRow, ignoreExt bool) string {
+	if !ignoreExt {
+		return r.OldBase
+	}
+	stem, _ := massRenameSplitExt(r.OldBase, r.IsDir)
+	return stem
 }
 
 func resolveEntryPath(entry localfs.Entry, panelPath string) string {
@@ -44,7 +68,7 @@ func resolveEntryPath(entry localfs.Entry, panelPath string) string {
 // stripping leading/trailing Unicode spaces from the result. Shared by MassRenameCompute and
 // MassRenameComputeCapitalize. panelPath is used to resolve non-absolute entry paths (same as
 // PlanRename). Rows with NewBase == OldBase are no-ops (still listed for preview).
-func massRenameBuildRows(entries []localfs.Entry, panelPath string, stripSpaces bool, transform func(oldBase string) (string, error)) ([]MassRenameRow, error) {
+func massRenameBuildRows(entries []localfs.Entry, panelPath string, stripSpaces, ignoreExt bool, transform func(oldBase string) (string, error)) ([]MassRenameRow, error) {
 	if len(entries) == 0 {
 		return nil, &Error{Op: "mass-rename", Text: "no files to rename"}
 	}
@@ -52,14 +76,21 @@ func massRenameBuildRows(entries []localfs.Entry, panelPath string, stripSpaces 
 	for _, e := range entries {
 		src := resolveEntryPath(e, panelPath)
 		oldBase := filepath.Base(src)
-		nb, err := transform(oldBase)
+		isDir := e.Type == localfs.EntryDirectory
+		row := MassRenameRow{SourcePath: src, OldBase: oldBase, IsDir: isDir}
+		nb, err := transform(MassRenameMatchBase(row, ignoreExt))
 		if err != nil {
 			return nil, err
+		}
+		if ignoreExt {
+			_, ext := massRenameSplitExt(oldBase, isDir)
+			nb += ext
 		}
 		if stripSpaces {
 			nb = strings.TrimSpace(nb)
 		}
-		out = append(out, MassRenameRow{SourcePath: src, OldBase: oldBase, NewBase: nb})
+		row.NewBase = nb
+		out = append(out, row)
 	}
 	return out, nil
 }
@@ -68,10 +99,11 @@ func massRenameBuildRows(entries []localfs.Entry, panelPath string, stripSpaces 
 // In simple mode, an empty find string leaves each basename unchanged (before optional strip).
 // In regex mode, a nil regexp leaves each basename unchanged (caller omits compile for an empty pattern).
 // When stripSpaces is true, leading/trailing Unicode spaces are trimmed from NewBase.
+// When ignoreExt is true, only the stem (basename without extension) is transformed.
 // Rows with NewBase == OldBase are no-ops (still listed for preview).
 // panelPath is used to resolve non-absolute entry paths (same as PlanRename).
-func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenameMode, find, replace string, caseFold, stripSpaces bool, rx *regexp.Regexp) ([]MassRenameRow, error) {
-	return massRenameBuildRows(entries, panelPath, stripSpaces, func(oldBase string) (string, error) {
+func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenameMode, find, replace string, caseFold, stripSpaces, ignoreExt bool, rx *regexp.Regexp) ([]MassRenameRow, error) {
+	return massRenameBuildRows(entries, panelPath, stripSpaces, ignoreExt, func(oldBase string) (string, error) {
 		return massRenameTransformBase(mode, oldBase, find, replace, caseFold, rx)
 	})
 }
@@ -79,8 +111,8 @@ func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenam
 // MassRenameComputeCapitalize applies the Capitalize transform (massRenameCapitalize) to each
 // entry basename and returns one row per entry. When stripSpaces is true, leading/trailing
 // Unicode spaces are trimmed from NewBase. panelPath is used to resolve non-absolute entry paths.
-func MassRenameComputeCapitalize(entries []localfs.Entry, panelPath string, eachWord, punctSep, stripSpaces bool) ([]MassRenameRow, error) {
-	return massRenameBuildRows(entries, panelPath, stripSpaces, func(oldBase string) (string, error) {
+func MassRenameComputeCapitalize(entries []localfs.Entry, panelPath string, eachWord, punctSep, stripSpaces, ignoreExt bool) ([]MassRenameRow, error) {
+	return massRenameBuildRows(entries, panelPath, stripSpaces, ignoreExt, func(oldBase string) (string, error) {
 		return massRenameCapitalize(oldBase, eachWord, punctSep), nil
 	})
 }
@@ -433,14 +465,14 @@ func MassRenameValidateRows(rows []MassRenameRow) error {
 
 // MassRenameFindMatchesAny reports whether find (simple) or rx (regex) matches at least one row basename.
 // An empty simple find or nil regexp matches all rows (identity preview; no error state).
-func MassRenameFindMatchesAny(rows []MassRenameRow, mode MassRenameMode, find string, caseFold bool, rx *regexp.Regexp) bool {
+func MassRenameFindMatchesAny(rows []MassRenameRow, mode MassRenameMode, find string, caseFold, ignoreExt bool, rx *regexp.Regexp) bool {
 	switch mode {
 	case MassRenameModeSimple:
 		if find == "" {
 			return true
 		}
 		for _, r := range rows {
-			if massRenameSimpleFindMatches(r.OldBase, find, caseFold) {
+			if massRenameSimpleFindMatches(MassRenameMatchBase(r, ignoreExt), find, caseFold) {
 				return true
 			}
 		}
@@ -450,7 +482,7 @@ func MassRenameFindMatchesAny(rows []MassRenameRow, mode MassRenameMode, find st
 			return true
 		}
 		for _, r := range rows {
-			if rx.MatchString(r.OldBase) {
+			if rx.MatchString(MassRenameMatchBase(r, ignoreExt)) {
 				return true
 			}
 		}

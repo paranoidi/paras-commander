@@ -308,12 +308,16 @@ func TestActivateMassRenameLoadPickerSelectionAppliesPattern(t *testing.T) {
 	}
 	h.openMassRenameLoadPicker()
 	h.model.FileDialog.MassRenameLoadPicker.Selected = 0
+	h.model.FileDialog.MassRenameIgnoreExt = true
 
 	h.activateMassRenamePickerSelection()
 
 	d := &h.model.FileDialog
 	if d.MassRenamePhase != uidialog.MassRenamePhaseMain {
 		t.Fatalf("phase = %v, want Main", d.MassRenamePhase)
+	}
+	if d.MassRenameIgnoreExt {
+		t.Fatal("IgnoreExt not restored to saved false")
 	}
 	if d.MassRenameMode != uidialog.MassRenameModeUIRegex {
 		t.Fatalf("mode = %v, want Regex", d.MassRenameMode)

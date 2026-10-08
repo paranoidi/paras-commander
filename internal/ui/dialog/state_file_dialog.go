@@ -38,8 +38,9 @@ const (
 
 // MassRenameSource is one selected file (absolute path resolved when the dialog opens).
 type MassRenameSource struct {
-	Path string
-	Name string // basename
+	Path  string
+	Name  string // basename
+	IsDir bool
 }
 
 // FileDialogField is a single input field in a file operation dialog.
@@ -181,6 +182,7 @@ type FileDialogState struct {
 	MassRenameMode             MassRenameModeUI
 	MassRenameCaseFold         bool
 	MassRenameStripSpaces      bool
+	MassRenameIgnoreExt        bool
 	MassRenameShowOnlyModified bool
 	// MassRenameCapEachWord / MassRenameCapPunctSep apply when MassRenameMode ==
 	// MassRenameModeUICapitalize: capitalize every word (vs. only the first letter of the

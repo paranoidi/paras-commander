@@ -318,6 +318,7 @@ func (h *Handler) massRenameCurrentPattern(name, description, find, replace stri
 		Replace:     replace,
 		CaseFold:    d.MassRenameCaseFold,
 		StripSpaces: d.MassRenameStripSpaces,
+		IgnoreExt:   d.MassRenameIgnoreExt,
 		CapEachWord: d.MassRenameCapEachWord,
 		CapPunctSep: d.MassRenameCapPunctSep,
 	}
@@ -532,6 +533,7 @@ func (h *Handler) activateMassRenamePickerSelection() {
 	}
 	d.MassRenameCaseFold = p.CaseFold
 	d.MassRenameStripSpaces = p.StripSpaces
+	d.MassRenameIgnoreExt = p.IgnoreExt
 	d.MassRenameCapEachWord = p.CapEachWord
 	d.MassRenameCapPunctSep = p.CapPunctSep
 	h.MassRenameSyncFieldLabels()

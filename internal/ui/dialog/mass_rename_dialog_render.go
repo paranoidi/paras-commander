@@ -19,9 +19,9 @@ func massRenameContentEnd(state FileDialogState) int {
 	case MassRenameModeUIExternalEditor:
 		return 6 // 4 radios + show-modified + strip
 	case MassRenameModeUICapitalize:
-		return 8 // 4 radios + show-modified + strip + capitalize-each-word + treat-punctuation
+		return 9 // 4 radios + show-modified + strip + capitalize-each-word + treat-punctuation + ignore-ext
 	default:
-		return 9 // 4 radios + find + replace + show-modified + strip + case
+		return 10 // 4 radios + find + replace + show-modified + strip + case + ignore-ext
 	}
 }
 
@@ -203,6 +203,19 @@ func MassRenameCaseFocusIdx(state FileDialogState) int {
 	}
 }
 
+// MassRenameIgnoreExtFocusIdx returns the FocusedField index of the "Ignore extension"
+// checkbox, or -1 when not shown (External $EDITOR mode).
+func MassRenameIgnoreExtFocusIdx(state FileDialogState) int {
+	switch state.MassRenameMode {
+	case MassRenameModeUIExternalEditor:
+		return -1
+	case MassRenameModeUICapitalize:
+		return 8
+	default:
+		return 9
+	}
+}
+
 // MassRenameCapEachWordFocusIdx returns the FocusedField index of the "Capitalize each word"
 // checkbox, or -1 when not shown (only visible in Capitalize mode).
 func MassRenameCapEachWordFocusIdx(state FileDialogState) int {
@@ -261,16 +274,24 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		return
 	}
 
-	// Options row: Show only modified | Trim whitespace | Case insensitive (Simple/Regex).
+	// Options row: Show only modified | Trim whitespace | Case insensitive (Simple/Regex) | Ignore extension.
 	showModifiedFocusIdx := MassRenameShowModifiedFocusIdx(state)
 	stripFocusIdx := MassRenameStripFocusIdx(state)
 	caseFocusIdx := MassRenameCaseFocusIdx(state)
+	ignoreExtFocusIdx := MassRenameIgnoreExtFocusIdx(state)
 	stripX := optX + utf8.RuneCountInString(draw.CheckboxText("Show only modified", false)) + 3
 	caseX := stripX + utf8.RuneCountInString(draw.CheckboxText("Trim whitespace", false)) + 3
+	ignoreExtX := caseX
+	if caseFocusIdx >= 0 {
+		ignoreExtX += utf8.RuneCountInString(draw.CheckboxText("Case insensitive", false)) + 3
+	}
 	draw.DrawDialogCheckbox(screen, optX, y, "Show only modified", 'm', state.MassRenameShowOnlyModified, state.FocusedField == showModifiedFocusIdx, false, styles)
 	draw.DrawDialogCheckbox(screen, stripX, y, "Trim whitespace", 't', state.MassRenameStripSpaces, state.FocusedField == stripFocusIdx, false, styles)
 	if caseFocusIdx >= 0 {
 		draw.DrawDialogCheckbox(screen, caseX, y, "Case insensitive", 'i', state.MassRenameCaseFold, state.FocusedField == caseFocusIdx, false, styles)
+	}
+	if ignoreExtFocusIdx >= 0 {
+		draw.DrawDialogCheckbox(screen, ignoreExtX, y, "Ignore extension", 'x', state.MassRenameIgnoreExt, state.FocusedField == ignoreExtFocusIdx, false, styles)
 	}
 	y++
 	if y >= innerBottom {

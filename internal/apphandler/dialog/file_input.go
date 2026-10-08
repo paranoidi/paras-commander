@@ -363,6 +363,12 @@ func (h *Handler) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune)
 			h.RecomputeMassRenamePreview()
 		}
 		return true
+	case 'x', 'X':
+		if d.MassRenameMode != dialog.MassRenameModeUIExternalEditor {
+			d.MassRenameIgnoreExt = !d.MassRenameIgnoreExt
+			h.RecomputeMassRenamePreview()
+		}
+		return true
 	case 't', 'T':
 		d.MassRenameStripSpaces = !d.MassRenameStripSpaces
 		h.RecomputeMassRenamePreview()
@@ -541,11 +547,12 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 	showModifiedIdx := dialog.MassRenameShowModifiedFocusIdx(*d)
 	stripIdx := dialog.MassRenameStripFocusIdx(*d)
 	caseIdx := dialog.MassRenameCaseFocusIdx(*d)
+	ignoreExtIdx := dialog.MassRenameIgnoreExtFocusIdx(*d)
 	capEachWordIdx := dialog.MassRenameCapEachWordFocusIdx(*d)
 	capPunctIdx := dialog.MassRenameCapPunctFocusIdx(*d)
 	okIdx := dialog.FileDialogOKFocusIndex(*d)
 	onRadio := d.FocusedField >= 0 && d.FocusedField < 4
-	onOptionsRow := d.FocusedField == showModifiedIdx || d.FocusedField == stripIdx || d.FocusedField == caseIdx
+	onOptionsRow := d.FocusedField == showModifiedIdx || d.FocusedField == stripIdx || d.FocusedField == caseIdx || d.FocusedField == ignoreExtIdx
 	onFindOrReplace := !externalMode && !capitalizeMode && (d.FocusedField == dialog.MassRenameFindFieldFocus || d.FocusedField == dialog.MassRenameFindFieldFocus+1)
 	onCapRows := capitalizeMode && (d.FocusedField == capEachWordIdx || d.FocusedField == capPunctIdx)
 	onButton := d.FocusedField >= okIdx
@@ -560,6 +567,13 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 				d.FocusedField = caseIdx
 				return true
 			}
+			if ignoreExtIdx >= 0 {
+				d.FocusedField = ignoreExtIdx
+				return true
+			}
+		case caseIdx:
+			d.FocusedField = ignoreExtIdx
+			return true
 		}
 	}
 	if key == tcell.KeyLeft {
@@ -569,6 +583,13 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 			return true
 		case caseIdx:
 			d.FocusedField = stripIdx
+			return true
+		case ignoreExtIdx:
+			if caseIdx >= 0 {
+				d.FocusedField = caseIdx
+			} else {
+				d.FocusedField = stripIdx
+			}
 			return true
 		}
 	}
@@ -756,7 +777,7 @@ func toggleMassRenameCapPunctSep(d *dialog.FileDialogState) {
 
 // massRenameCheckboxSpec pairs a checkbox's FocusedField-index lookup with its toggle action.
 // Used by fileDialogOnMassRenameCheckbox / toggleFocusedMassRenameCheckbox to dispatch the
-// five mass-rename checkboxes (show-modified, strip, case, capitalize-each-word,
+// six mass-rename checkboxes (show-modified, strip, case, ignore-ext, capitalize-each-word,
 // treat-punctuation-as-separators) through one table instead of five near-duplicate methods.
 type massRenameCheckboxSpec struct {
 	idx    func(dialog.FileDialogState) int
@@ -768,6 +789,7 @@ func massRenameCheckboxSpecs() []massRenameCheckboxSpec {
 		{idx: dialog.MassRenameShowModifiedFocusIdx, toggle: func(d *dialog.FileDialogState) { d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified }},
 		{idx: dialog.MassRenameStripFocusIdx, toggle: func(d *dialog.FileDialogState) { d.MassRenameStripSpaces = !d.MassRenameStripSpaces }},
 		{idx: dialog.MassRenameCaseFocusIdx, toggle: func(d *dialog.FileDialogState) { d.MassRenameCaseFold = !d.MassRenameCaseFold }},
+		{idx: dialog.MassRenameIgnoreExtFocusIdx, toggle: func(d *dialog.FileDialogState) { d.MassRenameIgnoreExt = !d.MassRenameIgnoreExt }},
 		{idx: dialog.MassRenameCapEachWordFocusIdx, toggle: func(d *dialog.FileDialogState) { d.MassRenameCapEachWord = !d.MassRenameCapEachWord }},
 		{idx: dialog.MassRenameCapPunctFocusIdx, toggle: toggleMassRenameCapPunctSep},
 	}

@@ -16,7 +16,7 @@ func TestMassRenameComputeSimple(t *testing.T) {
 		{Name: "foo_bar.txt", Path: filepath.Join(dir, "foo_bar.txt"), Type: localfs.EntryFile},
 		{Name: "foo_baz.txt", Path: filepath.Join(dir, "foo_baz.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeSimple, "foo_", "x_", false, false, nil)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeSimple, "foo_", "x_", false, false, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestMassRenameComputeSimpleCaseFold(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "AbC.txt", Path: filepath.Join(dir, "AbC.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeSimple, "bc", "xx", true, false, nil)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeSimple, "bc", "xx", true, false, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,14 +47,14 @@ func TestMassRenameComputeStripSpaces(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "  alpha  ", Path: filepath.Join(dir, "  alpha  "), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeSimple, "", "", false, true, nil)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeSimple, "", "", false, true, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if rows[0].NewBase != "alpha" {
 		t.Fatalf("strip on: got %q, want alpha", rows[0].NewBase)
 	}
-	rows, err = MassRenameCompute(entries, dir, MassRenameModeSimple, "", "", false, false, nil)
+	rows, err = MassRenameCompute(entries, dir, MassRenameModeSimple, "", "", false, false, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestMassRenameComputeCapitalizeDefaultFirstLetterOnly(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "wandering elephant.txt", Path: filepath.Join(dir, "wandering elephant.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false)
+	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestMassRenameComputeCapitalizeDefaultSkipsLeadingDigits(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "3 dragons flying.txt", Path: filepath.Join(dir, "3 dragons flying.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false)
+	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestMassRenameComputeCapitalizeDefaultAlreadyCapitalizedFirstLetter(t *test
 	entries := []localfs.Entry{
 		{Name: "7.Golden Compass.txt", Path: filepath.Join(dir, "7.Golden Compass.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false)
+	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestMassRenameComputeCapitalizeEachWord(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "wandering elephant-forest.txt", Path: filepath.Join(dir, "wandering elephant-forest.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameComputeCapitalize(entries, dir, true, false, false)
+	rows, err := MassRenameComputeCapitalize(entries, dir, true, false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestMassRenameComputeCapitalizeEachWordPunctuationSeparators(t *testing.T) 
 	entries := []localfs.Entry{
 		{Name: "wandering_elephant.forest,journey.txt", Path: filepath.Join(dir, "wandering_elephant.forest,journey.txt"), Type: localfs.EntryFile},
 	}
-	rowsOff, err := MassRenameComputeCapitalize(entries, dir, true, false, false)
+	rowsOff, err := MassRenameComputeCapitalize(entries, dir, true, false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func TestMassRenameComputeCapitalizeEachWordPunctuationSeparators(t *testing.T) 
 	if rowsOff[0].NewBase != "Wandering_elephant.forest,journey.txt" {
 		t.Fatalf("punct off: got %q, want %q", rowsOff[0].NewBase, "Wandering_elephant.forest,journey.txt")
 	}
-	rowsOn, err := MassRenameComputeCapitalize(entries, dir, true, true, false)
+	rowsOn, err := MassRenameComputeCapitalize(entries, dir, true, true, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestMassRenameComputeRegexCaseFold(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "HelloWorld.txt", Path: filepath.Join(dir, "HelloWorld.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", "X", false, false, re)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", "X", false, false, false, re)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestMassRenameComputeRegexCaseFold(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rows, err = MassRenameCompute(entries, dir, MassRenameModeRegex, "", "X", false, false, reSens)
+	rows, err = MassRenameCompute(entries, dir, MassRenameModeRegex, "", "X", false, false, false, reSens)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestMassRenameComputeRegex(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "aa_bb.txt", Path: filepath.Join(dir, "aa_bb.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", `${2}_${1}.txt`, false, false, re)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", `${2}_${1}.txt`, false, false, false, re)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func TestMassRenameComputeRegexSeasonDigitPad(t *testing.T) {
 		{Name: "Season 1", Path: filepath.Join(dir, "Season 1"), Type: localfs.EntryFile},
 	}
 	for _, repl := range []string{"0${1}", "0$1", "0${0}"} {
-		rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", repl, false, false, re)
+		rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", repl, false, false, false, re)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -225,14 +225,14 @@ func TestMassRenameComputeRegexAmbiguousDollarGroup(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "Season 1", Path: filepath.Join(dir, "Season 1"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", "0$10", false, false, re)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", "0$10", false, false, false, re)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if rows[0].NewBase != "Season 0" {
 		t.Fatalf("0$10: got %q, want Season 0 (group 10 empty)", rows[0].NewBase)
 	}
-	rows, err = MassRenameCompute(entries, dir, MassRenameModeRegex, "", "0${1}0", false, false, re)
+	rows, err = MassRenameCompute(entries, dir, MassRenameModeRegex, "", "0${1}0", false, false, false, re)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +250,7 @@ func TestMassRenameComputeRegexDollarGroupFollowedByLetter(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "Show Grape S02E09 - Meadow.mkv", Path: filepath.Join(dir, "Show Grape S02E09 - Meadow.mkv"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", `S$1E$2`, false, false, re)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", `S$1E$2`, false, false, false, re)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +268,7 @@ func TestMassRenameComputeRegexBackslashGroup(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "Season 1", Path: filepath.Join(dir, "Season 1"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", `0\1`, false, false, re)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", `0\1`, false, false, false, re)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -516,7 +516,7 @@ func TestMassRenameComputeSimpleEmptyFindIsIdentity(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "x.txt", Path: filepath.Join(dir, "x.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeSimple, "", "y", false, false, nil)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeSimple, "", "y", false, false, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -530,23 +530,23 @@ func TestMassRenameFindMatchesAnySimple(t *testing.T) {
 		{OldBase: "foo_a.txt", NewBase: "foo_a.txt"},
 		{OldBase: "bar_b.txt", NewBase: "bar_b.txt"},
 	}
-	if !MassRenameFindMatchesAny(rows, MassRenameModeSimple, "foo", false, nil) {
+	if !MassRenameFindMatchesAny(rows, MassRenameModeSimple, "foo", false, false, nil) {
 		t.Fatal("expected match for foo")
 	}
-	if MassRenameFindMatchesAny(rows, MassRenameModeSimple, "zzz", false, nil) {
+	if MassRenameFindMatchesAny(rows, MassRenameModeSimple, "zzz", false, false, nil) {
 		t.Fatal("expected no match for zzz")
 	}
-	if !MassRenameFindMatchesAny(rows, MassRenameModeSimple, "", false, nil) {
+	if !MassRenameFindMatchesAny(rows, MassRenameModeSimple, "", false, false, nil) {
 		t.Fatal("empty find should match")
 	}
 }
 
 func TestMassRenameFindMatchesAnySimpleCaseFold(t *testing.T) {
 	rows := []MassRenameRow{{OldBase: "Alpha.txt", NewBase: "Alpha.txt"}}
-	if !MassRenameFindMatchesAny(rows, MassRenameModeSimple, "alpha", true, nil) {
+	if !MassRenameFindMatchesAny(rows, MassRenameModeSimple, "alpha", true, false, nil) {
 		t.Fatal("expected case-fold match")
 	}
-	if MassRenameFindMatchesAny(rows, MassRenameModeSimple, "alpha", false, nil) {
+	if MassRenameFindMatchesAny(rows, MassRenameModeSimple, "alpha", false, false, nil) {
 		t.Fatal("expected no case-sensitive match")
 	}
 }
@@ -557,13 +557,13 @@ func TestMassRenameFindMatchesAnyRegex(t *testing.T) {
 		t.Fatal(err)
 	}
 	rows := []MassRenameRow{{OldBase: "a.txt", NewBase: "a.txt"}}
-	if !MassRenameFindMatchesAny(rows, MassRenameModeRegex, "", false, re) {
+	if !MassRenameFindMatchesAny(rows, MassRenameModeRegex, "", false, false, re) {
 		t.Fatal("expected regex match")
 	}
-	if !MassRenameFindMatchesAny(rows, MassRenameModeRegex, "", false, nil) {
+	if !MassRenameFindMatchesAny(rows, MassRenameModeRegex, "", false, false, nil) {
 		t.Fatal("nil regex should match all")
 	}
-	if MassRenameFindMatchesAny([]MassRenameRow{{OldBase: "a.dat", NewBase: "a.dat"}}, MassRenameModeRegex, "", false, re) {
+	if MassRenameFindMatchesAny([]MassRenameRow{{OldBase: "a.dat", NewBase: "a.dat"}}, MassRenameModeRegex, "", false, false, re) {
 		t.Fatal("expected no regex match on .dat")
 	}
 }
@@ -573,7 +573,7 @@ func TestMassRenameComputeRegexNilIsIdentity(t *testing.T) {
 	entries := []localfs.Entry{
 		{Name: "x.txt", Path: filepath.Join(dir, "x.txt"), Type: localfs.EntryFile},
 	}
-	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", "anything", false, false, nil)
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", "anything", false, false, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -749,7 +749,7 @@ func TestMassRenameComputeRegexZeroPad(t *testing.T) {
 			}
 			dir := t.TempDir()
 			entries := []localfs.Entry{{Name: tc.old, Path: filepath.Join(dir, tc.old), Type: localfs.EntryFile}}
-			rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, tc.pattern, tc.repl, false, false, rx)
+			rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, tc.pattern, tc.repl, false, false, false, rx)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -768,5 +768,40 @@ func TestMassRenameReplacementRangesZeroPad(t *testing.T) {
 	got := MassRenameReplacementRanges("walnut 1.txt", MassRenameModeRegex, "", "${0:3}", false, re)
 	if len(got) != 1 || got[0].Start != 7 || got[0].End != 10 {
 		t.Fatalf("got %+v, want one range 7..10", got)
+	}
+}
+
+func TestMassRenameComputeIgnoreExt(t *testing.T) {
+	dir := t.TempDir()
+	entries := []localfs.Entry{
+		{Name: "walnut.pear.txt", Path: filepath.Join(dir, "walnut.pear.txt"), Type: localfs.EntryFile},
+		{Name: ".bashrc", Path: filepath.Join(dir, ".bashrc"), Type: localfs.EntryFile},
+		{Name: "maple.d", Path: filepath.Join(dir, "maple.d"), Type: localfs.EntryDirectory},
+	}
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeSimple, ".", " ", false, false, true, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].NewBase != "walnut pear.txt" || rows[1].NewBase != " bashrc" || rows[2].NewBase != "maple d" {
+		t.Fatalf("got %#v", rows)
+	}
+	rows, err = MassRenameCompute(entries, dir, MassRenameModeSimple, ".", " ", false, false, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].NewBase != "walnut pear txt" {
+		t.Fatalf("ignoreExt off: got %q", rows[0].NewBase)
+	}
+}
+
+func TestMassRenameComputeCapitalizeIgnoreExt(t *testing.T) {
+	dir := t.TempDir()
+	entries := []localfs.Entry{{Name: "song.mp3", Path: filepath.Join(dir, "song.mp3"), Type: localfs.EntryFile}}
+	rows, err := MassRenameComputeCapitalize(entries, dir, true, true, false, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].NewBase != "Song.mp3" {
+		t.Fatalf("got %q", rows[0].NewBase)
 	}
 }

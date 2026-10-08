@@ -328,6 +328,7 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 			"Show only modified",
 			"Trim whitespace",
 			"Case insensitive",
+			"Ignore extension",
 			"Pattern",
 			"Replacement",
 		} {
@@ -336,10 +337,11 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 				minWidth = lw
 			}
 		}
-		// Options row: three checkboxes on one line (Show only modified | Trim whitespace | Case insensitive).
+		// Options row: four checkboxes on one line (Show only modified | Trim whitespace | Case insensitive | Ignore extension).
 		optsRow := utf8.RuneCountInString(draw.CheckboxText("Show only modified", false)) +
 			utf8.RuneCountInString(draw.CheckboxText("Trim whitespace", false)) +
-			utf8.RuneCountInString(draw.CheckboxText("Case insensitive", false)) + 10 // gaps + margins
+			utf8.RuneCountInString(draw.CheckboxText("Case insensitive", false)) +
+			utf8.RuneCountInString(draw.CheckboxText("Ignore extension", false)) + 13 // gaps + margins
 		if optsRow > minWidth {
 			minWidth = optsRow
 		}

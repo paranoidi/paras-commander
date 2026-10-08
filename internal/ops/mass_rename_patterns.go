@@ -20,6 +20,7 @@ type MassRenamePattern struct {
 	StripSpaces bool   `toml:"strip_spaces"`
 	CapEachWord bool   `toml:"cap_each_word"`
 	CapPunctSep bool   `toml:"cap_punct_sep"`
+	IgnoreExt   bool   `toml:"ignore_ext"`
 }
 
 type massRenamePatternsFile struct {

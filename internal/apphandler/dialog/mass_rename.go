@@ -33,7 +33,7 @@ func (h *Handler) OpenMassRenameDialog(p *panel.State) {
 			ap = filepath.Join(p.PathString(), ap)
 		}
 		ap = filepath.Clean(ap)
-		sources = append(sources, dialog.MassRenameSource{Path: ap, Name: filepath.Base(ap)})
+		sources = append(sources, dialog.MassRenameSource{Path: ap, Name: filepath.Base(ap), IsDir: e.Type == localfs.EntryDirectory})
 	}
 	fields := []dialog.FileDialogField{
 		{Label: "Find", Value: "", Cursor: 0},
@@ -47,6 +47,7 @@ func (h *Handler) OpenMassRenameDialog(p *panel.State) {
 		MassRenameMode:             dialog.MassRenameModeUISimple,
 		MassRenameCaseFold:         true,
 		MassRenameStripSpaces:      true,
+		MassRenameIgnoreExt:        true,
 		MassRenameShowOnlyModified: false,
 		MassRenamePreviewScroll:    0,
 		MassRenameSources:          sources,
@@ -55,6 +56,19 @@ func (h *Handler) OpenMassRenameDialog(p *panel.State) {
 	}
 	h.MassRenameSyncFieldLabels()
 	h.RecomputeMassRenamePreview()
+}
+
+// massRenameEntries builds the localfs entries the ops compute functions take from the sources.
+func massRenameEntries(d *dialog.FileDialogState) []localfs.Entry {
+	entries := make([]localfs.Entry, len(d.MassRenameSources))
+	for i, s := range d.MassRenameSources {
+		t := localfs.EntryFile
+		if s.IsDir {
+			t = localfs.EntryDirectory
+		}
+		entries[i] = localfs.Entry{Name: s.Name, Path: s.Path, Type: t}
+	}
+	return entries
 }
 
 // MassRenameSyncFieldLabels updates the two visible field labels (Find/Replace vs
@@ -123,10 +137,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 		return
 	}
 
-	entries := make([]localfs.Entry, len(d.MassRenameSources))
-	for i, s := range d.MassRenameSources {
-		entries[i] = localfs.Entry{Name: s.Name, Path: s.Path, Type: localfs.EntryFile}
-	}
+	entries := massRenameEntries(d)
 	panelPath := h.host.ActivePanel().PathString()
 	find, replace := "", ""
 	if len(d.Fields) > 0 {
@@ -157,12 +168,12 @@ func (h *Handler) RecomputeMassRenamePreview() {
 			}
 		}
 	}
-	rows, err := ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, d.MassRenameStripSpaces, rx)
+	rows, err := ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, d.MassRenameStripSpaces, d.MassRenameIgnoreExt, rx)
 	if err != nil {
 		setMassRenameComputeError(d, err.Error())
 		return
 	}
-	if len(d.Fields) > 0 && !d.Fields[0].InputInvalid && !ops.MassRenameFindMatchesAny(rows, mode, find, caseFold, rx) {
+	if len(d.Fields) > 0 && !d.Fields[0].InputInvalid && !ops.MassRenameFindMatchesAny(rows, mode, find, caseFold, d.MassRenameIgnoreExt, rx) {
 		d.Fields[0].InputInvalid = true
 	}
 	rowErrs := ops.MassRenameRowErrors(rows)
@@ -173,7 +184,8 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	afterAdded := make([][]search.Range, 0, len(rows))
 	afterError := make([]bool, 0, len(rows))
 	for i, r := range rows {
-		matchRanges := ops.MassRenameMatchRanges(r.OldBase, mode, find, caseFold, rx)
+		matchBase := ops.MassRenameMatchBase(r, d.MassRenameIgnoreExt)
+		matchRanges := ops.MassRenameMatchRanges(matchBase, mode, find, caseFold, rx)
 		if len(matchRanges) > 0 {
 			d.MassRenameMatchCount++
 		}
@@ -185,7 +197,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 		after = append(after, r.NewBase)
 		beforeRemoved = append(beforeRemoved, removed)
 		beforeReplaced = append(beforeReplaced, replaced)
-		afterAdded = append(afterAdded, ops.MassRenameReplacementRanges(r.OldBase, mode, find, replace, caseFold, rx))
+		afterAdded = append(afterAdded, ops.MassRenameReplacementRanges(matchBase, mode, find, replace, caseFold, rx))
 		afterError = append(afterError, i < len(rowErrs) && rowErrs[i] != nil)
 	}
 	d.MassRenamePreviewBefore = before
@@ -260,12 +272,9 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 // and after-column highlights come from dialog.MassRenameDiff like the external-editor path.
 func (h *Handler) recomputeMassRenameCapitalizePreview() {
 	d := &h.model.FileDialog
-	entries := make([]localfs.Entry, len(d.MassRenameSources))
-	for i, s := range d.MassRenameSources {
-		entries[i] = localfs.Entry{Name: s.Name, Path: s.Path, Type: localfs.EntryFile}
-	}
+	entries := massRenameEntries(d)
 	panelPath := h.host.ActivePanel().PathString()
-	rows, err := ops.MassRenameComputeCapitalize(entries, panelPath, d.MassRenameCapEachWord, d.MassRenameCapPunctSep, d.MassRenameStripSpaces)
+	rows, err := ops.MassRenameComputeCapitalize(entries, panelPath, d.MassRenameCapEachWord, d.MassRenameCapPunctSep, d.MassRenameStripSpaces, d.MassRenameIgnoreExt)
 	if err != nil {
 		setMassRenameComputeError(d, err.Error())
 		return
@@ -356,6 +365,12 @@ func (h *Handler) MassRenameClampFocusAfterModeChange(prev dialog.MassRenameMode
 		d.FocusedField = dialog.MassRenameShowModifiedFocusIdx(*d)
 	case d.FocusedField == dialog.MassRenameStripFocusIdx(prevState):
 		d.FocusedField = dialog.MassRenameStripFocusIdx(*d)
+	case dialog.MassRenameIgnoreExtFocusIdx(prevState) >= 0 && d.FocusedField == dialog.MassRenameIgnoreExtFocusIdx(prevState):
+		if idx := dialog.MassRenameIgnoreExtFocusIdx(*d); idx >= 0 {
+			d.FocusedField = idx
+		} else {
+			d.FocusedField = dialog.MassRenameShowModifiedFocusIdx(*d)
+		}
 	case dialog.MassRenameCaseFocusIdx(prevState) >= 0 && d.FocusedField == dialog.MassRenameCaseFocusIdx(prevState):
 		if idx := dialog.MassRenameCaseFocusIdx(*d); idx >= 0 {
 			d.FocusedField = idx
@@ -436,13 +451,10 @@ func (h *Handler) massRenameComputeRows(d *dialog.FileDialogState) ([]ops.MassRe
 		}
 		return rows, nil
 	}
-	entries := make([]localfs.Entry, len(d.MassRenameSources))
-	for i, s := range d.MassRenameSources {
-		entries[i] = localfs.Entry{Name: s.Name, Path: s.Path, Type: localfs.EntryFile}
-	}
+	entries := massRenameEntries(d)
 	panelPath := h.host.ActivePanel().PathString()
 	if d.MassRenameMode == dialog.MassRenameModeUICapitalize {
-		return ops.MassRenameComputeCapitalize(entries, panelPath, d.MassRenameCapEachWord, d.MassRenameCapPunctSep, d.MassRenameStripSpaces)
+		return ops.MassRenameComputeCapitalize(entries, panelPath, d.MassRenameCapEachWord, d.MassRenameCapPunctSep, d.MassRenameStripSpaces, d.MassRenameIgnoreExt)
 	}
 	find, replace := "", ""
 	if len(d.Fields) > 0 {
@@ -464,7 +476,7 @@ func (h *Handler) massRenameComputeRows(d *dialog.FileDialogState) ([]ops.MassRe
 			}
 		}
 	}
-	return ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, d.MassRenameStripSpaces, rx)
+	return ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, d.MassRenameStripSpaces, d.MassRenameIgnoreExt, rx)
 }
 
 // ExecuteMassRename runs the mass-rename dialog's OK action: validates the computed rows and,
@@ -576,7 +588,7 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 			active.RenameEntry(r.SourcePath, r.NewBase, vr)
 		}
 		newPath := filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
-		newSources[i] = dialog.MassRenameSource{Path: newPath, Name: r.NewBase}
+		newSources[i] = dialog.MassRenameSource{Path: newPath, Name: r.NewBase, IsDir: r.IsDir}
 		newPaths[i] = newPath
 	}
 

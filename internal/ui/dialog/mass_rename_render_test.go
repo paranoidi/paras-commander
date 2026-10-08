@@ -353,3 +353,36 @@ func TestMassRenameDialogWidthSameAcrossModes(t *testing.T) {
 		}
 	}
 }
+
+func TestMassRenameIgnoreExtFocusIdx(t *testing.T) {
+	for mode, want := range map[MassRenameModeUI]int{
+		MassRenameModeUISimple: 9, MassRenameModeUIRegex: 9, MassRenameModeUICapitalize: 8, MassRenameModeUIExternalEditor: -1,
+	} {
+		if got := MassRenameIgnoreExtFocusIdx(FileDialogState{MassRenameMode: mode}); got != want {
+			t.Fatalf("mode %d idx = %d, want %d", mode, got, want)
+		}
+	}
+}
+
+func TestDrawMassRenameDialogShowsIgnoreExtCheckbox(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(120, 40)
+	state := FileDialogState{
+		Open:       true,
+		DialogType: FileDialogMassRename,
+		Fields:     []FileDialogField{{Label: "Find"}, {Label: "Replace"}},
+	}
+	DrawFileDialog(screen, Layout{Width: 120, Height: 40}, state, DialogRenderContext{Styles: theme.Default()}, nil)
+	var dump strings.Builder
+	for y := 0; y < 40; y++ {
+		dump.WriteString(tcelltest.TextAt(screen, 0, y, 120))
+		dump.WriteByte('\n')
+	}
+	if !strings.Contains(dump.String(), "Ignore extension") {
+		t.Fatalf("Ignore extension checkbox missing:\n%s", dump.String())
+	}
+}
