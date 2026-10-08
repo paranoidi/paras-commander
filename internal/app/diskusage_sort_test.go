@@ -55,7 +55,9 @@ func TestParentStaysCenteredAfterDiskUsageResort(t *testing.T) {
 	if _, err := left.Enter(app.activeViewportRows()); err != nil {
 		t.Fatal(err)
 	}
+	waitPanelListingApplied(t, app, screen, left, asdf)
 	app.dispatch(keymap.ActionNavParent)
+	waitPanelListingApplied(t, app, screen, left, bar)
 	app.resortPanelsDiskUsageSorted()
 
 	vr := app.activeViewportRows()
@@ -65,6 +67,19 @@ func TestParentStaysCenteredAfterDiskUsageResort(t *testing.T) {
 	if row != mid && row != vr-1 {
 		t.Fatalf("after Parent+disk resort: viewport row = %d, want %d or %d; cursor=%d scroll=%d",
 			row, mid, vr-1, p.Cursor, p.ScrollOffset)
+	}
+}
+
+// waitPanelListingApplied pumps async listing completions until p shows want.
+func waitPanelListingApplied(t *testing.T, app *App, screen tcell.SimulationScreen, p *panel.State, want string) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for p.ListingPending || p.PathString() != want {
+		if time.Now().After(deadline) {
+			t.Fatalf("listing not applied: path=%q pending=%v, want %q", p.PathString(), p.ListingPending, want)
+		}
+		drainScreenInterrupts(app, screen)
+		time.Sleep(time.Millisecond)
 	}
 }
 
