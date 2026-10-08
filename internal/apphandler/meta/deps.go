@@ -39,6 +39,10 @@ type Handler struct {
 	navPath [2]string
 	// cancel holds the cancel function for the in-flight meta run per panel (nil if none).
 	cancel [2]context.CancelFunc
+	// runCtx and runDefs are the context and resolved command defs of the current run per
+	// panel, kept so ReconcileForPanel can dispatch only newly appeared entries into it.
+	runCtx  [2]context.Context
+	runDefs [2][]metacmds.MetaEntry
 	// runGen is a monotonically increasing generation counter per panel for meta runs.
 	// Workers carry the generation; stale (cancelled) results are discarded by the wake handler.
 	runGen [2]uint64

@@ -236,9 +236,9 @@ func (h *Handler) rerunActivePanels() {
 }
 
 // ReconcileForPanel detects entries that appeared in the panel listing after a same-directory
-// refresh (e.g. flatten, periodic scan) and re-runs meta for the panel so the new entries get
-// their meta column values populated. Called from reconcileAfterEvent; must be cheap when
-// nothing is missing.
+// refresh (e.g. rename, flatten, periodic scan) and dispatches meta for just those entries into
+// the current run, leaving every other row's value alone. Called from reconcileAfterEvent; must
+// be cheap when nothing is missing.
 func (h *Handler) ReconcileForPanel(panelID int) {
 	cols := h.model.MetaResults[panelID]
 	if len(cols) == 0 {
@@ -255,12 +255,21 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 	if p == nil {
 		return
 	}
+	var missing []localfs.Entry
 	for _, e := range p.Entries {
 		if _, ok := cols[0].Results[e.Path]; !ok {
-			h.startAsyncLoad(panelID, h.activeEntries[panelID])
-			return
+			missing = append(missing, e)
 		}
 	}
+	if len(missing) == 0 {
+		return
+	}
+	ctx, defs := h.runCtx[panelID], h.runDefs[panelID]
+	if ctx == nil || ctx.Err() != nil || len(defs) != len(cols) {
+		h.startAsyncLoad(panelID, h.activeEntries[panelID])
+		return
+	}
+	h.dispatch(ctx, panelID, defs, cols, missing, p.PathString())
 }
 
 // OpenFileEditor opens the meta.toml at path in an external editor, clears the session
@@ -589,13 +598,26 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel[panelID] = cancel
+	h.runCtx[panelID] = ctx
+	h.runDefs[panelID] = cmdDefs
 	h.runGen[panelID]++
-	gen := h.runGen[panelID]
 
+	for i := range cols {
+		cols[i].Results = make(map[string]string, len(entries))
+		cols[i].PendingCount = 0
+	}
+	h.model.MetaResults[panelID] = cols
+	h.dispatch(ctx, panelID, cmdDefs, cols, entries, dir)
+}
+
+// dispatch marks entries pending in cols (pre-filling cached values) and runs cmdDefs for them
+// in the background under ctx and the panel's current run generation.
+func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.MetaEntry, cols []ui.MetaColumnState, entries []localfs.Entry, dir string) {
+	gen := h.runGen[panelID]
 	runningMarker := h.host.IconMetaRunning()
 
 	for i, cmdDef := range cmdDefs {
-		results := make(map[string]string, len(entries))
+		results := cols[i].Results
 		for _, e := range entries {
 			results[e.Path] = ""
 		}
@@ -613,20 +635,15 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 			h.cacheMu.RUnlock()
 		}
 
-		pendingCount := 0
 		for _, e := range entries {
 			if _, ok := h.entryCmd(cmdDef, e, dir); !ok {
 				continue
 			}
 			results[e.Path] = runningMarker
-			pendingCount++
+			cols[i].PendingCount++
 		}
-		cols[i].Results = results
 		cols[i].Pending = runningMarker
-		cols[i].PendingCount = pendingCount
 	}
-
-	h.model.MetaResults[panelID] = cols
 
 	// A run that dispatches nothing for the sorted column (every entry cached or filtered out
 	// by `when`) never posts a wake, so HandleWake/HandleRenderFlush never get a chance to

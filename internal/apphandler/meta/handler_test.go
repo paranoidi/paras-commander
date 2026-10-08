@@ -752,3 +752,44 @@ func TestEntryCmd_whenFiltersDirRows(t *testing.T) {
 		})
 	}
 }
+
+// TestReconcileForPanel_dispatchesOnlyNewEntries covers a rename in a panel with resolved meta
+// columns: only the renamed entry's new path is dispatched, other rows keep their values and the
+// run generation is unchanged so in-flight results still land.
+func TestReconcileForPanel_dispatchesOnlyNewEntries(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+
+	dir := t.TempDir()
+	harbor := filepath.Join(dir, "harbor.txt")
+	meadow := filepath.Join(dir, "meadow.txt")
+	thistle := filepath.Join(dir, "thistle.txt")
+	p := testPanel(t, dir, []localfs.Entry{
+		{Name: "harbor.txt", Path: harbor, Type: localfs.EntryFile},
+		{Name: "meadow.txt", Path: meadow, Type: localfs.EntryFile},
+	})
+	fh := &fakeHost{panels: [2]*panel.State{p}}
+	h := &Handler{screen: screen, host: fh, model: &ui.Model{}, config: config.Default()}
+	h.cache = map[string]map[string]string{"words": {harbor: "3", meadow: "5"}}
+
+	cmdDef := metacmds.MetaEntry{Name: "words", File: "true", Cache: true}
+	h.runForPanel(0, []metacmds.MetaEntry{cmdDef}, []ui.MetaColumnState{{EntryName: "words"}})
+	gen := h.runGen[0]
+
+	p.Entries[1] = localfs.Entry{Name: "thistle.txt", Path: thistle, Type: localfs.EntryFile}
+	h.ReconcileForPanel(0)
+
+	col := h.model.MetaResults[0][0]
+	if col.PendingCount != 1 || col.Results[thistle] != "*" {
+		t.Fatalf("PendingCount = %d, thistle = %q; want 1 and running marker", col.PendingCount, col.Results[thistle])
+	}
+	if col.Results[harbor] != "3" {
+		t.Fatalf("harbor = %q, want untouched cached value", col.Results[harbor])
+	}
+	if h.runGen[0] != gen || h.loadPending[0] {
+		t.Fatal("reconcile restarted the run instead of dispatching into it")
+	}
+}
