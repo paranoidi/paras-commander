@@ -682,7 +682,7 @@ func TestHandlePanelDirChanged_cancelsStaleRunAndRejectsOldWakes(t *testing.T) {
 	}
 	h.runGen[0] = 1
 	cancelled := false
-	h.cancel[0] = func() { cancelled = true }
+	h.run[0] = &metaRun{cancel: func() { cancelled = true }}
 
 	p.Path = testPanel(t, other, nil).Path
 
@@ -691,8 +691,8 @@ func TestHandlePanelDirChanged_cancelsStaleRunAndRejectsOldWakes(t *testing.T) {
 	if !cancelled {
 		t.Fatal("expected the in-flight run to be cancelled")
 	}
-	if h.cancel[0] != nil {
-		t.Fatal("expected cancel to be cleared after HandlePanelDirChanged")
+	if h.run[0] != nil {
+		t.Fatal("expected run to be cleared after HandlePanelDirChanged")
 	}
 	if h.ColumnResolved(0) {
 		t.Fatal("ColumnResolved = true right after a directory change, want false")

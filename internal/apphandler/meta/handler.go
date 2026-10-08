@@ -264,12 +264,12 @@ func (h *Handler) ReconcileForPanel(panelID int) {
 	if len(missing) == 0 {
 		return
 	}
-	ctx, defs := h.runCtx[panelID], h.runDefs[panelID]
-	if ctx == nil || ctx.Err() != nil || len(defs) != len(cols) {
+	r := h.run[panelID]
+	if r == nil || r.ctx.Err() != nil || len(r.defs) != len(cols) {
 		h.startAsyncLoad(panelID, h.activeEntries[panelID])
 		return
 	}
-	h.dispatch(ctx, panelID, defs, cols, missing, p.PathString())
+	h.dispatch(r.ctx, panelID, r.defs, cols, missing, p.PathString())
 }
 
 // OpenFileEditor opens the meta.toml at path in an external editor, clears the session
@@ -378,10 +378,7 @@ func (h *Handler) ActivateSelection() {
 
 	if len(activeNames) == 0 {
 		h.invalidatePendingLoads(panelID)
-		if h.cancel[panelID] != nil {
-			h.cancel[panelID]()
-			h.cancel[panelID] = nil
-		}
+		h.stopRun(panelID)
 		h.model.MetaResults[panelID] = nil
 		h.activeEntries[panelID] = nil
 		h.navPath[panelID] = ""
@@ -432,10 +429,7 @@ func (h *Handler) ActivateSelection() {
 		}
 	}
 
-	if h.cancel[panelID] != nil {
-		h.cancel[panelID]()
-		h.cancel[panelID] = nil
-	}
+	h.stopRun(panelID)
 	h.runGen[panelID]++
 
 	names := append([]string(nil), activeNames...)
@@ -467,10 +461,7 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 		return
 	}
 	h.navPath[panelID] = cur
-	if h.cancel[panelID] != nil {
-		h.cancel[panelID]()
-		h.cancel[panelID] = nil
-	}
+	h.stopRun(panelID)
 	h.runGen[panelID]++
 	h.startAsyncLoad(panelID, h.activeEntries[panelID])
 }
@@ -593,13 +584,9 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 	entries := append([]localfs.Entry(nil), panel.Entries...)
 	dir := panel.PathString()
 
-	if h.cancel[panelID] != nil {
-		h.cancel[panelID]()
-	}
+	h.stopRun(panelID)
 	ctx, cancel := context.WithCancel(context.Background())
-	h.cancel[panelID] = cancel
-	h.runCtx[panelID] = ctx
-	h.runDefs[panelID] = cmdDefs
+	h.run[panelID] = &metaRun{ctx: ctx, cancel: cancel, defs: cmdDefs}
 	h.runGen[panelID]++
 
 	for i := range cols {
@@ -860,9 +847,15 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 
 // CancelAll cancels every in-flight per-panel meta run. Called on quit.
 func (h *Handler) CancelAll() {
-	for i := range h.cancel {
-		if h.cancel[i] != nil {
-			h.cancel[i]()
-		}
+	for i := range h.run {
+		h.stopRun(i)
+	}
+}
+
+// stopRun cancels the in-flight meta run for panelID, if any, and clears it.
+func (h *Handler) stopRun(panelID int) {
+	if r := h.run[panelID]; r != nil {
+		r.cancel()
+		h.run[panelID] = nil
 	}
 }

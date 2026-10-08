@@ -37,12 +37,9 @@ type Handler struct {
 	activeEntries [2][]string
 	// navPath holds the last panel path for which meta was run (used to detect navigation).
 	navPath [2]string
-	// cancel holds the cancel function for the in-flight meta run per panel (nil if none).
-	cancel [2]context.CancelFunc
-	// runCtx and runDefs are the context and resolved command defs of the current run per
-	// panel, kept so ReconcileForPanel can dispatch only newly appeared entries into it.
-	runCtx  [2]context.Context
-	runDefs [2][]metacmds.MetaEntry
+	// run is the in-flight meta run per panel (nil if none), kept so ReconcileForPanel can
+	// dispatch only newly appeared entries into it.
+	run [2]*metaRun
 	// runGen is a monotonically increasing generation counter per panel for meta runs.
 	// Workers carry the generation; stale (cancelled) results are discarded by the wake handler.
 	runGen [2]uint64
@@ -127,4 +124,11 @@ func (e *runFailure) Unwrap() error { return e.err }
 type dispatchItem struct {
 	entry localfs.Entry
 	cmd   string
+}
+
+// metaRun is one in-flight meta run for a panel: its context, cancel func and resolved command defs.
+type metaRun struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	defs   []metacmds.MetaEntry
 }
