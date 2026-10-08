@@ -235,9 +235,16 @@ func (s *State) leaseHolderUnlocked() *Job {
 	return nil
 }
 
-// AddJob adds a job to the queue and emits an enqueued event.
+// AddJob adds a job to the queue and emits an enqueued event. A StatusScanning job whose type
+// does not pre-scan goes straight to StatusQueued (StatusPaused when PausedAfterScan).
 func (s *State) AddJob(job *Job) {
 	job.ComputeVolumeDevs()
+	if job.Status == StatusScanning && !job.NeedsPreScan() {
+		job.Status = StatusQueued
+		if job.PausedAfterScan {
+			job.Status = StatusPaused
+		}
+	}
 	s.mu.Lock()
 	s.queue.Enqueue(job)
 	status := job.Status
@@ -248,7 +255,7 @@ func (s *State) AddJob(job *Job) {
 		JobID:  job.ID,
 		Status: status,
 	})
-	if job.NeedsPreScan() && status == StatusScanning {
+	if status == StatusScanning {
 		s.startJobScan(job)
 		return
 	}

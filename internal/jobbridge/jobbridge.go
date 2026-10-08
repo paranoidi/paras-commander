@@ -309,7 +309,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rat
 		// true — ops.copyRegularItem's per-file check (gated by disk_space_check_min_file_bytes)
 		// is the safety net for streamed jobs, same trade-off mc makes (mc has no upfront check
 		// at all); see llm-docs/jobs.md.
-		if job.PlanCh != nil {
+		if job.PlanCh != nil || job.Type != jobs.TypeCopy {
 			return runTransfer(transferExecCtx{
 				ctx:      ctx,
 				job:      job,
@@ -322,31 +322,13 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rat
 			})
 		}
 
-		// Fallback path: job.PlanCh is nil. Move never pre-scans (ops.ExecuteMove renames first and
-		// plans only cross-device sources), so it only announces one total per source; flatten
-		// (ops.ExecuteFlatten) walks its roots while running and announces none. Copy reaches here
-		// when its scan was bypassed (e.g. a job injected directly into StatusQueued in tests) and
-		// rebuilds the plan synchronously; job.Plan is safe to read unlocked because nothing streams
-		// into it.
-		if job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten {
-			if job.Type == jobs.TypeMove {
-				emit(jobs.Event{
-					Type:       jobs.EventPlanTotals,
-					JobID:      job.ID,
-					Status:     jobs.StatusRunning,
-					TotalFiles: len(job.Sources),
-					TotalBytes: 0,
-				})
-			}
-			return runTransfer(transferExecCtx{
-				ctx: ctx, job: job, opts: opts, throttle: throttle, progress: progress,
-				resolver: resolver, diskWait: diskWait, emit: emit,
-			})
-		}
+		// Fallback path: a copy whose scan was bypassed (job.PlanCh nil, e.g. a job injected
+		// directly into StatusQueued in tests) rebuilds the plan synchronously; job.Plan is safe
+		// to read unlocked because nothing streams into it.
 		opsPlan := job.Plan
 		var planErr error
 		totalBytes := job.TotalBytes
-		if job.Type == jobs.TypeCopy && len(opsPlan) == 0 {
+		if len(opsPlan) == 0 {
 			var tf int
 			// ponytail: no OnWarning here — this synchronous-rebuild fallback only runs when a
 			// job bypassed the streamed pre-scan (job.PlanCh nil; tests or a job injected
@@ -365,7 +347,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rat
 				})
 			}
 		}
-		if planErr == nil && job.Type == jobs.TypeCopy {
+		if planErr == nil {
 			tb := totalBytes
 			if tb <= 0 && len(opsPlan) > 0 {
 				_, _, tb = ops.SummarizePlan(opsPlan)
@@ -548,6 +530,14 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 	case jobs.TypeCopy:
 		doneFiles, doneBytes, err = ops.ExecuteCopyFrom(tc.ctx, tc.planSource(), job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeMove:
+		// Move never pre-scans (ops.ExecuteMove renames first and plans only cross-device
+		// sources), so it announces one total per source.
+		tc.emit(jobs.Event{
+			Type:       jobs.EventPlanTotals,
+			JobID:      job.ID,
+			Status:     jobs.StatusRunning,
+			TotalFiles: len(job.Sources),
+		})
 		doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeFlatten:
 		doneFiles, doneBytes, err = ops.ExecuteFlatten(tc.ctx, job.Sources, job.Destination, job.FlattenRecursive, job.FlattenRemoveEmpty, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)

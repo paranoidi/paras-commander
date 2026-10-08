@@ -1134,12 +1134,6 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		DereferenceSymlinks: req.Preserve.DereferenceSymlinks && req.Type == jobs.TypeCopy,
 		PromptDanglingDirs:  req.Type == jobs.TypeMove && h.config.Operations.RemoveDanglingDirs,
 	}
-	if !job.NeedsPreScan() {
-		job.Status = jobs.StatusQueued
-		if req.StartPaused {
-			job.Status = jobs.StatusPaused
-		}
-	}
 	h.commitJob(job)
 }
 

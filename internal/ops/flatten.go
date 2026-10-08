@@ -159,26 +159,26 @@ func (w *flattenWalk) walk(ctx context.Context, dir pathloc.Path) error {
 		}
 	}
 	if w.removeEmpty {
-		_, err = removeDirIfEmpty(ctx, be, dir)
+		_, err = removeDirIfEmpty(ctx, be, dir, "flatten")
 	}
 	return err
 }
 
 // removeDirIfEmpty removes dir when it holds nothing but dot entries. A directory that no longer
-// exists counts as removed.
-func removeDirIfEmpty(ctx context.Context, be fsbackend.Backend, dir pathloc.Path) (bool, error) {
+// exists counts as removed. op labels returned errors.
+func removeDirIfEmpty(ctx context.Context, be fsbackend.Backend, dir pathloc.Path, op string) (bool, error) {
 	entries, err := be.List(ctx, dir)
 	if err != nil {
 		if isNotExist(err) {
 			return true, nil
 		}
-		return false, &Error{Op: "flatten", Text: fmt.Sprintf("list %q: %v", dir, err), Err: err}
+		return false, &Error{Op: op, Text: fmt.Sprintf("list %q: %v", dir, err), Err: err}
 	}
 	if !dirHasOnlyDotEntries(entries) {
 		return false, nil
 	}
 	if err := be.Remove(ctx, dir); err != nil {
-		return false, &Error{Op: "flatten", Text: fmt.Sprintf("remove empty directory %q: %v", dir, err), Err: err}
+		return false, &Error{Op: op, Text: fmt.Sprintf("remove empty directory %q: %v", dir, err), Err: err}
 	}
 	return true, nil
 }
@@ -214,7 +214,7 @@ func (w *flattenWalk) finishDeferred(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
-				removed, err := removeDirIfEmpty(ctx, be, dir)
+				removed, err := removeDirIfEmpty(ctx, be, dir, "flatten")
 				if err != nil {
 					return err
 				}
@@ -297,16 +297,8 @@ func removeEmptyDirsPostOrder(ctx context.Context, dir pathloc.Path) error {
 			return err
 		}
 	}
-	entries, err = be.List(ctx, dir)
-	if err != nil {
-		return err
-	}
-	if dirHasOnlyDotEntries(entries) {
-		if err := be.Remove(ctx, dir); err != nil {
-			return &Error{Op: "flatten", Text: fmt.Sprintf("remove empty directory %q: %v", dir, err), Err: err}
-		}
-	}
-	return nil
+	_, err = removeDirIfEmpty(ctx, be, dir, "flatten")
+	return err
 }
 
 // PreviewEmptyDirsUnder dry-runs RemoveEmptyDirsUnder: it reports which

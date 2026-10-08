@@ -192,8 +192,8 @@ func (j *Job) NeedsPreScan() bool {
 // RetryClone returns a fresh Job with the same ID and only the enqueue-time spec fields
 // copied from j — everything else (progress, ETA, PlanCh, Error, timestamps, PendingBlocker)
 // starts zero, mirroring how AddTransferJob/EnqueueDeleteJob/EnqueueExtractJob/AddFlattenJob
-// build a job at enqueue time. Status is StatusScanning when the type needs a pre-scan,
-// otherwise StatusQueued; TotalFiles is preset to len(Sources) for delete/extract, matching
+// build a job at enqueue time. Status is StatusScanning; State.AddJob turns it into
+// StatusQueued for types that do not pre-scan. TotalFiles is preset to len(Sources) for delete/extract, matching
 // their enqueue path (copy/move/flatten recompute it during scan).
 func (j *Job) RetryClone() *Job {
 	totalFiles := 0
@@ -203,7 +203,7 @@ func (j *Job) RetryClone() *Job {
 	clone := &Job{
 		ID:                    j.ID,
 		Type:                  j.Type,
-		Status:                StatusQueued,
+		Status:                StatusScanning,
 		Sources:               j.Sources,
 		Destination:           j.Destination,
 		DestIsDir:             ops.DestinationIsDirAtEnqueue(j.Destination),
@@ -216,9 +216,6 @@ func (j *Job) RetryClone() *Job {
 		PreserveTimestamps:    j.PreserveTimestamps,
 		DereferenceSymlinks:   j.DereferenceSymlinks,
 		FlattenIntoDest:       j.FlattenIntoDest,
-	}
-	if clone.NeedsPreScan() {
-		clone.Status = StatusScanning
 	}
 	return clone
 }

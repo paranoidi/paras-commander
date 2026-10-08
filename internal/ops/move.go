@@ -128,18 +128,15 @@ func restoreStagedDest(ctx context.Context, dst, staged pathloc.Path) error {
 // renameSourceForMove handles conflict resolution then RenameFastPath for one source.
 // Returns renamed when the path was moved, skipped when the user chose not to overwrite,
 // fallbackCopy when cross-device (or non-fast) rename requires copy+delete for the batch.
-// staged is the parked original destination after an overwrite; empty otherwise.
-func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (renamed, skipped, fallbackCopy bool, staged string, err error) {
+// staged is the parked original destination after an overwrite; empty otherwise. dstExists is the
+// caller's stat of dst.
+func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, dstExists bool, resolver ConflictResolver) (renamed, skipped, fallbackCopy bool, staged string, err error) {
 	if err := ctx.Err(); err != nil {
 		return false, false, false, "", err
 	}
-	_, statErr := moveStat(ctx, dst)
-	if isNotExist(statErr) {
+	if !dstExists {
 		renamed, skipped, fallbackCopy, err = renameFastPathOrFallback(ctx, src, dst)
 		return renamed, skipped, fallbackCopy, "", err
-	}
-	if statErr != nil {
-		return false, false, false, "", fmt.Errorf("stat destination %q: %w", dst, statErr)
 	}
 	if resolver == nil {
 		return false, false, false, "", fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
@@ -244,19 +241,18 @@ func moveOne(ctx context.Context, src, dst, destination pathloc.Path, opts Optio
 	if PathsEquivalent(src, dst) {
 		return 0, 0, false, nil
 	}
-	merge, err := bothDirectories(ctx, src, dst)
+	dstExists, merge, err := moveDestState(ctx, src, dst)
 	if err != nil {
 		return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
 	}
 	if merge {
 		return mergeMoveDir(ctx, src, dst, opts, throttle, progress, baseFiles, baseBytes, resolver, diskWait)
 	}
-	renamed, skipped, needCopy, staged, err := renameSourceForMove(ctx, src, dst, resolver)
+	renamed, _, needCopy, staged, err := renameSourceForMove(ctx, src, dst, dstExists, resolver)
 	if err != nil {
 		return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
 	}
 	switch {
-	case skipped:
 	case needCopy:
 		offset := func(s, d string, f int, b int64) {
 			if progress != nil {
@@ -276,26 +272,26 @@ func moveOne(ctx context.Context, src, dst, destination pathloc.Path, opts Optio
 	return 0, 0, false, nil
 }
 
-// bothDirectories reports whether src and dst are both real directories. moveStat does not follow
-// symlinks (local Lstat, sftp Lstat), so a symlink on either side reports EntrySymlink: a symlink
-// src is never descended into and a symlink dst (even to a directory) is not merged into, so those
-// collisions go through the conflict resolver.
-func bothDirectories(ctx context.Context, src, dst pathloc.Path) (bool, error) {
+// moveDestState stats dst once and reports whether it exists and whether src and dst are both real
+// directories (merge). moveStat does not follow symlinks (local Lstat, sftp Lstat), so a symlink on
+// either side reports EntrySymlink: a symlink src is never descended into and a symlink dst (even
+// to a directory) is not merged into, so those collisions go through the conflict resolver.
+func moveDestState(ctx context.Context, src, dst pathloc.Path) (exists, merge bool, err error) {
 	de, err := moveStat(ctx, dst)
 	if err != nil {
 		if isNotExist(err) {
-			return false, nil
+			return false, false, nil
 		}
-		return false, fmt.Errorf("stat destination %q: %w", dst, err)
+		return false, false, fmt.Errorf("stat destination %q: %w", dst, err)
 	}
 	if de.Type != fsbackend.EntryDirectory {
-		return false, nil
+		return true, false, nil
 	}
 	se, err := moveStat(ctx, src)
 	if err != nil {
-		return false, fmt.Errorf("stat source %q: %w", src, err)
+		return true, false, fmt.Errorf("stat source %q: %w", src, err)
 	}
-	return se.Type == fsbackend.EntryDirectory, nil
+	return true, se.Type == fsbackend.EntryDirectory, nil
 }
 
 // mergeMoveDir moves the children of directory src into the existing directory dst, recursing via
@@ -333,19 +329,8 @@ func mergeMoveDir(ctx context.Context, src, dst pathloc.Path, opts Options, thro
 			return files, bytes, false, err
 		}
 	}
-	rest, err := be.List(ctx, src)
-	if err != nil {
-		return files, bytes, false, fmt.Errorf("list %q: %w", src, err)
-	}
-	for _, c := range rest {
-		if c.Name != "." && c.Name != ".." {
-			return files, bytes, false, nil
-		}
-	}
-	if err := be.Remove(ctx, src); err != nil {
-		return files, bytes, false, fmt.Errorf("remove merged source %q: %w", src, err)
-	}
-	return files, bytes, true, nil
+	moved, err = removeDirIfEmpty(ctx, be, src, "move")
+	return files, bytes, moved, err
 }
 
 // moveCopyFallback copies one source whose rename was not possible to dst, then removes it.

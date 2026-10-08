@@ -869,11 +869,23 @@ func (s *State) selectTreeCursorRow() bool {
 // selectTreeRowID moves the cursor onto the first visible row among id and then fallback. Leaves
 // the cursor untouched (callers clamp) when none is visible, including when filtered out.
 func (s *State) selectTreeRowID(id string, fallback []string) bool {
+	for i := range s.treeRows {
+		if s.treeRows[i].ID == id {
+			if pos, ok := s.cursorForRawIndex(i); ok {
+				s.Cursor = pos
+				return true
+			}
+			break
+		}
+	}
+	if len(fallback) == 0 {
+		return false
+	}
 	raw := make(map[string]int, len(s.treeRows))
 	for i := range s.treeRows {
 		raw[s.treeRows[i].ID] = i
 	}
-	for _, want := range append([]string{id}, fallback...) {
+	for _, want := range fallback {
 		if i, ok := raw[want]; ok {
 			if pos, ok := s.cursorForRawIndex(i); ok {
 				s.Cursor = pos

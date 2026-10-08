@@ -1476,12 +1476,11 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	var nextSurvivor string
 	// A tree reload, or a tree history recall, reselects by full row path (treeCursorFallback for
 	// a deleted row) — never by name, which could land on a same-named row in another branch.
-	treeReselect := priorTreeCursorID != ""
+	recalledTreeCursor := ""
 	if s.ListLayout == ListLayoutTree && !sameDirReload && centerRecalled {
-		if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok && snap.CursorPath != "" {
-			treeReselect = true
-		}
+		recalledTreeCursor = s.HistoryCursorByPath[cleanPathString(listingLoc.String())].CursorPath
 	}
+	treeReselect := priorTreeCursorID != "" || recalledTreeCursor != ""
 	if sameDirReload {
 		wasCentered = s.cursorAppearsCentered(s.effectiveFileListViewportRows(viewportRows))
 		if !treeReselect {
@@ -1608,11 +1607,9 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 			s.treeCursorID = priorTreeCursorID
 			s.treeCursorFallback = priorTreeFallback
 			s.selectTreeCursorRow()
-		case !sameDirReload && centerRecalled:
-			if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok && snap.CursorPath != "" {
-				s.selectVisibleEntryByPath(snap.CursorPath)
-				s.treeCursorID = snap.CursorPath
-			}
+		case recalledTreeCursor != "":
+			s.selectVisibleEntryByPath(recalledTreeCursor)
+			s.treeCursorID = recalledTreeCursor
 		}
 	}
 	if sameDirReload {
