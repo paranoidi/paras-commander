@@ -469,7 +469,7 @@ func (h *Handler) submitJobsConflictDecision(d jobs.ConflictDecision) {
 	if id == "" {
 		return
 	}
-	h.state.SubmitConflictDecision(id, d)
+	h.state.SubmitBlockerDecision(id, d)
 	h.model.JobsView.ConflictButtonFocus = 0
 }
 

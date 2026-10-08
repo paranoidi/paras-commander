@@ -65,7 +65,7 @@ func runExtractTransfer(t *testing.T, src, destDir string, decision jobs.Conflic
 	}
 
 	var blockers int
-	err = transfer(context.Background(), job, func(jobs.Event) {}, func(req jobs.BlockerRequest) jobs.ConflictDecision {
+	err = transfer(context.Background(), job, func(jobs.Event) {}, func(req jobs.BlockerRequest) jobs.BlockerAnswer {
 		blockers++
 		if req.Kind != jobs.BlockerKindConflict {
 			t.Fatalf("blocker kind = %q, want %q", req.Kind, jobs.BlockerKindConflict)
@@ -73,7 +73,7 @@ func runExtractTransfer(t *testing.T, src, destDir string, decision jobs.Conflic
 		if !req.Conflict.NoCompare {
 			t.Fatal("extract conflict must set NoCompare")
 		}
-		return decision
+		return jobs.BlockerAnswer{Decision: decision}
 	})
 	if err != nil {
 		t.Fatalf("transfer: %v", err)

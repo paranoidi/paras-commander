@@ -54,10 +54,7 @@ func (h *Handler) confirmBlockerDialogWithFocus(focus int) {
 		return
 	}
 	if ui.JobBlockerDialogIsAdvanced(st.Blocker, focus) {
-		h.model.ConflictDialog.Advanced = true
-		h.model.ConflictDialog.AdvFocus = 0
-		h.model.ConflictDialog.AdvRule = 0
-		h.model.ConflictDialog.AdvAll = true
+		h.model.ConflictDialog.StartAdvanced()
 		return
 	}
 	d, ok := ui.JobBlockerDialogDecision(st.Blocker, focus)
@@ -116,7 +113,7 @@ func (h *Handler) HandleBlockerDialogKey(event *tcell.EventKey) {
 	}
 }
 
-// openAdvancedFromPanel opens the "Overwrite advanced" dialog for the job selected in the jobs-view
+// openAdvancedFromPanel opens the "Conflict rules" dialog for the job selected in the jobs-view
 // conflict panel.
 func (h *Handler) openAdvancedFromPanel(sel ui.JobEntry) {
 	if sel.PendingBlocker == nil || h.model.ConflictDialog.Open {
@@ -126,10 +123,9 @@ func (h *Handler) openAdvancedFromPanel(sel ui.JobEntry) {
 		Open:            true,
 		JobID:           sel.ID,
 		Blocker:         *sel.PendingBlocker,
-		Advanced:        true,
-		AdvAll:          true,
 		OpenedFromPanel: true,
 	}
+	h.model.ConflictDialog.StartAdvanced()
 }
 
 func (h *Handler) cancelAdvanced() {
@@ -142,12 +138,9 @@ func (h *Handler) cancelAdvanced() {
 
 func (h *Handler) applyAdvanced() {
 	st := h.model.ConflictDialog
-	d := st.ConflictAdvancedDecision()
-	if d == "" {
-		return
-	}
+	answer := st.ConflictAdvancedAnswer()
 	h.model.ConflictDialog = dialog.ConflictDialogState{}
-	h.state.SubmitBlockerDecision(st.JobID, d)
+	h.state.SubmitBlockerAnswer(st.JobID, answer)
 	h.PollEvents()
 	h.SetListStale(true)
 	if st.OpenedFromPanel {
@@ -158,36 +151,46 @@ func (h *Handler) applyAdvanced() {
 	h.scheduleBlockerDialogChain()
 }
 
-// handleAdvancedKey routes keys for the "Overwrite advanced" mode of the conflict dialog.
+// handleAdvancedKey routes keys for the "Conflict rules" mode of the conflict dialog.
 func (h *Handler) handleAdvancedKey(event *tcell.EventKey) {
 	st := &h.model.ConflictDialog
-	rules := dialog.ConflictAdvancedRulesFor(st.Blocker.Conflict)
-	n := len(rules)
-	form := dialog.ConflictAdvancedForm(n)
+	form := st.ConflictAdvancedForm()
+	skipFocus, allFocus := st.ConflictAdvancedSkipIdenticalFocus(), st.ConflictAdvancedAllFocus()
 
 	if event.Key() == tcell.KeyEsc {
 		h.cancelAdvanced()
 		return
 	}
-	if dialog.TryStandardDialogActions(event, h.applyAdvanced, h.cancelAdvanced, []dialog.ExtraMnemonic{
-		{Rune: 'a', Fn: func() { st.AdvAll = !st.AdvAll }},
-	}) {
+	extras := []dialog.ExtraMnemonic{{Rune: 'a', Fn: func() { st.AdvAll = !st.AdvAll }}}
+	if skipFocus >= 0 {
+		extras = append(extras, dialog.ExtraMnemonic{Rune: 'i', Fn: func() { st.Rules.SkipIdentical = !st.Rules.SkipIdentical }})
+	}
+	if dialog.TryStandardDialogActions(event, h.applyAdvanced, h.cancelAdvanced, extras) {
+		return
+	}
+	// Left/Right move between the choices of a rule row (not only buttons, like the config dialog's
+	// horizontal inputs).
+	if st.AdvFocus < dialog.ConflictRuleRows && (event.Key() == tcell.KeyLeft || event.Key() == tcell.KeyRight) {
+		if event.Key() == tcell.KeyLeft {
+			st.AdvMoveChoice(-1)
+		} else {
+			st.AdvMoveChoice(1)
+		}
 		return
 	}
 	if newFocus, handled := form.MoveFocus(st.AdvFocus, event.Key()); handled {
 		st.AdvFocus = newFocus
-		if newFocus < n {
-			st.AdvRule = newFocus
-		}
+		st.SyncAdvCol()
 		return
 	}
+	space := event.Key() == tcell.KeyRune && event.Rune() == ' '
 	switch {
-	case event.Key() == tcell.KeyRune && event.Rune() == ' ':
-		if st.AdvFocus < n {
-			st.AdvRule = st.AdvFocus
-		} else if st.AdvFocus == n {
-			st.AdvAll = !st.AdvAll
-		}
+	case (space || event.Key() == tcell.KeyEnter) && st.AdvFocus < dialog.ConflictRuleRows:
+		st.AdvSelectChoice()
+	case space && st.AdvFocus == skipFocus:
+		st.Rules.SkipIdentical = !st.Rules.SkipIdentical
+	case space && st.AdvFocus == allFocus:
+		st.AdvAll = !st.AdvAll
 	case event.Key() == tcell.KeyEnter:
 		if st.AdvFocus == form.CancelIndex() {
 			h.cancelAdvanced()

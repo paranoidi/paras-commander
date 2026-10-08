@@ -49,11 +49,11 @@ func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMer
 			"Shared: "+primitive.FitPathForWidth(sharedPrefix, draw.DialogContentWidth(rect)-len("Shared: ")), pathStyle)
 		y++
 	}
-	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Left side", 'L', state.Direction == comparepkg.MergeTowardPrimary, state.Focus == 0, styles)
+	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Left side", 'L', state.Direction == comparepkg.MergeTowardPrimary, state.Focus == 0, false, styles)
 	y++
 	primitive.Text(screen, draw.DialogTextX(rect)+pathIndent, y, pathAvailW, primitive.FitPathForWidth(leftPath, pathAvailW), pathStyle)
 	y++
-	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Right side", 'R', state.Direction == comparepkg.MergeTowardSecondary, state.Focus == 1, styles)
+	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Right side", 'R', state.Direction == comparepkg.MergeTowardSecondary, state.Focus == 1, false, styles)
 	y++
 	primitive.Text(screen, draw.DialogTextX(rect)+pathIndent, y, pathAvailW, primitive.FitPathForWidth(rightPath, pathAvailW), pathStyle)
 	y++
@@ -73,9 +73,9 @@ func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMer
 	// Operation section
 	primitive.Text(screen, draw.DialogTextX(rect), y, draw.DialogContentWidth(rect), "Operation:", pathStyle)
 	y++
-	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Copy (keep source files)", 'K', !state.MoveMode, state.Focus == 4, styles)
+	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Copy (keep source files)", 'K', !state.MoveMode, state.Focus == 4, false, styles)
 	y++
-	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Move (delete source after transfer)", 'D', state.MoveMode, state.Focus == 5, styles)
+	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Move (delete source after transfer)", 'D', state.MoveMode, state.Focus == 5, false, styles)
 	y++
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++

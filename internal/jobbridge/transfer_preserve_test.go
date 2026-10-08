@@ -46,8 +46,8 @@ func TestTransferFuncUsesJobPreserveOptions(t *testing.T) {
 		PreserveTimestamps:  false,
 	}
 
-	err = transfer(context.Background(), job, func(jobs.Event) {}, func(jobs.BlockerRequest) jobs.ConflictDecision {
-		return jobs.DecisionOverwrite
+	err = transfer(context.Background(), job, func(jobs.Event) {}, func(jobs.BlockerRequest) jobs.BlockerAnswer {
+		return jobs.BlockerAnswer{Decision: jobs.DecisionOverwrite}
 	})
 	if err != nil {
 		t.Fatalf("transfer: %v", err)

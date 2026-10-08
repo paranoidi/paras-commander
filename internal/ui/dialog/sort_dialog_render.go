@@ -30,12 +30,12 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 	builtinRadios := panel.SortDialogRadios()
 	metaCount := state.MetaCount()
 	for i, m := range builtinRadios {
-		draw.DrawDialogRadio(screen, optionCol, y, m.Label, m.Shortcut, state.SortMode == m.Mode, state.Focus == i, styles)
+		draw.DrawDialogRadio(screen, optionCol, y, m.Label, m.Shortcut, state.SortMode == m.Mode, state.Focus == i, false, styles)
 		if i < metaCount {
 			radio := state.MetaRadios[i]
 			label := primitive.TruncateRight(radio.Title, metaWidth)
 			selected := state.SortMode == panel.SortMeta && state.MetaColumn == radio.Name
-			draw.DrawDialogRadio(screen, metaCol, y, label, 0, selected, state.Focus == len(builtinRadios)+i, styles)
+			draw.DrawDialogRadio(screen, metaCol, y, label, 0, selected, state.Focus == len(builtinRadios)+i, false, styles)
 		}
 		y++
 	}

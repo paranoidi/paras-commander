@@ -40,17 +40,17 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	y := rect.Y + 1
 	innerBottom := rect.Y + rect.Height - 2
 
-	draw.DrawDialogRadio(screen, optionX, y, "Shell patterns", 'S', state.PatternMode == panel.GroupPatternShell, state.Focus == GroupSelectFocusShellRadio, styles)
+	draw.DrawDialogRadio(screen, optionX, y, "Shell patterns", 'S', state.PatternMode == panel.GroupPatternShell, state.Focus == GroupSelectFocusShellRadio, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawDialogRadio(screen, optionX, y, "Regular expression", 'R', state.PatternMode == panel.GroupPatternRegex, state.Focus == GroupSelectFocusRegexRadio, styles)
+	draw.DrawDialogRadio(screen, optionX, y, "Regular expression", 'R', state.PatternMode == panel.GroupPatternRegex, state.Focus == GroupSelectFocusRegexRadio, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawDialogRadio(screen, optionX, y, "Simple", 'I', state.PatternMode == panel.GroupPatternSimple, state.Focus == GroupSelectFocusSimpleRadio, styles)
+	draw.DrawDialogRadio(screen, optionX, y, "Simple", 'I', state.PatternMode == panel.GroupPatternSimple, state.Focus == GroupSelectFocusSimpleRadio, false, styles)
 	y++
 	if y >= innerBottom {
 		return

@@ -59,12 +59,18 @@ func DrawDialogRadio(
 	shortcut rune,
 	selected bool,
 	focused bool,
+	disabled bool,
 	styles theme.Theme,
 ) {
 	style := styles.DialogOptionRowStyle(focused, selected)
+	accent := styles.DialogAccent
+	if disabled {
+		style = styles.DialogOptionDisabledStyle()
+		accent = style
+	}
 	marker := " " + styles.IconDialogRadio(selected) + " "
 	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
-	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, styles.DialogAccent)
+	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, accent)
 }
 
 func drawDialogItem(screen tcell.Screen, x, y int, label string, shortcut rune, baseStyle, accentStyle tcell.Style) {

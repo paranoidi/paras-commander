@@ -102,11 +102,11 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	for i := 0; i < scrollRows; i++ {
 		if i < len(scrollRadios) {
 			r := scrollRadios[i]
-			draw.DrawDialogRadio(screen, leftOptionCol, y, r.Label, r.Shortcut, scrollMode == r.Mode, state.Focus == ConfigDialogScrollModeFocus(i), styles)
+			draw.DrawDialogRadio(screen, leftOptionCol, y, r.Label, r.Shortcut, scrollMode == r.Mode, state.Focus == ConfigDialogScrollModeFocus(i), false, styles)
 		}
 		if i < len(sbRadios) {
 			r := sbRadios[i]
-			draw.DrawDialogRadio(screen, rightOptionCol, y, r.Label, r.Shortcut, sb == r.Style, state.Focus == ConfigDialogScrollbarFocus(i), styles)
+			draw.DrawDialogRadio(screen, rightOptionCol, y, r.Label, r.Shortcut, sb == r.Style, state.Focus == ConfigDialogScrollbarFocus(i), false, styles)
 		}
 		y++
 	}
@@ -119,7 +119,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	lf := panel.EffectiveListFormat(state.ListFormat)
 	listRadios := panel.ListFormatDialogRadios()
 	for i, r := range listRadios {
-		draw.DrawDialogRadio(screen, leftOptionCol, y, r.Label, r.Shortcut, lf == r.Format, state.Focus == configDialogFocusListingFirst+i, styles)
+		draw.DrawDialogRadio(screen, leftOptionCol, y, r.Label, r.Shortcut, lf == r.Format, state.Focus == configDialogFocusListingFirst+i, false, styles)
 		y++
 	}
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)

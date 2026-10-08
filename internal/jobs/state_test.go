@@ -17,7 +17,7 @@ func TestWorkerSkipsPausedJobInFavorOfQueued(t *testing.T) {
 	s := NewState()
 	stop := make(chan struct{})
 	order := make(chan string, 4)
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		order <- job.ID
 		return nil
 	})
@@ -42,7 +42,7 @@ func TestDisjointDeleteJobRunsWhileTransferHoldsLease(t *testing.T) {
 	stop := make(chan struct{})
 	release := make(chan struct{})
 	started := make(chan string, 2)
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		started <- job.ID
 		if job.Type == TypeCopy {
 			<-release
@@ -121,7 +121,7 @@ func TestOverlappingDeleteWaitsForTransferLease(t *testing.T) {
 	stop := make(chan struct{})
 	release := make(chan struct{})
 	started := make(chan string, 2)
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		started <- job.ID
 		if job.Type == TypeCopy {
 			<-release
@@ -167,7 +167,7 @@ func TestOverlappingDeleteOfTransferDestWaitsForLease(t *testing.T) {
 	stop := make(chan struct{})
 	release := make(chan struct{})
 	started := make(chan string, 2)
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		started <- job.ID
 		if job.Type == TypeCopy {
 			<-release
@@ -213,7 +213,7 @@ func TestOverlappingDeleteAncestorWaitsForTransferLease(t *testing.T) {
 	stop := make(chan struct{})
 	release := make(chan struct{})
 	started := make(chan string, 2)
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		started <- job.ID
 		if job.Type == TypeCopy {
 			<-release
@@ -262,7 +262,7 @@ func TestOverlappingDeleteCanceledWhileWaitingForLease(t *testing.T) {
 	holderLeft := make(chan struct{})
 	var enteredIDs sync.Map
 
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		enteredIDs.Store(job.ID, true)
 		if job.ID == "copy-1" {
 			close(holderEntered)
@@ -305,7 +305,7 @@ func TestWorkerYieldsTransferLeaseWhileWaitingConflictDecision(t *testing.T) {
 	var wg sync.WaitGroup
 	order := make(chan string, 4)
 
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		switch job.ID {
 		case "job-a":
 			order <- "a-start"
@@ -348,7 +348,7 @@ func TestWorkerYieldsTransferLeaseWhileWaitingConflictDecision(t *testing.T) {
 			}
 		}
 	}
-	s.SubmitConflictDecision("job-a", DecisionSkip)
+	s.SubmitBlockerDecision("job-a", DecisionSkip)
 	select {
 	case <-deadline:
 		t.Fatal("timeout waiting a-after")
@@ -365,7 +365,7 @@ func TestWorkerEmitsJobResumedAfterBlockerDecision(t *testing.T) {
 	stop := make(chan struct{})
 	var wg sync.WaitGroup
 
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		if job.ID != "job-a" {
 			return nil
 		}
@@ -384,7 +384,7 @@ func TestWorkerEmitsJobResumedAfterBlockerDecision(t *testing.T) {
 		s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
 	}()
 
-	// SubmitConflictDecision only takes effect once the worker has registered
+	// SubmitBlockerDecision only takes effect once the worker has registered
 	// job-a's blocker channel, which happens before EventJobBlockerRequest is
 	// emitted. Waiting on that event (rather than a signal fired from inside
 	// the transferFunc closure, before registration) avoids racing ahead of
@@ -401,7 +401,7 @@ func TestWorkerEmitsJobResumedAfterBlockerDecision(t *testing.T) {
 			}
 		}
 	}
-	s.SubmitConflictDecision("job-a", DecisionOverwriteAll)
+	s.SubmitBlockerDecision("job-a", DecisionOverwriteAll)
 
 	var gotResumed bool
 	for !gotResumed {
@@ -423,7 +423,7 @@ func TestWorkerBlockerAllJobsListsSingleEntry(t *testing.T) {
 	blockerEntered := make(chan struct{})
 	var wg sync.WaitGroup
 
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		if job.ID != "job-a" {
 			return nil
 		}
@@ -454,7 +454,7 @@ func TestWorkerBlockerAllJobsListsSingleEntry(t *testing.T) {
 	} else if all[0].ID != "job-a" {
 		t.Fatalf("job ID = %q, want job-a", all[0].ID)
 	}
-	s.SubmitConflictDecision("job-a", DecisionSkip)
+	s.SubmitBlockerDecision("job-a", DecisionSkip)
 	wg.Wait()
 }
 
@@ -613,7 +613,7 @@ func TestStateCancelQueuedJobKeepsInQueue(t *testing.T) {
 func TestWorkerUserCancelFromConflict(t *testing.T) {
 	s := NewState()
 	stop := make(chan struct{})
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		return ErrUserCanceled
 	})
 	s.StartWorker(stop)
@@ -695,7 +695,7 @@ func (s *State) setActiveForTest(job *Job) {
 func TestWorkerArchivesFinishedToHistory(t *testing.T) {
 	s := NewState()
 	stop := make(chan struct{})
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		return nil
 	})
 	s.StartWorker(stop)
@@ -809,7 +809,7 @@ func TestStateHasUnfinishedWork(t *testing.T) {
 	t.Run("finished_archive_only", func(t *testing.T) {
 		s := NewState()
 		stop := make(chan struct{})
-		s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 			return nil
 		})
 		s.StartWorker(stop)
@@ -969,7 +969,7 @@ func TestRunJobTerminalEventCarriesTotalsWhenProgressDropped(t *testing.T) {
 
 	const wantFiles = 42
 	const wantBytes int64 = 9999
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		for i := 0; i < cap(s.events)+5; i++ {
 			emit(Event{Type: EventProgress, JobID: job.ID, Status: StatusRunning, DoneFiles: 1, DoneBytes: 10})
 		}
@@ -1183,7 +1183,7 @@ func TestRetryJobRequeuesFailedJob(t *testing.T) {
 	defer close(stop)
 
 	var attempts atomic.Int32
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		if attempts.Add(1) == 1 {
 			return errors.New("permission denied")
 		}
@@ -1328,7 +1328,7 @@ func TestCancelJobPendingDequeuedNeverEntersTransferFunc(t *testing.T) {
 	var enteredIDs sync.Map
 	var extraEntries atomic.Int32
 
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		if _, loaded := enteredIDs.LoadOrStore(job.ID, true); loaded {
 			extraEntries.Add(1)
 		}
@@ -1399,7 +1399,7 @@ func TestShutdownPendingDequeuedNeverEntersTransferFunc(t *testing.T) {
 	holderLeft := make(chan struct{})
 	var enteredIDs sync.Map
 
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
 		enteredIDs.Store(job.ID, true)
 		if job.ID == "holder" {
 			close(holderEntered)
@@ -1449,24 +1449,24 @@ func TestShutdownPendingDequeuedNeverEntersTransferFunc(t *testing.T) {
 	t.Fatalf("NumGoroutine() after stop = %d, want <= %d (before=%d)", after, before+3, before)
 }
 
-func TestWorkerContentDiffersBypassesConflictPolicy(t *testing.T) {
+func TestWorkerRepromptBypassesConflictPolicy(t *testing.T) {
 	s := NewState()
 	stop := make(chan struct{})
-	second := make(chan ConflictDecision, 1)
-	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
-		conflict := func(differs bool) BlockerRequest {
+	second := make(chan BlockerAnswer, 1)
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
+		conflict := func(reprompt string) BlockerRequest {
 			return BlockerRequest{
 				Kind:     BlockerKindConflict,
-				Conflict: &ConflictRequest{JobID: job.ID, Source: "/a", Destination: "/b", ContentDiffers: differs},
+				Conflict: &ConflictRequest{JobID: job.ID, Source: "/a", Destination: "/b", Reprompt: reprompt},
 			}
 		}
-		_ = waitBlocker(conflict(false)) // user answers Compare-all
-		// A plain conflict is answered by the policy without prompting.
-		if d := waitBlocker(conflict(false)); d != DecisionCompare.All() {
-			t.Errorf("policy answer = %q, want compare-all", d)
+		_ = waitBlocker(conflict("")) // user answers with rules, applied to all
+		// A plain conflict is answered by the policy without prompting, rules included.
+		if a := waitBlocker(conflict("")); a.Decision != DecisionRules.All() || a.Rules == nil || !a.Rules.SkipIdentical {
+			t.Errorf("policy answer = %+v, want rules-all with rules", a)
 		}
-		// A content-differs conflict must prompt again despite the policy.
-		second <- waitBlocker(conflict(true))
+		// A reprompt must prompt again despite the policy.
+		second <- waitBlocker(conflict("No rule matched."))
 		return nil
 	})
 	s.StartWorker(stop)
@@ -1485,19 +1485,19 @@ func TestWorkerContentDiffersBypassesConflictPolicy(t *testing.T) {
 			}
 			requests++
 			if requests == 1 {
-				s.SubmitConflictDecision("job-a", DecisionCompare.All())
+				s.SubmitBlockerAnswer("job-a", BlockerAnswer{Decision: DecisionRules.All(), Rules: &ConflictRules{SkipIdentical: true}})
 			} else {
-				if ev.Blocker == nil || ev.Blocker.Conflict == nil || !ev.Blocker.Conflict.ContentDiffers {
-					t.Fatalf("second prompt lacks ContentDiffers: %+v", ev.Blocker)
+				if ev.Blocker == nil || ev.Blocker.Conflict == nil || ev.Blocker.Conflict.Reprompt == "" {
+					t.Fatalf("second prompt lacks Reprompt: %+v", ev.Blocker)
 				}
-				s.SubmitConflictDecision("job-a", DecisionSkip)
+				s.SubmitBlockerDecision("job-a", DecisionSkip)
 			}
 		}
 	}
 	select {
 	case d := <-second:
-		if d != DecisionSkip {
-			t.Fatalf("second answer = %q, want skip", d)
+		if d.Decision != DecisionSkip {
+			t.Fatalf("second answer = %q, want skip", d.Decision)
 		}
 	case <-deadline:
 		t.Fatal("timeout waiting for second answer")

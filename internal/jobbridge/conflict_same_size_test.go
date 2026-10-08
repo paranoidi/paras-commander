@@ -19,7 +19,7 @@ type conflictCase struct {
 
 // runConflict transfers one colliding file ("harbor.txt") and returns the source and destination
 // paths plus the blocker requests seen. answers are consumed one per prompt.
-func runConflict(t *testing.T, typ jobs.Type, c conflictCase, answers ...jobs.ConflictDecision) (src, dstDir string, reqs []jobs.ConflictRequest) {
+func runConflict(t *testing.T, typ jobs.Type, c conflictCase, answers ...jobs.BlockerAnswer) (src, dstDir string, reqs []jobs.ConflictRequest) {
 	t.Helper()
 	dir := t.TempDir()
 	dstDir = filepath.Join(dir, "meadow")
@@ -49,7 +49,7 @@ func runConflict(t *testing.T, typ jobs.Type, c conflictCase, answers ...jobs.Co
 		Sources:     []pathloc.Path{pathloc.FileMust(src)},
 		Destination: pathloc.FileMust(dstDir),
 	}
-	err := transfer(context.Background(), job, func(jobs.Event) {}, func(r jobs.BlockerRequest) jobs.ConflictDecision {
+	err := transfer(context.Background(), job, func(jobs.Event) {}, func(r jobs.BlockerRequest) jobs.BlockerAnswer {
 		reqs = append(reqs, *r.Conflict)
 		if len(answers) == 0 {
 			t.Fatalf("unexpected extra prompt")
@@ -73,6 +73,14 @@ func readFile(t *testing.T, p string) string {
 	return string(b)
 }
 
+func rulesAnswer(r jobs.ConflictRules, all bool) jobs.BlockerAnswer {
+	d := jobs.DecisionRules
+	if all {
+		d = d.All()
+	}
+	return jobs.BlockerAnswer{Decision: d, Rules: &r}
+}
+
 func TestConflictRules(t *testing.T) {
 	t.Parallel()
 	const (
@@ -81,47 +89,54 @@ func TestConflictRules(t *testing.T) {
 	)
 	tests := []struct {
 		name      string
-		rule      jobs.ConflictDecision
+		rules     jobs.ConflictRules
 		c         conflictCase
 		overwrite bool
 	}{
-		{"newer yes", jobs.DecisionOverwriteIfNewer, conflictCase{"aaaa", "bbbb", recent, stale}, true},
-		{"newer no", jobs.DecisionOverwriteIfNewer, conflictCase{"aaaa", "bbbb", stale, recent}, false},
-		{"older yes", jobs.DecisionOverwriteIfOlder, conflictCase{"aaaa", "bbbb", stale, recent}, true},
-		{"older no", jobs.DecisionOverwriteIfOlder, conflictCase{"aaaa", "bbbb", recent, stale}, false},
-		{"smaller yes", jobs.DecisionOverwriteIfExistingSmaller, conflictCase{"aaaaaa", "bb", stale, stale}, true},
-		{"smaller no", jobs.DecisionOverwriteIfExistingSmaller, conflictCase{"aa", "bbbbbb", stale, stale}, false},
-		{"differs yes", jobs.DecisionOverwriteIfSizeDiffers, conflictCase{"aaaa", "bbbbbb", stale, stale}, true},
-		{"differs no", jobs.DecisionOverwriteIfSizeDiffers, conflictCase{"aaaa", "bbbb", stale, stale}, false},
-		{"same size yes", jobs.DecisionOverwriteIfSameSize, conflictCase{"aaaa", "bbbb", stale, stale}, true},
-		{"same size no", jobs.DecisionOverwriteIfSameSize, conflictCase{"aaaa", "bbbbbb", stale, stale}, false},
+		{"newer yes", jobs.ConflictRules{Time: [3]jobs.RuleAction{jobs.TimeDestOlder: jobs.RuleOverwrite}}, conflictCase{"aaaa", "bbbb", recent, stale}, true},
+		{"newer no", jobs.ConflictRules{Time: [3]jobs.RuleAction{jobs.TimeDestOlder: jobs.RuleOverwrite}}, conflictCase{"aaaa", "bbbb", stale, recent}, false},
+		{"smaller yes", jobs.ConflictRules{Size: [3]jobs.RuleAction{jobs.SizeDestSmaller: jobs.RuleOverwrite}}, conflictCase{"aaaaaa", "bb", stale, stale}, true},
+		{"smaller no", jobs.ConflictRules{Size: [3]jobs.RuleAction{jobs.SizeDestSmaller: jobs.RuleOverwrite}}, conflictCase{"aa", "bbbbbb", stale, stale}, false},
+		{"same size yes", jobs.ConflictRules{Size: [3]jobs.RuleAction{jobs.SizeSame: jobs.RuleOverwrite}}, conflictCase{"aaaa", "bbbb", stale, stale}, true},
+		{"same size no", jobs.ConflictRules{Size: [3]jobs.RuleAction{jobs.SizeSame: jobs.RuleOverwrite}}, conflictCase{"aaaa", "bbbbbb", stale, stale}, false},
 	}
 	for _, tt := range tests {
-		for _, all := range []bool{false, true} {
-			rule, name := tt.rule, tt.name
-			if all {
-				rule, name = rule.All(), name+" all"
+		t.Run(tt.name, func(t *testing.T) {
+			// Rules that do not match leave the file on Ask, which prompts again: answer Skip.
+			_, dstDir, reqs := runConflict(t, jobs.TypeCopy, tt.c, rulesAnswer(tt.rules, false), jobs.BlockerAnswer{Decision: jobs.DecisionSkip})
+			want := tt.c.dstData
+			if tt.overwrite {
+				want = tt.c.srcData
 			}
-			t.Run(name, func(t *testing.T) {
-				_, dstDir, reqs := runConflict(t, jobs.TypeCopy, tt.c, rule)
-				want := tt.c.dstData
-				if tt.overwrite {
-					want = tt.c.srcData
-				}
-				if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != want {
-					t.Fatalf("dest = %q, want %q", got, want)
-				}
-				if len(reqs) != 1 {
-					t.Fatalf("prompts = %d, want 1", len(reqs))
-				}
-			})
-		}
+			if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != want {
+				t.Fatalf("dest = %q, want %q", got, want)
+			}
+			if wantPrompts := map[bool]int{true: 1, false: 2}[tt.overwrite]; len(reqs) != wantPrompts {
+				t.Fatalf("prompts = %d, want %d", len(reqs), wantPrompts)
+			}
+			if !tt.overwrite && reqs[1].Reprompt == "" {
+				t.Fatal("unmatched file must reprompt with a note")
+			}
+		})
+	}
+}
+
+func TestConflictRulesTimeBeatsSize(t *testing.T) {
+	t.Parallel()
+	rules := jobs.ConflictRules{
+		Time: [3]jobs.RuleAction{jobs.TimeDestOlder: jobs.RuleSkip},
+		Size: [3]jobs.RuleAction{jobs.SizeDestSmaller: jobs.RuleSkip},
+	}
+	_, dstDir, reqs := runConflict(t, jobs.TypeCopy, conflictCase{"aaaaaa", "bb", time.Hour, 2 * time.Hour}, rulesAnswer(rules, false))
+	if len(reqs) != 1 || readFile(t, filepath.Join(dstDir, "harbor.txt")) != "bb" {
+		t.Fatalf("expected a single prompt and skipped file, prompts=%d", len(reqs))
 	}
 }
 
 func TestConflictKeepBoth(t *testing.T) {
 	t.Parallel()
-	_, dstDir, _ := runConflict(t, jobs.TypeCopy, conflictCase{"aaaa", "bbbb", time.Hour, time.Hour}, jobs.DecisionKeepBoth)
+	rules := jobs.ConflictRules{Size: [3]jobs.RuleAction{jobs.SizeSame: jobs.RuleKeepBoth}}
+	_, dstDir, _ := runConflict(t, jobs.TypeCopy, conflictCase{"aaaa", "bbbb", time.Hour, time.Hour}, rulesAnswer(rules, false))
 	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "bbbb" {
 		t.Fatalf("existing = %q, want untouched", got)
 	}
@@ -130,10 +145,11 @@ func TestConflictKeepBoth(t *testing.T) {
 	}
 }
 
-func TestConflictCompareIdentical(t *testing.T) {
+func TestConflictSkipIdentical(t *testing.T) {
 	t.Parallel()
 	same := conflictCase{"0123456789", "0123456789", time.Hour, time.Hour}
-	src, dstDir, reqs := runConflict(t, jobs.TypeCopy, same, jobs.DecisionCompare)
+	rules := jobs.ConflictRules{SkipIdentical: true}
+	src, dstDir, reqs := runConflict(t, jobs.TypeCopy, same, rulesAnswer(rules, false))
 	if len(reqs) != 1 {
 		t.Fatalf("prompts = %d, want 1", len(reqs))
 	}
@@ -144,7 +160,7 @@ func TestConflictCompareIdentical(t *testing.T) {
 		t.Fatalf("dest = %q", got)
 	}
 
-	src, dstDir, _ = runConflict(t, jobs.TypeMove, same, jobs.DecisionCompare)
+	src, dstDir, _ = runConflict(t, jobs.TypeMove, same, rulesAnswer(rules, false))
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Fatalf("move of an identical file must remove the source, stat err = %v", err)
 	}
@@ -153,25 +169,25 @@ func TestConflictCompareIdentical(t *testing.T) {
 	}
 }
 
-func TestConflictCompareDifferentPromptsAgain(t *testing.T) {
+func TestConflictSkipIdenticalDifferentFallsToRows(t *testing.T) {
 	t.Parallel()
-	// Same size, differing in the last chunk (chunk size 4 in runConflict).
+	// Same size, differing in the last chunk (chunk size 4 in runConflict): the rows decide.
+	rules := jobs.ConflictRules{SkipIdentical: true, Size: [3]jobs.RuleAction{jobs.SizeSame: jobs.RuleOverwrite}}
 	diff := conflictCase{"0123456789", "012345678X", time.Hour, time.Hour}
-	_, dstDir, reqs := runConflict(t, jobs.TypeCopy, diff, jobs.DecisionCompare, jobs.DecisionOverwrite)
-	if len(reqs) != 2 || reqs[0].ContentDiffers || !reqs[1].ContentDiffers {
-		t.Fatalf("prompts = %+v, want a second prompt with ContentDiffers", reqs)
+	_, dstDir, reqs := runConflict(t, jobs.TypeCopy, diff, rulesAnswer(rules, false))
+	if len(reqs) != 1 {
+		t.Fatalf("prompts = %d, want 1", len(reqs))
 	}
 	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "0123456789" {
 		t.Fatalf("dest = %q, want overwritten", got)
 	}
 
-	// Different sizes also prompt again, and Skip leaves the destination alone.
-	diff = conflictCase{"0123456789", "short", time.Hour, time.Hour}
-	_, dstDir, reqs = runConflict(t, jobs.TypeCopy, diff, jobs.DecisionCompare, jobs.DecisionSkip)
-	if len(reqs) != 2 || !reqs[1].ContentDiffers {
-		t.Fatalf("prompts = %+v", reqs)
+	// With every row on Ask the file is asked about again.
+	_, dstDir, reqs = runConflict(t, jobs.TypeCopy, diff, rulesAnswer(jobs.ConflictRules{SkipIdentical: true}, false), jobs.BlockerAnswer{Decision: jobs.DecisionSkip})
+	if len(reqs) != 2 || reqs[1].Reprompt == "" {
+		t.Fatalf("prompts = %+v, want a reprompt", reqs)
 	}
-	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "short" {
+	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "012345678X" {
 		t.Fatalf("dest = %q, want untouched", got)
 	}
 }

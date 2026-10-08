@@ -25,7 +25,7 @@ func newBlockerTestHandler(t *testing.T, cfg config.Config) (*Handler, *jobs.Sta
 	screen.SetSize(100, 30)
 
 	state := jobs.NewState()
-	state.SetTransferFunc(func(_ context.Context, job *jobs.Job, _ func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
+	state.SetTransferFunc(func(_ context.Context, job *jobs.Job, _ func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 		_ = waitBlocker(jobs.BlockerRequest{
 			Kind: jobs.BlockerKindConflict,
 			Conflict: &jobs.ConflictRequest{
@@ -204,17 +204,23 @@ func TestBlockerDialogAdvancedFlow(t *testing.T) {
 	if st = h.model.ConflictDialog; !st.Open || st.Advanced {
 		t.Fatalf("Esc in advanced must return to the main dialog, got %+v", st)
 	}
-	// Alt+D reopens with apply-to-all preselected; Down selects the second rule, Tab jumps to the
-	// checkbox, Space toggles it off and back on.
+	// Alt+D reopens with apply-to-all preselected; Tab jumps between groups, Space toggles the checkbox.
 	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt))
 	if !h.model.ConflictDialog.AdvAll {
 		t.Fatal("apply-to-all must be checked by default")
 	}
-	key(tcell.KeyDown)
-	if h.model.ConflictDialog.AdvRule != 1 {
-		t.Fatalf("AdvRule = %d, want 1", h.model.ConflictDialog.AdvRule)
+	// Row 0: Right from Ask moves to Overwrite; Space selects it.
+	key(tcell.KeyRight)
+	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	if got := h.model.ConflictDialog.Rules.Time[jobs.TimeDestNewer]; got != jobs.RuleOverwrite {
+		t.Fatalf("Time[newer] = %v, want overwrite", got)
 	}
-	key(tcell.KeyTab)
+	key(tcell.KeyTab) // size block
+	key(tcell.KeyTab) // checkboxes
+	key(tcell.KeyDown)
+	if h.model.ConflictDialog.AdvFocus != h.model.ConflictDialog.ConflictAdvancedAllFocus() {
+		t.Fatalf("focus = %d, want apply-to-all checkbox", h.model.ConflictDialog.AdvFocus)
+	}
 	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if h.model.ConflictDialog.AdvAll {
 		t.Fatal("Space on the checkbox must clear apply-to-all")
@@ -223,8 +229,8 @@ func TestBlockerDialogAdvancedFlow(t *testing.T) {
 	if !h.model.ConflictDialog.AdvAll {
 		t.Fatal("Space on the checkbox must set apply-to-all")
 	}
-	if got := h.model.ConflictDialog.ConflictAdvancedDecision(); got != jobs.DecisionOverwriteIfOlder.All() {
-		t.Fatalf("decision = %q", got)
+	if a := h.model.ConflictDialog.ConflictAdvancedAnswer(); a.Decision != jobs.DecisionRules.All() || a.Rules.Time[jobs.TimeDestNewer] != jobs.RuleOverwrite {
+		t.Fatalf("answer = %+v", a)
 	}
 	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 	if h.model.ConflictDialog.Open {

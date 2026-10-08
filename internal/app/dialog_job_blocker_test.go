@@ -13,7 +13,7 @@ import (
 )
 
 func installJobBlockerTransferFunc(app *App) {
-	app.jobState.SetTransferFunc(func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
+	app.jobState.SetTransferFunc(func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 		_ = waitBlocker(jobs.BlockerRequest{
 			Kind: jobs.BlockerKindConflict,
 			Conflict: &jobs.ConflictRequest{

@@ -24,7 +24,7 @@ func DrawConflictDialog(screen tcell.Screen, layout Layout, state ConflictDialog
 		return
 	}
 	if state.Advanced {
-		drawConflictAdvancedDialog(screen, layout, state, styles, userHomeDir)
+		drawConflictAdvancedDialog(screen, layout, state, styles)
 		return
 	}
 	drawConflictFileDialog(screen, layout, state, styles, userHomeDir)
@@ -82,53 +82,60 @@ func drawConflictFileDialog(screen tcell.Screen, layout Layout, state ConflictDi
 	draw.DrawDialogButtonRowCentered(screen, rect, y, row3, styles)
 }
 
-// ConflictPromptText is the question under the file summaries; it notes when Compare found
-// different contents.
+// ConflictPromptText is the question under the file summaries; it carries the Reprompt note.
 func ConflictPromptText(c *jobs.ConflictEvent) string {
-	if c != nil && c.ContentDiffers {
-		return "Contents differ. Overwrite this file?"
+	if c != nil && c.Reprompt != "" {
+		return c.Reprompt + " Overwrite this file?"
 	}
 	return "Overwrite this file?"
 }
 
-func drawConflictAdvancedDialog(screen tcell.Screen, layout Layout, state ConflictDialogState, styles theme.Theme, userHomeDir string) {
-	c := state.Blocker.Conflict
-	if c == nil {
-		c = &jobs.ConflictEvent{}
+func drawConflictAdvancedDialog(screen tcell.Screen, layout Layout, state ConflictDialogState, styles theme.Theme) {
+	width := min(layout.Width-4, 56)
+	if width < 52 {
+		width = min(52, layout.Width-2)
 	}
-	rules := ConflictAdvancedRulesFor(c)
-	width := min(layout.Width-4, 76)
-	if width < 48 {
-		width = min(48, layout.Width-2)
+	checks := 2
+	if state.ConflictAdvancedNoCompare() {
+		checks = 1
 	}
-	// top + new(3) + blank + existing(3) + sep + rules + sep + checkbox + blank + buttons + bottom border
-	height := 1 + 3 + 1 + 3 + 1 + len(rules) + 1 + 1 + 1 + 1 + 1
+	// top + (label+radio)*6 + 2 separators + checkboxes + blank + buttons + bottom border
+	height := 1 + ConflictRuleRows*2 + 2 + checks + 1 + 1 + 1
 	rect := draw.CenteredDialogRect(layout, width, height)
 
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Overwrite advanced", styles)
+	borderStyle := draw.DrawDialogFrame(screen, rect, "Conflict rules", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	body := styles.DialogText.Background(dbg)
 
 	textX := draw.DialogTextX(rect)
 	textW := draw.DialogContentWidth(rect)
 	y := rect.Y + 1
-
-	y = drawConflictFileGroup(screen, textX, y, textW, conflictDialogLabelNew, c.Source, c.SourceSize, c.SourceTime, body, userHomeDir)
-	y++
-	y = drawConflictFileGroup(screen, textX, y, textW, conflictDialogLabelExisting, c.Destination, c.DestSize, c.DestTime, body, userHomeDir)
-
-	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
-	y++
-	for i, r := range rules {
-		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, r.Label, 0, state.AdvRule == i, state.AdvFocus == i, styles)
+	for row, label := range conflictRuleRowLabels {
+		if row == conflictRuleTimeRows {
+			draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
+			y++
+		}
+		primitive.Text(screen, textX, y, textW, label, body)
+		y++
+		x := draw.DialogOptionX(rect)
+		cur := *state.ruleSlot(row)
+		for col, c := range ConflictRuleChoices {
+			focused := state.AdvFocus == row && state.AdvCol == col
+			draw.DrawDialogRadio(screen, x, y, c.Label, 0, cur == c.Action, focused, !state.ConflictAdvancedChoiceEnabled(row, col), styles)
+			x += utf8.RuneCountInString(draw.RadioText(c.Label, false)) + 1
+		}
 		y++
 	}
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
-	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Apply to all conflicts", 'A', state.AdvAll, state.AdvFocus == len(rules), false, styles)
+	if f := state.ConflictAdvancedSkipIdenticalFocus(); f >= 0 {
+		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Skip identical files (slow)", 'I', state.Rules.SkipIdentical, state.AdvFocus == f, false, styles)
+		y++
+	}
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Apply to all conflicts", 'A', state.AdvAll, state.AdvFocus == state.ConflictAdvancedAllFocus(), false, styles)
 	y++
 	y++
-	form := ConflictAdvancedForm(len(rules))
+	form := state.ConflictAdvancedForm()
 	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: state.AdvFocus == form.OKIndex()},
 		{Label: "Cancel", Shortcut: 'C', Focused: state.AdvFocus == form.CancelIndex()},

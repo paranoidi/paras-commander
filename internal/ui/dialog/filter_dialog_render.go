@@ -37,17 +37,17 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 	y := rect.Y + 1
 	innerBottom := rect.Y + rect.Height - 2
 
-	draw.DrawDialogRadio(screen, optionX, y, "Shell patterns", 'S', state.PatternMode == panel.GroupPatternShell, state.Focus == FilterFocusShellRadio, styles)
+	draw.DrawDialogRadio(screen, optionX, y, "Shell patterns", 'S', state.PatternMode == panel.GroupPatternShell, state.Focus == FilterFocusShellRadio, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawDialogRadio(screen, optionX, y, "Regular expression", 'R', state.PatternMode == panel.GroupPatternRegex, state.Focus == FilterFocusRegexRadio, styles)
+	draw.DrawDialogRadio(screen, optionX, y, "Regular expression", 'R', state.PatternMode == panel.GroupPatternRegex, state.Focus == FilterFocusRegexRadio, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawDialogRadio(screen, optionX, y, "Simple", 'I', state.PatternMode == panel.GroupPatternSimple, state.Focus == FilterFocusSimpleRadio, styles)
+	draw.DrawDialogRadio(screen, optionX, y, "Simple", 'I', state.PatternMode == panel.GroupPatternSimple, state.Focus == FilterFocusSimpleRadio, false, styles)
 	y++
 	if y >= innerBottom {
 		return

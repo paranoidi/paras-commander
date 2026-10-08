@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"testing"
+	"time"
 )
 
 func TestConflictPolicyDefaults(t *testing.T) {
@@ -62,15 +63,15 @@ func TestConflictPolicySkipAll(t *testing.T) {
 	}
 }
 
-func TestConflictPolicyConditionalRuleAll(t *testing.T) {
+func TestConflictPolicyRulesAll(t *testing.T) {
 	p := NewConflictPolicy()
-	_, _, _, updated := ApplyDecision(p, DecisionOverwriteIfNewer.All())
-	if updated.Decision() != DecisionOverwriteIfNewer.All() {
-		t.Fatalf("active decision = %q, want %q", updated.Decision(), DecisionOverwriteIfNewer.All())
+	_, _, _, updated := ApplyDecision(p, DecisionRules.All())
+	if updated.Decision() != DecisionRules.All() {
+		t.Fatalf("active decision = %q, want %q", updated.Decision(), DecisionRules.All())
 	}
-	_, _, _, single := ApplyDecision(p, DecisionOverwriteIfNewer)
+	_, _, _, single := ApplyDecision(p, DecisionRules)
 	if single.Decision() != "" {
-		t.Fatalf("single rule set policy %q", single.Decision())
+		t.Fatalf("single rules answer set policy %q", single.Decision())
 	}
 }
 
@@ -78,11 +79,49 @@ func TestDecisionAllBase(t *testing.T) {
 	if DecisionOverwrite.All() != DecisionOverwriteAll || DecisionSkip.All() != DecisionSkipAll {
 		t.Fatal("All() must match the -all constants")
 	}
-	if DecisionKeepBoth.All().Base() != DecisionKeepBoth {
+	if DecisionRules.All().Base() != DecisionRules {
 		t.Fatal("Base() must strip the suffix")
 	}
-	if DecisionKeepBoth.All().All() != DecisionKeepBoth.All() {
+	if DecisionRules.All().All() != DecisionRules.All() {
 		t.Fatal("All() must be idempotent")
+	}
+}
+
+func TestConflictRulesEvaluate(t *testing.T) {
+	base := time.Unix(1_000_000, 0)
+	later := base.Add(time.Hour)
+	tests := []struct {
+		name         string
+		rules        ConflictRules
+		src, dst     time.Time
+		srcSz, dstSz int64
+		want         RuleAction
+	}{
+		{"all ask", ConflictRules{}, base, later, 1, 2, RuleAsk},
+		{"time row wins", ConflictRules{Time: [3]RuleAction{TimeDestNewer: RuleSkip}, Size: [3]RuleAction{SizeDestLarger: RuleOverwrite}}, base, later, 1, 2, RuleSkip},
+		{"size row when time asks", ConflictRules{Size: [3]RuleAction{SizeDestLarger: RuleKeepBoth}}, base, later, 1, 2, RuleKeepBoth},
+		{"older row", ConflictRules{Time: [3]RuleAction{TimeDestOlder: RuleOverwrite}}, later, base, 1, 1, RuleOverwrite},
+		{"same time ignores sub-second", ConflictRules{Time: [3]RuleAction{TimeSame: RuleSkip}}, base, base.Add(400 * time.Millisecond), 1, 1, RuleSkip},
+		{"smaller row", ConflictRules{Size: [3]RuleAction{SizeDestSmaller: RuleOverwrite}}, base, base, 5, 2, RuleOverwrite},
+		{"same size row", ConflictRules{Size: [3]RuleAction{SizeSame: RuleSkip}}, base, base, 2, 2, RuleSkip},
+	}
+	for _, tt := range tests {
+		if got := tt.rules.Evaluate(tt.src, tt.dst, tt.srcSz, tt.dstSz); got != tt.want {
+			t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestConflictRulesGreyingAndNormalize(t *testing.T) {
+	r := ConflictRules{Time: [3]RuleAction{TimeDestNewer: RuleSkip}}
+	if !r.SizeChoiceEnabled(RuleSkip) || !r.SizeChoiceEnabled(RuleAsk) || r.SizeChoiceEnabled(RuleOverwrite) {
+		t.Fatal("only Skip and Ask may stay enabled when a time row is Skip")
+	}
+	r.Size[SizeSame] = RuleSkip
+	r.Time[TimeDestOlder] = RuleOverwrite // now Skip and Overwrite conflict: only Ask is enabled
+	r.Normalize()
+	if r.Size[SizeSame] != RuleAsk {
+		t.Fatalf("greyed selection must fall back to Ask, got %v", r.Size[SizeSame])
 	}
 }
 
@@ -127,8 +166,8 @@ func TestApplyAll(t *testing.T) {
 	}{
 		{DecisionOverwriteAll, true},
 		{DecisionSkipAll, true},
-		{DecisionCompare.All(), true},
-		{DecisionKeepBoth, false},
+		{DecisionRules.All(), true},
+		{DecisionRules, false},
 		{DecisionOverwrite, false},
 		{DecisionSkip, false},
 		{DecisionCancel, false},

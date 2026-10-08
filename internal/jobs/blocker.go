@@ -58,7 +58,7 @@ func BlockerDetailsFromRequest(req BlockerRequest) *BlockerDetails {
 				SourceTime:      c.SourceTime,
 				DestSize:        c.DestSize,
 				DestTime:        c.DestTime,
-				ContentDiffers:  c.ContentDiffers,
+				Reprompt:        c.Reprompt,
 				NoCompare:       c.NoCompare,
 			},
 		}

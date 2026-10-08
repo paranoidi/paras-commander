@@ -76,38 +76,39 @@ for a decision. It is asked in the quick blocker dialog or in the conflict panel
 | --- | --- | --- |
 | Overwrite | O | Replace this file |
 | Overwrite All | A | Replace this and every later conflict in the job |
-| Advanced... | D | Open the "Overwrite advanced" dialog |
+| Advanced... | D | Open the "Conflict rules" dialog |
 | Skip | S | Keep the existing file |
 | Skip All | L | Skip this and every later conflict in the job |
 | Cancel | C | Abort the job |
 | Postpone | P | Dismiss the quick dialog without answering (quick dialog only) |
 
-## Overwrite advanced
+## Conflict rules
 
-Pick one rule. **Apply to all conflicts** (Alt+A) is checked by default, so OK makes the rule the
-job's policy and later conflicts are decided by it without asking; uncheck it to apply the rule to
-the current file only.
-Cancel (or Esc) goes back to the File exists dialog.
+Advanced... opens a matrix where every condition picks its own action: Ask, Overwrite, Skip or
+Keep both. Up/Down move between rows, Left/Right between the choices of a row, Space or Enter picks
+one. Tab jumps between the time rows, the size rows, the checkboxes and the buttons.
 
-| Rule | Overwrites when, otherwise skips |
+| Rows | Conditions (relative to the destination file) |
 | --- | --- |
-| Overwrite if newer | the source was modified after the existing file |
-| Overwrite if older | the source was modified before the existing file |
-| Overwrite if existing is smaller | the existing file is smaller than the source |
-| Overwrite if size differs | the sizes differ |
-| Overwrite if same size | the sizes are equal |
-| Compare contents | see below |
-| Keep both (rename new file) | never overwrites: the new file is written as `name (1).ext` (first free number) |
+| Time | Destination newer, Destination older, Same time (compared to the whole second) |
+| Size | Destination smaller, Destination larger, Same size |
 
-### Compare contents
+Every conflicting file matches exactly one time row and one size row. The action is the time row's
+if it is not Ask, else the size row's, else Ask. Ask means "no rule here": if no row decides, the
+File exists dialog comes back for that file with "No rule matched." (even when the rules were
+applied to all conflicts).
 
-The two files are compared with the same chunked hashing as Find Duplicates
-(`dedup.chunk_bytes`), stopping at the first differing chunk. Files of different size differ
-without being read.
+- **Keep both** writes the new file as `name (1).ext` (first free number) and leaves the existing
+  file alone.
+- **Greyed choices:** the time rows take precedence. A size choice is greyed out when a time row
+  holds a different non-Ask action, since a file can be newer and smaller at once. Changing a time
+  row resets any size choice it greys out to Ask.
+- **Skip identical files (slow)** (Alt+I, off by default) runs first: files of equal size are compared with
+  the same chunked hashing as Find Duplicates (`dedup.chunk_bytes`), stopping at the first
+  differing chunk. Identical files are not copied; on a move the source is removed, so no
+  identical leftovers remain. Different files continue to the rows. The option is not offered when
+  extracting an archive (the archive is not comparable to the extracted output).
+- **Apply to all conflicts** (Alt+A, on by default) makes the rules the job's policy, so later
+  conflicts are decided without asking; uncheck it to apply the rules to the current file only.
 
-- Identical: nothing is copied. On a copy the source stays; on a move the source is removed, so
-  no identical leftovers remain.
-- Different: the File exists dialog comes back for that file with "Contents differ." and Compare
-  is no longer offered. This happens even when Compare was applied to all conflicts.
-- Compare is not offered when extracting an archive (the archive is not comparable to the
-  extracted output).
+OK (Alt+O) submits; Cancel (or Esc) goes back to the File exists dialog.

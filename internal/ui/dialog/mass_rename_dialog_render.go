@@ -240,22 +240,22 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	warnStyle := styles.MessageWarn.Background(dbg)
 
 	optX := primaryCol - 1
-	draw.DrawDialogRadio(screen, optX, y, "Simple (replace text)", 'S', state.MassRenameMode == MassRenameModeUISimple, state.FocusedField == 0, styles)
+	draw.DrawDialogRadio(screen, optX, y, "Simple (replace text)", 'S', state.MassRenameMode == MassRenameModeUISimple, state.FocusedField == 0, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawDialogRadio(screen, optX, y, "Regular expression", 'R', state.MassRenameMode == MassRenameModeUIRegex, state.FocusedField == 1, styles)
+	draw.DrawDialogRadio(screen, optX, y, "Regular expression", 'R', state.MassRenameMode == MassRenameModeUIRegex, state.FocusedField == 1, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawDialogRadio(screen, optX, y, "External $EDITOR", 'E', state.MassRenameMode == MassRenameModeUIExternalEditor, state.FocusedField == 2, styles)
+	draw.DrawDialogRadio(screen, optX, y, "External $EDITOR", 'E', state.MassRenameMode == MassRenameModeUIExternalEditor, state.FocusedField == 2, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawDialogRadio(screen, optX, y, "Capitalize", 'z', state.MassRenameMode == MassRenameModeUICapitalize, state.FocusedField == 3, styles)
+	draw.DrawDialogRadio(screen, optX, y, "Capitalize", 'z', state.MassRenameMode == MassRenameModeUICapitalize, state.FocusedField == 3, false, styles)
 	y++
 	if y >= innerBottom {
 		return

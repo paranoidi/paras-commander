@@ -1,6 +1,9 @@
 package jobs
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 // ConflictDecision is the user's choice for resolving a file conflict.
 type ConflictDecision string
@@ -12,16 +15,8 @@ const (
 	// DecisionRetry applies to disk-space blockers only (re-check free space and continue).
 	DecisionRetry ConflictDecision = "retry"
 
-	// Conditional rules from the "Overwrite advanced" dialog. The resolver evaluates them per file.
-	DecisionOverwriteIfNewer           ConflictDecision = "overwrite-if-newer"
-	DecisionOverwriteIfOlder           ConflictDecision = "overwrite-if-older"
-	DecisionOverwriteIfExistingSmaller ConflictDecision = "overwrite-if-existing-smaller"
-	DecisionOverwriteIfSizeDiffers     ConflictDecision = "overwrite-if-size-differs"
-	DecisionOverwriteIfSameSize        ConflictDecision = "overwrite-if-same-size"
-	// DecisionCompare skips identical files (removing the source on move); differing files prompt again.
-	DecisionCompare ConflictDecision = "compare"
-	// DecisionKeepBoth writes the new file under the first free "name (N).ext".
-	DecisionKeepBoth ConflictDecision = "keep-both"
+	// DecisionRules means "evaluate the attached ConflictRules per file" (see BlockerAnswer.Rules).
+	DecisionRules ConflictDecision = "rules"
 
 	DecisionOverwriteAll = DecisionOverwrite + allSuffix
 	DecisionSkipAll      = DecisionSkip + allSuffix
@@ -58,16 +53,17 @@ type ConflictRequest struct {
 	SourceTime      string
 	DestSize        string
 	DestTime        string
-	// ContentDiffers marks a repeat prompt after Compare found different contents; the job's
-	// apply-to-all policy is bypassed and Compare is not offered again.
-	ContentDiffers bool
-	// NoCompare hides Compare: the source is not comparable to the destination (archive extract).
+	// Reprompt is the note for a repeat prompt after the rules left this file undecided
+	// ("No rule matched."); a non-empty value bypasses the job's apply-to-all policy.
+	Reprompt string
+	// NoCompare hides Skip identical: the source is not comparable to the destination (archive extract).
 	NoCompare bool
 }
 
 // ConflictPolicy tracks active overwrite/skip decisions within a job.
 type ConflictPolicy struct {
 	activeDecision ConflictDecision
+	rules          *ConflictRules
 }
 
 // NewConflictPolicy creates a clean conflict policy with no active bulk decision.
@@ -78,6 +74,11 @@ func NewConflictPolicy() ConflictPolicy {
 // Decision returns the current active decision or empty string if none.
 func (p ConflictPolicy) Decision() ConflictDecision {
 	return p.activeDecision
+}
+
+// Answer returns the active decision together with its rules.
+func (p ConflictPolicy) Answer() BlockerAnswer {
+	return BlockerAnswer{Decision: p.activeDecision, Rules: p.rules}
 }
 
 // SetDecision sets a new active decision.
@@ -110,5 +111,87 @@ func ApplyDecision(policy ConflictPolicy, newDecision ConflictDecision) (overwri
 		return false, false, true, policy
 	default:
 		return false, false, false, policy
+	}
+}
+
+// BlockerAnswer is the user's reply to a blocker: a decision plus, for DecisionRules, the rules.
+type BlockerAnswer struct {
+	Decision ConflictDecision
+	Rules    *ConflictRules
+}
+
+// RuleAction is what a conflict-rules row does with a matching file.
+type RuleAction int
+
+const (
+	RuleAsk RuleAction = iota // no rule: leave the decision to the next row, else prompt again
+	RuleOverwrite
+	RuleSkip
+	RuleKeepBoth // write the new file under the first free "name (N).ext"
+)
+
+// Row indexes of ConflictRules.Time and ConflictRules.Size (relative to the destination).
+const (
+	TimeDestNewer = iota
+	TimeDestOlder
+	TimeSame
+)
+const (
+	SizeDestSmaller = iota
+	SizeDestLarger
+	SizeSame
+)
+
+// ConflictRules is the "Conflict rules" matrix: one action per time and size condition.
+type ConflictRules struct {
+	Time, Size    [3]RuleAction
+	SkipIdentical bool
+}
+
+
+
+// Evaluate returns the action for a file: the matching time row if it is not Ask, else the
+// matching size row, else Ask. Times compare at whole-second precision (SFTP resolution).
+func (r ConflictRules) Evaluate(srcMod, dstMod time.Time, srcSize, dstSize int64) RuleAction {
+	t := TimeSame
+	switch s, d := srcMod.Unix(), dstMod.Unix(); {
+	case d > s:
+		t = TimeDestNewer
+	case d < s:
+		t = TimeDestOlder
+	}
+	z := SizeSame
+	switch {
+	case dstSize < srcSize:
+		z = SizeDestSmaller
+	case dstSize > srcSize:
+		z = SizeDestLarger
+	}
+	if a := r.Time[t]; a != RuleAsk {
+		return a
+	}
+	return r.Size[z]
+}
+
+// SizeChoiceEnabled reports whether action may be picked in size row: every size row overlaps
+// every time row, so a non-Ask choice must not contradict a different non-Ask time action.
+func (r ConflictRules) SizeChoiceEnabled(action RuleAction) bool {
+	if action == RuleAsk {
+		return true
+	}
+	for _, t := range r.Time {
+		if t != RuleAsk && t != action {
+			return false
+		}
+	}
+	return true
+}
+
+// Normalize resets size choices that contradict the time rows to Ask.
+func (r *ConflictRules) Normalize() {
+	for i, a := range r.Size {
+		if !r.SizeChoiceEnabled(a) {
+			r.Size[i] = RuleAsk
+		}
 	}
 }

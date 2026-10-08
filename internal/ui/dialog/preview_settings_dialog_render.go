@@ -86,7 +86,7 @@ func DrawPreviewSettingsDialog(screen tcell.Screen, layout Layout, state Preview
 	primitive.Text(screen, textX, y, textW, "Active protocol:", textStyle)
 	y++
 	for i, r := range PreviewSettingsDialogProtocolRadios() {
-		draw.DrawDialogRadio(screen, optionX, y, r.Label, r.Shortcut, state.Protocol == r.Value, state.Focus == previewSettingsDialogFocusProtocolFirst+i, styles)
+		draw.DrawDialogRadio(screen, optionX, y, r.Label, r.Shortcut, state.Protocol == r.Value, state.Focus == previewSettingsDialogFocusProtocolFirst+i, false, styles)
 		y++
 	}
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
@@ -95,7 +95,7 @@ func DrawPreviewSettingsDialog(screen tcell.Screen, layout Layout, state Preview
 	primitive.Text(screen, textX, y, textW, "Image metadata:", textStyle)
 	y++
 	for i, r := range PreviewSettingsDialogImageMetadataRadios() {
-		draw.DrawDialogRadio(screen, optionX, y, r.Label, r.Shortcut, state.ImageMetadata == r.Value, state.Focus == previewSettingsDialogFocusMetadataFirst+i, styles)
+		draw.DrawDialogRadio(screen, optionX, y, r.Label, r.Shortcut, state.ImageMetadata == r.Value, state.Focus == previewSettingsDialogFocusMetadataFirst+i, false, styles)
 		y++
 	}
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
@@ -123,7 +123,7 @@ func drawPreviewSettingsCapabilityGroup(
 	styles theme.Theme,
 ) int {
 	for i, r := range PreviewSettingsDialogCapabilityRadios() {
-		draw.DrawDialogRadio(screen, optionX, y, prefix+" "+r.Label, r.Shortcut, value == r.Value, focus == focusFirst+i, styles)
+		draw.DrawDialogRadio(screen, optionX, y, prefix+" "+r.Label, r.Shortcut, value == r.Value, focus == focusFirst+i, false, styles)
 		y++
 	}
 	return y

@@ -35,7 +35,7 @@ type State struct {
 
 	// blockerWait maps job ID -> channel for one in-flight blocker prompt per job.
 	blockerRegMu sync.Mutex
-	blockerWait  map[string]chan ConflictDecision
+	blockerWait  map[string]chan BlockerAnswer
 
 	// pendingDequeued lists jobs removed from the FIFO queue but not yet holding the transfer lease.
 	// runWorker may dequeue the next runnable job before an earlier runJob goroutine acquires the lease;
@@ -50,7 +50,7 @@ type State struct {
 
 	// TransferFunc is called by the worker to copy/move files, allowing tests to inject
 	// custom implementations. emit must be used for all job-related UI events (same path as State.emit).
-	TransferFunc func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error
+	TransferFunc func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error
 
 	emitMu   sync.RWMutex
 	emitHook func(Event)
@@ -129,7 +129,7 @@ func NewState() *State {
 		queue:                  NewQueue(),
 		events:                 make(chan Event, 100),
 		wake:                   make(chan struct{}, 1),
-		blockerWait:            make(map[string]chan ConflictDecision),
+		blockerWait:            make(map[string]chan BlockerAnswer),
 		cancelRun:              make(map[string]context.CancelFunc),
 		throughputChartEnabled: true,
 		scanCancel:             make(map[string]context.CancelFunc),
@@ -567,14 +567,19 @@ func (s *State) ClearFinishedArchive() {
 }
 
 // SetTransferFunc sets the copy/move function used by the worker.
-func (s *State) SetTransferFunc(fn func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error) {
+func (s *State) SetTransferFunc(fn func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.TransferFunc = fn
 }
 
-// SubmitBlockerDecision delivers the user's choice for a job blocked on conflict or disk space.
+// SubmitBlockerDecision delivers a rule-less choice for a blocked job.
 func (s *State) SubmitBlockerDecision(jobID string, d ConflictDecision) {
+	s.SubmitBlockerAnswer(jobID, BlockerAnswer{Decision: d})
+}
+
+// SubmitBlockerAnswer delivers the user's answer for a job blocked on conflict or disk space.
+func (s *State) SubmitBlockerAnswer(jobID string, a BlockerAnswer) {
 	s.blockerRegMu.Lock()
 	ch := s.blockerWait[jobID]
 	s.blockerRegMu.Unlock()
@@ -582,14 +587,9 @@ func (s *State) SubmitBlockerDecision(jobID string, d ConflictDecision) {
 		return
 	}
 	select {
-	case ch <- d:
+	case ch <- a:
 	default:
 	}
-}
-
-// SubmitConflictDecision is an alias for SubmitBlockerDecision (conflict outcomes use the same channel).
-func (s *State) SubmitConflictDecision(jobID string, d ConflictDecision) {
-	s.SubmitBlockerDecision(jobID, d)
 }
 
 // CancelJob requests cancellation of a queued or running job. Returns true if the job was found.
@@ -699,17 +699,17 @@ func (s *State) runWorker(stop <-chan struct{}) {
 
 func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	var policy ConflictPolicy
-	waitBlocker := func(req BlockerRequest) ConflictDecision {
+	waitBlocker := func(req BlockerRequest) BlockerAnswer {
 		if req.Kind == BlockerKindConflict && req.Conflict != nil {
-			if policy.Decision() != "" && !req.Conflict.ContentDiffers {
-				return policy.Decision()
+			if policy.Decision() != "" && req.Conflict.Reprompt == "" {
+				return policy.Answer()
 			}
 		}
 
 		details := BlockerDetailsFromRequest(req)
 		jobSnap := *details
 		emitSnap := *details
-		ch := make(chan ConflictDecision, 1)
+		ch := make(chan BlockerAnswer, 1)
 		s.blockerRegMu.Lock()
 		s.blockerWait[job.ID] = ch
 		s.blockerRegMu.Unlock()
@@ -732,11 +732,11 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		})
 
 		s.transferLease.Unlock()
-		var d ConflictDecision
+		var ans BlockerAnswer
 		select {
-		case d = <-ch:
+		case ans = <-ch:
 		case <-stop:
-			d = DecisionCancel
+			ans.Decision = DecisionCancel
 		}
 		s.transferLease.Lock()
 
@@ -761,9 +761,12 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		}
 
 		if req.Kind == BlockerKindConflict {
-			_, _, _, policy = ApplyDecision(policy, d)
+			_, _, _, policy = ApplyDecision(policy, ans.Decision)
+			if ans.Decision.ApplyAll() {
+				policy.rules = ans.Rules
+			}
 		}
-		return d
+		return ans
 	}
 
 	s.mu.Lock()

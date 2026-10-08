@@ -261,8 +261,8 @@ func ActivityFailureLabel(ev jobs.Event) string {
 }
 
 // TransferFunc builds the job worker transfer function from config.
-func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, dedupChunkBytes int64, rateWait ops.RateLimiter) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
-	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
+func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, dedupChunkBytes int64, rateWait ops.RateLimiter) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
+	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
 		opts.OnRemoveSources = func() {
 			emit(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning})
@@ -375,12 +375,12 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, ded
 }
 
 // diskWaitFromBlocker adapts the jobs blocker callback to ops.DiskWaitFunc.
-func diskWaitFromBlocker(waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) ops.DiskWaitFunc {
+func diskWaitFromBlocker(waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) ops.DiskWaitFunc {
 	if waitBlocker == nil {
 		return nil
 	}
 	return func(req ops.DiskSpaceWaitRequest) ops.DiskSpaceWaitDecision {
-		decision := waitBlocker(jobs.BlockerRequest{
+		answer := waitBlocker(jobs.BlockerRequest{
 			Kind: jobs.BlockerKindDiskSpace,
 			DiskSpace: &jobs.DiskSpaceBlockerRequest{
 				Destination:    req.Destination,
@@ -390,7 +390,7 @@ func diskWaitFromBlocker(waitBlocker func(jobs.BlockerRequest) jobs.ConflictDeci
 				NextSource:     req.NextSource,
 			},
 		})
-		if decision == jobs.DecisionCancel {
+		if answer.Decision == jobs.DecisionCancel {
 			return ops.DiskSpaceWaitCancel
 		}
 		return ops.DiskSpaceWaitRetry
@@ -455,10 +455,10 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 
 // newConflictResolver builds the per-file conflict resolver passed to ops.Execute*: it turns a
 // file conflict into a jobs.BlockerRequest, blocks on waitBlocker for the user's decision, and
-// evaluates that decision (including the conditional "advanced" rules) into an ops.ConflictResolution.
-// Compare uses compare.SameContent (chunked, bails at the first difference); differing contents
-// ask again with ContentDiffers set.
-func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision, chunkBytes int64) ops.ConflictResolver {
+// evaluates that answer (including the conflict-rules matrix) into an ops.ConflictResolution.
+// Skip identical uses compare.SameContent (chunked, bails at the first difference); a file the
+// rules leave on Ask is asked about again with Reprompt set.
+func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer, chunkBytes int64) ops.ConflictResolver {
 	return func(ctx context.Context, src, dst string, facts ops.FileConflictFacts) (ops.ConflictResolution, error) {
 		kind := facts.Kind
 		if kind == "" {
@@ -475,50 +475,47 @@ func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jo
 			DestTime:        ops.FormatConflictTime(facts.DestMod),
 			NoCompare:       job.Type == jobs.TypeExtract,
 		}
-		overwriteIf := func(ok bool) (ops.ConflictResolution, error) {
-			if ok {
-				return ops.ConflictResolution{Action: ops.ActionOverwrite}, nil
-			}
-			return ops.ConflictResolution{Action: ops.ActionSkip}, nil
-		}
 		for {
-			decision := waitBlocker(jobs.BlockerRequest{
+			answer := waitBlocker(jobs.BlockerRequest{
 				Kind:     jobs.BlockerKindConflict,
 				Conflict: &req,
 			})
-			switch decision.Base() {
+			switch answer.Decision.Base() {
 			case jobs.DecisionOverwrite:
-				return overwriteIf(true)
-			case jobs.DecisionOverwriteIfNewer:
-				return overwriteIf(facts.SourceMod.After(facts.DestMod))
-			case jobs.DecisionOverwriteIfOlder:
-				return overwriteIf(facts.SourceMod.Before(facts.DestMod))
-			case jobs.DecisionOverwriteIfExistingSmaller:
-				return overwriteIf(facts.DestSize < facts.SourceSize)
-			case jobs.DecisionOverwriteIfSizeDiffers:
-				return overwriteIf(facts.SourceSize != facts.DestSize)
-			case jobs.DecisionOverwriteIfSameSize:
-				return overwriteIf(facts.SourceSize == facts.DestSize)
-			case jobs.DecisionKeepBoth:
-				return ops.ConflictResolution{Action: ops.ActionRename}, nil
-			case jobs.DecisionCompare:
-				if req.ContentDiffers {
-					return overwriteIf(false) // Compare is not offered again; defensive
+				return ops.ConflictResolution{Action: ops.ActionOverwrite}, nil
+			case jobs.DecisionRules:
+				var rules jobs.ConflictRules // nil rules: everything is Ask
+				if answer.Rules != nil {
+					rules = *answer.Rules
 				}
-				same, err := sameContent(ctx, src, dst, facts, chunkBytes)
-				if err != nil {
-					return ops.ConflictResolution{}, err
+				note := "No rule matched."
+				if rules.SkipIdentical && !req.NoCompare {
+					same, err := sameContent(ctx, src, dst, facts, chunkBytes)
+					if err != nil {
+						return ops.ConflictResolution{}, err
+					}
+					if same {
+						return ops.ConflictResolution{Action: ops.ActionIdentical}, nil
+					}
+					if facts.Kind != "symlink" && facts.SourceSize == facts.DestSize {
+						note = "Contents differ. No rule matched."
+					}
 				}
-				if same {
-					return ops.ConflictResolution{Action: ops.ActionIdentical}, nil
+				switch rules.Evaluate(facts.SourceMod, facts.DestMod, facts.SourceSize, facts.DestSize) {
+				case jobs.RuleOverwrite:
+					return ops.ConflictResolution{Action: ops.ActionOverwrite}, nil
+				case jobs.RuleSkip:
+					return ops.ConflictResolution{Action: ops.ActionSkip}, nil
+				case jobs.RuleKeepBoth:
+					return ops.ConflictResolution{Action: ops.ActionRename}, nil
 				}
-				req.ContentDiffers = true
+				req.Reprompt = note
 			case jobs.DecisionCancel:
 				return ops.ConflictResolution{}, jobs.ErrUserCanceled
 			case jobs.DecisionRetry:
 				return ops.ConflictResolution{}, fmt.Errorf("unexpected retry decision for file conflict")
 			default:
-				return overwriteIf(false)
+				return ops.ConflictResolution{Action: ops.ActionSkip}, nil
 			}
 		}
 	}

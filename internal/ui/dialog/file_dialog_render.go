@@ -471,7 +471,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 	if y < innerBottom {
 		focused := state.FocusedField == baseFocus
 		selected := strings.TrimSpace(state.RunForEachPool) == ""
-		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "No pool (unlimited)", 0, selected, focused, styles)
+		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "No pool (unlimited)", 0, selected, focused, false, styles)
 		y++
 	}
 	for i, name := range state.RunForEachPools {
@@ -480,7 +480,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 		}
 		focused := state.FocusedField == baseFocus+1+i
 		selected := strings.TrimSpace(state.RunForEachPool) == strings.TrimSpace(name)
-		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, name, 0, selected, focused, styles)
+		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, name, 0, selected, focused, false, styles)
 		y++
 	}
 }
@@ -693,10 +693,10 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 	} else if state.RenamePhase == RenamePhaseSlugify {
 		dotSel := state.RenameSlugifySep == RenameSlugifyDot
 		usSel := state.RenameSlugifySep == RenameSlugifyUnderscore
-		draw.DrawDialogRadio(screen, optionCol, y, `Replace space with "."`, '.', dotSel, state.FocusedField == 0, styles)
+		draw.DrawDialogRadio(screen, optionCol, y, `Replace space with "."`, '.', dotSel, state.FocusedField == 0, false, styles)
 		y++
 		if y < innerBottom {
-			draw.DrawDialogRadio(screen, optionCol, y, `Replace space with "_"`, '_', usSel, state.FocusedField == 1, styles)
+			draw.DrawDialogRadio(screen, optionCol, y, `Replace space with "_"`, '_', usSel, state.FocusedField == 1, false, styles)
 		}
 	} else if state.RenamePhase == RenamePhaseEncoding {
 		for i := 0; i < len(state.RenameEncodingCandidates); i++ {
@@ -706,7 +706,7 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 			label := RenameEncodingOptionLabel(state, i)
 			shortcut := RenameEncodingOptionShortcut(state, i)
 			sel := state.RenameEncodingSelected == i
-			draw.DrawDialogRadio(screen, optionCol, y, label, shortcut, sel, state.FocusedField == i, styles)
+			draw.DrawDialogRadio(screen, optionCol, y, label, shortcut, sel, state.FocusedField == i, false, styles)
 			y++
 		}
 	}
@@ -852,7 +852,7 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 		if y >= rect.Y+rect.Height-2 {
 			break
 		}
-		draw.DrawDialogRadio(screen, optionCol, y, r.Label, r.Shortcut, state.MkdirAction == r.Action, state.FocusedField == baseFocus+i, styles)
+		draw.DrawDialogRadio(screen, optionCol, y, r.Label, r.Shortcut, state.MkdirAction == r.Action, state.FocusedField == baseFocus+i, false, styles)
 	}
 }
 

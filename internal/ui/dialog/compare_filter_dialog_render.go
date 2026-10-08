@@ -23,7 +23,7 @@ func DrawCompareFilterDialog(screen tcell.Screen, layout Layout, state CompareFi
 
 	for i, r := range comparepkg.FilterDialogRadios() {
 		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, r.Label, r.Shortcut,
-			state.Filter == r.Filter, state.Focus == i, styles)
+			state.Filter == r.Filter, state.Focus == i, false, styles)
 		y++
 	}
 
