@@ -113,6 +113,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		RunForEachDialog: overlayMaps[16],
 		PinDialog:        overlayMaps[17],
 		HelpDialog:       overlayMaps[18],
+		UserMenu:         overlayMaps[19],
 		LeaderKey:        leaderKey,
 		CopyMenuKey:      copyMenuKey,
 		PreviewMenuKey:   previewMenuKey,
@@ -317,6 +318,7 @@ type dialogShortcuts struct {
 	RunForEach map[string][]string `toml:"run_for_each"`
 	Pin        map[string][]string `toml:"pin"`
 	Help       map[string][]string `toml:"help"`
+	UserMenu   map[string][]string `toml:"user_menu"`
 }
 
 // EncodeDefaultStub writes the canonical keybindings TOML: a leading
@@ -386,6 +388,7 @@ func EncodeDefaultStub(w io.Writer) error {
 			RunForEach: DefaultRunForEachDialogOverlayKeys(),
 			Pin:        DefaultPinDialogOverlayKeys(),
 			Help:       DefaultHelpDialogOverlayKeys(),
+			UserMenu:   DefaultUserMenuOverlayKeys(),
 		},
 	}
 	if err := toml.NewEncoder(w).Encode(payload); err != nil {

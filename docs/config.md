@@ -303,6 +303,9 @@ the Run-for-each dialog's "Allocate pseudo-TTY (interactive)" checkbox. It requi
 to be set and cannot be combined with a submenu table. See `llm-docs/commands.md` for the full
 per-entry field list.
 
+Inside a submenu, **Left** or **Backspace** (`usermenu.back` under `[dialog.user_menu]` in
+`keybindings.toml`) returns to the parent menu; **Esc** closes the whole menu.
+
 ## `[preview]`
 
 Preview pane (F3 / quick view / carousel).

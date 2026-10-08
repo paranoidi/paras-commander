@@ -317,12 +317,21 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 		return false
 	}
 
+	if st.UserMenu && a.keys.UserMenu != nil {
+		if id, ok := a.keys.UserMenu.Lookup(event); ok && id == keymap.ActionUserMenuBack {
+			if n := len(a.userMenuStack); n > 0 {
+				parent := a.userMenuStack[n-1]
+				a.userMenuStack = a.userMenuStack[:n-1]
+				a.openUserMenuLevel(parent)
+			}
+			return false
+		}
+	}
+
 	switch event.Key() {
 	case tcell.KeyEsc:
-		if st.UserMenu && len(a.userMenuStack) > 0 {
-			parent := a.userMenuStack[len(a.userMenuStack)-1]
-			a.userMenuStack = a.userMenuStack[:len(a.userMenuStack)-1]
-			a.openUserMenuLevel(parent)
+		if st.UserMenu {
+			a.closeUserMenu()
 			return false
 		}
 		a.closeLeaderMenu()

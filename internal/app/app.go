@@ -356,7 +356,7 @@ type App struct {
 	// level) from the last load, toasted every time a user-menu level is shown.
 	userMenuWarnings []string
 
-	// userMenuStack holds ancestor levels while a submenu is open, for Esc back-navigation.
+	// userMenuStack holds ancestor levels while a submenu is open, for usermenu.back navigation.
 	userMenuStack [][]usermenu.MenuEntry
 }
 
@@ -822,6 +822,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.FindDialog, keymap.DefaultFindDialogOverlayKeys, "find dialog overlay"},
 		{&rk.HistoryDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
 		{&rk.HelpDialog, keymap.DefaultHelpDialogOverlayKeys, "help dialog overlay"},
+		{&rk.UserMenu, keymap.DefaultUserMenuOverlayKeys, "user menu overlay"},
 		{&rk.FilePreview, keymap.DefaultFilePreviewOverlayKeys, "preview overlay"},
 		{&rk.FlattenDialog, keymap.DefaultFlattenDialogOverlayKeys, "flatten dialog overlay"},
 		{&rk.TransferDialog, keymap.DefaultTransferDialogOverlayKeys, "transfer dialog overlay"},

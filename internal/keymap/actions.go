@@ -48,7 +48,9 @@ const (
 	ActionPanelGitFilterMenu     = "panel.git-filter-menu"
 	ActionPanelHistoryBothPanels = "panel.history-both-panels"
 	// ActionHelpTextEditKeys is bound via [dialog.help], not [main].
-	ActionHelpTextEditKeys            = "help.text-edit-keys"
+	ActionHelpTextEditKeys = "help.text-edit-keys"
+	// ActionUserMenuBack is bound via [dialog.user_menu], not [main].
+	ActionUserMenuBack                = "usermenu.back"
 	ActionPanelFindDialog             = "panel.find-dialog"
 	ActionFindView                    = "find.view"
 	ActionFindSelectAll               = "find.select-all"
@@ -346,6 +348,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelGitFilterMenu:          {},
 	ActionPanelHistoryBothPanels:      {},
 	ActionHelpTextEditKeys:            {},
+	ActionUserMenuBack:                {},
 	ActionPanelFindDialog:             {},
 	ActionFindView:                    {},
 	ActionFindSelectAll:               {},

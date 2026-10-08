@@ -18,6 +18,7 @@ const (
 	DialogHistoryShortcutsTable    = "dialog.history"
 	DialogPinShortcutsTable        = "dialog.pin"
 	DialogHelpShortcutsTable       = "dialog.help"
+	DialogUserMenuShortcutsTable   = "dialog.user_menu"
 	DialogFlattenShortcutsTable    = "dialog.flatten"
 	DialogTransferShortcutsTable   = "dialog.transfer"
 	CompareShortcutsTable          = "compare"
@@ -41,6 +42,7 @@ var dialogShortcutSubtables = map[string]struct{}{
 	"run_for_each": {},
 	"pin":          {},
 	"help":         {},
+	"user_menu":    {},
 }
 
 // AllShortcutTablePaths returns every shortcut table path (top-level and dialog.*).
@@ -63,6 +65,7 @@ func AllShortcutTablePaths() []string {
 		DialogRunForEachShortcutsTable,
 		DialogPinShortcutsTable,
 		DialogHelpShortcutsTable,
+		DialogUserMenuShortcutsTable,
 		CompareShortcutsTable,
 		DedupShortcutsTable,
 		TerminalShortcutsTable,

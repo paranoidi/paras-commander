@@ -23,6 +23,7 @@ type Bundle struct {
 	RunForEachDialog *Map // run-for-each dialog (command history shortcut)
 	PinDialog        *Map // pin dialog (open-primary/open-secondary/remove shortcuts)
 	HelpDialog       *Map // F1 help dialog (switch to text-edit keys page)
+	UserMenu         *Map // F2 user menu strip (back to parent submenu)
 	// LeaderKey maps action ID → single-letter Esc function-menu leader key (merged defaults + user).
 	LeaderKey map[string]string
 	// CopyMenuKey maps action ID → single-letter `"` copy-menu key (merged defaults + user).

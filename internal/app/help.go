@@ -326,6 +326,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if a.keys.HelpDialog != nil {
 		add(a.keys.HelpDialog.BindingsForAction(actionID))
 	}
+	if a.keys.UserMenu != nil {
+		add(a.keys.UserMenu.BindingsForAction(actionID))
+	}
 	if a.keys.FlattenDialog != nil {
 		add(a.keys.FlattenDialog.BindingsForAction(actionID))
 	}
@@ -358,6 +361,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 		add(od)
 	}
 	if od := keymap.DefaultHelpDialogOverlayKeys()[actionID]; len(od) > 0 {
+		add(od)
+	}
+	if od := keymap.DefaultUserMenuOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
 	if od := keymap.DefaultFlattenDialogOverlayKeys()[actionID]; len(od) > 0 {

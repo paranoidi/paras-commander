@@ -675,7 +675,47 @@ func TestUserMenuSubmenuOpensChildren(t *testing.T) {
 	}
 }
 
-func TestUserMenuEscInSubmenuReturnsToParentLevel(t *testing.T) {
+func TestUserMenuBackInSubmenuReturnsToParentLevel(t *testing.T) {
+	for _, ev := range []*tcell.EventKey{
+		tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone),
+		tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone),
+	} {
+		dir := t.TempDir()
+		cfgDir := filepath.Join(dir, "config")
+		menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+		if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		userMenuSubmenuFixture(t, menuPath)
+
+		app := testUserMenuApp(t, dir, cfgDir)
+		app.openUserMenu()
+		app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+		if len(app.model.LeaderMenu.Items) != 1 {
+			t.Fatalf("test setup: expected to be inside submenu, items = %+v", app.model.LeaderMenu.Items)
+		}
+
+		app.handleLeaderMenuKey(ev)
+
+		if !app.model.LeaderMenu.Open {
+			t.Fatalf("%v inside submenu should return to parent level, not close the whole menu", ev.Name())
+		}
+		if len(app.model.LeaderMenu.Items) != 2 {
+			t.Fatalf("items after %v = %+v, want back to top-level 2 items", ev.Name(), app.model.LeaderMenu.Items)
+		}
+		if len(app.userMenuStack) != 0 {
+			t.Fatalf("userMenuStack len = %d, want 0 back at top level", len(app.userMenuStack))
+		}
+
+		// Back at top level is a no-op: the menu stays open.
+		app.handleLeaderMenuKey(ev)
+		if !app.model.LeaderMenu.Open {
+			t.Fatalf("%v at top level should keep the menu open", ev.Name())
+		}
+	}
+}
+
+func TestUserMenuEscInSubmenuClosesWholeMenu(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -687,20 +727,14 @@ func TestUserMenuEscInSubmenuReturnsToParentLevel(t *testing.T) {
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
-	if len(app.model.LeaderMenu.Items) != 1 {
-		t.Fatalf("test setup: expected to be inside submenu, items = %+v", app.model.LeaderMenu.Items)
-	}
 
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 
-	if !app.model.LeaderMenu.Open {
-		t.Fatal("Esc inside submenu should return to parent level, not close the whole menu")
-	}
-	if len(app.model.LeaderMenu.Items) != 2 {
-		t.Fatalf("items after Esc = %+v, want back to top-level 2 items", app.model.LeaderMenu.Items)
+	if app.model.LeaderMenu.Open {
+		t.Fatal("Esc inside submenu should close the whole menu")
 	}
 	if len(app.userMenuStack) != 0 {
-		t.Fatalf("userMenuStack len = %d, want 0 back at top level", len(app.userMenuStack))
+		t.Fatalf("userMenuStack len = %d, want 0 after close", len(app.userMenuStack))
 	}
 }
 

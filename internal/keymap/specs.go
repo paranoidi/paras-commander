@@ -442,6 +442,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"help dialog", "text editing", "input", "readline"},
 		},
 		{
+			ID:           ActionUserMenuBack,
+			Title:        "User menu: parent menu",
+			Section:      "Navigation",
+			DefaultKeys:  nil, // overlay: DefaultUserMenuOverlayKeys
+			PreferredKey: "Left",
+			Keywords:     []string{"user menu", "submenu", "back", "parent"},
+		},
+		{
 			ID:           ActionPanelFindDialog,
 			Views:        HelpBrowser,
 			Title:        "Find files",

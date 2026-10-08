@@ -156,9 +156,9 @@ func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry
 
 // openUserMenuLevel opens (or swaps the already-open strip to) one menu level: entries is
 // the flat list of rows to show now, either the top-level menu or a submenu's children. This
-// is the single place any user-menu level is shown (top level, submenu, Esc-back, reload), so
+// is the single place any user-menu level is shown (top level, submenu, back, reload), so
 // it is also the single place a.userMenuWarnings is toasted. Picking a submenu row pushes the
-// current level onto a.userMenuStack and recurses into it; picking a leaf clears the stack
+// current level onto a.userMenuStack and recurses into it (usermenu.back pops it); picking a leaf clears the stack
 // (leaving the whole menu, not just one level) and runs it.
 func (a *App) openUserMenuLevel(entries []usermenu.MenuEntry) {
 	a.userMenuVisible = entries
