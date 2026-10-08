@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -68,13 +69,13 @@ func ConflictDecisionFromButtonIndex(idx int) jobs.ConflictDecision {
 	case 0:
 		return jobs.DecisionOverwrite
 	case 1:
-		return jobs.DecisionSkip
-	case 2:
 		return jobs.DecisionOverwriteAll
-	case 3:
-		return jobs.DecisionSkipAll
-	case 4:
+	case 2:
 		return jobs.DecisionOverwriteAllSameSize
+	case 3:
+		return jobs.DecisionSkip
+	case 4:
+		return jobs.DecisionSkipAll
 	default:
 		return jobs.DecisionCancel
 	}
@@ -146,13 +147,13 @@ func JobBlockerDialogFocusFromShortcut(b jobs.BlockerDetails, r rune) (int, bool
 	switch r {
 	case 'o', 'O':
 		return 0, true
-	case 's', 'S':
-		return 1, true
 	case 'a', 'A':
-		return 2, true
-	case 'l', 'L':
-		return 3, true
+		return 1, true
 	case 'm', 'M':
+		return 2, true
+	case 's', 'S':
+		return 3, true
+	case 'l', 'L':
 		return 4, true
 	case 'c', 'C':
 		return 5, true
@@ -200,50 +201,60 @@ func JobBlockerDialogMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) 
 			return focus, false
 		}
 	}
-	col := focus % 3
-	row := focus / 3
-	maxRow := max / 3
+	return moveFocusInButtonGrid(conflictDialogButtonGrid, focus, key)
+}
+
+// Conflict button rows as focus indexes (see ConflictDecisionFromButtonIndex; 6 is Postpone).
+var (
+	conflictDialogButtonGrid = [][]int{{0, 1, 2}, {3, 4, 6}, {5}}
+	conflictPanelButtonGrid  = [][]int{{0, 1, 2}, {3, 4, 5}}
+)
+
+// JobsBlockerPanelMoveFocus applies navigation keys to the jobs-view blocker pane buttons,
+// which lay out like the quick dialog minus Postpone.
+func JobsBlockerPanelMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) (int, bool) {
+	if b.Kind == jobs.BlockerKindDiskSpace {
+		return JobBlockerDialogMoveFocus(b, focus, key)
+	}
+	return moveFocusInButtonGrid(conflictPanelButtonGrid, focus, key)
+}
+
+// moveFocusInButtonGrid moves focus through centered button rows: Tab/Left/Right step in
+// reading order (Tab wraps, arrows do not), Up/Down jump to the visually nearest button.
+func moveFocusInButtonGrid(grid [][]int, focus int, key tcell.Key) (int, bool) {
+	var flat []int
+	row, col := 0, 0
+	for r, cells := range grid {
+		for c, f := range cells {
+			if f == focus {
+				row, col = r, c
+			}
+			flat = append(flat, f)
+		}
+	}
+	pos := slices.Index(flat, focus)
+	if pos < 0 {
+		return flat[0], true
+	}
 	switch key {
 	case tcell.KeyTab:
-		if focus >= max {
-			return 0, true
-		}
-		return focus + 1, true
+		return flat[(pos+1)%len(flat)], true
 	case tcell.KeyBacktab:
-		if focus <= 0 {
-			return max, true
-		}
-		return focus - 1, true
+		return flat[(pos+len(flat)-1)%len(flat)], true
 	case tcell.KeyLeft:
-		if col > 0 {
-			return focus - 1, true
-		}
-		if row > 0 {
-			return focus - 1, true
-		}
-		return focus, true
+		return flat[max(pos-1, 0)], true
 	case tcell.KeyRight:
-		if col < 2 && focus+1 <= max {
-			return focus + 1, true
+		return flat[min(pos+1, len(flat)-1)], true
+	case tcell.KeyUp, tcell.KeyDown:
+		next := row - 1
+		if key == tcell.KeyDown {
+			next = row + 1
 		}
-		if row < maxRow {
-			return focus + 1, true
+		if next < 0 || next >= len(grid) {
+			return focus, true
 		}
-		return focus, true
-	case tcell.KeyUp:
-		if row > 0 {
-			return focus - 3, true
-		}
-		return focus, true
-	case tcell.KeyDown:
-		if row < maxRow {
-			next := focus + 3
-			if next > max {
-				return max, true
-			}
-			return next, true
-		}
-		return focus, true
+		src, dst := len(grid[row]), len(grid[next])
+		return grid[next][(2*col+1)*dst/(2*src)], true
 	default:
 		return focus, false
 	}
@@ -370,12 +381,12 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 
 	row1 := []dialog.DialogButtonSpec{
 		{Label: "Overwrite", Shortcut: 'O', Focused: focused && f == 0, Destructive: true},
-		{Label: "Skip", Shortcut: 'S', Focused: focused && f == 1},
-		{Label: "Overwrite All", Shortcut: 'A', Focused: focused && f == 2, Destructive: true},
+		{Label: "Overwrite All", Shortcut: 'A', Focused: focused && f == 1, Destructive: true},
+		{Label: "Match Size", Shortcut: 'M', Focused: focused && f == 2, Destructive: true},
 	}
 	row2 := []dialog.DialogButtonSpec{
-		{Label: "Skip All", Shortcut: 'L', Focused: focused && f == 3},
-		{Label: "Match Size", Shortcut: 'M', Focused: focused && f == 4, Destructive: true},
+		{Label: "Skip", Shortcut: 'S', Focused: focused && f == 3},
+		{Label: "Skip All", Shortcut: 'L', Focused: focused && f == 4},
 		{Label: "Cancel", Shortcut: 'C', Focused: focused && f == 5},
 	}
 	if y <= rect.Y+rect.Height-3 {

@@ -112,7 +112,7 @@ func TestBlockerDialogSubmitDecision(t *testing.T) {
 	waitJobsWaitingDecision(t, h, state, 1)
 	h.HandleAnswerBlockerKey()
 
-	h.model.ConflictDialog.Focus = 1 // Skip
+	h.model.ConflictDialog.Focus = 3 // Skip
 	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if h.model.ConflictDialog.Open {
 		t.Fatal("dialog still open after confirm")
@@ -151,7 +151,7 @@ func TestBlockerDialogChainOpensNext(t *testing.T) {
 	if h.model.ConflictDialog.JobID != "chain-1" {
 		t.Fatalf("first dialog JobID = %q, want chain-1", h.model.ConflictDialog.JobID)
 	}
-	h.model.ConflictDialog.Focus = 1 // Skip
+	h.model.ConflictDialog.Focus = 3 // Skip
 	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	deadline := time.Now().Add(2 * time.Second)

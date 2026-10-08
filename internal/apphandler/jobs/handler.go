@@ -338,7 +338,7 @@ func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
 		if sel.PendingBlocker == nil {
 			return false
 		}
-		newFocus, handled := ui.JobBlockerDialogMoveFocus(*sel.PendingBlocker, h.model.JobsView.ConflictButtonFocus, event.Key())
+		newFocus, handled := ui.JobsBlockerPanelMoveFocus(*sel.PendingBlocker, h.model.JobsView.ConflictButtonFocus, event.Key())
 		if handled {
 			if newFocus > maxB {
 				newFocus = maxB

@@ -60,16 +60,16 @@ func drawConflictFileDialog(screen tcell.Screen, layout Layout, state ConflictDi
 
 	row1 := []draw.DialogButtonSpec{
 		{Label: "Overwrite", Shortcut: 'O', Focused: state.Focus == 0, Destructive: true},
-		{Label: "Skip", Shortcut: 'S', Focused: state.Focus == 1},
-		{Label: "Overwrite All", Shortcut: 'A', Focused: state.Focus == 2, Destructive: true},
+		{Label: "Overwrite All", Shortcut: 'A', Focused: state.Focus == 1, Destructive: true},
+		{Label: "Match Size", Shortcut: 'M', Focused: state.Focus == 2, Destructive: true},
 	}
 	row2 := []draw.DialogButtonSpec{
-		{Label: "Skip All", Shortcut: 'L', Focused: state.Focus == 3},
-		{Label: "Match Size", Shortcut: 'M', Focused: state.Focus == 4, Destructive: true},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 5},
+		{Label: "Skip", Shortcut: 'S', Focused: state.Focus == 3},
+		{Label: "Skip All", Shortcut: 'L', Focused: state.Focus == 4},
+		{Label: "Postpone", Shortcut: 'P', Focused: state.Focus == 6},
 	}
 	row3 := []draw.DialogButtonSpec{
-		{Label: "Postpone", Shortcut: 'P', Focused: state.Focus == 6},
+		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 5},
 	}
 	draw.DrawDialogButtonRowCentered(screen, rect, y, row1, styles)
 	y++

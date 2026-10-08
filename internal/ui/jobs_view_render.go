@@ -66,7 +66,7 @@ type JobsViewState struct {
 	ListScroll     int
 	DetailScroll   int
 	ActivityScroll int
-	// ConflictButtonFocus is the focused action index in the conflict panel (0..4).
+	// ConflictButtonFocus is the focused action index in the conflict panel (0..5).
 	ConflictButtonFocus int
 }
 

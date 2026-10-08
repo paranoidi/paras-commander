@@ -196,11 +196,11 @@ func TestJobsViewLeftInConflictPanelNavigatesButtonsNotClose(t *testing.T) {
 	if model.JobsView.ConflictButtonFocus != 1 {
 		t.Fatalf("ConflictButtonFocus = %d, want 1 after Right", model.JobsView.ConflictButtonFocus)
 	}
-	// Overwrite All -> Skip All across button rows.
+	// Match Size -> Skip across button rows.
 	model.JobsView.ConflictButtonFocus = 2
 	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if model.JobsView.ConflictButtonFocus != 3 {
-		t.Fatalf("ConflictButtonFocus = %d, want 3 after Right from Overwrite All", model.JobsView.ConflictButtonFocus)
+		t.Fatalf("ConflictButtonFocus = %d, want 3 after Right from Match Size", model.JobsView.ConflictButtonFocus)
 	}
 	if model.ViewMode != ui.ViewJobs {
 		t.Fatal("jobs view closed after Right in conflict panel")
@@ -212,7 +212,7 @@ func TestJobsViewLeftInConflictPanelNavigatesButtonsNotClose(t *testing.T) {
 		t.Fatal("jobs view closed after Left in conflict panel")
 	}
 	if model.JobsView.ConflictButtonFocus != 2 {
-		t.Fatalf("ConflictButtonFocus = %d, want 2 after Left from Skip All", model.JobsView.ConflictButtonFocus)
+		t.Fatalf("ConflictButtonFocus = %d, want 2 after Left from Skip", model.JobsView.ConflictButtonFocus)
 	}
 }
 
