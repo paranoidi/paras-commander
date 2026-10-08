@@ -175,3 +175,25 @@ func TestRefreshDoesNotClobberCrossDirNavigation(t *testing.T) {
 		t.Fatalf("calls = %d, want 1 (cross-dir pending must not schedule refresh)", calls)
 	}
 }
+
+// TestRenameEntryKeepsTreeExpansion: renaming an expanded tree directory keeps it expanded and
+// moves its loaded children under the new path.
+func TestRenameEntryKeepsTreeExpansion(t *testing.T) {
+	s, dirID := setupTreeStateWithOneDir(t)
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow: %v", err)
+	}
+	if !s.RenameEntry(dirID, "orchard", 10) {
+		t.Fatal("RenameEntry = false, want true")
+	}
+	newID := filepath.Join(filepath.Dir(dirID), "orchard")
+	if !s.TreeExpanded[newID] || s.TreeExpanded[dirID] {
+		t.Fatalf("TreeExpanded = %v, want only %q", s.TreeExpanded, newID)
+	}
+	if got := s.VisibleEntryCount(); got != 3 {
+		t.Fatalf("VisibleEntryCount = %d, want 3 (still expanded)", got)
+	}
+	if node := findTreeNode(s.TreeRoots, filepath.Join(newID, "harbor.txt")); node == nil {
+		t.Fatal("child not re-pathed under renamed directory")
+	}
+}

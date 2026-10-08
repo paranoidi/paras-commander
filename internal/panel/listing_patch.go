@@ -2,6 +2,7 @@ package panel
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -30,6 +31,10 @@ func (s *State) RenameEntry(oldPath, newName string, viewportRows int) bool {
 	if s.ListLayout == ListLayoutTree {
 		if renameTreeNode(s.TreeRoots, oldClean, newName, newPath) {
 			found = true
+			// Expand state and the tree entry index are keyed by path: carry them over so the
+			// renamed directory (and its expanded descendants) keep their state.
+			rekeyPathPrefix(s.TreeExpanded, oldClean, newPath)
+			rekeyPathPrefix(s.treeByPath, oldClean, newPath)
 		}
 	}
 	if !found {
@@ -132,6 +137,7 @@ func renameTreeNode(nodes []treeflat.Node[TreeEntry], oldPath, newName, newPath 
 			nodes[i].ID = newPath
 			nodes[i].Value.Entry.Name = newName
 			nodes[i].Value.Entry.Path = newPath
+			reprefixTreeNodes(nodes[i].Children, oldPath, newPath)
 			return true
 		}
 		if renameTreeNode(nodes[i].Children, oldPath, newName, newPath) {
@@ -139,4 +145,33 @@ func renameTreeNode(nodes []treeflat.Node[TreeEntry], oldPath, newName, newPath 
 		}
 	}
 	return false
+}
+
+// reprefixTreeNodes rewrites loaded descendants' IDs and paths from oldPrefix to newPrefix.
+func reprefixTreeNodes(nodes []treeflat.Node[TreeEntry], oldPrefix, newPrefix string) {
+	for i := range nodes {
+		nodes[i].ID = reprefixPath(nodes[i].ID, oldPrefix, newPrefix)
+		nodes[i].Value.Entry.Path = reprefixPath(nodes[i].Value.Entry.Path, oldPrefix, newPrefix)
+		reprefixTreeNodes(nodes[i].Children, oldPrefix, newPrefix)
+	}
+}
+
+// rekeyPathPrefix moves every key equal to or under oldPrefix to the same key under newPrefix.
+func rekeyPathPrefix[V any](m map[string]V, oldPrefix, newPrefix string) {
+	for k, v := range m {
+		if nk := reprefixPath(k, oldPrefix, newPrefix); nk != k {
+			delete(m, k)
+			m[nk] = v
+		}
+	}
+}
+
+func reprefixPath(p, oldPrefix, newPrefix string) string {
+	if p == oldPrefix {
+		return newPrefix
+	}
+	if rest, ok := strings.CutPrefix(p, oldPrefix+string(filepath.Separator)); ok {
+		return filepath.Join(newPrefix, rest)
+	}
+	return p
 }
