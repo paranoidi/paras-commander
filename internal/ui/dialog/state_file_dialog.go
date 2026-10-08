@@ -179,10 +179,13 @@ type FileDialogState struct {
 	RenameEncodingSelected   int
 
 	// Mass rename (DialogType == FileDialogMassRename).
-	MassRenameMode             MassRenameModeUI
-	MassRenameCaseFold         bool
-	MassRenameStripSpaces      bool
-	MassRenameIgnoreExt        bool
+	MassRenameMode        MassRenameModeUI
+	MassRenameCaseFold    bool
+	MassRenameStripSpaces bool
+	MassRenameIgnoreExt   bool
+	// MassRenameMarkerWidth is the theme's radio/checkbox marker width, cached at open so
+	// fileDialogWidth (which has no theme) sizes the option columns to the drawn icons.
+	MassRenameMarkerWidth      int
 	MassRenameShowOnlyModified bool
 	// MassRenameCapEachWord / MassRenameCapPunctSep apply when MassRenameMode ==
 	// MassRenameModeUICapitalize: capitalize every word (vs. only the first letter of the

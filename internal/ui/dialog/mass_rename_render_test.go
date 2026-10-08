@@ -391,51 +391,78 @@ func TestDrawMassRenameDialogShowsIgnoreExtCheckbox(t *testing.T) {
 // four mode radios sit on one row directly above the options row, each radio's text starting at
 // the x of its column's checkbox.
 func TestDrawMassRenameRadiosShareRowAndColumnsWithCheckboxes(t *testing.T) {
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
-	defer screen.Fini()
-	screen.SetSize(140, 40)
+	for _, nerd := range []bool{false, true} {
+		styles := theme.Default()
+		styles.UseNerdfontIcons = nerd
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init() error = %v", err)
+		}
+		screen.SetSize(140, 40)
 
-	state := FileDialogState{
-		Open:           true,
-		DialogType:     FileDialogMassRename,
-		Fields:         []FileDialogField{{Label: "Find"}, {Label: "Replace"}},
-		MassRenameMode: MassRenameModeUISimple,
-	}
-	DrawFileDialog(screen, Layout{Width: 140, Height: 40}, state, DialogRenderContext{Styles: theme.Default()}, nil)
+		state := FileDialogState{
+			Open:                  true,
+			DialogType:            FileDialogMassRename,
+			Fields:                []FileDialogField{{Label: "Find"}, {Label: "Replace"}},
+			MassRenameMode:        MassRenameModeUISimple,
+			MassRenameMarkerWidth: MassRenameMarkerWidth(styles),
+		}
+		DrawFileDialog(screen, Layout{Width: 140, Height: 40}, state, DialogRenderContext{Styles: styles}, nil)
 
-	rows := make([]string, 40)
-	for y := range rows {
-		rows[y] = tcelltest.TextAt(screen, 0, y, 140)
-	}
-	radioRow, optRow := -1, -1
-	for y, r := range rows {
-		if strings.Contains(r, "Simple (replace text)") {
-			radioRow = y
+		rows := make([][]rune, 40)
+		for y := range rows {
+			rows[y] = []rune(tcelltest.TextAt(screen, 0, y, 140))
 		}
-		if strings.Contains(r, "Show only modified") {
-			optRow = y
+		screen.Fini()
+		x := func(row int, s string) int {
+			if i := strings.Index(string(rows[row]), s); i >= 0 {
+				return len([]rune(string(rows[row])[:i]))
+			}
+			return -1
 		}
-	}
-	if radioRow < 0 || optRow != radioRow+1 {
-		t.Fatalf("radio row %d, options row %d, want options directly below radios", radioRow, optRow)
-	}
-	x := func(row int, s string) int { return len([]rune(rows[row][:strings.Index(rows[row], s)])) }
-	pairs := [][2]string{
-		{"Simple (replace text)", "Show only modified"},
-		{"Regular expression", "Trim whitespace"},
-		{"External $EDITOR", "Case insensitive"},
-		{"Capitalize", "Ignore extension"},
-	}
-	for _, p := range pairs {
-		if !strings.Contains(rows[radioRow], p[0]) {
-			t.Fatalf("radio %q not on shared row:\n%s", p[0], rows[radioRow])
+		radioRow, optRow := -1, -1
+		for y := range rows {
+			if x(y, "Simple (replace text)") >= 0 {
+				radioRow = y
+			}
+			if x(y, "Show only modified") >= 0 {
+				optRow = y
+			}
 		}
-		// Radio text starts after its "( ) " marker, checkbox text after "[ ] ": markers share x.
-		if rx, cx := x(radioRow, p[0]), x(optRow, p[1]); rx != cx {
-			t.Errorf("%q at x=%d, checkbox %q at x=%d, want same column", p[0], rx, p[1], cx)
+		if radioRow < 0 || optRow != radioRow+1 {
+			t.Fatalf("nerd=%v: radio row %d, options row %d, want options directly below radios", nerd, radioRow, optRow)
+		}
+		// Dialog is sized to the option row: one margin space after the last checkbox, then border.
+		if end := x(optRow, "Ignore extension") + len("Ignore extension"); string(rows[optRow][end:end+2]) != " │" {
+			t.Errorf("nerd=%v: options row ends %q, want one space then border:\n%s", nerd, string(rows[optRow][end:]), string(rows[optRow]))
+		}
+		pairs := [][2]string{
+			{"Simple (replace text)", "Show only modified"},
+			{"Regular expression", "Trim whitespace"},
+			{"External $EDITOR", "Case insensitive"},
+			{"Capitalize", "Ignore extension"},
+		}
+		for i, p := range pairs {
+			rx, cx := x(radioRow, p[0]), x(optRow, p[1])
+			if rx < 0 {
+				t.Fatalf("nerd=%v: radio %q not on shared row:\n%s", nerd, p[0], string(rows[radioRow]))
+			}
+			// Radio text starts after its marker, checkbox text after its marker: markers share x.
+			if rx != cx {
+				t.Errorf("nerd=%v: %q at x=%d, checkbox %q at x=%d, want same column", nerd, p[0], rx, p[1], cx)
+			}
+			if i == 0 {
+				continue
+			}
+			// Exactly 3 blank cells between the previous radio's label and this radio's icon.
+			prevEnd := x(radioRow, pairs[i-1][0]) + len([]rune(pairs[i-1][0]))
+			blanks := 0
+			for rows[radioRow][prevEnd+blanks] == ' ' {
+				blanks++
+			}
+			if blanks != 3 {
+				t.Errorf("nerd=%v: %d blank cells before radio %q, want 3:\n%s", nerd, blanks, p[0], string(rows[radioRow]))
+			}
 		}
 	}
 }

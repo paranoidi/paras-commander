@@ -251,29 +251,40 @@ func MassRenameColumnFocus(state FileDialogState) [4]int {
 }
 
 // massRenameColumns returns each column's x offset from the first radio/checkbox and the total
-// row width. A column is as wide as its widest radio or checkbox (column 2 also fits Ignore
-// extension for Capitalize), plus a 3-cell gap, independent of mode so switching never resizes.
-func massRenameColumns() (off [4]int, total int) {
-	w := func(ss ...string) int {
+// row width, for widgets whose marker (leading margin space + icon + space, e.g. " ( ) ") is
+// markerW cells. A column is as wide as its widest radio or checkbox (column 2 also fits Ignore
+// extension for Capitalize), independent of mode so switching never resizes. The margin space
+// of the next column's marker plus a 2-cell gap leaves 3 blank cells between adjacent items.
+func massRenameColumns(markerW int) (off [4]int, total int) {
+	w := func(labels ...string) int {
 		m := 0
-		for _, t := range ss {
-			m = max(m, utf8.RuneCountInString(t))
+		for _, l := range labels {
+			m = max(m, markerW+utf8.RuneCountInString(l))
 		}
 		return m
 	}
-	rb := func(l string) string { return draw.RadioText(l, false) }
-	cb := func(l string) string { return draw.CheckboxText(l, false) }
 	widths := [4]int{
-		w(rb("Simple (replace text)"), cb("Show only modified")),
-		w(rb("Regular expression"), cb("Trim whitespace")),
-		w(rb("External $EDITOR"), cb("Case insensitive"), cb("Ignore extension")),
-		w(rb("Capitalize"), cb("Ignore extension")),
+		w("Simple (replace text)", "Show only modified"),
+		w("Regular expression", "Trim whitespace"),
+		w("External $EDITOR", "Case insensitive", "Ignore extension"),
+		w("Capitalize", "Ignore extension"),
 	}
+	const gap = 2
 	for i, cw := range widths {
 		off[i] = total
-		total += cw + 3
+		total += cw + gap
 	}
-	return off, total - 3
+	return off, total - gap
+}
+
+// MassRenameMarkerWidth returns the drawn marker width for styles' radio/checkbox icons
+// (mirrors DrawDialogRadio / DrawDialogCheckbox).
+func MassRenameMarkerWidth(styles theme.Theme) int {
+	m := 0
+	for _, icon := range []string{styles.IconDialogRadio(false), styles.IconDialogRadio(true), styles.IconDialogCheckbox(false), styles.IconDialogCheckbox(true)} {
+		m = max(m, utf8.RuneCountInString(" "+icon+" "))
+	}
+	return m
 }
 
 func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
@@ -295,7 +306,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	warnStyle := styles.MessageWarn.Background(dbg)
 
 	optX := primaryCol - 1
-	colOff, _ := massRenameColumns()
+	colOff, _ := massRenameColumns(MassRenameMarkerWidth(styles))
 	radios := [4]struct {
 		label string
 		mnem  rune

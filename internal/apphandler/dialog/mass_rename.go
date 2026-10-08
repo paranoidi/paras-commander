@@ -47,6 +47,7 @@ func (h *Handler) OpenMassRenameDialog(p *panel.State) {
 		MassRenameMode:             dialog.MassRenameModeUISimple,
 		MassRenameCaseFold:         true,
 		MassRenameStripSpaces:      true,
+		MassRenameMarkerWidth:      dialog.MassRenameMarkerWidth(h.host.Styles()),
 		MassRenameIgnoreExt:        true,
 		MassRenameShowOnlyModified: false,
 		MassRenamePreviewScroll:    0,

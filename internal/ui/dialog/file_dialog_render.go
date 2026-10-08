@@ -330,11 +330,14 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 				minWidth = lw
 			}
 		}
-		// Radio row and options row share four columns.
-		_, rowW := massRenameColumns()
-		if rowW+4 > minWidth {
-			minWidth = rowW + 4
+		// Radio row and options row share four columns; the row starts on the left margin
+		// cell (marker's leading space), so +3 = left border + right margin + right border.
+		markerW := state.MassRenameMarkerWidth
+		if markerW == 0 {
+			markerW = utf8.RuneCountInString(draw.RadioText("", false)) // ASCII markers, the widest
 		}
+		_, rowW := massRenameColumns(markerW)
+		minWidth = max(minWidth, rowW+3)
 		for i := 0; i < len(state.MassRenamePreviewBefore); i++ {
 			lb := state.MassRenamePreviewBefore[i]
 			lw := utf8.RuneCountInString(lb)
