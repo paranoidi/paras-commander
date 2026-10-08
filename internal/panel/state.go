@@ -1962,20 +1962,22 @@ func (s *State) selectVisibleEntryByPath(absPath string) bool {
 		return false
 	}
 	wantLoc, wantErr := pathloc.Parse(absPath)
+	wantClean := filepath.Clean(absPath)
 	for i := 0; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
 		if !ok {
 			continue
+		}
+		// Cheap string compare first; pathloc.Parse only for rows it does not settle.
+		if filepath.Clean(entry.Path) == wantClean {
+			s.Cursor = i
+			return true
 		}
 		if wantErr == nil {
 			if entLoc, err := pathloc.Parse(entry.Path); err == nil && entLoc.Equal(wantLoc) {
 				s.Cursor = i
 				return true
 			}
-		}
-		if filepath.Clean(entry.Path) == filepath.Clean(absPath) {
-			s.Cursor = i
-			return true
 		}
 	}
 	return false
