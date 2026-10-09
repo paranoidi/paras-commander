@@ -101,3 +101,77 @@ func waitUntilTrue(t *testing.T, timeout time.Duration, cond func() bool) {
 	}
 	t.Fatal("condition not met before timeout")
 }
+
+// TestNarrowSelectionWalksSelectedRoots checks that narrowing to a selected
+// directory the panel walk never entered (here: gitignored) walks it, drops
+// everything outside it, and that widening brings the rest back.
+func TestNarrowSelectionWalksSelectedRoots(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("lantern/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"meadow/pebble.txt", "lantern/harbor.txt"} {
+		p := filepath.Join(root, f)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var finished atomic.Bool
+	walk := fswalk.Params{InitialWorkers: 1, MaxWorkers: 2, AdaptIntervalMS: 500}
+	coord := NewCoordinator(walk, func(ev Event) {
+		if ev.IndexFinished {
+			finished.Store(true)
+		}
+	})
+	defer coord.Cancel()
+	has := func(rel string) bool {
+		found := false
+		coord.activeSession().idx.View(func(entries []Entry, _ int) {
+			for _, e := range entries {
+				if e.RelLine == rel {
+					found = true
+				}
+			}
+		})
+		return found
+	}
+
+	selected := filepath.Join(root, "lantern")
+	coord.Start(StartOpts{
+		Gen:            1,
+		DisplayRoot:    root,
+		Roots:          []string{root},
+		Gitignore:      gitignore.NewCache(),
+		SelectionRoots: []string{selected},
+		Walk:           walk,
+	})
+	waitUntilTrue(t, 3*time.Second, finished.Load)
+	if has("lantern/harbor.txt") || !has("meadow/pebble.txt") {
+		t.Fatal("unexpected initial index")
+	}
+
+	finished.Store(false)
+	coord.NarrowSelection([]string{selected})
+	waitUntilTrue(t, 3*time.Second, finished.Load)
+	if !has("lantern/harbor.txt") {
+		t.Fatal("selected dir not walked after narrowing")
+	}
+	if has("meadow/pebble.txt") {
+		t.Fatal("out-of-scope entry kept after narrowing")
+	}
+
+	finished.Store(false)
+	coord.Widen()
+	waitUntilTrue(t, 3*time.Second, finished.Load)
+	if !has("meadow/pebble.txt") {
+		t.Fatal("out-of-scope entry not restored after widening")
+	}
+}

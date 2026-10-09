@@ -29,6 +29,7 @@ type coordinatorCmd struct {
 type walkDoneMsg struct {
 	gen              int
 	root             string
+	sess             *rootWalk
 	err              error
 	skippedDirs      []string
 	skippedFilePaths []string
@@ -37,6 +38,7 @@ type walkDoneMsg struct {
 type walkBatchMsg struct {
 	gen   int
 	root  string
+	sess  *rootWalk
 	batch []Entry
 }
 
@@ -164,11 +166,11 @@ func (c *Coordinator) loop() {
 		case msg := <-c.internal:
 			switch m := msg.(type) {
 			case walkBatchMsg:
-				if s := c.activeSession(); s != nil && m.gen == s.gen {
+				if s := c.activeSession(); s != nil && m.gen == s.gen && s.walkCurrent(m.root, m.sess) {
 					s.ingestBatch(m.root, m.batch)
 				}
 			case walkDoneMsg:
-				if s := c.activeSession(); s != nil && m.gen == s.gen {
+				if s := c.activeSession(); s != nil && m.gen == s.gen && s.walkCurrent(m.root, m.sess) {
 					s.onWalkDone(m)
 				}
 			case matchDoneMsg:
@@ -395,7 +397,7 @@ func (s *session) startWalk(root string, skipIndexedSelectionSubtrees bool) {
 func (s *session) readWalk(sess *rootWalk, gen int, root string) {
 	for batch := range sess.Results() {
 		select {
-		case s.coord.internal <- walkBatchMsg{gen: gen, root: root, batch: batch}:
+		case s.coord.internal <- walkBatchMsg{gen: gen, root: root, sess: sess, batch: batch}:
 		case <-s.ctx.Done():
 			return
 		}
@@ -404,6 +406,7 @@ func (s *session) readWalk(sess *rootWalk, gen int, root string) {
 	msg := walkDoneMsg{
 		gen:              gen,
 		root:             root,
+		sess:             sess,
 		err:              sess.Err(),
 		skippedDirs:      sess.SkippedHiddenDirs(),
 		skippedFilePaths: sess.SkippedHiddenFiles(),
@@ -412,6 +415,14 @@ func (s *session) readWalk(sess *rootWalk, gen int, root string) {
 	case s.coord.internal <- msg:
 	case <-s.ctx.Done():
 	}
+}
+
+// walkCurrent reports whether sess is still the tracked walk for root. Walks
+// stopped by narrowSelection or stopExpandedHiddenWalks keep draining buffered
+// batches and a done message; those must not re-enter the index.
+func (s *session) walkCurrent(root string, sess *rootWalk) bool {
+	w, ok := s.walks[root]
+	return ok && w.sess == sess
 }
 
 func (s *session) ingestBatch(walkRoot string, batch []Entry) {
@@ -647,7 +658,10 @@ func (s *session) narrowSelection(roots []string) {
 	})
 	s.idx.ReplaceEntries(s.opts.DisplayRoot, filtered)
 	s.emitIndexReplaced(filtered)
-	s.maybeFinish()
+	// The panel-root walk may not have reached the selections yet, and never
+	// enters gitignored/hidden ones. Walk each selection root explicitly.
+	// ponytail: re-walks roots the panel walk already covered; Index.Append dedupes.
+	s.startRoots(false)
 }
 
 func (s *session) widen() {
