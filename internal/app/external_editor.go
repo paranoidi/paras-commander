@@ -13,13 +13,17 @@ import (
 )
 
 // externalEditorRunner runs the external editor on path. Tests may replace this.
-var externalEditorRunner = func(ctx context.Context, path string) error {
-	argv, err := editor.EditorArgv(editor.ResolveEditor(), path)
+// When elevate is true and path is not writable, the editor runs via sudoedit.
+var externalEditorRunner = func(ctx context.Context, path string, elevate bool) error {
+	argv, env, elevated, err := editor.Command(editor.ResolveEditor(), path, elevate)
 	if err != nil {
 		return err
 	}
+	if elevated {
+		fmt.Fprintf(os.Stderr, "pc: %s is not writable, editing via sudoedit\n", path)
+	}
 	dir := filepath.Dir(path)
-	return editor.RunInteractive(ctx, argv, dir)
+	return editor.RunInteractive(ctx, argv, env, dir)
 }
 
 func (a *App) withTerminalReleased(fn func() error) error {
@@ -59,7 +63,7 @@ func (a *App) openFileInExternalEditor(path string) error {
 		return fmt.Errorf("no file path")
 	}
 	return a.withTerminalReleased(func() error {
-		return externalEditorRunner(context.Background(), path)
+		return externalEditorRunner(context.Background(), path, a.config.Editor.Elevate)
 	})
 }
 

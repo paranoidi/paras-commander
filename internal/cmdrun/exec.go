@@ -207,6 +207,11 @@ func FormatArgvDisplay(argv []string) string {
 
 // RunInteractive runs argv with stdin/stdout/stderr attached to the terminal.
 func RunInteractive(ctx context.Context, argv []string, dir string) error {
+	return RunInteractiveEnv(ctx, argv, nil, dir)
+}
+
+// RunInteractiveEnv is RunInteractive with extraEnv (KEY=VALUE) appended to the inherited environment.
+func RunInteractiveEnv(ctx context.Context, argv, extraEnv []string, dir string) error {
 	if len(argv) == 0 {
 		return errors.New("empty argv")
 	}
@@ -214,6 +219,9 @@ func RunInteractive(ctx context.Context, argv []string, dir string) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
 	if dir != "" {
 		cmd.Dir = dir
 	}

@@ -133,6 +133,16 @@ func TestDialogLabelsAreFollowedByContentRow(t *testing.T) {
 			labels: []string{"Command:", "Worker pool (optional):"},
 		},
 		{
+			name: "elevate password",
+			draw: func(screen tcell.Screen) {
+				DrawElevateDialog(screen, layout, ElevateDialogState{
+					Open: true, Op: "rename", Path: "/srv/otter/walrus.txt", BadPassword: true,
+					Password: FileDialogField{Value: "heron", Cursor: 5},
+				}, styles)
+			},
+			labels: []string{"Password:"},
+		},
+		{
 			name: "transfer copy destination",
 			draw: func(screen tcell.Screen) {
 				DrawTransferDialog(screen, layout, TransferDialogState{

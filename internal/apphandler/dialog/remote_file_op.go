@@ -136,8 +136,9 @@ func (h *Handler) startRemoteMkdir(st mkdirApply) {
 	input := st.plan.Name
 	screen := h.screen
 	backend := h.testRemote
+	ctx := h.elevatedCtx()
 	go func() {
-		plan, err := remotePlanAndMkdir(backend, input, panelPath)
+		plan, err := remotePlanAndMkdir(ctx, backend, input, panelPath)
 		if err == nil {
 			st.plan = plan
 		}
@@ -151,6 +152,9 @@ func (h *Handler) startRemoteMkdir(st mkdirApply) {
 }
 
 func (h *Handler) applyRemoteMkdir(p RemoteFileOpPayload) {
+	if ops.IsSkipOrCancel(p.Err) {
+		return
+	}
 	if p.Err != nil {
 		h.host.SetErrorMessage("Mkdir", p.Err)
 		return
@@ -164,8 +168,9 @@ func (h *Handler) startRemoteRename(st renameApply, newName, panelPath string) {
 	screen := h.screen
 	backend := h.testRemote
 	entry := st.entry
+	ctx := h.elevatedCtx()
 	go func() {
-		plan, err := remotePlanAndRename(backend, entry, newName, panelPath)
+		plan, err := remotePlanAndRename(ctx, backend, entry, newName, panelPath)
 		if err == nil {
 			st.plan = plan
 		}
@@ -179,6 +184,9 @@ func (h *Handler) startRemoteRename(st renameApply, newName, panelPath string) {
 }
 
 func (h *Handler) applyRemoteRename(p RemoteFileOpPayload) {
+	if ops.IsSkipOrCancel(p.Err) {
+		return
+	}
 	if p.Err != nil {
 		if strings.Contains(p.Err.Error(), "source") {
 			h.host.SetErrorMessage("Rename source", p.Err)
@@ -255,7 +263,7 @@ func (h *Handler) applyRemoteExtractProbe(p RemoteFileOpPayload) {
 	h.enqueueExtractFromPlan(st.sources, st.dest, st.plan, st.skipped, p.Err)
 }
 
-func remotePlanAndMkdir(backend fsbackend.Backend, input, panelPath string) (ops.MkdirPlan, error) {
+func remotePlanAndMkdir(ctx context.Context, backend fsbackend.Backend, input, panelPath string) (ops.MkdirPlan, error) {
 	if backend != nil {
 		parent, err := pathloc.Parse(panelPath)
 		if err != nil {
@@ -283,7 +291,7 @@ func remotePlanAndMkdir(backend fsbackend.Backend, input, panelPath string) (ops
 	if err != nil {
 		return plan, err
 	}
-	if err := ops.ExecuteMkdir(plan); err != nil {
+	if err := ops.ExecuteMkdir(ctx, plan); err != nil {
 		return plan, err
 	}
 	return plan, nil
@@ -291,7 +299,7 @@ func remotePlanAndMkdir(backend fsbackend.Backend, input, panelPath string) (ops
 
 var errRenameFailed = errors.New("rename failed")
 
-func remotePlanAndRename(backend fsbackend.Backend, entry localfs.Entry, newName, panelPath string) (ops.RenamePlan, error) {
+func remotePlanAndRename(ctx context.Context, backend fsbackend.Backend, entry localfs.Entry, newName, panelPath string) (ops.RenamePlan, error) {
 	if backend != nil {
 		srcLoc, err := pathloc.Parse(entry.Path)
 		if err != nil {
@@ -315,7 +323,10 @@ func remotePlanAndRename(backend fsbackend.Backend, entry localfs.Entry, newName
 	if err != nil {
 		return plan, err
 	}
-	if err := ops.ExecuteRename(plan); err != nil {
+	if err := ops.ExecuteRename(ctx, plan); err != nil {
+		if ops.IsSkipOrCancel(err) {
+			return plan, err
+		}
 		return plan, fmt.Errorf("%w: %v", errRenameFailed, err)
 	}
 	return plan, nil

@@ -51,7 +51,7 @@ func TestTransferFinalTotalsSurviveFullEventChannel(t *testing.T) {
 
 	s := jobs.NewState()
 	cfg := config.Default()
-	s.SetTransferFunc(TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, nil))
+	s.SetTransferFunc(TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, nil, nil))
 	stop := make(chan struct{})
 	defer close(stop)
 

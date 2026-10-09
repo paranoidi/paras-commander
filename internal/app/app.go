@@ -34,6 +34,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -298,6 +299,7 @@ type App struct {
 	statusCmdStopCh  chan struct{}
 
 	sftp           sftpState
+	elevate        elevateState
 	image          imageOverlay
 	placeholderImg placeholderImage
 
@@ -524,7 +526,12 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, err
 	}
 	jobState := jobs.NewState()
-	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, jobState.Wait))
+	// app does not exist yet; the permission prompt is bound once it does.
+	var app *App
+	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, jobState.Wait,
+		func(ctx context.Context, req ops.PermissionRequest) ops.PermissionAnswer {
+			return app.promptElevate(ctx, req)
+		}))
 	jobState.SetThroughputChart(
 		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
 		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,
@@ -549,7 +556,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, err
 	}
 	cmdCtx, cmdCancel := context.WithCancel(context.Background())
-	app := &App{
+	app = &App{
 		screen:         screen,
 		config:         cfg,
 		styles:         styles,
@@ -712,6 +719,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Dedup:                app.dedupCtrl,
 		DiskUsage:            app.disk.engine,
 		DiskUsageIgnore:      duIgnorer,
+		PromptElevate:        app.promptElevate,
 	})
 	app.pinCtrl = pinctrl.New(pinctrl.Deps{
 		Host:            pinHost{appShellHost: appShellHost{app: app}},
@@ -1232,6 +1240,10 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 			a.render()
 			out.didRender = true
 		}
+	case elevateOpenPayload:
+		a.applyElevateOpen(d)
+		a.render()
+		out.didRender = true
 	default:
 		return eventOutcome{}, false
 	}

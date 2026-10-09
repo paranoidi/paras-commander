@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -53,9 +54,11 @@ func PlanSymlink(target, linkPath string, activePanelPath string, passivePanelPa
 	}, nil
 }
 
-// ExecuteSymlink creates the symlink.
-func ExecuteSymlink(plan SymlinkPlan) error {
-	return localfs.Symlink(plan.Target, plan.LinkPath)
+// ExecuteSymlink creates the symlink. A permission failure is retried as root when ctx carries an Elevator.
+func ExecuteSymlink(ctx context.Context, plan SymlinkPlan) error {
+	return withElevation(ctx, "symlink", plan.LinkPath, []string{"ln", "-s", "-T", "--", plan.Target, plan.LinkPath}, func() error {
+		return localfs.Symlink(plan.Target, plan.LinkPath)
+	})
 }
 
 // HardlinkPlan describes a validated hardlink creation operation.
@@ -112,7 +115,9 @@ func PlanHardlink(source, newPath string, activePanelPath string, passivePanelPa
 	}, nil
 }
 
-// ExecuteHardlink creates the hardlink.
-func ExecuteHardlink(plan HardlinkPlan) error {
-	return localfs.Link(plan.Source, plan.NewPath)
+// ExecuteHardlink creates the hardlink. A permission failure is retried as root when ctx carries an Elevator.
+func ExecuteHardlink(ctx context.Context, plan HardlinkPlan) error {
+	return withElevation(ctx, "hardlink", plan.NewPath, []string{"ln", "-T", "--", plan.Source, plan.NewPath}, func() error {
+		return localfs.Link(plan.Source, plan.NewPath)
+	})
 }

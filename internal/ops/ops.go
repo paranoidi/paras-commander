@@ -305,7 +305,9 @@ func RenameFastPath(ctx context.Context, src, dest pathloc.Path) (ok bool, err e
 	if err != nil {
 		return false, err
 	}
-	err = osRename(srcHost, destHost)
+	err = withElevation(ctx, "move", srcHost, []string{"mv", "-T", "--", srcHost, destHost}, func() error {
+		return osRename(srcHost, destHost)
+	})
 	if err == nil {
 		return true, nil
 	}

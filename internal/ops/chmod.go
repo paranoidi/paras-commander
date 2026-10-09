@@ -1,6 +1,8 @@
 package ops
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -37,10 +39,20 @@ func PlanChmod(source Source, modeExpr string) (ChmodPlan, error) {
 	}, nil
 }
 
-// ExecuteChmod applies the mode to each entry.
-func ExecuteChmod(plan ChmodPlan) error {
+// ExecuteChmod applies the mode to each entry. A permission failure is retried as root when ctx
+// carries an Elevator; entries the user skips are left unchanged.
+func ExecuteChmod(ctx context.Context, plan ChmodPlan) error {
 	for _, entry := range plan.Entries {
-		if err := localfs.Chmod(entry.Path, plan.Mode); err != nil {
+		err := withElevation(ctx, "chmod", entry.Path, []string{"chmod", chmodArg(plan.Mode), "--", entry.Path}, func() error {
+			return localfs.Chmod(entry.Path, plan.Mode)
+		})
+		if errors.Is(err, ErrPermissionSkipped) {
+			continue
+		}
+		if err != nil {
+			if errors.Is(err, ErrUserCanceled) {
+				return err
+			}
 			return &Error{Op: "chmod", Text: "failed to change mode for " + entry.Name, Err: err}
 		}
 	}

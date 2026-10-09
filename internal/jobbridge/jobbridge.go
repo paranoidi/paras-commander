@@ -260,9 +260,12 @@ func ActivityFailureLabel(ev jobs.Event) string {
 	return "Failed: " + msg
 }
 
-// TransferFunc builds the job worker transfer function from config.
-func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, dedupChunkBytes int64, rateWait ops.RateLimiter) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
+// TransferFunc builds the job worker transfer function from config. permWait asks the user
+// whether to retry a permission-denied local step as root (nil disables elevation).
+func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, dedupChunkBytes int64, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
+		// One Elevator per job: a sudo password the user types is remembered for this job only.
+		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
 		opts.OnRemoveSources = func() {
 			emit(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning})

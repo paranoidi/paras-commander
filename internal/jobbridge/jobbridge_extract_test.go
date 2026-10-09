@@ -55,7 +55,7 @@ func runExtractTransfer(t *testing.T, src, destDir string, decision jobs.Conflic
 	}
 
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, nil)
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, nil, nil)
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        jobs.TypeExtract,

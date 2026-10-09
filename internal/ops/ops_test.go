@@ -252,7 +252,7 @@ func TestExecuteRename(t *testing.T) {
 		t.Fatalf("PlanRename() error = %v", err)
 	}
 
-	if err := ExecuteRename(plan); err != nil {
+	if err := ExecuteRename(context.Background(), plan); err != nil {
 		t.Fatalf("ExecuteRename() error = %v", err)
 	}
 
@@ -319,7 +319,7 @@ func TestExecuteMkdir(t *testing.T) {
 		t.Fatalf("PlanMkdir() error = %v", err)
 	}
 
-	if err := ExecuteMkdir(plan); err != nil {
+	if err := ExecuteMkdir(context.Background(), plan); err != nil {
 		t.Fatalf("ExecuteMkdir() error = %v", err)
 	}
 
@@ -677,7 +677,7 @@ func TestExecuteSymlink(t *testing.T) {
 		t.Fatalf("PlanSymlink() error = %v", err)
 	}
 
-	if err := ExecuteSymlink(plan); err != nil {
+	if err := ExecuteSymlink(context.Background(), plan); err != nil {
 		t.Fatalf("ExecuteSymlink() error = %v", err)
 	}
 

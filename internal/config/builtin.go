@@ -513,6 +513,12 @@ const (
 	// local, including slow network mounts) gets before the app gives up on it.
 	DefaultSFTPListTimeoutSecs = 60
 
+	// DefaultOperationsElevate offers sudo retry for file operations that hit a permission error.
+	DefaultOperationsElevate = true
+
+	// DefaultEditorElevate edits non-writable files via sudoedit.
+	DefaultEditorElevate = true
+
 	// DefaultShellSyncCwdOnReturn navigates the active panel to the process cwd after open shell exits.
 	DefaultShellSyncCwdOnReturn = true
 	// DefaultShellPersistent keeps one MC-style shell session alive across Ctrl+O toggles (Linux only).

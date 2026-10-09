@@ -58,8 +58,9 @@ func PlanMkdir(input string, panelPath string) (MkdirPlan, error) {
 	}, nil
 }
 
-// ExecuteMkdir creates the directory with default permissions.
-func ExecuteMkdir(plan MkdirPlan) error {
+// ExecuteMkdir creates the directory with default permissions. A permission failure on a local
+// path is retried as root when ctx carries an Elevator (the new directory is then root-owned).
+func ExecuteMkdir(ctx context.Context, plan MkdirPlan) error {
 	loc, err := pathloc.Parse(plan.Path)
 	if err != nil {
 		return err
@@ -69,11 +70,13 @@ func ExecuteMkdir(plan MkdirPlan) error {
 		return err
 	}
 	if loc.IsRemote() {
-		return be.Mkdir(context.Background(), loc, 0o755)
+		return be.Mkdir(ctx, loc, 0o755)
 	}
 	host, err := loc.FilePath()
 	if err != nil {
 		return err
 	}
-	return localfs.Mkdir(host, 0o755)
+	return withElevation(ctx, "mkdir", host, []string{"mkdir", "--", host}, func() error {
+		return localfs.Mkdir(host, 0o755)
+	})
 }

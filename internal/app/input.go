@@ -48,6 +48,7 @@ const (
 	InputModeLeaderMenu
 	InputModeHelpView
 	InputModeHostKeyDialog
+	InputModeElevateDialog
 	InputModeSFTPConnectDialog
 	InputModeCommandOutputDialog
 )
@@ -60,6 +61,8 @@ func (a *App) viewActiveForInput(vm ui.ViewMode) bool {
 
 func (a *App) inputMode() InputMode {
 	switch {
+	case a.model.ElevateDialog.Open:
+		return InputModeElevateDialog
 	case a.model.CommandOutputDialog.Open:
 		return InputModeCommandOutputDialog
 	case a.model.MessageDialog.Open:
@@ -662,6 +665,10 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 	},
 	InputModeFilterDialog: func(a *App, ev *tcell.EventKey) bool {
 		return a.dialogCtrl.HandleFilterDialogKey(ev)
+	},
+	InputModeElevateDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleElevateDialogKey(ev)
+		return false
 	},
 	InputModeHostKeyDialog: func(a *App, ev *tcell.EventKey) bool {
 		_ = a.handleHostKeyDialogKey(ev)

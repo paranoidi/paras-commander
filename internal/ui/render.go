@@ -271,6 +271,7 @@ type Model struct {
 	FlattenDialog          dialog.FlattenDialogState
 	ConflictDialog         dialog.ConflictDialogState
 	HostKeyDialog          dialog.HostKeyDialogState
+	ElevateDialog          dialog.ElevateDialogState
 	QuitConfirm            dialog.QuitConfirmState
 	DedupEmptyDirsConfirm  dialog.DedupEmptyDirsConfirmState
 	StashRestoreDialog     dialog.StashRestoreDialogState
@@ -504,7 +505,7 @@ func (m *Model) nonLeaderModalOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -519,7 +520,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.PinDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
-		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
+		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open ||
 		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open
 }
@@ -898,6 +899,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	}
 	if model.HostKeyDialog.Open {
 		dialog.DrawHostKeyDialog(screen, layout, model.HostKeyDialog, styles)
+	}
+	if model.ElevateDialog.Open {
+		dialog.DrawElevateDialog(screen, layout, model.ElevateDialog, styles)
 	}
 	if model.HelpView.Open {
 		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles)

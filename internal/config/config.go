@@ -98,6 +98,7 @@ type Config struct {
 	Preview    PreviewConfig    `toml:"preview"`
 	SFTP       SFTPConfig       `toml:"sftp"`
 	Shell      ShellConfig      `toml:"shell"`
+	Editor     EditorConfig     `toml:"editor"`
 	// Meta configures the separate meta.toml command definitions file and execution settings.
 	Meta MetaConfig `toml:"meta"`
 	// Pools configures discovery of the separate pools.toml work-pool definitions file.
@@ -232,6 +233,13 @@ type UserMenuConfig struct {
 	// LocalNames lists basenames probed in the active panel directory before the global file.
 	// Empty in config means use built-in default (see Default().UserMenu).
 	LocalNames []string `toml:"local_names"`
+}
+
+// EditorConfig controls the external editor launched by Edit (F4).
+type EditorConfig struct {
+	// Elevate runs the editor via sudoedit when the file (or, for a new file, its directory)
+	// is not writable by the current user.
+	Elevate bool `toml:"elevate"`
 }
 
 // ShellConfig controls open shell (suspend TUI, run interactive shell, resume).
@@ -520,7 +528,10 @@ type JobsConfig struct {
 
 type OperationsConfig struct {
 	// ConfirmDelete shows a confirmation dialog before deleting files.
-	ConfirmDelete       bool `toml:"confirm_delete"`
+	ConfirmDelete bool `toml:"confirm_delete"`
+	// Elevate offers to retry a local rename, move, delete, mkdir, chmod, chown or link as root
+	// via sudo when it fails with a permission error.
+	Elevate             bool `toml:"elevate"`
 	PreservePermissions bool `toml:"preserve_permissions"`
 	PreserveTimestamps  bool `toml:"preserve_timestamps"`
 	// DereferenceSymlinks copies through symlinks (file or directory targets) at their real
@@ -671,6 +682,7 @@ func Default() Config {
 		},
 		Operations: OperationsConfig{
 			ConfirmDelete:                true,
+			Elevate:                      DefaultOperationsElevate,
 			PreservePermissions:          DefaultPreservePermissions,
 			PreserveTimestamps:           DefaultPreserveTimestamps,
 			DereferenceSymlinks:          DefaultDereferenceSymlinks,
@@ -736,6 +748,7 @@ func Default() Config {
 			DialTimeoutSecs: DefaultSFTPDialTimeoutSecs,
 			ListTimeoutSecs: DefaultSFTPListTimeoutSecs,
 		},
+		Editor: EditorConfig{Elevate: DefaultEditorElevate},
 		Shell: ShellConfig{
 			SyncCwdOnReturn:     DefaultShellSyncCwdOnReturn,
 			Persistent:          DefaultShellPersistent,

@@ -1,6 +1,8 @@
 package ops
 
 import (
+	"context"
+	"errors"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -56,11 +58,21 @@ func PlanChown(source Source, user, group string) (ChownPlan, error) {
 	}, nil
 }
 
-// ExecuteChown applies the ownership change to each entry.
-// Requires appropriate privileges.
-func ExecuteChown(plan ChownPlan) error {
+// ExecuteChown applies the ownership change to each entry. Changing the owner normally needs
+// root, so a permission failure is retried as root when ctx carries an Elevator; entries the user
+// skips are left unchanged.
+func ExecuteChown(ctx context.Context, plan ChownPlan) error {
 	for _, entry := range plan.Entries {
-		if err := localfs.Chown(entry.Path, plan.UID, plan.GID); err != nil {
+		err := withElevation(ctx, "chown", entry.Path, []string{"chown", chownArg(plan.UID, plan.GID), "--", entry.Path}, func() error {
+			return localfs.Chown(entry.Path, plan.UID, plan.GID)
+		})
+		if errors.Is(err, ErrPermissionSkipped) {
+			continue
+		}
+		if err != nil {
+			if errors.Is(err, ErrUserCanceled) {
+				return err
+			}
 			return &Error{Op: "chown", Text: "failed to change owner for " + entry.Name, Err: err}
 		}
 	}

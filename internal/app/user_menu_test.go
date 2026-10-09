@@ -47,7 +47,7 @@ func TestOpenUserMenuCreatesStubWhenMissing(t *testing.T) {
 
 	var edited []string
 	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string) error {
+	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
 		edited = append(edited, path)
 		return nil
 	}
@@ -87,7 +87,7 @@ command = "true"
 
 	var edited []string
 	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string) error {
+	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
 		edited = append(edited, path)
 		return nil
 	}
@@ -118,7 +118,7 @@ func TestOpenUserMenuInvalidFileCritical(t *testing.T) {
 
 	prev := externalEditorRunner
 	var called bool
-	externalEditorRunner = func(_ context.Context, _ string) error {
+	externalEditorRunner = func(_ context.Context, _ string, _ bool) error {
 		called = true
 		return nil
 	}
@@ -155,7 +155,7 @@ func TestOpenUserMenuExistingStubNoEditor(t *testing.T) {
 
 	prev := externalEditorRunner
 	var called bool
-	externalEditorRunner = func(_ context.Context, _ string) error {
+	externalEditorRunner = func(_ context.Context, _ string, _ bool) error {
 		called = true
 		return nil
 	}
@@ -194,7 +194,7 @@ command = "true"
 	prev := externalEditorRunner
 	var mu sync.Mutex
 	called := false
-	externalEditorRunner = func(_ context.Context, path string) error {
+	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
 		mu.Lock()
 		called = true
 		mu.Unlock()

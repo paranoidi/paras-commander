@@ -391,7 +391,7 @@ func TestSelectionsStripFileEditViaF4(t *testing.T) {
 	app, filePath := setupSelectionsStripFileFocusTest(t)
 	var edited string
 	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string) error {
+	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
 		edited = path
 		return nil
 	}

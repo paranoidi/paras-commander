@@ -58,6 +58,7 @@ These live alongside `config.toml` in the same config directory but are
 - [\[user_menu\]](#user_menu)
 - [\[preview\]](#preview)
 - [\[sftp\]](#sftp)
+- [\[editor\]](#editor)
 - [\[shell\]](#shell)
 - [\[meta\]](#meta)
 - [\[pools\]](#pools)
@@ -243,6 +244,7 @@ Copy/move file-transfer behavior.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `confirm_delete` | bool | `true` | Ask for confirmation before deleting files or directories. |
+| `elevate` | bool | `true` | When a local rename, same-filesystem move, delete, mkdir, chmod, chown, symlink or hardlink fails with a permission error, ask whether to retry that one step as root via `sudo` (password entered in a dialog). Read-only filesystems are never elevated. See [elevation](elevation.md). |
 | `preserve_permissions` | bool | `true` | Preserve source file permissions on copy. |
 | `preserve_timestamps` | bool | `true` | Preserve source file modification times on copy. |
 | `dereference_symlinks` | bool | `false` | Copy dialog only: copy through symlinks (file or directory targets) instead of recreating them at the destination. Local-to-local Copy only; never applied to Move, and has no effect when either endpoint is remote. |
@@ -378,6 +380,14 @@ SSH/SFTP remote panel connections.
 | `idle_timeout_secs` | int | `60` | How long an unused pooled SFTP connection stays open before closing (clamped 15–3600). |
 | `dial_timeout_secs` | int | `30` | Limit on TCP connect + SSH handshake time (clamped 5–300). |
 | `list_timeout_secs` | int | `60` | Limit on any panel directory listing request — SFTP or local, since a local path can be a slow network mount too (clamped 5–300). |
+
+## `[editor]`
+
+External editor launched by Edit (**F4**), chosen from `$VISUAL`, then `$EDITOR`, then `vi`.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `elevate` | bool | `true` | When the local file is not writable by you (or does not exist and its directory is not writable), run `sudo -e` (sudoedit) with `SUDO_EDITOR` set to your editor, so `sudo` asks for the password on the released terminal and the file is edited as a temporary copy. A line `pc: <path> is not writable, editing via sudoedit` is printed first. Read-only filesystems are never elevated. |
 
 ## `[shell]`
 

@@ -254,6 +254,9 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 		return r.mergeMoveDir(ctx, src, dst, baseFiles, baseBytes)
 	}
 	out, err := renameSourceForMove(ctx, src, dst, dstExists, r.resolver)
+	if errors.Is(err, ErrPermissionSkipped) {
+		return 0, 0, false, nil // user skipped this source after a permission error
+	}
 	if err != nil {
 		return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
 	}

@@ -80,8 +80,19 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 			return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to stat " + loc.Base(), Err: err}
 		}
 		size := ent.Size
-		if err := deletePathRecursive(ctx, loc); err != nil {
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		rmArgv := []string{"rm", "-f", "--"}
+		if ent.Type == fsbackend.EntryDirectory {
+			rmArgv = []string{"rm", "-rf", "--"}
+		}
+		host := hostPathOf(loc)
+		err = withElevation(ctx, "delete", host, append(rmArgv, host), func() error {
+			return deletePathRecursive(ctx, loc)
+		})
+		if errors.Is(err, ErrPermissionSkipped) {
+			continue
+		}
+		if err != nil {
+			if errors.Is(err, ErrUserCanceled) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return doneFiles, doneBytes, err
 			}
 			return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to delete " + ent.Name, Err: err}

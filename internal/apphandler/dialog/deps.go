@@ -112,6 +112,10 @@ type Deps struct {
 	// fields (rather than through Host) matches the compare handler's DiskIgnore precedent.
 	DiskUsage       *diskusage.Engine
 	DiskUsageIgnore diskusage.ShouldIgnoreFolder
+
+	// PromptElevate asks the user whether a permission-denied local file step may be retried as
+	// root (the app's single permission prompt). Nil disables elevation.
+	PromptElevate ops.PermissionWaitFunc
 }
 
 // pendingPanelFocus defers a select-and-scroll until the target entry actually appears in the
@@ -153,6 +157,7 @@ type Handler struct {
 	dedup                *dedupctrl.Handler
 	diskUsage            *diskusage.Engine
 	diskUsageIgnore      diskusage.ShouldIgnoreFolder
+	promptElevate        ops.PermissionWaitFunc
 
 	// deleteDialogScanFP is the last enqueued directory set fingerprint for the delete
 	// confirmation dialog.
@@ -241,5 +246,6 @@ func New(d Deps) *Handler {
 		dedup:                d.Dedup,
 		diskUsage:            d.DiskUsage,
 		diskUsageIgnore:      d.DiskUsageIgnore,
+		promptElevate:        d.PromptElevate,
 	}
 }

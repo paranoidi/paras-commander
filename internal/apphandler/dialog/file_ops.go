@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
@@ -447,6 +448,7 @@ func (h *Handler) executeRename() {
 		}, newName, panelPath)
 		return
 	}
+	retry := renameApply{focusAfter: focusAfter, openInOther: openInOther, panelDir: panelDir, panelID: panelID}
 	entry, err := localfs.EntryFromPath(sourcePath)
 	if err != nil {
 		h.host.SetErrorMessage("Rename source", err)
@@ -459,7 +461,12 @@ func (h *Handler) executeRename() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteRename(plan); err != nil {
+	if err := ops.ExecuteRename(context.Background(), plan); err != nil {
+		if h.canElevate(err) {
+			retry.entry = entry
+			h.startRemoteRename(retry, newName, panelPath) // asynchronously asks to retry as root
+			return
+		}
 		h.host.SetErrorMessage("Rename failed", err)
 		h.CloseFileDialog()
 		return
@@ -561,7 +568,11 @@ func (h *Handler) executeMkdir() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteMkdir(plan); err != nil {
+	if err := ops.ExecuteMkdir(context.Background(), plan); err != nil {
+		if h.canElevate(err) {
+			h.startRemoteMkdir(st) // asynchronously asks to retry as root
+			return
+		}
 		h.host.SetErrorMessage("Mkdir failed", err)
 		h.CloseFileDialog()
 		return
@@ -711,16 +722,19 @@ type attrOpApply struct {
 	successMsg string
 }
 
-func (h *Handler) startAttrOp(title, successMsg string, exec func() error) {
+// startAttrOp runs exec off the UI goroutine. Its ctx carries the permission-retry Elevator, so
+// a permission-denied step can pop the "retry as root" prompt while the UI keeps running.
+func (h *Handler) startAttrOp(title, successMsg string, exec func(ctx context.Context) error) {
 	gen := h.nextRemoteFileOpGen()
 	h.CloseFileDialog()
 	screen := h.screen
+	ctx := h.elevatedCtx()
 	hook := attrOpTestHook
 	go func() {
 		if hook != nil {
 			hook()
 		}
-		err := exec()
+		err := exec(ctx)
 		if screen == nil {
 			return
 		}
@@ -733,6 +747,9 @@ func (h *Handler) startAttrOp(title, successMsg string, exec func() error) {
 
 func (h *Handler) applyAttrOp(p RemoteFileOpPayload) {
 	h.RefreshBothPanels()
+	if ops.IsSkipOrCancel(p.Err) {
+		return
+	}
 	if p.Err != nil {
 		h.host.SetErrorMessage(p.attr.title+" failed", p.Err)
 		return
@@ -759,8 +776,8 @@ func (h *Handler) executeChmod() {
 		h.CloseFileDialog()
 		return
 	}
-	h.startAttrOp("Chmod", fmt.Sprintf("Changed mode to %s on %d item(s)", plan.ModeStr, len(plan.Entries)), func() error {
-		return ops.ExecuteChmod(plan)
+	h.startAttrOp("Chmod", fmt.Sprintf("Changed mode to %s on %d item(s)", plan.ModeStr, len(plan.Entries)), func(ctx context.Context) error {
+		return ops.ExecuteChmod(ctx, plan)
 	})
 }
 
@@ -784,8 +801,8 @@ func (h *Handler) executeChown() {
 		h.CloseFileDialog()
 		return
 	}
-	h.startAttrOp("Chown", fmt.Sprintf("Changed owner on %d item(s)", len(plan.Entries)), func() error {
-		return ops.ExecuteChown(plan)
+	h.startAttrOp("Chown", fmt.Sprintf("Changed owner on %d item(s)", len(plan.Entries)), func(ctx context.Context) error {
+		return ops.ExecuteChown(ctx, plan)
 	})
 }
 
@@ -803,7 +820,13 @@ func (h *Handler) executeSymlink() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteSymlink(plan); err != nil {
+	if err := ops.ExecuteSymlink(context.Background(), plan); err != nil {
+		if h.canElevate(err) {
+			h.startAttrOp("Symlink", fmt.Sprintf("Created symlink: %s -> %s", filepath.Base(plan.LinkPath), plan.TargetSrc), func(ctx context.Context) error {
+				return ops.ExecuteSymlink(ctx, plan)
+			})
+			return
+		}
 		h.host.SetErrorMessage("Symlink failed", err)
 		h.CloseFileDialog()
 		return
@@ -827,7 +850,13 @@ func (h *Handler) executeHardlink() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteHardlink(plan); err != nil {
+	if err := ops.ExecuteHardlink(context.Background(), plan); err != nil {
+		if h.canElevate(err) {
+			h.startAttrOp("Hardlink", fmt.Sprintf("Created hardlink: %s", filepath.Base(plan.NewPath)), func(ctx context.Context) error {
+				return ops.ExecuteHardlink(ctx, plan)
+			})
+			return
+		}
 		h.host.SetErrorMessage("Hardlink failed", err)
 		h.CloseFileDialog()
 		return

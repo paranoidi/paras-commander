@@ -35,8 +35,9 @@ func PlanRename(source localfs.Entry, newName string, panelPath string) (RenameP
 	}, nil
 }
 
-// ExecuteRename performs the rename.
-func ExecuteRename(plan RenamePlan) error {
+// ExecuteRename performs the rename. A permission failure on a local path is retried as root
+// when ctx carries an Elevator (see WithElevator).
+func ExecuteRename(ctx context.Context, plan RenamePlan) error {
 	oldLoc, err := pathloc.Parse(plan.SourcePath)
 	if err != nil {
 		return err
@@ -49,5 +50,9 @@ func ExecuteRename(plan RenamePlan) error {
 	if err != nil {
 		return err
 	}
-	return be.Rename(context.Background(), oldLoc, newLoc)
+	do := func() error { return be.Rename(ctx, oldLoc, newLoc) }
+	if oldHost, newHost := hostPathOf(oldLoc), hostPathOf(newLoc); oldHost != "" && newHost != "" {
+		return withElevation(ctx, "rename", oldHost, []string{"mv", "-T", "--", oldHost, newHost}, do)
+	}
+	return do()
 }

@@ -185,7 +185,7 @@ func TestPreviewMenuEditLetter(t *testing.T) {
 
 	var edited string
 	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, p string) error {
+	externalEditorRunner = func(_ context.Context, p string, _ bool) error {
 		edited = p
 		return nil
 	}
