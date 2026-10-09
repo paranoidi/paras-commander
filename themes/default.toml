@@ -277,7 +277,7 @@ row = { fg = "white" }
 running = { fg = "bright_cyan", bold = true }
 
 [jobs.progress]
-fill = { fg = "black", bg = "bright_green" }
+fill = { fg = "black", bg = "green" }
 label.on_fill = { fg = "black", bold = true }
 label.on_track = { fg = "bright_white", bold = true }
 track = { fg = "bright_black", bg = "black" }
