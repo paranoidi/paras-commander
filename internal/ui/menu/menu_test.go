@@ -225,7 +225,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Swap panels":  "C-M-space",
 	})
 	assertMenuItemKeyLabels(t, display, map[string]string{
-		"Commands":   "C-M-e",
+		"Commands":   "M-c",
 		"Messages":   "M-l",
 		"Jobs":       "M-j",
 		"Open shell": "C-o",
@@ -272,7 +272,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		t.Fatal("jobs view menus missing Display")
 	}
 	assertMenuItemKeyLabels(t, display, map[string]string{
-		"Commands":   "C-M-e",
+		"Commands":   "M-c",
 		"Messages":   "M-l",
 		"Jobs":       "M-j",
 		"Open shell": "C-o",
@@ -459,7 +459,7 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 				t.Fatalf("Display shortcut = %q, want none", display.Shortcut)
 			}
 			assertMenuItemKeyLabels(t, display, map[string]string{
-				"Commands":   "C-M-e",
+				"Commands":   "M-c",
 				"Messages":   "M-l",
 				"Jobs":       "M-j",
 				"Open shell": "C-o",
