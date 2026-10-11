@@ -12,13 +12,21 @@ const (
 	FilterFocusShellRadio  = 0
 	FilterFocusRegexRadio  = 1
 	FilterFocusSimpleRadio = 2
-	FilterFocusPattern     = 3
-	FilterFocusFilesOnly   = 4
-	FilterFocusDirsOnly    = 5
-	FilterFocusCase        = 6
-	FilterFocusIncludeMeta = 7
-	FilterFocusOnlyMeta    = 8
+	// FilterFocusTypeFirst..FilterFocusTypeFirst+FilterTypeCount-1 are the type checkboxes,
+	// in FilterTypeLabels order.
+	FilterFocusTypeFirst   = 3
+	FilterFocusPattern     = FilterFocusTypeFirst + FilterTypeCount // 8
+	FilterFocusFilesOnly   = FilterFocusPattern + 1
+	FilterFocusDirsOnly    = FilterFocusPattern + 2
+	FilterFocusInvert      = FilterFocusPattern + 3
+	FilterFocusCase        = FilterFocusPattern + 4
+	FilterFocusIncludeMeta = FilterFocusPattern + 5
+	FilterFocusOnlyMeta    = FilterFocusPattern + 6
 )
+
+// FilterDialogWidth is the Filter dialog's frame width, shared by the renderer and the
+// handler's input-width computation. It fits "( ) Regular expression" plus both type columns.
+const FilterDialogWidth = 60
 
 // FilterContentCount is the number of navigable content items (meta row included when shown).
 func FilterContentCount(metaColumnCount int) int {
@@ -84,7 +92,7 @@ func filterPatternInvalid(state FilterDialogState) bool {
 }
 
 func filterDialogInnerRows(state FilterDialogState) int {
-	rows := 3 + 1 + 1 + 1 + 2 + 1 + 1 // mode radios, separator, Pattern label, input, filter checkbox rows, separator, buttons
+	rows := 3 + 1 + 1 + 1 + 2 + 1 + 1 + 1 // mode radios, separator, Pattern label, input, filter checkbox rows, separator, blank, buttons
 	if filterShowsPatternHint(state) {
 		rows++
 	}
@@ -102,130 +110,111 @@ func filterDialogHeight(state FilterDialogState, layoutHeight int) int {
 	return height
 }
 
-// FilterLastContentFocus returns the last navigable content index for the given mode and meta
-// column count.
-func FilterLastContentFocus(mode panel.GroupPatternMode, metaColumnCount int) int {
+// filterGrid is the dialog's content as rows of focus indexes (-1 = empty cell), hidden cells
+// (case in regex mode, meta row without meta columns) omitted. Up/Down keep the column, Left/Right
+// move within a row.
+func filterGrid(mode panel.GroupPatternMode, metaColumnCount int) [][]int {
+	t := FilterFocusTypeFirst
+	grid := [][]int{
+		{FilterFocusShellRadio, t, t + 3},
+		{FilterFocusRegexRadio, t + 1, t + 4},
+		{FilterFocusSimpleRadio, t + 2, -1},
+		{FilterFocusPattern},
+		{FilterFocusFilesOnly, FilterFocusDirsOnly},
+		{FilterFocusInvert},
+	}
+	if FilterShowsCaseSensitive(FilterDialogState{PatternMode: mode}) {
+		grid[len(grid)-1] = append(grid[len(grid)-1], FilterFocusCase)
+	}
 	if metaColumnCount > 0 {
-		return FilterFocusIncludeMeta // leftmost item on the meta row
+		grid = append(grid, []int{FilterFocusIncludeMeta, FilterFocusOnlyMeta})
 	}
-	if mode == panel.GroupPatternRegex {
-		return FilterFocusFilesOnly // leftmost item on the type row
-	}
-	return FilterFocusCase
+	return grid
 }
 
-// FilterMoveFocus applies dialog navigation, including 2D checkbox layout: Files only and
-// Directories only share a row (Left/Right) above Case sensitive. When metaColumnCount > 0,
-// "Include meta columns" and "Only meta columns" share a row below case sensitive.
+func filterGridFind(grid [][]int, focus int) (row, col int) {
+	for r, cells := range grid {
+		for c, f := range cells {
+			if f == focus {
+				return r, c
+			}
+		}
+	}
+	return -1, -1
+}
+
+// filterGridCell returns the cell at (row, col), falling back to the nearest non-empty cell to
+// the left when col is past the row's end or empty.
+func filterGridCell(grid [][]int, row, col int) int {
+	cells := grid[row]
+	if col >= len(cells) {
+		col = len(cells) - 1
+	}
+	for ; col > 0 && cells[col] < 0; col-- {
+	}
+	return cells[col]
+}
+
+// FilterMoveFocus applies dialog navigation over filterGrid plus the OK/Cancel button row, and
+// Tab/Shift+Tab jumps between groups: mode radios, type checkboxes, pattern, options, buttons.
 func FilterMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode, metaColumnCount int) (int, bool) {
 	form := NewDialogLinearForm(FilterContentCount(metaColumnCount))
-	showCase := FilterShowsCaseSensitive(FilterDialogState{PatternMode: mode})
-	showMeta := metaColumnCount > 0
+	okIdx, cancelIdx := form.OKIndex(), form.CancelIndex()
+	grid := filterGrid(mode, metaColumnCount)
 
-	okIdx := form.OKIndex()
 	switch key {
-	case tcell.KeyRight:
-		if focus == FilterFocusFilesOnly {
-			return FilterFocusDirsOnly, true
+	case tcell.KeyTab, tcell.KeyBacktab:
+		starts := []int{FilterFocusShellRadio, FilterFocusTypeFirst, FilterFocusPattern, FilterFocusFilesOnly, okIdx}
+		seg := 0
+		for i, st := range starts {
+			if focus >= st {
+				seg = i
+			}
 		}
-		if focus == FilterFocusIncludeMeta && showMeta {
-			return FilterFocusOnlyMeta, true
+		if key == tcell.KeyTab {
+			return starts[(seg+1)%len(starts)], true
 		}
-		if focus == okIdx {
-			return form.CancelIndex(), true
+		return starts[(seg+len(starts)-1)%len(starts)], true
+	}
+
+	if focus == okIdx || focus == cancelIdx {
+		switch key {
+		case tcell.KeyLeft:
+			if focus == cancelIdx {
+				return okIdx, true
+			}
+		case tcell.KeyRight:
+			if focus == okIdx {
+				return cancelIdx, true
+			}
+		case tcell.KeyUp:
+			return grid[len(grid)-1][0], true
 		}
 		return focus, false
+	}
+
+	row, col := filterGridFind(grid, focus)
+	if row < 0 {
+		return focus, false
+	}
+	switch key {
 	case tcell.KeyLeft:
-		if focus == FilterFocusDirsOnly {
-			return FilterFocusFilesOnly, true
+		if col > 0 {
+			return grid[row][col-1], true
 		}
-		if focus == FilterFocusOnlyMeta && showMeta {
-			return FilterFocusIncludeMeta, true
-		}
-		if focus == form.CancelIndex() {
-			return okIdx, true
-		}
-		return focus, false
-	case tcell.KeyTab:
-		// Segment jumps: mode radios(0-2) → pattern(3) → filters(4+) → buttons → mode radios
-		switch {
-		case focus < FilterFocusPattern:
-			return FilterFocusPattern, true
-		case focus == FilterFocusPattern:
-			return FilterFocusFilesOnly, true
-		case focus < okIdx:
-			return okIdx, true
-		default:
-			return FilterFocusShellRadio, true
-		}
-	case tcell.KeyBacktab:
-		// Reverse segment jumps
-		switch {
-		case focus < FilterFocusPattern:
-			return okIdx, true
-		case focus == FilterFocusPattern:
-			return FilterFocusShellRadio, true
-		case focus < okIdx:
-			return FilterFocusPattern, true
-		default:
-			return FilterFocusFilesOnly, true
-		}
-	case tcell.KeyDown:
-		switch focus {
-		case FilterFocusFilesOnly, FilterFocusDirsOnly:
-			if showCase {
-				return FilterFocusCase, true
-			}
-			if showMeta {
-				return FilterFocusIncludeMeta, true
-			}
-			return okIdx, true
-		case FilterFocusCase:
-			if showMeta {
-				return FilterFocusIncludeMeta, true
-			}
-			return okIdx, true
-		case FilterFocusIncludeMeta, FilterFocusOnlyMeta:
-			return okIdx, true
-		default:
-			next, ok := form.MoveFocus(focus, tcell.KeyDown)
-			if !ok {
-				return focus, false
-			}
-			return filterSkipHiddenCase(next, mode), true
+	case tcell.KeyRight:
+		if col+1 < len(grid[row]) && grid[row][col+1] >= 0 {
+			return grid[row][col+1], true
 		}
 	case tcell.KeyUp:
-		switch focus {
-		case FilterFocusFilesOnly, FilterFocusDirsOnly:
-			return FilterFocusPattern, true
-		case FilterFocusCase:
-			return FilterFocusFilesOnly, true
-		case FilterFocusIncludeMeta, FilterFocusOnlyMeta:
-			if showCase {
-				return FilterFocusCase, true
-			}
-			return FilterFocusFilesOnly, true
-		case okIdx, form.CancelIndex():
-			return FilterLastContentFocus(mode, metaColumnCount), true
-		default:
-			next, ok := form.MoveFocus(focus, tcell.KeyUp)
-			if !ok {
-				return focus, false
-			}
-			return filterSkipHiddenCase(next, mode), true
+		if row > 0 {
+			return filterGridCell(grid, row-1, col), true
 		}
-	default:
-		next, ok := form.MoveFocus(focus, key)
-		if !ok {
-			return focus, false
+	case tcell.KeyDown:
+		if row+1 < len(grid) {
+			return filterGridCell(grid, row+1, col), true
 		}
-		return filterSkipHiddenCase(next, mode), true
+		return okIdx, true
 	}
-}
-
-func filterSkipHiddenCase(focus int, mode panel.GroupPatternMode) int {
-	if mode == panel.GroupPatternRegex && focus == FilterFocusCase {
-		return FilterFocusFilesOnly
-	}
-	return focus
+	return focus, false
 }

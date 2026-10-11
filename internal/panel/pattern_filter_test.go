@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"sort"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
@@ -33,7 +35,7 @@ func TestPatternFilterIncludeMetaMatchesByNameOrValue(t *testing.T) {
 	meta := func() GroupSelectMeta {
 		return GroupSelectMeta{Cols: []map[string]string{{lanternPath: "beacon tag"}}}
 	}
-	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, false, meta)
+	filter, err := PatternFilter(FilterSpec{Pattern: "thicket", Mode: GroupPatternSimple}, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -49,7 +51,7 @@ func TestPatternFilterIncludeMetaMatchesByNameOrValue(t *testing.T) {
 
 	// Now match a pattern that only the meta value satisfies: with Include on, basename matching
 	// still runs (finds nothing) and the meta value match adds lantern.txt.
-	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, false, meta)
+	filter, err = PatternFilter(FilterSpec{Pattern: "beacon", Mode: GroupPatternSimple}, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -70,7 +72,7 @@ func TestPatternFilterOnlyMetaSkipsBasenameMatch(t *testing.T) {
 	}
 	// "thicket" matches thicket.txt's basename, but OnlyMeta suppresses basename matching
 	// entirely, so only meta-value matches count — here, none.
-	filter, err := PatternFilter("thicket", GroupPatternSimple, false, false, false, meta)
+	filter, err := PatternFilter(FilterSpec{Pattern: "thicket", Mode: GroupPatternSimple}, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -80,7 +82,7 @@ func TestPatternFilterOnlyMetaSkipsBasenameMatch(t *testing.T) {
 	}
 
 	// "beacon" matches only lantern.txt's meta value.
-	filter, err = PatternFilter("beacon", GroupPatternSimple, false, false, false, meta)
+	filter, err = PatternFilter(FilterSpec{Pattern: "beacon", Mode: GroupPatternSimple}, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -105,7 +107,7 @@ func TestPatternFilterRefreshPicksUpLiveProviderData(t *testing.T) {
 	meta := func() GroupSelectMeta {
 		return GroupSelectMeta{Cols: []map[string]string{live}}
 	}
-	filter, err := PatternFilter("beacon", GroupPatternSimple, false, false, false, meta)
+	filter, err := PatternFilter(FilterSpec{Pattern: "beacon", Mode: GroupPatternSimple}, meta)
 	if err != nil {
 		t.Fatalf("PatternFilter() error = %v", err)
 	}
@@ -136,7 +138,7 @@ func TestEntryFilterKeepsDirectories(t *testing.T) {
 		}
 	}
 	pattern := func(pat string, dirsOnly bool) *EntryFilter {
-		f, err := PatternFilter(pat, GroupPatternShell, false, false, dirsOnly, nil)
+		f, err := PatternFilter(FilterSpec{Pattern: pat, Mode: GroupPatternShell, DirsOnly: dirsOnly}, nil)
 		if err != nil {
 			t.Fatalf("PatternFilter() error = %v", err)
 		}
@@ -150,7 +152,7 @@ func TestEntryFilterKeepsDirectories(t *testing.T) {
 		{"pattern keeps dir", pattern("*.go", false), []string{"harbor", "match.go"}},
 		{"dirs only filters dirs", pattern("harb*", true), []string{"harbor"}},
 		{"files only hides dirs", func() *EntryFilter {
-			f, err := PatternFilter("*", GroupPatternShell, false, true, false, nil)
+			f, err := PatternFilter(FilterSpec{Pattern: "*", Mode: GroupPatternShell, FilesOnly: true}, nil)
 			if err != nil {
 				t.Fatalf("PatternFilter() error = %v", err)
 			}
@@ -216,5 +218,87 @@ func TestGitFiltersHideDirsWithoutMatches(t *testing.T) {
 				t.Fatalf("visible = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func visibleNames(s *State) []string {
+	var out []string
+	for i := 0; i < s.VisibleEntryCount(); i++ {
+		if e, _, ok := s.VisibleEntry(i); ok {
+			out = append(out, e.Name)
+		}
+	}
+	return out
+}
+
+func setupTypeFilterState(t *testing.T) State {
+	t.Helper()
+	dir := t.TempDir()
+	for _, name := range []string{"thicket.mkv", "thicket.txt", "lantern.jpg", "sesame.MKV"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Mkdir(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	state, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return state
+}
+
+func TestPatternFilterTypes(t *testing.T) {
+	types := regexp.MustCompile(`(?i)\.(mkv|jpg)$`)
+	cases := []struct {
+		name string
+		spec FilterSpec
+		want []string
+	}{
+		{"types only keeps dirs", FilterSpec{Types: types}, []string{"meadow", "lantern.jpg", "sesame.MKV", "thicket.mkv"}},
+		{"types and pattern", FilterSpec{Types: types, Pattern: "thicket", Mode: GroupPatternSimple}, []string{"meadow", "thicket.mkv"}},
+		{"invert", FilterSpec{Types: types, Invert: true}, []string{"meadow", "thicket.txt"}},
+		{"invert files only", FilterSpec{Types: types, Invert: true, FilesOnly: true}, []string{"thicket.txt"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			state := setupTypeFilterState(t)
+			f, err := PatternFilter(tc.spec, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state.SetEntryFilter(f)
+			got := visibleNames(&state)
+			sort.Strings(got)
+			want := append([]string(nil), tc.want...)
+			sort.Strings(want)
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("visible = %v, want %v", got, want)
+			}
+			files, dirs, err := state.CountPatternMatches(tc.spec, GroupSelectMeta{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			// The preview counts real matches; directories merely stay visible, so only files are compared.
+			wantFiles := len(tc.want)
+			for _, n := range tc.want {
+				if n == "meadow" {
+					wantFiles--
+				}
+			}
+			if files != wantFiles || dirs > 1 {
+				t.Fatalf("CountPatternMatches = %d files %d dirs, want %d files", files, dirs, wantFiles)
+			}
+		})
+	}
+}
+
+func TestFilterSpecLabel(t *testing.T) {
+	if got := (FilterSpec{Pattern: "walnut*"}).Label(); got != "Filter: walnut*" {
+		t.Fatalf("Label = %q", got)
+	}
+	if got := (FilterSpec{Pattern: "a", TypeLabel: "Videos, Audio", Invert: true}).Label(); got != "Filter: not a Videos, Audio" {
+		t.Fatalf("Label = %q", got)
 	}
 }

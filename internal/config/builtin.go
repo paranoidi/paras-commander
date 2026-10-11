@@ -539,3 +539,13 @@ const (
 	StatusCommandMaxWidthMin = 1
 	StatusCommandMaxWidthMax = 200
 )
+
+// Default regexps for the Filter dialog's file-type checkboxes ([filter.types]). Matched against
+// the entry basename.
+const (
+	DefaultFilterTypeVideos    = `(?i)\.(mkv|mp4|m4v|webm|avi|mov|wmv|flv|mpe?g|m2ts|mts|ts|vob|ogv|3gp|3g2|divx|rmvb|asf)$`
+	DefaultFilterTypePictures  = `(?i)\.(jpe?g|png|gif|webp|bmp|tiff?|svg|heic|heif|avif|ico|raw|cr2|cr3|nef|arw|dng|orf|rw2|psd|xcf|jxl)$`
+	DefaultFilterTypeArchives  = `(?i)\.(zip|rar|7z|tar|t?gz|tbz2?|txz|tzst|bz2|xz|zst|lz4?|lzma|z|cab|iso|dmg|deb|rpm|apk|jar|war)$`
+	DefaultFilterTypeAudio     = `(?i)\.(mp3|flac|wav|ogg|oga|opus|m4a|aac|wma|alac|aiff?|ape|mka|mid|midi|dsf|wv)$`
+	DefaultFilterTypeDocuments = `(?i)\.(pdf|docx?|odt|rtf|txt|md|xlsx?|ods|csv|pptx?|odp|epub|mobi|djvu|tex|pages|numbers|key)$`
+)

@@ -212,6 +212,18 @@ Panel quick-filter behavior.
 | `cycle_matches` | string | `"visual"` | How Up/Down move among quick-filter matches: `"visual"` (panel row order) or `"ranked"` (best fuzzy match first). |
 | `case_insensitive` | bool | `true` | Match panel quick-filter and find queries case-insensitively. |
 
+### `[filter.types]`
+
+Regular expressions behind the file-type checkboxes of the panel Filter dialog (Alt+F; see [panel-filter.md](panel-filter.md)). Each is matched against the entry's file name only and ignores the dialog's "Case sensitive" box, so the defaults start with `(?i)`. An empty or non-compiling value falls back to the built-in default.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `videos` | string | common video extensions (`mkv`, `mp4`, `avi`, `mov`, ...) | Videos checkbox. |
+| `pictures` | string | common image extensions (`jpg`, `png`, `gif`, `webp`, raw formats, ...) | Pictures checkbox. |
+| `archives` | string | common archive/package extensions (`zip`, `rar`, `7z`, `tar`, `gz`, `iso`, ...) | Archives checkbox. |
+| `audio` | string | common audio extensions (`mp3`, `flac`, `wav`, `ogg`, ...) | Audio checkbox. |
+| `documents` | string | common document extensions (`pdf`, `docx`, `txt`, `md`, `xlsx`, ...) | Documents checkbox. |
+
 ## `[jobs]`
 
 Background file-operation jobs: display, timing, and throttling.

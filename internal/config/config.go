@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -482,6 +483,17 @@ type FilterConfig struct {
 	CycleMatches string `toml:"cycle_matches"`
 	// CaseInsensitive controls case sensitivity of the quick filter and find dialog.
 	CaseInsensitive bool `toml:"case_insensitive"`
+	// Types holds the regexps behind the panel Filter dialog's file-type checkboxes.
+	Types FilterTypesConfig `toml:"types"`
+}
+
+// FilterTypesConfig is `[filter.types]`: one basename regexp per Filter dialog type checkbox.
+type FilterTypesConfig struct {
+	Videos    string `toml:"videos"`
+	Pictures  string `toml:"pictures"`
+	Archives  string `toml:"archives"`
+	Audio     string `toml:"audio"`
+	Documents string `toml:"documents"`
 }
 
 type JobsConfig struct {
@@ -659,6 +671,13 @@ func Default() Config {
 			Syntax:          FilterSyntaxFZF,
 			CycleMatches:    FilterCycleMatchesVisual,
 			CaseInsensitive: true,
+			Types: FilterTypesConfig{
+				Videos:    DefaultFilterTypeVideos,
+				Pictures:  DefaultFilterTypePictures,
+				Archives:  DefaultFilterTypeArchives,
+				Audio:     DefaultFilterTypeAudio,
+				Documents: DefaultFilterTypeDocuments,
+			},
 		},
 		Jobs: JobsConfig{
 			ShowFinished:                true,
@@ -1202,6 +1221,17 @@ func (c *Config) validateFilter(builtin *Config) {
 	default:
 		c.Filter.CycleMatches = builtin.Filter.CycleMatches
 	}
+	validType := func(rx *string, def string) {
+		if _, err := regexp.Compile(*rx); *rx == "" || err != nil {
+			*rx = def
+		}
+	}
+	t, b := &c.Filter.Types, builtin.Filter.Types
+	validType(&t.Videos, b.Videos)
+	validType(&t.Pictures, b.Pictures)
+	validType(&t.Archives, b.Archives)
+	validType(&t.Audio, b.Audio)
+	validType(&t.Documents, b.Documents)
 }
 
 func (c *Config) validateJobs(builtin *Config) {

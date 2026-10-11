@@ -2,8 +2,12 @@ package dialog
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -36,12 +40,17 @@ func (h *Handler) CloseFilterDialog() {
 // pattern is empty or fails to compile.
 func (h *Handler) updateFilterDialogPreview() {
 	fd := &h.model.FilterDialog
-	if !fd.Open || fd.Text == "" {
+	if !fd.Open {
+		fd.PreviewShow = false
+		return
+	}
+	spec := h.filterSpec()
+	if spec.Empty() {
 		fd.PreviewShow = false
 		return
 	}
 	meta := ui.MetaMatchData(h.model.MetaResults[h.model.ActivePanel], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
-	files, dirs, err := h.host.ActivePanel().CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly, meta)
+	files, dirs, err := h.host.ActivePanel().CountPatternMatches(spec, meta)
 	if err != nil {
 		fd.PreviewShow = false
 		return
@@ -51,13 +60,44 @@ func (h *Handler) updateFilterDialogPreview() {
 	fd.PreviewShow = true
 }
 
+// filterTypeRegexps returns the [filter.types] regexps in dialog.FilterType* order.
+func filterTypeRegexps(t config.FilterTypesConfig) [dialog.FilterTypeCount]string {
+	return [dialog.FilterTypeCount]string{t.Videos, t.Pictures, t.Archives, t.Audio, t.Documents}
+}
+
+// filterSpec builds the panel.FilterSpec for the dialog's current state: checked types are
+// OR-joined into one regexp from the (already validated) config.
+func (h *Handler) filterSpec() panel.FilterSpec {
+	fd := &h.model.FilterDialog
+	spec := panel.FilterSpec{
+		Pattern: fd.Text, Mode: fd.PatternMode, CaseSensitive: fd.CaseSensitive,
+		FilesOnly: fd.FilesOnly, DirsOnly: fd.DirsOnly, Invert: fd.Invert,
+	}
+	var alts, labels []string
+	rx := filterTypeRegexps(h.host.Config().Filter.Types)
+	for i, on := range fd.Types {
+		if on {
+			alts = append(alts, "(?:"+rx[i]+")")
+			labels = append(labels, dialog.FilterTypeLabels[i])
+		}
+	}
+	if len(alts) > 0 {
+		// Config is validated, so this compiles; on failure the type restriction is dropped.
+		if re, err := regexp.Compile(strings.Join(alts, "|")); err == nil {
+			spec.Types = re
+			spec.TypeLabel = strings.Join(labels, ", ")
+		}
+	}
+	return spec
+}
+
 func (h *Handler) filterDialogForm() dialog.DialogLinearForm {
 	return dialog.NewDialogLinearForm(dialog.FilterContentCount(h.model.FilterDialog.MetaColumnCount))
 }
 
 func (h *Handler) filterDialogQueryWidth() int {
 	termW, _ := h.screen.Size()
-	width := 54
+	width := dialog.FilterDialogWidth
 	if width > termW-4 {
 		width = termW - 4
 	}
@@ -110,7 +150,8 @@ func (h *Handler) executeFilterDialog() {
 	fd := &h.model.FilterDialog
 	p := h.host.ActivePanel()
 	panelID := h.model.ActivePanel
-	if fd.Text == "" {
+	spec := h.filterSpec()
+	if spec.Empty() {
 		p.SetEntryFilter(nil)
 		h.CloseFilterDialog()
 		return
@@ -127,13 +168,13 @@ func (h *Handler) executeFilterDialog() {
 			return ui.MetaMatchData(h.model.MetaResults[panelID], true, only)
 		}
 	}
-	filter, err := panel.PatternFilter(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly, metaFn)
+	filter, err := panel.PatternFilter(spec, metaFn)
 	if err != nil {
 		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
 		return
 	}
 	meta := ui.MetaMatchData(h.model.MetaResults[panelID], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
-	files, dirs, _ := p.CountPatternMatches(fd.Text, fd.PatternMode, fd.CaseSensitive, fd.FilesOnly, fd.DirsOnly, meta)
+	files, dirs, _ := p.CountPatternMatches(spec, meta)
 	p.SetEntryFilter(filter)
 	h.CloseFilterDialog()
 	if files == 0 && dirs == 0 {
@@ -200,7 +241,7 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 		case 'r', 'R':
 			h.toggleFilterDialogField(fd, dialog.FilterFocusRegexRadio)
 			return false
-		case 'i', 'I':
+		case 'l', 'L':
 			h.toggleFilterDialogField(fd, dialog.FilterFocusSimpleRadio)
 			return false
 		}
@@ -224,6 +265,9 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 			case 'd', 'D':
 				h.toggleFilterDialogField(fd, dialog.FilterFocusDirsOnly)
 				fd.Focus = dialog.FilterFocusDirsOnly
+			case 'i', 'I':
+				h.toggleFilterDialogField(fd, dialog.FilterFocusInvert)
+				fd.Focus = dialog.FilterFocusInvert
 			case 'e', 'E':
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusCase) {
 					fd.Focus = dialog.FilterFocusCase
@@ -235,6 +279,13 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 			case 'n', 'N':
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusOnlyMeta) {
 					fd.Focus = dialog.FilterFocusOnlyMeta
+				}
+			default:
+				for i, m := range dialog.FilterTypeMnemonics {
+					if unicode.ToUpper(event.Rune()) == m {
+						fd.Focus = dialog.FilterFocusTypeFirst + i
+						h.toggleFilterDialogField(fd, fd.Focus)
+					}
 				}
 			}
 			return false
@@ -284,6 +335,8 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 		if fd.DirsOnly {
 			fd.FilesOnly = false
 		}
+	case dialog.FilterFocusInvert:
+		fd.Invert = !fd.Invert
 	case dialog.FilterFocusCase:
 		if !dialog.FilterShowsCaseSensitive(*fd) {
 			return false
@@ -306,7 +359,10 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 			fd.IncludeMetaColumns = true
 		}
 	default:
-		return false
+		if focus < dialog.FilterFocusTypeFirst || focus >= dialog.FilterFocusPattern {
+			return false
+		}
+		fd.Types[focus-dialog.FilterFocusTypeFirst] = !fd.Types[focus-dialog.FilterFocusTypeFirst]
 	}
 	h.updateFilterDialogPreview()
 	return true
@@ -314,7 +370,7 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 
 func filterAltIsDialogMnemonic(r rune) bool {
 	switch r {
-	case 'd', 'D', 'f', 'F', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N':
+	case 'd', 'D', 'f', 'F', 'e', 'E', 'r', 'R', 's', 'S', 'l', 'L', 'i', 'I', 'm', 'M', 'n', 'N', 'v', 'V', 'p', 'P', 'a', 'A', 'u', 'U', 't', 'T':
 		return true
 	default:
 		return false

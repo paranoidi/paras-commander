@@ -660,6 +660,18 @@ func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 			},
 		},
 		{
+			name:    "filter types invalid regex falls back",
+			content: "[filter.types]\nvideos = \"(\"\npictures = \"\"\naudio = \"(?i)\\\\.wolf$\"\n",
+			testFn: func(t *testing.T, cfg Config) {
+				if cfg.Filter.Types.Videos != DefaultFilterTypeVideos || cfg.Filter.Types.Pictures != DefaultFilterTypePictures {
+					t.Fatalf("Types = %+v, want builtin fallback for invalid/empty", cfg.Filter.Types)
+				}
+				if cfg.Filter.Types.Audio != "(?i)\\.wolf$" {
+					t.Fatalf("Audio = %q, want user value kept", cfg.Filter.Types.Audio)
+				}
+			},
+		},
+		{
 			name:    "finished retention",
 			content: "[jobs]\nkeep_finished = 0\n",
 			testFn: func(t *testing.T, cfg Config) {

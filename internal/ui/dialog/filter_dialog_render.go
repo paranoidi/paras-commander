@@ -17,7 +17,7 @@ import (
 func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogState, styles theme.Theme) {
 	const title = "Filter"
 
-	width := 54
+	width := FilterDialogWidth
 	if width > layout.Width-4 {
 		width = layout.Width - 4
 	}
@@ -37,18 +37,34 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 	y := rect.Y + 1
 	innerBottom := rect.Y + rect.Height - 2
 
-	draw.DrawDialogRadio(screen, optionX, y, "Shell patterns", 'S', state.PatternMode == panel.GroupPatternShell, state.Focus == FilterFocusShellRadio, false, styles)
-	y++
-	if y >= innerBottom {
-		return
+	// Radios in the left column, type checkboxes in two columns to their right; column X is
+	// derived from the widest rendered label in the column to the left.
+	typeCol1X := optionX + utf8.RuneCountInString(draw.RadioText("Regular expression", false)) + 2
+	typeCol2X := typeCol1X + utf8.RuneCountInString(" "+draw.CheckboxText("Pictures", false)) + 2
+	radios := []struct {
+		label string
+		key   rune
+		mode  panel.GroupPatternMode
+		focus int
+	}{
+		{"Shell patterns", 'S', panel.GroupPatternShell, FilterFocusShellRadio},
+		{"Regular expression", 'R', panel.GroupPatternRegex, FilterFocusRegexRadio},
+		{"Simple", 'L', panel.GroupPatternSimple, FilterFocusSimpleRadio},
 	}
-	draw.DrawDialogRadio(screen, optionX, y, "Regular expression", 'R', state.PatternMode == panel.GroupPatternRegex, state.Focus == FilterFocusRegexRadio, false, styles)
-	y++
-	if y >= innerBottom {
-		return
+	for i, r := range radios {
+		if y >= innerBottom {
+			return
+		}
+		draw.DrawDialogRadio(screen, optionX, y, r.label, r.key, state.PatternMode == r.mode, state.Focus == r.focus, false, styles)
+		for t := i; t < FilterTypeCount; t += 3 {
+			x := typeCol1X
+			if t >= 3 {
+				x = typeCol2X
+			}
+			draw.DrawDialogCheckbox(screen, x, y, FilterTypeLabels[t], FilterTypeMnemonics[t], state.Types[t], state.Focus == FilterFocusTypeFirst+t, false, styles)
+		}
+		y++
 	}
-	draw.DrawDialogRadio(screen, optionX, y, "Simple", 'I', state.PatternMode == panel.GroupPatternSimple, state.Focus == FilterFocusSimpleRadio, false, styles)
-	y++
 	if y >= innerBottom {
 		return
 	}
@@ -85,8 +101,8 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 		}
 	}
 
-	// col2X aligns the second checkbox on every two-column row.
-	col2X := optionX + utf8.RuneCountInString(draw.CheckboxText("Include meta columns", false)) + 3 // +1 pad +2 gap
+	// col2X aligns the second checkbox on every two-column row with the type checkboxes above.
+	col2X := typeCol1X
 	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'F', state.FilesOnly, state.Focus == FilterFocusFilesOnly, false, styles)
 	draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", 'D', state.DirsOnly, state.Focus == FilterFocusDirsOnly, false, styles)
 	y++
@@ -94,8 +110,9 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 		return
 	}
 
+	draw.DrawDialogCheckbox(screen, optionX, y, "Invert", 'I', state.Invert, state.Focus == FilterFocusInvert, false, styles)
 	if FilterShowsCaseSensitive(state) {
-		draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == FilterFocusCase, false, styles)
+		draw.DrawDialogCheckbox(screen, col2X, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == FilterFocusCase, false, styles)
 	}
 	y++
 	if y >= innerBottom {
