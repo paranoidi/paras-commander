@@ -59,3 +59,37 @@ func TestMapStripBasenameRangesToDisplay(t *testing.T) {
 		t.Fatalf("mapped[0] = %+v, want offset onto basename", mapped[0])
 	}
 }
+
+func TestStripCursorRememberRestore(t *testing.T) {
+	paths := []string{"/tmp/meadow/bravo.txt", "/tmp/meadow/crystal.txt", "/tmp/orchard/delta.txt"}
+	mk := func(ps []string) State {
+		st := State{Path: pathloc.MustParse("/tmp/harbor"), SelectedPaths: map[string]bool{}}
+		for _, p := range ps {
+			st.AddSelection(p)
+		}
+		return st
+	}
+	st := mk(paths)
+	st.SelectionsStripCursor = 2
+	want, _ := st.SelectedPathAtStripIndex(2)
+	st.RememberStripCursor()
+	st.ClearSelection()
+	if st.SelectionsStripCursor != 0 || st.StripCursorPath != "" {
+		t.Fatalf("after clear: cursor %d path %q", st.SelectionsStripCursor, st.StripCursorPath)
+	}
+	for _, p := range paths {
+		st.AddSelection(p)
+	}
+	st.StripCursorPath = want
+	st.RestoreStripCursor()
+	if got, _ := st.SelectedPathAtStripIndex(st.SelectionsStripCursor); got != want {
+		t.Fatalf("restored %q, want %q", got, want)
+	}
+
+	st.StripCursorPath = "/tmp/gone/missing.txt"
+	st.SelectionsStripCursor = 1
+	st.RestoreStripCursor()
+	if st.SelectionsStripCursor != 1 {
+		t.Fatalf("cursor moved to %d for missing path", st.SelectionsStripCursor)
+	}
+}

@@ -281,6 +281,7 @@ func (a *App) focusSelectionsStrip() bool {
 		p.SetStripForced(true)
 	}
 	a.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	p.RestoreStripCursor()
 	p.EnsureSelectionsStripCursorVisible(a.selectionsStripViewportRows(a.model.ActivePanel))
 	return true
 }
@@ -307,6 +308,7 @@ func (a *App) reconcileSelectionsStripFocus() {
 	}
 	p := a.activePanel()
 	if p.SelectionsStripCount() > 0 {
+		p.RememberStripCursor()
 		return
 	}
 	p.CancelStripFilter(0)

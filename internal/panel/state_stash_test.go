@@ -28,7 +28,7 @@ func TestStashSaveFromSelectionAndRestore(t *testing.T) {
 	if s.SelectedPathCount() != 0 {
 		t.Fatalf("live selection should be cleared, got %d", s.SelectedPathCount())
 	}
-	s.ApplySelectionSnapshot(s.SelectionStashPaths, s.SelectionStashStripOrder)
+	s.ApplySelectionSnapshot(s.SelectionStashPaths, s.SelectionStashStripOrder, "")
 	s.StashClear()
 	if s.SelectedPathCount() != 2 {
 		t.Fatalf("restored count = %d, want 2", s.SelectedPathCount())
@@ -47,7 +47,7 @@ func TestApplySelectionSnapshotSkipsMissingPaths(t *testing.T) {
 	}
 	gone := filepath.Join(dir, "gone.txt")
 	s := &State{}
-	s.ApplySelectionSnapshot([]string{keep, gone}, []string{gone, keep})
+	s.ApplySelectionSnapshot([]string{keep, gone}, []string{gone, keep}, "")
 	if s.SelectedPathCount() != 1 {
 		t.Fatalf("count = %d, want 1", s.SelectedPathCount())
 	}
@@ -78,7 +78,7 @@ func TestMergeSelectionSnapshot(t *testing.T) {
 		}
 	}
 	s := &State{SelectedPaths: map[string]bool{keep: true}}
-	s.MergeSelectionSnapshot([]string{newPath, keep}, nil)
+	s.MergeSelectionSnapshot([]string{newPath, keep}, nil, "")
 	if s.SelectedPathCount() != 2 {
 		t.Fatalf("count = %d, want 2", s.SelectedPathCount())
 	}
@@ -95,7 +95,7 @@ func TestMergeSelectionSnapshotSkipsMissingPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &State{SelectedPaths: map[string]bool{keep: true}}
-	s.MergeSelectionSnapshot([]string{keep, filepath.Join(dir, "missing.txt")}, nil)
+	s.MergeSelectionSnapshot([]string{keep, filepath.Join(dir, "missing.txt")}, nil, "")
 	if s.SelectedPathCount() != 1 {
 		t.Fatalf("count = %d, want 1", s.SelectedPathCount())
 	}

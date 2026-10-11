@@ -97,12 +97,17 @@ type State struct {
 	// on chdir away from D, selected paths under D are appended (deduped).
 	SelectionsStripOrder  []string
 	SelectionsStripCursor int
+	// StripCursorPath is the last focused strip row path; restores the cursor on re-focus.
+	// Cleared by ClearSelection; travels with the stash (SelectionStashStripCursorPath).
+	StripCursorPath       string
 	SelectionsStripScroll int
 	// SelectionStashPaths holds stashed selection paths (empty/nil = no stash).
 	SelectionStashPaths []string
 	// SelectionStashStripOrder mirrors SelectionsStripOrder at stash time.
 	SelectionStashStripOrder []string
-	ShowHidden               bool
+	// SelectionStashStripCursorPath is StripCursorPath at stash time.
+	SelectionStashStripCursorPath string
+	ShowHidden                    bool
 	// Gitignore is a shared cache for .gitignore filtering when ShowHidden is false; nil disables.
 	Gitignore *gitignore.Cache
 	// GitignoreActive is true when the current listing applies Git ignore rules (inside a work tree).
@@ -1818,6 +1823,26 @@ func (s *State) MoveSelectionsStrip(delta int, stripViewportRows int) {
 	s.normalizeSelectionsStripCursorWithViewport(stripViewportRows)
 }
 
+// RememberStripCursor records the path under the strip cursor.
+func (s *State) RememberStripCursor() {
+	if path, ok := s.SelectedPathAtStripIndex(s.SelectionsStripCursor); ok {
+		s.StripCursorPath = path
+	}
+}
+
+// RestoreStripCursor moves the strip cursor back to StripCursorPath when it is still in the strip.
+func (s *State) RestoreStripCursor() {
+	if s.StripCursorPath == "" {
+		return
+	}
+	for i, p := range s.SelectionsStripPaths() {
+		if p == s.StripCursorPath {
+			s.SelectionsStripCursor = i
+			return
+		}
+	}
+}
+
 // SelectionsStripTop moves the selections-strip cursor to the first row.
 func (s *State) SelectionsStripTop(stripViewportRows int) {
 	if s.SelectionsStripCount() == 0 {
@@ -2104,6 +2129,7 @@ func rebuildSelectionsStripOrderAfterBulk(stripOrder []string, selected map[stri
 func (s *State) ClearSelection() {
 	s.clearSelectionState()
 	s.SelectionsStripOrder = nil
+	s.StripCursorPath = ""
 	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectionsStripCursor()
 }

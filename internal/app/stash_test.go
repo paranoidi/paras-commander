@@ -108,3 +108,87 @@ func TestActionFromKeyMapsPinToggle(t *testing.T) {
 		t.Fatalf("M-insert = %q, want %s", got, keymap.ActionPanelPinToggle)
 	}
 }
+
+func TestStripCursorSurvivesStash(t *testing.T) {
+	dir := t.TempDir()
+	other := t.TempDir()
+	var sel []string
+	for _, n := range []string{"lantern.txt", "quartz.txt", "willow.txt", "ember.txt"} {
+		p := filepath.Join(other, n)
+		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		sel = append(sel, p)
+	}
+	app := newApp(t, newScreen(t, 80, 24), dir)
+	p := app.activePanel()
+	for _, s := range sel {
+		p.AddSelection(s)
+	}
+	if !app.focusSelectionsStrip() {
+		t.Fatal("focus failed")
+	}
+	p.MoveSelectionsStrip(2, 10)
+	want, _ := p.SelectedPathAtStripIndex(p.SelectionsStripCursor)
+	app.reconcileAfterEvent()
+	app.togglePanelSelectionStash()
+	app.reconcileAfterEvent()
+	app.togglePanelSelectionStash()
+	if !app.focusSelectionsStrip() {
+		t.Fatal("refocus failed")
+	}
+	if got, _ := p.SelectedPathAtStripIndex(p.SelectionsStripCursor); got != want {
+		t.Fatalf("cursor path %q, want %q", got, want)
+	}
+}
+
+func TestStripCursorBelongsToSelectionSet(t *testing.T) {
+	dir := t.TempDir()
+	other := t.TempDir()
+	mk := func(names ...string) []string {
+		var out []string
+		for _, n := range names {
+			p := filepath.Join(other, n)
+			if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			out = append(out, p)
+		}
+		return out
+	}
+	old := mk("lantern.txt", "quartz.txt", "willow.txt", "ember.txt")
+	fresh := mk("meadow.txt", "falcon.txt", "copper.txt")
+	app := newApp(t, newScreen(t, 80, 24), dir)
+	p := app.activePanel()
+	for _, s := range old {
+		p.AddSelection(s)
+	}
+	if !app.focusSelectionsStrip() {
+		t.Fatal("focus failed")
+	}
+	p.MoveSelectionsStrip(2, 10)
+	want, _ := p.SelectedPathAtStripIndex(p.SelectionsStripCursor)
+	app.reconcileAfterEvent()
+	app.togglePanelSelectionStash()
+	app.reconcileAfterEvent()
+
+	for _, s := range fresh {
+		p.AddSelection(s)
+	}
+	if !app.focusSelectionsStrip() {
+		t.Fatal("focus fresh failed")
+	}
+	if p.SelectionsStripCursor != 0 {
+		t.Fatalf("fresh selection cursor %d, want 0", p.SelectionsStripCursor)
+	}
+	app.reconcileAfterEvent()
+	p.ClearSelection()
+	app.reconcileAfterEvent()
+	app.togglePanelSelectionStash()
+	if !app.focusSelectionsStrip() {
+		t.Fatal("refocus failed")
+	}
+	if got, _ := p.SelectedPathAtStripIndex(p.SelectionsStripCursor); got != want {
+		t.Fatalf("cursor path %q, want %q", got, want)
+	}
+}

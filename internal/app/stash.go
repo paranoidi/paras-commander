@@ -33,7 +33,7 @@ func (a *App) togglePanelSelectionStash() {
 func (a *App) restorePanelStash(p *panel.State) {
 	paths := append([]string(nil), p.SelectionStashPaths...)
 	strip := append([]string(nil), p.SelectionStashStripOrder...)
-	p.ApplySelectionSnapshot(paths, strip)
+	p.ApplySelectionSnapshot(paths, strip, p.SelectionStashStripCursorPath)
 	p.StashClear()
 	n := p.SelectedPathCount()
 	a.setTransientMessage(fmt.Sprintf("%d selection(s) restored from stash", n), ui.MessageUrgencyInfo)
@@ -105,16 +105,17 @@ func (a *App) applyStashRestoreChoice(action string) {
 	p := a.activePanel()
 	stashPaths := append([]string(nil), p.SelectionStashPaths...)
 	stashStrip := append([]string(nil), p.SelectionStashStripOrder...)
+	stashCursor := p.SelectionStashStripCursorPath
 	a.closeStashRestoreDialog()
 
 	switch action {
 	case "replace":
-		p.ApplySelectionSnapshot(stashPaths, stashStrip)
+		p.ApplySelectionSnapshot(stashPaths, stashStrip, stashCursor)
 		p.StashClear()
 		a.setTransientMessage(fmt.Sprintf("%d selection(s) restored (replaced)", p.SelectedPathCount()), ui.MessageUrgencyInfo)
 	case "merge":
 		before := p.SelectedPathCount()
-		p.MergeSelectionSnapshot(stashPaths, stashStrip)
+		p.MergeSelectionSnapshot(stashPaths, stashStrip, stashCursor)
 		p.StashClear()
 		added := p.SelectedPathCount() - before
 		a.setTransientMessage(fmt.Sprintf("Merged %d stashed selection(s)", added), ui.MessageUrgencyInfo)

@@ -38,6 +38,7 @@ func (s *State) StashSaveFromSelection() bool {
 	} else {
 		s.SelectionStashStripOrder = append([]string(nil), s.SelectionsStripOrder...)
 	}
+	s.SelectionStashStripCursorPath = s.StripCursorPath
 	s.ClearSelection()
 	return true
 }
@@ -46,13 +47,15 @@ func (s *State) StashSaveFromSelection() bool {
 func (s *State) StashClear() {
 	s.SelectionStashPaths = nil
 	s.SelectionStashStripOrder = nil
+	s.SelectionStashStripCursorPath = ""
 }
 
 // ApplySelectionSnapshot replaces the live selection with paths and strip order.
 // Paths that no longer exist on disk are omitted (stash restore).
-func (s *State) ApplySelectionSnapshot(paths, stripOrder []string) {
+func (s *State) ApplySelectionSnapshot(paths, stripOrder []string, cursorPath string) {
 	s.clearSelectionState()
 	s.SelectionsStripOrder = nil
+	s.StripCursorPath = cursorPath
 	paths = filterExistingSelectionPaths(paths)
 	if len(paths) == 0 {
 		s.invalidateSelectionDerivedFull()
@@ -77,10 +80,13 @@ func (s *State) ApplySelectionSnapshot(paths, stripOrder []string) {
 
 // MergeSelectionSnapshot unions stash paths and strip order into the live selection.
 // Paths that no longer exist on disk are omitted (stash restore).
-func (s *State) MergeSelectionSnapshot(paths, stripOrder []string) {
+func (s *State) MergeSelectionSnapshot(paths, stripOrder []string, cursorPath string) {
 	paths = filterExistingSelectionPaths(paths)
 	if len(paths) == 0 {
 		return
+	}
+	if s.StripCursorPath == "" {
+		s.StripCursorPath = cursorPath
 	}
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool, len(paths))
