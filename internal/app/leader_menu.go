@@ -280,7 +280,9 @@ func (a *App) dispatchAuxiliaryViewCommonKeys(event *tcell.EventKey, nextAction 
 	if a.dispatchLeaderLetterDirectFire(event) {
 		return false, true
 	}
-	if a.tryOpenMenuByShortcut(event) {
+	// A view-overlay binding (e.g. compare.filter-dialog on M-f) beats the Alt+letter menu
+	// mnemonic, just as any bound action does in the browser view.
+	if globalID, _ := a.keys.Global.Lookup(event); nextAction == globalID && a.tryOpenMenuByShortcut(event) {
 		return false, true
 	}
 	return false, false

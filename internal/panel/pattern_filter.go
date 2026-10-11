@@ -45,9 +45,9 @@ func (f FilterSpec) Label() string {
 	return "Filter: " + strings.Join(parts, " ")
 }
 
-// matchFunc compiles the pattern once and returns the per-entry predicate (files/dirs-only,
+// MatchFunc compiles the pattern once and returns the per-entry predicate (files/dirs-only,
 // types, pattern, invert). meta may be the zero value.
-func (f FilterSpec) matchFunc() (func(e localfs.Entry, meta GroupSelectMeta) bool, error) {
+func (f FilterSpec) MatchFunc() (func(e localfs.Entry, meta GroupSelectMeta) bool, error) {
 	var matcher GroupMatcher
 	if f.Pattern != "" {
 		var err error
@@ -72,7 +72,7 @@ func (f FilterSpec) matchFunc() (func(e localfs.Entry, meta GroupSelectMeta) boo
 // and the underlying maps are replaced wholesale on a directory change. Returns an error when
 // the pattern fails to compile.
 func PatternFilter(spec FilterSpec, meta func() GroupSelectMeta) (*EntryFilter, error) {
-	match, err := spec.matchFunc()
+	match, err := spec.MatchFunc()
 	if err != nil {
 		return nil, err
 	}

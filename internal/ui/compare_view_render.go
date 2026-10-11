@@ -44,7 +44,7 @@ func drawCompareView(
 	primary := data.Primary
 	secondary := data.Secondary
 	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, orientation)
-	endLabel := panelSelectionSizePadded(comparepkg.EndLabel(view.Filter, view.IgnoreEmpty, snap))
+	endLabel := panelSelectionSizePadded(comparepkg.EndLabel(view.Filter, view.IgnoreEmpty, snap, view.NameFilterLabel))
 	title := compareViewTitle(snap)
 	layoutChrome := drawAuxPanelChrome(screen, rect, title, endLabel, true, chromeBlocked, false, styles)
 	bg := layoutChrome.ContentBG

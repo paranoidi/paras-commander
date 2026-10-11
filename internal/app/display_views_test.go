@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -111,7 +112,7 @@ func TestAuxiliaryScreensSwitchTearsDownCompare(t *testing.T) {
 	if !app.model.CompareSnapshot.PrimaryRoot.IsZero() || app.model.CompareSnapshot.Rows != nil {
 		t.Fatalf("compare snapshot still set after leaving view: phase=%v rows=%d", app.model.CompareSnapshot.Phase, len(app.model.CompareSnapshot.Rows))
 	}
-	if app.model.CompareView != (ui.CompareViewState{}) {
+	if !reflect.DeepEqual(app.model.CompareView, ui.CompareViewState{}) {
 		t.Fatalf("compare view state still set: %+v", app.model.CompareView)
 	}
 }

@@ -9,6 +9,10 @@ type CompareViewState struct {
 	Filter      comparepkg.Filter
 	FocusColumn CompareColumnFocus
 	IgnoreEmpty bool // hide zero-byte rows (default true on open)
+	// NameFilter, when non-nil, keeps only rows whose basename it accepts (set by the Filter
+	// dialog); NameFilterLabel is its border label.
+	NameFilter      func(name string) bool
+	NameFilterLabel string
 }
 
 // CompareColumnFocus is which path column has keyboard focus for selection.

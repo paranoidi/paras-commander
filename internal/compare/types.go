@@ -3,6 +3,7 @@ package compare
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -185,11 +186,15 @@ func FilterForFocus(focus int) (Filter, bool) {
 }
 
 // FilteredRows returns rows from snap that match filter. When ignoreEmpty is true,
-// rows with Size == 0 are omitted.
-func FilteredRows(snap Snapshot, filter Filter, ignoreEmpty bool) []Row {
+// rows with Size == 0 are omitted. match, when non-nil, additionally keeps only rows whose
+// basename (PrimaryRel, else SecondaryRel) it accepts.
+func FilteredRows(snap Snapshot, filter Filter, ignoreEmpty bool, match func(name string) bool) []Row {
 	out := make([]Row, 0, len(snap.Rows))
 	for _, row := range snap.Rows {
 		if ignoreEmpty && row.Size == 0 {
+			continue
+		}
+		if match != nil && !match(RowBaseName(row)) {
 			continue
 		}
 		if FilterMatches(filter, row.Kind) {
@@ -197,6 +202,15 @@ func FilteredRows(snap Snapshot, filter Filter, ignoreEmpty bool) []Row {
 		}
 	}
 	return out
+}
+
+// RowBaseName is the basename the name filter matches against.
+func RowBaseName(row Row) string {
+	rel := row.PrimaryRel
+	if rel == "" {
+		rel = row.SecondaryRel
+	}
+	return path.Base(rel)
 }
 
 // CountEmptyRows returns how many snapshot rows have Size == 0.
@@ -212,14 +226,16 @@ func CountEmptyRows(snap Snapshot) int {
 
 // EndLabel returns the compare view top-right chrome label for the active category
 // filter, appending " · N empty hidden" when empties are ignored and at least one
-// zero-byte row is hidden.
-func EndLabel(filter Filter, ignoreEmpty bool, snap Snapshot) string {
+// zero-byte row is hidden, and " · <nameLabel>" when a name filter is active.
+func EndLabel(filter Filter, ignoreEmpty bool, snap Snapshot, nameLabel string) string {
 	label := FilterLabel(filter)
-	if !ignoreEmpty {
-		return label
+	if ignoreEmpty {
+		if n := CountEmptyRows(snap); n > 0 {
+			label = fmt.Sprintf("%s · %d empty hidden", label, n)
+		}
 	}
-	if n := CountEmptyRows(snap); n > 0 {
-		return fmt.Sprintf("%s · %d empty hidden", label, n)
+	if nameLabel != "" {
+		label += " · " + nameLabel
 	}
 	return label
 }

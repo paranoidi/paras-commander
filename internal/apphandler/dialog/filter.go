@@ -7,20 +7,27 @@ import (
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// OpenFilterDialog opens the panel Filter modal with an empty pattern (no prefill from any
+// OpenFilterDialog opens the Filter modal (targeting compare result rows in the Compare view) with an empty pattern (no prefill from any
 // filter already active on the panel).
 func (h *Handler) OpenFilterDialog() {
 	metaCount := len(h.model.MetaResults[h.model.ActivePanel])
+	compare := h.model.ViewMode == ui.ViewCompare
+	if compare {
+		metaCount = 0 // compare rows have no meta columns
+	}
 	h.model.FilterDialog = dialog.FilterDialogState{
 		Open:               true,
+		Compare:            compare,
 		PatternMode:        panel.GroupPatternShell,
 		MetaColumnCount:    metaCount,
 		IncludeMetaColumns: metaCount > 0,
@@ -49,6 +56,12 @@ func (h *Handler) updateFilterDialogPreview() {
 		fd.PreviewShow = false
 		return
 	}
+	if fd.Compare {
+		n, err := h.compareMatchCount(spec)
+		fd.PreviewShow = err == nil
+		fd.PreviewFiles, fd.PreviewFolders = n, 0
+		return
+	}
 	meta := ui.MetaMatchData(h.model.MetaResults[h.model.ActivePanel], fd.IncludeMetaColumns, fd.OnlyMetaColumns)
 	files, dirs, err := h.host.ActivePanel().CountPatternMatches(spec, meta)
 	if err != nil {
@@ -58,6 +71,46 @@ func (h *Handler) updateFilterDialogPreview() {
 	fd.PreviewFiles = files
 	fd.PreviewFolders = dirs
 	fd.PreviewShow = true
+}
+
+// compareMatchCount counts the compare rows (after the category / empty-file filters) whose
+// basename matches spec. Compare rows are all files.
+func (h *Handler) compareMatchCount(spec panel.FilterSpec) (int, error) {
+	match, err := spec.MatchFunc()
+	if err != nil {
+		return 0, err
+	}
+	v := h.model.CompareView
+	return len(comparepkg.FilteredRows(h.model.CompareSnapshot, v.Filter, v.IgnoreEmpty, compareNameMatcher(match))), nil
+}
+
+func compareNameMatcher(match func(localfs.Entry, panel.GroupSelectMeta) bool) func(string) bool {
+	return func(name string) bool { return match(localfs.Entry{Name: name}, panel.GroupSelectMeta{}) }
+}
+
+// executeCompareFilterDialog applies the dialog to the Compare view's rows; an empty spec clears
+// the name filter.
+func (h *Handler) executeCompareFilterDialog(spec panel.FilterSpec) {
+	v := &h.model.CompareView
+	if spec.Empty() {
+		v.NameFilter, v.NameFilterLabel = nil, ""
+		h.CloseFilterDialog()
+		return
+	}
+	match, err := spec.MatchFunc()
+	if err != nil {
+		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
+		return
+	}
+	n, _ := h.compareMatchCount(spec)
+	v.NameFilter, v.NameFilterLabel = compareNameMatcher(match), spec.Label()
+	v.Selected, v.ListScroll = 0, 0
+	h.CloseFilterDialog()
+	if n == 0 {
+		h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
+		return
+	}
+	h.host.SetTransientMessage(fmt.Sprintf("Filtered: %d files", n), ui.MessageUrgencyInfo)
 }
 
 // filterTypeRegexps returns the [filter.types] regexps in dialog.FilterType* order.
@@ -148,9 +201,16 @@ func (h *Handler) tryRejectFilterDialogOK() bool {
 // panel.PatternFilter, replacing whatever filter (e.g. a git-status filter) was active before.
 func (h *Handler) executeFilterDialog() {
 	fd := &h.model.FilterDialog
+	spec := h.filterSpec()
+	if fd.Compare && !spec.Empty() && h.tryRejectFilterDialogOK() {
+		return
+	}
+	if fd.Compare {
+		h.executeCompareFilterDialog(spec)
+		return
+	}
 	p := h.host.ActivePanel()
 	panelID := h.model.ActivePanel
-	spec := h.filterSpec()
 	if spec.Empty() {
 		p.SetEntryFilter(nil)
 		h.CloseFilterDialog()
@@ -260,11 +320,13 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 		if keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
 			case 'f', 'F':
-				h.toggleFilterDialogField(fd, dialog.FilterFocusFilesOnly)
-				fd.Focus = dialog.FilterFocusFilesOnly
+				if h.toggleFilterDialogField(fd, dialog.FilterFocusFilesOnly) {
+					fd.Focus = dialog.FilterFocusFilesOnly
+				}
 			case 'd', 'D':
-				h.toggleFilterDialogField(fd, dialog.FilterFocusDirsOnly)
-				fd.Focus = dialog.FilterFocusDirsOnly
+				if h.toggleFilterDialogField(fd, dialog.FilterFocusDirsOnly) {
+					fd.Focus = dialog.FilterFocusDirsOnly
+				}
 			case 'i', 'I':
 				h.toggleFilterDialogField(fd, dialog.FilterFocusInvert)
 				fd.Focus = dialog.FilterFocusInvert
@@ -306,7 +368,7 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 			return false
 		}
 	}
-	if focus, ok := dialog.FilterMoveFocus(fd.Focus, event.Key(), fd.PatternMode, fd.MetaColumnCount); ok {
+	if focus, ok := dialog.FilterMoveFocus(fd.Focus, event.Key(), *fd); ok {
 		fd.Focus = focus
 	}
 	return false
@@ -326,11 +388,17 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 	case dialog.FilterFocusSimpleRadio:
 		fd.PatternMode = panel.GroupPatternSimple
 	case dialog.FilterFocusFilesOnly:
+		if !dialog.FilterShowsFilesDirs(*fd) {
+			return false
+		}
 		fd.FilesOnly = !fd.FilesOnly
 		if fd.FilesOnly {
 			fd.DirsOnly = false
 		}
 	case dialog.FilterFocusDirsOnly:
+		if !dialog.FilterShowsFilesDirs(*fd) {
+			return false
+		}
 		fd.DirsOnly = !fd.DirsOnly
 		if fd.DirsOnly {
 			fd.FilesOnly = false

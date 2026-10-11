@@ -43,6 +43,26 @@ func TestCompareViewFooterEscFirst(t *testing.T) {
 	if !foundToggleEmpty {
 		t.Fatalf("footer missing toggle-empty hint: %+v", keys)
 	}
+	var foundMenu bool
+	for _, fk := range keys {
+		if fk.Key == tcell.KeyF9 && fk.Hint == "Menu" {
+			foundMenu = true
+		}
+	}
+	if !foundMenu {
+		t.Fatalf("footer missing F9 Menu: %+v", keys)
+	}
+}
+
+func TestCompareViewAltFOpensFilterDialog(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	app.model.ViewMode = ui.ViewCompare
+
+	app.handleCompareViewKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	if !app.model.FilterDialog.Open || !app.model.FilterDialog.Compare {
+		t.Fatal("Alt+F in compare should open the Filter dialog for compare rows")
+	}
 }
 
 func TestCompareViewOpenIgnoresEmptyByDefault(t *testing.T) {

@@ -179,6 +179,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionCompareClose,
 				ActionCompareCycleFilter,
 				ActionCompareResetFilter,
+				ActionCompareFilterDialog,
 				ActionCompareRefresh,
 				ActionCompareMerge,
 				ActionCompareToggleEmpty,

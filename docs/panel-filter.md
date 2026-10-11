@@ -23,3 +23,7 @@ An entry is shown when it matches the checked types **and** the pattern; an empt
 Alt+letter toggles the underlined option: Shell patterns S, Regular expression R, Simple L, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only F, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N. Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
 
 The panel border shows the active filter, for example `Filter: not report Videos, Audio`. A live count of matches is shown beside the Pattern label.
+
+## Compare view
+
+In the Compare panels view Alt+F (`compare.filter-dialog` in `[compare]`, leader letter `f`) opens the same dialog and filters the result rows by file name (the basename of the row's path). It stacks with the category filter (F3) and the empty-file toggle, and merge (F5) only sees the rows that remain. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern after the category, for example `All · Filter: *.jpg`. OK with an empty pattern, or Shift+F3 (reset filter), clears it.

@@ -68,7 +68,7 @@ func TestDrawFilterDialogTypeColumnsBesideRadios(t *testing.T) {
 func TestFilterMoveFocusGrid(t *testing.T) {
 	shell, regex := panel.GroupPatternShell, panel.GroupPatternRegex
 	step := func(focus int, key tcell.Key, mode panel.GroupPatternMode, meta int) int {
-		got, _ := FilterMoveFocus(focus, key, mode, meta)
+		got, _ := FilterMoveFocus(focus, key, FilterDialogState{PatternMode: mode, MetaColumnCount: meta})
 		return got
 	}
 	okIdx := FilterContentCount(0)
@@ -108,5 +108,18 @@ func TestFilterMoveFocusGrid(t *testing.T) {
 		if got := step(s.focus, s.key, s.mode, s.meta); got != s.want {
 			t.Errorf("%s: got %d, want %d", s.name, got, s.want)
 		}
+	}
+}
+
+func TestFilterMoveFocusCompareHidesFilesDirs(t *testing.T) {
+	st := FilterDialogState{PatternMode: panel.GroupPatternShell, Compare: true}
+	if got, _ := FilterMoveFocus(FilterFocusPattern, tcell.KeyDown, st); got != FilterFocusInvert {
+		t.Fatalf("Down from pattern in compare = %d, want Invert %d", got, FilterFocusInvert)
+	}
+	if got, _ := FilterMoveFocus(FilterFocusPattern, tcell.KeyTab, st); got != FilterFocusInvert {
+		t.Fatalf("Tab from pattern in compare = %d, want Invert %d", got, FilterFocusInvert)
+	}
+	if filterDialogInnerRows(st) != filterDialogInnerRows(FilterDialogState{PatternMode: panel.GroupPatternShell})-1 {
+		t.Fatal("compare dialog should be one row shorter")
 	}
 }

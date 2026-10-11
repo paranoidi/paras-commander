@@ -39,7 +39,9 @@ type FilterDialogState struct {
 	// Types are the checked file-type presets (indexed FilterTypeVideos..); Invert negates the match.
 	Types  [FilterTypeCount]bool
 	Invert bool
-	Focus  int // FilterFocus* constants (filter_hint.go), then OK, Cancel
+	// Compare targets the Compare view's result rows (basename match) instead of the active panel.
+	Compare bool
+	Focus   int // FilterFocus* constants (filter_hint.go), then OK, Cancel
 
 	// Live match-count preview shown right-aligned on the Pattern row, recomputed on every state
 	// change. PreviewShow is false while the pattern is empty or fails to compile.

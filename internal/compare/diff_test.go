@@ -1,6 +1,9 @@
 package compare
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestClassifyEqualSamePath(t *testing.T) {
 	primary := []FileRecord{{Rel: "a.txt", Size: 10}}
@@ -116,11 +119,11 @@ func TestFilteredRowsIgnoreEmpty(t *testing.T) {
 			{Kind: KindEqual, PrimaryRel: "both-empty", SecondaryRel: "both-empty", Size: 0, HashDone: true},
 		},
 	}
-	got := FilteredRows(snap, FilterAll, true)
+	got := FilteredRows(snap, FilterAll, true, nil)
 	if len(got) != 1 || got[0].PrimaryRel != "data.bin" {
 		t.Fatalf("ignoreEmpty rows = %+v, want only data.bin", got)
 	}
-	got = FilteredRows(snap, FilterAll, false)
+	got = FilteredRows(snap, FilterAll, false, nil)
 	if len(got) != 3 {
 		t.Fatalf("show empty rows = %d, want 3", len(got))
 	}
@@ -131,13 +134,13 @@ func TestEndLabelEmptyHidden(t *testing.T) {
 		{Kind: KindPrimaryOnly, PrimaryRel: "e", Size: 0},
 		{Kind: KindSecondaryOnly, SecondaryRel: "f", Size: 0},
 	}}
-	if got := EndLabel(FilterAll, true, snap); got != "All · 2 empty hidden" {
+	if got := EndLabel(FilterAll, true, snap, ""); got != "All · 2 empty hidden" {
 		t.Fatalf("EndLabel = %q, want All · 2 empty hidden", got)
 	}
-	if got := EndLabel(FilterAll, false, snap); got != "All" {
+	if got := EndLabel(FilterAll, false, snap, ""); got != "All" {
 		t.Fatalf("EndLabel show empty = %q, want All", got)
 	}
-	if got := EndLabel(FilterAll, true, Snapshot{}); got != "All" {
+	if got := EndLabel(FilterAll, true, Snapshot{}, ""); got != "All" {
 		t.Fatalf("EndLabel no empties = %q, want All", got)
 	}
 }
@@ -163,5 +166,20 @@ func TestMarkHashingSetsActiveOnly(t *testing.T) {
 	got = MarkHashing(got, nil, nil)
 	if got[0].Hashing {
 		t.Fatal("Hashing must clear when no workers are active")
+	}
+}
+
+func TestFilteredRowsNameMatch(t *testing.T) {
+	snap := Snapshot{Rows: []Row{
+		{Kind: KindPrimaryOnly, PrimaryRel: "garden/lemon.txt", Size: 1},
+		{Kind: KindSecondaryOnly, SecondaryRel: "river/maple.txt", Size: 1},
+		{Kind: KindEqual, PrimaryRel: "river/cedar.jpg", SecondaryRel: "river/cedar.jpg", Size: 1},
+	}}
+	got := FilteredRows(snap, FilterAll, false, func(n string) bool { return strings.HasSuffix(n, ".txt") })
+	if len(got) != 2 || got[1].SecondaryRel != "river/maple.txt" {
+		t.Fatalf("name match rows = %+v", got)
+	}
+	if got := EndLabel(FilterAll, false, snap, "Filter: *.txt"); got != "All · Filter: *.txt" {
+		t.Fatalf("EndLabel = %q", got)
 	}
 }

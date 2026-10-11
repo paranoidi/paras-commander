@@ -43,6 +43,12 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 	case keymap.ActionCompareResetFilter:
 		if a.model.ViewMode == ui.ViewCompare {
 			a.compareCtrl.SetFilter(comparepkg.FilterAll)
+			a.model.CompareView.NameFilter, a.model.CompareView.NameFilterLabel = nil, ""
+		}
+		return true
+	case keymap.ActionCompareFilterDialog:
+		if a.model.ViewMode == ui.ViewCompare {
+			a.dialogCtrl.OpenFilterDialog()
 		}
 		return true
 	case keymap.ActionCompareRefresh:

@@ -230,7 +230,7 @@ func (h *Handler) ToggleIgnoreEmpty() {
 // FilteredRows returns snapshot rows matching the active filter and empty-file toggle.
 func (h *Handler) FilteredRows() []comparepkg.Row {
 	st := h.model.CompareView
-	return comparepkg.FilteredRows(h.model.CompareSnapshot, st.Filter, st.IgnoreEmpty)
+	return comparepkg.FilteredRows(h.model.CompareSnapshot, st.Filter, st.IgnoreEmpty, st.NameFilter)
 }
 
 // EnsureSelectionVisible keeps the cursor row visible for visibleRows height.

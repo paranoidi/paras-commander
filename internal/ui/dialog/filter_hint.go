@@ -41,6 +41,12 @@ func FilterShowsCaseSensitive(state FilterDialogState) bool {
 	return state.PatternMode != panel.GroupPatternRegex
 }
 
+// FilterShowsFilesDirs reports whether the Files only / Directories only row is shown; compare
+// rows are always files, so it is hidden there.
+func FilterShowsFilesDirs(state FilterDialogState) bool {
+	return !state.Compare
+}
+
 func filterPatternHintText(state FilterDialogState) string {
 	if state.PatternMode != panel.GroupPatternRegex && state.PatternMode != panel.GroupPatternShell {
 		return ""
@@ -93,6 +99,9 @@ func filterPatternInvalid(state FilterDialogState) bool {
 
 func filterDialogInnerRows(state FilterDialogState) int {
 	rows := 3 + 1 + 1 + 1 + 2 + 1 + 1 + 1 // mode radios, separator, Pattern label, input, filter checkbox rows, separator, blank, buttons
+	if !FilterShowsFilesDirs(state) {
+		rows--
+	}
 	if filterShowsPatternHint(state) {
 		rows++
 	}
@@ -113,20 +122,22 @@ func filterDialogHeight(state FilterDialogState, layoutHeight int) int {
 // filterGrid is the dialog's content as rows of focus indexes (-1 = empty cell), hidden cells
 // (case in regex mode, meta row without meta columns) omitted. Up/Down keep the column, Left/Right
 // move within a row.
-func filterGrid(mode panel.GroupPatternMode, metaColumnCount int) [][]int {
+func filterGrid(state FilterDialogState) [][]int {
 	t := FilterFocusTypeFirst
 	grid := [][]int{
 		{FilterFocusShellRadio, t, t + 3},
 		{FilterFocusRegexRadio, t + 1, t + 4},
 		{FilterFocusSimpleRadio, t + 2, -1},
 		{FilterFocusPattern},
-		{FilterFocusFilesOnly, FilterFocusDirsOnly},
-		{FilterFocusInvert},
 	}
-	if FilterShowsCaseSensitive(FilterDialogState{PatternMode: mode}) {
+	if FilterShowsFilesDirs(state) {
+		grid = append(grid, []int{FilterFocusFilesOnly, FilterFocusDirsOnly})
+	}
+	grid = append(grid, []int{FilterFocusInvert})
+	if FilterShowsCaseSensitive(state) {
 		grid[len(grid)-1] = append(grid[len(grid)-1], FilterFocusCase)
 	}
-	if metaColumnCount > 0 {
+	if state.MetaColumnCount > 0 {
 		grid = append(grid, []int{FilterFocusIncludeMeta, FilterFocusOnlyMeta})
 	}
 	return grid
@@ -157,14 +168,18 @@ func filterGridCell(grid [][]int, row, col int) int {
 
 // FilterMoveFocus applies dialog navigation over filterGrid plus the OK/Cancel button row, and
 // Tab/Shift+Tab jumps between groups: mode radios, type checkboxes, pattern, options, buttons.
-func FilterMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode, metaColumnCount int) (int, bool) {
-	form := NewDialogLinearForm(FilterContentCount(metaColumnCount))
+func FilterMoveFocus(focus int, key tcell.Key, state FilterDialogState) (int, bool) {
+	form := NewDialogLinearForm(FilterContentCount(state.MetaColumnCount))
 	okIdx, cancelIdx := form.OKIndex(), form.CancelIndex()
-	grid := filterGrid(mode, metaColumnCount)
+	grid := filterGrid(state)
+	optionsStart := FilterFocusFilesOnly
+	if !FilterShowsFilesDirs(state) {
+		optionsStart = FilterFocusInvert
+	}
 
 	switch key {
 	case tcell.KeyTab, tcell.KeyBacktab:
-		starts := []int{FilterFocusShellRadio, FilterFocusTypeFirst, FilterFocusPattern, FilterFocusFilesOnly, okIdx}
+		starts := []int{FilterFocusShellRadio, FilterFocusTypeFirst, FilterFocusPattern, optionsStart, okIdx}
 		seg := 0
 		for i, st := range starts {
 			if focus >= st {

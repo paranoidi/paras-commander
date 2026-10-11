@@ -632,7 +632,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 		drawCommandsView(screen, layout, model.CommandsView, cmdEntries, styles, chromeBlocked, model.UserHomeDir)
 	case ViewCompare:
-		filtered := comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter, model.CompareView.IgnoreEmpty)
+		filtered := comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter, model.CompareView.IgnoreEmpty, model.CompareView.NameFilter)
 		drawCompareView(screen, layout, model.CompareView,
 			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary, RowMarks: rowMarksResolver(model.PinnedItems, model.JobPathMarks)},
 			styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)

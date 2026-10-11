@@ -573,6 +573,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "r",
 		},
 		{
+			ID:          ActionCompareFilterDialog,
+			Views:       HelpCompare,
+			Title:       "Filter",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"regex", "glob", "pattern", "narrow", "hide", "name"},
+			LeaderKey:   "f",
+		},
+		{
 			ID:          ActionCompareRefresh,
 			Views:       HelpCompare,
 			Title:       "Refresh compare",

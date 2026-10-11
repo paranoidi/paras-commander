@@ -2216,7 +2216,7 @@ func (s *State) CountGroupMatches(pattern string, filesOnly, dirsOnly, caseSensi
 // selection state would flip). Used by the Filter dialog's live preview. meta: optional meta
 // column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename matching.
 func (s *State) CountPatternMatches(spec FilterSpec, meta GroupSelectMeta) (files, dirs int, err error) {
-	match, err := spec.matchFunc()
+	match, err := spec.MatchFunc()
 	if err != nil {
 		return 0, 0, err
 	}
