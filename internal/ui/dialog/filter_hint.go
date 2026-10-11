@@ -42,9 +42,9 @@ func FilterShowsCaseSensitive(state FilterDialogState) bool {
 }
 
 // FilterShowsFilesDirs reports whether the Files only / Directories only row is shown; compare
-// rows are always files, so it is hidden there.
+// and dedup rows are always files, so it is hidden there.
 func FilterShowsFilesDirs(state FilterDialogState) bool {
-	return !state.Compare
+	return state.Target == FilterTargetPanel
 }
 
 func filterPatternHintText(state FilterDialogState) string {

@@ -636,6 +636,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "T",
 		},
 		{
+			ID:          ActionDedupFilterDialog,
+			Views:       HelpDedup,
+			Title:       "Filter",
+			Section:     "Find duplicates",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"regex", "glob", "pattern", "narrow", "hide", "name"},
+			LeaderKey:   "f",
+		},
+		{
 			ID:          ActionDedupToggleNode,
 			Views:       HelpDedup,
 			Title:       "Expand/collapse directory",

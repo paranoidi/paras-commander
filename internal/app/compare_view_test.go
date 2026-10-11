@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -60,7 +61,7 @@ func TestCompareViewAltFOpensFilterDialog(t *testing.T) {
 	app.model.ViewMode = ui.ViewCompare
 
 	app.handleCompareViewKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
-	if !app.model.FilterDialog.Open || !app.model.FilterDialog.Compare {
+	if !app.model.FilterDialog.Open || app.model.FilterDialog.Target != dialog.FilterTargetCompare {
 		t.Fatal("Alt+F in compare should open the Filter dialog for compare rows")
 	}
 }

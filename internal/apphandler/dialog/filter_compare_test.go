@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestFilterDialogCompareTarget(t *testing.T) {
@@ -21,7 +22,7 @@ func TestFilterDialogCompareTarget(t *testing.T) {
 	h := New(Deps{Host: &identityTestHost{model: model, cfg: config.Default()}, Model: model})
 
 	h.OpenFilterDialog()
-	if !model.FilterDialog.Compare || model.FilterDialog.MetaColumnCount != 0 {
+	if model.FilterDialog.Target != dialog.FilterTargetCompare || model.FilterDialog.MetaColumnCount != 0 {
 		t.Fatalf("dialog = %+v, want Compare target without meta columns", model.FilterDialog)
 	}
 	model.FilterDialog.Text = "*.txt"

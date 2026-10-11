@@ -548,3 +548,17 @@ func TestSwitchPanePrevCyclesInReverse(t *testing.T) {
 		t.Fatalf("SwitchPanePrev without copies = %s, want main", got)
 	}
 }
+
+func TestMarkedFilesIncludesGroupsHiddenByFilter(t *testing.T) {
+	snap := dedupDoneSnapshot(pathloc.MustParse("/scan"), dedupFile("orchard/lemon.txt"), dedupFile("meadow/lemon.txt"))
+	snap.Groups = append(snap.Groups, comparepkg.DedupGroup{Size: 5, Files: []comparepkg.DedupFile{dedupFile("orchard/cedar.jpg"), dedupFile("meadow/cedar.jpg")}})
+	h, model := dedupHandlerWithView(t, snap, ui.DedupViewState{Marked: map[string]bool{"/scan/meadow/cedar.jpg": true}})
+	h.SetGroupFilter(func(g comparepkg.DedupGroup) bool { return g.Size == 100 }, "Filter: lemon")
+	if got := len(ui.DedupActiveGroups(model.DedupSnapshot, model.DedupView)); got != 1 {
+		t.Fatalf("active groups = %d, want 1", got)
+	}
+	got := h.MarkedFiles()
+	if len(got) != 1 || got[0].Rel != "meadow/cedar.jpg" {
+		t.Fatalf("MarkedFiles = %+v, want the mark inside the filtered-out group", got)
+	}
+}

@@ -208,6 +208,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionDedupNextDir,
 				ActionDedupToggleSort,
 				ActionDedupToggleEmpty,
+				ActionDedupFilterDialog,
 			},
 			LeaderMenuGroupDuplicates: {
 				ActionPanelRefresh,

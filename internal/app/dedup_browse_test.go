@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func dedupBrowseSettle(t *testing.T, app *App, screen tcell.SimulationScreen) {
@@ -223,5 +224,18 @@ func TestDedupBrowsePanelHeldNavDefersReload(t *testing.T) {
 	}
 	if app.model.DedupView.SourceStale {
 		t.Fatal("SourceStale still set after flush")
+	}
+}
+
+func TestDedupViewAltFOpensFilterDialog(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	app.model.ViewMode = ui.ViewDedup
+
+	if !app.tryDispatchDedup(keymap.ActionDedupFilterDialog) {
+		t.Fatal("dedup.filter-dialog not dispatched")
+	}
+	if !app.model.FilterDialog.Open || app.model.FilterDialog.Target != dialog.FilterTargetDedup {
+		t.Fatal("dedup.filter-dialog should open the Filter dialog for dedup groups")
 	}
 }

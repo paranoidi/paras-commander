@@ -18,6 +18,15 @@ var (
 	FilterTypeMnemonics = [FilterTypeCount]rune{'V', 'P', 'A', 'U', 'T'}
 )
 
+// FilterTarget selects what the Filter dialog narrows.
+type FilterTarget int
+
+const (
+	FilterTargetPanel   FilterTarget = iota // the active panel's entries
+	FilterTargetCompare                     // Compare view result rows (basename match)
+	FilterTargetDedup                       // Find duplicates groups (any copy's basename matches)
+)
+
 // FilterDialogState is the renderable state for the panel Filter modal, which narrows the
 // active panel's visible entries via a shell-glob/regexp/simple-substring pattern (installed as
 // a panel.EntryFilter). The hint text shown under the pattern row on an invalid pattern is
@@ -39,9 +48,9 @@ type FilterDialogState struct {
 	// Types are the checked file-type presets (indexed FilterTypeVideos..); Invert negates the match.
 	Types  [FilterTypeCount]bool
 	Invert bool
-	// Compare targets the Compare view's result rows (basename match) instead of the active panel.
-	Compare bool
-	Focus   int // FilterFocus* constants (filter_hint.go), then OK, Cancel
+	// Target is what the dialog filters: the active panel, Compare rows or dedup groups.
+	Target FilterTarget
+	Focus  int // FilterFocus* constants (filter_hint.go), then OK, Cancel
 
 	// Live match-count preview shown right-aligned on the Pattern row, recomputed on every state
 	// change. PreviewShow is false while the pattern is empty or fails to compile.

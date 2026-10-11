@@ -852,11 +852,6 @@ func (h *Handler) resyncPreservingCursor() {
 	h.ensureSelectionVisible(0)
 }
 
-// activeGroups returns the groups the view operates on (ignore-empty applied).
-func (h *Handler) activeGroups() []comparepkg.DedupGroup {
-	return ui.DedupActiveGroups(h.model.DedupSnapshot, h.model.DedupView.IgnoreEmpty)
-}
-
 // ToggleSortOrder flips between order-by-path and most-space-wasted (groups tree).
 func (h *Handler) ToggleSortOrder() {
 	if h.model.ViewMode != ui.ViewDedup {
@@ -1169,6 +1164,20 @@ func (h *Handler) ToggleIgnoreEmpty() {
 	st.IgnoreEmpty = !st.IgnoreEmpty
 	ui.DedupCollapseNewIDs(&st.Main, prevIDs, ui.DedupExpandableIDs(h.model.DedupSnapshot, *st))
 	h.model.MenuDefinitions = h.host.DedupMenuDefinitions()
+	h.syncDedupList()
+	h.ensureSelectionVisible(0)
+}
+
+// SetGroupFilter sets (or, with nil, clears) the Filter dialog's group predicate and its
+// border label.
+func (h *Handler) SetGroupFilter(fn func(g comparepkg.DedupGroup) bool, label string) {
+	if h.model.ViewMode != ui.ViewDedup {
+		return
+	}
+	st := &h.model.DedupView
+	prevIDs := ui.DedupExpandableIDs(h.model.DedupSnapshot, *st)
+	st.GroupFilter, st.NameFilterLabel = fn, label
+	ui.DedupCollapseNewIDs(&st.Main, prevIDs, ui.DedupExpandableIDs(h.model.DedupSnapshot, *st))
 	h.syncDedupList()
 	h.ensureSelectionVisible(0)
 }
@@ -1569,12 +1578,12 @@ func (h *Handler) ClearMarks() {
 }
 
 // MarkedFiles returns marked files that still exist in the current snapshot, in
-// group order. Iterates the active groups (not visible rows) so files hidden
-// inside collapsed nodes are included.
+// group order. Iterates every snapshot group (not visible rows) so marks inside
+// collapsed nodes or groups hidden by the filters are still included.
 func (h *Handler) MarkedFiles() []comparepkg.DedupFile {
 	st := h.model.DedupView
 	out := make([]comparepkg.DedupFile, 0, len(st.Marked))
-	for _, g := range h.activeGroups() {
+	for _, g := range h.model.DedupSnapshot.Groups {
 		for _, f := range g.Files {
 			if st.Marked[f.Abs.String()] {
 				out = append(out, f)

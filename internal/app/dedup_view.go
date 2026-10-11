@@ -133,6 +133,9 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionDedupToggleEmpty:
 		a.dedupCtrl.ToggleIgnoreEmpty()
 		return true
+	case keymap.ActionDedupFilterDialog:
+		a.dialogCtrl.OpenFilterDialog()
+		return true
 	case keymap.ActionPanelExternalBrowser:
 		a.dedupOpenInExternalBrowser()
 		return true

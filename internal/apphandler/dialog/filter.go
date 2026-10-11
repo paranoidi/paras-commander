@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"fmt"
+	"path"
 	"regexp"
 	"strings"
 	"unicode"
@@ -17,17 +18,24 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// OpenFilterDialog opens the Filter modal (targeting compare result rows in the Compare view) with an empty pattern (no prefill from any
-// filter already active on the panel).
+// OpenFilterDialog opens the Filter modal with an empty pattern (no prefill from any filter
+// already active on the panel). The target is the active panel, or the Compare / Find
+// duplicates rows when that view is showing.
 func (h *Handler) OpenFilterDialog() {
 	metaCount := len(h.model.MetaResults[h.model.ActivePanel])
-	compare := h.model.ViewMode == ui.ViewCompare
-	if compare {
-		metaCount = 0 // compare rows have no meta columns
+	target := dialog.FilterTargetPanel
+	switch h.model.ViewMode {
+	case ui.ViewCompare:
+		target = dialog.FilterTargetCompare
+	case ui.ViewDedup:
+		target = dialog.FilterTargetDedup
+	}
+	if target != dialog.FilterTargetPanel {
+		metaCount = 0 // compare and dedup rows have no meta columns
 	}
 	h.model.FilterDialog = dialog.FilterDialogState{
 		Open:               true,
-		Compare:            compare,
+		Target:             target,
 		PatternMode:        panel.GroupPatternShell,
 		MetaColumnCount:    metaCount,
 		IncludeMetaColumns: metaCount > 0,
@@ -56,8 +64,14 @@ func (h *Handler) updateFilterDialogPreview() {
 		fd.PreviewShow = false
 		return
 	}
-	if fd.Compare {
-		n, err := h.compareMatchCount(spec)
+	if fd.Target != dialog.FilterTargetPanel {
+		var n int
+		var err error
+		if fd.Target == dialog.FilterTargetDedup {
+			n, err = h.dedupMatchCount(spec)
+		} else {
+			n, err = h.compareMatchCount(spec)
+		}
 		fd.PreviewShow = err == nil
 		fd.PreviewFiles, fd.PreviewFolders = n, 0
 		return
@@ -86,6 +100,64 @@ func (h *Handler) compareMatchCount(spec panel.FilterSpec) (int, error) {
 
 func compareNameMatcher(match func(localfs.Entry, panel.GroupSelectMeta) bool) func(string) bool {
 	return func(name string) bool { return match(localfs.Entry{Name: name}, panel.GroupSelectMeta{}) }
+}
+
+// dedupGroupFilter builds the Find duplicates predicate: a group is kept when any copy's
+// basename matches spec, with Invert applied at group level (no copy matches).
+func dedupGroupFilter(spec panel.FilterSpec) (func(comparepkg.DedupGroup) bool, error) {
+	invert := spec.Invert
+	spec.Invert = false
+	match, err := spec.MatchFunc()
+	if err != nil {
+		return nil, err
+	}
+	name := compareNameMatcher(match)
+	return func(g comparepkg.DedupGroup) bool {
+		for _, f := range g.Files {
+			if name(path.Base(f.Abs.String())) {
+				return !invert
+			}
+		}
+		return invert
+	}, nil
+}
+
+// dedupMatchCount counts the files in the groups the view would show under spec.
+func (h *Handler) dedupMatchCount(spec panel.FilterSpec) (int, error) {
+	fn, err := dedupGroupFilter(spec)
+	if err != nil {
+		return 0, err
+	}
+	view := h.model.DedupView
+	view.GroupFilter = fn
+	n := 0
+	for _, g := range ui.DedupActiveGroups(h.model.DedupSnapshot, view) {
+		n += len(g.Files)
+	}
+	return n, nil
+}
+
+// executeDedupFilterDialog applies the dialog to the Find duplicates groups; an empty spec
+// clears the filter.
+func (h *Handler) executeDedupFilterDialog(spec panel.FilterSpec) {
+	if spec.Empty() {
+		h.dedup.SetGroupFilter(nil, "")
+		h.CloseFilterDialog()
+		return
+	}
+	fn, err := dedupGroupFilter(spec)
+	if err != nil {
+		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
+		return
+	}
+	n, _ := h.dedupMatchCount(spec)
+	h.dedup.SetGroupFilter(fn, spec.Label())
+	h.CloseFilterDialog()
+	if n == 0 {
+		h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
+		return
+	}
+	h.host.SetTransientMessage(fmt.Sprintf("Filtered: %d files", n), ui.MessageUrgencyInfo)
 }
 
 // executeCompareFilterDialog applies the dialog to the Compare view's rows; an empty spec clears
@@ -202,11 +274,15 @@ func (h *Handler) tryRejectFilterDialogOK() bool {
 func (h *Handler) executeFilterDialog() {
 	fd := &h.model.FilterDialog
 	spec := h.filterSpec()
-	if fd.Compare && !spec.Empty() && h.tryRejectFilterDialogOK() {
+	if fd.Target != dialog.FilterTargetPanel && !spec.Empty() && h.tryRejectFilterDialogOK() {
 		return
 	}
-	if fd.Compare {
+	switch fd.Target {
+	case dialog.FilterTargetCompare:
 		h.executeCompareFilterDialog(spec)
+		return
+	case dialog.FilterTargetDedup:
+		h.executeDedupFilterDialog(spec)
 		return
 	}
 	p := h.host.ActivePanel()

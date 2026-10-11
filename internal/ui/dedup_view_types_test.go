@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -427,10 +428,10 @@ func TestDedupActiveGroups(t *testing.T) {
 			dedupTestGroup(2, 0, "mango/copper", "mango/willow"),
 		},
 	}
-	if got := len(DedupActiveGroups(snap, true)); got != 1 {
+	if got := len(DedupActiveGroups(snap, DedupViewState{IgnoreEmpty: true})); got != 1 {
 		t.Fatalf("active groups (ignore empty) = %d, want 1", got)
 	}
-	if got := len(DedupActiveGroups(snap, false)); got != 2 {
+	if got := len(DedupActiveGroups(snap, DedupViewState{})); got != 2 {
 		t.Fatalf("active groups (show empty) = %d, want 2", got)
 	}
 }
@@ -710,5 +711,31 @@ func TestDedupNextDirRowIndex(t *testing.T) {
 	}
 	if got := DedupNextDirRowIndex(rows, 3); got != 5 {
 		t.Fatalf("next dir after orchard = %d, want 5 (past end)", got)
+	}
+}
+
+func TestDedupGroupFilterHidesGroupsInBothTreeModes(t *testing.T) {
+	snap := comparepkg.DedupSnapshot{
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 100, "apple/copper", "apple/willow"),
+			dedupTestGroup(2, 100, "mango/copper", "mango/willow"),
+		},
+	}
+	view := DedupViewState{GroupFilter: func(g comparepkg.DedupGroup) bool { return g.Hash[0] == 2 }}
+	if got := len(DedupActiveGroups(snap, view)); got != 1 {
+		t.Fatalf("active groups = %d, want 1", got)
+	}
+	for _, dirs := range []bool{false, true} {
+		view.TreeDirs = dirs
+		rows, _ := DedupRowsFromSnapshot(snap, view)
+		for _, r := range rows {
+			if strings.HasPrefix(r.Value.File.Rel, "apple/") {
+				t.Fatalf("TreeDirs=%v: row %q belongs to a filtered-out group", dirs, r.Value.File.Rel)
+			}
+		}
+		if len(rows) == 0 {
+			t.Fatalf("TreeDirs=%v: no rows", dirs)
+		}
 	}
 }

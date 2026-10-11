@@ -126,19 +126,20 @@ const (
 	ActionCompareToggleEmpty  = "compare.toggle-empty"
 
 	// Dedup (find-duplicates) view
-	ActionDedupClose       = "dedup.close"
-	ActionDedupToggleSort  = "dedup.toggle-sort"
-	ActionDedupToggleEmpty = "dedup.toggle-empty"
-	ActionDedupToggleNode  = "dedup.toggle-node"
-	ActionDedupCollapse    = "dedup.collapse"
-	ActionDedupToggleTree  = "dedup.toggle-tree"
-	ActionDedupCollapseAll = "dedup.collapse-all"
-	ActionDedupExpandAll   = "dedup.expand-all"
-	ActionDedupPrevDir     = "dedup.prev-dir"
-	ActionDedupNextDir     = "dedup.next-dir"
-	ActionDedupMarkKeep    = "dedup.mark-keep"
-	ActionDedupCompare     = "dedup.compare"
-	ActionDedupPrevPane    = "dedup.prev-pane"
+	ActionDedupClose        = "dedup.close"
+	ActionDedupToggleSort   = "dedup.toggle-sort"
+	ActionDedupToggleEmpty  = "dedup.toggle-empty"
+	ActionDedupFilterDialog = "dedup.filter-dialog"
+	ActionDedupToggleNode   = "dedup.toggle-node"
+	ActionDedupCollapse     = "dedup.collapse"
+	ActionDedupToggleTree   = "dedup.toggle-tree"
+	ActionDedupCollapseAll  = "dedup.collapse-all"
+	ActionDedupExpandAll    = "dedup.expand-all"
+	ActionDedupPrevDir      = "dedup.prev-dir"
+	ActionDedupNextDir      = "dedup.next-dir"
+	ActionDedupMarkKeep     = "dedup.mark-keep"
+	ActionDedupCompare      = "dedup.compare"
+	ActionDedupPrevPane     = "dedup.prev-pane"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -423,19 +424,20 @@ var KnownActions = map[string]struct{}{
 	ActionCompareMerge:        {},
 	ActionCompareToggleEmpty:  {},
 
-	ActionDedupClose:       {},
-	ActionDedupToggleSort:  {},
-	ActionDedupToggleEmpty: {},
-	ActionDedupToggleNode:  {},
-	ActionDedupCollapse:    {},
-	ActionDedupToggleTree:  {},
-	ActionDedupCollapseAll: {},
-	ActionDedupExpandAll:   {},
-	ActionDedupPrevDir:     {},
-	ActionDedupNextDir:     {},
-	ActionDedupMarkKeep:    {},
-	ActionDedupCompare:     {},
-	ActionDedupPrevPane:    {},
+	ActionDedupClose:        {},
+	ActionDedupToggleSort:   {},
+	ActionDedupToggleEmpty:  {},
+	ActionDedupFilterDialog: {},
+	ActionDedupToggleNode:   {},
+	ActionDedupCollapse:     {},
+	ActionDedupToggleTree:   {},
+	ActionDedupCollapseAll:  {},
+	ActionDedupExpandAll:    {},
+	ActionDedupPrevDir:      {},
+	ActionDedupNextDir:      {},
+	ActionDedupMarkKeep:     {},
+	ActionDedupCompare:      {},
+	ActionDedupPrevPane:     {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},

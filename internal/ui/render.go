@@ -923,7 +923,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawDedupProgressDialog(screen, layout, model.DedupProgressDialog, model.DedupSnapshot, styles, model.UserHomeDir)
 	}
 	if model.DedupReturnDialog.Open {
-		groups := DedupActiveGroups(model.DedupSnapshot, model.DedupView.IgnoreEmpty)
+		groups := DedupActiveGroups(model.DedupSnapshot, model.DedupView)
 		var wasted int64
 		for _, g := range groups {
 			wasted += g.Size * int64(len(g.Files)-1)

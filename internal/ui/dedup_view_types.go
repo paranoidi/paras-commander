@@ -101,15 +101,17 @@ type DedupViewState struct {
 	Marked                map[string]bool // absolute paths marked for deletion
 	MarkedCount           int
 	MarkedReclaimBytes    int64
-	Kept                  map[string]bool // absolute paths designated as survivors
-	SortByWasted          bool            // groups mode: false = order by path; true = most space wasted first
-	IgnoreEmpty           bool            // hide zero-byte duplicate groups (default true, set on Open)
-	IgnoredEmptyCount     int             // files hidden by IgnoreEmpty, for the title
-	TreeDirs              bool            // true = directory hierarchy tree (default); false = duplicate groups tree
-	DirsCollapsePending   bool            // dirs mode: collapse all folders on first DedupDone list build
-	GroupsCollapsePending bool            // groups mode: collapse all group headers on first DedupDone list build
-	RecheckDone           int             // kept results being re-stat'ed on return: files checked so far
-	RecheckTotal          int             // files to re-check; 0 = no check running
+	Kept                  map[string]bool                    // absolute paths designated as survivors
+	SortByWasted          bool                               // groups mode: false = order by path; true = most space wasted first
+	IgnoreEmpty           bool                               // hide zero-byte duplicate groups (default true, set on Open)
+	IgnoredEmptyCount     int                                // files hidden by IgnoreEmpty, for the title
+	GroupFilter           func(g comparepkg.DedupGroup) bool // set by the Filter dialog; nil = every group
+	NameFilterLabel       string                             // border label of GroupFilter
+	TreeDirs              bool                               // true = directory hierarchy tree (default); false = duplicate groups tree
+	DirsCollapsePending   bool                               // dirs mode: collapse all folders on first DedupDone list build
+	GroupsCollapsePending bool                               // groups mode: collapse all group headers on first DedupDone list build
+	RecheckDone           int                                // kept results being re-stat'ed on return: files checked so far
+	RecheckTotal          int                                // files to re-check; 0 = no check running
 }
 
 // RecheckPercent is the re-check progress for the title, or -1 when no check runs.
@@ -122,16 +124,20 @@ func (v DedupViewState) RecheckPercent() int {
 
 func dedupGroupID(g comparepkg.DedupGroup) string { return fmt.Sprintf("g:%x", g.Hash) }
 
-// DedupActiveGroups returns the snapshot groups the view operates on, applying
-// the ignore-empty filter. Mark helpers and the delete flow use this so hidden
-// (collapsed) rows are never silently skipped.
-func DedupActiveGroups(snap comparepkg.DedupSnapshot, ignoreEmpty bool) []comparepkg.DedupGroup {
-	if !ignoreEmpty {
-		return snap.Groups
+// groupVisible is the single visibility rule: ignore-empty and the dialog's group filter.
+func (v DedupViewState) groupVisible(g comparepkg.DedupGroup) bool {
+	if v.IgnoreEmpty && g.Size == 0 {
+		return false
 	}
+	return v.GroupFilter == nil || v.GroupFilter(g)
+}
+
+// DedupActiveGroups returns the snapshot groups the view shows (ignore-empty and group
+// filter applied).
+func DedupActiveGroups(snap comparepkg.DedupSnapshot, view DedupViewState) []comparepkg.DedupGroup {
 	out := make([]comparepkg.DedupGroup, 0, len(snap.Groups))
 	for _, g := range snap.Groups {
-		if g.Size != 0 {
+		if view.groupVisible(g) {
 			out = append(out, g)
 		}
 	}
@@ -150,6 +156,9 @@ func DedupRowsFromSnapshot(snap comparepkg.DedupSnapshot, view DedupViewState) (
 	for i, g := range snap.Groups {
 		if view.IgnoreEmpty && g.Size == 0 {
 			ignoredEmpty += len(g.Files)
+			continue
+		}
+		if !view.groupVisible(g) {
 			continue
 		}
 		idxs = append(idxs, i)
@@ -246,7 +255,7 @@ func DedupExpandableIDs(snap comparepkg.DedupSnapshot, view DedupViewState) []st
 	}
 	idxs := make([]int, 0, len(snap.Groups))
 	for i, g := range snap.Groups {
-		if view.IgnoreEmpty && g.Size == 0 {
+		if !view.groupVisible(g) {
 			continue
 		}
 		idxs = append(idxs, i)

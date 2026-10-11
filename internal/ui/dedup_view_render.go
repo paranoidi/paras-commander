@@ -539,6 +539,9 @@ func dedupEndLabel(view DedupViewState) string {
 	if view.TreeDirs {
 		modeLabel = "View: Dirs"
 	}
+	if view.NameFilterLabel != "" {
+		modeLabel += " · " + view.NameFilterLabel
+	}
 	if ms := view.MarkedSummary(); ms != "" {
 		return modeLabel + " · " + ms
 	}

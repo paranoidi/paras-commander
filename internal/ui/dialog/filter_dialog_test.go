@@ -112,7 +112,7 @@ func TestFilterMoveFocusGrid(t *testing.T) {
 }
 
 func TestFilterMoveFocusCompareHidesFilesDirs(t *testing.T) {
-	st := FilterDialogState{PatternMode: panel.GroupPatternShell, Compare: true}
+	st := FilterDialogState{PatternMode: panel.GroupPatternShell, Target: FilterTargetCompare}
 	if got, _ := FilterMoveFocus(FilterFocusPattern, tcell.KeyDown, st); got != FilterFocusInvert {
 		t.Fatalf("Down from pattern in compare = %d, want Invert %d", got, FilterFocusInvert)
 	}

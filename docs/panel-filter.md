@@ -27,3 +27,9 @@ The panel border shows the active filter, for example `Filter: not report Videos
 ## Compare view
 
 In the Compare panels view Alt+F (`compare.filter-dialog` in `[compare]`, leader letter `f`) opens the same dialog and filters the result rows by file name (the basename of the row's path). It stacks with the category filter (F3) and the empty-file toggle, and merge (F5) only sees the rows that remain. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern after the category, for example `All · Filter: *.jpg`. OK with an empty pattern, or Shift+F3 (reset filter), clears it.
+
+## Find duplicates view
+
+In the Find duplicates results view Alt+F (`dedup.filter-dialog` in `[dedup]`, leader letter `f`) opens the same dialog and filters whole duplicate groups: a group is shown when any of its copies has a file name that matches (types and pattern), and Invert shows the groups where no copy matches. A shown group keeps all its copies, in both the groups tree and the directory tree. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern, for example `View: Dirs · Filter: *.jpg`. OK with an empty pattern clears it, and a rescan resets it.
+
+Marks on files in groups the filter hides are kept and still counted: deleting acts on every marked file, shown or not.
