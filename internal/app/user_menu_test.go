@@ -707,10 +707,10 @@ func TestUserMenuBackInSubmenuReturnsToParentLevel(t *testing.T) {
 			t.Fatalf("userMenuStack len = %d, want 0 back at top level", len(app.userMenuStack))
 		}
 
-		// Back at top level is a no-op: the menu stays open.
+		// Back at top level closes the menu.
 		app.handleLeaderMenuKey(ev)
-		if !app.model.LeaderMenu.Open {
-			t.Fatalf("%v at top level should keep the menu open", ev.Name())
+		if app.model.LeaderMenu.Open {
+			t.Fatalf("%v at top level should close the menu", ev.Name())
 		}
 	}
 }
@@ -844,5 +844,23 @@ func TestUserMenuKeepOpenStaysOpenWithToast(t *testing.T) {
 		if app.userMenuOpen() {
 			t.Fatal("non-keep_open entry should close the menu")
 		}
+	}
+}
+
+func TestUserMenuViHClosesTopLevel(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	userMenuSubmenuFixture(t, menuPath)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.model.ViMotionMode = true
+	app.openUserMenu()
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
+	if app.model.LeaderMenu.Open {
+		t.Fatal("h in vi-motion mode at top level should close the user menu")
 	}
 }

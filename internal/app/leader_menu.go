@@ -317,13 +317,23 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 		return false
 	}
 
+	if st.UserMenu && a.model.ViMotionMode {
+		// An entry bound to h/j/k/l keeps its key; otherwise h acts as Left (usermenu.back).
+		if _, isEntry := ui.LeaderMenuIndexForKey(st.Items, event.Rune()); !isEntry {
+			event = keymap.RemapViMotionKey(event)
+		}
+	}
+
 	if st.UserMenu && a.keys.UserMenu != nil {
 		if id, ok := a.keys.UserMenu.Lookup(event); ok && id == keymap.ActionUserMenuBack {
-			if n := len(a.userMenuStack); n > 0 {
-				parent := a.userMenuStack[n-1]
-				a.userMenuStack = a.userMenuStack[:n-1]
-				a.openUserMenuLevel(parent)
+			n := len(a.userMenuStack)
+			if n == 0 {
+				a.closeUserMenu()
+				return false
 			}
+			parent := a.userMenuStack[n-1]
+			a.userMenuStack = a.userMenuStack[:n-1]
+			a.openUserMenuLevel(parent)
 			return false
 		}
 	}

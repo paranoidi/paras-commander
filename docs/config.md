@@ -306,7 +306,8 @@ to be set and cannot be combined with a submenu table. See `llm-docs/commands.md
 per-entry field list.
 
 Inside a submenu, **Left** or **Backspace** (`usermenu.back` under `[dialog.user_menu]` in
-`keybindings.toml`) returns to the parent menu; **Esc** closes the whole menu.
+`keybindings.toml`) returns to the parent menu; at the top level it closes the menu. In vi-motion
+mode **h** acts as Left unless a menu entry is bound to `h`. **Esc** closes the whole menu.
 
 ## `[preview]`
 
