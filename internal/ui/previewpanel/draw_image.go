@@ -93,7 +93,7 @@ func drawImageBody(screen tcell.Screen, st State, textX, contentTop, textW, cont
 		y := captionTop + row
 		idx := scroll + row
 		if idx < len(lines) {
-			drawLine(screen, textX, y, textW, lines[idx], padStyle)
+			DrawCells(screen, textX, y, textW, lines[idx], padStyle)
 		}
 	}
 

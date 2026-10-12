@@ -345,7 +345,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		if idx >= len(lines) {
 			fillContentRow(screen, textX, y, textW, padStyle)
 		} else {
-			drawLine(screen, textX, y, textW, lines[idx], padStyle)
+			DrawCells(screen, textX, y, textW, lines[idx], padStyle)
 		}
 		if paintRightMargin {
 			screen.SetContent(rightMarginX, y, ' ', nil, marginStyle)
@@ -513,7 +513,7 @@ func titlePath(absPath, homeDir string, maxRunes int) string {
 	return primitive.TruncateRight(display, maxRunes)
 }
 
-func drawLine(screen tcell.Screen, x, y, maxW int, cells []AnsiCell, padBase tcell.Style) {
+func DrawCells(screen tcell.Screen, x, y, maxW int, cells []AnsiCell, padBase tcell.Style) {
 	col := 0
 	for _, c := range cells {
 		rw := runewidth.RuneWidth(c.R)

@@ -361,7 +361,7 @@ func (h *Handler) maxStdoutScroll() int {
 	if layout.TooSmall {
 		return 0
 	}
-	stdoutRect, _, stdoutLines, _ := ui.CommandsStreamPanels(layout.Secondary, sel)
+	stdoutRect, _, stdoutLines, _ := ui.CommandsStreamPanels(layout.Secondary, sel, tcell.StyleDefault)
 	contentH := ui.JobsPanelContentRows(stdoutRect)
 	return max(0, len(stdoutLines)-contentH)
 }
@@ -373,7 +373,7 @@ func (h *Handler) maxStderrScroll() int {
 	if layout.TooSmall {
 		return 0
 	}
-	_, stderrRect, _, stderrLines := ui.CommandsStreamPanels(layout.Secondary, sel)
+	_, stderrRect, _, stderrLines := ui.CommandsStreamPanels(layout.Secondary, sel, tcell.StyleDefault)
 	contentH := ui.JobsPanelContentRows(stderrRect)
 	return max(0, len(stderrLines)-contentH)
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -132,7 +133,9 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 		if idx := state.Scroll + row; idx < len(state.Lines) {
 			line = state.Lines[idx]
 		}
-		primitive.Text(screen, contentX, y, contentW, line, lineStyle)
+		// ponytail: per-line SGR parse; a color left open across \n does not carry to the next
+		// line. Parse the whole output once into cell rows if a tool needs that.
+		previewpanel.DrawCells(screen, contentX, y, contentW, previewpanel.AnsiStyledCells(line, lineStyle), lineStyle)
 	}
 	if !state.Running {
 		draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, listH, len(state.Lines), state.Scroll, scrollbarStyle, borderStyle, styles)

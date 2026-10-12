@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
 const commandsListColMarker = 3
@@ -27,7 +28,7 @@ func drawCommandsView(
 	if state.Selected >= 0 && state.Selected < len(entries) {
 		sel = entries[state.Selected]
 	}
-	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(layout.Secondary, sel)
+	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(layout.Secondary, sel, auxPanelBodyText(styles, chromeBlocked, auxPanelContentBG(styles, chromeBlocked)))
 	stdoutFocused := state.FocusPane == 1
 	stderrFocused := state.FocusPane == 2
 	drawCommandsStreamPanel(screen, stdoutRect, " Stdout ", state.StdoutScroll, stdoutLines, styles, chromeBlocked, stdoutFocused)
@@ -35,13 +36,13 @@ func drawCommandsView(
 }
 
 // CommandsStreamPanels returns stdout/stderr panel geometry and wrapped output lines for one run entry.
-func CommandsStreamPanels(column Rect, entry CommandRunEntry) (stdoutRect, stderrRect Rect, stdoutLines, stderrLines []string) {
+func CommandsStreamPanels(column Rect, entry CommandRunEntry, base tcell.Style) (stdoutRect, stderrRect Rect, stdoutLines, stderrLines [][]AnsiCell) {
 	textW := column.Width - 4
 	if textW < 1 {
 		textW = 1
 	}
-	stdoutLines = CommandPanelLines(entry.Stdout, textW)
-	stderrLines = CommandPanelLines(CommandStderrDisplay(entry), textW)
+	stdoutLines = CommandPanelLines(entry.Stdout, textW, base)
+	stderrLines = CommandPanelLines(CommandStderrDisplay(entry), textW, base)
 	stderrLineBudget := max(8, min(len(stderrLines)+2, 24))
 	stdoutRect, stderrRect = SplitJobsSecondaryColumnFlexTop(column, stderrLineBudget)
 	return stdoutRect, stderrRect, stdoutLines, stderrLines
@@ -179,18 +180,18 @@ func commandPhaseStyle(e CommandRunEntry, styles theme.Theme) tcell.Style {
 }
 
 // CommandPanelLines splits command stdout/stderr into wrapped display lines for the Commands view.
-func CommandPanelLines(text string, width int) []string {
+func CommandPanelLines(text string, width int, base tcell.Style) [][]AnsiCell {
 	if width < 1 {
 		width = 1
 	}
 	t := strings.ReplaceAll(text, "\r\n", "\n")
 	if strings.TrimSpace(t) == "" {
-		return []string{" (empty)"}
+		return [][]AnsiCell{AnsiStyledCells(" (empty)", base)}
 	}
-	return WrapTextLines(t, width)
+	return WrapAnsiCells(AnsiStyledCells(t, base), width)
 }
 
-func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scroll int, lines []string, styles theme.Theme, chromeBlocked bool, focused bool) {
+func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scroll int, lines [][]AnsiCell, styles theme.Theme, chromeBlocked bool, focused bool) {
 	layout := drawAuxPanelChrome(screen, rect, title, "", focused, chromeBlocked, false, styles)
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	contentTop := rect.Y + 1
@@ -213,10 +214,10 @@ func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scrol
 		textW = 1
 	}
 	for i := 0; i < contentH; i++ {
-		line := ""
+		var line []AnsiCell
 		if i+scroll < len(lines) {
 			line = lines[i+scroll]
 		}
-		primitive.Text(screen, textX, contentTop+i, textW, line, body)
+		previewpanel.DrawCells(screen, textX, contentTop+i, textW, line, body)
 	}
 }

@@ -3,7 +3,8 @@ package ui
 import (
 	"strings"
 	"testing"
-	"unicode/utf8"
+
+	"github.com/gdamore/tcell/v2"
 )
 
 func TestCommandStderrDisplay(t *testing.T) {
@@ -42,13 +43,21 @@ func TestCommandStderrDisplay(t *testing.T) {
 func TestCommandPanelLinesWrapsLongOutput(t *testing.T) {
 	t.Parallel()
 	long := strings.Repeat("word ", 30)
-	lines := CommandPanelLines(long, 20)
+	lines := CommandPanelLines(long, 20, tcell.StyleDefault)
 	if len(lines) < 2 {
 		t.Fatalf("got %d lines, want wrapped output", len(lines))
 	}
 	for _, ln := range lines {
-		if utf8.RuneCountInString(ln) > 20 {
-			t.Fatalf("line longer than width: %q", ln)
+		if len(ln) > 20 {
+			t.Fatalf("line longer than width: %d cells", len(ln))
 		}
+	}
+}
+
+func TestCommandPanelLinesCountsVisibleWidthOnly(t *testing.T) {
+	t.Parallel()
+	lines := CommandPanelLines("\x1b[31m"+strings.Repeat("a", 20), 20, tcell.StyleDefault)
+	if len(lines) != 1 {
+		t.Fatalf("got %d rows, want 1", len(lines))
 	}
 }

@@ -67,3 +67,29 @@ func TestCommandOutputDialogRunningButtons(t *testing.T) {
 		t.Fatalf("button row = %q", row)
 	}
 }
+
+func TestCommandOutputDialogRendersAnsiColors(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	layout := Layout{Width: 80, Height: 24}
+	state := CommandOutputDialogState{Open: true, Title: "Output", Lines: []string{"\x1b[32mgreen\x1b[0m plain"}}
+	DrawCommandOutputDialog(screen, layout, state, theme.Default(), uiscrollbar.StyleBar)
+	m, _ := ComputeCommandOutputDialogMetrics(layout, state)
+	x, y := m.Rect.X+2, m.Rect.Y+1
+	ch, style, _ := screen.Get(x, y)
+	if ch != "g" {
+		t.Fatalf("cell = %q, want g", ch)
+	}
+	if fg, _, _ := style.Decompose(); fg == tcell.ColorDefault {
+		t.Fatalf("expected green fg, got default")
+	}
+	for i := range m.ContentWidth {
+		if c, _, _ := screen.Get(x+i, y); c == "[" {
+			t.Fatalf("literal [ at col %d", i)
+		}
+	}
+}
