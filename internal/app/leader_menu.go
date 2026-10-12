@@ -327,9 +327,13 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 		}
 	}
 
-	// usermenu.back also closes the `"` copy menu, which has no parent level.
+	// usermenu.back returns from the copy git submenu to the copy menu and closes the copy menu itself.
 	if backNav && a.keys.UserMenu != nil {
 		if id, ok := a.keys.UserMenu.Lookup(event); ok && id == keymap.ActionUserMenuBack {
+			if st.CopyGit {
+				a.toggleCopyMenu()
+				return false
+			}
 			n := len(a.userMenuStack)
 			if n == 0 || st.CopyMenu {
 				a.closeUserMenu()

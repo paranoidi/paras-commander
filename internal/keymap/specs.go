@@ -50,6 +50,8 @@ type ActionSpec struct {
 	LeaderKey string
 	// CopyMenuKey is the activation character for the `"` copy menu (empty = excluded).
 	CopyMenuKey string
+	// CopyMenuLabel overrides Title for the copy-menu row label (empty = Title).
+	CopyMenuLabel string
 	// PreviewMenuKey is the activation character for the `:` fullscreen-preview menu
 	// (empty = excluded). Letters only; case-sensitive (r vs R).
 	PreviewMenuKey string
@@ -193,6 +195,32 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "App",
 			Keywords:    []string{"clipboard", "stem", "name", "copy"},
 			CopyMenuKey: "n",
+		},
+		{
+			ID:          ActionClipboardGitMenu,
+			Views:       HelpBrowser,
+			Title:       "Relative to git root",
+			Section:     "App",
+			Keywords:    []string{"clipboard", "git", "relative", "path", "copy"},
+			CopyMenuKey: "g",
+		},
+		{
+			ID:            ActionClipboardCopyGitFilePath,
+			Views:         HelpBrowser,
+			Title:         "Copy file path relative to git root",
+			Section:       "App",
+			Keywords:      []string{"clipboard", "git", "relative", "path", "copy"},
+			CopyMenuKey:   "c",
+			CopyMenuLabel: "Copy file URL",
+		},
+		{
+			ID:            ActionClipboardCopyGitDirPath,
+			Views:         HelpBrowser,
+			Title:         "Copy directory path relative to git root",
+			Section:       "App",
+			Keywords:      []string{"clipboard", "git", "relative", "path", "directory", "copy"},
+			CopyMenuKey:   "d",
+			CopyMenuLabel: "Copy directory URL",
 		},
 		{
 			ID:           ActionAppUserMenuEdit,

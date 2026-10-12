@@ -16,6 +16,9 @@ const (
 	ActionClipboardCopyDirURL             = "clipboard.copy-dir-url"
 	ActionClipboardCopyFilename           = "clipboard.copy-filename"
 	ActionClipboardCopyFilenameWithoutExt = "clipboard.copy-filename-without-ext"
+	ActionClipboardGitMenu                = "clipboard.git-menu"
+	ActionClipboardCopyGitFilePath        = "clipboard.copy-git-file-path"
+	ActionClipboardCopyGitDirPath         = "clipboard.copy-git-dir-path"
 	// ActionAppShellInsertPaths puts the selected/focused paths on the persistent
 	// subshell's command line and enters the shell.
 	ActionAppShellInsertPaths = "app.shell-insert-paths"
@@ -327,6 +330,9 @@ var KnownActions = map[string]struct{}{
 	ActionClipboardCopyDirURL:             {},
 	ActionClipboardCopyFilename:           {},
 	ActionClipboardCopyFilenameWithoutExt: {},
+	ActionClipboardGitMenu:                {},
+	ActionClipboardCopyGitFilePath:        {},
+	ActionClipboardCopyGitDirPath:         {},
 
 	ActionTerminalTogglePanel: {},
 	ActionTerminalFocus:       {},

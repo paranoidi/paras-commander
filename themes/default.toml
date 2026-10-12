@@ -251,6 +251,7 @@ group = { fg = "cyan", bold = true }
 key = { fg = "magenta", bold = true }
 arrow = { fg = "bright_black" }
 label = { fg = "white" }
+disabled = { fg = "bright_black" }
 
 [dialog.help]
 section = { fg = "cyan", bold = true }

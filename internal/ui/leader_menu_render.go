@@ -428,6 +428,10 @@ func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuSta
 	if _, lb, _ := labelStyle.Decompose(); lb == tcell.ColorDefault {
 		labelStyle = labelStyle.Background(surfBG)
 	}
+	disabledStyle := styles.LeaderMenuDisabled
+	if _, db, _ := disabledStyle.Decompose(); db == tcell.ColorDefault {
+		disabledStyle = disabledStyle.Background(surfBG)
+	}
 	groupStyle := styles.LeaderMenuGroup
 	if _, gb, _ := groupStyle.Decompose(); gb == tcell.ColorDefault {
 		groupStyle = groupStyle.Background(surfBG)
@@ -435,13 +439,13 @@ func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuSta
 
 	showDirectKeys := leaderMenuShowDirectKeys(layout, state.Items)
 	if leaderMenuIsGrouped(visibleItems) {
-		drawLeaderMenuGrouped(screen, rect, visibleItems, arrow, showDirectKeys, keyStyle, arrowStyle, labelStyle, groupStyle, surface)
+		drawLeaderMenuGrouped(screen, rect, visibleItems, arrow, showDirectKeys, keyStyle, arrowStyle, labelStyle, groupStyle, disabledStyle, surface)
 		return
 	}
-	drawLeaderMenuFlat(screen, rect, visibleItems, arrow, showDirectKeys, keyStyle, arrowStyle, labelStyle, surface)
+	drawLeaderMenuFlat(screen, rect, visibleItems, arrow, showDirectKeys, keyStyle, arrowStyle, labelStyle, disabledStyle, surface)
 }
 
-func drawLeaderMenuGrouped(screen tcell.Screen, rect geom.Rect, items []LeaderMenuItem, arrow rune, showDirectKeys bool, keyStyle, arrowStyle, labelStyle, groupStyle, surface tcell.Style) {
+func drawLeaderMenuGrouped(screen tcell.Screen, rect geom.Rect, items []LeaderMenuItem, arrow rune, showDirectKeys bool, keyStyle, arrowStyle, labelStyle, groupStyle, disabledStyle, surface tcell.Style) {
 	buckets := leaderMenuSplitByColumn(items)
 	xs, widths, _ := leaderMenuMacroColumnLayout(rect, buckets, showDirectKeys)
 	yBase := rect.Y + leaderMenuMarginRows
@@ -465,12 +469,21 @@ func drawLeaderMenuGrouped(screen tcell.Screen, rect geom.Rect, items []LeaderMe
 		if !showDirectKeys {
 			directKey = ""
 		}
-		drawLeaderMenuCell(screen, x, y, w, keys[i], arrow, it.Label, directKey, keyStyle, arrowStyle, labelStyle, surface)
+		ks, ls := leaderMenuItemStyles(it, keyStyle, labelStyle, disabledStyle)
+		drawLeaderMenuCell(screen, x, y, w, keys[i], arrow, it.Label, directKey, ks, arrowStyle, ls, surface)
 		colY[col] = y + 1
 	}
 }
 
-func drawLeaderMenuFlat(screen tcell.Screen, rect geom.Rect, items []LeaderMenuItem, arrow rune, showDirectKeys bool, keyStyle, arrowStyle, labelStyle, surface tcell.Style) {
+// leaderMenuItemStyles returns the key and label styles, dimmed for disabled rows.
+func leaderMenuItemStyles(it LeaderMenuItem, key, label, disabled tcell.Style) (tcell.Style, tcell.Style) {
+	if it.Disabled {
+		return disabled, disabled
+	}
+	return key, label
+}
+
+func drawLeaderMenuFlat(screen tcell.Screen, rect geom.Rect, items []LeaderMenuItem, arrow rune, showDirectKeys bool, keyStyle, arrowStyle, labelStyle, disabledStyle, surface tcell.Style) {
 	contentWidth := rect.Width - leaderMenuLeftMargin
 	colWidth := contentWidth / leaderMenuItemColumns
 	if colWidth < 4 {
@@ -489,7 +502,8 @@ func drawLeaderMenuFlat(screen tcell.Screen, rect geom.Rect, items []LeaderMenuI
 		if !showDirectKeys {
 			directKey = ""
 		}
-		drawLeaderMenuCell(screen, x, y, colWidth, keys[i], arrow, it.Label, directKey, keyStyle, arrowStyle, labelStyle, surface)
+		ks, ls := leaderMenuItemStyles(it, keyStyle, labelStyle, disabledStyle)
+		drawLeaderMenuCell(screen, x, y, colWidth, keys[i], arrow, it.Label, directKey, ks, arrowStyle, ls, surface)
 		col++
 		if col >= leaderMenuItemColumns {
 			col = 0

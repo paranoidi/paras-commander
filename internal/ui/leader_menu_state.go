@@ -6,6 +6,7 @@ type LeaderMenuItem struct {
 	GroupColumn int    // macro column 0..2 for grouped menu; ignored for F2 user menu
 	Key         rune   // pinned activation letter, or 0 for auto-assignment
 	Label       string
+	Disabled    bool   // drawn dimmed (still activatable)
 	DirectKey   string // compact global binding, e.g. "C-s"; built-in Esc menu only
 }
 
@@ -15,6 +16,7 @@ type LeaderMenuState struct {
 	Open          bool
 	UserMenu      bool // true = F2/menu.toml
 	CopyMenu      bool // true = `"` copy menu
+	CopyGit       bool // with CopyMenu: the "Relative to git root" submenu
 	PreviewMenu   bool // true = ':' fullscreen-preview menu (ui.ViewFilePreview only)
 	GitFilterMenu bool // true = Alt-G git filter menu
 	Items         []LeaderMenuItem

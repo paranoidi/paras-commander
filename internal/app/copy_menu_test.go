@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -51,8 +52,8 @@ func TestOpenCopyMenuShowsCopyActions(t *testing.T) {
 	if app.model.LeaderMenu.UserMenu {
 		t.Fatal("expected UserMenu=false")
 	}
-	if len(app.model.LeaderMenu.Items) != 4 {
-		t.Fatalf("items len = %d, want 4", len(app.model.LeaderMenu.Items))
+	if len(app.model.LeaderMenu.Items) != 5 {
+		t.Fatalf("items len = %d, want 5", len(app.model.LeaderMenu.Items))
 	}
 }
 
@@ -146,6 +147,103 @@ func TestCopyToClipboardWarnsWhenClipboardToolUnavailable(t *testing.T) {
 	app.copyToClipboard(keymap.ActionClipboardCopyFilename)
 	if !strings.Contains(app.model.Message, "Copy failed") {
 		t.Fatalf("message = %q, want copy failure wording", app.model.Message)
+	}
+}
+
+func gitMenuItem(app *App) ui.LeaderMenuItem {
+	for _, it := range app.model.LeaderMenu.Items {
+		if it.Key == 'g' {
+			return it
+		}
+	}
+	return ui.LeaderMenuItem{}
+}
+
+// testCopyMenuGitApp is testCopyMenuApp with the file moved into a
+// subdirectory (the panel's cwd) of a fake git work tree.
+func testCopyMenuGitApp(t *testing.T) *App {
+	t.Helper()
+	clipboard.Reset()
+	prevWriter := clipboard.OSWriter
+	clipboard.OSWriter = func(string) error { return nil }
+	t.Cleanup(func() { clipboard.OSWriter = prevWriter })
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(root, ".git", "HEAD"))
+	sub := filepath.Join(root, "orchard", "lantern")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(sub, "meadow.txt"))
+	app := newTestApp(t, newScreen(t, 80, 50), Options{
+		CWD:    func() (string, error) { return sub, nil },
+		Config: config.Default(),
+		Paths:  config.Paths{ConfigDir: filepath.Join(root, "config")},
+	})
+	app.model.ViewMode = ui.ViewBrowser
+	for i := 0; i < app.model.Primary.VisibleEntryCount(); i++ {
+		if e, _, ok := app.model.Primary.VisibleEntry(i); ok && e.Name == "meadow.txt" {
+			app.model.Primary.Cursor = i
+			break
+		}
+	}
+	return app
+}
+
+func TestCopyMenuGitRowDisabledOutsideRepo(t *testing.T) {
+	app, _ := testCopyMenuApp(t)
+	app.toggleCopyMenu()
+	it := gitMenuItem(app)
+	if it.Key != 'g' || !it.Disabled {
+		t.Fatalf("expected disabled g row outside a work tree, got %+v", it)
+	}
+	app.dispatch(keymap.ActionClipboardGitMenu)
+	if app.model.LeaderMenu.CopyGit {
+		t.Fatal("git submenu must not open outside a work tree")
+	}
+}
+
+func TestCopyMenuGitSubmenuInsideRepo(t *testing.T) {
+	app := testCopyMenuGitApp(t)
+	app.toggleCopyMenu()
+	if gitMenuItem(app).Disabled {
+		t.Fatal("g row should be enabled inside a work tree")
+	}
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
+	st := app.model.LeaderMenu
+	if !st.Open || !st.CopyMenu || !st.CopyGit || len(st.Items) != 2 {
+		t.Fatalf("expected open git submenu with 2 rows, got %+v", st)
+	}
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
+	if got, want := clipboard.LastSet(), filepath.Join("orchard", "lantern", "meadow.txt"); got != want {
+		t.Fatalf("clipboard = %q, want %q", got, want)
+	}
+
+	app.toggleCopyMenu()
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
+	if got, want := clipboard.LastSet(), filepath.Join("orchard", "lantern"); got != want {
+		t.Fatalf("clipboard = %q, want %q", got, want)
+	}
+}
+
+func TestCopyMenuGitSubmenuLeftReturnsToTop(t *testing.T) {
+	for _, vi := range []bool{false, true} {
+		app := testCopyMenuGitApp(t)
+		app.model.ViMotionMode = vi
+		app.toggleCopyMenu()
+		app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
+		ev := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone)
+		if vi {
+			ev = tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone)
+		}
+		app.handleLeaderMenuKey(ev)
+		st := app.model.LeaderMenu
+		if !st.Open || !st.CopyMenu || st.CopyGit || len(st.Items) != 5 {
+			t.Fatalf("vi=%v: expected top copy menu, got %+v", vi, st)
+		}
 	}
 }
 

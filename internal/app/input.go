@@ -1190,8 +1190,12 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionClipboardCopyFileURL,
 		keymap.ActionClipboardCopyDirURL,
 		keymap.ActionClipboardCopyFilename,
-		keymap.ActionClipboardCopyFilenameWithoutExt:
+		keymap.ActionClipboardCopyFilenameWithoutExt,
+		keymap.ActionClipboardCopyGitFilePath,
+		keymap.ActionClipboardCopyGitDirPath:
 		a.copyToClipboard(actionID)
+	case keymap.ActionClipboardGitMenu:
+		a.openCopyGitMenu()
 	case keymap.ActionAppUserMenuEdit:
 		a.editUserMenu()
 	case keymap.ActionUIOpenTheme:

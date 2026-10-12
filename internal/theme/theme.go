@@ -262,11 +262,12 @@ type Theme struct {
 	DialogCompletionMatch          tcell.Style
 	DialogCompletionMatchSelected  tcell.Style
 
-	LeaderMenuSurface tcell.Style
-	LeaderMenuGroup   tcell.Style
-	LeaderMenuKey     tcell.Style
-	LeaderMenuArrow   tcell.Style
-	LeaderMenuLabel   tcell.Style
+	LeaderMenuSurface  tcell.Style
+	LeaderMenuGroup    tcell.Style
+	LeaderMenuKey      tcell.Style
+	LeaderMenuArrow    tcell.Style
+	LeaderMenuLabel    tcell.Style
+	LeaderMenuDisabled tcell.Style
 
 	MessageInfo  tcell.Style
 	MessageWarn  tcell.Style
@@ -1111,6 +1112,7 @@ var requiredStyleKeys = []string{
 	"leader_menu.key",
 	"leader_menu.arrow",
 	"leader_menu.label",
+	"leader_menu.disabled",
 	"message.info",
 	"message.warn",
 	"message.error",
@@ -1671,11 +1673,12 @@ func parse(data []byte) (Theme, error) {
 		DialogCompletionMatch:          styles["dialog.completion.match"],
 		DialogCompletionMatchSelected:  styles["dialog.completion.match.selected"],
 
-		LeaderMenuSurface: styles["leader_menu.surface"],
-		LeaderMenuGroup:   styles["leader_menu.group"],
-		LeaderMenuKey:     styles["leader_menu.key"],
-		LeaderMenuArrow:   styles["leader_menu.arrow"],
-		LeaderMenuLabel:   styles["leader_menu.label"],
+		LeaderMenuSurface:  styles["leader_menu.surface"],
+		LeaderMenuGroup:    styles["leader_menu.group"],
+		LeaderMenuKey:      styles["leader_menu.key"],
+		LeaderMenuArrow:    styles["leader_menu.arrow"],
+		LeaderMenuLabel:    styles["leader_menu.label"],
+		LeaderMenuDisabled: styles["leader_menu.disabled"],
 
 		MessageInfo:  styles["message.info"],
 		MessageWarn:  styles["message.warn"],

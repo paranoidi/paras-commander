@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/clipboard"
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/textutil"
@@ -12,7 +13,7 @@ import (
 )
 
 func (a *App) toggleCopyMenu() {
-	if a.copyMenuOpen() {
+	if a.copyMenuOpen() && !a.model.LeaderMenu.CopyGit {
 		a.closeLeaderMenu()
 		return
 	}
@@ -31,11 +32,40 @@ func (a *App) toggleCopyMenu() {
 	}
 	var items []ui.LeaderMenuItem
 	var actions []string
+	_, _, dirPath, _, hasTarget := a.copyTargets()
 	for _, e := range entries {
+		label := e.Label
+		disabled := false
+		if e.ActionID == keymap.ActionClipboardGitMenu {
+			// Same submenu marker as the user menu (userMenuLeaderMenuItems).
+			label += " " + string(a.styles.IconTreeExpand())
+			disabled = hasTarget && gitignore.ValidWorkTreeRoot(dirPath) == ""
+		}
+		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: label, Disabled: disabled})
+		actions = append(actions, e.ActionID)
+	}
+	a.openLeaderMenuDispatch(items, actions, false, true, "Copy menu", a.dispatchActionLikeKeyboardShortcut)
+}
+
+// openCopyGitMenu opens the "Relative to git root" submenu, or warns when the
+// target directory is not in a git work tree.
+func (a *App) openCopyGitMenu() {
+	_, _, dirPath, _, ok := a.copyTargets()
+	if !ok || a.keys == nil {
+		return
+	}
+	if gitignore.ValidWorkTreeRoot(dirPath) == "" {
+		a.setTransientMessage("Copy: not in a git repository", ui.MessageUrgencyWarn)
+		return
+	}
+	var items []ui.LeaderMenuItem
+	var actions []string
+	for _, e := range a.keys.CopyMenuGitEntries() {
 		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: e.Label})
 		actions = append(actions, e.ActionID)
 	}
 	a.openLeaderMenuDispatch(items, actions, false, true, "Copy menu", a.dispatchActionLikeKeyboardShortcut)
+	a.model.LeaderMenu.CopyGit = true
 }
 
 // singleCopyTarget builds the paths/entries/dirPath triple for a copy-menu
@@ -44,37 +74,45 @@ func singleCopyTarget(path string) ([]string, []localfs.Entry, string) {
 	return []string{canonicalTargetPath(path)}, []localfs.Entry{{Name: filepath.Base(path)}}, filepath.Dir(path)
 }
 
-func (a *App) copyToClipboard(actionID string) {
-	var paths []string
-	var entries []localfs.Entry
-	var dirPath string
+// copyTargets resolves the paths/entries/dirPath the copy actions operate on
+// for the current view. ok is false when there is no target; warn then holds
+// the message to show (empty for silent).
+func (a *App) copyTargets() (paths []string, entries []localfs.Entry, dirPath, warn string, ok bool) {
 	switch a.model.ViewMode {
 	case ui.ViewBrowser:
 		p := a.activePanel()
-		paths = panelTargetPaths(p)
-		entries = panelTargetEntries(p)
-		dirPath = p.PathString()
+		return panelTargetPaths(p), panelTargetEntries(p), p.PathString(), "", true
 	case ui.ViewFilePreview:
 		path := a.model.FullscreenFilePreview.Path
 		if path == "" {
-			return
+			return nil, nil, "", "", false
 		}
 		paths, entries, dirPath = singleCopyTarget(path)
+		return paths, entries, dirPath, "", true
 	case ui.ViewCompare:
-		path, ok := a.compareCtrl.SelectedColumnPinTarget()
-		if !ok {
-			a.setTransientMessage("Copy: no file selected", ui.MessageUrgencyWarn)
-			return
+		path, found := a.compareCtrl.SelectedColumnPinTarget()
+		if !found {
+			return nil, nil, "", "Copy: no file selected", false
 		}
 		paths, entries, dirPath = singleCopyTarget(path)
+		return paths, entries, dirPath, "", true
 	case ui.ViewDedup:
-		path, _, ok := a.dedupCtrl.SelectedPinTarget()
-		if !ok {
-			a.setTransientMessage("Copy: no file selected", ui.MessageUrgencyWarn)
-			return
+		path, _, found := a.dedupCtrl.SelectedPinTarget()
+		if !found {
+			return nil, nil, "", "Copy: no file selected", false
 		}
 		paths, entries, dirPath = singleCopyTarget(path)
-	default:
+		return paths, entries, dirPath, "", true
+	}
+	return nil, nil, "", "", false
+}
+
+func (a *App) copyToClipboard(actionID string) {
+	paths, entries, dirPath, warn, ok := a.copyTargets()
+	if !ok {
+		if warn != "" {
+			a.setTransientMessage(warn, ui.MessageUrgencyWarn)
+		}
 		return
 	}
 
@@ -104,6 +142,36 @@ func (a *App) copyToClipboard(actionID string) {
 			return
 		}
 		text = clipboard.BuildFilenamesWithoutExt(entries)
+	case keymap.ActionClipboardCopyGitFilePath, keymap.ActionClipboardCopyGitDirPath:
+		root := gitignore.ValidWorkTreeRoot(dirPath)
+		if root == "" {
+			a.setTransientMessage("Copy: not in a git repository", ui.MessageUrgencyWarn)
+			return
+		}
+		if actionID == keymap.ActionClipboardCopyGitDirPath {
+			dirs := make([]string, 0, len(paths))
+			for _, p := range paths {
+				dirs = append(dirs, filepath.Dir(p))
+			}
+			if len(dirs) == 0 {
+				dirs = []string{dirPath}
+			}
+			paths = dirs
+		}
+		rel := make([]string, 0, len(paths))
+		seen := make(map[string]struct{}, len(paths))
+		for _, p := range paths {
+			r, err := filepath.Rel(root, p)
+			if err != nil {
+				continue
+			}
+			if _, dup := seen[r]; dup {
+				continue
+			}
+			seen[r] = struct{}{}
+			rel = append(rel, r)
+		}
+		text = strings.Join(rel, "\n")
 	default:
 		return
 	}
