@@ -94,6 +94,10 @@ func newMassRenamePatternTestHandler(t *testing.T) (*Handler, *fakeMassRenamePat
 		model:     &ui.Model{},
 		configDir: t.TempDir(),
 	}
+	// Start from an existing empty patterns.toml so ops.DefaultMassRenamePatterns are not seeded.
+	if err := ops.SaveMassRenamePatterns(h.massRenamePatternsPath(), nil); err != nil {
+		t.Fatalf("SaveMassRenamePatterns: %v", err)
+	}
 	return h, fh
 }
 

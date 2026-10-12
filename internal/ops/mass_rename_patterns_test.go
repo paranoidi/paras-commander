@@ -2,6 +2,7 @@ package ops
 
 import (
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -20,8 +21,35 @@ func TestLoadMassRenamePatternsMissingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadMassRenamePatterns: %v", err)
 	}
-	if got != nil {
-		t.Fatalf("got = %#v, want nil", got)
+	if !slices.Equal(got, DefaultMassRenamePatterns) {
+		t.Fatalf("got = %#v, want DefaultMassRenamePatterns", got)
+	}
+}
+
+func TestUpsertMassRenamePatternSeedsDefaults(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "patterns.toml")
+	if err := UpsertMassRenamePattern(path, MassRenamePattern{Name: "meadow", Mode: "simple"}); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+	got, err := LoadMassRenamePatterns(path)
+	if err != nil {
+		t.Fatalf("LoadMassRenamePatterns: %v", err)
+	}
+	if len(got) != len(DefaultMassRenamePatterns)+1 || got[len(got)-1].Name != "meadow" {
+		t.Fatalf("got = %+v, want defaults followed by meadow", got)
+	}
+}
+
+func TestDefaultMassRenamePatternsPadLastNumber(t *testing.T) {
+	want := []string{"walnut 7 pear 05 plum", "walnut 7 pear 005 plum"}
+	for i, p := range DefaultMassRenamePatterns {
+		rx, err := MassRenameCompileRegex(p.Find, p.CaseFold)
+		if err != nil {
+			t.Fatalf("%s: compile: %v", p.Name, err)
+		}
+		if got := massRenameRegexReplace(rx, "walnut 7 pear 5 plum", p.Replace); got != want[i] {
+			t.Fatalf("%s: got %q, want %q", p.Name, got, want[i])
+		}
 	}
 }
 
@@ -52,6 +80,10 @@ func TestSaveLoadMassRenamePatternsRoundTrip(t *testing.T) {
 func TestUpsertMassRenamePatternAppendsAndOverwrites(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "patterns.toml")
+	// An existing (empty) file is never seeded with DefaultMassRenamePatterns.
+	if err := SaveMassRenamePatterns(path, nil); err != nil {
+		t.Fatalf("SaveMassRenamePatterns: %v", err)
+	}
 
 	if err := UpsertMassRenamePattern(path, MassRenamePattern{Name: "meadow", Description: "first", Mode: "simple"}); err != nil {
 		t.Fatalf("Upsert 1: %v", err)

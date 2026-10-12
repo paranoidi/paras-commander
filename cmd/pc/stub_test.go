@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ops"
 )
 
 func TestWriteConfigDirStubsCreatesAllFiles(t *testing.T) {
@@ -26,10 +28,18 @@ func TestWriteConfigDirStubsCreatesAllFiles(t *testing.T) {
 		config.DefaultUserMenuFileName,
 		config.DefaultMetaFileName,
 		config.DefaultPoolsFileName,
+		config.DefaultMassRenamePatternsFileName,
 	} {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			t.Fatalf("stat %s: %v", name, err)
 		}
+	}
+	patterns, err := ops.LoadMassRenamePatterns(filepath.Join(dir, config.DefaultMassRenamePatternsFileName))
+	if err != nil {
+		t.Fatalf("LoadMassRenamePatterns: %v", err)
+	}
+	if !slices.Equal(patterns, ops.DefaultMassRenamePatterns) {
+		t.Fatalf("patterns.toml = %+v, want DefaultMassRenamePatterns", patterns)
 	}
 	cfg, err := config.LoadFromPaths(config.Paths{
 		ConfigFile:      filepath.Join(dir, config.ConfigFileName()),

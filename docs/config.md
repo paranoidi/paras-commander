@@ -20,7 +20,9 @@ pc --config-stub
 ```
 
 This writes a `config.toml` containing every key at its current built-in
-default. It's the fastest way to get a copy of every available key, correctly
+default, plus `keybindings.toml`, `menu.toml`, `meta.toml`, `pools.toml` and
+`patterns.toml` (the built-in example mass-rename patterns). Existing files are
+left unchanged. It's the fastest way to get a copy of every available key, correctly
 named and up to date with the installed binary — treat it as more
 authoritative than any example in this document if the two ever disagree.
 
@@ -439,7 +441,7 @@ Worker pool definitions (used by "run for each" operations).
 
 ## `[mass_rename]`
 
-Saved mass-rename find/replace patterns (F2 Load pattern / F5 Save pattern in the mass rename dialog; F5 again on the Name/Description save prompt opens **Overwrite existing**, a picker over the saved patterns whose selection writes the current find/replace over that entry, keeping its name; F8 deletes the selected saved pattern. F3 opens the in-memory pattern-history picker, which is session-only and not backed by this file).
+Saved mass-rename find/replace patterns (F2 Load pattern / F5 Save pattern in the mass rename dialog; F5 again on the Name/Description save prompt opens **Overwrite existing**, a picker over the saved patterns whose selection writes the current find/replace over that entry, keeping its name; F8 deletes the selected saved pattern. F3 opens the in-memory pattern-history picker, which is session-only and not backed by this file). While the file does not exist, the Load picker lists built-in example patterns (*Pad last number to 2 digits* / *3 digits*); the first save or delete writes them into the file along with that change. An existing file is never re-seeded, so deleted examples stay deleted.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

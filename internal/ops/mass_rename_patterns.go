@@ -2,8 +2,10 @@ package ops
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -16,15 +18,29 @@ type MassRenamePattern struct {
 	Mode        string `toml:"mode"` // "simple" | "regex" | "capitalize"
 	Find        string `toml:"find"`
 	Replace     string `toml:"replace"`
-	CaseFold    bool   `toml:"case_fold"`
+	CaseFold    bool   `toml:"case_insensitive"`
 	StripSpaces bool   `toml:"strip_spaces"`
-	CapEachWord bool   `toml:"cap_each_word"`
-	CapPunctSep bool   `toml:"cap_punct_sep"`
+	CapEachWord bool   `toml:"capitalize_each_word"`
+	CapPunctSep bool   `toml:"punctuation_separates_words"`
 	IgnoreExt   bool   `toml:"ignore_ext"`
+}
+
+// DefaultMassRenamePatterns seeds patterns.toml: LoadMassRenamePatterns returns them while the
+// file does not exist, and the first save or delete writes them out with the change. An existing
+// file (even an empty one) is never re-seeded, so deleted defaults stay deleted.
+var DefaultMassRenamePatterns = []MassRenamePattern{
+	{Name: "Pad last number to 2 digits", Description: "zero-pad the last number in the name", Mode: "regex", Find: `(\d+)(\D*)$`, Replace: "${1:2}${2}", IgnoreExt: true},
+	{Name: "Pad last number to 3 digits", Description: "zero-pad the last number in the name", Mode: "regex", Find: `(\d+)(\D*)$`, Replace: "${1:3}${2}", IgnoreExt: true},
 }
 
 type massRenamePatternsFile struct {
 	Patterns []MassRenamePattern `toml:"patterns"`
+}
+
+// EncodeDefaultMassRenamePatterns writes DefaultMassRenamePatterns in patterns.toml format
+// (used by pc --config-stub).
+func EncodeDefaultMassRenamePatterns(w io.Writer) error {
+	return toml.NewEncoder(w).Encode(massRenamePatternsFile{Patterns: DefaultMassRenamePatterns})
 }
 
 // MassRenamePatternsResolveFile returns the path to patterns.toml: cfgFile when non-empty
@@ -36,12 +52,12 @@ func MassRenamePatternsResolveFile(cfgFile, configDir string) string {
 	return filepath.Join(configDir, "patterns.toml")
 }
 
-// LoadMassRenamePatterns reads path. A missing file returns (nil, nil).
+// LoadMassRenamePatterns reads path. A missing file returns a copy of DefaultMassRenamePatterns.
 func LoadMassRenamePatterns(path string) ([]MassRenamePattern, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return slices.Clone(DefaultMassRenamePatterns), nil
 		}
 		return nil, fmt.Errorf("read %q: %w", path, err)
 	}

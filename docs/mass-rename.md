@@ -33,3 +33,7 @@ unmatched group counts as empty, and `W` is capped at 255.
 
 Every number matched by the pattern is padded, so `maple1pear2` with `\d+` becomes
 `maple001pear002`. Use a more specific pattern such as `E(\d+)` to pad only one number.
+
+To pad only the last number, use `(\d+)(\D*)$` with `${1:3}${2}`: `walnut 7 pear 5.txt` becomes
+`walnut 7 pear 005.txt`. The built-in patterns *Pad last number to 2 digits* and *Pad last
+number to 3 digits* (F2 Load pattern) do exactly this.
