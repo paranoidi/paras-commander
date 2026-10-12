@@ -322,6 +322,7 @@ per-entry field list.
 Inside a submenu, **Left** or **Backspace** (`usermenu.back` under `[dialog.user_menu]` in
 `keybindings.toml`) returns to the parent menu; at the top level it closes the menu. In vi-motion
 mode **h** acts as Left unless a menu entry is bound to `h`. **Esc** closes the whole menu.
+The same `usermenu.back` binding (Left, or **h** in vi-motion mode) closes the `"` copy menu.
 
 ## `[preview]`
 

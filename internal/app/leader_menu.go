@@ -319,17 +319,19 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 		return false
 	}
 
-	if st.UserMenu && a.model.ViMotionMode {
+	backNav := st.UserMenu || st.CopyMenu
+	if backNav && a.model.ViMotionMode {
 		// An entry bound to h/j/k/l keeps its key; otherwise h acts as Left (usermenu.back).
 		if _, isEntry := ui.LeaderMenuIndexForKey(st.Items, event.Rune()); !isEntry {
 			event = keymap.RemapViMotionKey(event)
 		}
 	}
 
-	if st.UserMenu && a.keys.UserMenu != nil {
+	// usermenu.back also closes the `"` copy menu, which has no parent level.
+	if backNav && a.keys.UserMenu != nil {
 		if id, ok := a.keys.UserMenu.Lookup(event); ok && id == keymap.ActionUserMenuBack {
 			n := len(a.userMenuStack)
-			if n == 0 {
+			if n == 0 || st.CopyMenu {
 				a.closeUserMenu()
 				return false
 			}

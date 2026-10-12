@@ -148,3 +148,19 @@ func TestCopyToClipboardWarnsWhenClipboardToolUnavailable(t *testing.T) {
 		t.Fatalf("message = %q, want copy failure wording", app.model.Message)
 	}
 }
+
+func TestCopyMenuLeftCloses(t *testing.T) {
+	for _, vi := range []bool{false, true} {
+		app, _ := testCopyMenuApp(t)
+		app.model.ViMotionMode = vi
+		app.toggleCopyMenu()
+		ev := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone)
+		if vi {
+			ev = tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone)
+		}
+		app.handleLeaderMenuKey(ev)
+		if app.model.LeaderMenu.Open {
+			t.Fatalf("vi=%v: copy menu still open after Left", vi)
+		}
+	}
+}
