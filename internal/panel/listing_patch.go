@@ -75,7 +75,7 @@ func (s *State) InsertEntry(entry localfs.Entry, viewportRows int) bool {
 // already exist, are skipped, and the expensive index rebuild/sort/filter passes run once for
 // the whole batch rather than once per entry — inserting one at a time (each doing its own
 // O(entries) duplicate scan and full ApplySort) is O(n²) and stalls the UI on a large batch.
-// Returns true when anything was inserted.
+// Inserted entries get the new-file mark. Returns true when anything was inserted.
 func (s *State) InsertEntries(entries []localfs.Entry, viewportRows int) bool {
 	if s == nil || s.Path.IsZero() || len(entries) == 0 {
 		return false
@@ -84,7 +84,7 @@ func (s *State) InsertEntries(entries []localfs.Entry, viewportRows int) bool {
 	for _, e := range s.Entries {
 		existing[filepath.Clean(e.Path)] = true
 	}
-	inserted := false
+	var inserted []string
 	for _, entry := range entries {
 		if entry.Path == "" {
 			continue
@@ -103,11 +103,14 @@ func (s *State) InsertEntries(entries []localfs.Entry, viewportRows int) bool {
 		}
 		entry.Path = clean
 		s.Entries = append(s.Entries, entry)
-		inserted = true
+		inserted = append(inserted, entry.Name)
 	}
-	if !inserted {
+	if len(inserted) == 0 {
 		return false
 	}
+	// The follow-up reload diffs against Entries, which already hold these rows, so mark them
+	// here — same "new" mark a reload gives anything else that appeared.
+	s.AddNewFileMarks(s.Path, inserted)
 	s.ListingEpoch++
 	s.rebuildListingByPath()
 	s.recomputeSelectionListedBytes()

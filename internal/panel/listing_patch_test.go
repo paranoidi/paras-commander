@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -28,6 +29,14 @@ func TestInsertEntryOnlyWhenParentMatches(t *testing.T) {
 	}
 	if !state.SelectVisibleEntry("beacon.txt") {
 		t.Fatal("beacon missing after insert")
+	}
+	// The follow-up reload can't diff it as newly appeared (Entries already hold it), so the
+	// insert itself must mark it new — matching nested tree rows, which get it from that diff.
+	if tier := state.NewFileMarkTier(localfs.Entry{Name: "beacon.txt", Path: newPath}); tier != panellist.NewFileMarkLatest {
+		t.Fatalf("inserted entry tier = %v, want NewFileMarkLatest", tier)
+	}
+	if tier := state.NewFileMarkTier(localfs.Entry{Name: "harbor.txt", Path: filepath.Join(dir, "harbor.txt")}); tier != panellist.NewFileMarkNone {
+		t.Fatalf("pre-existing entry tier = %v, want NewFileMarkNone", tier)
 	}
 	if state.InsertEntry(localfs.Entry{Name: "beacon.txt", Path: newPath, Type: localfs.EntryFile}, 10) {
 		t.Fatal("duplicate InsertEntry should be false")
