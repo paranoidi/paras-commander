@@ -99,9 +99,7 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 		return
 	}
 
-	if GroupSelectShowsCaseSensitive(state) {
-		draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == GroupSelectFocusCase, false, styles)
-	}
+	draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == GroupSelectFocusCase, false, styles)
 	if state.Context == "find" {
 		draw.DrawDialogCheckbox(screen, col2X, y, "Match full path", 'A', state.FullPath, state.Focus == GroupSelectFocusFullPath, false, styles)
 	}

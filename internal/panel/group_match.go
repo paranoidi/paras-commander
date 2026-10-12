@@ -89,6 +89,9 @@ func newGroupMatcher(pattern string, mode GroupPatternMode, caseSensitive bool, 
 			return GroupMatcher{}, fmt.Errorf("invalid shell pattern: %w", err)
 		}
 	case GroupPatternRegex:
+		if !caseSensitive {
+			pattern = "(?i)" + pattern
+		}
 		re, err := regexp.Compile(pattern)
 		if err != nil {
 			return GroupMatcher{}, fmt.Errorf("invalid regexp: %w", err)

@@ -735,14 +735,6 @@ func (a *App) applyGroupSelectModeFromFocus() {
 	case dialog.GroupSelectFocusSimpleRadio:
 		gs.PatternMode = panel.GroupPatternSimple
 	}
-	a.groupSelectClampCaseFocus()
-}
-
-func (a *App) groupSelectClampCaseFocus() {
-	gs := &a.model.GroupSelect
-	if gs.PatternMode == panel.GroupPatternRegex && gs.Focus == dialog.GroupSelectFocusCase {
-		gs.Focus = dialog.GroupSelectFocusDirsOnly
-	}
 }
 
 func (a *App) tryRejectGroupSelectOK() bool {
@@ -930,7 +922,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			break
 		}
 	}
-	if focus, ok := dialog.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.PatternMode, gs.MetaColumnCount, dialog.GroupSelectShowsFullPath(*gs)); ok {
+	if focus, ok := dialog.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.MetaColumnCount, dialog.GroupSelectShowsFullPath(*gs)); ok {
 		gs.Focus = focus
 	}
 }
@@ -940,16 +932,14 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 // truth shared by the Alt-letter mnemonic switch (which sets gs.Focus only when
 // the action actually applies) and the Space-toggle switch (which already has
 // gs.Focus at the target field). Returns false when focus doesn't address a
-// toggleable field, or the field is conditionally hidden (case-sensitivity when
-// not shown, meta columns when there are none) so nothing changed.
+// toggleable field, or the field is conditionally hidden (meta columns when
+// there are none) so nothing changed.
 func (a *App) toggleGroupSelectField(gs *dialog.GroupSelectState, focus int) bool {
 	switch focus {
 	case dialog.GroupSelectFocusShellRadio:
 		gs.PatternMode = panel.GroupPatternShell
-		a.groupSelectClampCaseFocus()
 	case dialog.GroupSelectFocusRegexRadio:
 		gs.PatternMode = panel.GroupPatternRegex
-		a.groupSelectClampCaseFocus()
 	case dialog.GroupSelectFocusSimpleRadio:
 		gs.PatternMode = panel.GroupPatternSimple
 	case dialog.GroupSelectFocusFilesOnly:
@@ -963,9 +953,6 @@ func (a *App) toggleGroupSelectField(gs *dialog.GroupSelectState, focus int) boo
 			gs.FilesOnly = false
 		}
 	case dialog.GroupSelectFocusCase:
-		if !dialog.GroupSelectShowsCaseSensitive(*gs) {
-			return false
-		}
 		gs.CaseSensitive = !gs.CaseSensitive
 	case dialog.GroupSelectFocusFullPath:
 		if !dialog.GroupSelectShowsFullPath(*gs) {
