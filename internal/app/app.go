@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -669,6 +670,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Mu:           &app.commandsMu,
 		Ctx:          app.commandsCtx,
 		WorkPools:    app.workPools,
+		ChildEnv:     cmdrun.ColorEnv(cfg.Commands.ForceColor),
 	})
 	app.compareCtrl = comparectrl.New(comparectrl.Deps{
 		Host:        compareHost{appShellHost: appShellHost{app: app}},

@@ -58,6 +58,7 @@ These live alongside `config.toml` in the same config directory but are
 - [\[logging\]](#logging)
 - [\[bookmarks\]](#bookmarks)
 - [\[user_menu\]](#user_menu)
+- [\[commands\]](#commands)
 - [\[preview\]](#preview)
 - [\[sftp\]](#sftp)
 - [\[editor\]](#editor)
@@ -323,6 +324,14 @@ Inside a submenu, **Left** or **Backspace** (`usermenu.back` under `[dialog.user
 `keybindings.toml`) returns to the parent menu; at the top level it closes the menu. In vi-motion
 mode **h** acts as Left unless a menu entry is bound to `h`. **Esc** closes the whole menu.
 The same `usermenu.back` binding (Left, or **h** in vi-motion mode) returns from the `"` copy menu's git submenu to the copy menu, and closes the copy menu at top level.
+
+## `[commands]`
+
+User commands whose output is captured into the Commands view or output dialog (user menu, run-for-each, executing a file from the panel).
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `force_color` | bool | `true` | Set `FORCE_COLOR=1` and `CLICOLOR_FORCE=1` for captured (pipe, non-TTY) runs so tools that honour them emit ANSI color. Tools that only check `isatty` still won't color. PTY runs (run-for-each with terminal) are real terminals and don't need it. |
 
 ## `[preview]`
 

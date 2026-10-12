@@ -32,6 +32,8 @@ type Deps struct {
 	// It is shared with the preview subsystem's background subprocess goroutines too.
 	Ctx       context.Context
 	WorkPools *workpool.Registry
+	// ChildEnv is extra KEY=VALUE env for captured (non-PTY) child runs (see cmdrun.ColorEnv).
+	ChildEnv []string
 }
 
 // Handler owns the Commands view, command-output dialog, and run-for-each dialog/backend.
@@ -44,6 +46,7 @@ type Handler struct {
 	mu           *sync.RWMutex
 	ctx          context.Context
 	workPools    *workpool.Registry
+	childEnv     []string
 
 	// batchesInflight counts in-flight command batches (run-for-each, user-menu, file-execute)
 	// started via Deps.Ctx-scoped goroutines. HasRunning reports whether any is still running.
@@ -86,6 +89,9 @@ type entryPTYSession struct {
 	feed *subshell.PanelFeed
 }
 
+// ChildEnv returns the extra environment for captured child runs.
+func (h *Handler) ChildEnv() []string { return h.childEnv }
+
 // New creates a Handler.
 func New(d Deps) *Handler {
 	sem := make(chan struct{}, 1)
@@ -99,6 +105,7 @@ func New(d Deps) *Handler {
 		mu:            d.Mu,
 		ctx:           d.Ctx,
 		workPools:     d.WorkPools,
+		childEnv:      d.ChildEnv,
 		ptySessions:   make(map[int]*entryPTYSession),
 		ptyForeground: sem,
 	}

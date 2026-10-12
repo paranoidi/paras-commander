@@ -4,6 +4,9 @@ package config
 // Single source of truth: do not duplicate these in internal/ops.
 
 const (
+	// DefaultCommandsForceColor is the default for [commands].force_color.
+	DefaultCommandsForceColor = true
+
 	// DefaultPathPickerValidateDelayMS is the debounce before filesystem checks on the path-picker filter.
 	DefaultPathPickerValidateDelayMS = 200
 

@@ -30,13 +30,23 @@ type RunResult struct {
 // Run executes argv as a subprocess with working directory dir. argv must be non-empty.
 // Each stream is capped at maxStreamBytes; when exceeded, tail bytes are kept and StdoutTrim/StderrTrim are set.
 func Run(ctx context.Context, argv []string, dir string, maxStreamBytes int) RunResult {
-	return RunTracked(ctx, argv, dir, maxStreamBytes, nil)
+	return RunTracked(ctx, argv, nil, dir, maxStreamBytes, nil)
+}
+
+// ColorEnv returns env vars asking captured (non-TTY) children to emit ANSI color, or nil when
+// force is false. Honoured by many CLIs (chalk/node, python rich/pytest, BSD ls, cmake, many
+// Rust crates); tools that only check isatty still won't color.
+func ColorEnv(force bool) []string {
+	if !force {
+		return nil
+	}
+	return []string{"FORCE_COLOR=1", "CLICOLOR_FORCE=1"}
 }
 
 // RunTracked behaves like Run but, once the subprocess starts, calls onStart with its
 // *os.Process so a caller can send it signals (e.g. terminate/kill) independently of ctx
-// cancellation. onStart may be nil.
-func RunTracked(ctx context.Context, argv []string, dir string, maxStreamBytes int, onStart func(*os.Process)) RunResult {
+// cancellation. onStart may be nil. extraEnv (KEY=VALUE) is appended to the inherited environment.
+func RunTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStreamBytes int, onStart func(*os.Process)) RunResult {
 	if len(argv) == 0 {
 		return RunResult{LaunchErr: errors.New("empty argv"), ExitCode: -1}
 	}
@@ -46,6 +56,9 @@ func RunTracked(ctx context.Context, argv []string, dir string, maxStreamBytes i
 
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
 	// Orphaned child processes (e.g. clipboard tools that fork into the background
 	// to keep serving a selection) may inherit our stdout/stderr pipe and never
 	// close it on their own — no amount of waiting makes them flush, since they're

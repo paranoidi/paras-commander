@@ -443,7 +443,7 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, rowID string, arg
 	})
 	a.commandsCtrl.PostWake(commandsctrl.WakePayload{OutputDialogStartedRunID: rowID})
 
-	res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+	res := cmdrun.RunTracked(ctx, argv, a.commandsCtrl.ChildEnv(), workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 		a.commandsCtrl.SetProcess(idx, p)
 	})
 	a.commandsCtrl.UnregisterProc(idx)

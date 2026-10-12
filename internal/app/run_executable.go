@@ -165,7 +165,7 @@ func (a *App) runFileExecuteCommand(ctx context.Context, idx int, argv []string,
 	})
 	a.commandsCtrl.PostRenderWake()
 
-	res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+	res := cmdrun.RunTracked(ctx, argv, a.commandsCtrl.ChildEnv(), workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 		a.commandsCtrl.SetProcess(idx, p)
 	})
 	a.commandsCtrl.UnregisterProc(idx)

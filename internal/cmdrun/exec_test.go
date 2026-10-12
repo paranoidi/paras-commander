@@ -176,3 +176,13 @@ func killPIDFile(path string) {
 func processAlive(pid int) bool {
 	return syscall.Kill(pid, 0) == nil
 }
+
+func TestRunTracked_colorEnv(t *testing.T) {
+	res := RunTracked(context.Background(), []string{"sh", "-c", `printf %s "$FORCE_COLOR"`}, ColorEnv(true), "", MaxStreamBytes, nil)
+	if got := string(res.Stdout); got != "1" {
+		t.Fatalf("FORCE_COLOR = %q, want 1", got)
+	}
+	if ColorEnv(false) != nil {
+		t.Fatal("ColorEnv(false) should be nil")
+	}
+}

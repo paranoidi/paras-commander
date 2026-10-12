@@ -96,10 +96,13 @@ type Config struct {
 	Logging    LoggingConfig    `toml:"logging"`
 	Bookmarks  BookmarksConfig  `toml:"bookmarks"`
 	UserMenu   UserMenuConfig   `toml:"user_menu"`
-	Preview    PreviewConfig    `toml:"preview"`
-	SFTP       SFTPConfig       `toml:"sftp"`
-	Shell      ShellConfig      `toml:"shell"`
-	Editor     EditorConfig     `toml:"editor"`
+	// Commands configures user commands whose output is captured into the Commands view / output
+	// dialog (user menu, run-for-each, executing a file from the panel).
+	Commands CommandsConfig `toml:"commands"`
+	Preview  PreviewConfig  `toml:"preview"`
+	SFTP     SFTPConfig     `toml:"sftp"`
+	Shell    ShellConfig    `toml:"shell"`
+	Editor   EditorConfig   `toml:"editor"`
 	// Meta configures the separate meta.toml command definitions file and execution settings.
 	Meta MetaConfig `toml:"meta"`
 	// Pools configures discovery of the separate pools.toml work-pool definitions file.
@@ -224,6 +227,13 @@ type MetaConfig struct {
 type BookmarksConfig struct {
 	// File is the marks file path. Empty uses FZF_MARKS_FILE or ~/.fzf-marks.
 	File string `toml:"file"`
+}
+
+// CommandsConfig controls how captured user commands are run.
+type CommandsConfig struct {
+	// ForceColor sets FORCE_COLOR=1 and CLICOLOR_FORCE=1 for captured (non-PTY) runs so tools
+	// emit ANSI color even though stdout is a pipe.
+	ForceColor bool `toml:"force_color"`
 }
 
 // UserMenuConfig controls discovery of the separate menu.toml (F2 user menu).
@@ -735,6 +745,7 @@ func Default() Config {
 			File:       "",
 			LocalNames: []string{DefaultUserMenuFileName},
 		},
+		Commands: CommandsConfig{ForceColor: DefaultCommandsForceColor},
 		Preview: PreviewConfig{
 			Mode:                          DefaultPreviewMode,
 			Style:                         DefaultPreviewStyle,

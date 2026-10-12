@@ -249,7 +249,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			res = h.runEntryPTY(ctx, idx, argv, workDir, panelOwner, markRunning)
 		} else {
 			markRunning()
-			res = cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+			res = cmdrun.RunTracked(ctx, argv, h.childEnv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 				h.SetProcess(idx, p)
 			})
 			h.UnregisterProc(idx)
@@ -284,7 +284,7 @@ func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workD
 	if err != nil {
 		if errors.Is(err, subshell.ErrUnsupportedPlatform) {
 			markRunning()
-			res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+			res := cmdrun.RunTracked(ctx, argv, h.childEnv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 				h.SetProcess(idx, p)
 			})
 			h.UnregisterProc(idx)
