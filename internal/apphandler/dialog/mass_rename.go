@@ -519,20 +519,19 @@ func (h *Handler) ExecuteMassRename() {
 	}
 	h.recordMassRenameHistory(h.massRenameCurrentPattern("", "", histFind, histReplace))
 	n := 0
-	var renamedNames []string
+	var renamedPaths []string
 	active := h.host.ActivePanel()
 	vr := h.host.ActiveViewportRows()
 	for _, r := range rows {
 		if r.NewBase != r.OldBase {
 			n++
-			renamedNames = append(renamedNames, r.NewBase)
+			renamedPaths = append(renamedPaths, filepath.Join(filepath.Dir(r.SourcePath), r.NewBase))
 			active.RenameEntry(r.SourcePath, r.NewBase, vr)
 		}
 	}
-	panelDir := active.Path
 	h.CloseFileDialog()
 	h.RefreshBothPanels()
-	h.host.ActivePanel().AddRenameMarks(panelDir, renamedNames)
+	h.addRenameMarks(renamedPaths)
 	h.host.ActivePanel().ClearSelection()
 	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", n), ui.MessageUrgencyInfo)
 }
@@ -579,13 +578,13 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 	n := 0
 	newSources := make([]dialog.MassRenameSource, len(rows))
 	newPaths := make([]string, len(rows))
-	var renamedNames []string
+	var renamedPaths []string
 	active := h.host.ActivePanel()
 	vr := h.host.ActiveViewportRows()
 	for i, r := range rows {
 		if r.NewBase != r.OldBase {
 			n++
-			renamedNames = append(renamedNames, r.NewBase)
+			renamedPaths = append(renamedPaths, filepath.Join(filepath.Dir(r.SourcePath), r.NewBase))
 			active.RenameEntry(r.SourcePath, r.NewBase, vr)
 		}
 		newPath := filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
@@ -593,9 +592,8 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 		newPaths[i] = newPath
 	}
 
-	panelDir := active.Path
 	h.RefreshBothPanels()
-	h.host.ActivePanel().AddRenameMarks(panelDir, renamedNames)
+	h.addRenameMarks(renamedPaths)
 	h.host.ActivePanel().ClearSelection()
 	for _, np := range newPaths {
 		h.host.ActivePanel().AddSelection(np)

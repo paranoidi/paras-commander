@@ -120,7 +120,7 @@ func (a *App) runExecutableFromPanel(path string) {
 		return
 	}
 
-	workDir := p.PathString()
+	workDir := filepath.Dir(path)
 	cmdLine := formatExecuteCommandLine(workDir, path)
 	argv := []string{path}
 	background := resolveExecuteBackground(a.config.Panels.ExecuteRules, a.config.Panels.ShellPatterns, filepath.Base(path), fi.Mode())

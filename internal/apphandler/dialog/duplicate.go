@@ -94,7 +94,7 @@ func (h *Handler) executeDuplicate() {
 		// The copy is only queued above, not yet on disk, so it can't be tied to a specific
 		// reload (unlike rename/mkdir's RefreshBothPanelsWithFocus); this polls instead, via
 		// ReconcilePendingPanelFocus, until the job's terminal event eventually refreshes the panel.
-		h.schedulePanelFocus(panelID, listDir, plan.NewName)
+		h.schedulePanelFocus(panelID, listDir, plan.NewName, plan.DestPath)
 	}
 	h.RefreshBothPanels()
 	h.host.SetTransientMessage(fmt.Sprintf("Copy queued as %s", plan.NewName), ui.MessageUrgencyInfo)

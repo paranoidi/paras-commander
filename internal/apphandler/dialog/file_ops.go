@@ -435,7 +435,6 @@ func (h *Handler) executeRename() {
 	}
 	focusAfter := d.RenameFocusAfter
 	openInOther := d.RenameOpenInOther && d.RenameSourceIsDir
-	panelDir := p.Path
 	panelID := h.model.ActivePanel
 	panelPath := p.PathString()
 	if h.useRemoteFileOp(sourcePath, panelPath) {
@@ -444,11 +443,11 @@ func (h *Handler) executeRename() {
 			entry.Name = loc.Base()
 		}
 		h.startRemoteRename(renameApply{
-			entry: entry, focusAfter: focusAfter, openInOther: openInOther, panelDir: panelDir, panelID: panelID,
+			entry: entry, focusAfter: focusAfter, openInOther: openInOther, panelID: panelID,
 		}, newName, panelPath)
 		return
 	}
-	retry := renameApply{focusAfter: focusAfter, openInOther: openInOther, panelDir: panelDir, panelID: panelID}
+	retry := renameApply{focusAfter: focusAfter, openInOther: openInOther, panelID: panelID}
 	entry, err := localfs.EntryFromPath(sourcePath)
 	if err != nil {
 		h.host.SetErrorMessage("Rename source", err)
@@ -473,8 +472,18 @@ func (h *Handler) executeRename() {
 	}
 	h.CloseFileDialog()
 	h.applyRenameSuccess(renameApply{
-		plan: plan, entry: entry, focusAfter: focusAfter, openInOther: openInOther, panelDir: panelDir, panelID: panelID,
+		plan: plan, entry: entry, focusAfter: focusAfter, openInOther: openInOther, panelID: panelID,
 	})
+}
+
+// addRenameMarks records each renamed row under its own parent directory (tree rows can be nested).
+func (h *Handler) addRenameMarks(newPaths []string) {
+	p := h.host.ActivePanel()
+	for _, np := range newPaths {
+		if loc, err := pathloc.Parse(np); err == nil {
+			p.AddRenameMarks(loc.Parent(), []string{loc.Base()})
+		}
+	}
 }
 
 func (h *Handler) applyRenameSuccess(st renameApply) {
@@ -488,14 +497,11 @@ func (h *Handler) applyRenameSuccess(st renameApply) {
 	} else {
 		h.RefreshBothPanels()
 	}
-	h.host.ActivePanel().AddRenameMarks(st.panelDir, []string{st.plan.NewName})
+	h.addRenameMarks([]string{st.plan.NewPath})
 	if st.openInOther {
-		if target, err := st.panelDir.Join(st.plan.NewName); err == nil {
-			err = h.host.NavigatePanelToPath(h.host.InactivePanelID(), target.String(), "")
-			if err != nil {
-				h.host.SetErrorMessage("Rename", err)
-				return
-			}
+		if err := h.host.NavigatePanelToPath(h.host.InactivePanelID(), st.plan.NewPath, ""); err != nil {
+			h.host.SetErrorMessage("Rename", err)
+			return
 		}
 	}
 	h.host.SetTransientMessage(fmt.Sprintf("Renamed to %s", st.plan.NewName), ui.MessageUrgencyInfo)
@@ -514,11 +520,11 @@ func (h *Handler) executeMkdir() {
 		action = d.MkdirAction
 	}
 	openInInactive := d.MkdirOpenInInactive
-	priorEntryName := ""
+	priorEntryPath := ""
 	if entry, ok := p.CurrentEntry(); ok {
-		priorEntryName = entry.Name
+		priorEntryPath = entry.Path
 	}
-	panelPath := p.PathString()
+	panelPath := p.CursorDir().String()
 	panelID := h.model.ActivePanel
 
 	// For copy/move post-actions, resolve sources up-front so a missing/empty
@@ -554,7 +560,8 @@ func (h *Handler) executeMkdir() {
 		action:         action,
 		sources:        sources,
 		openInInactive: openInInactive,
-		priorEntryName: priorEntryName,
+		priorEntryPath: priorEntryPath,
+		dir:            panelPath,
 		panelID:        panelID,
 	}
 	if h.useRemoteFileOp(panelPath, input) {
@@ -596,20 +603,20 @@ func (h *Handler) applyMkdirSuccess(st mkdirApply) {
 		Type: localfs.EntryDirectory,
 		Mode: 0o755,
 	}, viewportRows)
-	focusName := ""
+	focusPath := ""
 	if st.openInInactive {
-		if st.priorEntryName != "" && st.priorEntryName != createdName {
-			focusName = st.priorEntryName
+		if st.priorEntryPath != "" && st.priorEntryPath != plan.Path {
+			focusPath = st.priorEntryPath
 		}
 		// The createdName-under-cursor fallback (step off the just-created directory before
 		// reload) still runs synchronously below on the panel's pre-reload cursor state — no
 		// specific target name to defer, so there is nothing to schedule here.
 	} else {
-		focusName = createdName
+		focusPath = plan.Path
 	}
-	if focusName != "" {
+	if focusPath != "" {
 		h.RefreshBothPanelsWithFocus(st.panelID, func() {
-			h.host.PanelByID(st.panelID).SelectVisibleEntryInViewport(focusName, h.host.PanelViewportRows(st.panelID))
+			h.host.PanelByID(st.panelID).SelectVisibleEntryPathInViewport(focusPath, h.host.PanelViewportRows(st.panelID))
 		})
 	} else {
 		h.RefreshBothPanels()

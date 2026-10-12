@@ -503,6 +503,25 @@ func (s State) CurrentEntry() (localfs.Entry, bool) {
 	return entry, ok
 }
 
+// EntryDir is the directory containing entry as listed: its parent in tree layout (rows can live
+// in expanded subdirectories), else s.Path.
+func (s *State) EntryDir(entry localfs.Entry) pathloc.Path {
+	if s.ListLayout == ListLayoutTree && entry.Path != "" && entry.Name != ".." {
+		if p, err := pathloc.Parse(entry.Path); err == nil {
+			return p.Parent()
+		}
+	}
+	return s.Path
+}
+
+// CursorDir is EntryDir of the cursor row, or s.Path when there is none.
+func (s *State) CursorDir() pathloc.Path {
+	if entry, ok := s.CurrentEntry(); ok {
+		return s.EntryDir(entry)
+	}
+	return s.Path
+}
+
 // VisibleEntryCount returns the number of entries currently visible in the panel.
 func (s State) VisibleEntryCount() int {
 	if s.ActiveEntryFilter != nil {
@@ -1963,6 +1982,15 @@ func (s *State) SelectVisibleEntryInViewport(name string, viewportRows int) bool
 	return true
 }
 
+// SelectVisibleEntryPathInViewport selects the row at absPath (any tree depth) and scrolls according to ScrollMode.
+func (s *State) SelectVisibleEntryPathInViewport(absPath string, viewportRows int) bool {
+	if !s.selectPathOrArmTreeCursor(absPath) {
+		return false
+	}
+	s.EnsureCursorInViewport(viewportRows)
+	return true
+}
+
 // SelectVisibleEntryCentered selects by visible name and scrolls to center the row when possible.
 // Used after in-place operations (rename) so scroll matches explicit navigation recall, independent of ScrollMode.
 func (s *State) SelectVisibleEntryCentered(name string, viewportRows int) bool {
@@ -1975,11 +2003,25 @@ func (s *State) SelectVisibleEntryCentered(name string, viewportRows int) bool {
 
 // SelectVisibleEntryPathCentered selects the row at absPath (any tree depth) and centers it.
 func (s *State) SelectVisibleEntryPathCentered(absPath string, viewportRows int) bool {
-	if !s.selectVisibleEntryByPath(absPath) {
+	if !s.selectPathOrArmTreeCursor(absPath) {
 		return false
 	}
 	s.applyHighlightScroll(viewportRows, true)
 	return true
+}
+
+// selectPathOrArmTreeCursor selects absPath, or in tree layout, when its row is not loaded yet
+// (a reload re-fetches expanded subdirectories asynchronously), arms treeCursorID so the cursor
+// lands on it once the child load applies.
+func (s *State) selectPathOrArmTreeCursor(absPath string) bool {
+	if s.selectVisibleEntryByPath(absPath) {
+		return true
+	}
+	if s.ListLayout == ListLayoutTree && absPath != "" {
+		s.treeCursorID = filepath.Clean(absPath)
+		s.treeCursorFallback = nil
+	}
+	return false
 }
 
 func (s *State) selectVisibleEntryByPath(absPath string) bool {

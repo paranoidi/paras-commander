@@ -105,12 +105,7 @@ func keyUnderDir(key, dir string) bool {
 // markDirKey returns the mark-map key for entry's containing directory: the entry's parent in tree
 // layout (rows can live in expanded subdirectories), else the listing directory.
 func (s *State) markDirKey(entry localfs.Entry) string {
-	if s.ListLayout == ListLayoutTree && entry.Path != "" {
-		if p, err := pathloc.Parse(entry.Path); err == nil {
-			return cleanPathString(p.Parent().String())
-		}
-	}
-	return cleanPathString(s.Path.String())
+	return cleanPathString(s.EntryDir(entry).String())
 }
 
 // NewFileMarkTier reports which new-file suffix tier entry has in the current listing.

@@ -128,6 +128,8 @@ type pendingPanelFocus struct {
 	listDir string
 	// name is a single basename (duplicate focus-after); empty when using candidateNames.
 	name string
+	// path is the absolute path to select for name (nested tree rows); empty selects by name.
+	path string
 	// candidateNames are top-level dest names for transfer-to-other-panel focus; apply picks
 	// the first that appears in the panel's visible listing order.
 	candidateNames []string

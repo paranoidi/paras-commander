@@ -51,7 +51,8 @@ type mkdirApply struct {
 	action         dialog.MkdirAction
 	sources        []string
 	openInInactive bool
-	priorEntryName string
+	priorEntryPath string
+	dir            string // directory the new folder is created in (cursor row's parent)
 	panelID        int
 }
 
@@ -60,7 +61,6 @@ type renameApply struct {
 	entry       localfs.Entry
 	focusAfter  bool
 	openInOther bool
-	panelDir    pathloc.Path
 	panelID     int
 }
 
@@ -132,7 +132,7 @@ func (h *Handler) ApplyRemoteFileOp(p RemoteFileOpPayload) {
 func (h *Handler) startRemoteMkdir(st mkdirApply) {
 	gen := h.nextRemoteFileOpGen()
 	h.CloseFileDialog()
-	panelPath := h.host.ActivePanel().PathString()
+	panelPath := st.dir
 	input := st.plan.Name
 	screen := h.screen
 	backend := h.testRemote

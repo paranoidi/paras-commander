@@ -17,11 +17,12 @@ import (
 // — it lands later, off of the job's own terminal-event refresh (jobs.Handler's ApplyRefreshes).
 // applyPendingPanelFocus (called from App.reconcileAfterEvent after every event, including that
 // later refresh) retries until it either succeeds or the panel has moved on to a different directory.
-func (h *Handler) schedulePanelFocus(panelID int, listDir, name string) {
+func (h *Handler) schedulePanelFocus(panelID int, listDir, name, path string) {
 	h.pendingFocus = pendingPanelFocus{
 		panelID: panelID,
 		listDir: listDir,
 		name:    name,
+		path:    path,
 	}
 }
 
@@ -107,7 +108,11 @@ func (h *Handler) applyPendingPanelFocus() {
 	// scheduleTransferOtherPanelFocus (candidateNames): scroll into viewport only.
 	var ok bool
 	if f.name != "" {
-		ok = p.SelectVisibleEntryCentered(name, vr)
+		if f.path != "" {
+			ok = p.SelectVisibleEntryPathCentered(f.path, vr)
+		} else {
+			ok = p.SelectVisibleEntryCentered(name, vr)
+		}
 	} else {
 		ok = p.SelectVisibleEntryInViewport(name, vr)
 	}
