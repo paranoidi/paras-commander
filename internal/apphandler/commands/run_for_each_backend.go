@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -53,7 +54,8 @@ type RunForEachBatchSpec struct {
 }
 
 // StartRunForEachBatch enqueues Commands-view rows for spec.Entries and runs them in the
-// background, one at a time in submission order (gated by PoolName's parallelism, if any).
+// background in submission order: sequentially without a pool; with a pool, up to its
+// max_parallel at a time (PTY batches always run sequentially).
 func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 	if len(spec.Entries) == 0 {
 		h.host.SetTransientMessage("No paths to run", ui.MessageUrgencyWarn)
@@ -90,7 +92,9 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec RunForEachBatchSpec) {
 	var panelOwner int64
 	acquired := false
+	var wg sync.WaitGroup
 	defer func() {
+		wg.Wait()
 		h.EndBatch()
 		if acquired {
 			h.postPanelWakeAndWait(ctx, WakePayload{TerminalPanelHide: true})
@@ -226,50 +230,62 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			}
 		}
 
-		markRunning := func() {
+		runEntry := func() {
+			markRunning := func() {
+				h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
+					e.Phase = ui.CommandRunRunning
+					e.TargetPath = abs
+					e.UserCommandLine = userLine
+				})
+				h.PostRenderWake()
+			}
+
+			workDir := spec.WorkDir
+			if spec.PerEntryWorkDir {
+				workDir = abs
+			}
+			var res cmdrun.RunResult
+			if spec.PTY {
+				// Stays Pending while the PTY starts; name the row now so it isn't blank.
+				h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
+					e.TargetPath = abs
+					e.UserCommandLine = userLine
+				})
+				res = h.runEntryPTY(ctx, idx, argv, workDir, panelOwner, markRunning)
+			} else {
+				markRunning()
+				res = cmdrun.RunTracked(ctx, argv, h.childEnv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+					h.SetProcess(idx, p)
+				})
+				h.UnregisterProc(idx)
+			}
+			if release != nil {
+				release()
+			}
+
 			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
-				e.Phase = ui.CommandRunRunning
-				e.TargetPath = abs
-				e.UserCommandLine = userLine
+				e.Phase = ui.CommandRunDone
+				e.Stdout = string(res.Stdout)
+				e.Stderr = string(res.Stderr)
+				if res.LaunchErr != nil {
+					e.ErrorMsg = res.LaunchErr.Error()
+					e.ExitCode = -1
+				} else {
+					e.ExitCode = res.ExitCode
+				}
 			})
 			h.PostRenderWake()
 		}
-
-		workDir := spec.WorkDir
-		if spec.PerEntryWorkDir {
-			workDir = abs
+		if release != nil && !spec.PTY {
+			// Pool slot held: run concurrently; the next Acquire blocks once max_parallel is reached.
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				runEntry()
+			}()
+			continue
 		}
-		var res cmdrun.RunResult
-		if spec.PTY {
-			// Stays Pending while the PTY starts; name the row now so it isn't blank.
-			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
-				e.TargetPath = abs
-				e.UserCommandLine = userLine
-			})
-			res = h.runEntryPTY(ctx, idx, argv, workDir, panelOwner, markRunning)
-		} else {
-			markRunning()
-			res = cmdrun.RunTracked(ctx, argv, h.childEnv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
-				h.SetProcess(idx, p)
-			})
-			h.UnregisterProc(idx)
-		}
-		if release != nil {
-			release()
-		}
-
-		h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
-			e.Phase = ui.CommandRunDone
-			e.Stdout = string(res.Stdout)
-			e.Stderr = string(res.Stderr)
-			if res.LaunchErr != nil {
-				e.ErrorMsg = res.LaunchErr.Error()
-				e.ExitCode = -1
-			} else {
-				e.ExitCode = res.ExitCode
-			}
-		})
-		h.PostRenderWake()
+		runEntry()
 	}
 }
 

@@ -286,3 +286,65 @@ func TestRunForEachCancelWhilePoolWaiting(t *testing.T) {
 		t.Fatalf("ErrorMsg = %q, want Canceled", e.ErrorMsg)
 	}
 }
+
+func TestRunForEachPoolRunsEntriesConcurrently(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "log")
+	words := []string{"harbor", "lantern", "meadow", "copper", "willow", "ember", "falcon", "marble"}
+	entries := make([]localfs.Entry, len(words))
+	for i, w := range words {
+		p := filepath.Join(dir, w)
+		if err := os.WriteFile(p, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		entries[i] = localfs.Entry{Name: w, Path: p, Type: localfs.EntryFile}
+	}
+	script := "echo + >> " + logPath + "; sleep 0.3; echo - >> " + logPath
+
+	h := &Handler{
+		screen:    screen,
+		model:     &ui.Model{CommandsList: make([]ui.CommandRunEntry, len(entries))},
+		mu:        &sync.RWMutex{},
+		ctx:       context.Background(),
+		workPools: workpool.NewRegistry([]pools.Def{{Name: "io", MaxParallel: 2}}),
+	}
+	spec := RunForEachBatchSpec{
+		Entries:    entries,
+		Background: true,
+		AllowFiles: true,
+		WorkDir:    dir,
+		PoolName:   "io",
+		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+			return RunForEachBuiltItem{Argv: []string{"sh", "-c", script}, UserLine: strconv.Quote(script)}, nil
+		},
+	}
+	h.runForEachUnifiedBatch(context.Background(), 0, spec)
+
+	for i, e := range h.model.CommandsList {
+		if e.Phase != ui.CommandRunDone || e.ExitCode != 0 {
+			t.Fatalf("entry %d: phase=%v exit=%d err=%q", i, e.Phase, e.ExitCode, e.ErrorMsg)
+		}
+	}
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur, peak := 0, 0
+	for _, l := range strings.Fields(string(data)) {
+		if l == "+" {
+			cur++
+			peak = max(peak, cur)
+		} else {
+			cur--
+		}
+	}
+	if peak != 2 {
+		t.Fatalf("max concurrency = %d, want 2", peak)
+	}
+}

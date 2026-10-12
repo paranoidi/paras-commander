@@ -13,7 +13,8 @@ import (
 // so the user can uncomment and customize.
 const PoolsStubTOML = `# pools.toml — work pool concurrency limits
 #
-# User menu entries may set pool = "name" to limit parallel runs.
+# User menu entries may set pool = "name" to limit parallel runs (also the
+# per-batch parallelism of run_for_each entries).
 # Omit pool on an entry for unlimited parallelism.
 #
 # [[pools]]

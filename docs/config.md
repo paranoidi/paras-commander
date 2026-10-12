@@ -443,7 +443,7 @@ An `[[entry]]`'s `when` filters every row it is dispatched against, files and di
 
 ## `[pools]`
 
-Worker pool definitions (used by "run for each" operations).
+Worker pool definitions (used by "run for each" operations). A user menu entry with `pool` set runs its run_for_each paths concurrently, up to the pool's `max_parallel`; without a pool they run one at a time.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

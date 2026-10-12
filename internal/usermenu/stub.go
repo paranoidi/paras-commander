@@ -129,6 +129,7 @@ const MenuStubTOML = `# User function menu
 #
 # pool            string   optional
 #   Work pool name from pools.toml [[pools]]; default/background mode only.
+#   Also caps how many run_for_each entries of one batch run at once (max_parallel).
 #   Omit for unlimited parallelism; not combinable with interactive or detach.
 #
 # Macros (substituted before the command line is parsed into argv):
