@@ -101,6 +101,7 @@ func setMassRenameComputeError(d *dialog.FileDialogState, msg string) {
 	d.MassRenamePreviewAfter = nil
 	d.MassRenamePreviewBeforeRemoved = nil
 	d.MassRenamePreviewBeforeReplaced = nil
+	d.MassRenamePreviewBeforeIgnored = nil
 	d.MassRenamePreviewAfterAdded = nil
 	d.MassRenamePreviewAfterError = nil
 }
@@ -124,6 +125,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 		d.MassRenamePreviewAfter = nil
 		d.MassRenamePreviewBeforeRemoved = nil
 		d.MassRenamePreviewBeforeReplaced = nil
+		d.MassRenamePreviewBeforeIgnored = nil
 		d.MassRenamePreviewAfterAdded = nil
 		d.MassRenamePreviewAfterError = nil
 		return
@@ -182,6 +184,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	after := make([]string, 0, len(rows))
 	beforeRemoved := make([][]search.Range, 0, len(rows))
 	beforeReplaced := make([][]search.Range, 0, len(rows))
+	beforeIgnored := make([]search.Range, 0, len(rows))
 	afterAdded := make([][]search.Range, 0, len(rows))
 	afterError := make([]bool, 0, len(rows))
 	for i, r := range rows {
@@ -198,6 +201,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 		after = append(after, r.NewBase)
 		beforeRemoved = append(beforeRemoved, removed)
 		beforeReplaced = append(beforeReplaced, replaced)
+		beforeIgnored = append(beforeIgnored, ops.MassRenameIgnoredExtRange(r, d.MassRenameIgnoreExt))
 		afterAdded = append(afterAdded, ops.MassRenameReplacementRanges(matchBase, mode, find, replace, caseFold, rx))
 		afterError = append(afterError, i < len(rowErrs) && rowErrs[i] != nil)
 	}
@@ -205,6 +209,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	d.MassRenamePreviewAfter = after
 	d.MassRenamePreviewBeforeRemoved = beforeRemoved
 	d.MassRenamePreviewBeforeReplaced = beforeReplaced
+	d.MassRenamePreviewBeforeIgnored = beforeIgnored
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
 	_, height := h.screen.Size()
@@ -231,6 +236,7 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 	after := make([]string, 0, len(d.MassRenameSources))
 	beforeRemoved := make([][]search.Range, 0, len(d.MassRenameSources))
 	beforeReplaced := make([][]search.Range, 0, len(d.MassRenameSources))
+	beforeIgnored := make([]search.Range, 0, len(d.MassRenameSources))
 	afterAdded := make([][]search.Range, 0, len(d.MassRenameSources))
 	afterError := make([]bool, 0, len(d.MassRenameSources))
 	for i, src := range d.MassRenameSources {
@@ -248,6 +254,7 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 		after = append(after, newBase)
 		beforeRemoved = append(beforeRemoved, nil)
 		beforeReplaced = append(beforeReplaced, nil)
+		beforeIgnored = append(beforeIgnored, search.Range{})
 		if namesReady {
 			_, added := dialog.MassRenameDiff(src.Name, newBase)
 			afterAdded = append(afterAdded, added)
@@ -260,6 +267,7 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 	d.MassRenamePreviewAfter = after
 	d.MassRenamePreviewBeforeRemoved = beforeRemoved
 	d.MassRenamePreviewBeforeReplaced = beforeReplaced
+	d.MassRenamePreviewBeforeIgnored = beforeIgnored
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
 	_, height := h.screen.Size()
@@ -285,6 +293,7 @@ func (h *Handler) recomputeMassRenameCapitalizePreview() {
 	after := make([]string, 0, len(rows))
 	beforeRemoved := make([][]search.Range, 0, len(rows))
 	beforeReplaced := make([][]search.Range, 0, len(rows))
+	beforeIgnored := make([]search.Range, 0, len(rows))
 	afterAdded := make([][]search.Range, 0, len(rows))
 	afterError := make([]bool, 0, len(rows))
 	for i, r := range rows {
@@ -295,6 +304,7 @@ func (h *Handler) recomputeMassRenameCapitalizePreview() {
 		after = append(after, r.NewBase)
 		beforeRemoved = append(beforeRemoved, nil)
 		beforeReplaced = append(beforeReplaced, nil)
+		beforeIgnored = append(beforeIgnored, ops.MassRenameIgnoredExtRange(r, d.MassRenameIgnoreExt))
 		_, added := dialog.MassRenameDiff(r.OldBase, r.NewBase)
 		afterAdded = append(afterAdded, added)
 		afterError = append(afterError, i < len(rowErrs) && rowErrs[i] != nil)
@@ -303,6 +313,7 @@ func (h *Handler) recomputeMassRenameCapitalizePreview() {
 	d.MassRenamePreviewAfter = after
 	d.MassRenamePreviewBeforeRemoved = beforeRemoved
 	d.MassRenamePreviewBeforeReplaced = beforeReplaced
+	d.MassRenamePreviewBeforeIgnored = beforeIgnored
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
 	_, height := h.screen.Size()

@@ -56,6 +56,21 @@ func MassRenameMatchBase(r MassRenameRow, ignoreExt bool) string {
 	return stem
 }
 
+// MassRenameIgnoredExtRange returns the rune range of the extension (including the dot) in
+// r.OldBase that find/replace cannot see when ignoreExt is set. Empty when ignoreExt is off or
+// the name has no extension (directories, dotfiles).
+func MassRenameIgnoredExtRange(r MassRenameRow, ignoreExt bool) search.Range {
+	if !ignoreExt {
+		return search.Range{}
+	}
+	stem, ext := massRenameSplitExt(r.OldBase, r.IsDir)
+	if ext == "" {
+		return search.Range{}
+	}
+	n := utf8.RuneCountInString(stem)
+	return search.Range{Start: n, End: n + utf8.RuneCountInString(ext)}
+}
+
 func resolveEntryPath(entry localfs.Entry, panelPath string) string {
 	p := entry.Path
 	if !filepath.IsAbs(p) {

@@ -203,7 +203,9 @@ type FileDialogState struct {
 	MassRenamePreviewAfter          []string
 	MassRenamePreviewBeforeRemoved  [][]search.Range
 	MassRenamePreviewBeforeReplaced [][]search.Range
-	MassRenamePreviewAfterAdded     [][]search.Range
+	// MassRenamePreviewBeforeIgnored is one range per row: the extension find/replace ignores.
+	MassRenamePreviewBeforeIgnored []search.Range
+	MassRenamePreviewAfterAdded    [][]search.Range
 	// MassRenamePreviewAfterError marks after-column rows with a validation conflict (per-row).
 	MassRenamePreviewAfterError []bool
 	// MassRenameMatchCount is the number of source files whose basename matches the current

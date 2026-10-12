@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -464,5 +465,52 @@ func TestDrawMassRenameRadiosShareRowAndColumnsWithCheckboxes(t *testing.T) {
 				t.Errorf("nerd=%v: %d blank cells before radio %q, want 3:\n%s", nerd, blanks, p[0], string(rows[radioRow]))
 			}
 		}
+	}
+}
+
+func TestDrawMassRenameDialogDimsIgnoredExtensionInBeforeColumn(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 40)
+
+	state := FileDialogState{
+		Open:       true,
+		DialogType: FileDialogMassRename,
+		Fields: []FileDialogField{
+			{Label: "Find", Value: "x"},
+			{Label: "Replace", Value: "y"},
+		},
+		MassRenameMode:                 MassRenameModeUISimple,
+		MassRenameIgnoreExt:            true,
+		MassRenamePreviewBefore:        []string{"walrus.pdf"},
+		MassRenamePreviewAfter:         []string{"walrus.pdf"},
+		MassRenamePreviewBeforeIgnored: []search.Range{{Start: 6, End: 10}},
+	}
+	styles := theme.Default()
+	DrawFileDialog(screen, Layout{Width: 80, Height: 40}, state, DialogRenderContext{Styles: styles}, nil)
+
+	wantFg, _, _ := styles.DialogOptionDisabledStyle().Decompose()
+	found := false
+	for y := 0; y < 40 && !found; y++ {
+		for x := 0; x+10 <= 80; x++ {
+			if tcelltest.TextAt(screen, x, y, 10) != "walrus.pdf" {
+				continue
+			}
+			found = true
+			for i := 0; i < 10; i++ {
+				_, style, _ := screen.Get(x+i, y)
+				fg, _, _ := style.Decompose()
+				if dimmed := i >= 6; (fg == wantFg) != dimmed {
+					t.Errorf("cell %d fg=%v, dimmed want %v (disabled fg %v)", i, fg, dimmed, wantFg)
+				}
+			}
+			break
+		}
+	}
+	if !found {
+		t.Fatal("before-column row not rendered")
 	}
 }

@@ -805,3 +805,23 @@ func TestMassRenameComputeCapitalizeIgnoreExt(t *testing.T) {
 		t.Fatalf("got %q", rows[0].NewBase)
 	}
 }
+
+func TestMassRenameIgnoredExtRange(t *testing.T) {
+	cases := []struct {
+		name      string
+		row       MassRenameRow
+		ignoreExt bool
+		want      search.Range
+	}{
+		{"file", MassRenameRow{OldBase: "walrus kettle.pdf"}, true, search.Range{Start: 13, End: 17}},
+		{"unicode stem", MassRenameRow{OldBase: "äpple.sh"}, true, search.Range{Start: 5, End: 8}},
+		{"directory", MassRenameRow{OldBase: "walrus.d", IsDir: true}, true, search.Range{}},
+		{"dotfile", MassRenameRow{OldBase: ".kettle"}, true, search.Range{}},
+		{"ignore off", MassRenameRow{OldBase: "walrus.pdf"}, false, search.Range{}},
+	}
+	for _, c := range cases {
+		if got := MassRenameIgnoredExtRange(c.row, c.ignoreExt); got != c.want {
+			t.Errorf("%s: got %+v, want %+v", c.name, got, c.want)
+		}
+	}
+}
