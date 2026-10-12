@@ -50,8 +50,14 @@ func (f FilterSpec) Label() string {
 func (f FilterSpec) MatchFunc() (func(e localfs.Entry, meta GroupSelectMeta) bool, error) {
 	var matcher GroupMatcher
 	if f.Pattern != "" {
+		pattern := f.Pattern
+		if f.Mode == GroupPatternRegex && !f.CaseSensitive {
+			// GroupMatcher regexes are always case-sensitive; the Filter dialog's checkbox
+			// applies to regex too.
+			pattern = "(?i)" + pattern
+		}
 		var err error
-		if matcher, err = NewGroupMatcher(f.Pattern, f.Mode, f.CaseSensitive); err != nil {
+		if matcher, err = NewGroupMatcher(pattern, f.Mode, f.CaseSensitive); err != nil {
 			return nil, err
 		}
 	}

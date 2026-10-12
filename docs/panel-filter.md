@@ -4,7 +4,7 @@ Alt+F opens the Filter dialog, which narrows the active panel to matching entrie
 
 ## Pattern
 
-Pick how the pattern is read: Shell patterns (`*.log`), Regular expression, or Simple (plain substring). "Case sensitive" applies to shell and simple patterns. With meta columns present, "Include meta" also matches column values and "Only meta" matches them exclusively.
+Pick how the pattern is read: Shell patterns (`*.log`), Regular expression, or Simple (plain substring). "Case sensitive" applies to every mode (regex included). With meta columns present, "Include meta" also matches column values and "Only meta" matches them exclusively.
 
 ## File types
 

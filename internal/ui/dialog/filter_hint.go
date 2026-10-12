@@ -36,11 +36,6 @@ func FilterContentCount(metaColumnCount int) int {
 	return FilterFocusCase + 1
 }
 
-// FilterShowsCaseSensitive reports whether the case-sensitive checkbox is shown.
-func FilterShowsCaseSensitive(state FilterDialogState) bool {
-	return state.PatternMode != panel.GroupPatternRegex
-}
-
 // FilterShowsFilesDirs reports whether the Files only / Directories only row is shown; compare
 // and dedup rows are always files, so it is hidden there.
 func FilterShowsFilesDirs(state FilterDialogState) bool {
@@ -133,10 +128,7 @@ func filterGrid(state FilterDialogState) [][]int {
 	if FilterShowsFilesDirs(state) {
 		grid = append(grid, []int{FilterFocusFilesOnly, FilterFocusDirsOnly})
 	}
-	grid = append(grid, []int{FilterFocusInvert})
-	if FilterShowsCaseSensitive(state) {
-		grid[len(grid)-1] = append(grid[len(grid)-1], FilterFocusCase)
-	}
+	grid = append(grid, []int{FilterFocusInvert, FilterFocusCase})
 	if state.MetaColumnCount > 0 {
 		grid = append(grid, []int{FilterFocusIncludeMeta, FilterFocusOnlyMeta})
 	}

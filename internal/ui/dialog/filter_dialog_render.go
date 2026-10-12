@@ -113,9 +113,7 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 	}
 
 	draw.DrawDialogCheckbox(screen, optionX, y, "Invert", 'I', state.Invert, state.Focus == FilterFocusInvert, false, styles)
-	if FilterShowsCaseSensitive(state) {
-		draw.DrawDialogCheckbox(screen, col2X, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == FilterFocusCase, false, styles)
-	}
+	draw.DrawDialogCheckbox(screen, col2X, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == FilterFocusCase, false, styles)
 	y++
 	if y >= innerBottom {
 		return

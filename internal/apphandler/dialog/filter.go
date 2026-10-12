@@ -242,15 +242,7 @@ func (h *Handler) applyFilterDialogModeFromFocus() {
 	case dialog.FilterFocusSimpleRadio:
 		fd.PatternMode = panel.GroupPatternSimple
 	}
-	h.filterDialogClampCaseFocus()
 	h.updateFilterDialogPreview()
-}
-
-func (h *Handler) filterDialogClampCaseFocus() {
-	fd := &h.model.FilterDialog
-	if fd.PatternMode == panel.GroupPatternRegex && fd.Focus == dialog.FilterFocusCase {
-		fd.Focus = dialog.FilterFocusFilesOnly
-	}
 }
 
 // tryRejectFilterDialogOK reports whether OK should be rejected because the (non-empty) pattern
@@ -407,9 +399,8 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 				h.toggleFilterDialogField(fd, dialog.FilterFocusInvert)
 				fd.Focus = dialog.FilterFocusInvert
 			case 'e', 'E':
-				if h.toggleFilterDialogField(fd, dialog.FilterFocusCase) {
-					fd.Focus = dialog.FilterFocusCase
-				}
+				h.toggleFilterDialogField(fd, dialog.FilterFocusCase)
+				fd.Focus = dialog.FilterFocusCase
 			case 'm', 'M':
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusIncludeMeta) {
 					fd.Focus = dialog.FilterFocusIncludeMeta
@@ -452,15 +443,13 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 
 // toggleFilterDialogField applies the toggle/radio-set action addressed by focus (one of the
 // dialog.FilterFocus* constants). Returns false when focus doesn't address a toggleable field,
-// or the field is conditionally hidden (case-sensitivity when not shown), so nothing changed.
+// or the field is conditionally hidden, so nothing changed.
 func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus int) bool {
 	switch focus {
 	case dialog.FilterFocusShellRadio:
 		fd.PatternMode = panel.GroupPatternShell
-		h.filterDialogClampCaseFocus()
 	case dialog.FilterFocusRegexRadio:
 		fd.PatternMode = panel.GroupPatternRegex
-		h.filterDialogClampCaseFocus()
 	case dialog.FilterFocusSimpleRadio:
 		fd.PatternMode = panel.GroupPatternSimple
 	case dialog.FilterFocusFilesOnly:
@@ -482,9 +471,6 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 	case dialog.FilterFocusInvert:
 		fd.Invert = !fd.Invert
 	case dialog.FilterFocusCase:
-		if !dialog.FilterShowsCaseSensitive(*fd) {
-			return false
-		}
 		fd.CaseSensitive = !fd.CaseSensitive
 	case dialog.FilterFocusIncludeMeta:
 		if fd.MetaColumnCount <= 0 {

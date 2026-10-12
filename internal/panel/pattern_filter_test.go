@@ -302,3 +302,18 @@ func TestFilterSpecLabel(t *testing.T) {
 		t.Fatalf("Label = %q", got)
 	}
 }
+
+func TestFilterSpecRegexCaseSensitivity(t *testing.T) {
+	for _, tc := range []struct {
+		caseSensitive bool
+		want          bool
+	}{{false, true}, {true, false}} {
+		match, err := FilterSpec{Pattern: `^lantern\.txt$`, Mode: GroupPatternRegex, CaseSensitive: tc.caseSensitive}.MatchFunc()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := match(localfs.Entry{Name: "Lantern.TXT"}, GroupSelectMeta{}); got != tc.want {
+			t.Errorf("caseSensitive=%v: got %v, want %v", tc.caseSensitive, got, tc.want)
+		}
+	}
+}
