@@ -96,7 +96,7 @@ func (d DialogTrailingButtonsForm) Backtab(focus int) int {
 	return (focus + n - 1) % n
 }
 
-// Down moves focus down per AGENTS.md: within content only until last content, then to OK;
+// Down moves focus down per docs/agents/dialogs.md: within content only until last content, then to OK;
 // on trailing buttons, Down does nothing.
 func (d DialogTrailingButtonsForm) Down(focus int) int {
 	if d.NumContent <= 0 {
@@ -112,7 +112,7 @@ func (d DialogTrailingButtonsForm) Down(focus int) int {
 	return focus
 }
 
-// Up moves focus up per AGENTS.md: from any trailing button to last content; within content without wrap from 0.
+// Up moves focus up per docs/agents/dialogs.md: from any trailing button to last content; within content without wrap from 0.
 func (d DialogTrailingButtonsForm) Up(focus int) int {
 	if focus >= d.OKIndex() {
 		if d.NumContent <= 0 {

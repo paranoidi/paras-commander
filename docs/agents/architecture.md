@@ -1,0 +1,129 @@
+# Architecture
+
+Code map, package layout, twin-panel model, chrome/layout, transient messages, menu bar, and the post-event reconciler.
+
+## Code map
+
+- **Entrypoint**: `cmd/pc`. `-v`/`--version` print `internal/version.Line()` (from `debug.ReadBuildInfo`, else `dev`).
+- **App model / event loop**: `internal/app`.
+- **Config + XDG paths**: `internal/config` (`Default()`, `Validate`). All built-in defaults are exported values in `internal/config/builtin.go`; `internal/config` never imports `internal/ops` (cycle), `ops` reads defaults via `config`. `internal/fswalk` is the adaptive walker (`[fs_walk]`), consumed by `internal/diskusage`; Find indexing is sequential (`scan.StartRootWalk`) and ignores `[fs_walk]`. See `docs/config.md`.
+- **Key to action**: `internal/keymap` (see `keybindings.md`). `nav.*` covers cursor/paging/open/parent/history; other panel shortcuts are `panel.*`.
+- **Typed paths**: `internal/pathloc` (`file` and `sftp://`). Parse at boundaries (`Parse`/`MustParse`); compare with `Equal`, `HasPrefix`, `EqualOrUnder`, `TreesOverlap`. `panel.State.Path`, `jobs.Job` and `ops.PlanItem` use `pathloc.Path`; UI marks often use `[]string` via `pathloc.Strings`.
+- **Backends**: `internal/fsbackend` (`Backend`, `Registry`); `internal/fsbackend/file` registers the local backend over `internal/localfs` in `init()` and `internal/app` blank-imports it. Panel `load` calls `ListWithOptions` then `file.ToLocalEntries`, so rows stay `[]localfs.Entry`.
+- **Panel state**: `internal/panel`. **Fuzzy matching**: `internal/search`. **Theme**: `internal/theme` + `themes/*.toml` (`theming.md`).
+- **Rendering**: `internal/ui` (+ `internal/ui/menu` for menu definitions/state). `[ui].screen_render_hash_cache` skips redundant `screen.Show` when the logical frame is unchanged (`internal/ui/screen_hash.go`, `App.emitScreenAfterFullRender`).
+- **User menu / editor / shell**: `internal/usermenu`, `internal/app/user_menu.go`, `leader_menu.go` (see `menus.md`); `file.edit` via `internal/app/external_editor.go` + `internal/editor`; `app.drop-to-shell` via `internal/app/drop_to_shell.go` + `internal/shell`, which suspends/resumes through `withTerminalReleased` (not a PTY toggle). See `subshell.md`.
+
+### Partial repaints must not overwrite overlays
+
+The panel-only paint paths (`renderBrowserListNavUpdate`, gated by `browserListNavPartialRenderEligible` and also used by `renderAfterAsyncApply`/`renderPanelAsyncResult`; and `paintDiskUsageBrowserUpdate`) draw panel cells without redrawing anything layered over them. Both decline via `App.panelOnlyPaintBlocked()` (`internal/app/render.go`: `Model.ModalDialogOpen() || Model.Menu.Open`) and fall back to a full `ui.Render`. Without the gate, an async listing that lands while a dialog is open (e.g. Find's `find.open-primary`/`find.open-secondary`, which navigate a panel and keep the dialog up) paints the file list over the dialog.
+
+## Package layout
+
+### `internal/app` and feature handlers
+
+- **`internal/app`**: `App` struct, `Run()` event loop, input dispatch, render/reconcile, and one `*_host.go` per handler wiring it in. `App` fields are flat (screen/config/styles/model/keys, controller fields, debounce timers, generation counters) except two grouped clusters: `a.disk` (`diskUsageState`, `disk_usage.go`: scan engine, ignore matcher, idle-sort bookkeeping, redraw timer) and `a.sftp` (`sftpState`, `sftp.go`/`sftp_connect_dialog.go`: prompt waiters, `promptSem`, per-panel `connectGen`, connect-dialog target).
+- **`internal/apphandler/*`**: feature handlers (`jobs`, `find`, `meta`, `commands`, `compare`, `dedup`, `preview`, `dialog`, `pin`), each built from a `Deps` struct plus a narrow `Host` interface composed from the `internal/apphandler/host` facets (`LayoutHost`, `MessageHost`, `PanelHost`, `PanelNavigationHost`, `ShellHost`). `internal/app` calls handlers directly through controller fields (`a.jobsCtrl`, `a.dialogCtrl`, ...); there are no forwarding bridge files. `hashwalk` is shared compare/dedup walk-settings support, not a handler.
+- **Host forwarders**: each `internal/app/*_host.go` implements one handler's `Host` with one-line forwarders onto `App` and embeds the shared `appShellHost` (`shell_host.go`). Keep one file per handler.
+- **Dialog state** for every dialog (`dialog.FileDialogState`, `TransferDialogState`, `PathPickerState`, `FlattenDialogState`, ...) lives in `ui.Model`, never in a handler.
+- **Runtime-mutable settings** (`preview.style`, theme, `key_repeat_debounce_ms`, filter case-sensitivity) are read through `Host.Config()`/`Host.Styles()` on every use, never snapshotted into `Deps`: the settings/theme dialogs mutate `App.config`/`App.styles` in place.
+- **Wake payloads**: a handler that schedules async work posts its own wake payload type (e.g. `jobsctrl.WakePayload`, preview's `RenderWakePayload`/`QuickViewFlushPayload`, dialog's `PathPickerValidatePayload`/`TransferDestValidatePayload`), defined in the handler package; the `Run()` interrupt switch in `internal/app/app.go` forwards each to its controller.
+
+### What each handler owns
+
+- **`dialog`**: the file-operation and navigation-dialog family: generic `FileDialogField` open/submit/key machinery and the dialogs built on it (rename, mkdir, delete, duplicate, chmod, chown, symlink, hardlink); mass rename; archive extract; flatten; copy/move transfer dialog (multi-location preview, self-copy rename, active/inactive-panel destination shortcuts shared with flatten in `active_panel_path.go`); bookmarks picker and add-bookmark dialog; the fuzzy history/bookmarks path picker used by transfer, flatten and file-dialog path fields. It takes the jobs, commands, preview and dedup handlers and the keymap overlays it checks directly in `Deps` rather than widening `Host`; `Deps.Dedup` exists only so `ExecuteDelete` can open the dedup view's empty-dirs confirmation. Its `Host` is limited to services it cannot own: panel/layout/message primitives, `Config()`/`Styles()`, `OpenMessageDialog`, `InQuickFilterUI`, `OpenFileInExternalEditor`, `ExecuteSFTPPassword`, and scrolling-query glue.
+- **`preview`**: quick view (with its directory overlay and latched panel-sync interplay), fullscreen F3 preview and its `/` search, carousel side/child preview, the F9 Chroma style picker, and all async preview-subprocess dispatch and debounce/coalesce state.
+- **`commands`**: the Commands view, the command-output dialog, and the run-for-each dialog and batch backend.
+- **`meta`**: async per-entry `meta.toml` command dispatch: checkbox picker, per-panel worker pool, result cache, F9 edit-config flow.
+- **`pin`**: the ad-hoc pin-list dialog.
+
+### Dialogs that stay in `internal/app`
+
+Each has a reason it cannot move to `apphandler/dialog`:
+
+- Settings, config-edit, message-theme and debounce-calibrate (`dialog_config_edit.go`, `dialog_message_theme.go`, ...): they mutate `App.config`/`App.styles` in place, which only `internal/app` may do.
+- SFTP connect and password (`sftp*.go`): they own connection state and credentials.
+- Per-panel navigation history (`history.go`).
+- Quit/stash confirmations: they sit on the shutdown path.
+- Dedup view (`dedup_view.go`, handler `a.dedupCtrl`), including `DedupEmptyDirsConfirm` key handling: `apphandler/dialog` only opens that confirmation.
+
+### Shared App-independent packages
+
+- **`internal/scrollquery`**: scrolling-query text field core (cursor/scroll editing, key handling) for find, help, history, SFTP connect, group select, preview theme picker and path picker; `internal/app/scrolling_query.go` binds it to `App`.
+- **`internal/dialogform`**: linear-form dialog key handling (focus, mnemonics, space-toggle, apply/cancel) for dialogs built on `dialog.DialogLinearForm`; `internal/app/dialog_linear_form.go` is the glue.
+- **`internal/filterlist`**: fuzzy-list ranking, clamp and list motion. The preview theme picker and app-side history/SFTP connect call it directly; the dialog and pin Hosts forward to it.
+- **`internal/quickfilter`**: type-to-jump engine for the file list, selections strip and dedup view; options are passed per call. It must not import `panel`, `ui` or `app`.
+- **`internal/pathpick`**: path-picker query validation, resolution and completion.
+- **`internal/sched`**: `Debouncer` (`Arm`/`Stop`/`Invalidate`/`Armed`). Each `Arm` bumps a generation so stale timers exit without running; `Invalidate` also drops in-flight callbacks.
+- **`internal/app/helpkeys`**, **`internal/jobbridge`**: stateless helpers extracted from the app layer.
+
+## CLI startup
+
+Zero to two positionals (not combinable with `--chooser-file`). Wiring: `cmd/pc/main.go` -> `app.LaunchConfig.StartPaths`; classification in `internal/app/startup_paths.go` (`applyStartPaths`); fullscreen open via `previewCtrl.OpenFullscreenFilePreviewAt` (`internal/apphandler/preview/view.go`).
+
+| Args | Behavior |
+|------|----------|
+| none | both panels at cwd |
+| 1 directory | Primary opens it, Secondary at cwd |
+| 1 file | Primary navigates to parent + selects, opens fullscreen preview; unpreviewable/missing exits with error |
+| 2 directories | Primary <- first, Secondary <- second |
+| file + directory | each panel opens its path (file -> parent + select); Quick View on with the file's panel as driver; order decides Primary/Secondary |
+| 2 files | error `both arguments are files; provide at most one file` |
+| missing path | error `...: no such file or directory` |
+
+- **`-qp`** requires a path; `LaunchConfig.QuickPreview` -> `Options.QuickPreview`, applied in `NewWithOptions` right after `applyStartPaths`: if Quick View is not already on, enable it with the active panel as driver and call `previewCtrl.ApplyQuickViewPreviewImmediately()`.
+- **`--carousel`** starts Primary in carousel view outside chooser mode (rejected with `--chooser-file`, which enables carousel by default; `--no-carousel` disables). `LaunchConfig.Carousel` -> `Options.Carousel`, applied at the end of `NewWithOptions`: `Model.Primary.CarouselMode = true` plus `SetListLayout(panel.ListLayoutFlat, ...)`, the same pair `panel.toggle-carousel` applies interactively.
+- **`--chooser-file=PATH`** (Yazi-compatible editor file-picker mode): quick view and carousel on by default, optional `--select=PATH` (file -> parent + highlight; missing file -> parent + select basename when listed). Enter/Right on a regular file writes the absolute path (newline-terminated) to `PATH` and quits immediately (no open, no exec, no quit-confirm). Quitting without selecting leaves the file untouched (the editor should `rm -f` it before launch). Takes no positionals.
+
+## Twin-panel model
+
+- Columns are identities, not screen slots: `ui.PrimaryPanel` (0) / `ui.SecondaryPanel` (1); `ui.Model.Primary`/`Secondary` hold each `panel.State`; `ActivePanel` has focus. `geom.Layout.Primary`/`.Secondary` are the identity's paint rect. Helpers: `App.panelByID`, `activePanel()`, `inactivePanel()`, `panelLabel(id)`.
+- `geom.SplitOrientation`: `SplitHorizontal` (Primary left) or `SplitVertical` (Primary top); `CalculateLayoutWithOrientation` splits via `PanelPaneSplit`. `[ui].pane_split_orientation` is the saved default; `panel.toggle-split-orientation` overrides it for the session (cleared on Configuration OK). Stacked mode needs `minStackedHeight` rows.
+- `panel.swap-panes` sets session-only `Model.SwapPanes`: Secondary takes the first visual slot. Identities, `ActivePanel` and `panel.State` do not change; browser only (aux views ignore it). Left/Right pulldowns mean the visual slot (`App.visualPanelScope`).
+- Menu pulldowns use ids `TopPanelLeft`/`TopPanelRight` and Left/Right labels; scoped items use `menu.PanelScopePrimary`/`PanelScopeSecondary` (numerically equal to the panel ids).
+- Zoom: `[ui].zoom_active_panel` gives the active pane `panel_zoom_active_percent` and the inactive one `panel_zoom_inactive_percent` (must sum to 100, min cells per pane else 50/50 fallback), gated by `zoom_active_panel_disabled_above_width` / `_height` (stacked). Toggle `panel.toggle-zoom-active-panel`. Defaults in `docs/config.md`.
+- Renderer is `tcell`. Layout: menu row, twin panels, footer; computed in `internal/ui/geom`. Too-small terminals show `Terminal too small`.
+- **Blocked chrome**: when a modal is open or the menu bar is focused/open, panels render with `panel.blocked.*` styles (including `panel.blocked.disk_usage_overview`).
+
+## Menu bar row
+
+- **Reservation (single source)**: `Model.MenuBarLayoutReserved()` (`!HideMenuBar && ViewMode != ViewFilePreview`) decides whether row 0 is the menu strip. `Render` passes it as `ShowMenuBar` to `CalculateLayoutWithOrientation`; false zeroes `Layout.Menu` height and starts the panels at row 0 (fullscreen preview reclaims row 0 for its filename row, see `preview.md`). Every partial painter (`DrawMenuBarJobsGapOnly`, `DrawMenuBarPermissionTailOnly`, `DrawMenuBarSpinnerOnly` in `internal/ui/menu_render.go`) checks it before touching `layout.Menu`, so a stale layout cannot paint into the reclaimed row; the spinner painter special-cases `ViewFilePreview` to draw that view's own spinner cell. `jobs.Handler`'s repaint decision (`batchAffectsVisible`/`batchIsMenuBarStripOnly`, `internal/apphandler/jobs/handler.go`) uses the same method. `Model.MenuBarInteractive()` additionally requires `!ModalDialogOpen()`.
+- **Status command**: `[status_command]` runs `command` on `interval_ms` and shows its first stdout line top-left (`max_width` cap). It runs via `cmdrun.ShellArgv` (`sh -c`, no macro expansion: there is no per-panel context and `cmdmacro.ExpandCommandLine` requires one). Empty `command` reserves nothing. When enabled `geom.Layout.StatusCmd` takes the left cells (`LayoutInput.StatusCmdWidth`) and `Layout.Menu.X` shifts, so everything computed from `layout.Menu` moves right. `internal/app/status_command.go`: `runStatusCommandTicker` fires immediately then per interval, guarded by `App.statusCmdRunning` (overlapping ticks skipped, not queued) with its own per-run timeout. Output goes through `textutil.FirstLine` + `TruncateBannerRunes`; a failing command keeps the previous text. Style `menu.status`.
+- **Footer shift hints**: `menu.FunctionKey.Hint` + `HintShiftPrefix` (`internal/ui/menu/fkeys.go`), rendered by `drawFooter` (`internal/ui/status_footer_render.go`) with `footer.label` / `footer.label.shift`. Under width pressure shift suffixes drop before primary hints get `...` (`primitive.Ellipsis`).
+- **Jobs strip** (see `jobs.md`): between the pulldown labels and the attention/permission/spinner tail, per-status groups `<icon> <count>` (hidden at 0; fixed order scanning, completed, failed, decision, paused, queued, running; canceled never shown), folded by `State.MenuBarStripStatuses()` (`internal/apphandler/jobs/menubar_strip.go`) into `ui.MenuBarJobGroup`; width via `ui.MenuBarJobsGroupsWidth`. Layout `ui.LayoutMenuBarJobsStrip` drops the progress segment (<3 cells left), then the groups, as space runs out. Snapshot is built in `App.render`; progress-only batches repaint via `paintMenuBarJobsStripOnly` (`DrawMenuBarJobsGapOnly`); `EventProgress` uses `[jobs].progress_ui_wake_debounce_ms`. Styles: `[menu.job]`, `[menu.progress]`, `[icons.menu.job]`.
+  - **Indeterminate bar** (`ProgressIndeterminate`): a `scanning` job, or a running copy/move/flatten whose counting walk has not finished (`!Job.TotalsComplete`, from `PlanProducer.TotalsDone`; not `PlanComplete`, which lands near the end) because provisional totals let `DoneBytes` overtake `TotalBytes`. It shows an empty track with the gradient ping-ponging (`period = 2*(progW-1)`, trail ends in `menu.progress.done`).
+  - **Light bar**: the done span carries a moving highlight (`Theme.MenuProgressDoneGfx`, `menu.progress.done.gfx.0..9`, `gfx.0` = head; none defined = static fill). While deleting (`MenuBarJobsStrip.Deleting`: delete job or move with `RemovingSources`; the bar is forced full) it uses `MenuProgressDeleteGfx` (`menu.progress.delete.gfx.*`), falling back to the done gradient. The head is an app-side frame counter `App.lightbarHead` (stamped by `refreshMenuBarJobsStrip`, the single consumer of `MenuBarStripSnapshot`), not a clock index, so it does not jump when the done span grows. Driven by the `spinnerTickPayload` handler (`internal/app/app.go`) when `[jobs].progress_lightbar` is on, every `menuBarLightbarTicksPerFrame` ticks (`internal/app/disk_usage.go`). `ui.DrawMenuBarJobsGap` returns `lightbarExited` (determinate: gradient past the done edge; indeterminate: head reached `period`), on which the app resets the counter to 0 and repaints in the same tick. Never wrap with a modulus on `cutoff`, and the raw counter must be reset, or it would grow unbounded and keep the exited check true.
+  - **Speed pill**: for a running copy/move (never `Deleting`), a fixed 11-cell slot (`menuBarSpeedSlotWidth`, `internal/ui/menu_bar_jobs.go`) plus a 1-cell margin is carved from the progress span left of the bar, only if `menuBarJobsProgressMinWidth` still fits. The text is left-padded to a constant width so the pill never resizes. `Speed` comes from `MenuBarStripSnapshot` via `jobs.EffectiveDisplayThroughputBPS` + `jobs.FormatThroughputWhole`. Styles `menu.speed.cap`/`menu.speed.text`, icons `icons.menu.speed.left/right`. The text only changes on jobs progress wakes: `Run()` sets `App.menuBarSpeedStale` on dirty jobs and `refreshMenuBarJobsStrip` re-reads the sample only while stale, otherwise stamping the cached `App.menuBarSpeed`, so 100 ms light-bar frames do not re-sample throughput.
+  - Dev mode (`-dev`) adds Dev -> Delete bar demo (`dev.demo-delete-bar`) which overrides the strip for 10 s; `menuBarSpinnerBusy` stays true meanwhile.
+
+## Embedded terminal panel
+
+Same persistent PTY shell as Ctrl+O, drawn above the footer (`geom.Layout.Terminal`, `drawTerminalPanel` in `internal/ui/terminal_panel_render.go`, browser view only). Height is `TerminalRows+1` (one separator row on top) when `LayoutInput.TerminalRows > 0`, minimum 3 rows; if reserving it would push the panel area below the `TooSmall` floor, the terminal shrinks first and is then omitted (zero rect) rather than making the layout `TooSmall`. `ui.Model.TerminalPanel` (`Visible`, `Focused`, `Rows`, `Drawer`); nil `Drawer` paints blank rows, a live one paints the vt10x emulator (`subshell.PanelFeed`). Only theme key `terminal.text` (see `theming.md`). Default rows `[shell].terminal_panel_height`. Keys and dispatch: `keybindings.md`, `subshell.md`.
+
+## Transient status messages
+
+- **Single painter**: `ui.PaintTransientStatusMessage(screen, layout, model, styles)` (`internal/ui/status_message_render.go`) owns the toast row. `ui.Render` calls it, and every partial-paint path in `internal/app/render.go` (`paintFindDialogOverlay`, `paintFileDialogOverlay`, `renderBrowserListNavUpdate`, `paintDiskUsageBrowserUpdate`) calls it again right before `emitScreenAfterPartialPaint()`; otherwise a panel-only repaint wipes an active toast until the next full render.
+- **Placement**: centered on the row above the footer (full width), or on the terminal panel's separator row when that panel is visible (message wins over the label). `ui.FormatToastDisplay` adds one space each side for the banner and Messages log rows; stored `Model.Message` / `MessageLogEntry.Text` are unpadded.
+- **Order**: painted after modal overlays so dialogs never obscure it. Styles `message.info/warn/error`; menu-bar attention uses `menu.bar.alert`. TTL `[ui].status_message_ttl_seconds` (0 = until replaced).
+
+## Menu system
+
+- Definitions/state in `internal/ui/menu`, rendering in `internal/ui`. F9 opens the bar; Enter/Down opens a pulldown; Esc steps pulldown -> bar -> normal; Alt+letter jumps to a top-level menu. Item mnemonic rules and add-item steps: `recipes/add-menu-item.md`.
+- Pulldown `KeyLabel`s come from the loaded keymap (`menu.ApplyMenuKeyLabels` -> `keymap.Map.MenuBindingLabel`). Definitions: `menu.BrowserDefinitions`, `JobsDefinitions`, `CommandsDefinitions` (`ApplyCommandsMenuKeyLabels`), `MessagesDefinitions` (`ApplyMessagesMenuKeyLabels`). Jobs/Commands/Messages also carry the shared Display pulldown (`menu.DisplayDefinition`); their global open chords work there via `App.tryDispatchAuxiliaryScreens`.
+- Dev menu (`pc -dev`): `menu.DevDefinition` (top shortcut `v`) with `dev.show-info/warn/error` test toasts via `setTransientMessage`; menu-only actions, not in `keybindings.toml`.
+- Unsupported items close the menu and show a concise "not implemented" message (e.g. `menu.file.*` chattr stub).
+- Leader (Esc) menu and strips: `menus.md`. Preview and quick-view behavior behind `file.view`/`file.quick-view`: `preview.md`.
+
+## Path fitting
+
+`primitive.FitPathForWidth` (`internal/primitive/path_fit.go`) keeps the basename and shortens earlier segments first (full name -> first rune + `...` -> single rune), then middle-ellipsis. `primitive.PathWithHomeTilde` (`path_home.go`) swaps the home prefix for `~/`; composed with `FitPathForWidth` for jobs Details rows, blocker panels and Selections strip paths. `primitive.StripCommonPathPrefix` removes shared leading segments for compare row columns. Jobs Details order: Sources, Destination, Current, then Progress/ETA or Took/throughput; Activity lines stay relative to the destination.
+
+## Post-event reconciler
+
+`App.reconcileAfterEvent()` (`internal/app/panels.go`) runs once at the bottom of every `App.Run()` iteration, whatever the event source (key, resize, interrupt, job tick). High-frequency payloads may skip it (the interrupt flag gates it); disk-usage events drain either way.
+
+- Every hook must be **idempotent**: a repeat call, or a call on an already-consistent world, is a cheap no-op.
+- Hook order: selections-strip focus (`reconcileSelectionsStripFocus`); selection-size disk-usage scans for both panels plus delete- and find-dialog scans; pending post-create focus (`dialogCtrl.ReconcilePendingPanelFocus`); group-select preview; disk-usage idle-sort arming via `handlePanelDirChanged` (no-op when idle-size sort is off); meta panel-dir + `ReconcileForPanel`; preview panel-dir hooks; **latched panel sync**; then preview prefetch, Quick View, carousel file preview and carousel side preview (both panels).
+- **Latched panel sync**: `syncFollowFromActive()` mirrors the driver's highlighted directory into the follower unless `syncFollowNavSkipReconcile` is set. It is a no-op when the follower is already at the target or already has an async load pending to it (`ListingPending && ListingPendingPath == target`), and is skipped entirely while inactive-panel file preview or Quick View is open, so `Load` cannot overwrite the preview pane.
+- New derived UI invariants belong here, not scattered across dispatch branches or dialog handlers; new event sources inherit reconciliation.
+- Tests that bypass `App.handleKey()` (calling `dispatch`, `navigatePanelToDirectory`, `panel.State.Load`, ...) must call `App.reconcileAfterEvent()` themselves.

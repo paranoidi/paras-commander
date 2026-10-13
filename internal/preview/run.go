@@ -171,7 +171,7 @@ type Result struct {
 	// ImageInTmux carries Request.ImageInTmux forward so Draw can show the bottom-right
 	// Sixel/Sixel+Tmux protocol indicator without re-deriving tmux status from the
 	// environment itself (same rationale as ImageUnicodePlaceholder — see lesson 7 in
-	// llm-docs/graphics-implementation-lessons.md).
+	// docs/agents/terminal-graphics.md).
 	ImageInTmux bool
 	// ImageCapabilityUncertain carries Request.ImageCapabilityUncertain forward — see that
 	// field's doc comment.

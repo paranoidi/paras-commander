@@ -1,0 +1,52 @@
+# Subshell and terminal panel
+
+`internal/subshell` keeps one long-lived interactive shell (`$SHELL`, fallback `/bin/sh`) on a PTY (`creack/pty`). `app.drop-to-shell` (Ctrl+O) toggles between the TUI and that shell; history, environment and running jobs survive toggles. Linux only (`*_linux.go`); `subshell_other.go` stubs return `ErrUnsupportedPlatform`, which makes the app use the one-shot shell in `drop_to_shell.go` (see [commands.md](commands.md)).
+
+## Toggle mechanics (`subshell_linux.go`, `feed_linux.go`)
+
+- `Start(StartOptions)` forks the shell on a PTY master. `RunVisible(screen)` hands over the terminal with tcell `Suspend`/`Resume` (never `Fini`/`Init`), puts `/dev/tty` (not `os.Stdin`) in raw mode, and runs a poll-based feed loop between host tty and PTY until Ctrl+O or child exit. Visible output goes to the controlling TTY (`hostTTY`) and is teed into the emulator, so redirected `os.Stdout` can't steal the session.
+- Toggle detection (`toggle.go`) accepts raw `0x0f`, kitty-keyboard CSIs and xterm `CSI 15;5~`. The kitty protocol is disabled on the host TTY while the shell is visible (so Ctrl+O arrives as `0x0f`) and re-enabled after Resume.
+- **Toggle-in while a full-screen app runs** (`Busy()`): if the size is unchanged, the panel feed's vt10x emulator already holds the app's screen, so `RunVisible` resizes it via `syncVTToPTY` and writes its cells to the host (`PanelFeed.WriteScreenTo`). `forceFullRedraw` (PTY winsize jiggle) is only for when no panel feed exists. Skipped when `syncPTYSize` reports a resize while in the TUI (the real SIGWINCH already forces a repaint).
+- **SIGWINCH** re-syncs the PTY size. `watchWinchResize` has an explicit stop channel and waits for its goroutine (`signal.Stop` alone leaks); `RunVisible` stops it on exit. `SaveLaunchTerminal`/`RestoreLaunchTerminal`/`ShutdownTerminal`/`EmergencyRestoreScreen` guard termios on abnormal exits (the app relies on `RunVisible`'s own restore defers).
+- `Close()` sends SIGHUP, SIGKILL after 500 ms, then closes the PTY: closing only the master doesn't reliably end an interactive shell and hangs `cmd.Wait`.
+
+## Cwd sync (`cwd_linux.go`, `precmd_linux.go`, `chdir.go`)
+
+- **Shell -> commander** uses MC's pipe: `Start` passes a pipe write end as child fd 3 and types a precmd hook (`precmdInit`: bash `PROMPT_COMMAND`, zsh `precmd_functions`, fish `fish_prompt` wrapper; no `kill -STOP`, `TIOCGPGRP` covers busy detection). Each prompt writes the **logical** `$PWD`, so symlinked paths survive panel sync. The init echo is absorbed until quiet (`absorbPTYUntilQuiet`). `Cwd()` returns the last pipe value; hookless shells (sh/dash) fall back to `/proc/<pid>/cwd` (resolved). After toggle-out of the persistent session `[shell].sync_cwd_on_return` navigates the active panel (`syncActivePanelToDir` compares symlink-resolved paths); it has no effect on the one-shot shell. `HISTCONTROL=ignoreboth` is exported so leading-space injections stay out of bash history.
+- **Commander -> shell**: on toggle-in `subshellChdirIfNeeded` injects `" cd '<quoted>'\n"` (leading space keeps it out of history; `QuoteArg` works for POSIX shells and fish) when the shell cwd differs from the active panel. `Busy()` compares the PTY foreground process group (`TIOCGPGRP`) with the shell pid; `Chdir` returns `ErrBusy` while a foreground command runs. No injection for SFTP panel paths.
+- **Invisible injection** (as MC's `feed_subshell(QUIETLY, ...)`): `Chdir` calls `PanelFeed.Mute()` before writing (discarding `carry` synchronously to avoid racing the reader), so `feedBytes()` drops PTY bytes and the injected line can never be painted, in the strip or via `RunVisible`'s `WriteScreenTo`. The unmute signal reuses the precmd pipe: every reported line bumps `Subshell.cwdGen` and broadcasts `cwdCond` (even for an unchanged `$PWD`, so a failed cd doesn't hang to timeout); `waitForPromptCycle` blocks on it, bounded by `subshellChdirSyncTimeout`. Hookless shells wait a fixed `subshellChdirQuietFallback`.
+  - ponytail: there is a narrow, accepted race between the condvar signal and the reader's next read boundary (rare cosmetic stale prompt; the real cwd is always right). Upgrade path if it flickers: per-injection `kill -STOP $$` plus `wait4(..., WUNTRACED)`.
+
+## Send paths to shell (`app.shell-insert-paths`, Alt+Enter)
+
+`shellInsertPaths` (`drop_to_shell.go`) writes sorted selected paths (or the focused entry; `..` yields nothing) as quoted absolute paths plus a trailing space into the shell's input buffer via `Subshell.InsertText` (no newline), after the panel `cd` (PTY writes are ordered), then enters the shell. A busy shell gives a warning and stays in the TUI. Needs the persistent shell (local panel, no `[shell].command`).
+
+## App integration (`internal/app/drop_to_shell.go`)
+
+- `App.subshell` starts lazily on first Ctrl+O in the active panel dir and is dropped (`closeSubshell`) when the child exits; the next toggle starts fresh. `Run` defers `closeSubshell` so the child dies before `screen.Fini`.
+- `persistentShellToggle` returns false (one-shot fallback) when `[shell].command` is set, the platform is unsupported, or `subshell.Start` fails (warning toast).
+- After `RunVisible`, housekeeping mirrors `withTerminalReleased`: reset `lastScreenContentHash`, `HideCursor`, `render`. Job events posted while the shell is visible queue in tcell and process after Resume.
+- Tests: `newApp`/`testAppMinimal` set `Shell.Persistent = false` (a real PTY and `/dev/tty` break headless simulation screens); persistent-path tests live in `internal/subshell` (stub-shell PTY tests, bash/fish cd round-trips, busy refusal).
+
+## Embedded terminal panel
+
+The same persistent shell rendered as a bottom strip above the footer (separator row plus content; height `[shell].terminal_panel_height`, min `config.MinShellTerminalPanelHeight`). `terminal.toggle-panel` (Alt+T) only shows/hides (show never takes focus; hide returns focus to the file panels if it was focused). `terminal.focus` (Alt+P): hidden -> open+focused, visible+unfocused -> focused, focused -> unfocused. `terminal.grow`/`shrink` (Ctrl+K/Ctrl+J) are bound in the `[terminal]` context, active only while focused. Alt+T replaced Ctrl+Alt chords, which are unreliable across terminals.
+
+- **Emulator**: `subshell.PanelFeed` (`panelfeed_linux.go`) wraps `github.com/micro-editor/terminal` (vt10x fork). A reader goroutine (poll + re-arm-SetNonblock) feeds `VT.Write` and fires a coalesced `terminalWakePayload` (full render; screen hash dedups). `Draw` maps vt10x colors to `tcell.PaletteColor` (defaults -> theme `terminal.text`). No scrollback and no truecolor (vt10x ceiling).
+- **Sole-reader handoff**: `RunVisible` parks the panel reader (`Pause`, synchronous ack), tees output into the emulator (`io.MultiWriter`), resizes the emulator to full screen, and restarts the reader on exit; `runShellVisible` resizes back (the WINCH repaints busy apps). `Subshell.Close` stops the feed before closing the PTY.
+- **Input** (`internal/app/terminal_panel.go`): while focused, `handleKey` routes to the panel **before** the global F10/F1 intercepts (htop's F10 must reach the PTY): `[terminal]` overlay chords first (toggle-panel, focus, grow, shrink, `app.drop-to-shell`), everything else through `subshell.EncodeKey` (tcell -> xterm bytes, DECCKM-aware, `keyencode.go`) into `WritePTY`. Footer F-key hints blank while focused. The hardware cursor follows the emulator (`syncTerminalPanelCursor` after each render, the app's sole `ShowCursor` caller).
+- **Layout single source**: `geom.LayoutInput.TerminalRows` reserves the strip; `App.terminalLayoutRows()` (0 unless visible and `ViewBrowser`) must match `ui.Render`'s derivation, and both feed `CalculateLayoutWithOrientation`. Full-screen views reclaim the strip; too-small screens omit it (it returns on regrow; focus falls back to files). Transient messages paint on the separator row while visible.
+- **Lifecycle**: the panel is a *view* of the persistent shell. `closeTerminalPanel` only hides the drawer; the `PanelFeed` keeps reading into the emulator so content is instantly visible on reopen. `closeSubshell` (shell exit) stops the feed via `Subshell.Close()`. `syncPanelFromSubshellCwd` runs whenever focus leaves the shell. `panel.toggle-sync` is Alt+Y.
+- Tests: `panelfeed_linux_test.go` (headless stub shells), `keyencode_test.go`, `internal/app/terminal_panel_test.go` (real `/bin/sh` on a PTY; only `RunVisible` needs `/dev/tty`, so `Shell.Persistent=true` is safe there).
+
+## One-shot argv PTY sessions (`StartArgv`)
+
+`StartArgv(argv, dir)` is a lean sibling of `Start` for a fully built argv on its own PTY (`exec.Command` on `pty.Start`), skipping the cwd pipe and precmd hook. It reuses `Alive`, `WritePTY`, `StartPanelFeed`, `Close`, `Draw`, `Cursor`, `AppCursor` and adds `Done() <-chan struct{}` and `ExitCode()` (valid after `Done`, captured in the same `cmd.Wait()` goroutine as `Start`). `PanelFeed.SnapshotText()` dumps the emulator grid as right-trimmed plain text (last frame only). Each session is independent of `App.subshell`, so several can run alongside the persistent shell. The only caller is run-for-each PTY mode ([commands.md](commands.md)); non-Linux returns `ErrUnsupportedPlatform` and callers fall back to capture.
+
+## Manual harness
+
+`go run ./cmd/subshell-spike/`: banner/shell toggle outside the app (live cwd in the banner, `1`/`2` inject `Chdir`, `q` quits). Use it to QA terminal handoff per terminal (foot, kitty, xterm, VTE, tmux).
+
+## Deferred by choice
+
+Command-buffer replay into the shell, prompt-idle detection, non-Linux support, zsh `HIST_IGNORE_SPACE` handling, bash 5.1+ array `PROMPT_COMMAND`.

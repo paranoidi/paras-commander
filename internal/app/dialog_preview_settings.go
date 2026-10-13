@@ -15,7 +15,7 @@ import (
 )
 
 // Preview settings dialog (M-F3) handlers. Mutates a.config.Preview in place (settings-dialog
-// pattern, see CLAUDE.md App package layout), so it stays in internal/app rather than
+// pattern, see docs/agents/architecture.md Package layout), so it stays in internal/app rather than
 // apphandler/dialog.
 
 func (a *App) openPreviewSettingsDialog() {

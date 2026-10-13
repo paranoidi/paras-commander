@@ -317,7 +317,7 @@ kills the command.
 A `menu.toml` `run_for_each` entry may also set `pty = true` (or `pty = 1`) to run each invocation
 attached to a live pseudo-TTY instead of capturing output non-interactively — the same mode as
 the Run-for-each dialog's "Allocate pseudo-TTY (interactive)" checkbox. It requires `run_for_each`
-to be set and cannot be combined with a submenu table. See `llm-docs/commands.md` for the full
+to be set and cannot be combined with a submenu table. See `docs/agents/commands.md` for the full
 per-entry field list.
 
 Inside a submenu, **Left** or **Backspace** (`usermenu.back` under `[dialog.user_menu]` in

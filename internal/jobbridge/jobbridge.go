@@ -312,7 +312,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, ded
 		// EnsureDiskSpace gate unconditionally instead of only when PlanComplete is already
 		// true — ops.copyRegularItem's per-file check (gated by disk_space_check_min_file_bytes)
 		// is the safety net for streamed jobs, same trade-off mc makes (mc has no upfront check
-		// at all); see llm-docs/jobs.md.
+		// at all); see docs/agents/jobs.md.
 		if job.PlanCh != nil || job.Type != jobs.TypeCopy {
 			return runTransfer(transferExecCtx{
 				ctx:      ctx,

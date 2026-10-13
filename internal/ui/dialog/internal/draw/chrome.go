@@ -11,7 +11,7 @@ import (
 )
 
 // DrawCenteredDialogTitle overwrites the top border row between corners with '─'
-// fillers and the title centered, per AGENTS.md.
+// fillers and the title centered, per docs/agents/dialogs.md.
 func DrawCenteredDialogTitle(screen tcell.Screen, rect Rect, title string, titleStyle tcell.Style, edgeStyle tcell.Style) {
 	innerWidth := rect.Width - 2
 	if innerWidth < 1 {
@@ -583,7 +583,7 @@ func CenteredDialogRect(layout Layout, width, height int) Rect {
 }
 
 // DrawDialogFrame clears the rect with dialog background, draws a sharp-cornered border using
-// DialogFrame on that background, and paints the title row per AGENTS.md (title glyph foreground
+// DialogFrame on that background, and paints the title row per docs/agents/dialogs.md (title glyph foreground
 // comes from DialogFrame — DialogTitle only contributes attributes like bold).
 // Returns borderStyle (for horizontal rules inside the dialog).
 func DrawDialogFrame(screen tcell.Screen, rect Rect, title string, styles theme.Theme) tcell.Style {

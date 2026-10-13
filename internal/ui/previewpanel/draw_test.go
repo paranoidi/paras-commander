@@ -780,7 +780,7 @@ func TestDrawImageProtocolIndicatorSixelPlain(t *testing.T) {
 }
 
 // TestDrawImageProtocolIndicatorSixelTmux covers the red "Sixel+Tmux" label for the
-// known-flaky combination (see llm-docs/graphics-implementation-lessons.md lesson 11/12).
+// known-flaky combination (see docs/agents/terminal-graphics.md lesson 11/12).
 func TestDrawImageProtocolIndicatorSixelTmux(t *testing.T) {
 	_ = TakeFrameImage()
 	screen := tcell.NewSimulationScreen("UTF-8")

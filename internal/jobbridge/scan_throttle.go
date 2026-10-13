@@ -7,7 +7,7 @@ import (
 )
 
 // adaptiveThrottle implements the pre-scan counting walk's duty-cycle contention probe (see
-// llm-docs/jobs.md): periodically pause the counting walk for a short window and compare the
+// docs/agents/jobs.md): periodically pause the counting walk for a short window and compare the
 // job's measured transfer throughput just before vs. during the pause, growing the duty-cycle
 // pause only when pausing measurably helped and decaying it otherwise, re-probing on a fixed
 // cadence since conditions change through a job's lifetime. This self-corrects for any storage

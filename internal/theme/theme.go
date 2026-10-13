@@ -143,7 +143,7 @@ type Theme struct {
 	// PanelStatusImageSixel/ImageSixelTmux style the bottom-right image-protocol indicator in
 	// the file preview panel (previewpanel.Draw) when the active image is Sixel — ImageSixelTmux
 	// specifically for Sixel-under-tmux, a combination with a known display gap (see
-	// llm-docs/graphics-implementation-lessons.md lesson 11). No indicator for Kitty/None.
+	// docs/agents/terminal-graphics.md lesson 11). No indicator for Kitty/None.
 	PanelStatusImageSixel     tcell.Style
 	PanelStatusImageSixelTmux tcell.Style
 	PanelScrollbarTrack       tcell.Style

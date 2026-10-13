@@ -341,7 +341,7 @@ func (a *App) resetImageOverlayForResize() {
 // that id, so two different images at the same on-screen grid size produce byte-for-byte
 // identical cell content — the hash cache can't see the change and, uncorrected, Show() (and so
 // the terminal redraw the real Kitty terminal needs to notice the new data) gets skipped even
-// though fresh image bytes just went out (see llm-docs/graphics-implementation-lessons.md
+// though fresh image bytes just went out (see docs/agents/terminal-graphics.md
 // lesson 15).
 func (a *App) reconcilePlaceholderImage(plan *previewpanel.ImagePlacement) (changed bool) {
 	if plan == nil || !plan.UnicodePlaceholder {

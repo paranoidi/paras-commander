@@ -22,7 +22,7 @@ type StartOpts struct {
 
 // Event is sent from the scan coordinator to the UI thread.
 // Pay attention: the UI must not read the coordinator index directly — only mirror
-// these payloads into FindDialogState on the main thread (see llm-docs/navigation.md).
+// these payloads into FindDialogState on the main thread (see docs/agents/navigation.md).
 type Event struct {
 	Gen int
 

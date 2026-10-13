@@ -108,7 +108,7 @@ type FindDialogState struct {
 	SearchOnlySelections bool
 	// SelectionDirRoots is a pruned snapshot of selected directory paths at dialog open.
 	SelectionDirRoots []string
-	// Entries mirrors the coordinator index; UI thread updates only via scan.Event (llm-docs/navigation.md).
+	// Entries mirrors the coordinator index; UI thread updates only via scan.Event (docs/agents/navigation.md).
 	Entries []FindEntry
 	// PathMeta resolves isDir and file size by absolute path for marked-selection helpers.
 	PathMeta    func(absPath string) (isDir bool, size int64, ok bool)

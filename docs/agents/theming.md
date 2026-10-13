@@ -1,0 +1,23 @@
+# Theming
+
+UI theme TOML only; preview syntax highlighting (Chroma) is a separate system (`preview.md`). Add-a-key procedure: `recipes/add-theme-key.md`.
+
+## Themes tree
+
+- `themes/default.toml` is the only embedded theme (`themes/embed.go` embeds `*.toml` at the package root only). Disk themes load from the config themes dir; a declared `name` overrides an embedded theme of the same name.
+- `themes/imports/` holds Alacritty color schemes for `import_alacritty.py`, which uses `default.toml` as its template and swaps only `[palette]`, so a new style key in `default.toml` appears in regenerated themes; regenerate rather than hand-edit. `themes/trash/` is discards; `themes/preview/` is Chroma XML.
+- Every new key needs a runtime fallback in `internal/theme` so imported/user themes without it still render.
+- Which TOML fields reach pixels must be checked against resolution in `internal/theme` and use in `internal/ui`. Regression tests for `AccentIconStyle` and dialog title composition: `internal/ui/dialog/internal/draw/`.
+
+## Key groups
+
+- **Panel**: `[panel.active]`, `[panel.inactive]`, `[panel.blocked]` plus shared subtables `[panel]` (text, hint), `[panel.row]` (directory/file/info/selected/symlink, `tree.connector`; `info` styles size/mtime/permissions/meta), `[panel.row.mark]` (suffix marks: selection_subtree, new(.previous), renamed, no_permission, pinned, job(.read/.decision/.move/.delete)), `[panel.icon.folder]` (open, mount, scanning, excluded; no `default`), `[panel.status]` (bottom-border segments: sync, quick_view, selections, selection_size, dotfiles_hidden, gitignore, stash, other_panel), `[panel.git]`, `[panel.scrollbar]`, `[panel.usage]`. `[panel.dedup]` uses `row.mark.keep_subtree`. File rows use `panel.row.file`; non-listing body copy uses `panel.text` / `panel.blocked.text`.
+- **Menu**: `[menu]` (detail, status, spinner, dropdown*; `dropdown` stays dotted because `menu.dropdown` is both leaf and parent), `[menu.bar]`, `[menu.job]`, `[menu.progress]`, `[menu.speed]`. `menu.status` styles the status command (`architecture.md`). `menu.progress.done.gfx.0..9` and `menu.progress.delete.gfx.0..9` are optional light-bar gradients (`gfx.0` = head); absent means a static done fill, and delete falls back to the done gradient. `[menu.speed]` `cap`/`text` and `[icons.menu.speed]` `left`/`right` are optional with fallbacks matching the default theme.
+- **Dialog**: `[dialog]` chrome (frame/surface/text/title/accent), `[dialog.button]`, `[dialog.input]`, `[dialog.option]`, `[dialog.status]` (`selection_size`), `[dialog.progress]`, `[dialog.massrename]`. Styling rules (option rows foreground-only, input placeholder pairs): `dialogs.md`.
+- **Jobs**: `[jobs]` status buckets (`row`/`running`/`done`/`failed`), `[jobs.progress]`, `[jobs.icons]` (keys are job status strings: scanning/queued/running/paused/canceled/failed/decision/completed). `[icons.filelist]` holds row-suffix glyphs (`selection_subtree`, `new`, `renamed`, `no_permission`, `job`, `move`, `delete`, `preview_loading`); the queued suffix glyph is `[icons.jobs.list] queued` (`Theme.IconFilelistQueued`), colored by `jobs.icons.queued`.
+- **Compare**: `[compare]` `hashing` (pending disk icon while a worker reads a file).
+- **Terminal**: `terminal.text` styles the embedded terminal panel (`internal/ui/terminal_panel_render.go`). It is a required root (`styleSectionRoots`/`requiredStyleKeys`); `Theme.TerminalTextStyle()` falls back to `panel.text`. There are no separator keys.
+
+## Theme picker dialog
+
+Navigating live-previews the highlighted theme; Enter applies and persists `theme` to XDG `config.toml`; Esc restores the previous theme; F5 reloads the highlighted theme from disk (failures surface as a status message or message dialog).

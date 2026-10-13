@@ -372,7 +372,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 // the active graphics protocol, but only for Sixel — Kitty and None get no indicator. Sixel
 // under tmux has a known display gap Kitty doesn't share (WezTerm's fix for images surviving
 // an unrelated tmux redraw sweep currently excludes Sixel — see
-// llm-docs/graphics-implementation-lessons.md lesson 11), so that combination gets its own
+// docs/agents/terminal-graphics.md lesson 11), so that combination gets its own
 // louder "Sixel+Tmux" label (styles.PanelStatusImageSixelTmux, red by default) instead of the
 // plain "Sixel" one (styles.PanelStatusImageSixel), making a known risk visible instead of
 // silent. Caller only invokes this for a boxed panel (not Embedded/Borderless): those have no

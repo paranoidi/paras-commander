@@ -11,7 +11,7 @@
 //
 // The settings/config-edit/message-theme/debounce-calibrate dialogs, the SFTP connect/password
 // dialogs, the history dialog, and the quit/stash confirmations remain in internal/app (see
-// AGENTS.md's App package layout section for why); this package reaches the few app-side pieces
+// docs/agents/architecture.md's Package layout section for why); this package reaches the few app-side pieces
 // it still needs — SFTP password execution, opening the generic message dialog, the quick-filter
 // check, and launching the external editor for mass-rename's External mode — through Host.
 package dialog
