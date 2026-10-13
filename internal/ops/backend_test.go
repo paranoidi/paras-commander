@@ -3,6 +3,7 @@ package ops
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -115,5 +116,14 @@ func TestRemovePathRecursiveCancelBetweenRemoteChildren(t *testing.T) {
 	}
 	if len(be.removed) != 1 || be.removed[0] != meadow.String() {
 		t.Fatalf("removed = %v, want only %q", be.removed, meadow)
+	}
+}
+
+func TestIsNotExistUnwrapsBackendErrors(t *testing.T) {
+	if !isNotExist(fmt.Errorf("sftp stat /home/quill/lantern.wav: %w", os.ErrNotExist)) {
+		t.Fatal("wrapped os.ErrNotExist not recognized")
+	}
+	if isNotExist(fmt.Errorf("sftp stat /home/quill/lantern.wav: %w", os.ErrPermission)) {
+		t.Fatal("permission error treated as not-exist")
 	}
 }

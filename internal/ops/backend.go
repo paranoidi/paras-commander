@@ -69,7 +69,7 @@ func isNotExist(err error) bool {
 	if err == nil {
 		return false
 	}
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return true
 	}
 	msg := strings.ToLower(err.Error())
