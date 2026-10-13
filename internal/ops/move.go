@@ -146,6 +146,12 @@ func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, dstExists b
 	default:
 		return renameOutcome{}, nil // skipped
 	}
+	if !dst.IsRemote() {
+		// rename(2) atomically replaces a non-directory target; the mismatch gate in
+		// resolveConflict guarantees dst is not a directory here.
+		return renameFastPathOrFallback(ctx, src, dst)
+	}
+	// SFTP v3 rename fails when the target exists: park the original, rename in, then drop it.
 	stagedLoc, stageErr := stageExistingDest(ctx, dst)
 	if stageErr != nil {
 		return renameOutcome{}, stageErr

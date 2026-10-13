@@ -68,4 +68,7 @@ type ConflictEvent struct {
 	Reprompt string
 	// NoCompare: Skip identical is meaningless for this conflict (archive extract); the dialog omits it.
 	NoCompare bool
+	// Mismatch and DestIsDir mirror ConflictRequest: overwrite is not offered across a directory boundary.
+	Mismatch  bool
+	DestIsDir bool
 }

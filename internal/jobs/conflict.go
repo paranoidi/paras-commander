@@ -18,7 +18,11 @@ const (
 	// DecisionRules means "evaluate the attached ConflictRules per file" (see BlockerAnswer.Rules).
 	DecisionRules ConflictDecision = "rules"
 
+	// DecisionRename keeps both: the source is written under a free "name (N).ext" sibling.
+	DecisionRename ConflictDecision = "rename"
+
 	DecisionOverwriteAll = DecisionOverwrite + allSuffix
+	DecisionRenameAll    = DecisionRename + allSuffix
 	DecisionSkipAll      = DecisionSkip + allSuffix
 )
 
@@ -58,6 +62,10 @@ type ConflictRequest struct {
 	Reprompt string
 	// NoCompare hides Skip identical: the source is not comparable to the destination (archive extract).
 	NoCompare bool
+	// Mismatch: exactly one side is a directory, so Overwrite is not offered (skip, rename, cancel only).
+	Mismatch bool
+	// DestIsDir tells which side of a Mismatch is the directory.
+	DestIsDir bool
 }
 
 // ConflictPolicy tracks active overwrite/skip decisions within a job.
@@ -147,8 +155,6 @@ type ConflictRules struct {
 	Time, Size    [3]RuleAction
 	SkipIdentical bool
 }
-
-
 
 // Evaluate returns the action for a file: the matching time row if it is not Ask, else the
 // matching size row, else Ask. Times compare at whole-second precision (SFTP resolution).

@@ -95,3 +95,13 @@ colliding items themselves (file over file, or a file and a directory sharing
 a name). Skipping an item keeps it, and its parent directories, in the source.
 Once everything is moved the emptied source directory is removed. A symbolic
 link is never merged into or out of; it is treated as a single item.
+
+## Files and directories never overwrite each other
+
+Overwrite replaces a file with a file (or a link). It never replaces a
+directory, and never replaces a file with a directory: when one side is a
+directory (or a link to one) and the other is not, the conflict dialog says
+`Destination is a directory` or `Destination is a file` and offers only Rename
+(keep both), Skip and Cancel. "Overwrite all" and the advanced conflict rules
+are not applied to such items; you are asked each time, while "Skip all" and
+"Rename all" apply as usual. This holds for copy, move and flatten.

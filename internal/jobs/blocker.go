@@ -60,6 +60,8 @@ func BlockerDetailsFromRequest(req BlockerRequest) *BlockerDetails {
 				DestTime:        c.DestTime,
 				Reprompt:        c.Reprompt,
 				NoCompare:       c.NoCompare,
+				Mismatch:        c.Mismatch,
+				DestIsDir:       c.DestIsDir,
 			},
 		}
 	case BlockerKindDiskSpace:

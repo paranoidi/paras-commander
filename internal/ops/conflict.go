@@ -10,11 +10,49 @@ import (
 
 // FileConflictFacts summarizes source and destination for a user conflict prompt.
 type FileConflictFacts struct {
-	Kind       string // "file" or "symlink"
+	Kind       string // "file" or "symlink" (the source)
 	SourceSize int64
 	SourceMod  time.Time
 	DestSize   int64
 	DestMod    time.Time
+	// SourceTarget and DestTarget classify each side; a symlink is followed only to classify.
+	SourceTarget PathTarget
+	DestTarget   PathTarget
+}
+
+// PathTarget is what a conflict side ultimately is.
+type PathTarget int
+
+const (
+	TargetOther   PathTarget = iota // file, symlink to a file, anything not a directory
+	TargetDir                       // real directory
+	TargetDirLink                   // symlink to a directory
+)
+
+// OverwriteUnsafe reports a collision overwrite must never resolve: it can only be skipped,
+// renamed or canceled. That is a directory/non-directory mismatch, or two real directories (they
+// merge before reaching a resolver, so this is only a safety net). Link onto link may be replaced.
+func (f FileConflictFacts) OverwriteUnsafe() bool {
+	sd, dd := f.SourceTarget != TargetOther, f.DestTarget != TargetOther
+	if sd != dd {
+		return true
+	}
+	return sd && (f.SourceTarget != TargetDirLink || f.DestTarget != TargetDirLink)
+}
+
+// DestIsDir reports whether the destination is a directory or a symlink to one.
+func (f FileConflictFacts) DestIsDir() bool { return f.DestTarget != TargetOther }
+
+func localTarget(path string, info os.FileInfo) PathTarget {
+	if info.IsDir() {
+		return TargetDir
+	}
+	if localfs.IsSymlink(info) {
+		if st, err := os.Stat(path); err == nil && st.IsDir() {
+			return TargetDirLink
+		}
+	}
+	return TargetOther
 }
 
 // StatFileConflictFacts reads both paths for display in conflict UIs.
@@ -37,6 +75,9 @@ func StatFileConflictFacts(src, dst string) (FileConflictFacts, error) {
 		SourceMod:  si.ModTime(),
 		DestSize:   localfs.GetFileSize(di),
 		DestMod:    di.ModTime(),
+
+		SourceTarget: localTarget(src, si),
+		DestTarget:   localTarget(dst, di),
 	}, nil
 }
 

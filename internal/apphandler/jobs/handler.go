@@ -312,6 +312,17 @@ func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
 			}
 			return false
 		}
+		mismatch := sel.PendingBlocker != nil && sel.PendingBlocker.Conflict != nil && sel.PendingBlocker.Conflict.Mismatch
+		switch r := event.Rune(); {
+		case mismatch && (r == 'r' || r == 'R'):
+			h.submitJobsConflictDecision(jobs.DecisionRename)
+			return false
+		case mismatch && (r == 'a' || r == 'A'):
+			h.submitJobsConflictDecision(jobs.DecisionRenameAll)
+			return false
+		case mismatch && (r == 'o' || r == 'O' || r == 'd' || r == 'D'):
+			return false // Overwrite and Advanced… are not offered across a directory boundary
+		}
 		switch event.Rune() {
 		case 'o', 'O':
 			h.submitJobsConflictDecision(jobs.DecisionOverwrite)

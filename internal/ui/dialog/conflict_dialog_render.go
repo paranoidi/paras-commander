@@ -67,6 +67,12 @@ func drawConflictFileDialog(screen tcell.Screen, layout Layout, state ConflictDi
 		{Label: "Overwrite All", Shortcut: 'A', Focused: state.Focus == 1, Destructive: true},
 		{Label: "Advanced…", Shortcut: 'D', Focused: state.Focus == 2, Destructive: true},
 	}
+	if c.Mismatch {
+		row1 = []draw.DialogButtonSpec{
+			{Label: "Rename", Shortcut: 'R', Focused: state.Focus == 0},
+			{Label: "Rename All", Shortcut: 'A', Focused: state.Focus == 1},
+		}
+	}
 	row2 := []draw.DialogButtonSpec{
 		{Label: "Skip", Shortcut: 'S', Focused: state.Focus == 3},
 		{Label: "Skip All", Shortcut: 'L', Focused: state.Focus == 4},
@@ -84,6 +90,12 @@ func drawConflictFileDialog(screen tcell.Screen, layout Layout, state ConflictDi
 
 // ConflictPromptText is the question under the file summaries; it carries the Reprompt note.
 func ConflictPromptText(c *jobs.ConflictEvent) string {
+	if c != nil && c.Mismatch {
+		if c.DestIsDir {
+			return "Destination is a directory"
+		}
+		return "Destination is a file"
+	}
 	if c != nil && c.Reprompt != "" {
 		return c.Reprompt + " Overwrite this file?"
 	}

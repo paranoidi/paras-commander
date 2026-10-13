@@ -338,7 +338,7 @@ func TestMoveMixedDeviceRenamesOneCopiesOther(t *testing.T) {
 	}
 }
 
-func TestMoveOverwriteCommitsAndRemovesStash(t *testing.T) {
+func TestMoveOverwriteReplacesFileWithoutStash(t *testing.T) {
 	srcDir := t.TempDir()
 	dstDir := t.TempDir()
 	srcAlpha := filepath.Join(srcDir, "alpha.txt")

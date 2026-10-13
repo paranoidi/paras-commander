@@ -3,8 +3,10 @@ package ops
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
@@ -228,6 +230,8 @@ type copyRunState struct {
 	transferredOut  []pathloc.Path
 	deferredDirMeta []PlanItem
 	deferredSync    []string
+	skippedDirs     []pathloc.Path    // source dirs whose destination collided with a non-directory and was skipped
+	renamedDirs     [][2]pathloc.Path // {destination, keep-both sibling} for directories written under a new name
 
 	th       ProgressEmitThrottle
 	progress ProgressCallback
@@ -265,10 +269,44 @@ func (s *copyRunState) emitMetaProgress(srcPath, dstPath string) {
 	s.progress(srcPath, dstPath, s.doneFiles, s.doneBytes)
 }
 
-func copyDirItem(ctx context.Context, item PlanItem, opts Options, state *copyRunState) error {
+// skipsItem reports whether item lies under a skipped directory; otherwise it re-roots item.Dst
+// under a directory that was kept under a new name. Plans list a directory before its children.
+func (s *copyRunState) skipsItem(item *PlanItem) bool {
+	for _, d := range s.skippedDirs {
+		if item.Src.HasPrefix(d) {
+			return true
+		}
+	}
+	for _, r := range s.renamedDirs {
+		if item.Dst.HasPrefix(r[0]) {
+			if np, err := pathloc.Parse(r[1].String() + strings.TrimPrefix(item.Dst.String(), r[0].String())); err == nil {
+				item.Dst = np
+			}
+			break
+		}
+	}
+	return false
+}
+
+func copyDirItem(ctx context.Context, item PlanItem, opts Options, resolver ConflictResolver, state *copyRunState) error {
+	de, statErr := statEntry(ctx, item.Dst)
+	if statErr == nil && de.Type != fsbackend.EntryDirectory {
+		// A file or symlink (even to a directory) sits where the directory goes: never merge
+		// through it, never replace it; only skip or keep both.
+		res, newDst, err := resolveDestConflict(ctx, item.Src, item.Dst, resolver)
+		if err != nil {
+			return err
+		}
+		if res != copyDone {
+			state.skippedDirs = append(state.skippedDirs, item.Src)
+			return nil
+		}
+		state.renamedDirs = append(state.renamedDirs, [2]pathloc.Path{item.Dst, newDst})
+		item.Dst, statErr = newDst, fs.ErrNotExist
+	}
 	srcStr := item.Src.String()
 	dstStr := item.Dst.String()
-	if _, err := statEntry(ctx, item.Dst); isNotExist(err) {
+	if isNotExist(statErr) {
 		be, err := backendFor(item.Dst)
 		if err != nil {
 			return err
@@ -276,8 +314,8 @@ func copyDirItem(ctx context.Context, item PlanItem, opts Options, state *copyRu
 		if err := be.Mkdir(ctx, item.Dst, mkdirModeForItem(item, opts)); err != nil {
 			return fmt.Errorf("create directory %q: %w", dstStr, err)
 		}
-	} else if err != nil {
-		return fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(err))
+	} else if statErr != nil {
+		return fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(statErr))
 	}
 	if opts.PreservePermissions || opts.PreserveTimestamps {
 		state.deferredDirMeta = append(state.deferredDirMeta, item)
@@ -424,8 +462,12 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 			break
 		}
 
+		if state.skipsItem(&item) {
+			continue
+		}
+
 		if item.IsDir && !item.IsSymlink {
-			if err := copyDirItem(ctx, item, opts, state); err != nil {
+			if err := copyDirItem(ctx, item, opts, resolver, state); err != nil {
 				return state.doneFiles, state.doneBytes, state.transferredOut, err
 			}
 			continue

@@ -115,3 +115,28 @@ func TestJobBlockerDialogFocusFromShortcutAdvanced(t *testing.T) {
 		t.Fatalf("shortcut P = %d %v, want focus 6", focus, ok)
 	}
 }
+
+func TestJobBlockerDialogMismatchOffersNoOverwrite(t *testing.T) {
+	t.Parallel()
+	b := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{Mismatch: true, DestIsDir: true}}
+	if d, ok := JobBlockerDialogDecision(b, 0); !ok || d != jobs.DecisionRename {
+		t.Fatalf("focus 0 = %q %v, want rename", d, ok)
+	}
+	if d, ok := JobBlockerDialogDecision(b, 1); !ok || d != jobs.DecisionRenameAll {
+		t.Fatalf("focus 1 = %q %v, want rename-all", d, ok)
+	}
+	if JobBlockerDialogIsAdvanced(b, 2) {
+		t.Fatal("Advanced must not be offered on a mismatch")
+	}
+	for _, r := range []rune{'o', 'd'} {
+		if _, ok := JobBlockerDialogFocusFromShortcut(b, r); ok {
+			t.Fatalf("Alt+%c must be inactive on a mismatch", r)
+		}
+	}
+	if f, ok := JobBlockerDialogFocusFromShortcut(b, 'r'); !ok || f != 0 {
+		t.Fatalf("Alt+R = %d %v, want 0", f, ok)
+	}
+	if got, _ := JobBlockerDialogMoveFocus(b, 1, tcell.KeyRight); got != 3 {
+		t.Fatalf("Right from Rename All = %d, want 3 (Advanced is skipped)", got)
+	}
+}

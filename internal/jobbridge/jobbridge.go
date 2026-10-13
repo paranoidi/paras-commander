@@ -477,13 +477,24 @@ func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jo
 			DestSize:        ops.FormatConflictSize(facts.DestSize),
 			DestTime:        ops.FormatConflictTime(facts.DestMod),
 			NoCompare:       job.Type == jobs.TypeExtract,
+			Mismatch:        facts.OverwriteUnsafe(),
+			DestIsDir:       facts.DestIsDir(),
 		}
 		for {
 			answer := waitBlocker(jobs.BlockerRequest{
 				Kind:     jobs.BlockerKindConflict,
 				Conflict: &req,
 			})
-			switch answer.Decision.Base() {
+			base := answer.Decision.Base()
+			if req.Mismatch && (base == jobs.DecisionOverwrite || base == jobs.DecisionRules) {
+				// A remembered Overwrite all or rule set must not decide a directory mismatch:
+				// ask, bypassing the job's apply-to-all policy.
+				req.Reprompt = "Overwrite not possible."
+				continue
+			}
+			switch base {
+			case jobs.DecisionRename:
+				return ops.ConflictResolution{Action: ops.ActionRename}, nil
 			case jobs.DecisionOverwrite:
 				return ops.ConflictResolution{Action: ops.ActionOverwrite}, nil
 			case jobs.DecisionRules:

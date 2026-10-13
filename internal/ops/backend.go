@@ -198,7 +198,49 @@ func statConflictFacts(ctx context.Context, src, dst pathloc.Path) (FileConflict
 		SourceMod:  se.ModifiedAt,
 		DestSize:   de.Size,
 		DestMod:    de.ModifiedAt,
+
+		SourceTarget: entryTarget(ctx, src, se),
+		DestTarget:   entryTarget(ctx, dst, de),
 	}, nil
+}
+
+// entryTarget classifies a backend entry; a symlink is followed (target resolved against its
+// parent) only to learn whether it points at a directory.
+func entryTarget(ctx context.Context, loc pathloc.Path, e fsbackend.Entry) PathTarget {
+	switch e.Type {
+	case fsbackend.EntryDirectory:
+		return TargetDir
+	case fsbackend.EntrySymlink:
+		be, err := backendFor(loc)
+		if err != nil {
+			return TargetOther
+		}
+		link, err := be.ReadSymlink(ctx, loc)
+		if err != nil {
+			return TargetOther
+		}
+		t := loc.Parent()
+		if strings.HasPrefix(link, "/") {
+			for p := t.Parent(); !p.Equal(t); p = t.Parent() {
+				t = p
+			}
+		}
+		for _, seg := range strings.Split(link, "/") {
+			switch seg {
+			case "", ".":
+			case "..":
+				t = t.Parent()
+			default:
+				if t, err = t.Join(seg); err != nil {
+					return TargetOther
+				}
+			}
+		}
+		if te, err := be.Stat(ctx, t); err == nil && te.Type == fsbackend.EntryDirectory {
+			return TargetDirLink
+		}
+	}
+	return TargetOther
 }
 
 // resolveDestConflict returns copyDone with the path to write to (dst, or its free sibling for

@@ -63,6 +63,10 @@ func resolveConflict(ctx context.Context, src, dst pathloc.Path, resolver Confli
 	if err != nil {
 		return ActionSkip, dst, err
 	}
+	if res.Action == ActionOverwrite && facts.OverwriteUnsafe() {
+		// Single choke point: overwrite never crosses a directory boundary, whatever the resolver said.
+		return ActionSkip, dst, nil
+	}
 	if res.Action == ActionRename {
 		newDst, err := uniqueSiblingName(ctx, dst)
 		return ActionRename, newDst, err

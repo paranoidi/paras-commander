@@ -63,12 +63,24 @@ func jobsConflictPaneFocused(state JobsViewState, showConflict bool) bool {
 	return showConflict && state.FocusPane == 1
 }
 
+// blockerMismatch reports a directory/non-directory conflict, where the first button pair is
+// Rename / Rename All instead of Overwrite / Overwrite All and Advanced… is absent.
+func blockerMismatch(b *jobs.BlockerDetails) bool {
+	return b != nil && b.Kind != jobs.BlockerKindDiskSpace && b.Conflict != nil && b.Conflict.Mismatch
+}
+
 // ConflictDecisionFromButtonIndex maps conflict panel button order to domain decisions.
-func ConflictDecisionFromButtonIndex(idx int) jobs.ConflictDecision {
+func ConflictDecisionFromButtonIndex(idx int, mismatch bool) jobs.ConflictDecision {
 	switch idx {
 	case 0:
+		if mismatch {
+			return jobs.DecisionRename
+		}
 		return jobs.DecisionOverwrite
 	case 1:
+		if mismatch {
+			return jobs.DecisionRenameAll
+		}
 		return jobs.DecisionOverwriteAll
 	case 2:
 		return "" // Advanced…: opens the advanced dialog, not a decision
@@ -86,12 +98,12 @@ const conflictAdvancedFocus = 2
 
 // JobBlockerPanelIsAdvanced reports whether panel button focus selects "Advanced…" (not a decision).
 func JobBlockerPanelIsAdvanced(sel JobEntry, btnIdx int) bool {
-	return sel.PendingBlocker != nil && sel.PendingBlocker.Kind != jobs.BlockerKindDiskSpace && btnIdx == conflictAdvancedFocus
+	return sel.PendingBlocker != nil && sel.PendingBlocker.Kind != jobs.BlockerKindDiskSpace && !blockerMismatch(sel.PendingBlocker) && btnIdx == conflictAdvancedFocus
 }
 
 // JobBlockerDialogIsAdvanced reports whether dialog focus selects "Advanced…" (not a decision).
 func JobBlockerDialogIsAdvanced(b jobs.BlockerDetails, focus int) bool {
-	return b.Kind != jobs.BlockerKindDiskSpace && focus == conflictAdvancedFocus
+	return b.Kind != jobs.BlockerKindDiskSpace && !blockerMismatch(&b) && focus == conflictAdvancedFocus
 }
 
 // JobBlockerDecisionFromFocus resolves the decision for the blocker pane from button focus.
@@ -102,7 +114,7 @@ func JobBlockerDecisionFromFocus(sel JobEntry, btnIdx int) jobs.ConflictDecision
 		}
 		return jobs.DecisionCancel
 	}
-	return ConflictDecisionFromButtonIndex(btnIdx)
+	return ConflictDecisionFromButtonIndex(btnIdx, blockerMismatch(sel.PendingBlocker))
 }
 
 // JobBlockerDialogMaxFocus returns the maximum button focus index for the quick blocker dialog.
@@ -138,10 +150,11 @@ func JobBlockerDialogDecision(b jobs.BlockerDetails, focus int) (jobs.ConflictDe
 		}
 		return jobs.DecisionCancel, true
 	}
+	mismatch := blockerMismatch(&b)
 	if focus < 0 || focus > 5 || focus == conflictAdvancedFocus {
 		return "", false
 	}
-	return ConflictDecisionFromButtonIndex(focus), true
+	return ConflictDecisionFromButtonIndex(focus, mismatch), true
 }
 
 // JobBlockerDialogFocusFromShortcut maps Alt+letter shortcuts to button focus.
@@ -157,13 +170,16 @@ func JobBlockerDialogFocusFromShortcut(b jobs.BlockerDetails, r rune) (int, bool
 		}
 		return 0, false
 	}
+	mismatch := blockerMismatch(&b)
 	switch r {
 	case 'o', 'O':
-		return 0, true
+		return 0, !mismatch
+	case 'r', 'R':
+		return 0, mismatch
 	case 'a', 'A':
 		return 1, true
 	case 'd', 'D':
-		return 2, true
+		return 2, !mismatch
 	case 's', 'S':
 		return 3, true
 	case 'l', 'L':
@@ -214,6 +230,9 @@ func JobBlockerDialogMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) 
 			return focus, false
 		}
 	}
+	if blockerMismatch(&b) {
+		return moveFocusInButtonGrid(conflictDialogMismatchGrid, focus, key)
+	}
 	return moveFocusInButtonGrid(conflictDialogButtonGrid, focus, key)
 }
 
@@ -221,6 +240,9 @@ func JobBlockerDialogMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) 
 var (
 	conflictDialogButtonGrid = [][]int{{0, 1, 2}, {3, 4, 6}, {5}}
 	conflictPanelButtonGrid  = [][]int{{0, 1, 2}, {3, 4, 5}}
+	// A directory mismatch has no Advanced… button (focus 2).
+	conflictDialogMismatchGrid = [][]int{{0, 1}, {3, 4, 6}, {5}}
+	conflictPanelMismatchGrid  = [][]int{{0, 1}, {3, 4, 5}}
 )
 
 // JobsBlockerPanelMoveFocus applies navigation keys to the jobs-view blocker pane buttons,
@@ -228,6 +250,9 @@ var (
 func JobsBlockerPanelMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) (int, bool) {
 	if b.Kind == jobs.BlockerKindDiskSpace {
 		return JobBlockerDialogMoveFocus(b, focus, key)
+	}
+	if blockerMismatch(&b) {
+		return moveFocusInButtonGrid(conflictPanelMismatchGrid, focus, key)
 	}
 	return moveFocusInButtonGrid(conflictPanelButtonGrid, focus, key)
 }
@@ -396,6 +421,12 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 		{Label: "Overwrite", Shortcut: 'O', Focused: focused && f == 0, Destructive: true},
 		{Label: "Overwrite All", Shortcut: 'A', Focused: focused && f == 1, Destructive: true},
 		{Label: "Advanced…", Shortcut: 'D', Focused: focused && f == 2, Destructive: true},
+	}
+	if c.Mismatch {
+		row1 = []dialog.DialogButtonSpec{
+			{Label: "Rename", Shortcut: 'R', Focused: focused && f == 0},
+			{Label: "Rename All", Shortcut: 'A', Focused: focused && f == 1},
+		}
 	}
 	row2 := []dialog.DialogButtonSpec{
 		{Label: "Skip", Shortcut: 'S', Focused: focused && f == 3},
