@@ -503,6 +503,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		rowSuffix.Working = (state.ShowLoadingIcon && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath) ||
 			(ctx.WorkingRowPath != "" && entry.Path == ctx.WorkingRowPath)
 		_, rowSuffix.Pinned = display.PinnedPaths[entry.Path]
+		rowSuffix.RangeAnchor = state.RangeAnchor != "" && entry.Path == state.RangeAnchor
 		if display.OtherMatchNames != nil && entry.Name != ".." && state.EntryDir(entry).String() == display.OtherMatchDir {
 			_, rowSuffix.OtherMatch = display.OtherMatchNames[entry.Name]
 			rowSuffix.OtherMatchCursor = rowSuffix.OtherMatch && entry.Name == display.OtherMatchCursorName
@@ -528,7 +529,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 
 	cursorIconKey := ""
 	if hasEntry {
-		cursorIconKey = panelCursorIconThemeKey(ctx.CursorRowActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.CursorRowActive && state.FilterUniqueMatch())
+		cursorIconKey = panelCursorIconThemeKey(ctx.CursorRowActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.CursorRowActive && state.FilterUniqueMatch(), state.RangeAnchor != "")
 	}
 	if hasEntry {
 		spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, panelStyle.Styles, rowOpts, func(di int) tcell.Style {
@@ -608,6 +609,7 @@ func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx P
 			FileListActive:    ctx.CursorRowActive,
 			Selected:          selected,
 			FilterUniqueMatch: ctx.CursorRowActive && state.FilterUniqueMatch(),
+			RangePending:      state.RangeAnchor != "",
 		})
 	}
 	return style, selected
@@ -835,9 +837,15 @@ const (
 )
 
 // panelCursorIconThemeKey is the semantic style key for Theme.PanelFileIconFG on the cursor row; empty otherwise.
-func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cursor int, selected, filterUniqueMatch bool) string {
+func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cursor int, selected, filterUniqueMatch, rangePending bool) string {
 	if entryIndex != cursor {
 		return ""
+	}
+	if rangePending {
+		if selected {
+			return "panel.row.cursor.range.selected"
+		}
+		return "panel.row.cursor.range"
 	}
 	if chromeBlocked {
 		if selected {

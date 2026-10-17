@@ -70,6 +70,7 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileQuickView,
 	},
 	LeaderMenuGroupSelection: {
+		ActionPanelSelectRange,
 		ActionPanelSelectGroup,
 		ActionPanelUnselectGroup,
 		ActionPanelInvertSelection,

@@ -75,6 +75,8 @@ text = { fg = "white" }
 hint = { fg = "bright_white", bold = true }
 
 [panel.row]                  # file-list row colors
+cursor.range = { fg = "black", bg = "yellow", icon = "black" }  # cursor row while a range select is pending
+cursor.range.selected = { fg = "black", bg = "yellow", bold = true, icon = "black" }
 directory = { fg = "blue", bold = true }
 file = { fg = "white" }
 info = { fg = "bright_black" }  # size / mtime / permissions / meta columns
@@ -89,6 +91,7 @@ new.previous = { fg = "bright_yellow" }
 renamed = { fg = "cyan" }
 no_permission = { fg = "bright_black" }
 pinned = { fg = "magenta" }
+range_anchor = { fg = "yellow" }
 other_match = { fg = "bright_black" }
 other_match.cursor = { fg = "cyan" }
 job = { fg = "green" }
@@ -337,6 +340,7 @@ selection_subtree = ""
 new = "\uea7f"
 renamed = "\U000f11e8"
 other_match = "\U000f01fc"
+range_anchor = "\uf11d"
 no_permission = "\uf023"
 job = "\U000f02ca"
 move = "\U000f0ab9"

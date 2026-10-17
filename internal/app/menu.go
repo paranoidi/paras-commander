@@ -201,6 +201,8 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 			return a.handleQuit()
 		case keymap.ActionAppQuitImmediate:
 			return a.handleQuitImmediate()
+		case keymap.ActionPanelSelectRange:
+			a.dispatch(item.Action)
 		case keymap.ActionPanelSelectGroup:
 			a.openGroupSelect("select", "panel")
 		case keymap.ActionPanelUnselectGroup:

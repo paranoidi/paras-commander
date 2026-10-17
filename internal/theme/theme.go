@@ -122,12 +122,15 @@ type Theme struct {
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
 	PanelText tcell.Style
 	// PanelHint highlights rows related to the cursor row (e.g. duplicate siblings in the dedupe treeview).
-	PanelHint                   tcell.Style
-	PanelCursorActive           tcell.Style
-	PanelCursorActiveUnique     tcell.Style
-	PanelCursorInactive         tcell.Style
-	PanelActiveCursorSelected   tcell.Style
-	PanelInactiveCursorSelected tcell.Style
+	PanelHint         tcell.Style
+	PanelCursorActive tcell.Style
+	// PanelCursorRange / PanelCursorRangeSelected style the cursor row while a range select
+	// is pending (panel.row.cursor.range[.selected]); PanelRowMarkRangeAnchor styles the anchor mark.
+	PanelCursorRange, PanelCursorRangeSelected, PanelRowMarkRangeAnchor tcell.Style
+	PanelCursorActiveUnique                                             tcell.Style
+	PanelCursorInactive                                                 tcell.Style
+	PanelActiveCursorSelected                                           tcell.Style
+	PanelInactiveCursorSelected                                         tcell.Style
 	// PanelCarouselInactiveCursor* styles preview-pane cursors in carousel mode.
 	PanelCarouselInactiveCursor         tcell.Style
 	PanelCarouselInactiveCursorSelected tcell.Style
@@ -588,6 +591,7 @@ const (
 	IconKeyFilelistNew              = "filelist.new"
 	IconKeyFilelistRenamed          = "filelist.renamed"
 	IconKeyFilelistOtherMatch       = "filelist.other_match"
+	IconKeyFilelistRangeAnchor      = "filelist.range_anchor"
 	IconKeyFilelistJob              = "filelist.job"
 	IconKeyFilelistMove             = "filelist.move"
 	IconKeyFilelistDelete           = "filelist.delete"
@@ -765,6 +769,11 @@ func (t Theme) IconFilelistNew() rune {
 // IconFilelistRenamed returns the recently-renamed file suffix icon.
 func (t Theme) IconFilelistRenamed() rune {
 	return t.filelistIconRune(IconKeyFilelistRenamed, '\U000f11e8')
+}
+
+// IconFilelistRangeAnchor returns the suffix icon marking the pending range-select anchor row.
+func (t Theme) IconFilelistRangeAnchor() rune {
+	return t.filelistIconRune(IconKeyFilelistRangeAnchor, '\uf11d')
 }
 
 // IconFilelistOtherMatch returns the suffix icon for names also present in the other panel.
@@ -1194,7 +1203,8 @@ var optionalStyleKeys = func() []string {
 	for i := 0; i < 10; i++ {
 		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
 	}
-	keys = append(keys, "menu.speed.cap", "menu.speed.text", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor")
+	keys = append(keys, "menu.speed.cap", "menu.speed.text", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
+		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected")
 	return keys
 }()
 
@@ -1512,6 +1522,19 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	panelRowMarkRangeAnchor, err := optionalStyle(specs, palette, "panel.row.mark.range_anchor", tcell.StyleDefault.Foreground(tcell.ColorYellow))
+	if err != nil {
+		return Theme{}, err
+	}
+	panelCursorRange, err := optionalStyle(specs, palette, "panel.row.cursor.range", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorYellow))
+	if err != nil {
+		return Theme{}, err
+	}
+	panelCursorRangeSelected, err := optionalStyle(specs, palette, "panel.row.cursor.range.selected", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorYellow).Bold(true))
+	if err != nil {
+		return Theme{}, err
+	}
+
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
 		"panel.active.row.cursor":                     {},
@@ -1523,6 +1546,8 @@ func parse(data []byte) (Theme, error) {
 		"panel.carousel.inactive.row.cursor.selected": {},
 		"panel.blocked.row.cursor":                    {},
 		"panel.blocked.row.cursor.selected":           {},
+		"panel.row.cursor.range":                      {},
+		"panel.row.cursor.range.selected":             {},
 	}
 	for key, spec := range specs {
 		if spec.Icon == "" {
@@ -1603,6 +1628,9 @@ func parse(data []byte) (Theme, error) {
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
 		PanelText:                           styles["panel.text"],
 		PanelHint:                           styles["panel.hint"],
+		PanelRowMarkRangeAnchor:             panelRowMarkRangeAnchor,
+		PanelCursorRange:                    panelCursorRange,
+		PanelCursorRangeSelected:            panelCursorRangeSelected,
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
 		PanelCursorActiveUnique:             styles["panel.active.row.cursor.unique"],
 		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],

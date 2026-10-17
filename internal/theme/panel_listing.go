@@ -14,6 +14,9 @@ type PanelListingCursorOpts struct {
 	// FilterUniqueMatch is true when the active quick filter has exactly one matching entry.
 	// Activates panel.active.row.cursor.unique styling on the active panel cursor.
 	FilterUniqueMatch bool
+	// RangePending is true while the panel has a pending range-select anchor; the cursor row
+	// then uses panel.row.cursor.range[.selected] in every chrome state.
+	RangePending bool
 }
 
 // PanelListingEntryStyle returns the base row style for a listing entry by type and chrome state.
@@ -60,6 +63,12 @@ func (t Theme) PanelListingCursorStyle(base tcell.Style, opts PanelListingCursor
 }
 
 func (t Theme) panelListingCursorThemeStyle(opts PanelListingCursorOpts) tcell.Style {
+	if opts.RangePending {
+		if opts.Selected {
+			return t.PanelCursorRangeSelected
+		}
+		return t.PanelCursorRange
+	}
 	if opts.ChromeBlocked {
 		if opts.Selected {
 			return t.PanelBlockedCursorSelected
@@ -100,6 +109,12 @@ func (t Theme) PanelListingInfoStyle(rowCell tcell.Style) tcell.Style {
 
 // PanelListingCursorIconKey returns the theme key for panel.*.row.cursor icon overrides on the cursor row.
 func (t Theme) PanelListingCursorIconKey(opts PanelListingCursorOpts) string {
+	if opts.RangePending {
+		if opts.Selected {
+			return "panel.row.cursor.range.selected"
+		}
+		return "panel.row.cursor.range"
+	}
 	if opts.ChromeBlocked {
 		if opts.Selected {
 			return "panel.blocked.row.cursor.selected"

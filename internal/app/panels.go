@@ -839,6 +839,18 @@ func (a *App) tryDispatchSelectionActions(actionID string) bool {
 		if conflicts {
 			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 		}
+	case keymap.ActionPanelSelectRange:
+		anchored, added, conflicts := activePanel.MarkRange(viewportRows)
+		key := a.keys.Global.MenuBindingLabel(keymap.ActionPanelSelectRange)
+		switch {
+		case anchored && activePanel.RangeAnchor != "":
+			a.setTransientMessage(fmt.Sprintf("Range start set, move and press %s on the last item", key), ui.MessageUrgencyInfo)
+		case anchored:
+			a.setTransientMessage(fmt.Sprintf("Selected %d items", added), ui.MessageUrgencyInfo)
+			if conflicts {
+				a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+			}
+		}
 	case keymap.ActionGitStage:
 		a.gitStageActive(true)
 	case keymap.ActionGitUnstage:

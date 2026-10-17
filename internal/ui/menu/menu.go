@@ -118,6 +118,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionFileMkdir, Label: "Mkdir", Shortcut: 'm'},
 				{Action: keymap.ActionFileDelete, Label: "Delete", Shortcut: 'd'},
 				{Separator: true},
+				{Action: keymap.ActionPanelSelectRange, Label: "Select range", Shortcut: 'a'},
 				{Action: keymap.ActionPanelSelectGroup, Label: "Select group", Shortcut: 'g'},
 				{Action: keymap.ActionPanelUnselectGroup, Label: "Unselect group", Shortcut: 'n'},
 				{Action: keymap.ActionPanelInvertSelection, Label: "Invert selection", Shortcut: 'I'},

@@ -47,6 +47,8 @@ type historyCursorSnapshot struct {
 // State contains all panel data needed by the App and renderer.
 type State struct {
 	Path pathloc.Path
+	// RangeAnchor is the path marked as the start of a pending range select ("" when none).
+	RangeAnchor string
 	// VolumeAvailBytes / VolumeTotalBytes describe the file system backing Path after the last successful load.
 	VolumeSpaceOK    bool
 	VolumeAvailBytes uint64
@@ -672,6 +674,50 @@ func (s *State) ToggleSelectionAndAdvance(viewportRows int) (bool, bool) {
 		s.Move(1, viewportRows)
 	}
 	return true, conflictsRemoved
+}
+
+// MarkRange sets RangeAnchor to the current entry and advances the cursor like
+// ToggleSelectionAndAdvance, or, when an anchor is set and still visible,
+// adds every visible entry between anchor and cursor to the selection and clears the anchor.
+// anchored is false only when there is no current entry; added counts newly selected entries.
+func (s *State) MarkRange(viewportRows int) (anchored bool, added int, conflicts bool) {
+	cur, ok := s.CurrentEntry()
+	if !ok {
+		return false, 0, false
+	}
+	n := s.VisibleEntryCount()
+	// ponytail: O(n) scan for anchor index; fine for listing sizes.
+	ai := -1
+	if s.RangeAnchor != "" {
+		for i := 0; i < n; i++ {
+			if e, _, ok := s.VisibleEntry(i); ok && e.Path == s.RangeAnchor {
+				ai = i
+				break
+			}
+		}
+	}
+	if ai < 0 {
+		s.RangeAnchor = cur.Path
+		if s.Cursor < n-1 {
+			s.Move(1, viewportRows)
+		}
+		return true, 0, false
+	}
+	lo, hi := min(ai, s.Cursor), max(ai, s.Cursor)
+	for i := lo; i <= hi; i++ {
+		e, _, ok := s.VisibleEntry(i)
+		if !ok || e.Name == ".." {
+			continue
+		}
+		if !s.IsSelectedPath(e.Path) {
+			added++
+		}
+		if s.AddSelection(e.Path) {
+			conflicts = true
+		}
+	}
+	s.RangeAnchor = ""
+	return true, added, conflicts
 }
 
 // IsSelected reports whether entry is selected in this panel.

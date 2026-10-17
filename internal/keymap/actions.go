@@ -63,6 +63,7 @@ const (
 	ActionFindSelectParentDirs        = "find.select-parent-dirs"
 	ActionPanelRefresh                = "panel.refresh"
 	ActionPanelSelectToggle           = "panel.select-toggle"
+	ActionPanelSelectRange            = "panel.select-range"
 	ActionPanelSelectGroup            = "panel.select-group"
 	ActionPanelUnselectGroup          = "panel.unselect-group"
 	ActionPanelInvertSelection        = "panel.invert-selection"
@@ -368,6 +369,7 @@ var KnownActions = map[string]struct{}{
 	ActionFindSelectParentDirs:        {},
 	ActionPanelRefresh:                {},
 	ActionPanelSelectToggle:           {},
+	ActionPanelSelectRange:            {},
 	ActionPanelSelectGroup:            {},
 	ActionPanelUnselectGroup:          {},
 	ActionPanelInvertSelection:        {},

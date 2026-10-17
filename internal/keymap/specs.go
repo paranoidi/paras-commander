@@ -818,6 +818,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "S",
 		},
 		{
+			ID:          ActionPanelSelectRange,
+			Views:       HelpBrowser,
+			Title:       "Select range",
+			Section:     "Selection",
+			DefaultKeys: []string{"M-m"},
+			Keywords:    []string{"range", "mark", "shift", "block"},
+			LeaderKey:   "k",
+		},
+		{
 			ID:          ActionPanelSelectGroup,
 			Views:       HelpBrowser | HelpCompare,
 			Title:       "Select group",
