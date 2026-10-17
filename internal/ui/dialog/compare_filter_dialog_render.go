@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
@@ -20,8 +21,8 @@ func DrawCompareFilterDialog(screen tcell.Screen, layout Layout, state CompareFi
 	y := rect.Y + 1
 
 	for i, r := range radios {
-		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, r.Label, r.Shortcut,
-			state.Filter == r.Filter, state.Focus == i, false, styles)
+		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, r.Label, r.Shortcut,
+			comparepkg.FilterChecked(state.Filter, r.Filter), state.Focus == i, false, styles)
 		y++
 	}
 

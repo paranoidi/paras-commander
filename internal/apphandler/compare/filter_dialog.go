@@ -35,7 +35,7 @@ func (h *Handler) OpenSelectDialog(selected bool) {
 	if !selected {
 		mode = dialog.CompareFilterModeUnselect
 	}
-	h.model.CompareFilterDialog = dialog.CompareFilterDialogState{Open: true, Mode: mode, Filter: comparepkg.FilterAll}
+	h.model.CompareFilterDialog = dialog.CompareFilterDialogState{Open: true, Mode: mode, Filter: comparepkg.FilterNone}
 }
 
 func (h *Handler) closeFilterDialog() {
@@ -91,12 +91,12 @@ func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
 	h.host.SetTransientMessage(fmt.Sprintf("%sed %d files on %s side", strings.ToUpper(verb[:1])+verb[1:], n, side), ui.MessageUrgencyInfo)
 }
 
-// selectFilterDialogRadio sets the pending radio selection for focus without
+// selectFilterDialogRadio toggles the pending checkbox for focus without
 // applying it to the view (Space/Enter/Alt mnemonic).
 func (h *Handler) selectFilterDialogRadio(focus int) {
 	d := &h.model.CompareFilterDialog
 	if f, ok := d.FilterForFocus(focus); ok {
-		d.Filter = f
+		d.Filter = comparepkg.ToggleFilter(d.Filter, f)
 		d.Focus = focus
 	}
 }

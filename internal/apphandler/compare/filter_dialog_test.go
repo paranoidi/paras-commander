@@ -31,8 +31,9 @@ func TestFilterDialogArrowDoesNotApplyUntilOK(t *testing.T) {
 	}
 
 	h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
-	if model.CompareFilterDialog.Filter != comparepkg.FilterEqual {
-		t.Fatalf("after Space: dialog Filter = %v, want Equal", model.CompareFilterDialog.Filter)
+	wantPending := comparepkg.FilterAll &^ comparepkg.FilterEqual
+	if model.CompareFilterDialog.Filter != wantPending {
+		t.Fatalf("after Space: dialog Filter = %v, want All minus Equal", model.CompareFilterDialog.Filter)
 	}
 	if model.CompareView.Filter != comparepkg.FilterAll {
 		t.Fatalf("after Space: view Filter = %v, want All until OK", model.CompareView.Filter)
@@ -42,11 +43,39 @@ func TestFilterDialogArrowDoesNotApplyUntilOK(t *testing.T) {
 		h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	}
 	h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if model.CompareView.Filter != comparepkg.FilterEqual {
-		t.Fatalf("after OK: view Filter = %v, want Equal", model.CompareView.Filter)
+	if model.CompareView.Filter != wantPending {
+		t.Fatalf("after OK: view Filter = %v, want All minus Equal", model.CompareView.Filter)
 	}
 	if model.CompareFilterDialog.Open {
 		t.Fatal("dialog should be closed after OK")
+	}
+}
+
+func TestFilterDialogTogglesMasterAndKinds(t *testing.T) {
+	model := &ui.Model{
+		ViewMode:    ui.ViewCompare,
+		CompareView: ui.CompareViewState{Filter: comparepkg.FilterAll},
+	}
+	h := New(Deps{Host: compareHandlerHost{}, Model: model})
+	h.OpenFilterDialog()
+	alt := func(r rune) { h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModAlt)) }
+
+	alt('a')
+	if got := model.CompareFilterDialog.Filter; got != comparepkg.FilterNone {
+		t.Fatalf("master on All: Filter = %v, want None", got)
+	}
+	alt('p')
+	alt('d')
+	if got, want := model.CompareFilterDialog.Filter, comparepkg.FilterPrimaryOnly|comparepkg.FilterContentDiff; got != want {
+		t.Fatalf("after P, D: Filter = %v, want %v", got, want)
+	}
+	alt('p')
+	if got := model.CompareFilterDialog.Filter; got != comparepkg.FilterContentDiff {
+		t.Fatalf("after P again: Filter = %v, want Content diff", got)
+	}
+	alt('a')
+	if got := model.CompareFilterDialog.Filter; got != comparepkg.FilterAll {
+		t.Fatalf("master on partial: Filter = %v, want All", got)
 	}
 }
 
@@ -101,7 +130,7 @@ func TestSelectDialogSelectsAndUnselectsMatchingFocusedSidePaths(t *testing.T) {
 	root1, root2 := pathloc.MustParse("/amber"), pathloc.MustParse("/birch")
 	model := &ui.Model{
 		ViewMode:    ui.ViewCompare,
-		CompareView: ui.CompareViewState{FocusColumn: ui.CompareColumnSecondary},
+		CompareView: ui.CompareViewState{Filter: comparepkg.FilterAll, FocusColumn: ui.CompareColumnSecondary},
 		CompareSnapshot: comparepkg.Snapshot{
 			PrimaryRoot: root1, SecondaryRoot: root2,
 			Rows: []comparepkg.Row{

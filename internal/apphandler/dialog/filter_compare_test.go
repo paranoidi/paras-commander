@@ -12,7 +12,8 @@ import (
 func TestFilterDialogCompareTarget(t *testing.T) {
 	t.Parallel()
 	model := &ui.Model{
-		ViewMode: ui.ViewCompare,
+		ViewMode:    ui.ViewCompare,
+		CompareView: ui.CompareViewState{Filter: compare.FilterAll},
 		CompareSnapshot: compare.Snapshot{Rows: []compare.Row{
 			{Kind: compare.KindPrimaryOnly, PrimaryRel: "orchard/lemon.txt", Size: 1},
 			{Kind: compare.KindSecondaryOnly, SecondaryRel: "meadow/maple.txt", Size: 1},

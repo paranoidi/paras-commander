@@ -10,7 +10,7 @@ import (
 
 func TestSelectedColumnTargetPrimaryAndSecondary(t *testing.T) {
 	model := &ui.Model{
-		CompareView: ui.CompareViewState{Selected: 0, FocusColumn: ui.CompareColumnPrimary},
+		CompareView: ui.CompareViewState{Filter: comparepkg.FilterAll, Selected: 0, FocusColumn: ui.CompareColumnPrimary},
 		CompareSnapshot: comparepkg.Snapshot{
 			PrimaryRoot:   pathloc.MustParse("/primary"),
 			SecondaryRoot: pathloc.MustParse("/secondary"),
@@ -41,7 +41,7 @@ func TestSelectedColumnTargetPrimaryAndSecondary(t *testing.T) {
 
 func TestSelectedColumnTargetNoCounterpart(t *testing.T) {
 	model := &ui.Model{
-		CompareView: ui.CompareViewState{Selected: 0, FocusColumn: ui.CompareColumnSecondary},
+		CompareView: ui.CompareViewState{Filter: comparepkg.FilterAll, Selected: 0, FocusColumn: ui.CompareColumnSecondary},
 		CompareSnapshot: comparepkg.Snapshot{
 			PrimaryRoot:   pathloc.MustParse("/primary"),
 			SecondaryRoot: pathloc.MustParse("/secondary"),
@@ -59,7 +59,7 @@ func TestSelectedColumnTargetNoCounterpart(t *testing.T) {
 
 func TestSelectedColumnTargetNoSelection(t *testing.T) {
 	model := &ui.Model{
-		CompareView:     ui.CompareViewState{Selected: 0},
+		CompareView:     ui.CompareViewState{Filter: comparepkg.FilterAll, Selected: 0},
 		CompareSnapshot: comparepkg.Snapshot{},
 	}
 	h := New(Deps{Host: compareHandlerHost{}, Model: model})

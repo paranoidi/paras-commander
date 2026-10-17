@@ -4,6 +4,7 @@ package compare
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -95,66 +96,70 @@ type Snapshot struct {
 	Err             string
 }
 
-// Filter selects which row kinds are visible in the UI.
+// Filter is a bitmask of the row kinds visible in the UI. Skipped rows have no bit and stay hidden.
 type Filter int
 
 const (
-	FilterAll Filter = iota
-	FilterEqual
+	FilterEqual Filter = 1 << iota
 	FilterRelocated
 	FilterPrimaryOnly
 	FilterSecondaryOnly
 	FilterContentDiff
+
+	// FilterNone shows no rows.
+	FilterNone Filter = 0
+	// FilterAll shows every kind except Skipped.
+	FilterAll = FilterEqual | FilterRelocated | FilterPrimaryOnly | FilterSecondaryOnly | FilterContentDiff
 )
+
+// filterKinds lists the single-kind filters in display and cycle order.
+var filterKinds = []struct {
+	Filter Filter
+	Kind   Kind
+	Label  string
+}{
+	{FilterEqual, KindEqual, "Equal"},
+	{FilterRelocated, KindRelocated, "Relocated"},
+	{FilterPrimaryOnly, KindPrimaryOnly, "Primary only"},
+	{FilterSecondaryOnly, KindSecondaryOnly, "Secondary only"},
+	{FilterContentDiff, KindContentDiff, "Content diff"},
+}
 
 // FilterMatches reports whether kind is included in f.
 func FilterMatches(f Filter, kind Kind) bool {
-	switch f {
-	case FilterAll:
-		return kind != KindSkipped
-	case FilterEqual:
-		return kind == KindEqual
-	case FilterRelocated:
-		return kind == KindRelocated
-	case FilterPrimaryOnly:
-		return kind == KindPrimaryOnly
-	case FilterSecondaryOnly:
-		return kind == KindSecondaryOnly
-	case FilterContentDiff:
-		return kind == KindContentDiff
-	default:
-		return false
+	for _, k := range filterKinds {
+		if k.Kind == kind {
+			return f&k.Filter != 0
+		}
 	}
+	return false
 }
 
-// FilterLabel returns a short UI label for f.
+// FilterLabel returns a short UI label for f: All, None, or the kind names joined with " + ".
 func FilterLabel(f Filter) string {
-	switch f {
+	switch f & FilterAll {
 	case FilterAll:
 		return "All"
-	case FilterEqual:
-		return "Equal"
-	case FilterRelocated:
-		return "Relocated"
-	case FilterPrimaryOnly:
-		return "Primary only"
-	case FilterSecondaryOnly:
-		return "Secondary only"
-	case FilterContentDiff:
-		return "Content diff"
-	default:
-		return "All"
+	case FilterNone:
+		return "None"
 	}
+	var names []string
+	for _, k := range filterKinds {
+		if f&k.Filter != 0 {
+			names = append(names, k.Label)
+		}
+	}
+	return strings.Join(names, " + ")
 }
 
-// FilterDialogRadio describes one category radio in the compare filter dialog.
+// FilterDialogRadio describes one category checkbox in the compare filter dialog.
 type FilterDialogRadio struct {
 	Filter   Filter
 	Label    string
 	Shortcut rune
 }
 
-// FilterDialogRadios is the canonical radio list for the compare filter dialog and its key handler.
+// FilterDialogRadios is the canonical checkbox list for the compare filter dialog and its key handler.
 func FilterDialogRadios() []FilterDialogRadio {
 	return []FilterDialogRadio{
 		{FilterAll, "All", 'A'},
@@ -166,7 +171,7 @@ func FilterDialogRadios() []FilterDialogRadio {
 	}
 }
 
-// SelectDialogRadios is the radio list for the compare select-by-kind dialog.
+// SelectDialogRadios is the checkbox list for the compare select-by-kind dialog.
 func SelectDialogRadios() []FilterDialogRadio {
 	return []FilterDialogRadio{
 		{FilterAll, "All", 'A'},
@@ -192,6 +197,27 @@ func FilterForFocus(radios []FilterDialogRadio, focus int) (Filter, bool) {
 		return FilterAll, false
 	}
 	return radios[focus].Filter, true
+}
+
+// FilterChecked reports whether the checkbox row for bit is checked in mask f.
+// FilterAll is the master row: checked only when every kind is on.
+func FilterChecked(f, bit Filter) bool {
+	if bit == FilterAll {
+		return f&FilterAll == FilterAll
+	}
+	return f&bit != 0
+}
+
+// ToggleFilter flips the checkbox row for bit in f. The FilterAll master row clears
+// everything when checked and sets everything otherwise.
+func ToggleFilter(f, bit Filter) Filter {
+	if bit == FilterAll {
+		if FilterChecked(f, FilterAll) {
+			return FilterNone
+		}
+		return FilterAll
+	}
+	return f ^ bit
 }
 
 // FilteredRows returns rows from snap that match filter. When ignoreEmpty is true,
@@ -249,20 +275,16 @@ func EndLabel(filter Filter, ignoreEmpty bool, snap Snapshot, nameLabel string) 
 	return label
 }
 
-// CycleFilter advances f.
+// CycleFilter advances f through All, then each single kind, then back to All.
+// Any other mask (none or several kinds) goes to All.
 func CycleFilter(f Filter) Filter {
-	switch f {
-	case FilterAll:
-		return FilterEqual
-	case FilterEqual:
-		return FilterRelocated
-	case FilterRelocated:
-		return FilterPrimaryOnly
-	case FilterPrimaryOnly:
-		return FilterSecondaryOnly
-	case FilterSecondaryOnly:
-		return FilterContentDiff
-	default:
-		return FilterAll
+	if f == FilterAll {
+		return filterKinds[0].Filter
 	}
+	for i, k := range filterKinds[:len(filterKinds)-1] {
+		if f == k.Filter {
+			return filterKinds[i+1].Filter
+		}
+	}
+	return FilterAll
 }

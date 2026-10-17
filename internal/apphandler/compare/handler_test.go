@@ -26,7 +26,7 @@ func (compareHandlerHost) BrowserMenuDefinitions() []menu.Definition     { retur
 
 func TestMoveColumnFocusMapsLeftRightToPrimarySecondary(t *testing.T) {
 	model := &ui.Model{
-		CompareView: ui.CompareViewState{FocusColumn: ui.CompareColumnSecondary},
+		CompareView: ui.CompareViewState{Filter: comparepkg.FilterAll, FocusColumn: ui.CompareColumnSecondary},
 		CompareSnapshot: comparepkg.Snapshot{
 			Rows: []comparepkg.Row{
 				{PrimaryRel: "a.txt", SecondaryRel: "b.txt", Kind: comparepkg.KindContentDiff, HashDone: true},
@@ -160,7 +160,7 @@ func TestEnsureSelectionVisibleScrollsWhenCursorPastViewport(t *testing.T) {
 		rows[i] = comparepkg.Row{PrimaryRel: name, SecondaryRel: name, Kind: comparepkg.KindEqual, HashDone: true}
 	}
 	model := &ui.Model{
-		CompareView:     ui.CompareViewState{Selected: 0, ListScroll: 0},
+		CompareView:     ui.CompareViewState{Filter: comparepkg.FilterAll, Selected: 0, ListScroll: 0},
 		CompareSnapshot: comparepkg.Snapshot{Rows: rows, Phase: comparepkg.PhaseDone},
 	}
 	h := New(Deps{Host: compareHandlerHost{}, Model: model})
@@ -254,7 +254,7 @@ func TestEnsureSelectionVisibleClampsMaxScroll(t *testing.T) {
 		rows[i] = comparepkg.Row{PrimaryRel: "f.txt", Kind: comparepkg.KindPrimaryOnly, HashDone: true}
 	}
 	model := &ui.Model{
-		CompareView:     ui.CompareViewState{Selected: 9, ListScroll: 100},
+		CompareView:     ui.CompareViewState{Filter: comparepkg.FilterAll, Selected: 9, ListScroll: 100},
 		CompareSnapshot: comparepkg.Snapshot{Rows: rows, Phase: comparepkg.PhaseDone},
 	}
 	h := New(Deps{Host: compareHandlerHost{}, Model: model})

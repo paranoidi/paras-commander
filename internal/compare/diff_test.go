@@ -183,3 +183,53 @@ func TestFilteredRowsNameMatch(t *testing.T) {
 		t.Fatalf("EndLabel = %q", got)
 	}
 }
+
+func TestFilterMatchesCombinedMask(t *testing.T) {
+	f := FilterPrimaryOnly | FilterContentDiff
+	for kind, want := range map[Kind]bool{
+		KindPrimaryOnly: true, KindContentDiff: true,
+		KindEqual: false, KindRelocated: false, KindSecondaryOnly: false, KindSkipped: false,
+	} {
+		if got := FilterMatches(f, kind); got != want {
+			t.Errorf("FilterMatches(%v, %v) = %v, want %v", f, kind, got, want)
+		}
+	}
+	if FilterMatches(FilterAll, KindSkipped) || FilterMatches(FilterNone, KindEqual) {
+		t.Error("All must hide Skipped and None must hide everything")
+	}
+}
+
+func TestFilterLabelCombined(t *testing.T) {
+	for _, c := range []struct {
+		f    Filter
+		want string
+	}{
+		{FilterNone, "None"},
+		{FilterAll, "All"},
+		{FilterRelocated, "Relocated"},
+		{FilterPrimaryOnly | FilterContentDiff, "Primary only + Content diff"},
+	} {
+		if got := FilterLabel(c.f); got != c.want {
+			t.Errorf("FilterLabel(%d) = %q, want %q", c.f, got, c.want)
+		}
+	}
+}
+
+func TestCycleFilterFromMask(t *testing.T) {
+	if got := CycleFilter(FilterPrimaryOnly | FilterContentDiff); got != FilterAll {
+		t.Errorf("multi mask cycles to %v, want All", got)
+	}
+	if got := CycleFilter(FilterNone); got != FilterAll {
+		t.Errorf("None cycles to %v, want All", got)
+	}
+	f := FilterAll
+	for i := 0; i < 6; i++ {
+		f = CycleFilter(f)
+	}
+	if f != FilterAll {
+		t.Errorf("full cycle ended at %v, want All", f)
+	}
+	if got := CycleFilter(FilterAll); got != FilterEqual {
+		t.Errorf("All cycles to %v, want Equal", got)
+	}
+}
