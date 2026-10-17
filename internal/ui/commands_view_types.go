@@ -1,6 +1,9 @@
 package ui
 
-import "strings"
+import (
+	"math"
+	"strings"
+)
 
 // CommandRunPhase is the lifecycle state of one subprocess row.
 type CommandRunPhase int
@@ -61,4 +64,17 @@ type CommandsViewState struct {
 	ListScroll   int
 	StdoutScroll int
 	StderrScroll int
+	// StdoutDetached / StderrDetached are set once the user scrolls a pane away from its
+	// bottom; otherwise the pane follows the tail (tail -f) and its Scroll is ignored.
+	StdoutDetached bool
+	StderrDetached bool
+}
+
+// StreamScroll returns the scroll offset to draw a pane at: a followed pane sits at the
+// bottom (drawCommandsStreamPanel clamps the large value to its real maximum).
+func StreamScroll(scroll int, detached bool) int {
+	if detached {
+		return scroll
+	}
+	return math.MaxInt
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -31,21 +32,67 @@ func drawCommandsView(
 	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(layout.Secondary, sel, auxPanelBodyText(styles, chromeBlocked, auxPanelContentBG(styles, chromeBlocked)))
 	stdoutFocused := state.FocusPane == 1
 	stderrFocused := state.FocusPane == 2
-	drawCommandsStreamPanel(screen, stdoutRect, " Stdout ", state.StdoutScroll, stdoutLines, styles, chromeBlocked, stdoutFocused)
-	drawCommandsStreamPanel(screen, stderrRect, " Stderr ", state.StderrScroll, stderrLines, styles, chromeBlocked, stderrFocused)
+	drawCommandsStreamPanel(screen, stdoutRect, " Stdout ", StreamScroll(state.StdoutScroll, state.StdoutDetached), stdoutLines, styles, chromeBlocked, stdoutFocused)
+	drawCommandsStreamPanel(screen, stderrRect, " Stderr ", StreamScroll(state.StderrScroll, state.StderrDetached), stderrLines, styles, chromeBlocked, stderrFocused)
+}
+
+type streamWrapKey struct {
+	// Full strings, not lengths: capped output keeps a constant length while its content
+	// moves. Comparing is cheap (same backing pointer short-circuits; changes differ early).
+	id, stdout, stderr, errMsg string
+	textW                      int
+}
+
+type streamWrapLines struct{ stdout, stderr [][]AnsiCell }
+
+// streamWrapCache holds the wrapped lines of the last-rendered entry, one copy per base style
+// (the renderer and the key handler pass different bases). ponytail: single entry; a running
+// row re-wraps on every change (at most 10/s), upgrade = wrap only the appended tail.
+var streamWrapCache struct {
+	mu     sync.Mutex
+	key    streamWrapKey
+	byBase map[tcell.Style]streamWrapLines
+}
+
+func commandStreamLines(entry CommandRunEntry, textW int, base tcell.Style) streamWrapLines {
+	key := streamWrapKey{entry.ID, entry.Stdout, entry.Stderr, entry.ErrorMsg, textW}
+	c := &streamWrapCache
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.byBase == nil || c.key != key {
+		c.key, c.byBase = key, map[tcell.Style]streamWrapLines{}
+	}
+	if l, ok := c.byBase[base]; ok {
+		return l
+	}
+	l := streamWrapLines{
+		stdout: CommandPanelLines(entry.Stdout, textW, base),
+		stderr: CommandPanelLines(CommandStderrDisplay(entry), textW, base),
+	}
+	c.byBase[base] = l
+	return l
 }
 
 // CommandsStreamPanels returns stdout/stderr panel geometry and wrapped output lines for one run entry.
+// The returned slices are shared with the wrap cache and must not be mutated.
 func CommandsStreamPanels(column Rect, entry CommandRunEntry, base tcell.Style) (stdoutRect, stderrRect Rect, stdoutLines, stderrLines [][]AnsiCell) {
 	textW := column.Width - 4
 	if textW < 1 {
 		textW = 1
 	}
-	stdoutLines = CommandPanelLines(entry.Stdout, textW, base)
-	stderrLines = CommandPanelLines(CommandStderrDisplay(entry), textW, base)
+	l := commandStreamLines(entry, textW, base)
+	stdoutLines, stderrLines = l.stdout, l.stderr
 	stderrLineBudget := max(8, min(len(stderrLines)+2, 24))
 	stdoutRect, stderrRect = SplitJobsSecondaryColumnFlexTop(column, stderrLineBudget)
 	return stdoutRect, stderrRect, stdoutLines, stderrLines
+}
+
+// CommandsStreamMaxScroll returns the largest valid scroll offset of the stdout and stderr
+// panes for entry (the single source for key handling).
+func CommandsStreamMaxScroll(column Rect, entry CommandRunEntry) (stdoutMax, stderrMax int) {
+	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(column, entry, tcell.StyleDefault)
+	return max(0, len(stdoutLines)-JobsPanelContentRows(stdoutRect)),
+		max(0, len(stderrLines)-JobsPanelContentRows(stderrRect))
 }
 
 func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewState, entries []CommandRunEntry, styles theme.Theme, chromeBlocked bool, userHomeDir string) {

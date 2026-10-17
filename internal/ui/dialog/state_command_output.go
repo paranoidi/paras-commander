@@ -8,6 +8,7 @@ type CommandOutputDialogState struct {
 	Title      string
 	Lines      []string // stdout pre-split on \n
 	Scroll     int      // first visible line index
+	Follow     bool     // keep the tail visible as Lines grow (cleared when scrolled up)
 	PrefWidth  string   // from config, e.g. "80%"
 	PrefHeight string   // from config, e.g. "50%"
 

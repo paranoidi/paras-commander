@@ -82,9 +82,15 @@ func (h *Handler) OpenViewAt(idx int) {
 	h.model.CommandsView.Selected = idx
 	h.model.CommandsView.FocusPane = 0
 	h.model.CommandsView.ListScroll = 0
-	h.model.CommandsView.StdoutScroll = 0
-	h.model.CommandsView.StderrScroll = 0
+	h.resetStreamScroll()
 	h.EnsureSelectionVisible()
+}
+
+// resetStreamScroll returns both stream panes to following the tail.
+func (h *Handler) resetStreamScroll() {
+	cv := &h.model.CommandsView
+	cv.StdoutScroll, cv.StderrScroll = 0, 0
+	cv.StdoutDetached, cv.StderrDetached = false, false
 }
 
 // CloseView switches back to the browser view.
@@ -190,7 +196,7 @@ func (h *Handler) closeSelectedPTYRow(idx int) bool {
 }
 
 // MoveSelection moves the Commands-list cursor by delta rows (clamped), scrolling into view
-// and resetting stream scroll when the row actually changes. Shared by raw arrow-key handling
+// and resetting stream panes to follow the tail when the row actually changes. Shared by raw arrow-key handling
 // and help-dialog activation.
 func (h *Handler) MoveSelection(delta int) {
 	n := h.Len()
@@ -215,8 +221,7 @@ func (h *Handler) setSelection(sel int) {
 	beforeSel := h.model.CommandsView.Selected
 	h.model.CommandsView.Selected = sel
 	if beforeSel != sel {
-		h.model.CommandsView.StdoutScroll = 0
-		h.model.CommandsView.StderrScroll = 0
+		h.resetStreamScroll()
 	}
 	h.EnsureSelectionVisible()
 }
@@ -299,30 +304,42 @@ func (h *Handler) HandleViewKey(event *tcell.EventKey) bool {
 			h.SelectEdge(true)
 		}
 	case 1:
-		h.scrollPane(&h.model.CommandsView.StdoutScroll, h.maxStdoutScroll(), event.Key())
+		maxOut, _ := h.maxStreamScroll()
+		cv := &h.model.CommandsView
+		h.scrollPane(&cv.StdoutScroll, &cv.StdoutDetached, maxOut, event.Key())
 	case 2:
-		h.scrollPane(&h.model.CommandsView.StderrScroll, h.maxStderrScroll(), event.Key())
+		_, maxErr := h.maxStreamScroll()
+		cv := &h.model.CommandsView
+		h.scrollPane(&cv.StderrScroll, &cv.StderrDetached, maxErr, event.Key())
 	}
 	return false
 }
 
-// scrollPane applies an Up/Down/PgUp/PgDn key to a scroll offset clamped to [0, maxScroll],
-// collapsing the identical stdout/stderr pane scroll switches in HandleViewKey.
-func (h *Handler) scrollPane(scroll *int, maxScroll int, key tcell.Key) {
+// scrollPane applies an Up/Down/PgUp/PgDn/Home/End key to a scroll offset clamped to
+// [0, maxScroll], collapsing the identical stdout/stderr pane scroll switches in HandleViewKey.
+// A followed pane (not detached) starts from the bottom; ending at the bottom re-follows.
+func (h *Handler) scrollPane(scroll *int, detached *bool, maxScroll int, key tcell.Key) {
+	if !*detached {
+		*scroll = maxScroll
+	}
+	*scroll = min(*scroll, maxScroll)
 	switch key {
 	case tcell.KeyUp:
-		if *scroll > 0 {
-			*scroll--
-		}
+		*scroll = max(0, *scroll-1)
 	case tcell.KeyDown:
-		if *scroll < maxScroll {
-			*scroll++
-		}
+		*scroll = min(maxScroll, *scroll+1)
 	case tcell.KeyPgUp:
 		*scroll = max(0, *scroll-5)
 	case tcell.KeyPgDn:
 		*scroll = min(maxScroll, *scroll+5)
+	case tcell.KeyHome:
+		*scroll = 0
+	case tcell.KeyEnd:
+		*scroll = maxScroll
+	default:
+		return
 	}
+	*detached = *scroll < maxScroll
 }
 
 func (h *Handler) clampFocusPane() {
@@ -354,26 +371,12 @@ func (h *Handler) selectedCommandEntry() ui.CommandRunEntry {
 	return ui.CommandRunEntry{}
 }
 
-func (h *Handler) maxStdoutScroll() int {
-	sel := h.selectedCommandEntry()
+// maxStreamScroll returns the max scroll of the stdout and stderr panes of the selected row.
+func (h *Handler) maxStreamScroll() (stdoutMax, stderrMax int) {
 	width, height := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(width, height)
 	if layout.TooSmall {
-		return 0
+		return 0, 0
 	}
-	stdoutRect, _, stdoutLines, _ := ui.CommandsStreamPanels(layout.Secondary, sel, tcell.StyleDefault)
-	contentH := ui.JobsPanelContentRows(stdoutRect)
-	return max(0, len(stdoutLines)-contentH)
-}
-
-func (h *Handler) maxStderrScroll() int {
-	sel := h.selectedCommandEntry()
-	width, height := h.screen.Size()
-	layout := h.host.LayoutForTerminalSize(width, height)
-	if layout.TooSmall {
-		return 0
-	}
-	_, stderrRect, _, stderrLines := ui.CommandsStreamPanels(layout.Secondary, sel, tcell.StyleDefault)
-	contentH := ui.JobsPanelContentRows(stderrRect)
-	return max(0, len(stderrLines)-contentH)
+	return ui.CommandsStreamMaxScroll(layout.Secondary, h.selectedCommandEntry())
 }

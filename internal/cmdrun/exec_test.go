@@ -32,7 +32,7 @@ func TestStripJobControlNoise(t *testing.T) {
 		{"only noise becomes empty (no toast)", "bash: no job control in this shell\n", ""},
 	}
 	for _, c := range cases {
-		if got := string(stripJobControlNoise([]byte(c.in))); got != c.want {
+		if got := string(StripNoise([]byte(c.in))); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
 	}
@@ -178,11 +178,52 @@ func processAlive(pid int) bool {
 }
 
 func TestRunTracked_colorEnv(t *testing.T) {
-	res := RunTracked(context.Background(), []string{"sh", "-c", `printf %s "$FORCE_COLOR"`}, ColorEnv(true), "", MaxStreamBytes, nil)
+	res := RunTracked(context.Background(), []string{"sh", "-c", `printf %s "$FORCE_COLOR"`}, ColorEnv(true), "", MaxStreamBytes, nil, nil)
 	if got := string(res.Stdout); got != "1" {
 		t.Fatalf("FORCE_COLOR = %q, want 1", got)
 	}
 	if ColorEnv(false) != nil {
 		t.Fatal("ColorEnv(false) should be nil")
+	}
+}
+
+func TestRunTracked_liveOutputBeforeExit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	live := &Live{}
+	done := make(chan RunResult, 1)
+	go func() {
+		done <- RunTracked(ctx, []string{"sh", "-c", "while :; do echo tick; sleep 0.05; done"}, nil, "", MaxStreamBytes, nil, live)
+	}()
+	deadline := time.Now().Add(5 * time.Second)
+	for !bytes.Contains(live.Stdout.Bytes(), []byte("tick")) {
+		if time.Now().After(deadline) {
+			t.Fatal("no live output while the command was still running")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	select {
+	case <-done:
+		t.Fatal("RunTracked returned before cancel")
+	default:
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("RunTracked did not return after cancel")
+	}
+}
+
+func TestCappedWriterWrittenGrowsPastCap(t *testing.T) {
+	w := CappedWriter{Max: 4}
+	_, _ = w.Write([]byte("lantern"))
+	before := w.Written()
+	_, _ = w.Write([]byte("orchid"))
+	if w.Written() <= before {
+		t.Fatalf("Written did not grow after cap: %d -> %d", before, w.Written())
+	}
+	if len(w.Data) != 4 {
+		t.Fatalf("Data len = %d, want 4", len(w.Data))
 	}
 }

@@ -254,9 +254,12 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 				res = h.runEntryPTY(ctx, idx, argv, workDir, panelOwner, markRunning)
 			} else {
 				markRunning()
+				live := &cmdrun.Live{}
+				stopLive := h.StreamLive(ctx, idx, "", live)
 				res = cmdrun.RunTracked(ctx, argv, h.childEnv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 					h.SetProcess(idx, p)
-				})
+				}, live)
+				stopLive()
 				h.UnregisterProc(idx)
 			}
 			if release != nil {
@@ -302,7 +305,7 @@ func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workD
 			markRunning()
 			res := cmdrun.RunTracked(ctx, argv, h.childEnv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 				h.SetProcess(idx, p)
-			})
+			}, nil)
 			h.UnregisterProc(idx)
 			return res
 		}

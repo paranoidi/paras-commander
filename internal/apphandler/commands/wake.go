@@ -19,6 +19,8 @@ type WakePayload struct {
 	RefreshBrowserPanel  bool
 	ClearActiveSelection bool
 	OpenOutputDialog     *dialog.CommandOutputDialogState
+	// OutputDialogLive refreshes the running output dialog's body with partial output.
+	OutputDialogLive *OutputDialogLive
 	// OutputDialogStartedRunID clears the output dialog's Queued state when it shows this run.
 	OutputDialogStartedRunID string
 
@@ -31,6 +33,12 @@ type WakePayload struct {
 	TerminalPanelClearDrawer bool
 
 	applied chan struct{}
+}
+
+// OutputDialogLive is a snapshot of a run's partial output for the open running dialog.
+type OutputDialogLive struct {
+	RunID          string
+	Stdout, Stderr string
 }
 
 // PostWake posts p through the screen's event queue so Run's interrupt switch delivers it to
@@ -51,13 +59,18 @@ func (h *Handler) ApplyWake(p WakePayload) {
 	if p.OutputDialogStartedRunID != "" && cur.Open && cur.RunID == p.OutputDialogStartedRunID {
 		cur.Queued = false
 	}
+	if l := p.OutputDialogLive; l != nil && cur.Open && cur.Running && cur.RunID == l.RunID {
+		cur.Lines = outputDialogLines(l.Stdout, l.Stderr)
+	}
 	if p.OpenOutputDialog != nil {
 		if cur.Open && cur.Running && cur.RunID == p.OpenOutputDialog.RunID {
 			// The user is watching this run: show the output instead of a banner/refresh.
 			if cur.Cancel != nil {
 				cur.Cancel() // release the run context
 			}
+			scroll, follow := cur.Scroll, cur.Follow
 			*cur = *p.OpenOutputDialog
+			cur.Scroll, cur.Follow = scroll, follow
 			p.NotifyLog, p.NotifyBanner, p.RefreshBrowserPanel = "", "", false
 		}
 	}

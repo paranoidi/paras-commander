@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -30,7 +31,7 @@ type RunResult struct {
 // Run executes argv as a subprocess with working directory dir. argv must be non-empty.
 // Each stream is capped at maxStreamBytes; when exceeded, tail bytes are kept and StdoutTrim/StderrTrim are set.
 func Run(ctx context.Context, argv []string, dir string, maxStreamBytes int) RunResult {
-	return RunTracked(ctx, argv, nil, dir, maxStreamBytes, nil)
+	return RunTracked(ctx, argv, nil, dir, maxStreamBytes, nil, nil)
 }
 
 // ColorEnv returns env vars asking captured (non-TTY) children to emit ANSI color, or nil when
@@ -43,10 +44,18 @@ func ColorEnv(force bool) []string {
 	return []string{"FORCE_COLOR=1", "CLICOLOR_FORCE=1"}
 }
 
+// Live lets a caller read a run's output while it is still running: RunTracked writes into
+// these writers (Max defaults to the run's cap) and callers poll Bytes/Len. Stderr is the raw
+// stream (job-control noise is stripped only from the final RunResult; see StripNoise).
+type Live struct {
+	Stdout, Stderr CappedWriter
+}
+
 // RunTracked behaves like Run but, once the subprocess starts, calls onStart with its
 // *os.Process so a caller can send it signals (e.g. terminate/kill) independently of ctx
 // cancellation. onStart may be nil. extraEnv (KEY=VALUE) is appended to the inherited environment.
-func RunTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStreamBytes int, onStart func(*os.Process)) RunResult {
+// live may be nil; when set it receives the output as it is produced.
+func RunTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStreamBytes int, onStart func(*os.Process), live *Live) RunResult {
 	if len(argv) == 0 {
 		return RunResult{LaunchErr: errors.New("empty argv"), ExitCode: -1}
 	}
@@ -89,11 +98,14 @@ func RunTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStr
 		return err
 	}
 
-	var stdoutBuf, stderrBuf CappedWriter
-	stdoutBuf.Max = maxStreamBytes
-	stderrBuf.Max = maxStreamBytes
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
+	if live == nil {
+		live = &Live{}
+	}
+	stdoutBuf, stderrBuf := &live.Stdout, &live.Stderr
+	stdoutBuf.SetMaxIfZero(maxStreamBytes)
+	stderrBuf.SetMaxIfZero(maxStreamBytes)
+	cmd.Stdout = stdoutBuf
+	cmd.Stderr = stderrBuf
 
 	if err := cmd.Start(); err != nil {
 		return RunResult{LaunchErr: err, ExitCode: -1}
@@ -104,9 +116,9 @@ func RunTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStr
 	err := cmd.Wait()
 	out := RunResult{
 		Stdout:     stdoutBuf.Bytes(),
-		Stderr:     stripJobControlNoise(stderrBuf.Bytes()),
-		StdoutTrim: stdoutBuf.Trimmed,
-		StderrTrim: stderrBuf.Trimmed,
+		Stderr:     StripNoise(stderrBuf.Bytes()),
+		StdoutTrim: stdoutBuf.IsTrimmed(),
+		StderrTrim: stderrBuf.IsTrimmed(),
 		ExitCode:   -1,
 	}
 	if err != nil {
@@ -143,7 +155,8 @@ var jobControlNoise = []string{
 	"no job control in this shell",
 }
 
-func stripJobControlNoise(b []byte) []byte {
+// StripNoise drops harmless job-control startup warnings from captured stderr.
+func StripNoise(b []byte) []byte {
 	needsFilter := false
 	for _, m := range jobControlNoise {
 		if bytes.Contains(b, []byte(m)) {
@@ -179,15 +192,44 @@ func isJobControlNoise(line []byte) bool {
 // capture (e.g. preview.runRuleCommandCapture's PTY read loop) that needs the same tail-keeping
 // cap.
 type CappedWriter struct {
+	mu      sync.Mutex // Write runs on the exec copy goroutine while callers poll Bytes
 	Data    []byte
 	Max     int
 	Trimmed bool
+	written int // total bytes ever written; keeps growing after Data is capped
+}
+
+// SetMaxIfZero sets the cap when none was configured.
+func (w *CappedWriter) SetMaxIfZero(n int) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.Max <= 0 {
+		w.Max = n
+	}
+}
+
+// IsTrimmed reports whether the cap was exceeded.
+func (w *CappedWriter) IsTrimmed() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.Trimmed
+}
+
+// Written returns the total bytes ever written, a change detector for pollers that still
+// moves once Data is capped at Max.
+func (w *CappedWriter) Written() int {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.written
 }
 
 func (w *CappedWriter) Write(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.written += len(p)
 	w.Data = append(w.Data, p...)
 	if len(w.Data) > w.Max {
 		w.Trimmed = true
@@ -197,6 +239,8 @@ func (w *CappedWriter) Write(p []byte) (int, error) {
 }
 
 func (w *CappedWriter) Bytes() []byte {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	b := w.Data
 	if !w.Trimmed {
 		return append([]byte(nil), b...)

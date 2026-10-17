@@ -165,9 +165,12 @@ func (a *App) runFileExecuteCommand(ctx context.Context, idx int, argv []string,
 	})
 	a.commandsCtrl.PostRenderWake()
 
+	live := &cmdrun.Live{}
+	stopLive := a.commandsCtrl.StreamLive(ctx, idx, "", live)
 	res := cmdrun.RunTracked(ctx, argv, a.commandsCtrl.ChildEnv(), workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 		a.commandsCtrl.SetProcess(idx, p)
-	})
+	}, live)
+	stopLive()
 	a.commandsCtrl.UnregisterProc(idx)
 	a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunDone

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
@@ -112,34 +111,33 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 	if title == "" {
 		title = "Output"
 	}
-	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	lineStyle := styles.DialogText.Background(dbg)
-
-	contentX := draw.DialogTextX(rect)
 	if state.Running {
 		status := styles.IconMetaRunning() + " Running…"
 		if state.Queued {
 			status = styles.IconJobsList("queued") + " Queued…"
 		}
-		primitive.Text(screen, contentX, rect.Y+1, contentW, status, lineStyle)
+		title += " " + status
+	}
+	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
+	_, dbg, _ := styles.DialogSurface.Decompose()
+	lineStyle := styles.DialogText.Background(dbg)
+
+	contentX := draw.DialogTextX(rect)
+	scroll := state.Scroll
+	if state.Follow {
+		scroll = max(0, len(state.Lines)-listH)
 	}
 	for row := range listH {
-		if state.Running {
-			break
-		}
 		y := rect.Y + 1 + row
 		line := ""
-		if idx := state.Scroll + row; idx < len(state.Lines) {
+		if idx := scroll + row; idx < len(state.Lines) {
 			line = state.Lines[idx]
 		}
 		// ponytail: per-line SGR parse; a color left open across \n does not carry to the next
 		// line. Parse the whole output once into cell rows if a tool needs that.
 		previewpanel.DrawCells(screen, contentX, y, contentW, previewpanel.AnsiStyledCells(line, lineStyle), lineStyle)
 	}
-	if !state.Running {
-		draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, listH, len(state.Lines), state.Scroll, scrollbarStyle, borderStyle, styles)
-	}
+	draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, listH, len(state.Lines), scroll, scrollbarStyle, borderStyle, styles)
 
 	// separator at buttonY-2, blank row at buttonY-1 (DrawDialogFrame fills surface), button at buttonY
 	buttonY := rect.Y + rect.Height - 2

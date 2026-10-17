@@ -443,9 +443,12 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, rowID string, arg
 	})
 	a.commandsCtrl.PostWake(commandsctrl.WakePayload{OutputDialogStartedRunID: rowID})
 
+	live := &cmdrun.Live{}
+	stopLive := a.commandsCtrl.StreamLive(ctx, idx, rowID, live)
 	res := cmdrun.RunTracked(ctx, argv, a.commandsCtrl.ChildEnv(), workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 		a.commandsCtrl.SetProcess(idx, p)
-	})
+	}, live)
+	stopLive()
 	a.commandsCtrl.UnregisterProc(idx)
 	if entry.Dialog && ctx.Err() != nil {
 		markCanceled()
