@@ -62,6 +62,7 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 #
 # cache           bool     optional   default: false
 #   Session-scoped in-memory cache keyed by absolute path (never on disk).
+#   Panel refresh (panel.refresh) drops it and recalculates.
 #
 # workers         int      optional   default: meta.default_entry_workers (2)
 #   Number of concurrent background goroutines for this entry. Clamped to 64.

@@ -466,6 +466,18 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 	h.startAsyncLoad(panelID, h.activeEntries[panelID])
 }
 
+// RefreshPanel handles a user-requested panel refresh: drops the session `cache = true`
+// results and re-runs the panel's active meta commands so every value is recalculated.
+func (h *Handler) RefreshPanel(panelID int) {
+	h.clearCache()
+	if len(h.model.MetaResults[panelID]) == 0 || len(h.activeEntries[panelID]) == 0 {
+		return
+	}
+	h.stopRun(panelID)
+	h.runGen[panelID]++
+	h.startAsyncLoad(panelID, h.activeEntries[panelID])
+}
+
 // HandleLoad is called on the UI goroutine when an async meta file load completes.
 // Called from Run's interrupt switch for LoadPayload.
 func (h *Handler) HandleLoad(d LoadPayload) {

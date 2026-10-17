@@ -424,6 +424,28 @@ func TestOpenFileEditor_clearsCache(t *testing.T) {
 	}
 }
 
+func TestRefreshPanel_clearsCacheAndReruns(t *testing.T) {
+	dir := t.TempDir()
+	fh := &fakeHost{}
+	fh.panels[0] = testPanel(t, dir, nil)
+	h := &Handler{host: fh, model: &ui.Model{}}
+	h.cache = map[string]map[string]string{"lines": {dir + "/lantern": "42"}}
+	h.activeEntries[0] = []string{"lines"}
+	h.model.MetaResults[0] = []ui.MetaColumnState{{EntryName: "lines"}}
+
+	h.RefreshPanel(0)
+
+	h.cacheMu.RLock()
+	empty := len(h.cache) == 0
+	h.cacheMu.RUnlock()
+	if !empty {
+		t.Fatalf("cache = %#v, want cleared", h.cache)
+	}
+	if !h.loadPending[0] {
+		t.Fatal("RefreshPanel should start an async meta reload")
+	}
+}
+
 func testPanel(t *testing.T, dir string, entries []localfs.Entry) *panel.State {
 	t.Helper()
 	p, err := pathloc.Parse(dir)

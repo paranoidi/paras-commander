@@ -259,7 +259,6 @@ func (a *App) visualPanelScope(scope int) int {
 }
 
 func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
-	target := a.panelByID(panelScope)
 	label := panelLabel(panelScope)
 	switch item.Action {
 	case keymap.ActionPanelSortDialog:
@@ -270,17 +269,7 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 			return
 		}
 	case keymap.ActionPanelRefresh:
-		if err := target.Refresh(a.panelViewportRows(panelScope)); err != nil {
-			a.setErrorMessage(label+" refresh failed", err)
-			return
-		}
-		if panelScope == ui.PrimaryPanel {
-			a.requestVolumeSpaceRefreshAsync(ui.SecondaryPanel)
-		} else {
-			a.requestVolumeSpaceRefreshAsync(ui.PrimaryPanel)
-		}
-		a.dialogCtrl.SyncOpenPathInputsAfterFSChange()
-		a.setTransientMessage(label+" refreshed", ui.MessageUrgencyInfo)
+		a.userRefreshPanel(panelScope, label+" refreshed")
 	case keymap.ActionPanelDiskUsageScan:
 		a.startDiskUsageScanForPanel(panelScope)
 	case keymap.ActionPanelHistoryDialog:

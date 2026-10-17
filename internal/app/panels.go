@@ -147,22 +147,31 @@ func (a *App) toggleCarousel(panelID int, menu bool) {
 }
 
 func (a *App) reloadActive(successMessage string) {
-	a.reloadPanel(a.model.ActivePanel, successMessage)
+	a.userRefreshPanel(a.model.ActivePanel, successMessage)
 }
 
-// reloadPanel refreshes the given panel and shows successMessage.
-func (a *App) reloadPanel(panelID int, successMessage string) {
+// userRefreshPanel is the panel.refresh entry point: reloads the listing and recalculates
+// meta columns, bypassing their result cache.
+func (a *App) userRefreshPanel(panelID int, successMessage string) {
+	if a.reloadPanel(panelID, successMessage) {
+		a.metaCtrl.RefreshPanel(panelID)
+	}
+}
+
+// reloadPanel refreshes the given panel and shows successMessage. Returns false on error.
+func (a *App) reloadPanel(panelID int, successMessage string) bool {
 	other := ui.PrimaryPanel
 	if panelID == ui.PrimaryPanel {
 		other = ui.SecondaryPanel
 	}
-	if err := a.panelByID(panelID).Refresh(a.activeViewportRows()); err != nil {
+	if err := a.panelByID(panelID).Refresh(a.panelViewportRows(panelID)); err != nil {
 		a.setErrorMessage("Refresh failed", err)
-		return
+		return false
 	}
 	a.requestVolumeSpaceRefreshAsync(other)
 	a.dialogCtrl.SyncOpenPathInputsAfterFSChange()
 	a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
+	return true
 }
 
 func (a *App) activePanel() *panel.State {
