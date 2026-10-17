@@ -1330,7 +1330,7 @@ func (h *Handler) ToggleCopiesPaneSelectAll() {
 }
 
 func (h *Handler) toggleMainFolderMarks(dirRow ui.DedupRow) {
-	byGroup := ui.DedupSnapshotFilesUnderDir(h.model.DedupSnapshot, dirRow.Value.DirRel)
+	byGroup := ui.DedupSnapshotFilesUnderDir(h.model.DedupSnapshot, h.model.DedupView, dirRow.Value.DirRel)
 	if len(byGroup) == 0 {
 		return
 	}
@@ -1498,7 +1498,7 @@ func (h *Handler) KeepSelection() {
 	}
 	if row.Value.Kind == ui.DedupRowDir {
 		replaced := false
-		byGroup := ui.DedupSnapshotFilesUnderDir(h.model.DedupSnapshot, row.Value.DirRel)
+		byGroup := ui.DedupSnapshotFilesUnderDir(h.model.DedupSnapshot, h.model.DedupView, row.Value.DirRel)
 		for gi, files := range byGroup {
 			if _, groupReplaced := h.applyGroupKeep(gi, keepAbsSetFromFiles(files)); groupReplaced {
 				replaced = true

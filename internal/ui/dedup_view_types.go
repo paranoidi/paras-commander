@@ -619,14 +619,15 @@ func dedupSnapshotFullyMarkedDirSet(snap comparepkg.DedupSnapshot, marked map[st
 
 // dedupCopyPaneFullyMarkedDirSet returns DirRel keys of copies-pane directory
 // rows whose entire descendant copy-file subtree is marked for deletion.
-func dedupCopyPaneFullyMarkedDirSet(snap comparepkg.DedupSnapshot, mainSel DedupRow, marked map[string]bool) map[string]bool {
+func dedupCopyPaneFullyMarkedDirSet(snap comparepkg.DedupSnapshot, view DedupViewState, mainSel DedupRow) map[string]bool {
+	marked := view.Marked
 	if len(marked) == 0 {
 		return nil
 	}
 	if mainSel.Value.Kind == DedupRowDir {
 		var files []comparepkg.DedupFile
 		for _, t := range DedupTwinDirs(snap, mainSel.Value.DirRel) {
-			for _, fs := range DedupSnapshotFilesUnderDir(snap, t) {
+			for _, fs := range DedupSnapshotFilesUnderDir(snap, view, t) {
 				files = append(files, fs...)
 			}
 		}
@@ -646,11 +647,15 @@ func DedupGroupFilesUnderDir(g comparepkg.DedupGroup, dirRel string) []comparepk
 	return out
 }
 
-// DedupSnapshotFilesUnderDir returns, for each group index, the files in that
-// group whose Rel path is under dirRel. Used for main-pane folder keep.
-func DedupSnapshotFilesUnderDir(snap comparepkg.DedupSnapshot, dirRel string) map[int][]comparepkg.DedupFile {
+// DedupSnapshotFilesUnderDir returns, for each visible group index (groupVisible:
+// ignore-empty and group filter), the files in that group whose Rel path is under
+// dirRel. Used for main-pane folder keep/mark, so hidden groups are never touched.
+func DedupSnapshotFilesUnderDir(snap comparepkg.DedupSnapshot, view DedupViewState, dirRel string) map[int][]comparepkg.DedupFile {
 	out := map[int][]comparepkg.DedupFile{}
 	for gi, g := range snap.Groups {
+		if !view.groupVisible(g) {
+			continue
+		}
 		files := DedupGroupFilesUnderDir(g, dirRel)
 		if len(files) > 0 {
 			out[gi] = files

@@ -557,7 +557,7 @@ func TestDedupSnapshotFilesUnderDir(t *testing.T) {
 			dedupTestGroup(2, 50, "meadow/beacon.txt", "orchard/beacon.txt"),
 		},
 	}
-	byGroup := DedupSnapshotFilesUnderDir(snap, "meadow")
+	byGroup := DedupSnapshotFilesUnderDir(snap, DedupViewState{}, "meadow")
 	if len(byGroup) != 2 {
 		t.Fatalf("groups under meadow = %d, want 2", len(byGroup))
 	}
@@ -567,8 +567,16 @@ func TestDedupSnapshotFilesUnderDir(t *testing.T) {
 	if len(byGroup[1]) != 1 || byGroup[1][0].Rel != "meadow/beacon.txt" {
 		t.Fatalf("group 1 meadow files = %v", byGroup[1])
 	}
-	if got := DedupSnapshotFilesUnderDir(snap, "missing"); got != nil {
+	if got := DedupSnapshotFilesUnderDir(snap, DedupViewState{}, "missing"); got != nil {
 		t.Fatalf("missing dir groups = %v, want nil", got)
+	}
+	// Hidden zero-byte groups must not be picked up by folder keep/mark.
+	snap.Groups = append(snap.Groups, dedupTestGroup(3, 0, "meadow/hollow.txt", "orchard/hollow.txt"))
+	if got := DedupSnapshotFilesUnderDir(snap, DedupViewState{IgnoreEmpty: true}, "meadow"); len(got) != 2 || got[2] != nil {
+		t.Fatalf("ignore-empty groups under meadow = %v, want groups 0 and 1 only", got)
+	}
+	if got := DedupSnapshotFilesUnderDir(snap, DedupViewState{}, "meadow"); len(got) != 3 {
+		t.Fatalf("shown-empty groups under meadow = %d, want 3", len(got))
 	}
 }
 
@@ -638,7 +646,7 @@ func TestDedupCopyPaneFullyMarkedDirSet(t *testing.T) {
 		}
 	}
 	partial := map[string]bool{"/root/meadow/lantern.txt": true}
-	got := dedupCopyPaneFullyMarkedDirSet(snap, mainSel, partial)
+	got := dedupCopyPaneFullyMarkedDirSet(snap, DedupViewState{Marked: partial}, mainSel)
 	if len(got) != 0 {
 		t.Fatalf("partial marks = %v, want none fully marked", got)
 	}
@@ -646,7 +654,7 @@ func TestDedupCopyPaneFullyMarkedDirSet(t *testing.T) {
 		"/root/meadow/lantern.txt": true,
 		"/root/meadow/beacon.txt":  true,
 	}
-	got = dedupCopyPaneFullyMarkedDirSet(snap, mainSel, fullMeadow)
+	got = dedupCopyPaneFullyMarkedDirSet(snap, DedupViewState{Marked: fullMeadow}, mainSel)
 	if len(got) != 1 || !got["meadow"] {
 		t.Fatalf("meadow fully marked = %v, want only meadow", got)
 	}
@@ -655,7 +663,7 @@ func TestDedupCopyPaneFullyMarkedDirSet(t *testing.T) {
 		"/root/meadow/beacon.txt":        true,
 		"/root/orchard/deep/lantern.txt": true,
 	}
-	got = dedupCopyPaneFullyMarkedDirSet(snap, mainSel, fullAll)
+	got = dedupCopyPaneFullyMarkedDirSet(snap, DedupViewState{Marked: fullAll}, mainSel)
 	if len(got) != 3 || !got["meadow"] || !got["orchard"] || !got["orchard/deep"] {
 		t.Fatalf("all copies marked = %v, want meadow + orchard + orchard/deep", got)
 	}

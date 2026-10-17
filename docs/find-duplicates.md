@@ -29,6 +29,8 @@ Alt+Ctrl+Left / Alt+Ctrl+Right (`panel.tree-collapse-all` / `panel.tree-expand-a
 
 Alt+F (`dedup.filter-dialog` in `[dedup]`, leader `f`) opens the [panel Filter dialog](panel-filter.md#find-duplicates-view) to narrow the results by file name.
 
+Zero-byte files are hidden by default; the title shows `N empty hidden`. Alt+E (`dedup.toggle-empty` in `[dedup]`, leader `T`, Actions > Show empty files / Ignore empty files) shows or hides them. Folder keep and folder marks only touch the files currently shown, so hidden empty files are never marked by them.
+
 **Type to jump:** typing a printable key that has no binding in the focused tree pane (not the browse panel) starts the same fuzzy quick filter as the main file list. `> query` shows in the pane's top border, the cursor jumps to the best match (the Copies pane follows), and matched characters are highlighted. Up/Down cycle through matches (`filter.cycle_matches`, `filter.case_insensitive`), Backspace edits the query, Ctrl+L / Ctrl+Backspace clear it, Esc closes it. Enter and Insert close the filter and then do their normal action; any other key closes it too. Each pane has its own filter, and switching panes clears it.
 
 ## Duplicate directories

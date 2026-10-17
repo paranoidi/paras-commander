@@ -143,7 +143,7 @@ func drawDedupView(
 	}
 	var copyFullyMarkedDirs map[string]bool
 	if sel, ok := dedupRowAt(list, view.SourceRow); ok && sel.Value.Kind == DedupRowFile {
-		copyFullyMarkedDirs = dedupCopyPaneFullyMarkedDirSet(snap, sel, view.Marked)
+		copyFullyMarkedDirs = dedupCopyPaneFullyMarkedDirSet(snap, view, sel)
 	}
 	activeGroup := -1
 	if !view.SourceStale && view.SourceRow >= 0 && view.SourceRow < len(list) {
