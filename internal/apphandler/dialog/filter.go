@@ -386,34 +386,41 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyRune:
 		if keymap.AltLetterModifiers(event.Modifiers()) {
+			// Alt mnemonics move focus to the toggled row, except from the
+			// pattern input: the user keeps typing after flipping an option.
+			altFocus := func(f int) {
+				if fd.Focus != dialog.FilterFocusPattern {
+					fd.Focus = f
+				}
+			}
 			switch event.Rune() {
 			case 'f', 'F':
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusFilesOnly) {
-					fd.Focus = dialog.FilterFocusFilesOnly
+					altFocus(dialog.FilterFocusFilesOnly)
 				}
 			case 'd', 'D':
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusDirsOnly) {
-					fd.Focus = dialog.FilterFocusDirsOnly
+					altFocus(dialog.FilterFocusDirsOnly)
 				}
 			case 'i', 'I':
 				h.toggleFilterDialogField(fd, dialog.FilterFocusInvert)
-				fd.Focus = dialog.FilterFocusInvert
+				altFocus(dialog.FilterFocusInvert)
 			case 'e', 'E':
 				h.toggleFilterDialogField(fd, dialog.FilterFocusCase)
-				fd.Focus = dialog.FilterFocusCase
+				altFocus(dialog.FilterFocusCase)
 			case 'm', 'M':
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusIncludeMeta) {
-					fd.Focus = dialog.FilterFocusIncludeMeta
+					altFocus(dialog.FilterFocusIncludeMeta)
 				}
 			case 'n', 'N':
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusOnlyMeta) {
-					fd.Focus = dialog.FilterFocusOnlyMeta
+					altFocus(dialog.FilterFocusOnlyMeta)
 				}
 			default:
 				for i, m := range dialog.FilterTypeMnemonics {
 					if unicode.ToUpper(event.Rune()) == m {
-						fd.Focus = dialog.FilterFocusTypeFirst + i
-						h.toggleFilterDialogField(fd, fd.Focus)
+						h.toggleFilterDialogField(fd, dialog.FilterFocusTypeFirst+i)
+						altFocus(dialog.FilterFocusTypeFirst + i)
 					}
 				}
 			}

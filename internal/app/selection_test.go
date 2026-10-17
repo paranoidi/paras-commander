@@ -140,9 +140,13 @@ func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt))
-	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != dialog.GroupSelectFocusFilesOnly {
-		t.Fatalf("Alt+Y should toggle Files only and focus row; got FilesOnly=%v focus=%d",
+	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != dialog.GroupSelectFocusPattern {
+		t.Fatalf("Alt+Y should toggle Files only and keep pattern focus; got FilesOnly=%v focus=%d",
 			app.model.GroupSelect.FilesOnly, app.model.GroupSelect.Focus)
+	}
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+	if got := app.model.GroupSelect.Text; got != "focusFx" {
+		t.Fatalf("pattern after Alt+Y then typing = %q, want focusFx", got)
 	}
 }
 

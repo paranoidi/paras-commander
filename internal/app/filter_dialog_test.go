@@ -113,13 +113,15 @@ func TestFilterDialogOnlyMetaColumnsMatchesMetaValue(t *testing.T) {
 		t.Fatal("expected IncludeMetaColumns checked by default when meta columns are active")
 	}
 
-	// Type the pattern (shell glob, the dialog's default mode) while focus is still on the
-	// Pattern field, then Alt+N (Only meta columns) — which moves focus onto the checkbox row,
-	// so it must come after typing.
-	typeRunes(t, app, "*harbor*")
+	// Alt+N (Only meta columns) mid-typing keeps focus on the Pattern field.
+	typeRunes(t, app, "*harbor")
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModAlt)); quit {
 		t.Fatal("M-N handleKey quit = true")
 	}
+	if app.model.FilterDialog.Focus != dialog.FilterFocusPattern {
+		t.Fatalf("Focus after M-N = %d, want FilterFocusPattern", app.model.FilterDialog.Focus)
+	}
+	typeRunes(t, app, "*")
 	if !app.model.FilterDialog.OnlyMetaColumns || !app.model.FilterDialog.IncludeMetaColumns {
 		t.Fatalf("expected Only+Include meta columns set, got %+v", app.model.FilterDialog)
 	}

@@ -1901,9 +1901,12 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateCopySelect {
 		t.Fatalf("Alt+y: MkdirAction = %v, want copy", app.model.FileDialog.MkdirAction)
 	}
-	if app.model.FileDialog.FocusedField != 2 {
-		t.Fatalf("Alt+y: focus = %d, want 2 (copy radio)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.FocusedField != 0 {
+		t.Fatalf("Alt+y: focus = %d, want 0 (name field keeps focus)", app.model.FileDialog.FocusedField)
 	}
+
+	// From a radio row, Alt mnemonics move focus to the picked radio.
+	app.model.FileDialog.FocusedField = 1
 
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'm', alt))
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateMoveSelect {

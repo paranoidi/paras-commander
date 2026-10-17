@@ -467,7 +467,7 @@ func (h *Handler) tryRenameFocusAltShortcut(r rune) bool {
 }
 
 // tryMkdirActionAltShortcut selects a mkdir post-action via Alt+mnemonic. Works while
-// the directory-name field is focused. Alt+C selects copy (not Cancel) in this mode.
+// the directory-name field is focused (focus stays there). Alt+C selects copy (not Cancel) in this mode.
 func (h *Handler) tryMkdirActionAltShortcut(r rune) bool {
 	d := &h.model.FileDialog
 	if d.DialogType != dialog.FileDialogMkdir || !d.MkdirShowActions {
@@ -478,7 +478,10 @@ func (h *Handler) tryMkdirActionAltShortcut(r rune) bool {
 		return false
 	}
 	d.MkdirAction = action
-	d.FocusedField = len(d.Fields) + radioIdx
+	// Keep focus in the name field so typing continues after picking an action.
+	if d.FocusedField >= len(d.Fields) {
+		d.FocusedField = len(d.Fields) + radioIdx
+	}
 	return true
 }
 

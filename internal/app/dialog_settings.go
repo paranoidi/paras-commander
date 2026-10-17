@@ -880,28 +880,35 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	switch event.Key() {
 	case tcell.KeyRune:
 		if keymap.AltLetterModifiers(event.Modifiers()) {
+			// Alt mnemonics move focus to the toggled row, except from the
+			// pattern input: the user keeps typing after flipping an option.
+			altFocus := func(f int) {
+				if gs.Focus != dialog.GroupSelectFocusPattern {
+					gs.Focus = f
+				}
+			}
 			switch event.Rune() {
 			case 'y', 'Y':
 				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusFilesOnly)
-				gs.Focus = dialog.GroupSelectFocusFilesOnly
+				altFocus(dialog.GroupSelectFocusFilesOnly)
 			case 't', 'T':
 				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusDirsOnly)
-				gs.Focus = dialog.GroupSelectFocusDirsOnly
+				altFocus(dialog.GroupSelectFocusDirsOnly)
 			case 'e', 'E':
 				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusCase) {
-					gs.Focus = dialog.GroupSelectFocusCase
+					altFocus(dialog.GroupSelectFocusCase)
 				}
 			case 'm', 'M':
 				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusIncludeMeta) {
-					gs.Focus = dialog.GroupSelectFocusIncludeMeta
+					altFocus(dialog.GroupSelectFocusIncludeMeta)
 				}
 			case 'n', 'N':
 				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusOnlyMeta) {
-					gs.Focus = dialog.GroupSelectFocusOnlyMeta
+					altFocus(dialog.GroupSelectFocusOnlyMeta)
 				}
 			case 'a', 'A':
 				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusFullPath) {
-					gs.Focus = dialog.GroupSelectFocusFullPath
+					altFocus(dialog.GroupSelectFocusFullPath)
 				}
 			}
 			break
