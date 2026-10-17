@@ -18,10 +18,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// dedupProgressInterval rate-limits dedup walk and hashing progress publishes.
-// ponytail: fixed 500ms; promote to config if someone wants to tune it.
+// progressInterval rate-limits compare and dedup progress publishes.
+// ponytail: fixed 250ms; promote to config if someone wants to tune it.
 // A var only so tests can publish every update.
-var dedupProgressInterval = 500 * time.Millisecond
+var progressInterval = 250 * time.Millisecond
 
 // DedupPhase is the dedup session lifecycle stage.
 type DedupPhase int
@@ -133,7 +133,7 @@ func (s *DedupSession) walkRoot(ctx context.Context) ([]FileRecord, error) {
 	var lastPub time.Time
 	walkOpts.OnFile = func(walked int) {
 		pubMu.Lock()
-		if !lastPub.IsZero() && time.Since(lastPub) < dedupProgressInterval {
+		if !lastPub.IsZero() && time.Since(lastPub) < progressInterval {
 			pubMu.Unlock()
 			return
 		}
@@ -375,7 +375,7 @@ func (s *DedupSession) run(ctx context.Context) {
 	inProgress := map[int]int64{} // candidate idx -> bytes hashed so far
 	publishProgress := func() {
 		pubMu.Lock()
-		if !lastPub.IsZero() && time.Since(lastPub) < dedupProgressInterval {
+		if !lastPub.IsZero() && time.Since(lastPub) < progressInterval {
 			pubMu.Unlock()
 			return
 		}

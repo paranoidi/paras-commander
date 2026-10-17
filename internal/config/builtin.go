@@ -146,7 +146,7 @@ const (
 	DefaultDedupChunkBytes = 32 * 1024 * 1024
 
 	// DefaultCompareHashConcurrency limits parallel file hashing during panel compare.
-	DefaultCompareHashConcurrency = 4
+	DefaultCompareHashConcurrency = 8
 
 	// DefaultCompareReadBufferKiB is the per-worker read buffer for compare hashing.
 	DefaultCompareReadBufferKiB = 256

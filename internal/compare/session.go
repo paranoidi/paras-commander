@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -210,8 +211,6 @@ func (s *Session) run(ctx context.Context) {
 	var mu sync.Mutex
 	hashingP := map[string]struct{}{}
 	hashingS := map[string]struct{}{}
-	lastRows := Classify(primary, secondary, pHash, sHash, pErr, sErr)
-
 	publishRows := func(rows []Row, h int) {
 		s.publish(Snapshot{
 			PrimaryRoot:     s.primaryRoot,
@@ -225,14 +224,26 @@ func (s *Session) run(ctx context.Context) {
 		})
 	}
 
-	// stampPublish copies lastRows, marks in-flight hashes, and publishes (no re-Classify).
-	stampPublish := func() {
-		mu.Lock()
-		rows := MarkHashing(append([]Row(nil), lastRows...), hashingP, hashingS)
-		h := int(hashed.Load())
-		mu.Unlock()
-		publishRows(rows, h)
-	}
+	// One publisher classifies and publishes on a ticker, so cost is O(N x ticks), not O(N^2).
+	stopPub := make(chan struct{})
+	pubDone := make(chan struct{})
+	go func() {
+		defer close(pubDone)
+		t := time.NewTicker(progressInterval)
+		defer t.Stop()
+		for {
+			select {
+			case <-stopPub:
+				return
+			case <-t.C:
+				mu.Lock()
+				rows := MarkHashing(Classify(primary, secondary, pHash, sHash, pErr, sErr), hashingP, hashingS)
+				h := int(hashed.Load())
+				mu.Unlock()
+				publishRows(rows, h)
+			}
+		}
+	}()
 
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
@@ -250,9 +261,8 @@ func (s *Session) run(ctx context.Context) {
 					hashingS[job.rel] = struct{}{}
 				}
 				mu.Unlock()
-				stampPublish()
 
-				sum, err := HashFile(ctx, job.loc, buf, s.opts.MaxHashBytes)
+				sum, err := HashFile(ctx, job.loc, job.size, buf, s.opts.MaxHashBytes)
 				mu.Lock()
 				if job.side == 0 {
 					delete(hashingP, job.rel)
@@ -270,13 +280,8 @@ func (s *Session) run(ctx context.Context) {
 				} else {
 					sHash[job.rel] = sum
 				}
-				n := int(hashed.Add(1))
-				// Reclassify on every completion so finished small files leave Pending
-				// immediately (not only every N hashes) while larger jobs are still running.
-				lastRows = Classify(primary, secondary, pHash, sHash, pErr, sErr)
-				rows := MarkHashing(append([]Row(nil), lastRows...), hashingP, hashingS)
+				hashed.Add(1)
 				mu.Unlock()
-				publishRows(rows, n)
 			}
 		}()
 	}
@@ -289,6 +294,8 @@ func (s *Session) run(ctx context.Context) {
 	}
 	close(jobCh)
 	wg.Wait()
+	close(stopPub)
+	<-pubDone // no stale PhaseHashing snapshot may land after the final publish
 
 	if ctx.Err() != nil {
 		s.publish(Snapshot{PrimaryRoot: s.primaryRoot, SecondaryRoot: s.secondaryRoot, Phase: PhaseCanceled})

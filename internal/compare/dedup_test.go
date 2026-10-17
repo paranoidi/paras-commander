@@ -239,7 +239,7 @@ func TestDedupHashingProgressRateLimited(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 
-	// n tiny files hash in well under one dedupProgressInterval; the throttle should coalesce
+	// n tiny files hash in well under one progressInterval; the throttle should coalesce
 	// them into far fewer visible path changes than one-per-file.
 	if pathChanges >= n {
 		t.Fatalf("path changes = %d, want < %d (rate-limited)", pathChanges, n)
@@ -697,9 +697,9 @@ func TestDedupHashCachePersistsAfterCancel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	old := dedupProgressInterval
-	dedupProgressInterval = 0 // publish every resolve so the trigger below is deterministic
-	t.Cleanup(func() { dedupProgressInterval = old })
+	old := progressInterval
+	progressInterval = 0 // publish every resolve so the trigger below is deterministic
+	t.Cleanup(func() { progressInterval = old })
 	// One worker; cancel once the first file resolves. A group's duplicates all
 	// reach EOF before the cancel check, so at least one whole group is saved.
 	var once sync.Once

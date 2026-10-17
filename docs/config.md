@@ -464,7 +464,7 @@ Twin-panel directory compare (content hash diff).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `hash_concurrency` | int | `4` | Number of files hashed in parallel during a compare. |
+| `hash_concurrency` | int | `8` | Number of files hashed in parallel during a compare. |
 | `read_buffer_kib` | int | `256` | Per-worker read buffer size, in KiB, used while hashing. |
 | `max_hash_bytes` | int64 | `0` | Cap on bytes read per file when hashing. `0` means unbounded (whole file is hashed). |
 | `stay_on_volume_default` | bool | `true` | Default state of the "stay on volume" option when opening compare. |

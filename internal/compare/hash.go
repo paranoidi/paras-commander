@@ -7,19 +7,14 @@ import (
 	"io"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // HashFile reads loc and returns SHA-256 of its contents.
-func HashFile(ctx context.Context, loc pathloc.Path, buf []byte, maxBytes int64) ([32]byte, error) {
-	if maxBytes > 0 {
-		ent, err := fsbackend.Default().Stat(ctx, loc)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		if ent.Size > maxBytes {
-			return [32]byte{}, fmt.Errorf("file exceeds compare max_hash_bytes (%d > %d)", ent.Size, maxBytes)
-		}
+func HashFile(ctx context.Context, loc pathloc.Path, size int64, buf []byte, maxBytes int64) ([32]byte, error) {
+	if maxBytes > 0 && size > maxBytes {
+		return [32]byte{}, fmt.Errorf("file exceeds compare max_hash_bytes (%d > %d)", size, maxBytes)
 	}
 	be, err := fsbackend.Default().Backend(loc)
 	if err != nil {
