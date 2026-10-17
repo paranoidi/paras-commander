@@ -24,9 +24,11 @@ type JobEntry struct {
 	Error       string
 	// Warnings mirrors jobs.Job.Warnings: non-fatal per-item issues (e.g. a symlink relinked
 	// instead of dereferenced) that do not fail the job.
-	Warnings   []string
-	StartedAt  time.Time
-	FinishedAt time.Time
+	Warnings []string
+	// FailedItems mirrors jobs.Job.FailedItems: source items a copy skipped (Errors panel).
+	FailedItems []jobs.FailedItem
+	StartedAt   time.Time
+	FinishedAt  time.Time
 	// ETABytesPerSec is smoothed throughput from recent progress samples (bytes/s).
 	ETABytesPerSec float64
 	// ETAFilesPerSec is smoothed completion rate from recent progress samples (files/s).

@@ -67,14 +67,20 @@ type Job struct {
 	// Warnings collects non-fatal per-item issues encountered while building the transfer
 	// plan (currently: a symlink that could not be safely dereferenced and was relinked
 	// instead — see DereferenceSymlinks). Unlike Error, warnings never fail the job.
-	Warnings      []string
+	Warnings []string
+	// FailedItems lists the source items a copy skipped and carried on without (unsupported file
+	// type, unreadable or vanished source file). Written only by State.ApplyEvent
+	// (EventItemFailed). A job with failed items ends StatusFailed ("N item(s) failed"); Retry
+	// re-runs just these items (see RetryClone).
+	FailedItems   []FailedItem
 	ScanStartedAt time.Time
 	StartedAt     time.Time
 	FinishedAt    time.Time
 
-	// Plan is the pre-built copy/move plan from pre-scan; nil until scan completes or for delete jobs.
-	// Populated only as a synchronous-rebuild fallback (see jobbridge.TransferFunc) when the job
-	// never went through PlanCh — the normal streaming pre-scan leaves this nil throughout.
+	// Plan is the pre-built copy plan; nil for delete jobs and for streamed copies.
+	// Populated as a synchronous-rebuild fallback (see jobbridge.TransferFunc) when the job
+	// never went through PlanCh, and by RetryClone with the failed items of the previous run (such
+	// a job skips the pre-scan). The normal streaming pre-scan leaves this nil throughout.
 	Plan []ops.PlanItem
 	// PlanCh streams PlanItems from the background pre-scan producer (see jobs/scan.go) as they
 	// are discovered, instead of jobbridge waiting for a fully-built Plan slice. Set once by
@@ -186,7 +192,13 @@ func FinishedStatuses() []Status {
 // Move and flatten do not: they rename first and plan only the sources that need a cross-device
 // copy fallback (see ops.ExecuteMove). Flatten-into-dest copy is TypeCopy and keeps the pre-scan.
 func (j *Job) NeedsPreScan() bool {
-	return j != nil && j.Type == TypeCopy
+	return j != nil && j.Type == TypeCopy && len(j.Plan) == 0
+}
+
+// FailedItem is a source item a copy skipped, with the error text shown in the Errors panel.
+type FailedItem struct {
+	Item  ops.PlanItem
+	Error string
 }
 
 // RetryClone returns a fresh Job with the same ID and only the enqueue-time spec fields
@@ -194,13 +206,24 @@ func (j *Job) NeedsPreScan() bool {
 // starts zero, mirroring how AddTransferJob/EnqueueDeleteJob/EnqueueExtractJob/AddFlattenJob
 // build a job at enqueue time. Status is StatusScanning; State.AddJob turns it into
 // StatusQueued for types that do not pre-scan. TotalFiles is preset to len(Sources) for delete/extract, matching
-// their enqueue path (copy/move/flatten recompute it during scan).
+// their enqueue path (copy/move/flatten recompute it during scan). A copy with FailedItems
+// instead gets Plan = those items and their totals, so the retry re-runs only them without a scan.
 func (j *Job) RetryClone() *Job {
 	totalFiles := 0
 	if j.Type == TypeDelete || j.Type == TypeExtract {
 		totalFiles = len(j.Sources)
 	}
+	var plan []ops.PlanItem
+	var planBytes int64
+	if j.Type == TypeCopy && len(j.FailedItems) > 0 {
+		for _, f := range j.FailedItems {
+			plan = append(plan, f.Item)
+		}
+		totalFiles, _, planBytes = ops.SummarizePlan(plan)
+	}
 	clone := &Job{
+		Plan:                  plan,
+		TotalBytes:            planBytes,
 		ID:                    j.ID,
 		Type:                  j.Type,
 		Status:                StatusScanning,

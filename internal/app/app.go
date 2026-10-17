@@ -583,7 +583,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			DiskUsage:                    duEngine,
 			DiskUsageShown:               false,
 			ViewMode:                     ui.ViewBrowser,
-			JobActivity:                  make(map[string][]string),
+			JobSucceeded:                 make(map[string][]string),
 			MenuDefinitions:              menu.BrowserDefinitions(keys.Global, opts.DevMode),
 			ThemeDialog: dialog.ThemeDialogState{
 				CurrentName: styles.Name,

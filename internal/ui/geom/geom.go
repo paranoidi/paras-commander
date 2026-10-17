@@ -390,7 +390,7 @@ func SplitPanelColumn(column Rect, stripItemCount int, maxStripContentRows int, 
 	return file, strip
 }
 
-const jobsSubpanelMinFrameH = 4 // activity panel: title row + bottom border + at least two content rows
+const jobsSubpanelMinFrameH = 4 // Errors/Succeeded panel: title row + bottom border + at least two content rows
 
 // jobsDetailChromeRows is non-content rows in drawJobsDetailPanel (inner area is Height - 2).
 const jobsDetailChromeRows = 2
@@ -398,12 +398,14 @@ const jobsDetailChromeRows = 2
 // jobsConflictPanelMinFrameH is the minimum frame height for the file-exists conflict panel above Details.
 const jobsConflictPanelMinFrameH = 17
 
-// SplitJobsSecondaryPanels splits the right column into optional conflict (top), detail, then activity.
-// When showConflict is false, conflict has zero height and detail+activity use the full column.
-func SplitJobsSecondaryPanels(column Rect, showConflict bool, detailLineCount int) (conflict, detail, activity Rect) {
+// SplitJobsSecondaryPanels splits the right column into optional conflict (top), detail, optional
+// errors, then succeeded. When showConflict is false, conflict has zero height and the rest use the
+// full column. errorLineCount is the number of Errors panel text lines; zero hides the panel.
+func SplitJobsSecondaryPanels(column Rect, showConflict bool, detailLineCount, errorLineCount int) (conflict, detail, errors, succeeded Rect) {
 	if !showConflict {
-		d, a := SplitJobsSecondaryColumn(column, detailLineCount)
-		return Rect{X: column.X, Y: column.Y, Width: column.Width, Height: 0}, d, a
+		d, lower := SplitJobsSecondaryColumn(column, detailLineCount)
+		e, su := SplitJobsLowerPanels(lower, errorLineCount)
+		return Rect{X: column.X, Y: column.Y, Width: column.Width, Height: 0}, d, e, su
 	}
 	cH := jobsConflictPanelMinFrameH
 	if cH >= column.Height {
@@ -415,15 +417,34 @@ func SplitJobsSecondaryPanels(column Rect, showConflict bool, detailLineCount in
 		Width:  column.Width,
 		Height: column.Height - cH,
 	}
-	d, a := SplitJobsSecondaryColumn(sub, detailLineCount)
+	d, lower := SplitJobsSecondaryColumn(sub, detailLineCount)
+	e, su := SplitJobsLowerPanels(lower, errorLineCount)
 	conflict = Rect{X: column.X, Y: column.Y, Width: column.Width, Height: cH}
-	return conflict, d, a
+	return conflict, d, e, su
 }
 
-// SplitJobsSecondaryColumn divides the jobs screen right column into a top Details panel and bottom Activity panel.
-// The Details frame height is the minimum needed for detailLineCount text rows (plus panel chrome), so Activity
-// receives all remaining vertical space. When the column is too short for two usable panels, activity height is
-// zero and the caller should draw only the detail panel in the full column.
+// SplitJobsLowerPanels divides the area under Details into an Errors panel (top) and a Succeeded
+// panel. With errorLineCount == 0 the Errors panel has zero height and Succeeded takes everything.
+// Otherwise Errors is capped to its line count plus chrome and to half of the area; an area too
+// short for two panels goes entirely to Errors.
+func SplitJobsLowerPanels(lower Rect, errorLineCount int) (errors, succeeded Rect) {
+	if errorLineCount <= 0 || lower.Height <= 0 {
+		return Rect{X: lower.X, Y: lower.Y, Width: lower.Width, Height: 0}, lower
+	}
+	errH := lower.Height
+	if lower.Height >= 2*jobsSubpanelMinFrameH {
+		errH = min(errorLineCount+jobsDetailChromeRows, lower.Height/2)
+	}
+	errors = Rect{X: lower.X, Y: lower.Y, Width: lower.Width, Height: errH}
+	succeeded = Rect{X: lower.X, Y: lower.Y + errH, Width: lower.Width, Height: lower.Height - errH}
+	return errors, succeeded
+}
+
+// SplitJobsSecondaryColumn divides the jobs screen right column into a top Details panel and a lower area
+// (Errors + Succeeded, see SplitJobsLowerPanels). The Details frame height is the minimum needed for
+// detailLineCount text rows (plus panel chrome), so the lower area receives all remaining vertical space. When
+// the column is too short for two usable panels, the lower height is zero and the caller should draw only the
+// detail panel in the full column.
 func SplitJobsSecondaryColumn(column Rect, detailLineCount int) (detail Rect, activity Rect) {
 	activityMin := jobsSubpanelMinFrameH
 	minDetailFrame := max(detailLineCount+jobsDetailChromeRows, 3)
@@ -472,7 +493,7 @@ func SplitJobsSecondaryColumnFlexTop(column Rect, bottomLineCount int) (top Rect
 	return top, bottom
 }
 
-// JobsPanelContentRows returns scrollable text lines inside a jobs detail/activity frame (inner height).
+// JobsPanelContentRows returns scrollable text lines inside a jobs detail/errors/succeeded frame (inner height).
 func JobsPanelContentRows(rect Rect) int {
 	h := rect.Height - 2
 	if h < 0 {

@@ -74,17 +74,22 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 			OnPath:              hooks.OnPath,
 			DereferenceSymlinks: hooks.DereferenceSymlinks,
 			OnWarning:           hooks.OnWarning,
+			OnItemError:         hooks.OnItemError,
 		}
 
 		// countOpts is the counting walk's own copy of opts (the delivery walk above keeps the
 		// original, untouched) with Yield wrapped by the adaptive throttle when a throughput
-		// signal is available and the probe isn't disabled. OnWarning and OnPath are cleared: the
+		// signal is available and the probe isn't disabled. OnWarning and OnPath are cleared (OnItemError is replaced by a no-op): the
 		// counting walk enumerates the same tree independently, so leaving them wired would
 		// double-report every symlink-dereference fallback and every progress path (once per
 		// walk), and OnPath's rate-limit state is not safe for two concurrent walks.
 		countOpts := opts
 		countOpts.OnWarning = nil
 		countOpts.OnPath = nil
+		if opts.OnItemError != nil {
+			// Skip silently like the delivery walk (which reports) so the totals walk does not abort.
+			countOpts.OnItemError = func(ops.PlanItem, error) {}
+		}
 		if hooks.ThroughputBPS != nil && !jobsCfg.ScanDisableAdaptiveThrottle {
 			countOpts.Yield = newAdaptiveThrottleYield(opts.Yield, hooks.ThroughputBPS)
 		}
@@ -242,24 +247,6 @@ baseLabel:
 	return label
 }
 
-// ActivityFailureLabel formats a terminal failure line for the jobs Activity panel.
-func ActivityFailureLabel(ev jobs.Event) string {
-	if ev.Type != jobs.EventFailed {
-		return ""
-	}
-	msg := strings.TrimSpace(ev.Error)
-	if ev.Err != nil {
-		msg = strings.TrimSpace(ev.Err.Error())
-	}
-	if msg == "" {
-		return "Failed"
-	}
-	if i := strings.IndexByte(msg, '\n'); i >= 0 {
-		msg = strings.TrimSpace(msg[:i])
-	}
-	return "Failed: " + msg
-}
-
 // TransferFunc builds the job worker transfer function from config. permWait asks the user
 // whether to retry a permission-denied local step as root (nil disables elevation).
 func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, dedupChunkBytes int64, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
@@ -267,6 +254,16 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, ded
 		// One Elevator per job: a sudo password the user types is remembered for this job only.
 		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
+		if job.Type == jobs.TypeCopy {
+			opts.OnItemError = func(item ops.PlanItem, err error) {
+				emit(jobs.Event{
+					Type:       jobs.EventItemFailed,
+					JobID:      job.ID,
+					Status:     jobs.StatusRunning,
+					FailedItem: &jobs.FailedItem{Item: item, Error: ops.RootFirstErrorText(err)},
+				})
+			}
+		}
 		opts.OnRemoveSources = func() {
 			emit(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning})
 		}

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-const jobActivityMaxLines = 200
+const jobSucceededMaxLines = 200
 
 // jobsDetailLineBudgetFallback is used when line width is unknown (layout line counts only).
 const jobsDetailLineBudgetFallback = 4096
@@ -61,21 +62,39 @@ func LayoutHideInactivePanel(vm ViewMode, hideInactivePanel bool) bool {
 
 // JobsViewState holds focus and scroll positions for the jobs view screen.
 type JobsViewState struct {
-	Selected       int
-	FocusPane      int // 0=list; 1=conflict when visible else details; 2=details or activity; 3=activity when conflict visible
-	ListScroll     int
-	DetailScroll   int
-	ActivityScroll int
+	Selected        int
+	FocusPane       int // index into JobsPaneOrder: list, blocker (if shown), Details, Errors (if shown), Succeeded (if shown)
+	ListScroll      int
+	DetailScroll    int
+	ErrorsScroll    int
+	SucceededScroll int
 	// ConflictButtonFocus is the focused action index in the conflict panel (0..5).
 	ConflictButtonFocus int
 }
 
-// Truncate job activity logs to avoid unbounded memory in long sessions.
-func CapJobActivityLines(lines []string) []string {
-	if len(lines) <= jobActivityMaxLines {
+// CapJobSucceededLines truncates a job's Succeeded log to avoid unbounded memory in long sessions.
+func CapJobSucceededLines(lines []string) []string {
+	if len(lines) <= jobSucceededMaxLines {
 		return lines
 	}
-	return lines[len(lines)-jobActivityMaxLines:]
+	return lines[len(lines)-jobSucceededMaxLines:]
+}
+
+// JobErrorLines renders the Errors panel text from job state: one "<src>: <error>" line per
+// skipped item, plus the job's own Error line when it failed.
+func JobErrorLines(j JobEntry) []string {
+	var lines []string
+	for _, f := range j.FailedItems {
+		lines = append(lines, f.Item.Src.String()+": "+f.Error)
+	}
+	if j.Status == string(jobs.StatusFailed) && j.Error != "" {
+		msg := j.Error
+		if i := strings.IndexByte(msg, '\n'); i >= 0 {
+			msg = msg[:i]
+		}
+		lines = append(lines, msg)
+	}
+	return lines
 }
 
 func drawJobsView(
@@ -83,7 +102,7 @@ func drawJobsView(
 	layout Layout,
 	state JobsViewState,
 	jobs []JobEntry,
-	activity map[string][]string,
+	succeeded map[string][]string,
 	styles theme.Theme,
 	now time.Time,
 	chromeBlocked bool,
@@ -98,16 +117,19 @@ func drawJobsView(
 	}
 	detailLines := JobDetailLineCount(sel, now, throughputChartEnabled)
 	showConflict := JobEntryShowsConflictPanel(sel)
-	conflictRect, detailRect, activityRect := SplitJobsSecondaryPanels(layout.Secondary, showConflict, detailLines)
-	detailFocused := jobsDetailPaneFocused(state, showConflict)
-	activityFocused := jobsActivityPaneFocused(state, showConflict)
-	conflictFocused := jobsConflictPaneFocused(state, showConflict)
+	errorLines := JobErrorLines(sel)
+	conflictRect, detailRect, errorsRect, succeededRect := SplitJobsSecondaryPanels(layout.Secondary, showConflict, detailLines, len(errorLines))
+	focused := focusedJobsPane(state, JobsPaneOrder(showConflict, errorsRect.Height > 0, succeededRect.Height > 0))
 	if conflictRect.Height > 0 {
-		drawJobsConflictPanel(screen, conflictRect, state, sel, styles, chromeBlocked, conflictFocused, userHomeDir)
+		drawJobsConflictPanel(screen, conflictRect, state, sel, styles, chromeBlocked, focused == JobsPaneConflict, userHomeDir)
 	}
-	drawJobsDetailPanel(screen, detailRect, state, jobs, styles, now, chromeBlocked, detailFocused, userHomeDir, throughputChartEnabled)
-	if activityRect.Height > 0 {
-		drawJobsActivityPanel(screen, activityRect, state, jobs, activity, styles, chromeBlocked, activityFocused)
+	drawJobsDetailPanel(screen, detailRect, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, userHomeDir, throughputChartEnabled)
+	if errorsRect.Height > 0 {
+		body := styles.JobsFailed
+		drawJobsLinesPanel(screen, errorsRect, " "+styles.IconJobsList("failed")+" Errors ", errorLines, "", state.ErrorsScroll, &body, styles, chromeBlocked, focused == JobsPaneErrors)
+	}
+	if succeededRect.Height > 0 {
+		drawJobsLinesPanel(screen, succeededRect, " Succeeded ", succeeded[sel.ID], " No activity", state.SucceededScroll, nil, styles, chromeBlocked, focused == JobsPaneSucceeded)
 	}
 }
 
@@ -258,47 +280,33 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 	}
 }
 
-func drawJobsActivityPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, activity map[string][]string, styles theme.Theme, chromeBlocked bool, focused bool) {
-	layout := drawAuxPanelChrome(screen, rect, " Activity ", "", focused, chromeBlocked, false, styles)
+// drawJobsLinesPanel draws a scrollable list of text lines (the Errors and Succeeded panels).
+// emptyText is shown, after a blank row, when lines is empty. A non-nil lineStyle overrides the
+// body text style (foreground only: the panel background is kept).
+func drawJobsLinesPanel(screen tcell.Screen, rect Rect, title string, lines []string, emptyText string, scroll int, lineStyle *tcell.Style, styles theme.Theme, chromeBlocked bool, focused bool) {
+	layout := drawAuxPanelChrome(screen, rect, title, "", focused, chromeBlocked, false, styles)
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
+	if lineStyle != nil && !chromeBlocked {
+		body = lineStyle.Background(layout.ContentBG)
+	}
 	contentTop := rect.Y + 1
 	contentH := rect.Height - 2
 	if contentH <= 0 {
 		return
 	}
-
-	var sel JobEntry
-	if state.Selected >= 0 && state.Selected < len(jobs) {
-		sel = jobs[state.Selected]
+	if len(lines) == 0 {
+		lines = []string{"", emptyText}
 	}
-	act := activity[sel.ID]
-	var lines []string
-	if len(act) == 0 {
-		lines = []string{"", " No activity"}
-	} else {
-		lines = append(lines, act...)
-	}
-
-	scroll := state.ActivityScroll
-	if scroll < 0 {
-		scroll = 0
-	}
-	maxStart := max(0, len(lines)-contentH)
-	if scroll > maxStart {
-		scroll = maxStart
-	}
+	scroll = min(max(scroll, 0), max(0, len(lines)-contentH))
 
 	textX := rect.X + 2
-	textW := rect.Width - 4
-	if textW < 1 {
-		textW = 1
-	}
+	textW := max(rect.Width-4, 1)
 	for i := 0; i < contentH; i++ {
 		line := ""
 		if i+scroll < len(lines) {
 			line = lines[i+scroll]
 		}
-		if line != "" && line != " No activity" {
+		if line != "" && line != emptyText {
 			line = primitive.FitPathForWidth(line, textW)
 		}
 		primitive.Text(screen, textX, contentTop+i, textW, line, body)
@@ -443,12 +451,10 @@ func JobDetailLineCount(j JobEntry, now time.Time, throughputChartEnabled bool) 
 	return len(detailStaticLines(j, now, jobsDetailLineBudgetFallback, "", throughputChartEnabled))
 }
 
-// JobActivityLineCount returns the number of lines in the jobs Activity panel for scroll bounds.
-func JobActivityLineCount(activity []string) int {
-	if len(activity) == 0 {
-		return 1
-	}
-	return len(activity)
+// JobsLinesPanelLineCount returns the number of rows in an Errors or Succeeded panel (an empty
+// Succeeded panel shows one placeholder row) for scroll bounds.
+func JobsLinesPanelLineCount(lines []string) int {
+	return max(len(lines), 1)
 }
 
 func jobPercentDone(j JobEntry) float64 {

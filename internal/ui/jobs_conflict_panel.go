@@ -45,22 +45,41 @@ func JobsBlockerMaxButtonIndex(j JobEntry) int {
 	return 5
 }
 
-func jobsDetailPaneFocused(state JobsViewState, showConflict bool) bool {
+// JobsPane names a focusable panel of the jobs view. JobsViewState.FocusPane indexes the
+// panels currently shown, in JobsPaneOrder.
+type JobsPane int
+
+const (
+	JobsPaneList JobsPane = iota
+	JobsPaneConflict
+	JobsPaneDetail
+	JobsPaneErrors
+	JobsPaneSucceeded
+)
+
+// JobsPaneOrder is the Tab focus order of the shown panels: list, blocker (when shown), Details
+// (always), Errors (when shown), Succeeded (when shown).
+func JobsPaneOrder(showConflict, showErrors, showSucceeded bool) []JobsPane {
+	order := []JobsPane{JobsPaneList}
 	if showConflict {
-		return state.FocusPane == 2
+		order = append(order, JobsPaneConflict)
 	}
-	return state.FocusPane == 1
+	order = append(order, JobsPaneDetail)
+	if showErrors {
+		order = append(order, JobsPaneErrors)
+	}
+	if showSucceeded {
+		order = append(order, JobsPaneSucceeded)
+	}
+	return order
 }
 
-func jobsActivityPaneFocused(state JobsViewState, showConflict bool) bool {
-	if showConflict {
-		return state.FocusPane == 3
+// focusedJobsPane returns the panel named by state.FocusPane; out-of-range indices name the list.
+func focusedJobsPane(state JobsViewState, order []JobsPane) JobsPane {
+	if state.FocusPane < 0 || state.FocusPane >= len(order) {
+		return JobsPaneList
 	}
-	return state.FocusPane == 2
-}
-
-func jobsConflictPaneFocused(state JobsViewState, showConflict bool) bool {
-	return showConflict && state.FocusPane == 1
+	return order[state.FocusPane]
 }
 
 // blockerMismatch reports a directory/non-directory conflict, where the first button pair is

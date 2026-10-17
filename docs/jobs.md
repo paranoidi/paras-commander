@@ -26,13 +26,28 @@ With the Queue panel focused:
 The current limit appears on the right side of the Queue panel's border
 (e.g. `40MB/s`). Nothing is shown there when the limit is Unlimited.
 
+# Skipped items and the Errors panel
+
+When a copy meets something it cannot copy, it skips that item and carries on
+with the rest: a file type that cannot be copied (a socket, FIFO or device), or
+a source file that cannot be read or has vanished. Problems on the destination
+side (write errors, a full disk) still stop the job. Move jobs always stop at
+the first problem.
+
+A job that skipped items finishes as **failed** with `N item(s) failed`. In the
+jobs view the right column shows an **Errors** panel (above **Succeeded**) listing
+each skipped item as `<source path>: <reason>`. The panel appears only when the
+selected job has errors. Tab cycles Queue, blocker (when shown), Details,
+Errors (when shown), Succeeded.
+
 # Retrying a failed job
 
 A copy, move, flatten, delete, or extract job that fails (e.g. `permission
 denied` on the destination) stays in the Queue panel as a failed row instead
 of disappearing. Select it and press `Ctrl+R` — the footer shows **Retry**
 and the `:` leader menu shows "Retry failed job" while a failed job is
-selected — to re-run it from scratch under the same job ID. Any files
+selected — to re-run it from scratch under the same job ID. A copy that
+failed only because it skipped items re-runs just those items. Any files
 already transferred before the failure hit the normal overwrite/skip
 conflict prompt on retry.
 

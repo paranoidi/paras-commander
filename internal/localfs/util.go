@@ -79,6 +79,22 @@ func IsCrossDeviceRenameError(err error) bool {
 	return linkErr.Err != nil && linkErr.Err.Error() == "invalid cross-device link"
 }
 
+// sourceError marks a failure on the source side of a copy (stat/open of the source file), as
+// opposed to the destination, so a copy job can skip that one item and carry on.
+type sourceError struct{ err error }
+
+func (e *sourceError) Error() string { return e.err.Error() }
+func (e *sourceError) Unwrap() error { return e.err }
+
+// SourceError tags err as a source-side failure; see IsSourceError.
+func SourceError(err error) error { return &sourceError{err: err} }
+
+// IsSourceError reports whether err (or anything it wraps) was tagged by SourceError.
+func IsSourceError(err error) bool {
+	var se *sourceError
+	return errors.As(err, &se)
+}
+
 // CopyFile copies a regular file from src to dst.
 // If preservePerms is true, the source file permissions are replicated.
 // If preserveTimes is true, the source file access/mod times are replicated.
@@ -90,7 +106,7 @@ func IsCrossDeviceRenameError(err error) bool {
 func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, preserveTimes, dir, tryKernelFastCopy bool, extra CopyFileOpts, onWritten func(int64)) error {
 	srcInfo, err := os.Lstat(src)
 	if err != nil {
-		return fmt.Errorf("stat source %q: %w", src, err)
+		return SourceError(fmt.Errorf("stat source %q: %w", src, err))
 	}
 	if IsSymlink(srcInfo) {
 		if !extra.FollowSymlinks {
@@ -98,7 +114,7 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 		}
 		resolved, err := os.Stat(src)
 		if err != nil {
-			return fmt.Errorf("stat source %q: %w", src, err)
+			return SourceError(fmt.Errorf("stat source %q: %w", src, err))
 		}
 		srcInfo = resolved
 	}
@@ -110,7 +126,7 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 
 	srcFile, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("open source %q: %w", src, err)
+		return SourceError(fmt.Errorf("open source %q: %w", src, err))
 	}
 	defer func() { _ = srcFile.Close() }()
 

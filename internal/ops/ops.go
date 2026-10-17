@@ -36,6 +36,10 @@ func effectiveProgressThrottle(t ProgressEmitThrottle) ProgressEmitThrottle {
 
 // Options controls operation behavior.
 type Options struct {
+	// OnItemError, when set (copy jobs only), makes the executor report a source-side failure
+	// (unreadable or vanished source file) and carry on with the next item instead of aborting.
+	// Move leaves it nil: its copy fallback deletes sources afterwards.
+	OnItemError         func(item PlanItem, err error)
 	PreservePermissions bool
 	PreserveTimestamps  bool
 	CopyBufferKiB       int
@@ -456,7 +460,7 @@ func buildPlan(ctx context.Context, sources []pathloc.Path, destination pathloc.
 			return fmt.Errorf("cannot copy %s into a subdirectory of itself", srcLoc)
 		}
 		if srcLoc.IsRemote() || destination.IsRemote() || !useLocalFastPath(srcLoc, dstLoc) {
-			if err := planRemoteSource(ctx, srcLoc, dstLoc, followDirChildren, sink, afterVisit); err != nil {
+			if err := planRemoteSource(ctx, srcLoc, dstLoc, followDirChildren, opts, sink, afterVisit); err != nil {
 				return err
 			}
 			continue
@@ -472,7 +476,7 @@ func buildPlan(ctx context.Context, sources []pathloc.Path, destination pathloc.
 // when either endpoint is remote or the local os fast path isn't available for this src/dst
 // pair. Stats srcLoc, then either walks a directory tree via walkBackendTree or feeds a
 // single planItemFromEntry to sink.
-func planRemoteSource(ctx context.Context, srcLoc, dstLoc pathloc.Path, followDirChildren bool, sink func(PlanItem) error, afterVisit func(string) error) error {
+func planRemoteSource(ctx context.Context, srcLoc, dstLoc pathloc.Path, followDirChildren bool, opts PlanBuildOptions, sink func(PlanItem) error, afterVisit func(string) error) error {
 	srcEnt, err := statEntry(ctx, srcLoc)
 	if err != nil {
 		return fmt.Errorf("stat %q: %w", srcLoc, err)
@@ -481,14 +485,14 @@ func planRemoteSource(ctx context.Context, srcLoc, dstLoc pathloc.Path, followDi
 		if !followDirChildren {
 			return nil
 		}
-		return walkBackendTree(ctx, srcLoc, dstLoc, sink, afterVisit)
+		return walkBackendTree(ctx, srcLoc, dstLoc, opts, sink, afterVisit)
 	}
 	if err := afterVisit(srcLoc.String()); err != nil {
 		return err
 	}
 	item, err := planItemFromEntry(srcLoc, dstLoc, srcEnt)
 	if err != nil {
-		return err
+		return skipOrFail(opts, PlanItem{Src: srcLoc, Dst: dstLoc}, err)
 	}
 	return sink(item)
 }
@@ -548,7 +552,7 @@ func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, opts P
 			case info.Mode().IsRegular():
 				return sink(planItemFromLocalInfo(srcItem, dstItem, info, false, false))
 			default:
-				return fmt.Errorf("unsupported file type for %q (mode %v)", path, info.Mode())
+				return skipOrFail(opts, PlanItem{Src: srcItem, Dst: dstItem}, fmt.Errorf("unsupported file type for %q (mode %v)", path, info.Mode()))
 			}
 		}
 		if opts.DereferenceSymlinks {
@@ -567,8 +571,18 @@ func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, opts P
 	case srcInfo.Mode().IsRegular():
 		return sink(planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, false))
 	default:
-		return fmt.Errorf("unsupported file type for %q (mode %v)", src, srcInfo.Mode())
+		return skipOrFail(opts, PlanItem{Src: srcLoc, Dst: dstLoc}, fmt.Errorf("unsupported file type for %q (mode %v)", src, srcInfo.Mode()))
 	}
+}
+
+// skipOrFail reports err for item through opts.OnItemError and returns nil (skip the item) when
+// the callback is set; otherwise it returns err and the walk aborts.
+func skipOrFail(opts PlanBuildOptions, item PlanItem, err error) error {
+	if opts.OnItemError == nil {
+		return err
+	}
+	opts.OnItemError(item, err)
+	return nil
 }
 
 // planDerefWarning reports a non-fatal symlink-dereference fallback through opts.OnWarning

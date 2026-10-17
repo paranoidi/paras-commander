@@ -30,6 +30,9 @@ type PlanBuildOptions struct {
 	// OnWarning reports a non-fatal per-item issue during plan building (e.g. a symlink that
 	// fell back to being relinked instead of dereferenced). Optional; nil-safe.
 	OnWarning func(string)
+	// OnItemError reports a source item the walk cannot plan (e.g. a socket or other unsupported
+	// file type) and skips it instead of aborting the walk. Nil keeps the abort behavior.
+	OnItemError func(item PlanItem, err error)
 }
 
 // ConflictResolver is called when a destination path already exists.
@@ -481,6 +484,9 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 		}
 
 		if err := copyRegularItem(ctx, item, opts, resolver, diskWait, destination, copyBuf, state); err != nil {
+			if skipSourceItemError(ctx, opts, item, err) {
+				continue
+			}
 			return state.doneFiles, state.doneBytes, state.transferredOut, err
 		}
 	}
@@ -494,6 +500,17 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 	}
 
 	return state.doneFiles, state.doneBytes, state.transferredOut, nil
+}
+
+// skipSourceItemError reports err through opts.OnItemError and returns true when the copy may
+// carry on without item: a source-side failure (localfs.IsSourceError) with the callback set and
+// ctx still live. Destination, conflict and cancel errors are never skipped.
+func skipSourceItemError(ctx context.Context, opts Options, item PlanItem, err error) bool {
+	if opts.OnItemError == nil || ctx.Err() != nil || !localfs.IsSourceError(err) {
+		return false
+	}
+	opts.OnItemError(item, err)
+	return true
 }
 
 func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copyResult, error) {

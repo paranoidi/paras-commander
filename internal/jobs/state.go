@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -58,6 +59,11 @@ type State struct {
 	throughputChartBin     time.Duration
 	throughputChartWindow  time.Duration
 	throughputChartEnabled bool
+
+	// itemFailures counts EventItemFailed emits per job ID so runJob can fail a job whose
+	// transfer returned nil without waiting for the UI loop to apply the events.
+	failMu       sync.Mutex
+	itemFailures map[string]int
 
 	scanConfig ScanConfig
 	scanFunc   ScanFunc
@@ -369,11 +375,13 @@ func (s *State) RetryJob(id string) bool {
 			break
 		}
 	}
+	clone := job.RetryClone()
 	s.mu.Unlock()
 	// Scan failures stay in the FIFO with StatusFailed; drop a stray queue entry if present.
 	s.queue.RemoveJobByID(id)
 
-	s.AddJob(job.RetryClone())
+	s.takeItemFailures(id) // drop a stale count from a run that never reached runJob's end
+	s.AddJob(clone)
 	return true
 }
 
@@ -498,6 +506,10 @@ func (s *State) ApplyEvent(ev Event) {
 			now := time.Now()
 			ApplyProgressETA(j, ev.DoneBytes, ev.DoneFiles, now)
 			j.PendingBlocker = nil
+		}
+	case EventItemFailed:
+		if j := s.findJobUnlocked(ev.JobID); j != nil && ev.FailedItem != nil {
+			j.FailedItems = append(j.FailedItems, *ev.FailedItem)
 		}
 	case EventRemovingSources:
 		if j := s.findJobUnlocked(ev.JobID); j != nil {
@@ -697,6 +709,15 @@ func (s *State) runWorker(stop <-chan struct{}) {
 	}
 }
 
+// takeItemFailures returns and clears the number of items job id skipped this run.
+func (s *State) takeItemFailures(id string) int {
+	s.failMu.Lock()
+	defer s.failMu.Unlock()
+	n := s.itemFailures[id]
+	delete(s.itemFailures, id)
+	return n
+}
+
 func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	var policy ConflictPolicy
 	waitBlocker := func(req BlockerRequest) BlockerAnswer {
@@ -826,6 +847,10 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 
 	cancel()
 
+	if n := s.takeItemFailures(job.ID); n > 0 && transferErr == nil {
+		transferErr = fmt.Errorf("%d item(s) failed", n)
+	}
+
 	s.mu.Lock()
 	switch {
 	case errors.Is(transferErr, context.Canceled) || errors.Is(transferErr, ErrUserCanceled):
@@ -933,6 +958,14 @@ func (s *State) QueueTestEvent(ev Event) {
 }
 
 func (s *State) emit(ev Event) {
+	if ev.Type == EventItemFailed {
+		s.failMu.Lock()
+		if s.itemFailures == nil {
+			s.itemFailures = make(map[string]int)
+		}
+		s.itemFailures[ev.JobID]++
+		s.failMu.Unlock()
+	}
 	sent := false
 	if ev.Type.DroppableWhenChannelFull() {
 		select {

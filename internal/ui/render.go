@@ -140,7 +140,7 @@ type Model struct {
 	// same bounded window SchedulePrefetchFromActivePanel schedules — used only to tint image/video
 	// file icons bright magenta (warm) vs standard magenta (cold) as a prefetch debugging aid.
 	PreviewPrefetchWarm map[string]struct{}
-	JobActivity         map[string][]string
+	JobSucceeded        map[string][]string
 	CommandsView        CommandsViewState
 	CommandsList        []CommandRunEntry
 	// CommandsDisplay is a mutex-backed snapshot refreshed in App.render for ViewCommands (avoids races with worker updates).
@@ -624,7 +624,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 	case ViewJobs:
 		now := time.Now()
-		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobActivity, styles, now, chromeBlocked, model.UserHomeDir, model.JobsThroughputChartEnabled, model.JobsTransferRateLimitBPS)
+		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobSucceeded, styles, now, chromeBlocked, model.UserHomeDir, model.JobsThroughputChartEnabled, model.JobsTransferRateLimitBPS)
 	case ViewCommands:
 		cmdEntries := model.CommandsList
 		if len(model.CommandsDisplay) > 0 {

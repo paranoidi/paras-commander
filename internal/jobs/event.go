@@ -16,6 +16,8 @@ const (
 	EventCompleted  EventType = "completed"
 	EventFailed     EventType = "failed"
 	EventCanceled   EventType = "canceled"
+	// EventItemFailed reports one skipped copy item (Event.FailedItem); the copy carries on.
+	EventItemFailed EventType = "item-failed"
 	// EventRemovingSources is emitted once when a move's copy fallback starts deleting its sources.
 	EventRemovingSources EventType = "removing-sources"
 )
@@ -52,6 +54,8 @@ type Event struct {
 	Err error
 	// Blocker is set when Type == EventJobBlockerRequest (file conflict or disk space).
 	Blocker *BlockerDetails
+	// FailedItem is set when Type == EventItemFailed.
+	FailedItem *FailedItem
 }
 
 // ConflictEvent carries information about a file conflict.

@@ -319,11 +319,11 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 	}
 	srcEnt, err := statEntry(ctx, src)
 	if err != nil {
-		return copySkipped, err
+		return copySkipped, localfs.SourceError(err)
 	}
 	rc, err := srcBE.OpenRead(ctx, src)
 	if err != nil {
-		return copySkipped, err
+		return copySkipped, localfs.SourceError(err)
 	}
 	defer func() { _ = rc.Close() }()
 
@@ -469,7 +469,7 @@ func planItemFromEntry(srcLoc, dstLoc pathloc.Path, ent fsbackend.Entry) (PlanIt
 	}
 }
 
-func walkBackendTree(ctx context.Context, rootSrc, rootDst pathloc.Path, sink func(PlanItem) error, afterVisit func(string) error) error {
+func walkBackendTree(ctx context.Context, rootSrc, rootDst pathloc.Path, opts PlanBuildOptions, sink func(PlanItem) error, afterVisit func(string) error) error {
 	rootEnt, err := statEntry(ctx, rootSrc)
 	if err != nil {
 		return err
@@ -477,13 +477,13 @@ func walkBackendTree(ctx context.Context, rootSrc, rootDst pathloc.Path, sink fu
 	if rootEnt.Type != fsbackend.EntryDirectory {
 		return fmt.Errorf("%q is not a directory", rootSrc)
 	}
-	if err := appendBackendWalk(ctx, rootSrc, rootDst, sink, afterVisit); err != nil {
+	if err := appendBackendWalk(ctx, rootSrc, rootDst, opts, sink, afterVisit); err != nil {
 		return err
 	}
 	return nil
 }
 
-func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, sink func(PlanItem) error, afterVisit func(string) error) error {
+func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, opts PlanBuildOptions, sink func(PlanItem) error, afterVisit func(string) error) error {
 	be, err := backendFor(dirSrc)
 	if err != nil {
 		return err
@@ -521,7 +521,7 @@ func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, sink fu
 		}
 		switch e.Type {
 		case fsbackend.EntryDirectory:
-			if err := appendBackendWalk(ctx, e.Loc, childDst, sink, afterVisit); err != nil {
+			if err := appendBackendWalk(ctx, e.Loc, childDst, opts, sink, afterVisit); err != nil {
 				return err
 			}
 		case fsbackend.EntrySymlink:
@@ -559,7 +559,9 @@ func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, sink fu
 				}
 			}
 		default:
-			return fmt.Errorf("unsupported file type for %q", e.Loc)
+			if err := skipOrFail(opts, PlanItem{Src: e.Loc, Dst: childDst}, fmt.Errorf("unsupported file type for %q", e.Loc)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

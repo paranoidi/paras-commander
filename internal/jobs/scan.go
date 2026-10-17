@@ -48,6 +48,9 @@ type ScanWalkHooks struct {
 	// OnWarning reports a non-fatal per-item issue during the walk (e.g. a symlink relinked
 	// instead of dereferenced). Optional.
 	OnWarning func(string)
+	// OnItemError reports a source item the walk skipped (e.g. unsupported file type) instead of
+	// aborting. Nil means the walk aborts on such items.
+	OnItemError func(item ops.PlanItem, err error)
 }
 
 // ScanFunc starts a background plan walk for sources/destination and returns immediately with a
@@ -140,6 +143,14 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 			s.mu.Lock()
 			job.Warnings = append(job.Warnings, msg)
 			s.mu.Unlock()
+		},
+		OnItemError: func(item ops.PlanItem, err error) {
+			s.emit(Event{
+				Type:       EventItemFailed,
+				JobID:      job.ID,
+				Status:     StatusScanning,
+				FailedItem: &FailedItem{Item: item, Error: ops.RootFirstErrorText(err)},
+			})
 		},
 		OnPath: func(path string) error {
 			now := time.Now()
