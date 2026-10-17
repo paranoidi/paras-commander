@@ -17,7 +17,7 @@ import (
 func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogState, styles theme.Theme) {
 	const title = "Filter"
 
-	width := FilterDialogWidth
+	width := PatternDialogWidth
 	if width > layout.Width-4 {
 		width = layout.Width - 4
 	}
@@ -47,9 +47,9 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 		mode  panel.GroupPatternMode
 		focus int
 	}{
-		{"Shell patterns", 'S', panel.GroupPatternShell, FilterFocusShellRadio},
-		{"Regular expression", 'R', panel.GroupPatternRegex, FilterFocusRegexRadio},
-		{"Simple", 'L', panel.GroupPatternSimple, FilterFocusSimpleRadio},
+		{"Shell patterns", PatternMnemonicShell, panel.GroupPatternShell, FilterFocusShellRadio},
+		{"Regular expression", PatternMnemonicRegex, panel.GroupPatternRegex, FilterFocusRegexRadio},
+		{"Simple", PatternMnemonicSimple, panel.GroupPatternSimple, FilterFocusSimpleRadio},
 	}
 	for i, r := range radios {
 		if y >= innerBottom {
@@ -61,7 +61,7 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 			if t >= 3 {
 				x = typeCol2X
 			}
-			draw.DrawDialogCheckbox(screen, x, y, FilterTypeLabels[t], FilterTypeMnemonics[t], state.Types[t], state.Focus == FilterFocusTypeFirst+t, false, styles)
+			draw.DrawDialogCheckbox(screen, x, y, FilterTypeLabels[t], FilterTypeMnemonics[t], state.Types[t], state.Focus == FilterFocusTypeFirst+t, PatternTypesDisabled(state.DirsOnly), styles)
 		}
 		y++
 	}
@@ -106,24 +106,24 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 	// col2X aligns the second checkbox on every two-column row with the type checkboxes above.
 	col2X := typeCol1X
 	if FilterShowsFilesDirs(state) {
-		draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'F', state.FilesOnly, state.Focus == FilterFocusFilesOnly, false, styles)
-		draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", 'D', state.DirsOnly, state.Focus == FilterFocusDirsOnly, false, styles)
+		draw.DrawDialogRadio(screen, optionX, y, "Files only", PatternMnemonicFilesOnly, state.FilesOnly, state.Focus == FilterFocusFilesOnly, false, styles)
+		draw.DrawDialogRadio(screen, col2X, y, "Directories only", PatternMnemonicDirsOnly, state.DirsOnly, state.Focus == FilterFocusDirsOnly, false, styles)
 		y++
 		if y >= innerBottom {
 			return
 		}
 	}
 
-	draw.DrawDialogCheckbox(screen, optionX, y, "Invert", 'I', state.Invert, state.Focus == FilterFocusInvert, false, styles)
-	draw.DrawDialogCheckbox(screen, col2X, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == FilterFocusCase, false, styles)
+	draw.DrawDialogCheckbox(screen, optionX, y, "Invert", PatternMnemonicInvert, state.Invert, state.Focus == FilterFocusInvert, false, styles)
+	draw.DrawDialogCheckbox(screen, col2X, y, "Case sensitive", PatternMnemonicCase, state.CaseSensitive, state.Focus == FilterFocusCase, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
 
 	if state.MetaColumnCount > 0 {
-		draw.DrawDialogCheckbox(screen, optionX, y, "Include meta columns", 'M', state.IncludeMetaColumns, state.Focus == FilterFocusIncludeMeta, false, styles)
-		draw.DrawDialogCheckbox(screen, col2X, y, "Only meta columns", 'N', state.OnlyMetaColumns, state.Focus == FilterFocusOnlyMeta, false, styles)
+		draw.DrawDialogCheckbox(screen, optionX, y, "Include meta columns", PatternMnemonicIncludeMeta, state.IncludeMetaColumns, state.Focus == FilterFocusIncludeMeta, false, styles)
+		draw.DrawDialogCheckbox(screen, col2X, y, "Only meta columns", PatternMnemonicOnlyMeta, state.OnlyMetaColumns, state.Focus == FilterFocusOnlyMeta, false, styles)
 		y++
 		if y >= innerBottom {
 			return

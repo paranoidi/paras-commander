@@ -24,9 +24,9 @@ const (
 	FilterFocusOnlyMeta    = FilterFocusPattern + 6
 )
 
-// FilterDialogWidth is the Filter dialog's frame width, shared by the renderer and the
-// handler's input-width computation. It fits "( ) Regular expression" plus both type columns.
-const FilterDialogWidth = 60
+// PatternDialogWidth is the frame width of the Filter and Select group dialogs, shared by their
+// renderers and input-width computations. It fits "( ) Regular expression" plus both type columns.
+const PatternDialogWidth = 60
 
 // FilterContentCount is the number of navigable content items (meta row included when shown).
 func FilterContentCount(metaColumnCount int) int {
@@ -117,13 +117,7 @@ func filterDialogHeight(state FilterDialogState, layoutHeight int) int {
 // (case in regex mode, meta row without meta columns) omitted. Up/Down keep the column, Left/Right
 // move within a row.
 func filterGrid(state FilterDialogState) [][]int {
-	t := FilterFocusTypeFirst
-	grid := [][]int{
-		{FilterFocusShellRadio, t, t + 3},
-		{FilterFocusRegexRadio, t + 1, t + 4},
-		{FilterFocusSimpleRadio, t + 2, -1},
-		{FilterFocusPattern},
-	}
+	grid := patternDialogGridHead(FilterFocusShellRadio, FilterFocusTypeFirst, FilterFocusPattern)
 	if FilterShowsFilesDirs(state) {
 		grid = append(grid, []int{FilterFocusFilesOnly, FilterFocusDirsOnly})
 	}
@@ -134,7 +128,8 @@ func filterGrid(state FilterDialogState) [][]int {
 	return grid
 }
 
-func filterGridFind(grid [][]int, focus int) (row, col int) {
+// dialogGridFind returns the (row, col) of focus in grid, or (-1, -1).
+func dialogGridFind(grid [][]int, focus int) (row, col int) {
 	for r, cells := range grid {
 		for c, f := range cells {
 			if f == focus {
@@ -145,9 +140,9 @@ func filterGridFind(grid [][]int, focus int) (row, col int) {
 	return -1, -1
 }
 
-// filterGridCell returns the cell at (row, col), falling back to the nearest non-empty cell to
+// dialogGridCell returns the cell at (row, col), falling back to the nearest non-empty cell to
 // the left when col is past the row's end or empty.
-func filterGridCell(grid [][]int, row, col int) int {
+func dialogGridCell(grid [][]int, row, col int) int {
 	cells := grid[row]
 	if col >= len(cells) {
 		col = len(cells) - 1
@@ -157,32 +152,24 @@ func filterGridCell(grid [][]int, row, col int) int {
 	return cells[col]
 }
 
-// FilterMoveFocus applies dialog navigation over filterGrid plus the OK/Cancel button row, and
-// Tab/Shift+Tab jumps between groups: mode radios, type checkboxes, pattern, options, buttons.
-func FilterMoveFocus(focus int, key tcell.Key, state FilterDialogState) (int, bool) {
-	form := NewDialogLinearForm(FilterContentCount(state.MetaColumnCount))
-	okIdx, cancelIdx := form.OKIndex(), form.CancelIndex()
-	grid := filterGrid(state)
-	optionsStart := FilterFocusFilesOnly
-	if !FilterShowsFilesDirs(state) {
-		optionsStart = FilterFocusInvert
-	}
-
-	switch key {
-	case tcell.KeyTab, tcell.KeyBacktab:
-		starts := []int{FilterFocusShellRadio, FilterFocusTypeFirst, FilterFocusPattern, optionsStart, okIdx}
-		seg := 0
-		for i, st := range starts {
-			if focus >= st {
-				seg = i
-			}
+// dialogTabSegment jumps Tab/Shift+Tab to the next/previous of the segment start indexes
+// (ascending); focus belongs to the last segment whose start it has reached.
+func dialogTabSegment(starts []int, focus int, key tcell.Key) int {
+	seg := 0
+	for i, st := range starts {
+		if focus >= st {
+			seg = i
 		}
-		if key == tcell.KeyTab {
-			return starts[(seg+1)%len(starts)], true
-		}
-		return starts[(seg+len(starts)-1)%len(starts)], true
 	}
+	if key == tcell.KeyTab {
+		return starts[(seg+1)%len(starts)]
+	}
+	return starts[(seg+len(starts)-1)%len(starts)]
+}
 
+// dialogGridMove applies arrow navigation over grid plus the OK/Cancel button row. Up from a
+// button goes to upFromButtons.
+func dialogGridMove(grid [][]int, focus int, key tcell.Key, okIdx, cancelIdx, upFromButtons int) (int, bool) {
 	if focus == okIdx || focus == cancelIdx {
 		switch key {
 		case tcell.KeyLeft:
@@ -194,12 +181,12 @@ func FilterMoveFocus(focus int, key tcell.Key, state FilterDialogState) (int, bo
 				return cancelIdx, true
 			}
 		case tcell.KeyUp:
-			return grid[len(grid)-1][0], true
+			return upFromButtons, true
 		}
 		return focus, false
 	}
 
-	row, col := filterGridFind(grid, focus)
+	row, col := dialogGridFind(grid, focus)
 	if row < 0 {
 		return focus, false
 	}
@@ -214,13 +201,42 @@ func FilterMoveFocus(focus int, key tcell.Key, state FilterDialogState) (int, bo
 		}
 	case tcell.KeyUp:
 		if row > 0 {
-			return filterGridCell(grid, row-1, col), true
+			return dialogGridCell(grid, row-1, col), true
 		}
 	case tcell.KeyDown:
 		if row+1 < len(grid) {
-			return filterGridCell(grid, row+1, col), true
+			return dialogGridCell(grid, row+1, col), true
 		}
 		return okIdx, true
 	}
 	return focus, false
+}
+
+// patternDialogGridHead is the top of the Filter / Select group grid: the three mode radios
+// with the type checkboxes in two columns to their right, then the pattern row.
+func patternDialogGridHead(shell, typeFirst, pattern int) [][]int {
+	t := typeFirst
+	return [][]int{
+		{shell, t, t + 3},
+		{shell + 1, t + 1, t + 4},
+		{shell + 2, t + 2, -1},
+		{pattern},
+	}
+}
+
+// FilterMoveFocus applies dialog navigation over filterGrid plus the OK/Cancel button row, and
+// Tab/Shift+Tab jumps between groups: mode radios, type checkboxes, pattern, options, buttons.
+func FilterMoveFocus(focus int, key tcell.Key, state FilterDialogState) (int, bool) {
+	form := NewDialogLinearForm(FilterContentCount(state.MetaColumnCount))
+	okIdx, cancelIdx := form.OKIndex(), form.CancelIndex()
+	grid := filterGrid(state)
+	optionsStart := FilterFocusFilesOnly
+	if !FilterShowsFilesDirs(state) {
+		optionsStart = FilterFocusInvert
+	}
+	if key == tcell.KeyTab || key == tcell.KeyBacktab {
+		starts := []int{FilterFocusShellRadio, FilterFocusTypeFirst, FilterFocusPattern, optionsStart, okIdx}
+		return dialogTabSegment(starts, focus, key), true
+	}
+	return dialogGridMove(grid, focus, key, okIdx, cancelIdx, grid[len(grid)-1][0])
 }

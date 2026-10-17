@@ -1382,19 +1382,12 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	}
 }
 
-// matchingFindPaths returns the absolute paths of entries at indices whose basename (or full
-// path, when fullPath is set — find dialog "Match full path" option) matches matcher, honoring
-// filesOnly/dirsOnly, along with an isDir map built in the same pass (mirroring
+// matchingFindPaths returns the absolute paths of entries at indices for which match
+// (newFindPathMatcher) holds, honoring filesOnly/dirsOnly, along with an isDir map built in the same pass (mirroring
 // panel.State.groupMatchedPaths) so callers never need a separate per-path PathMeta lookup.
 // Shared filter pipeline for both ApplyGroupSelect branches (select also filters out
 // already-marked paths itself).
-func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dirsOnly, fullPath bool, matcher panel.GroupMatcher) ([]string, map[string]bool) {
-	matchName := func(path string) string {
-		if fullPath {
-			return path
-		}
-		return filepath.Base(path)
-	}
+func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dirsOnly bool, match func(path string) bool) ([]string, map[string]bool) {
 	if indices == nil {
 		paths := make([]string, 0, 256)
 		isDir := make(map[string]bool, 256)
@@ -1410,7 +1403,7 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 				continue
 			}
 			path := findEntryAbsPath(st, ent)
-			if path == "" || !matcher.Match(matchName(path)) {
+			if path == "" || !match(path) {
 				continue
 			}
 			paths = append(paths, path)
@@ -1435,7 +1428,7 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 		if path == "" {
 			continue
 		}
-		if !matcher.Match(matchName(path)) {
+		if !match(path) {
 			continue
 		}
 		paths = append(paths, path)
@@ -1444,25 +1437,47 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 	return paths, isDir
 }
 
-// newGroupMatcherForRequest builds the matcher for req, using full-path matching when
-// req.FullPath is set (find dialog "Match full path" option).
-func newGroupMatcherForRequest(pattern string, mode panel.GroupPatternMode, caseSensitive, fullPath bool) (panel.GroupMatcher, error) {
-	if fullPath {
-		return panel.NewGroupMatcherFullPath(pattern, mode, caseSensitive)
+// newFindPathMatcher builds the per-result predicate for req on an absolute path: Types (when
+// set) must match the basename, and the pattern (when set) the basename, or the full path with
+// req.FullPath ("Match full path" option).
+func newFindPathMatcher(req GroupSelectRequest) (func(path string) bool, error) {
+	var matcher panel.GroupMatcher
+	if req.Pattern != "" {
+		var err error
+		if req.FullPath {
+			matcher, err = panel.NewGroupMatcherFullPath(req.Pattern, req.PatternMode, req.CaseSensitive)
+		} else {
+			matcher, err = panel.NewGroupMatcher(req.Pattern, req.PatternMode, req.CaseSensitive)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
-	return panel.NewGroupMatcher(pattern, mode, caseSensitive)
+	return func(path string) bool {
+		base := filepath.Base(path)
+		if req.Types != nil && !req.Types.MatchString(base) {
+			return false
+		}
+		switch {
+		case req.Pattern == "":
+			return true
+		case req.FullPath:
+			return matcher.Match(path)
+		}
+		return matcher.Match(base)
+	}, nil
 }
 
-// CountGroupMatches synchronously reports how many find results matching req.Pattern have
-// marked state equal to marked, split into files and directories. Returns (0, 0) for an empty
-// or invalid pattern. The live group-select dialog preview uses the async StartGroupCount
+// CountGroupMatches synchronously reports how many find results matching req have marked state
+// equal to marked, split into files and directories. Returns (0, 0) for an empty request or
+// an invalid pattern. The live group-select dialog preview uses the async StartGroupCount
 // instead, since a synchronous pass over a 1M-row corpus on every keystroke is too slow; this
 // stays for tests that exercise the find-result indices/cache directly.
 func (h *Handler) CountGroupMatches(req GroupSelectRequest, marked bool) (files, dirs int) {
-	if req.Pattern == "" {
+	if req.Empty() {
 		return 0, 0
 	}
-	matcher, err := newGroupMatcherForRequest(req.Pattern, req.PatternMode, req.CaseSensitive, req.FullPath)
+	match, err := newFindPathMatcher(req)
 	if err != nil {
 		return 0, 0
 	}
@@ -1474,9 +1489,8 @@ func (h *Handler) CountGroupMatches(req GroupSelectRequest, marked bool) (files,
 		marks:     st.MarkedPaths,
 		filesOnly: req.FilesOnly,
 		dirsOnly:  req.DirsOnly,
-		fullPath:  req.FullPath,
 		matched:   marked,
-		matcher:   matcher,
+		match:     match,
 	}
 	files, dirs, _ = countGroupMatchesSnapshot(context.Background(), snap)
 	return files, dirs
@@ -1487,11 +1501,10 @@ func (h *Handler) CountGroupMatches(req GroupSelectRequest, marked bool) (files,
 func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 	h.StopGroupCount()
 	st := &h.model.FindDialog
-	pattern := req.Pattern
-	if pattern == "" {
+	if req.Empty() {
 		return
 	}
-	matcher, err := newGroupMatcherForRequest(pattern, req.PatternMode, req.CaseSensitive, req.FullPath)
+	match, err := newFindPathMatcher(req)
 	if err != nil {
 		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
 		return
@@ -1502,7 +1515,7 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 		if st.MarkedPaths == nil {
 			st.MarkedPaths = make(map[string]bool, len(indices))
 		}
-		matched, isDir := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, req.FullPath, matcher)
+		matched, isDir := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, match)
 		paths := make([]string, 0, len(matched))
 		for _, path := range matched {
 			if !st.MarkedPaths[path] {
@@ -1527,12 +1540,12 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 		case conflicts:
 			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 		default:
-			h.host.SetTransientMessage(fmt.Sprintf("Selected matching %q", pattern), ui.MessageUrgencyInfo)
+			h.host.SetTransientMessage("Selected matching "+req.Describe(), ui.MessageUrgencyInfo)
 		}
 		h.noteFindMarksChanged(st)
 		return
 	}
-	unmatched, _ := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, req.FullPath, matcher)
+	unmatched, _ := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, match)
 	for _, path := range unmatched {
 		delete(st.MarkedPaths, path)
 	}
@@ -1543,6 +1556,6 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 	if len(unmatched) == 0 {
 		h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
 	} else {
-		h.host.SetTransientMessage(fmt.Sprintf("Unselected matching %q", pattern), ui.MessageUrgencyInfo)
+		h.host.SetTransientMessage("Unselected matching "+req.Describe(), ui.MessageUrgencyInfo)
 	}
 }

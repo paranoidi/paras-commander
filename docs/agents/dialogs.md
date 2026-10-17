@@ -160,3 +160,12 @@ Logic lives in `internal/ui/dialog/dialog_field.go`. When opening a dialog with 
 
 - Use `drawInputField` in `internal/ui/dialog/file_dialog_render.go` for `FileDialogField`-based inputs (supports placeholder-pending rendering).
 - Use `draw.DrawSimpleDialogInput` in `internal/ui/dialog/internal/draw/chrome.go` for simple string inputs (no placeholder-pending concept).
+
+## Twin dialogs: Filter and Select group
+
+Filter (`panel.filter`) and Select/Unselect group are twins: same mode radios, file-type checkboxes, Files/Dirs only, Case sensitive, meta row, live preview, reserved hint row, width and grid navigation. **A change to one (layout, options, mnemonics, matching, preview, hint/error behaviour, navigation) should generally be mirrored to the other in the same change.** When a difference is intentional, record it in `docs/agents/panels.md`.
+
+- **File pairs**: `internal/ui/dialog/filter_hint.go` ↔ `groupselect_hint.go`, `filter_dialog_render.go` ↔ `groupselect_dialog_render.go`, `internal/apphandler/dialog/filter.go` ↔ group-select handlers in `internal/app/dialog_settings.go` (find context: `internal/apphandler/find/group_select.go`, `group_count.go`). User docs for both: `docs/panel-filter.md`.
+- **Shared code (extend, don't duplicate)**: `dialog.PatternDialogWidth`, `dialog.FilterTypesRegexp` (takes the dirs-only flag), `dialog.PatternTypesDisabled` (type checkboxes disabled while Directories only is selected; renderers and toggle functions both use it), `FilterTypeLabels`/`FilterTypeMnemonics`, `dialogGridMove`/`patternDialogGridHead` (`filter_hint.go`), `panel.FilterSpec.MatchFunc`.
+- **Intentional differences**: Filter has Invert and also targets Compare/dedup rows; Select group has Match full path (find context, Alt+H) and its preview counts only selection-state flips.
+- **Mnemonics**: one letter per option across both dialogs, defined once as the `PatternMnemonic*` constants in `internal/ui/dialog/state_filter.go` (Shell S, Regex R, Simple L, FilesOnly Y, DirsOnly D, Case E, IncludeMeta M, OnlyMeta N, plus Filter-only Invert I and Select group-only FullPath H, and `FilterTypeMnemonics`). Both renderers and both key handlers use them, and `dialog.PatternAltIsMnemonic` derives the pattern-input pass-through from them.

@@ -14,13 +14,15 @@ Videos, Pictures, Archives, Audio and Documents are checkboxes beside the mode r
 
 An entry is shown when it matches the checked types **and** the pattern; an empty pattern means types only. Directories stay visible unless "Files only" or "Directories only" is set.
 
+"Files only" and "Directories only" are radio buttons: mutually exclusive, and selecting the chosen one again clears it. While "Directories only" is selected, the type checkboxes are shown disabled: they cannot be toggled and the checked types are ignored. They keep their state and apply again when "Directories only" is cleared.
+
 ## Invert
 
 "Invert" shows the entries that do not match. Files only / Directories only still apply afterwards, so Invert plus Files only lists the files that do not match.
 
 ## Keys
 
-Alt+letter toggles the underlined option: Shell patterns S, Regular expression R, Simple L, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only F, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N. Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
+Alt+letter toggles the underlined option: Shell patterns S, Regular expression R, Simple L, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only Y, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N. Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
 
 The panel border shows the active filter, for example `Filter: not report Videos, Audio`. A live count of matches is shown beside the Pattern label.
 
@@ -33,3 +35,7 @@ In the Compare panels view Alt+F (`compare.filter-dialog` in `[compare]`, leader
 In the Find duplicates results view Alt+F (`dedup.filter-dialog` in `[dedup]`, leader letter `f`) opens the same dialog and filters whole duplicate groups: a group is shown when any of its copies has a file name that matches (types and pattern), and Invert shows the groups where no copy matches. A shown group keeps all its copies, in both the groups tree and the directory tree. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern, for example `View: Dirs · Filter: *.jpg`. OK with an empty pattern clears it, and a rescan resets it.
 
 Marks on files in groups the filter hides are kept and still counted: deleting acts on every marked file, shown or not.
+
+## Select group
+
+The Select group (`+`) and Unselect group (`-`) dialogs, in the panel and in Find results, have the same mode radios and the same Videos, Pictures, Archives, Audio and Documents checkboxes (same `[filter.types]` config), and every option shared with Filter uses the same Alt letter. Checked types are OR-ed and AND-ed with the pattern; an empty pattern with types checked selects every entry of those types, and an empty pattern with no types selects nothing. Types always match the file name, even with "Match full path". As in Filter, "Directories only" disables the type checkboxes and ignores the types. There is no Invert. Match full path (Find results only) is Alt+H.

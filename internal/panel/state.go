@@ -2176,14 +2176,12 @@ func (s *State) ClearSelection() {
 	s.normalizeSelectionsStripCursor()
 }
 
-// SelectGroup selects entries whose basename (or any meta column value) matches the pattern.
-// filesOnly: when true, only regular files are matched (directories skipped).
-// dirsOnly: when true, only directories are matched (regular files skipped).
-// caseSensitive: when true, matching is case-sensitive (shell and simple modes only).
+// SelectGroup selects entries matching spec (pattern against basename or meta values, AND the
+// checked file types, with the files/dirs-only switches; Invert is ignored).
 // meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
 // The returned bool reports whether the pattern matched any entry.
-func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) (bool, error) {
-	paths, isDir, err := s.groupMatchedPaths(pattern, filesOnly, dirsOnly, caseSensitive, mode, meta)
+func (s *State) SelectGroup(spec FilterSpec, meta GroupSelectMeta) (bool, error) {
+	paths, isDir, err := s.groupMatchedPaths(spec, meta)
 	if err != nil {
 		return false, err
 	}
@@ -2203,27 +2201,22 @@ func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive b
 	return true, nil
 }
 
-// groupMatchedPaths returns the visible entries (paths and dir flags) matching pattern under
-// the given filters. Shared matching pipeline for SelectGroup, UnselectGroup, and CountGroupMatches.
-func (s *State) groupMatchedPaths(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) ([]string, map[string]bool, error) {
-	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
+// groupMatchedPaths returns the visible entries (paths and dir flags) matching spec (Invert is
+// ignored). An empty spec matches nothing. Shared matching pipeline for SelectGroup,
+// UnselectGroup, and CountGroupMatches.
+func (s *State) groupMatchedPaths(spec FilterSpec, meta GroupSelectMeta) ([]string, map[string]bool, error) {
+	match, err := spec.MatchFunc()
 	if err != nil {
 		return nil, nil, err
 	}
 	paths := make([]string, 0)
 	isDir := make(map[string]bool)
+	if spec.Empty() {
+		return paths, isDir, nil
+	}
 	for i := 0; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
-		if !ok {
-			continue
-		}
-		if filesOnly && entry.IsDir() {
-			continue
-		}
-		if dirsOnly && !entry.IsDir() {
-			continue
-		}
-		if meta.Match(matcher, entry) {
+		if ok && match(entry, meta) {
 			paths = append(paths, entry.Path)
 			isDir[entry.Path] = entry.IsDir()
 		}
@@ -2231,12 +2224,12 @@ func (s *State) groupMatchedPaths(pattern string, filesOnly, dirsOnly, caseSensi
 	return paths, isDir, nil
 }
 
-// CountGroupMatches reports how many visible entries matching pattern have selection state
+// CountGroupMatches reports how many visible entries matching spec have selection state
 // equal to selected — i.e. how many entries SelectGroup (selected=false) or UnselectGroup
 // (selected=true) would actually change — split into files and directories, for the
 // group-select dialog's live result preview.
-func (s *State) CountGroupMatches(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta, selected bool) (files, dirs int, err error) {
-	paths, isDir, err := s.groupMatchedPaths(pattern, filesOnly, dirsOnly, caseSensitive, mode, meta)
+func (s *State) CountGroupMatches(spec FilterSpec, meta GroupSelectMeta, selected bool) (files, dirs int, err error) {
+	paths, isDir, err := s.groupMatchedPaths(spec, meta)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -2279,8 +2272,8 @@ func (s *State) CountPatternMatches(spec FilterSpec, meta GroupSelectMeta) (file
 // UnselectGroup unselects entries whose basename (or any meta column value) matches the pattern.
 // meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
 // The returned bool reports whether the pattern matched any entry (regardless of prior selection state).
-func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) (bool, error) {
-	paths, isDir, err := s.groupMatchedPaths(pattern, filesOnly, dirsOnly, caseSensitive, mode, meta)
+func (s *State) UnselectGroup(spec FilterSpec, meta GroupSelectMeta) (bool, error) {
+	paths, isDir, err := s.groupMatchedPaths(spec, meta)
 	if err != nil {
 		return false, err
 	}

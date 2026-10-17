@@ -3,6 +3,7 @@ package find
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
@@ -23,19 +24,19 @@ func TestMatchingFindPathsFullPathMatchesDirComponent(t *testing.T) {
 		IndexedCount: 2,
 	}
 
-	basenameMatcher, err := panel.NewGroupMatcher("*src*", panel.GroupPatternShell, false)
+	basenameMatch, err := newFindPathMatcher(GroupSelectRequest{Pattern: "*src*", PatternMode: panel.GroupPatternShell})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if paths, _ := matchingFindPaths(st, nil, false, false, false, basenameMatcher); len(paths) != 0 {
+	if paths, _ := matchingFindPaths(st, nil, false, false, basenameMatch); len(paths) != 0 {
 		t.Fatalf("basename match should not see the dir component, got %v", paths)
 	}
 
-	fullPathMatcher, err := panel.NewGroupMatcherFullPath("*src*", panel.GroupPatternShell, false)
+	fullPathMatch, err := newFindPathMatcher(GroupSelectRequest{Pattern: "*src*", PatternMode: panel.GroupPatternShell, FullPath: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	paths, isDir := matchingFindPaths(st, nil, false, false, true, fullPathMatcher)
+	paths, isDir := matchingFindPaths(st, nil, false, false, fullPathMatch)
 	want := filepath.Clean("/root/src/main.go")
 	if len(paths) != 1 || paths[0] != want {
 		t.Fatalf("full-path match = %v, want [%s]", paths, want)
@@ -290,5 +291,39 @@ func TestExtendGroupCountRestartsOnEntriesShrink(t *testing.T) {
 	files, _, ok := h.HandleGroupCount(payloads[0])
 	if !ok || files != 2 {
 		t.Fatalf("restarted count = files=%d ok=%v, want 2 true", files, ok)
+	}
+}
+
+func TestFindGroupSelectTypesOnlyCountAndApply(t *testing.T) {
+	t.Parallel()
+	st := &dialog.FindDialogState{
+		RootPath: "/root",
+		Entries: []dialog.FindEntry{
+			{RelLine: "videos.d/lantern.mkv"},
+			{RelLine: "lantern.txt"},
+			{RelLine: "harbor.mkv"},
+		},
+		IndexedCount: 3,
+	}
+	req := GroupSelectRequest{Types: regexp.MustCompile(`(?i)\.mkv$`), TypeLabel: "Videos", FullPath: true}
+	if req.Empty() {
+		t.Fatal("types-only request must not be empty")
+	}
+	match, err := newFindPathMatcher(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths, _ := matchingFindPaths(st, nil, false, false, match)
+	if len(paths) != 2 {
+		t.Fatalf("types-only match = %v, want the two .mkv files", paths)
+	}
+	req.Pattern, req.PatternMode = "lantern*", panel.GroupPatternShell
+	req.FullPath = false
+	match, err = newFindPathMatcher(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if paths, _ = matchingFindPaths(st, nil, false, false, match); len(paths) != 1 {
+		t.Fatalf("types AND pattern = %v, want 1", paths)
 	}
 }

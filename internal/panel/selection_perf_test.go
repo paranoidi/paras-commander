@@ -99,7 +99,7 @@ func TestSelectGroupSelectAllLargeDirectoryListingIsFast(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		if _, err := s.SelectGroup("*", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
+		if _, err := s.SelectGroup(FilterSpec{Pattern: "*", FilesOnly: false, DirsOnly: false, CaseSensitive: false, Mode: GroupPatternShell}, GroupSelectMeta{}); err != nil {
 			t.Error(err)
 		}
 	}()

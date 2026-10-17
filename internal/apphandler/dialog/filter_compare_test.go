@@ -45,3 +45,24 @@ func TestFilterDialogCompareTarget(t *testing.T) {
 		t.Fatal("empty OK should clear the name filter")
 	}
 }
+
+func TestFilterDialogDirsOnlyDisablesTypes(t *testing.T) {
+	t.Parallel()
+	model := &ui.Model{}
+	h := New(Deps{Host: &identityTestHost{model: model, cfg: config.Default()}, Model: model})
+	fd := &model.FilterDialog
+	fd.DirsOnly = true
+	fd.Types[0] = true
+	if h.toggleFilterDialogField(fd, dialog.FilterFocusTypeFirst+1) || fd.Types[1] {
+		t.Fatal("type toggle must be a no-op with Directories only")
+	}
+	if spec := h.filterSpec(); spec.Types != nil || spec.TypeLabel != "" {
+		t.Fatalf("spec types = %v %q, want ignored", spec.Types, spec.TypeLabel)
+	}
+	if !h.toggleFilterDialogField(fd, dialog.FilterFocusFilesOnly) || !fd.FilesOnly || fd.DirsOnly {
+		t.Fatal("Files only radio must switch away from Directories only")
+	}
+	if spec := h.filterSpec(); spec.Types == nil {
+		t.Fatal("checked type must apply again once Directories only is off")
+	}
+}

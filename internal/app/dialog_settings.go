@@ -627,6 +627,7 @@ type groupSelectPreviewKey struct {
 	DirsOnly      bool
 	CaseSensitive bool
 	FullPath      bool
+	Types         [dialog.FilterTypeCount]bool
 }
 
 // groupSelectMeta builds the meta-column match data for the panel-context group-select dialog
@@ -636,21 +637,55 @@ func (a *App) groupSelectMeta(gs *dialog.GroupSelectState) panel.GroupSelectMeta
 	return ui.MetaMatchData(a.model.MetaResults[a.model.ActivePanel], gs.IncludeMetaColumns, gs.OnlyMetaColumns)
 }
 
+// groupSelectSpec is the panel.FilterSpec for the dialog's current state (Invert unused).
+func (a *App) groupSelectSpec(gs *dialog.GroupSelectState) panel.FilterSpec {
+	spec := panel.FilterSpec{
+		Pattern: gs.Text, Mode: gs.PatternMode, CaseSensitive: gs.CaseSensitive,
+		FilesOnly: gs.FilesOnly, DirsOnly: gs.DirsOnly,
+	}
+	spec.Types, spec.TypeLabel = dialog.FilterTypesRegexp(gs.DirsOnly, gs.Types, a.config.Filter.Types)
+	return spec
+}
+
+// findGroupSelectRequest is the find-context request for the dialog's current state.
+func (a *App) findGroupSelectRequest(gs *dialog.GroupSelectState) findctrl.GroupSelectRequest {
+	spec := a.groupSelectSpec(gs)
+	return findctrl.GroupSelectRequest{
+		Mode:          findctrl.GroupSelectMode(gs.Mode),
+		Pattern:       gs.Text,
+		FilesOnly:     gs.FilesOnly,
+		DirsOnly:      gs.DirsOnly,
+		CaseSensitive: gs.CaseSensitive,
+		FullPath:      gs.FullPath,
+		PatternMode:   gs.PatternMode,
+		Types:         spec.Types,
+		TypeLabel:     spec.TypeLabel,
+	}
+}
+
+// groupSelectEmpty reports whether the dialog restricts nothing (no pattern, no types), in
+// which case there is nothing to preview or apply.
+func (a *App) groupSelectEmpty() bool {
+	return a.groupSelectSpec(&a.model.GroupSelect).Empty()
+}
+
 // updateGroupSelectPreview recomputes the group-select dialog's live result preview (matched
 // file/folder counts that would actually change selection state) from the current pattern and
 // options. No-op when the dialog is closed; hides the preview when the pattern is empty or
 // fails to compile.
 func (a *App) updateGroupSelectPreview() {
 	gs := &a.model.GroupSelect
-	if !gs.Open || gs.Text == "" {
+	if !gs.Open || a.groupSelectEmpty() {
 		gs.PreviewShow = false
 		a.groupSelectPreviewKey = groupSelectPreviewKey{}
 		return
 	}
-	if _, err := panel.NewGroupMatcher(gs.Text, gs.PatternMode, gs.CaseSensitive); err != nil {
-		gs.PreviewShow = false
-		a.groupSelectPreviewKey = groupSelectPreviewKey{}
-		return
+	if gs.Text != "" {
+		if _, err := panel.NewGroupMatcher(gs.Text, gs.PatternMode, gs.CaseSensitive); err != nil {
+			gs.PreviewShow = false
+			a.groupSelectPreviewKey = groupSelectPreviewKey{}
+			return
+		}
 	}
 	selectMode := gs.Mode == "select"
 	context := gs.Context
@@ -666,6 +701,7 @@ func (a *App) updateGroupSelectPreview() {
 			DirsOnly:      gs.DirsOnly,
 			CaseSensitive: gs.CaseSensitive,
 			FullPath:      gs.FullPath,
+			Types:         gs.Types,
 		}
 		if key == a.groupSelectPreviewKey {
 			if files, dirs, changed := a.findCtrl.ExtendGroupCount(); changed {
@@ -677,19 +713,11 @@ func (a *App) updateGroupSelectPreview() {
 		}
 		a.groupSelectPreviewKey = key
 		gs.PreviewShow = false
-		a.findCtrl.StartGroupCount(findctrl.GroupSelectRequest{
-			Mode:          findctrl.GroupSelectMode(gs.Mode),
-			Pattern:       gs.Text,
-			FilesOnly:     gs.FilesOnly,
-			DirsOnly:      gs.DirsOnly,
-			CaseSensitive: gs.CaseSensitive,
-			FullPath:      gs.FullPath,
-			PatternMode:   gs.PatternMode,
-		}, !selectMode)
+		a.findCtrl.StartGroupCount(a.findGroupSelectRequest(gs), !selectMode)
 		return
 	}
 	p := a.activePanel()
-	files, dirs, err := p.CountGroupMatches(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, a.groupSelectMeta(gs), !selectMode)
+	files, dirs, err := p.CountGroupMatches(a.groupSelectSpec(gs), a.groupSelectMeta(gs), !selectMode)
 	if err != nil {
 		gs.PreviewShow = false
 		return
@@ -718,11 +746,7 @@ func (a *App) applyGroupCountPayload(p findctrl.GroupCountPayload) bool {
 }
 
 func (a *App) groupSelectForm() dialog.DialogLinearForm {
-	n := 8
-	if a.model.GroupSelect.MetaColumnCount > 0 {
-		n += 2 // IncludeMeta + OnlyMeta
-	}
-	return dialog.NewDialogLinearForm(n)
+	return dialog.NewDialogLinearForm(dialog.GroupSelectContentCount(a.model.GroupSelect.MetaColumnCount))
 }
 
 func (a *App) applyGroupSelectModeFromFocus() {
@@ -753,7 +777,7 @@ func (a *App) tryRejectGroupSelectOK() bool {
 
 func (a *App) executeGroupSelect() {
 	gs := &a.model.GroupSelect
-	if gs.Text == "" {
+	if a.groupSelectEmpty() {
 		return
 	}
 	if a.tryRejectGroupSelectOK() {
@@ -765,34 +789,28 @@ func (a *App) executeGroupSelect() {
 	}
 	switch context {
 	case "find":
-		a.findCtrl.ApplyGroupSelect(findctrl.GroupSelectRequest{
-			Mode:          findctrl.GroupSelectMode(gs.Mode),
-			Pattern:       gs.Text,
-			FilesOnly:     gs.FilesOnly,
-			DirsOnly:      gs.DirsOnly,
-			CaseSensitive: gs.CaseSensitive,
-			FullPath:      gs.FullPath,
-			PatternMode:   gs.PatternMode,
-		})
+		a.findCtrl.ApplyGroupSelect(a.findGroupSelectRequest(gs))
 	default:
 		p := a.activePanel()
 		meta := a.groupSelectMeta(gs)
+		spec := a.groupSelectSpec(gs)
+		what := findctrl.GroupSelectRequest{Pattern: gs.Text, TypeLabel: spec.TypeLabel}.Describe()
 		var err error
 		var matched bool
 		if gs.Mode == "select" {
-			matched, err = p.SelectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, meta)
+			matched, err = p.SelectGroup(spec, meta)
 			if err == nil {
 				if matched {
-					a.setTransientMessage(fmt.Sprintf("Selected matching %q", gs.Text), ui.MessageUrgencyInfo)
+					a.setTransientMessage("Selected matching "+what, ui.MessageUrgencyInfo)
 				} else {
 					a.setTransientMessage("No matches", ui.MessageUrgencyWarn)
 				}
 			}
 		} else {
-			matched, err = p.UnselectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, meta)
+			matched, err = p.UnselectGroup(spec, meta)
 			if err == nil {
 				if matched {
-					a.setTransientMessage(fmt.Sprintf("Unselected matching %q", gs.Text), ui.MessageUrgencyInfo)
+					a.setTransientMessage("Unselected matching "+what, ui.MessageUrgencyInfo)
 				} else {
 					a.setTransientMessage("No matches", ui.MessageUrgencyWarn)
 				}
@@ -856,21 +874,21 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	}
 
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 's', 'S':
+		switch unicode.ToUpper(event.Rune()) {
+		case dialog.PatternMnemonicShell:
 			a.toggleGroupSelectField(gs, dialog.GroupSelectFocusShellRadio)
 			return
-		case 'r', 'R':
+		case dialog.PatternMnemonicRegex:
 			a.toggleGroupSelectField(gs, dialog.GroupSelectFocusRegexRadio)
 			return
-		case 'i', 'I':
+		case dialog.PatternMnemonicSimple:
 			a.toggleGroupSelectField(gs, dialog.GroupSelectFocusSimpleRadio)
 			return
 		}
 	}
 
 	if gs.Focus == dialog.GroupSelectFocusPattern {
-		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && groupSelectAltIsDialogMnemonic(event.Rune())
+		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune())
 		edit := scrollquery.NewEdit(&gs.Text, &gs.TextCursor, &gs.TextScroll, a.groupSelectQueryWidth(), nil)
 		if !skipScrolling && a.handleScrollingQueryKey(event, true, edit) {
 			return
@@ -887,28 +905,35 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 					gs.Focus = f
 				}
 			}
-			switch event.Rune() {
-			case 'y', 'Y':
+			switch unicode.ToUpper(event.Rune()) {
+			case dialog.PatternMnemonicFilesOnly:
 				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusFilesOnly)
 				altFocus(dialog.GroupSelectFocusFilesOnly)
-			case 't', 'T':
+			case dialog.PatternMnemonicDirsOnly:
 				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusDirsOnly)
 				altFocus(dialog.GroupSelectFocusDirsOnly)
-			case 'e', 'E':
+			case dialog.PatternMnemonicCase:
 				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusCase) {
 					altFocus(dialog.GroupSelectFocusCase)
 				}
-			case 'm', 'M':
+			case dialog.PatternMnemonicIncludeMeta:
 				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusIncludeMeta) {
 					altFocus(dialog.GroupSelectFocusIncludeMeta)
 				}
-			case 'n', 'N':
+			case dialog.PatternMnemonicOnlyMeta:
 				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusOnlyMeta) {
 					altFocus(dialog.GroupSelectFocusOnlyMeta)
 				}
-			case 'a', 'A':
+			case dialog.PatternMnemonicFullPath:
 				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusFullPath) {
 					altFocus(dialog.GroupSelectFocusFullPath)
+				}
+			default:
+				for i, m := range dialog.FilterTypeMnemonics {
+					if unicode.ToUpper(event.Rune()) == m {
+						a.toggleGroupSelectField(gs, dialog.GroupSelectFocusTypeFirst+i)
+						altFocus(dialog.GroupSelectFocusTypeFirst + i)
+					}
 				}
 			}
 			break
@@ -983,16 +1008,13 @@ func (a *App) toggleGroupSelectField(gs *dialog.GroupSelectState, focus int) boo
 			gs.IncludeMetaColumns = true
 		}
 	default:
-		return false
+		if focus < dialog.GroupSelectFocusTypeFirst || focus >= dialog.GroupSelectFocusPattern {
+			return false
+		}
+		if dialog.PatternTypesDisabled(gs.DirsOnly) {
+			return false
+		}
+		gs.Types[focus-dialog.GroupSelectFocusTypeFirst] = !gs.Types[focus-dialog.GroupSelectFocusTypeFirst]
 	}
 	return true
-}
-
-func groupSelectAltIsDialogMnemonic(r rune) bool {
-	switch r {
-	case 'y', 'Y', 't', 'T', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N', 'a', 'A':
-		return true
-	default:
-		return false
-	}
 }

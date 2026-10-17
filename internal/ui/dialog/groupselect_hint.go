@@ -12,14 +12,26 @@ const (
 	GroupSelectFocusShellRadio  = 0
 	GroupSelectFocusRegexRadio  = 1
 	GroupSelectFocusSimpleRadio = 2
-	GroupSelectFocusPattern     = 3
-	GroupSelectFocusFilesOnly   = 4
-	GroupSelectFocusDirsOnly    = 5
-	GroupSelectFocusCase        = 6
-	GroupSelectFocusFullPath    = 7
-	GroupSelectFocusIncludeMeta = 8
-	GroupSelectFocusOnlyMeta    = 9
+	// GroupSelectFocusTypeFirst..+FilterTypeCount-1 are the type checkboxes, in FilterTypeLabels
+	// order.
+	GroupSelectFocusTypeFirst   = 3
+	GroupSelectFocusPattern     = GroupSelectFocusTypeFirst + FilterTypeCount // 8
+	GroupSelectFocusFilesOnly   = GroupSelectFocusPattern + 1
+	GroupSelectFocusDirsOnly    = GroupSelectFocusPattern + 2
+	GroupSelectFocusCase        = GroupSelectFocusPattern + 3
+	GroupSelectFocusFullPath    = GroupSelectFocusPattern + 4
+	GroupSelectFocusIncludeMeta = GroupSelectFocusPattern + 5
+	GroupSelectFocusOnlyMeta    = GroupSelectFocusPattern + 6
 )
+
+// GroupSelectContentCount is the number of focus slots before OK (Match full path's slot is
+// always counted, even when hidden; meta slots only when shown).
+func GroupSelectContentCount(metaColumnCount int) int {
+	if metaColumnCount > 0 {
+		return GroupSelectFocusOnlyMeta + 1
+	}
+	return GroupSelectFocusFullPath + 1
+}
 
 // GroupSelectShowsFullPath reports whether the "Match full path" checkbox is shown. Find
 // context only — panel entries all share one directory, so it would be meaningless there.
@@ -83,8 +95,8 @@ func groupSelectPatternInvalid(state GroupSelectState) bool {
 
 func groupSelectDialogInnerRows(state GroupSelectState) int {
 	// mode radios, separator, Pattern label, input, reserved hint row, filter
-	// checkboxes, separator, buttons
-	rows := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 1
+	// checkboxes, separator, blank, buttons
+	rows := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 1 + 1
 	if state.MetaColumnCount > 0 {
 		rows++
 	}
@@ -111,142 +123,32 @@ func GroupSelectLastContentFocus(metaColumnCount int, showFullPath bool) int {
 	return GroupSelectFocusCase
 }
 
-// GroupSelectMoveFocus applies dialog navigation, including 2D checkbox layout: Files only and
-// Directories only share a row (Left/Right); Case sensitive and, when showFullPath (find
-// context), Match full path share the row below (also Left/Right). When metaColumnCount > 0,
-// "Include meta columns" and "Only meta columns" share a row below that (find context never
-// has meta columns, so showFullPath and metaColumnCount > 0 never both apply).
-func GroupSelectMoveFocus(focus int, key tcell.Key, metaColumnCount int, showFullPath bool) (int, bool) {
-	numContent := 8
+// groupSelectGrid is the dialog's content as rows of focus indexes (see filterGrid): Match
+// full path shows only in find context, the meta row only with meta columns.
+func groupSelectGrid(metaColumnCount int, showFullPath bool) [][]int {
+	grid := patternDialogGridHead(GroupSelectFocusShellRadio, GroupSelectFocusTypeFirst, GroupSelectFocusPattern)
+	grid = append(grid, []int{GroupSelectFocusFilesOnly, GroupSelectFocusDirsOnly})
+	if showFullPath {
+		grid = append(grid, []int{GroupSelectFocusCase, GroupSelectFocusFullPath})
+	} else {
+		grid = append(grid, []int{GroupSelectFocusCase})
+	}
 	if metaColumnCount > 0 {
-		numContent += 2 // IncludeMeta + OnlyMeta
+		grid = append(grid, []int{GroupSelectFocusIncludeMeta, GroupSelectFocusOnlyMeta})
 	}
-	form := NewDialogLinearForm(numContent)
-	showMeta := metaColumnCount > 0
-
-	okIdx := form.OKIndex()
-	switch key {
-	case tcell.KeyRight:
-		if focus == GroupSelectFocusFilesOnly {
-			return GroupSelectFocusDirsOnly, true
-		}
-		if focus == GroupSelectFocusCase && showFullPath {
-			return GroupSelectFocusFullPath, true
-		}
-		if focus == GroupSelectFocusIncludeMeta && showMeta {
-			return GroupSelectFocusOnlyMeta, true
-		}
-		if focus == okIdx {
-			return form.CancelIndex(), true
-		}
-		return focus, false
-	case tcell.KeyLeft:
-		if focus == GroupSelectFocusDirsOnly {
-			return GroupSelectFocusFilesOnly, true
-		}
-		if focus == GroupSelectFocusFullPath {
-			return GroupSelectFocusCase, true
-		}
-		if focus == GroupSelectFocusOnlyMeta && showMeta {
-			return GroupSelectFocusIncludeMeta, true
-		}
-		if focus == form.CancelIndex() {
-			return okIdx, true
-		}
-		return focus, false
-	case tcell.KeyTab:
-		// Segment jumps: mode radios(0-2) → pattern(3) → filters(4+) → buttons → mode radios
-		switch {
-		case focus < GroupSelectFocusPattern:
-			return GroupSelectFocusPattern, true
-		case focus == GroupSelectFocusPattern:
-			return GroupSelectFocusFilesOnly, true
-		case focus < okIdx:
-			return okIdx, true
-		default:
-			return GroupSelectFocusShellRadio, true
-		}
-	case tcell.KeyBacktab:
-		// Reverse segment jumps
-		switch {
-		case focus < GroupSelectFocusPattern:
-			return okIdx, true
-		case focus == GroupSelectFocusPattern:
-			return GroupSelectFocusShellRadio, true
-		case focus < okIdx:
-			return GroupSelectFocusPattern, true
-		default:
-			return GroupSelectFocusFilesOnly, true
-		}
-	case tcell.KeyDown:
-		switch focus {
-		case GroupSelectFocusFilesOnly:
-			return GroupSelectFocusCase, true
-		case GroupSelectFocusDirsOnly:
-			if showFullPath {
-				return GroupSelectFocusFullPath, true
-			}
-			if showMeta {
-				return GroupSelectFocusIncludeMeta, true
-			}
-			return okIdx, true
-		case GroupSelectFocusCase:
-			if showMeta {
-				return GroupSelectFocusIncludeMeta, true
-			}
-			return okIdx, true
-		case GroupSelectFocusFullPath:
-			return okIdx, true
-		case GroupSelectFocusIncludeMeta, GroupSelectFocusOnlyMeta:
-			return okIdx, true
-		default:
-			next, ok := form.MoveFocus(focus, tcell.KeyDown)
-			if !ok {
-				return focus, false
-			}
-			return groupSelectSkipHiddenCase(next, metaColumnCount, showFullPath), true
-		}
-	case tcell.KeyUp:
-		switch focus {
-		case GroupSelectFocusFilesOnly, GroupSelectFocusDirsOnly:
-			return GroupSelectFocusPattern, true
-		case GroupSelectFocusCase:
-			return GroupSelectFocusFilesOnly, true
-		case GroupSelectFocusFullPath:
-			return GroupSelectFocusDirsOnly, true
-		case GroupSelectFocusIncludeMeta, GroupSelectFocusOnlyMeta:
-			if showFullPath {
-				return GroupSelectFocusFullPath, true
-			}
-			return GroupSelectFocusCase, true
-		case okIdx, form.CancelIndex():
-			return GroupSelectLastContentFocus(metaColumnCount, showFullPath), true
-		default:
-			next, ok := form.MoveFocus(focus, tcell.KeyUp)
-			if !ok {
-				return focus, false
-			}
-			return groupSelectSkipHiddenCase(next, metaColumnCount, showFullPath), true
-		}
-	default:
-		next, ok := form.MoveFocus(focus, key)
-		if !ok {
-			return focus, false
-		}
-		return groupSelectSkipHiddenCase(next, metaColumnCount, showFullPath), true
-	}
+	return grid
 }
 
-// groupSelectSkipHiddenCase redirects focus away from Match full path when it is hidden
-// (outside find context) to the next visible slot: meta, else Directories only.
-func groupSelectSkipHiddenCase(focus int, metaColumnCount int, showFullPath bool) int {
-	showMeta := metaColumnCount > 0
-	if focus == GroupSelectFocusFullPath && !showFullPath {
-		if showMeta {
-			focus = GroupSelectFocusIncludeMeta
-		} else {
-			focus = GroupSelectFocusDirsOnly
-		}
+// GroupSelectMoveFocus applies dialog navigation over groupSelectGrid plus the OK/Cancel row,
+// and Tab/Shift+Tab jumps between groups: mode radios, type checkboxes, pattern, options,
+// buttons. Find context never has meta columns, so showFullPath and metaColumnCount > 0 never
+// both apply.
+func GroupSelectMoveFocus(focus int, key tcell.Key, metaColumnCount int, showFullPath bool) (int, bool) {
+	form := NewDialogLinearForm(GroupSelectContentCount(metaColumnCount))
+	okIdx := form.OKIndex()
+	if key == tcell.KeyTab || key == tcell.KeyBacktab {
+		starts := []int{GroupSelectFocusShellRadio, GroupSelectFocusTypeFirst, GroupSelectFocusPattern, GroupSelectFocusFilesOnly, okIdx}
+		return dialogTabSegment(starts, focus, key), true
 	}
-	return focus
+	return dialogGridMove(groupSelectGrid(metaColumnCount, showFullPath), focus, key, okIdx, form.CancelIndex(), GroupSelectLastContentFocus(metaColumnCount, showFullPath))
 }

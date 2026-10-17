@@ -218,7 +218,7 @@ Panel quick-filter behavior.
 
 ### `[filter.types]`
 
-Regular expressions behind the file-type checkboxes of the panel Filter dialog (Alt+F; see [panel-filter.md](panel-filter.md)). Each is matched against the entry's file name only and ignores the dialog's "Case sensitive" box, so the defaults start with `(?i)`. An empty or non-compiling value falls back to the built-in default.
+Regular expressions behind the file-type checkboxes of the panel Filter dialog (Alt+F; see [panel-filter.md](panel-filter.md)) and of the Select group / Unselect group dialogs (panel and Find results). Each is matched against the entry's file name only and ignores the dialog's "Case sensitive" box, so the defaults start with `(?i)`. An empty or non-compiling value falls back to the built-in default.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

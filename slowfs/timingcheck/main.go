@@ -34,7 +34,7 @@ func main() {
 	fmt.Printf("Load(%d entries):        %v\n", len(s.Entries), loadDur)
 
 	t0 = time.Now()
-	if _, err := s.SelectGroup("*", false, false, false, panel.GroupPatternShell, panel.GroupSelectMeta{}); err != nil {
+	if _, err := s.SelectGroup(panel.FilterSpec{Pattern: "*", Mode: panel.GroupPatternShell}, panel.GroupSelectMeta{}); err != nil {
 		fmt.Fprintf(os.Stderr, "SelectGroup: %v\n", err)
 		os.Exit(1)
 	}

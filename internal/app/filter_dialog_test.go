@@ -145,3 +145,18 @@ func TestFilterDialogOnlyMetaColumnsMatchesMetaValue(t *testing.T) {
 		t.Fatalf("ActiveEntryFilter.ID = %+v, want %q", p.ActiveEntryFilter, panel.PatternMetaFilterID)
 	}
 }
+
+func TestFilterDialogAltYTogglesFilesOnlyAltLSelectsSimple(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	fd := &app.model.FilterDialog
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt))
+	if !fd.FilesOnly {
+		t.Fatal("Alt+Y should toggle Files only")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt))
+	if fd.PatternMode != panel.GroupPatternSimple {
+		t.Fatalf("Alt+L mode = %v, want simple", fd.PatternMode)
+	}
+}

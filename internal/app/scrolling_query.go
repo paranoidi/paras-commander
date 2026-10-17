@@ -100,7 +100,7 @@ func (a *App) sftpConnectDialogQueryWidth() int {
 
 func (a *App) groupSelectQueryWidth() int {
 	termW, _ := a.screen.Size()
-	width := 54
+	width := dialog.PatternDialogWidth
 	if width > termW-4 {
 		width = termW - 4
 	}

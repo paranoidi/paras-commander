@@ -172,7 +172,7 @@ func TestGroupSelectModeShortcutKeepsPatternFocus(t *testing.T) {
 		t.Fatalf("after Alt+R: text=%q focus=%d", gs.Text, gs.Focus)
 	}
 
-	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt))
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt))
 	if gs.PatternMode != panel.GroupPatternSimple {
 		t.Fatalf("mode = %v, want simple", gs.PatternMode)
 	}
@@ -475,5 +475,46 @@ func TestViMotionSelectionsStripCopyLetter(t *testing.T) {
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
 	if !app.model.TransferDialog.Open {
 		t.Fatal("c with selections strip focused in vi-mode should open the copy dialog")
+	}
+}
+
+func TestGroupSelectTypeMnemonicKeepsPatternFocus(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openGroupSelect("select", "panel")
+
+	gs := &app.model.GroupSelect
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModAlt))
+	if !gs.Types[dialog.FilterTypeVideos] || gs.Focus != dialog.GroupSelectFocusPattern {
+		t.Fatalf("Alt+V: Types=%v focus=%d, want Videos checked and pattern focus", gs.Types, gs.Focus)
+	}
+	if app.groupSelectEmpty() {
+		t.Fatal("a checked type with an empty pattern is not empty")
+	}
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt))
+	if !gs.DirsOnly {
+		t.Fatal("Alt+D should toggle Directories only")
+	}
+	if !app.groupSelectEmpty() {
+		t.Fatal("types are ignored with Directories only, so the empty pattern is empty")
+	}
+}
+
+func TestGroupSelectDirsOnlyDisablesTypes(t *testing.T) {
+	app := newApp(t, newScreen(t, 80, 24), t.TempDir())
+	gs := &dialog.GroupSelectState{DirsOnly: true, Text: "*"}
+	gs.Types[0] = true
+	if app.toggleGroupSelectField(gs, dialog.GroupSelectFocusTypeFirst+1) || gs.Types[1] {
+		t.Fatal("type toggle must be a no-op with Directories only")
+	}
+	if spec := app.groupSelectSpec(gs); spec.Types != nil || spec.TypeLabel != "" {
+		t.Fatalf("spec types = %v %q, want ignored", spec.Types, spec.TypeLabel)
+	}
+	if !app.toggleGroupSelectField(gs, dialog.GroupSelectFocusFilesOnly) || !gs.FilesOnly || gs.DirsOnly {
+		t.Fatal("Files only radio must switch away from Directories only")
+	}
+	if spec := app.groupSelectSpec(gs); spec.Types == nil {
+		t.Fatal("checked type must apply again once Directories only is off")
 	}
 }

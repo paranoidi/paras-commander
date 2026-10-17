@@ -3,13 +3,10 @@ package dialog
 import (
 	"fmt"
 	"path"
-	"regexp"
-	"strings"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
-	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -185,34 +182,14 @@ func (h *Handler) executeCompareFilterDialog(spec panel.FilterSpec) {
 	h.host.SetTransientMessage(fmt.Sprintf("Filtered: %d files", n), ui.MessageUrgencyInfo)
 }
 
-// filterTypeRegexps returns the [filter.types] regexps in dialog.FilterType* order.
-func filterTypeRegexps(t config.FilterTypesConfig) [dialog.FilterTypeCount]string {
-	return [dialog.FilterTypeCount]string{t.Videos, t.Pictures, t.Archives, t.Audio, t.Documents}
-}
-
-// filterSpec builds the panel.FilterSpec for the dialog's current state: checked types are
-// OR-joined into one regexp from the (already validated) config.
+// filterSpec builds the panel.FilterSpec for the dialog's current state.
 func (h *Handler) filterSpec() panel.FilterSpec {
 	fd := &h.model.FilterDialog
 	spec := panel.FilterSpec{
 		Pattern: fd.Text, Mode: fd.PatternMode, CaseSensitive: fd.CaseSensitive,
 		FilesOnly: fd.FilesOnly, DirsOnly: fd.DirsOnly, Invert: fd.Invert,
 	}
-	var alts, labels []string
-	rx := filterTypeRegexps(h.host.Config().Filter.Types)
-	for i, on := range fd.Types {
-		if on {
-			alts = append(alts, "(?:"+rx[i]+")")
-			labels = append(labels, dialog.FilterTypeLabels[i])
-		}
-	}
-	if len(alts) > 0 {
-		// Config is validated, so this compiles; on failure the type restriction is dropped.
-		if re, err := regexp.Compile(strings.Join(alts, "|")); err == nil {
-			spec.Types = re
-			spec.TypeLabel = strings.Join(labels, ", ")
-		}
-	}
+	spec.Types, spec.TypeLabel = dialog.FilterTypesRegexp(fd.DirsOnly, fd.Types, h.host.Config().Filter.Types)
 	return spec
 }
 
@@ -222,7 +199,7 @@ func (h *Handler) filterDialogForm() dialog.DialogLinearForm {
 
 func (h *Handler) filterDialogQueryWidth() int {
 	termW, _ := h.screen.Size()
-	width := dialog.FilterDialogWidth
+	width := dialog.PatternDialogWidth
 	if width > termW-4 {
 		width = termW - 4
 	}
@@ -362,21 +339,21 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 	}
 
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 's', 'S':
+		switch unicode.ToUpper(event.Rune()) {
+		case dialog.PatternMnemonicShell:
 			h.toggleFilterDialogField(fd, dialog.FilterFocusShellRadio)
 			return false
-		case 'r', 'R':
+		case dialog.PatternMnemonicRegex:
 			h.toggleFilterDialogField(fd, dialog.FilterFocusRegexRadio)
 			return false
-		case 'l', 'L':
+		case dialog.PatternMnemonicSimple:
 			h.toggleFilterDialogField(fd, dialog.FilterFocusSimpleRadio)
 			return false
 		}
 	}
 
 	if fd.Focus == dialog.FilterFocusPattern {
-		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && filterAltIsDialogMnemonic(event.Rune())
+		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune())
 		edit := scrollquery.NewEdit(&fd.Text, &fd.TextCursor, &fd.TextScroll, h.filterDialogQueryWidth(), h.updateFilterDialogPreview)
 		if !skipScrolling && scrollquery.HandleKey(h.keysDialogInput, event, true, edit) {
 			return false
@@ -393,26 +370,26 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 					fd.Focus = f
 				}
 			}
-			switch event.Rune() {
-			case 'f', 'F':
+			switch unicode.ToUpper(event.Rune()) {
+			case dialog.PatternMnemonicFilesOnly:
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusFilesOnly) {
 					altFocus(dialog.FilterFocusFilesOnly)
 				}
-			case 'd', 'D':
+			case dialog.PatternMnemonicDirsOnly:
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusDirsOnly) {
 					altFocus(dialog.FilterFocusDirsOnly)
 				}
-			case 'i', 'I':
+			case dialog.PatternMnemonicInvert:
 				h.toggleFilterDialogField(fd, dialog.FilterFocusInvert)
 				altFocus(dialog.FilterFocusInvert)
-			case 'e', 'E':
+			case dialog.PatternMnemonicCase:
 				h.toggleFilterDialogField(fd, dialog.FilterFocusCase)
 				altFocus(dialog.FilterFocusCase)
-			case 'm', 'M':
+			case dialog.PatternMnemonicIncludeMeta:
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusIncludeMeta) {
 					altFocus(dialog.FilterFocusIncludeMeta)
 				}
-			case 'n', 'N':
+			case dialog.PatternMnemonicOnlyMeta:
 				if h.toggleFilterDialogField(fd, dialog.FilterFocusOnlyMeta) {
 					altFocus(dialog.FilterFocusOnlyMeta)
 				}
@@ -499,17 +476,11 @@ func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus in
 		if focus < dialog.FilterFocusTypeFirst || focus >= dialog.FilterFocusPattern {
 			return false
 		}
+		if dialog.PatternTypesDisabled(fd.DirsOnly) {
+			return false
+		}
 		fd.Types[focus-dialog.FilterFocusTypeFirst] = !fd.Types[focus-dialog.FilterFocusTypeFirst]
 	}
 	h.updateFilterDialogPreview()
 	return true
-}
-
-func filterAltIsDialogMnemonic(r rune) bool {
-	switch r {
-	case 'd', 'D', 'f', 'F', 'e', 'E', 'r', 'R', 's', 'S', 'l', 'L', 'i', 'I', 'm', 'M', 'n', 'N', 'v', 'V', 'p', 'P', 'a', 'A', 'u', 'U', 't', 'T':
-		return true
-	default:
-		return false
-	}
 }

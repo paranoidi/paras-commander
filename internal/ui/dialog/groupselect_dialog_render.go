@@ -19,7 +19,7 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 		title = "Select group"
 	}
 
-	width := 54
+	width := PatternDialogWidth
 	if width > layout.Width-4 {
 		width = layout.Width - 4
 	}
@@ -40,18 +40,34 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	y := rect.Y + 1
 	innerBottom := rect.Y + rect.Height - 2
 
-	draw.DrawDialogRadio(screen, optionX, y, "Shell patterns", 'S', state.PatternMode == panel.GroupPatternShell, state.Focus == GroupSelectFocusShellRadio, false, styles)
-	y++
-	if y >= innerBottom {
-		return
+	// Radios in the left column, type checkboxes in two columns to their right (same layout as
+	// the Filter dialog).
+	typeCol1X := optionX + utf8.RuneCountInString(draw.RadioText("Regular expression", false)) + 2
+	typeCol2X := typeCol1X + utf8.RuneCountInString(" "+draw.CheckboxText("Pictures", false)) + 2
+	radios := []struct {
+		label string
+		key   rune
+		mode  panel.GroupPatternMode
+		focus int
+	}{
+		{"Shell patterns", PatternMnemonicShell, panel.GroupPatternShell, GroupSelectFocusShellRadio},
+		{"Regular expression", PatternMnemonicRegex, panel.GroupPatternRegex, GroupSelectFocusRegexRadio},
+		{"Simple", PatternMnemonicSimple, panel.GroupPatternSimple, GroupSelectFocusSimpleRadio},
 	}
-	draw.DrawDialogRadio(screen, optionX, y, "Regular expression", 'R', state.PatternMode == panel.GroupPatternRegex, state.Focus == GroupSelectFocusRegexRadio, false, styles)
-	y++
-	if y >= innerBottom {
-		return
+	for i, r := range radios {
+		if y >= innerBottom {
+			return
+		}
+		draw.DrawDialogRadio(screen, optionX, y, r.label, r.key, state.PatternMode == r.mode, state.Focus == r.focus, false, styles)
+		for t := i; t < FilterTypeCount; t += 3 {
+			x := typeCol1X
+			if t >= 3 {
+				x = typeCol2X
+			}
+			draw.DrawDialogCheckbox(screen, x, y, FilterTypeLabels[t], FilterTypeMnemonics[t], state.Types[t], state.Focus == GroupSelectFocusTypeFirst+t, PatternTypesDisabled(state.DirsOnly), styles)
+		}
+		y++
 	}
-	draw.DrawDialogRadio(screen, optionX, y, "Simple", 'I', state.PatternMode == panel.GroupPatternSimple, state.Focus == GroupSelectFocusSimpleRadio, false, styles)
-	y++
 	if y >= innerBottom {
 		return
 	}
@@ -90,18 +106,18 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 		return
 	}
 
-	// col2X aligns the second checkbox on every two-column row.
-	col2X := optionX + utf8.RuneCountInString(draw.CheckboxText("Include meta columns", false)) + 3 // +1 pad +2 gap
-	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'Y', state.FilesOnly, state.Focus == GroupSelectFocusFilesOnly, false, styles)
-	draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", 'T', state.DirsOnly, state.Focus == GroupSelectFocusDirsOnly, false, styles)
+	// col2X aligns the second checkbox on every two-column row with the type checkboxes above.
+	col2X := typeCol1X
+	draw.DrawDialogRadio(screen, optionX, y, "Files only", PatternMnemonicFilesOnly, state.FilesOnly, state.Focus == GroupSelectFocusFilesOnly, false, styles)
+	draw.DrawDialogRadio(screen, col2X, y, "Directories only", PatternMnemonicDirsOnly, state.DirsOnly, state.Focus == GroupSelectFocusDirsOnly, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
 
-	draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == GroupSelectFocusCase, false, styles)
+	draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", PatternMnemonicCase, state.CaseSensitive, state.Focus == GroupSelectFocusCase, false, styles)
 	if state.Context == "find" {
-		draw.DrawDialogCheckbox(screen, col2X, y, "Match full path", 'A', state.FullPath, state.Focus == GroupSelectFocusFullPath, false, styles)
+		draw.DrawDialogCheckbox(screen, col2X, y, "Match full path", PatternMnemonicFullPath, state.FullPath, state.Focus == GroupSelectFocusFullPath, false, styles)
 	}
 	y++
 	if y >= innerBottom {
@@ -109,8 +125,8 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	}
 
 	if state.MetaColumnCount > 0 {
-		draw.DrawDialogCheckbox(screen, optionX, y, "Include meta columns", 'M', state.IncludeMetaColumns, state.Focus == GroupSelectFocusIncludeMeta, false, styles)
-		draw.DrawDialogCheckbox(screen, col2X, y, "Only meta columns", 'N', state.OnlyMetaColumns, state.Focus == GroupSelectFocusOnlyMeta, false, styles)
+		draw.DrawDialogCheckbox(screen, optionX, y, "Include meta columns", PatternMnemonicIncludeMeta, state.IncludeMetaColumns, state.Focus == GroupSelectFocusIncludeMeta, false, styles)
+		draw.DrawDialogCheckbox(screen, col2X, y, "Only meta columns", PatternMnemonicOnlyMeta, state.OnlyMetaColumns, state.Focus == GroupSelectFocusOnlyMeta, false, styles)
 		y++
 		if y >= innerBottom {
 			return
@@ -119,11 +135,7 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 
-	n := 8
-	if state.MetaColumnCount > 0 {
-		n += 2
-	}
-	form := NewDialogLinearForm(n)
+	form := NewDialogLinearForm(GroupSelectContentCount(state.MetaColumnCount))
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawOKCancelButtonRow(screen, rect, buttonY, state.Focus == form.OKIndex(), state.Focus == form.CancelIndex(), styles)
 }

@@ -162,7 +162,10 @@ type GroupSelectState struct {
 	MetaColumnCount    int  // number of visible meta columns; 0 hides the meta checkboxes
 	IncludeMetaColumns bool // when true and MetaColumnCount > 0, meta column values are also matched
 	OnlyMetaColumns    bool // when true, match only meta column values (skip filename matching)
-	Focus              int  // 0-2=mode radios, 3=pattern, 4=files only, 5=dirs only, 6=case sensitive, 7=full path (find only), 8=include meta, 9=only meta (last two when MetaColumnCount>0), then OK, Cancel
+	// Types are the checked file-type presets (indexed FilterTypeVideos..): OR-joined and AND-ed
+	// with the pattern; matched against the entry basename only.
+	Types [FilterTypeCount]bool
+	Focus int // GroupSelectFocus* constants (groupselect_hint.go), then OK, Cancel
 
 	// Live result preview shown right-aligned on the Pattern row, recomputed on every state
 	// change. PreviewShow is false while the pattern is empty or fails to compile.

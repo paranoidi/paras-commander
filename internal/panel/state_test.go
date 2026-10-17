@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"sync/atomic"
@@ -2026,7 +2027,7 @@ func TestSelectGroupByRegex(t *testing.T) {
 		},
 	}
 
-	if _, err := state.SelectGroup(`^main.*\.go$`, false, false, false, GroupPatternRegex, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup(FilterSpec{Pattern: `^main.*\.go$`, FilesOnly: false, DirsOnly: false, CaseSensitive: false, Mode: GroupPatternRegex}, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2054,7 +2055,7 @@ func TestSelectGroupByGlob(t *testing.T) {
 		},
 	}
 
-	if _, err := state.SelectGroup("*.go", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup(FilterSpec{Pattern: "*.go", FilesOnly: false, DirsOnly: false, CaseSensitive: false, Mode: GroupPatternShell}, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2081,7 +2082,7 @@ func TestSelectGroupByGlobCaseInsensitive(t *testing.T) {
 		},
 	}
 
-	if _, err := state.SelectGroup("*.GO", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup(FilterSpec{Pattern: "*.GO", FilesOnly: false, DirsOnly: false, CaseSensitive: false, Mode: GroupPatternShell}, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2104,7 +2105,7 @@ func TestSelectGroupByGlobCaseSensitive(t *testing.T) {
 		},
 	}
 
-	if _, err := state.SelectGroup("*.go", false, false, true, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup(FilterSpec{Pattern: "*.go", FilesOnly: false, DirsOnly: false, CaseSensitive: true, Mode: GroupPatternShell}, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2130,7 +2131,7 @@ func TestUnselectGroupByGlob(t *testing.T) {
 		},
 	}
 
-	if _, err := state.UnselectGroup("*.go", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.UnselectGroup(FilterSpec{Pattern: "*.go", FilesOnly: false, DirsOnly: false, CaseSensitive: false, Mode: GroupPatternShell}, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2154,7 +2155,7 @@ func TestSelectGroupFilesOnly(t *testing.T) {
 		},
 	}
 
-	if _, err := state.SelectGroup("*", true, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup(FilterSpec{Pattern: "*", FilesOnly: true, DirsOnly: false, CaseSensitive: false, Mode: GroupPatternShell}, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2179,7 +2180,7 @@ func TestSelectGroupSubstringCaseSensitive(t *testing.T) {
 	}
 
 	// Substring match, case-sensitive
-	if _, err := state.SelectGroup("main", false, false, true, GroupPatternSimple, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup(FilterSpec{Pattern: "main", FilesOnly: false, DirsOnly: false, CaseSensitive: true, Mode: GroupPatternSimple}, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2204,7 +2205,7 @@ func TestSelectGroupSubstringCaseInsensitive(t *testing.T) {
 	}
 
 	// Substring match, case-insensitive
-	if _, err := state.SelectGroup("main", false, false, false, GroupPatternSimple, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup(FilterSpec{Pattern: "main", FilesOnly: false, DirsOnly: false, CaseSensitive: false, Mode: GroupPatternSimple}, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3133,5 +3134,29 @@ func TestFilterOptionsHookIsLive(t *testing.T) {
 	}
 	if state.Filter.HasMatches() {
 		t.Fatal("case-sensitive filter must not match Harbor.txt after the hook flips")
+	}
+}
+
+func TestSelectGroupTypesOnly(t *testing.T) {
+	state := State{
+		Entries: []localfs.Entry{
+			{Name: "lantern.mkv", Path: "/tmp/lantern.mkv"},
+			{Name: "harbor.mkv", Path: "/tmp/harbor.mkv"},
+			{Name: "meadow.txt", Path: "/tmp/meadow.txt"},
+		},
+	}
+	spec := FilterSpec{Types: regexp.MustCompile(`(?i)\.mkv$`), TypeLabel: "Videos"}
+	files, _, err := state.CountGroupMatches(spec, GroupSelectMeta{}, false)
+	if err != nil || files != 2 {
+		t.Fatalf("count = %d, err %v; want 2", files, err)
+	}
+	if _, err := state.SelectGroup(spec, GroupSelectMeta{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(state.SelectedPaths) != 2 || state.SelectedPaths["/tmp/meadow.txt"] {
+		t.Fatalf("selected = %v, want the two .mkv files", state.SelectedPaths)
+	}
+	if matched, _ := state.SelectGroup(FilterSpec{}, GroupSelectMeta{}); matched {
+		t.Fatal("empty spec must match nothing")
 	}
 }

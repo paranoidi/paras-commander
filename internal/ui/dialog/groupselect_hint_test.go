@@ -11,41 +11,40 @@ func TestGroupSelectDialogHeight(t *testing.T) {
 	t.Parallel()
 
 	base := GroupSelectState{PatternMode: panel.GroupPatternShell}
-	if got := groupSelectDialogHeight(base, 40); got != 13 {
-		t.Fatalf("base height = %d, want 13", got)
+	if got := groupSelectDialogHeight(base, 40); got != 14 {
+		t.Fatalf("base height = %d, want 14", got)
 	}
 
 	withPreview := base
 	withPreview.PreviewShow = true
 	withPreview.PreviewFiles = 2
-	if got := groupSelectDialogHeight(withPreview, 40); got != 13 {
-		t.Fatalf("preview height = %d, want 13", got)
+	if got := groupSelectDialogHeight(withPreview, 40); got != 14 {
+		t.Fatalf("preview height = %d, want 14", got)
 	}
 
 	withMeta := base
 	withMeta.MetaColumnCount = 3
-	if got := groupSelectDialogHeight(withMeta, 40); got != 14 {
-		t.Fatalf("meta height = %d, want 14", got)
+	if got := groupSelectDialogHeight(withMeta, 40); got != 15 {
+		t.Fatalf("meta height = %d, want 15", got)
 	}
 
 	withHint := base
 	withHint.Text = "["
 	withHint.PatternMode = panel.GroupPatternRegex
-	if got := groupSelectDialogHeight(withHint, 40); got != 13 {
-		t.Fatalf("hint height = %d, want 13 (reserved row; no grow)", got)
+	if got := groupSelectDialogHeight(withHint, 40); got != 14 {
+		t.Fatalf("hint height = %d, want 14 (reserved row; no grow)", got)
 	}
 
 	withHintAndMeta := withHint
 	withHintAndMeta.MetaColumnCount = 3
-	if got := groupSelectDialogHeight(withHintAndMeta, 40); got != 14 {
-		t.Fatalf("hint+meta height = %d, want 14", got)
+	if got := groupSelectDialogHeight(withHintAndMeta, 40); got != 15 {
+		t.Fatalf("hint+meta height = %d, want 15", got)
 	}
 }
 
 func TestGroupSelectMoveFocusCheckboxGrid(t *testing.T) {
 	t.Parallel()
-	form := NewDialogLinearForm(8)
-	formMeta := NewDialogLinearForm(10)
+	formMeta := NewDialogLinearForm(GroupSelectContentCount(1))
 
 	t.Run("down from files to case", func(t *testing.T) {
 		got, ok := GroupSelectMoveFocus(GroupSelectFocusFilesOnly, tcell.KeyDown, 0, false)
@@ -75,10 +74,10 @@ func TestGroupSelectMoveFocusCheckboxGrid(t *testing.T) {
 		}
 	})
 
-	t.Run("down from dirs goes to ok without full path", func(t *testing.T) {
+	t.Run("down from dirs falls back to case without full path", func(t *testing.T) {
 		got, ok := GroupSelectMoveFocus(GroupSelectFocusDirsOnly, tcell.KeyDown, 0, false)
-		if !ok || got != form.OKIndex() {
-			t.Fatalf("Down Dirs: got %d ok=%v want OK %d", got, ok, form.OKIndex())
+		if !ok || got != GroupSelectFocusCase {
+			t.Fatalf("Down Dirs: got %d ok=%v want %d", got, ok, GroupSelectFocusCase)
 		}
 	})
 
@@ -106,7 +105,7 @@ func TestGroupSelectMoveFocusCheckboxGrid(t *testing.T) {
 
 func TestGroupSelectMoveFocusFullPath(t *testing.T) {
 	t.Parallel()
-	form := NewDialogLinearForm(8)
+	form := NewDialogLinearForm(GroupSelectContentCount(0))
 
 	t.Run("down from dirs goes to full path when shown", func(t *testing.T) {
 		got, ok := GroupSelectMoveFocus(GroupSelectFocusDirsOnly, tcell.KeyDown, 0, true)
@@ -162,4 +161,31 @@ func TestGroupSelectMoveFocusFullPath(t *testing.T) {
 			t.Fatalf("LastContentFocus = %d, want %d", got, GroupSelectFocusFullPath)
 		}
 	})
+}
+
+func TestGroupSelectMoveFocusTypes(t *testing.T) {
+	t.Parallel()
+
+	first := GroupSelectFocusTypeFirst
+	cases := []struct {
+		name  string
+		focus int
+		key   tcell.Key
+		want  int
+	}{
+		{"right from shell radio enters types", GroupSelectFocusShellRadio, tcell.KeyRight, first},
+		{"down within first type column", first, tcell.KeyDown, first + 1},
+		{"right to second type column", first, tcell.KeyRight, first + 3},
+		{"down from pattern is files only", GroupSelectFocusPattern, tcell.KeyDown, GroupSelectFocusFilesOnly},
+		{"up from pattern is simple radio", GroupSelectFocusPattern, tcell.KeyUp, GroupSelectFocusSimpleRadio},
+		{"tab from radios is first type", GroupSelectFocusRegexRadio, tcell.KeyTab, first},
+		{"tab from types is pattern", first + 2, tcell.KeyTab, GroupSelectFocusPattern},
+		{"backtab from pattern is first type", GroupSelectFocusPattern, tcell.KeyBacktab, first},
+	}
+	for _, tc := range cases {
+		got, ok := GroupSelectMoveFocus(tc.focus, tc.key, 0, false)
+		if !ok || got != tc.want {
+			t.Errorf("%s: got %d ok=%v want %d", tc.name, got, ok, tc.want)
+		}
+	}
 }
