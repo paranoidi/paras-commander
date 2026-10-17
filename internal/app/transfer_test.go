@@ -588,15 +588,15 @@ func TestEnqueueCopyJobClearsCrossDirectorySelections(t *testing.T) {
 	hereTxt := filepath.Join(here, "here.txt")
 	otherTxt := filepath.Join(other, "other.txt")
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
-	p.SelectionsStripOrder = []string{otherTxt}
+	p.SelectedStripOrder = []string{otherTxt}
 
 	app.jobsCtrl.EnqueueCopyJob()
 
 	if p.SelectedPaths != nil {
 		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)
 	}
-	if len(p.SelectionsStripOrder) != 0 {
-		t.Fatalf("expected selections strip order cleared, got %v", p.SelectionsStripOrder)
+	if len(p.SelectedStripOrder) != 0 {
+		t.Fatalf("expected selected strip order cleared, got %v", p.SelectedStripOrder)
 	}
 	if len(app.jobState.AllJobs()) != 1 {
 		t.Fatalf("expected one job, got %d", len(app.jobState.AllJobs()))
@@ -636,15 +636,15 @@ func TestEnqueueMoveJobClearsCrossDirectorySelections(t *testing.T) {
 	hereTxt := filepath.Join(here, "here.txt")
 	otherTxt := filepath.Join(other, "other.txt")
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
-	p.SelectionsStripOrder = []string{otherTxt}
+	p.SelectedStripOrder = []string{otherTxt}
 
 	app.jobsCtrl.EnqueueMoveJob()
 
 	if p.SelectedPaths != nil {
 		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)
 	}
-	if len(p.SelectionsStripOrder) != 0 {
-		t.Fatalf("expected selections strip order cleared, got %v", p.SelectionsStripOrder)
+	if len(p.SelectedStripOrder) != 0 {
+		t.Fatalf("expected selected strip order cleared, got %v", p.SelectedStripOrder)
 	}
 	if len(app.jobState.AllJobs()) != 1 {
 		t.Fatalf("expected one job, got %d", len(app.jobState.AllJobs()))

@@ -140,7 +140,7 @@ type Theme struct {
 	// PanelStatusQuickView styles quick-view overlays on the driver pane border toward the inactive pane.
 	PanelStatusQuickView tcell.Style
 	// PanelStatus* style Start/PhysicalLeft bottom-border segments (see ui panel_bottom_indicators).
-	PanelStatusSelections     tcell.Style
+	PanelStatusSelected       tcell.Style
 	PanelStatusDotfilesHidden tcell.Style
 	PanelStatusGitignore      tcell.Style
 	PanelStatusStash          tcell.Style
@@ -482,7 +482,7 @@ func mergeForegroundOnSurface(src, surface tcell.Style) tcell.Style {
 
 // Panel bottom-indicator style keys ([panel.status] in TOML).
 const (
-	PanelBottomIndicatorKeySelections     = "selections"
+	PanelBottomIndicatorKeySelected       = "selected"
 	PanelBottomIndicatorKeyDotfilesHidden = "dotfiles_hidden"
 	PanelBottomIndicatorKeyGitignore      = "gitignore"
 	PanelBottomIndicatorKeyStash          = "stash"
@@ -498,9 +498,9 @@ const (
 // selections falls back to panel title styles; dotfiles_hidden and gitignore fall back to panel frame styles.
 func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked bool) tcell.Style {
 	switch id {
-	case PanelBottomIndicatorKeySelections:
-		if t.PanelStatusSelections != (tcell.Style{}) {
-			return t.PanelStatusSelections
+	case PanelBottomIndicatorKeySelected:
+		if t.PanelStatusSelected != (tcell.Style{}) {
+			return t.PanelStatusSelected
 		}
 		if chromeBlocked {
 			return t.PanelBlockedTitle
@@ -610,7 +610,7 @@ const (
 	IconKeyTreeBranch               = "tree.branch"
 	IconKeyTreeEnd                  = "tree.end"
 	IconKeyTreeLeaf                 = "tree.leaf"
-	IconKeySelectionsMultiLocation  = "selections.multi_location"
+	IconKeySelectedMultiLocation    = "selected.multi_location"
 	IconKeyDedupRelated             = "dedup.related"
 	IconKeyDedupRelatedWithin       = "dedup.related_within"
 	IconKeyDedupFullDir             = "dedup.full_dir"
@@ -721,11 +721,11 @@ func (t Theme) IconGit() string {
 	return "\uf1d3" // Font Awesome git (Nerd Fonts)
 }
 
-// IconSelectionsMultiLocation returns the icon prepended to the selections strip title
+// IconSelectedMultiLocation returns the icon prepended to the selected strip title
 // when the panel's selections span multiple parent directories.
-func (t Theme) IconSelectionsMultiLocation() string {
+func (t Theme) IconSelectedMultiLocation() string {
 	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeySelectionsMultiLocation]); s != "" {
+		if s := strings.TrimSpace(t.Icons[IconKeySelectedMultiLocation]); s != "" {
 			return s
 		}
 	}
@@ -1066,7 +1066,7 @@ var requiredStyleKeys = []string{
 	"panel.hint",
 	"panel.status.sync",
 	"panel.status.quick_view",
-	"panel.status.selections",
+	"panel.status.selected",
 	"panel.status.dotfiles_hidden",
 	"panel.status.gitignore",
 	"panel.status.stash",
@@ -1640,7 +1640,7 @@ func parse(data []byte) (Theme, error) {
 		PanelCarouselInactiveCursorSelected: styles["panel.carousel.inactive.row.cursor.selected"],
 		PanelStatusSync:                     styles["panel.status.sync"],
 		PanelStatusQuickView:                styles["panel.status.quick_view"],
-		PanelStatusSelections:               styles["panel.status.selections"],
+		PanelStatusSelected:                 styles["panel.status.selected"],
 		PanelStatusDotfilesHidden:           styles["panel.status.dotfiles_hidden"],
 		PanelStatusGitignore:                styles["panel.status.gitignore"],
 		PanelStatusStash:                    styles["panel.status.stash"],

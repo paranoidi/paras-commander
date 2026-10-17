@@ -136,8 +136,8 @@ const (
 )
 
 func (a *App) editTargetFilePath(p *panel.State) (path string, mode editTargetMode) {
-	if a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip && p.SelectionsStripCount() > 0 {
-		selPath, ok := p.SelectedPathAtStripIndex(p.SelectionsStripCursor)
+	if a.model.ActiveSubFocus == ui.SubFocusSelectedStrip && p.SelectedStripCount() > 0 {
+		selPath, ok := p.SelectedPathAtStripIndex(p.SelectedStripCursor)
 		if !ok {
 			return "", editTargetNone
 		}

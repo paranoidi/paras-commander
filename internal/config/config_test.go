@@ -11,12 +11,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 )
 
-func TestSelectionsPanelMaxRowsSentinelUsesExportedDefault(t *testing.T) {
-	if DefaultSelectionsPanelMaxRows <= 0 {
-		t.Fatalf("DefaultSelectionsPanelMaxRows = %d, want a positive effective default", DefaultSelectionsPanelMaxRows)
+func TestSelectedPanelMaxRowsSentinelUsesExportedDefault(t *testing.T) {
+	if DefaultSelectedPanelMaxRows <= 0 {
+		t.Fatalf("DefaultSelectedPanelMaxRows = %d, want a positive effective default", DefaultSelectedPanelMaxRows)
 	}
-	if got := Default().UI.SelectionsPanelMaxRows; got != 0 {
-		t.Fatalf("Default SelectionsPanelMaxRows = %d, want 0 sentinel (effective %d)", got, DefaultSelectionsPanelMaxRows)
+	if got := Default().UI.SelectedPanelMaxRows; got != 0 {
+		t.Fatalf("Default SelectedPanelMaxRows = %d, want 0 sentinel (effective %d)", got, DefaultSelectedPanelMaxRows)
 	}
 }
 
@@ -468,28 +468,28 @@ func TestValidateClampsScrollEdgeMargin(t *testing.T) {
 	}
 }
 
-func TestValidateClampsSelectionsPanelActivePercent(t *testing.T) {
+func TestValidateClampsSelectedPanelActivePercent(t *testing.T) {
 	cfg := Default()
-	cfg.UI.SelectionsPanelActivePercent = 5
+	cfg.UI.SelectedPanelActivePercent = 5
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.SelectionsPanelActivePercent != DefaultSelectionsPanelActivePercent {
-		t.Fatalf("percent = %d, want default %d", cfg.UI.SelectionsPanelActivePercent, DefaultSelectionsPanelActivePercent)
+	if cfg.UI.SelectedPanelActivePercent != DefaultSelectedPanelActivePercent {
+		t.Fatalf("percent = %d, want default %d", cfg.UI.SelectedPanelActivePercent, DefaultSelectedPanelActivePercent)
 	}
-	cfg.UI.SelectionsPanelActivePercent = 95
+	cfg.UI.SelectedPanelActivePercent = 95
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.SelectionsPanelActivePercent != DefaultSelectionsPanelActivePercent {
-		t.Fatalf("percent = %d, want default %d", cfg.UI.SelectionsPanelActivePercent, DefaultSelectionsPanelActivePercent)
+	if cfg.UI.SelectedPanelActivePercent != DefaultSelectedPanelActivePercent {
+		t.Fatalf("percent = %d, want default %d", cfg.UI.SelectedPanelActivePercent, DefaultSelectedPanelActivePercent)
 	}
-	cfg.UI.SelectionsPanelActivePercent = 40
+	cfg.UI.SelectedPanelActivePercent = 40
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.SelectionsPanelActivePercent != 40 {
-		t.Fatalf("percent = %d, want 40", cfg.UI.SelectionsPanelActivePercent)
+	if cfg.UI.SelectedPanelActivePercent != 40 {
+		t.Fatalf("percent = %d, want 40", cfg.UI.SelectedPanelActivePercent)
 	}
 }
 

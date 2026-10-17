@@ -16,7 +16,7 @@ func TestCollectPanelBottomIndicatorsOrder(t *testing.T) {
 	t.Parallel()
 	ctx := PanelBottomIndicatorContext{
 		PanelID:                PrimaryPanel,
-		SelectionsBottomHint:   true,
+		SelectedBottomHint:     true,
 		QuickViewDriverPanelID: -1,
 		State: panel.State{
 			Path:            pathloc.MustParse("/tmp"),
@@ -35,7 +35,7 @@ func TestCollectPanelBottomIndicatorsOrder(t *testing.T) {
 		t.Fatalf("len = %d, want 2 (start + physical left)", len(nonEnd))
 	}
 	got = nonEnd
-	if got[0].ID != PanelBottomIndicatorSelections || got[0].Edge != PanelBottomEdgeStart {
+	if got[0].ID != PanelBottomIndicatorSelected || got[0].Edge != PanelBottomEdgeStart {
 		t.Fatalf("first = %+v, want selections on start edge", got[0])
 	}
 	if got[1].ID != PanelBottomIndicatorGitignore || got[1].Edge != PanelBottomEdgePhysicalLeft {
@@ -128,8 +128,8 @@ func TestPanelBottomIndicatorStyleUsesThemeAndFrame(t *testing.T) {
 		BorderStyle:    frame,
 		Styles:         styles,
 	}
-	wantSel := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelections, true, false)
-	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorSelections); got != wantSel {
+	wantSel := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelected, true, false)
+	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorSelected); got != wantSel {
 		t.Fatalf("selections style = %v, want %v", got, wantSel)
 	}
 	wantGit := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeyGitignore, true, false)
@@ -142,7 +142,7 @@ func TestPanelBottomPhysicalLeftChainStartXOffsetWithSelectionsHint(t *testing.T
 	t.Parallel()
 	rect := Rect{X: 10, Y: 0, Width: 30, Height: 8}
 	x := panelBottomPhysicalLeftChainStartX(rect, true)
-	selPadW := len([]rune(panelSelectionsChromePadded))
+	selPadW := len([]rune(panelSelectedChromePadded))
 	want := rect.X + 1 + 1 + selPadW
 	if x != want {
 		t.Fatalf("x = %d, want %d", x, want)

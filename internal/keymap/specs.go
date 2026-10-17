@@ -13,10 +13,10 @@ const (
 	HelpCompare
 	HelpDedup
 	HelpFilePreview
-	// HelpSelectionsStrip is only a leader-menu scope (leaderMenuViewSpecs): no ActionSpec.Views
+	// HelpSelectedStrip is only a leader-menu scope (leaderMenuViewSpecs): no ActionSpec.Views
 	// is tagged with it and it is not in helpAllViews.
-	HelpSelectionsStrip
-	// HelpFindDialog is only a leader-menu scope (leaderMenuViewSpecs), like HelpSelectionsStrip.
+	HelpSelectedStrip
+	// HelpFindDialog is only a leader-menu scope (leaderMenuViewSpecs), like HelpSelectedStrip.
 	HelpFindDialog
 )
 
@@ -299,18 +299,18 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"focus", "toggle panel"},
 		},
 		{
-			ID:           ActionPanelFocusSelections,
+			ID:           ActionPanelFocusSelected,
 			Views:        HelpBrowser,
-			Title:        "Focus selections panel",
+			Title:        "Focus selected panel",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-s"},
 			PreferredKey: "C-s",
 			Keywords:     []string{"selections", "strip"},
 		},
 		{
-			ID:           ActionPanelOpenSelectionsRoot,
+			ID:           ActionPanelOpenSelectedRoot,
 			Views:        HelpBrowser,
-			Title:        "Go to selections common root",
+			Title:        "Go to selected common root",
 			LeaderKey:    "r",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-M-s"},

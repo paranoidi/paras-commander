@@ -18,7 +18,7 @@ _Avoid_: current panel, other panel
 The set of entries a panel has marked, kept by full path so it survives leaving the directory.
 _Avoid_: marks, tags
 
-**Selections strip**:
+**Selected strip**:
 The sub-pane listing selected entries that lie outside the panel's current directory.
 _Avoid_: selection panel, basket
 

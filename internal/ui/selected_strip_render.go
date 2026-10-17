@@ -12,14 +12,14 @@ import (
 )
 
 const (
-	// panelSelectionsChromeName is the cross-directory selections title word (strip + inactive file-panel bottom hint).
-	panelSelectionsChromeName = "Selections"
-	// panelSelectionsChromePadded is the strip title / bottom-hint segment with one space on each side of the name.
-	panelSelectionsChromePadded = " " + panelSelectionsChromeName + " "
+	// panelSelectedChromeName is the cross-directory selections title word (strip + inactive file-panel bottom hint).
+	panelSelectedChromeName = "Selected"
+	// panelSelectedChromePadded is the strip title / bottom-hint segment with one space on each side of the name.
+	panelSelectedChromePadded = " " + panelSelectedChromeName + " "
 )
 
-// SelectionsStripOpts carries display configuration for drawSelectionsStrip.
-type SelectionsStripOpts struct {
+// SelectedStripOpts carries display configuration for drawSelectedStrip.
+type SelectedStripOpts struct {
 	Styles                          theme.Theme
 	UserHomeDir                     string
 	Painter                         DiskUsagePainter
@@ -32,16 +32,16 @@ type SelectionsStripOpts struct {
 	ViMotionActive                  bool
 }
 
-// drawSelectionsStrip renders the per-panel list of selected paths outside the current directory.
-// The title is always "Selections"; stripFocused only affects title active vs inactive color.
+// drawSelectedStrip renders the per-panel list of selected paths outside the current directory.
+// The title is always "Selected"; stripFocused only affects title active vs inactive color.
 // When the selections span multiple parent directories, the multi-location icon is painted
 // at the right end of the top border (… ─ x ─┐).
-func drawSelectionsStrip(
+func drawSelectedStrip(
 	screen tcell.Screen,
 	rect Rect,
 	state panel.State,
 	stripFocused, chromeBlocked bool,
-	opts SelectionsStripOpts,
+	opts SelectedStripOpts,
 ) {
 	styles := opts.Styles
 	userHomeDir := opts.UserHomeDir
@@ -55,11 +55,11 @@ func drawSelectionsStrip(
 	}
 
 	endLabel := ""
-	if _, multiDir, _ := state.SelectionsCommonRoot(); multiDir {
-		endLabel = " " + styles.IconSelectionsMultiLocation() + " "
+	if _, multiDir, _ := state.SelectedCommonRoot(); multiDir {
+		endLabel = " " + styles.IconSelectedMultiLocation() + " "
 	}
 	filterUI := stripFocused && (state.StripFilter.Active || state.StripFilter.Editing)
-	title := panelSelectionsChromePadded
+	title := panelSelectedChromePadded
 	if filterUI {
 		title = ""
 		endLabel = "" // filter query owns the top row
@@ -77,21 +77,21 @@ func drawSelectionsStrip(
 			styles.IconWorking(),
 		); ok {
 			endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, stripFocused, chromeBlocked)
-			paintSelectionsStripBottomSize(screen, rect, raw, endStyle, chrome.Chrome.Frame)
+			paintSelectedStripBottomSize(screen, rect, raw, endStyle, chrome.Chrome.Frame)
 		}
 	}
 
-	visibleRows := SelectionsStripListRows(rect)
+	visibleRows := SelectedStripListRows(rect)
 	if visibleRows == 0 {
 		return
 	}
 
-	paths := state.SelectionsStripPaths()
+	paths := state.SelectedStripPaths()
 	interior := rect.Width - 2
 	rowTextWidth := max(1, interior)
 	contentStart := rect.X + 1
 
-	scroll := state.SelectionsStripScroll
+	scroll := state.SelectedStripScroll
 	if scroll < 0 {
 		scroll = 0
 	}
@@ -102,8 +102,8 @@ func drawSelectionsStrip(
 	}
 
 	mark := styles.IconFilelistSelectionSubtree()
-	selectionsStripMarkPrefix := " " + string(mark) + " "
-	markCols := utf8.RuneCountInString(selectionsStripMarkPrefix)
+	selectedStripMarkPrefix := " " + string(mark) + " "
+	markCols := utf8.RuneCountInString(selectedStripMarkPrefix)
 	markStart := 1
 	markEnd := markStart + utf8.RuneCountInString(string(mark))
 
@@ -115,7 +115,7 @@ func drawSelectionsStrip(
 		if chromeBlocked {
 			baseStyle = styles.PanelBlockedRowFile
 		}
-		if stripFocused && idx == state.SelectionsStripCursor {
+		if stripFocused && idx == state.SelectedStripCursor {
 			if chromeBlocked {
 				baseStyle = styles.PanelBlockedCursor
 				cursorStyleKey = "panel.blocked.row.cursor"
@@ -128,7 +128,7 @@ func drawSelectionsStrip(
 		prefix := ""
 		textCols := rowTextWidth
 		if idx < len(paths) {
-			prefix = selectionsStripMarkPrefix
+			prefix = selectedStripMarkPrefix
 			textCols = rowTextWidth - markCols
 			if textCols < 0 {
 				textCols = 0
@@ -155,7 +155,7 @@ func drawSelectionsStrip(
 			baseRanges := state.StripFilter.Ranges(idx)
 			if mapped := panel.MapStripBasenameRangesToDisplay(pathLabel, paths[idx], baseRanges); len(mapped) > 0 {
 				matchStyle := styles.FuzzyHighlight
-				if stripFocused && idx == state.SelectionsStripCursor {
+				if stripFocused && idx == state.SelectedStripCursor {
 					matchStyle = styles.FuzzyHighlightCursor
 				}
 				_, bg, _ := baseStyle.Decompose()
@@ -178,9 +178,9 @@ func drawSelectionsStrip(
 		stripFocused, chromeBlocked, chrome.Chrome.Frame, styles)
 }
 
-// paintSelectionsStripBottomSize paints the padded selection count/size on the bottom border,
+// paintSelectedStripBottomSize paints the padded selection count/size on the bottom border,
 // right-aligned with a frame dash immediately before the corner (… label ─┘).
-func paintSelectionsStripBottomSize(screen tcell.Screen, rect Rect, rawLabel string, endStyle, borderStyle tcell.Style) {
+func paintSelectedStripBottomSize(screen tcell.Screen, rect Rect, rawLabel string, endStyle, borderStyle tcell.Style) {
 	padded := panelSelectionSizePadded(rawLabel)
 	w := utf8.RuneCountInString(padded)
 	if w == 0 {

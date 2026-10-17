@@ -7,7 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func TestPaintSelectionsStripBottomSizeFrameDashBeforeCorner(t *testing.T) {
+func TestPaintSelectedStripBottomSizeFrameDashBeforeCorner(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -19,9 +19,9 @@ func TestPaintSelectionsStripBottomSizeFrameDashBeforeCorner(t *testing.T) {
 	rect := Rect{X: 0, Y: 0, Width: 30, Height: 5}
 	styles := theme.Default()
 	chrome := styles.PanelChrome(true, false)
-	drawAuxPanelChrome(screen, rect, panelSelectionsChromePadded, "", true, false, false, styles)
+	drawAuxPanelChrome(screen, rect, panelSelectedChromePadded, "", true, false, false, styles)
 	endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, true, false)
-	paintSelectionsStripBottomSize(screen, rect, "2 items (1 KiB)", endStyle, chrome.Frame)
+	paintSelectedStripBottomSize(screen, rect, "2 items (1 KiB)", endStyle, chrome.Frame)
 
 	y := rect.Y + rect.Height - 1
 	lastIn := rect.X + rect.Width - 2

@@ -20,7 +20,7 @@ type AuxPanelChromeLayout struct {
 
 // drawAuxPanelChrome paints border, surface fill, and title overlay for an auxiliary panel.
 // When endLabel is non-empty, the top row uses a split layout (title left, endLabel right).
-// viMotion selects the vi-motion accent frame on the active, unblocked panel (selections strip).
+// viMotion selects the vi-motion accent frame on the active, unblocked panel (selected strip).
 func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, active, blocked, viMotion bool, styles theme.Theme) AuxPanelChromeLayout {
 	chrome := styles.PanelChrome(active, blocked)
 	borderStyle := chrome.Frame

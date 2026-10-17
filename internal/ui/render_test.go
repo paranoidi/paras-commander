@@ -1759,7 +1759,7 @@ func TestRenderOmitsSyncIndicatorWhenDisabled(t *testing.T) {
 	}
 }
 
-func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
+func TestRenderDrawsSelectedBottomHintOnInactiveFilePanel(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -1794,15 +1794,15 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
 	primaryWidth := width / 2
 	bottomY := height - 2
 	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
-	if !strings.Contains(leftBottom, " Selections ") {
-		t.Fatalf("inactive left bottom = %q, want substring %q", leftBottom, " Selections ")
+	if !strings.Contains(leftBottom, " Selected ") {
+		t.Fatalf("inactive left bottom = %q, want substring %q", leftBottom, " Selected ")
 	}
 	rightBottom := tcelltest.TextAt(screen, primaryWidth, bottomY, width-primaryWidth)
-	if strings.Contains(rightBottom, " Selections ") {
+	if strings.Contains(rightBottom, " Selected ") {
 		t.Fatalf("active right bottom = %q, want no selections hint on active column", rightBottom)
 	}
 
-	// Frame "─" uses panel frame style; Selections segment uses panel.status.selections.
+	// Frame "─" uses panel frame style; Selected segment uses panel.status.selected.
 	dashR, dashSt, _ := screen.Get(1, bottomY)
 	if dashR != "─" {
 		t.Fatalf("left bottom frame dash = %q, want '─'", dashR)
@@ -1810,14 +1810,14 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
 	if dashSt != styles.PanelInactiveFrame {
 		t.Fatalf("left bottom frame dash style = %v, want PanelInactiveFrame", dashSt)
 	}
-	wantSel := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelections, false, false)
+	wantSel := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelected, false, false)
 	_, titleSt, _ := screen.Get(2, bottomY)
 	if titleSt != wantSel {
 		t.Fatalf("selections hint padded segment style = %v, want %v", titleSt, wantSel)
 	}
 }
 
-func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
+func TestRenderDrawsSelectedBottomHintOnInactiveRightFilePanel(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -1851,11 +1851,11 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
 	primaryWidth := width / 2
 	bottomY := height - 2
 	rightBottom := tcelltest.TextAt(screen, primaryWidth, bottomY, width-primaryWidth)
-	if !strings.Contains(rightBottom, " Selections ") {
-		t.Fatalf("inactive right bottom = %q, want substring %q", rightBottom, " Selections ")
+	if !strings.Contains(rightBottom, " Selected ") {
+		t.Fatalf("inactive right bottom = %q, want substring %q", rightBottom, " Selected ")
 	}
 
-	// Trailing frame dash before ┘ uses PanelFrame; Selections uses panel.status.selections.
+	// Trailing frame dash before ┘ uses PanelFrame; Selections uses panel.status.selected.
 	lastIn := width - 2
 	dashR, dashSt, _ := screen.Get(lastIn, bottomY)
 	if dashR != "─" {
@@ -1864,14 +1864,14 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
 	if dashSt != styles.PanelInactiveFrame {
 		t.Fatalf("right bottom frame dash style = %v, want PanelInactiveFrame", dashSt)
 	}
-	wantSel := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelections, false, false)
+	wantSel := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelected, false, false)
 	_, titleSt, _ := screen.Get(lastIn-1, bottomY)
 	if titleSt != wantSel {
 		t.Fatalf("selections hint padded last cell style = %v, want %v", titleSt, wantSel)
 	}
 }
 
-func TestRenderOmitsSelectionsBottomHintWhenStripVisible(t *testing.T) {
+func TestRenderOmitsSelectedBottomHintWhenStripVisible(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -1899,12 +1899,12 @@ func TestRenderOmitsSelectionsBottomHintWhenStripVisible(t *testing.T) {
 	primaryWidth := width / 2
 	bottomY := height - 2
 	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
-	if strings.Contains(leftBottom, " Selections ") {
+	if strings.Contains(leftBottom, " Selected ") {
 		t.Fatalf("left column bottom = %q, want no file-panel selections hint when strip is visible", leftBottom)
 	}
 }
 
-func TestRenderSelectionSizeOnSelectionsStripBottom(t *testing.T) {
+func TestRenderSelectionSizeOnSelectedStripBottom(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -1932,11 +1932,11 @@ func TestRenderSelectionSizeOnSelectionsStripBottom(t *testing.T) {
 	Render(screen, model, styles)
 
 	layout := CalculateLayout(width, height, true, PanelWidthSplit{})
-	stripN := SelectionsStripLayoutItemCount(&model.Primary, PrimaryPanel, model.ActivePanel, false)
+	stripN := SelectedStripLayoutItemCount(&model.Primary, PrimaryPanel, model.ActivePanel, false)
 	if stripN == 0 {
-		t.Fatal("stripN = 0, want selections strip visible")
+		t.Fatal("stripN = 0, want selected strip visible")
 	}
-	primaryFile, leftStrip := SplitPanelForSelections(layout.Primary, browserSelectionsStripSplit(model, PrimaryPanel, stripN))
+	primaryFile, leftStrip := SplitPanelForSelected(layout.Primary, browserSelectedStripSplit(model, PrimaryPanel, stripN))
 	if leftStrip.Height == 0 {
 		t.Fatal("leftStrip.Height = 0, want visible strip")
 	}
@@ -1954,7 +1954,7 @@ func TestRenderSelectionSizeOnSelectionsStripBottom(t *testing.T) {
 		t.Fatalf("strip top = %q, want selection size only on bottom border", stripTop)
 	}
 	if !strings.Contains(stripBottom, " items (") {
-		t.Fatalf("strip bottom = %q, want selection size on selections strip bottom row", stripBottom)
+		t.Fatalf("strip bottom = %q, want selection size on selected strip bottom row", stripBottom)
 	}
 	lastIn := leftStrip.X + leftStrip.Width - 2
 	cornerX := leftStrip.X + leftStrip.Width - 1

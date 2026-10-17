@@ -422,12 +422,12 @@ type UIConfig struct {
 	// directories for background disk-usage size (stats each one to check mount boundaries).
 	// Default DefaultSelectionSizeScanDebounceMS. Use 0 to run on the next scheduler tick.
 	SelectionSizeScanDebounceMS int `toml:"selection_size_scan_debounce_ms"`
-	// SelectionsPanelMaxRows caps visible rows in the cross-directory selections strip
-	// (0 = DefaultSelectionsPanelMaxRows).
-	SelectionsPanelMaxRows int `toml:"selections_panel_max_rows"`
-	// SelectionsPanelActivePercent is the strip share of panel height when focused in side-by-side
+	// SelectedPanelMaxRows caps visible rows in the cross-directory selected strip
+	// (0 = DefaultSelectedPanelMaxRows).
+	SelectedPanelMaxRows int `toml:"selected_panel_max_rows"`
+	// SelectedPanelActivePercent is the strip share of panel height when focused in side-by-side
 	// layout, and of panel width when the strip is shown in stacked layout (default 50; clamped 10–90).
-	SelectionsPanelActivePercent int `toml:"selections_panel_active_percent"`
+	SelectedPanelActivePercent int `toml:"selected_panel_active_percent"`
 
 	Zoom   UIZoomConfig   `toml:"zoom"`
 	Scroll UIScrollConfig `toml:"scroll"`
@@ -644,18 +644,18 @@ func Default() Config {
 			AutohideInactivePanel: DefaultCarouselAutohideInactivePanel,
 		},
 		UI: UIConfig{
-			ShowMenuBar:                  true,
-			UseNerdfontIcons:             true,
-			LeaderMenuShowDirectKeys:     DefaultLeaderMenuShowDirectKeys,
-			NarrowPanelsNameOnly:         DefaultNarrowPanelsNameOnly,
-			OtherPanelMatchMarks:         DefaultOtherPanelMatchMarks,
-			ScreenRenderHashCache:        DefaultScreenRenderHashCache,
-			KeyRepeatDebounceMS:          DefaultKeyRepeatDebounceMS,
-			MediaPreviewDebounceMS:       DefaultMediaPreviewDebounceMS,
-			PathPickerValidateDelayMS:    DefaultPathPickerValidateDelayMS,
-			SelectionSizeScanDebounceMS:  DefaultSelectionSizeScanDebounceMS,
-			SelectionsPanelMaxRows:       0,
-			SelectionsPanelActivePercent: DefaultSelectionsPanelActivePercent,
+			ShowMenuBar:                 true,
+			UseNerdfontIcons:            true,
+			LeaderMenuShowDirectKeys:    DefaultLeaderMenuShowDirectKeys,
+			NarrowPanelsNameOnly:        DefaultNarrowPanelsNameOnly,
+			OtherPanelMatchMarks:        DefaultOtherPanelMatchMarks,
+			ScreenRenderHashCache:       DefaultScreenRenderHashCache,
+			KeyRepeatDebounceMS:         DefaultKeyRepeatDebounceMS,
+			MediaPreviewDebounceMS:      DefaultMediaPreviewDebounceMS,
+			PathPickerValidateDelayMS:   DefaultPathPickerValidateDelayMS,
+			SelectionSizeScanDebounceMS: DefaultSelectionSizeScanDebounceMS,
+			SelectedPanelMaxRows:        0,
+			SelectedPanelActivePercent:  DefaultSelectedPanelActivePercent,
 			Zoom: UIZoomConfig{
 				ActivePanel:         DefaultZoomActivePanel,
 				DisabledAboveWidth:  DefaultZoomActivePanelDisabledAboveWidth,
@@ -1179,9 +1179,9 @@ func (c *Config) validateUI(builtin *Config) {
 	if c.UI.Find.ListNavIdleMS < 0 {
 		c.UI.Find.ListNavIdleMS = builtin.UI.Find.ListNavIdleMS
 	}
-	if c.UI.SelectionsPanelActivePercent < SelectionsPanelActivePercentMin ||
-		c.UI.SelectionsPanelActivePercent > SelectionsPanelActivePercentMax {
-		c.UI.SelectionsPanelActivePercent = DefaultSelectionsPanelActivePercent
+	if c.UI.SelectedPanelActivePercent < SelectedPanelActivePercentMin ||
+		c.UI.SelectedPanelActivePercent > SelectedPanelActivePercentMax {
+		c.UI.SelectedPanelActivePercent = DefaultSelectedPanelActivePercent
 	}
 }
 

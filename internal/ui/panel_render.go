@@ -114,7 +114,7 @@ type PanelContext struct {
 	SyncDriverPanelID         int
 	QuickViewDriverPanelID    int
 	SplitOrientation          SplitOrientation
-	SelectionsBottomHint      bool
+	SelectedBottomHint        bool
 	ShowSelectionSizeOnBottom bool
 	// IsTransferTarget marks this panel as the resolved Copy/Move/Flatten destination
 	// (its border and path title are painted with theme.PanelTargetFrame / PanelTargetTitle).
@@ -208,7 +208,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	bottomCtx := PanelBottomIndicatorContext{
 		PanelID:                ctx.PanelID,
 		State:                  state,
-		SelectionsBottomHint:   ctx.SelectionsBottomHint,
+		SelectedBottomHint:     ctx.SelectedBottomHint,
 		SyncDriverPanelID:      ctx.SyncDriverPanelID,
 		QuickViewDriverPanelID: ctx.QuickViewDriverPanelID,
 		HideInactivePanel:      ctx.HideInactivePanel,

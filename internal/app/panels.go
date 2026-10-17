@@ -43,7 +43,7 @@ func (a *App) switchPanel() {
 }
 
 func (a *App) switchPanelSwap() {
-	if a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip {
+	if a.model.ActiveSubFocus == ui.SubFocusSelectedStrip {
 		a.activePanel().CancelStripFilter(0)
 	}
 	if a.model.HideInactivePanel {
@@ -204,7 +204,7 @@ func (a *App) panelViewportRows(panelID int) int {
 		col = layout.Secondary
 		p = &a.model.Secondary
 	}
-	return ui.FileListViewportRows(col, p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectionsStripSplitParams(panelID, 0))
+	return ui.FileListViewportRows(col, p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(panelID, 0))
 }
 
 func (a *App) wireFileListViewportRows() {
@@ -232,18 +232,18 @@ func (a *App) metaValueFor(panelID int) func(column string) (map[string]string, 
 	}
 }
 
-func (a *App) selectionsStripSplitParams(panelID, stripN int) ui.SelectionsStripSplitParams {
-	return ui.SelectionsStripSplitParams{
+func (a *App) selectedStripSplitParams(panelID, stripN int) ui.SelectedStripSplitParams {
+	return ui.SelectedStripSplitParams{
 		StripItemCount:     stripN,
-		MaxRows:            a.model.SelectionsPanelMaxRows,
-		ActivePercent:      a.model.SelectionsPanelActivePercent,
-		StripFocused:       a.model.ActivePanel == panelID && a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip,
+		MaxRows:            a.model.SelectedPanelMaxRows,
+		ActivePercent:      a.model.SelectedPanelActivePercent,
+		StripFocused:       a.model.ActivePanel == panelID && a.model.ActiveSubFocus == ui.SubFocusSelectedStrip,
 		Orientation:        a.model.SplitOrientation,
 		MinFileContentRows: ui.MinFileListContentRows,
 	}
 }
 
-func (a *App) selectionsStripViewportRows(panelID int) int {
+func (a *App) selectedStripViewportRows(panelID int) int {
 	width, height := a.screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
 	if layout.TooSmall {
@@ -255,60 +255,60 @@ func (a *App) selectionsStripViewportRows(panelID int) int {
 		col = layout.Secondary
 		p = &a.model.Secondary
 	}
-	stripN := ui.SelectionsStripLayoutItemCount(p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open)
-	params := a.selectionsStripSplitParams(panelID, stripN)
-	_, stripCol := ui.SplitPanelForSelections(col, params)
-	return ui.SelectionsStripListRows(stripCol)
+	stripN := ui.SelectedStripLayoutItemCount(p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open)
+	params := a.selectedStripSplitParams(panelID, stripN)
+	_, stripCol := ui.SplitPanelForSelected(col, params)
+	return ui.SelectedStripListRows(stripCol)
 }
 
-func (a *App) toggleSelectionsStripFocus() {
-	if a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip {
-		a.activePanel().CancelStripFilter(a.selectionsStripViewportRows(a.model.ActivePanel))
+func (a *App) toggleSelectedStripFocus() {
+	if a.model.ActiveSubFocus == ui.SubFocusSelectedStrip {
+		a.activePanel().CancelStripFilter(a.selectedStripViewportRows(a.model.ActivePanel))
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 		return
 	}
-	a.focusSelectionsStrip()
+	a.focusSelectedStrip()
 }
 
-// focusSelectionsStrip focuses the active panel's strip, forcing it visible when all
+// focusSelectedStrip focuses the active panel's strip, forcing it visible when all
 // selections are in the current directory. Warns and returns false with no selection.
-func (a *App) focusSelectionsStrip() bool {
+func (a *App) focusSelectedStrip() bool {
 	p := a.activePanel()
-	if p.SelectionsStripCount() == 0 {
+	if p.SelectedStripCount() == 0 {
 		if len(p.SelectedPaths) == 0 {
 			a.setTransientMessage("No selected items", ui.MessageUrgencyWarn)
 			return false
 		}
 		p.SetStripForced(true)
 	}
-	a.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	a.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 	p.RestoreStripCursor()
-	p.EnsureSelectionsStripCursorVisible(a.selectionsStripViewportRows(a.model.ActivePanel))
+	p.EnsureSelectedStripCursorVisible(a.selectedStripViewportRows(a.model.ActivePanel))
 	return true
 }
 
-// reconcileSelectionsStripFocus also clears StripForced on every panel that does not
+// reconcileSelectedStripFocus also clears StripForced on every panel that does not
 // currently hold strip focus. It drops strip focus back to the file list whenever the
 // active panel's strip has become empty (every selection now lives inside the panel's
 // current directory, so the strip itself is no longer rendered — see
-// buildSelectionsStripPaths). Any selection mutation can cause this (select-parent-dirs
+// buildSelectedStripPaths). Any selection mutation can cause this (select-parent-dirs
 // collapsing to an in-place directory, navigation making a previously off-listing
 // selection local again, Insert/Delete removing the last strip entry, …), so this is
 // checked centrally on every reconcile pass rather than re-derived at each mutation
 // site: focus must never point at an invisible, empty strip, or key routing (arrows,
 // Enter, F-keys) silently misfires against it instead of the file list.
-func (a *App) reconcileSelectionsStripFocus() {
-	focused := a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip && a.model.ViewMode == ui.ViewBrowser
+func (a *App) reconcileSelectedStripFocus() {
+	focused := a.model.ActiveSubFocus == ui.SubFocusSelectedStrip && a.model.ViewMode == ui.ViewBrowser
 	for id := range 2 {
 		if !focused || id != a.model.ActivePanel {
 			a.panelByID(id).SetStripForced(false)
 		}
 	}
-	if a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
+	if a.model.ActiveSubFocus != ui.SubFocusSelectedStrip {
 		return
 	}
 	p := a.activePanel()
-	if p.SelectionsStripCount() > 0 {
+	if p.SelectedStripCount() > 0 {
 		p.RememberStripCursor()
 		return
 	}
@@ -316,17 +316,17 @@ func (a *App) reconcileSelectionsStripFocus() {
 	a.model.ActiveSubFocus = ui.SubFocusFileList
 }
 
-// navigateToSelectionsRoot moves the active panel to the deepest common ancestor of its
+// navigateToSelectedRoot moves the active panel to the deepest common ancestor of its
 // selected paths — the directory copy/move is permitted from when selections span
 // multiple parent directories.
-func (a *App) navigateToSelectionsRoot() {
-	root, _, ok := a.activePanel().SelectionsCommonRoot()
+func (a *App) navigateToSelectedRoot() {
+	root, _, ok := a.activePanel().SelectedCommonRoot()
 	if !ok {
 		a.setTransientMessage("No selections", ui.MessageUrgencyInfo)
 		return
 	}
 	if a.activePanel().Path.Equal(root) {
-		a.setTransientMessage("Already at selections root", ui.MessageUrgencyInfo)
+		a.setTransientMessage("Already at selected root", ui.MessageUrgencyInfo)
 		return
 	}
 	if err := a.navigatePanelToDirectory(a.model.ActivePanel, root.String(), ""); err != nil {
@@ -356,7 +356,7 @@ func (a *App) selectParentDirs() {
 	// hides the strip. Drop strip focus in that case — same as ActionPanelClearSelection
 	// and the strip's own Insert/Delete handling — so ActiveSubFocus is correct
 	// immediately, not just after the next reconcile pass.
-	if p.SelectionsStripCount() == 0 {
+	if p.SelectedStripCount() == 0 {
 		p.CancelStripFilter(0)
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 	}
@@ -367,11 +367,11 @@ func (a *App) selectParentDirs() {
 	a.setTransientMessage(message, ui.MessageUrgencyInfo)
 }
 
-// navigateFromSelectionsStrip opens the directory containing the highlighted strip path in the
+// navigateFromSelectedStrip opens the directory containing the highlighted strip path in the
 // active panel, puts the cursor on that entry (file or directory) and focuses the file list.
-func (a *App) navigateFromSelectionsStrip() {
+func (a *App) navigateFromSelectedStrip() {
 	p := a.activePanel()
-	selPath, ok := p.SelectedPathAtStripIndex(p.SelectionsStripCursor)
+	selPath, ok := p.SelectedPathAtStripIndex(p.SelectedStripCursor)
 	if !ok {
 		return
 	}
@@ -453,7 +453,7 @@ func (a *App) toggleSyncFollow() {
 // consistent). New invariants belong here, not sprinkled at call sites: any code path
 // that mutates panel state automatically triggers them via the Run-loop chokepoint.
 func (a *App) reconcileAfterEvent() {
-	a.reconcileSelectionsStripFocus()
+	a.reconcileSelectedStripFocus()
 	a.reconcileSelectionSizeScans(ui.PrimaryPanel)
 	a.reconcileSelectionSizeScans(ui.SecondaryPanel)
 	a.dialogCtrl.ReconcileDeleteDialogScans()
@@ -483,11 +483,11 @@ func (a *App) reconcileAfterEvent() {
 }
 
 // syncFollowTargetPath returns the absolute directory path the follower should mirror when
-// the driver panel is active. When keyboard focus is on the selections strip, the strip row
+// the driver panel is active. When keyboard focus is on the selected strip, the strip row
 // wins so sync matches what the user is steering; otherwise the file-list cursor row is used.
 func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
-	if a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip && driver.SelectionsStripCount() > 0 {
-		p, ok := driver.SelectedPathAtStripIndex(driver.SelectionsStripCursor)
+	if a.model.ActiveSubFocus == ui.SubFocusSelectedStrip && driver.SelectedStripCount() > 0 {
+		p, ok := driver.SelectedPathAtStripIndex(driver.SelectedStripCursor)
 		if !ok {
 			return "", false
 		}
@@ -579,7 +579,7 @@ func browserFolderChangeNavAction(actionID string) bool {
 }
 
 // panelSyncFollowNavCoalesceContext is true when latched sync should mirror the file-list cursor
-// (not the selections strip) from the active driver panel.
+// (not the selected strip) from the active driver panel.
 func (a *App) panelSyncFollowNavCoalesceContext() bool {
 	return a.model.ViewMode == ui.ViewBrowser &&
 		a.model.SyncFollowEnabled &&
@@ -636,42 +636,42 @@ func (a *App) applyPanelSyncFollowNavFlush() bool {
 	return true
 }
 
-// tryDispatchSelectionsStrip handles actions while the selections strip has keyboard focus.
-func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
-	if a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
+// tryDispatchSelectedStrip handles actions while the selected strip has keyboard focus.
+func (a *App) tryDispatchSelectedStrip(actionID string) bool {
+	if a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusSelectedStrip {
 		return false
 	}
-	vr := a.selectionsStripViewportRows(a.model.ActivePanel)
+	vr := a.selectedStripViewportRows(a.model.ActivePanel)
 	p := a.activePanel()
 	switch actionID {
 	case keymap.ActionNavUp:
-		p.MoveSelectionsStrip(-1, vr)
+		p.MoveSelectedStrip(-1, vr)
 	case keymap.ActionNavDown:
-		p.MoveSelectionsStrip(1, vr)
+		p.MoveSelectedStrip(1, vr)
 	case keymap.ActionNavPageUp:
 		step := vr
 		if step < 1 {
 			step = 1
 		}
-		p.MoveSelectionsStrip(-step, vr)
+		p.MoveSelectedStrip(-step, vr)
 	case keymap.ActionNavPageDown:
 		step := vr
 		if step < 1 {
 			step = 1
 		}
-		p.MoveSelectionsStrip(step, vr)
+		p.MoveSelectedStrip(step, vr)
 	case keymap.ActionNavTop:
-		p.SelectionsStripTop(vr)
+		p.SelectedStripTop(vr)
 	case keymap.ActionNavBottom:
-		p.SelectionsStripBottom(vr)
+		p.SelectedStripBottom(vr)
 	case keymap.ActionPanelSelectToggle:
 		p.ToggleOrRemoveStripSelection()
-		if p.SelectionsStripCount() == 0 {
+		if p.SelectedStripCount() == 0 {
 			p.CancelStripFilter(0)
 			a.model.ActiveSubFocus = ui.SubFocusFileList
 		}
-	case keymap.ActionPanelFocusSelections:
-		a.toggleSelectionsStripFocus()
+	case keymap.ActionPanelFocusSelected:
+		a.toggleSelectedStripFocus()
 	case keymap.ActionPanelSwitch:
 		if a.model.QuickViewEnabled {
 			a.switchPanel()
@@ -686,15 +686,15 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
 	case keymap.ActionNavOpen:
-		a.navigateFromSelectionsStrip()
+		a.navigateFromSelectedStrip()
 	case keymap.ActionAppUserMenu:
-		// F2 opens the user-command menu everywhere else; the Selections Strip has no
+		// F2 opens the user-command menu everywhere else; the Selected strip has no
 		// room for its own dedicated chord, so while it's focused F2 selects the unique
 		// parent directories of the whole selection instead (see selectParentDirs).
 		a.selectParentDirs()
 	case keymap.ActionPanelToggleSync:
 		return false
-	case keymap.ActionAppLeaderMenu, keymap.ActionPanelSelectParentDirs, keymap.ActionPanelOpenSelectionsRoot,
+	case keymap.ActionAppLeaderMenu, keymap.ActionPanelSelectParentDirs, keymap.ActionPanelOpenSelectedRoot,
 		keymap.ActionFileDelete, keymap.ActionFileFlatten, keymap.ActionFileRunForEach:
 		// Handled by dispatch(); they act on the panel selection, which is non-empty here.
 		return false

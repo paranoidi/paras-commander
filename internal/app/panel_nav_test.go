@@ -462,8 +462,8 @@ func TestParentNavigationCentersInAppViewport(t *testing.T) {
 	}
 }
 
-// Regression: Parent must re-resolve viewport rows after chdir when the selections strip layout changes.
-func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
+// Regression: Parent must re-resolve viewport rows after chdir when the selected strip layout changes.
+func TestParentCentersWhenSelectedStripShrinksAfterChdir(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "sub")
 	if err := os.Mkdir(sub, 0o755); err != nil {
@@ -491,7 +491,7 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 	}
 	left.SelectedPaths[other] = true
 
-	if ui.SelectionsStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) != 0 {
+	if ui.SelectedStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) != 0 {
 		t.Fatal("strip should be hidden while cross-dir selections are in the current directory")
 	}
 	selectPanelEntryByName(t, left, "sub")
@@ -499,14 +499,14 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 		t.Fatal(err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, entering sub
-	if ui.SelectionsStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) == 0 {
+	if ui.SelectedStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) == 0 {
 		t.Fatal("strip should be visible after entering sub with cross-dir selection")
 	}
 
 	if left.FileListViewportRows == nil {
 		t.Fatal("FileListViewportRows callback not wired")
 	}
-	staleVR := app.panelViewportRows(ui.PrimaryPanel) // still in sub: includes selections strip
+	staleVR := app.panelViewportRows(ui.PrimaryPanel) // still in sub: includes selected strip
 	origViewport := left.FileListViewportRows
 	var scrollPath string
 	var scrollVR int
@@ -523,7 +523,7 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 	if staleVR >= vr {
 		t.Fatalf("staleVR = %d, want smaller than post-parent %d (strip must shrink file list)", staleVR, vr)
 	}
-	if ui.SelectionsStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) != 0 {
+	if ui.SelectedStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) != 0 {
 		t.Fatal("strip should be hidden in parent after chdir")
 	}
 	if vr != ui.FileListViewportRows(
@@ -532,10 +532,10 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 		ui.PrimaryPanel,
 		ui.PrimaryPanel,
 		false,
-		app.selectionsStripSplitParams(ui.PrimaryPanel, 0),
+		app.selectedStripSplitParams(ui.PrimaryPanel, 0),
 	) {
 		t.Fatalf("viewportRows = %d, want post-parent file list rows %d", vr,
-			ui.FileListViewportRows(app.layoutForTerminalSize(80, 24).Primary, left, ui.PrimaryPanel, ui.PrimaryPanel, false, app.selectionsStripSplitParams(ui.PrimaryPanel, 0)))
+			ui.FileListViewportRows(app.layoutForTerminalSize(80, 24).Primary, left, ui.PrimaryPanel, ui.PrimaryPanel, false, app.selectedStripSplitParams(ui.PrimaryPanel, 0)))
 	}
 	entry, ok := left.CurrentEntry()
 	if !ok || entry.Name != "sub" {

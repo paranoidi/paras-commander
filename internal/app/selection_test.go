@@ -222,7 +222,7 @@ func TestGroupSelectCheckboxFocusNavigation(t *testing.T) {
 	}
 }
 
-func setupSelectionsStripFocusTest(t *testing.T) (*App, *panel.State) {
+func setupSelectedStripFocusTest(t *testing.T) (*App, *panel.State) {
 	t.Helper()
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")
@@ -247,43 +247,43 @@ func setupSelectionsStripFocusTest(t *testing.T) (*App, *panel.State) {
 		t.Fatalf("NavigateTo alpha: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, Primary enters alpha
-	if left.SelectionsStripCount() == 0 {
-		t.Fatal("expected selections strip to list beta while cwd is alpha")
+	if left.SelectedStripCount() == 0 {
+		t.Fatal("expected selected strip to list beta while cwd is alpha")
 	}
-	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 	return app, left
 }
 
-func TestViMotionHJKLSelectionsStripWhenFocused(t *testing.T) {
-	app, left := setupSelectionsStripFocusTest(t)
+func TestViMotionHJKLSelectedStripWhenFocused(t *testing.T) {
+	app, left := setupSelectedStripFocusTest(t)
 	root := filepath.Dir(left.Path.String())
 	gamma := filepath.Join(root, "gamma")
 	if err := os.Mkdir(gamma, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	left.BulkAddSelections([]string{gamma}, nil)
-	if left.SelectionsStripCount() < 2 {
-		t.Fatalf("need at least 2 strip rows, got %d", left.SelectionsStripCount())
+	if left.SelectedStripCount() < 2 {
+		t.Fatalf("need at least 2 strip rows, got %d", left.SelectedStripCount())
 	}
-	left.SelectionsStripCursor = 0
+	left.SelectedStripCursor = 0
 
 	app.model.ViMotionMode = true
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
-	if left.SelectionsStripCursor != 1 {
-		t.Fatalf("'j' with vi-motion on: strip cursor = %d, want 1", left.SelectionsStripCursor)
+	if left.SelectedStripCursor != 1 {
+		t.Fatalf("'j' with vi-motion on: strip cursor = %d, want 1", left.SelectedStripCursor)
 	}
 	if left.StripFilter.Active || left.StripFilter.Editing || left.StripFilter.Query != "" {
 		t.Fatalf("'j' with vi-motion on must not open strip filter, got %+v", left.StripFilter)
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
-	if left.SelectionsStripCursor != 0 {
-		t.Fatalf("'k' with vi-motion on: strip cursor = %d, want 0", left.SelectionsStripCursor)
+	if left.SelectedStripCursor != 0 {
+		t.Fatalf("'k' with vi-motion on: strip cursor = %d, want 0", left.SelectedStripCursor)
 	}
 }
 
-func TestViMotionToggleEscWhileSelectionsStripFocused(t *testing.T) {
-	app, _ := setupSelectionsStripFocusTest(t)
+func TestViMotionToggleEscWhileSelectedStripFocused(t *testing.T) {
+	app, _ := setupSelectedStripFocusTest(t)
 	if app.model.ViMotionMode {
 		t.Fatal("ViMotionMode should start false")
 	}
@@ -291,23 +291,23 @@ func TestViMotionToggleEscWhileSelectionsStripFocused(t *testing.T) {
 		t.Fatal("handleKey(Esc) quit = true, want false")
 	}
 	if !app.model.ViMotionMode {
-		t.Fatal("Esc with selections strip focused should toggle ViMotionMode on")
+		t.Fatal("Esc with selected strip focused should toggle ViMotionMode on")
 	}
-	if app.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
-		t.Fatalf("ActiveSubFocus = %d, want selections strip", app.model.ActiveSubFocus)
+	if app.model.ActiveSubFocus != ui.SubFocusSelectedStrip {
+		t.Fatalf("ActiveSubFocus = %d, want selected strip", app.model.ActiveSubFocus)
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.ViMotionMode {
 		t.Fatal("second Esc should toggle ViMotionMode back off")
 	}
-	if app.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
-		t.Fatalf("ActiveSubFocus = %d, want selections strip after toggle off", app.model.ActiveSubFocus)
+	if app.model.ActiveSubFocus != ui.SubFocusSelectedStrip {
+		t.Fatalf("ActiveSubFocus = %d, want selected strip after toggle off", app.model.ActiveSubFocus)
 	}
 }
 
-func TestActiveFooterKeysSelectionsStripFocused(t *testing.T) {
-	app, _ := setupSelectionsStripFocusTest(t)
-	want := menu.FunctionKeysSelectionsStripView(app.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
+func TestActiveFooterKeysSelectedStripFocused(t *testing.T) {
+	app, _ := setupSelectedStripFocusTest(t)
+	want := menu.FunctionKeysSelectedStripView(app.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
 	got := app.activeFooterKeys()
 	if len(got) != len(want) {
 		t.Fatalf("footer len = %d, want %d: got %+v", len(got), len(want), got)
@@ -334,14 +334,14 @@ func TestActiveFooterKeysSelectionsStripFocused(t *testing.T) {
 	}
 }
 
-func TestSelectionsStripClearSelectionViaBinding(t *testing.T) {
-	app, left := setupSelectionsStripFocusTest(t)
+func TestSelectedStripClearSelectionViaBinding(t *testing.T) {
+	app, left := setupSelectedStripFocusTest(t)
 	app.dispatch(keymap.ActionPanelClearSelection)
 	if len(left.SelectedPaths) != 0 {
 		t.Fatalf("SelectedPaths len = %d, want 0", len(left.SelectedPaths))
 	}
-	if left.SelectionsStripCount() != 0 {
-		t.Fatalf("SelectionsStripCount = %d, want 0", left.SelectionsStripCount())
+	if left.SelectedStripCount() != 0 {
+		t.Fatalf("SelectedStripCount = %d, want 0", left.SelectedStripCount())
 	}
 	if app.model.ActiveSubFocus != ui.SubFocusFileList {
 		t.Fatalf("ActiveSubFocus = %d, want file list", app.model.ActiveSubFocus)
@@ -351,9 +351,9 @@ func TestSelectionsStripClearSelectionViaBinding(t *testing.T) {
 	}
 }
 
-// setupSelectionsStripFileFocusTest marks a file in one directory, then navigates elsewhere
-// so the selections strip lists that file and keyboard focus is on the strip.
-func setupSelectionsStripFileFocusTest(t *testing.T) (*App, string) {
+// setupSelectedStripFileFocusTest marks a file in one directory, then navigates elsewhere
+// so the selected strip lists that file and keyboard focus is on the strip.
+func setupSelectedStripFileFocusTest(t *testing.T) (*App, string) {
 	t.Helper()
 	root := t.TempDir()
 	harbor := filepath.Join(root, "harbor")
@@ -383,16 +383,16 @@ func setupSelectionsStripFileFocusTest(t *testing.T) (*App, string) {
 		t.Fatalf("NavigateTo meadow: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, Primary enters meadow
-	if left.SelectionsStripCount() == 0 {
-		t.Fatal("expected selections strip to list willow.txt while cwd is meadow")
+	if left.SelectedStripCount() == 0 {
+		t.Fatal("expected selected strip to list willow.txt while cwd is meadow")
 	}
-	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
-	left.SelectionsStripCursor = 0
+	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
+	left.SelectedStripCursor = 0
 	return app, filePath
 }
 
-func TestSelectionsStripFileEditViaF4(t *testing.T) {
-	app, filePath := setupSelectionsStripFileFocusTest(t)
+func TestSelectedStripFileEditViaF4(t *testing.T) {
+	app, filePath := setupSelectedStripFileFocusTest(t)
 	var edited string
 	prev := externalEditorRunner
 	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
@@ -405,13 +405,13 @@ func TestSelectionsStripFileEditViaF4(t *testing.T) {
 	if edited != filePath {
 		t.Fatalf("edited = %q, want strip file %q", edited, filePath)
 	}
-	if app.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
-		t.Fatalf("ActiveSubFocus = %d, want selections strip", app.model.ActiveSubFocus)
+	if app.model.ActiveSubFocus != ui.SubFocusSelectedStrip {
+		t.Fatalf("ActiveSubFocus = %d, want selected strip", app.model.ActiveSubFocus)
 	}
 }
 
-func TestSelectionsStripFileViewViaF3(t *testing.T) {
-	app, filePath := setupSelectionsStripFileFocusTest(t)
+func TestSelectedStripFileViewViaF3(t *testing.T) {
+	app, filePath := setupSelectedStripFileFocusTest(t)
 	app.dispatch(keymap.ActionFileView)
 	if app.model.ViewMode != ui.ViewFilePreview {
 		t.Fatalf("ViewMode = %v, want ViewFilePreview", app.model.ViewMode)
@@ -424,13 +424,13 @@ func TestSelectionsStripFileViewViaF3(t *testing.T) {
 	}
 }
 
-func TestSelectionsStripLeaderMenuParentDirs(t *testing.T) {
-	app, left := setupSelectionsStripFocusTest(t)
+func TestSelectedStripLeaderMenuParentDirs(t *testing.T) {
+	app, left := setupSelectedStripFocusTest(t)
 	root := filepath.Dir(left.Path.String())
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
 	if !app.model.LeaderMenu.Open {
-		t.Fatal("':' with selections strip focused should open the strip menu")
+		t.Fatal("':' with selected strip focused should open the strip menu")
 	}
 	foundParent, foundOpen := false, false
 	for _, it := range app.model.LeaderMenu.Items {
@@ -447,8 +447,8 @@ func TestSelectionsStripLeaderMenuParentDirs(t *testing.T) {
 	}
 }
 
-func TestViMotionSelectionsStripLeaderLetters(t *testing.T) {
-	app, left := setupSelectionsStripFocusTest(t)
+func TestViMotionSelectedStripLeaderLetters(t *testing.T) {
+	app, left := setupSelectedStripFocusTest(t)
 	root := filepath.Dir(left.Path.String())
 	app.model.ViMotionMode = true
 
@@ -469,12 +469,12 @@ func TestViMotionSelectionsStripLeaderLetters(t *testing.T) {
 	}
 }
 
-func TestViMotionSelectionsStripCopyLetter(t *testing.T) {
-	app, _ := setupSelectionsStripFocusTest(t)
+func TestViMotionSelectedStripCopyLetter(t *testing.T) {
+	app, _ := setupSelectedStripFocusTest(t)
 	app.model.ViMotionMode = true
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
 	if !app.model.TransferDialog.Open {
-		t.Fatal("c with selections strip focused in vi-mode should open the copy dialog")
+		t.Fatal("c with selected strip focused in vi-mode should open the copy dialog")
 	}
 }
 

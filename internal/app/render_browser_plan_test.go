@@ -11,12 +11,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-func TestPaintDiskUsageBrowserUpdateMatchesFullRenderTerminalFocusSelectionsStrip(t *testing.T) {
+func TestPaintDiskUsageBrowserUpdateMatchesFullRenderTerminalFocusSelectedStrip(t *testing.T) {
 	t.Parallel()
 	app := newBrowserPlanApp(t)
 	armToastDiskUsagePaint(t, app)
-	armSelectionsStrip(t, app)
-	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	armSelectedStrip(t, app)
+	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 	app.model.TerminalPanel.Visible = true
 	app.model.TerminalPanel.Focused = true
 	app.model.TerminalPanel.Rows = 5
@@ -27,7 +27,7 @@ func TestPaintDiskUsageBrowserUpdateMatchesFullRenderTerminalFocusSelectionsStri
 		t.Fatal("expected disk-usage partial paint to succeed")
 	}
 	if got := ui.HashScreenLogical(app.screen); got != want {
-		t.Fatal("disk-usage partial paint with terminal focus and a selections strip must pixel-match a full render")
+		t.Fatal("disk-usage partial paint with terminal focus and a selected strip must pixel-match a full render")
 	}
 }
 
@@ -76,11 +76,11 @@ func TestBrowserPartialPaintMatchesFullRenderListedStates(t *testing.T) {
 			},
 		},
 		{
-			name: "selections strip",
+			name: "selected strip",
 			setup: func(t *testing.T, app *App) {
 				t.Helper()
-				armSelectionsStrip(t, app)
-				app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+				armSelectedStrip(t, app)
+				app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 			},
 		},
 		{
@@ -154,12 +154,12 @@ func newBrowserPlanApp(t *testing.T) *App {
 	return app
 }
 
-func armSelectionsStrip(t *testing.T, app *App) {
+func armSelectedStrip(t *testing.T, app *App) {
 	t.Helper()
 	p := &app.model.Primary
 	outside := filepath.Join(t.TempDir(), "harbor.txt")
 	p.BulkAddSelections([]string{outside}, func(string) bool { return false })
-	if p.SelectionsStripCount() == 0 {
-		t.Fatal("expected selections strip to have a foreign path")
+	if p.SelectedStripCount() == 0 {
+		t.Fatal("expected selected strip to have a foreign path")
 	}
 }

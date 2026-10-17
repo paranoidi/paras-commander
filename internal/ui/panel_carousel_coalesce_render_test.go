@@ -154,7 +154,7 @@ func TestDrawCarouselFilePreviewDuringQuickFilter(t *testing.T) {
 	}
 	drawPanel(screen, rect, state,
 		PanelStyleConfig{Styles: styles},
-		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SelectionsBottomHint: true},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SelectedBottomHint: true},
 		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout(), CarouselFilePreview: preview})
 
 	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout(), [3]int{})
@@ -220,7 +220,7 @@ func TestDrawCarouselFilePreviewDuringNavCoalesce(t *testing.T) {
 	}
 	drawPanel(screen, rect, state,
 		PanelStyleConfig{Styles: styles},
-		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SelectionsBottomHint: true},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SelectedBottomHint: true},
 		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout(), CarouselFilePreview: preview})
 
 	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout(), [3]int{})

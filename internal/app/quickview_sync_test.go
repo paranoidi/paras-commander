@@ -636,9 +636,9 @@ func TestPanelSyncFollowNavDebounceDefersFollowerUntilCleared(t *testing.T) {
 	}
 }
 
-// Regression: with selections-strip focus, sync must follow the strip row (what the user
+// Regression: with selected-strip focus, sync must follow the strip row (what the user
 // is steering), not the file-list cursor — otherwise the other panel shows a stale directory.
-func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
+func TestSyncFollowUsesSelectedStripWhenStripFocused(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")
 	beta := filepath.Join(root, "beta")
@@ -663,11 +663,11 @@ func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
 		t.Fatalf("NavigateTo alpha: %v", err)
 	}
 	applyNextInterruptEvent(t, app, screen) // async load, entering alpha
-	if left.SelectionsStripCount() == 0 {
-		t.Fatal("expected selections strip to list beta while cwd is alpha")
+	if left.SelectedStripCount() == 0 {
+		t.Fatal("expected selected strip to list beta while cwd is alpha")
 	}
-	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
-	left.SelectionsStripCursor = 0
+	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
+	left.SelectedStripCursor = 0
 
 	app.dispatch(keymap.ActionPanelToggleSync)
 	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror

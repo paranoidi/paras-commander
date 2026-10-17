@@ -272,16 +272,16 @@ const (
 	// DefaultPaneSplitOrientation is the default twin-pane layout (primary left, secondary right).
 	DefaultPaneSplitOrientation = PaneSplitSideBySide
 
-	// DefaultSelectionsPanelMaxRows is the effective selections-strip row cap when
-	// [ui].selections_panel_max_rows is 0 (sentinel meaning "use this default").
-	DefaultSelectionsPanelMaxRows = 5
+	// DefaultSelectedPanelMaxRows is the effective selected-strip row cap when
+	// [ui].selected_panel_max_rows is 0 (sentinel meaning "use this default").
+	DefaultSelectedPanelMaxRows = 5
 
-	// DefaultSelectionsPanelActivePercent is the strip share of panel height (side-by-side, focused)
-	// or width (stacked) when the selections strip has keyboard focus / is shown stacked.
-	DefaultSelectionsPanelActivePercent = 50
-	// SelectionsPanelActivePercentMin / Max clamp [ui].selections_panel_active_percent in Validate.
-	SelectionsPanelActivePercentMin = 10
-	SelectionsPanelActivePercentMax = 90
+	// DefaultSelectedPanelActivePercent is the strip share of panel height (side-by-side, focused)
+	// or width (stacked) when the selected strip has keyboard focus / is shown stacked.
+	DefaultSelectedPanelActivePercent = 50
+	// SelectedPanelActivePercentMin / Max clamp [ui].selected_panel_active_percent in Validate.
+	SelectedPanelActivePercentMin = 10
+	SelectedPanelActivePercentMax = 90
 
 	// DefaultNarrowPanelsNameOnly: when true, file panels whose list row text width is below
 	// NarrowPanelRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).

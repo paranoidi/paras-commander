@@ -12,7 +12,7 @@ Vi-motion h/j/k/l mapping exists twice:
 - `internal/keymap/chord.go`'s `RemapViMotionKey` rewrites the event key to Left/Down/Up/Right so each auxiliary view's arrow handling works unchanged (Compare, Dedup, Messages, Commands, Jobs).
 - `internal/app/input.go`'s `InputModeNormal` (browser) resolves `resolvedAction` directly to `ActionNavParent`/`NavDown`/`NavUp`/`NavOpen` in a hand-written switch and tracks a `viMotionNav` bool to suppress quick-filter start for those runes.
 
-The browser could call `RemapViMotionKey` (plain arrows already resolve to the same nav actions in `internal/keymap/specs.go`), but its switch is entangled with quick-filter suppression and `SubFocusSelectionsStrip` handling inside `handleKey` (gocyclo 71). Consolidating needs care with those interactions, not a mechanical swap.
+The browser could call `RemapViMotionKey` (plain arrows already resolve to the same nav actions in `internal/keymap/specs.go`), but its switch is entangled with quick-filter suppression and `SubFocusSelectedStrip` handling inside `handleKey` (gocyclo 71). Consolidating needs care with those interactions, not a mechanical swap.
 
 ## Vi-motion common-key preamble duplicated across the app/apphandler boundary
 

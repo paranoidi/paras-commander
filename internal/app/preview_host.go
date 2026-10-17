@@ -31,11 +31,11 @@ func (h previewHost) ActiveViewportRows() int { return h.app.activeViewportRows(
 
 func (h previewHost) PanelViewportRows(panelID int) int { return h.app.panelViewportRows(panelID) }
 
-func (h previewHost) SelectionsStripViewportRows(panelID int) int {
-	return h.app.selectionsStripViewportRows(panelID)
+func (h previewHost) SelectedStripViewportRows(panelID int) int {
+	return h.app.selectedStripViewportRows(panelID)
 }
 
-func (h previewHost) FocusSelectionsStrip() bool { return h.app.focusSelectionsStrip() }
+func (h previewHost) FocusSelectedStrip() bool { return h.app.focusSelectedStrip() }
 
 func (h previewHost) InQuickFilterUI() bool { return h.app.inQuickFilterUI() }
 

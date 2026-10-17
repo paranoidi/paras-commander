@@ -125,19 +125,19 @@ func TestStripCursorSurvivesStash(t *testing.T) {
 	for _, s := range sel {
 		p.AddSelection(s)
 	}
-	if !app.focusSelectionsStrip() {
+	if !app.focusSelectedStrip() {
 		t.Fatal("focus failed")
 	}
-	p.MoveSelectionsStrip(2, 10)
-	want, _ := p.SelectedPathAtStripIndex(p.SelectionsStripCursor)
+	p.MoveSelectedStrip(2, 10)
+	want, _ := p.SelectedPathAtStripIndex(p.SelectedStripCursor)
 	app.reconcileAfterEvent()
 	app.togglePanelSelectionStash()
 	app.reconcileAfterEvent()
 	app.togglePanelSelectionStash()
-	if !app.focusSelectionsStrip() {
+	if !app.focusSelectedStrip() {
 		t.Fatal("refocus failed")
 	}
-	if got, _ := p.SelectedPathAtStripIndex(p.SelectionsStripCursor); got != want {
+	if got, _ := p.SelectedPathAtStripIndex(p.SelectedStripCursor); got != want {
 		t.Fatalf("cursor path %q, want %q", got, want)
 	}
 }
@@ -163,11 +163,11 @@ func TestStripCursorBelongsToSelectionSet(t *testing.T) {
 	for _, s := range old {
 		p.AddSelection(s)
 	}
-	if !app.focusSelectionsStrip() {
+	if !app.focusSelectedStrip() {
 		t.Fatal("focus failed")
 	}
-	p.MoveSelectionsStrip(2, 10)
-	want, _ := p.SelectedPathAtStripIndex(p.SelectionsStripCursor)
+	p.MoveSelectedStrip(2, 10)
+	want, _ := p.SelectedPathAtStripIndex(p.SelectedStripCursor)
 	app.reconcileAfterEvent()
 	app.togglePanelSelectionStash()
 	app.reconcileAfterEvent()
@@ -175,20 +175,20 @@ func TestStripCursorBelongsToSelectionSet(t *testing.T) {
 	for _, s := range fresh {
 		p.AddSelection(s)
 	}
-	if !app.focusSelectionsStrip() {
+	if !app.focusSelectedStrip() {
 		t.Fatal("focus fresh failed")
 	}
-	if p.SelectionsStripCursor != 0 {
-		t.Fatalf("fresh selection cursor %d, want 0", p.SelectionsStripCursor)
+	if p.SelectedStripCursor != 0 {
+		t.Fatalf("fresh selection cursor %d, want 0", p.SelectedStripCursor)
 	}
 	app.reconcileAfterEvent()
 	p.ClearSelection()
 	app.reconcileAfterEvent()
 	app.togglePanelSelectionStash()
-	if !app.focusSelectionsStrip() {
+	if !app.focusSelectedStrip() {
 		t.Fatal("refocus failed")
 	}
-	if got, _ := p.SelectedPathAtStripIndex(p.SelectionsStripCursor); got != want {
+	if got, _ := p.SelectedPathAtStripIndex(p.SelectedStripCursor); got != want {
 		t.Fatalf("cursor path %q, want %q", got, want)
 	}
 }

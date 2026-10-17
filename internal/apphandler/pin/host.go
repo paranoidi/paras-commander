@@ -23,7 +23,7 @@ type Host interface {
 	// InQuickFilterUI reports whether the active panel's quick/strip filter is mid-edit, so
 	// OpenDialog can cancel it before showing the dialog over the panel.
 	InQuickFilterUI() bool
-	// CancelActiveQuickFilter cancels whichever filter (plain or selections-strip) currently
+	// CancelActiveQuickFilter cancels whichever filter (plain or selected-strip) currently
 	// has focus, mirroring internal/app's strip-aware cancelActiveQuickFilter exactly.
 	CancelActiveQuickFilter()
 	// Config returns the App's live config (not a snapshot): Filter.CaseInsensitive is

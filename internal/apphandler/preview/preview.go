@@ -134,11 +134,11 @@ func (h *Handler) inactivePanelPreviewLayoutMetrics(filePreviewOpenForLayout boo
 		col = lay.Secondary
 		p = &h.model.Secondary
 	}
-	stripN := ui.SelectionsStripLayoutItemCount(p, inactiveID, h.model.ActivePanel, h.model.ThemeDialog.Open)
-	fileCol, _ := ui.SplitPanelForSelections(col, ui.SelectionsStripSplitParams{
+	stripN := ui.SelectedStripLayoutItemCount(p, inactiveID, h.model.ActivePanel, h.model.ThemeDialog.Open)
+	fileCol, _ := ui.SplitPanelForSelected(col, ui.SelectedStripSplitParams{
 		StripItemCount:     stripN,
-		MaxRows:            h.model.SelectionsPanelMaxRows,
-		ActivePercent:      h.model.SelectionsPanelActivePercent,
+		MaxRows:            h.model.SelectedPanelMaxRows,
+		ActivePercent:      h.model.SelectedPanelActivePercent,
 		StripFocused:       false, // inactive column never focuses the strip
 		Orientation:        h.model.SplitOrientation,
 		MinFileContentRows: ui.MinFileListContentRows,
@@ -219,18 +219,18 @@ func (h *Handler) previewScrollTo(scroll int) {
 	})
 }
 
-// CycleSubFocusForTabWithPreview advances Tab focus among file list, selections strip (if any),
+// CycleSubFocusForTabWithPreview advances Tab focus among file list, selected strip (if any),
 // and preview pane. Tab from preview returns to the active panel's file list (see TryDispatchFilePreviewFocus).
 func (h *Handler) CycleSubFocusForTabWithPreview() {
 	switch h.model.ActiveSubFocus {
 	case ui.SubFocusFileList:
-		if h.host.ActivePanel().SelectionsStripCount() > 0 {
-			h.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
-			h.host.ActivePanel().EnsureSelectionsStripCursorVisible(h.host.SelectionsStripViewportRows(h.model.ActivePanel))
+		if h.host.ActivePanel().SelectedStripCount() > 0 {
+			h.model.ActiveSubFocus = ui.SubFocusSelectedStrip
+			h.host.ActivePanel().EnsureSelectedStripCursorVisible(h.host.SelectedStripViewportRows(h.model.ActivePanel))
 			return
 		}
 		h.model.ActiveSubFocus = ui.SubFocusInactivePreview
-	case ui.SubFocusSelectionsStrip:
+	case ui.SubFocusSelectedStrip:
 		h.model.ActiveSubFocus = ui.SubFocusInactivePreview
 	case ui.SubFocusInactivePreview:
 		// Defensive: Tab from preview is handled in TryDispatchFilePreviewFocus before dispatch reaches here.
@@ -281,8 +281,8 @@ func (h *Handler) TryDispatchFilePreviewFocus(actionID string) bool {
 		return true
 	case keymap.ActionNavOpen:
 		return true
-	case keymap.ActionPanelFocusSelections:
-		if !h.host.FocusSelectionsStrip() {
+	case keymap.ActionPanelFocusSelected:
+		if !h.host.FocusSelectedStrip() {
 			h.model.ActiveSubFocus = ui.SubFocusFileList
 		}
 		return true
@@ -568,7 +568,7 @@ const (
 	quickViewWantStatErr
 )
 
-// stripStat is the stat used when the selections-strip highlight has no listing
+// stripStat is the stat used when the selected-strip highlight has no listing
 // metadata. Tests replace this with a blocking fake to prove quickViewWantFile
 // does not call it on the UI goroutine.
 var stripStat = os.Stat
@@ -579,8 +579,8 @@ var stripStat = os.Stat
 func (h *Handler) quickViewWantFile() (path string, workDir string, mode quickViewWantMode) {
 	p := h.host.ActivePanel()
 	workDir = p.PathString()
-	if h.model.ActiveSubFocus == ui.SubFocusSelectionsStrip && p.SelectionsStripCount() > 0 {
-		selPath, ok := p.SelectedPathAtStripIndex(p.SelectionsStripCursor)
+	if h.model.ActiveSubFocus == ui.SubFocusSelectedStrip && p.SelectedStripCount() > 0 {
+		selPath, ok := p.SelectedPathAtStripIndex(p.SelectedStripCursor)
 		if !ok {
 			return "", workDir, quickViewWantNone
 		}
@@ -1093,7 +1093,7 @@ func (h *Handler) quickViewDebounceDelay() time.Duration {
 		// The strip path can point at an off-listing selection, so CurrentEntry (the file-list
 		// cursor's entry) is only trustworthy as the type source outside strip focus.
 		entryType := localfs.EntryFile
-		if h.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
+		if h.model.ActiveSubFocus != ui.SubFocusSelectedStrip {
 			if entry, ok := h.host.ActivePanel().CurrentEntry(); ok {
 				entryType = entry.Type
 			}

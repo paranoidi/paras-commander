@@ -52,7 +52,7 @@ Each has a reason it cannot move to `apphandler/dialog`:
 - **`internal/scrollquery`**: scrolling-query text field core (cursor/scroll editing, key handling) for find, help, history, SFTP connect, group select, preview theme picker and path picker; `internal/app/scrolling_query.go` binds it to `App`.
 - **`internal/dialogform`**: linear-form dialog key handling (focus, mnemonics, space-toggle, apply/cancel) for dialogs built on `dialog.DialogLinearForm`; `internal/app/dialog_linear_form.go` is the glue.
 - **`internal/filterlist`**: fuzzy-list ranking, clamp and list motion. The preview theme picker and app-side history/SFTP connect call it directly; the dialog and pin Hosts forward to it.
-- **`internal/quickfilter`**: type-to-jump engine for the file list, selections strip and dedup view; options are passed per call. It must not import `panel`, `ui` or `app`.
+- **`internal/quickfilter`**: type-to-jump engine for the file list, selected strip and dedup view; options are passed per call. It must not import `panel`, `ui` or `app`.
 - **`internal/pathpick`**: path-picker query validation, resolution and completion.
 - **`internal/sched`**: `Debouncer` (`Arm`/`Stop`/`Invalidate`/`Armed`). Each `Arm` bumps a generation so stale timers exit without running; `Invalidate` also drops in-flight callbacks.
 - **`internal/app/helpkeys`**, **`internal/jobbridge`**: stateless helpers extracted from the app layer.
@@ -116,14 +116,14 @@ Same persistent PTY shell as Ctrl+O, drawn above the footer (`geom.Layout.Termin
 
 ## Path fitting
 
-`primitive.FitPathForWidth` (`internal/primitive/path_fit.go`) keeps the basename and shortens earlier segments first (full name -> first rune + `...` -> single rune), then middle-ellipsis. `primitive.PathWithHomeTilde` (`path_home.go`) swaps the home prefix for `~/`; composed with `FitPathForWidth` for jobs Details rows, blocker panels and Selections strip paths. `primitive.StripCommonPathPrefix` removes shared leading segments for compare row columns. Jobs Details order: Sources, Destination, Current, then Progress/ETA or Took/throughput; Succeeded lines stay relative to the destination.
+`primitive.FitPathForWidth` (`internal/primitive/path_fit.go`) keeps the basename and shortens earlier segments first (full name -> first rune + `...` -> single rune), then middle-ellipsis. `primitive.PathWithHomeTilde` (`path_home.go`) swaps the home prefix for `~/`; composed with `FitPathForWidth` for jobs Details rows, blocker panels and Selected strip paths. `primitive.StripCommonPathPrefix` removes shared leading segments for compare row columns. Jobs Details order: Sources, Destination, Current, then Progress/ETA or Took/throughput; Succeeded lines stay relative to the destination.
 
 ## Post-event reconciler
 
 `App.reconcileAfterEvent()` (`internal/app/panels.go`) runs once at the bottom of every `App.Run()` iteration, whatever the event source (key, resize, interrupt, job tick). High-frequency payloads may skip it (the interrupt flag gates it); disk-usage events drain either way.
 
 - Every hook must be **idempotent**: a repeat call, or a call on an already-consistent world, is a cheap no-op.
-- Hook order: selections-strip focus (`reconcileSelectionsStripFocus`); selection-size disk-usage scans for both panels plus delete- and find-dialog scans; pending post-create focus (`dialogCtrl.ReconcilePendingPanelFocus`); group-select preview; disk-usage idle-sort arming via `handlePanelDirChanged` (no-op when idle-size sort is off); meta panel-dir + `ReconcileForPanel`; preview panel-dir hooks; **latched panel sync**; then preview prefetch, Quick View, carousel file preview and carousel side preview (both panels).
+- Hook order: selected-strip focus (`reconcileSelectedStripFocus`); selection-size disk-usage scans for both panels plus delete- and find-dialog scans; pending post-create focus (`dialogCtrl.ReconcilePendingPanelFocus`); group-select preview; disk-usage idle-sort arming via `handlePanelDirChanged` (no-op when idle-size sort is off); meta panel-dir + `ReconcileForPanel`; preview panel-dir hooks; **latched panel sync**; then preview prefetch, Quick View, carousel file preview and carousel side preview (both panels).
 - **Latched panel sync**: `syncFollowFromActive()` mirrors the driver's highlighted directory into the follower unless `syncFollowNavSkipReconcile` is set. It is a no-op when the follower is already at the target or already has an async load pending to it (`ListingPending && ListingPendingPath == target`), and is skipped entirely while inactive-panel file preview or Quick View is open, so `Load` cannot overwrite the preview pane.
 - New derived UI invariants belong here, not scattered across dispatch branches or dialog handlers; new event sources inherit reconciliation.
 - Tests that bypass `App.handleKey()` (calling `dispatch`, `navigatePanelToDirectory`, `panel.State.Load`, ...) must call `App.reconcileAfterEvent()` themselves.

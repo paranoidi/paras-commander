@@ -222,9 +222,9 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		return keys
 	}
 	if a.model.ViewMode == ui.ViewBrowser &&
-		a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip &&
+		a.model.ActiveSubFocus == ui.SubFocusSelectedStrip &&
 		!a.inQuickFilterUI() {
-		keys := menu.FunctionKeysSelectionsStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
+		keys := menu.FunctionKeysSelectedStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
 		if a.model.ViMotionMode {
 			return viMotionFooterKeys(keys, a.keys.LeaderKey)
 		}
@@ -796,8 +796,8 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 		// If neither function key nor filter key, fall through to action dispatch.
 	default: // InputModeNormal
-		if a.model.ViewMode == ui.ViewBrowser && a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip {
-			if a.handleSelectionsStripKey(event) {
+		if a.model.ViewMode == ui.ViewBrowser && a.model.ActiveSubFocus == ui.SubFocusSelectedStrip {
+			if a.handleSelectedStripKey(event) {
 				a.render()
 				return false, true
 			}
@@ -822,7 +822,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 			default:
 				actionID, ok := a.keys.ActionForLeaderKey(event.Rune())
 				if a.stripFilterFocused() {
-					actionID, ok = a.keys.ActionForLeaderKeyInView(event.Rune(), keymap.HelpSelectionsStrip)
+					actionID, ok = a.keys.ActionForLeaderKeyInView(event.Rune(), keymap.HelpSelectedStrip)
 				}
 				if ok {
 					quit := a.dispatchActionLikeKeyboardShortcut(actionID)
@@ -845,7 +845,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	if nextAction == "" {
 		// Alt+letter opens the corresponding pulldown menu directly.
 		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-			if a.model.ViewMode == ui.ViewBrowser && a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip {
+			if a.model.ViewMode == ui.ViewBrowser && a.model.ActiveSubFocus == ui.SubFocusSelectedStrip {
 				return false, false
 			}
 			if a.openMenuByShortcut(event.Rune()) {
@@ -1011,7 +1011,7 @@ func filterRetainsKey(f quickfilter.Filter, event *tcell.EventKey, global *keyma
 }
 
 func (a *App) stripFilterFocused() bool {
-	return a.model.ViewMode == ui.ViewBrowser && a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip
+	return a.model.ViewMode == ui.ViewBrowser && a.model.ActiveSubFocus == ui.SubFocusSelectedStrip
 }
 
 func (a *App) activeQuickFilter() quickfilter.Filter {
@@ -1023,7 +1023,7 @@ func (a *App) activeQuickFilter() quickfilter.Filter {
 
 func (a *App) cancelActiveQuickFilter() {
 	if a.stripFilterFocused() {
-		a.activePanel().CancelStripFilter(a.selectionsStripViewportRows(a.model.ActivePanel))
+		a.activePanel().CancelStripFilter(a.selectedStripViewportRows(a.model.ActivePanel))
 		return
 	}
 	a.activePanel().CancelFilter(a.activeViewportRows())
@@ -1079,7 +1079,7 @@ func (a *App) dispatch(actionID string) bool {
 	if a.previewCtrl.TryDispatchQuickViewPreviewScroll(actionID) {
 		return false
 	}
-	if a.tryDispatchSelectionsStrip(actionID) {
+	if a.tryDispatchSelectedStrip(actionID) {
 		return false
 	}
 	if a.jobsCtrl.TryDispatch(actionID) {
@@ -1147,10 +1147,10 @@ func (a *App) dispatch(actionID string) bool {
 		} else {
 			a.switchPanel()
 		}
-	case keymap.ActionPanelFocusSelections:
-		a.toggleSelectionsStripFocus()
-	case keymap.ActionPanelOpenSelectionsRoot:
-		a.navigateToSelectionsRoot()
+	case keymap.ActionPanelFocusSelected:
+		a.toggleSelectedStripFocus()
+	case keymap.ActionPanelOpenSelectedRoot:
+		a.navigateToSelectedRoot()
 	case keymap.ActionPanelSelectParentDirs:
 		a.selectParentDirs()
 	case keymap.ActionPanelMeta:
@@ -1159,7 +1159,7 @@ func (a *App) dispatch(actionID string) bool {
 		a.metaCtrl.EditMetaFile()
 	case keymap.ActionPanelFilterOpen:
 		if a.stripFilterFocused() {
-			a.activePanel().OpenStripFilter(a.selectionsStripViewportRows(a.model.ActivePanel))
+			a.activePanel().OpenStripFilter(a.selectedStripViewportRows(a.model.ActivePanel))
 		} else {
 			activePanel.OpenFilter(viewportRows)
 		}
@@ -1274,7 +1274,7 @@ func (a *App) handleFilterKey(event *tcell.EventKey) {
 
 func (a *App) handleStripFilterKey(event *tcell.EventKey) {
 	p := a.activePanel()
-	vr := a.selectionsStripViewportRows(a.model.ActivePanel)
+	vr := a.selectedStripViewportRows(a.model.ActivePanel)
 	switch event.Key() {
 	case tcell.KeyEsc:
 		p.CancelStripFilter(vr)
@@ -1285,13 +1285,13 @@ func (a *App) handleStripFilterKey(event *tcell.EventKey) {
 	case tcell.KeyEnter:
 		if p.StripFilter.Query != "" {
 			p.CancelStripFilter(vr)
-			a.navigateFromSelectionsStrip()
+			a.navigateFromSelectedStrip()
 		} else {
 			p.AcceptStripFilter(vr)
 		}
 	case tcell.KeyInsert:
 		p.ToggleOrRemoveStripSelection()
-		if p.SelectionsStripCount() == 0 {
+		if p.SelectedStripCount() == 0 {
 			p.CancelStripFilter(0)
 			a.model.ActiveSubFocus = ui.SubFocusFileList
 			return
@@ -1317,9 +1317,9 @@ func (a *App) inQuickFilterUI() bool {
 	return f.Active || f.Editing
 }
 
-func (a *App) handleSelectionsStripKey(event *tcell.EventKey) bool {
+func (a *App) handleSelectedStripKey(event *tcell.EventKey) bool {
 	if a.model.ViMotionMode && !a.inQuickFilterUI() {
-		if remapped, ok := viMotionSelectionsStripKey(event); ok {
+		if remapped, ok := viMotionSelectedStripKey(event); ok {
 			if remapped == nil {
 				return true
 			}
@@ -1327,40 +1327,40 @@ func (a *App) handleSelectionsStripKey(event *tcell.EventKey) bool {
 		}
 	}
 	p := a.activePanel()
-	vr := a.selectionsStripViewportRows(a.model.ActivePanel)
+	vr := a.selectedStripViewportRows(a.model.ActivePanel)
 	switch event.Key() {
 	case tcell.KeyUp:
-		p.MoveSelectionsStrip(-1, vr)
+		p.MoveSelectedStrip(-1, vr)
 		return true
 	case tcell.KeyDown:
-		p.MoveSelectionsStrip(1, vr)
+		p.MoveSelectedStrip(1, vr)
 		return true
 	case tcell.KeyPgUp:
 		step := vr
 		if step < 1 {
 			step = 1
 		}
-		p.MoveSelectionsStrip(-step, vr)
+		p.MoveSelectedStrip(-step, vr)
 		return true
 	case tcell.KeyPgDn:
 		step := vr
 		if step < 1 {
 			step = 1
 		}
-		p.MoveSelectionsStrip(step, vr)
+		p.MoveSelectedStrip(step, vr)
 		return true
 	case tcell.KeyHome:
-		p.SelectionsStripTop(vr)
+		p.SelectedStripTop(vr)
 		return true
 	case tcell.KeyEnd:
-		p.SelectionsStripBottom(vr)
+		p.SelectedStripBottom(vr)
 		return true
 	case tcell.KeyEnter:
-		a.navigateFromSelectionsStrip()
+		a.navigateFromSelectedStrip()
 		return true
 	case tcell.KeyInsert, tcell.KeyDelete:
 		p.ToggleOrRemoveStripSelection()
-		if p.SelectionsStripCount() == 0 {
+		if p.SelectedStripCount() == 0 {
 			p.CancelStripFilter(0)
 			a.model.ActiveSubFocus = ui.SubFocusFileList
 		}
@@ -1370,10 +1370,10 @@ func (a *App) handleSelectionsStripKey(event *tcell.EventKey) bool {
 	}
 }
 
-// viMotionSelectionsStripKey maps vi-motion hjkl to strip-local navigation keys. ok=false leaves
+// viMotionSelectedStripKey maps vi-motion hjkl to strip-local navigation keys. ok=false leaves
 // the event unchanged (fall through to filter text or outer vi-motion leader dispatch).
 // remapped=nil means the key was consumed with no action (e.g. h has no strip equivalent).
-func viMotionSelectionsStripKey(event *tcell.EventKey) (remapped *tcell.EventKey, ok bool) {
+func viMotionSelectedStripKey(event *tcell.EventKey) (remapped *tcell.EventKey, ok bool) {
 	if !keymap.IsPlainPrintableRune(event) {
 		return nil, false
 	}

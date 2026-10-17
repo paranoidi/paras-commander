@@ -32,10 +32,10 @@ func TestPanelBottomCenterOverlaySpanSkipsIndicators(t *testing.T) {
 	t.Parallel()
 	rect := Rect{X: 0, Y: 0, Width: 50, Height: 10}
 	ctx := PanelBottomIndicatorContext{
-		PanelID:              PrimaryPanel,
-		SelectionsBottomHint: true,
-		SyncDriverPanelID:    PrimaryPanel,
-		Styles:               theme.Default(),
+		PanelID:            PrimaryPanel,
+		SelectedBottomHint: true,
+		SyncDriverPanelID:  PrimaryPanel,
+		Styles:             theme.Default(),
 	}
 	start, end, ok := panelBottomCenterOverlaySpan(rect, PrimaryPanel, ctx)
 	if !ok {

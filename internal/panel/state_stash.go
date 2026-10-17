@@ -33,10 +33,10 @@ func (s *State) StashSaveFromSelection() bool {
 	}
 	sort.Strings(paths)
 	s.SelectionStashPaths = paths
-	if len(s.SelectionsStripOrder) == 0 {
+	if len(s.SelectedStripOrder) == 0 {
 		s.SelectionStashStripOrder = nil
 	} else {
-		s.SelectionStashStripOrder = append([]string(nil), s.SelectionsStripOrder...)
+		s.SelectionStashStripOrder = append([]string(nil), s.SelectedStripOrder...)
 	}
 	s.SelectionStashStripCursorPath = s.StripCursorPath
 	s.ClearSelection()
@@ -54,12 +54,12 @@ func (s *State) StashClear() {
 // Paths that no longer exist on disk are omitted (stash restore).
 func (s *State) ApplySelectionSnapshot(paths, stripOrder []string, cursorPath string) {
 	s.clearSelectionState()
-	s.SelectionsStripOrder = nil
+	s.SelectedStripOrder = nil
 	s.StripCursorPath = cursorPath
 	paths = filterExistingSelectionPaths(paths)
 	if len(paths) == 0 {
 		s.invalidateSelectionDerivedFull()
-		s.normalizeSelectionsStripCursor()
+		s.normalizeSelectedStripCursor()
 		return
 	}
 	s.SelectedPaths = make(map[string]bool, len(paths))
@@ -68,14 +68,14 @@ func (s *State) ApplySelectionSnapshot(paths, stripOrder []string, cursorPath st
 	}
 	s.rebuildSelectedDirPaths()
 	s.recomputeSelectionListedBytes()
-	filteredStrip := filterSelectionsStripOrder(stripOrder, s.SelectedPaths)
+	filteredStrip := filterSelectedStripOrder(stripOrder, s.SelectedPaths)
 	if len(filteredStrip) != len(stripOrder) {
-		s.SelectionsStripOrder = nil
+		s.SelectedStripOrder = nil
 	} else {
-		s.SelectionsStripOrder = filteredStrip
+		s.SelectedStripOrder = filteredStrip
 	}
 	s.invalidateSelectionDerivedFull()
-	s.normalizeSelectionsStripCursor()
+	s.normalizeSelectedStripCursor()
 }
 
 // MergeSelectionSnapshot unions stash paths and strip order into the live selection.
@@ -94,9 +94,9 @@ func (s *State) MergeSelectionSnapshot(paths, stripOrder []string, cursorPath st
 	for _, p := range paths {
 		s.SelectedPaths[p] = true
 	}
-	seen := make(map[string]bool, len(s.SelectionsStripOrder)+len(stripOrder))
-	merged := make([]string, 0, len(s.SelectionsStripOrder)+len(stripOrder))
-	for _, p := range s.SelectionsStripOrder {
+	seen := make(map[string]bool, len(s.SelectedStripOrder)+len(stripOrder))
+	merged := make([]string, 0, len(s.SelectedStripOrder)+len(stripOrder))
+	for _, p := range s.SelectedStripOrder {
 		if seen[p] || s.SelectedPaths == nil || !s.SelectedPaths[p] {
 			continue
 		}
@@ -111,14 +111,14 @@ func (s *State) MergeSelectionSnapshot(paths, stripOrder []string, cursorPath st
 		seen[p] = true
 	}
 	if len(merged) == 0 {
-		s.SelectionsStripOrder = nil
+		s.SelectedStripOrder = nil
 	} else {
-		s.SelectionsStripOrder = merged
+		s.SelectedStripOrder = merged
 	}
 	s.rebuildSelectedDirPaths()
 	s.recomputeSelectionListedBytes()
 	s.invalidateSelectionDerivedFull()
-	s.normalizeSelectionsStripCursor()
+	s.normalizeSelectedStripCursor()
 }
 
 func filterExistingSelectionPaths(paths []string) []string {
@@ -139,7 +139,7 @@ func filterExistingSelectionPaths(paths []string) []string {
 	return out
 }
 
-func filterSelectionsStripOrder(stripOrder []string, selected map[string]bool) []string {
+func filterSelectedStripOrder(stripOrder []string, selected map[string]bool) []string {
 	if len(stripOrder) == 0 || len(selected) == 0 {
 		return nil
 	}

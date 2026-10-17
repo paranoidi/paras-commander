@@ -169,14 +169,14 @@ func setupSFTPStripPanel(t *testing.T) (*App, *panel.State) {
 	return app, left
 }
 
-func TestNavigateFromSelectionsStripSFTPDirectory(t *testing.T) {
+func TestNavigateFromSelectedStripSFTPDirectory(t *testing.T) {
 	app, left := setupSFTPStripPanel(t)
 	dir := "sftp://user@example.com/meadow"
 	left.SelectedPaths = map[string]bool{dir: true}
 	left.SelectedDirPaths = map[string]bool{dir: true}
-	left.SelectionsStripOrder = []string{dir}
-	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
-	left.SelectionsStripCursor = 0
+	left.SelectedStripOrder = []string{dir}
+	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
+	left.SelectedStripCursor = 0
 
 	var captured panel.AsyncLoadRequest
 	left.ScheduleAsyncLoad = func(req panel.AsyncLoadRequest) bool {
@@ -184,7 +184,7 @@ func TestNavigateFromSelectionsStripSFTPDirectory(t *testing.T) {
 		return true
 	}
 
-	app.navigateFromSelectionsStrip()
+	app.navigateFromSelectedStrip()
 	if want := "sftp://user@example.com/"; captured.Loc.String() != want {
 		t.Fatalf("NavigateTo loc = %q, want containing directory %q (must not os.Stat / filepath.Dir)", captured.Loc.String(), want)
 	}
@@ -196,14 +196,14 @@ func TestNavigateFromSelectionsStripSFTPDirectory(t *testing.T) {
 	}
 }
 
-func TestNavigateFromSelectionsStripSFTPFile(t *testing.T) {
+func TestNavigateFromSelectedStripSFTPFile(t *testing.T) {
 	app, left := setupSFTPStripPanel(t)
 	file := "sftp://user@example.com/meadow/ember.txt"
 	parent := "sftp://user@example.com/meadow"
 	left.SelectedPaths = map[string]bool{file: true}
-	left.SelectionsStripOrder = []string{file}
-	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
-	left.SelectionsStripCursor = 0
+	left.SelectedStripOrder = []string{file}
+	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
+	left.SelectedStripCursor = 0
 
 	var captured panel.AsyncLoadRequest
 	left.ScheduleAsyncLoad = func(req panel.AsyncLoadRequest) bool {
@@ -211,7 +211,7 @@ func TestNavigateFromSelectionsStripSFTPFile(t *testing.T) {
 		return true
 	}
 
-	app.navigateFromSelectionsStrip()
+	app.navigateFromSelectedStrip()
 	if captured.Loc.String() != parent {
 		t.Fatalf("NavigateTo loc = %q, want sftp parent %q", captured.Loc.String(), parent)
 	}
@@ -226,16 +226,16 @@ func TestSyncFollowTargetPathSFTPStripRow(t *testing.T) {
 	file := "sftp://user@example.com/meadow/ember.txt"
 	left.SelectedPaths = map[string]bool{dir: true, file: true}
 	left.SelectedDirPaths = map[string]bool{dir: true}
-	left.SelectionsStripOrder = []string{dir, file}
-	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	left.SelectedStripOrder = []string{dir, file}
+	app.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 
-	left.SelectionsStripCursor = 0
+	left.SelectedStripCursor = 0
 	got, ok := app.syncFollowTargetPath(left)
 	if !ok || got != dir {
 		t.Fatalf("sync dir row = %q ok=%v, want %q", got, ok, dir)
 	}
 
-	left.SelectionsStripCursor = 1
+	left.SelectedStripCursor = 1
 	got, ok = app.syncFollowTargetPath(left)
 	if !ok || got != dir {
 		t.Fatalf("sync file row = %q ok=%v, want parent %q", got, ok, dir)

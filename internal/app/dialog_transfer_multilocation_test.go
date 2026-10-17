@@ -325,7 +325,7 @@ func TestTransferEscClearsDestinationTargetMarks(t *testing.T) {
 	}
 }
 
-func TestOpenSelectionsRootNavigatesToCommonRoot(t *testing.T) {
+func TestOpenSelectedRootNavigatesToCommonRoot(t *testing.T) {
 	app, root, alpha, bravo := setupMultiDirSelection(t)
 	p := app.activePanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
@@ -349,7 +349,7 @@ func TestOpenSelectionsRootNavigatesToCommonRoot(t *testing.T) {
 	}
 }
 
-func TestOpenSelectionsRootSingleDirNavigatesToParent(t *testing.T) {
+func TestOpenSelectedRootSingleDirNavigatesToParent(t *testing.T) {
 	app, _, alpha, bravo := setupMultiDirSelection(t)
 	p := app.activePanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
@@ -366,7 +366,7 @@ func TestOpenSelectionsRootSingleDirNavigatesToParent(t *testing.T) {
 	}
 }
 
-func TestOpenSelectionsRootWithoutSelectionsKeepsLocation(t *testing.T) {
+func TestOpenSelectedRootWithoutSelectionsKeepsLocation(t *testing.T) {
 	app, _, alpha, _ := setupMultiDirSelection(t)
 
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModAlt)); quit {

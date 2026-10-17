@@ -105,7 +105,7 @@ func (h *Handler) transferPreviewEntries(root string) []dialog.DeleteListEntry {
 // current path. The transfer dialog always shows the multi-location Source/Result preview
 // in that case.
 func (h *Handler) multiDirSelectionCommonRoot() (string, bool) {
-	root, multiDir, ok := h.host.ActivePanel().SelectionsCommonRoot()
+	root, multiDir, ok := h.host.ActivePanel().SelectedCommonRoot()
 	if !ok || !multiDir {
 		return "", false
 	}

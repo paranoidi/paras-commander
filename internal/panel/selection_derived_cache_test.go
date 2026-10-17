@@ -35,13 +35,13 @@ func makeLargeFlatSelectionState(b testing.TB, n int) *State {
 	}
 }
 
-func TestSelectionsStripCountCachedLargeSelection(t *testing.T) {
+func TestSelectedStripCountCachedLargeSelection(t *testing.T) {
 	t.Parallel()
 	s := makeLargeFlatSelectionState(t, 1500)
-	if got := s.SelectionsStripCount(); got != 0 {
+	if got := s.SelectedStripCount(); got != 0 {
 		t.Fatalf("strip count in cwd = %d, want 0", got)
 	}
-	if got := s.SelectionsStripCount(); got != 0 {
+	if got := s.SelectedStripCount(); got != 0 {
 		t.Fatalf("cached strip count = %d, want 0", got)
 	}
 }
@@ -101,9 +101,9 @@ func benchmarkLargeFlatSelection(b *testing.B, op func(*State)) {
 	}
 }
 
-func BenchmarkSelectionsStripCount1500(b *testing.B) {
+func BenchmarkSelectedStripCount1500(b *testing.B) {
 	benchmarkLargeFlatSelection(b, func(s *State) {
-		_ = s.SelectionsStripCount()
+		_ = s.SelectedStripCount()
 	})
 }
 
@@ -284,24 +284,24 @@ func BenchmarkHasSelectionInSubtree1500(b *testing.B) {
 func TestStripForcedShowsLocalSelections(t *testing.T) {
 	t.Parallel()
 	s := makeLargeFlatSelectionState(t, 3)
-	if got := s.SelectionsStripCount(); got != 0 {
+	if got := s.SelectedStripCount(); got != 0 {
 		t.Fatalf("strip count = %d, want 0", got)
 	}
 	s.SetStripForced(true)
-	if got := s.SelectionsStripCount(); got != 3 {
+	if got := s.SelectedStripCount(); got != 3 {
 		t.Fatalf("forced strip count = %d, want 3", got)
 	}
 	extra := filepath.Join(s.Path.String(), "walnut.txt")
 	s.applySelectionAdd(extra, false)
-	if got := s.SelectionsStripCount(); got != 4 {
+	if got := s.SelectedStripCount(); got != 4 {
 		t.Fatalf("after add = %d, want 4", got)
 	}
 	s.applySelectionRemove(extra, false)
-	if got := s.SelectionsStripCount(); got != 3 {
+	if got := s.SelectedStripCount(); got != 3 {
 		t.Fatalf("after remove = %d, want 3", got)
 	}
 	s.SetStripForced(false)
-	if got := s.SelectionsStripCount(); got != 0 {
+	if got := s.SelectedStripCount(); got != 0 {
 		t.Fatalf("unforced strip count = %d, want 0", got)
 	}
 }

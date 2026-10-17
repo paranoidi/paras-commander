@@ -14,7 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-func TestSelectionsStripMarkOnFileRow(t *testing.T) {
+func TestSelectedStripMarkOnFileRow(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -39,12 +39,12 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 	screen.SetSize(width, height)
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	state := panel.State{
-		Path:                 pathloc.MustParse(sub),
-		SelectionsStripOrder: []string{filePath},
-		SelectedPaths:        map[string]bool{filePath: true},
+		Path:               pathloc.MustParse(sub),
+		SelectedStripOrder: []string{filePath},
+		SelectedPaths:      map[string]bool{filePath: true},
 	}
 
-	drawSelectionsStrip(screen, rect, state, false, false, SelectionsStripOpts{
+	drawSelectedStrip(screen, rect, state, false, false, SelectedStripOpts{
 		Styles: styles, ShowSelectionSizeOnBottom: true, ScrollbarStyle: uiscrollbar.StyleNone,
 		ScrollbarShowInactive: true, PanelFileListActive: true,
 	})
@@ -70,9 +70,9 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 	}
 }
 
-// TestSelectionsStripMarkOnCursorRow verifies the active row's selection mark follows the
+// TestSelectedStripMarkOnCursorRow verifies the active row's selection mark follows the
 // cursor row's icon color override instead of staying the static panel.row.selected color.
-func TestSelectionsStripMarkOnCursorRow(t *testing.T) {
+func TestSelectedStripMarkOnCursorRow(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -100,12 +100,12 @@ func TestSelectionsStripMarkOnCursorRow(t *testing.T) {
 	screen.SetSize(width, height)
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	state := panel.State{
-		Path:                 pathloc.MustParse(sub),
-		SelectionsStripOrder: []string{filePath},
-		SelectedPaths:        map[string]bool{filePath: true},
+		Path:               pathloc.MustParse(sub),
+		SelectedStripOrder: []string{filePath},
+		SelectedPaths:      map[string]bool{filePath: true},
 	}
 
-	drawSelectionsStrip(screen, rect, state, true, false, SelectionsStripOpts{
+	drawSelectedStrip(screen, rect, state, true, false, SelectedStripOpts{
 		Styles: styles, ShowSelectionSizeOnBottom: true, ScrollbarStyle: uiscrollbar.StyleNone,
 		ScrollbarShowInactive: true, PanelFileListActive: true,
 	})
@@ -131,7 +131,7 @@ func TestSelectionsStripMarkOnCursorRow(t *testing.T) {
 	}
 }
 
-func TestSelectionsStripViMotionBorderColor(t *testing.T) {
+func TestSelectedStripViMotionBorderColor(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -154,12 +154,12 @@ func TestSelectionsStripViMotionBorderColor(t *testing.T) {
 	screen.SetSize(width, height)
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	state := panel.State{
-		Path:                 pathloc.MustParse(sub),
-		SelectionsStripOrder: []string{filePath},
-		SelectedPaths:        map[string]bool{filePath: true},
+		Path:               pathloc.MustParse(sub),
+		SelectedStripOrder: []string{filePath},
+		SelectedPaths:      map[string]bool{filePath: true},
 	}
 
-	drawSelectionsStrip(screen, rect, state, true, false, SelectionsStripOpts{
+	drawSelectedStrip(screen, rect, state, true, false, SelectedStripOpts{
 		Styles: styles, ViMotionActive: true, ScrollbarStyle: uiscrollbar.StyleNone,
 		ScrollbarShowInactive: true, PanelFileListActive: false,
 	})
@@ -176,7 +176,7 @@ func TestSelectionsStripViMotionBorderColor(t *testing.T) {
 	}
 }
 
-func TestSelectionsStripTitleShowsMultiLocationIcon(t *testing.T) {
+func TestSelectedStripTitleShowsMultiLocationIcon(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -204,18 +204,18 @@ func TestSelectionsStripTitleShowsMultiLocationIcon(t *testing.T) {
 	const width, height = 60, 8
 	screen.SetSize(width, height)
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
-	opts := SelectionsStripOpts{
+	opts := SelectedStripOpts{
 		Styles: styles, ScrollbarStyle: uiscrollbar.StyleNone,
 		ScrollbarShowInactive: true, PanelFileListActive: true,
 	}
 
 	multiState := panel.State{
-		Path:                 pathloc.MustParse(alpha),
-		SelectionsStripOrder: []string{alphaFile, bravoFile},
-		SelectedPaths:        map[string]bool{alphaFile: true, bravoFile: true},
+		Path:               pathloc.MustParse(alpha),
+		SelectedStripOrder: []string{alphaFile, bravoFile},
+		SelectedPaths:      map[string]bool{alphaFile: true, bravoFile: true},
 	}
-	drawSelectionsStrip(screen, rect, multiState, true, false, opts)
-	icon := styles.IconSelectionsMultiLocation()
+	drawSelectedStrip(screen, rect, multiState, true, false, opts)
+	icon := styles.IconSelectedMultiLocation()
 	// The icon is an end label on the top border, one frame dash before the corner: … ─ x ─┐
 	iconX := rect.X + rect.Width - 4
 	if got, _, _ := screen.Get(iconX, rect.Y); got != icon {
@@ -229,11 +229,11 @@ func TestSelectionsStripTitleShowsMultiLocationIcon(t *testing.T) {
 		screen.SetContent(x, rect.Y, ' ', nil, tcell.StyleDefault)
 	}
 	singleState := panel.State{
-		Path:                 pathloc.MustParse(alpha),
-		SelectionsStripOrder: []string{alphaFile},
-		SelectedPaths:        map[string]bool{alphaFile: true},
+		Path:               pathloc.MustParse(alpha),
+		SelectedStripOrder: []string{alphaFile},
+		SelectedPaths:      map[string]bool{alphaFile: true},
 	}
-	drawSelectionsStrip(screen, rect, singleState, true, false, opts)
+	drawSelectedStrip(screen, rect, singleState, true, false, opts)
 	if rowContainsText(screen, rect.Y, rect.X, rect.X+rect.Width, icon) {
 		t.Fatal("strip title should not contain the multi-location icon for a single-directory selection")
 	}

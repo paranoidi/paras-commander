@@ -98,8 +98,8 @@ const (
 	ActionPanelDiskUsageScan          = "panel.disk-usage-scan"
 	ActionPanelDiskUsageClear         = "panel.disk-usage-clear"
 	ActionPanelDirSize                = "panel.dir-size"
-	ActionPanelFocusSelections        = "panel.focus-selections"
-	ActionPanelOpenSelectionsRoot     = "panel.open-selections-root"
+	ActionPanelFocusSelected          = "panel.focus-selected"
+	ActionPanelOpenSelectedRoot       = "panel.open-selected-root"
 	ActionPanelSelectParentDirs       = "panel.select-parent-dirs"
 	ActionPanelToggleHideInactive     = "panel.toggle-hide-inactive"
 	ActionPanelExternalBrowser        = "panel.external-browser"
@@ -404,8 +404,8 @@ var KnownActions = map[string]struct{}{
 	ActionPanelDiskUsageScan:          {},
 	ActionPanelDiskUsageClear:         {},
 	ActionPanelDirSize:                {},
-	ActionPanelFocusSelections:        {},
-	ActionPanelOpenSelectionsRoot:     {},
+	ActionPanelFocusSelected:          {},
+	ActionPanelOpenSelectedRoot:       {},
 	ActionPanelSelectParentDirs:       {},
 	ActionPanelToggleHideInactive:     {},
 	ActionPanelExternalBrowser:        {},

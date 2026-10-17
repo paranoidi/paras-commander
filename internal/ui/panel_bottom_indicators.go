@@ -15,7 +15,7 @@ import (
 type PanelBottomIndicatorID string
 
 const (
-	PanelBottomIndicatorSelections     PanelBottomIndicatorID = "selections"
+	PanelBottomIndicatorSelected       PanelBottomIndicatorID = "selected"
 	PanelBottomIndicatorDotfilesHidden PanelBottomIndicatorID = "dotfiles_hidden"
 	PanelBottomIndicatorGitignore      PanelBottomIndicatorID = "gitignore"
 	PanelBottomIndicatorStash          PanelBottomIndicatorID = "stash"
@@ -31,7 +31,7 @@ type PanelBottomEdge int
 
 const (
 	// PanelBottomEdgeStart is the panel-relative start corner (physical left on PrimaryPanel,
-	// physical right on SecondaryPanel). Used for cross-directory Selections.
+	// physical right on SecondaryPanel). Used for cross-directory Selected.
 	PanelBottomEdgeStart PanelBottomEdge = iota
 	// PanelBottomEdgePhysicalLeft chains segments from the physical left interior column
 	// (dotfiles-hidden icon, Gitignore, stash, and trailing frame dashes on both panels).
@@ -48,7 +48,7 @@ const (
 type PanelBottomIndicatorContext struct {
 	PanelID                int
 	State                  panel.State
-	SelectionsBottomHint   bool
+	SelectedBottomHint     bool
 	SyncDriverPanelID      int
 	QuickViewDriverPanelID int
 	HideInactivePanel      bool
@@ -83,7 +83,7 @@ type panelBottomIndicatorSpec struct {
 
 // panelBottomIndicatorRegistry is the single source of truth for segment order.
 var panelBottomIndicatorRegistry = []panelBottomIndicatorSpec{
-	{ID: PanelBottomIndicatorSelections, Edge: PanelBottomEdgeStart, Order: 0},
+	{ID: PanelBottomIndicatorSelected, Edge: PanelBottomEdgeStart, Order: 0},
 	{ID: PanelBottomIndicatorDotfilesHidden, Edge: PanelBottomEdgePhysicalLeft, Order: 0},
 	{ID: PanelBottomIndicatorGitignore, Edge: PanelBottomEdgePhysicalLeft, Order: 1},
 	{ID: PanelBottomIndicatorStash, Edge: PanelBottomEdgePhysicalLeft, Order: 2},
@@ -116,8 +116,8 @@ func panelBottomIndicatorStyle(ctx PanelBottomIndicatorContext, id PanelBottomIn
 // panelBottomIndicatorVisible reports whether an indicator should appear for the context.
 func panelBottomIndicatorVisible(id PanelBottomIndicatorID, ctx PanelBottomIndicatorContext) bool {
 	switch id {
-	case PanelBottomIndicatorSelections:
-		return ctx.SelectionsBottomHint
+	case PanelBottomIndicatorSelected:
+		return ctx.SelectedBottomHint
 	case PanelBottomIndicatorDotfilesHidden:
 		return !ctx.State.ShowHidden && ctx.State.DotfilesHiddenActive
 	case PanelBottomIndicatorGitignore:
@@ -141,8 +141,8 @@ func panelBottomIndicatorVisible(id PanelBottomIndicatorID, ctx PanelBottomIndic
 
 func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicatorContext) string {
 	switch id {
-	case PanelBottomIndicatorSelections:
-		return panelSelectionsChromePadded
+	case PanelBottomIndicatorSelected:
+		return panelSelectedChromePadded
 	case PanelBottomIndicatorDotfilesHidden:
 		return panelDotfilesHiddenChromePadded(ctx.Styles)
 	case PanelBottomIndicatorGitignore:
@@ -182,10 +182,10 @@ func panelDotfilesHiddenChromePadded(styles theme.Theme) string {
 
 // panelBottomPhysicalLeftChainStartX is the first column for the physical-left chain after any
 // selections-hint offset (preserves legacy layout when cross-dir selections use the corner).
-func panelBottomPhysicalLeftChainStartX(rect Rect, selectionsBottomHint bool) int {
+func panelBottomPhysicalLeftChainStartX(rect Rect, selectedBottomHint bool) int {
 	x := rect.X + 1
-	if selectionsBottomHint {
-		selPadW := utf8.RuneCountInString(panelSelectionsChromePadded)
+	if selectedBottomHint {
+		selPadW := utf8.RuneCountInString(panelSelectedChromePadded)
 		x += 1 + selPadW
 	}
 	return x
@@ -503,9 +503,9 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 	drawPanelBottomStartEdgeIndicators(screen, rect, ctx, y, lastIn, startEdge)
 
 	if len(physicalLeft) > 0 {
-		x := panelBottomPhysicalLeftChainStartX(rect, ctx.SelectionsBottomHint)
+		x := panelBottomPhysicalLeftChainStartX(rect, ctx.SelectedBottomHint)
 		if x <= leftMax {
-			leadingDash := !ctx.SelectionsBottomHint
+			leadingDash := !ctx.SelectedBottomHint
 			maxCols := leftMax - x + 1
 			if ctx.SelectionSizeCenterStart > 0 {
 				maxCols = min(maxCols, ctx.SelectionSizeCenterStart-x)
@@ -541,7 +541,7 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 	drawPanelPhysicalRightIndicators(screen, rect, ctx)
 }
 
-// drawPanelBottomStartEdgeIndicators paints corner-anchored segments (Selections).
+// drawPanelBottomStartEdgeIndicators paints corner-anchored segments (Selected).
 func drawPanelBottomStartEdgeIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIndicatorContext, y, lastIn int, segs []panelBottomIndicatorSegment) {
 	if len(segs) == 0 {
 		return
@@ -556,7 +556,7 @@ func drawPanelBottomStartEdgeIndicators(screen tcell.Screen, rect Rect, ctx Pane
 			continue
 		}
 		if ctx.PanelID == SecondaryPanel {
-			// Physical right outer corner holds job_write; Selections sits just left of it.
+			// Physical right outer corner holds job_write; Selected sits just left of it.
 			xTitle := lastIn - padW - prW
 			if xTitle < rect.X+1 {
 				continue

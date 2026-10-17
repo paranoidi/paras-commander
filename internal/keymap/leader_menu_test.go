@@ -325,8 +325,8 @@ func TestBuildLeaderMenuEntriesForViewMessages(t *testing.T) {
 	checkLeaderMenuEntriesForView(t, HelpMessages)
 }
 
-func TestBuildLeaderMenuEntriesForViewSelectionsStrip(t *testing.T) {
-	checkLeaderMenuEntriesForView(t, HelpSelectionsStrip)
+func TestBuildLeaderMenuEntriesForViewSelectedStrip(t *testing.T) {
+	checkLeaderMenuEntriesForView(t, HelpSelectedStrip)
 }
 
 func TestBuildLeaderMenuEntriesForViewFindDialog(t *testing.T) {

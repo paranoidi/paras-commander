@@ -95,18 +95,18 @@ type State struct {
 	selDerivedCache     selectionDerivedCache
 	// selectionHasDirs is true when any selected path is a directory (avoids stat scans on bulk file sets).
 	selectionHasDirs bool
-	// SelectionsStripOrder lists selected paths that belong in the bottom “selections” strip:
+	// SelectedStripOrder lists selected paths that belong in the bottom “selections” strip:
 	// off-current-directory order is tracked here; on chdir into dir D those paths are removed;
 	// on chdir away from D, selected paths under D are appended (deduped).
-	SelectionsStripOrder  []string
-	SelectionsStripCursor int
+	SelectedStripOrder  []string
+	SelectedStripCursor int
 	// StripCursorPath is the last focused strip row path; restores the cursor on re-focus.
 	// Cleared by ClearSelection; travels with the stash (SelectionStashStripCursorPath).
-	StripCursorPath       string
-	SelectionsStripScroll int
+	StripCursorPath     string
+	SelectedStripScroll int
 	// SelectionStashPaths holds stashed selection paths (empty/nil = no stash).
 	SelectionStashPaths []string
-	// SelectionStashStripOrder mirrors SelectionsStripOrder at stash time.
+	// SelectionStashStripOrder mirrors SelectedStripOrder at stash time.
 	SelectionStashStripOrder []string
 	// SelectionStashStripCursorPath is StripCursorPath at stash time.
 	SelectionStashStripCursorPath string
@@ -140,9 +140,9 @@ type State struct {
 	// scheduleTreeChildGitStatus that haven't completed yet — see NoteTreeChildGitStatusApplied.
 	gitStatusChildPending int
 	Filter                quickfilter.Filter
-	// StripFilter is the selections-strip quick filter (basename fuzzy match), independent of Filter.
+	// StripFilter is the selected-strip quick filter (basename fuzzy match), independent of Filter.
 	StripFilter quickfilter.Filter
-	// StripForced keeps the selections strip visible although every selection is in the
+	// StripForced keeps the selected strip visible although every selection is in the
 	// current directory (explicit C-s). Use SetStripForced so the derived cache refreshes.
 	StripForced bool
 	// ActiveEntryFilter narrows visible entries (e.g. git-status filtering); nil means unfiltered.
@@ -220,7 +220,7 @@ type State struct {
 	// can be applied immediately or needs to be deferred.
 	OnDirectoryChange func()
 	// FileListViewportRows, when set by the app, returns the live file-list viewport row count
-	// (after selections-strip layout for the current path). ApplyListing uses it when applying scroll
+	// (after selected-strip layout for the current path). ApplyListing uses it when applying scroll
 	// so Parent/Enter stay aligned with paint even when strip height changes on chdir.
 	FileListViewportRows func() int
 	// SuppressHeavyPathProbes, when set, skips statfs and device lookup in load() for paths
@@ -627,8 +627,8 @@ func (s *State) TogglePathSelection(path string) (selected bool, conflictsRemove
 	isDir := s.selectedPathIsDirectory(path)
 	if s.SelectedPaths != nil && s.SelectedPaths[path] {
 		s.applySelectionRemove(path, isDir)
-		s.removePathFromSelectionsStripOrder(path)
-		s.normalizeSelectionsStripCursor()
+		s.removePathFromSelectedStripOrder(path)
+		s.normalizeSelectedStripCursor()
 		return false, false
 	}
 	conflictsRemoved = s.resolveSelectionConflicts(path, isDir)
@@ -652,8 +652,8 @@ func (s *State) ToggleSelection() (selected bool, conflictsRemoved bool) {
 	if s.SelectedPaths[entry.Path] {
 		wasDir := entry.IsDir()
 		s.applySelectionRemove(entry.Path, wasDir)
-		s.removePathFromSelectionsStripOrder(entry.Path)
-		s.normalizeSelectionsStripCursor()
+		s.removePathFromSelectedStripOrder(entry.Path)
+		s.normalizeSelectedStripCursor()
 		return false, false
 	}
 	conflictsRemoved = s.resolveSelectionConflicts(entry.Path, entry.IsDir())
@@ -1808,7 +1808,7 @@ func (s *State) notifyChdir(oldPath, newPath pathloc.Path) {
 	if newC != "" {
 		s.stripSelectionsOrderForEnteredDir(newC)
 	}
-	s.normalizeSelectionsStripCursor()
+	s.normalizeSelectedStripCursor()
 }
 
 func (s *State) appendLeftBehindSelectionsToStripOrder(leftDir string) {
@@ -1826,66 +1826,66 @@ func (s *State) appendLeftBehindSelectionsToStripOrder(leftDir string) {
 	}
 	sort.Strings(batch)
 	for _, p := range batch {
-		s.removePathFromSelectionsStripOrder(p)
-		s.SelectionsStripOrder = append(s.SelectionsStripOrder, p)
+		s.removePathFromSelectedStripOrder(p)
+		s.SelectedStripOrder = append(s.SelectedStripOrder, p)
 	}
 }
 
 func (s *State) stripSelectionsOrderForEnteredDir(dir string) {
-	if len(s.SelectionsStripOrder) == 0 {
+	if len(s.SelectedStripOrder) == 0 {
 		return
 	}
-	out := s.SelectionsStripOrder[:0]
-	for _, p := range s.SelectionsStripOrder {
+	out := s.SelectedStripOrder[:0]
+	for _, p := range s.SelectedStripOrder {
 		if cleanPathString(filepath.Dir(p)) == dir {
 			continue
 		}
 		out = append(out, p)
 	}
-	s.SelectionsStripOrder = out
+	s.SelectedStripOrder = out
 }
 
-func (s *State) removePathFromSelectionsStripOrder(path string) {
-	if len(s.SelectionsStripOrder) == 0 {
+func (s *State) removePathFromSelectedStripOrder(path string) {
+	if len(s.SelectedStripOrder) == 0 {
 		return
 	}
-	out := s.SelectionsStripOrder[:0]
-	for _, p := range s.SelectionsStripOrder {
+	out := s.SelectedStripOrder[:0]
+	for _, p := range s.SelectedStripOrder {
 		if p != path {
 			out = append(out, p)
 		}
 	}
-	s.SelectionsStripOrder = out
+	s.SelectedStripOrder = out
 }
 
-// SelectionsStripPaths returns all selected paths shown in the selections sub-pane.
+// SelectedStripPaths returns all selected paths shown in the selections sub-pane.
 // Empty when every selection lives in the current directory (strip hidden).
-func (s *State) SelectionsStripPaths() []string {
+func (s *State) SelectedStripPaths() []string {
 	s.ensureSelectionDerived()
 	return s.selDerivedCache.stripPaths
 }
 
-// SelectionsStripCount is the number of rows in the selections sub-pane for the current directory.
-func (s *State) SelectionsStripCount() int {
+// SelectedStripCount is the number of rows in the selections sub-pane for the current directory.
+func (s *State) SelectedStripCount() int {
 	s.ensureSelectionDerived()
 	return len(s.selDerivedCache.stripPaths)
 }
 
-// MoveSelectionsStrip moves the selections-strip cursor by delta and keeps it visible.
-func (s *State) MoveSelectionsStrip(delta int, stripViewportRows int) {
-	n := s.SelectionsStripCount()
+// MoveSelectedStrip moves the selected-strip cursor by delta and keeps it visible.
+func (s *State) MoveSelectedStrip(delta int, stripViewportRows int) {
+	n := s.SelectedStripCount()
 	if n == 0 {
-		s.SelectionsStripCursor = 0
-		s.SelectionsStripScroll = 0
+		s.SelectedStripCursor = 0
+		s.SelectedStripScroll = 0
 		return
 	}
-	s.SelectionsStripCursor += delta
-	s.normalizeSelectionsStripCursorWithViewport(stripViewportRows)
+	s.SelectedStripCursor += delta
+	s.normalizeSelectedStripCursorWithViewport(stripViewportRows)
 }
 
 // RememberStripCursor records the path under the strip cursor.
 func (s *State) RememberStripCursor() {
-	if path, ok := s.SelectedPathAtStripIndex(s.SelectionsStripCursor); ok {
+	if path, ok := s.SelectedPathAtStripIndex(s.SelectedStripCursor); ok {
 		s.StripCursorPath = path
 	}
 }
@@ -1895,100 +1895,100 @@ func (s *State) RestoreStripCursor() {
 	if s.StripCursorPath == "" {
 		return
 	}
-	for i, p := range s.SelectionsStripPaths() {
+	for i, p := range s.SelectedStripPaths() {
 		if p == s.StripCursorPath {
-			s.SelectionsStripCursor = i
+			s.SelectedStripCursor = i
 			return
 		}
 	}
 }
 
-// SelectionsStripTop moves the selections-strip cursor to the first row.
-func (s *State) SelectionsStripTop(stripViewportRows int) {
-	if s.SelectionsStripCount() == 0 {
+// SelectedStripTop moves the selected-strip cursor to the first row.
+func (s *State) SelectedStripTop(stripViewportRows int) {
+	if s.SelectedStripCount() == 0 {
 		return
 	}
-	s.SelectionsStripCursor = 0
-	s.SelectionsStripScroll = 0
-	s.EnsureSelectionsStripCursorVisible(stripViewportRows)
+	s.SelectedStripCursor = 0
+	s.SelectedStripScroll = 0
+	s.EnsureSelectedStripCursorVisible(stripViewportRows)
 }
 
-// SelectionsStripBottom moves the selections-strip cursor to the last row.
-func (s *State) SelectionsStripBottom(stripViewportRows int) {
-	n := s.SelectionsStripCount()
+// SelectedStripBottom moves the selected-strip cursor to the last row.
+func (s *State) SelectedStripBottom(stripViewportRows int) {
+	n := s.SelectedStripCount()
 	if n == 0 {
 		return
 	}
-	s.SelectionsStripCursor = n - 1
-	s.EnsureSelectionsStripCursorVisible(stripViewportRows)
+	s.SelectedStripCursor = n - 1
+	s.EnsureSelectedStripCursorVisible(stripViewportRows)
 }
 
-func (s *State) normalizeSelectionsStripCursor() {
-	s.normalizeSelectionsStripCursorWithViewport(0)
+func (s *State) normalizeSelectedStripCursor() {
+	s.normalizeSelectedStripCursorWithViewport(0)
 }
 
-// EnsureSelectionsStripCursorVisible clamps the selections-strip cursor and scroll to the viewport.
-func (s *State) EnsureSelectionsStripCursorVisible(stripViewportRows int) {
-	s.normalizeSelectionsStripCursorWithViewport(stripViewportRows)
+// EnsureSelectedStripCursorVisible clamps the selected-strip cursor and scroll to the viewport.
+func (s *State) EnsureSelectedStripCursorVisible(stripViewportRows int) {
+	s.normalizeSelectedStripCursorWithViewport(stripViewportRows)
 }
 
-func (s *State) normalizeSelectionsStripCursorWithViewport(stripViewportRows int) {
-	n := s.SelectionsStripCount()
+func (s *State) normalizeSelectedStripCursorWithViewport(stripViewportRows int) {
+	n := s.SelectedStripCount()
 	if n == 0 {
-		s.SelectionsStripCursor = 0
-		s.SelectionsStripScroll = 0
+		s.SelectedStripCursor = 0
+		s.SelectedStripScroll = 0
 		return
 	}
-	if s.SelectionsStripCursor < 0 {
-		s.SelectionsStripCursor = 0
+	if s.SelectedStripCursor < 0 {
+		s.SelectedStripCursor = 0
 	}
-	if s.SelectionsStripCursor >= n {
-		s.SelectionsStripCursor = n - 1
+	if s.SelectedStripCursor >= n {
+		s.SelectedStripCursor = n - 1
 	}
 	if stripViewportRows <= 0 {
-		if s.SelectionsStripScroll > s.SelectionsStripCursor {
-			s.SelectionsStripScroll = s.SelectionsStripCursor
+		if s.SelectedStripScroll > s.SelectedStripCursor {
+			s.SelectedStripScroll = s.SelectedStripCursor
 		}
 		return
 	}
 	maxOffset := n - stripViewportRows
 	if maxOffset < 0 {
 		maxOffset = 0
-		s.SelectionsStripScroll = 0
+		s.SelectedStripScroll = 0
 	}
-	if s.SelectionsStripScroll > maxOffset {
-		s.SelectionsStripScroll = maxOffset
+	if s.SelectedStripScroll > maxOffset {
+		s.SelectedStripScroll = maxOffset
 	}
-	if s.SelectionsStripScroll < 0 {
-		s.SelectionsStripScroll = 0
+	if s.SelectedStripScroll < 0 {
+		s.SelectedStripScroll = 0
 	}
-	if s.SelectionsStripCursor < s.SelectionsStripScroll {
-		s.SelectionsStripScroll = s.SelectionsStripCursor
+	if s.SelectedStripCursor < s.SelectedStripScroll {
+		s.SelectedStripScroll = s.SelectedStripCursor
 	}
-	if s.SelectionsStripCursor >= s.SelectionsStripScroll+stripViewportRows {
-		s.SelectionsStripScroll = s.SelectionsStripCursor - stripViewportRows + 1
+	if s.SelectedStripCursor >= s.SelectedStripScroll+stripViewportRows {
+		s.SelectedStripScroll = s.SelectedStripCursor - stripViewportRows + 1
 	}
 }
 
 // SelectedPathAtStripIndex returns the absolute path at the given strip row index, or "", false.
 func (s *State) SelectedPathAtStripIndex(index int) (string, bool) {
-	paths := s.SelectionsStripPaths()
+	paths := s.SelectedStripPaths()
 	if index < 0 || index >= len(paths) {
 		return "", false
 	}
 	return paths[index], true
 }
 
-// ToggleOrRemoveStripSelection toggles off the strip row at SelectionsStripCursor (deselects).
+// ToggleOrRemoveStripSelection toggles off the strip row at SelectedStripCursor (deselects).
 func (s *State) ToggleOrRemoveStripSelection() bool {
-	p, ok := s.SelectedPathAtStripIndex(s.SelectionsStripCursor)
+	p, ok := s.SelectedPathAtStripIndex(s.SelectedStripCursor)
 	if !ok {
 		return false
 	}
 	wasDir := s.selectedPathIsDirectory(p)
 	s.applySelectionRemove(p, wasDir)
-	s.removePathFromSelectionsStripOrder(p)
-	s.normalizeSelectionsStripCursor()
+	s.removePathFromSelectedStripOrder(p)
+	s.normalizeSelectedStripCursor()
 	return true
 }
 
@@ -2171,7 +2171,7 @@ func (s *State) InvertSelection() {
 	}
 	if len(newSel) == 0 {
 		s.clearSelectionState()
-		s.SelectionsStripOrder = rebuildSelectionsStripOrderAfterBulk(s.SelectionsStripOrder, nil)
+		s.SelectedStripOrder = rebuildSelectedStripOrderAfterBulk(s.SelectedStripOrder, nil)
 		s.invalidateSelectionDerivedFull()
 	} else {
 		s.SelectedPaths = newSel
@@ -2182,13 +2182,13 @@ func (s *State) InvertSelection() {
 			s.SelectedDirPaths = nil
 		}
 		s.recomputeSelectionListedBytes()
-		s.SelectionsStripOrder = rebuildSelectionsStripOrderAfterBulk(s.SelectionsStripOrder, newSel)
+		s.SelectedStripOrder = rebuildSelectedStripOrderAfterBulk(s.SelectedStripOrder, newSel)
 		s.invalidateSelectionDerivedFull()
 	}
-	s.normalizeSelectionsStripCursor()
+	s.normalizeSelectedStripCursor()
 }
 
-func rebuildSelectionsStripOrderAfterBulk(stripOrder []string, selected map[string]bool) []string {
+func rebuildSelectedStripOrderAfterBulk(stripOrder []string, selected map[string]bool) []string {
 	if len(stripOrder) == 0 {
 		return nil
 	}
@@ -2208,13 +2208,13 @@ func rebuildSelectionsStripOrderAfterBulk(stripOrder []string, selected map[stri
 }
 
 // ClearSelection removes all tagged paths on this panel (any directory) and clears the
-// selections strip order.
+// selected strip order.
 func (s *State) ClearSelection() {
 	s.clearSelectionState()
-	s.SelectionsStripOrder = nil
+	s.SelectedStripOrder = nil
 	s.StripCursorPath = ""
 	s.invalidateSelectionDerivedFull()
-	s.normalizeSelectionsStripCursor()
+	s.normalizeSelectedStripCursor()
 }
 
 // SelectGroup selects entries matching spec (pattern against basename or meta values, AND the
@@ -2326,9 +2326,9 @@ func (s *State) UnselectGroup(spec FilterSpec, meta GroupSelectMeta) (bool, erro
 			continue
 		}
 		s.applySelectionRemove(path, isDir[path])
-		s.removePathFromSelectionsStripOrder(path)
+		s.removePathFromSelectedStripOrder(path)
 	}
-	s.normalizeSelectionsStripCursor()
+	s.normalizeSelectedStripCursor()
 	return true, nil
 }
 

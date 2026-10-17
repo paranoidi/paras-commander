@@ -2005,15 +2005,15 @@ func TestClearSelectionClearsAllDirectories(t *testing.T) {
 			"/tmp/here/a.txt":  true,
 			"/tmp/other/b.txt": true,
 		},
-		SelectionsStripOrder: []string{"/tmp/other/b.txt"},
+		SelectedStripOrder: []string{"/tmp/other/b.txt"},
 	}
 
 	state.ClearSelection()
 	if state.SelectedPaths != nil {
 		t.Fatalf("SelectedPaths should be nil, got %#v", state.SelectedPaths)
 	}
-	if len(state.SelectionsStripOrder) != 0 {
-		t.Fatalf("SelectionsStripOrder should be empty, got %v", state.SelectionsStripOrder)
+	if len(state.SelectedStripOrder) != 0 {
+		t.Fatalf("SelectedStripOrder should be empty, got %v", state.SelectedStripOrder)
 	}
 }
 
@@ -2907,7 +2907,7 @@ func TestHasSelectionInSubtree(t *testing.T) {
 	}
 }
 
-func TestSelectionsStripDropsConflictRemovedDir(t *testing.T) {
+func TestSelectedStripDropsConflictRemovedDir(t *testing.T) {
 	root := t.TempDir()
 	meadow := filepath.Join(root, "meadow")
 	if err := os.Mkdir(meadow, 0o755); err != nil {
@@ -2940,8 +2940,8 @@ func TestSelectionsStripDropsConflictRemovedDir(t *testing.T) {
 		t.Fatalf("ToggleSelection = (%v, %v), want selected with conflicts removed", selected, conflictsRemoved)
 	}
 	// Strip must not keep the removed dir; all selections are in the current dir, so it hides.
-	if paths := state.SelectionsStripPaths(); len(paths) != 0 {
-		t.Fatalf("SelectionsStripPaths = %v, want empty after conflict removal", paths)
+	if paths := state.SelectedStripPaths(); len(paths) != 0 {
+		t.Fatalf("SelectedStripPaths = %v, want empty after conflict removal", paths)
 	}
 }
 
@@ -3004,9 +3004,9 @@ func TestCrossDirectorySelectionsAndStripOrder(t *testing.T) {
 		t.Fatalf("Parent: %v", err)
 	}
 	// Left sub: the visible strip lists ALL selections, including root.txt in the current dir.
-	paths := state.SelectionsStripPaths()
+	paths := state.SelectedStripPaths()
 	if len(paths) != 2 || !slices.Contains(paths, subTxtPath) || !slices.Contains(paths, rootEntryPath) {
-		t.Fatalf("SelectionsStripPaths = %v, want sub.txt and root.txt", paths)
+		t.Fatalf("SelectedStripPaths = %v, want sub.txt and root.txt", paths)
 	}
 
 	// Re-enter sub: strip still lists both selections.
@@ -3021,7 +3021,7 @@ func TestCrossDirectorySelectionsAndStripOrder(t *testing.T) {
 	if err != nil || !entered {
 		t.Fatalf("Enter sub again: err=%v entered=%v", err, entered)
 	}
-	paths = state.SelectionsStripPaths()
+	paths = state.SelectedStripPaths()
 	if len(paths) != 2 || !slices.Contains(paths, subTxtPath) || !slices.Contains(paths, rootEntryPath) {
 		t.Fatalf("strip should list both selections while in sub, got %v", paths)
 	}

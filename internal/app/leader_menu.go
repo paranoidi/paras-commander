@@ -148,8 +148,8 @@ func (a *App) openBuiltinLeaderMenu() {
 	prefix := "Function menu"
 	entries := a.keys.LeaderMenuEntries()
 	if a.stripFilterFocused() {
-		prefix = "Selections menu"
-		entries = a.keys.LeaderMenuEntriesForView(keymap.HelpSelectionsStrip)
+		prefix = "Selected menu"
+		entries = a.keys.LeaderMenuEntriesForView(keymap.HelpSelectedStrip)
 	}
 	if len(entries) == 0 {
 		a.setTransientMessage(prefix+": no entries configured", ui.MessageUrgencyWarn)

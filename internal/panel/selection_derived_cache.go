@@ -27,7 +27,7 @@ func (s *State) invalidateSelectionDerived() {
 	s.selDerivedCache.built = false
 }
 
-// SetStripForced shows (or stops forcing) the selections strip even when every
+// SetStripForced shows (or stops forcing) the selected strip even when every
 // selection lives in the current directory.
 func (s *State) SetStripForced(on bool) {
 	if s.StripForced == on {
@@ -62,7 +62,7 @@ func (s *State) rebuildSelectionDerived() {
 		gen:   s.selectionDerivedGen,
 	}
 
-	cache.stripPaths = s.buildSelectionsStripPaths(cur)
+	cache.stripPaths = s.buildSelectedStripPaths(cur)
 	cache.prunedRoots = s.buildPrunedSelectionRoots()
 	cache.subtreeAncestors = buildSubtreeSelAncestors(s.SelectedPaths)
 
@@ -291,16 +291,16 @@ func (s *State) applySelectionRemove(path string, wasDir bool) {
 	s.patchSelectionDerivedAfterRemove(path, wasDir)
 }
 
-// buildSelectionsStripPaths lists ALL selected paths (order-first, extras sorted) when at
+// buildSelectedStripPaths lists ALL selected paths (order-first, extras sorted) when at
 // least one selection lives outside cur or StripForced is set; an all-in-current-directory
 // selection otherwise hides the strip.
-func (s *State) buildSelectionsStripPaths(cur string) []string {
+func (s *State) buildSelectedStripPaths(cur string) []string {
 	if !s.StripForced && !selectionsOutsideDir(s.SelectedPaths, cur) {
 		return nil
 	}
 	seen := make(map[string]bool, len(s.SelectedPaths))
 	out := make([]string, 0, len(s.SelectedPaths))
-	for _, p := range s.SelectionsStripOrder {
+	for _, p := range s.SelectedStripOrder {
 		if !s.SelectedPaths[p] || seen[p] {
 			continue
 		}

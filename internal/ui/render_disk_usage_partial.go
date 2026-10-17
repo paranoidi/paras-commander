@@ -25,7 +25,7 @@ func PaintDiskUsageBrowserPanelsOnly(screen tcell.Screen, layout Layout, model M
 	return painted
 }
 
-// paintBrowserPanelsInScope redraws twin-panel file lists (and visible selections strips)
+// paintBrowserPanelsInScope redraws twin-panel file lists (and visible selected strips)
 // for panelIDs where inScope returns true. Skips inactive-column file preview surfaces.
 func paintBrowserPanelsInScope(
 	screen tcell.Screen,
@@ -44,17 +44,17 @@ func paintBrowserPanelsInScope(
 	primaryFileListFocus := previewTheme || (model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList)
 	secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.renderSubFocus() == SubFocusFileList
 
-	leftStripCount := model.Primary.SelectionsStripCount()
-	rightStripCount := model.Secondary.SelectionsStripCount()
-	leftStripN := SelectionsStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel, previewTheme)
-	rightStripN := SelectionsStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel, previewTheme)
-	leftSplit := browserSelectionsStripSplit(model, PrimaryPanel, leftStripN)
-	rightSplit := browserSelectionsStripSplit(model, SecondaryPanel, rightStripN)
-	primaryFile, leftStrip := SplitPanelForSelections(layout.Primary, leftSplit)
-	secondaryFile, rightStrip := SplitPanelForSelections(layout.Secondary, rightSplit)
+	leftStripCount := model.Primary.SelectedStripCount()
+	rightStripCount := model.Secondary.SelectedStripCount()
+	leftStripN := SelectedStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel, previewTheme)
+	rightStripN := SelectedStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel, previewTheme)
+	leftSplit := browserSelectedStripSplit(model, PrimaryPanel, leftStripN)
+	rightSplit := browserSelectedStripSplit(model, SecondaryPanel, rightStripN)
+	primaryFile, leftStrip := SplitPanelForSelected(layout.Primary, leftSplit)
+	secondaryFile, rightStrip := SplitPanelForSelected(layout.Secondary, rightSplit)
 
-	primarySelectionsBottomHint := leftStripCount > 0 && leftStripN == 0
-	secondarySelectionsBottomHint := rightStripCount > 0 && rightStripN == 0
+	primarySelectedBottomHint := leftStripCount > 0 && leftStripN == 0
+	secondarySelectedBottomHint := rightStripCount > 0 && rightStripN == 0
 	leftStripVisible := leftStrip.Height > 0
 	rightStripVisible := rightStrip.Height > 0
 	primarySelectionSizeOnFileBottom := model.Primary.SelectedPathCount() > 0 && !leftStripVisible
@@ -81,7 +81,7 @@ func paintBrowserPanelsInScope(
 			CursorRowActive: primaryFileListFocus && !model.LeaderMenu.Open, ChromeBlocked: primaryChromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: primaryOtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
-			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
+			SplitOrientation: model.SplitOrientation, SelectedBottomHint: primarySelectedBottomHint,
 			ShowSelectionSizeOnBottom: primarySelectionSizeOnFileBottom,
 			IsTransferTarget:          model.DestinationTargetPrimary,
 			ViMotionActive:            viMotionActive(model, PrimaryPanel),
@@ -109,8 +109,8 @@ func paintBrowserPanelsInScope(
 			})
 		painted = true
 		if leftStrip.Height > 0 {
-			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
-			drawSelectionsStrip(screen, leftStrip, model.Primary, leftStripFocused, primaryChromeBlocked, SelectionsStripOpts{
+			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectedStrip
+			drawSelectedStrip(screen, leftStrip, model.Primary, leftStripFocused, primaryChromeBlocked, SelectedStripOpts{
 				Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
 				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 				ShowSelectionSizeOnBottom: leftSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
@@ -125,7 +125,7 @@ func paintBrowserPanelsInScope(
 			CursorRowActive: secondaryFileListFocus && !model.LeaderMenu.Open, ChromeBlocked: chromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: secondaryOtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
-			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,
+			SplitOrientation: model.SplitOrientation, SelectedBottomHint: secondarySelectedBottomHint,
 			ShowSelectionSizeOnBottom: secondarySelectionSizeOnFileBottom,
 			IsTransferTarget:          model.DestinationTargetSecondary,
 			ViMotionActive:            viMotionActive(model, SecondaryPanel),
@@ -153,8 +153,8 @@ func paintBrowserPanelsInScope(
 			})
 		painted = true
 		if rightStrip.Height > 0 {
-			rightStripFocused := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
-			drawSelectionsStrip(screen, rightStrip, model.Secondary, rightStripFocused, chromeBlocked, SelectionsStripOpts{
+			rightStripFocused := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusSelectedStrip
+			drawSelectedStrip(screen, rightStrip, model.Secondary, rightStripFocused, chromeBlocked, SelectedStripOpts{
 				Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
 				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 				ShowSelectionSizeOnBottom: rightSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
@@ -169,7 +169,7 @@ func paintBrowserPanelsInScope(
 	return painted
 }
 
-// PaintBrowserListNavPanelOnly repaints one browser file-list column (and its selections strip
+// PaintBrowserListNavPanelOnly repaints one browser file-list column (and its selected strip
 // when visible) without touching the other twin panel or the rest of the frame.
 func PaintBrowserListNavPanelOnly(screen tcell.Screen, layout Layout, model Model, styles theme.Theme, panelID int) bool {
 	if model.ViewMode != ViewBrowser || layout.TooSmall {

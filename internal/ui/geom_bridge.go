@@ -46,31 +46,31 @@ func PanelListRows(rect Rect) int {
 	return geom.PanelListRows(rect)
 }
 
-// SelectionsStripListRows returns list rows inside the selections strip (no Path header row).
-func SelectionsStripListRows(rect Rect) int {
-	return geom.SelectionsStripListRows(rect)
+// SelectedStripListRows returns list rows inside the selected strip (no Path header row).
+func SelectedStripListRows(rect Rect) int {
+	return geom.SelectedStripListRows(rect)
 }
 
-// EffectiveSelectionsPanelMaxRows returns the configured cap, or the built-in default when n <= 0.
-func EffectiveSelectionsPanelMaxRows(n int) int {
-	return geom.EffectiveSelectionsPanelMaxRows(n)
+// EffectiveSelectedPanelMaxRows returns the configured cap, or the built-in default when n <= 0.
+func EffectiveSelectedPanelMaxRows(n int) int {
+	return geom.EffectiveSelectedPanelMaxRows(n)
 }
 
-// EffectiveSelectionsPanelActivePercent returns percent clamped to 10–90, or the default when out of range.
-func EffectiveSelectionsPanelActivePercent(n int) int {
-	return geom.EffectiveSelectionsPanelActivePercent(n)
+// EffectiveSelectedPanelActivePercent returns percent clamped to 10–90, or the default when out of range.
+func EffectiveSelectedPanelActivePercent(n int) int {
+	return geom.EffectiveSelectedPanelActivePercent(n)
 }
 
-// SelectionsStripSplitParams controls how a browser column shares space with the selections strip.
-type SelectionsStripSplitParams = geom.SelectionsStripSplitParams
+// SelectedStripSplitParams controls how a browser column shares space with the selected strip.
+type SelectedStripSplitParams = geom.SelectedStripSplitParams
 
-// SplitPanelForSelections divides a browser column into a file list and selections strip
+// SplitPanelForSelected divides a browser column into a file list and selected strip
 // (side-by-side: strip below; stacked: strip to the right).
-func SplitPanelForSelections(column Rect, p SelectionsStripSplitParams) (file Rect, strip Rect) {
-	return geom.SplitPanelForSelections(column, p)
+func SplitPanelForSelected(column Rect, p SelectedStripSplitParams) (file Rect, strip Rect) {
+	return geom.SplitPanelForSelected(column, p)
 }
 
-// SplitPanelColumn divides a column into a top file panel and bottom selections strip.
+// SplitPanelColumn divides a column into a top file panel and bottom selected strip.
 func SplitPanelColumn(column Rect, stripItemCount int, maxStripContentRows int, minFileContentRows int) (file Rect, strip Rect) {
 	return geom.SplitPanelColumn(column, stripItemCount, maxStripContentRows, minFileContentRows)
 }
@@ -96,7 +96,7 @@ func JobsPanelContentRows(rect Rect) int {
 	return geom.JobsPanelContentRows(rect)
 }
 
-// MinFileListContentRows is the default minimum file-list content rows when splitting with a selections strip.
+// MinFileListContentRows is the default minimum file-list content rows when splitting with a selected strip.
 const MinFileListContentRows = geom.MinFileListContentRows
 
 // ScrollOffset returns the scroll start so that selected is centered in the viewport.

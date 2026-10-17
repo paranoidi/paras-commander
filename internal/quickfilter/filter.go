@@ -26,7 +26,7 @@ func OptionsFrom(caseInsensitive bool, cycleMatches string) Options {
 }
 
 // Filter tracks quick filter state. It is a self-contained engine over a
-// list of row labels and is shared by the file list, selections strip and dedup view.
+// list of row labels and is shared by the file list, selected strip and dedup view.
 type Filter struct {
 	Query   string
 	Cursor  int // rune offset within Query where typed/deleted runes apply

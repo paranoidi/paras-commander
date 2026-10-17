@@ -386,7 +386,7 @@ func (h *Handler) handleFilePreviewScrollKey(event *tcell.EventKey) bool {
 }
 
 // OpenFilePreviewFullscreen opens the full-screen file view (F3 / file.view) for the active selection.
-// When the selections strip has keyboard focus, the highlighted strip row is the target
+// When the selected strip has keyboard focus, the highlighted strip row is the target
 // (same resolution as quick view / EditActiveFile).
 func (h *Handler) OpenFilePreviewFullscreen() {
 	if h.model.ViewMode != ui.ViewBrowser {

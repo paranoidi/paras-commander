@@ -16,28 +16,28 @@ func TestStripFilterMatchesBasenameAndCycles(t *testing.T) {
 			"/tmp/meadow/crystal.txt": true,
 			"/tmp/orchard/delta.txt":  true,
 		},
-		SelectionsStripOrder: []string{
+		SelectedStripOrder: []string{
 			"/tmp/meadow/bravo.txt",
 			"/tmp/meadow/crystal.txt",
 			"/tmp/orchard/delta.txt",
 		},
 		FilterOptions: ciFilterOptions,
 	}
-	if n := state.SelectionsStripCount(); n != 3 {
-		t.Fatalf("strip count = %d, want 3 (paths=%v)", n, state.SelectionsStripPaths())
+	if n := state.SelectedStripCount(); n != 3 {
+		t.Fatalf("strip count = %d, want 3 (paths=%v)", n, state.SelectedStripPaths())
 	}
 
 	state.AppendStripFilterRune('c', 10)
 	if !state.StripFilter.Active || !state.StripFilter.HasMatches() {
 		t.Fatalf("want active strip filter with matches, got %+v results=%d", state.StripFilter, state.StripFilter.MatchCount())
 	}
-	path, ok := state.SelectedPathAtStripIndex(state.SelectionsStripCursor)
+	path, ok := state.SelectedPathAtStripIndex(state.SelectedStripCursor)
 	if !ok || filepath.Base(path) != "crystal.txt" {
 		t.Fatalf("cursor path = %q ok=%v, want crystal.txt", path, ok)
 	}
 
 	state.AppendStripFilterRune('r', 10) // "cr" still crystal
-	path, ok = state.SelectedPathAtStripIndex(state.SelectionsStripCursor)
+	path, ok = state.SelectedPathAtStripIndex(state.SelectedStripCursor)
 	if !ok || filepath.Base(path) != "crystal.txt" {
 		t.Fatalf("after 'cr' path = %q, want crystal.txt", path)
 	}
@@ -70,26 +70,26 @@ func TestStripCursorRememberRestore(t *testing.T) {
 		return st
 	}
 	st := mk(paths)
-	st.SelectionsStripCursor = 2
+	st.SelectedStripCursor = 2
 	want, _ := st.SelectedPathAtStripIndex(2)
 	st.RememberStripCursor()
 	st.ClearSelection()
-	if st.SelectionsStripCursor != 0 || st.StripCursorPath != "" {
-		t.Fatalf("after clear: cursor %d path %q", st.SelectionsStripCursor, st.StripCursorPath)
+	if st.SelectedStripCursor != 0 || st.StripCursorPath != "" {
+		t.Fatalf("after clear: cursor %d path %q", st.SelectedStripCursor, st.StripCursorPath)
 	}
 	for _, p := range paths {
 		st.AddSelection(p)
 	}
 	st.StripCursorPath = want
 	st.RestoreStripCursor()
-	if got, _ := st.SelectedPathAtStripIndex(st.SelectionsStripCursor); got != want {
+	if got, _ := st.SelectedPathAtStripIndex(st.SelectedStripCursor); got != want {
 		t.Fatalf("restored %q, want %q", got, want)
 	}
 
 	st.StripCursorPath = "/tmp/gone/missing.txt"
-	st.SelectionsStripCursor = 1
+	st.SelectedStripCursor = 1
 	st.RestoreStripCursor()
-	if st.SelectionsStripCursor != 1 {
-		t.Fatalf("cursor moved to %d for missing path", st.SelectionsStripCursor)
+	if st.SelectedStripCursor != 1 {
+		t.Fatalf("cursor moved to %d for missing path", st.SelectedStripCursor)
 	}
 }

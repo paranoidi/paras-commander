@@ -120,7 +120,7 @@ func panelBottomPhysicalLeftChainEndX(rect Rect, ctx PanelBottomIndicatorContext
 	if len(physicalLeft) == 0 {
 		return minX - 1
 	}
-	x := panelBottomPhysicalLeftChainStartX(rect, ctx.SelectionsBottomHint)
+	x := panelBottomPhysicalLeftChainStartX(rect, ctx.SelectedBottomHint)
 	if x > maxX {
 		return minX - 1
 	}
@@ -128,12 +128,12 @@ func panelBottomPhysicalLeftChainEndX(rect Rect, ctx PanelBottomIndicatorContext
 	if ctx.SelectionSizeCenterStart > 0 {
 		maxCols = min(maxCols, ctx.SelectionSizeCenterStart-x)
 	}
-	leadingDash := !ctx.SelectionsBottomHint
+	leadingDash := !ctx.SelectedBottomHint
 	physicalLeft = dropPanelBottomIndicatorsForWidth(physicalLeft, maxCols, leadingDash)
 	if len(physicalLeft) == 0 {
 		return minX - 1
 	}
-	if ctx.SelectionsBottomHint {
+	if ctx.SelectedBottomHint {
 		x++
 	} else {
 		x++

@@ -65,13 +65,13 @@ func TestQuickViewWantFileStripDoesNotStatOnCaller(t *testing.T) {
 	other := t.TempDir()
 	selPath := filepath.Join(other, "notes.txt")
 	h.model.Primary = panel.State{
-		Path:                  pathloc.MustParse(root),
-		SelectedPaths:         map[string]bool{selPath: true},
-		SelectionsStripOrder:  []string{selPath},
-		SelectionsStripCursor: 0,
+		Path:                pathloc.MustParse(root),
+		SelectedPaths:       map[string]bool{selPath: true},
+		SelectedStripOrder:  []string{selPath},
+		SelectedStripCursor: 0,
 	}
 	h.model.ActivePanel = ui.PrimaryPanel
-	h.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	h.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 
 	done := make(chan struct{})
 	var path string
@@ -83,7 +83,7 @@ func TestQuickViewWantFileStripDoesNotStatOnCaller(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(200 * time.Millisecond):
-		t.Fatal("quickViewWantFile blocked on Stat for a selections-strip highlight")
+		t.Fatal("quickViewWantFile blocked on Stat for a selected-strip highlight")
 	}
 	if mode != quickViewWantFile || path != selPath {
 		t.Fatalf("quickViewWantFile = (%q, %v), want file %q without Stat", path, mode, selPath)
@@ -99,14 +99,14 @@ func TestQuickViewWantFileStripUsesSelectedDirPaths(t *testing.T) {
 	other := t.TempDir()
 	selPath := filepath.Join(other, "photos")
 	h.model.Primary = panel.State{
-		Path:                  pathloc.MustParse(root),
-		SelectedPaths:         map[string]bool{selPath: true},
-		SelectedDirPaths:      map[string]bool{selPath: true},
-		SelectionsStripOrder:  []string{selPath},
-		SelectionsStripCursor: 0,
+		Path:                pathloc.MustParse(root),
+		SelectedPaths:       map[string]bool{selPath: true},
+		SelectedDirPaths:    map[string]bool{selPath: true},
+		SelectedStripOrder:  []string{selPath},
+		SelectedStripCursor: 0,
 	}
 	h.model.ActivePanel = ui.PrimaryPanel
-	h.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	h.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 
 	_, _, mode := h.quickViewWantFile()
 	if mode != quickViewWantDir {
@@ -130,12 +130,12 @@ func TestQuickViewWantFileStripUsesListingSize(t *testing.T) {
 			{Name: "blank.txt", Path: emptyPath, Type: localfs.EntryFile, Size: 0, ModifiedAt: time.Now()},
 			{Name: "notes.txt", Path: filePath, Type: localfs.EntryFile, Size: 12, ModifiedAt: time.Now()},
 		},
-		SelectedPaths:         map[string]bool{emptyPath: true, outside: true},
-		SelectionsStripOrder:  []string{emptyPath, filePath, outside},
-		SelectionsStripCursor: 0,
+		SelectedPaths:       map[string]bool{emptyPath: true, outside: true},
+		SelectedStripOrder:  []string{emptyPath, filePath, outside},
+		SelectedStripCursor: 0,
 	}
 	h.model.ActivePanel = ui.PrimaryPanel
-	h.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	h.model.ActiveSubFocus = ui.SubFocusSelectedStrip
 
 	path, _, mode := h.quickViewWantFile()
 	if mode != quickViewWantEmpty || path != emptyPath {
@@ -148,9 +148,9 @@ func TestQuickViewWantFileStripUsesListingSize(t *testing.T) {
 			{Name: "blank.txt", Path: emptyPath, Type: localfs.EntryFile, Size: 0, ModifiedAt: time.Now()},
 			{Name: "notes.txt", Path: filePath, Type: localfs.EntryFile, Size: 12, ModifiedAt: time.Now()},
 		},
-		SelectedPaths:         map[string]bool{filePath: true, outside: true},
-		SelectionsStripOrder:  []string{filePath, outside},
-		SelectionsStripCursor: 0,
+		SelectedPaths:       map[string]bool{filePath: true, outside: true},
+		SelectedStripOrder:  []string{filePath, outside},
+		SelectedStripCursor: 0,
 	}
 	path, _, mode = h.quickViewWantFile()
 	if mode != quickViewWantFile || path != filePath {

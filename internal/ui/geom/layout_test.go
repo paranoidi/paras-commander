@@ -186,12 +186,12 @@ func TestPanelListRows(t *testing.T) {
 	}
 }
 
-func TestSelectionsStripListRows(t *testing.T) {
+func TestSelectedStripListRows(t *testing.T) {
 	// One more list line than file panel at same height (no column header row).
-	if n := SelectionsStripListRows(Rect{Width: 50, Height: 12}); n != 10 {
-		t.Fatalf("SelectionsStripListRows = %d, want 10", n)
+	if n := SelectedStripListRows(Rect{Width: 50, Height: 12}); n != 10 {
+		t.Fatalf("SelectedStripListRows = %d, want 10", n)
 	}
-	if SelectionsStripListRows(Rect{Width: 7, Height: 12}) != 0 {
+	if SelectedStripListRows(Rect{Width: 7, Height: 12}) != 0 {
 		t.Fatal("narrow strip should yield 0 rows")
 	}
 }
@@ -205,8 +205,8 @@ func TestSplitPanelColumnAllocatesStripBelowFilePanel(t *testing.T) {
 	if file.Height+strip.Height != col.Height {
 		t.Fatalf("heights sum %d+%d want %d", file.Height, strip.Height, col.Height)
 	}
-	if SelectionsStripListRows(strip) < 1 {
-		t.Fatalf("strip list rows = %d", SelectionsStripListRows(strip))
+	if SelectedStripListRows(strip) < 1 {
+		t.Fatalf("strip list rows = %d", SelectedStripListRows(strip))
 	}
 	if PanelListRows(file) < 3 {
 		t.Fatalf("file list rows = %d want >=3", PanelListRows(file))
@@ -224,13 +224,13 @@ func TestSplitPanelColumnHidesStripWhenNoItems(t *testing.T) {
 	}
 }
 
-func TestSplitPanelForSelectionsSideBySideGrowsWhenFocused(t *testing.T) {
+func TestSplitPanelForSelectedSideBySideGrowsWhenFocused(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 40, Height: 40}
-	_, unfocusedStrip := SplitPanelForSelections(col, SelectionsStripSplitParams{
+	_, unfocusedStrip := SplitPanelForSelected(col, SelectedStripSplitParams{
 		StripItemCount: 20, MaxRows: 5, ActivePercent: 50,
 		StripFocused: false, Orientation: SplitHorizontal, MinFileContentRows: 3,
 	})
-	_, focusedStrip := SplitPanelForSelections(col, SelectionsStripSplitParams{
+	_, focusedStrip := SplitPanelForSelected(col, SelectedStripSplitParams{
 		StripItemCount: 20, MaxRows: 5, ActivePercent: 50,
 		StripFocused: true, Orientation: SplitHorizontal, MinFileContentRows: 3,
 	})
@@ -242,9 +242,9 @@ func TestSplitPanelForSelectionsSideBySideGrowsWhenFocused(t *testing.T) {
 	}
 }
 
-func TestSplitPanelForSelectionsStackedPlacesStripRight(t *testing.T) {
+func TestSplitPanelForSelectedStackedPlacesStripRight(t *testing.T) {
 	col := Rect{X: 0, Y: 2, Width: 80, Height: 20}
-	file, strip := SplitPanelForSelections(col, SelectionsStripSplitParams{
+	file, strip := SplitPanelForSelected(col, SelectedStripSplitParams{
 		StripItemCount: 12, MaxRows: 5, ActivePercent: 50,
 		StripFocused: false, Orientation: SplitVertical, MinFileContentRows: 3,
 	})
@@ -575,14 +575,14 @@ func TestMergePaneRectsStacked(t *testing.T) {
 	}
 }
 
-func TestEffectiveSelectionsPanelMaxRowsUsesConfigDefault(t *testing.T) {
-	if got := EffectiveSelectionsPanelMaxRows(0); got != config.DefaultSelectionsPanelMaxRows {
-		t.Fatalf("EffectiveSelectionsPanelMaxRows(0) = %d, want config.DefaultSelectionsPanelMaxRows (%d)", got, config.DefaultSelectionsPanelMaxRows)
+func TestEffectiveSelectedPanelMaxRowsUsesConfigDefault(t *testing.T) {
+	if got := EffectiveSelectedPanelMaxRows(0); got != config.DefaultSelectedPanelMaxRows {
+		t.Fatalf("EffectiveSelectedPanelMaxRows(0) = %d, want config.DefaultSelectedPanelMaxRows (%d)", got, config.DefaultSelectedPanelMaxRows)
 	}
-	if got := EffectiveSelectionsPanelMaxRows(-1); got != config.DefaultSelectionsPanelMaxRows {
-		t.Fatalf("EffectiveSelectionsPanelMaxRows(-1) = %d, want config.DefaultSelectionsPanelMaxRows (%d)", got, config.DefaultSelectionsPanelMaxRows)
+	if got := EffectiveSelectedPanelMaxRows(-1); got != config.DefaultSelectedPanelMaxRows {
+		t.Fatalf("EffectiveSelectedPanelMaxRows(-1) = %d, want config.DefaultSelectedPanelMaxRows (%d)", got, config.DefaultSelectedPanelMaxRows)
 	}
-	if got := EffectiveSelectionsPanelMaxRows(7); got != 7 {
-		t.Fatalf("EffectiveSelectionsPanelMaxRows(7) = %d, want 7", got)
+	if got := EffectiveSelectedPanelMaxRows(7); got != 7 {
+		t.Fatalf("EffectiveSelectedPanelMaxRows(7) = %d, want 7", got)
 	}
 }

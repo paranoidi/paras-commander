@@ -132,17 +132,17 @@ func (h *Handler) activePanelFileColumnRect() (geom.Rect, bool) {
 	if h.model.ActivePanel == ui.SecondaryPanel {
 		col = lay.Secondary
 	}
-	stripN := ui.SelectionsStripLayoutItemCount(
+	stripN := ui.SelectedStripLayoutItemCount(
 		h.host.ActivePanel(),
 		h.model.ActivePanel,
 		h.model.ActivePanel,
 		h.model.ThemeDialog.Open,
 	)
-	fileCol, _ := ui.SplitPanelForSelections(ui.Rect(col), ui.SelectionsStripSplitParams{
+	fileCol, _ := ui.SplitPanelForSelected(ui.Rect(col), ui.SelectedStripSplitParams{
 		StripItemCount:     stripN,
-		MaxRows:            h.model.SelectionsPanelMaxRows,
-		ActivePercent:      h.model.SelectionsPanelActivePercent,
-		StripFocused:       h.model.ActiveSubFocus == ui.SubFocusSelectionsStrip,
+		MaxRows:            h.model.SelectedPanelMaxRows,
+		ActivePercent:      h.model.SelectedPanelActivePercent,
+		StripFocused:       h.model.ActiveSubFocus == ui.SubFocusSelectedStrip,
 		Orientation:        h.model.SplitOrientation,
 		MinFileContentRows: ui.MinFileListContentRows,
 	})

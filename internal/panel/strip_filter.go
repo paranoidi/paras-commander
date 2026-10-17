@@ -7,11 +7,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
-// OpenStripFilter starts editing the selections-strip quick filter.
+// OpenStripFilter starts editing the selected-strip quick filter.
 func (s *State) OpenStripFilter(stripViewportRows int) {
 	s.StripFilter.Editing = true
 	s.rebuildStripFilter()
-	s.EnsureSelectionsStripCursorVisible(stripViewportRows)
+	s.EnsureSelectedStripCursorVisible(stripViewportRows)
 }
 
 // AcceptStripFilter exits editing while keeping the current filtered strip cursor.
@@ -21,7 +21,7 @@ func (s *State) AcceptStripFilter(stripViewportRows int) {
 	if !s.StripFilter.Active {
 		s.StripFilter.ClearResults()
 	}
-	s.EnsureSelectionsStripCursorVisible(stripViewportRows)
+	s.EnsureSelectedStripCursorVisible(stripViewportRows)
 }
 
 // CancelStripFilter exits editing and clears the strip filter query.
@@ -51,24 +51,24 @@ func (s *State) BackspaceStripFilter(stripViewportRows int) {
 
 // CycleStripFilterMatch moves the strip cursor through fuzzy matches (or plain Move when none).
 func (s *State) CycleStripFilterMatch(delta int, stripViewportRows int) {
-	cur, ok := s.StripFilter.Cycle(s.SelectionsStripCursor, delta, s.filterOptions())
+	cur, ok := s.StripFilter.Cycle(s.SelectedStripCursor, delta, s.filterOptions())
 	if !ok {
-		s.MoveSelectionsStrip(delta, stripViewportRows)
+		s.MoveSelectedStrip(delta, stripViewportRows)
 		return
 	}
-	s.SelectionsStripCursor = cur
-	s.EnsureSelectionsStripCursorVisible(stripViewportRows)
+	s.SelectedStripCursor = cur
+	s.EnsureSelectedStripCursorVisible(stripViewportRows)
 }
 
 func (s *State) applyStripFilterQuery(query string, stripViewportRows int) {
 	if cur, ok := s.StripFilter.Apply(query, s.stripFilterNames(), s.filterOptions()); ok {
-		s.SelectionsStripCursor = cur
+		s.SelectedStripCursor = cur
 	}
-	s.EnsureSelectionsStripCursorVisible(stripViewportRows)
+	s.EnsureSelectedStripCursorVisible(stripViewportRows)
 }
 
 func (s *State) stripFilterNames() []string {
-	paths := s.SelectionsStripPaths()
+	paths := s.SelectedStripPaths()
 	names := make([]string, len(paths))
 	for i, p := range paths {
 		names[i] = filepath.Base(p)

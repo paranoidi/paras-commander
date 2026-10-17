@@ -113,7 +113,7 @@ cold = { fg = "magenta" }          # not yet preloaded
 [panel.status]                # bottom-border status segments
 sync = { fg = "green", bold = true }
 quick_view = { fg = "green", bold = true }
-selections = { fg = "white" }
+selected = { fg = "white" }
 selection_size = { fg = "yellow" }
 dotfiles_hidden = { fg = "bright_black" }
 gitignore = { fg = "bright_black" }
@@ -389,7 +389,7 @@ paused = ""
 running = ""
 queued = ""
 
-[icons.selections]
+[icons.selected]
 multi_location = "\uef81"
 
 [icons.leader_menu]

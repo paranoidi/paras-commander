@@ -54,8 +54,8 @@ func TestApplySelectionSnapshotSkipsMissingPaths(t *testing.T) {
 	if !s.SelectedPaths[keep] {
 		t.Fatalf("paths = %v", s.SelectedPaths)
 	}
-	if len(s.SelectionsStripOrder) != 0 {
-		t.Fatalf("strip order should omit missing paths, got %v", s.SelectionsStripOrder)
+	if len(s.SelectedStripOrder) != 0 {
+		t.Fatalf("strip order should omit missing paths, got %v", s.SelectedStripOrder)
 	}
 }
 

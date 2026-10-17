@@ -46,11 +46,11 @@ func dialogRenderContext(model Model, styles theme.Theme) dialog.DialogRenderCon
 	}
 }
 
-// SubFocus areas within the active browser column (file list vs selections strip),
+// SubFocus areas within the active browser column (file list vs selected strip),
 // or keyboard focus on the inactive-column file preview when it is open.
 const (
 	SubFocusFileList = iota
-	SubFocusSelectionsStrip
+	SubFocusSelectedStrip
 	// SubFocusInactivePreview is only used while FilePreview is open (inactive column shows preview).
 	SubFocusInactivePreview
 )
@@ -125,13 +125,13 @@ type Model struct {
 	// path validation tick (see App.updateDestinationTargetPanels).
 	DestinationTargetPrimary   bool
 	DestinationTargetSecondary bool
-	// SelectionsPanelMaxRows caps visible rows in the selections strip when unfocused (0 = use app default).
-	SelectionsPanelMaxRows int
-	// SelectionsPanelActivePercent is strip height share when focused (side-by-side) or width share (stacked).
-	SelectionsPanelActivePercent int
-	ViewMode                     ViewMode
-	JobsView                     JobsViewState
-	JobsList                     []JobEntry
+	// SelectedPanelMaxRows caps visible rows in the selected strip when unfocused (0 = use app default).
+	SelectedPanelMaxRows int
+	// SelectedPanelActivePercent is strip height share when focused (side-by-side) or width share (stacked).
+	SelectedPanelActivePercent int
+	ViewMode                   ViewMode
+	JobsView                   JobsViewState
+	JobsList                   []JobEntry
 	// JobPathMarks is the browser file-list job icon snapshot (progress fields omitted).
 	JobPathMarks []JobPathMark
 	// PreviewPrefetchLoading lists absolute paths currently being decoded/thumbnailed by prefetch.
@@ -668,7 +668,7 @@ type browserPanelSide struct {
 	FileListFocus              bool
 	ChromeBlocked              bool
 	OtherPanelPath             string
-	SelectionsBottomHint       bool
+	SelectedBottomHint         bool
 	SelectionSizeOnFileBottom  bool
 	SelectionSizeOnStripBottom bool
 	IsTransferTarget           bool
@@ -705,14 +705,14 @@ func viMotionActive(model Model, panelID int) bool {
 		model.renderSubFocus() == SubFocusFileList
 }
 
-// viMotionStripActive reports whether the selections strip border should use the vi-motion accent.
+// viMotionStripActive reports whether the selected strip border should use the vi-motion accent.
 func viMotionStripActive(model Model, panelID int) bool {
 	return model.ViMotionMode &&
 		model.ActivePanel == panelID &&
-		model.renderSubFocus() == SubFocusSelectionsStrip
+		model.renderSubFocus() == SubFocusSelectedStrip
 }
 
-// drawBrowserPanel paints one twin column (file list or file preview) plus its selections strip
+// drawBrowserPanel paints one twin column (file list or file preview) plus its selected strip
 // for the browser view. Called once per side (PrimaryPanel, SecondaryPanel) with the side-specific
 // rects/flags precomputed by drawBrowserView; the two calls are mirror images of each other.
 func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, syncDriver, quickViewDriver int, pinnedPaths map[string]struct{}, cursorNameHintFallback *CursorNameHintFallback, side browserPanelSide) {
@@ -730,7 +730,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			CursorRowActive: side.FileListFocus && !model.LeaderMenu.Open, ChromeBlocked: side.ChromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: side.OtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
-			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: side.SelectionsBottomHint,
+			SplitOrientation: model.SplitOrientation, SelectedBottomHint: side.SelectedBottomHint,
 			ShowSelectionSizeOnBottom: side.SelectionSizeOnFileBottom,
 			IsTransferTarget:          side.IsTransferTarget,
 			ViMotionActive:            side.ViMotionActive,
@@ -758,8 +758,8 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			})
 	}
 	if side.ColumnWidth > 0 && side.StripRect.Height > 0 {
-		stripFocused := model.ActivePanel == side.PanelID && model.renderSubFocus() == SubFocusSelectionsStrip
-		drawSelectionsStrip(screen, side.StripRect, ownState, stripFocused, side.ChromeBlocked, SelectionsStripOpts{
+		stripFocused := model.ActivePanel == side.PanelID && model.renderSubFocus() == SubFocusSelectedStrip
+		drawSelectedStrip(screen, side.StripRect, ownState, stripFocused, side.ChromeBlocked, SelectedStripOpts{
 			Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
 			DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 			ShowSelectionSizeOnBottom: side.SelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
@@ -769,7 +769,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 	}
 }
 
-// drawBrowserView paints the twin file-list panels (or file-preview panes), selections strips,
+// drawBrowserView paints the twin file-list panels (or file-preview panes), selected strips,
 // terminal panel strip, and cursor-name-hint fallback for the default (browser) view mode.
 func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, styles theme.Theme, chromeBlocked bool) {
 	// Theme picker: show the real left panel (normal chrome, always active) so preview matches in-browser use.
@@ -778,17 +778,17 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 	primaryFileListFocus := previewTheme || (model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList)
 	secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.renderSubFocus() == SubFocusFileList
 
-	leftStripCount := model.Primary.SelectionsStripCount()
-	rightStripCount := model.Secondary.SelectionsStripCount()
-	leftStripN := SelectionsStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel, previewTheme)
-	rightStripN := SelectionsStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel, previewTheme)
-	leftSplit := browserSelectionsStripSplit(model, PrimaryPanel, leftStripN)
-	rightSplit := browserSelectionsStripSplit(model, SecondaryPanel, rightStripN)
-	primaryFile, leftStrip := SplitPanelForSelections(layout.Primary, leftSplit)
-	secondaryFile, rightStrip := SplitPanelForSelections(layout.Secondary, rightSplit)
+	leftStripCount := model.Primary.SelectedStripCount()
+	rightStripCount := model.Secondary.SelectedStripCount()
+	leftStripN := SelectedStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel, previewTheme)
+	rightStripN := SelectedStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel, previewTheme)
+	leftSplit := browserSelectedStripSplit(model, PrimaryPanel, leftStripN)
+	rightSplit := browserSelectedStripSplit(model, SecondaryPanel, rightStripN)
+	primaryFile, leftStrip := SplitPanelForSelected(layout.Primary, leftSplit)
+	secondaryFile, rightStrip := SplitPanelForSelected(layout.Secondary, rightSplit)
 
-	primarySelectionsBottomHint := leftStripCount > 0 && leftStripN == 0
-	secondarySelectionsBottomHint := rightStripCount > 0 && rightStripN == 0
+	primarySelectedBottomHint := leftStripCount > 0 && leftStripN == 0
+	secondarySelectedBottomHint := rightStripCount > 0 && rightStripN == 0
 	leftStripVisible := leftStrip.Height > 0
 	rightStripVisible := rightStrip.Height > 0
 	primarySelectionSizeOnFileBottom := model.Primary.SelectedPathCount() > 0 && !leftStripVisible
@@ -812,7 +812,7 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, pinnedPaths, &cursorNameHintFallback, browserPanelSide{
 		PanelID: PrimaryPanel, ColumnWidth: layout.Primary.Width, FileRect: primaryFile, StripRect: leftStrip,
 		ShowPreview: showLeftPreview, FileListFocus: primaryFileListFocus, ChromeBlocked: primaryChromeBlocked,
-		OtherPanelPath: primaryOtherPanelPath, SelectionsBottomHint: primarySelectionsBottomHint,
+		OtherPanelPath: primaryOtherPanelPath, SelectedBottomHint: primarySelectedBottomHint,
 		SelectionSizeOnFileBottom: primarySelectionSizeOnFileBottom, SelectionSizeOnStripBottom: leftSelectionSizeOnStripBottom,
 		IsTransferTarget: model.DestinationTargetPrimary, CursorNameHintPinnedOut: model.CursorNameHintPinOutPrimary,
 		ViMotionActive:           viMotionActive(model, PrimaryPanel),
@@ -822,7 +822,7 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, pinnedPaths, &cursorNameHintFallback, browserPanelSide{
 		PanelID: SecondaryPanel, ColumnWidth: layout.Secondary.Width, FileRect: secondaryFile, StripRect: rightStrip,
 		ShowPreview: showRightPreview, FileListFocus: secondaryFileListFocus, ChromeBlocked: chromeBlocked,
-		OtherPanelPath: secondaryOtherPanelPath, SelectionsBottomHint: secondarySelectionsBottomHint,
+		OtherPanelPath: secondaryOtherPanelPath, SelectedBottomHint: secondarySelectedBottomHint,
 		SelectionSizeOnFileBottom: secondarySelectionSizeOnFileBottom, SelectionSizeOnStripBottom: rightSelectionSizeOnStripBottom,
 		IsTransferTarget: model.DestinationTargetSecondary, CursorNameHintPinnedOut: model.CursorNameHintPinOutSecondary,
 		ViMotionActive:           viMotionActive(model, SecondaryPanel),
