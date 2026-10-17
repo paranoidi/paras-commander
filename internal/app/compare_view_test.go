@@ -392,3 +392,45 @@ func TestCompareViewDeleteOpensDialogForFocusedColumnCursor(t *testing.T) {
 		t.Fatalf("delete dialog = %+v", fd)
 	}
 }
+
+// TestCompareViewExternalBrowserUsesFocusedColumn verifies M-x reveals the focused side's
+// file directory, and that side's root when the row has no entry there.
+func TestCompareViewExternalBrowserUsesFocusedColumn(t *testing.T) {
+	left, right := t.TempDir(), t.TempDir()
+	for _, d := range []string{filepath.Join(left, "orchard"), filepath.Join(right, "harbor")} {
+		if err := os.Mkdir(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var opened []string
+	old := runDetachedXDGOpen
+	runDetachedXDGOpen = func(p string) error { opened = append(opened, p); return nil }
+	t.Cleanup(func() { runDetachedXDGOpen = old })
+
+	app := newApp(t, newScreen(t, 80, 24), left)
+	app.panelByID(ui.SecondaryPanel).Path = pathloc.MustParse(right)
+	app.model.ViewMode = ui.ViewCompare
+	app.model.CompareSnapshot = comparepkg.Snapshot{
+		PrimaryRoot:   pathloc.MustParse(left),
+		SecondaryRoot: pathloc.MustParse(right),
+		Phase:         comparepkg.PhaseDone,
+		Rows: []comparepkg.Row{
+			{PrimaryRel: "orchard/lantern.txt", SecondaryRel: "harbor/lantern.txt", Kind: comparepkg.KindContentDiff, HashDone: true},
+			{PrimaryRel: "orchard/pebble.txt", Kind: comparepkg.KindPrimaryOnly, HashDone: true},
+		},
+	}
+	app.model.CompareView = ui.CompareViewState{Filter: comparepkg.FilterAll, FocusColumn: ui.CompareColumnSecondary}
+	altX := tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModAlt)
+
+	_, _ = app.handleKey(altX)
+	app.model.CompareView.FocusColumn = ui.CompareColumnPrimary
+	_, _ = app.handleKey(altX)
+	app.model.CompareView.FocusColumn = ui.CompareColumnSecondary
+	app.model.CompareView.Selected = 1
+	_, _ = app.handleKey(altX)
+
+	want := []string{filepath.Join(right, "harbor"), filepath.Join(left, "orchard"), right}
+	if fmt.Sprint(opened) != fmt.Sprint(want) {
+		t.Fatalf("opened = %v, want %v", opened, want)
+	}
+}

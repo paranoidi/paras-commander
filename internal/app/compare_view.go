@@ -102,6 +102,12 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 		}
 		a.openCompareDeleteDialog()
 		return true
+	case keymap.ActionPanelExternalBrowser:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		a.compareOpenInExternalBrowser()
+		return true
 	case keymap.ActionCompareToggleEmpty:
 		if a.model.ViewMode == ui.ViewCompare {
 			a.compareCtrl.ToggleIgnoreEmpty()
@@ -110,6 +116,20 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 	default:
 		return false
 	}
+}
+
+// compareOpenInExternalBrowser reveals the focused column's file directory, or that side's
+// panel directory when the row has no entry there.
+func (a *App) compareOpenInExternalBrowser() {
+	if path, _, ok := a.compareCtrl.SelectedColumnTarget(); ok {
+		a.openDirInExternalBrowser(filepath.Dir(path))
+		return
+	}
+	panelID := ui.PrimaryPanel
+	if a.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
+		panelID = ui.SecondaryPanel
+	}
+	a.openPanelPathInExternalBrowser(panelID)
 }
 
 // openCompareDeleteDialog deletes the focused column's panel selection (set with Space) or,
