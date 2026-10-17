@@ -1074,6 +1074,36 @@ func (h *Handler) ExpandAll() {
 	h.resyncFocused()
 }
 
+// SetCopiesCollapsed expands (collapsed=false) every collapsed folder holding a
+// related copy of the main cursor row, or collapses them again (collapsed=true),
+// sparing the cursor row's own folders. Dirs mode only; the cursor stays on its row.
+func (h *Handler) SetCopiesCollapsed(collapsed bool) {
+	st := &h.model.DedupView
+	if h.model.ViewMode != ui.ViewDedup || !st.TreeDirs {
+		return
+	}
+	hint, _ := ui.DedupCursorHintDirs(h.model.DedupSnapshot, *st, h.model.DedupList)
+	var own string // cursor row's rel path: its ancestors (and itself) stay open
+	if row, ok := h.paneRow(&st.Main, h.model.DedupList); ok {
+		own = row.Value.DirRel
+		if row.Value.Kind == ui.DedupRowFile {
+			own = row.Value.File.Rel
+		}
+	}
+	changed := false
+	for rel := range hint {
+		id := "d:" + rel
+		if st.Main.Collapsed[id] == collapsed || (collapsed && (own == rel || strings.HasPrefix(own, rel+"/"))) {
+			continue
+		}
+		st.Main.SetCollapsed(id, collapsed)
+		changed = true
+	}
+	if changed {
+		h.resyncPreservingCursor()
+	}
+}
+
 func (h *Handler) toastExpandDepthLimit() {
 	h.host.SetTransientMessage(fmt.Sprintf("Expand all is limited to depth %d", panel.MaxExpandAllShallowDepth), ui.MessageUrgencyInfo)
 }

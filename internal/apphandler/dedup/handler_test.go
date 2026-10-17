@@ -562,3 +562,70 @@ func TestMarkedFilesIncludesGroupsHiddenByFilter(t *testing.T) {
 		t.Fatalf("MarkedFiles = %+v, want the mark inside the filtered-out group", got)
 	}
 }
+
+func TestSetCopiesCollapsed_expandsAncestorsOfCopies(t *testing.T) {
+	root := pathloc.MustParse("/scan")
+	cursor := dedupFile("orange/table.txt")
+	deep := dedupFile("plane/river/cloud/stone.txt")
+	other := dedupFile("tiger/window.txt")
+	snap := dedupDoneSnapshot(root, cursor, deep, other)
+
+	view := ui.DedupViewState{
+		TreeDirs: true,
+		Marked:   map[string]bool{},
+		Kept:     map[string]bool{},
+		Main: ui.DedupPane{Collapsed: map[string]bool{
+			"d:plane": true, "d:plane/river": true, "d:plane/river/cloud": true, "d:tiger": true,
+		}},
+	}
+	h, model := dedupHandlerWithView(t, snap, view)
+	idx := ui.DedupRowIndexByID(model.DedupList, cursor.Abs.String())
+	if idx < 0 {
+		t.Fatal("cursor file row not found")
+	}
+	model.DedupView.Main.Selected = idx
+	h.syncCopies()
+
+	h.SetCopiesCollapsed(false)
+
+	for _, id := range []string{"d:plane", "d:plane/river", "d:plane/river/cloud", "d:tiger"} {
+		if model.DedupView.Main.Collapsed[id] {
+			t.Errorf("%s still collapsed", id)
+		}
+	}
+	for _, f := range []comparepkg.DedupFile{deep, other} {
+		if ui.DedupRowIndexByID(model.DedupList, f.Abs.String()) < 0 {
+			t.Errorf("%s not visible", f.Rel)
+		}
+	}
+	if got := ui.DedupRowIndexByID(model.DedupList, cursor.Abs.String()); got != model.DedupView.Main.Selected {
+		t.Errorf("cursor moved: selected %d, row %d", model.DedupView.Main.Selected, got)
+	}
+
+	h.SetCopiesCollapsed(true)
+	for _, id := range []string{"d:plane", "d:plane/river", "d:plane/river/cloud", "d:tiger"} {
+		if !model.DedupView.Main.Collapsed[id] {
+			t.Errorf("%s not collapsed again", id)
+		}
+	}
+	if model.DedupView.Main.Collapsed["d:orange"] {
+		t.Error("cursor's own folder collapsed")
+	}
+	if got := ui.DedupRowIndexByID(model.DedupList, cursor.Abs.String()); got < 0 || got != model.DedupView.Main.Selected {
+		t.Errorf("cursor lost after collapse: selected %d, row %d", model.DedupView.Main.Selected, got)
+	}
+}
+
+func TestSetCopiesCollapsed_noopInGroupsMode(t *testing.T) {
+	root := pathloc.MustParse("/scan")
+	a, b := dedupFile("orange/table.txt"), dedupFile("plane/river.txt")
+	view := ui.DedupViewState{
+		Marked: map[string]bool{}, Kept: map[string]bool{},
+		Main: ui.DedupPane{Collapsed: map[string]bool{"d:plane": true}},
+	}
+	h, model := dedupHandlerWithView(t, dedupDoneSnapshot(root, a, b), view)
+	h.SetCopiesCollapsed(false)
+	if !model.DedupView.Main.Collapsed["d:plane"] {
+		t.Error("groups mode should not expand")
+	}
+}

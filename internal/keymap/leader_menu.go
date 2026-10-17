@@ -204,6 +204,8 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionDedupToggleTree,
 				ActionDedupCollapseAll,
 				ActionDedupExpandAll,
+				ActionDedupExpandCopies,
+				ActionDedupCollapseCopies,
 				ActionDedupPrevDir,
 				ActionDedupNextDir,
 				ActionDedupToggleSort,

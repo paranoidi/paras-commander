@@ -149,15 +149,7 @@ func drawDedupView(
 	if !view.SourceStale && view.SourceRow >= 0 && view.SourceRow < len(list) {
 		activeGroup = list[view.SourceRow].Value.GroupIdx
 	}
-	var hintDirs, twinDirs map[string]bool
-	if view.TreeDirs && activeGroup >= 0 && activeGroup < len(snap.Groups) {
-		hintDirs = dedupGroupDirSet(snap.Groups[activeGroup])
-	}
-	if view.TreeDirs && !view.SourceStale {
-		if sel, ok := dedupRowAt(list, view.SourceRow); ok && sel.Value.Kind == DedupRowDir {
-			twinDirs, hintDirs = dedupTwinDirSets(snap, sel.Value.DirRel)
-		}
-	}
+	hintDirs, twinDirs := DedupCursorHintDirs(snap, view, list)
 	drawDedupTreePane(screen, layout.Primary, dedupPaneParams{
 		Title:            dedupViewTitle(snap, view.IgnoredEmptyCount, view.RecheckPercent()),
 		EndLabel:         panelSelectionSizePadded(dedupEndLabel(view)),

@@ -170,6 +170,10 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		a.dedupCtrl.ExpandAll()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
+	case keymap.ActionDedupExpandCopies, keymap.ActionDedupCollapseCopies:
+		a.dedupCtrl.SetCopiesCollapsed(actionID == keymap.ActionDedupCollapseCopies)
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
 	case keymap.ActionDedupPrevDir:
 		a.dedupCtrl.MoveToAdjacentDir(-1)
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())

@@ -29,6 +29,12 @@ func DefinitionsDedup(ignoreEmpty, treeDirs bool) []Definition {
 		Item{Action: keymap.ActionDedupCollapseAll, Label: "Collapse all", Shortcut: 'c'},
 		Item{Action: keymap.ActionDedupExpandAll, Label: "Expand all", Shortcut: 'a'},
 	)
+	if treeDirs {
+		items = append(items,
+			Item{Action: keymap.ActionDedupExpandCopies, Label: "Show copies", Shortcut: 's'},
+			Item{Action: keymap.ActionDedupCollapseCopies, Label: "Hide copies", Shortcut: 'h'},
+		)
+	}
 	items = append(items,
 		Item{Action: keymap.ActionPanelClearSelection, Label: "Unselect all", Shortcut: 'u'},
 		Item{Action: keymap.ActionFileDelete, Label: "Delete marked", Shortcut: 'm'},

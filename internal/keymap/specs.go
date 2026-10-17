@@ -718,6 +718,24 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "a",
 		},
 		{
+			ID:          ActionDedupExpandCopies,
+			Views:       HelpDedup,
+			Title:       "Expand folders to show copies",
+			Section:     "Find duplicates",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"expand", "copies", "reveal", "related"},
+			LeaderKey:   "s",
+		},
+		{
+			ID:          ActionDedupCollapseCopies,
+			Views:       HelpDedup,
+			Title:       "Collapse folders holding copies",
+			Section:     "Find duplicates",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"collapse", "copies", "hide", "related"},
+			LeaderKey:   "H",
+		},
+		{
 			ID:          ActionDedupPrevDir,
 			Views:       HelpDedup,
 			Title:       "Previous directory",

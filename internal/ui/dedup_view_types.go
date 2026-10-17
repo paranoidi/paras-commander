@@ -740,6 +740,22 @@ func dedupTwinDirSets(snap comparepkg.DedupSnapshot, dirRel string) (twins, ance
 	return twins, ancestors
 }
 
+// DedupCursorHintDirs returns the dirs (DirRel) holding the cursor row's related
+// copies (hint: every ancestor, i.e. the folders to expand to show them) and,
+// for a dir cursor, its twin dirs. Dirs mode only; nils otherwise.
+func DedupCursorHintDirs(snap comparepkg.DedupSnapshot, view DedupViewState, list []DedupRow) (hint, twins map[string]bool) {
+	if !view.TreeDirs || view.SourceStale || view.SourceRow < 0 || view.SourceRow >= len(list) {
+		return nil, nil
+	}
+	if g := list[view.SourceRow].Value.GroupIdx; g >= 0 && g < len(snap.Groups) {
+		hint = dedupGroupDirSet(snap.Groups[g])
+	}
+	if sel := list[view.SourceRow]; sel.Value.Kind == DedupRowDir {
+		twins, hint = dedupTwinDirSets(snap, sel.Value.DirRel)
+	}
+	return hint, twins
+}
+
 func dedupGroupDirSet(g comparepkg.DedupGroup) map[string]bool {
 	out := map[string]bool{}
 	for _, f := range g.Files {
