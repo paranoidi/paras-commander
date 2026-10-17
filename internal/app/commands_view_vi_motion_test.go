@@ -81,3 +81,35 @@ func TestCommandsViewViMotionLeaderLetterOnlyWhenModeOn(t *testing.T) {
 		t.Fatalf("vi-motion on: 'x' should dispatch commands.close directly, ViewMode = %v", app.model.ViewMode)
 	}
 }
+
+// TestCommandsViewQuickFilterThroughHandleKey drives the Commands list filter through the
+// full key path: every typed rune must reach the Commands filter (not the panel filter), Esc
+// closes only the filter, and a second Esc closes the view.
+func TestCommandsViewQuickFilterThroughHandleKey(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	app.commandsCtrl.AppendEntry(ui.CommandRunEntry{Kind: ui.CommandRunKindUserMenu, UserCommandLine: "lantern.sh"})
+	last := app.commandsCtrl.AppendEntry(ui.CommandRunEntry{Kind: ui.CommandRunKindUserMenu, UserCommandLine: "orchard.sh"})
+	app.commandsCtrl.OpenViewAt(last)
+	app.model.CommandsView.Selected = last
+
+	for _, r := range "lant" {
+		_, _ = app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if q := app.model.CommandsView.Filter.Query; q != "lant" {
+		t.Fatalf("filter query = %q, want %q", q, "lant")
+	}
+	if app.model.CommandsView.Selected != 0 {
+		t.Fatalf("Selected = %d, want 0 (lantern.sh)", app.model.CommandsView.Selected)
+	}
+
+	_, _ = app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.CommandsView.Filter.UIActive() || app.model.ViewMode != ui.ViewCommands {
+		t.Fatalf("first Esc: filter active=%v view=%v, want filter closed and view open",
+			app.model.CommandsView.Filter.UIActive(), app.model.ViewMode)
+	}
+	_, _ = app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.ViewMode == ui.ViewCommands {
+		t.Fatal("second Esc: Commands view still open")
+	}
+}

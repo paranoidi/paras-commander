@@ -312,7 +312,8 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	if f := a.dedupCtrl.FocusedFilter(); !a.model.DedupView.FocusPanel && f.UIActive() {
 		if !filterRetainsKey(f, event, a.keys.Global) {
 			a.dedupCtrl.CancelFilter()
-		} else if a.handleDedupFilterKey(event) {
+		} else if a.handleListFilterKey(a.dedupCtrl, event) {
+			a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 			return false
 		}
 	}
@@ -337,7 +338,8 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	}
 	visible := a.dedupVisibleRows()
 	if nextAction == "" && keymap.IsPlainPrintableRune(event) {
-		a.handleDedupFilterKey(event)
+		a.handleListFilterKey(a.dedupCtrl, event)
+		a.dedupCtrl.EnsureSelectionVisible(visible)
 		return false
 	}
 
@@ -389,11 +391,19 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	return false
 }
 
-// handleDedupFilterKey edits the focused pane's type-to-jump filter. It reports
-// whether the key was consumed; Enter and Insert close the filter and fall
-// through to their normal action.
-func (a *App) handleDedupFilterKey(event *tcell.EventKey) bool {
-	c := a.dedupCtrl
+// listFilterCtrl is a list view's type-to-jump filter (Dedup panes, Commands list).
+type listFilterCtrl interface {
+	CancelFilter()
+	CycleFilterMatch(delta int)
+	ClearFilter()
+	BackspaceFilter()
+	AppendFilterRune(r rune)
+}
+
+// handleListFilterKey edits c's type-to-jump filter. It reports whether the key
+// was consumed; Enter and Insert close the filter and fall through to their
+// normal action. Callers re-scroll the selection into view afterwards.
+func (a *App) handleListFilterKey(c listFilterCtrl, event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyEnter, tcell.KeyInsert:
 		c.CancelFilter()
@@ -415,6 +425,5 @@ func (a *App) handleDedupFilterKey(event *tcell.EventKey) bool {
 	case tcell.KeyRune: // filterRetainsKey / the caller only pass plain printable runes
 		c.AppendFilterRune(event.Rune())
 	}
-	c.EnsureSelectionVisible(a.dedupVisibleRows())
 	return true
 }

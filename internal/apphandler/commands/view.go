@@ -285,6 +285,10 @@ func (h *Handler) HandleViewKey(event *tcell.EventKey) bool {
 		h.host.Dispatch(nextAction)
 		return false
 	}
+	if nextAction == "" && h.model.CommandsView.FocusPane == 0 && keymap.IsPlainPrintableRune(event) {
+		h.AppendFilterRune(event.Rune())
+		return false
+	}
 
 	fp := h.model.CommandsView.FocusPane
 	switch fp {

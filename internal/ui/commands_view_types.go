@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
 )
 
 // CommandRunPhase is the lifecycle state of one subprocess row.
@@ -34,12 +35,12 @@ type CommandRunEntry struct {
 	Kind            CommandRunKind
 	UserCommandLine string // command as written (macros unexpanded)
 	// Macros are the values the command's macros expanded to, one list-row line each.
-	Macros []cmdmacro.MacroUse
-	Phase           CommandRunPhase
-	ExitCode        int // set when Phase == CommandRunDone; -1 while pending/running or unknown
-	Stdout          string
-	Stderr          string
-	ErrorMsg        string // launch failure or context cancellation
+	Macros   []cmdmacro.MacroUse
+	Phase    CommandRunPhase
+	ExitCode int // set when Phase == CommandRunDone; -1 while pending/running or unknown
+	Stdout   string
+	Stderr   string
+	ErrorMsg string // launch failure or context cancellation
 	// PTY marks a run-for-each entry that runs attached to a live pseudo-TTY, shown live in
 	// the bottom terminal panel (Alt+P) while it runs, instead of capturing stdout/stderr
 	// into memory buffers.
@@ -71,6 +72,8 @@ type CommandsViewState struct {
 	// bottom; otherwise the pane follows the tail (tail -f) and its Scroll is ignored.
 	StdoutDetached bool
 	StderrDetached bool
+	// Filter is the list pane's type-to-jump quick filter; match indices are entry indices.
+	Filter quickfilter.Filter
 }
 
 // StreamScroll returns the scroll offset to draw a pane at: a followed pane sits at the

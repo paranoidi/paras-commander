@@ -5,11 +5,13 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
@@ -98,7 +100,15 @@ func CommandsStreamMaxScroll(column Rect, entry CommandRunEntry) (stdoutMax, std
 
 func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewState, entries []CommandRunEntry, styles theme.Theme, chromeBlocked bool, userHomeDir string) {
 	active := state.FocusPane == 0
-	layout := drawAuxPanelChrome(screen, rect, " Commands ", "", active, chromeBlocked, false, styles)
+	filterUI := active && state.Filter.UIActive()
+	title := " Commands "
+	if filterUI {
+		title = "" // drawQuickFilterTitle owns the top row
+	}
+	layout := drawAuxPanelChrome(screen, rect, title, "", active, chromeBlocked, false, styles)
+	if filterUI {
+		drawQuickFilterTitle(screen, layout.TitleX, rect.Y, layout.TitleWidth, state.Filter, styles)
+	}
 	bg := layout.ContentBG
 
 	contentX := rect.X + 2
@@ -137,17 +147,34 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 		}
 		paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
 		primitive.Text(screen, contentX, y, commandsListColMarker, commandPhaseMark(entry), markStyle)
-		cmdShown := primitive.TruncateRight(cmdIcon+commandDisplayLine(entry.UserCommandLine), cmdW-1)
-		primitive.Text(screen, xCmd, y, cmdW, cmdShown, lineStyle)
+		segs := CommandsFilterSegments(entry, userHomeDir)
+		segRanges := splitSegmentRanges(segs, state.Filter.Ranges(idx))
+		matchStyle := styles.FuzzyHighlight
+		if selected && active {
+			matchStyle = styles.FuzzyHighlightCursor
+		}
+		matchStyle = matchStyle.Background(lineBG)
+		cmdFull := cmdIcon + segs[0]
+		cmdShown := primitive.TruncateRight(cmdFull, cmdW-1)
+		var spans []primitive.Span
+		if cmdShown == cmdFull { // ponytail: no highlight on a truncated line, like Dedup
+			spans = shiftSpans(segRanges[0], utf8.RuneCountInString(cmdIcon), matchStyle)
+		}
+		primitive.StyledText(screen, xCmd, y, cmdW, cmdShown, lineStyle, spans)
 		y++
 
-		for _, m := range entry.Macros {
+		for mi, m := range entry.Macros {
 			if y >= bottom {
 				break
 			}
 			paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
 			primitive.Text(screen, contentX, y, commandsListColMarker, "", lineStyle)
-			primitive.Text(screen, xCmd, y, cmdW, commandMacroLine(m, userHomeDir, cmdW), lineStyle)
+			line := commandMacroLine(m, userHomeDir, cmdW)
+			var spans []primitive.Span
+			if prefix := commandMacroPrefix(m); strings.HasPrefix(line, prefix+segs[mi+1]) {
+				spans = shiftSpans(segRanges[mi+1], utf8.RuneCountInString(prefix), matchStyle)
+			}
+			primitive.StyledText(screen, xCmd, y, cmdW, line, lineStyle, spans)
 			y++
 		}
 	}
@@ -156,20 +183,72 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 // commandMacroLine renders one macro row line, "%f ~/path", fitting width; a multi-value
 // macro (%t/%T) shows its first value plus " (+N more)".
 func commandMacroLine(m cmdmacro.MacroUse, userHomeDir string, width int) string {
-	prefix := "%" + string(m.Letter) + " "
+	prefix := commandMacroPrefix(m)
 	if len(m.Values) == 0 {
 		return prefix
 	}
-	v := m.Values[0]
-	if userHomeDir != "" && strings.HasPrefix(v, userHomeDir+string(filepath.Separator)) {
-		v = "~" + v[len(userHomeDir):]
-	}
+	v := commandMacroValue(m, userHomeDir)
 	suffix := ""
 	if len(m.Values) > 1 {
 		suffix = fmt.Sprintf(" (+%d more)", len(m.Values)-1)
 	}
 	pathW := max(1, width-1-runewidth.StringWidth(prefix+suffix))
 	return prefix + primitive.FitPathForWidth(v, pathW) + suffix
+}
+
+func commandMacroPrefix(m cmdmacro.MacroUse) string { return "%" + string(m.Letter) + " " }
+
+// commandMacroValue is the first value of m as displayed, with the home directory as "~".
+func commandMacroValue(m cmdmacro.MacroUse, userHomeDir string) string {
+	if len(m.Values) == 0 {
+		return ""
+	}
+	v := m.Values[0]
+	if userHomeDir != "" && strings.HasPrefix(v, userHomeDir+string(filepath.Separator)) {
+		v = "~" + v[len(userHomeDir):]
+	}
+	return v
+}
+
+// CommandsFilterSegments returns the text the Commands quick filter matches for e: the
+// displayed command line, then each macro's displayed first value. Joined with " " it is the
+// match label (CommandsFilterLabel); the renderer splits match ranges back per segment.
+func CommandsFilterSegments(e CommandRunEntry, userHomeDir string) []string {
+	segs := make([]string, 0, 1+len(e.Macros))
+	segs = append(segs, commandDisplayLine(e.UserCommandLine))
+	for _, m := range e.Macros {
+		segs = append(segs, commandMacroValue(m, userHomeDir))
+	}
+	return segs
+}
+
+// CommandsFilterLabel is the single string the quick filter ranks for e.
+func CommandsFilterLabel(e CommandRunEntry, userHomeDir string) string {
+	return strings.Join(CommandsFilterSegments(e, userHomeDir), " ")
+}
+
+// splitSegmentRanges maps rune ranges over the " "-joined segments back to per-segment ranges.
+func splitSegmentRanges(segs []string, ranges []search.Range) [][]search.Range {
+	out := make([][]search.Range, len(segs))
+	off := 0
+	for i, seg := range segs {
+		n := utf8.RuneCountInString(seg)
+		for _, r := range ranges {
+			if s, e := max(r.Start, off), min(r.End, off+n); s < e {
+				out[i] = append(out[i], search.Range{Start: s - off, End: e - off})
+			}
+		}
+		off += n + 1
+	}
+	return out
+}
+
+func shiftSpans(ranges []search.Range, off int, style tcell.Style) []primitive.Span {
+	var spans []primitive.Span
+	for _, r := range ranges {
+		spans = append(spans, primitive.Span{Start: off + r.Start, End: off + r.End, Style: style})
+	}
+	return spans
 }
 
 // commandDisplayWrappers are leading words dropped (with their flags) from Commands-row

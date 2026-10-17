@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pools"
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -431,6 +432,7 @@ func (ptyHostStub) SetTransientMessage(string, ui.MessageUrgency)               
 func (ptyHostStub) SetErrorMessage(string, error)                               {}
 func (p ptyHostStub) ActivePanel() *panel.State                                 { return p.panel }
 func (ptyHostStub) InactivePanel() *panel.State                                 { return &panel.State{} }
+func (ptyHostStub) FilterOptions() quickfilter.Options                          { return quickfilter.Options{} }
 func (ptyHostStub) Styles() theme.Theme                                         { return theme.Theme{} }
 func (ptyHostStub) BrowserMenuDefinitions() []menu.Definition                   { return nil }
 func (ptyHostStub) SetTransientMessageBanner(string, string, ui.MessageUrgency) {}

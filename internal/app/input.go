@@ -681,7 +681,7 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 		return a.jobsCtrl.HandleJobsViewKey(ev)
 	},
 	InputModeCommandsView: func(a *App, ev *tcell.EventKey) bool {
-		return a.commandsCtrl.HandleViewKey(ev)
+		return a.handleCommandsViewKey(ev)
 	},
 	InputModeCompareView: func(a *App, ev *tcell.EventKey) bool {
 		return a.handleCompareViewKey(ev)

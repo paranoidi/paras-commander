@@ -1,7 +1,9 @@
 package app
 
 import (
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -33,4 +35,19 @@ func (h commandsHost) FocusedFileDialogField() *dialog.FileDialogField {
 
 func (h commandsHost) RefreshAfterBackgroundCommand() { h.app.refreshAfterBackgroundCommand() }
 
+func (h commandsHost) FilterOptions() quickfilter.Options { return h.app.quickFilterOptions() }
+
 func (h commandsHost) Styles() theme.Theme { return h.app.styles }
+
+// handleCommandsViewKey gives an open list-pane type-to-jump filter the key before the
+// Esc-closes-view and vi-motion handling in commandsCtrl.HandleViewKey, like Dedup.
+func (a *App) handleCommandsViewKey(event *tcell.EventKey) bool {
+	if f := a.commandsCtrl.Filter(); a.model.CommandsView.FocusPane == 0 && f.UIActive() {
+		if !filterRetainsKey(f, event, a.keys.Global) {
+			a.commandsCtrl.CancelFilter()
+		} else if a.handleListFilterKey(a.commandsCtrl, event) {
+			return false
+		}
+	}
+	return a.commandsCtrl.HandleViewKey(event)
+}

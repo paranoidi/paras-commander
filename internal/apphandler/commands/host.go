@@ -3,6 +3,7 @@ package commands
 import (
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -22,6 +23,9 @@ type Host interface {
 	// dialogs mutate it in place after construction) — needed for the run-for-each PTY
 	// session's terminal text style in the bottom terminal panel.
 	Styles() theme.Theme
+
+	// FilterOptions returns the live quick-filter settings (case folding, cycle order).
+	FilterOptions() quickfilter.Options
 
 	// BrowserMenuDefinitions returns the browser view's menu bar definitions, restored when
 	// the Commands view closes.
