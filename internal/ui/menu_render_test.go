@@ -83,3 +83,25 @@ func TestDrawMenuBarSpinnerOnlyIgnoresStaleLayoutInFullscreenPreview(t *testing.
 		}
 	}
 }
+
+// With a modal open the menu bar is blank; the pin badge must still keep one margin cell
+// after the status_command text instead of abutting it.
+func TestDrawMenuBarBlankKeepsMarginAfterStatusCommand(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, statusW = 80, 6
+	screen.SetSize(width, 24)
+	styles := theme.Default()
+	rect := Rect{X: statusW, Y: 0, Width: width - statusW, Height: 1}
+	drawMenuBarBlank(screen, rect, styles, MenuBarJobsStrip{}, "", "", false, 0, 3)
+	if r, _, _ := screen.Get(statusW, 0); r != " " {
+		t.Fatalf("cell (%d,0) = %q, want margin space", statusW, r)
+	}
+	if r, _, _ := screen.Get(statusW+1, 0); r == " " {
+		t.Fatalf("cell (%d,0) is blank, want pin badge", statusW+1)
+	}
+}

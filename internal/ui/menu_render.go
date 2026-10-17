@@ -84,7 +84,7 @@ func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsSt
 	primitive.Text(screen, rect.X, rect.Y, rect.Width, "", styles.MenuBarInactive)
 	tailW := menuBarRightTailRuneCount(attention, perm, showMenuBarSpinner)
 	clipExclusive := menuBarMenusClipExclusive(rect, tailW)
-	gapStart := rect.X
+	gapStart := min(menuBarContentStart(rect), clipExclusive)
 	gapWidth := clipExclusive - gapStart
 	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, jobsStrip, pinCount, styles)
 	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
@@ -121,10 +121,20 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.
 		}
 		x += labelW + 1
 	}
-	gapStart := min(x, clipExclusive)
+	gapStart := min(max(x, menuBarContentStart(rect)), clipExclusive)
 	gapWidth := clipExclusive - gapStart
 	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, jobsStrip, pinCount, styles)
 	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
+}
+
+// menuBarContentStart is the first column menu-bar content may use: one cell past rect.X
+// when status_command text sits to the left (rect.X > 0), so the jobs strip or pin badge
+// never abuts it. Menu labels carry their own leading space and start at rect.X.
+func menuBarContentStart(rect Rect) int {
+	if rect.X > 0 {
+		return rect.X + 1
+	}
+	return rect.X
 }
 
 // menuBarMenusClipExclusive is the first column after the menu label area (before permission tail).
@@ -155,7 +165,7 @@ func menuBarMenusEndX(rect Rect, menus []menu.Definition, permissionTailRunes in
 		}
 		x += labelW + 1
 	}
-	return min(x, clip)
+	return min(max(x, menuBarContentStart(rect)), clip)
 }
 
 // DrawMenuBarJobsGapOnly repaints the jobs queue/progress gap between menu labels and the right tail.
@@ -171,7 +181,7 @@ func DrawMenuBarJobsGapOnly(screen tcell.Screen, layout Layout, model Model, men
 	clipEx := menuBarMenusClipExclusive(rect, tailW)
 	var gapStart, gapWidth int
 	if model.ModalDialogOpen() {
-		gapStart = rect.X
+		gapStart = min(menuBarContentStart(rect), clipEx)
 	} else {
 		gapStart = menuBarMenusEndX(rect, menus, tailW)
 	}
