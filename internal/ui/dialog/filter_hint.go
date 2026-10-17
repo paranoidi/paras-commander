@@ -93,12 +93,11 @@ func filterPatternInvalid(state FilterDialogState) bool {
 }
 
 func filterDialogInnerRows(state FilterDialogState) int {
-	rows := 3 + 1 + 1 + 1 + 2 + 1 + 1 + 1 // mode radios, separator, Pattern label, input, filter checkbox rows, separator, blank, buttons
+	// mode radios, separator, Pattern label, input, reserved hint row, filter checkbox rows,
+	// separator, blank, buttons
+	rows := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 1 + 1
 	if !FilterShowsFilesDirs(state) {
 		rows--
-	}
-	if filterShowsPatternHint(state) {
-		rows++
 	}
 	if state.MetaColumnCount > 0 {
 		rows++

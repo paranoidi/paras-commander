@@ -93,12 +93,14 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 		return
 	}
 
-	if hint := filterPatternHintText(state); hint != "" && y < innerBottom {
+	// The row after the input is reserved for the compile-error hint so the dialog never grows
+	// when the hint appears.
+	if hint := filterPatternHintText(state); hint != "" {
 		primitive.Text(screen, textX, y, inputWidth, hint, filterPatternHintStyle(styles, dbg))
-		y++
-		if y >= innerBottom {
-			return
-		}
+	}
+	y++ // reserved hint row (blank when pattern is valid)
+	if y >= innerBottom {
+		return
 	}
 
 	// col2X aligns the second checkbox on every two-column row with the type checkboxes above.
