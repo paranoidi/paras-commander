@@ -95,6 +95,7 @@ func paintBrowserPanelsInScope(
 			primaryCtx.TitlePath = titlePath
 			primaryCtx.TitleEndLabel = endLabel
 		}
+		otherNames, otherCursor := otherPanelMatchNames(model, PrimaryPanel)
 		drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			primaryCtx,
@@ -102,7 +103,7 @@ func paintBrowserPanelsInScope(
 				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(PrimaryPanel),
-				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, MetaColumns: model.MetaResults[PrimaryPanel],
+				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, OtherMatchNames: otherNames, OtherMatchCursorName: otherCursor, MetaColumns: model.MetaResults[PrimaryPanel],
 				NarrowPanelsNameOnly: model.NarrowPanelsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})
@@ -138,6 +139,7 @@ func paintBrowserPanelsInScope(
 			secondaryCtx.TitlePath = titlePath
 			secondaryCtx.TitleEndLabel = endLabel
 		}
+		otherNames, otherCursor := otherPanelMatchNames(model, SecondaryPanel)
 		drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			secondaryCtx,
@@ -145,7 +147,7 @@ func paintBrowserPanelsInScope(
 				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(SecondaryPanel),
-				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, MetaColumns: model.MetaResults[SecondaryPanel],
+				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, OtherMatchNames: otherNames, OtherMatchCursorName: otherCursor, MetaColumns: model.MetaResults[SecondaryPanel],
 				NarrowPanelsNameOnly: model.NarrowPanelsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})
@@ -176,5 +178,6 @@ func PaintBrowserListNavPanelOnly(screen tcell.Screen, layout Layout, model Mode
 	if panelID != PrimaryPanel && panelID != SecondaryPanel {
 		return false
 	}
-	return paintBrowserPanelsInScope(screen, layout, model, styles, func(id int) bool { return id == panelID })
+	// The other panel's match marks follow this panel's cursor, so repaint both when they are on.
+	return paintBrowserPanelsInScope(screen, layout, model, styles, func(id int) bool { return id == panelID || model.OtherPanelMatchMarks })
 }

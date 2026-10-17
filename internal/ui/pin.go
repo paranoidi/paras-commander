@@ -42,3 +42,29 @@ func PinnedPathSet(items []PinnedItem) map[string]struct{} {
 	}
 	return set
 }
+
+// otherPanelMatchNames returns, for the inactive panel panelID, the entry names of the active
+// panel's directory and its cursor entry name; nil when the mark is off, panelID is the active
+// panel, or both panels show the same directory.
+// ponytail: rebuilt per render (O(n) over the active listing); cache on State keyed by listing generation if huge dirs lag.
+func otherPanelMatchNames(model Model, panelID int) (map[string]struct{}, string) {
+	if !model.OtherPanelMatchMarks || panelID == model.ActivePanel {
+		return nil, ""
+	}
+	active, inactive := &model.Primary, &model.Secondary
+	if model.ActivePanel == SecondaryPanel {
+		active, inactive = inactive, active
+	}
+	if active.PathString() == inactive.PathString() || len(active.Entries) == 0 {
+		return nil, ""
+	}
+	names := make(map[string]struct{}, len(active.Entries))
+	for _, e := range active.Entries {
+		names[e.Name] = struct{}{}
+	}
+	cursor := ""
+	if e, ok := active.CurrentEntry(); ok && active.EntryDir(e).String() == active.Path.String() {
+		cursor = e.Name
+	}
+	return names, cursor
+}

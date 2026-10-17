@@ -89,6 +89,8 @@ new.previous = { fg = "bright_yellow" }
 renamed = { fg = "cyan" }
 no_permission = { fg = "bright_black" }
 pinned = { fg = "magenta" }
+other_match = { fg = "bright_black" }
+other_match.cursor = { fg = "cyan" }
 job = { fg = "green" }
 job.read = { fg = "yellow" }
 job.decision = { fg = "red" }
@@ -331,6 +333,7 @@ completed = "\uf05d"
 selection_subtree = ""
 new = "\uea7f"
 renamed = "\U000f11e8"
+other_match = "\U000f01fc"
 no_permission = "\uf023"
 job = "\U000f02ca"
 move = "\U000f0ab9"

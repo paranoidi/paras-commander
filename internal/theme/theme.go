@@ -97,6 +97,10 @@ type Theme struct {
 	PanelRowMarkNoPermission tcell.Style
 	// PanelRowMarkPinned styles the file-list suffix for entries in the pin list.
 	PanelRowMarkPinned tcell.Style
+	// PanelRowMarkOtherMatch / PanelRowMarkOtherMatchCursor style the inactive-panel suffix for names
+	// present in the active panel's directory (the Cursor variant marks the active cursor's name).
+	PanelRowMarkOtherMatch       tcell.Style
+	PanelRowMarkOtherMatchCursor tcell.Style
 	// PanelRowMarkJob styles the file-list job mark when the row is under a job's
 	// write (destination) tree; PanelRowMarkJobRead styles the read (source) tree;
 	// PanelRowMarkJobDecision styles either while the matched job waits on a user
@@ -562,6 +566,7 @@ const (
 	IconKeyFilelistSelectionSubtree = "filelist.selection_subtree"
 	IconKeyFilelistNew              = "filelist.new"
 	IconKeyFilelistRenamed          = "filelist.renamed"
+	IconKeyFilelistOtherMatch       = "filelist.other_match"
 	IconKeyFilelistJob              = "filelist.job"
 	IconKeyFilelistMove             = "filelist.move"
 	IconKeyFilelistDelete           = "filelist.delete"
@@ -739,6 +744,11 @@ func (t Theme) IconFilelistNew() rune {
 // IconFilelistRenamed returns the recently-renamed file suffix icon.
 func (t Theme) IconFilelistRenamed() rune {
 	return t.filelistIconRune(IconKeyFilelistRenamed, '\U000f11e8')
+}
+
+// IconFilelistOtherMatch returns the suffix icon for names also present in the other panel.
+func (t Theme) IconFilelistOtherMatch() rune {
+	return t.filelistIconRune(IconKeyFilelistOtherMatch, '\U000f01fc')
 }
 
 // IconFilelistJob returns the file-list job mark icon (role/status colored via
@@ -1161,7 +1171,7 @@ var optionalStyleKeys = func() []string {
 	for i := 0; i < 10; i++ {
 		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
 	}
-	keys = append(keys, "menu.speed.cap", "menu.speed.text")
+	keys = append(keys, "menu.speed.cap", "menu.speed.text", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor")
 	return keys
 }()
 
@@ -1470,6 +1480,15 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	panelRowMarkOtherMatch, err := optionalStyle(specs, palette, "panel.row.mark.other_match", tcell.StyleDefault.Foreground(tcell.ColorGray))
+	if err != nil {
+		return Theme{}, err
+	}
+	panelRowMarkOtherMatchCursor, err := optionalStyle(specs, palette, "panel.row.mark.other_match.cursor", tcell.StyleDefault.Foreground(tcell.ColorTeal))
+	if err != nil {
+		return Theme{}, err
+	}
+
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
 		"panel.active.row.cursor":                     {},
@@ -1549,6 +1568,8 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkRenamed:                 styles["panel.row.mark.renamed"],
 		PanelRowMarkNoPermission:            styles["panel.row.mark.no_permission"],
 		PanelRowMarkPinned:                  styles["panel.row.mark.pinned"],
+		PanelRowMarkOtherMatch:              panelRowMarkOtherMatch,
+		PanelRowMarkOtherMatchCursor:        panelRowMarkOtherMatchCursor,
 		PanelRowMarkJob:                     styles["panel.row.mark.job"],
 		PanelRowMarkJobRead:                 styles["panel.row.mark.job.read"],
 		PanelRowMarkJobDecision:             styles["panel.row.mark.job.decision"],

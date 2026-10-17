@@ -400,6 +400,9 @@ type UIConfig struct {
 	// NarrowPanelsNameOnly: when true, narrow panels hide trailing listing columns and show only names
 	// (sort and default_listing_format are unchanged; see NarrowPanelRowTextWidthThreshold in builtin.go).
 	NarrowPanelsNameOnly bool `toml:"narrow_panels_name_only"`
+	// OtherPanelMatchMarks: when true, the inactive panel marks rows whose name also exists in the active
+	// panel's directory (cyan for the active cursor's name).
+	OtherPanelMatchMarks bool `toml:"other_panel_match_marks"`
 	// ScreenRenderHashCache, when true, hashes the logical cell buffer after each full render and skips
 	// screen.Show when unchanged from the last flush. Default DefaultScreenRenderHashCache.
 	ScreenRenderHashCache bool `toml:"screen_render_hash_cache"`
@@ -645,6 +648,7 @@ func Default() Config {
 			UseNerdfontIcons:             true,
 			LeaderMenuShowDirectKeys:     DefaultLeaderMenuShowDirectKeys,
 			NarrowPanelsNameOnly:         DefaultNarrowPanelsNameOnly,
+			OtherPanelMatchMarks:         DefaultOtherPanelMatchMarks,
 			ScreenRenderHashCache:        DefaultScreenRenderHashCache,
 			KeyRepeatDebounceMS:          DefaultKeyRepeatDebounceMS,
 			MediaPreviewDebounceMS:       DefaultMediaPreviewDebounceMS,

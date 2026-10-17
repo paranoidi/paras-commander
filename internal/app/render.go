@@ -249,6 +249,7 @@ func (a *App) render() {
 	a.model.PanelZoomActivePercent = a.config.UI.Zoom.ActivePercent
 	a.model.PanelZoomInactivePercent = a.config.UI.Zoom.InactivePercent
 	a.model.NarrowPanelsNameOnly = a.config.UI.NarrowPanelsNameOnly
+	a.model.OtherPanelMatchMarks = a.config.UI.OtherPanelMatchMarks
 	sb, _ := uiscrollbar.ParseStyle(a.config.UI.Scroll.Scrollbar)
 	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(sb)
 	a.model.PanelScrollbarInactive = a.config.UI.Scroll.ScrollbarInactive

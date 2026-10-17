@@ -164,7 +164,11 @@ type PanelDisplayConfig struct {
 	PreviewPrefetchWarm             map[string]struct{}
 	// PinnedPaths lists absolute paths currently in the app's pin list, for the row-suffix pin
 	// icon; see ui.PinnedPathSet.
-	PinnedPaths           map[string]struct{}
+	PinnedPaths map[string]struct{}
+	// OtherMatchNames holds the active panel's entry names (nil when the mark is off for this panel);
+	// OtherMatchCursorName is the active panel's cursor entry name.
+	OtherMatchNames       map[string]struct{}
+	OtherMatchCursorName  string
 	MetaColumns           []MetaColumnState
 	NarrowPanelsNameOnly  bool
 	ScrollbarShowInactive bool
@@ -497,6 +501,10 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		rowSuffix.Working = (state.ShowLoadingIcon && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath) ||
 			(ctx.WorkingRowPath != "" && entry.Path == ctx.WorkingRowPath)
 		_, rowSuffix.Pinned = display.PinnedPaths[entry.Path]
+		if display.OtherMatchNames != nil && entry.Name != ".." && (state.ListLayout != panel.ListLayoutTree || state.EntryDir(entry).String() == state.Path.String()) {
+			_, rowSuffix.OtherMatch = display.OtherMatchNames[entry.Name]
+			rowSuffix.OtherMatchCursor = rowSuffix.OtherMatch && entry.Name == display.OtherMatchCursorName
+		}
 		rowOpts.Suffix = rowSuffix
 		rowOpts.SizePending = entry.Type == localfs.EntryDirectory && display.Painter != nil && display.Painter.PendingForPanel(entry.Path, ctx.PanelID)
 		text = formatEntry(entry, effTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)

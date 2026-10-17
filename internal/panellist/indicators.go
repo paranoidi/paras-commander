@@ -54,6 +54,9 @@ type RowSuffix struct {
 	Working bool
 	// Pinned marks an entry present in the app's pin list; see Theme.IconPin.
 	Pinned bool
+	// OtherMatch marks a row whose name also exists in the other panel's directory;
+	// OtherMatchCursor additionally marks the name under the other panel's cursor.
+	OtherMatch, OtherMatchCursor bool
 }
 
 // SuffixDecorationLen returns how many trailing runes are reserved for row suffix indicators.
@@ -78,6 +81,9 @@ func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th th
 		n += 2
 	}
 	if suffix.Pinned && width > n+2 {
+		n += 2
+	}
+	if suffix.OtherMatch && width > n+2 {
 		n += 2
 	}
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
@@ -168,6 +174,10 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: pinIconRune(th), NameIdx: -1})
 		used += 2
 	}
+	if suffix.OtherMatch && width > used+2 {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistOtherMatch(), NameIdx: -1})
+		used += 2
+	}
 	if subtree && width > used+2 {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistSelectionSubtree(), NameIdx: -1})
 		used += 2
@@ -251,6 +261,12 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelIconFolderScanning)), true
 	case r == pinIconRune(th) && suffix.Pinned:
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelRowMarkPinned)), true
+	case r == th.IconFilelistOtherMatch() && suffix.OtherMatch:
+		base := th.PanelRowMarkOtherMatch
+		if suffix.OtherMatchCursor {
+			base = th.PanelRowMarkOtherMatchCursor
+		}
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == th.IconFilelistSelectionSubtree() && suffix.SubtreeSelection:
 		base := th.PanelRowMarkSelectionSubtree
 		if chromeBlocked {
@@ -279,7 +295,7 @@ func ListingSuffixSpans(
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
 	if suffix.JobIcon == 0 && suffix.JobQueuedIcon == 0 && suffix.JobOpIcon == 0 &&
 		suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree &&
-		!suffix.Working && !suffix.Pinned && !entry.AccessDenied {
+		!suffix.Working && !suffix.Pinned && !suffix.OtherMatch && !entry.AccessDenied {
 		return nil
 	}
 	display := EntryDisplayRunes(entry, nameWidth, showIcons, suffix, th)
