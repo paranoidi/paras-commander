@@ -400,7 +400,7 @@ type UIConfig struct {
 	// NarrowPanelsNameOnly: when true, narrow panels hide trailing listing columns and show only names
 	// (sort and default_listing_format are unchanged; see NarrowPanelRowTextWidthThreshold in builtin.go).
 	NarrowPanelsNameOnly bool `toml:"narrow_panels_name_only"`
-	// OtherPanelMatchMarks: when true, the inactive panel marks rows whose name also exists in the active
+	// OtherPanelMatchMarks: when true, each panel marks rows whose name also exists in the other
 	// panel's directory (cyan for the active cursor's name).
 	OtherPanelMatchMarks bool `toml:"other_panel_match_marks"`
 	// ScreenRenderHashCache, when true, hashes the logical cell buffer after each full render and skips

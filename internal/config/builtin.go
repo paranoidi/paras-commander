@@ -287,8 +287,8 @@ const (
 	// NarrowPanelRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
 	DefaultNarrowPanelsNameOnly = true
 
-	// DefaultOtherPanelMatchMarks: when true, the inactive panel marks names that also exist in the
-	// active panel's (different) directory.
+	// DefaultOtherPanelMatchMarks: when true, each panel marks names that also exist in the other
+	// panel's (different) directory.
 	DefaultOtherPanelMatchMarks = true
 
 	// DefaultLeaderMenuShowDirectKeys shows the preferred global keybind after each action name

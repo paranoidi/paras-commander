@@ -1,6 +1,10 @@
 package ui
 
-import "github.com/paranoidi/paras-commander/internal/ui/dialog"
+import (
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+)
 
 // PinnedItem is one ad-hoc, session-only pinned file or directory. Pins are
 // never persisted — the list resets on every app restart.
@@ -43,28 +47,58 @@ func PinnedPathSet(items []PinnedItem) map[string]struct{} {
 	return set
 }
 
-// otherPanelMatchNames returns, for the inactive panel panelID, the entry names of the active
-// panel's directory and its cursor entry name; nil when the mark is off, panelID is the active
-// panel, or both panels show the same directory.
-// ponytail: rebuilt per render (O(n) over the active listing); cache on State keyed by listing generation if huge dirs lag.
-func otherPanelMatchNames(model Model, panelID int) (map[string]struct{}, string) {
-	if !model.OtherPanelMatchMarks || panelID == model.ActivePanel {
-		return nil, ""
+// otherMatchDir is the directory a panel compares against the other panel: in tree layout the
+// cursor row's folder when that row is an expanded directory, else the cursor row's parent;
+// outside tree layout, the panel path.
+func otherMatchDir(s *panel.State) string {
+	if e, ok := s.CurrentEntry(); ok && e.Type == localfs.EntryDirectory && e.Name != ".." {
+		if _, _, _, expanded, _, ok := s.TreeRowShape(s.Cursor); ok && expanded {
+			return e.Path
+		}
 	}
-	active, inactive := &model.Primary, &model.Secondary
+	return s.CursorDir().String()
+}
+
+// otherPanelMatchNames returns, for panelID, the entry names directly in the other panel's
+// otherMatchDir, the active panel's cursor entry name, and panelID's own otherMatchDir (rows
+// outside it are not marked); nil names when the mark is off or both dirs are equal.
+// ponytail: rebuilt per render (O(n) over the other listing); cache on State keyed by listing generation if huge dirs lag.
+func otherPanelMatchNames(model Model, panelID int) (names map[string]struct{}, cursor, dir string) {
+	if !model.OtherPanelMatchMarks {
+		return nil, "", ""
+	}
+	self, other := &model.Primary, &model.Secondary
+	if panelID == SecondaryPanel {
+		self, other = other, self
+	}
+	dir, otherDir := otherMatchDir(self), otherMatchDir(other)
+	if dir == otherDir || len(other.Entries) == 0 {
+		return nil, "", ""
+	}
+	names = make(map[string]struct{}, len(other.Entries))
+	add := func(e localfs.Entry) {
+		if e.Name != ".." && other.EntryDir(e).String() == otherDir {
+			names[e.Name] = struct{}{}
+		}
+	}
+	if other.ListLayout == panel.ListLayoutTree {
+		// Expanded children live only in the tree rows; a filter there hides names from matching.
+		for i := range other.VisibleEntryCount() {
+			if e, _, ok := other.VisibleEntry(i); ok {
+				add(e)
+			}
+		}
+	} else {
+		for _, e := range other.Entries {
+			add(e)
+		}
+	}
+	active := &model.Primary
 	if model.ActivePanel == SecondaryPanel {
-		active, inactive = inactive, active
+		active = &model.Secondary
 	}
-	if active.PathString() == inactive.PathString() || len(active.Entries) == 0 {
-		return nil, ""
-	}
-	names := make(map[string]struct{}, len(active.Entries))
-	for _, e := range active.Entries {
-		names[e.Name] = struct{}{}
-	}
-	cursor := ""
-	if e, ok := active.CurrentEntry(); ok && active.EntryDir(e).String() == active.Path.String() {
+	if e, ok := active.CurrentEntry(); ok && active.EntryDir(e).String() == otherMatchDir(active) {
 		cursor = e.Name
 	}
-	return names, cursor
+	return names, cursor, dir
 }

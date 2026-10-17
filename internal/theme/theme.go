@@ -97,8 +97,8 @@ type Theme struct {
 	PanelRowMarkNoPermission tcell.Style
 	// PanelRowMarkPinned styles the file-list suffix for entries in the pin list.
 	PanelRowMarkPinned tcell.Style
-	// PanelRowMarkOtherMatch / PanelRowMarkOtherMatchCursor style the inactive-panel suffix for names
-	// present in the active panel's directory (the Cursor variant marks the active cursor's name).
+	// PanelRowMarkOtherMatch / PanelRowMarkOtherMatchCursor style the suffix for names present
+	// in the other panel's directory (the Cursor variant marks the active cursor's name).
 	PanelRowMarkOtherMatch       tcell.Style
 	PanelRowMarkOtherMatchCursor tcell.Style
 	// PanelRowMarkJob styles the file-list job mark when the row is under a job's

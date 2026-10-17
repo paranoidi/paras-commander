@@ -744,7 +744,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			panelCtx.TitlePath = titlePath
 			panelCtx.TitleEndLabel = endLabel
 		}
-		otherNames, otherCursor := otherPanelMatchNames(model, side.PanelID)
+		otherNames, otherCursor, otherDir := otherPanelMatchNames(model, side.PanelID)
 		drawPanel(screen, side.FileRect, model.PanelForFileListRender(side.PanelID),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			panelCtx,
@@ -752,7 +752,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(side.PanelID),
-				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, OtherMatchNames: otherNames, OtherMatchCursorName: otherCursor, MetaColumns: model.MetaResults[side.PanelID],
+				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, OtherMatchNames: otherNames, OtherMatchCursorName: otherCursor, OtherMatchDir: otherDir, MetaColumns: model.MetaResults[side.PanelID],
 				NarrowPanelsNameOnly: model.NarrowPanelsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})
