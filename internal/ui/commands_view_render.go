@@ -7,13 +7,14 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
 const commandsListColMarker = 3
-const commandsListColCmd = 28
 
 func drawCommandsView(
 	screen tcell.Screen,
@@ -106,80 +107,96 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 		contentW = 1
 	}
 
-	visibleRows := PanelListRows(rect)
+	visibleRows := JobsPanelContentRows(rect) // no header row: the list starts below the border
 	if visibleRows <= 0 || len(entries) == 0 {
 		if visibleRows > 0 {
 			emptyStyle := styles.JobsRow.Background(bg)
-			primitive.Text(screen, contentX, rect.Y+2, contentW, " No runs ", emptyStyle)
+			primitive.Text(screen, contentX, rect.Y+1, contentW, " No runs ", emptyStyle)
 		}
 		return
 	}
 
-	cmdHdrW := commandsListColCmd - commandsListColMarker
-	hdr := fmt.Sprintf("%-*s%-*s%s",
-		commandsListColMarker, "",
-		cmdHdrW, "Command",
-		"Target")
-	headerStyle := styles.PanelActiveHeader.Background(bg)
-	if chromeBlocked {
-		headerStyle = styles.PanelBlockedHeader
-	} else if !active {
-		headerStyle = styles.PanelInactiveHeader.Background(bg)
-	}
-	primitive.Text(screen, contentX, rect.Y+1, contentW, hdr, headerStyle)
-
 	n := len(entries)
-	scroll := state.ListScroll
-	if scroll < 0 {
-		scroll = 0
-	}
-	if scroll > 0 && scroll >= n {
-		scroll = max(0, n-visibleRows)
-	}
-	if scroll+visibleRows > n {
-		scroll = max(0, n-visibleRows)
-	}
+	scroll := max(0, min(state.ListScroll, commandsMaxListScroll(entries, visibleRows)))
+	cmdIcon := styles.IconCommandsCommand() + " "
+	xCmd := contentX + commandsListColMarker
+	cmdW := max(1, contentW-commandsListColMarker)
 
 	rowBase := styles.JobsRow.Background(bg)
-	for row := 0; row < visibleRows; row++ {
-		idx := scroll + row
-		y := rect.Y + 2 + row
-		if idx >= n {
-			break
-		}
+	y := rect.Y + 1
+	bottom := y + visibleRows
+	for idx := scroll; idx < n && y < bottom; idx++ {
 		entry := entries[idx]
 		selected := idx == state.Selected
 		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
 		_, lineBG, _ := lineStyle.Decompose()
-		paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
 
 		markStyle := commandPhaseStyle(entry, styles).Background(lineBG)
 		if selected {
 			markStyle = lineStyle
 		}
-		mark := commandPhaseMark(entry)
-		primitive.Text(screen, contentX, y, commandsListColMarker, mark, markStyle)
+		paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
+		primitive.Text(screen, contentX, y, commandsListColMarker, commandPhaseMark(entry), markStyle)
+		cmdShown := primitive.TruncateRight(cmdIcon+commandDisplayLine(entry.UserCommandLine), cmdW-1)
+		primitive.Text(screen, xCmd, y, cmdW, cmdShown, lineStyle)
+		y++
 
-		cmdColW := commandsListColCmd - commandsListColMarker
-		if cmdColW < 1 {
-			cmdColW = 1
+		for _, m := range entry.Macros {
+			if y >= bottom {
+				break
+			}
+			paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
+			primitive.Text(screen, contentX, y, commandsListColMarker, "", lineStyle)
+			primitive.Text(screen, xCmd, y, cmdW, commandMacroLine(m, userHomeDir, cmdW), lineStyle)
+			y++
 		}
-		cmdShown := primitive.TruncateRight(entry.UserCommandLine, cmdColW-1)
-		xCmd := contentX + commandsListColMarker
-		primitive.Text(screen, xCmd, y, cmdColW, cmdShown, lineStyle)
-
-		tpath := entry.TargetPath
-		if userHomeDir != "" && strings.HasPrefix(tpath, userHomeDir+string(filepath.Separator)) {
-			tpath = "~" + tpath[len(userHomeDir):]
-		}
-		targetW := contentW - commandsListColCmd
-		if targetW < 1 {
-			targetW = 1
-		}
-		xTarget := contentX + commandsListColCmd
-		targetShown := primitive.FitPathForWidth(tpath, targetW)
-		primitive.Text(screen, xTarget, y, targetW, targetShown, lineStyle)
 	}
+}
+
+// commandMacroLine renders one macro row line, "%f ~/path", fitting width; a multi-value
+// macro (%t/%T) shows its first value plus " (+N more)".
+func commandMacroLine(m cmdmacro.MacroUse, userHomeDir string, width int) string {
+	prefix := "%" + string(m.Letter) + " "
+	if len(m.Values) == 0 {
+		return prefix
+	}
+	v := m.Values[0]
+	if userHomeDir != "" && strings.HasPrefix(v, userHomeDir+string(filepath.Separator)) {
+		v = "~" + v[len(userHomeDir):]
+	}
+	suffix := ""
+	if len(m.Values) > 1 {
+		suffix = fmt.Sprintf(" (+%d more)", len(m.Values)-1)
+	}
+	pathW := max(1, width-1-runewidth.StringWidth(prefix+suffix))
+	return prefix + primitive.FitPathForWidth(v, pathW) + suffix
+}
+
+// commandDisplayWrappers are leading words dropped (with their flags) from Commands-row
+// command lines: shells that only obscure the command they run.
+var commandDisplayWrappers = map[string]bool{
+	"sh": true, "bash": true, "zsh": true, "fish": true, "dash": true, "ksh": true,
+	"csh": true, "tcsh": true, "nu": true,
+}
+
+// commandDisplayLine drops a leading shell word and its flags (e.g. "bash -ci 'ls'" → "'ls'")
+// from a Commands-row command line.
+func commandDisplayLine(line string) string {
+	word, rest, _ := strings.Cut(strings.TrimLeft(line, " "), " ")
+	if !commandDisplayWrappers[word] {
+		return line
+	}
+	for {
+		rest = strings.TrimLeft(rest, " ")
+		if !strings.HasPrefix(rest, "-") {
+			break
+		}
+		_, rest, _ = strings.Cut(rest, " ")
+	}
+	if rest == "" { // a bare shell ("fish -l") keeps its own name
+		return line
+	}
+	return rest
 }
 
 // Status icons match AGENTS.md (Nerd Font / PUA codepoints).

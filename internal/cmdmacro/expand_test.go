@@ -1,6 +1,7 @@
 package cmdmacro
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -116,5 +117,27 @@ func TestReplaceTerminalWidth(t *testing.T) {
 	want := `bat --tw=42 --w=42`
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
+	}
+}
+
+func TestMacroDisplayValues(t *testing.T) {
+	ctx := Context{
+		Active: &PanelSnapshot{Dir: "/harbor", HasCurrent: true, CurrentName: "lantern.txt",
+			TaggedInDir: []string{"/harbor/b.txt", "/harbor/a.txt"}},
+		Other: &PanelSnapshot{Dir: "/meadow", HasCurrent: true, CurrentName: "copper.md"},
+	}
+	got := MacroDisplayValues("cp %f %D && echo %f %% %t %F %x", ctx)
+	want := []MacroUse{
+		{'f', []string{"/harbor/lantern.txt"}},
+		{'D', []string{"/meadow"}},
+		{'t', []string{"/harbor/a.txt", "/harbor/b.txt"}},
+		{'F', []string{"/meadow/copper.md"}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	ctx.FOverride = "/orchard/willow"
+	if got := MacroDisplayValues("ls %f", ctx); got[0].Values[0] != "/orchard/willow" {
+		t.Fatalf("FOverride: got %v", got)
 	}
 }

@@ -3,6 +3,8 @@ package ui
 import (
 	"math"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 )
 
 // CommandRunPhase is the lifecycle state of one subprocess row.
@@ -30,8 +32,9 @@ const (
 type CommandRunEntry struct {
 	ID              string
 	Kind            CommandRunKind
-	UserCommandLine string
-	TargetPath      string
+	UserCommandLine string // command as written (macros unexpanded)
+	// Macros are the values the command's macros expanded to, one list-row line each.
+	Macros []cmdmacro.MacroUse
 	Phase           CommandRunPhase
 	ExitCode        int // set when Phase == CommandRunDone; -1 while pending/running or unknown
 	Stdout          string

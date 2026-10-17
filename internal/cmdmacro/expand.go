@@ -229,3 +229,47 @@ func CommandRequiresMacro(template string, letter byte) bool {
 
 // ErrRunForEachRequiresF is returned when a run-for-each command omits %f.
 const ErrRunForEachRequiresF = "command must include %f to represent the selected item"
+
+// MacroUse is one distinct macro a template references, with the values it expands to.
+type MacroUse struct {
+	Letter byte
+	Values []string
+}
+
+// MacroDisplayValues returns the distinct macros template references, in first-use order,
+// with their values for display: %f/%F bare names are joined with their panel's directory so
+// every value is a path. Macros that fail to expand are omitted.
+func MacroDisplayValues(template string, ctx Context) []MacroUse {
+	var out []MacroUse
+	seen := map[byte]bool{}
+	for i := 0; i < len(template)-1; i++ {
+		if template[i] != '%' {
+			continue
+		}
+		i++
+		letter := template[i]
+		if seen[letter] {
+			continue
+		}
+		vals, err := macroValues(letter, ctx)
+		if err != nil {
+			continue // also skips %% and unknown letters
+		}
+		seen[letter] = true
+		if dir := macroDir(letter, ctx); dir != "" && !filepath.IsAbs(vals[0]) {
+			vals = []string{filepath.Join(dir, vals[0])}
+		}
+		out = append(out, MacroUse{Letter: letter, Values: vals})
+	}
+	return out
+}
+
+func macroDir(letter byte, ctx Context) string {
+	switch {
+	case letter == 'f' && ctx.Active != nil:
+		return ctx.Active.Dir
+	case letter == 'F' && ctx.Other != nil:
+		return ctx.Other.Dir
+	}
+	return ""
+}

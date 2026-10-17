@@ -394,6 +394,10 @@ arrow = "\uea9c"
 [icons.search]
 icon = "\uf002"
 
+[icons.commands]
+# U+F1183 (nf-md-console_line); use 8-digit escape
+command = "\U000F1183"
+
 [icons.compare]
 equal = "="
 relocated = "\u2194"

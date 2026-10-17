@@ -104,15 +104,15 @@ func (h *Handler) CloseView() {
 
 // EnsureSelectionVisible scrolls the Commands-view list so the selected row is on-screen.
 func (h *Handler) EnsureSelectionVisible() {
-	n := h.Len()
 	width, height := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(width, height)
-	if layout.TooSmall {
-		h.model.CommandsView.EnsureSelectionVisible(n, 0)
-		return
+	visible := 0
+	if !layout.TooSmall {
+		visible = ui.JobsPanelContentRows(layout.Primary) // must match drawCommandsListPanel
 	}
-	visible := ui.PanelListRows(layout.Primary)
-	h.model.CommandsView.EnsureSelectionVisible(n, visible)
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	h.model.CommandsView.EnsureSelectionVisible(h.model.CommandsList, visible)
 }
 
 // TryDispatch handles Commands-view action IDs. Returns true when actionID was consumed.

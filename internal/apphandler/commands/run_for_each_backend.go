@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/subshell"
@@ -149,11 +151,17 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 		abs := textutil.AbsPathClean(ent.Path)
 
 		built, buildErr := spec.BuildItem(ent)
-		userLine := built.UserLine
+		// Macro values get their own row lines, so line 1 keeps only the template.
+		userLine, _, _ := strings.Cut(built.UserLine, " → ")
+		// The iterated item is always shown, even when the template omits %f (directory mode).
+		macros := built.Macros
+		if !slices.ContainsFunc(macros, func(m cmdmacro.MacroUse) bool { return m.Letter == 'f' }) {
+			macros = append([]cmdmacro.MacroUse{{Letter: 'f', Values: []string{abs}}}, macros...)
+		}
 		if buildErr != nil {
 			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 				e.Phase = ui.CommandRunDone
-				e.TargetPath = abs
+				e.Macros = macros
 				e.UserCommandLine = userLine
 				e.ExitCode = -1
 				e.ErrorMsg = buildErr.Error()
@@ -165,7 +173,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 		if len(argvPrefix) == 0 {
 			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 				e.Phase = ui.CommandRunDone
-				e.TargetPath = abs
+				e.Macros = macros
 				e.UserCommandLine = userLine
 				e.ExitCode = -1
 				e.ErrorMsg = "Command is empty"
@@ -178,7 +186,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			if ent.Type == localfs.EntryDirectory && !spec.AllowDirs {
 				h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 					e.Phase = ui.CommandRunDone
-					e.TargetPath = abs
+					e.Macros = macros
 					e.UserCommandLine = userLine
 					e.ExitCode = -1
 					e.ErrorMsg = "Skipped: directories are not allowed"
@@ -189,7 +197,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			if ent.Type != localfs.EntryDirectory && !spec.AllowFiles {
 				h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 					e.Phase = ui.CommandRunDone
-					e.TargetPath = abs
+					e.Macros = macros
 					e.UserCommandLine = userLine
 					e.ExitCode = -1
 					e.ErrorMsg = "Skipped: files are not allowed"
@@ -207,7 +215,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			// yet" from a live subprocess. Target/line are filled so the waiting
 			// row still names the command.
 			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
-				e.TargetPath = abs
+				e.Macros = macros
 				e.UserCommandLine = userLine
 			})
 			h.PostRenderWake()
@@ -234,7 +242,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			markRunning := func() {
 				h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 					e.Phase = ui.CommandRunRunning
-					e.TargetPath = abs
+					e.Macros = macros
 					e.UserCommandLine = userLine
 				})
 				h.PostRenderWake()
@@ -248,7 +256,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			if spec.PTY {
 				// Stays Pending while the PTY starts; name the row now so it isn't blank.
 				h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
-					e.TargetPath = abs
+					e.Macros = macros
 					e.UserCommandLine = userLine
 				})
 				res = h.runEntryPTY(ctx, idx, argv, workDir, panelOwner, markRunning)

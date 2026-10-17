@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -16,6 +17,7 @@ import (
 type RunForEachBuiltItem struct {
 	Argv     []string
 	UserLine string
+	Macros   []cmdmacro.MacroUse // display values of the template's macros
 }
 
 // BuildRunForEachItem expands cmdTemplate's macros for ent and returns the argv to run.
@@ -26,11 +28,12 @@ func BuildRunForEachItem(cmdTemplate string, ent localfs.Entry, active, other *p
 	if requireF && !usermenu.CommandRequiresIteratedF(cmdTemplate) {
 		return RunForEachBuiltItem{}, errors.New(usermenu.ErrRunForEachRequiresF)
 	}
+	ctx := usermenu.MacroContext(active, other, textutil.AbsPathClean(ent.Path), "")
 	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{
 		Template:   cmdTemplate,
 		Mode:       cmdrun.ModeAuto,
 		ForceShell: forceShell,
-		Ctx:        usermenu.MacroContext(active, other, textutil.AbsPathClean(ent.Path), ""),
+		Ctx:        ctx,
 	})
 	if err != nil {
 		return RunForEachBuiltItem{}, err
@@ -42,5 +45,6 @@ func BuildRunForEachItem(cmdTemplate string, ent localfs.Entry, active, other *p
 	return RunForEachBuiltItem{
 		Argv:     built.Argv,
 		UserLine: display,
+		Macros:   cmdmacro.MacroDisplayValues(cmdTemplate, ctx),
 	}, nil
 }

@@ -41,7 +41,7 @@ func TestEnsureSelectionVisibleTable(t *testing.T) {
 				t.Fatalf("messages Selected=%d ListScroll=%d, want %d %d", msgs.Selected, msgs.ListScroll, tt.wantSel, tt.wantScroll)
 			}
 			cmds := CommandsViewState{Selected: tt.selected, ListScroll: tt.listScroll}
-			cmds.EnsureSelectionVisible(tt.total, tt.visibleRows)
+			cmds.EnsureSelectionVisible(make([]CommandRunEntry, max(0, tt.total)), tt.visibleRows)
 			if cmds.Selected != tt.wantSel || cmds.ListScroll != tt.wantScroll {
 				t.Fatalf("commands Selected=%d ListScroll=%d, want %d %d", cmds.Selected, cmds.ListScroll, tt.wantSel, tt.wantScroll)
 			}

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -227,11 +228,12 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		return
 	}
 
+	macroCtx := usermenu.MacroContext(active, other, "", "")
 	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{
 		Template:   entry.Command,
 		Mode:       cmdrun.ModeAuto,
 		ForceShell: entry.Shell,
-		Ctx:        usermenu.MacroContext(active, other, "", ""),
+		Ctx:        macroCtx,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "cmdmacro:") || strings.Contains(err.Error(), "user menu:") {
@@ -242,12 +244,12 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		return
 	}
 	argv := built.Argv
-	expanded := built.Expanded
+	macros := cmdmacro.MacroDisplayValues(entry.Command, macroCtx)
 
 	workDir := active.PathString()
 	switch {
 	case entry.Dialog:
-		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, expanded)
+		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, macros)
 		ctx, cancel := context.WithCancel(a.commandsCtrl.Context())
 		a.commandsCtrl.OpenRunningOutputDialog(rowID, entry.Title, strings.TrimSpace(entry.Pool) != "", cancel, entry.DialogWidth, entry.DialogHeight)
 		a.commandsCtrl.BeginBatch()
@@ -260,8 +262,7 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	case entry.Detach:
 		a.runUserMenuDetached(argv, workDir, entry.Toast)
 	default:
-		cmdLine := entry.Command
-		rowIdx, rowID := a.appendUserMenuCommandRow(cmdLine, expanded)
+		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, macros)
 		if !entry.Background {
 			a.commandsCtrl.OpenViewAt(rowIdx)
 		}
@@ -350,13 +351,13 @@ func (a *App) refreshAfterBackgroundCommand() {
 	}
 }
 
-func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) (int, string) {
+func (a *App) appendUserMenuCommandRow(cmdLine string, macros []cmdmacro.MacroUse) (int, string) {
 	id := cmdrun.NewRunID()
 	return a.commandsCtrl.AppendEntry(ui.CommandRunEntry{
 		ID:              id,
 		Kind:            ui.CommandRunKindUserMenu,
-		UserCommandLine: cmdLine + " → " + expanded,
-		TargetPath:      "",
+		UserCommandLine: cmdLine,
+		Macros:          macros,
 		Phase:           ui.CommandRunPending,
 		ExitCode:        -1,
 	}), id

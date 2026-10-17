@@ -13,7 +13,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/entrymatch"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -129,7 +128,6 @@ func (a *App) runExecutableFromPanel(path string) {
 		ID:              cmdrun.NewRunID(),
 		Kind:            ui.CommandRunKindFileExecute,
 		UserCommandLine: cmdLine,
-		TargetPath:      textutil.AbsPathClean(path),
 		Phase:           ui.CommandRunPending,
 		ExitCode:        -1,
 	})
