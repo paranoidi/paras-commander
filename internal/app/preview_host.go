@@ -115,7 +115,7 @@ func (h previewHost) EditActiveFile() { h.app.editActiveFile() }
 func (h previewHost) EditFullscreenPreviewFile() { h.app.editFullscreenPreviewFile() }
 
 func (h previewHost) OpenDeleteDialogForPreviewedFile() {
-	h.app.dialogCtrl.OpenDeleteDialogForPreviewedFile()
+	h.app.dialogCtrl.OpenDeleteDialogForPath(h.app.model.FullscreenFilePreview.Path, h.app.model.FullscreenFilePreview.TitleBase)
 }
 
 func (h previewHost) OpenPreviewLeaderMenu() { h.app.togglePreviewLeaderMenu() }

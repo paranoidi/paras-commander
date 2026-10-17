@@ -73,7 +73,7 @@ func (st *ConflictDialogState) StartAdvanced() {
 	st.AdvFocus = 0
 	st.AdvAll = true
 	st.Rules = jobs.ConflictRules{} // every row Ask, Skip identical off
-	st.AdvCol = 0 // Ask, the default selection
+	st.AdvCol = 0                   // Ask, the default selection
 }
 
 // SyncAdvCol keeps the choice cursor in its column when focus changes rows; a greyed column on

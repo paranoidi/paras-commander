@@ -45,7 +45,7 @@ func (h *Handler) ToggleActivePanelCursor() {
 // ToggleCompareSelection pins/unpins the Compare view's focused-column selection. Compare
 // rows are always files.
 func (h *Handler) ToggleCompareSelection() {
-	path, ok := h.compare.SelectedColumnPinTarget()
+	path, _, ok := h.compare.SelectedColumnTarget()
 	if !ok {
 		h.host.SetTransientMessage("No entry to pin", ui.MessageUrgencyInfo)
 		return

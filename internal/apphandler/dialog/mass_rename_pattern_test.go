@@ -49,6 +49,7 @@ func (f *fakeMassRenamePatternHost) Config() config.Config                      
 func (f *fakeMassRenamePatternHost) Styles() theme.Theme                           { return theme.Theme{} }
 func (f *fakeMassRenamePatternHost) OpenMessageDialog(string, string)              {}
 func (f *fakeMassRenamePatternHost) InQuickFilterUI() bool                         { return false }
+func (f *fakeMassRenamePatternHost) ForgetComparePaths([]string)                   {}
 func (f *fakeMassRenamePatternHost) OpenFileInExternalEditor(string) error         { return nil }
 func (f *fakeMassRenamePatternHost) ExecuteSFTPPassword()                          {}
 func (f *fakeMassRenamePatternHost) CancelSFTPPassword()                           {}

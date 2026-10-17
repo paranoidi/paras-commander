@@ -513,6 +513,11 @@ func (a *App) activateMessagesHelpAction(actionID string) bool {
 // activateCompareHelpAction runs a help-dialog action while the Compare view is active.
 func (a *App) activateCompareHelpAction(actionID string) bool {
 	switch actionID {
+	case keymap.ActionAppShowHelp: // `:` menu "?"
+		if !a.model.HelpView.Open {
+			a.openHelpDialog()
+		}
+		return false
 	case keymap.ActionAppQuit:
 		return a.handleQuit()
 	case keymap.ActionAppQuitImmediate:
@@ -534,11 +539,6 @@ func (a *App) activateCompareHelpAction(actionID string) bool {
 
 	visible := a.compareVisibleRows()
 	switch actionID {
-	case keymap.ActionPanelSelectToggle:
-		if conflicts := a.compareCtrl.ToggleColumnSelection(); conflicts {
-			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
-		}
-		a.moveCompareSelection(1)
 	case keymap.ActionNavUp:
 		a.moveCompareSelection(-1)
 	case keymap.ActionNavDown:

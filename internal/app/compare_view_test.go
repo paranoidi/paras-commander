@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -364,4 +366,29 @@ func compareColumnHasCursorBG(screen tcell.SimulationScreen, styles theme.Theme,
 	_, st, _ := screen.Get(x, y)
 	_, bg, _ := st.Decompose()
 	return bg == activeBG
+}
+
+func TestCompareViewDeleteOpensDialogForFocusedColumnCursor(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	left, right := t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(right, "lantern.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	app.model.ViewMode = ui.ViewCompare
+	app.model.CompareView = ui.CompareViewState{Filter: comparepkg.FilterAll, FocusColumn: ui.CompareColumnSecondary}
+	app.model.CompareSnapshot = comparepkg.Snapshot{
+		PrimaryRoot:   pathloc.MustParse(left),
+		SecondaryRoot: pathloc.MustParse(right),
+		Rows:          []comparepkg.Row{{Kind: comparepkg.KindSecondaryOnly, SecondaryRel: "lantern.txt", Size: 1, HashDone: true}},
+	}
+
+	if !app.tryDispatchCompare(keymap.ActionFileDelete) {
+		t.Fatal("file.delete not handled in compare")
+	}
+	fd := app.model.FileDialog
+	if !fd.Open || fd.DialogType != dialog.FileDialogDelete || len(fd.DeleteEntries) != 1 ||
+		fd.DeleteEntries[0].Path != filepath.Join(right, "lantern.txt") {
+		t.Fatalf("delete dialog = %+v", fd)
+	}
 }

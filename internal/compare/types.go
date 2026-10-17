@@ -166,9 +166,19 @@ func FilterDialogRadios() []FilterDialogRadio {
 	}
 }
 
-// FocusForFilter returns the radio focus index for f (0 when unknown).
-func FocusForFilter(f Filter) int {
-	for i, r := range FilterDialogRadios() {
+// SelectDialogRadios is the radio list for the compare select-by-kind dialog.
+func SelectDialogRadios() []FilterDialogRadio {
+	return []FilterDialogRadio{
+		{FilterAll, "All", 'A'},
+		{FilterEqual, "Equal", 'E'},
+		{FilterRelocated, "Relocated", 'R'},
+		{FilterContentDiff, "Modified", 'M'},
+	}
+}
+
+// FocusForFilter returns the index of f in radios (0 when unknown).
+func FocusForFilter(radios []FilterDialogRadio, f Filter) int {
+	for i, r := range radios {
 		if r.Filter == f {
 			return i
 		}
@@ -177,8 +187,7 @@ func FocusForFilter(f Filter) int {
 }
 
 // FilterForFocus maps focus index to a Filter value.
-func FilterForFocus(focus int) (Filter, bool) {
-	radios := FilterDialogRadios()
+func FilterForFocus(radios []FilterDialogRadio, focus int) (Filter, bool) {
 	if focus < 0 || focus >= len(radios) {
 		return FilterAll, false
 	}

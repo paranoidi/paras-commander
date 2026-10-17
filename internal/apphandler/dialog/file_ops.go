@@ -233,10 +233,9 @@ func (h *Handler) OpenDeleteDialog(p *panel.State) {
 	h.ReconcileDeleteDialogScans()
 }
 
-// OpenDeleteDialogForPreviewedFile shows the delete confirm dialog for the file currently open
-// in the fullscreen viewer (F8), never the active panel's selection.
-func (h *Handler) OpenDeleteDialogForPreviewedFile() {
-	path := h.model.FullscreenFilePreview.Path
+// OpenDeleteDialogForPath shows the delete confirm dialog for the single entry at path
+// (fullscreen viewer, Compare cursor row), never a panel selection. name is the list label.
+func (h *Handler) OpenDeleteDialogForPath(path, name string) {
 	if path == "" {
 		return
 	}
@@ -246,7 +245,7 @@ func (h *Handler) OpenDeleteDialogForPreviewedFile() {
 		return
 	}
 	entries := []dialog.DeleteListEntry{{
-		Name: h.model.FullscreenFilePreview.TitleBase,
+		Name: name,
 		Path: entry.Path,
 		Type: entry.Type,
 	}}
@@ -689,6 +688,13 @@ func (h *Handler) ExecuteDelete() {
 		return
 	}
 	p := h.host.ActivePanel()
+	if h.model.ViewMode == ui.ViewCompare {
+		// The delete source is the focused column's panel (its selection), not the active panel.
+		p = h.host.PanelByID(ui.PrimaryPanel)
+		if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
+			p = h.host.PanelByID(ui.SecondaryPanel)
+		}
+	}
 	listed := h.model.FileDialog.DeleteEntries
 	if len(listed) == 0 {
 		h.host.SetErrorMessage("Delete source", ops.SourceError("no entries to delete"))
@@ -712,6 +718,9 @@ func (h *Handler) ExecuteDelete() {
 	p.ClearSelection()
 	h.CloseFileDialog()
 	h.jobs.EnqueueDeleteJob(sources, false, true)
+	if h.model.ViewMode == ui.ViewCompare {
+		h.host.ForgetComparePaths(sources)
+	}
 	n := len(sources)
 	delNoun := "items"
 	if n == 1 {

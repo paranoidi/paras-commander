@@ -34,6 +34,10 @@ type Session struct {
 	wg     sync.WaitGroup
 
 	snap atomic.Pointer[Snapshot]
+
+	forgetMu         sync.Mutex
+	primaryRemoved   []string
+	secondaryRemoved []string
 }
 
 // Start begins comparing primary and secondary roots.
@@ -70,9 +74,25 @@ func (s *Session) Close() {
 	s.wg.Wait()
 }
 
+// Forget removes deleted files (rels relative to each root) from every snapshot published
+// from now on, including the current one, so no re-walk or re-hash is needed.
+func (s *Session) Forget(primaryRels, secondaryRels []string) {
+	s.forgetMu.Lock()
+	s.primaryRemoved = append(s.primaryRemoved, primaryRels...)
+	s.secondaryRemoved = append(s.secondaryRemoved, secondaryRels...)
+	s.forgetMu.Unlock()
+	if p := s.snap.Load(); p != nil {
+		s.publish(*p)
+	}
+}
+
 func (s *Session) publish(snap Snapshot) {
 	cp := snap
+	s.forgetMu.Lock()
+	// Store under the lock so a worker pruned with an older removed list cannot land after Forget.
+	cp.Rows = PruneRows(cp.Rows, s.primaryRemoved, s.secondaryRemoved)
 	s.snap.Store(&cp)
+	s.forgetMu.Unlock()
 	if s.opts.OnUpdate != nil {
 		s.opts.OnUpdate(cp)
 	}

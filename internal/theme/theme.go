@@ -300,6 +300,9 @@ type Theme struct {
 	// CompareHashing styles the compare-view pending disk icon while a file is
 	// actively being content-hashed (queued pending rows keep the row style).
 	CompareHashing tcell.Style
+	// CompareEqual / CompareContentDiff color the compare-view = and ≠ status icons.
+	CompareEqual       tcell.Style
+	CompareContentDiff tcell.Style
 
 	// Icons holds global icons (e.g. Nerd Font job status icons) referenced by the UI
 	// from the [icons] section of the theme file.
@@ -423,6 +426,24 @@ func (t Theme) DialogProgressLabelOnBar(onFill bool) tcell.Style {
 // CompareHashingOn returns the compare-view hashing-icon foreground merged onto lineStyle's background.
 func (t Theme) CompareHashingOn(lineStyle tcell.Style) tcell.Style {
 	return mergeForegroundOnSurface(t.CompareHashing, lineStyle)
+}
+
+// CompareEqualOn returns the compare-view equal-icon foreground merged onto lineStyle's background.
+func (t Theme) CompareEqualOn(lineStyle tcell.Style) tcell.Style {
+	return mergeForegroundIfSet(t.CompareEqual, lineStyle)
+}
+
+// CompareContentDiffOn returns the compare-view content-diff-icon foreground merged onto lineStyle's background.
+func (t Theme) CompareContentDiffOn(lineStyle tcell.Style) tcell.Style {
+	return mergeForegroundIfSet(t.CompareContentDiff, lineStyle)
+}
+
+// mergeForegroundIfSet keeps lineStyle when src has no foreground (key absent from the theme).
+func mergeForegroundIfSet(src, lineStyle tcell.Style) tcell.Style {
+	if fg, _, _ := src.Decompose(); fg == tcell.ColorDefault {
+		return lineStyle
+	}
+	return mergeForegroundOnSurface(src, lineStyle)
 }
 
 func mergeForegroundOnBar(labelSrc, bar tcell.Style) tcell.Style {
@@ -1143,6 +1164,8 @@ var requiredStyleKeys = []string{
 	"jobs.icons.decision",
 	"jobs.icons.completed",
 	"compare.hashing",
+	"compare.equal",
+	"compare.content_diff",
 	"menu.progress.done",
 	"menu.progress.remaining",
 	"menu.job.scanning",
@@ -1724,7 +1747,9 @@ func parse(data []byte) (Theme, error) {
 		JobsIconsDecision:  styles["jobs.icons.decision"],
 		JobsIconsCompleted: styles["jobs.icons.completed"],
 
-		CompareHashing: styles["compare.hashing"],
+		CompareHashing:     styles["compare.hashing"],
+		CompareEqual:       styles["compare.equal"],
+		CompareContentDiff: styles["compare.content_diff"],
 
 		Icons: icons,
 

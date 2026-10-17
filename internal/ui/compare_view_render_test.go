@@ -498,7 +498,7 @@ func TestDrawCompareViewActiveHashingIconIsGreen(t *testing.T) {
 	contentX := rect.X + 2
 	contentW := rect.Width - 4
 	pathW := (contentW - compareStatusCol - 1) / 2
-	statusX := contentX + pathW + 1
+	statusX := contentX + pathW
 	lineY := rect.Y + 2
 
 	rows := []comparepkg.Row{
@@ -595,10 +595,58 @@ func TestDrawCompareViewShowsPinIconOnlyOnPinnedSide(t *testing.T) {
 		}
 		return false
 	}
-	if !hasIcon(leftX, leftX+pathW) {
-		t.Error("expected pin icon on pinned primary (left) column")
+	// " " + pin directly after "alpha.txt", like the main panel and dedup rows.
+	afterName := leftX + len("alpha.txt") + 1
+	if !hasIcon(afterName, afterName+1) {
+		t.Error("expected pin icon right after the pinned primary (left) filename")
 	}
 	if hasIcon(rightX, rightX+pathW+1) {
 		t.Error("did not expect pin icon on unpinned secondary (right) column")
+	}
+}
+
+func TestDrawCompareViewCursorRowStatusIconKeepsRowStyle(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 14)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 11},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 11},
+	}
+	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
+	contentX := rect.X + 2
+	pathW := (rect.Width - 4 - compareStatusCol - 1) / 2
+	statusX := contentX + pathW
+
+	snap := comparepkg.Snapshot{
+		PrimaryRoot:   pathloc.MustParse("/left-root"),
+		SecondaryRoot: pathloc.MustParse("/right-root"),
+		Phase:         comparepkg.PhaseDone,
+		Rows: []comparepkg.Row{
+			{Kind: comparepkg.KindPrimaryOnly, PrimaryRel: "harbor.txt", HashDone: true},
+			{Kind: comparepkg.KindPrimaryOnly, PrimaryRel: "meadow.txt", HashDone: true},
+		},
+	}
+	view := CompareViewState{Selected: 0, Filter: comparepkg.FilterAll}
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: snap.Rows}, styles, false, "", SplitHorizontal)
+
+	styleAt := func(y int) tcell.Style {
+		for x := statusX; x < statusX+compareStatusCol; x++ {
+			if str, st, _ := screen.Get(x, y); strings.TrimSpace(str) != "" {
+				return st
+			}
+		}
+		t.Fatalf("no status icon at row %d", y)
+		return tcell.StyleDefault
+	}
+	cursorFG, _, _ := styleAt(rect.Y + 2).Decompose()
+	otherFG, _, _ := styleAt(rect.Y + 3).Decompose()
+	if cursorFG != otherFG {
+		t.Fatalf("cursor-row status icon fg = %v, want row fg %v", cursorFG, otherFG)
 	}
 }

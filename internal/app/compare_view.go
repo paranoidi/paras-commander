@@ -1,6 +1,8 @@
 package app
 
 import (
+	"path/filepath"
+
 	"github.com/gdamore/tcell/v2"
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -61,6 +63,45 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 			a.compareCtrl.OpenMergeDialog()
 		}
 		return true
+	case keymap.ActionPanelSwitch:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		a.compareCtrl.ToggleColumnFocus()
+		return true
+	case keymap.ActionPanelSelectToggle:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		if conflicts := a.compareCtrl.ToggleColumnSelection(); conflicts {
+			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+		}
+		a.moveCompareSelection(1)
+		return true
+	case keymap.ActionPanelPinToggle:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		a.pinCtrl.ToggleCompareSelection()
+		return true
+	case keymap.ActionPanelSelectGroup:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		a.compareCtrl.OpenSelectDialog(true)
+		return true
+	case keymap.ActionPanelUnselectGroup:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		a.compareCtrl.OpenSelectDialog(false)
+		return true
+	case keymap.ActionFileDelete:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		a.openCompareDeleteDialog()
+		return true
 	case keymap.ActionCompareToggleEmpty:
 		if a.model.ViewMode == ui.ViewCompare {
 			a.compareCtrl.ToggleIgnoreEmpty()
@@ -69,6 +110,25 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 	default:
 		return false
 	}
+}
+
+// openCompareDeleteDialog deletes the focused column's panel selection (set with Space) or,
+// without one, the file under the cursor on that side.
+func (a *App) openCompareDeleteDialog() {
+	p := a.panelByID(ui.PrimaryPanel)
+	if a.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
+		p = a.panelByID(ui.SecondaryPanel)
+	}
+	if len(p.SelectedPaths) > 0 {
+		a.dialogCtrl.OpenDeleteDialog(p)
+		return
+	}
+	path, _, ok := a.compareCtrl.SelectedColumnTarget()
+	if !ok {
+		a.setTransientMessage("Nothing to delete on this side", ui.MessageUrgencyInfo)
+		return
+	}
+	a.dialogCtrl.OpenDeleteDialogForPath(path, filepath.Base(path))
 }
 
 // compareVisibleRows returns the merged twin-panel list row count used for Compare-list
@@ -147,23 +207,6 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 		return false
 	}
 
-	if nextAction == keymap.ActionPanelSelectToggle {
-		if conflicts := a.compareCtrl.ToggleColumnSelection(); conflicts {
-			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
-		}
-		rows := a.compareCtrl.FilteredRows()
-		st := &a.model.CompareView
-		if st.Selected < len(rows)-1 {
-			st.Selected++
-		}
-		a.compareCtrl.EnsureSelectionVisible(a.compareVisibleRows())
-		return false
-	}
-	if nextAction == keymap.ActionPanelPinToggle {
-		a.pinCtrl.ToggleCompareSelection()
-		return false
-	}
-
 	visible := a.compareVisibleRows()
 	switch event.Key() {
 	case tcell.KeyUp:
@@ -186,7 +229,7 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 	return false
 }
 
-func compareViewFooterKeys(keys *keymap.Map, filter comparepkg.Filter, ignoreEmpty bool) []menu.FunctionKey {
+func compareViewFooterKeys(global, keys *keymap.Map, filter comparepkg.Filter, ignoreEmpty bool) []menu.FunctionKey {
 	if keys == nil {
 		return nil
 	}
@@ -208,5 +251,10 @@ func compareViewFooterKeys(keys *keymap.Map, filter comparepkg.Filter, ignoreEmp
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint, ActionID: keymap.ActionCompareToggleEmpty})
 	}
 	out = append(out, menu.FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Merge", ActionID: keymap.ActionCompareMerge})
+	if global != nil {
+		if lbl := global.MenuBindingLabel(keymap.ActionFileDelete); lbl != "" {
+			out = append(out, menu.FunctionKey{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete", ActionID: keymap.ActionFileDelete})
+		}
+	}
 	return out
 }

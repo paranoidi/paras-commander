@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -106,14 +107,6 @@ func drawCompareView(
 		entry := rows[idx]
 		lineY := y + row
 		rowSelected := idx == view.Selected
-		lineStyle := styles.JobsRow.Background(bg)
-		if rowSelected {
-			if chromeBlocked {
-				lineStyle = styles.PanelBlockedCursor
-			} else {
-				lineStyle = styles.PanelRowSelected.Background(bg)
-			}
-		}
 
 		leftPath, rightPath := compareDisplayPathPair(entry.PrimaryRel, entry.SecondaryRel)
 
@@ -139,15 +132,16 @@ func drawCompareView(
 			if leftFitW < 1 {
 				leftFitW = 1
 			}
-			primitive.Text(screen, contentX, lineY, leftFitW, primitive.FitPathForWidth(leftPath, leftFitW), leftStyle)
+			leftText := primitive.FitPathForWidth(leftPath, leftFitW)
+			primitive.Text(screen, contentX, lineY, leftPathW, leftText, leftStyle)
 			if leftMarksW > 0 {
 				_, leftBG, _ := leftStyle.Decompose()
-				dialog.DrawRowMarksSuffix(screen, contentX+leftFitW, lineY, leftMarksW, leftMarks, leftBG, styles)
+				dialog.DrawRowMarksSuffix(screen, contentX+runewidth.StringWidth(leftText), lineY, leftMarksW, leftMarks, leftBG, styles)
 			}
 		}
-		primitive.Text(screen, contentX+leftPathW, lineY, comparePathGapCol, "", lineStyle)
+		primitive.Text(screen, contentX+leftPathW, lineY, comparePathGapCol, "", pathBase)
 		icon := compareIconCentered(compareRowIcon(styles, entry))
-		primitive.Text(screen, statusX, lineY, compareStatusCol, icon, compareIconStyle(styles, entry, lineStyle))
+		primitive.Text(screen, statusX, lineY, compareStatusCol, icon, compareIconStyle(styles, entry, pathBase))
 		primitive.Text(screen, rightX-1, lineY, 1, "", rightStyle)
 		if rightPath == "" {
 			effectiveRight := absentStyle
@@ -165,11 +159,12 @@ func drawCompareView(
 			if rightFitW < 1 {
 				rightFitW = 1
 			}
-			primitive.Text(screen, rightX, lineY, rightFitW, primitive.FitPathForWidth(rightPath, rightFitW), rightStyle)
-			// +1 preserves the original pathW+1 sizing's one-cell buffer to the border,
-			// regardless of whether rightMarksW is 0.
-			_, rightBG, _ := rightStyle.Decompose()
-			dialog.DrawRowMarksSuffix(screen, rightX+rightFitW, lineY, rightMarksW+1, rightMarks, rightBG, styles)
+			rightText := primitive.FitPathForWidth(rightPath, rightFitW)
+			primitive.Text(screen, rightX, lineY, pathW+1, rightText, rightStyle)
+			if rightMarksW > 0 {
+				_, rightBG, _ := rightStyle.Decompose()
+				dialog.DrawRowMarksSuffix(screen, rightX+runewidth.StringWidth(rightText), lineY, rightMarksW, rightMarks, rightBG, styles)
+			}
 		}
 	}
 
@@ -280,13 +275,27 @@ func compareIconCentered(icon string) string {
 	return strings.Repeat(" ", left) + icon + strings.Repeat(" ", pad-left)
 }
 
-// compareIconStyle colors the pending disk icon green while a worker is actively
-// hashing that row; queued pending rows keep the ordinary row style.
-func compareIconStyle(styles theme.Theme, row comparepkg.Row, lineStyle tcell.Style) tcell.Style {
-	if !row.Hashing || !comparepkg.RowPending(row) {
-		return lineStyle
+// compareIconStyle colors the pending disk icon while a worker is actively
+// hashing that row, and the settled equal / content-diff icons; everything else
+// keeps the ordinary row style.
+func compareIconStyle(styles theme.Theme, row comparepkg.Row, base tcell.Style) tcell.Style {
+	if comparepkg.RowPending(row) {
+		if row.Hashing {
+			return styles.CompareHashingOn(base)
+		}
+		return base
 	}
-	return styles.CompareHashingOn(lineStyle)
+	if row.Err != "" {
+		return base
+	}
+	switch row.Kind {
+	case comparepkg.KindEqual:
+		return styles.CompareEqualOn(base)
+	case comparepkg.KindContentDiff:
+		return styles.CompareContentDiffOn(base)
+	default:
+		return base
+	}
 }
 
 func compareRowIcon(styles theme.Theme, row comparepkg.Row) string {

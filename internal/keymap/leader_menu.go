@@ -171,10 +171,13 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 		},
 	},
 	HelpCompare: {
-		order: []string{LeaderMenuGroupCompare, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
+		order: []string{
+			LeaderMenuGroupFile, LeaderMenuGroupSelection, LeaderMenuGroupCompare,
+			LeaderMenuGroupAddMark, LeaderMenuGroupDisplay, LeaderMenuGroupApp,
+		},
 		actions: map[string][]string{
-			LeaderMenuGroupApp:     {ActionAppQuit},
-			LeaderMenuGroupDisplay: {ActionDedupOpen, ActionJobsOpen, ActionMessagesOpen, ActionCommandsOpen},
+			LeaderMenuGroupFile:      {ActionFileDelete},
+			LeaderMenuGroupSelection: {ActionPanelSelectToggle, ActionPanelSelectGroup, ActionPanelUnselectGroup},
 			LeaderMenuGroupCompare: {
 				ActionCompareClose,
 				ActionCompareCycleFilter,
@@ -183,14 +186,19 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionCompareRefresh,
 				ActionCompareMerge,
 				ActionCompareToggleEmpty,
-				ActionPanelSelectToggle,
 				ActionPanelExternalBrowser,
 			},
+			LeaderMenuGroupAddMark: {ActionPanelPinToggle},
+			LeaderMenuGroupDisplay: {ActionDedupOpen, ActionJobsOpen, ActionMessagesOpen, ActionCommandsOpen},
+			LeaderMenuGroupApp:     {ActionAppShowHelp, ActionAppQuit},
 		},
 		column: map[string]int{
-			LeaderMenuGroupCompare: 0,
-			LeaderMenuGroupDisplay: 1,
-			LeaderMenuGroupApp:     1,
+			LeaderMenuGroupFile:      0,
+			LeaderMenuGroupSelection: 0,
+			LeaderMenuGroupCompare:   1,
+			LeaderMenuGroupAddMark:   2,
+			LeaderMenuGroupDisplay:   2,
+			LeaderMenuGroupApp:       2,
 		},
 	},
 	HelpDedup: {

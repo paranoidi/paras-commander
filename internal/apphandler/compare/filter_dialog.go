@@ -1,6 +1,8 @@
 package compare
 
 import (
+	"fmt"
+	"strings"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -18,9 +20,22 @@ func (h *Handler) OpenFilterDialog() {
 	cur := h.model.CompareView.Filter
 	h.model.CompareFilterDialog = dialog.CompareFilterDialogState{
 		Open:   true,
-		Focus:  dialog.FocusForCompareFilter(cur),
+		Focus:  (dialog.CompareFilterDialogState{}).FocusForFilter(cur),
 		Filter: cur,
 	}
+}
+
+// OpenSelectDialog opens the select-by-kind picker: OK adds (selected) or removes (!selected)
+// the focused column's path of every visible matching row in that side's panel selection.
+func (h *Handler) OpenSelectDialog(selected bool) {
+	if h.model.ViewMode != ui.ViewCompare {
+		return
+	}
+	mode := dialog.CompareFilterModeSelect
+	if !selected {
+		mode = dialog.CompareFilterModeUnselect
+	}
+	h.model.CompareFilterDialog = dialog.CompareFilterDialogState{Open: true, Mode: mode, Filter: comparepkg.FilterAll}
 }
 
 func (h *Handler) closeFilterDialog() {
@@ -29,15 +44,58 @@ func (h *Handler) closeFilterDialog() {
 
 func (h *Handler) confirmFilterDialog() {
 	d := &h.model.CompareFilterDialog
+	if d.Mode != dialog.CompareFilterModeCategory {
+		f, selected := d.Filter, d.Mode == dialog.CompareFilterModeSelect
+		h.closeFilterDialog()
+		h.selectMatching(f, selected)
+		return
+	}
 	h.SetFilter(d.Filter)
 	h.closeFilterDialog()
+}
+
+// selectMatching adds (selected) or removes the focused side's path of every visible row of
+// kind f in that panel's selection and reports how many changed.
+func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
+	n := 0
+	panelID := ui.PrimaryPanel
+	if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
+		panelID = ui.SecondaryPanel
+	}
+	for _, row := range h.FilteredRows() {
+		if !comparepkg.FilterMatches(f, row.Kind) {
+			continue
+		}
+		abs, id, ok, err := h.focusedSide(row)
+		if err != nil || !ok {
+			continue
+		}
+		// ponytail: AddSelection lstats unlisted paths on the UI thread, fine for local
+		// roots; add a batched file-only add if huge results lag.
+		if h.host.SetPanelSelection(id, abs.String(), selected) {
+			n++
+		}
+	}
+	side := "left"
+	if panelID == ui.SecondaryPanel {
+		side = "right"
+	}
+	verb := "select"
+	if !selected {
+		verb = "unselect"
+	}
+	if n == 0 {
+		h.host.SetTransientMessage("Nothing to "+verb, ui.MessageUrgencyInfo)
+		return
+	}
+	h.host.SetTransientMessage(fmt.Sprintf("%sed %d files on %s side", strings.ToUpper(verb[:1])+verb[1:], n, side), ui.MessageUrgencyInfo)
 }
 
 // selectFilterDialogRadio sets the pending radio selection for focus without
 // applying it to the view (Space/Enter/Alt mnemonic).
 func (h *Handler) selectFilterDialogRadio(focus int) {
 	d := &h.model.CompareFilterDialog
-	if f, ok := dialog.CompareFilterForFocus(focus); ok {
+	if f, ok := d.FilterForFocus(focus); ok {
 		d.Filter = f
 		d.Focus = focus
 	}
@@ -63,9 +121,9 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if event.Key() == tcell.KeyEnter {
-		if d.Focus == dialog.CompareFilterDialogCancelIndex() {
+		if d.Focus == d.CancelIndex() {
 			h.closeFilterDialog()
-		} else if d.Focus < dialog.CompareFilterDialogOKIndex() {
+		} else if d.Focus < d.OKIndex() {
 			h.selectFilterDialogRadio(d.Focus)
 		} else {
 			h.confirmFilterDialog()
@@ -73,20 +131,20 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && event.Rune() == ' ' &&
-		d.Focus < dialog.CompareFilterDialogOKIndex() {
+		d.Focus < d.OKIndex() {
 		h.selectFilterDialogRadio(d.Focus)
 		return
 	}
 	// Alt+letter selects a filter option (pending until OK), like sort-dialog mnemonics.
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		for _, row := range comparepkg.FilterDialogRadios() {
+		for _, row := range d.Radios() {
 			if filterShortcutMatches(event.Rune(), row.Shortcut) {
-				h.selectFilterDialogRadio(dialog.FocusForCompareFilter(row.Filter))
+				h.selectFilterDialogRadio(d.FocusForFilter(row.Filter))
 				return
 			}
 		}
 	}
-	if nf, ok := dialog.CompareFilterDialogMoveFocus(d.Focus, event.Key()); ok {
+	if nf, ok := d.MoveFocus(event.Key()); ok {
 		d.Focus = nf
 	}
 }

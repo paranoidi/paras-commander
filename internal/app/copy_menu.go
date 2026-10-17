@@ -90,7 +90,7 @@ func (a *App) copyTargets() (paths []string, entries []localfs.Entry, dirPath, w
 		paths, entries, dirPath = singleCopyTarget(path)
 		return paths, entries, dirPath, "", true
 	case ui.ViewCompare:
-		path, found := a.compareCtrl.SelectedColumnPinTarget()
+		path, _, found := a.compareCtrl.SelectedColumnTarget()
 		if !found {
 			return nil, nil, "", "Copy: no file selected", false
 		}

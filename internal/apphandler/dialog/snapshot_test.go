@@ -65,6 +65,7 @@ func (f *identityTestHost) Config() config.Config                       { return
 func (f *identityTestHost) Styles() theme.Theme                         { return theme.Default() }
 func (f *identityTestHost) OpenMessageDialog(string, string)            {}
 func (f *identityTestHost) InQuickFilterUI() bool                       { return false }
+func (f *identityTestHost) ForgetComparePaths([]string)                 {}
 func (f *identityTestHost) OpenFileInExternalEditor(string) error       { return nil }
 func (f *identityTestHost) ExecuteSFTPPassword()                        {}
 func (f *identityTestHost) CancelSFTPPassword()                         {}

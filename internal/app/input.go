@@ -388,7 +388,7 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		return out, true
 	}
 	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
-		rest := compareViewFooterKeys(a.keys.Compare, a.model.CompareView.Filter, a.model.CompareView.IgnoreEmpty)
+		rest := compareViewFooterKeys(a.keys.Global, a.keys.Compare, a.model.CompareView.Filter, a.model.CompareView.IgnoreEmpty)
 		rest = append(rest,
 			menu.FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
 			menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},

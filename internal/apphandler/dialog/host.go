@@ -22,6 +22,9 @@ type Host interface {
 	ActiveViewportRows() int
 	PanelViewportRows(panelID int) int
 
+	// ForgetComparePaths prunes deleted paths from the open Compare view's results.
+	ForgetComparePaths(paths []string)
+
 	// ClearTransientMessage clears the status banner (e.g. when a transfer/extract dialog opens).
 	ClearTransientMessage()
 

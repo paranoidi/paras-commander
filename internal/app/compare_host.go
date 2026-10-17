@@ -19,6 +19,19 @@ func (h compareHost) TogglePanelSelection(panelID int, path string) bool {
 	return conflicts
 }
 
+func (h compareHost) SetPanelSelection(panelID int, path string, selected bool) bool {
+	p := h.app.panelByID(panelID)
+	if p.IsSelectedPath(path) == selected {
+		return false
+	}
+	if selected {
+		p.AddSelection(path)
+	} else {
+		p.TogglePathSelection(path)
+	}
+	return true
+}
+
 func (h compareHost) SetTransientMessage(text string, urgency ui.MessageUrgency) {
 	h.app.setTransientMessage(text, urgency)
 }

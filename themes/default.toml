@@ -297,6 +297,8 @@ canceled = { fg = "bright_red", bold = true }
 
 [compare]
 hashing = { fg = "bright_green", bold = true }
+equal = { fg = "bright_green" }
+content_diff = { fg = "bright_red" }
 
 [icons]
 working = "\uf017"

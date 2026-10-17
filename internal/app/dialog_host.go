@@ -30,6 +30,8 @@ func (h dialogHost) PanelViewportRows(panelID int) int { return h.app.panelViewp
 
 func (h dialogHost) ClearTransientMessage() { h.app.clearTransientMessage() }
 
+func (h dialogHost) ForgetComparePaths(paths []string) { h.app.compareCtrl.ForgetPaths(paths) }
+
 func (h dialogHost) Config() config.Config { return h.app.config }
 
 func (h dialogHost) Styles() theme.Theme { return h.app.styles }

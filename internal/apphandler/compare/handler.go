@@ -3,6 +3,7 @@ package compare
 import (
 	"context"
 	"path/filepath"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/hashwalk"
@@ -36,6 +37,8 @@ type Deps struct {
 type Host interface {
 	host.PanelNavigationHost
 	TogglePanelSelection(panelID int, path string) (conflicts bool)
+	// SetPanelSelection adds (selected) or removes path in the panel's selection; true when it changed.
+	SetPanelSelection(panelID int, path string, selected bool) (changed bool)
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
 	ClearTransientMessage()
 	CompareMenuDefinitions() []menu.Definition
@@ -201,7 +204,33 @@ func (h *Handler) Refresh() {
 	if h.model.ViewMode != ui.ViewCompare {
 		return
 	}
+	// open resets the view state; keep cursor, scroll, focus and filters so a refresh after a
+	// delete does not jump to the top (EnsureSelectionVisible clamps once rows arrive).
+	view := h.model.CompareView
 	h.open(h.openedPrimary, h.openedSecondary, h.openedShowHidden, h.openedGate, h.onClose)
+	h.model.CompareView = view
+}
+
+// ForgetPaths drops deleted absolute paths (or directories) from the results without a
+// re-walk or re-hash, in both the running session and the visible snapshot.
+func (h *Handler) ForgetPaths(paths []string) {
+	if h.session == nil || h.model.ViewMode != ui.ViewCompare {
+		return
+	}
+	snap := h.model.CompareSnapshot
+	rels := func(root pathloc.Path) []string {
+		var out []string
+		for _, p := range paths {
+			if rel, err := filepath.Rel(root.String(), p); err == nil && rel != ".." && !strings.HasPrefix(rel, "../") {
+				out = append(out, filepath.ToSlash(rel))
+			}
+		}
+		return out
+	}
+	pRels, sRels := rels(snap.PrimaryRoot), rels(snap.SecondaryRoot)
+	h.session.Forget(pRels, sRels)
+	h.model.CompareSnapshot.Rows = comparepkg.PruneRows(snap.Rows, pRels, sRels)
+	h.ensureSelectionVisible(0)
 }
 
 // CycleFilter advances the category filter.
@@ -254,6 +283,16 @@ func (h *Handler) MoveColumnFocus(delta int) {
 	}
 }
 
+// ToggleColumnFocus flips focus between the primary and secondary column (panel.switch, Tab).
+func (h *Handler) ToggleColumnFocus() {
+	st := &h.model.CompareView
+	if st.FocusColumn == ui.CompareColumnSecondary {
+		st.FocusColumn = ui.CompareColumnPrimary
+	} else {
+		st.FocusColumn = ui.CompareColumnSecondary
+	}
+}
+
 // selectedColumnTarget resolves the row/column under the current selection and focused
 // column to an absolute path and its owning panel. ok is false when nothing is selected or
 // the focused side has no counterpart entry; err is set when the resolved path itself is
@@ -264,18 +303,20 @@ func (h *Handler) selectedColumnTarget() (abs pathloc.Path, panelID int, ok bool
 	if st.Selected < 0 || st.Selected >= len(rows) {
 		return pathloc.Path{}, 0, false, nil
 	}
-	row := rows[st.Selected]
+	return h.focusedSide(rows[st.Selected])
+}
+
+// focusedSide resolves row's entry on the focused column's side to an absolute path and
+// its owning panel. ok is false when that side has no counterpart entry.
+func (h *Handler) focusedSide(row comparepkg.Row) (abs pathloc.Path, panelID int, ok bool, err error) {
 	snap := h.model.CompareSnapshot
-	var rel string
+	rel := row.PrimaryRel
 	root := snap.PrimaryRoot
 	panelID = ui.PrimaryPanel
-	switch st.FocusColumn {
-	case ui.CompareColumnSecondary:
+	if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
 		rel = row.SecondaryRel
 		root = snap.SecondaryRoot
 		panelID = ui.SecondaryPanel
-	default:
-		rel = row.PrimaryRel
 	}
 	if rel == "" {
 		return pathloc.Path{}, 0, false, nil
@@ -300,15 +341,15 @@ func (h *Handler) ToggleColumnSelection() (conflicts bool) {
 	return h.host.TogglePanelSelection(panelID, abs.String())
 }
 
-// SelectedColumnPinTarget returns the absolute path under the focused column, for pinning.
-// Compare rows are always files. False when nothing is selected or the focused side has no
-// counterpart entry.
-func (h *Handler) SelectedColumnPinTarget() (path string, ok bool) {
-	abs, _, ok, err := h.selectedColumnTarget()
+// SelectedColumnTarget returns the absolute path under the focused column and the panel that
+// owns it (pin, copy, delete). Compare rows are always files. False when nothing is selected
+// or the focused side has no counterpart entry.
+func (h *Handler) SelectedColumnTarget() (path string, panelID int, ok bool) {
+	abs, panelID, ok, err := h.selectedColumnTarget()
 	if !ok || err != nil {
-		return "", false
+		return "", 0, false
 	}
-	return abs.String(), true
+	return abs.String(), panelID, true
 }
 
 // NavigateFromSelection opens the highlighted path in the browser.

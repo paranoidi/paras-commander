@@ -292,7 +292,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Panel navigation ──
 		{
 			ID:          ActionPanelSwitch,
-			Views:       HelpBrowser | HelpDedup,
+			Views:       HelpBrowser | HelpDedup | HelpCompare,
 			Title:       "Switch panel",
 			Section:     "Navigation",
 			DefaultKeys: []string{"tab"},
@@ -819,7 +819,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelSelectGroup,
-			Views:       HelpBrowser,
+			Views:       HelpBrowser | HelpCompare,
 			Title:       "Select group",
 			Section:     "Selection",
 			DefaultKeys: []string{"+"},
@@ -828,7 +828,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelUnselectGroup,
-			Views:       HelpBrowser,
+			Views:       HelpBrowser | HelpCompare,
 			Title:       "Unselect group",
 			Section:     "Selection",
 			DefaultKeys: []string{"-", "M-u"},
@@ -1257,7 +1257,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:             ActionFileDelete,
-			Views:          HelpBrowser | HelpDedup,
+			Views:          HelpBrowser | HelpDedup | HelpCompare,
 			Title:          "Delete",
 			Section:        "File",
 			DefaultKeys:    []string{"F8", "delete", "C-d"},
