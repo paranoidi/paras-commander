@@ -481,7 +481,7 @@ Find-duplicates scan (within a single directory).
 
 ## `[status_command]`
 
-Runs a shell command on an interval and shows its first line of output at the top-left of the menu bar. Menu labels and the job-progress strip shift right to make room.
+Runs a shell command on an interval and shows its first line of output at the top-left of the menu bar. Menu labels and the job-progress strip shift right to make room. Empty output, a non-zero exit, or a run exceeding 10 s clears the text.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

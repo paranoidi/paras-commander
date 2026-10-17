@@ -18,6 +18,7 @@ func (a *App) restartStatusCommandTicker(cfg config.StatusCommandConfig) {
 		close(a.statusCmdStopCh)
 		a.statusCmdStopCh = nil
 	}
+	a.statusCmdText = ""
 	if cfg.Command == "" {
 		return
 	}
@@ -33,7 +34,6 @@ const statusCommandTimeout = 10 * time.Second
 // statusCommandResultPayload delivers async status_command output to the main loop.
 type statusCommandResultPayload struct {
 	Text string
-	OK   bool
 }
 
 // runStatusCommandTicker fires command immediately, then on every interval, until stop
@@ -68,20 +68,19 @@ func (a *App) requestStatusCommandRun(command string, maxWidth int) {
 		// runs the configured line via sh -c directly rather than cmdrun.BuildInvocation
 		// (which requires a panel/row cmdmacro.Context even when the template has no macros).
 		result := cmdrun.Run(ctx, cmdrun.ShellArgv(command), "", cmdrun.MaxStreamBytes)
-		if result.LaunchErr != nil || result.ExitCode != 0 {
-			// Keep displaying the last known-good text rather than blanking on a
-			// transient failure.
-			return
+		line := ""
+		// A failing (or timed-out) command clears the text so stale output never lingers.
+		if result.LaunchErr == nil && result.ExitCode == 0 {
+			line = textutil.TruncateBannerRunes(textutil.FirstLine(string(result.Stdout)), maxWidth)
 		}
-		line := textutil.TruncateBannerRunes(textutil.FirstLine(string(result.Stdout)), maxWidth)
-		_ = a.screen.PostEvent(tcell.NewEventInterrupt(statusCommandResultPayload{Text: line, OK: true}))
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(statusCommandResultPayload{Text: line}))
 	}()
 }
 
 // applyStatusCommandResult merges an async status_command result into app state. It
 // returns true when the displayed text changed (caller may repaint).
 func (a *App) applyStatusCommandResult(d statusCommandResultPayload) bool {
-	if !d.OK || d.Text == a.statusCmdText {
+	if d.Text == a.statusCmdText {
 		return false
 	}
 	a.statusCmdText = d.Text
