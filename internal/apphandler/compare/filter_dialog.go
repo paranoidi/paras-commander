@@ -35,7 +35,10 @@ func (h *Handler) OpenSelectDialog(selected bool) {
 	if !selected {
 		mode = dialog.CompareFilterModeUnselect
 	}
-	h.model.CompareFilterDialog = dialog.CompareFilterDialogState{Open: true, Mode: mode, Filter: comparepkg.FilterNone}
+	h.model.CompareFilterDialog = dialog.CompareFilterDialogState{
+		Open: true, Mode: mode, Filter: comparepkg.FilterNone,
+		FocusSecondary: h.model.CompareView.FocusColumn == ui.CompareColumnSecondary,
+	}
 }
 
 func (h *Handler) closeFilterDialog() {
@@ -54,41 +57,75 @@ func (h *Handler) confirmFilterDialog() {
 	h.closeFilterDialog()
 }
 
-// selectMatching adds (selected) or removes the focused side's path of every visible row of
-// kind f in that panel's selection and reports how many changed.
-func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
-	n := 0
-	panelID := ui.PrimaryPanel
-	if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
-		panelID = ui.SecondaryPanel
+// sideName names a panel's compare column in messages.
+func sideName(panelID int) string {
+	if panelID == ui.SecondaryPanel {
+		return "right"
 	}
+	return "left"
+}
+
+// selectMatching adds (selected) or removes the focused side's path of every visible row of
+// kind f in that panel's selection and reports how many changed per side. Rows without a
+// focused-side entry (only on the other side) use the other side's path and panel.
+func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
+	var n [2]int
+	focusSecondary := h.model.CompareView.FocusColumn == ui.CompareColumnSecondary
 	for _, row := range h.FilteredRows() {
 		if !comparepkg.FilterMatches(f, row.Kind) {
 			continue
 		}
-		abs, id, ok, err := h.focusedSide(row)
+		abs, id, ok, err := h.sideOf(row, focusSecondary)
+		if err == nil && !ok {
+			abs, id, ok, err = h.sideOf(row, !focusSecondary)
+		}
 		if err != nil || !ok {
 			continue
 		}
 		// ponytail: AddSelection lstats unlisted paths on the UI thread, fine for local
 		// roots; add a batched file-only add if huge results lag.
 		if h.host.SetPanelSelection(id, abs.String(), selected) {
-			n++
+			n[id]++
 		}
-	}
-	side := "left"
-	if panelID == ui.SecondaryPanel {
-		side = "right"
 	}
 	verb := "select"
 	if !selected {
 		verb = "unselect"
 	}
-	if n == 0 {
+	var parts []string
+	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
+		if n[id] == 0 {
+			continue
+		}
+		if len(parts) == 0 {
+			parts = append(parts, fmt.Sprintf("%d files on %s side", n[id], sideName(id)))
+		} else {
+			parts = append(parts, fmt.Sprintf("%d on %s side", n[id], sideName(id)))
+		}
+	}
+	if len(parts) == 0 {
 		h.host.SetTransientMessage("Nothing to "+verb, ui.MessageUrgencyInfo)
 		return
 	}
-	h.host.SetTransientMessage(fmt.Sprintf("%sed %d files on %s side", strings.ToUpper(verb[:1])+verb[1:], n, side), ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(strings.ToUpper(verb[:1])+verb[1:]+"ed "+strings.Join(parts, ", "), ui.MessageUrgencyInfo)
+}
+
+// InvertColumnSelection toggles the focused column's path of every visible row in that
+// panel's selection.
+func (h *Handler) InvertColumnSelection() {
+	n, panelID := 0, ui.PrimaryPanel
+	if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
+		panelID = ui.SecondaryPanel
+	}
+	for _, row := range h.FilteredRows() {
+		abs, id, ok, err := h.focusedSide(row)
+		if err != nil || !ok {
+			continue
+		}
+		h.host.TogglePanelSelection(id, abs.String())
+		n++
+	}
+	h.host.SetTransientMessage(fmt.Sprintf("Inverted %d files on %s side", n, sideName(panelID)), ui.MessageUrgencyInfo)
 }
 
 // selectFilterDialogRadio toggles the pending checkbox for focus without

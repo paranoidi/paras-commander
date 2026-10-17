@@ -837,7 +837,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelInvertSelection,
-			Views:       HelpBrowser | HelpDedup,
+			Views:       HelpBrowser | HelpDedup | HelpCompare,
 			Title:       "Invert selection",
 			Section:     "Selection",
 			DefaultKeys: []string{"*", "C-i"},

@@ -309,11 +309,16 @@ func (h *Handler) selectedColumnTarget() (abs pathloc.Path, panelID int, ok bool
 // focusedSide resolves row's entry on the focused column's side to an absolute path and
 // its owning panel. ok is false when that side has no counterpart entry.
 func (h *Handler) focusedSide(row comparepkg.Row) (abs pathloc.Path, panelID int, ok bool, err error) {
+	return h.sideOf(row, h.model.CompareView.FocusColumn == ui.CompareColumnSecondary)
+}
+
+// sideOf resolves row's entry on the secondary (or primary) side like focusedSide.
+func (h *Handler) sideOf(row comparepkg.Row, secondary bool) (abs pathloc.Path, panelID int, ok bool, err error) {
 	snap := h.model.CompareSnapshot
 	rel := row.PrimaryRel
 	root := snap.PrimaryRoot
 	panelID = ui.PrimaryPanel
-	if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
+	if secondary {
 		rel = row.SecondaryRel
 		root = snap.SecondaryRoot
 		panelID = ui.SecondaryPanel

@@ -172,12 +172,19 @@ func FilterDialogRadios() []FilterDialogRadio {
 }
 
 // SelectDialogRadios is the checkbox list for the compare select-by-kind dialog.
-func SelectDialogRadios() []FilterDialogRadio {
+// "This side" is the focused column's one-sided kind, "other side" the opposite.
+func SelectDialogRadios(focusSecondary bool) []FilterDialogRadio {
+	this, other := FilterPrimaryOnly, FilterSecondaryOnly
+	if focusSecondary {
+		this, other = other, this
+	}
 	return []FilterDialogRadio{
 		{FilterAll, "All", 'A'},
 		{FilterEqual, "Equal", 'E'},
 		{FilterRelocated, "Relocated", 'R'},
 		{FilterContentDiff, "Modified", 'M'},
+		{this, "Only this side", 'O'},
+		{other, "Only other side", 'N'},
 	}
 }
 

@@ -96,6 +96,12 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 		}
 		a.compareCtrl.OpenSelectDialog(false)
 		return true
+	case keymap.ActionPanelInvertSelection:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		a.compareCtrl.InvertColumnSelection()
+		return true
 	case keymap.ActionFileDelete:
 		if a.model.ViewMode != ui.ViewCompare {
 			return false

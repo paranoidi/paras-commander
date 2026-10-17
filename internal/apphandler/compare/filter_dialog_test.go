@@ -159,3 +159,57 @@ func TestSelectDialogSelectsAndUnselectsMatchingFocusedSidePaths(t *testing.T) {
 		t.Fatalf("after unselect modified: %v, want quartz.txt removed only", got)
 	}
 }
+
+func TestSelectDialogOnlyOtherSideSelectsOtherPanel(t *testing.T) {
+	root1, root2 := pathloc.MustParse("/amber"), pathloc.MustParse("/birch")
+	model := &ui.Model{
+		ViewMode:    ui.ViewCompare,
+		CompareView: ui.CompareViewState{Filter: comparepkg.FilterAll},
+		CompareSnapshot: comparepkg.Snapshot{
+			PrimaryRoot: root1, SecondaryRoot: root2,
+			Rows: []comparepkg.Row{
+				{PrimaryRel: "harbor.txt", Kind: comparepkg.KindPrimaryOnly, HashDone: true},
+				{SecondaryRel: "lantern.txt", Kind: comparepkg.KindSecondaryOnly, HashDone: true},
+			},
+		},
+	}
+	host := &selectRecordHost{selected: map[int]map[string]bool{}}
+	h := New(Deps{Host: host, Model: model})
+
+	h.OpenSelectDialog(true)
+	pickKindAndConfirm(h, model, 'n')
+	if got := host.selected[ui.SecondaryPanel]; len(got) != 1 || !got["/birch/lantern.txt"] || len(host.selected[ui.PrimaryPanel]) != 0 {
+		t.Fatalf("only other side: %v, want lantern.txt in secondary only", host.selected)
+	}
+}
+
+type toggleRecordHost struct {
+	compareHandlerHost
+	toggled map[int][]string
+}
+
+func (h *toggleRecordHost) TogglePanelSelection(id int, path string) bool {
+	h.toggled[id] = append(h.toggled[id], path)
+	return false
+}
+
+func TestInvertColumnSelectionTogglesFocusedSidePaths(t *testing.T) {
+	model := &ui.Model{
+		ViewMode:    ui.ViewCompare,
+		CompareView: ui.CompareViewState{Filter: comparepkg.FilterAll, FocusColumn: ui.CompareColumnSecondary},
+		CompareSnapshot: comparepkg.Snapshot{
+			PrimaryRoot: pathloc.MustParse("/amber"), SecondaryRoot: pathloc.MustParse("/birch"),
+			Rows: []comparepkg.Row{
+				{PrimaryRel: "harbor.txt", SecondaryRel: "harbor.txt", Kind: comparepkg.KindEqual, HashDone: true},
+				{PrimaryRel: "quartz.txt", Kind: comparepkg.KindPrimaryOnly, HashDone: true},
+				{SecondaryRel: "lantern.txt", Kind: comparepkg.KindSecondaryOnly, HashDone: true},
+			},
+		},
+	}
+	host := &toggleRecordHost{toggled: map[int][]string{}}
+	New(Deps{Host: host, Model: model}).InvertColumnSelection()
+	got := host.toggled[ui.SecondaryPanel]
+	if len(got) != 2 || len(host.toggled[ui.PrimaryPanel]) != 0 || got[0] != "/birch/harbor.txt" || got[1] != "/birch/lantern.txt" {
+		t.Fatalf("toggled = %v, want two secondary paths", host.toggled)
+	}
+}

@@ -24,12 +24,14 @@ type CompareFilterDialogState struct {
 	Mode   CompareFilterDialogMode
 	Focus  int
 	Filter comparepkg.Filter
+	// FocusSecondary marks the right column as focused (select/unselect "this side").
+	FocusSecondary bool
 }
 
 // Radios returns the radio list for the dialog's mode.
 func (s CompareFilterDialogState) Radios() []comparepkg.FilterDialogRadio {
 	if s.Mode != CompareFilterModeCategory {
-		return comparepkg.SelectDialogRadios()
+		return comparepkg.SelectDialogRadios(s.FocusSecondary)
 	}
 	return comparepkg.FilterDialogRadios()
 }

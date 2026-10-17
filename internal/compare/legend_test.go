@@ -48,3 +48,18 @@ func TestRowLegendPendingAndHashing(t *testing.T) {
 		})
 	}
 }
+
+func TestSelectDialogRadiosThisOtherSide(t *testing.T) {
+	for _, tc := range []struct {
+		secondary   bool
+		this, other Filter
+	}{
+		{false, FilterPrimaryOnly, FilterSecondaryOnly},
+		{true, FilterSecondaryOnly, FilterPrimaryOnly},
+	} {
+		r := SelectDialogRadios(tc.secondary)
+		if n := len(r); n != 6 || r[4].Filter != tc.this || r[5].Filter != tc.other {
+			t.Fatalf("secondary=%v: radios %+v", tc.secondary, r)
+		}
+	}
+}
