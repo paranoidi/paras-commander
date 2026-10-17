@@ -22,7 +22,7 @@ func DefinitionsMessages() []Definition {
 			Label:      "File",
 			Shortcut:   'f',
 			Items: []Item{
-				{Action: keymap.ActionAppQuit, Label: "Exit", Shortcut: 'x'},
+				{Action: keymap.ActionAppQuit, Label: "Exit", Shortcut: 'q'},
 			},
 		},
 	}

@@ -83,7 +83,7 @@ func TestFileMenuShortcutExceptions(t *testing.T) {
 		"Select group":     'g',
 		"Unselect group":   'n',
 		"Invert selection": 'I',
-		"Exit":             'i',
+		"Exit":             'q',
 		"Flatten":          'F',
 	}
 

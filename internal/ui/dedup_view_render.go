@@ -150,6 +150,10 @@ func drawDedupView(
 		activeGroup = list[view.SourceRow].Value.GroupIdx
 	}
 	hintDirs, twinDirs := DedupCursorHintDirs(snap, view, list)
+	mainAnchor, copiesAnchor := view.RangeAnchor, ""
+	if view.FocusCopies {
+		mainAnchor, copiesAnchor = "", view.RangeAnchor
+	}
 	drawDedupTreePane(screen, layout.Primary, dedupPaneParams{
 		Title:            dedupViewTitle(snap, view.IgnoredEmptyCount, view.RecheckPercent()),
 		EndLabel:         panelSelectionSizePadded(dedupEndLabel(view)),
@@ -157,6 +161,7 @@ func drawDedupView(
 		Rows:             list,
 		Pane:             view.Main,
 		Focused:          !view.FocusCopies && !view.FocusPanel,
+		RangePending:     !view.FocusCopies && !view.FocusPanel && view.RangeAnchor != "",
 		EmptyText:        dedupEmptyMessage(snap),
 		ActiveGroup:      activeGroup,
 		HintDirs:         hintDirs,
@@ -165,7 +170,7 @@ func drawDedupView(
 		MarkedDirs:       markedDirs,
 		DangerMarkedDirs: dangerMarkedDirs,
 		KeptDirs:         keptDirs,
-		RowMarks:         rowMarks,
+		RowMarks:         withRangeAnchor(rowMarks, mainAnchor),
 	}, snap, view, styles, chromeBlocked)
 
 	copiesHeader := ""
@@ -187,6 +192,7 @@ func drawDedupView(
 		Rows:             copies,
 		Pane:             view.Copies,
 		Focused:          view.FocusCopies && !view.FocusPanel,
+		RangePending:     view.FocusCopies && !view.FocusPanel && view.RangeAnchor != "",
 		EmptyText:        copiesEmpty,
 		ActiveGroup:      -1,
 		CopiesPane:       true,
@@ -194,7 +200,7 @@ func drawDedupView(
 		MarkedDirs:       markedDirs,
 		DangerMarkedDirs: dangerMarkedDirs,
 		KeptDirs:         keptDirs,
-		RowMarks:         rowMarks,
+		RowMarks:         withRangeAnchor(rowMarks, copiesAnchor),
 	}, snap, view, styles, chromeBlocked)
 }
 
@@ -222,6 +228,7 @@ type dedupPaneParams struct {
 	MarkedDirs       map[string]bool     // DirRel keys of dirs whose subtree has a marked file
 	DangerMarkedDirs map[string]bool     // DirRel keys of dirs whose subtree has a fully-marked group
 	KeptDirs         map[string]bool     // DirRel keys of dirs whose subtree has a kept file
+	RangePending     bool                // focused pane with a pending range-select anchor: cursor row uses panel.row.cursor.range
 	RowMarks         dialog.RowMarksFunc // resolves the pin/in-progress-job trailing marks for one row's absolute path
 }
 
@@ -305,6 +312,7 @@ func drawDedupTreePane(
 			Marked:         marked,
 			GroupAllMarked: groupAllMarked,
 			DirFullyMarked: dirFullyMarked,
+			RangePending:   rowSelected && p.RangePending,
 		}
 		lineStyle := dedupRowStyle(styles, p, d, entry, flags, chromeBlocked, base, bg)
 
@@ -316,6 +324,7 @@ func drawDedupTreePane(
 				ChromeBlocked:  chromeBlocked,
 				FileListActive: p.Focused,
 				Selected:       marked || dirFullyMarked,
+				RangePending:   p.RangePending,
 			})
 		}
 		hinted := dedupRowHinted(p, d, entry, rowSelected)
@@ -337,6 +346,7 @@ type dedupRowFlags struct {
 	Marked         bool
 	GroupAllMarked bool
 	DirFullyMarked bool
+	RangePending   bool
 }
 
 // dedupRowStyle picks the row's base and line styles from precomputed per-row flags, moved out
@@ -349,6 +359,10 @@ func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry 
 	}
 	lineStyle := rowBase
 	switch {
+	case f.RangePending:
+		lineStyle = styles.PanelListingCursorStyle(rowBase, theme.PanelListingCursorOpts{
+			ChromeBlocked: chromeBlocked, FileListActive: p.Focused, Selected: f.Marked || f.DirFullyMarked, RangePending: true,
+		})
 	case f.Kept && f.RowSelected && p.Focused:
 		lineStyle = styles.PanelDedupRowCursorKeep
 	case f.GroupAllMarked && f.RowSelected && p.Focused:
@@ -499,6 +513,7 @@ const (
 	dedupLegendMarkedSubtree = "contains marked files"
 	dedupLegendJob           = "job in progress"
 	dedupLegendPinned        = "pinned"
+	dedupLegendRangeAnchor   = "range start"
 )
 
 // dedupSuffixIcon is one trailing icon after the subtree mark. Legend is empty for icons the
@@ -545,6 +560,9 @@ func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.Dedup
 		}
 		if m.Pinned {
 			add(styles.IconPinRune(), dedupLegendPinned)
+		}
+		if m.RangeAnchor {
+			add(styles.IconFilelistRangeAnchor(), dedupLegendRangeAnchor)
 		}
 	}
 	if d.Kind == DedupRowDir {

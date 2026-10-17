@@ -128,6 +128,16 @@ func (h *Handler) InvertColumnSelection() {
 	h.host.SetTransientMessage(fmt.Sprintf("Inverted %d files on %s side", n, sideName(panelID)), ui.MessageUrgencyInfo)
 }
 
+// ClearColumnSelection clears the focused column's panel selection.
+func (h *Handler) ClearColumnSelection() {
+	panelID := ui.PrimaryPanel
+	if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
+		panelID = ui.SecondaryPanel
+	}
+	h.host.ClearPanelSelection(panelID)
+	h.host.SetTransientMessage("Cleared selection on "+sideName(panelID)+" side", ui.MessageUrgencyInfo)
+}
+
 // selectFilterDialogRadio toggles the pending checkbox for focus without
 // applying it to the view (Space/Enter/Alt mnemonic).
 func (h *Handler) selectFilterDialogRadio(focus int) {

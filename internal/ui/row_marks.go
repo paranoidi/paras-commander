@@ -16,3 +16,16 @@ func rowMarksResolver(pinnedItems []PinnedItem, jobMarks []JobPathMark) dialog.R
 		return dialog.RowMarks{Pinned: isPinned, HasJob: hasJob, JobStatus: status, JobWrite: write}
 	}
 }
+
+// withRangeAnchor wraps f so the row at absolute path anchor also reports RangeAnchor
+// (pending range-select start). An empty anchor returns f unchanged.
+func withRangeAnchor(f dialog.RowMarksFunc, anchor string) dialog.RowMarksFunc {
+	if anchor == "" || f == nil {
+		return f
+	}
+	return func(absPath string) dialog.RowMarks {
+		m := f(absPath)
+		m.RangeAnchor = absPath == anchor
+		return m
+	}
+}

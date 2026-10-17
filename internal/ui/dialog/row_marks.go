@@ -19,6 +19,8 @@ type RowMarks struct {
 	// its color to the file list's cursor icon color (Theme.DialogMissingIconForeground).
 	Missing bool
 	Cursor  bool
+	// RangeAnchor marks the pending range-select start row (Theme.IconFilelistRangeAnchor).
+	RangeAnchor bool
 }
 
 // RowMarksFunc resolves RowMarks for one row's absolute path.
@@ -26,8 +28,8 @@ type RowMarksFunc func(absPath string) RowMarks
 
 // RowMarksWidth returns how many trailing cells m's active marks need: 2 cells per active
 // mark (" <icon>"), the same convention as panellist.SuffixDecorationLen.
-// rowMarksMaxWidth is RowMarksWidth's ceiling: three possible marks (job, pin, missing) at 2 cells each.
-const rowMarksMaxWidth = 6
+// rowMarksMaxWidth is RowMarksWidth's ceiling: four possible marks (job, pin, missing, range anchor) at 2 cells each.
+const rowMarksMaxWidth = 8
 
 func RowMarksWidth(m RowMarks) int {
 	n := 0
@@ -38,6 +40,9 @@ func RowMarksWidth(m RowMarks) int {
 		n += 2
 	}
 	if m.Missing {
+		n += 2
+	}
+	if m.RangeAnchor {
 		n += 2
 	}
 	return n
@@ -73,6 +78,11 @@ func DrawRowMarksSuffix(screen tcell.Screen, x, y, maxWidth int, m RowMarks, bg 
 	if m.Missing && used+2 <= maxWidth {
 		fg := styles.DialogMissingIconForeground(m.Cursor)
 		primitive.Text(screen, x+used, y, 2, " "+styles.IconDialogMissing(), tcell.StyleDefault.Foreground(fg).Background(bg))
+		used += 2
+	}
+	if m.RangeAnchor && used+2 <= maxWidth {
+		fg, _, _ := styles.PanelRowMarkRangeAnchor.Decompose()
+		primitive.Text(screen, x+used, y, 2, " "+string(styles.IconFilelistRangeAnchor()), tcell.StyleDefault.Foreground(fg).Background(bg))
 		used += 2
 	}
 	return used

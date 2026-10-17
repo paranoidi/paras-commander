@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -829,6 +830,14 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 	return true, false
 }
 
+// announceRange shows the shared range-select toast for res (nothing for RangeNone).
+func (a *App) announceRange(res primitive.RangeResult, added int) {
+	key := a.keys.Global.MenuBindingLabel(keymap.ActionPanelSelectRange)
+	if msg := primitive.RangeMessage(res, added, key); msg != "" {
+		a.setTransientMessage(msg, ui.MessageUrgencyInfo)
+	}
+}
+
 // tryDispatchSelectionActions handles panel selection actions (toggle/group/invert/clear/stash).
 func (a *App) tryDispatchSelectionActions(actionID string) bool {
 	viewportRows := a.activeViewportRows()
@@ -841,12 +850,11 @@ func (a *App) tryDispatchSelectionActions(actionID string) bool {
 		}
 	case keymap.ActionPanelSelectRange:
 		anchored, added, conflicts := activePanel.MarkRange(viewportRows)
-		key := a.keys.Global.MenuBindingLabel(keymap.ActionPanelSelectRange)
 		switch {
 		case anchored && activePanel.RangeAnchor != "":
-			a.setTransientMessage(fmt.Sprintf("Range start set, move and press %s on the last item", key), ui.MessageUrgencyInfo)
+			a.announceRange(primitive.RangeStarted, 0)
 		case anchored:
-			a.setTransientMessage(fmt.Sprintf("Selected %d items", added), ui.MessageUrgencyInfo)
+			a.announceRange(primitive.RangeDone, added)
 			if conflicts {
 				a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 			}

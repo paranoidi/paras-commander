@@ -8,7 +8,7 @@ Alt (`M`) combinations generally alter the current view. Ctrl (`C`) combinations
 
 `Alt++` (`git.stage`) and `Alt+-` (`git.unstage`) stage or unstage the selected files (or the cursor entry) in the active panel when it shows a local git work tree.
 
-`Alt+M` (`panel.select-range`) marks the range start on the first press and selects everything between it and the cursor on the second.
+`Alt+K` (`panel.select-range`) marks the range start on the first press and selects everything between it and the cursor on the second. It also works in the carousel view, the Compare directories results (the focused column's files) and Find duplicates (unkept files in the focused pane, marked for deletion).
 
 `Alt+W` (`dedup.open`) returns to kept Find duplicates results; see `find-duplicates.md`.
 

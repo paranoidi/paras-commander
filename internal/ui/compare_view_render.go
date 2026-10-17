@@ -112,8 +112,8 @@ func drawCompareView(
 
 		pathBase := styles.JobsRow.Background(bg)
 		absentStyle := styles.PanelBlockedText.Background(bg)
-		leftStyle := comparePathCellStyle(pathBase, view.FocusColumn == CompareColumnPrimary, rowSelected, primary.IsSelectedPath(entryPrimaryAbs(snap, entry)), styles, chromeBlocked, bg)
-		rightStyle := comparePathCellStyle(pathBase, view.FocusColumn == CompareColumnSecondary, rowSelected, secondary.IsSelectedPath(entrySecondaryAbs(snap, entry)), styles, chromeBlocked, bg)
+		leftStyle := comparePathCellStyle(pathBase, view.FocusColumn == CompareColumnPrimary, rowSelected, primary.IsSelectedPath(entryPrimaryAbs(snap, entry)), styles, chromeBlocked, bg, view.RangeAnchor != "")
+		rightStyle := comparePathCellStyle(pathBase, view.FocusColumn == CompareColumnSecondary, rowSelected, secondary.IsSelectedPath(entrySecondaryAbs(snap, entry)), styles, chromeBlocked, bg, view.RangeAnchor != "")
 
 		primitive.Text(screen, rect.X+1, lineY, 1, "", leftStyle)
 		if leftPath == "" {
@@ -206,12 +206,13 @@ func entrySecondaryAbs(snap comparepkg.Snapshot, row comparepkg.Row) string {
 	return filepath.Clean(loc.String())
 }
 
-func comparePathCellStyle(pathBase tcell.Style, colFocused, rowCursor, pathSelected bool, styles theme.Theme, chromeBlocked bool, bg tcell.Color) tcell.Style {
+func comparePathCellStyle(pathBase tcell.Style, colFocused, rowCursor, pathSelected bool, styles theme.Theme, chromeBlocked bool, bg tcell.Color, rangePending bool) tcell.Style {
 	if colFocused && rowCursor {
 		return styles.PanelListingCursorStyle(pathBase, theme.PanelListingCursorOpts{
 			ChromeBlocked:  chromeBlocked,
 			FileListActive: true,
 			Selected:       pathSelected,
+			RangePending:   rangePending,
 		})
 	}
 	if pathSelected {

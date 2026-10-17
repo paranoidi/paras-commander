@@ -100,6 +100,7 @@ type DedupViewState struct {
 	FocusPanel            bool            // Tab focus is in the browse panel (FocusCopies keeps the source pane)
 	Marked                map[string]bool // absolute paths marked for deletion
 	MarkedCount           int
+	RangeAnchor           string // focused pane's file AbsKey marked as the pending range-select start ("" when none); cleared on pane switch
 	MarkedReclaimBytes    int64
 	Kept                  map[string]bool                    // absolute paths designated as survivors
 	SortByWasted          bool                               // groups mode: false = order by path; true = most space wasted first

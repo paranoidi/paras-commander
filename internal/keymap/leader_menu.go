@@ -178,7 +178,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 		},
 		actions: map[string][]string{
 			LeaderMenuGroupFile:      {ActionFileDelete},
-			LeaderMenuGroupSelection: {ActionPanelSelectToggle, ActionPanelSelectGroup, ActionPanelUnselectGroup},
+			LeaderMenuGroupSelection: {ActionPanelSelectRange, ActionPanelSelectGroup, ActionPanelUnselectGroup, ActionPanelClearSelection},
 			LeaderMenuGroupCompare: {
 				ActionCompareClose,
 				ActionCompareCycleFilter,
@@ -203,10 +203,11 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 		},
 	},
 	HelpDedup: {
-		order: []string{LeaderMenuGroupTree, LeaderMenuGroupDuplicates, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
+		order: []string{LeaderMenuGroupTree, LeaderMenuGroupSelection, LeaderMenuGroupDuplicates, LeaderMenuGroupDisplay, LeaderMenuGroupApp},
 		actions: map[string][]string{
-			LeaderMenuGroupApp:     {ActionAppQuit},
-			LeaderMenuGroupDisplay: {ActionJobsOpen, ActionMessagesOpen, ActionCommandsOpen},
+			LeaderMenuGroupSelection: {ActionPanelSelectRange, ActionPanelInvertSelection, ActionPanelClearSelection},
+			LeaderMenuGroupApp:       {ActionAppQuit},
+			LeaderMenuGroupDisplay:   {ActionJobsOpen, ActionMessagesOpen, ActionCommandsOpen},
 			LeaderMenuGroupTree: {
 				ActionDedupToggleNode,
 				ActionDedupCollapse,
@@ -223,17 +224,15 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 			},
 			LeaderMenuGroupDuplicates: {
 				ActionPanelRefresh,
-				ActionPanelInvertSelection,
-				ActionPanelClearSelection,
 				ActionFileDelete,
 				ActionDedupMarkKeep,
 				ActionDedupCompare,
-				ActionPanelSelectToggle,
 				ActionDedupClose,
 			},
 		},
 		column: map[string]int{
 			LeaderMenuGroupTree:       0,
+			LeaderMenuGroupSelection:  1,
 			LeaderMenuGroupDuplicates: 1,
 			LeaderMenuGroupDisplay:    2,
 			LeaderMenuGroupApp:        2,

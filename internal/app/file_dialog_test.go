@@ -64,7 +64,7 @@ func TestFileMenuExitQuits(t *testing.T) {
 	app.dispatch(keymap.ActionAppOpenMenu)
 	// Open pulldown first, then press shortcut.
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone))
 
 	if !quit {
 		t.Fatal("handleKey() quit = false, want true")

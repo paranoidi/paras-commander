@@ -25,8 +25,10 @@ func DefinitionsCompare(ignoreEmpty bool) []Definition {
 				{Action: keymap.ActionCompareRefresh, Label: "Refresh", Shortcut: 'r'},
 				{Action: keymap.ActionCompareMerge, Label: "Merge", Shortcut: 'm'},
 				{Action: keymap.ActionFileDelete, Label: "Delete", Shortcut: 'd'},
-				{Action: keymap.ActionPanelSelectGroup, Label: "Select group", Shortcut: 's'},
-				{Action: keymap.ActionPanelUnselectGroup, Label: "Unselect group", Shortcut: 'u'},
+				{Action: keymap.ActionPanelSelectRange, Label: "Select range", Shortcut: 'k'},
+				{Action: keymap.ActionPanelSelectGroup, Label: "Select group", Shortcut: 'g'},
+				{Action: keymap.ActionPanelUnselectGroup, Label: "Unselect group", Shortcut: 'n'},
+				{Action: keymap.ActionPanelClearSelection, Label: "Unselect all", Shortcut: 'u'},
 				{Action: keymap.ActionCompareToggleEmpty, Label: CompareToggleEmptyMenuLabel(ignoreEmpty), Shortcut: 'e'},
 			},
 		},
@@ -37,7 +39,7 @@ func DefinitionsCompare(ignoreEmpty bool) []Definition {
 			Label:      "File",
 			Shortcut:   'f',
 			Items: []Item{
-				{Action: keymap.ActionAppQuit, Label: "Exit", Shortcut: 'x'},
+				{Action: keymap.ActionAppQuit, Label: "Exit", Shortcut: 'q'},
 			},
 		},
 	}

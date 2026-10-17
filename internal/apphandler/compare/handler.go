@@ -15,6 +15,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -39,6 +40,8 @@ type Host interface {
 	TogglePanelSelection(panelID int, path string) (conflicts bool)
 	// SetPanelSelection adds (selected) or removes path in the panel's selection; true when it changed.
 	SetPanelSelection(panelID int, path string, selected bool) (changed bool)
+	// ClearPanelSelection removes every tagged path from the panel's selection.
+	ClearPanelSelection(panelID int)
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
 	ClearTransientMessage()
 	CompareMenuDefinitions() []menu.Definition
@@ -209,6 +212,7 @@ func (h *Handler) Refresh() {
 	view := h.model.CompareView
 	h.open(h.openedPrimary, h.openedSecondary, h.openedShowHidden, h.openedGate, h.onClose)
 	h.model.CompareView = view
+	h.model.CompareView.RangeAnchor = ""
 }
 
 // ForgetPaths drops deleted absolute paths (or directories) from the results without a
@@ -274,12 +278,14 @@ func (h *Handler) ensureSelectionVisible(visibleRows int) {
 // MoveColumnFocus shifts primary/secondary column focus (sticky across row navigation).
 func (h *Handler) MoveColumnFocus(delta int) {
 	st := &h.model.CompareView
+	prev := st.FocusColumn
 	if delta < 0 {
 		st.FocusColumn = ui.CompareColumnPrimary
-		return
-	}
-	if delta > 0 {
+	} else if delta > 0 {
 		st.FocusColumn = ui.CompareColumnSecondary
+	}
+	if st.FocusColumn != prev {
+		st.RangeAnchor = ""
 	}
 }
 
@@ -291,6 +297,7 @@ func (h *Handler) ToggleColumnFocus() {
 	} else {
 		st.FocusColumn = ui.CompareColumnSecondary
 	}
+	st.RangeAnchor = ""
 }
 
 // selectedColumnTarget resolves the row/column under the current selection and focused
@@ -344,6 +351,42 @@ func (h *Handler) ToggleColumnSelection() (conflicts bool) {
 		return false
 	}
 	return h.host.TogglePanelSelection(panelID, abs.String())
+}
+
+// SelectColumnRange is panel.select-range: the first press anchors the cursor row's focused-side
+// path (RangeStarted; the caller moves the cursor down); the next press selects every visible
+// row's focused-side path between anchor and cursor and clears the anchor (RangeDone). If the
+// anchor row is no longer visible the press re-anchors. Rows without a focused-side entry are skipped.
+func (h *Handler) SelectColumnRange() (res primitive.RangeResult, added int) {
+	st := &h.model.CompareView
+	abs, _, ok, err := h.selectedColumnTarget()
+	if err != nil {
+		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyError)
+		return primitive.RangeNone, 0
+	}
+	if !ok {
+		return primitive.RangeNone, 0
+	}
+	rows := h.FilteredRows()
+	ai := primitive.RangeAnchorIndex(len(rows), st.RangeAnchor, func(i int) string {
+		a, _, ok, _ := h.focusedSide(rows[i])
+		if !ok {
+			return ""
+		}
+		return a.String()
+	})
+	if ai < 0 {
+		st.RangeAnchor = abs.String()
+		return primitive.RangeStarted, 0
+	}
+	for i := min(ai, st.Selected); i <= max(ai, st.Selected); i++ {
+		a, id, ok, _ := h.focusedSide(rows[i])
+		if ok && h.host.SetPanelSelection(id, a.String(), true) {
+			added++
+		}
+	}
+	st.RangeAnchor = ""
+	return primitive.RangeDone, added
 }
 
 // SelectedColumnTarget returns the absolute path under the focused column and the panel that

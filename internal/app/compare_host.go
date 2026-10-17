@@ -32,6 +32,10 @@ func (h compareHost) SetPanelSelection(panelID int, path string, selected bool) 
 	return true
 }
 
+func (h compareHost) ClearPanelSelection(panelID int) {
+	h.app.panelByID(panelID).ClearSelection()
+}
+
 func (h compareHost) SetTransientMessage(text string, urgency ui.MessageUrgency) {
 	h.app.setTransientMessage(text, urgency)
 }

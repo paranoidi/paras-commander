@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 
 	"github.com/gdamore/tcell/v2"
@@ -829,6 +830,7 @@ func (h *Handler) cyclePane(dir int) {
 		next = (next + dir + 3) % 3
 	}
 	st.Main.Filter, st.Copies.Filter = quickfilter.Filter{}, quickfilter.Filter{}
+	st.RangeAnchor = ""
 	st.FocusCopies, st.FocusPanel = next == 1, next == 2
 }
 
@@ -1290,6 +1292,42 @@ func (h *Handler) SelectToggleAndAdvance() {
 	}
 	h.setMark(row.Value.AbsKey, row.Value.Size, !st.Marked[row.Value.AbsKey])
 	h.MoveSelection(1)
+}
+
+// SelectRange is panel.select-range over the focused pane's visible rows. The first press
+// anchors the cursor's file row (RangeStarted) and moves the cursor down; the next press marks
+// every unkept file row between anchor and cursor and clears the anchor (RangeDone). A kept
+// file warns like Insert; directory rows and the browse panel are ignored. If the anchor row is
+// no longer visible the press re-anchors.
+func (h *Handler) SelectRange() (res primitive.RangeResult, added int) {
+	st := &h.model.DedupView
+	row, ok := h.selectedRow()
+	if st.FocusPanel || !ok || row.Value.Kind != ui.DedupRowFile {
+		return primitive.RangeNone, 0
+	}
+	if st.Kept[row.Value.AbsKey] {
+		h.host.SetTransientMessage("Kept file can not be selected", ui.MessageUrgencyWarn)
+		return primitive.RangeNone, 0
+	}
+	pane, rows := h.focusedPane()
+	ai := primitive.RangeAnchorIndex(len(rows), st.RangeAnchor, func(i int) string { return rows[i].Value.AbsKey })
+	if ai < 0 {
+		st.RangeAnchor = row.Value.AbsKey
+		h.MoveSelection(1)
+		return primitive.RangeStarted, 0
+	}
+	for i := min(ai, pane.Selected); i <= max(ai, pane.Selected); i++ {
+		d := rows[i].Value
+		if d.Kind != ui.DedupRowFile || st.Kept[d.AbsKey] {
+			continue
+		}
+		if !st.Marked[d.AbsKey] {
+			added++
+		}
+		h.setMark(d.AbsKey, d.Size, true)
+	}
+	st.RangeAnchor = ""
+	return primitive.RangeDone, added
 }
 
 // ToggleCopiesPaneSelectAll marks every copy-pane file for the current main

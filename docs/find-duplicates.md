@@ -21,6 +21,8 @@ In both views the right column is split: the Copies pane on top and a browse pan
 
 Shift+Left / Shift+Right (`ui.open-primary` / `ui.open-secondary`, the same actions the Find and Pin dialogs use) point the primary or secondary file panel at the row under the cursor: a folder opens that folder, a file opens its parent with the file selected. This works in both tree panes and in the browse panel, and the results view stays open.
 
+Alt+K (`panel.select-range`, leader `k` in the Selection group, Actions menu `k`) marks a range: the first press flags the file under the cursor (flag icon, yellow cursor) and moves down; the second press marks every unkept file row between the flag and the cursor in the focused pane. Switching panes drops the flag.
+
 Space or Ctrl+K (`dedup.mark-keep`, rebindable under `[dedup]` in `keybindings.toml`) marks the file under the cursor to keep; Insert on a kept file shows a toast instead of selecting it.
 
 Right / Enter on a **file** row (tree panes and the browse panel) opens it with the default opener, like the main file list (honours `open_files_externally`); folder and group rows keep their expand/enter behaviour. Alt+x (`panel.external-browser`, the main list's binding, rebindable in `keybindings.toml`) opens the folder of the row in the desktop file manager: a file's containing folder, a folder row itself, or the browse panel's current folder.

@@ -13,6 +13,9 @@ type CompareViewState struct {
 	// dialog); NameFilterLabel is its border label.
 	NameFilter      func(name string) bool
 	NameFilterLabel string
+	// RangeAnchor is the focused column's absolute path marked as the pending range-select
+	// start ("" when none); cleared on column change and refresh.
+	RangeAnchor string
 }
 
 // CompareColumnFocus is which path column has keyboard focus for selection.

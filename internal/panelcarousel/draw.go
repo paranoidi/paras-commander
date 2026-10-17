@@ -235,6 +235,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 			renameMark = p.RenameMark(entry)
 		}
 		rowSuffix := panellist.NewRowSuffix(jobSuffix, newFileTier, renameMark, subtree)
+		rowSuffix.RangeAnchor = c.Active && p.Center.RangeAnchor != "" && entry.Path == p.Center.RangeAnchor
 		var diskSrc DiskUsageSource
 		if p.DiskUsage.Active {
 			diskSrc = p.DiskUsage.Source
@@ -255,6 +256,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 				CarouselInactive:  inactive,
 				Selected:          selected,
 				FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
+				RangePending:      c.Active && p.Center.RangeAnchor != "",
 			})
 		}
 		if suffixSpans := panellist.ListingSuffixSpans(entry, nameWidth, p.ShowIcons, rowSuffix, jobStatus, p.Styles, p.ChromeBlocked, cursorKey, func(di int) tcell.Style {
@@ -330,6 +332,7 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 			CarouselInactive:  inactive,
 			Selected:          selected,
 			FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
+			RangePending:      c.Active && p.Center.RangeAnchor != "",
 		})
 	} else if selected {
 		style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)

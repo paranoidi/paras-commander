@@ -15,6 +15,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
@@ -686,16 +687,10 @@ func (s *State) MarkRange(viewportRows int) (anchored bool, added int, conflicts
 		return false, 0, false
 	}
 	n := s.VisibleEntryCount()
-	// ponytail: O(n) scan for anchor index; fine for listing sizes.
-	ai := -1
-	if s.RangeAnchor != "" {
-		for i := 0; i < n; i++ {
-			if e, _, ok := s.VisibleEntry(i); ok && e.Path == s.RangeAnchor {
-				ai = i
-				break
-			}
-		}
-	}
+	ai := primitive.RangeAnchorIndex(n, s.RangeAnchor, func(i int) string {
+		e, _, _ := s.VisibleEntry(i)
+		return e.Path
+	})
 	if ai < 0 {
 		s.RangeAnchor = cur.Path
 		if s.Cursor < n-1 {

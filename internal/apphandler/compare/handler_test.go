@@ -19,6 +19,7 @@ type compareHandlerHost struct{}
 func (compareHandlerHost) NavigatePanelToPath(int, string, string) error { return nil }
 func (compareHandlerHost) TogglePanelSelection(int, string) bool         { return false }
 func (compareHandlerHost) SetPanelSelection(int, string, bool) bool      { return false }
+func (compareHandlerHost) ClearPanelSelection(int)                       {}
 func (compareHandlerHost) SetTransientMessage(string, ui.MessageUrgency) {}
 func (compareHandlerHost) ClearTransientMessage()                        {}
 func (compareHandlerHost) CompareMenuDefinitions() []menu.Definition     { return nil }

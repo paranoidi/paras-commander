@@ -203,6 +203,11 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionPanelClearSelection:
 		a.dedupCtrl.ClearMarks()
 		return true
+	case keymap.ActionPanelSelectRange:
+		res, added := a.dedupCtrl.SelectRange()
+		a.announceRange(res, added)
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
 	case keymap.ActionFileDelete:
 		if len(a.dedupCtrl.MarkedPaths()) > 0 {
 			a.openDedupDeleteDialog()

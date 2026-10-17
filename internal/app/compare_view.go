@@ -7,6 +7,7 @@ import (
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
@@ -78,6 +79,16 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 		}
 		a.moveCompareSelection(1)
 		return true
+	case keymap.ActionPanelSelectRange:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		res, added := a.compareCtrl.SelectColumnRange()
+		a.announceRange(res, added)
+		if res == primitive.RangeStarted {
+			a.moveCompareSelection(1)
+		}
+		return true
 	case keymap.ActionPanelPinToggle:
 		if a.model.ViewMode != ui.ViewCompare {
 			return false
@@ -101,6 +112,12 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 			return false
 		}
 		a.compareCtrl.InvertColumnSelection()
+		return true
+	case keymap.ActionPanelClearSelection:
+		if a.model.ViewMode != ui.ViewCompare {
+			return false
+		}
+		a.compareCtrl.ClearColumnSelection()
 		return true
 	case keymap.ActionFileDelete:
 		if a.model.ViewMode != ui.ViewCompare {

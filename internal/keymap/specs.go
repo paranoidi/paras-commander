@@ -819,10 +819,10 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelSelectRange,
-			Views:       HelpBrowser,
+			Views:       HelpBrowser | HelpCompare | HelpDedup,
 			Title:       "Select range",
 			Section:     "Selection",
-			DefaultKeys: []string{"M-m"},
+			DefaultKeys: []string{"M-k"},
 			Keywords:    []string{"range", "mark", "shift", "block"},
 			LeaderKey:   "k",
 		},
@@ -855,7 +855,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelClearSelection,
-			Views:       HelpBrowser | HelpDedup,
+			Views:       HelpBrowser | HelpDedup | HelpCompare,
 			Title:       "Unselect all",
 			Section:     "Selection",
 			DefaultKeys: []string{"C-u"},
