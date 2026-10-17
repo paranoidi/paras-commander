@@ -15,6 +15,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
@@ -862,5 +863,50 @@ func TestUserMenuViHClosesTopLevel(t *testing.T) {
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
 	if app.model.LeaderMenu.Open {
 		t.Fatal("h in vi-motion mode at top level should close the user menu")
+	}
+}
+
+func TestUserMenuClearsOnlyConsumedSelection(t *testing.T) {
+	cases := []struct {
+		name, cmd             string
+		wantActive, wantOther int
+	}{
+		{"tagged in active", "echo %t", 0, 2},
+		{"tagged in other", "echo %T", 2, 0},
+		{"directory only", "echo %d", 2, 2},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			cfgDir := filepath.Join(dir, "config")
+			if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			writeUserMenuFile(t, filepath.Join(cfgDir, config.DefaultUserMenuFileName),
+				"[run]\nkey = \"r\"\ntitle = \"Run\"\ncommand = \""+tc.cmd+"\"\ndetach = true\n")
+			app := testUserMenuApp(t, dir, cfgDir)
+			tag := func(p *panel.State, root string) {
+				p.SelectedPaths = map[string]bool{
+					filepath.Join(root, "harbor.txt"): true,
+					filepath.Join(root, "walnut.txt"): true,
+				}
+			}
+			tag(&app.model.Primary, dir)
+			tag(&app.model.Secondary, app.model.Secondary.PathString())
+
+			prev := userMenuDetachRunner
+			userMenuDetachRunner = func([]string, string) error { return nil }
+			t.Cleanup(func() { userMenuDetachRunner = prev })
+
+			app.openUserMenu()
+			app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
+
+			if got := len(app.model.Primary.SelectedPaths); got != tc.wantActive {
+				t.Fatalf("active tags = %d, want %d", got, tc.wantActive)
+			}
+			if got := len(app.model.Secondary.SelectedPaths); got != tc.wantOther {
+				t.Fatalf("other tags = %d, want %d", got, tc.wantOther)
+			}
+		})
 	}
 }

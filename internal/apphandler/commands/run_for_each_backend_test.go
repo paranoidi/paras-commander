@@ -12,6 +12,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pools"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -104,6 +105,7 @@ func TestRunForEachPoolWaitingStaysPending(t *testing.T) {
 		mu:        &sync.RWMutex{},
 		ctx:       ctx,
 		workPools: workpool.NewRegistry([]pools.Def{{Name: "one", MaxParallel: 1}}),
+		host:      &bannerHost{pnl: &panel.State{}},
 	}
 
 	hold := RunForEachBatchSpec{
@@ -346,5 +348,34 @@ func TestRunForEachPoolRunsEntriesConcurrently(t *testing.T) {
 	}
 	if peak != 2 {
 		t.Fatalf("max concurrency = %d, want 2", peak)
+	}
+}
+
+func TestStartRunForEachBatchClearsSelectionAtStart(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	dir := t.TempDir()
+	pnl, err := panel.New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pnl.SelectedPaths = map[string]bool{filepath.Join(dir, "walnut"): true}
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	h := &Handler{screen: screen, model: &ui.Model{}, mu: &sync.RWMutex{}, ctx: ctx, host: &bannerHost{pnl: &pnl}}
+	h.StartRunForEachBatch(RunForEachBatchSpec{
+		Entries:    []localfs.Entry{{Name: "harbor", Path: dir, Type: localfs.EntryDirectory}},
+		AllowDirs:  true,
+		WorkDir:    dir,
+		Background: true,
+		BuildItem: func(localfs.Entry) (RunForEachBuiltItem, error) {
+			return RunForEachBuiltItem{Argv: []string{"sleep", "5"}, UserLine: "sleep"}, nil
+		},
+	})
+	if len(pnl.SelectedPaths) != 0 {
+		t.Fatalf("selection = %v, want cleared at start", pnl.SelectedPaths)
 	}
 }

@@ -13,12 +13,11 @@ import (
 // WakePayload wakes PollEvent after asynchronous command-run mutations. Run() forwards it to
 // ApplyWake.
 type WakePayload struct {
-	NotifyLog            string
-	NotifyBanner         string
-	NotifyUrg            ui.MessageUrgency
-	RefreshBrowserPanel  bool
-	ClearActiveSelection bool
-	OpenOutputDialog     *dialog.CommandOutputDialogState
+	NotifyLog           string
+	NotifyBanner        string
+	NotifyUrg           ui.MessageUrgency
+	RefreshBrowserPanel bool
+	OpenOutputDialog    *dialog.CommandOutputDialogState
 	// OutputDialogLive refreshes the running output dialog's body with partial output.
 	OutputDialogLive *OutputDialogLive
 	// OutputDialogStartedRunID clears the output dialog's Queued state when it shows this run.
@@ -73,9 +72,6 @@ func (h *Handler) ApplyWake(p WakePayload) {
 			cur.Scroll, cur.Follow = scroll, follow
 			p.NotifyLog, p.NotifyBanner, p.RefreshBrowserPanel = "", "", false
 		}
-	}
-	if p.ClearActiveSelection {
-		h.host.ActivePanel().ClearSelection()
 	}
 	if p.RefreshBrowserPanel {
 		h.host.RefreshAfterBackgroundCommand()

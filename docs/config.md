@@ -316,6 +316,8 @@ runs the dialog offers **Background** (also Esc, Alt+B), which closes the dialog
 there (its result and any failure banner appear as for `background = true`), and **Cancel** (Alt+C), which
 kills the command.
 
+A `menu.toml` command clears the tags it used when it starts: `%t` clears the active panel's tags, `%T` the other panel's, and a command using only `%d`, `%f` and the like leaves them. `interactive` and `detach` entries clear only if they ran or started without error. `run_for_each` entries clear the active panel's tags.
+
 A `menu.toml` `run_for_each` entry may also set `pty = true` (or `pty = 1`) to run each invocation
 attached to a live pseudo-TTY instead of capturing output non-interactively — the same mode as
 the Run-for-each dialog's "Allocate pseudo-TTY (interactive)" checkbox. It requires `run_for_each`

@@ -68,6 +68,9 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 		return
 	}
 
+	// The batch iterates the selection; the tags are already captured in spec.Entries.
+	h.host.ActivePanel().ClearSelection()
+
 	entries := make([]ui.CommandRunEntry, len(spec.Entries))
 	for i := range spec.Entries {
 		entries[i] = ui.CommandRunEntry{
@@ -113,7 +116,7 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 		}
 		h.mu.RUnlock()
 
-		p := WakePayload{ClearActiveSelection: true}
+		var p WakePayload
 		if spec.Background {
 			p.RefreshBrowserPanel = true
 		}

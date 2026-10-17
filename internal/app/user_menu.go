@@ -249,6 +249,7 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	workDir := active.PathString()
 	switch {
 	case entry.Dialog:
+		clearConsumedSelection(entry.Command, active, other)
 		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, macros)
 		ctx, cancel := context.WithCancel(a.commandsCtrl.Context())
 		a.commandsCtrl.OpenRunningOutputDialog(rowID, entry.Title, strings.TrimSpace(entry.Pool) != "", cancel, entry.DialogWidth, entry.DialogHeight)
@@ -258,10 +259,15 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 			a.runUserMenuCommand(ctx, rowIdx, rowID, argv, workDir, entry)
 		}()
 	case entry.Interactive:
-		a.runUserMenuInteractive(argv, workDir, entry.Toast)
+		if a.runUserMenuInteractive(argv, workDir, entry.Toast) {
+			clearConsumedSelection(entry.Command, active, other)
+		}
 	case entry.Detach:
-		a.runUserMenuDetached(argv, workDir, entry.Toast)
+		if a.runUserMenuDetached(argv, workDir, entry.Toast) {
+			clearConsumedSelection(entry.Command, active, other)
+		}
 	default:
+		clearConsumedSelection(entry.Command, active, other)
 		rowIdx, rowID := a.appendUserMenuCommandRow(entry.Command, macros)
 		if !entry.Background {
 			a.commandsCtrl.OpenViewAt(rowIdx)
@@ -269,6 +275,17 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 
 		a.commandsCtrl.BeginBatch()
 		go a.runUserMenuCommand(a.commandsCtrl.Context(), rowIdx, rowID, argv, workDir, entry)
+	}
+}
+
+// clearConsumedSelection clears the tags the command read: %t uses the active
+// panel's, %T the other panel's.
+func clearConsumedSelection(cmd string, active, other *panel.State) {
+	if cmdmacro.CommandRequiresMacro(cmd, 't') {
+		active.ClearSelection()
+	}
+	if cmdmacro.CommandRequiresMacro(cmd, 'T') {
+		other.ClearSelection()
 	}
 }
 
@@ -317,30 +334,33 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 	return true
 }
 
-func (a *App) runUserMenuInteractive(argv []string, workDir, toast string) {
+// runUserMenuInteractive reports whether the command ran without error.
+func (a *App) runUserMenuInteractive(argv []string, workDir, toast string) bool {
 	if err := a.withTerminalReleased(func() error {
 		return userMenuInteractiveRunner(context.Background(), argv, workDir)
 	}); err != nil {
 		a.setErrorMessage("User menu", err)
-		return
+		return false
 	}
-	a.activePanel().ClearSelection()
 	a.refreshAfterBackgroundCommand()
 	if toast != "" {
 		a.setTransientMessage(toast, ui.MessageUrgencyInfo)
 	}
+	return true
 }
 
-func (a *App) runUserMenuDetached(argv []string, workDir, toast string) {
+// runUserMenuDetached reports whether the process started.
+func (a *App) runUserMenuDetached(argv []string, workDir, toast string) bool {
 	if err := userMenuDetachRunner(argv, workDir); err != nil {
 		a.setErrorMessage("User menu", err)
-		return
+		return false
 	}
 	if toast != "" {
 		a.setTransientMessage(toast, ui.MessageUrgencyInfo)
 	} else {
 		a.setTransientMessage("Started "+cmdrun.FormatArgvDisplay(argv), ui.MessageUrgencyInfo)
 	}
+	return true
 }
 
 func (a *App) refreshAfterBackgroundCommand() {
@@ -371,10 +391,10 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, rowID string, arg
 
 	postBackgroundFinal := func(res cmdrun.RunResult) {
 		if !background && !entry.Dialog {
-			a.commandsCtrl.PostWake(commandsctrl.WakePayload{ClearActiveSelection: true})
+			a.commandsCtrl.PostRenderWake()
 			return
 		}
-		p := commandsctrl.WakePayload{RefreshBrowserPanel: true, ClearActiveSelection: true}
+		p := commandsctrl.WakePayload{RefreshBrowserPanel: true}
 		if entry.Dialog {
 			// Applied only if the dialog still shows this run; otherwise it is backgrounded.
 			out := commandsctrl.OutputDialogResult(rowID, title, res, entry.DialogWidth, entry.DialogHeight)
