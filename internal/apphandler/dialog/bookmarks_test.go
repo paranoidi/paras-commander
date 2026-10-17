@@ -323,3 +323,5 @@ func waitBookmarkIOPayload(t *testing.T, screen tcell.SimulationScreen) Bookmark
 	t.Fatal("timeout waiting for BookmarkIOPayload")
 	return BookmarkIOPayload{}
 }
+
+func (f *bookmarkTestHost) PinTogglePath(string, string, bool) {}

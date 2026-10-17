@@ -73,3 +73,7 @@ func (h dialogHost) HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int
 }
 
 var _ dialogctrl.Host = dialogHost{}
+
+func (h dialogHost) PinTogglePath(name, path string, isDir bool) {
+	h.app.pinCtrl.TogglePath(name, path, isDir)
+}

@@ -715,3 +715,5 @@ func TestMassRenameHistoryEntryDoesNotBecomePreselection(t *testing.T) {
 		t.Fatalf("massRenamePatternName = %q, want thicket (unnamed history entry must not clear it)", h.massRenamePatternName)
 	}
 }
+
+func (f *fakeMassRenamePatternHost) PinTogglePath(string, string, bool) {}

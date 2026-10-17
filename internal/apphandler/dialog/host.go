@@ -64,4 +64,7 @@ type Host interface {
 	SyncFilteredListRanks(lines []string, query string, matchRangeSlots int, caseInsensitive bool) (ranked []int, matchRanges [][]search.Range)
 	ClampFilteredListSelection(selected *int, rankedLen int)
 	HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool
+
+	// PinTogglePath pins/unpins path in the app-owned pin list and shows a status message.
+	PinTogglePath(name, path string, isDir bool)
 }

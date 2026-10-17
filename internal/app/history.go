@@ -216,7 +216,25 @@ func (a *App) activateHistorySelection() {
 	a.setTransientMessage(path, ui.MessageUrgencyInfo)
 }
 
+// pinHistorySelection toggles the selected history directory in the pin list.
+func (a *App) pinHistorySelection() {
+	st := &a.model.HistoryDialog
+	if st.Selected < 0 || st.Selected >= len(st.Ranked) {
+		return
+	}
+	entIdx := st.Ranked[st.Selected]
+	if entIdx < 0 || entIdx >= len(st.Paths) {
+		return
+	}
+	path := filepath.Clean(st.Paths[entIdx])
+	a.pinCtrl.TogglePath(filepath.Base(path), path, true)
+}
+
 func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
+	if id, ok := a.keys.Global.Lookup(event); ok && id == keymap.ActionPanelPinToggle {
+		a.pinHistorySelection()
+		return
+	}
 	if a.keys.HistoryDialog != nil {
 		if id, ok := a.keys.HistoryDialog.Lookup(event); ok {
 			switch id {

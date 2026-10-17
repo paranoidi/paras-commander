@@ -11,13 +11,23 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// TryBookmarkDialogShortcut handles [dialog.bookmark] while the bookmarks
-// path picker is open. Returns true when the event was consumed.
+// TryBookmarkDialogShortcut handles [dialog.bookmark] and the global
+// panel.pin-toggle while the bookmarks path picker is open. Returns true when
+// the event was consumed.
 func (h *Handler) TryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
-	if h.keysBookmarkDialog == nil {
+	if !h.bookmarkDialogOpen() {
 		return false
 	}
-	if !h.bookmarkDialogOpen() {
+	if h.keysGlobal != nil {
+		if id, ok := h.keysGlobal.Lookup(ev); ok && id == keymap.ActionPanelPinToggle {
+			if item, ok := h.pathPickerSelectedItem(); ok {
+				path := filepath.Clean(item.Path)
+				h.host.PinTogglePath(filepath.Base(path), path, true)
+			}
+			return true
+		}
+	}
+	if h.keysBookmarkDialog == nil {
 		return false
 	}
 	id, ok := h.keysBookmarkDialog.Lookup(ev)
