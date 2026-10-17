@@ -294,3 +294,37 @@ func TestInsertTextStaysInInputBuffer(t *testing.T) {
 	}
 	readUntil(t, sub.pty, "line:'/tmp/alpha beta'", 3*time.Second)
 }
+
+// A half-typed command line must neither get the cd appended (and executed with it) nor be
+// lost: Chdir stashes it, cds on an empty line, and restores it at the new prompt.
+func testChdirKeepsPendingInput(t *testing.T, shell string) {
+	base := t.TempDir()
+	target := filepath.Join(base, "harbor lantern")
+	if err := os.Mkdir(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	sub := startInteractive(t, shell, base)
+	pollUntil(t, 5*time.Second, "shell idle at start", func() bool { return !sub.Busy() })
+
+	if _, err := sub.WritePTY([]byte("touch marble")); err != nil {
+		t.Fatal(err)
+	}
+	if err := sub.Chdir(target); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sub.WritePTY([]byte("-pebble\n")); err != nil {
+		t.Fatal(err)
+	}
+	pollUntil(t, 5*time.Second, "restored command to run in the new dir", func() bool {
+		_, err := os.Stat(filepath.Join(target, "marble-pebble"))
+		return err == nil
+	})
+	if _, err := os.Stat(filepath.Join(base, "cd")); err == nil {
+		t.Fatal("cd was appended to the pending command line")
+	}
+}
+
+func TestChdirKeepsPendingInputBash(t *testing.T) { testChdirKeepsPendingInput(t, "bash") }
+func TestChdirKeepsPendingInputFish(t *testing.T) { testChdirKeepsPendingInput(t, "fish") }
+func TestChdirKeepsPendingInputZsh(t *testing.T)  { testChdirKeepsPendingInput(t, "zsh") }

@@ -76,7 +76,11 @@ func (s *Subshell) Chdir(dir string) error {
 	s.mu.Lock()
 	beforeGen := s.cwdGen
 	s.mu.Unlock()
-	if _, err := s.WritePTY(chdirCommand(dir)); err != nil {
+	clearLine := chdirDiscardLine
+	if s.hasPrecmdHook {
+		clearLine = chdirStashLine
+	}
+	if _, err := s.WritePTY(append([]byte(clearLine), chdirCommand(dir)...)); err != nil {
 		if feed != nil {
 			feed.Unmute()
 		}
@@ -96,6 +100,9 @@ func (s *Subshell) Chdir(dir string) error {
 	// confirmed the shell is sitting at its own prompt, not running a foreground
 	// command — the same precondition that already gates the cd injection itself.
 	_, _ = s.WritePTY([]byte("\n"))
+	if s.hasPrecmdHook {
+		_, _ = s.WritePTY([]byte(chdirRestoreLine))
+	}
 	return nil
 }
 

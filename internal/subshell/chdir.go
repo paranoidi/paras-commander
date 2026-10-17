@@ -14,3 +14,14 @@ func QuoteArg(s string) string {
 func chdirCommand(dir string) []byte {
 	return []byte(" cd " + QuoteArg(dir) + "\n")
 }
+
+// Private key sequences bound by [precmdInit] to stash/restore the line editor's pending
+// input, so [Subshell.Chdir] never appends its cd to a half-typed command (and runs both).
+// Real terminals never send these CSIs.
+const (
+	chdirStashLine   = "\x1b[9001~"
+	chdirRestoreLine = "\x1b[9002~"
+	// chdirDiscardLine is the tty VKILL for hookless shells (sh/dash, canonical mode): no
+	// binding to restore from, so pending input is dropped rather than executed with the cd.
+	chdirDiscardLine = "\x15"
+)
