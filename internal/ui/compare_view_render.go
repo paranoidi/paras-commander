@@ -182,7 +182,7 @@ func drawCompareView(
 			legend = primitive.FitPathForWidth(row.Err, rect.Width-4)
 		}
 	}
-	drawCompareBottomLegend(screen, rect, layoutChrome, panelSelectionSizePadded(legend), styles)
+	drawCompareBottomLegend(screen, rect, layoutChrome, legend, styles)
 }
 
 func compareDisplayPathPair(primaryRel, secondaryRel string) (string, string) {

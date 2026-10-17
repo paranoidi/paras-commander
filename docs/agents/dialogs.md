@@ -51,8 +51,12 @@ rate-limit indicator or compare/dedup filter indicators, bottom-row selection-si
 etc.) must carry one space of padding on each side so it doesn't run flush into the border
 dashes — `──100MB/s─` is a bug, `── 100MB/s ─` is correct. Use `panelSelectionSizePadded` /
 `SelectionSizePadded` (`internal/ui/selection_size.go`) to pad the raw text; do not pass an
-unpadded string to `drawAuxPanelChrome`'s `endLabel` or similar. This has been missed more than
-once (e.g. the jobs rate-limit indicator) — check it whenever adding a new border-overlaid label.
+unpadded string to `drawAuxPanelChrome`'s `endLabel` or similar. Exception:
+`drawAuxPanelBottomCenterLabel` (`internal/ui/panel_chrome_draw.go`, bottom-border centered
+legends such as the compare and dedup cursor-row icon legends) pads internally, so pass it raw
+text, never pre-padded. This has been missed repeatedly (the jobs rate-limit indicator, the
+dedup icon legend) — when adding any border-overlaid label, check the rendered row shows
+`─ text ─`, and assert the surrounding spaces in its render test.
 
 ## Horizontal columns (do not confuse `rect.X+1` and `rect.X+2`)
 

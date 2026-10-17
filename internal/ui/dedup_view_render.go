@@ -291,6 +291,7 @@ func drawDedupTreePane(
 
 	base := styles.PanelRowFile.Background(bg)
 	dim := styles.PanelBlockedText.Background(bg)
+	legend := ""
 	for row := range visibleRows {
 		idx := scroll + row
 		if idx >= n {
@@ -326,11 +327,15 @@ func drawDedupTreePane(
 			})
 		}
 		hinted := dedupRowHinted(p, d, entry, rowSelected)
+		if rowSelected && p.Focused {
+			legend = dedupRowLegend(styles, p, snap, d, hinted)
+		}
 		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked, hinted, p.Pane.Filter.Ranges(idx), rowSelected && p.Focused)
 		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
 		drawDedupDetailColumns(screen, cols, d, lineY, lineStyle, dim, rowSelected || kept || groupAllMarked || dirFullyMarked, innerRight)
 	}
+	drawAuxPanelBottomCenterLabel(screen, rect, legend, styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, true, false))
 }
 
 // dedupRowFlags bundles the per-row booleans dedupRowStyle picks a style from.
@@ -425,15 +430,8 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	if subtreeMark {
 		fitW -= 2 // room for subtree mark suffix, like panellist.SuffixDecorationLen
 	}
-	if d.DirDup != comparepkg.DirNone {
-		fitW -= 2 // room for duplicate-directory icon suffix
-	}
-	if d.DirDup != comparepkg.DirNone && d.DirHidden {
-		fitW -= 2 // room for hidden-items warning icon suffix
-	}
-	if hinted {
-		fitW -= 2 // room for related-copy icon suffix
-	}
+	icons := dedupRowSuffixIcons(styles, p, d, hinted)
+	fitW -= 2 * len(icons) // room for the suffix icons
 	fitW -= marksW
 	pathText := primitive.FitPathForWidth(d.Display, max(fitW, 4))
 	_, rowBG, _ := lineStyle.Decompose()
@@ -489,28 +487,88 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	iconStyle := func(base tcell.Style) tcell.Style {
 		return base.Background(rowBG).Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
 	}
-	if d.DirDup != comparepkg.DirNone {
-		icon, style := styles.IconDedupFullDir(), styles.PanelDedupFullDir
-		if d.DirDup == comparepkg.DirContent {
-			icon, style = styles.IconFilelistRenamed(), styles.PanelDedupFullDirContent
+	for _, ic := range icons {
+		markX := cursorX + 1
+		if markX >= pathX+pathW {
+			break
 		}
-		if markX := cursorX + 1; markX < pathX+pathW {
-			primitive.Text(screen, markX, lineY, 1, string(icon), iconStyle(style))
-			cursorX = markX + 1
-		}
-	}
-	// Related-copy icon follows the duplicate-directory icon; the hidden-items warning comes last.
-	if markX := cursorX + 1; hinted && markX < pathX+pathW {
-		icon := styles.IconDedupRelated()
-		if d.Kind == DedupRowDir && !p.TwinDirs[d.DirRel] {
-			icon = styles.IconDedupRelatedWithin() // collapsed folder hinted for what it contains
-		}
-		primitive.Text(screen, markX, lineY, 1, string(icon), iconStyle(styles.PanelHint))
+		primitive.Text(screen, markX, lineY, 1, string(ic.Icon), iconStyle(ic.Style))
 		cursorX = markX + 1
 	}
-	if markX := cursorX + 1; d.DirDup != comparepkg.DirNone && d.DirHidden && markX < pathX+pathW {
-		primitive.Text(screen, markX, lineY, 1, string(styles.IconDedupHidden()), iconStyle(styles.PanelDedupFullDirHidden))
+}
+
+// Legend texts for the cursor row's icons, shown on the focused pane's bottom border.
+const (
+	dedupLegendExact         = "exact duplicate folder"
+	dedupLegendContent       = "renamed"
+	dedupLegendHidden        = "has skipped items"
+	dedupLegendRelatedWithin = "contains copies"
+	dedupLegendKeptSubtree   = "contains kept files"
+	dedupLegendMarkedSubtree = "contains marked files"
+	dedupLegendJob           = "job in progress"
+	dedupLegendPinned        = "pinned"
+)
+
+// dedupSuffixIcon is one trailing icon after the subtree mark. Legend is empty for icons the
+// bottom-border legend does not explain (the related-copy +).
+type dedupSuffixIcon struct {
+	Icon   rune
+	Style  tcell.Style
+	Legend string
+}
+
+// dedupRowSuffixIcons is the single source for a row's duplicate-dir, related-copy and
+// skipped-items icons, in paint order; drawDedupPathColumn paints it and dedupRowLegend explains it.
+func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d DedupRowData, hinted bool) []dedupSuffixIcon {
+	var out []dedupSuffixIcon
+	if d.DirDup != comparepkg.DirNone {
+		ic := dedupSuffixIcon{Icon: styles.IconDedupFullDir(), Style: styles.PanelDedupFullDir, Legend: dedupLegendExact}
+		if d.DirDup == comparepkg.DirContent {
+			ic = dedupSuffixIcon{Icon: styles.IconFilelistRenamed(), Style: styles.PanelDedupFullDirContent, Legend: dedupLegendContent}
+		}
+		out = append(out, ic)
 	}
+	if hinted {
+		ic := dedupSuffixIcon{Icon: styles.IconDedupRelated(), Style: styles.PanelHint}
+		if d.Kind == DedupRowDir && !p.TwinDirs[d.DirRel] {
+			ic = dedupSuffixIcon{Icon: styles.IconDedupRelatedWithin(), Style: styles.PanelHint, Legend: dedupLegendRelatedWithin}
+		}
+		out = append(out, ic)
+	}
+	if d.DirDup != comparepkg.DirNone && d.DirHidden {
+		out = append(out, dedupSuffixIcon{Icon: styles.IconDedupHidden(), Style: styles.PanelDedupFullDirHidden, Legend: dedupLegendHidden})
+	}
+	return out
+}
+
+// dedupRowLegend lists "<icon> <meaning>" for each explainable icon on the row, in paint order
+// (job, pin, subtree mark, suffix icons), comma-separated.
+func dedupRowLegend(styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, hinted bool) string {
+	var parts []string
+	add := func(icon rune, text string) { parts = append(parts, string(icon)+" "+text) }
+	if p.RowMarks != nil {
+		m := p.RowMarks(dedupRowAbsPath(snap, d))
+		if m.HasJob {
+			add(styles.IconFilelistJob(), dedupLegendJob)
+		}
+		if m.Pinned {
+			add(styles.IconPinRune(), dedupLegendPinned)
+		}
+	}
+	if d.Kind == DedupRowDir {
+		switch {
+		case p.KeptDirs[d.DirRel]:
+			add(styles.IconFilelistSelectionSubtree(), dedupLegendKeptSubtree)
+		case p.MarkedDirs[d.DirRel]:
+			add(styles.IconFilelistSelectionSubtree(), dedupLegendMarkedSubtree)
+		}
+	}
+	for _, ic := range dedupRowSuffixIcons(styles, p, d, hinted) {
+		if ic.Legend != "" {
+			add(ic.Icon, ic.Legend)
+		}
+	}
+	return strings.Join(parts, ", ")
 }
 
 // drawDedupDetailColumns paints the Count and Size trailing columns for one row, moved out of

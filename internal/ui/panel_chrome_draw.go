@@ -112,7 +112,8 @@ func paintAuxPanelTopRow(screen tcell.Screen, titleX, innerRight, contentCols, y
 	}
 }
 
-// drawAuxPanelBottomCenterLabel paints centered text on the bottom border interior row.
+// drawAuxPanelBottomCenterLabel paints raw label centered on the bottom border interior row,
+// adding the one-space border padding itself (callers pass unpadded text).
 func drawAuxPanelBottomCenterLabel(screen tcell.Screen, rect Rect, label string, style tcell.Style) {
 	if label == "" {
 		return
@@ -120,14 +121,14 @@ func drawAuxPanelBottomCenterLabel(screen tcell.Screen, rect Rect, label string,
 	innerLeft := rect.X + 1
 	innerRight := rect.X + rect.Width - 2
 	innerW := innerRight - innerLeft + 1
-	runes := len([]rune(label))
-	if runes > innerW {
-		label = primitive.TruncateRight(label, innerW)
-		runes = len([]rune(label))
-	}
-	if runes <= 0 || innerW <= 0 {
+	if innerW <= 2 {
 		return
 	}
+	if len([]rune(label)) > innerW-2 {
+		label = primitive.TruncateRight(label, innerW-2)
+	}
+	label = panelSelectionSizePadded(label)
+	runes := len([]rune(label))
 	x := innerLeft + (innerW-runes)/2
 	y := rect.Y + rect.Height - 1
 	primitive.TextOverlay(screen, x, y, runes, label, style)
