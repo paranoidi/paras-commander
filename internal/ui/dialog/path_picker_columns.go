@@ -52,12 +52,14 @@ func pathPickerSeparatorCount(nameW int) int {
 // grid (sourceW/nameW/pathW computed once outside the render loop) reserves one uniform
 // trailing marks column, rather than a per-row width that would misalign the grid.
 func pathPickerRowMarksWidth(items []PathPickerItem, rowMarks RowMarksFunc) int {
-	if rowMarks == nil {
-		return 0
-	}
 	max := 0
 	for _, item := range items {
-		if w := RowMarksWidth(rowMarks(item.Path)); w > max {
+		m := RowMarks{Missing: item.PathMissing}
+		if rowMarks != nil {
+			m = rowMarks(item.Path)
+			m.Missing = item.PathMissing
+		}
+		if w := RowMarksWidth(m); w > max {
 			max = w
 			if max >= rowMarksMaxWidth {
 				break

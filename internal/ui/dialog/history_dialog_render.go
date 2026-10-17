@@ -112,6 +112,7 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 		if rowMarks != nil {
 			marks = rowMarks(absPath)
 		}
+		marks.Missing, marks.Cursor = missing, isCursor
 		marksW := RowMarksWidth(marks)
 		fitWidth := rowWidth - marksW
 		if fitWidth < 1 {

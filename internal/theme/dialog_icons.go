@@ -1,6 +1,10 @@
 package theme
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/gdamore/tcell/v2"
+)
 
 const (
 	IconKeyDialogCheckboxChecked   = "dialog.checkbox.checked"
@@ -8,6 +12,7 @@ const (
 	IconKeyDialogRadioSelected     = "dialog.radio.selected"
 	IconKeyDialogRadioUnselected   = "dialog.radio.unselected"
 	IconKeyDialogInfo              = "dialog.info"
+	IconKeyDialogMissing           = "dialog.missing"
 
 	// IconDialogInfoASCII is the info marker used when Nerd Font icons are disabled; it is
 	// also the widest form, so dialog sizing reserves its width.
@@ -22,6 +27,26 @@ func (t Theme) IconDialogInfo() string {
 		return IconDialogInfoASCII
 	}
 	return t.dialogIcon(IconKeyDialogInfo, "\uf05a")
+}
+
+// IconDialogMissing returns the trailing mark painted on picker rows (history, bookmarks,
+// pin) whose path no longer exists. When UseNerdfontIcons is false, returns "!".
+// Otherwise consults the theme's [icons.dialog] missing key or uses the Nerd Font default.
+func (t Theme) IconDialogMissing() string {
+	if !t.UseNerdfontIcons {
+		return "!"
+	}
+	return t.dialogIcon(IconKeyDialogMissing, "\U000F09E7")
+}
+
+// DialogMissingIconForeground is the missing-path mark color: the main file list's cursor
+// icon color (panel.active.row.cursor icon) on the cursor row, else dialog.option.invalid.
+func (t Theme) DialogMissingIconForeground(cursor bool) tcell.Color {
+	if cursor {
+		return t.PanelRowIconForeground("panel.active.row.cursor", t.DialogOptionRowStyle(true, false))
+	}
+	fg, _, _ := t.DialogOptionInvalidStyle().Decompose()
+	return fg
 }
 
 // IconDialogCheckbox returns the checkbox marker icon for the given state.

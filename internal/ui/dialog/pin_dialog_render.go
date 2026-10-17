@@ -126,7 +126,10 @@ func DrawPinDialog(screen tcell.Screen, layout Layout, state PinDialogState, ite
 		}
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
-		drawPinRow(screen, primaryCol, y, rowWidth, item, ranges, baseStyle, matchStyle, styles)
+		marks := RowMarks{Missing: item.PathMissing, Cursor: isCursor}
+		marksW := RowMarksWidth(marks)
+		drawPinRow(screen, primaryCol, y, rowWidth-marksW, item, ranges, baseStyle, matchStyle, styles)
+		DrawRowMarksSuffix(screen, primaryCol+rowWidth-marksW, y, marksW, marks, bg, styles)
 	}
 }
 

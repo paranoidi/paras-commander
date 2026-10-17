@@ -119,6 +119,7 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 			if rowMarks != nil {
 				marks = rowMarks(item.Path)
 			}
+			marks.Missing, marks.Cursor = item.PathMissing, isCursor
 			DrawRowMarksSuffix(screen, primaryCol+gridWidth, y, marksW, marks, bg, styles)
 		}
 	}

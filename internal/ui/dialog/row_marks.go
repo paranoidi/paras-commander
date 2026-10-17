@@ -15,6 +15,10 @@ type RowMarks struct {
 	HasJob    bool
 	JobStatus string
 	JobWrite  bool
+	// Missing marks a path that no longer exists (Theme.IconDialogMissing); Cursor switches
+	// its color to the file list's cursor icon color (Theme.DialogMissingIconForeground).
+	Missing bool
+	Cursor  bool
 }
 
 // RowMarksFunc resolves RowMarks for one row's absolute path.
@@ -22,8 +26,8 @@ type RowMarksFunc func(absPath string) RowMarks
 
 // RowMarksWidth returns how many trailing cells m's active marks need: 2 cells per active
 // mark (" <icon>"), the same convention as panellist.SuffixDecorationLen.
-// rowMarksMaxWidth is RowMarksWidth's ceiling: two possible marks (job, pin) at 2 cells each.
-const rowMarksMaxWidth = 4
+// rowMarksMaxWidth is RowMarksWidth's ceiling: three possible marks (job, pin, missing) at 2 cells each.
+const rowMarksMaxWidth = 6
 
 func RowMarksWidth(m RowMarks) int {
 	n := 0
@@ -31,6 +35,9 @@ func RowMarksWidth(m RowMarks) int {
 		n += 2
 	}
 	if m.Pinned {
+		n += 2
+	}
+	if m.Missing {
 		n += 2
 	}
 	return n
@@ -61,6 +68,11 @@ func DrawRowMarksSuffix(screen tcell.Screen, x, y, maxWidth int, m RowMarks, bg 
 	if m.Pinned && used+2 <= maxWidth {
 		fg, _, _ := styles.PanelRowMarkPinned.Decompose()
 		primitive.Text(screen, x+used, y, 2, " "+string(rowMarksPinRune(styles)), tcell.StyleDefault.Foreground(fg).Background(bg))
+		used += 2
+	}
+	if m.Missing && used+2 <= maxWidth {
+		fg := styles.DialogMissingIconForeground(m.Cursor)
+		primitive.Text(screen, x+used, y, 2, " "+styles.IconDialogMissing(), tcell.StyleDefault.Foreground(fg).Background(bg))
 		used += 2
 	}
 	return used

@@ -18,6 +18,7 @@ func TestRowMarksWidth(t *testing.T) {
 		{"pinned only", RowMarks{Pinned: true}, 2},
 		{"job only", RowMarks{HasJob: true}, 2},
 		{"both", RowMarks{Pinned: true, HasJob: true}, 4},
+		{"all", RowMarks{Pinned: true, HasJob: true, Missing: true}, 6},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -114,5 +115,32 @@ func TestDrawRowMarksSuffixTruncatesToMaxWidth(t *testing.T) {
 	}
 	if r := cellRune(screen, 3, 1); r != styles.IconFilelistJob() {
 		t.Fatalf("cell 3 = %q, want job icon", r)
+	}
+}
+
+func TestDrawRowMarksSuffixMissingColorFollowsCursor(t *testing.T) {
+	styles := theme.Default()
+	styles.UseNerdfontIcons = true
+	invalidFG, _, _ := styles.DialogOptionInvalidStyle().Decompose()
+	for _, cursor := range []bool{false, true} {
+		screen := newSimScreen(t, 20, 3)
+		m := RowMarks{Missing: true, Cursor: cursor}
+		if used := DrawRowMarksSuffix(screen, 2, 1, RowMarksWidth(m), m, tcell.ColorBlack, styles); used != 2 {
+			t.Fatalf("cursor=%v: used = %d, want 2", cursor, used)
+		}
+		if r := cellRune(screen, 3, 1); string(r) != styles.IconDialogMissing() {
+			t.Fatalf("cursor=%v: cell 3 = %q, want missing icon", cursor, r)
+		}
+		_, st, _ := screen.Get(3, 1)
+		fg, _, _ := st.Decompose()
+		if want := styles.DialogMissingIconForeground(cursor); fg != want {
+			t.Fatalf("cursor=%v: fg = %v, want %v", cursor, fg, want)
+		}
+		if cursor && fg != tcell.ColorBlack {
+			t.Fatalf("cursor fg = %v, want black (file list cursor icon color)", fg)
+		}
+		if !cursor && fg != invalidFG {
+			t.Fatalf("fg = %v, want invalid %v", fg, invalidFG)
+		}
 	}
 }
