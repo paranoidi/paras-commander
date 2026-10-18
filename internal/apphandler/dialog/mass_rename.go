@@ -548,7 +548,7 @@ func (h *Handler) applyMassRenameRows(rows []ops.MassRenameRow) []string {
 		if r.NewBase == r.OldBase {
 			continue
 		}
-		newPath := filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
+		newPath := r.NewPath()
 		renamedPaths = append(renamedPaths, newPath)
 		pairs = append(pairs, [2]string{r.SourcePath, newPath})
 		active.RenameEntry(r.SourcePath, r.NewBase, vr)
@@ -600,7 +600,7 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 	newSources := make([]dialog.MassRenameSource, len(rows))
 	newPaths := make([]string, len(rows))
 	for i, r := range rows {
-		newPath := filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
+		newPath := r.NewPath()
 		newSources[i] = dialog.MassRenameSource{Path: newPath, Name: r.NewBase, IsDir: r.IsDir}
 		newPaths[i] = newPath
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/paranoidi/paras-commander/internal/fswalk"
@@ -168,10 +167,6 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 				}
 				name := d.Name()
 				path := filepath.Join(dir, name)
-				if !opts.IncludeHidden && strings.HasPrefix(name, ".") {
-					w.recordSkippedHidden(path, isDir)
-					continue
-				}
 				if !localfs.EntryVisible(name, dir, isDir, listOpts) {
 					w.recordSkippedHidden(path, isDir)
 					continue

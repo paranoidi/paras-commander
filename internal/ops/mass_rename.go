@@ -33,6 +33,11 @@ type MassRenameRow struct {
 	IsDir      bool
 }
 
+// NewPath is the row's destination: NewBase in SourcePath's directory.
+func (r MassRenameRow) NewPath() string {
+	return filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
+}
+
 // massRenameSplitExt splits base into stem and extension (filepath.Ext). Directories and names
 // whose stem would be empty (dotfiles) have no extension.
 func massRenameSplitExt(base string, isDir bool) (stem, ext string) {
@@ -435,7 +440,7 @@ func MassRenameRowErrors(rows []MassRenameRow) []error {
 		if r.NewBase == r.OldBase || out[i] != nil {
 			continue
 		}
-		dst := filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
+		dst := r.NewPath()
 		if fi, err := os.Lstat(dst); err == nil {
 			if fi.IsDir() {
 				massRenameSetRowError(out, i, &Error{Op: "mass-rename", Text: fmt.Sprintf("target %q already exists", r.NewBase)})

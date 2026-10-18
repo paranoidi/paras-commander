@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -127,6 +128,8 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 	if state.Follow {
 		scroll = max(0, len(state.Lines)-listH)
 	}
+	// Paths are ordered by Line: walk them alongside the visible rows.
+	pi := sort.Search(len(state.Paths), func(i int) bool { return state.Paths[i].Line >= scroll })
 	for row := range listH {
 		y := rect.Y + 1 + row
 		line := ""
@@ -136,10 +139,8 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 		// ponytail: per-line SGR parse; a color left open across \n does not carry to the next
 		// line. Parse the whole output once into cell rows if a tool needs that.
 		cells := previewpanel.AnsiStyledCells(line, lineStyle)
-		for i, m := range state.Paths {
-			if m.Line != scroll+row {
-				continue
-			}
+		for ; pi < len(state.Paths) && state.Paths[pi].Line == scroll+row; pi++ {
+			i, m := pi, state.Paths[pi]
 			st := styles.DialogOptionInactive
 			sel := isSelected != nil && isSelected(m.Path)
 			switch {

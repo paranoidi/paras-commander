@@ -743,12 +743,13 @@ func (a *App) updateGroupSelectPreview() {
 // whose selection state in the active panel would flip (select: not yet selected; unselect:
 // selected). In-memory only: IsDir was captured at detection.
 func (a *App) outputGroupMatches(gs *dialog.GroupSelectState) ([]dialog.OutputPathMatch, error) {
-	match, err := findctrl.NewPathMatcher(a.groupSelectRequest(gs))
+	req := a.groupSelectRequest(gs)
+	match, err := findctrl.NewPathMatcher(req)
 	if err != nil {
 		return nil, err
 	}
 	p := a.activePanel()
-	selectMode := gs.Mode == "select"
+	selectMode := req.Mode == findctrl.GroupSelectModeSelect
 	var out []dialog.OutputPathMatch
 	for _, m := range a.model.CommandOutputDialog.UniquePaths() {
 		if (gs.DirsOnly && !m.IsDir) || (gs.FilesOnly && m.IsDir) ||

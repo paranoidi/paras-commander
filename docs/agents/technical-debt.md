@@ -24,7 +24,7 @@ The browser could call `RemapViMotionKey` (plain arrows already resolve to the s
 
 ## List scroll policy is package-level state
 
-Jobs, Messages, Compare and Dedup read `[ui.scroll]` mode and edge margin from a package global, `atomic.Pointer[listScrollPolicy]` in `internal/ui/jobs_view_state.go`, through `ensureSelectionVisible`. `NewWithOptions` (`internal/app/app.go`) and `syncScrollFromConfig` (`internal/app/panels.go`) write it. For: it is tiny, about 74 `EnsureSelectionVisible` call sites needed no change, one reader keeps the semantics identical across the four views, and it is race-safe. Against:
+Jobs, Messages, Compare and Dedup read `[ui.scroll]` mode and edge margin from a package global, `atomic.Pointer[listScrollPolicy]` in `internal/ui/jobs_view_state.go`, through `ensureSelectionVisible`. `NewWithOptions` (`internal/app/app.go`) and `syncScrollFromConfig` (`internal/app/panels.go`) write it. Both writes are needed, because `syncScrollFromConfig` runs only when settings change, not at startup. For: it is tiny, about 74 `EnsureSelectionVisible` call sites needed no change, one reader keeps the semantics identical across the four views, and it is race-safe. Against:
 - It is hidden coupling, and with nothing set it silently falls back to "edge, margin 0".
 - Tests must reset it with `t.Cleanup` and cannot run `t.Parallel`.
 - Panels carry the same pair per `panel.State`, so one config value is plumbed two ways.
@@ -34,7 +34,7 @@ The fix is a policy value on `ui.Model` or on each view state, passed into `Ensu
 
 ## Minimal-scroll logic duplicated
 
-The minimal (`default:`) branch of `ensureSelectionVisible` reimplements `panel.State.EnsureCursorVisible` (`internal/panel/state.go`). `internal/ui/geom/scroll.go` has `ScrollOffset` and `ScrollOffsetEdge` but no minimal variant. `SetListScroll` also re-applies `panel.EffectiveScrollMode`, which `scrollModeFromConfig` has already applied. For: about five readable lines, and the double normalisation is idempotent. Against: two copies of the scroll semantics can drift when a mode or edge case changes. The fix is `geom.ScrollOffsetMinimal`, shared by both. Relevance: low. Fold it into the scroll-policy refactor.
+The minimal (`default:`) branch of `ensureSelectionVisible` reimplements `panel.State.EnsureCursorVisible` (`internal/panel/state.go`). `internal/ui/geom/scroll.go` has `ScrollOffset` and `ScrollOffsetEdge` but no minimal variant. `SetListScroll` also re-applies `panel.EffectiveScrollMode`, which `scrollModeFromConfig` has already applied. For: about five readable lines, and the double normalisation is idempotent. Against: two copies of the scroll semantics can drift when a mode or edge case changes. A third copy is `ensurePathVisible` (`internal/apphandler/commands/output_dialog.go`), which scrolls the output dialog's path cursor with the minimal rule only, so it ignores `[ui.scroll]` center/edge. It cannot call `ensureSelectionVisible`, because that helper is unexported in `internal/ui`. The fix is `geom.ScrollOffsetMinimal`, shared by all three, with the output dialog honouring the scroll policy too. Relevance: low. Fold it into the scroll-policy refactor.
 
 ## Dedup unfocused pane only clamps; `visibleRows = 0` means "clamp only"
 
@@ -65,3 +65,27 @@ The fix is a theme key (e.g. `panel.usage.mark`, see `recipes/add-theme-key.md`)
 ## Single rename keeps a typed trailing space
 
 `pathloc.Parse` does not trim, and `executeRename` passes the field unchanged, so renaming to `"bar "` keeps the space. Mkdir, duplicate, self-copy and remote rename trim typed names. For: an existing `"foo "` survives a rename that edits something else, and names round-trip. Against: it is inconsistent with the other name dialogs, and a stray space can create a name that is hard to spot. The options are to trim only when the original had no trailing whitespace, or to show trailing whitespace visibly (e.g. a dimmed `·`) in panel and dialog. Relevance: low–medium. It is a UX choice, not a defect.
+
+## Jump mode is a flag checked across the Find dialog
+
+`FindDialogState.JumpMode` (jump to directory) reuses the Find dialog and its scan, and is guarded by `if JumpMode` checks in `internal/apphandler/find/handler.go` (`applyFindToggle`, a hard-coded action list in `RunAction`, select-toggle and Insert keys, and a focus-skip loop with magic indices `nf == 1 || nf == 2`), in `internal/ui/dialog/find_dialog_render.go` (title, radios), and in the footer keys in `internal/app/input.go`. `OnlyDirectories` is set alongside it, so the state is partly redundant. For: one dialog and one index, and each guard is small. Against: every new Find action or focus slot must remember a jump-mode guard, and the focus indices duplicate the layout knowledge in `FindDialogNavFocusKey`. The fix is one capability source on `FindDialogState` (e.g. `FocusSlots()` / `Marking()`) that navigation, `RunAction`, footer and render all read. If the modes keep diverging, make jump a separate small dialog sharing only the scan and index. Relevance: medium. Do it before adding the next jump-only or find-only control.
+
+## Group select context is a string switch
+
+`GroupSelectState.Context` is `"find"` or `"output"`, and `"output"` is special-cased in the preview, the apply switch, the full-path flag, input-mode priority (`internal/app/input.go`), and draw order (`GroupSelectOverOutput` in `internal/ui/render.go`, which stacks it above the output dialog). For: two hosts, and each branch is short. Against: a third host repeats every switch, a typo in a context string fails silently, and the stacking rule is a one-off rather than a general modal parent. The fix is for the opener to supply the behaviour (`Preview`, `Apply`, `ShowsFullPath`) as a small interface or typed value, plus a generic dialog stack for "opened over another modal". Relevance: medium. It becomes high when a third group-select host appears.
+
+## Disk-usage cache is told about renames per entry point
+
+Single rename and mass rename (`applyMassRenameRows` in `internal/apphandler/dialog/mass_rename.go`) call `diskUsageRenamed` (`internal/apphandler/dialog/file_ops.go`), while move jobs reach `diskusage.Engine.RenamePaths` through an `OnRenamed` hook that `internal/app/app.go` wires through `jobbridge.TransferFunc`. Each entry point opts in separately, and the local/remote guard is written in more than one place. For: three explicit call sites, and the batching in `jobbridge` avoids a cache sweep per renamed child. Against: a new rename path (undo, a Compare rename) leaves the cache stale until someone remembers the call, and `TransferFunc` grew another positional parameter. The fix is for the shared local rename primitive to emit one "paths renamed" event, with a single app subscriber feeding the engine. Relevance: low–medium.
+
+## Disk-usage rename rebase walks ancestors twice per key
+
+`rebaseKeys` (`internal/diskusage/engine.go`) calls `rebase`, then `stale` when `rebase` misses. Each one is a `nearestAncestor` walk of `filepath.Dir` to the root, repeated for `cache`, `fileCounts` and `excluded` while holding `e.mu`. For: it runs once per job on the job goroutine, not the UI goroutine, and the code is simple. Against: on a very large size cache, scans and readers block on `e.mu` for the whole sweep. The fix is one walk per key that answers both questions, or a cheap prefix check that skips keys under no rename root. Relevance: low. Do it only if profiling shows it.
+
+## Find walker reads directories sorted and serially
+
+`runBFS` (`internal/scan/walk.go`) uses `os.ReadDir`, which sorts each directory, one directory at a time, and in `DirsOnly` mode still reads the file entries it discards. For: the sort keeps the order within each depth level stable, and the previous `WalkDir` sorted too. Against: on big or slow trees the walk is bound by serial `getdents` latency. The fix is `f.ReadDir(-1)` with no sort, if a stable order is not needed, and optionally a small worker pool per level. Relevance: low.
+
+## "Removed conflicting selections" warning repeated
+
+`setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)` after a conflicting selection change appears at about a dozen sites across `internal/app` and `internal/apphandler/commands`. The output dialog's invert and group-unselect also hand-roll `TogglePathSelection` loops, and `internal/panel` has `BulkAddSelections` but no bulk-remove counterpart. For: each site is one line. Against: the wording and urgency can drift, and the toggle loops are near-copies. The fix is one helper (`warnSelectionConflicts(bool)`, reachable from both `app` and the handler `Host`) and a `panel.BulkRemoveSelections`. Relevance: low.
