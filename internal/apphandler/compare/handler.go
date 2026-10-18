@@ -69,7 +69,6 @@ type Handler struct {
 	openedSecondary  pathloc.Path
 	openedShowHidden bool
 	openedGate       diskusage.ListingVolumeGate
-	openedSwap       bool // main panels were swapped on Open: left column = Secondary panel
 	onClose          func()
 }
 
@@ -113,8 +112,7 @@ func (h *Handler) Open() {
 			Valid:   left.ListingDeviceValid,
 		}
 	}
-	h.openedSwap = h.model.SwapPanes
-	h.open(left.Path, right.Path, left.ShowHidden, volGate, nil)
+	h.open(left.Path, right.Path, left.ShowHidden, volGate, h.model.SwapPanes, nil)
 }
 
 // OpenPaths opens compare on two arbitrary local roots (the dedup entry point).
@@ -123,11 +121,10 @@ func (h *Handler) Open() {
 // view is closed — but not on Refresh. Returns false when validation fails,
 // leaving the current view untouched.
 func (h *Handler) OpenPaths(primary, secondary pathloc.Path, showHidden bool, onClose func()) bool {
-	h.openedSwap = false
-	return h.open(primary, secondary, showHidden, diskusage.ListingVolumeGate{}, onClose)
+	return h.open(primary, secondary, showHidden, diskusage.ListingVolumeGate{}, false, onClose)
 }
 
-func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate diskusage.ListingVolumeGate, onClose func()) bool {
+func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate diskusage.ListingVolumeGate, swap bool, onClose func()) bool {
 	// Validate before any teardown so a failed open is a true no-op for the
 	// caller's view (dedup stays up when the pair overlaps).
 	if primary.IsZero() || secondary.IsZero() {
@@ -149,7 +146,7 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 		Filter:      comparepkg.FilterAll,
 		FocusColumn: ui.CompareColumnPrimary,
 		IgnoreEmpty: true,
-		SwapPanels:  h.openedSwap,
+		SwapPanels:  swap,
 	}
 	h.model.MenuDefinitions = h.host.CompareMenuDefinitions()
 	h.model.Menu.ActiveMenu = menu.DefaultIndexCompare()
@@ -219,7 +216,7 @@ func (h *Handler) Refresh() {
 	// open resets the view state; keep cursor, scroll, focus and filters so a refresh after a
 	// delete does not jump to the top (EnsureSelectionVisible clamps once rows arrive).
 	view := h.model.CompareView
-	h.open(h.openedPrimary, h.openedSecondary, h.openedShowHidden, h.openedGate, h.onClose)
+	h.open(h.openedPrimary, h.openedSecondary, h.openedShowHidden, h.openedGate, h.model.CompareView.SwapPanels, h.onClose)
 	h.model.CompareView = view
 	h.model.CompareView.RangeAnchor = ""
 }

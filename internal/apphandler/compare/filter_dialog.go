@@ -114,7 +114,7 @@ func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
 // panel's selection.
 func (h *Handler) InvertColumnSelection() {
 	n := 0
-	panelID := h.model.CompareView.PanelID(h.model.CompareView.FocusColumn == ui.CompareColumnSecondary)
+	panelID := h.model.CompareView.FocusedPanelID()
 	for _, row := range h.FilteredRows() {
 		abs, id, ok, err := h.focusedSide(row)
 		if err != nil || !ok {
@@ -128,7 +128,7 @@ func (h *Handler) InvertColumnSelection() {
 
 // ClearColumnSelection clears the focused column's panel selection.
 func (h *Handler) ClearColumnSelection() {
-	panelID := h.model.CompareView.PanelID(h.model.CompareView.FocusColumn == ui.CompareColumnSecondary)
+	panelID := h.model.CompareView.FocusedPanelID()
 	h.host.ClearPanelSelection(panelID)
 	h.host.SetTransientMessage("Cleared selection on "+h.sideName(panelID)+" side", ui.MessageUrgencyInfo)
 }

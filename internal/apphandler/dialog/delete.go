@@ -22,8 +22,7 @@ func (h *Handler) ClearDeleteDialogReconcileCache() {
 	h.deleteDialogScanFP = ""
 	h.deleteDialogSelGen = 0
 	h.deleteDialogPanelPath = ""
-	h.deleteDialogPanelID = ui.PrimaryPanel
-	h.deleteDialogPathOnly = false
+	h.deleteDialogPanelID = h.model.ActivePanel
 	h.deleteDialogPrunedPaths = nil
 	h.deleteDialogScanArmedGen = 0
 	h.deleteDialogScanArmedPath = ""
@@ -78,10 +77,10 @@ func (h *Handler) invalidateDeleteDialogDiskCache(p *panel.State, pruned []strin
 // RefreshDeleteDialogSummary recomputes the open delete dialog's impact summary from the
 // current disk-usage cache. No-op when the delete dialog is not open.
 func (h *Handler) RefreshDeleteDialogSummary() {
-	if !h.deleteDialogOpen() || h.deleteDialogPathOnly {
+	p, ok := h.deleteDialogPanel()
+	if !ok {
 		return
 	}
-	p := h.host.PanelByID(h.deleteDialogPanelID)
 	pruned, ok := h.snapshotDeleteDialogSource(p)
 	if !ok {
 		return
@@ -105,10 +104,10 @@ func (h *Handler) ReconcileDeleteDialogScans() {
 		h.ClearDeleteDialogReconcileCache()
 		return
 	}
-	if h.deleteDialogPathOnly {
+	p, ok := h.deleteDialogPanel()
+	if !ok {
 		return
 	}
-	p := h.host.PanelByID(h.deleteDialogPanelID)
 	if p.Path.IsRemote() {
 		h.deleteDialogScanFP = ""
 		h.deleteDialogScanDebounce.Invalidate()
@@ -153,10 +152,13 @@ func (h *Handler) ReconcileDeleteDialogScans() {
 // starts the actual (already-async) disk-usage walk for whatever still needs scanning, unless
 // the delete dialog closed or its source selection changed again since the scan was computed.
 func (h *Handler) ApplyDeleteDialogScanNeed(d DeleteDialogScanNeedPayload) {
-	if h.diskUsage == nil || !h.deleteDialogOpen() || h.deleteDialogPathOnly {
+	if h.diskUsage == nil {
 		return
 	}
-	p := h.host.PanelByID(h.deleteDialogPanelID)
+	p, ok := h.deleteDialogPanel()
+	if !ok {
+		return
+	}
 	if p.SelectionDerivedGen() != d.Gen || p.PathString() != d.Path {
 		return
 	}
@@ -180,6 +182,18 @@ func (h *Handler) ApplyDeleteDialogScanNeed(d DeleteDialogScanNeedPayload) {
 		h.deleteDialogPanelID,
 		diskusage.ListingVolumeGate{},
 	)
+}
+
+// deleteDialogNoPanel marks a delete dialog opened for one bare path (no panel source).
+const deleteDialogNoPanel = -1
+
+// deleteDialogPanel returns the panel the open delete dialog was resolved against; false when the
+// dialog is closed or was opened for one bare path (its static summary is left alone).
+func (h *Handler) deleteDialogPanel() (*panel.State, bool) {
+	if !h.deleteDialogOpen() || h.deleteDialogPanelID == deleteDialogNoPanel {
+		return nil, false
+	}
+	return h.host.PanelByID(h.deleteDialogPanelID), true
 }
 
 func (h *Handler) deleteDialogOpen() bool {

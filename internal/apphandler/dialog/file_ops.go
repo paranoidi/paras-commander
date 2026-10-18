@@ -36,7 +36,7 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 	case keymap.ActionFileRename:
 		h.OpenRenameDialog(activePanel)
 	case keymap.ActionFileDelete:
-		h.OpenDeleteDialog(activePanel)
+		h.OpenDeleteDialog(h.model.ActivePanel)
 	case keymap.ActionFileMkdir:
 		h.OpenMkdirDialog(false)
 	case keymap.ActionFileMkdirOpenInOther:
@@ -190,8 +190,9 @@ func (h *Handler) OpenMkdirDialog(openInInactive bool) {
 	}
 }
 
-// OpenDeleteDialog opens the delete confirmation for p's resolved source (selection or cursor entry).
-func (h *Handler) OpenDeleteDialog(p *panel.State) {
+// OpenDeleteDialog opens the delete confirmation for panelID's resolved source (selection or cursor entry).
+func (h *Handler) OpenDeleteDialog(panelID int) {
+	p := h.host.PanelByID(panelID)
 	source, err := ops.ResolveSource(p)
 	if err != nil {
 		h.host.SetErrorMessage("Delete", err)
@@ -220,10 +221,7 @@ func (h *Handler) OpenDeleteDialog(p *panel.State) {
 	h.invalidateDeleteDialogDiskCache(p, pruned)
 	h.deleteDialogSelGen = p.SelectionDerivedGen()
 	h.deleteDialogPanelPath = panelPath
-	h.deleteDialogPanelID = ui.PrimaryPanel
-	if p != h.host.PanelByID(ui.PrimaryPanel) {
-		h.deleteDialogPanelID = ui.SecondaryPanel
-	}
+	h.deleteDialogPanelID = panelID
 	h.deleteDialogPrunedPaths = pruned
 	fd := dialog.FileDialogState{
 		Open:          true,
@@ -262,7 +260,7 @@ func (h *Handler) OpenDeleteDialogForPath(path, name string) {
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
 	h.ClearDeleteDialogReconcileCache()
-	h.deleteDialogPathOnly = true
+	h.deleteDialogPanelID = deleteDialogNoPanel
 	h.model.FileDialog = fd
 }
 

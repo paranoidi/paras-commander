@@ -29,6 +29,11 @@ func (s CompareViewState) PanelID(secondary bool) int {
 	return PrimaryPanel
 }
 
+// FocusedPanelID returns the main-panel ID that owns the focused column.
+func (s CompareViewState) FocusedPanelID() int {
+	return s.PanelID(s.FocusColumn == CompareColumnSecondary)
+}
+
 // CompareColumnFocus is which path column has keyboard focus for selection.
 type CompareColumnFocus int
 

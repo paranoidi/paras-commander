@@ -251,7 +251,7 @@ func TestDeleteUsesOpenSnapshotForBothConfirmDeleteValues(t *testing.T) {
 		t.Run(confirmDeleteName(confirm), func(t *testing.T) {
 			t.Parallel()
 			s := newSnapshotHarness(t, confirm)
-			s.h.OpenDeleteDialog(&s.h.model.Primary)
+			s.h.OpenDeleteDialog(ui.PrimaryPanel)
 			if confirm {
 				if !s.h.model.FileDialog.Open {
 					t.Fatal("confirm_delete=true should open the dialog")

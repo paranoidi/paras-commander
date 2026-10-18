@@ -327,7 +327,7 @@ func ListingSuffixSpans(
 		_, rowBG, _ := nameBGAt(i).Decompose()
 		spanFG, _, _ := spanStyle.Decompose()
 		// The other-match mark is bright_black, same as the disk-usage bar background.
-		if onBar != nil && onBar(i) && r == th.IconFilelistOtherMatch() && suffix.OtherMatch {
+		if suffix.OtherMatch && onBar != nil && r == th.IconFilelistOtherMatch() && onBar(i) {
 			spanFG = tcell.ColorBlack
 		}
 		spans = append(spans, primitive.Span{

@@ -84,7 +84,7 @@ func TestApplyDeleteDialogScanNeedNotJobFiltered(t *testing.T) {
 	t.Parallel()
 	s := newSnapshotHarness(t, true)
 	s.h.diskUsage = diskusage.New()
-	s.h.OpenDeleteDialog(&s.h.model.Primary)
+	s.h.OpenDeleteDialog(ui.PrimaryPanel)
 	p := s.h.host.ActivePanel()
 	s.h.ApplyDeleteDialogScanNeed(DeleteDialogScanNeedPayload{
 		Need: []string{s.dir},
@@ -106,7 +106,7 @@ func TestDeleteDialogScansTargetPanelInCompareView(t *testing.T) {
 	if !m.Secondary.SelectVisibleEntry("meadow.txt") {
 		t.Fatal("meadow.txt not visible")
 	}
-	s.h.OpenDeleteDialog(&m.Secondary) // compare deletes the focused column's panel, not the active one
+	s.h.OpenDeleteDialog(ui.SecondaryPanel) // compare deletes the focused column's panel, not the active one
 
 	s.h.ReconcileDeleteDialogScans()
 	if s.h.deleteDialogScanArmedGen != m.Secondary.SelectionDerivedGen() {

@@ -165,7 +165,7 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{sub: true}
-	app.dialogCtrl.OpenDeleteDialog(p)
+	app.dialogCtrl.OpenDeleteDialog(app.model.ActivePanel)
 
 	if strings.HasPrefix(app.model.FileDialog.DeleteSummary, "2 files") {
 		t.Fatalf("summary = %q; should not trust stale cache after files moved out", app.model.FileDialog.DeleteSummary)
