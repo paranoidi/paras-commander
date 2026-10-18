@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -119,9 +120,10 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 			fitWidth = 1
 		}
 		text, spans := fuzzyRowContent(line, ranges, fitWidth, matchStyle, false)
-		primitive.StyledText(screen, primaryCol, y, fitWidth, text, baseStyle, spans)
+		primitive.StyledText(screen, primaryCol, y, rowWidth, text, baseStyle, spans)
 		if marksW > 0 {
-			DrawRowMarksSuffix(screen, primaryCol+fitWidth, y, marksW, marks, bg, styles)
+			// Marks follow the path, not the row end (same as find dialog).
+			DrawRowMarksSuffix(screen, primaryCol+min(runewidth.StringWidth(text), fitWidth), y, marksW, marks, bg, styles)
 		}
 	}
 

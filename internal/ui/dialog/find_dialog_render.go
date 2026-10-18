@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"unicode/utf8"
 
+	"github.com/mattn/go-runewidth"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -222,9 +224,10 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 			fitWidth = 1
 		}
 		text, spans := fuzzyPathRowContent(line, ranges, fitWidth, matchStyle)
-		primitive.StyledText(screen, textX, y, fitWidth, text, baseStyle, spans)
+		primitive.StyledText(screen, textX, y, rowWidth, text, baseStyle, spans)
 		if marksW > 0 {
-			DrawRowMarksSuffix(screen, textX+fitWidth, y, marksW, marks, bg, styles)
+			// Marks follow the name, not the row end (same as compare view).
+			DrawRowMarksSuffix(screen, textX+min(runewidth.StringWidth(text), fitWidth), y, marksW, marks, bg, styles)
 		}
 	}
 
