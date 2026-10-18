@@ -159,7 +159,6 @@ func TestEntryFilterKeepsDirectories(t *testing.T) {
 			}
 			return f
 		}(), []string{"match.go", "other.txt"}},
-		{"reject-all keeps dir", &EntryFilter{ID: "none", Match: func(localfs.Entry, *State) bool { return false }}, []string{"harbor"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

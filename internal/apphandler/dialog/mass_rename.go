@@ -529,25 +529,32 @@ func (h *Handler) ExecuteMassRename() {
 		histReplace = d.Fields[1].Value
 	}
 	h.recordMassRenameHistory(h.massRenameCurrentPattern("", "", histFind, histReplace))
-	n := 0
-	var renamedPaths []string
-	var duPairs [][2]string
-	active := h.host.ActivePanel()
-	vr := h.host.ActiveViewportRows()
-	for _, r := range rows {
-		if r.NewBase != r.OldBase {
-			n++
-			renamedPaths = append(renamedPaths, filepath.Join(filepath.Dir(r.SourcePath), r.NewBase))
-			duPairs = append(duPairs, [2]string{r.SourcePath, renamedPaths[len(renamedPaths)-1]})
-			active.RenameEntry(r.SourcePath, r.NewBase, vr)
-		}
-	}
+	renamedPaths := h.applyMassRenameRows(rows)
 	h.CloseFileDialog()
-	h.diskUsageRenamed(duPairs)
 	h.RefreshBothPanels()
 	h.addRenameMarks(renamedPaths)
 	h.host.ActivePanel().ClearSelection()
-	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", n), ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", len(renamedPaths)), ui.MessageUrgencyInfo)
+}
+
+// applyMassRenameRows patches the active panel and the disk-usage cache for each row that
+// changed name, returning the new paths.
+func (h *Handler) applyMassRenameRows(rows []ops.MassRenameRow) []string {
+	var renamedPaths []string
+	var pairs [][2]string
+	active := h.host.ActivePanel()
+	vr := h.host.ActiveViewportRows()
+	for _, r := range rows {
+		if r.NewBase == r.OldBase {
+			continue
+		}
+		newPath := filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
+		renamedPaths = append(renamedPaths, newPath)
+		pairs = append(pairs, [2]string{r.SourcePath, newPath})
+		active.RenameEntry(r.SourcePath, r.NewBase, vr)
+	}
+	h.diskUsageRenamed(pairs)
+	return renamedPaths
 }
 
 // ApplyMassRenameKeepOpen runs the mass-rename dialog's Apply action: like
@@ -589,26 +596,15 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 	}
 	h.recordMassRenameHistory(h.massRenameCurrentPattern("", "", histFind, histReplace))
 
-	n := 0
+	renamedPaths := h.applyMassRenameRows(rows)
 	newSources := make([]dialog.MassRenameSource, len(rows))
 	newPaths := make([]string, len(rows))
-	var renamedPaths []string
-	var duPairs [][2]string
-	active := h.host.ActivePanel()
-	vr := h.host.ActiveViewportRows()
 	for i, r := range rows {
-		if r.NewBase != r.OldBase {
-			n++
-			renamedPaths = append(renamedPaths, filepath.Join(filepath.Dir(r.SourcePath), r.NewBase))
-			duPairs = append(duPairs, [2]string{r.SourcePath, renamedPaths[len(renamedPaths)-1]})
-			active.RenameEntry(r.SourcePath, r.NewBase, vr)
-		}
 		newPath := filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
 		newSources[i] = dialog.MassRenameSource{Path: newPath, Name: r.NewBase, IsDir: r.IsDir}
 		newPaths[i] = newPath
 	}
 
-	h.diskUsageRenamed(duPairs)
 	h.RefreshBothPanels()
 	h.addRenameMarks(renamedPaths)
 	h.host.ActivePanel().ClearSelection()
@@ -622,7 +618,7 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 	d.MassRenameExternalNames = nil
 	d.FocusedField = dialog.MassRenameFindFieldFocus
 	h.RecomputeMassRenamePreview()
-	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", n), ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", len(renamedPaths)), ui.MessageUrgencyInfo)
 }
 
 // MassRenameEditorFooterEligible reports whether the F4 "Editor" footer hint should show:

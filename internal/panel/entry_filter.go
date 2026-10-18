@@ -8,18 +8,11 @@ type EntryFilter struct {
 	ID    string // stable id, e.g. "git-staged"
 	Label string // bottom-border indicator text, e.g. "Filter: staged"
 	Match func(entry localfs.Entry, s *State) bool
-	// FiltersDirs: when false, directories always pass and Match only narrows files.
-	FiltersDirs bool
 	// Applicable reports whether the filter still makes sense for the current listing (e.g. a
 	// git-status filter outside a git work tree). Nil means always applicable. Checked whenever
 	// the filter is set and after every listing load; when it returns false the filter clears
 	// itself instead of leaving the panel showing zero entries.
 	Applicable func(s *State) bool
-}
-
-// passes reports whether e stays visible: directories always pass unless FiltersDirs is set.
-func (f *EntryFilter) passes(e localfs.Entry, s *State) bool {
-	return (e.IsDir() && !f.FiltersDirs) || f.Match(e, s)
 }
 
 // SetEntryFilter installs f (nil clears filtering) and rebuilds the visible-entry index.
@@ -125,7 +118,7 @@ func (s *State) rebuildEntryFilter() {
 		var ancestors []int
 		for i := range s.treeRows {
 			ancestors = append(ancestors[:min(s.treeRows[i].Depth, len(ancestors))], i)
-			if !s.ActiveEntryFilter.passes(s.treeRows[i].Value.Entry, s) {
+			if !s.ActiveEntryFilter.Match(s.treeRows[i].Value.Entry, s) {
 				continue
 			}
 			for j := len(ancestors) - 1; j >= 0 && !visible[ancestors[j]]; j-- {
@@ -143,7 +136,7 @@ func (s *State) rebuildEntryFilter() {
 	}
 	s.filteredIdx = make([]int, 0, len(s.Entries))
 	for i := range s.Entries {
-		if s.ActiveEntryFilter.passes(s.Entries[i], s) {
+		if s.ActiveEntryFilter.Match(s.Entries[i], s) {
 			s.filteredIdx = append(s.filteredIdx, i)
 		}
 	}

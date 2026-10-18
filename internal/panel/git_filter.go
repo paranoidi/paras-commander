@@ -7,7 +7,7 @@ import (
 
 // GitStagedFilter shows only entries with a staged (index) change.
 func GitStagedFilter() *EntryFilter {
-	return &EntryFilter{FiltersDirs: true, ID: "git-staged", Label: "Filter: staged", Match: func(e localfs.Entry, s *State) bool {
+	return &EntryFilter{ID: "git-staged", Label: "Filter: staged", Match: func(e localfs.Entry, s *State) bool {
 		c := s.GitByPath[e.Path]
 		if e.IsDir() {
 			return c.HasStaged
@@ -21,7 +21,7 @@ func GitStagedFilter() *EntryFilter {
 // GitUnstagedFilter shows only entries with an unstaged (work tree) modification, excluding
 // untracked and ignored entries.
 func GitUnstagedFilter() *EntryFilter {
-	return &EntryFilter{FiltersDirs: true, ID: "git-unstaged", Label: "Filter: unstaged", Match: func(e localfs.Entry, s *State) bool {
+	return &EntryFilter{ID: "git-unstaged", Label: "Filter: unstaged", Match: func(e localfs.Entry, s *State) bool {
 		c := s.GitByPath[e.Path]
 		if e.IsDir() {
 			return c.HasUnstaged
@@ -34,7 +34,7 @@ func GitUnstagedFilter() *EntryFilter {
 
 // GitUntrackedFilter shows only entries not tracked by git.
 func GitUntrackedFilter() *EntryFilter {
-	return &EntryFilter{FiltersDirs: true, ID: "git-untracked", Label: "Filter: untracked", Match: func(e localfs.Entry, s *State) bool {
+	return &EntryFilter{ID: "git-untracked", Label: "Filter: untracked", Match: func(e localfs.Entry, s *State) bool {
 		c := s.GitByPath[e.Path]
 		if e.IsDir() {
 			return c.HasUntracked
@@ -47,7 +47,7 @@ func GitUntrackedFilter() *EntryFilter {
 
 // GitTrackedFilter shows only entries tracked by git (excludes untracked and ignored entries).
 func GitTrackedFilter() *EntryFilter {
-	return &EntryFilter{FiltersDirs: true, ID: "git-tracked", Label: "Filter: tracked", Match: func(e localfs.Entry, s *State) bool {
+	return &EntryFilter{ID: "git-tracked", Label: "Filter: tracked", Match: func(e localfs.Entry, s *State) bool {
 		c := s.GitByPath[e.Path]
 		if e.IsDir() {
 			return !c.NoTracked

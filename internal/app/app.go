@@ -533,7 +533,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		func(ctx context.Context, req ops.PermissionRequest) ops.PermissionAnswer {
 			return app.promptElevate(ctx, req)
 		},
-		func(src, dst string) { duEngine.RenamePaths([][2]string{{src, dst}}) }))
+		duEngine.RenamePaths))
 	jobState.SetThroughputChart(
 		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
 		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,

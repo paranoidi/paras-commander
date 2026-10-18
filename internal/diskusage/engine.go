@@ -2,6 +2,7 @@ package diskusage
 
 import (
 	"context"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -383,75 +384,48 @@ func (e *Engine) InvalidateSubtree(rootAbs string) {
 }
 
 // RenamePaths moves cached sizes, file counts and exclusion marks of each pair's old path and
-// every descendant to the matching new path. All moves are collected before any is written, so
-// swaps (a->b, b->a) work. O(cache size), like InvalidateSubtree.
+// every descendant to the matching new path. Moves are collected before any is written, so swaps
+// (a->b, b->a) work. O(cache size × path depth), like InvalidateSubtree's full sweep.
 func (e *Engine) RenamePaths(pairs [][2]string) {
 	if e == nil || len(pairs) == 0 {
 		return
 	}
-	type moved struct {
-		key        string
-		size, fc   int64
-		hasSize    bool
-		hasFC      bool
-		isExcluded bool
+	renames := make(map[string]string, len(pairs))
+	for _, p := range pairs {
+		renames[filepath.Clean(p[0])] = filepath.Clean(p[1])
 	}
+	// rebase walks k's ancestors (cache keys are clean) to the nearest renamed one.
 	rebase := func(k string) (string, bool) {
-		for _, p := range pairs {
-			if pathIsOrUnder(k, p[0]) {
-				return filepath.Join(filepath.Clean(p[1]), strings.TrimPrefix(filepath.Clean(k), filepath.Clean(p[0]))), true
+		for p := k; ; {
+			if to, ok := renames[p]; ok {
+				return to + k[len(p):], true
 			}
+			parent := filepath.Dir(p)
+			if parent == p {
+				return "", false
+			}
+			p = parent
 		}
-		return "", false
 	}
 	e.mu.Lock()
-	var out []moved
-	byKey := map[string]int{}
-	get := func(old, nk string) *moved {
-		i, ok := byKey[old]
-		if !ok {
-			out = append(out, moved{key: nk})
-			i = len(out) - 1
-			byKey[old] = i
-		}
-		return &out[i]
-	}
-	for k, v := range e.cache {
-		if nk, ok := rebase(k); ok {
-			m := get(k, nk)
-			m.size, m.hasSize = v, true
-		}
-	}
-	for k, v := range e.fileCounts {
-		if nk, ok := rebase(k); ok {
-			m := get(k, nk)
-			m.fc, m.hasFC = v, true
-		}
-	}
-	for k := range e.excluded {
-		if nk, ok := rebase(k); ok {
-			get(k, nk).isExcluded = true
-		}
-	}
-	for old := range byKey {
-		delete(e.cache, old)
-		delete(e.fileCounts, old)
-		delete(e.excluded, old)
-	}
-	for _, m := range out {
-		if m.hasSize {
-			e.cache[m.key] = m.size
-		}
-		if m.hasFC {
-			e.fileCounts[m.key] = m.fc
-		}
-		if m.isExcluded {
-			e.excluded[m.key] = true
-		}
-	}
+	rebaseKeys(e.cache, rebase)
+	rebaseKeys(e.fileCounts, rebase)
+	rebaseKeys(e.excluded, rebase)
 	e.cacheVersion.Add(1)
 	e.mu.Unlock()
 	e.poke()
+}
+
+// rebaseKeys rewrites every key of m that rebase maps to a new key.
+func rebaseKeys[V any](m map[string]V, rebase func(string) (string, bool)) {
+	moved := map[string]V{}
+	for k, v := range m {
+		if nk, ok := rebase(k); ok {
+			moved[nk] = v
+			delete(m, k)
+		}
+	}
+	maps.Copy(m, moved)
 }
 
 // InvalidateRoots drops the cached size, file count and exclusion mark of each path itself,
