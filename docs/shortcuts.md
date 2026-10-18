@@ -36,7 +36,7 @@ Examples: `C-f`, `M-v`, `S-F3`, `C-M-p`. Prefixes are case-insensitive (`c-f` = 
 
 The in-app Help view (**F1** or `?`) shows the bindings that apply to the current view. Inside Help, **F2** (configurable as `help.text-edit-keys` under `[dialog.help]`) switches to a page listing the text-input editing chords (`[dialog.input]`); **F2** again returns.
 
-In a finished user-menu output dialog, Up/Down/Left/Right (or `k`/`j`/`h`/`l`) move between detected paths and `command-output.toggle-selection` (Insert, Space; `[dialog.command_output]`) selects the highlighted path in the active panel; see the user menu section of [config.md](config.md).
+In a finished user-menu output dialog, Up/Down/Left/Right (or `k`/`j`/`h`/`l`) move between detected paths and `command-output.toggle-selection` (Insert, Space; `[dialog.command_output]`) selects the highlighted path in the active panel, and the Select group, Unselect group and Invert selection keys (`+`, `-`, `*` by default) act on all detected paths; see the user menu section of [config.md](config.md).
 
 ## Generate the default file
 

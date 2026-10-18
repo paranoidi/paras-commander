@@ -27,6 +27,14 @@ func (h commandsHost) SetTransientMessageBanner(log, banner string, urgency ui.M
 
 func (h commandsHost) ClearTransientMessage() { h.app.clearTransientMessage() }
 
+func (h commandsHost) OpenOutputGroupSelect(selectMode bool) {
+	mode := "unselect"
+	if selectMode {
+		mode = "select"
+	}
+	h.app.openGroupSelect(mode, "output")
+}
+
 func (h commandsHost) CloseFileDialog() { h.app.dialogCtrl.CloseFileDialog() }
 
 func (h commandsHost) FocusedFileDialogField() *dialog.FileDialogField {

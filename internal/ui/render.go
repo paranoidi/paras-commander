@@ -497,6 +497,12 @@ func (m *Model) PanelsChromeBlocked() bool {
 	return m.Menu.Open || m.nonLeaderModalOpen()
 }
 
+// GroupSelectOverOutput reports the output-context group select, which stacks above the
+// command-output dialog it was opened from (input and paint order both follow this).
+func (m *Model) GroupSelectOverOutput() bool {
+	return m.GroupSelect.Open && m.GroupSelect.Context == "output"
+}
+
 // ModalDialogOpen reports modals that block normal navigation and hide the menu bar row.
 func (m *Model) ModalDialogOpen() bool {
 	return m.LeaderMenu.Open || m.nonLeaderModalOpen()
@@ -888,7 +894,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		)
 		dialog.DrawFindDialog(screen, layout, model.FindDialog, dialogRenderContext(model, styles), PaintFindDialogRowIcon, selectionLabel, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	}
-	if model.GroupSelect.Open {
+	if model.GroupSelect.Open && !model.GroupSelectOverOutput() {
 		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
 	}
 	if model.FilterDialog.Open {
@@ -939,5 +945,8 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 			active = model.Secondary
 		}
 		dialog.DrawCommandOutputDialog(screen, layout, model.CommandOutputDialog, styles, model.PanelScrollbar, active.IsSelectedPath)
+		if model.GroupSelectOverOutput() {
+			dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
+		}
 	}
 }

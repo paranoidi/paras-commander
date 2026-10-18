@@ -34,9 +34,10 @@ func GroupSelectContentCount(metaColumnCount int) int {
 }
 
 // GroupSelectShowsFullPath reports whether the "Match full path" checkbox is shown. Find
-// context only — panel entries all share one directory, so it would be meaningless there.
+// and output contexts only — panel entries all share one directory, so it would be
+// meaningless there.
 func GroupSelectShowsFullPath(state GroupSelectState) bool {
-	return state.Context == "find"
+	return state.Context == "find" || state.Context == "output"
 }
 
 func groupSelectPatternHintText(state GroupSelectState) string {

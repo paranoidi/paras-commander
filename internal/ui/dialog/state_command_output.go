@@ -30,8 +30,22 @@ type CommandOutputDialogState struct {
 }
 
 // OutputPathMatch is a path found in output line Line, spanning cells [Start, End) of the
-// ANSI-stripped line. Path is absolute and cleaned.
+// ANSI-stripped line. Path is absolute and cleaned; IsDir comes from the detection Lstat.
 type OutputPathMatch struct {
 	Line, Start, End int
 	Path             string
+	IsDir            bool
+}
+
+// UniquePaths returns Paths with repeated paths dropped, keeping first occurrences in order.
+func (st CommandOutputDialogState) UniquePaths() []OutputPathMatch {
+	seen := make(map[string]bool, len(st.Paths))
+	out := make([]OutputPathMatch, 0, len(st.Paths))
+	for _, m := range st.Paths {
+		if !seen[m.Path] {
+			seen[m.Path] = true
+			out = append(out, m)
+		}
+	}
+	return out
 }

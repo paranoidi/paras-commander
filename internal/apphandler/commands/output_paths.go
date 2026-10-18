@@ -30,26 +30,26 @@ const maxPathTokens = 6
 func detectOutputPaths(lines []string, workDir string) []dialog.OutputPathMatch {
 	var out []dialog.OutputPathMatch
 	stats := 0
-	cache := map[string]bool{}
-	exists := func(cand string) (string, bool) {
+	cache := map[string]os.FileInfo{} // nil = does not exist
+	exists := func(cand string) (string, os.FileInfo) {
 		if cand == "" || cand == "." || cand == ".." {
-			return "", false
+			return "", nil
 		}
 		abs := cand
 		if !filepath.IsAbs(abs) {
 			abs = filepath.Join(workDir, abs)
 		}
 		abs = filepath.Clean(abs)
-		if ok, seen := cache[abs]; seen {
-			return abs, ok
+		if fi, seen := cache[abs]; seen {
+			return abs, fi
 		}
 		if stats >= maxOutputPathStats {
-			return "", false
+			return "", nil
 		}
 		stats++
-		_, err := os.Lstat(abs)
-		cache[abs] = err == nil
-		return abs, err == nil
+		fi, _ := os.Lstat(abs)
+		cache[abs] = fi
+		return abs, fi
 	}
 	for li, line := range lines {
 		if line == "--- stderr ---" {
@@ -69,8 +69,8 @@ func detectOutputPaths(lines []string, workDir string) []dialog.OutputPathMatch 
 		if first == last {
 			continue
 		}
-		if abs, ok := exists(string(rs[first:last])); ok {
-			out = append(out, dialog.OutputPathMatch{Line: li, Start: first, End: last, Path: abs})
+		if abs, fi := exists(string(rs[first:last])); fi != nil {
+			out = append(out, dialog.OutputPathMatch{Line: li, Start: first, End: last, Path: abs, IsDir: fi.IsDir()})
 			continue
 		}
 		var toks [][2]int
@@ -90,8 +90,8 @@ func detectOutputPaths(lines []string, workDir string) []dialog.OutputPathMatch 
 			next := i + 1
 			for j := min(i+maxPathTokens-1, len(toks)-1); j >= i; j-- {
 				s, e := trimTokenSpan(rs, toks[i][0], toks[j][1])
-				if abs, ok := exists(string(rs[s:e])); ok {
-					out = append(out, dialog.OutputPathMatch{Line: li, Start: s, End: e, Path: abs})
+				if abs, fi := exists(string(rs[s:e])); fi != nil {
+					out = append(out, dialog.OutputPathMatch{Line: li, Start: s, End: e, Path: abs, IsDir: fi.IsDir()})
 					next = j + 1
 					break
 				}

@@ -321,7 +321,7 @@ quoted or followed by `:<line>` as in `grep -n`; relative paths are taken from t
 are highlighted if they exist. Down/Up (`j`/`k`) jump to the next/previous line with a path, Right/Left (`l`/`h`)
 step to the next/previous path, and Insert or Space (`command-output.toggle-selection` under
 `[dialog.command_output]` in `keybindings.toml`) toggle the highlighted path's selection in the active panel and
-move on. PgUp/PgDn/Home/End still scroll; output without paths scrolls with Up/Down. Only the first 5000
+move on. The Select group, Unselect group and Invert selection keys (`+`, `-`, `*` by default, the same actions as in the panel) select, unselect or invert all detected paths in the active panel; the group dialogs match the file name (or the full path with "Match full path") of each detected path and honour Files only / Directories only. PgUp/PgDn/Home/End still scroll; output without paths scrolls with Up/Down. Only the first 5000
 candidates per output are checked.
 
 A `menu.toml` command clears the tags it used when it starts: `%t` clears the active panel's tags, `%T` the other panel's, and a command using only `%d`, `%f` and the like leaves them. `interactive` and `detach` entries clear only if they ran or started without error. `run_for_each` entries clear the active panel's tags.

@@ -149,15 +149,13 @@ type GroupSelectState struct {
 	TextCursor         int    // rune offset of caret within Text (0..len(runes))
 	TextScroll         int    // first visible rune offset for horizontal scrolling
 	Mode               string // "select" or "unselect"
-	Context            string // "" or "panel" (default), "find"
+	Context            string // "" or "panel" (default), "find", "output"
 	PatternMode        panel.GroupPatternMode
 	PatternCompileHint string
 	FilesOnly          bool
 	DirsOnly           bool
 	CaseSensitive      bool
-	// FullPath matches the full path instead of the basename. Find-dialog context only
-	// (Context == "find"): panel entries all share one directory, so it would be meaningless
-	// there.
+	// FullPath matches the full path instead of the basename; see GroupSelectShowsFullPath.
 	FullPath           bool
 	MetaColumnCount    int  // number of visible meta columns; 0 hides the meta checkboxes
 	IncludeMetaColumns bool // when true and MetaColumnCount > 0, meta column values are also matched

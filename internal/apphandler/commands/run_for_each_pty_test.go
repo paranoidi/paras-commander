@@ -438,6 +438,7 @@ func (ptyHostStub) BrowserMenuDefinitions() []menu.Definition                   
 func (ptyHostStub) SetTransientMessageBanner(string, string, ui.MessageUrgency) {}
 func (ptyHostStub) ClearTransientMessage()                                      {}
 func (ptyHostStub) CloseFileDialog()                                            {}
+func (ptyHostStub) OpenOutputGroupSelect(bool)                                  {}
 func (ptyHostStub) FocusedFileDialogField() *dialog.FileDialogField             { return nil }
 func (ptyHostStub) RefreshAfterBackgroundCommand()                              {}
 func (ptyHostStub) HandleQuit() bool                                            { return false }

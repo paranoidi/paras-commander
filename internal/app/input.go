@@ -63,6 +63,8 @@ func (a *App) inputMode() InputMode {
 	switch {
 	case a.model.ElevateDialog.Open:
 		return InputModeElevateDialog
+	case a.model.GroupSelectOverOutput():
+		return InputModeGroupSelect
 	case a.model.CommandOutputDialog.Open:
 		return InputModeCommandOutputDialog
 	case a.model.MessageDialog.Open:

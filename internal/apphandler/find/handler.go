@@ -1383,7 +1383,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 }
 
 // matchingFindPaths returns the absolute paths of entries at indices for which match
-// (newFindPathMatcher) holds, honoring filesOnly/dirsOnly, along with an isDir map built in the same pass (mirroring
+// (NewPathMatcher) holds, honoring filesOnly/dirsOnly, along with an isDir map built in the same pass (mirroring
 // panel.State.groupMatchedPaths) so callers never need a separate per-path PathMeta lookup.
 // Shared filter pipeline for both ApplyGroupSelect branches (select also filters out
 // already-marked paths itself).
@@ -1437,10 +1437,10 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 	return paths, isDir
 }
 
-// newFindPathMatcher builds the per-result predicate for req on an absolute path: Types (when
+// NewPathMatcher builds the per-result predicate for req on an absolute path: Types (when
 // set) must match the basename, and the pattern (when set) the basename, or the full path with
 // req.FullPath ("Match full path" option).
-func newFindPathMatcher(req GroupSelectRequest) (func(path string) bool, error) {
+func NewPathMatcher(req GroupSelectRequest) (func(path string) bool, error) {
 	var matcher panel.GroupMatcher
 	if req.Pattern != "" {
 		var err error
@@ -1477,7 +1477,7 @@ func (h *Handler) CountGroupMatches(req GroupSelectRequest, marked bool) (files,
 	if req.Empty() {
 		return 0, 0
 	}
-	match, err := newFindPathMatcher(req)
+	match, err := NewPathMatcher(req)
 	if err != nil {
 		return 0, 0
 	}
@@ -1504,7 +1504,7 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 	if req.Empty() {
 		return
 	}
-	match, err := newFindPathMatcher(req)
+	match, err := NewPathMatcher(req)
 	if err != nil {
 		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
 		return

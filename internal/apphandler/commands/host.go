@@ -36,6 +36,10 @@ type Host interface {
 	SetTransientMessageBanner(log, banner string, urgency ui.MessageUrgency)
 	ClearTransientMessage()
 
+	// OpenOutputGroupSelect opens the Select (selectMode) or Unselect group dialog in its
+	// "output" context, matching the command-output dialog's detected paths.
+	OpenOutputGroupSelect(selectMode bool)
+
 	// CloseFileDialog closes the active file dialog (used after Run for each is submitted).
 	CloseFileDialog()
 	// FocusedFileDialogField returns the currently focused field of the active file dialog,

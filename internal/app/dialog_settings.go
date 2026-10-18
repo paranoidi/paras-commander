@@ -647,8 +647,8 @@ func (a *App) groupSelectSpec(gs *dialog.GroupSelectState) panel.FilterSpec {
 	return spec
 }
 
-// findGroupSelectRequest is the find-context request for the dialog's current state.
-func (a *App) findGroupSelectRequest(gs *dialog.GroupSelectState) findctrl.GroupSelectRequest {
+// groupSelectRequest is the find/output-context request for the dialog's current state.
+func (a *App) groupSelectRequest(gs *dialog.GroupSelectState) findctrl.GroupSelectRequest {
 	spec := a.groupSelectSpec(gs)
 	return findctrl.GroupSelectRequest{
 		Mode:          findctrl.GroupSelectMode(gs.Mode),
@@ -692,6 +692,18 @@ func (a *App) updateGroupSelectPreview() {
 	if context == "" {
 		context = "panel"
 	}
+	if context == "output" {
+		matches, err := a.outputGroupMatches(gs)
+		gs.PreviewFiles, gs.PreviewFolders, gs.PreviewShow = 0, 0, err == nil
+		for _, m := range matches {
+			if m.IsDir {
+				gs.PreviewFolders++
+			} else {
+				gs.PreviewFiles++
+			}
+		}
+		return
+	}
 	if context == "find" {
 		key := groupSelectPreviewKey{
 			Text:          gs.Text,
@@ -713,7 +725,7 @@ func (a *App) updateGroupSelectPreview() {
 		}
 		a.groupSelectPreviewKey = key
 		gs.PreviewShow = false
-		a.findCtrl.StartGroupCount(a.findGroupSelectRequest(gs), !selectMode)
+		a.findCtrl.StartGroupCount(a.groupSelectRequest(gs), !selectMode)
 		return
 	}
 	p := a.activePanel()
@@ -725,6 +737,62 @@ func (a *App) updateGroupSelectPreview() {
 	gs.PreviewFiles = files
 	gs.PreviewFolders = dirs
 	gs.PreviewShow = true
+}
+
+// outputGroupMatches returns the output dialog's detected paths (deduped) that gs matches and
+// whose selection state in the active panel would flip (select: not yet selected; unselect:
+// selected). In-memory only: IsDir was captured at detection.
+func (a *App) outputGroupMatches(gs *dialog.GroupSelectState) ([]dialog.OutputPathMatch, error) {
+	match, err := findctrl.NewPathMatcher(a.groupSelectRequest(gs))
+	if err != nil {
+		return nil, err
+	}
+	p := a.activePanel()
+	selectMode := gs.Mode == "select"
+	var out []dialog.OutputPathMatch
+	for _, m := range a.model.CommandOutputDialog.UniquePaths() {
+		if (gs.DirsOnly && !m.IsDir) || (gs.FilesOnly && m.IsDir) ||
+			p.IsSelectedPath(m.Path) == selectMode || !match(m.Path) {
+			continue
+		}
+		out = append(out, m)
+	}
+	return out, nil
+}
+
+// applyOutputGroupSelect selects or unselects the matching detected output paths in the active
+// panel and reports the result.
+func (a *App) applyOutputGroupSelect(gs *dialog.GroupSelectState) {
+	matches, err := a.outputGroupMatches(gs)
+	if err != nil {
+		a.setTransientMessage(err.Error(), ui.MessageUrgencyCritical)
+		return
+	}
+	if len(matches) == 0 {
+		a.setTransientMessage("No matches", ui.MessageUrgencyWarn)
+		return
+	}
+	req := a.groupSelectRequest(gs)
+	p := a.activePanel()
+	verb, conflicts := "Unselected", false
+	if req.Mode == findctrl.GroupSelectModeSelect {
+		verb = "Selected"
+		paths := make([]string, len(matches))
+		isDir := make(map[string]bool, len(matches))
+		for i, m := range matches {
+			paths[i], isDir[m.Path] = m.Path, m.IsDir
+		}
+		conflicts = p.BulkAddSelections(paths, func(path string) bool { return isDir[path] })
+	} else {
+		// Every match is selected, so toggling only removes and never conflicts.
+		for _, m := range matches {
+			p.TogglePathSelection(m.Path)
+		}
+	}
+	a.setTransientMessage(verb+" matching "+req.Describe(), ui.MessageUrgencyInfo)
+	if conflicts {
+		a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+	}
 }
 
 // applyGroupCountPayload applies an async find-context group-select count (StartGroupCount)
@@ -789,7 +857,9 @@ func (a *App) executeGroupSelect() {
 	}
 	switch context {
 	case "find":
-		a.findCtrl.ApplyGroupSelect(a.findGroupSelectRequest(gs))
+		a.findCtrl.ApplyGroupSelect(a.groupSelectRequest(gs))
+	case "output":
+		a.applyOutputGroupSelect(gs)
 	default:
 		p := a.activePanel()
 		meta := a.groupSelectMeta(gs)

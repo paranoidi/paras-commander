@@ -76,7 +76,7 @@ func (h *Handler) StartGroupCount(req GroupSelectRequest, marked bool) {
 	if req.Empty() {
 		return
 	}
-	match, err := newFindPathMatcher(req)
+	match, err := NewPathMatcher(req)
 	if err != nil {
 		h.groupCountAcc.active = false
 		h.groupCountAcc.inFlight = false

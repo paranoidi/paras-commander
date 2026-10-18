@@ -24,7 +24,7 @@ func TestMatchingFindPathsFullPathMatchesDirComponent(t *testing.T) {
 		IndexedCount: 2,
 	}
 
-	basenameMatch, err := newFindPathMatcher(GroupSelectRequest{Pattern: "*src*", PatternMode: panel.GroupPatternShell})
+	basenameMatch, err := NewPathMatcher(GroupSelectRequest{Pattern: "*src*", PatternMode: panel.GroupPatternShell})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestMatchingFindPathsFullPathMatchesDirComponent(t *testing.T) {
 		t.Fatalf("basename match should not see the dir component, got %v", paths)
 	}
 
-	fullPathMatch, err := newFindPathMatcher(GroupSelectRequest{Pattern: "*src*", PatternMode: panel.GroupPatternShell, FullPath: true})
+	fullPathMatch, err := NewPathMatcher(GroupSelectRequest{Pattern: "*src*", PatternMode: panel.GroupPatternShell, FullPath: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +309,7 @@ func TestFindGroupSelectTypesOnlyCountAndApply(t *testing.T) {
 	if req.Empty() {
 		t.Fatal("types-only request must not be empty")
 	}
-	match, err := newFindPathMatcher(req)
+	match, err := NewPathMatcher(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +319,7 @@ func TestFindGroupSelectTypesOnlyCountAndApply(t *testing.T) {
 	}
 	req.Pattern, req.PatternMode = "lantern*", panel.GroupPatternShell
 	req.FullPath = false
-	match, err = newFindPathMatcher(req)
+	match, err = NewPathMatcher(req)
 	if err != nil {
 		t.Fatal(err)
 	}

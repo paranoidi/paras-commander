@@ -29,6 +29,9 @@ func TestDetectOutputPaths(t *testing.T) {
 	touchFile(t, dir, "Season willow")
 	touchFile(t, dir, "harbor")
 	touchFile(t, dir, "harbor lights")
+	if err := os.Mkdir(filepath.Join(dir, "cobalt"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	lines := []string{
 		abs,                                  // 0 absolute
 		"lantern.go",                         // 1 relative
@@ -41,6 +44,7 @@ func TestDetectOutputPaths(t *testing.T) {
 		"found: './new anchor', checked",     // 8 quoted multi-word mid-line
 		"./Season willow:12: grep-style hit", // 9 multi-word with grep suffix
 		"see harbor lights now",              // 10 longest of harbor / harbor lights wins
+		"cobalt",                             // 11 directory
 	}
 	want := []dialog.OutputPathMatch{
 		{Line: 0, Start: 0, End: len([]rune(abs)), Path: abs},
@@ -53,6 +57,7 @@ func TestDetectOutputPaths(t *testing.T) {
 		{Line: 8, Start: 8, End: 20, Path: filepath.Join(dir, "new anchor")},
 		{Line: 9, Start: 0, End: 15, Path: filepath.Join(dir, "Season willow")},
 		{Line: 10, Start: 4, End: 17, Path: filepath.Join(dir, "harbor lights")},
+		{Line: 11, Start: 0, End: 6, Path: filepath.Join(dir, "cobalt"), IsDir: true},
 	}
 	got := detectOutputPaths(lines, dir)
 	if !slices.Equal(got, want) {

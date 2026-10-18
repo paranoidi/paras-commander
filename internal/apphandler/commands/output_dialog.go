@@ -141,6 +141,9 @@ func (h *Handler) handlePathKey(st *dialog.CommandOutputDialogState, event *tcel
 	case tcell.KeyLeft:
 		cur = max(cur-1, 0)
 	default:
+		if h.handleGroupSelectionKey(st, event) {
+			return true
+		}
 		id, ok := h.keysCommandOutputDialog.Lookup(event)
 		if !ok || id != keymap.ActionCommandOutputToggleSelection {
 			return false
@@ -152,6 +155,33 @@ func (h *Handler) handlePathKey(st *dialog.CommandOutputDialogState, event *tcel
 	}
 	st.PathCursor = cur
 	h.ensurePathVisible(st)
+	return true
+}
+
+// handleGroupSelectionKey runs the global select-group, unselect-group and invert-selection
+// actions over the detected paths. Returns false for any other key.
+func (h *Handler) handleGroupSelectionKey(st *dialog.CommandOutputDialogState, event *tcell.EventKey) bool {
+	id, _ := h.keys.Lookup(event)
+	switch id {
+	case keymap.ActionPanelSelectGroup:
+		h.host.OpenOutputGroupSelect(true)
+	case keymap.ActionPanelUnselectGroup:
+		h.host.OpenOutputGroupSelect(false)
+	case keymap.ActionPanelInvertSelection:
+		uniq := st.UniquePaths()
+		p := h.host.ActivePanel()
+		conflicts := false
+		for _, m := range uniq {
+			_, c := p.TogglePathSelection(m.Path)
+			conflicts = conflicts || c
+		}
+		h.host.SetTransientMessage(fmt.Sprintf("Inverted %d", len(uniq)), ui.MessageUrgencyInfo)
+		if conflicts {
+			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+		}
+	default:
+		return false
+	}
 	return true
 }
 

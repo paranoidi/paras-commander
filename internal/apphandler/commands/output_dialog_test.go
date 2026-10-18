@@ -137,10 +137,19 @@ func newOutputDialogHandler(t *testing.T) (*Handler, tcell.SimulationScreen) {
 
 type pathKeysHost struct {
 	layoutHost
-	pnl *panel.State
+	pnl         *panel.State
+	msgs        []string
+	groupSelect []bool
 }
 
 func (p *pathKeysHost) ActivePanel() *panel.State { return p.pnl }
+
+func (p *pathKeysHost) SetTransientMessage(msg string, _ ui.MessageUrgency) {
+	p.msgs = append(p.msgs, msg)
+}
+func (p *pathKeysHost) OpenOutputGroupSelect(selectMode bool) {
+	p.groupSelect = append(p.groupSelect, selectMode)
+}
 
 func pathDialogHandler(t *testing.T, lines []string, paths []dialog.OutputPathMatch) (*Handler, *pathKeysHost) {
 	t.Helper()
@@ -150,6 +159,9 @@ func pathDialogHandler(t *testing.T, lines []string, paths []dialog.OutputPathMa
 		t.Fatal(err)
 	}
 	h.keysCommandOutputDialog = keys
+	if h.keys, err = keymap.Default(); err != nil {
+		t.Fatal(err)
+	}
 	pnl, err := panel.New(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -219,5 +231,27 @@ func TestOutputDialogNoPathsStillScrolls(t *testing.T) {
 	h.HandleOutputDialogKey(key(tcell.KeyUp))
 	if st.Scroll != 1 {
 		t.Fatalf("scroll = %d, want 1", st.Scroll)
+	}
+}
+
+func TestOutputDialogGroupSelectionKeys(t *testing.T) {
+	paths := []dialog.OutputPathMatch{
+		{Line: 0, Path: "/x/amber"}, {Line: 1, Path: "/x/birch"}, {Line: 2, Path: "/x/amber"},
+	}
+	h, ph := pathDialogHandler(t, manyLines(3), paths)
+	ph.pnl.AddSelection("/x/amber")
+
+	h.HandleOutputDialogKey(runeKey('*'))
+	if ph.pnl.IsSelectedPath("/x/amber") || !ph.pnl.IsSelectedPath("/x/birch") {
+		t.Fatal("invert should toggle each unique path once")
+	}
+	if len(ph.msgs) != 1 || ph.msgs[0] != "Inverted 2" {
+		t.Fatalf("messages = %v", ph.msgs)
+	}
+
+	h.HandleOutputDialogKey(runeKey('+'))
+	h.HandleOutputDialogKey(runeKey('-'))
+	if want := []bool{true, false}; !slices.Equal(ph.groupSelect, want) {
+		t.Fatalf("group select calls = %v, want %v", ph.groupSelect, want)
 	}
 }
