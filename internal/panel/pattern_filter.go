@@ -65,8 +65,7 @@ func (f FilterSpec) MatchFunc() (func(e localfs.Entry, meta GroupSelectMeta) boo
 	}, nil
 }
 
-// PatternFilter builds an EntryFilter from spec. Directories always stay visible unless
-// FilesOnly/DirsOnly is set. meta is nil when there are no meta columns to match against;
+// PatternFilter builds an EntryFilter from spec. Directories are filtered like files. meta is nil when there are no meta columns to match against;
 // otherwise it is called on every filter rebuild (RefreshEntryFilter) to read the current live
 // GroupSelectMeta — a closure rather than a snapshot because meta results arrive asynchronously
 // and the underlying maps are replaced wholesale on a directory change. Returns an error when
@@ -82,7 +81,7 @@ func PatternFilter(spec FilterSpec, meta func() GroupSelectMeta) (*EntryFilter, 
 	}
 	return &EntryFilter{
 		ID:          id,
-		FiltersDirs: spec.DirsOnly || spec.FilesOnly,
+		FiltersDirs: true,
 		Label:       spec.Label(),
 		Match: func(e localfs.Entry, _ *State) bool {
 			var m GroupSelectMeta

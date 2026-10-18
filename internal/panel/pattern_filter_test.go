@@ -149,7 +149,8 @@ func TestEntryFilterKeepsDirectories(t *testing.T) {
 		filter *EntryFilter
 		want   []string
 	}{
-		{"pattern keeps dir", pattern("*.go", false), []string{"harbor", "match.go"}},
+		{"pattern hides non-matching dir", pattern("*.go", false), []string{"match.go"}},
+		{"pattern matches dir", pattern("harb*", false), []string{"harbor"}},
 		{"dirs only filters dirs", pattern("harb*", true), []string{"harbor"}},
 		{"files only hides dirs", func() *EntryFilter {
 			f, err := PatternFilter(FilterSpec{Pattern: "*", Mode: GroupPatternShell, FilesOnly: true}, nil)
@@ -256,8 +257,8 @@ func TestPatternFilterTypes(t *testing.T) {
 		spec FilterSpec
 		want []string
 	}{
-		{"types only keeps dirs", FilterSpec{Types: types}, []string{"meadow", "lantern.jpg", "sesame.MKV", "thicket.mkv"}},
-		{"types and pattern", FilterSpec{Types: types, Pattern: "thicket", Mode: GroupPatternSimple}, []string{"meadow", "thicket.mkv"}},
+		{"types only hides dirs", FilterSpec{Types: types}, []string{"lantern.jpg", "sesame.MKV", "thicket.mkv"}},
+		{"types and pattern", FilterSpec{Types: types, Pattern: "thicket", Mode: GroupPatternSimple}, []string{"thicket.mkv"}},
 		{"invert", FilterSpec{Types: types, Invert: true}, []string{"meadow", "thicket.txt"}},
 		{"invert files only", FilterSpec{Types: types, Invert: true, FilesOnly: true}, []string{"thicket.txt"}},
 	}
@@ -280,15 +281,8 @@ func TestPatternFilterTypes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			// The preview counts real matches; directories merely stay visible, so only files are compared.
-			wantFiles := len(tc.want)
-			for _, n := range tc.want {
-				if n == "meadow" {
-					wantFiles--
-				}
-			}
-			if files != wantFiles || dirs > 1 {
-				t.Fatalf("CountPatternMatches = %d files %d dirs, want %d files", files, dirs, wantFiles)
+			if files+dirs != len(tc.want) {
+				t.Fatalf("CountPatternMatches = %d files %d dirs, want %d entries", files, dirs, len(tc.want))
 			}
 		})
 	}
@@ -315,5 +309,42 @@ func TestFilterSpecRegexCaseSensitivity(t *testing.T) {
 		if got := match(localfs.Entry{Name: "Lantern.TXT"}, GroupSelectMeta{}); got != tc.want {
 			t.Errorf("caseSensitive=%v: got %v, want %v", tc.caseSensitive, got, tc.want)
 		}
+	}
+}
+
+func TestPatternFilterTreeKeepsAncestorsOfMatches(t *testing.T) {
+	root := t.TempDir()
+	for _, d := range []string{"meadow/thicket", "harbor"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, f := range []string{"meadow/thicket/lantern.go", "meadow/sesame.txt", "harbor/walnut.txt"} {
+		if err := os.WriteFile(filepath.Join(root, f), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false")
+	}
+	// Rows: harbor, meadow; expand meadow, then its thicket child (synchronous in tests).
+	for _, cursor := range []int{1, 2} {
+		state.Cursor = cursor
+		if err := state.ToggleTreeExpand(10); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f, err := PatternFilter(FilterSpec{Pattern: "*.go", Mode: GroupPatternShell}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.SetEntryFilter(f)
+	want := []string{"meadow", "thicket", "lantern.go"}
+	if got := visibleNames(&state); !reflect.DeepEqual(got, want) {
+		t.Fatalf("visible = %v, want %v", got, want)
 	}
 }

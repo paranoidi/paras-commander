@@ -12,9 +12,9 @@ Videos, Pictures, Archives, Audio and Documents are checkboxes beside the mode r
 
 ## Combining
 
-An entry is shown when it matches the checked types **and** the pattern; an empty pattern means types only. Directories stay visible unless "Files only" or "Directories only" is set.
+An entry is shown when it matches the checked types **and** the pattern; an empty pattern means types only. Directories are filtered the same way as files, except that in tree view a matching entry keeps its parent folders visible.
 
-"Files only" and "Directories only" are radio buttons: mutually exclusive, and selecting the chosen one again clears it. While "Directories only" is selected, the type checkboxes are shown disabled: they cannot be toggled and the checked types are ignored. They keep their state and apply again when "Directories only" is cleared.
+"Files only" and "Directories only" are checkboxes: checking one unchecks the other. While "Directories only" is selected, the type checkboxes are shown disabled: they cannot be toggled and the checked types are ignored. They keep their state and apply again when "Directories only" is cleared.
 
 ## Invert
 

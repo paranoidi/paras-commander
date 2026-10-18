@@ -106,8 +106,8 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 	// col2X aligns the second checkbox on every two-column row with the type checkboxes above.
 	col2X := typeCol1X
 	if FilterShowsFilesDirs(state) {
-		draw.DrawDialogRadio(screen, optionX, y, "Files only", PatternMnemonicFilesOnly, state.FilesOnly, state.Focus == FilterFocusFilesOnly, false, styles)
-		draw.DrawDialogRadio(screen, col2X, y, "Directories only", PatternMnemonicDirsOnly, state.DirsOnly, state.Focus == FilterFocusDirsOnly, false, styles)
+		draw.DrawDialogCheckbox(screen, optionX, y, "Files only", PatternMnemonicFilesOnly, state.FilesOnly, state.Focus == FilterFocusFilesOnly, false, styles)
+		draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", PatternMnemonicDirsOnly, state.DirsOnly, state.Focus == FilterFocusDirsOnly, false, styles)
 		y++
 		if y >= innerBottom {
 			return

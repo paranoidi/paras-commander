@@ -108,8 +108,8 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 
 	// col2X aligns the second checkbox on every two-column row with the type checkboxes above.
 	col2X := typeCol1X
-	draw.DrawDialogRadio(screen, optionX, y, "Files only", PatternMnemonicFilesOnly, state.FilesOnly, state.Focus == GroupSelectFocusFilesOnly, false, styles)
-	draw.DrawDialogRadio(screen, col2X, y, "Directories only", PatternMnemonicDirsOnly, state.DirsOnly, state.Focus == GroupSelectFocusDirsOnly, false, styles)
+	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", PatternMnemonicFilesOnly, state.FilesOnly, state.Focus == GroupSelectFocusFilesOnly, false, styles)
+	draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", PatternMnemonicDirsOnly, state.DirsOnly, state.Focus == GroupSelectFocusDirsOnly, false, styles)
 	y++
 	if y >= innerBottom {
 		return

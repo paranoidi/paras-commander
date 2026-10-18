@@ -119,9 +119,22 @@ func (s *State) rebuildEntryFilter() {
 		return
 	}
 	if s.ListLayout == ListLayoutTree {
-		s.filteredIdx = make([]int, 0, len(s.treeRows))
+		// A passing row makes its ancestor directories visible too, so a match deep in the tree
+		// keeps its path. treeRows is pre-order, so ancestors[d] is the open row at depth d.
+		visible := make([]bool, len(s.treeRows))
+		var ancestors []int
 		for i := range s.treeRows {
-			if s.ActiveEntryFilter.passes(s.treeRows[i].Value.Entry, s) {
+			ancestors = append(ancestors[:min(s.treeRows[i].Depth, len(ancestors))], i)
+			if !s.ActiveEntryFilter.passes(s.treeRows[i].Value.Entry, s) {
+				continue
+			}
+			for j := len(ancestors) - 1; j >= 0 && !visible[ancestors[j]]; j-- {
+				visible[ancestors[j]] = true
+			}
+		}
+		s.filteredIdx = make([]int, 0, len(s.treeRows))
+		for i, v := range visible {
+			if v {
 				s.filteredIdx = append(s.filteredIdx, i)
 			}
 		}
