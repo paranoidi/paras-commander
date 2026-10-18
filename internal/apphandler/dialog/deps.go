@@ -166,8 +166,14 @@ type Handler struct {
 	deleteDialogScanFP string
 	// deleteDialogSelGen / deleteDialogPanelPath / deleteDialogPrunedPaths skip ResolveSource
 	// while the delete dialog is open.
-	deleteDialogSelGen      uint64
-	deleteDialogPanelPath   string
+	deleteDialogSelGen    uint64
+	deleteDialogPanelPath string
+	// deleteDialogPanelID is the panel the open delete dialog was resolved against (Compare
+	// deletes from the focused column's panel, which need not be the active one);
+	// deleteDialogPathOnly marks a dialog opened for one bare path (no panel source), whose
+	// static summary the scan/refresh paths leave alone.
+	deleteDialogPanelID     int
+	deleteDialogPathOnly    bool
 	deleteDialogPrunedPaths []string
 	// deleteDialogScanArmedGen / deleteDialogScanArmedPath record what ReconcileDeleteDialogScans
 	// last armed deleteDialogScanDebounce for, so repeated calls with an unchanged source (e.g.

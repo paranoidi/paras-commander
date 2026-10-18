@@ -177,7 +177,7 @@ Active/inactive panel width zoom and twin-panel orientation.
 
 ## `[ui.scroll]`
 
-File-list scroll policy and scrollbar display.
+File-list scroll policy and scrollbar display. The mode and edge margin also apply to the Jobs, Messages, Compare and Dedup lists.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

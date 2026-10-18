@@ -146,7 +146,7 @@ func massRenameIsWordSep(r rune, punctSep bool) bool {
 }
 
 // massRenameCapitalize uppercases the first letter of each word (eachWord) or just the first
-// letter of the whole basename (default). Separator runes (massRenameIsWordSep) are never
+// character of the whole basename when it is a letter (default). Separator runes (massRenameIsWordSep) are never
 // touched, and no rune is ever lowercased.
 func massRenameCapitalize(oldBase string, eachWord, punctSep bool) string {
 	runes := []rune(oldBase)
@@ -164,14 +164,8 @@ func massRenameCapitalize(oldBase string, eachWord, punctSep bool) string {
 		}
 		return string(runes)
 	}
-	for i, r := range runes {
-		if massRenameIsWordSep(r, punctSep) {
-			continue
-		}
-		if unicode.IsLetter(r) {
-			runes[i] = unicode.ToUpper(r)
-			break
-		}
+	if unicode.IsLetter(runes[0]) {
+		runes[0] = unicode.ToUpper(runes[0])
 	}
 	return string(runes)
 }

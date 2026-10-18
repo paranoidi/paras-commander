@@ -16,6 +16,17 @@ type CompareViewState struct {
 	// RangeAnchor is the focused column's absolute path marked as the pending range-select
 	// start ("" when none); cleared on column change and refresh.
 	RangeAnchor string
+	// SwapPanels is set when the main panels were swapped on open: the left compare column
+	// then belongs to the Secondary panel (see PanelID).
+	SwapPanels bool
+}
+
+// PanelID returns the main-panel ID that owns the left (secondary=false) or right column.
+func (s CompareViewState) PanelID(secondary bool) int {
+	if secondary != s.SwapPanels {
+		return SecondaryPanel
+	}
+	return PrimaryPanel
 }
 
 // CompareColumnFocus is which path column has keyboard focus for selection.

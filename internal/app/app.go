@@ -509,6 +509,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	duEngine := diskusage.NewWithFSWalk(cfg.FSWalk)
 
+	ui.SetListScroll(scrollModeFromConfig(cfg.UI.Scroll.Mode), cfg.UI.Scroll.EdgeMargin)
 	panelOpts := browserPanelOptions{
 		list:       listOptions,
 		gitignore:  giCache,

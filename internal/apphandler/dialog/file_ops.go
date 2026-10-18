@@ -220,6 +220,10 @@ func (h *Handler) OpenDeleteDialog(p *panel.State) {
 	h.invalidateDeleteDialogDiskCache(p, pruned)
 	h.deleteDialogSelGen = p.SelectionDerivedGen()
 	h.deleteDialogPanelPath = panelPath
+	h.deleteDialogPanelID = ui.PrimaryPanel
+	if p != h.host.PanelByID(ui.PrimaryPanel) {
+		h.deleteDialogPanelID = ui.SecondaryPanel
+	}
 	h.deleteDialogPrunedPaths = pruned
 	fd := dialog.FileDialogState{
 		Open:          true,
@@ -257,6 +261,8 @@ func (h *Handler) OpenDeleteDialogForPath(path, name string) {
 		FocusedField:  1, // No (safe default); Yes stays index 0.
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
+	h.ClearDeleteDialogReconcileCache()
+	h.deleteDialogPathOnly = true
 	h.model.FileDialog = fd
 }
 

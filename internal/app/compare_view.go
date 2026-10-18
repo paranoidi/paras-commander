@@ -148,20 +148,13 @@ func (a *App) compareOpenInExternalBrowser() {
 		a.openDirInExternalBrowser(filepath.Dir(path))
 		return
 	}
-	panelID := ui.PrimaryPanel
-	if a.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
-		panelID = ui.SecondaryPanel
-	}
-	a.openPanelPathInExternalBrowser(panelID)
+	a.openPanelPathInExternalBrowser(a.model.CompareView.PanelID(a.model.CompareView.FocusColumn == ui.CompareColumnSecondary))
 }
 
 // openCompareDeleteDialog deletes the focused column's panel selection (set with Space) or,
 // without one, the file under the cursor on that side.
 func (a *App) openCompareDeleteDialog() {
-	p := a.panelByID(ui.PrimaryPanel)
-	if a.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
-		p = a.panelByID(ui.SecondaryPanel)
-	}
+	p := a.panelByID(a.model.CompareView.PanelID(a.model.CompareView.FocusColumn == ui.CompareColumnSecondary))
 	if len(p.SelectedPaths) > 0 {
 		a.dialogCtrl.OpenDeleteDialog(p)
 		return

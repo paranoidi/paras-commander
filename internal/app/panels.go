@@ -29,6 +29,7 @@ func (a *App) syncScrollFromConfig() {
 	a.model.Secondary.ScrollMode = mode
 	a.model.Primary.ScrollEdgeMargin = margin
 	a.model.Secondary.ScrollEdgeMargin = margin
+	ui.SetListScroll(mode, margin) // Jobs, Messages, Compare and Dedup lists
 }
 
 func (a *App) switchPanel() {

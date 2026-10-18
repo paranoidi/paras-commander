@@ -10,7 +10,7 @@ confirm. Swaps and chains (a to b, b to a) are handled safely.
 - **Regular expression**: Find is a Go (RE2) pattern, Replace is a template using `$1`,
   `${1}`, `\1` or named groups `${name}`; `${0}` is the whole match.
 - **External $EDITOR**: opens the names in your editor, one per line.
-- **Capitalize**: capitalizes words, optionally treating punctuation as word separators.
+- **Capitalize**: capitalizes words, optionally treating punctuation as word separators. By default only the first character of the name is capitalized, and only when it is a letter (a name starting with a digit, space or symbol is left unchanged).
 
 **Trim whitespace** strips leading and trailing whitespace from the new names.
 

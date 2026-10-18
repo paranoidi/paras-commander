@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
@@ -92,5 +93,45 @@ func TestApplyDeleteDialogScanNeedNotJobFiltered(t *testing.T) {
 	})
 	if s.h.deleteDialogScanFP == "" {
 		t.Fatal("scan need was dropped; summary would stay pending")
+	}
+}
+
+func TestDeleteDialogScansTargetPanelInCompareView(t *testing.T) {
+	t.Parallel()
+	s := newSnapshotHarness(t, true)
+	s.h.diskUsage = diskusage.New()
+	m := s.h.model
+	m.ViewMode = ui.ViewCompare
+	m.ActivePanel = ui.PrimaryPanel
+	if !m.Secondary.SelectVisibleEntry("meadow.txt") {
+		t.Fatal("meadow.txt not visible")
+	}
+	s.h.OpenDeleteDialog(&m.Secondary) // compare deletes the focused column's panel, not the active one
+
+	s.h.ReconcileDeleteDialogScans()
+	if s.h.deleteDialogScanArmedGen != m.Secondary.SelectionDerivedGen() {
+		t.Fatal("reconcile skipped or used the wrong panel in compare view")
+	}
+	s.h.ApplyDeleteDialogScanNeed(DeleteDialogScanNeedPayload{
+		Need: []string{s.dir},
+		Gen:  m.Secondary.SelectionDerivedGen(),
+		Path: m.Secondary.PathString(),
+	})
+	if s.h.deleteDialogScanFP == "" {
+		t.Fatal("scan need for the target panel was dropped; summary would stay pending")
+	}
+}
+
+func TestOpenDeleteDialogForPathKeepsStaticSummary(t *testing.T) {
+	t.Parallel()
+	s := newSnapshotHarness(t, true)
+	s.h.diskUsage = diskusage.New()
+	s.h.model.ViewMode = ui.ViewCompare
+	s.h.OpenDeleteDialogForPath(filepath.Join(s.dir, "meadow.txt"), "meadow.txt")
+	want := s.h.model.FileDialog.DeleteSummary
+	s.h.ReconcileDeleteDialogScans()
+	s.h.RefreshDeleteDialogSummary()
+	if got := s.h.model.FileDialog.DeleteSummary; got != want {
+		t.Fatalf("summary changed to %q, want %q", got, want)
 	}
 }

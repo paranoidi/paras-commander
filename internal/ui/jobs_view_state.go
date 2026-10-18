@@ -1,8 +1,12 @@
 package ui
 
 import (
+	"sync/atomic"
+
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
 // JobEntriesFromJobs converts domain jobs to the render DTO used by the jobs view.
@@ -58,33 +62,49 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 	return entries
 }
 
-func ensureSelectionVisible(selected *int, listScroll *int, total int, visibleRows int) {
+// listScrollPolicy is the [ui.scroll] mode and edge margin shared by the Jobs, Messages,
+// Compare and Dedup list views; the app plumbs it once via SetListScroll.
+type listScrollPolicy struct {
+	mode   panel.ScrollMode
+	margin int
+}
+
+var listScroll atomic.Pointer[listScrollPolicy]
+
+// SetListScroll sets the scroll mode and edge margin the list views honor.
+func SetListScroll(mode panel.ScrollMode, margin int) {
+	listScroll.Store(&listScrollPolicy{mode: panel.EffectiveScrollMode(mode), margin: margin})
+}
+
+// ensureSelectionVisible clamps selected and scrolls per the configured scroll mode.
+// visibleRows <= 0 only clamps.
+func ensureSelectionVisible(selected *int, listScrollPos *int, total int, visibleRows int) {
 	if total == 0 {
 		*selected = 0
-		*listScroll = 0
+		*listScrollPos = 0
 		return
 	}
-	if *selected >= total {
-		*selected = total - 1
-	}
-	if *selected < 0 {
-		*selected = 0
-	}
+	*selected = max(0, min(*selected, total-1))
 	if visibleRows <= 0 {
 		return
 	}
-	if *selected < *listScroll {
-		*listScroll = *selected
+	pol := listScroll.Load()
+	if pol == nil {
+		pol = &listScrollPolicy{mode: panel.ScrollModeEdge}
 	}
-	if *selected >= *listScroll+visibleRows {
-		*listScroll = *selected - visibleRows + 1
-	}
-	maxScroll := max(0, total-visibleRows)
-	if *listScroll > maxScroll {
-		*listScroll = maxScroll
-	}
-	if *listScroll < 0 {
-		*listScroll = 0
+	switch pol.mode {
+	case panel.ScrollModeCenter:
+		*listScrollPos = geom.ScrollOffset(*selected, visibleRows, total)
+	case panel.ScrollModeEdge:
+		*listScrollPos = geom.ScrollOffsetEdge(*selected, *listScrollPos, visibleRows, total, pol.margin)
+	default:
+		if *selected < *listScrollPos {
+			*listScrollPos = *selected
+		}
+		if *selected >= *listScrollPos+visibleRows {
+			*listScrollPos = *selected - visibleRows + 1
+		}
+		*listScrollPos = max(0, min(*listScrollPos, max(0, total-visibleRows)))
 	}
 }
 

@@ -50,8 +50,7 @@ func panelTargetEntries(p *panel.State) []localfs.Entry {
 }
 
 func canonicalTargetPath(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
+	if strings.TrimSpace(raw) == "" {
 		return ""
 	}
 	if pl, err := pathloc.Parse(raw); err == nil {

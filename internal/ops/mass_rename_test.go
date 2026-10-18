@@ -77,19 +77,18 @@ func TestMassRenameComputeCapitalizeDefaultFirstLetterOnly(t *testing.T) {
 	}
 }
 
-func TestMassRenameComputeCapitalizeDefaultSkipsLeadingDigits(t *testing.T) {
+func TestMassRenameComputeCapitalizeDefaultLeavesNonLetterStart(t *testing.T) {
 	dir := t.TempDir()
-	entries := []localfs.Entry{
-		{Name: "3 dragons flying.txt", Path: filepath.Join(dir, "3 dragons flying.txt"), Type: localfs.EntryFile},
-	}
-	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Digits and separators never trigger the "first letter" latch; it fires on the first
-	// rune that actually has an uppercase form (the 'd' in "dragons").
-	if rows[0].NewBase != "3 Dragons flying.txt" {
-		t.Fatalf("got %q, want %q", rows[0].NewBase, "3 Dragons flying.txt")
+	for _, name := range []string{"3 dragons flying.txt", " lantern glow.txt", "-river stone.txt"} {
+		entries := []localfs.Entry{{Name: name, Path: filepath.Join(dir, name), Type: localfs.EntryFile}}
+		rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// A non-letter first character means nothing is capitalized.
+		if rows[0].NewBase != name {
+			t.Fatalf("got %q, want %q", rows[0].NewBase, name)
+		}
 	}
 }
 

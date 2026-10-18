@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 	"strings"
 	"unicode/utf8"
 
@@ -133,7 +134,7 @@ func fileDeleteDialogHeight(layoutHeight int, state FileDialogState) int {
 	return height
 }
 
-func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme, showIcons bool, iconLead int, paintIcon DeleteRowIconPainter) {
+func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme, showIcons bool, iconLead int, paintIcon DeleteRowIconPainter, scrollbarStyle uiscrollbar.Style) {
 	if state.DeleteSummary == "" && len(state.DeleteEntries) == 0 {
 		return
 	}
@@ -185,6 +186,7 @@ func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialo
 		primitive.Text(screen, textX, y, textW, line, listStyle)
 		y++
 	}
+	draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, vp, len(state.DeleteEntries), scroll, scrollbarStyle, borderStyle, styles)
 
 	sepY := deleteDialogSummarySepY(rect, state)
 	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)

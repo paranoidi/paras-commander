@@ -69,6 +69,7 @@ type Handler struct {
 	openedSecondary  pathloc.Path
 	openedShowHidden bool
 	openedGate       diskusage.ListingVolumeGate
+	openedSwap       bool // main panels were swapped on Open: left column = Secondary panel
 	onClose          func()
 }
 
@@ -99,15 +100,21 @@ func (h *Handler) Open() {
 	if ui.IsAuxiliaryView(h.model.ViewMode) && h.model.ViewMode != ui.ViewCompare {
 		return
 	}
+	// The left compare column is the panel drawn on the left in the main view.
+	left, right := &h.model.Primary, &h.model.Secondary
+	if h.model.SwapPanes {
+		left, right = right, left
+	}
 	volGate := diskusage.ListingVolumeGate{}
 	if h.config.Compare.StayOnVolumeDefault {
 		volGate = diskusage.ListingVolumeGate{
-			Enabled: h.model.Primary.ListingDeviceValid,
-			RefDev:  h.model.Primary.ListingDevice,
-			Valid:   h.model.Primary.ListingDeviceValid,
+			Enabled: left.ListingDeviceValid,
+			RefDev:  left.ListingDevice,
+			Valid:   left.ListingDeviceValid,
 		}
 	}
-	h.open(h.model.Primary.Path, h.model.Secondary.Path, h.model.Primary.ShowHidden, volGate, nil)
+	h.openedSwap = h.model.SwapPanes
+	h.open(left.Path, right.Path, left.ShowHidden, volGate, nil)
 }
 
 // OpenPaths opens compare on two arbitrary local roots (the dedup entry point).
@@ -116,6 +123,7 @@ func (h *Handler) Open() {
 // view is closed — but not on Refresh. Returns false when validation fails,
 // leaving the current view untouched.
 func (h *Handler) OpenPaths(primary, secondary pathloc.Path, showHidden bool, onClose func()) bool {
+	h.openedSwap = false
 	return h.open(primary, secondary, showHidden, diskusage.ListingVolumeGate{}, onClose)
 }
 
@@ -141,6 +149,7 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 		Filter:      comparepkg.FilterAll,
 		FocusColumn: ui.CompareColumnPrimary,
 		IgnoreEmpty: true,
+		SwapPanels:  h.openedSwap,
 	}
 	h.model.MenuDefinitions = h.host.CompareMenuDefinitions()
 	h.model.Menu.ActiveMenu = menu.DefaultIndexCompare()
@@ -324,11 +333,10 @@ func (h *Handler) sideOf(row comparepkg.Row, secondary bool) (abs pathloc.Path, 
 	snap := h.model.CompareSnapshot
 	rel := row.PrimaryRel
 	root := snap.PrimaryRoot
-	panelID = ui.PrimaryPanel
+	panelID = h.model.CompareView.PanelID(secondary)
 	if secondary {
 		rel = row.SecondaryRel
 		root = snap.SecondaryRoot
-		panelID = ui.SecondaryPanel
 	}
 	if rel == "" {
 		return pathloc.Path{}, 0, false, nil
@@ -411,11 +419,11 @@ func (h *Handler) NavigateFromSelection(viewportRows int) {
 	row := rows[st.Selected]
 	snap := h.model.CompareSnapshot
 	if row.PrimaryRel != "" {
-		_ = h.navigateSide(ui.PrimaryPanel, snap.PrimaryRoot, row.PrimaryRel)
+		_ = h.navigateSide(st.PanelID(false), snap.PrimaryRoot, row.PrimaryRel)
 		return
 	}
 	if row.SecondaryRel != "" {
-		_ = h.navigateSide(ui.SecondaryPanel, snap.SecondaryRoot, row.SecondaryRel)
+		_ = h.navigateSide(st.PanelID(true), snap.SecondaryRoot, row.SecondaryRel)
 	}
 }
 

@@ -58,8 +58,8 @@ func (h *Handler) confirmFilterDialog() {
 }
 
 // sideName names a panel's compare column in messages.
-func sideName(panelID int) string {
-	if panelID == ui.SecondaryPanel {
+func (h *Handler) sideName(panelID int) string {
+	if panelID == h.model.CompareView.PanelID(true) {
 		return "right"
 	}
 	return "left"
@@ -98,9 +98,9 @@ func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
 			continue
 		}
 		if len(parts) == 0 {
-			parts = append(parts, fmt.Sprintf("%d files on %s side", n[id], sideName(id)))
+			parts = append(parts, fmt.Sprintf("%d files on %s side", n[id], h.sideName(id)))
 		} else {
-			parts = append(parts, fmt.Sprintf("%d on %s side", n[id], sideName(id)))
+			parts = append(parts, fmt.Sprintf("%d on %s side", n[id], h.sideName(id)))
 		}
 	}
 	if len(parts) == 0 {
@@ -113,10 +113,8 @@ func (h *Handler) selectMatching(f comparepkg.Filter, selected bool) {
 // InvertColumnSelection toggles the focused column's path of every visible row in that
 // panel's selection.
 func (h *Handler) InvertColumnSelection() {
-	n, panelID := 0, ui.PrimaryPanel
-	if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
-		panelID = ui.SecondaryPanel
-	}
+	n := 0
+	panelID := h.model.CompareView.PanelID(h.model.CompareView.FocusColumn == ui.CompareColumnSecondary)
 	for _, row := range h.FilteredRows() {
 		abs, id, ok, err := h.focusedSide(row)
 		if err != nil || !ok {
@@ -125,17 +123,14 @@ func (h *Handler) InvertColumnSelection() {
 		h.host.TogglePanelSelection(id, abs.String())
 		n++
 	}
-	h.host.SetTransientMessage(fmt.Sprintf("Inverted %d files on %s side", n, sideName(panelID)), ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(fmt.Sprintf("Inverted %d files on %s side", n, h.sideName(panelID)), ui.MessageUrgencyInfo)
 }
 
 // ClearColumnSelection clears the focused column's panel selection.
 func (h *Handler) ClearColumnSelection() {
-	panelID := ui.PrimaryPanel
-	if h.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
-		panelID = ui.SecondaryPanel
-	}
+	panelID := h.model.CompareView.PanelID(h.model.CompareView.FocusColumn == ui.CompareColumnSecondary)
 	h.host.ClearPanelSelection(panelID)
-	h.host.SetTransientMessage("Cleared selection on "+sideName(panelID)+" side", ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage("Cleared selection on "+h.sideName(panelID)+" side", ui.MessageUrgencyInfo)
 }
 
 // selectFilterDialogRadio toggles the pending checkbox for focus without

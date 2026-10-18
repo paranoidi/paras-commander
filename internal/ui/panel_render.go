@@ -537,6 +537,8 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		})
 		if suffixSpans := panellist.ListingSuffixSpans(cur, nameWidth, display.ShowIcons, rowSuffix, jobStatus, panelStyle.Styles, ctx.ChromeBlocked, cursorIconKey, func(di int) tcell.Style {
 			return blendCell(di + leftGutter + gitStrip + iconStrip + treeGutterWidth)
+		}, func(di int) bool {
+			return !ctx.ChromeBlocked && di+leftGutter+gitStrip+iconStrip+treeGutterWidth < fillCols
 		}); len(suffixSpans) > 0 {
 			spans = append(suffixSpans, spans...)
 		}

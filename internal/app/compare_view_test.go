@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -305,6 +306,9 @@ func TestCompareViewKeyDownScrollsBeforeCursorLeavesViewport(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
 	app.model.ViewMode = ui.ViewCompare
+	app.config.UI.Scroll.Mode = "minimal"
+	app.syncScrollFromConfig()
+	t.Cleanup(func() { ui.SetListScroll(panel.ScrollModeEdge, 0) })
 
 	visible := app.compareVisibleRows()
 	if visible < 3 {

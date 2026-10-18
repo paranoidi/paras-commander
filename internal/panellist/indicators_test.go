@@ -134,7 +134,7 @@ func TestListingSuffixSpansPinnedOnlyReturnsSpan(t *testing.T) {
 	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile}
 	spans := ListingSuffixSpans(entry, 20, true, RowSuffix{Pinned: true}, "", th, false, "", func(int) tcell.Style {
 		return tcell.StyleDefault
-	})
+	}, nil)
 	if len(spans) != 1 {
 		t.Fatalf("spans len = %d, want 1 pin icon", len(spans))
 	}
@@ -149,7 +149,7 @@ func TestListingSuffixSpansCursorIconOnCursorRow(t *testing.T) {
 	suffix := RowSuffix{NewFileTier: NewFileMarkLatest}
 	spans := ListingSuffixSpans(entry, 20, true, suffix, "", th, false, "panel.active.row.cursor", func(int) tcell.Style {
 		return th.PanelCursorActive
-	})
+	}, nil)
 	if len(spans) != 1 {
 		t.Fatalf("spans len = %d, want 1 new-file icon", len(spans))
 	}

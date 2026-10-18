@@ -22,6 +22,8 @@ func (h *Handler) ClearDeleteDialogReconcileCache() {
 	h.deleteDialogScanFP = ""
 	h.deleteDialogSelGen = 0
 	h.deleteDialogPanelPath = ""
+	h.deleteDialogPanelID = ui.PrimaryPanel
+	h.deleteDialogPathOnly = false
 	h.deleteDialogPrunedPaths = nil
 	h.deleteDialogScanArmedGen = 0
 	h.deleteDialogScanArmedPath = ""
@@ -76,10 +78,10 @@ func (h *Handler) invalidateDeleteDialogDiskCache(p *panel.State, pruned []strin
 // RefreshDeleteDialogSummary recomputes the open delete dialog's impact summary from the
 // current disk-usage cache. No-op when the delete dialog is not open.
 func (h *Handler) RefreshDeleteDialogSummary() {
-	if !h.deleteDialogOpen() {
+	if !h.deleteDialogOpen() || h.deleteDialogPathOnly {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.PanelByID(h.deleteDialogPanelID)
 	pruned, ok := h.snapshotDeleteDialogSource(p)
 	if !ok {
 		return
@@ -96,14 +98,17 @@ func (h *Handler) RefreshDeleteDialogSummary() {
 // directory not yet cached — for a delete confirmation over a large selection that's too much
 // synchronous work for the main goroutine, same as the panel/find-dialog selection-size scans.
 func (h *Handler) ReconcileDeleteDialogScans() {
-	if h.diskUsage == nil || h.model.ViewMode != ui.ViewBrowser {
+	if h.diskUsage == nil {
 		return
 	}
 	if !h.deleteDialogOpen() {
 		h.ClearDeleteDialogReconcileCache()
 		return
 	}
-	p := h.host.ActivePanel()
+	if h.deleteDialogPathOnly {
+		return
+	}
+	p := h.host.PanelByID(h.deleteDialogPanelID)
 	if p.Path.IsRemote() {
 		h.deleteDialogScanFP = ""
 		h.deleteDialogScanDebounce.Invalidate()
@@ -148,10 +153,10 @@ func (h *Handler) ReconcileDeleteDialogScans() {
 // starts the actual (already-async) disk-usage walk for whatever still needs scanning, unless
 // the delete dialog closed or its source selection changed again since the scan was computed.
 func (h *Handler) ApplyDeleteDialogScanNeed(d DeleteDialogScanNeedPayload) {
-	if h.diskUsage == nil || !h.deleteDialogOpen() {
+	if h.diskUsage == nil || !h.deleteDialogOpen() || h.deleteDialogPathOnly {
 		return
 	}
-	p := h.host.ActivePanel()
+	p := h.host.PanelByID(h.deleteDialogPanelID)
 	if p.SelectionDerivedGen() != d.Gen || p.PathString() != d.Path {
 		return
 	}
@@ -172,7 +177,7 @@ func (h *Handler) ApplyDeleteDialogScanNeed(d DeleteDialogScanNeedPayload) {
 	h.diskUsage.StartPriorityScan(
 		d.Need,
 		h.diskUsageIgnore,
-		h.model.ActivePanel,
+		h.deleteDialogPanelID,
 		diskusage.ListingVolumeGate{},
 	)
 }

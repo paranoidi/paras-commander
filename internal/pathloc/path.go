@@ -30,8 +30,8 @@ type Path struct {
 // Host paths may be relative; they are resolved to an absolute path for scheme file.
 // Remote paths must use the sftp:// prefix (MC-compatible).
 func Parse(raw string) (Path, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
+	// Trailing/leading spaces are legal in file names; only reject blank input.
+	if strings.TrimSpace(raw) == "" {
 		return Path{}, errors.New("empty path")
 	}
 	if strings.HasPrefix(raw, "sftp://") {

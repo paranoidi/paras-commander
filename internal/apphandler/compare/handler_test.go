@@ -264,3 +264,30 @@ func TestEnsureSelectionVisibleClampsMaxScroll(t *testing.T) {
 		t.Fatalf("ListScroll = %d, want 6 (max 10-4)", model.CompareView.ListScroll)
 	}
 }
+
+func TestOpenWithSwappedPanesPutsVisualLeftPanelFirst(t *testing.T) {
+	dirs := []string{t.TempDir(), t.TempDir()}
+	model := &ui.Model{
+		Primary:   panelStateAt(pathloc.MustParse(dirs[0])),
+		Secondary: panelStateAt(pathloc.MustParse(dirs[1])),
+		SwapPanes: true,
+	}
+	h := New(Deps{Host: compareHandlerHost{}, Model: model})
+	h.Open()
+	defer h.Close()
+
+	if got := h.openedPrimary.String(); got != dirs[1] {
+		t.Fatalf("compare left root = %q, want the visually-left (secondary) panel %q", got, dirs[1])
+	}
+	row := comparepkg.Row{PrimaryRel: "a.txt", SecondaryRel: "a.txt"}
+	_, left, _, _ := h.sideOf(row, false)
+	_, right, _, _ := h.sideOf(row, true)
+	if left != ui.SecondaryPanel || right != ui.PrimaryPanel {
+		t.Fatalf("sideOf panels left=%d right=%d, want secondary/primary", left, right)
+	}
+	// Refresh keeps the swap.
+	h.Refresh()
+	if got := h.openedPrimary.String(); got != dirs[1] {
+		t.Fatalf("after refresh left root = %q, want %q", got, dirs[1])
+	}
+}

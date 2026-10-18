@@ -33,7 +33,26 @@ func TestOtherMatchSuffix(t *testing.T) {
 	if plain == cur {
 		t.Fatal("cursor mark must differ in color")
 	}
-	if len(ListingSuffixSpans(entry, 20, true, suffix, "", th, false, "", func(int) tcell.Style { return tcell.StyleDefault })) != 1 {
+	if len(ListingSuffixSpans(entry, 20, true, suffix, "", th, false, "", func(int) tcell.Style { return tcell.StyleDefault }, nil)) != 1 {
 		t.Fatal("span missing")
+	}
+}
+
+func TestOtherMatchMarkBlackOnDiskUsageBar(t *testing.T) {
+	t.Parallel()
+	th := theme.Default()
+	entry := localfs.Entry{Name: "pebble", Type: localfs.EntryFile}
+	suffix := RowSuffix{OtherMatch: true}
+	bg := func(int) tcell.Style { return tcell.StyleDefault }
+	fg := func(onBar func(int) bool) tcell.Color {
+		spans := ListingSuffixSpans(entry, 20, true, suffix, "", th, false, "", bg, onBar)
+		c, _, _ := spans[0].Style.Decompose()
+		return c
+	}
+	if got := fg(func(int) bool { return true }); got != tcell.ColorBlack {
+		t.Fatalf("on bar fg = %v, want black", got)
+	}
+	if got := fg(func(int) bool { return false }); got == tcell.ColorBlack {
+		t.Fatal("off bar fg must keep the theme color")
 	}
 }

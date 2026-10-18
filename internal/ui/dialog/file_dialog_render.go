@@ -117,7 +117,7 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, c
 
 	switch state.DialogType {
 	case FileDialogDelete:
-		drawFileDeleteDialogContent(screen, rect, state, borderStyle, styles, showIcons, deleteIconLead, paintDeleteIcon)
+		drawFileDeleteDialogContent(screen, rect, state, borderStyle, styles, showIcons, deleteIconLead, paintDeleteIcon, ctx.ScrollbarStyle)
 	case FileDialogAddBookmark:
 		drawAddBookmarkDialogContent(screen, rect, state, borderStyle, styles)
 	case FileDialogRunForEach:

@@ -291,7 +291,8 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 	}
 }
 
-// ListingSuffixSpans returns styled spans for trailing row suffix icons.
+// ListingSuffixSpans returns styled spans for trailing row suffix icons. onBar (nil ok) reports
+// whether a display cell sits on the disk-usage bar.
 func ListingSuffixSpans(
 	entry localfs.Entry,
 	nameWidth int,
@@ -302,6 +303,7 @@ func ListingSuffixSpans(
 	chromeBlocked bool,
 	cursorStyleKey string,
 	nameBGAt func(displayIndex int) tcell.Style,
+	onBar func(displayIndex int) bool,
 ) []primitive.Span {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
 	if suffix.JobIcon == 0 && suffix.JobQueuedIcon == 0 && suffix.JobOpIcon == 0 &&
@@ -324,6 +326,10 @@ func ListingSuffixSpans(
 		}
 		_, rowBG, _ := nameBGAt(i).Decompose()
 		spanFG, _, _ := spanStyle.Decompose()
+		// The other-match mark is bright_black, same as the disk-usage bar background.
+		if onBar != nil && onBar(i) && r == th.IconFilelistOtherMatch() && suffix.OtherMatch {
+			spanFG = tcell.ColorBlack
+		}
 		spans = append(spans, primitive.Span{
 			Start: i,
 			End:   i + 1,

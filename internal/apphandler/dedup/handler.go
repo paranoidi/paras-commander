@@ -545,7 +545,7 @@ func (h *Handler) CompareDirsFromSelection() (primary, secondary pathloc.Path, o
 	return primary, secondary, true
 }
 
-// EnsureSelectionVisible keeps both panes' cursor rows visible for visibleRows height.
+// EnsureSelectionVisible scrolls the focused pane's cursor row into view for visibleRows height.
 func (h *Handler) EnsureSelectionVisible(visibleRows int) {
 	h.ensureSelectionVisible(visibleRows)
 }
@@ -1214,10 +1214,16 @@ func (h *Handler) SetGroupFilter(fn func(g comparepkg.DedupGroup) bool, label st
 	h.ensureSelectionVisible(0)
 }
 
+// ensureSelectionVisible scrolls the focused pane by visibleRows (the caller measured that
+// pane's own rect); the other pane only clamps, since its height differs.
 func (h *Handler) ensureSelectionVisible(visibleRows int) {
 	st := &h.model.DedupView
-	st.Main.EnsureSelectionVisible(len(h.model.DedupList), visibleRows)
-	st.Copies.EnsureSelectionVisible(len(h.model.DedupCopiesList), visibleRows)
+	mainRows, copiesRows := visibleRows, 0
+	if st.FocusCopies {
+		mainRows, copiesRows = 0, visibleRows
+	}
+	st.Main.EnsureSelectionVisible(len(h.model.DedupList), mainRows)
+	st.Copies.EnsureSelectionVisible(len(h.model.DedupCopiesList), copiesRows)
 }
 
 // setMark adds/removes one file's delete mark, keeping count and reclaim bytes in sync.
