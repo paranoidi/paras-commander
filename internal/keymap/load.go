@@ -93,30 +93,31 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		return nil, fmt.Errorf("keymap: overlay map count %d != registry %d", len(overlayMaps), len(overlayRegistry))
 	}
 	return &Bundle{
-		Global:           gMap,
-		Jobs:             overlayMaps[0],
-		Commands:         overlayMaps[1],
-		Messages:         overlayMaps[2],
-		FilePreview:      overlayMaps[3],
-		DialogInput:      overlayMaps[4],
-		RenameDialog:     overlayMaps[5],
-		MkdirDialog:      overlayMaps[6],
-		BookmarkDialog:   overlayMaps[7],
-		FindDialog:       overlayMaps[8],
-		HistoryDialog:    overlayMaps[9],
-		FlattenDialog:    overlayMaps[10],
-		TransferDialog:   overlayMaps[11],
-		Compare:          overlayMaps[12],
-		Dedup:            overlayMaps[13],
-		Terminal:         overlayMaps[14],
-		MassRenameDialog: overlayMaps[15],
-		RunForEachDialog: overlayMaps[16],
-		PinDialog:        overlayMaps[17],
-		HelpDialog:       overlayMaps[18],
-		UserMenu:         overlayMaps[19],
-		LeaderKey:        leaderKey,
-		CopyMenuKey:      copyMenuKey,
-		PreviewMenuKey:   previewMenuKey,
+		Global:              gMap,
+		Jobs:                overlayMaps[0],
+		Commands:            overlayMaps[1],
+		Messages:            overlayMaps[2],
+		FilePreview:         overlayMaps[3],
+		DialogInput:         overlayMaps[4],
+		RenameDialog:        overlayMaps[5],
+		MkdirDialog:         overlayMaps[6],
+		BookmarkDialog:      overlayMaps[7],
+		FindDialog:          overlayMaps[8],
+		HistoryDialog:       overlayMaps[9],
+		FlattenDialog:       overlayMaps[10],
+		TransferDialog:      overlayMaps[11],
+		Compare:             overlayMaps[12],
+		Dedup:               overlayMaps[13],
+		Terminal:            overlayMaps[14],
+		MassRenameDialog:    overlayMaps[15],
+		RunForEachDialog:    overlayMaps[16],
+		PinDialog:           overlayMaps[17],
+		HelpDialog:          overlayMaps[18],
+		UserMenu:            overlayMaps[19],
+		CommandOutputDialog: overlayMaps[20],
+		LeaderKey:           leaderKey,
+		CopyMenuKey:         copyMenuKey,
+		PreviewMenuKey:      previewMenuKey,
 	}, nil
 }
 
@@ -306,19 +307,20 @@ func WriteDefaultStub(filename string) error {
 }
 
 type dialogShortcuts struct {
-	Input      map[string][]string `toml:"input"`
-	Rename     map[string][]string `toml:"rename"`
-	MassRename map[string][]string `toml:"mass_rename"`
-	Mkdir      map[string][]string `toml:"mkdir"`
-	Bookmark   map[string][]string `toml:"bookmark"`
-	Find       map[string][]string `toml:"find"`
-	History    map[string][]string `toml:"history"`
-	Flatten    map[string][]string `toml:"flatten"`
-	Transfer   map[string][]string `toml:"transfer"`
-	RunForEach map[string][]string `toml:"run_for_each"`
-	Pin        map[string][]string `toml:"pin"`
-	Help       map[string][]string `toml:"help"`
-	UserMenu   map[string][]string `toml:"user_menu"`
+	Input         map[string][]string `toml:"input"`
+	Rename        map[string][]string `toml:"rename"`
+	MassRename    map[string][]string `toml:"mass_rename"`
+	Mkdir         map[string][]string `toml:"mkdir"`
+	Bookmark      map[string][]string `toml:"bookmark"`
+	Find          map[string][]string `toml:"find"`
+	History       map[string][]string `toml:"history"`
+	Flatten       map[string][]string `toml:"flatten"`
+	Transfer      map[string][]string `toml:"transfer"`
+	RunForEach    map[string][]string `toml:"run_for_each"`
+	Pin           map[string][]string `toml:"pin"`
+	Help          map[string][]string `toml:"help"`
+	UserMenu      map[string][]string `toml:"user_menu"`
+	CommandOutput map[string][]string `toml:"command_output"`
 }
 
 // EncodeDefaultStub writes the canonical keybindings TOML: a leading
@@ -376,19 +378,20 @@ func EncodeDefaultStub(w io.Writer) error {
 		Dedup:       DefaultDedupOverlayKeys(),
 		Terminal:    DefaultTerminalOverlayKeys(),
 		Dialog: dialogShortcuts{
-			Input:      DefaultDialogInputOverlayKeys(),
-			Rename:     DefaultRenameDialogOverlayKeys(),
-			MassRename: DefaultMassRenameDialogOverlayKeys(),
-			Mkdir:      DefaultMkdirDialogOverlayKeys(),
-			Bookmark:   DefaultBookmarkDialogOverlayKeys(),
-			Find:       DefaultFindDialogOverlayKeys(),
-			History:    DefaultHistoryDialogOverlayKeys(),
-			Flatten:    DefaultFlattenDialogOverlayKeys(),
-			Transfer:   DefaultTransferDialogOverlayKeys(),
-			RunForEach: DefaultRunForEachDialogOverlayKeys(),
-			Pin:        DefaultPinDialogOverlayKeys(),
-			Help:       DefaultHelpDialogOverlayKeys(),
-			UserMenu:   DefaultUserMenuOverlayKeys(),
+			Input:         DefaultDialogInputOverlayKeys(),
+			Rename:        DefaultRenameDialogOverlayKeys(),
+			MassRename:    DefaultMassRenameDialogOverlayKeys(),
+			Mkdir:         DefaultMkdirDialogOverlayKeys(),
+			Bookmark:      DefaultBookmarkDialogOverlayKeys(),
+			Find:          DefaultFindDialogOverlayKeys(),
+			History:       DefaultHistoryDialogOverlayKeys(),
+			Flatten:       DefaultFlattenDialogOverlayKeys(),
+			Transfer:      DefaultTransferDialogOverlayKeys(),
+			RunForEach:    DefaultRunForEachDialogOverlayKeys(),
+			Pin:           DefaultPinDialogOverlayKeys(),
+			Help:          DefaultHelpDialogOverlayKeys(),
+			UserMenu:      DefaultUserMenuOverlayKeys(),
+			CommandOutput: DefaultCommandOutputDialogOverlayKeys(),
 		},
 	}
 	if err := toml.NewEncoder(w).Encode(payload); err != nil {

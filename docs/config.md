@@ -316,6 +316,14 @@ runs the dialog offers **Background** (also Esc, Alt+B), which closes the dialog
 there (its result and any failure banner appear as for `background = true`), and **Cancel** (Alt+C), which
 kills the command.
 
+When the command finishes, paths printed in the output (a whole line, or up to six whitespace-separated words, so names with spaces work, optionally
+quoted or followed by `:<line>` as in `grep -n`; relative paths are taken from the directory the command ran in)
+are highlighted if they exist. Down/Up (`j`/`k`) jump to the next/previous line with a path, Right/Left (`l`/`h`)
+step to the next/previous path, and Insert or Space (`command-output.toggle-selection` under
+`[dialog.command_output]` in `keybindings.toml`) toggle the highlighted path's selection in the active panel and
+move on. PgUp/PgDn/Home/End still scroll; output without paths scrolls with Up/Down. Only the first 5000
+candidates per output are checked.
+
 A `menu.toml` command clears the tags it used when it starts: `%t` clears the active panel's tags, `%T` the other panel's, and a command using only `%d`, `%f` and the like leaves them. `interactive` and `detach` entries clear only if they ran or started without error. `run_for_each` entries clear the active panel's tags.
 
 A `menu.toml` `run_for_each` entry may also set `pty = true` (or `pty = 1`) to run each invocation

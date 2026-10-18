@@ -166,6 +166,8 @@ const (
 	ActionFileMassRenameLoadPattern   = "file.mass-rename.load-pattern"
 	ActionFileMassRenameHistory       = "file.mass-rename.history"
 	ActionFileMassRenameDeletePattern = "file.mass-rename.delete-pattern"
+	// ActionCommandOutputToggleSelection is bound via [dialog.command-output], not [main].
+	ActionCommandOutputToggleSelection = "command-output.toggle-selection"
 	// ActionFileRunForEachHistory is bound via [dialog.run_for_each], not [main].
 	ActionFileRunForEachHistory = "file.run-for-each.history"
 	ActionFileDelete            = "file.delete"
@@ -465,6 +467,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileMassRenameHistory:        {},
 	ActionFileMassRenameDeletePattern:  {},
 	ActionFileRunForEachHistory:        {},
+	ActionCommandOutputToggleSelection: {},
 	ActionFileDelete:                   {},
 	ActionFileMkdir:                    {},
 	ActionFileMkdirOpenInOther:         {},

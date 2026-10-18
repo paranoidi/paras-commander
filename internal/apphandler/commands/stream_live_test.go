@@ -70,7 +70,7 @@ func TestOutputDialogFinalResultKeepsScroll(t *testing.T) {
 	h.host = &bannerHost{}
 	h.OpenRunningOutputDialog("row1", "T", false, func() {}, "", "")
 	h.model.CommandOutputDialog.Scroll, h.model.CommandOutputDialog.Follow = 3, false
-	res := OutputDialogResult("row1", "T", cmdrun.RunResult{Stdout: []byte("a\nb")}, "", "")
+	res := OutputDialogResult("row1", "T", cmdrun.RunResult{Stdout: []byte("a\nb")}, "", "", "")
 	h.ApplyWake(WakePayload{OpenOutputDialog: &res})
 	if st := h.model.CommandOutputDialog; st.Running || st.Scroll != 3 || st.Follow {
 		t.Fatalf("after final: %+v", st)

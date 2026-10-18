@@ -934,6 +934,10 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawDedupReturnDialog(screen, layout, model.DedupReturnDialog, model.DedupSnapshot.Root.String(), len(groups), wasted, styles, model.UserHomeDir)
 	}
 	if model.CommandOutputDialog.Open {
-		dialog.DrawCommandOutputDialog(screen, layout, model.CommandOutputDialog, styles, model.PanelScrollbar)
+		active := model.Primary
+		if model.ActivePanel == SecondaryPanel {
+			active = model.Secondary
+		}
+		dialog.DrawCommandOutputDialog(screen, layout, model.CommandOutputDialog, styles, model.PanelScrollbar, active.IsSelectedPath)
 	}
 }

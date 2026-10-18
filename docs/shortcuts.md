@@ -32,9 +32,11 @@ Examples: `C-f`, `M-v`, `S-F3`, `C-M-p`. Prefixes are case-insensitive (`c-f` = 
 
 ## Precedence
 
-`pc` builds a keymap **bundle**: a global `[main]` map plus overlay tables (`[jobs]`, `[commands]`, `[compare]`, `[dedup]`, `[terminal]`, `[dialog.input]`, `[dialog.transfer]`, and so on). While a view or dialog is focused, its overlay is consulted **before** `[main]`. Overlay tables only accept the action IDs that overlay is allowed to bind; see the generated stub header for the current list.
+`pc` builds a keymap **bundle**: a global `[main]` map plus overlay tables (`[jobs]`, `[commands]`, `[compare]`, `[dedup]`, `[terminal]`, `[dialog.input]`, `[dialog.transfer]`, `[dialog.command_output]`, and so on). While a view or dialog is focused, its overlay is consulted **before** `[main]`. Overlay tables only accept the action IDs that overlay is allowed to bind; see the generated stub header for the current list.
 
 The in-app Help view (**F1** or `?`) shows the bindings that apply to the current view. Inside Help, **F2** (configurable as `help.text-edit-keys` under `[dialog.help]`) switches to a page listing the text-input editing chords (`[dialog.input]`); **F2** again returns.
+
+In a finished user-menu output dialog, Up/Down/Left/Right (or `k`/`j`/`h`/`l`) move between detected paths and `command-output.toggle-selection` (Insert, Space; `[dialog.command_output]`) selects the highlighted path in the active panel; see the user menu section of [config.md](config.md).
 
 ## Generate the default file
 

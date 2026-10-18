@@ -665,15 +665,16 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		ConfigDir: resolvedPaths.ConfigDir,
 	})
 	app.commandsCtrl = commandsctrl.New(commandsctrl.Deps{
-		Host:         commandsHost{appShellHost: appShellHost{app: app}},
-		Screen:       screen,
-		Model:        &app.model,
-		Keys:         keys.Global,
-		KeysCommands: keys.Commands,
-		Mu:           &app.commandsMu,
-		Ctx:          app.commandsCtx,
-		WorkPools:    app.workPools,
-		ChildEnv:     cmdrun.ColorEnv(cfg.Commands.ForceColor),
+		Host:                    commandsHost{appShellHost: appShellHost{app: app}},
+		Screen:                  screen,
+		Model:                   &app.model,
+		Keys:                    keys.Global,
+		KeysCommands:            keys.Commands,
+		KeysCommandOutputDialog: keys.CommandOutputDialog,
+		Mu:                      &app.commandsMu,
+		Ctx:                     app.commandsCtx,
+		WorkPools:               app.workPools,
+		ChildEnv:                cmdrun.ColorEnv(cfg.Commands.ForceColor),
 	})
 	app.compareCtrl = comparectrl.New(comparectrl.Deps{
 		Host:        compareHost{appShellHost: appShellHost{app: app}},

@@ -95,7 +95,7 @@ func CommandOutputDialogListH(layout Layout, state CommandOutputDialogState) int
 }
 
 // DrawCommandOutputDialog renders the command output modal overlay.
-func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOutputDialogState, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
+func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOutputDialogState, styles theme.Theme, scrollbarStyle uiscrollbar.Style, isSelected func(string) bool) {
 	if !state.Open {
 		return
 	}
@@ -135,7 +135,30 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 		}
 		// ponytail: per-line SGR parse; a color left open across \n does not carry to the next
 		// line. Parse the whole output once into cell rows if a tool needs that.
-		previewpanel.DrawCells(screen, contentX, y, contentW, previewpanel.AnsiStyledCells(line, lineStyle), lineStyle)
+		cells := previewpanel.AnsiStyledCells(line, lineStyle)
+		for i, m := range state.Paths {
+			if m.Line != scroll+row {
+				continue
+			}
+			st := styles.DialogOptionInactive
+			sel := isSelected != nil && isSelected(m.Path)
+			switch {
+			case i == state.PathCursor && sel:
+				st = styles.DialogOptionActiveSelected
+			case i == state.PathCursor:
+				st = styles.DialogOptionActive
+			case sel:
+				st = styles.DialogOptionSelected
+			}
+			for c := m.Start; c < m.End && c < len(cells); c++ {
+				cells[c].St = styles.DialogTextSelectStyle(st)
+			}
+			if m.End >= len(cells) {
+				// DrawCells pads with the last cell's style; keep the highlight on the text only.
+				cells = append(cells, previewpanel.AnsiCell{R: ' ', St: lineStyle})
+			}
+		}
+		previewpanel.DrawCells(screen, contentX, y, contentW, cells, lineStyle)
 	}
 	draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, listH, len(state.Lines), scroll, scrollbarStyle, borderStyle, styles)
 

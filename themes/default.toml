@@ -215,6 +215,8 @@ input.nomatch = { fg = "bright_red", bold = true }
 frame = { fg = "white" }
 surface = { fg = "white", bg = "bright_black" }
 text = { fg = "white" }
+# background-only highlight for selectable text spans inside dialogs (e.g. detected paths); falls back to surface bg
+text_select = { bg = "black" }
 title = { bold = true }
 # bg matters for the path-picker trailing icon when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "white", bg = "black", bold = true }

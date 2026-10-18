@@ -230,10 +230,12 @@ type Theme struct {
 	FuzzyHighlight       tcell.Style
 	FuzzyHighlightCursor tcell.Style
 
-	DialogFrame                    tcell.Style
-	DialogTitle                    tcell.Style
-	DialogText                     tcell.Style
-	DialogSurface                  tcell.Style
+	DialogFrame   tcell.Style
+	DialogTitle   tcell.Style
+	DialogText    tcell.Style
+	DialogSurface tcell.Style
+	// DialogTextSelect is the optional background-only highlight for selectable text spans (dialog.text_select).
+	DialogTextSelect               tcell.Style
 	DialogAccent                   tcell.Style
 	DialogSearchIcon               tcell.Style
 	DialogInputActive              tcell.Style
@@ -395,6 +397,16 @@ func (t Theme) DialogOptionRowStyle(focused, selected bool) tcell.Style {
 	default:
 		return mergeForegroundOnSurface(t.DialogOptionInactive, t.DialogSurface)
 	}
+}
+
+// DialogTextSelectStyle returns fg's foreground and attributes on the dialog.text_select
+// background, falling back to the dialog.surface background when the theme omits the key.
+func (t Theme) DialogTextSelectStyle(fg tcell.Style) tcell.Style {
+	bg := t.DialogTextSelect
+	if _, b, _ := bg.Decompose(); b == tcell.ColorDefault {
+		bg = t.DialogSurface
+	}
+	return mergeForegroundOnSurface(fg, bg)
 }
 
 // DialogOptionInvalidStyle returns the resolved style for invalid/missing option rows.
@@ -1204,7 +1216,7 @@ var optionalStyleKeys = func() []string {
 		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
-		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected")
+		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select")
 	return keys
 }()
 
@@ -1513,6 +1525,10 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	dialogTextSelect, err := optionalStyle(specs, palette, "dialog.text_select", tcell.Style{})
+	if err != nil {
+		return Theme{}, err
+	}
 	panelRowMarkOtherMatch, err := optionalStyle(specs, palette, "panel.row.mark.other_match", tcell.StyleDefault.Foreground(tcell.ColorGray))
 	if err != nil {
 		return Theme{}, err
@@ -1710,6 +1726,7 @@ func parse(data []byte) (Theme, error) {
 		DialogTitle:                    styles["dialog.title"],
 		DialogText:                     styles["dialog.text"],
 		DialogSurface:                  styles["dialog.surface"],
+		DialogTextSelect:               dialogTextSelect,
 		DialogAccent:                   styles["dialog.accent"],
 		DialogSearchIcon:               styles["dialog.search_icon"],
 		DialogInputActive:              styles["dialog.input.active"],

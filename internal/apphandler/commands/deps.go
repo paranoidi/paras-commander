@@ -22,6 +22,8 @@ type Deps struct {
 	// Keys is the global action keymap; KeysCommands is the Commands-view overlay (may be nil).
 	Keys         *keymap.Map
 	KeysCommands *keymap.Map
+	// KeysCommandOutputDialog is the [dialog.command_output] overlay (path-selection toggle).
+	KeysCommandOutputDialog *keymap.Map
 	// Mu is the App's shared async-model-mutation lock (guards CommandsList and other model
 	// fields written from background goroutines). render() copies the whole App.model under
 	// this same lock, so CommandsList mutations here must use the identical mutex App uses
@@ -38,15 +40,16 @@ type Deps struct {
 
 // Handler owns the Commands view, command-output dialog, and run-for-each dialog/backend.
 type Handler struct {
-	host         Host
-	screen       tcell.Screen
-	model        *ui.Model
-	keys         *keymap.Map
-	keysCommands *keymap.Map
-	mu           *sync.RWMutex
-	ctx          context.Context
-	workPools    *workpool.Registry
-	childEnv     []string
+	host                    Host
+	screen                  tcell.Screen
+	model                   *ui.Model
+	keys                    *keymap.Map
+	keysCommands            *keymap.Map
+	keysCommandOutputDialog *keymap.Map
+	mu                      *sync.RWMutex
+	ctx                     context.Context
+	workPools               *workpool.Registry
+	childEnv                []string
 
 	// batchesInflight counts in-flight command batches (run-for-each, user-menu, file-execute)
 	// started via Deps.Ctx-scoped goroutines. HasRunning reports whether any is still running.
@@ -97,17 +100,18 @@ func New(d Deps) *Handler {
 	sem := make(chan struct{}, 1)
 	sem <- struct{}{}
 	return &Handler{
-		host:          d.Host,
-		screen:        d.Screen,
-		model:         d.Model,
-		keys:          d.Keys,
-		keysCommands:  d.KeysCommands,
-		mu:            d.Mu,
-		ctx:           d.Ctx,
-		workPools:     d.WorkPools,
-		childEnv:      d.ChildEnv,
-		ptySessions:   make(map[int]*entryPTYSession),
-		ptyForeground: sem,
+		host:                    d.Host,
+		screen:                  d.Screen,
+		model:                   d.Model,
+		keys:                    d.Keys,
+		keysCommands:            d.KeysCommands,
+		keysCommandOutputDialog: d.KeysCommandOutputDialog,
+		mu:                      d.Mu,
+		ctx:                     d.Ctx,
+		workPools:               d.WorkPools,
+		childEnv:                d.ChildEnv,
+		ptySessions:             make(map[int]*entryPTYSession),
+		ptyForeground:           sem,
 	}
 }
 

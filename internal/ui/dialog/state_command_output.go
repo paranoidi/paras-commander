@@ -21,4 +21,17 @@ type CommandOutputDialogState struct {
 	RunID   string
 	Cancel  context.CancelFunc
 	Focus   int
+
+	// Paths are filesystem paths detected in Lines when the run finished (nil while Running);
+	// PathCursor indexes the highlighted one. WorkDir is the run's directory.
+	Paths      []OutputPathMatch
+	PathCursor int
+	WorkDir    string
+}
+
+// OutputPathMatch is a path found in output line Line, spanning cells [Start, End) of the
+// ANSI-stripped line. Path is absolute and cleaned.
+type OutputPathMatch struct {
+	Line, Start, End int
+	Path             string
 }

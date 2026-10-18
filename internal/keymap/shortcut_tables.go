@@ -2,47 +2,49 @@ package keymap
 
 // TOML table names for keybindings.toml shortcut sections.
 const (
-	MainShortcutsTable             = "main"
-	JobsShortcutsTable             = "jobs"
-	CommandsShortcutsTable         = "commands"
-	MessagesShortcutsTable         = "messages"
-	FilePreviewShortcutsTable      = "preview"
-	DialogShortcutsGroup           = "dialog"
-	DialogInputShortcutsTable      = "dialog.input"
-	DialogRenameShortcutsTable     = "dialog.rename"
-	DialogMassRenameShortcutsTable = "dialog.mass_rename"
-	DialogRunForEachShortcutsTable = "dialog.run_for_each"
-	DialogMkdirShortcutsTable      = "dialog.mkdir"
-	DialogBookmarkShortcutsTable   = "dialog.bookmark"
-	DialogFindShortcutsTable       = "dialog.find"
-	DialogHistoryShortcutsTable    = "dialog.history"
-	DialogPinShortcutsTable        = "dialog.pin"
-	DialogHelpShortcutsTable       = "dialog.help"
-	DialogUserMenuShortcutsTable   = "dialog.user_menu"
-	DialogFlattenShortcutsTable    = "dialog.flatten"
-	DialogTransferShortcutsTable   = "dialog.transfer"
-	CompareShortcutsTable          = "compare"
-	DedupShortcutsTable            = "dedup"
-	TerminalShortcutsTable         = "terminal"
-	LeaderKeyShortcutsTable        = "leader_key"
-	CopyMenuShortcutsTable         = "copy_menu"
-	PreviewMenuShortcutsTable      = "preview_menu"
+	MainShortcutsTable                = "main"
+	JobsShortcutsTable                = "jobs"
+	CommandsShortcutsTable            = "commands"
+	MessagesShortcutsTable            = "messages"
+	FilePreviewShortcutsTable         = "preview"
+	DialogShortcutsGroup              = "dialog"
+	DialogInputShortcutsTable         = "dialog.input"
+	DialogRenameShortcutsTable        = "dialog.rename"
+	DialogMassRenameShortcutsTable    = "dialog.mass_rename"
+	DialogRunForEachShortcutsTable    = "dialog.run_for_each"
+	DialogMkdirShortcutsTable         = "dialog.mkdir"
+	DialogBookmarkShortcutsTable      = "dialog.bookmark"
+	DialogFindShortcutsTable          = "dialog.find"
+	DialogHistoryShortcutsTable       = "dialog.history"
+	DialogPinShortcutsTable           = "dialog.pin"
+	DialogCommandOutputShortcutsTable = "dialog.command_output"
+	DialogHelpShortcutsTable          = "dialog.help"
+	DialogUserMenuShortcutsTable      = "dialog.user_menu"
+	DialogFlattenShortcutsTable       = "dialog.flatten"
+	DialogTransferShortcutsTable      = "dialog.transfer"
+	CompareShortcutsTable             = "compare"
+	DedupShortcutsTable               = "dedup"
+	TerminalShortcutsTable            = "terminal"
+	LeaderKeyShortcutsTable           = "leader_key"
+	CopyMenuShortcutsTable            = "copy_menu"
+	PreviewMenuShortcutsTable         = "preview_menu"
 )
 
 var dialogShortcutSubtables = map[string]struct{}{
-	"input":        {},
-	"rename":       {},
-	"mass_rename":  {},
-	"mkdir":        {},
-	"bookmark":     {},
-	"find":         {},
-	"history":      {},
-	"flatten":      {},
-	"transfer":     {},
-	"run_for_each": {},
-	"pin":          {},
-	"help":         {},
-	"user_menu":    {},
+	"input":          {},
+	"rename":         {},
+	"mass_rename":    {},
+	"mkdir":          {},
+	"bookmark":       {},
+	"find":           {},
+	"history":        {},
+	"flatten":        {},
+	"transfer":       {},
+	"run_for_each":   {},
+	"pin":            {},
+	"command_output": {},
+	"help":           {},
+	"user_menu":      {},
 }
 
 // AllShortcutTablePaths returns every shortcut table path (top-level and dialog.*).
@@ -64,6 +66,7 @@ func AllShortcutTablePaths() []string {
 		DialogTransferShortcutsTable,
 		DialogRunForEachShortcutsTable,
 		DialogPinShortcutsTable,
+		DialogCommandOutputShortcutsTable,
 		DialogHelpShortcutsTable,
 		DialogUserMenuShortcutsTable,
 		CompareShortcutsTable,

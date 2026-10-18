@@ -7,6 +7,8 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -43,7 +45,14 @@ func (h *Handler) closeOutputDialogKeepRunning() {
 // HandleOutputDialogKey handles key events while the command-output dialog is open.
 func (h *Handler) HandleOutputDialogKey(event *tcell.EventKey) {
 	st := &h.model.CommandOutputDialog
-	if h.scrollOutputDialog(st, event.Key()) {
+	scrollEv := event
+	if !st.Running {
+		scrollEv = keymap.RemapViMotionKey(event) // hjkl: no text input here
+		if len(st.Paths) > 0 && h.handlePathKey(st, event, scrollEv.Key()) {
+			return
+		}
+	}
+	if h.scrollOutputDialog(st, scrollEv.Key()) {
 		return
 	}
 	if st.Running {
@@ -77,7 +86,7 @@ func (h *Handler) HandleOutputDialogKey(event *tcell.EventKey) {
 }
 
 // OutputDialogResult builds the finished-state output dialog for a completed run.
-func OutputDialogResult(runID, title string, res cmdrun.RunResult, prefW, prefH string) dialog.CommandOutputDialogState {
+func OutputDialogResult(runID, title string, res cmdrun.RunResult, prefW, prefH, workDir string) dialog.CommandOutputDialogState {
 	dialogTitle := strings.TrimSpace(title)
 	stderr := string(res.Stderr)
 	if res.LaunchErr != nil {
@@ -89,13 +98,16 @@ func OutputDialogResult(runID, title string, res cmdrun.RunResult, prefW, prefH 
 			dialogTitle = fmt.Sprintf("exit %d", res.ExitCode)
 		}
 	}
+	lines := outputDialogLines(string(res.Stdout), stderr)
 	return dialog.CommandOutputDialogState{
 		Open:       true,
 		RunID:      runID,
 		Title:      dialogTitle,
-		Lines:      outputDialogLines(string(res.Stdout), stderr),
+		Lines:      lines,
 		PrefWidth:  prefW,
 		PrefHeight: prefH,
+		Paths:      detectOutputPaths(lines, workDir),
+		WorkDir:    workDir,
 	}
 }
 
@@ -111,6 +123,51 @@ func outputDialogLines(stdout, stderr string) []string {
 		lines = append(lines, strings.Split(stderr, "\n")...)
 	}
 	return lines
+}
+
+// handlePathKey moves the path cursor (Up/Down by line, Left/Right by match; key is the
+// vi-remapped key) or toggles the highlighted path's selection in the active panel. Returns
+// false for any other key.
+func (h *Handler) handlePathKey(st *dialog.CommandOutputDialogState, event *tcell.EventKey, key tcell.Key) bool {
+	n := len(st.Paths)
+	cur := min(st.PathCursor, n-1)
+	switch key {
+	case tcell.KeyDown:
+		cur = nextPathLine(st.Paths, cur)
+	case tcell.KeyUp:
+		cur = prevPathLine(st.Paths, cur)
+	case tcell.KeyRight:
+		cur = min(cur+1, n-1)
+	case tcell.KeyLeft:
+		cur = max(cur-1, 0)
+	default:
+		id, ok := h.keysCommandOutputDialog.Lookup(event)
+		if !ok || id != keymap.ActionCommandOutputToggleSelection {
+			return false
+		}
+		if _, conflicts := h.host.ActivePanel().TogglePathSelection(st.Paths[cur].Path); conflicts {
+			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+		}
+		cur = min(cur+1, n-1)
+	}
+	st.PathCursor = cur
+	h.ensurePathVisible(st)
+	return true
+}
+
+// ensurePathVisible scrolls so the cursor match's line is on screen and clears Follow.
+func (h *Handler) ensurePathVisible(st *dialog.CommandOutputDialogState) {
+	visH := h.outputDialogVisH(*st)
+	if st.Follow {
+		st.Scroll = max(0, len(st.Lines)-visH)
+		st.Follow = false
+	}
+	line := st.Paths[st.PathCursor].Line
+	if line < st.Scroll {
+		st.Scroll = line
+	} else if line >= st.Scroll+visH {
+		st.Scroll = line - visH + 1
+	}
 }
 
 // outputDialogVisH returns the dialog's visible row count (at least 1).

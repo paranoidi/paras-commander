@@ -397,7 +397,7 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, rowID string, arg
 		p := commandsctrl.WakePayload{RefreshBrowserPanel: true}
 		if entry.Dialog {
 			// Applied only if the dialog still shows this run; otherwise it is backgrounded.
-			out := commandsctrl.OutputDialogResult(rowID, title, res, entry.DialogWidth, entry.DialogHeight)
+			out := commandsctrl.OutputDialogResult(rowID, title, res, entry.DialogWidth, entry.DialogHeight, workDir)
 			p.OpenOutputDialog = &out
 		}
 		if log, banner, urg, ok := backgroundRunNotify("User menu: "+backgroundRunTitle(title), res); ok {

@@ -70,6 +70,13 @@ func (h *Handler) ApplyWake(p WakePayload) {
 			scroll, follow := cur.Scroll, cur.Follow
 			*cur = *p.OpenOutputDialog
 			cur.Scroll, cur.Follow = scroll, follow
+			if len(cur.Paths) > 0 {
+				if follow {
+					cur.Scroll = 0
+				}
+				cur.Follow = false
+				h.ensurePathVisible(cur)
+			}
 			p.NotifyLog, p.NotifyBanner, p.RefreshBrowserPanel = "", "", false
 		}
 	}

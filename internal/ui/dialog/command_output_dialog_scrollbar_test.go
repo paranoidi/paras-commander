@@ -28,7 +28,7 @@ func TestCommandOutputDialogScrollbar(t *testing.T) {
 			for i := range tc.lines {
 				state.Lines = append(state.Lines, words[i%len(words)])
 			}
-			DrawCommandOutputDialog(screen, layout, state, theme.Default(), uiscrollbar.StyleBar)
+			DrawCommandOutputDialog(screen, layout, state, theme.Default(), uiscrollbar.StyleBar, nil)
 			m, ok := ComputeCommandOutputDialogMetrics(layout, state)
 			if !ok {
 				t.Fatal("metrics")
@@ -56,7 +56,7 @@ func TestCommandOutputDialogRunningButtons(t *testing.T) {
 	screen.SetSize(80, 24)
 	layout := Layout{Width: 80, Height: 24}
 	state := CommandOutputDialogState{Open: true, Running: true, Title: "Output"}
-	DrawCommandOutputDialog(screen, layout, state, theme.Default(), uiscrollbar.StyleBar)
+	DrawCommandOutputDialog(screen, layout, state, theme.Default(), uiscrollbar.StyleBar, nil)
 	m, _ := ComputeCommandOutputDialogMetrics(layout, state)
 	row := ""
 	for x := m.Rect.X; x < m.Rect.X+m.Rect.Width; x++ {
@@ -77,7 +77,7 @@ func TestCommandOutputDialogRendersAnsiColors(t *testing.T) {
 	screen.SetSize(80, 24)
 	layout := Layout{Width: 80, Height: 24}
 	state := CommandOutputDialogState{Open: true, Title: "Output", Lines: []string{"\x1b[32mgreen\x1b[0m plain"}}
-	DrawCommandOutputDialog(screen, layout, state, theme.Default(), uiscrollbar.StyleBar)
+	DrawCommandOutputDialog(screen, layout, state, theme.Default(), uiscrollbar.StyleBar, nil)
 	m, _ := ComputeCommandOutputDialogMetrics(layout, state)
 	x, y := m.Rect.X+2, m.Rect.Y+1
 	ch, style, _ := screen.Get(x, y)

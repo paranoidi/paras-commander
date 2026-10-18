@@ -1165,6 +1165,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"find dialog", "containing", "directories", "parent", "convert"},
 		},
 		{
+			ID:           ActionCommandOutputToggleSelection,
+			Title:        "Toggle path selection",
+			Section:      "Commands",
+			DefaultKeys:  nil, // overlay: DefaultCommandOutputDialogOverlayKeys
+			PreferredKey: "Space",
+			Keywords:     []string{"command output", "dialog", "path", "select", "mark"},
+		},
+		{
 			ID:           ActionPinView,
 			Title:        "View",
 			Section:      "Pin",

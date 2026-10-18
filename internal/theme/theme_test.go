@@ -585,3 +585,31 @@ func TestPanelBottomIndicatorUsesDedicatedGitignoreAndDotfilesStyles(t *testing.
 func testTheme(t *testing.T, name string, skip map[string]bool, overrides map[string]string) []byte {
 	return TestThemeBytesNamed(t, name, skip, overrides)
 }
+
+func TestDialogTextSelectStyleFallsBackToSurface(t *testing.T) {
+	data := testTheme(t, "textselectfallback", nil, map[string]string{
+		"dialog.surface": `{ fg = "white", bg = "yellow" }`,
+	})
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, surfaceBG, _ := th.DialogSurface.Decompose()
+	fg, bg, attrs := th.DialogTextSelectStyle(tcell.StyleDefault.Foreground(tcell.ColorRed).Bold(true)).Decompose()
+	if bg != surfaceBG || fg != tcell.ColorRed || attrs&tcell.AttrBold == 0 {
+		t.Fatalf("fallback style fg=%v bg=%v attrs=%v", fg, bg, attrs)
+	}
+
+	data = testTheme(t, "textselectset", nil, map[string]string{
+		"dialog.surface":     `{ fg = "white", bg = "yellow" }`,
+		"dialog.text_select": `{ bg = "black" }`,
+	})
+	th, err = parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, want, _ := th.DialogTextSelect.Decompose()
+	if _, bg, _ = th.DialogTextSelectStyle(tcell.StyleDefault.Foreground(tcell.ColorRed)).Decompose(); bg != want || bg == surfaceBG {
+		t.Fatalf("bg = %v, want %v", bg, want)
+	}
+}

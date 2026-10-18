@@ -7,20 +7,22 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestOutputDialogResultKeepsStderr(t *testing.T) {
 	res := cmdrun.RunResult{Stdout: []byte("out\n"), Stderr: []byte("err\n"), ExitCode: 2}
-	st := OutputDialogResult("id", "Show", res, "", "")
+	st := OutputDialogResult("id", "Show", res, "", "", "")
 	if st.Title != "Show (exit 2)" || st.Running || !st.Open || st.RunID != "id" {
 		t.Fatalf("state: %+v", st)
 	}
 	if want := []string{"out", "--- stderr ---", "err"}; !slices.Equal(st.Lines, want) {
 		t.Fatalf("Lines = %#v, want %#v", st.Lines, want)
 	}
-	st = OutputDialogResult("id", "Show", cmdrun.RunResult{LaunchErr: errors.New("boom")}, "", "")
+	st = OutputDialogResult("id", "Show", cmdrun.RunResult{LaunchErr: errors.New("boom")}, "", "", "")
 	if want := []string{"--- stderr ---", "boom"}; !slices.Equal(st.Lines, want) {
 		t.Fatalf("launch err Lines = %#v", st.Lines)
 	}
@@ -63,7 +65,7 @@ func TestApplyWakeStartedClearsQueued(t *testing.T) {
 
 func TestApplyWakeFillsMatchingDialogAndSuppressesBanner(t *testing.T) {
 	h, bh, canceled := runningHandler(t)
-	res := OutputDialogResult("row1", "T", cmdrun.RunResult{Stdout: []byte("x")}, "", "")
+	res := OutputDialogResult("row1", "T", cmdrun.RunResult{Stdout: []byte("x")}, "", "", "")
 	h.ApplyWake(WakePayload{OpenOutputDialog: &res, NotifyLog: "l", NotifyBanner: "b", RefreshBrowserPanel: true})
 	if got := h.model.CommandOutputDialog; got.Running || !slices.Equal(got.Lines, []string{"x"}) {
 		t.Fatalf("after fill: %+v", got)
@@ -76,14 +78,14 @@ func TestApplyWakeFillsMatchingDialogAndSuppressesBanner(t *testing.T) {
 func TestApplyWakeBackgroundedAppliesBanner(t *testing.T) {
 	h, bh, canceled := runningHandler(t)
 	h.HandleOutputDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, 0))
-	res := OutputDialogResult("row1", "T", cmdrun.RunResult{}, "", "")
+	res := OutputDialogResult("row1", "T", cmdrun.RunResult{}, "", "", "")
 	h.ApplyWake(WakePayload{OpenOutputDialog: &res, NotifyLog: "l", NotifyBanner: "b"})
 	if h.model.CommandOutputDialog.Open || bh.banners != 1 || *canceled {
 		t.Fatalf("open=%v banners=%d canceled=%v", h.model.CommandOutputDialog.Open, bh.banners, *canceled)
 	}
 
 	h, bh, _ = runningHandler(t)
-	other := OutputDialogResult("other", "T", cmdrun.RunResult{}, "", "")
+	other := OutputDialogResult("other", "T", cmdrun.RunResult{}, "", "", "")
 	h.ApplyWake(WakePayload{OpenOutputDialog: &other, NotifyLog: "l", NotifyBanner: "b"})
 	if !h.model.CommandOutputDialog.Running || bh.banners != 1 {
 		t.Fatalf("non-matching: %+v banners=%d", h.model.CommandOutputDialog, bh.banners)
@@ -131,4 +133,91 @@ func newOutputDialogHandler(t *testing.T) (*Handler, tcell.SimulationScreen) {
 		screen: screen,
 		model:  &ui.Model{},
 	}, screen
+}
+
+type pathKeysHost struct {
+	layoutHost
+	pnl *panel.State
+}
+
+func (p *pathKeysHost) ActivePanel() *panel.State { return p.pnl }
+
+func pathDialogHandler(t *testing.T, lines []string, paths []dialog.OutputPathMatch) (*Handler, *pathKeysHost) {
+	t.Helper()
+	h, _ := newOutputDialogHandler(t)
+	keys, err := keymap.Build(keymap.DefaultCommandOutputDialogOverlayKeys())
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.keysCommandOutputDialog = keys
+	pnl, err := panel.New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ph := &pathKeysHost{pnl: &pnl}
+	h.host = ph
+	h.model.CommandOutputDialog = dialog.CommandOutputDialogState{Open: true, Lines: lines, Paths: paths}
+	return h, ph
+}
+
+func runeKey(r rune) *tcell.EventKey { return tcell.NewEventKey(tcell.KeyRune, r, 0) }
+
+func TestOutputDialogPathKeys(t *testing.T) {
+	lines := manyLines(60)
+	paths := []dialog.OutputPathMatch{
+		{Line: 2, Start: 0, End: 4, Path: "/x/amber"},
+		{Line: 2, Start: 5, End: 9, Path: "/x/birch"},
+		{Line: 40, Start: 0, End: 4, Path: "/x/cedar"},
+	}
+	h, ph := pathDialogHandler(t, lines, paths)
+	st := &h.model.CommandOutputDialog
+	h.HandleOutputDialogKey(runeKey('j'))
+	if st.PathCursor != 2 {
+		t.Fatalf("j: cursor=%d", st.PathCursor)
+	}
+	visH := h.outputDialogVisH(*st)
+	if line := 40; st.Scroll > line || line >= st.Scroll+visH || st.Follow {
+		t.Fatalf("j: scroll=%d visH=%d follow=%v", st.Scroll, visH, st.Follow)
+	}
+	h.HandleOutputDialogKey(runeKey('k'))
+	if st.PathCursor != 0 || st.Scroll > 2 {
+		t.Fatalf("k: cursor=%d scroll=%d", st.PathCursor, st.Scroll)
+	}
+	h.HandleOutputDialogKey(runeKey('l'))
+	h.HandleOutputDialogKey(runeKey('l'))
+	h.HandleOutputDialogKey(runeKey('l'))
+	if st.PathCursor != 2 {
+		t.Fatalf("l x3 (clamped): cursor=%d", st.PathCursor)
+	}
+	h.HandleOutputDialogKey(runeKey('h'))
+	if st.PathCursor != 1 {
+		t.Fatalf("h: cursor=%d", st.PathCursor)
+	}
+
+	h.HandleOutputDialogKey(runeKey(' '))
+	if !ph.pnl.IsSelectedPath("/x/birch") || st.PathCursor != 2 {
+		t.Fatalf("space: selected=%v cursor=%d", ph.pnl.IsSelectedPath("/x/birch"), st.PathCursor)
+	}
+	h.HandleOutputDialogKey(key(tcell.KeyLeft))
+	h.HandleOutputDialogKey(key(tcell.KeyInsert))
+	if ph.pnl.IsSelectedPath("/x/birch") {
+		t.Fatal("insert did not toggle selection off")
+	}
+	if !st.Open {
+		t.Fatal("dialog closed")
+	}
+}
+
+func TestOutputDialogNoPathsStillScrolls(t *testing.T) {
+	h, _ := pathDialogHandler(t, manyLines(60), nil)
+	st := &h.model.CommandOutputDialog
+	h.HandleOutputDialogKey(key(tcell.KeyDown))
+	h.HandleOutputDialogKey(runeKey('j'))
+	if st.Scroll != 2 {
+		t.Fatalf("scroll = %d, want 2", st.Scroll)
+	}
+	h.HandleOutputDialogKey(key(tcell.KeyUp))
+	if st.Scroll != 1 {
+		t.Fatalf("scroll = %d, want 1", st.Scroll)
+	}
 }
