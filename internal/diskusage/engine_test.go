@@ -676,3 +676,23 @@ func TestRenamePathsMovesSubtreeAndSwaps(t *testing.T) {
 		t.Fatalf("swapped cedar = %d want 7", got)
 	}
 }
+
+func TestRenamePathsDropsStaleDestination(t *testing.T) {
+	e := New()
+	e.SetSize("/r/maple", 2, 10)
+	e.SetSize("/r/maple/leaf", 1, 4)
+	e.SetSize("/r/birch", 3, 30)
+	e.SetSize("/r/birch/leaf", 1, 9)
+	e.SetSize("/r/birch/acorn", 2, 21)
+	e.RenamePaths([][2]string{{"/r/maple", "/r/birch"}})
+	for p, want := range map[string]int64{"/r/birch": 10, "/r/birch/leaf": 4} {
+		if got, ok := e.Size(p); !ok || got != want {
+			t.Fatalf("Size(%s) = %d ok=%v want %d", p, got, ok, want)
+		}
+	}
+	for _, p := range []string{"/r/birch/acorn", "/r/maple", "/r/maple/leaf"} {
+		if _, ok := e.Size(p); ok {
+			t.Fatalf("%s still cached", p)
+		}
+	}
+}

@@ -384,44 +384,61 @@ func (e *Engine) InvalidateSubtree(rootAbs string) {
 }
 
 // RenamePaths moves cached sizes, file counts and exclusion marks of each pair's old path and
-// every descendant to the matching new path. Moves are collected before any is written, so swaps
+// every descendant to the matching new path, dropping stale keys already under a new path (a move
+// that replaced an existing tree). Moves are collected before any is written, so swaps
 // (a->b, b->a) work. O(cache size × path depth), like InvalidateSubtree's full sweep.
 func (e *Engine) RenamePaths(pairs [][2]string) {
 	if e == nil || len(pairs) == 0 {
 		return
 	}
 	renames := make(map[string]string, len(pairs))
+	targets := make(map[string]string, len(pairs))
 	for _, p := range pairs {
-		renames[filepath.Clean(p[0])] = filepath.Clean(p[1])
+		from, to := filepath.Clean(p[0]), filepath.Clean(p[1])
+		renames[from] = to
+		targets[to] = from
 	}
-	// rebase walks k's ancestors (cache keys are clean) to the nearest renamed one.
 	rebase := func(k string) (string, bool) {
-		for p := k; ; {
-			if to, ok := renames[p]; ok {
-				return to + k[len(p):], true
-			}
-			parent := filepath.Dir(p)
-			if parent == p {
-				return "", false
-			}
-			p = parent
+		if p, ok := nearestAncestor(k, renames); ok {
+			return renames[p] + k[len(p):], true
 		}
+		return "", false
+	}
+	stale := func(k string) bool {
+		_, ok := nearestAncestor(k, targets)
+		return ok
 	}
 	e.mu.Lock()
-	rebaseKeys(e.cache, rebase)
-	rebaseKeys(e.fileCounts, rebase)
-	rebaseKeys(e.excluded, rebase)
+	rebaseKeys(e.cache, rebase, stale)
+	rebaseKeys(e.fileCounts, rebase, stale)
+	rebaseKeys(e.excluded, rebase, stale)
 	e.cacheVersion.Add(1)
 	e.mu.Unlock()
 	e.poke()
 }
 
-// rebaseKeys rewrites every key of m that rebase maps to a new key.
-func rebaseKeys[V any](m map[string]V, rebase func(string) (string, bool)) {
+// nearestAncestor returns k or the closest of its ancestors (cache keys are clean) present in m.
+func nearestAncestor(k string, m map[string]string) (string, bool) {
+	for p := k; ; {
+		if _, ok := m[p]; ok {
+			return p, true
+		}
+		parent := filepath.Dir(p)
+		if parent == p {
+			return "", false
+		}
+		p = parent
+	}
+}
+
+// rebaseKeys rewrites every key of m that rebase maps to a new key and deletes the stale rest.
+func rebaseKeys[V any](m map[string]V, rebase func(string) (string, bool), stale func(string) bool) {
 	moved := map[string]V{}
 	for k, v := range m {
 		if nk, ok := rebase(k); ok {
 			moved[nk] = v
+			delete(m, k)
+		} else if stale(k) {
 			delete(m, k)
 		}
 	}
