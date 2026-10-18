@@ -184,7 +184,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	}
 	if a.model.FindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog), rest...)
+		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.FindDialog.JumpMode), rest...)
 		return footerWithEscClose(rest)
 	}
 	if a.model.HistoryDialog.Open {
@@ -441,10 +441,24 @@ func footerWithEscClose(rest []menu.FunctionKey) []menu.FunctionKey {
 	return out
 }
 
-func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
+func findDialogOverlayFooterKeys(keys *keymap.Map, jumpMode bool) []menu.FunctionKey {
 	if keys == nil {
 		return nil
 	}
+	var out []menu.FunctionKey
+	if !jumpMode {
+		out = findDialogMarkingFooterKeys(keys)
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInPrimary); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInSecondary); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ►"})
+	}
+	return out
+}
+
+func findDialogMarkingFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	var out []menu.FunctionKey
 	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectParentDirs); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Parent dirs"})
@@ -463,12 +477,6 @@ func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionFindUnselectGroup); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect group"})
-	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInPrimary); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄"})
-	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInSecondary); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ►"})
 	}
 	return out
 }
@@ -1183,6 +1191,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.toggleGitFilterMenu()
 	case keymap.ActionPanelFindDialog:
 		a.findCtrl.OpenDialog(a.model.ActivePanel)
+	case keymap.ActionPanelJumpDialog:
+		a.findCtrl.OpenJumpDialog(a.model.ActivePanel)
 	case keymap.ActionAppUserMenu:
 		a.toggleUserMenu()
 	case keymap.ActionAppLeaderMenu:

@@ -99,7 +99,10 @@ type FindDialogState struct {
 	// OnlyDirectories hides non-directory entries from the ranked result list (instant filter).
 	OnlyDirectories bool
 	// OnlyFiles hides directory entries from the ranked result list (instant filter).
-	OnlyFiles          bool
+	OnlyFiles bool
+	// JumpMode turns Find into "Jump to directory": directories only, breadth-first,
+	// no marking, no Only dirs/files radios, no selection scope.
+	JumpMode           bool
 	ListingDevice      uint64
 	ListingDeviceValid bool
 	// ShowSearchSelectionsOption is true when the panel had selected directories at open.

@@ -18,7 +18,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func (h *Handler) OpenDialog(panelID int) {
+func (h *Handler) OpenDialog(panelID int) { h.openDialog(panelID, false) }
+
+// OpenJumpDialog opens the Find dialog in jump mode: a breadth-first,
+// directories-only index whose Enter changes the panel directory.
+func (h *Handler) OpenJumpDialog(panelID int) { h.openDialog(panelID, true) }
+
+func (h *Handler) openDialog(panelID int, jump bool) {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
 		return
 	}
@@ -30,7 +36,10 @@ func (h *Handler) OpenDialog(panelID int) {
 	}
 	p := h.host.PanelByID(panelID)
 	root := filepath.Clean(p.PathString())
-	selRoots := panel.PruneNestedPaths(p.SelectedDirectoryPaths())
+	var selRoots []string
+	if !jump {
+		selRoots = panel.PruneNestedPaths(p.SelectedDirectoryPaths())
+	}
 	h.model.FindDialog = dialog.FindDialogState{
 		Open:                       true,
 		PanelID:                    panelID,
@@ -44,6 +53,8 @@ func (h *Handler) OpenDialog(panelID int) {
 		SelectionDirRoots:          selRoots,
 		Focus:                      0,
 		Indexing:                   true,
+		JumpMode:                   jump,
+		OnlyDirectories:            jump,
 	}
 	h.bindFindDialogPathMeta(&h.model.FindDialog)
 	h.startFindIndexer()
@@ -1208,6 +1219,9 @@ func (h *Handler) findToggleFieldForFocus(focus int) findToggleField {
 
 // applyFindToggle runs the Toggle* method for field. Returns false (no-op) for findToggleNone.
 func (h *Handler) applyFindToggle(field findToggleField) bool {
+	if h.model.FindDialog.JumpMode && (field == findToggleOnlyDirs || field == findToggleOnlyFiles || field == findToggleSelections) {
+		return false
+	}
 	switch field {
 	case findToggleStayOnVolume:
 		h.ToggleStayOnVolume()
@@ -1261,6 +1275,14 @@ func (h *Handler) tryFindDialogActionKey(event *tcell.EventKey) bool {
 // RunAction runs a find-dialog action by ID (key bindings and the Find leader menu).
 // Returns false when id is not a find-dialog action.
 func (h *Handler) RunAction(id string) bool {
+	if h.model.FindDialog.JumpMode {
+		switch id {
+		case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindUnselectAll,
+			keymap.ActionFindSelectAll, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup,
+			keymap.ActionFindSelectParentDirs:
+			return true // marking and viewing do not apply to jump mode
+		}
+	}
 	switch id {
 	case keymap.ActionPanelSelectToggle:
 		h.findDialogToggleSelectionAndAdvance()
@@ -1294,7 +1316,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		return
 	}
 	// Plain space is query text here, even though it is globally bound to select-toggle.
-	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle && !keymap.IsPlainPrintableRune(event) {
+	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle && !keymap.IsPlainPrintableRune(event) && !st.JumpMode {
 		h.findDialogToggleSelectionAndAdvance()
 		return
 	}
@@ -1331,7 +1353,9 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 
 	switch event.Key() {
 	case tcell.KeyInsert:
-		h.findDialogToggleSelectionAndAdvance()
+		if !st.JumpMode {
+			h.findDialogToggleSelectionAndAdvance()
+		}
 	case tcell.KeyEsc:
 		h.CloseDialog()
 	case tcell.KeyEnter:
@@ -1342,6 +1366,15 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		}
 	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
 		if nf, ok := dialog.FindDialogNavFocusKey(st.Focus, st.FindDialogHasSelectionsCheckbox(), event.Key()); ok {
+			// Jump mode hides the Only dirs/files radios (focus 1, 2): step past them.
+			for st.JumpMode && (nf == 1 || nf == 2) {
+				next, moved := dialog.FindDialogNavFocusKey(nf, false, event.Key())
+				if !moved {
+					nf = st.Focus
+					break
+				}
+				nf = next
+			}
 			st.Focus = nf
 			if st.Focus == 0 && event.Key() == tcell.KeyUp {
 				dialog.EnsureFindListScroll(st, h.findDialogListRows())

@@ -93,6 +93,7 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionAppUserMenu,
 	},
 	LeaderMenuGroupNavigation: {
+		ActionPanelJumpDialog,
 		ActionPanelHistoryDialog,
 		ActionPanelRefresh,
 		ActionBookmarkOpen,

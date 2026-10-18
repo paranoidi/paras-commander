@@ -488,6 +488,16 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "f",
 		},
 		{
+			ID:           ActionPanelJumpDialog,
+			Views:        HelpBrowser,
+			Title:        "Jump to directory",
+			Section:      "Tools",
+			DefaultKeys:  []string{"M-m"},
+			PreferredKey: "M-m",
+			Keywords:     []string{"jump", "cd", "quick", "directory", "fuzzy", "change directory"},
+			LeaderKey:    "t",
+		},
+		{
 			ID:           ActionPanelPinDialog,
 			Views:        HelpBrowser,
 			Title:        "Pinned items",

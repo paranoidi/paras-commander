@@ -3,6 +3,7 @@ package scan
 import (
 	"context"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -20,6 +21,9 @@ type WalkOptions struct {
 	IncludeHidden bool
 	Gitignore     *gitignore.Cache
 	ShouldSkipDir func(string) bool
+	// BreadthFirst indexes directories only, level by level (all depth-1 dirs,
+	// then depth-2, ...), so shallow results appear first. Files are ignored.
+	BreadthFirst bool
 }
 
 // RootWalk runs one recursive directory index (tests and legacy callers).
@@ -137,6 +141,13 @@ func (w *rootWalk) run(ctx context.Context, opts WalkOptions) {
 		listOpts.Gitignore = matcher
 	}
 
+	if opts.BreadthFirst {
+		w.runBFS(ctx, opts, listOpts, batch)
+		batch.flush()
+		close(w.results)
+		return
+	}
+
 	walkErr := filepath.WalkDir(w.root, func(path string, d fs.DirEntry, err error) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -187,6 +198,51 @@ func (w *rootWalk) run(ctx context.Context, opts WalkOptions) {
 	close(w.results)
 	if walkErr != nil && ctx.Err() == nil {
 		w.err = walkErr
+	}
+}
+
+// runBFS emits directories level by level with the same filters as the
+// WalkDir path (hidden, gitignore, ShouldSkipDir); symlinks are not followed.
+func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localfs.ListOptions, batch *walkBatch) {
+	level := []string{w.root}
+	for len(level) > 0 {
+		var next []string
+		for _, dir := range level {
+			if ctx.Err() != nil {
+				return
+			}
+			children, err := os.ReadDir(dir)
+			if err != nil {
+				continue // unreadable dir: skip, like WalkDir's err callback
+			}
+			for _, d := range children {
+				if !d.IsDir() {
+					continue
+				}
+				name := d.Name()
+				path := filepath.Join(dir, name)
+				if !opts.IncludeHidden && strings.HasPrefix(name, ".") {
+					w.recordSkippedHidden(path, true)
+					continue
+				}
+				if !localfs.EntryVisible(name, dir, true, listOpts) {
+					w.recordSkippedHidden(path, true)
+					continue
+				}
+				entry, ok := buildEntry(w.root, path, d, true)
+				if !ok {
+					continue
+				}
+				if batch.appendEntry(entry) {
+					batch.flush()
+				}
+				if opts.ShouldSkipDir == nil || !opts.ShouldSkipDir(path) {
+					next = append(next, path)
+				}
+			}
+		}
+		batch.flush() // show each level as soon as it is indexed
+		level = next
 	}
 }
 

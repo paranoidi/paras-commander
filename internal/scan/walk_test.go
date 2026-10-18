@@ -51,3 +51,38 @@ func TestWalkRecordsGitignoreSkipsForHiddenReplay(t *testing.T) {
 		t.Fatalf("SkippedHiddenDirs = %v, want it to include skipdir", dirs)
 	}
 }
+
+func TestWalkBreadthFirstDirsOnlyLevelOrder(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	for _, d := range []string{"maple/oak/pine", "birch/cedar", "elm"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "birch", "willow.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	w := startRootWalk(t.Context(), root, WalkOptions{BreadthFirst: true})
+	var got []string
+	for batch := range w.Results() {
+		for _, e := range batch {
+			if !e.IsDir {
+				t.Fatalf("file emitted: %q", e.RelLine)
+			}
+			got = append(got, e.RelLine)
+		}
+	}
+	<-w.Done()
+	prev := 0
+	for _, rel := range got {
+		depth := strings.Count(rel, "/") + 1
+		if depth < prev {
+			t.Fatalf("depth %d after %d in %v", depth, prev, got)
+		}
+		prev = depth
+	}
+	if len(got) != 6 {
+		t.Fatalf("got %v, want 6 dirs", got)
+	}
+}

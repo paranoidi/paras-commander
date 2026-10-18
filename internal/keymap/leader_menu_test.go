@@ -195,8 +195,8 @@ func TestDefaultBundleLeaderKey(t *testing.T) {
 			t.Fatalf("invalid entry: %+v", e)
 		}
 	}
-	if actions != 41 {
-		t.Fatalf("action entries = %d, want 41", actions)
+	if actions != 42 {
+		t.Fatalf("action entries = %d, want 42", actions)
 	}
 }
 

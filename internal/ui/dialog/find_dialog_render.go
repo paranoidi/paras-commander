@@ -71,16 +71,20 @@ func formatIndexedCount(n int) string {
 }
 
 func findDialogTitle(state FindDialogState, styles theme.Theme) string {
-	title := "Find"
+	name := "Find"
+	if state.JumpMode {
+		name = "Jump to directory"
+	}
+	title := name
 	count := formatIndexedCount(state.IndexedCount)
 	if state.Indexing {
-		title = fmt.Sprintf("Find (%s%s)", count, string(primitive.Ellipsis))
+		title = fmt.Sprintf("%s (%s%s)", name, count, string(primitive.Ellipsis))
 		if state.WalkWorkers > 0 {
 			icon := styles.IconMenuJob("scanning")
 			title = fmt.Sprintf("%s %d %c", title, state.WalkWorkers, icon)
 		}
 	} else if state.IndexDone && state.IndexedCount > 0 {
-		title = fmt.Sprintf("Find (%s)", count)
+		title = fmt.Sprintf("%s (%s)", name, count)
 	}
 	return title
 }
@@ -116,12 +120,15 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	draw.DrawDialogHSeparator(screen, rect, sepAfterFilter, borderStyle)
 
 	cbY := rect.Y + 3
-	draw.DrawDialogRadio(screen, cbCol, cbY, "Only directories", 'N', state.OnlyDirectories, state.Focus == state.FindDialogOnlyDirsFocus(), false, styles)
-	radio1W := utf8.RuneCountInString(draw.RadioText("Only directories", state.OnlyDirectories)) + 1
 	const cbGap = 4
-	draw.DrawDialogRadio(screen, cbCol+radio1W+cbGap, cbY, "Only files", 'Y', state.OnlyFiles, state.Focus == state.FindDialogOnlyFilesFocus(), false, styles)
-	radio2W := utf8.RuneCountInString(draw.RadioText("Only files", state.OnlyFiles)) + 1
-	volumeX := cbCol + radio1W + cbGap + radio2W + cbGap
+	volumeX := cbCol
+	if !state.JumpMode {
+		draw.DrawDialogRadio(screen, cbCol, cbY, "Only directories", 'N', state.OnlyDirectories, state.Focus == state.FindDialogOnlyDirsFocus(), false, styles)
+		radio1W := utf8.RuneCountInString(draw.RadioText("Only directories", state.OnlyDirectories)) + 1
+		draw.DrawDialogRadio(screen, cbCol+radio1W+cbGap, cbY, "Only files", 'Y', state.OnlyFiles, state.Focus == state.FindDialogOnlyFilesFocus(), false, styles)
+		radio2W := utf8.RuneCountInString(draw.RadioText("Only files", state.OnlyFiles)) + 1
+		volumeX = cbCol + radio1W + cbGap + radio2W + cbGap
+	}
 	draw.DrawDialogCheckbox(screen, volumeX, cbY, "Stay on current volume", 'V', state.StayOnCurrentVolume, state.Focus == state.FindDialogStayOnVolumeFocus(), false, styles)
 	volumeW := utf8.RuneCountInString(draw.CheckboxText("Stay on current volume", state.StayOnCurrentVolume)) + 1
 	draw.DrawDialogCheckbox(screen, volumeX+volumeW+cbGap, cbY, "Include hidden", 'I', state.IncludeHidden, state.Focus == state.FindDialogIncludeHiddenFocus(), false, styles)

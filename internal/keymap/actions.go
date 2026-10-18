@@ -55,6 +55,7 @@ const (
 	// ActionUserMenuBack is bound via [dialog.user_menu], not [main].
 	ActionUserMenuBack                = "usermenu.back"
 	ActionPanelFindDialog             = "panel.find-dialog"
+	ActionPanelJumpDialog             = "panel.jump-dialog"
 	ActionFindView                    = "find.view"
 	ActionFindSelectAll               = "find.select-all"
 	ActionFindUnselectAll             = "find.unselect-all"
@@ -363,6 +364,7 @@ var KnownActions = map[string]struct{}{
 	ActionHelpTextEditKeys:            {},
 	ActionUserMenuBack:                {},
 	ActionPanelFindDialog:             {},
+	ActionPanelJumpDialog:             {},
 	ActionFindView:                    {},
 	ActionFindSelectAll:               {},
 	ActionFindUnselectAll:             {},
