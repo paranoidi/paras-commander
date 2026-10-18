@@ -648,3 +648,31 @@ func TestPriorityScanPreemptsAndRequeuesRest(t *testing.T) {
 		t.Fatalf("JobFinished QueueEmpty = %v, want [false true] (priority job, then requeued rest)", finished)
 	}
 }
+
+func TestRenamePathsMovesSubtreeAndSwaps(t *testing.T) {
+	e := New()
+	e.SetSize("/r/maple", 2, 10)
+	e.SetSize("/r/maple/leaf", 1, 4)
+	e.SetSize("/r/birch", 1, 7)
+	e.RenamePaths([][2]string{{"/r/maple", "/r/cedar"}})
+	for p, want := range map[string]int64{"/r/cedar": 10, "/r/cedar/leaf": 4, "/r/birch": 7} {
+		if got, ok := e.Size(p); !ok || got != want {
+			t.Fatalf("Size(%s) = %d ok=%v want %d", p, got, ok, want)
+		}
+	}
+	for _, p := range []string{"/r/maple", "/r/maple/leaf"} {
+		if _, ok := e.Size(p); ok {
+			t.Fatalf("%s still cached", p)
+		}
+	}
+	if n, ok := e.FileCount("/r/cedar"); !ok || n != 2 {
+		t.Fatalf("FileCount(/r/cedar) = %d ok=%v want 2", n, ok)
+	}
+	e.RenamePaths([][2]string{{"/r/cedar", "/r/birch"}, {"/r/birch", "/r/cedar"}})
+	if got, _ := e.Size("/r/birch"); got != 10 {
+		t.Fatalf("swapped birch = %d want 10", got)
+	}
+	if got, _ := e.Size("/r/cedar"); got != 7 {
+		t.Fatalf("swapped cedar = %d want 7", got)
+	}
+}

@@ -283,6 +283,9 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 		f, b, err := fb.moveCopyFallback(ctx, src, dst, destination)
 		return f, b, false, err
 	case out.renamed:
+		if r.opts.OnRenamed != nil && !src.IsRemote() && !dst.IsRemote() {
+			r.opts.OnRenamed(src, dst)
+		}
 		if out.staged != "" {
 			if loc, perr := pathloc.Parse(out.staged); perr == nil {
 				_ = removePathRecursive(ctx, loc)

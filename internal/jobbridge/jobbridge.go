@@ -249,7 +249,7 @@ baseLabel:
 
 // TransferFunc builds the job worker transfer function from config. permWait asks the user
 // whether to retry a permission-denied local step as root (nil disables elevation).
-func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, dedupChunkBytes int64, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
+func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, dedupChunkBytes int64, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc, onRenamed func(src, dst string)) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 		// One Elevator per job: a sudo password the user types is remembered for this job only.
 		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
@@ -266,6 +266,9 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, ded
 		}
 		opts.OnRemoveSources = func() {
 			emit(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning})
+		}
+		if job.Type == jobs.TypeMove && onRenamed != nil {
+			opts.OnRenamed = func(src, dst pathloc.Path) { onRenamed(src.String(), dst.String()) }
 		}
 		resolver := newConflictResolver(job, waitBlocker, dedupChunkBytes)
 		diskWait := diskWaitFromBlocker(waitBlocker)

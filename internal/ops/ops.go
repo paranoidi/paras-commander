@@ -79,6 +79,9 @@ type Options struct {
 	// OnRemoveSources is called once when a move's copy fallback starts removing transferred
 	// sources; nil means no-op.
 	OnRemoveSources func()
+	// OnRenamed is called after a move completes a plain rename of src to dst (not a merge or
+	// copy fallback) when both paths are local; nil means no-op.
+	OnRenamed func(src, dst pathloc.Path)
 }
 
 // RateLimiter throttles n bytes just spent, blocking until permitted or ctx is canceled.

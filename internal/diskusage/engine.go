@@ -382,6 +382,78 @@ func (e *Engine) InvalidateSubtree(rootAbs string) {
 	e.poke()
 }
 
+// RenamePaths moves cached sizes, file counts and exclusion marks of each pair's old path and
+// every descendant to the matching new path. All moves are collected before any is written, so
+// swaps (a->b, b->a) work. O(cache size), like InvalidateSubtree.
+func (e *Engine) RenamePaths(pairs [][2]string) {
+	if e == nil || len(pairs) == 0 {
+		return
+	}
+	type moved struct {
+		key        string
+		size, fc   int64
+		hasSize    bool
+		hasFC      bool
+		isExcluded bool
+	}
+	rebase := func(k string) (string, bool) {
+		for _, p := range pairs {
+			if pathIsOrUnder(k, p[0]) {
+				return filepath.Join(filepath.Clean(p[1]), strings.TrimPrefix(filepath.Clean(k), filepath.Clean(p[0]))), true
+			}
+		}
+		return "", false
+	}
+	e.mu.Lock()
+	var out []moved
+	byKey := map[string]int{}
+	get := func(old, nk string) *moved {
+		i, ok := byKey[old]
+		if !ok {
+			out = append(out, moved{key: nk})
+			i = len(out) - 1
+			byKey[old] = i
+		}
+		return &out[i]
+	}
+	for k, v := range e.cache {
+		if nk, ok := rebase(k); ok {
+			m := get(k, nk)
+			m.size, m.hasSize = v, true
+		}
+	}
+	for k, v := range e.fileCounts {
+		if nk, ok := rebase(k); ok {
+			m := get(k, nk)
+			m.fc, m.hasFC = v, true
+		}
+	}
+	for k := range e.excluded {
+		if nk, ok := rebase(k); ok {
+			get(k, nk).isExcluded = true
+		}
+	}
+	for old := range byKey {
+		delete(e.cache, old)
+		delete(e.fileCounts, old)
+		delete(e.excluded, old)
+	}
+	for _, m := range out {
+		if m.hasSize {
+			e.cache[m.key] = m.size
+		}
+		if m.hasFC {
+			e.fileCounts[m.key] = m.fc
+		}
+		if m.isExcluded {
+			e.excluded[m.key] = true
+		}
+	}
+	e.cacheVersion.Add(1)
+	e.mu.Unlock()
+	e.poke()
+}
+
 // InvalidateRoots drops the cached size, file count and exclusion mark of each path itself,
 // leaving descendants cached. O(len(paths)), unlike InvalidateSubtree's full cache sweep, so it
 // is cheap enough for the UI goroutine. A rescan of each root overwrites its descendants anyway.

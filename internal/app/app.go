@@ -532,7 +532,8 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, jobState.Wait,
 		func(ctx context.Context, req ops.PermissionRequest) ops.PermissionAnswer {
 			return app.promptElevate(ctx, req)
-		}))
+		},
+		func(src, dst string) { duEngine.RenamePaths([][2]string{{src, dst}}) }))
 	jobState.SetThroughputChart(
 		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
 		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,

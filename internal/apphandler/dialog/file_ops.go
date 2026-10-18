@@ -485,8 +485,17 @@ func (h *Handler) addRenameMarks(newPaths []string) {
 	}
 }
 
+// diskUsageRenamed carries cached disk-usage sizes from old paths to new ones after a local rename.
+func (h *Handler) diskUsageRenamed(pairs [][2]string) {
+	if h.diskUsage == nil || h.host.ActivePanel().Path.IsRemote() {
+		return
+	}
+	h.diskUsage.RenamePaths(pairs)
+}
+
 func (h *Handler) applyRenameSuccess(st renameApply) {
 	p := h.host.ActivePanel()
+	h.diskUsageRenamed([][2]string{{st.entry.Path, st.plan.NewPath}})
 	p.RenameEntry(st.entry.Path, st.plan.NewName, h.host.PanelViewportRows(st.panelID))
 	if st.focusAfter {
 		h.RefreshBothPanelsWithFocus(st.panelID, func() {
