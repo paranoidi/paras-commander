@@ -214,7 +214,7 @@ func pathHasAncestorIn(path string, set map[string]bool) bool {
 }
 
 // BulkApplySelectionAddsWalkOrder marks paths assuming parents appear before descendants
-// (find WalkDir index order). Only valid when selected starts empty or caller accepts walk-order semantics.
+// (find breadth-first index order). Only valid when selected starts empty or caller accepts walk-order semantics.
 // Returns true if any conflicting path was removed from selected.
 func BulkApplySelectionAddsWalkOrder(selected map[string]bool, paths []string, isDir func(string) bool) bool {
 	if len(paths) == 0 {

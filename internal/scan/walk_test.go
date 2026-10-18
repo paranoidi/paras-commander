@@ -52,7 +52,7 @@ func TestWalkRecordsGitignoreSkipsForHiddenReplay(t *testing.T) {
 	}
 }
 
-func TestWalkBreadthFirstDirsOnlyLevelOrder(t *testing.T) {
+func TestWalkDirsOnlyLevelOrder(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	for _, d := range []string{"maple/oak/pine", "birch/cedar", "elm"} {
@@ -63,7 +63,7 @@ func TestWalkBreadthFirstDirsOnlyLevelOrder(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "birch", "willow.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	w := startRootWalk(t.Context(), root, WalkOptions{BreadthFirst: true})
+	w := startRootWalk(t.Context(), root, WalkOptions{DirsOnly: true})
 	var got []string
 	for batch := range w.Results() {
 		for _, e := range batch {
@@ -84,5 +84,30 @@ func TestWalkBreadthFirstDirsOnlyLevelOrder(t *testing.T) {
 	}
 	if len(got) != 6 {
 		t.Fatalf("got %v, want 6 dirs", got)
+	}
+}
+
+func TestWalkIndexesFilesLevelOrder(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "harbor", "lantern"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"harbor/lantern/quilt.txt", "harbor/meadow.txt", "zephyr.txt"} {
+		if err := os.WriteFile(filepath.Join(root, f), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	w := startRootWalk(t.Context(), root, WalkOptions{})
+	var got []string
+	for batch := range w.Results() {
+		for _, e := range batch {
+			got = append(got, e.RelLine)
+		}
+	}
+	<-w.Done()
+	want := []string{"harbor", "zephyr.txt", "harbor/lantern", "harbor/meadow.txt", "harbor/lantern/quilt.txt"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("got %v, want %v", got, want)
 	}
 }

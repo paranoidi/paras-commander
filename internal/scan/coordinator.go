@@ -388,7 +388,7 @@ func (s *session) startWalk(root string, skipIndexedSelectionSubtrees bool) {
 		IncludeHidden: s.opts.IncludeHidden,
 		Gitignore:     gi,
 		ShouldSkipDir: s.shouldSkipForRoot(root, skipIndexedSelectionSubtrees),
-		BreadthFirst:  s.opts.BreadthFirst,
+		DirsOnly:      s.opts.DirsOnly,
 	}
 	sess := startRootWalk(s.ctx, root, wopts)
 	s.walks[root] = &walkHandle{root: root, sess: sess}

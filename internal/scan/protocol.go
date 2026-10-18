@@ -18,8 +18,8 @@ type StartOpts struct {
 	SelectionRoots       []string
 	SearchOnlySelections bool
 	Walk                 fswalk.Params
-	// BreadthFirst selects the directories-only breadth-first walk (jump mode).
-	BreadthFirst bool
+	// DirsOnly indexes directories only (jump mode).
+	DirsOnly bool
 }
 
 // Event is sent from the scan coordinator to the UI thread.
