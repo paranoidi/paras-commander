@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -114,10 +113,7 @@ func cycleKittyPlaceholderCapability(st *dialog.PreviewSettingsDialogState) {
 
 // applyPreviewSettingsDialog writes the dialog's checkbox/radio state into a.config.Preview in
 // memory (takes effect on the next preview request, same as every other settings dialog) and
-// persists the same 6 keys to config.toml via config.PatchPreviewKeys. Unlike other settings
-// dialogs (which use the whole-file WriteMergedPartial/persistPartial merge), this one uses the
-// narrower key-scoped patcher so it doesn't strip comments/formatting from the rest of
-// config.toml — see internal/config/patch.go.
+// persists the same 6 keys to config.toml via persistPartial.
 func (a *App) applyPreviewSettingsDialog() {
 	st := a.model.PreviewSettingsDialog
 	sixel := effectiveTerminalCapability(st.Sixel)
@@ -136,21 +132,17 @@ func (a *App) applyPreviewSettingsDialog() {
 	a.closePreviewSettingsDialog()
 	msg := "Preview settings saved"
 	urgency := ui.MessageUrgencyInfo
-	if !a.paths.CanPersist() {
-		msg = fmt.Sprintf("%s (config save failed: no config path)", msg)
-		urgency = ui.MessageUrgencyWarn
-		a.setTransientMessage(msg, urgency)
-		return
+	patch := map[string]any{
+		"preview": map[string]any{
+			"terminal_sixel":             sixel,
+			"terminal_kitty":             kitty,
+			"terminal_kitty_placeholder": placeholder,
+			"image_protocol":             protocol,
+			"image_metadata":             imageMetadata,
+			"video_metadata":             st.VideoMetadata,
+		},
 	}
-	values := map[string]string{
-		"terminal_sixel":             strconv.Quote(sixel),
-		"terminal_kitty":             strconv.Quote(kitty),
-		"terminal_kitty_placeholder": strconv.Quote(placeholder),
-		"image_protocol":             strconv.Quote(protocol),
-		"image_metadata":             strconv.Quote(imageMetadata),
-		"video_metadata":             strconv.FormatBool(st.VideoMetadata),
-	}
-	if err := config.PatchPreviewKeysForPaths(a.paths, values); err != nil {
+	if err := a.persistPartial(patch); err != nil {
 		msg = fmt.Sprintf("%s (config save failed: %v)", msg, err)
 		urgency = ui.MessageUrgencyWarn
 	}

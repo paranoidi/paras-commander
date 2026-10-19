@@ -884,6 +884,34 @@ keep_finished = 7
 	}
 }
 
+func TestWriteMergedPartialKeepsNestedArrayTables(t *testing.T) {
+	path := writeConfig(t, `[preview]
+  image_protocol = "auto"
+
+  [[preview.commands]]
+    command = "lantern-info %f"
+`)
+
+	paths := Paths{ConfigFile: path}
+	patch := map[string]interface{}{"preview": map[string]interface{}{
+		"image_metadata": PreviewImageMetadataFull,
+		"video_metadata": true,
+	}}
+	if err := WriteMergedPartial(paths, patch); err != nil {
+		t.Fatalf("WriteMergedPartial: %v", err)
+	}
+	cfg, err := LoadFromPaths(paths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths(): %v", err)
+	}
+	if cfg.Preview.ImageMetadata != PreviewImageMetadataFull || !cfg.Preview.VideoMetadata {
+		t.Fatalf("Preview metadata = %q/%v", cfg.Preview.ImageMetadata, cfg.Preview.VideoMetadata)
+	}
+	if len(cfg.Preview.Commands) != 1 || cfg.Preview.Commands[0].Command != "lantern-info %f" {
+		t.Fatalf("Preview.Commands = %+v, want the existing entry kept", cfg.Preview.Commands)
+	}
+}
+
 func TestPathsWithResolvedLocations(t *testing.T) {
 	base := filepath.Join(t.TempDir(), "xcfg")
 	got := Paths{ConfigDir: base}.WithResolvedLocations()
