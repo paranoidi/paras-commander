@@ -30,6 +30,26 @@ func EnsureHistoryListScroll(state *HistoryDialogState, listRows int) {
 	}
 }
 
+// HistoryZoxideMnemonic toggles the "Include zoxide" checkbox (Alt+I).
+const HistoryZoxideMnemonic = 'I'
+
+// HistoryDialogListRows returns the History dialog's list height for a layout height, or 0
+// when the dialog does not fit. zoxideRow adds the "Include zoxide" checkbox row.
+func HistoryDialogListRows(layoutHeight int, zoxideRow bool) int {
+	chrome := 6
+	if zoxideRow {
+		chrome++
+	}
+	listH := min(max(layoutHeight-12, 4), 18)
+	if chrome+listH > layoutHeight-2 {
+		listH = layoutHeight - 2 - chrome
+		if listH < 4 {
+			return 0
+		}
+	}
+	return listH
+}
+
 func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogState, styles theme.Theme, rowMarks RowMarksFunc) {
 	width := 78
 	if width > layout.Width-4 {
@@ -39,21 +59,15 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 		return
 	}
 
-	listH := layout.Height - 12
-	switch {
-	case listH > 18:
-		listH = 18
-	case listH < 4:
-		listH = 4
+	listH := HistoryDialogListRows(layout.Height, state.ZoxideAvailable)
+	if listH == 0 {
+		return
 	}
-	height := 6 + listH
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-		listH = height - 6
-		if listH < 4 {
-			return
-		}
+	extra := 0
+	if state.ZoxideAvailable {
+		extra = 1
 	}
+	height := 6 + extra + listH
 
 	rect := draw.CenteredDialogRect(layout, width, height)
 	title := "History"
@@ -69,10 +83,14 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	filterFocused := state.Focus == 0
 	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, false, styles)
 
-	sepBeforeList := rect.Y + 2
+	if state.ZoxideAvailable {
+		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), rect.Y+2, "Include zoxide", HistoryZoxideMnemonic, state.IncludeZoxide, state.Focus == state.HistoryZoxideFocus(), false, styles)
+	}
+
+	sepBeforeList := rect.Y + 2 + extra
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
 
-	listTop := rect.Y + 3
+	listTop := rect.Y + 3 + extra
 	rowWidth := inputWidth
 	for row := 0; row < listH; row++ {
 		y := listTop + row
@@ -114,6 +132,7 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 			marks = rowMarks(absPath)
 		}
 		marks.Missing, marks.Cursor = missing, isCursor
+		marks.Zoxide = absPath != "" && idxInRank < len(state.Ranked) && state.Ranked[idxInRank] >= state.ZoxideFrom
 		marksW := RowMarksWidth(marks)
 		fitWidth := rowWidth - marksW
 		if fitWidth < 1 {
@@ -131,7 +150,7 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
 
 	buttonY := rect.Y + rect.Height - 2
-	okFocused := state.Focus == 1
-	cancelFocused := state.Focus == 2
+	okFocused := state.Focus == state.HistoryOKFocus()
+	cancelFocused := state.Focus == state.HistoryCancelFocus()
 	draw.DrawOKCancelButtonRow(screen, rect, buttonY, okFocused, cancelFocused, styles)
 }

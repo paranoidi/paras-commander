@@ -13,6 +13,7 @@ const (
 	IconKeyDialogRadioUnselected   = "dialog.radio.unselected"
 	IconKeyDialogInfo              = "dialog.info"
 	IconKeyDialogMissing           = "dialog.missing"
+	IconKeyDialogZoxide            = "dialog.zoxide"
 
 	// IconDialogInfoASCII is the info marker used when Nerd Font icons are disabled; it is
 	// also the widest form, so dialog sizing reserves its width.
@@ -37,6 +38,15 @@ func (t Theme) IconDialogMissing() string {
 		return "!"
 	}
 	return t.dialogIcon(IconKeyDialogMissing, "\U000F09E7")
+}
+
+// IconDialogZoxide returns the trailing mark on History rows that come from zoxide.
+// When UseNerdfontIcons is false, returns "z".
+func (t Theme) IconDialogZoxide() string {
+	if !t.UseNerdfontIcons {
+		return "z"
+	}
+	return t.dialogIcon(IconKeyDialogZoxide, "\uf0e7")
 }
 
 // DialogMissingIconForeground is the missing-path mark color: the main file list's cursor

@@ -6,6 +6,8 @@ package config
 const (
 	// DefaultCommandsForceColor is the default for [commands].force_color.
 	DefaultCommandsForceColor = true
+	// DefaultHistoryZoxide is the default for [history].zoxide.
+	DefaultHistoryZoxide = true
 
 	// DefaultPathPickerValidateDelayMS is the debounce before filesystem checks on the path-picker filter.
 	DefaultPathPickerValidateDelayMS = 200

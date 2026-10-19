@@ -292,6 +292,14 @@ Application log file.
 | `level` | string | `"info"` | Minimum log level: `"debug"`, `"info"`, `"warn"`, or `"error"`. |
 | `path` | string | `""` | Log file path. Empty uses the built-in default location. |
 
+## `[history]`
+
+Directory History dialog (Alt+H).
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `zoxide` | bool | `true` | Initial state of the History dialog's **Include zoxide** checkbox (Alt+I), shown only when `zoxide` is on `PATH`. When checked, zoxide directories (`zoxide query --list`, score order) follow the panel history, marked with `[icons.dialog] zoxide`; entries already in the history are not repeated. |
+
 ## `[bookmarks]`
 
 Directory bookmarks (fzf-marks compatible).

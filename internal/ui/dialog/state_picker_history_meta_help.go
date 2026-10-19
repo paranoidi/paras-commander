@@ -246,6 +246,10 @@ type HistoryDialogState struct {
 	BothPanels        bool     // true when showing merged list
 	PanelPaths        []string // snapshot of PanelID history at open (for F5 toggle back)
 	PanelCurrentIndex int      // snapshot HistoryIndex at open
+	Zoxide            []string // zoxide directories (loaded async), appended after the history when IncludeZoxide
+	ZoxideAvailable   bool     // zoxide is installed; shows the "Include zoxide" checkbox
+	IncludeZoxide     bool     // "Include zoxide" checkbox; starts from [history].zoxide
+	ZoxideFrom        int      // index into Paths where zoxide rows start (== len(Paths) when none)
 	DisplayLines      []string // per-row UI text ("* path" / "  path"); len == len(Paths)
 	PathMissing       []bool   // len == len(Paths); true when the path no longer exists on disk
 	Query             string
@@ -255,8 +259,31 @@ type HistoryDialogState struct {
 	MatchRanges       [][]search.Range // len == len(Paths); highlights on DisplayLines
 	Selected          int              // index into Ranked
 	ListScroll        int
-	Focus             int // 0=list+query, 1=OK, 2=Cancel
+	Focus             int // 0=list+query, then HistoryZoxideFocus (when shown), HistoryOKFocus, HistoryCancelFocus
 }
+
+// HistoryForm is the History dialog's focus layout: list+query, the "Include zoxide" checkbox
+// when zoxide is installed, then OK and Cancel.
+func (s HistoryDialogState) HistoryForm() DialogTrailingButtonsForm {
+	if s.ZoxideAvailable {
+		return NewDialogLinearForm(2)
+	}
+	return NewDialogLinearForm(1)
+}
+
+// HistoryZoxideFocus returns the focus index of the "Include zoxide" checkbox, or -1 when hidden.
+func (s HistoryDialogState) HistoryZoxideFocus() int {
+	if s.ZoxideAvailable {
+		return 1
+	}
+	return -1
+}
+
+// HistoryOKFocus returns the focus index of the OK button.
+func (s HistoryDialogState) HistoryOKFocus() int { return s.HistoryForm().OKIndex() }
+
+// HistoryCancelFocus returns the focus index of the Cancel button.
+func (s HistoryDialogState) HistoryCancelFocus() int { return s.HistoryForm().CancelIndex() }
 
 // MetaEntry is one selectable command in the meta picker dialog.
 type MetaEntry struct {

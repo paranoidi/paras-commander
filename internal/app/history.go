@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
+	"github.com/paranoidi/paras-commander/internal/zoxide"
 )
 
 func (a *App) mergedPanelHistories() []string {
@@ -44,6 +45,8 @@ func (a *App) openHistoryDialog(panelID int) {
 		PanelCurrentIndex: curIdx,
 		DisplayLines:      panelPaths,
 		PathMissing:       make([]bool, len(panelPaths)),
+		IncludeZoxide:     a.config.History.Zoxide,
+		ZoxideFrom:        len(panelPaths),
 		Query:             "",
 		Focus:             0,
 		Selected:          0,
@@ -59,6 +62,76 @@ func (a *App) openHistoryDialog(panelID int) {
 	}
 	a.model.HistoryDialog.Selected = selected
 	dialog.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
+	a.startHistoryMissingScan()
+	// Always query: the checkbox is shown only when zoxide is installed, and toggling it on
+	// should not wait for another subprocess.
+	if a.screen != nil {
+		screen := a.screen
+		go func() {
+			paths, installed := zoxide.List()
+			_ = screen.PostEvent(tcell.NewEventInterrupt(historyZoxidePayload{Paths: paths, Installed: installed}))
+		}()
+	}
+}
+
+// historyZoxidePayload carries `zoxide query --list` results back to the UI goroutine.
+type historyZoxidePayload struct {
+	Paths     []string
+	Installed bool
+}
+
+// applyHistoryZoxide stores zoxide's directories on the open history dialog and shows its
+// "Include zoxide" checkbox.
+// ponytail: no generation guard; a late result for a since-reopened dialog carries the same data.
+func (a *App) applyHistoryZoxide(p historyZoxidePayload) {
+	st := &a.model.HistoryDialog
+	if !st.Open || !p.Installed {
+		return
+	}
+	if !st.ZoxideAvailable && st.Focus > 0 {
+		st.Focus++ // the checkbox is inserted before OK/Cancel; keep the same button focused
+	}
+	st.ZoxideAvailable = true
+	st.Zoxide = p.Paths
+	a.rebuildHistoryDialogPaths()
+}
+
+// toggleHistoryIncludeZoxide flips the "Include zoxide" checkbox (Alt+I).
+func (a *App) toggleHistoryIncludeZoxide() {
+	st := &a.model.HistoryDialog
+	if !st.ZoxideAvailable {
+		return
+	}
+	st.IncludeZoxide = !st.IncludeZoxide
+	a.rebuildHistoryDialogPaths()
+}
+
+// rebuildHistoryDialogPaths sets Paths to the target-only or merged history followed, when
+// IncludeZoxide, by the zoxide directories not already in it, then re-ranks and rescans for
+// missing paths.
+func (a *App) rebuildHistoryDialogPaths() {
+	st := &a.model.HistoryDialog
+	base := append([]string(nil), st.PanelPaths...)
+	if st.BothPanels {
+		base = a.mergedPanelHistories()
+	}
+	st.ZoxideFrom = len(base)
+	seen := make(map[string]struct{}, len(base))
+	for _, p := range base {
+		seen[panel.CleanPathString(p)] = struct{}{}
+	}
+	for _, p := range st.Zoxide {
+		if !st.IncludeZoxide {
+			break
+		}
+		if _, ok := seen[p]; !ok {
+			seen[p] = struct{}{}
+			base = append(base, p)
+		}
+	}
+	st.Paths = base
+	st.PathMissing = make([]bool, len(st.Paths))
+	a.reloadHistoryDialogList()
 	a.startHistoryMissingScan()
 }
 
@@ -112,16 +185,8 @@ func (a *App) toggleHistoryDialogBothPanels() {
 	if !st.Open {
 		return
 	}
-	if st.BothPanels {
-		st.BothPanels = false
-		st.Paths = append([]string(nil), st.PanelPaths...)
-	} else {
-		st.BothPanels = true
-		st.Paths = a.mergedPanelHistories()
-	}
-	st.PathMissing = make([]bool, len(st.Paths))
-	a.reloadHistoryDialogList()
-	a.startHistoryMissingScan()
+	st.BothPanels = !st.BothPanels
+	a.rebuildHistoryDialogPaths()
 }
 
 func (a *App) reloadHistoryDialogList() {
@@ -179,21 +244,7 @@ func (a *App) syncHistoryDialogRanks() {
 func (a *App) historyDialogListRows() int {
 	termW, termH := a.screen.Size()
 	layout := a.layoutForTerminalSize(termW, termH)
-	listH := layout.Height - 12
-	switch {
-	case listH > 18:
-		listH = 18
-	case listH < 4:
-		listH = 4
-	}
-	dialogHeight := 7 + listH
-	if dialogHeight > layout.Height-2 {
-		listH = layout.Height - 2 - 7
-		if listH < 4 {
-			return 4
-		}
-	}
-	return listH
+	return max(dialog.HistoryDialogListRows(layout.Height, a.model.HistoryDialog.ZoxideAvailable), 1)
 }
 
 func (a *App) activateHistorySelection() {
@@ -244,7 +295,7 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			}
 		}
 	}
-	if dialog.TryStandardDialogActions(event, a.activateHistorySelection, a.closeHistoryDialog, nil) {
+	if dialog.TryStandardDialogActions(event, a.activateHistorySelection, a.closeHistoryDialog, []dialog.ExtraMnemonic{{Rune: dialog.HistoryZoxideMnemonic, Fn: a.toggleHistoryIncludeZoxide}}) {
 		return
 	}
 
@@ -265,14 +316,18 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 	case tcell.KeyEsc:
 		a.closeHistoryDialog()
 	case tcell.KeyEnter:
-		switch a.model.HistoryDialog.Focus {
-		case 2:
+		switch st.Focus {
+		case st.HistoryCancelFocus():
 			a.closeHistoryDialog()
+		case st.HistoryZoxideFocus():
+			a.toggleHistoryIncludeZoxide()
 		default:
 			a.activateHistorySelection()
 		}
 	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+		// Up/Down on the list move the selection, not focus.
+		listMotion := st.Focus == 0 && (event.Key() == tcell.KeyUp || event.Key() == tcell.KeyDown)
+		if nf, ok := st.HistoryForm().MoveFocus(st.Focus, event.Key()); ok && !listMotion {
 			st.Focus = nf
 			if st.Focus == 0 && event.Key() == tcell.KeyUp {
 				dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
@@ -294,19 +349,21 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 		if event.Modifiers() != tcell.ModNone {
 			break
 		}
-		if a.model.HistoryDialog.Focus == 0 {
+		if st.Focus == 0 {
 			break
 		}
-		switch event.Rune() {
-		case 'o', 'O':
+		switch dialog.DialogButtonRune(event.Rune()) {
+		case dialog.ButtonRuneOK:
 			a.activateHistorySelection()
-		case 'c', 'C':
+		case dialog.ButtonRuneCancel:
 			a.closeHistoryDialog()
-		case ' ':
-			switch a.model.HistoryDialog.Focus {
-			case 1:
+		case dialog.ButtonRuneToggle:
+			switch st.Focus {
+			case st.HistoryZoxideFocus():
+				a.toggleHistoryIncludeZoxide()
+			case st.HistoryOKFocus():
 				a.activateHistorySelection()
-			case 2:
+			case st.HistoryCancelFocus():
 				a.closeHistoryDialog()
 			}
 		}

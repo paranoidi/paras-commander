@@ -94,6 +94,7 @@ type Config struct {
 	Jobs       JobsConfig       `toml:"jobs"`
 	Operations OperationsConfig `toml:"operations"`
 	Logging    LoggingConfig    `toml:"logging"`
+	History    HistoryConfig    `toml:"history"`
 	Bookmarks  BookmarksConfig  `toml:"bookmarks"`
 	UserMenu   UserMenuConfig   `toml:"user_menu"`
 	// Commands configures user commands whose output is captured into the Commands view / output
@@ -221,6 +222,12 @@ type MetaConfig struct {
 	// entry when the entry does not specify its own workers value in meta.toml.
 	// Minimum 1 after Validate. Default DefaultMetaEntryWorkers.
 	DefaultEntryWorkers int `toml:"default_entry_workers"`
+}
+
+// HistoryConfig controls the directory History dialog.
+type HistoryConfig struct {
+	// Zoxide appends `zoxide query --list` directories after the panel history when zoxide is on PATH.
+	Zoxide bool `toml:"zoxide"`
 }
 
 // BookmarksConfig controls fzf-marks compatible directory marks.
@@ -741,6 +748,9 @@ func Default() Config {
 			Enabled: false,
 			Level:   "info",
 			Path:    "",
+		},
+		History: HistoryConfig{
+			Zoxide: DefaultHistoryZoxide,
 		},
 		Bookmarks: BookmarksConfig{
 			File: "",

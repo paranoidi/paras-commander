@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -633,5 +634,55 @@ func TestAddBookmarkEmptyNameClosesWithError(t *testing.T) {
 	}
 	if _, err := os.Stat(marksPath); !os.IsNotExist(err) {
 		t.Fatalf("marks file should not exist; stat err = %v", err)
+	}
+}
+
+func TestHistoryDialogZoxideRowsCheckboxAndBothPanels(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	meadow := filepath.Join(root, "meadow")
+	for _, p := range []string{alpha, meadow} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	navigatePanelIntoDir(t, app, screen, ui.PrimaryPanel, "alpha")
+
+	app.openHistoryDialog(ui.PrimaryPanel)
+	history := append([]string(nil), app.model.HistoryDialog.Paths...)
+	app.applyHistoryZoxide(historyZoxidePayload{Paths: []string{alpha, meadow}, Installed: true})
+	st := &app.model.HistoryDialog
+	want := append(append([]string(nil), history...), meadow)
+	if !st.ZoxideAvailable || !slices.Equal(st.Paths, want) || st.ZoxideFrom != len(history) {
+		t.Fatalf("paths = %q (zoxide from %d), want %q", st.Paths, st.ZoxideFrom, want)
+	}
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if st.IncludeZoxide || !slices.Equal(st.Paths, history) {
+		t.Fatalf("Alt+I should drop zoxide rows: include=%v paths=%q", st.IncludeZoxide, st.Paths)
+	}
+	// Tab reaches the checkbox (Find-style focus), Space toggles it back on, Tab moves to OK.
+	for _, ev := range []*tcell.EventKey{
+		tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone),
+		tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone),
+	} {
+		if quit, _ := app.handleKey(ev); quit {
+			t.Fatal("unexpected quit")
+		}
+	}
+	if st.Focus != st.HistoryZoxideFocus() || !st.IncludeZoxide {
+		t.Fatalf("focus=%d include=%v, want checkbox focused and checked", st.Focus, st.IncludeZoxide)
+	}
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)); quit || st.Focus != st.HistoryOKFocus() {
+		t.Fatalf("focus=%d, want OK %d", st.Focus, st.HistoryOKFocus())
+	}
+
+	app.toggleHistoryDialogBothPanels()
+	if got := app.model.HistoryDialog.Paths; got[len(got)-1] != meadow {
+		t.Fatalf("merged paths lost zoxide tail: %q", got)
 	}
 }

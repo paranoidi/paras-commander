@@ -21,6 +21,8 @@ type RowMarks struct {
 	Cursor  bool
 	// RangeAnchor marks the pending range-select start row (Theme.IconFilelistRangeAnchor).
 	RangeAnchor bool
+	// Zoxide marks a History row that comes from zoxide (Theme.IconDialogZoxide); colored like Missing on Cursor.
+	Zoxide bool
 }
 
 // RowMarksFunc resolves RowMarks for one row's absolute path.
@@ -28,8 +30,8 @@ type RowMarksFunc func(absPath string) RowMarks
 
 // RowMarksWidth returns how many trailing cells m's active marks need: 2 cells per active
 // mark (" <icon>"), the same convention as panellist.SuffixDecorationLen.
-// rowMarksMaxWidth is RowMarksWidth's ceiling: four possible marks (job, pin, missing, range anchor) at 2 cells each.
-const rowMarksMaxWidth = 8
+// rowMarksMaxWidth is RowMarksWidth's ceiling: five possible marks (job, pin, missing, range anchor, zoxide) at 2 cells each.
+const rowMarksMaxWidth = 10
 
 func RowMarksWidth(m RowMarks) int {
 	n := 0
@@ -43,6 +45,9 @@ func RowMarksWidth(m RowMarks) int {
 		n += 2
 	}
 	if m.RangeAnchor {
+		n += 2
+	}
+	if m.Zoxide {
 		n += 2
 	}
 	return n
@@ -83,6 +88,14 @@ func DrawRowMarksSuffix(screen tcell.Screen, x, y, maxWidth int, m RowMarks, bg 
 	if m.RangeAnchor && used+2 <= maxWidth {
 		fg, _, _ := styles.PanelRowMarkRangeAnchor.Decompose()
 		primitive.Text(screen, x+used, y, 2, " "+string(styles.IconFilelistRangeAnchor()), tcell.StyleDefault.Foreground(fg).Background(bg))
+		used += 2
+	}
+	if m.Zoxide && used+2 <= maxWidth {
+		fg, _, _ := styles.DialogOptionRowStyle(false, false).Decompose()
+		if m.Cursor {
+			fg = styles.DialogMissingIconForeground(true)
+		}
+		primitive.Text(screen, x+used, y, 2, " "+styles.IconDialogZoxide(), tcell.StyleDefault.Foreground(fg).Background(bg))
 		used += 2
 	}
 	return used

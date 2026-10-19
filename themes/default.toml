@@ -318,6 +318,7 @@ hidden_dotfiles = "\U000F06D1"
 [icons.dialog]
 info = "\uf05a"
 missing = "\U000F09E7"   # trailing mark on history/bookmark/pin rows whose path is gone
+zoxide = "\uf0e7"        # trailing mark on History rows that come from zoxide
 
 [icons.dialog.checkbox]
 checked = "\U000F0856"

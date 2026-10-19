@@ -144,3 +144,13 @@ func TestDrawRowMarksSuffixMissingColorFollowsCursor(t *testing.T) {
 		}
 	}
 }
+
+func TestHistoryDialogListRowsCountsZoxideRow(t *testing.T) {
+	// Height 12 fits exactly 6 chrome rows + 4 list rows; the checkbox row tips it over.
+	if got := HistoryDialogListRows(12, false); got != 4 {
+		t.Fatalf("without checkbox = %d, want 4", got)
+	}
+	if got := HistoryDialogListRows(12, true); got != 0 {
+		t.Fatalf("with checkbox = %d, want 0 (does not fit)", got)
+	}
+}
