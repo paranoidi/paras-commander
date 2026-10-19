@@ -3,7 +3,9 @@ package preview
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"image"
 	"image/png"
@@ -204,9 +206,37 @@ func encodeImagePayload(img image.Image, proto previewpanel.ImageProtocol, unico
 			return "", err
 		}
 		return buf.String(), nil
+	case previewpanel.ImageProtocolUeberzug:
+		return writeUeberzugPNG(img)
 	default:
 		return "", fmt.Errorf("unsupported image protocol %d", proto)
 	}
+}
+
+// ueberzugDir is this process's directory of PNGs handed to ueberzugpp by path.
+var ueberzugDir = filepath.Join(os.TempDir(), fmt.Sprintf("pc-ueberzug-%d", os.Getpid()))
+
+// writeUeberzugPNG stores img as a content-addressed PNG in ueberzugDir and returns its path,
+// which is the Überzug++ payload.
+func writeUeberzugPNG(img image.Image) (string, error) {
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(ueberzugDir, 0o700); err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(buf.Bytes())
+	path := filepath.Join(ueberzugDir, hex.EncodeToString(sum[:])+".png")
+	if _, err := os.Stat(path); err == nil {
+		return path, nil
+	}
+	return path, os.WriteFile(path, buf.Bytes(), 0o600)
+}
+
+// RemoveUeberzugFiles deletes the PNGs written for Überzug++ (call at exit).
+func RemoveUeberzugFiles() {
+	_ = os.RemoveAll(ueberzugDir)
 }
 
 // shrinkSixelForTmux re-fits and re-encodes img at progressively smaller sizes (0.75x per

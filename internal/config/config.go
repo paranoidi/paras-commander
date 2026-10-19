@@ -300,7 +300,7 @@ type PreviewConfig struct {
 	// Images enables in-process image previews (F3 / quick view / carousel) via sixel or
 	// Kitty graphics. When false, image paths and video thumbnails show metadata text instead.
 	Images bool `toml:"images"`
-	// ImageProtocol selects the terminal graphics protocol: "auto", "sixel", or "kitty".
+	// ImageProtocol selects the terminal graphics protocol: "auto", "sixel", "kitty", or "ueberzug".
 	// Empty/invalid values normalize to DefaultPreviewImageProtocol ("auto").
 	ImageProtocol string `toml:"image_protocol"`
 	// TerminalSixel / TerminalKitty / TerminalKittyPlaceholder are tri-state user confirmations
@@ -1392,6 +1392,8 @@ func (c *Config) validatePreview(builtin *Config) {
 		c.Preview.ImageProtocol = PreviewImageProtocolSixel
 	case PreviewImageProtocolKitty:
 		c.Preview.ImageProtocol = PreviewImageProtocolKitty
+	case PreviewImageProtocolUeberzug:
+		c.Preview.ImageProtocol = PreviewImageProtocolUeberzug
 	case "", PreviewImageProtocolAuto:
 		c.Preview.ImageProtocol = PreviewImageProtocolAuto
 	default:

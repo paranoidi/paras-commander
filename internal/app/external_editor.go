@@ -27,6 +27,8 @@ var externalEditorRunner = func(ctx context.Context, path string, elevate bool) 
 }
 
 func (a *App) withTerminalReleased(fn func() error) error {
+	// An Überzug++ window is not part of the terminal, so it would float over the subprocess.
+	a.resetImageOverlay()
 	// Suspend/Resume release the TTY for a subprocess; Fini/Init must not be used
 	// here because Fini closes the TTY once (sync.Once) and breaks a second launch.
 	if err := a.screen.Suspend(); err != nil {

@@ -305,3 +305,34 @@ func TestRunImageProtocolNoneReturnsMetadata(t *testing.T) {
 		t.Fatalf("ImagePayload = %q, want empty for None protocol", res.ImagePayload)
 	}
 }
+
+func TestEncodeImagePayloadUeberzugWritesPNG(t *testing.T) {
+	orig := ueberzugDir
+	ueberzugDir = filepath.Join(t.TempDir(), "pc-ueberzug-test")
+	t.Cleanup(func() { ueberzugDir = orig })
+
+	img := image.NewRGBA(image.Rect(0, 0, 4, 3))
+	path, err := encodeImagePayload(img, previewpanel.ImageProtocolUeberzug, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Dir(path) != ueberzugDir {
+		t.Fatalf("path %q not under %q", path, ueberzugDir)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	got, err := png.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Bounds().Dx() != 4 || got.Bounds().Dy() != 3 {
+		t.Fatalf("decoded bounds = %v", got.Bounds())
+	}
+	RemoveUeberzugFiles()
+	if _, err := os.Stat(ueberzugDir); !os.IsNotExist(err) {
+		t.Fatalf("dir still present after RemoveUeberzugFiles: %v", err)
+	}
+}

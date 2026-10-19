@@ -24,6 +24,34 @@ var tmuxClientTermType = sync.OnceValue(func() string {
 	return strings.ToLower(strings.TrimSpace(string(out)))
 })
 
+// ueberzugInstalled reports whether `ueberzugpp` is on PATH. Cached for the process lifetime
+// (warmed in WarmTmuxCaches) so the render path never stats PATH. Overridable in tests.
+var ueberzugInstalled = sync.OnceValue(func() bool {
+	_, err := exec.LookPath("ueberzugpp")
+	return err == nil
+})
+
+// UeberzugOutput returns the `ueberzugpp layer -so` output for the session: "wayland" under a
+// compositor Überzug++ supports (it reads the compositor socket directly; these variables are
+// from ueberzugpp's canvas/wayland/config.cpp), "x11" when DISPLAY is set, else "" (unusable).
+func UeberzugOutput(environ func(string) string) string {
+	if environ("WAYLAND_DISPLAY") != "" {
+		for _, k := range []string{"NIRI_SOCKET", "SWAYSOCK", "HYPRLAND_INSTANCE_SIGNATURE", "WAYFIRE_SOCKET"} {
+			if environ(k) != "" {
+				return "wayland"
+			}
+		}
+	}
+	if environ("DISPLAY") != "" {
+		return "x11"
+	}
+	return ""
+}
+
+func ueberzugAvailable(environ func(string) string) bool {
+	return ueberzugInstalled() && UeberzugOutput(environ) != ""
+}
+
 // tmuxOuterTerminalSupportsUnicodePlaceholders reports whether tmux's client_termtype
 // identifies the actually-attached terminal as one known to support Kitty's Unicode-placeholder
 // image display: Kitty and Ghostty always, plus any terminal the user has explicitly confirmed
@@ -86,7 +114,8 @@ func imageProtocolHeuristic(environ func(string) string) previewpanel.ImageProto
 // them is "yes", that protocol wins outright; if the heuristic's guess is contradicted by a
 // "no" for that protocol, the other protocol is used instead; otherwise the heuristic's guess
 // stands. Kitty is preferred over Sixel for any terminal known to implement it, WezTerm
-// included, both outside and under tmux. Under tmux, whether that Kitty traffic goes out as a
+// included, both outside and under tmux. When that guess would be Sixel without a "yes"
+// confirmation, Überzug++ is used instead if installed and a display is usable. Under tmux, whether that Kitty traffic goes out as a
 // race-free Unicode placeholder or as cursor-relative-via-passthrough depends on whether the
 // outer terminal is confirmed placeholder-capable — see TmuxSupportsKittyUnicodePlaceholders.
 func ResolveImageProtocol(cfg config.PreviewConfig, environ func(string) string) previewpanel.ImageProtocol {
@@ -95,6 +124,8 @@ func ResolveImageProtocol(cfg config.PreviewConfig, environ func(string) string)
 		return previewpanel.ImageProtocolSixel
 	case config.PreviewImageProtocolKitty:
 		return previewpanel.ImageProtocolKitty
+	case config.PreviewImageProtocolUeberzug:
+		return previewpanel.ImageProtocolUeberzug
 	default:
 		// auto (and unknown values)
 		if environ == nil {
@@ -114,6 +145,11 @@ func ResolveImageProtocol(cfg config.PreviewConfig, environ func(string) string)
 		}
 		if guess == previewpanel.ImageProtocolSixel && sixel == config.PreviewTerminalCapabilityNo {
 			return previewpanel.ImageProtocolKitty
+		}
+		if guess == previewpanel.ImageProtocolSixel && sixel != config.PreviewTerminalCapabilityYes &&
+			ueberzugAvailable(environ) {
+			// Sixel here is only the "nothing else matched" guess; a window overlay beats it.
+			return previewpanel.ImageProtocolUeberzug
 		}
 		return guess
 	}
@@ -153,7 +189,7 @@ func TmuxSupportsKittyUnicodePlaceholders(environ func(string) string, cfg confi
 //     WezTerm-under-tmux case this feature exists for).
 func CapabilityUncertain(cfg config.PreviewConfig, environ func(string) string) bool {
 	switch strings.ToLower(strings.TrimSpace(cfg.ImageProtocol)) {
-	case config.PreviewImageProtocolSixel, config.PreviewImageProtocolKitty:
+	case config.PreviewImageProtocolSixel, config.PreviewImageProtocolKitty, config.PreviewImageProtocolUeberzug:
 		return false
 	}
 	if environ == nil {
@@ -234,10 +270,12 @@ func tmuxSupportsNativeSixel(environ func(string) string) bool {
 // tmux is detected, so the first image preview doesn't pay for the `tmux` subprocess
 // synchronously on the render path (ResolveImageProtocol / TmuxSupportsKittyUnicodePlaceholders
 // / TmuxSupportsNativeSixel all block on these the first time they're called, then hit the
-// sync.OnceValue cache forever after). No-op outside tmux. Call once at app startup; safe
-// from any goroutine since sync.OnceValue serializes concurrent first calls. environ is
+// sync.OnceValue cache forever after). Call once at app startup; safe
+// from any goroutine since sync.OnceValue serializes concurrent first calls. The tmux probes are
+// skipped outside tmux; the ueberzugpp PATH lookup is not. environ is
 // typically os.Getenv.
 func WarmTmuxCaches(environ func(string) string) {
+	go ueberzugInstalled() // also warmed outside tmux
 	if environ == nil || environ("TMUX") == "" {
 		return
 	}

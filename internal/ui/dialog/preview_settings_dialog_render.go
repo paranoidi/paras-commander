@@ -23,6 +23,7 @@ func PreviewSettingsDialogProtocolRadios() []PreviewSettingsDialogRadio {
 		{config.PreviewImageProtocolAuto, "Auto", 'a'},
 		{config.PreviewImageProtocolSixel, "Sixel", 'i'},
 		{config.PreviewImageProtocolKitty, "Kitty", 't'},
+		{config.PreviewImageProtocolUeberzug, "Überzug++", 'z'},
 	}
 }
 
@@ -51,22 +52,22 @@ const (
 	previewSettingsDialogFocusKittyFirst       = 3
 	previewSettingsDialogFocusPlaceholderFirst = 6
 	previewSettingsDialogFocusProtocolFirst    = 9
-	previewSettingsDialogFocusMetadataFirst    = 12
-	previewSettingsDialogFocusVideoMetadata    = 16
-	previewSettingsDialogFocusOK               = 17
-	previewSettingsDialogFocusCancel           = 18
+	previewSettingsDialogFocusMetadataFirst    = 13
+	previewSettingsDialogFocusVideoMetadata    = 17
+	previewSettingsDialogFocusOK               = 18
+	previewSettingsDialogFocusCancel           = 19
 )
 
 // PreviewSettingsDialogForm is the dialog's radio/checkbox/button focus layout, shared by the
-// render and key-handling code: sixel(0-2) | kitty(3-5) | placeholder(6-8) | protocol(9-11) |
-// metadata(12-15) | video(16) | buttons(17-18).
+// render and key-handling code: sixel(0-2) | kitty(3-5) | placeholder(6-8) | protocol(9-12) |
+// metadata(13-16) | video(17) | buttons(18-19).
 func PreviewSettingsDialogForm() DialogLinearForm {
-	return NewDialogLinearForm(17).WithSegments(0, 3, 6, 9, 12, 16)
+	return NewDialogLinearForm(18).WithSegments(0, 3, 6, 9, 13, 17)
 }
 
 // DrawPreviewSettingsDialog renders the M-F3 preview settings modal.
 func DrawPreviewSettingsDialog(screen tcell.Screen, layout Layout, state PreviewSettingsDialogState, styles theme.Theme) {
-	const width, height = 46, 28
+	const width, height = 46, 29
 	rect := draw.CenteredDialogRect(layout, width, height)
 
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Preview settings", styles)

@@ -1,8 +1,8 @@
 # Terminal image previews
 
 Paras Commander can show inline image previews in quick view, fullscreen (F3), and
-carousel. Images are drawn with either **Sixel** or the **Kitty graphics protocol**,
-depending on your terminal and configuration.
+carousel. Images are drawn with **Sixel**, the **Kitty graphics protocol**, or an
+**Überzug++** overlay window, depending on your terminal and configuration.
 
 This page covers what you need for previews to work reliably — especially under
 **tmux**.
@@ -14,14 +14,14 @@ In `config.toml`:
 ```toml
 [preview]
 images = true
-image_protocol = "auto"   # recommended: "auto", "sixel", or "kitty"
+image_protocol = "auto"   # recommended: "auto", "sixel", "kitty", or "ueberzug"
 ```
 
 | Key | Default | Meaning |
 |---|---|---|
 | `images` | `true` | When `false`, image files show format / dimensions / size text only. |
 | `image_protocol` | `"auto"` | Which graphics protocol to use (see below). |
-| `terminal_sixel` / `terminal_kitty` / `terminal_kitty_placeholder` | `"auto"` | Tri-state (`"auto"`/`"yes"`/`"no"`) user confirmations for graphics capabilities detection can't always answer on its own — set via the **M-F3** Preview settings dialog (also reachable from the top menu: **Options → Preview settings**), not by hand. **F5** in that dialog writes detected radios as `"yes"` and undetected as `"auto"` from a fresh best-guess (same environment/tmux introspection `image_protocol = "auto"` itself uses) without touching the Auto/Sixel/Kitty radio and never writes `"no"`; it never guesses `terminal_kitty_placeholder` for anything but Kitty/Ghostty, since that's precisely the capability this dialog exists to let you confirm by hand. `terminal_kitty_placeholder` is the WezTerm-under-tmux case; see [Confirming Kitty Unicode placeholders under tmux](#confirming-kitty-unicode-placeholders-under-tmux) below. |
+| `terminal_sixel` / `terminal_kitty` / `terminal_kitty_placeholder` | `"auto"` | Tri-state (`"auto"`/`"yes"`/`"no"`) user confirmations for graphics capabilities detection can't always answer on its own — set via the **M-F3** Preview settings dialog (also reachable from the top menu: **Options → Preview settings**), not by hand. **F5** in that dialog writes detected radios as `"yes"` and undetected as `"auto"` from a fresh best-guess (same environment/tmux introspection `image_protocol = "auto"` itself uses) without touching the Active protocol radios and never writes `"no"`; it never guesses `terminal_kitty_placeholder` for anything but Kitty/Ghostty, since that's precisely the capability this dialog exists to let you confirm by hand. `terminal_kitty_placeholder` is the WezTerm-under-tmux case; see [Confirming Kitty Unicode placeholders under tmux](#confirming-kitty-unicode-placeholders-under-tmux) below. |
 
 Leave `image_protocol` at `"auto"` unless you have a reason to force a protocol.
 Forcing `"kitty"` on a terminal that only speaks Sixel (or that lacks Kitty Unicode
@@ -165,8 +165,9 @@ see above. If your terminal isn't recognized, add it explicitly, e.g.
 
 | Value | Behavior |
 |---|---|
-| `"auto"` | Best default. Also consults `terminal_sixel`/`terminal_kitty`: an explicit `"yes"` on one settles the choice outright, and an explicit `"no"` on the guessed protocol falls through to the other. Otherwise Kitty on Kitty/Ghostty/WezTerm, Sixel elsewhere. Under tmux, Unicode placeholders are used for a confirmed placeholder-capable terminal (Kitty/Ghostty always, others via `terminal_kitty_placeholder`); otherwise cursor-relative Kitty. |
+| `"auto"` | Best default. Also consults `terminal_sixel`/`terminal_kitty`: an explicit `"yes"` on one settles the choice outright, and an explicit `"no"` on the guessed protocol falls through to the other. Otherwise Kitty on Kitty/Ghostty/WezTerm, Sixel elsewhere (Überzug++ instead of that Sixel guess when available and `terminal_sixel` is not `"yes"`). Under tmux, Unicode placeholders are used for a confirmed placeholder-capable terminal (Kitty/Ghostty always, others via `terminal_kitty_placeholder`); otherwise cursor-relative Kitty. |
 | `"sixel"` | Always encode as Sixel. Needs a Sixel-capable outer terminal. |
+| `"ueberzug"` | Always use the Überzug++ overlay (see [Überzug++](#überzug)). |
 | `"kitty"` | Always encode with the Kitty protocol. Under tmux, Unicode placeholders are used only when the outer terminal is confirmed placeholder-capable (same rule as `"auto"`); otherwise cursor-relative Kitty is used (can misplace images under tmux on terminals without placeholder support, e.g. an unconfirmed WezTerm). |
 
 Prefer `"auto"`. It already picks Kitty for WezTerm both outside and under tmux;
@@ -247,3 +248,19 @@ Audio files always show metadata text only (no cover art).
 ## Related
 
 - Preview settings: [config.md](config.md) — `[preview]`
+
+## Überzug++
+
+For terminals with neither Kitty nor Sixel (xterm without Sixel, alacritty, urxvt, ...),
+Paras Commander can draw images with [Überzug++](https://github.com/jstkdng/ueberzugpp),
+which shows them in a separate overlay window placed over the preview pane.
+
+- Install `ueberzugpp` and make sure it is on `PATH`.
+- It needs an X11 session (`DISPLAY`) or a Wayland session on Niri, Sway, Hyprland or
+  Wayfire.
+- With `image_protocol = "auto"`, it is used instead of the Sixel fallback guess when
+  both conditions hold and `terminal_sixel` is not `"yes"`. Set
+  `image_protocol = "ueberzug"` (or pick Überzug++ in the **M-F3** dialog) to force it.
+- The overlay is removed while a menu or dialog is open and while an external editor or
+  the Ctrl+O shell has the terminal. Temporary PNGs are deleted on exit.
+- Works under tmux; `ueberzugpp` handles the pane offset itself.

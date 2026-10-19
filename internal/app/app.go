@@ -303,6 +303,7 @@ type App struct {
 	elevate        elevateState
 	image          imageOverlay
 	placeholderImg placeholderImage
+	ueberzug       ueberzugDaemon
 
 	// Indexed by panel ID (ui.PrimaryPanel, ui.SecondaryPanel, and the synthetic
 	// ui.QuickViewOverlayPanel / ui.DedupBrowsePanel).
@@ -467,6 +468,7 @@ func Run(cfg LaunchConfig) (err error) {
 	}
 	// Registered after screen.Fini's defer so the shell child dies before tcell releases the TTY.
 	defer app.closeSubshell()
+	defer app.ueberzug.close()
 	return app.Run()
 }
 

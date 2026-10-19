@@ -379,6 +379,8 @@ const (
 	PreviewImageProtocolSixel = "sixel"
 	// PreviewImageProtocolKitty forces Kitty graphics protocol encoding.
 	PreviewImageProtocolKitty = "kitty"
+	// PreviewImageProtocolUeberzug forces the Überzug++ overlay (X11 / supported Wayland compositors).
+	PreviewImageProtocolUeberzug = "ueberzug"
 	// DefaultPreviewImageProtocol is the default [preview].image_protocol value.
 	DefaultPreviewImageProtocol = PreviewImageProtocolAuto
 	// PreviewTerminalCapabilityAuto/Yes/No are the tri-state values for [preview].terminal_sixel,

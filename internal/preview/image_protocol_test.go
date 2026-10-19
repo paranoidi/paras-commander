@@ -356,3 +356,60 @@ func TestDetectTerminalCapabilities(t *testing.T) {
 		t.Fatalf("tmux+wezterm with sixel feature: got sixel=%v kitty=%v placeholder=%v, want true/true/false (placeholder never auto-detected for WezTerm)", sixel, kitty, placeholder)
 	}
 }
+
+func TestUeberzugOutput(t *testing.T) {
+	cases := []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{"none", nil, ""},
+		{"x11", map[string]string{"DISPLAY": ":0"}, "x11"},
+		{"wayland sway", map[string]string{"WAYLAND_DISPLAY": "wayland-1", "SWAYSOCK": "/run/sway"}, "wayland"},
+		{"wayland niri", map[string]string{"WAYLAND_DISPLAY": "wayland-1", "NIRI_SOCKET": "/run/niri"}, "wayland"},
+		{"wayland unsupported compositor falls to x11", map[string]string{"WAYLAND_DISPLAY": "wayland-1", "DISPLAY": ":0"}, "x11"},
+		{"wayland unsupported compositor alone", map[string]string{"WAYLAND_DISPLAY": "wayland-1"}, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := UeberzugOutput(func(k string) string { return tc.env[k] }); got != tc.want {
+				t.Fatalf("UeberzugOutput = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveImageProtocolUeberzug(t *testing.T) {
+	orig := ueberzugInstalled
+	t.Cleanup(func() { ueberzugInstalled = orig })
+	env := func(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
+	x11 := map[string]string{"DISPLAY": ":0"}
+	auto := config.PreviewConfig{ImageProtocol: config.PreviewImageProtocolAuto}
+
+	ueberzugInstalled = func() bool { return true }
+	if got := ResolveImageProtocol(auto, env(x11)); got != previewpanel.ImageProtocolUeberzug {
+		t.Fatalf("auto + installed + X11 = %v, want Ueberzug", got)
+	}
+	if got := ResolveImageProtocol(auto, env(nil)); got != previewpanel.ImageProtocolSixel {
+		t.Fatalf("auto + no display = %v, want Sixel", got)
+	}
+	if got := ResolveImageProtocol(auto, env(map[string]string{"DISPLAY": ":0", "TERM": "xterm-kitty"})); got != previewpanel.ImageProtocolKitty {
+		t.Fatalf("auto + kitty env = %v, want Kitty", got)
+	}
+	yes := config.PreviewConfig{ImageProtocol: config.PreviewImageProtocolAuto, TerminalSixel: config.PreviewTerminalCapabilityYes}
+	if got := ResolveImageProtocol(yes, env(x11)); got != previewpanel.ImageProtocolSixel {
+		t.Fatalf("terminal_sixel=yes = %v, want Sixel", got)
+	}
+	explicit := config.PreviewConfig{ImageProtocol: config.PreviewImageProtocolUeberzug}
+	if got := ResolveImageProtocol(explicit, env(nil)); got != previewpanel.ImageProtocolUeberzug {
+		t.Fatalf("explicit = %v, want Ueberzug", got)
+	}
+	if CapabilityUncertain(auto, env(x11)) {
+		t.Fatal("Ueberzug auto fallback should not be uncertain")
+	}
+
+	ueberzugInstalled = func() bool { return false }
+	if got := ResolveImageProtocol(auto, env(x11)); got != previewpanel.ImageProtocolSixel {
+		t.Fatalf("auto + not installed = %v, want Sixel", got)
+	}
+}

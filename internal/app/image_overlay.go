@@ -102,6 +102,12 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 
 	if a.image.lastSet {
 		wasKitty := a.image.last.Protocol == previewpanel.ImageProtocolKitty
+		if a.image.last.Protocol == previewpanel.ImageProtocolUeberzug &&
+			(plan == nil || plan.Protocol != previewpanel.ImageProtocolUeberzug) {
+			// A following Überzug++ add replaces the window in place, so only remove when
+			// nothing replaces it.
+			a.ueberzug.remove()
+		}
 		// Per the Kitty graphics spec, re-transmitting image data under the same id requires
 		// deleting the existing image and its placements first; a bare re-transmit without
 		// that delete is undefined behavior. Some terminals (Kitty itself) tolerate skipping
@@ -135,8 +141,8 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 }
 
 // emitImageAfterShow writes pending Kitty deletes and/or the image payload to the tty for the
-// cursor-relative placement path. No-op for tmux Unicode-placeholder images: those are
-// transmitted synchronously in reconcilePlaceholderImage (before Show, since the terminal
+// cursor-relative placement path (Überzug++ instead sends its add command to the daemon).
+// No-op for tmux Unicode-placeholder images: those are transmitted synchronously in reconcilePlaceholderImage (before Show, since the terminal
 // must know the image data before Show draws the placeholder cells that reference it) and
 // displayed via normal screen cells, not an out-of-band write here.
 //
@@ -153,6 +159,16 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 // redraws it after every tmux-side invalidate — so it is sent unwrapped, exactly like the
 // no-tmux path below, instead of passthrough-wrapped.
 func (a *App) emitImageAfterShow() {
+	if a.image.lastSet && a.image.last.Protocol == previewpanel.ImageProtocolUeberzug {
+		// Überzug++ draws its own window: no tty writes, no cursor ceremony, no tmux handling.
+		a.image.pendingDelete = false
+		if a.image.pendingEmit {
+			a.image.pendingEmit = false
+			p := a.image.last
+			a.ueberzug.show(p.X, p.Y, a.image.lastCols, a.image.lastRows, p.Payload)
+		}
+		return
+	}
 	tty, ok := a.screen.Tty()
 	if !ok {
 		a.image.pendingEmit = false
@@ -300,6 +316,9 @@ func (a *App) resetImageOverlay() {
 		(a.image.lastSet && a.image.last.Protocol == previewpanel.ImageProtocolKitty)
 	if a.image.lastSet {
 		a.screen.LockRegion(a.image.last.X, a.image.last.Y, a.image.lastCols, a.image.lastRows, false)
+	}
+	if a.image.lastSet && a.image.last.Protocol == previewpanel.ImageProtocolUeberzug {
+		a.ueberzug.remove()
 	}
 	if needKittyDelete {
 		if tty, ok := a.screen.Tty(); ok {

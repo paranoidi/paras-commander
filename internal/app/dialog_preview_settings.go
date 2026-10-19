@@ -35,7 +35,7 @@ func (a *App) openPreviewSettingsDialog() {
 
 func effectiveImageProtocol(v string) string {
 	switch v {
-	case config.PreviewImageProtocolSixel, config.PreviewImageProtocolKitty:
+	case config.PreviewImageProtocolSixel, config.PreviewImageProtocolKitty, config.PreviewImageProtocolUeberzug:
 		return v
 	default:
 		return config.PreviewImageProtocolAuto
@@ -193,8 +193,8 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 		kittyFocusFirst       = 3
 		placeholderFocusFirst = 6
 		protocolFocusFirst    = 9
-		metadataFocusFirst    = 12
-		videoFocus            = 16
+		metadataFocusFirst    = 13
+		videoFocus            = 17
 	)
 	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
 		Focus:              &st.Focus,

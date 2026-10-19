@@ -83,6 +83,9 @@ const (
 	ImageProtocolSixel
 	// ImageProtocolKitty is the Kitty graphics protocol (APC _G).
 	ImageProtocolKitty
+	// ImageProtocolUeberzug is an Überzug++ overlay window; the payload is a PNG file path, not
+	// escape bytes.
+	ImageProtocolUeberzug
 )
 
 // KittyGraphicsImageID is the fixed Kitty image id used for the single on-screen preview.

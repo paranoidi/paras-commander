@@ -6,7 +6,8 @@ Lesson index (current conclusion first): L1 Kitty delete-before-retransmit; L2 t
 
 ## Protocols and selection
 
-- `[preview].image_protocol` = `auto` (default) | `sixel` | `kitty`.
+- `[preview].image_protocol` = `auto` (default) | `sixel` | `kitty` | `ueberzug`.
+- **Überzug++**: not a terminal protocol. The payload is a PNG file path (`<tmp>/pc-ueberzug-<pid>/<sha256>.png`, removed on exit by `RemoveUeberzugFiles`); `ueberzugDaemon` (`internal/app/ueberzug.go`) sends `add`/`remove` JSON lines to `ueberzugpp layer -so x11|wayland` (`UeberzugOutput`). One goroutine owns the process; render-path sends are non-blocking and drop when the buffer is full. No tty writes, no tmux handling (`ueberzugpp` handles pane offsets). `auto` picks it when Sixel would only be the heuristic fallback (`terminal_sixel` not `yes`) and `ueberzugpp` is on `PATH` (cached `ueberzugInstalled`) with a usable display.
 - **Sixel**: DEC format, broad support (WezTerm, iTerm2, foot, ...).
 - **Kitty graphics**: APC-based, richer. Cursor-relative "default placement" works on Kitty, Ghostty and WezTerm. Unicode placeholders (L4) work on Kitty and Ghostty always, on WezTerm only in placeholder-capable builds (L16).
 - tmux never parses Kitty APC (passthrough is mandatory, L2). It parses Sixel only when sent bare (L9, L19).
