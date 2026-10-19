@@ -1,0 +1,49 @@
+site_name: Paras Commander
+docs_dir: docs
+site_dir: site
+exclude_docs: |
+  agents/
+
+nav:
+  - index.md
+  - Usage:
+      - shortcuts.md
+      - panel-filter.md
+      - path-completion.md
+      - jump-to-directory.md
+      - find-duplicates.md
+      - mass-rename.md
+      - graphics.md
+  - Operations:
+      - fileoperations.md
+      - jobs.md
+      - background-scan-throttle.md
+      - elevation.md
+  - Configuration:
+      - config.md
+      - predicates.md
+
+theme:
+  name: material
+  features:
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences

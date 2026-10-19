@@ -14,6 +14,7 @@ vars:
   GOCYCLO_VERSION: v0.6.0
   GOCYCLO_OVER: "70"
   GOVULNCHECK_VERSION: latest
+  MKDOCS: uvx --from mkdocs==1.6.1 --with mkdocs-material==9.7.7 mkdocs
 
 tasks:
   setup:
@@ -84,6 +85,16 @@ tasks:
     desc: Build the pc binary in the repo root
     cmds:
       - CGO_ENABLED=0 go build -ldflags="-s -w" -o pc ./cmd/pc
+
+  docs:build:
+    desc: Build the docs site into ./site
+    cmds:
+      - "{{.MKDOCS}} build --strict"
+
+  docs:serve:
+    desc: Serve the docs site with live reload on localhost:8000
+    cmds:
+      - "{{.MKDOCS}} serve"
 
   verify:
     desc: Merge-ready local gate (lint + race tests + pc artifact)

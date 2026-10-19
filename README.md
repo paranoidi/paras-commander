@@ -38,6 +38,8 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - Linux
 - NerdFont or something similar, no fallback implemented yet.
 
+User documentation lives in `docs/`; `task docs:serve` browses it as a site locally (needs `uv`).
+
 ## Install
 
 Install the `pc` binary into `$GOBIN` if that environment variable is set; otherwise into `$(go env GOPATH)/bin` (often `~/go/bin`). Put that directory on your `PATH`.
