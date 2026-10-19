@@ -32,7 +32,7 @@ func TestTransferDialogPrefillDestinationTrailingSlash(t *testing.T) {
 	}
 }
 
-func TestTransferDialogCopyPreserveAltAndFocusedShortcuts(t *testing.T) {
+func TestTransferDialogCopyPreserveAltAndSpaceShortcuts(t *testing.T) {
 	root := t.TempDir()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -71,16 +71,25 @@ func TestTransferDialogCopyPreserveAltAndFocusedShortcuts(t *testing.T) {
 		t.Fatal("Alt+T should toggle preserve timestamps off")
 	}
 
+	// Mnemonics need Alt: a plain letter on the focused row does nothing; Space toggles.
 	d.FocusField = 1
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
+	if d.PreservePermissions {
+		t.Fatal("plain r on focused permissions row should not toggle")
+	}
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if !d.PreservePermissions {
-		t.Fatal("r on focused permissions row should toggle on")
+		t.Fatal("Space on focused permissions row should toggle on")
 	}
 
 	d.FocusField = 2
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	if d.PreserveTimestamps {
+		t.Fatal("plain t on focused timestamps row should not toggle")
+	}
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if !d.PreserveTimestamps {
-		t.Fatal("t on focused timestamps row should toggle on")
+		t.Fatal("Space on focused timestamps row should toggle on")
 	}
 }
 

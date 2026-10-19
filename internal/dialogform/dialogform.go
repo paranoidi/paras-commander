@@ -22,7 +22,7 @@ type Handlers struct {
 }
 
 // HandleKey applies standard linear-form navigation/mnemonic/space-toggle/apply/cancel
-// key handling. Callers must first try their dialog's Alt+O/Alt+C standard-actions
+// key handling. Mnemonics (OnMnemonic) fire only with Alt. Callers must first try their dialog's Alt+O/Alt+C standard-actions
 // handling (e.g. App.tryStandardDialogActions) before calling HandleKey, since that
 // App-level wiring lives outside this App-independent package.
 func HandleKey(ev *tcell.EventKey, form dialog.DialogLinearForm, h Handlers) bool {
@@ -49,9 +49,6 @@ func HandleKey(ev *tcell.EventKey, form dialog.DialogLinearForm, h Handlers) boo
 		}
 		if ev.Modifiers() != tcell.ModNone {
 			break
-		}
-		if h.OnMnemonic != nil && h.OnMnemonic(ev.Rune()) {
-			return true
 		}
 		if h.AllowPlainOKCancel {
 			switch ev.Rune() {

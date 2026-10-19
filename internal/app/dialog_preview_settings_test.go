@@ -216,8 +216,8 @@ func TestPreviewSettingsDialogCanPersistCapabilityNo(t *testing.T) {
 			})
 
 			app.openPreviewSettingsDialog()
-			app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, field.cycle, tcell.ModNone))
-			app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, field.cycle, tcell.ModNone))
+			app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, field.cycle, tcell.ModAlt))
+			app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, field.cycle, tcell.ModAlt))
 			quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 			if quit {
 				t.Fatal("handleKey() quit = true, want false")
@@ -261,11 +261,11 @@ func TestPreviewSettingsDialogApplyPersists(t *testing.T) {
 	})
 
 	app.openPreviewSettingsDialog()
-	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
-	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
-	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
-	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'u', tcell.ModNone))
-	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModAlt))
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt))
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt))
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'u', tcell.ModAlt))
+	app.handlePreviewSettingsDialogKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModAlt))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {

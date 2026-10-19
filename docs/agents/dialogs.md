@@ -31,6 +31,8 @@ Navigation, button, layout and styling rules every modal dialog follows. For the
 - An Alt-letter that toggles a checkbox or picks a radio **never moves focus out of a focused
   text input** — the user keeps typing after flipping the option. From a non-input row it may
   move focus to the toggled row (group select, filter, mkdir actions follow this).
+- Mnemonic letters always require Alt. A plain letter never toggles a checkbox or picks a radio,
+  even when that row is focused; the focused option toggles with Space or Enter.
 
 ## Rendering / Styling
 

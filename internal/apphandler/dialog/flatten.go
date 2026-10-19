@@ -98,27 +98,14 @@ func (h *Handler) tryFlattenToggle(event *tcell.EventKey) bool {
 			return true
 		}
 	}
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
-		switch event.Rune() {
-		case 'r', 'R':
-			if d.FocusField == 1 {
-				d.Recursive = !d.Recursive
-				return true
-			}
-		case 'e', 'E':
-			if d.FocusField == 2 {
-				d.RemoveEmpty = !d.RemoveEmpty
-				return true
-			}
-		case ' ':
-			switch d.FocusField {
-			case 1:
-				d.Recursive = !d.Recursive
-				return true
-			case 2:
-				d.RemoveEmpty = !d.RemoveEmpty
-				return true
-			}
+	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && event.Rune() == ' ' {
+		switch d.FocusField {
+		case 1:
+			d.Recursive = !d.Recursive
+			return true
+		case 2:
+			d.RemoveEmpty = !d.RemoveEmpty
+			return true
 		}
 	}
 	return false

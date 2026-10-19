@@ -272,47 +272,26 @@ func (h *Handler) handleTransferEnter(event *tcell.EventKey) bool {
 	return false
 }
 
-// handleTransferCheckboxRune applies rune shortcuts (mnemonic letters and Space) for the
-// permissions/timestamps checkboxes and the multi-location flatten checkbox when they are
-// focused.
+// handleTransferCheckboxRune toggles the focused permissions/timestamps/dereference checkbox
+// or the multi-location flatten checkbox on Space. Mnemonic letters require Alt
+// (handleTransferAltShortcut).
 func (h *Handler) handleTransferCheckboxRune(event *tcell.EventKey) {
 	d := &h.model.TransferDialog
-	if d.Phase != dialog.TransferPhaseDestination || event.Key() != tcell.KeyRune || event.Modifiers() != tcell.ModNone {
+	if d.Phase != dialog.TransferPhaseDestination || event.Key() != tcell.KeyRune || event.Modifiers() != tcell.ModNone || event.Rune() != ' ' {
 		return
 	}
 	if d.Kind == dialog.TransferKindCopy {
-		switch event.Rune() {
-		case 'r', 'R':
-			if d.FocusField == 1 {
-				d.PreservePermissions = !d.PreservePermissions
-			}
-		case 't', 'T':
-			if d.FocusField == 2 {
-				d.PreserveTimestamps = !d.PreserveTimestamps
-			}
-		case 'd', 'D':
-			if d.FocusField == 3 {
-				toggleDereferenceSymlinks(d)
-			}
-		case ' ':
-			switch d.FocusField {
-			case 1:
-				d.PreservePermissions = !d.PreservePermissions
-			case 2:
-				d.PreserveTimestamps = !d.PreserveTimestamps
-			case 3:
-				toggleDereferenceSymlinks(d)
-			}
+		switch d.FocusField {
+		case 1:
+			d.PreservePermissions = !d.PreservePermissions
+		case 2:
+			d.PreserveTimestamps = !d.PreserveTimestamps
+		case 3:
+			toggleDereferenceSymlinks(d)
 		}
 	}
-	if d.MultiLocation() {
-		flattenIdx := dialog.TransferDialogEffectiveNumContent(*d) - 1
-		if d.FocusField == flattenIdx {
-			switch event.Rune() {
-			case 'i', 'I', ' ':
-				d.FlattenIntoDest = !d.FlattenIntoDest
-			}
-		}
+	if d.MultiLocation() && d.FocusField == dialog.TransferDialogEffectiveNumContent(*d)-1 {
+		d.FlattenIntoDest = !d.FlattenIntoDest
 	}
 }
 

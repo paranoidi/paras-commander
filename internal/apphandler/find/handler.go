@@ -1391,12 +1391,6 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		if st.Focus == 0 {
 			break
 		}
-		if field := findToggleFieldForRune(event.Rune()); field != findToggleNone {
-			if field == h.findToggleFieldForFocus(st.Focus) {
-				h.applyFindToggle(field)
-			}
-			break
-		}
 		switch dialog.DialogButtonRune(event.Rune()) {
 		case dialog.ButtonRuneOK:
 			h.ActivateDialogOK()

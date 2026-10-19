@@ -123,3 +123,22 @@ func TestHandleKeyEnterCallsOnSpaceBeforeApply(t *testing.T) {
 		t.Fatal("Enter on OK should apply when OnSpace does not handle focus")
 	}
 }
+
+func TestHandleKeyMnemonicRequiresAlt(t *testing.T) {
+	form := dialog.NewDialogLinearForm(1)
+	focus := 0
+	var got []rune
+	h := Handlers{
+		Focus:      &focus,
+		OnApply:    func() {},
+		OnCancel:   func() {},
+		OnMnemonic: func(r rune) bool { got = append(got, r); return true },
+	}
+	HandleKey(tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModNone), form, h)
+	if len(got) != 0 {
+		t.Fatalf("plain z reached OnMnemonic: %q", got)
+	}
+	if !HandleKey(tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModAlt), form, h) || len(got) != 1 {
+		t.Fatalf("Alt+Z should reach OnMnemonic, got %q", got)
+	}
+}

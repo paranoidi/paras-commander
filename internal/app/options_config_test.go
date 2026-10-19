@@ -223,7 +223,7 @@ func TestConfigDialogApplyPersistsUseNerdfontIcons(t *testing.T) {
 	})
 
 	app.openConfigDialog()
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {
@@ -271,7 +271,7 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 	})
 
 	app.openConfigDialog()
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModAlt))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {
@@ -313,7 +313,7 @@ func TestConfigDialogApplyPersistsPaneSplitOrientation(t *testing.T) {
 	})
 
 	app.openConfigDialog()
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
@@ -357,7 +357,7 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	}
 
 	app.openConfigDialog()
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {
@@ -400,7 +400,7 @@ func TestConfigDialogApplyPersistsDefaultListingFormat(t *testing.T) {
 	})
 
 	app.openConfigDialog()
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {
