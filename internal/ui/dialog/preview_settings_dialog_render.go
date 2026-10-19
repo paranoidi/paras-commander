@@ -1,6 +1,8 @@
 package dialog
 
 import (
+	"unicode/utf8"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -67,7 +69,7 @@ func PreviewSettingsDialogForm() DialogLinearForm {
 
 // DrawPreviewSettingsDialog renders the M-F3 preview settings modal.
 func DrawPreviewSettingsDialog(screen tcell.Screen, layout Layout, state PreviewSettingsDialogState, styles theme.Theme) {
-	const width, height = 46, 29
+	const width, height = 46, 23
 	rect := draw.CenteredDialogRect(layout, width, height)
 
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Preview settings", styles)
@@ -113,19 +115,54 @@ func DrawPreviewSettingsDialog(screen tcell.Screen, layout Layout, state Preview
 	draw.DrawOKCancelButtonRow(screen, rect, y, okFocused, cancelFocused, styles)
 }
 
+// previewSettingsCapabilityLabelW is the label column of the capability rows: the longest
+// label ("Placeholder") plus one space, so the radios line up.
+const previewSettingsCapabilityLabelW = len("Placeholder") + 1
+
+// drawPreviewSettingsCapabilityGroup draws the group label and its auto/yes/no radios on one
+// row (Left/Right moves within the row, see
+// PreviewSettingsDialogCapabilityMoveFocus).
 func drawPreviewSettingsCapabilityGroup(
 	screen tcell.Screen,
 	optionX int,
 	y int,
-	prefix string,
+	label string,
 	value string,
 	focus int,
 	focusFirst int,
 	styles theme.Theme,
 ) int {
+	_, dbg, _ := styles.DialogSurface.Decompose()
+	primitive.Text(screen, optionX+1, y, previewSettingsCapabilityLabelW, label, styles.DialogText.Background(dbg))
+	x := optionX + 1 + previewSettingsCapabilityLabelW - 1 // radio marker starts with a space
 	for i, r := range PreviewSettingsDialogCapabilityRadios() {
-		draw.DrawDialogRadio(screen, optionX, y, prefix+" "+r.Label, r.Shortcut, value == r.Value, focus == focusFirst+i, false, styles)
-		y++
+		draw.DrawDialogRadio(screen, x, y, r.Label, r.Shortcut, value == r.Value, focus == focusFirst+i, false, styles)
+		x += utf8.RuneCountInString(" "+styles.IconDialogRadio(false)+" ") + utf8.RuneCountInString(r.Label) + 1
 	}
-	return y
+	return y + 1
+}
+
+// PreviewSettingsDialogCapabilityMoveFocus handles arrow keys inside the three horizontal
+// capability rows: Left/Right stay within the row, Up/Down keep the column across rows and
+// Down from the last row enters the Active protocol group. ok is false outside those rows.
+func PreviewSettingsDialogCapabilityMoveFocus(focus int, key tcell.Key) (int, bool) {
+	n := len(PreviewSettingsDialogCapabilityRadios())
+	if focus < previewSettingsDialogFocusSixelFirst || focus >= previewSettingsDialogFocusProtocolFirst {
+		return focus, false
+	}
+	col := focus % n
+	switch key {
+	case tcell.KeyLeft:
+		return focus - min(col, 1), true
+	case tcell.KeyRight:
+		return focus + min(n-1-col, 1), true
+	case tcell.KeyUp:
+		return max(focus-n, col), true
+	case tcell.KeyDown:
+		if focus+n >= previewSettingsDialogFocusProtocolFirst {
+			return previewSettingsDialogFocusProtocolFirst, true
+		}
+		return focus + n, true
+	}
+	return focus, false
 }

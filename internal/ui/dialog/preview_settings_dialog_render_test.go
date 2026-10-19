@@ -26,24 +26,51 @@ func TestDrawPreviewSettingsDialogShowsCapabilityNoRadio(t *testing.T) {
 		KittyPlaceholder: config.PreviewTerminalCapabilityYes,
 	}, theme.Default())
 
-	var foundSixelNo, foundKittyAuto, foundPlaceholderYes bool
+	// Each group: one row with the label followed by its auto/yes/no radios, selection marked.
+	sel := theme.Default().IconDialogRadio(true) + " "
+	want := map[string]string{"Sixel": "no", "Kitty": "auto", "Placeholder": "yes"}
 	for y := 0; y < h; y++ {
 		row := tcelltest.TextAt(screen, 0, y, w)
-		if strings.Contains(row, "Sixel no") {
-			foundSixelNo = true
-			if !strings.Contains(row, theme.Default().IconDialogRadio(true)) && !strings.Contains(row, "*") {
-				t.Fatalf("Sixel no row = %q, want a selected radio marker", strings.TrimSpace(row))
+		label, _, _ := strings.Cut(strings.Trim(row, "│ "), " ")
+		v, ok := want[label]
+		if !ok {
+			continue
+		}
+		for _, l := range []string{"auto", "yes", "no"} {
+			if !strings.Contains(row, l) {
+				t.Fatalf("%s row = %q, missing %q", label, strings.TrimSpace(row), l)
 			}
 		}
-		if strings.Contains(row, "Kitty auto") {
-			foundKittyAuto = true
+		if !strings.Contains(row, sel+v) {
+			t.Fatalf("%s row = %q, want %q selected", label, strings.TrimSpace(row), v)
 		}
-		if strings.Contains(row, "Placeholder yes") {
-			foundPlaceholderYes = true
-		}
+		delete(want, label)
 	}
-	if !foundSixelNo || !foundKittyAuto || !foundPlaceholderYes {
-		t.Fatalf("capability radio labels missing: sixel-no=%v kitty-auto=%v placeholder-yes=%v",
-			foundSixelNo, foundKittyAuto, foundPlaceholderYes)
+	if len(want) != 0 {
+		t.Fatalf("capability groups missing: %v", want)
+	}
+}
+
+func TestPreviewSettingsDialogCapabilityMoveFocus(t *testing.T) {
+	cases := []struct {
+		focus int
+		key   tcell.Key
+		want  int
+		ok    bool
+	}{
+		{0, tcell.KeyLeft, 0, true},
+		{0, tcell.KeyRight, 1, true},
+		{2, tcell.KeyRight, 2, true},
+		{4, tcell.KeyUp, 1, true},
+		{1, tcell.KeyUp, 1, true},
+		{1, tcell.KeyDown, 4, true},
+		{7, tcell.KeyDown, previewSettingsDialogFocusProtocolFirst, true},
+		{previewSettingsDialogFocusProtocolFirst, tcell.KeyUp, previewSettingsDialogFocusProtocolFirst, false},
+	}
+	for _, c := range cases {
+		got, ok := PreviewSettingsDialogCapabilityMoveFocus(c.focus, c.key)
+		if got != c.want || ok != c.ok {
+			t.Errorf("focus %d key %v: got (%d,%v), want (%d,%v)", c.focus, c.key, got, ok, c.want, c.ok)
+		}
 	}
 }

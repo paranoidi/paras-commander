@@ -201,6 +201,7 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 		OnApply:            a.applyPreviewSettingsDialog,
 		OnCancel:           a.closePreviewSettingsDialog,
 		AllowPlainOKCancel: true,
+		OnMoveFocus:        dialog.PreviewSettingsDialogCapabilityMoveFocus,
 		OnMnemonic: func(r rune) bool {
 			for i, radio := range protocolRadios {
 				if unicode.ToLower(r) == unicode.ToLower(radio.Shortcut) {
