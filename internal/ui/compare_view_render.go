@@ -28,6 +28,20 @@ type compareViewData struct {
 	// RowMarks resolves the pin/in-progress-job trailing marks for one row's absolute path;
 	// nil (the zero value, used by existing test literals) paints no marks.
 	RowMarks dialog.RowMarksFunc
+	// DimLeft / DimRight render a column in panel.blocked.* styles (see compareDimmedSides).
+	DimLeft, DimRight bool
+}
+
+// compareDimmedSides reports which compare columns render dimmed: both behind the
+// category dialog, the column select/unselect by kind is not operating on otherwise.
+func compareDimmedSides(d dialog.CompareFilterDialogState) (left, right bool) {
+	if !d.Open {
+		return false, false
+	}
+	if d.Mode == dialog.CompareFilterModeCategory {
+		return true, true
+	}
+	return d.FocusSecondary, !d.FocusSecondary
 }
 
 func drawCompareView(
@@ -47,7 +61,9 @@ func drawCompareView(
 	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, orientation)
 	endLabel := panelSelectionSizePadded(comparepkg.EndLabel(view.Filter, view.IgnoreEmpty, snap, view.NameFilterLabel))
 	title := compareViewTitle(snap)
-	layoutChrome := drawAuxPanelChrome(screen, rect, title, endLabel, true, chromeBlocked, false, styles)
+	dimLeft := chromeBlocked || data.DimLeft
+	dimRight := chromeBlocked || data.DimRight
+	layoutChrome := drawAuxPanelChrome(screen, rect, title, endLabel, true, dimLeft && dimRight, false, styles)
 	bg := layoutChrome.ContentBG
 
 	contentX := rect.X + 2
@@ -111,9 +127,21 @@ func drawCompareView(
 		leftPath, rightPath := compareDisplayPathPair(entry.PrimaryRel, entry.SecondaryRel)
 
 		pathBase := styles.JobsRow.Background(bg)
+		dimBase := styles.PanelBlockedRowFile.Background(bg)
+		leftBase, rightBase := pathBase, pathBase
+		if dimLeft {
+			leftBase = dimBase
+		}
+		if dimRight {
+			rightBase = dimBase
+		}
+		statusBase := pathBase
+		if dimLeft && dimRight {
+			statusBase = dimBase
+		}
 		absentStyle := styles.PanelBlockedText.Background(bg)
-		leftStyle := comparePathCellStyle(pathBase, view.FocusColumn == CompareColumnPrimary, rowSelected, primary.IsSelectedPath(entryPrimaryAbs(snap, entry)), styles, chromeBlocked, bg, view.RangeAnchor != "")
-		rightStyle := comparePathCellStyle(pathBase, view.FocusColumn == CompareColumnSecondary, rowSelected, secondary.IsSelectedPath(entrySecondaryAbs(snap, entry)), styles, chromeBlocked, bg, view.RangeAnchor != "")
+		leftStyle := comparePathCellStyle(leftBase, view.FocusColumn == CompareColumnPrimary, rowSelected, primary.IsSelectedPath(entryPrimaryAbs(snap, entry)), styles, dimLeft, bg, view.RangeAnchor != "")
+		rightStyle := comparePathCellStyle(rightBase, view.FocusColumn == CompareColumnSecondary, rowSelected, secondary.IsSelectedPath(entrySecondaryAbs(snap, entry)), styles, dimRight, bg, view.RangeAnchor != "")
 
 		primitive.Text(screen, rect.X+1, lineY, 1, "", leftStyle)
 		if leftPath == "" {
@@ -139,9 +167,9 @@ func drawCompareView(
 				dialog.DrawRowMarksSuffix(screen, contentX+runewidth.StringWidth(leftText), lineY, leftMarksW, leftMarks, leftBG, styles)
 			}
 		}
-		primitive.Text(screen, contentX+leftPathW, lineY, comparePathGapCol, "", pathBase)
+		primitive.Text(screen, contentX+leftPathW, lineY, comparePathGapCol, "", leftBase)
 		icon := compareIconCentered(compareRowIcon(styles, entry))
-		primitive.Text(screen, statusX, lineY, compareStatusCol, icon, compareIconStyle(styles, entry, pathBase))
+		primitive.Text(screen, statusX, lineY, compareStatusCol, icon, compareIconStyle(styles, entry, statusBase))
 		primitive.Text(screen, rightX-1, lineY, 1, "", rightStyle)
 		if rightPath == "" {
 			effectiveRight := absentStyle

@@ -644,8 +644,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		drawCommandsView(screen, layout, model.CommandsView, cmdEntries, styles, chromeBlocked, model.UserHomeDir)
 	case ViewCompare:
 		filtered := comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter, model.CompareView.IgnoreEmpty, model.CompareView.NameFilter)
+		dimLeft, dimRight := compareDimmedSides(model.CompareFilterDialog)
 		drawCompareView(screen, layout, model.CompareView,
-			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary, RowMarks: withRangeAnchor(rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.CompareView.RangeAnchor)},
+			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary, RowMarks: withRangeAnchor(rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.CompareView.RangeAnchor), DimLeft: dimLeft, DimRight: dimRight},
 			styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
 		if model.CompareMergeDialog.Open {
 			dialog.DrawCompareMergeDialog(screen, layout, model.CompareMergeDialog, styles, model.UserHomeDir)

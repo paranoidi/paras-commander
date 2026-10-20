@@ -650,3 +650,20 @@ func TestDrawCompareViewCursorRowStatusIconKeepsRowStyle(t *testing.T) {
 		t.Fatalf("cursor-row status icon fg = %v, want row fg %v", cursorFG, otherFG)
 	}
 }
+
+func TestCompareDimmedSides(t *testing.T) {
+	cases := []struct {
+		d           dialog.CompareFilterDialogState
+		left, right bool
+	}{
+		{dialog.CompareFilterDialogState{}, false, false},
+		{dialog.CompareFilterDialogState{Open: true, Mode: dialog.CompareFilterModeCategory}, true, true},
+		{dialog.CompareFilterDialogState{Open: true, Mode: dialog.CompareFilterModeSelect}, false, true},
+		{dialog.CompareFilterDialogState{Open: true, Mode: dialog.CompareFilterModeUnselect, FocusSecondary: true}, true, false},
+	}
+	for _, c := range cases {
+		if l, r := compareDimmedSides(c.d); l != c.left || r != c.right {
+			t.Errorf("compareDimmedSides(%+v) = %v, %v; want %v, %v", c.d, l, r, c.left, c.right)
+		}
+	}
+}
