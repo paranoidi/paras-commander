@@ -120,8 +120,8 @@ var filterKinds = []struct {
 }{
 	{FilterEqual, KindEqual, "Equal"},
 	{FilterRelocated, KindRelocated, "Relocated"},
-	{FilterPrimaryOnly, KindPrimaryOnly, "Primary only"},
-	{FilterSecondaryOnly, KindSecondaryOnly, "Secondary only"},
+	{FilterPrimaryOnly, KindPrimaryOnly, "Left only"},
+	{FilterSecondaryOnly, KindSecondaryOnly, "Right only"},
 	{FilterContentDiff, KindContentDiff, "Content diff"},
 }
 
@@ -165,8 +165,8 @@ func FilterDialogRadios() []FilterDialogRadio {
 		{FilterAll, "All", 'A'},
 		{FilterEqual, "Equal", 'E'},
 		{FilterRelocated, "Relocated", 'R'},
-		{FilterPrimaryOnly, "Primary only", 'P'},
-		{FilterSecondaryOnly, "Secondary only", 'S'},
+		{FilterPrimaryOnly, "Left only", 'L'},
+		{FilterSecondaryOnly, "Right only", 'O'},
 		{FilterContentDiff, "Content diff", 'D'},
 	}
 }

@@ -64,14 +64,14 @@ func TestFilterDialogTogglesMasterAndKinds(t *testing.T) {
 	if got := model.CompareFilterDialog.Filter; got != comparepkg.FilterNone {
 		t.Fatalf("master on All: Filter = %v, want None", got)
 	}
-	alt('p')
+	alt('l')
 	alt('d')
 	if got, want := model.CompareFilterDialog.Filter, comparepkg.FilterPrimaryOnly|comparepkg.FilterContentDiff; got != want {
-		t.Fatalf("after P, D: Filter = %v, want %v", got, want)
+		t.Fatalf("after L, D: Filter = %v, want %v", got, want)
 	}
-	alt('p')
+	alt('l')
 	if got := model.CompareFilterDialog.Filter; got != comparepkg.FilterContentDiff {
-		t.Fatalf("after P again: Filter = %v, want Content diff", got)
+		t.Fatalf("after L again: Filter = %v, want Content diff", got)
 	}
 	alt('a')
 	if got := model.CompareFilterDialog.Filter; got != comparepkg.FilterAll {

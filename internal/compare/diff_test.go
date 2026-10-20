@@ -207,7 +207,7 @@ func TestFilterLabelCombined(t *testing.T) {
 		{FilterNone, "None"},
 		{FilterAll, "All"},
 		{FilterRelocated, "Relocated"},
-		{FilterPrimaryOnly | FilterContentDiff, "Primary only + Content diff"},
+		{FilterPrimaryOnly | FilterContentDiff, "Left only + Content diff"},
 	} {
 		if got := FilterLabel(c.f); got != c.want {
 			t.Errorf("FilterLabel(%d) = %q, want %q", c.f, got, c.want)
