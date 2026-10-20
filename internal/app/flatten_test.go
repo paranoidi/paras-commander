@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
@@ -76,6 +77,21 @@ func TestFlattenDestinationTargetPanel(t *testing.T) {
 	app.dialogCtrl.CloseFlattenDialog()
 	if app.model.DestinationTargetPrimary || app.model.DestinationTargetSecondary {
 		t.Fatal("closing the dialog should clear destination target panels")
+	}
+}
+
+func TestFlattenDestinationTargetPanelWarningBorderColor(t *testing.T) {
+	app, _, inactiveDir := flattenDialogTestSetup(t)
+	app.model.FlattenDialog.Destination.Value = inactiveDir
+	app.dialogCtrl.ApplyFlattenDestinationPathValidation()
+	app.render()
+
+	width, height := app.screen.Size()
+	layout := app.layoutForTerminalSize(width, height)
+	wantFG, _, _ := theme.Default().PanelTargetWarningFrame.Decompose()
+	_, secStyle, _ := app.screen.Get(layout.Secondary.X, layout.Secondary.Y)
+	if secFG, _, _ := secStyle.Decompose(); secFG != wantFG {
+		t.Fatalf("Secondary panel border fg = %v, want warning target frame fg %v", secFG, wantFG)
 	}
 }
 

@@ -119,6 +119,9 @@ type PanelContext struct {
 	// IsTransferTarget marks this panel as the resolved Copy/Move/Flatten destination
 	// (its border and path title are painted with theme.PanelTargetFrame / PanelTargetTitle).
 	IsTransferTarget bool
+	// TransferTargetWarning switches the IsTransferTarget styles to theme.PanelTargetWarningFrame /
+	// PanelTargetWarningTitle (Move and Flatten destinations).
+	TransferTargetWarning bool
 	// ViMotionActive marks this panel as the active panel while vi-motion mode is on
 	// (its border is painted with theme.PanelViMotionFrame instead of the normal frame,
 	// unless IsTransferTarget also applies — transfer-target takes priority).
@@ -188,6 +191,10 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if ctx.IsTransferTarget {
 		borderStyle = panelStyle.Styles.PanelTargetFrame
 		titleStyle = panelStyle.Styles.PanelTargetTitle
+		if ctx.TransferTargetWarning {
+			borderStyle = panelStyle.Styles.PanelTargetWarningFrame
+			titleStyle = panelStyle.Styles.PanelTargetWarningTitle
+		}
 	} else if ctx.ViMotionActive {
 		borderStyle = panelStyle.Styles.PanelViMotionFrame
 	}

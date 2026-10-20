@@ -171,6 +171,10 @@ usage.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
 frame = { fg = "green" }
 title = { fg = "green", bold = true }
 
+[panel.target.warning]
+frame = { fg = "yellow" }
+title = { fg = "yellow", bold = true }
+
 [panel.vimotion]
 frame = { fg = "yellow" }
 

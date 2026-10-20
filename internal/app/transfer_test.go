@@ -246,6 +246,42 @@ func TestTransferDialogDestinationTargetPanelBorderColor(t *testing.T) {
 	}
 }
 
+func TestMoveDialogDestinationTargetPanelWarningBorderColor(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	dstDir := filepath.Join(dir, "dest")
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
+		t.Fatalf("mkdir dest: %v", err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if err := app.inactivePanel().Load(dstDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
+
+	app.dialogCtrl.OpenMoveDialog()
+	app.dialogCtrl.ApplyTransferDestinationPathValidation()
+	app.render()
+
+	width, height := app.screen.Size()
+	layout := app.layoutForTerminalSize(width, height)
+	styles := theme.Default()
+	wantFG, _, _ := styles.PanelTargetWarningFrame.Decompose()
+
+	_, secStyle, _ := screen.Get(layout.Secondary.X, layout.Secondary.Y)
+	secFG, _, _ := secStyle.Decompose()
+	if secFG != wantFG {
+		t.Fatalf("Secondary panel border fg = %v, want warning target frame fg %v", secFG, wantFG)
+	}
+
+	_, priStyle, _ := screen.Get(layout.Primary.X, layout.Primary.Y)
+	priFG, _, _ := priStyle.Decompose()
+	if priFG == wantFG {
+		t.Fatal("Primary panel border should not use the warning target frame color")
+	}
+}
+
 func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))

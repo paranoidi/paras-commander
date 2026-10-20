@@ -630,7 +630,7 @@ func (h *Handler) ApplyTransferDestValidatePayload(d TransferDestValidatePayload
 		st.DestPathCheckPending = false
 		st.DestPathInvalid = d.Invalid
 		p := h.host.ActivePanel()
-		h.updateDestinationTargetPanels(p.PathString(), st.Destination.Value)
+		h.updateDestinationTargetPanels(p.PathString(), st.Destination.Value, true)
 		h.SyncOpenPathInputsAfterFSChange()
 		return
 	}
@@ -642,7 +642,7 @@ func (h *Handler) ApplyTransferDestValidatePayload(d TransferDestValidatePayload
 	st.DestPathCheckPending = false
 	st.DestPathInvalid = d.Invalid
 	p := h.host.ActivePanel()
-	h.updateDestinationTargetPanels(p.PathString(), st.Destination.Value)
+	h.updateDestinationTargetPanels(p.PathString(), st.Destination.Value, st.Kind == dialog.TransferKindMove)
 	h.SyncOpenPathInputsAfterFSChange()
 }
 
@@ -678,8 +678,10 @@ func pathExists(fn func(panelPath, home, raw string) bool, panelPath, home, raw 
 
 // updateDestinationTargetPanels resolves typed (the Copy/Move/Flatten destination text,
 // relative to panelPath) and marks whichever visible panel(s) it points at so drawPanel
-// can paint that panel's border with theme.PanelTargetFrame.
-func (h *Handler) updateDestinationTargetPanels(panelPath, typed string) {
+// can paint that panel's border with theme.PanelTargetFrame, or theme.PanelTargetWarningFrame
+// when warning is set (Move and Flatten remove the sources).
+func (h *Handler) updateDestinationTargetPanels(panelPath, typed string, warning bool) {
+	h.model.DestinationTargetWarning = warning
 	typed = strings.TrimSpace(typed)
 	if typed == "" {
 		h.model.DestinationTargetPrimary = false

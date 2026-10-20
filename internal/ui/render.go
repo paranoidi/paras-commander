@@ -125,6 +125,9 @@ type Model struct {
 	// path validation tick (see App.updateDestinationTargetPanels).
 	DestinationTargetPrimary   bool
 	DestinationTargetSecondary bool
+	// DestinationTargetWarning paints the destination with the warning target styles
+	// (Move/Flatten) instead of the plain target styles (Copy).
+	DestinationTargetWarning bool
 	// SelectedPanelMaxRows caps visible rows in the selected strip when unfocused (0 = use app default).
 	SelectedPanelMaxRows int
 	// SelectedPanelActivePercent is strip height share when focused (side-by-side) or width share (stacked).
@@ -739,6 +742,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			SplitOrientation: model.SplitOrientation, SelectedBottomHint: side.SelectedBottomHint,
 			ShowSelectionSizeOnBottom: side.SelectionSizeOnFileBottom,
 			IsTransferTarget:          side.IsTransferTarget,
+			TransferTargetWarning:     model.DestinationTargetWarning,
 			ViMotionActive:            side.ViMotionActive,
 			CursorNameHintFallbackOut: cursorNameHintFallbackOut(side.FileListFocus, cursorNameHintFallback),
 			CursorNameHintPinnedOut:   side.CursorNameHintPinnedOut,
