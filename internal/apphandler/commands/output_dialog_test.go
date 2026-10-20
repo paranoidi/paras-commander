@@ -77,7 +77,8 @@ func TestApplyWakeFillsMatchingDialogAndSuppressesBanner(t *testing.T) {
 
 func TestApplyWakeBackgroundedAppliesBanner(t *testing.T) {
 	h, bh, canceled := runningHandler(t)
-	h.HandleOutputDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, 0))
+	_, _, esc := h.OutputDialogButtons()
+	esc()
 	res := OutputDialogResult("row1", "T", cmdrun.RunResult{}, "", "", "")
 	h.ApplyWake(WakePayload{OpenOutputDialog: &res, NotifyLog: "l", NotifyBanner: "b"})
 	if h.model.CommandOutputDialog.Open || bh.banners != 1 || *canceled {
@@ -95,23 +96,30 @@ func TestApplyWakeBackgroundedAppliesBanner(t *testing.T) {
 func TestOutputDialogRunningKeys(t *testing.T) {
 	alt := func(r rune) *tcell.EventKey { return tcell.NewEventKey(tcell.KeyRune, r, tcell.ModAlt) }
 	key := func(k tcell.Key) *tcell.EventKey { return tcell.NewEventKey(k, 0, 0) }
+	press := func(keys ...*tcell.EventKey) func(*Handler) {
+		return func(h *Handler) {
+			for _, k := range keys {
+				h.HandleOutputDialogKey(k)
+			}
+		}
+	}
+	// Esc / OK / Cancel are resolved centrally (App.activeDialogButtons) to these funcs.
 	cases := []struct {
 		name       string
-		keys       []*tcell.EventKey
+		run        func(*Handler)
 		wantCancel bool
 	}{
-		{"esc", []*tcell.EventKey{key(tcell.KeyEsc)}, false},
-		{"alt+b", []*tcell.EventKey{alt('b')}, false},
-		{"enter default", []*tcell.EventKey{key(tcell.KeyEnter)}, false},
-		{"alt+c", []*tcell.EventKey{alt('c')}, true},
-		{"right enter", []*tcell.EventKey{key(tcell.KeyRight), key(tcell.KeyEnter)}, true},
+		{"esc", func(h *Handler) { _, _, esc := h.OutputDialogButtons(); esc() }, false},
+		{"ok", func(h *Handler) { ok, _, _ := h.OutputDialogButtons(); ok() }, false},
+		{"alt+b", press(alt('b')), false},
+		{"enter default", press(key(tcell.KeyEnter)), false},
+		{"cancel", func(h *Handler) { _, cancel, _ := h.OutputDialogButtons(); cancel() }, true},
+		{"right enter", press(key(tcell.KeyRight), key(tcell.KeyEnter)), true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			h, _, canceled := runningHandler(t)
-			for _, k := range tc.keys {
-				h.HandleOutputDialogKey(k)
-			}
+			tc.run(h)
 			if h.model.CommandOutputDialog.Open {
 				t.Fatal("dialog still open")
 			}

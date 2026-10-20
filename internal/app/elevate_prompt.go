@@ -119,16 +119,12 @@ func (a *App) handleElevateDialogKey(ev *tcell.EventKey) {
 			a.finishElevate(ops.PermissionElevate)
 		case 's', 'S':
 			a.finishElevate(ops.PermissionSkip)
-		case 'c', 'C':
-			a.finishElevate(ops.PermissionAbort)
 		}
 		return
 	}
 	base := d.ButtonBase()
 	last := base + dialog.ElevateButtons - 1
 	switch ev.Key() {
-	case tcell.KeyEsc:
-		a.finishElevate(ops.PermissionAbort)
 	case tcell.KeyEnter:
 		if d.FocusOnInput() {
 			a.finishElevate(ops.PermissionElevate)

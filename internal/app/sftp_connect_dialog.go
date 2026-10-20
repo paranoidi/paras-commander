@@ -136,10 +136,6 @@ func sftpConnectNavFocus(form dialog.DialogLinearForm, focus int, key tcell.Key,
 }
 
 func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
-	if dialog.TryStandardDialogActions(event, a.executeSFTPConnectDialog, a.closeSFTPConnectDialog, nil) {
-		return
-	}
-
 	st := &a.model.SFTPConnectDialog
 	if st.Focus == 0 {
 		onChange := func() {
@@ -158,8 +154,6 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 
 	form := dialog.NewDialogLinearForm(2)
 	switch event.Key() {
-	case tcell.KeyEsc:
-		a.closeSFTPConnectDialog()
 	case tcell.KeyEnter:
 		switch st.Focus {
 		case 3:

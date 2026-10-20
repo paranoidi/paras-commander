@@ -82,7 +82,7 @@ type Deps struct {
 	// dialog's active/inactive-panel destination shortcut.
 	KeysFlattenDialog *keymap.Map
 	// KeysBookmarkDialog is the [dialog.bookmark] keymap overlay, consulted while the
-	// bookmarks path picker is open (delete/open-other fzf-marks entry chords).
+	// bookmarks path picker is open (delete fzf-marks entry and open-in-panel chords).
 	KeysBookmarkDialog *keymap.Map
 	// KeysMassRenameDialog is the [dialog.mass_rename] keymap overlay, consulted while the
 	// main mass-rename dialog is open (save/load/delete pattern chords).

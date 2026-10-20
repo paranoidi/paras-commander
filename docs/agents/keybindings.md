@@ -15,6 +15,7 @@ How default shortcuts are declared, layered and validated. Add-a-shortcut proced
 
 - `keymap.LoadFromPaths` layers each table independently: defaults < `keybindings.toml`. Overlay maps resolve before the global map while their view/dialog is focused.
 - Shortcut tables in `config.toml` fail `config.LoadFromPaths` (unknown field). `[jobs]` in `config.toml` is job settings; the jobs-view shortcuts are `[jobs]` in `keybindings.toml`.
+- **Dialog OK / Cancel**: `ui.input.dialog-ok` (`M-o`, `M-Enter`) and `ui.input.dialog-cancel` (`Esc`, `M-c`, `F9`) are `[dialog.input]` defaults and the only place those chords are bound. `App.handleKey` resolves them once (`dispatchDialogButton` + `activeDialogButtons`, `internal/app/dialog_buttons.go`); dialog key handlers must not look for them. `F9` stays "edit config" in the Configuration and meta dialogs.
 - Namespace restrictions: `jobs.*` only under `[jobs]`; `commands.*` only under `[commands]`; `ui.input.*` only under `[dialog.input]`; `file.rename.open-sanitize`/`open-slugify` only under `[dialog.rename]`; other dialog actions only under their `[dialog.*]` table.
 - `pc --config-stub` writes `config.toml` (`config.EncodeDefaultStub`), `keybindings.toml` (`keymap.EncodeDefaultStub`, all tables) and commented `menu.toml`/`meta.toml`/`pools.toml` into `~/.config/pc/` (or a given dir); existing files are kept. New global defaults and overlay defaults appear in the stub automatically.
 

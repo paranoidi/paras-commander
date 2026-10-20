@@ -305,14 +305,10 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 		h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusField, h.ArmTransferDestinationValidateTimer) {
 		return
 	}
-	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
-	if dialog.TryStandardDialogActions(event, h.confirmTransfer, h.CloseTransferDialog, []dialog.ExtraMnemonic{
+	// Alt+P = Add paused (mnemonic; must run before field edit).
+	if dialog.TryDialogMnemonics(event, []dialog.ExtraMnemonic{
 		{Rune: 'p', Fn: h.confirmTransferPaused},
 	}) {
-		return
-	}
-	if event.Key() == tcell.KeyEsc {
-		h.CloseTransferDialog()
 		return
 	}
 	if d.MultiLocation() {

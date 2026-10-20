@@ -64,7 +64,7 @@ func TestPromptSFTPPasswordEscAndAltCCompleteWaiter(t *testing.T) {
 			}()
 			waitSFTPPasswordWait(t, app)
 			app.openSFTPPasswordDialog(sftpb.PasswordPrompt{User: "alice", Host: "example.com"})
-			app.handleSFTPPasswordCancelKey(tt.ev)
+			app.handleKey(tt.ev)
 			select {
 			case got := <-result:
 				if got.password != "" {

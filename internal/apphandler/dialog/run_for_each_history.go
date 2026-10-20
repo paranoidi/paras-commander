@@ -112,10 +112,6 @@ func (h *Handler) activateRunForEachHistorySelection() {
 func (h *Handler) handleRunForEachHistoryPickerKey(event *tcell.EventKey) bool {
 	st := &h.model.FileDialog.RunForEachHistoryPicker
 
-	if dialog.TryStandardDialogActions(event, h.activateRunForEachHistorySelection, h.closeRunForEachHistoryPicker, nil) {
-		return false
-	}
-
 	if st.Focus == 0 {
 		onChange := func() {
 			h.syncRunForEachHistoryPickerRanks()
@@ -129,8 +125,6 @@ func (h *Handler) handleRunForEachHistoryPickerKey(event *tcell.EventKey) bool {
 	}
 
 	switch event.Key() {
-	case tcell.KeyEsc:
-		h.closeRunForEachHistoryPicker()
 	case tcell.KeyEnter:
 		switch st.Focus {
 		case 2:

@@ -336,7 +336,7 @@ func (h *Handler) OpenDialog(panelID int) {
 	h.host.ClearTransientMessage()
 }
 
-func (h *Handler) closeDialog() {
+func (h *Handler) CloseDialog() {
 	h.model.MetaDialog = dialog.MetaDialogState{}
 }
 
@@ -367,7 +367,7 @@ func (h *Handler) ActivateSelection() {
 	prevActive := append([]string(nil), h.activeEntries[panelID]...)
 	checked := append([]bool(nil), st.Checked...)
 	entries := append([]dialog.MetaEntry(nil), st.Entries...)
-	h.closeDialog()
+	h.CloseDialog()
 
 	var activeNames []string
 	for i, on := range checked {
@@ -795,15 +795,6 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	n := len(st.Entries)
 	form := dialog.NewDialogLinearForm(n)
 
-	if dialog.AltDialogOK(event) {
-		h.ActivateSelection()
-		return
-	}
-	if dialog.AltDialogCancel(event) {
-		h.closeDialog()
-		return
-	}
-
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		if i, ok := dialog.MetaEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
 			st.Checked[i] = !st.Checked[i]
@@ -816,12 +807,10 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	case tcell.KeyF9:
 		h.editConfigFromDialog()
 		return
-	case tcell.KeyEsc:
-		h.closeDialog()
 	case tcell.KeyEnter:
 		switch st.Focus {
 		case form.CancelIndex():
-			h.closeDialog()
+			h.CloseDialog()
 		case form.OKIndex():
 			h.ActivateSelection()
 		default:
@@ -838,7 +827,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			h.ActivateSelection()
 			return
 		case 'c', 'C':
-			h.closeDialog()
+			h.CloseDialog()
 			return
 		case ' ':
 			switch {
@@ -847,7 +836,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			case st.Focus == form.OKIndex():
 				h.ActivateSelection()
 			case st.Focus == form.CancelIndex():
-				h.closeDialog()
+				h.CloseDialog()
 			}
 			return
 		}

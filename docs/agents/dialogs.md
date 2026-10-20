@@ -21,13 +21,17 @@ Navigation, button, layout and styling rules every modal dialog follows. For the
     from one input to the next before it leaves the block (mass rename Find → Replace, chown
     User → Group, symlink Target → Link path). Use Up/Down to step item-by-item inside a group.
 - **Enter**: Activates the focused button or confirms the dialog.
-- **Esc**: Cancels/closes the dialog.
+- **Esc**: Cancels/closes the dialog (see Button Shortcuts: OK/Cancel are resolved centrally).
 
 ## Button Shortcuts
 
 - Buttons have a highlighted shortcut letter in accent color (magenta by default).
 - Shortcuts: `O` for OK, `C` for Cancel, `Y` for Yes, `N` for No.
-- Shortcuts are triggered via **Alt+letter** (e.g., Alt+O executes OK, Alt+C cancels).
+- Shortcuts are triggered via **Alt+letter**.
+- **OK and Cancel are resolved once, centrally.** `ui.input.dialog-ok` (`M-o`, `M-Enter`) and `ui.input.dialog-cancel` (`Esc`, `M-c`, `F9`) are `[dialog.input]` actions dispatched in `App.handleKey` through `App.activeDialogButtons` (`internal/app/dialog_buttons.go`), which returns the top-most open dialog's `dialogButtons{OK, Cancel, Esc}`. A new dialog adds one case there; its key handler must **not** handle Alt+O / Alt+C / Esc / F9 itself. A nil `OK` or `Cancel` means the dialog has no such button (the chord is swallowed); `Esc` is set only where Esc deliberately differs from Cancel (running command-output dialog keeps the command running).
+  - Layered dialogs resolve to their innermost layer: handlers with sub-phases, sub-confirms or a path-completion dropdown expose `OK`/`Cancel` funcs that pick the layer (`FileDialogOK`/`FileDialogCancel`, `TransferDialogCancel`, `jobs.Handler.DialogOK`/`DialogCancel`, the Configuration dialog's Yes/No sub-confirms).
+  - Dialogs whose Alt+O / Alt+C are letter choices (the job blocker's Overwrite / Cancel) return zero for rune events; `M-Enter`, `Esc` and `F9` still map. Configuration and meta dialogs return zero for `F9` (edit config).
+  - Dialog-specific extras (Alt+Y/Alt+N on delete, Alt+P on transfer, Alt+I on history) go through `dialog.TryDialogMnemonics(ev, extras)`.
 - An Alt-letter that toggles a checkbox or picks a radio **never moves focus out of a focused
   text input** — the user keeps typing after flipping the option. From a non-input row it may
   move focus to the toggled row (group select, filter, mkdir actions follow this).

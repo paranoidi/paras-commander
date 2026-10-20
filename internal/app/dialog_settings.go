@@ -86,7 +86,7 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 	cb := st.CheckboxFocus() // first checkbox: disk usage idle sort
 	// Segments: sort mode + meta radios(0..cb-1) | options checkboxes(cb..cb+2) | buttons(cb+3..cb+4).
 	form := dialog.NewDialogLinearForm(cb+3).WithSegments(0, cb, cb+3)
-	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
+	dialogform.HandleKey(event, form, dialogform.Handlers{
 		Focus:              &st.Focus,
 		OnMoveFocus:        st.MoveFocus,
 		OnApply:            a.applySortDialog,
@@ -182,7 +182,7 @@ func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
 	form := dialog.NewDialogLinearForm(3).WithSegments(0, 3)
 	st := &a.model.ListingFormatDialog
 	radios := panel.ListFormatDialogRadios()
-	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
+	dialogform.HandleKey(event, form, dialogform.Handlers{
 		Focus:              &st.Focus,
 		OnApply:            a.applyListingFormatDialog,
 		OnCancel:           a.closeListingFormatDialog,
@@ -350,7 +350,7 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		st.ResetDefaultsConfirmFocus = 0
 		return
 	}
-	if i, ok := dialog.ConfigDialogSplitIndex(st.Focus); ok && !dialog.AltDialogOK(event) && !dialog.AltDialogCancel(event) {
+	if i, ok := dialog.ConfigDialogSplitIndex(st.Focus); ok {
 		if dialog.HandleFileDialogFieldKey(event, &st.Split[i], a.keys.DialogInput, nil) {
 			return
 		}
@@ -360,7 +360,7 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 	listRadios := panel.ListFormatDialogRadios()
 	scrollRadios := panel.ScrollModeDialogRadios()
 	sbRadios := uiscrollbar.DialogRadios()
-	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
+	dialogform.HandleKey(event, form, dialogform.Handlers{
 		Focus:              &st.Focus,
 		OnApply:            a.applyConfigDialog,
 		OnCancel:           a.closeConfigDialog,
@@ -443,8 +443,6 @@ func (a *App) handleConfigEditStubConfirmKey(event *tcell.EventKey) {
 		}
 	}
 	switch event.Key() {
-	case tcell.KeyEsc:
-		st.EditStubConfirm = false
 	case tcell.KeyLeft:
 		st.EditStubConfirmFocus = dialog.DialogPairLeftRight(st.EditStubConfirmFocus, false)
 	case tcell.KeyRight:
@@ -474,8 +472,6 @@ func (a *App) handleConfigResetDefaultsConfirmKey(event *tcell.EventKey) {
 		}
 	}
 	switch event.Key() {
-	case tcell.KeyEsc:
-		st.ResetDefaultsConfirm = false
 	case tcell.KeyLeft:
 		st.ResetDefaultsConfirmFocus = dialog.DialogPairLeftRight(st.ResetDefaultsConfirmFocus, false)
 	case tcell.KeyRight:
@@ -918,19 +914,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	gs := &a.model.GroupSelect
 	form := a.groupSelectForm()
 
-	if dialog.AltDialogOK(event) {
-		a.confirmGroupSelectFromInput()
-		return
-	}
-	if dialog.AltDialogCancel(event) {
-		a.closeGroupSelect()
-		return
-	}
-
 	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		a.closeGroupSelect()
-		return
 	case tcell.KeyEnter:
 		if gs.Focus == form.CancelIndex() {
 			a.closeGroupSelect()

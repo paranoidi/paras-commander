@@ -31,28 +31,16 @@ func openSFTPPasswordFileDialog(h *Handler) {
 	}
 }
 
-func TestHandleFileDialogKeyCancelsSFTPPassword(t *testing.T) {
+func TestFileDialogCancelCancelsSFTPPassword(t *testing.T) {
 	t.Parallel()
-	keys := []struct {
-		name string
-		ev   *tcell.EventKey
-	}{
-		{name: "Esc", ev: tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone)},
-		{name: "Alt+C", ev: tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt)},
+	host, h := newSFTPPasswordCancelHandler(t)
+	openSFTPPasswordFileDialog(h)
+	h.FileDialogCancel()
+	if host.cancelCalls != 1 {
+		t.Fatalf("CancelSFTPPassword calls = %d, want 1", host.cancelCalls)
 	}
-	for _, tt := range keys {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			host, h := newSFTPPasswordCancelHandler(t)
-			openSFTPPasswordFileDialog(h)
-			h.HandleFileDialogKey(tt.ev)
-			if host.cancelCalls != 1 {
-				t.Fatalf("CancelSFTPPassword calls = %d, want 1", host.cancelCalls)
-			}
-			if h.model.FileDialog.Open {
-				t.Fatal("password dialog still open after cancel")
-			}
-		})
+	if h.model.FileDialog.Open {
+		t.Fatal("password dialog still open after cancel")
 	}
 }
 

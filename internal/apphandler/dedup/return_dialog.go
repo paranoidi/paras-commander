@@ -13,14 +13,13 @@ import (
 
 const dedupReturnButtons = 3 // Show/Selected, Rescan/Directory, Cancel
 
+// ReturnDialogCancel dismisses the kept-results / scan-scope dialog (its Cancel button).
+func (h *Handler) ReturnDialogCancel() { h.returnDialogActivate(2) }
+
 // HandleReturnDialogKey routes keys for the open kept-results / scan-scope dialog.
 func (h *Handler) HandleReturnDialogKey(event *tcell.EventKey) {
 	st := &h.model.DedupReturnDialog
 
-	if dialog.AltDialogCancel(event) {
-		h.returnDialogActivate(2)
-		return
-	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 's', 'S':
@@ -38,8 +37,6 @@ func (h *Handler) HandleReturnDialogKey(event *tcell.EventKey) {
 	}
 
 	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		h.returnDialogActivate(2)
 	case tcell.KeyLeft:
 		if st.ButtonFocus > 0 {
 			st.ButtonFocus--

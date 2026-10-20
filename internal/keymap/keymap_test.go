@@ -1338,13 +1338,11 @@ func TestKnownActionsHaveSpecOrAreReserved(t *testing.T) {
 		}
 	}
 	reserved := map[string]struct{}{
-		ActionDialogConfirm: {},
-		ActionDialogCancel:  {},
-		ActionDialogNext:    {},
-		ActionDialogPrev:    {},
-		ActionUILeft:        {},
-		ActionUIRight:       {},
-		ActionUIActivate:    {},
+		ActionDialogNext: {},
+		ActionDialogPrev: {},
+		ActionUILeft:     {},
+		ActionUIRight:    {},
+		ActionUIActivate: {},
 	}
 	for id := range KnownActions {
 		if _, ok := SpecForAction(id); ok {

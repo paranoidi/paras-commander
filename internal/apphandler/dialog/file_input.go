@@ -142,7 +142,7 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 			{Rune: 'n', Fn: h.CloseFileDialog},
 		}
 	}
-	if dialog.TryStandardDialogActions(event, h.ExecuteFileDialog, h.CloseFileDialog, altExtras) {
+	if dialog.TryDialogMnemonics(event, altExtras) {
 		return false
 	}
 
@@ -167,9 +167,6 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	}
 
 	switch event.Key() {
-	case tcell.KeyEsc:
-		h.CloseFileDialog()
-		return false
 	case tcell.KeyEnter:
 		h.handleFileDialogEnter()
 		return false
@@ -1003,18 +1000,12 @@ func (h *Handler) applyRenameToolAtFocus() {
 func (h *Handler) handleRenameToolKey(event *tcell.EventKey) bool {
 	d := &h.model.FileDialog
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if dialog.TryStandardDialogActions(event, h.applyRenameToolAndReturnMain, h.closeRenameToolPhase, nil) {
-			return false
-		}
 		if h.tryRenameToolAltShortcut(event, d) {
 			return false
 		}
 	}
 
 	switch event.Key() {
-	case tcell.KeyEsc:
-		h.closeRenameToolPhase()
-		return false
 	case tcell.KeyEnter:
 		okIdx := dialog.FileDialogOKFocusIndex(*d)
 		cancelIdx := dialog.FileDialogCancelFocusIndex(*d)

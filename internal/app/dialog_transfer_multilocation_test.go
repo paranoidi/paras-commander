@@ -316,7 +316,7 @@ func TestTransferEscClearsDestinationTargetMarks(t *testing.T) {
 		t.Fatal("expected Secondary (inactive) panel marked as destination target")
 	}
 
-	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.TransferDialog.Open {
 		t.Fatal("transfer dialog should close on Esc")
 	}

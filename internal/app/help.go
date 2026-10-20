@@ -71,6 +71,8 @@ const textEditHelpPrefix = "ui.input."
 var notTextEditHelp = map[string]bool{
 	keymap.ActionDialogInputRestoreDefault: true,
 	keymap.ActionDialogInputPathPickerAll:  true,
+	keymap.ActionDialogOK:                  true,
+	keymap.ActionDialogCancel:              true,
 }
 
 // buildTextEditHelpEntries lists the dialog text-input editing shortcuts.
@@ -637,19 +639,7 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		}
 	}
 
-	// Alt+O and Alt+C close the dialog.
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'o', 'O', 'c', 'C':
-			a.closeHelpDialog()
-			return false
-		}
-	}
-
 	switch event.Key() {
-	case tcell.KeyEsc:
-		a.closeHelpDialog()
-		return false
 	case tcell.KeyEnter:
 		if st.Focus == 1 {
 			a.closeHelpDialog()

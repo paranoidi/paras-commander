@@ -33,7 +33,8 @@ func TestHandleKeyEnterAppliesOrCancels(t *testing.T) {
 	}
 }
 
-func TestHandleKeyEscCancels(t *testing.T) {
+// Esc / F9 cancel is resolved centrally (App.handleKey), so HandleKey leaves them alone.
+func TestHandleKeyLeavesEscAndF9ToCentralCancel(t *testing.T) {
 	form := dialog.NewDialogLinearForm(1).WithSegments(0, 1)
 	focus := 0
 	cancelled := false
@@ -42,11 +43,13 @@ func TestHandleKeyEscCancels(t *testing.T) {
 		OnApply:  func() {},
 		OnCancel: func() { cancelled = true },
 	}
-	if !HandleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone), form, h) {
-		t.Fatal("expected Esc to be consumed")
+	for _, k := range []tcell.Key{tcell.KeyEsc, tcell.KeyF9} {
+		if HandleKey(tcell.NewEventKey(k, 0, tcell.ModNone), form, h) {
+			t.Fatalf("%v must not be consumed by dialogform", k)
+		}
 	}
-	if !cancelled {
-		t.Fatal("expected Esc to cancel")
+	if cancelled {
+		t.Fatal("Esc / F9 must not cancel inside dialogform")
 	}
 }
 

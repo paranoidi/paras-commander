@@ -42,7 +42,7 @@ func TestHandleElevateDialogAltShortcuts(t *testing.T) {
 		app.applyElevateOpen(elevateOpenPayload{req: ops.PermissionRequest{Op: "rename", Path: "/srv/otter"}})
 		reply := make(chan ops.PermissionAnswer, 1)
 		app.elevate.wait = &elevateWait{id: 1, reply: reply}
-		app.handleElevateDialogKey(tcell.NewEventKey(tcell.KeyRune, tc.r, tcell.ModAlt))
+		app.handleKey(tcell.NewEventKey(tcell.KeyRune, tc.r, tcell.ModAlt))
 		if ans := <-reply; ans.Decision != tc.want {
 			t.Fatalf("Alt+%c: decision = %v, want %v", tc.r, ans.Decision, tc.want)
 		}

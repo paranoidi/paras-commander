@@ -3,10 +3,9 @@ package keymap
 // DefaultBookmarkDialogOverlayKeys holds chords that apply only while the
 // bookmarks path picker (navigate purpose) is open.
 func DefaultBookmarkDialogOverlayKeys() map[string][]string {
-	return map[string][]string{
-		ActionBookmarkDelete:    {"F8"},
-		ActionBookmarkOpenOther: {"M-Enter", "S-Enter"},
-	}
+	return withOpenInPanelKeys(map[string][]string{
+		ActionBookmarkDelete: {"F8"},
+	})
 }
 
 // AllowedInBookmarkDialogOverlay reports whether actionID may appear under

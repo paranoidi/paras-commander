@@ -1324,14 +1324,6 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		h.findDialogPinToggleCursor()
 		return
 	}
-	if dialog.AltDialogOK(event) {
-		h.ActivateDialogOK()
-		return
-	}
-	if dialog.AltDialogCancel(event) {
-		h.CloseDialog()
-		return
-	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		if field := findToggleFieldForRune(event.Rune()); field != findToggleNone {
 			if field != findToggleSelections || st.FindDialogHasSelectionsCheckbox() {
@@ -1356,8 +1348,6 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		if !st.JumpMode {
 			h.findDialogToggleSelectionAndAdvance()
 		}
-	case tcell.KeyEsc:
-		h.CloseDialog()
 	case tcell.KeyEnter:
 		if st.Focus == st.FindDialogCancelFocus() {
 			h.CloseDialog()

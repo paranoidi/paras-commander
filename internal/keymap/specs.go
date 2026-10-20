@@ -1113,14 +1113,6 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"fzf-marks", "mark", "remove", "delete"},
 		},
 		{
-			ID:           ActionBookmarkOpenOther,
-			Title:        "Open in other panel",
-			Section:      "Navigation",
-			DefaultKeys:  nil, // overlay: DefaultBookmarkDialogOverlayKeys
-			PreferredKey: "M-Enter",
-			Keywords:     []string{"bookmark", "inactive panel", "other panel", "open"},
-		},
-		{
 			ID:           ActionFindView,
 			LeaderKey:    "v",
 			Title:        "View",
@@ -1819,6 +1811,22 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Preview",
 			DefaultKeys: []string{"M-F3"},
 			Keywords:    []string{"sixel", "kitty", "placeholder", "wezterm", "graphics", "image", "exif", "metadata"},
+		},
+		{
+			ID:           ActionDialogOK,
+			Title:        "Confirm dialog (OK)",
+			Section:      "UI",
+			DefaultKeys:  nil, // bound only via [dialog.input] (defaults M-o and M-Enter)
+			PreferredKey: "M-o",
+			Keywords:     []string{"ok", "confirm", "apply", "accept", "alt-enter", "dialog"},
+		},
+		{
+			ID:           ActionDialogCancel,
+			Title:        "Cancel dialog",
+			Section:      "UI",
+			DefaultKeys:  nil, // bound only via [dialog.input] (defaults Esc, M-c and F9)
+			PreferredKey: "M-c",
+			Keywords:     []string{"cancel", "close", "dismiss", "escape", "dialog"},
 		},
 		{
 			ID:           ActionDialogInputRestoreDefault,

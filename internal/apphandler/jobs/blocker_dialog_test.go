@@ -96,7 +96,7 @@ func TestBlockerDialogPostponeDoesNotSubmit(t *testing.T) {
 	waitJobsWaitingDecision(t, h, state, 1)
 	h.HandleAnswerBlockerKey()
 
-	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	h.DialogCancel()
 	if h.model.ConflictDialog.Open {
 		t.Fatal("dialog still open after Esc postpone")
 	}
@@ -200,7 +200,7 @@ func TestBlockerDialogAdvancedFlow(t *testing.T) {
 		t.Fatalf("Enter on Advanced… must open the advanced mode, got %+v", st)
 	}
 	// Esc returns to the main dialog.
-	key(tcell.KeyEsc)
+	h.DialogCancel()
 	if st = h.model.ConflictDialog; !st.Open || st.Advanced {
 		t.Fatalf("Esc in advanced must return to the main dialog, got %+v", st)
 	}
@@ -232,8 +232,8 @@ func TestBlockerDialogAdvancedFlow(t *testing.T) {
 	if a := h.model.ConflictDialog.ConflictAdvancedAnswer(); a.Decision != jobs.DecisionRules.All() || a.Rules.Time[jobs.TimeDestNewer] != jobs.RuleOverwrite {
 		t.Fatalf("answer = %+v", a)
 	}
-	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
+	h.DialogOK()
 	if h.model.ConflictDialog.Open {
-		t.Fatal("Alt+O must submit and close")
+		t.Fatal("OK must submit and close")
 	}
 }

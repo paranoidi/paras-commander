@@ -32,7 +32,7 @@ func TestHandleFileDialogKeyEscAndAltCCancelSFTPPasswordWaiter(t *testing.T) {
 			}()
 			waitSFTPPasswordWait(t, app)
 			app.openSFTPPasswordDialog(sftpb.PasswordPrompt{User: "alice", Host: "example.com"})
-			app.dialogCtrl.HandleFileDialogKey(tt.ev)
+			app.handleKey(tt.ev)
 			assertSFTPPasswordCanceled(t, app, result)
 		})
 	}

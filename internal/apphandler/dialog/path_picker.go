@@ -194,17 +194,11 @@ func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if dialog.TryStandardDialogActions(event, h.activatePathPickerSelection, h.ClosePathPicker, nil) {
-		return
-	}
-
 	if st.Focus == 0 && h.host.HandlePathPickerScrollingQueryKey(event) {
 		return
 	}
 
 	switch event.Key() {
-	case tcell.KeyEsc:
-		h.ClosePathPicker()
 	case tcell.KeyEnter:
 		switch st.Focus {
 		case 2:

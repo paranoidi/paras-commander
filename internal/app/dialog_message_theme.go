@@ -31,14 +31,6 @@ func (a *App) closeMessageDialog() {
 func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 	d := &a.model.MessageDialog
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if dialog.AltDialogOK(event) {
-			a.closeMessageDialog()
-			return
-		}
-		if dialog.AltDialogCancel(event) && d.TwoButtons {
-			a.closeMessageDialog()
-			return
-		}
 		return
 	}
 	if d.TwoButtons {
@@ -53,9 +45,6 @@ func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 				d.ButtonFocus++
 			}
 			return
-		case tcell.KeyEsc:
-			a.closeMessageDialog()
-			return
 		case tcell.KeyEnter:
 			a.closeMessageDialog()
 			return
@@ -63,26 +52,13 @@ func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyEnter:
+	if event.Key() == tcell.KeyEnter {
 		a.closeMessageDialog()
 	}
 }
 
 func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
-	// Alt+O = OK, Alt+C = Cancel
-	if dialog.AltDialogOK(event) {
-		a.activateThemeDialogSelection()
-		return
-	}
-	if dialog.AltDialogCancel(event) {
-		a.cancelThemeDialog()
-		return
-	}
-
 	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		a.cancelThemeDialog()
 	case tcell.KeyF5:
 		a.previewThemeAtSelection()
 	case tcell.KeyEnter:

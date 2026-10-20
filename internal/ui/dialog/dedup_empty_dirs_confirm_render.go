@@ -93,5 +93,6 @@ func DrawDedupEmptyDirsConfirmDialog(screen tcell.Screen, layout Layout, state D
 	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "Yes", Shortcut: 'Y', Focused: state.Focus == 0},
 		{Label: "No", Shortcut: 'N', Focused: state.Focus == 1},
+		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 2},
 	}, styles)
 }

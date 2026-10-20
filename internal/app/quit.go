@@ -92,9 +92,6 @@ func (a *App) handleQuitConfirmKey(event *tcell.EventKey) bool {
 		}
 	}
 	switch event.Key() {
-	case tcell.KeyEsc:
-		a.model.QuitConfirm = dialog.QuitConfirmState{}
-		return false
 	case tcell.KeyLeft:
 		a.model.QuitConfirm.Focus = dialog.DialogPairLeftRight(a.model.QuitConfirm.Focus, false)
 		return false

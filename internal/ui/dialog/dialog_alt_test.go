@@ -6,24 +6,23 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func TestAltDialogOKCancel(t *testing.T) {
+func TestTryDialogMnemonicsExtrasOnly(t *testing.T) {
 	t.Parallel()
-	if !AltDialogOK(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt)) {
-		t.Fatal("Alt+o")
+	ran := 0
+	extras := []ExtraMnemonic{{Rune: 'p', Fn: func() { ran++ }}}
+	if !TryDialogMnemonics(tcell.NewEventKey(tcell.KeyRune, 'P', tcell.ModAlt), extras) || ran != 1 {
+		t.Fatal("Alt+P should run the extra")
 	}
-	if !AltDialogOK(tcell.NewEventKey(tcell.KeyRune, 'O', tcell.ModAlt)) {
-		t.Fatal("Alt+O")
+	if !TryDialogMnemonics(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModMeta), extras) || ran != 2 {
+		t.Fatal("Meta+p should run the extra (Meta as Alt)")
 	}
-	if !AltDialogOK(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta)) {
-		t.Fatal("Meta+o should match dialog OK (Meta as Alt)")
-	}
-	if AltDialogOK(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone)) {
-		t.Fatal("plain o")
-	}
-	if !AltDialogCancel(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt)) {
-		t.Fatal("Alt+c")
-	}
-	if !AltDialogCancel(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModMeta)) {
-		t.Fatal("Meta+c should match dialog Cancel")
+	for _, ev := range []*tcell.EventKey{
+		tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone),
+		tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt),
+		tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt),
+	} {
+		if TryDialogMnemonics(ev, extras) {
+			t.Fatalf("%v must not be handled (OK/Cancel are resolved centrally)", ev.Name())
+		}
 	}
 }

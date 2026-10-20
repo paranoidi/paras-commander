@@ -324,7 +324,7 @@ func TestFileDialogEscCancelsAndNoMessage(t *testing.T) {
 		t.Fatal("dialog should be open")
 	}
 
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after Esc")
 	}
@@ -1439,7 +1439,7 @@ func TestRenameDialogSanitizeEscReturnsWithoutApply(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 		t.Fatalf("phase = %v, want Main", app.model.FileDialog.RenamePhase)
 	}
@@ -1595,7 +1595,7 @@ func TestFileDialogEnterOnDeleteWithNoItems(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileDelete)
 	// Esc should work.
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
 		t.Fatal("Esc should close delete dialog")
 	}
@@ -1925,7 +1925,7 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 	}
 
 	// Alt+C cancels the dialog; it must not select the copy radio.
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', alt))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', alt))
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog still open after Alt+c; want cancel")
 	}

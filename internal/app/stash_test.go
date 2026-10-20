@@ -192,3 +192,42 @@ func TestStripCursorBelongsToSelectionSet(t *testing.T) {
 		t.Fatalf("cursor path %q, want %q", got, want)
 	}
 }
+
+func TestStashRestoreDialogCancelKeepsStashAndSelection(t *testing.T) {
+	keys := map[string]func(app *App){
+		"esc":   func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone)) },
+		"alt-c": func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt)) },
+		"enter-on-cancel": func(app *App) {
+			app.model.StashRestoreDialog.Focus = 4
+			app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+		},
+	}
+	for name, press := range keys {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			stashed := filepath.Join(dir, "lantern.txt")
+			live := filepath.Join(dir, "meadow.txt")
+			for _, p := range []string{stashed, live} {
+				if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			app := newApp(t, newScreen(t, 80, 24), dir)
+			panel := app.activePanel()
+			panel.AddSelection(stashed)
+			app.togglePanelSelectionStash()
+			panel.AddSelection(live)
+			app.togglePanelSelectionStash()
+			if !app.model.StashRestoreDialog.Open {
+				t.Fatal("expected stash restore dialog")
+			}
+			press(app)
+			if app.model.StashRestoreDialog.Open {
+				t.Fatal("dialog should be closed")
+			}
+			if panel.StashPathCount() != 1 || panel.SelectedPathCount() != 1 {
+				t.Fatalf("stash=%d selection=%d, want 1 and 1", panel.StashPathCount(), panel.SelectedPathCount())
+			}
+		})
+	}
+}

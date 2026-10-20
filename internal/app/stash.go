@@ -44,6 +44,9 @@ func (a *App) closeStashRestoreDialog() {
 	a.model.StashRestoreDialog = dialog.StashRestoreDialogState{}
 }
 
+// stashRestoreButtonCount is Replace, Merge, Drop stash, Drop all, Cancel.
+const stashRestoreButtonCount = 5
+
 func (a *App) handleStashRestoreDialogKey(event *tcell.EventKey) {
 	if action, ok := stashRestoreDialogAltAction(event); ok {
 		a.applyStashRestoreChoice(action)
@@ -51,18 +54,16 @@ func (a *App) handleStashRestoreDialogKey(event *tcell.EventKey) {
 	}
 	d := &a.model.StashRestoreDialog
 	switch event.Key() {
-	case tcell.KeyEsc:
-		a.applyStashRestoreChoice("drop_stash")
 	case tcell.KeyTab:
-		d.Focus = (d.Focus + 1) % 4
+		d.Focus = (d.Focus + 1) % stashRestoreButtonCount
 	case tcell.KeyBacktab:
-		d.Focus = (d.Focus + 3) % 4
+		d.Focus = (d.Focus + stashRestoreButtonCount - 1) % 4
 	case tcell.KeyLeft:
 		if d.Focus > 0 {
 			d.Focus--
 		}
 	case tcell.KeyRight:
-		if d.Focus < 3 {
+		if d.Focus < stashRestoreButtonCount-1 {
 			d.Focus++
 		}
 	case tcell.KeyEnter:
@@ -96,8 +97,10 @@ func stashRestoreFocusAction(focus int) string {
 		return "merge"
 	case 2:
 		return "drop_stash"
-	default:
+	case 3:
 		return "drop_all"
+	default:
+		return "cancel" // closes the dialog, keeps stash and selection
 	}
 }
 

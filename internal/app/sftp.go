@@ -340,15 +340,6 @@ func (a *App) cancelSFTPPassword() {
 	}
 }
 
-func (a *App) handleSFTPPasswordCancelKey(ev *tcell.EventKey) {
-	if ev == nil {
-		return
-	}
-	if ev.Key() == tcell.KeyEsc || dialog.AltDialogCancel(ev) {
-		a.cancelSFTPPassword()
-	}
-}
-
 func (a *App) executeSFTPPassword() {
 	if len(a.model.FileDialog.Fields) == 0 {
 		a.dialogCtrl.CloseFileDialog()
@@ -382,10 +373,6 @@ func (a *App) handleHostKeyDialogKey(ev *tcell.EventKey) bool {
 		}
 	}
 	switch ev.Key() {
-	case tcell.KeyEsc:
-		a.finishHostKeyDialog(sftpb.HostKeyReject)
-		a.render()
-		return true
 	case tcell.KeyLeft:
 		if d.Focus > 0 {
 			d.Focus--

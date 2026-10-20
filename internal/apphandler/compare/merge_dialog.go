@@ -69,14 +69,6 @@ func (h *Handler) HandleMergeDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 	form := dialog.NewCompareMergeDialogLinearForm()
-	if dialog.AltDialogOK(event) {
-		h.confirmMerge()
-		return true
-	}
-	if dialog.AltDialogCancel(event) {
-		h.closeMergeDialog()
-		return true
-	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 'l', 'L':
@@ -193,3 +185,9 @@ func (h *Handler) confirmMerge() {
 	msg := fmt.Sprintf("Merge queued (%d %s)", len(plan.Copies), verb)
 	h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
 }
+
+// MergeDialogOK confirms the merge dialog.
+func (h *Handler) MergeDialogOK() { h.confirmMerge() }
+
+// MergeDialogCancel closes the merge dialog.
+func (h *Handler) MergeDialogCancel() { h.closeMergeDialog() }

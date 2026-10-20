@@ -1,7 +1,7 @@
 package keymap
 
 // DefaultOpenInPanelKeys is the single definition of the open-in-primary/secondary chords shared
-// by the find, pin and dedup overlays.
+// by the find, pin, bookmarks, history and dedup overlays.
 func DefaultOpenInPanelKeys() map[string][]string {
 	return map[string][]string{
 		ActionOpenInPrimary:   {"S-left"},

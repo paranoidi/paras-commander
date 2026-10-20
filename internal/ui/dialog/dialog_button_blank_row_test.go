@@ -156,6 +156,9 @@ func TestStashRestoreHasBlankRowAboveButtonsAndNoHelpFooter(t *testing.T) {
 	if !strings.Contains(rows[buttonY], "[ Replace ]") {
 		t.Fatalf("button row = %q, want Replace (help text must not overwrite buttons)", strings.TrimSpace(rows[buttonY]))
 	}
+	if !strings.Contains(rows[buttonY], "[ Cancel ]") {
+		t.Fatalf("button row = %q, want Cancel", strings.TrimSpace(rows[buttonY]))
+	}
 	joined := strings.Join(rows, "\n")
 	if strings.Contains(joined, "Left/Right") || strings.Contains(joined, "Enter confirm") {
 		t.Fatalf("stash restore still paints a navigation help footer; rows:\n%s", joined)

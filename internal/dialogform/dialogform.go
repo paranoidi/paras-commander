@@ -22,14 +22,11 @@ type Handlers struct {
 }
 
 // HandleKey applies standard linear-form navigation/mnemonic/space-toggle/apply/cancel
-// key handling. Mnemonics (OnMnemonic) fire only with Alt. Callers must first try their dialog's Alt+O/Alt+C standard-actions
-// handling (e.g. App.tryStandardDialogActions) before calling HandleKey, since that
-// App-level wiring lives outside this App-independent package.
+// key handling. Mnemonics (OnMnemonic) fire only with Alt. The dialog-wide OK / Cancel chords
+// (ui.input.dialog-ok / dialog-cancel) are resolved before dialog keys reach here, by
+// App.handleKey; OnApply / OnCancel serve Enter on a button and the plain o / c runes.
 func HandleKey(ev *tcell.EventKey, form dialog.DialogLinearForm, h Handlers) bool {
 	switch ev.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		h.OnCancel()
-		return true
 	case tcell.KeyEnter:
 		if *h.Focus == form.CancelIndex() {
 			h.OnCancel()

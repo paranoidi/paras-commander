@@ -95,7 +95,6 @@ const (
 	ActionBookmarkOpen                = "bookmark.open"
 	ActionBookmarkAdd                 = "bookmark.add"
 	ActionBookmarkDelete              = "bookmark.delete"
-	ActionBookmarkOpenOther           = "bookmark.open-other"
 	ActionPanelDiskUsageScan          = "panel.disk-usage-scan"
 	ActionPanelDiskUsageClear         = "panel.disk-usage-clear"
 	ActionPanelDirSize                = "panel.dir-size"
@@ -149,10 +148,8 @@ const (
 	ActionDedupPrevPane       = "dedup.prev-pane"
 
 	// Dialog actions
-	ActionDialogConfirm = "ui.confirm"
-	ActionDialogCancel  = "ui.cancel"
-	ActionDialogNext    = "ui.next-field"
-	ActionDialogPrev    = "ui.prev-field"
+	ActionDialogNext = "ui.next-field"
+	ActionDialogPrev = "ui.prev-field"
 
 	// File operations
 	ActionFileRename = "file.rename"
@@ -258,6 +255,12 @@ const (
 
 	// ActionFindSelectAll marks all ranked find-dialog results and is bound via
 	// [dialog.find], not [main].
+	// ActionDialogOK confirms the top-most dialog (its OK / Apply / Yes button). Bound via
+	// [dialog.input], not [main]; resolved once in App.handleKey.
+	ActionDialogOK = "ui.input.dialog-ok"
+	// ActionDialogCancel closes the top-most dialog (its Cancel / No button). Bound via
+	// [dialog.input], not [main]; resolved once in App.handleKey.
+	ActionDialogCancel = "ui.input.dialog-cancel"
 	// ActionDialogInputRestoreDefault restores a focused dialog input field's suggested default
 	// (Prefill) and is bound via [dialog.input], not [main].
 	ActionDialogInputRestoreDefault = "ui.input.restore-default"
@@ -404,7 +407,6 @@ var KnownActions = map[string]struct{}{
 	ActionBookmarkOpen:                {},
 	ActionBookmarkAdd:                 {},
 	ActionBookmarkDelete:              {},
-	ActionBookmarkOpenOther:           {},
 	ActionPanelDiskUsageScan:          {},
 	ActionPanelDiskUsageClear:         {},
 	ActionPanelDirSize:                {},
@@ -455,10 +457,8 @@ var KnownActions = map[string]struct{}{
 	ActionDedupCompare:        {},
 	ActionDedupPrevPane:       {},
 
-	ActionDialogConfirm: {},
-	ActionDialogCancel:  {},
-	ActionDialogNext:    {},
-	ActionDialogPrev:    {},
+	ActionDialogNext: {},
+	ActionDialogPrev: {},
 
 	ActionFileRename:                   {},
 	ActionFileRenameOpenSanitize:       {},
@@ -542,6 +542,8 @@ var KnownActions = map[string]struct{}{
 	ActionUICalibrateDebounce:   {},
 	ActionPreviewSettingsDialog: {},
 
+	ActionDialogOK:                  {},
+	ActionDialogCancel:              {},
 	ActionDialogInputRestoreDefault: {},
 	ActionDialogInputPathPickerAll:  {},
 

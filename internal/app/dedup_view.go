@@ -79,17 +79,16 @@ func (a *App) handleDedupEmptyDirsConfirmKey(event *tcell.EventKey) bool {
 		}
 	}
 	switch event.Key() {
-	case tcell.KeyEsc:
-		a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
-		a.dedupCtrl.DeleteMarked(false)
 	case tcell.KeyLeft:
-		a.model.DedupEmptyDirsConfirm.Focus = dialog.DialogPairLeftRight(a.model.DedupEmptyDirsConfirm.Focus, false)
+		a.model.DedupEmptyDirsConfirm.Focus = max(a.model.DedupEmptyDirsConfirm.Focus-1, 0)
 	case tcell.KeyRight:
-		a.model.DedupEmptyDirsConfirm.Focus = dialog.DialogPairLeftRight(a.model.DedupEmptyDirsConfirm.Focus, true)
+		a.model.DedupEmptyDirsConfirm.Focus = min(a.model.DedupEmptyDirsConfirm.Focus+1, 2)
 	case tcell.KeyEnter:
-		removeEmpty := a.model.DedupEmptyDirsConfirm.Focus == 0
+		focus := a.model.DedupEmptyDirsConfirm.Focus
 		a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
-		a.dedupCtrl.DeleteMarked(removeEmpty)
+		if focus < 2 {
+			a.dedupCtrl.DeleteMarked(focus == 0)
+		}
 	}
 	return false
 }

@@ -241,10 +241,6 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			}
 		}
 	}
-	if dialog.TryStandardDialogActions(event, h.ActivateSelection, h.CloseDialog, nil) {
-		return
-	}
-
 	st := &h.model.PinDialog
 	edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, h.queryWidth(), func() {
 		h.SyncDialogRanks()
@@ -256,8 +252,6 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	}
 
 	switch event.Key() {
-	case tcell.KeyEsc:
-		h.CloseDialog()
 	case tcell.KeyEnter:
 		h.ActivateSelection()
 	case tcell.KeyUp, tcell.KeyDown, tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd:

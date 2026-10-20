@@ -212,12 +212,6 @@ func (h *Handler) handleMassRenameSavePromptKey(event *tcell.EventKey) bool {
 		}
 	}
 
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if dialog.TryStandardDialogActions(event, h.confirmMassRenameSavePrompt, h.closeMassRenameSavePrompt, nil) {
-			return false
-		}
-	}
-
 	fieldAt := func(idx int) *dialog.FileDialogField {
 		if idx < 0 || idx >= len(d.Fields) {
 			return nil
@@ -230,9 +224,6 @@ func (h *Handler) handleMassRenameSavePromptKey(event *tcell.EventKey) bool {
 	}
 
 	switch event.Key() {
-	case tcell.KeyEsc:
-		h.closeMassRenameSavePrompt()
-		return false
 	case tcell.KeyEnter:
 		if d.FocusedField == cancelIdx {
 			h.closeMassRenameSavePrompt()
@@ -589,10 +580,6 @@ func (h *Handler) handleMassRenamePickerKey(event *tcell.EventKey) bool {
 			return false
 		}
 	}
-	if dialog.TryStandardDialogActions(event, h.activateMassRenamePickerSelection, h.closeMassRenamePicker, nil) {
-		return false
-	}
-
 	if st.Focus == 0 {
 		onChange := func() {
 			h.syncMassRenamePickerRanks()
@@ -606,8 +593,6 @@ func (h *Handler) handleMassRenamePickerKey(event *tcell.EventKey) bool {
 	}
 
 	switch event.Key() {
-	case tcell.KeyEsc:
-		h.closeMassRenamePicker()
 	case tcell.KeyEnter:
 		switch st.Focus {
 		case 2:

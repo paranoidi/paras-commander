@@ -57,10 +57,8 @@ func (h *Handler) HandleOutputDialogKey(event *tcell.EventKey) {
 	}
 	if st.Running {
 		switch {
-		case event.Key() == tcell.KeyEsc || dialog.AltLetter(event, 'b'):
+		case dialog.AltLetter(event, 'b'):
 			h.closeOutputDialogKeepRunning()
-		case dialog.AltDialogCancel(event):
-			h.CloseOutputDialog()
 		case event.Key() == tcell.KeyLeft:
 			st.Focus = 0
 		case event.Key() == tcell.KeyRight:
@@ -75,14 +73,19 @@ func (h *Handler) HandleOutputDialogKey(event *tcell.EventKey) {
 		return
 	}
 
-	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyEnter:
+	if event.Key() == tcell.KeyEnter {
 		h.CloseOutputDialog()
-	case tcell.KeyRune:
-		if dialog.AltDialogOK(event) || dialog.AltDialogCancel(event) {
-			h.CloseOutputDialog()
-		}
 	}
+}
+
+// OutputDialogButtons returns what OK, Cancel and Esc do in the open command-output dialog.
+// While the command runs, OK and Esc keep it running in the background and Cancel stops it;
+// once finished all three just close the dialog.
+func (h *Handler) OutputDialogButtons() (ok, cancel, esc func()) {
+	if h.model.CommandOutputDialog.Running {
+		return h.closeOutputDialogKeepRunning, h.CloseOutputDialog, h.closeOutputDialogKeepRunning
+	}
+	return h.CloseOutputDialog, h.CloseOutputDialog, nil
 }
 
 // OutputDialogResult builds the finished-state output dialog for a completed run.

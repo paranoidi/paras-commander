@@ -37,29 +37,29 @@ func (h *Handler) TryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
 	switch id {
 	case keymap.ActionBookmarkDelete:
 		return h.deleteSelectedBookmark()
-	case keymap.ActionBookmarkOpenOther:
-		return h.openSelectedBookmarkInInactivePanel()
+	case keymap.ActionOpenInPrimary:
+		return h.openSelectedBookmarkInPanel(ui.PrimaryPanel)
+	case keymap.ActionOpenInSecondary:
+		return h.openSelectedBookmarkInPanel(ui.SecondaryPanel)
 	default:
 		return false
 	}
 }
 
-// openSelectedBookmarkInInactivePanel navigates the inactive panel to the
-// selected bookmark path and closes the picker (like Enter). Returns true when handled.
-func (h *Handler) openSelectedBookmarkInInactivePanel() bool {
+// openSelectedBookmarkInPanel navigates panelID to the selected bookmark path; the picker stays
+// open (like the Pin dialog's open-in-panel). Returns true when handled.
+func (h *Handler) openSelectedBookmarkInPanel(panelID int) bool {
 	item, ok := h.pathPickerSelectedItem()
 	if !ok {
 		return false
 	}
 	path := filepath.Clean(item.Path)
-	id := h.host.InactivePanelID()
-	if err := h.host.NavigatePanelToPath(id, path, ""); err != nil {
+	if err := h.host.NavigatePanelToPath(panelID, path, ""); err != nil {
 		h.host.SetErrorMessage("Bookmark", err)
 		return true
 	}
-	h.host.PanelByID(id).EnsureCursorVisible(h.host.PanelViewportRows(id))
-	h.ClosePathPicker()
-	h.host.SetTransientMessage(fmt.Sprintf("Opened in other panel: %s", path), ui.MessageUrgencyInfo)
+	h.host.PanelByID(panelID).EnsureCursorVisible(h.host.PanelViewportRows(panelID))
+	h.host.SetTransientMessage(fmt.Sprintf("Opened: %s", path), ui.MessageUrgencyInfo)
 	return true
 }
 
@@ -101,9 +101,9 @@ func (h *Handler) BookmarkDialogDeleteFooterEligible() bool {
 	return h.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete) != ""
 }
 
-// BookmarkDialogOpenOtherFooterEligible reports whether the bookmarks path picker is open with
-// a selected item eligible for the "open in other panel" shortcut footer hint.
-func (h *Handler) BookmarkDialogOpenOtherFooterEligible() bool {
+// BookmarkDialogOpenInPanelFooterEligible reports whether the bookmarks path picker is open with
+// a selected item eligible for the open-in-panel shortcut footer hints.
+func (h *Handler) BookmarkDialogOpenInPanelFooterEligible() bool {
 	if h.keysBookmarkDialog == nil || !h.bookmarkDialogOpen() {
 		return false
 	}

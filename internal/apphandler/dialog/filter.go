@@ -312,19 +312,7 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 	fd := &h.model.FilterDialog
 	form := h.filterDialogForm()
 
-	if dialog.AltDialogOK(event) {
-		h.confirmFilterDialogFromInput()
-		return false
-	}
-	if dialog.AltDialogCancel(event) {
-		h.CloseFilterDialog()
-		return false
-	}
-
 	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		h.CloseFilterDialog()
-		return false
 	case tcell.KeyEnter:
 		if fd.Focus == form.CancelIndex() {
 			h.CloseFilterDialog()

@@ -2,13 +2,15 @@ package keymap
 
 import "strings"
 
-// DefaultDialogInputOverlayKeys holds built-in chords that apply only while a
-// dialog input field is focused ([dialog.input]). These act on the
-// focused FileDialogField (e.g. restore the suggested default placeholder) and
-// are intentionally scoped so the same chord can be reused globally for an
-// unrelated action when no dialog input is focused.
+// DefaultDialogInputOverlayKeys holds built-in chords shared by every dialog
+// ([dialog.input]): OK / Cancel (resolved once in App.handleKey) and the editing
+// chords that act on a focused FileDialogField (e.g. restore the suggested default
+// placeholder). They are intentionally scoped so the same chord can be reused
+// globally for an unrelated action when no dialog is open.
 func DefaultDialogInputOverlayKeys() map[string][]string {
 	return map[string][]string{
+		ActionDialogOK:                    {"M-o", "M-Enter"},
+		ActionDialogCancel:                {"Esc", "M-c", "F9"},
 		ActionDialogInputRestoreDefault:   {"C-r", "C-d"},
 		ActionDialogInputPathPickerAll:    {"*", "|"},
 		ActionDialogInputKillWordBackward: {"C-w", "M-backspace"},

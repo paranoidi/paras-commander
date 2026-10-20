@@ -223,10 +223,30 @@ func historyDialogOverlayFooterKeys(keys *keymap.Map, bothPanels bool) []menu.Fu
 	if bothPanels {
 		hint = "Active panel"
 	}
+	var out []menu.FunctionKey
 	if lbl := keys.MenuBindingLabel(keymap.ActionPanelHistoryBothPanels); lbl != "" {
-		return []menu.FunctionKey{{KeyLabel: lbl, Hint: hint}}
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint})
 	}
-	return nil
+	return append(out, openInPanelFooterKeys(keys)...)
+}
+
+// openHistorySelectionInPanel navigates panelID to the selected history directory; the dialog
+// stays open (like the Pin dialog's open-in-panel).
+func (a *App) openHistorySelectionInPanel(panelID int) {
+	st := &a.model.HistoryDialog
+	if len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
+		return
+	}
+	entIdx := st.Ranked[st.Selected]
+	if entIdx < 0 || entIdx >= len(st.Paths) {
+		return
+	}
+	path := filepath.Clean(st.Paths[entIdx])
+	if err := a.navigatePanelToDirectory(panelID, path, ""); err != nil {
+		a.setErrorMessage("History", err)
+		return
+	}
+	a.setTransientMessage("Opened: "+path, ui.MessageUrgencyInfo)
 }
 
 func (a *App) syncHistoryDialogRanks() {
@@ -292,10 +312,16 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			case keymap.ActionPanelHistoryBothPanels:
 				a.toggleHistoryDialogBothPanels()
 				return
+			case keymap.ActionOpenInPrimary:
+				a.openHistorySelectionInPanel(ui.PrimaryPanel)
+				return
+			case keymap.ActionOpenInSecondary:
+				a.openHistorySelectionInPanel(ui.SecondaryPanel)
+				return
 			}
 		}
 	}
-	if dialog.TryStandardDialogActions(event, a.activateHistorySelection, a.closeHistoryDialog, []dialog.ExtraMnemonic{{Rune: dialog.HistoryZoxideMnemonic, Fn: a.toggleHistoryIncludeZoxide}}) {
+	if dialog.TryDialogMnemonics(event, []dialog.ExtraMnemonic{{Rune: dialog.HistoryZoxideMnemonic, Fn: a.toggleHistoryIncludeZoxide}}) {
 		return
 	}
 
@@ -313,8 +339,6 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 	}
 
 	switch event.Key() {
-	case tcell.KeyEsc:
-		a.closeHistoryDialog()
 	case tcell.KeyEnter:
 		switch st.Focus {
 		case st.HistoryCancelFocus():

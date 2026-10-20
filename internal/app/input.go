@@ -265,10 +265,8 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete bookmark"}}, rest...)
 		}
 	}
-	if a.dialogCtrl.BookmarkDialogOpenOtherFooterEligible() {
-		if lbl := a.keys.BookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkOpenOther); lbl != "" {
-			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Open other"}}, rest...)
-		}
+	if a.dialogCtrl.BookmarkDialogOpenInPanelFooterEligible() {
+		rest = append(openInPanelFooterKeys(a.keys.BookmarkDialog), rest...)
 	}
 	return footerWithEscClose(rest)
 }
@@ -449,6 +447,16 @@ func findDialogOverlayFooterKeys(keys *keymap.Map, jumpMode bool) []menu.Functio
 	if !jumpMode {
 		out = findDialogMarkingFooterKeys(keys)
 	}
+	return append(out, openInPanelFooterKeys(keys)...)
+}
+
+// openInPanelFooterKeys is the one source of the "Open ◄" / "Open ►" footer hints shown by the
+// overlays that bind ActionOpenInPrimary / ActionOpenInSecondary (find, pin, bookmarks, history).
+func openInPanelFooterKeys(keys *keymap.Map) []menu.FunctionKey {
+	if keys == nil {
+		return nil
+	}
+	var out []menu.FunctionKey
 	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInPrimary); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄"})
 	}
@@ -489,12 +497,7 @@ func pinDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	if lbl := keys.MenuBindingLabel(keymap.ActionPinView); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "View"})
 	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInPrimary); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄"})
-	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionOpenInSecondary); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ►"})
-	}
+	out = append(out, openInPanelFooterKeys(keys)...)
 	if lbl := keys.MenuBindingLabel(keymap.ActionPinRemove); lbl != "" {
 		fk := menu.FunctionKey{KeyLabel: lbl, Hint: "Remove"}
 		if keys.MenuBindingLabel(keymap.ActionPinRemoveAll) != "" {
@@ -727,6 +730,9 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	resolvedAction := a.actionFromKeyEvent(event)
 	if handled, iquit, irendered := a.handleGlobalKeyIntercepts(event, resolvedAction); handled {
 		return iquit, irendered
+	}
+	if a.dispatchDialogButton(event) {
+		return false, true
 	}
 
 	mode := a.inputMode()

@@ -88,7 +88,7 @@ func TestFilterDialogCancelDiscardsPending(t *testing.T) {
 	h.OpenFilterDialog()
 	h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
-	h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	h.FilterDialogCancel()
 	if model.CompareView.Filter != comparepkg.FilterAll {
 		t.Fatalf("after Esc: view Filter = %v, want All", model.CompareView.Filter)
 	}

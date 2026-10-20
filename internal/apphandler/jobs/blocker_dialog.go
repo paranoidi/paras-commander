@@ -70,6 +70,30 @@ func (h *Handler) confirmBlockerDialogWithFocus(focus int) {
 	h.scheduleBlockerDialogChain()
 }
 
+// DialogOK confirms the open blocker dialog: the focused choice, or the rules in advanced mode.
+func (h *Handler) DialogOK() {
+	if !h.model.ConflictDialog.Open {
+		return
+	}
+	if h.model.ConflictDialog.Advanced {
+		h.applyAdvanced()
+		return
+	}
+	h.confirmBlockerDialog()
+}
+
+// DialogCancel postpones the open blocker dialog, or leaves advanced mode.
+func (h *Handler) DialogCancel() {
+	if !h.model.ConflictDialog.Open {
+		return
+	}
+	if h.model.ConflictDialog.Advanced {
+		h.cancelAdvanced()
+		return
+	}
+	h.postponeBlockerDialog()
+}
+
 // HandleBlockerDialogKey routes keys for the open quick-blocker (ConflictDialog) dialog.
 // No-op when the dialog is not open.
 func (h *Handler) HandleBlockerDialogKey(event *tcell.EventKey) {
@@ -80,11 +104,6 @@ func (h *Handler) HandleBlockerDialogKey(event *tcell.EventKey) {
 
 	if st.Advanced {
 		h.handleAdvancedKey(event)
-		return
-	}
-
-	if event.Key() == tcell.KeyEsc {
-		h.postponeBlockerDialog()
 		return
 	}
 
@@ -157,15 +176,11 @@ func (h *Handler) handleAdvancedKey(event *tcell.EventKey) {
 	form := st.ConflictAdvancedForm()
 	skipFocus, allFocus := st.ConflictAdvancedSkipIdenticalFocus(), st.ConflictAdvancedAllFocus()
 
-	if event.Key() == tcell.KeyEsc {
-		h.cancelAdvanced()
-		return
-	}
 	extras := []dialog.ExtraMnemonic{{Rune: 'a', Fn: func() { st.AdvAll = !st.AdvAll }}}
 	if skipFocus >= 0 {
 		extras = append(extras, dialog.ExtraMnemonic{Rune: 'i', Fn: func() { st.Rules.SkipIdentical = !st.Rules.SkipIdentical }})
 	}
-	if dialog.TryStandardDialogActions(event, h.applyAdvanced, h.cancelAdvanced, extras) {
+	if dialog.TryDialogMnemonics(event, extras) {
 		return
 	}
 	// Left/Right move between the choices of a rule row (not only buttons, like the config dialog's

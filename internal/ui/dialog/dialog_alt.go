@@ -7,49 +7,26 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 )
 
-// AltDialogOK reports Alt+O (standard dialog OK mnemonic).
-func AltDialogOK(ev *tcell.EventKey) bool {
-	return ev.Key() == tcell.KeyRune && keymap.AltLetterModifiers(ev.Modifiers()) &&
-		(ev.Rune() == 'o' || ev.Rune() == 'O')
-}
-
 // AltLetter reports Alt+<letter> (either case) for a dialog-specific button mnemonic.
 func AltLetter(ev *tcell.EventKey, letter rune) bool {
 	return ev.Key() == tcell.KeyRune && keymap.AltLetterModifiers(ev.Modifiers()) &&
 		unicode.ToLower(ev.Rune()) == letter
 }
 
-// AltDialogCancel reports Alt+C (standard dialog Cancel mnemonic).
-func AltDialogCancel(ev *tcell.EventKey) bool {
-	return ev.Key() == tcell.KeyRune && keymap.AltLetterModifiers(ev.Modifiers()) &&
-		(ev.Rune() == 'c' || ev.Rune() == 'C')
-}
-
 // ExtraMnemonic pairs an Alt+letter shortcut with an action, for dialogs that need
-// standard Alt+O/Alt+C plus one or more additional Alt-letter mnemonics (e.g.
-// Alt+Y/Alt+N on the delete confirmation, Alt+P "Add paused" on transfer).
+// additional Alt-letter mnemonics beyond OK/Cancel (e.g. Alt+Y/Alt+N on the delete
+// confirmation, Alt+P "Add paused" on transfer).
 type ExtraMnemonic struct {
 	Rune rune
 	Fn   func()
 }
 
-// TryStandardDialogActions handles Alt+O (apply) and Alt+C (cancel), plus any extra
-// Alt-letter mnemonics. Returns true when a matching action ran.
-func TryStandardDialogActions(ev *tcell.EventKey, apply, cancel func(), extras []ExtraMnemonic) bool {
+// TryDialogMnemonics handles the dialog-specific Alt-letter mnemonics in extras. OK and
+// Cancel are not handled here: App.handleKey resolves ui.input.dialog-ok / dialog-cancel once
+// for every dialog. Returns true when a matching action ran.
+func TryDialogMnemonics(ev *tcell.EventKey, extras []ExtraMnemonic) bool {
 	if ev.Key() != tcell.KeyRune || !keymap.AltLetterModifiers(ev.Modifiers()) {
 		return false
-	}
-	if AltDialogOK(ev) {
-		if apply != nil {
-			apply()
-		}
-		return true
-	}
-	if AltDialogCancel(ev) {
-		if cancel != nil {
-			cancel()
-		}
-		return true
 	}
 	for _, extra := range extras {
 		if runeMatchesCaseFold(ev.Rune(), extra.Rune) {

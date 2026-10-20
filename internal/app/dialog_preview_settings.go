@@ -188,7 +188,7 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 		metadataFocusFirst    = 13
 		videoFocus            = 17
 	)
-	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
+	dialogform.HandleKey(event, form, dialogform.Handlers{
 		Focus:              &st.Focus,
 		OnApply:            a.applyPreviewSettingsDialog,
 		OnCancel:           a.closePreviewSettingsDialog,

@@ -196,22 +196,11 @@ func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 	}
 
 	form := dialog.NewDialogTrailingButtonsForm(2, 3)
-	if dialog.AltDialogOK(event) {
-		a.applyDebounceCalibrateDialog()
-		return
-	}
 	if altDialogCalibrate(event) {
 		a.beginDebounceCalibrateMeasuring()
 		return
 	}
-	if dialog.AltDialogCancel(event) {
-		a.closeDebounceCalibrateDialog()
-		return
-	}
 	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		a.closeDebounceCalibrateDialog()
-		return
 	case tcell.KeyEnter:
 		switch st.Focus {
 		case form.CancelIndex():
@@ -297,11 +286,6 @@ func (a *App) handleDebounceCalibrateInputKey(event *tcell.EventKey, value *stri
 
 func (a *App) handleDebounceCalibrateMeasuringKey(event *tcell.EventKey) {
 	st := &a.model.DebounceCalibrateDialog
-	switch event.Key() {
-	case tcell.KeyEsc:
-		a.abortDebounceCalibrateMeasuring()
-		return
-	}
 	fp, ok := dialog.KeyFingerprint(event)
 	if !ok {
 		return

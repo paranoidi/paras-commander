@@ -9,8 +9,8 @@ import (
 
 func DrawStashRestoreDialog(screen tcell.Screen, layout Layout, state StashRestoreDialogState, styles theme.Theme) {
 	width := min(layout.Width-4, 72)
-	if width < 44 {
-		width = min(44, layout.Width-2)
+	if width < 68 { // five buttons plus gaps need 64 columns
+		width = min(68, layout.Width-2)
 	}
 	height := 7
 	rect := draw.CenteredDialogRect(layout, width, height)
@@ -38,6 +38,7 @@ func DrawStashRestoreDialog(screen tcell.Screen, layout Layout, state StashResto
 		{"Merge", 'M', 1},
 		{"Drop stash", 'D', 2},
 		{"Drop all", 'A', 3},
+		{"Cancel", 'C', 4},
 	}
 	row := make([]draw.DialogButtonSpec, len(buttonSpecs))
 	for i, b := range buttonSpecs {

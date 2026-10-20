@@ -150,18 +150,6 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 	if !d.Open {
 		return
 	}
-	if dialog.AltDialogOK(event) {
-		h.confirmFilterDialog()
-		return
-	}
-	if dialog.AltDialogCancel(event) {
-		h.closeFilterDialog()
-		return
-	}
-	if event.Key() == tcell.KeyEsc {
-		h.closeFilterDialog()
-		return
-	}
 	if event.Key() == tcell.KeyEnter {
 		if d.Focus == d.CancelIndex() {
 			h.closeFilterDialog()
@@ -194,3 +182,9 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 func filterShortcutMatches(got, want rune) bool {
 	return got == want || unicode.ToLower(got) == unicode.ToLower(want)
 }
+
+// FilterDialogOK applies the category-filter dialog.
+func (h *Handler) FilterDialogOK() { h.confirmFilterDialog() }
+
+// FilterDialogCancel closes the category-filter dialog.
+func (h *Handler) FilterDialogCancel() { h.closeFilterDialog() }

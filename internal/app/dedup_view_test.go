@@ -1454,7 +1454,7 @@ func TestDedupProgressDialogCancelClosesScan(t *testing.T) {
 		t.Fatal("expected progress dialog open")
 	}
 
-	app.dedupCtrl.HandleProgressDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.DedupProgressDialog.Open {
 		t.Fatal("progress dialog should close after cancel")
 	}
@@ -1610,5 +1610,56 @@ func TestDedupViewOpenFileAndExternalBrowser(t *testing.T) {
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModAlt))
 	if len(opened) != 1 || opened[0] != filepath.Dir(path) {
 		t.Fatalf("Alt+x opened %v, want %q", opened, filepath.Dir(path))
+	}
+}
+
+// TestDedupViewEmptyDirsConfirmCancelDeletesNothing verifies every Cancel path
+// closes the dialog, queues no delete and leaves the marks intact.
+func TestDedupViewEmptyDirsConfirmCancelDeletesNothing(t *testing.T) {
+	presses := map[string]func(app *App){
+		"esc":   func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone)) },
+		"alt-c": func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt)) },
+		"f9":    func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone)) },
+		"enter-on-cancel": func(app *App) {
+			app.model.DedupEmptyDirsConfirm.Focus = 2
+			app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+		},
+	}
+	for name, press := range presses {
+		t.Run(name, func(t *testing.T) {
+			sub := filepath.Join(t.TempDir(), "sub")
+			if err := os.Mkdir(sub, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			for _, n := range []string{"orchard.txt", "pebble.txt"} {
+				if err := os.WriteFile(filepath.Join(sub, n), []byte("dup"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			app := newApp(t, newScreen(t, 80, 24), sub)
+			app.openFindDuplicates()
+			waitDedupDone(t, app)
+			app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+			app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+			app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+			app.dialogCtrl.ExecuteDelete()
+			if !app.model.DedupEmptyDirsConfirm.Open {
+				t.Fatal("empty-dirs confirm dialog did not open")
+			}
+			press(app)
+			if app.model.DedupEmptyDirsConfirm.Open {
+				t.Fatal("dialog should be closed")
+			}
+			if got := len(app.dedupCtrl.MarkedPaths()); got != 2 {
+				t.Fatalf("marked paths = %d, want 2 (marks kept)", got)
+			}
+			flushBackgroundJobs(t, app)
+			waitUntilAppJobsFinished(t, app, 5*time.Second)
+			for _, n := range []string{"orchard.txt", "pebble.txt"} {
+				if _, err := os.Stat(filepath.Join(sub, n)); err != nil {
+					t.Fatalf("%s should still exist: %v", n, err)
+				}
+			}
+		})
 	}
 }

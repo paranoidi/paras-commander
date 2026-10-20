@@ -128,13 +128,6 @@ func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 	if h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusField, h.ArmFlattenDestinationValidateTimer) {
 		return
 	}
-	if dialog.TryStandardDialogActions(event, h.confirmFlatten, h.CloseFlattenDialog, nil) {
-		return
-	}
-	if event.Key() == tcell.KeyEsc {
-		h.CloseFlattenDialog()
-		return
-	}
 	if h.TryPathPickerHostShortcut(event) {
 		return
 	}

@@ -72,7 +72,7 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	if len(p.SelectedPaths) == 0 {
 		t.Fatal("opening copy dialog must not clear selection")
 	}
-	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.TransferDialog.Open {
 		t.Fatal("copy dialog should close on Esc")
 	}
@@ -81,7 +81,7 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	}
 
 	app.dialogCtrl.OpenCopyDialog()
-	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'C', tcell.ModAlt))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'C', tcell.ModAlt))
 	if app.model.TransferDialog.Open {
 		t.Fatal("copy dialog should close on Alt+C")
 	}
@@ -96,7 +96,7 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	if len(p.SelectedPaths) == 0 {
 		t.Fatal("opening move dialog must not clear selection")
 	}
-	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.TransferDialog.Open {
 		t.Fatal("move dialog should close on Esc")
 	}
@@ -105,7 +105,7 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	}
 
 	app.dialogCtrl.OpenMoveDialog()
-	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt))
 	if app.model.TransferDialog.Open {
 		t.Fatal("move dialog should close on Alt+c")
 	}
@@ -748,7 +748,7 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		t.Fatalf("footer = %+v, want Inactive S-right hint", keys)
 	}
 
-	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	app.dispatch(keymap.ActionFileSymlink)
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogSymlink {
 		t.Fatal("symlink dialog should be open")
@@ -811,7 +811,7 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 	if app.model.PathPicker.Title != "Bookmarks" {
 		t.Fatalf("path picker title = %q, want Bookmarks", app.model.PathPicker.Title)
 	}
-	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.PathPicker.Open {
 		t.Fatal("path picker should close")
 	}
@@ -824,8 +824,8 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 	if app.model.PathPicker.Title != "History" {
 		t.Fatalf("path picker title = %q, want History", app.model.PathPicker.Title)
 	}
-	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
-	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 
 	app.dispatch(keymap.ActionFileSymlink)
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogSymlink {
