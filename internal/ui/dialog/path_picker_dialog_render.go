@@ -124,6 +124,8 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 		}
 	}
 
+	draw.DrawDialogListScrollbar(screen, rect, listTop, listH, len(state.Ranked), state.ListScroll, scrollbarStyle, borderStyle, styles)
+
 	sepAfterList := listTop + listH
 	draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
 

@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -159,5 +160,33 @@ func TestEnsurePathPickerListScroll(t *testing.T) {
 	EnsurePathPickerListScroll(&st, 5)
 	if st.ListScroll != 11 {
 		t.Fatalf("ListScroll = %d want 11", st.ListScroll)
+	}
+}
+
+func TestDrawPathPickerDialogScrollbarOnOverflow(t *testing.T) {
+	items := make([]PathPickerItem, 40)
+	ranked := make([]int, len(items))
+	for i := range items {
+		items[i] = PathPickerItem{Source: "fzf-marks", Name: fmt.Sprintf("meadow%02d", i), Path: fmt.Sprintf("/tmp/meadow%02d", i)}
+		ranked[i] = i
+	}
+	state := PathPickerState{Open: true, Title: "Bookmarks", Items: items, Ranked: ranked}
+	render := func(sb uiscrollbar.Style) string {
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init: %v", err)
+		}
+		defer screen.Fini()
+		screen.SetSize(80, 24)
+		DrawPathPickerDialog(screen, geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{}), state, theme.Default(), sb, nil)
+		var b strings.Builder
+		for y := 0; y < 24; y++ {
+			cell, _, _ := screen.Get(79-2, y) // right border column of the 76-wide dialog
+			b.WriteString(cell)
+		}
+		return b.String()
+	}
+	if render(uiscrollbar.StyleNone) == render(uiscrollbar.StyleBar) {
+		t.Fatal("bar scrollbar did not change the right border on an overflowing list")
 	}
 }
