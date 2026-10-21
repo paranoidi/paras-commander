@@ -16,7 +16,7 @@ type RowMarks struct {
 	JobStatus string
 	JobWrite  bool
 	// Missing marks a path that no longer exists (Theme.IconDialogMissing); Cursor switches
-	// its color to the file list's cursor icon color (Theme.DialogMissingIconForeground).
+	// its color to dialog.option.active (Theme.DialogMissingIconForeground).
 	Missing bool
 	Cursor  bool
 	// RangeAnchor marks the pending range-select start row (Theme.IconFilelistRangeAnchor).

@@ -136,8 +136,8 @@ func TestDrawRowMarksSuffixMissingColorFollowsCursor(t *testing.T) {
 		if want := styles.DialogMissingIconForeground(cursor); fg != want {
 			t.Fatalf("cursor=%v: fg = %v, want %v", cursor, fg, want)
 		}
-		if cursor && fg != tcell.ColorBlack {
-			t.Fatalf("cursor fg = %v, want black (file list cursor icon color)", fg)
+		if activeFG, _, _ := styles.DialogOptionRowStyle(true, false).Decompose(); cursor && fg != activeFG {
+			t.Fatalf("cursor fg = %v, want dialog.option.active %v", fg, activeFG)
 		}
 		if !cursor && fg != invalidFG {
 			t.Fatalf("fg = %v, want invalid %v", fg, invalidFG)

@@ -142,10 +142,7 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 			if state.Ranked[idxInRank] >= state.ZoxideFrom {
 				icon = styles.IconDialogZoxide()
 			}
-			fg, _, _ := styles.DialogOptionRowStyle(false, false).Decompose()
-			if isCursor {
-				fg = styles.DialogMissingIconForeground(true)
-			}
+			fg, _, _ := styles.DialogOptionRowStyle(isCursor, false).Decompose()
 			primitive.Text(screen, primaryCol, y, historySourcePrefixWidth, icon+" ", baseStyle.Foreground(fg))
 			pathCol += historySourcePrefixWidth
 			pathWidth -= historySourcePrefixWidth

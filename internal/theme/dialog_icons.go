@@ -59,13 +59,14 @@ func (t Theme) IconDialogZoxide() string {
 	return t.dialogIcon(IconKeyDialogZoxide, "\uf0e7")
 }
 
-// DialogMissingIconForeground is the missing-path mark color: the main file list's cursor
-// icon color (panel.active.row.cursor icon) on the cursor row, else dialog.option.invalid.
+// DialogMissingIconForeground is the missing-path mark color: dialog.option.active on the
+// cursor row (dialog cursor rows keep the dialog surface background), else dialog.option.invalid.
 func (t Theme) DialogMissingIconForeground(cursor bool) tcell.Color {
+	style := t.DialogOptionInvalidStyle()
 	if cursor {
-		return t.PanelRowIconForeground("panel.active.row.cursor", t.DialogOptionRowStyle(true, false))
+		style = t.DialogOptionRowStyle(true, false)
 	}
-	fg, _, _ := t.DialogOptionInvalidStyle().Decompose()
+	fg, _, _ := style.Decompose()
 	return fg
 }
 

@@ -107,3 +107,41 @@ func TestEnsureHistoryListScroll(t *testing.T) {
 		t.Fatalf("ListScroll = %d want 11", st.ListScroll)
 	}
 }
+
+func TestDrawHistoryDialogCursorRowSourceIconVisible(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	styles := theme.Default()
+	styles.UseNerdfontIcons = true
+	layout := geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{})
+	state := HistoryDialogState{
+		Open:         true,
+		Paths:        []string{"/tmp/a", "/tmp/b"},
+		DisplayLines: []string{"/tmp/a", "/tmp/b"},
+		Ranked:       []int{0, 1},
+		ZoxideFrom:   2,
+	}
+	DrawHistoryDialog(screen, layout, state, styles, nil)
+	w, h := screen.Size()
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			cell, st, _ := screen.Get(x, y)
+			if cell != styles.IconDialogHistory() {
+				continue
+			}
+			fg, bg, _ := st.Decompose()
+			if fg == bg {
+				t.Fatalf("cursor-row icon at (%d,%d) fg == bg %v", x, y, fg)
+			}
+			if want, _, _ := styles.DialogOptionRowStyle(true, false).Decompose(); fg != want {
+				t.Fatalf("cursor-row icon fg = %v, want %v", fg, want)
+			}
+			return
+		}
+	}
+	t.Fatal("history source icon not drawn")
+}
