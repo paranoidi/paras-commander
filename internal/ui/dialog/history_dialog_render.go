@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // EnsureHistoryListScroll keeps Selected row visible in a list of height listRows.
@@ -53,7 +54,7 @@ func HistoryDialogListRows(layoutHeight int, zoxideRow bool) int {
 	return listH
 }
 
-func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogState, styles theme.Theme, rowMarks RowMarksFunc) {
+func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogState, styles theme.Theme, scrollbarStyle uiscrollbar.Style, rowMarks RowMarksFunc) {
 	width := 78
 	if width > layout.Width-4 {
 		width = layout.Width - 4
@@ -159,6 +160,8 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 			DrawRowMarksSuffix(screen, pathCol+min(runewidth.StringWidth(text), fitWidth), y, marksW, marks, bg, styles)
 		}
 	}
+
+	draw.DrawDialogListScrollbar(screen, rect, listTop, listH, len(state.Ranked), state.ListScroll, scrollbarStyle, borderStyle, styles)
 
 	sepAfterList := listTop + listH
 	draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)

@@ -1,6 +1,8 @@
 package dialog
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -8,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 func TestDrawPinDialogSmoke(t *testing.T) {
@@ -34,7 +37,7 @@ func TestDrawPinDialogSmoke(t *testing.T) {
 		Selected:   0,
 		ListScroll: 0,
 	}
-	DrawPinDialog(screen, layout, state, items, styles)
+	DrawPinDialog(screen, layout, state, items, styles, uiscrollbar.StyleNone)
 
 	width := 78
 	if width > layout.Width-4 {
@@ -69,7 +72,7 @@ func TestDrawPinDialogSmokeEmptyList(t *testing.T) {
 	layout := geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{})
 	state := PinDialogState{Open: true}
 	// Should not panic with no items and no ranked rows.
-	DrawPinDialog(screen, layout, state, nil, styles)
+	DrawPinDialog(screen, layout, state, nil, styles, uiscrollbar.StyleNone)
 }
 
 func TestEnsurePinListScroll(t *testing.T) {
@@ -101,5 +104,33 @@ func TestPinDialogListRowsNoLeftoverBlankRow(t *testing.T) {
 		if listH < 4 {
 			t.Fatalf("layoutHeight=%d: listH = %d, want >= 4", layoutHeight, listH)
 		}
+	}
+}
+
+func TestDrawPinDialogScrollbarOnOverflow(t *testing.T) {
+	items := make([]PinDialogItem, 40)
+	ranked := make([]int, len(items))
+	for i := range items {
+		items[i] = PinDialogItem{Path: fmt.Sprintf("/tmp/lantern%02d", i), IsDir: true}
+		ranked[i] = i
+	}
+	state := PinDialogState{Ranked: ranked}
+	render := func(sb uiscrollbar.Style) string {
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init: %v", err)
+		}
+		defer screen.Fini()
+		screen.SetSize(80, 24)
+		DrawPinDialog(screen, geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{}), state, items, theme.Default(), sb)
+		var b strings.Builder
+		for y := 0; y < 24; y++ {
+			cell, _, _ := screen.Get(79-2, y) // right border column of the 76-wide dialog
+			b.WriteString(cell)
+		}
+		return b.String()
+	}
+	if render(uiscrollbar.StyleNone) == render(uiscrollbar.StyleBar) {
+		t.Fatal("bar scrollbar did not change the right border on an overflowing list")
 	}
 }

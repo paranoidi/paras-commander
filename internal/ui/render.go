@@ -883,10 +883,10 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawPathPickerDialog(screen, layout, model.PathPicker, styles, model.PanelScrollbar, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	}
 	if model.HistoryDialog.Open {
-		dialog.DrawHistoryDialog(screen, layout, model.HistoryDialog, styles, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+		dialog.DrawHistoryDialog(screen, layout, model.HistoryDialog, styles, model.PanelScrollbar, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	}
 	if model.PinDialog.Open {
-		dialog.DrawPinDialog(screen, layout, model.PinDialog, pinDialogItems(model.PinnedItems), styles)
+		dialog.DrawPinDialog(screen, layout, model.PinDialog, pinDialogItems(model.PinnedItems), styles, model.PanelScrollbar)
 	}
 	if model.SFTPConnectDialog.Open {
 		dialog.DrawSFTPConnectDialog(screen, layout, model.SFTPConnectDialog, styles)

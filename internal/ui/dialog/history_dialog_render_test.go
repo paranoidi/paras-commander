@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -9,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 func TestDrawHistoryDialogSmoke(t *testing.T) {
@@ -35,7 +37,7 @@ func TestDrawHistoryDialogSmoke(t *testing.T) {
 		ListScroll: 0,
 		Focus:      0,
 	}
-	DrawHistoryDialog(screen, layout, state, styles, nil)
+	DrawHistoryDialog(screen, layout, state, styles, uiscrollbar.StyleNone, nil)
 	cell, _, _ := screen.Get(4, layout.Menu.Height+4)
 	if cell == "" || cell == " " {
 		t.Fatal("expected filter row content")
@@ -63,7 +65,7 @@ func TestDrawHistoryDialogShowsPinIconOnlyForPinnedRow(t *testing.T) {
 	rowMarks := func(absPath string) RowMarks {
 		return RowMarks{Pinned: absPath == "/tmp/pinned-alpha"}
 	}
-	DrawHistoryDialog(screen, layout, state, styles, rowMarks)
+	DrawHistoryDialog(screen, layout, state, styles, uiscrollbar.StyleNone, rowMarks)
 
 	pinIcon := []rune(styles.IconPin())[0]
 	rowContainingHasIcon := func(needle string) bool {
@@ -125,7 +127,7 @@ func TestDrawHistoryDialogCursorRowSourceIconVisible(t *testing.T) {
 		Ranked:       []int{0, 1},
 		ZoxideFrom:   2,
 	}
-	DrawHistoryDialog(screen, layout, state, styles, nil)
+	DrawHistoryDialog(screen, layout, state, styles, uiscrollbar.StyleNone, nil)
 	w, h := screen.Size()
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -144,4 +146,32 @@ func TestDrawHistoryDialogCursorRowSourceIconVisible(t *testing.T) {
 		}
 	}
 	t.Fatal("history source icon not drawn")
+}
+
+func TestDrawHistoryDialogScrollbarOnOverflow(t *testing.T) {
+	paths := make([]string, 40)
+	ranked := make([]int, len(paths))
+	for i := range paths {
+		paths[i] = fmt.Sprintf("/tmp/orchard%02d", i)
+		ranked[i] = i
+	}
+	state := HistoryDialogState{Open: true, Paths: paths, DisplayLines: paths, Ranked: ranked, ZoxideFrom: len(paths)}
+	render := func(sb uiscrollbar.Style) string {
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init: %v", err)
+		}
+		defer screen.Fini()
+		screen.SetSize(80, 24)
+		DrawHistoryDialog(screen, geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{}), state, theme.Default(), sb, nil)
+		var b strings.Builder
+		for y := 0; y < 24; y++ {
+			cell, _, _ := screen.Get(79-2, y) // right border column of the 78-wide (clamped to 76) dialog
+			b.WriteString(cell)
+		}
+		return b.String()
+	}
+	if render(uiscrollbar.StyleNone) == render(uiscrollbar.StyleBar) {
+		t.Fatal("bar scrollbar did not change the right border on an overflowing list")
+	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // PinDialogFixedChromeRows is the outer height consumed by rows that aren't the list:
@@ -61,7 +62,7 @@ func EnsurePinListScroll(state *PinDialogState, listRows int) {
 
 // DrawPinDialog paints the Pin dialog: a fuzzy-filterable, most-recently-pinned-first
 // list of pinned files/directories. No OK/Cancel buttons (Esc closes, mirroring History).
-func DrawPinDialog(screen tcell.Screen, layout Layout, state PinDialogState, items []PinDialogItem, styles theme.Theme) {
+func DrawPinDialog(screen tcell.Screen, layout Layout, state PinDialogState, items []PinDialogItem, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
 	width := 78
 	if width > layout.Width-4 {
 		width = layout.Width - 4
@@ -131,6 +132,7 @@ func DrawPinDialog(screen tcell.Screen, layout Layout, state PinDialogState, ite
 		drawPinRow(screen, primaryCol, y, rowWidth-marksW, item, ranges, baseStyle, matchStyle, styles)
 		DrawRowMarksSuffix(screen, primaryCol+rowWidth-marksW, y, marksW, marks, bg, styles)
 	}
+	draw.DrawDialogListScrollbar(screen, rect, listTop, listH, len(state.Ranked), state.ListScroll, scrollbarStyle, borderStyle, styles)
 }
 
 // drawPinRow renders one pin row as "<icon> <path>", the path fuzzy-highlighted and
