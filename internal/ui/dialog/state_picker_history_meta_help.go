@@ -239,27 +239,26 @@ func (s FindDialogState) FindDialogMaxFocus() int {
 
 // HistoryDialogState is a fuzzy picker over one panel’s navigation history paths.
 type HistoryDialogState struct {
-	Open              bool
-	PanelID           int      // PrimaryPanel or SecondaryPanel
-	Paths             []string // current list (single panel or merged)
-	CurrentIndex      int      // snapshot HistoryIndex when dialog opened
-	BothPanels        bool     // true when showing merged list
-	PanelPaths        []string // snapshot of PanelID history at open (for F5 toggle back)
-	PanelCurrentIndex int      // snapshot HistoryIndex at open
-	Zoxide            []string // zoxide directories (loaded async), appended after the history when IncludeZoxide
-	ZoxideAvailable   bool     // zoxide is installed; shows the "Include zoxide" checkbox
-	IncludeZoxide     bool     // "Include zoxide" checkbox; starts from [history].zoxide
-	ZoxideFrom        int      // index into Paths where zoxide rows start (== len(Paths) when none)
-	DisplayLines      []string // per-row UI text ("* path" / "  path"); len == len(Paths)
-	PathMissing       []bool   // len == len(Paths); true when the path no longer exists on disk
-	Query             string
-	QueryCursor       int              // rune offset of caret within Query (0..len(runes))
-	QueryScroll       int              // first visible rune offset for horizontal scrolling
-	Ranked            []int            // indices into Paths / DisplayLines
-	MatchRanges       [][]search.Range // len == len(Paths); highlights on DisplayLines
-	Selected          int              // index into Ranked
-	ListScroll        int
-	Focus             int // 0=list+query, then HistoryZoxideFocus (when shown), HistoryOKFocus, HistoryCancelFocus
+	Open            bool
+	PanelID         int      // PrimaryPanel or SecondaryPanel
+	Paths           []string // current list (single panel or merged)
+	CurrentPath     string   // PanelID's directory at open (CleanPathString); hidden from the list
+	BothPanels      bool     // true when showing merged list
+	PanelPaths      []string // snapshot of PanelID history at open (for F5 toggle back)
+	Zoxide          []string // zoxide directories (loaded async), appended after the history when IncludeZoxide
+	ZoxideAvailable bool     // zoxide is installed; shows the "Include zoxide" checkbox
+	IncludeZoxide   bool     // "Include zoxide" checkbox; starts from [history].zoxide
+	ZoxideFrom      int      // index into Paths where zoxide rows start (== len(Paths) when none)
+	DisplayLines    []string // per-row UI text ("* path" / "  path"); len == len(Paths)
+	PathMissing     []bool   // len == len(Paths); true when the path no longer exists on disk
+	Query           string
+	QueryCursor     int              // rune offset of caret within Query (0..len(runes))
+	QueryScroll     int              // first visible rune offset for horizontal scrolling
+	Ranked          []int            // indices into Paths / DisplayLines
+	MatchRanges     [][]search.Range // len == len(Paths); highlights on DisplayLines
+	Selected        int              // index into Ranked
+	ListScroll      int
+	Focus           int // 0=list+query, then HistoryZoxideFocus (when shown), HistoryOKFocus, HistoryCancelFocus
 }
 
 // HistoryForm is the History dialog's focus layout: list+query, the "Include zoxide" checkbox

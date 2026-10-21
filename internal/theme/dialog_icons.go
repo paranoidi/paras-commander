@@ -14,6 +14,7 @@ const (
 	IconKeyDialogInfo              = "dialog.info"
 	IconKeyDialogMissing           = "dialog.missing"
 	IconKeyDialogZoxide            = "dialog.zoxide"
+	IconKeyDialogHistory           = "dialog.history"
 
 	// IconDialogInfoASCII is the info marker used when Nerd Font icons are disabled; it is
 	// also the widest form, so dialog sizing reserves its width.
@@ -40,7 +41,16 @@ func (t Theme) IconDialogMissing() string {
 	return t.dialogIcon(IconKeyDialogMissing, "\U000F09E7")
 }
 
-// IconDialogZoxide returns the trailing mark on History rows that come from zoxide.
+// IconDialogHistory returns the prefix on History rows from the app's own panel history.
+// When UseNerdfontIcons is false, returns "h".
+func (t Theme) IconDialogHistory() string {
+	if !t.UseNerdfontIcons {
+		return "h"
+	}
+	return t.dialogIcon(IconKeyDialogHistory, "\uf1da")
+}
+
+// IconDialogZoxide returns the prefix on History rows that come from zoxide.
 // When UseNerdfontIcons is false, returns "z".
 func (t Theme) IconDialogZoxide() string {
 	if !t.UseNerdfontIcons {

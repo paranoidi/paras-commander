@@ -33,6 +33,9 @@ func EnsureHistoryListScroll(state *HistoryDialogState, listRows int) {
 // HistoryZoxideMnemonic toggles the "Include zoxide" checkbox (Alt+I).
 const HistoryZoxideMnemonic = 'I'
 
+// historySourcePrefixWidth is the "<icon> " source prefix on each History row.
+const historySourcePrefixWidth = 2
+
 // HistoryDialogListRows returns the History dialog's list height for a layout height, or 0
 // when the dialog does not fit. zoxideRow adds the "Include zoxide" checkbox row.
 func HistoryDialogListRows(layoutHeight int, zoxideRow bool) int {
@@ -132,17 +135,31 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 			marks = rowMarks(absPath)
 		}
 		marks.Missing, marks.Cursor = missing, isCursor
-		marks.Zoxide = absPath != "" && idxInRank < len(state.Ranked) && state.Ranked[idxInRank] >= state.ZoxideFrom
+		pathCol, pathWidth := primaryCol, rowWidth
+		if absPath != "" {
+			// Source prefix: zoxide rows vs the app's own panel history.
+			icon := styles.IconDialogHistory()
+			if state.Ranked[idxInRank] >= state.ZoxideFrom {
+				icon = styles.IconDialogZoxide()
+			}
+			fg, _, _ := styles.DialogOptionRowStyle(false, false).Decompose()
+			if isCursor {
+				fg = styles.DialogMissingIconForeground(true)
+			}
+			primitive.Text(screen, primaryCol, y, historySourcePrefixWidth, icon+" ", baseStyle.Foreground(fg))
+			pathCol += historySourcePrefixWidth
+			pathWidth -= historySourcePrefixWidth
+		}
 		marksW := RowMarksWidth(marks)
-		fitWidth := rowWidth - marksW
+		fitWidth := pathWidth - marksW
 		if fitWidth < 1 {
 			fitWidth = 1
 		}
 		text, spans := fuzzyRowContent(line, ranges, fitWidth, matchStyle, false)
-		primitive.StyledText(screen, primaryCol, y, rowWidth, text, baseStyle, spans)
+		primitive.StyledText(screen, pathCol, y, pathWidth, text, baseStyle, spans)
 		if marksW > 0 {
 			// Marks follow the path, not the row end (same as find dialog).
-			DrawRowMarksSuffix(screen, primaryCol+min(runewidth.StringWidth(text), fitWidth), y, marksW, marks, bg, styles)
+			DrawRowMarksSuffix(screen, pathCol+min(runewidth.StringWidth(text), fitWidth), y, marksW, marks, bg, styles)
 		}
 	}
 

@@ -39,6 +39,8 @@ func TestAltInsertPinsFromHistoryAndBookmarkDialogs(t *testing.T) {
 	}
 	app.dialogCtrl.ClosePathPicker()
 
+	// The current directory is hidden from History: leave root so it is listed.
+	navigatePanelIntoDir(t, app, screen, app.model.ActivePanel, "harbor")
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt))
 	if !app.model.HistoryDialog.Open {
 		t.Fatal("expected history dialog open")

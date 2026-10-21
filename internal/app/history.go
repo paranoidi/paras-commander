@@ -2,6 +2,7 @@ package app
 
 import (
 	"path/filepath"
+	"slices"
 
 	"github.com/gdamore/tcell/v2"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
@@ -31,38 +32,14 @@ func (a *App) openHistoryDialog(panelID int) {
 		a.setTransientMessage("No directory history yet", ui.MessageUrgencyInfo)
 		return
 	}
-	curIdx := p.HistoryIndex
-	if curIdx < 0 || curIdx >= len(panelPaths) {
-		curIdx = 0
-	}
 	a.model.HistoryDialog = dialog.HistoryDialogState{
-		Open:              true,
-		PanelID:           panelID,
-		Paths:             panelPaths,
-		CurrentIndex:      curIdx,
-		BothPanels:        false,
-		PanelPaths:        panelPaths,
-		PanelCurrentIndex: curIdx,
-		DisplayLines:      panelPaths,
-		PathMissing:       make([]bool, len(panelPaths)),
-		IncludeZoxide:     a.config.History.Zoxide,
-		ZoxideFrom:        len(panelPaths),
-		Query:             "",
-		Focus:             0,
-		Selected:          0,
-		ListScroll:        0,
+		Open:          true,
+		PanelID:       panelID,
+		CurrentPath:   panel.CleanPathString(p.Path.String()),
+		PanelPaths:    panelPaths,
+		IncludeZoxide: a.config.History.Zoxide,
 	}
-	a.syncHistoryDialogRanks()
-	selected := 0
-	for i, idx := range a.model.HistoryDialog.Ranked {
-		if idx == curIdx {
-			selected = i
-			break
-		}
-	}
-	a.model.HistoryDialog.Selected = selected
-	dialog.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
-	a.startHistoryMissingScan()
+	a.rebuildHistoryDialogPaths()
 	// Always query: the checkbox is shown only when zoxide is installed, and toggling it on
 	// should not wait for another subprocess.
 	if a.screen != nil {
@@ -108,18 +85,21 @@ func (a *App) toggleHistoryIncludeZoxide() {
 
 // rebuildHistoryDialogPaths sets Paths to the target-only or merged history followed, when
 // IncludeZoxide, by the zoxide directories not already in it, then re-ranks and rescans for
-// missing paths.
+// missing paths. CurrentPath is left out of both.
 func (a *App) rebuildHistoryDialogPaths() {
 	st := &a.model.HistoryDialog
 	base := append([]string(nil), st.PanelPaths...)
 	if st.BothPanels {
 		base = a.mergedPanelHistories()
 	}
+	seen := map[string]struct{}{st.CurrentPath: {}}
+	base = slices.DeleteFunc(base, func(p string) bool {
+		cp := panel.CleanPathString(p)
+		_, dup := seen[cp]
+		seen[cp] = struct{}{}
+		return dup
+	})
 	st.ZoxideFrom = len(base)
-	seen := make(map[string]struct{}, len(base))
-	for _, p := range base {
-		seen[panel.CleanPathString(p)] = struct{}{}
-	}
 	for _, p := range st.Zoxide {
 		if !st.IncludeZoxide {
 			break

@@ -209,24 +209,9 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 24)
 	app := newTestApp(t, screen, testOptions(root))
-	p := app.panelByID(ui.PrimaryPanel)
-	for i := 0; i < p.VisibleEntryCount(); i++ {
-		entry, _, ok := p.VisibleEntry(i)
-		if ok && entry.Name == "alpha" {
-			p.Cursor = i
-			break
-		}
-	}
-	app.dispatch(keymap.ActionNavOpen)
-	applyNextInterruptEvent(t, app, screen) // async load: panel actually enters alpha (empty) before the next search
-	for i := 0; i < p.VisibleEntryCount(); i++ {
-		entry, _, ok := p.VisibleEntry(i)
-		if ok && entry.Name == "beta" {
-			p.Cursor = i
-			break
-		}
-	}
-	app.dispatch(keymap.ActionNavOpen)
+	navigatePanelIntoDir(t, app, screen, ui.PrimaryPanel, "alpha")
+	app.dispatch(keymap.ActionNavParent) // alpha is no longer the hidden current directory
+	applyNextInterruptEvent(t, app, screen)
 
 	app.openHistoryDialog(ui.PrimaryPanel)
 	if !app.model.HistoryDialog.Open {
@@ -246,8 +231,11 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	if app.model.HistoryDialog.Open {
 		t.Fatal("expected dialog closed")
 	}
-	applyNextInterruptEvent(t, app, screen) // async load triggered by the history navigation
 	want := filepath.Clean(alpha)
+	// The missing-path scan and the navigation load may queue in either order.
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return filepath.Clean(app.activePanel().Path.String()) == want
+	})
 	if got := filepath.Clean(app.activePanel().Path.String()); got != want {
 		t.Fatalf("panel path = %q want %q", got, want)
 	}
@@ -652,6 +640,10 @@ func TestHistoryDialogZoxideRowsCheckboxAndBothPanels(t *testing.T) {
 
 	app.openHistoryDialog(ui.PrimaryPanel)
 	history := append([]string(nil), app.model.HistoryDialog.Paths...)
+	if !slices.Equal(history, []string{root}) {
+		t.Fatalf("history = %q, want %q without the current directory", history, []string{root})
+	}
+	// zoxide's alpha is the current directory: hidden too.
 	app.applyHistoryZoxide(historyZoxidePayload{Paths: []string{alpha, meadow}, Installed: true})
 	st := &app.model.HistoryDialog
 	want := append(append([]string(nil), history...), meadow)

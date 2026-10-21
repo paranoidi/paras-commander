@@ -298,7 +298,7 @@ Directory History dialog (Alt+H).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `zoxide` | bool | `true` | Initial state of the History dialog's **Include zoxide** checkbox (Alt+I), shown only when `zoxide` is on `PATH`. When checked, zoxide directories (`zoxide query --list`, score order) follow the panel history, marked with `[icons.dialog] zoxide`; entries already in the history are not repeated. |
+| `zoxide` | bool | `true` | Initial state of the History dialog's **Include zoxide** checkbox (Alt+I), shown only when `zoxide` is on `PATH`. When checked, zoxide directories (`zoxide query --list`, score order) follow the panel history, prefixed with `[icons.dialog] zoxide` (panel history rows use `[icons.dialog] history`); entries already in the history are not repeated. |
 
 ## `[bookmarks]`
 
