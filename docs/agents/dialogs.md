@@ -28,9 +28,9 @@ Navigation, button, layout and styling rules every modal dialog follows. For the
 - Buttons have a highlighted shortcut letter in accent color (magenta by default).
 - Shortcuts: `O` for OK, `C` for Cancel, `Y` for Yes, `N` for No.
 - Shortcuts are triggered via **Alt+letter**.
-- **OK and Cancel are resolved once, centrally.** `ui.input.dialog-ok` (`M-o`, `M-Enter`) and `ui.input.dialog-cancel` (`Esc`, `M-c`, `F9`) are `[dialog.input]` actions dispatched in `App.handleKey` through `App.activeDialogButtons` (`internal/app/dialog_buttons.go`), which returns the top-most open dialog's `dialogButtons{OK, Cancel, Esc}`. A new dialog adds one case there; its key handler must **not** handle Alt+O / Alt+C / Esc / F9 itself. A nil `OK` or `Cancel` means the dialog has no such button (the chord is swallowed); `Esc` is set only where Esc deliberately differs from Cancel (running command-output dialog keeps the command running).
+- **OK and Cancel are resolved once, centrally.** `ui.input.dialog-ok` and `ui.input.dialog-cancel` are `[dialog.input]` actions dispatched in `App.handleKey` through `App.activeDialogButtons` (`internal/app/dialog_buttons.go`), which returns the top-most open dialog's `dialogButtons{OK, Cancel, Esc}`. A new dialog adds one case there; its key handler must **not** handle the OK / Cancel chords itself. A nil `OK` or `Cancel` means the dialog has no such button (the chord is swallowed); `Esc` is set only where Esc deliberately differs from Cancel (running command-output dialog keeps the command running).
   - Layered dialogs resolve to their innermost layer: handlers with sub-phases, sub-confirms or a path-completion dropdown expose `OK`/`Cancel` funcs that pick the layer (`FileDialogOK`/`FileDialogCancel`, `TransferDialogCancel`, `jobs.Handler.DialogOK`/`DialogCancel`, the Configuration dialog's Yes/No sub-confirms).
-  - Dialogs whose Alt+O / Alt+C are letter choices (the job blocker's Overwrite / Cancel) return zero for rune events; `M-Enter`, `Esc` and `F9` still map. Configuration and meta dialogs return zero for `F9` (edit config).
+  - Dialogs whose OK / Cancel letters are letter choices (the job blocker's Overwrite / Cancel) return zero for rune events; the non-letter `ui.input.dialog-ok` / `ui.input.dialog-cancel` chords still map. Configuration and meta dialogs return zero for the `F9` chord (edit config).
   - Dialog-specific extras (Alt+Y/Alt+N on delete, Alt+P on transfer, Alt+I on history) go through `dialog.TryDialogMnemonics(ev, extras)`.
 - An Alt-letter that toggles a checkbox or picks a radio **never moves focus out of a focused
   text input** — the user keeps typing after flipping the option. From a non-input row it may
@@ -162,8 +162,8 @@ Logic lives in `internal/ui/dialog/dialog_field.go`. When opening a dialog with 
 
 - **First printable (`InsertRune`)**: clear `Value`, reset cursor, clear `PrefillPending`, then insert the rune (replace-from-scratch on top of the suggestion).
 - **Backspace, Delete, cursor moves (`MoveCursor` / Home / End via handlers)** call `commitPrefill()` first: drop `PrefillPending` but **keep** `Value`, then apply the usual edit/move.
-- **`Clear`** (file dialog `Ctrl+L`): empty `Value`, cursor `0`, `PrefillPending` false.
-- **`RestorePrefill`** (defaults `Ctrl+R` and `Ctrl+D`, configurable under `[dialog.input]` as `ui.input.restore-default`): re-arm the suggested default after editing or clearing — `Value` becomes `Prefill`, cursor moves to the end, `PrefillPending` is set to true. No-op when `Prefill` is empty.
+- **`Clear`** (file dialog `ui.input.kill-line`): empty `Value`, cursor `0`, `PrefillPending` false.
+- **`RestorePrefill`** (`ui.input.restore-default`, configurable under `[dialog.input]`): re-arm the suggested default after editing or clearing — `Value` becomes `Prefill`, cursor moves to the end, `PrefillPending` is set to true. No-op when `Prefill` is empty.
 - **OK while still pending**: use current `Value` (still the full suggestion)—no extra commit step required.
 
 ### Helpers
@@ -173,7 +173,7 @@ Logic lives in `internal/ui/dialog/dialog_field.go`. When opening a dialog with 
 
 ## Twin dialogs: Filter and Select group
 
-Filter (`panel.filter`) and Select/Unselect group are twins: same mode radios, file-type checkboxes, Files/Dirs only, Case sensitive, meta row, live preview, reserved hint row, width and grid navigation. **A change to one (layout, options, mnemonics, matching, preview, hint/error behaviour, navigation) should generally be mirrored to the other in the same change.** When a difference is intentional, record it in `docs/agents/panels.md`.
+Filter (`panel.filter-dialog`) and Select/Unselect group are twins: same mode radios, file-type checkboxes, Files/Dirs only, Case sensitive, meta row, live preview, reserved hint row, width and grid navigation. **A change to one (layout, options, mnemonics, matching, preview, hint/error behaviour, navigation) should generally be mirrored to the other in the same change.** When a difference is intentional, record it in `docs/agents/panels.md`.
 
 - **File pairs**: `internal/ui/dialog/filter_hint.go` ↔ `groupselect_hint.go`, `filter_dialog_render.go` ↔ `groupselect_dialog_render.go`, `internal/apphandler/dialog/filter.go` ↔ group-select handlers in `internal/app/dialog_settings.go` (find context: `internal/apphandler/find/group_select.go`, `group_count.go`). User docs for both: `docs/panel-filter.md`.
 - **Shared code (extend, don't duplicate)**: `dialog.PatternDialogWidth`, `dialog.FilterTypesRegexp` (takes the dirs-only flag), `dialog.PatternTypesDisabled` (type checkboxes disabled while Directories only is selected; renderers and toggle functions both use it), `FilterTypeLabels`/`FilterTypeMnemonics`, `dialogGridMove`/`patternDialogGridHead` (`filter_hint.go`), `panel.FilterSpec.MatchFunc`.

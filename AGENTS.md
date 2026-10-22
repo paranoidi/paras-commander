@@ -4,7 +4,7 @@ This project is midnight commander inspired twin panel filesystem manager writte
 
 Currently the project is in implementation phase and not all features are implemented.
 
-Tracked architecture, import, and state rules live in this file. Per-area agent notes live in `docs/agents/`: read the file for the area you are about to change, and update every file a change touches. Those files describe the current state of the code: write what is true now, as if written fresh today (no "used to be", "previously", "renamed from", or changelog entries).
+Tracked architecture, import, and state rules live in this file. Per-area agent notes live in `docs/agents/`: read the file for the area you are about to change, and update every file a change touches. Those files describe the current state of the code: write what is true now, as if written fresh today (no "used to be", "previously", "renamed from", or changelog entries). Refer to commands by action id (`panel.toggle-carousel`), never by default key: default keys live only in `internal/keymap/specs.go` and the overlay defaults. Mention a literal key only for key *behaviour* (terminal quirks, in-widget keys that are not actions).
 
 | Area | Read when touching | File |
 |---|---|---|

@@ -92,7 +92,7 @@ The inactive panel shows a live preview of whatever the active panel's cursor is
 _Avoid_: preview pane
 
 **Fullscreen preview**:
-A full-screen view of one file's preview (F3).
+A full-screen view of one file's preview (`file.view`).
 _Avoid_: viewer
 
 **Directory overlay**:
@@ -149,11 +149,11 @@ _Avoid_: batch command
 A named limit on how many commands may run at once.
 
 **User menu**:
-The user's own nested menu of commands (F2).
+The user's own nested menu of commands (`app.user-menu`).
 _Avoid_: custom commands
 
 **Subshell**:
-The persistent shell behind the panels, toggled with Ctrl+O, whose working directory stays in sync with the active panel.
+The persistent shell behind the panels, toggled with `app.drop-to-shell`, whose working directory stays in sync with the active panel.
 
 **Terminal panel**:
 A strip above the footer showing the subshell (or a command's terminal) while the panels stay visible.
@@ -175,11 +175,11 @@ A view finding duplicate files under one directory.
 _Avoid_: duplicate finder
 
 **Leader menu**:
-The bottom strip of lettered entries opened by Esc, `:` or similar keys; each letter fires an action directly.
+The bottom strip of lettered entries opened by `app.leader-menu`; each letter fires an action directly.
 _Avoid_: function menu
 
 **Menu bar**:
-The top row of pulldown menus (F9).
+The top row of pulldown menus (`app.open-menu`).
 
 **Overlay**:
 A view- or dialog-specific shortcut table that takes precedence over the global one while that view is focused.

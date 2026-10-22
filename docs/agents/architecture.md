@@ -16,7 +16,7 @@ Code map, package layout, twin-panel model, chrome/layout, transient messages, m
 
 ### Partial repaints must not overwrite overlays
 
-The panel-only paint paths (`renderBrowserListNavUpdate`, gated by `browserListNavPartialRenderEligible` and also used by `renderAfterAsyncApply`/`renderPanelAsyncResult`; and `paintDiskUsageBrowserUpdate`) draw panel cells without redrawing anything layered over them. Both decline via `App.panelOnlyPaintBlocked()` (`internal/app/render.go`: `Model.ModalDialogOpen() || Model.Menu.Open`) and fall back to a full `ui.Render`. Without the gate, an async listing that lands while a dialog is open (e.g. Find's `find.open-primary`/`find.open-secondary`, which navigate a panel and keep the dialog up) paints the file list over the dialog.
+The panel-only paint paths (`renderBrowserListNavUpdate`, gated by `browserListNavPartialRenderEligible` and also used by `renderAfterAsyncApply`/`renderPanelAsyncResult`; and `paintDiskUsageBrowserUpdate`) draw panel cells without redrawing anything layered over them. Both decline via `App.panelOnlyPaintBlocked()` (`internal/app/render.go`: `Model.ModalDialogOpen() || Model.Menu.Open`) and fall back to a full `ui.Render`. Without the gate, an async listing that lands while a dialog is open (e.g. Find's `ui.open-primary`/`ui.open-secondary`, which navigate a panel and keep the dialog up) paints the file list over the dialog.
 
 ## Package layout
 
@@ -32,7 +32,7 @@ The panel-only paint paths (`renderBrowserListNavUpdate`, gated by `browserListN
 ### What each handler owns
 
 - **`dialog`**: the file-operation and navigation-dialog family: generic `FileDialogField` open/submit/key machinery and the dialogs built on it (rename, mkdir, delete, duplicate, chmod, chown, symlink, hardlink); mass rename; archive extract; flatten; copy/move transfer dialog (multi-location preview, self-copy rename, active/inactive-panel destination shortcuts shared with flatten in `active_panel_path.go`); bookmarks picker and add-bookmark dialog; the fuzzy history/bookmarks path picker used by transfer, flatten and file-dialog path fields. It takes the jobs, commands, preview and dedup handlers and the keymap overlays it checks directly in `Deps` rather than widening `Host`; `Deps.Dedup` exists only so `ExecuteDelete` can open the dedup view's empty-dirs confirmation. Its `Host` is limited to services it cannot own: panel/layout/message primitives, `Config()`/`Styles()`, `OpenMessageDialog`, `InQuickFilterUI`, `OpenFileInExternalEditor`, `ExecuteSFTPPassword`, and scrolling-query glue.
-- **`preview`**: quick view (with its directory overlay and latched panel-sync interplay), fullscreen F3 preview and its `/` search, carousel side/child preview, the F9 Chroma style picker, and all async preview-subprocess dispatch and debounce/coalesce state.
+- **`preview`**: quick view (with its directory overlay and latched panel-sync interplay), fullscreen preview (`file.view`) and its search (`preview.search-start`), carousel side/child preview, the Chroma style picker (`preview.theme-picker`), and all async preview-subprocess dispatch and debounce/coalesce state.
 - **`commands`**: the Commands view, the command-output dialog, and the run-for-each dialog and batch backend.
 - **`meta`**: async per-entry `meta.toml` command dispatch: checkbox picker, per-panel worker pool, result cache, F9 edit-config flow.
 - **`pin`**: the ad-hoc pin-list dialog.
@@ -73,7 +73,7 @@ Zero to two positionals (not combinable with `--chooser-file`). Wiring: `cmd/pc/
 
 - **`-qp`** requires a path; `LaunchConfig.QuickPreview` -> `Options.QuickPreview`, applied in `NewWithOptions` right after `applyStartPaths`: if Quick View is not already on, enable it with the active panel as driver and call `previewCtrl.ApplyQuickViewPreviewImmediately()`.
 - **`--carousel`** starts Primary in carousel view outside chooser mode (rejected with `--chooser-file`, which enables carousel by default; `--no-carousel` disables). `LaunchConfig.Carousel` -> `Options.Carousel`, applied at the end of `NewWithOptions`: `Model.Primary.CarouselMode = true` plus `SetListLayout(panel.ListLayoutFlat, ...)`, the same pair `panel.toggle-carousel` applies interactively.
-- **`--chooser-file=PATH`** (Yazi-compatible editor file-picker mode): quick view and carousel on by default, optional `--select=PATH` (file -> parent + highlight; missing file -> parent + select basename when listed). Enter/Right on a regular file writes the absolute path (newline-terminated) to `PATH` and quits immediately (no open, no exec, no quit-confirm). Quitting without selecting leaves the file untouched (the editor should `rm -f` it before launch). Takes no positionals.
+- **`--chooser-file=PATH`** (Yazi-compatible editor file-picker mode): quick view and carousel on by default, optional `--select=PATH` (file -> parent + highlight; missing file -> parent + select basename when listed). `nav.open` on a regular file writes the absolute path (newline-terminated) to `PATH` and quits immediately (no open, no exec, no quit-confirm). Quitting without selecting leaves the file untouched (the editor should `rm -f` it before launch). Takes no positionals.
 
 ## Twin-panel model
 
@@ -98,7 +98,7 @@ Zero to two positionals (not combinable with `--chooser-file`). Wiring: `cmd/pc/
 
 ## Embedded terminal panel
 
-Same persistent PTY shell as Ctrl+O, drawn above the footer (`geom.Layout.Terminal`, `drawTerminalPanel` in `internal/ui/terminal_panel_render.go`, browser view only). Height is `TerminalRows+1` (one separator row on top) when `LayoutInput.TerminalRows > 0`, minimum 3 rows; if reserving it would push the panel area below the `TooSmall` floor, the terminal shrinks first and is then omitted (zero rect) rather than making the layout `TooSmall`. `ui.Model.TerminalPanel` (`Visible`, `Focused`, `Rows`, `Drawer`); nil `Drawer` paints blank rows, a live one paints the vt10x emulator (`subshell.PanelFeed`). Only theme key `terminal.text` (see `theming.md`). Default rows `[shell].terminal_panel_height`. Keys and dispatch: `keybindings.md`, `subshell.md`.
+Same persistent PTY shell as `app.drop-to-shell`, drawn above the footer (`geom.Layout.Terminal`, `drawTerminalPanel` in `internal/ui/terminal_panel_render.go`, browser view only). Height is `TerminalRows+1` (one separator row on top) when `LayoutInput.TerminalRows > 0`, minimum 3 rows; if reserving it would push the panel area below the `TooSmall` floor, the terminal shrinks first and is then omitted (zero rect) rather than making the layout `TooSmall`. `ui.Model.TerminalPanel` (`Visible`, `Focused`, `Rows`, `Drawer`); nil `Drawer` paints blank rows, a live one paints the vt10x emulator (`subshell.PanelFeed`). Only theme key `terminal.text` (see `theming.md`). Default rows `[shell].terminal_panel_height`. Keys and dispatch: `keybindings.md`, `subshell.md`.
 
 ## Transient status messages
 
@@ -108,11 +108,11 @@ Same persistent PTY shell as Ctrl+O, drawn above the footer (`geom.Layout.Termin
 
 ## Menu system
 
-- Definitions/state in `internal/ui/menu`, rendering in `internal/ui`. F9 opens the bar; Enter/Down opens a pulldown; Esc steps pulldown -> bar -> normal; Alt+letter jumps to a top-level menu. Item mnemonic rules and add-item steps: `recipes/add-menu-item.md`.
+- Definitions/state in `internal/ui/menu`, rendering in `internal/ui`. `app.open-menu` opens the bar; Enter/Down opens a pulldown; Esc steps pulldown -> bar -> normal; Alt+letter jumps to a top-level menu. Item mnemonic rules and add-item steps: `recipes/add-menu-item.md`.
 - Pulldown `KeyLabel`s come from the loaded keymap (`menu.ApplyMenuKeyLabels` -> `keymap.Map.MenuBindingLabel`). Definitions: `menu.BrowserDefinitions`, `JobsDefinitions`, `CommandsDefinitions` (`ApplyCommandsMenuKeyLabels`), `MessagesDefinitions` (`ApplyMessagesMenuKeyLabels`). Jobs/Commands/Messages also carry the shared Display pulldown (`menu.DisplayDefinition`); their global open chords work there via `App.tryDispatchAuxiliaryScreens`.
 - Dev menu (`pc -dev`): `menu.DevDefinition` (top shortcut `v`) with `dev.show-info/warn/error` test toasts via `setTransientMessage`; menu-only actions, not in `keybindings.toml`.
 - Unsupported items close the menu and show a concise "not implemented" message (e.g. `menu.file.*` chattr stub).
-- Leader (Esc) menu and strips: `menus.md`. Preview and quick-view behavior behind `file.view`/`file.quick-view`: `preview.md`.
+- Leader menu (`app.leader-menu`) and strips: `menus.md`. Preview and quick-view behavior behind `file.view`/`file.quick-view`: `preview.md`.
 
 ## Path fitting
 
