@@ -38,7 +38,7 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - Linux
 - NerdFont or something similar, no fallback implemented yet.
 
-User documentation lives in `docs/`; `task docs:serve` browses it as a site locally (needs `uv`).
+📖 **Documentation: <https://paranoidi.github.io/paras-commander/>** (sources in `docs/`; `task docs:serve` browses it locally, needs `uv`).
 
 ## Install
 

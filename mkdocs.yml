@@ -1,4 +1,5 @@
 site_name: Paras Commander
+site_url: https://paranoidi.github.io/paras-commander/
 docs_dir: docs
 site_dir: site
 use_directory_urls: false
