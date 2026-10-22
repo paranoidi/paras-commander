@@ -1,6 +1,6 @@
 # Keybindings
 
-Every shortcut is configurable. Defaults are built in; `keybindings.toml` overrides only what you list. This page covers how to customise it; the default keys are in [Shortcuts](shortcuts.md) and in the in-app help (`F1`).
+Every shortcut is configurable. Defaults are built in; `keybindings.toml` overrides only what you list. This page covers how to customise it; default keys are in the in-app help (`F1`).
 
 ## File
 
@@ -67,5 +67,5 @@ Terminals do not deliver every combination. Known traps: `Ctrl+H` arrives as Bac
 ## Related
 
 - Press `F1` in any view for the bindings that apply there; `F2` inside help lists text-input editing keys.
-- [Shortcuts](shortcuts.md) for the default scheme and chord conventions.
+- [Shortcuts](shortcuts.md) for the design of the default scheme and dialog keys.
 - [Menus](menus.md) for leader-menu letters.

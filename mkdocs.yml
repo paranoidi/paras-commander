@@ -15,7 +15,6 @@ nav:
       - graphics.md
       - navigation.md
       - find-files.md
-      - jump-to-directory.md
       - panel-filter.md
       - path-completion.md
       - menus.md

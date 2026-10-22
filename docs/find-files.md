@@ -1,6 +1,6 @@
 # Find files
 
-Find is a fuzzy, recursive search across everything below a panel's directory. Results appear while the index is still being built, so shallow matches show immediately even in very large trees. [Jump to directory](jump-to-directory.md) is the same dialog reduced to directories only.
+Find is a fuzzy, recursive search across everything below a panel's directory. Results appear while the index is still being built, so shallow matches show immediately even in very large trees. [Jump to directory](navigation.md#jump-to-directory) is the same dialog reduced to directories only.
 
 ## Opening
 

@@ -2,74 +2,48 @@
 
 ## Design philosophy
 
-Default mode uses Midnight Commander–inspired shortcuts. Arrows navigate, letters fuzzy-match the current list, and F-keys plus Ctrl (`C`), Alt (`M`), and Shift (`S`) chords issue commands and change views.
+- **Midnight Commander first.** F-keys do the classic file-manager jobs (`F3` view, `F5` copy, `F6` move, `F7` mkdir, `F8` delete). Shift on an F-key gives a close variant of the same job; the footer shows that variant dimmed next to each F-key.
+- **Typing searches.** Arrows navigate and plain letters fuzzy-match the current list, so plain letters are never used as commands in panels.
+- **Modifiers say what kind of action it is.** Alt (`M`) changes what you see: views, columns, display modes. Ctrl (`C`) makes changes, to files or selections for example.
+- **Mnemonics favour common actions.** When two actions compete for a letter, the more common one gets it (`f` is find, not flatten).
+- **Leader menu for discovery.** `:` opens the leader menu, which lists commands by group with a one-letter key and the direct chord next to each. You can learn the chords from it or never learn them at all. `Esc` toggles a persistent vi/leader mode, marked by a yellow border.
+- **Vim keys where reading matters.** Read-only views such as the fullscreen preview accept vim-style motion keys.
+- **Context decides.** A view or dialog can give a key its own meaning while it has focus, so the same chord can do different things in the jobs view, compare results or a dialog.
+- **Dialogs behave the same everywhere.** OK, Cancel and Alt+letter mnemonics for buttons and options work the same way in every dialog.
+- **Terminal-safe chords.** Defaults avoid combinations that common terminals don't deliver reliably. A few shortcuts therefore have less obvious letters.
+- **Everything is rebindable.** Every action has an id and can be bound in `keybindings.toml`; see [Keybindings](keybindings.md).
 
-Alt (`M`) combinations generally alter the current view. Ctrl (`C`) combinations issue modifications. Letter mnemonics prefer common actions over rare ones (for example `f` for find, not flatten).
+## Dialogs
 
-`Alt++` (`git.stage`) and `Alt+-` (`git.unstage`) stage or unstage the selected files (or the cursor entry) in the active panel when it shows a local git work tree.
+These work in every dialog, whatever has focus (`[dialog.input]` in `keybindings.toml`):
 
-`Alt+K` (`panel.select-range`) marks the range start on the first press and selects everything between it and the cursor on the second. It also works in the carousel view, the Compare directories results (the focused column's files) and Find duplicates (unkept files in the focused pane, marked for deletion).
+| Key | Action | |
+|---|---|---|
+| `Alt+O`, `Alt+Enter` | `ui.input.dialog-ok` | Press OK |
+| `Esc`, `Alt+C`, `F9` | `ui.input.dialog-cancel` | Press Cancel |
 
-`Alt+W` (`dedup.open`) returns to kept Find duplicates results; see `find-duplicates.md`.
+A dialog with an inner layer (a sub-confirm, a rename tool page, an open completion list) closes that layer first. Where Esc means something else it keeps that meaning: in a running command-output dialog it leaves the command running. Some window managers take `Alt+Enter`; `Alt+O` always works. The Configuration and meta-column dialogs use `F9` for "edit config" instead.
 
-`Alt+M` (`panel.jump-dialog`, also Left/Right menu "Jump to directory" and leader `t`) opens the quick directory jump; see `jump-to-directory.md`. (`Alt+J` is already `jobs.open`.)
+## Text input
 
-Leader-key commands are available via `:`. The same letters are used in the leader menu and in the Esc function menu where possible. Persistent vi/leader-key mode toggles with Esc and is indicated by a yellow border. This also applies inside the fullscreen preview (F3): `j`/`k` scroll, `h` closes the view, and the footer shows the `[preview_menu]` letters (search stays `/`), which fire their action directly.
+Readline-style editing in every dialog text field. Kills go to one shared kill buffer that `Ctrl+Y` pastes from.
 
-In the fullscreen preview (F3) vim-style keys are always on: `j`/`k` scroll a line, `C-d`/`C-u` half a page, `C-f`/`C-b` a page, `g`/`G` jump to top/bottom, and `q` or `h` closes the view (rebind under `[preview]` in `keybindings.toml`).
+| Key | Action | |
+|---|---|---|
+| `Ctrl+A` / `Ctrl+E` | `ui.input.line-start` / `ui.input.line-end` | Start / end of line |
+| `Alt+B` / `Alt+F` | `ui.input.backward-word` / `ui.input.forward-word` | Word left / right |
+| `Ctrl+W`, `Alt+Backspace` | `ui.input.kill-word-backward` | Delete previous word |
+| `Alt+D` | `ui.input.kill-word-forward` | Delete next word |
+| `Ctrl+U` / `Ctrl+K` | `ui.input.kill-line-backward` / `ui.input.kill-line-forward` | Delete to line start / end |
+| `Ctrl+L` | `ui.input.kill-line` | Delete the whole line |
+| `Ctrl+Y` | `ui.input.yank` | Paste the last deleted text |
+| `Alt+U` / `Alt+L` | `ui.input.upcase-word` / `ui.input.downcase-word` | Upper- / lowercase to end of word |
+| `Alt+T` | `ui.input.capitalize-word` | Capitalize word (`Alt+C` is Cancel) |
+| `Ctrl+R`, `Ctrl+D` | `ui.input.restore-default` | Restore the field's default value |
+| `*`, `\|` | `ui.input.path-picker-all` | In path fields: pick from bookmarks, history and pins |
 
-## Syntax
+Inside Help (`F1`), `F2` lists these too.
 
-Bindings live in `keybindings.toml` as one chord per string. Spaces (multi-stroke sequences) are rejected.
+## Changing keys
 
-Prefixes, in any order, before the key name:
-
-| Prefix | Meaning |
-|---|---|
-| `C-` | Ctrl |
-| `M-` | Alt / Meta |
-| `S-` | Shift |
-
-Examples: `C-f`, `M-v`, `S-F3`, `C-M-p`. Prefixes are case-insensitive (`c-f` = `C-f`). The remaining key is an F-key (`F1`…), a named key (`left`, `enter`, `insert`, `space`, `tab`, …), or a single printable rune.
-
-## Precedence
-
-`pc` builds a keymap **bundle**: a global `[main]` map plus overlay tables (`[jobs]`, `[commands]`, `[compare]`, `[dedup]`, `[terminal]`, `[dialog.input]`, `[dialog.transfer]`, `[dialog.command_output]`, and so on). While a view or dialog is focused, its overlay is consulted **before** `[main]`. Overlay tables only accept the action IDs that overlay is allowed to bind; see the generated stub header for the current list.
-
-The in-app Help view (**F1** or `?`) shows the bindings that apply to the current view. Inside Help, **F2** (configurable as `help.text-edit-keys` under `[dialog.help]`) switches to a page listing the text-input editing chords (`[dialog.input]`); **F2** again returns.
-
-In a finished user-menu output dialog, Up/Down/Left/Right (or `k`/`j`/`h`/`l`) move between detected paths and `command-output.toggle-selection` (Insert, Space; `[dialog.command_output]`) selects the highlighted path in the active panel, and the Select group, Unselect group and Invert selection keys (`+`, `-`, `*` by default) act on all detected paths; see the user menu section of [config.md](config.md).
-
-## Generate the default file
-
-Do not treat this page as a complete encyclopedia of every action. The generated stub is the source of default chords:
-
-```sh
-pc --config-stub
-```
-
-That writes `keybindings.toml` (alongside `config.toml`) with every default binding and overlay table. Edit that file to override chords. Unknown action IDs and disallowed overlay IDs fail at load time.
-
-`docs/config.md` describes `config.toml` keys. `keybindings.toml` is a separate file; it happens to reuse some table names (`[jobs]`, `[dialog.input]`) that are unrelated to the same-named `config.toml` tables.
-
-## Feature pages
-
-User docs under `docs/` cover large features, not every command:
-
-| Page | Feature |
-|---|---|
-| [config.md](config.md) | `config.toml` keys and related files |
-| [fileoperations.md](fileoperations.md) | Copy, move, delete, rename, and related dialogs |
-| [jobs.md](jobs.md) | Background job queue |
-| [graphics.md](graphics.md) | Terminal image preview |
-| [background-scan-throttle.md](background-scan-throttle.md) | Disk-usage scan throttle |
-
-There are **no** dedicated user pages for panel compare, SFTP browsing, or the persistent subshell. Use Help (**F1**) and the generated `keybindings.toml` / `config.toml` stubs for those. A few subshell notes that are easy to miss:
-
-- zsh: `setopt HIST_IGNORE_SPACE` so injected `cd` lines stay out of history.
-- bash ≥ 5.1: array-style `PROMPT_COMMAND` uses the string-append form for the cwd hook.
-- Smoke: Ctrl+O, `cd` through a symlink, toggle out; Alt+Enter on a selection in fish.
-
-In every dialog, `M-o` / `M-Enter` (`ui.input.dialog-ok`) press OK and `Esc` / `M-c` / `F9` (`ui.input.dialog-cancel`) press Cancel, whatever has focus. Both are bound under `[dialog.input]`. Where Esc deliberately differs from Cancel it keeps that meaning (the running command-output dialog keeps the command going), and a dialog with an inner layer (a sub-confirm, a rename tool page, an open path-completion list) closes that layer first. Some terminals and window managers intercept Alt+Enter; `M-o` always works. The Configuration and meta-column dialogs keep `F9` as "edit config".
-
-In dialog text inputs, `C-w` / `M-Backspace` (`ui.input.kill-word-backward`) deletes the previous word and `M-d` (`ui.input.kill-word-forward`) the next word, storing it in a process-wide kill buffer; `C-y` (`ui.input.yank`, `[dialog.input]`) re-inserts the last killed text at the caret. Outside a focused input `C-y` still refreshes the panel. `C-u` (`ui.input.kill-line-backward`) deletes from the line start to the caret, `C-k` (`ui.input.kill-line-forward`) deletes from the caret to the line end, and `C-l` (`ui.input.kill-line`) deletes the whole line, all into the same kill buffer, so `C-y` restores the text; killing nothing leaves the buffer untouched. `C-a` (`ui.input.line-start`) and `C-e` (`ui.input.line-end`) move the caret to the line start and end; `M-u` (`ui.input.upcase-word`) and `M-l` (`ui.input.downcase-word`) upper- or lowercase up to the end of the next word and move the caret past it, and `M-t` (`ui.input.capitalize-word`) capitalizes it (readline's `M-c` is the dialog Cancel mnemonic); in the Find dialog, select all is `F5` / `M-a`. In any path input (copy/move and flatten destinations, symlink/hardlink/extract paths), `*` or `|` (`ui.input.path-picker-all`, `[dialog.input]`) opens one picker listing bookmarks, history and pinned directories, while `bookmark.open`, `panel.history-dialog` and `panel.pin-dialog` (pinned) open the single-source pickers.
+See [Keybindings](keybindings.md) for `keybindings.toml`, chord syntax, per-view tables and `pc --config-stub`.

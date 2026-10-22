@@ -33,6 +33,11 @@ The panel has no scrollback and no truecolor support.
 
 The panel is also used by [Run for each](commands.md#run-for-each) with a pseudo-TTY: while such a batch is running it owns the panel and the panel keys above refuse with a warning.
 
+## Shell notes
+
+- zsh: `setopt HIST_IGNORE_SPACE` keeps the injected `cd` lines out of history.
+- bash 5.1 and later: with an array-style `PROMPT_COMMAND`, the directory hook is appended to the string form.
+
 ## Options
 
 `[shell]` in [Config](config.md#shell): `persistent`, `sync_cwd_on_return`, `command`, `terminal_panel_height` (default 10 rows, minimum 3). Panel colors use the `terminal.text` theme key ([Themes](themes.md)). Keys are rebindable in `keybindings.toml`; the panel keys live under `[terminal]`.

@@ -1,6 +1,6 @@
 # Navigation
 
-Besides typing paths and pressing Enter, Paras Commander has several ways to get back to places: directory history, pinned items, bookmarks, [Jump to directory](jump-to-directory.md), [Find](find-files.md) and a latched panel sync. All dialogs are fuzzy-filtered by typing.
+Besides typing paths and pressing Enter, Paras Commander has several ways to get back to places: directory history, pinned items, bookmarks, [jump to directory](#jump-to-directory), [Find](find-files.md) and a latched panel sync. All dialogs are fuzzy-filtered by typing.
 
 ## Directory history
 
@@ -36,9 +36,19 @@ Bookmarks are compatible with [fzf-marks](https://github.com/urbainvaes/fzf-mark
 
 The same list serves as a **path picker** in path fields (copy and move destinations, flatten, extract, symlink): while such a field is focused, the footer offers All, Bookmarks, History and Pinned. `*` or `|` opens the combined list; `Ctrl+B`, `Alt+H` and `Alt+N` open the single-source ones. Typing a path in these fields has its own [autocomplete](path-completion.md).
 
+## Jump to directory
+
+`Alt+M` (`panel.jump-dialog`, Left/Right menu "Jump to directory", leader `t`) changes the panel's directory by typing part of its name. It is the [Find](find-files.md) dialog reduced to one job: fuzzy-type, press Enter, the panel changes to that directory.
+
+Only directories are indexed, breadth-first: every directory directly under the panel's path first, then the next level down, and so on, so shallow targets show up immediately even in very large trees.
+
+Enter changes the panel to the highlighted directory. `Shift+Left` / `Shift+Right` point the left or right panel at it and keep the dialog open. `Alt+Insert` pins it. `Esc` cancels the scan and closes the dialog.
+
+- **Stay on current volume** (`Alt+V`, default on) does not descend into other mounted file systems.
+- **Include hidden** (`Alt+I`, default off) adds dot-directories and git-ignored directories.
+
 ## Other ways to move
 
-- [Jump to directory](jump-to-directory.md) (`Alt+M`): fuzzy directory search from the current path.
 - [Find](find-files.md) (`Ctrl+F`): recursive search for files and directories.
 - [SFTP](sftp.md) (`Alt+R`): remote hosts.
 - `Alt+O` / `Alt+I`: open the highlighted directory, or the current path, in the other panel.
