@@ -2,7 +2,7 @@ Source docs/tapes/settings.tape
 Output "/tmp/pc-docs-demo/quick-view.webm"
 
 Hide
-Type "clear && HOME=$PC_DEMO_HOME XDG_CONFIG_HOME=$PC_DEMO_HOME/.config ./pc $PC_DEMO_HOME/work/copper-garden/src $PC_DEMO_HOME/work/harbor-lantern"
+Type "clear && HOME=$PC_DEMO_HOME XDG_CONFIG_HOME=$PC_DEMO_HOME/.config ./pc $PC_DEMO_HOME/media/photo-tools/scripts $PC_DEMO_HOME/media/trips"
 Enter
 Wait+Screen /QuitNow/
 Sleep 3s

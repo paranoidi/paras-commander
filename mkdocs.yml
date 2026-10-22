@@ -5,7 +5,7 @@ exclude_docs: |
   agents/
 
 nav:
-  - index.md
+  - Overview: index.md
   - getting-started.md
   - Usage:
       - panels.md

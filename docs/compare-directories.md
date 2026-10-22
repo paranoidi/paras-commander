@@ -2,6 +2,8 @@
 
 Compare shows how two directory trees differ: files that exist on only one side, identical files, files that moved to a different path, and files with different content. Content is compared by SHA-256 hash, so renamed or relocated copies are recognised. Local directories only.
 
+![Compare results with every class](assets/compare.png)
+
 ## Open
 
 `Ctrl+Alt+C` (`panel.compare-panels`, leader `C`, Command menu, Compare panels) compares the left panel's directory with the right panel's. The directories must not contain one another. It is also reachable from [Find duplicates](find-duplicates.md) (`Ctrl+Alt+C`), where it compares the selected file's directory with the directory under the Copies cursor and returns to the duplicates view on `Esc`. Keys are rebindable in `keybindings.toml` (`[compare]` for the keys below).

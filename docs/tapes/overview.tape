@@ -2,7 +2,7 @@ Source docs/tapes/settings.tape
 Output "/tmp/pc-docs-demo/overview.webm"
 
 Hide
-Type "clear && HOME=$PC_DEMO_HOME XDG_CONFIG_HOME=$PC_DEMO_HOME/.config ./pc $PC_DEMO_HOME/work/quiet_meadow/photos $PC_DEMO_HOME/work/velvet-orbit/clips"
+Type "clear && HOME=$PC_DEMO_HOME XDG_CONFIG_HOME=$PC_DEMO_HOME/.config ./pc $PC_DEMO_HOME/media/trips/2025-07-lapland-hike $PC_DEMO_HOME/media/aerial"
 Enter
 Wait+Screen /QuitNow/
 Sleep 3s

@@ -2,9 +2,9 @@ Source docs/tapes/settings.tape
 Output docs/assets/find-duplicates.webm
 
 Hide
-Type "clear && HOME=$PC_DEMO_HOME XDG_CONFIG_HOME=$PC_DEMO_HOME/.config ./pc $PC_DEMO_HOME/work"
+Type "clear && HOME=$PC_DEMO_HOME XDG_CONFIG_HOME=$PC_DEMO_HOME/.config ./pc $PC_DEMO_HOME/media"
 Enter
-Wait+Screen /harbor-lantern/
+Wait+Screen /trips/
 Sleep 1s
 Show
 Sleep 1s

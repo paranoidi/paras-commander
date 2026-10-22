@@ -22,8 +22,8 @@ the conflicts are gone.
 **Show only modified** hides unchanged rows in the preview. **Case insensitive** applies to Simple and Regular expression matching. **Trim whitespace** strips leading and trailing whitespace from the new names.
 
 **Ignore extension** (on by default, `Alt+X`) limits Simple, Regular expression and Capitalize
-to the file name without its extension, so `.` to a space turns `walnut.pear.txt` into
-`walnut pear.txt`. The extension is the part after the last dot; dotfiles such as `.bashrc` and
+to the file name without its extension, so `.` to a space turns `lapland.hike.jpg` into
+`lapland hike.jpg`. The extension is the part after the last dot; dotfiles such as `.bashrc` and
 directories have none. External $EDITOR ignores this option. The setting is saved with patterns.
 
 ## Zero-padding numbers
@@ -34,15 +34,15 @@ unmatched group counts as empty, and `W` is capped at 255.
 
 | Pattern  | Replace   | Before        | After          |
 |----------|-----------|---------------|----------------|
-| `\d+`    | `${0:3}`  | `walnut 1.txt`  | `walnut 001.txt` |
-| `\d+`    | `${0:3}`  | `walnut 10.txt` | `walnut 010.txt` |
-| `E(\d+)` | `E${1:2}` | `maple E5.txt`  | `maple E05.txt`  |
+| `\d+`    | `${0:3}`  | `midsummer 1.jpg`  | `midsummer 001.jpg` |
+| `\d+`    | `${0:3}`  | `midsummer 10.jpg` | `midsummer 010.jpg` |
+| `F(\d+)` | `F${1:2}` | `fjord F5.mp4`  | `fjord F05.mp4`  |
 
-Every number matched by the pattern is padded, so `maple1pear2` with `\d+` becomes
-`maple001pear002`. Use a more specific pattern such as `E(\d+)` to pad only one number.
+Every number matched by the pattern is padded, so `day1photo2` with `\d+` becomes
+`day001photo002`. Use a more specific pattern such as `F(\d+)` to pad only one number.
 
-To pad only the last number, use `(\d+)(\D*)$` with `${1:3}${2}`: `walnut 7 pear 5.txt` becomes
-`walnut 7 pear 005.txt`. The built-in patterns *Pad last number to 2 digits* and *Pad last
+To pad only the last number, use `(\d+)(\D*)$` with `${1:3}${2}`: `game night 7 round 5.jpg` becomes
+`game night 7 round 005.jpg`. The built-in patterns *Pad last number to 2 digits* and *Pad last
 number to 3 digits* (F2 Load pattern) do exactly this.
 
 ## Apply, saved patterns and history

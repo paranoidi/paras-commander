@@ -53,8 +53,8 @@ when = ["*.mkv", "*.mp4", "t d"]  # video files, or any directory
 - `true`: glob (`filepath.Match`). The pattern must match the **whole** value. `*` does not cross
   `/`, and there is no `{a,b}` brace expansion or `**`. Matching is case-sensitive;
   `*.[mM][kK][vV]` covers both cases.
-- `false`: Go regex (RE2). Unanchored unless you add `^`/`$`, so `d movies` matches any path
-  containing `movies`. `(?i)` makes it case-insensitive.
+- `false`: Go regex (RE2). Unanchored unless you add `^`/`$`, so `d aerial` matches any path
+  containing `aerial`. `(?i)` makes it case-insensitive.
 
 Set it per `[[entry]]` or at the top of `meta.toml` / the user menu file, under `[preview]` for
 preview commands, and under `[panels]` for execute rules.
@@ -67,8 +67,8 @@ Write regexes as TOML literal strings (`'...'`) so backslashes survive: `'f \.ta
 must be wrapped in a group:
 
 ```toml
-when = 'd ^/media/(movies|films)$'          # works
-when = 'd ^/media/movies$|^/media/films$'   # error: unknown predicate '^'
+when = 'd ^/media/(aerial|drone)$'          # works
+when = 'd ^/media/aerial$|^/media/drone$'   # error: unknown predicate '^'
 ```
 
 ## Multiple directories
@@ -77,63 +77,63 @@ Yes, `when` can match several directories. There are three ways to write it, all
 
 ```toml
 # 1. List items (OR).
-when = ["t d & d /media/movies", "t d & d /mnt/archive/movies"]
+when = ["t d & d /media/aerial", "t d & d /mnt/archive/aerial"]
 
 # 2. | inside one expression.
-when = "t d & (d /media/movies | d /mnt/archive/movies)"
+when = "t d & (d /media/aerial | d /mnt/archive/aerial)"
 
 # 3. One regex alternation (shell_patterns = false).
-when = 't d & d ^(/media|/mnt/archive)/movies$'
+when = 't d & d ^(/media|/mnt/archive)/aerial$'
 ```
 
 ## Examples
 
-### Any folder whose name starts with "movies"
+### Any folder whose name starts with "aerial"
 
-Rows listed inside `/foo/movies`, `/bar/movies-bd`, and so on, at any depth:
+Rows listed inside `/data/aerial`, `/backup/aerial-raw`, and so on, at any depth:
 
 ```toml
 shell_patterns = false
-when = 'd /movies[^/]*$'
+when = 'd /aerial[^/]*$'
 ```
 
-`d` checks the full directory path, so the regex pins "movies" to the start of the last path
-component (`/movies`) and allows anything but another `/` after it. It does not match
-`/foo/movies/extras` or `/foo/old-movies`. A glob can't express "at any depth" because `*` never
-crosses `/`; `d /*/movies*` only works exactly one level below `/`.
+`d` checks the full directory path, so the regex pins "aerial" to the start of the last path
+component (`/aerial`) and allows anything but another `/` after it. It does not match
+`/data/aerial/raw` or `/data/old-aerial`. A glob can't express "at any depth" because `*` never
+crosses `/`; `d /*/aerial*` only works exactly one level below `/`.
 
-To match the folders themselves (rows named `movies…`) rather than what is inside them, match the
+To match the folders themselves (rows named `aerial…`) rather than what is inside them, match the
 row name instead:
 
 ```toml
-when = "t d & f movies*"
+when = "t d & f aerial*"
 ```
 
-### Movie info only under the movie libraries, not series
+### Flight info only under the aerial libraries, not photos
 
-The meta column runs on each movie directory in two movie libraries. The series library right
-next to them never gets the command.
+The meta column runs on each flight directory in two aerial-video libraries. The photo library
+right next to them never gets the command.
 
 ```toml
 # meta.toml
 [[entry]]
-name = "movie-info"
+name = "flight-info"
 shell_patterns = false
-when = 't d & d ^(/media/movies|/mnt/archive/movies)$'
+when = 't d & d ^(/media/aerial|/mnt/archive/aerial)$'
 cache = true
-dirs = "movie-info %f"
+dirs = "flight-info %f"
 ```
 
-### Episode count in any season folder
+### Photo count in any trip day folder
 
-Glob `*` matches one path component, so `d /media/series/*` means "directly inside a show
-folder": the rows there are the season folders.
+Glob `*` matches one path component, so `d /media/trips/*` means "directly inside a trip
+folder": the rows there are the day folders.
 
 ```toml
 [[entry]]
-name = "episodes"
-when = "t d & d /media/series/*"
-dirs = "find %f -maxdepth 1 -name '*.mkv' | wc -l"
+name = "photos"
+when = "t d & d /media/trips/*"
+dirs = "find %f -maxdepth 1 -name '*.jpg' | wc -l"
 ```
 
 ### Video duration for video files anywhere except the downloads scratch area
