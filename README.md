@@ -2,7 +2,9 @@
 
 A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf, written in Go using a TUI.
 
-> ⚠️ **Not yet stable** Use at your own risk.
+⚠️ **Relatively stable** Use at your own risk.
+
+📖 **Documentation: <https://paranoidi.github.io/paras-commander/>** (sources in `docs/`; `task docs:serve` browses it locally, needs `uv`).
 
 ## Features
 
@@ -27,18 +29,11 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - File chooser mode (`--chooser-file`) for editor integration (e.g. Helix).
 - Subshell, ability to send selected filenames into the subshell.
 
-### Outscoped compared to MC
-
-- No EXT2 recovery.
-- No shell link.
-
 ## Requirements
 
 - Go 1.26+
 - Linux
-- NerdFont or something similar, no fallback implemented yet.
-
-📖 **Documentation: <https://paranoidi.github.io/paras-commander/>** (sources in `docs/`; `task docs:serve` browses it locally, needs `uv`).
+- NerdFont or something similar, no fallback implemented yet across whole application.
 
 ## Install
 
@@ -64,8 +59,8 @@ This produces a `pc` binary in the repo root. The artifact must be named `pc`, n
 pc [left-dir] [right-dir]
 ```
 
-Command-line flags, file arguments and first-run setup: [`docs/getting-started.md`](docs/getting-started.md).
-Editor integration (Helix file picker): [`docs/chooser-mode.md`](docs/chooser-mode.md).
+Command-line flags, file arguments and first-run setup: [Getting started](https://paranoidi.github.io/paras-commander/getting-started.html).
+Editor integration (Helix file picker): [Chooser mode](https://paranoidi.github.io/paras-commander/chooser-mode.html).
 
 ## Test and lint
 
@@ -108,4 +103,4 @@ golangci-lint run ./...
 
 Paras Commander reads a TOML config file. On first run a default config is generated. Themes live in the `themes/` directory.
 
-See [`docs/config.md`](docs/config.md) for the full list of config.toml keys, defaults, and descriptions.
+See [Configuration](https://paranoidi.github.io/paras-commander/config.html) for the full list of config.toml keys, defaults, and descriptions.
