@@ -60,3 +60,5 @@ Details:
 `[operations] elevate` (default `true`) turns the dialog on or off; see
 [config.md](config.md#operations). When off, permission errors are reported as
 before.
+
+See also [File operations](fileoperations.md#operation-dialogs) for the dialogs that can ask for elevation and [Jobs](jobs.md) for jobs waiting on this dialog.

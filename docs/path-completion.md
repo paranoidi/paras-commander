@@ -79,3 +79,5 @@ dropdown's own rightmost column (the panel's configured scrollbar style).
 Colors come from the `[dialog.completion]` theme section (`item`,
 `item.selected`, `match`, `match.selected`) in the active `themes/*.toml`
 file.
+
+See also [Navigation](navigation.md#bookmarks-and-the-path-picker) for the bookmark, history and pinned-directory picker available in the same fields.

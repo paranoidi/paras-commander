@@ -61,4 +61,4 @@ actual transfer benefit), disable it in `config.toml`:
 scan_disable_adaptive_throttle = true
 ```
 
-See [config.md](config.md) for the full list of `[jobs]` settings.
+See [Config](config.md#jobs) for the full list of `[jobs]` settings, and [Jobs](jobs.md) for the jobs view and its Details panel.

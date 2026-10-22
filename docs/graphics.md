@@ -4,6 +4,8 @@ Paras Commander can show inline image previews in quick view, fullscreen (F3), a
 carousel. Images are drawn with **Sixel**, the **Kitty graphics protocol**, or an
 **Überzug++** overlay window, depending on your terminal and configuration.
 
+See [Quick view and file preview](quick-view-preview.md) for the preview features themselves.
+
 This page covers what you need for previews to work reliably — especially under
 **tmux**.
 

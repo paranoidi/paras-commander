@@ -1,6 +1,35 @@
+# Jobs
+
+Copy, move, flatten, extract and delete operations run as background jobs, so
+the file manager stays usable while they work. The menu bar shows a compact
+summary: an icon with a count for each job state, a progress bar for the
+running job and, to its left, a pill with the current transfer speed while a
+transfer runs. A job waiting for your answer is shown as "N job(s) waiting".
+
+Open the jobs view with `Alt+J` (`jobs.open`, **Display -> Jobs**, Esc menu
+`j`). It has a Queue panel with Type, Status, ETA, Speed and Progress, plus
+Details, Errors and Succeeded panels for the selected job. When a job is
+waiting for an answer, opening the view selects it and focuses the conflict
+panel. Keys are rebindable under `[jobs]` in `keybindings.toml`.
+
+| Key | Action |
+|---|---|
+| `Ctrl+C` | Cancel the selected job (`jobs.cancel`) |
+| `Ctrl+P` | Pause a queued job (`jobs.pause`) |
+| `Ctrl+R` | Resume a paused job or retry a failed one (`jobs.resume`) |
+| `Ctrl+Up` / `Ctrl+Down` | Move the job in the queue (`jobs.queue-up`, `jobs.queue-down`) |
+| `F8` | Clear finished jobs (`jobs.clear-finished`) |
+| `+` / `-` / `Ctrl+U` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
+| `Tab` | Cycle the panels |
+| `Left` | Back to the file view (`jobs.close`) |
+
+Jobs copy and move one at a time; deletes start immediately. Add a transfer
+paused from the copy or move dialog (**Add paused**) and start it later with
+`Ctrl+R`. See [File operations](fileoperations.md#operation-dialogs).
+
 # Transfer rate limit
 
-The jobs view (open with Alt+J) has a Queue panel on the left listing all
+The jobs view has a Queue panel on the left listing all
 background copy/move jobs. While that panel is focused, you can cap how fast
 transfers run. Delete jobs start immediately and run in parallel with
 transfers instead of waiting behind a running copy/move.
@@ -97,6 +126,18 @@ for a decision. It is asked in the quick blocker dialog or in the conflict panel
 | Cancel | C | Abort the job |
 | Postpone | P | Dismiss the quick dialog without answering (quick dialog only) |
 
+When exactly one side is a directory, the prompt says `Destination is a
+directory` or `Destination is a file` and offers Rename (`R`), Rename All
+(`A`), Skip, Skip All and Cancel instead of the overwrite buttons. When the
+target disk is too full the prompt offers Retry (`R`) and Abort (`B`).
+
+### Answering from the file view
+
+You do not have to open the jobs view. `Ctrl+Q` or `Alt+Q`
+(`jobs.answer-blocker`, Esc menu `a`) opens the quick dialog for the job that
+has waited longest. Postpone dismisses it and the job keeps waiting. After you
+answer, the next waiting job's dialog opens automatically.
+
 ## Conflict rules
 
 Advanced... opens a matrix where every condition picks its own action: Ask, Overwrite, Skip or
@@ -126,4 +167,9 @@ applied to all conflicts).
 - **Apply to all conflicts** (Alt+A, on by default) makes the rules the job's policy, so later
   conflicts are decided without asking; uncheck it to apply the rules to the current file only.
 
+The rules replace a plain "match size" switch: use the Same size row (Skip or
+Overwrite) together with the time rows to express it.
+
 OK (Alt+O) submits; Cancel (or Esc) goes back to the File exists dialog.
+
+See also [Background scan throttling](background-scan-throttle.md) and [Running as root](elevation.md).

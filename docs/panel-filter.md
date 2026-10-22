@@ -1,6 +1,6 @@
 # Panel filter
 
-Alt+F opens the Filter dialog, which narrows the active panel to matching entries. OK with an empty pattern and no type checked clears the filter.
+Alt+F (`panel.filter-dialog`, leader `F`, rebindable in `keybindings.toml`) opens the Filter dialog, which narrows the active panel to matching entries. To mark entries instead of hiding the rest, use [Select group](selections.md#select-and-unselect-group). OK with an empty pattern and no type checked clears the filter.
 
 ## Pattern
 
@@ -38,4 +38,4 @@ Marks on files in groups the filter hides are kept and still counted: deleting a
 
 ## Select group
 
-The Select group (`+`) and Unselect group (`-`) dialogs, in the panel and in Find results, have the same mode radios and the same Videos, Pictures, Archives, Audio and Documents checkboxes (same `[filter.types]` config), and every option shared with Filter uses the same Alt letter. Checked types are OR-ed and AND-ed with the pattern; an empty pattern with types checked selects every entry of those types, and an empty pattern with no types selects nothing. Types always match the file name, even with "Match full path". As in Filter, "Directories only" disables the type checkboxes and ignores the types. There is no Invert. Match full path (Find results and the command output dialog) is Alt+H. In a finished user-menu output dialog the same dialogs act on the paths detected in the output (see the user menu section of [config.md](config.md)).
+The Select group (see [Selections](selections.md#select-and-unselect-group)) (`+`) and Unselect group (`-`) dialogs, in the panel and in Find results, have the same mode radios and the same Videos, Pictures, Archives, Audio and Documents checkboxes (same `[filter.types]` config), and every option shared with Filter uses the same Alt letter. Checked types are OR-ed and AND-ed with the pattern; an empty pattern with types checked selects every entry of those types, and an empty pattern with no types selects nothing. Types always match the file name, even with "Match full path". As in Filter, "Directories only" disables the type checkboxes and ignores the types. There is no Invert. Match full path (Find results and the command output dialog) is Alt+H. In a finished user-menu output dialog the same dialogs act on the paths detected in the output (see the user menu section of [config.md](config.md)).

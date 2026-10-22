@@ -6,21 +6,41 @@ exclude_docs: |
 
 nav:
   - index.md
+  - getting-started.md
   - Usage:
-      - shortcuts.md
+      - panels.md
+      - layout.md
+      - selections.md
+      - quick-view-preview.md
+      - graphics.md
+      - navigation.md
+      - find-files.md
+      - jump-to-directory.md
       - panel-filter.md
       - path-completion.md
-      - jump-to-directory.md
+      - menus.md
+      - shortcuts.md
+  - Tools:
+      - disk-usage.md
+      - compare-directories.md
       - find-duplicates.md
       - mass-rename.md
-      - graphics.md
+      - commands.md
+      - meta-columns.md
+      - archives.md
+      - subshell.md
+      - messages.md
   - Operations:
       - fileoperations.md
       - jobs.md
       - background-scan-throttle.md
       - elevation.md
+      - sftp.md
+      - chooser-mode.md
   - Configuration:
       - config.md
+      - keybindings.md
+      - themes.md
       - predicates.md
 
 theme:

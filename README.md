@@ -60,83 +60,12 @@ This produces a `pc` binary in the repo root. The artifact must be named `pc`, n
 
 ## Run
 
-After a local `go build` (binary in the current directory):
-
 ```bash
-./pc
+pc [left-dir] [right-dir]
 ```
 
-Open a directory in the primary (left) panel:
-
-```bash
-./pc /path/to/dir
-```
-
-Open a file in fullscreen preview (Esc returns to its parent directory with the file selected):
-
-```bash
-./pc README.md
-```
-
-Open two directories (primary, then secondary). If exactly one argument is a file,
-that panel opens the file's parent with the file selected and Quick View is enabled
-on that panel; both arguments being files is an error.
-
-```bash
-./pc ~/projects ~/Downloads
-./pc README.md ~/Downloads
-```
-
-Missing paths exit with an error. Path arguments cannot be combined with
-`--chooser-file` (use `--select` there instead).
-
-With test helpers (Dev pulldown menu for status toasts):
-
-```bash
-./pc -dev
-```
-
-After `go install`, with your Go `bin` directory on `PATH`:
-
-```bash
-pc
-```
-
-## File chooser (Helix)
-
-Inspiration taken from yazi, the filemanager you should check out.
-
-```bash
-pc --chooser-file=/path/to/output-file [--select=PATH] [--no-carousel]
-```
-
-- **`--chooser-file`** — when you press **Enter** on a regular file, `pc` writes
-  its absolute path (with a trailing newline) to this file and exits.
-  Directories are opened as usual; only files complete the pick.
-- **`--select`** — open at a file or directory and highlight it
-  (e.g. Helix `%{buffer_name}` for the active buffer). For a file, `pc` opens
-  its parent directory with that file selected. If the path does not exist yet,
-  the parent directory is opened and the basename is selected when present in the listing.
-- **Carousel view** on the left panel (parent | current | child columns)
-  is **on by default** in chooser mode. Pass **`--no-carousel`** to use a plain
-  single-column list instead.
-- **Quick view** (Shift+F3) is **on by default** in chooser mode so the inactive
-  panel previews the highlighted file.
-- Quit without selecting leaves the output file unchanged — clear it
-  before each invocation.
-
-Example Helix keybinding (requires a Helix build with command extensions):
-
-```toml
-[keys.normal]
-C-p = [
-  ':sh rm -f /tmp/pc-chooser',
-  ':insert-output pc -select "%{buffer_name}" -chooser-file=/tmp/pc-chooser',
-  ':sh printf "\x1b[?1049h\x1b[?2004h" > /dev/tty',
-  ':open %sh{cat /tmp/pc-chooser}',
-  ':redraw',
-]
-```
+Command-line flags, file arguments and first-run setup: [`docs/getting-started.md`](docs/getting-started.md).
+Editor integration (Helix file picker): [`docs/chooser-mode.md`](docs/chooser-mode.md).
 
 ## Test and lint
 

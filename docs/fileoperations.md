@@ -3,7 +3,11 @@
 This page explains what paras-commander does between reading a source file
 and calling the copy done, why the job speed you see is what it is, and how
 that compares to Midnight Commander and yazi. Everything here is tunable under
-`[operations]` in `config.toml` (see `config.md`).
+`[operations]` in `config.toml` (see [Config](config.md#operations)).
+
+The dialogs that start these operations are described in
+[Operation dialogs](#operation-dialogs) at the end; the queue they feed is
+described in [Jobs](jobs.md).
 
 ## The copy path
 
@@ -105,3 +109,117 @@ directory (or a link to one) and the other is not, the conflict dialog says
 (keep both), Skip and Cancel. "Overwrite all" and the advanced conflict rules
 are not applied to such items; you are asked each time, while "Skip all" and
 "Rename all" apply as usual. This holds for copy, move and flatten.
+
+## Operation dialogs
+
+Every operation works on the selected entries, or the highlighted entry when
+nothing is selected. Delete and rename act on the entries that were selected
+when the dialog opened, even if you move the cursor afterwards. All keys are
+rebindable in `keybindings.toml`.
+
+| Operation | Key | Action id | Menu |
+|---|---|---|---|
+| Copy | `F5`, `Ctrl+C` | `file.copy` | File -> Copy |
+| Move | `F6` | `file.move` | File -> Move |
+| Rename | `Shift+F6`, `Ctrl+R` | `file.rename` | File -> Rename |
+| Duplicate | `Shift+F5` | `file.duplicate` | Esc menu `p` |
+| Mkdir | `F7` | `file.mkdir` | File -> Mkdir |
+| Mkdir and open | `Shift+F7` | `file.mkdir-open-in-other` | Esc menu `o` |
+| Delete | `F8`, `Delete` | `file.delete` | File -> Delete |
+| Symlink | `Ctrl+L` | `file.symlink` | File -> Symlink |
+| Hard link | unbound | `file.hardlink` | File -> Link |
+| Flatten | `Ctrl+Z` | `file.flatten` | File -> Flatten |
+| Extract archive | `Ctrl+X` | `file.extract` | File -> Extract |
+
+Symlinks, hard links, chmod and chown are local-only. All dialogs accept
+`Alt+O` (OK) and `Esc` (Cancel).
+
+### Copy and move
+
+The destination field starts with the other panel's path and supports path
+completion and the Bookmarks, History and Pinned pickers; `Shift+Left` and
+`Shift+Right` insert the active or inactive panel's path. While you type, the
+panel whose directory matches the destination is outlined (in a warning colour
+for move). Move always asks for a destination; renaming in place is Rename.
+
+- **Preserve permissions** (`Alt+R`), **Preserve timestamps** (`Alt+T`) and
+  **Dereference symlinks** (`Alt+D`) are copy-only checkboxes. Dereference
+  copies what a symlink points to instead of recreating the link; it is
+  available only between local locations. Defaults:
+  `preserve_permissions`, `preserve_timestamps`, `dereference_symlinks`.
+- **Flatten into destination** (`Alt+I`) drops the directory structure and puts
+  every item directly into the destination. Without it the structure relative
+  to the sources' common parent is kept, and when the selection spans several
+  directories the dialog shows the common source and a preview of the result.
+- **Add paused** (`Alt+P`) queues the job without starting it.
+- Copying or moving a single item onto itself asks for a new name; copying a
+  directory into itself is refused.
+- After a copy or move into the other panel's current directory finishes, the
+  first transferred entry is highlighted there, unless you moved that panel's
+  cursor meanwhile (`focus_other_panel_after_transfer`).
+- When a move or delete leaves directories empty, a prompt offers to remove
+  them (`remove_dangling_directories`).
+
+Name collisions are resolved in the jobs view or the quick dialog, including
+the size and time based Conflict rules and skipping identical files; see
+[File conflicts](jobs.md#file-conflicts).
+
+### Duplicate
+
+Copies exactly one file or directory under a new name in the same place.
+The name field behaves like Rename, including Sanitize and Slugify and the
+**Focus after duplicate** checkbox; the focus moves to the copy once the job
+has created it.
+
+### Rename
+
+Rename works within one directory and refuses path separators. The **Focus
+after rename** checkbox (`Alt+A`, default from `rename_focus_after`) selects
+and centres the new name; for a directory, **Open in the other panel after
+rename** (`Alt+P`) also opens it in the inactive panel. Inside the name field:
+
+| Key | Opens |
+|---|---|
+| `F2` | Sanitize: removes characters that are awkward in file names |
+| `F3` | Slugify: lowercase, hyphen-separated names |
+| `F4` | Encoding: repairs names stored in a legacy Japanese encoding, with a preview of the decoded name. Offered only when such an encoding is detected |
+
+Leading or trailing whitespace in the new name triggers a warning. With a
+selection, Rename becomes [Mass rename](mass-rename.md).
+
+### Mkdir
+
+The name is prefilled from the highlighted entry (a file drops its last
+extension). After Create, the new directory is highlighted. `Shift+F7`
+additionally opens the new directory in the inactive panel. With a selection,
+radios offer **Create**, **Create and copy** and **Create and move**: the
+selected items are queued into the new directory and the selection is cleared.
+With two or more selected items, `F7` inside the name field fills in the
+longest name part they share. Mkdir also works on SFTP panels.
+
+### Delete
+
+The dialog lists the entries (scrollable when long) with a size summary that
+fills in while the disk-usage scan runs. `Alt+Y` and `Alt+N` answer from anywhere in the dialog. Deleting is queued as a job.
+Delete jobs start at once and run in parallel with each other and with a
+running copy or move, except when their paths overlap a running transfer,
+in which case they wait for it. Switch the confirmation off with
+`confirm_delete = false`.
+
+### Symlink
+
+`Ctrl+L` asks for the link target and the link path. Hard links (File -> Link) work
+the same way.
+
+### Flatten
+
+Needs a selection of directories only. The dialog asks for the destination and
+two options: **recursive** (take files from all depths instead of only the
+immediate children) and **remove empty directories** afterwards (defaults
+`flatten_recursive`, `flatten_remove_empty_dirs`). Files that already exist
+at the destination go through the normal conflict prompt. Progress shows a
+count of moved items without a total.
+
+### Permission denied
+
+When an operation fails for lack of permission, see [Elevation](elevation.md).

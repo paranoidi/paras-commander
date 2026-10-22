@@ -15,4 +15,6 @@ Type to filter; the best matches are listed first. Enter changes the panel to th
 - **Stay on current volume** (`Alt+V`, default on) does not descend into other mounted file systems.
 - **Include hidden** (`Alt+I`, default off) adds dot-directories and git-ignored directories.
 
+See also [Navigation](navigation.md) and [Find files](find-files.md).
+
 Marking, select all, group select, the view key, Only directories / Only files and the selected-directories scope of Find are not available here.

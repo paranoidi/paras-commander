@@ -96,6 +96,25 @@ tasks:
     cmds:
       - "{{.MKDOCS}} serve"
 
+  docs:media:
+    desc: Regenerate docs screenshots and animations with VHS
+    deps: [build]
+    env:
+      PC_DEMO_HOME: /tmp/pc-docs-demo
+    cmds:
+      - rm -rf "${PC_DEMO_HOME:?}" && docs/tapes/fixture.sh "$PC_DEMO_HOME"
+      - mkdir -p docs/assets
+      # VHS renders through headless Chromium; a private network namespace
+      # with only loopback keeps it off the internet (ttyd is on localhost).
+      # Chromium's own sandbox can't start as the namespace's mapped root.
+      - |
+        unshare --map-root-user --net sh -c '
+          ip link set lo up
+          for t in docs/tapes/*.tape; do
+            [ "$t" = docs/tapes/settings.tape ] && continue
+            VHS_NO_SANDBOX=1 vhs "$t" || exit 1
+          done'
+
   verify:
     desc: Merge-ready local gate (lint + race tests + pc artifact)
     cmds:
