@@ -494,6 +494,8 @@ type UIStatusConfig struct {
 	// LogMaxEntries caps how many status/toast lines are retained for the Messages view (oldest dropped).
 	// Zero means use the built-in default (see DefaultMessageLogMaxEntries).
 	LogMaxEntries int `toml:"log_max_entries"`
+	// Sweep animates new banners in from left to right. Default DefaultMessageSweep.
+	Sweep bool `toml:"sweep"`
 }
 
 type FilterConfig struct {
@@ -685,6 +687,7 @@ func Default() Config {
 			Status: UIStatusConfig{
 				MessageTTLSeconds: 4.5,
 				LogMaxEntries:     DefaultMessageLogMaxEntries,
+				Sweep:             DefaultMessageSweep,
 			},
 		},
 		Filter: FilterConfig{

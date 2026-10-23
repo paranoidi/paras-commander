@@ -104,13 +104,14 @@ Same persistent PTY shell as `app.drop-to-shell`, drawn above the footer (`geom.
 
 - **Single painter**: `ui.PaintTransientStatusMessage(screen, layout, model, styles)` (`internal/ui/status_message_render.go`) owns the toast row. `ui.Render` calls it, and every partial-paint path in `internal/app/render.go` (`paintFindDialogOverlay`, `paintFileDialogOverlay`, `renderBrowserListNavUpdate`, `paintDiskUsageBrowserUpdate`) calls it again right before `emitScreenAfterPartialPaint()`; otherwise a panel-only repaint wipes an active toast until the next full render.
 - **Placement**: centered on the row above the footer (full width), or on the terminal panel's separator row when that panel is visible (message wins over the label). `ui.FormatToastDisplay` adds one space each side for the banner and Messages log rows; stored `Model.Message` / `MessageLogEntry.Text` are unpadded.
+- **Sweep-in** (`[ui.status].sweep`, default on): a new toast reveals left to right over `ui.ToastSweepDuration` (200 ms), leading-edge cell in `message.sweep`. `startToastSweep` (`internal/app/status.go`) stamps `Model.MessageSweepStart` and posts `statusMessagePayload{sweepFrame: true}` every `toastSweepFrame` (the same payload type carries TTL expiry); `applyStatusMessagePayload` repaints only the toast row (partial paint) and zeroes the start once done. Frames carry `messageExpiryGen`, so a replaced/cleared toast stops them.
 - **Order**: painted after modal overlays so dialogs never obscure it. Styles `message.info/warn/error`; menu-bar attention uses `menu.bar.alert`. TTL `[ui].status_message_ttl_seconds` (0 = until replaced).
 
 ## Menu system
 
 - Definitions/state in `internal/ui/menu`, rendering in `internal/ui`. `app.open-menu` opens the bar; Enter/Down opens a pulldown; Esc steps pulldown -> bar -> normal; Alt+letter jumps to a top-level menu. Item mnemonic rules and add-item steps: `recipes/add-menu-item.md`.
 - Pulldown `KeyLabel`s come from the loaded keymap (`menu.ApplyMenuKeyLabels` -> `keymap.Map.MenuBindingLabel`). Definitions: `menu.BrowserDefinitions`, `JobsDefinitions`, `CommandsDefinitions` (`ApplyCommandsMenuKeyLabels`), `MessagesDefinitions` (`ApplyMessagesMenuKeyLabels`). Jobs/Commands/Messages also carry the shared Display pulldown (`menu.DisplayDefinition`); their global open chords work there via `App.tryDispatchAuxiliaryScreens`.
-- Dev menu (`pc -dev`): `menu.DevDefinition` (top shortcut `v`) with `dev.show-info/warn/error` test toasts via `setTransientMessage`; menu-only actions, not in `keybindings.toml`.
+- Dev menu (`pc -dev`): `menu.DevDefinition` (top shortcut `v`) with `dev.show-info/warn/error/success` test toasts plus `dev.show-long-*` variants (wrap in the Messages log, clip on the banner) via `setTransientMessage`; menu-only actions, not in `keybindings.toml`.
 - Unsupported items close the menu and show a concise "not implemented" message (e.g. `menu.file.*` chattr stub).
 - Leader menu (`app.leader-menu`) and strips: `menus.md`. Preview and quick-view behavior behind `file.view`/`file.quick-view`: `preview.md`.
 

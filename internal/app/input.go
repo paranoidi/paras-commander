@@ -1234,6 +1234,16 @@ func (a *App) dispatch(actionID string) bool {
 		a.setTransientMessage("Example warn message", ui.MessageUrgencyWarn)
 	case keymap.ActionDevShowError:
 		a.setTransientMessage("Example error message", ui.MessageUrgencyError)
+	case keymap.ActionDevShowSuccess:
+		a.setTransientMessage("Example success message", ui.MessageUrgencySuccess)
+	case keymap.ActionDevShowLongInfo:
+		a.setTransientMessage(devLongMessage("info"), ui.MessageUrgencyInfo)
+	case keymap.ActionDevShowLongWarn:
+		a.setTransientMessage(devLongMessage("warn"), ui.MessageUrgencyWarn)
+	case keymap.ActionDevShowLongError:
+		a.setTransientMessage(devLongMessage("error"), ui.MessageUrgencyError)
+	case keymap.ActionDevShowLongSuccess:
+		a.setTransientMessage(devLongMessage("success"), ui.MessageUrgencySuccess)
 	case keymap.ActionDevDemoDeleteBar:
 		a.devDeleteBarDemoStart = time.Now()
 	}
@@ -1407,4 +1417,12 @@ func viMotionSelectedStripKey(event *tcell.EventKey) (remapped *tcell.EventKey, 
 	default:
 		return nil, false
 	}
+}
+
+// devLongMessage is a dev-menu test toast long enough to clip on the banner and wrap in the
+// Messages log.
+func devLongMessage(kind string) string {
+	return "Example long " + kind + " message: the quick brown fox jumps over the lazy dog while " +
+		"the lantern flickers above the harbor, the copper kettle whistles in the kitchen, and the " +
+		"marching band rehearses the same three bars until every window on the street is open."
 }

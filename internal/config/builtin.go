@@ -365,6 +365,9 @@ const (
 	// DefaultMessageLogMaxEntries caps status/toast lines retained for the Messages view (oldest dropped).
 	DefaultMessageLogMaxEntries = 500
 
+	// DefaultMessageSweep enables the left-to-right sweep-in animation of new toasts.
+	DefaultMessageSweep = true
+
 	// PreviewModeInternal highlights files in-process with Chroma (default).
 	PreviewModeInternal = "internal"
 	// PreviewModeExternal runs [preview].command as a subprocess.

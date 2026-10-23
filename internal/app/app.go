@@ -53,10 +53,15 @@ import (
 	"github.com/paranoidi/paras-commander/internal/workpool"
 )
 
-// statusMessageExpiryPayload is posted through tcell when a transient status banner TTL elapses.
-type statusMessageExpiryPayload struct {
-	gen uint64
+// statusMessagePayload is posted through tcell when a transient status banner TTL elapses
+// (sweepFrame false) or every toastSweepFrame while a new banner sweeps in (sweepFrame true).
+type statusMessagePayload struct {
+	gen        uint64
+	sweepFrame bool
 }
+
+// toastSweepFrame is the toast sweep-in animation step (~60 fps).
+const toastSweepFrame = 16 * time.Millisecond
 
 // spinnerTickPayload is posted periodically to animate the menu-bar activity spinner.
 type spinnerTickPayload struct{}
@@ -968,9 +973,9 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		out.pollDiskUsageAfter = false
 		a.handleTerminalWake()
 		out.didRender = true
-	case statusMessageExpiryPayload:
-		a.applyStatusMessageExpiry(d)
-		a.render()
+	case statusMessagePayload:
+		out.pollDiskUsageAfter = !d.sweepFrame
+		a.applyStatusMessagePayload(d)
 		out.didRender = true
 	case spinnerTickPayload:
 		out.pollDiskUsageAfter = false

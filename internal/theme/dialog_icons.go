@@ -16,6 +16,7 @@ const (
 	IconKeyDialogZoxide            = "dialog.zoxide"
 	IconKeyDialogHistory           = "dialog.history"
 	IconKeyDialogDepth             = "dialog.depth"
+	IconKeyMessageSuccess          = "message.success"
 
 	// IconDialogInfoASCII is the info marker used when Nerd Font icons are disabled; it is
 	// also the widest form, so dialog sizing reserves its width.
@@ -30,6 +31,15 @@ func (t Theme) IconDialogInfo() string {
 		return IconDialogInfoASCII
 	}
 	return t.dialogIcon(IconKeyDialogInfo, "\uf05a")
+}
+
+// IconMessageSuccess returns the prefix of success toasts from [icons.message] success, or ""
+// when UseNerdfontIcons is false (success messages then carry no prefix).
+func (t Theme) IconMessageSuccess() string {
+	if !t.UseNerdfontIcons {
+		return ""
+	}
+	return t.dialogIcon(IconKeyMessageSuccess, "\uf05d")
 }
 
 // IconDialogMissing returns the trailing mark painted on picker rows (history, bookmarks,

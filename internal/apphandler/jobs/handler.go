@@ -1116,7 +1116,7 @@ func (h *Handler) updateJobMessage(ev jobs.Event) {
 	case jobs.EventStarted:
 		h.host.SetTransientMessage("Job started", ui.MessageUrgencyInfo)
 	case jobs.EventCompleted:
-		h.host.SetTransientMessage("Job completed", ui.MessageUrgencyInfo)
+		h.host.SetTransientMessage("Job completed", ui.MessageUrgencySuccess)
 	case jobs.EventFailed:
 		h.host.SetJobFailedTransientMessage(ev.Err, ev.Error)
 	case jobs.EventCanceled:

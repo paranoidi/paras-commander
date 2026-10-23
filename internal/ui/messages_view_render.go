@@ -89,7 +89,7 @@ func drawMessagesView(
 		timeCell := primitive.TruncateRight(timeShow+" ", messagesListColTime)
 		primitive.Text(screen, contentX, y, messagesListColTime, timeCell, timeStyle)
 
-		shown := primitive.TruncateRight(strings.TrimSpace(entry.Text), msgW)
+		shown := primitive.TruncateRight(messageWithUrgencyIcon(styles, entry.Urg, strings.TrimSpace(entry.Text)), msgW)
 		primitive.Text(screen, msgStart, y, msgW, shown, urgStyle)
 	}
 }

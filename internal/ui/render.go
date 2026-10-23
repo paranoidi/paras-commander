@@ -287,7 +287,9 @@ type Model struct {
 	CommandOutputDialog    dialog.CommandOutputDialogState
 	Message                string
 	MessageUrgency         MessageUrgency
-	FooterKeys             []menu.FunctionKey
+	// MessageSweepStart is when Message started its sweep-in; zero paints it fully.
+	MessageSweepStart time.Time
+	FooterKeys        []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
 	// StatusCommandText is the latest status_command output line, drawn at the top-left of

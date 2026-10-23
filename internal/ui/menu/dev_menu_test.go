@@ -11,6 +11,11 @@ func TestDevDefinitionShortcuts(t *testing.T) {
 		"Show info":       's',
 		"Show warn":       'w',
 		"Show error":      'e',
+		"Show success":    'h',
+		"Long info":       'l',
+		"Long warn":       'o',
+		"Long error":      'n',
+		"Long success":    'g',
 		"Delete bar demo": 'd',
 	}
 	for _, item := range def.Items {

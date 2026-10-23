@@ -287,6 +287,10 @@ type Theme struct {
 	MessageInfo  tcell.Style
 	MessageWarn  tcell.Style
 	MessageError tcell.Style
+	// MessageSweep styles the leading edge cell of a toast sweeping in (optional message.sweep).
+	MessageSweep tcell.Style
+	// MessageSuccess styles success toasts (optional message.success, black on green).
+	MessageSuccess tcell.Style
 
 	JobsRow     tcell.Style
 	JobsRunning tcell.Style
@@ -1223,7 +1227,7 @@ var optionalStyleKeys = func() []string {
 	for i := 0; i < 10; i++ {
 		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
 	}
-	keys = append(keys, "menu.speed.cap", "menu.speed.text", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
+	keys = append(keys, "menu.speed.cap", "menu.speed.text", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty")
 	return keys
 }()
@@ -1533,6 +1537,16 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	messageSweep, err := optionalStyle(specs, palette, "message.sweep", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite))
+	if err != nil {
+		return Theme{}, err
+	}
+
+	messageSuccess, err := optionalStyle(specs, palette, "message.success", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorGreen))
+	if err != nil {
+		return Theme{}, err
+	}
+
 	dialogTextSelect, err := optionalStyle(specs, palette, "dialog.text_select", tcell.Style{})
 	if err != nil {
 		return Theme{}, err
@@ -1785,9 +1799,11 @@ func parse(data []byte) (Theme, error) {
 		LeaderMenuLabel:    styles["leader_menu.label"],
 		LeaderMenuDisabled: styles["leader_menu.disabled"],
 
-		MessageInfo:  styles["message.info"],
-		MessageWarn:  styles["message.warn"],
-		MessageError: styles["message.error"],
+		MessageInfo:    styles["message.info"],
+		MessageWarn:    styles["message.warn"],
+		MessageError:   styles["message.error"],
+		MessageSweep:   messageSweep,
+		MessageSuccess: messageSuccess,
 
 		JobsRow:     styles["jobs.row"],
 		JobsRunning: styles["jobs.running"],

@@ -318,10 +318,16 @@ const (
 
 // Dev menu actions (menu routing only; enabled with pc -dev).
 const (
-	ActionDevShowInfo      = "dev.show-info"
-	ActionDevShowWarn      = "dev.show-warn"
-	ActionDevShowError     = "dev.show-error"
-	ActionDevDemoDeleteBar = "dev.demo-delete-bar"
+	ActionDevShowInfo    = "dev.show-info"
+	ActionDevShowWarn    = "dev.show-warn"
+	ActionDevShowError   = "dev.show-error"
+	ActionDevShowSuccess = "dev.show-success"
+	// ActionDevShowLong* show a message long enough to wrap in the Messages log and clip on the banner.
+	ActionDevShowLongInfo    = "dev.show-long-info"
+	ActionDevShowLongWarn    = "dev.show-long-warn"
+	ActionDevShowLongError   = "dev.show-long-error"
+	ActionDevShowLongSuccess = "dev.show-long-success"
+	ActionDevDemoDeleteBar   = "dev.demo-delete-bar"
 )
 
 // KnownActions lists action IDs accepted in keybindings.toml for the current app.

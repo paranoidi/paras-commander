@@ -64,6 +64,8 @@ text = { fg = "default", bg = "bright_black" }
 info = { fg = "black", bg = "white" }
 warn = { fg = "black", bg = "yellow", bold = true }
 error = { fg = "bright_white", bg = "red", bold = true }
+success = { fg = "black", bg = "green" }
+sweep = { fg = "black", bg = "bright_white" } # leading edge of a toast sweeping in
 
 [footer]
 key = { fg = "magenta", bold = true }
@@ -327,6 +329,9 @@ missing = "\U000F09E7"   # trailing mark on history/bookmark/pin rows whose path
 zoxide = "\uf0e7"        # prefix on History rows that come from zoxide
 history = "\uf1da"       # prefix on History rows from the panel history
 depth = "\uef81"         # before the indexing depth in the find dialog title
+
+[icons.message]
+success = "\uf05d"       # fa-circle_check, prefix on success toasts
 
 [icons.dialog.checkbox]
 checked = "\U000F0856"

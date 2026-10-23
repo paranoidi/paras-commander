@@ -84,13 +84,14 @@ func (a *App) setTransientMessageBanner(logMsg, bannerMsg string, urgency ui.Mes
 	a.model.Message = banner
 	a.model.MessageUrgency = urgency
 	a.appendMessageLogLines(lines, urgency)
+	a.startToastSweep(gen)
 	ttl := a.statusMessageTTL()
 	if ttl <= 0 {
 		return
 	}
 	go func(g uint64, d time.Duration) {
 		time.Sleep(d)
-		_ = a.screen.PostEvent(tcell.NewEventInterrupt(statusMessageExpiryPayload{gen: g}))
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(statusMessagePayload{gen: g}))
 	}(gen, ttl)
 }
 
@@ -105,17 +106,54 @@ func (a *App) appendTransientMessageLines(banner string, lines []string, urgency
 	a.model.Message = banner
 	a.model.MessageUrgency = urgency
 	a.appendMessageLogLines(lines, urgency)
+	a.startToastSweep(gen)
 	ttl := a.statusMessageTTL()
 	if ttl <= 0 {
 		return
 	}
 	go func(g uint64, d time.Duration) {
 		time.Sleep(d)
-		_ = a.screen.PostEvent(tcell.NewEventInterrupt(statusMessageExpiryPayload{gen: g}))
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(statusMessagePayload{gen: g}))
 	}(gen, ttl)
 }
 
-func (a *App) applyStatusMessageExpiry(p statusMessageExpiryPayload) {
+// startToastSweep starts the toast sweep-in and posts sweep-frame statusMessagePayloads until it
+// completes; a newer message (gen bump) stops the frames.
+func (a *App) startToastSweep(gen uint64) {
+	if !a.config.UI.Status.Sweep {
+		a.model.MessageSweepStart = time.Time{}
+		return
+	}
+	start := time.Now()
+	a.model.MessageSweepStart = start
+	go func() {
+		for time.Since(start) < ui.ToastSweepDuration && a.messageExpiryGen.Load() == gen {
+			time.Sleep(toastSweepFrame)
+			_ = a.screen.PostEvent(tcell.NewEventInterrupt(statusMessagePayload{gen: gen, sweepFrame: true}))
+		}
+	}()
+}
+
+// applyStatusMessagePayload applies a banner TTL expiry (full render) or a sweep frame.
+func (a *App) applyStatusMessagePayload(p statusMessagePayload) {
+	if !p.sweepFrame {
+		a.applyStatusMessageExpiry(p)
+		a.render()
+		return
+	}
+	if p.gen != a.messageExpiryGen.Load() {
+		return
+	}
+	// Sweep frames repaint only the toast row.
+	if time.Since(a.model.MessageSweepStart) >= ui.ToastSweepDuration {
+		a.model.MessageSweepStart = time.Time{}
+	}
+	w, h := a.screen.Size()
+	ui.PaintTransientStatusMessage(a.screen, a.layoutForTerminalSize(w, h), a.model, a.styles)
+	a.emitScreenAfterPartialPaint()
+}
+
+func (a *App) applyStatusMessageExpiry(p statusMessagePayload) {
 	if p.gen != a.messageExpiryGen.Load() {
 		return
 	}

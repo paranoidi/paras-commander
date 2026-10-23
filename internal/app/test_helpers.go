@@ -24,20 +24,28 @@ import (
 // ReconcilePendingPanelFocus (rename/mkdir/duplicate's deferred select-and-center) once the async
 // reload they were waiting on has just landed. Used by tests that dispatch an action triggering
 // async work and need the result (and its follow-on reconcile) applied before asserting on state.
+// Toast sweep frames are applied and skipped: they are animation, not the awaited async result.
 func applyNextInterruptEvent(t *testing.T, app *App, screen tcell.SimulationScreen) {
 	t.Helper()
-	done := make(chan tcell.Event, 1)
-	go func() { done <- screen.PollEvent() }()
-	select {
-	case ev := <-done:
-		interruptEv, ok := ev.(*tcell.EventInterrupt)
-		if !ok {
-			t.Fatalf("PollEvent returned %T, want *tcell.EventInterrupt", ev)
+	timeout := time.After(2 * time.Second)
+	for {
+		done := make(chan tcell.Event, 1)
+		go func() { done <- screen.PollEvent() }()
+		select {
+		case ev := <-done:
+			interruptEv, ok := ev.(*tcell.EventInterrupt)
+			if !ok {
+				t.Fatalf("PollEvent returned %T, want *tcell.EventInterrupt", ev)
+			}
+			app.handleInterruptPayload(interruptEv.Data())
+			app.reconcileAfterEvent()
+			if p, ok := interruptEv.Data().(statusMessagePayload); ok && p.sweepFrame {
+				continue
+			}
+			return
+		case <-timeout:
+			t.Fatal("timeout waiting for async event")
 		}
-		app.handleInterruptPayload(interruptEv.Data())
-		app.reconcileAfterEvent()
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for async event")
 	}
 }
 
