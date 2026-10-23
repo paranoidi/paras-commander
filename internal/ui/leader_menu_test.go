@@ -347,3 +347,61 @@ func TestDrawLeaderMenuRendersQuestionMarkHelp(t *testing.T) {
 		t.Fatalf("help key = %q, want ?", mainc)
 	}
 }
+
+func leaderMenuSlotTestItems(cols int) []LeaderMenuItem {
+	var items []LeaderMenuItem
+	for c := range cols {
+		items = append(items,
+			LeaderMenuItem{GroupTitle: "Group", GroupColumn: c},
+			LeaderMenuItem{Key: rune('a' + c), Label: "Item", GroupColumn: c})
+	}
+	return items
+}
+
+func TestLeaderMenuMacroColumnLayoutTwoColumnsTakeCenterSlots(t *testing.T) {
+	rect := geom.Rect{X: 0, Y: 0, Width: 120, Height: 10}
+	xs, _, fits := leaderMenuMacroColumnLayout(rect, leaderMenuSplitByColumn(leaderMenuSlotTestItems(2)), false)
+	if !fits {
+		t.Fatal("expected slot layout to fit at width 120")
+	}
+	leftEdge := rect.X + leaderMenuLeftMargin
+	pitch := (rect.Width - leaderMenuLeftMargin - leaderMenuRightMargin) / leaderMenuMacroColumns
+	// Center slots, give or take the rounding remainder of the slot pitch.
+	if d := xs[0] - (leftEdge + pitch); d < 0 || d > 1 || xs[1]-xs[0] != pitch {
+		t.Fatalf("xs = %v, want ~%d and +%d", xs[:2], leftEdge+pitch, pitch)
+	}
+}
+
+func TestLeaderMenuMacroColumnLayoutThreeColumnsCentered(t *testing.T) {
+	rect := geom.Rect{X: 0, Y: 0, Width: 125, Height: 10}
+	xs, _, fits := leaderMenuMacroColumnLayout(rect, leaderMenuSplitByColumn(leaderMenuSlotTestItems(3)), false)
+	if !fits {
+		t.Fatal("expected slot layout to fit at width 125")
+	}
+	leftEdge := rect.X + leaderMenuLeftMargin
+	rightEdge := rect.X + rect.Width - leaderMenuRightMargin
+	pitch := (rightEdge - leftEdge) / leaderMenuMacroColumns
+	if xs[1]-xs[0] != pitch || xs[2]-xs[1] != pitch {
+		t.Fatalf("xs = %v, want spacing %d", xs[:3], pitch)
+	}
+	if left, right := xs[0]-leftEdge, rightEdge-(xs[2]+pitch); left-right < -1 || left-right > 1 {
+		t.Fatalf("slot block not centered: left %d, right %d", left, right)
+	}
+}
+
+func TestLeaderMenuMacroColumnLayoutSlotsFallBackWhenNarrow(t *testing.T) {
+	items := []LeaderMenuItem{
+		{GroupTitle: "Group", GroupColumn: 0},
+		{Key: 'a', Label: "A rather long item label", GroupColumn: 0},
+		{GroupTitle: "Other", GroupColumn: 1},
+		{Key: 'b', Label: "Another long item label", GroupColumn: 1},
+	}
+	rect := geom.Rect{X: 0, Y: 0, Width: 70, Height: 10}
+	xs, widths, fits := leaderMenuMacroColumnLayout(rect, leaderMenuSplitByColumn(items), false)
+	if fits {
+		t.Fatal("expected slot layout not to fit at width 70")
+	}
+	if xs[0]+widths[0] > xs[1] {
+		t.Fatalf("fallback overlaps: xs=%v widths=%v", xs[:2], widths[:2])
+	}
+}

@@ -1184,6 +1184,11 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		a.render()
 		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
 	}
+	if p, ok := data.(gitRemoteResultPayload); ok {
+		a.applyGitRemoteResult(p)
+		a.render()
+		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
+	}
 	if p, ok := data.(gitStageResultPayload); ok {
 		a.applyGitStageResult(p)
 		a.render()

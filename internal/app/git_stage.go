@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -15,6 +16,9 @@ import (
 
 // gitStageTimeout bounds a single git add/reset invocation.
 const gitStageTimeout = 30 * time.Second
+
+// gitRemoteTimeout bounds a git push/pull invocation.
+const gitRemoteTimeout = 5 * time.Minute
 
 // gitStageResultPayload delivers an async git add/reset result to the main loop.
 type gitStageResultPayload struct {
@@ -43,18 +47,26 @@ func runGitStage(root string, stage bool, paths []string) error {
 	return nil
 }
 
-// gitStageActive stages or unstages the active panel's selection, or the cursor entry and
-// then advances the cursor.
-func (a *App) gitStageActive(stage bool) {
-	p := a.activePanel()
-	dir, err := p.Path.FilePath()
+// activeGitRoot returns the active panel's work tree root, or "" after showing why there is none.
+func (a *App) activeGitRoot() string {
+	dir, err := a.activePanel().Path.FilePath()
 	if err != nil {
 		a.setTransientMessage("Not a local directory", ui.MessageUrgencyInfo)
-		return
+		return ""
 	}
 	root := gitignore.ValidWorkTreeRoot(dir)
 	if root == "" {
 		a.setTransientMessage("Not in a git repository", ui.MessageUrgencyWarn)
+	}
+	return root
+}
+
+// gitStageActive stages or unstages the active panel's selection, or the cursor entry and
+// then advances the cursor.
+func (a *App) gitStageActive(stage bool) {
+	p := a.activePanel()
+	root := a.activeGitRoot()
+	if root == "" {
 		return
 	}
 	paths := panelTargetPaths(p)
@@ -71,6 +83,48 @@ func (a *App) gitStageActive(stage bool) {
 	}()
 }
 
+// gitRemoteResultPayload delivers an async git push/pull result to the main loop.
+type gitRemoteResultPayload struct {
+	panelID  int
+	workRoot string
+	verb     string // "push" or "pull"
+	res      cmdrun.RunResult
+}
+
+// gitRemoteActive runs `git push` or `git pull` (verb) in the background for the active panel's
+// work tree. The child gets no terminal (Setsid) and GIT_TERMINAL_PROMPT=0, so credentials must
+// come from an agent or credential helper instead of an interactive prompt.
+func (a *App) gitRemoteActive(verb string) {
+	root := a.activeGitRoot()
+	if root == "" {
+		return
+	}
+	panelID := a.model.ActivePanel
+	a.setTransientMessage("git "+verb+"…", ui.MessageUrgencyInfo)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), gitRemoteTimeout)
+		defer cancel()
+		res := cmdrun.RunTracked(ctx, []string{"git", "-C", root, verb}, []string{"GIT_TERMINAL_PROMPT=0"}, root, 0, nil, nil)
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(gitRemoteResultPayload{panelID, root, verb, res}))
+	}()
+}
+
+func (a *App) applyGitRemoteResult(d gitRemoteResultPayload) {
+	if d.res.LaunchErr != nil || d.res.ExitCode != 0 {
+		err := d.res.LaunchErr
+		if err == nil {
+			msg := strings.TrimSpace(string(d.res.Stderr))
+			if msg == "" {
+				msg = fmt.Sprintf("exit status %d", d.res.ExitCode)
+			}
+			err = errors.New(msg)
+		}
+		a.setErrorMessage("git "+d.verb+" failed", err)
+		return
+	}
+	a.reloadGitPanels(d.panelID, d.workRoot, "git "+d.verb+" done")
+}
+
 func (a *App) applyGitStageResult(d gitStageResultPayload) {
 	if d.err != nil {
 		prefix := "git reset failed"
@@ -84,12 +138,18 @@ func (a *App) applyGitStageResult(d gitStageResultPayload) {
 	if d.stage {
 		msg = fmt.Sprintf("Staged %d item(s)", d.n)
 	}
-	a.reloadPanel(d.panelID, msg)
+	a.reloadGitPanels(d.panelID, d.workRoot, msg)
+}
+
+// reloadGitPanels reloads panelID with msg and refreshes the other panel when it shows the same
+// work tree.
+func (a *App) reloadGitPanels(panelID int, workRoot, msg string) {
+	a.reloadPanel(panelID, msg)
 	other := ui.PrimaryPanel
-	if d.panelID == ui.PrimaryPanel {
+	if panelID == ui.PrimaryPanel {
 		other = ui.SecondaryPanel
 	}
-	if dir, err := a.panelByID(other).Path.FilePath(); err == nil && gitignore.ValidWorkTreeRoot(dir) == d.workRoot {
+	if dir, err := a.panelByID(other).Path.FilePath(); err == nil && gitignore.ValidWorkTreeRoot(dir) == workRoot {
 		_ = a.panelByID(other).Refresh(a.activeViewportRows())
 	}
 }
@@ -97,15 +157,8 @@ func (a *App) applyGitStageResult(d gitStageResultPayload) {
 // gitCommitActive runs an interactive `git commit` (the user's editor) in the active panel's
 // work tree, suspending the TUI while it runs.
 func (a *App) gitCommitActive() {
-	p := a.activePanel()
-	dir, err := p.Path.FilePath()
-	if err != nil {
-		a.setTransientMessage("Not a local directory", ui.MessageUrgencyInfo)
-		return
-	}
-	root := gitignore.ValidWorkTreeRoot(dir)
+	root := a.activeGitRoot()
 	if root == "" {
-		a.setTransientMessage("Not in a git repository", ui.MessageUrgencyWarn)
 		return
 	}
 	// ponytail: sync pre-check; `git diff --cached --quiet` is instant and gates the suspend.

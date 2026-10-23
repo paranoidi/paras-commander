@@ -288,7 +288,7 @@ func leaderMenuDirectKeysFitColumns(layout geom.Layout, items []LeaderMenuItem) 
 		rect := LeaderMenuRect(layout, leaderMenuContentRows(visible))
 		buckets := leaderMenuSplitByColumn(visible)
 		natural := leaderMenuMacroColumnNaturalWidths(buckets, true)
-		if _, fits := leaderMenuMacroColumnGap(rect, natural); fits {
+		if _, _, fits := leaderMenuMacroColumnLayout(rect, buckets, true); fits {
 			return true
 		}
 		colWidth := leaderMenuColumnWidth(layout, true)
@@ -358,16 +358,28 @@ func leaderMenuMacroColumnGap(rect geom.Rect, natural [leaderMenuMacroColumns]in
 	return gap, gap >= leaderMenuColumnGap
 }
 
-// leaderMenuMacroColumnLayout computes the 4 macro-column x-offsets and widths:
-// column 0 left-anchored, the last column right-anchored (with leaderMenuRightMargin
-// blank columns after it), and the columns in between evenly spaced across the gap,
-// with a fallback to uniform division when that doesn't fit. fits reports which
-// layout was used.
+// leaderMenuMacroColumnLayout computes the 4 macro-column x-offsets and widths. With all
+// columns in use: column 0 left-anchored, the last column right-anchored (with
+// leaderMenuRightMargin blank columns after it), and the columns in between evenly spaced
+// across the gap. With fewer non-empty columns: the content width is split into
+// leaderMenuMacroColumns equal slots and the used columns sit on consecutive slots,
+// centered (2 columns take the two middle slots). Either falls back to uniform division
+// when it doesn't fit. fits reports which layout was used.
 func leaderMenuMacroColumnLayout(rect geom.Rect, buckets [leaderMenuMacroColumns][]LeaderMenuItem, showDirectKeys bool) (xs [leaderMenuMacroColumns]int, widths [leaderMenuMacroColumns]int, fits bool) {
 	natural := leaderMenuMacroColumnNaturalWidths(buckets, showDirectKeys)
 	widths = natural
 	xBase := rect.X + leaderMenuLeftMargin
 	last := leaderMenuMacroColumns - 1
+
+	var used []int
+	for i, b := range buckets {
+		if len(b) > 0 {
+			used = append(used, i)
+		}
+	}
+	if len(used) > 0 && len(used) < leaderMenuMacroColumns {
+		return leaderMenuSlotLayout(rect, used, natural)
+	}
 
 	gap, fits := leaderMenuMacroColumnGap(rect, natural)
 	if fits {
@@ -388,6 +400,34 @@ func leaderMenuMacroColumnLayout(rect geom.Rect, buckets [leaderMenuMacroColumns
 	for i := range xs {
 		xs[i] = xBase + i*colWidth
 		widths[i] = colWidth
+	}
+	return xs, widths, false
+}
+
+// leaderMenuSlotLayout places the used macro columns (fewer than leaderMenuMacroColumns) on
+// consecutive equal-width slots centered in the content width; see leaderMenuMacroColumnLayout.
+func leaderMenuSlotLayout(rect geom.Rect, used []int, natural [leaderMenuMacroColumns]int) (xs [leaderMenuMacroColumns]int, widths [leaderMenuMacroColumns]int, fits bool) {
+	widths = natural
+	leftEdge := rect.X + leaderMenuLeftMargin
+	rightEdge := rect.X + rect.Width - leaderMenuRightMargin
+	pitch := (rightEdge - leftEdge) / leaderMenuMacroColumns
+	start := leftEdge + (rightEdge-leftEdge-len(used)*pitch)/2
+	fits = pitch > 0
+	for j, col := range used {
+		xs[col] = start + j*pitch
+		if j < len(used)-1 {
+			fits = fits && natural[col]+leaderMenuColumnGap <= pitch
+		} else {
+			fits = fits && xs[col]+natural[col] <= rightEdge
+		}
+	}
+	if fits {
+		return xs, widths, true
+	}
+	colWidth := max((rect.Width-leaderMenuLeftMargin)/len(used), 4)
+	for j, col := range used {
+		xs[col] = leftEdge + j*colWidth
+		widths[col] = colWidth
 	}
 	return xs, widths, false
 }
