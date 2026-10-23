@@ -97,29 +97,17 @@ func (h *Handler) SyncJobPathMarks() {
 	h.pathMarksVersion++
 }
 
-func (h *Handler) applyNewFileMarksForCompletedJob(jobID string) {
-	for _, job := range h.state.AllJobs() {
-		if job == nil || job.ID != jobID {
-			continue
-		}
-		ui.ApplyNewFileMarksFromJob(h.host.PrimaryPanel(), job)
-		ui.ApplyNewFileMarksFromJob(h.host.SecondaryPanel(), job)
-		return
-	}
+func (h *Handler) applyNewFileMarksForCompletedJob(job *jobs.Job) {
+	ui.ApplyNewFileMarksFromJob(h.host.PrimaryPanel(), job)
+	ui.ApplyNewFileMarksFromJob(h.host.SecondaryPanel(), job)
 }
 
 // stashDanglingSourcesForCompletedJob queues job.Sources for the dangling-dirs check
 // (see promptDanglingDirsIfAny) when the just-completed job was enqueued with
 // PromptDanglingDirs. No filesystem I/O here — this runs on the event-batch path.
-func (h *Handler) stashDanglingSourcesForCompletedJob(jobID string) {
-	for _, job := range h.state.AllJobs() {
-		if job == nil || job.ID != jobID {
-			continue
-		}
-		if job.PromptDanglingDirs {
-			h.pendingDanglingSources = append(h.pendingDanglingSources, job.Sources...)
-		}
-		return
+func (h *Handler) stashDanglingSourcesForCompletedJob(job *jobs.Job) {
+	if job.PromptDanglingDirs {
+		h.pendingDanglingSources = append(h.pendingDanglingSources, job.Sources...)
 	}
 }
 
@@ -933,8 +921,10 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 		switch ev.Type {
 		case jobs.EventCompleted:
 			f.Terminal = true
-			h.applyNewFileMarksForCompletedJob(ev.JobID)
-			h.stashDanglingSourcesForCompletedJob(ev.JobID)
+			if job := h.state.Job(ev.JobID); job != nil {
+				h.applyNewFileMarksForCompletedJob(job)
+				h.stashDanglingSourcesForCompletedJob(job)
+			}
 		case jobs.EventFailed, jobs.EventCanceled:
 			f.Terminal = true
 		case jobs.EventProgress, jobs.EventScanProgress:
