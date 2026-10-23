@@ -61,7 +61,7 @@ func (a *App) findDialogQueryWidth() int {
 	if !ok {
 		width = 54 // ponytail: dialog not drawn below this; keep the old floor
 	}
-	return scrollquery.DialogInputWidthFromFrame(width)
+	return dialog.FindDialogQueryInputWidth(scrollquery.DialogInputWidthFromFrame(width), a.styles)
 }
 
 func (a *App) helpDialogQueryWidth() int {

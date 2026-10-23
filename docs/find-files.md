@@ -8,10 +8,11 @@ Find is a fuzzy, recursive search across everything below a panel's directory. R
 
 ## Searching
 
-Type to filter; matching is fuzzy against paths relative to the root, best matches first. The walk is breadth-first (level by level) and never reads sizes, so it stays responsive on millions of files. While indexing, the dialog title shows the count and the level being read, e.g. `Find (12.3K…) depth 4 · 37%` plus a scanning icon (with Nerd Font icons on, a depth icon replaces the word `depth`): the percentage is directories read at that depth out of all directories found for it (across all roots, the deepest level wins). Only the top `[ui.find].max_results` (default 200) ranked rows are displayed, but the whole index is searched, and select-all marks everything that matches.
+Type to filter; matching is fuzzy against paths relative to the root, best matches first. The walk is breadth-first (level by level) and never reads sizes, so it stays responsive on millions of files. While indexing, the dialog title shows the count and the level being read, e.g. `Find (12.3K…) Depth 4 · 37%` plus a scanning icon (with Nerd Font icons on, a depth icon replaces the word `Depth`): the percentage is directories read at that depth out of all directories found for it (across all roots, the deepest level wins). Only the top `[ui.find].max_results` (default 200) ranked rows are displayed, but the whole index is searched, and select-all marks everything that matches.
 
 Options in the dialog:
 
+- **Depth** (input at the right end of the query row, reached with Tab or Down from the query): limit the index to this many path levels below the root (`a` is depth 1, `a/b` depth 2). Typing a digit 1-9 sets it, `0`, Backspace or Delete clear it for unlimited; either applies it at once and returns focus to the query. Leaving the field (Tab, Shift+Tab, Up, Down, Left) or pressing Enter, which returns focus to the query, applies it: a lower limit drops the deeper results at once and stops the running scan from going deeper; a higher limit re-indexes to reach the extra levels. The limit starts unlimited each time the dialog opens.
 - **Stay on current volume** (`Alt+V`, default on): do not descend into other mounted file systems.
 - **Include hidden** (`Alt+I`, default off): add dot-entries and git-ignored paths. This does not change the panel's own hidden-file setting.
 - **Only directories** (`Alt+D`) / **Only files** (`Alt+L`): filter the result list without re-scanning.

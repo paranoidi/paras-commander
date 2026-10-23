@@ -23,6 +23,8 @@ type WalkOptions struct {
 	// DirsOnly indexes directories only (jump mode); files are neither
 	// indexed nor recorded as skipped.
 	DirsOnly bool
+	// MaxDepth limits the levels read below Root (1 = Root's children only); 0 = unlimited.
+	MaxDepth int
 }
 
 // RootWalk runs one recursive directory index (tests and legacy callers).
@@ -47,6 +49,9 @@ type rootWalk struct {
 	// children are depth 1), directories read so far and total at that depth.
 	depth, levelDone, levelTotal atomic.Int64
 
+	// maxDepth is the live level limit (0 = unlimited); SetMaxDepth lowers it mid-walk.
+	maxDepth atomic.Int64
+
 	skippedMu        sync.Mutex
 	skippedDirs      []string
 	skippedFilePaths []string // RelLine under root for dot-files
@@ -61,6 +66,7 @@ func startRootWalk(ctx context.Context, root string, opts WalkOptions) *rootWalk
 		done:    make(chan struct{}),
 		cancel:  cancel,
 	}
+	w.maxDepth.Store(int64(opts.MaxDepth))
 	w.wg.Add(1)
 	go w.run(ctx, opts)
 	return w
@@ -76,6 +82,15 @@ func (w *rootWalk) Err() error { return w.err }
 // directories are read. After a finished walk it is the last level read.
 func (w *rootWalk) Progress() (depth, done, total int) {
 	return int(w.depth.Load()), int(w.levelDone.Load()), int(w.levelTotal.Load())
+}
+
+// SetMaxDepth changes the level limit of a running walk (0 = unlimited).
+func (w *rootWalk) SetMaxDepth(n int) { w.maxDepth.Store(int64(n)) }
+
+// tooDeep reports whether level depth exceeds the current limit.
+func (w *rootWalk) tooDeep(depth int64) bool {
+	m := w.maxDepth.Load()
+	return m > 0 && depth > m
 }
 
 func (w *rootWalk) SkippedHiddenDirs() []string {
@@ -160,11 +175,14 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 	level := []string{w.root}
 	for len(level) > 0 {
 		var next []string
+		if w.tooDeep(w.depth.Load() + 1) {
+			return
+		}
 		w.depth.Add(1)
 		w.levelDone.Store(0)
 		w.levelTotal.Store(int64(len(level)))
 		for _, dir := range level {
-			if ctx.Err() != nil {
+			if ctx.Err() != nil || w.tooDeep(w.depth.Load()) {
 				return
 			}
 			children, err := os.ReadDir(dir)

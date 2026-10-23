@@ -1120,6 +1120,57 @@ func (h *Handler) ToggleStayOnVolume() {
 	h.restartFindIndexer()
 }
 
+// commitFindDepth applies the depth edit buffer as the new index limit. A tighter limit
+// prunes the live index; a looser one re-indexes (ponytail: raising restarts the whole
+// index; resume from the depth-N frontier if rescans hurt).
+func (h *Handler) commitFindDepth() {
+	st := &h.model.FindDialog
+	next := 0
+	if st.DepthInput != "" {
+		next = int(st.DepthInput[0] - '0')
+	}
+	old := st.MaxDepth
+	if next == old {
+		return
+	}
+	st.MaxDepth = next
+	if next != 0 && (old == 0 || next < old) {
+		st.IndexDone = false
+		st.Indexing = true
+		st.RankPending = !search.Parse(st.Query).Empty()
+		h.scan.SetMaxDepth(next)
+		return
+	}
+	h.restartFindIndexer()
+}
+
+// handleFindDepthKey edits the depth field: 1-9 sets the value, 0/Backspace/Delete clear it
+// (unlimited); either commits it and returns focus to the query. Reports whether the key was consumed.
+func (h *Handler) handleFindDepthKey(event *tcell.EventKey) bool {
+	st := &h.model.FindDialog
+	switch event.Key() {
+	case tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete:
+		st.DepthInput = ""
+	case tcell.KeyRune:
+		if event.Modifiers() != tcell.ModNone {
+			return false
+		}
+		switch r := event.Rune(); {
+		case r >= '1' && r <= '9':
+			st.DepthInput = string(r)
+		case r == '0':
+			st.DepthInput = ""
+		default:
+			return true
+		}
+	default:
+		return false
+	}
+	h.commitFindDepth()
+	st.Focus = 0
+	return true
+}
+
 // ToggleIncludeHidden toggles include-hidden via the scan coordinator.
 func (h *Handler) ToggleIncludeHidden() {
 	st := &h.model.FindDialog
@@ -1343,6 +1394,20 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		}
 	}
 
+	if st.Focus == st.FindDialogDepthFocus() {
+		if h.handleFindDepthKey(event) {
+			return
+		}
+		switch event.Key() {
+		case tcell.KeyEnter:
+			h.commitFindDepth()
+			st.Focus = 0
+			return
+		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyUp, tcell.KeyDown, tcell.KeyLeft:
+			h.commitFindDepth()
+		}
+	}
+
 	switch event.Key() {
 	case tcell.KeyInsert:
 		if !st.JumpMode {
@@ -1356,8 +1421,8 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		}
 	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
 		if nf, ok := dialog.FindDialogNavFocusKey(st.Focus, st.FindDialogHasSelectionsCheckbox(), event.Key()); ok {
-			// Jump mode hides the Only dirs/files radios (focus 1, 2): step past them.
-			for st.JumpMode && (nf == 1 || nf == 2) {
+			// Jump mode hides the Only dirs/files radios: step past them.
+			for st.JumpMode && (nf == st.FindDialogOnlyDirsFocus() || nf == st.FindDialogOnlyFilesFocus()) {
 				next, moved := dialog.FindDialogNavFocusKey(nf, false, event.Key())
 				if !moved {
 					nf = st.Focus

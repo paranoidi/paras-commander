@@ -62,6 +62,7 @@ func (h *Handler) findStartOpts(st *dialog.FindDialogState) scan.StartOpts {
 		SearchOnlySelections: st.SearchOnlySelections,
 		Walk:                 h.findWalkParams(),
 		DirsOnly:             st.JumpMode,
+		MaxDepth:             st.MaxDepth,
 	}
 }
 

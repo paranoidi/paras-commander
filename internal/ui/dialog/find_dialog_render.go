@@ -95,6 +95,22 @@ func findDialogTitle(state FindDialogState, styles theme.Theme) string {
 	return title
 }
 
+// Max-depth input on the query row: icon (or "Depth" label) and its space, then one digit,
+// the caret cell and a padding cell; a one-cell gap separates it from the query.
+const (
+	findDialogDepthInputCells = 3
+	findDialogDepthGap        = 1
+)
+
+func findDialogDepthFieldWidth(styles theme.Theme) int {
+	return runewidth.StringWidth(styles.IconDialogDepth()) + 1 + findDialogDepthInputCells
+}
+
+// FindDialogQueryInputWidth is the query input width for a row of rowWidth cells.
+func FindDialogQueryInputWidth(rowWidth int, styles theme.Theme) int {
+	return max(0, rowWidth-findDialogDepthFieldWidth(styles)-findDialogDepthGap)
+}
+
 const findDialogPreferredWidth = 125 // preferred frame width; clamped to the terminal in FindDialogMetrics
 
 // FindRowIconPainter draws file-list devicons for one find dialog row; nil skips icons.
@@ -120,7 +136,10 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	fileListWidth := inputWidth
 
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, FindDialogQueryInputWidth(inputWidth, styles), draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, false, styles)
+	if depthW := findDialogDepthFieldWidth(styles); inputWidth > depthW+findDialogDepthGap {
+		draw.DrawScrollingDialogInput(screen, primaryCol+inputWidth-depthW, rect.Y+1, depthW, draw.ScrollingInputState{Value: state.DepthInput, Cursor: utf8.RuneCountInString(state.DepthInput), LeadingIcon: styles.IconDialogDepth()}, state.Focus == state.FindDialogDepthFocus(), false, styles)
+	}
 
 	sepAfterFilter := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepAfterFilter, borderStyle)

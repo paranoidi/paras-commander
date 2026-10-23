@@ -79,47 +79,46 @@ func listOKCancelNavFocusKey(focus int, key tcell.Key) (newFocus int, handled bo
 }
 
 // FindDialogNavFocusKey applies Tab/arrow navigation for find dialog focus.
-// When hasSelectionsCheckbox is false: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=include-hidden, 5=OK, 6=Cancel.
-// When true: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=include-hidden, 5=selections, 6=OK, 7=Cancel.
-// Row 1 (focus 1–4) uses Left/Right; Up/Down moves between list, row 1, optional selections, and buttons.
+// When hasSelectionsCheckbox is false: 0=list+filter, 1=max depth, 2=only-directories, 3=only-files, 4=stay-on-volume, 5=include-hidden, 6=OK, 7=Cancel.
+// When true: 0=list+filter, 1=max depth, 2=only-directories, 3=only-files, 4=stay-on-volume, 5=include-hidden, 6=selections, 7=OK, 8=Cancel.
+// Row 1 (focus 2-5) uses Left/Right; Up/Down moves between list, depth, row 1, optional selections, and buttons.
 func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key) (newFocus int, handled bool) {
-	numContent := 5
+	numContent := 6
 	if hasSelectionsCheckbox {
-		numContent = 6
+		numContent = 7
 	}
 	form := NewDialogLinearForm(numContent)
 	okFocus := form.OKIndex()
 	cancelFocus := form.CancelIndex()
-	const includeFocus = 4
-	selectionsFocus := 5
+	const (
+		depthFocus   = 1
+		onlyDirs     = 2
+		includeFocus = 5
+	)
+	selectionsFocus := 6
+	inRow := focus >= onlyDirs && focus <= includeFocus
 
 	switch key {
 	case tcell.KeyTab, tcell.KeyBacktab:
 		return form.MoveFocus(focus, key)
 	case tcell.KeyLeft:
-		switch focus {
-		case 2:
-			return 1, true
-		case 3:
-			return 2, true
-		case includeFocus:
-			return 3, true
-		case okFocus:
+		switch {
+		case focus == depthFocus:
+			return 0, true
+		case focus > onlyDirs && focus <= includeFocus:
+			return focus - 1, true
+		case focus == okFocus:
 			return okFocus - 1, true
-		case cancelFocus:
+		case focus == cancelFocus:
 			return okFocus, true
 		default:
 			return focus, false
 		}
 	case tcell.KeyRight:
-		switch focus {
-		case 1:
-			return 2, true
-		case 2:
-			return 3, true
-		case 3:
-			return includeFocus, true
-		case okFocus:
+		switch {
+		case focus >= onlyDirs && focus < includeFocus:
+			return focus + 1, true
+		case focus == okFocus:
 			return cancelFocus, true
 		default:
 			return focus, false
@@ -134,15 +133,15 @@ func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key)
 		if hasSelectionsCheckbox && focus == selectionsFocus {
 			return includeFocus, true
 		}
-		if focus == 1 || focus == 2 || focus == 3 || focus == includeFocus {
-			return 0, true
+		if inRow {
+			return depthFocus, true
 		}
 		return focus - 1, true
 	case tcell.KeyDown:
 		if focus == 0 || focus == cancelFocus {
 			return focus, false
 		}
-		if focus == 1 || focus == 2 || focus == 3 || focus == includeFocus {
+		if inRow {
 			if hasSelectionsCheckbox {
 				return selectionsFocus, true
 			}

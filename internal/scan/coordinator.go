@@ -3,6 +3,7 @@ package scan
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
@@ -22,6 +23,7 @@ type coordinatorCmd struct {
 	restart         *StartOpts
 	narrowSelection []string
 	widen           bool
+	maxDepth        *int
 	match           *MatchRequest
 	done            chan struct{}
 }
@@ -97,6 +99,13 @@ func (c *Coordinator) NarrowSelection(roots []string) {
 	c.cmd <- coordinatorCmd{narrowSelection: out}
 }
 
+// SetMaxDepth lowers the depth limit: running walks stop at it and deeper entries are
+// pruned from the index (IndexReplaced). Raising it (including 0 = unlimited) only
+// records the value; the caller restarts the session to index the missing levels.
+func (c *Coordinator) SetMaxDepth(n int) {
+	c.cmd <- coordinatorCmd{maxDepth: &n}
+}
+
 // WidenSelection starts the panel root walk if missing.
 func (c *Coordinator) Widen() {
 	c.cmd <- coordinatorCmd{widen: true}
@@ -150,6 +159,10 @@ func (c *Coordinator) loop() {
 			case cmd.narrowSelection != nil:
 				if s := c.activeSession(); s != nil {
 					s.narrowSelection(cmd.narrowSelection)
+				}
+			case cmd.maxDepth != nil:
+				if s := c.activeSession(); s != nil {
+					s.setMaxDepth(*cmd.maxDepth)
 				}
 			case cmd.widen:
 				if s := c.activeSession(); s != nil {
@@ -389,7 +402,12 @@ func (s *session) startWalk(root string, skipIndexedSelectionSubtrees bool) {
 		// An explicitly selected directory is searched in full even when git-ignored.
 		gi = nil
 	}
+	walkDepth := s.walkMaxDepth(root)
+	if s.opts.MaxDepth > 0 && walkDepth <= 0 {
+		return // root already sits at the depth limit
+	}
 	wopts := WalkOptions{
+		MaxDepth:      walkDepth,
 		Root:          root,
 		IncludeHidden: s.opts.IncludeHidden,
 		Gitignore:     gi,
@@ -399,6 +417,60 @@ func (s *session) startWalk(root string, skipIndexedSelectionSubtrees bool) {
 	sess := startRootWalk(s.ctx, root, wopts)
 	s.walks[root] = &walkHandle{root: root, sess: sess}
 	go s.readWalk(sess, gen, root)
+}
+
+// depthOf is the number of path segments of a RelLine ("a/b" is 2; the root "." is 0).
+func depthOf(rel string) int {
+	if rel == "." || rel == "" {
+		return 0
+	}
+	return strings.Count(rel, "/") + 1
+}
+
+// walkMaxDepth is the level limit for a walk rooted at root: MaxDepth less the
+// root's own depth below DisplayRoot (0 = unlimited).
+func (s *session) walkMaxDepth(root string) int {
+	if s.opts.MaxDepth <= 0 {
+		return 0
+	}
+	return s.opts.MaxDepth - depthOf(relLine(filepath.Clean(s.opts.DisplayRoot), root))
+}
+
+// withinMaxDepth drops entries deeper than the session limit (in place).
+func (s *session) withinMaxDepth(batch []Entry) []Entry {
+	if s.opts.MaxDepth <= 0 {
+		return batch
+	}
+	kept := batch[:0]
+	for _, e := range batch {
+		if depthOf(e.RelLine) <= s.opts.MaxDepth {
+			kept = append(kept, e)
+		}
+	}
+	return kept
+}
+
+func (s *session) setMaxDepth(n int) {
+	lower := n > 0 && (s.opts.MaxDepth == 0 || n < s.opts.MaxDepth)
+	s.opts.MaxDepth = n
+	if !lower {
+		return
+	}
+	for root, w := range s.walks {
+		if limit := s.walkMaxDepth(root); limit > 0 {
+			w.sess.SetMaxDepth(limit)
+			continue
+		}
+		w.sess.Abort()
+		delete(s.walks, root)
+	}
+	var filtered []Entry
+	s.idx.View(func(entries []Entry, _ int) {
+		filtered = s.withinMaxDepth(append([]Entry(nil), entries...))
+	})
+	s.idx.ReplaceEntries(s.opts.DisplayRoot, filtered)
+	s.emitIndexReplaced(filtered)
+	s.maybeFinish()
 }
 
 func (s *session) readWalk(sess *rootWalk, gen int, root string) {
@@ -447,7 +519,7 @@ func (s *session) ingestBatch(walkRoot string, batch []Entry) {
 			batch[i].RelLine = relLine(displayRoot, abs)
 		}
 	}
-	if added := s.idx.Append(displayRoot, batch); len(added) > 0 {
+	if added := s.idx.Append(displayRoot, s.withinMaxDepth(batch)); len(added) > 0 {
 		s.emitCount(added)
 	}
 	s.maybeFinish()
@@ -538,6 +610,7 @@ func (s *session) emitIndexFinishedIfReady() {
 }
 
 func (s *session) ingestHiddenBatch(batch []Entry) {
+	batch = s.withinMaxDepth(batch)
 	if len(batch) == 0 {
 		return
 	}

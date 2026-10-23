@@ -20,6 +20,8 @@ type StartOpts struct {
 	Walk                 fswalk.Params
 	// DirsOnly indexes directories only (jump mode).
 	DirsOnly bool
+	// MaxDepth limits indexed entries to this many path segments below DisplayRoot; 0 = unlimited.
+	MaxDepth int
 }
 
 // Event is sent from the scan coordinator to the UI thread.

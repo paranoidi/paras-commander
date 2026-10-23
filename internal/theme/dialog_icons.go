@@ -61,10 +61,10 @@ func (t Theme) IconDialogZoxide() string {
 }
 
 // IconDialogDepth returns the marker before the find indexing depth in the find dialog
-// title. When UseNerdfontIcons is false, returns "depth".
+// title and before the max-depth input. When UseNerdfontIcons is false, returns "Depth".
 func (t Theme) IconDialogDepth() string {
 	if !t.UseNerdfontIcons {
-		return "depth"
+		return "Depth"
 	}
 	return t.dialogIcon(IconKeyDialogDepth, "\uef81")
 }
