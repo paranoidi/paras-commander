@@ -70,6 +70,25 @@ type JobsViewState struct {
 	SucceededScroll int
 	// ConflictButtonFocus is the focused action index in the conflict panel (0..5).
 	ConflictButtonFocus int
+	// Maximized draws the focused Errors or Succeeded pane fullscreen with wrapped lines.
+	Maximized bool
+}
+
+// JobsMaximizedRect is the bounding rect of the jobs Primary and Secondary columns, where a
+// maximized Errors/Succeeded pane is drawn.
+func JobsMaximizedRect(layout Layout) Rect {
+	p, s := layout.Primary, layout.Secondary
+	x, y := min(p.X, s.X), min(p.Y, s.Y)
+	return Rect{X: x, Y: y, Width: max(p.X+p.Width, s.X+s.Width) - x, Height: max(p.Y+p.Height, s.Y+s.Height) - y}
+}
+
+// WrapJobsPaneLines word-wraps lines to the text width of a lines panel drawn in rect.
+func WrapJobsPaneLines(lines []string, rect Rect) []string {
+	var out []string
+	for _, l := range lines {
+		out = append(out, WrapTextLines(l, max(rect.Width-4, 1))...)
+	}
+	return out
 }
 
 // CapJobSucceededLines truncates a job's Succeeded log to avoid unbounded memory in long sessions.
@@ -110,11 +129,26 @@ func drawJobsView(
 	throughputChartEnabled bool,
 	rateLimitBPS int64,
 ) {
-	drawJobsListPanel(screen, layout.Primary, state, jobs, styles, now, chromeBlocked, rateLimitBPS)
 	var sel JobEntry
 	if state.Selected >= 0 && state.Selected < len(jobs) {
 		sel = jobs[state.Selected]
 	}
+	if state.Maximized {
+		errs := JobErrorLines(sel)
+		_, _, errorsRect, succeededRect := SplitJobsSecondaryPanels(layout.Secondary, JobEntryShowsConflictPanel(sel), JobDetailLineCount(sel, now, throughputChartEnabled), len(errs))
+		switch focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), errorsRect.Height > 0, succeededRect.Height > 0)) {
+		case JobsPaneErrors:
+			body := styles.JobsFailed
+			full := JobsMaximizedRect(layout)
+			drawJobsLinesPanel(screen, full, " "+styles.IconJobsList("failed")+" Errors ", WrapJobsPaneLines(errs, full), false, state.ErrorsScroll, &body, styles, chromeBlocked, true, true)
+			return
+		case JobsPaneSucceeded:
+			full := JobsMaximizedRect(layout)
+			drawJobsLinesPanel(screen, full, " Succeeded ", WrapJobsPaneLines(succeeded[sel.ID], full), true, state.SucceededScroll, nil, styles, chromeBlocked, true, true)
+			return
+		}
+	}
+	drawJobsListPanel(screen, layout.Primary, state, jobs, styles, now, chromeBlocked, rateLimitBPS)
 	detailLines := JobDetailLineCount(sel, now, throughputChartEnabled)
 	showConflict := JobEntryShowsConflictPanel(sel)
 	errorLines := JobErrorLines(sel)
@@ -126,10 +160,10 @@ func drawJobsView(
 	drawJobsDetailPanel(screen, detailRect, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, userHomeDir, throughputChartEnabled)
 	if errorsRect.Height > 0 {
 		body := styles.JobsFailed
-		drawJobsLinesPanel(screen, errorsRect, " "+styles.IconJobsList("failed")+" Errors ", errorLines, "", state.ErrorsScroll, &body, styles, chromeBlocked, focused == JobsPaneErrors)
+		drawJobsLinesPanel(screen, errorsRect, " "+styles.IconJobsList("failed")+" Errors ", errorLines, false, state.ErrorsScroll, &body, styles, chromeBlocked, focused == JobsPaneErrors, false)
 	}
 	if succeededRect.Height > 0 {
-		drawJobsLinesPanel(screen, succeededRect, " Succeeded ", succeeded[sel.ID], " No activity", state.SucceededScroll, nil, styles, chromeBlocked, focused == JobsPaneSucceeded)
+		drawJobsLinesPanel(screen, succeededRect, " Succeeded ", succeeded[sel.ID], true, state.SucceededScroll, nil, styles, chromeBlocked, focused == JobsPaneSucceeded, false)
 	}
 }
 
@@ -158,8 +192,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 	visibleRows := PanelListRows(rect)
 	if visibleRows <= 0 || len(jobs) == 0 {
 		if visibleRows > 0 {
-			emptyStyle := styles.JobsRow.Background(bg)
-			primitive.Text(screen, contentX, rect.Y+2, contentW, " No jobs ", emptyStyle)
+			primitive.Text(screen, contentX, rect.Y+2, contentW, styles.EmptyText(), styles.PanelEmptyStyle().Background(bg))
 		}
 		return
 	}
@@ -276,14 +309,19 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 		if i+scroll < len(all) {
 			line = all[i+scroll]
 		}
+		if sel.ID == "" && i+scroll == 1 { // empty-detail placeholder row
+			primitive.Text(screen, textX, contentTop+i, textW, styles.EmptyText(), styles.PanelEmptyStyle().Background(layout.ContentBG))
+			continue
+		}
 		primitive.Text(screen, textX, contentTop+i, textW, line, body)
 	}
 }
 
 // drawJobsLinesPanel draws a scrollable list of text lines (the Errors and Succeeded panels).
-// emptyText is shown, after a blank row, when lines is empty. A non-nil lineStyle overrides the
-// body text style (foreground only: the panel background is kept).
-func drawJobsLinesPanel(screen tcell.Screen, rect Rect, title string, lines []string, emptyText string, scroll int, lineStyle *tcell.Style, styles theme.Theme, chromeBlocked bool, focused bool) {
+// showEmpty draws the themed empty text, after a blank row, when lines is empty. A non-nil lineStyle overrides the
+// body text style (foreground only: the panel background is kept). wrapped lines already fit the
+// text width and are not path-truncated.
+func drawJobsLinesPanel(screen tcell.Screen, rect Rect, title string, lines []string, showEmpty bool, scroll int, lineStyle *tcell.Style, styles theme.Theme, chromeBlocked bool, focused bool, wrapped bool) {
 	layout := drawAuxPanelChrome(screen, rect, title, "", focused, chromeBlocked, false, styles)
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	if lineStyle != nil && !chromeBlocked {
@@ -294,8 +332,9 @@ func drawJobsLinesPanel(screen tcell.Screen, rect Rect, title string, lines []st
 	if contentH <= 0 {
 		return
 	}
-	if len(lines) == 0 {
-		lines = []string{"", emptyText}
+	empty := len(lines) == 0
+	if empty {
+		lines = []string{"", ""}
 	}
 	scroll = min(max(scroll, 0), max(0, len(lines)-contentH))
 
@@ -306,7 +345,11 @@ func drawJobsLinesPanel(screen tcell.Screen, rect Rect, title string, lines []st
 		if i+scroll < len(lines) {
 			line = lines[i+scroll]
 		}
-		if line != "" && line != emptyText {
+		if empty && showEmpty && i+scroll == 1 {
+			primitive.Text(screen, textX, contentTop+i, textW, styles.EmptyText(), styles.PanelEmptyStyle().Background(layout.ContentBG))
+			continue
+		}
+		if !wrapped && line != "" {
 			line = primitive.FitPathForWidth(line, textW)
 		}
 		primitive.Text(screen, textX, contentTop+i, textW, line, body)
@@ -392,7 +435,7 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 		pathMax = jobsDetailLineBudgetFallback
 	}
 	if j.ID == "" {
-		return []string{"No job selected"}
+		return []string{"", "", ""} // middle row is drawn as the themed empty text
 	}
 	prefixDestination := "Destination: "
 	prefixError := "Error:       "

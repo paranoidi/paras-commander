@@ -151,8 +151,8 @@ func (a *App) appendMessageLogLines(lines []string, urgency ui.MessageUrgency) {
 		}
 	}
 	a.model.MessageLog = append(batch, a.model.MessageLog...)
-	if !wasAtTop && len(batch) > 0 {
-		a.model.MessagesView.Selected++
+	if !wasAtTop {
+		a.model.MessagesView.Selected += len(batch)
 	}
 	for len(a.model.MessageLog) > max {
 		a.model.MessageLog = a.model.MessageLog[:max]

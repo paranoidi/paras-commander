@@ -613,3 +613,27 @@ func TestDialogTextSelectStyleFallsBackToSurface(t *testing.T) {
 		t.Fatalf("bg = %v, want %v", bg, want)
 	}
 }
+
+func TestEmptyTextAndStyle(t *testing.T) {
+	var bare Theme
+	if got := bare.EmptyText(); got != "[empty]" {
+		t.Fatalf("fallback EmptyText = %q", got)
+	}
+	if fg, _, _ := bare.PanelEmptyStyle().Decompose(); fg != tcell.PaletteColor(8) {
+		t.Fatalf("fallback fg = %v", fg)
+	}
+	set := Theme{Icons: map[string]string{IconKeyEmpty: "nothing"}, PanelEmpty: tcell.StyleDefault.Foreground(tcell.ColorRed)}
+	if got := set.EmptyText(); got != "nothing" {
+		t.Fatalf("EmptyText = %q", got)
+	}
+	if fg, _, _ := set.PanelEmptyStyle().Decompose(); fg != tcell.ColorRed {
+		t.Fatalf("fg = %v", fg)
+	}
+	def := Default()
+	if def.EmptyText() != "[empty]" {
+		t.Fatalf("default EmptyText = %q", def.EmptyText())
+	}
+	if fg, _, _ := def.PanelEmptyStyle().Decompose(); fg != tcell.PaletteColor(8) {
+		t.Fatalf("default fg = %v", fg)
+	}
+}

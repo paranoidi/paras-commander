@@ -1,6 +1,6 @@
 package jobs
 
-// collectAllJobsUnlocked gathers job pointers from every ownership bucket in display order.
+// collectAllJobsUnlocked gathers job pointers from every ownership bucket in display order: in-flight buckets and the queue in run order, then finished jobs newest first.
 // Caller must hold s.mu and s.queue.mu. The same job ID may appear in more than one bucket
 // during transitions (e.g. active not cleared yet while entering waitingBlocker); use
 // dedupeJobsByID before UI use.
@@ -22,8 +22,8 @@ func (s *State) collectAllJobsUnlocked() []*Job {
 		}
 	}
 	all = append(all, s.queue.allJobsUnlocked()...)
-	if len(s.finished) > 0 {
-		all = append(all, s.finished...)
+	for i := len(s.finished) - 1; i >= 0; i-- { // most recently finished first
+		all = append(all, s.finished[i])
 	}
 	return all
 }

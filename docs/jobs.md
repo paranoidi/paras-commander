@@ -10,7 +10,9 @@ Open the jobs view with `Alt+J` (`jobs.open`, **Display -> Jobs**, Esc menu
 `j`). It has a Queue panel with Type, Status, ETA, Speed and Progress, plus
 Details, Errors and Succeeded panels for the selected job. When a job is
 waiting for an answer, opening the view selects it and focuses the conflict
-panel. Keys are rebindable under `[jobs]` in `keybindings.toml`.
+panel. Running and queued jobs are listed first in run order (so the queue
+move keys match the screen), followed by finished jobs with the most recent
+first. Keys are rebindable under `[jobs]` in `keybindings.toml`.
 
 | Key | Action |
 |---|---|
@@ -21,6 +23,7 @@ panel. Keys are rebindable under `[jobs]` in `keybindings.toml`.
 | `F8` | Clear finished jobs (`jobs.clear-finished`) |
 | `+` / `-` / `Ctrl+U` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
 | `Tab` | Cycle the panels |
+| `Enter` | Maximize the focused Errors or Succeeded panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `q`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view (`jobs.close`) |
 
 Jobs copy and move one at a time; deletes start immediately. Add a transfer

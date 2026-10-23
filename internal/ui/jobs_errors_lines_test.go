@@ -37,3 +37,25 @@ func TestJobsPaneOrder(t *testing.T) {
 		t.Fatalf("order = %v", got)
 	}
 }
+
+func TestWrapJobsPaneLinesWrapsLongLine(t *testing.T) {
+	rect := Rect{X: 0, Y: 0, Width: 24, Height: 10}
+	long := "harbor lantern meadow thistle orchard willow pebble"
+	got := WrapJobsPaneLines([]string{long, "short"}, rect)
+	if len(got) < 3 {
+		t.Fatalf("lines = %v, want long line wrapped into several rows", got)
+	}
+	for _, l := range got {
+		if len([]rune(l)) > rect.Width-4 {
+			t.Fatalf("line %q wider than %d", l, rect.Width-4)
+		}
+	}
+}
+
+func TestJobsMaximizedRectCoversBothColumns(t *testing.T) {
+	l := Layout{Primary: Rect{X: 0, Y: 1, Width: 40, Height: 20}, Secondary: Rect{X: 40, Y: 1, Width: 39, Height: 20}}
+	want := Rect{X: 0, Y: 1, Width: 79, Height: 20}
+	if got := JobsMaximizedRect(l); got != want {
+		t.Fatalf("rect = %+v, want %+v", got, want)
+	}
+}

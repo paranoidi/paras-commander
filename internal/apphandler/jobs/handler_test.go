@@ -532,3 +532,105 @@ func TestAddTransferJobCopyKeepsDereferenceSymlinks(t *testing.T) {
 		t.Fatal("Copy job should keep DereferenceSymlinks as requested")
 	}
 }
+
+// newMaximizeTestHandler builds a jobs-view handler with a failed job selected and the Errors
+// pane focused (FocusPane 2: list, Details, Errors).
+func newMaximizeTestHandler(t *testing.T) (*Handler, *ui.Model, *jobs.State) {
+	t.Helper()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(100, 30)
+
+	state := jobs.NewState()
+	state.AddJob(&jobs.Job{
+		ID:          "failing",
+		Type:        jobs.TypeCopy,
+		Status:      jobs.StatusFailed,
+		Error:       "orchard thistle meadow lantern",
+		Sources:     pathloc.PathsForTest("/orchard"),
+		Destination: pathloc.MustParse("/meadow"),
+	})
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	model := &ui.Model{}
+	host := jobsHostKeymapStub{lookup: func(ev *tcell.EventKey) string {
+		if id, ok := bundle.Jobs.Lookup(ev); ok {
+			return id
+		}
+		return ""
+	}}
+	h := New(Deps{Host: host, Screen: screen, Model: model, State: state, Config: config.Default(), Keys: bundle.Global, KeysJobs: bundle.Jobs})
+	h.OpenJobsView()
+	model.JobsView.FocusPane = 2
+	return h, model, state
+}
+
+func TestJobsViewEnterMaximizesErrorsAndKeysRestore(t *testing.T) {
+	t.Parallel()
+	keys := map[string]*tcell.EventKey{
+		"esc":   tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone),
+		"q":     tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone),
+		"enter": tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone),
+		"left":  tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone),
+	}
+	for name, ev := range keys {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			h, model, _ := newMaximizeTestHandler(t)
+			h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+			if !model.JobsView.Maximized {
+				t.Fatal("Enter on Errors pane did not maximize")
+			}
+			h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+			if !model.JobsView.Maximized || model.JobsView.FocusPane != 2 {
+				t.Fatal("Tab must be swallowed while maximized")
+			}
+			h.HandleJobsViewKey(ev)
+			if model.JobsView.Maximized {
+				t.Fatalf("%s did not restore layout", name)
+			}
+			if model.ViewMode != ui.ViewJobs {
+				t.Fatalf("%s closed the jobs view", name)
+			}
+		})
+	}
+}
+
+func TestJobsViewEnterOnListPaneDoesNotMaximize(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	model.JobsView.FocusPane = 0
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if model.JobsView.Maximized {
+		t.Fatal("Enter on list pane maximized")
+	}
+}
+
+func TestJobsViewEnterOnBlockerPaneStillSubmits(t *testing.T) {
+	t.Parallel()
+	h, model, state := newMaximizeTestHandler(t)
+	state.AddJob(&jobs.Job{ID: "wait", Type: jobs.TypeCopy, Status: jobs.StatusRunning, Sources: pathloc.PathsForTest("/lantern"), Destination: pathloc.MustParse("/harbor")})
+	state.ApplyEvent(jobs.Event{
+		Type: jobs.EventJobBlockerRequest, JobID: "wait", Status: jobs.StatusWaitingDecision,
+		Blocker: &jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{Source: "/lantern/f", Destination: "/harbor/f"}},
+	})
+	h.SyncJobsList()
+	h.OpenJobsView()
+	if model.JobsView.FocusPane != 1 {
+		t.Fatalf("FocusPane = %d, want blocker pane", model.JobsView.FocusPane)
+	}
+	model.JobsView.ConflictButtonFocus = 1
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if model.JobsView.Maximized {
+		t.Fatal("Enter on blocker pane maximized")
+	}
+	// submitJobsConflictDecision resets the button focus, so 0 proves Enter reached the buttons.
+	if model.JobsView.ConflictButtonFocus != 0 {
+		t.Fatalf("ConflictButtonFocus = %d, want 0 after Enter submitted", model.JobsView.ConflictButtonFocus)
+	}
+}

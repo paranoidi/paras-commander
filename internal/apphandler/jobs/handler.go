@@ -161,6 +161,15 @@ func (h *Handler) TryDispatch(actionID string) bool {
 			h.closeJobsView()
 		}
 		return true
+	case keymap.ActionJobsMaximizePane:
+		if h.model.ViewMode != ui.ViewJobs {
+			return true
+		}
+		if pane, _, ok := h.maximizablePane(); ok && (pane == ui.JobsPaneErrors || pane == ui.JobsPaneSucceeded) {
+			h.model.JobsView.Maximized = true
+			return true
+		}
+		return false // let Enter reach the blocker pane's buttons
 	case keymap.ActionJobsClearFinished:
 		if h.model.ViewMode != ui.ViewJobs {
 			return true
@@ -210,6 +219,10 @@ func (h *Handler) TryDispatch(actionID string) bool {
 
 func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 	h.clampJobsFocusPane()
+	if h.model.JobsView.Maximized {
+		h.handleJobsMaximizedKey(event)
+		return false
+	}
 	// Esc closes this screen only; it must not run the global quit action even if
 	// the user binds quit to Esc in keybindings.toml.
 	switch event.Key() {
@@ -478,6 +491,53 @@ func (h *Handler) clampJobsFocusPane() {
 	if h.model.JobsView.FocusPane > maxPane {
 		h.model.JobsView.FocusPane = maxPane
 	}
+	if h.model.JobsView.Maximized {
+		if pane, _, ok := h.maximizablePane(); !ok || (pane != ui.JobsPaneErrors && pane != ui.JobsPaneSucceeded) {
+			h.model.JobsView.Maximized = false
+		}
+	}
+}
+
+// maximizablePane returns the focused pane and its source lines; ok is false when the focus
+// index is out of range.
+func (h *Handler) maximizablePane() (ui.JobsPane, []string, bool) {
+	order, _ := h.jobsPaneLayout()
+	fp := h.model.JobsView.FocusPane
+	if fp < 0 || fp >= len(order) {
+		return 0, nil, false
+	}
+	switch pane := order[fp]; pane {
+	case ui.JobsPaneErrors:
+		return pane, ui.JobErrorLines(h.selectedJobEntry()), true
+	case ui.JobsPaneSucceeded:
+		return pane, h.model.JobSucceeded[h.selectedJobEntry().ID], true
+	default:
+		return pane, nil, true
+	}
+}
+
+// handleJobsMaximizedKey handles keys while an Errors/Succeeded pane is maximized: Esc, Enter,
+// Left and q restore the layout, Up/Down/PgUp/PgDn scroll the wrapped lines, the rest is swallowed.
+func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
+	switch event.Key() {
+	case tcell.KeyEsc, tcell.KeyEnter, tcell.KeyLeft:
+		h.model.JobsView.Maximized = false
+		return
+	case tcell.KeyRune:
+		if event.Rune() == 'q' && event.Modifiers() == tcell.ModNone {
+			h.model.JobsView.Maximized = false
+		}
+		return
+	}
+	pane, lines, _ := h.maximizablePane()
+	width, height := h.screen.Size()
+	full := ui.JobsMaximizedRect(h.host.LayoutForTerminalSize(width, height))
+	total := ui.JobsLinesPanelLineCount(ui.WrapJobsPaneLines(lines, full))
+	scroll := &h.model.JobsView.ErrorsScroll
+	if pane == ui.JobsPaneSucceeded {
+		scroll = &h.model.JobsView.SucceededScroll
+	}
+	scrollPane(event.Key(), scroll, max(0, total-ui.JobsPanelContentRows(full)))
 }
 
 func (h *Handler) jobsDetailLineCountForSelection() int {

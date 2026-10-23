@@ -215,6 +215,7 @@ const (
 	ActionJobsOpen          = "jobs.open"
 	ActionDedupOpen         = "dedup.open"
 	ActionJobsClose         = "jobs.close"
+	ActionJobsMaximizePane  = "jobs.maximize-pane"
 	ActionJobsClearFinished = "jobs.clear-finished"
 	ActionJobsCancel        = "jobs.cancel"
 	ActionJobsPause         = "jobs.pause"
@@ -516,6 +517,7 @@ var KnownActions = map[string]struct{}{
 	ActionJobsOpen:          {},
 	ActionDedupOpen:         {},
 	ActionJobsClose:         {},
+	ActionJobsMaximizePane:  {},
 	ActionJobsClearFinished: {},
 	ActionJobsCancel:        {},
 	ActionJobsPause:         {},

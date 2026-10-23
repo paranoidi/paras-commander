@@ -40,11 +40,6 @@ func TestEnsureSelectionVisibleTable(t *testing.T) {
 			if msgs.Selected != tt.wantSel || msgs.ListScroll != tt.wantScroll {
 				t.Fatalf("messages Selected=%d ListScroll=%d, want %d %d", msgs.Selected, msgs.ListScroll, tt.wantSel, tt.wantScroll)
 			}
-			cmds := CommandsViewState{Selected: tt.selected, ListScroll: tt.listScroll}
-			cmds.EnsureSelectionVisible(make([]CommandRunEntry, max(0, tt.total)), tt.visibleRows)
-			if cmds.Selected != tt.wantSel || cmds.ListScroll != tt.wantScroll {
-				t.Fatalf("commands Selected=%d ListScroll=%d, want %d %d", cmds.Selected, cmds.ListScroll, tt.wantSel, tt.wantScroll)
-			}
 			dedup := DedupPane{Selected: tt.selected, ListScroll: tt.listScroll}
 			dedup.EnsureSelectionVisible(tt.total, tt.visibleRows)
 			if dedup.Selected != tt.wantSel || dedup.ListScroll != tt.wantScroll {

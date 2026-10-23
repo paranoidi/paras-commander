@@ -35,12 +35,12 @@ The selection is cleared when the batch starts. A failed batch shows a summary t
 
 ## Commands view
 
-Open with `Alt+C` (`commands.open`), **Display -> Commands** or Esc menu `E`. The left list holds one row per run with its phase and exit marker; the command is shown as written, followed by one line per macro it used. Stdout and Stderr appear in two panes, wrapped to the pane width.
+Open with `Alt+C` (`commands.open`), **Display -> Commands** or Esc menu `E`. The left list holds one row per run, newest at the top, with its phase and exit marker; opening the view selects the newest run; the command is shown as written, followed by one line per macro it used. Stdout and Stderr appear in two panes, wrapped to the pane width.
 
 | Key | Action |
 |---|---|
 | `Tab` / `Shift+Tab` | Cycle list, stdout, stderr |
-| `Up` `Down` `PgUp` `PgDn` `Home` `End` | Scroll the focused pane. Panes follow the tail until you scroll up; reaching the bottom follows again |
+| `Up` `Down` `PgUp` `PgDn` `Home` `End` | Move through the run list as drawn (`Up` toward newer runs, `Home` the top row), or scroll the focused output pane. Panes follow the tail until you scroll up; reaching the bottom follows again |
 | `F8` | Terminate the selected running command (`commands.terminate`) |
 | `Shift+F8` | Kill it (`commands.kill`) |
 | a printable character | Type-to-jump filter over the command lines |

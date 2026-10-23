@@ -1745,6 +1745,14 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "x",
 		},
 		{
+			ID:          ActionJobsMaximizePane,
+			Views:       HelpJobs,
+			Title:       "Maximize Errors/Succeeded pane",
+			Section:     "Jobs",
+			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
+			Keywords:    []string{"fullscreen", "wrap", "errors", "succeeded", "zoom"},
+		},
+		{
 			ID:          ActionJobsClearFinished,
 			Views:       HelpJobs,
 			Title:       "Clear finished jobs",

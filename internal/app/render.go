@@ -278,6 +278,7 @@ func (a *App) render() {
 	a.model.PanelZoomEnabled = a.effectiveZoomActivePanelLayout(w, h, previewOpen)
 	a.applyCarouselPanelZoomPercents(w)
 	if a.model.ViewMode == ui.ViewCommands {
+		a.commandsCtrl.EnsureSelectionVisible() // rows appended while open shift the display
 		a.commandsMu.RLock()
 		a.model.CommandsDisplay = append([]ui.CommandRunEntry(nil), a.model.CommandsList...)
 		a.commandsMu.RUnlock()

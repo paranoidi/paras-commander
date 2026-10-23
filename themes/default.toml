@@ -73,6 +73,7 @@ label.shift = { fg = "bright_black" }
 [panel]                      # panel-wide text
 text = { fg = "white" }
 hint = { fg = "bright_white", bold = true }
+empty = { fg = "bright_black" }  # "[empty]" text of empty lists
 
 [panel.row]                  # file-list row colors
 cursor.range = { fg = "black", bg = "yellow", icon = "black" }  # cursor row while a range select is pending
@@ -310,6 +311,7 @@ equal = { fg = "bright_green" }
 content_diff = { fg = "bright_red" }
 
 [icons]
+empty = "[empty]"   # plain text shown in empty lists (not a glyph)
 working = "\uf017"
 file = "\uf15b"
 folder = "\uf07b"

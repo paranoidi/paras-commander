@@ -32,7 +32,7 @@ func drawCommandsView(
 	if state.Selected >= 0 && state.Selected < len(entries) {
 		sel = entries[state.Selected]
 	}
-	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(layout.Secondary, sel, auxPanelBodyText(styles, chromeBlocked, auxPanelContentBG(styles, chromeBlocked)))
+	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(layout.Secondary, sel, auxPanelBodyText(styles, chromeBlocked, auxPanelContentBG(styles, chromeBlocked)), styles)
 	stdoutFocused := state.FocusPane == 1
 	stderrFocused := state.FocusPane == 2
 	drawCommandsStreamPanel(screen, stdoutRect, " Stdout ", StreamScroll(state.StdoutScroll, state.StdoutDetached), stdoutLines, styles, chromeBlocked, stdoutFocused)
@@ -46,44 +46,50 @@ type streamWrapKey struct {
 	textW                      int
 }
 
+type streamWrapVariant struct {
+	base, empty tcell.Style
+	emptyText   string
+}
+
 type streamWrapLines struct{ stdout, stderr [][]AnsiCell }
 
-// streamWrapCache holds the wrapped lines of the last-rendered entry, one copy per base style
+// streamWrapCache holds the wrapped lines of the last-rendered entry, one copy per base/empty-text variant
 // (the renderer and the key handler pass different bases). ponytail: single entry; a running
 // row re-wraps on every change (at most 10/s), upgrade = wrap only the appended tail.
 var streamWrapCache struct {
 	mu     sync.Mutex
 	key    streamWrapKey
-	byBase map[tcell.Style]streamWrapLines
+	byBase map[streamWrapVariant]streamWrapLines
 }
 
-func commandStreamLines(entry CommandRunEntry, textW int, base tcell.Style) streamWrapLines {
+func commandStreamLines(entry CommandRunEntry, textW int, base tcell.Style, styles theme.Theme) streamWrapLines {
 	key := streamWrapKey{entry.ID, entry.Stdout, entry.Stderr, entry.ErrorMsg, textW}
 	c := &streamWrapCache
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.byBase == nil || c.key != key {
-		c.key, c.byBase = key, map[tcell.Style]streamWrapLines{}
+		c.key, c.byBase = key, map[streamWrapVariant]streamWrapLines{}
 	}
-	if l, ok := c.byBase[base]; ok {
+	variant := streamWrapVariant{base, styles.PanelEmptyStyle(), styles.EmptyText()}
+	if l, ok := c.byBase[variant]; ok {
 		return l
 	}
 	l := streamWrapLines{
-		stdout: CommandPanelLines(entry.Stdout, textW, base),
-		stderr: CommandPanelLines(CommandStderrDisplay(entry), textW, base),
+		stdout: CommandPanelLines(entry.Stdout, textW, base, styles),
+		stderr: CommandPanelLines(CommandStderrDisplay(entry), textW, base, styles),
 	}
-	c.byBase[base] = l
+	c.byBase[variant] = l
 	return l
 }
 
 // CommandsStreamPanels returns stdout/stderr panel geometry and wrapped output lines for one run entry.
 // The returned slices are shared with the wrap cache and must not be mutated.
-func CommandsStreamPanels(column Rect, entry CommandRunEntry, base tcell.Style) (stdoutRect, stderrRect Rect, stdoutLines, stderrLines [][]AnsiCell) {
+func CommandsStreamPanels(column Rect, entry CommandRunEntry, base tcell.Style, styles theme.Theme) (stdoutRect, stderrRect Rect, stdoutLines, stderrLines [][]AnsiCell) {
 	textW := column.Width - 4
 	if textW < 1 {
 		textW = 1
 	}
-	l := commandStreamLines(entry, textW, base)
+	l := commandStreamLines(entry, textW, base, styles)
 	stdoutLines, stderrLines = l.stdout, l.stderr
 	stderrLineBudget := max(8, min(len(stderrLines)+2, 24))
 	stdoutRect, stderrRect = SplitJobsSecondaryColumnFlexTop(column, stderrLineBudget)
@@ -93,7 +99,7 @@ func CommandsStreamPanels(column Rect, entry CommandRunEntry, base tcell.Style) 
 // CommandsStreamMaxScroll returns the largest valid scroll offset of the stdout and stderr
 // panes for entry (the single source for key handling).
 func CommandsStreamMaxScroll(column Rect, entry CommandRunEntry) (stdoutMax, stderrMax int) {
-	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(column, entry, tcell.StyleDefault)
+	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(column, entry, tcell.StyleDefault, theme.Theme{})
 	return max(0, len(stdoutLines)-JobsPanelContentRows(stdoutRect)),
 		max(0, len(stderrLines)-JobsPanelContentRows(stderrRect))
 }
@@ -119,9 +125,8 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 
 	visibleRows := JobsPanelContentRows(rect) // no header row: the list starts below the border
 	if visibleRows <= 0 || len(entries) == 0 {
-		if visibleRows > 0 {
-			emptyStyle := styles.JobsRow.Background(bg)
-			primitive.Text(screen, contentX, rect.Y+1, contentW, " No runs ", emptyStyle)
+		if visibleRows > 1 { // second content row, matching the Jobs list
+			primitive.Text(screen, contentX, rect.Y+2, contentW, styles.EmptyText(), styles.PanelEmptyStyle().Background(bg))
 		}
 		return
 	}
@@ -135,7 +140,8 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 	rowBase := styles.JobsRow.Background(bg)
 	y := rect.Y + 1
 	bottom := y + visibleRows
-	for idx := scroll; idx < n && y < bottom; idx++ {
+	for row := scroll; row < n && y < bottom; row++ {
+		idx := CommandsDisplayIndex(n, row) // newest first
 		entry := entries[idx]
 		selected := idx == state.Selected
 		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
@@ -323,13 +329,14 @@ func commandPhaseStyle(e CommandRunEntry, styles theme.Theme) tcell.Style {
 }
 
 // CommandPanelLines splits command stdout/stderr into wrapped display lines for the Commands view.
-func CommandPanelLines(text string, width int, base tcell.Style) [][]AnsiCell {
+func CommandPanelLines(text string, width int, base tcell.Style, styles theme.Theme) [][]AnsiCell {
 	if width < 1 {
 		width = 1
 	}
 	t := strings.ReplaceAll(text, "\r\n", "\n")
 	if strings.TrimSpace(t) == "" {
-		return [][]AnsiCell{AnsiStyledCells(" (empty)", base)}
+		_, bg, _ := base.Decompose()
+		return [][]AnsiCell{nil, AnsiStyledCells(styles.EmptyText(), styles.PanelEmptyStyle().Background(bg))}
 	}
 	return WrapAnsiCells(AnsiStyledCells(t, base), width)
 }

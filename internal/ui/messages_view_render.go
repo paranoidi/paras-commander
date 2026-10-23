@@ -33,8 +33,7 @@ func drawMessagesView(
 	visibleRows := PanelListRows(rect)
 	if visibleRows <= 0 || len(entries) == 0 {
 		if visibleRows > 0 {
-			emptyStyle := styles.JobsRow.Background(bg)
-			primitive.Text(screen, contentX, rect.Y+2, contentW, " No messages yet ", emptyStyle)
+			primitive.Text(screen, contentX, rect.Y+2, contentW, styles.EmptyText(), styles.PanelEmptyStyle().Background(bg))
 		}
 		return
 	}

@@ -25,17 +25,17 @@ func TestCommandsViewViMotionHJKLOnlyWhenModeOn(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
 	openCommandsViewWithEntries(t, app, 2)
-	app.model.CommandsView.Selected = 1
+	app.model.CommandsView.Selected = 0
 
 	app.commandsCtrl.HandleViewKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
-	if app.model.CommandsView.Selected != 1 {
-		t.Fatalf("vi-motion off: 'k' moved selection to %d, want unchanged 1", app.model.CommandsView.Selected)
+	if app.model.CommandsView.Selected != 0 {
+		t.Fatalf("vi-motion off: 'k' moved selection to %d, want unchanged 0", app.model.CommandsView.Selected)
 	}
 
 	app.model.ViMotionMode = true
 	app.commandsCtrl.HandleViewKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
-	if app.model.CommandsView.Selected != 0 {
-		t.Fatalf("vi-motion on: 'k' selection = %d, want 0", app.model.CommandsView.Selected)
+	if app.model.CommandsView.Selected != 1 {
+		t.Fatalf("vi-motion on: 'k' selection = %d, want 1 (up = newer)", app.model.CommandsView.Selected)
 	}
 }
 
@@ -48,18 +48,18 @@ func TestCommandsViewViMotionKMovesSelectionNotKill(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
 	openCommandsViewWithEntries(t, app, 2)
-	app.model.CommandsView.Selected = 1
-	app.model.CommandsList[1].Phase = ui.CommandRunRunning
+	app.model.CommandsView.Selected = 0
+	app.model.CommandsList[0].Phase = ui.CommandRunRunning
 
 	app.model.ViMotionMode = true
 	app.model.Message = ""
 	app.commandsCtrl.HandleViewKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
 
-	if app.model.CommandsView.Selected != 0 {
-		t.Fatalf("'k' with vi-motion on: selection = %d, want 0 (nav, not kill)", app.model.CommandsView.Selected)
+	if app.model.CommandsView.Selected != 1 {
+		t.Fatalf("'k' with vi-motion on: selection = %d, want 1 (nav, not kill)", app.model.CommandsView.Selected)
 	}
-	if app.model.CommandsList[1].Phase != ui.CommandRunRunning {
-		t.Fatalf("'k' with vi-motion on must not kill the running command, Phase = %v", app.model.CommandsList[1].Phase)
+	if app.model.CommandsList[0].Phase != ui.CommandRunRunning {
+		t.Fatalf("'k' with vi-motion on must not kill the running command, Phase = %v", app.model.CommandsList[0].Phase)
 	}
 }
 

@@ -106,3 +106,35 @@ func TestAppendPendingDequeuedSkipsDuplicateID(t *testing.T) {
 		t.Fatalf("pendingDequeued len = %d, want 1", n)
 	}
 }
+
+func TestAllJobsOrdersInFlightFirstThenFinishedNewestFirst(t *testing.T) {
+	t.Parallel()
+	s := NewState()
+	s.mu.Lock()
+	s.active = []*Job{{ID: "run", Status: StatusRunning}}
+	// "orchard" is in a finished slot and still in waitingBlocker: the in-flight copy wins.
+	s.waitingBlocker = []*Job{{ID: "orchard", Status: StatusWaitingDecision}}
+	s.finished = []*Job{
+		{ID: "meadow", Status: StatusCompleted},
+		{ID: "orchard", Status: StatusCompleted},
+		{ID: "lantern", Status: StatusFailed},
+	}
+	s.mu.Unlock()
+
+	var ids []string
+	for _, j := range s.AllJobs() {
+		ids = append(ids, j.ID)
+	}
+	want := []string{"run", "orchard", "lantern", "meadow"}
+	if len(ids) != len(want) {
+		t.Fatalf("ids = %v, want %v", ids, want)
+	}
+	for i := range want {
+		if ids[i] != want[i] {
+			t.Fatalf("ids = %v, want %v", ids, want)
+		}
+	}
+	if st := s.AllJobs()[1].Status; st != StatusWaitingDecision {
+		t.Fatalf("orchard status = %s, want in-flight bucket preferred", st)
+	}
+}

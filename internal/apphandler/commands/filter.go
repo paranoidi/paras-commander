@@ -43,10 +43,16 @@ func (h *Handler) ClearFilter() { h.applyFilter("") }
 // CancelFilter closes the quick filter.
 func (h *Handler) CancelFilter() { h.model.CommandsView.Filter = quickfilter.Filter{} }
 
-// CycleFilterMatch steps the cursor through filter matches, or moves plainly when nothing matches.
+// CycleFilterMatch steps the cursor through filter matches (positive = down the screen, toward
+// older runs; in ranked mode, down the ranking), or moves plainly when nothing matches.
 func (h *Handler) CycleFilterMatch(delta int) {
 	cv := &h.model.CommandsView
-	if cur, ok := cv.Filter.Cycle(cv.Selected, delta, h.host.FilterOptions()); ok {
+	opts := h.host.FilterOptions()
+	step := delta
+	if !opts.CycleRanked {
+		step = -delta // match order is storage order, the reverse of the screen
+	}
+	if cur, ok := cv.Filter.Cycle(cv.Selected, step, opts); ok {
 		h.setSelection(cur)
 		return
 	}

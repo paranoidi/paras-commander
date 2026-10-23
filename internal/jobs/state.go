@@ -434,7 +434,7 @@ func (s *State) EnqueueUndo(id string) (*Job, bool) {
 	return job, true
 }
 
-// AllJobs returns active job (if any), jobs waiting for blocker input, queued jobs, then recently finished jobs.
+// AllJobs returns active job (if any), jobs waiting for blocker input, queued jobs, then recently finished jobs (most recent first).
 // Each job ID appears at most once even if internal buckets overlap during worker transitions.
 // Returned jobs are copies (same convention as ActiveJob/FirstWaitingBlockerJob) so callers can
 // read them after releasing s.mu without racing the worker goroutine's in-place mutations.

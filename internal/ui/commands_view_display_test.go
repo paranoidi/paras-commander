@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 func TestCommandStderrDisplay(t *testing.T) {
@@ -43,7 +44,7 @@ func TestCommandStderrDisplay(t *testing.T) {
 func TestCommandPanelLinesWrapsLongOutput(t *testing.T) {
 	t.Parallel()
 	long := strings.Repeat("word ", 30)
-	lines := CommandPanelLines(long, 20, tcell.StyleDefault)
+	lines := CommandPanelLines(long, 20, tcell.StyleDefault, theme.Theme{})
 	if len(lines) < 2 {
 		t.Fatalf("got %d lines, want wrapped output", len(lines))
 	}
@@ -56,7 +57,7 @@ func TestCommandPanelLinesWrapsLongOutput(t *testing.T) {
 
 func TestCommandPanelLinesCountsVisibleWidthOnly(t *testing.T) {
 	t.Parallel()
-	lines := CommandPanelLines("\x1b[31m"+strings.Repeat("a", 20), 20, tcell.StyleDefault)
+	lines := CommandPanelLines("\x1b[31m"+strings.Repeat("a", 20), 20, tcell.StyleDefault, theme.Theme{})
 	if len(lines) != 1 {
 		t.Fatalf("got %d rows, want 1", len(lines))
 	}

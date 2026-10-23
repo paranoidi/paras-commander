@@ -65,6 +65,9 @@ func (h *Handler) ToggleView() {
 
 // OpenView switches to the Commands view.
 func (h *Handler) OpenView() {
+	if h.model.ViewMode != ui.ViewCommands {
+		h.model.CommandsView.Selected = max(0, h.Len()-1) // newest run, top of the list
+	}
 	h.model.ViewMode = ui.ViewCommands
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.model.MenuDefinitions = menu.CommandsDefinitions(h.keys, h.keysCommands)
@@ -195,26 +198,28 @@ func (h *Handler) closeSelectedPTYRow(idx int) bool {
 	return true
 }
 
-// MoveSelection moves the Commands-list cursor by delta rows (clamped), scrolling into view
-// and resetting stream panes to follow the tail when the row actually changes. Shared by raw arrow-key handling
-// and help-dialog activation.
+// MoveSelection moves the Commands-list cursor by delta rows on screen (negative = up, toward
+// newer runs; clamped), scrolling into view and resetting stream panes to follow the tail
+// when the row actually changes. Shared by raw arrow-key handling and help-dialog activation.
 func (h *Handler) MoveSelection(delta int) {
 	n := h.Len()
-	sel := max(0, h.model.CommandsView.Selected+delta)
-	if n > 0 && sel > n-1 {
-		sel = n - 1
+	if n == 0 {
+		h.setSelection(0)
+		return
 	}
-	h.setSelection(sel)
+	row := max(0, min(n-1, ui.CommandsDisplayIndex(n, h.model.CommandsView.Selected)+delta))
+	h.setSelection(ui.CommandsDisplayIndex(n, row))
 }
 
-// SelectEdge moves the Commands-list cursor to the first (toEnd=false) or last (toEnd=true) row.
+// SelectEdge moves the Commands-list cursor to the top (toEnd=false) or bottom (toEnd=true)
+// row on screen.
 func (h *Handler) SelectEdge(toEnd bool) {
 	n := h.Len()
-	sel := 0
-	if toEnd && n > 0 {
-		sel = n - 1
+	row := 0
+	if toEnd {
+		row = max(0, n-1)
 	}
-	h.setSelection(sel)
+	h.setSelection(ui.CommandsDisplayIndex(n, row))
 }
 
 func (h *Handler) setSelection(sel int) {

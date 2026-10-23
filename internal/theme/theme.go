@@ -126,7 +126,9 @@ type Theme struct {
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
 	PanelText tcell.Style
 	// PanelHint highlights rows related to the cursor row (e.g. duplicate siblings in the dedupe treeview).
-	PanelHint         tcell.Style
+	PanelHint tcell.Style
+	// PanelEmpty styles the empty-list text ([panel] empty); optional, falls back to bright black.
+	PanelEmpty        tcell.Style
 	PanelCursorActive tcell.Style
 	// PanelCursorRange / PanelCursorRangeSelected style the cursor row while a range select
 	// is pending (panel.row.cursor.range[.selected]); PanelRowMarkRangeAnchor styles the anchor mark.
@@ -1222,7 +1224,7 @@ var optionalStyleKeys = func() []string {
 		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
-		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select")
+		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty")
 	return keys
 }()
 
@@ -1557,6 +1559,11 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	panelEmpty, err := optionalStyle(specs, palette, "panel.empty", panelEmptyFallback)
+	if err != nil {
+		return Theme{}, err
+	}
+
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
 		"panel.active.row.cursor":                     {},
@@ -1652,6 +1659,7 @@ func parse(data []byte) (Theme, error) {
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
 		PanelText:                           styles["panel.text"],
 		PanelHint:                           styles["panel.hint"],
+		PanelEmpty:                          panelEmpty,
 		PanelRowMarkRangeAnchor:             panelRowMarkRangeAnchor,
 		PanelCursorRange:                    panelCursorRange,
 		PanelCursorRangeSelected:            panelCursorRangeSelected,
