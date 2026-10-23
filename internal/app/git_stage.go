@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -91,4 +92,32 @@ func (a *App) applyGitStageResult(d gitStageResultPayload) {
 	if dir, err := a.panelByID(other).Path.FilePath(); err == nil && gitignore.ValidWorkTreeRoot(dir) == d.workRoot {
 		_ = a.panelByID(other).Refresh(a.activeViewportRows())
 	}
+}
+
+// gitCommitActive runs an interactive `git commit` (the user's editor) in the active panel's
+// work tree, suspending the TUI while it runs.
+func (a *App) gitCommitActive() {
+	p := a.activePanel()
+	dir, err := p.Path.FilePath()
+	if err != nil {
+		a.setTransientMessage("Not a local directory", ui.MessageUrgencyInfo)
+		return
+	}
+	root := gitignore.ValidWorkTreeRoot(dir)
+	if root == "" {
+		a.setTransientMessage("Not in a git repository", ui.MessageUrgencyWarn)
+		return
+	}
+	// ponytail: sync pre-check; `git diff --cached --quiet` is instant and gates the suspend.
+	if exec.Command("git", "-C", root, "diff", "--cached", "--quiet").Run() == nil {
+		a.setTransientMessage("Nothing staged to commit", ui.MessageUrgencyWarn)
+		return
+	}
+	if err := a.withTerminalReleased(func() error {
+		return cmdrun.RunInteractive(context.Background(), []string{"git", "-C", root, "commit"}, root)
+	}); err != nil {
+		a.setErrorMessage("git commit failed or aborted", err)
+		return
+	}
+	a.reloadPanel(a.model.ActivePanel, "Committed")
 }

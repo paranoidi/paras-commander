@@ -16,11 +16,16 @@ func (a *App) toggleGitFilterMenu() {
 		{Key: 'u', Label: "Unstaged"},
 		{Key: 't', Label: "Tracked"},
 		{Key: 'r', Label: "Untracked"},
+		{Key: 'c', Label: "Commit"},
 	}
 	filters := []*panel.EntryFilter{nil, panel.GitStagedFilter(), panel.GitUnstagedFilter(), panel.GitTrackedFilter(), panel.GitUntrackedFilter()}
 	// onActivate's bool return is the app-quit signal (see handleLeaderMenuKey/InputModeLeaderMenu
 	// in input.go), not a success flag — always return false here.
-	a.openLeaderMenuStrip(items, false, false, false, true, "Git filter", func(i int) bool {
+	a.openLeaderMenuStrip(items, false, false, false, true, "Git", func(i int) bool {
+		if i == len(filters) {
+			a.gitCommitActive()
+			return false
+		}
 		if i < 0 || i >= len(filters) {
 			return false
 		}
