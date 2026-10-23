@@ -42,7 +42,8 @@ func runGitStage(root string, stage bool, paths []string) error {
 	return nil
 }
 
-// gitStageActive stages or unstages the active panel's selection (or cursor entry).
+// gitStageActive stages or unstages the active panel's selection, or the cursor entry and
+// then advances the cursor.
 func (a *App) gitStageActive(stage bool) {
 	p := a.activePanel()
 	dir, err := p.Path.FilePath()
@@ -58,6 +59,9 @@ func (a *App) gitStageActive(stage bool) {
 	paths := panelTargetPaths(p)
 	if len(paths) == 0 {
 		return
+	}
+	if len(p.SelectedPaths) == 0 && p.Cursor < p.VisibleEntryCount()-1 {
+		p.Move(1, a.activeViewportRows())
 	}
 	panelID := a.model.ActivePanel
 	go func() {

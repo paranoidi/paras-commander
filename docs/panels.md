@@ -56,7 +56,7 @@ Inside a local git work tree a two-cell status column appears before the name (n
 
 Directories show a summary of their contents. Status is read in the background with `git status`.
 
-- `Alt++` (`git.stage`) and `Alt+-` (`git.unstage`) stage or unstage the selected entries, or the cursor entry.
+- `Alt++` (`git.stage`) and `Alt+-` (`git.unstage`) stage or unstage the selected entries, or the cursor entry (then moving the cursor to the next entry).
 - `Alt+G` (`panel.git-filter-menu`) opens a menu that limits the panel to Staged, Unstaged, Tracked or Untracked entries. The filter is dropped when you leave the repository.
 - Viewing (`F3`) or quick-viewing a modified file shows its diff; see [Quick view and preview](quick-view-preview.md). `Ctrl+Alt+J` / `Ctrl+Alt+K` jump between changes (`preview.diff-next-hunk` / `preview.diff-prev-hunk`).
 
