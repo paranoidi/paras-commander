@@ -13,8 +13,8 @@ Type to filter; matching is fuzzy against paths relative to the root, best match
 Options in the dialog:
 
 - **Depth** (input at the right end of the query row, reached with Tab or Down from the query): limit the index to this many path levels below the root (`a` is depth 1, `a/b` depth 2). Typing a digit 1-9 sets it, `0`, Backspace or Delete clear it for unlimited; either applies it at once and returns focus to the query. Leaving the field (Tab, Shift+Tab, Up, Down, Left) or pressing Enter, which returns focus to the query, applies it: a lower limit drops the deeper results at once and stops the running scan from going deeper; a higher limit re-indexes to reach the extra levels. The limit starts unlimited each time the dialog opens.
-- **Stay on current volume** (`Alt+V`, default on): do not descend into other mounted file systems.
 - **Include hidden** (`Alt+I`, default off): add dot-entries and git-ignored paths. This does not change the panel's own hidden-file setting.
+- **Stay on current volume** (`Alt+V`, default on): do not descend into other mounted file systems.
 - **Only directories** (`Alt+D`) / **Only files** (`Alt+L`): filter the result list without re-scanning.
 - **Search only from selected directories** (`Alt+S`, shown only when directories are selected in the panel, default on): the search is limited to those directories; uncheck it to widen to the whole panel path.
 

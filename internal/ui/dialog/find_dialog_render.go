@@ -146,17 +146,17 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 
 	cbY := rect.Y + 3
 	const cbGap = 4
-	volumeX := cbCol
+	hiddenX := cbCol
 	if !state.JumpMode {
 		draw.DrawDialogRadio(screen, cbCol, cbY, "Only directories", 'N', state.OnlyDirectories, state.Focus == state.FindDialogOnlyDirsFocus(), false, styles)
 		radio1W := utf8.RuneCountInString(draw.RadioText("Only directories", state.OnlyDirectories)) + 1
 		draw.DrawDialogRadio(screen, cbCol+radio1W+cbGap, cbY, "Only files", 'Y', state.OnlyFiles, state.Focus == state.FindDialogOnlyFilesFocus(), false, styles)
 		radio2W := utf8.RuneCountInString(draw.RadioText("Only files", state.OnlyFiles)) + 1
-		volumeX = cbCol + radio1W + cbGap + radio2W + cbGap
+		hiddenX = cbCol + radio1W + cbGap + radio2W + cbGap
 	}
-	draw.DrawDialogCheckbox(screen, volumeX, cbY, "Stay on current volume", 'V', state.StayOnCurrentVolume, state.Focus == state.FindDialogStayOnVolumeFocus(), false, styles)
-	volumeW := utf8.RuneCountInString(draw.CheckboxText("Stay on current volume", state.StayOnCurrentVolume)) + 1
-	draw.DrawDialogCheckbox(screen, volumeX+volumeW+cbGap, cbY, "Include hidden", 'I', state.IncludeHidden, state.Focus == state.FindDialogIncludeHiddenFocus(), false, styles)
+	draw.DrawDialogCheckbox(screen, hiddenX, cbY, "Include hidden", 'I', state.IncludeHidden, state.Focus == state.FindDialogIncludeHiddenFocus(), false, styles)
+	hiddenW := utf8.RuneCountInString(draw.CheckboxText("Include hidden", state.IncludeHidden)) + 1
+	draw.DrawDialogCheckbox(screen, hiddenX+hiddenW+cbGap, cbY, "Stay on current volume", 'V', state.StayOnCurrentVolume, state.Focus == state.FindDialogStayOnVolumeFocus(), false, styles)
 	if state.ShowSearchSelectionsOption {
 		draw.DrawDialogCheckbox(screen, cbCol, cbY+1, "Search only from selected directories", 'S', state.SearchOnlySelections, state.Focus == state.FindDialogSelectionsFocus(), false, styles)
 	}

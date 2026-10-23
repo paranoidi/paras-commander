@@ -91,12 +91,12 @@ func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key)
 	okFocus := form.OKIndex()
 	cancelFocus := form.CancelIndex()
 	const (
-		depthFocus   = 1
-		onlyDirs     = 2
-		includeFocus = 5
+		depthFocus  = 1
+		onlyDirs    = 2
+		volumeFocus = 5
 	)
 	selectionsFocus := 6
-	inRow := focus >= onlyDirs && focus <= includeFocus
+	inRow := focus >= onlyDirs && focus <= volumeFocus
 
 	switch key {
 	case tcell.KeyTab, tcell.KeyBacktab:
@@ -105,7 +105,7 @@ func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key)
 		switch {
 		case focus == depthFocus:
 			return 0, true
-		case focus > onlyDirs && focus <= includeFocus:
+		case focus > onlyDirs && focus <= volumeFocus:
 			return focus - 1, true
 		case focus == okFocus:
 			return okFocus - 1, true
@@ -116,7 +116,7 @@ func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key)
 		}
 	case tcell.KeyRight:
 		switch {
-		case focus >= onlyDirs && focus < includeFocus:
+		case focus >= onlyDirs && focus < volumeFocus:
 			return focus + 1, true
 		case focus == okFocus:
 			return cancelFocus, true
@@ -131,7 +131,7 @@ func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key)
 			return okFocus - 1, true
 		}
 		if hasSelectionsCheckbox && focus == selectionsFocus {
-			return includeFocus, true
+			return volumeFocus, true
 		}
 		if inRow {
 			return depthFocus, true

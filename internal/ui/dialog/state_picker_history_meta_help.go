@@ -208,20 +208,20 @@ func (s FindDialogState) FindDialogOnlyFilesFocus() int {
 	return s.FindDialogOnlyDirsFocus() + 1
 }
 
-// FindDialogStayOnVolumeFocus returns the focus index for the stay-on-volume checkbox.
-func (s FindDialogState) FindDialogStayOnVolumeFocus() int {
+// FindDialogIncludeHiddenFocus returns the focus index for the include-hidden checkbox.
+func (s FindDialogState) FindDialogIncludeHiddenFocus() int {
 	return s.FindDialogOnlyFilesFocus() + 1
 }
 
-// FindDialogIncludeHiddenFocus returns the focus index for the include-hidden checkbox.
-func (s FindDialogState) FindDialogIncludeHiddenFocus() int {
-	return s.FindDialogStayOnVolumeFocus() + 1
+// FindDialogStayOnVolumeFocus returns the focus index for the stay-on-volume checkbox.
+func (s FindDialogState) FindDialogStayOnVolumeFocus() int {
+	return s.FindDialogIncludeHiddenFocus() + 1
 }
 
 // FindDialogSelectionsFocus returns the focus index for search-only-selections, or -1 when hidden.
 func (s FindDialogState) FindDialogSelectionsFocus() int {
 	if s.FindDialogHasSelectionsCheckbox() {
-		return s.FindDialogIncludeHiddenFocus() + 1
+		return s.FindDialogStayOnVolumeFocus() + 1
 	}
 	return -1
 }
@@ -231,7 +231,7 @@ func (s FindDialogState) FindDialogOKFocus() int {
 	if s.FindDialogHasSelectionsCheckbox() {
 		return s.FindDialogSelectionsFocus() + 1
 	}
-	return s.FindDialogIncludeHiddenFocus() + 1
+	return s.FindDialogStayOnVolumeFocus() + 1
 }
 
 // FindDialogCancelFocus returns the focus index for the Cancel button.
