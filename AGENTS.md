@@ -87,6 +87,13 @@ CRITICAL:
 - Each feature should live it's own file, update the file as feature evolves
 - Feature is a large functionality, not a simple button or a toggle. Examples: (terminal graphics, job queue, panel comparison)
 
+# Commit messages
+
+- Subject: Conventional Commits, `<type>(<scope>): <summary>` — lowercase imperative summary, no trailing period.
+- Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`. Scope is the area touched (`git`, `find`, `dialog`, `compare`, `jobs`, `panel`, `ui`, `agents` for `docs/agents/`, ...); omit it when a change spans many areas (`fix: batch of panel and dialog bugs`).
+- One type per commit; a commit mixing a feature with a layout change still uses the dominant type.
+- Body (optional): what and why, wrapped at 79 columns.
+
 # Performance
 
 - All IO/Disk/Network operations should be implemented in a separate goroutine/process in async manner UNLESS it is directly related to immediate UI feedback like path autocomplete where such heavy machinery is not warranted.
