@@ -167,7 +167,7 @@ func (h *Handler) findWalkParams() fswalk.Params {
 func (h *Handler) finishFindIndexing(st *dialog.FindDialogState) {
 	st.Indexing = false
 	st.IndexDone = true
-	st.WalkWorkers = 0
+	st.Depth, st.LevelDone, st.LevelTotal = 0, 0, 0
 	st.IndexedCount = len(st.Entries)
 	st.RankDisplayLines = nil
 	if search.Parse(st.Query).Empty() {
@@ -198,7 +198,7 @@ func (h *Handler) applyScanEvent(st *dialog.FindDialogState, ev scan.Event) (nee
 	}
 	if ev.CountUpdate {
 		st.IndexedCount = ev.Count
-		st.WalkWorkers = ev.WalkWorkers
+		st.Depth, st.LevelDone, st.LevelTotal = ev.Depth, ev.LevelDone, ev.LevelTotal
 		if ev.IndexActive {
 			st.Indexing = true
 			st.IndexDone = false

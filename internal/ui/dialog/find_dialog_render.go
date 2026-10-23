@@ -81,9 +81,13 @@ func findDialogTitle(state FindDialogState, styles theme.Theme) string {
 	count := formatIndexedCount(state.IndexedCount)
 	if state.Indexing {
 		title = fmt.Sprintf("%s (%s%s)", name, count, string(primitive.Ellipsis))
-		if state.WalkWorkers > 0 {
+		if state.LevelTotal > 0 {
 			icon := styles.IconMenuJob("scanning")
-			title = fmt.Sprintf("%s %d %c", title, state.WalkWorkers, icon)
+			depth := styles.IconDialogDepth()
+			if styles.UseNerdfontIcons {
+				depth += " " // the glyph renders wide and crowds the number
+			}
+			title = fmt.Sprintf("%s %s %d · %d%% %c", title, depth, state.Depth, state.LevelDone*100/state.LevelTotal, icon)
 		}
 	} else if state.IndexDone && state.IndexedCount > 0 {
 		title = fmt.Sprintf("%s (%s)", name, count)

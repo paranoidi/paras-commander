@@ -111,3 +111,21 @@ func TestWalkIndexesFilesLevelOrder(t *testing.T) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
 }
+
+func TestWalkProgressReportsLastLevel(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "harbor", "lantern", "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	w := startRootWalk(t.Context(), root, WalkOptions{DirsOnly: true})
+	for range w.Results() {
+	}
+	<-w.Done()
+	// Levels read: [root] depth 1, [harbor] 2, [lantern] 3, [meadow] 4. The
+	// leaf dir is still read (its frontier is empty), so the walk ends at depth 4.
+	depth, done, total := w.Progress()
+	if depth != 4 || done != 1 || total != 1 {
+		t.Fatalf("Progress = %d,%d,%d, want 4,1,1", depth, done, total)
+	}
+}

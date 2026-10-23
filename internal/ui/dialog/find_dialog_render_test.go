@@ -10,21 +10,32 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
-func TestFindDialogTitleIndexingWorkers(t *testing.T) {
+func TestFindDialogTitleIndexingProgress(t *testing.T) {
 	t.Parallel()
 	th := theme.Default()
-	st := FindDialogState{Indexing: true, IndexedCount: 123, WalkWorkers: 4}
+	st := FindDialogState{Indexing: true, IndexedCount: 123, Depth: 4, LevelDone: 3, LevelTotal: 8}
 	got := findDialogTitle(st, th)
 	icon := string(th.IconMenuJob("scanning"))
-	want := "Find (123…) 4 " + icon
+	want := "Find (123…) " + th.IconDialogDepth() + " 4 · 37% " + icon
 	if got != want {
 		t.Fatalf("title = %q, want %q", got, want)
 	}
 }
 
+func TestFindDialogTitleDepthIconSpacing(t *testing.T) {
+	t.Parallel()
+	th := theme.Default()
+	th.UseNerdfontIcons = true
+	st := FindDialogState{Indexing: true, IndexedCount: 1, Depth: 2, LevelDone: 1, LevelTotal: 2}
+	got := findDialogTitle(st, th)
+	if want := th.IconDialogDepth() + "  2 · 50%"; !strings.Contains(got, want) {
+		t.Fatalf("title = %q, want it to contain %q", got, want)
+	}
+}
+
 func TestFindDialogTitleIndexingCompactCount(t *testing.T) {
 	t.Parallel()
-	st := FindDialogState{Indexing: true, IndexedCount: 1_240_000, WalkWorkers: 4}
+	st := FindDialogState{Indexing: true, IndexedCount: 1_240_000, Depth: 1, LevelDone: 1, LevelTotal: 2}
 	got := findDialogTitle(st, theme.Default())
 	if !strings.HasPrefix(got, "Find (1.24M") {
 		t.Fatalf("title = %q, want 1.24M prefix", got)
@@ -75,7 +86,7 @@ func TestFindDialogTitleDone(t *testing.T) {
 
 func TestFindDialogTitleIndexingNoWorkerSuffixWord(t *testing.T) {
 	t.Parallel()
-	st := FindDialogState{Indexing: true, IndexedCount: 1, WalkWorkers: 2}
+	st := FindDialogState{Indexing: true, IndexedCount: 1, Depth: 1, LevelDone: 1, LevelTotal: 2}
 	got := findDialogTitle(st, theme.Default())
 	if strings.Contains(got, "workers") {
 		t.Fatalf("title must not contain workers: %q", got)

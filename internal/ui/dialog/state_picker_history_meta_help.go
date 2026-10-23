@@ -127,9 +127,10 @@ type FindDialogState struct {
 	Focus            int
 	Indexing         bool
 	IndexedCount     int
-	WalkWorkers      int
-	IndexDone        bool
-	IndexErr         string
+	// Index BFS level progress: depth, directories read and total at that depth.
+	Depth, LevelDone, LevelTotal int
+	IndexDone                    bool
+	IndexErr                     string
 	// RankPending is true while an async background rank is in progress or scheduled.
 	RankPending bool
 	// FullRanked holds uncapped query-filtered entry indices for bulk select-all / group select.

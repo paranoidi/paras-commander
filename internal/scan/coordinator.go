@@ -252,25 +252,31 @@ func (s *session) emitCount(added []Entry) {
 	ev := Event{
 		CountUpdate: true,
 		Count:       s.idx.Len(),
-		WalkWorkers: s.maxWalkWorkers(),
 		IndexActive: len(s.walks) > 0 || s.hiddenWorkPending(),
 	}
+	ev.Depth, ev.LevelDone, ev.LevelTotal = s.walkProgress()
 	if len(added) > 0 {
 		ev.BatchAdded = append([]Entry(nil), added...)
 	}
 	s.emit(ev)
 }
 
-func (s *session) maxWalkWorkers() int {
-	max := 0
+// ponytail: max-depth aggregate across roots; per-root display if anyone asks.
+func (s *session) walkProgress() (depth, done, total int) {
 	for _, w := range s.walks {
-		if w.sess != nil {
-			if n := w.sess.Workers(); n > max {
-				max = n
-			}
+		if w.sess == nil {
+			continue
+		}
+		d, dn, t := w.sess.Progress()
+		switch {
+		case d > depth:
+			depth, done, total = d, dn, t
+		case d == depth:
+			done += dn
+			total += t
 		}
 	}
-	return max
+	return depth, done, total
 }
 
 func (s *session) scopeRoots() []string {
@@ -526,7 +532,6 @@ func (s *session) emitIndexFinishedIfReady() {
 		IndexFinished: true,
 		CountUpdate:   true,
 		Count:         s.idx.Len(),
-		WalkWorkers:   0,
 		IndexActive:   false,
 		IndexErr:      errStr,
 	})
@@ -573,14 +578,15 @@ func (s *session) applyStripDone(filtered []Entry) {
 }
 
 func (s *session) emitIndexReplaced(filtered []Entry) {
-	s.emit(Event{
+	ev := Event{
 		CountUpdate:     true,
 		Count:           s.idx.Len(),
-		WalkWorkers:     s.maxWalkWorkers(),
 		IndexActive:     len(s.walks) > 0 || s.hiddenWorkPending(),
 		IndexReplaced:   true,
 		ReplacedEntries: append([]Entry(nil), filtered...),
-	})
+	}
+	ev.Depth, ev.LevelDone, ev.LevelTotal = s.walkProgress()
+	s.emit(ev)
 }
 
 func (s *session) expandHidden() {

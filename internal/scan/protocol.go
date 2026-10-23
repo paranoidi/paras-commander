@@ -30,8 +30,9 @@ type Event struct {
 
 	CountUpdate bool
 	Count       int
-	WalkWorkers int
-	IndexActive bool
+	// Depth, LevelDone, LevelTotal: BFS level progress (see rootWalk.Progress).
+	Depth, LevelDone, LevelTotal int
+	IndexActive                  bool
 
 	IndexFinished bool
 	IndexErr      string

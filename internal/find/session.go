@@ -33,7 +33,7 @@ func (s *Session) Done() <-chan struct{} { return s.w.Done() }
 func (s *Session) Err() error { return s.w.Err() }
 
 // Workers returns the current adaptive walk concurrency limit.
-func (s *Session) Workers() int { return s.w.Workers() }
+func (s *Session) Progress() (depth, done, total int) { return s.w.Progress() }
 
 // SkippedHiddenDirs returns absolute paths of dot-directories skipped when IncludeHidden was false.
 func (s *Session) SkippedHiddenDirs() []string { return s.w.SkippedHiddenDirs() }

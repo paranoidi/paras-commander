@@ -8,7 +8,7 @@ Find is a fuzzy, recursive search across everything below a panel's directory. R
 
 ## Searching
 
-Type to filter; matching is fuzzy against paths relative to the root, best matches first. The walk is breadth-first (level by level) and never reads sizes, so it stays responsive on millions of files. Only the top `[ui.find].max_results` (default 200) ranked rows are displayed, but the whole index is searched, and select-all marks everything that matches.
+Type to filter; matching is fuzzy against paths relative to the root, best matches first. The walk is breadth-first (level by level) and never reads sizes, so it stays responsive on millions of files. While indexing, the dialog title shows the count and the level being read, e.g. `Find (12.3K…) depth 4 · 37%` plus a scanning icon (with Nerd Font icons on, a depth icon replaces the word `depth`): the percentage is directories read at that depth out of all directories found for it (across all roots, the deepest level wins). Only the top `[ui.find].max_results` (default 200) ranked rows are displayed, but the whole index is searched, and select-all marks everything that matches.
 
 Options in the dialog:
 

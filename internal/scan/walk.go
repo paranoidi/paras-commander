@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
@@ -42,6 +43,10 @@ type rootWalk struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
+	// Level progress of runBFS: depth of the entries being read (root's
+	// children are depth 1), directories read so far and total at that depth.
+	depth, levelDone, levelTotal atomic.Int64
+
 	skippedMu        sync.Mutex
 	skippedDirs      []string
 	skippedFilePaths []string // RelLine under root for dot-files
@@ -67,8 +72,11 @@ func (w *rootWalk) Done() <-chan struct{} { return w.done }
 
 func (w *rootWalk) Err() error { return w.err }
 
-// Workers reports 1 while a sequential walk is running.
-func (w *rootWalk) Workers() int { return 1 }
+// Progress reports the BFS level being read: its depth and how many of its
+// directories are read. After a finished walk it is the last level read.
+func (w *rootWalk) Progress() (depth, done, total int) {
+	return int(w.depth.Load()), int(w.levelDone.Load()), int(w.levelTotal.Load())
+}
 
 func (w *rootWalk) SkippedHiddenDirs() []string {
 	w.skippedMu.Lock()
@@ -152,11 +160,15 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 	level := []string{w.root}
 	for len(level) > 0 {
 		var next []string
+		w.depth.Add(1)
+		w.levelDone.Store(0)
+		w.levelTotal.Store(int64(len(level)))
 		for _, dir := range level {
 			if ctx.Err() != nil {
 				return
 			}
 			children, err := os.ReadDir(dir)
+			w.levelDone.Add(1)
 			if err != nil {
 				continue // unreadable dir: skip
 			}

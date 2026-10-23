@@ -324,6 +324,7 @@ info = "\uf05a"
 missing = "\U000F09E7"   # trailing mark on history/bookmark/pin rows whose path is gone
 zoxide = "\uf0e7"        # prefix on History rows that come from zoxide
 history = "\uf1da"       # prefix on History rows from the panel history
+depth = "\uef81"         # before the indexing depth in the find dialog title
 
 [icons.dialog.checkbox]
 checked = "\U000F0856"
