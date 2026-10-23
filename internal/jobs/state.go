@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -287,6 +288,18 @@ func (s *State) ActiveJob() *Job {
 	return &cp
 }
 
+// Job returns a copy of the job with id from any bucket, or nil.
+func (s *State) Job(id string) *Job {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job := s.findJobUnlocked(id)
+	if job == nil {
+		return nil
+	}
+	cp := *job
+	return &cp
+}
+
 // JobsWaitingDecision returns the count of jobs blocked on user blocker input.
 func (s *State) JobsWaitingDecision() int {
 	s.mu.Lock()
@@ -365,7 +378,7 @@ func (s *State) PauseQueuedJob(id string) bool {
 func (s *State) RetryJob(id string) bool {
 	s.mu.Lock()
 	job := s.findJobUnlocked(id)
-	if job == nil || job.Status != StatusFailed {
+	if job == nil || job.Status != StatusFailed || job.Type == TypeRename || job.Type == TypeUndo {
 		s.mu.Unlock()
 		return false
 	}
@@ -383,6 +396,42 @@ func (s *State) RetryJob(id string) bool {
 	s.takeItemFailures(id) // drop a stale count from a run that never reached runJob's end
 	s.AddJob(clone)
 	return true
+}
+
+// AddFinishedJob records an operation that already ran (a rename) as a completed job.
+func (s *State) AddFinishedJob(job *Job) {
+	job.Status = StatusCompleted
+	job.FinishedAt = time.Now()
+	s.mu.Lock()
+	s.finished = append(s.finished, job)
+	s.mu.Unlock()
+}
+
+// EnqueueUndo queues a TypeUndo job reversing job id's journal. It returns false when the job is
+// not Undoable or an undo of it is already unfinished.
+func (s *State) EnqueueUndo(id string) (*Job, bool) {
+	target := s.Job(id)
+	if target == nil || !target.Undoable() {
+		return nil, false
+	}
+	for _, j := range s.AllJobs() {
+		if j.Type == TypeUndo && j.UndoOf == id && !j.Status.IsFinished() {
+			return nil, false
+		}
+	}
+	job := &Job{
+		ID:          NewJobID(),
+		Type:        TypeUndo,
+		Status:      StatusScanning,
+		Sources:     target.Sources,
+		Destination: target.Destination,
+		DestIsDir:   target.DestIsDir,
+		TotalFiles:  len(target.Undo),
+		Undo:        slices.Clone(target.Undo),
+		UndoOf:      id,
+	}
+	s.AddJob(job)
+	return job, true
 }
 
 // AllJobs returns active job (if any), jobs waiting for blocker input, queued jobs, then recently finished jobs.
@@ -515,13 +564,32 @@ func (s *State) ApplyEvent(ev Event) {
 		if j := s.findJobUnlocked(ev.JobID); j != nil {
 			j.RemovingSources = true
 		}
+	case EventUndoJournal:
+		if j := s.findJobUnlocked(ev.JobID); j != nil {
+			j.Undo = append(j.Undo, ev.Undo...)
+			j.Irreversible = j.Irreversible || ev.Irreversible
+		}
 	case EventCompleted:
 		s.finalizeJob(ev.JobID, StatusCompleted, "", ev.DoneFiles, ev.DoneBytes)
+		s.markUndoneUnlocked(ev.JobID, ev.DoneFiles)
 	case EventFailed:
 		s.finalizeJob(ev.JobID, StatusFailed, ev.Error, ev.DoneFiles, ev.DoneBytes)
+		s.markUndoneUnlocked(ev.JobID, ev.DoneFiles)
 	case EventCanceled:
 		s.removeWaitingBlockerUnlocked(ev.JobID)
 		s.finalizeJob(ev.JobID, StatusCanceled, "", ev.DoneFiles, ev.DoneBytes)
+	}
+}
+
+// markUndoneUnlocked sets Undone on the job an undo job reversed once it got any step done, so
+// a partly failed undo is not offered again (its leftovers are listed in its Errors pane).
+func (s *State) markUndoneUnlocked(undoID string, doneFiles int) {
+	u := s.findJobUnlocked(undoID)
+	if u == nil || u.Type != TypeUndo || doneFiles == 0 {
+		return
+	}
+	if t := s.findJobUnlocked(u.UndoOf); t != nil {
+		t.Undone = true
 	}
 }
 

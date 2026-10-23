@@ -254,6 +254,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionJobsQueueDown,
 				ActionJobsClose,
 				ActionJobsClearFinished,
+				ActionJobsUndo,
 			},
 		},
 		column: map[string]int{

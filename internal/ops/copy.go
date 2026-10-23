@@ -317,6 +317,7 @@ func copyDirItem(ctx context.Context, item PlanItem, opts Options, resolver Conf
 		if err := be.Mkdir(ctx, item.Dst, mkdirModeForItem(item, opts)); err != nil {
 			return fmt.Errorf("create directory %q: %w", dstStr, err)
 		}
+		opts.journalCreated(ctx, item.Dst)
 	} else if statErr != nil {
 		return fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(statErr))
 	}
@@ -328,15 +329,15 @@ func copyDirItem(ctx context.Context, item PlanItem, opts Options, resolver Conf
 	return nil
 }
 
-func copySymlinkItem(ctx context.Context, item PlanItem, resolver ConflictResolver, state *copyRunState) error {
+func copySymlinkItem(ctx context.Context, item PlanItem, opts Options, resolver ConflictResolver, state *copyRunState) error {
 	srcStr := item.Src.String()
 	dstStr := item.Dst.String()
 	var res copyResult
 	var err error
 	if useLocalFastPath(item.Src, item.Dst) {
-		res, err = copySymlinkWithConflict(ctx, srcStr, dstStr, resolver)
+		res, err = copySymlinkWithConflict(ctx, srcStr, dstStr, opts, resolver)
 	} else {
-		res, err = copySymlinkTransfer(ctx, item.Src, item.Dst, resolver)
+		res, err = copySymlinkTransfer(ctx, item.Src, item.Dst, opts, resolver)
 	}
 	if err != nil {
 		return err
@@ -477,7 +478,7 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 		}
 
 		if item.IsSymlink {
-			if err := copySymlinkItem(ctx, item, resolver, state); err != nil {
+			if err := copySymlinkItem(ctx, item, opts, resolver, state); err != nil {
 				return state.doneFiles, state.doneBytes, state.transferredOut, err
 			}
 			continue
@@ -540,7 +541,18 @@ func copyLocalFile(ctx context.Context, src, dst string, opts Options, buf []byt
 	if err != nil {
 		return copySkipped, err
 	}
+	journalLocalCreated(ctx, opts, dst)
 	return copyDone, nil
+}
+
+// journalLocalCreated is Options.journalCreated for a local path string.
+func journalLocalCreated(ctx context.Context, opts Options, dst string) {
+	if opts.OnJournal == nil {
+		return
+	}
+	if loc, err := pathloc.Parse(dst); err == nil {
+		opts.journalCreated(ctx, loc)
+	}
 }
 
 // resolveLocalConflict adapts resolveConflict to local string paths. done is true when the
@@ -569,7 +581,7 @@ func resolveLocalConflict(ctx context.Context, src, dst string, resolver Conflic
 	return dst, copySkipped, true, nil
 }
 
-func copySymlinkWithConflict(ctx context.Context, src, dst string, resolver ConflictResolver) (copyResult, error) {
+func copySymlinkWithConflict(ctx context.Context, src, dst string, opts Options, resolver ConflictResolver) (copyResult, error) {
 	parent := filepath.Dir(dst)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
 		return copySkipped, fmt.Errorf("create parent directory %q: %w", parent, err)
@@ -597,5 +609,6 @@ func copySymlinkWithConflict(ctx context.Context, src, dst string, resolver Conf
 	if err := CopySymlink(src, dst, nil); err != nil {
 		return copySkipped, err
 	}
+	journalLocalCreated(ctx, opts, dst)
 	return copyDone, nil
 }

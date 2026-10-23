@@ -47,6 +47,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			TotalBytes:      j.TotalBytes,
 			Error:           j.Error,
 			Warnings:        j.Warnings,
+			Undo:            j.UndoLabel(),
 			FailedItems:     j.FailedItems,
 			StartedAt:       j.StartedAt,
 			FinishedAt:      j.FinishedAt,

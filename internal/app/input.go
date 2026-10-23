@@ -123,7 +123,7 @@ func (a *App) inputMode() InputMode {
 		return InputModeMessagesView
 	case a.viewActiveForInput(ui.ViewJobs):
 		return InputModeJobsView
-	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.QuitConfirm.Open, a.model.DedupEmptyDirsConfirm.Open, a.model.StashRestoreDialog.Open:
+	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.QuitConfirm.Open, a.model.DedupEmptyDirsConfirm.Open, a.model.UndoConfirm.Open, a.model.StashRestoreDialog.Open:
 		return InputModeDialog
 	case a.model.Menu.Open:
 		return InputModeMenu

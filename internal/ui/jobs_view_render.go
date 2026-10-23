@@ -402,6 +402,9 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 		fmt.Sprintf("Type:        %s", j.Type),
 		fmt.Sprintf("Status:      %s", j.Status),
 	}
+	if j.Undo != "" {
+		lines = append(lines, "Undo:        "+j.Undo)
+	}
 	if j.Error != "" {
 		lines = append(lines, fmt.Sprintf(prefixError+"%s", primitive.TruncateMiddle(j.Error, jobsDetailPathBudget(pathMax, prefixError))))
 	}

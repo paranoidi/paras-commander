@@ -1,5 +1,7 @@
 package jobs
 
+import "github.com/paranoidi/paras-commander/internal/ops"
+
 // EventType categorises worker-to-app events.
 type EventType string
 
@@ -20,6 +22,8 @@ const (
 	EventItemFailed EventType = "item-failed"
 	// EventRemovingSources is emitted once when a move's copy fallback starts deleting its sources.
 	EventRemovingSources EventType = "removing-sources"
+	// EventUndoJournal delivers the job's undo journal (Event.Undo, Event.Irreversible) once, before its terminal event.
+	EventUndoJournal EventType = "undo-journal"
 )
 
 // DroppableWhenChannelFull reports whether emit may discard the event when the
@@ -56,6 +60,9 @@ type Event struct {
 	Blocker *BlockerDetails
 	// FailedItem is set when Type == EventItemFailed.
 	FailedItem *FailedItem
+	// Undo and Irreversible are set when Type == EventUndoJournal.
+	Undo         []ops.UndoStep
+	Irreversible bool
 }
 
 // ConflictEvent carries information about a file conflict.

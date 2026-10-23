@@ -279,6 +279,7 @@ type Model struct {
 	ElevateDialog          dialog.ElevateDialogState
 	QuitConfirm            dialog.QuitConfirmState
 	DedupEmptyDirsConfirm  dialog.DedupEmptyDirsConfirmState
+	UndoConfirm            dialog.UndoConfirmState
 	StashRestoreDialog     dialog.StashRestoreDialogState
 	MessageDialog          dialog.MessageDialogState
 	DedupProgressDialog    dialog.DedupProgressDialogState
@@ -318,6 +319,8 @@ func (m *Model) PrimaryModal() dialog.PrimaryModal {
 		return dialog.PrimaryModalQuit
 	case m.DedupEmptyDirsConfirm.Open:
 		return dialog.PrimaryModalDedupEmptyDirs
+	case m.UndoConfirm.Open:
+		return dialog.PrimaryModalUndo
 	default:
 		return dialog.PrimaryModalNone
 	}
@@ -533,14 +536,14 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open ||
-		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open
+		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open
 }
 
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
 // dedicated Jobs/Commands view keyboard handling. inputMode checks this only after earlier cases have ruled
 // out other modals.
 func (m *Model) AuxiliaryViewDialogKeysBlocked() bool {
-	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.DedupEmptyDirsConfirm.Open || m.Menu.Open
+	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.Menu.Open
 }
 
 // MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config
@@ -863,6 +866,8 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawQuitConfirmDialog(screen, layout, model.QuitConfirm, styles)
 	case dialog.PrimaryModalDedupEmptyDirs:
 		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, dialogRenderContext(model, styles), PaintDedupEmptyDirsConfirmRowIcon)
+	case dialog.PrimaryModalUndo:
+		dialog.DrawUndoConfirmDialog(screen, layout, model.UndoConfirm, styles)
 	}
 	if model.ConfigDialog.Open {
 		dialog.DrawConfigDialog(screen, layout, model.ConfigDialog, styles)

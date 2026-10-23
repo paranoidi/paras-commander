@@ -20,6 +20,10 @@ const (
 	TypeFlatten Type = "flatten"
 	TypeDelete  Type = "delete"
 	TypeExtract Type = "extract"
+	// TypeRename is a finished rename or mass rename recorded for the jobs view; it never runs.
+	TypeRename Type = "rename"
+	// TypeUndo reverses the journal of another job (UndoOf).
+	TypeUndo Type = "undo"
 )
 
 // Status represents the lifecycle state of a Job.
@@ -163,8 +167,50 @@ type Job struct {
 	// "Flatten into destination" checkbox), independent of TypeFlatten jobs.
 	FlattenIntoDest bool
 
+	// Undo is the journal of what this copy, move or rename did, oldest first; ExecuteUndo reverses
+	// it. A TypeUndo job carries a copy of its target's journal. Written only by State.ApplyEvent
+	// (EventUndoJournal) and at enqueue.
+	Undo []ops.UndoStep
+	// Irreversible is true when the job overwrote or discarded something, so Undo would not
+	// restore the previous state. Written only by State.ApplyEvent (EventUndoJournal).
+	Irreversible bool
+	// UndoOf is the ID of the job a TypeUndo job reverses.
+	UndoOf string
+	// Undone is set on the original job once an undo job has reversed (part of) it.
+	Undone bool
+
 	// RemovingSources is true once a move's copy fallback is deleting its transferred sources.
 	RemovingSources bool
+}
+
+// journaled reports whether jobs of type t record an undo journal.
+func (t Type) journaled() bool {
+	return t == TypeCopy || t == TypeMove || t == TypeRename
+}
+
+// Undoable reports whether the job's journal can be reversed: a finished copy, move or rename
+// that recorded something, overwrote nothing and has not been undone. A canceled or failed copy
+// keeps the journal of what it did write. State.EnqueueUndo also rules out a running undo.
+func (j *Job) Undoable() bool {
+	return j.Type.journaled() && j.Status.IsFinished() && len(j.Undo) > 0 && !j.Irreversible && !j.Undone
+}
+
+// UndoLabel is the Details line value for a job that can be undone or explains why not; empty
+// for job types that never support undo.
+func (j *Job) UndoLabel() string {
+	switch {
+	case !j.Type.journaled():
+		return ""
+	case j.Undone:
+		return "undone"
+	case j.Irreversible:
+		return "irreversible (overwrote files)"
+	case j.Undoable():
+		return "available"
+	case len(j.Undo) == 0 && j.Status.IsFinished():
+		return "nothing to undo"
+	}
+	return ""
 }
 
 // FlatDestNames reports whether the job should resolve every source to dest/<basename>

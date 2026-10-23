@@ -445,6 +445,9 @@ func (h *Handler) executeRename() {
 		if loc, err := pathloc.Parse(sourcePath); err == nil {
 			entry.Name = loc.Base()
 		}
+		if d.RenameSourceIsDir {
+			entry.Type = localfs.EntryDirectory
+		}
 		h.startRemoteRename(renameApply{
 			entry: entry, focusAfter: focusAfter, openInOther: openInOther, panelID: panelID,
 		}, newName, panelPath)
@@ -497,9 +500,27 @@ func (h *Handler) diskUsageRenamed(pairs [][2]string) {
 	h.diskUsage.RenamePaths(pairs)
 }
 
+// renameStep is the undo step for one rename of from to to; empty when either path is unparsable.
+func renameStep(from, to string, isDir bool) []ops.UndoStep {
+	f, err1 := pathloc.Parse(from)
+	t, err2 := pathloc.Parse(to)
+	if err1 != nil || err2 != nil {
+		return nil
+	}
+	return []ops.UndoStep{{Kind: ops.UndoMoveBack, Path: t, From: f, IsDir: isDir}}
+}
+
+// recordRename shows a finished rename in the jobs view (nil-safe for tests without a jobs handler).
+func (h *Handler) recordRename(steps []ops.UndoStep) {
+	if h.jobs != nil {
+		h.jobs.RecordRename(steps)
+	}
+}
+
 func (h *Handler) applyRenameSuccess(st renameApply) {
 	p := h.host.ActivePanel()
 	h.diskUsageRenamed([][2]string{{st.entry.Path, st.plan.NewPath}})
+	h.recordRename(renameStep(st.entry.Path, st.plan.NewPath, st.entry.Type == localfs.EntryDirectory))
 	p.RenameEntry(st.entry.Path, st.plan.NewName, h.host.PanelViewportRows(st.panelID))
 	if st.focusAfter {
 		h.RefreshBothPanelsWithFocus(st.panelID, func() {

@@ -1779,6 +1779,16 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "u",
 		},
 
+		{
+			ID:          ActionJobsUndo,
+			Views:       HelpJobs,
+			Title:       "Undo job",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"revert", "rollback", "restore"},
+			LeaderKey:   "z",
+		},
+
 		// ── Options dialogs ──
 		{
 			ID:          ActionUIOpenTheme,

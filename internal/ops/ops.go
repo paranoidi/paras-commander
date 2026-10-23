@@ -82,6 +82,9 @@ type Options struct {
 	// OnRenamed is called after a move completes a plain rename of src to dst (not a merge or
 	// copy fallback) when both paths are local; nil means no-op.
 	OnRenamed func(src, dst pathloc.Path)
+	// OnJournal receives one UndoStep per item a copy created or a move relocated (undo.go); nil
+	// means no-op. It runs on the job goroutine after the item exists. Undo itself never journals.
+	OnJournal func(UndoStep)
 }
 
 // RateLimiter throttles n bytes just spent, blocking until permitted or ctx is canceled.

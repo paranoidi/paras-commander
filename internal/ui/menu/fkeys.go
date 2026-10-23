@@ -17,6 +17,8 @@ type FunctionKey struct {
 	// no-ops once the selected job has reached a terminal state; FunctionKeysJobsView
 	// hides them in that case.
 	RequiresActiveJob bool
+	// RequiresFinishedJob is the inverse: shown only once the selected job has finished (undo).
+	RequiresFinishedJob bool
 	// ActionID is the keymap action bound to this key, used to resolve its vi-motion leader letter.
 	ActionID string
 }
@@ -59,6 +61,7 @@ var FunctionKeysJobs = []FunctionKey{
 	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume", RequiresActiveJob: true, ActionID: keymap.ActionJobsResume},
 	{Key: tcell.KeyUp, KeyLabel: "C-up", Hint: "Move up", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueUp},
 	{Key: tcell.KeyDown, KeyLabel: "C-down", Hint: "Move down", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueDown},
+	{Key: tcell.KeyCtrlZ, KeyLabel: "C-z", Hint: "Undo", RequiresFinishedJob: true, ActionID: keymap.ActionJobsUndo},
 	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear", ActionID: keymap.ActionJobsClearFinished},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
@@ -67,14 +70,14 @@ var FunctionKeysJobs = []FunctionKey{
 // FunctionKeysJobsView returns hints for the jobs screen footer. selectedFinished hides the
 // cancel/pause/resume/reorder actions, which are no-ops on a completed, failed, or canceled
 // job — except Resume, which selectedFailed keeps around relabeled "Retry" since it doubles
-// as retry on a failed job.
+// as retry on a failed job. Undo (RequiresFinishedJob) shows only on a finished job.
 func FunctionKeysJobsView(selectedFinished, selectedFailed bool) []FunctionKey {
-	if !selectedFinished {
-		return FunctionKeysJobs
-	}
 	out := make([]FunctionKey, 0, len(FunctionKeysJobs))
 	for _, fk := range FunctionKeysJobs {
-		if fk.RequiresActiveJob {
+		if fk.RequiresFinishedJob && !selectedFinished {
+			continue
+		}
+		if fk.RequiresActiveJob && selectedFinished {
 			if selectedFailed && fk.ActionID == keymap.ActionJobsResume {
 				fk.Hint = "Retry"
 				out = append(out, fk)

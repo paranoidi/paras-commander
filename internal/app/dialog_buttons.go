@@ -181,6 +181,11 @@ func (a *App) modalDialogButtons(event *tcell.EventKey) dialogButtons {
 			},
 			Cancel: func() { a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{} },
 		}
+	case a.model.UndoConfirm.Open:
+		return dialogButtons{
+			OK:     func() { a.answerUndoConfirm(a.model.UndoConfirm.Focus == 0) },
+			Cancel: func() { a.answerUndoConfirm(false) },
+		}
 	case a.model.StashRestoreDialog.Open:
 		return dialogButtons{
 			OK:     func() { a.applyStashRestoreChoice(stashRestoreFocusAction(a.model.StashRestoreDialog.Focus)) },

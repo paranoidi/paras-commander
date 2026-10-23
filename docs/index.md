@@ -12,6 +12,7 @@ New here? Start with [Getting started](getting-started.md), then
 
 - **fzf-style everywhere** — type to fuzzy-match file lists, dialogs and keybinding help. See [Panels](panels.md), [Panel filter](panel-filter.md).
 - **Background job queue** — copy, move and delete run queued in the background with progress, transfer graphs, rate limits and retry. See [Jobs](jobs.md), [File operations](fileoperations.md).
+- **Undo** — undo a finished copy, move, rename or mass rename from the jobs view; items changed since are left alone and reported. See [Undoing a job](jobs.md#undoing-a-job).
 - **Git aware** — gitignore filtering and eza-style git status column, stage/unstage, diff preview. See [Panels](panels.md).
 - **Previews** — quick view, fullscreen preview, carousel, syntax highlighting, markdown, images, archives. See [Quick view and preview](quick-view-preview.md), [Graphics](graphics.md), [Archives](archives.md).
 - **Selections** — across multiple paths, group select, stash and restore. See [Selections](selections.md).

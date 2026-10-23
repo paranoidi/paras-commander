@@ -69,6 +69,32 @@ each skipped item as `<source path>: <reason>`. The panel appears only when the
 selected job has errors. Tab cycles Queue, blocker (when shown), Details,
 Errors (when shown), Succeeded.
 
+# Undoing a job
+
+A finished copy, move, rename or mass rename can be reversed from the jobs view
+with **Jobs → Undo job** (`jobs.undo`). Renames and mass renames done in the
+file view are listed as finished `rename` jobs, one job per rename (one per
+Apply in the mass rename dialog), so they can be undone the same way. Undo asks
+for confirmation (No is the default), then runs as its own `undo` job in the
+queue.
+
+- A copy undo removes what the copy created: files only if they still have the
+  size and modification time they had when copied, directories only if they
+  are empty. Anything you changed or added since is left alone.
+- A move or rename undo moves each item back, and never overwrites: if the
+  original name is taken again, that item is skipped. Several renamed files
+  (including swaps such as `a` and `b` exchanging names) are reversed together.
+- Every item that could not be reversed is listed in the undo job's Errors
+  panel, and the job finishes as failed with `N item(s) failed`. The original
+  job then shows `Undo: undone`; the leftovers are not retried.
+- A job that overwrote anything (or, for a move, replaced an identical file and
+  deleted its source) cannot be undone; its Details panel shows
+  `Undo: irreversible (overwrote files)`. A canceled or failed copy can undo
+  the part it did write.
+- Not undoable: flatten, delete, extract, and a cross-device move that kept
+  both files under a new name. Jobs are not kept across restarts, so neither
+  is their undo.
+
 # Retrying a failed job
 
 A copy, move, flatten, delete, or extract job that fails (e.g. `permission

@@ -351,10 +351,11 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 	if err := applyTransferMetadata(ctx, src, dst, srcEnt, opts); err != nil {
 		return copySkipped, err
 	}
+	opts.journalCreated(ctx, dst)
 	return copyDone, nil
 }
 
-func copySymlinkTransfer(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (copyResult, error) {
+func copySymlinkTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, resolver ConflictResolver) (copyResult, error) {
 	res, dst, err := resolveDestConflict(ctx, src, dst, resolver)
 	if err != nil || res != copyDone {
 		return res, err
@@ -375,6 +376,7 @@ func copySymlinkTransfer(ctx context.Context, src, dst pathloc.Path, resolver Co
 	if err := dstBE.Symlink(ctx, dst, target); err != nil {
 		return copySkipped, fmt.Errorf("create symlink %q -> %q: %w", dst, target, err)
 	}
+	opts.journalCreated(ctx, dst)
 	return copyDone, nil
 }
 

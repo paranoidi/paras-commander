@@ -254,7 +254,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, ded
 		// One Elevator per job: a sudo password the user types is remembered for this job only.
 		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
-		if job.Type == jobs.TypeCopy {
+		if job.Type == jobs.TypeCopy || job.Type == jobs.TypeUndo {
 			opts.OnItemError = func(item ops.PlanItem, err error) {
 				emit(jobs.Event{
 					Type:       jobs.EventItemFailed,
@@ -274,6 +274,18 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, ded
 			defer func() { onRenamed(renamed) }()
 		}
 		resolver := newConflictResolver(job, waitBlocker, dedupChunkBytes)
+		if job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove {
+			// One non-droppable journal event before the terminal one; ApplyEvent stores it on the job.
+			var journal []ops.UndoStep
+			var irreversible bool
+			opts.OnJournal = func(s ops.UndoStep) { journal = append(journal, s) }
+			resolver = trackIrreversible(job.Type, resolver, &irreversible)
+			defer func() {
+				if len(journal) > 0 || irreversible {
+					emit(jobs.Event{Type: jobs.EventUndoJournal, JobID: job.ID, Status: jobs.StatusRunning, Undo: journal, Irreversible: irreversible})
+				}
+			}()
+		}
 		diskWait := diskWaitFromBlocker(waitBlocker)
 		progress := func(sourcePath, destPath string, doneFiles int, doneBytes int64) {
 			emit(jobs.Event{
@@ -538,6 +550,19 @@ func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jo
 	}
 }
 
+// trackIrreversible wraps resolver and sets *irreversible when an answer replaces or discards
+// existing data, which undo could not restore: an overwrite, or (move only) an identical
+// destination whose source is then removed. Called on the job goroutine only.
+func trackIrreversible(t jobs.Type, resolver ops.ConflictResolver, irreversible *bool) ops.ConflictResolver {
+	return func(ctx context.Context, src, dst string, facts ops.FileConflictFacts) (ops.ConflictResolution, error) {
+		res, err := resolver(ctx, src, dst, facts)
+		if err == nil && ((res.Action == ops.ActionOverwrite && !facts.OverwriteUnsafe()) || (res.Action == ops.ActionIdentical && t == jobs.TypeMove)) {
+			*irreversible = true
+		}
+		return res, err
+	}
+}
+
 // sameContent reports whether src and dst hold identical bytes; symlinks never compare equal.
 func sameContent(ctx context.Context, src, dst string, facts ops.FileConflictFacts, chunkBytes int64) (bool, error) {
 	if facts.Kind == "symlink" || facts.SourceSize != facts.DestSize {
@@ -601,6 +626,14 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 			TotalFiles: len(job.Sources),
 		})
 		doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
+	case jobs.TypeUndo:
+		tc.emit(jobs.Event{
+			Type:       jobs.EventPlanTotals,
+			JobID:      job.ID,
+			Status:     jobs.StatusRunning,
+			TotalFiles: len(job.Undo),
+		})
+		doneFiles, doneBytes, err = ops.ExecuteUndo(tc.ctx, job.Undo, tc.opts, tc.progress)
 	case jobs.TypeFlatten:
 		doneFiles, doneBytes, err = ops.ExecuteFlatten(tc.ctx, job.Sources, job.Destination, job.FlattenRecursive, job.FlattenRemoveEmpty, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeDelete:

@@ -29,6 +29,8 @@ type JobEntry struct {
 	FailedItems []jobs.FailedItem
 	StartedAt   time.Time
 	FinishedAt  time.Time
+	// Undo is jobs.Job.UndoLabel: whether the job can be undone, and why not.
+	Undo string
 	// ETABytesPerSec is smoothed throughput from recent progress samples (bytes/s).
 	ETABytesPerSec float64
 	// ETAFilesPerSec is smoothed completion rate from recent progress samples (files/s).

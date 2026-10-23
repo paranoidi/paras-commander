@@ -204,6 +204,11 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		}
 		h.adjustRateLimit(actionID == keymap.ActionJobsRateLimitIncrease)
 		return true
+	case keymap.ActionJobsUndo:
+		if h.model.ViewMode == ui.ViewJobs {
+			h.undoSelectedJob()
+		}
+		return true
 	case keymap.ActionJobsRateLimitClear:
 		if h.model.ViewMode != ui.ViewJobs {
 			return true
@@ -665,6 +670,76 @@ func (h *Handler) resumeOrRetrySelectedJob() {
 	h.SyncJobsList()
 	h.SyncJobPathMarks()
 	h.ensureJobsViewSelectionVisible()
+}
+
+// undoSelectedJob asks to confirm the undo of the selected job, or says why it cannot be undone.
+func (h *Handler) undoSelectedJob() {
+	id := h.selectedJobEntry().ID
+	j := h.state.Job(id)
+	if j == nil {
+		return
+	}
+	if !j.Undoable() {
+		reason := j.UndoLabel()
+		if reason == "" || reason == "available" {
+			reason = "not available for this job"
+		}
+		h.host.SetTransientMessage("Cannot undo: "+reason, ui.MessageUrgencyWarn)
+		return
+	}
+	var created, moved int
+	for _, s := range j.Undo {
+		if s.Kind == ops.UndoMoveBack {
+			moved++
+		} else {
+			created++
+		}
+	}
+	line2 := fmt.Sprintf("Remove %d created %s.", created, jobbridge.Plural(created, "item", "items"))
+	if moved > 0 {
+		line2 = fmt.Sprintf("Move %d %s back.", moved, jobbridge.Plural(moved, "item", "items"))
+	}
+	h.model.UndoConfirm = dialog.UndoConfirmState{
+		Open:  true,
+		Focus: 1,
+		JobID: id,
+		Line1: fmt.Sprintf("Undo %s: %d %s", j.Type, len(j.Undo), jobbridge.Plural(len(j.Undo), "step", "steps")),
+		Line2: line2,
+	}
+}
+
+// ConfirmUndo queues the undo job for job id after the user confirmed.
+func (h *Handler) ConfirmUndo(id string) {
+	if _, ok := h.state.EnqueueUndo(id); !ok {
+		h.host.SetTransientMessage("Could not undo job", ui.MessageUrgencyWarn)
+		return
+	}
+	h.SyncJobsList()
+	h.SyncJobPathMarks()
+	h.ensureJobsViewSelectionVisible()
+}
+
+// RecordRename records a finished rename or mass rename (one step per renamed item) as a
+// completed job so it shows in the jobs view and can be undone.
+func (h *Handler) RecordRename(steps []ops.UndoStep) {
+	if len(steps) == 0 {
+		return
+	}
+	sources := make([]pathloc.Path, len(steps))
+	for i, s := range steps {
+		sources[i] = s.From
+	}
+	h.state.AddFinishedJob(&jobs.Job{
+		ID:          jobs.NewJobID(),
+		Type:        jobs.TypeRename,
+		Sources:     sources,
+		Destination: steps[0].Path.Parent(),
+		DestIsDir:   true,
+		TotalFiles:  len(steps),
+		DoneFiles:   len(steps),
+		Undo:        steps,
+	})
+	h.SyncJobsList()
 }
 
 // SelectedJobStatus returns the status of the currently selected job in the jobs view, or ""

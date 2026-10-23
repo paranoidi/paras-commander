@@ -110,6 +110,10 @@ type renameOutcome struct {
 	// asking the resolver again.
 	keepBoth bool
 	staged   string // parked original destination after an overwrite; empty otherwise
+	// identical: the destination already held the same content and the source was just removed.
+	identical bool
+	// final is the path the source ended up at when that is not the requested dst (keep-both).
+	final pathloc.Path
 }
 
 // renameSourceForMove handles conflict resolution then RenameFastPath for one source. An
@@ -137,10 +141,11 @@ func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, dstExists b
 		if err := removePathRecursive(ctx, src); err != nil {
 			return renameOutcome{}, fmt.Errorf("remove identical source %q: %w", src, err)
 		}
-		return renameOutcome{renamed: true}, nil // counts as moved
+		return renameOutcome{renamed: true, identical: true}, nil // counts as moved
 	case ActionRename:
 		out, err := renameFastPathOrFallback(ctx, src, newDst)
 		out.keepBoth = out.fallbackCopy
+		out.final = newDst
 		return out, err
 	case ActionOverwrite:
 	default:
@@ -270,6 +275,7 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 	case out.fallbackCopy:
 		orig := r.progress
 		fb := r
+		fb.opts.OnJournal = nil // the move is journaled once below, not per copied file
 		if out.keepBoth {
 			fb.resolver = func(context.Context, string, string, FileConflictFacts) (ConflictResolution, error) {
 				return ConflictResolution{Action: ActionRename}, nil
@@ -281,10 +287,19 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 			}
 		}
 		f, b, err := fb.moveCopyFallback(ctx, src, dst, destination)
+		if err == nil && !out.keepBoth { // keep-both fallbacks pick their own free name: not journaled
+			r.opts.journalMoved(ctx, src, dst)
+		}
 		return f, b, false, err
 	case out.renamed:
 		if r.opts.OnRenamed != nil && !src.IsRemote() && !dst.IsRemote() {
 			r.opts.OnRenamed(src, dst)
+		}
+		if !out.final.IsZero() {
+			dst = out.final
+		}
+		if !out.identical {
+			r.opts.journalMoved(ctx, src, dst)
 		}
 		if out.staged != "" {
 			if loc, perr := pathloc.Parse(out.staged); perr == nil {

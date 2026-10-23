@@ -250,6 +250,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Move up in queue":   "C-up",
 		"Move down in queue": "C-down",
 		"Clear finished":     "F8",
+		"Undo job":           "C-z",
 		"Clear rate limit":   "C-u",
 		"Back to file view":  "left",
 	}
