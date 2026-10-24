@@ -7,43 +7,69 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
-// drawHelpDialog renders the centered help dialog with fuzzy shortcut search.
+// Widget IDs of the help dialog. An empty state Focus is the filter. The entry list has no focus
+// of its own: the filter steers it, and it is painted into the reserved helpList region because
+// its section-header rows, key column, page-to-edge motion and header reveal are help specific.
+const (
+	HelpFilter = dlg.ID("help-filter")
+	HelpClose  = dlg.ID("close")
+	helpList   = dlg.ID("help-list")
+)
+
+// HelpDialogView is the help dialog's widget spec: the search filter, a rule, the reserved list
+// region (listH rows) and a Close button. ok is false when the dialog does not fit the layout.
+func HelpDialogView(state HelpViewState, layout Layout, styles theme.Theme) (spec dlg.Spec, listH int, ok bool) {
+	prefW, listH, ok := helpDialogSize(layout)
+	title := state.Title
+	if title == "" {
+		title = "Help"
+	}
+	return dlg.Spec{
+		Title: title, Width: prefW, MinWidth: prefW, Unclamped: true,
+		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
+			{ID: HelpFilter, Kind: dlg.KindInput, LeadingIcon: styles.IconSearchIcon(), Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll},
+			{Kind: dlg.KindSeparator},
+			{ID: helpList, Kind: dlg.KindSpacer, Height: listH},
+		}}}},
+		Buttons: []dlg.Button{{ID: HelpClose, Label: "Close", Mnemonic: 'C'}},
+	}, listH, ok
+}
+
+// HelpDialogKeys is the spec for key handling alone: the filter and the Close button, which needs
+// no layout.
+func HelpDialogKeys() dlg.Spec {
+	return dlg.Spec{
+		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{{ID: HelpFilter, Kind: dlg.KindInput}}}}},
+		Buttons: []dlg.Button{{ID: HelpClose, Label: "Close", Mnemonic: 'C'}},
+	}
+}
+
+// DrawHelpDialog renders the centered help dialog with fuzzy shortcut search: the dlg frame, filter,
+// rules and Close button, then the entry rows painted into the reserved list region.
 func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, styles theme.Theme) {
 	metrics, ok := ComputeHelpDialogListMetrics(layout)
 	if !ok {
 		return
 	}
+	spec, _, _ := HelpDialogView(state, layout, styles)
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 	rect := metrics.Rect
-	title := state.Title
-	if title == "" {
-		title = "Help"
-	}
-	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	itemBg := dbg
-	primaryCol := rect.X + 2
-	inputWidth := metrics.InputWidth
-	listH := metrics.ListH
-
-	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, false, styles)
-
-	// Separator before list.
+	_, itemBg, _ := styles.DialogSurface.Decompose()
+	primaryCol := draw.DialogTextX(rect)
 	listTop := rect.Y + 2
-	draw.DrawDialogHSeparator(screen, rect, listTop, borderStyle)
+	listH := metrics.ListH
+	filterFocused := state.Focus != HelpClose
 
 	// List rows start right after the separator — no column-title row. Rows are always grouped
 	// under non-selectable section headers, in browse mode and while filtering alike.
-	rowWidth := inputWidth
+	rowWidth := metrics.InputWidth
 	visualRows := BuildHelpVisualRows(state.Entries, state.Ranked)
 	for row := 0; row < listH; row++ {
 		y := listTop + 1 + row
-		if y >= rect.Y+rect.Height-2 {
-			break
-		}
 		visualIdx := state.ListScroll + row
 		baseStyle := styles.DialogText.Background(itemBg)
 		line := ""
@@ -66,7 +92,7 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 						ranges = state.MatchRanges[entIdx]
 					}
 				}
-				isCursor = state.Focus == 0 && vr.RankedIdx == state.Selected
+				isCursor = filterFocused && vr.RankedIdx == state.Selected
 			}
 		}
 		matchStyle := styles.FuzzyHighlight
@@ -86,17 +112,6 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 		}
 		primitive.StyledText(screen, primaryCol, y, rowWidth, rendered, baseStyle, spans)
 	}
-
-	// Separator after list.
-	sepAfterList := listTop + 1 + listH
-	draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
-
-	// Button row: single Close button.
-	buttonY := rect.Y + rect.Height - 2
-	closeFocused := state.Focus == 1
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "Close", Shortcut: 'C', Focused: closeFocused},
-	}, styles)
 }
 
 // FormatHelpRow builds a single text line for a help entry: the shortcut keys right-aligned

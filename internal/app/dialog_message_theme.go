@@ -5,7 +5,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -14,46 +13,20 @@ import (
 )
 
 func (a *App) openMessageDialog(title, message string) {
-	a.model.MessageDialog.Title = title
-	a.model.MessageDialog.Message = message
-	a.model.MessageDialog.TwoButtons = false
-	a.model.MessageDialog.ButtonFocus = 0
-	a.model.MessageDialog.Open = true
+	a.model.MessageDialog = dialog.MessageDialogState{Open: true, Title: title, Message: message}
 }
 
 func (a *App) closeMessageDialog() {
-	a.model.MessageDialog.Open = false
-	a.model.MessageDialog.Title = ""
-	a.model.MessageDialog.Message = ""
-	a.model.MessageDialog.TwoButtons = false
-	a.model.MessageDialog.ButtonFocus = 0
+	a.model.MessageDialog = dialog.MessageDialogState{}
 }
 
+// handleMessageDialogKey closes the dialog on the focused OK button (Enter, Space, Alt+O); every
+// other key is swallowed.
 func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
-	d := &a.model.MessageDialog
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		return
-	}
-	if d.TwoButtons {
-		switch event.Key() {
-		case tcell.KeyLeft:
-			if d.ButtonFocus > 0 {
-				d.ButtonFocus--
-			}
-			return
-		case tcell.KeyRight:
-			if d.ButtonFocus < 1 {
-				d.ButtonFocus++
-			}
-			return
-		case tcell.KeyEnter:
-			a.closeMessageDialog()
-			return
-		default:
-			return
-		}
-	}
-	if event.Key() == tcell.KeyEnter {
+	w, h := a.screen.Size()
+	spec := dialog.MessageDialogView(a.model.MessageDialog, a.layoutForTerminalSize(w, h))
+	focus := dlg.OK
+	if ev, ok := dlg.HandleKey(spec, &focus, event); ok && ev.ID == dlg.OK {
 		a.closeMessageDialog()
 	}
 }

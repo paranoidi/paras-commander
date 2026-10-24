@@ -181,9 +181,12 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 				switch it.Kind {
 				case KindLabel:
 					style := styles.DialogText.Background(surface)
-					if it.Style == TextError {
+					switch it.Style {
+					case TextError:
 						errFG, _, _ := styles.DialogInputActiveError.Decompose()
 						style = style.Foreground(errFG)
+					case TextMessageError:
+						style = styles.MessageError.Background(surface)
 					}
 					primitive.Text(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, style)
 				case KindSeparator:

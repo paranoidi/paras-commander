@@ -48,7 +48,7 @@ func selectHelpEntry(app *App, actionID string) bool {
 	for i, entIdx := range app.model.HelpView.Ranked {
 		if entIdx == idx {
 			app.model.HelpView.Selected = i
-			app.model.HelpView.Focus = 0
+			app.model.HelpView.Focus = dialog.HelpFilter
 			return true
 		}
 	}

@@ -1,0 +1,57 @@
+-- text --
+                                                                                
+                          ┌──────── Extract ─────────┐                          
+                          │ line 0 amber birch       │                          
+                          │ line 1 birch ember       │                          
+                          │ line 2 cinder harbor     │                          
+                          │ line 3 dune cinder       │                          
+                          │ line 4 ember fable       │                          
+                          │ line 5 fable amber       │                          
+                          │ line 6 glacier dune      │                          
+                          │ line 7 harbor glacier    │                          
+                          │ line 8 amber birch       │                          
+                          │ line 9 birch ember       │                          
+                          │ line 10 cinder harbor    │                          
+                          │ line 11 dune cinder      │                          
+                          │ line 12 ember fable      │                          
+                          │ line 13 fable amber      │                          
+                          │ line 14 glacier dune     │                          
+                          │ line 15 harbor glacier   │                          
+                          │ line 16 amber birch      │                          
+                          │ line 17 birch ember ...  │                          
+                          ├──────────────────────────┤                          
+                          │          [ OK ]          │                          
+                          └──────────────────────────┘                          
+                                                                                
+-- legend --
+a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbcccccccccbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbddddddddddddddddddddddddbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbeeefeeeebbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

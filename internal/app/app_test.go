@@ -75,7 +75,7 @@ func TestHelpViewEnterRunsCopyLikeKeyboardShortcut(t *testing.T) {
 		t.Fatal("ranked list should include Copy entry")
 	}
 	app.model.HelpView.Selected = sel
-	app.model.HelpView.Focus = 0
+	app.model.HelpView.Focus = dialog.HelpFilter
 
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
 		t.Fatal("Enter on Copy should not quit")

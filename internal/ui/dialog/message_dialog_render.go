@@ -4,12 +4,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
-
 	"github.com/gdamore/tcell/v2"
-
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 const (
@@ -98,10 +95,11 @@ func truncateMessageLines(lines []string, innerW int) []string {
 	return out
 }
 
-func DrawMessageDialog(screen tcell.Screen, layout Layout, state MessageDialogState, styles theme.Theme) {
-	if !state.Open {
-		return
-	}
+// MessageDialogView is the message dialog's widget spec: the wrapped body (at most
+// messageDialogMaxBodyLines rows, shortened to the screen with a trailing ellipsis) above a single
+// focused OK button. The width follows the title and the longest body line up to
+// messageDialogMaxInnerWidth.
+func MessageDialogView(state MessageDialogState, layout Layout) dlg.Spec {
 	title := strings.TrimSpace(state.Title)
 	if title == "" {
 		title = "Message"
@@ -151,39 +149,24 @@ func DrawMessageDialog(screen tcell.Screen, layout Layout, state MessageDialogSt
 		lines = truncateMessageLines(lines, innerW)
 	}
 
-	height := len(lines) + 4
-	if height < minMsgDialogHeight {
-		height = minMsgDialogHeight
-	}
-	if height > maxH {
-		height = maxH
-	}
-
-	rect := draw.CenteredDialogRect(layout, dialogW, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	bodyStyle := styles.MessageError.Background(dbg)
-
-	y := rect.Y + 1
-	innerX := rect.X + 2
-	textWidth := rect.Width - 4
+	items := make([]dlg.Item, 0, max(len(lines), 2))
 	for _, line := range lines {
-		if y >= rect.Y+rect.Height-3 {
-			break
-		}
-		primitive.Text(screen, innerX, y, textWidth, line, bodyStyle)
-		y++
+		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: line, Style: dlg.TextMessageError})
 	}
+	for len(items) < minMsgDialogHeight-4 { // a short body keeps the dialog at its minimum height
+		items = append(items, dlg.Item{Kind: dlg.KindLabel})
+	}
+	return dlg.Spec{
+		Title: title, Width: dialogW, MinWidth: dialogW, Unclamped: true,
+		Groups:  []dlg.Group{{Columns: [][]dlg.Item{items}}},
+		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}},
+	}
+}
 
-	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
-	if state.TwoButtons {
-		f0 := state.ButtonFocus == 0
-		f1 := state.ButtonFocus == 1
-		draw.DrawOKCancelButtonRow(screen, rect, buttonY, f0, f1, styles)
+// DrawMessageDialog paints the message dialog from its widget spec (see MessageDialogView).
+func DrawMessageDialog(screen tcell.Screen, layout Layout, state MessageDialogState, styles theme.Theme) {
+	if !state.Open {
 		return
 	}
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: true},
-	}, styles)
+	dlg.Draw(screen, layout.Width, layout.Height, MessageDialogView(state, layout), dlg.OK, styles)
 }

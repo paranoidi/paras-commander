@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -60,7 +61,6 @@ func (a *App) openHelpDialog() {
 		Entries:    entries,
 		Selected:   0,
 		ListScroll: 0,
-		Focus:      0,
 	}
 	a.syncHelpRanks()
 }
@@ -190,7 +190,7 @@ func (a *App) syncHelpRanks() {
 // list isn't focused, is empty, or key isn't a recognized list-navigation key.
 func (a *App) applyHelpListNav(key tcell.Key, mods tcell.ModMask) bool {
 	st := &a.model.HelpView
-	if st.Focus != 0 || len(st.Ranked) == 0 {
+	if st.Focus == dialog.HelpClose || len(st.Ranked) == 0 {
 		return false
 	}
 	switch key {
@@ -629,7 +629,7 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		}
 	}
 
-	if st.Focus == 0 {
+	if st.Focus != dialog.HelpClose {
 		onChange := func() {
 			st.Selected = 0
 			a.syncHelpRanks() // re-ranks and calls st.EnsureListScroll itself
@@ -640,65 +640,81 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		}
 	}
 
+	// The entry list is painted into a reserved region (section headers, key column, page-to-edge
+	// motion), so its motion keys are handled here rather than by the engine.
 	switch event.Key() {
-	case tcell.KeyEnter:
-		if st.Focus == 1 {
-			a.closeHelpDialog()
-			return false
-		}
-		if len(st.Ranked) == 0 {
-			a.closeHelpDialog()
-			return false
-		}
-		entIdx := st.Ranked[st.Selected]
-		if entIdx < 0 || entIdx >= len(st.Entries) {
-			a.closeHelpDialog()
-			return false
-		}
-		if st.TextEdit {
-			return false
-		}
-		actionID := st.Entries[entIdx].ActionID
-		if !helpkeys.ActionRunnableInView(a.model.ViewMode, actionID) {
-			return false
-		}
+	case tcell.KeyUp, tcell.KeyDown, tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd:
+		a.handleHelpListKey(event)
+		return false
+	}
+
+	ev, ok := dlg.HandleKey(dialog.HelpDialogKeys(), &st.Focus, event)
+	if !ok {
+		return false
+	}
+	switch ev.ID {
+	case dialog.HelpClose:
 		a.closeHelpDialog()
-		return a.activateHelpAction(actionID)
-	case tcell.KeyTab:
-		st.Focus = (st.Focus + 1) % 2
-	case tcell.KeyBacktab:
-		st.Focus = (st.Focus + 1) % 2 // same as Tab for simple 2-focus dialog
+	case dialog.HelpFilter: // Enter in the filter activates the selected entry
+		return a.activateHelpSelection()
+	}
+	return false
+}
+
+// handleHelpListKey moves the selection with Up/Down/PgUp/PgDn/Ctrl+Home/Ctrl+End. Down from the
+// last entry focuses Close, and Up from Close returns to the filter on the last entry.
+func (a *App) handleHelpListKey(event *tcell.EventKey) {
+	st := &a.model.HelpView
+	switch event.Key() {
 	case tcell.KeyUp:
-		if st.Focus == 0 {
+		if st.Focus != dialog.HelpClose {
 			if len(st.Ranked) > 0 {
 				st.Selected = filterlist.ClampedDelta(st.Selected, len(st.Ranked), -1)
 				st.EnsureListScroll(a.helpListRows())
 			}
-		} else {
-			st.Focus = 0 // back to list
-			if len(st.Ranked) > 0 {
-				st.Selected = len(st.Ranked) - 1
-				st.EnsureListScroll(a.helpListRows())
-			}
+			return
+		}
+		st.Focus = dialog.HelpFilter
+		if len(st.Ranked) > 0 {
+			st.Selected = len(st.Ranked) - 1
+			st.EnsureListScroll(a.helpListRows())
 		}
 	case tcell.KeyDown:
-		if st.Focus == 0 {
-			if len(st.Ranked) > 0 {
-				next := filterlist.ClampedDelta(st.Selected, len(st.Ranked), 1)
-				if next != st.Selected {
-					st.Selected = next
-					st.EnsureListScroll(a.helpListRows())
-				} else if st.Selected == len(st.Ranked)-1 {
-					st.Focus = 1 // move to Close button
-				}
-			}
-		} // on Close button, Down does nothing
-	case tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd:
+		if st.Focus == dialog.HelpClose || len(st.Ranked) == 0 {
+			return
+		}
+		if next := filterlist.ClampedDelta(st.Selected, len(st.Ranked), 1); next != st.Selected {
+			st.Selected = next
+			st.EnsureListScroll(a.helpListRows())
+		} else if st.Selected == len(st.Ranked)-1 {
+			st.Focus = dialog.HelpClose
+		}
+	default:
 		a.applyHelpListNav(event.Key(), event.Modifiers())
-	case tcell.KeyLeft:
-		// Only one button (Close), no-op between buttons.
-	case tcell.KeyRight:
-		// Only one button, no-op.
 	}
-	return false
+}
+
+// activateHelpSelection runs the selected entry's action and closes the dialog. It closes without
+// running anything when there are no results, and does nothing on the text-editing page or for an
+// entry that cannot run in the current view. Reports whether the app should quit.
+func (a *App) activateHelpSelection() bool {
+	st := &a.model.HelpView
+	if len(st.Ranked) == 0 {
+		a.closeHelpDialog()
+		return false
+	}
+	entIdx := st.Ranked[st.Selected]
+	if entIdx < 0 || entIdx >= len(st.Entries) {
+		a.closeHelpDialog()
+		return false
+	}
+	if st.TextEdit {
+		return false
+	}
+	actionID := st.Entries[entIdx].ActionID
+	if !helpkeys.ActionRunnableInView(a.model.ViewMode, actionID) {
+		return false
+	}
+	a.closeHelpDialog()
+	return a.activateHelpAction(actionID)
 }

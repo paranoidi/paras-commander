@@ -317,6 +317,6 @@ type HelpViewState struct {
 	MatchRanges [][]search.Range // len == len(Entries); rune ranges on the painted padded row
 	Selected    int              // index into Ranked
 	ListScroll  int              // first visible row index into Ranked
-	Focus       int              // 0=list+fiter, 1=Close button
+	Focus       dlg.ID           // HelpFilter (the filter steering the list; "" too) or HelpClose
 	TextEdit    bool             // true on the dialog text-input editing keys page
 }

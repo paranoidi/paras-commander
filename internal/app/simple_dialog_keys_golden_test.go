@@ -39,6 +39,9 @@ type keyGoldenDialog struct {
 	open  func(app *App) bool
 	// outcome describes what closing did.
 	outcome func(app *App, quit bool) string
+	// action runs a script token starting with "@": an injected asynchronous result (streamed
+	// output, a finished run) rather than a key. nil = every token is a key.
+	action func(t *testing.T, app *App, tok string)
 }
 
 func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
@@ -54,6 +57,11 @@ func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
 	}
 	dump("open")
 	for _, tok := range keys {
+		if d.action != nil && strings.HasPrefix(tok, "@") {
+			d.action(t, app, tok)
+			dump(tok)
+			continue
+		}
 		quit, _ := app.handleKey(goldenKeyEvent(t, tok))
 		if !d.open(app) || quit {
 			fmt.Fprintf(&sb, "== %s ==\nCLOSED: %s\n", tok, d.outcome(app, quit))

@@ -31,7 +31,7 @@ func TestCentralDialogOKCancelKeys(t *testing.T) {
 		open   func(*App)
 		isOpen func(*App) bool
 	}{
-		{"message", func(a *App) { a.openMessageDialog("Otter", "lantern"); a.model.MessageDialog.TwoButtons = true },
+		{"message", func(a *App) { a.openMessageDialog("Otter", "lantern") },
 			func(a *App) bool { return a.model.MessageDialog.Open }},
 		{"help", func(a *App) { a.openHelpDialog() }, func(a *App) bool { return a.model.HelpView.Open }},
 		{"listing format", func(a *App) { a.openListingFormatDialog() }, func(a *App) bool { return a.model.ListingFormatDialog.Open }},

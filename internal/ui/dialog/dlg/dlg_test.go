@@ -746,3 +746,33 @@ func TestDrawInputGhostAndPlaceholder(t *testing.T) {
 		t.Errorf("invalid input drawn with the normal style %v", st)
 	}
 }
+
+func TestDrawMessageErrorLabelStyle(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	styles := theme.Default()
+	spec := Spec{
+		Title: "Harbor", Width: 40, Unclamped: true,
+		Groups: []Group{{Columns: [][]Item{{
+			{Kind: KindLabel, Label: "lantern failed", Style: TextMessageError},
+			{Kind: KindLabel, Label: "plain"},
+		}}}},
+		Buttons: []Button{{ID: OK, Label: "OK", Mnemonic: 'O'}},
+	}
+	Draw(screen, 80, 24, spec, OK, styles)
+	screen.Show()
+	p := mustPlace(t, spec)
+	_, surface, _ := styles.DialogSurface.Decompose()
+	r := p.Items[0].Rect
+	if _, st, _ := screen.Get(r.X, r.Y); st != styles.MessageError.Background(surface) {
+		t.Errorf("message label style = %v, want MessageError on the surface", st)
+	}
+	r = p.Items[1].Rect
+	if _, st, _ := screen.Get(r.X, r.Y); st != styles.DialogText.Background(surface) {
+		t.Errorf("plain label style = %v, want DialogText", st)
+	}
+}

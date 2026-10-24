@@ -1,0 +1,56 @@
+== open ==
+title="Extract"
+-- text --
+┌──────── Extract ─────────┐
+│ line 0 willow            │
+│ line 1 willow            │
+│ line 2 willow            │
+│ line 3 willow            │
+│ line 4 willow            │
+│ line 5 willow            │
+│ line 6 willow            │
+│ line 7 willow            │
+│ line 8 willow            │
+│ line 9 willow            │
+│ line 10 willow           │
+│ line 11 willow           │
+│ line 12 willow           │
+│ line 13 willow           │
+│ line 14 willow           │
+│ line 15 willow           │
+│ line 16 willow           │
+│ line 17 willow ...       │
+├──────────────────────────┤
+│          [ OK ]          │
+└──────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaabbbbbbbbbaaaaaaaaaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaadddeddddaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Enter ==
+CLOSED: quit=false message=""

@@ -27,13 +27,11 @@ type FilePreviewThemePickerState struct {
 	ListScroll   int
 }
 
-// MessageDialogState is a generic modal with a title, body text, and OK or OK/Cancel buttons.
+// MessageDialogState is a generic modal with a title, body text and a single OK button.
 type MessageDialogState struct {
-	Open        bool
-	Title       string
-	Message     string
-	TwoButtons  bool
-	ButtonFocus int // 0=OK, 1=Cancel when TwoButtons
+	Open    bool
+	Title   string
+	Message string
 }
 
 // ThemeDialogState is the renderable state for the theme selection modal.

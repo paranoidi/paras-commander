@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // CloseOutputDialog closes the command-output dialog.
@@ -55,25 +56,14 @@ func (h *Handler) HandleOutputDialogKey(event *tcell.EventKey) {
 	if h.scrollOutputDialog(st, scrollEv.Key()) {
 		return
 	}
-	if st.Running {
-		switch {
-		case dialog.AltLetter(event, 'b'):
-			h.closeOutputDialogKeepRunning()
-		case event.Key() == tcell.KeyLeft:
-			st.Focus = 0
-		case event.Key() == tcell.KeyRight:
-			st.Focus = 1
-		case event.Key() == tcell.KeyEnter:
-			if st.Focus == 0 {
-				h.closeOutputDialogKeepRunning()
-			} else {
-				h.CloseOutputDialog()
-			}
-		}
+	ev, ok := dlg.HandleKey(dialog.CommandOutputDialogKeys(*st), &st.Focus, event)
+	if !ok {
 		return
 	}
-
-	if event.Key() == tcell.KeyEnter {
+	switch ev.ID {
+	case dialog.OutputBackground:
+		h.closeOutputDialogKeepRunning()
+	case dialog.OutputCancel, dlg.OK:
 		h.CloseOutputDialog()
 	}
 }

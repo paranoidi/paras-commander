@@ -1,0 +1,156 @@
+== open ==
+title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=0(line 2) selected=0 cancels=0 groupselect=false
+-- text --
+┌──────────────────────── Build willow ────────────────────────┐
+│ line 00 amber birch                                          ┃
+│ line 01 birch ember                                          │
+│ built harbor.txt and willow.txt ok                           │
+│ meadow                                                       │
+│ line 04 ember fable                                          │
+│ line 05 fable amber                                          │
+│ line 06 glacier dune                                         │
+│ line 07 harbor glacier                                       │
+│ line 08 amber birch                                          │
+│ see lantern.txt:12 here                                      │
+├──────────────────────────────────────────────────────────────┤
+│                            [ OK ]                            │
+└──────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaccccccccccaaaaaddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaeeefeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Right ==
+title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=1(line 2) selected=0 cancels=0 groupselect=false
+-- text --
+┌──────────────────────── Build willow ────────────────────────┐
+│ line 00 amber birch                                          ┃
+│ line 01 birch ember                                          │
+│ built harbor.txt and willow.txt ok                           │
+│ meadow                                                       │
+│ line 04 ember fable                                          │
+│ line 05 fable amber                                          │
+│ line 06 glacier dune                                         │
+│ line 07 harbor glacier                                       │
+│ line 08 amber birch                                          │
+│ see lantern.txt:12 here                                      │
+├──────────────────────────────────────────────────────────────┤
+│                            [ OK ]                            │
+└──────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaccccccccccaaaaaddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaacccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaeeefeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=2(line 3) selected=0 cancels=0 groupselect=false
+-- text --
+┌──────────────────────── Build willow ────────────────────────┐
+│ line 00 amber birch                                          ┃
+│ line 01 birch ember                                          │
+│ built harbor.txt and willow.txt ok                           │
+│ meadow                                                       │
+│ line 04 ember fable                                          │
+│ line 05 fable amber                                          │
+│ line 06 glacier dune                                         │
+│ line 07 harbor glacier                                       │
+│ line 08 amber birch                                          │
+│ see lantern.txt:12 here                                      │
+├──────────────────────────────────────────────────────────────┤
+│                            [ OK ]                            │
+└──────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaccccccccccaaaaaccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaacccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaeeefeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=3(line 9) selected=0 cancels=0 groupselect=false
+-- text --
+┌──────────────────────── Build willow ────────────────────────┐
+│ line 00 amber birch                                          ┃
+│ line 01 birch ember                                          │
+│ built harbor.txt and willow.txt ok                           │
+│ meadow                                                       │
+│ line 04 ember fable                                          │
+│ line 05 fable amber                                          │
+│ line 06 glacier dune                                         │
+│ line 07 harbor glacier                                       │
+│ line 08 amber birch                                          │
+│ see lantern.txt:12 here                                      │
+├──────────────────────────────────────────────────────────────┤
+│                            [ OK ]                            │
+└──────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaccccccccccaaaaaccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaadddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaeeefeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

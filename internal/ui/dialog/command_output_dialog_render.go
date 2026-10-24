@@ -7,9 +7,20 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
+)
+
+// Command output dialog widget IDs. The finished state has the conventional dlg.OK button; while
+// the run is live the buttons are Background (keeps it running) and Cancel (kills it).
+const (
+	OutputBackground = dlg.ID("background")
+	OutputCancel     = dlg.ID("cancel")
+	// outputBody is the reserved region the output lines are painted into (ANSI colored cells
+	// with path highlights and a scrollbar are bespoke, so it is an overlay, not a dlg list).
+	outputBody = dlg.ID("output")
 )
 
 // CommandOutputDialogMetrics holds computed geometry for the output dialog.
@@ -19,8 +30,8 @@ type CommandOutputDialogMetrics struct {
 	ContentWidth int
 }
 
-// cmdOutputOverhead: top-border/title + separator + blank-above-button + button + bottom-border.
-const cmdOutputOverhead = 5
+// cmdOutputOverhead: top border/title + separator + button + bottom border.
+const cmdOutputOverhead = 4
 
 // ParseDialogDimension parses "N%" as a percentage of total, or "N" as an absolute count.
 // Returns 0 for empty or unparseable input so the caller can substitute its own default.
@@ -43,12 +54,13 @@ func ParseDialogDimension(raw string, total int) int {
 	return n
 }
 
-// ComputeCommandOutputDialogMetrics calculates dialog geometry from layout and state.
-func ComputeCommandOutputDialogMetrics(layout Layout, state CommandOutputDialogState) (m CommandOutputDialogMetrics, ok bool) {
+// commandOutputSize returns the preferred outer width and the visible output row count for the
+// layout; ok is false when the dialog does not fit.
+func commandOutputSize(layout Layout, state CommandOutputDialogState) (prefW, listH int, ok bool) {
 	const minListH = 4
 	const minW = 40
 
-	prefW := ParseDialogDimension(state.PrefWidth, layout.Width)
+	prefW = ParseDialogDimension(state.PrefWidth, layout.Width)
 	if prefW == 0 {
 		prefW = layout.Width * 4 / 5
 	}
@@ -57,7 +69,7 @@ func ComputeCommandOutputDialogMetrics(layout Layout, state CommandOutputDialogS
 	}
 	maxW := layout.Width - 4
 	if maxW < minW {
-		return m, false
+		return 0, 0, false
 	}
 	if prefW > maxW {
 		prefW = maxW
@@ -67,22 +79,67 @@ func ComputeCommandOutputDialogMetrics(layout Layout, state CommandOutputDialogS
 	if prefH == 0 {
 		prefH = layout.Height * 3 / 5
 	}
-	listH := prefH - cmdOutputOverhead
-	listH = max(listH, minListH)
-	height := listH + cmdOutputOverhead
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-		listH = height - cmdOutputOverhead
+	listH = max(prefH-cmdOutputOverhead, minListH)
+	if height := listH + cmdOutputOverhead; height > layout.Height-2 {
+		listH = layout.Height - 2 - cmdOutputOverhead
 		if listH < minListH {
-			return m, false
+			return 0, 0, false
 		}
 	}
+	return prefW, listH, true
+}
 
-	rect := draw.CenteredDialogRect(layout, prefW, height)
-	m.Rect = rect
-	m.ListH = listH
-	m.ContentWidth = draw.DialogContentWidth(rect)
-	return m, true
+// CommandOutputDialogView is the output dialog's widget spec: a reserved output region above the
+// OK button (finished) or the Background / Cancel buttons (running; the title carries the
+// Running / Queued status). ok is false when the dialog does not fit the layout.
+func CommandOutputDialogView(layout Layout, state CommandOutputDialogState, styles theme.Theme) (spec dlg.Spec, listH int, ok bool) {
+	prefW, listH, ok := commandOutputSize(layout, state)
+	title := strings.TrimSpace(state.Title)
+	if title == "" {
+		title = "Output"
+	}
+	if state.Running {
+		status := styles.IconMetaRunning() + " Running…"
+		if state.Queued {
+			status = styles.IconJobsList("queued") + " Queued…"
+		}
+		title += " " + status
+	}
+	return dlg.Spec{
+		Title: title, Width: prefW, Unclamped: true,
+		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{{ID: outputBody, Kind: dlg.KindSpacer, Height: listH}}}}},
+		Buttons: commandOutputButtons(state.Running),
+	}, listH, ok
+}
+
+// commandOutputButtons is the button strip: OK when finished, Background / Cancel while running.
+func commandOutputButtons(running bool) []dlg.Button {
+	if running {
+		return []dlg.Button{
+			{ID: OutputBackground, Label: "Background", Mnemonic: 'B'},
+			{ID: OutputCancel, Label: "Cancel", Mnemonic: 'C', Destructive: true},
+		}
+	}
+	return []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}}
+}
+
+// CommandOutputDialogKeys is the spec for key handling alone: it carries the buttons but needs no
+// layout, since the output region is not focusable.
+func CommandOutputDialogKeys(state CommandOutputDialogState) dlg.Spec {
+	return dlg.Spec{Buttons: commandOutputButtons(state.Running)}
+}
+
+// ComputeCommandOutputDialogMetrics calculates dialog geometry from layout and state.
+func ComputeCommandOutputDialogMetrics(layout Layout, state CommandOutputDialogState) (m CommandOutputDialogMetrics, ok bool) {
+	spec, listH, fits := CommandOutputDialogView(layout, state, theme.Theme{})
+	if !fits {
+		return m, false
+	}
+	p, placed := dlg.Place(layout.Width, layout.Height, spec)
+	if !placed {
+		return m, false
+	}
+	return CommandOutputDialogMetrics{Rect: p.Rect, ListH: listH, ContentWidth: draw.DialogContentWidth(p.Rect)}, true
 }
 
 // CommandOutputDialogListH returns the visible content row count for scroll handling.
@@ -95,32 +152,25 @@ func CommandOutputDialogListH(layout Layout, state CommandOutputDialogState) int
 	return m.ListH
 }
 
-// DrawCommandOutputDialog renders the command output modal overlay.
+// DrawCommandOutputDialog renders the command output modal overlay: the dlg frame, separator and
+// buttons, then the output lines painted into the reserved output region.
 func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOutputDialogState, styles theme.Theme, scrollbarStyle uiscrollbar.Style, isSelected func(string) bool) {
 	if !state.Open {
 		return
 	}
-	metrics, ok := ComputeCommandOutputDialogMetrics(layout, state)
+	spec, listH, ok := CommandOutputDialogView(layout, state, styles)
 	if !ok {
 		return
 	}
-	rect := metrics.Rect
-	listH := metrics.ListH
-	contentW := metrics.ContentWidth
-
-	title := strings.TrimSpace(state.Title)
-	if title == "" {
-		title = "Output"
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
+	p, placed := dlg.Place(layout.Width, layout.Height, spec)
+	if !placed {
+		return
 	}
-	if state.Running {
-		status := styles.IconMetaRunning() + " Running…"
-		if state.Queued {
-			status = styles.IconJobsList("queued") + " Queued…"
-		}
-		title += " " + status
-	}
-	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
+	rect := p.Rect
+	contentW := draw.DialogContentWidth(rect)
 	_, dbg, _ := styles.DialogSurface.Decompose()
+	borderStyle := styles.DialogFrame.Background(dbg)
 	lineStyle := styles.DialogText.Background(dbg)
 
 	contentX := draw.DialogTextX(rect)
@@ -162,16 +212,4 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 		previewpanel.DrawCells(screen, contentX, y, contentW, cells, lineStyle)
 	}
 	draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, listH, len(state.Lines), scroll, scrollbarStyle, borderStyle, styles)
-
-	// separator at buttonY-2, blank row at buttonY-1 (DrawDialogFrame fills surface), button at buttonY
-	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
-	buttons := []draw.DialogButtonSpec{{Label: "OK", Shortcut: 'O', Focused: true}}
-	if state.Running {
-		buttons = []draw.DialogButtonSpec{
-			{Label: "Background", Shortcut: 'B', Focused: state.Focus == 0},
-			{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 1, Destructive: true},
-		}
-	}
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, buttons, styles)
 }

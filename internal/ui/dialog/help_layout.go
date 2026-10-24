@@ -1,7 +1,14 @@
 package dialog
 
-import "github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+import (
+	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+)
 
+// HelpDialogChromeRows is the number of fixed (non-list) rows in the help dialog: both
+// borders, the filter input, separator-before-list, separator-after-list, and the button
+// row. The single source of truth for total-height/list-height math shared by
 // HelpDialogChromeRows is the number of fixed (non-list) rows in the help dialog: both
 // borders, the filter input, separator-before-list, separator-after-list, and the button
 // row. The single source of truth for total-height/list-height math shared by
@@ -16,47 +23,36 @@ type HelpDialogListMetrics struct {
 	ListH       int
 }
 
-// ComputeHelpDialogListMetrics mirrors DrawHelpDialog sizing for the scrollable list area.
-// When ok is false, the help dialog would not render a usable list at this terminal size.
-func ComputeHelpDialogListMetrics(layout Layout) (m HelpDialogListMetrics, ok bool) {
-	maxW := layout.Width - 14
-	if maxW < 40 {
-		maxW = 40
-	}
-	if maxW > 90 {
-		maxW = 90
-	}
-	maxH := layout.Height - 14
-	if maxH < 12 {
-		maxH = 12
-	}
-	if maxH > 36 {
-		maxH = 36
-	}
-	listH := maxH - HelpDialogChromeRows
-	if listH < 4 {
-		listH = 4
-	}
-	height := HelpDialogChromeRows + listH
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-		listH = height - HelpDialogChromeRows
+// helpDialogSize returns the preferred outer width and the visible list row count for the layout;
+// ok is false when the dialog does not fit.
+func helpDialogSize(layout Layout) (prefW, listH int, ok bool) {
+	prefW = min(max(layout.Width-14, 40), 90)
+	maxH := min(max(layout.Height-14, 12), 36)
+	listH = max(maxH-HelpDialogChromeRows, 4)
+	if height := HelpDialogChromeRows + listH; height > layout.Height-2 {
+		listH = layout.Height - 2 - HelpDialogChromeRows
 		if listH < 4 {
-			return m, false
+			return 0, 0, false
 		}
 	}
-	rect := draw.CenteredDialogRect(layout, maxW, height)
-	inputWidth := rect.Width - 4
+	return prefW, listH, true
+}
+
+// ComputeHelpDialogListMetrics mirrors DrawHelpDialog sizing for the scrollable list area, taking
+// the rect from the dialog's placement. When ok is false, the help dialog would not render a
+// usable list at this terminal size.
+func ComputeHelpDialogListMetrics(layout Layout) (m HelpDialogListMetrics, ok bool) {
+	spec, listH, fits := HelpDialogView(HelpViewState{}, layout, theme.Theme{})
+	if !fits {
+		return m, false
+	}
+	p, placed := dlg.Place(layout.Width, layout.Height, spec)
+	if !placed {
+		return m, false
+	}
+	inputWidth := draw.DialogContentWidth(p.Rect)
 	if inputWidth < 10 {
 		return m, false
 	}
-	keyColWidth := 28
-	if keyColWidth > inputWidth-3 {
-		keyColWidth = inputWidth - 3
-	}
-	m.Rect = rect
-	m.InputWidth = inputWidth
-	m.KeyColWidth = keyColWidth
-	m.ListH = listH
-	return m, true
+	return HelpDialogListMetrics{Rect: p.Rect, InputWidth: inputWidth, KeyColWidth: min(28, inputWidth-3), ListH: listH}, true
 }
