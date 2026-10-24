@@ -41,7 +41,7 @@ func (h *Handler) DialogInputRestoreFooterEligible() bool {
 	}
 	if h.model.SFTPConnectDialog.Open {
 		st := &h.model.SFTPConnectDialog
-		if st.Focus != 1 {
+		if st.Focus != dialog.SFTPLocation {
 			return false
 		}
 		return st.Location.Prefill != ""

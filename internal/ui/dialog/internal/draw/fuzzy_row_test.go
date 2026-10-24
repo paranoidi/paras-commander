@@ -1,4 +1,4 @@
-package dialog
+package draw
 
 import (
 	"strings"
@@ -12,7 +12,7 @@ import (
 
 func TestFuzzyPathRowContentUsesFitPathForWidth(t *testing.T) {
 	line := "very/long/parent/directory/important_file.go"
-	text, _ := fuzzyPathRowContent(line, nil, 28, tcell.StyleDefault)
+	text, _ := FuzzyPathRowContent(line, nil, 28, tcell.StyleDefault)
 	if strings.ContainsRune(text, '~') {
 		t.Fatalf("display %q should not use tilde truncation", text)
 	}
@@ -30,7 +30,7 @@ func TestFuzzyPathRowContentUsesFitPathForWidth(t *testing.T) {
 func TestFuzzyPathRowContentMapsHighlightsOntoFittedPath(t *testing.T) {
 	line := "pkg/util/target.go"
 	ranges := []search.Range{{Start: 8, End: 14}} // "target" in basename
-	_, spans := fuzzyPathRowContent(line, ranges, 40, tcell.StyleDefault)
+	_, spans := FuzzyPathRowContent(line, ranges, 40, tcell.StyleDefault)
 	if len(spans) == 0 {
 		t.Fatal("expected highlight spans on fitted path")
 	}
@@ -38,7 +38,7 @@ func TestFuzzyPathRowContentMapsHighlightsOntoFittedPath(t *testing.T) {
 
 func TestFuzzyPathRowContentFitsWideGlyphsByCells(t *testing.T) {
 	line := "森の黒魔術/大量の画質/魔術.txt" // 18 runes, 32 cells
-	text, _ := fuzzyPathRowContent(line, nil, 20, tcell.StyleDefault)
+	text, _ := FuzzyPathRowContent(line, nil, 20, tcell.StyleDefault)
 	if w := runewidth.StringWidth(text); w > 20 {
 		t.Fatalf("row %q is %d cells, want <= 20", text, w)
 	}

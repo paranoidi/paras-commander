@@ -1,14 +1,13 @@
 package dialog
 
 import (
-	"fmt"
 	"unicode/utf8"
-
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
@@ -37,95 +36,85 @@ func themeDialogClampedHeight(layout geom.Layout, choiceCount int) int {
 	return dialogHeight
 }
 
-func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState, styles theme.Theme) {
-	if len(state.Choices) == 0 {
-		return
-	}
+// ThemeList is the theme list's widget ID; the dialog's Focus is ThemeList, dlg.OK or dlg.Cancel.
+const ThemeList dlg.ID = "themes"
 
-	const previewWidthMin = 40 // minimum width for the right column
+// themePreviewPane is the reserved region the live widget preview is painted into.
+const themePreviewPane dlg.ID = "theme-preview"
 
-	// Calculate list column width.
+// themeDialogListWidth is the width of the left (list) column: the widest label plus the radio
+// marker and spacing.
+func themeDialogListWidth(state ThemeDialogState) int {
 	listWidth := 0
 	for _, choice := range state.Choices {
 		// marker (3) + label + spacing
-		w := utf8.RuneCountInString(choice.Label) + 6
-		if w > listWidth {
-			listWidth = w
-		}
+		listWidth = max(listWidth, utf8.RuneCountInString(choice.Label)+6)
 	}
-	listWidth = max(16, listWidth)
+	return max(16, listWidth)
+}
 
-	// Total dialog width: list column + separator + preview column + margins.
-	dialogWidth := listWidth + 10 + previewWidthMin
-	if dialogWidth > layout.Width-4 {
-		dialogWidth = layout.Width - 4
+// ThemeDialogView describes the theme dialog: a radio-marked list that wraps and stays centered
+// on the cursor next to a reserved preview pane (painted by DrawThemeDialog), over OK / Cancel.
+// layout fixes how many rows the list shows (ThemeDialogListViewportRows).
+func ThemeDialogView(state ThemeDialogState, layout Layout) dlg.Spec {
+	const previewWidthMin = 40 // minimum width for the right column
+	listWidth := themeDialogListWidth(state)
+	rows := ThemeDialogListViewportRows(layout, len(state.Choices))
+	list := dlg.Item{
+		ID: ThemeList, Kind: dlg.KindList, Cursor: state.Selected, Height: rows,
+		Wrap: true, CenterScroll: true, PageStep: rows, Markers: true,
 	}
-	if dialogWidth < listWidth+10 {
-		dialogWidth = listWidth + 10
+	for i, choice := range state.Choices {
+		list.Rows = append(list.Rows, dlg.ListRow{Text: choice.Label, Marked: i == state.Selected})
 	}
+	return dlg.Spec{
+		Title: "Theme", Width: listWidth + 10 + previewWidthMin, MinWidth: listWidth + 10, Unclamped: true,
+		PlainButtonKeys: true,
+		Groups: []dlg.Group{{
+			ColWidths: []int{listWidth + 2},
+			Columns: [][]dlg.Item{
+				{list},
+				{{ID: themePreviewPane, Kind: dlg.KindSpacer, Height: rows}},
+			},
+		}},
+		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}},
+	}
+}
 
-	dialogHeight := themeDialogClampedHeight(layout, len(state.Choices))
-	if dialogHeight < 8 {
+func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState, styles theme.Theme) {
+	if len(state.Choices) == 0 || themeDialogClampedHeight(layout, len(state.Choices)) < 8 {
 		return
 	}
+	spec := ThemeDialogView(state, layout)
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
+	p, ok := dlg.Place(layout.Width, layout.Height, spec)
+	if !ok {
+		return
+	}
+	pane, _ := p.Item(themePreviewPane)
+	drawThemePreview(screen, p, pane.Rect, styles)
+}
 
-	rect := draw.CenteredDialogRect(layout, dialogWidth, dialogHeight)
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Theme", styles)
+// drawThemePreview paints the widget preview in the pane right of the list: the vertical rule
+// (with its tees on the frame), sample inputs, checkboxes and buttons in the theme being previewed.
+func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, styles theme.Theme) {
+	rect := p.Rect
 	_, dbg, _ := styles.DialogSurface.Decompose()
-	// Layout columns.
-	primaryCol := draw.DialogTextX(rect)
-	listRightEdge := primaryCol + listWidth
-	sepCol := listRightEdge + 2 // space before vertical separator
-	previewLeft := sepCol + 1   // after vertical line
+	borderStyle := styles.DialogFrame.Background(dbg)
+	sepCol := pane.X + 1 // the rule sits one cell into the pane
+	previewLeft := sepCol + 1
 	previewWidth := rect.X + rect.Width - 2 - previewLeft
 	if previewWidth < 20 {
 		previewWidth = 20
 	}
+	outerSepY := p.SepY
 
-	// ============================================================
-	// LEFT COLUMN: Theme list (radio items)
-	// ============================================================
-	visibleRows := ThemeDialogListViewportRows(layout, len(state.Choices))
-	start := themeDialogStart(state.Selected, visibleRows, len(state.Choices))
-	listTopY := rect.Y + 1
-
-	for row := 0; row < visibleRows && start+row < len(state.Choices); row++ {
-		choice := state.Choices[start+row]
-		idx := start + row
-		y := listTopY + row
-
-		style := styles.DialogOptionRowStyle(false, idx == state.Selected)
-		if state.Focus == 0 && idx == state.Selected {
-			style = styles.DialogOptionRowStyle(true, true)
-		}
-		part := " " + styles.IconDialogRadio(idx == state.Selected) + " "
-		primitive.Text(screen, primaryCol, y, utf8.RuneCountInString(part), part, style)
-		labelX := primaryCol + utf8.RuneCountInString(part)
-		labelMax := listRightEdge - labelX
-		if labelMax > 0 {
-			text := fmt.Sprintf("%-*s", labelMax, choice.Label)
-			primitive.Text(screen, labelX, y, labelMax, text, style)
-		}
-	}
-
-	// ============================================================
-	// VERTICAL SEPARATOR: Draw │ between columns (excluding top, outer-sep, bottom rows)
-	// ============================================================
-	outerSepY := rect.Y + rect.Height - 3
-	sepStyle := borderStyle
+	// Vertical separator between the columns (excluding top, outer-sep and bottom rows).
 	for y := rect.Y + 1; y < outerSepY; y++ {
-		screen.SetContent(sepCol, y, '│', nil, sepStyle)
+		screen.SetContent(sepCol, y, '│', nil, borderStyle)
 	}
 
-	// ============================================================
-	// RIGHT COLUMN: Widget preview
-	// ============================================================
 	previewY := rect.Y + 1
-	// Check we have room before the outer separator.
-	if previewY >= outerSepY {
-		return
-	}
-
 	// --- Input field examples (dialog input vs placeholder, focus cursor) ---
 	previewY++ // blank line after dialog top
 	labelStyle := styles.DialogText.Background(dbg)
@@ -135,10 +124,16 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	cursorOnLastRune := max(0, cursorEnd-1)
 	inputWidth := previewWidth - 1
 
+	// The pane is only as tall as the list: on a short screen the preview is cut off at the outer
+	// separator instead of spilling over the frame.
+	fits := func(y int) bool { return y < outerSepY }
+
 	drawThemePreviewInputPair := func(label string, field FileDialogField, focused bool) {
-		primitive.Text(screen, previewLeft, previewY, previewWidth, " "+label, labelStyle)
+		if fits(previewY) {
+			primitive.Text(screen, previewLeft, previewY, previewWidth, " "+label, labelStyle)
+		}
 		previewY++
-		if inputWidth > 0 {
+		if inputWidth > 0 && fits(previewY) {
 			drawInputField(screen, previewLeft+1, previewY, inputWidth, field, focused, styles)
 		}
 		previewY++ // empty row after input area
@@ -159,9 +154,13 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	}, true)
 
 	// --- Checkboxes ---
-	draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Selected", 'S', true, false, false, styles)
+	if fits(previewY) {
+		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Selected", 'S', true, false, false, styles)
+	}
 	previewY++
-	draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, false, styles)
+	if fits(previewY) {
+		draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, false, styles)
+	}
 	previewY++
 
 	// --- Separator ---
@@ -172,7 +171,7 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	previewHSepY := previewY
 	previewSepStyle := borderStyle
 	rightBorderCol := rect.X + rect.Width - 1 // dialog right border column
-	for x := previewLeft; x <= rightBorderCol; x++ {
+	for x := previewLeft; x <= rightBorderCol && fits(previewHSepY); x++ {
 		ch := '─'
 		if x == rightBorderCol {
 			ch = '┤'
@@ -188,30 +187,17 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	if btnStartX < previewLeft {
 		btnStartX = previewLeft
 	}
-	draw.DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', false, false, false, styles)
-	btnStartX += draw.DialogButtonWidth("Selected") + btnGap
-	draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', true, false, false, styles)
-
-	// ============================================================
-	// OUTER SEPARATOR
-	// ============================================================
-	draw.DrawDialogHSeparator(screen, rect, outerSepY, borderStyle)
-
-	// ============================================================
-	// OUTER BUTTONS
-	// ============================================================
-	btnY := outerSepY + 1
-	okFocused := state.Focus == 1
-	cancelFocused := state.Focus == 2
-	draw.DrawOKCancelButtonRow(screen, rect, btnY, okFocused, cancelFocused, styles)
+	if fits(previewY) {
+		draw.DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', false, false, false, styles)
+		btnStartX += draw.DialogButtonWidth("Selected") + btnGap
+		draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', true, false, false, styles)
+	}
 
 	// Override box-drawing connector characters at the vertical separator column
 	// where it intersects horizontal lines. Must be after all draw calls.
-	screen.SetContent(sepCol, rect.Y, '┬', nil, borderStyle)       // top border: tee down
-	screen.SetContent(sepCol, previewHSepY, '├', nil, borderStyle) // preview separator: tee right
-	screen.SetContent(sepCol, outerSepY, '┴', nil, borderStyle)    // outer separator: tee up (no vertical below)
-}
-
-func themeDialogStart(selected, visibleRows, total int) int {
-	return geom.ScrollOffset(selected, visibleRows, total)
+	screen.SetContent(sepCol, rect.Y, '┬', nil, borderStyle) // top border: tee down
+	if fits(previewHSepY) {
+		screen.SetContent(sepCol, previewHSepY, '├', nil, borderStyle) // preview separator: tee right
+	}
+	screen.SetContent(sepCol, outerSepY, '┴', nil, borderStyle) // outer separator: tee up (no vertical below)
 }

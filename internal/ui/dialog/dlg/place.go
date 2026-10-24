@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // placeLabel positions a label row whose column starts at x (the option marker's cell) and ends
@@ -32,9 +33,36 @@ func placeLabel(it Item, x, right, y int) PlacedItem {
 func (g Group) height() int {
 	h := 0
 	for _, col := range g.Columns {
-		h = max(h, len(col))
+		n := 0
+		for _, it := range col {
+			n += it.span()
+		}
+		h = max(h, n)
 	}
 	return h
+}
+
+// columnX returns where column ci of g starts (the option marker's cell) and the x its cell ends
+// before (the next column's start, or the right border for the last column).
+func (g Group) columnX(rect Rect, ci int) (x, right int) {
+	base := draw.DialogOptionX(rect)
+	right = rect.X + rect.Width - 1 // stop one cell before the right border
+	if len(g.ColWidths) > 0 {
+		x = base
+		for i := 0; i < ci && i < len(g.ColWidths); i++ {
+			x += g.ColWidths[i]
+		}
+		if ci < len(g.ColWidths) {
+			right = x + g.ColWidths[ci]
+		}
+		return x, right
+	}
+	colW := rect.Width / max(len(g.Columns), 1)
+	x = base + ci*colW
+	if ci+1 < len(g.Columns) {
+		right = base + (ci+1)*colW
+	}
+	return x, right
 }
 
 // Place is the one layout pass: it clamps and centers the dialog on a screen of screenW x screenH
@@ -73,17 +101,27 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 	p := Placement{Rect: rect}
 	y := rect.Y + 1
 	for _, g := range spec.Groups {
-		colW := rect.Width / max(len(g.Columns), 1)
 		for ci, col := range g.Columns {
-			x := draw.DialogOptionX(rect) + ci*colW
-			right := rect.X + rect.Width - 1 // stop one cell before the right border
-			if ci+1 < len(g.Columns) {
-				right = draw.DialogOptionX(rect) + (ci+1)*colW
-			}
-			for ri, it := range col {
+			x, right := g.columnX(rect, ci)
+			ry := 0 // rows used so far in this column
+			for _, it := range col {
+				ri := ry
+				ry += it.span()
 				switch it.Kind {
 				case KindLabel:
 					p.Items = append(p.Items, placeLabel(it, x, right, y+ri))
+					continue
+				case KindSpacer:
+					p.Items = append(p.Items, PlacedItem{
+						ID: it.ID, Kind: KindSpacer, Rect: Rect{X: x, Y: y + ri, Width: max(right-x, 0), Height: it.span()},
+					})
+					continue
+				case KindList:
+					p.Items = append(p.Items, PlacedItem{
+						ID: it.ID, Kind: KindList,
+						Rect:   Rect{X: x + 1, Y: y + ri, Width: max(right-x-2, 0), Height: it.span()},
+						Offset: it.ViewOffset(), Rows: len(it.Rows),
+					})
 					continue
 				case KindSeparator:
 					label := ""
@@ -158,6 +196,10 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 					draw.DrawDialogHSeparatorWithCenteredLabel(screen, pi.Rect, pi.Rect.Y, borderStyle, labelStyle, pi.Label)
 				case KindInput:
 					drawInput(screen, pi.Rect, it, focus == it.ID, styles)
+				case KindSpacer:
+					// reserved for the caller's overlay
+				case KindList:
+					drawList(screen, p.Rect, pi, it, listFocused(spec, focus, it.ID), spec.ScrollbarStyle, borderStyle, styles)
 				case KindCheckbox:
 					draw.DrawDialogCheckbox(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, false, styles)
 				default:
@@ -190,12 +232,79 @@ func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.
 func HitTest(p Placement, x, y int) (ID, bool) {
 	for _, it := range p.Items {
 		r := it.Rect
-		if it.Kind == KindLabel || it.Kind == KindSeparator {
+		if it.Kind == KindLabel || it.Kind == KindSeparator || it.Kind == KindSpacer {
 			continue
 		}
 		if x >= r.X && x < r.X+r.Width && y >= r.Y && y < r.Y+r.Height {
+			if it.Kind == KindList && it.Offset+(y-r.Y) >= it.Rows {
+				continue // below the last row
+			}
 			return it.ID, true
 		}
 	}
 	return "", false
+}
+
+// listFocused reports whether list id shows its cursor as focused: the list itself or an input
+// that drives it holds focus.
+func listFocused(spec Spec, focus, id ID) bool {
+	if focus == id {
+		return true
+	}
+	if p, ok := find(spec, focus); ok && !p.isButton() {
+		it := itemAt(spec, p)
+		return it.Kind == KindInput && it.Drives == id
+	}
+	return false
+}
+
+// drawList paints the visible rows of a list (pi is its placement) and its scrollbar.
+func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focused bool, sbStyle uiscrollbar.Style, borderStyle tcell.Style, styles theme.Theme) {
+	r := pi.Rect
+	_, surface, _ := styles.DialogSurface.Decompose()
+	for row := 0; row < r.Height; row++ {
+		y := r.Y + row
+		idx := pi.Offset + row
+		if idx >= len(it.Rows) {
+			if !it.Markers { // option-row lists leave unused rows as bare surface
+				primitive.StyledText(screen, r.X, y, r.Width, "", styles.DialogText.Background(surface), nil)
+			}
+			continue
+		}
+		rw := it.Rows[idx]
+		isCursor := focused && idx == it.Cursor
+		if it.Markers {
+			style := styles.DialogOptionRowStyle(isCursor, rw.Marked)
+			part := " " + styles.IconDialogRadio(rw.Marked) + " "
+			partW := runewidth.StringWidth(part)
+			primitive.Text(screen, r.X, y, partW, part, style)
+			primitive.StyledText(screen, r.X+partW, y, max(r.Width-partW, 0), rw.Text, style, nil)
+			continue
+		}
+		base := styles.DialogText.Background(surface)
+		match := styles.FuzzyHighlight
+		if isCursor {
+			base = styles.DialogOptionRowStyle(true, false)
+			match = styles.FuzzyHighlightCursor
+		}
+		_, bg, _ := base.Decompose()
+		match = match.Background(bg)
+		text, spans := fitRow(rw, it.Fit, r.Width, match)
+		primitive.StyledText(screen, r.X, y, r.Width, text, base, spans)
+	}
+	if it.Scrollbar {
+		if sbStyle == "" {
+			sbStyle = uiscrollbar.StyleThumb
+		}
+		draw.DrawDialogListScrollbar(screen, dialogRect, r.Y, r.Height, len(it.Rows), pi.Offset, sbStyle, borderStyle, styles)
+	}
+}
+
+// fitRow shortens a row's text to width per fit and maps its match ranges onto the result.
+func fitRow(rw ListRow, fit Fit, width int, match tcell.Style) (string, []primitive.Span) {
+	if fit != FitRight {
+		return draw.FuzzyRowContent(rw.Text, rw.Match, width, match, fit == FitPath)
+	}
+	text := primitive.TruncateRight(rw.Text, width)
+	return text, draw.FuzzyHighlightSpans([]rune(rw.Text), []rune(text), rw.Match, match)
 }

@@ -170,15 +170,8 @@ func (a *App) modalDialogButtons(event *tcell.EventKey) dialogButtons {
 		return dialogButtons{Cancel: func() { a.model.QuitConfirm = dialog.QuitConfirmState{} }}
 	case a.model.DedupEmptyDirsConfirm.Open:
 		// Cancel backs out: nothing is deleted and the dedup marks stay.
-		d := &a.model.DedupEmptyDirsConfirm
 		return dialogButtons{
-			OK: func() {
-				focus := d.Focus
-				a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
-				if focus < 2 {
-					a.dedupCtrl.DeleteMarked(focus == 0)
-				}
-			},
+			OK:     func() { a.answerDedupEmptyDirsConfirm(a.model.DedupEmptyDirsConfirm.Focus) },
 			Cancel: func() { a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{} },
 		}
 	case a.model.UndoConfirm.Open:

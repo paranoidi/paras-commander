@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 const pathPickerMinPathWidth = 8
@@ -169,9 +170,9 @@ func pathPickerFieldHighlightSpans(
 	dispWidth := utf8.RuneCountInString(disp)
 	var spans []primitive.Span
 	if pathFit {
-		_, spans = fuzzyPathRowContent(field.text, fieldRanges, dispWidth, matchStyle)
+		_, spans = draw.FuzzyPathRowContent(field.text, fieldRanges, dispWidth, matchStyle)
 	} else {
-		_, spans = fuzzyRowContent(field.text, fieldRanges, dispWidth, matchStyle, false)
+		_, spans = draw.FuzzyRowContent(field.text, fieldRanges, dispWidth, matchStyle, false)
 	}
 	for i := range spans {
 		spans[i].Start += dispOffset

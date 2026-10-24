@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/filterlist"
 	"github.com/paranoidi/paras-commander/internal/pathpick"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -59,7 +60,7 @@ func (c *PathCompletion) Set(value string, start int, items []pathpick.Candidate
 	}
 	_, ghost := c.ghost(value)
 	if sameValue {
-		c.Selected = ListClampedSelectionDelta(c.Selected, len(items), 0)
+		c.Selected = filterlist.ClampedDelta(c.Selected, len(items), 0)
 		c.clampScroll()
 		if ghost {
 			c.Open = false
@@ -110,7 +111,7 @@ func (c *PathCompletion) Move(delta int) {
 	if !c.Open || len(c.Items) == 0 {
 		return
 	}
-	c.Selected = ListClampedSelectionDelta(c.Selected, len(c.Items), delta)
+	c.Selected = filterlist.ClampedDelta(c.Selected, len(c.Items), delta)
 	c.clampScroll()
 }
 

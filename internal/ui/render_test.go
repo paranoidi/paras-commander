@@ -1008,7 +1008,7 @@ func TestRenderTransientStatusAboveFooterAfterThemeDialog(t *testing.T) {
 		ThemeDialog: dialog.ThemeDialogState{
 			Open:     true,
 			Selected: 0,
-			Focus:    0,
+			Focus:    dialog.ThemeList,
 			Choices:  []dialog.ThemeChoice{{Name: "default", Label: "default"}},
 		},
 		Message:        "theme-reload-err",

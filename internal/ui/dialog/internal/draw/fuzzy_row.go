@@ -1,4 +1,4 @@
-package dialog
+package draw
 
 import (
 	"github.com/gdamore/tcell/v2"
@@ -7,10 +7,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
-// fuzzyRowContent renders one list row with optional fuzzy highlights.
+// FuzzyRowContent renders one list row with optional fuzzy highlights.
 // When pathFit is true, relative paths use primitive.FitPathForWidth; otherwise
 // primitive.TruncateMiddle is used for non-path lines.
-func fuzzyRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style, pathFit bool) (string, []primitive.Span) {
+func FuzzyRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style, pathFit bool) (string, []primitive.Span) {
 	if width <= 0 {
 		return "", nil
 	}
@@ -25,16 +25,16 @@ func fuzzyRowContent(line string, ranges []search.Range, width int, matchStyle t
 		dispStr = primitive.TruncateMiddle(line, width)
 	}
 	disp := []rune(dispStr)
-	spans := fuzzyHighlightSpans(orig, disp, ranges, matchStyle)
+	spans := FuzzyHighlightSpans(orig, disp, ranges, matchStyle)
 	return dispStr, spans
 }
 
-// fuzzyPathRowContent is fuzzyRowContent with path-aware shortening (find dialog paths).
-func fuzzyPathRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style) (string, []primitive.Span) {
-	return fuzzyRowContent(line, ranges, width, matchStyle, true)
+// FuzzyPathRowContent is FuzzyRowContent with path-aware shortening (find dialog paths).
+func FuzzyPathRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style) (string, []primitive.Span) {
+	return FuzzyRowContent(line, ranges, width, matchStyle, true)
 }
 
-func fuzzyHighlightSpans(orig, disp []rune, ranges []search.Range, matchStyle tcell.Style) []primitive.Span {
+func FuzzyHighlightSpans(orig, disp []rune, ranges []search.Range, matchStyle tcell.Style) []primitive.Span {
 	if len(ranges) == 0 || len(disp) == 0 {
 		return nil
 	}
@@ -89,9 +89,4 @@ func alignOrigToDisp(orig, disp []rune) []int {
 		oi++
 	}
 	return m
-}
-
-// FuzzyRowContent renders one list row with optional fuzzy highlights.
-func FuzzyRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style, pathFit bool) (string, []primitive.Span) {
-	return fuzzyRowContent(line, ranges, width, matchStyle, pathFit)
 }

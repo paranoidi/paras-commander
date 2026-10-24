@@ -1,6 +1,9 @@
 package dialog
 
-import "github.com/paranoidi/paras-commander/internal/search"
+import (
+	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+)
 
 // SFTPConnectDialogState is the SSH/SFTP connect dialog (known hosts + manual URI).
 type SFTPConnectDialogState struct {
@@ -12,9 +15,10 @@ type SFTPConnectDialogState struct {
 	QueryScroll  int // first visible rune offset for horizontal scrolling
 	Ranked       []int
 	MatchRanges  [][]search.Range // len == len(DisplayLines); highlights on DisplayLines
-	Selected     int
-	ListScroll   int
+	Selected     int              // host list cursor row (index into Ranked)
+	ListScroll   int              // first visible host row
 	Location     FileDialogField
-	// Focus: 0=list+query, 1=location input, 2=OK, 3=Cancel
-	Focus int
+	// Focus is SFTPFilter ("" = the filter, which also steers the host list), SFTPLocation,
+	// dlg.OK or dlg.Cancel.
+	Focus dlg.ID
 }

@@ -5,10 +5,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
-
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // dedupEmptyDirsConfirmMaxListRows caps visible directory rows (a trailing
@@ -19,13 +17,6 @@ const dedupEmptyDirsConfirmMaxListRows = 10
 // empty-dirs confirmation list; nil skips icons. dir is the relative path
 // shown on that row (used only to derive the display name for lookup).
 type DedupEmptyDirsRowIconPainter func(screen tcell.Screen, x, y int, dir string, styles theme.Theme)
-
-func dedupEmptyDirsConfirmListRows(state DedupEmptyDirsConfirmState) int {
-	if len(state.Dirs) <= dedupEmptyDirsConfirmMaxListRows {
-		return max(len(state.Dirs), 1)
-	}
-	return dedupEmptyDirsConfirmMaxListRows
-}
 
 func dedupEmptyDirsConfirmWidth(state DedupEmptyDirsConfirmState, msg string, iconLead int) int {
 	width := utf8.RuneCountInString(msg) + 4
@@ -43,56 +34,66 @@ func dedupEmptyDirsConfirmWidth(state DedupEmptyDirsConfirmState, msg string, ic
 	return width
 }
 
-func DrawDedupEmptyDirsConfirmDialog(screen tcell.Screen, layout Layout, state DedupEmptyDirsConfirmState, ctx DialogRenderContext, paintIcon DedupEmptyDirsRowIconPainter) {
-	styles := ctx.Styles
-	showIcons := ctx.ShowIcons
-	iconLead := ctx.IconLead
+// dedupEmptyDirsRowID is the label ID of directory row i, so the caller can find the row's rect
+// to paint its icon.
+func dedupEmptyDirsRowID(i int) dlg.ID { return dlg.ID(fmt.Sprintf("dedup-dir-%d", i)) }
+
+// DedupEmptyDirsConfirmView describes the confirmation: the question, the directories (capped at
+// dedupEmptyDirsConfirmMaxListRows rows, a trailing "(+N more)" line replacing the last one) and
+// Yes / No / Cancel. iconLead cells are kept free before each directory for a row icon the
+// renderer paints (0 = no icons); key handling passes 0.
+func DedupEmptyDirsConfirmView(state DedupEmptyDirsConfirmState, iconLead int) dlg.Spec {
 	noun := "directories"
 	if len(state.Dirs) == 1 {
 		noun = "directory"
 	}
 	msg := fmt.Sprintf("Remove %d empty %s left by this delete?", len(state.Dirs), noun)
-
-	listRows := dedupEmptyDirsConfirmListRows(state)
-	width := dedupEmptyDirsConfirmWidth(state, msg, iconLead)
-	height := listRows + 7 // msg + blank + list + separator + blank + buttons + top/bottom border
-	rect := draw.CenteredDialogRect(layout, width, height)
-
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Remove Empty Directories", styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	textStyle := styles.DialogText.Background(dbg)
-	listCol := draw.DialogTextX(rect)
-	innerW := draw.DialogContentWidth(rect)
-	textX, textW := listCol, innerW
-	if showIcons && paintIcon != nil && iconLead > 0 {
-		textX = listCol + iconLead
-		textW = max(innerW-iconLead, 1)
-	}
-
-	primitive.Text(screen, listCol, rect.Y+1, innerW, msg, textStyle)
-
-	listY := rect.Y + 3
+	items := []dlg.Item{{Kind: dlg.KindLabel, Label: msg}, {Kind: dlg.KindLabel}}
 	shown := len(state.Dirs)
 	truncated := shown > dedupEmptyDirsConfirmMaxListRows
 	if truncated {
 		shown = dedupEmptyDirsConfirmMaxListRows - 1
 	}
 	for i := 0; i < shown; i++ {
-		if showIcons && paintIcon != nil && iconLead > 0 {
-			paintIcon(screen, listCol, listY+i, state.Dirs[i], styles)
-		}
-		primitive.Text(screen, textX, listY+i, textW, primitive.FitPathForWidth(state.Dirs[i], textW), textStyle)
+		items = append(items, dlg.Item{ID: dedupEmptyDirsRowID(i), Kind: dlg.KindLabel, Label: state.Dirs[i], Fit: dlg.FitPath, Indent: iconLead})
 	}
 	if truncated {
-		more := fmt.Sprintf("(+%d more)", len(state.Dirs)-shown)
-		primitive.Text(screen, textX, listY+shown, textW, more, textStyle)
+		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: fmt.Sprintf("(+%d more)", len(state.Dirs)-shown), Indent: iconLead})
 	}
+	if len(state.Dirs) == 0 {
+		items = append(items, dlg.Item{Kind: dlg.KindLabel}) // an empty list keeps one blank row
+	}
+	return dlg.Spec{
+		Title: "Remove Empty Directories", Width: dedupEmptyDirsConfirmWidth(state, msg, iconLead), Unclamped: true,
+		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
+		Buttons: []dlg.Button{
+			{ID: DedupEmptyDirsYes, Label: "Yes", Mnemonic: 'Y'},
+			{ID: DedupEmptyDirsNo, Label: "No", Mnemonic: 'N'},
+			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+		},
+	}
+}
 
-	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "Yes", Shortcut: 'Y', Focused: state.Focus == 0},
-		{Label: "No", Shortcut: 'N', Focused: state.Focus == 1},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 2},
-	}, styles)
+func DrawDedupEmptyDirsConfirmDialog(screen tcell.Screen, layout Layout, state DedupEmptyDirsConfirmState, ctx DialogRenderContext, paintIcon DedupEmptyDirsRowIconPainter) {
+	iconLead := 0
+	if ctx.ShowIcons && paintIcon != nil && ctx.IconLead > 0 {
+		iconLead = ctx.IconLead
+	}
+	spec := DedupEmptyDirsConfirmView(state, iconLead)
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
+	if iconLead == 0 {
+		return
+	}
+	p, ok := dlg.Place(layout.Width, layout.Height, spec)
+	if !ok {
+		return
+	}
+	// Icons are the overlay: each sits in the cells the row's Indent left free.
+	for i, dir := range state.Dirs {
+		row, found := p.Item(dedupEmptyDirsRowID(i))
+		if !found {
+			break
+		}
+		paintIcon(screen, row.Rect.X-iconLead, row.Rect.Y, dir, ctx.Styles)
+	}
 }

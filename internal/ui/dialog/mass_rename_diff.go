@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 // MassRenameDiff returns rune-index half-open ranges in old for removed segments and in new
@@ -111,10 +112,10 @@ func massRenameBeforePreviewRow(line string, removed, replaced []search.Range, i
 	removedStyle = removedStyle.Background(bg)
 	replacedStyle = replacedStyle.Background(bg)
 	var spans []primitive.Span
-	spans = append(spans, fuzzyHighlightSpans(orig, disp, replaced, replacedStyle)...)
-	spans = append(spans, fuzzyHighlightSpans(orig, disp, removed, removedStyle)...)
+	spans = append(spans, draw.FuzzyHighlightSpans(orig, disp, replaced, replacedStyle)...)
+	spans = append(spans, draw.FuzzyHighlightSpans(orig, disp, removed, removedStyle)...)
 	if ignored.End > ignored.Start {
-		spans = append(spans, fuzzyHighlightSpans(orig, disp, []search.Range{ignored}, ignoredStyle.Background(bg))...)
+		spans = append(spans, draw.FuzzyHighlightSpans(orig, disp, []search.Range{ignored}, ignoredStyle.Background(bg))...)
 	}
 	return dispStr, spans
 }
@@ -145,10 +146,10 @@ func massRenamePreviewRowStyled(line string, ranges []search.Range, width int, b
 		if end > len(disp) {
 			end = len(disp)
 		}
-		spans = fuzzyHighlightSpans(orig, disp, []search.Range{{Start: 0, End: end}}, highlightStyle)
+		spans = draw.FuzzyHighlightSpans(orig, disp, []search.Range{{Start: 0, End: end}}, highlightStyle)
 	} else {
 		highlight = highlight.Background(bg)
-		spans = fuzzyHighlightSpans(orig, disp, ranges, highlight)
+		spans = draw.FuzzyHighlightSpans(orig, disp, ranges, highlight)
 	}
 	return dispStr, spans
 }

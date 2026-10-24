@@ -54,6 +54,20 @@ func goldenKeyEvent(t *testing.T, tok string) *tcell.EventKey {
 		return tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone)
 	case "End":
 		return tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone)
+	case "Insert":
+		return tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)
+	case "F8":
+		return tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)
+	case "PgUp":
+		return tcell.NewEventKey(tcell.KeyPgUp, 0, tcell.ModNone)
+	case "PgDn":
+		return tcell.NewEventKey(tcell.KeyPgDn, 0, tcell.ModNone)
+	case "Ctrl+Home":
+		return tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModCtrl)
+	case "Ctrl+End":
+		return tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModCtrl)
+	case "F5":
+		return tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)
 	}
 	if r, ok := strings.CutPrefix(tok, "Alt+"); ok && len([]rune(r)) == 1 {
 		return tcell.NewEventKey(tcell.KeyRune, []rune(r)[0], tcell.ModAlt)

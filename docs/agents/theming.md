@@ -22,3 +22,6 @@ UI theme TOML only; preview syntax highlighting (Chroma) is a separate system (`
 ## Theme picker dialog
 
 Navigating live-previews the highlighted theme; Enter applies and persists `theme` to XDG `config.toml`; Esc restores the previous theme; F5 reloads the highlighted theme from disk (failures surface as a status message or message dialog).
+
+- **Spec**: `ThemeDialogView` (`internal/ui/dialog/theme_dialog_render.go`) is a `dlg` dialog (`dialogs.md`, Lists): a `ThemeList` list that wraps at the ends, keeps the cursor row centered and pages by its visible height, next to a reserved preview pane; `ThemeDialogListViewportRows` gives the visible rows for a layout. Each list move (`dlg.EventListMove`) sets `ThemeDialogState.Selected` and previews that theme in `App.handleThemeDialogKey`; Enter on the list or OK applies, Cancel / Esc restore. `ThemeDialogState.Focus` is `ThemeList`, `dlg.OK` or `dlg.Cancel`.
+- **Preview pane**: `drawThemePreview` paints the sample inputs, checkboxes and buttons in the previewed theme, the vertical rule and its frame tees after `dlg.Draw`, inside the spacer's rect and clipped above the button separator on short terminals.

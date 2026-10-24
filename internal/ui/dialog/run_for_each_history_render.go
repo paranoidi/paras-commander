@@ -83,7 +83,7 @@ func drawRunForEachHistoryPickerContent(screen tcell.Screen, rect Rect, st RunFo
 		}
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
-		text, spans := fuzzyRowContent(line, ranges, innerWidth, matchStyle, false)
+		text, spans := draw.FuzzyRowContent(line, ranges, innerWidth, matchStyle, false)
 		primitive.StyledText(screen, primaryCol, y, innerWidth, text, baseStyle, spans)
 		y++
 	}

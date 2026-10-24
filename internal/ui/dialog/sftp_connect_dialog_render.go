@@ -2,110 +2,85 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/primitive"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// EnsureSFTPConnectListScroll keeps Selected visible in the host list.
+// Widget IDs of the SFTP connect dialog. The host list is driven by the filter input and has no
+// focus of its own.
+const (
+	SFTPFilter   dlg.ID = "sftp-filter"
+	SFTPHosts    dlg.ID = "sftp-hosts"
+	SFTPLocation dlg.ID = "sftp-location"
+)
+
+// sftpConnectMinWidth is the narrowest terminal-clamped dialog width that still draws.
+const sftpConnectMinWidth = 40
+
+// SFTPConnectListRows is how many host rows the dialog shows on this layout (the list grows with
+// the terminal, between 3 and 12 rows).
+func SFTPConnectListRows(layout Layout) int {
+	listH := min(max(layout.Height-16, 3), 12)
+	if 9+listH > layout.Height-2 {
+		listH = max(layout.Height-2-9, 3)
+	}
+	return listH
+}
+
+// sftpHostList is the host list item: the ranked display lines with their fuzzy highlights.
+func sftpHostList(state SFTPConnectDialogState, listRows int) dlg.Item {
+	list := dlg.Item{
+		ID: SFTPHosts, Kind: dlg.KindList, Driven: true, Fit: dlg.FitMiddle,
+		Cursor: state.Selected, Offset: state.ListScroll, Height: listRows,
+	}
+	for _, ent := range state.Ranked {
+		var row dlg.ListRow
+		if ent >= 0 && ent < len(state.DisplayLines) {
+			row.Text = state.DisplayLines[ent]
+			if ent < len(state.MatchRanges) {
+				row.Match = state.MatchRanges[ent]
+			}
+		}
+		list.Rows = append(list.Rows, row)
+	}
+	return list
+}
+
+// EnsureSFTPConnectListScroll keeps Selected in range and visible in the host list.
 func EnsureSFTPConnectListScroll(state *SFTPConnectDialogState, listRows int) {
 	n := len(state.Ranked)
 	if n == 0 || listRows <= 0 {
 		state.ListScroll = 0
 		return
 	}
-	if state.Selected < 0 {
-		state.Selected = 0
+	state.Selected = min(max(state.Selected, 0), n-1)
+	state.ListScroll = sftpHostList(*state, listRows).ViewOffset()
+}
+
+// SFTPConnectView describes the SFTP dialog: a filter input that steers the host list below it,
+// the location input and OK / Cancel.
+func SFTPConnectView(state SFTPConnectDialogState, layout Layout, styles theme.Theme) dlg.Spec {
+	filter := dlg.Item{
+		ID: SFTPFilter, Kind: dlg.KindInput, Drives: SFTPHosts, LeadingIcon: styles.IconSearchIcon(),
+		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll,
 	}
-	if state.Selected >= n {
-		state.Selected = n - 1
-	}
-	if state.ListScroll > state.Selected {
-		state.ListScroll = state.Selected
-	}
-	if state.Selected >= state.ListScroll+listRows {
-		state.ListScroll = state.Selected - listRows + 1
+	return dlg.Spec{
+		Title: "SFTP", Width: min(78, layout.Width-4), Unclamped: true,
+		Groups: []dlg.Group{
+			{Columns: [][]dlg.Item{{filter, {Kind: dlg.KindSeparator}, sftpHostList(state, SFTPConnectListRows(layout))}}},
+			{Columns: [][]dlg.Item{{
+				{Kind: dlg.KindSeparator},
+				{Kind: dlg.KindLabel, Label: "Location:"},
+				fileFieldInput(SFTPLocation, state.Location, false),
+			}}},
+		},
+		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}},
 	}
 }
 
 func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnectDialogState, styles theme.Theme) {
-	width := 78
-	if width > layout.Width-4 {
-		width = layout.Width - 4
-	}
-	if width < 40 {
+	if min(78, layout.Width-4) < sftpConnectMinWidth {
 		return
 	}
-
-	listH := layout.Height - 16
-	switch {
-	case listH > 12:
-		listH = 12
-	case listH < 3:
-		listH = 3
-	}
-	height := 9 + listH
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-		listH = height - 9
-		if listH < 3 {
-			listH = 3
-		}
-	}
-
-	rect := draw.CenteredDialogRect(layout, width, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, "SFTP", styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	itemBg := dbg
-	primaryCol := rect.X + 2
-	inputWidth := rect.Width - 4
-
-	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, false, styles)
-
-	sepBeforeList := rect.Y + 2
-	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
-
-	listTop := rect.Y + 3
-	rowWidth := inputWidth
-	for row := 0; row < listH; row++ {
-		y := listTop + row
-		idxInRank := state.ListScroll + row
-		baseStyle := styles.DialogText.Background(itemBg)
-		line := ""
-		var ranges []search.Range
-		isCursor := false
-		if idxInRank < len(state.Ranked) {
-			entIdx := state.Ranked[idxInRank]
-			if entIdx >= 0 && entIdx < len(state.DisplayLines) {
-				line = state.DisplayLines[entIdx]
-				if entIdx < len(state.MatchRanges) {
-					ranges = state.MatchRanges[entIdx]
-				}
-			}
-			isCursor = state.Focus == 0 && idxInRank == state.Selected
-		}
-		matchStyle := styles.FuzzyHighlight
-		if isCursor {
-			baseStyle = styles.DialogOptionRowStyle(true, false)
-			matchStyle = styles.FuzzyHighlightCursor
-		}
-		_, bg, _ := baseStyle.Decompose()
-		matchStyle = matchStyle.Background(bg)
-		text, spans := fuzzyRowContent(line, ranges, rowWidth, matchStyle, false)
-		primitive.StyledText(screen, primaryCol, y, rowWidth, text, baseStyle, spans)
-	}
-
-	sep1 := listTop + listH
-	draw.DrawDialogHSeparator(screen, rect, sep1, borderStyle)
-
-	locLabelY := sep1 + 1
-	primitive.Text(screen, primaryCol, locLabelY, inputWidth, "Location:", styles.DialogText.Background(itemBg))
-	inputY := locLabelY + 1
-	drawInputField(screen, primaryCol, inputY, inputWidth, state.Location, state.Focus == 1, styles)
-	draw.DrawDialogHSeparator(screen, rect, inputY+1, borderStyle)
-
-	btnY := rect.Y + rect.Height - 2
-	draw.DrawOKCancelButtonRow(screen, rect, btnY, state.Focus == 2, state.Focus == 3, styles)
+	dlg.Draw(screen, layout.Width, layout.Height, SFTPConnectView(state, layout, styles), state.Focus, styles)
 }

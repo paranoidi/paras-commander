@@ -6,7 +6,6 @@ package filterlist
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/search"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // SyncRanks ranks display lines against query and builds ranked indices plus
@@ -40,43 +39,54 @@ func ClampSelection(selected *int, rankedLen int) {
 	}
 }
 
+// ClampedDelta returns selected+delta clamped to [0, rankedLen-1]. If rankedLen <= 0 it returns 0.
+func ClampedDelta(selected, rankedLen, delta int) int {
+	if rankedLen <= 0 {
+		return 0
+	}
+	return min(max(selected+delta, 0), rankedLen-1)
+}
+
+// NavKey computes the new selected index for the list-navigation keys shared by fuzzy-picker
+// style dialogs (Up/Down by one row, PgUp/PgDn by pageSize rows, Ctrl+Home/Ctrl+End to the
+// first/last row). pageSize is clamped to at least 1. ok is false when rankedLen <= 0 or key is
+// not one of these keys (or is Home/End without Ctrl): the caller leaves selected unchanged and
+// falls through to its own handling.
+func NavKey(key tcell.Key, mods tcell.ModMask, selected, rankedLen, pageSize int) (newSelected int, ok bool) {
+	if rankedLen <= 0 {
+		return selected, false
+	}
+	switch key {
+	case tcell.KeyUp:
+		return ClampedDelta(selected, rankedLen, -1), true
+	case tcell.KeyDown:
+		return ClampedDelta(selected, rankedLen, 1), true
+	case tcell.KeyPgUp:
+		return ClampedDelta(selected, rankedLen, -max(1, pageSize)), true
+	case tcell.KeyPgDn:
+		return ClampedDelta(selected, rankedLen, max(1, pageSize)), true
+	case tcell.KeyHome:
+		if mods&tcell.ModCtrl != 0 {
+			return 0, true
+		}
+	case tcell.KeyEnd:
+		if mods&tcell.ModCtrl != 0 {
+			return rankedLen - 1, true
+		}
+	}
+	return selected, false
+}
+
 // HandleSelectionKey handles list motion when focus is on the filtered list (focus index 0).
 func HandleSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool {
 	if focus != 0 || rankedLen <= 0 {
 		return false
 	}
-	rows := listRows()
-	switch ev.Key() {
-	case tcell.KeyUp:
-		*selected = dialog.ListClampedSelectionDelta(*selected, rankedLen, -1)
-		ensureScroll()
-		return true
-	case tcell.KeyDown:
-		*selected = dialog.ListClampedSelectionDelta(*selected, rankedLen, 1)
-		ensureScroll()
-		return true
-	case tcell.KeyPgUp:
-		step := max(1, rows-1)
-		*selected = dialog.ListClampedSelectionDelta(*selected, rankedLen, -step)
-		ensureScroll()
-		return true
-	case tcell.KeyPgDn:
-		step := max(1, rows-1)
-		*selected = dialog.ListClampedSelectionDelta(*selected, rankedLen, step)
-		ensureScroll()
-		return true
-	case tcell.KeyHome:
-		if ev.Modifiers()&tcell.ModCtrl != 0 {
-			*selected = 0
-			ensureScroll()
-			return true
-		}
-	case tcell.KeyEnd:
-		if ev.Modifiers()&tcell.ModCtrl != 0 {
-			*selected = rankedLen - 1
-			ensureScroll()
-			return true
-		}
+	sel, ok := NavKey(ev.Key(), ev.Modifiers(), *selected, rankedLen, listRows()-1)
+	if !ok {
+		return false
 	}
-	return false
+	*selected = sel
+	ensureScroll()
+	return true
 }

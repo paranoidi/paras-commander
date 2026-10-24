@@ -81,7 +81,7 @@ func DrawFilePreviewThemePicker(screen tcell.Screen, rect geom.Rect, state FileP
 			labelWidth = 1
 		}
 		primitive.Text(screen, primaryCol, y, markerWidth, marker, baseStyle)
-		text, spans := fuzzyRowContent(line, ranges, labelWidth, matchStyle, false)
+		text, spans := draw.FuzzyRowContent(line, ranges, labelWidth, matchStyle, false)
 		primitive.StyledText(screen, primaryCol+markerWidth, y, labelWidth, text, baseStyle, spans)
 	}
 }

@@ -139,3 +139,43 @@ func TestHandleSelectionKeyPageAndCtrlHomeEnd(t *testing.T) {
 		})
 	}
 }
+
+func TestClampedDelta(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct{ sel, n, delta, want int }{
+		{3, 10, 1, 4}, {9, 10, 5, 9}, {0, 10, -1, 0}, {5, 0, 1, 0},
+	} {
+		if got := ClampedDelta(tt.sel, tt.n, tt.delta); got != tt.want {
+			t.Fatalf("ClampedDelta(%d,%d,%d) = %d, want %d", tt.sel, tt.n, tt.delta, got, tt.want)
+		}
+	}
+}
+
+func TestNavKey(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		key    tcell.Key
+		mods   tcell.ModMask
+		sel    int
+		n      int
+		page   int
+		want   int
+		wantOK bool
+	}{
+		{"up", tcell.KeyUp, 0, 3, 10, 4, 2, true},
+		{"pgdn clamps", tcell.KeyPgDn, 0, 8, 10, 4, 9, true},
+		{"page below one is one", tcell.KeyPgUp, 0, 5, 10, 0, 4, true},
+		{"ctrl-home", tcell.KeyHome, tcell.ModCtrl, 5, 10, 4, 0, true},
+		{"ctrl-end", tcell.KeyEnd, tcell.ModCtrl, 5, 10, 4, 9, true},
+		{"plain home is not list motion", tcell.KeyHome, 0, 5, 10, 4, 5, false},
+		{"empty list", tcell.KeyDown, 0, 0, 0, 4, 0, false},
+		{"other key", tcell.KeyTab, 0, 5, 10, 4, 5, false},
+	}
+	for _, tt := range tests {
+		got, ok := NavKey(tt.key, tt.mods, tt.sel, tt.n, tt.page)
+		if got != tt.want || ok != tt.wantOK {
+			t.Fatalf("%s: NavKey = (%d,%v), want (%d,%v)", tt.name, got, ok, tt.want, tt.wantOK)
+		}
+	}
+}

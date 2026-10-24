@@ -144,7 +144,7 @@ func drawPinRow(screen tcell.Screen, x, y, rowWidth int, item PinDialogItem, ran
 		icon = styles.IconFolder()
 	}
 	if icon == "" {
-		text, spans := fuzzyRowContent(item.Path, ranges, rowWidth, matchStyle, true)
+		text, spans := draw.FuzzyRowContent(item.Path, ranges, rowWidth, matchStyle, true)
 		primitive.StyledText(screen, x, y, rowWidth, text, baseStyle, spans)
 		return
 	}
@@ -158,6 +158,6 @@ func drawPinRow(screen tcell.Screen, x, y, rowWidth int, item PinDialogItem, ran
 	if pathWidth <= 0 {
 		return
 	}
-	text, spans := fuzzyRowContent(item.Path, ranges, pathWidth, matchStyle, true)
+	text, spans := draw.FuzzyRowContent(item.Path, ranges, pathWidth, matchStyle, true)
 	primitive.StyledText(screen, x+prefixW, y, pathWidth, text, baseStyle, spans)
 }

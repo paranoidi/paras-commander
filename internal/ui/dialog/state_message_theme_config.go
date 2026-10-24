@@ -40,7 +40,7 @@ type MessageDialogState struct {
 type ThemeDialogState struct {
 	Open        bool
 	Selected    int
-	Focus       int // 0=list, 1=OK button, 2=Cancel button
+	Focus       dlg.ID // ThemeList, dlg.OK or dlg.Cancel ("" = the list)
 	CurrentName string
 	Choices     []ThemeChoice
 }

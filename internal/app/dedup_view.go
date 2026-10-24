@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -66,31 +67,26 @@ func (a *App) openDedupDeleteDialog() {
 }
 
 func (a *App) handleDedupEmptyDirsConfirmKey(event *tcell.EventKey) bool {
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'y', 'Y':
-			a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
-			a.dedupCtrl.DeleteMarked(true)
-			return false
-		case 'n', 'N':
-			a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
-			a.dedupCtrl.DeleteMarked(false)
-			return false
-		}
-	}
-	switch event.Key() {
-	case tcell.KeyLeft:
-		a.model.DedupEmptyDirsConfirm.Focus = max(a.model.DedupEmptyDirsConfirm.Focus-1, 0)
-	case tcell.KeyRight:
-		a.model.DedupEmptyDirsConfirm.Focus = min(a.model.DedupEmptyDirsConfirm.Focus+1, 2)
-	case tcell.KeyEnter:
-		focus := a.model.DedupEmptyDirsConfirm.Focus
-		a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
-		if focus < 2 {
-			a.dedupCtrl.DeleteMarked(focus == 0)
-		}
+	st := &a.model.DedupEmptyDirsConfirm
+	ev, ok := dlg.HandleKey(dialog.DedupEmptyDirsConfirmView(*st, 0), &st.Focus, event)
+	if ok && ev.ID != "" {
+		a.answerDedupEmptyDirsConfirm(ev.ID)
 	}
 	return false
+}
+
+// answerDedupEmptyDirsConfirm closes the confirmation and, unless the answer is Cancel, queues the
+// delete of the marked files, removing the directories it empties when the answer is Yes. An empty
+// id is the default button, Yes. Every way of answering (buttons, mnemonics, the central OK chord)
+// comes through here.
+func (a *App) answerDedupEmptyDirsConfirm(id dlg.ID) {
+	a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
+	switch id {
+	case "", dialog.DedupEmptyDirsYes:
+		a.dedupCtrl.DeleteMarked(true)
+	case dialog.DedupEmptyDirsNo:
+		a.dedupCtrl.DeleteMarked(false)
+	}
 }
 
 // closeDedupView leaves the view but keeps its results for ActionDedupOpen.

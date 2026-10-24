@@ -8,6 +8,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestSFTPConnectDialogFilterSelectsHost(t *testing.T) {
@@ -55,8 +56,8 @@ func TestSFTPConnectDialogFilterSelectsHost(t *testing.T) {
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
-	if app.model.SFTPConnectDialog.Focus != 1 {
-		t.Fatalf("focus = %d, want location input (1)", app.model.SFTPConnectDialog.Focus)
+	if app.model.SFTPConnectDialog.Focus != dialog.SFTPLocation {
+		t.Fatalf("focus = %q, want the location input", app.model.SFTPConnectDialog.Focus)
 	}
 	if !strings.Contains(app.model.SFTPConnectDialog.Location.Value, "alpha.example.com") {
 		t.Fatalf("location = %q, want alpha host URI", app.model.SFTPConnectDialog.Location.Value)

@@ -1,0 +1,1282 @@
+== open ==
+focus=list selected=0 style=default
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐾 Default Theme     │                                            │  
+ │  󰐽 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐽 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Active input with text:                    │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x0 attrs=1 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x100000004 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+k fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+l fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+m fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+n fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+o fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+p fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+q fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+r fg=0x100000004 bg=0x0 attrs=0 ul=0 ulc=0x0
+s fg=0x100000005 bg=0x0 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+bcccccccccccccccccccccccccccccccdddddddcccccccccccccccccccccccccccccccaa
+eccfffffffffffffffffffccccccccccccccccccccccccccccccccccccccccccccccccgg
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccccciiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiicchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccccciiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiicchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hcccccccccccccccccccccccccjjjjjjjjjjjjjjjjjjkjjjjjjjjjjjjjjjjjjjjjjjcchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hcccccccccccccccccccccccccllllllllllllllllllmlllllllllllllllllllllllcchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccccnnndnnnnnnncccccccccccccccccccccccccccccccccchh
+hcccccccccccccccccccccccccccdccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccccccccciiioiiiiiiiiiiccpppqppppppppppppcccccccchh
+hccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccchh
+hccccccccccccccccccccccciiioiiiicciiioiiiiiiiicccccccccccccccccccccccchh
+rcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+llllllllllllllllllllllllllllllllssllllllllllllllllllllllllllllllllllsssl
+== Down ==
+focus=list selected=1 style=birch-1
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Default Theme     │                                            │  
+ │  󰐾 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐽 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Active input with text:                    │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=2 style=cinder-2
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Default Theme     │                                            │  
+ │  󰐽 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐾 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Active input with text:                    │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=3 style=dune-3
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Default Theme     │                                            │  
+ │  󰐽 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐽 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐾 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Active input with text:                    │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=4 style=ember-4
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Default Theme     │                                            │  
+ │  󰐽 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐽 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Dune Theme        │                                            │  
+ │  󰐾 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Active input with text:                    │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=5 style=fable-5
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Default Theme     │                                            │  
+ │  󰐽 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐽 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐾 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Active input with text:                    │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=6 style=glacier-6
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Default Theme     │                                            │  
+ │  󰐽 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐽 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐾 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Active input with text:                    │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=7 style=harbor-7
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Default Theme     │                                            │  
+ │  󰐽 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐽 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐾 Harbor Theme      │ Active input with text:                    │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=8 style=ivory-8
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Default Theme     │                                            │  
+ │  󰐽 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐽 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Active input with text:                    │  
+ │  󰐾 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=9 style=jasper-9
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Default Theme     │                                            │  
+ │  󰐽 Birch Theme       │ Inactive input with text:                  │  
+ │  󰐽 Cinder Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with default value:         │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Active input with text:                    │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐾 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with default value:           │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Orchard Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 River Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=10 style=kestrel-10
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Birch Theme       │                                            │  
+ │  󰐽 Cinder Theme      │ Inactive input with text:                  │  
+ │  󰐽 Dune Theme        │ /home/user/demo.txt                        │  
+ │  󰐽 Ember Theme       │                                            │  
+ │  󰐽 Fable Theme       │ Inactive input with default value:         │  
+ │  󰐽 Glacier Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Harbor Theme      │                                            │  
+ │  󰐽 Ivory Theme       │ Active input with text:                    │  
+ │  󰐽 Jasper Theme      │ /home/user/demo.txt                        │  
+ │  󰐾 Kestrel Theme     │                                            │  
+ │  󰐽 Lantern Theme     │ Active input with default value:           │  
+ │  󰐽 Meadow Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Nectar Theme      │                                            │  
+ │  󰐽 Orchard Theme     │ 󰡖 Selected                                 │  
+ │  󰐽 Pebble Theme      │ 󰄱 Unselected                               │  
+ │  󰐽 Quartz Theme      │                                            │  
+ │  󰐽 River Theme       ├────────────────────────────────────────────┤  
+ │  󰐽 Saffron Theme     │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=11 style=lantern-11
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Cinder Theme      │                                            │  
+ │  󰐽 Dune Theme        │ Inactive input with text:                  │  
+ │  󰐽 Ember Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Fable Theme       │                                            │  
+ │  󰐽 Glacier Theme     │ Inactive input with default value:         │  
+ │  󰐽 Harbor Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Ivory Theme       │                                            │  
+ │  󰐽 Jasper Theme      │ Active input with text:                    │  
+ │  󰐽 Kestrel Theme     │ /home/user/demo.txt                        │  
+ │  󰐾 Lantern Theme     │                                            │  
+ │  󰐽 Meadow Theme      │ Active input with default value:           │  
+ │  󰐽 Nectar Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Orchard Theme     │                                            │  
+ │  󰐽 Pebble Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 Quartz Theme      │ 󰄱 Unselected                               │  
+ │  󰐽 River Theme       │                                            │  
+ │  󰐽 Saffron Theme     ├────────────────────────────────────────────┤  
+ │  󰐽 Thistle Theme     │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=12 style=meadow-12
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Dune Theme        │                                            │  
+ │  󰐽 Ember Theme       │ Inactive input with text:                  │  
+ │  󰐽 Fable Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Inactive input with default value:         │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Active input with text:                    │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐾 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ Active input with default value:           │  
+ │  󰐽 Orchard Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      │ 󰡖 Selected                                 │  
+ │  󰐽 River Theme       │ 󰄱 Unselected                               │  
+ │  󰐽 Saffron Theme     │                                            │  
+ │  󰐽 Thistle Theme     ├────────────────────────────────────────────┤  
+ │  󰐽 Umber Theme       │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=13 style=nectar-13
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Ember Theme       │                                            │  
+ │  󰐽 Fable Theme       │ Inactive input with text:                  │  
+ │  󰐽 Glacier Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Harbor Theme      │                                            │  
+ │  󰐽 Ivory Theme       │ Inactive input with default value:         │  
+ │  󰐽 Jasper Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Kestrel Theme     │                                            │  
+ │  󰐽 Lantern Theme     │ Active input with text:                    │  
+ │  󰐽 Meadow Theme      │ /home/user/demo.txt                        │  
+ │  󰐾 Nectar Theme      │                                            │  
+ │  󰐽 Orchard Theme     │ Active input with default value:           │  
+ │  󰐽 Pebble Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Quartz Theme      │                                            │  
+ │  󰐽 River Theme       │ 󰡖 Selected                                 │  
+ │  󰐽 Saffron Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Thistle Theme     │                                            │  
+ │  󰐽 Umber Theme       ├────────────────────────────────────────────┤  
+ │  󰐽 Velvet Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=14 style=orchard-14
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Fable Theme       │                                            │  
+ │  󰐽 Glacier Theme     │ Inactive input with text:                  │  
+ │  󰐽 Harbor Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Ivory Theme       │                                            │  
+ │  󰐽 Jasper Theme      │ Inactive input with default value:         │  
+ │  󰐽 Kestrel Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Lantern Theme     │                                            │  
+ │  󰐽 Meadow Theme      │ Active input with text:                    │  
+ │  󰐽 Nectar Theme      │ /home/user/demo.txt                        │  
+ │  󰐾 Orchard Theme     │                                            │  
+ │  󰐽 Pebble Theme      │ Active input with default value:           │  
+ │  󰐽 Quartz Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 River Theme       │                                            │  
+ │  󰐽 Saffron Theme     │ 󰡖 Selected                                 │  
+ │  󰐽 Thistle Theme     │ 󰄱 Unselected                               │  
+ │  󰐽 Umber Theme       │                                            │  
+ │  󰐽 Velvet Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 Willow Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=15 style=pebble-15
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Glacier Theme     │                                            │  
+ │  󰐽 Harbor Theme      │ Inactive input with text:                  │  
+ │  󰐽 Ivory Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Jasper Theme      │                                            │  
+ │  󰐽 Kestrel Theme     │ Inactive input with default value:         │  
+ │  󰐽 Lantern Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Meadow Theme      │                                            │  
+ │  󰐽 Nectar Theme      │ Active input with text:                    │  
+ │  󰐽 Orchard Theme     │ /home/user/demo.txt                        │  
+ │  󰐾 Pebble Theme      │                                            │  
+ │  󰐽 Quartz Theme      │ Active input with default value:           │  
+ │  󰐽 River Theme       │ /home/user/demo.txt                        │  
+ │  󰐽 Saffron Theme     │                                            │  
+ │  󰐽 Thistle Theme     │ 󰡖 Selected                                 │  
+ │  󰐽 Umber Theme       │ 󰄱 Unselected                               │  
+ │  󰐽 Velvet Theme      │                                            │  
+ │  󰐽 Willow Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 Yarrow Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=16 style=quartz-16
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Harbor Theme      │                                            │  
+ │  󰐽 Ivory Theme       │ Inactive input with text:                  │  
+ │  󰐽 Jasper Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Kestrel Theme     │                                            │  
+ │  󰐽 Lantern Theme     │ Inactive input with default value:         │  
+ │  󰐽 Meadow Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Nectar Theme      │                                            │  
+ │  󰐽 Orchard Theme     │ Active input with text:                    │  
+ │  󰐽 Pebble Theme      │ /home/user/demo.txt                        │  
+ │  󰐾 Quartz Theme      │                                            │  
+ │  󰐽 River Theme       │ Active input with default value:           │  
+ │  󰐽 Saffron Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Thistle Theme     │                                            │  
+ │  󰐽 Umber Theme       │ 󰡖 Selected                                 │  
+ │  󰐽 Velvet Theme      │ 󰄱 Unselected                               │  
+ │  󰐽 Willow Theme      │                                            │  
+ │  󰐽 Yarrow Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 Zephyr Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=17 style=river-17
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Harbor Theme      │                                            │  
+ │  󰐽 Ivory Theme       │ Inactive input with text:                  │  
+ │  󰐽 Jasper Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Kestrel Theme     │                                            │  
+ │  󰐽 Lantern Theme     │ Inactive input with default value:         │  
+ │  󰐽 Meadow Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Nectar Theme      │                                            │  
+ │  󰐽 Orchard Theme     │ Active input with text:                    │  
+ │  󰐽 Pebble Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Quartz Theme      │                                            │  
+ │  󰐾 River Theme       │ Active input with default value:           │  
+ │  󰐽 Saffron Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Thistle Theme     │                                            │  
+ │  󰐽 Umber Theme       │ 󰡖 Selected                                 │  
+ │  󰐽 Velvet Theme      │ 󰄱 Unselected                               │  
+ │  󰐽 Willow Theme      │                                            │  
+ │  󰐽 Yarrow Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 Zephyr Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=18 style=saffron-18
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Harbor Theme      │                                            │  
+ │  󰐽 Ivory Theme       │ Inactive input with text:                  │  
+ │  󰐽 Jasper Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Kestrel Theme     │                                            │  
+ │  󰐽 Lantern Theme     │ Inactive input with default value:         │  
+ │  󰐽 Meadow Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Nectar Theme      │                                            │  
+ │  󰐽 Orchard Theme     │ Active input with text:                    │  
+ │  󰐽 Pebble Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Quartz Theme      │                                            │  
+ │  󰐽 River Theme       │ Active input with default value:           │  
+ │  󰐾 Saffron Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Thistle Theme     │                                            │  
+ │  󰐽 Umber Theme       │ 󰡖 Selected                                 │  
+ │  󰐽 Velvet Theme      │ 󰄱 Unselected                               │  
+ │  󰐽 Willow Theme      │                                            │  
+ │  󰐽 Yarrow Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 Zephyr Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=19 style=thistle-19
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Harbor Theme      │                                            │  
+ │  󰐽 Ivory Theme       │ Inactive input with text:                  │  
+ │  󰐽 Jasper Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Kestrel Theme     │                                            │  
+ │  󰐽 Lantern Theme     │ Inactive input with default value:         │  
+ │  󰐽 Meadow Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Nectar Theme      │                                            │  
+ │  󰐽 Orchard Theme     │ Active input with text:                    │  
+ │  󰐽 Pebble Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Quartz Theme      │                                            │  
+ │  󰐽 River Theme       │ Active input with default value:           │  
+ │  󰐽 Saffron Theme     │ /home/user/demo.txt                        │  
+ │  󰐾 Thistle Theme     │                                            │  
+ │  󰐽 Umber Theme       │ 󰡖 Selected                                 │  
+ │  󰐽 Velvet Theme      │ 󰄱 Unselected                               │  
+ │  󰐽 Willow Theme      │                                            │  
+ │  󰐽 Yarrow Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 Zephyr Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=20 style=umber-20
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Harbor Theme      │                                            │  
+ │  󰐽 Ivory Theme       │ Inactive input with text:                  │  
+ │  󰐽 Jasper Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Kestrel Theme     │                                            │  
+ │  󰐽 Lantern Theme     │ Inactive input with default value:         │  
+ │  󰐽 Meadow Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Nectar Theme      │                                            │  
+ │  󰐽 Orchard Theme     │ Active input with text:                    │  
+ │  󰐽 Pebble Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Quartz Theme      │                                            │  
+ │  󰐽 River Theme       │ Active input with default value:           │  
+ │  󰐽 Saffron Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Thistle Theme     │                                            │  
+ │  󰐾 Umber Theme       │ 󰡖 Selected                                 │  
+ │  󰐽 Velvet Theme      │ 󰄱 Unselected                               │  
+ │  󰐽 Willow Theme      │                                            │  
+ │  󰐽 Yarrow Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 Zephyr Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=21 style=velvet-21
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Harbor Theme      │                                            │  
+ │  󰐽 Ivory Theme       │ Inactive input with text:                  │  
+ │  󰐽 Jasper Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Kestrel Theme     │                                            │  
+ │  󰐽 Lantern Theme     │ Inactive input with default value:         │  
+ │  󰐽 Meadow Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Nectar Theme      │                                            │  
+ │  󰐽 Orchard Theme     │ Active input with text:                    │  
+ │  󰐽 Pebble Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Quartz Theme      │                                            │  
+ │  󰐽 River Theme       │ Active input with default value:           │  
+ │  󰐽 Saffron Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Thistle Theme     │                                            │  
+ │  󰐽 Umber Theme       │ 󰡖 Selected                                 │  
+ │  󰐾 Velvet Theme      │ 󰄱 Unselected                               │  
+ │  󰐽 Willow Theme      │                                            │  
+ │  󰐽 Yarrow Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 Zephyr Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=list selected=22 style=willow-22
+-- text --
+                                                                        
+t┌──────────────────────┬─────── Theme ──────────────────────────────┐──
+↓│  󰐽 Harbor Theme      │                                            │  
+ │  󰐽 Ivory Theme       │ Inactive input with text:                  │  
+ │  󰐽 Jasper Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Kestrel Theme     │                                            │  
+ │  󰐽 Lantern Theme     │ Inactive input with default value:         │  
+ │  󰐽 Meadow Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Nectar Theme      │                                            │  
+ │  󰐽 Orchard Theme     │ Active input with text:                    │  
+ │  󰐽 Pebble Theme      │ /home/user/demo.txt                        │  
+ │  󰐽 Quartz Theme      │                                            │  
+ │  󰐽 River Theme       │ Active input with default value:           │  
+ │  󰐽 Saffron Theme     │ /home/user/demo.txt                        │  
+ │  󰐽 Thistle Theme     │                                            │  
+ │  󰐽 Umber Theme       │ 󰡖 Selected                                 │  
+ │  󰐽 Velvet Theme      │ 󰄱 Unselected                               │  
+ │  󰐾 Willow Theme      │                                            │  
+ │  󰐽 Yarrow Theme      ├────────────────────────────────────────────┤  
+ │  󰐽 Zephyr Theme      │      [ Selected ]    [ Unselected ]        │  
+ ├──────────────────────┴────────────────────────────────────────────┤  
+ │                       [ OK ]    [ Cancel ]                        │  
+─└───────────────────────────────────────────────────────────────────┘──
+Close                           F5 Reload                           F10 
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+b fg=0x300010203 bg=0x300040506 attrs=4 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -80,22 +80,6 @@ func TestFindDialogNavFocusKey(t *testing.T) {
 	}
 }
 
-func TestListClampedSelectionDelta(t *testing.T) {
-	t.Parallel()
-	if g := ListClampedSelectionDelta(3, 10, 1); g != 4 {
-		t.Fatalf("increment: got %d", g)
-	}
-	if g := ListClampedSelectionDelta(9, 10, 5); g != 9 {
-		t.Fatalf("clamp high: got %d", g)
-	}
-	if g := ListClampedSelectionDelta(0, 10, -1); g != 0 {
-		t.Fatalf("clamp low: got %d", g)
-	}
-	if g := ListClampedSelectionDelta(5, 0, 1); g != 0 {
-		t.Fatalf("empty list: got %d", g)
-	}
-}
-
 func TestFindDialogFocusHelpersMatchNav(t *testing.T) {
 	t.Parallel()
 	s := FindDialogState{ShowSearchSelectionsOption: true}

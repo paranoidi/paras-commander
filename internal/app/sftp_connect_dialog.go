@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func (a *App) loadSSHConfig() sshconfig.Config {
@@ -42,11 +43,11 @@ func (a *App) openSFTPConnectDialogForPanel(panelID int) {
 			Cursor:         len([]rune(prefill)),
 			PrefillPending: true,
 		},
-		Focus: 0,
+		Focus: dialog.SFTPFilter,
 	}
 	a.syncSFTPConnectDialogRanks()
 	if len(a.model.SFTPConnectDialog.Ranked) == 0 {
-		a.model.SFTPConnectDialog.Focus = 1
+		a.model.SFTPConnectDialog.Focus = dialog.SFTPLocation
 	}
 	dialog.EnsureSFTPConnectListScroll(&a.model.SFTPConnectDialog, a.sftpConnectListRows())
 	a.model.FileDialog = dialog.FileDialogState{}
@@ -71,15 +72,13 @@ func (a *App) syncSFTPConnectDialogRanks() {
 }
 
 func (a *App) sftpConnectListRows() int {
-	_, h := a.screen.Size()
-	listH := h - 16
-	if listH > 12 {
-		return 12
-	}
-	if listH < 3 {
-		return 3
-	}
-	return listH
+	w, h := a.screen.Size()
+	return dialog.SFTPConnectListRows(a.layoutForTerminalSize(w, h))
+}
+
+func (a *App) sftpConnectView() dlg.Spec {
+	w, h := a.screen.Size()
+	return dialog.SFTPConnectView(a.model.SFTPConnectDialog, a.layoutForTerminalSize(w, h), a.styles)
 }
 
 func (a *App) applySFTPConnectHostToLocation() {
@@ -117,94 +116,37 @@ func (a *App) executeSFTPConnectDialog() {
 	a.executeSFTPConnectURI(panelID, raw)
 }
 
-// sftpConnectNavFocus applies the generic Left/Right/Up/Down focus transition via form,
-// redirecting a landing on the host list (0) back to the location field when the list is
-// empty (or, moving up into it, to Cancel) — mirroring pathPickerNavFocus's hidden-focus
-// skip for the path picker's Navigate purpose.
-func sftpConnectNavFocus(form dialog.DialogLinearForm, focus int, key tcell.Key, emptyList bool) (int, bool) {
-	nf, ok := form.MoveFocus(focus, key)
-	if !ok {
-		return focus, false
-	}
-	if nf == 0 && emptyList {
-		if key == tcell.KeyUp {
-			return form.CancelIndex(), true
-		}
-		return 1, true
-	}
-	return nf, true
-}
-
 func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 	st := &a.model.SFTPConnectDialog
-	if st.Focus == 0 {
+	ev, ok := dlg.HandleKey(a.sftpConnectView(), &st.Focus, event)
+	switch {
+	case !ok:
+		a.editSFTPConnectDialog(event)
+	case ev.Kind == dlg.EventListMove:
+		st.Selected, st.ListScroll = ev.Index, ev.Offset
+	case ev.ID == dlg.Cancel:
+		a.closeSFTPConnectDialog()
+	case ev.ID == dlg.OK || ev.ID == dialog.SFTPLocation:
+		a.executeSFTPConnectDialog()
+	case ev.ID == dialog.SFTPFilter: // Enter in the filter takes the selected host to the location
+		a.applySFTPConnectHostToLocation()
+		st.Focus = dialog.SFTPLocation
+	}
+}
+
+// editSFTPConnectDialog feeds a key the engine declined to the focused input's text editing.
+func (a *App) editSFTPConnectDialog(event *tcell.EventKey) {
+	st := &a.model.SFTPConnectDialog
+	switch st.Focus {
+	case dialog.SFTPFilter:
 		onChange := func() {
 			a.syncSFTPConnectDialogRanks()
 			st.Selected = 0
 			dialog.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
 		}
 		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.sftpConnectDialogQueryWidth(), onChange)
-		if a.handleScrollingQueryKey(event, true, edit) {
-			return
-		}
-	}
-	if st.Focus == 1 && dialog.HandleFileDialogFieldKey(event, &st.Location, a.keys.DialogInput, nil) {
-		return
-	}
-
-	form := dialog.NewDialogLinearForm(2)
-	switch event.Key() {
-	case tcell.KeyEnter:
-		switch st.Focus {
-		case 3:
-			a.closeSFTPConnectDialog()
-		case 2:
-			a.executeSFTPConnectDialog()
-		case 1:
-			a.executeSFTPConnectDialog()
-		default:
-			a.applySFTPConnectHostToLocation()
-			if st.Focus == 0 {
-				st.Focus = 1
-			}
-		}
-	case tcell.KeyTab, tcell.KeyBacktab:
-		if nf, ok := form.MoveFocus(st.Focus, event.Key()); ok {
-			st.Focus = nf
-			if st.Focus == 0 && len(st.Ranked) == 0 {
-				st.Focus = 1
-			}
-		}
-	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		emptyList := len(st.Ranked) == 0
-		if st.Focus >= form.OKIndex() {
-			if nf, ok := sftpConnectNavFocus(form, st.Focus, event.Key(), emptyList); ok {
-				st.Focus = nf
-			}
-			break
-		}
-		if st.Focus == 0 {
-			if event.Key() == tcell.KeyDown && emptyList {
-				st.Focus = 1
-				break
-			}
-			if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.sftpConnectListRows, func() {
-				dialog.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
-			}) {
-				break
-			}
-			if event.Key() == tcell.KeyUp {
-				break
-			}
-		}
-		if nf, ok := sftpConnectNavFocus(form, st.Focus, event.Key(), emptyList); ok {
-			st.Focus = nf
-		}
-	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
-		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.sftpConnectListRows, func() {
-			dialog.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
-		}) {
-			break
-		}
+		a.handleScrollingQueryKey(event, true, edit)
+	case dialog.SFTPLocation:
+		dialog.HandleFileDialogFieldKey(event, &st.Location, a.keys.DialogInput, nil)
 	}
 }

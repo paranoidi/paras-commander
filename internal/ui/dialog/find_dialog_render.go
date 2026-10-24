@@ -246,7 +246,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 		if fitWidth < 1 {
 			fitWidth = 1
 		}
-		text, spans := fuzzyPathRowContent(line, ranges, fitWidth, matchStyle)
+		text, spans := draw.FuzzyPathRowContent(line, ranges, fitWidth, matchStyle)
 		primitive.StyledText(screen, textX, y, rowWidth, text, baseStyle, spans)
 		if marksW > 0 {
 			// Marks follow the name, not the row end (same as compare view).

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
+	"github.com/paranoidi/paras-commander/internal/filterlist"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -198,7 +199,7 @@ func (a *App) applyHelpListNav(key tcell.Key, mods tcell.ModMask) bool {
 	case tcell.KeyPgDn:
 		st.Selected = st.PageDownSelection(a.helpListRows())
 	default:
-		sel, ok := dialog.ListNavKeySelection(key, mods, st.Selected, len(st.Ranked), 1)
+		sel, ok := filterlist.NavKey(key, mods, st.Selected, len(st.Ranked), 1)
 		if !ok {
 			return false
 		}
@@ -670,7 +671,7 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	case tcell.KeyUp:
 		if st.Focus == 0 {
 			if len(st.Ranked) > 0 {
-				st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
+				st.Selected = filterlist.ClampedDelta(st.Selected, len(st.Ranked), -1)
 				st.EnsureListScroll(a.helpListRows())
 			}
 		} else {
@@ -683,7 +684,7 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	case tcell.KeyDown:
 		if st.Focus == 0 {
 			if len(st.Ranked) > 0 {
-				next := dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
+				next := filterlist.ClampedDelta(st.Selected, len(st.Ranked), 1)
 				if next != st.Selected {
 					st.Selected = next
 					st.EnsureListScroll(a.helpListRows())

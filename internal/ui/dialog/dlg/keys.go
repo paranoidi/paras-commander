@@ -87,18 +87,21 @@ func groupFocusables(g Group) []Item {
 	return out
 }
 
+// ownSegment reports whether the item is a Tab segment of its own: every text input and list is.
+func ownSegment(it Item) bool { return it.Kind == KindInput || it.Kind == KindList }
+
 // segmentTable returns the first focusable of each Tab segment and the segment index of every
-// focusable item. A group is one segment, except that every text input is a segment of its own
-// (also when inputs are adjacent) and splits the group around it. The buttons are the last segment.
+// focusable item. A group is one segment, except that every text input and list is a segment of
+// its own (also when adjacent) and splits the group around it. The buttons are the last segment.
 func segmentTable(spec Spec) (starts []ID, index map[ID]int) {
 	index = map[ID]int{}
 	for _, g := range spec.Groups {
 		prevInput := false
 		for i, it := range groupFocusables(g) {
-			if i == 0 || it.Kind == KindInput || prevInput {
+			if i == 0 || ownSegment(it) || prevInput {
 				starts = append(starts, it.ID)
 			}
-			prevInput = it.Kind == KindInput
+			prevInput = ownSegment(it)
 			index[it.ID] = len(starts) - 1
 		}
 	}
@@ -166,6 +169,24 @@ func prevGroupLast(spec Spec, g int) (ID, bool) {
 //     Delete and every other key return (Event{}, false): the caller feeds them to its text
 //     editing code (lineedit, scrollquery, path completion...) and keeps Value/Cursor/Scroll in its
 //     own state.
+//
+// Lists (KindList) own their motion, so the keyboard and Scroll (the mouse wheel) share one
+// implementation, and report it as EventListMove events carrying the new cursor row (Index) and
+// first visible row (Offset), which the caller stores. While a list is focused:
+//   - Up/Down move the cursor one row and PgUp/PgDn by Item.PageStep (default Height-1); Home/End
+//     (with or without Ctrl) jump to the first / last row. The cursor stops at the ends (or wraps
+//     when Item.Wrap), and the key is consumed even there: Up on the first row never leaves the
+//     list. An empty list is never focused (it is skipped by every focus move);
+//   - Enter and Space return an EventActivate event for the list with Index = the cursor row;
+//   - Tab/Backtab leave the list (every list is a Tab segment of its own); Left/Right do nothing;
+//   - plain letters return (Event{}, false) unless Spec.PlainButtonKeys, so a type-to-jump
+//     handler of the caller keeps working; Alt+mnemonic focuses and activates its widget.
+//
+// An input with Item.Drives naming a list steers it while the input is focused and the list has
+// rows: Up/Down/PgUp/PgDn and Ctrl+Home/Ctrl+End return the list's EventListMove and focus stays in
+// the input (plain Home/End stay text editing keys, so they return (Event{}, false)). With an
+// empty list those keys move focus like for any input. Enter on the input still returns
+// Event{ID: input}; the caller reads the list cursor from its own state.
 func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 	*focus = resolve(spec, *focus)
 	cur, ok := find(spec, *focus)
@@ -178,9 +199,23 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		}
 		return Event{}, true
 	}
+	if !cur.isButton() {
+		switch it := itemAt(spec, cur); {
+		case it.Kind == KindList:
+			if e, ok := listKey(it, ev, false); ok {
+				return e, true
+			}
+		case it.Kind == KindInput && it.Drives != "":
+			if list, ok := listByID(spec, it.Drives); ok {
+				if e, ok := listKey(list, ev, true); ok {
+					return e, true
+				}
+			}
+		}
+	}
 	switch ev.Key() {
 	case tcell.KeyEnter:
-		return Event{ID: *focus}, true
+		return activation(spec, *focus), true
 	case tcell.KeyTab, tcell.KeyBacktab:
 		segs := segments(spec)
 		step := 1
@@ -264,7 +299,7 @@ func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, 
 		return Event{}, false // plain letters and Space are text
 	}
 	if ev.Rune() == ' ' {
-		return Event{ID: *focus}, true
+		return activation(spec, *focus), true
 	}
 	if spec.PlainButtonKeys {
 		for _, b := range spec.Buttons {
@@ -276,7 +311,9 @@ func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, 
 	return Event{}, false
 }
 
-// Click focuses the widget under (x, y) and activates it like Space. ok is false on a miss.
+// Click focuses the widget under (x, y) and activates it like Space. ok is false on a miss. A click
+// on a list row focuses the list and returns an EventListMove to that row (rows past the last
+// row are misses); on an input it returns the clicked column.
 func Click(spec Spec, screenW, screenH int, focus *ID, x, y int) (Event, bool) {
 	p, placed := Place(screenW, screenH, spec)
 	if !placed {
@@ -288,8 +325,19 @@ func Click(spec Spec, screenW, screenH int, focus *ID, x, y int) (Event, bool) {
 	}
 	*focus = id
 	ev := Event{ID: id}
-	if it, ok := p.Item(id); ok && it.Kind == KindInput {
-		ev.Col = x - it.Rect.X
+	if it, ok := p.Item(id); ok {
+		switch it.Kind {
+		case KindInput:
+			ev.Col = x - it.Rect.X
+		case KindList:
+			// The caller decides whether a click also activates the row.
+			if list, ok := listByID(spec, id); ok {
+				if driver, ok := driverOf(spec, id); ok && list.Driven {
+					*focus = driver // a driven list has no focus of its own
+				}
+				ev = listMove(list, it.Offset+(y-it.Rect.Y))
+			}
+		}
 	}
 	return ev, true
 }

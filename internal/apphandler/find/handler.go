@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/filterlist"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -1299,7 +1300,7 @@ func (h *Handler) applyFindListNav(key tcell.Key, mods tcell.ModMask) bool {
 	if st.Focus != 0 || len(st.Ranked) == 0 {
 		return false
 	}
-	sel, ok := dialog.ListNavKeySelection(key, mods, st.Selected, len(st.Ranked), max(1, h.findDialogListRows()-1))
+	sel, ok := filterlist.NavKey(key, mods, st.Selected, len(st.Ranked), max(1, h.findDialogListRows()-1))
 	if !ok {
 		return false
 	}

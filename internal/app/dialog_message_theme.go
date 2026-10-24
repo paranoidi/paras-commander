@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func (a *App) openMessageDialog(title, message string) {
@@ -58,68 +59,27 @@ func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 }
 
 func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
-	switch event.Key() {
-	case tcell.KeyF5:
+	if event.Key() == tcell.KeyF5 {
 		a.previewThemeAtSelection()
-	case tcell.KeyEnter:
-		switch a.model.ThemeDialog.Focus {
-		case 2: // Cancel
-			a.cancelThemeDialog()
-		default: // list or OK
-			a.activateThemeDialogSelection()
-		}
-	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		td := &a.model.ThemeDialog
-		if nf, ok := dialog.ListOKCancelNavFocusKey(td.Focus, event.Key()); ok {
-			td.Focus = nf
-			break
-		}
-		if td.Focus == 0 && event.Key() == tcell.KeyUp {
-			a.moveThemeDialog(-1)
-			break
-		}
-		if td.Focus == 0 && event.Key() == tcell.KeyDown {
-			a.moveThemeDialog(1)
-			break
-		}
-	case tcell.KeyHome:
-		if a.model.ThemeDialog.Focus == 0 && len(a.model.ThemeDialog.Choices) > 0 {
-			a.model.ThemeDialog.Selected = 0
-			a.previewThemeAtSelection()
-		}
-	case tcell.KeyEnd:
-		if a.model.ThemeDialog.Focus == 0 && len(a.model.ThemeDialog.Choices) > 0 {
-			a.model.ThemeDialog.Selected = len(a.model.ThemeDialog.Choices) - 1
-			a.previewThemeAtSelection()
-		}
-	case tcell.KeyPgUp:
-		if a.model.ThemeDialog.Focus == 0 && len(a.model.ThemeDialog.Choices) > 0 {
-			a.moveThemeDialog(-a.themeDialogListViewportRows())
-		}
-	case tcell.KeyPgDn:
-		if a.model.ThemeDialog.Focus == 0 && len(a.model.ThemeDialog.Choices) > 0 {
-			a.moveThemeDialog(a.themeDialogListViewportRows())
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		switch dialog.DialogButtonRune(event.Rune()) {
-		case dialog.ButtonRuneOK:
-			a.activateThemeDialogSelection()
-		case dialog.ButtonRuneCancel:
-			a.cancelThemeDialog()
-		case dialog.ButtonRuneToggle:
-			switch a.model.ThemeDialog.Focus {
-			case 0:
-				a.activateThemeDialogSelection()
-			case 1:
-				a.activateThemeDialogSelection()
-			case 2:
-				a.cancelThemeDialog()
-			}
-		}
+		return
 	}
+	td := &a.model.ThemeDialog
+	ev, ok := dlg.HandleKey(a.themeDialogView(), &td.Focus, event)
+	switch {
+	case !ok || ev.ID == "": // not handled, or only focus moved
+	case ev.Kind == dlg.EventListMove:
+		td.Selected = ev.Index
+		a.previewThemeAtSelection()
+	case ev.ID == dlg.Cancel:
+		a.cancelThemeDialog()
+	default: // list or OK
+		a.activateThemeDialogSelection()
+	}
+}
+
+func (a *App) themeDialogView() dlg.Spec {
+	w, h := a.screen.Size()
+	return dialog.ThemeDialogView(a.model.ThemeDialog, a.layoutForTerminalSize(w, h))
 }
 
 func (a *App) openThemeDialog() {
@@ -130,7 +90,7 @@ func (a *App) openThemeDialog() {
 	a.closeMessageDialog()
 	a.themeAtDialogOpen = a.styles
 	a.model.ThemeDialog.Selected = a.currentThemeChoiceIndex()
-	a.model.ThemeDialog.Focus = 0
+	a.model.ThemeDialog.Focus = dialog.ThemeList
 	a.model.ThemeDialog.Open = true
 	a.clearTransientMessage()
 	a.previewThemeAtSelection()
@@ -144,25 +104,6 @@ func (a *App) closeThemeDialog() {
 func (a *App) cancelThemeDialog() {
 	a.setStyles(a.themeAtDialogOpen)
 	a.closeThemeDialog()
-}
-
-func (a *App) moveThemeDialog(delta int) {
-	count := len(a.model.ThemeDialog.Choices)
-	if count == 0 {
-		a.model.ThemeDialog.Selected = 0
-		return
-	}
-	a.model.ThemeDialog.Selected = wrap(a.model.ThemeDialog.Selected+delta, count)
-	a.previewThemeAtSelection()
-}
-
-func (a *App) themeDialogListViewportRows() int {
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
-	if layout.TooSmall {
-		return 1
-	}
-	return dialog.ThemeDialogListViewportRows(layout, len(a.model.ThemeDialog.Choices))
 }
 
 func (a *App) previewThemeAtSelection() {

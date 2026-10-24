@@ -153,7 +153,7 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 		if fitWidth < 1 {
 			fitWidth = 1
 		}
-		text, spans := fuzzyRowContent(line, ranges, fitWidth, matchStyle, false)
+		text, spans := draw.FuzzyRowContent(line, ranges, fitWidth, matchStyle, false)
 		primitive.StyledText(screen, pathCol, y, pathWidth, text, baseStyle, spans)
 		if marksW > 0 {
 			// Marks follow the path, not the row end (same as find dialog).

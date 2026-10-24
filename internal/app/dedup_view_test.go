@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -1121,8 +1122,8 @@ func TestDedupViewEmptyDirsConfirmDefaultsYesAndRemoves(t *testing.T) {
 			if !app.model.DedupEmptyDirsConfirm.Open {
 				t.Fatal("empty-dirs confirm dialog did not open")
 			}
-			if app.model.DedupEmptyDirsConfirm.Focus != 0 {
-				t.Fatalf("empty-dirs confirm default focus = %d, want 0 (Yes)", app.model.DedupEmptyDirsConfirm.Focus)
+			if app.model.DedupEmptyDirsConfirm.Focus != dialog.DedupEmptyDirsYes {
+				t.Fatalf("empty-dirs confirm default focus = %q, want Yes", app.model.DedupEmptyDirsConfirm.Focus)
 			}
 			if got := app.model.DedupEmptyDirsConfirm.Dirs; len(got) != 1 || got[0] != "." {
 				t.Fatalf("empty-dirs confirm dirs = %v, want [\".\"] (sub is the scan root)", got)
@@ -1621,7 +1622,7 @@ func TestDedupViewEmptyDirsConfirmCancelDeletesNothing(t *testing.T) {
 		"alt-c": func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt)) },
 		"f9":    func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone)) },
 		"enter-on-cancel": func(app *App) {
-			app.model.DedupEmptyDirsConfirm.Focus = 2
+			app.model.DedupEmptyDirsConfirm.Focus = dlg.Cancel
 			app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 		},
 	}

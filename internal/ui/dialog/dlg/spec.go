@@ -7,7 +7,11 @@
 // The package must not import internal/ui/dialog: dialog builds specs and imports dlg.
 package dlg
 
-import "github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+import (
+	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
+)
 
 // ID names a widget. OK and Cancel are the conventional button IDs.
 type ID string
@@ -36,6 +40,22 @@ const (
 	// DialogContentWidth). The engine only draws and places it: it does not edit text, the caller
 	// keeps Value/Cursor/Scroll in its own state (see HandleKey for the key contract).
 	KindInput
+	// KindList is a scrollable list of plain-data rows (Item.Rows) with a cursor. The engine
+	// draws it, moves its cursor and scroll offset (ListMove events) and reports the activated
+	// row, but the rows, Cursor and Offset stay in the caller's state like an input's text. It is
+	// its own Tab segment (unless Driven) and, while it has no rows, is skipped by every focus move.
+	// See HandleKey for the key contract.
+	//
+	// Row features today: Text, fuzzy-match highlights (Match), a radio-style marker (Marked, with
+	// Item.Markers) and the cursor row's focus style. Complex list dialogs (history, pin, path
+	// picker, find) will additionally need per-row source icons, row-mark suffixes (pinned /
+	// job status), an invalid/missing style variant, per-column right-aligned fields and a
+	// scrollbar variant per list; add them to ListRow when the first of those dialogs migrates.
+	KindList
+	// KindSpacer reserves Height rows of the column for the caller to paint after Draw (the
+	// overlay escape hatch, see dialogs.md). It is never focusable or a hit target and its ID
+	// is optional; Placement.Item(id) returns its rect.
+	KindSpacer
 )
 
 // Fit says how a label that is wider than its cell is shortened.
@@ -65,7 +85,7 @@ type Item struct {
 
 	// Label rows only.
 	Indent int       // extra cells before the text
-	Fit    Fit       // how an overlong Label is shortened
+	Fit    Fit       // how an overlong Label (or list row text) is shortened
 	Prefix string    // fixed text drawn before Label; only Label is shortened (FitPath)
 	Style  TextStyle // text style variant
 	Center bool      // center the text in the available width
@@ -80,13 +100,72 @@ type Item struct {
 	// Simple draws draw.DrawSimpleDialogInput (no scrolling, no ghost text, no icon) instead of the
 	// scrolling input.
 	Simple bool
+	// Drives names a KindList that this input filters. While the input is focused and that list
+	// has rows, Up/Down/PgUp/PgDn/Ctrl+Home/Ctrl+End move the list's cursor (ListMove events)
+	// and focus stays in the input. The list is drawn with its cursor row highlighted while this
+	// input (or the list itself) holds focus.
+	Drives ID
+
+	// List rows only (KindList). Cursor is the cursor row index (shared with the input's caret
+	// field) and Offset the first visible row; both stay in the caller's state.
+	Rows   []ListRow
+	Offset int
+	// Height is the number of visible rows of a list, or the rows a KindSpacer reserves.
+	Height int
+	// Wrap makes Up/Down/PgUp/PgDn wrap around the ends instead of stopping at them.
+	Wrap bool
+	// CenterScroll keeps the cursor row centered in the viewport (geom.ScrollOffset, Offset is
+	// ignored). Otherwise the viewport scrolls only as far as needed (Offset is sticky).
+	CenterScroll bool
+	// PageStep is how many rows PgUp/PgDn move; 0 means Height-1 (at least 1).
+	PageStep int
+	// Driven marks a list whose focus lives in the input that Drives it: the list is never a focus
+	// stop or Tab segment itself, its cursor row is lit while that input is focused, and a click on
+	// one of its rows focuses that input.
+	Driven bool
+	// Markers draws a radio glyph before each row (lit when ListRow.Marked) and styles every row
+	// as an option row; otherwise rows are plain dialog text and only the focused cursor row is
+	// highlighted.
+	Markers bool
+	// Scrollbar draws draw.DrawDialogListScrollbar on the dialog's right border when the rows
+	// overflow Height.
+	Scrollbar bool
+}
+
+// ListRow is one row of a KindList.
+type ListRow struct {
+	Text   string
+	Match  []search.Range // fuzzy-match highlight ranges (rune offsets into Text)
+	Marked bool           // lit radio glyph when the list has Markers
 }
 
 // focusable reports whether keyboard focus and mouse clicks can land on the item.
-func (it Item) focusable() bool { return it.Kind != KindLabel && it.Kind != KindSeparator }
+func (it Item) focusable() bool {
+	switch it.Kind {
+	case KindLabel, KindSeparator, KindSpacer:
+		return false
+	case KindList:
+		return len(it.Rows) > 0 && !it.Driven // an empty list has nothing to select
+	}
+	return true
+}
+
+// span is how many dialog rows the item occupies.
+func (it Item) span() int {
+	if (it.Kind == KindList || it.Kind == KindSpacer) && it.Height > 1 {
+		return it.Height
+	}
+	return 1
+}
 
 // Group is one Tab segment: columns side by side (a single column is the common case).
-type Group struct{ Columns [][]Item }
+//
+// ColWidths, when set, are the widths in cells of every column but the last (which takes the rest
+// up to the right border); without it the columns share the width equally.
+type Group struct {
+	Columns   [][]Item
+	ColWidths []int
+}
 
 // Button is a push button in the strip below the groups.
 type Button struct {
@@ -109,6 +188,8 @@ type Spec struct {
 	// screen: width is min(Width, screen-4), widened to min(MinWidth, screen-2) when that is below
 	// MinWidth, and the height only shrinks to the screen. MinHeight still raises the height.
 	Unclamped bool
+	// ScrollbarStyle is the scrollbar variant for lists with Item.Scrollbar (empty = thumb).
+	ScrollbarStyle uiscrollbar.Style
 }
 
 // Rect is a screen region in cells.
@@ -118,11 +199,16 @@ type Rect = draw.Rect
 // column may be truncated to fit). Kind is KindLabel for static text rows and KindSeparator for
 // rules, which HitTest skips; a label's Rect spans the whole text cell range it paints, spaces
 // included, and a separator's the full dialog width. A KindInput's Rect is its full row.
+//
+// A KindList's Rect spans its visible rows and text width (the scrollbar column is outside it);
+// Offset is the first visible row and Rows the number of rows in the data, so rows past the end
+// are not hits. A KindSpacer's Rect is the whole column cell it reserves.
 type PlacedItem struct {
-	ID    ID
-	Kind  Kind
-	Rect  Rect
-	Label string
+	ID           ID
+	Kind         Kind
+	Rect         Rect
+	Label        string
+	Offset, Rows int
 }
 
 // Placement is the result of the single layout pass. Items are the group items (labels included) in
@@ -138,10 +224,25 @@ type Placement struct {
 //
 // Col is set only by Click on a KindInput: the clicked cell's offset from the input's left edge
 // (so the caller can place its cursor; an input with a LeadingIcon starts its text after the icon).
+//
+// List events carry the list's ID. EventActivate (the zero Kind) reports the activated row in
+// Index. EventListMove reports the list's new Cursor in Index and the new first visible row in
+// Offset; the caller stores both in its state.
 type Event struct {
-	ID  ID
-	Col int
+	ID     ID
+	Col    int
+	Kind   EventKind
+	Index  int
+	Offset int
 }
+
+// EventKind says what an Event with a list ID reports.
+type EventKind int
+
+const (
+	EventActivate EventKind = iota // a widget (or list row) was activated
+	EventListMove                  // a list's cursor / scroll offset moved
+)
 
 // Item returns the placed widget named id (an input's Rect is where a caller anchors overlays such
 // as a completion dropdown or a validation hint).
