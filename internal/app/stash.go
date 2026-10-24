@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func (a *App) togglePanelSelectionStash() {
@@ -26,7 +26,7 @@ func (a *App) togglePanelSelectionStash() {
 		a.restorePanelStash(p)
 		return
 	}
-	a.model.StashRestoreDialog = dialog.StashRestoreDialogState{Open: true, Focus: 0}
+	a.model.StashRestoreDialog = dialog.StashRestoreDialogState{Open: true, Focus: dialog.StashReplace}
 	a.render()
 }
 
@@ -44,64 +44,27 @@ func (a *App) closeStashRestoreDialog() {
 	a.model.StashRestoreDialog = dialog.StashRestoreDialogState{}
 }
 
-// stashRestoreButtonCount is Replace, Merge, Drop stash, Drop all, Cancel.
-const stashRestoreButtonCount = 5
-
 func (a *App) handleStashRestoreDialogKey(event *tcell.EventKey) {
-	if action, ok := stashRestoreDialogAltAction(event); ok {
-		a.applyStashRestoreChoice(action)
-		return
-	}
 	d := &a.model.StashRestoreDialog
-	switch event.Key() {
-	case tcell.KeyTab:
-		d.Focus = (d.Focus + 1) % stashRestoreButtonCount
-	case tcell.KeyBacktab:
-		d.Focus = (d.Focus + stashRestoreButtonCount - 1) % 4
-	case tcell.KeyLeft:
-		if d.Focus > 0 {
-			d.Focus--
-		}
-	case tcell.KeyRight:
-		if d.Focus < stashRestoreButtonCount-1 {
-			d.Focus++
-		}
-	case tcell.KeyEnter:
-		a.applyStashRestoreChoice(stashRestoreFocusAction(d.Focus))
+	if ev, ok := dlg.HandleKey(dialog.StashRestoreView(*d), &d.Focus, event); ok && ev.ID != "" {
+		a.applyStashRestoreChoice(stashRestoreFocusAction(ev.ID))
 	}
 }
 
-func stashRestoreDialogAltAction(ev *tcell.EventKey) (string, bool) {
-	if ev.Key() != tcell.KeyRune || !keymap.AltLetterModifiers(ev.Modifiers()) {
-		return "", false
-	}
-	switch ev.Rune() {
-	case 'r', 'R':
-		return "replace", true
-	case 'm', 'M':
-		return "merge", true
-	case 'd', 'D':
-		return "drop_stash", true
-	case 'a', 'A':
-		return "drop_all", true
-	default:
-		return "", false
-	}
-}
-
-func stashRestoreFocusAction(focus int) string {
+// stashRestoreFocusAction maps a stash restore button to its action; an unset focus is the first
+// button (Replace).
+func stashRestoreFocusAction(focus dlg.ID) string {
 	switch focus {
-	case 0:
-		return "replace"
-	case 1:
+	case dialog.StashMerge:
 		return "merge"
-	case 2:
+	case dialog.StashDropStash:
 		return "drop_stash"
-	case 3:
+	case dialog.StashDropAll:
 		return "drop_all"
-	default:
+	case dlg.Cancel:
 		return "cancel" // closes the dialog, keeps stash and selection
 	}
+	return "replace"
 }
 
 func (a *App) applyStashRestoreChoice(action string) {

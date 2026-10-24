@@ -63,29 +63,3 @@ func TestMetaEntryShortcuts_duplicateFirstLetters(t *testing.T) {
 		t.Fatalf("noble shortcut = %q, want b (n taken, o reserved for OK)", got[1])
 	}
 }
-
-func TestMetaEntryIndexForAltShortcut(t *testing.T) {
-	entries := []dialog.MetaEntry{
-		{Name: "none"},
-		{Name: "walnut"},
-		{Name: "cedar"},
-	}
-	if i, ok := dialog.MetaEntryIndexForAltShortcut(entries, 'N'); !ok || i != 0 {
-		t.Fatalf("Alt+n: i=%d ok=%v, want 0 true", i, ok)
-	}
-	if i, ok := dialog.MetaEntryIndexForAltShortcut(entries, 'w'); !ok || i != 1 {
-		t.Fatalf("Alt+w: i=%d ok=%v, want 1 true", i, ok)
-	}
-	if i, ok := dialog.MetaEntryIndexForAltShortcut(entries, 'e'); !ok || i != 2 {
-		t.Fatalf("Alt+e: i=%d ok=%v, want 2 true", i, ok)
-	}
-	if _, ok := dialog.MetaEntryIndexForAltShortcut(entries, 'z'); ok {
-		t.Fatal("Alt+z should not match")
-	}
-	if _, ok := dialog.MetaEntryIndexForAltShortcut(entries, 'o'); ok {
-		t.Fatal("Alt+o must stay reserved for OK")
-	}
-	if _, ok := dialog.MetaEntryIndexForAltShortcut(entries, 'c'); ok {
-		t.Fatal("Alt+c must stay reserved for Cancel")
-	}
-}

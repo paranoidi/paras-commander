@@ -5,70 +5,43 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-const dedupReturnButtons = 3 // Show/Selected, Rescan/Directory, Cancel
-
 // ReturnDialogCancel dismisses the kept-results / scan-scope dialog (its Cancel button).
-func (h *Handler) ReturnDialogCancel() { h.returnDialogActivate(2) }
+func (h *Handler) ReturnDialogCancel() { h.returnDialogActivate(dlg.Cancel) }
 
 // HandleReturnDialogKey routes keys for the open kept-results / scan-scope dialog.
 func (h *Handler) HandleReturnDialogKey(event *tcell.EventKey) {
 	st := &h.model.DedupReturnDialog
-
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 's', 'S':
-			h.returnDialogActivate(0)
-		case 'r', 'R':
-			if len(st.ScopeDirs) == 0 {
-				h.returnDialogActivate(1)
-			}
-		case 'd', 'D':
-			if len(st.ScopeDirs) > 0 {
-				h.returnDialogActivate(1)
-			}
-		}
-		return
-	}
-
-	switch event.Key() {
-	case tcell.KeyLeft:
-		if st.ButtonFocus > 0 {
-			st.ButtonFocus--
-		}
-	case tcell.KeyRight:
-		if st.ButtonFocus < dedupReturnButtons-1 {
-			st.ButtonFocus++
-		}
-	case tcell.KeyEnter:
-		h.returnDialogActivate(st.ButtonFocus)
+	// The summary only shapes the message lines, not the buttons or their mnemonics.
+	if ev, ok := dlg.HandleKey(dialog.DedupReturnView(*st, "", 0, 0, ""), &st.Focus, event); ok && ev.ID != "" {
+		h.returnDialogActivate(ev.ID)
 	}
 }
 
-// returnDialogActivate closes the dialog and runs button i: 0=Show, 1=Rescan, 2=Cancel, or
-// in scope mode 0=Selected, 1=Directory, 2=Cancel.
-func (h *Handler) returnDialogActivate(i int) {
+// returnDialogActivate closes the dialog and runs button id: First is Show (Selected in scope
+// mode), Second is Rescan (Directory), dlg.Cancel just closes.
+func (h *Handler) returnDialogActivate(id dlg.ID) {
 	dirs := h.model.DedupReturnDialog.ScopeDirs
 	h.model.DedupReturnDialog = dialog.DedupReturnDialogState{}
 	if len(dirs) > 0 {
-		switch i {
-		case 0:
+		switch id {
+		case dialog.DedupReturnFirst:
 			root, only := scanScope(dirs)
 			h.openRoot(root, only)
-		case 1:
+		case dialog.DedupReturnSecond:
 			h.openCurrent()
 		}
 		return
 	}
-	switch i {
-	case 0:
+	switch id {
+	case dialog.DedupReturnFirst:
 		h.VerifyAndShowKept()
-	case 1:
+	case dialog.DedupReturnSecond:
 		h.openRoot(h.activePanelPath(), nil)
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // PathPickerPurpose selects what happens when the user confirms a path in the picker.
@@ -303,13 +304,12 @@ type MetaEntry struct {
 }
 
 // MetaDialogState is the checkbox picker for toggling meta columns on panel entries.
-// Focus 0..len(Entries)-1 are checkbox rows; len(Entries) is OK; len(Entries)+1 is Cancel.
 type MetaDialogState struct {
 	Open    bool
 	PanelID int
 	Entries []MetaEntry
 	Checked []bool // parallel to Entries
-	Focus   int    // 0..len(Entries)-1 checkbox items, len = OK, len+1 = Cancel
+	Focus   dlg.ID // MetaEntryID(i) for a checkbox row, dlg.OK or dlg.Cancel; empty is the first row
 }
 
 // HelpEntry is one row in the full-screen help view.

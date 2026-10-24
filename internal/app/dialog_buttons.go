@@ -183,7 +183,7 @@ func (a *App) modalDialogButtons(event *tcell.EventKey) dialogButtons {
 		}
 	case a.model.UndoConfirm.Open:
 		return dialogButtons{
-			OK:     func() { a.answerUndoConfirm(a.model.UndoConfirm.Focus == 0) },
+			OK:     func() { a.answerUndoConfirm(a.model.UndoConfirm.Focus == dialog.UndoYes) },
 			Cancel: func() { a.answerUndoConfirm(false) },
 		}
 	case a.model.StashRestoreDialog.Open:

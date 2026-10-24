@@ -8,11 +8,11 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	sftpb "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // sftpPromptDismissSentinel is posted through the existing host-key/password open
@@ -265,7 +265,7 @@ func (a *App) openHostKeyDialog(p sftpb.HostKeyPrompt) {
 		Host:        p.Host,
 		KeyType:     p.KeyType,
 		Fingerprint: p.Fingerprint,
-		Focus:       0,
+		Focus:       dialog.HostKeyAccept,
 	}
 }
 
@@ -351,67 +351,23 @@ func (a *App) executeSFTPPassword() {
 	a.finishSFTPPassword(pw)
 }
 
-func (a *App) handleHostKeyDialogKey(ev *tcell.EventKey) bool {
-	if !a.model.HostKeyDialog.Open {
-		return false
-	}
+// handleHostKeyDialogKey drives the host key prompt; Accept trusts the key for the session, Save
+// also persists it, Reject (or Esc) refuses it.
+func (a *App) handleHostKeyDialogKey(ev *tcell.EventKey) {
 	d := &a.model.HostKeyDialog
-	if ev.Key() == tcell.KeyRune && keymap.AltLetterModifiers(ev.Modifiers()) {
-		switch ev.Rune() {
-		case 'a', 'A':
-			a.finishHostKeyDialog(sftpb.HostKeyTrustSession)
-			a.render()
-			return true
-		case 's', 'S':
-			a.finishHostKeyDialog(sftpb.HostKeyTrustPersist)
-			a.render()
-			return true
-		case 'r', 'R':
-			a.finishHostKeyDialog(sftpb.HostKeyReject)
-			a.render()
-			return true
-		}
+	if !d.Open {
+		return
 	}
-	switch ev.Key() {
-	case tcell.KeyLeft:
-		if d.Focus > 0 {
-			d.Focus--
-		}
-		a.render()
-		return true
-	case tcell.KeyRight:
-		if d.Focus < 2 {
-			d.Focus++
-		}
-		a.render()
-		return true
-	case tcell.KeyEnter:
-		switch d.Focus {
-		case 0:
-			a.finishHostKeyDialog(sftpb.HostKeyTrustSession)
-		case 1:
-			a.finishHostKeyDialog(sftpb.HostKeyTrustPersist)
-		default:
-			a.finishHostKeyDialog(sftpb.HostKeyReject)
-		}
-		a.render()
-		return true
+	key, ok := dlg.HandleKey(dialog.HostKeyView(*d), &d.Focus, ev)
+	if !ok {
+		return
 	}
-	if ev.Key() == tcell.KeyRune {
-		switch ev.Rune() {
-		case 'a', 'A':
-			a.finishHostKeyDialog(sftpb.HostKeyTrustSession)
-			a.render()
-			return true
-		case 's', 'S':
-			a.finishHostKeyDialog(sftpb.HostKeyTrustPersist)
-			a.render()
-			return true
-		case 'r', 'R':
-			a.finishHostKeyDialog(sftpb.HostKeyReject)
-			a.render()
-			return true
-		}
+	switch key.ID {
+	case dialog.HostKeyAccept:
+		a.finishHostKeyDialog(sftpb.HostKeyTrustSession)
+	case dialog.HostKeySave:
+		a.finishHostKeyDialog(sftpb.HostKeyTrustPersist)
+	case dialog.HostKeyReject:
+		a.finishHostKeyDialog(sftpb.HostKeyReject)
 	}
-	return false
 }

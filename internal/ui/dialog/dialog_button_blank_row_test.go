@@ -147,12 +147,15 @@ func TestPathPickerHasBlankRowAboveButtons(t *testing.T) {
 	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
 }
 
-func TestStashRestoreHasBlankRowAboveButtonsAndNoHelpFooter(t *testing.T) {
+func TestStashRestoreButtonsSitUnderSeparatorAndNoHelpFooter(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
-	DrawStashRestoreDialog(screen, layout, StashRestoreDialogState{Focus: 0}, theme.Default())
+	DrawStashRestoreDialog(screen, layout, StashRestoreDialogState{}, theme.Default())
 	rows := dialogScreenRows(screen)
-	buttonY := assertSurfaceBlankRowAboveButtons(t, rows)
+	buttonY := dialogButtonRowY(rows)
+	if buttonY < 1 || !strings.Contains(rows[buttonY-1], "├") {
+		t.Fatalf("row above buttons = %q, want the separator (dlg dialogs have no blank row there)", rows[buttonY-1])
+	}
 	if !strings.Contains(rows[buttonY], "[ Replace ]") {
 		t.Fatalf("button row = %q, want Replace (help text must not overwrite buttons)", strings.TrimSpace(rows[buttonY]))
 	}

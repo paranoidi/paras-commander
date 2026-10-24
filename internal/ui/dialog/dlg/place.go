@@ -26,9 +26,27 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 		prefH += 2 // separator + button row
 	}
 	prefH = max(prefH, spec.MinHeight)
-	rect, ok := draw.ClampCenteredDialogRect(draw.Layout{Width: screenW, Height: screenH}, spec.Width, prefH, spec.MinWidth, spec.MinHeight)
-	if !ok {
-		return Placement{}, false
+	prefW := spec.Width
+	labels := make([]string, len(spec.Buttons))
+	for i, b := range spec.Buttons {
+		labels[i] = b.Label
+	}
+	if len(labels) > 0 {
+		prefW = max(prefW, draw.ButtonRowWidth(labels)+2) // the strip must fit between the borders
+	}
+	layout := draw.Layout{Width: screenW, Height: screenH}
+	var rect Rect
+	if spec.Unclamped {
+		w := min(prefW, screenW-4)
+		if w < spec.MinWidth {
+			w = min(spec.MinWidth, screenW-2)
+		}
+		rect = draw.CenteredDialogRect(layout, w, prefH)
+	} else {
+		var ok bool
+		if rect, ok = draw.ClampCenteredDialogRect(layout, prefW, prefH, spec.MinWidth, spec.MinHeight); !ok {
+			return Placement{}, false
+		}
 	}
 	p := Placement{Rect: rect}
 	y := rect.Y + 1
@@ -41,10 +59,21 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 				right = draw.DialogOptionX(rect) + (ci+1)*colW
 			}
 			for ri, it := range col {
+				if it.Kind == KindLabel {
+					// Text starts where the option marker's glyph does and keeps the one-cell right margin.
+					w := max(right-x-2, 0)
+					p.Items = append(p.Items, PlacedItem{
+						ID: it.ID, Kind: KindLabel,
+						Rect:  Rect{X: x + 1, Y: y + ri, Width: w, Height: 1},
+						Label: primitive.TruncateRight(it.Label, w),
+					})
+					continue
+				}
 				// The marker counts against the column too, or a long label runs past the border.
 				label := primitive.TruncateRight(it.Label, max(right-x-draw.DialogOptionWidth(""), 0))
 				p.Items = append(p.Items, PlacedItem{
 					ID:    it.ID,
+					Kind:  it.Kind,
 					Rect:  Rect{X: x, Y: y + ri, Width: draw.DialogOptionWidth(label), Height: 1},
 					Label: label,
 				})
@@ -54,10 +83,6 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 	}
 	if len(spec.Buttons) > 0 {
 		p.SepY, p.ButtonY = y, y+1
-		labels := make([]string, len(spec.Buttons))
-		for i, b := range spec.Buttons {
-			labels[i] = b.Label
-		}
 		for i, x := range draw.ButtonRowXs(rect, labels) {
 			b := spec.Buttons[i]
 			p.Items = append(p.Items, PlacedItem{ID: b.ID, Rect: Rect{X: x, Y: p.ButtonY, Width: draw.DialogButtonWidth(b.Label), Height: 1}, Label: b.Label})
@@ -75,17 +100,19 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	}
 	focus = resolve(spec, focus)
 	borderStyle := draw.DrawDialogFrame(screen, p.Rect, spec.Title, styles)
-	placed := map[ID]PlacedItem{}
-	for _, pi := range p.Items {
-		placed[pi.ID] = pi
-	}
+	_, surface, _ := styles.DialogSurface.Decompose()
+	n := 0 // p.Items holds the group items in the same order as this walk
 	for _, g := range spec.Groups {
 		for _, col := range g.Columns {
 			for _, it := range col {
-				pi := placed[it.ID]
-				if it.Kind == KindCheckbox {
+				pi := p.Items[n]
+				n++
+				switch it.Kind {
+				case KindLabel:
+					primitive.Text(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, styles.DialogText.Background(surface))
+				case KindCheckbox:
 					draw.DrawDialogCheckbox(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, false, styles)
-				} else {
+				default:
 					draw.DrawDialogRadio(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, false, styles)
 				}
 			}
@@ -106,6 +133,9 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 func HitTest(p Placement, x, y int) (ID, bool) {
 	for _, it := range p.Items {
 		r := it.Rect
+		if it.Kind == KindLabel {
+			continue
+		}
 		if x >= r.X && x < r.X+r.Width && y >= r.Y && y < r.Y+r.Height {
 			return it.ID, true
 		}

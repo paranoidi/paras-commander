@@ -1,7 +1,9 @@
 package dialog
 
+import "github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+
 // StashRestoreDialogState holds the selection-stash restore conflict dialog.
 type StashRestoreDialogState struct {
 	Open  bool
-	Focus int // 0=Replace, 1=Merge, 2=Drop stash, 3=Drop all, 4=Cancel
+	Focus dlg.ID // a Stash* button ID (StashReplace is the default) or dlg.Cancel
 }

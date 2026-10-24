@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // PrimaryModal identifies which exclusive modal occupies the primary dialog layer.
@@ -106,7 +107,7 @@ type ConflictDialogState struct {
 // QuitConfirmState holds the quit confirmation dialog.
 type QuitConfirmState struct {
 	Open  bool
-	Focus int // 0=stay, 1=quit-anyway
+	Focus dlg.ID // QuitStay (the default) or QuitQuit
 	// WarnLine1 / WarnLine2 override copy when non-empty (e.g. active commands vs jobs only).
 	WarnLine1 string
 	WarnLine2 string

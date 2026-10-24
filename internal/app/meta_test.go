@@ -33,7 +33,6 @@ file = "echo meta"
 		PanelID: ui.PrimaryPanel,
 		Entries: []dialog.MetaEntry{{Name: "mkvinfo", Description: "MKV info"}},
 		Checked: []bool{true},
-		Focus:   0,
 	}
 	app.metaCtrl.ActivateSelection()
 

@@ -1,9 +1,12 @@
 package dlg
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 func key(k tcell.Key) *tcell.EventKey { return tcell.NewEventKey(k, 0, tcell.ModNone) }
@@ -226,5 +229,216 @@ func TestHitTestAndClick(t *testing.T) {
 	}
 	if _, ok := Click(spec, 80, 24, &focus, 20, 8); ok || focus != Cancel {
 		t.Fatalf("click on border should miss and keep focus, focus=%q ok=%v", focus, ok)
+	}
+}
+
+func label(text string) Item { return Item{Kind: KindLabel, Label: text} }
+
+// labelSpec: a text-only group (heading, spacer), then a column with a label between its items,
+// then a two-column group whose right column has a label on the row of a left item, then buttons.
+func labelSpec() Spec {
+	return Spec{
+		Title: "Harbor", Width: 40, MinWidth: 20, MinHeight: 6,
+		Groups: []Group{
+			{Columns: [][]Item{{label("Moor the boat?"), label("")}}},
+			{Columns: [][]Item{{radio("r0", "Yes", 'y'), label("(ropes included)"), radio("r1", "No", 'n')}}},
+			{Columns: [][]Item{
+				{check("c0", "Lantern", 'l'), check("c1", "Mast", 'm')},
+				{label("note"), check("d1", "Sail", 's')},
+			}},
+		},
+		Buttons: []Button{{ID: OK, Label: "OK", Mnemonic: 'O'}, {ID: Cancel, Label: "Cancel", Mnemonic: 'C'}},
+	}
+}
+
+func TestLabelPlacement(t *testing.T) {
+	spec := labelSpec()
+	spec.Groups[0].Columns[0][0].Label = "Moor the boat at a very long pier name that cannot fit the dialog"
+	p, ok := Place(80, 24, spec)
+	if !ok {
+		t.Fatal("Place not ok")
+	}
+	// 2 border + 2 + 3 + 2 rows + separator + buttons.
+	if p.Rect != (Rect{X: 20, Y: 6, Width: 40, Height: 11}) {
+		t.Fatalf("rect = %+v", p.Rect)
+	}
+	var labels []PlacedItem
+	for _, it := range p.Items {
+		if it.Kind == KindLabel {
+			labels = append(labels, it)
+		}
+	}
+	if len(labels) != 4 {
+		t.Fatalf("placed %d labels, want 4: %+v", len(labels), labels)
+	}
+	// Text starts at DialogTextX (rect.X+2) and spans the content width, one cell short of the border.
+	head := labels[0]
+	if head.Rect != (Rect{X: 22, Y: 7, Width: 36, Height: 1}) || head.Label == spec.Groups[0].Columns[0][0].Label {
+		t.Errorf("heading = %+v %q, want x=22 w=36 and a truncated label", head.Rect, head.Label)
+	}
+	if spacer := labels[1]; spacer.Rect.Y != 8 || spacer.Label != "" {
+		t.Errorf("spacer = %+v, want a blank row at y=8", spacer)
+	}
+	if mid := labels[2]; mid.Rect.Y != 10 || mid.Label != "(ropes included)" {
+		t.Errorf("middle label = %+v, want it between the radios at y=10", mid)
+	}
+	// A label in the second column starts at that column's text x and stops before the border.
+	if note := labels[3]; note.Rect != (Rect{X: 42, Y: 12, Width: 16, Height: 1}) {
+		t.Errorf("note = %+v, want x=42 y=12 w=16", note.Rect)
+	}
+	if p.SepY != 14 || p.ButtonY != 15 {
+		t.Errorf("SepY/ButtonY = %d/%d, want 14/15", p.SepY, p.ButtonY)
+	}
+}
+
+func TestLabelsAreSkippedByFocus(t *testing.T) {
+	cases := []struct {
+		name string
+		from ID
+		key  *tcell.EventKey
+		want ID
+	}{
+		{"empty focus is the first focusable", "", key(tcell.KeyDown), "r1"},
+		{"down skips the label between radios", "r0", key(tcell.KeyDown), "r1"},
+		{"up skips the label between radios", "r1", key(tcell.KeyUp), "r0"},
+		{"up from the first focusable skips the text-only group", "r0", key(tcell.KeyUp), "r0"},
+		{"down to the next group", "r1", key(tcell.KeyDown), "c0"},
+		{"up into the previous group skips its labels", "c0", key(tcell.KeyUp), "r1"},
+		{"right does not land on a label", "c0", key(tcell.KeyRight), "c0"},
+		{"right onto an item beside a label row", "c1", key(tcell.KeyRight), "d1"},
+		{"left back", "d1", key(tcell.KeyLeft), "c1"},
+		{"down in the right column", "d1", key(tcell.KeyDown), OK},
+		{"tab skips the text-only group", OK, key(tcell.KeyTab), "r0"},
+		{"backtab skips the text-only group", "r0", key(tcell.KeyBacktab), OK},
+		{"tab between item groups", "r1", key(tcell.KeyTab), "c0"},
+	}
+	for _, c := range cases {
+		focus := c.from
+		if _, ok := HandleKey(labelSpec(), &focus, c.key); !ok || focus != c.want {
+			t.Errorf("%s: got focus %q ok=%v, want %q", c.name, focus, ok, c.want)
+		}
+	}
+	// Unknown or label-less IDs resolve to the first focusable, and activation never reports a label.
+	focus := ID("")
+	if ev, _ := HandleKey(labelSpec(), &focus, key(tcell.KeyEnter)); ev.ID != "r0" {
+		t.Errorf("Enter on empty focus = %q, want r0", ev.ID)
+	}
+	if ev, ok := HandleKey(labelSpec(), &focus, runeKey('x', tcell.ModAlt)); ok || ev.ID != "" {
+		t.Errorf("Alt+x = (%q, %v), want unhandled", ev.ID, ok)
+	}
+}
+
+func TestLabelsAreNotHitTargets(t *testing.T) {
+	spec := labelSpec()
+	p, _ := Place(80, 24, spec)
+	for _, c := range [][2]int{{22, 7}, {30, 7}, {22, 8}, {22, 10}, {42, 12}, {50, 12}} {
+		if id, ok := HitTest(p, c[0], c[1]); ok {
+			t.Errorf("(%d,%d) hit %q, want a miss on a label cell", c[0], c[1], id)
+		}
+	}
+	if id, ok := HitTest(p, 22, 9); !ok || id != "r0" {
+		t.Errorf("radio row hit = %q %v, want r0", id, ok)
+	}
+	focus := ID("r1")
+	if _, ok := Click(spec, 80, 24, &focus, 22, 10); ok || focus != "r1" {
+		t.Errorf("click on a label: focus %q ok=%v, want a miss that keeps focus", focus, ok)
+	}
+	if ev, ok := Click(spec, 80, 24, &focus, 22, 11); !ok || ev.ID != "r1" {
+		t.Errorf("click on radio below the label = (%q, %v), want r1", ev.ID, ok)
+	}
+}
+
+func TestDrawLabels(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	styles := theme.Default()
+	spec := labelSpec()
+	Draw(screen, 80, 24, spec, "", styles)
+	screen.Show()
+	row := func(y int) string { return tcelltest.TextAt(screen, 20, y, 40) }
+	if got := row(7); !strings.HasPrefix(got, "│ Moor the boat?") {
+		t.Errorf("heading row = %q", got)
+	}
+	if got := strings.TrimSpace(strings.Trim(row(8), "│")); got != "" {
+		t.Errorf("spacer row = %q, want blank", got)
+	}
+	if got := row(10); !strings.HasPrefix(got, "│ (ropes included)") {
+		t.Errorf("middle label row = %q", got)
+	}
+	if got := tcelltest.TextAt(screen, 42, 12, 4); got != "note" {
+		t.Errorf("right column label = %q at x=42, want note at the column text x", got)
+	}
+	// Label text uses the dialog text style on the surface background.
+	_, surface, _ := styles.DialogSurface.Decompose()
+	want := styles.DialogText.Background(surface)
+	if _, st, _ := screen.Get(22, 7); st != want {
+		t.Errorf("label style = %v, want %v", st, want)
+	}
+}
+
+func TestUnclampedPlacement(t *testing.T) {
+	spec := Spec{
+		Title: "Harbor", Width: 72, MinWidth: 44, Unclamped: true,
+		Groups:  []Group{{Columns: [][]Item{{label("one"), label("two")}}}},
+		Buttons: []Button{{ID: OK, Label: "OK", Mnemonic: 'O'}},
+	}
+	cases := []struct {
+		name         string
+		screenW      int
+		screenH      int
+		wantW, wantH int
+	}{
+		{"wide screen caps at Width", 120, 30, 72, 6},
+		{"width follows the screen margin", 60, 30, 56, 6},
+		{"below MinWidth widens to the screen minus 2", 46, 30, 44, 6},
+		{"narrower than MinWidth", 40, 30, 38, 6},
+		{"height shrinks to the screen, never refuses", 80, 4, 72, 4},
+	}
+	for _, c := range cases {
+		p, ok := Place(c.screenW, c.screenH, spec)
+		if !ok || p.Rect.Width != c.wantW || p.Rect.Height != c.wantH {
+			t.Errorf("%s: rect %+v ok=%v, want %dx%d", c.name, p.Rect, ok, c.wantW, c.wantH)
+		}
+	}
+	// The default (clamped) mode refuses where Unclamped draws.
+	spec.Unclamped = false
+	if _, ok := Place(40, 30, spec); ok {
+		t.Error("clamped placement should refuse a screen below MinWidth")
+	}
+	// MinHeight raises an unclamped dialog's height too.
+	spec.Unclamped, spec.MinHeight = true, 9
+	if p, _ := Place(80, 30, spec); p.Rect.Height != 9 {
+		t.Errorf("height = %d, want MinHeight 9", p.Rect.Height)
+	}
+}
+
+func TestWidthGrowsToFitButtons(t *testing.T) {
+	spec := Spec{
+		Title: "Harbor", Width: 20, MinWidth: 10, MinHeight: 5,
+		Groups: []Group{{Columns: [][]Item{{label("one")}}}},
+		Buttons: []Button{
+			{ID: "a", Label: "Anchor", Mnemonic: 'A'}, {ID: "b", Label: "Buoy", Mnemonic: 'B'},
+			{ID: "c", Label: "Cable", Mnemonic: 'C'},
+		},
+	}
+	// Three buttons are 12 + 10 + 11 wide with two 2-cell gaps: 37 between the borders.
+	for _, unclamped := range []bool{false, true} {
+		spec.Unclamped = unclamped
+		p, ok := Place(80, 24, spec)
+		if !ok || p.Rect.Width != 39 {
+			t.Fatalf("unclamped=%v: rect %+v ok=%v, want width 39", unclamped, p.Rect, ok)
+		}
+		last := p.Items[len(p.Items)-1]
+		if last.Rect.X < p.Rect.X+1 || last.Rect.X+last.Rect.Width > p.Rect.X+p.Rect.Width-1 {
+			t.Errorf("unclamped=%v: last button %+v sticks out of the dialog %+v", unclamped, last.Rect, p.Rect)
+		}
+	}
+	// A screen that cannot hold the strip still clamps.
+	if p, _ := Place(30, 24, Spec{Width: 20, Unclamped: true, Buttons: spec.Buttons}); p.Rect.Width != 26 {
+		t.Errorf("narrow screen width = %d, want 26", p.Rect.Width)
 	}
 }

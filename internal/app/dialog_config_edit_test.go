@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/configdoc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -312,7 +313,7 @@ file = "wc -l"
 	app := testMetaDialogApp(t, dir, cfgDir)
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
 	app.model.MetaDialog.Checked[0] = true
-	app.model.MetaDialog.Focus = 0
+	app.model.MetaDialog.Focus = dialog.MetaEntryID(0)
 
 	prev := externalEditorRunner
 	externalEditorRunner = func(_ context.Context, path string, _ bool) error {

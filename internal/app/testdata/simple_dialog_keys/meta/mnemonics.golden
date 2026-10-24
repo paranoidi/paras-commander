@@ -1,0 +1,120 @@
+== open ==
+focus=item0 checked=[false true false]
+-- text --
+┌──────────────────────── Meta ────────────────────────┐
+│ 󰄱 lantern — Shows the lantern count                  │
+│ 󰡖 orchard — Orchard yield                            │
+│ 󰄱 velvet — Velvet rating                             │
+├──────────────────────────────────────────────────────┤
+│                 [ OK ]    [ Cancel ]                 │
+└──────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+l ==
+focus=item0 checked=[true true false]
+-- text --
+┌──────────────────────── Meta ────────────────────────┐
+│ 󰡖 lantern — Shows the lantern count                  │
+│ 󰡖 orchard — Orchard yield                            │
+│ 󰄱 velvet — Velvet rating                             │
+├──────────────────────────────────────────────────────┤
+│                 [ OK ]    [ Cancel ]                 │
+└──────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+r ==
+focus=item1 checked=[true false false]
+-- text --
+┌──────────────────────── Meta ────────────────────────┐
+│ 󰡖 lantern — Shows the lantern count                  │
+│ 󰄱 orchard — Orchard yield                            │
+│ 󰄱 velvet — Velvet rating                             │
+├──────────────────────────────────────────────────────┤
+│                 [ OK ]    [ Cancel ]                 │
+└──────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+v ==
+focus=item2 checked=[true false true]
+-- text --
+┌──────────────────────── Meta ────────────────────────┐
+│ 󰡖 lantern — Shows the lantern count                  │
+│ 󰄱 orchard — Orchard yield                            │
+│ 󰡖 velvet — Velvet rating                             │
+├──────────────────────────────────────────────────────┤
+│                 [ OK ]    [ Cancel ]                 │
+└──────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+L ==
+focus=item0 checked=[false false true]
+-- text --
+┌──────────────────────── Meta ────────────────────────┐
+│ 󰄱 lantern — Shows the lantern count                  │
+│ 󰄱 orchard — Orchard yield                            │
+│ 󰡖 velvet — Velvet rating                             │
+├──────────────────────────────────────────────────────┤
+│                 [ OK ]    [ Cancel ]                 │
+└──────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+R ==
+focus=item1 checked=[false true true]
+-- text --
+┌──────────────────────── Meta ────────────────────────┐
+│ 󰄱 lantern — Shows the lantern count                  │
+│ 󰡖 orchard — Orchard yield                            │
+│ 󰡖 velvet — Velvet rating                             │
+├──────────────────────────────────────────────────────┤
+│                 [ OK ]    [ Cancel ]                 │
+└──────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x300010203 bg=0x300040506 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

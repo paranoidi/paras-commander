@@ -23,9 +23,13 @@ type Kind int
 const (
 	KindRadio Kind = iota
 	KindCheckbox
+	// KindLabel is a static text row in the dialog's text style. It has no mnemonic and no state
+	// and is never focusable or hit-testable, so its ID is optional. An empty Label is a blank
+	// spacer row.
+	KindLabel
 )
 
-// Item is a radio or checkbox row.
+// Item is a radio or checkbox row, or a static label row (KindLabel).
 type Item struct {
 	ID       ID
 	Kind     Kind
@@ -33,6 +37,9 @@ type Item struct {
 	Mnemonic rune // 0 = none
 	On       bool // radio selected / checkbox checked
 }
+
+// focusable reports whether keyboard focus and mouse clicks can land on the item.
+func (it Item) focusable() bool { return it.Kind != KindLabel }
 
 // Group is one Tab segment: columns side by side (a single column is the common case).
 type Group struct{ Columns [][]Item }
@@ -46,26 +53,35 @@ type Button struct {
 }
 
 // Spec describes a whole dialog.
+//
+// Width is the preferred width; Place widens it to fit the button strip between the borders.
 type Spec struct {
 	Title                      string
 	Width, MinWidth, MinHeight int
 	Groups                     []Group
 	Buttons                    []Button // drawn after a horizontal separator, centered; also its own Tab segment
 	PlainButtonKeys            bool     // plain (no Alt) button mnemonic letters press the button
+	// Unclamped sizes the dialog like draw.CenteredDialogRect instead of refusing to draw on a small
+	// screen: width is min(Width, screen-4), widened to min(MinWidth, screen-2) when that is below
+	// MinWidth, and the height only shrinks to the screen. MinHeight still raises the height.
+	Unclamped bool
 }
 
 // Rect is a screen region in cells.
 type Rect = draw.Rect
 
 // PlacedItem is a widget's screen position. Label is the text actually drawn (a label in a later
-// column may be truncated to fit).
+// column may be truncated to fit). Kind is KindLabel for static text rows, which HitTest skips; a
+// label's Rect spans the whole text cell range it paints, spaces included.
 type PlacedItem struct {
 	ID    ID
+	Kind  Kind
 	Rect  Rect
 	Label string
 }
 
-// Placement is the result of the single layout pass. Items include the buttons. SepY and ButtonY
+// Placement is the result of the single layout pass. Items are the group items (labels included) in
+// spec order, then the buttons. SepY and ButtonY
 // are the screen rows of the button separator and the button strip (0 when there are no buttons).
 type Placement struct {
 	Rect          Rect

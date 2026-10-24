@@ -1,9 +1,6 @@
 package dialog
 
-import (
-	"fmt"
-	"unicode"
-)
+import "fmt"
 
 func metaEntryDisplayLabel(e MetaEntry) string {
 	if e.Description != "" {
@@ -21,20 +18,4 @@ func MetaEntryShortcuts(entries []MetaEntry) []rune {
 		labels[i] = metaEntryDisplayLabel(e)
 	}
 	return assignDialogMnemonics(labels, nil, true)
-}
-
-// MetaEntryIndexForAltShortcut returns the entry index when r matches a row mnemonic
-// (case-insensitive). The second result is false when there is no match.
-func MetaEntryIndexForAltShortcut(entries []MetaEntry, r rune) (int, bool) {
-	if r == 0 || !unicode.IsLetter(r) {
-		return 0, false
-	}
-	shortcuts := MetaEntryShortcuts(entries)
-	lr := unicode.ToLower(r)
-	for i, sh := range shortcuts {
-		if sh != 0 && sh == lr {
-			return i, true
-		}
-	}
-	return 0, false
 }

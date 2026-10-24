@@ -1,8 +1,8 @@
 package dialog
 
 import (
-	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // CompareFilterDialogMode picks what OK does with the chosen kind.
@@ -16,13 +16,13 @@ const (
 
 // CompareFilterDialogState is the compare category picker modal. Mode switches it
 // from the view filter to select/unselect by kind (OK (un)selects matching rows instead).
-// Focus indexes the radio rows, then OK, then Cancel.
+// Focus is the focused widget: one of the Radios rows (see CompareFilterView), dlg.OK or dlg.Cancel.
 // Filter is the pending radio selection (updated by Space/Enter/Alt mnemonic;
 // applied only on OK).
 type CompareFilterDialogState struct {
 	Open   bool
 	Mode   CompareFilterDialogMode
-	Focus  int
+	Focus  dlg.ID
 	Filter comparepkg.Filter
 	// FocusSecondary marks the right column as focused (select/unselect "this side").
 	FocusSecondary bool
@@ -47,30 +47,13 @@ func (s CompareFilterDialogState) Title() string {
 	return "Category"
 }
 
-// MoveFocus applies standard dialog navigation.
-// Segments: all radios | buttons.
-func (s CompareFilterDialogState) MoveFocus(key tcell.Key) (int, bool) {
-	n := len(s.Radios())
-	form := NewDialogTrailingButtonsForm(n, 2).WithSegments(0, n)
-	return form.MoveFocus(s.Focus, key)
-}
-
-// OKIndex returns the OK button focus index.
-func (s CompareFilterDialogState) OKIndex() int {
-	return len(s.Radios())
-}
-
-// CancelIndex returns the Cancel button focus index.
-func (s CompareFilterDialogState) CancelIndex() int {
-	return len(s.Radios()) + 1
-}
-
-// FilterForFocus maps radio focus index to a Filter value.
-func (s CompareFilterDialogState) FilterForFocus(focus int) (comparepkg.Filter, bool) {
-	return comparepkg.FilterForFocus(s.Radios(), focus)
-}
-
-// FocusForFilter maps a Filter value to its radio focus index.
-func (s CompareFilterDialogState) FocusForFilter(f comparepkg.Filter) int {
-	return comparepkg.FocusForFilter(s.Radios(), f)
+// FocusForFilter is the widget ID of the radio whose filter is exactly f. It is empty (the first
+// widget) when f matches none, e.g. a combination of kinds.
+func (s CompareFilterDialogState) FocusForFilter(f comparepkg.Filter) dlg.ID {
+	for _, r := range s.Radios() {
+		if r.Filter == f {
+			return compareFilterItemID(r.Filter)
+		}
+	}
+	return ""
 }

@@ -2,37 +2,12 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
+// DrawListingFormatDialog paints the listing format dialog from its widget spec (see
+// ListingFormatView).
 func DrawListingFormatDialog(screen tcell.Screen, layout Layout, state ListingFormatDialogState, styles theme.Theme) {
-	const (
-		width     = 44
-		minWidth  = 28
-		minHeight = 7
-	)
-	rect, ok := draw.ClampCenteredDialogRect(layout, width, minHeight, minWidth, minHeight)
-	if !ok {
-		return
-	}
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Listing format", styles)
-
-	optionCol := draw.DialogOptionX(rect)
-	y := rect.Y + 1
-
-	lf := panel.EffectiveListFormat(state.ListFormat)
-	radios := panel.ListFormatDialogRadios()
-	for i, r := range radios {
-		draw.DrawDialogRadio(screen, optionCol, y, r.Label, r.Shortcut, lf == r.Format, state.Focus == i, false, styles)
-		y++
-	}
-
-	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
-	y++
-
-	okFocused := state.Focus == 3
-	cancelFocused := state.Focus == 4
-	draw.DrawOKCancelButtonRow(screen, rect, y, okFocused, cancelFocused, styles)
+	dlg.Draw(screen, layout.Width, layout.Height, ListingFormatView(state), state.Focus, styles)
 }

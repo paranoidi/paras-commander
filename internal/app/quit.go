@@ -3,8 +3,8 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func (a *App) handleQuit() bool {
@@ -65,7 +65,7 @@ func (a *App) hasActiveJobs() bool {
 }
 
 func (a *App) openQuitConfirm() {
-	st := dialog.QuitConfirmState{Open: true, Focus: 0}
+	st := dialog.QuitConfirmState{Open: true, Focus: dialog.QuitStay}
 	hasJobs := a.hasActiveJobs()
 	cmds := a.commandsCtrl.HasRunning()
 	switch {
@@ -81,27 +81,11 @@ func (a *App) openQuitConfirm() {
 }
 
 func (a *App) handleQuitConfirmKey(event *tcell.EventKey) bool {
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 's', 'S':
-			a.model.QuitConfirm = dialog.QuitConfirmState{}
-			return false
-		case 'q', 'Q':
-			a.model.QuitConfirm = dialog.QuitConfirmState{}
-			return true
-		}
-	}
-	switch event.Key() {
-	case tcell.KeyLeft:
-		a.model.QuitConfirm.Focus = dialog.DialogPairLeftRight(a.model.QuitConfirm.Focus, false)
+	st := &a.model.QuitConfirm
+	ev, ok := dlg.HandleKey(dialog.QuitConfirmView(*st), &st.Focus, event)
+	if !ok || ev.ID == "" {
 		return false
-	case tcell.KeyRight:
-		a.model.QuitConfirm.Focus = dialog.DialogPairLeftRight(a.model.QuitConfirm.Focus, true)
-		return false
-	case tcell.KeyEnter:
-		quitAnyway := a.model.QuitConfirm.Focus == 1
-		a.model.QuitConfirm = dialog.QuitConfirmState{}
-		return quitAnyway
 	}
-	return false
+	*st = dialog.QuitConfirmState{}
+	return ev.ID == dialog.QuitQuit
 }

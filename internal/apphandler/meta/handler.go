@@ -14,12 +14,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func (h *Handler) postResult(panelID int, entryName, path, value string, gen uint64) {
@@ -331,7 +331,6 @@ func (h *Handler) OpenDialog(panelID int) {
 		PanelID: panelID,
 		Entries: entries,
 		Checked: checked,
-		Focus:   0,
 	}
 	h.host.ClearTransientMessage()
 }
@@ -792,57 +791,19 @@ func runCommand(ctx context.Context, cmd, path, dir string) (string, error) {
 // HandleDialogKey routes a key event to the open meta checkbox dialog.
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.MetaDialog
-	n := len(st.Entries)
-	form := dialog.NewDialogLinearForm(n)
-
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if i, ok := dialog.MetaEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
-			st.Checked[i] = !st.Checked[i]
-			st.Focus = i
-			return
-		}
-	}
-
-	switch event.Key() {
-	case tcell.KeyF9:
+	if event.Key() == tcell.KeyF9 {
 		h.editConfigFromDialog()
 		return
-	case tcell.KeyEnter:
-		switch st.Focus {
-		case form.CancelIndex():
-			h.CloseDialog()
-		case form.OKIndex():
-			h.ActivateSelection()
-		default:
-			if st.Focus < n {
-				st.Checked[st.Focus] = !st.Checked[st.Focus]
-			}
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		switch event.Rune() {
-		case 'o', 'O':
-			h.ActivateSelection()
-			return
-		case 'c', 'C':
-			h.CloseDialog()
-			return
-		case ' ':
-			switch {
-			case st.Focus < n:
-				st.Checked[st.Focus] = !st.Checked[st.Focus]
-			case st.Focus == form.OKIndex():
-				h.ActivateSelection()
-			case st.Focus == form.CancelIndex():
-				h.CloseDialog()
-			}
-			return
-		}
 	}
-	if focus, ok := form.MoveFocus(st.Focus, event.Key()); ok {
-		st.Focus = focus
+	ev, ok := dlg.HandleKey(dialog.MetaDialogView(*st), &st.Focus, event)
+	switch {
+	case !ok:
+	case ev.ID == dlg.OK:
+		h.ActivateSelection()
+	case ev.ID == dlg.Cancel:
+		h.CloseDialog()
+	default:
+		st.Apply(ev)
 	}
 }
 

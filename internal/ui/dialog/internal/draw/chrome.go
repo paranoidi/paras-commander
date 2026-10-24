@@ -621,26 +621,33 @@ func DrawOKCancelButtonRow(screen tcell.Screen, rect Rect, y int, okFocused, can
 	DrawDialogButtonRowCentered(screen, rect, y, OKCancelButtonSpecs(okFocused, cancelFocused), styles)
 }
 
+// buttonGap is the number of blank cells between two buttons of a row.
+const buttonGap = 2
+
+// ButtonRowWidth is the width of a row of buttons labelled by labels, gaps included.
+func ButtonRowWidth(labels []string) int {
+	w := 0
+	for i, l := range labels {
+		w += dialogButtonWidth(l)
+		if i > 0 {
+			w += buttonGap
+		}
+	}
+	return w
+}
+
 // ButtonRowXs returns the left x of each button (labelled by labels) in a row centered in rect, with
 // the fixed gap between buttons. DrawDialogButtonRowCentered paints at these positions and
 // dialog engines hit-test against them, so the strip geometry has one source.
 func ButtonRowXs(rect Rect, labels []string) []int {
-	const gap = 2
-	totalWidth := 0
-	for i, l := range labels {
-		totalWidth += dialogButtonWidth(l)
-		if i > 0 {
-			totalWidth += gap
-		}
-	}
-	x := rect.X + (rect.Width-totalWidth)/2
+	x := rect.X + (rect.Width-ButtonRowWidth(labels))/2
 	if x < rect.X+1 {
 		x = rect.X + 1
 	}
 	xs := make([]int, len(labels))
 	for i, l := range labels {
 		xs[i] = x
-		x += dialogButtonWidth(l) + gap
+		x += dialogButtonWidth(l) + buttonGap
 	}
 	return xs
 }

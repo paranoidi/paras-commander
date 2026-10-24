@@ -7,6 +7,7 @@ import (
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestFilterDialogArrowDoesNotApplyUntilOK(t *testing.T) {
@@ -27,7 +28,7 @@ func TestFilterDialogArrowDoesNotApplyUntilOK(t *testing.T) {
 		t.Fatalf("after Down: dialog Filter = %v, want All (unchanged until Space)", model.CompareFilterDialog.Filter)
 	}
 	if model.CompareFilterDialog.Focus != model.CompareFilterDialog.FocusForFilter(comparepkg.FilterEqual) {
-		t.Fatalf("after Down: Focus = %d, want Equal radio", model.CompareFilterDialog.Focus)
+		t.Fatalf("after Down: Focus = %q, want Equal radio", model.CompareFilterDialog.Focus)
 	}
 
 	h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
@@ -39,7 +40,7 @@ func TestFilterDialogArrowDoesNotApplyUntilOK(t *testing.T) {
 		t.Fatalf("after Space: view Filter = %v, want All until OK", model.CompareView.Filter)
 	}
 
-	for model.CompareFilterDialog.Focus != model.CompareFilterDialog.OKIndex() {
+	for model.CompareFilterDialog.Focus != dlg.OK {
 		h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	}
 	h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
@@ -120,7 +121,7 @@ func (h *selectRecordHost) SetPanelSelection(id int, path string, selected bool)
 // pickKindAndConfirm chooses the radio with Alt+mnemonic, then presses OK.
 func pickKindAndConfirm(h *Handler, model *ui.Model, mnemonic rune) {
 	h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyRune, mnemonic, tcell.ModAlt))
-	for model.CompareFilterDialog.Focus != model.CompareFilterDialog.OKIndex() {
+	for model.CompareFilterDialog.Focus != dlg.OK {
 		h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	}
 	h.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))

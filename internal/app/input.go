@@ -687,7 +687,7 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 		return false
 	},
 	InputModeHostKeyDialog: func(a *App, ev *tcell.EventKey) bool {
-		_ = a.handleHostKeyDialogKey(ev)
+		a.handleHostKeyDialogKey(ev)
 		return false
 	},
 	InputModeJobsView: func(a *App, ev *tcell.EventKey) bool {

@@ -16,7 +16,7 @@ func find(spec Spec, id ID) (pos, bool) {
 	for gi, g := range spec.Groups {
 		for ci, col := range g.Columns {
 			for ri, it := range col {
-				if it.ID == id {
+				if it.focusable() && it.ID == id {
 					return pos{gi, ci, ri, -1}, true
 				}
 			}
@@ -30,23 +30,42 @@ func find(spec Spec, id ID) (pos, bool) {
 	return pos{}, false
 }
 
-// groupFirst is the first focusable of group g in column-major order.
-func groupFirst(g Group) (ID, bool) {
-	for _, col := range g.Columns {
-		if len(col) > 0 {
-			return col[0].ID, true
+// nextFocusable is the first focusable item of col strictly after row from (from -1 starts at the
+// top), and prevFocusable the last one strictly before row from.
+func nextFocusable(col []Item, from int) (ID, bool) {
+	for i := from + 1; i < len(col); i++ {
+		if col[i].focusable() {
+			return col[i].ID, true
 		}
 	}
 	return "", false
 }
 
-// col0Last is the last item of column 0 of group g.
+func prevFocusable(col []Item, from int) (ID, bool) {
+	for i := from - 1; i >= 0; i-- {
+		if col[i].focusable() {
+			return col[i].ID, true
+		}
+	}
+	return "", false
+}
+
+// groupFirst is the first focusable of group g in column-major order.
+func groupFirst(g Group) (ID, bool) {
+	for _, col := range g.Columns {
+		if id, ok := nextFocusable(col, -1); ok {
+			return id, true
+		}
+	}
+	return "", false
+}
+
+// col0Last is the last focusable item of column 0 of group g.
 func col0Last(g Group) (ID, bool) {
-	if len(g.Columns) == 0 || len(g.Columns[0]) == 0 {
+	if len(g.Columns) == 0 {
 		return "", false
 	}
-	c := g.Columns[0]
-	return c[len(c)-1].ID, true
+	return prevFocusable(g.Columns[0], len(g.Columns[0]))
 }
 
 // segments are the first focusables of each Tab segment: every non-empty group, then the buttons.
@@ -143,17 +162,16 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		if cur.isButton() {
 			return Event{}, true
 		}
-		col := spec.Groups[cur.group].Columns[cur.col]
-		if cur.row+1 < len(col) {
-			return move(col[cur.row+1].ID, true)
+		if id, ok := nextFocusable(spec.Groups[cur.group].Columns[cur.col], cur.row); ok {
+			return move(id, true)
 		}
 		return move(nextGroupFirst(spec, cur.group))
 	case tcell.KeyUp:
 		if cur.isButton() {
 			return move(prevGroupLast(spec, len(spec.Groups)))
 		}
-		if cur.row > 0 {
-			return move(spec.Groups[cur.group].Columns[cur.col][cur.row-1].ID, true)
+		if id, ok := prevFocusable(spec.Groups[cur.group].Columns[cur.col], cur.row); ok {
+			return move(id, true)
 		}
 		if cur.col == 0 {
 			return move(prevGroupLast(spec, cur.group))
@@ -171,7 +189,7 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 			return Event{}, true
 		}
 		cols := spec.Groups[cur.group].Columns
-		if c := cur.col + d; c >= 0 && c < len(cols) && cur.row < len(cols[c]) {
+		if c := cur.col + d; c >= 0 && c < len(cols) && cur.row < len(cols[c]) && cols[c][cur.row].focusable() {
 			*focus = cols[c][cur.row].ID
 		}
 		return Event{}, true

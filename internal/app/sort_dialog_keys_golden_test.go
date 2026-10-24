@@ -13,15 +13,15 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-var updateSortKeyGolden = flag.Bool("update", false, "rewrite sort dialog key-script golden files")
+var updateKeyGolden = flag.Bool("update", false, "rewrite dialog key-script golden files")
 
 const sortKeyGoldenDir = "testdata/sort_dialog_keys"
 
 // Sort dialog rect on an 80x24 screen: 56 wide, 11 tall, centered.
 const sortRectX, sortRectY, sortRectW, sortRectH = 12, 6, 56, 11
 
-// sortKeyEvent parses a script token: a named key, "Alt+<letter>", or a single plain rune.
-func sortKeyEvent(t *testing.T, tok string) *tcell.EventKey {
+// goldenKeyEvent parses a script token: a named key, "Alt+<letter>", or a single plain rune.
+func goldenKeyEvent(t *testing.T, tok string) *tcell.EventKey {
 	t.Helper()
 	switch tok {
 	case "Down":
@@ -42,6 +42,10 @@ func sortKeyEvent(t *testing.T, tok string) *tcell.EventKey {
 		return tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone)
 	case "Space":
 		return tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone)
+	case "Alt+Enter":
+		return tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModAlt)
+	case "F9":
+		return tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone)
 	}
 	if r, ok := strings.CutPrefix(tok, "Alt+"); ok && len([]rune(r)) == 1 {
 		return tcell.NewEventKey(tcell.KeyRune, []rune(r)[0], tcell.ModAlt)
@@ -86,7 +90,7 @@ func runSortKeyScript(t *testing.T, metas int, keys []string) string {
 	}
 	dump("open")
 	for _, tok := range keys {
-		app.handleKey(sortKeyEvent(t, tok))
+		app.handleKey(goldenKeyEvent(t, tok))
 		if !app.model.SortDialog.Open {
 			outcome := "cancelled"
 			if strings.HasPrefix(app.model.Message, "Sort:") {
@@ -151,7 +155,7 @@ func TestSortDialogKeyScripts(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				got := runSortKeyScript(t, metas, strings.Fields(sc.keys))
 				path := filepath.Join(sortKeyGoldenDir, name+".golden")
-				if *updateSortKeyGolden {
+				if *updateKeyGolden {
 					if err := os.MkdirAll(sortKeyGoldenDir, 0o755); err != nil {
 						t.Fatal(err)
 					}

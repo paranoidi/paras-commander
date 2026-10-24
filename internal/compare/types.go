@@ -188,24 +188,6 @@ func SelectDialogRadios(focusSecondary bool) []FilterDialogRadio {
 	}
 }
 
-// FocusForFilter returns the index of f in radios (0 when unknown).
-func FocusForFilter(radios []FilterDialogRadio, f Filter) int {
-	for i, r := range radios {
-		if r.Filter == f {
-			return i
-		}
-	}
-	return 0
-}
-
-// FilterForFocus maps focus index to a Filter value.
-func FilterForFocus(radios []FilterDialogRadio, focus int) (Filter, bool) {
-	if focus < 0 || focus >= len(radios) {
-		return FilterAll, false
-	}
-	return radios[focus].Filter, true
-}
-
 // FilterChecked reports whether the checkbox row for bit is checked in mask f.
 // FilterAll is the master row: checked only when every kind is on.
 func FilterChecked(f, bit Filter) bool {

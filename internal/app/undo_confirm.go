@@ -2,29 +2,15 @@ package app
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // handleUndoConfirmKey drives the undo confirmation; Yes queues the undo job.
 func (a *App) handleUndoConfirmKey(event *tcell.EventKey) bool {
 	d := &a.model.UndoConfirm
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'y', 'Y':
-			a.answerUndoConfirm(true)
-		case 'n', 'N':
-			a.answerUndoConfirm(false)
-		}
-		return false
-	}
-	switch event.Key() {
-	case tcell.KeyLeft:
-		d.Focus = dialog.DialogPairLeftRight(d.Focus, false)
-	case tcell.KeyRight:
-		d.Focus = dialog.DialogPairLeftRight(d.Focus, true)
-	case tcell.KeyEnter:
-		a.answerUndoConfirm(d.Focus == 0)
+	if ev, ok := dlg.HandleKey(dialog.UndoConfirmView(*d), &d.Focus, event); ok && ev.ID != "" {
+		a.answerUndoConfirm(ev.ID == dialog.UndoYes)
 	}
 	return false
 }

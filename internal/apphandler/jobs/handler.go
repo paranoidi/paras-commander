@@ -749,7 +749,7 @@ func (h *Handler) undoSelectedJob() {
 	}
 	h.model.UndoConfirm = dialog.UndoConfirmState{
 		Open:  true,
-		Focus: 1,
+		Focus: dialog.UndoNo,
 		JobID: id,
 		Line1: fmt.Sprintf("Undo %s: %d %s", j.Type, len(j.Undo), jobbridge.Plural(len(j.Undo), "step", "steps")),
 		Line2: line2,

@@ -3,13 +3,12 @@ package compare
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // OpenFilterDialog opens the compare category-filter picker.
@@ -133,54 +132,23 @@ func (h *Handler) ClearColumnSelection() {
 	h.host.SetTransientMessage("Cleared selection on "+h.sideName(panelID)+" side", ui.MessageUrgencyInfo)
 }
 
-// selectFilterDialogRadio toggles the pending checkbox for focus without
-// applying it to the view (Space/Enter/Alt mnemonic).
-func (h *Handler) selectFilterDialogRadio(focus int) {
-	d := &h.model.CompareFilterDialog
-	if f, ok := d.FilterForFocus(focus); ok {
-		d.Filter = comparepkg.ToggleFilter(d.Filter, f)
-		d.Focus = focus
-	}
-}
-
 // HandleFilterDialogKey routes keys for the open category-filter dialog. No-op when the
-// dialog is not open.
+// dialog is not open. Toggling a row only changes the pending filter; OK applies it.
 func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 	d := &h.model.CompareFilterDialog
 	if !d.Open {
 		return
 	}
-	if event.Key() == tcell.KeyEnter {
-		if d.Focus == d.CancelIndex() {
-			h.closeFilterDialog()
-		} else if d.Focus < d.OKIndex() {
-			h.selectFilterDialogRadio(d.Focus)
-		} else {
-			h.confirmFilterDialog()
-		}
-		return
+	ev, ok := dlg.HandleKey(dialog.CompareFilterView(*d), &d.Focus, event)
+	switch {
+	case !ok:
+	case ev.ID == dlg.OK:
+		h.confirmFilterDialog()
+	case ev.ID == dlg.Cancel:
+		h.closeFilterDialog()
+	default:
+		d.Apply(ev)
 	}
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && event.Rune() == ' ' &&
-		d.Focus < d.OKIndex() {
-		h.selectFilterDialogRadio(d.Focus)
-		return
-	}
-	// Alt+letter selects a filter option (pending until OK), like sort-dialog mnemonics.
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		for _, row := range d.Radios() {
-			if filterShortcutMatches(event.Rune(), row.Shortcut) {
-				h.selectFilterDialogRadio(d.FocusForFilter(row.Filter))
-				return
-			}
-		}
-	}
-	if nf, ok := d.MoveFocus(event.Key()); ok {
-		d.Focus = nf
-	}
-}
-
-func filterShortcutMatches(got, want rune) bool {
-	return got == want || unicode.ToLower(got) == unicode.ToLower(want)
 }
 
 // FilterDialogOK applies the category-filter dialog.

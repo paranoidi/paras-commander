@@ -94,16 +94,6 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 	}
 }
 
-func listingFormatFromShortcut(ch rune, focus *int) (panel.ListFormat, bool) {
-	for i, row := range panel.ListFormatDialogRadios() {
-		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
-			*focus = i
-			return row.Format, true
-		}
-	}
-	return 0, false
-}
-
 func scrollModeFromShortcut(ch rune, focus *int) (panel.ScrollMode, bool) {
 	for i, row := range panel.ScrollModeDialogRadios() {
 		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
@@ -125,36 +115,17 @@ func panelScrollbarFromShortcut(ch rune, focus *int) (uiscrollbar.Style, bool) {
 }
 
 func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
-	// Segments: format radios(0-2) | buttons(3).
-	form := dialog.NewDialogLinearForm(3).WithSegments(0, 3)
 	st := &a.model.ListingFormatDialog
-	radios := panel.ListFormatDialogRadios()
-	dialogform.HandleKey(event, form, dialogform.Handlers{
-		Focus:              &st.Focus,
-		OnApply:            a.applyListingFormatDialog,
-		OnCancel:           a.closeListingFormatDialog,
-		AllowPlainOKCancel: true,
-		OnMnemonic: func(r rune) bool {
-			if format, ok := listingFormatFromShortcut(r, &st.Focus); ok {
-				st.ListFormat = format
-				return true
-			}
-			return false
-		},
-		OnSpace: func(focus int) bool {
-			switch focus {
-			case 0, 1, 2:
-				st.ListFormat = radios[focus].Format
-			case form.OKIndex():
-				a.applyListingFormatDialog()
-			case form.CancelIndex():
-				a.closeListingFormatDialog()
-			default:
-				return false
-			}
-			return true
-		},
-	})
+	ev, ok := dlg.HandleKey(dialog.ListingFormatView(*st), &st.Focus, event)
+	switch {
+	case !ok:
+	case ev.ID == dlg.OK:
+		a.applyListingFormatDialog()
+	case ev.ID == dlg.Cancel:
+		a.closeListingFormatDialog()
+	default:
+		st.Apply(ev)
+	}
 }
 
 func (a *App) openListingFormatDialog() {
@@ -168,7 +139,6 @@ func (a *App) openListingFormatDialogForPanel(panelID int) {
 	a.model.ListingFormatDialog = dialog.ListingFormatDialogState{
 		Open:       true,
 		ListFormat: panel.EffectiveListFormat(target.ListFormat),
-		Focus:      0,
 		PanelID:    panelID,
 	}
 }

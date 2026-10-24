@@ -214,7 +214,7 @@ func TransferDialogMoveFocus(st TransferDialogState, focus int, key tcell.Key) (
 	return NewTransferDialogLinearForm(n).WithSegments(segs...).MoveFocus(focus, key)
 }
 
-// DialogPairLeftRight toggles between 0 and 1 (e.g. quit confirm) with Left/Right.
+// DialogPairLeftRight toggles between 0 and 1 (the Yes/No sub-confirms) with Left/Right.
 func DialogPairLeftRight(focus int, goRight bool) int {
 	if goRight {
 		if focus < 1 {

@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestPanelStashToggleIndependentPanels(t *testing.T) {
@@ -198,7 +199,7 @@ func TestStashRestoreDialogCancelKeepsStashAndSelection(t *testing.T) {
 		"esc":   func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone)) },
 		"alt-c": func(app *App) { app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt)) },
 		"enter-on-cancel": func(app *App) {
-			app.model.StashRestoreDialog.Focus = 4
+			app.model.StashRestoreDialog.Focus = dlg.Cancel
 			app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 		},
 	}

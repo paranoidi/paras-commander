@@ -1,0 +1,611 @@
+package app
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/gdamore/tcell/v2"
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/config"
+	sftpb "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
+	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+)
+
+// Key-script goldens for the small button/radio/checkbox dialogs. Each script is fed through the
+// real App.handleKey path; the transcript holds a one-line semantic state and a rune+style dump
+// of the dialog rect after every key, and, once the dialog closes, what the close did. Focus is
+// reported by name; the *Name functions below are the only code that knows how each state
+// encodes it.
+
+const simpleKeyGoldenDir = "testdata/simple_dialog_keys"
+
+// keyGoldenDialog describes one dialog under test. rect is its position on an 80x24 screen.
+type keyGoldenDialog struct {
+	name           string
+	rx, ry, rw, rh int
+	// setup returns the opened-dialog app; dir is a fresh temp dir.
+	setup func(t *testing.T, dir string) *App
+	// state is a one-line semantic summary; open reports whether the dialog is still open.
+	state func(app *App) string
+	open  func(app *App) bool
+	// outcome describes what closing did.
+	outcome func(app *App, quit bool) string
+}
+
+func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
+	t.Helper()
+	dir := t.TempDir()
+	app := d.setup(t, dir)
+	screen := app.screen.(tcell.SimulationScreen)
+	var sb strings.Builder
+	dump := func(label string) {
+		app.render()
+		fmt.Fprintf(&sb, "== %s ==\n%s\n", label, d.state(app))
+		sb.WriteString(tcelltest.DumpRect(screen, d.rx, d.ry, d.rw, d.rh))
+	}
+	dump("open")
+	for _, tok := range keys {
+		quit, _ := app.handleKey(goldenKeyEvent(t, tok))
+		if !d.open(app) || quit {
+			fmt.Fprintf(&sb, "== %s ==\nCLOSED: %s\n", tok, d.outcome(app, quit))
+			return sb.String()
+		}
+		dump(tok)
+	}
+	return sb.String()
+}
+
+type simpleKeyScript struct {
+	name string
+	keys string // space-separated tokens
+}
+
+func runKeyGoldenScripts(t *testing.T, d keyGoldenDialog, scripts []simpleKeyScript) {
+	t.Helper()
+	for _, sc := range scripts {
+		t.Run(sc.name, func(t *testing.T) {
+			got := runKeyGolden(t, d, strings.Fields(sc.keys))
+			path := filepath.Join(simpleKeyGoldenDir, d.name, sc.name+".golden")
+			if *updateKeyGolden {
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			want, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read golden (run with -update to create): %v", err)
+			}
+			if string(want) != got {
+				t.Errorf("%s differs from golden %s\n--- got ---\n%s\n--- want ---\n%s", sc.name, path, got, want)
+			}
+		})
+	}
+}
+
+// ---- undo confirm ----
+
+func undoName(st dialog.UndoConfirmState) string { return string(st.Focus) }
+
+var undoKeyDialog = keyGoldenDialog{
+	name: "undo_confirm", rx: 12, ry: 9, rw: 56, rh: 6,
+	setup: func(t *testing.T, dir string) *App {
+		app := newApp(t, newScreen(t, 80, 24), dir)
+		app.model.Message = ""
+		app.model.UndoConfirm = dialog.UndoConfirmState{
+			Open: true, Focus: dialog.UndoNo, JobID: "job-harbor",
+			Line1: "Undo copy of 3 items to willow (5 steps)?",
+			Line2: "Copied files are removed again.",
+		}
+		return app
+	},
+	state:   func(app *App) string { return "focus=" + undoName(app.model.UndoConfirm) },
+	open:    func(app *App) bool { return app.model.UndoConfirm.Open },
+	outcome: func(app *App, _ bool) string { return fmt.Sprintf("message=%q", app.model.Message) },
+}
+
+func TestUndoConfirmKeyScripts(t *testing.T) {
+	runKeyGoldenScripts(t, undoKeyDialog, []simpleKeyScript{
+		{"left-right", "Left Left Right Right Left Right"},
+		{"up-down", "Up Down Left Up Down"},
+		{"tab", "Tab Tab Backtab Backtab Tab Left Tab"},
+		{"enter-no", "Enter"},
+		{"enter-yes", "Left Enter"},
+		{"space-no", "Space"},
+		{"space-yes", "Left Space"},
+		{"alt-y", "Alt+y"},
+		{"alt-n", "Left Alt+n"},
+		{"alt-upper", "Alt+Y"},
+		{"plain-y", "y"},
+		{"plain-n", "Left n"},
+		{"plain-other", "x q Down"},
+		{"esc", "Left Esc"},
+		{"alt-o-on-no", "Alt+o"},
+		{"alt-o-on-yes", "Left Alt+o"},
+		{"alt-c", "Left Alt+c"},
+		{"alt-enter-on-no", "Alt+Enter"},
+		{"alt-enter-on-yes", "Left Alt+Enter"},
+		{"alt-unknown", "Alt+x Alt+q Right"},
+	})
+}
+
+// ---- quit confirm ----
+
+func quitName(st dialog.QuitConfirmState) string { return string(st.Focus) }
+
+var quitKeyDialog = keyGoldenDialog{
+	name: "quit_confirm", rx: 15, ry: 9, rw: 50, rh: 6,
+	setup: func(t *testing.T, dir string) *App {
+		app := newApp(t, newScreen(t, 80, 24), dir)
+		app.model.QuitConfirm = dialog.QuitConfirmState{Open: true, Focus: dialog.QuitStay}
+		return app
+	},
+	state:   func(app *App) string { return "focus=" + quitName(app.model.QuitConfirm) },
+	open:    func(app *App) bool { return app.model.QuitConfirm.Open },
+	outcome: func(_ *App, quit bool) string { return fmt.Sprintf("quit=%v", quit) },
+}
+
+func TestQuitConfirmKeyScripts(t *testing.T) {
+	runKeyGoldenScripts(t, quitKeyDialog, []simpleKeyScript{
+		{"left-right", "Right Right Left Left Right"},
+		{"up-down", "Up Down Right Up Down"},
+		{"tab", "Tab Tab Backtab Backtab Tab"},
+		{"enter-stay", "Enter"},
+		{"enter-quit", "Right Enter"},
+		{"space-stay", "Space"},
+		{"space-quit", "Right Space"},
+		{"alt-s", "Right Alt+s"},
+		{"alt-q", "Alt+q"},
+		{"alt-upper-q", "Alt+Q"},
+		{"alt-upper-s", "Right Alt+S"},
+		{"plain-s", "Right s"},
+		{"plain-q", "q"},
+		{"plain-other", "x o Down"},
+		{"esc", "Right Esc"},
+		{"alt-o-swallowed", "Right Alt+o Down"},
+		{"alt-c", "Right Alt+c"},
+		{"alt-enter-swallowed", "Right Alt+Enter Alt+x"},
+	})
+}
+
+// ---- listing format ----
+
+func listingName(st dialog.ListingFormatDialogState) string {
+	switch st.Focus {
+	case dlg.OK:
+		return "ok"
+	case dlg.Cancel:
+		return "cancel"
+	}
+	for i, r := range panel.ListFormatDialogRadios() {
+		if st.Focus == dlg.ID("format:"+r.Label) {
+			return fmt.Sprintf("radio%d", i)
+		}
+	}
+	return "radio0" // an unset focus is the first widget
+}
+
+var listingKeyDialog = keyGoldenDialog{
+	name: "listing_format", rx: 18, ry: 8, rw: 44, rh: 7,
+	setup: func(t *testing.T, dir string) *App {
+		app := newApp(t, newScreen(t, 80, 24), dir)
+		app.model.ActivePanel = ui.PrimaryPanel
+		app.model.Message = ""
+		app.openListingFormatDialog()
+		return app
+	},
+	state: func(app *App) string {
+		st := app.model.ListingFormatDialog
+		return fmt.Sprintf("focus=%s format=%v", listingName(st), st.ListFormat)
+	},
+	open: func(app *App) bool { return app.model.ListingFormatDialog.Open },
+	outcome: func(app *App, _ bool) string {
+		return fmt.Sprintf("message=%q panel format=%v", app.model.Message, app.model.Primary.ListFormat)
+	},
+}
+
+func TestListingFormatKeyScripts(t *testing.T) {
+	runKeyGoldenScripts(t, listingKeyDialog, []simpleKeyScript{
+		{"down-walk", "Down Down Down Down Down Down"},
+		{"up-walk", "Down Down Down Down Up Up Up Up Up Up"},
+		{"left-right", "Right Left Down Right Left Left Down Down Right Right Left Left"},
+		{"tab", "Tab Tab Tab Backtab Backtab Backtab Backtab"},
+		{"tab-from-radio", "Down Tab Tab Backtab"},
+		{"space-radios", "Down Space Down Space Up Up Space"},
+		{"enter-radios", "Down Down Enter Up Enter"},
+		{"space-ok", "Down Space Tab Space"},
+		{"enter-ok", "Down Space Tab Enter"},
+		{"space-cancel", "Down Space Tab Right Space"},
+		{"enter-cancel", "Down Space Tab Right Enter"},
+		{"mnemonics", "Alt+p Alt+b Alt+m Alt+P Alt+B Alt+M"},
+		{"mnemonics-from-button", "Tab Right Alt+b Down Alt+m"},
+		{"mnemonic-unknown", "Alt+x Alt+q Down"},
+		{"mnemonic-then-ok", "Alt+b Tab Enter"},
+		{"plain-o", "Down Space o"},
+		{"plain-c", "Down Space c"},
+		{"plain-upper-o", "Down Space O"},
+		{"plain-upper-c", "Down Space C"},
+		{"plain-radio-letters", "m p b x"},
+		{"esc", "Down Space Esc"},
+		{"alt-o", "Down Space Alt+o"},
+		{"alt-c", "Down Space Alt+c"},
+		{"alt-enter", "Alt+b Alt+Enter"},
+	})
+}
+
+// ---- compare filter ----
+
+func compareFilterName(st dialog.CompareFilterDialogState) string {
+	switch st.Focus {
+	case dlg.OK:
+		return "ok"
+	case dlg.Cancel:
+		return "cancel"
+	}
+	for i, it := range dialog.CompareFilterView(st).Groups[0].Columns[0] {
+		if st.Focus == it.ID {
+			return fmt.Sprintf("item%d", i)
+		}
+	}
+	return "item0" // an unset focus is the first widget
+}
+
+func compareFilterKeyDialog(name string, open func(app *App)) keyGoldenDialog {
+	return keyGoldenDialog{
+		name: name, rx: 24, ry: 7, rw: 32, rh: 10,
+		setup: func(t *testing.T, dir string) *App {
+			app := newApp(t, newScreen(t, 80, 24), dir)
+			app.model.Message = ""
+			app.model.ViewMode = ui.ViewCompare
+			app.model.CompareView.Filter = comparepkg.FilterAll
+			open(app)
+			return app
+		},
+		state: func(app *App) string {
+			st := app.model.CompareFilterDialog
+			return fmt.Sprintf("focus=%s pending=%d", compareFilterName(st), st.Filter)
+		},
+		open: func(app *App) bool { return app.model.CompareFilterDialog.Open },
+		outcome: func(app *App, _ bool) string {
+			return fmt.Sprintf("view filter=%d message=%q", app.model.CompareView.Filter, app.model.Message)
+		},
+	}
+}
+
+func TestCompareFilterKeyScripts(t *testing.T) {
+	category := compareFilterKeyDialog("compare_filter_category", func(app *App) { app.compareCtrl.OpenFilterDialog() })
+	runKeyGoldenScripts(t, category, []simpleKeyScript{
+		{"down-walk", "Down Down Down Down Down Down Down Down Down"},
+		{"up-walk", "Down Down Down Down Down Down Down Up Up Up Up Up Up Up Up Up"},
+		{"left-right-items", "Right Left Down Right Left"},
+		{"left-right-buttons", "Tab Right Right Left Left Left"},
+		{"tab", "Tab Tab Backtab Backtab Backtab"},
+		{"tab-from-middle", "Down Down Tab Backtab"},
+		{"space-items", "Space Down Space Down Down Space Up Space"},
+		{"enter-items", "Enter Down Enter Down Enter"},
+		{"space-on-buttons", "Tab Space Right Space Tab"},
+		{"enter-ok-keeps-pending", "Down Space Tab Enter"},
+		{"enter-cancel", "Down Space Tab Right Enter"},
+		{"mnemonics", "Alt+e Alt+r Alt+l Alt+d Alt+A Alt+E Alt+R"},
+		{"mnemonic-master", "Alt+a Alt+a Alt+l Alt+a"},
+		{"mnemonic-unknown", "Alt+x Alt+q Down"},
+		{"alt-o-is-ok", "Down Space Alt+o"},
+		{"alt-c", "Down Space Alt+c"},
+		{"alt-enter", "Down Space Alt+Enter"},
+		{"esc", "Down Space Esc"},
+		{"plain-letters", "a e x o c"},
+	})
+	selectDlg := compareFilterKeyDialog("compare_filter_select", func(app *App) { app.compareCtrl.OpenSelectDialog(true) })
+	runKeyGoldenScripts(t, selectDlg, []simpleKeyScript{
+		{"walk", "Down Down Down Down Down Down Down Up Up Up Up Up Up Up"},
+		{"mnemonics", "Alt+a Alt+e Alt+r Alt+m Alt+n Alt+m"},
+		{"space-and-ok", "Down Space Down Down Down Down Space Tab Enter"},
+		{"alt-o-is-ok", "Alt+m Alt+o"},
+		{"esc", "Alt+m Esc"},
+	})
+	unselect := compareFilterKeyDialog("compare_filter_unselect", func(app *App) {
+		app.model.CompareView.FocusColumn = ui.CompareColumnSecondary
+		app.compareCtrl.OpenSelectDialog(false)
+	})
+	runKeyGoldenScripts(t, unselect, []simpleKeyScript{
+		{"walk", "Down Down Down Down Down Down Down"},
+		{"mnemonics-and-ok", "Alt+n Alt+m Alt+Enter"},
+		{"cancel", "Alt+n Alt+c"},
+	})
+}
+
+// ---- host key ----
+
+func hostKeyName(st dialog.HostKeyDialogState) string {
+	if st.Focus == "" {
+		return "accept" // an unset focus is the first widget
+	}
+	return string(st.Focus)
+}
+
+// hostKeyReply is the channel the dialog's decision lands on.
+type hostKeyReply = chan sftpHostKeyReply
+
+var hostKeyReplies = map[*App]hostKeyReply{}
+
+var hostKeyKeyDialog = keyGoldenDialog{
+	name: "hostkey", rx: 4, ry: 8, rw: 72, rh: 8,
+	setup: func(t *testing.T, dir string) *App {
+		app := newApp(t, newScreen(t, 80, 24), dir)
+		reply := make(hostKeyReply, 1)
+		app.sftp.hostKeyWait = &sftpHostKeyWait{id: 1, reply: reply}
+		hostKeyReplies[app] = reply
+		t.Cleanup(func() { delete(hostKeyReplies, app) })
+		app.openHostKeyDialog(sftpb.HostKeyPrompt{
+			Host: "harbor.example.net:22", KeyType: "ssh-ed25519", Fingerprint: "tulip+meadow/harbor+lantern=willow",
+		})
+		return app
+	},
+	state:   func(app *App) string { return "focus=" + hostKeyName(app.model.HostKeyDialog) },
+	open:    func(app *App) bool { return app.model.HostKeyDialog.Open },
+	outcome: func(app *App, _ bool) string { return hostKeyDecision(hostKeyReplies[app]) },
+}
+
+func hostKeyDecision(reply hostKeyReply) string {
+	select {
+	case r := <-reply:
+		return fmt.Sprintf("decision=%v err=%v", r.decision, r.err)
+	default:
+		return "no decision"
+	}
+}
+
+func TestHostKeyKeyScripts(t *testing.T) {
+	runKeyGoldenScripts(t, hostKeyKeyDialog, []simpleKeyScript{
+		{"left-right", "Left Right Right Right Left Left Left"},
+		{"up-down", "Up Down Right Up Down"},
+		{"tab", "Tab Tab Tab Backtab Backtab"},
+		{"enter-accept", "Enter"},
+		{"enter-save", "Right Enter"},
+		{"enter-reject", "Right Right Enter"},
+		{"space-accept", "Space"},
+		{"space-reject", "Right Right Space"},
+		{"alt-a", "Right Alt+a"},
+		{"alt-s", "Alt+s"},
+		{"alt-r", "Alt+R"},
+		{"plain-a", "Right a"},
+		{"plain-s", "s"},
+		{"plain-r", "R"},
+		{"plain-other", "x o c Down"},
+		{"esc", "Right Esc"},
+		{"alt-o-swallowed", "Right Alt+o Down"},
+		{"alt-c", "Alt+c"},
+		{"alt-enter-swallowed", "Alt+Enter Alt+x"},
+	})
+}
+
+// ---- meta ----
+
+func metaName(st dialog.MetaDialogState) string {
+	switch st.Focus {
+	case dlg.OK:
+		return "ok"
+	case dlg.Cancel:
+		return "cancel"
+	}
+	for i := range st.Entries {
+		if st.Focus == dialog.MetaEntryID(i) {
+			return fmt.Sprintf("item%d", i)
+		}
+	}
+	return "item0" // an unset focus is the first widget
+}
+
+const metaGoldenBody = `[[entry]]
+name = "lantern"
+description = "Shows the lantern count"
+file = "echo meta"
+
+[[entry]]
+name = "orchard"
+description = "Orchard yield"
+file = "echo meta"
+
+[[entry]]
+name = "velvet"
+description = "Velvet rating"
+file = "echo meta"
+`
+
+var metaKeyDialog = keyGoldenDialog{
+	name: "meta", rx: 12, ry: 8, rw: 56, rh: 7,
+	setup: func(t *testing.T, dir string) *App {
+		cfgDir := filepath.Join(dir, "config")
+		if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(cfgDir, config.DefaultMetaFileName), []byte(metaGoldenBody), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		app := testMetaDialogApp(t, dir, cfgDir)
+		app.model.Message = ""
+		prev := externalEditorRunner
+		externalEditorRunner = func(context.Context, string, bool) error { return nil }
+		t.Cleanup(func() { externalEditorRunner = prev })
+		app.model.MetaDialog = dialog.MetaDialogState{
+			Open: true, PanelID: ui.PrimaryPanel,
+			Entries: []dialog.MetaEntry{
+				{Name: "lantern", Description: "Shows the lantern count"},
+				{Name: "orchard", Description: "Orchard yield"},
+				{Name: "velvet", Description: "Velvet rating"},
+			},
+			Checked: []bool{false, true, false},
+		}
+		return app
+	},
+	state: func(app *App) string {
+		st := app.model.MetaDialog
+		return fmt.Sprintf("focus=%s checked=%v", metaName(st), st.Checked)
+	},
+	open: func(app *App) bool { return app.model.MetaDialog.Open },
+	outcome: func(app *App, _ bool) string {
+		var names []string
+		for _, c := range app.model.MetaResults[ui.PrimaryPanel] {
+			names = append(names, c.EntryName)
+		}
+		return fmt.Sprintf("meta columns=%v message=%q", names, app.model.Message)
+	},
+}
+
+func TestMetaDialogKeyScripts(t *testing.T) {
+	runKeyGoldenScripts(t, metaKeyDialog, []simpleKeyScript{
+		{"down-walk", "Down Down Down Down Down Down"},
+		{"up-walk", "Down Down Down Down Up Up Up Up Up"},
+		{"left-right-items", "Right Left Down Right Left"},
+		{"left-right-buttons", "Down Down Down Right Right Left Left Left"},
+		{"tab", "Tab Tab Tab Backtab Backtab"},
+		{"tab-from-item", "Down Tab Backtab Backtab"},
+		{"tab-around", "Tab Tab Tab Tab Tab Backtab Backtab Backtab Backtab Backtab Backtab"},
+		{"space-toggles", "Space Down Space Down Space Space Up Space"},
+		{"enter-toggles", "Enter Down Enter Down Enter"},
+		{"space-ok", "Space Down Down Down Space"},
+		{"enter-ok", "Space Down Down Down Enter"},
+		{"space-cancel", "Space Down Down Down Right Space"},
+		{"enter-cancel", "Space Down Down Down Right Enter"},
+		{"mnemonics", "Alt+l Alt+r Alt+v Alt+L Alt+R"},
+		{"mnemonic-from-button", "Down Down Down Alt+v Down Down Down Alt+l"},
+		{"mnemonic-unknown", "Alt+x Alt+q Down"},
+		{"plain-o", "Space o"},
+		{"plain-c", "Space c"},
+		{"plain-upper", "Space O"},
+		{"plain-other", "l r v x"},
+		{"esc", "Space Esc"},
+		{"alt-o", "Space Alt+o"},
+		{"alt-c", "Space Alt+c"},
+		{"alt-enter", "Space Alt+Enter"},
+		{"f9-on-item", "Down F9"},
+		{"f9-on-ok", "Down Down Down F9"},
+		{"f9-on-cancel", "Down Down Down Right F9"},
+	})
+}
+
+// ---- stash restore ----
+
+func stashName(st dialog.StashRestoreDialogState) string {
+	if st.Focus == "" {
+		return "replace" // an unset focus is the first widget
+	}
+	return string(st.Focus)
+}
+
+var stashKeyDialog = keyGoldenDialog{
+	name: "stash_restore", rx: 2, ry: 9, rw: 76, rh: 6,
+	setup: func(t *testing.T, dir string) *App {
+		harbor, orchard := filepath.Join(dir, "harbor.txt"), filepath.Join(dir, "orchard.txt")
+		for _, p := range []string{harbor, orchard} {
+			if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		app := newApp(t, newScreen(t, 80, 24), dir)
+		app.model.Message = ""
+		p := app.activePanel()
+		p.AddSelection(harbor)
+		app.togglePanelSelectionStash()
+		p.AddSelection(orchard)
+		app.togglePanelSelectionStash()
+		app.model.Message = ""
+		return app
+	},
+	state: func(app *App) string { return "focus=" + stashName(app.model.StashRestoreDialog) },
+	open:  func(app *App) bool { return app.model.StashRestoreDialog.Open },
+	outcome: func(app *App, _ bool) string {
+		p := app.activePanel()
+		return fmt.Sprintf("live=%d stash=%d message=%q", p.SelectedPathCount(), p.StashPathCount(), app.model.Message)
+	},
+}
+
+func TestStashRestoreKeyScripts(t *testing.T) {
+	runKeyGoldenScripts(t, stashKeyDialog, []simpleKeyScript{
+		{"left-right", "Left Right Right Right Right Right Left Left Left Left Left"},
+		{"up-down", "Up Down Right Up Down"},
+		{"tab-cycle", "Tab Tab Tab Tab Tab Tab"},
+		{"backtab-cycle", "Backtab Backtab Backtab Backtab Backtab Backtab"},
+		{"tab-then-backtab", "Tab Tab Backtab Backtab"},
+		{"enter-replace", "Enter"},
+		{"enter-merge", "Right Enter"},
+		{"enter-drop-stash", "Right Right Enter"},
+		{"enter-drop-all", "Right Right Right Enter"},
+		{"enter-cancel", "Right Right Right Right Enter"},
+		{"space", "Right Space"},
+		{"alt-r", "Right Alt+r"},
+		{"alt-m", "Alt+m"},
+		{"alt-d", "Alt+d"},
+		{"alt-a", "Alt+A"},
+		{"plain-letters", "r m d a c x"},
+		{"esc", "Right Esc"},
+		{"alt-o-replace", "Alt+o"},
+		{"alt-o-drop-all", "Right Right Right Alt+o"},
+		{"alt-o-cancel", "Right Right Right Right Alt+o"},
+		{"alt-c", "Right Alt+c"},
+		{"alt-enter", "Right Alt+Enter"},
+		{"alt-unknown", "Alt+x Alt+q Right"},
+	})
+}
+
+// ---- dedup return ----
+
+func dedupReturnKeyDialog(name string, scope []string) keyGoldenDialog {
+	return keyGoldenDialog{
+		name: name, rx: 5, ry: 9, rw: 70, rh: 6,
+		setup: func(t *testing.T, dir string) *App {
+			app := newApp(t, newScreen(t, 80, 24), dir)
+			app.model.Message = ""
+			app.model.DedupSnapshot.Phase = comparepkg.DedupDone
+			app.model.DedupSnapshot.Root = pathloc.MustParse("/srv/meadow/orchard")
+			app.model.DedupReturnDialog = dialog.DedupReturnDialogState{Open: true, Dir: "/srv/meadow/orchard", ScopeDirs: scope}
+			t.Cleanup(app.dedupCtrl.Close)
+			return app
+		},
+		state: func(app *App) string {
+			if f := app.model.DedupReturnDialog.Focus; f != "" {
+				return "focus=" + string(f)
+			}
+			return "focus=first" // an unset focus is the first widget
+		},
+		open: func(app *App) bool { return app.model.DedupReturnDialog.Open },
+		outcome: func(app *App, _ bool) string {
+			return fmt.Sprintf("view=%v progress=%v message=%q", app.model.ViewMode, app.model.DedupProgressDialog.Open, app.model.Message)
+		},
+	}
+}
+
+func TestDedupReturnKeyScripts(t *testing.T) {
+	scripts := []simpleKeyScript{
+		{"left-right", "Left Right Right Right Left Left Left"},
+		{"up-down", "Up Down Right Up Down"},
+		{"tab", "Tab Tab Backtab Right Tab"},
+		{"enter-first", "Enter"},
+		{"enter-second", "Right Enter"},
+		{"enter-cancel", "Right Right Enter"},
+		{"space", "Space Right Space"},
+		{"alt-s", "Right Alt+s"},
+		{"alt-r", "Alt+r"},
+		{"alt-d", "Alt+d"},
+		{"alt-upper", "Alt+S"},
+		{"plain-letters", "s r d c x"},
+		{"esc", "Right Esc"},
+		{"alt-o-swallowed", "Right Alt+o Down"},
+		{"alt-c", "Alt+c"},
+		{"alt-enter-swallowed", "Alt+Enter Alt+x"},
+	}
+	runKeyGoldenScripts(t, dedupReturnKeyDialog("dedup_return_kept", nil), scripts)
+	runKeyGoldenScripts(t, dedupReturnKeyDialog("dedup_return_scope", []string{"/nonexistent/meadow/willow"}), scripts)
+}

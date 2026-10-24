@@ -20,7 +20,6 @@ func TestDrawCompareFilterDialogNoBlankAboveButtons(t *testing.T) {
 	layout := Layout{Width: 80, Height: 24}
 	state := CompareFilterDialogState{
 		Open:   true,
-		Focus:  0,
 		Filter: comparepkg.FilterAll,
 	}
 	DrawCompareFilterDialog(screen, layout, state, theme.Default())
