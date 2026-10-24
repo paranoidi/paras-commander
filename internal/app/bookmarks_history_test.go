@@ -14,6 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
@@ -666,11 +667,11 @@ func TestHistoryDialogZoxideRowsCheckboxAndBothPanels(t *testing.T) {
 			t.Fatal("unexpected quit")
 		}
 	}
-	if st.Focus != st.HistoryZoxideFocus() || !st.IncludeZoxide {
-		t.Fatalf("focus=%d include=%v, want checkbox focused and checked", st.Focus, st.IncludeZoxide)
+	if st.Focus != dialog.HistoryZoxide || !st.IncludeZoxide {
+		t.Fatalf("focus=%q include=%v, want checkbox focused and checked", st.Focus, st.IncludeZoxide)
 	}
-	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)); quit || st.Focus != st.HistoryOKFocus() {
-		t.Fatalf("focus=%d, want OK %d", st.Focus, st.HistoryOKFocus())
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)); quit || st.Focus != dlg.OK {
+		t.Fatalf("focus=%q, want OK", st.Focus)
 	}
 
 	app.toggleHistoryDialogBothPanels()

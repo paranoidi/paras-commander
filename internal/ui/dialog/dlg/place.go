@@ -267,7 +267,14 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 		idx := pi.Offset + row
 		if idx >= len(it.Rows) {
 			if !it.Markers { // option-row lists leave unused rows as bare surface
-				primitive.StyledText(screen, r.X, y, r.Width, "", styles.DialogText.Background(surface), nil)
+				w := r.Width
+				if it.MarksWidth > 0 && !it.MarksAfterText { // keep the reserved marks column painted
+					w = max(r.Width-it.MarksWidth, 1)
+				}
+				primitive.StyledText(screen, r.X, y, w, "", styles.DialogText.Background(surface), nil)
+				if w < r.Width {
+					DrawRowMarksSuffix(screen, r.X+w, y, it.MarksWidth, RowMarks{}, surface, styles)
+				}
 			}
 			continue
 		}
@@ -281,16 +288,7 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 			primitive.StyledText(screen, r.X+partW, y, max(r.Width-partW, 0), rw.Text, style, nil)
 			continue
 		}
-		base := styles.DialogText.Background(surface)
-		match := styles.FuzzyHighlight
-		if isCursor {
-			base = styles.DialogOptionRowStyle(true, false)
-			match = styles.FuzzyHighlightCursor
-		}
-		_, bg, _ := base.Decompose()
-		match = match.Background(bg)
-		text, spans := fitRow(rw, it.Fit, r.Width, match)
-		primitive.StyledText(screen, r.X, y, r.Width, text, base, spans)
+		drawPlainRow(screen, r.X, y, r.Width, rw, it, isCursor, styles)
 	}
 	if it.Scrollbar {
 		if sbStyle == "" {
@@ -300,8 +298,69 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 	}
 }
 
+// drawPlainRow paints one row of a list without Markers: the optional icon, the fitted text with
+// its fuzzy highlights and the trailing marks, in the cursor, invalid or plain row style.
+func drawPlainRow(screen tcell.Screen, x, y, w int, rw ListRow, it Item, isCursor bool, styles theme.Theme) {
+	_, surface, _ := styles.DialogSurface.Decompose()
+	base := styles.DialogText.Background(surface)
+	match := styles.FuzzyHighlight
+	switch {
+	case isCursor:
+		base = styles.DialogOptionRowStyle(true, false)
+		match = styles.FuzzyHighlightCursor
+	case rw.Missing:
+		base = styles.DialogOptionInvalidStyle()
+	}
+	_, bg, _ := base.Decompose()
+	match = match.Background(bg)
+	marks := rw.Marks
+	marks.Missing = marks.Missing || rw.Missing
+	marks.Cursor = isCursor
+	marksW := RowMarksWidth(marks)
+	if it.MarksWidth > 0 && !it.MarksAfterText {
+		marksW = it.MarksWidth
+	}
+	area, markX := w, 0
+	if !it.MarksAfterText {
+		area = max(w-marksW, 1)
+		markX = x + area
+	}
+	tx, tw := x, area
+	if rw.Icon != "" {
+		iw := min(runewidth.RuneWidth([]rune(rw.Icon)[0])+1, tw)
+		iconStyle := base
+		if it.IconOptionFG {
+			fg, _, _ := styles.DialogOptionRowStyle(isCursor, false).Decompose()
+			iconStyle = base.Foreground(fg)
+		}
+		primitive.Text(screen, tx, y, iw, rw.Icon+" ", iconStyle)
+		tx, tw = tx+iw, tw-iw
+	}
+	if tw > 0 {
+		fit := tw
+		if it.MarksAfterText {
+			fit = max(tw-marksW, 1)
+		}
+		text, spans := fitRow(rw, it.Fit, fit, match)
+		primitive.StyledText(screen, tx, y, tw, text, base, spans)
+		if it.MarksAfterText {
+			markX = tx + min(runewidth.StringWidth(text), fit)
+		}
+	}
+	if marksW > 0 {
+		DrawRowMarksSuffix(screen, markX, y, marksW, marks, bg, styles)
+	}
+}
+
 // fitRow shortens a row's text to width per fit and maps its match ranges onto the result.
 func fitRow(rw ListRow, fit Fit, width int, match tcell.Style) (string, []primitive.Span) {
+	if fit == FitNone {
+		spans := make([]primitive.Span, 0, len(rw.Match))
+		for _, r := range rw.Match {
+			spans = append(spans, primitive.Span{Start: r.Start, End: r.End, Style: match})
+		}
+		return rw.Text, spans
+	}
 	if fit != FitRight {
 		return draw.FuzzyRowContent(rw.Text, rw.Match, width, match, fit == FitPath)
 	}

@@ -1,0 +1,214 @@
+== open ==
+focus=filter selected=0 scroll=0 query="" qcursor=0 ranked=18 paths=18 zoxide=true/true both=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │                                                                         │ 
+ │ 󰡖 Include zoxide                                                         │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/amber/dune-0                                                      ┃ 
+ │  /srv/birch/kestrel-1                                                   │ 
+ │  /srv/cinder/river-2                                                    │ 
+ │  /srv/dune/zephyr-3                                                     │ 
+ │  /srv/ember/birch-4                                                     │ 
+ │  /srv/fable/ivory-5                                                     │ 
+ │  /srv/glacier/pebble-6                                                  │ 
+ │  /srv/harbor/willow-7                                                   │ 
+ │  /srv/ivory/fern-8                                                      │ 
+ │  /srv/jasper/glacier-9                                                  │ 
+ │  /srv/kestrel/nectar-10                                                 │ 
+ │  /srv/lantern/umber-11                                                  │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+h fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+dbbeefgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbbd
+dbhhhchhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiibbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+== Down ==
+focus=filter selected=1 scroll=0 query="" qcursor=0 ranked=18 paths=18 zoxide=true/true both=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │                                                                         │ 
+ │ 󰡖 Include zoxide                                                         │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/amber/dune-0                                                      ┃ 
+ │  /srv/birch/kestrel-1                                                   │ 
+ │  /srv/cinder/river-2                                                    │ 
+ │  /srv/dune/zephyr-3                                                     │ 
+ │  /srv/ember/birch-4                                                     │ 
+ │  /srv/fable/ivory-5                                                     │ 
+ │  /srv/glacier/pebble-6                                                  │ 
+ │  /srv/harbor/willow-7                                                   │ 
+ │  /srv/ivory/fern-8                                                      │ 
+ │  /srv/jasper/glacier-9                                                  │ 
+ │  /srv/kestrel/nectar-10                                                 │ 
+ │  /srv/lantern/umber-11                                                  │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+h fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+dbbeefgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbbd
+dbhhhchhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiibbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+== Tab ==
+focus=zoxide selected=1 scroll=0 query="" qcursor=0 ranked=18 paths=18 zoxide=true/true both=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │                                                                         │ 
+ │ 󰡖 Include zoxide                                                         │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/amber/dune-0                                                      ┃ 
+ │  /srv/birch/kestrel-1                                                   │ 
+ │  /srv/cinder/river-2                                                    │ 
+ │  /srv/dune/zephyr-3                                                     │ 
+ │  /srv/ember/birch-4                                                     │ 
+ │  /srv/fable/ivory-5                                                     │ 
+ │  /srv/glacier/pebble-6                                                  │ 
+ │  /srv/harbor/willow-7                                                   │ 
+ │  /srv/ivory/fern-8                                                      │ 
+ │  /srv/jasper/glacier-9                                                  │ 
+ │  /srv/kestrel/nectar-10                                                 │ 
+ │  /srv/lantern/umber-11                                                  │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+dbbeeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbd
+dbgggcgggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbfffhffffbbfffhffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+== Tab ==
+focus=ok selected=1 scroll=0 query="" qcursor=0 ranked=18 paths=18 zoxide=true/true both=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │                                                                         │ 
+ │ 󰡖 Include zoxide                                                         │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/amber/dune-0                                                      ┃ 
+ │  /srv/birch/kestrel-1                                                   │ 
+ │  /srv/cinder/river-2                                                    │ 
+ │  /srv/dune/zephyr-3                                                     │ 
+ │  /srv/ember/birch-4                                                     │ 
+ │  /srv/fable/ivory-5                                                     │ 
+ │  /srv/glacier/pebble-6                                                  │ 
+ │  /srv/harbor/willow-7                                                   │ 
+ │  /srv/ivory/fern-8                                                      │ 
+ │  /srv/jasper/glacier-9                                                  │ 
+ │  /srv/kestrel/nectar-10                                                 │ 
+ │  /srv/lantern/umber-11                                                  │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+dbbeeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbd
+dbgggcgggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbhhhihhhhbbfffjffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+dbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbd
+== Alt+c ==
+CLOSED: quit=false active=0 pins=0 message=""

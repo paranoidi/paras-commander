@@ -17,11 +17,11 @@ type PinnedItem struct {
 	PathMissing bool
 }
 
-// pinDialogItems projects Model.PinnedItems into the dialog package's own row type for
+// PinDialogItems projects Model.PinnedItems into the dialog package's own row type for
 // DrawPinDialog. internal/ui/dialog cannot import internal/ui (ui already imports dialog),
 // so this render-time conversion — not a duplicated copy of the pin list itself — is how the
 // dialog stays a thin view over Model.PinnedItems, the single source of truth.
-func pinDialogItems(items []PinnedItem) []dialog.PinDialogItem {
+func PinDialogItems(items []PinnedItem) []dialog.PinDialogItem {
 	if len(items) == 0 {
 		return nil
 	}

@@ -139,7 +139,7 @@ func TestFlattenButtonsSitUnderSeparator(t *testing.T) {
 	}
 }
 
-func TestPathPickerHasBlankRowAboveButtons(t *testing.T) {
+func TestPathPickerButtonsSitUnderSeparator(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
 	DrawPathPickerDialog(screen, layout, PathPickerState{
@@ -148,7 +148,11 @@ func TestPathPickerHasBlankRowAboveButtons(t *testing.T) {
 		Items:  []PathPickerItem{{Source: "fzf-marks", Name: "harbor", Path: "/tmp/harbor"}},
 		Ranked: []int{0},
 	}, theme.Default(), uiscrollbar.StyleThumb, nil)
-	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
+	rows := dialogScreenRows(screen)
+	buttonY := dialogButtonRowY(rows)
+	if buttonY < 1 || !strings.Contains(rows[buttonY-1], "├") {
+		t.Fatalf("row above buttons = %q, want the separator (dlg dialogs have no blank row there)", rows[buttonY-1])
+	}
 }
 
 func TestStashRestoreButtonsSitUnderSeparatorAndNoHelpFooter(t *testing.T) {

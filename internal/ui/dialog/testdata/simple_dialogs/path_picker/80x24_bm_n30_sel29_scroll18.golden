@@ -1,0 +1,60 @@
+-- text --
+                                                                                
+                                                                                
+                                                                                
+  ┌─────────────────────────────── Bookmarks ────────────────────────────────┐  
+  │ /                                                                        │  
+  ├──────────────────────────────────────────────────────────────────────────┤  
+  │ fzf-marks saffron-jasper  /home/saffron/jasper-18                        │  
+  │ gnome     thistle-orchard /home/thistle/orchard-19                       │  
+  │ pinned    umber-thistle   /home/umber/thistle-20                         │  
+  │ fzf-marks velvet-zephyr   /home/velvet/zephyr-21                         │  
+  │ gnome     willow-birch    /home/willow/birch-22                          │  
+  │ pinned    yarrow-glacier  /home/yarrow/glacier-23                        │  
+  │ fzf-marks zephyr-lantern  /home/zephyr/lantern-24                        │  
+  │ gnome     anchor-quartz   /home/anchor/quartz-25                         │  
+  │ pinned    breeze-velvet   /home/breeze/velvet-26                         │  
+  │ fzf-marks copper-breeze   /home/copper/breeze-27                         │  
+  │ gnome     amber-dune      /home/amber/dune-28                            │  
+  │ pinned    birch-ivory     /home/birch/ivory-29                           ┃  
+  ├──────────────────────────────────────────────────────────────────────────┤  
+  │                           [ OK ]    [ Cancel ]                           │  
+  └──────────────────────────────────────────────────────────────────────────┘  
+                                                                                
+                                                                                
+                                                                                
+-- legend --
+a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbddefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbhhhihhhhbbhhhihhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -35,7 +35,6 @@ func TestDrawHistoryDialogSmoke(t *testing.T) {
 		},
 		Selected:   0,
 		ListScroll: 0,
-		Focus:      0,
 	}
 	DrawHistoryDialog(screen, layout, state, styles, uiscrollbar.StyleNone, nil)
 	cell, _, _ := screen.Get(4, layout.Menu.Height+4)
@@ -60,7 +59,6 @@ func TestDrawHistoryDialogShowsPinIconOnlyForPinnedRow(t *testing.T) {
 		Ranked:       []int{0, 1},
 		MatchRanges:  [][]search.Range{nil, nil},
 		Selected:     -1,
-		Focus:        0,
 	}
 	rowMarks := func(absPath string) RowMarks {
 		return RowMarks{Pinned: absPath == "/tmp/pinned-alpha"}

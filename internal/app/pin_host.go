@@ -1,10 +1,10 @@
 package app
 
 import (
-	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 // pinHost implements apphandler/pin.Host for *App.
@@ -34,6 +34,4 @@ func (h pinHost) ClampFilteredListSelection(selected *int, rankedLen int) {
 	clampFilteredListSelection(selected, rankedLen)
 }
 
-func (h pinHost) HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool {
-	return handleFilteredListSelectionKey(ev, focus, selected, rankedLen, listRows, ensureScroll)
-}
+func (h pinHost) Styles() theme.Theme { return h.app.styles }

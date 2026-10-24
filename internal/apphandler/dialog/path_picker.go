@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathpick"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // InvalidateTransferDestValidate stops any pending debounced transfer/flatten destination-path
@@ -99,22 +100,14 @@ func (h *Handler) SyncPathPickerScroll() {
 // PathPickerListRows returns how many rows the path picker's fuzzy list currently shows.
 func (h *Handler) PathPickerListRows() int {
 	termW, termH := h.screen.Size()
-	layout := h.host.LayoutForTerminalSize(termW, termH)
-	listH := layout.Height - 12
-	switch {
-	case listH > 18:
-		listH = 18
-	case listH < 4:
-		listH = 4
-	}
-	dialogHeight := 7 + listH
-	if dialogHeight > layout.Height-2 {
-		listH = layout.Height - 2 - 7
-		if listH < 4 {
-			return 4
-		}
-	}
-	return listH
+	return dialog.PathPickerListRows(h.host.LayoutForTerminalSize(termW, termH).Height)
+}
+
+// pathPickerView is the path picker's spec for the current terminal size, the one description
+// the renderer and the key handler share (the renderer adds the pinned / job marks resolver).
+func (h *Handler) pathPickerView() dlg.Spec {
+	termW, termH := h.screen.Size()
+	return dialog.PathPickerView(h.model.PathPicker, h.host.LayoutForTerminalSize(termW, termH), h.host.Styles(), h.model.PanelScrollbar, nil)
 }
 
 func (h *Handler) activatePathPickerSelection() {
@@ -171,18 +164,13 @@ func (h *Handler) activatePathPickerSelection() {
 	}
 }
 
-// pathPickerNavFocus applies list+OK+Cancel navigation, hiding OK for navigate/bookmark.
-func pathPickerNavFocus(purpose dialog.PathPickerPurpose, focus int, key tcell.Key) (int, bool) {
-	return dialog.ListDialogForm{HideOK: purpose == dialog.PathPickerPurposeNavigate}.MoveFocus(focus, key)
-}
-
 // HandlePathPickerKey routes a key event for the open fuzzy path/history picker.
 func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 	st := &h.model.PathPicker
 	if h.TryBookmarkDialogShortcut(event) {
 		return
 	}
-	if st.Focus == 0 {
+	if st.FilterFocused() {
 		if handled, accepted := dialog.HandlePathCompletionKey(event, &st.Completion, &st.Query, &st.QueryCursor); handled {
 			if accepted {
 				h.resyncPathPickerCompletion()
@@ -194,65 +182,18 @@ func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if st.Focus == 0 && h.host.HandlePathPickerScrollingQueryKey(event) {
-		return
-	}
-
-	switch event.Key() {
-	case tcell.KeyEnter:
-		switch st.Focus {
-		case 2:
-			h.ClosePathPicker()
-		default:
-			h.activatePathPickerSelection()
+	ev, ok := dlg.HandleKey(h.pathPickerView(), &st.Focus, event)
+	switch {
+	case !ok:
+		if st.Focus == dialog.PathPickerFilter {
+			h.host.HandlePathPickerScrollingQueryKey(event)
 		}
-	case tcell.KeyTab:
-		if nf, ok := pathPickerNavFocus(st.Purpose, st.Focus, event.Key()); ok {
-			st.Focus = nf
-		}
-	case tcell.KeyBacktab:
-		if nf, ok := pathPickerNavFocus(st.Purpose, st.Focus, event.Key()); ok {
-			st.Focus = nf
-		}
-	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		if nf, ok := pathPickerNavFocus(st.Purpose, st.Focus, event.Key()); ok {
-			st.Focus = nf
-			if st.Focus == 0 && event.Key() == tcell.KeyUp {
-				dialog.EnsurePathPickerListScroll(st, h.PathPickerListRows())
-			}
-			break
-		}
-		if h.host.HandleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), h.PathPickerListRows, func() {
-			dialog.EnsurePathPickerListScroll(st, h.PathPickerListRows())
-		}) {
-			break
-		}
-	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
-		if h.host.HandleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), h.PathPickerListRows, func() {
-			dialog.EnsurePathPickerListScroll(st, h.PathPickerListRows())
-		}) {
-			break
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		if st.Focus == 0 {
-			break
-		}
-		switch dialog.DialogButtonRune(event.Rune()) {
-		case dialog.ButtonRuneOK:
-			h.activatePathPickerSelection()
-		case dialog.ButtonRuneCancel:
-			h.ClosePathPicker()
-		case dialog.ButtonRuneToggle:
-			switch st.Focus {
-			case 1:
-				h.activatePathPickerSelection()
-			case 2:
-				h.ClosePathPicker()
-			}
-		}
+	case ev.Kind == dlg.EventListMove:
+		st.Selected, st.ListScroll = ev.Index, ev.Offset
+	case ev.ID == dlg.Cancel:
+		h.ClosePathPicker()
+	case ev.ID == dlg.OK || ev.ID == dialog.PathPickerFilter: // Enter in the filter picks the selected path
+		h.activatePathPickerSelection()
 	}
 }
 
@@ -420,7 +361,6 @@ func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pat
 		FileFieldIndex: fileFieldIndex,
 		Query:          "",
 		Items:          items,
-		Focus:          0,
 		Selected:       0,
 		ListScroll:     0,
 	}
@@ -472,7 +412,6 @@ func (h *Handler) openBookmarkPathPicker(purpose dialog.PathPickerPurpose, fileF
 		Purpose:        purpose,
 		FileFieldIndex: fileFieldIndex,
 		Query:          "",
-		Focus:          0,
 		Selected:       0,
 		ListScroll:     0,
 	}

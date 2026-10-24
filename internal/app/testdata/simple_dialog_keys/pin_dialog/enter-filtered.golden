@@ -1,0 +1,96 @@
+== open ==
+selected=0 scroll=0 query="" qcursor=0 ranked=20 pins=20 message=""
+-- text --
+ ┌────────────────────────────────── Pin ───────────────────────────────────┐ 
+ │                                                                         │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /                                                                      ┃ 
+ │  /srv/birch/kestrel-1                                                   │ 
+ │  /srv/cinder/river-2                                                    │ 
+ │  /srv/dune/zephyr-3                                                     │ 
+ │  /srv/ember/birch-4                                                     │ 
+ │  /srv/fable/ivory-5                                                     │ 
+ │  /srv/glacier/pebble-6                                                  │ 
+ │  /srv/harbor/willow-7                                                   │ 
+ │  /srv/ivory/fern-8                                                      │ 
+ │  /srv/jasper/glacier-9                                                  │ 
+ │  /srv/kestrel/nectar-10                                                 │ 
+ │  /srv/lantern/umber-11                                                  │ 
+ │                                                                          │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== e ==
+selected=0 scroll=0 query="e" qcursor=1 ranked=17 pins=20 message=""
+-- text --
+ ┌────────────────────────────────── Pin ───────────────────────────────────┐ 
+ │  e                                                                      │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/ember/birch-4                                                     ┃ 
+ │  /srv/kestrel/nectar-10                                                 │ 
+ │  /srv/meadow/copper-12                                                  │ 
+ │  /srv/nectar/ember-13                                                   │ 
+ │  /srv/pebble/saffron-15                                                 │ 
+ │  /srv/dune/zephyr-3                                                     │ 
+ │  /srv/river/cinder-17                                                   │ 
+ │  /srv/cinder/river-2                                                    │ 
+ │  /srv/fable/ivory-5                                                     │ 
+ │  /srv/jasper/glacier-9                                                  │ 
+ │  /srv/lantern/umber-11                                                  │ 
+ │  /srv/glacier/pebble-6                                                  │ 
+ │                                                                          │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggghggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== Enter ==
+CLOSED: quit=false pins=20 active=0 message="Opened birch-4 in primary panel"

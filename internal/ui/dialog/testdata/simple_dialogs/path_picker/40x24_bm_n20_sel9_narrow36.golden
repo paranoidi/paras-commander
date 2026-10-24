@@ -1,0 +1,59 @@
+-- text --
+                                        
+                                        
+                                        
+  ┌─────────── Bookmarks ────────────┐  
+  │ /                                │  
+  ├──────────────────────────────────┤  
+  │ pinned    cinder-nectar /h/…ar-2 │  
+  │ fzf-marks dune-saffron  /ho…on-3 │  
+  │ gnome     ember-yarrow  /h/…ow-4 ┃  
+  │ pinned    fable-amber   /h/…er-5 │  
+  │ fzf-marks glacier-fable /h/…le-6 │  
+  │ gnome     harbor-kestr… /ho…el-7 │  
+  │ pinned    ivory-pebble  /h/…le-8 │  
+  │ fzf-marks jasper-umber  /h/…er-9 │  
+  │ gnome     kestrel-anch… /ho…r-10 │  
+  │ pinned    lantern-cind… /ho…r-11 │  
+  │ fzf-marks meadow-harbor /ho…r-12 │  
+  │ gnome     nectar-meadow /ho…w-13 │  
+  ├──────────────────────────────────┤  
+  │       [ OK ]    [ Cancel ]       │  
+  └──────────────────────────────────┘  
+                                        
+                                        
+                                        
+-- legend --
+a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbbbbbbbbbbbcccccccccccbbbbbbbbbbbbbaa
+aabbddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbfffgffffbbeeeheeeeeeeebbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

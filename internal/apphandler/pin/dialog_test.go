@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -39,9 +40,7 @@ func (fakePinHost) ClampFilteredListSelection(selected *int, rankedLen int) {
 		*selected = rankedLen - 1
 	}
 }
-func (fakePinHost) HandleFilteredListSelectionKey(*tcell.EventKey, int, *int, int, func() int, func()) bool {
-	return false
-}
+func (fakePinHost) Styles() theme.Theme { return theme.Default() }
 
 func newPinTestHandler(t *testing.T) *Handler {
 	t.Helper()

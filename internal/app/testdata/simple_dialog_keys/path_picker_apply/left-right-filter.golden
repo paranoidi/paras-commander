@@ -1,0 +1,518 @@
+== open ==
+focus=filter selected=0 scroll=0 query="" qcursor=0 ranked=20 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │                                                                         │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/amber/dune-0                                                       ┃ 
+ │  /srv/birch/kestrel-1                                                    │ 
+ │  /srv/cinder/river-2                                                     │ 
+ │  /srv/dune/zephyr-3                                                      │ 
+ │  /srv/ember/birch-4                                                      │ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/ivory/fern-8                                                       │ 
+ │  /srv/jasper/glacier-9                                                   │ 
+ │  /srv/kestrel/nectar-10                                                  │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbhhhihhhhbbhhhihhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== a ==
+focus=filter selected=0 scroll=0 query="a" qcursor=1 ranked=14 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │  a                                                                      │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/amber/dune-0                                                       ┃ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/jasper/glacier-9                                                   │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ │  /srv/saffron/jasper-18                                                  │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/meadow/copper-12                                                   │ 
+ │  /srv/quartz/anchor-16                                                   │ 
+ │  /srv/nectar/ember-13                                                    │ 
+ │  /srv/orchard/lantern-14                                                 │ 
+ │  /srv/pebble/saffron-15                                                  │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbgggggghgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== b ==
+focus=filter selected=0 scroll=0 query="ab" qcursor=2 ranked=6 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │  ab                                                                     │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/amber/dune-0                                                       │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/nectar/ember-13                                                    │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggghhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== Left ==
+focus=filter selected=0 scroll=0 query="ab" qcursor=1 ranked=6 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │  ab                                                                     │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/amber/dune-0                                                       │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/nectar/ember-13                                                    │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggghhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== Left ==
+focus=filter selected=0 scroll=0 query="ab" qcursor=0 ranked=6 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │  ab                                                                     │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/amber/dune-0                                                       │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/nectar/ember-13                                                    │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggghhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== Left ==
+focus=filter selected=0 scroll=0 query="ab" qcursor=0 ranked=6 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │  ab                                                                     │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/amber/dune-0                                                       │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/nectar/ember-13                                                    │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggghhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== Right ==
+focus=filter selected=0 scroll=0 query="ab" qcursor=1 ranked=6 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │  ab                                                                     │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/amber/dune-0                                                       │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/nectar/ember-13                                                    │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggghhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== Right ==
+focus=filter selected=0 scroll=0 query="ab" qcursor=2 ranked=6 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │  ab                                                                     │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/amber/dune-0                                                       │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/nectar/ember-13                                                    │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggghhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== Right ==
+focus=filter selected=0 scroll=0 query="ab" qcursor=2 ranked=6 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │  ab                                                                     │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/amber/dune-0                                                       │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/nectar/ember-13                                                    │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggghhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+== Right ==
+focus=filter selected=0 scroll=0 query="ab" qcursor=2 ranked=6 items=20 invalid=false message=""
+-- text --
+ ┌──────────────────────────────── History ─────────────────────────────────┐ 
+ │  ab                                                                     │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │  /srv/fable/ivory-5                                                      │ 
+ │  /srv/amber/dune-0                                                       │ 
+ │  /srv/harbor/willow-7                                                    │ 
+ │  /srv/nectar/ember-13                                                    │ 
+ │  /srv/glacier/pebble-6                                                   │ 
+ │  /srv/lantern/umber-11                                                   │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ │                                                                          │ 
+ ├──────────────────────────────────────────────────────────────────────────┤ 
+ │                           [ OK ]    [ Cancel ]                           │ 
+ └──────────────────────────────────────────────────────────────────────────┘ 
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbddeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbggggggghhgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbba
+abbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbibbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbibbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbibbbbbbbbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjbbjjjkjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba

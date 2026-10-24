@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // listRows returns the list row count for a dialog sized to the terminal, delegating to
@@ -19,6 +20,14 @@ func (h *Handler) listRows() int {
 	termW, termH := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(termW, termH)
 	return dialog.PinDialogListRows(layout.Height)
+}
+
+// dialogView is the Pin dialog's spec for the current terminal size, the one description the
+// renderer and the key handler share.
+func (h *Handler) dialogView() dlg.Spec {
+	termW, termH := h.screen.Size()
+	layout := h.host.LayoutForTerminalSize(termW, termH)
+	return dialog.PinDialogView(h.model.PinDialog, ui.PinDialogItems(h.model.PinnedItems), layout, h.host.Styles(), h.model.PanelScrollbar)
 }
 
 // OpenDialog opens the Pin dialog. Every item's PathMissing starts false; a background scan
@@ -242,21 +251,18 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		}
 	}
 	st := &h.model.PinDialog
-	edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, h.queryWidth(), func() {
-		h.SyncDialogRanks()
-		st.Selected = 0
-		dialog.EnsurePinListScroll(st, h.listRows())
-	})
-	if scrollquery.HandleKey(h.keysDialogInput, event, true, edit) {
-		return
-	}
-
-	switch event.Key() {
-	case tcell.KeyEnter:
-		h.ActivateSelection()
-	case tcell.KeyUp, tcell.KeyDown, tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd:
-		h.host.HandleFilteredListSelectionKey(event, 0, &st.Selected, len(st.Ranked), h.listRows, func() {
+	focus := dialog.PinFilter
+	switch ev, ok := dlg.HandleKey(h.dialogView(), &focus, event); {
+	case !ok:
+		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, h.queryWidth(), func() {
+			h.SyncDialogRanks()
+			st.Selected = 0
 			dialog.EnsurePinListScroll(st, h.listRows())
 		})
+		scrollquery.HandleKey(h.keysDialogInput, event, true, edit)
+	case ev.Kind == dlg.EventListMove:
+		st.Selected, st.ListScroll = ev.Index, ev.Offset
+	case ev.ID == dialog.PinFilter:
+		h.ActivateSelection() // Enter in the filter opens the selected pin
 	}
 }

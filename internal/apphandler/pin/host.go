@@ -1,11 +1,11 @@
 package pin
 
 import (
-	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 // Host supplies cross-cutting app services the pin handler cannot import from internal/app.
@@ -31,10 +31,12 @@ type Host interface {
 	// every call rather than caching a copy from construction time.
 	Config() config.Config
 
-	// SyncFilteredListRanks / ClampFilteredListSelection / HandleFilteredListSelectionKey
-	// forward to internal/app's shared fuzzy-list ranking/selection helpers
-	// (filtered_list.go), also used by find/history/SFTP-connect/preview-style-picker/dialog.
+	// Styles returns the active theme, which the dialog's key view needs to build its spec.
+	Styles() theme.Theme
+
+	// SyncFilteredListRanks / ClampFilteredListSelection forward to internal/app's shared
+	// fuzzy-list ranking/selection helpers (filtered_list.go), also used by
+	// find/history/SFTP-connect/preview-style-picker/dialog.
 	SyncFilteredListRanks(lines []string, query string, matchRangeSlots int, caseInsensitive bool) (ranked []int, matchRanges [][]search.Range)
 	ClampFilteredListSelection(selected *int, rankedLen int)
-	HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool
 }

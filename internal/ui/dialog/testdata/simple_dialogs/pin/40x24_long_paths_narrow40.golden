@@ -1,0 +1,61 @@
+-- text --
+                                        
+                                        
+                                        
+  ┌────────────── Pin ───────────────┐  
+  │ / x                              │  
+  ├──────────────────────────────────┤  
+  │  /h/a/b/c/d/e/f…final-amber.txt │  
+  │  /h/b/c/d/e/f/…inal-birch.txt ! │  
+  │  /h/c/d/e/f/g/h…inal-cinder.txt │  
+  │  /h/d/e/f/g/h/i…/final-dune.txt │  
+  │  /h/e/f/g/h/i/j…final-ember.txt │  
+  │                                  │  
+  │                                  │  
+  │                                  │  
+  │                                  │  
+  │                                  │  
+  │                                  │  
+  │                                  │  
+  │                                  │  
+  └──────────────────────────────────┘  
+                                        
+                                        
+                                        
+                                        
+-- legend --
+a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbbbbbbbbbbbbbbcccccbbbbbbbbbbbbbbbbaa
+aabbddefffffffffffffffffffffffffffffbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbggggggggggggggggggggggggggggggggbbaa
+aabbhhhhhihhhhhhhhhhhhhhhhhhhhhhhhhhbbaa
+aabbbbbjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

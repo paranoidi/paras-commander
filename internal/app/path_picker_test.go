@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestApplyPathPickerPathValidation(t *testing.T) {
@@ -210,7 +211,7 @@ func TestPathPickerQueryCtrlWAndAltBWordNav(t *testing.T) {
 	st := &app.model.PathPicker
 	st.Query = "/foo/bar"
 	st.QueryCursor = len([]rune(st.Query))
-	st.Focus = 0
+	st.Focus = dialog.PathPickerFilter
 
 	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone))
 	if st.Query != "/foo/" || st.QueryCursor != 5 {

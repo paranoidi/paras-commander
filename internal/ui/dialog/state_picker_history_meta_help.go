@@ -65,7 +65,8 @@ type PathPickerState struct {
 	MatchRanges    [][]search.Range
 	Selected       int // index into Ranked
 	ListScroll     int // first visible row index into Ranked
-	Focus          int // 0=list+query, 1=OK, 2=Cancel
+	// Focus is PathPickerFilter ("" = the filter, which also steers the list), dlg.OK or dlg.Cancel.
+	Focus dlg.ID
 	// QueryPathInvalid is true after a debounced check when the filter looks like a path and os.Lstat fails.
 	QueryPathInvalid bool
 	// QueryPathCheckPending is true until debounced validation runs after Query changed.
@@ -73,6 +74,9 @@ type PathPickerState struct {
 	// Completion holds the filesystem-completion dropdown state for Query.
 	Completion PathCompletion
 }
+
+// FilterFocused reports whether the query input (and with it the list) holds focus.
+func (s PathPickerState) FilterFocused() bool { return s.Focus == "" || s.Focus == PathPickerFilter }
 
 // FindEntry is one indexed path in the recursive find dialog.
 type FindEntry struct {
@@ -266,31 +270,10 @@ type HistoryDialogState struct {
 	MatchRanges     [][]search.Range // len == len(Paths); highlights on DisplayLines
 	Selected        int              // index into Ranked
 	ListScroll      int
-	Focus           int // 0=list+query, then HistoryZoxideFocus (when shown), HistoryOKFocus, HistoryCancelFocus
+	// Focus is HistoryFilter ("" = the filter, which also steers the path list), HistoryZoxide
+	// (when shown), dlg.OK or dlg.Cancel.
+	Focus dlg.ID
 }
-
-// HistoryForm is the History dialog's focus layout: list+query, the "Include zoxide" checkbox
-// when zoxide is installed, then OK and Cancel.
-func (s HistoryDialogState) HistoryForm() DialogTrailingButtonsForm {
-	if s.ZoxideAvailable {
-		return NewDialogLinearForm(2)
-	}
-	return NewDialogLinearForm(1)
-}
-
-// HistoryZoxideFocus returns the focus index of the "Include zoxide" checkbox, or -1 when hidden.
-func (s HistoryDialogState) HistoryZoxideFocus() int {
-	if s.ZoxideAvailable {
-		return 1
-	}
-	return -1
-}
-
-// HistoryOKFocus returns the focus index of the OK button.
-func (s HistoryDialogState) HistoryOKFocus() int { return s.HistoryForm().OKIndex() }
-
-// HistoryCancelFocus returns the focus index of the Cancel button.
-func (s HistoryDialogState) HistoryCancelFocus() int { return s.HistoryForm().CancelIndex() }
 
 // MetaEntry is one selectable command in the meta picker dialog.
 type MetaEntry struct {

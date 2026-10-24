@@ -2,21 +2,24 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/mattn/go-runewidth"
-	"github.com/paranoidi/paras-commander/internal/primitive"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
+// Widget IDs of the Pin dialog. The list is driven by the filter input and has no focus of its own.
+const (
+	PinFilter dlg.ID = "pin-filter"
+	PinList   dlg.ID = "pin-list"
+)
+
+// pinMinWidth is the narrowest terminal-clamped dialog width that still draws.
+const pinMinWidth = 36
+
 // PinDialogFixedChromeRows is the outer height consumed by rows that aren't the list:
-// top border, query row, separator, one mandatory blank row above the bottom border,
-// bottom border. No OK/Cancel row — Esc closes, S-Left/S-Right/F8/Enter cover every
-// action a button row would (mirrors History's chrome but without its OK/Cancel row).
-// Exported so internal/app can size the dialog identically instead of duplicating the
-// row count as a separate magic number (see historyDialogListRows/DrawHistoryDialog's
-// 7-vs-6 drift this project already has for History; don't reproduce it here).
+// top border, query row, separator, one blank row above the bottom border, bottom border. No
+// OK/Cancel row: Esc closes, the open-in-panel, remove and Enter actions cover every action a
+// button row would. The View sizes the dialog with it and internal/app sizes the list with it.
 const PinDialogFixedChromeRows = 5
 
 // PinDialogListRows returns the list row count for a dialog sized to layout, mirroring the
@@ -39,125 +42,61 @@ func PinDialogListRows(layoutHeight int) int {
 	return listH
 }
 
-// EnsurePinListScroll keeps Selected row visible in a list of height listRows.
+// pinList is the pin list item: the ranked items with their fuzzy highlights, icons and
+// missing-path variant. Rows whose item index is out of range stay blank so row indices keep
+// matching state.Ranked.
+func pinList(state PinDialogState, items []PinDialogItem, listRows int, styles theme.Theme) dlg.Item {
+	list := dlg.Item{
+		ID: PinList, Kind: dlg.KindList, Driven: true, Fit: dlg.FitPath, Scrollbar: true,
+		Cursor: state.Selected, Offset: state.ListScroll, Height: listRows,
+	}
+	for _, ent := range state.Ranked {
+		var row dlg.ListRow
+		if ent >= 0 && ent < len(items) {
+			it := items[ent]
+			row = dlg.ListRow{Text: it.Path, Missing: it.PathMissing, Icon: styles.IconFile()}
+			if it.IsDir {
+				row.Icon = styles.IconFolder()
+			}
+			if ent < len(state.MatchRanges) {
+				row.Match = state.MatchRanges[ent]
+			}
+		}
+		list.Rows = append(list.Rows, row)
+	}
+	return list
+}
+
+// EnsurePinListScroll keeps Selected in range and visible in the pin list of height listRows.
 func EnsurePinListScroll(state *PinDialogState, listRows int) {
 	n := len(state.Ranked)
 	if n == 0 || listRows <= 0 {
 		state.ListScroll = 0
 		return
 	}
-	if state.Selected < 0 {
-		state.Selected = 0
+	state.Selected = min(max(state.Selected, 0), n-1)
+	state.ListScroll = dlg.Item{Kind: dlg.KindList, Rows: make([]dlg.ListRow, n), Cursor: state.Selected, Offset: state.ListScroll, Height: listRows}.ViewOffset()
+}
+
+// PinDialogView describes the Pin dialog: a filter input that steers the pin list below it, a
+// blank row and no buttons. The filter always holds focus.
+func PinDialogView(state PinDialogState, items []PinDialogItem, layout Layout, styles theme.Theme, scrollbarStyle uiscrollbar.Style) dlg.Spec {
+	listRows := PinDialogListRows(layout.Height)
+	filter := dlg.Item{
+		ID: PinFilter, Kind: dlg.KindInput, Drives: PinList, LeadingIcon: styles.IconSearchIcon(),
+		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll,
 	}
-	if state.Selected >= n {
-		state.Selected = n - 1
-	}
-	if state.ListScroll > state.Selected {
-		state.ListScroll = state.Selected
-	}
-	if state.Selected >= state.ListScroll+listRows {
-		state.ListScroll = state.Selected - listRows + 1
+	return dlg.Spec{
+		Title: "Pin", Width: min(78, layout.Width-4), MinWidth: pinMinWidth, MinHeight: PinDialogFixedChromeRows + listRows,
+		ScrollbarStyle: scrollbarStyle,
+		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
+			filter, {Kind: dlg.KindSeparator}, pinList(state, items, listRows, styles), {Kind: dlg.KindLabel},
+		}}}},
 	}
 }
 
-// DrawPinDialog paints the Pin dialog: a fuzzy-filterable, most-recently-pinned-first
-// list of pinned files/directories. No OK/Cancel buttons (Esc closes, mirroring History).
+// DrawPinDialog paints the Pin dialog: a fuzzy-filterable, most-recently-pinned-first list of
+// pinned files and directories. There are no buttons; Esc closes.
 func DrawPinDialog(screen tcell.Screen, layout Layout, state PinDialogState, items []PinDialogItem, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
-	width := 78
-	if width > layout.Width-4 {
-		width = layout.Width - 4
-	}
-	if width < 36 {
-		return
-	}
-
-	listH := PinDialogListRows(layout.Height)
-	height := PinDialogFixedChromeRows + listH
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-		listH = height - PinDialogFixedChromeRows
-		if listH < 4 {
-			return
-		}
-	}
-
-	rect := draw.CenteredDialogRect(layout, width, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Pin", styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	primaryCol := draw.DialogTextX(rect)
-	rowWidth := draw.DialogContentWidth(rect)
-
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, rowWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, true, false, styles)
-
-	sepBeforeList := rect.Y + 2
-	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
-
-	listTop := rect.Y + 3
-	for row := 0; row < listH; row++ {
-		y := listTop + row
-		idxInRank := state.ListScroll + row
-		baseStyle := styles.DialogText.Background(dbg)
-		var item PinDialogItem
-		var ranges []search.Range
-		haveItem := false
-		if idxInRank < len(state.Ranked) {
-			entIdx := state.Ranked[idxInRank]
-			if entIdx >= 0 && entIdx < len(items) {
-				item = items[entIdx]
-				haveItem = true
-				if entIdx < len(state.MatchRanges) {
-					ranges = state.MatchRanges[entIdx]
-				}
-			}
-		}
-		isCursor := haveItem && idxInRank == state.Selected
-		switch {
-		case isCursor:
-			baseStyle = styles.DialogOptionRowStyle(true, false)
-		case haveItem && item.PathMissing:
-			baseStyle = styles.DialogOptionInvalidStyle()
-		}
-		if !haveItem {
-			primitive.Text(screen, primaryCol, y, rowWidth, "", baseStyle)
-			continue
-		}
-		matchStyle := styles.FuzzyHighlight
-		if isCursor {
-			matchStyle = styles.FuzzyHighlightCursor
-		}
-		_, bg, _ := baseStyle.Decompose()
-		matchStyle = matchStyle.Background(bg)
-		marks := RowMarks{Missing: item.PathMissing, Cursor: isCursor}
-		marksW := RowMarksWidth(marks)
-		drawPinRow(screen, primaryCol, y, rowWidth-marksW, item, ranges, baseStyle, matchStyle, styles)
-		DrawRowMarksSuffix(screen, primaryCol+rowWidth-marksW, y, marksW, marks, bg, styles)
-	}
-	draw.DrawDialogListScrollbar(screen, rect, listTop, listH, len(state.Ranked), state.ListScroll, scrollbarStyle, borderStyle, styles)
-}
-
-// drawPinRow renders one pin row as "<icon> <path>", the path fuzzy-highlighted and
-// fit (middle-ellipsized) to whatever width remains after the icon and its trailing
-// space. The icon itself carries no highlight — matches are keyed against Path text.
-func drawPinRow(screen tcell.Screen, x, y, rowWidth int, item PinDialogItem, ranges []search.Range, baseStyle, matchStyle tcell.Style, styles theme.Theme) {
-	icon := styles.IconFile()
-	if item.IsDir {
-		icon = styles.IconFolder()
-	}
-	if icon == "" {
-		text, spans := draw.FuzzyRowContent(item.Path, ranges, rowWidth, matchStyle, true)
-		primitive.StyledText(screen, x, y, rowWidth, text, baseStyle, spans)
-		return
-	}
-	iconW := runewidth.RuneWidth([]rune(icon)[0])
-	prefixW := iconW + 1
-	if prefixW > rowWidth {
-		prefixW = rowWidth
-	}
-	primitive.Text(screen, x, y, prefixW, icon+" ", baseStyle)
-	pathWidth := rowWidth - prefixW
-	if pathWidth <= 0 {
-		return
-	}
-	text, spans := draw.FuzzyRowContent(item.Path, ranges, pathWidth, matchStyle, true)
-	primitive.StyledText(screen, x+prefixW, y, pathWidth, text, baseStyle, spans)
+	dlg.Draw(screen, layout.Width, layout.Height, PinDialogView(state, items, layout, styles, scrollbarStyle), PinFilter, styles)
 }

@@ -91,7 +91,7 @@ func (h *Handler) PathPickerOK() { h.activatePathPickerSelection() }
 // PathPickerCancel closes the query completion dropdown, else the picker.
 func (h *Handler) PathPickerCancel() {
 	st := &h.model.PathPicker
-	if st.Focus == 0 && closeCompletion(&st.Completion) {
+	if st.FilterFocused() && closeCompletion(&st.Completion) {
 		return
 	}
 	h.ClosePathPicker()

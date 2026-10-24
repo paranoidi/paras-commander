@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/zoxide"
 )
@@ -64,9 +65,6 @@ func (a *App) applyHistoryZoxide(p historyZoxidePayload) {
 	st := &a.model.HistoryDialog
 	if !st.Open || !p.Installed {
 		return
-	}
-	if !st.ZoxideAvailable && st.Focus > 0 {
-		st.Focus++ // the checkbox is inserted before OK/Cancel; keep the same button focused
 	}
 	st.ZoxideAvailable = true
 	st.Zoxide = p.Paths
@@ -301,75 +299,33 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			}
 		}
 	}
-	if dialog.TryDialogMnemonics(event, []dialog.ExtraMnemonic{{Rune: dialog.HistoryZoxideMnemonic, Fn: a.toggleHistoryIncludeZoxide}}) {
-		return
-	}
-
 	st := &a.model.HistoryDialog
-	if st.Focus == 0 {
-		onChange := func() {
-			a.syncHistoryDialogRanks()
-			st.Selected = 0
-			dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
-		}
-		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.historyDialogQueryWidth(), onChange)
-		if a.handleScrollingQueryKey(event, true, edit) {
-			return
-		}
-	}
-
-	switch event.Key() {
-	case tcell.KeyEnter:
-		switch st.Focus {
-		case st.HistoryCancelFocus():
-			a.closeHistoryDialog()
-		case st.HistoryZoxideFocus():
-			a.toggleHistoryIncludeZoxide()
-		default:
-			a.activateHistorySelection()
-		}
-	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		// Up/Down on the list move the selection, not focus.
-		listMotion := st.Focus == 0 && (event.Key() == tcell.KeyUp || event.Key() == tcell.KeyDown)
-		if nf, ok := st.HistoryForm().MoveFocus(st.Focus, event.Key()); ok && !listMotion {
-			st.Focus = nf
-			if st.Focus == 0 && event.Key() == tcell.KeyUp {
+	ev, ok := dlg.HandleKey(a.historyView(), &st.Focus, event)
+	switch {
+	case !ok:
+		if st.Focus == dialog.HistoryFilter {
+			onChange := func() {
+				a.syncHistoryDialogRanks()
+				st.Selected = 0
 				dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 			}
-			break
+			edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.historyDialogQueryWidth(), onChange)
+			a.handleScrollingQueryKey(event, true, edit)
 		}
-		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.historyDialogListRows, func() {
-			dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
-		}) {
-			break
-		}
-	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
-		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.historyDialogListRows, func() {
-			dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
-		}) {
-			break
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		if st.Focus == 0 {
-			break
-		}
-		switch dialog.DialogButtonRune(event.Rune()) {
-		case dialog.ButtonRuneOK:
-			a.activateHistorySelection()
-		case dialog.ButtonRuneCancel:
-			a.closeHistoryDialog()
-		case dialog.ButtonRuneToggle:
-			switch st.Focus {
-			case st.HistoryZoxideFocus():
-				a.toggleHistoryIncludeZoxide()
-			case st.HistoryOKFocus():
-				a.activateHistorySelection()
-			case st.HistoryCancelFocus():
-				a.closeHistoryDialog()
-			}
-		}
+	case ev.Kind == dlg.EventListMove:
+		st.Selected, st.ListScroll = ev.Index, ev.Offset
+	case ev.ID == dialog.HistoryZoxide:
+		a.toggleHistoryIncludeZoxide()
+	case ev.ID == dlg.Cancel:
+		a.closeHistoryDialog()
+	case ev.ID == dlg.OK || ev.ID == dialog.HistoryFilter: // Enter in the filter opens the selected directory
+		a.activateHistorySelection()
 	}
+}
+
+// historyView is the History dialog's spec for the current terminal size, shared by the key
+// handler (the renderer builds the same spec with the pinned / job marks resolver).
+func (a *App) historyView() dlg.Spec {
+	w, h := a.screen.Size()
+	return dialog.HistoryDialogView(a.model.HistoryDialog, a.layoutForTerminalSize(w, h), a.styles, a.model.PanelScrollbar, nil)
 }

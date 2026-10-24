@@ -46,11 +46,9 @@ const (
 	// its own Tab segment (unless Driven) and, while it has no rows, is skipped by every focus move.
 	// See HandleKey for the key contract.
 	//
-	// Row features today: Text, fuzzy-match highlights (Match), a radio-style marker (Marked, with
-	// Item.Markers) and the cursor row's focus style. Complex list dialogs (history, pin, path
-	// picker, find) will additionally need per-row source icons, row-mark suffixes (pinned /
-	// job status), an invalid/missing style variant, per-column right-aligned fields and a
-	// scrollbar variant per list; add them to ListRow when the first of those dialogs migrates.
+	// Row features: Text, fuzzy-match highlights (Match), a leading Icon, an invalid-path variant
+	// (Missing), trailing Marks (pinned / job / missing icons), a radio-style marker (Marked, with
+	// Item.Markers) and the cursor row's focus style.
 	KindList
 	// KindSpacer reserves Height rows of the column for the caller to paint after Draw (the
 	// overlay escape hatch, see dialogs.md). It is never focusable or a hit target and its ID
@@ -65,6 +63,9 @@ const (
 	FitRight  Fit = iota // clip the end with an ellipsis
 	FitMiddle            // keep both ends, ellipsis in the middle
 	FitPath              // shorten leading directories first, keep the basename (primitive.FitPathForWidth)
+	// FitNone is for list rows the caller already fitted to the row width (column grids): the text
+	// is drawn as is, clipped, and ListRow.Match ranges are rune offsets into that displayed text.
+	FitNone
 )
 
 // TextStyle is the style variant of a KindLabel.
@@ -130,6 +131,17 @@ type Item struct {
 	// Scrollbar draws draw.DrawDialogListScrollbar on the dialog's right border when the rows
 	// overflow Height.
 	Scrollbar bool
+	// IconOptionFG paints ListRow.Icon in the foreground of the option row style (active under
+	// the cursor, inactive elsewhere) on the row's background instead of in the row's own style,
+	// so an invalid row keeps a neutral icon.
+	IconOptionFG bool
+	// MarksAfterText places a row's trailing Marks right after its (fitted) text instead of at the
+	// row's right edge.
+	MarksAfterText bool
+	// MarksWidth reserves this many cells at the row's right edge for Marks on every row, so a
+	// column of marks stays aligned however the rows are filtered (0 = each row reserves what its
+	// own Marks need). Ignored with MarksAfterText.
+	MarksWidth int
 }
 
 // ListRow is one row of a KindList.
@@ -137,6 +149,14 @@ type ListRow struct {
 	Text   string
 	Match  []search.Range // fuzzy-match highlight ranges (rune offsets into Text)
 	Marked bool           // lit radio glyph when the list has Markers
+	// Icon is drawn before Text followed by one space (empty = none); Match ranges stay keyed to Text.
+	Icon string
+	// Missing styles the row as an invalid path (unless it is under the cursor) and adds the
+	// missing mark to Marks.
+	Missing bool
+	// Marks are the pinned / job / missing icons drawn after the text (see Item.MarksAfterText,
+	// Item.MarksWidth). Marks.Cursor is set by the engine.
+	Marks RowMarks
 }
 
 // focusable reports whether keyboard focus and mouse clicks can land on the item.

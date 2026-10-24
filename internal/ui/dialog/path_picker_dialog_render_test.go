@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
@@ -37,7 +38,6 @@ func TestDrawPathPickerDialogSmoke(t *testing.T) {
 		},
 		Selected:   0,
 		ListScroll: 0,
-		Focus:      0,
 	}
 	DrawPathPickerDialog(screen, layout, state, styles, uiscrollbar.StyleThumb, nil)
 	cell, _, _ := screen.Get(4, layout.Menu.Height+4)
@@ -67,7 +67,7 @@ func TestDrawPathPickerDialogInvalidPathRowStyle(t *testing.T) {
 		Ranked:     []int{0},
 		Selected:   1, // no cursor on row
 		ListScroll: 0,
-		Focus:      1, // OK focused, list row not active
+		Focus:      dlg.OK, // OK focused, list row not active
 	}
 	DrawPathPickerDialog(screen, layout, state, styles, uiscrollbar.StyleThumb, nil)
 
@@ -113,7 +113,6 @@ func TestDrawPathPickerDialogShowsPinIconOnlyForPinnedRow(t *testing.T) {
 		Ranked:     []int{0, 1},
 		Selected:   -1,
 		ListScroll: 0,
-		Focus:      0,
 	}
 	rowMarks := func(absPath string) RowMarks {
 		return RowMarks{Pinned: absPath == "/tmp/pinned-alpha"}
