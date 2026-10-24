@@ -1,6 +1,6 @@
 // Package dialogform implements the App-independent core of linear-form dialog
 // key handling: focus navigation, mnemonics, space-toggle, and apply/cancel keys
-// shared by every dialog built on dialog.DialogLinearForm (sort, listing-format,
+// shared by every dialog built on dialog.DialogLinearForm (listing-format,
 // config, debounce-calibrate, group-select, run-for-each, and similar dialogs).
 package dialogform
 

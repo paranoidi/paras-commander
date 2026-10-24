@@ -1,0 +1,7 @@
+# Dialogs are described by a declarative Spec, drawn and driven by one engine
+
+A dialog built on `internal/ui/dialog/dlg` is a plain-data `Spec` (widgets, Tab groups, mnemonics, buttons) returned by a pure `View(state) -> Spec` function, Elm style. State stays in `ui.Model` exactly as before; the engine owns no state beyond the focused widget ID. `dlg.Place` is the single layout pass, and `Draw`, `HitTest`, `Click` and `HandleKey` all derive from the same `Spec`/`Placement`, so painting, focus order, Tab segments, mnemonics and mouse hitboxes cannot drift apart (the hand-written dialogs keep these in separate render, focus-index and key-handler code).
+
+The engine reports activations as `Event{ID}` values rather than calling back: the caller maps a radio or checkbox event onto its state (`SortDialogState.Apply`) and treats `dlg.OK` / `dlg.Cancel` as it always did. This keeps the spec serializable, which is what future plugin-defined dialogs and mouse support need; there are no interfaces or closures in `Spec`.
+
+Migration is incremental. Dialogs whose widgets the engine supports (radios, checkboxes, OK/Cancel strip) move over one at a time; the rest stay on `dialogform` and the `DialogLinearForm` helpers, and both paths coexist. The sort dialog is the pilot. OK/Cancel/Esc chords stay resolved centrally by `App.activeDialogButtons`; the engine never handles them. See `dialogs.md` (Declarative dialogs).

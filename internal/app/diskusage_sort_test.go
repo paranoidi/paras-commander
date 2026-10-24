@@ -710,8 +710,8 @@ func TestSortDialogHandleKeyAltDTogglesDirectoriesFirstWithoutStartingDiskUsageS
 	if !st.DirectoriesFirst {
 		t.Fatal("Alt+D should toggle directories-first in sort dialog")
 	}
-	if st.Focus != 6 {
-		t.Fatalf("focus = %d, want 6 (directories-first row)", st.Focus)
+	if st.Focus != "opt:dirs-first" {
+		t.Fatalf("focus = %q, want the directories-first row", st.Focus)
 	}
 	if !app.model.DiskUsageShown {
 		t.Fatal("disk usage should remain shown after Sort Alt+D")

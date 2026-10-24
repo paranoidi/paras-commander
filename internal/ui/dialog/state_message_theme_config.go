@@ -3,6 +3,7 @@ package dialog
 import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -108,9 +109,8 @@ type SortDialogState struct {
 	MetaRadios []SortDialogMetaRadio
 	// MetaColumn is the EntryName of the meta column selected in the dialog (SortMode == SortMeta).
 	MetaColumn string
-	// Focus: 0..len(panel.SortDialogRadios())-1=built-in radios, then meta radios, then disk idle
-	// sort, reverse, dirs first checkboxes, OK, Cancel. See CheckboxFocus/OKFocus/CancelFocus.
-	Focus   int
+	// Focus is the focused widget of SortDialogView; empty focuses the first radio.
+	Focus   dlg.ID
 	PanelID int // PrimaryPanel or SecondaryPanel
 }
 
@@ -123,16 +123,6 @@ func (s SortDialogState) MetaCount() int {
 	}
 	return n
 }
-
-// CheckboxFocus returns the focus index of the first checkbox (disk usage idle sort), the row
-// immediately after the built-in and meta radios.
-func (s SortDialogState) CheckboxFocus() int { return len(panel.SortDialogRadios()) + s.MetaCount() }
-
-// OKFocus returns the focus index of the OK button.
-func (s SortDialogState) OKFocus() int { return s.CheckboxFocus() + 3 }
-
-// CancelFocus returns the focus index of the Cancel button.
-func (s SortDialogState) CancelFocus() int { return s.OKFocus() + 1 }
 
 // ListingFormatDialogState is the renderable state for the panel listing format modal.
 type ListingFormatDialogState struct {

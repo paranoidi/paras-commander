@@ -86,3 +86,10 @@ func drawDialogItem(screen tcell.Screen, x, y int, label string, shortcut rune, 
 		col++
 	}
 }
+
+// DialogOptionWidth is the cell width of a checkbox or radio row drawn by DrawDialogCheckbox /
+// DrawDialogRadio for label: the " (*) " / " [x] " marker (ASCII width, an upper bound for icon
+// markers) plus the label.
+func DialogOptionWidth(label string) int {
+	return 5 + utf8.RuneCountInString(label)
+}

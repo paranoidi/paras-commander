@@ -19,6 +19,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -55,7 +56,6 @@ func (a *App) openSortDialogForPanel(panelID int) {
 		DiskUsageIdleSizeSort: target.Sort.DiskUsageIdleSizeSort,
 		MetaRadios:            metaRadios,
 		MetaColumn:            metaColumn,
-		Focus:                 0,
 		PanelID:               panelID,
 	}
 }
@@ -82,69 +82,16 @@ func (a *App) applySortDialog() {
 
 func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 	st := &a.model.SortDialog
-	n := st.MetaCount()
-	cb := st.CheckboxFocus() // first checkbox: disk usage idle sort
-	// Segments: sort mode + meta radios(0..cb-1) | options checkboxes(cb..cb+2) | buttons(cb+3..cb+4).
-	form := dialog.NewDialogLinearForm(cb+3).WithSegments(0, cb, cb+3)
-	dialogform.HandleKey(event, form, dialogform.Handlers{
-		Focus:              &st.Focus,
-		OnMoveFocus:        st.MoveFocus,
-		OnApply:            a.applySortDialog,
-		OnCancel:           a.closeSortDialog,
-		AllowPlainOKCancel: true,
-		OnMnemonic: func(r rune) bool {
-			for i, row := range panel.SortDialogRadios() {
-				if unicode.ToLower(r) == unicode.ToLower(row.Shortcut) {
-					st.SortMode = row.Mode
-					st.Focus = i
-					return true
-				}
-			}
-			switch r {
-			case 'u', 'U':
-				st.DiskUsageIdleSizeSort = !st.DiskUsageIdleSizeSort
-				st.Focus = cb
-			case 'r', 'R':
-				st.SortReverse = !st.SortReverse
-				st.Focus = cb + 1
-			case 'd', 'D':
-				st.DirectoriesFirst = !st.DirectoriesFirst
-				st.Focus = cb + 2
-			default:
-				return false
-			}
-			return true
-		},
-		OnSpace: func(focus int) bool {
-			radios := panel.SortDialogRadios()
-			if focus >= 0 && focus < len(radios) {
-				st.SortMode = radios[focus].Mode
-				return true
-			}
-			if focus >= len(radios) && focus < len(radios)+n {
-				// No mnemonics for meta radios: shortcut letters are already taken by the
-				// built-in radios, and meta column names are user-defined.
-				st.SortMode = panel.SortMeta
-				st.MetaColumn = st.MetaRadios[focus-len(radios)].Name
-				return true
-			}
-			switch {
-			case focus == cb:
-				st.DiskUsageIdleSizeSort = !st.DiskUsageIdleSizeSort
-			case focus == cb+1:
-				st.SortReverse = !st.SortReverse
-			case focus == cb+2:
-				st.DirectoriesFirst = !st.DirectoriesFirst
-			case focus == form.OKIndex():
-				a.applySortDialog()
-			case focus == form.CancelIndex():
-				a.closeSortDialog()
-			default:
-				return false
-			}
-			return true
-		},
-	})
+	ev, ok := dlg.HandleKey(dialog.SortDialogView(*st), &st.Focus, event)
+	switch {
+	case !ok:
+	case ev.ID == dlg.OK:
+		a.applySortDialog()
+	case ev.ID == dlg.Cancel:
+		a.closeSortDialog()
+	default:
+		st.Apply(ev)
+	}
 }
 
 func listingFormatFromShortcut(ch rune, focus *int) (panel.ListFormat, bool) {

@@ -51,6 +51,7 @@ Each has a reason it cannot move to `apphandler/dialog`:
 
 - **`internal/scrollquery`**: scrolling-query text field core (cursor/scroll editing, key handling) for find, help, history, SFTP connect, group select, preview theme picker and path picker; `internal/app/scrolling_query.go` binds it to `App`.
 - **`internal/dialogform`**: linear-form dialog key handling (focus, mnemonics, space-toggle, apply/cancel) for dialogs built on `dialog.DialogLinearForm`; `internal/app/dialog_linear_form.go` is the glue.
+- **`internal/ui/dialog/dlg`**: declarative dialog engine (ADR 0020): a plain-data `Spec` placed once (`Place`), then drawn, hit-tested and key-driven from that one layout. Used by the sort dialog; it must not import `internal/ui/dialog`.
 - **`internal/filterlist`**: fuzzy-list ranking, clamp and list motion. The preview theme picker and app-side history/SFTP connect call it directly; the dialog and pin Hosts forward to it.
 - **`internal/quickfilter`**: type-to-jump engine for the file list, selected strip and dedup view; options are passed per call. It must not import `panel`, `ui` or `app`.
 - **`internal/pathpick`**: path-picker query validation, resolution and completion.

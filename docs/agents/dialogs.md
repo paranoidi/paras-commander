@@ -81,6 +81,15 @@ Use `draw.DialogTextX(rect)`, `draw.DialogOptionX(rect)`, and `draw.DialogConten
 - Focus management lives with the dialog's handler: `internal/apphandler/dialog` for most dialogs, `internal/app` for the ones that stay app-side (see `architecture.md`, Package layout). `internal/app/input.go` owns top-level key dispatch.
 - File dialogs (`FileDialogState`) use `FocusedField` for focus tracking; button focus indexes = len(Fields)+0 for OK and len(Fields)+1 for Cancel.
 
+## Declarative dialogs (`dlg` engine)
+
+`internal/ui/dialog/dlg` (ADR 0020) draws and drives dialogs from a plain-data `dlg.Spec`: groups of radio/checkbox items (one or more columns each) followed by a button strip. Currently used by the sort dialog (`SortDialogView`, `SortDialogState.Apply`, `App.handleSortDialogKey`); every other dialog still uses the hand-written render plus `dialogform` path.
+
+- `dlg.Place` is the only geometry pass. `Draw`, `HitTest` and `Click` read its `Placement`; nothing re-derives rects. Button x positions come from `draw.ButtonRowXs`, shared with `DrawDialogButtonRowCentered`.
+- Navigation rules are implemented generically by the engine, so a spec-based dialog gets them without per-dialog code. Focus order is group by group, column-major inside a group, then the buttons. Up/Down move within a column; Down from the bottom of a column enters the first item of the next group (or the first button); Up from the top of column 0 returns to the last item of column 0 of the previous group; Up from a button returns to the last item of the last group. Left/Right move to the same row of the adjacent column (staying put when there is no item there) and along the button strip. Tab/Shift+Tab jump between groups and the button strip with wrap. Space and Enter activate the focused widget; Alt+mnemonic focuses and activates; with `Spec.PlainButtonKeys` a plain button letter presses the button.
+- `HandleKey` returns an `Event`; the caller applies it to its state. OK / Cancel / Esc chords are not handled by the engine (see Button Shortcuts).
+- The frame, option markers, separator and buttons are drawn with the same `draw.*` helpers as the other dialogs, so styling rules above apply unchanged. Labels in columns after the first are truncated to their column.
+
 ## Input Area Rendering / Styling
 
 All dialogs with labeled content blocks (text inputs, radio groups, checkbox groups under a section label) must follow these rules:

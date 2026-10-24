@@ -621,28 +621,38 @@ func DrawOKCancelButtonRow(screen tcell.Screen, rect Rect, y int, okFocused, can
 	DrawDialogButtonRowCentered(screen, rect, y, OKCancelButtonSpecs(okFocused, cancelFocused), styles)
 }
 
-// DrawDialogButtonRowCentered draws a row of buttons with fixed gap, centered in rect at row y.
-func DrawDialogButtonRowCentered(screen tcell.Screen, rect Rect, y int, buttons []DialogButtonSpec, styles theme.Theme) {
-	if len(buttons) == 0 {
-		return
-	}
+// ButtonRowXs returns the left x of each button (labelled by labels) in a row centered in rect, with
+// the fixed gap between buttons. DrawDialogButtonRowCentered paints at these positions and
+// dialog engines hit-test against them, so the strip geometry has one source.
+func ButtonRowXs(rect Rect, labels []string) []int {
 	const gap = 2
 	totalWidth := 0
-	for i, b := range buttons {
-		totalWidth += dialogButtonWidth(b.Label)
+	for i, l := range labels {
+		totalWidth += dialogButtonWidth(l)
 		if i > 0 {
 			totalWidth += gap
 		}
 	}
-	startX := rect.X + (rect.Width-totalWidth)/2
-	if startX < rect.X+1 {
-		startX = rect.X + 1
+	x := rect.X + (rect.Width-totalWidth)/2
+	if x < rect.X+1 {
+		x = rect.X + 1
 	}
-	x := startX
+	xs := make([]int, len(labels))
+	for i, l := range labels {
+		xs[i] = x
+		x += dialogButtonWidth(l) + gap
+	}
+	return xs
+}
+
+// DrawDialogButtonRowCentered draws a row of buttons with fixed gap, centered in rect at row y.
+func DrawDialogButtonRowCentered(screen tcell.Screen, rect Rect, y int, buttons []DialogButtonSpec, styles theme.Theme) {
+	labels := make([]string, len(buttons))
 	for i, b := range buttons {
-		if i > 0 {
-			x += gap
-		}
-		x += DrawDialogButton(screen, x, y, b.Label, b.Shortcut, b.Focused, b.Destructive, b.Disabled, styles)
+		labels[i] = b.Label
+	}
+	for i, x := range ButtonRowXs(rect, labels) {
+		b := buttons[i]
+		DrawDialogButton(screen, x, y, b.Label, b.Shortcut, b.Focused, b.Destructive, b.Disabled, styles)
 	}
 }
