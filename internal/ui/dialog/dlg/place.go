@@ -1,6 +1,8 @@
 package dlg
 
 import (
+	"unicode/utf8"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -23,11 +25,157 @@ func placeLabel(it Item, x, right, y int) PlacedItem {
 	default:
 		text = it.Prefix + primitive.TruncateRight(it.Label, avail)
 	}
-	if n := runewidth.StringWidth(text); it.Center && n <= w {
-		pad := (w - n) / 2
-		x, w = x+pad, w-pad
+	if n := runewidth.StringWidth(text); n <= w {
+		switch {
+		case it.Right:
+			x, w = x+w-n, n
+		case it.Center:
+			pad := (w - n) / 2
+			x, w = x+pad, w-pad
+		}
 	}
 	return PlacedItem{ID: it.ID, Kind: KindLabel, Rect: Rect{X: x, Y: y, Width: w, Height: 1}, Label: text}
+}
+
+// leaves returns the widgets of spec in layout order (group, column, item), with the cells of a
+// row in place of the row. Place lays them out in this order and Draw walks them in it.
+func leaves(spec Spec) []Item {
+	var out []Item
+	for _, g := range spec.Groups {
+		for _, col := range g.Columns {
+			for _, it := range col {
+				if it.Kind == KindRow {
+					out = append(out, it.Cells...)
+					continue
+				}
+				out = append(out, it)
+			}
+		}
+	}
+	return out
+}
+
+// growing reports whether a row cell takes a share of the row's spare width.
+func (it Item) growing() bool { return it.Width <= 0 && (it.Grow || it.Kind == KindInput) }
+
+// boxWidth is the width of a row cell's box when it is not growing.
+func (it Item) boxWidth(markerW int) int {
+	switch {
+	case it.Width > 0:
+		return it.Width
+	case it.Kind == KindLabel:
+		return 1 + it.Indent + runewidth.StringWidth(it.Prefix+it.Label)
+	case it.Kind == KindRadio || it.Kind == KindCheckbox:
+		return markerW + runewidth.StringWidth(it.Label)
+	}
+	return 0
+}
+
+// placeRow lays the cells of a row out from x to one cell before right. Boxes are placed left to
+// right; growing cells share what the others leave. A box that crosses the end is clipped.
+func placeRow(row Item, x, right, y, markerW int) []PlacedItem {
+	end := right - 1
+	boxes := make([]int, len(row.Cells))
+	used, grows := 0, 0
+	for i, c := range row.Cells {
+		used += c.Gap
+		if c.growing() {
+			grows++
+			continue
+		}
+		boxes[i] = c.boxWidth(markerW)
+		used += boxes[i]
+	}
+	if grows > 0 {
+		spare := max(end-x-used, 0)
+		for i, c := range row.Cells {
+			if c.growing() {
+				boxes[i] = spare / grows
+			}
+		}
+		for i := len(boxes) - 1; i >= 0; i-- { // the rounding remainder goes to the last growing cell
+			if row.Cells[i].growing() {
+				boxes[i] += spare - spare/grows*grows
+				break
+			}
+		}
+	}
+	out := make([]PlacedItem, 0, len(row.Cells))
+	bx := x
+	for i, c := range row.Cells {
+		boxEnd := min(bx+boxes[i], end)
+		avail := max(boxEnd-bx, 0)
+		var pi PlacedItem
+		switch c.Kind {
+		case KindLabel:
+			pi = placeLabel(c, bx, boxEnd+1, y)
+			if avail == 0 {
+				pi.Rect.Width, pi.Label = 0, ""
+			}
+		case KindInput:
+			pi = PlacedItem{ID: c.ID, Kind: KindInput, Rect: Rect{X: bx + 1, Y: y, Width: max(avail-1, 0), Height: 1}}
+		case KindSpacer:
+			pi = PlacedItem{ID: c.ID, Kind: KindSpacer, Rect: Rect{X: bx, Y: y, Width: avail, Height: 1}}
+		default:
+			pi = PlacedItem{ID: c.ID, Kind: c.Kind, Rect: Rect{X: bx, Y: y, Height: 1}}
+			if avail >= markerW {
+				pi.Label = primitive.TruncateRight(c.Label, avail-markerW)
+				pi.Rect.Width = markerW + runewidth.StringWidth(pi.Label)
+			}
+		}
+		pi.Disabled = c.Disabled
+		out = append(out, pi)
+		bx += boxes[i] + c.Gap
+	}
+	return out
+}
+
+// shrinkToFit returns spec with its flexible items (lists, then spacers) shortened, down to one
+// row each, until the groups and the button strip fit inside rect. Anything still too tall is cut
+// off by Place/Draw above the button separator. spec itself is not modified.
+func shrinkToFit(spec Spec, rect Rect) Spec {
+	avail := rect.Height - 2
+	if len(spec.Buttons) > 0 {
+		avail -= 2
+	}
+	need := 0
+	for _, g := range spec.Groups {
+		need += g.height()
+	}
+	if need <= avail {
+		return spec
+	}
+	groups := make([]Group, len(spec.Groups))
+	for gi, g := range spec.Groups {
+		cols := make([][]Item, len(g.Columns))
+		for ci, col := range g.Columns {
+			cols[ci] = append([]Item(nil), col...)
+		}
+		groups[gi] = Group{Columns: cols, ColWidths: g.ColWidths}
+	}
+	spec.Groups = groups
+	for _, kind := range []Kind{KindList, KindSpacer} {
+		for need > avail {
+			shrunk := false
+			for gi := range spec.Groups {
+				for ci := range spec.Groups[gi].Columns {
+					col := spec.Groups[gi].Columns[ci]
+					for i := range col {
+						if col[i].Kind == kind && col[i].Height > 1 && need > avail {
+							before := spec.Groups[gi].height()
+							col[i].Height--
+							need -= before - spec.Groups[gi].height()
+							shrunk = true
+						}
+					}
+				}
+			}
+			if !shrunk {
+				break
+			}
+		}
+	}
+	return spec
 }
 
 func (g Group) height() int {
@@ -99,6 +247,11 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 		}
 	}
 	p := Placement{Rect: rect}
+	spec = shrinkToFit(spec, rect)
+	markerW := draw.DialogOptionWidth("")
+	if spec.MarkerWidth > 0 {
+		markerW = spec.MarkerWidth
+	}
 	y := rect.Y + 1
 	for _, g := range spec.Groups {
 		for ci, col := range g.Columns {
@@ -108,6 +261,9 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 				ri := ry
 				ry += it.span()
 				switch it.Kind {
+				case KindRow:
+					p.Items = append(p.Items, placeRow(it, x, right, y+ri, markerW)...)
+					continue
 				case KindLabel:
 					p.Items = append(p.Items, placeLabel(it, x, right, y+ri))
 					continue
@@ -143,16 +299,22 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 				// The marker counts against the column too, or a long label runs past the border.
 				label := primitive.TruncateRight(it.Label, max(right-x-draw.DialogOptionWidth(""), 0))
 				p.Items = append(p.Items, PlacedItem{
-					ID:    it.ID,
-					Kind:  it.Kind,
-					Rect:  Rect{X: x, Y: y + ri, Width: draw.DialogOptionWidth(label), Height: 1},
-					Label: label,
+					ID:       it.ID,
+					Kind:     it.Kind,
+					Rect:     Rect{X: x, Y: y + ri, Width: draw.DialogOptionWidth(label), Height: 1},
+					Label:    label,
+					Disabled: it.Disabled,
 				})
 			}
 		}
 		y += g.height()
 	}
+	p.ContentBottom = rect.Y + rect.Height - 1
 	if len(spec.Buttons) > 0 {
+		// The button strip always sits at the bottom of the frame; content that did not fit
+		// (nothing flexible left to shrink) is cut off above the separator.
+		y = min(y, rect.Y+rect.Height-3)
+		p.ContentBottom = y
 		p.SepY, p.ButtonY = y, y+1
 		for i, x := range draw.ButtonRowXs(rect, labels) {
 			b := spec.Buttons[i]
@@ -160,6 +322,14 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 		}
 	}
 	return p, true
+}
+
+// MarkerWidth is the width of a radio or checkbox marker in the theme's icons, for Spec.MarkerWidth.
+func MarkerWidth(styles theme.Theme) int {
+	return max(
+		utf8.RuneCountInString(" "+styles.IconDialogRadio(false)+" "),
+		utf8.RuneCountInString(" "+styles.IconDialogCheckbox(false)+" "),
+	)
 }
 
 // Draw paints spec with focus on the widget named by focus (an empty or unknown ID focuses the
@@ -172,42 +342,49 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	focus = resolve(spec, focus)
 	borderStyle := draw.DrawDialogFrame(screen, p.Rect, spec.Title, styles)
 	_, surface, _ := styles.DialogSurface.Decompose()
-	n := 0 // p.Items holds the group items in the same order as this walk
-	for _, g := range spec.Groups {
-		for _, col := range g.Columns {
-			for _, it := range col {
-				pi := p.Items[n]
-				n++
-				switch it.Kind {
-				case KindLabel:
-					style := styles.DialogText.Background(surface)
-					switch it.Style {
-					case TextError:
-						errFG, _, _ := styles.DialogInputActiveError.Decompose()
-						style = style.Foreground(errFG)
-					case TextMessageError:
-						style = styles.MessageError.Background(surface)
-					}
-					primitive.Text(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, style)
-				case KindSeparator:
-					if pi.Label == "" {
-						draw.DrawDialogHSeparator(screen, pi.Rect, pi.Rect.Y, borderStyle)
-						break
-					}
-					frameFG, _, _ := styles.DialogFrame.Decompose()
-					labelStyle := styles.DialogTitle.Foreground(frameFG).Background(surface)
-					draw.DrawDialogHSeparatorWithCenteredLabel(screen, pi.Rect, pi.Rect.Y, borderStyle, labelStyle, pi.Label)
-				case KindInput:
-					drawInput(screen, pi.Rect, it, focus == it.ID, styles)
-				case KindSpacer:
-					// reserved for the caller's overlay
-				case KindList:
-					drawList(screen, p.Rect, pi, it, listFocused(spec, focus, it.ID), spec.ScrollbarStyle, borderStyle, styles)
-				case KindCheckbox:
-					draw.DrawDialogCheckbox(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, false, styles)
-				default:
-					draw.DrawDialogRadio(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, false, styles)
-				}
+	bottom := p.ContentBottom         // content stops above the button separator (or the bottom border)
+	for n, it := range leaves(spec) { // p.Items holds the group items in the same order
+		pi := p.Items[n]
+		if pi.Rect.Y >= bottom {
+			continue
+		}
+		if it.Kind == KindList && pi.Rect.Y+pi.Rect.Height > bottom {
+			pi.Rect.Height = bottom - pi.Rect.Y
+		}
+		switch it.Kind {
+		case KindLabel:
+			style := styles.DialogText.Background(surface)
+			switch it.Style {
+			case TextError:
+				errFG, _, _ := styles.DialogInputActiveError.Decompose()
+				style = style.Foreground(errFG)
+			case TextMessageError:
+				style = styles.MessageError.Background(surface)
+			}
+			primitive.Text(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, style)
+		case KindSeparator:
+			if pi.Label == "" {
+				draw.DrawDialogHSeparator(screen, pi.Rect, pi.Rect.Y, borderStyle)
+				break
+			}
+			frameFG, _, _ := styles.DialogFrame.Decompose()
+			labelStyle := styles.DialogTitle.Foreground(frameFG).Background(surface)
+			draw.DrawDialogHSeparatorWithCenteredLabel(screen, pi.Rect, pi.Rect.Y, borderStyle, labelStyle, pi.Label)
+		case KindInput:
+			if pi.Rect.Width > 0 {
+				drawInput(screen, pi.Rect, it, focus == it.ID, styles)
+			}
+		case KindSpacer:
+			// reserved for the caller's overlay
+		case KindList:
+			drawList(screen, p.Rect, pi, it, listFocused(spec, focus, it.ID), spec.ScrollbarStyle, borderStyle, styles)
+		case KindCheckbox:
+			if pi.Rect.Width > 0 {
+				draw.DrawDialogCheckbox(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, it.Disabled, styles)
+			}
+		default:
+			if pi.Rect.Width > 0 {
+				draw.DrawDialogRadio(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, it.Disabled, styles)
 			}
 		}
 	}
@@ -235,7 +412,7 @@ func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.
 func HitTest(p Placement, x, y int) (ID, bool) {
 	for _, it := range p.Items {
 		r := it.Rect
-		if it.Kind == KindLabel || it.Kind == KindSeparator || it.Kind == KindSpacer {
+		if it.Kind == KindLabel || it.Kind == KindSeparator || it.Kind == KindSpacer || it.Disabled {
 			continue
 		}
 		if x >= r.X && x < r.X+r.Width && y >= r.Y && y < r.Y+r.Height {
@@ -255,7 +432,7 @@ func listFocused(spec Spec, focus, id ID) bool {
 		return true
 	}
 	if p, ok := find(spec, focus); ok && !p.isButton() {
-		it := itemAt(spec, p)
+		it := widgetAt(spec, p)
 		return it.Kind == KindInput && it.Drives == id
 	}
 	return false

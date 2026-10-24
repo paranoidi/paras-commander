@@ -515,7 +515,7 @@ func (a *App) openGroupSelect(mode string, context string) {
 		FullPath:           false,
 		MetaColumnCount:    metaCount,
 		IncludeMetaColumns: metaCount > 0,
-		Focus:              dialog.GroupSelectFocusPattern,
+		Focus:              dialog.PatternInput,
 	}
 	a.groupSelectPreviewKey = groupSelectPreviewKey{}
 }
@@ -727,20 +727,10 @@ func (a *App) applyGroupCountPayload(p findctrl.GroupCountPayload) bool {
 	return true
 }
 
-func (a *App) groupSelectForm() dialog.DialogLinearForm {
-	return dialog.NewDialogLinearForm(dialog.GroupSelectContentCount(a.model.GroupSelect.MetaColumnCount))
-}
-
-func (a *App) applyGroupSelectModeFromFocus() {
-	gs := &a.model.GroupSelect
-	switch gs.Focus {
-	case dialog.GroupSelectFocusShellRadio:
-		gs.PatternMode = panel.GroupPatternShell
-	case dialog.GroupSelectFocusRegexRadio:
-		gs.PatternMode = panel.GroupPatternRegex
-	case dialog.GroupSelectFocusSimpleRadio:
-		gs.PatternMode = panel.GroupPatternSimple
-	}
+// groupSelectView is the group select dialog's widget spec for the current terminal size.
+func (a *App) groupSelectView() dlg.Spec {
+	termW, termH := a.screen.Size()
+	return dialog.GroupSelectView(a.model.GroupSelect, dialog.Layout{Width: termW, Height: termH}, a.styles)
 }
 
 func (a *App) tryRejectGroupSelectOK() bool {
@@ -814,12 +804,9 @@ func (a *App) executeGroupSelect() {
 // confirmGroupSelectFromInput applies the pattern row then runs OK (Enter / Alt+O).
 func (a *App) confirmGroupSelectFromInput() {
 	gs := &a.model.GroupSelect
-	if gs.Focus == dialog.GroupSelectFocusPattern {
+	if gs.Focus == dialog.PatternInput {
 		e := scrollquery.NewEdit(&gs.Text, &gs.TextCursor, &gs.TextScroll, a.groupSelectQueryWidth(), nil)
 		e.Apply()
-	}
-	if gs.Focus >= dialog.GroupSelectFocusShellRadio && gs.Focus <= dialog.GroupSelectFocusSimpleRadio {
-		a.applyGroupSelectModeFromFocus()
 	}
 	if a.tryRejectGroupSelectOK() {
 		return
@@ -827,166 +814,36 @@ func (a *App) confirmGroupSelectFromInput() {
 	a.executeGroupSelect()
 }
 
+// handleGroupSelectKey routes a key for the open group select dialog. The engine owns focus and
+// the mnemonics; the pattern input's text editing runs when the engine declines a key.
 func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	gs := &a.model.GroupSelect
-	form := a.groupSelectForm()
-
-	switch event.Key() {
-	case tcell.KeyEnter:
-		if gs.Focus == form.CancelIndex() {
-			a.closeGroupSelect()
-			return
-		}
-		if gs.Focus >= dialog.GroupSelectFocusShellRadio && gs.Focus <= dialog.GroupSelectFocusSimpleRadio {
-			a.applyGroupSelectModeFromFocus()
-			return
-		}
+	ev, ok := dlg.HandleKey(a.groupSelectView(), &gs.Focus, event)
+	switch {
+	case !ok:
+		a.editGroupSelectPattern(event)
+	case ev.ID == dlg.OK || ev.ID == dialog.PatternInput:
 		a.confirmGroupSelectFromInput()
-		return
-	}
-
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch unicode.ToUpper(event.Rune()) {
-		case dialog.PatternMnemonicShell:
-			a.toggleGroupSelectField(gs, dialog.GroupSelectFocusShellRadio)
-			return
-		case dialog.PatternMnemonicRegex:
-			a.toggleGroupSelectField(gs, dialog.GroupSelectFocusRegexRadio)
-			return
-		case dialog.PatternMnemonicSimple:
-			a.toggleGroupSelectField(gs, dialog.GroupSelectFocusSimpleRadio)
-			return
-		}
-	}
-
-	if gs.Focus == dialog.GroupSelectFocusPattern {
-		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune())
-		edit := scrollquery.NewEdit(&gs.Text, &gs.TextCursor, &gs.TextScroll, a.groupSelectQueryWidth(), nil)
-		if !skipScrolling && a.handleScrollingQueryKey(event, true, edit) {
-			return
-		}
-	}
-
-	switch event.Key() {
-	case tcell.KeyRune:
-		if keymap.AltLetterModifiers(event.Modifiers()) {
-			// Alt mnemonics move focus to the toggled row, except from the
-			// pattern input: the user keeps typing after flipping an option.
-			altFocus := func(f int) {
-				if gs.Focus != dialog.GroupSelectFocusPattern {
-					gs.Focus = f
-				}
-			}
-			switch unicode.ToUpper(event.Rune()) {
-			case dialog.PatternMnemonicFilesOnly:
-				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusFilesOnly)
-				altFocus(dialog.GroupSelectFocusFilesOnly)
-			case dialog.PatternMnemonicDirsOnly:
-				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusDirsOnly)
-				altFocus(dialog.GroupSelectFocusDirsOnly)
-			case dialog.PatternMnemonicCase:
-				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusCase) {
-					altFocus(dialog.GroupSelectFocusCase)
-				}
-			case dialog.PatternMnemonicIncludeMeta:
-				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusIncludeMeta) {
-					altFocus(dialog.GroupSelectFocusIncludeMeta)
-				}
-			case dialog.PatternMnemonicOnlyMeta:
-				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusOnlyMeta) {
-					altFocus(dialog.GroupSelectFocusOnlyMeta)
-				}
-			case dialog.PatternMnemonicFullPath:
-				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusFullPath) {
-					altFocus(dialog.GroupSelectFocusFullPath)
-				}
-			default:
-				for i, m := range dialog.FilterTypeMnemonics {
-					if unicode.ToUpper(event.Rune()) == m {
-						a.toggleGroupSelectField(gs, dialog.GroupSelectFocusTypeFirst+i)
-						altFocus(dialog.GroupSelectFocusTypeFirst + i)
-					}
-				}
-			}
-			break
-		}
-		mod := event.Modifiers()
-		if mod != tcell.ModNone && mod != tcell.ModShift {
-			break
-		}
-		if dialog.DialogButtonRune(event.Rune()) == dialog.ButtonRuneToggle {
-			switch gs.Focus {
-			case form.OKIndex():
-				a.confirmGroupSelectFromInput()
-			case form.CancelIndex():
-				a.closeGroupSelect()
-			default:
-				a.toggleGroupSelectField(gs, gs.Focus)
-			}
-			break
-		}
-	}
-	if focus, ok := dialog.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.MetaColumnCount, dialog.GroupSelectShowsFullPath(*gs)); ok {
-		gs.Focus = focus
+	case ev.ID == dlg.Cancel:
+		a.closeGroupSelect()
+	case ev.ID == "":
+	case event.Key() == tcell.KeyEnter && !dialog.PatternIsRadio(ev.ID):
+		a.confirmGroupSelectFromInput() // Enter on a checkbox confirms; Space toggles it
+	default:
+		gs.Apply(ev)
 	}
 }
 
-// toggleGroupSelectField applies the toggle/radio-set action addressed by focus
-// (one of the dialog.GroupSelectFocus* constants). It is the single source of
-// truth shared by the Alt-letter mnemonic switch (which sets gs.Focus only when
-// the action actually applies) and the Space-toggle switch (which already has
-// gs.Focus at the target field). Returns false when focus doesn't address a
-// toggleable field, or the field is conditionally hidden (meta columns when
-// there are none) so nothing changed.
-func (a *App) toggleGroupSelectField(gs *dialog.GroupSelectState, focus int) bool {
-	switch focus {
-	case dialog.GroupSelectFocusShellRadio:
-		gs.PatternMode = panel.GroupPatternShell
-	case dialog.GroupSelectFocusRegexRadio:
-		gs.PatternMode = panel.GroupPatternRegex
-	case dialog.GroupSelectFocusSimpleRadio:
-		gs.PatternMode = panel.GroupPatternSimple
-	case dialog.GroupSelectFocusFilesOnly:
-		gs.FilesOnly = !gs.FilesOnly
-		if gs.FilesOnly {
-			gs.DirsOnly = false
-		}
-	case dialog.GroupSelectFocusDirsOnly:
-		gs.DirsOnly = !gs.DirsOnly
-		if gs.DirsOnly {
-			gs.FilesOnly = false
-		}
-	case dialog.GroupSelectFocusCase:
-		gs.CaseSensitive = !gs.CaseSensitive
-	case dialog.GroupSelectFocusFullPath:
-		if !dialog.GroupSelectShowsFullPath(*gs) {
-			return false
-		}
-		gs.FullPath = !gs.FullPath
-	case dialog.GroupSelectFocusIncludeMeta:
-		if gs.MetaColumnCount <= 0 {
-			return false
-		}
-		gs.IncludeMetaColumns = !gs.IncludeMetaColumns
-		if !gs.IncludeMetaColumns {
-			gs.OnlyMetaColumns = false
-		}
-	case dialog.GroupSelectFocusOnlyMeta:
-		if gs.MetaColumnCount <= 0 {
-			return false
-		}
-		gs.OnlyMetaColumns = !gs.OnlyMetaColumns
-		if gs.OnlyMetaColumns {
-			gs.IncludeMetaColumns = true
-		}
-	default:
-		if focus < dialog.GroupSelectFocusTypeFirst || focus >= dialog.GroupSelectFocusPattern {
-			return false
-		}
-		if dialog.PatternTypesDisabled(gs.DirsOnly) {
-			return false
-		}
-		gs.Types[focus-dialog.GroupSelectFocusTypeFirst] = !gs.Types[focus-dialog.GroupSelectFocusTypeFirst]
+// editGroupSelectPattern feeds a key the engine declined to the pattern input's editor. Alt+letter
+// keys that are mnemonics of the twin dialogs never edit, whether or not this dialog has them.
+func (a *App) editGroupSelectPattern(event *tcell.EventKey) {
+	gs := &a.model.GroupSelect
+	if gs.Focus != dialog.PatternInput {
+		return
 	}
-	return true
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune()) {
+		return
+	}
+	edit := scrollquery.NewEdit(&gs.Text, &gs.TextCursor, &gs.TextScroll, a.groupSelectQueryWidth(), nil)
+	a.handleScrollingQueryKey(event, true, edit)
 }

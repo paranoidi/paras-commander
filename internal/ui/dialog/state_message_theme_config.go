@@ -84,7 +84,9 @@ type PreviewSettingsDialogState struct {
 	ImageMetadata string
 	// VideoMetadata reflects the Video metadata checkbox ([preview].video_metadata).
 	VideoMetadata bool
-	Focus         int // 0-8=capability radios, 9-11=protocol, 12-15=metadata, 16=video, 17=OK, 18=Cancel
+	// Focus is the focused widget ("" = the first capability radio): a PreviewCapabilityID,
+	// PreviewProtocolID or PreviewMetadataID radio, PreviewVideoMetadata, dlg.OK or dlg.Cancel.
+	Focus dlg.ID
 }
 
 // SortDialogMetaRadio is one active meta column offered as a sort-target radio in the sort
@@ -151,7 +153,9 @@ type GroupSelectState struct {
 	// Types are the checked file-type presets (indexed FilterTypeVideos..): OR-joined and AND-ed
 	// with the pattern; matched against the entry basename only.
 	Types [FilterTypeCount]bool
-	Focus int // GroupSelectFocus* constants (groupselect_hint.go), then OK, Cancel
+	// Focus is the focused widget: PatternInput, a radio, checkbox, dlg.OK or dlg.Cancel (see the
+	// Pattern* IDs in pattern_dialog_view.go).
+	Focus dlg.ID
 
 	// Live result preview shown right-aligned on the Pattern row, recomputed on every state
 	// change. PreviewShow is false while the pattern is empty or fails to compile.

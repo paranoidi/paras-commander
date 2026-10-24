@@ -73,13 +73,9 @@ func listKey(it Item, ev *tcell.EventKey, driven bool) (Event, bool) {
 
 // listByID returns the KindList item named id, focusable or not.
 func listByID(spec Spec, id ID) (Item, bool) {
-	for _, g := range spec.Groups {
-		for _, col := range g.Columns {
-			for _, it := range col {
-				if it.Kind == KindList && it.ID == id && id != "" {
-					return it, true
-				}
-			}
+	for _, it := range leaves(spec) {
+		if it.Kind == KindList && it.ID == id && id != "" {
+			return it, true
 		}
 	}
 	return Item{}, false
@@ -87,13 +83,9 @@ func listByID(spec Spec, id ID) (Item, bool) {
 
 // driverOf returns the input that Drives the list id.
 func driverOf(spec Spec, id ID) (ID, bool) {
-	for _, g := range spec.Groups {
-		for _, col := range g.Columns {
-			for _, it := range col {
-				if it.Kind == KindInput && it.Drives == id && id != "" {
-					return it.ID, true
-				}
-			}
+	for _, it := range leaves(spec) {
+		if it.Kind == KindInput && it.Drives == id && id != "" {
+			return it.ID, true
 		}
 	}
 	return "", false
@@ -103,7 +95,7 @@ func driverOf(spec Spec, id ID) (ID, bool) {
 // just the ID.
 func activation(spec Spec, id ID) Event {
 	if p, ok := find(spec, id); ok && !p.isButton() {
-		if it := itemAt(spec, p); it.Kind == KindList {
+		if it := widgetAt(spec, p); it.Kind == KindList {
 			return Event{ID: id, Index: min(max(it.Cursor, 0), len(it.Rows)-1)}
 		}
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -105,8 +106,8 @@ func TestGroupSelectEnterOnPatternInputConfirms(t *testing.T) {
 	for _, r := range "*.txt" {
 		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	if app.model.GroupSelect.Focus != dialog.GroupSelectFocusPattern {
-		t.Fatalf("focus = %d, want %d (pattern input)", app.model.GroupSelect.Focus, dialog.GroupSelectFocusPattern)
+	if app.model.GroupSelect.Focus != dialog.PatternInput {
+		t.Fatalf("focus = %q, want %q (pattern input)", app.model.GroupSelect.Focus, dialog.PatternInput)
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.GroupSelect.Open {
@@ -140,8 +141,8 @@ func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt))
-	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != dialog.GroupSelectFocusPattern {
-		t.Fatalf("Alt+Y should toggle Files only and keep pattern focus; got FilesOnly=%v focus=%d",
+	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != dialog.PatternInput {
+		t.Fatalf("Alt+Y should toggle Files only and keep pattern focus; got FilesOnly=%v focus=%q",
 			app.model.GroupSelect.FilesOnly, app.model.GroupSelect.Focus)
 	}
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
@@ -160,16 +161,16 @@ func TestGroupSelectModeShortcutKeepsPatternFocus(t *testing.T) {
 		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	gs := &app.model.GroupSelect
-	if gs.Focus != dialog.GroupSelectFocusPattern {
-		t.Fatalf("focus = %d, want pattern", gs.Focus)
+	if gs.Focus != dialog.PatternInput {
+		t.Fatalf("focus = %q, want pattern", gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
 	if gs.PatternMode != panel.GroupPatternRegex {
 		t.Fatalf("mode = %v, want regex", gs.PatternMode)
 	}
-	if gs.Text != "foo" || gs.Focus != dialog.GroupSelectFocusPattern {
-		t.Fatalf("after Alt+R: text=%q focus=%d", gs.Text, gs.Focus)
+	if gs.Text != "foo" || gs.Focus != dialog.PatternInput {
+		t.Fatalf("after Alt+R: text=%q focus=%q", gs.Text, gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt))
@@ -202,23 +203,23 @@ func TestGroupSelectCheckboxFocusNavigation(t *testing.T) {
 
 	gs := &app.model.GroupSelect
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // pattern -> files
-	if gs.Focus != dialog.GroupSelectFocusFilesOnly {
-		t.Fatalf("after Down from pattern: focus = %d, want files only", gs.Focus)
+	if gs.Focus != dialog.PatternFilesOnly {
+		t.Fatalf("after Down from pattern: focus = %q, want files only", gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // files -> case
-	if gs.Focus != dialog.GroupSelectFocusCase {
-		t.Fatalf("after Down from files: focus = %d, want case sensitive", gs.Focus)
+	if gs.Focus != dialog.PatternCase {
+		t.Fatalf("after Down from files: focus = %q, want case sensitive", gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)) // case -> files
-	if gs.Focus != dialog.GroupSelectFocusFilesOnly {
-		t.Fatalf("after Up from case: focus = %d, want files only", gs.Focus)
+	if gs.Focus != dialog.PatternFilesOnly {
+		t.Fatalf("after Up from case: focus = %q, want files only", gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone)) // files -> dirs
-	if gs.Focus != dialog.GroupSelectFocusDirsOnly {
-		t.Fatalf("after Right from files: focus = %d, want directories only", gs.Focus)
+	if gs.Focus != dialog.PatternDirsOnly {
+		t.Fatalf("after Right from files: focus = %q, want directories only", gs.Focus)
 	}
 }
 
@@ -486,8 +487,8 @@ func TestGroupSelectTypeMnemonicKeepsPatternFocus(t *testing.T) {
 
 	gs := &app.model.GroupSelect
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModAlt))
-	if !gs.Types[dialog.FilterTypeVideos] || gs.Focus != dialog.GroupSelectFocusPattern {
-		t.Fatalf("Alt+V: Types=%v focus=%d, want Videos checked and pattern focus", gs.Types, gs.Focus)
+	if !gs.Types[dialog.FilterTypeVideos] || gs.Focus != dialog.PatternInput {
+		t.Fatalf("Alt+V: Types=%v focus=%q, want Videos checked and pattern focus", gs.Types, gs.Focus)
 	}
 	if app.groupSelectEmpty() {
 		t.Fatal("a checked type with an empty pattern is not empty")
@@ -505,13 +506,13 @@ func TestGroupSelectDirsOnlyDisablesTypes(t *testing.T) {
 	app := newApp(t, newScreen(t, 80, 24), t.TempDir())
 	gs := &dialog.GroupSelectState{DirsOnly: true, Text: "*"}
 	gs.Types[0] = true
-	if app.toggleGroupSelectField(gs, dialog.GroupSelectFocusTypeFirst+1) || gs.Types[1] {
+	if gs.Apply(dlg.Event{ID: dialog.PatternTypeID(1)}) || gs.Types[1] {
 		t.Fatal("type toggle must be a no-op with Directories only")
 	}
 	if spec := app.groupSelectSpec(gs); spec.Types != nil || spec.TypeLabel != "" {
 		t.Fatalf("spec types = %v %q, want ignored", spec.Types, spec.TypeLabel)
 	}
-	if !app.toggleGroupSelectField(gs, dialog.GroupSelectFocusFilesOnly) || !gs.FilesOnly || gs.DirsOnly {
+	if !gs.Apply(dlg.Event{ID: dialog.PatternFilesOnly}) || !gs.FilesOnly || gs.DirsOnly {
 		t.Fatal("Files only radio must switch away from Directories only")
 	}
 	if spec := app.groupSelectSpec(gs); spec.Types == nil {

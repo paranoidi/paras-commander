@@ -11,14 +11,14 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// TestSetKittyCapabilityClearsPlaceholderYes covers setting Kitty to anything other than
+// TestSetKittyClearsPlaceholderYes covers setting Kitty to anything other than
 // "yes" also dropping a "yes" placeholder, since placeholder display requires Kitty protocol.
-func TestSetKittyCapabilityClearsPlaceholderYes(t *testing.T) {
+func TestSetKittyClearsPlaceholderYes(t *testing.T) {
 	st := &dialog.PreviewSettingsDialogState{
 		Kitty:            config.PreviewTerminalCapabilityYes,
 		KittyPlaceholder: config.PreviewTerminalCapabilityYes,
 	}
-	setKittyCapability(st, config.PreviewTerminalCapabilityNo)
+	st.SetKitty(config.PreviewTerminalCapabilityNo)
 	if st.Kitty != config.PreviewTerminalCapabilityNo {
 		t.Fatalf("Kitty = %q, want %q", st.Kitty, config.PreviewTerminalCapabilityNo)
 	}
@@ -26,7 +26,7 @@ func TestSetKittyCapabilityClearsPlaceholderYes(t *testing.T) {
 		t.Fatalf("KittyPlaceholder = %q, want %q when Kitty is no", st.KittyPlaceholder, config.PreviewTerminalCapabilityNo)
 	}
 
-	setKittyCapability(st, config.PreviewTerminalCapabilityYes)
+	st.SetKitty(config.PreviewTerminalCapabilityYes)
 	if st.Kitty != config.PreviewTerminalCapabilityYes {
 		t.Fatalf("Kitty = %q, want %q", st.Kitty, config.PreviewTerminalCapabilityYes)
 	}
@@ -35,14 +35,14 @@ func TestSetKittyCapabilityClearsPlaceholderYes(t *testing.T) {
 	}
 }
 
-// TestSetKittyPlaceholderCapabilityImpliesKittyYes covers setting placeholder to "yes"
+// TestSetKittyPlaceholderImpliesKittyYes covers setting placeholder to "yes"
 // also forcing Kitty to "yes", since placeholder is a Kitty-only display mode.
-func TestSetKittyPlaceholderCapabilityImpliesKittyYes(t *testing.T) {
+func TestSetKittyPlaceholderImpliesKittyYes(t *testing.T) {
 	st := &dialog.PreviewSettingsDialogState{
 		Kitty:            config.PreviewTerminalCapabilityAuto,
 		KittyPlaceholder: config.PreviewTerminalCapabilityAuto,
 	}
-	setKittyPlaceholderCapability(st, config.PreviewTerminalCapabilityYes)
+	st.SetKittyPlaceholder(config.PreviewTerminalCapabilityYes)
 	if st.KittyPlaceholder != config.PreviewTerminalCapabilityYes {
 		t.Fatalf("KittyPlaceholder = %q, want %q", st.KittyPlaceholder, config.PreviewTerminalCapabilityYes)
 	}
@@ -50,7 +50,7 @@ func TestSetKittyPlaceholderCapabilityImpliesKittyYes(t *testing.T) {
 		t.Fatalf("Kitty = %q, want %q when placeholder is yes", st.Kitty, config.PreviewTerminalCapabilityYes)
 	}
 
-	setKittyPlaceholderCapability(st, config.PreviewTerminalCapabilityNo)
+	st.SetKittyPlaceholder(config.PreviewTerminalCapabilityNo)
 	if st.KittyPlaceholder != config.PreviewTerminalCapabilityNo {
 		t.Fatalf("KittyPlaceholder = %q, want %q", st.KittyPlaceholder, config.PreviewTerminalCapabilityNo)
 	}

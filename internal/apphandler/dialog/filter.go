@@ -3,7 +3,6 @@ package dialog
 import (
 	"fmt"
 	"path"
-	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -13,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // OpenFilterDialog opens the Filter modal with an empty pattern (no prefill from any filter
@@ -36,7 +36,7 @@ func (h *Handler) OpenFilterDialog() {
 		PatternMode:        panel.GroupPatternShell,
 		MetaColumnCount:    metaCount,
 		IncludeMetaColumns: metaCount > 0,
-		Focus:              dialog.FilterFocusPattern,
+		Focus:              dialog.PatternInput,
 	}
 }
 
@@ -193,33 +193,15 @@ func (h *Handler) filterSpec() panel.FilterSpec {
 	return spec
 }
 
-func (h *Handler) filterDialogForm() dialog.DialogLinearForm {
-	return dialog.NewDialogLinearForm(dialog.FilterContentCount(h.model.FilterDialog.MetaColumnCount))
+// filterDialogView is the Filter dialog's widget spec for the current terminal size.
+func (h *Handler) filterDialogView() dlg.Spec {
+	termW, termH := h.screen.Size()
+	return dialog.FilterDialogView(h.model.FilterDialog, dialog.Layout{Width: termW, Height: termH}, h.host.Styles())
 }
 
 func (h *Handler) filterDialogQueryWidth() int {
 	termW, _ := h.screen.Size()
-	width := dialog.PatternDialogWidth
-	if width > termW-4 {
-		width = termW - 4
-	}
-	if width < 30 {
-		width = 30
-	}
-	return scrollquery.DialogInputWidthFromFrame(width)
-}
-
-func (h *Handler) applyFilterDialogModeFromFocus() {
-	fd := &h.model.FilterDialog
-	switch fd.Focus {
-	case dialog.FilterFocusShellRadio:
-		fd.PatternMode = panel.GroupPatternShell
-	case dialog.FilterFocusRegexRadio:
-		fd.PatternMode = panel.GroupPatternRegex
-	case dialog.FilterFocusSimpleRadio:
-		fd.PatternMode = panel.GroupPatternSimple
-	}
-	h.updateFilterDialogPreview()
+	return scrollquery.DialogInputWidthFromFrame(dialog.PatternDialogFrameWidth(termW))
 }
 
 // tryRejectFilterDialogOK reports whether OK should be rejected because the (non-empty) pattern
@@ -292,13 +274,9 @@ func (h *Handler) executeFilterDialog() {
 // confirmFilterDialogFromInput applies the pattern row then runs OK (Enter / Alt+O).
 func (h *Handler) confirmFilterDialogFromInput() {
 	fd := &h.model.FilterDialog
-	if fd.Focus == dialog.FilterFocusPattern {
+	if fd.Focus == dialog.PatternInput {
 		e := scrollquery.NewEdit(&fd.Text, &fd.TextCursor, &fd.TextScroll, h.filterDialogQueryWidth(), nil)
 		e.Apply()
-	}
-	if fd.Focus >= dialog.FilterFocusShellRadio && fd.Focus <= dialog.FilterFocusSimpleRadio {
-		h.applyFilterDialogModeFromFocus()
-		return
 	}
 	if h.tryRejectFilterDialogOK() {
 		return
@@ -307,168 +285,39 @@ func (h *Handler) confirmFilterDialogFromInput() {
 }
 
 // HandleFilterDialogKey routes a key event for the open Filter dialog. Returns whether the app
-// should quit (always false here).
+// should quit (always false here). The engine owns focus and the mnemonics; the pattern input's
+// text editing runs when the engine declines a key.
 func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 	fd := &h.model.FilterDialog
-	form := h.filterDialogForm()
-
-	switch event.Key() {
-	case tcell.KeyEnter:
-		if fd.Focus == form.CancelIndex() {
-			h.CloseFilterDialog()
-			return false
-		}
-		if fd.Focus >= dialog.FilterFocusShellRadio && fd.Focus <= dialog.FilterFocusSimpleRadio {
-			h.applyFilterDialogModeFromFocus()
-			return false
-		}
+	ev, ok := dlg.HandleKey(h.filterDialogView(), &fd.Focus, event)
+	switch {
+	case !ok:
+		h.editFilterPattern(event)
+	case ev.ID == dlg.OK || ev.ID == dialog.PatternInput:
 		h.confirmFilterDialogFromInput()
-		return false
-	}
-
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch unicode.ToUpper(event.Rune()) {
-		case dialog.PatternMnemonicShell:
-			h.toggleFilterDialogField(fd, dialog.FilterFocusShellRadio)
-			return false
-		case dialog.PatternMnemonicRegex:
-			h.toggleFilterDialogField(fd, dialog.FilterFocusRegexRadio)
-			return false
-		case dialog.PatternMnemonicSimple:
-			h.toggleFilterDialogField(fd, dialog.FilterFocusSimpleRadio)
-			return false
+	case ev.ID == dlg.Cancel:
+		h.CloseFilterDialog()
+	case ev.ID == "":
+	case event.Key() == tcell.KeyEnter && !dialog.PatternIsRadio(ev.ID):
+		h.confirmFilterDialogFromInput() // Enter on a checkbox confirms; Space toggles it
+	default:
+		if fd.Apply(ev) {
+			h.updateFilterDialogPreview()
 		}
-	}
-
-	if fd.Focus == dialog.FilterFocusPattern {
-		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune())
-		edit := scrollquery.NewEdit(&fd.Text, &fd.TextCursor, &fd.TextScroll, h.filterDialogQueryWidth(), h.updateFilterDialogPreview)
-		if !skipScrolling && scrollquery.HandleKey(h.keysDialogInput, event, true, edit) {
-			return false
-		}
-	}
-
-	switch event.Key() {
-	case tcell.KeyRune:
-		if keymap.AltLetterModifiers(event.Modifiers()) {
-			// Alt mnemonics move focus to the toggled row, except from the
-			// pattern input: the user keeps typing after flipping an option.
-			altFocus := func(f int) {
-				if fd.Focus != dialog.FilterFocusPattern {
-					fd.Focus = f
-				}
-			}
-			switch unicode.ToUpper(event.Rune()) {
-			case dialog.PatternMnemonicFilesOnly:
-				if h.toggleFilterDialogField(fd, dialog.FilterFocusFilesOnly) {
-					altFocus(dialog.FilterFocusFilesOnly)
-				}
-			case dialog.PatternMnemonicDirsOnly:
-				if h.toggleFilterDialogField(fd, dialog.FilterFocusDirsOnly) {
-					altFocus(dialog.FilterFocusDirsOnly)
-				}
-			case dialog.PatternMnemonicInvert:
-				h.toggleFilterDialogField(fd, dialog.FilterFocusInvert)
-				altFocus(dialog.FilterFocusInvert)
-			case dialog.PatternMnemonicCase:
-				h.toggleFilterDialogField(fd, dialog.FilterFocusCase)
-				altFocus(dialog.FilterFocusCase)
-			case dialog.PatternMnemonicIncludeMeta:
-				if h.toggleFilterDialogField(fd, dialog.FilterFocusIncludeMeta) {
-					altFocus(dialog.FilterFocusIncludeMeta)
-				}
-			case dialog.PatternMnemonicOnlyMeta:
-				if h.toggleFilterDialogField(fd, dialog.FilterFocusOnlyMeta) {
-					altFocus(dialog.FilterFocusOnlyMeta)
-				}
-			default:
-				for i, m := range dialog.FilterTypeMnemonics {
-					if unicode.ToUpper(event.Rune()) == m {
-						h.toggleFilterDialogField(fd, dialog.FilterFocusTypeFirst+i)
-						altFocus(dialog.FilterFocusTypeFirst + i)
-					}
-				}
-			}
-			return false
-		}
-		mod := event.Modifiers()
-		if mod != tcell.ModNone && mod != tcell.ModShift {
-			break
-		}
-		if dialog.DialogButtonRune(event.Rune()) == dialog.ButtonRuneToggle {
-			switch fd.Focus {
-			case form.OKIndex():
-				h.confirmFilterDialogFromInput()
-			case form.CancelIndex():
-				h.CloseFilterDialog()
-			default:
-				h.toggleFilterDialogField(fd, fd.Focus)
-			}
-			return false
-		}
-	}
-	if focus, ok := dialog.FilterMoveFocus(fd.Focus, event.Key(), *fd); ok {
-		fd.Focus = focus
 	}
 	return false
 }
 
-// toggleFilterDialogField applies the toggle/radio-set action addressed by focus (one of the
-// dialog.FilterFocus* constants). Returns false when focus doesn't address a toggleable field,
-// or the field is conditionally hidden, so nothing changed.
-func (h *Handler) toggleFilterDialogField(fd *dialog.FilterDialogState, focus int) bool {
-	switch focus {
-	case dialog.FilterFocusShellRadio:
-		fd.PatternMode = panel.GroupPatternShell
-	case dialog.FilterFocusRegexRadio:
-		fd.PatternMode = panel.GroupPatternRegex
-	case dialog.FilterFocusSimpleRadio:
-		fd.PatternMode = panel.GroupPatternSimple
-	case dialog.FilterFocusFilesOnly:
-		if !dialog.FilterShowsFilesDirs(*fd) {
-			return false
-		}
-		fd.FilesOnly = !fd.FilesOnly
-		if fd.FilesOnly {
-			fd.DirsOnly = false
-		}
-	case dialog.FilterFocusDirsOnly:
-		if !dialog.FilterShowsFilesDirs(*fd) {
-			return false
-		}
-		fd.DirsOnly = !fd.DirsOnly
-		if fd.DirsOnly {
-			fd.FilesOnly = false
-		}
-	case dialog.FilterFocusInvert:
-		fd.Invert = !fd.Invert
-	case dialog.FilterFocusCase:
-		fd.CaseSensitive = !fd.CaseSensitive
-	case dialog.FilterFocusIncludeMeta:
-		if fd.MetaColumnCount <= 0 {
-			return false
-		}
-		fd.IncludeMetaColumns = !fd.IncludeMetaColumns
-		if !fd.IncludeMetaColumns {
-			fd.OnlyMetaColumns = false
-		}
-	case dialog.FilterFocusOnlyMeta:
-		if fd.MetaColumnCount <= 0 {
-			return false
-		}
-		fd.OnlyMetaColumns = !fd.OnlyMetaColumns
-		if fd.OnlyMetaColumns {
-			fd.IncludeMetaColumns = true
-		}
-	default:
-		if focus < dialog.FilterFocusTypeFirst || focus >= dialog.FilterFocusPattern {
-			return false
-		}
-		if dialog.PatternTypesDisabled(fd.DirsOnly) {
-			return false
-		}
-		fd.Types[focus-dialog.FilterFocusTypeFirst] = !fd.Types[focus-dialog.FilterFocusTypeFirst]
+// editFilterPattern feeds a key the engine declined to the pattern input's editor. Alt+letter
+// keys that are mnemonics of the twin dialogs never edit, whether or not this dialog has them.
+func (h *Handler) editFilterPattern(event *tcell.EventKey) {
+	fd := &h.model.FilterDialog
+	if fd.Focus != dialog.PatternInput {
+		return
 	}
-	h.updateFilterDialogPreview()
-	return true
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune()) {
+		return
+	}
+	edit := scrollquery.NewEdit(&fd.Text, &fd.TextCursor, &fd.TextScroll, h.filterDialogQueryWidth(), h.updateFilterDialogPreview)
+	scrollquery.HandleKey(h.keysDialogInput, event, true, edit)
 }

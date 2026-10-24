@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestDrawFilterDialogTypeColumnsBesideRadios(t *testing.T) {
@@ -17,7 +18,7 @@ func TestDrawFilterDialogTypeColumnsBesideRadios(t *testing.T) {
 	defer screen.Fini()
 	const w, h = 62, 24
 	screen.SetSize(w, h)
-	DrawFilterDialog(screen, Layout{Width: w, Height: h}, FilterDialogState{Open: true, PatternMode: panel.GroupPatternShell, Focus: FilterFocusPattern}, theme.Default())
+	DrawFilterDialog(screen, Layout{Width: w, Height: h}, FilterDialogState{Open: true, PatternMode: panel.GroupPatternShell, Focus: PatternInput}, theme.Default())
 
 	rows := make([]string, h)
 	for y := 0; y < h; y++ {
@@ -58,68 +59,105 @@ func TestDrawFilterDialogTypeColumnsBesideRadios(t *testing.T) {
 	if len(runes) < 3 || string(runes[len(runes)-1]) != "│" || string(runes[len(runes)-2]) != " " {
 		t.Fatalf("regex row lost its right margin: %q", reg)
 	}
-	// Exactly one blank inner row above the buttons.
+	// The button strip sits directly under its separator (no blank row between them).
 	btn := find("OK")
-	if strings.Trim(rows[btn-1], " │") != "" || strings.Trim(rows[btn-2], " │─├┤") != "" {
-		t.Fatalf("want blank row then separator above buttons:\n%q\n%q", rows[btn-2], rows[btn-1])
+	if strings.Trim(rows[btn-1], " ─├┤") != "" {
+		t.Fatalf("want the separator directly above the buttons:\n%q", rows[btn-1])
 	}
 }
 
-func TestFilterMoveFocusGrid(t *testing.T) {
+// patternStep presses key with focus on from and returns where focus lands.
+func patternStep(spec dlg.Spec, from dlg.ID, key tcell.Key) dlg.ID {
+	focus := from
+	dlg.HandleKey(spec, &focus, tcell.NewEventKey(key, 0, tcell.ModNone))
+	return focus
+}
+
+func TestFilterFocusGrid(t *testing.T) {
 	shell, regex := panel.GroupPatternShell, panel.GroupPatternRegex
-	step := func(focus int, key tcell.Key, mode panel.GroupPatternMode, meta int) int {
-		got, _ := FilterMoveFocus(focus, key, FilterDialogState{PatternMode: mode, MetaColumnCount: meta})
-		return got
+	view := func(mode panel.GroupPatternMode, meta int) dlg.Spec {
+		return FilterDialogView(FilterDialogState{PatternMode: mode, MetaColumnCount: meta}, Layout{Width: 80, Height: 24}, theme.Default())
 	}
-	okIdx := FilterContentCount(0)
+	videos, audio, archives, documents := PatternTypeID(FilterTypeVideos), PatternTypeID(FilterTypeAudio), PatternTypeID(FilterTypeArchives), PatternTypeID(FilterTypeDocuments)
 	steps := []struct {
 		name  string
-		focus int
+		focus dlg.ID
 		key   tcell.Key
 		mode  panel.GroupPatternMode
 		meta  int
-		want  int
+		want  dlg.ID
 	}{
-		{"radio right to type", FilterFocusShellRadio, tcell.KeyRight, shell, 0, FilterFocusTypeFirst},
-		{"type right to audio col", FilterFocusTypeFirst, tcell.KeyRight, shell, 0, FilterFocusTypeFirst + 3},
-		{"type left back to radio", FilterFocusTypeFirst, tcell.KeyLeft, shell, 0, FilterFocusShellRadio},
-		{"down keeps type column", FilterFocusTypeFirst, tcell.KeyDown, shell, 0, FilterFocusTypeFirst + 1},
-		{"down from empty cell falls left", FilterFocusTypeFirst + 4, tcell.KeyDown, shell, 0, FilterFocusTypeFirst + 2},
-		{"down from archives to pattern", FilterFocusTypeFirst + 2, tcell.KeyDown, shell, 0, FilterFocusPattern},
-		{"up from pattern to simple radio", FilterFocusPattern, tcell.KeyUp, shell, 0, FilterFocusSimpleRadio},
-		{"dirs down to case", FilterFocusDirsOnly, tcell.KeyDown, shell, 0, FilterFocusCase},
-		{"dirs down to case in regex", FilterFocusDirsOnly, tcell.KeyDown, regex, 0, FilterFocusCase},
-		{"invert right to case", FilterFocusInvert, tcell.KeyRight, shell, 0, FilterFocusCase},
-		{"invert right to case in regex", FilterFocusInvert, tcell.KeyRight, regex, 0, FilterFocusCase},
-		{"invert down to OK", FilterFocusInvert, tcell.KeyDown, regex, 0, okIdx},
-		{"case down to meta", FilterFocusCase, tcell.KeyDown, shell, 2, FilterFocusOnlyMeta},
-		{"OK up to last row", okIdx, tcell.KeyUp, shell, 0, FilterFocusInvert},
-		{"OK right to Cancel", okIdx, tcell.KeyRight, shell, 0, okIdx + 1},
-		{"first row up nothing", FilterFocusTypeFirst, tcell.KeyUp, shell, 0, FilterFocusTypeFirst},
-		{"tab radios to types", FilterFocusRegexRadio, tcell.KeyTab, shell, 0, FilterFocusTypeFirst},
-		{"tab types to pattern", FilterFocusTypeFirst + 4, tcell.KeyTab, shell, 0, FilterFocusPattern},
-		{"tab pattern to options", FilterFocusPattern, tcell.KeyTab, shell, 0, FilterFocusFilesOnly},
-		{"tab options to buttons", FilterFocusInvert, tcell.KeyTab, shell, 0, okIdx},
-		{"tab buttons wraps", okIdx + 1, tcell.KeyTab, shell, 0, FilterFocusShellRadio},
-		{"backtab pattern to types", FilterFocusPattern, tcell.KeyBacktab, shell, 0, FilterFocusTypeFirst},
-		{"backtab radios wraps to buttons", FilterFocusShellRadio, tcell.KeyBacktab, shell, 0, okIdx},
+		{"radio right to type", PatternShellRadio, tcell.KeyRight, shell, 0, videos},
+		{"type right to audio col", videos, tcell.KeyRight, shell, 0, audio},
+		{"type left back to radio", videos, tcell.KeyLeft, shell, 0, PatternShellRadio},
+		{"down keeps type column", videos, tcell.KeyDown, shell, 0, PatternTypeID(FilterTypePictures)},
+		{"down from empty cell falls left", documents, tcell.KeyDown, shell, 0, archives},
+		{"down from archives to pattern", archives, tcell.KeyDown, shell, 0, PatternInput},
+		{"up from pattern to simple radio", PatternInput, tcell.KeyUp, shell, 0, PatternSimpleRadio},
+		{"dirs down to case", PatternDirsOnly, tcell.KeyDown, shell, 0, PatternCase},
+		{"dirs down to case in regex", PatternDirsOnly, tcell.KeyDown, regex, 0, PatternCase},
+		{"invert right to case", PatternInvert, tcell.KeyRight, shell, 0, PatternCase},
+		{"invert right to case in regex", PatternInvert, tcell.KeyRight, regex, 0, PatternCase},
+		{"invert down to OK", PatternInvert, tcell.KeyDown, regex, 0, dlg.OK},
+		{"case down to meta", PatternCase, tcell.KeyDown, shell, 2, PatternOnlyMeta},
+		{"OK up to last row", dlg.OK, tcell.KeyUp, shell, 0, PatternInvert},
+		{"OK up to meta row", dlg.OK, tcell.KeyUp, shell, 2, PatternIncludeMeta},
+		{"OK right to Cancel", dlg.OK, tcell.KeyRight, shell, 0, dlg.Cancel},
+		{"first row up nothing", videos, tcell.KeyUp, shell, 0, videos},
+		{"tab radios to types", PatternRegexRadio, tcell.KeyTab, shell, 0, videos},
+		{"tab types to pattern", documents, tcell.KeyTab, shell, 0, PatternInput},
+		{"tab pattern to options", PatternInput, tcell.KeyTab, shell, 0, PatternFilesOnly},
+		{"tab options to buttons", PatternInvert, tcell.KeyTab, shell, 0, dlg.OK},
+		{"tab buttons wraps", dlg.Cancel, tcell.KeyTab, shell, 0, PatternShellRadio},
+		{"backtab pattern to types", PatternInput, tcell.KeyBacktab, shell, 0, videos},
+		{"backtab radios wraps to buttons", PatternShellRadio, tcell.KeyBacktab, shell, 0, dlg.OK},
 	}
 	for _, s := range steps {
-		if got := step(s.focus, s.key, s.mode, s.meta); got != s.want {
-			t.Errorf("%s: got %d, want %d", s.name, got, s.want)
+		if got := patternStep(view(s.mode, s.meta), s.focus, s.key); got != s.want {
+			t.Errorf("%s: got %q, want %q", s.name, got, s.want)
 		}
 	}
 }
 
-func TestFilterMoveFocusCompareHidesFilesDirs(t *testing.T) {
+func TestFilterCompareHidesFilesDirs(t *testing.T) {
+	layout := Layout{Width: 80, Height: 24}
 	st := FilterDialogState{PatternMode: panel.GroupPatternShell, Target: FilterTargetCompare}
-	if got, _ := FilterMoveFocus(FilterFocusPattern, tcell.KeyDown, st); got != FilterFocusInvert {
-		t.Fatalf("Down from pattern in compare = %d, want Invert %d", got, FilterFocusInvert)
+	spec := FilterDialogView(st, layout, theme.Default())
+	if got := patternStep(spec, PatternInput, tcell.KeyDown); got != PatternInvert {
+		t.Fatalf("Down from pattern in compare = %q, want Invert", got)
 	}
-	if got, _ := FilterMoveFocus(FilterFocusPattern, tcell.KeyTab, st); got != FilterFocusInvert {
-		t.Fatalf("Tab from pattern in compare = %d, want Invert %d", got, FilterFocusInvert)
+	if got := patternStep(spec, PatternInput, tcell.KeyTab); got != PatternInvert {
+		t.Fatalf("Tab from pattern in compare = %q, want Invert", got)
 	}
-	if filterDialogInnerRows(st) != filterDialogInnerRows(FilterDialogState{PatternMode: panel.GroupPatternShell})-1 {
+	height := func(st FilterDialogState) int {
+		p, ok := dlg.Place(layout.Width, layout.Height, FilterDialogView(st, layout, theme.Default()))
+		if !ok {
+			t.Fatal("dialog does not fit")
+		}
+		return p.Rect.Height
+	}
+	if height(st) != height(FilterDialogState{PatternMode: panel.GroupPatternShell})-1 {
 		t.Fatal("compare dialog should be one row shorter")
+	}
+}
+
+// TestFilterDisabledTypes: the type checkboxes cannot be focused, toggled, reached by their
+// mnemonics or clicked while Directories only is on.
+func TestFilterDisabledTypes(t *testing.T) {
+	layout := Layout{Width: 80, Height: 24}
+	st := FilterDialogState{PatternMode: panel.GroupPatternShell, DirsOnly: true}
+	spec := FilterDialogView(st, layout, theme.Default())
+	if got := patternStep(spec, PatternShellRadio, tcell.KeyRight); got != PatternShellRadio {
+		t.Errorf("Right from a radio over disabled types = %q, want to stay", got)
+	}
+	if got := patternStep(spec, PatternShellRadio, tcell.KeyTab); got != PatternInput {
+		t.Errorf("Tab from the radios = %q, want the pattern (types are skipped)", got)
+	}
+	focus := PatternInput
+	if ev, ok := dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModAlt)); ok || ev.ID != "" {
+		t.Errorf("Alt+V on a disabled type = (%q,%v), want unhandled", ev.ID, ok)
+	}
+	if st.Apply(dlg.Event{ID: PatternTypeID(FilterTypeVideos)}) || st.Types[FilterTypeVideos] {
+		t.Error("a disabled type must not toggle")
 	}
 }

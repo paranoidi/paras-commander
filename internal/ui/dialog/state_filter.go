@@ -8,6 +8,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // File-type preset indexes for FilterDialogState.Types (order matches config [filter.types]).
@@ -118,7 +119,9 @@ type FilterDialogState struct {
 	Invert bool
 	// Target is what the dialog filters: the active panel, Compare rows or dedup groups.
 	Target FilterTarget
-	Focus  int // FilterFocus* constants (filter_hint.go), then OK, Cancel
+	// Focus is the focused widget: PatternInput, a radio, checkbox, dlg.OK or dlg.Cancel (see the
+	// Pattern* IDs in pattern_dialog_view.go).
+	Focus dlg.ID
 
 	// Live match-count preview shown right-aligned on the Pattern row, recomputed on every state
 	// change. PreviewShow is false while the pattern is empty or fails to compile.

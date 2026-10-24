@@ -7,10 +7,11 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/dialogform"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // Preview settings dialog (M-F3) handlers. Mutates a.config.Preview in place (settings-dialog
@@ -28,7 +29,6 @@ func (a *App) openPreviewSettingsDialog() {
 		Protocol:         effectiveImageProtocol(p.ImageProtocol),
 		ImageMetadata:    effectiveImageMetadata(p.ImageMetadata),
 		VideoMetadata:    p.VideoMetadata,
-		Focus:            0,
 	}
 }
 
@@ -70,45 +70,8 @@ func cycleTerminalCapability(v string) string {
 	}
 }
 
-func capabilityRadioFocus(first int, v string) int {
-	switch effectiveTerminalCapability(v) {
-	case config.PreviewTerminalCapabilityAuto:
-		return first
-	case config.PreviewTerminalCapabilityYes:
-		return first + 1
-	default:
-		return first + 2
-	}
-}
-
 func (a *App) closePreviewSettingsDialog() {
 	a.model.PreviewSettingsDialog.Open = false
-}
-
-// setKittyCapability writes the Kitty radio and, since Unicode-placeholder display requires
-// Kitty protocol support, drops a "yes" placeholder whenever Kitty is not "yes".
-func setKittyCapability(st *dialog.PreviewSettingsDialogState, v string) {
-	st.Kitty = effectiveTerminalCapability(v)
-	if st.Kitty != config.PreviewTerminalCapabilityYes && st.KittyPlaceholder == config.PreviewTerminalCapabilityYes {
-		st.KittyPlaceholder = st.Kitty
-	}
-}
-
-// setKittyPlaceholderCapability writes the placeholder radio and, since it implies Kitty
-// protocol support, forces Kitty to "yes" whenever placeholder is "yes".
-func setKittyPlaceholderCapability(st *dialog.PreviewSettingsDialogState, v string) {
-	st.KittyPlaceholder = effectiveTerminalCapability(v)
-	if st.KittyPlaceholder == config.PreviewTerminalCapabilityYes {
-		st.Kitty = config.PreviewTerminalCapabilityYes
-	}
-}
-
-func cycleKittyCapability(st *dialog.PreviewSettingsDialogState) {
-	setKittyCapability(st, cycleTerminalCapability(st.Kitty))
-}
-
-func cycleKittyPlaceholderCapability(st *dialog.PreviewSettingsDialogState) {
-	setKittyPlaceholderCapability(st, cycleTerminalCapability(st.KittyPlaceholder))
 }
 
 // applyPreviewSettingsDialog writes the dialog's checkbox/radio state into a.config.Preview in
@@ -166,8 +129,30 @@ func (a *App) autoDetectPreviewSettingsDialog() {
 	st := &a.model.PreviewSettingsDialog
 	sixel, kitty, placeholder := preview.DetectTerminalCapabilities(os.Getenv)
 	st.Sixel = capabilityFromDetect(sixel)
-	setKittyCapability(st, capabilityFromDetect(kitty))
-	setKittyPlaceholderCapability(st, capabilityFromDetect(placeholder))
+	st.SetKitty(capabilityFromDetect(kitty))
+	st.SetKittyPlaceholder(capabilityFromDetect(placeholder))
+}
+
+// previewSettingsCapabilityMnemonic maps an Alt letter to the capability row it cycles. The row
+// labels carry no mnemonic widget, so the letters are handled before the engine.
+var previewSettingsCapabilityMnemonic = map[rune]string{
+	's': dialog.PreviewSixel, 'k': dialog.PreviewKitty, 'p': dialog.PreviewPlaceholder,
+}
+
+// cyclePreviewSettingsCapability advances the capability row to its next value and focuses that
+// value's radio.
+func cyclePreviewSettingsCapability(st *dialog.PreviewSettingsDialogState, row string) {
+	switch row {
+	case dialog.PreviewSixel:
+		st.Sixel = cycleTerminalCapability(st.Sixel)
+		st.Focus = dialog.PreviewCapabilityID(row, st.Sixel)
+	case dialog.PreviewKitty:
+		st.SetKitty(cycleTerminalCapability(st.Kitty))
+		st.Focus = dialog.PreviewCapabilityID(row, st.Kitty)
+	case dialog.PreviewPlaceholder:
+		st.SetKittyPlaceholder(cycleTerminalCapability(st.KittyPlaceholder))
+		st.Focus = dialog.PreviewCapabilityID(row, st.KittyPlaceholder)
+	}
 }
 
 func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
@@ -176,79 +161,20 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 		a.autoDetectPreviewSettingsDialog()
 		return
 	}
-	form := dialog.PreviewSettingsDialogForm()
-	capabilityRadios := dialog.PreviewSettingsDialogCapabilityRadios()
-	protocolRadios := dialog.PreviewSettingsDialogProtocolRadios()
-	metadataRadios := dialog.PreviewSettingsDialogImageMetadataRadios()
-	const (
-		sixelFocusFirst       = 0
-		kittyFocusFirst       = 3
-		placeholderFocusFirst = 6
-		protocolFocusFirst    = 9
-		metadataFocusFirst    = 13
-		videoFocus            = 17
-	)
-	dialogform.HandleKey(event, form, dialogform.Handlers{
-		Focus:              &st.Focus,
-		OnApply:            a.applyPreviewSettingsDialog,
-		OnCancel:           a.closePreviewSettingsDialog,
-		AllowPlainOKCancel: true,
-		OnMoveFocus:        dialog.PreviewSettingsDialogCapabilityMoveFocus,
-		OnMnemonic: func(r rune) bool {
-			for i, radio := range protocolRadios {
-				if unicode.ToLower(r) == unicode.ToLower(radio.Shortcut) {
-					st.Protocol = radio.Value
-					st.Focus = protocolFocusFirst + i
-					return true
-				}
-			}
-			for i, radio := range metadataRadios {
-				if unicode.ToLower(r) == unicode.ToLower(radio.Shortcut) {
-					st.ImageMetadata = radio.Value
-					st.Focus = metadataFocusFirst + i
-					return true
-				}
-			}
-			switch r {
-			case 's', 'S':
-				st.Sixel = cycleTerminalCapability(st.Sixel)
-				st.Focus = capabilityRadioFocus(sixelFocusFirst, st.Sixel)
-			case 'k', 'K':
-				cycleKittyCapability(st)
-				st.Focus = capabilityRadioFocus(kittyFocusFirst, st.Kitty)
-			case 'p', 'P':
-				cycleKittyPlaceholderCapability(st)
-				st.Focus = capabilityRadioFocus(placeholderFocusFirst, st.KittyPlaceholder)
-			case 'v', 'V':
-				st.VideoMetadata = !st.VideoMetadata
-				st.Focus = videoFocus
-			default:
-				return false
-			}
-			return true
-		},
-		OnSpace: func(focus int) bool {
-			switch {
-			case focus >= sixelFocusFirst && focus < kittyFocusFirst:
-				st.Sixel = capabilityRadios[focus-sixelFocusFirst].Value
-			case focus >= kittyFocusFirst && focus < placeholderFocusFirst:
-				setKittyCapability(st, capabilityRadios[focus-kittyFocusFirst].Value)
-			case focus >= placeholderFocusFirst && focus < protocolFocusFirst:
-				setKittyPlaceholderCapability(st, capabilityRadios[focus-placeholderFocusFirst].Value)
-			case focus >= protocolFocusFirst && focus < protocolFocusFirst+len(protocolRadios):
-				st.Protocol = protocolRadios[focus-protocolFocusFirst].Value
-			case focus >= metadataFocusFirst && focus < metadataFocusFirst+len(metadataRadios):
-				st.ImageMetadata = metadataRadios[focus-metadataFocusFirst].Value
-			case focus == videoFocus:
-				st.VideoMetadata = !st.VideoMetadata
-			case focus == form.OKIndex():
-				a.applyPreviewSettingsDialog()
-			case focus == form.CancelIndex():
-				a.closePreviewSettingsDialog()
-			default:
-				return false
-			}
-			return true
-		},
-	})
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		if row, ok := previewSettingsCapabilityMnemonic[unicode.ToLower(event.Rune())]; ok {
+			cyclePreviewSettingsCapability(st, row)
+			return
+		}
+	}
+	ev, ok := dlg.HandleKey(dialog.PreviewSettingsDialogView(*st), &st.Focus, event)
+	switch {
+	case !ok:
+	case ev.ID == dlg.OK:
+		a.applyPreviewSettingsDialog()
+	case ev.ID == dlg.Cancel:
+		a.closePreviewSettingsDialog()
+	default:
+		st.Apply(ev)
+	}
 }

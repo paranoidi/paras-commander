@@ -50,27 +50,3 @@ func TestDrawPreviewSettingsDialogShowsCapabilityNoRadio(t *testing.T) {
 		t.Fatalf("capability groups missing: %v", want)
 	}
 }
-
-func TestPreviewSettingsDialogCapabilityMoveFocus(t *testing.T) {
-	cases := []struct {
-		focus int
-		key   tcell.Key
-		want  int
-		ok    bool
-	}{
-		{0, tcell.KeyLeft, 0, true},
-		{0, tcell.KeyRight, 1, true},
-		{2, tcell.KeyRight, 2, true},
-		{4, tcell.KeyUp, 1, true},
-		{1, tcell.KeyUp, 1, true},
-		{1, tcell.KeyDown, 4, true},
-		{7, tcell.KeyDown, previewSettingsDialogFocusProtocolFirst, true},
-		{previewSettingsDialogFocusProtocolFirst, tcell.KeyUp, previewSettingsDialogFocusProtocolFirst, false},
-	}
-	for _, c := range cases {
-		got, ok := PreviewSettingsDialogCapabilityMoveFocus(c.focus, c.key)
-		if got != c.want || ok != c.ok {
-			t.Errorf("focus %d key %v: got (%d,%v), want (%d,%v)", c.focus, c.key, got, ok, c.want, c.ok)
-		}
-	}
-}

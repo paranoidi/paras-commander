@@ -1,0 +1,385 @@
+== open ==
+focus=pattern text="" cursor=0 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐾 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐽 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐽 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰄱 Files only             󰄱 Directories only              │
+│ 󰄱 Invert                 󰄱 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccccccaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaabaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+S ==
+focus=pattern text="" cursor=0 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐾 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐽 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐽 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰄱 Files only             󰄱 Directories only              │
+│ 󰄱 Invert                 󰄱 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccccccaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaabaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+R ==
+focus=pattern text="" cursor=0 scroll=0 mode=1 files=false dirs=false invert=false case=false meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐽 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐾 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐽 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰄱 Files only             󰄱 Directories only              │
+│ 󰄱 Invert                 󰄱 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaa
+acccbcccccccccccccccccaaaaaaabaaaaaaaaaaaaaaaaaaaaabaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+L ==
+focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐽 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐽 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐾 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰄱 Files only             󰄱 Directories only              │
+│ 󰄱 Invert                 󰄱 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaabaaaaaaaa
+acccccccbcaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+Y ==
+focus=pattern text="" cursor=0 scroll=0 mode=2 files=true dirs=false invert=false case=false meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐽 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐽 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐾 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰡖 Files only             󰄱 Directories only              │
+│ 󰄱 Invert                 󰄱 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaabaaaaaaaa
+acccccccbcaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+accccccccccccbaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+D ==
+focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=true invert=false case=false meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐽 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐽 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐾 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰄱 Files only             󰡖 Directories only              │
+│ 󰄱 Invert                 󰄱 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccaaaaaaccccccccaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccccaaaaccccccccccccaaaaaaa
+adddddddbdaaaaaaaaaaaaaaaacccccccccccaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaefffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaabaaaaaaaaaaaadddbdddddddddddddddaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+I ==
+focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=true invert=true case=false meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐽 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐽 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐾 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰄱 Files only             󰡖 Directories only              │
+│ 󰡖 Invert                 󰄱 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccaaaaaaccccccccaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccccaaaaccccccccccccaaaaaaa
+adddddddbdaaaaaaaaaaaaaaaacccccccccccaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaefffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaabaaaaaaaaaaaadddbdddddddddddddddaaaaaaaaaaaaaaa
+adddbdddddaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+E ==
+focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=true invert=true case=true meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐽 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐽 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐾 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰄱 Files only             󰡖 Directories only              │
+│ 󰡖 Invert                 󰡖 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccaaaaaaccccccccaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccccaaaaccccccccccccaaaaaaa
+adddddddbdaaaaaaaaaaaaaaaacccccccccccaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaefffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaabaaaaaaaaaaaadddbdddddddddddddddaaaaaaaaaaaaaaa
+adddbdddddaaaaaaaaaaaaaaaaddddddbddddddddddaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+V ==
+focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=true invert=true case=true meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐽 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐽 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐾 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰄱 Files only             󰡖 Directories only              │
+│ 󰡖 Invert                 󰡖 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccaaaaaaccccccccaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccccaaaaccccccccccccaaaaaaa
+adddddddbdaaaaaaaaaaaaaaaacccccccccccaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaefffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaabaaaaaaaaaaaadddbdddddddddddddddaaaaaaaaaaaaaaa
+adddbdddddaaaaaaaaaaaaaaaaddddddbddddddddddaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Alt+P ==
+focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=true invert=true case=true meta=false/false types=[] preview=false/0/0
+-- text --
+┌───────────────────────── Filter ─────────────────────────┐
+│ 󰐽 Shell patterns         󰄱 Videos       󰄱 Audio          │
+│ 󰐽 Regular expression     󰄱 Pictures     󰄱 Documents      │
+│ 󰐾 Simple                 󰄱 Archives                      │
+├──────────────────────────────────────────────────────────┤
+│ Pattern:                                                 │
+│                                                          │
+│                                                          │
+│ 󰄱 Files only             󰡖 Directories only              │
+│ 󰡖 Invert                 󰡖 Case sensitive                │
+├──────────────────────────────────────────────────────────┤
+│                   [ OK ]    [ Cancel ]                   │
+└──────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccaaaaaaccccccccaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaacccccccccccaaaaccccccccccccaaaaaaa
+adddddddbdaaaaaaaaaaaaaaaacccccccccccaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaefffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaabaaaaaaaaaaaadddbdddddddddddddddaaaaaaaaaaaaaaa
+adddbdddddaaaaaaaaaaaaaaaaddddddbddddddddddaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

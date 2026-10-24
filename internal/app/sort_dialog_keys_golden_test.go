@@ -68,6 +68,18 @@ func goldenKeyEvent(t *testing.T, tok string) *tcell.EventKey {
 		return tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModCtrl)
 	case "F5":
 		return tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)
+	case "Ctrl+W":
+		return tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone)
+	case "Ctrl+U":
+		return tcell.NewEventKey(tcell.KeyCtrlU, 0, tcell.ModNone)
+	case "Ctrl+K":
+		return tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModNone)
+	case "Ctrl+L":
+		return tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone)
+	case "Ctrl+Y":
+		return tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModNone)
+	case "Alt+Backspace":
+		return tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModAlt)
 	case "Alt+Insert":
 		return tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModAlt)
 	case "F3":

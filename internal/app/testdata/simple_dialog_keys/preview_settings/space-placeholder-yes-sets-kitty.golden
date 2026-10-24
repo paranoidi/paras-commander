@@ -1,0 +1,440 @@
+== open ==
+focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+-- text --
+┌───────────── Preview settings ─────────────┐
+│ Confirm terminal capabilities:             │
+│ Sixel       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Kitty       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Placeholder 󰐾 auto  󰐽 yes  󰐽 no            │
+├────────────────────────────────────────────┤
+│ Active protocol:                           │
+│ 󰐾 Auto                                     │
+│ 󰐽 Sixel                                    │
+│ 󰐽 Kitty                                    │
+│ 󰐽 Überzug++                                │
+├────────────────────────────────────────────┤
+│ Image metadata:                            │
+│ 󰐽 Off                                      │
+│ 󰐽 Basic                                    │
+│ 󰐾 Essentials                               │
+│ 󰐽 Full                                     │
+├────────────────────────────────────────────┤
+│ 󰡖 Video metadata                           │
+├────────────────────────────────────────────┤
+│            [ OK ]    [ Cancel ]            │
+└────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaadddddddaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaadddddddaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+adddbdddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+adddbdddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+adddbdddddddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaeeefeeeeaaeeefeeeeeeeeaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=kitty-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+-- text --
+┌───────────── Preview settings ─────────────┐
+│ Confirm terminal capabilities:             │
+│ Sixel       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Kitty       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Placeholder 󰐾 auto  󰐽 yes  󰐽 no            │
+├────────────────────────────────────────────┤
+│ Active protocol:                           │
+│ 󰐾 Auto                                     │
+│ 󰐽 Sixel                                    │
+│ 󰐽 Kitty                                    │
+│ 󰐽 Überzug++                                │
+├────────────────────────────────────────────┤
+│ Image metadata:                            │
+│ 󰐽 Off                                      │
+│ 󰐽 Basic                                    │
+│ 󰐾 Essentials                               │
+│ 󰐽 Full                                     │
+├────────────────────────────────────────────┤
+│ 󰡖 Video metadata                           │
+├────────────────────────────────────────────┤
+│            [ OK ]    [ Cancel ]            │
+└────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaadddddddaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaeeefeeeeaaeeefeeeeeeeeaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=placeholder-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+-- text --
+┌───────────── Preview settings ─────────────┐
+│ Confirm terminal capabilities:             │
+│ Sixel       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Kitty       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Placeholder 󰐾 auto  󰐽 yes  󰐽 no            │
+├────────────────────────────────────────────┤
+│ Active protocol:                           │
+│ 󰐾 Auto                                     │
+│ 󰐽 Sixel                                    │
+│ 󰐽 Kitty                                    │
+│ 󰐽 Überzug++                                │
+├────────────────────────────────────────────┤
+│ Image metadata:                            │
+│ 󰐽 Off                                      │
+│ 󰐽 Basic                                    │
+│ 󰐾 Essentials                               │
+│ 󰐽 Full                                     │
+├────────────────────────────────────────────┤
+│ 󰡖 Video metadata                           │
+├────────────────────────────────────────────┤
+│            [ OK ]    [ Cancel ]            │
+└────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaadddddddaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaeeefeeeeaaeeefeeeeeeeeaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Right ==
+focus=placeholder-yes sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+-- text --
+┌───────────── Preview settings ─────────────┐
+│ Confirm terminal capabilities:             │
+│ Sixel       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Kitty       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Placeholder 󰐾 auto  󰐽 yes  󰐽 no            │
+├────────────────────────────────────────────┤
+│ Active protocol:                           │
+│ 󰐾 Auto                                     │
+│ 󰐽 Sixel                                    │
+│ 󰐽 Kitty                                    │
+│ 󰐽 Überzug++                                │
+├────────────────────────────────────────────┤
+│ Image metadata:                            │
+│ 󰐽 Off                                      │
+│ 󰐽 Basic                                    │
+│ 󰐾 Essentials                               │
+│ 󰐽 Full                                     │
+├────────────────────────────────────────────┤
+│ 󰡖 Video metadata                           │
+├────────────────────────────────────────────┤
+│            [ OK ]    [ Cancel ]            │
+└────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaddddddaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaeeefeeeeaaeeefeeeeeeeeaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Space ==
+focus=placeholder-yes sixel=auto kitty=yes placeholder=yes protocol=auto metadata=essentials video=true
+-- text --
+┌───────────── Preview settings ─────────────┐
+│ Confirm terminal capabilities:             │
+│ Sixel       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Kitty       󰐽 auto  󰐾 yes  󰐽 no            │
+│ Placeholder 󰐽 auto  󰐾 yes  󰐽 no            │
+├────────────────────────────────────────────┤
+│ Active protocol:                           │
+│ 󰐾 Auto                                     │
+│ 󰐽 Sixel                                    │
+│ 󰐽 Kitty                                    │
+│ 󰐽 Überzug++                                │
+├────────────────────────────────────────────┤
+│ Image metadata:                            │
+│ 󰐽 Off                                      │
+│ 󰐽 Basic                                    │
+│ 󰐾 Essentials                               │
+│ 󰐽 Full                                     │
+├────────────────────────────────────────────┤
+│ 󰡖 Video metadata                           │
+├────────────────────────────────────────────┤
+│            [ OK ]    [ Cancel ]            │
+└────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaccccccaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaddddddaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaeeefeeeeaaeeefeeeeeeeeaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Up ==
+focus=kitty-yes sixel=auto kitty=yes placeholder=yes protocol=auto metadata=essentials video=true
+-- text --
+┌───────────── Preview settings ─────────────┐
+│ Confirm terminal capabilities:             │
+│ Sixel       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Kitty       󰐽 auto  󰐾 yes  󰐽 no            │
+│ Placeholder 󰐽 auto  󰐾 yes  󰐽 no            │
+├────────────────────────────────────────────┤
+│ Active protocol:                           │
+│ 󰐾 Auto                                     │
+│ 󰐽 Sixel                                    │
+│ 󰐽 Kitty                                    │
+│ 󰐽 Überzug++                                │
+├────────────────────────────────────────────┤
+│ Image metadata:                            │
+│ 󰐽 Off                                      │
+│ 󰐽 Basic                                    │
+│ 󰐾 Essentials                               │
+│ 󰐽 Full                                     │
+├────────────────────────────────────────────┤
+│ 󰡖 Video metadata                           │
+├────────────────────────────────────────────┤
+│            [ OK ]    [ Cancel ]            │
+└────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaddddddaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaccccccaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaeeefeeeeaaeeefeeeeeeeeaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Left ==
+focus=kitty-auto sixel=auto kitty=yes placeholder=yes protocol=auto metadata=essentials video=true
+-- text --
+┌───────────── Preview settings ─────────────┐
+│ Confirm terminal capabilities:             │
+│ Sixel       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Kitty       󰐽 auto  󰐾 yes  󰐽 no            │
+│ Placeholder 󰐽 auto  󰐾 yes  󰐽 no            │
+├────────────────────────────────────────────┤
+│ Active protocol:                           │
+│ 󰐾 Auto                                     │
+│ 󰐽 Sixel                                    │
+│ 󰐽 Kitty                                    │
+│ 󰐽 Überzug++                                │
+├────────────────────────────────────────────┤
+│ Image metadata:                            │
+│ 󰐽 Off                                      │
+│ 󰐽 Basic                                    │
+│ 󰐾 Essentials                               │
+│ 󰐽 Full                                     │
+├────────────────────────────────────────────┤
+│ 󰡖 Video metadata                           │
+├────────────────────────────────────────────┤
+│            [ OK ]    [ Cancel ]            │
+└────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaadddddddaccccccaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaccccccaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaeeefeeeeaaeeefeeeeeeeeaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Space ==
+focus=kitty-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+-- text --
+┌───────────── Preview settings ─────────────┐
+│ Confirm terminal capabilities:             │
+│ Sixel       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Kitty       󰐾 auto  󰐽 yes  󰐽 no            │
+│ Placeholder 󰐾 auto  󰐽 yes  󰐽 no            │
+├────────────────────────────────────────────┤
+│ Active protocol:                           │
+│ 󰐾 Auto                                     │
+│ 󰐽 Sixel                                    │
+│ 󰐽 Kitty                                    │
+│ 󰐽 Überzug++                                │
+├────────────────────────────────────────────┤
+│ Image metadata:                            │
+│ 󰐽 Off                                      │
+│ 󰐽 Basic                                    │
+│ 󰐾 Essentials                               │
+│ 󰐽 Full                                     │
+├────────────────────────────────────────────┤
+│ 󰡖 Video metadata                           │
+├────────────────────────────────────────────┤
+│            [ OK ]    [ Cancel ]            │
+└────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaadddddddaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaacccccccaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbcccccccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaeeefeeeeaaeeefeeeeeeeeaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

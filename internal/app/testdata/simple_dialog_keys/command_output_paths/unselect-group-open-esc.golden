@@ -51,9 +51,9 @@ title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follo
 │ │ 󰄱 Files only             󰄱 Directories only              │ │
 │ │ 󰄱 Case sensitive         󰄱 Match full path               │ │
 │ ├──────────────────────────────────────────────────────────┤ │
-├─│                                                          │─┤
-│ │                   [ OK ]    [ Cancel ]                   │ │
-└─└──────────────────────────────────────────────────────────┘─┘
+├─│                   [ OK ]    [ Cancel ]                   │─┤
+│ └──────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
 -- legend --
 a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
@@ -74,8 +74,8 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Esc ==
 title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=0(line 2) selected=0 cancels=0 groupselect=false

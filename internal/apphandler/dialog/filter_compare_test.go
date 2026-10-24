@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestFilterDialogCompareTarget(t *testing.T) {
@@ -54,13 +55,13 @@ func TestFilterDialogDirsOnlyDisablesTypes(t *testing.T) {
 	fd := &model.FilterDialog
 	fd.DirsOnly = true
 	fd.Types[0] = true
-	if h.toggleFilterDialogField(fd, dialog.FilterFocusTypeFirst+1) || fd.Types[1] {
+	if fd.Apply(dlg.Event{ID: dialog.PatternTypeID(1)}) || fd.Types[1] {
 		t.Fatal("type toggle must be a no-op with Directories only")
 	}
 	if spec := h.filterSpec(); spec.Types != nil || spec.TypeLabel != "" {
 		t.Fatalf("spec types = %v %q, want ignored", spec.Types, spec.TypeLabel)
 	}
-	if !h.toggleFilterDialogField(fd, dialog.FilterFocusFilesOnly) || !fd.FilesOnly || fd.DirsOnly {
+	if !fd.Apply(dlg.Event{ID: dialog.PatternFilesOnly}) || !fd.FilesOnly || fd.DirsOnly {
 		t.Fatal("Files only radio must switch away from Directories only")
 	}
 	if spec := h.filterSpec(); spec.Types == nil {

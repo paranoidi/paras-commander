@@ -54,6 +54,9 @@ const (
 	// overlay escape hatch, see dialogs.md). It is never focusable or a hit target and its ID
 	// is optional; Placement.Item(id) returns its rect.
 	KindSpacer
+	// KindRow lays Cells out left to right on one dialog row (see Item.Cells). It has no ID of its
+	// own: its cells are the widgets, each with its own placed rect, focus stop and mouse hit rect.
+	KindRow
 )
 
 // Fit says how a label that is wider than its cell is shortened.
@@ -143,6 +146,40 @@ type Item struct {
 	// column of marks stays aligned however the rows are filtered (0 = each row reserves what its
 	// own Marks need). Ignored with MarksAfterText.
 	MarksWidth int
+
+	// Disabled (radio and checkbox) draws the item in the disabled style and takes it out of
+	// focus, mnemonics and hits.
+	Disabled bool
+	// Seg names the Tab segment of an item inside its group (default 0). Items of one group that
+	// share a Seg are one Tab segment, whatever their layout order, so a grid whose rows hold a
+	// radio and its checkboxes can still Tab between the radios and the checkboxes. A segment
+	// starts at its first item in focus order; inputs and lists remain segments of their own.
+	Seg int
+
+	// Row only (KindRow). Cells are laid out left to right from the column's left edge, each in a
+	// box whose width follows its own rule (Width, Grow or its content), followed by the cell's Gap. Cells may be radios, checkboxes, labels, inputs and spacers (no
+	// rows, lists or separators). The row ends one cell before the right border, like labels and
+	// inputs; a cell that does not fit is clipped, and one that would start past the end is not
+	// drawn (its Rect is empty). Left/Right move between the focusable cells of a row (never out of
+	// a focused input); Up/Down keep the cell index of the row they leave (clamped to the row, then
+	// the nearest focusable cell to the left, then to the right).
+	Cells []Item
+	// EntryLast makes Up land on the row's last focusable cell, instead of its first, when focus
+	// comes from a widget that is not a cell of a row (a button or an item of another kind).
+	EntryLast bool
+
+	// Cell box (items inside Cells). The box starts where the previous one (plus its Gap) ends; radios
+	// and checkboxes start in the box's first cell, labels and inputs one cell in (the dialog's
+	// text column). Width is the box width in cells; 0 means the cell's content: the marker and
+	// label of a radio or checkbox, the indent and text of a label. Grow cells split what the fixed
+	// and content boxes leave, equally (an input without Width grows too). Width and Grow on an
+	// item outside a row are ignored.
+	Width int
+	Grow  bool
+	// Gap is the number of blank cells after the box.
+	Gap int
+	// Right right-aligns a label's text in its box.
+	Right bool
 }
 
 // ListRow is one row of a KindList.
@@ -164,6 +201,15 @@ type ListRow struct {
 func (it Item) focusable() bool {
 	switch it.Kind {
 	case KindLabel, KindSeparator, KindSpacer:
+		return false
+	case KindRadio, KindCheckbox:
+		return !it.Disabled
+	case KindRow:
+		for _, c := range it.Cells {
+			if c.focusable() {
+				return true
+			}
+		}
 		return false
 	case KindList:
 		return len(it.Rows) > 0 && !it.Driven // an empty list has nothing to select
@@ -211,6 +257,10 @@ type Spec struct {
 	Unclamped bool
 	// ScrollbarStyle is the scrollbar variant for lists with Item.Scrollbar (empty = thumb).
 	ScrollbarStyle uiscrollbar.Style
+	// MarkerWidth is the width in cells of a radio or checkbox marker (" ( ) ", " <icon> ") for
+	// the content width of row cells. Zero means the ASCII marker (5 cells); a caller that knows
+	// its theme passes MarkerWidth(styles) so rows follow the theme's narrower icons.
+	MarkerWidth int
 }
 
 // Rect is a screen region in cells.
@@ -230,6 +280,8 @@ type PlacedItem struct {
 	Rect         Rect
 	Label        string
 	Offset, Rows int
+	// Disabled items are drawn but are not hit targets.
+	Disabled bool
 }
 
 // Placement is the result of the single layout pass. Items are the group items (labels included) in
@@ -239,6 +291,9 @@ type Placement struct {
 	Rect          Rect
 	Items         []PlacedItem
 	SepY, ButtonY int
+	// ContentBottom is the first screen row content is not drawn on: the button separator, or
+	// the bottom border when there are no buttons.
+	ContentBottom int
 }
 
 // Event reports an activation. A zero ID means the key was handled but only moved focus.

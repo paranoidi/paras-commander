@@ -91,7 +91,7 @@ func DrawDedupEmptyDirsConfirmDialog(screen tcell.Screen, layout Layout, state D
 	// Icons are the overlay: each sits in the cells the row's Indent left free.
 	for i, dir := range state.Dirs {
 		row, found := p.Item(dedupEmptyDirsRowID(i))
-		if !found {
+		if !found || row.Rect.Y >= p.ContentBottom { // rows cut off by a short screen have no icon either
 			break
 		}
 		paintIcon(screen, row.Rect.X-iconLead, row.Rect.Y, dir, ctx.Styles)

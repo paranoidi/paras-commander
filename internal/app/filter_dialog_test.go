@@ -42,8 +42,8 @@ func TestFilterDialogMAltFOpensAndNarrows(t *testing.T) {
 	if !app.model.FilterDialog.Open {
 		t.Fatal("expected Filter dialog open after M-f")
 	}
-	if app.model.FilterDialog.Focus != dialog.FilterFocusPattern {
-		t.Fatalf("Focus = %d, want FilterFocusPattern", app.model.FilterDialog.Focus)
+	if app.model.FilterDialog.Focus != dialog.PatternInput {
+		t.Fatalf("Focus = %q, want the pattern input", app.model.FilterDialog.Focus)
 	}
 
 	typeRunes(t, app, "walnut*")
@@ -118,8 +118,8 @@ func TestFilterDialogOnlyMetaColumnsMatchesMetaValue(t *testing.T) {
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModAlt)); quit {
 		t.Fatal("M-N handleKey quit = true")
 	}
-	if app.model.FilterDialog.Focus != dialog.FilterFocusPattern {
-		t.Fatalf("Focus after M-N = %d, want FilterFocusPattern", app.model.FilterDialog.Focus)
+	if app.model.FilterDialog.Focus != dialog.PatternInput {
+		t.Fatalf("Focus after M-N = %q, want the pattern input", app.model.FilterDialog.Focus)
 	}
 	typeRunes(t, app, "*")
 	if !app.model.FilterDialog.OnlyMetaColumns || !app.model.FilterDialog.IncludeMetaColumns {
