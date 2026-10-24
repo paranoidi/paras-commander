@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
 
@@ -393,4 +394,18 @@ func HandleFileDialogFieldKey(ev *tcell.EventKey, f *FileDialogField, keysDialog
 		return true
 	}
 	return false
+}
+
+// fileFieldInput is the dlg input row for a FileDialogField: the same value, ghost completion and
+// suggested-default (prefill pending) rendering as drawInputField.
+func fileFieldInput(id dlg.ID, f FileDialogField, invalid bool) dlg.Item {
+	prefillPending := f.Prefill != "" && f.PrefillPending && f.Value == f.Prefill
+	ghost := "" // empty for fields without path completion
+	if !prefillPending {
+		ghost = f.Completion.GhostSuffix(f.Value)
+	}
+	return dlg.Item{
+		ID: id, Kind: dlg.KindInput, Value: f.Value, Cursor: f.Cursor, Scroll: f.Scroll,
+		CompletionSuffix: ghost, Invalid: invalid, Placeholder: prefillPending,
+	}
 }

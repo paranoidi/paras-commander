@@ -125,14 +125,18 @@ func TestTransferMultiLocationHasBlankRowAboveButtons(t *testing.T) {
 	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
 }
 
-func TestFlattenDialogHasBlankRowAboveButtons(t *testing.T) {
+func TestFlattenButtonsSitUnderSeparator(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
 	DrawFlattenDialog(screen, layout, FlattenDialogState{
 		Open:        true,
 		Destination: FileDialogField{Value: "/home/user/meadow", PathPicker: true},
 	}, theme.Default(), uiscrollbar.StyleThumb)
-	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
+	rows := dialogScreenRows(screen)
+	buttonY := dialogButtonRowY(rows)
+	if buttonY < 1 || !strings.Contains(rows[buttonY-1], "├") {
+		t.Fatalf("row above buttons = %q, want the separator (dlg dialogs have no blank row there)", rows[buttonY-1])
+	}
 }
 
 func TestPathPickerHasBlankRowAboveButtons(t *testing.T) {

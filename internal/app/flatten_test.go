@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -160,8 +161,8 @@ func TestFileMenuFlattenOpensDialog(t *testing.T) {
 	if !app.model.FlattenDialog.RemoveEmpty {
 		t.Fatal("remove empty should default true")
 	}
-	if app.model.FlattenDialog.FocusField != 0 {
-		t.Fatalf("FocusField = %d, want destination row 0", app.model.FlattenDialog.FocusField)
+	if !app.model.FlattenDialog.FocusOnDest() {
+		t.Fatalf("Focus = %q, want the destination row", app.model.FlattenDialog.Focus)
 	}
 }
 
@@ -217,8 +218,8 @@ func TestFlattenConfirmQueuesJob(t *testing.T) {
 func TestFlattenDestinationFooterShowsActiveAndInactive(t *testing.T) {
 	t.Parallel()
 	app, _, _ := flattenDialogTestSetup(t)
-	if app.model.FlattenDialog.FocusField != 0 {
-		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.FlattenDialog.FocusField)
+	if !app.model.FlattenDialog.FocusOnDest() {
+		t.Fatalf("Focus = %q, want the destination", app.model.FlattenDialog.Focus)
 	}
 	keys := app.activeFooterKeys()
 	if !footerHasHint(keys, "Active path ◄", "S-left") {
@@ -262,8 +263,8 @@ func TestFlattenDestinationShortcutsNoOpWhenUnfocused(t *testing.T) {
 	app, _, _ := flattenDialogTestSetup(t)
 	want := app.model.FlattenDialog.Destination.Value
 	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if app.model.FlattenDialog.FocusField != 1 {
-		t.Fatalf("FocusField = %d, want 1 (recursive)", app.model.FlattenDialog.FocusField)
+	if app.model.FlattenDialog.Focus != dialog.FlattenRecursive {
+		t.Fatalf("Focus = %q, want recursive", app.model.FlattenDialog.Focus)
 	}
 	keys := app.activeFooterKeys()
 	if footerHasHint(keys, "Active path ◄", "S-left") || footerHasHint(keys, "Inactive path ►", "S-right") {

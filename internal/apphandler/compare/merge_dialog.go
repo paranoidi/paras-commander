@@ -8,9 +8,9 @@ import (
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // OpenMergeDialog opens the merge/sync dialog for the current compare snapshot.
@@ -68,77 +68,20 @@ func (h *Handler) HandleMergeDialogKey(event *tcell.EventKey) bool {
 	if !d.Open {
 		return false
 	}
-	form := dialog.NewCompareMergeDialogLinearForm()
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'l', 'L':
-			d.Direction = comparepkg.MergeTowardPrimary
-			h.refreshMergePreview(d)
-			return true
-		case 'r', 'R':
-			d.Direction = comparepkg.MergeTowardSecondary
-			h.refreshMergePreview(d)
-			return true
-		case 'm', 'M':
-			d.CopyMissing = !d.CopyMissing
-			h.refreshMergePreview(d)
-			return true
-		case 'f', 'F':
-			d.CopyModified = !d.CopyModified
-			h.refreshMergePreview(d)
-			return true
-		case 'k', 'K':
-			d.MoveMode = false
-			h.refreshMergePreview(d)
-			return true
-		case 'd', 'D':
-			d.MoveMode = true
-			h.refreshMergePreview(d)
-			return true
-		}
-	}
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
-		switch event.Rune() {
-		case ' ':
-			h.activateCompareMergeDialogFocus(d)
-			return true
-		}
-	}
-	if event.Key() == tcell.KeyEnter {
-		if d.Focus == form.CancelIndex() {
-			h.closeMergeDialog()
-		} else if h.activateCompareMergeDialogFocus(d) {
-			// radio/checkbox activated; stay open
-		} else {
-			h.confirmMerge()
-		}
+	ev, ok := dlg.HandleKey(dialog.CompareMergeView(*d, h.model.UserHomeDir), &d.Focus, event)
+	if !ok {
 		return true
 	}
-	if nf, ok := dialog.CompareMergeDialogMoveFocus(d.Focus, event.Key()); ok {
-		d.Focus = nf
-		return true
-	}
-	return true
-}
-
-func (h *Handler) activateCompareMergeDialogFocus(d *dialog.CompareMergeDialogState) bool {
-	switch d.Focus {
-	case 0:
-		d.Direction = comparepkg.MergeTowardPrimary
-	case 1:
-		d.Direction = comparepkg.MergeTowardSecondary
-	case 2:
-		d.CopyMissing = !d.CopyMissing
-	case 3:
-		d.CopyModified = !d.CopyModified
-	case 4:
-		d.MoveMode = false
-	case 5:
-		d.MoveMode = true
+	switch ev.ID {
+	case "":
+	case dlg.OK:
+		h.confirmMerge()
+	case dlg.Cancel:
+		h.closeMergeDialog()
 	default:
-		return false
+		d.Apply(ev)
+		h.refreshMergePreview(d)
 	}
-	h.refreshMergePreview(d)
 	return true
 }
 

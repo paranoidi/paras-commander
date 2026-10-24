@@ -2,10 +2,32 @@ package dlg
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
+
+// placeLabel positions a label row whose column starts at x (the option marker's cell) and ends
+// before right. Text starts where the option marker's glyph does and keeps the one-cell right margin.
+func placeLabel(it Item, x, right, y int) PlacedItem {
+	x += 1 + it.Indent
+	w := max(right-x-1, 0)
+	var text string
+	switch avail := max(w-runewidth.StringWidth(it.Prefix), 0); it.Fit {
+	case FitMiddle:
+		text = it.Prefix + primitive.TruncateMiddle(it.Label, avail)
+	case FitPath:
+		text = it.Prefix + primitive.FitPathForWidth(it.Label, avail)
+	default:
+		text = it.Prefix + primitive.TruncateRight(it.Label, avail)
+	}
+	if n := runewidth.StringWidth(text); it.Center && n <= w {
+		pad := (w - n) / 2
+		x, w = x+pad, w-pad
+	}
+	return PlacedItem{ID: it.ID, Kind: KindLabel, Rect: Rect{X: x, Y: y, Width: w, Height: 1}, Label: text}
+}
 
 func (g Group) height() int {
 	h := 0
@@ -59,13 +81,24 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 				right = draw.DialogOptionX(rect) + (ci+1)*colW
 			}
 			for ri, it := range col {
-				if it.Kind == KindLabel {
-					// Text starts where the option marker's glyph does and keeps the one-cell right margin.
-					w := max(right-x-2, 0)
+				switch it.Kind {
+				case KindLabel:
+					p.Items = append(p.Items, placeLabel(it, x, right, y+ri))
+					continue
+				case KindSeparator:
+					label := ""
+					if it.Label != "" {
+						label = " " + primitive.TruncateRight(it.Label, max(rect.Width-4, 0)) + " "
+					}
 					p.Items = append(p.Items, PlacedItem{
-						ID: it.ID, Kind: KindLabel,
-						Rect:  Rect{X: x + 1, Y: y + ri, Width: w, Height: 1},
-						Label: primitive.TruncateRight(it.Label, w),
+						ID: it.ID, Kind: KindSeparator,
+						Rect: Rect{X: rect.X, Y: y + ri, Width: rect.Width, Height: 1}, Label: label,
+					})
+					continue
+				case KindInput:
+					p.Items = append(p.Items, PlacedItem{
+						ID: it.ID, Kind: KindInput,
+						Rect: Rect{X: draw.DialogTextX(rect), Y: y + ri, Width: draw.DialogContentWidth(rect), Height: 1},
 					})
 					continue
 				}
@@ -109,7 +142,22 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 				n++
 				switch it.Kind {
 				case KindLabel:
-					primitive.Text(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, styles.DialogText.Background(surface))
+					style := styles.DialogText.Background(surface)
+					if it.Style == TextError {
+						errFG, _, _ := styles.DialogInputActiveError.Decompose()
+						style = style.Foreground(errFG)
+					}
+					primitive.Text(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, style)
+				case KindSeparator:
+					if pi.Label == "" {
+						draw.DrawDialogHSeparator(screen, pi.Rect, pi.Rect.Y, borderStyle)
+						break
+					}
+					frameFG, _, _ := styles.DialogFrame.Decompose()
+					labelStyle := styles.DialogTitle.Foreground(frameFG).Background(surface)
+					draw.DrawDialogHSeparatorWithCenteredLabel(screen, pi.Rect, pi.Rect.Y, borderStyle, labelStyle, pi.Label)
+				case KindInput:
+					drawInput(screen, pi.Rect, it, focus == it.ID, styles)
 				case KindCheckbox:
 					draw.DrawDialogCheckbox(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, false, styles)
 				default:
@@ -129,11 +177,20 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	draw.DrawDialogButtonRowCentered(screen, p.Rect, p.ButtonY, specs, styles)
 }
 
+func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.Theme) {
+	if it.Simple {
+		draw.DrawSimpleDialogInput(screen, r.X, r.Y, r.Width, it.Value, it.Cursor, focused, it.Invalid, styles)
+		return
+	}
+	draw.PaintScrollingInputContent(screen, r.X, r.Y, r.Width, it.Value, it.CompletionSuffix, it.Cursor, it.Scroll,
+		focused, it.Invalid, focused, it.Placeholder, it.LeadingIcon, styles)
+}
+
 // HitTest returns the widget under screen cell (x, y).
 func HitTest(p Placement, x, y int) (ID, bool) {
 	for _, it := range p.Items {
 		r := it.Rect
-		if it.Kind == KindLabel {
+		if it.Kind == KindLabel || it.Kind == KindSeparator {
 			continue
 		}
 		if x >= r.X && x < r.X+r.Width && y >= r.Y && y < r.Y+r.Height {

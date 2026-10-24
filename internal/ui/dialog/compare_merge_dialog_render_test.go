@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestDrawCompareMergeDialogLeftRightAndShortPaths(t *testing.T) {
@@ -46,8 +47,15 @@ func TestDrawCompareMergeDialogLeftRightAndShortPaths(t *testing.T) {
 }
 
 func TestCompareMergeDialogHeightSharedPrefix(t *testing.T) {
-	base := compareMergeDialogHeight(false)
-	withShared := compareMergeDialogHeight(true)
+	height := func(primary, secondary string) int {
+		p, ok := dlg.Place(80, 40, CompareMergeView(CompareMergeDialogState{PrimaryPath: primary, SecondaryPath: secondary}, "/home/alice"))
+		if !ok {
+			t.Fatal("Place not ok")
+		}
+		return p.Rect.Height
+	}
+	base := height("/srv/orchard", "/mnt/willow")
+	withShared := height("/srv/harbor/orchard", "/srv/harbor/willow")
 	if withShared != base+1 {
 		t.Fatalf("height with shared = %d, base = %d, want base+1", withShared, base)
 	}

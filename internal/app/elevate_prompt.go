@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // elevateState holds the pending permission prompt (at most one; prompts are serialized with the
@@ -86,8 +86,6 @@ func (a *App) applyElevateOpen(p elevateOpenPayload) {
 		NoPassword:  p.req.NoPassword,
 		BadPassword: p.req.BadPassword,
 	}
-	// Land on the password field, or on Elevate when there is none.
-	a.model.ElevateDialog.Focus = 0
 }
 
 func (a *App) finishElevate(d ops.PermissionDecision) {
@@ -98,12 +96,12 @@ func (a *App) finishElevate(d ops.PermissionDecision) {
 	}
 }
 
-// elevateDecisionAt maps a button index (0=Elevate, 1=Skip, 2=Cancel) to its decision.
-func elevateDecisionAt(i int) ops.PermissionDecision {
-	switch i {
-	case 0:
+// elevateDecision maps an activated widget to its decision: Enter in the password field elevates.
+func elevateDecision(id dlg.ID) ops.PermissionDecision {
+	switch id {
+	case dialog.ElevatePassword, dialog.ElevateRetry:
 		return ops.PermissionElevate
-	case 1:
+	case dialog.ElevateSkip:
 		return ops.PermissionSkip
 	default:
 		return ops.PermissionAbort
@@ -113,70 +111,30 @@ func elevateDecisionAt(i int) ops.PermissionDecision {
 func (a *App) handleElevateDialogKey(ev *tcell.EventKey) {
 	d := &a.model.ElevateDialog
 	defer a.render()
-	if ev.Key() == tcell.KeyRune && keymap.AltLetterModifiers(ev.Modifiers()) {
-		switch ev.Rune() {
-		case 'e', 'E':
-			a.finishElevate(ops.PermissionElevate)
-		case 's', 'S':
-			a.finishElevate(ops.PermissionSkip)
+	if e, ok := dlg.HandleKey(dialog.ElevateView(*d), &d.Focus, ev); ok {
+		if e.ID != "" {
+			a.finishElevate(elevateDecision(e.ID))
 		}
 		return
 	}
-	base := d.ButtonBase()
-	last := base + dialog.ElevateButtons - 1
+	if !d.FocusOnInput() {
+		return
+	}
 	switch ev.Key() {
-	case tcell.KeyEnter:
-		if d.FocusOnInput() {
-			a.finishElevate(ops.PermissionElevate)
-			return
-		}
-		a.finishElevate(elevateDecisionAt(d.Focus - base))
-	case tcell.KeyUp:
-		if d.HasInput() && d.Focus >= base {
-			d.Focus = 0 // up from the buttons goes back to the field
-		}
-	case tcell.KeyDown:
-		if d.FocusOnInput() {
-			d.Focus = base
-		}
-	case tcell.KeyTab, tcell.KeyBacktab:
-		if d.HasInput() {
-			if d.FocusOnInput() {
-				d.Focus = base
-			} else {
-				d.Focus = 0
-			}
-		}
 	case tcell.KeyLeft:
-		if d.FocusOnInput() {
-			d.Password.MoveCursor(-1)
-		} else if d.Focus > base {
-			d.Focus--
-		}
+		d.Password.MoveCursor(-1)
 	case tcell.KeyRight:
-		if d.FocusOnInput() {
-			d.Password.MoveCursor(1)
-		} else if d.Focus < last {
-			d.Focus++
-		}
+		d.Password.MoveCursor(1)
 	case tcell.KeyHome:
-		if d.FocusOnInput() {
-			d.Password.MoveCursorStart()
-		}
+		d.Password.MoveCursorStart()
 	case tcell.KeyEnd:
-		if d.FocusOnInput() {
-			d.Password.MoveCursorEnd()
-		}
+		d.Password.MoveCursorEnd()
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if d.FocusOnInput() {
-			d.Password.Backspace()
-		}
+		d.Password.Backspace()
 	case tcell.KeyDelete:
-		if d.FocusOnInput() {
-			d.Password.Delete()
-		}
+		d.Password.Delete()
 	case tcell.KeyRune:
-		if d.FocusOnInput() && ev.Modifiers()&(tcell.ModAlt|tcell.ModCtrl) == 0 {
+		if ev.Modifiers()&(tcell.ModAlt|tcell.ModCtrl) == 0 {
 			d.Password.InsertRune(ev.Rune())
 		}
 	}

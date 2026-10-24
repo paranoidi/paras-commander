@@ -1,17 +1,23 @@
 package dialog
 
-import "time"
+import (
+	"time"
+
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+)
 
 // DebounceCalibrateDialogState is the Options calibrate-debounce dialog.
 type DebounceCalibrateDialogState struct {
 	Open bool
 
-	Phase  DebounceCalibratePhase
-	Focus  int
+	Phase DebounceCalibratePhase
+	// Focus is the focused widget (DebounceDelay, DebouncePreview, dlg.OK, DebounceCalibrate or
+	// dlg.Cancel); empty is the first.
+	Focus  dlg.ID
 	Value  string
 	Cursor int
 
-	// Media preview debounce (focus 1); derived from the largest measured key-repeat delay when calibrated.
+	// Media preview debounce (DebouncePreview); derived from the largest measured key-repeat delay when calibrated.
 	PreviewValue  string
 	PreviewCursor int
 

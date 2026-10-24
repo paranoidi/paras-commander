@@ -1,0 +1,440 @@
+== open ==
+focus=dest dest="/srv/thicket-lantern/" cursor=21 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ /srv/thicket-lantern/                                              │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== r ==
+focus=dest dest="r" cursor=1 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ r                                                                  │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== e ==
+focus=dest dest="re" cursor=2 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ re                                                                 │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== o ==
+focus=dest dest="reo" cursor=3 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ reo                                                                │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== c ==
+focus=dest dest="reoc" cursor=4 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ reoc                                                               │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== y ==
+focus=dest dest="reocy" cursor=5 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ reocy                                                              │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== n ==
+focus=dest dest="reocyn" cursor=6 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ reocyn                                                             │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== O ==
+focus=dest dest="reocynO" cursor=7 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ reocynO                                                            │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== C ==
+focus=dest dest="reocynOC" cursor=8 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ reocynOC                                                           │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== Y ==
+focus=dest dest="reocynOCY" cursor=9 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ reocynOCY                                                          │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+== N ==
+focus=dest dest="reocynOCYN" cursor=10 recursive=false removeEmpty=true dropdown=false selected=0
+-- text --
+                                                  ││                  
+┌───────────────────────────── Flatten ──────────────────────────────┐
+│ Destination:                                                       │
+│ reocynOCYN                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Recursive flatten                                                │
+│ 󰡖 Remove empty directories                                         │
+├────────────────────────────────────────────────────────────────────┤
+│                        [ OK ]    [ Cancel ]                        │
+└────────────────────────────────────────────────────────────────────┘
+                                                  ││                  
+                                                  ││                  
+                                                  ││                  
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+ccccccccccccccccccccccccccccccdddddddddccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cggggdggggggggggggggggggggggcccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccchhhihhhhcchhhihhhhhhhhcccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaa

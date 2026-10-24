@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -440,5 +441,308 @@ func TestWidthGrowsToFitButtons(t *testing.T) {
 	// A screen that cannot hold the strip still clamps.
 	if p, _ := Place(30, 24, Spec{Width: 20, Unclamped: true, Buttons: spec.Buttons}); p.Rect.Width != 26 {
 		t.Errorf("narrow screen width = %d, want 26", p.Rect.Width)
+	}
+}
+
+func input(id ID, value string) Item { return Item{ID: id, Kind: KindInput, Value: value} }
+
+func sep(text string) Item { return Item{Kind: KindSeparator, Label: text} }
+
+// inputSpec: a label and two adjacent inputs, a separator, a checkbox/radio block and buttons.
+func inputSpec() Spec {
+	return Spec{
+		Title: "Harbor", Width: 40, MinWidth: 20, MinHeight: 6, PlainButtonKeys: true,
+		Groups: []Group{
+			{Columns: [][]Item{{label("Find:"), input("find", "anchor"), input("repl", ""), sep("")}}},
+			{Columns: [][]Item{{check("c0", "Lantern", 'l'), radio("r0", "Mast", 'm'), sep("Sails")}}},
+		},
+		Buttons: []Button{{ID: OK, Label: "OK", Mnemonic: 'O'}, {ID: Cancel, Label: "Cancel", Mnemonic: 'C'}},
+	}
+}
+
+func TestSeparatorAndInputPlacement(t *testing.T) {
+	p, ok := Place(80, 24, inputSpec())
+	if !ok {
+		t.Fatal("Place not ok")
+	}
+	// 2 border + label, 2 inputs, separator, 2 options, separator + button separator + buttons.
+	if p.Rect != (Rect{X: 20, Y: 6, Width: 40, Height: 11}) {
+		t.Fatalf("rect = %+v", p.Rect)
+	}
+	find, ok := p.Item("find")
+	if !ok || find.Kind != KindInput || find.Rect != (Rect{X: 22, Y: 8, Width: 36, Height: 1}) {
+		t.Errorf("find = %+v %v, want the row at DialogTextX across DialogContentWidth", find, ok)
+	}
+	if repl, _ := p.Item("repl"); repl.Rect.Y != 9 {
+		t.Errorf("repl y = %d, want 9 (inputs stack without blank rows)", repl.Rect.Y)
+	}
+	var seps []PlacedItem
+	for _, it := range p.Items {
+		if it.Kind == KindSeparator {
+			seps = append(seps, it)
+		}
+	}
+	if len(seps) != 2 || seps[0].Rect != (Rect{X: 20, Y: 10, Width: 40, Height: 1}) || seps[0].Label != "" {
+		t.Fatalf("separators = %+v, want a full-width rule at y=10", seps)
+	}
+	if seps[1].Rect.Y != 13 || seps[1].Label != " Sails " {
+		t.Errorf("labelled separator = %+v, want y=13 and a padded label", seps[1])
+	}
+	if _, ok := p.Item(""); ok {
+		t.Error("Item(\"\") must not match unnamed separators")
+	}
+	if p.SepY != 14 || p.ButtonY != 15 {
+		t.Errorf("SepY/ButtonY = %d/%d, want 14/15", p.SepY, p.ButtonY)
+	}
+}
+
+func TestSeparatorsAreNotFocusableOrHitTargets(t *testing.T) {
+	spec := inputSpec()
+	p, _ := Place(80, 24, spec)
+	for _, y := range []int{10, 13} {
+		for _, x := range []int{20, 21, 30, 59} {
+			if id, ok := HitTest(p, x, y); ok {
+				t.Errorf("(%d,%d) hit %q, want a miss on a separator", x, y, id)
+			}
+		}
+	}
+	focus := ID("repl")
+	if _, ok := Click(spec, 80, 24, &focus, 30, 10); ok || focus != "repl" {
+		t.Errorf("click on a separator: focus %q ok=%v, want a miss that keeps focus", focus, ok)
+	}
+	for from, want := range map[ID]ID{"repl": "c0", "c0": "r0", "r0": OK} {
+		f := from
+		if _, ok := HandleKey(spec, &f, key(tcell.KeyDown)); !ok || f != want {
+			t.Errorf("down from %q = %q, want %q (separators skipped)", from, f, want)
+		}
+	}
+	f := ID("c0")
+	if _, ok := HandleKey(spec, &f, key(tcell.KeyUp)); !ok || f != "repl" {
+		t.Errorf("up from c0 = %q, want repl", f)
+	}
+}
+
+func TestInputsAreTheirOwnTabSegments(t *testing.T) {
+	cases := []struct {
+		from ID
+		k    tcell.Key
+		want ID
+	}{
+		{"find", tcell.KeyTab, "repl"}, // adjacent inputs: Tab does not skip the second
+		{"repl", tcell.KeyTab, "c0"},
+		{"c0", tcell.KeyTab, OK},
+		{"r0", tcell.KeyTab, OK}, // the option block is one segment
+		{OK, tcell.KeyTab, "find"},
+		{"find", tcell.KeyBacktab, OK},
+		{"repl", tcell.KeyBacktab, "find"},
+		{"c0", tcell.KeyBacktab, "repl"},
+		{"r0", tcell.KeyBacktab, "repl"},
+		{"find", tcell.KeyDown, "repl"},
+		{"repl", tcell.KeyUp, "find"},
+		{"find", tcell.KeyUp, "find"},
+	}
+	for _, c := range cases {
+		f := c.from
+		if ev, ok := HandleKey(inputSpec(), &f, key(c.k)); !ok || f != c.want || ev.ID != "" {
+			t.Errorf("%v from %q = (focus %q, ev %q, ok %v), want focus %q", c.k, c.from, f, ev.ID, ok, c.want)
+		}
+	}
+	// An input between two option rows splits the group into three segments.
+	spec := Spec{Groups: []Group{{Columns: [][]Item{{check("a", "A", 'a'), check("b", "B", 'b'), input("in", ""), check("c", "C", 'c')}}}}}
+	f := ID("a")
+	for _, want := range []ID{"in", "c", "a"} {
+		if _, ok := HandleKey(spec, &f, key(tcell.KeyTab)); !ok || f != want {
+			t.Fatalf("tab = %q, want %q", f, want)
+		}
+	}
+}
+
+func TestInputKeyContract(t *testing.T) {
+	unhandled := []*tcell.EventKey{
+		key(tcell.KeyLeft), key(tcell.KeyRight), key(tcell.KeyHome), key(tcell.KeyEnd),
+		key(tcell.KeyBackspace), key(tcell.KeyBackspace2), key(tcell.KeyDelete), key(tcell.KeyEsc),
+		runeKey(' ', tcell.ModNone), runeKey('a', tcell.ModNone), runeKey('Z', tcell.ModNone),
+		runeKey('o', tcell.ModNone), runeKey('c', tcell.ModNone), // PlainButtonKeys letters are text here
+		runeKey('x', tcell.ModAlt),
+	}
+	for _, k := range unhandled {
+		f := ID("find")
+		if ev, ok := HandleKey(inputSpec(), &f, k); ok || ev != (Event{}) || f != "find" {
+			t.Errorf("%v %q: (focus %q, ev %+v, ok %v), want unhandled with focus kept", k.Key(), k.Rune(), f, ev, ok)
+		}
+	}
+	f := ID("repl")
+	if ev, ok := HandleKey(inputSpec(), &f, key(tcell.KeyEnter)); !ok || ev.ID != "repl" || f != "repl" {
+		t.Errorf("Enter = (%q, %v, focus %q), want Event{repl}", ev.ID, ok, f)
+	}
+	// Alt+mnemonic of a checkbox / radio reports the widget but focus stays in the input.
+	for r, want := range map[rune]ID{'l': "c0", 'M': "r0"} {
+		f = "find"
+		if ev, ok := HandleKey(inputSpec(), &f, runeKey(r, tcell.ModAlt)); !ok || ev.ID != want || f != "find" {
+			t.Errorf("Alt+%c = (%q, %v, focus %q), want %q with focus kept", r, ev.ID, ok, f, want)
+		}
+	}
+	// A button mnemonic still focuses the button.
+	f = "find"
+	if ev, ok := HandleKey(inputSpec(), &f, runeKey('o', tcell.ModAlt)); !ok || ev.ID != OK || f != OK {
+		t.Errorf("Alt+o = (%q, %v, focus %q), want OK focused", ev.ID, ok, f)
+	}
+	// Off an input the same keys keep working: Space toggles, plain button letters press.
+	f = "c0"
+	if ev, ok := HandleKey(inputSpec(), &f, runeKey(' ', tcell.ModNone)); !ok || ev.ID != "c0" {
+		t.Errorf("Space on checkbox = (%q, %v)", ev.ID, ok)
+	}
+	if ev, ok := HandleKey(inputSpec(), &f, runeKey('o', tcell.ModNone)); !ok || ev.ID != OK || f != "c0" {
+		t.Errorf("plain o on checkbox = (%q, %v, focus %q)", ev.ID, ok, f)
+	}
+	// Alt mnemonic from a non-input row still moves focus.
+	f = "r0"
+	if _, ok := HandleKey(inputSpec(), &f, runeKey('l', tcell.ModAlt)); !ok || f != "c0" {
+		t.Errorf("Alt+l from radio: focus %q, want c0", f)
+	}
+}
+
+func TestInputClick(t *testing.T) {
+	spec := inputSpec()
+	focus := ID("c0")
+	ev, ok := Click(spec, 80, 24, &focus, 22+5, 9) // 5 cells into the second input, which is empty
+	if !ok || ev.ID != "repl" || ev.Col != 5 || focus != "repl" {
+		t.Fatalf("click input: got (%+v, %v, focus %q), want repl with Col 5", ev, ok, focus)
+	}
+	if ev, ok := Click(spec, 80, 24, &focus, 22, 8); !ok || ev.ID != "find" || ev.Col != 0 {
+		t.Fatalf("click first cell: got (%+v, %v)", ev, ok)
+	}
+	if ev, ok := Click(spec, 80, 24, &focus, 57, 8); !ok || ev.Col != 35 {
+		t.Fatalf("click last cell: got (%+v, %v), want Col 35", ev, ok)
+	}
+	// Other widgets report no column.
+	if ev, _ := Click(spec, 80, 24, &focus, 22, 11); ev.ID != "c0" || ev.Col != 0 {
+		t.Fatalf("click checkbox = %+v", ev)
+	}
+	for _, miss := range [][2]int{{21, 8}, {58, 8}} { // the margins around the input
+		if id, hit := HitTest(mustPlace(t, spec), miss[0], miss[1]); hit {
+			t.Errorf("(%d,%d) hit %q, want a miss in the input margin", miss[0], miss[1], id)
+		}
+	}
+}
+
+func mustPlace(t *testing.T, spec Spec) Placement {
+	t.Helper()
+	p, ok := Place(80, 24, spec)
+	if !ok {
+		t.Fatal("Place not ok")
+	}
+	return p
+}
+
+func TestLabelStylesPlacement(t *testing.T) {
+	spec := Spec{
+		Title: "Harbor", Width: 40, MinWidth: 20, Unclamped: true,
+		Groups: []Group{{Columns: [][]Item{{
+			{Kind: KindLabel, Label: "/home/harbor/orchard/meadow/lantern/willow", Fit: FitMiddle},
+			{Kind: KindLabel, Label: "/home/harbor/orchard/meadow/lantern/willow", Fit: FitPath, Prefix: "Shared: ", Indent: 2},
+			{Kind: KindLabel, Label: "abc", Center: true},
+			{Kind: KindLabel, Label: "Wrong password.", Style: TextError},
+		}}}},
+	}
+	p := mustPlace(t, spec) // content width 36
+	if l := p.Items[0]; l.Rect.Width != 36 || l.Label != primitive.TruncateMiddle(spec.Groups[0].Columns[0][0].Label, 36) {
+		t.Errorf("middle fit = %+v", l)
+	}
+	l := p.Items[1]
+	if l.Rect.X != 24 || l.Rect.Width != 34 || !strings.HasPrefix(l.Label, "Shared: ") || len([]rune(l.Label)) > 34 {
+		t.Errorf("path fit with prefix and indent = %+v", l)
+	}
+	if want := primitive.FitPathForWidth(spec.Groups[0].Columns[0][1].Label, 34-len("Shared: ")); l.Label != "Shared: "+want {
+		t.Errorf("path label = %q, want the path fitted into what the prefix leaves", l.Label)
+	}
+	if c := p.Items[2]; c.Rect.X != 22+16 || c.Rect.Width != 36-16 {
+		t.Errorf("centered = %+v, want pad (36-3)/2=16", c.Rect)
+	}
+}
+
+func TestDrawSeparatorAndInputs(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	styles := theme.Default()
+	spec := inputSpec()
+	spec.Groups[0].Columns[0][1] = Item{ID: "find", Kind: KindInput, Value: "anchor", Cursor: 6}
+	spec.Groups[0].Columns[0][2] = Item{ID: "repl", Kind: KindInput, Value: "x", Placeholder: true, Simple: true}
+	Draw(screen, 80, 24, spec, "find", styles)
+	screen.Show()
+	row := func(y int) string { return tcelltest.TextAt(screen, 20, y, 40) }
+	if got := row(10); got != "├"+strings.Repeat("─", 38)+"┤" {
+		t.Errorf("plain separator row = %q", got)
+	}
+	if got := row(13); !strings.Contains(got, "─ Sails ─") || !strings.HasPrefix(got, "├") || !strings.HasSuffix(got, "┤") {
+		t.Errorf("labelled separator row = %q", got)
+	}
+	if got := tcelltest.TextAt(screen, 22, 8, 6); got != "anchor" {
+		t.Errorf("input text = %q", got)
+	}
+	// The separator uses the frame's border style; inputs use the dialog input styles.
+	_, surface, _ := styles.DialogSurface.Decompose()
+	borderStyle := styles.DialogFrame.Background(surface)
+	if _, st, _ := screen.Get(30, 10); st != borderStyle {
+		t.Errorf("separator style = %v, want %v", st, borderStyle)
+	}
+	focusedBase, _ := styles.DialogInputPair(true)
+	if _, st, _ := screen.Get(22, 8); st != focusedBase {
+		t.Errorf("focused input style = %v, want %v", st, focusedBase)
+	}
+	if _, st, _ := screen.Get(40, 8); st != focusedBase {
+		t.Errorf("input fill style = %v, want %v", st, focusedBase)
+	}
+	// The cursor cell is reversed on the focused input.
+	if _, st, _ := screen.Get(28, 8); st != focusedBase.Reverse(true) {
+		t.Errorf("cursor cell style = %v, want reversed", st)
+	}
+	// An unfocused input uses the inactive pair.
+	inactiveBase, _ := styles.DialogInputPair(false)
+	if _, st, _ := screen.Get(40, 9); st != inactiveBase {
+		t.Errorf("unfocused input fill = %v, want %v", st, inactiveBase)
+	}
+}
+
+func TestDrawInputGhostAndPlaceholder(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	styles := theme.Default()
+	spec := Spec{
+		Title: "Harbor", Width: 40, MinWidth: 20,
+		Groups: []Group{{Columns: [][]Item{{
+			{ID: "ghost", Kind: KindInput, Value: "/srv/or", Cursor: 7, CompletionSuffix: "chard"},
+			{ID: "pending", Kind: KindInput, Value: "/srv/orchard/", Cursor: 13, Placeholder: true},
+			{ID: "bad", Kind: KindInput, Value: "x", Cursor: 1, Invalid: true},
+		}}}},
+	}
+	Draw(screen, 80, 24, spec, "ghost", styles)
+	screen.Show()
+	p := mustPlace(t, spec)
+	row := func(id ID) PlacedItem { it, _ := p.Item(id); return it }
+	if got := tcelltest.TextAt(screen, 22, row("ghost").Rect.Y, 12); got != "/srv/orchard" {
+		t.Errorf("ghost row = %q, want the suffix drawn after the typed text", got)
+	}
+	focusedBase, focusedGhost := styles.DialogInputPair(true)
+	if _, st, _ := screen.Get(22, row("ghost").Rect.Y); st != focusedBase {
+		t.Errorf("typed text style = %v, want %v", st, focusedBase)
+	}
+	if _, st, _ := screen.Get(30, row("ghost").Rect.Y); st != focusedGhost {
+		t.Errorf("ghost style = %v, want the placeholder style %v", st, focusedGhost)
+	}
+	inactiveBase, inactiveGhost := styles.DialogInputPair(false)
+	if _, st, _ := screen.Get(24, row("pending").Rect.Y); st != inactiveGhost {
+		t.Errorf("pending value style = %v, want the placeholder style %v", st, inactiveGhost)
+	}
+	if _, st, _ := screen.Get(22, row("bad").Rect.Y); st == inactiveBase {
+		t.Errorf("invalid input drawn with the normal style %v", st)
 	}
 }

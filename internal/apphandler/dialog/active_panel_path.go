@@ -81,7 +81,7 @@ func (h *Handler) applyTransferDestinationFromInactivePanel() {
 }
 
 func (h *Handler) flattenDialogDestinationFooterEligible() bool {
-	return h.model.FlattenDialog.Open && h.model.FlattenDialog.FocusField == 0
+	return h.model.FlattenDialog.Open && h.model.FlattenDialog.FocusOnDest()
 }
 
 // FlattenDialogOverlayFooterKeys builds the flatten dialog's "Active path"/"Inactive path"

@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // OpenFlattenDialog opens the flatten dialog for the active panel's selection, prefilling the
@@ -51,7 +52,7 @@ func (h *Handler) OpenFlattenDialog() {
 		Destination: dest,
 		Recursive:   h.host.Config().Operations.FlattenRecursive,
 		RemoveEmpty: h.host.Config().Operations.FlattenRemoveEmptyDirs,
-		FocusField:  0,
+		Focus:       dialog.FlattenDest,
 		DirRoots:    rootStrs,
 	}
 	h.host.ClearTransientMessage()
@@ -83,49 +84,37 @@ func (h *Handler) CloseFlattenDialog() {
 	h.model.DestinationTargetSecondary = false
 }
 
-// tryFlattenToggle handles the Recursive/RemoveEmpty toggle shortcuts: Alt+R/Alt+E always,
-// and the plain r/e/Space mnemonics when the matching checkbox row is focused. Returns true
-// when handled.
-func (h *Handler) tryFlattenToggle(event *tcell.EventKey) bool {
-	d := &h.model.FlattenDialog
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'r', 'R':
-			d.Recursive = !d.Recursive
-			return true
-		case 'e', 'E':
-			d.RemoveEmpty = !d.RemoveEmpty
-			return true
-		}
-	}
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && event.Rune() == ' ' {
-		switch d.FocusField {
-		case 1:
-			d.Recursive = !d.Recursive
-			return true
-		case 2:
-			d.RemoveEmpty = !d.RemoveEmpty
-			return true
-		}
-	}
-	return false
-}
-
 // handleFlattenDestNavKey handles Left/Right cursor movement on the destination field while
 // it is focused. Returns true when the key was handled (caller should return); false to fall
 // through to the generic focus-move / Enter handling below.
 func (h *Handler) handleFlattenDestNavKey(event *tcell.EventKey) bool {
 	d := &h.model.FlattenDialog
-	return h.DestFieldNav(event, &d.Destination, d.FocusField)
+	return h.DestFieldNav(event, &d.Destination, d.FocusOnDest())
+}
+
+// applyFlattenEvent acts on an activation from the widget spec: checkboxes toggle, Enter in the
+// destination field or OK confirms, Cancel closes.
+func (h *Handler) applyFlattenEvent(ev dlg.Event) {
+	h.model.FlattenDialog.Apply(ev)
+	switch ev.ID {
+	case dialog.FlattenDest, dlg.OK:
+		h.confirmFlatten()
+	case dlg.Cancel:
+		h.CloseFlattenDialog()
+	}
 }
 
 // HandleFlattenDialogKey dispatches a key event to the open flatten dialog.
 func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 	d := &h.model.FlattenDialog
-	if h.tryFlattenToggle(event) {
-		return
+	// Alt mnemonics (Recursive, Remove empty) win over every other chord, also in the destination field.
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		if ev, ok := dlg.HandleKey(dialog.FlattenView(*d), &d.Focus, event); ok {
+			h.applyFlattenEvent(ev)
+			return
+		}
 	}
-	if h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusField, h.ArmFlattenDestinationValidateTimer) {
+	if h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusOnDest(), h.ArmFlattenDestinationValidateTimer) {
 		return
 	}
 	if h.TryPathPickerHostShortcut(event) {
@@ -137,37 +126,13 @@ func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 	if h.handleFlattenDestNavKey(event) {
 		return
 	}
-	if focus, ok := dialog.FlattenDialogMoveFocus(d.FocusField, event.Key()); ok {
-		d.FocusField = focus
+	if ev, ok := dlg.HandleKey(dialog.FlattenView(*d), &d.Focus, event); ok {
+		h.applyFlattenEvent(ev)
 		return
 	}
-	if event.Key() == tcell.KeyEnter {
-		tform := dialog.NewFlattenDialogLinearForm()
-		if d.FocusField == 0 {
-			h.confirmFlatten()
-			return
-		}
-		switch d.FocusField {
-		case 1:
-			d.Recursive = !d.Recursive
-			return
-		case 2:
-			d.RemoveEmpty = !d.RemoveEmpty
-			return
-		case tform.OKIndex():
-			h.confirmFlatten()
-			return
-		case tform.CancelIndex():
-			h.CloseFlattenDialog()
-			return
-		}
-	}
-	if d.FocusField == 0 {
-		if h.editFlattenFieldKey(event, &d.Destination) {
-			h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
-			h.ArmFlattenDestinationValidateTimer()
-			return
-		}
+	if d.FocusOnDest() && h.editFlattenFieldKey(event, &d.Destination) {
+		h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
+		h.ArmFlattenDestinationValidateTimer()
 	}
 }
 

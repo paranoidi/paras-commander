@@ -6,10 +6,10 @@ import (
 )
 
 // DestFieldNav handles Left/Right cursor movement on a destination path field while
-// FocusField is 0. Shared by the transfer and flatten dialogs.
+// the destination field is focused. Shared by the transfer and flatten dialogs.
 // Returns true when the key was handled (caller should return).
-func (h *Handler) DestFieldNav(event *tcell.EventKey, field *dialog.FileDialogField, focusField int) bool {
-	if focusField != 0 || field == nil {
+func (h *Handler) DestFieldNav(event *tcell.EventKey, field *dialog.FileDialogField, focused bool) bool {
+	if !focused || field == nil {
 		return false
 	}
 	switch event.Key() {
@@ -43,8 +43,8 @@ func (h *Handler) DestFieldNav(event *tcell.EventKey, field *dialog.FileDialogFi
 
 // DestFieldTryCompletionKey handles Tab/Up/Down/Enter/Esc for the completion dropdown on a
 // destination path field. Shared by the transfer and flatten dialogs.
-func (h *Handler) DestFieldTryCompletionKey(event *tcell.EventKey, field *dialog.FileDialogField, focusField int, armValidate func()) bool {
-	if focusField != 0 || field == nil {
+func (h *Handler) DestFieldTryCompletionKey(event *tcell.EventKey, field *dialog.FileDialogField, focused bool, armValidate func()) bool {
+	if !focused || field == nil {
 		return false
 	}
 	return h.tryPathFieldCompletionKey(event, field, h.TransferDestinationTextWidth(), armValidate)

@@ -2,56 +2,21 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-const flattenDialogNumContent = 3
-
-// DrawFlattenDialog paints the flatten confirmation modal.
+// DrawFlattenDialog paints the flatten confirmation modal from its widget spec (see FlattenView),
+// then the destination's completion dropdown anchored under the input row.
 func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogState, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
-	width := PreferredFormDialogWidth
-	height := 10
-	rect := draw.CenteredDialogRect(layout, width, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Flatten", styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-
-	primitive.Text(screen, draw.DialogTextX(rect), rect.Y+1, draw.DialogContentWidth(rect), "Destination:", styles.DialogText.Background(dbg))
-
-	inputY := rect.Y + 2
-	inputWidth := draw.DialogContentWidth(rect)
-	rowFocused := state.FocusField == 0
-	destInvalid := state.DestPathInvalid && !state.DestPathCheckPending
-	drawInputFieldInvalid(screen, draw.DialogTextX(rect), inputY, inputWidth, state.Destination, rowFocused, destInvalid, styles)
-
-	sep1Y := rect.Y + 3
-	draw.DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
-
-	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), sep1Y+1, "Recursive flatten", 'R', state.Recursive, state.FocusField == 1, false, styles)
-	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), sep1Y+2, "Remove empty directories", 'E', state.RemoveEmpty, state.FocusField == 2, false, styles)
-
-	sep2Y := sep1Y + 3
-	draw.DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)
-
-	tform := NewFlattenDialogLinearForm()
-	buttonY := rect.Y + rect.Height - 2
-	draw.DrawOKCancelButtonRow(screen, rect, buttonY, state.FocusField == tform.OKIndex(), state.FocusField == tform.CancelIndex(), styles)
-
-	drawPathCompletionDropdown(screen, draw.DialogTextX(rect), inputY+1, state.Destination.Scroll, state.Destination.Completion, scrollbarStyle, styles)
-}
-
-// FlattenDialogLinearForm is the flatten dialog focus layout (destination + 2 checkboxes + OK/Cancel).
-type FlattenDialogLinearForm = DialogTrailingButtonsForm
-
-// NewFlattenDialogLinearForm returns the flatten dialog focus layout.
-// Segments: destination(0) | recursive+removeEmpty(1,2) | buttons(3).
-func NewFlattenDialogLinearForm() DialogTrailingButtonsForm {
-	return NewDialogTrailingButtonsForm(flattenDialogNumContent, 2).WithSegments(0, 1, flattenDialogNumContent)
-}
-
-// FlattenDialogMoveFocus applies standard dialog navigation for the flatten dialog.
-func FlattenDialogMoveFocus(focus int, key tcell.Key) (int, bool) {
-	return NewFlattenDialogLinearForm().MoveFocus(focus, key)
+	spec := FlattenView(state)
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
+	p, ok := dlg.Place(layout.Width, layout.Height, spec)
+	if !ok {
+		return
+	}
+	if in, ok := p.Item(FlattenDest); ok {
+		drawPathCompletionDropdown(screen, in.Rect.X, in.Rect.Y+1, state.Destination.Scroll, state.Destination.Completion, scrollbarStyle, styles)
+	}
 }

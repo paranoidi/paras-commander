@@ -1,0 +1,320 @@
+== open ==
+focus=input password="" cursor=0
+-- text --
+                                               ││               
+                                               ││               
+┌───────────────────── Permission denied ──────────────────────┐
+│ Delete failed                                                │
+│ /srv/harbor/orchard/meadow.txt                               │
+│ Incorrect password.                                          │
+├──────────────────────────────────────────────────────────────┤
+│ Password:                                                    │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│            [ Elevate ]    [ Skip ]    [ Cancel ]             │
+└──────────────────────────────────────────────────────────────┘
+                                               ││               
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+ccccccccccccccccccccccdddddddddddddddddddccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccfgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggcc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccchhhihhhhhhhhhcchhhihhhhhhcchhhihhhhhhhhccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+== a ==
+focus=input password="a" cursor=1
+-- text --
+                                               ││               
+                                               ││               
+┌───────────────────── Permission denied ──────────────────────┐
+│ Delete failed                                                │
+│ /srv/harbor/orchard/meadow.txt                               │
+│ Incorrect password.                                          │
+├──────────────────────────────────────────────────────────────┤
+│ Password:                                                    │
+│ *                                                            │
+├──────────────────────────────────────────────────────────────┤
+│            [ Elevate ]    [ Skip ]    [ Cancel ]             │
+└──────────────────────────────────────────────────────────────┘
+                                               ││               
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+ccccccccccccccccccccccdddddddddddddddddddccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccfgffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccchhhihhhhhhhhhcchhhihhhhhhcchhhihhhhhhhhccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+== b ==
+focus=input password="ab" cursor=2
+-- text --
+                                               ││               
+                                               ││               
+┌───────────────────── Permission denied ──────────────────────┐
+│ Delete failed                                                │
+│ /srv/harbor/orchard/meadow.txt                               │
+│ Incorrect password.                                          │
+├──────────────────────────────────────────────────────────────┤
+│ Password:                                                    │
+│ **                                                           │
+├──────────────────────────────────────────────────────────────┤
+│            [ Elevate ]    [ Skip ]    [ Cancel ]             │
+└──────────────────────────────────────────────────────────────┘
+                                               ││               
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+ccccccccccccccccccccccdddddddddddddddddddccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccffgfffffffffffffffffffffffffffffffffffffffffffffffffffffffffcc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccchhhihhhhhhhhhcchhhihhhhhhcchhhihhhhhhhhccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+== Down ==
+focus=elevate password="ab" cursor=2
+-- text --
+                                               ││               
+                                               ││               
+┌───────────────────── Permission denied ──────────────────────┐
+│ Delete failed                                                │
+│ /srv/harbor/orchard/meadow.txt                               │
+│ Incorrect password.                                          │
+├──────────────────────────────────────────────────────────────┤
+│ Password:                                                    │
+│ **                                                           │
+├──────────────────────────────────────────────────────────────┤
+│            [ Elevate ]    [ Skip ]    [ Cancel ]             │
+└──────────────────────────────────────────────────────────────┘
+                                               ││               
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+ccccccccccccccccccccccdddddddddddddddddddccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccggghgggggggggccfffiffffffccfffiffffffffccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+== Right ==
+focus=skip password="ab" cursor=2
+-- text --
+                                               ││               
+                                               ││               
+┌───────────────────── Permission denied ──────────────────────┐
+│ Delete failed                                                │
+│ /srv/harbor/orchard/meadow.txt                               │
+│ Incorrect password.                                          │
+├──────────────────────────────────────────────────────────────┤
+│ Password:                                                    │
+│ **                                                           │
+├──────────────────────────────────────────────────────────────┤
+│            [ Elevate ]    [ Skip ]    [ Cancel ]             │
+└──────────────────────────────────────────────────────────────┘
+                                               ││               
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+h fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+ccccccccccccccccccccccdddddddddddddddddddccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccfffgfffffffffcchhhihhhhhhccfffgffffffffccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+== Up ==
+focus=input password="ab" cursor=2
+-- text --
+                                               ││               
+                                               ││               
+┌───────────────────── Permission denied ──────────────────────┐
+│ Delete failed                                                │
+│ /srv/harbor/orchard/meadow.txt                               │
+│ Incorrect password.                                          │
+├──────────────────────────────────────────────────────────────┤
+│ Password:                                                    │
+│ **                                                           │
+├──────────────────────────────────────────────────────────────┤
+│            [ Elevate ]    [ Skip ]    [ Cancel ]             │
+└──────────────────────────────────────────────────────────────┘
+                                               ││               
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+ccccccccccccccccccccccdddddddddddddddddddccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccffgfffffffffffffffffffffffffffffffffffffffffffffffffffffffffcc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccchhhihhhhhhhhhcchhhihhhhhhcchhhihhhhhhhhccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+== Tab ==
+focus=elevate password="ab" cursor=2
+-- text --
+                                               ││               
+                                               ││               
+┌───────────────────── Permission denied ──────────────────────┐
+│ Delete failed                                                │
+│ /srv/harbor/orchard/meadow.txt                               │
+│ Incorrect password.                                          │
+├──────────────────────────────────────────────────────────────┤
+│ Password:                                                    │
+│ **                                                           │
+├──────────────────────────────────────────────────────────────┤
+│            [ Elevate ]    [ Skip ]    [ Cancel ]             │
+└──────────────────────────────────────────────────────────────┘
+                                               ││               
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+ccccccccccccccccccccccdddddddddddddddddddccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccggghgggggggggccfffiffffffccfffiffffffffccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+== Backtab ==
+focus=input password="ab" cursor=2
+-- text --
+                                               ││               
+                                               ││               
+┌───────────────────── Permission denied ──────────────────────┐
+│ Delete failed                                                │
+│ /srv/harbor/orchard/meadow.txt                               │
+│ Incorrect password.                                          │
+├──────────────────────────────────────────────────────────────┤
+│ Password:                                                    │
+│ **                                                           │
+├──────────────────────────────────────────────────────────────┤
+│            [ Elevate ]    [ Skip ]    [ Cancel ]             │
+└──────────────────────────────────────────────────────────────┘
+                                               ││               
+-- legend --
+a fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa
+ccccccccccccccccccccccdddddddddddddddddddccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeecc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccffgfffffffffffffffffffffffffffffffffffffffffffffffffffffffffcc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccccccccchhhihhhhhhhhhcchhhihhhhhhcchhhihhhhhhhhccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaa

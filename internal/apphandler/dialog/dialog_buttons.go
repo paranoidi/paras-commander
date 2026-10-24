@@ -76,7 +76,7 @@ func (h *Handler) FlattenDialogOK() { h.confirmFlatten() }
 // FlattenDialogCancel closes the destination completion dropdown, else the dialog.
 func (h *Handler) FlattenDialogCancel() {
 	d := &h.model.FlattenDialog
-	if d.FocusField == 0 && closeCompletion(&d.Destination.Completion) {
+	if d.FocusOnDest() && closeCompletion(&d.Destination.Completion) {
 		return
 	}
 	h.CloseFlattenDialog()

@@ -30,6 +30,12 @@ func find(spec Spec, id ID) (pos, bool) {
 	return pos{}, false
 }
 
+// itemAt returns the item at an item position (not a button).
+func itemAt(spec Spec, p pos) Item { return spec.Groups[p.group].Columns[p.col][p.row] }
+
+// isInput reports whether the focused widget p is a text input.
+func isInput(spec Spec, p pos) bool { return !p.isButton() && itemAt(spec, p).Kind == KindInput }
+
 // nextFocusable is the first focusable item of col strictly after row from (from -1 starts at the
 // top), and prevFocusable the last one strictly before row from.
 func nextFocusable(col []Item, from int) (ID, bool) {
@@ -68,18 +74,46 @@ func col0Last(g Group) (ID, bool) {
 	return prevFocusable(g.Columns[0], len(g.Columns[0]))
 }
 
-// segments are the first focusables of each Tab segment: every non-empty group, then the buttons.
-func segments(spec Spec) []ID {
-	var segs []ID
+// groupFocusables lists the focusable items of g in column-major order.
+func groupFocusables(g Group) []Item {
+	var out []Item
+	for _, col := range g.Columns {
+		for _, it := range col {
+			if it.focusable() {
+				out = append(out, it)
+			}
+		}
+	}
+	return out
+}
+
+// segmentTable returns the first focusable of each Tab segment and the segment index of every
+// focusable item. A group is one segment, except that every text input is a segment of its own
+// (also when inputs are adjacent) and splits the group around it. The buttons are the last segment.
+func segmentTable(spec Spec) (starts []ID, index map[ID]int) {
+	index = map[ID]int{}
 	for _, g := range spec.Groups {
-		if id, ok := groupFirst(g); ok {
-			segs = append(segs, id)
+		prevInput := false
+		for i, it := range groupFocusables(g) {
+			if i == 0 || it.Kind == KindInput || prevInput {
+				starts = append(starts, it.ID)
+			}
+			prevInput = it.Kind == KindInput
+			index[it.ID] = len(starts) - 1
 		}
 	}
 	if len(spec.Buttons) > 0 {
-		segs = append(segs, spec.Buttons[0].ID)
+		starts = append(starts, spec.Buttons[0].ID)
+		for _, b := range spec.Buttons {
+			index[b.ID] = len(starts) - 1
+		}
 	}
-	return segs
+	return starts, index
+}
+
+func segments(spec Spec) []ID {
+	starts, _ := segmentTable(spec)
+	return starts
 }
 
 // resolve maps an empty or unknown focus to the first focusable.
@@ -91,20 +125,6 @@ func resolve(spec Spec, focus ID) ID {
 		return segs[0]
 	}
 	return focus
-}
-
-// segmentIndex is the index in segments(spec) of the segment holding p.
-func segmentIndex(spec Spec, p pos) int {
-	if p.isButton() {
-		return len(segments(spec)) - 1
-	}
-	n := 0
-	for gi := range p.group {
-		if _, ok := groupFirst(spec.Groups[gi]); ok {
-			n++
-		}
-	}
-	return n
 }
 
 // nextGroupFirst is the first item of the first non-empty group after g, else the first button.
@@ -135,6 +155,17 @@ func prevGroupLast(spec Spec, g int) (ID, bool) {
 // with Spec.PlainButtonKeys a plain button mnemonic letter returns that button's Event without
 // moving focus. Anything else returns (Event{}, false). OK / Cancel / Esc chords are resolved by
 // the application before dialog keys reach here and are not handled.
+//
+// Text inputs (KindInput) are edited by the caller, not the engine. While an input is focused:
+//   - Up/Down and Tab/Backtab move focus as usual, and every input is a Tab segment of its own,
+//     also when inputs are adjacent;
+//   - Enter returns Event{ID: input}, which the caller treats as submit / OK;
+//   - Alt+mnemonic of a checkbox or radio returns that widget's Event but leaves focus in the
+//     input, so the user keeps typing (a button mnemonic still focuses the button);
+//   - Space, plain letters (also PlainButtonKeys letters), Left/Right, Home/End, Backspace,
+//     Delete and every other key return (Event{}, false): the caller feeds them to its text
+//     editing code (lineedit, scrollquery, path completion...) and keeps Value/Cursor/Scroll in its
+//     own state.
 func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 	*focus = resolve(spec, *focus)
 	cur, ok := find(spec, *focus)
@@ -156,7 +187,8 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		if ev.Key() == tcell.KeyBacktab {
 			step = -1
 		}
-		i := segmentIndex(spec, cur)
+		_, index := segmentTable(spec)
+		i := index[*focus]
 		return move(segs[(i+step+len(segs))%len(segs)], true)
 	case tcell.KeyDown:
 		if cur.isButton() {
@@ -178,6 +210,9 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		}
 		return Event{}, true
 	case tcell.KeyLeft, tcell.KeyRight:
+		if isInput(spec, cur) {
+			return Event{}, false // the caller moves the text cursor
+		}
 		d := 1
 		if ev.Key() == tcell.KeyLeft {
 			d = -1
@@ -194,19 +229,21 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		}
 		return Event{}, true
 	case tcell.KeyRune:
-		return handleRune(spec, focus, ev)
+		return handleRune(spec, focus, isInput(spec, cur), ev)
 	}
 	return Event{}, false
 }
 
-func handleRune(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
+func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, bool) {
 	r := unicode.ToLower(ev.Rune())
 	if keymap.AltLetterModifiers(ev.Modifiers()) {
 		for _, g := range spec.Groups {
 			for _, col := range g.Columns {
 				for _, it := range col {
 					if it.Mnemonic != 0 && unicode.ToLower(it.Mnemonic) == r {
-						*focus = it.ID
+						if !inInput { // a flipped option never pulls focus out of a text input
+							*focus = it.ID
+						}
 						return Event{ID: it.ID}, true
 					}
 				}
@@ -222,6 +259,9 @@ func handleRune(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 	}
 	if ev.Modifiers() != tcell.ModNone {
 		return Event{}, false
+	}
+	if inInput {
+		return Event{}, false // plain letters and Space are text
 	}
 	if ev.Rune() == ' ' {
 		return Event{ID: *focus}, true
@@ -247,5 +287,9 @@ func Click(spec Spec, screenW, screenH int, focus *ID, x, y int) (Event, bool) {
 		return Event{}, false
 	}
 	*focus = id
-	return Event{ID: id}, true
+	ev := Event{ID: id}
+	if it, ok := p.Item(id); ok && it.Kind == KindInput {
+		ev.Col = x - it.Rect.X
+	}
+	return ev, true
 }

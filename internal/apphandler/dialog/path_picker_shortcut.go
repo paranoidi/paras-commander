@@ -22,7 +22,7 @@ func (h *Handler) PathPickerHostFooterEligible() bool {
 		h.model.TransferDialog.FocusField == 0 {
 		return true
 	}
-	if h.model.FlattenDialog.Open && h.model.FlattenDialog.FocusField == 0 {
+	if h.model.FlattenDialog.Open && h.model.FlattenDialog.FocusOnDest() {
 		return true
 	}
 	return false

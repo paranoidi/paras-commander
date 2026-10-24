@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func (a *App) openDebounceCalibrateDialog() {
@@ -20,7 +21,7 @@ func (a *App) openDebounceCalibrateDialog() {
 	a.model.DebounceCalibrateDialog = dialog.DebounceCalibrateDialogState{
 		Open:          true,
 		Phase:         dialog.DebounceCalibrateEdit,
-		Focus:         0,
+		Focus:         dialog.DebounceDelay,
 		Value:         value,
 		Cursor:        utf8.RuneCountInString(value),
 		PreviewValue:  previewValue,
@@ -37,13 +38,13 @@ func (a *App) applyDebounceCalibrateDialog() {
 	st := &a.model.DebounceCalibrateDialog
 	ms, err := dialog.ParseDebounceMSInput(st.Value)
 	if err != nil {
-		st.Focus = 0
+		st.Focus = dialog.DebounceDelay
 		st.Status = fmt.Sprintf("Enter 0–%d", config.KeyRepeatDebounceMaxMS)
 		return
 	}
 	previewMS, err := dialog.ParseDebounceMSInput(st.PreviewValue)
 	if err != nil {
-		st.Focus = 1
+		st.Focus = dialog.DebouncePreview
 		// The status row sits under the first field, so name the field this one is about.
 		st.Status = fmt.Sprintf("Media preview: enter 0–%d", config.KeyRepeatDebounceMaxMS)
 		return
@@ -89,7 +90,7 @@ func (a *App) abortDebounceCalibrateMeasuring() {
 	st.Cursor = utf8.RuneCountInString(st.Value)
 	st.PreviewValue = st.PreviewSnapshot
 	st.PreviewCursor = utf8.RuneCountInString(st.PreviewValue)
-	st.Focus = dialog.NewDialogTrailingButtonsForm(2, 3).MiddleButtonIndex()
+	st.Focus = dialog.DebounceCalibrate
 	st.Status = ""
 	st.MeasureStep = dialog.MeasureAwaitPress
 	st.HoldIndex = 0
@@ -132,7 +133,7 @@ func (a *App) finishDebounceCalibrateMeasuring() {
 	st.Cursor = utf8.RuneCountInString(st.Value)
 	st.PreviewValue = dialog.FormatDebounceMS(previewMS)
 	st.PreviewCursor = utf8.RuneCountInString(st.PreviewValue)
-	st.Focus = 0
+	st.Focus = dialog.DebounceDelay
 	st.Status = fmt.Sprintf("Repeat %d ms, delay %d ms (margins %d/%d ms).",
 		avg, maxDelay, dialog.CalibrationMarginMS(), dialog.CalibrationMediaPreviewMarginMS())
 	st.MeasureStep = dialog.MeasureAwaitPress
@@ -195,37 +196,31 @@ func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 		return
 	}
 
-	form := dialog.NewDialogTrailingButtonsForm(2, 3)
 	if altDialogCalibrate(event) {
 		a.beginDebounceCalibrateMeasuring()
 		return
 	}
-	switch event.Key() {
-	case tcell.KeyEnter:
-		switch st.Focus {
-		case form.CancelIndex():
+	onInput := st.Focus == dialog.DebounceDelay || st.Focus == dialog.DebouncePreview
+	if onInput && event.Key() != tcell.KeyEnter {
+		st.Status = ""
+	}
+	if ev, ok := dlg.HandleKey(dialog.DebounceCalibrateView(*st), &st.Focus, event); ok {
+		switch ev.ID {
+		case "":
+		case dlg.Cancel:
 			a.closeDebounceCalibrateDialog()
-		case form.MiddleButtonIndex():
+		case dialog.DebounceCalibrate:
 			a.beginDebounceCalibrateMeasuring()
-		default:
+		default: // OK, or Enter in an input
 			a.applyDebounceCalibrateDialog()
 		}
 		return
 	}
-
 	switch st.Focus {
-	case 0:
-		if a.handleDebounceCalibrateInputKey(event, &st.Value, &st.Cursor) {
-			return
-		}
-	case 1:
-		if a.handleDebounceCalibrateInputKey(event, &st.PreviewValue, &st.PreviewCursor) {
-			return
-		}
-	}
-
-	if nf, ok := form.MoveFocus(st.Focus, event.Key()); ok {
-		st.Focus = nf
+	case dialog.DebounceDelay:
+		handleDebounceCalibrateInputKey(event, &st.Value, &st.Cursor)
+	case dialog.DebouncePreview:
+		handleDebounceCalibrateInputKey(event, &st.PreviewValue, &st.PreviewCursor)
 	}
 }
 
@@ -235,8 +230,8 @@ func altDialogCalibrate(ev *tcell.EventKey) bool {
 }
 
 // handleDebounceCalibrateInputKey edits one numeric field of the dialog; shared by both inputs.
-func (a *App) handleDebounceCalibrateInputKey(event *tcell.EventKey, value *string, cursor *int) bool {
-	a.model.DebounceCalibrateDialog.Status = ""
+// Keys it does not know are ignored, and non-digit runes are swallowed.
+func handleDebounceCalibrateInputKey(event *tcell.EventKey, value *string, cursor *int) {
 	switch event.Key() {
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if *cursor > 0 {
@@ -244,43 +239,31 @@ func (a *App) handleDebounceCalibrateInputKey(event *tcell.EventKey, value *stri
 			*value = string(runes[:*cursor-1]) + string(runes[*cursor:])
 			*cursor--
 		}
-		return true
 	case tcell.KeyDelete:
 		runes := []rune(*value)
 		if *cursor < len(runes) {
 			*value = string(runes[:*cursor]) + string(runes[*cursor+1:])
 		}
-		return true
 	case tcell.KeyLeft:
 		if *cursor > 0 {
 			*cursor--
 		}
-		return true
 	case tcell.KeyRight:
 		if *cursor < utf8.RuneCountInString(*value) {
 			*cursor++
 		}
-		return true
 	case tcell.KeyHome:
 		*cursor = 0
-		return true
 	case tcell.KeyEnd:
 		*cursor = utf8.RuneCountInString(*value)
-		return true
 	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			return false
-		}
-		if !unicode.IsDigit(event.Rune()) {
-			return true
+		if event.Modifiers() != tcell.ModNone || !unicode.IsDigit(event.Rune()) {
+			return
 		}
 		runes := []rune(*value)
 		runes = append(runes[:*cursor], append([]rune{event.Rune()}, runes[*cursor:]...)...)
 		*value = string(runes)
 		*cursor++
-		return true
-	default:
-		return false
 	}
 }
 

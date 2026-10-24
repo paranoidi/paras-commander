@@ -115,3 +115,22 @@ func dedupReturnGoldenState(scope, focus string) DedupReturnDialogState {
 	st.Focus = map[string]dlg.ID{"first": DedupReturnFirst, "second": DedupReturnSecond, "cancel": dlg.Cancel}[focus]
 	return st
 }
+
+func setElevateGoldenFocus(st *ElevateDialogState, focus string) {
+	st.Focus = map[string]dlg.ID{"input": ElevatePassword, "elevate": ElevateRetry, "skip": ElevateSkip, "cancel": dlg.Cancel}[focus]
+}
+
+func setDebounceGoldenFocus(st *DebounceCalibrateDialogState, focus string) {
+	st.Focus = map[string]dlg.ID{"in0": DebounceDelay, "in1": DebouncePreview, "ok": dlg.OK, "calibrate": DebounceCalibrate, "cancel": dlg.Cancel}[focus]
+}
+
+func setFlattenGoldenFocus(st *FlattenDialogState, focus string) {
+	st.Focus = map[string]dlg.ID{"dest": FlattenDest, "rec": FlattenRecursive, "empty": FlattenRemoveEmpty, "ok": dlg.OK, "cancel": dlg.Cancel}[focus]
+}
+
+func setCompareMergeGoldenFocus(st *CompareMergeDialogState, focus string) {
+	st.Focus = map[string]dlg.ID{
+		"left": CompareMergeLeft, "right": CompareMergeRight, "missing": CompareMergeMissing, "modified": CompareMergeModified,
+		"copy": CompareMergeCopy, "move": CompareMergeMove, "ok": dlg.OK, "cancel": dlg.Cancel,
+	}[focus]
+}

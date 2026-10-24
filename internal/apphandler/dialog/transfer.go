@@ -237,7 +237,7 @@ func (h *Handler) handleTransferDestinationNav(event *tcell.EventKey) bool {
 	if d.Phase != dialog.TransferPhaseDestination {
 		return false
 	}
-	return h.DestFieldNav(event, &d.Destination, d.FocusField)
+	return h.DestFieldNav(event, &d.Destination, d.FocusField == 0)
 }
 
 // handleTransferEnter handles Enter on the transfer dialog: confirm from the destination
@@ -302,7 +302,7 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if d.Phase == dialog.TransferPhaseDestination &&
-		h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusField, h.ArmTransferDestinationValidateTimer) {
+		h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusField == 0, h.ArmTransferDestinationValidateTimer) {
 		return
 	}
 	// Alt+P = Add paused (mnemonic; must run before field edit).

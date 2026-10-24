@@ -26,7 +26,11 @@ type simpleGolden struct {
 	draw func(screen tcell.Screen, layout Layout)
 }
 
-func dumpDialogBand(t *testing.T, c simpleGolden) string {
+// goldenBandRows is how many screen rows a dialog's goldens dump around the vertical center;
+// dialogs not listed dump 16.
+var goldenBandRows = map[string]int{}
+
+func dumpDialogBand(t *testing.T, c simpleGolden, rows int) string {
 	t.Helper()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -36,8 +40,8 @@ func dumpDialogBand(t *testing.T, c simpleGolden) string {
 	screen.SetSize(c.w, c.h)
 	c.draw(screen, Layout{Width: c.w, Height: c.h})
 	screen.Show()
-	top := max(c.h/2-8, 0)
-	return tcelltest.DumpRect(screen, 0, top, c.w, min(16, c.h-top))
+	top := max(c.h/2-rows/2, 0)
+	return tcelltest.DumpRect(screen, 0, top, c.w, min(rows, c.h-top))
 }
 
 func checkGoldenFile(t *testing.T, dir, name, got string) {
@@ -61,11 +65,18 @@ func checkGoldenFile(t *testing.T, dir, name, got string) {
 	}
 }
 
+func bandRows(dialogName string) int {
+	if n := goldenBandRows[dialogName]; n > 0 {
+		return n
+	}
+	return 16
+}
+
 func runSimpleGoldens(t *testing.T, dialogName string, cases []simpleGolden) {
 	t.Helper()
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			checkGoldenFile(t, filepath.Join(simpleGoldenRoot, dialogName), c.name, dumpDialogBand(t, c))
+			checkGoldenFile(t, filepath.Join(simpleGoldenRoot, dialogName), c.name, dumpDialogBand(t, c, bandRows(dialogName)))
 		})
 	}
 }
