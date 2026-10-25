@@ -178,7 +178,8 @@ func sftpKeyApp(t *testing.T, dir string, n int) *App {
 func sftpKeyDialog(name string, n int) keyGoldenDialog {
 	return keyGoldenDialog{
 		name: name, rx: 1, ry: 3, rw: 78, rh: 17, // the dialog only: the panels behind it show the host's free disk space
-		setup: func(t *testing.T, dir string) *App { return sftpKeyApp(t, dir, n) },
+		serial: true, // setup swaps the package-level sftpTouchConn
+		setup:  func(t *testing.T, dir string) *App { return sftpKeyApp(t, dir, n) },
 		state: func(app *App) string {
 			st := app.model.SFTPConnectDialog
 			return fmt.Sprintf("focus=%s selected=%d scroll=%d query=%q qcursor=%d ranked=%d location=%q lcursor=%d pending=%v",
@@ -278,6 +279,7 @@ func dedupEmptyKeyDialog(name string) keyGoldenDialog {
 	var tt *testing.T
 	return keyGoldenDialog{
 		name: name, rx: 12, ry: 6, rw: 56, rh: 12,
+		serial: true, // setup writes the sub and tt variables shared by this dialog's scripts
 		setup: func(t *testing.T, _ string) *App {
 			tt = t
 			sub = filepath.Join(t.TempDir(), "orchard")

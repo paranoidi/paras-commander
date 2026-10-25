@@ -73,6 +73,7 @@ func cmdOutDialog(name, mode string, lines int, withPaths bool, exit int) keyGol
 	var workDir string // the temp dir of the script under test (scripts run one at a time)
 	return keyGoldenDialog{
 		name: name, rx: cmdOutRectX, ry: cmdOutRectY, rw: cmdOutRectW, rh: cmdOutRectH,
+		serial: true, // setup writes workDir and the shared cmdOutCancels map
 		setup: func(t *testing.T, dir string) *App {
 			workDir = dir
 			app := newApp(t, newScreen(t, 80, 24), dir)

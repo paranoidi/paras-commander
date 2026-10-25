@@ -197,6 +197,7 @@ func TestSortDialogKeyScripts(t *testing.T) {
 		for _, metas := range sc.metas {
 			name := fmt.Sprintf("%s_meta%d", sc.name, metas)
 			t.Run(name, func(t *testing.T) {
+				t.Parallel()
 				got := runSortKeyScript(t, metas, strings.Fields(sc.keys))
 				path := filepath.Join(sortKeyGoldenDir, name+".golden")
 				if *updateKeyGolden {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -42,6 +43,9 @@ type keyGoldenDialog struct {
 	// action runs a script token starting with "@": an injected asynchronous result (streamed
 	// output, a finished run) rather than a key. nil = every token is a key.
 	action func(t *testing.T, app *App, tok string)
+	// serial keeps the scripts off t.Parallel, for setups that call t.Setenv (forbidden in
+	// parallel tests) or share fixture state between scripts.
+	serial bool
 }
 
 func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
@@ -81,6 +85,12 @@ func runKeyGoldenScripts(t *testing.T, d keyGoldenDialog, scripts []simpleKeyScr
 	t.Helper()
 	for _, sc := range scripts {
 		t.Run(sc.name, func(t *testing.T) {
+			// Each script builds its own App on its own screen and temp dir. A yank reads the
+			// process-wide lineedit kill buffer, which parallel scripts' kills would overwrite;
+			// serial subtests finish before the parallel ones are released.
+			if !d.serial && !slices.Contains(strings.Fields(sc.keys), "Ctrl+Y") {
+				t.Parallel()
+			}
 			got := runKeyGolden(t, d, strings.Fields(sc.keys))
 			path := filepath.Join(simpleKeyGoldenDir, d.name, sc.name+".golden")
 			if *updateKeyGolden {
@@ -350,6 +360,7 @@ var hostKeyReplies = map[*App]hostKeyReply{}
 
 var hostKeyKeyDialog = keyGoldenDialog{
 	name: "hostkey", rx: 4, ry: 8, rw: 72, rh: 8,
+	serial: true, // setup writes the shared hostKeyReplies map
 	setup: func(t *testing.T, dir string) *App {
 		app := newApp(t, newScreen(t, 80, 24), dir)
 		reply := make(hostKeyReply, 1)
@@ -434,6 +445,7 @@ file = "echo meta"
 
 var metaKeyDialog = keyGoldenDialog{
 	name: "meta", rx: 12, ry: 8, rw: 56, rh: 7,
+	serial: true, // setup swaps the package-level externalEditorRunner
 	setup: func(t *testing.T, dir string) *App {
 		cfgDir := filepath.Join(dir, "config")
 		if err := os.MkdirAll(cfgDir, 0o755); err != nil {

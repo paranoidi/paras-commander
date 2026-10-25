@@ -28,6 +28,14 @@ func pickerFocusName(app *App) string {
 	return "filter"
 }
 
+// pickerKeyBookmarksDialog is pickerKeyDialog over pickerKeyBookmarksApp, kept serial because that
+// setup points XDG_CONFIG_HOME at its fixture marks.
+func pickerKeyBookmarksDialog(name string, n int) keyGoldenDialog {
+	d := pickerKeyDialog(name, func(t *testing.T, dir string) *App { return pickerKeyBookmarksApp(t, dir, n) })
+	d.serial = true
+	return d
+}
+
 // pickerKeyBookmarksApp opens the bookmarks picker over n fixture marks.
 func pickerKeyBookmarksApp(t *testing.T, dir string, n int) *App {
 	t.Helper()
@@ -132,7 +140,7 @@ func pickerListScripts() []simpleKeyScript {
 }
 
 func TestPathPickerNavigateKeyScripts(t *testing.T) {
-	d := pickerKeyDialog("path_picker_navigate", func(t *testing.T, dir string) *App { return pickerKeyBookmarksApp(t, dir, 20) })
+	d := pickerKeyBookmarksDialog("path_picker_navigate", 20)
 	scripts := append(pickerListScripts(),
 		simpleKeyScript{"tab-cancel-enter", "Tab Enter"},
 		simpleKeyScript{"tab-cancel-space", "Down Tab Space"},
@@ -144,13 +152,13 @@ func TestPathPickerNavigateKeyScripts(t *testing.T) {
 		simpleKeyScript{"f8-delete-filtered", "e F8"},
 	)
 	runKeyGoldenScripts(t, d, scripts)
-	runKeyGoldenScripts(t, pickerKeyDialog("path_picker_navigate_short", func(t *testing.T, dir string) *App { return pickerKeyBookmarksApp(t, dir, 3) }),
+	runKeyGoldenScripts(t, pickerKeyBookmarksDialog("path_picker_navigate_short", 3),
 		[]simpleKeyScript{
 			{"walk", "Down Down Down Up Up Up PgDn PgUp Ctrl+End Ctrl+Home"},
 			{"filter", "s r"},
 			{"tab-around", "Tab Tab Tab"},
 		})
-	runKeyGoldenScripts(t, pickerKeyDialog("path_picker_navigate_empty", func(t *testing.T, dir string) *App { return pickerKeyBookmarksApp(t, dir, 0) }),
+	runKeyGoldenScripts(t, pickerKeyBookmarksDialog("path_picker_navigate_empty", 0),
 		[]simpleKeyScript{
 			{"nav", "Down Up PgDn PgUp Ctrl+End Tab Tab Down Up"},
 			{"typing", "x y z Up Tab Backspace"},

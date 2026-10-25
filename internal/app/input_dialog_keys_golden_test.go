@@ -29,6 +29,7 @@ func elevateName(st dialog.ElevateDialogState) string {
 func elevateKeyDialog(name string, req ops.PermissionRequest) keyGoldenDialog {
 	return keyGoldenDialog{
 		name: name, rx: 8, ry: 5, rw: 64, rh: 13,
+		serial: true, // setup writes the package-level elevateReply
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""
