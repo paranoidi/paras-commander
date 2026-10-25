@@ -65,6 +65,15 @@ func (m *Map) FirstEventKeyForAction(actionID string) (*tcell.EventKey, bool) {
 	return nil, false
 }
 
+// EventForKey returns the key press a binding string such as "M-o" or "F5" stands for.
+func EventForKey(key string) (*tcell.EventKey, bool) {
+	ch, err := ParseKey(key)
+	if err != nil {
+		return nil, false
+	}
+	return chordToEventKey(ch), true
+}
+
 func chordToEventKey(ch Chord) *tcell.EventKey {
 	if ch.Key == tcell.KeyRune {
 		return tcell.NewEventKey(tcell.KeyRune, ch.Rune, ch.Mod)

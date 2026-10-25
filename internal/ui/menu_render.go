@@ -99,27 +99,13 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.
 	primitive.Text(screen, x, rect.Y, rect.Width, "", barStyle)
 	tailW := menuBarRightTailRuneCount(attention, perm, showMenuBarSpinner)
 	clipExclusive := menuBarMenusClipExclusive(rect, tailW)
-	for index, menuDefinition := range menus {
-		label := " " + menuDefinition.Label + " "
-		labelW := utf8.RuneCountInString(label)
+	spans, x := menuBarLabelSpans(rect, menus, clipExclusive)
+	for index, span := range spans {
 		style := barStyle
-		accent := styles.MenuBarAccent
 		if state.Open && index == state.ActiveMenu {
 			style = styles.MenuBarSelected
 		}
-		if x >= clipExclusive {
-			break
-		}
-		avail := clipExclusive - x
-		if avail <= 0 {
-			break
-		}
-		drawW := min(labelW, avail)
-		drawMenuBarLabel(screen, x, rect.Y, drawW, label, menuDefinition.Shortcut, style, accent, state.Open && !state.PulldownOpen)
-		if labelW > avail {
-			break
-		}
-		x += labelW + 1
+		drawMenuBarLabel(screen, span.X, rect.Y, span.Width, " "+menus[index].Label+" ", menus[index].Shortcut, style, styles.MenuBarAccent, state.Open && !state.PulldownOpen)
 	}
 	gapStart := min(max(x, menuBarContentStart(rect)), clipExclusive)
 	gapWidth := clipExclusive - gapStart
@@ -146,25 +132,35 @@ func menuBarMenusClipExclusive(rect Rect, permissionTailRunes int) int {
 	return max(rect.X, permStart-menuBarPermGap)
 }
 
-// menuBarMenusEndX returns the column just after menu labels laid out like drawMenuBar (respecting permission clip).
-func menuBarMenusEndX(rect Rect, menus []menu.Definition, permissionTailRunes int) int {
-	clip := menuBarMenusClipExclusive(rect, permissionTailRunes)
+// menuBarLabelSpan is the drawn extent of one top menu label on the menu row.
+type menuBarLabelSpan struct {
+	X, Width int
+}
+
+// menuBarLabelSpans lays out the top menu labels from rect.X up to clipExclusive: one span per
+// label that fits (the last may be cut short), and the column just past the label area.
+func menuBarLabelSpans(rect Rect, menus []menu.Definition, clipExclusive int) (spans []menuBarLabelSpan, endX int) {
 	x := rect.X
 	for _, menuDefinition := range menus {
-		label := " " + menuDefinition.Label + " "
-		labelW := utf8.RuneCountInString(label)
-		if x >= clip {
-			break
-		}
-		avail := clip - x
+		labelW := utf8.RuneCountInString(" " + menuDefinition.Label + " ")
+		avail := clipExclusive - x
 		if avail <= 0 {
 			break
 		}
 		if labelW > avail {
-			return x + avail
+			spans = append(spans, menuBarLabelSpan{X: x, Width: avail})
+			return spans, x + avail
 		}
+		spans = append(spans, menuBarLabelSpan{X: x, Width: labelW})
 		x += labelW + 1
 	}
+	return spans, x
+}
+
+// menuBarMenusEndX returns the column just after menu labels laid out like drawMenuBar (respecting permission clip).
+func menuBarMenusEndX(rect Rect, menus []menu.Definition, permissionTailRunes int) int {
+	clip := menuBarMenusClipExclusive(rect, permissionTailRunes)
+	_, x := menuBarLabelSpans(rect, menus, clip)
 	return min(max(x, menuBarContentStart(rect)), clip)
 }
 
@@ -334,15 +330,16 @@ func drawMenuBarLabel(screen tcell.Screen, x, y, width int, label string, shortc
 	}
 }
 
-func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, menus []menu.Definition, styles theme.Theme) {
+// pulldownRect is the frame of the open pulldown, below its top menu label and clamped to the
+// screen width and the footer. ok is false when no pulldown is open or it has no items.
+func pulldownRect(layout Layout, state menu.State, menus []menu.Definition) (Rect, bool) {
 	if !state.PulldownOpen || state.ActiveMenu < 0 || state.ActiveMenu >= len(menus) {
-		return
+		return Rect{}, false
 	}
 	menuDefinition := menus[state.ActiveMenu]
 	if len(menuDefinition.Items) == 0 {
-		return
+		return Rect{}, false
 	}
-
 	menuX := layout.Menu.X + menuBarItemX(state.ActiveMenu, menus)
 	width := pulldownWidth(menuDefinition)
 	if menuX+width > layout.Width {
@@ -352,6 +349,15 @@ func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, menu
 	if rect.Y+rect.Height > layout.Footer.Y {
 		rect.Height = max(2, layout.Footer.Y-rect.Y)
 	}
+	return rect, true
+}
+
+func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, menus []menu.Definition, styles theme.Theme) {
+	rect, ok := pulldownRect(layout, state, menus)
+	if !ok {
+		return
+	}
+	menuDefinition := menus[state.ActiveMenu]
 
 	primitive.Box(screen, primitive.Rect(rect), styles.MenuDropdownFrame, primitive.SharpBorder)
 	itemRows := rect.Height - 2

@@ -15,14 +15,16 @@ type footerHintLayout struct {
 	showPrefix bool
 }
 
-func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu.FunctionKey) {
-	keyRegionWidth := rect.Width
-	startX := rect.X
+// footerHintSpan is one drawn footer entry: the key label, then a space and the hint.
+type footerHintSpan struct {
+	X, Width int
+	Item     menu.FunctionKey
+	layout   footerHintLayout
+}
 
-	for col := rect.X; col < rect.X+rect.Width; col++ {
-		screen.SetContent(col, rect.Y, ' ', nil, styles.FooterLabel)
-	}
-
+// footerHintSpans lays out the entries of fkeys that have a hint across rect, spreading the spare
+// width evenly into the gaps between them.
+func footerHintSpans(rect Rect, fkeys []menu.FunctionKey) []footerHintSpan {
 	visible := make([]menu.FunctionKey, 0, len(fkeys))
 	for _, item := range fkeys {
 		if item.FullHint() != "" {
@@ -30,42 +32,55 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 		}
 	}
 	n := len(visible)
-	if n > 0 && keyRegionWidth > 0 {
-		layouts, sumW := footerHintStringsFittingWidth(visible, keyRegionWidth)
-		remaining := keyRegionWidth - sumW
-		x := startX
-		gapsBetween := n - 1
-		for i, item := range visible {
-			layout := layouts[i]
-			keyRunes := utf8.RuneCountInString(item.KeyLabel)
-			prefix := ""
-			if layout.showPrefix {
-				prefix = item.HintShiftPrefix
+	if n == 0 || rect.Width <= 0 {
+		return nil
+	}
+	layouts, sumW := footerHintStringsFittingWidth(visible, rect.Width)
+	remaining := rect.Width - sumW
+	gapsBetween := n - 1
+	spans := make([]footerHintSpan, 0, n)
+	x := rect.X
+	for i, item := range visible {
+		w := footerItemWidth(item, layouts[i])
+		spans = append(spans, footerHintSpan{X: x, Width: w, Item: item, layout: layouts[i]})
+		x += w
+		if i < n-1 && gapsBetween > 0 {
+			gap := remaining / gapsBetween
+			if i < remaining%gapsBetween {
+				gap++
 			}
-			prefixRunes := utf8.RuneCountInString(prefix)
-			primaryRunes := utf8.RuneCountInString(layout.primary)
-			hintRunes := prefixRunes + primaryRunes
-			primitive.TextOverlay(screen, x, rect.Y, keyRunes, item.KeyLabel, styles.FooterKey)
-			x += keyRunes
-			if hintRunes > 0 {
-				screen.SetContent(x, rect.Y, ' ', nil, styles.FooterLabel)
-				x++
-				if primaryRunes > 0 {
-					primitive.TextOverlay(screen, x, rect.Y, primaryRunes, layout.primary, styles.FooterLabel)
-					x += primaryRunes
-				}
-				if prefixRunes > 0 {
-					primitive.TextOverlay(screen, x, rect.Y, prefixRunes, prefix, styles.FooterLabelShift)
-					x += prefixRunes
-				}
-			}
-			if i < n-1 && gapsBetween > 0 {
-				gap := remaining / gapsBetween
-				if i < remaining%gapsBetween {
-					gap++
-				}
-				x += gap
-			}
+			x += gap
+		}
+	}
+	return spans
+}
+
+func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu.FunctionKey) {
+	for col := rect.X; col < rect.X+rect.Width; col++ {
+		screen.SetContent(col, rect.Y, ' ', nil, styles.FooterLabel)
+	}
+	for _, span := range footerHintSpans(rect, fkeys) {
+		item, layout, x := span.Item, span.layout, span.X
+		keyRunes := utf8.RuneCountInString(item.KeyLabel)
+		prefix := ""
+		if layout.showPrefix {
+			prefix = item.HintShiftPrefix
+		}
+		prefixRunes := utf8.RuneCountInString(prefix)
+		primaryRunes := utf8.RuneCountInString(layout.primary)
+		primitive.TextOverlay(screen, x, rect.Y, keyRunes, item.KeyLabel, styles.FooterKey)
+		x += keyRunes
+		if prefixRunes+primaryRunes == 0 {
+			continue
+		}
+		screen.SetContent(x, rect.Y, ' ', nil, styles.FooterLabel)
+		x++
+		if primaryRunes > 0 {
+			primitive.TextOverlay(screen, x, rect.Y, primaryRunes, layout.primary, styles.FooterLabel)
+			x += primaryRunes
+		}
+		if prefixRunes > 0 {
+			primitive.TextOverlay(screen, x, rect.Y, prefixRunes, prefix, styles.FooterLabelShift)
 		}
 	}
 }

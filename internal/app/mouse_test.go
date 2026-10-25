@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 // mouseSpyScreen records the mouse mode calls the app makes.
@@ -215,5 +217,105 @@ func TestMouseOffAroundTerminalRelease(t *testing.T) {
 	}
 	if len(spy.calls) != 2 || spy.calls[1] != "enable" {
 		t.Fatalf("calls = %v want [disable enable]", spy.calls)
+	}
+}
+
+// screenTextCell renders the app and returns the first cell showing text, scanning rows top
+// down. Panel glyphs are one cell wide here, so a rune index is a column.
+func screenTextCell(t *testing.T, a *App, text string) (int, int) {
+	t.Helper()
+	a.render()
+	screen := a.screen.(tcell.SimulationScreen)
+	w, h := screen.Size()
+	want := []rune(text)
+	for y := 0; y < h; y++ {
+		row := []rune(tcelltest.TextAt(screen, 0, y, w))
+		for x := 0; x+len(want) <= len(row); x++ {
+			if string(row[x:x+len(want)]) == text {
+				return x, y
+			}
+		}
+	}
+	t.Fatalf("%q not on screen", text)
+	return 0, 0
+}
+
+func tallMouseTestApp(t *testing.T) *App {
+	t.Helper()
+	dir := t.TempDir()
+	for _, n := range []string{"walnut", "pepper", "violin"} {
+		writeFile(t, filepath.Join(dir, n+".txt"))
+	}
+	app := newApp(t, newScreen(t, 100, 30), dir)
+	app.config.UI.Mouse = true
+	return app
+}
+
+func TestMouseMenuBarClickTogglesPulldown(t *testing.T) {
+	app := tallMouseTestApp(t)
+	x, y := screenTextCell(t, app, " File ")
+	click(app, x+2, y, tcell.Button1)
+	menus := menu.ActiveDefinitions(app.model.MenuDefinitions)
+	if !app.model.Menu.Open || !app.model.Menu.PulldownOpen || menus[app.model.Menu.ActiveMenu].ID != menu.TopFile {
+		t.Fatalf("menu state %+v want File pulldown", app.model.Menu)
+	}
+	click(app, x+2, y, tcell.Button1)
+	if app.model.Menu.Open {
+		t.Fatal("second click on the open menu's label should close it")
+	}
+}
+
+func TestMouseMenuItemClickActivates(t *testing.T) {
+	app := tallMouseTestApp(t)
+	x, y := screenTextCell(t, app, " Left ")
+	click(app, x+2, y, tcell.Button1)
+	x, y = screenTextCell(t, app, "Sort...")
+	click(app, x, y, tcell.Button1)
+	if app.model.Menu.Open || !app.model.SortDialog.Open {
+		t.Fatalf("menu open=%v sort dialog open=%v want closed/open", app.model.Menu.Open, app.model.SortDialog.Open)
+	}
+}
+
+func TestMouseMenuWheelAndOutsideClick(t *testing.T) {
+	app := tallMouseTestApp(t)
+	x, y := screenTextCell(t, app, " Left ")
+	click(app, x+2, y, tcell.Button1)
+	ix, iy := screenTextCell(t, app, "Sort...")
+	first := app.model.Menu.SelectedItem
+	app.handleMouse(mouseEv(ix, iy, tcell.WheelDown))
+	if app.model.Menu.SelectedItem != first+1 {
+		t.Fatalf("selected = %d want %d", app.model.Menu.SelectedItem, first+1)
+	}
+	click(app, 90, 20, tcell.Button1)
+	if app.model.Menu.Open {
+		t.Fatal("click outside the pulldown should close the menu")
+	}
+	if app.model.SortDialog.Open {
+		t.Fatal("outside click must not reach what lies below")
+	}
+}
+
+func TestMouseFooterClickPressesKey(t *testing.T) {
+	app := tallMouseTestApp(t)
+	x, y := screenTextCell(t, app, "F9 Menu")
+	click(app, x+4, y, tcell.Button1)
+	if !app.model.Menu.Open {
+		t.Fatal("footer F9 click did not open the menu")
+	}
+	x, y = screenTextCell(t, app, "Esc Close")
+	click(app, x, y, tcell.Button1)
+	if app.model.Menu.Open {
+		t.Fatal("footer Esc click did not close the menu")
+	}
+}
+
+func TestFooterKeyEventFromBindingLabel(t *testing.T) {
+	ev, ok := menu.FunctionKey{KeyLabel: "M-o", Hint: "Open"}.Event()
+	if !ok || ev.Key() != tcell.KeyRune || ev.Rune() != 'o' || ev.Modifiers()&tcell.ModAlt == 0 {
+		t.Fatalf("event = %v ok=%v want Alt+o", ev, ok)
+	}
+	ev, _ = menu.FunctionKey{Key: tcell.KeyUp, Mod: tcell.ModCtrl, KeyLabel: "C-up"}.Event()
+	if ev.Key() != tcell.KeyUp || ev.Modifiers() != tcell.ModCtrl {
+		t.Fatalf("event = %v want Ctrl+Up", ev)
 	}
 }

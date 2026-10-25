@@ -102,16 +102,23 @@ func (a *App) setCursorByMouse(row int) {
 	a.doListNav(func() { p.Move(row-p.Cursor, vr) })
 }
 
-// handleMouse handles one mouse event. Only the browser view reacts; everything else (other
-// views, dialogs, menus, the quick filter) swallows mouse input.
+// handleMouse handles one mouse event. The footer, the menu bar and its pulldown take clicks in
+// every mode that shows them; the browser panels react only in normal mode. Everything else (other
+// views, dialogs, the quick filter) swallows mouse input.
 func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	buttons := ev.Buttons()
 	pressed := buttons &^ a.mouse.buttons
 	a.mouse.buttons = buttons &^ (tcell.WheelUp | tcell.WheelDown | tcell.WheelLeft | tcell.WheelRight)
-	if a.model.ViewMode != ui.ViewBrowser || a.inputMode() != InputModeNormal || a.terminalPanelHasKeyFocus() {
+	if a.terminalPanelHasKeyFocus() {
 		return false, false
 	}
 	x, y := ev.Position()
+	if handled, quit, rendered := a.handleChromeMouse(x, y, buttons, pressed); handled {
+		return quit, rendered
+	}
+	if a.model.ViewMode != ui.ViewBrowser || a.inputMode() != InputModeNormal {
+		return false, false
+	}
 	id, row, ok := a.mouseHit(x, y)
 	if !ok {
 		return false, false
@@ -159,4 +166,79 @@ func (a *App) scrollInactivePanel(id, delta int) bool {
 	vr := a.panelViewportRows(id)
 	p.Move(delta, vr)
 	return true
+}
+
+// handleChromeMouse handles the footer, the menu bar and the open pulldown. handled is false when
+// the event belongs to whatever lies below them.
+func (a *App) handleChromeMouse(x, y int, buttons, pressed tcell.ButtonMask) (handled, quit, rendered bool) {
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall {
+		return false, false, false
+	}
+	left := pressed&tcell.Button1 != 0
+	if fk, ok := ui.FooterKeyAt(layout, &a.model, x, y); ok {
+		if !left {
+			return true, false, false
+		}
+		ev, ok := fk.Event()
+		if !ok {
+			return true, false, false
+		}
+		quit, rendered := a.handleKey(ev)
+		return true, quit, rendered
+	}
+	if index, ok := ui.MenuBarMenuAt(layout, &a.model, x, y); ok && a.menuBarAcceptsMouse() {
+		if !left {
+			return true, false, false
+		}
+		if a.model.Menu.Open && a.model.Menu.PulldownOpen && a.model.Menu.ActiveMenu == index {
+			a.closeMenu()
+		} else {
+			a.openMenuAt(index)
+		}
+		a.render()
+		return true, false, true
+	}
+	if a.inputMode() != InputModeMenu {
+		return false, false, false
+	}
+	// The menu is modal: wheel and clicks act on the pulldown, a click anywhere else closes it.
+	item, inside := ui.PulldownItemAt(layout, &a.model, x, y)
+	switch {
+	case buttons&(tcell.WheelUp|tcell.WheelDown) != 0:
+		if !inside {
+			return true, false, false
+		}
+		delta := 1
+		if buttons&tcell.WheelUp != 0 {
+			delta = -1
+		}
+		a.moveMenuItem(delta)
+	case left && inside:
+		if item < 0 {
+			return true, false, false
+		}
+		a.model.Menu.SelectedItem = item
+		quit := a.activateMenuItem()
+		if quit {
+			return true, true, false
+		}
+	case pressed != 0 && !inside:
+		a.closeMenu()
+	default:
+		return true, false, false
+	}
+	a.render()
+	return true, false, true
+}
+
+// menuBarAcceptsMouse reports whether a click on a menu label may open that menu: in the views
+// whose menu bar F9 opens, but not while a dialog or confirmation has the keyboard.
+func (a *App) menuBarAcceptsMouse() bool {
+	switch a.inputMode() {
+	case InputModeNormal, InputModeMenu, InputModeFilter, InputModeJobsView, InputModeCommandsView, InputModeMessagesView, InputModeCompareView, InputModeDedupView:
+		return true
+	}
+	return false
 }

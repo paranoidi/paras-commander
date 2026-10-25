@@ -9,10 +9,11 @@ import (
 
 // FunctionKey describes a labeled footer key with an optional hint.
 type FunctionKey struct {
-	Key             tcell.Key // tcell.KeyF1 etc.
-	KeyLabel        string    // "F1"
-	Hint            string    // primary footer label suffix (e.g. "Mkdir")
-	HintShiftPrefix string    // Shift-alternative suffix shown after Hint (e.g. "Ren" in MovRen)
+	Key             tcell.Key     // tcell.KeyF1 etc.
+	Mod             tcell.ModMask // modifiers held with Key (Ctrl for C-up)
+	KeyLabel        string        // "F1"
+	Hint            string        // primary footer label suffix (e.g. "Mkdir")
+	HintShiftPrefix string        // Shift-alternative suffix shown after Hint (e.g. "Ren" in MovRen)
 	// RequiresActiveJob marks jobs-view actions (cancel/pause/resume/reorder) that are
 	// no-ops once the selected job has reached a terminal state; FunctionKeysJobsView
 	// hides them in that case.
@@ -21,6 +22,15 @@ type FunctionKey struct {
 	RequiresFinishedJob bool
 	// ActionID is the keymap action bound to this key, used to resolve its vi-motion leader letter.
 	ActionID string
+}
+
+// Event is the key press this entry stands for; a footer click replays it. Entries built from a
+// keymap binding carry only KeyLabel, which is then parsed as that binding.
+func (fk FunctionKey) Event() (*tcell.EventKey, bool) {
+	if fk.Key != tcell.KeyNUL {
+		return tcell.NewEventKey(fk.Key, 0, fk.Mod), true
+	}
+	return keymap.EventForKey(fk.KeyLabel)
 }
 
 // FullHint returns the combined footer hint text for width layout.
@@ -59,8 +69,8 @@ var FunctionKeysJobs = []FunctionKey{
 	{Key: tcell.KeyCtrlC, KeyLabel: "C-c", Hint: "Cancel", RequiresActiveJob: true, ActionID: keymap.ActionJobsCancel},
 	{Key: tcell.KeyCtrlP, KeyLabel: "C-p", Hint: "Pause", RequiresActiveJob: true, ActionID: keymap.ActionJobsPause},
 	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume", RequiresActiveJob: true, ActionID: keymap.ActionJobsResume},
-	{Key: tcell.KeyUp, KeyLabel: "C-up", Hint: "Move up", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueUp},
-	{Key: tcell.KeyDown, KeyLabel: "C-down", Hint: "Move down", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueDown},
+	{Key: tcell.KeyUp, Mod: tcell.ModCtrl, KeyLabel: "C-up", Hint: "Move up", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueUp},
+	{Key: tcell.KeyDown, Mod: tcell.ModCtrl, KeyLabel: "C-down", Hint: "Move down", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueDown},
 	{Key: tcell.KeyCtrlZ, KeyLabel: "C-z", Hint: "Undo", RequiresFinishedJob: true, ActionID: keymap.ActionJobsUndo},
 	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear", ActionID: keymap.ActionJobsClearFinished},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},

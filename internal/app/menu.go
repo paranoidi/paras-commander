@@ -120,14 +120,23 @@ func (a *App) openMenuByShortcut(shortcut rune) bool {
 	menus := menu.ActiveDefinitions(a.model.MenuDefinitions)
 	for index, def := range menus {
 		if def.Shortcut != 0 && unicode.ToLower(def.Shortcut) == unicode.ToLower(shortcut) {
-			a.model.Menu.ActiveMenu = index
-			a.model.Menu.Open = true
-			a.model.Menu.PulldownOpen = true
-			a.model.Menu.SelectedItem = firstSelectableMenuItem(menus[index])
+			a.openMenuAt(index)
 			return true
 		}
 	}
 	return false
+}
+
+// openMenuAt opens top menu index with its pulldown, on its first selectable item.
+func (a *App) openMenuAt(index int) {
+	menus := menu.ActiveDefinitions(a.model.MenuDefinitions)
+	if index < 0 || index >= len(menus) {
+		return
+	}
+	a.model.Menu.ActiveMenu = index
+	a.model.Menu.Open = true
+	a.model.Menu.PulldownOpen = true
+	a.model.Menu.SelectedItem = firstSelectableMenuItem(menus[index])
 }
 
 func (a *App) closeMenu() {

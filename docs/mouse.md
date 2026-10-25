@@ -1,6 +1,6 @@
 # Mouse
 
-Optional mouse support for the twin-panel file browser. Off by default; enable it with `[ui].mouse = true` in `config.toml` (see [Configuration](config.md)). The change applies as soon as the configuration is reloaded.
+Optional mouse support for the twin-panel file browser, the menu bar and the footer. Off by default; enable it with `[ui].mouse = true` in `config.toml` (see [Configuration](config.md)). The change applies as soon as the configuration is reloaded.
 
 ## What works
 
@@ -16,7 +16,19 @@ In the file browser:
 
 Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. While quick view or a file preview fills the inactive column, clicks and the wheel there are ignored.
 
-Everything else ignores the mouse for now: other views (jobs, messages, compare, duplicates, commands, help, fullscreen preview), dialogs, menus, the quick filter and the embedded terminal panel.
+In the menu bar and the footer:
+
+| Action | Result |
+|---|---|
+| Left click on a menu title | Opens that menu's pulldown. Clicking the title of the open menu closes it. |
+| Left click on a pulldown item | Runs the item, like Enter on it. |
+| Wheel over the pulldown | Moves the highlighted item. |
+| Left click outside the pulldown | Closes the menu. The click does nothing else. |
+| Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. |
+
+Menu titles take clicks in the file browser and in the jobs, commands, messages, compare and duplicates views, but not while a dialog is open. Footer entries take clicks everywhere the footer shows them, dialogs included.
+
+Everything else ignores the mouse for now: the content of the other views (jobs, messages, compare, duplicates, commands, help, fullscreen preview), dialog contents, the leader menu, the quick filter and the embedded terminal panel.
 
 ## Caveats
 
