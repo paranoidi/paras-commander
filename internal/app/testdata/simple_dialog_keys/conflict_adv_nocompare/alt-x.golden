@@ -1,0 +1,14 @@
+== open ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+== Alt+x ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+== Alt+r ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+== Alt+s ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+== Alt+d ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+== Alt+p ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+== Down ==
+advanced focus=r1c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true

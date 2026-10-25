@@ -1,0 +1,10 @@
+== open ==
+focus=rename
+== Down ==
+focus=skip
+== Right ==
+focus=skip-all
+== Right ==
+focus=postpone
+== Enter ==
+CLOSED: submitted nothing (postponed or closed) quit=false

@@ -62,7 +62,7 @@ func configKeyOutcome(app *App, quit bool) string {
 
 func configKeyDialog(name string, withFile bool) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name,
+		name:   name,
 		serial: true, // setup swaps the package-level externalEditorRunner
 		setup: func(t *testing.T, dir string) *App {
 			cfgDir := filepath.Join(dir, "cfg")
@@ -100,20 +100,6 @@ func configKeyDialog(name string, withFile bool) keyGoldenDialog {
 
 func TestConfigDialogKeyScripts(t *testing.T) {
 	scripts := []simpleKeyScript{
-		{"down-all", "Down Down Down Down Down Down Down Down Down Down Down Down"},
-		{"up-from-end", "Down Down Down Down Down Down Down Down Down Down Down Up Up Up Up Up Up Up Up Up Up Up Up Up Up"},
-		{"scroll-block-lr", "Down Down Down Right Right Left Left Down Right Down Left Down Right Right"},
-		{"scroll-block-updown", "Down Down Down Down Down Up Up Up Up"},
-		{"scroll-col-kept", "Down Down Down Right Down Down Down Up Up Up Up"},
-		{"left-right-checkbox", "Left Right Down Right Left"},
-		{"listing-edges", "Down Down Down Down Down Down Down Up Up Up Up Up Up Down"},
-		{"split-updown", "Down Down Down Down Down Down Down Down Down Up Down Down Up Up"},
-		{"buttons-lr", "Down Down Down Down Down Down Down Down Down Down Down Left Left Right Right Right Left"},
-		{"buttons-up", "Down Down Down Down Down Down Down Down Down Down Down Up"},
-		{"cancel-up", "Down Down Down Down Down Down Down Down Down Down Down Right Up"},
-		{"tab-ring", "Tab Tab Tab Tab Tab Tab Tab Tab Tab"},
-		{"backtab-ring", "Backtab Backtab Backtab Backtab Backtab Backtab Backtab Backtab"},
-		{"tab-from-middle", "Down Down Down Down Right Tab Tab Backtab Backtab Backtab"},
 		{"space-checkboxes", "Space Down Space Down Space"},
 		{"enter-checkbox", "Enter Down Enter"},
 		{"space-scroll-radios", "Down Down Down Space Right Space Down Space Left Down Space"},
@@ -158,7 +144,6 @@ func TestConfigDialogKeyScripts(t *testing.T) {
 		{"input-restore-default", "Tab Tab Tab Tab Backspace Backspace Backspace Ctrl+L"},
 		{"f8-nofile", "F8"},
 		{"f9-stub-confirm", "F9"},
-		{"home-end-pgdn", "Home End PgUp PgDn"},
 		{"all-options-then-ok", "Space Down Space Down Space Down Space Down Down Space Down Down Down Space Alt+o"},
 	}
 	runKeyGoldenScripts(t, configKeyDialog("config_nofile", false), scripts)

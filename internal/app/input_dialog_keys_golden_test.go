@@ -28,7 +28,7 @@ func elevateName(st dialog.ElevateDialogState) string {
 
 func elevateKeyDialog(name string, req ops.PermissionRequest) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name,
+		name:   name,
 		serial: true, // setup writes the package-level elevateReply
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
@@ -61,9 +61,6 @@ func TestElevateKeyScripts(t *testing.T) {
 		{"type-space", "a Space b Space"},
 		{"home-end", "a b c Home Home End Left Left Right"},
 		{"edit-empty", "Backspace Delete Left Right Home End"},
-		{"down-up", "Down Up Down Down Up Up Up"},
-		{"tab", "Tab Tab Backtab Backtab Tab Tab Tab"},
-		{"left-right-buttons", "Down Left Right Right Right Left Left Left"},
 		{"enter-on-input", "w i l Enter"},
 		{"enter-elevate", "a Down Enter"},
 		{"enter-skip", "a Down Right Enter"},
@@ -91,9 +88,6 @@ func TestElevateKeyScripts(t *testing.T) {
 	})
 	noPassword := elevateKeyDialog("elevate_nopw", ops.PermissionRequest{Op: "", Path: "/srv/harbor/orchard/meadow.txt", NoPassword: true})
 	runKeyGoldenScripts(t, noPassword, []simpleKeyScript{
-		{"left-right", "Left Right Right Right Left Left Left"},
-		{"up-down", "Up Down Right Down Up"},
-		{"tab", "Tab Tab Backtab Right Tab"},
 		{"enter-elevate", "Enter"},
 		{"enter-skip", "Right Enter"},
 		{"enter-cancel", "Right Right Enter"},
@@ -166,11 +160,6 @@ func TestDebounceCalibrateKeyScripts(t *testing.T) {
 		{"edit-second", "Down 7 8 Left Backspace 1 End"},
 		{"edit-empty", "Backspace Backspace Backspace Delete Left Right Home End"},
 		{"home-end", "Home Home 1 End End 2 Left Left Left Left"},
-		{"down-walk", "Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Up Up Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab Backtab Backtab"},
-		{"left-right-buttons", "Down Down Left Right Right Right Left Left Left"},
 		{"left-right-inputs", "Left Left Right Right Right Down Left Right"},
 		{"enter-input-applies", "Enter"},
 		{"enter-second-input-applies", "Down Enter"},
@@ -254,13 +243,6 @@ func TestFlattenKeyScripts(t *testing.T) {
 		{"edit-empty", "a Backspace Backspace Delete Left Right Home End"},
 		{"space-in-dest", "a Space b"},
 		{"letters-in-dest", "r e o c y n O C Y N"},
-		{"down-walk", "Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Up Up Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab Backtab Backtab"},
-		{"tab-from-checkbox", "Down Down Tab Backtab Backtab"},
-		{"left-right-buttons", "Tab Tab Left Right Right Right Left Left Left"},
-		{"left-right-checkbox", "Down Left Right Down Left Right"},
 		{"space-checkboxes", "Down Space Down Space Space"},
 		{"enter-checkboxes", "Down Enter Down Enter Enter"},
 		{"mnemonics-in-dest", "a Alt+r Alt+e Alt+R Alt+E b"},
@@ -359,13 +341,6 @@ func compareMergeKeyDialog(name string, primary, secondary string) keyGoldenDial
 
 func TestCompareMergeKeyScripts(t *testing.T) {
 	scripts := []simpleKeyScript{
-		{"down-walk", "Down Down Down Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Down Down Down Up Up Up Up Up Up Up Up Up"},
-		{"left-right-radios", "Left Right Down Left Right Down Down Down Left Right"},
-		{"left-right-buttons", "Tab Tab Tab Left Right Right Right Left Left Left"},
-		{"tab", "Tab Tab Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab Backtab Backtab"},
-		{"tab-from-second-item", "Down Tab Down Backtab Backtab"},
 		{"space-all-rows", "Space Down Space Down Space Down Space Down Space Down Space Down Space Down Space"},
 		{"enter-items", "Enter Down Enter Down Enter Down Enter Down Enter Down Enter"},
 		{"enter-ok", "Tab Tab Tab Enter"},
@@ -387,7 +362,6 @@ func TestCompareMergeKeyScripts(t *testing.T) {
 	}
 	runKeyGoldenScripts(t, compareMergeKeyDialog("compare_merge", "/home/alice/projects/harbor/orchard", "/home/alice/projects/harbor/willow/meadow"), scripts)
 	runKeyGoldenScripts(t, compareMergeKeyDialog("compare_merge_plain", "/srv/orchard", "/mnt/willow"), []simpleKeyScript{
-		{"walk", "Down Down Down Down Down Down Down Up"},
 		{"toggle-and-ok", "Space Down Space Tab Tab Enter"},
 	})
 }

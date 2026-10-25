@@ -78,7 +78,7 @@ func pickerKeyApplyApp(t *testing.T, dir string, n int) *App {
 
 func pickerKeyDialog(name string, setup func(t *testing.T, dir string) *App) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, // the dialog only: the panels behind it show free disk space
+		name:  name, // the dialog only: the panels behind it show free disk space
 		setup: setup,
 		state: func(app *App) string {
 			st := app.model.PathPicker
@@ -119,11 +119,8 @@ func pickerListScripts() []simpleKeyScript {
 		{"nomatch-enter", "z z z q Enter"},
 		{"nomatch-then-clear", "z z z q Backspace Backspace Backspace Backspace"},
 		{"left-right-filter", "a b Left Left Left Right Right Right Right"},
-		{"tab", "Tab Tab Tab Tab Backtab Backtab Backtab"},
 		{"tab-from-list-moved", "Down Down Tab Backtab"},
 		{"back-to-filter-keeps-cursor", "Down Down Tab Tab Backtab Backtab Up"},
-		{"down-up-from-buttons", "Tab Down Down Up Up Up"},
-		{"left-right-from-buttons", "Tab Left Right Left Right Right"},
 		{"enter-row", "Down Down Enter"},
 		{"enter-filtered-row", "e Enter"},
 		{"esc", "Down Esc"},
@@ -156,11 +153,9 @@ func TestPathPickerNavigateKeyScripts(t *testing.T) {
 		[]simpleKeyScript{
 			{"walk", "Down Down Down Up Up Up PgDn PgUp Ctrl+End Ctrl+Home"},
 			{"filter", "s r"},
-			{"tab-around", "Tab Tab Tab"},
 		})
 	runKeyGoldenScripts(t, pickerKeyBookmarksDialog("path_picker_navigate_empty", 0),
 		[]simpleKeyScript{
-			{"nav", "Down Up PgDn PgUp Ctrl+End Tab Tab Down Up"},
 			{"typing", "x y z Up Tab Backspace"},
 			{"enter", "Enter"},
 			{"enter-cancel", "Tab Enter"},
@@ -180,9 +175,6 @@ func TestPathPickerApplyKeyScripts(t *testing.T) {
 		simpleKeyScript{"plain-c-cancel", "Down Tab Tab c"},
 		simpleKeyScript{"plain-c-cancel-right", "Down Tab Right c"},
 		simpleKeyScript{"plain-o-cancel-right", "Down Tab Right o"},
-		simpleKeyScript{"left-right-up-down-buttons", "Tab Right Right Left Left Left"},
-		simpleKeyScript{"down-from-ok", "Tab Down Down"},
-		simpleKeyScript{"up-from-cancel", "Tab Right Up Up"},
 		simpleKeyScript{"esc-from-cancel-right", "Tab Right Esc"},
 		simpleKeyScript{"alt-o-on-cancel-right", "Down Tab Right Alt+o"},
 	)

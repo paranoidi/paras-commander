@@ -1,0 +1,4 @@
+== open ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+== Alt+c ==
+CLOSED: submitted nothing (postponed or closed) quit=false

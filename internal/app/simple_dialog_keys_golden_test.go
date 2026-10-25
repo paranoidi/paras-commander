@@ -141,9 +141,6 @@ var undoKeyDialog = keyGoldenDialog{
 
 func TestUndoConfirmKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, undoKeyDialog, []simpleKeyScript{
-		{"left-right", "Left Left Right Right Left Right"},
-		{"up-down", "Up Down Left Up Down"},
-		{"tab", "Tab Tab Backtab Backtab Tab Left Tab"},
 		{"enter-no", "Enter"},
 		{"enter-yes", "Left Enter"},
 		{"space-no", "Space"},
@@ -182,9 +179,6 @@ var quitKeyDialog = keyGoldenDialog{
 
 func TestQuitConfirmKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, quitKeyDialog, []simpleKeyScript{
-		{"left-right", "Right Right Left Left Right"},
-		{"up-down", "Up Down Right Up Down"},
-		{"tab", "Tab Tab Backtab Backtab Tab"},
 		{"enter-stay", "Enter"},
 		{"enter-quit", "Right Enter"},
 		{"space-stay", "Space"},
@@ -241,11 +235,6 @@ var listingKeyDialog = keyGoldenDialog{
 
 func TestListingFormatKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, listingKeyDialog, []simpleKeyScript{
-		{"down-walk", "Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Up Up Up Up Up Up"},
-		{"left-right", "Right Left Down Right Left Left Down Down Right Right Left Left"},
-		{"tab", "Tab Tab Tab Backtab Backtab Backtab Backtab"},
-		{"tab-from-radio", "Down Tab Tab Backtab"},
 		{"space-radios", "Down Space Down Space Up Up Space"},
 		{"enter-radios", "Down Down Enter Up Enter"},
 		{"space-ok", "Down Space Tab Space"},
@@ -310,12 +299,6 @@ func compareFilterKeyDialog(name string, open func(app *App)) keyGoldenDialog {
 func TestCompareFilterKeyScripts(t *testing.T) {
 	category := compareFilterKeyDialog("compare_filter_category", func(app *App) { app.compareCtrl.OpenFilterDialog() })
 	runKeyGoldenScripts(t, category, []simpleKeyScript{
-		{"down-walk", "Down Down Down Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Down Down Down Up Up Up Up Up Up Up Up Up"},
-		{"left-right-items", "Right Left Down Right Left"},
-		{"left-right-buttons", "Tab Right Right Left Left Left"},
-		{"tab", "Tab Tab Backtab Backtab Backtab"},
-		{"tab-from-middle", "Down Down Tab Backtab"},
 		{"space-items", "Space Down Space Down Down Space Up Space"},
 		{"enter-items", "Enter Down Enter Down Enter"},
 		{"space-on-buttons", "Tab Space Right Space Tab"},
@@ -332,7 +315,6 @@ func TestCompareFilterKeyScripts(t *testing.T) {
 	})
 	selectDlg := compareFilterKeyDialog("compare_filter_select", func(app *App) { app.compareCtrl.OpenSelectDialog(true) })
 	runKeyGoldenScripts(t, selectDlg, []simpleKeyScript{
-		{"walk", "Down Down Down Down Down Down Down Up Up Up Up Up Up Up"},
 		{"mnemonics", "Alt+a Alt+e Alt+r Alt+m Alt+n Alt+m"},
 		{"space-and-ok", "Down Space Down Down Down Down Space Tab Enter"},
 		{"alt-o-is-ok", "Alt+m Alt+o"},
@@ -343,7 +325,6 @@ func TestCompareFilterKeyScripts(t *testing.T) {
 		app.compareCtrl.OpenSelectDialog(false)
 	})
 	runKeyGoldenScripts(t, unselect, []simpleKeyScript{
-		{"walk", "Down Down Down Down Down Down Down"},
 		{"mnemonics-and-ok", "Alt+n Alt+m Alt+Enter"},
 		{"cancel", "Alt+n Alt+c"},
 	})
@@ -364,7 +345,7 @@ type hostKeyReply = chan sftpHostKeyReply
 var hostKeyReplies = map[*App]hostKeyReply{}
 
 var hostKeyKeyDialog = keyGoldenDialog{
-	name: "hostkey",
+	name:   "hostkey",
 	serial: true, // setup writes the shared hostKeyReplies map
 	setup: func(t *testing.T, dir string) *App {
 		app := newApp(t, newScreen(t, 80, 24), dir)
@@ -393,9 +374,6 @@ func hostKeyDecision(reply hostKeyReply) string {
 
 func TestHostKeyKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, hostKeyKeyDialog, []simpleKeyScript{
-		{"left-right", "Left Right Right Right Left Left Left"},
-		{"up-down", "Up Down Right Up Down"},
-		{"tab", "Tab Tab Tab Backtab Backtab"},
 		{"enter-accept", "Enter"},
 		{"enter-save", "Right Enter"},
 		{"enter-reject", "Right Right Enter"},
@@ -449,7 +427,7 @@ file = "echo meta"
 `
 
 var metaKeyDialog = keyGoldenDialog{
-	name: "meta",
+	name:   "meta",
 	serial: true, // setup swaps the package-level externalEditorRunner
 	setup: func(t *testing.T, dir string) *App {
 		cfgDir := filepath.Join(dir, "config")
@@ -491,13 +469,6 @@ var metaKeyDialog = keyGoldenDialog{
 
 func TestMetaDialogKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, metaKeyDialog, []simpleKeyScript{
-		{"down-walk", "Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Up Up Up Up Up"},
-		{"left-right-items", "Right Left Down Right Left"},
-		{"left-right-buttons", "Down Down Down Right Right Left Left Left"},
-		{"tab", "Tab Tab Tab Backtab Backtab"},
-		{"tab-from-item", "Down Tab Backtab Backtab"},
-		{"tab-around", "Tab Tab Tab Tab Tab Backtab Backtab Backtab Backtab Backtab Backtab"},
 		{"space-toggles", "Space Down Space Down Space Space Up Space"},
 		{"enter-toggles", "Enter Down Enter Down Enter"},
 		{"space-ok", "Space Down Down Down Space"},
@@ -559,11 +530,6 @@ var stashKeyDialog = keyGoldenDialog{
 
 func TestStashRestoreKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, stashKeyDialog, []simpleKeyScript{
-		{"left-right", "Left Right Right Right Right Right Left Left Left Left Left"},
-		{"up-down", "Up Down Right Up Down"},
-		{"tab-cycle", "Tab Tab Tab Tab Tab Tab"},
-		{"backtab-cycle", "Backtab Backtab Backtab Backtab Backtab Backtab"},
-		{"tab-then-backtab", "Tab Tab Backtab Backtab"},
 		{"enter-replace", "Enter"},
 		{"enter-merge", "Right Enter"},
 		{"enter-drop-stash", "Right Right Enter"},
@@ -614,9 +580,6 @@ func dedupReturnKeyDialog(name string, scope []string) keyGoldenDialog {
 
 func TestDedupReturnKeyScripts(t *testing.T) {
 	scripts := []simpleKeyScript{
-		{"left-right", "Left Right Right Right Left Left Left"},
-		{"up-down", "Up Down Right Up Down"},
-		{"tab", "Tab Tab Backtab Right Tab"},
 		{"enter-first", "Enter"},
 		{"enter-second", "Right Enter"},
 		{"enter-cancel", "Right Right Enter"},

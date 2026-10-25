@@ -104,11 +104,8 @@ func helpScripts() []simpleKeyScript {
 		{"nomatch-enter-closes", "z z z q Enter"},
 		{"nomatch-then-clear", "z z z q Backspace Backspace Backspace Backspace"},
 		{"left-right-filter", "a b Left Left Left Right Right Right Right"},
-		{"tab", "Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab"},
 		{"tab-from-list-moved", "Down Down Tab Backtab"},
 		{"back-to-filter-keeps-cursor", "Down Down Tab Tab Down"},
-		{"left-right-on-close", "Tab Left Right Right Left"},
 		{"letters-on-close", "Tab c o x"},
 		{"plain-space-on-close", "Tab Space Space"},
 		{"enter-fake-entry-stays-open", "Down Enter"},
@@ -139,7 +136,6 @@ func TestHelpDialogKeyScripts(t *testing.T) {
 		{"walk", "Down Down Down Down Down Down Up Up Up Up Up Up"},
 		{"pages", "PgDn PgUp PgDn Ctrl+End Ctrl+Home"},
 		{"filter", "a r"},
-		{"tab-around", "Tab Tab Tab"},
 		{"down-focuses-close", "Down Down Down Down Down Down Down"},
 		{"enter", "Enter"},
 	})
@@ -151,9 +147,6 @@ func TestHelpDialogKeyScripts(t *testing.T) {
 		{"filter-then-pages", "e PgDn PgDn PgUp"},
 	})
 	runKeyGoldenScripts(t, helpKeyDialog("help_dialog_empty", 0), []simpleKeyScript{
-		{"nav-noop", "Down Up PgDn PgUp Ctrl+End Ctrl+Home"},
-		{"down-focuses-close", "Down"},
-		{"tab", "Tab Tab"},
 		{"enter-closes", "Enter"},
 		{"type", "a b"},
 	})

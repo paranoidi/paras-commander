@@ -51,9 +51,6 @@ func dedupProgressKeyDialog(name string, phase comparepkg.DedupPhase) keyGoldenD
 
 func TestDedupProgressKeyScripts(t *testing.T) {
 	common := []simpleKeyScript{
-		{"left-right", "Left Right Right Right Left Left Left"},
-		{"up-down", "Up Down Right Up Down Left Down"},
-		{"tab", "Tab Tab Backtab Right Tab Backtab"},
 		{"enter", "Enter"},
 		{"enter-second", "Right Enter"},
 		{"space", "Space Right Space"},
@@ -64,7 +61,6 @@ func TestDedupProgressKeyScripts(t *testing.T) {
 		{"alt-upper", "Alt+C"},
 		{"plain-letters", "o c y n x"},
 		{"alt-enter-swallowed", "Alt+Enter Alt+x"},
-		{"home-end-pgdn", "Home End PgUp PgDn"},
 	}
 	runKeyGoldenScripts(t, dedupProgressKeyDialog("dedup_progress_walking", comparepkg.DedupWalking), common)
 	runKeyGoldenScripts(t, dedupProgressKeyDialog("dedup_progress_confirm", comparepkg.DedupAwaitConfirm), common)

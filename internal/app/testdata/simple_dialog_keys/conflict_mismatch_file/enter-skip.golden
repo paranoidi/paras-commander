@@ -1,0 +1,6 @@
+== open ==
+focus=rename
+== Down ==
+focus=skip
+== Enter ==
+CLOSED: decision=skip quit=false

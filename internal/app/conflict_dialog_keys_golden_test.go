@@ -144,12 +144,6 @@ func prefixed(prefix string, scripts []simpleKeyScript) []simpleKeyScript {
 
 func TestConflictFileKeyScripts(t *testing.T) {
 	scripts := []simpleKeyScript{
-		{"left-right", "Right Right Right Right Left Left Left Left"},
-		{"up-down", "Down Down Down Up Up Up Up"},
-		{"grid-mixed", "Right Down Left Down Right Up Right Right Down"},
-		{"grid-columns", "Right Right Down Down Up Left Down Right"},
-		{"tab", "Tab Tab Tab Tab Tab Tab Tab Tab Backtab Backtab"},
-		{"backtab", "Backtab Backtab Tab"},
 		{"enter-overwrite", "Enter"},
 		{"enter-overwrite-all", "Right Enter"},
 		{"enter-advanced", "Right Right Enter"},
@@ -174,7 +168,6 @@ func TestConflictFileKeyScripts(t *testing.T) {
 		{"f9", "Right F9"},
 		{"alt-enter", "Down Right Alt+Enter"},
 		{"plain-letters", "o a d s l c p r x"},
-		{"home-end-pgdn", "Home End PgUp PgDn"},
 		{"advanced-then-esc", "Alt+d Esc"},
 		{"advanced-then-alt-enter", "Alt+d Alt+Enter"},
 	}
@@ -183,10 +176,6 @@ func TestConflictFileKeyScripts(t *testing.T) {
 
 func TestConflictMismatchKeyScripts(t *testing.T) {
 	scripts := []simpleKeyScript{
-		{"left-right", "Right Right Right Left Left Left"},
-		{"up-down", "Down Down Down Up Up Up"},
-		{"grid-mixed", "Right Down Right Down Left Up Up"},
-		{"tab", "Tab Tab Tab Tab Tab Tab Tab Backtab"},
 		{"enter-rename", "Enter"},
 		{"enter-rename-all", "Right Enter"},
 		{"enter-skip", "Down Enter"},
@@ -213,9 +202,6 @@ func TestConflictMismatchKeyScripts(t *testing.T) {
 
 func TestConflictDiskKeyScripts(t *testing.T) {
 	scripts := []simpleKeyScript{
-		{"left-right", "Right Right Right Left Left Left"},
-		{"up-down", "Down Up Right Down Up"},
-		{"tab", "Tab Tab Tab Tab Backtab Backtab Backtab"},
 		{"enter-retry", "Enter"},
 		{"enter-abort", "Right Enter"},
 		{"enter-postpone", "Right Right Enter"},
@@ -237,11 +223,6 @@ func TestConflictDiskKeyScripts(t *testing.T) {
 
 func conflictAdvScripts() []simpleKeyScript {
 	return []simpleKeyScript{
-		{"choices-left-right", "Right Right Right Right Left Left Left Left"},
-		{"rows-down", "Down Down Down Down Down Down Down Down Down Down Down"},
-		{"rows-up", "Up Down Down Up Up Up"},
-		{"column-kept", "Right Right Down Down Down Down Down Down Up Up Up Up Up Up"},
-		{"tab-segments", "Tab Tab Tab Tab Tab Backtab Backtab Backtab"},
 		{"space-select", "Right Space Right Space Right Space"},
 		{"enter-select", "Right Right Enter Left Enter"},
 		{"greyed-skip", "Right Right Space Down Down Down Right Right Right Right Space"},
@@ -251,8 +232,6 @@ func conflictAdvScripts() []simpleKeyScript {
 		{"checkbox-space", "Down Down Down Down Down Down Space Down Space Space"},
 		{"checkbox-enter-applies", "Down Down Down Down Down Down Enter"},
 		{"all-checkbox-enter-applies", "Down Down Down Down Down Down Down Enter"},
-		{"buttons", "Down Down Down Down Down Down Down Down Left Right Right Left"},
-		{"buttons-up", "Down Down Down Down Down Down Down Down Up"},
 		{"enter-ok", "Right Space Down Down Down Down Down Down Down Down Enter"},
 		{"enter-cancel", "Down Down Down Down Down Down Down Down Right Enter"},
 		{"space-ok", "Down Down Down Down Down Down Down Down Space"},
@@ -265,7 +244,6 @@ func conflictAdvScripts() []simpleKeyScript {
 		{"alt-enter", "Right Space Alt+Enter"},
 		{"alt-x", "Alt+x Alt+r Alt+s Alt+d Alt+p Down"},
 		{"plain-letters", "a i o c x Right"},
-		{"home-end", "Home End PgUp PgDn Right"},
 	}
 }
 

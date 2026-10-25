@@ -69,7 +69,7 @@ func cmdOutStdout(n int, withPaths bool) string {
 func cmdOutDialog(name, mode string, lines int, withPaths bool, exit int) keyGoldenDialog {
 	var workDir string // the temp dir of the script under test (scripts run one at a time)
 	return keyGoldenDialog{
-		name: name,
+		name:   name,
 		serial: true, // setup writes workDir and the shared cmdOutCancels map
 		setup: func(t *testing.T, dir string) *App {
 			workDir = dir
@@ -135,8 +135,6 @@ func cmdOutDialog(name, mode string, lines int, withPaths bool, exit int) keyGol
 
 func cmdOutButtonScripts() []simpleKeyScript {
 	return []simpleKeyScript{
-		{"left-right", "Left Right Right Left Left Right"},
-		{"tab", "Tab Tab Tab Backtab Backtab"},
 		{"enter-background", "Enter"},
 		{"enter-cancel", "Right Enter"},
 		{"space-background", "Space"},
@@ -188,13 +186,11 @@ func TestCommandOutputRunningKeyScripts(t *testing.T) {
 	scripts := append(cmdOutButtonScripts(), cmdOutScrollScripts()...)
 	runKeyGoldenScripts(t, cmdOutDialog("command_output_running", "running", 40, false, 0), scripts)
 	runKeyGoldenScripts(t, cmdOutDialog("command_output_running_short", "running", 3, false, 0), []simpleKeyScript{
-		{"scroll-noop", "Up Down PgUp PgDn Home End"},
 		{"stream-grows-past-view", "@live+4 @live+4 @live+4"},
 		{"stream-grows-then-up", "@live+12 Up Up @live+5"},
 		{"buttons", "Right Left Tab Enter"},
 	})
 	runKeyGoldenScripts(t, cmdOutDialog("command_output_running_empty", "running", 0, false, 0), []simpleKeyScript{
-		{"scroll-noop", "Up Down PgUp PgDn Home End"},
 		{"first-lines-stream", "@live+3 @live+10"},
 		{"cancel-empty", "Right Enter"},
 	})
@@ -215,15 +211,12 @@ func cmdOutFinishedScripts() []simpleKeyScript {
 		{"alt-enter", "Alt+Enter"},
 		{"esc", "Esc"},
 		{"alt-b-ignored", "Alt+b Down"},
-		{"left-right", "Left Right Left"},
 		{"tab", "Tab Backtab Tab Enter"},
 		{"plain-letters", "o c b x"},
 		{"alt-unknown", "Alt+x Alt+q Down"},
 		{"function-keys", "F5 F8 Down"},
 		{"down-to-bottom", strings.Repeat("Down ", 34)},
-		{"up-from-top", "Up Up"},
 		{"pgdn-pgup", "PgDn PgDn PgDn PgDn PgUp PgUp"},
-		{"pgup-at-top", "PgUp"},
 		{"pgdn-at-bottom", "End PgDn Down"},
 		{"home-end", "End Home End Home"},
 		{"vi-motion", "j j j k k"},

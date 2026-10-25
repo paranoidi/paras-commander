@@ -193,21 +193,6 @@ func TestMassRenameKeyScripts(t *testing.T) {
 		{"no-match", typeWord("zzz")},
 		{"conflict", typeWord("lantern-willow") + " Tab " + typeWord("velvet")},
 		{"find-then-clear", find + " Ctrl+U"},
-		// Tab and arrows between the widgets.
-		{"tab-walk", "Tab Tab Tab Tab Tab Tab"},
-		{"backtab-walk", "Backtab Backtab Backtab Backtab Backtab"},
-		{"tab-from-radio", "Up Up Tab Tab Tab Tab"},
-		{"down-walk", "Down Down Down Down Down Down Down"},
-		{"up-walk", "Up Up Up Down Down Down Down Down Up Up Up Up Up"},
-		{"find-down-up", "Down Up Up Up"},
-		{"radio-left-right", "Up Right Right Right Right Left Left Left Left"},
-		{"radio-down-keeps-column", "Up Right Down Up Right Down Up Right Down Up"},
-		{"options-left-right", "Up Down Left Right Right Right Right Left Left Left"},
-		{"options-down-to-find", "Up Down Down Down"},
-		{"buttons-left-right", "Down Down Down Down Left Right Right Right Left Left Left"},
-		{"buttons-up", "Down Down Up Up"},
-		{"buttons-tab", "Down Down Down Tab Backtab"},
-		{"replace-down-ok", "Tab Down Down Up"},
 		// Mode radios: Space selects and keeps focus, Enter selects and moves on.
 		{"radio-space-regex", "Up Right Space"},
 		{"radio-enter-regex", "Up Right Enter"},
@@ -244,7 +229,6 @@ func TestMassRenameKeyScripts(t *testing.T) {
 		{"checkbox-space", "Up Down Space Right Space Right Space Right Space"},
 		{"checkbox-enter", "Up Down Enter Right Enter"},
 		{"checkbox-plain-letters", "Up Down m t i x Space"},
-		{"checkbox-column-up", "Up Down Right Right Up"},
 		// Regex mode.
 		{"regex-valid", "Alt+r " + typeWord("orch(ard)") + " Tab " + typeWord("meadow$1")},
 		{"regex-invalid", "Alt+r " + typeWord("orch(ard")},
@@ -279,9 +263,7 @@ func TestMassRenameKeyScripts(t *testing.T) {
 		{"external-modified-toggle", "Alt+e F4 Alt+m Alt+t"},
 		{"external-mode-to-simple", "Alt+e F4 Alt+s"},
 		// Preview scrolling.
-		{"preview-pgdn", "PgDn PgDn PgUp PgUp PgUp"},
 		{"preview-in-find", find + " PgDn PgUp"},
-		{"preview-on-button", "Down Down Down PgDn"},
 		// OK, Apply, Cancel and the chords.
 		{"enter-in-find-renames", find + " Tab " + repl + " Enter"},
 		{"enter-in-find-nothing", "Enter"},

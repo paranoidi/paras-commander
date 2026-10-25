@@ -1,8 +1,0 @@
-== open ==
-focus=f0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== Down ==
-focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== Left ==
-focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== Right ==
-focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true

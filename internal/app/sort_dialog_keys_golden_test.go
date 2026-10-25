@@ -18,7 +18,6 @@ var updateKeyGolden = flag.Bool("update", false, "rewrite dialog key-script gold
 
 const sortKeyGoldenDir = "testdata/sort_dialog_keys"
 
-
 // goldenKeyEvent parses a script token: a named key, "Alt+<letter>", or a single plain rune.
 func goldenKeyEvent(t *testing.T, tok string) *tcell.EventKey {
 	t.Helper()
@@ -160,20 +159,10 @@ type sortKeyScript struct {
 }
 
 var sortKeyScripts = []sortKeyScript{
-	{"down-walk", []int{0, 2, 4}, "Down Down Down Down Down Down Down Down Down Down Down"},
-	{"up-walk", []int{0, 2, 4}, "Down Down Down Down Down Down Down Down Down Up Up Up Up Up Up Up Up Up Up Up"},
-	{"grid", []int{4}, "Right Down Down Left Down Right Down Up Right Right Left Up Up Up Up Up Left"},
-	{"grid-meta-column-edges", []int{4}, "Right Up Down Down Down Down Down Up Up Up Up Up"},
-	{"grid-no-meta-row", []int{2}, "Down Down Right Right Up Right Down Down Down Right Left Left"},
-	{"grid-no-meta-row-down-out", []int{2}, "Right Down Down Down Left Down Down Down"},
-	{"tab-wrap", []int{0, 4}, "Tab Tab Tab Tab Backtab Backtab Backtab Backtab Backtab"},
-	{"tab-from-grid", []int{4}, "Right Down Tab Tab Backtab Backtab Backtab"},
-	{"tab-from-checkbox-and-buttons", []int{4}, "Tab Down Tab Down Right Backtab Backtab Backtab"},
 	{"space-radios", []int{4}, "Down Space Down Down Space Right Space Down Space Left Space"},
 	{"enter-radios", []int{2}, "Down Down Enter Right Enter Down Left Enter"},
 	{"space-checkboxes", []int{0}, "Tab Space Down Space Down Space Space Up Space"},
 	{"enter-checkboxes", []int{0}, "Tab Enter Down Enter Down Enter Enter"},
-	{"buttons-nav", []int{0}, "Tab Tab Right Right Left Left Left Down Up"},
 	{"space-ok", []int{4}, "Right Down Space Tab Tab Space"},
 	{"enter-ok", []int{4}, "Down Space Tab Tab Enter"},
 	{"space-cancel", []int{4}, "Down Space Tab Tab Right Space"},

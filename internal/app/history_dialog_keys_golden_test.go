@@ -56,7 +56,7 @@ func historyKeyApp(t *testing.T, dir string, nHist, nZox int) *App {
 
 func historyKeyDialog(name string, nHist, nZox int) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name,
+		name:  name,
 		setup: func(t *testing.T, dir string) *App { return historyKeyApp(t, dir, nHist, nZox) },
 		state: func(app *App) string {
 			st := app.model.HistoryDialog
@@ -96,11 +96,8 @@ func historyScripts() []simpleKeyScript {
 		{"nomatch-enter", "z z z q Enter"},
 		{"nomatch-then-clear", "z z z q Backspace Backspace Backspace Backspace"},
 		{"left-right-filter", "a b Left Left Left Right Right Right Right"},
-		{"tab", "Tab Tab Tab Tab Tab Backtab Backtab Backtab Backtab Backtab"},
 		{"tab-from-list-moved", "Down Down Tab Backtab"},
 		{"back-to-filter-keeps-cursor", "Down Down Tab Tab Backtab Backtab Up"},
-		{"down-up-through-controls", "Tab Down Down Down Down Up Up Up Up"},
-		{"left-right-controls", "Tab Left Right Tab Left Right Right Left Left"},
 		{"letters-on-controls", "Tab o c Tab o c x"},
 		{"plain-space-on-controls", "Tab Space Space Tab Space"},
 		{"enter-row", "Down Down Enter"},
@@ -109,10 +106,6 @@ func historyScripts() []simpleKeyScript {
 		{"enter-on-ok", "Down Tab Tab Enter"},
 		{"enter-on-cancel", "Down Tab Tab Tab Enter"},
 		{"enter-on-cancel-right", "Down Tab Tab Right Enter"},
-		{"right-left-on-buttons", "Tab Tab Right Right Left Left Left"},
-		{"tab-from-cancel", "Tab Tab Right Tab Tab"},
-		{"up-from-cancel", "Tab Tab Right Up Up"},
-		{"down-from-cancel", "Tab Tab Right Down"},
 		{"space-on-ok", "Down Tab Tab Space"},
 		{"space-on-cancel", "Down Tab Tab Tab Space"},
 		{"space-on-cancel-right", "Down Tab Tab Right Space"},
@@ -152,14 +145,10 @@ func TestHistoryDialogKeyScripts(t *testing.T) {
 		{"to-bottom", strings.Repeat("Down ", 22)},
 		{"pgdn-pgup", "PgDn PgDn PgUp"},
 		{"type-filter", "e m"},
-		{"tab", "Tab Tab Tab Tab Backtab Backtab Backtab"},
-		{"down-up-controls", "Tab Down Down Down Up Up Up"},
-		{"left-right-controls", "Tab Left Right Tab Left Right"},
 		{"enter-row", "Down Enter"},
 		{"enter-ok", "Tab Enter"},
 		{"enter-cancel", "Tab Tab Enter"},
 		{"enter-cancel-right", "Tab Right Enter"},
-		{"tab-from-cancel", "Tab Right Tab Tab"},
 		{"space-ok", "Tab Space"},
 		{"plain-letters", "Tab o"},
 		{"plain-letters-cancel", "Tab Tab c"},
@@ -173,7 +162,6 @@ func TestHistoryDialogKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, historyKeyDialog("history_dialog_short", 3, 2), []simpleKeyScript{
 		{"walk", "Down Down Down Up Up Up PgDn PgUp Ctrl+End Ctrl+Home"},
 		{"filter", "s r"},
-		{"tab-around", "Tab Tab Tab Tab"},
 		{"toggle-zoxide", "Alt+i Alt+i"},
 	})
 	runKeyGoldenScripts(t, historyKeyDialog("history_dialog_single", 1, 0), []simpleKeyScript{

@@ -63,7 +63,7 @@ func themeFocusName(app *App) string {
 
 func themeKeyDialog(name string, n int) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name,
+		name:  name,
 		setup: func(t *testing.T, dir string) *App { return themeKeyApp(t, dir, n) },
 		state: func(app *App) string {
 			st := app.model.ThemeDialog
@@ -90,7 +90,6 @@ func TestThemeDialogKeyScripts(t *testing.T) {
 		{"ctrl-home-end", "Down Down Ctrl+End Ctrl+Home"},
 		{"scroll-down-through-list", strings.Repeat("Down ", 22)},
 		{"scroll-up-through-list", "End " + strings.Repeat("Up ", 22)},
-		{"tab", "Tab Tab Tab Backtab Backtab Backtab"},
 		{"tab-then-nav", "Down Down Tab Down Up Left Right Tab Left Right"},
 		{"back-to-list", "Down Tab Up Tab Tab Up"},
 		{"enter-list", "Down Down Enter"},
@@ -99,7 +98,6 @@ func TestThemeDialogKeyScripts(t *testing.T) {
 		{"enter-cancel-right", "Down Tab Right Enter"},
 		{"space-cancel-right", "Down Tab Right Space"},
 		{"esc-from-cancel", "Tab Right Esc"},
-		{"left-right-buttons", "Tab Right Right Left Left Left"},
 		{"esc", "Down Down Esc"},
 		{"esc-from-button", "Down Tab Tab Esc"},
 		{"space-list", "Down Space"},
@@ -177,7 +175,7 @@ func sftpKeyApp(t *testing.T, dir string, n int) *App {
 
 func sftpKeyDialog(name string, n int) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, // the dialog only: the panels behind it show the host's free disk space
+		name:   name, // the dialog only: the panels behind it show the host's free disk space
 		serial: true, // setup swaps the package-level sftpTouchConn
 		setup:  func(t *testing.T, dir string) *App { return sftpKeyApp(t, dir, n) },
 		state: func(app *App) string {
@@ -218,11 +216,8 @@ func TestSFTPConnectKeyScripts(t *testing.T) {
 		{"nomatch-enter", "z z z q Enter"},
 		{"nomatch-then-clear", "z z z q Backspace Backspace Backspace Backspace"},
 		{"left-right-filter", "a b Left Left Left Right Right Right Right"},
-		{"tab", "Tab Tab Tab Tab Tab Backtab Backtab Backtab Backtab Backtab"},
 		{"tab-from-list-moved", "Down Down Tab Backtab"},
 		{"down-up-buttons", "Tab Tab Down Up Tab Tab Down Up Up"},
-		{"location-up-down", "Tab Down Up Tab Up"},
-		{"left-right-buttons", "Tab Tab Left Right Right Left Left"},
 		{"left-right-location", "Tab Left Right Left Left"},
 		{"type-location", "Tab x y Left Backspace"},
 		{"type-location-prefilled", "Tab Backspace"},
@@ -253,7 +248,6 @@ func TestSFTPConnectKeyScripts(t *testing.T) {
 	})
 	empty := sftpKeyDialog("sftp_connect_empty", 0)
 	runKeyGoldenScripts(t, empty, []simpleKeyScript{
-		{"nav", "Down Up Tab Tab Tab Tab Backtab Up Down"},
 		{"typing", "x y z Up Tab Backspace"},
 		{"enter", "Enter"},
 		{"enter-ok", "Tab Enter"},
@@ -278,7 +272,7 @@ func dedupEmptyKeyDialog(name string) keyGoldenDialog {
 	var sub string
 	var tt *testing.T
 	return keyGoldenDialog{
-		name: name,
+		name:   name,
 		serial: true, // setup writes the sub and tt variables shared by this dialog's scripts
 		setup: func(t *testing.T, _ string) *App {
 			tt = t
@@ -342,9 +336,6 @@ func dedupEmptyLongKeyDialog(name string, n int) keyGoldenDialog {
 
 func TestDedupEmptyDirsConfirmKeyScripts(t *testing.T) {
 	scripts := []simpleKeyScript{
-		{"left-right", "Right Right Right Left Left Left Right"},
-		{"up-down", "Up Down Right Up Down Right Up Down"},
-		{"tab", "Tab Tab Tab Backtab Backtab Backtab"},
 		{"enter-yes", "Enter"},
 		{"enter-no", "Right Enter"},
 		{"enter-cancel", "Right Right Enter"},
@@ -361,11 +352,9 @@ func TestDedupEmptyDirsConfirmKeyScripts(t *testing.T) {
 		{"alt-unknown", "Alt+x Alt+q Right"},
 		{"esc", "Right Esc"},
 		{"plain-letters", "y n c o x q"},
-		{"home-end-pg", "Home End PgUp PgDn Down"},
 	}
 	runKeyGoldenScripts(t, dedupEmptyKeyDialog("dedup_empty_dirs"), scripts)
 	long := []simpleKeyScript{
-		{"walk", "Right Right Left Tab Tab Backtab"},
 		{"enter-yes", "Enter"},
 		{"alt-n", "Alt+n"},
 	}

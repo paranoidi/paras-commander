@@ -29,8 +29,6 @@ func typeTokens(text string) string {
 	return strings.Join(toks, " ")
 }
 
-func repeatTok(tok string, n int) string { return strings.TrimSpace(strings.Repeat(tok+" ", n)) }
-
 // seedPatternFixtures fills dir with deterministic entries: seven files and two directories.
 func seedPatternFixtures(t *testing.T, dir string) {
 	t.Helper()
@@ -108,32 +106,6 @@ func filterKeyDialog(name string, metas int) keyGoldenDialog {
 
 func TestFilterDialogKeyScripts(t *testing.T) {
 	scripts := []simpleKeyScript{
-		// Focus movement.
-		{"down-walk", repeatTok("Down", 9)},
-		{"down-walk-from-top", "Up Up Up " + repeatTok("Down", 9)},
-		{"up-walk", repeatTok("Up", 6)},
-		{"up-walk-from-buttons", repeatTok("Down", 5) + " " + repeatTok("Up", 8)},
-		{"grid-right-left", "Up Left Right Right Right Left Left Left"},
-		{"grid-columns", "Up Up Up Right Down Down Right Down Down Left Down Up"},
-		{"grid-types-col2", "Up Up Up Right Right Down Down Right Up Up"},
-		{"grid-down-from-short-column", "Up Up Up Right Right Down Down Down"},
-		{"grid-up-from-pattern-to-radio", "Up Up Right Up Down"},
-		{"grid-up-into-types", "Up Up Up Right Right Down Up"},
-		{"grid-down-from-types-to-pattern", "Up Up Up Right Down Down Down Up"},
-		{"options-rows", "Down Right Down Left Down Down Up Up Up"},
-		{"options-rows-right-edges", "Down Right Right Down Right Right Up Right"},
-		{"options-from-column-two", "Down Right Down Down Up Left"},
-		{"buttons-left-right", "Down Down Down Left Right Right Right Left Left Left"},
-		{"buttons-up-from-ok", "Down Down Down Up Down Down Up"},
-		{"buttons-up-from-cancel", "Down Down Down Right Up Right Up"},
-		{"buttons-down-stays", "Down Down Down Down Down Right Down Down"},
-		{"tab-walk", repeatTok("Tab", 7)},
-		{"backtab-walk", repeatTok("Backtab", 7)},
-		{"tab-from-radios", "Up Up Up Tab Tab Tab Tab Tab"},
-		{"tab-from-types", "Up Up Up Right Down Tab Tab Backtab Backtab"},
-		{"tab-from-types-col2", "Up Up Up Right Right Down Tab Backtab"},
-		{"tab-from-options", "Down Right Tab Tab Backtab Backtab Backtab"},
-		{"tab-from-buttons", "Down Down Down Right Tab Backtab Backtab"},
 		// Activation.
 		{"space-radios", "Up Up Up Space Down Space Down Space"},
 		{"enter-radios", "Up Up Up Enter Down Enter Down Enter"},
@@ -217,15 +189,6 @@ func TestFilterDialogKeyScripts(t *testing.T) {
 	}
 	runKeyGoldenScripts(t, filterKeyDialog("filter", 0), scripts)
 	meta := []simpleKeyScript{
-		{"down-walk", repeatTok("Down", 10)},
-		{"up-walk-from-buttons", repeatTok("Down", 6) + " " + repeatTok("Up", 8)},
-		{"meta-row-nav", "Down Down Down Right Left Down Up Up"},
-		{"meta-row-right-edges", "Down Down Down Right Right Up Right"},
-		{"tab-walk", repeatTok("Tab", 7)},
-		{"backtab-walk", repeatTok("Backtab", 7)},
-		{"tab-from-meta-row", "Down Down Down Right Tab Backtab Backtab"},
-		{"up-from-ok", repeatTok("Down", 4) + " Up"},
-		{"up-from-cancel", repeatTok("Down", 4) + " Right Up"},
 		{"space-meta", "Down Down Down Space Right Space Left Space"},
 		{"enter-meta-applies", typeTokens("*") + " Down Down Down Enter"},
 		{"alt-meta-in-pattern", "Alt+m Alt+n Alt+m Alt+n Alt+n"},

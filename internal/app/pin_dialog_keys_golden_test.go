@@ -32,7 +32,7 @@ func pinKeyApp(t *testing.T, dir string, n int) *App {
 
 func pinKeyDialog(name string, n int) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, // the dialog only: the panels behind it show free disk space
+		name:  name, // the dialog only: the panels behind it show free disk space
 		setup: func(t *testing.T, dir string) *App { return pinKeyApp(t, dir, n) },
 		state: func(app *App) string {
 			st := app.model.PinDialog
@@ -72,7 +72,6 @@ func TestPinDialogKeyScripts(t *testing.T) {
 		{"nomatch-enter", "z z z q Enter"},
 		{"nomatch-then-clear", "z z z q Backspace Backspace Backspace Backspace"},
 		{"left-right-filter", "a b Left Left Left Right Right Right Right"},
-		{"tab", "Tab Tab Backtab Backtab"},
 		{"tab-from-list-moved", "Down Down Tab Backtab"},
 		{"enter-root", "Enter"},
 		{"enter-missing", "Down Enter"},

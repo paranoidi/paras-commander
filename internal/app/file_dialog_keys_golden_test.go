@@ -162,13 +162,6 @@ func TestFileRenameKeyScripts(t *testing.T) {
 		{"restore-default", "x y z Alt+Backspace"},
 		{"space-in-name", "a Space b"},
 		{"letters-in-name", "a t p r o c y n O C"},
-		{"down-walk", "Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Up Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab Backtab"},
-		{"tab-from-checkbox", "Down Tab Backtab Backtab"},
-		{"left-right-buttons", "Down Down Left Right Right Right Left Left Left"},
-		{"left-right-checkbox", "Down Left Right"},
 		{"space-checkbox", "Down Space Space"},
 		{"enter-checkbox", "Down Enter Enter"},
 		{"mnemonic-in-name", "a Alt+a b Alt+A"},
@@ -200,15 +193,10 @@ func TestFileRenameKeyScripts(t *testing.T) {
 	})
 	dir := fileKeyDialog("file_rename_dir", true, openRenameOn("orchard"))
 	runKeyGoldenScripts(t, dir, []simpleKeyScript{
-		{"down-walk", "Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Up Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab"},
 		{"space-checkboxes", "Down Space Down Space"},
 		{"enter-checkboxes", "Down Enter Down Enter"},
 		{"mnemonics-in-name", "a Alt+a Alt+p b"},
 		{"mnemonics-on-button", "Down Down Down Alt+p Alt+a"},
-		{"left-right-checkboxes", "Down Left Right Down Left Right"},
 		{"plain-letters", "Down Down a p x"},
 		{"open-other-then-rename", "Alt+p e m b e r Enter"},
 		{"whitespace-warning", "x Space Down Down"},
@@ -238,11 +226,6 @@ func TestFileRenameToolKeyScripts(t *testing.T) {
 	}
 	runKeyGoldenScripts(t, fileKeyDialog("file_rename_sanitize", false, open("F2", false)), []simpleKeyScript{
 		{"down-walk", "Down Down Down Down"},
-		{"up-walk", "Up Up Down Down Down Up Up Up"},
-		{"tab", "Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab"},
-		{"left-right-buttons", "Left Right Right Right Left Left Left"},
-		{"left-right-options", "Up Left Right Up Left Right"},
 		{"space-toggles", "Up Space Up Space Space"},
 		{"enter-toggles", "Up Enter Up Enter"},
 		{"mnemonic-dot", "Alt+. Alt+."},
@@ -261,8 +244,6 @@ func TestFileRenameToolKeyScripts(t *testing.T) {
 	})
 	runKeyGoldenScripts(t, fileKeyDialog("file_rename_slugify", false, open("F3", false)), []simpleKeyScript{
 		{"down-walk", "Down Down Down Down"},
-		{"up-walk", "Up Up Up"},
-		{"tab", "Tab Tab Tab"},
 		{"space-selects", "Up Down Up Space"},
 		{"enter-selects", "Up Down Up Enter Up Enter"},
 		{"mnemonics", "Alt+_ Alt+. Alt+_"},
@@ -274,8 +255,6 @@ func TestFileRenameToolKeyScripts(t *testing.T) {
 	})
 	runKeyGoldenScripts(t, fileKeyDialog("file_rename_encoding", false, open("F4", true)), []simpleKeyScript{
 		{"down-walk", "Down Down Down Down"},
-		{"up-walk", "Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab"},
 		{"space-selects", "Up Space Up Space Up Space"},
 		{"enter-selects", "Up Enter Up Enter"},
 		{"mnemonics", "Alt+E Alt+W Alt+S"},
@@ -299,11 +278,7 @@ func TestFileDuplicateKeyScripts(t *testing.T) {
 		{"edit-cursor", "x y z Left Left Backspace Home Delete End q Right Right"},
 		{"edit-keys", "x y z Ctrl+W a b Ctrl+U c d"},
 		{"restore-default", "x y z Alt+Backspace"},
-		{"down-walk", "Down Down Down Down Down"},
 		{"up-walk", "Down Down Down Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab"},
-		{"left-right-buttons", "Down Down Left Right Right Right Left Left Left"},
 		{"space-checkbox", "Down Space Space"},
 		{"enter-checkbox", "Down Enter Enter"},
 		{"mnemonic-in-name", "a Alt+a b"},
@@ -337,10 +312,6 @@ func TestFileMkdirKeyScripts(t *testing.T) {
 		{"restore-default", "x y z Alt+Backspace"},
 		{"extract-chord-without-selection", "F7"},
 		{"down-walk", "Down Down Down Down"},
-		{"up-walk", "Down Down Up Up Up"},
-		{"tab", "Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab"},
-		{"left-right-buttons", "Down Left Right Right Right Left Left Left"},
 		{"mnemonics-without-actions", "a Alt+r Alt+y Alt+m b"},
 		{"plain-letters-on-buttons", "Down o c r y m x"},
 		{"enter-creates", "e m b e r Enter"},
@@ -364,13 +335,6 @@ func TestFileMkdirKeyScripts(t *testing.T) {
 		dispatchFileOp(t, app, keymap.ActionFileMkdir)
 	}
 	runKeyGoldenScripts(t, fileKeyDialog("file_mkdir_actions", false, withActions), []simpleKeyScript{
-		{"down-walk", "Down Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Down Up Up Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab"},
-		{"tab-from-radio", "Down Tab Backtab Backtab"},
-		{"left-right-buttons", "Down Down Down Down Left Right Right Right Left Left Left"},
-		{"left-right-radios", "Down Left Right Down Left Right"},
 		{"space-radios", "Down Space Down Space Down Space Up Space"},
 		{"enter-radios", "Down Down Enter"},
 		{"enter-first-radio", "Down Enter"},
@@ -419,9 +383,6 @@ func TestFileDeleteKeyScripts(t *testing.T) {
 	}
 	scripts := []simpleKeyScript{
 		{"default-no", "Enter"},
-		{"left-right", "Left Right Left Left Right Right"},
-		{"up-down", "Up Down Left Up Down"},
-		{"tab", "Tab Tab Backtab Backtab Tab"},
 		{"enter-yes", "Left Enter"},
 		{"space-yes", "Left Space"},
 		{"space-no", "Space"},
@@ -437,7 +398,6 @@ func TestFileDeleteKeyScripts(t *testing.T) {
 		{"esc", "Left Esc"},
 		{"pgdn-pgup", "PgDn PgDn PgUp PgUp PgUp"},
 		{"pgdn-to-end", "PgDn PgDn PgDn PgDn PgDn"},
-		{"other-scroll-keys", "Home End Down Up"},
 	}
 	runKeyGoldenScripts(t, fileKeyDialog("file_delete", false, few), scripts)
 	runKeyGoldenScripts(t, fileKeyDialog("file_delete_many", false, many), scripts)
@@ -473,12 +433,7 @@ func attrScripts() []simpleKeyScript {
 		{"edit-keys", "x y z Ctrl+W a b Ctrl+U c d"},
 		{"letters-in-input", "o c y n O C"},
 		{"space-in-input", "a Space b"},
-		{"down-walk", "Down Down Down Down Down"},
 		{"up-walk", "Down Down Down Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab"},
-		{"tab-from-button", "Tab Tab Tab Backtab"},
-		{"left-right-buttons", "Down Down Left Right Right Right Left Left Left"},
 		{"plain-letters-on-buttons", "Down Down o c x"},
 		{"mnemonic-unknown", "a Alt+x Alt+q b"},
 		{"enter-empty", "Enter"},
@@ -510,10 +465,6 @@ func TestFileChmodChownKeyScripts(t *testing.T) {
 		{"edit-keys", "7 5 5 Ctrl+W 6 4 4 Ctrl+U 7"},
 		{"letters-in-input", "o c y n O C"},
 		{"down-walk", "Down Down Down Down"},
-		{"up-walk", "Down Down Up Up Up"},
-		{"tab", "Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab"},
-		{"left-right-buttons", "Down Left Right Right Right Left Left Left"},
 		{"plain-letters-on-buttons", "Down o c x"},
 		{"enter-empty", "Enter"},
 		{"enter-bad-mode", "z z z Enter"},

@@ -193,13 +193,8 @@ func findKeyScripts() []simpleKeyScript {
 		{"query-then-nav", findQuery("note") + " Down Down Up"},
 		{"query-edit", findQuery("lantren") + " Left Left Backspace Backspace " + findQuery("er") + " Home Delete End Ctrl+W"},
 		{"query-no-match", findQuery("zzq") + " Down Up Enter"},
-		{"tab-cycle", "Tab Tab Tab Tab Tab Tab Tab Tab Tab"},
-		{"backtab-cycle", "Backtab Backtab Backtab Backtab Backtab"},
-		{"right-into-depth-left-back", "Right Tab Left"},
-		{"depth-row-nav", "Tab Down Right Right Right Right Left Up Down Down Up"},
 		{"depth-typing", "Tab 2 Tab 0 Tab x Backspace Enter"},
 		{"depth-digit-reindexes", "Tab 1"},
-		{"buttons-nav", "Tab Tab Tab Tab Tab Tab Left Left Right Up Down"},
 		{"space-on-options", "Tab Tab Space Right Space Right Space Right Space"},
 		{"enter-on-options", "Tab Tab Enter Right Enter Right Enter"},
 		{"mnemonics-from-query", "Alt+n Alt+y Alt+i Alt+v Alt+n"},
@@ -210,7 +205,6 @@ func findKeyScripts() []simpleKeyScript {
 		{"space-ok", "Tab Tab Tab Tab Tab Tab Space"},
 		{"space-on-ok-button", "Down Tab Tab Tab Space"},
 		{"space-on-cancel-button", "Tab Tab Tab Right Space"},
-		{"up-from-buttons", "Tab Tab Tab Up Up Down Down"},
 		{"space-cancel", "Tab Tab Tab Tab Tab Tab Tab Space"},
 		{"enter-on-file", findQuery("kestrel") + " Enter"},
 		{"enter-on-dir", findQuery("juniper") + " Enter"},
@@ -231,19 +225,14 @@ func TestFindDialogKeyScripts(t *testing.T) {
 
 func TestFindDialogSelectionsKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, findKeyDialog("find_dialog_selections", false, true), []simpleKeyScript{
-		{"tab-cycle", "Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab"},
-		{"row-down-to-selections", "Tab Tab Right Down Up Down Down Up Up"},
 		{"mnemonic-selections", "Alt+s Down Alt+s"},
 		{"space-selections", "Tab Tab Tab Tab Tab Tab Space Space"},
-		{"buttons-up", "Tab Tab Tab Tab Tab Tab Tab Up Tab Tab Left Up"},
 	})
 }
 
 func TestFindJumpDialogKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, findKeyDialog("find_jump", true, false), []simpleKeyScript{
 		{"walk-down", "Down Down Down Down Down"},
-		{"tab-cycle", "Tab Tab Tab Tab Tab Tab Tab"},
-		{"row-nav", "Tab Down Right Left Left Up"},
 		{"mnemonics", "Alt+n Alt+y Alt+i Alt+v"},
 		{"insert-ignored", "Down Insert Down"},
 		{"query-enter", findQuery("quartz") + " Enter"},

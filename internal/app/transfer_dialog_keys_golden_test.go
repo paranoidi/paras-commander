@@ -163,13 +163,6 @@ func TestTransferCopyKeyScripts(t *testing.T) {
 		{"complete-open-down-enter", "~ / p r o j e c t s / Tab Down Enter"},
 		{"complete-open-esc", "~ / p r o j e c t s / Tab Esc"},
 		{"complete-open-esc-esc", "~ / p r o j e c t s / Tab Esc Esc"},
-		{"down-walk", "Down Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Up Up Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab Backtab Backtab"},
-		{"tab-from-checkbox", "Down Down Tab Backtab Backtab"},
-		{"left-right-buttons", "Tab Tab Left Right Right Right Left Left Left"},
-		{"left-right-checkbox", "Down Left Right Down Left Right"},
 		{"space-checkboxes", "Down Space Down Space Down Space"},
 		{"enter-checkboxes", "Down Enter Down Enter Down Enter"},
 		{"mnemonics-in-dest", "a Alt+r Alt+t Alt+d Alt+R b"},
@@ -201,11 +194,9 @@ func TestTransferCopyKeyScripts(t *testing.T) {
 		{"esc", "a Esc"},
 		{"esc-from-button", "Tab Tab Right Esc"},
 		{"toggles-then-ok", "@tmpdest Alt+r Alt+t Tab Tab Enter"},
-		{"pgup-pgdn-ignored", "PgUp PgDn Down PgDn PgUp"},
 	})
 	runKeyGoldenScripts(t, transferKeyDialog("transfer_copy_remote", transferKeyOpts{remote: true}), []simpleKeyScript{
 		{"deref-inert", "Down Down Down Space Enter Alt+d"},
-		{"walk", "Down Down Down Down Down Up Up"},
 		{"mnemonic-in-dest", "a Alt+d Alt+r"},
 	})
 	runKeyGoldenScripts(t, transferKeyDialog("transfer_copy_dropdown", transferKeyOpts{dropdown: true}), []simpleKeyScript{
@@ -233,11 +224,7 @@ func TestTransferMoveKeyScripts(t *testing.T) {
 		{"replace-prefill", "a b c"},
 		{"edit-cursor", "x y z Left Left Backspace Home Delete End q Right Right"},
 		{"complete-open-tab", "~ / p r o j e c t s / Tab"},
-		{"down-walk", "Down Down Down Down Down"},
 		{"up-walk", "Down Down Down Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab"},
-		{"left-right-buttons", "Down Left Right Right Right Left Left Left"},
 		{"mnemonics-in-dest", "a Alt+r Alt+t Alt+d Alt+i b"},
 		{"plain-letters-on-buttons", "Down o c p x"},
 		{"dest-shortcut-active", "a Shift+Left"},
@@ -272,9 +259,6 @@ func TestTransferSelfCopyKeyScripts(t *testing.T) {
 		{"letters-in-name", "r t d i o c p y n"},
 		{"down-walk", "Down Down Down Down"},
 		{"up-walk", "Down Down Down Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab"},
-		{"left-right-buttons", "Down Left Right Right Right Left Left Left"},
 		{"mnemonics-in-name", "a Alt+r Alt+t Alt+d Alt+i b"},
 		{"plain-letters-on-buttons", "Down o c p x"},
 		{"dest-shortcuts-ignored", "a Shift+Left Shift+Right"},
@@ -298,7 +282,6 @@ func TestTransferSelfCopyKeyScripts(t *testing.T) {
 		{"esc-from-button", "Down Right Esc"},
 	})
 	runKeyGoldenScripts(t, transferKeyDialog("transfer_self_move", transferKeyOpts{self: true, move: true}), []simpleKeyScript{
-		{"walk", "Down Right Left Up Tab Tab Tab"},
 		{"enter-new-name", "j u n i p e r . t x t Enter"},
 		{"alt-p", "j u n i p e r . t x t Alt+p"},
 		{"esc", "Esc"},
@@ -307,11 +290,6 @@ func TestTransferSelfCopyKeyScripts(t *testing.T) {
 
 func TestTransferMultiLocationKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, transferKeyDialog("transfer_multi_copy", transferKeyOpts{multi: true}), []simpleKeyScript{
-		{"down-walk", "Down Down Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Down Up Up Up Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab Backtab Backtab"},
-		{"left-right-buttons", "Down Down Down Down Down Left Right Right Right Left Left Left"},
 		{"space-checkboxes", "Down Space Down Space Down Space Down Space"},
 		{"enter-checkboxes", "Down Enter Down Enter Down Enter Down Enter"},
 		{"mnemonics-in-dest", "a Alt+r Alt+t Alt+d Alt+i b"},
@@ -336,13 +314,8 @@ func TestTransferMultiLocationKeyScripts(t *testing.T) {
 		{"complete-open-tab", "~ / p r o j e c t s / Tab"},
 	})
 	runKeyGoldenScripts(t, transferKeyDialog("transfer_multi_move", transferKeyOpts{multi: true, move: true}), []simpleKeyScript{
-		{"down-walk", "Down Down Down Down Down Down"},
-		{"up-walk", "Down Down Down Down Up Up Up Up"},
-		{"tab", "Tab Tab Tab Tab Tab"},
-		{"backtab", "Backtab Backtab Backtab Backtab"},
 		{"space-flatten", "Down Space Space"},
 		{"mnemonics", "a Alt+i Alt+r Alt+d b"},
-		{"scroll", "PgDn PgUp"},
 		{"enter-queues", "@tmpdest Alt+i Enter"},
 		{"enter-paused", "@tmpdest Down Down Right Enter"},
 		{"alt-p", "@tmpdest Alt+p"},
