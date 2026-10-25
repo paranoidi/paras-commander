@@ -313,7 +313,7 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		return Event{}, true
 	}
 	if !cur.isButton() {
-		switch it := itemAt(spec, cur); {
+		switch it := widgetAt(spec, cur); {
 		case it.Kind == KindList:
 			if e, ok := listKey(it, ev, false); ok {
 				return e, true

@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestFindDepthInputKeys(t *testing.T) {
@@ -33,15 +34,15 @@ func TestFindDepthKeyCommitsAndFocusesQuery(t *testing.T) {
 	t.Parallel()
 	h := newTestFindHandler(&fakeFindHost{}, &ui.Model{})
 	st := &h.model.FindDialog
-	st.Focus = st.FindDialogDepthFocus()
+	st.Focus = dialog.FindDepth
 	h.handleFindDepthKey(tcell.NewEventKey(tcell.KeyRune, '3', tcell.ModNone))
-	if st.MaxDepth != 3 || st.Focus != 0 {
-		t.Fatalf("MaxDepth = %d, Focus = %d; want 3, 0", st.MaxDepth, st.Focus)
+	if st.MaxDepth != 3 || st.Focus != dialog.FindQuery {
+		t.Fatalf("MaxDepth = %d, Focus = %q; want 3, query", st.MaxDepth, st.Focus)
 	}
-	st.Focus = st.FindDialogDepthFocus()
+	st.Focus = dialog.FindDepth
 	h.handleFindDepthKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
-	if st.MaxDepth != 0 || st.Focus != 0 {
-		t.Fatalf("after Backspace: MaxDepth = %d, Focus = %d; want 0, 0", st.MaxDepth, st.Focus)
+	if st.MaxDepth != 0 || st.Focus != dialog.FindQuery {
+		t.Fatalf("after Backspace: MaxDepth = %d, Focus = %q; want 0, query", st.MaxDepth, st.Focus)
 	}
 }
 

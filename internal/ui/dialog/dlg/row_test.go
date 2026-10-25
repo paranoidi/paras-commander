@@ -155,6 +155,40 @@ func TestRowClipsOverflowingCells(t *testing.T) {
 	}
 }
 
+func TestRowNarrowsGapsBeforeClipping(t *testing.T) {
+	cells := func(gap int) []Item {
+		return []Item{
+			{ID: "a", Kind: KindRadio, Label: "Anchorage", Gap: gap},
+			{ID: "b", Kind: KindCheckbox, Label: "Breakwater", Gap: gap},
+			{ID: "c", Kind: KindRadio, Label: "Cove"},
+		}
+	}
+	spec := func(gap int) Spec {
+		return Spec{
+			Title: "Harbor", Width: 44, MinWidth: 20, Unclamped: true,
+			Groups:  []Group{{Columns: [][]Item{{{Kind: KindRow, Cells: cells(gap)}}}}},
+			Buttons: []Button{{ID: OK, Label: "OK"}},
+		}
+	}
+	// 14 + 15 + 9 cells of boxes in a 41-cell row: gaps of 6 do not fit, gaps of 1 do.
+	wide := mustPlace(t, spec(6))
+	a, b, c := wide.Items[0], wide.Items[1], wide.Items[2]
+	if got := b.Rect.X - (a.Rect.X + a.Rect.Width); got >= 6 || got < 1 {
+		t.Errorf("gap a..b = %d, want it narrowed below 6 (at least 1)", got)
+	}
+	if c.Label != "Cove" {
+		t.Errorf("last cell = %+v, want it drawn whole once the gaps narrowed", c)
+	}
+	if end := wide.Rect.X + wide.Rect.Width - 2; c.Rect.X+c.Rect.Width > end {
+		t.Errorf("last cell %+v ends past %d", c.Rect, end)
+	}
+	// A row that fits keeps its gaps.
+	fits := mustPlace(t, spec(1))
+	if got := fits.Items[1].Rect.X - (fits.Items[0].Rect.X + fits.Items[0].Rect.Width); got != 1 {
+		t.Errorf("gap in a row that fits = %d, want 1", got)
+	}
+}
+
 func TestRowHitRectsAndClick(t *testing.T) {
 	spec := rowSpec()
 	p := mustPlace(t, spec)

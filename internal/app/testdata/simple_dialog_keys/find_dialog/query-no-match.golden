@@ -4,18 +4,18 @@ focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │                                                                        │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  amber                                                                  ┃
-│  birch                                                                  │
-│  cinder                                                                 │
-│  delta                                                                  │
-│  harbor                                                                 │
-│  willow_overview.md                                                     │
-│  amber/birch_notes.md                                                   │
-│  amber/cinder_report.txt                                                │
-│  amber/delta                                                            │
-│  birch/fable_draft.go                                                   │
+│ 󰉋 amber                                                                  ┃
+│ 󰉋 birch                                                                  │
+│ 󰉋 cinder                                                                 │
+│ 󰉋 delta                                                                  │
+│ 󰉋 harbor                                                                 │
+│  willow_overview.md                                                     │
+│  amber/birch_notes.md                                                   │
+│ 󰈙 amber/cinder_report.txt                                                │
+│ 󰉋 amber/delta                                                            │
+│  birch/fable_draft.go                                                   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                           [ OK ]    [ Cancel ]                           │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -27,27 +27,30 @@ d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+j fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+k fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
+m fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaafffjffffaafffjffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffmffffaafffmffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == z ==
 focus=0 query="z" qcursor=1 depth="" sel=0 cursor="cinder/harbor_map.zip" scroll=0 ranked=3 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -55,11 +58,11 @@ focus=0 query="z" qcursor=1 depth="" sel=0 cursor="cinder/harbor_map.zip" scroll
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  z                                                                     │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  cinder/harbor_map.zip                                                  │
-│  harbor/quartz                                                          │
-│  harbor/quartz/thistle_note.txt                                         │
+│  cinder/harbor_map.zip                                                  │
+│ 󰉋 harbor/quartz                                                          │
+│ 󰈙 harbor/quartz/thistle_note.txt                                         │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -78,20 +81,22 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300eca517 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-k fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-l fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+k fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+l fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+m fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+n fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiiiiiiiiiiiiiiiiiijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaaaaaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakkaaaaaaaaaaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aamaaaaaaaaaaaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -100,7 +105,7 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaffflffffaaffflffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffnffffaafffnffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == z ==
 focus=0 query="zz" qcursor=2 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -108,7 +113,7 @@ focus=0 query="zz" qcursor=2 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=fal
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  zz                                                                    │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │                                                                          │
@@ -136,7 +141,7 @@ h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -157,7 +162,7 @@ focus=0 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=fa
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  zzq                                                                   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │                                                                          │
@@ -185,7 +190,7 @@ h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -201,12 +206,12 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Down ==
-focus=0 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
+focus=2 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
 -- text --
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  zzq                                                                   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │                                                                          │
@@ -225,18 +230,15 @@ focus=0 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=fa
 a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
-e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaccdddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
+aaccddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccdddaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aeeeebeeeeeeeeeeeeeeaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaafffffffffffffaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -247,7 +249,9 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaadddgddddaadddgddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Up ==
 focus=0 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -255,7 +259,7 @@ focus=0 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=fa
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  zzq                                                                   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │                                                                          │
@@ -283,7 +287,7 @@ h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -304,7 +308,7 @@ focus=0 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=fa
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  zzq                                                                   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │                                                                          │
@@ -332,7 +336,7 @@ h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

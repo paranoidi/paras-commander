@@ -4,18 +4,18 @@ focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │                                                                        │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  amber                                                                  ┃
-│  birch                                                                  │
-│  cinder                                                                 │
-│  delta                                                                  │
-│  harbor                                                                 │
-│  willow_overview.md                                                     │
-│  amber/birch_notes.md                                                   │
-│  amber/cinder_report.txt                                                │
-│  amber/delta                                                            │
-│  birch/fable_draft.go                                                   │
+│ 󰉋 amber                                                                  ┃
+│ 󰉋 birch                                                                  │
+│ 󰉋 cinder                                                                 │
+│ 󰉋 delta                                                                  │
+│ 󰉋 harbor                                                                 │
+│  willow_overview.md                                                     │
+│  amber/birch_notes.md                                                   │
+│ 󰈙 amber/cinder_report.txt                                                │
+│ 󰉋 amber/delta                                                            │
+│  birch/fable_draft.go                                                   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                           [ OK ]    [ Cancel ]                           │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -27,27 +27,30 @@ d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+j fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+k fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
+m fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaafffjffffaafffjffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffmffffaafffmffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == l ==
 focus=0 query="l" qcursor=1 depth="" sel=0 cursor="delta" scroll=0 ranked=11 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -55,18 +58,18 @@ focus=0 query="l" qcursor=1 depth="" sel=0 cursor="delta" scroll=0 ranked=11 dir
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  l                                                                     │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta                                                                  ┃
-│  willow_overview.md                                                     │
-│  delta/juniper                                                          │
-│  delta/juniper/kestrel_log.txt                                          │
-│  delta/juniper/lantern_plan.md                                          │
-│  birch/glacier_summary.toml                                             │
-│  amber/delta                                                            │
-│  amber/delta/ember_photo.png                                            │
-│  birch/fable_draft.go                                                   │
-│  cinder/ivory_clip.mp4                                                  │
+│ 󰉋 delta                                                                  ┃
+│  willow_overview.md                                                     │
+│ 󰉋 delta/juniper                                                          │
+│ 󰈙 delta/juniper/kestrel_log.txt                                          │
+│  delta/juniper/lantern_plan.md                                          │
+│  birch/glacier_summary.toml                                             │
+│ 󰉋 amber/delta                                                            │
+│  amber/delta/ember_photo.png                                            │
+│  birch/fable_draft.go                                                   │
+│  cinder/ivory_clip.mp4                                                  │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                           [ OK ]    [ Cancel ]                           │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -78,29 +81,34 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-k fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-l fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+k fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+m fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+n fg=0x3009c4221 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+o fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+p fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
+q fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaiijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhiijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
+aakaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aamaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aanaaaaaaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaoaaaaaaaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aapaaaaaaaaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaoaaaaaaaaaaaaaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaffflffffaaffflffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffqffffaafffqffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == a ==
 focus=0 query="la" qcursor=2 depth="" sel=2 cursor="delta" scroll=0 ranked=8 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -108,16 +116,16 @@ focus=0 query="la" qcursor=2 depth="" sel=2 cursor="delta" scroll=0 ranked=8 dir
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  la                                                                    │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  birch/glacier_summary.toml                                             │
-│  delta/juniper/lantern_plan.md                                          │
-│  delta                                                                  │
-│  delta/juniper                                                          │
-│  delta/juniper/kestrel_log.txt                                          │
-│  amber/delta                                                            │
-│  amber/delta/ember_photo.png                                            │
-│  birch/fable_draft.go                                                   │
+│  birch/glacier_summary.toml                                             │
+│  delta/juniper/lantern_plan.md                                          │
+│ 󰉋 delta                                                                  │
+│ 󰉋 delta/juniper                                                          │
+│ 󰈙 delta/juniper/kestrel_log.txt                                          │
+│ 󰉋 amber/delta                                                            │
+│  amber/delta/ember_photo.png                                            │
+│  birch/fable_draft.go                                                   │
 │                                                                          │
 │                                                                          │
 ├──────────────────────────────────────────────────────────────────────────┤
@@ -131,29 +139,34 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x3009c4221 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-k fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-l fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+j fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+k fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+l fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+m fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+n fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+o fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+p fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
+q fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaaaaaaaaiiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaiiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahajjkjkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjaa
-aahaaaiaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaiaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaiaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaiaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaiaaaaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aajaaaaaaaaaaaaaaaiiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakkllmlmlllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllaa
+aakkaaiaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aanaaaiaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakkaaaaaaaaiaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaoaaaaaaaaaiaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aapaaaaaaaaaaiaaaaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaffflffffaaffflffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffqffffaafffqffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == n ==
 focus=0 query="lan" qcursor=3 depth="" sel=0 cursor="delta/juniper/lantern_plan.md" scroll=0 ranked=4 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -161,12 +174,12 @@ focus=0 query="lan" qcursor=3 depth="" sel=0 cursor="delta/juniper/lantern_plan.
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  lan                                                                   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
-│  delta/juniper                                                          │
-│  delta/juniper/kestrel_log.txt                                          │
-│  amber/delta/ember_photo.png                                            │
+│  delta/juniper/lantern_plan.md                                          │
+│ 󰉋 delta/juniper                                                          │
+│ 󰈙 delta/juniper/kestrel_log.txt                                          │
+│  amber/delta/ember_photo.png                                            │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -184,21 +197,24 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-k fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-l fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+k fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+l fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+m fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+n fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+o fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiiiiiiiiiiiiiijjjiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaakakaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaakakaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaakakaaaaaaaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakkaalalaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aamaaalalaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aanaaaaaaaaalalaaaaaaaaaaaaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -206,7 +222,7 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaffflffffaaffflffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffoffffaafffoffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == t ==
 focus=0 query="lant" qcursor=4 depth="" sel=0 cursor="delta/juniper/lantern_plan.md" scroll=0 ranked=2 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -214,10 +230,10 @@ focus=0 query="lant" qcursor=4 depth="" sel=0 cursor="delta/juniper/lantern_plan
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  lant                                                                  │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
-│  delta/juniper/kestrel_log.txt                                          │
+│  delta/juniper/lantern_plan.md                                          │
+│ 󰈙 delta/juniper/kestrel_log.txt                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -237,19 +253,20 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-k fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-l fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+k fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+m fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccddddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiiiiiiiiiiiiiijjjjiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaakakaaakaaaaaaaakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakaaalalaaalaaaaaaaalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -259,7 +276,7 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaffflffffaaffflffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffmffffaafffmffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == r ==
 focus=0 query="lantr" qcursor=5 depth="" sel=0 cursor="delta/juniper/lantern_plan.md" scroll=0 ranked=2 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -267,10 +284,10 @@ focus=0 query="lantr" qcursor=5 depth="" sel=0 cursor="delta/juniper/lantern_pla
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  lantr                                                                 │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
-│  delta/juniper/kestrel_log.txt                                          │
+│  delta/juniper/lantern_plan.md                                          │
+│ 󰈙 delta/juniper/kestrel_log.txt                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -290,19 +307,20 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-k fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-l fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+k fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+m fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdddddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiiiiiiiiiiiiiijjjjijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaakakaaakaaaaaaaakkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakaaalalaaalaaaaaaaallaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -312,7 +330,7 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaffflffffaaffflffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffmffffaafffmffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == e ==
 focus=0 query="lantre" qcursor=6 depth="" sel=0 cursor="delta/juniper/kestrel_log.txt" scroll=0 ranked=1 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -320,9 +338,9 @@ focus=0 query="lantre" qcursor=6 depth="" sel=0 cursor="delta/juniper/kestrel_lo
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  lantre                                                                │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/kestrel_log.txt                                          │
+│ 󰈙 delta/juniper/kestrel_log.txt                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -343,7 +361,7 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
@@ -351,7 +369,7 @@ k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccddddddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiijijiiijiiiiiiiijjjiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -372,7 +390,7 @@ focus=0 query="lantren" qcursor=7 depth="" sel=0 cursor="" scroll=0 ranked=0 dir
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  lantren                                                               │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │                                                                          │
@@ -400,7 +418,7 @@ h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdddddddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -421,7 +439,7 @@ focus=0 query="lantren" qcursor=6 depth="" sel=0 cursor="" scroll=0 ranked=0 dir
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  lantren                                                               │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │                                                                          │
@@ -449,7 +467,7 @@ h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccddddddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -470,7 +488,7 @@ focus=0 query="lantren" qcursor=5 depth="" sel=0 cursor="" scroll=0 ranked=0 dir
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  lantren                                                               │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │                                                                          │
@@ -498,7 +516,7 @@ h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdddddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -519,9 +537,9 @@ focus=0 query="lanten" qcursor=4 depth="" sel=0 cursor="delta/juniper/lantern_pl
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  lanten                                                                │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
+│  delta/juniper/lantern_plan.md                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -542,7 +560,7 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
@@ -550,7 +568,7 @@ k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccddddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiiiiiiiiiiiiiijjjjjijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -571,9 +589,9 @@ focus=0 query="lanen" qcursor=3 depth="" sel=0 cursor="delta/juniper/lantern_pla
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  lanen                                                                 │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
+│  delta/juniper/lantern_plan.md                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -594,7 +612,7 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
@@ -602,7 +620,7 @@ k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiiiiiiiiiiiiiijjjijijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -623,9 +641,9 @@ focus=0 query="laneen" qcursor=4 depth="" sel=0 cursor="delta/juniper/lantern_pl
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  laneen                                                                │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
+│  delta/juniper/lantern_plan.md                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -646,7 +664,7 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
@@ -654,7 +672,7 @@ k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccddddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiijijiiijiijiiiiiijijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -675,9 +693,9 @@ focus=0 query="laneren" qcursor=5 depth="" sel=0 cursor="delta/juniper/lantern_p
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  laneren                                                               │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
+│  delta/juniper/lantern_plan.md                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -698,7 +716,7 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
@@ -706,7 +724,7 @@ k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdddddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiijijiiijiijjiiiiijijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -727,9 +745,9 @@ focus=0 query="laneren" qcursor=0 depth="" sel=0 cursor="delta/juniper/lantern_p
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  laneren                                                               │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
+│  delta/juniper/lantern_plan.md                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -750,7 +768,7 @@ d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
@@ -758,7 +776,7 @@ k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiijijiiijiijjiiiiijijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -779,9 +797,9 @@ focus=0 query="aneren" qcursor=0 depth="" sel=0 cursor="delta/juniper/lantern_pl
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  aneren                                                                │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
+│  delta/juniper/lantern_plan.md                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -802,7 +820,7 @@ d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
@@ -810,7 +828,7 @@ k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiiiijiiijiijjiiiiijijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -831,9 +849,9 @@ focus=0 query="aneren" qcursor=6 depth="" sel=0 cursor="delta/juniper/lantern_pl
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │  aneren                                                                │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  delta/juniper/lantern_plan.md                                          │
+│  delta/juniper/lantern_plan.md                                          │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -854,7 +872,7 @@ d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 j fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
@@ -862,7 +880,7 @@ k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccddddddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaiiiijiiijiijjiiiiijijiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -883,18 +901,18 @@ focus=0 query="" qcursor=0 depth="" sel=18 cursor="delta/juniper/lantern_plan.md
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │                                                                        │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  birch/glacier_summary.toml                                             │
-│  cinder/harbor_map.zip                                                  │
-│  cinder/ivory_clip.mp4                                                  │
-│  delta/juniper                                                          │
-│  harbor/meadow_index.go                                                 │
-│  harbor/quartz                                                          │
-│  amber/delta/ember_photo.png                                            │
-│  delta/juniper/kestrel_log.txt                                          │
-│  delta/juniper/lantern_plan.md                                          │
-│  harbor/quartz/thistle_note.txt                                         ┃
+│  birch/glacier_summary.toml                                             │
+│  cinder/harbor_map.zip                                                  │
+│  cinder/ivory_clip.mp4                                                  │
+│ 󰉋 delta/juniper                                                          │
+│  harbor/meadow_index.go                                                 │
+│ 󰉋 harbor/quartz                                                          │
+│  amber/delta/ember_photo.png                                            │
+│ 󰈙 delta/juniper/kestrel_log.txt                                          │
+│  delta/juniper/lantern_plan.md                                          │
+│ 󰈙 harbor/quartz/thistle_note.txt                                         ┃
 ├──────────────────────────────────────────────────────────────────────────┤
 │                           [ OK ]    [ Cancel ]                           │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -906,25 +924,31 @@ d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
-i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+h fg=0x3009c4221 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+i fg=0x300eca517 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+j fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+k fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+l fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
+m fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+n fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+o fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+p fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aamaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aanaooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooaa
+aamaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaafffjffffaafffjffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffpffffaafffpffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

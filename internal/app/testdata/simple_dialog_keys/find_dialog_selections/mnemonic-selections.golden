@@ -4,19 +4,19 @@ focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │                                                                        │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 │ 󰄱 Search only from selected directories                                  │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  amber                                                                  ┃
-│  birch                                                                  │
-│  cinder                                                                 │
-│  delta                                                                  │
-│  harbor                                                                 │
-│  willow_overview.md                                                     │
-│  amber/birch_notes.md                                                   │
-│  amber/cinder_report.txt                                                │
-│  amber/delta                                                            │
-│  birch/fable_draft.go                                                   │
+│ 󰉋 amber                                                                  ┃
+│ 󰉋 birch                                                                  │
+│ 󰉋 cinder                                                                 │
+│ 󰉋 delta                                                                  │
+│ 󰉋 harbor                                                                 │
+│  willow_overview.md                                                     │
+│  amber/birch_notes.md                                                   │
+│ 󰈙 amber/cinder_report.txt                                                │
+│ 󰉋 amber/delta                                                            │
+│  birch/fable_draft.go                                                   │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                           [ OK ]    [ Cancel ]                           │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -28,28 +28,31 @@ d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+j fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+k fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
+m fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaafffjffffaafffjffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffmffffaafffmffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Alt+s ==
 focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=5 dirs=false files=false hidden=false volume=true selections=true marked=[]
@@ -57,14 +60,14 @@ focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=5 dirs=
 ┌──────────────────────────────── Find (5) ────────────────────────────────┐
 │                                                                        │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 │ 󰡖 Search only from selected directories                                  │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  amber                                                                  │
-│  amber/birch_notes.md                                                   │
-│  amber/cinder_report.txt                                                │
-│  amber/delta                                                            │
-│  amber/delta/ember_photo.png                                            │
+│ 󰉋 amber                                                                  │
+│  amber/birch_notes.md                                                   │
+│ 󰈙 amber/cinder_report.txt                                                │
+│ 󰉋 amber/delta                                                            │
+│  amber/delta/ember_photo.png                                            │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -81,28 +84,31 @@ d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+j fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+k fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+m fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 agggbggggggggggggggggggggggggggggggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
+aajaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaafffjffffaafffjffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffmffffaafffmffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Down ==
 focus=0 query="" qcursor=0 depth="" sel=1 cursor="amber/birch_notes.md" scroll=0 ranked=5 dirs=false files=false hidden=false volume=true selections=true marked=[]
@@ -110,14 +116,14 @@ focus=0 query="" qcursor=0 depth="" sel=1 cursor="amber/birch_notes.md" scroll=0
 ┌──────────────────────────────── Find (5) ────────────────────────────────┐
 │                                                                        │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 │ 󰡖 Search only from selected directories                                  │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  amber                                                                  │
-│  amber/birch_notes.md                                                   │
-│  amber/cinder_report.txt                                                │
-│  amber/delta                                                            │
-│  amber/delta/ember_photo.png                                            │
+│ 󰉋 amber                                                                  │
+│  amber/birch_notes.md                                                   │
+│ 󰈙 amber/cinder_report.txt                                                │
+│ 󰉋 amber/delta                                                            │
+│  amber/delta/ember_photo.png                                            │
 │                                                                          │
 │                                                                          │
 │                                                                          │
@@ -134,28 +140,31 @@ d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
-i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+h fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+j fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+k fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+m fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 agggbggggggggggggggggggggggggggggggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaiajjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjaa
+aakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaafffjffffaafffjffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffmffffaafffmffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Alt+s ==
 focus=0 query="" qcursor=0 depth="" sel=1 cursor="amber/birch_notes.md" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
@@ -163,19 +172,19 @@ focus=0 query="" qcursor=0 depth="" sel=1 cursor="amber/birch_notes.md" scroll=0
 ┌─────────────────────────────── Find (20) ────────────────────────────────┐
 │                                                                        │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 󰐽 Only directories        󰐽 Only files        󰄱 Include hidden       󰡖 Sta
+│ 󰐽 Only directories    󰐽 Only files    󰄱 Include hidden    󰡖 Stay on c…   │
 │ 󰄱 Search only from selected directories                                  │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  amber                                                                  ┃
-│  amber/birch_notes.md                                                   │
-│  amber/cinder_report.txt                                                │
-│  amber/delta                                                            │
-│  amber/delta/ember_photo.png                                            │
-│  birch                                                                  │
-│  cinder                                                                 │
-│  delta                                                                  │
-│  harbor                                                                 │
-│  willow_overview.md                                                     │
+│ 󰉋 amber                                                                  ┃
+│  amber/birch_notes.md                                                   │
+│ 󰈙 amber/cinder_report.txt                                                │
+│ 󰉋 amber/delta                                                            │
+│  amber/delta/ember_photo.png                                            │
+│ 󰉋 birch                                                                  │
+│ 󰉋 cinder                                                                 │
+│ 󰉋 delta                                                                  │
+│ 󰉋 harbor                                                                 │
+│  willow_overview.md                                                     │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                           [ OK ]    [ Cancel ]                           │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -187,26 +196,29 @@ d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
-i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+h fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+j fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+k fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+l fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+m fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaccfffaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaagggggg
+aaaaabaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaabaaaaaaaaaaaaaaaagggggggggggggaaaa
 aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaiajjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjaa
+aakaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aalaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaafffjffffaafffjffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffmffffaafffmffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

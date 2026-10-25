@@ -899,7 +899,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawSFTPConnectDialog(screen, layout, model.SFTPConnectDialog, styles)
 	}
 	if model.FindDialog.Open {
-		selectionLabel := FindDialogSelectionSizePadded(
+		selectionLabel := FindDialogSelectionSizeLabel(
 			&model.FindDialog,
 			model.DiskUsage,
 			styles.IconWorking(),

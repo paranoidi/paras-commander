@@ -5,6 +5,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -21,6 +22,8 @@ type Host interface {
 	HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, edit ScrollingQueryEdit) bool
 	FindDialogScrollingQuery(st *dialog.FindDialogState, width int, onChange func()) ScrollingQueryEdit
 	FindDialogQueryWidth() int
+	// Styles is the live theme (the dialog spec's icon widths depend on it).
+	Styles() theme.Theme
 	GitignoreCache() *gitignore.Cache
 	PanelViewportRows(panelID int) int
 	OpenGroupSelectDialog(mode GroupSelectMode, forFind bool)

@@ -2,15 +2,13 @@ package dialog
 
 import (
 	"fmt"
-	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // EnsureFindListScroll keeps Selected row visible in a list of height listRows.
@@ -116,158 +114,38 @@ const findDialogPreferredWidth = 125 // preferred frame width; clamped to the te
 // FindRowIconPainter draws file-list devicons for one find dialog row; nil skips icons.
 type FindRowIconPainter func(screen tcell.Screen, x, y int, entry FindEntry, styles theme.Theme)
 
+// DrawFindDialog paints the find dialog from its widget spec (FindDialogView), then the row
+// devicons over the leading cells each list row reserves for them (the overlay escape hatch:
+// devicons are colored per entry type by the panel icon painter). selectionSizeLabel is the
+// unpadded marked-selection size ("" = none).
 func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, ctx DialogRenderContext, paintIcon FindRowIconPainter, selectionSizeLabel string, rowMarks RowMarksFunc) {
-	styles := ctx.Styles
-	showIcons := ctx.ShowIcons
 	iconLead := ctx.IconLead
-	width, height, listH, ok := FindDialogMetrics(layout, state.ShowSearchSelectionsOption)
+	if !ctx.ShowIcons || paintIcon == nil {
+		iconLead = 0
+	}
+	spec := FindDialogView(&state, FindViewContext{
+		Layout: layout, Styles: ctx.Styles, IconLead: iconLead, ScrollbarStyle: ctx.ScrollbarStyle,
+		SelectionLabel: selectionSizeLabel, RowMarks: rowMarks,
+	})
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
+	if iconLead == 0 {
+		return
+	}
+	p, ok := dlg.Place(layout.Width, layout.Height, spec)
 	if !ok {
 		return
 	}
-
-	rect := draw.CenteredDialogRect(layout, width, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, findDialogTitle(state, styles), styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	itemBg := dbg
-	primaryCol := rect.X + 2
-	inputWidth := rect.Width - 4
-	cbCol := rect.X + 1
-	fileListCol := primaryCol
-	fileListWidth := inputWidth
-
-	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, FindDialogQueryInputWidth(inputWidth, styles), draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon()}, filterFocused, false, styles)
-	if depthW := findDialogDepthFieldWidth(styles); inputWidth > depthW+findDialogDepthGap {
-		draw.DrawScrollingDialogInput(screen, primaryCol+inputWidth-depthW, rect.Y+1, depthW, draw.ScrollingInputState{Value: state.DepthInput, Cursor: utf8.RuneCountInString(state.DepthInput), LeadingIcon: styles.IconDialogDepth()}, state.Focus == state.FindDialogDepthFocus(), false, styles)
+	list, ok := p.Item(FindList)
+	if !ok {
+		return
 	}
-
-	sepAfterFilter := rect.Y + 2
-	draw.DrawDialogHSeparator(screen, rect, sepAfterFilter, borderStyle)
-
-	cbY := rect.Y + 3
-	const cbGap = 4
-	hiddenX := cbCol
-	if !state.JumpMode {
-		draw.DrawDialogRadio(screen, cbCol, cbY, "Only directories", 'N', state.OnlyDirectories, state.Focus == state.FindDialogOnlyDirsFocus(), false, styles)
-		radio1W := utf8.RuneCountInString(draw.RadioText("Only directories", state.OnlyDirectories)) + 1
-		draw.DrawDialogRadio(screen, cbCol+radio1W+cbGap, cbY, "Only files", 'Y', state.OnlyFiles, state.Focus == state.FindDialogOnlyFilesFocus(), false, styles)
-		radio2W := utf8.RuneCountInString(draw.RadioText("Only files", state.OnlyFiles)) + 1
-		hiddenX = cbCol + radio1W + cbGap + radio2W + cbGap
-	}
-	draw.DrawDialogCheckbox(screen, hiddenX, cbY, "Include hidden", 'I', state.IncludeHidden, state.Focus == state.FindDialogIncludeHiddenFocus(), false, styles)
-	hiddenW := utf8.RuneCountInString(draw.CheckboxText("Include hidden", state.IncludeHidden)) + 1
-	draw.DrawDialogCheckbox(screen, hiddenX+hiddenW+cbGap, cbY, "Stay on current volume", 'V', state.StayOnCurrentVolume, state.Focus == state.FindDialogStayOnVolumeFocus(), false, styles)
-	if state.ShowSearchSelectionsOption {
-		draw.DrawDialogCheckbox(screen, cbCol, cbY+1, "Search only from selected directories", 'S', state.SearchOnlySelections, state.Focus == state.FindDialogSelectionsFocus(), false, styles)
-	}
-
-	checkboxRows := 1
-	if state.ShowSearchSelectionsOption {
-		checkboxRows = 2
-	}
-	sepAfterCheckbox := rect.Y + 3 + checkboxRows
-	draw.DrawDialogHSeparator(screen, rect, sepAfterCheckbox, borderStyle)
-
-	listTop := sepAfterCheckbox + 1
-	buttonY := rect.Y + rect.Height - 2
-	if maxListH := buttonY - listTop - 1; maxListH < listH {
-		listH = maxListH
-	}
-	if listH < 0 {
-		listH = 0
-	}
-	if !showIcons {
-		iconLead = 0
-	}
-	rowWidth := fileListWidth - iconLead
-	if rowWidth < 8 {
-		rowWidth = 8
-	}
-	listFocused := state.Focus == 0
-	for row := 0; row < listH; row++ {
-		y := listTop + row
-		if y >= buttonY {
+	for row := 0; row < list.Rect.Height; row++ {
+		idx := list.Offset + row
+		if idx >= len(state.Ranked) {
 			break
 		}
-		idxInRank := state.ListScroll + row
-		baseStyle := styles.DialogText.Background(itemBg)
-		line := ""
-		var ranges []search.Range
-		isCursor := false
-		marked := false
-		var ent FindEntry
-		hasEntry := false
-		absPath := ""
-		if idxInRank < len(state.Ranked) {
-			entIdx := state.Ranked[idxInRank]
-			if ent, ok := state.FindEntryAt(entIdx); ok {
-				hasEntry = true
-				line = ent.RelLine
-				ranges = state.MatchRanges[entIdx]
-				if idxInRank < len(state.RankDisplayLines) {
-					if dl := state.RankDisplayLines[idxInRank]; dl != "" {
-						line = dl
-					}
-				}
-				absPath = ent.AbsPath(state.RootPath)
-				if state.MarkedPaths != nil {
-					marked = state.MarkedPaths[absPath]
-				}
-			} else if idxInRank < len(state.RankDisplayLines) {
-				line = state.RankDisplayLines[idxInRank]
-				if entIdx >= 0 {
-					ranges = state.MatchRanges[entIdx]
-				}
-			}
-			isCursor = listFocused && idxInRank == state.Selected
-		}
-		matchStyle := styles.FuzzyHighlight
-		if isCursor {
-			baseStyle = styles.DialogOptionRowStyle(true, marked)
-			matchStyle = styles.FuzzyHighlightCursor
-		} else if marked {
-			baseStyle = styles.DialogOptionRowStyle(false, true)
-		}
-		_, bg, _ := baseStyle.Decompose()
-		matchStyle = matchStyle.Background(bg)
-		textX := fileListCol
-		if showIcons && paintIcon != nil && iconLead > 0 {
-			if hasEntry {
-				paintIcon(screen, fileListCol, y, ent, styles)
-			}
-			textX = fileListCol + iconLead
-		}
-		marks := RowMarks{}
-		if rowMarks != nil {
-			marks = rowMarks(absPath)
-		}
-		marksW := RowMarksWidth(marks)
-		fitWidth := rowWidth - marksW
-		if fitWidth < 1 {
-			fitWidth = 1
-		}
-		text, spans := draw.FuzzyPathRowContent(line, ranges, fitWidth, matchStyle)
-		primitive.StyledText(screen, textX, y, rowWidth, text, baseStyle, spans)
-		if marksW > 0 {
-			// Marks follow the name, not the row end (same as compare view).
-			DrawRowMarksSuffix(screen, textX+min(runewidth.StringWidth(text), fitWidth), y, marksW, marks, bg, styles)
+		if ent, ok := state.FindEntryAt(state.Ranked[idx]); ok {
+			paintIcon(screen, list.Rect.X, list.Rect.Y+row, ent, ctx.Styles)
 		}
 	}
-
-	draw.DrawDialogListScrollbar(screen, rect, listTop, listH, len(state.Ranked), state.ListScroll, ctx.ScrollbarStyle, borderStyle, styles)
-
-	sepAfterList := listTop + listH
-	if sepAfterList >= buttonY {
-		sepAfterList = buttonY - 1
-	}
-	if selectionSizeLabel != "" {
-		labelStyle := styles.DialogStatusSelectionSizeStyle()
-		draw.DrawDialogHSeparatorWithCenteredLabel(screen, rect, sepAfterList, borderStyle, labelStyle, selectionSizeLabel)
-	} else {
-		draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
-	}
-
-	okFocused := state.Focus == state.FindDialogOKFocus()
-	cancelFocused := state.Focus == state.FindDialogCancelFocus()
-	draw.DrawOKCancelButtonRow(screen, rect, buttonY, okFocused, cancelFocused, styles)
 }

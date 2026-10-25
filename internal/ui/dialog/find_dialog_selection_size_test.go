@@ -19,7 +19,7 @@ func TestDrawFindDialogSelectionSizeOnSeparator(t *testing.T) {
 	layout := Layout{Width: 80, Height: 24}
 	state := FindDialogState{Open: true}
 	styles := theme.Default()
-	selectionLabel := " 2 items (1 KiB) "
+	selectionLabel := "2 items (1 KiB)"
 
 	DrawFindDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil, selectionLabel, nil)
 

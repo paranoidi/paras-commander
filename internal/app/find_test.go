@@ -146,8 +146,8 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	if st.StayOnCurrentVolume {
 		t.Fatal("Alt+V should toggle stay-on-volume while typing filter")
 	}
-	if st.Focus != 0 {
-		t.Fatalf("focus = %d want 0 after Alt+V", st.Focus)
+	if !st.QueryFocused() {
+		t.Fatalf("focus = %q want the query after Alt+V", st.Focus)
 	}
 
 	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModAlt))
@@ -157,8 +157,8 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	if st.OnlyFiles {
 		t.Fatal("Alt+N should not enable only-files")
 	}
-	if st.Focus != 0 {
-		t.Fatalf("focus = %d want 0 after Alt+N", st.Focus)
+	if !st.QueryFocused() {
+		t.Fatalf("focus = %q want the query after Alt+N", st.Focus)
 	}
 
 	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt))
@@ -168,8 +168,8 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	if st.OnlyDirectories {
 		t.Fatal("Alt+Y should clear only-directories")
 	}
-	if st.Focus != 0 {
-		t.Fatalf("focus = %d want 0 after Alt+Y", st.Focus)
+	if !st.QueryFocused() {
+		t.Fatalf("focus = %q want the query after Alt+Y", st.Focus)
 	}
 
 	if st.IncludeHidden {
@@ -179,8 +179,8 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	if !st.IncludeHidden {
 		t.Fatal("Alt+I should toggle include-hidden while typing filter")
 	}
-	if st.Focus != 0 {
-		t.Fatalf("focus = %d want 0 after Alt+I", st.Focus)
+	if !st.QueryFocused() {
+		t.Fatalf("focus = %q want the query after Alt+I", st.Focus)
 	}
 }
 

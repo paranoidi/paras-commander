@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scan"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -40,6 +41,7 @@ func (f *fakeFindHost) FindDialogScrollingQuery(*dialog.FindDialogState, int, fu
 	return ScrollingQueryEdit{}
 }
 func (f *fakeFindHost) FindDialogQueryWidth() int                      { return 0 }
+func (f *fakeFindHost) Styles() theme.Theme                            { return theme.Default() }
 func (f *fakeFindHost) GitignoreCache() *gitignore.Cache               { return nil }
 func (f *fakeFindHost) PanelViewportRows(int) int                      { return 0 }
 func (f *fakeFindHost) OpenGroupSelectDialog(GroupSelectMode, bool)    {}

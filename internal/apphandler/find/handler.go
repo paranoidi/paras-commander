@@ -9,7 +9,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
-	"github.com/paranoidi/paras-commander/internal/filterlist"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -17,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func (h *Handler) OpenDialog(panelID int) { h.openDialog(panelID, false) }
@@ -52,7 +52,7 @@ func (h *Handler) openDialog(panelID int, jump bool) {
 		ShowSearchSelectionsOption: len(selRoots) > 0,
 		SearchOnlySelections:       false,
 		SelectionDirRoots:          selRoots,
-		Focus:                      0,
+		Focus:                      dialog.FindQuery,
 		Indexing:                   true,
 		JumpMode:                   jump,
 		OnlyDirectories:            jump,
@@ -1085,7 +1085,7 @@ func (h *Handler) findDialogUnselectAll() {
 
 func (h *Handler) findDialogToggleSelectionAndAdvance() {
 	st := &h.model.FindDialog
-	if st.Focus != 0 || len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
+	if !st.QueryFocused() || len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
 		return
 	}
 	entIdx := st.Ranked[st.Selected]
@@ -1168,7 +1168,7 @@ func (h *Handler) handleFindDepthKey(event *tcell.EventKey) bool {
 		return false
 	}
 	h.commitFindDepth()
-	st.Focus = 0
+	st.Focus = dialog.FindQuery
 	return true
 }
 
@@ -1232,37 +1232,18 @@ const (
 	findToggleSelections
 )
 
-// findToggleFieldForRune maps a mnemonic letter (v/i/d/l/s) to its toggle field.
-func findToggleFieldForRune(r rune) findToggleField {
-	switch r {
-	case 'v', 'V':
+// findToggleFieldForID maps a find dialog widget ID to its toggle field.
+func findToggleFieldForID(id dlg.ID) findToggleField {
+	switch id {
+	case dialog.FindStayOnVol:
 		return findToggleStayOnVolume
-	case 'i', 'I':
+	case dialog.FindHidden:
 		return findToggleIncludeHidden
-	case 'n', 'N':
+	case dialog.FindOnlyDirs:
 		return findToggleOnlyDirs
-	case 'y', 'Y':
+	case dialog.FindOnlyFiles:
 		return findToggleOnlyFiles
-	case 's', 'S':
-		return findToggleSelections
-	default:
-		return findToggleNone
-	}
-}
-
-// findToggleFieldForFocus maps a dialog focus index to its toggle field.
-func (h *Handler) findToggleFieldForFocus(focus int) findToggleField {
-	st := &h.model.FindDialog
-	switch focus {
-	case st.FindDialogStayOnVolumeFocus():
-		return findToggleStayOnVolume
-	case st.FindDialogIncludeHiddenFocus():
-		return findToggleIncludeHidden
-	case st.FindDialogOnlyDirsFocus():
-		return findToggleOnlyDirs
-	case st.FindDialogOnlyFilesFocus():
-		return findToggleOnlyFiles
-	case st.FindDialogSelectionsFocus():
+	case dialog.FindSelections:
 		return findToggleSelections
 	default:
 		return findToggleNone
@@ -1288,25 +1269,6 @@ func (h *Handler) applyFindToggle(field findToggleField) bool {
 	default:
 		return false
 	}
-	return true
-}
-
-// applyFindListNav applies Up/Down/PgUp/PgDn/Ctrl+Home/Ctrl+End to the ranked
-// result list when it has focus, updating scroll and the nav-idle debounce.
-// Returns false (no-op) when the list isn't focused, is empty, or key isn't a
-// recognized list-navigation key.
-func (h *Handler) applyFindListNav(key tcell.Key, mods tcell.ModMask) bool {
-	st := &h.model.FindDialog
-	if st.Focus != 0 || len(st.Ranked) == 0 {
-		return false
-	}
-	sel, ok := filterlist.NavKey(key, mods, st.Selected, len(st.Ranked), max(1, h.findDialogListRows()-1))
-	if !ok {
-		return false
-	}
-	st.Selected = sel
-	dialog.EnsureFindListScroll(st, h.findDialogListRows())
-	h.armFindNavIdleTimer()
 	return true
 }
 
@@ -1376,92 +1338,68 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		h.findDialogPinToggleCursor()
 		return
 	}
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if field := findToggleFieldForRune(event.Rune()); field != findToggleNone {
-			if field != findToggleSelections || st.FindDialogHasSelectionsCheckbox() {
-				h.applyFindToggle(field)
-			}
+	if event.Key() == tcell.KeyInsert {
+		if !st.JumpMode {
+			h.findDialogToggleSelectionAndAdvance()
+		}
+		return
+	}
+	spec := h.findDialogSpec()
+	if st.Focus == dialog.FindDepth {
+		switch event.Key() {
+		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyUp, tcell.KeyDown:
+			h.commitFindDepth()
+		case tcell.KeyLeft:
+			h.commitFindDepth()
+			st.Focus = dialog.FindQuery
 			return
 		}
 	}
-
-	if st.Focus == 0 {
+	if ev, ok := dlg.HandleKey(spec, &st.Focus, event); ok {
+		h.applyFindDialogEvent(ev)
+		return
+	}
+	// What the engine declines is text editing of the focused input.
+	switch st.Focus {
+	case dialog.FindQuery:
 		onChange := func() {
 			st.Selected = 0
 			h.scheduleFindRank(-h.config.UI.Find.QueryDebounceMS)
 		}
-		if h.host.HandleScrollingQueryKey(event, true, h.host.FindDialogScrollingQuery(st, h.host.FindDialogQueryWidth(), onChange)) {
-			return
-		}
+		h.host.HandleScrollingQueryKey(event, true, h.host.FindDialogScrollingQuery(st, h.host.FindDialogQueryWidth(), onChange))
+	case dialog.FindDepth:
+		h.handleFindDepthKey(event)
 	}
+}
 
-	if st.Focus == st.FindDialogDepthFocus() {
-		if h.handleFindDepthKey(event) {
-			return
-		}
-		switch event.Key() {
-		case tcell.KeyEnter:
-			h.commitFindDepth()
-			st.Focus = 0
-			return
-		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyUp, tcell.KeyDown, tcell.KeyLeft:
-			h.commitFindDepth()
-		}
-	}
+// findDialogSpec is the open find dialog's widget spec for the current screen.
+func (h *Handler) findDialogSpec() dlg.Spec {
+	termW, termH := h.screen.Size()
+	return dialog.FindDialogView(&h.model.FindDialog, dialog.FindViewContext{
+		Layout: h.host.LayoutForTerminalSize(termW, termH), Styles: h.host.Styles(),
+		IconLead: ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons),
+	})
+}
 
-	switch event.Key() {
-	case tcell.KeyInsert:
-		if !st.JumpMode {
-			h.findDialogToggleSelectionAndAdvance()
-		}
-	case tcell.KeyEnter:
-		if st.Focus == st.FindDialogCancelFocus() {
-			h.CloseDialog()
-		} else if !h.applyFindToggle(h.findToggleFieldForFocus(st.Focus)) {
-			h.ActivateDialogOK()
-		}
-	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		if nf, ok := dialog.FindDialogNavFocusKey(st.Focus, st.FindDialogHasSelectionsCheckbox(), event.Key()); ok {
-			// Jump mode hides the Only dirs/files radios: step past them.
-			for st.JumpMode && (nf == st.FindDialogOnlyDirsFocus() || nf == st.FindDialogOnlyFilesFocus()) {
-				next, moved := dialog.FindDialogNavFocusKey(nf, false, event.Key())
-				if !moved {
-					nf = st.Focus
-					break
-				}
-				nf = next
-			}
-			st.Focus = nf
-			if st.Focus == 0 && event.Key() == tcell.KeyUp {
-				dialog.EnsureFindListScroll(st, h.findDialogListRows())
-			}
-			break
-		}
-		h.applyFindListNav(event.Key(), event.Modifiers())
-	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
-		h.applyFindListNav(event.Key(), event.Modifiers())
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		if st.Focus == 0 {
-			break
-		}
-		switch dialog.DialogButtonRune(event.Rune()) {
-		case dialog.ButtonRuneOK:
-			h.ActivateDialogOK()
-		case dialog.ButtonRuneCancel:
-			h.CloseDialog()
-		case dialog.ButtonRuneToggle:
-			if !h.applyFindToggle(h.findToggleFieldForFocus(st.Focus)) {
-				switch st.Focus {
-				case st.FindDialogOKFocus():
-					h.ActivateDialogOK()
-				case st.FindDialogCancelFocus():
-					h.CloseDialog()
-				}
-			}
-		}
+// applyFindDialogEvent acts on an activation from the widget spec: list motion moves the cursor
+// (and arms the navigation-idle rank), Enter in the query or OK confirms, Enter in the depth
+// input commits it and returns to the query, the options toggle and Cancel closes.
+func (h *Handler) applyFindDialogEvent(ev dlg.Event) {
+	st := &h.model.FindDialog
+	switch {
+	case ev.ID == dialog.FindList && ev.Kind == dlg.EventListMove:
+		st.Selected, st.ListScroll = ev.Index, ev.Offset
+		h.armFindNavIdleTimer()
+	case ev.ID == "":
+	case ev.ID == dialog.FindQuery, ev.ID == dlg.OK:
+		h.ActivateDialogOK()
+	case ev.ID == dialog.FindDepth:
+		h.commitFindDepth()
+		st.Focus = dialog.FindQuery
+	case ev.ID == dlg.Cancel:
+		h.CloseDialog()
+	default:
+		h.applyFindToggle(findToggleFieldForID(ev.ID))
 	}
 }
 

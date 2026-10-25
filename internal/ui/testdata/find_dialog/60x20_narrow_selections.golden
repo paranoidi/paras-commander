@@ -4,15 +4,15 @@
   ┌───────────────────── Find (49) ──────────────────────┐  
   │ /                                          Depth     │  
   ├──────────────────────────────────────────────────────┤  
-  │ ( ) Only directories      ( ) Only files      [ ] Includ
+  │ ( ) Only directories  ( ) Only files  [ ] Include h… │  
   │ [ ] Search only from selected directories            │  
   ├──────────────────────────────────────────────────────┤  
-  │  amber                                              ┃  
-  │  amber/birch_delta.go                               │  
-  │  amber/cinder_fable.md                              │  
-  │  amber/delta_harbor.png                             │  
-  │  birch                                              │  
-  │  birch/cinder_ember.md                              │  
+  │ 󰉋 amber                                              ┃  
+  │  amber/birch_delta.go                               │  
+  │  amber/cinder_fable.md                              │  
+  │  amber/delta_harbor.png                             │  
+  │ 󰉋 birch                                              │  
+  │  birch/cinder_ember.md                              │  
   ├──────────────────────────────────────────────────────┤  
   │                 [ OK ]    [ Cancel ]                 │  
   └──────────────────────────────────────────────────────┘  
@@ -26,25 +26,28 @@ c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-g fg=0x300abb2bf bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+g fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
+i fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
+j fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbbbbbbbbbcccccccccccbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebddddddeeebbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbcbbbbb
+aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbcbbbbbbbbbbbaa
 aabfffffcffffffffffffffffffffffffffffffffffffbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbgbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbgbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbgbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbgbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbgbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbgbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbeeeheeeebbeeeheeeeeeeebbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbeeekeeeebbeeekeeeeeeeebbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

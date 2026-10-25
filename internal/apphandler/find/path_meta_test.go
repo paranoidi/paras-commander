@@ -58,7 +58,7 @@ func TestFindToggleSelectionDoesNotWaitOnStat(t *testing.T) {
 		FindDialog: dialog.FindDialogState{
 			Open:     true,
 			RootPath: root,
-			Focus:    0,
+			Focus:    dialog.FindQuery,
 			Entries:  []dialog.FindEntry{{RelLine: "cedar.txt"}},
 			Ranked:   []int{0},
 			Selected: 0,

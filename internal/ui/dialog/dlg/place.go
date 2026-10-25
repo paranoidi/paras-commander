@@ -92,12 +92,15 @@ func (it Item) boxWidth(markerW int) int {
 }
 
 // placeRow lays the cells of a row out from x to one cell before right. Boxes are placed left to
-// right; growing cells share what the others leave. A box that crosses the end is clipped.
+// right; growing cells share what the others leave. A row too wide for its space first narrows its
+// gaps (down to one cell), then a box that crosses the end is clipped.
 func placeRow(row Item, x, right, y, markerW int) []PlacedItem {
 	end := right - 1
 	boxes := make([]int, len(row.Cells))
+	gaps := make([]int, len(row.Cells))
 	used, grows := 0, 0
 	for i, c := range row.Cells {
+		gaps[i] = c.Gap
 		used += c.Gap
 		if c.growing() {
 			grows++
@@ -105,6 +108,16 @@ func placeRow(row Item, x, right, y, markerW int) []PlacedItem {
 		}
 		boxes[i] = c.boxWidth(markerW)
 		used += boxes[i]
+	}
+	for narrowed := true; used > end-x && narrowed; {
+		narrowed = false
+		for i := range gaps {
+			if gaps[i] > 1 && used > end-x {
+				gaps[i]--
+				used--
+				narrowed = true
+			}
+		}
 	}
 	if grows > 0 {
 		spare := max(end-x-used, 0)
@@ -145,7 +158,7 @@ func placeRow(row Item, x, right, y, markerW int) []PlacedItem {
 		}
 		pi.Disabled = c.Disabled
 		out = append(out, pi)
-		bx += boxes[i] + c.Gap
+		bx += boxes[i] + gaps[i]
 	}
 	return out
 }
@@ -421,7 +434,13 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	if len(spec.Buttons) == 0 {
 		return
 	}
-	draw.DrawDialogHSeparator(screen, p.Rect, p.SepY, borderStyle)
+	if spec.ButtonsLabel == "" {
+		draw.DrawDialogHSeparator(screen, p.Rect, p.SepY, borderStyle)
+	} else {
+		label := " " + primitive.TruncateRight(spec.ButtonsLabel, max(p.Rect.Width-4, 0)) + " "
+		labelStyle := styles.DialogStatusSelectionSizeStyle()
+		draw.DrawDialogHSeparatorWithCenteredLabel(screen, p.Rect, p.SepY, borderStyle, labelStyle, label)
+	}
 	for ri, row := range buttonRows(spec.Buttons) {
 		specs := make([]draw.DialogButtonSpec, len(row))
 		for i, b := range row {
@@ -518,10 +537,12 @@ func drawPlainRow(screen tcell.Screen, x, y, w int, rw ListRow, it Item, isCurso
 	match := styles.FuzzyHighlight
 	switch {
 	case isCursor:
-		base = styles.DialogOptionRowStyle(true, false)
+		base = styles.DialogOptionRowStyle(true, rw.Marked)
 		match = styles.FuzzyHighlightCursor
 	case rw.Missing:
 		base = styles.DialogOptionInvalidStyle()
+	case rw.Marked:
+		base = styles.DialogOptionRowStyle(false, true)
 	}
 	_, bg, _ := base.Decompose()
 	match = match.Background(bg)

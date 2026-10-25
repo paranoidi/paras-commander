@@ -194,7 +194,8 @@ type Item struct {
 	// item outside a row are ignored.
 	Width int
 	Grow  bool
-	// Gap is the number of blank cells after the box.
+	// Gap is the number of blank cells after the box. A row too wide for the dialog narrows its gaps
+	// (down to one cell) before it clips a box.
 	Gap int
 	// Right right-aligns a label's text in its box.
 	Right bool
@@ -202,9 +203,11 @@ type Item struct {
 
 // ListRow is one row of a KindList.
 type ListRow struct {
-	Text   string
-	Match  []search.Range // fuzzy-match highlight ranges (rune offsets into Text)
-	Marked bool           // lit radio glyph when the list has Markers
+	Text  string
+	Match []search.Range // fuzzy-match highlight ranges (rune offsets into Text)
+	// Marked lights the radio glyph when the list has Markers; without Markers it draws the row in
+	// the selected option style (find's marked results).
+	Marked bool
 	// Icon is drawn before Text followed by one space (empty = none); Match ranges stay keyed to Text.
 	Icon string
 	// Missing styles the row as an invalid path (unless it is under the cursor) and adds the
@@ -273,6 +276,9 @@ type Spec struct {
 	Groups                     []Group
 	Buttons                    []Button // drawn after a horizontal separator, centered; also its own Tab segment
 	PlainButtonKeys            bool     // plain (no Alt) button mnemonic letters press the button
+	// ButtonsLabel, when set, is drawn centered in the separator above the buttons, padded with one
+	// space on each side, in the selection-size status style (find's marked-selection size).
+	ButtonsLabel string
 	// Unclamped sizes the dialog like draw.CenteredDialogRect instead of refusing to draw on a small
 	// screen: width is min(Width, screen-4), widened to min(MinWidth, screen-2) when that is below
 	// MinWidth, and the height only shrinks to the screen. MinHeight still raises the height.

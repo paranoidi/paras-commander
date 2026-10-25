@@ -16,8 +16,9 @@ func FindDialogListRows(layout Layout, showSearchSelectionsOption bool) int {
 	return listH
 }
 
-// FindDialogSelectionSizePadded returns the padded selection count/size label for the find dialog separator, or "".
-func FindDialogSelectionSizePadded(
+// FindDialogSelectionSizeLabel returns the unpadded selection count/size label for the find
+// dialog's button separator (the dialog engine pads it), or "".
+func FindDialogSelectionSizeLabel(
 	state *dialog.FindDialogState,
 	painter DiskUsagePainter,
 	workingSym string,
@@ -29,7 +30,7 @@ func FindDialogSelectionSizePadded(
 	if !ok {
 		return ""
 	}
-	return SelectionSizePadded(raw)
+	return raw
 }
 
 // PaintFindDialog repaints the find dialog overlay without touching panels or the footer.
@@ -47,7 +48,7 @@ func PaintFindDialog(
 	if state == nil || !state.Open {
 		return
 	}
-	selectionLabel := FindDialogSelectionSizePadded(state, painter, styles.IconWorking())
+	selectionLabel := FindDialogSelectionSizeLabel(state, painter, styles.IconWorking())
 	ctx := dialog.DialogRenderContext{
 		Styles:         styles,
 		ShowIcons:      showIcons,

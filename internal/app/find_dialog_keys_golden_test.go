@@ -13,6 +13,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // Key-script goldens for the find dialog (and its jump-to-directory mode) over a fixed fixture
@@ -77,6 +79,25 @@ func findKeyRel(app *App, p string) string {
 	return p
 }
 
+// findKeyFocus is the focused widget's position in the dialog's focus order (0 = the query, which
+// also drives the list; the selections row only when shown).
+func findKeyFocus(st *dialog.FindDialogState) int {
+	ids := []dlg.ID{dialog.FindQuery, dialog.FindDepth, dialog.FindOnlyDirs, dialog.FindOnlyFiles, dialog.FindHidden, dialog.FindStayOnVol}
+	if st.ShowSearchSelectionsOption {
+		ids = append(ids, dialog.FindSelections)
+	}
+	ids = append(ids, dlg.OK, dlg.Cancel)
+	if st.QueryFocused() {
+		return 0
+	}
+	for i, id := range ids {
+		if id == st.Focus {
+			return i
+		}
+	}
+	return -1
+}
+
 func findKeyState(app *App) string {
 	st := app.model.FindDialog
 	cursor := ""
@@ -91,7 +112,7 @@ func findKeyState(app *App) string {
 	}
 	sort.Strings(marked)
 	return fmt.Sprintf("focus=%d query=%q qcursor=%d depth=%q sel=%d cursor=%q scroll=%d ranked=%d dirs=%v files=%v hidden=%v volume=%v selections=%v marked=%v",
-		st.Focus, st.Query, st.QueryCursor, st.DepthInput, st.Selected, cursor, st.ListScroll, len(st.Ranked),
+		findKeyFocus(&st), st.Query, st.QueryCursor, st.DepthInput, st.Selected, cursor, st.ListScroll, len(st.Ranked),
 		st.OnlyDirectories, st.OnlyFiles, st.IncludeHidden, st.StayOnCurrentVolume, st.SearchOnlySelections, marked)
 }
 
@@ -190,6 +211,9 @@ func findKeyScripts() []simpleKeyScript {
 		{"plain-letters-on-option", "Tab Tab x o"},
 		{"plain-c-on-option", "Tab Tab c"},
 		{"space-ok", "Tab Tab Tab Tab Tab Tab Space"},
+		{"space-on-ok-button", "Down Tab Tab Tab Space"},
+		{"space-on-cancel-button", "Tab Tab Tab Right Space"},
+		{"up-from-buttons", "Tab Tab Tab Up Up Down Down"},
 		{"space-cancel", "Tab Tab Tab Tab Tab Tab Tab Space"},
 		{"enter-on-file", findQuery("kestrel") + " Enter"},
 		{"enter-on-dir", findQuery("juniper") + " Enter"},

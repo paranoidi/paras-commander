@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -98,16 +99,25 @@ type findGolden struct {
 	state    func(st *dialog.FindDialogState)
 }
 
+// findFocusOrder lists the dialog's widgets in focus order; golden names number them by position
+// (0 = the query, which also lights the list cursor).
+func findFocusOrder(selections bool) []dlg.ID {
+	ids := []dlg.ID{dialog.FindQuery, dialog.FindDepth, dialog.FindOnlyDirs, dialog.FindOnlyFiles, dialog.FindHidden, dialog.FindStayOnVol}
+	if selections {
+		ids = append(ids, dialog.FindSelections)
+	}
+	return append(ids, dlg.OK, dlg.Cancel)
+}
+
 func findFocusCases() []findGolden {
 	var out []findGolden
 	for _, sel := range []bool{false, true} {
-		probe := dialog.FindDialogState{ShowSearchSelectionsOption: sel}
-		for f := 0; f <= probe.FindDialogMaxFocus(); f++ {
+		for f, id := range findFocusOrder(sel) {
 			out = append(out, findGolden{
 				name: fmt.Sprintf("125x40_sel%v_focus%d", sel, f), w: 125, h: 40, icons: true,
 				state: func(st *dialog.FindDialogState) {
 					st.ShowSearchSelectionsOption = sel
-					st.Focus = f
+					st.Focus = id
 					st.Selected = 2
 				},
 			})
@@ -146,7 +156,7 @@ func findGoldenCases() []findGolden {
 		findGolden{name: "80x24_depth_typed", w: 80, h: 24, icons: true, state: func(st *dialog.FindDialogState) {
 			st.DepthInput = "3"
 			st.MaxDepth = 3
-			st.Focus = st.FindDialogDepthFocus()
+			st.Focus = dialog.FindDepth
 		}},
 		findGolden{name: "80x24_options_on", w: 80, h: 24, icons: true, state: func(st *dialog.FindDialogState) {
 			st.OnlyFiles = true
@@ -164,7 +174,7 @@ func findGoldenCases() []findGolden {
 		}},
 		findGolden{name: "80x24_marked_cursor_on_buttons", w: 80, h: 24, icons: true, state: func(st *dialog.FindDialogState) {
 			st.MarkedPaths = map[string]bool{st.Entries[1].AbsPath(findGoldenRoot): true}
-			st.Focus = st.FindDialogOKFocus()
+			st.Focus = dlg.OK
 		}},
 		findGolden{
 			name: "80x24_row_marks", w: 80, h: 24, icons: true,
@@ -173,7 +183,7 @@ func findGoldenCases() []findGolden {
 		},
 		findGolden{name: "80x24_jump_mode", w: 80, h: 24, icons: true, state: func(st *dialog.FindDialogState) {
 			st.JumpMode = true
-			st.Focus = 2
+			st.Focus = dialog.FindOnlyDirs // hidden in jump mode
 		}},
 		findGolden{name: "80x24_indexing", w: 80, h: 24, icons: true, state: func(st *dialog.FindDialogState) {
 			st.IndexDone = false
@@ -189,7 +199,7 @@ func findGoldenCases() []findGolden {
 		}},
 		findGolden{name: "60x20_narrow_selections", w: 60, h: 20, icons: true, state: func(st *dialog.FindDialogState) {
 			st.ShowSearchSelectionsOption = true
-			st.Focus = 6
+			st.Focus = dialog.FindSelections
 		}},
 		findGolden{name: "80x14_short", w: 80, h: 14, icons: true},
 		findGolden{name: "80x13_short_selections", w: 80, h: 13, icons: true, state: func(st *dialog.FindDialogState) {

@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -37,6 +38,8 @@ func (h findHost) FindDialogScrollingQuery(st *dialog.FindDialogState, width int
 }
 
 func (h findHost) FindDialogQueryWidth() int { return h.app.findDialogQueryWidth() }
+
+func (h findHost) Styles() theme.Theme { return h.app.styles }
 
 func (h findHost) GitignoreCache() *gitignore.Cache { return h.app.gitignoreCache }
 

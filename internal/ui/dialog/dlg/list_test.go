@@ -346,6 +346,34 @@ func TestDrivenList(t *testing.T) {
 	}
 }
 
+func TestRowCellInputDrivesList(t *testing.T) {
+	// A driving input inside a row (find's query beside its depth input) steers the list too.
+	list := listItem(30, 5, 0, 6)
+	list.Driven = true
+	spec := Spec{
+		Title: "Harbor", Width: 40, MinWidth: 20, Unclamped: true,
+		Groups: []Group{{Columns: [][]Item{{
+			{Kind: KindRow, Cells: []Item{
+				{ID: "filter", Kind: KindInput, Grow: true, Drives: "hosts"},
+				{ID: "depth", Kind: KindInput, Width: 6},
+			}},
+			sep(""),
+			list,
+		}}}},
+		Buttons: []Button{{ID: OK, Label: "OK", Mnemonic: 'O'}, {ID: Cancel, Label: "Cancel", Mnemonic: 'C'}},
+	}
+	focus := ID("filter")
+	ev, ok := HandleKey(spec, &focus, key(tcell.KeyDown))
+	if !ok || ev.Kind != EventListMove || ev.ID != "hosts" || ev.Index != 6 || focus != "filter" {
+		t.Errorf("down in a row-cell driving input: (%+v, %v) focus %q, want ListMove 6 and focus kept", ev, ok, focus)
+	}
+	// The other cell of the row does not drive it.
+	focus = "depth"
+	if ev, _ := HandleKey(spec, &focus, key(tcell.KeyDown)); ev.Kind == EventListMove {
+		t.Errorf("down in the depth cell moved the list: %+v", ev)
+	}
+}
+
 func TestListScroll(t *testing.T) {
 	spec := listOnlySpec(listItem(30, 12, 10, 6))
 	for _, c := range []struct {

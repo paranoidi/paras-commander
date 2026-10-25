@@ -91,10 +91,9 @@ func (e FindEntry) AbsPath(rootPath string) string {
 	return filepath.Join(rootPath, filepath.FromSlash(e.RelLine))
 }
 
-// FindDialogState is a fuzzy picker over recursively indexed paths under a panel root.
-// Focus without selections checkbox: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=include-hidden, 5=OK, 6=Cancel.
-// With selections checkbox: same row-1 foci, then 5=search-selections, 6=OK, 7=Cancel.
-// Row 1 draws Only directories / Only files / Stay on current volume / Include hidden; selections (when shown) is row 2.
+// FindDialogState is a fuzzy picker over recursively indexed paths under a panel root. Its
+// widgets are described by FindDialogView; Focus names the focused one (the Find* IDs, OK or
+// Cancel; empty = the query, which also drives the result list).
 type FindDialogState struct {
 	Open                bool
 	PanelID             int
@@ -133,7 +132,7 @@ type FindDialogState struct {
 	RankDisplayLines []string
 	Selected         int
 	ListScroll       int
-	Focus            int
+	Focus            dlg.ID
 	Indexing         bool
 	IndexedCount     int
 	// Index BFS level progress: depth, directories read and total at that depth.
@@ -193,60 +192,12 @@ func (s *FindDialogState) PathIndexLookup(absPath string) (int, bool) {
 	return i, ok
 }
 
+// QueryFocused reports whether the query input (and with it the result list it drives) has focus.
+func (s FindDialogState) QueryFocused() bool { return s.Focus == "" || s.Focus == FindQuery }
+
 // FindDialogHasSelectionsCheckbox reports whether the search-selections row is shown.
 func (s FindDialogState) FindDialogHasSelectionsCheckbox() bool {
 	return s.ShowSearchSelectionsOption
-}
-
-// FindDialogDepthFocus returns the focus index for the max-depth input.
-func (s FindDialogState) FindDialogDepthFocus() int {
-	return 1
-}
-
-// FindDialogOnlyDirsFocus returns the focus index for the only-directories radio.
-func (s FindDialogState) FindDialogOnlyDirsFocus() int {
-	return s.FindDialogDepthFocus() + 1
-}
-
-// FindDialogOnlyFilesFocus returns the focus index for the only-files radio.
-func (s FindDialogState) FindDialogOnlyFilesFocus() int {
-	return s.FindDialogOnlyDirsFocus() + 1
-}
-
-// FindDialogIncludeHiddenFocus returns the focus index for the include-hidden checkbox.
-func (s FindDialogState) FindDialogIncludeHiddenFocus() int {
-	return s.FindDialogOnlyFilesFocus() + 1
-}
-
-// FindDialogStayOnVolumeFocus returns the focus index for the stay-on-volume checkbox.
-func (s FindDialogState) FindDialogStayOnVolumeFocus() int {
-	return s.FindDialogIncludeHiddenFocus() + 1
-}
-
-// FindDialogSelectionsFocus returns the focus index for search-only-selections, or -1 when hidden.
-func (s FindDialogState) FindDialogSelectionsFocus() int {
-	if s.FindDialogHasSelectionsCheckbox() {
-		return s.FindDialogStayOnVolumeFocus() + 1
-	}
-	return -1
-}
-
-// FindDialogOKFocus returns the focus index for the OK button.
-func (s FindDialogState) FindDialogOKFocus() int {
-	if s.FindDialogHasSelectionsCheckbox() {
-		return s.FindDialogSelectionsFocus() + 1
-	}
-	return s.FindDialogStayOnVolumeFocus() + 1
-}
-
-// FindDialogCancelFocus returns the focus index for the Cancel button.
-func (s FindDialogState) FindDialogCancelFocus() int {
-	return s.FindDialogOKFocus() + 1
-}
-
-// FindDialogMaxFocus returns the highest focus index (Cancel).
-func (s FindDialogState) FindDialogMaxFocus() int {
-	return s.FindDialogCancelFocus()
 }
 
 // HistoryDialogState is a fuzzy picker over one panel’s navigation history paths.
