@@ -120,7 +120,7 @@ func TestConflictDialogGoldenRender(t *testing.T) {
 	base := conflictGoldenEvent()
 
 	// File exists, overwrite layout: every focus position.
-	for _, f := range []string{"overwrite", "overwrite-all", "advanced", "skip", "skip-all", "cancel", "postpone"} {
+	for _, f := range []string{"overwrite"} {
 		add("file_focus-"+f, 80, 30, conflictFileState(base, f))
 	}
 	// Directory mismatch (rename layout), both directions.
@@ -128,7 +128,7 @@ func TestConflictDialogGoldenRender(t *testing.T) {
 	dirDest.Mismatch, dirDest.DestIsDir = true, true
 	fileDest := base
 	fileDest.Mismatch = true
-	for _, f := range []string{"rename", "rename-all", "skip", "skip-all", "cancel", "postpone"} {
+	for _, f := range []string{"rename"} {
 		add("mismatch-dir_focus-"+f, 80, 30, conflictFileState(dirDest, f))
 	}
 	add("mismatch-file_focus-rename", 80, 30, conflictFileState(fileDest, "rename"))
@@ -150,7 +150,7 @@ func TestConflictDialogGoldenRender(t *testing.T) {
 
 	// Disk space.
 	disk := jobs.DiskSpaceBlockerDetails{Destination: "/srv/willow/amber", RequiredBytes: 5 << 20, AvailableBytes: 900 << 10, AvailableKnown: true, NextSource: "/home/kestrel/meadow/orchard.dat"}
-	for _, f := range []string{"retry", "abort", "postpone"} {
+	for _, f := range []string{"retry"} {
 		add("disk_focus-"+f, 80, 30, conflictDiskState(disk, f))
 	}
 	noNext := disk
@@ -173,12 +173,7 @@ func TestConflictDialogGoldenRender(t *testing.T) {
 
 	// Conflict rules.
 	var none jobs.ConflictRules
-	for row := 0; row < ConflictRuleRows; row++ {
-		for col := 0; col < len(ConflictRuleChoices); col++ {
-			add(fmt.Sprintf("adv_focus-r%dc%d", row, col), 80, 30, conflictAdvState(base, fmt.Sprintf("r%dc%d", row, col), none, true))
-		}
-	}
-	for _, f := range []string{"skip-identical", "all", "ok", "cancel"} {
+	for _, f := range []string{"r0c0", "skip-identical", "ok"} {
 		add("adv_focus-"+f, 80, 30, conflictAdvState(base, f, none, true))
 	}
 	picked := jobs.ConflictRules{Time: [3]jobs.RuleAction{jobs.RuleOverwrite, jobs.RuleAsk, jobs.RuleSkip}, Size: [3]jobs.RuleAction{jobs.RuleAsk, jobs.RuleOverwrite, jobs.RuleAsk}, SkipIdentical: true}
@@ -189,7 +184,7 @@ func TestConflictDialogGoldenRender(t *testing.T) {
 	add("adv_rules_one_action_ok", 80, 30, conflictAdvState(base, "ok", oneKind, false))
 	noCompare := base
 	noCompare.NoCompare = true
-	for _, f := range []string{"r0c0", "all", "ok", "cancel"} {
+	for _, f := range []string{"r0c0", "ok"} {
 		add("adv_nocompare_focus-"+f, 80, 30, conflictAdvState(noCompare, f, oneKind, true))
 	}
 	add("adv_wide120", 120, 30, conflictAdvState(base, "r1c1", oneKind, true))

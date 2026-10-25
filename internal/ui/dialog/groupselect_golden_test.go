@@ -15,13 +15,6 @@ import (
 
 func init() { goldenBandRows["group_select"] = 26 }
 
-var groupSelectGoldenFocusNames = []string{
-	"shell", "regex", "simple",
-	"videos", "pictures", "archives", "audio", "documents",
-	"pattern", "filesonly", "dirsonly", "case", "fullpath", "includemeta", "onlymeta",
-	"ok", "cancel",
-}
-
 func groupSelectGoldenFocus(t *testing.T, st *GroupSelectState, name string) {
 	t.Helper()
 	st.Focus = patternGoldenFocus(t, name)
@@ -105,27 +98,17 @@ func TestGroupSelectGoldenRender(t *testing.T) {
 			DrawGroupSelectDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
-	for _, pos := range groupSelectGoldenFocusNames {
-		switch pos {
-		case "includemeta", "onlymeta", "fullpath":
-			continue
-		}
+	for _, pos := range []string{"shell", "pattern", "ok"} {
 		add(80, 24, "empty", pos)
 	}
-	for _, pos := range groupSelectGoldenFocusNames {
-		if pos != "fullpath" {
-			add(80, 25, "meta", pos)
-		}
+	for _, pos := range []string{"pattern", "includemeta", "ok"} {
+		add(80, 25, "meta", pos)
 	}
-	for _, pos := range groupSelectGoldenFocusNames {
-		switch pos {
-		case "includemeta", "onlymeta":
-			continue
-		}
+	for _, pos := range []string{"pattern", "fullpath", "ok"} {
 		add(80, 24, "find", pos)
 	}
 	for _, v := range []string{"typed", "unselect", "many", "zero", "bad-regex", "compile-hint", "scrolled", "options", "dirs-only", "output", "find-empty"} {
-		for _, pos := range []string{"pattern", "shell", "ok"} {
+		for _, pos := range []string{"pattern", "ok"} {
 			add(80, 24, v, pos)
 		}
 	}

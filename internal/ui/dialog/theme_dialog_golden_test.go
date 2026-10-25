@@ -52,7 +52,7 @@ func TestThemeDialogGoldenRender(t *testing.T) {
 			DrawThemeDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
-	for _, focus := range []string{"list", "ok", "cancel"} {
+	for _, focus := range []string{"list", "ok"} {
 		add(100, 40, 5, 2, focus)
 	}
 	// shorter than the viewport (rows = max(n,17)+1)

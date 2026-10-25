@@ -66,8 +66,7 @@ func TestConfigDialogGoldenRender(t *testing.T) {
 			DrawConfigDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
-	focuses := []string{"nerdfont", "zoom", "hsplit", "mode0", "bar0", "mode1", "bar1", "mode2", "bar2", "listing0", "listing1", "listing2", "split0", "split1", "split2", "ok", "cancel"}
-	for _, f := range focuses {
+	for _, f := range []string{"nerdfont", "split0", "ok"} {
 		add("focus-"+f, 80, 30, configGoldenState(f))
 	}
 

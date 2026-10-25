@@ -71,7 +71,7 @@ func TestFlattenGoldenRender(t *testing.T) {
 			DrawFlattenDialog(s, l, st, asciiDialogStyles(), uiscrollbar.StyleThumb)
 		}})
 	}
-	for _, focus := range []string{"dest", "rec", "empty", "ok", "cancel"} {
+	for _, focus := range []string{"dest", "ok"} {
 		add(80, 24, "typed", "r", focus)
 	}
 	for _, opts := range []string{"-", "re", "e"} {

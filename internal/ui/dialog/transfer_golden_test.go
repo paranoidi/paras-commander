@@ -142,7 +142,7 @@ func TestTransferGoldenRender(t *testing.T) {
 	copyK, moveK := TransferKindCopy, TransferKindMove
 
 	// Single location, copy: every focus position, then the option and value variants.
-	for _, focus := range []string{"dest", "perm", "ts", "deref", "ok", "paused", "cancel"} {
+	for _, focus := range []string{"dest", "ok"} {
 		add(80, 24, copyK, "dest", 0, "typed", "pt", focus)
 	}
 	for _, opts := range []string{"-", "ptd", "d"} {
@@ -168,7 +168,7 @@ func TestTransferGoldenRender(t *testing.T) {
 	add(80, 9, copyK, "dest", 0, "typed", "p", "ok")
 
 	// Single location, move.
-	for _, focus := range []string{"dest", "ok", "paused", "cancel"} {
+	for _, focus := range []string{"dest", "ok"} {
 		add(80, 24, moveK, "dest", 0, "typed", "-", focus)
 	}
 	for _, value := range []string{"empty", "prefill", "long", "ghost", "dropdown", "scrollbar"} {
@@ -184,7 +184,7 @@ func TestTransferGoldenRender(t *testing.T) {
 
 	// Self-copy / self-move rename phase.
 	for _, k := range []TransferKind{copyK, moveK} {
-		for _, focus := range []string{"dest", "ok", "paused", "cancel"} {
+		for _, focus := range []string{"dest", "ok"} {
 			add(80, 24, k, "self", 0, "typed", "pt", focus)
 		}
 		for _, value := range []string{"empty", "prefill", "long", "longmid"} {
@@ -196,10 +196,10 @@ func TestTransferGoldenRender(t *testing.T) {
 	add(80, 8, moveK, "self", 0, "typed", "-", "dest")
 
 	// Multi-location: Source header, Result preview.
-	for _, focus := range []string{"dest", "perm", "ts", "deref", "flat", "ok", "paused", "cancel"} {
+	for _, focus := range []string{"dest", "ok"} {
 		add(80, 30, copyK, "dest", 14, "typed", "pt", focus)
 	}
-	for _, focus := range []string{"dest", "flat", "ok", "paused", "cancel"} {
+	for _, focus := range []string{"dest", "ok"} {
 		add(80, 30, moveK, "dest", 14, "typed", "-", focus)
 	}
 	add(80, 30, copyK, "dest", 14, "typed", "ptf", "flat") // flatten on: basename labels

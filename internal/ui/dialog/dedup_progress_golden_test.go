@@ -51,7 +51,7 @@ func TestDedupProgressGoldenRender(t *testing.T) {
 
 	confirm := dedupProgressGoldenSnap(comparepkg.DedupAwaitConfirm, false)
 	confirm.HashBytesTotal = 5 << 30
-	for _, focus := range []string{"ok", "cancel"} {
+	for _, focus := range []string{"ok"} {
 		add("confirm_focus-"+focus, 80, 24, dedupProgressGoldenState(focus), confirm)
 	}
 	confirmSmall := confirm

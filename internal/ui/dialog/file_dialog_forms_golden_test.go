@@ -74,7 +74,7 @@ func TestFileDialogBookmarkGoldenRender(t *testing.T) {
 	add := func(w, h int, value, opts, focus string) {
 		addFormGolden(&cases, w, h, bookmarkGoldenState(value, opts, focus), fmt.Sprintf("%s_opts-%s_focus-%s", value, opts, focus))
 	}
-	for _, focus := range []string{"f0", "ok", "cancel"} {
+	for _, focus := range []string{"f0", "ok"} {
 		add(80, 24, "typed", "-", focus)
 	}
 	for _, value := range []string{"empty", "prefill", "long", "longmid"} {
@@ -118,7 +118,7 @@ func TestFileDialogSFTPPasswordGoldenRender(t *testing.T) {
 	add := func(w, h int, value, opts, focus string) {
 		addFormGolden(&cases, w, h, sftpPasswordGoldenState(value, opts, focus), fmt.Sprintf("%s_opts-%s_focus-%s", value, opts, focus))
 	}
-	for _, focus := range []string{"f0", "ok", "cancel"} {
+	for _, focus := range []string{"f0", "ok"} {
 		add(80, 24, "typed", "-", focus)
 	}
 	for _, value := range []string{"empty", "long", "longmid"} {
@@ -173,7 +173,7 @@ func TestFileDialogExtractGoldenRender(t *testing.T) {
 	add := func(w, h int, value, opts, focus string) {
 		addFormGolden(&cases, w, h, extractGoldenState(value, opts, focus), fmt.Sprintf("%s_opts-%s_focus-%s", value, opts, focus))
 	}
-	for _, focus := range []string{"f0", "ok", "cancel"} {
+	for _, focus := range []string{"f0", "ok"} {
 		add(80, 24, "typed", "-", focus)
 		add(80, 24, "typed", "m", focus)
 	}

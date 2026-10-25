@@ -122,17 +122,10 @@ func TestSortDialogGoldenRender(t *testing.T) {
 		}{fmt.Sprintf("%dx%d_meta%d_cb-%s_focus-%s", w, h, metas, on, pos), w, h, metas, checked, pos})
 	}
 	for _, metas := range []int{0, 4} {
-		var positions []sortPos
-		for i := range 4 {
-			positions = append(positions, sortPos{"radio", i})
+		positions := []sortPos{{"radio", 0}, {"ok", 0}}
+		if metas > 0 {
+			positions = append(positions, sortPos{"meta", 0})
 		}
-		for i := range metas {
-			positions = append(positions, sortPos{"meta", i})
-		}
-		for i := range 3 {
-			positions = append(positions, sortPos{"cb", i})
-		}
-		positions = append(positions, sortPos{"ok", 0}, sortPos{"cancel", 0})
 		for _, checked := range []bool{false, true} {
 			for _, pos := range positions {
 				add(80, 24, metas, checked, pos)

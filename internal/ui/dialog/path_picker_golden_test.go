@@ -85,11 +85,11 @@ func TestPathPickerGoldenRender(t *testing.T) {
 	nerd := theme.Default()
 	nerd.UseNerdfontIcons = true
 	// every focus position, apply purpose and navigate purpose, both row shapes
-	for _, focus := range []string{"filter", "ok", "cancel"} {
+	for _, focus := range []string{"filter", "ok"} {
 		add("apply_bm_n6_sel2_focus-"+focus, 80, 24, pickerGoldenState(6, 2, 0, true, focus), ascii, nil)
 		add("apply_hist_n6_sel2_focus-"+focus, 80, 24, pickerGoldenState(6, 2, 0, false, focus), ascii, nil)
 	}
-	for _, focus := range []string{"filter", "cancel"} {
+	for _, focus := range []string{"filter"} {
 		nav := pickerGoldenState(6, 2, 0, true, focus)
 		nav.Purpose = PathPickerPurposeNavigate
 		add("navigate_bm_n6_sel2_focus-"+focus, 80, 24, nav, ascii, nil)

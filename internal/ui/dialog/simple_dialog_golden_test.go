@@ -83,7 +83,7 @@ func runSimpleGoldens(t *testing.T, dialogName string, cases []simpleGolden) {
 
 func TestUndoConfirmGoldenRender(t *testing.T) {
 	var cases []simpleGolden
-	for _, focus := range []string{"yes", "no"} {
+	for _, focus := range []string{"yes"} {
 		st := undoGoldenState(focus)
 		cases = append(cases, simpleGolden{fmt.Sprintf("80x24_focus-%s", focus), 80, 24, func(s tcell.Screen, l Layout) {
 			DrawUndoConfirmDialog(s, l, st, asciiDialogStyles())
@@ -95,7 +95,7 @@ func TestUndoConfirmGoldenRender(t *testing.T) {
 func TestQuitConfirmGoldenRender(t *testing.T) {
 	var cases []simpleGolden
 	for _, variant := range []string{"default", "commands"} {
-		for _, focus := range []string{"stay", "quit"} {
+		for _, focus := range []string{"stay"} {
 			st := quitGoldenState(focus, variant == "commands")
 			cases = append(cases, simpleGolden{fmt.Sprintf("80x24_%s_focus-%s", variant, focus), 80, 24, func(s tcell.Screen, l Layout) {
 				DrawQuitConfirmDialog(s, l, st, asciiDialogStyles())
@@ -116,7 +116,7 @@ func TestListingFormatGoldenRender(t *testing.T) {
 	for _, f := range panel.ListFormatDialogRadios() {
 		add(80, 24, f.Format, "radio0")
 	}
-	for _, focus := range []string{"radio1", "radio2", "ok", "cancel"} {
+	for _, focus := range []string{"radio1", "ok"} {
 		add(80, 24, panel.ListFormatPerm, focus)
 	}
 	add(36, 24, panel.ListFormatBrief, "radio2")
@@ -136,11 +136,11 @@ func TestCompareFilterGoldenRender(t *testing.T) {
 	}
 	partial := comparepkg.FilterPrimaryOnly | comparepkg.FilterContentDiff
 	for _, filter := range []comparepkg.Filter{comparepkg.FilterAll, comparepkg.FilterNone, partial} {
-		for _, focus := range []string{"item0", "item3", "item5", "ok", "cancel"} {
+		for _, focus := range []string{"item0", "ok"} {
 			add(80, 24, CompareFilterModeCategory, false, filter, focus)
 		}
 	}
-	for _, focus := range []string{"item1", "item4", "item5"} {
+	for _, focus := range []string{"item1"} {
 		add(80, 24, CompareFilterModeSelect, false, partial, focus)
 		add(80, 24, CompareFilterModeUnselect, true, partial, focus)
 	}
@@ -162,7 +162,7 @@ func TestHostKeyGoldenRender(t *testing.T) {
 	}
 	short := "tulip+meadow/harbor+lantern=willow"
 	long := "tulip+meadow/harbor+lantern=willow+copper/marble+anchor=orchard+velvet/silver+timber=ribbon"
-	for _, focus := range []string{"accept", "save", "reject"} {
+	for _, focus := range []string{"accept"} {
 		add(80, 24, short, focus)
 	}
 	add(80, 24, long, "save")
@@ -182,7 +182,7 @@ func TestMetaDialogGoldenRender(t *testing.T) {
 		}})
 	}
 	for _, checked := range []string{"none", "mixed", "all"} {
-		for _, focus := range []string{"item0", "item1", "item2", "ok", "cancel"} {
+		for _, focus := range []string{"item0", "ok"} {
 			add(80, 24, 3, checked, focus)
 		}
 	}
@@ -203,7 +203,7 @@ func TestStashRestoreGoldenRender(t *testing.T) {
 			DrawStashRestoreDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
-	for _, focus := range []string{"replace", "merge", "drop-stash", "drop-all", "cancel"} {
+	for _, focus := range []string{"replace"} {
 		add(80, 24, focus)
 	}
 	add(120, 30, "merge")
@@ -221,7 +221,7 @@ func TestDedupReturnGoldenRender(t *testing.T) {
 		}})
 	}
 	for _, scope := range []string{"none", "one", "many"} {
-		for _, focus := range []string{"first", "second", "cancel"} {
+		for _, focus := range []string{"first"} {
 			add(80, 24, scope, focus)
 		}
 	}

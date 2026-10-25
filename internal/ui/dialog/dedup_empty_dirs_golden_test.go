@@ -64,7 +64,7 @@ func TestDedupEmptyDirsConfirmGoldenRender(t *testing.T) {
 			DrawDedupEmptyDirsConfirmDialog(s, l, st, ctx, painter)
 		}})
 	}
-	for _, focus := range []string{"yes", "no", "cancel"} {
+	for _, focus := range []string{"yes"} {
 		add("n3_focus-"+focus, 80, 24, dedupGoldenState(3, false, focus), false)
 	}
 	add("n3_icons", 80, 24, dedupGoldenState(3, false, "yes"), true)

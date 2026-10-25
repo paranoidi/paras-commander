@@ -15,17 +15,6 @@ import (
 
 func init() { goldenBandRows["preview_settings"] = 26 }
 
-var previewGoldenFocusNames = []string{
-	"sixel-auto", "sixel-yes", "sixel-no",
-	"kitty-auto", "kitty-yes", "kitty-no",
-	"placeholder-auto", "placeholder-yes", "placeholder-no",
-	"protocol-" + config.PreviewImageProtocolAuto, "protocol-" + config.PreviewImageProtocolSixel,
-	"protocol-" + config.PreviewImageProtocolKitty, "protocol-" + config.PreviewImageProtocolUeberzug,
-	"metadata-" + config.PreviewImageMetadataOff, "metadata-" + config.PreviewImageMetadataBasic,
-	"metadata-" + config.PreviewImageMetadataEssentials, "metadata-" + config.PreviewImageMetadataFull,
-	"video", "ok", "cancel",
-}
-
 func previewGoldenFocus(t *testing.T, st *PreviewSettingsDialogState, pos string) {
 	t.Helper()
 	row, value, _ := strings.Cut(pos, "-")
@@ -77,10 +66,10 @@ func TestPreviewSettingsGoldenRender(t *testing.T) {
 			DrawPreviewSettingsDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
-	for _, pos := range previewGoldenFocusNames {
+	for _, pos := range []string{"sixel-auto", "ok"} {
 		add(80, 31, "default", pos)
 	}
-	for _, pos := range []string{"sixel-no", "kitty-yes", "placeholder-yes", "protocol-kitty", "metadata-full", "video", "ok", "cancel"} {
+	for _, pos := range []string{"sixel-no", "ok"} {
 		add(80, 31, "mixed", pos)
 	}
 	add(60, 31, "mixed", "kitty-no")

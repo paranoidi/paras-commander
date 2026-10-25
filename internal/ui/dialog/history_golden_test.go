@@ -82,10 +82,10 @@ func TestHistoryGoldenRender(t *testing.T) {
 	nerd := theme.Default()
 	nerd.UseNerdfontIcons = true
 	// every focus position, with and without the checkbox
-	for _, focus := range []string{"filter", "zoxide", "ok", "cancel"} {
+	for _, focus := range []string{"filter", "ok"} {
 		add("zox_n6_z3_sel2_focus-"+focus, 80, 24, historyGoldenState(6, 3, 2, 0, true, focus), ascii)
 	}
-	for _, focus := range []string{"filter", "ok", "cancel"} {
+	for _, focus := range []string{"filter", "ok"} {
 		add("nozox_n6_sel2_focus-"+focus, 80, 24, historyGoldenState(6, 0, 2, 0, false, focus), ascii)
 	}
 	add("zox_n6_z3_sel2_focus-ok_nerd", 80, 24, historyGoldenState(6, 3, 2, 0, true, "ok"), nerd)

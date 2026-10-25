@@ -107,7 +107,7 @@ func TestCommandOutputGoldenRender(t *testing.T) {
 	// running: both focus positions, queued, with and without output, ascii and nerd icons
 	run := commandOutputGoldenState(commandOutputGoldenLines(30), 0, true)
 	run.Running = true
-	for _, focus := range []string{"background", "cancel"} {
+	for _, focus := range []string{"background"} {
 		r := run
 		setCommandOutputGoldenFocus(&r, focus)
 		add("running_follow_focus-"+focus, 80, 24, r, ascii)

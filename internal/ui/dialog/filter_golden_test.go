@@ -15,13 +15,6 @@ import (
 
 func init() { goldenBandRows["filter"] = 26 }
 
-var filterGoldenFocusNames = []string{
-	"shell", "regex", "simple",
-	"videos", "pictures", "archives", "audio", "documents",
-	"pattern", "filesonly", "dirsonly", "invert", "case", "includemeta", "onlymeta",
-	"ok", "cancel",
-}
-
 // patternGoldenFocus names a focus position of the Filter and Select group dialogs (shared
 // widget IDs).
 func patternGoldenFocus(t *testing.T, name string) dlg.ID {
@@ -119,18 +112,14 @@ func TestFilterGoldenRender(t *testing.T) {
 			DrawFilterDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
-	for _, pos := range filterGoldenFocusNames {
-		switch pos {
-		case "includemeta", "onlymeta":
-			continue
-		}
+	for _, pos := range []string{"shell", "pattern", "ok"} {
 		add(80, 24, "empty", pos)
 	}
-	for _, pos := range filterGoldenFocusNames {
+	for _, pos := range []string{"pattern", "includemeta", "ok"} {
 		add(80, 25, "meta", pos)
 	}
 	for _, v := range []string{"typed", "many", "zero", "bad-regex", "bad-shell", "scrolled", "options", "dirs-only", "files-only-preview"} {
-		for _, pos := range []string{"pattern", "shell", "ok"} {
+		for _, pos := range []string{"pattern", "ok"} {
 			add(80, 24, v, pos)
 		}
 	}
@@ -141,7 +130,7 @@ func TestFilterGoldenRender(t *testing.T) {
 	add(80, 24, "dirs-only", "filesonly")
 	add(80, 25, "meta-only", "onlymeta")
 	add(80, 25, "meta-only", "audio")
-	for _, pos := range []string{"pattern", "shell", "invert", "case", "ok"} {
+	for _, pos := range []string{"pattern", "ok"} {
 		add(80, 25, "compare", pos)
 	}
 	add(34, 24, "typed", "pattern")

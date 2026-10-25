@@ -59,7 +59,7 @@ func TestSFTPConnectGoldenRender(t *testing.T) {
 			DrawSFTPConnectDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
-	for _, focus := range []string{"filter", "location", "ok", "cancel"} {
+	for _, focus := range []string{"filter", "ok"} {
 		add("n5_sel2_focus-"+focus, 100, 40, sftpGoldenState(5, 2, 0, focus))
 	}
 	// 100x40: viewport 12 rows

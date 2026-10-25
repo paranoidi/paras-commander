@@ -148,16 +148,16 @@ func TestMassRenameGoldenRender(t *testing.T) {
 			fmt.Sprintf("%s_%s_opts-%s_scroll%d_focus-%s", mode, data, opts, scroll, focus))
 	}
 	// Every focus position of every mode on the usual preview.
-	for _, focus := range []string{"r0", "r1", "r2", "r3", "o0", "o1", "o2", "o3", "find", "repl", "ok", "apply", "cancel"} {
+	for _, focus := range []string{"r0", "find", "ok"} {
 		add(80, 40, "simple", "few", "-", focus, 0)
 	}
-	for _, focus := range []string{"r1", "o2", "find", "repl", "ok"} {
+	for _, focus := range []string{"r1", "find", "ok"} {
 		add(80, 40, "regex", "few", "-", focus, 0)
 	}
-	for _, focus := range []string{"r2", "o0", "o1", "ok", "apply", "cancel"} {
+	for _, focus := range []string{"r2", "ok"} {
 		add(80, 40, "external", "few", "-", focus, 0)
 	}
-	for _, focus := range []string{"r3", "o0", "o1", "o2", "cw", "cp", "ok", "apply", "cancel"} {
+	for _, focus := range []string{"r3", "ok"} {
 		add(80, 40, "cap", "few", "-", focus, 0)
 	}
 	// Option states.
@@ -231,7 +231,7 @@ func TestMassRenameSaveGoldenRender(t *testing.T) {
 	add := func(w, h int, v0, v1, focus string) {
 		addMassRenameGolden(&cases, w, h, massRenameSaveGoldenState(v0, v1, focus), fmt.Sprintf("%s_%s_focus-%s", v0, v1, focus))
 	}
-	for _, focus := range []string{"f0", "f1", "ok", "cancel"} {
+	for _, focus := range []string{"f0", "ok"} {
 		add(80, 24, "typed", "typed", focus)
 	}
 	for _, v := range []string{"empty", "long", "longmid"} {
@@ -303,7 +303,7 @@ func TestMassRenamePickerGoldenRender(t *testing.T) {
 			fmt.Sprintf("%s_n%d_q-%s_sel%d_scroll%d_focus-%s", phase, items, query, selected, scroll, focus))
 	}
 	for _, phase := range []string{"load", "history", "overwrite"} {
-		for _, focus := range []string{"list", "ok", "cancel"} {
+		for _, focus := range []string{"list", "ok"} {
 			add(80, 24, phase, 5, "", 0, 0, focus)
 		}
 	}

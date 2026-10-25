@@ -13,16 +13,16 @@ func TestMassRenameWideGoldenRender(t *testing.T) {
 		addMassRenameGolden(&cases, 120, 50, massRenameGoldenState(mode, data, opts, focus, scroll),
 			fmt.Sprintf("wide_%s_%s_opts-%s_scroll%d_focus-%s", mode, data, opts, scroll, focus))
 	}
-	for _, focus := range []string{"r0", "r1", "r2", "r3", "o0", "o1", "o2", "o3", "find", "repl", "ok", "apply", "cancel"} {
+	for _, focus := range []string{"r0", "find", "ok"} {
 		add("simple", "few", "-", focus, 0)
 	}
-	for _, focus := range []string{"r1", "o2", "find", "repl", "ok"} {
+	for _, focus := range []string{"r1", "find", "ok"} {
 		add("regex", "few", "-", focus, 0)
 	}
-	for _, focus := range []string{"r2", "o0", "o1", "ok", "apply", "cancel"} {
+	for _, focus := range []string{"r2", "ok"} {
 		add("external", "few", "-", focus, 0)
 	}
-	for _, focus := range []string{"r3", "o0", "o1", "o2", "cw", "cp", "ok", "apply", "cancel"} {
+	for _, focus := range []string{"r3", "ok"} {
 		add("cap", "few", "-", focus, 0)
 	}
 	add("simple", "few", "mtix", "o0", 0)

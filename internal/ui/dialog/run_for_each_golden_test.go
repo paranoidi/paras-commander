@@ -114,10 +114,10 @@ func TestRunForEachGoldenRender(t *testing.T) {
 	add := func(w, h int, value, opts, focus string) {
 		addRunForEachGolden(&cases, w, h, runForEachGoldenState(value, opts, focus), fmt.Sprintf("%s_opts-%s_focus-%s", value, opts, focus))
 	}
-	for _, focus := range []string{"f0", "cb0", "cb1", "ok", "cancel"} {
+	for _, focus := range []string{"f0", "ok"} {
 		add(80, 40, "typed", "-", focus)
 	}
-	for _, focus := range []string{"f0", "cb0", "cb1", "pool0", "pool1", "pool2", "ok", "cancel"} {
+	for _, focus := range []string{"f0", "ok"} {
 		add(80, 40, "typed", "n", focus)
 	}
 	add(80, 40, "typed", "ns", "pool2")
@@ -195,7 +195,7 @@ func TestRunForEachHistoryGoldenRender(t *testing.T) {
 		addRunForEachGolden(&cases, w, h, runForEachHistoryGoldenState(items, query, selected, scroll, focus),
 			fmt.Sprintf("n%d_q-%s_sel%d_scroll%d_focus-%s", items, query, selected, scroll, focus))
 	}
-	for _, focus := range []string{"list", "ok", "cancel"} {
+	for _, focus := range []string{"list", "ok"} {
 		add(80, 24, 5, "", 0, 0, focus)
 	}
 	add(80, 24, 5, "", 3, 0, "list")

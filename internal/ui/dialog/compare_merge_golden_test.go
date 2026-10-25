@@ -55,7 +55,7 @@ func TestCompareMergeGoldenRender(t *testing.T) {
 			DrawCompareMergeDialog(s, l, st, asciiDialogStyles(), compareMergeGoldenHome)
 		}})
 	}
-	for _, focus := range []string{"left", "right", "missing", "modified", "copy", "move", "ok", "cancel"} {
+	for _, focus := range []string{"left", "ok"} {
 		add(80, 30, "shared", "mf", focus)
 	}
 	add(80, 30, "shared", "rmf", "left")

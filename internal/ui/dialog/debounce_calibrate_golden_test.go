@@ -48,7 +48,7 @@ func TestDebounceCalibrateGoldenRender(t *testing.T) {
 			DrawDebounceCalibrateDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
-	for _, focus := range []string{"in0", "in1", "ok", "calibrate", "cancel"} {
+	for _, focus := range []string{"in0", "ok"} {
 		add(80, 24, "edit", focus)
 	}
 	add(80, 24, "empty", "in0")

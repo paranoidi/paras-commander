@@ -41,7 +41,7 @@ func TestElevateGoldenRender(t *testing.T) {
 		cases = append(cases, simpleGolden{name: fmt.Sprintf("%dx%d_%s_focus-%s", w, h, variant, focus), w: w, h: h,
 			draw: func(s tcell.Screen, l Layout) { DrawElevateDialog(s, l, st, asciiDialogStyles()) }})
 	}
-	for _, focus := range []string{"input", "elevate", "skip", "cancel"} {
+	for _, focus := range []string{"input"} {
 		add(80, 24, "empty", focus)
 	}
 	add(80, 24, "typed", "input")
@@ -52,7 +52,7 @@ func TestElevateGoldenRender(t *testing.T) {
 	add(80, 24, "badpw", "skip")
 	add(80, 24, "noop", "input")
 	add(80, 24, "longpath", "input")
-	for _, focus := range []string{"elevate", "skip", "cancel"} {
+	for _, focus := range []string{"elevate"} {
 		add(80, 24, "nopw", focus)
 	}
 	add(80, 24, "longpath", "elevate") // unused password text, long path

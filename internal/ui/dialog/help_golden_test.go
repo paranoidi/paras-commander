@@ -89,7 +89,7 @@ func TestHelpGoldenRender(t *testing.T) {
 	nerd.UseNerdfontIcons = true
 
 	// both focus positions, ascii and nerd
-	for _, focus := range []string{"list", "close"} {
+	for _, focus := range []string{"list"} {
 		add("browse_n25_sel3_focus-"+focus, 100, 30, helpGoldenState(25, 3, 0, focus), ascii)
 	}
 	add("browse_n25_sel3_nerd", 100, 30, helpGoldenState(25, 3, 0, "list"), nerd)

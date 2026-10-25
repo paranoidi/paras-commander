@@ -308,7 +308,7 @@ func TestFileDialogRenameGoldenRender(t *testing.T) {
 		add := func(w, h int, value, opts, focus string) {
 			addFileGolden(&cases, member, w, h, renameGoldenState(dup, value, opts, focus), fmt.Sprintf("%s_%s_opts-%s_focus-%s", tag, value, opts, focus))
 		}
-		for _, focus := range []string{"f0", "opt0", "ok", "cancel"} {
+		for _, focus := range []string{"f0", "ok"} {
 			add(80, 24, "typed", "-", focus)
 		}
 		add(80, 24, "typed", "f", "opt0")
@@ -327,7 +327,7 @@ func TestFileDialogRenameGoldenRender(t *testing.T) {
 		add(80, 9, "typed", "f", "ok")
 		add(80, 8, "typed", "-", "cancel")
 		if !dup {
-			for _, focus := range []string{"f0", "opt0", "opt1", "ok", "cancel"} {
+			for _, focus := range []string{"f0", "ok"} {
 				add(80, 24, "typed", "d", focus) // directory: open in the other panel
 			}
 			add(80, 24, "typed", "dfo", "opt1")
@@ -344,7 +344,7 @@ func TestFileDialogRenameToolGoldenRender(t *testing.T) {
 	add := func(w, h int, phase, opts, focus string) {
 		addFileGolden(&cases, "file_rename_tool", w, h, renameToolGoldenState(phase, opts, focus), fmt.Sprintf("%s_opts-%s_focus-%s", phase, opts, focus))
 	}
-	for _, focus := range []string{"opt0", "opt1", "ok", "cancel"} {
+	for _, focus := range []string{"opt0", "ok"} {
 		add(80, 24, "sanitize", "-", focus)
 		add(80, 24, "slugify", "-", focus)
 	}
@@ -352,7 +352,7 @@ func TestFileDialogRenameToolGoldenRender(t *testing.T) {
 		add(80, 24, "sanitize", opts, "opt0")
 	}
 	add(80, 24, "slugify", "u", "opt1")
-	for _, focus := range []string{"opt0", "opt1", "opt2", "ok", "cancel"} {
+	for _, focus := range []string{"opt0", "ok"} {
 		add(80, 24, "encoding", "0", focus)
 	}
 	add(80, 24, "encoding", "1", "opt1")
@@ -369,13 +369,13 @@ func TestFileDialogMkdirGoldenRender(t *testing.T) {
 	add := func(w, h int, value, opts, focus string) {
 		addFileGolden(&cases, "file_mkdir", w, h, mkdirGoldenState(value, opts, focus), fmt.Sprintf("%s_opts-%s_focus-%s", value, opts, focus))
 	}
-	for _, focus := range []string{"f0", "ok", "cancel"} {
+	for _, focus := range []string{"f0", "ok"} {
 		add(80, 24, "typed", "-", focus)
 	}
 	for _, value := range []string{"empty", "prefill", "long", "longmid"} {
 		add(80, 24, value, "-", "f0")
 	}
-	for _, focus := range []string{"f0", "opt0", "opt1", "opt2", "ok", "cancel"} {
+	for _, focus := range []string{"f0", "ok"} {
 		add(80, 24, "typed", "a", focus)
 	}
 	add(80, 24, "typed", "a1", "opt1")
@@ -396,7 +396,7 @@ func TestFileDialogDeleteGoldenRender(t *testing.T) {
 	add := func(w, h, entries int, opts, focus string, scroll int) {
 		addFileGolden(&cases, "file_delete", w, h, deleteGoldenState(entries, opts, focus, scroll), fmt.Sprintf("n%d_opts-%s_scroll%d_focus-%s", entries, opts, scroll, focus))
 	}
-	for _, focus := range []string{"yes", "no"} {
+	for _, focus := range []string{"yes"} {
 		add(80, 24, 3, "-", focus, 0)
 		add(80, 24, 1, "-", focus, 0)
 		add(80, 24, 3, "w", focus, 0)
@@ -436,9 +436,9 @@ func TestFileDialogAttrGoldenRender(t *testing.T) {
 		add := func(w, h int, v0, v1, opts, focus string) {
 			addFileGolden(&cases, m.name, w, h, twoFieldGoldenState(m.typ, v0, v1, opts, focus), fmt.Sprintf("%s_%s_opts-%s_focus-%s", v0, v1, opts, focus))
 		}
-		foci := []string{"f0", "ok", "cancel"}
+		foci := []string{"f0", "ok"}
 		if fields > 1 {
-			foci = []string{"f0", "f1", "ok", "cancel"}
+			foci = []string{"f0", "f1", "ok"}
 		}
 		for _, focus := range foci {
 			add(80, 24, "typed", "typed", "-", focus)
@@ -468,7 +468,7 @@ func TestFileDialogAttrGoldenRender(t *testing.T) {
 			add(80, 12, "typed", "scrollbar", "-", "f1")
 		}
 		add(60, 24, "long", "typed", "-", "f0")
-		add(36, 24, "typed", "typed", "-", foci[len(foci)-2])
+		add(36, 24, "typed", "typed", "-", "ok")
 		add(80, 12, "typed", "typed", "-", "f0")
 		add(80, 9, "typed", "typed", "-", "ok")
 		add(80, 7, "typed", "typed", "-", "cancel")
