@@ -53,7 +53,8 @@ func findKeyFixture(t *testing.T, dir string) {
 	}
 }
 
-// settleFind drains the find dialog's asynchronous index and rank work.
+// settleFind drains the find dialog's asynchronous index and rank work, and the disk-usage scan
+// that sizes marked directories for the selection label.
 func settleFind(t *testing.T, app *App) {
 	t.Helper()
 	deadline := time.Now().Add(raceSlowdown * 3 * time.Second)
@@ -62,8 +63,9 @@ func settleFind(t *testing.T, app *App) {
 		app.findCtrl.HandleThrottleRankWake()
 		app.findCtrl.HandleDebounceRankWake()
 		app.findCtrl.ApplyPendingRank()
+		app.pollDiskUsageUpdates()
 		st := &app.model.FindDialog
-		if !st.Open || (st.IndexDone && !st.RankPending) {
+		if !st.Open || (st.IndexDone && !st.RankPending && !app.diskUsageScanBusy()) {
 			return
 		}
 		time.Sleep(2 * time.Millisecond)

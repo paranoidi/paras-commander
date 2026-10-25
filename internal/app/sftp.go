@@ -143,10 +143,11 @@ func (a *App) executeSFTPConnectURI(panelID int, raw string) {
 func (a *App) startSFTPConnect(panelID int, loc pathloc.Path) {
 	gen := a.nextSFTPConnectGen(panelID)
 	a.setTransientMessage("Connecting to "+loc.Display(48)+"...", ui.MessageUrgencyInfo)
+	touch := sftpTouchConn // read on the UI goroutine: tests swap the hook
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.config.SFTP.DialTimeoutSecs)*time.Second)
 		defer cancel()
-		err := sftpTouchConn(ctx, loc)
+		err := touch(ctx, loc)
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(sftpConnectPayload{
 			panelID: panelID,
 			uri:     loc.String(),
