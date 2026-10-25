@@ -2,16 +2,18 @@ package dialog
 
 import "testing"
 
-func TestRenameOpenOtherCheckboxShiftsButtons(t *testing.T) {
+func TestRenameOpenOtherCheckboxOnlyForDirectoryRename(t *testing.T) {
 	t.Parallel()
 	st := FileDialogState{
 		Open: true, DialogType: FileDialogRename, RenamePhase: RenamePhaseMain,
 		Fields: []FileDialogField{{Label: "Name", Value: "alpha"}},
 	}
-	okFile := FileDialogOKFocusIndex(st)
+	if renameHasOpenOtherCheckbox(st) {
+		t.Fatal("a file rename must not offer the open-in-other checkbox")
+	}
 	st.RenameSourceIsDir = true
-	if got := FileDialogOKFocusIndex(st); got != okFile+1 {
-		t.Fatalf("OK focus = %d, want %d", got, okFile+1)
+	if !renameHasOpenOtherCheckbox(st) {
+		t.Fatal("a directory rename offers the open-in-other checkbox")
 	}
 	st.DialogType = FileDialogDuplicate
 	if renameHasOpenOtherCheckbox(st) {

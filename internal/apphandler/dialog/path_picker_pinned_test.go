@@ -107,7 +107,7 @@ func TestPinDialogKeyOpensPinnedPickerInFlattenAndFileField(t *testing.T) {
 			DialogType: dialog.FileDialogSymlink,
 			Fields:     []dialog.FileDialogField{{Label: "Target", PathPicker: true}, {Label: "Link path", PathPicker: true}},
 		}
-		h.model.FileDialog.FocusedField = 1
+		h.model.FileDialog.Focus = dialog.FileFieldID(1)
 		if !h.TryPathPickerHostShortcut(ev) {
 			t.Fatal("shortcut not handled")
 		}

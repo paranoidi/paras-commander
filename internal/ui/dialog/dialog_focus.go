@@ -177,9 +177,6 @@ func (d DialogTrailingButtonsForm) MoveFocus(focus int, key tcell.Key) (int, boo
 	}
 }
 
-// DialogLinearForm is the standard OK+Cancel trailing-button layout.
-type DialogLinearForm = DialogTrailingButtonsForm
-
 // NewDialogLinearForm returns layout for NumContent fields and two trailing buttons.
 func NewDialogLinearForm(numContent int) DialogTrailingButtonsForm {
 	return NewDialogTrailingButtonsForm(numContent, 2)

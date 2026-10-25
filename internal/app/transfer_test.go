@@ -14,6 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestActivateMoveActionSamePanelPathOpensMoveDialog(t *testing.T) {
@@ -938,18 +939,17 @@ func TestDuplicateDialogFocusCheckboxToggle(t *testing.T) {
 	if !app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("Alt+A should toggle focus-after checkbox on")
 	}
-	okIdx := dialog.FileDialogOKFocusIndex(app.model.FileDialog)
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if app.model.FileDialog.FocusedField != 1 {
-		t.Fatalf("Down from field: focus = %d, want 1 (checkbox)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.Focus != dialog.FileRenameFocusAfter {
+		t.Fatalf("Down from field: focus = %q, want the checkbox", app.model.FileDialog.Focus)
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("Enter on checkbox should toggle focus-after off")
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if app.model.FileDialog.FocusedField != okIdx {
-		t.Fatalf("Down from checkbox: focus = %d, want OK %d", app.model.FileDialog.FocusedField, okIdx)
+	if app.model.FileDialog.Focus != dlg.OK {
+		t.Fatalf("Down from checkbox: focus = %q, want OK", app.model.FileDialog.Focus)
 	}
 }
 
@@ -1038,8 +1038,7 @@ func TestDuplicateConfirmsFromOKButtonWithFocusAfter(t *testing.T) {
 	// Enable focus-after, then navigate focus down to the OK button and confirm
 	// from there (the real user flow that used to drop the copy silently).
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
-	okIdx := dialog.FileDialogOKFocusIndex(app.model.FileDialog)
-	for app.model.FileDialog.FocusedField != okIdx {
+	for app.model.FileDialog.Focus != dlg.OK {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))

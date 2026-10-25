@@ -51,7 +51,7 @@ func (h *Handler) TryPathPickerHostShortcut(ev *tcell.EventKey) bool {
 	}
 	switch {
 	case h.model.FileDialog.Open:
-		h.OpenPathPickerForFileField(h.model.FileDialog.FocusedField, kind)
+		h.OpenPathPickerForFileField(h.focusedFieldIndex(), kind)
 	case h.model.TransferDialog.Open:
 		h.OpenPathPickerForTransfer(kind)
 	default:

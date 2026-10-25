@@ -1,14 +1,8 @@
 package dialog
 
 import (
-	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/primitive"
-	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 // DeleteDialogMaxListRows caps visible name rows per paint (full list still scrolls).
@@ -25,10 +19,6 @@ func deleteDialogWarningLines(state FileDialogState) int {
 // (footer block + blank + button row).
 func deleteDialogChromeRows(state FileDialogState) int {
 	return 7 + deleteDialogWarningLines(state)
-}
-
-func deleteDialogSummarySepY(rect Rect, state FileDialogState) int {
-	return rect.Y + rect.Height - 6 - deleteDialogWarningLines(state)
 }
 
 func deleteDialogMaxHeight(layoutHeight int) int {
@@ -83,18 +73,6 @@ func DeleteEnsureListScroll(state *FileDialogState, viewportRows, totalRows int)
 	}
 }
 
-func deleteDialogListViewportFromHeight(outerHeight int, state FileDialogState) int {
-	capped := deleteDialogCappedEntryCount(len(state.DeleteEntries))
-	available := outerHeight - deleteDialogChromeRows(state)
-	if available >= capped {
-		return capped
-	}
-	if available < 1 {
-		return 1
-	}
-	return available
-}
-
 // ComputeDeleteDialogLayoutMinWidth returns the minimum outer dialog width from summary, warning,
 // and entry display names. Call once when opening the dialog and store in DeleteLayoutMinWidth.
 func ComputeDeleteDialogLayoutMinWidth(state FileDialogState, deleteListIconLead int) int {
@@ -132,83 +110,4 @@ func fileDeleteDialogHeight(layoutHeight int, state FileDialogState) int {
 		height = 8
 	}
 	return height
-}
-
-func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme, showIcons bool, iconLead int, paintIcon DeleteRowIconPainter, scrollbarStyle uiscrollbar.Style) {
-	if state.DeleteSummary == "" && len(state.DeleteEntries) == 0 {
-		return
-	}
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	textStyle := styles.DialogText.Background(dbg)
-	listStyle := styles.DialogOptionRowStyle(false, false)
-	innerW := rect.Width - 4
-	if innerW <= 0 {
-		return
-	}
-	listBottom := deleteDialogSummarySepY(rect, state)
-	listCol := rect.X + 2
-	textX := listCol
-	textW := innerW
-	if showIcons && paintIcon != nil && iconLead > 0 {
-		textX = listCol + iconLead
-		textW = innerW - iconLead
-		if textW < 1 {
-			textW = 1
-		}
-	}
-
-	y := rect.Y + 1
-
-	vp := deleteDialogListViewportFromHeight(rect.Height, state)
-	scroll := state.DeleteListScroll
-	maxScroll := len(state.DeleteEntries) - vp
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if scroll > maxScroll {
-		scroll = maxScroll
-	}
-	if scroll < 0 {
-		scroll = 0
-	}
-	end := scroll + vp
-	if end > len(state.DeleteEntries) {
-		end = len(state.DeleteEntries)
-	}
-	for _, entry := range state.DeleteEntries[scroll:end] {
-		if y >= listBottom {
-			break
-		}
-		if showIcons && paintIcon != nil && iconLead > 0 {
-			paintIcon(screen, listCol, y, entry, styles)
-		}
-		line := DeleteListEntryNameFitsWidth(entry.Name, entry.Path, textW)
-		primitive.Text(screen, textX, y, textW, line, listStyle)
-		y++
-	}
-	draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, vp, len(state.DeleteEntries), scroll, scrollbarStyle, borderStyle, styles)
-
-	sepY := deleteDialogSummarySepY(rect, state)
-	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
-	y = sepY + 1
-	if warn := strings.TrimSpace(state.DeleteWarning); warn != "" {
-		primitive.Text(screen, draw.DialogTextX(rect), y, draw.DialogContentWidth(rect), warn, textStyle)
-		y++
-	}
-	drawDeleteDialogCenteredSummary(screen, rect, y, state.DeleteSummary, textStyle)
-}
-
-func drawDeleteDialogCenteredSummary(screen tcell.Screen, rect Rect, y int, summary string, style tcell.Style) {
-	if summary == "" {
-		return
-	}
-	innerW := draw.DialogContentWidth(rect)
-	x := draw.DialogTextX(rect)
-	n := utf8.RuneCountInString(summary)
-	if n > innerW {
-		primitive.Text(screen, x, y, innerW, summary, style)
-		return
-	}
-	pad := (innerW - n) / 2
-	primitive.Text(screen, x+pad, y, innerW-pad, summary, style)
 }

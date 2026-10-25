@@ -3,6 +3,7 @@ package dialog
 import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // FileDialogType identifies which file operation dialog is active.
@@ -112,11 +113,17 @@ const (
 
 // FileDialogState holds state for any file operation dialog.
 type FileDialogState struct {
-	Open         bool
-	DialogType   FileDialogType
-	Fields       []FileDialogField
+	Open       bool
+	DialogType FileDialogType
+	Fields     []FileDialogField
+	// FocusedField is the focus index of the dialogs that still use the index machinery (mass
+	// rename, run-for-each, extract, add bookmark, SFTP password); FileDialogUsesSpec types use
+	// Focus instead.
 	FocusedField int
-	Message      string
+	// Focus is the focused widget of a FileDialogUsesSpec dialog (FileFieldID, a checkbox or radio
+	// ID, dlg.OK, dlg.Cancel); empty is the first widget.
+	Focus   dlg.ID
+	Message string
 	// RunForEachPaths / RunForEachDir apply when DialogType == FileDialogRunForEach (targets resolved at dialog open).
 	RunForEachEntries []localfs.Entry
 	RunForEachDir     string

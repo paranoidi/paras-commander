@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // FileDialogRect returns the current on-screen file-dialog rect, used as a geometry
@@ -23,8 +24,8 @@ func (h *Handler) FileDialogRect() ui.Rect {
 	return r
 }
 
-// tryFileDialogPreKey handles the mass-rename/delete Alt-shortcuts and preview/list
-// scrolling, plus the mkdir/rename Alt-mnemonics, that must run before general field
+// tryFileDialogPreKey handles the mass-rename and run-for-each Alt-shortcuts and the
+// mass-rename preview scrolling that must run before general field
 // routing in HandleFileDialogKey. Returns true when the key was fully handled.
 func (h *Handler) tryFileDialogPreKey(event *tcell.EventKey, d *dialog.FileDialogState) bool {
 	if d.Open && d.DialogType == dialog.FileDialogMassRename && event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
@@ -37,18 +38,7 @@ func (h *Handler) tryFileDialogPreKey(event *tcell.EventKey, d *dialog.FileDialo
 			return true
 		}
 	}
-	if d.Open && d.DialogType == dialog.FileDialogDelete {
-		if h.handleDeleteListScrollKey(d, event.Key()) {
-			return true
-		}
-	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if h.tryMkdirActionAltShortcut(event.Rune()) {
-			return true
-		}
-		if h.tryRenameFocusAltShortcut(event.Rune()) {
-			return true
-		}
 		if h.tryRunForEachInDirsAltShortcut(event.Rune()) {
 			return true
 		}
@@ -96,8 +86,6 @@ func (h *Handler) tryRunForEachPTYAltShortcut(r rune) bool {
 // sub-phases are added.
 func (h *Handler) trySubPhaseFileDialogKey(event *tcell.EventKey, d *dialog.FileDialogState) (quit, handled bool) {
 	switch {
-	case d.Open && dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != dialog.RenamePhaseMain:
-		return h.handleRenameToolKey(event), true
 	case d.Open && d.DialogType == dialog.FileDialogMassRename && d.MassRenamePhase == dialog.MassRenamePhaseSavePrompt:
 		return h.handleMassRenameSavePromptKey(event), true
 	case d.Open && d.DialogType == dialog.FileDialogMassRename && massRenamePickerPhaseOpen(d.MassRenamePhase):
@@ -114,14 +102,11 @@ func (h *Handler) trySubPhaseFileDialogKey(event *tcell.EventKey, d *dialog.File
 // (bool quit) convention shared across auxiliary key handlers).
 func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	d := &h.model.FileDialog
+	if dialog.FileDialogUsesSpec(d.DialogType) {
+		return h.handleFileDialogSpecKey(event)
+	}
 	if quit, handled := h.trySubPhaseFileDialogKey(event, d); handled {
 		return quit
-	}
-	if h.tryRenameDialogShortcut(event) {
-		return false
-	}
-	if h.tryMkdirDialogShortcut(event) {
-		return false
 	}
 	if h.tryExtractDialogDestinationShortcut(event) {
 		return false
@@ -135,17 +120,6 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	if h.tryFileDialogPreKey(event, d) {
 		return false
 	}
-	var altExtras []dialog.ExtraMnemonic
-	if d.DialogType == dialog.FileDialogDelete {
-		altExtras = []dialog.ExtraMnemonic{
-			{Rune: 'y', Fn: h.ExecuteDelete},
-			{Rune: 'n', Fn: h.CloseFileDialog},
-		}
-	}
-	if dialog.TryDialogMnemonics(event, altExtras) {
-		return false
-	}
-
 	if h.TryPathPickerHostShortcut(event) {
 		return false
 	}
@@ -219,14 +193,6 @@ func (h *Handler) fileDialogPassFieldEditKey(event *tcell.EventKey, onRadio, onC
 // button/default activation.
 func (h *Handler) handleFileDialogEnter() {
 	d := &h.model.FileDialog
-	if d.DialogType == dialog.FileDialogDelete {
-		if d.FocusedField == 0 {
-			h.ExecuteDelete()
-		} else {
-			h.CloseFileDialog()
-		}
-		return
-	}
 	if h.fileDialogOnMassRenameRadio() {
 		if d.FocusedField == 2 {
 			h.LaunchMassRenameExternalEditor()
@@ -243,14 +209,6 @@ func (h *Handler) handleFileDialogEnter() {
 	if h.toggleFocusedMassRenameCheckbox() {
 		return
 	}
-	if h.fileDialogOnRenameFocusCheckbox() {
-		d.RenameFocusAfter = !d.RenameFocusAfter
-		return
-	}
-	if h.fileDialogOnRenameOpenOtherCheckbox() {
-		d.RenameOpenInOther = !d.RenameOpenInOther
-		return
-	}
 	if h.fileDialogOnRunForEachInDirsCheckbox() {
 		d.RunForEachInDirs = !d.RunForEachInDirs
 		h.commands.RecomputeRunForEachValidation()
@@ -260,16 +218,12 @@ func (h *Handler) handleFileDialogEnter() {
 		d.RunForEachPTY = !d.RunForEachPTY
 		return
 	}
-	if h.fileDialogOnMkdirRadio() {
-		h.selectFocusedMkdirRadio()
-	}
 	if h.FileDialogOnButton() && d.DialogType == dialog.FileDialogMassRename &&
 		d.FocusedField == dialog.MassRenameApplyFocusIndex(*d) {
 		h.ApplyMassRenameKeepOpen()
 		return
 	}
-	if h.FileDialogOnButton() && d.DialogType != dialog.FileDialogDelete &&
-		d.FocusedField == dialog.FileDialogCancelFocusIndex(*d) {
+	if h.FileDialogOnButton() && d.FocusedField == dialog.FileDialogCancelFocusIndex(*d) {
 		h.CloseFileDialog()
 		return
 	}
@@ -300,18 +254,6 @@ func (h *Handler) handleFileDialogRune(event *tcell.EventKey) {
 		}
 		return
 	}
-	if h.fileDialogOnRenameFocusCheckbox() {
-		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
-			d.RenameFocusAfter = !d.RenameFocusAfter
-		}
-		return
-	}
-	if h.fileDialogOnRenameOpenOtherCheckbox() {
-		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
-			d.RenameOpenInOther = !d.RenameOpenInOther
-		}
-		return
-	}
 	if h.fileDialogOnRunForEachInDirsCheckbox() {
 		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
 			d.RunForEachInDirs = !d.RunForEachInDirs
@@ -322,12 +264,6 @@ func (h *Handler) handleFileDialogRune(event *tcell.EventKey) {
 	if h.fileDialogOnRunForEachPTYCheckbox() {
 		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
 			d.RunForEachPTY = !d.RunForEachPTY
-		}
-		return
-	}
-	if h.fileDialogOnMkdirRadio() {
-		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
-			h.selectFocusedMkdirRadio()
 		}
 		return
 	}
@@ -420,93 +356,14 @@ func (h *Handler) handleMassRenamePreviewScrollKey(d *dialog.FileDialogState, ke
 	return false
 }
 
-// handleDeleteListScrollKey handles PgUp/PgDn scrolling of the delete confirmation list.
-// Returns true when the key was handled.
-func (h *Handler) handleDeleteListScrollKey(d *dialog.FileDialogState, key tcell.Key) bool {
-	switch key {
-	case tcell.KeyPgUp:
-		_, ht := h.screen.Size()
-		vp := dialog.DeleteDialogListViewportRows(ht, *d)
-		d.DeleteListScroll -= vp
-		if d.DeleteListScroll < 0 {
-			d.DeleteListScroll = 0
-		}
-		return true
-	case tcell.KeyPgDn:
-		_, ht := h.screen.Size()
-		vp := dialog.DeleteDialogListViewportRows(ht, *d)
-		dialog.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
-		d.DeleteListScroll += vp
-		dialog.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
-		return true
-	}
-	return false
-}
-
-// tryRenameFocusAltShortcut toggles focus-after-rename via Alt+A on the main rename dialog.
-func (h *Handler) tryRenameFocusAltShortcut(r rune) bool {
-	d := &h.model.FileDialog
-	if !dialog.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != dialog.RenamePhaseMain {
-		return false
-	}
-	switch r {
-	case 'a', 'A':
-		d.RenameFocusAfter = !d.RenameFocusAfter
-	case 'p', 'P':
-		if d.DialogType != dialog.FileDialogRename || !d.RenameSourceIsDir {
-			return false
-		}
-		d.RenameOpenInOther = !d.RenameOpenInOther
-	default:
-		return false
-	}
-	return true
-}
-
-// tryMkdirActionAltShortcut selects a mkdir post-action via Alt+mnemonic. Works while
-// the directory-name field is focused (focus stays there). Alt+C selects copy (not Cancel) in this mode.
-func (h *Handler) tryMkdirActionAltShortcut(r rune) bool {
-	d := &h.model.FileDialog
-	if d.DialogType != dialog.FileDialogMkdir || !d.MkdirShowActions {
-		return false
-	}
-	action, radioIdx, ok := dialog.MkdirActionForAltShortcut(r)
-	if !ok {
-		return false
-	}
-	d.MkdirAction = action
-	// Keep focus in the name field so typing continues after picking an action.
-	if d.FocusedField >= len(d.Fields) {
-		d.FocusedField = len(d.Fields) + radioIdx
-	}
-	return true
-}
-
-// selectFocusedMkdirRadio commits the currently focused mkdir radio row as the
-// active MkdirAction. No-op when focus is not on a radio row.
-func (h *Handler) selectFocusedMkdirRadio() {
-	if h.model.FileDialog.DialogType != dialog.FileDialogMkdir {
-		return
-	}
-	idx := h.fileDialogRadioIndex()
-	if idx < 0 {
-		return
-	}
-	switch idx {
-	case 0:
-		h.model.FileDialog.MkdirAction = dialog.MkdirActionCreate
-	case 1:
-		h.model.FileDialog.MkdirAction = dialog.MkdirActionCreateCopySelect
-	case 2:
-		h.model.FileDialog.MkdirAction = dialog.MkdirActionCreateMoveSelect
-	}
-}
-
 // FocusedField returns the FileDialogField the file dialog currently has focus on, or nil when
 // focus is on a button/radio/checkbox row or no dialog is open.
 func (h *Handler) FocusedField() *dialog.FileDialogField {
 	d := &h.model.FileDialog
-	if dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != dialog.RenamePhaseMain {
+	if dialog.FileDialogUsesSpec(d.DialogType) {
+		if i := d.FileDialogFocusedField(); i >= 0 {
+			return &d.Fields[i]
+		}
 		return nil
 	}
 	if d.DialogType == dialog.FileDialogMassRename {
@@ -735,48 +592,25 @@ func (h *Handler) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
 	return false
 }
 
-// mkdirExtraFocusRows returns the number of extra focus rows contributed by the
-// mkdir-with-selections radio section, or 0 when not applicable.
-func (h *Handler) mkdirExtraFocusRows() int {
-	d := &h.model.FileDialog
-	if d.DialogType == dialog.FileDialogMkdir && d.MkdirShowActions {
-		return 3
-	}
-	return 0
-}
-
 // fileDialogOnAnyCheckbox reports whether focus is on any file-dialog checkbox row (mass-rename,
 // rename-focus-after, or either run-for-each checkbox). Kept out of HandleFileDialogKey's own
 // branching so that function's cyclomatic complexity doesn't grow with each new checkbox.
 func (h *Handler) fileDialogOnAnyCheckbox() bool {
 	return h.fileDialogOnMassRenameAnyCheckbox() ||
-		h.fileDialogOnRenameFocusCheckbox() ||
-		h.fileDialogOnRenameOpenOtherCheckbox() ||
 		h.fileDialogOnRunForEachInDirsCheckbox() ||
 		h.fileDialogOnRunForEachPTYCheckbox()
 }
 
-// fileDialogOnRadio returns true when focus is on a mkdir post-action radio, a mass-rename mode
-// radio, or a run-for-each pool radio.
+// fileDialogOnRadio returns true when focus is on a mass-rename mode radio or a run-for-each
+// pool radio.
 func (h *Handler) fileDialogOnRadio() bool {
-	return h.fileDialogOnMkdirRadio() || h.fileDialogOnMassRenameRadio() || h.fileDialogOnRunForEachPoolRadio()
+	return h.fileDialogOnMassRenameRadio() || h.fileDialogOnRunForEachPoolRadio()
 }
 
-// FileDialogOnRadio reports whether focus is currently on any file-dialog radio row (mkdir
-// post-action, mass-rename mode, or run-for-each pool).
+// FileDialogOnRadio reports whether focus is currently on any file-dialog radio row
+// (mass-rename mode or run-for-each pool).
 func (h *Handler) FileDialogOnRadio() bool {
 	return h.fileDialogOnRadio()
-}
-
-// fileDialogOnMkdirRadio returns true when focus is on the mkdir-with-selections radio rows.
-func (h *Handler) fileDialogOnMkdirRadio() bool {
-	d := &h.model.FileDialog
-	extra := h.mkdirExtraFocusRows()
-	if extra == 0 {
-		return false
-	}
-	base := len(d.Fields)
-	return d.DialogType == dialog.FileDialogMkdir && d.FocusedField >= base && d.FocusedField < base+extra
 }
 
 // fileDialogOnRunForEachPoolRadio returns true when focus is on the run-for-each pool selector rows.
@@ -863,25 +697,6 @@ func (h *Handler) toggleFocusedMassRenameCheckbox() bool {
 	return true
 }
 
-// fileDialogOnRenameFocusCheckbox returns true when focus is on the focus-after-rename checkbox.
-func (h *Handler) fileDialogOnRenameFocusCheckbox() bool {
-	d := &h.model.FileDialog
-	return dialog.FileDialogHasRenamePhase(d.DialogType) &&
-		d.RenamePhase == dialog.RenamePhaseMain &&
-		len(d.Fields) > 0 &&
-		d.FocusedField == len(d.Fields)
-}
-
-// fileDialogOnRenameOpenOtherCheckbox returns true when focus is on the open-in-other-panel
-// checkbox (directory rename only), the row right after focus-after-rename.
-func (h *Handler) fileDialogOnRenameOpenOtherCheckbox() bool {
-	d := &h.model.FileDialog
-	return d.DialogType == dialog.FileDialogRename &&
-		d.RenamePhase == dialog.RenamePhaseMain &&
-		d.RenameSourceIsDir &&
-		d.FocusedField == len(d.Fields)+1
-}
-
 // fileDialogOnRunForEachInDirsCheckbox returns true when focus is on the "Run in each
 // directory" checkbox.
 func (h *Handler) fileDialogOnRunForEachInDirsCheckbox() bool {
@@ -894,15 +709,6 @@ func (h *Handler) fileDialogOnRunForEachInDirsCheckbox() bool {
 func (h *Handler) fileDialogOnRunForEachPTYCheckbox() bool {
 	d := &h.model.FileDialog
 	return d.DialogType == dialog.FileDialogRunForEach && d.FocusedField == len(d.Fields)+1
-}
-
-// fileDialogRadioIndex returns the 0-based radio index when focus is on a
-// mkdir radio row, or -1 otherwise.
-func (h *Handler) fileDialogRadioIndex() int {
-	if !h.fileDialogOnMkdirRadio() {
-		return -1
-	}
-	return h.model.FileDialog.FocusedField - len(h.model.FileDialog.Fields)
 }
 
 func (h *Handler) runForEachPoolRadioIndex() int {
@@ -934,126 +740,9 @@ func (h *Handler) selectFocusedRunForEachPoolRadio() {
 // FileDialogOnButton returns true if current focus is on a button (not a field/radio).
 func (h *Handler) FileDialogOnButton() bool {
 	d := &h.model.FileDialog
-	if d.DialogType == dialog.FileDialogDelete {
-		return true // delete only has buttons
-	}
-	if dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != dialog.RenamePhaseMain {
-		return d.FocusedField >= dialog.FileDialogOKFocusIndex(*d)
+	if dialog.FileDialogUsesSpec(d.DialogType) {
+		id := dlg.Focused(h.fileDialogSpec(), d.Focus)
+		return id == dlg.OK || id == dlg.Cancel
 	}
 	return d.FocusedField >= dialog.FileDialogOKFocusIndex(*d)
-}
-
-// tryRenameToolAltShortcut handles the per-phase Alt-letter mnemonics on the rename-tool
-// dialogs (Sanitize: '.'/'_' toggle dots/underscores; Slugify: '.'/'_' pick separator;
-// Encoding: per-candidate shortcut letter). Returns true when the rune was handled.
-func (h *Handler) tryRenameToolAltShortcut(event *tcell.EventKey, d *dialog.FileDialogState) bool {
-	switch d.RenamePhase {
-	case dialog.RenamePhaseSanitize:
-		switch event.Rune() {
-		case '.':
-			d.RenameSanitizeDots = !d.RenameSanitizeDots
-			d.FocusedField = 0
-			return true
-		case '_':
-			d.RenameSanitizeUnderscores = !d.RenameSanitizeUnderscores
-			d.FocusedField = 1
-			return true
-		}
-	case dialog.RenamePhaseSlugify:
-		switch event.Rune() {
-		case '.':
-			d.RenameSlugifySep = dialog.RenameSlugifyDot
-			d.FocusedField = 0
-			return true
-		case '_':
-			d.RenameSlugifySep = dialog.RenameSlugifyUnderscore
-			d.FocusedField = 1
-			return true
-		}
-	case dialog.RenamePhaseEncoding:
-		for i := 0; i < len(d.RenameEncodingCandidates); i++ {
-			if event.Rune() == dialog.RenameEncodingCandidateShortcut(d.RenameEncodingCandidates[i].Label) {
-				d.RenameEncodingSelected = i
-				d.FocusedField = i
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// applyRenameToolAtFocus applies the rename-tool action for the current focused row
-// (sanitize toggle / slugify pick / encoding pick), dispatched by d.RenamePhase. Shared
-// by Enter (on non-button focus) and Space.
-func (h *Handler) applyRenameToolAtFocus() {
-	d := &h.model.FileDialog
-	switch d.RenamePhase {
-	case dialog.RenamePhaseSanitize:
-		h.toggleRenameSanitizeAtFocus()
-	case dialog.RenamePhaseSlugify:
-		h.selectRenameSlugifyAtFocus()
-	case dialog.RenamePhaseEncoding:
-		h.selectRenameEncodingAtFocus()
-	}
-}
-
-func (h *Handler) handleRenameToolKey(event *tcell.EventKey) bool {
-	d := &h.model.FileDialog
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if h.tryRenameToolAltShortcut(event, d) {
-			return false
-		}
-	}
-
-	switch event.Key() {
-	case tcell.KeyEnter:
-		okIdx := dialog.FileDialogOKFocusIndex(*d)
-		cancelIdx := dialog.FileDialogCancelFocusIndex(*d)
-		switch d.FocusedField {
-		case okIdx:
-			h.applyRenameToolAndReturnMain()
-		case cancelIdx:
-			h.closeRenameToolPhase()
-		default:
-			h.applyRenameToolAtFocus()
-		}
-		return false
-	case tcell.KeyDown, tcell.KeyTab:
-		h.fileDialogMoveFocusKey(event)
-		return false
-	case tcell.KeyUp, tcell.KeyBacktab:
-		h.fileDialogMoveFocusKey(event)
-		return false
-	case tcell.KeyLeft, tcell.KeyRight:
-		if h.FileDialogOnButton() {
-			h.fileDialogMoveFocusKey(event)
-		}
-		return false
-	case tcell.KeyRune:
-		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
-			h.applyRenameToolAtFocus()
-		}
-		return false
-	}
-	return false
-}
-
-func (h *Handler) toggleRenameSanitizeAtFocus() {
-	d := &h.model.FileDialog
-	switch d.FocusedField {
-	case 0:
-		d.RenameSanitizeDots = !d.RenameSanitizeDots
-	case 1:
-		d.RenameSanitizeUnderscores = !d.RenameSanitizeUnderscores
-	}
-}
-
-func (h *Handler) selectRenameSlugifyAtFocus() {
-	d := &h.model.FileDialog
-	switch d.FocusedField {
-	case 0:
-		d.RenameSlugifySep = dialog.RenameSlugifyDot
-	case 1:
-		d.RenameSlugifySep = dialog.RenameSlugifyUnderscore
-	}
 }

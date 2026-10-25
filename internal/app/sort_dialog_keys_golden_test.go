@@ -84,6 +84,12 @@ func goldenKeyEvent(t *testing.T, tok string) *tcell.EventKey {
 		return tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModAlt)
 	case "F3":
 		return tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone)
+	case "F2":
+		return tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone)
+	case "F4":
+		return tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone)
+	case "F7":
+		return tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone)
 	case "Shift+F8":
 		return tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModShift)
 	case "Shift+Left":

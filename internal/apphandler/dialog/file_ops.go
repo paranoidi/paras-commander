@@ -16,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // CloseFileDialog closes the file dialog and clears its disk-usage scan reconcile cache.
@@ -228,7 +229,7 @@ func (h *Handler) OpenDeleteDialog(panelID int) {
 		DialogType:    dialog.FileDialogDelete,
 		DeleteSummary: h.DeleteDialogSummary(p, source),
 		DeleteEntries: entries,
-		FocusedField:  1, // No (safe default); Yes stays index 0.
+		Focus:         dlg.Cancel, // No is the safe default
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
 	h.model.FileDialog = fd
@@ -256,7 +257,7 @@ func (h *Handler) OpenDeleteDialogForPath(path, name string) {
 		DialogType:    dialog.FileDialogDelete,
 		DeleteSummary: ui.FormatDeleteImpactSummary(1, entry.Size, false, ""),
 		DeleteEntries: entries,
-		FocusedField:  1, // No (safe default); Yes stays index 0.
+		Focus:         dlg.Cancel, // No is the safe default
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
 	h.ClearDeleteDialogReconcileCache()
@@ -293,7 +294,7 @@ func (h *Handler) openDanglingDirsDeleteDialog(dirs []string) {
 		DialogType:         dialog.FileDialogDelete,
 		DeleteSummary:      fmt.Sprintf("%d %s left empty", len(dirs), jobbridge.Plural(len(dirs), "directory", "directories")),
 		DeleteEntries:      entries,
-		FocusedField:       0, // Yes default
+		Focus:              dlg.OK, // Yes default: removing already-empty directories is low risk
 		DeleteDanglingDirs: true,
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
@@ -809,11 +810,11 @@ func (h *Handler) applyAttrOp(p RemoteFileOpPayload) {
 
 func (h *Handler) executeChmod() {
 	p := h.host.ActivePanel()
-	field := h.FocusedField()
-	if field == nil {
+	if len(h.model.FileDialog.Fields) == 0 {
 		h.CloseFileDialog()
 		return
 	}
+	field := &h.model.FileDialog.Fields[0]
 	source, err := ops.ResolveSource(p)
 	if err != nil {
 		h.host.SetErrorMessage("Chmod source", err)

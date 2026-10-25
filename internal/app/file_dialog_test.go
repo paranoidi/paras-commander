@@ -18,6 +18,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"golang.org/x/text/encoding/japanese"
 )
 
@@ -168,8 +169,8 @@ func TestFileMenuDeleteOpensDeleteConfirmation(t *testing.T) {
 	if len(app.model.FileDialog.DeleteEntries) != 1 || app.model.FileDialog.DeleteEntries[0].Name != "test.txt" {
 		t.Fatalf("DeleteEntries = %v, want [test.txt]", app.model.FileDialog.DeleteEntries)
 	}
-	if app.model.FileDialog.FocusedField != 1 {
-		t.Fatalf("FocusedField = %d, want 1 (No)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.Focus != dlg.Cancel {
+		t.Fatalf("Focus = %q, want No (Cancel)", app.model.FileDialog.Focus)
 	}
 }
 
@@ -381,7 +382,7 @@ func TestRenameDialogFocusCheckboxDefaultOff(t *testing.T) {
 	if app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("RenameFocusAfter = true, want false (default)")
 	}
-	if got, want := dialog.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 4; got != want {
+	if got, want := fileDialogFocusCount(app), 4; got != want {
 		t.Fatalf("focus count = %d, want %d (field + checkbox + OK + Cancel)", got, want)
 	}
 }
@@ -1325,7 +1326,7 @@ func TestRenameDialogFooterListsRestoreDefaultShortcut(t *testing.T) {
 	}
 
 	// On OK button the restore hint is hidden (no prefill field focused).
-	app.model.FileDialog.FocusedField = 1
+	app.model.FileDialog.Focus = dlg.OK
 	keys = app.activeFooterKeys()
 	if len(keys) != 4 {
 		t.Fatalf("on OK footer len = %d, want Esc + Sanitize + Slugify + F10", len(keys))
@@ -1344,8 +1345,8 @@ func TestRenameDialogSanitizeF2ApplyTransformsName(t *testing.T) {
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseSanitize {
 		t.Fatalf("phase = %v, want Sanitize", app.model.FileDialog.RenamePhase)
 	}
-	if got, want := app.model.FileDialog.FocusedField, dialog.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
-		t.Fatalf("sanitize open focus = %d, want OK (%d)", got, want)
+	if got := app.model.FileDialog.Focus; got != dlg.OK {
+		t.Fatalf("sanitize open focus = %q, want OK", got)
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
@@ -1368,8 +1369,8 @@ func TestRenameDialogSlugifyF3ApplyTransformsName(t *testing.T) {
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseSlugify {
 		t.Fatalf("phase = %v, want Slugify", app.model.FileDialog.RenamePhase)
 	}
-	if got, want := app.model.FileDialog.FocusedField, dialog.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
-		t.Fatalf("slugify open focus = %d, want OK (%d)", got, want)
+	if got := app.model.FileDialog.Focus; got != dlg.OK {
+		t.Fatalf("slugify open focus = %q, want OK", got)
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
@@ -1610,8 +1611,8 @@ func TestDeleteDialogEnterDefaultCancelsWithoutDelete(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	app.dispatch(keymap.ActionFileDelete)
-	if app.model.FileDialog.FocusedField != 1 {
-		t.Fatalf("FocusedField = %d, want 1 (No)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.Focus != dlg.Cancel {
+		t.Fatalf("Focus = %q, want No (Cancel)", app.model.FileDialog.Focus)
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
@@ -1823,7 +1824,7 @@ func TestMkdirDialogWithoutSelectionHidesActionRadios(t *testing.T) {
 	if app.model.FileDialog.MkdirShowActions {
 		t.Fatal("MkdirShowActions should be false without selections")
 	}
-	if got, want := dialog.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 3; got != want {
+	if got, want := fileDialogFocusCount(app), 3; got != want {
 		t.Fatalf("focus count = %d, want %d (field + OK + Cancel)", got, want)
 	}
 }
@@ -1848,14 +1849,14 @@ func TestMkdirDialogWithSelectionShowsActionRadiosAndNav(t *testing.T) {
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreate {
 		t.Fatalf("MkdirAction = %v, want MkdirActionCreate (default)", app.model.FileDialog.MkdirAction)
 	}
-	if got, want := dialog.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 6; got != want {
+	if got, want := fileDialogFocusCount(app), 6; got != want {
 		t.Fatalf("focus count = %d, want %d (field + 3 radios + OK + Cancel)", got, want)
 	}
 
 	// Down navigates: field(0) -> radio0(1) -> radio1(2) -> radio2(3) -> OK(4)
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if app.model.FileDialog.FocusedField != 1 {
-		t.Fatalf("Down from field: focus = %d, want 1 (first radio)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.Focus != dialog.MkdirActionID(dialog.MkdirActionCreate) {
+		t.Fatalf("Down from field: focus = %q, want the first radio", app.model.FileDialog.Focus)
 	}
 	// Space on first radio selects MkdirActionCreate (already default).
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
@@ -1871,13 +1872,13 @@ func TestMkdirDialogWithSelectionShowsActionRadiosAndNav(t *testing.T) {
 	// Down past last radio reaches OK button.
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if app.model.FileDialog.FocusedField != 4 {
-		t.Fatalf("Down to OK: focus = %d, want 4", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.Focus != dlg.OK {
+		t.Fatalf("Down to OK: focus = %q", app.model.FileDialog.Focus)
 	}
 	// Right moves OK -> Cancel.
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
-	if app.model.FileDialog.FocusedField != 5 {
-		t.Fatalf("Right OK->Cancel: focus = %d, want 5", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.Focus != dlg.Cancel {
+		t.Fatalf("Right OK->Cancel: focus = %q", app.model.FileDialog.Focus)
 	}
 }
 
@@ -1892,8 +1893,8 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 	p.SelectedPaths = map[string]bool{src: true}
 
 	app.dispatch(keymap.ActionFileMkdir)
-	if app.model.FileDialog.FocusedField != 0 {
-		t.Fatalf("initial focus = %d, want 0 (directory name field)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.FileDialogFocusedField() != 0 {
+		t.Fatalf("initial focus = %q, want the directory name field", app.model.FileDialog.Focus)
 	}
 
 	alt := tcell.ModAlt
@@ -1901,27 +1902,27 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateCopySelect {
 		t.Fatalf("Alt+y: MkdirAction = %v, want copy", app.model.FileDialog.MkdirAction)
 	}
-	if app.model.FileDialog.FocusedField != 0 {
-		t.Fatalf("Alt+y: focus = %d, want 0 (name field keeps focus)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.FileDialogFocusedField() != 0 {
+		t.Fatalf("Alt+y: focus = %q, want the name field to keep focus", app.model.FileDialog.Focus)
 	}
 
 	// From a radio row, Alt mnemonics move focus to the picked radio.
-	app.model.FileDialog.FocusedField = 1
+	app.model.FileDialog.Focus = dialog.MkdirActionID(dialog.MkdirActionCreate)
 
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'm', alt))
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateMoveSelect {
 		t.Fatalf("Alt+m: MkdirAction = %v, want move", app.model.FileDialog.MkdirAction)
 	}
-	if app.model.FileDialog.FocusedField != 3 {
-		t.Fatalf("Alt+m: focus = %d, want 3 (move radio)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.Focus != dialog.MkdirActionID(dialog.MkdirActionCreateMoveSelect) {
+		t.Fatalf("Alt+m: focus = %q, want the move radio", app.model.FileDialog.Focus)
 	}
 
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', alt))
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreate {
 		t.Fatalf("Alt+r: MkdirAction = %v, want create", app.model.FileDialog.MkdirAction)
 	}
-	if app.model.FileDialog.FocusedField != 1 {
-		t.Fatalf("Alt+r: focus = %d, want 1 (create radio)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.Focus != dialog.MkdirActionID(dialog.MkdirActionCreate) {
+		t.Fatalf("Alt+r: focus = %q, want the create radio", app.model.FileDialog.Focus)
 	}
 
 	// Alt+C cancels the dialog; it must not select the copy radio.
@@ -1947,8 +1948,8 @@ func TestMkdirDialogRadioRowsRejectTextInput(t *testing.T) {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if !app.dialogCtrl.FileDialogOnRadio() {
-		t.Fatalf("expected focus on a radio row, focus = %d", app.model.FileDialog.FocusedField)
+	if _, onRadio := dialog.MkdirActionFromID(app.model.FileDialog.Focus); !onRadio {
+		t.Fatalf("expected focus on a radio row, focus = %q", app.model.FileDialog.Focus)
 	}
 	// Typing must not alter the text field while on a radio row.
 	beforeValue := app.model.FileDialog.Fields[0].Value
@@ -2132,4 +2133,27 @@ func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
 		t.Fatalf("selection should be cleared after queueing move job, got %d", len(p.SelectedPaths))
 	}
 	waitUntilAppJobsFinished(t, app, 5*time.Second)
+}
+
+// fileDialogFocusCount counts the focus stops of the open spec dialog: every widget reachable with
+// Down, then the buttons reachable with Right.
+func fileDialogFocusCount(app *App) int {
+	d := &app.model.FileDialog
+	seen := map[dlg.ID]bool{}
+	step := func(key tcell.Key) {
+		for range 20 {
+			app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(key, 0, tcell.ModNone))
+			seen[d.Focus] = true
+		}
+	}
+	d.Focus = ""
+	seen[""] = true
+	step(tcell.KeyDown)
+	step(tcell.KeyRight)
+	d.Focus = "" // back to the first widget
+	delete(seen, "")
+	if d.Fields != nil {
+		seen[dialog.FileFieldID(0)] = true // the unset focus is the first input
+	}
+	return len(seen)
 }

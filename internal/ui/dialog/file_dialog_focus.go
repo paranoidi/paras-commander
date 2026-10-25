@@ -27,17 +27,15 @@ func FileDialogFocusForm(state FileDialogState) DialogTrailingButtonsForm {
 }
 
 // fileDialogInputRowCount returns how many leading focus rows are text input rows.
-// It is 0 where focus row i is not state.Fields[i]: the delete confirmation, the list-picker
-// phases, the rename tool sub-screens, and mass rename's main screen (Find/Replace sit after
+// It is 0 where focus row i is not state.Fields[i]: the list-picker
+// phases, and mass rename's main screen (Find/Replace sit after
 // the mode radios and massRenameMoveFocusKey drives Tab there itself). The arms mirror the
 // early returns in fileDialogOKFocusIndex.
 func fileDialogInputRowCount(state FileDialogState) int {
 	switch {
-	case state.DialogType == FileDialogDelete,
-		state.DialogType == FileDialogMassRename && MassRenamePickerPhase(state.MassRenamePhase),
+	case state.DialogType == FileDialogMassRename && MassRenamePickerPhase(state.MassRenamePhase),
 		state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain,
-		state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen,
-		renameToolActive(state):
+		state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen:
 		return 0
 	}
 	return len(state.Fields)

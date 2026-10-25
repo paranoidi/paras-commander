@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // tryRenameDialogShortcut handles [dialog.rename] while the main
@@ -25,12 +26,12 @@ func (h *Handler) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
 		d.RenamePhase = dialog.RenamePhaseSanitize
 		d.RenameSanitizeDots = true
 		d.RenameSanitizeUnderscores = true
-		d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
+		d.Focus = dlg.OK
 		return true
 	case keymap.ActionFileRenameOpenSlugify:
 		d.RenamePhase = dialog.RenamePhaseSlugify
 		d.RenameSlugifySep = dialog.RenameSlugifyDot
-		d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
+		d.Focus = dlg.OK
 		return true
 	case keymap.ActionFileRenameOpenEncoding:
 		if len(d.RenameEncodingCandidates) == 0 {
@@ -40,7 +41,7 @@ func (h *Handler) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
 		if d.RenameEncodingSelected < 0 || d.RenameEncodingSelected >= len(d.RenameEncodingCandidates) {
 			d.RenameEncodingSelected = 0
 		}
-		d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
+		d.Focus = dlg.OK
 		return true
 	default:
 		return false
@@ -74,7 +75,7 @@ func (h *Handler) RenameEncodingFooterEligible() bool {
 func (h *Handler) closeRenameToolPhase() {
 	d := &h.model.FileDialog
 	d.RenamePhase = dialog.RenamePhaseMain
-	d.FocusedField = 0
+	d.Focus = dialog.FileFieldID(0)
 }
 
 func (h *Handler) applyRenameToolAndReturnMain() {
@@ -100,13 +101,5 @@ func (h *Handler) applyRenameToolAndReturnMain() {
 	f.Cursor = len([]rune(f.Value))
 	f.PrefillPending = false
 	d.RenamePhase = dialog.RenamePhaseMain
-	d.FocusedField = 0
-}
-
-func (h *Handler) selectRenameEncodingAtFocus() {
-	d := &h.model.FileDialog
-	if d.FocusedField < 0 || d.FocusedField >= len(d.RenameEncodingCandidates) {
-		return
-	}
-	d.RenameEncodingSelected = d.FocusedField
+	d.Focus = dialog.FileFieldID(0)
 }

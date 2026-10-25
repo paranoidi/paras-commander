@@ -44,23 +44,6 @@ func dialogButtonRowY(rows []string) int {
 	return -1
 }
 
-// assertSurfaceBlankRowAboveButtons requires a surface-only row immediately above the first
-// button row. A section separator on that row does not count.
-func assertSurfaceBlankRowAboveButtons(t *testing.T, rows []string) int {
-	t.Helper()
-	buttonY := dialogButtonRowY(rows)
-	if buttonY < 1 {
-		t.Fatalf("button row not found; rows:\n%s", strings.Join(rows, "\n"))
-	}
-	above := rows[buttonY-1]
-	inner := strings.Trim(above, " │")
-	if inner != "" {
-		t.Fatalf("row above buttons (y=%d) = %q, want surface-only blank (a separator is not the blank row)\nrows:\n%s",
-			buttonY-1, strings.TrimSpace(above), strings.Join(rows, "\n"))
-	}
-	return buttonY
-}
-
 // assertButtonsUnderSeparator requires the separator on the row immediately above the first
 // button row: dlg dialogs have no blank row there.
 func assertButtonsUnderSeparator(t *testing.T, rows []string) {
@@ -71,7 +54,7 @@ func assertButtonsUnderSeparator(t *testing.T, rows []string) {
 	}
 }
 
-func TestFileDialogRenameHasBlankRowAboveButtons(t *testing.T) {
+func TestFileDialogRenameButtonsSitUnderSeparator(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
 	DrawFileDialog(screen, layout, FileDialogState{
@@ -79,7 +62,7 @@ func TestFileDialogRenameHasBlankRowAboveButtons(t *testing.T) {
 		DialogType: FileDialogRename,
 		Fields:     []FileDialogField{{Label: "New name", Value: "harborlantern.txt"}},
 	}, DialogRenderContext{Styles: theme.Default()}, nil)
-	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
+	assertButtonsUnderSeparator(t, dialogScreenRows(screen))
 }
 
 func TestTransferCopyButtonsSitUnderSeparator(t *testing.T) {
