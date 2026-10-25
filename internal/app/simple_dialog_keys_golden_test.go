@@ -46,6 +46,9 @@ type keyGoldenDialog struct {
 	// action runs a script token starting with "@": an injected asynchronous result (streamed
 	// output, a finished run) rather than a key. nil = every token is a key.
 	action func(t *testing.T, app *App, tok string)
+	// settle, when set, runs after every key before the state is recorded: it drains the
+	// asynchronous work a key starts (find's ranking) so the transcript does not depend on timing.
+	settle func(t *testing.T, app *App)
 	// serial keeps the scripts off t.Parallel, for setups that call t.Setenv (forbidden in
 	// parallel tests) or share fixture state between scripts.
 	serial bool
@@ -88,6 +91,9 @@ func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
 			}
 		}
 		quit, _ := app.handleKey(goldenKeyEvent(t, tok))
+		if d.settle != nil && !quit && d.open(app) {
+			d.settle(t, app)
+		}
 		if !d.open(app) || quit {
 			fmt.Fprintf(&sb, "== %s ==\nCLOSED: %s\n", tok, d.outcome(app, quit))
 			return sb.String()
