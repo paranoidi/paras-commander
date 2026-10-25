@@ -402,6 +402,9 @@ type PreviewCommandRule struct {
 type UIConfig struct {
 	ShowMenuBar      bool `toml:"show_menu_bar"`
 	UseNerdfontIcons bool `toml:"use_nerdfont_icons"`
+	// Mouse enables terminal mouse reporting (click, double click, wheel, right click on the file
+	// panels). Default DefaultMouse.
+	Mouse bool `toml:"mouse"`
 	// LeaderMenuShowDirectKeys shows the preferred global keybind after each action name in the Esc function menu.
 	LeaderMenuShowDirectKeys bool `toml:"leader_menu_show_direct_keys"`
 	// NarrowPanelsNameOnly: when true, narrow panels hide trailing listing columns and show only names
@@ -655,6 +658,7 @@ func Default() Config {
 		UI: UIConfig{
 			ShowMenuBar:                 true,
 			UseNerdfontIcons:            true,
+			Mouse:                       DefaultMouse,
 			LeaderMenuShowDirectKeys:    DefaultLeaderMenuShowDirectKeys,
 			NarrowPanelsNameOnly:        DefaultNarrowPanelsNameOnly,
 			OtherPanelMatchMarks:        DefaultOtherPanelMatchMarks,

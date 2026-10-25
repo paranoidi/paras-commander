@@ -175,6 +175,7 @@ type findDialogSelectionScanNeedPayload struct {
 // App owns lifecycle, state, and input dispatch.
 type App struct {
 	screen              tcell.Screen
+	mouse               mouseState // see mouse.go
 	config              config.Config
 	styles              theme.Theme
 	themes              map[string]theme.Theme
@@ -465,6 +466,7 @@ func Run(cfg LaunchConfig) (err error) {
 	if err != nil {
 		return err
 	}
+	app.applyMouseConfig()
 	if useBuiltIn {
 		app.setTransientMessage("Started with built-in defaults (configuration failed to load).", ui.MessageUrgencyWarn)
 	}
@@ -1317,6 +1319,20 @@ func (a *App) Run() error {
 				return nil
 			}
 			if keyRendered {
+				didRender = true
+			}
+		case *tcell.EventMouse:
+			if a.model.ViewMode != ui.ViewJobs {
+				a.jobsCtrl.DrainDiscardProgressEvents()
+			} else {
+				pollJobsAfter = true
+			}
+			quit, mouseRendered := a.handleMouse(event)
+			if quit {
+				a.stopWorker()
+				return nil
+			}
+			if mouseRendered {
 				didRender = true
 			}
 		case *tcell.EventInterrupt:

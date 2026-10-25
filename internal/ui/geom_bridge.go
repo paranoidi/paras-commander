@@ -41,6 +41,11 @@ type PanelPaneSplit = geom.PanelPaneSplit
 // PanelWidthSplit is a legacy alias for PanelPaneSplit.
 type PanelWidthSplit = geom.PanelPaneSplit
 
+// PanelListTop returns the screen row of the first entry row inside a file panel frame.
+func PanelListTop(rect Rect) int {
+	return geom.PanelListTop(rect)
+}
+
 // PanelListRows returns the number of entry rows inside a file panel frame.
 func PanelListRows(rect Rect) int {
 	return geom.PanelListRows(rect)

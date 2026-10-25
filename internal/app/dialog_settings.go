@@ -324,6 +324,7 @@ func (a *App) resetConfigToDefaults() {
 	}
 	a.config = cfg
 	a.restartStatusCommandTicker(cfg.StatusCommand)
+	a.applyMouseConfig()
 	a.openConfigDialog()
 	a.setTransientMessage("Configuration reset to defaults", ui.MessageUrgencyInfo)
 }
@@ -382,6 +383,7 @@ func (a *App) openConfigTOMLInEditor(path string) {
 	}
 	a.config = cfg
 	a.restartStatusCommandTicker(cfg.StatusCommand)
+	a.applyMouseConfig()
 	a.openConfigDialog()
 	a.setTransientMessage("config.toml reloaded", ui.MessageUrgencyInfo)
 }

@@ -160,7 +160,9 @@ func (a *App) ensureSubshell(panelDir string) (fresh, ok bool) {
 // runShellVisible shows the persistent shell session and reconciles the TUI afterwards.
 func (a *App) runShellVisible(chdirBusy bool) {
 	a.resetImageOverlay() // an Überzug++ window would float over the shell
+	restoreMouse := a.releaseMouse()
 	_, err := a.subshell.RunVisible(a.screen)
+	restoreMouse()
 	// Same post-Resume housekeeping as withTerminalReleased: force a full repaint.
 	a.lastScreenContentHash = 0
 	a.screen.HideCursor()
@@ -194,7 +196,9 @@ func (a *App) runShellVisible(chdirBusy bool) {
 // commands.Handler.runEntryPTY — this function only handles the fullscreen round-trip.
 func (a *App) runForEachSubshellVisible(sub *subshell.Subshell) {
 	a.resetImageOverlay()
+	restoreMouse := a.releaseMouse()
 	_, err := sub.RunVisible(a.screen)
+	restoreMouse()
 	a.lastScreenContentHash = 0
 	a.screen.HideCursor()
 	if err != nil {

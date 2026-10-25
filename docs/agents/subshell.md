@@ -43,6 +43,10 @@ The same persistent shell rendered as a bottom strip above the footer (separator
 
 `StartArgv(argv, dir)` is a lean sibling of `Start` for a fully built argv on its own PTY (`exec.Command` on `pty.Start`), skipping the cwd pipe and precmd hook. It reuses `Alive`, `WritePTY`, `StartPanelFeed`, `Close`, `Draw`, `Cursor`, `AppCursor` and adds `Done() <-chan struct{}` and `ExitCode()` (valid after `Done`, captured in the same `cmd.Wait()` goroutine as `Start`). `PanelFeed.SnapshotText()` dumps the emulator grid as right-trimmed plain text (last frame only). Each session is independent of `App.subshell`, so several can run alongside the persistent shell. The only caller is run-for-each PTY mode ([commands.md](commands.md)); non-Linux returns `ErrUnsupportedPlatform` and callers fall back to capture.
 
+## Mouse reporting around TTY hand-offs
+
+Every path that gives the TTY to another program turns mouse reporting off first and back on afterwards when `[ui].mouse` is set, so the child never receives raw mouse reports: `App.withTerminalReleased` (editor, one-shot shell, interactive commit, mass-rename editor, user-menu commands), `runShellVisible` and `runForEachSubshellVisible` (both around `Subshell.RunVisible`) via `App.releaseMouse()`. `internal/subshell` itself stays mouse-agnostic. The embedded terminal panel is not a hand-off and keeps reporting on.
+
 ## Manual harness
 
 `go run ./cmd/subshell-spike/`: banner/shell toggle outside the app (live cwd in the banner, `1`/`2` inject `Chdir`, `q` quits). Use it to QA terminal handoff per terminal (foot, kitty, xterm, VTE, tmux).

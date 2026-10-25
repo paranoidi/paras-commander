@@ -43,6 +43,8 @@ const (
 	MinFileListContentRows = 3
 	// filePanelListChromeRows is non-list lines in drawPanel (title + column header + bottom frame).
 	filePanelListChromeRows = 3
+	// filePanelListHeaderRows is the title + column header lines above the first entry row.
+	filePanelListHeaderRows = 2
 	// selectedStripChromeRows is non-list lines in drawSelectedStrip (title + bottom frame; no column header).
 	selectedStripChromeRows = 2
 )
@@ -240,6 +242,11 @@ func CalculateLayoutWithOrientation(in LayoutInput) Layout {
 	layout.Primary = Rect{X: 0, Y: menuY, Width: primaryW, Height: panelAreaH}
 	layout.Secondary = Rect{X: primaryW, Y: menuY, Width: secondaryW, Height: panelAreaH}
 	return layout
+}
+
+// PanelListTop returns the screen row of the first entry row inside a file panel frame.
+func PanelListTop(rect Rect) int {
+	return rect.Y + filePanelListHeaderRows
 }
 
 // PanelListRows returns the number of entry rows inside a file panel frame.

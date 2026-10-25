@@ -119,6 +119,16 @@ Same persistent PTY shell as `app.drop-to-shell`, drawn above the footer (`geom.
 
 `primitive.FitPathForWidth` (`internal/primitive/path_fit.go`) keeps the basename and shortens earlier segments first (full name -> first rune + `...` -> single rune), then middle-ellipsis. `primitive.PathWithHomeTilde` (`path_home.go`) swaps the home prefix for `~/`; composed with `FitPathForWidth` for jobs Details rows, blocker panels and Selected strip paths. `primitive.StripCommonPathPrefix` removes shared leading segments for compare row columns. Jobs Details order: Sources, Destination, Current, then Progress/ETA or Took/throughput; Succeeded lines stay relative to the destination.
 
+## Mouse
+
+`[ui].mouse` (default off) gates terminal mouse reporting. `App.applyMouseConfig()` (`internal/app/mouse.go`) enables `MouseButtonEvents|MouseDragEvents` after `screen.Init()` and again whenever the configuration is reloaded (`dialog_settings.go`); it only calls the screen when the state changes. `App.Run()` routes `*tcell.EventMouse` to `App.handleMouse`, which renders like a key and falls through to `reconcileAfterEvent`.
+
+- **Scope**: only the browser view in `InputModeNormal` reacts. Other views, every modal dialog, menu, leader menu, the quick filter and a focused embedded terminal panel swallow mouse events, wheel included.
+- **Hit-testing** (`App.mouseHit`): `layoutForTerminalSize` gives the identity-keyed `Primary`/`Secondary` rects (swap-panes and split orientation are already resolved there). `ui.FileListFrame` reserves the selected strip, `ui.PanelListTop` (shared with `drawPanelRow` and the scrollbar) is the first entry row, `ui.PanelListRows` the row count, and the entry index is `ScrollOffset + row`. Tree view uses the same visible-entry indexing. A carousel panel only takes focus; the inactive column is ignored while quick view or file preview paints a preview there.
+- **Press tracking**: tcell repeats the held buttons on every drag report, so `mouseState.buttons` keeps the previous mask and only newly set bits fire. Wheel events are not held state.
+- **Actions**: left press focuses (`switchPanel`) and moves the cursor with `panel.State.Move` inside `doListNav`, so quick view and latched sync react as for keys. A second press on the same row within `config.MouseDoubleClickMS` runs `nav.open`; right press runs `panel.select-toggle`; both go through `finishResolvedKeyboardAction`. The wheel moves the cursor `config.MouseWheelRows` rows on the panel under the pointer without changing focus.
+- **TTY hand-off**: `App.releaseMouse()` disables reporting and returns the func that re-enables it when the option is on. `withTerminalReleased`, `runShellVisible` and `runForEachSubshellVisible` call it around Suspend/Resume and `RunVisible`. The embedded terminal panel is not a hand-off.
+
 ## Post-event reconciler
 
 `App.reconcileAfterEvent()` (`internal/app/panels.go`) runs once at the bottom of every `App.Run()` iteration, whatever the event source (key, resize, interrupt, job tick). High-frequency payloads may skip it (the interrupt flag gates it); disk-usage events drain either way.

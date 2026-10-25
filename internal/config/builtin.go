@@ -312,6 +312,14 @@ const (
 	// DefaultScreenRenderHashCache skips terminal Show when the logical screen buffer matches the
 	// last pushed frame (reduces flicker and I/O on slow links). Set [ui].screen_render_hash_cache = false to always flush.
 	DefaultScreenRenderHashCache = true
+	// DefaultMouse is the built-in [ui].mouse value. Mouse reporting is opt-in because it takes over
+	// the terminal's own text selection (Shift+drag selects instead) and needs `set -g mouse on` in tmux.
+	DefaultMouse = false
+	// MouseDoubleClickMS is the largest gap between two left presses on the same row that still
+	// counts as a double click.
+	MouseDoubleClickMS = 400
+	// MouseWheelRows is how many rows one wheel notch moves the cursor over a file panel.
+	MouseWheelRows = 3
 	// NarrowPanelRowTextWidthThreshold is the row text width (cells) below which a panel counts as
 	// "narrow" for optional name-only listing (see [ui].narrow_panels_name_only).
 	// 40 targets a 50/50 split on an 80-column terminal (inner listing width 38) with file icons off;
