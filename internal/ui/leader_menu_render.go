@@ -432,19 +432,94 @@ func leaderMenuSlotLayout(rect geom.Rect, used []int, natural [leaderMenuMacroCo
 	return xs, widths, false
 }
 
-// DrawLeaderMenu paints the bottom function menu above the footer.
-func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuState, styles theme.Theme) {
+// leaderMenuPlacement resolves the drawn strip: its rect and the items that fit in it. ok is false
+// when the menu is closed, empty, or the terminal has no room for it.
+func leaderMenuPlacement(layout geom.Layout, state LeaderMenuState) (rect geom.Rect, visibleItems []LeaderMenuItem, ok bool) {
 	if len(state.Items) == 0 || !state.Open {
-		return
+		return geom.Rect{}, nil, false
 	}
-	visibleItems := LeaderMenuVisibleItems(layout, state.Items)
+	visibleItems = LeaderMenuVisibleItems(layout, state.Items)
 	if len(visibleItems) == 0 {
-		return
+		return geom.Rect{}, nil, false
 	}
-	contentRows := leaderMenuContentRows(visibleItems)
-	rect := LeaderMenuRect(layout, contentRows)
+	rect = LeaderMenuRect(layout, leaderMenuContentRows(visibleItems))
 	minHeight := 2*leaderMenuMarginRows + 1
 	if rect.Height < minHeight || rect.Width <= leaderMenuLeftMargin {
+		return geom.Rect{}, nil, false
+	}
+	return rect, visibleItems, true
+}
+
+// leaderMenuCell is where one visible item is drawn.
+type leaderMenuCell struct {
+	X, Y, Width int
+	Item        int // index into the visible items
+	Action      int // action index (group headers skipped), -1 on a group header
+}
+
+// leaderMenuCells lays out items in rect: grouped menus stack each macro column's groups, flat
+// menus fill leaderMenuItemColumns columns row by row and skip group headers.
+func leaderMenuCells(rect geom.Rect, items []LeaderMenuItem, showDirectKeys bool) []leaderMenuCell {
+	cells := make([]leaderMenuCell, 0, len(items))
+	yBase := rect.Y + leaderMenuMarginRows
+	action := 0
+	if leaderMenuIsGrouped(items) {
+		xs, widths, _ := leaderMenuMacroColumnLayout(rect, leaderMenuSplitByColumn(items), showDirectKeys)
+		colY := [leaderMenuMacroColumns]int{}
+		for i := range colY {
+			colY[i] = yBase
+		}
+		for i, it := range items {
+			col := leaderMenuClampColumn(it.GroupColumn)
+			cell := leaderMenuCell{X: xs[col], Y: colY[col], Width: widths[col], Item: i, Action: -1}
+			if it.GroupTitle == "" {
+				cell.Action = action
+				action++
+			}
+			cells = append(cells, cell)
+			colY[col]++
+		}
+		return cells
+	}
+	colWidth := max((rect.Width-leaderMenuLeftMargin)/leaderMenuItemColumns, 4)
+	xBase := rect.X + leaderMenuLeftMargin
+	y := yBase
+	col := 0
+	for i, it := range items {
+		if it.GroupTitle != "" {
+			continue
+		}
+		cells = append(cells, leaderMenuCell{X: xBase + col*colWidth, Y: y, Width: colWidth, Item: i, Action: action})
+		action++
+		col++
+		if col >= leaderMenuItemColumns {
+			col = 0
+			y++
+		}
+	}
+	return cells
+}
+
+// LeaderMenuActionAt reports whether (x, y) lies on the open leader menu strip and, when it is
+// on an action's cell, that action's index (as LeaderMenuIndexForKey returns); action is -1 on
+// group headers and empty space.
+func LeaderMenuActionAt(layout geom.Layout, state LeaderMenuState, x, y int) (action int, inside bool) {
+	rect, visibleItems, ok := leaderMenuPlacement(layout, state)
+	if !ok || x < rect.X || x >= rect.X+rect.Width || y < rect.Y || y >= rect.Y+rect.Height {
+		return -1, false
+	}
+	for _, cell := range leaderMenuCells(rect, visibleItems, leaderMenuShowDirectKeys(layout, state.Items)) {
+		if cell.Action >= 0 && y == cell.Y && x >= cell.X && x < cell.X+cell.Width {
+			return cell.Action, true
+		}
+	}
+	return -1, true
+}
+
+// DrawLeaderMenu paints the bottom function menu above the footer.
+func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuState, styles theme.Theme) {
+	rect, visibleItems, ok := leaderMenuPlacement(layout, state)
+	if !ok {
 		return
 	}
 
@@ -478,31 +553,11 @@ func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuSta
 	}
 
 	showDirectKeys := leaderMenuShowDirectKeys(layout, state.Items)
-	if leaderMenuIsGrouped(visibleItems) {
-		drawLeaderMenuGrouped(screen, rect, visibleItems, arrow, showDirectKeys, keyStyle, arrowStyle, labelStyle, groupStyle, disabledStyle, surface)
-		return
-	}
-	drawLeaderMenuFlat(screen, rect, visibleItems, arrow, showDirectKeys, keyStyle, arrowStyle, labelStyle, disabledStyle, surface)
-}
-
-func drawLeaderMenuGrouped(screen tcell.Screen, rect geom.Rect, items []LeaderMenuItem, arrow rune, showDirectKeys bool, keyStyle, arrowStyle, labelStyle, groupStyle, disabledStyle, surface tcell.Style) {
-	buckets := leaderMenuSplitByColumn(items)
-	xs, widths, _ := leaderMenuMacroColumnLayout(rect, buckets, showDirectKeys)
-	yBase := rect.Y + leaderMenuMarginRows
-	colY := [leaderMenuMacroColumns]int{}
-	for i := range colY {
-		colY[i] = yBase
-	}
-	keys := leaderMenuKeys(items)
-	for i, it := range items {
-		col := leaderMenuClampColumn(it.GroupColumn)
-		x := xs[col]
-		w := widths[col]
-		y := colY[col]
+	keys := leaderMenuKeys(visibleItems)
+	for _, cell := range leaderMenuCells(rect, visibleItems, showDirectKeys) {
+		it := visibleItems[cell.Item]
 		if it.GroupTitle != "" {
-			text := strings.TrimSpace(it.GroupTitle)
-			primitive.Text(screen, x, y, w, text, groupStyle)
-			colY[col] = y + 1
+			primitive.Text(screen, cell.X, cell.Y, cell.Width, strings.TrimSpace(it.GroupTitle), groupStyle)
 			continue
 		}
 		directKey := it.DirectKey
@@ -510,8 +565,7 @@ func drawLeaderMenuGrouped(screen tcell.Screen, rect geom.Rect, items []LeaderMe
 			directKey = ""
 		}
 		ks, ls := leaderMenuItemStyles(it, keyStyle, labelStyle, disabledStyle)
-		drawLeaderMenuCell(screen, x, y, w, keys[i], arrow, it.Label, directKey, ks, arrowStyle, ls, surface)
-		colY[col] = y + 1
+		drawLeaderMenuCell(screen, cell.X, cell.Y, cell.Width, keys[cell.Item], arrow, it.Label, directKey, ks, arrowStyle, ls, surface)
 	}
 }
 
@@ -521,35 +575,6 @@ func leaderMenuItemStyles(it LeaderMenuItem, key, label, disabled tcell.Style) (
 		return disabled, disabled
 	}
 	return key, label
-}
-
-func drawLeaderMenuFlat(screen tcell.Screen, rect geom.Rect, items []LeaderMenuItem, arrow rune, showDirectKeys bool, keyStyle, arrowStyle, labelStyle, disabledStyle, surface tcell.Style) {
-	contentWidth := rect.Width - leaderMenuLeftMargin
-	colWidth := contentWidth / leaderMenuItemColumns
-	if colWidth < 4 {
-		colWidth = 4
-	}
-	xBase := rect.X + leaderMenuLeftMargin
-	y := rect.Y + leaderMenuMarginRows
-	col := 0
-	keys := leaderMenuKeys(items)
-	for i, it := range items {
-		if it.GroupTitle != "" {
-			continue
-		}
-		x := xBase + col*colWidth
-		directKey := it.DirectKey
-		if !showDirectKeys {
-			directKey = ""
-		}
-		ks, ls := leaderMenuItemStyles(it, keyStyle, labelStyle, disabledStyle)
-		drawLeaderMenuCell(screen, x, y, colWidth, keys[i], arrow, it.Label, directKey, ks, arrowStyle, ls, surface)
-		col++
-		if col >= leaderMenuItemColumns {
-			col = 0
-			y++
-		}
-	}
 }
 
 func drawLeaderMenuCell(screen tcell.Screen, x, y, width int, key rune, arrow rune, label, directKey string, keyStyle, arrowStyle, labelStyle, surface tcell.Style) {

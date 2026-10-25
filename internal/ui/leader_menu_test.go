@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
@@ -404,4 +405,61 @@ func TestLeaderMenuMacroColumnLayoutSlotsFallBackWhenNarrow(t *testing.T) {
 	if xs[0]+widths[0] > xs[1] {
 		t.Fatalf("fallback overlaps: xs=%v widths=%v", xs[:2], widths[:2])
 	}
+}
+
+// TestLeaderMenuActionAtMatchesDrawnCells clicks each drawn label, flat and grouped.
+func TestLeaderMenuActionAtMatchesDrawnCells(t *testing.T) {
+	layout := geom.Layout{Width: 80, Height: 24, Menu: geom.Rect{Height: 1}, Footer: geom.Rect{Y: 23, Height: 1}}
+	flat := []LeaderMenuItem{{Label: "Harbor"}, {Label: "Meadow"}, {Label: "Lantern"}, {Label: "Velvet"}, {Label: "Copper"}}
+	grouped := []LeaderMenuItem{
+		{GroupTitle: "Garden", GroupColumn: 0},
+		{Key: 'w', Label: "Walnut", GroupColumn: 0},
+		{Key: 'p', Label: "Pepper", GroupColumn: 0},
+		{GroupTitle: "Orchid", GroupColumn: 2},
+		{Key: 'v', Label: "Violin", GroupColumn: 2},
+	}
+	for name, items := range map[string][]LeaderMenuItem{"flat": flat, "grouped": grouped} {
+		state := LeaderMenuState{Open: true, Items: items}
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatal(err)
+		}
+		screen.SetSize(80, 24)
+		DrawLeaderMenu(screen, layout, state, theme.Default())
+		action := 0
+		for _, it := range items {
+			if it.GroupTitle != "" {
+				x, y := findScreenText(t, screen, it.GroupTitle)
+				if got, inside := LeaderMenuActionAt(layout, state, x, y); got != -1 || !inside {
+					t.Errorf("%s: header %q hit = %d,%v want -1,true", name, it.GroupTitle, got, inside)
+				}
+				continue
+			}
+			x, y := findScreenText(t, screen, it.Label)
+			if got, _ := LeaderMenuActionAt(layout, state, x, y); got != action {
+				t.Errorf("%s: %q hit = %d want %d", name, it.Label, got, action)
+			}
+			action++
+		}
+		if _, inside := LeaderMenuActionAt(layout, state, 5, 2); inside {
+			t.Errorf("%s: row 2 is above the strip", name)
+		}
+		screen.Fini()
+	}
+}
+
+func findScreenText(t *testing.T, screen tcell.SimulationScreen, text string) (int, int) {
+	t.Helper()
+	w, h := screen.Size()
+	want := []rune(text)
+	for y := 0; y < h; y++ {
+		row := []rune(tcelltest.TextAt(screen, 0, y, w))
+		for x := 0; x+len(want) <= len(row); x++ {
+			if string(row[x:x+len(want)]) == text {
+				return x, y
+			}
+		}
+	}
+	t.Fatalf("%q not drawn", text)
+	return 0, 0
 }

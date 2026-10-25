@@ -319,3 +319,26 @@ func TestFooterKeyEventFromBindingLabel(t *testing.T) {
 		t.Fatalf("event = %v want Ctrl+Up", ev)
 	}
 }
+
+func TestMouseLeaderMenuClickRunsEntry(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openBuiltinLeaderMenu()
+	x, y := screenTextCell(t, app, "Sort dialog")
+	click(app, x+3, y, tcell.Button1)
+	if app.model.LeaderMenu.Open || !app.model.SortDialog.Open {
+		t.Fatalf("leader open=%v sort dialog open=%v want closed/open", app.model.LeaderMenu.Open, app.model.SortDialog.Open)
+	}
+}
+
+func TestMouseLeaderMenuOutsideClickCloses(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openBuiltinLeaderMenu()
+	x, y := cellOf(t, app, ui.PrimaryPanel, 1)
+	click(app, x, y, tcell.Button1)
+	if app.model.LeaderMenu.Open {
+		t.Fatal("click outside the strip should close the leader menu")
+	}
+	if app.model.Primary.Cursor != 0 {
+		t.Fatal("outside click must not reach the panel")
+	}
+}

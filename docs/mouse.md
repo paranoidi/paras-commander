@@ -26,9 +26,11 @@ In the menu bar and the footer:
 | Left click outside the pulldown | Closes the menu. The click does nothing else. |
 | Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. |
 
+In the leader menu strip (and the user, copy-path, preview and git filter menus it hosts), a left click on an entry runs it, like its letter. A click outside the strip closes it.
+
 Menu titles take clicks in the file browser and in the jobs, commands, messages, compare and duplicates views, but not while a dialog is open. Footer entries take clicks everywhere the footer shows them, dialogs included.
 
-Everything else ignores the mouse for now: the content of the other views (jobs, messages, compare, duplicates, commands, help, fullscreen preview), dialog contents, the leader menu, the quick filter and the embedded terminal panel.
+Everything else ignores the mouse for now: the content of the other views (jobs, messages, compare, duplicates, commands, help, fullscreen preview), dialog contents, the quick filter and the embedded terminal panel.
 
 ## Caveats
 

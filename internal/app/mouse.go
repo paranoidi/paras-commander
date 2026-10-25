@@ -200,7 +200,11 @@ func (a *App) handleChromeMouse(x, y int, buttons, pressed tcell.ButtonMask) (ha
 		a.render()
 		return true, false, true
 	}
-	if a.inputMode() != InputModeMenu {
+	switch a.inputMode() {
+	case InputModeLeaderMenu:
+		return a.handleLeaderMenuMouse(layout, x, y, pressed)
+	case InputModeMenu:
+	default:
 		return false, false, false
 	}
 	// The menu is modal: wheel and clicks act on the pulldown, a click anywhere else closes it.
@@ -241,4 +245,29 @@ func (a *App) menuBarAcceptsMouse() bool {
 		return true
 	}
 	return false
+}
+
+// handleLeaderMenuMouse handles the open leader menu strip, which is modal like the pulldown: a
+// click on an entry runs it, a click elsewhere closes the menu as Esc does. The wheel is ignored.
+func (a *App) handleLeaderMenuMouse(layout ui.Layout, x, y int, pressed tcell.ButtonMask) (handled, quit, rendered bool) {
+	if pressed&(tcell.Button1|tcell.Button2|tcell.Button3) == 0 {
+		return true, false, false
+	}
+	action, inside := ui.LeaderMenuActionAt(layout, a.model.LeaderMenu, x, y)
+	switch {
+	case !inside:
+		if a.model.LeaderMenu.UserMenu {
+			a.closeUserMenu()
+		} else {
+			a.closeLeaderMenu()
+		}
+	case action >= 0 && pressed&tcell.Button1 != 0:
+		if a.activateLeaderMenu(action) {
+			return true, true, false
+		}
+	default:
+		return true, false, false
+	}
+	a.render()
+	return true, false, true
 }
