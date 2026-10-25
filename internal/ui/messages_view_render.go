@@ -53,16 +53,7 @@ func drawMessagesView(
 	primitive.TextOverlay(screen, msgStart, rect.Y+1, msgW, "Message", headerStyle)
 
 	n := len(entries)
-	scroll := state.ListScroll
-	if scroll < 0 {
-		scroll = 0
-	}
-	if scroll > 0 && scroll >= n {
-		scroll = max(0, n-visibleRows)
-	}
-	if scroll+visibleRows > n {
-		scroll = max(0, n-visibleRows)
-	}
+	scroll := auxListScroll(state.ListScroll, n, visibleRows)
 
 	rowBase := styles.JobsRow.Background(bg)
 	for row := 0; row < visibleRows; row++ {

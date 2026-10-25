@@ -131,58 +131,53 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 		return
 	}
 
-	n := len(entries)
-	scroll := max(0, min(state.ListScroll, commandsMaxListScroll(entries, visibleRows)))
 	cmdIcon := styles.IconCommandsCommand() + " "
 	xCmd := contentX + commandsListColMarker
 	cmdW := max(1, contentW-commandsListColMarker)
 
 	rowBase := styles.JobsRow.Background(bg)
-	y := rect.Y + 1
-	bottom := y + visibleRows
-	for row := scroll; row < n && y < bottom; row++ {
-		idx := CommandsDisplayIndex(n, row) // newest first
+	var segs []string
+	var segRanges [][]search.Range
+	for _, row := range commandsListRows(rect, state, entries) {
+		idx, y := row.Entry, row.Y
 		entry := entries[idx]
 		selected := idx == state.Selected
 		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
 		_, lineBG, _ := lineStyle.Decompose()
-
-		markStyle := commandPhaseStyle(entry, styles).Background(lineBG)
-		if selected {
-			markStyle = lineStyle
-		}
-		paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
-		primitive.Text(screen, contentX, y, commandsListColMarker, commandPhaseMark(entry), markStyle)
-		segs := CommandsFilterSegments(entry, userHomeDir)
-		segRanges := splitSegmentRanges(segs, state.Filter.Ranges(idx))
 		matchStyle := styles.FuzzyHighlight
 		if selected && active {
 			matchStyle = styles.FuzzyHighlightCursor
 		}
 		matchStyle = matchStyle.Background(lineBG)
-		cmdFull := cmdIcon + segs[0]
-		cmdShown := primitive.TruncateRight(cmdFull, cmdW-1)
-		var spans []primitive.Span
-		if cmdShown == cmdFull { // ponytail: no highlight on a truncated line, like Dedup
-			spans = shiftSpans(segRanges[0], utf8.RuneCountInString(cmdIcon), matchStyle)
-		}
-		primitive.StyledText(screen, xCmd, y, cmdW, cmdShown, lineStyle, spans)
-		y++
+		paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
 
-		for mi, m := range entry.Macros {
-			if y >= bottom {
-				break
+		if row.Macro < 0 {
+			markStyle := commandPhaseStyle(entry, styles).Background(lineBG)
+			if selected {
+				markStyle = lineStyle
 			}
-			paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
-			primitive.Text(screen, contentX, y, commandsListColMarker, "", lineStyle)
-			line := commandMacroLine(m, userHomeDir, cmdW)
+			primitive.Text(screen, contentX, y, commandsListColMarker, commandPhaseMark(entry), markStyle)
+			segs = CommandsFilterSegments(entry, userHomeDir)
+			segRanges = splitSegmentRanges(segs, state.Filter.Ranges(idx))
+			cmdFull := cmdIcon + segs[0]
+			cmdShown := primitive.TruncateRight(cmdFull, cmdW-1)
 			var spans []primitive.Span
-			if prefix := commandMacroPrefix(m); strings.HasPrefix(line, prefix+segs[mi+1]) {
-				spans = shiftSpans(segRanges[mi+1], utf8.RuneCountInString(prefix), matchStyle)
+			if cmdShown == cmdFull { // ponytail: no highlight on a truncated line, like Dedup
+				spans = shiftSpans(segRanges[0], utf8.RuneCountInString(cmdIcon), matchStyle)
 			}
-			primitive.StyledText(screen, xCmd, y, cmdW, line, lineStyle, spans)
-			y++
+			primitive.StyledText(screen, xCmd, y, cmdW, cmdShown, lineStyle, spans)
+			continue
 		}
+
+		mi := row.Macro
+		m := entry.Macros[mi]
+		primitive.Text(screen, contentX, y, commandsListColMarker, "", lineStyle)
+		line := commandMacroLine(m, userHomeDir, cmdW)
+		var spans []primitive.Span
+		if prefix := commandMacroPrefix(m); strings.HasPrefix(line, prefix+segs[mi+1]) {
+			spans = shiftSpans(segRanges[mi+1], utf8.RuneCountInString(prefix), matchStyle)
+		}
+		primitive.StyledText(screen, xCmd, y, cmdW, line, lineStyle, spans)
 	}
 }
 

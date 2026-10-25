@@ -1,6 +1,6 @@
 # Mouse
 
-Optional mouse support for the twin-panel file browser, the menu bar and the footer. Off by default; enable it with `[ui].mouse = true` in `config.toml` (see [Configuration](config.md)). The change applies as soon as the configuration is reloaded.
+Optional mouse support for the twin-panel file browser, the menus, the footer and the jobs, commands and messages lists. Off by default; enable it with `[ui].mouse = true` in `config.toml` (see [Configuration](config.md)). The change applies as soon as the configuration is reloaded.
 
 ## What works
 
@@ -26,11 +26,13 @@ In the menu bar and the footer:
 | Left click outside the pulldown | Closes the menu. The click does nothing else. |
 | Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. |
 
-In the leader menu strip (and the user, copy-path, preview and git filter menus it hosts), a left click on an entry runs it, like its letter. A click outside the strip closes it.
-
 Menu titles take clicks in the file browser and in the jobs, commands, messages, compare and duplicates views, but not while a dialog is open. Footer entries take clicks everywhere the footer shows them, dialogs included.
 
-Everything else ignores the mouse for now: the content of the other views (jobs, messages, compare, duplicates, commands, help, fullscreen preview), dialog contents, the quick filter and the embedded terminal panel.
+In the leader menu strip (and the user, copy-path, preview and git filter menus it hosts), a left click on an entry runs it, like its letter. A click outside the strip closes it.
+
+In the jobs, commands and messages views, a left click on a list row selects that job, command or message and focuses the list; the wheel over the list moves the selection. In the messages view a click on the second line of a wrapped message selects the whole message.
+
+Everything else ignores the mouse for now: the other panes of the jobs and commands views, the compare, duplicates, help and fullscreen preview views, dialog contents, the quick filter and the embedded terminal panel.
 
 ## Caveats
 

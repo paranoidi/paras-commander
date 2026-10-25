@@ -91,6 +91,12 @@ func (a *App) moveMessagesSelection(steps int) {
 	a.ensureMessagesViewSelectionVisible()
 }
 
+// selectMessage moves the Messages-list cursor to the logical message at idx.
+func (a *App) selectMessage(idx int) {
+	a.model.MessagesView.Selected = idx
+	a.ensureMessagesViewSelectionVisible()
+}
+
 // selectMessagesEdge moves the Messages-list cursor to the first (toEnd=false) or last
 // (toEnd=true) logical message.
 func (a *App) selectMessagesEdge(toEnd bool) {

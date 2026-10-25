@@ -222,6 +222,12 @@ func (h *Handler) SelectEdge(toEnd bool) {
 	h.setSelection(ui.CommandsDisplayIndex(n, row))
 }
 
+// FocusListRow focuses the Commands list and moves its cursor to entry sel (a mouse click).
+func (h *Handler) FocusListRow(sel int) {
+	h.model.CommandsView.FocusPane = 0
+	h.setSelection(sel)
+}
+
 func (h *Handler) setSelection(sel int) {
 	beforeSel := h.model.CommandsView.Selected
 	h.model.CommandsView.Selected = sel

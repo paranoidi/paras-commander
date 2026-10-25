@@ -103,8 +103,9 @@ func (a *App) setCursorByMouse(row int) {
 }
 
 // handleMouse handles one mouse event. The footer, the menu bar and its pulldown take clicks in
-// every mode that shows them; the browser panels react only in normal mode. Everything else (other
-// views, dialogs, the quick filter) swallows mouse input.
+// every mode that shows them; the browser panels react in normal mode and the Jobs, Commands and
+// Messages lists in their views. Everything else (other panes and views, dialogs, the quick
+// filter) swallows mouse input.
 func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	buttons := ev.Buttons()
 	pressed := buttons &^ a.mouse.buttons
@@ -116,7 +117,14 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	if handled, quit, rendered := a.handleChromeMouse(x, y, buttons, pressed); handled {
 		return quit, rendered
 	}
-	if a.model.ViewMode != ui.ViewBrowser || a.inputMode() != InputModeNormal {
+	switch a.inputMode() {
+	case InputModeJobsView, InputModeCommandsView, InputModeMessagesView:
+		return false, a.handleAuxListMouse(x, y, buttons, pressed)
+	case InputModeNormal:
+		if a.model.ViewMode != ui.ViewBrowser {
+			return false, false
+		}
+	default:
 		return false, false
 	}
 	id, row, ok := a.mouseHit(x, y)
@@ -270,4 +278,44 @@ func (a *App) handleLeaderMenuMouse(layout ui.Layout, x, y int, pressed tcell.Bu
 	}
 	a.render()
 	return true, false, true
+}
+
+// handleAuxListMouse handles the list pane of the Jobs, Commands and Messages views: a left click
+// focuses the list and selects the entry under the pointer, the wheel moves the selection.
+func (a *App) handleAuxListMouse(x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
+	var hit func(ui.Layout, *ui.Model, int, int) (int, bool)
+	var selectEntry, move func(int)
+	switch a.inputMode() {
+	case InputModeJobsView:
+		hit, selectEntry, move = ui.JobsListEntryAt, a.jobsCtrl.FocusListRow, a.jobsCtrl.MoveSelection
+	case InputModeCommandsView:
+		hit, selectEntry, move = ui.CommandsListEntryAt, a.commandsCtrl.FocusListRow, a.commandsCtrl.MoveSelection
+	case InputModeMessagesView:
+		hit, selectEntry, move = ui.MessagesListEntryAt, a.selectMessage, a.moveMessagesSelection
+	default:
+		return false
+	}
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall {
+		return false
+	}
+	idx, ok := hit(layout, &a.model, x, y)
+	if !ok {
+		return false
+	}
+	switch {
+	case buttons&(tcell.WheelUp|tcell.WheelDown) != 0:
+		step := config.MouseWheelRows
+		if buttons&tcell.WheelUp != 0 {
+			step = -step
+		}
+		move(step)
+	case pressed&tcell.Button1 != 0:
+		selectEntry(idx)
+	default:
+		return false
+	}
+	a.render()
+	return true
 }

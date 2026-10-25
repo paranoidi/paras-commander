@@ -116,6 +116,17 @@ func JobErrorLines(j JobEntry) []string {
 	return lines
 }
 
+// jobsMaximizedPane returns the pane drawn full screen over the whole jobs view: the focused
+// Errors or Succeeded pane while maximized. ok is false when the normal split is drawn.
+func jobsMaximizedPane(layout Layout, state JobsViewState, sel JobEntry, now time.Time, throughputChartEnabled bool) (pane JobsPane, ok bool) {
+	if !state.Maximized {
+		return JobsPaneList, false
+	}
+	_, _, errorsRect, succeededRect := SplitJobsSecondaryPanels(layout.Secondary, JobEntryShowsConflictPanel(sel), JobDetailLineCount(sel, now, throughputChartEnabled), len(JobErrorLines(sel)))
+	pane = focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), errorsRect.Height > 0, succeededRect.Height > 0))
+	return pane, pane == JobsPaneErrors || pane == JobsPaneSucceeded
+}
+
 func drawJobsView(
 	screen tcell.Screen,
 	layout Layout,
@@ -133,20 +144,16 @@ func drawJobsView(
 	if state.Selected >= 0 && state.Selected < len(jobs) {
 		sel = jobs[state.Selected]
 	}
-	if state.Maximized {
-		errs := JobErrorLines(sel)
-		_, _, errorsRect, succeededRect := SplitJobsSecondaryPanels(layout.Secondary, JobEntryShowsConflictPanel(sel), JobDetailLineCount(sel, now, throughputChartEnabled), len(errs))
-		switch focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), errorsRect.Height > 0, succeededRect.Height > 0)) {
-		case JobsPaneErrors:
-			body := styles.JobsFailed
-			full := JobsMaximizedRect(layout)
-			drawJobsLinesPanel(screen, full, " "+styles.IconJobsList("failed")+" Errors ", WrapJobsPaneLines(errs, full), false, state.ErrorsScroll, &body, styles, chromeBlocked, true, true)
-			return
-		case JobsPaneSucceeded:
-			full := JobsMaximizedRect(layout)
-			drawJobsLinesPanel(screen, full, " Succeeded ", WrapJobsPaneLines(succeeded[sel.ID], full), true, state.SucceededScroll, nil, styles, chromeBlocked, true, true)
-			return
-		}
+	switch pane, _ := jobsMaximizedPane(layout, state, sel, now, throughputChartEnabled); pane {
+	case JobsPaneErrors:
+		body := styles.JobsFailed
+		full := JobsMaximizedRect(layout)
+		drawJobsLinesPanel(screen, full, " "+styles.IconJobsList("failed")+" Errors ", WrapJobsPaneLines(JobErrorLines(sel), full), false, state.ErrorsScroll, &body, styles, chromeBlocked, true, true)
+		return
+	case JobsPaneSucceeded:
+		full := JobsMaximizedRect(layout)
+		drawJobsLinesPanel(screen, full, " Succeeded ", WrapJobsPaneLines(succeeded[sel.ID], full), true, state.SucceededScroll, nil, styles, chromeBlocked, true, true)
+		return
 	}
 	drawJobsListPanel(screen, layout.Primary, state, jobs, styles, now, chromeBlocked, rateLimitBPS)
 	detailLines := JobDetailLineCount(sel, now, throughputChartEnabled)
@@ -202,16 +209,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 	primitive.Text(screen, contentX, rect.Y+1, contentW, hdr, headerStyle)
 
 	n := len(jobs)
-	scroll := state.ListScroll
-	if scroll < 0 {
-		scroll = 0
-	}
-	if scroll > 0 && scroll >= n {
-		scroll = max(0, n-visibleRows)
-	}
-	if scroll+visibleRows > n {
-		scroll = max(0, n-visibleRows)
-	}
+	scroll := auxListScroll(state.ListScroll, n, visibleRows)
 
 	rowBase := styles.JobsRow.Background(bg)
 	for row := 0; row < visibleRows; row++ {

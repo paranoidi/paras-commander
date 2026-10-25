@@ -6,6 +6,7 @@ Messages, Compare, Dedup and Help. Jobs and Commands views: [jobs.md](jobs.md), 
 
 - `messages.open` is a global default in `DefaultActionSpecs` (`[main]`); `messages.close` (plus hardcoded Esc) lives in `DefaultMessagesOverlayKeys` (`[messages]`); `messages.clear` empties `Model.MessageLog` and the banner. Only `messages.*` ids are allowed under `[messages]` (`AllowedInMessagesOverlay`/`validateMessagesOverlayKeys`); the overlay resolves before globals while `ViewMessages` is focused.
 - `setTransientMessage` prepends wrapped lines to `Model.MessageLog` (newest first), split on spaces to the Messages text-column width (`ui.MessageLogWrapColsForLayout`, same width as `drawMessagesView`; `ui.MessageLogWrapRunes` fallback). The first line of each toast carries a local `hh:mm:ss`; continuation lines don't, and Up/Down move by logical message (`ui.AdjacentMessageLogIndex`). The banner shows the first wrapped line unless a shorter override is supplied (job failures: `jobFailureBannerDetail`/`ops.Error`). Retention: `[ui].message_log_max_entries`.
+- **Mouse**: `ui.MessagesListEntryAt` maps a row to its logical message (a continuation row selects the message above it); a click calls `App.selectMessage`, the wheel `moveMessagesSelection` (`App.handleAuxListMouse`). The list scroll clamp (`auxListScroll`) is shared with `drawMessagesView`.
 
 ## Compare view
 

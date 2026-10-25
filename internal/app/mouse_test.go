@@ -342,3 +342,52 @@ func TestMouseLeaderMenuOutsideClickCloses(t *testing.T) {
 		t.Fatal("outside click must not reach the panel")
 	}
 }
+
+func TestMouseMessagesListClickAndWheel(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.model.MessageLog = []ui.MessageLogEntry{
+		{Time: "10:00:01", Text: "harbor opened"},
+		{Text: "harbor continued"},
+		{Time: "10:00:02", Text: "meadow copied"},
+		{Time: "10:00:03", Text: "lantern moved"},
+		{Time: "10:00:04", Text: "velvet deleted"},
+	}
+	app.openMessagesView()
+	x, y := screenTextCell(t, app, "meadow copied")
+	click(app, x, y, tcell.Button1)
+	if got := app.model.MessagesView.Selected; got != 2 {
+		t.Fatalf("selected = %d want 2", got)
+	}
+	x, y = screenTextCell(t, app, "harbor continued")
+	click(app, x, y, tcell.Button1)
+	if got := app.model.MessagesView.Selected; got != 0 {
+		t.Fatalf("continuation row selected %d want its message 0", got)
+	}
+	app.handleMouse(mouseEv(x, y, tcell.WheelDown))
+	if got := app.model.MessagesView.Selected; got != 4 {
+		t.Fatalf("after wheel selected = %d want 4", got)
+	}
+}
+
+func TestMouseCommandsListClickSelectsEntry(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.commandsMu.Lock()
+	app.model.CommandsList = []ui.CommandRunEntry{
+		{ID: "1", UserCommandLine: "echo walnut", Phase: ui.CommandRunDone},
+		{ID: "2", UserCommandLine: "echo pepper", Phase: ui.CommandRunDone},
+		{ID: "3", UserCommandLine: "echo violin", Phase: ui.CommandRunDone},
+	}
+	app.commandsMu.Unlock()
+	app.commandsCtrl.OpenView()
+	app.model.CommandsView.FocusPane = 1
+	x, y := screenTextCell(t, app, "echo pepper")
+	click(app, x, y, tcell.Button1)
+	if app.model.CommandsView.Selected != 1 || app.model.CommandsView.FocusPane != 0 {
+		t.Fatalf("selected=%d focus=%d want 1/0", app.model.CommandsView.Selected, app.model.CommandsView.FocusPane)
+	}
+	x, y = screenTextCell(t, app, "echo walnut")
+	click(app, x, y, tcell.Button1)
+	if app.model.CommandsView.Selected != 0 {
+		t.Fatalf("selected=%d want 0 (oldest, bottom row)", app.model.CommandsView.Selected)
+	}
+}

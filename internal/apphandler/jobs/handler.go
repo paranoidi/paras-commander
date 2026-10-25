@@ -453,6 +453,12 @@ func (h *Handler) SelectEdge(toEnd bool) {
 	h.setSelection(sel)
 }
 
+// FocusListRow focuses the queue list and moves its cursor to row sel (a mouse click).
+func (h *Handler) FocusListRow(sel int) {
+	h.model.JobsView.FocusPane = 0
+	h.setSelection(sel)
+}
+
 func (h *Handler) setSelection(sel int) {
 	beforeSel := h.model.JobsView.Selected
 	h.model.JobsView.Selected = sel
