@@ -70,7 +70,7 @@ func (d *diskCache) put(key string, png []byte) error {
 		_ = os.Remove(tmp)
 		return err
 	}
-	d.evictLocked()
+	d.evictLocked(d.pathFor(key))
 	return nil
 }
 
@@ -80,7 +80,9 @@ type diskFile struct {
 	mod  time.Time
 }
 
-func (d *diskCache) evictLocked() {
+// evictLocked removes the oldest files until the cache fits maxBytes. keep (the file just
+// written) is never evicted: mtimes can tie within the filesystem's timestamp granularity.
+func (d *diskCache) evictLocked(keep string) {
 	entries, err := os.ReadDir(d.dir)
 	if err != nil {
 		return
@@ -100,8 +102,11 @@ func (d *diskCache) evictLocked() {
 			continue
 		}
 		p := filepath.Join(d.dir, name)
-		files = append(files, diskFile{path: p, size: info.Size(), mod: info.ModTime()})
 		total += info.Size()
+		if p == keep {
+			continue
+		}
+		files = append(files, diskFile{path: p, size: info.Size(), mod: info.ModTime()})
 	}
 	if total <= d.maxBytes {
 		return
