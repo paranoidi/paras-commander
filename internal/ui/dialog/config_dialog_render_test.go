@@ -8,7 +8,7 @@ import (
 
 func configPlaced(t *testing.T, width int) (dlg.Placement, dlg.Spec) {
 	t.Helper()
-	spec := ConfigDialogView(ConfigDialogState{Split: [3]FileDialogField{{Value: "<<22%"}, {Value: "<44%"}, {Value: "*"}}})
+	spec := ConfigDialogView(ConfigDialogState{Split: [3]FileDialogField{{Value: "<<22%"}, {Value: "<44%"}, {Value: "*"}}}, 80)
 	p, ok := dlg.Place(width, 30, spec)
 	if !ok {
 		t.Fatalf("Place failed at width %d", width)

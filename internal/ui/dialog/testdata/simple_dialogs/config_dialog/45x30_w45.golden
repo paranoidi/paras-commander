@@ -1,7 +1,6 @@
 -- text --
                                              
                                              
-                                             
   ┌──────────── Configuration ────────────┐  
   │ View options:                         │  
   │ [ ] Use nerdfont icons                │  
@@ -18,13 +17,14 @@
   │ ( ) Permissions                       │  
   │ ( ) Brief                             │  
   ├───────────────────────────────────────┤  
+  │ [ ] Mouse support                     │  
+  ├───────────────────────────────────────┤  
   │ Carousel split (parent / center / ch… │  
   │ <<22%          <44%            *      │  
   │                                       │  
   ├───────────────────────────────────────┤  
   │         [ OK ]    [ Cancel ]          │  
   └───────────────────────────────────────┘  
-                                             
                                              
                                              
 -- legend --
@@ -37,7 +37,6 @@ f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 g fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbcccccccccccccccbbbbbbbbbbbbbaa
@@ -56,12 +55,13 @@ aabdddddcddddddddddddbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbeeeeeebbbbbbbbbffffgfbbbbbbbbbbeeeeeebbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbeeeheeeebbeeeheeeeeeeebbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -53,9 +53,10 @@ type ConfigDialogState struct {
 	PanelScrollbar         uiscrollbar.Style
 	PanelScrollbarInactive bool
 	ListFormat             panel.ListFormat
+	Mouse                  bool               // [ui].mouse
 	Split                  [3]FileDialogField // [carousel].split tokens: parent / center / child
 	// Focus is the focused widget of ConfigDialogView ("" = the first checkbox): ConfigNerdfont,
-	// ConfigZoom, ConfigHorizontalSplit, a ConfigScrollModeID / ConfigScrollbarID / ConfigListingID
+	// ConfigZoom, ConfigHorizontalSplit, ConfigMouse, a ConfigScrollModeID / ConfigScrollbarID / ConfigListingID
 	// radio, a ConfigSplitID input, dlg.OK or dlg.Cancel.
 	Focus dlg.ID
 

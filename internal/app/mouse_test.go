@@ -433,7 +433,7 @@ func TestMouseDialogMissIsSwallowed(t *testing.T) {
 	app := tallMouseTestApp(t)
 	app.openSortDialog()
 	x, y := screenTextCell(t, app, "Sort order")
-	click(app, x, y, tcell.Button1) // the title on the frame
+	click(app, x, y, tcell.Button1)  // the title on the frame
 	click(app, 2, 25, tcell.Button1) // the panel under the dialog
 	if !app.model.SortDialog.Open || app.model.SortDialog.Focus != "" {
 		t.Fatalf("miss changed the dialog: open=%v focus=%q", app.model.SortDialog.Open, app.model.SortDialog.Focus)

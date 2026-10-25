@@ -1,5 +1,5 @@
 == open ==
-focus=nerdfont nerd=true zoom=true stacked=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -14,9 +14,9 @@ focus=nerdfont nerd=true zoom=true stacked=false mode=edge bar=thumb format=2 sp
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -49,9 +49,9 @@ dehhhfhhheeeeeeeeeehhhhhfhheeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeehhhfhhhheeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -61,7 +61,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Space ==
-focus=nerdfont nerd=false zoom=true stacked=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=nerdfont nerd=false zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -76,9 +76,9 @@ focus=nerdfont nerd=false zoom=true stacked=false mode=edge bar=thumb format=2 s
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -111,9 +111,9 @@ dehhhfhhheeeeeeeeeehhhhhfhheeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeehhhfhhhheeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -123,7 +123,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Down ==
-focus=zoom nerd=false zoom=true stacked=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=zoom nerd=false zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -138,9 +138,9 @@ focus=zoom nerd=false zoom=true stacked=false mode=edge bar=thumb format=2 split
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -173,9 +173,9 @@ dehhhfhhheeeeeeeeeehhhhhfhheeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeehhhfhhhheeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -185,7 +185,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Space ==
-focus=zoom nerd=false zoom=false stacked=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=zoom nerd=false zoom=false stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -200,9 +200,9 @@ focus=zoom nerd=false zoom=false stacked=false mode=edge bar=thumb format=2 spli
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -235,9 +235,9 @@ dehhhfhhheeeeeeeeeehhhhhfhheeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeehhhfhhhheeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -247,7 +247,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Down ==
-focus=hsplit nerd=false zoom=false stacked=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=hsplit nerd=false zoom=false stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -262,9 +262,9 @@ focus=hsplit nerd=false zoom=false stacked=false mode=edge bar=thumb format=2 sp
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -297,9 +297,9 @@ dehhhfhhheeeeeeeeeehhhhhfhheeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeehhhfhhhheeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -309,7 +309,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Space ==
-focus=hsplit nerd=false zoom=false stacked=true mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=hsplit nerd=false zoom=false stacked=true mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -324,9 +324,9 @@ focus=hsplit nerd=false zoom=false stacked=true mode=edge bar=thumb format=2 spl
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -359,9 +359,9 @@ dehhhfhhheeeeeeeeeehhhhhfhheeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeehhhfhhhheeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -371,7 +371,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Down ==
-focus=mode0 nerd=false zoom=false stacked=true mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=mode0 nerd=false zoom=false stacked=true mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -386,9 +386,9 @@ focus=mode0 nerd=false zoom=false stacked=true mode=edge bar=thumb format=2 spli
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -421,9 +421,9 @@ degggfgggeeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeegggfggggeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -433,7 +433,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Space ==
-focus=mode0 nerd=false zoom=false stacked=true mode=minimal bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=mode0 nerd=false zoom=false stacked=true mouse=false mode=minimal bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -448,9 +448,9 @@ focus=mode0 nerd=false zoom=false stacked=true mode=minimal bar=thumb format=2 s
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -483,9 +483,9 @@ deeeefeeeeeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeegggfggggeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -495,7 +495,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Down ==
-focus=mode1 nerd=false zoom=false stacked=true mode=minimal bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=mode1 nerd=false zoom=false stacked=true mouse=false mode=minimal bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -510,9 +510,9 @@ focus=mode1 nerd=false zoom=false stacked=true mode=minimal bar=thumb format=2 s
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -545,9 +545,9 @@ dehhhfhhheeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeegggfggggeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -557,7 +557,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Down ==
-focus=mode2 nerd=false zoom=false stacked=true mode=minimal bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=mode2 nerd=false zoom=false stacked=true mouse=false mode=minimal bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -572,9 +572,9 @@ focus=mode2 nerd=false zoom=false stacked=true mode=minimal bar=thumb format=2 s
  │ 󰐽 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -607,9 +607,9 @@ deeeefeeeeeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dehhhhhhfhheeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeegggfggggeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -619,7 +619,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Space ==
-focus=mode2 nerd=false zoom=false stacked=true mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=mode2 nerd=false zoom=false stacked=true mouse=false mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -634,9 +634,9 @@ focus=mode2 nerd=false zoom=false stacked=true mode=center bar=thumb format=2 sp
  │ 󰐾 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -669,9 +669,9 @@ deeeefeeeeeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dehhhhhhfhheeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeegggfggggeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -681,7 +681,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Down ==
-focus=listing0 nerd=false zoom=false stacked=true mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=listing0 nerd=false zoom=false stacked=true mouse=false mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -696,9 +696,9 @@ focus=listing0 nerd=false zoom=false stacked=true mode=center bar=thumb format=2
  │ 󰐾 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -731,9 +731,9 @@ deeeefeeeeeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deggggggfggeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhhhhhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dehhhfhhhhhhhhhhhheeeeeeefeeeeeeeeeeeeeegggfggggeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -743,7 +743,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Down ==
-focus=listing1 nerd=false zoom=false stacked=true mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=mouse nerd=false zoom=false stacked=true mouse=false mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -758,9 +758,9 @@ focus=listing1 nerd=false zoom=false stacked=true mode=center bar=thumb format=2
  │ 󰐾 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -793,9 +793,9 @@ deeeefeeeeeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deggggggfggeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhhhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeegggfggggeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dehhhhhhfhhhhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
@@ -805,7 +805,7 @@ deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Down ==
-focus=listing2 nerd=false zoom=false stacked=true mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=split0 nerd=false zoom=false stacked=true mouse=false mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -820,9 +820,9 @@ focus=listing2 nerd=false zoom=false stacked=true mode=center bar=thumb format=2
  │ 󰐾 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
  │ <<22%                 <44%                  *      │ 
@@ -839,8 +839,9 @@ d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
 e fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
-i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+h fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+i fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbccaaaaaaaaaaa
 deeeeeeeeeeeeeeeeeeefffffffffffffffeeeeeeeeeeeeeeeeeeeed
@@ -855,19 +856,19 @@ deeeefeeeeeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deggggggfggeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeegggfggggeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
+deehhhhhieeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeaaajaaaaeeaaajaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Space ==
-focus=listing2 nerd=false zoom=false stacked=true mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+focus=split0 nerd=false zoom=false stacked=true mouse=false mode=center bar=thumb format=2 split=[<<22% |<44%|*] msg=""
 -- text --
                                            ││ 󰉋  cfg    
  ┌────────────────── Configuration ───────────────────┐ 
@@ -882,12 +883,12 @@ focus=listing2 nerd=false zoom=false stacked=true mode=center bar=thumb format=2
  │ 󰐾 Center         󰐽 Bar                             │ 
  ├────────────────────────────────────────────────────┤ 
  │ Default listing format:                            │ 
- │ 󰐽 Modified time                                    │ 
- │ 󰐽 Permissions                                      │ 
- │ 󰐾 Brief                                            │ 
+ │ 󰐽 Modified time     󰐽 Permissions     󰐾 Brief      │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ 󰄱 Mouse support                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │ Carousel split (parent / center / child):          │ 
- │ <<22%                 <44%                  *      │ 
+ │ ◀22%                  <44%                  *      │ 
  │                                                    │ 
  ├────────────────────────────────────────────────────┤ 
  │                [ OK ]    [ Cancel ]                │ 
@@ -901,8 +902,9 @@ d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
 e fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-h fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
-i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+h fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+i fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbccaaaaaaaaaaa
 deeeeeeeeeeeeeeeeeeefffffffffffffffeeeeeeeeeeeeeeeeeeeed
@@ -917,16 +919,16 @@ deeeefeeeeeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deggggggfggeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-dehhhfhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeegggfggggeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
+deehhhhhieeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
-deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeaaajaaaaeeaaajaaaaaaaaeeeeeeeeeeeeeeeed
 deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
 dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
 == Alt+o ==
-CLOSED: quit=false nerd=false zoom=false orientation=stacked mode=center bar=thumb format=brief split=[<<22% <44% *] editor-calls=0 file-exists=true message="Configuration saved"
+CLOSED: quit=false nerd=false zoom=false orientation=stacked mouse=false mode=center bar=thumb format=brief split=[<<22% <44% *] editor-calls=0 file-exists=true message="Configuration saved"

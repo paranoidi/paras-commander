@@ -15,6 +15,6 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	case state.ResetDefaultsConfirm:
 		dlg.Draw(screen, layout.Width, layout.Height, ConfigResetDefaultsView(), state.ResetDefaultsConfirmFocus, styles)
 	default:
-		dlg.Draw(screen, layout.Width, layout.Height, ConfigDialogView(state), state.Focus, styles)
+		dlg.Draw(screen, layout.Width, layout.Height, ConfigDialogView(state, layout.Width), state.Focus, styles)
 	}
 }

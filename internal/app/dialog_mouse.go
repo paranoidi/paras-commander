@@ -71,7 +71,7 @@ func (a *App) activeDialogMouse() (dialogMouse, bool) {
 		case st.ResetDefaultsConfirm:
 			return found(dialog.ConfigResetDefaultsView(), &st.ResetDefaultsConfirmFocus)
 		}
-		return found(dialog.ConfigDialogView(*st), &st.Focus)
+		return found(dialog.ConfigDialogView(*st, w), &st.Focus)
 	case InputModePreviewSettingsDialog:
 		return found(a.previewSettingsView(), &m.PreviewSettingsDialog.Focus)
 	case InputModeDebounceCalibrateDialog:

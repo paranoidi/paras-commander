@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -16,6 +17,7 @@ const (
 	ConfigNerdfont        = dlg.ID("nerdfont")
 	ConfigZoom            = dlg.ID("zoom")
 	ConfigHorizontalSplit = dlg.ID("hsplit")
+	ConfigMouse           = dlg.ID("mouse")
 
 	ConfigConfirmYes = dlg.ID("yes")
 	ConfigConfirmNo  = dlg.ID("no")
@@ -64,10 +66,28 @@ const (
 )
 
 // ConfigDialogView is the Configuration modal's widget spec: view checkboxes, the scroll-mode /
-// scrollbar-style radio block, the default listing format, the three carousel split inputs and
-// OK / Cancel. The scrollbar column and the gaps between the split inputs share the spare width
-// (Grow cells), so they stay centered at any dialog width.
-func ConfigDialogView(st ConfigDialogState) dlg.Spec {
+// scrollbar-style radio block, the default listing format, the mouse checkbox, the three carousel
+// split inputs and OK / Cancel. The scrollbar column and the gaps between the split inputs share
+// the spare width (Grow cells), so they stay centered at any dialog width. The listing-format
+// radios share one row when the dialog, placed on a screenW-wide screen, has room for all three
+// in full, and stack one per row otherwise.
+func ConfigDialogView(st ConfigDialogState, screenW int) dlg.Spec {
+	spec := configDialogSpec(st, true)
+	if p, ok := dlg.Place(screenW, configDialogFitProbeH, spec); ok {
+		for i, r := range panel.ListFormatDialogRadios() {
+			if it, found := p.Item(ConfigListingID(i)); !found || it.Rect.Width < draw.DialogOptionWidth(r.Label) {
+				return configDialogSpec(st, false)
+			}
+		}
+	}
+	return spec
+}
+
+// configDialogFitProbeH is a screen height that never shrinks the dialog, for the listing-row fit
+// test (only the width decides it).
+const configDialogFitProbeH = 1000
+
+func configDialogSpec(st ConfigDialogState, listingRow bool) dlg.Spec {
 	check := func(id dlg.ID, label string, m rune, on bool) dlg.Item {
 		return dlg.Item{ID: id, Kind: dlg.KindCheckbox, Label: label, Mnemonic: m, On: on}
 	}
@@ -107,11 +127,21 @@ func ConfigDialogView(st ConfigDialogState) dlg.Spec {
 	scroll = append(scroll, sep)
 
 	lf := panel.EffectiveListFormat(st.ListFormat)
-	listing := []dlg.Item{text("Default listing format:")}
+	var formats []dlg.Item
 	for i, r := range panel.ListFormatDialogRadios() {
-		listing = append(listing, dlg.Item{ID: ConfigListingID(i), Kind: dlg.KindRadio, Label: r.Label, Mnemonic: r.Shortcut, On: lf == r.Format})
+		formats = append(formats, dlg.Item{ID: ConfigListingID(i), Kind: dlg.KindRadio, Label: r.Label, Mnemonic: r.Shortcut, On: lf == r.Format, Gap: 2})
+	}
+	listing := []dlg.Item{text("Default listing format:")}
+	if listingRow {
+		listing = append(listing, dlg.Item{Kind: dlg.KindRow, Cells: formats})
+	} else {
+		for _, f := range formats {
+			f.Gap = 0
+			listing = append(listing, f)
+		}
 	}
 	listing = append(listing, sep)
+	mouse := []dlg.Item{check(ConfigMouse, "Mouse support", 's', st.Mouse), sep}
 
 	var inputs []dlg.Item
 	for i := range st.Split {
@@ -134,6 +164,7 @@ func ConfigDialogView(st ConfigDialogState) dlg.Spec {
 			{Columns: [][]dlg.Item{view}},
 			{Columns: [][]dlg.Item{scroll}},
 			{Columns: [][]dlg.Item{listing}},
+			{Columns: [][]dlg.Item{mouse}},
 			{Columns: [][]dlg.Item{split}},
 		},
 		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}},
@@ -150,6 +181,8 @@ func (st *ConfigDialogState) Apply(ev dlg.Event) {
 		st.ZoomActivePanel = !st.ZoomActivePanel
 	case ConfigHorizontalSplit:
 		st.PaneSplitStacked = !st.PaneSplitStacked
+	case ConfigMouse:
+		st.Mouse = !st.Mouse
 	default:
 		if i, ok := configIDIndex(ev.ID, configScrollModePrefix); ok && i < len(panel.ScrollModeDialogRadios()) {
 			st.ScrollMode = panel.ScrollModeDialogRadios()[i].Mode

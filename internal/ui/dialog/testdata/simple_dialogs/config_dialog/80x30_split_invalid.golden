@@ -14,9 +14,9 @@
              │ ( ) Center       ( ) Bar                           │             
              ├────────────────────────────────────────────────────┤             
              │ Default listing format:                            │             
-             │ (*) Modified time                                  │             
-             │ ( ) Permissions                                    │             
-             │ ( ) Brief                                          │             
+             │ (*) Modified time   ( ) Permissions   ( ) Brief    │             
+             ├────────────────────────────────────────────────────┤             
+             │ [ ] Mouse support                                  │             
              ├────────────────────────────────────────────────────┤             
              │ Carousel split (parent / center / child):          │             
              │ bogus                 <44%                  <5%    │             
@@ -53,9 +53,9 @@ aaaaaaaaaaaaabdddddcdddbbbbbbbbdddddddcddbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbcbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
-aaaaaaaaaaaaabdddddcddddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
-aaaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
-aaaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
+aaaaaaaaaaaaabdddddcddddddddddddbbbbbbbcbbbbbbbbbbbbbbbbbcbbbbbbbbbaaaaaaaaaaaaa
+aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
+aaaaaaaaaaaaabbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaa
 aaaaaaaaaaaaabbeeeeeebbbbbbbbbbbbbbbbffffgfbbbbbbbbbbbbbbbbeeeeeebbaaaaaaaaaaaaa

@@ -147,6 +147,7 @@ func (a *App) openConfigDialog() {
 		PanelScrollbar:         uiscrollbar.EffectiveStyle(sb),
 		PanelScrollbarInactive: a.config.UI.Scroll.ScrollbarInactive,
 		ListFormat:             panel.EffectiveListFormat(lf),
+		Mouse:                  a.config.UI.Mouse,
 	}
 	def := config.DefaultCarouselSplit()
 	for i := range a.model.ConfigDialog.Split {
@@ -192,6 +193,8 @@ func (a *App) applyConfigDialog() {
 	a.config.UI.Scroll.Mode = scrollMode
 	a.config.UI.Scroll.Scrollbar = sb
 	a.config.Panels.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
+	a.config.UI.Mouse = a.model.ConfigDialog.Mouse
+	a.applyMouseConfig()
 	a.config.Carousel.Split = split
 	a.model.CarouselLayout = carouselLayoutFromConfig(a.config.Carousel)
 	a.model.UseNerdfontIcons = val
@@ -204,6 +207,7 @@ func (a *App) applyConfigDialog() {
 	patch := map[string]any{
 		"ui": map[string]any{
 			"use_nerdfont_icons": val,
+			"mouse":              a.config.UI.Mouse,
 			"zoom": map[string]any{
 				"active_panel": zoom,
 				"orientation":  paneSplit,
@@ -244,7 +248,8 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		st.ResetDefaultsConfirmFocus = dialog.ConfigConfirmYes
 		return
 	}
-	spec := dialog.ConfigDialogView(*st)
+	termW, _ := a.screen.Size()
+	spec := dialog.ConfigDialogView(*st, termW)
 	ev, handled := dlg.HandleKey(spec, &st.Focus, event)
 	if handled {
 		switch {

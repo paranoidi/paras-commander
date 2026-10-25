@@ -5,8 +5,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 type configDialogMnemonic struct {
@@ -14,21 +13,19 @@ type configDialogMnemonic struct {
 	shortcut rune
 }
 
+// configDialogMnemonics lists the dialog's widget mnemonics in spec order, read from the spec.
 func configDialogMnemonics() []configDialogMnemonic {
 	var out []configDialogMnemonic
-	out = append(out,
-		configDialogMnemonic{"Show file icons", 'f'},
-		configDialogMnemonic{"Zoom active panel", 'z'},
-		configDialogMnemonic{configDialogHorizontalSplitLabel, 'h'},
-	)
-	for _, r := range panel.ScrollModeDialogRadios() {
-		out = append(out, configDialogMnemonic{r.Label, r.Shortcut})
-	}
-	for _, r := range uiscrollbar.DialogRadios() {
-		out = append(out, configDialogMnemonic{r.Label, r.Shortcut})
-	}
-	for _, r := range panel.ListFormatDialogRadios() {
-		out = append(out, configDialogMnemonic{r.Label, r.Shortcut})
+	for _, g := range ConfigDialogView(ConfigDialogState{}, 80).Groups {
+		for _, col := range g.Columns {
+			for _, it := range col {
+				for _, w := range append([]dlg.Item{it}, it.Cells...) {
+					if w.Mnemonic != 0 {
+						out = append(out, configDialogMnemonic{w.Label, w.Mnemonic})
+					}
+				}
+			}
+		}
 	}
 	return out
 }
@@ -58,14 +55,14 @@ func TestConfigDialogMnemonicsUniqueAndVisible(t *testing.T) {
 			t.Fatalf("%q: shortcut %q does not appear in label %q", m.label, string(m.shortcut), m.label)
 		}
 	}
-	if len(seen) != 12 {
-		t.Fatalf("got %d mnemonics, want 12", len(seen))
+	if len(seen) != 13 {
+		t.Fatalf("got %d mnemonics, want 13", len(seen))
 	}
 }
 
 func TestConfigDialogMnemonicsExpectedSet(t *testing.T) {
 	t.Parallel()
-	want := "fzhietnurmpb"
+	want := "dzhineutrmpbs"
 	var got strings.Builder
 	for _, m := range configDialogMnemonics() {
 		got.WriteRune(unicode.ToLower(m.shortcut))
