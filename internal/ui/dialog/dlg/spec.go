@@ -181,6 +181,10 @@ type Item struct {
 	// EntryLast makes Up land on the row's last focusable cell, instead of its first, when focus
 	// comes from a widget that is not a cell of a row (a button or an item of another kind).
 	EntryLast bool
+	// TabToSelected makes Tab and Shift+Tab, when they land on this row (its first focusable cell
+	// starts a Tab segment), focus the row's selected cell (the first with On) instead: the mode
+	// radios of the mass rename dialog. Up/Down/Left/Right are unaffected.
+	TabToSelected bool
 	// FallbackFirst makes Up/Down, when the cell at the index of the cell they leave cannot be
 	// focused (a disabled choice), land on the row's first focusable cell instead of the nearest
 	// one to its left.

@@ -3,9 +3,7 @@ package dialog
 import (
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ops"
-	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 // massRenamePatternHintText returns the regexp compile hint shown under the Pattern field.
@@ -34,11 +32,6 @@ func massRenamePatternHintText(state FileDialogState) string {
 	return hint
 }
 
-func massRenamePatternHintStyle(styles theme.Theme, dbg tcell.Color) tcell.Style {
-	errFG, _, _ := styles.DialogInputActiveError.Decompose()
-	return styles.DialogText.Foreground(errFG).Background(dbg)
-}
-
 func massRenameReplacementHintText(state FileDialogState) string {
 	if state.MassRenameMode != MassRenameModeUIRegex {
 		return ""
@@ -48,8 +41,4 @@ func massRenameReplacementHintText(state FileDialogState) string {
 
 func massRenameShowsReplacementHint(state FileDialogState) bool {
 	return massRenameReplacementHintText(state) != ""
-}
-
-func massRenameReplacementHintStyle(styles theme.Theme, dbg tcell.Color) tcell.Style {
-	return styles.DialogText.Background(dbg)
 }

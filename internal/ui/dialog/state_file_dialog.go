@@ -116,12 +116,8 @@ type FileDialogState struct {
 	Open       bool
 	DialogType FileDialogType
 	Fields     []FileDialogField
-	// FocusedField is the focus index of the dialogs that still use the index machinery (mass
-	// rename, run-for-each, extract, add bookmark, SFTP password); FileDialogUsesSpec types use
-	// Focus instead.
-	FocusedField int
-	// Focus is the focused widget of a FileDialogUsesSpec dialog (FileFieldID, a checkbox or radio
-	// ID, dlg.OK, dlg.Cancel); empty is the first widget.
+	// Focus is the focused widget of the dialog's current screen (FileFieldID, a checkbox or radio
+	// ID, dlg.OK, dlg.Cancel); empty is the first widget. The picker sub-screens keep their own.
 	Focus   dlg.ID
 	Message string
 	// RunForEachPaths / RunForEachDir apply when DialogType == FileDialogRunForEach (targets resolved at dialog open).

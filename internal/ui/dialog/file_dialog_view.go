@@ -7,22 +7,11 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
-
-// FileDialogUsesSpec reports whether a file dialog type is drawn and driven from a dlg.Spec
-// (FileDialogView): rename (with its tool screens), duplicate, mkdir, delete, chmod, chown,
-// symlink and hardlink. The other types keep the index-based machinery.
-func FileDialogUsesSpec(t FileDialogType) bool {
-	switch t {
-	case FileDialogRename, FileDialogDuplicate, FileDialogMkdir, FileDialogDelete,
-		FileDialogChmod, FileDialogChown, FileDialogSymlink, FileDialogHardlink:
-		return true
-	}
-	return false
-}
 
 // Widget IDs of the spec-driven file dialogs. The buttons are dlg.OK and dlg.Cancel (Yes / No on
 // the delete confirmation).
@@ -82,9 +71,11 @@ func renameEncodingIndex(id dlg.ID) (int, bool) {
 type FileDialogViewContext struct {
 	Layout   Layout
 	IconLead int
+	// Styles supplies the theme's search icon for the picker sub-screens.
+	Styles theme.Theme
 }
 
-// FileDialogView is the widget spec of every FileDialogUsesSpec dialog, built from the same parts:
+// FileDialogView is the widget spec of every file dialog, built from the same parts:
 //   - the text inputs (label row, input row, a blank row between inputs) from state.Fields, each a
 //     Tab segment of its own;
 //   - below them, in one more group behind a separator, the rows only some members have: rename's
@@ -93,8 +84,25 @@ type FileDialogViewContext struct {
 //   - the rename tool screens (Preview, then Sanitize checkboxes, Slugify radios or Encoding
 //     radios) in place of the inputs;
 //   - the delete confirmation: a reserved region for the name list (DrawFileDialog paints its rows,
-//     icons and scrollbar), the summary and OK / Cancel as Yes / No.
+//     icons and scrollbar), the summary and OK / Cancel as Yes / No;
+//   - add bookmark's path head, the extract skipped-items note and the mass rename save prompt reuse
+//     the input groups; run-for-each (runForEachView, its history picker) and the mass rename main
+//     screen and pattern pickers (massRenameView, massRenamePatternPickerView) have their own views.
 func FileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
+	if st.DialogType == FileDialogRunForEach {
+		if st.RunForEachHistoryOpen {
+			return runForEachHistoryView(st, ctx)
+		}
+		return runForEachView(st, ctx)
+	}
+	if st.DialogType == FileDialogMassRename {
+		switch {
+		case MassRenamePickerPhase(st.MassRenamePhase):
+			return massRenamePatternPickerView(st, ctx)
+		case st.MassRenamePhase == MassRenamePhaseMain:
+			return massRenameView(st, ctx)
+		}
+	}
 	spec := dlg.Spec{
 		Title: fileDialogOuterTitle(st), Width: fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), Unclamped: true,
 		Buttons: []dlg.Button{
@@ -111,6 +119,8 @@ func FileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 		spec.Groups = deleteViewGroups(st, ctx)
 	case renameToolActive(st):
 		spec.Groups = renameToolViewGroups(st)
+	case st.DialogType == FileDialogAddBookmark:
+		spec.Groups = append(bookmarkHeadGroups(st), fieldViewGroups(st)...)
 	default:
 		spec.Groups = fieldViewGroups(st)
 	}
@@ -132,20 +142,38 @@ func fileFocusedFieldIndex(st FileDialogState) int {
 }
 
 // FileDialogFocusedField returns the index into Fields of the focused text input of a
-// FileDialogUsesSpec dialog (the first input while Focus is unset), or -1.
+// file dialog (the first input while Focus is unset), or -1.
 func (st FileDialogState) FileDialogFocusedField() int { return fileFocusedFieldIndex(st) }
+
+// bookmarkHeadGroups is the add bookmark dialog's read-only head: the path being bookmarked
+// (state.Message) and a rule above the Name input.
+func bookmarkHeadGroups(st FileDialogState) []dlg.Group {
+	return []dlg.Group{{Columns: [][]dlg.Item{{
+		{Kind: dlg.KindLabel, Label: "Path:"},
+		{Kind: dlg.KindLabel, Label: st.Message},
+		{Kind: dlg.KindSeparator},
+	}}}}
+}
 
 func fieldViewGroups(st FileDialogState) []dlg.Group {
 	focused := fileFocusedFieldIndex(st)
 	var items []dlg.Item
 	for i, f := range st.Fields {
 		label := dlg.Item{Kind: dlg.KindLabel, Label: f.Label + ":"}
-		if st.Message != "" && i == focused {
+		if st.Message != "" && i == focused && st.DialogType != FileDialogAddBookmark {
 			label.Style = dlg.TextWarn
 		}
 		items = append(items, label, fileFieldInput(FileFieldID(i), f, f.InputInvalid))
 		if i < len(st.Fields)-1 {
 			items = append(items, dlg.Item{Kind: dlg.KindLabel})
+		}
+	}
+	if st.DialogType == FileDialogExtract {
+		// The note under the destination (skipped items) keeps the warning style.
+		for _, line := range strings.Split(strings.TrimSpace(st.Message), "\n") {
+			if line != "" {
+				items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: line, Style: dlg.TextWarn})
+			}
 		}
 	}
 	groups := []dlg.Group{{Columns: [][]dlg.Item{items}}}
@@ -243,6 +271,10 @@ func deleteViewGroups(st FileDialogState, ctx FileDialogViewContext) []dlg.Group
 // toggle, mkdir radios select their action, the tool screen options toggle or select. The inputs
 // and the buttons are the caller's to handle.
 func (st *FileDialogState) Apply(ev dlg.Event) {
+	if st.DialogType == FileDialogRunForEach {
+		st.applyRunForEachEvent(ev)
+		return
+	}
 	switch ev.ID {
 	case FileRenameFocusAfter:
 		st.RenameFocusAfter = !st.RenameFocusAfter
@@ -265,21 +297,39 @@ func (st *FileDialogState) Apply(ev dlg.Event) {
 	}
 }
 
-// drawFileDialogSpec paints a FileDialogUsesSpec dialog: the spec, then what lives in reserved
+// SpecFocus is the focused widget of the screen FileDialogView describes: the form's Focus, or the
+// open picker sub-screen's own.
+func (st FileDialogState) SpecFocus() dlg.ID {
+	switch {
+	case st.DialogType == FileDialogRunForEach && st.RunForEachHistoryOpen:
+		return st.RunForEachHistoryPicker.Focus
+	case st.DialogType == FileDialogMassRename && st.MassRenamePhase == MassRenamePhaseHistoryPicker:
+		return st.MassRenameHistoryPicker.Focus
+	case st.DialogType == FileDialogMassRename && MassRenamePickerPhase(st.MassRenamePhase):
+		return st.MassRenameLoadPicker.Focus
+	}
+	return st.Focus
+}
+
+// drawFileDialogSpec paints a file dialog: the spec, then what lives in reserved
 // regions and on the input rects (the delete list with its icons and scrollbar, the focused path
 // field's completion dropdown).
 func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) {
-	spec := FileDialogView(state, FileDialogViewContext{Layout: layout, IconLead: ctx.IconLead})
+	spec := FileDialogView(state, FileDialogViewContext{Layout: layout, IconLead: ctx.IconLead, Styles: ctx.Styles})
 	if fileDialogWidth(layout.Width, state, ctx.IconLead) < 20 {
 		return
 	}
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.SpecFocus(), ctx.Styles)
 	p, ok := dlg.Place(layout.Width, layout.Height, spec)
 	if !ok {
 		return
 	}
 	if state.DialogType == FileDialogDelete {
 		drawDeleteListRows(screen, p, state, ctx, paintDeleteIcon)
+		return
+	}
+	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {
+		drawMassRenamePreview(screen, p, state, ctx)
 		return
 	}
 	if i := fileFocusedFieldIndex(state); i >= 0 && state.Fields[i].PathPicker && state.Fields[i].Completion.Open {

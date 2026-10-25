@@ -320,7 +320,6 @@ func (a *App) openSFTPPasswordDialog(p sftpb.PasswordPrompt) {
 			Value:  "",
 			Cursor: 0,
 		}},
-		FocusedField: 0,
 	}
 }
 

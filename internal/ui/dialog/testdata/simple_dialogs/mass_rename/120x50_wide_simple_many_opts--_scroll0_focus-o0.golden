@@ -1,0 +1,112 @@
+-- text --
+                                                                                                                        
+          ┌────────────────────────────────────────── Mass rename ───────────────────────────────────────────┐          
+          │ (*) Simple (replace text)   ( ) Regular expression   ( ) External $EDITOR   ( ) Capitalize       │          
+          │ [ ] Show only modified      [x] Trim whitespace      [x] Case insensitive   [x] Ignore extension │          
+          ├──────────────────────────────────────────────────────────────────────────────────────────────────┤          
+          │ Find (3):                                                                                        │          
+          │ lantern                                                                                          │          
+          │ Replace:                                                                                         │          
+          │ harbor                                                                                           │          
+          ├──────────────────────────────────────────────────────────────────────────────────────────────────┤          
+          │ lantern-0.txt                                   harbor-0.txt                                     ┃          
+          │ orchard-1.txt                                   orchard-1.txt                                    │          
+          │ willow-2.txt                                    willow-2.txt                                     │          
+          │ meadow-3.txt                                    meadow-3.txt                                     │          
+          │ timber-4.txt                                    timber-4.txt                                     │          
+          │ ribbon-5.txt                                    ribbon-5.txt                                     │          
+          │ velvet-6.txt                                    velvet-6.txt                                     │          
+          │ anchor-7.txt                                    anchor-7.txt                                     │          
+          │ marble-8.txt                                    marble-8.txt                                     │          
+          │ otter-9.txt                                     otter-9.txt                                      │          
+          │ lantern-10.txt                                  harbor-10.txt                                    │          
+          │ orchard-11.txt                                  orchard-11.txt                                   │          
+          │ willow-12.txt                                   willow-12.txt                                    │          
+          │ meadow-13.txt                                   meadow-13.txt                                    │          
+          │ timber-14.txt                                   timber-14.txt                                    │          
+          │ ribbon-15.txt                                   ribbon-15.txt                                    │          
+          │ velvet-16.txt                                   velvet-16.txt                                    │          
+          │ anchor-17.txt                                   anchor-17.txt                                    │          
+          │ marble-18.txt                                   marble-18.txt                                    │          
+          │ otter-19.txt                                    otter-19.txt                                     │          
+          │ lantern-20.txt                                  harbor-20.txt                                    │          
+          │ orchard-21.txt                                  orchard-21.txt                                   │          
+          │ willow-22.txt                                   willow-22.txt                                    │          
+          │ meadow-23.txt                                   meadow-23.txt                                    │          
+          │ timber-24.txt                                   timber-24.txt                                    │          
+          │ ribbon-25.txt                                   ribbon-25.txt                                    │          
+          │ velvet-26.txt                                   velvet-26.txt                                    │          
+          │ anchor-27.txt                                   anchor-27.txt                                    │          
+          │ marble-28.txt                                   marble-28.txt                                    │          
+          │ otter-29.txt                                    otter-29.txt                                     │          
+          │ lantern-30.txt                                  harbor-30.txt                                    │          
+          │ orchard-31.txt                                  orchard-31.txt                                   │          
+          │ willow-32.txt                                   willow-32.txt                                    │          
+          │ meadow-33.txt                                   meadow-33.txt                                    │          
+          │ timber-34.txt                                   timber-34.txt                                    │          
+          ├──────────────────────────────────────────────────────────────────────────────────────────────────┤          
+          │                                [ OK ]    [ Apply ]    [ Cancel ]                                 │          
+          └──────────────────────────────────────────────────────────────────────────────────────────────────┘          
+                                                                                                                        
+                                                                                                                        
+-- legend --
+a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000002 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabdddddcddddddddddddddddddddbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabeeeeeeeeeeeeeeeceeeeeeebbbbbdddddcddddddddddddddbbbbbddddddddddcddddddddddbbdddddddddddddcdddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabbeeeeeeebbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbhhhhhhddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbeeeeeeebbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbhhhhhhddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbeeeeeeebbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbhhhhhhddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbeeeeeeebbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbhhhhhhddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbfffiffffbbfffifffffffbbfffiffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

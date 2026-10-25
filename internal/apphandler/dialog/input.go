@@ -19,7 +19,7 @@ func (h *Handler) DialogInputRestoreFooterEligible() bool {
 		if dialog.FileDialogHasRenamePhase(h.model.FileDialog.DialogType) && h.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 			return false
 		}
-		if h.FileDialogOnButton() || h.fileDialogOnRadio() {
+		if h.FileDialogOnButton() {
 			return false
 		}
 		f := h.FocusedField()

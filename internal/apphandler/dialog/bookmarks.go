@@ -214,30 +214,17 @@ func DefaultBookmarkName(path string) string {
 	return base
 }
 
-// addBookmarkDialogInputField returns the name field for Add bookmark, including when
-// keyboard focus is on OK/Cancel (focusedField returns nil in that case).
-func (h *Handler) addBookmarkDialogInputField() *dialog.FileDialogField {
-	d := &h.model.FileDialog
-	if !d.Open || d.DialogType != dialog.FileDialogAddBookmark || len(d.Fields) != 1 {
-		return nil
-	}
-	if d.FocusedField >= 0 && d.FocusedField < len(d.Fields) {
-		return &d.Fields[d.FocusedField]
-	}
-	return &d.Fields[0]
-}
-
 // ExecuteAddBookmark validates the input, resolves the marks file, and appends
 // a new mark line on a worker. The dialog closes immediately; ApplyBookmarkIO
 // shows the transient banner when the atomic write completes.
 func (h *Handler) ExecuteAddBookmark() {
-	field := h.addBookmarkDialogInputField()
-	if field == nil {
+	d := &h.model.FileDialog
+	if !d.Open || d.DialogType != dialog.FileDialogAddBookmark || len(d.Fields) != 1 {
 		h.CloseFileDialog()
 		return
 	}
-	name := strings.TrimSpace(field.Value)
-	path := strings.TrimSpace(h.model.FileDialog.Message)
+	name := strings.TrimSpace(d.Fields[0].Value)
+	path := strings.TrimSpace(d.Message)
 	if name == "" {
 		h.host.SetErrorMessage("Add bookmark", fmt.Errorf("name is required"))
 		h.CloseFileDialog()

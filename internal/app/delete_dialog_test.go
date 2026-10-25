@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestDeleteDialogSummaryRefreshesAfterDiskScanFlush(t *testing.T) {
@@ -37,7 +38,7 @@ func TestDeleteDialogSummaryRefreshesAfterDiskScanFlush(t *testing.T) {
 		Open:          true,
 		DialogType:    dialog.FileDialogDelete,
 		DeleteSummary: app.dialogCtrl.DeleteDialogSummary(p, source),
-		FocusedField:  1,
+		Focus:         dlg.Cancel,
 	}
 
 	app.dialogCtrl.ClearDeleteDialogReconcileCache()
@@ -92,7 +93,7 @@ func TestDeleteDialogSummaryRefreshesWhenScanNoLongerNeeded(t *testing.T) {
 		Open:          true,
 		DialogType:    dialog.FileDialogDelete,
 		DeleteSummary: "0 files (0 B) stale",
-		FocusedField:  1,
+		Focus:         dlg.Cancel,
 	}
 	app.dialogCtrl.ReconcileDeleteDialogScans()
 	waitForDeleteDialogScanApplied(t, app, screen)

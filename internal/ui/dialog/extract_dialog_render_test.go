@@ -72,12 +72,8 @@ func TestExtractDialogRendersSkippedItemWarning(t *testing.T) {
 	if buttonY < 3 {
 		t.Fatalf("OK button not found; rows:\n%s", joined)
 	}
-	// Mandatory surface-only blank sits on buttonY-1; the section separator is above that.
-	blank := strings.Trim(rows[buttonY-1], " │")
-	if blank != "" {
-		t.Fatalf("blank row above buttons = %q, want empty dialog surface", strings.TrimSpace(rows[buttonY-1]))
-	}
-	if !strings.Contains(rows[buttonY-2], "─") {
-		t.Fatalf("row above blank = %q, want separator", strings.TrimSpace(rows[buttonY-2]))
+	// The separator sits directly above the buttons.
+	if !strings.Contains(rows[buttonY-1], "─") {
+		t.Fatalf("row above buttons = %q, want separator", strings.TrimSpace(rows[buttonY-1]))
 	}
 }

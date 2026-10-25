@@ -5,6 +5,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // MassRenamePatternPickerState is a fuzzy-filtered list of ops.MassRenamePattern entries. It
@@ -21,7 +22,7 @@ type MassRenamePatternPickerState struct {
 	MatchRanges [][]search.Range
 	Selected    int
 	ListScroll  int
-	Focus       int // 0=list+query, 1=OK, 2=Cancel
+	Focus       dlg.ID // PickerFilter (also the empty value), dlg.OK or dlg.Cancel
 }
 
 // MassRenamePickerPhase reports whether phase is one of the three sub-screens rendered as a
@@ -48,4 +49,10 @@ func MassRenamePatternSearchLine(p ops.MassRenamePattern) string {
 		return "Capitalize"
 	}
 	return strings.TrimSpace(p.Find + " → " + p.Replace)
+}
+
+// EnsureMassRenamePatternPickerListScroll keeps Selected in range and visible in a list of height
+// listRows. Shared by the load, history and overwrite pickers.
+func EnsureMassRenamePatternPickerListScroll(state *MassRenamePatternPickerState, listRows int) {
+	EnsurePickerScroll(len(state.Ranked), &state.Selected, &state.ListScroll, listRows)
 }

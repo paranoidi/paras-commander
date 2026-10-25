@@ -8,51 +8,59 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// fileDialogSpec is the widget spec of the open FileDialogUsesSpec dialog, built for the current
+// fileDialogSpec is the widget spec of the open file dialog, built for the current
 // screen.
 func (h *Handler) fileDialogSpec() dlg.Spec {
 	w, ht := h.screen.Size()
 	return dialog.FileDialogView(h.model.FileDialog, dialog.FileDialogViewContext{
 		Layout:   h.host.LayoutForTerminalSize(w, ht),
 		IconLead: ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons),
+		Styles:   h.host.Styles(),
 	})
 }
 
 // focusedFieldIndex is the index into Fields of the focused text input, or -1.
-func (h *Handler) focusedFieldIndex() int {
-	d := &h.model.FileDialog
-	if dialog.FileDialogUsesSpec(d.DialogType) {
-		return d.FileDialogFocusedField()
-	}
-	if d.FocusedField >= 0 && d.FocusedField < len(d.Fields) {
-		return d.FocusedField
-	}
-	return -1
-}
+func (h *Handler) focusedFieldIndex() int { return h.model.FileDialog.FileDialogFocusedField() }
 
 // applyFileDialogEvent acts on an activation from the widget spec: the state folds options in
 // (Apply); Enter in a text input or OK runs the dialog (on a rename tool screen: applies the tool
-// and returns to the name); Cancel closes (on a tool screen: returns to the name). Enter on a
-// mkdir post-action radio selects it and runs the dialog.
+// and returns to the name; on the mass rename save prompt: saves the pattern); Cancel closes the
+// innermost layer. Enter on a mkdir post-action radio selects it and runs the dialog. The mass
+// rename radios, checkboxes and Apply button are handled by applyMassRenameEvent.
 func (h *Handler) applyFileDialogEvent(ev dlg.Event, key *tcell.EventKey) {
 	d := &h.model.FileDialog
 	d.Apply(ev)
-	tool := dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != dialog.RenamePhaseMain
+	switch d.DialogType {
+	case dialog.FileDialogRunForEach:
+		if ev.ID == dialog.RunForEachInDirs {
+			h.commands.RecomputeRunForEachValidation()
+		}
+	case dialog.FileDialogMassRename:
+		if h.applyMassRenameEvent(ev, key) {
+			return
+		}
+	}
 	_, field := dialog.FileFieldIndex(ev.ID)
 	switch {
-	case ev.ID == dlg.OK && tool:
-		h.applyRenameToolAndReturnMain()
-	case ev.ID == dlg.Cancel && tool:
-		h.closeRenameToolPhase()
 	case ev.ID == dlg.OK, field:
-		h.ExecuteFileDialog()
+		h.FileDialogOK()
 	case ev.ID == dlg.Cancel:
-		h.CloseFileDialog()
+		h.cancelFileDialogLayer()
 	default:
 		if _, radio := dialog.MkdirActionFromID(ev.ID); radio && key.Key() == tcell.KeyEnter {
 			h.ExecuteFileDialog()
 		}
 	}
+}
+
+// cancelFileDialogLayer is the Cancel button: it leaves the innermost sub-phase (a rename tool,
+// the mass rename save prompt), else closes the dialog.
+func (h *Handler) cancelFileDialogLayer() {
+	if _, cancel := h.fileDialogSubPhase(); cancel != nil {
+		cancel()
+		return
+	}
+	h.CloseFileDialog()
 }
 
 // handleDeleteListScrollKey scrolls the delete confirmation's name list by a page on PgUp / PgDn.
@@ -73,13 +81,20 @@ func (h *Handler) handleDeleteListScrollKey(key tcell.Key) bool {
 	return true
 }
 
-// handleFileDialogSpecKey routes a key for the open FileDialogUsesSpec dialog (rename, duplicate,
-// mkdir, delete, chmod, chown, symlink, hardlink and the rename tool screens). Order: the
-// dialog's own chords, list paging, Alt mnemonics (they win over everything, also in an input),
-// the path-picker shortcuts and the completion dropdown, then the widget engine; what it declines
-// is text editing of the focused input. Always returns false (the file dialog never quits).
+// handleFileDialogSpecKey routes a key for the open file dialog (rename, duplicate, mkdir, delete,
+// chmod, chown, symlink, hardlink, add bookmark, SFTP password, extract, run-for-each, mass rename
+// and their sub-screens). Order: the sub-screen pickers, the dialog's own chords, list paging,
+// Alt mnemonics (they win over everything, also in an input), the path-picker shortcuts and the
+// completion dropdown, then the widget engine; what it declines is text editing of the focused
+// input. Always returns false (the file dialog never quits).
 func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 	d := &h.model.FileDialog
+	switch {
+	case d.DialogType == dialog.FileDialogRunForEach && d.RunForEachHistoryOpen:
+		return h.handleRunForEachHistoryPickerKey(event)
+	case d.DialogType == dialog.FileDialogMassRename && massRenamePickerPhaseOpen(d.MassRenamePhase):
+		return h.handleMassRenamePickerKey(event)
+	}
 	spec := h.fileDialogSpec()
 	apply := func() bool {
 		ev, ok := dlg.HandleKey(spec, &d.Focus, event)
@@ -92,7 +107,7 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 		apply()
 		return false
 	}
-	if h.tryRenameDialogShortcut(event) || h.tryMkdirDialogShortcut(event) {
+	if h.tryFileDialogChord(event) {
 		return false
 	}
 	if d.DialogType == dialog.FileDialogDelete && h.handleDeleteListScrollKey(event.Key()) {
@@ -115,4 +130,26 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 		dialog.HandleFileDialogFieldKey(event, f, h.keysDialogInput, h.fileDialogFieldAfterEdit())
 	}
 	return false
+}
+
+// tryFileDialogChord handles the open dialog's own chords that run before the widget engine: the
+// rename and mkdir shortcuts, the extract destination shortcuts, the run-for-each history key and
+// the mass rename pattern, editor and preview keys. Returns true when the key was consumed.
+func (h *Handler) tryFileDialogChord(event *tcell.EventKey) bool {
+	d := &h.model.FileDialog
+	switch d.DialogType {
+	case dialog.FileDialogRunForEach:
+		return h.tryRunForEachDialogShortcut(event)
+	case dialog.FileDialogExtract:
+		return h.tryExtractDialogDestinationShortcut(event)
+	case dialog.FileDialogMassRename:
+		switch d.MassRenamePhase {
+		case dialog.MassRenamePhaseMain:
+			return h.tryMassRenameDialogShortcut(event) || h.handleMassRenamePreviewScrollKey(d, event.Key())
+		case dialog.MassRenamePhaseSavePrompt:
+			return h.tryMassRenameSavePromptShortcut(event)
+		}
+		return false
+	}
+	return h.tryRenameDialogShortcut(event) || h.tryMkdirDialogShortcut(event)
 }

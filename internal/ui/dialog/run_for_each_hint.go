@@ -2,9 +2,6 @@ package dialog
 
 import (
 	"strings"
-
-	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 func runForEachCommandErrorText(state FileDialogState) string {
@@ -16,11 +13,6 @@ func runForEachCommandErrorText(state FileDialogState) string {
 
 func runForEachShowsCommandError(state FileDialogState) bool {
 	return runForEachCommandErrorText(state) != ""
-}
-
-func dialogErrorTextStyle(styles theme.Theme, dbg tcell.Color) tcell.Style {
-	errFG, _, _ := styles.DialogInputActiveError.Decompose()
-	return styles.DialogText.Foreground(errFG).Background(dbg)
 }
 
 // runForEachPreviewText returns the expanded command preview for the first selected item, or
@@ -38,10 +30,6 @@ func runForEachPreviewText(state FileDialogState) string {
 
 func runForEachShowsPreview(state FileDialogState) bool {
 	return runForEachPreviewText(state) != ""
-}
-
-func runForEachPreviewStyle(styles theme.Theme, dbg tcell.Color) tcell.Style {
-	return styles.DialogText.Background(dbg)
 }
 
 // runForEachCommandFieldRows is vertical space for the command block (label, input, optional error/preview).

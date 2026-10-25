@@ -1,0 +1,663 @@
+== open ==
+focus=find phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find:                                                                                    │
+│                                                                                          │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== x ==
+focus=find phase=0 mode=0 fields=[Find="x"@1/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ x                                                                                        │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== y ==
+focus=find phase=0 mode=0 fields=[Find="xy"@2/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ xy                                                                                       │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== z ==
+focus=find phase=0 mode=0 fields=[Find="xyz"@3/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ xyz                                                                                      │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Left ==
+focus=find phase=0 mode=0 fields=[Find="xyz"@2/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ xyz                                                                                      │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Left ==
+focus=find phase=0 mode=0 fields=[Find="xyz"@1/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ xyz                                                                                      │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Backspace ==
+focus=find phase=0 mode=0 fields=[Find="yz"@0/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ yz                                                                                       │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Home ==
+focus=find phase=0 mode=0 fields=[Find="yz"@0/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ yz                                                                                       │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Delete ==
+focus=find phase=0 mode=0 fields=[Find="z"@0/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ z                                                                                        │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== End ==
+focus=find phase=0 mode=0 fields=[Find="z"@1/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ z                                                                                        │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aadeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== q ==
+focus=find phase=0 mode=0 fields=[Find="zq"@2/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ zq                                                                                       │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Right ==
+focus=find phase=0 mode=0 fields=[Find="zq"@2/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ zq                                                                                       │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Right ==
+focus=find phase=0 mode=0 fields=[Find="zq"@2/0 pending=false invalid=true; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
+-- text --
+┌────────────────────────────────────── Mass rename ───────────────────────────────────────┐
+│ 󰐾 Simple (replace text)   󰐽 Regular expression   󰐽 External $EDITOR   󰐽 Capitalize       │
+│ 󰄱 Show only modified      󰡖 Trim whitespace      󰡖 Case insensitive   󰡖 Ignore extension │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Find (0):                                                                                │
+│ zq                                                                                       │
+│ Replace:                                                                                 │
+│                                                                                          │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ anchor.txt                                  anchor.txt                                   │
+│ lantern-meadow.txt                          lantern-meadow.txt                           │
+│ lantern-willow.txt                          lantern-willow.txt                           │
+│ marble-otter.txt                            marble-otter.txt                             │
+│ orchard-ribbon.txt                          orchard-ribbon.txt                           │
+│ timber                                      timber                                       │
+│ velvet.txt                                  velvet.txt                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                            [ OK ]    [ Apply ]    [ Cancel ]                             │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+acccbccccccccccccccccccccaaaaabaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaa
+aaaaaaaaaaaaaabaaaaaaaaaaaacccbccccccccccccccaaaaaccccccccbccccccccccaacccccccccccbcccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaggggaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaafffhffffaafffhfffffffaafffhffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

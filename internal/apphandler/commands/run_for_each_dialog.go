@@ -41,7 +41,6 @@ func (h *Handler) OpenRunForEachDialog() {
 		Open:              true,
 		DialogType:        dialog.FileDialogRunForEach,
 		Fields:            fields,
-		FocusedField:      0,
 		Message:           msg,
 		RunForEachEntries: entries,
 		RunForEachDir:     dir,
@@ -55,12 +54,11 @@ func (h *Handler) OpenRunForEachDialog() {
 // ExecuteRunForEach validates and starts the run-for-each batch from the open dialog.
 func (h *Handler) ExecuteRunForEach() {
 	fd := &h.model.FileDialog
-	field := h.host.FocusedFileDialogField()
-	if field == nil {
+	if len(fd.Fields) == 0 {
 		h.host.CloseFileDialog()
 		return
 	}
-	cmdLine := strings.TrimSpace(field.Value)
+	cmdLine := strings.TrimSpace(fd.Fields[0].Value)
 	entries := append([]localfs.Entry(nil), fd.RunForEachEntries...)
 	workDir := fd.RunForEachDir
 	poolName := strings.TrimSpace(fd.RunForEachPool)

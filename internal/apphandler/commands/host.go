@@ -6,7 +6,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -42,9 +41,6 @@ type Host interface {
 
 	// CloseFileDialog closes the active file dialog (used after Run for each is submitted).
 	CloseFileDialog()
-	// FocusedFileDialogField returns the currently focused field of the active file dialog,
-	// or nil when none is focused (e.g. a rename sub-phase).
-	FocusedFileDialogField() *dialog.FileDialogField
 
 	// RefreshAfterBackgroundCommand refreshes the active browser panel after a background
 	// user-menu/run-for-each/file-execute command finishes (no-op outside the browser view).

@@ -116,7 +116,7 @@ func (h *Handler) applyFlattenDestinationFromInactivePanel() {
 // different chords there.
 func (h *Handler) extractDialogDestinationFooterEligible() bool {
 	d := h.model.FileDialog
-	return d.Open && d.DialogType == dialog.FileDialogExtract && d.FocusedField == 0
+	return d.Open && d.DialogType == dialog.FileDialogExtract && d.FileDialogFocusedField() == 0
 }
 
 // ExtractDialogOverlayFooterKeys builds the extract dialog's "Active path"/"Inactive path"

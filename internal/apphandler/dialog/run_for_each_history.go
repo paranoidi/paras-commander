@@ -3,7 +3,6 @@ package dialog
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -59,28 +58,7 @@ func (h *Handler) syncRunForEachHistoryPickerRanks() {
 	cfg := h.host.Config()
 	st.Ranked, st.MatchRanges = h.host.SyncFilteredListRanks(st.Items, st.Query, len(st.Items), cfg.Filter.CaseInsensitive)
 	h.host.ClampFilteredListSelection(&st.Selected, len(st.Ranked))
-	dialog.EnsureRunForEachHistoryPickerListScroll(st, h.RunForEachHistoryPickerListRows())
-}
-
-// RunForEachHistoryPickerListRows returns how many rows the open picker's fuzzy list currently
-// shows, derived from the dialog's actual on-screen rect (see runForEachHistoryPickerDialogHeight
-// / drawRunForEachHistoryPickerContent).
-func (h *Handler) RunForEachHistoryPickerListRows() int {
-	rows := h.FileDialogRect().Height - 6
-	if rows < 1 {
-		rows = 1
-	}
-	return rows
-}
-
-// RunForEachHistoryPickerQueryWidth returns the visible width of the open picker's query input
-// row.
-func (h *Handler) RunForEachHistoryPickerQueryWidth() int {
-	w := h.FileDialogRect().Width - 4
-	if w < 10 {
-		w = 10
-	}
-	return w
+	dialog.EnsureRunForEachHistoryPickerListScroll(st, h.pickerListRows())
 }
 
 // activateRunForEachHistorySelection applies the selected command line back into the main
@@ -106,71 +84,14 @@ func (h *Handler) activateRunForEachHistorySelection() {
 	h.commands.RecomputeRunForEachValidation()
 }
 
-// handleRunForEachHistoryPickerKey routes a key event for the open command-history picker.
-// Mirrors handleMassRenamePickerKey's shape (mass_rename_pattern.go) minus the F8-delete
-// chord — run-for-each history has no on-disk counterpart to justify one.
+// handleRunForEachHistoryPickerKey routes a key event for the open command-history picker. It
+// always returns false (the picker never quits).
 func (h *Handler) handleRunForEachHistoryPickerKey(event *tcell.EventKey) bool {
 	st := &h.model.FileDialog.RunForEachHistoryPicker
-
-	if st.Focus == 0 {
-		onChange := func() {
-			h.syncRunForEachHistoryPickerRanks()
-			st.Selected = 0
-			dialog.EnsureRunForEachHistoryPickerListScroll(st, h.RunForEachHistoryPickerListRows())
-		}
-		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, h.RunForEachHistoryPickerQueryWidth(), onChange)
-		if scrollquery.HandleKey(h.keysDialogInput, event, true, edit) {
-			return false
-		}
-	}
-
-	switch event.Key() {
-	case tcell.KeyEnter:
-		switch st.Focus {
-		case 2:
-			h.closeRunForEachHistoryPicker()
-		default:
-			h.activateRunForEachHistorySelection()
-		}
-	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
-			st.Focus = nf
-			if st.Focus == 0 && event.Key() == tcell.KeyUp {
-				dialog.EnsureRunForEachHistoryPickerListScroll(st, h.RunForEachHistoryPickerListRows())
-			}
-			break
-		}
-		if h.host.HandleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), h.RunForEachHistoryPickerListRows, func() {
-			dialog.EnsureRunForEachHistoryPickerListScroll(st, h.RunForEachHistoryPickerListRows())
-		}) {
-			break
-		}
-	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
-		if h.host.HandleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), h.RunForEachHistoryPickerListRows, func() {
-			dialog.EnsureRunForEachHistoryPickerListScroll(st, h.RunForEachHistoryPickerListRows())
-		}) {
-			break
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		if st.Focus == 0 {
-			break
-		}
-		switch dialog.DialogButtonRune(event.Rune()) {
-		case dialog.ButtonRuneOK:
-			h.activateRunForEachHistorySelection()
-		case dialog.ButtonRuneCancel:
-			h.closeRunForEachHistoryPicker()
-		case dialog.ButtonRuneToggle:
-			switch st.Focus {
-			case 1:
-				h.activateRunForEachHistorySelection()
-			case 2:
-				h.closeRunForEachHistoryPicker()
-			}
-		}
-	}
+	h.handlePickerKey(event, pickerBinding{
+		focus: &st.Focus, query: &st.Query, cursor: &st.QueryCursor, scroll: &st.QueryScroll,
+		selected: &st.Selected, offset: &st.ListScroll, count: func() int { return len(st.Ranked) },
+		resync: h.syncRunForEachHistoryPickerRanks, activate: h.activateRunForEachHistorySelection, closePicker: h.closeRunForEachHistoryPicker,
+	})
 	return false
 }

@@ -1,0 +1,559 @@
+== open ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 1 2 3 4 5 6 7 8 9 10 11] query=""@0 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│                                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ gzip -9 %f                                                               │
+│ tar -czf %f.tgz %f                                                       │
+│ echo willow %f                                                           │
+│ chmod 600 %f                                                             │
+│ touch %f                                                                 │
+│ echo lantern %f                                                          │
+│ sha256sum %f                                                             │
+│ echo meadow %f                                                           │
+│ rsync -a %f meadow/                                                      │
+│ echo anchor %f                                                           │
+│ ffmpeg -i %f out.mkv                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== e ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 3 6 8 10 11 9] query="e"@1 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  e                                                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│ ffmpeg -i %f out.mkv                                                     │
+│ rsync -a %f meadow/                                                      │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aafgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== c ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 3 6 8 10] query="ec"@2 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  ec                                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== h ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 3 6 8 10] query="ech"@3 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  ech                                                                    │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aafffgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aahhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== o ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 3 6 8 10] query="echo"@4 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  echo                                                                   │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccddddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aahhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Backspace ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 3 6 8 10] query="ech"@3 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  ech                                                                    │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdddeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aafffgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aahhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Backspace ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 3 6 8 10] query="ec"@2 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  ec                                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccddedddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Left ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 3 6 8 10] query="ec"@1 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  ec                                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Home ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 3 6 8 10] query="ec"@0 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  ec                                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aahhaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Delete ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[4 2 0 3 6 8 10 5 9] query="c"@0 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  c                                                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ chmod 600 %f                                                             │
+│ tar -czf %f.tgz %f                                                       │
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│ touch %f                                                                 │
+│ rsync -a %f meadow/                                                      │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aafgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aaaaaaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== End ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[4 2 0 3 6 8 10 5 9] query="c"@1 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│  c                                                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ chmod 600 %f                                                             │
+│ tar -czf %f.tgz %f                                                       │
+│ echo orchard %f                                                          │
+│ echo willow %f                                                           │
+│ echo lantern %f                                                          │
+│ echo meadow %f                                                           │
+│ echo anchor %f                                                           │
+│ touch %f                                                                 │
+│ rsync -a %f meadow/                                                      │
+│                                                                          │
+│                                                                          │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+f fg=0x100000001 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdeddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aafgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggaa
+aaaaaaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaahaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaiiijiiiiaaiiijiiiiiiiiaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

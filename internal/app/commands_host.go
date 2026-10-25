@@ -6,7 +6,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -36,10 +35,6 @@ func (h commandsHost) OpenOutputGroupSelect(selectMode bool) {
 }
 
 func (h commandsHost) CloseFileDialog() { h.app.dialogCtrl.CloseFileDialog() }
-
-func (h commandsHost) FocusedFileDialogField() *dialog.FileDialogField {
-	return h.app.dialogCtrl.FocusedField()
-}
 
 func (h commandsHost) RefreshAfterBackgroundCommand() { h.app.refreshAfterBackgroundCommand() }
 

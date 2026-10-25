@@ -80,9 +80,8 @@ func TestExecuteExtractQueuesExistingStreamWithoutUnsupportedToast(t *testing.T)
 	})
 
 	h.model.FileDialog = uidialog.FileDialogState{
-		Open:         true,
-		DialogType:   uidialog.FileDialogExtract,
-		FocusedField: 0,
+		Open:       true,
+		DialogType: uidialog.FileDialogExtract,
 		Fields: []uidialog.FileDialogField{{
 			Label: "Destination",
 			Value: destDir,
@@ -128,9 +127,8 @@ func TestRemoteExtractProbeQueuesExistingStreamWithoutErrorDialog(t *testing.T) 
 	h, host, jobState, screen := newExtractProbeHarness(t, srcDir, destDir)
 	h.testRemote = extractRemoteBackend{}
 	h.model.FileDialog = uidialog.FileDialogState{
-		Open:         true,
-		DialogType:   uidialog.FileDialogExtract,
-		FocusedField: 0,
+		Open:       true,
+		DialogType: uidialog.FileDialogExtract,
 		Fields: []uidialog.FileDialogField{{
 			Label: "Destination",
 			Value: destDir,

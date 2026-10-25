@@ -274,7 +274,7 @@ func TestDrawMassRenameDialogShowsRegexpCompileHint(t *testing.T) {
 			{Label: "Pattern", Value: `\`, Cursor: 1, InputInvalid: true},
 			{Label: "Replacement", Value: "", Cursor: 0},
 		},
-		FocusedField:                 2,
+		Focus:                        MassRenameRadioEditor,
 		MassRenameMode:               MassRenameModeUIRegex,
 		MassRenamePatternCompileHint: hint,
 		MassRenamePreviewBefore:      []string{"a.txt"},
@@ -351,16 +351,6 @@ func TestMassRenameDialogWidthSameAcrossModes(t *testing.T) {
 		}
 		if got != want {
 			t.Fatalf("mode %d width = %d, want %d (same as Simple)", mode, got, want)
-		}
-	}
-}
-
-func TestMassRenameIgnoreExtFocusIdx(t *testing.T) {
-	for mode, want := range map[MassRenameModeUI]int{
-		MassRenameModeUISimple: 9, MassRenameModeUIRegex: 9, MassRenameModeUICapitalize: 8, MassRenameModeUIExternalEditor: -1,
-	} {
-		if got := MassRenameIgnoreExtFocusIdx(FileDialogState{MassRenameMode: mode}); got != want {
-			t.Fatalf("mode %d idx = %d, want %d", mode, got, want)
 		}
 	}
 }

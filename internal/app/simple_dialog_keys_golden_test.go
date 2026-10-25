@@ -123,8 +123,12 @@ func runKeyGoldenScripts(t *testing.T, d keyGoldenDialog, scripts []simpleKeyScr
 			if !d.serial && !slices.Contains(strings.Fields(sc.keys), "Ctrl+Y") {
 				t.Parallel()
 			}
+			// Resolved before the script runs: a setup may change the working directory (t.Chdir).
+			path, err := filepath.Abs(filepath.Join(simpleKeyGoldenDir, d.name, sc.name+".golden"))
+			if err != nil {
+				t.Fatal(err)
+			}
 			got := runKeyGolden(t, d, strings.Fields(sc.keys))
-			path := filepath.Join(simpleKeyGoldenDir, d.name, sc.name+".golden")
 			if *updateKeyGolden {
 				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 					t.Fatal(err)

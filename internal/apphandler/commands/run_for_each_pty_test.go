@@ -16,7 +16,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/workpool"
 )
@@ -439,7 +438,6 @@ func (ptyHostStub) SetTransientMessageBanner(string, string, ui.MessageUrgency) 
 func (ptyHostStub) ClearTransientMessage()                                      {}
 func (ptyHostStub) CloseFileDialog()                                            {}
 func (ptyHostStub) OpenOutputGroupSelect(bool)                                  {}
-func (ptyHostStub) FocusedFileDialogField() *dialog.FileDialogField             { return nil }
 func (ptyHostStub) RefreshAfterBackgroundCommand()                              {}
 func (ptyHostStub) HandleQuit() bool                                            { return false }
 func (ptyHostStub) HandleQuitImmediate() bool                                   { return false }

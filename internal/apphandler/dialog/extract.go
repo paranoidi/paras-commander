@@ -37,7 +37,6 @@ func (h *Handler) OpenExtractDialog(p *panel.State) {
 		Open:           true,
 		DialogType:     dialog.FileDialogExtract,
 		Fields:         fields,
-		FocusedField:   0,
 		Message:        msg,
 		ExtractSources: append([]string(nil), paths...),
 	}
@@ -49,12 +48,11 @@ func (h *Handler) OpenExtractDialog(p *panel.State) {
 // archives gathered when the dialog was opened.
 func (h *Handler) ExecuteExtract() {
 	fd := h.model.FileDialog
-	field := h.FocusedField()
-	if field == nil {
+	if len(fd.Fields) == 0 {
 		h.CloseFileDialog()
 		return
 	}
-	dest := strings.TrimSpace(field.Value)
+	dest := strings.TrimSpace(fd.Fields[0].Value)
 	sources := append([]string(nil), fd.ExtractSources...)
 	if len(sources) == 0 {
 		h.CloseFileDialog()

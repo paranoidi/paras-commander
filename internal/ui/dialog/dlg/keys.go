@@ -224,6 +224,25 @@ func resolve(spec Spec, focus ID) ID {
 	return focus
 }
 
+// tabTarget is where Tab lands on the segment that starts at id: the selected cell of a row with
+// Item.TabToSelected, else id itself.
+func tabTarget(spec Spec, id ID) ID {
+	p, ok := find(spec, id)
+	if !ok || p.isButton() || p.cell < 0 {
+		return id
+	}
+	row := itemAt(spec, p)
+	if !row.TabToSelected {
+		return id
+	}
+	for _, c := range row.Cells {
+		if c.On && c.focusable() {
+			return c.ID
+		}
+	}
+	return id
+}
+
 // nextGroupFirst is the first item of the first non-empty group after g, else the first button.
 func nextGroupFirst(spec Spec, g, idx int) (ID, bool) {
 	for gi := g + 1; gi < len(spec.Groups); gi++ {
@@ -337,7 +356,7 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		}
 		_, index := segmentTable(spec)
 		i := index[*focus]
-		return move(segs[(i+step+len(segs))%len(segs)], true)
+		return move(tabTarget(spec, segs[(i+step+len(segs))%len(segs)]), true)
 	case tcell.KeyDown:
 		if cur.isButton() {
 			return move(adjacentButton(spec, cur.button, 1))

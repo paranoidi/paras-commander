@@ -1,6 +1,9 @@
 package dialog
 
-import "github.com/paranoidi/paras-commander/internal/search"
+import (
+	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+)
 
 // RunForEachHistoryPickerState is a fuzzy-filtered list of in-memory recently-run run-for-each
 // command lines (most-recent-first). Structurally near-identical to MassRenamePatternPickerState
@@ -16,27 +19,22 @@ type RunForEachHistoryPickerState struct {
 	MatchRanges [][]search.Range
 	Selected    int
 	ListScroll  int
-	Focus       int // 0=list+query, 1=OK, 2=Cancel
+	Focus       dlg.ID // PickerFilter (also the empty value), dlg.OK or dlg.Cancel
 }
 
-// EnsureRunForEachHistoryPickerListScroll keeps Selected row visible in a list of height
-// listRows. Mirrors EnsureMassRenamePatternPickerListScroll (mass_rename_pattern_dialog_render.go).
+// EnsureRunForEachHistoryPickerListScroll keeps Selected in range and visible in a list of height
+// listRows.
 func EnsureRunForEachHistoryPickerListScroll(state *RunForEachHistoryPickerState, listRows int) {
-	n := len(state.Ranked)
+	EnsurePickerScroll(len(state.Ranked), &state.Selected, &state.ListScroll, listRows)
+}
+
+// EnsurePickerScroll clamps *selected into n rows and sets *offset to the list offset that keeps it
+// visible in a viewport of listRows.
+func EnsurePickerScroll(n int, selected, offset *int, listRows int) {
 	if n == 0 || listRows <= 0 {
-		state.ListScroll = 0
+		*offset = 0
 		return
 	}
-	if state.Selected < 0 {
-		state.Selected = 0
-	}
-	if state.Selected >= n {
-		state.Selected = n - 1
-	}
-	if state.ListScroll > state.Selected {
-		state.ListScroll = state.Selected
-	}
-	if state.Selected >= state.ListScroll+listRows {
-		state.ListScroll = state.Selected - listRows + 1
-	}
+	*selected = min(max(*selected, 0), n-1)
+	*offset = dlg.Item{Kind: dlg.KindList, Rows: make([]dlg.ListRow, n), Cursor: *selected, Offset: *offset, Height: listRows}.ViewOffset()
 }

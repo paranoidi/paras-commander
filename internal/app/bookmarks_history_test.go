@@ -581,8 +581,8 @@ func TestAddBookmarkConfirmFromOKButtonWritesFile(t *testing.T) {
 	}
 	// Move focus from name field to OK, then confirm (Enter must still append).
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if app.model.FileDialog.FocusedField != 1 {
-		t.Fatalf("FocusedField = %d, want 1 (OK)", app.model.FileDialog.FocusedField)
+	if app.model.FileDialog.Focus != dlg.OK {
+		t.Fatalf("Focus = %q, want OK", app.model.FileDialog.Focus)
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 

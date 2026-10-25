@@ -8,7 +8,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
-	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -149,7 +148,7 @@ func (h *Handler) openMassRenameSavePrompt() {
 		{Label: "Description"},
 	}
 	d.MassRenamePhase = dialog.MassRenamePhaseSavePrompt
-	d.FocusedField = 0
+	d.Focus = dialog.FileFieldID(0)
 }
 
 // closeMassRenameSavePrompt restores the main dialog's fields and returns to the main screen
@@ -192,92 +191,19 @@ func (h *Handler) restoreMassRenameMainScreen() {
 	d.Fields = d.MassRenameSavedFields
 	d.MassRenameSavedFields = nil
 	d.MassRenamePhase = dialog.MassRenamePhaseMain
-	d.FocusedField = dialog.MassRenameFindFieldFocus
+	d.Focus = massRenameHomeFocus(d.MassRenameMode)
 }
 
-// handleMassRenameSavePromptKey routes keys while the save-pattern prompt is open. Mirrors
-// handleRenameToolKey's shape: focus cycles Name(0) -> Description(1) -> OK(okIdx) ->
-// Cancel(cancelIdx); Left/Right move buttons (or the cursor within a focused field);
-// Up/Down/Tab/Backtab move between content rows and stop at the button row (Left/Right then
-// moves between OK and Cancel), per the project's dialog navigation standard.
-func (h *Handler) handleMassRenameSavePromptKey(event *tcell.EventKey) bool {
-	d := &h.model.FileDialog
-	okIdx := len(d.Fields)
-	cancelIdx := okIdx + 1
-
-	if h.keysMassRenameDialog != nil {
-		if id, ok := h.keysMassRenameDialog.Lookup(event); ok && id == keymap.ActionFileMassRenameSavePattern {
-			h.openMassRenameOverwritePicker()
-			return false
-		}
-	}
-
-	fieldAt := func(idx int) *dialog.FileDialogField {
-		if idx < 0 || idx >= len(d.Fields) {
-			return nil
-		}
-		return &d.Fields[idx]
-	}
-
-	if d.FocusedField < okIdx && dialog.TryDialogInputFieldActions(event, fieldAt(d.FocusedField), h.keysDialogInput) {
+// tryMassRenameSavePromptShortcut handles the save-pattern prompt's own chord: the key bound to
+// file.mass-rename.save-pattern (also "Save pattern" on the main screen) opens the overwrite
+// picker. Returns true when the event was consumed.
+func (h *Handler) tryMassRenameSavePromptShortcut(event *tcell.EventKey) bool {
+	if h.keysMassRenameDialog == nil {
 		return false
 	}
-
-	switch event.Key() {
-	case tcell.KeyEnter:
-		if d.FocusedField == cancelIdx {
-			h.closeMassRenameSavePrompt()
-		} else {
-			h.confirmMassRenameSavePrompt()
-		}
-		return false
-	case tcell.KeyDown, tcell.KeyTab:
-		if d.FocusedField < okIdx {
-			d.FocusedField++
-		}
-		return false
-	case tcell.KeyUp, tcell.KeyBacktab:
-		switch {
-		case d.FocusedField == okIdx || d.FocusedField == cancelIdx:
-			d.FocusedField = okIdx - 1
-		case d.FocusedField > 0:
-			d.FocusedField--
-		}
-		return false
-	case tcell.KeyLeft:
-		switch {
-		case d.FocusedField == cancelIdx:
-			d.FocusedField = okIdx
-		case d.FocusedField < okIdx:
-			dialog.HandleFileDialogFieldKey(event, fieldAt(d.FocusedField), h.keysDialogInput, nil)
-		}
-		return false
-	case tcell.KeyRight:
-		switch {
-		case d.FocusedField == okIdx:
-			d.FocusedField = cancelIdx
-		case d.FocusedField < okIdx:
-			dialog.HandleFileDialogFieldKey(event, fieldAt(d.FocusedField), h.keysDialogInput, nil)
-		}
-		return false
-	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete:
-		if d.FocusedField < okIdx {
-			dialog.HandleFileDialogFieldKey(event, fieldAt(d.FocusedField), h.keysDialogInput, nil)
-		}
-		return false
-	case tcell.KeyRune:
-		if d.FocusedField < okIdx {
-			dialog.HandleFileDialogFieldKey(event, fieldAt(d.FocusedField), h.keysDialogInput, nil)
-			return false
-		}
-		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
-			if d.FocusedField == cancelIdx {
-				h.closeMassRenameSavePrompt()
-			} else {
-				h.confirmMassRenameSavePrompt()
-			}
-		}
-		return false
+	if id, ok := h.keysMassRenameDialog.Lookup(event); ok && id == keymap.ActionFileMassRenameSavePattern {
+		h.openMassRenameOverwritePicker()
+		return true
 	}
 	return false
 }
@@ -374,7 +300,7 @@ func (h *Handler) selectMassRenamePatternByName(st *dialog.MassRenamePatternPick
 			continue
 		}
 		st.Selected = i
-		dialog.EnsureMassRenamePatternPickerListScroll(st, h.MassRenamePatternPickerListRows())
+		dialog.EnsureMassRenamePatternPickerListScroll(st, h.pickerListRows())
 		return
 	}
 }
@@ -440,11 +366,11 @@ func (h *Handler) closeMassRenamePicker() {
 	d := &h.model.FileDialog
 	if d.MassRenamePhase == dialog.MassRenamePhaseOverwritePicker {
 		d.MassRenamePhase = dialog.MassRenamePhaseSavePrompt
-		d.FocusedField = 0
+		d.Focus = dialog.FileFieldID(0)
 		return
 	}
 	d.MassRenamePhase = dialog.MassRenamePhaseMain
-	d.FocusedField = dialog.MassRenameFindFieldFocus
+	d.Focus = massRenameHomeFocus(d.MassRenameMode)
 }
 
 // syncMassRenamePickerRanks re-filters and re-ranks the open picker's item list (load or
@@ -458,28 +384,7 @@ func (h *Handler) syncMassRenamePickerRanks() {
 	cfg := h.host.Config()
 	st.Ranked, st.MatchRanges = h.host.SyncFilteredListRanks(lines, st.Query, len(st.Items), cfg.Filter.CaseInsensitive)
 	h.host.ClampFilteredListSelection(&st.Selected, len(st.Ranked))
-	dialog.EnsureMassRenamePatternPickerListScroll(st, h.MassRenamePatternPickerListRows())
-}
-
-// MassRenamePatternPickerListRows returns how many rows the open picker's fuzzy list (load or
-// history) currently shows, derived from the dialog's actual on-screen rect (see
-// massRenamePatternPickerDialogHeight / drawMassRenamePatternPickerContent).
-func (h *Handler) MassRenamePatternPickerListRows() int {
-	rows := h.FileDialogRect().Height - 6
-	if rows < 1 {
-		rows = 1
-	}
-	return rows
-}
-
-// MassRenamePatternPickerQueryWidth returns the visible width of the open picker's query input
-// row.
-func (h *Handler) MassRenamePatternPickerQueryWidth() int {
-	w := h.FileDialogRect().Width - 4
-	if w < 10 {
-		w = 10
-	}
-	return w
+	dialog.EnsureMassRenamePatternPickerListScroll(st, h.pickerListRows())
 }
 
 // activateMassRenamePickerSelection applies the selected pattern (Enter / OK). On the load and
@@ -529,7 +434,7 @@ func (h *Handler) activateMassRenamePickerSelection() {
 	d.MassRenameCapPunctSep = p.CapPunctSep
 	h.MassRenameSyncFieldLabels()
 	d.MassRenamePhase = dialog.MassRenamePhaseMain
-	d.FocusedField = dialog.MassRenameFindFieldFocus
+	d.Focus = massRenameHomeFocus(d.MassRenameMode)
 	h.RecomputeMassRenamePreview()
 }
 
@@ -566,79 +471,21 @@ func (h *Handler) deleteSelectedMassRenamePattern() bool {
 	return true
 }
 
-// handleMassRenamePickerKey routes a key event for the open load-pattern or pattern-history
-// picker (identical key handling; currentMassRenamePickerState picks the right backing state).
-// Mirrors HandlePathPickerKey's shape (query editing built directly with internal/scrollquery
-// since the query field lives on MassRenamePatternPickerState rather than the shared PathPicker
-// state).
+// handleMassRenamePickerKey routes a key event for the open load-pattern, pattern-history or
+// overwrite picker (identical key handling; currentMassRenamePickerState picks the right backing
+// state). The delete-pattern chord runs before the widget engine; handlePickerKey does the rest.
 func (h *Handler) handleMassRenamePickerKey(event *tcell.EventKey) bool {
 	st := h.currentMassRenamePickerState()
-
 	if h.keysMassRenameDialog != nil {
 		if id, ok := h.keysMassRenameDialog.Lookup(event); ok && id == keymap.ActionFileMassRenameDeletePattern {
 			h.deleteSelectedMassRenamePattern()
 			return false
 		}
 	}
-	if st.Focus == 0 {
-		onChange := func() {
-			h.syncMassRenamePickerRanks()
-			st.Selected = 0
-			dialog.EnsureMassRenamePatternPickerListScroll(st, h.MassRenamePatternPickerListRows())
-		}
-		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, h.MassRenamePatternPickerQueryWidth(), onChange)
-		if scrollquery.HandleKey(h.keysDialogInput, event, true, edit) {
-			return false
-		}
-	}
-
-	switch event.Key() {
-	case tcell.KeyEnter:
-		switch st.Focus {
-		case 2:
-			h.closeMassRenamePicker()
-		default:
-			h.activateMassRenamePickerSelection()
-		}
-	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
-			st.Focus = nf
-			if st.Focus == 0 && event.Key() == tcell.KeyUp {
-				dialog.EnsureMassRenamePatternPickerListScroll(st, h.MassRenamePatternPickerListRows())
-			}
-			break
-		}
-		if h.host.HandleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), h.MassRenamePatternPickerListRows, func() {
-			dialog.EnsureMassRenamePatternPickerListScroll(st, h.MassRenamePatternPickerListRows())
-		}) {
-			break
-		}
-	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
-		if h.host.HandleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), h.MassRenamePatternPickerListRows, func() {
-			dialog.EnsureMassRenamePatternPickerListScroll(st, h.MassRenamePatternPickerListRows())
-		}) {
-			break
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		if st.Focus == 0 {
-			break
-		}
-		switch dialog.DialogButtonRune(event.Rune()) {
-		case dialog.ButtonRuneOK:
-			h.activateMassRenamePickerSelection()
-		case dialog.ButtonRuneCancel:
-			h.closeMassRenamePicker()
-		case dialog.ButtonRuneToggle:
-			switch st.Focus {
-			case 1:
-				h.activateMassRenamePickerSelection()
-			case 2:
-				h.closeMassRenamePicker()
-			}
-		}
-	}
+	h.handlePickerKey(event, pickerBinding{
+		focus: &st.Focus, query: &st.Query, cursor: &st.QueryCursor, scroll: &st.QueryScroll,
+		selected: &st.Selected, offset: &st.ListScroll, count: func() int { return len(st.Ranked) },
+		resync: h.syncMassRenamePickerRanks, activate: h.activateMassRenamePickerSelection, closePicker: h.closeMassRenamePicker,
+	})
 	return false
 }

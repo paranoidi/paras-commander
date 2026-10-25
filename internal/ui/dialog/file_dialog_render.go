@@ -9,9 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ops"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // DeleteRowIconPainter draws file-list devicons for one delete dialog row; nil skips icons.
@@ -23,129 +21,19 @@ type DeleteRowIconPainter func(screen tcell.Screen, x, y int, entry DeleteListEn
 // app can compare it across a keystroke to decide whether a dialog-rect overlay
 // is valid (unchanged geometry) or a full render is required (shrunk geometry).
 func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (Rect, bool) {
-	if !state.Open {
+	if !state.Open || fileDialogWidth(layout.Width, state, deleteIconLead) < 20 {
 		return Rect{}, false
 	}
-
-	width := fileDialogWidth(layout.Width, state, deleteIconLead)
-	if width < 20 {
-		return Rect{}, false
-	}
-	if FileDialogUsesSpec(state.DialogType) {
-		p, ok := dlg.Place(layout.Width, layout.Height, FileDialogView(state, FileDialogViewContext{Layout: layout, IconLead: deleteIconLead}))
-		return p.Rect, ok
-	}
-
-	// Calculate height based on dialog type.
-	var height int
-	switch state.DialogType {
-	case FileDialogAddBookmark:
-		height = 10
-	case FileDialogRunForEach:
-		if state.RunForEachHistoryOpen {
-			height = runForEachHistoryPickerDialogHeight(layout.Height)
-			break
-		}
-		helpLines := 0
-		if msg := strings.TrimSpace(state.Message); msg != "" {
-			helpLines = strings.Count(state.Message, "\n") + 1
-		}
-		// Help block + separator + command block + separator + 2 checkboxes + optional pool
-		// section + separator + blank + buttons row.
-		height = helpLines + 1 + runForEachCommandFieldRows(state) + 3 + 5
-		if runForEachHasPoolSelector(state) {
-			// Separator + label + pool radios ("No pool" + one per pool).
-			height += 1 + 1 + (1 + len(state.RunForEachPools))
-		}
-	case FileDialogMassRename:
-		switch state.MassRenamePhase {
-		case MassRenamePhaseSavePrompt:
-			height = massRenameSavePromptDialogHeight()
-		case MassRenamePhaseLoadPicker, MassRenamePhaseHistoryPicker, MassRenamePhaseOverwritePicker:
-			height = massRenamePatternPickerDialogHeight(layout.Height)
-		default:
-			height = massRenameDialogHeight(layout.Height, state)
-		}
-	default:
-		if len(state.Fields) > 0 {
-			height = len(state.Fields)*3 + 4 // +1 separator row above buttons
-			if state.DialogType == FileDialogExtract {
-				if msg := strings.TrimSpace(state.Message); msg != "" {
-					height += strings.Count(state.Message, "\n") + 1
-				}
-			}
-		} else {
-			height = 5
-		}
-	}
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-	}
-	if height < 5 {
-		height = 5
-	}
-
-	return draw.CenteredDialogRect(layout, width, height), true
+	p, ok := dlg.Place(layout.Width, layout.Height, FileDialogView(state, FileDialogViewContext{Layout: layout, IconLead: deleteIconLead}))
+	return p.Rect, ok
 }
 
+// DrawFileDialog paints the open file dialog: the spec FileDialogView describes, then what lives in
+// reserved regions and on the input rects (the delete list, the mass rename preview, the focused
+// path field's completion dropdown).
 func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) {
-	styles := ctx.Styles
-	deleteIconLead := ctx.IconLead
-	if FileDialogUsesSpec(state.DialogType) {
-		if state.Open {
-			drawFileDialogSpec(screen, layout, state, ctx, paintDeleteIcon)
-		}
-		return
-	}
-	rect, ok := FileDialogRect(layout, state, deleteIconLead)
-	if !ok {
-		return
-	}
-
-	dialogTitle := fileDialogOuterTitle(state)
-	if dialogTitle == "" {
-		return
-	}
-
-	borderStyle := draw.DrawDialogFrame(screen, rect, dialogTitle, styles)
-
-	// drawDropdown paints an open path-completion dropdown last, over the buttons.
-	var drawDropdown func(uiscrollbar.Style)
-
-	switch state.DialogType {
-	case FileDialogAddBookmark:
-		drawAddBookmarkDialogContent(screen, rect, state, borderStyle, styles)
-	case FileDialogRunForEach:
-		if state.RunForEachHistoryOpen {
-			drawRunForEachHistoryPickerContent(screen, rect, state.RunForEachHistoryPicker, borderStyle, styles)
-		} else if len(state.Fields) > 0 {
-			drawRunForEachDialogFields(screen, rect, borderStyle, state, styles)
-		}
-	case FileDialogMassRename:
-		switch state.MassRenamePhase {
-		case MassRenamePhaseSavePrompt:
-			drawMassRenameSavePromptContent(screen, rect, state, borderStyle, styles)
-		case MassRenamePhaseLoadPicker, MassRenamePhaseOverwritePicker:
-			drawMassRenamePatternPickerContent(screen, rect, state.MassRenameLoadPicker, borderStyle, styles)
-		case MassRenamePhaseHistoryPicker:
-			drawMassRenamePatternPickerContent(screen, rect, state.MassRenameHistoryPicker, borderStyle, styles)
-		default:
-			drawMassRenameDialog(screen, rect, state, borderStyle, styles, ctx.ScrollbarStyle)
-		}
-	default:
-		if len(state.Fields) > 0 {
-			drawDropdown = drawMultiFieldDialog(screen, rect, state, styles)
-		}
-	}
-
-	// Draw buttons at the bottom. Separator ends on buttonY-2; buttonY-1 is the
-	// mandatory surface-only blank row (a separator is not that row).
-	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
-	drawOkCancelButtons(screen, rect, buttonY, state, styles)
-
-	if drawDropdown != nil {
-		drawDropdown(ctx.ScrollbarStyle)
+	if state.Open {
+		drawFileDialogSpec(screen, layout, state, ctx, paintDeleteIcon)
 	}
 }
 
@@ -359,162 +247,8 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 	return max(fileDialogFloorWidth, minWidth)
 }
 
-func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcell.Style, state FileDialogState, styles theme.Theme) {
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	fieldStartY := rect.Y + 1
-	if msg := strings.TrimSpace(state.Message); msg != "" {
-		labelStyle := styles.DialogText.Background(dbg)
-		y := fieldStartY
-		for _, line := range strings.Split(state.Message, "\n") {
-			if y >= rect.Y+rect.Height-3 {
-				break
-			}
-			lineWidth := rect.Width - 4
-			if lineWidth > 0 {
-				primitive.Text(screen, rect.X+2, y, lineWidth, line, labelStyle)
-			}
-			y++
-		}
-		draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
-		fieldStartY = y + 1
-	}
-	y := fieldStartY
-	innerBottom := rect.Y + rect.Height - 2
-	for i, field := range state.Fields {
-		if y >= innerBottom {
-			break
-		}
-		labelWidth := rect.Width - 4
-		if labelWidth <= 0 {
-			break
-		}
-		fieldStyle := styles.DialogText.Background(dbg)
-		primitive.Text(screen, draw.DialogTextX(rect), y, labelWidth, field.Label+":", fieldStyle)
-		y++
-		if y >= innerBottom {
-			break
-		}
-		drawInputField(screen, draw.DialogTextX(rect), y, rect.Width-4, field, i == state.FocusedField, styles)
-		y++
-		if i == 0 {
-			if hint := runForEachCommandErrorText(state); hint != "" && y < innerBottom {
-				primitive.Text(screen, draw.DialogTextX(rect), y, rect.Width-4, hint, dialogErrorTextStyle(styles, dbg))
-				y++
-			} else if preview := runForEachPreviewText(state); preview != "" && y < innerBottom {
-				primitive.Text(screen, draw.DialogTextX(rect), y, rect.Width-4, "→ "+preview, runForEachPreviewStyle(styles, dbg))
-				y++
-			}
-		}
-	}
-
-	if y >= rect.Y+rect.Height-3 {
-		return
-	}
-	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
-	y++
-	if y < innerBottom {
-		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Run in each selected directory", 'R', state.RunForEachInDirs, state.FocusedField == len(state.Fields), false, styles)
-	}
-	y++
-	if y < innerBottom {
-		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Allocate pseudo-TTY (interactive)", 'T', state.RunForEachPTY, state.FocusedField == len(state.Fields)+1, false, styles)
-	}
-	y++
-
-	if !runForEachHasPoolSelector(state) {
-		return
-	}
-
-	sectionY := y
-	if sectionY >= rect.Y+rect.Height-3 {
-		return
-	}
-	draw.DrawDialogHSeparator(screen, rect, sectionY, borderStyle)
-
-	y = sectionY + 1
-	if y >= innerBottom {
-		return
-	}
-	labelWidth := rect.Width - 4
-	if labelWidth <= 0 {
-		return
-	}
-	labelStyle := styles.DialogText.Background(dbg)
-	primitive.Text(screen, rect.X+2, y, labelWidth, "Worker pool (optional):", labelStyle)
-	y++ // pool radios sit directly beneath the label
-
-	baseFocus := len(state.Fields) + 2
-	if y < innerBottom {
-		focused := state.FocusedField == baseFocus
-		selected := strings.TrimSpace(state.RunForEachPool) == ""
-		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "No pool (unlimited)", 0, selected, focused, false, styles)
-		y++
-	}
-	for i, name := range state.RunForEachPools {
-		if y >= innerBottom {
-			return
-		}
-		focused := state.FocusedField == baseFocus+1+i
-		selected := strings.TrimSpace(state.RunForEachPool) == strings.TrimSpace(name)
-		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, name, 0, selected, focused, false, styles)
-		y++
-	}
-}
-
 // drawMultiFieldDialog returns a non-nil func that paints the open path-completion dropdown;
 // the caller runs it after everything else so nothing overdraws it.
-func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState, styles theme.Theme) (drawDropdown func(uiscrollbar.Style)) {
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	fieldStartY := rect.Y + 1
-	for i, field := range state.Fields {
-		y := fieldStartY + i*3
-		if y >= rect.Y+rect.Height-3 {
-			break
-		}
-		labelWidth := rect.Width - 4
-		if labelWidth <= 0 {
-			continue
-		}
-		fieldStyle := styles.DialogText
-		if state.Message != "" && i == state.FocusedField {
-			fieldStyle = styles.MessageWarn
-		}
-		fieldStyle = fieldStyle.Background(dbg)
-		primitive.Text(screen, rect.X+2, y, labelWidth, field.Label+":", fieldStyle)
-
-		// Input row sits directly beneath the label.
-		inputY := y + 1
-		if inputY >= rect.Y+rect.Height-3 {
-			continue
-		}
-		drawInputField(screen, rect.X+2, inputY, rect.Width-4, field, i == state.FocusedField, styles)
-		if field.PathPicker && field.Completion.Open {
-			x, y, scroll, comp := rect.X+2, inputY+1, field.Scroll, field.Completion
-			drawDropdown = func(sb uiscrollbar.Style) {
-				drawPathCompletionDropdown(screen, x, y, scroll, comp, sb, styles)
-			}
-		}
-	}
-	if state.DialogType == FileDialogExtract {
-		if msg := strings.TrimSpace(state.Message); msg != "" && len(state.Fields) > 0 {
-			y := fieldStartY + (len(state.Fields)-1)*3 + 2
-			warn := styles.MessageWarn.Background(dbg)
-			innerW := draw.DialogContentWidth(rect)
-			textX := draw.DialogTextX(rect)
-			for _, line := range strings.Split(state.Message, "\n") {
-				if y >= rect.Y+rect.Height-3 {
-					break
-				}
-				if innerW > 0 {
-					primitive.Text(screen, textX, y, innerW, line, warn)
-				}
-				y++
-			}
-		}
-	}
-	return drawDropdown
-}
-
 // drawInputField paints a dialog text input row, including the filesystem-completion ghost
 // suffix when the field has one. drawInputFieldInvalid takes the error style explicitly (path
 // validation); drawInputField uses field.InputInvalid.
@@ -546,36 +280,6 @@ func drawInputFieldInvalid(screen tcell.Screen, x, y, width int, field FileDialo
 // DrawInputField paints a single dialog text input row (shared by file dialogs and inline query bars).
 func DrawInputField(screen tcell.Screen, x, y, width int, field FileDialogField, focused bool, styles theme.Theme) {
 	drawInputField(screen, x, y, width, field, focused, styles)
-}
-
-// fileDialogFocusIndex returns the focus index for the OK/Yes button.
-func fileDialogOKFocusIndex(state FileDialogState) int {
-	if state.DialogType == FileDialogMassRename && MassRenamePickerPhase(state.MassRenamePhase) {
-		return 1 // list=0, OK=1
-	}
-	if state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen {
-		return 1 // list=0, OK=1
-	}
-	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {
-		return massRenameContentEnd(state)
-	}
-	// SavePrompt phase (Name/Description fields) falls through to the generic formula below,
-	// same as any other two-field dialog: len(state.Fields) == 2.
-	return len(state.Fields) + runForEachExtraFocusRows(state)
-}
-
-// fileDialogCancelFocusIndex returns the focus index for the Cancel/No button.
-func fileDialogCancelFocusIndex(state FileDialogState) int {
-	if state.DialogType == FileDialogMassRename && MassRenamePickerPhase(state.MassRenamePhase) {
-		return 2
-	}
-	if state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen {
-		return 2
-	}
-	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {
-		return massRenameContentEnd(state) + 2
-	}
-	return len(state.Fields) + runForEachExtraFocusRows(state) + 1
 }
 
 func renameToolOptionCount(state FileDialogState) int {
@@ -639,76 +343,10 @@ func runForEachHasPoolSelector(state FileDialogState) bool {
 	return state.DialogType == FileDialogRunForEach && len(state.RunForEachPools) > 0
 }
 
-func runForEachExtraFocusRows(state FileDialogState) int {
-	if state.DialogType != FileDialogRunForEach {
-		return 0
-	}
-	// "Run in each selected directory" + "Allocate pseudo-TTY" checkbox rows.
-	rows := 2
-	if runForEachHasPoolSelector(state) {
-		// "No pool" + one row per configured pool.
-		rows += 1 + len(state.RunForEachPools)
-	}
-	return rows
-}
-
 // renameFocusCheckboxLabel returns the focus-after checkbox caption for rename-like dialogs.
 func renameFocusCheckboxLabel(state FileDialogState) string {
 	if state.DialogType == FileDialogDuplicate {
 		return "Focus after duplicate"
 	}
 	return "Focus after rename"
-}
-
-func drawOkCancelButtons(screen tcell.Screen, rect Rect, y int, state FileDialogState, styles theme.Theme) {
-	okFocusIdx := fileDialogOKFocusIndex(state)
-	cancelFocusIdx := fileDialogCancelFocusIndex(state)
-	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {
-		disabled := !FileDialogMassRenameOKEnabled(state)
-		specs := []draw.DialogButtonSpec{
-			{Label: "OK", Shortcut: 'O', Focused: state.FocusedField == okFocusIdx, Disabled: disabled},
-			{Label: "Apply", Shortcut: 'A', Focused: state.FocusedField == MassRenameApplyFocusIndex(state), Disabled: disabled},
-			{Label: "Cancel", Shortcut: 'C', Focused: state.FocusedField == cancelFocusIdx},
-		}
-		draw.DrawDialogButtonRowCentered(screen, rect, y, specs, styles)
-		return
-	}
-	draw.DrawDialogButtonRowCentered(screen, rect, y, draw.OKCancelButtonSpecs(state.FocusedField == okFocusIdx, state.FocusedField == cancelFocusIdx), styles)
-}
-
-// FileDialogOKFocusIndex returns the FocusedField index of the OK button.
-func FileDialogOKFocusIndex(state FileDialogState) int {
-	return fileDialogOKFocusIndex(state)
-}
-
-// FileDialogCancelFocusIndex returns the FocusedField index of the Cancel button.
-func FileDialogCancelFocusIndex(state FileDialogState) int {
-	return fileDialogCancelFocusIndex(state)
-}
-
-func drawAddBookmarkDialogContent(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
-	if rect.Width < 4 || rect.Height < 9 {
-		return
-	}
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	textStyle := styles.DialogText.Background(dbg)
-	primaryCol := rect.X + 2
-	innerWidth := rect.Width - 4
-
-	// Content rows sit directly beneath their label row.
-	primitive.Text(screen, primaryCol, rect.Y+1, innerWidth, "Path:", textStyle)
-	pathValue := state.Message
-	if utf8.RuneCountInString(pathValue) > innerWidth {
-		pathValue = primitive.TruncateRight(pathValue, innerWidth)
-	}
-	primitive.Text(screen, primaryCol, rect.Y+2, innerWidth, pathValue, textStyle)
-
-	draw.DrawDialogHSeparator(screen, rect, rect.Y+3, borderStyle)
-
-	primitive.Text(screen, primaryCol, rect.Y+4, innerWidth, "Name:", textStyle)
-
-	if len(state.Fields) > 0 {
-		focused := state.FocusedField == 0
-		drawInputField(screen, primaryCol, rect.Y+5, innerWidth, state.Fields[0], focused, styles)
-	}
 }

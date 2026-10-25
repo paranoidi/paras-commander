@@ -9,6 +9,9 @@ import "github.com/paranoidi/paras-commander/internal/ui/dialog"
 func (h *Handler) fileDialogExtra() func() {
 	switch h.model.FileDialog.DialogType {
 	case dialog.FileDialogMassRename:
+		if h.model.FileDialog.MassRenamePhase != dialog.MassRenamePhaseMain {
+			return nil // the save prompt's Name / Description are not the Find / Replace inputs
+		}
 		return h.RecomputeMassRenamePreview
 	case dialog.FileDialogRunForEach:
 		return h.commands.RecomputeRunForEachValidation

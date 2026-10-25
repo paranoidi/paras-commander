@@ -1,0 +1,533 @@
+== open ==
+focus=f0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+-- text --
+┌────────────────────────────── Run for each ──────────────────────────────┐
+│ Runs once per selected item. Default mode must include %f (iterated ite… │
+│ Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.      │
+│ Do not wrap % macros in quotes.                                          │
+│ >> | && etc. run via sh -c; otherwise argv is parsed without a shell.    │
+│                                                                          │
+│ Check "Run in each selected directory" (Alt+R) to cd into each selected… │
+│ If enabled; %f becomes optional.                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Command:                                                                 │
+│                                                                          │
+│ Command is empty                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Run in each selected directory                                         │
+│ 󰄱 Allocate pseudo-TTY (interactive)                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Worker pool (optional):                                                  │
+│ 󰐾 No pool (unlimited)                                                    │
+│ 󰐽 batch                                                                  │
+│ 󰐽 render                                                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000001 bg=0x0 attrs=4 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+affffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+-- text --
+┌────────────────────────────── Run for each ──────────────────────────────┐
+│ Runs once per selected item. Default mode must include %f (iterated ite… │
+│ Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.      │
+│ Do not wrap % macros in quotes.                                          │
+│ >> | && etc. run via sh -c; otherwise argv is parsed without a shell.    │
+│                                                                          │
+│ Check "Run in each selected directory" (Alt+R) to cd into each selected… │
+│ If enabled; %f becomes optional.                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Command:                                                                 │
+│                                                                          │
+│ Command is empty                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Run in each selected directory                                         │
+│ 󰄱 Allocate pseudo-TTY (interactive)                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Worker pool (optional):                                                  │
+│ 󰐾 No pool (unlimited)                                                    │
+│ 󰐽 batch                                                                  │
+│ 󰐽 render                                                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000001 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aeeebeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+affffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=cb1 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+-- text --
+┌────────────────────────────── Run for each ──────────────────────────────┐
+│ Runs once per selected item. Default mode must include %f (iterated ite… │
+│ Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.      │
+│ Do not wrap % macros in quotes.                                          │
+│ >> | && etc. run via sh -c; otherwise argv is parsed without a shell.    │
+│                                                                          │
+│ Check "Run in each selected directory" (Alt+R) to cd into each selected… │
+│ If enabled; %f becomes optional.                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Command:                                                                 │
+│                                                                          │
+│ Command is empty                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Run in each selected directory                                         │
+│ 󰄱 Allocate pseudo-TTY (interactive)                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Worker pool (optional):                                                  │
+│ 󰐾 No pool (unlimited)                                                    │
+│ 󰐽 batch                                                                  │
+│ 󰐽 render                                                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000001 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aeeeeeeeeebeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+affffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=pool0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+-- text --
+┌────────────────────────────── Run for each ──────────────────────────────┐
+│ Runs once per selected item. Default mode must include %f (iterated ite… │
+│ Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.      │
+│ Do not wrap % macros in quotes.                                          │
+│ >> | && etc. run via sh -c; otherwise argv is parsed without a shell.    │
+│                                                                          │
+│ Check "Run in each selected directory" (Alt+R) to cd into each selected… │
+│ If enabled; %f becomes optional.                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Command:                                                                 │
+│                                                                          │
+│ Command is empty                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Run in each selected directory                                         │
+│ 󰄱 Allocate pseudo-TTY (interactive)                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Worker pool (optional):                                                  │
+│ 󰐾 No pool (unlimited)                                                    │
+│ 󰐽 batch                                                                  │
+│ 󰐽 render                                                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000001 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=pool1 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+-- text --
+┌────────────────────────────── Run for each ──────────────────────────────┐
+│ Runs once per selected item. Default mode must include %f (iterated ite… │
+│ Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.      │
+│ Do not wrap % macros in quotes.                                          │
+│ >> | && etc. run via sh -c; otherwise argv is parsed without a shell.    │
+│                                                                          │
+│ Check "Run in each selected directory" (Alt+R) to cd into each selected… │
+│ If enabled; %f becomes optional.                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Command:                                                                 │
+│                                                                          │
+│ Command is empty                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Run in each selected directory                                         │
+│ 󰄱 Allocate pseudo-TTY (interactive)                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Worker pool (optional):                                                  │
+│ 󰐾 No pool (unlimited)                                                    │
+│ 󰐽 batch                                                                  │
+│ 󰐽 render                                                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000001 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+affffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=pool2 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+-- text --
+┌────────────────────────────── Run for each ──────────────────────────────┐
+│ Runs once per selected item. Default mode must include %f (iterated ite… │
+│ Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.      │
+│ Do not wrap % macros in quotes.                                          │
+│ >> | && etc. run via sh -c; otherwise argv is parsed without a shell.    │
+│                                                                          │
+│ Check "Run in each selected directory" (Alt+R) to cd into each selected… │
+│ If enabled; %f becomes optional.                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Command:                                                                 │
+│                                                                          │
+│ Command is empty                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Run in each selected directory                                         │
+│ 󰄱 Allocate pseudo-TTY (interactive)                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Worker pool (optional):                                                  │
+│ 󰐾 No pool (unlimited)                                                    │
+│ 󰐽 batch                                                                  │
+│ 󰐽 render                                                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000001 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+afffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=ok cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+-- text --
+┌────────────────────────────── Run for each ──────────────────────────────┐
+│ Runs once per selected item. Default mode must include %f (iterated ite… │
+│ Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.      │
+│ Do not wrap % macros in quotes.                                          │
+│ >> | && etc. run via sh -c; otherwise argv is parsed without a shell.    │
+│                                                                          │
+│ Check "Run in each selected directory" (Alt+R) to cd into each selected… │
+│ If enabled; %f becomes optional.                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Command:                                                                 │
+│                                                                          │
+│ Command is empty                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Run in each selected directory                                         │
+│ 󰄱 Allocate pseudo-TTY (interactive)                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Worker pool (optional):                                                  │
+│ 󰐾 No pool (unlimited)                                                    │
+│ 󰐽 batch                                                                  │
+│ 󰐽 render                                                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000001 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffgffffaahhhihhhhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Down ==
+focus=ok cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+-- text --
+┌────────────────────────────── Run for each ──────────────────────────────┐
+│ Runs once per selected item. Default mode must include %f (iterated ite… │
+│ Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.      │
+│ Do not wrap % macros in quotes.                                          │
+│ >> | && etc. run via sh -c; otherwise argv is parsed without a shell.    │
+│                                                                          │
+│ Check "Run in each selected directory" (Alt+R) to cd into each selected… │
+│ If enabled; %f becomes optional.                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Command:                                                                 │
+│                                                                          │
+│ Command is empty                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Run in each selected directory                                         │
+│ 󰄱 Allocate pseudo-TTY (interactive)                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Worker pool (optional):                                                  │
+│ 󰐾 No pool (unlimited)                                                    │
+│ 󰐽 batch                                                                  │
+│ 󰐽 render                                                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000001 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffgffffaahhhihhhhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Enter ==
+focus=ok cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+-- text --
+┌────────────────────────────── Run for each ──────────────────────────────┐
+│ Runs once per selected item. Default mode must include %f (iterated ite… │
+│ Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.      │
+│ Do not wrap % macros in quotes.                                          │
+│ >> | && etc. run via sh -c; otherwise argv is parsed without a shell.    │
+│                                                                          │
+│ Check "Run in each selected directory" (Alt+R) to cd into each selected… │
+│ If enabled; %f becomes optional.                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Command:                                                                 │
+│                                                                          │
+│ Command is empty                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 󰄱 Run in each selected directory                                         │
+│ 󰄱 Allocate pseudo-TTY (interactive)                                      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Worker pool (optional):                                                  │
+│ 󰐾 No pool (unlimited)                                                    │
+│ 󰐽 batch                                                                  │
+│ 󰐽 render                                                                 │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000001 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000001 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaafffgffffaahhhihhhhhhhhaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

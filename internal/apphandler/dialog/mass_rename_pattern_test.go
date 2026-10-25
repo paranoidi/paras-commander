@@ -568,8 +568,8 @@ func TestActivateMassRenameOverwritePickerReplacesPattern(t *testing.T) {
 	if len(d.Fields) != 2 || d.Fields[0].Label != "Find" || d.Fields[0].Value != "walrus" {
 		t.Fatalf("Fields not restored: %+v", d.Fields)
 	}
-	if d.FocusedField != uidialog.MassRenameFindFieldFocus {
-		t.Fatalf("FocusedField = %d, want %d", d.FocusedField, uidialog.MassRenameFindFieldFocus)
+	if d.Focus != uidialog.FileFieldID(0) {
+		t.Fatalf("Focus = %q, want the Find input", d.Focus)
 	}
 	if len(fh.messages) != 1 || fh.messages[0] != "Pattern overwritten: harbor" {
 		t.Fatalf("messages = %v, want Pattern overwritten: harbor", fh.messages)
@@ -637,8 +637,8 @@ func TestCloseMassRenameOverwritePickerReturnsToSavePrompt(t *testing.T) {
 	if len(d.Fields) != 2 || d.Fields[0].Label != "Name" || d.Fields[0].Value != "meadow" {
 		t.Fatalf("prompt fields lost: %+v", d.Fields)
 	}
-	if d.FocusedField != 0 {
-		t.Fatalf("FocusedField = %d, want 0", d.FocusedField)
+	if d.Focus != uidialog.FileFieldID(0) {
+		t.Fatalf("Focus = %q, want the Name input", d.Focus)
 	}
 }
 
@@ -656,7 +656,7 @@ func TestSavePromptF5OpensOverwritePicker(t *testing.T) {
 	}
 	h.openMassRenameSavePrompt()
 
-	h.handleMassRenameSavePromptKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	h.tryMassRenameSavePromptShortcut(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 
 	if h.model.FileDialog.MassRenamePhase != uidialog.MassRenamePhaseOverwritePicker {
 		t.Fatalf("phase = %v, want OverwritePicker", h.model.FileDialog.MassRenamePhase)

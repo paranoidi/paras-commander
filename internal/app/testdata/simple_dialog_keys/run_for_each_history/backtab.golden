@@ -1,0 +1,194 @@
+== open ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 1 2 3 4 5 6 7 8 9 10 11] query=""@0 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│                                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ gzip -9 %f                                                               │
+│ tar -czf %f.tgz %f                                                       │
+│ echo willow %f                                                           │
+│ chmod 600 %f                                                             │
+│ touch %f                                                                 │
+│ echo lantern %f                                                          │
+│ sha256sum %f                                                             │
+│ echo meadow %f                                                           │
+│ rsync -a %f meadow/                                                      │
+│ echo anchor %f                                                           │
+│ ffmpeg -i %f out.mkv                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Backtab ==
+focus=ok cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 1 2 3 4 5 6 7 8 9 10 11] query=""@0 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│                                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ gzip -9 %f                                                               │
+│ tar -czf %f.tgz %f                                                       │
+│ echo willow %f                                                           │
+│ chmod 600 %f                                                             │
+│ touch %f                                                                 │
+│ echo lantern %f                                                          │
+│ sha256sum %f                                                             │
+│ echo meadow %f                                                           │
+│ rsync -a %f meadow/                                                      │
+│ echo anchor %f                                                           │
+│ ffmpeg -i %f out.mkv                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaeeefeeeeaadddgddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Backtab ==
+focus=list cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 1 2 3 4 5 6 7 8 9 10 11] query=""@0 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│                                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ gzip -9 %f                                                               │
+│ tar -czf %f.tgz %f                                                       │
+│ echo willow %f                                                           │
+│ chmod 600 %f                                                             │
+│ touch %f                                                                 │
+│ echo lantern %f                                                          │
+│ sha256sum %f                                                             │
+│ echo meadow %f                                                           │
+│ rsync -a %f meadow/                                                      │
+│ echo anchor %f                                                           │
+│ ffmpeg -i %f out.mkv                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaggghggggaaggghggggggggaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Backtab ==
+focus=ok cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true history[items=12 ranked=[0 1 2 3 4 5 6 7 8 9 10 11] query=""@0 sel=0 scroll=0]
+-- text --
+┌──────────────────────────────── History ─────────────────────────────────┐
+│                                                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│ echo orchard %f                                                          │
+│ gzip -9 %f                                                               │
+│ tar -czf %f.tgz %f                                                       │
+│ echo willow %f                                                           │
+│ chmod 600 %f                                                             │
+│ touch %f                                                                 │
+│ echo lantern %f                                                          │
+│ sha256sum %f                                                             │
+│ echo meadow %f                                                           │
+│ rsync -a %f meadow/                                                      │
+│ echo anchor %f                                                           │
+│ ffmpeg -i %f out.mkv                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│                           [ OK ]    [ Cancel ]                           │
+└──────────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaeeefeeeeaadddgddddddddaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
