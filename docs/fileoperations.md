@@ -16,7 +16,8 @@ For a local-to-local file, in order:
 1. **Clone** (`cow_file_cloning`, default on): `ioctl(FICLONE)`. On a
    filesystem that supports it (btrfs, XFS with reflinks, ZFS with block
    cloning enabled, same dataset/pool) the file is done instantly with no
-   data copied.
+   data copied. When the filesystem cannot clone, or the host blocks the
+   ioctl (as some containers do), the copy moves on to the next step.
 2. **Kernel copy** (`copy_file_range`, default on): `copy_file_range(2)` in
    8 MiB chunks. Cross-pool / cross-filesystem copies end up here on modern
    kernels; the data still moves, but without a round trip through userspace.

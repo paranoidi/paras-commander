@@ -15,12 +15,14 @@ func ioctlCloneShouldFallback(err error) bool {
 		return false
 	}
 	// Try userspace read/write when the kernel or filesystem does not support cloning.
+	// EPERM covers hosts whose policy blocks the ioctl (LXC containers, seccomp).
 	switch {
 	case errors.Is(err, unix.EOPNOTSUPP),
 		errors.Is(err, unix.ENOSYS),
 		errors.Is(err, unix.ENOTTY),
 		errors.Is(err, unix.EXDEV),
-		errors.Is(err, unix.EINVAL):
+		errors.Is(err, unix.EINVAL),
+		errors.Is(err, unix.EPERM):
 		return true
 	default:
 		return false
