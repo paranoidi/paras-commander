@@ -19,7 +19,7 @@ import (
 
 // Key-script goldens for the list dialogs (theme picker, SFTP connect, dedup empty-dirs confirm).
 // They use the harness of simple_dialog_keys_golden_test.go: every script runs through
-// App.handleKey and the transcript dumps the dialog rect after each key.
+// App.handleKey and the transcript records the dialog state after each key.
 
 var listGoldenWords = []string{
 	"amber", "birch", "cinder", "dune", "ember", "fable", "glacier", "harbor", "ivory", "jasper",
@@ -63,7 +63,7 @@ func themeFocusName(app *App) string {
 
 func themeKeyDialog(name string, n int) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 4, ry: 0, rw: 72, rh: 24,
+		name: name,
 		setup: func(t *testing.T, dir string) *App { return themeKeyApp(t, dir, n) },
 		state: func(app *App) string {
 			st := app.model.ThemeDialog
@@ -177,7 +177,7 @@ func sftpKeyApp(t *testing.T, dir string, n int) *App {
 
 func sftpKeyDialog(name string, n int) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 1, ry: 3, rw: 78, rh: 17, // the dialog only: the panels behind it show the host's free disk space
+		name: name, // the dialog only: the panels behind it show the host's free disk space
 		serial: true, // setup swaps the package-level sftpTouchConn
 		setup:  func(t *testing.T, dir string) *App { return sftpKeyApp(t, dir, n) },
 		state: func(app *App) string {
@@ -278,7 +278,7 @@ func dedupEmptyKeyDialog(name string) keyGoldenDialog {
 	var sub string
 	var tt *testing.T
 	return keyGoldenDialog{
-		name: name, rx: 12, ry: 6, rw: 56, rh: 12,
+		name: name,
 		serial: true, // setup writes the sub and tt variables shared by this dialog's scripts
 		setup: func(t *testing.T, _ string) *App {
 			tt = t
@@ -321,7 +321,7 @@ func dedupEmptyKeyDialog(name string) keyGoldenDialog {
 // dedupEmptyLongKeyDialog shows a list past the visible cap; closing it only reports the answer.
 func dedupEmptyLongKeyDialog(name string, n int) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 0, ry: 2, rw: 80, rh: 20,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""

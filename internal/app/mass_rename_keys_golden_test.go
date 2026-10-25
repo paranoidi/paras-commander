@@ -17,7 +17,7 @@ import (
 
 // Key-script goldens for the mass rename dialog: the main screen in all four modes, the
 // save-pattern prompt and the load / history / overwrite pickers. They use the harness of
-// simple_dialog_keys_golden_test.go with the dialog's own rect (dialogFrameRect). The panel holds
+// simple_dialog_keys_golden_test.go. The panel holds
 // fixed file names; the patterns file lives in the temp dir; the external editor is a fake that
 // prefixes every line (installed once per test function, since the runner is a package-level
 // variable and the fake is stateless, so the scripts run in parallel).
@@ -98,7 +98,6 @@ var massRenameSeedNames = []string{"lantern-willow.txt", "lantern-meadow.txt", "
 func massRenameKeyDialog(name string, savedPatterns bool) keyGoldenDialog {
 	return keyGoldenDialog{
 		name: name,
-		rect: dialogFrameRect,
 		setup: func(t *testing.T, dir string) *App {
 			harbor := filepath.Join(dir, "harbor")
 			if err := os.MkdirAll(filepath.Join(harbor, "timber"), 0o755); err != nil {

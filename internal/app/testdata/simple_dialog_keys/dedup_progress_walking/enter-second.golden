@@ -1,60 +1,6 @@
 == open ==
 focus=0
--- text --
-┌───────────────────────── Find Duplicates ──────────────────────────┐
-│ Directory:                                                         │
-│ /srv/meadow/orchard                                                │
-├────────────────────────────────────────────────────────────────────┤
-│ Walking directories… 12 files                                      │
-│                                                                    │
-│                                                                    │
-├────────────────────────────────────────────────────────────────────┤
-│                             [ Cancel ]                             │
-└────────────────────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
-d fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaacccdccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Right ==
 focus=0
--- text --
-┌───────────────────────── Find Duplicates ──────────────────────────┐
-│ Directory:                                                         │
-│ /srv/meadow/orchard                                                │
-├────────────────────────────────────────────────────────────────────┤
-│ Walking directories… 12 files                                      │
-│                                                                    │
-│                                                                    │
-├────────────────────────────────────────────────────────────────────┤
-│                             [ Cancel ]                             │
-└────────────────────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
-d fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaacccdccccccccaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Enter ==
 CLOSED: view=0 progress=false quit=false

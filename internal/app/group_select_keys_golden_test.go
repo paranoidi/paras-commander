@@ -31,7 +31,7 @@ func groupSelectKeyState(app *App) string {
 // preselected, two fixture files are selected first so unselect has something to flip.
 func groupSelectKeyDialog(name, mode, context string, metas int, preselected bool) keyGoldenDialog {
 	d := keyGoldenDialog{
-		name: name, rx: 10, ry: 5, rw: 60, rh: 13,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			seedPatternFixtures(t, dir)
 			h := 24
@@ -60,9 +60,6 @@ func groupSelectKeyDialog(name, mode, context string, metas int, preselected boo
 		outcome: func(app *App, _ bool) string {
 			return fmt.Sprintf("message=%q selected=%d", app.model.Message, len(app.model.Primary.SelectedPaths))
 		},
-	}
-	if metas > 0 {
-		d.rh = 14
 	}
 	return d
 }

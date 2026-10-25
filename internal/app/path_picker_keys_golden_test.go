@@ -78,7 +78,7 @@ func pickerKeyApplyApp(t *testing.T, dir string, n int) *App {
 
 func pickerKeyDialog(name string, setup func(t *testing.T, dir string) *App) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 1, ry: 3, rw: 78, rh: 18, // the dialog only: the panels behind it show free disk space
+		name: name, // the dialog only: the panels behind it show free disk space
 		setup: setup,
 		state: func(app *App) string {
 			st := app.model.PathPicker

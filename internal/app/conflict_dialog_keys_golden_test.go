@@ -21,9 +21,6 @@ import (
 // submitted nothing (Postpone, Esc) is told apart by a probe answer sent afterwards: the blocked
 // job receives the probe instead of a dialog answer.
 
-// conflictKeyRect covers every screen of the dialog (the rules screen is the tallest).
-const conflictKeyRectX, conflictKeyRectY, conflictKeyRectW, conflictKeyRectH = 2, 2, 76, 20
-
 var conflictKeyAnswers sync.Map // *App -> chan jobs.BlockerAnswer
 
 type conflictKeyVariant struct {
@@ -101,7 +98,7 @@ func conflictKeyOutcome(app *App, quit bool) string {
 
 func conflictKeyDialog(v conflictKeyVariant) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: "conflict_" + v.name, rx: conflictKeyRectX, ry: conflictKeyRectY, rw: conflictKeyRectW, rh: conflictKeyRectH,
+		name: "conflict_" + v.name,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""

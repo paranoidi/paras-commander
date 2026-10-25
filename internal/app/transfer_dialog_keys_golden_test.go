@@ -14,41 +14,9 @@ import (
 )
 
 // Key-script goldens for the copy / move destination dialog: single location, the self-copy rename
-// phase and the multi-location preview. The dump is the dialog's own rect (found on the screen
-// after every key), so a change of the dialog height or position does not drag panel cells into
-// the transcript. Paths shown in the dialog are fixed (or "~/" relative to a temp home); steps
-// that would show a temp path run silently ("!" tokens) and a destination that really queues a
-// job is swapped in by "!@tmpdest", so no job ever leaves the temp dir.
-
-// dialogFrameRect finds the on-screen rect of the open dialog: the bounding box of the frame
-// corners drawn in the dialog surface.
-func dialogFrameRect(app *App) (x, y, w, h int) {
-	screen := app.screen
-	sw, sh := screen.Size()
-	_, surface, _ := app.styles.DialogSurface.Decompose()
-	x0, y0, x1, y1 := -1, -1, -1, -1
-	for row := 0; row < sh; row++ {
-		for col := 0; col < sw; col++ {
-			ch, st, _ := screen.Get(col, row)
-			_, bg, _ := st.Decompose()
-			if bg != surface {
-				continue
-			}
-			switch ch {
-			case "┌":
-				if x0 < 0 {
-					x0, y0 = col, row
-				}
-			case "┘":
-				x1, y1 = col, row
-			}
-		}
-	}
-	if x0 < 0 || x1 < 0 {
-		return 0, 0, 1, 1
-	}
-	return x0, y0, x1 - x0 + 1, y1 - y0 + 1
-}
+// phase and the multi-location preview. Paths in the state are fixed (or "~/" relative to a temp
+// home, temp paths masked as <tmp>); a destination that really queues a job is swapped in by
+// "@tmpdest", so no job ever leaves the temp dir.
 
 func transferName(st dialog.TransferDialogState) string {
 	switch st.Focus {
@@ -83,7 +51,6 @@ type transferKeyOpts struct {
 func transferKeyDialog(name string, o transferKeyOpts) keyGoldenDialog {
 	return keyGoldenDialog{
 		name: name,
-		rect: dialogFrameRect,
 		setup: func(t *testing.T, dir string) *App {
 			root := filepath.Join(dir, "projects")
 			harbor, orchard := filepath.Join(root, "harbor"), filepath.Join(root, "orchard")
@@ -148,9 +115,9 @@ func transferKeyDialog(name string, o transferKeyOpts) keyGoldenDialog {
 			if strings.Contains(st.Destination.Value, app.model.UserHomeDir) {
 				cursor, scroll = fmt.Sprintf("end-%d", len([]rune(st.Destination.Value))-st.Destination.Cursor), "-"
 			}
-			return fmt.Sprintf("phase=%d focus=%s dest=%q cursor=%s scroll=%s pending=%v name=%q ncursor=%d perm=%v ts=%v deref=%v flat=%v listScroll=%d dropdown=%v selected=%d message=%q",
+			return fmt.Sprintf("phase=%d focus=%s dest=%q cursor=%s scroll=%s pending=%v name=%q ncursor=%d npending=%v perm=%v ts=%v deref=%v flat=%v listScroll=%d dropdown=%v selected=%d message=%q",
 				st.Phase, transferName(st), mask(st.Destination.Value), cursor, scroll, st.Destination.PrefillPending,
-				st.SelfCopyNewName.Value, st.SelfCopyNewName.Cursor, st.PreservePermissions, st.PreserveTimestamps, st.DereferenceSymlinks,
+				st.SelfCopyNewName.Value, st.SelfCopyNewName.Cursor, st.SelfCopyNewName.PrefillPending, st.PreservePermissions, st.PreserveTimestamps, st.DereferenceSymlinks,
 				st.FlattenIntoDest, st.EntriesScroll, c.Open, c.Selected, mask(app.model.Message))
 		},
 		open: func(app *App) bool { return app.model.TransferDialog.Open },
@@ -211,29 +178,29 @@ func TestTransferCopyKeyScripts(t *testing.T) {
 		{"plain-letters-on-checkbox", "Down r t d Space"},
 		{"plain-letters-on-buttons", "Tab Tab o c p x r"},
 		{"mnemonic-unknown", "a Alt+x Alt+q b"},
-		{"dest-shortcut-active", "a b !Shift+Left"},
-		{"dest-shortcut-inactive", "a b !Shift+Right"},
+		{"dest-shortcut-active", "a b Shift+Left"},
+		{"dest-shortcut-inactive", "a b Shift+Right"},
 		{"dest-shortcut-off-dest", "Down Shift+Left Shift+Right"},
-		{"enter-dest-queues", "!@tmpdest Enter"},
+		{"enter-dest-queues", "@tmpdest Enter"},
 		{"enter-dest-empty", "a Backspace Enter"},
 		{"enter-dest-whitespace", "Space Space Enter"},
-		{"enter-ok", "!@tmpdest Tab Tab Enter"},
-		{"enter-paused", "!@tmpdest Tab Tab Right Enter"},
+		{"enter-ok", "@tmpdest Tab Tab Enter"},
+		{"enter-paused", "@tmpdest Tab Tab Right Enter"},
 		{"enter-cancel", "Tab Tab Right Right Enter"},
-		{"space-ok", "!@tmpdest Tab Tab Space"},
-		{"space-paused", "!@tmpdest Tab Tab Right Space"},
+		{"space-ok", "@tmpdest Tab Tab Space"},
+		{"space-paused", "@tmpdest Tab Tab Right Space"},
 		{"space-cancel", "Tab Tab Right Right Space"},
-		{"alt-o", "!@tmpdest Alt+o"},
-		{"alt-o-from-checkbox", "!@tmpdest Down Alt+o"},
-		{"alt-p", "!@tmpdest Alt+p"},
-		{"alt-p-upper", "!@tmpdest Alt+P"},
-		{"alt-p-from-checkbox", "!@tmpdest Down Alt+p"},
+		{"alt-o", "@tmpdest Alt+o"},
+		{"alt-o-from-checkbox", "@tmpdest Down Alt+o"},
+		{"alt-p", "@tmpdest Alt+p"},
+		{"alt-p-upper", "@tmpdest Alt+P"},
+		{"alt-p-from-checkbox", "@tmpdest Down Alt+p"},
 		{"alt-p-empty", "a Backspace Alt+p"},
 		{"alt-c", "a Alt+c"},
-		{"alt-enter", "!@tmpdest Alt+Enter"},
+		{"alt-enter", "@tmpdest Alt+Enter"},
 		{"esc", "a Esc"},
 		{"esc-from-button", "Tab Tab Right Esc"},
-		{"toggles-then-ok", "!@tmpdest Alt+r Alt+t Tab Tab Enter"},
+		{"toggles-then-ok", "@tmpdest Alt+r Alt+t Tab Tab Enter"},
 		{"pgup-pgdn-ignored", "PgUp PgDn Down PgDn PgUp"},
 	})
 	runKeyGoldenScripts(t, transferKeyDialog("transfer_copy_remote", transferKeyOpts{remote: true}), []simpleKeyScript{
@@ -255,7 +222,7 @@ func TestTransferCopyKeyScripts(t *testing.T) {
 		{"typing-resyncs", "x"},
 		{"alt-c-closes-dropdown", "Alt+c"},
 		{"alt-c-twice", "Alt+c Alt+c"},
-		{"alt-o-confirms-invalid", "!@tmpdest Alt+o"},
+		{"alt-o-confirms-invalid", "@tmpdest Alt+o"},
 		{"left-edits-cursor", "Left Left x"},
 		{"mnemonics", "Alt+r Alt+t"},
 	})
@@ -273,17 +240,17 @@ func TestTransferMoveKeyScripts(t *testing.T) {
 		{"left-right-buttons", "Down Left Right Right Right Left Left Left"},
 		{"mnemonics-in-dest", "a Alt+r Alt+t Alt+d Alt+i b"},
 		{"plain-letters-on-buttons", "Down o c p x"},
-		{"dest-shortcut-active", "a !Shift+Left"},
-		{"dest-shortcut-inactive", "a !Shift+Right"},
-		{"enter-dest-queues", "!@tmpdest Enter"},
+		{"dest-shortcut-active", "a Shift+Left"},
+		{"dest-shortcut-inactive", "a Shift+Right"},
+		{"enter-dest-queues", "@tmpdest Enter"},
 		{"enter-dest-empty", "a Backspace Enter"},
-		{"enter-ok", "!@tmpdest Down Enter"},
-		{"enter-paused", "!@tmpdest Down Right Enter"},
+		{"enter-ok", "@tmpdest Down Enter"},
+		{"enter-paused", "@tmpdest Down Right Enter"},
 		{"enter-cancel", "Down Right Right Enter"},
-		{"space-ok", "!@tmpdest Down Space"},
+		{"space-ok", "@tmpdest Down Space"},
 		{"space-cancel", "Down Right Right Space"},
-		{"alt-o", "!@tmpdest Alt+o"},
-		{"alt-p", "!@tmpdest Alt+p"},
+		{"alt-o", "@tmpdest Alt+o"},
+		{"alt-p", "@tmpdest Alt+p"},
 		{"alt-c", "Alt+c"},
 		{"esc", "a Esc"},
 		{"esc-from-button", "Down Right Esc"},
@@ -354,16 +321,16 @@ func TestTransferMultiLocationKeyScripts(t *testing.T) {
 		{"scroll-from-checkbox", "Down PgDn PgDn PgUp PgUp PgUp"},
 		{"scroll-from-button", "Tab Tab PgDn PgUp"},
 		{"scroll-then-flatten", "PgDn Alt+i"},
-		{"dest-shortcut-active", "a !Shift+Left"},
-		{"dest-shortcut-inactive", "a !Shift+Right"},
-		{"enter-dest-queues", "!@tmpdest Enter"},
-		{"enter-flatten-queues", "!@tmpdest Alt+i Enter"},
-		{"enter-ok", "!@tmpdest Tab Tab Enter"},
-		{"enter-paused", "!@tmpdest Tab Tab Right Enter"},
+		{"dest-shortcut-active", "a Shift+Left"},
+		{"dest-shortcut-inactive", "a Shift+Right"},
+		{"enter-dest-queues", "@tmpdest Enter"},
+		{"enter-flatten-queues", "@tmpdest Alt+i Enter"},
+		{"enter-ok", "@tmpdest Tab Tab Enter"},
+		{"enter-paused", "@tmpdest Tab Tab Right Enter"},
 		{"enter-cancel", "Tab Tab Right Right Enter"},
-		{"space-ok", "!@tmpdest Tab Tab Space"},
-		{"alt-o", "!@tmpdest Alt+o"},
-		{"alt-p", "!@tmpdest Alt+p"},
+		{"space-ok", "@tmpdest Tab Tab Space"},
+		{"alt-o", "@tmpdest Alt+o"},
+		{"alt-p", "@tmpdest Alt+p"},
 		{"alt-c", "Alt+c"},
 		{"esc", "Down Esc"},
 		{"complete-open-tab", "~ / p r o j e c t s / Tab"},
@@ -376,9 +343,9 @@ func TestTransferMultiLocationKeyScripts(t *testing.T) {
 		{"space-flatten", "Down Space Space"},
 		{"mnemonics", "a Alt+i Alt+r Alt+d b"},
 		{"scroll", "PgDn PgUp"},
-		{"enter-queues", "!@tmpdest Alt+i Enter"},
-		{"enter-paused", "!@tmpdest Down Down Right Enter"},
-		{"alt-p", "!@tmpdest Alt+p"},
+		{"enter-queues", "@tmpdest Alt+i Enter"},
+		{"enter-paused", "@tmpdest Down Down Right Enter"},
+		{"alt-p", "@tmpdest Alt+p"},
 		{"alt-c", "Alt+c"},
 		{"esc", "Esc"},
 	})

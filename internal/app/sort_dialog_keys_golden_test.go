@@ -9,16 +9,15 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 var updateKeyGolden = flag.Bool("update", false, "rewrite dialog key-script golden files")
 
 const sortKeyGoldenDir = "testdata/sort_dialog_keys"
 
-// Sort dialog rect on an 80x24 screen: 56 wide, 11 tall, centered.
-const sortRectX, sortRectY, sortRectW, sortRectH = 12, 6, 56, 11
 
 // goldenKeyEvent parses a script token: a named key, "Alt+<letter>", or a single plain rune.
 func goldenKeyEvent(t *testing.T, tok string) *tcell.EventKey {
@@ -109,13 +108,12 @@ func goldenKeyEvent(t *testing.T, tok string) *tcell.EventKey {
 
 func sortStateSummary(app *App) string {
 	st := app.model.SortDialog
-	return fmt.Sprintf("dialog: mode=%s meta=%q reverse=%v dirsFirst=%v diskUsage=%v",
-		st.SortMode, st.MetaColumn, st.SortReverse, st.DirectoriesFirst, st.DiskUsageIdleSizeSort)
+	return fmt.Sprintf("dialog: focus=%q mode=%s meta=%q reverse=%v dirsFirst=%v diskUsage=%v",
+		dlg.Focused(dialog.SortDialogView(st), st.Focus), st.SortMode, st.MetaColumn, st.SortReverse, st.DirectoriesFirst, st.DiskUsageIdleSizeSort)
 }
 
 // runSortKeyScript opens the sort dialog with n meta columns, feeds the tokens through
-// App.handleKey and returns a transcript: the dialog state and a full rune+style dump of the
-// dialog rect after every key. Once the dialog closes the transcript records whether it applied
+// App.handleKey and returns a transcript: the dialog state after every key. Once the dialog closes the transcript records whether it applied
 // (the "Sort:" toast) or cancelled, along with the panel's resulting sort state.
 func runSortKeyScript(t *testing.T, metas int, keys []string) string {
 	t.Helper()
@@ -136,7 +134,6 @@ func runSortKeyScript(t *testing.T, metas int, keys []string) string {
 	dump := func(label string) {
 		app.render()
 		fmt.Fprintf(&sb, "== %s ==\n%s\n", label, sortStateSummary(app))
-		sb.WriteString(tcelltest.DumpRect(screen, sortRectX, sortRectY, sortRectW, sortRectH))
 	}
 	dump("open")
 	for _, tok := range keys {

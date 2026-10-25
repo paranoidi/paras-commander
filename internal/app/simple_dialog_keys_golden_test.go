@@ -9,33 +9,27 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	sftpb "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
-	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// Key-script goldens for the small button/radio/checkbox dialogs. Each script is fed through the
-// real App.handleKey path; the transcript holds a one-line semantic state and a rune+style dump
-// of the dialog rect after every key, and, once the dialog closes, what the close did. Focus is
+// Key-script goldens for the dialogs. Each script is fed through the real App.handleKey path; the
+// transcript holds a one-line semantic state after every key and, once the dialog closes, what
+// the close did. How the dialog looks is the render goldens' job (internal/ui/dialog). Focus is
 // reported by name; the *Name functions below are the only code that knows how each state
 // encodes it.
 
 const simpleKeyGoldenDir = "testdata/simple_dialog_keys"
 
-// keyGoldenDialog describes one dialog under test. rect is its position on an 80x24 screen.
+// keyGoldenDialog describes one dialog under test.
 type keyGoldenDialog struct {
-	name           string
-	rx, ry, rw, rh int
-	// rect, when set, gives the dumped region at dump time (a dialog whose size depends on its
-	// content); rx..rh are then unused.
-	rect func(app *App) (x, y, w, h int)
+	name string
 	// setup returns the opened-dialog app; dir is a fresh temp dir.
 	setup func(t *testing.T, dir string) *App
 	// state is a one-line semantic summary; open reports whether the dialog is still open.
@@ -58,37 +52,17 @@ func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
 	t.Helper()
 	dir := t.TempDir()
 	app := d.setup(t, dir)
-	screen := app.screen.(tcell.SimulationScreen)
 	var sb strings.Builder
-	dump := func(label string) {
+	record := func(label string) {
 		app.render()
 		fmt.Fprintf(&sb, "== %s ==\n%s\n", label, d.state(app))
-		x, y, w, h := d.rx, d.ry, d.rw, d.rh
-		if d.rect != nil {
-			x, y, w, h = d.rect(app)
-		}
-		sb.WriteString(tcelltest.DumpRect(screen, x, y, w, h))
 	}
-	dump("open")
-	quiet := false
+	record("open")
 	for _, tok := range keys {
 		if d.action != nil && strings.HasPrefix(tok, "@") {
 			d.action(t, app, tok)
-			dump(tok)
+			record(tok)
 			continue
-		}
-		// A "!" token runs silently: only the one-line state is recorded, not the rect (for steps
-		// whose dialog text would show a temp path). A silent action ("!@...") keeps the rest of
-		// the script silent, since the dialog then holds that path.
-		silent := strings.HasPrefix(tok, "!") || quiet
-		if strings.HasPrefix(tok, "!") {
-			tok = tok[1:]
-			if d.action != nil && strings.HasPrefix(tok, "@") {
-				d.action(t, app, tok)
-				quiet = true
-				fmt.Fprintf(&sb, "== !%s ==\n%s\n", tok, d.state(app))
-				continue
-			}
 		}
 		quit, _ := app.handleKey(goldenKeyEvent(t, tok))
 		if d.settle != nil && !quit && d.open(app) {
@@ -98,12 +72,7 @@ func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
 			fmt.Fprintf(&sb, "== %s ==\nCLOSED: %s\n", tok, d.outcome(app, quit))
 			return sb.String()
 		}
-		if silent {
-			app.render()
-			fmt.Fprintf(&sb, "== !%s ==\n%s\n", tok, d.state(app))
-			continue
-		}
-		dump(tok)
+		record(tok)
 	}
 	return sb.String()
 }
@@ -154,7 +123,7 @@ func runKeyGoldenScripts(t *testing.T, d keyGoldenDialog, scripts []simpleKeyScr
 func undoName(st dialog.UndoConfirmState) string { return string(st.Focus) }
 
 var undoKeyDialog = keyGoldenDialog{
-	name: "undo_confirm", rx: 12, ry: 9, rw: 56, rh: 6,
+	name: "undo_confirm",
 	setup: func(t *testing.T, dir string) *App {
 		app := newApp(t, newScreen(t, 80, 24), dir)
 		app.model.Message = ""
@@ -200,7 +169,7 @@ func TestUndoConfirmKeyScripts(t *testing.T) {
 func quitName(st dialog.QuitConfirmState) string { return string(st.Focus) }
 
 var quitKeyDialog = keyGoldenDialog{
-	name: "quit_confirm", rx: 15, ry: 9, rw: 50, rh: 6,
+	name: "quit_confirm",
 	setup: func(t *testing.T, dir string) *App {
 		app := newApp(t, newScreen(t, 80, 24), dir)
 		app.model.QuitConfirm = dialog.QuitConfirmState{Open: true, Focus: dialog.QuitStay}
@@ -252,7 +221,7 @@ func listingName(st dialog.ListingFormatDialogState) string {
 }
 
 var listingKeyDialog = keyGoldenDialog{
-	name: "listing_format", rx: 18, ry: 8, rw: 44, rh: 7,
+	name: "listing_format",
 	setup: func(t *testing.T, dir string) *App {
 		app := newApp(t, newScreen(t, 80, 24), dir)
 		app.model.ActivePanel = ui.PrimaryPanel
@@ -318,7 +287,7 @@ func compareFilterName(st dialog.CompareFilterDialogState) string {
 
 func compareFilterKeyDialog(name string, open func(app *App)) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 24, ry: 7, rw: 32, rh: 10,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""
@@ -395,7 +364,7 @@ type hostKeyReply = chan sftpHostKeyReply
 var hostKeyReplies = map[*App]hostKeyReply{}
 
 var hostKeyKeyDialog = keyGoldenDialog{
-	name: "hostkey", rx: 4, ry: 8, rw: 72, rh: 8,
+	name: "hostkey",
 	serial: true, // setup writes the shared hostKeyReplies map
 	setup: func(t *testing.T, dir string) *App {
 		app := newApp(t, newScreen(t, 80, 24), dir)
@@ -480,7 +449,7 @@ file = "echo meta"
 `
 
 var metaKeyDialog = keyGoldenDialog{
-	name: "meta", rx: 12, ry: 8, rw: 56, rh: 7,
+	name: "meta",
 	serial: true, // setup swaps the package-level externalEditorRunner
 	setup: func(t *testing.T, dir string) *App {
 		cfgDir := filepath.Join(dir, "config")
@@ -562,7 +531,7 @@ func stashName(st dialog.StashRestoreDialogState) string {
 }
 
 var stashKeyDialog = keyGoldenDialog{
-	name: "stash_restore", rx: 2, ry: 9, rw: 76, rh: 6,
+	name: "stash_restore",
 	setup: func(t *testing.T, dir string) *App {
 		harbor, orchard := filepath.Join(dir, "harbor.txt"), filepath.Join(dir, "orchard.txt")
 		for _, p := range []string{harbor, orchard} {
@@ -620,7 +589,7 @@ func TestStashRestoreKeyScripts(t *testing.T) {
 
 func dedupReturnKeyDialog(name string, scope []string) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 5, ry: 9, rw: 70, rh: 6,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""

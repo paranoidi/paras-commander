@@ -147,13 +147,8 @@ func findKeyOutcome(app *App, _ bool) string {
 // findKeyDialog opens find (or jump) on the fixture; withSelection selects a directory in the
 // panel first, which adds the search-only-selections checkbox row.
 func findKeyDialog(name string, jump, withSelection bool) keyGoldenDialog {
-	// The dialog is 76x18 on 80x24, one row taller with the selections row.
-	ry, rh := 3, 18
-	if withSelection {
-		ry, rh = 2, 19
-	}
 	return keyGoldenDialog{
-		name: name, rx: 2, ry: ry, rw: 76, rh: rh,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			findKeyFixture(t, dir)
 			app := newApp(t, newScreen(t, 80, 24), dir)

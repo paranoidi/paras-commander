@@ -78,7 +78,7 @@ func filterKeyState(app *App) string {
 
 func filterKeyDialog(name string, metas int) keyGoldenDialog {
 	d := keyGoldenDialog{
-		name: name, rx: 10, ry: 5, rw: 60, rh: 13,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			seedPatternFixtures(t, dir)
 			h := 24
@@ -102,9 +102,6 @@ func filterKeyDialog(name string, metas int) keyGoldenDialog {
 		outcome: func(app *App, _ bool) string {
 			return fmt.Sprintf("message=%q visible=%d", app.model.Message, app.model.Primary.VisibleEntryCount())
 		},
-	}
-	if metas > 0 {
-		d.rh = 14
 	}
 	return d
 }

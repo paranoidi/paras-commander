@@ -15,8 +15,7 @@ import (
 
 // Key-script goldens for the run-for-each dialog: the command form (files, directories and
 // worker pools variants) and its command-history picker. They use the harness of
-// simple_dialog_keys_golden_test.go with the dialog's own rect (dialogFrameRect). The dialog opens
-// on fixed fake entries (/srv/harbor/...) so previews never show a temp path; commands used with
+// simple_dialog_keys_golden_test.go. The dialog opens on fixed fake entries (/srv/harbor/...) so previews never show a temp path; commands used with
 // Enter are harmless (echo).
 
 // runForEachFocusName names the focused widget of the run-for-each dialog: f0 (the command), cb0
@@ -79,7 +78,6 @@ func runForEachDialogState(app *App) string {
 func runForEachKeyDialog(name string, dirs bool, pools []string, history, noEntries bool) keyGoldenDialog {
 	return keyGoldenDialog{
 		name: name,
-		rect: dialogFrameRect,
 		setup: func(t *testing.T, dir string) *App {
 			harbor := filepath.Join(dir, "harbor")
 			for _, d := range []string{"orchard", "meadow"} {

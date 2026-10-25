@@ -1,31 +1,4 @@
 == open ==
 focus=f0 phase=0 fields=["lantern.txt"@11/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
--- text --
-┌────────────────────────────── Rename ──────────────────────────────┐
-│ Name:                                                              │
-│ lantern.txt                                                        │
-│                                                                    │
-├────────────────────────────────────────────────────────────────────┤
-│ 󰄱 Focus after rename                                               │
-├────────────────────────────────────────────────────────────────────┤
-│                        [ OK ]    [ Cancel ]                        │
-└────────────────────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
-d fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
-e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aacccccccccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaeeefeeeeaaeeefeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Enter ==
 CLOSED: message="rename: new name is the same as the current name" jobs=[] files=anchor.txt,lantern.txt,meadow,orchard,willow.txt

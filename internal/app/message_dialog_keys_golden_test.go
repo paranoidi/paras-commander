@@ -7,12 +7,11 @@ import (
 )
 
 // Key-script goldens for the generic message dialog (harness of simple_dialog_keys_golden_test.go).
-// The dialog has a single OK button; the transcript shows the dialog rect only, because the panels
-// behind it show free disk space.
+// The dialog has a single OK button.
 
-func messageKeyDialog(name, title, msg string, rx, ry, rw, rh int) keyGoldenDialog {
+func messageKeyDialog(name, title, msg string) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: rx, ry: ry, rw: rw, rh: rh,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""
@@ -52,8 +51,8 @@ func messageScripts() []simpleKeyScript {
 
 func TestMessageDialogKeyScripts(t *testing.T) {
 	long := strings.Repeat("harbor lantern willow meadow ", 12)
-	runKeyGoldenScripts(t, messageKeyDialog("message_dialog", "Extract", "lantern failed", 24, 8, 32, 8), messageScripts())
-	runKeyGoldenScripts(t, messageKeyDialog("message_dialog_wrapped", "Theme failed", long, 2, 7, 76, 10), []simpleKeyScript{
+	runKeyGoldenScripts(t, messageKeyDialog("message_dialog", "Extract", "lantern failed"), messageScripts())
+	runKeyGoldenScripts(t, messageKeyDialog("message_dialog_wrapped", "Theme failed", long), []simpleKeyScript{
 		{"enter", "Enter"},
 		{"esc", "Esc"},
 		{"alt-o", "Alt+o"},
@@ -63,7 +62,7 @@ func TestMessageDialogKeyScripts(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		tall = append(tall, fmt.Sprintf("line %d willow", i))
 	}
-	runKeyGoldenScripts(t, messageKeyDialog("message_dialog_overflow", "Extract", strings.Join(tall, "\n"), 26, 1, 28, 22), []simpleKeyScript{
+	runKeyGoldenScripts(t, messageKeyDialog("message_dialog_overflow", "Extract", strings.Join(tall, "\n")), []simpleKeyScript{
 		{"enter", "Enter"},
 		{"swallowed", "Down PgDn End Tab Enter"},
 	})

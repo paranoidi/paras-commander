@@ -55,12 +55,8 @@ func historyKeyApp(t *testing.T, dir string, nHist, nZox int) *App {
 }
 
 func historyKeyDialog(name string, nHist, nZox int) keyGoldenDialog {
-	ry, rh := 3, 18 // the dialog only: the panels behind it show free disk space
-	if nZox > 0 {
-		ry, rh = 2, 19
-	}
 	return keyGoldenDialog{
-		name: name, rx: 1, ry: ry, rw: 78, rh: rh,
+		name: name,
 		setup: func(t *testing.T, dir string) *App { return historyKeyApp(t, dir, nHist, nZox) },
 		state: func(app *App) string {
 			st := app.model.HistoryDialog

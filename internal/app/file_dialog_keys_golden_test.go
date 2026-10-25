@@ -14,9 +14,8 @@ import (
 
 // Key-script goldens for the file dialog family: rename (and its Sanitize / Slugify / Encoding
 // screens), duplicate, mkdir, delete, chmod, chown, symlink and hardlink. They use the harness of
-// simple_dialog_keys_golden_test.go with the dialog's own rect (dialogFrameRect). Steps that would
-// show a temp path run silently ("!" tokens); link dialogs use relative paths, so nothing is ever
-// created outside the temp dir.
+// simple_dialog_keys_golden_test.go. Link dialogs use relative paths, so nothing is ever created
+// outside the temp dir.
 
 // fileFocusName names the focused widget of a file dialog: f0/f1 (inputs), opt0.. (the rows after
 // the inputs, or the options of a rename tool screen), ok / cancel (yes / no on the delete
@@ -87,7 +86,6 @@ func fileDialogState(app *App) string {
 func fileKeyDialog(name string, listing bool, open func(t *testing.T, app *App)) keyGoldenDialog {
 	return keyGoldenDialog{
 		name: name,
-		rect: dialogFrameRect,
 		setup: func(t *testing.T, dir string) *App {
 			harbor := filepath.Join(dir, "projects", "harbor")
 			for _, d := range []string{harbor, filepath.Join(harbor, "orchard"), filepath.Join(harbor, "meadow")} {

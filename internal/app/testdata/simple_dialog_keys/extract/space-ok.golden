@@ -1,106 +1,10 @@
 == open ==
 focus=f0 fields=["~/projects/meadow/"@18/0 pending=true dropdown=false/0] message="1 non-archive item(s) will be skipped."
--- text --
-┌───────────────────────────── Extract ──────────────────────────────┐
-│ Destination:                                                       │
-│ ~/projects/meadow/                                                 │
-│ 1 non-archive item(s) will be skipped.                             │
-├────────────────────────────────────────────────────────────────────┤
-│                        [ OK ]    [ Cancel ]                        │
-└────────────────────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x100000000 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-d fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
-e fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
-aaddddddddddddddddddedddddddddddddddddddddddddddddddddddddddddddddddaa
-aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == End ==
 focus=f0 fields=["~/projects/meadow/"@18/0 pending=false dropdown=false/0] message="1 non-archive item(s) will be skipped."
--- text --
-┌───────────────────────────── Extract ──────────────────────────────┐
-│ Destination:                                                       │
-│ ~/projects/meadow/                                                 │
-│ 1 non-archive item(s) will be skipped.                             │
-├────────────────────────────────────────────────────────────────────┤
-│                        [ OK ]    [ Cancel ]                        │
-└────────────────────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x100000000 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
-e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
-aaddddddddddddddddddedddddddddddddddddddddddddddddddddddddddddddddddaa
-aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == x ==
 focus=f0 fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] message="1 non-archive item(s) will be skipped."
--- text --
-┌───────────────────────────── Extract ──────────────────────────────┐
-│ Destination:                                                       │
-│ ~/projects/meadow/x                                                │
-│ 1 non-archive item(s) will be skipped.                             │
-├────────────────────────────────────────────────────────────────────┤
-│                        [ OK ]    [ Cancel ]                        │
-└────────────────────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x100000000 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-d fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
-e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
-aadddddddddddddddddddeddddddddddddddddddddddddddddddddddddddddddddddaa
-aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaafffgffffaafffgffffffffaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Down ==
 focus=ok fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] message="1 non-archive item(s) will be skipped."
--- text --
-┌───────────────────────────── Extract ──────────────────────────────┐
-│ Destination:                                                       │
-│ ~/projects/meadow/x                                                │
-│ 1 non-archive item(s) will be skipped.                             │
-├────────────────────────────────────────────────────────────────────┤
-│                        [ OK ]    [ Cancel ]                        │
-└────────────────────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-d fg=0x100000000 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
-g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
-aaddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaeeefeeeeaacccgccccccccaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Space ==
 CLOSED: jobs=0 messageDialog=true title="Extract" text="extract: destination \"~/projects/meadow/x\": stat ~/projects/meadow/x: no such file or directory (no such file or directory)" message=""

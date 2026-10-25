@@ -19,9 +19,6 @@ import (
 // the finished result. The cancel func counts how often Cancel killed the run. Path fixtures are
 // created in the temp dir and shown relative to it, so no absolute temp path reaches a golden.
 
-// cmdOutRect is the dialog on an 80x24 screen (64 wide, 14 tall, centered).
-const cmdOutRectX, cmdOutRectY, cmdOutRectW, cmdOutRectH = 8, 5, 64, 14
-
 var cmdOutCancels = map[*App]*int{}
 
 func cmdOutLines(n int) []string {
@@ -72,7 +69,7 @@ func cmdOutStdout(n int, withPaths bool) string {
 func cmdOutDialog(name, mode string, lines int, withPaths bool, exit int) keyGoldenDialog {
 	var workDir string // the temp dir of the script under test (scripts run one at a time)
 	return keyGoldenDialog{
-		name: name, rx: cmdOutRectX, ry: cmdOutRectY, rw: cmdOutRectW, rh: cmdOutRectH,
+		name: name,
 		serial: true, // setup writes workDir and the shared cmdOutCancels map
 		setup: func(t *testing.T, dir string) *App {
 			workDir = dir

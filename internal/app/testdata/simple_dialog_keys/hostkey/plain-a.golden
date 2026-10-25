@@ -1,56 +1,6 @@
 == open ==
 focus=accept
--- text --
-┌────────────────────────────── Host key ──────────────────────────────┐
-│ Unknown host key for:                                                │
-│ harbor.example.net:22                                                │
-│ Type: ssh-ed25519                                                    │
-│ SHA256: tulip+meadow/harbor+lantern=willow                           │
-├──────────────────────────────────────────────────────────────────────┤
-│                 [ Accept ]    [ Save ]    [ Reject ]                 │
-└──────────────────────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
-d fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
-e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaacccdccccccccaaeeefeeeeeeaaeeefeeeeeeeeaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Right ==
 focus=save
--- text --
-┌────────────────────────────── Host key ──────────────────────────────┐
-│ Unknown host key for:                                                │
-│ harbor.example.net:22                                                │
-│ Type: ssh-ed25519                                                    │
-│ SHA256: tulip+meadow/harbor+lantern=willow                           │
-├──────────────────────────────────────────────────────────────────────┤
-│                 [ Accept ]    [ Save ]    [ Reject ]                 │
-└──────────────────────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-d fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
-e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaacccdccccccccaaeeefeeeeeeaacccdccccccccaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == a ==
 CLOSED: decision=1 err=<nil>

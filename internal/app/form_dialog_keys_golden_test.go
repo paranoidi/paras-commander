@@ -16,9 +16,8 @@ import (
 
 // Key-script goldens for the single-input file dialogs outside the rename family: add bookmark,
 // the SFTP password prompt and archive extract. They use the harness of
-// simple_dialog_keys_golden_test.go with the dialog's own rect (dialogFrameRect). The dialogs open
-// on temp paths, so each setup rewrites the text the dialog shows to fixed words before the first
-// dump.
+// simple_dialog_keys_golden_test.go. The dialogs open on temp paths, so each setup rewrites the
+// text the dialog shows to fixed words before the first state is recorded.
 
 // formFocusName names the focused widget of a single-input file dialog: f0 (the input), ok,
 // cancel. It is the only code that knows how the state encodes focus.
@@ -50,7 +49,6 @@ func formDialogState(app *App) string {
 func formKeyDialog(name string, open func(t *testing.T, app *App, dir string), outcome func(app *App, dir string) string) keyGoldenDialog {
 	return keyGoldenDialog{
 		name: name,
-		rect: dialogFrameRect,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""
@@ -184,7 +182,7 @@ func TestSFTPPasswordKeyScripts(t *testing.T) {
 
 // openExtractOn opens the extract dialog on a panel holding two archives (empty files) and a text
 // file, all selected when note is true (so the dialog carries the skipped-items note), else only
-// the archives. The destination is rewritten to a "~" path under the temp home so the dump and the
+// the archives. The destination is rewritten to a "~" path under the temp home so the state and the
 // completion never depend on the temp dir name; Enter on it fails the plan (no such directory)
 // and shows the failure in a message dialog, so no job runs. The extract does not expand "~", so
 // the test runs from the temp dir: the relative path it resolves stays inside the sandbox.
@@ -271,8 +269,8 @@ func TestExtractKeyScripts(t *testing.T) {
 		{"alt-enter", "End x Alt+Enter"},
 		{"esc", "a Esc"},
 		{"esc-from-button", "Down Right Esc"},
-		{"dest-shortcut-active", "End !Shift+Left"},
-		{"dest-shortcut-inactive", "End !Shift+Right"},
+		{"dest-shortcut-active", "End Shift+Left"},
+		{"dest-shortcut-inactive", "End Shift+Right"},
 		{"dest-shortcuts-off-input", "Down Shift+Left Shift+Right"},
 		{"f-keys-ignored", "F2 F3 F4 F7 a"},
 		{"page-keys-ignored", "PgUp PgDn a"},

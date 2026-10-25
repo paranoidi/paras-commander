@@ -19,9 +19,6 @@ import (
 // directory (nofile: no config.toml yet; withfile: the default stub exists) and a fake external
 // editor that only counts its calls. Closing the dialog reports what it did to App.config.
 
-// configKeyRect is the dialog on an 80x30 screen (54 wide, 22 tall; the sub-confirms are 56 wide).
-const configKeyRectX, configKeyRectY, configKeyRectW, configKeyRectH = 12, 3, 56, 24
-
 var configKeyEditorCalls = map[*App]*int{}
 
 func configFocusName(st dialog.ConfigDialogState) string {
@@ -50,9 +47,9 @@ func configKeyState(app *App) string {
 	case st.ResetDefaultsConfirm:
 		return fmt.Sprintf("reset-confirm focus=%d", configConfirmIndex(st.ResetDefaultsConfirmFocus))
 	}
-	return fmt.Sprintf("focus=%s nerd=%v zoom=%v stacked=%v mouse=%v mode=%s bar=%s format=%d split=[%s|%s|%s] msg=%q",
+	return fmt.Sprintf("focus=%s nerd=%v zoom=%v stacked=%v mouse=%v mode=%s bar=%s format=%d split=[%s|%s|%s] cursors=[%d|%d|%d] msg=%q",
 		configFocusName(st), st.UseNerdfontIcons, st.ZoomActivePanel, st.PaneSplitStacked, st.Mouse, st.ScrollMode, st.PanelScrollbar, st.ListFormat,
-		st.Split[0].Value, st.Split[1].Value, st.Split[2].Value, app.model.Message)
+		st.Split[0].Value, st.Split[1].Value, st.Split[2].Value, st.Split[0].Cursor, st.Split[1].Cursor, st.Split[2].Cursor, app.model.Message)
 }
 
 func configKeyOutcome(app *App, quit bool) string {
@@ -65,7 +62,7 @@ func configKeyOutcome(app *App, quit bool) string {
 
 func configKeyDialog(name string, withFile bool) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: configKeyRectX, ry: configKeyRectY, rw: configKeyRectW, rh: configKeyRectH,
+		name: name,
 		serial: true, // setup swaps the package-level externalEditorRunner
 		setup: func(t *testing.T, dir string) *App {
 			cfgDir := filepath.Join(dir, "cfg")

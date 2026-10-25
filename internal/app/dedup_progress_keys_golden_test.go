@@ -23,9 +23,9 @@ func dedupProgressFocusName(app *App) string {
 	return fmt.Sprintf("focus=%d", idx)
 }
 
-func dedupProgressKeyDialog(name string, phase comparepkg.DedupPhase, ry, rh int) keyGoldenDialog {
+func dedupProgressKeyDialog(name string, phase comparepkg.DedupPhase) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 5, ry: ry, rw: 70, rh: rh,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""
@@ -66,7 +66,7 @@ func TestDedupProgressKeyScripts(t *testing.T) {
 		{"alt-enter-swallowed", "Alt+Enter Alt+x"},
 		{"home-end-pgdn", "Home End PgUp PgDn"},
 	}
-	runKeyGoldenScripts(t, dedupProgressKeyDialog("dedup_progress_walking", comparepkg.DedupWalking, 7, 10), common)
-	runKeyGoldenScripts(t, dedupProgressKeyDialog("dedup_progress_confirm", comparepkg.DedupAwaitConfirm, 7, 10), common)
-	runKeyGoldenScripts(t, dedupProgressKeyDialog("dedup_progress_hashing", comparepkg.DedupHashing, 6, 11), common)
+	runKeyGoldenScripts(t, dedupProgressKeyDialog("dedup_progress_walking", comparepkg.DedupWalking), common)
+	runKeyGoldenScripts(t, dedupProgressKeyDialog("dedup_progress_confirm", comparepkg.DedupAwaitConfirm), common)
+	runKeyGoldenScripts(t, dedupProgressKeyDialog("dedup_progress_hashing", comparepkg.DedupHashing), common)
 }

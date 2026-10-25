@@ -16,7 +16,7 @@ import (
 
 // Key-script goldens for the dialogs that mix text inputs with options and buttons. They use the
 // harness of simple_dialog_keys_golden_test.go: every script runs through App.handleKey, and the
-// transcript dumps the dialog rect after each key.
+// transcript records the dialog state after each key.
 
 // ---- elevate ----
 
@@ -28,7 +28,7 @@ func elevateName(st dialog.ElevateDialogState) string {
 
 func elevateKeyDialog(name string, req ops.PermissionRequest) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 8, ry: 5, rw: 64, rh: 13,
+		name: name,
 		serial: true, // setup writes the package-level elevateReply
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
@@ -141,7 +141,7 @@ func debounceName(st dialog.DebounceCalibrateDialogState) string {
 }
 
 var debounceKeyDialog = keyGoldenDialog{
-	name: "debounce_calibrate", rx: 11, ry: 4, rw: 58, rh: 15,
+	name: "debounce_calibrate",
 	setup: func(t *testing.T, dir string) *App {
 		app := newApp(t, newScreen(t, 80, 24), dir)
 		app.model.Message = ""
@@ -215,7 +215,7 @@ func flattenName(st dialog.FlattenDialogState) string {
 // dir path would change every run). dropdown preloads three completion candidates.
 func flattenKeyDialog(name string, dropdown bool) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 5, ry: 6, rw: 70, rh: 13,
+		name: name,
 		setup: func(t *testing.T, _ string) *App {
 			app, _, _ := flattenDialogTestSetup(t)
 			app.model.Message = ""
@@ -232,8 +232,8 @@ func flattenKeyDialog(name string, dropdown bool) keyGoldenDialog {
 		state: func(app *App) string {
 			st := app.model.FlattenDialog
 			c := st.Destination.Completion
-			return fmt.Sprintf("focus=%s dest=%q cursor=%d recursive=%v removeEmpty=%v dropdown=%v selected=%d",
-				flattenName(st), st.Destination.Value, st.Destination.Cursor, st.Recursive, st.RemoveEmpty, c.Open, c.Selected)
+			return fmt.Sprintf("focus=%s dest=%q cursor=%d pending=%v recursive=%v removeEmpty=%v dropdown=%v selected=%d",
+				flattenName(st), st.Destination.Value, st.Destination.Cursor, st.Destination.PrefillPending, st.Recursive, st.RemoveEmpty, c.Open, c.Selected)
 		},
 		open: func(app *App) bool { return app.model.FlattenDialog.Open },
 		outcome: func(app *App, _ bool) string {
@@ -328,7 +328,7 @@ func compareMergeName(st dialog.CompareMergeDialogState) string {
 
 func compareMergeKeyDialog(name string, primary, secondary string) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: 5, ry: 2, rw: 70, rh: 20,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""

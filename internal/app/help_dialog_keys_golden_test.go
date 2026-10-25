@@ -16,9 +16,6 @@ import (
 // files), the others name no action and leave the dialog open. The F2 text-editing page is built
 // from the real keymap and is not part of the goldens.
 
-// helpRect is the dialog on a 100x30 screen: 86 wide, 16 tall (10 list rows), centered.
-const helpRectX, helpRectY, helpRectW, helpRectH = 7, 7, 86, 16
-
 func helpKeyEntries(n int) []dialog.HelpEntry {
 	words := []string{"amber", "birch", "cinder", "dune", "ember", "fable", "glacier", "harbor", "ivory", "jasper"}
 	keys := []string{"F5", "Ctrl+Shift+Left", "Alt+O", "Insert", "Ctrl+Alt+PgDn", "F10", "Shift+F6", "Backspace"}
@@ -54,7 +51,7 @@ func helpFocusName(st dialog.HelpViewState) string {
 
 func helpKeyDialog(name string, entries int) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, rx: helpRectX, ry: helpRectY, rw: helpRectW, rh: helpRectH,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 100, 30), dir)
 			app.model.Message = ""

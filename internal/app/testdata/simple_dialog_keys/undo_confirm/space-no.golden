@@ -1,25 +1,4 @@
 == open ==
 focus=no
--- text --
-┌────────────────────── Undo job ──────────────────────┐
-│ Undo copy of 3 items to willow (5 steps)?            │
-│ Copied files are removed again.                      │
-├──────────────────────────────────────────────────────┤
-│                  [ Yes ]    [ No ]                   │
-└──────────────────────────────────────────────────────┘
--- legend --
-a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-c fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-d fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
-e fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
--- styles --
-aaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaacccdcccccaaeeefeeeeaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 == Space ==
 CLOSED: message=""
