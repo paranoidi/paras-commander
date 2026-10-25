@@ -103,9 +103,9 @@ func (h *Handler) PathPickerListRows() int {
 	return dialog.PathPickerListRows(h.host.LayoutForTerminalSize(termW, termH).Height)
 }
 
-// pathPickerView is the path picker's spec for the current terminal size, the one description
+// PathPickerView is the path picker's spec for the current terminal size, the one description
 // the renderer and the key handler share (the renderer adds the pinned / job marks resolver).
-func (h *Handler) pathPickerView() dlg.Spec {
+func (h *Handler) PathPickerView() dlg.Spec {
 	termW, termH := h.screen.Size()
 	return dialog.PathPickerView(h.model.PathPicker, h.host.LayoutForTerminalSize(termW, termH), h.host.Styles(), h.model.PanelScrollbar, nil)
 }
@@ -182,7 +182,7 @@ func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	ev, ok := dlg.HandleKey(h.pathPickerView(), &st.Focus, event)
+	ev, ok := dlg.HandleKey(h.PathPickerView(), &st.Focus, event)
 	switch {
 	case !ok:
 		if st.Focus == dialog.PathPickerFilter {

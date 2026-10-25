@@ -200,7 +200,7 @@ func TestPlaceClampsAndTruncates(t *testing.T) {
 	}
 }
 
-func TestHitTestAndClick(t *testing.T) {
+func TestHitTestAndTargetAt(t *testing.T) {
 	spec := testSpec()
 	p, _ := Place(80, 24, spec)
 	hit := func(x, y int) ID {
@@ -219,17 +219,16 @@ func TestHitTestAndClick(t *testing.T) {
 		}
 	}
 
-	focus := ID("a0")
-	ev, ok := Click(spec, 80, 24, &focus, 22, 11)
-	if !ok || ev.ID != "c0" || focus != "c0" {
-		t.Fatalf("click checkbox: got (%q, %v, focus %q)", ev.ID, ok, focus)
+	tg, ok := TargetAt(spec, 80, 24, 22, 11)
+	if !ok || tg.ID != "c0" || tg.Kind != TargetOption || tg.Focus != "c0" {
+		t.Fatalf("checkbox target: got (%+v, %v)", tg, ok)
 	}
-	ev, ok = Click(spec, 80, 24, &focus, 45, 14)
-	if !ok || ev.ID != Cancel || focus != Cancel {
-		t.Fatalf("click Cancel: got (%q, %v, focus %q)", ev.ID, ok, focus)
+	tg, ok = TargetAt(spec, 80, 24, 45, 14)
+	if !ok || tg.ID != Cancel || tg.Kind != TargetButton {
+		t.Fatalf("Cancel target: got (%+v, %v)", tg, ok)
 	}
-	if _, ok := Click(spec, 80, 24, &focus, 20, 8); ok || focus != Cancel {
-		t.Fatalf("click on border should miss and keep focus, focus=%q ok=%v", focus, ok)
+	if _, ok := TargetAt(spec, 80, 24, 20, 8); ok {
+		t.Fatal("the border is no target")
 	}
 }
 
@@ -340,12 +339,11 @@ func TestLabelsAreNotHitTargets(t *testing.T) {
 	if id, ok := HitTest(p, 22, 9); !ok || id != "r0" {
 		t.Errorf("radio row hit = %q %v, want r0", id, ok)
 	}
-	focus := ID("r1")
-	if _, ok := Click(spec, 80, 24, &focus, 22, 10); ok || focus != "r1" {
-		t.Errorf("click on a label: focus %q ok=%v, want a miss that keeps focus", focus, ok)
+	if _, ok := TargetAt(spec, 80, 24, 22, 10); ok {
+		t.Error("a label is no target")
 	}
-	if ev, ok := Click(spec, 80, 24, &focus, 22, 11); !ok || ev.ID != "r1" {
-		t.Errorf("click on radio below the label = (%q, %v), want r1", ev.ID, ok)
+	if tg, ok := TargetAt(spec, 80, 24, 22, 11); !ok || tg.ID != "r1" {
+		t.Errorf("radio below the label = (%+v, %v), want r1", tg, ok)
 	}
 }
 
@@ -506,9 +504,8 @@ func TestSeparatorsAreNotFocusableOrHitTargets(t *testing.T) {
 			}
 		}
 	}
-	focus := ID("repl")
-	if _, ok := Click(spec, 80, 24, &focus, 30, 10); ok || focus != "repl" {
-		t.Errorf("click on a separator: focus %q ok=%v, want a miss that keeps focus", focus, ok)
+	if _, ok := TargetAt(spec, 80, 24, 30, 10); ok {
+		t.Error("a separator is no target")
 	}
 	for from, want := range map[ID]ID{"repl": "c0", "c0": "r0", "r0": OK} {
 		f := from
@@ -602,22 +599,27 @@ func TestInputKeyContract(t *testing.T) {
 	}
 }
 
-func TestInputClick(t *testing.T) {
+func TestInputTarget(t *testing.T) {
 	spec := inputSpec()
-	focus := ID("c0")
-	ev, ok := Click(spec, 80, 24, &focus, 22+5, 9) // 5 cells into the second input, which is empty
-	if !ok || ev.ID != "repl" || ev.Col != 5 || focus != "repl" {
-		t.Fatalf("click input: got (%+v, %v, focus %q), want repl with Col 5", ev, ok, focus)
+	tg, ok := TargetAt(spec, 80, 24, 22+5, 9) // 5 cells into the second input, which is empty
+	if !ok || tg.ID != "repl" || tg.Kind != TargetInput || tg.TextCol != 5 || tg.Focus != "repl" {
+		t.Fatalf("input target: got (%+v, %v), want repl with TextCol 5", tg, ok)
 	}
-	if ev, ok := Click(spec, 80, 24, &focus, 22, 8); !ok || ev.ID != "find" || ev.Col != 0 {
-		t.Fatalf("click first cell: got (%+v, %v)", ev, ok)
+	if tg, ok := TargetAt(spec, 80, 24, 22, 8); !ok || tg.ID != "find" || tg.TextCol != 0 {
+		t.Fatalf("first cell: got (%+v, %v)", tg, ok)
 	}
-	if ev, ok := Click(spec, 80, 24, &focus, 57, 8); !ok || ev.Col != 35 {
-		t.Fatalf("click last cell: got (%+v, %v), want Col 35", ev, ok)
+	if tg, ok := TargetAt(spec, 80, 24, 57, 8); !ok || tg.TextCol != 35 {
+		t.Fatalf("last cell: got (%+v, %v), want TextCol 35", tg, ok)
 	}
-	// Other widgets report no column.
-	if ev, _ := Click(spec, 80, 24, &focus, 22, 11); ev.ID != "c0" || ev.Col != 0 {
-		t.Fatalf("click checkbox = %+v", ev)
+	// A leading icon (plus its space) comes before the text, and a scrolled input adds its Scroll.
+	icon := inputSpec()
+	icon.Groups[0].Columns[0][1].LeadingIcon = ">"
+	icon.Groups[0].Columns[0][1].Scroll = 4
+	if tg, ok := TargetAt(icon, 80, 24, 22+5, 8); !ok || tg.TextCol != 3+4 {
+		t.Fatalf("icon input: got (%+v, %v), want TextCol 7", tg, ok)
+	}
+	if tg, _ := TargetAt(icon, 80, 24, 22, 8); tg.TextCol != 4 {
+		t.Fatalf("click on the icon: TextCol %d, want the first visible character 4", tg.TextCol)
 	}
 	for _, miss := range [][2]int{{21, 8}, {58, 8}} { // the margins around the input
 		if id, hit := HitTest(mustPlace(t, spec), miss[0], miss[1]); hit {

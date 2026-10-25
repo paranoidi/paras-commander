@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
@@ -511,6 +512,16 @@ func (m *Model) GroupSelectOverOutput() bool {
 	return m.GroupSelect.Open && m.GroupSelect.Context == "output"
 }
 
+// DedupReturnSpec is the "kept results" dialog's spec, summarizing the active duplicate groups.
+func DedupReturnSpec(model *Model) dlg.Spec {
+	groups := DedupActiveGroups(model.DedupSnapshot, model.DedupView)
+	var wasted int64
+	for _, g := range groups {
+		wasted += g.Size * int64(len(g.Files)-1)
+	}
+	return dialog.DedupReturnView(model.DedupReturnDialog, model.DedupSnapshot.Root.String(), len(groups), wasted, model.UserHomeDir)
+}
+
 // ModalDialogOpen reports modals that block normal navigation and hide the menu bar row.
 func (m *Model) ModalDialogOpen() bool {
 	return m.LeaderMenu.Open || m.nonLeaderModalOpen()
@@ -944,12 +955,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawDedupProgressDialog(screen, layout, model.DedupProgressDialog, model.DedupSnapshot, styles, model.UserHomeDir)
 	}
 	if model.DedupReturnDialog.Open {
-		groups := DedupActiveGroups(model.DedupSnapshot, model.DedupView)
-		var wasted int64
-		for _, g := range groups {
-			wasted += g.Size * int64(len(g.Files)-1)
-		}
-		dialog.DrawDedupReturnDialog(screen, layout, model.DedupReturnDialog, model.DedupSnapshot.Root.String(), len(groups), wasted, styles, model.UserHomeDir)
+		dialog.DrawDedupReturnDialog(screen, layout, model.DedupReturnDialog, styles, DedupReturnSpec(&model))
 	}
 	if model.CommandOutputDialog.Open {
 		active := model.Primary

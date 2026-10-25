@@ -167,7 +167,7 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	ev, ok := dlg.HandleKey(dialog.PreviewSettingsDialogView(*st), &st.Focus, event)
+	ev, ok := dlg.HandleKey(a.previewSettingsView(), &st.Focus, event)
 	switch {
 	case !ok:
 	case ev.ID == dlg.OK:
@@ -177,4 +177,9 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 	default:
 		st.Apply(ev)
 	}
+}
+
+// previewSettingsView is the Preview settings dialog's spec as drawn.
+func (a *App) previewSettingsView() dlg.Spec {
+	return dialog.PreviewSettingsDialogView(a.model.PreviewSettingsDialog, dlg.MarkerWidth(a.styles))
 }

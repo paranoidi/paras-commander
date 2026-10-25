@@ -51,7 +51,7 @@ func previewRadioItems(radios []PreviewSettingsDialogRadio, selected string, id 
 // PreviewSettingsDialogView is the preview settings dialog's widget spec: the three capability
 // rows (a label and its auto / yes / no radios on one row, each row a Tab stop), the Active
 // protocol and Image metadata radio groups and the Video metadata checkbox.
-func PreviewSettingsDialogView(s PreviewSettingsDialogState) dlg.Spec {
+func PreviewSettingsDialogView(s PreviewSettingsDialogState, markerWidth int) dlg.Spec {
 	values := map[string]string{PreviewSixel: s.Sixel, PreviewKitty: s.Kitty, PreviewPlaceholder: s.KittyPlaceholder}
 	caps := []dlg.Item{{Kind: dlg.KindLabel, Label: "Confirm terminal capabilities:"}}
 	for seg, row := range previewCapabilityRows {
@@ -74,6 +74,7 @@ func PreviewSettingsDialogView(s PreviewSettingsDialogState) dlg.Spec {
 	metadata = append(metadata, dlg.Item{Kind: dlg.KindSeparator})
 	return dlg.Spec{
 		Title: "Preview settings", Width: 46, MinWidth: 42, Unclamped: true, PlainButtonKeys: true,
+		MarkerWidth: markerWidth, // the capability rows follow the theme's marker icons (dlg.MarkerWidth)
 		Groups: []dlg.Group{
 			{Columns: [][]dlg.Item{caps}},
 			{Columns: [][]dlg.Item{protocol}},

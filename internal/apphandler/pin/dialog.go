@@ -22,9 +22,9 @@ func (h *Handler) listRows() int {
 	return dialog.PinDialogListRows(layout.Height)
 }
 
-// dialogView is the Pin dialog's spec for the current terminal size, the one description the
+// DialogView is the Pin dialog's spec for the current terminal size, the one description the
 // renderer and the key handler share.
-func (h *Handler) dialogView() dlg.Spec {
+func (h *Handler) DialogView() dlg.Spec {
 	termW, termH := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(termW, termH)
 	return dialog.PinDialogView(h.model.PinDialog, ui.PinDialogItems(h.model.PinnedItems), layout, h.host.Styles(), h.model.PanelScrollbar)
@@ -252,7 +252,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	}
 	st := &h.model.PinDialog
 	focus := dialog.PinFilter
-	switch ev, ok := dlg.HandleKey(h.dialogView(), &focus, event); {
+	switch ev, ok := dlg.HandleKey(h.DialogView(), &focus, event); {
 	case !ok:
 		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, h.queryWidth(), func() {
 			h.SyncDialogRanks()

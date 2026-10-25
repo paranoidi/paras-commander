@@ -344,7 +344,7 @@ func (h *Handler) MassRenameClampFocusAfterModeChange(prev dialog.MassRenameMode
 	if d.MassRenameMode == prev || d.Focus == "" {
 		return
 	}
-	if dlg.Focused(h.fileDialogSpec(), d.Focus) != d.Focus {
+	if dlg.Focused(h.FileDialogSpec(), d.Focus) != d.Focus {
 		d.Focus = dialog.MassRenameOptShowModified
 	}
 }

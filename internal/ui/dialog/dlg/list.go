@@ -101,28 +101,3 @@ func activation(spec Spec, id ID) Event {
 	}
 	return Event{ID: id}
 }
-
-// Scroll scrolls the list named id by delta rows (positive = down), for the mouse wheel. The
-// viewport moves and the cursor is pulled to stay inside it; with CenterScroll, whose viewport
-// follows the cursor, the cursor itself moves by delta. Focus is not touched. ok is false when
-// id is not a list, the list is empty or the viewport cannot move that way.
-func Scroll(spec Spec, id ID, delta int) (Event, bool) {
-	it, found := listByID(spec, id)
-	n := len(it.Rows)
-	if !found || n == 0 || delta == 0 {
-		return Event{}, false
-	}
-	cursor := min(max(it.Cursor, 0), n-1)
-	if it.CenterScroll {
-		next := filterlist.ClampedDelta(cursor, n, delta)
-		return listMove(it, next), next != cursor
-	}
-	off := it.ViewOffset()
-	next := min(max(off+delta, 0), max(n-it.Height, 0))
-	if next == off {
-		return Event{}, false
-	}
-	it.Offset = next
-	it.Cursor = min(max(cursor, next), min(next+it.Height-1, n-1))
-	return Event{ID: id, Kind: EventListMove, Index: it.Cursor, Offset: next}, true
-}

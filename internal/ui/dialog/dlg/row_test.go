@@ -189,7 +189,7 @@ func TestRowNarrowsGapsBeforeClipping(t *testing.T) {
 	}
 }
 
-func TestRowHitRectsAndClick(t *testing.T) {
+func TestRowHitRectsAndTargetAt(t *testing.T) {
 	spec := rowSpec()
 	p := mustPlace(t, spec)
 	y := p.Rect.Y + 3 // the keel row
@@ -211,10 +211,8 @@ func TestRowHitRectsAndClick(t *testing.T) {
 			t.Errorf("HitTest(%d,%d) = (%q,%v), want (%q,%v)", c.x, y, id, ok, c.want, c.hit)
 		}
 	}
-	focus := ID("")
-	ev, ok := Click(spec, 80, 24, &focus, 43, y)
-	if !ok || ev.ID != "keel-yes" || focus != "keel-yes" {
-		t.Errorf("Click on a cell = (%q,%v) focus %q, want keel-yes", ev.ID, ok, focus)
+	if tg, ok := TargetAt(spec, 80, 24, 43, y); !ok || tg.ID != "keel-yes" || tg.Kind != TargetOption {
+		t.Errorf("TargetAt on a cell = (%+v,%v), want keel-yes", tg, ok)
 	}
 }
 

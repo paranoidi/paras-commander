@@ -8,9 +8,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// fileDialogSpec is the widget spec of the open file dialog, built for the current
+// FileDialogSpec is the widget spec of the open file dialog, built for the current
 // screen.
-func (h *Handler) fileDialogSpec() dlg.Spec {
+func (h *Handler) FileDialogSpec() dlg.Spec {
 	w, ht := h.screen.Size()
 	return dialog.FileDialogView(h.model.FileDialog, dialog.FileDialogViewContext{
 		Layout:   h.host.LayoutForTerminalSize(w, ht),
@@ -95,7 +95,7 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 	case d.DialogType == dialog.FileDialogMassRename && massRenamePickerPhaseOpen(d.MassRenamePhase):
 		return h.handleMassRenamePickerKey(event)
 	}
-	spec := h.fileDialogSpec()
+	spec := h.FileDialogSpec()
 	apply := func() bool {
 		ev, ok := dlg.HandleKey(spec, &d.Focus, event)
 		if ok {

@@ -453,34 +453,3 @@ func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, 
 	}
 	return Event{}, false
 }
-
-// Click focuses the widget under (x, y) and activates it like Space. ok is false on a miss. A click
-// on a list row focuses the list and returns an EventListMove to that row (rows past the last
-// row are misses); on an input it returns the clicked column.
-func Click(spec Spec, screenW, screenH int, focus *ID, x, y int) (Event, bool) {
-	p, placed := Place(screenW, screenH, spec)
-	if !placed {
-		return Event{}, false
-	}
-	id, hit := HitTest(p, x, y)
-	if !hit {
-		return Event{}, false
-	}
-	*focus = id
-	ev := Event{ID: id}
-	if it, ok := p.Item(id); ok {
-		switch it.Kind {
-		case KindInput:
-			ev.Col = x - it.Rect.X
-		case KindList:
-			// The caller decides whether a click also activates the row.
-			if list, ok := listByID(spec, id); ok {
-				if driver, ok := driverOf(spec, id); ok && list.Driven {
-					*focus = driver // a driven list has no focus of its own
-				}
-				ev = listMove(list, it.Offset+(y-it.Rect.Y))
-			}
-		}
-	}
-	return ev, true
-}

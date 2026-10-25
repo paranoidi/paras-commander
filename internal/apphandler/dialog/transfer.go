@@ -190,6 +190,11 @@ func (h *Handler) applyCopyDefaults(st *dialog.TransferDialogState) {
 
 // transferViewContext is what dialog.TransferView needs besides the state: the screen layout, the
 // home directory and the icon lead of the preview rows.
+// TransferDialogSpec is the open transfer dialog's widget spec for the current screen.
+func (h *Handler) TransferDialogSpec() dlg.Spec {
+	return dialog.TransferView(h.model.TransferDialog, h.transferViewContext())
+}
+
 func (h *Handler) transferViewContext() dialog.TransferViewContext {
 	w, ht := h.screen.Size()
 	return dialog.TransferViewContext{
@@ -219,7 +224,7 @@ func (h *Handler) applyTransferEvent(ev dlg.Event) {
 // destination's cursor keys; then the widget engine; and what it declines is text editing.
 func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 	d := &h.model.TransferDialog
-	spec := dialog.TransferView(*d, h.transferViewContext())
+	spec := h.TransferDialogSpec()
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		prev := d.Focus
 		if ev, ok := dlg.HandleKey(spec, &d.Focus, event); ok {

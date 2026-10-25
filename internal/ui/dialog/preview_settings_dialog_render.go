@@ -49,7 +49,5 @@ func PreviewSettingsDialogCapabilityRadios() []PreviewSettingsDialogRadio {
 // DrawPreviewSettingsDialog renders the M-F3 preview settings modal from its widget spec (see
 // PreviewSettingsDialogView).
 func DrawPreviewSettingsDialog(screen tcell.Screen, layout Layout, state PreviewSettingsDialogState, styles theme.Theme) {
-	spec := PreviewSettingsDialogView(state)
-	spec.MarkerWidth = dlg.MarkerWidth(styles) // the capability rows follow the theme's marker icons
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
+	dlg.Draw(screen, layout.Width, layout.Height, PreviewSettingsDialogView(state, dlg.MarkerWidth(styles)), state.Focus, styles)
 }

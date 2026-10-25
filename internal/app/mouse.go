@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -16,9 +17,23 @@ type mouseState struct {
 	// buttons is the button mask of the previous event; tcell repeats the held buttons on every
 	// drag report, so a press is only the bits that were not set before.
 	buttons tcell.ButtonMask
-	// lastPanel/lastRow/lastAt identify the previous left press for double-click detection.
-	lastPanel, lastRow int
-	lastAt             time.Time
+	// lastTarget/lastRow/lastAt identify the previous left press for double-click detection.
+	lastTarget string
+	lastRow    int
+	lastAt     time.Time
+}
+
+// doubleClick records a left press on row of target and reports whether it completes a double
+// click: the previous press hit the same row within config.MouseDoubleClickMS. A third press
+// starts a new pair.
+func (m *mouseState) doubleClick(target string, row int) bool {
+	double := m.lastTarget == target && m.lastRow == row &&
+		time.Since(m.lastAt) <= config.MouseDoubleClickMS*time.Millisecond
+	m.lastTarget, m.lastRow, m.lastAt = target, row, time.Now()
+	if double {
+		m.lastAt = time.Time{}
+	}
+	return double
 }
 
 // applyMouseConfig switches terminal mouse reporting to match [ui].mouse.
@@ -103,9 +118,9 @@ func (a *App) setCursorByMouse(row int) {
 }
 
 // handleMouse handles one mouse event. The footer, the menu bar and its pulldown take clicks in
-// every mode that shows them; the browser panels react in normal mode and the Jobs, Commands and
-// Messages lists in their views. Everything else (other panes and views, dialogs, the quick
-// filter) swallows mouse input.
+// every mode that shows them; the browser panels react in normal mode, the Jobs, Commands and
+// Messages lists in their views, and the top-most dlg dialog in every other mode
+// (handleDialogMouse). Everything else (other panes and views, the quick filter) swallows it.
 func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	buttons := ev.Buttons()
 	pressed := buttons &^ a.mouse.buttons
@@ -125,7 +140,7 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 			return false, false
 		}
 	default:
-		return false, false
+		return a.handleDialogMouse(x, y, buttons, pressed)
 	}
 	id, row, ok := a.mouseHit(x, y)
 	if !ok {
@@ -149,13 +164,9 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 			return false, true
 		}
 		a.setCursorByMouse(row)
-		double := a.mouse.lastPanel == id && a.mouse.lastRow == row &&
-			time.Since(a.mouse.lastAt) <= config.MouseDoubleClickMS*time.Millisecond
-		a.mouse.lastPanel, a.mouse.lastRow, a.mouse.lastAt = id, row, time.Now()
-		if !double {
+		if !a.mouse.doubleClick(fmt.Sprintf("panel:%d", id), row) {
 			return false, true
 		}
-		a.mouse.lastAt = time.Time{} // a third press starts a new pair
 		return a.finishResolvedKeyboardAction(keymap.ActionNavOpen)
 	case pressed&tcell.Button2 != 0: // tcell: Button2 is the right button
 		a.focusPanelByMouse(id)

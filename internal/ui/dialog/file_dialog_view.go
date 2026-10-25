@@ -300,15 +300,20 @@ func (st *FileDialogState) Apply(ev dlg.Event) {
 // SpecFocus is the focused widget of the screen FileDialogView describes: the form's Focus, or the
 // open picker sub-screen's own.
 func (st FileDialogState) SpecFocus() dlg.ID {
+	return *st.SpecFocusRef()
+}
+
+// SpecFocusRef is the field SpecFocus reads, for callers that move focus.
+func (st *FileDialogState) SpecFocusRef() *dlg.ID {
 	switch {
 	case st.DialogType == FileDialogRunForEach && st.RunForEachHistoryOpen:
-		return st.RunForEachHistoryPicker.Focus
+		return &st.RunForEachHistoryPicker.Focus
 	case st.DialogType == FileDialogMassRename && st.MassRenamePhase == MassRenamePhaseHistoryPicker:
-		return st.MassRenameHistoryPicker.Focus
+		return &st.MassRenameHistoryPicker.Focus
 	case st.DialogType == FileDialogMassRename && MassRenamePickerPhase(st.MassRenamePhase):
-		return st.MassRenameLoadPicker.Focus
+		return &st.MassRenameLoadPicker.Focus
 	}
-	return st.Focus
+	return &st.Focus
 }
 
 // drawFileDialogSpec paints a file dialog: the spec, then what lives in reserved

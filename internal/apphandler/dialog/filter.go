@@ -193,8 +193,8 @@ func (h *Handler) filterSpec() panel.FilterSpec {
 	return spec
 }
 
-// filterDialogView is the Filter dialog's widget spec for the current terminal size.
-func (h *Handler) filterDialogView() dlg.Spec {
+// FilterDialogView is the Filter dialog's widget spec for the current terminal size.
+func (h *Handler) FilterDialogView() dlg.Spec {
 	termW, termH := h.screen.Size()
 	return dialog.FilterDialogView(h.model.FilterDialog, dialog.Layout{Width: termW, Height: termH}, h.host.Styles())
 }
@@ -289,7 +289,7 @@ func (h *Handler) confirmFilterDialogFromInput() {
 // text editing runs when the engine declines a key.
 func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 	fd := &h.model.FilterDialog
-	ev, ok := dlg.HandleKey(h.filterDialogView(), &fd.Focus, event)
+	ev, ok := dlg.HandleKey(h.FilterDialogView(), &fd.Focus, event)
 	switch {
 	case !ok:
 		h.editFilterPattern(event)

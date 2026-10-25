@@ -281,7 +281,7 @@ func TestInputDrivesList(t *testing.T) {
 	}
 }
 
-func TestListClickAndHitRects(t *testing.T) {
+func TestListTargetAndHitRects(t *testing.T) {
 	spec := listOnlySpec(listItem(3, 1, 0, 6))
 	p := mustPlace(t, spec)
 	it, _ := p.Item("hosts")
@@ -291,14 +291,12 @@ func TestListClickAndHitRects(t *testing.T) {
 			t.Errorf("row %d: HitTest = (%q, %v), want hit=%v", row, id, hit, want)
 		}
 	}
-	focus := OK
-	ev, ok := Click(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+2)
-	if !ok || ev.Kind != EventListMove || ev.ID != "hosts" || ev.Index != 2 || focus != "hosts" {
-		t.Errorf("click row 2: (%+v, %v) focus %q", ev, ok, focus)
+	tg, ok := TargetAt(spec, 80, 24, it.Rect.X+1, it.Rect.Y+2)
+	if !ok || tg.Kind != TargetList || tg.ID != "hosts" || tg.Focus != "hosts" || tg.Row != 2 || tg.Cursor != 1 {
+		t.Errorf("row 2: (%+v, %v)", tg, ok)
 	}
-	focus = OK
-	if ev, ok := Click(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+4); ok || ev != (Event{}) || focus != OK {
-		t.Errorf("click past the last row: (%+v, %v) focus %q, want a miss", ev, ok, focus)
+	if tg, ok := TargetAt(spec, 80, 24, it.Rect.X+1, it.Rect.Y+4); ok {
+		t.Errorf("past the last row: (%+v, %v), want a miss", tg, ok)
 	}
 	// A scrolled list maps the clicked line to the row at that line.
 	long := listOnlySpec(listItem(30, 12, 7, 6))
@@ -307,9 +305,8 @@ func TestListClickAndHitRects(t *testing.T) {
 	if lit.Offset != 7 {
 		t.Fatalf("placed offset = %d, want 7", lit.Offset)
 	}
-	ev, ok = Click(long, 80, 24, &focus, lit.Rect.X, lit.Rect.Y+3)
-	if !ok || ev.Index != 10 || ev.Offset != 7 {
-		t.Errorf("click on scrolled list: (%+v, %v), want index 10 offset 7", ev, ok)
+	if tg, ok = TargetAt(long, 80, 24, lit.Rect.X, lit.Rect.Y+3); !ok || tg.Row != 10 || tg.Cursor != 12 {
+		t.Errorf("scrolled list: (%+v, %v), want row 10 cursor 12", tg, ok)
 	}
 }
 
@@ -332,17 +329,11 @@ func TestDrivenList(t *testing.T) {
 	if focus != "filter" {
 		t.Errorf("down in the driving input moved focus to %q", focus)
 	}
-	// A click on a row focuses the driving input and moves the list cursor.
+	// A row of a driven list gives focus to the driving input.
 	p := mustPlace(t, spec)
 	it, _ := p.Item("hosts")
-	focus = OK
-	ev, ok := Click(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+2)
-	if !ok || ev.Kind != EventListMove || ev.ID != "hosts" || ev.Index != 2 || focus != "filter" {
-		t.Errorf("click on driven list: (%+v, %v) focus %q, want ListMove 2 and focus filter", ev, ok, focus)
-	}
-	// The wheel reaches it too.
-	if ev, ok := Scroll(spec, "hosts", 2); !ok || ev.ID != "hosts" {
-		t.Errorf("scroll driven list: (%+v, %v)", ev, ok)
+	if tg, ok := TargetAt(spec, 80, 24, it.Rect.X+1, it.Rect.Y+2); !ok || tg.Kind != TargetList || tg.ID != "hosts" || tg.Row != 2 || tg.Focus != "filter" {
+		t.Errorf("driven list target: (%+v, %v), want row 2 and focus filter", tg, ok)
 	}
 }
 
@@ -371,51 +362,6 @@ func TestRowCellInputDrivesList(t *testing.T) {
 	focus = "depth"
 	if ev, _ := HandleKey(spec, &focus, key(tcell.KeyDown)); ev.Kind == EventListMove {
 		t.Errorf("down in the depth cell moved the list: %+v", ev)
-	}
-}
-
-func TestListScroll(t *testing.T) {
-	spec := listOnlySpec(listItem(30, 12, 10, 6))
-	for _, c := range []struct {
-		name          string
-		delta         int
-		wantOK        bool
-		index, offset int
-	}{
-		{"wheel down", 3, true, 13, 13},
-		{"cursor pulled to the top edge", 9, true, 19, 19},
-		{"wheel up keeps a visible cursor", -1, true, 12, 9},
-		{"wheel up pulls the cursor to the bottom edge", -7, true, 8, 3},
-		{"clamped at the end", 99, true, 24, 24},
-		{"zero", 0, false, 0, 0},
-	} {
-		ev, ok := Scroll(spec, "hosts", c.delta)
-		if ok != c.wantOK {
-			t.Errorf("%s: ok = %v, want %v", c.name, ok, c.wantOK)
-			continue
-		}
-		if ok && (ev.Kind != EventListMove || ev.ID != "hosts" || ev.Index != c.index || ev.Offset != c.offset) {
-			t.Errorf("%s: %+v, want index %d offset %d", c.name, ev, c.index, c.offset)
-		}
-	}
-	top := listOnlySpec(listItem(30, 0, 0, 6))
-	if _, ok := Scroll(top, "hosts", -3); ok {
-		t.Error("scrolling up at the top reported movement")
-	}
-	if _, ok := Scroll(listOnlySpec(listItem(4, 0, 0, 6)), "hosts", 2); ok {
-		t.Error("scrolling a list that fits reported movement")
-	}
-	if _, ok := Scroll(spec, "nope", 1); ok {
-		t.Error("scrolling an unknown id reported movement")
-	}
-	if _, ok := Scroll(spec, OK, 1); ok {
-		t.Error("scrolling a button reported movement")
-	}
-	centered := listItem(30, 12, 0, 6)
-	centered.CenterScroll = true
-	ev, ok := Scroll(listOnlySpec(centered), "hosts", 4)
-	if !ok || ev.Index != 16 || ev.Offset != 13 {
-		t.Errorf("centered scroll: (%+v, %v), want index 16 offset 13", ev, ok)
 	}
 }
 

@@ -217,7 +217,7 @@ func TestDedupReturnGoldenRender(t *testing.T) {
 	add := func(w, h int, scope, focus string) {
 		st := dedupReturnGoldenState(scope, focus)
 		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_scope-%s_focus-%s", w, h, scope, focus), w, h, func(s tcell.Screen, l Layout) {
-			DrawDedupReturnDialog(s, l, st, "/home/user/orchard/meadow", 12, 3<<20, asciiDialogStyles(), "/home/user")
+			DrawDedupReturnDialog(s, l, st, asciiDialogStyles(), DedupReturnView(st, "/home/user/orchard/meadow", 12, 3<<20, "/home/user"))
 		}})
 	}
 	for _, scope := range []string{"none", "one", "many"} {

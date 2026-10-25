@@ -3,12 +3,17 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -389,5 +394,132 @@ func TestMouseCommandsListClickSelectsEntry(t *testing.T) {
 	click(app, x, y, tcell.Button1)
 	if app.model.CommandsView.Selected != 0 {
 		t.Fatalf("selected=%d want 0 (oldest, bottom row)", app.model.CommandsView.Selected)
+	}
+}
+
+func TestMouseDialogOptionsAndOK(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openSortDialog()
+	x, y := screenTextCell(t, app, "Extension")
+	click(app, x, y+1, tcell.Button1) // Size, the row below (the panel header also says Size)
+	if app.model.SortDialog.SortMode != panel.SortSize {
+		t.Fatalf("radio click: mode=%v want size", app.model.SortDialog.SortMode)
+	}
+	x, y = screenTextCell(t, app, "Reverse")
+	click(app, x, y, tcell.Button1)
+	if !app.model.SortDialog.SortReverse {
+		t.Fatal("checkbox click did not toggle Reverse")
+	}
+	x, y = screenTextCell(t, app, "[ OK ]")
+	click(app, x+2, y, tcell.Button1)
+	if app.model.SortDialog.Open {
+		t.Fatal("OK click did not apply and close")
+	}
+	if app.model.Primary.Sort.Mode != panel.SortSize || !app.model.Primary.Sort.Reverse {
+		t.Fatalf("panel sort = %+v want size, reversed", app.model.Primary.Sort)
+	}
+}
+
+func TestMouseDialogButtonPressQuits(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openQuitConfirm()
+	x, y := screenTextCell(t, app, "Quit Anyway")
+	if quit, _ := app.handleMouse(mouseEv(x, y, tcell.Button1)); !quit {
+		t.Fatal("Quit Anyway click did not quit")
+	}
+}
+
+func TestMouseDialogMissIsSwallowed(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openSortDialog()
+	x, y := screenTextCell(t, app, "Sort order")
+	click(app, x, y, tcell.Button1) // the title on the frame
+	click(app, 2, 25, tcell.Button1) // the panel under the dialog
+	if !app.model.SortDialog.Open || app.model.SortDialog.Focus != "" {
+		t.Fatalf("miss changed the dialog: open=%v focus=%q", app.model.SortDialog.Open, app.model.SortDialog.Focus)
+	}
+}
+
+func TestMouseDialogListRowsAndWheel(t *testing.T) {
+	app := sftpKeyApp(t, t.TempDir(), 12)
+	st := &app.model.SFTPConnectDialog
+	x, y := screenTextCell(t, app, listGoldenWords[2])
+	click(app, x, y, tcell.Button1)
+	if st.Selected != 2 || st.Focus != dialog.SFTPFilter {
+		t.Fatalf("row click: selected=%d focus=%q want 2 / the filter that drives the list", st.Selected, st.Focus)
+	}
+	app.handleMouse(mouseEv(x, y, tcell.WheelDown))
+	if st.Selected != 2+config.MouseWheelRows {
+		t.Fatalf("wheel: selected=%d want %d", st.Selected, 2+config.MouseWheelRows)
+	}
+	x, y = screenTextCell(t, app, listGoldenWords[1])
+	click(app, x, y, tcell.Button1)
+	click(app, x, y, tcell.Button1) // double click: Enter in the filter takes the host
+	if st.Selected != 1 || st.Focus != dialog.SFTPLocation || !strings.Contains(st.Location.Value, listGoldenWords[1]) {
+		t.Fatalf("double click: selected=%d focus=%q location=%q", st.Selected, st.Focus, st.Location.Value)
+	}
+}
+
+func TestMouseDialogInputPlacesCursor(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openGroupSelect("select", "panel")
+	gs := &app.model.GroupSelect
+	gs.Text, gs.TextCursor = "harbor*.txt", 0
+	gs.Focus = dialog.PatternRegexRadio
+	x, y := screenTextCell(t, app, "harbor*.txt")
+	click(app, x+4, y, tcell.Button1)
+	if gs.Focus != dialog.PatternInput || gs.TextCursor != 4 {
+		t.Fatalf("input click: focus=%q cursor=%d want input / 4", gs.Focus, gs.TextCursor)
+	}
+}
+
+// TestDialogMouseSpecsMatchTheScreen guards the activeDialogMouse table: each entry's spec must
+// be the one the renderer draws, so every button the spec places shows its label on screen
+// exactly where TargetAt finds it.
+func TestDialogMouseSpecsMatchTheScreen(t *testing.T) {
+	openers := map[string]func(a *App){
+		"sort":             func(a *App) { a.openSortDialog() },
+		"listing format":   func(a *App) { a.openListingFormatDialog() },
+		"config":           func(a *App) { a.openConfigDialog() },
+		"preview settings": func(a *App) { a.openPreviewSettingsDialog() },
+		"debounce":         func(a *App) { a.openDebounceCalibrateDialog() },
+		"quit":             func(a *App) { a.openQuitConfirm() },
+		"group select":     func(a *App) { a.openGroupSelect("select", "panel") },
+		"filter":           func(a *App) { a.dialogCtrl.OpenFilterDialog() },
+		"message":          func(a *App) { a.openMessageDialog("Harbor", "lantern meadow") },
+		"history":          func(a *App) { a.openHistoryDialog(ui.PrimaryPanel) },
+		"find":             func(a *App) { a.findCtrl.OpenDialog(ui.PrimaryPanel) },
+		"mkdir":            func(a *App) { a.dialogCtrl.OpenMkdirDialog(false) },
+		"copy":             func(a *App) { a.dialogCtrl.ActivateCopyAction() },
+		"help":             func(a *App) { a.openHelpDialog() },
+		"meta":             func(a *App) { a.metaCtrl.OpenDialog(ui.PrimaryPanel) },
+	}
+	for name, open := range openers {
+		t.Run(name, func(t *testing.T) {
+			app := tallMouseTestApp(t)
+			open(app)
+			app.render()
+			dm, ok := app.activeDialogMouse()
+			if !ok {
+				t.Fatalf("no mouse table entry (input mode %v)", app.inputMode())
+			}
+			p, placed := dlg.Place(100, 30, dm.spec)
+			if !placed || len(dm.spec.Buttons) == 0 {
+				t.Fatalf("placed=%v buttons=%d", placed, len(dm.spec.Buttons))
+			}
+			screen := app.screen.(tcell.SimulationScreen)
+			for _, b := range dm.spec.Buttons {
+				it, ok := p.Item(b.ID)
+				if !ok {
+					t.Fatalf("button %q not placed", b.ID)
+				}
+				if got := tcelltest.TextAt(screen, it.Rect.X, it.Rect.Y, it.Rect.Width); !strings.Contains(got, b.Label) {
+					t.Errorf("button %q: screen shows %q at its rect, want %q", b.ID, got, b.Label)
+				}
+				if tg, ok := dlg.TargetAt(dm.spec, 100, 30, it.Rect.X+1, it.Rect.Y); !ok || tg.ID != b.ID {
+					t.Errorf("TargetAt on button %q = (%+v, %v)", b.ID, tg, ok)
+				}
+			}
+		})
 	}
 }

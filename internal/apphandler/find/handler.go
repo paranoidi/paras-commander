@@ -1344,7 +1344,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		}
 		return
 	}
-	spec := h.findDialogSpec()
+	spec := h.DialogSpec()
 	if st.Focus == dialog.FindDepth {
 		switch event.Key() {
 		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyUp, tcell.KeyDown:
@@ -1372,8 +1372,8 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	}
 }
 
-// findDialogSpec is the open find dialog's widget spec for the current screen.
-func (h *Handler) findDialogSpec() dlg.Spec {
+// DialogSpec is the open find dialog's widget spec for the current screen.
+func (h *Handler) DialogSpec() dlg.Spec {
 	termW, termH := h.screen.Size()
 	return dialog.FindDialogView(&h.model.FindDialog, dialog.FindViewContext{
 		Layout: h.host.LayoutForTerminalSize(termW, termH), Styles: h.host.Styles(),

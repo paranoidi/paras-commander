@@ -8,18 +8,9 @@ import (
 
 // DrawDedupReturnDialog paints the "kept results" modal from its widget spec (see
 // DedupReturnView).
-func DrawDedupReturnDialog(
-	screen tcell.Screen,
-	layout Layout,
-	state DedupReturnDialogState,
-	root string,
-	groups int,
-	wasted int64,
-	styles theme.Theme,
-	userHomeDir string,
-) {
+func DrawDedupReturnDialog(screen tcell.Screen, layout Layout, state DedupReturnDialogState, styles theme.Theme, spec dlg.Spec) {
 	if !state.Open {
 		return
 	}
-	dlg.Draw(screen, layout.Width, layout.Height, DedupReturnView(state, root, groups, wasted, userHomeDir), state.Focus, styles)
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 }

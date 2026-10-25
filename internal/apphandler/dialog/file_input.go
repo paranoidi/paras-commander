@@ -68,6 +68,6 @@ func (h *Handler) FocusedField() *dialog.FileDialogField {
 // FileDialogOnButton returns true if current focus is on a button (not a field/radio).
 func (h *Handler) FileDialogOnButton() bool {
 	d := &h.model.FileDialog
-	id := dlg.Focused(h.fileDialogSpec(), d.SpecFocus())
+	id := dlg.Focused(h.FileDialogSpec(), d.SpecFocus())
 	return id == dlg.OK || id == dlg.Cancel || id == dialog.MassRenameApply
 }
