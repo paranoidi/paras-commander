@@ -61,6 +61,16 @@ func assertSurfaceBlankRowAboveButtons(t *testing.T, rows []string) int {
 	return buttonY
 }
 
+// assertButtonsUnderSeparator requires the separator on the row immediately above the first
+// button row: dlg dialogs have no blank row there.
+func assertButtonsUnderSeparator(t *testing.T, rows []string) {
+	t.Helper()
+	buttonY := dialogButtonRowY(rows)
+	if buttonY < 1 || !strings.Contains(rows[buttonY-1], "├") {
+		t.Fatalf("row above buttons = %q, want the separator (dlg dialogs have no blank row there)", rows[buttonY-1])
+	}
+}
+
 func TestFileDialogRenameHasBlankRowAboveButtons(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
@@ -72,7 +82,7 @@ func TestFileDialogRenameHasBlankRowAboveButtons(t *testing.T) {
 	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
 }
 
-func TestTransferCopyHasBlankRowAboveButtons(t *testing.T) {
+func TestTransferCopyButtonsSitUnderSeparator(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
 	DrawTransferDialog(screen, layout, TransferDialogState{
@@ -81,10 +91,10 @@ func TestTransferCopyHasBlankRowAboveButtons(t *testing.T) {
 		Phase:       TransferPhaseDestination,
 		Destination: FileDialogField{Value: "/home/user/meadow", PathPicker: true},
 	}, DialogRenderContext{Styles: theme.Default()}, nil)
-	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
+	assertButtonsUnderSeparator(t, dialogScreenRows(screen))
 }
 
-func TestTransferMoveHasBlankRowAboveButtons(t *testing.T) {
+func TestTransferMoveButtonsSitUnderSeparator(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
 	DrawTransferDialog(screen, layout, TransferDialogState{
@@ -93,10 +103,10 @@ func TestTransferMoveHasBlankRowAboveButtons(t *testing.T) {
 		Phase:       TransferPhaseDestination,
 		Destination: FileDialogField{Value: "/home/user/meadow", PathPicker: true},
 	}, DialogRenderContext{Styles: theme.Default()}, nil)
-	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
+	assertButtonsUnderSeparator(t, dialogScreenRows(screen))
 }
 
-func TestTransferSelfCopyHasBlankRowAboveButtons(t *testing.T) {
+func TestTransferSelfCopyButtonsSitUnderSeparator(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
 	DrawTransferDialog(screen, layout, TransferDialogState{
@@ -105,10 +115,10 @@ func TestTransferSelfCopyHasBlankRowAboveButtons(t *testing.T) {
 		Phase:           TransferPhaseSelfCopyRename,
 		SelfCopyNewName: FileDialogField{Value: "badger copy.txt"},
 	}, DialogRenderContext{Styles: theme.Default()}, nil)
-	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
+	assertButtonsUnderSeparator(t, dialogScreenRows(screen))
 }
 
-func TestTransferMultiLocationHasBlankRowAboveButtons(t *testing.T) {
+func TestTransferMultiLocationButtonsSitUnderSeparator(t *testing.T) {
 	screen := buttonBlankRowScreen(t)
 	layout := Layout{Width: buttonBlankRowTermW, Height: buttonBlankRowTermH}
 	DrawTransferDialog(screen, layout, TransferDialogState{
@@ -122,7 +132,7 @@ func TestTransferMultiLocationHasBlankRowAboveButtons(t *testing.T) {
 			{Name: "otter.txt", Path: "/home/user/thicket/otter.txt", Type: localfs.EntryFile},
 		},
 	}, DialogRenderContext{Styles: theme.Default()}, nil)
-	assertSurfaceBlankRowAboveButtons(t, dialogScreenRows(screen))
+	assertButtonsUnderSeparator(t, dialogScreenRows(screen))
 }
 
 func TestFlattenButtonsSitUnderSeparator(t *testing.T) {

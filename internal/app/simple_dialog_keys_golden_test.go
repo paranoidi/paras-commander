@@ -33,6 +33,9 @@ const simpleKeyGoldenDir = "testdata/simple_dialog_keys"
 type keyGoldenDialog struct {
 	name           string
 	rx, ry, rw, rh int
+	// rect, when set, gives the dumped region at dump time (a dialog whose size depends on its
+	// content); rx..rh are then unused.
+	rect func(app *App) (x, y, w, h int)
 	// setup returns the opened-dialog app; dir is a fresh temp dir.
 	setup func(t *testing.T, dir string) *App
 	// state is a one-line semantic summary; open reports whether the dialog is still open.
@@ -57,19 +60,42 @@ func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
 	dump := func(label string) {
 		app.render()
 		fmt.Fprintf(&sb, "== %s ==\n%s\n", label, d.state(app))
-		sb.WriteString(tcelltest.DumpRect(screen, d.rx, d.ry, d.rw, d.rh))
+		x, y, w, h := d.rx, d.ry, d.rw, d.rh
+		if d.rect != nil {
+			x, y, w, h = d.rect(app)
+		}
+		sb.WriteString(tcelltest.DumpRect(screen, x, y, w, h))
 	}
 	dump("open")
+	quiet := false
 	for _, tok := range keys {
 		if d.action != nil && strings.HasPrefix(tok, "@") {
 			d.action(t, app, tok)
 			dump(tok)
 			continue
 		}
+		// A "!" token runs silently: only the one-line state is recorded, not the rect (for steps
+		// whose dialog text would show a temp path). A silent action ("!@...") keeps the rest of
+		// the script silent, since the dialog then holds that path.
+		silent := strings.HasPrefix(tok, "!") || quiet
+		if strings.HasPrefix(tok, "!") {
+			tok = tok[1:]
+			if d.action != nil && strings.HasPrefix(tok, "@") {
+				d.action(t, app, tok)
+				quiet = true
+				fmt.Fprintf(&sb, "== !%s ==\n%s\n", tok, d.state(app))
+				continue
+			}
+		}
 		quit, _ := app.handleKey(goldenKeyEvent(t, tok))
 		if !d.open(app) || quit {
 			fmt.Fprintf(&sb, "== %s ==\nCLOSED: %s\n", tok, d.outcome(app, quit))
 			return sb.String()
+		}
+		if silent {
+			app.render()
+			fmt.Fprintf(&sb, "== !%s ==\n%s\n", tok, d.state(app))
+			continue
 		}
 		dump(tok)
 	}

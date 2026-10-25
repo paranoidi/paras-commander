@@ -42,16 +42,18 @@ const (
 
 // TransferDialogState holds the copy/move destination dialog (shared chrome and navigation).
 type TransferDialogState struct {
-	Open                 bool
-	Kind                 TransferKind
-	Phase                TransferDialogPhase
-	Destination          FileDialogField
-	PreservePermissions  bool // copy only
-	PreserveTimestamps   bool // copy only
-	DereferenceSymlinks  bool // copy only
-	SourceIsRemote       bool // copy only; true when the source panel is SFTP
-	FlattenIntoDest      bool // last content row when MultiLocation(); copies as dest/<basename>
-	FocusField           int  // content indices then OK, Add paused, Cancel; see TransferDialogLinearForm
+	Open                bool
+	Kind                TransferKind
+	Phase               TransferDialogPhase
+	Destination         FileDialogField
+	PreservePermissions bool // copy only
+	PreserveTimestamps  bool // copy only
+	DereferenceSymlinks bool // copy only
+	SourceIsRemote      bool // copy only; true when the source panel is SFTP
+	FlattenIntoDest     bool // last content row when MultiLocation(); copies as dest/<basename>
+	// Focus is the focused widget (TransferDest, TransferNewName, a checkbox ID, dlg.OK,
+	// TransferAddPaused or dlg.Cancel); empty is the first widget (the destination or new name input).
+	Focus                dlg.ID
 	SelfCopyDestDir      string
 	SelfCopyOrigBasename string
 	SelfCopyNewName      FileDialogField
@@ -112,20 +114,16 @@ type QuitConfirmState struct {
 	WarnLine2 string
 }
 
-// TransferDialogEffectiveNumContent returns the focusable content count for the current
-// dialog screen: self-copy rename = 1; destination phase = destination row plus, for
-// copy, the three preserve/dereference checkboxes; plus one more (Flatten into destination,
-// always last) when MultiLocation().
-func TransferDialogEffectiveNumContent(st TransferDialogState) int {
+// FocusOnDest reports whether the destination input has focus (destination phase).
+func (st TransferDialogState) FocusOnDest() bool {
+	return st.Phase == TransferPhaseDestination && (st.Focus == TransferDest || st.Focus == "")
+}
+
+// FocusOnInput reports whether the phase's text input (destination, or the new name of the
+// self-copy phase) has focus.
+func (st TransferDialogState) FocusOnInput() bool {
 	if st.Phase == TransferPhaseSelfCopyRename {
-		return 1
+		return st.Focus == TransferNewName || st.Focus == ""
 	}
-	n := 1 // destination
-	if st.Kind == TransferKindCopy {
-		n = 4 // destination + preserve permissions/timestamps + dereference symlinks
-	}
-	if st.MultiLocation() {
-		n++
-	}
-	return n
+	return st.FocusOnDest()
 }

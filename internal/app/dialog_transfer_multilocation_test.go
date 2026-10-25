@@ -171,11 +171,7 @@ func TestTransferFlattenToggleFocusedSpace(t *testing.T) {
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 	app.dialogCtrl.ActivateCopyAction()
 
-	flattenIdx := dialog.TransferDialogEffectiveNumContent(app.model.TransferDialog) - 1
-	if flattenIdx != 4 {
-		t.Fatalf("copy multi-location flatten focus index = %d, want 4", flattenIdx)
-	}
-	app.model.TransferDialog.FocusField = flattenIdx
+	app.model.TransferDialog.Focus = dialog.TransferFlatten
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if !app.model.TransferDialog.FlattenIntoDest {
 		t.Fatal("space on the focused flatten row should toggle FlattenIntoDest")
@@ -183,11 +179,7 @@ func TestTransferFlattenToggleFocusedSpace(t *testing.T) {
 
 	app.dialogCtrl.CloseTransferDialog()
 	app.dialogCtrl.ActivateMoveAction()
-	flattenIdx = dialog.TransferDialogEffectiveNumContent(app.model.TransferDialog) - 1
-	if flattenIdx != 1 {
-		t.Fatalf("move multi-location flatten focus index = %d, want 1", flattenIdx)
-	}
-	app.model.TransferDialog.FocusField = flattenIdx
+	app.model.TransferDialog.Focus = dialog.TransferFlatten
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if !app.model.TransferDialog.FlattenIntoDest {
 		t.Fatal("space on the focused flatten row should toggle FlattenIntoDest for move")

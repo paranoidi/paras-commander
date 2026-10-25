@@ -1,0 +1,306 @@
+== open ==
+phase=0 focus=dest dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ /srv/thicket-lantern/                                              │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+d fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacccccccccccccccccccccdccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaeeefeeeeaaeeeeeeefeeeeeeeeaaeeefeeeeeeeeaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== ~ ==
+phase=0 focus=dest dest="~" cursor=1 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~                                                                  │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacdccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaeeefeeeeaaeeeeeeefeeeeeeeeaaeeefeeeeeeeeaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== / ==
+phase=0 focus=dest dest="~/" cursor=2 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/                                                                 │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccdcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaeeefeeeeaaeeeeeeefeeeeeeeeaaeeefeeeeeeeeaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== p ==
+phase=0 focus=dest dest="~/p" cursor=3 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacccdeeeeeeccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaafffgffffaafffffffgffffffffaafffgffffffffaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== r ==
+phase=0 focus=dest dest="~/pr" cursor=4 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccdeeeeeccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaafffgffffaafffffffgffffffffaafffgffffffffaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== o ==
+phase=0 focus=dest dest="~/pro" cursor=5 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacccccdeeeeccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaafffgffffaafffffffgffffffffaafffgffffffffaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== j ==
+phase=0 focus=dest dest="~/proj" cursor=6 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccdeeeccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaafffgffffaafffffffgffffffffaafffgffffffffaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== e ==
+phase=0 focus=dest dest="~/proje" cursor=7 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacccccccdeeccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaafffgffffaafffffffgffffffffaafffgffffffffaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== c ==
+phase=0 focus=dest dest="~/projec" cursor=8 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccdeccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaafffgffffaafffffffgffffffffaafffgffffffffaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== t ==
+phase=0 focus=dest dest="~/project" cursor=9 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacccccccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaeeefeeeeaaeeeeeeefeeeeeeeeaaeeefeeeeeeeeaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== s ==
+phase=0 focus=dest dest="~/projects" cursor=10 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects                                                         │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaccccccccccdcccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaeeefeeeeaaeeeeeeefeeeeeeeeaaeeefeeeeeeeeaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== / ==
+phase=0 focus=dest dest="~/projects/" cursor=11 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects/                                                        │
+├────────────────────────────────────────────────────────────────────┤
+│               [ OK ]    [ Add paused ]    [ Cancel ]               │
+└────────────────────────────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacccccccccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaeeefeeeeaaeeeeeeefeeeeeeeeaaeeefeeeeeeeeaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+== Tab ==
+phase=0 focus=dest dest="~/projects/" cursor=11 scroll=0 pending=false name="" ncursor=0 perm=false ts=false deref=false flat=false listScroll=0 dropdown=true selected=0 message=""
+-- text --
+┌─────────────────────────────── Move ───────────────────────────────┐
+│ Destination:                                                       │
+│ ~/projects/                                                        │
+├─────────── dst/     ───────────────────────────────────────────────┤
+│            harbor/      [ Add paused ]    [ Cancel ]               │
+└─────────── orchard/ ───────────────────────────────────────────────┘
+-- legend --
+a fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+c fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+d fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aacccccccccccdccccccccccccccccccccccccccccccccccccccccccccccccccccccaa
+aaaaaaaaaaaaeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaafffffffffffaafffffffgffffffffaafffgffffffffaaaaaaaaaaaaaaa
+aaaaaaaaaaaaffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

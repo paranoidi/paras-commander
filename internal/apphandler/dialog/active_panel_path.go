@@ -49,7 +49,7 @@ func TryDestinationShortcut(ev *tcell.EventKey, keys *keymap.Map, eligible bool,
 
 func (h *Handler) transferDialogDestinationFooterEligible() bool {
 	d := h.model.TransferDialog
-	return d.Open && d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0
+	return d.Open && d.FocusOnDest()
 }
 
 // TransferDialogOverlayFooterKeys builds the transfer dialog's "Active path"/"Inactive path"

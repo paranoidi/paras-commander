@@ -58,11 +58,6 @@ func (d DialogTrailingButtonsForm) MiddleButtonIndex() int {
 	return d.NumContent + 1
 }
 
-// AddPausedIndex is the middle button index for the three-button transfer dialog.
-func (d DialogTrailingButtonsForm) AddPausedIndex() int {
-	return d.MiddleButtonIndex()
-}
-
 // CancelIndex is the focus index of the Cancel button.
 func (d DialogTrailingButtonsForm) CancelIndex() int {
 	return d.NumContent + d.NumTrailingButtons - 1
@@ -188,42 +183,4 @@ type DialogLinearForm = DialogTrailingButtonsForm
 // NewDialogLinearForm returns layout for NumContent fields and two trailing buttons.
 func NewDialogLinearForm(numContent int) DialogTrailingButtonsForm {
 	return NewDialogTrailingButtonsForm(numContent, 2)
-}
-
-// TransferDialogLinearForm is the three-button transfer dialog layout (OK, Add paused, Cancel).
-type TransferDialogLinearForm = DialogTrailingButtonsForm
-
-// NewTransferDialogLinearForm returns layout for NumContent fields plus three trailing buttons.
-func NewTransferDialogLinearForm(numContent int) DialogTrailingButtonsForm {
-	return NewDialogTrailingButtonsForm(numContent, 3)
-}
-
-// TransferDialogMoveFocus applies Tab/arrow navigation for the copy/move dialog (destination or self-copy phase).
-func TransferDialogMoveFocus(st TransferDialogState, focus int, key tcell.Key) (int, bool) {
-	n := TransferDialogEffectiveNumContent(st)
-	okIdx := n // buttons start at numContent (3-button form, so OKIndex == NumContent)
-	var segs []int
-	if n >= 2 {
-		// Copy destination(0) | preserve checkboxes / flatten(1..) | buttons(okIdx); or
-		// move/self-copy destination(0) | flatten(1) | buttons(okIdx) when MultiLocation().
-		segs = []int{0, 1, okIdx}
-	} else {
-		// Move or self-copy, no flatten row: single content field | buttons
-		segs = []int{0, okIdx}
-	}
-	return NewTransferDialogLinearForm(n).WithSegments(segs...).MoveFocus(focus, key)
-}
-
-// DialogPairLeftRight toggles between 0 and 1 (the Yes/No sub-confirms) with Left/Right.
-func DialogPairLeftRight(focus int, goRight bool) int {
-	if goRight {
-		if focus < 1 {
-			return 1
-		}
-		return focus
-	}
-	if focus > 0 {
-		return 0
-	}
-	return focus
 }

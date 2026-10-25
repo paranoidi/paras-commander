@@ -410,11 +410,11 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 			drawList(screen, p.Rect, pi, it, listFocused(spec, focus, it.ID), spec.ScrollbarStyle, borderStyle, styles)
 		case KindCheckbox:
 			if pi.Rect.Width > 0 {
-				draw.DrawDialogCheckbox(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, it.Disabled, styles)
+				draw.DrawDialogCheckbox(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, it.Disabled || it.Inert, styles)
 			}
 		default:
 			if pi.Rect.Width > 0 {
-				draw.DrawDialogRadio(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, it.Disabled, styles)
+				draw.DrawDialogRadio(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, it.Disabled || it.Inert, styles)
 			}
 		}
 	}

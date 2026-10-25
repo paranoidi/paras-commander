@@ -72,7 +72,7 @@ func TestTransferDialogCopyPreserveAltAndSpaceShortcuts(t *testing.T) {
 	}
 
 	// Mnemonics need Alt: a plain letter on the focused row does nothing; Space toggles.
-	d.FocusField = 1
+	d.Focus = dialog.TransferPerm
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
 	if d.PreservePermissions {
 		t.Fatal("plain r on focused permissions row should not toggle")
@@ -82,7 +82,7 @@ func TestTransferDialogCopyPreserveAltAndSpaceShortcuts(t *testing.T) {
 		t.Fatal("Space on focused permissions row should toggle on")
 	}
 
-	d.FocusField = 2
+	d.Focus = dialog.TransferTimes
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
 	if d.PreserveTimestamps {
 		t.Fatal("plain t on focused timestamps row should not toggle")
@@ -124,7 +124,7 @@ func TestTransferDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 			Value:  prefix,
 			Cursor: len([]rune(prefix)),
 		}
-		d.FocusField = 0
+		d.Focus = dialog.TransferDest
 		app.dialogCtrl.SyncPathFieldCompletion(&d.Destination, app.dialogCtrl.TransferDestinationTextWidth())
 		if len(d.Destination.Completion.Items) != 1 || d.Destination.Completion.Items[0].Name != "foo" {
 			t.Fatalf("Completion.Items = %+v, want single foo candidate", d.Destination.Completion.Items)
@@ -169,7 +169,7 @@ func TestTransferDialogSinglePrefixCompletionGhostTabAccepts(t *testing.T) {
 	if !d.Open {
 		t.Fatal("transfer dialog should be open")
 	}
-	d.FocusField = 0
+	d.Focus = dialog.TransferDest
 
 	partial := filepath.Join(root, "lantern-o")
 	d.Destination = dialog.FileDialogField{Value: partial, Cursor: len([]rune(partial))}
@@ -230,7 +230,7 @@ func TestTransferDialogEnterOverGhostTextConfirmsNotAccepts(t *testing.T) {
 	if !d.Open {
 		t.Fatal("transfer dialog should be open")
 	}
-	d.FocusField = 0
+	d.Focus = dialog.TransferDest
 
 	partial := filepath.Join(dir, "lantern-o")
 	d.Destination = dialog.FileDialogField{Value: partial, Cursor: len([]rune(partial))}
@@ -281,7 +281,7 @@ func TestTransferDialogFuzzyCompletionDropdownDownEnter(t *testing.T) {
 	if !d.Open {
 		t.Fatal("transfer dialog should be open")
 	}
-	d.FocusField = 0
+	d.Focus = dialog.TransferDest
 
 	partial := filepath.Join(targetRoot, "gully")
 	d.Destination = dialog.FileDialogField{Value: partial, Cursor: len([]rune(partial))}

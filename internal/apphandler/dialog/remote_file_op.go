@@ -407,7 +407,7 @@ func (h *Handler) finishTransferEnqueue(st transferProbeApply, nSelf int, destIs
 		}
 		d.SelfCopyOrigBasename = base
 		d.SelfCopyNewName = transferSelfCopyNewNamePrefilled(base)
-		d.FocusField = 0
+		d.Focus = dialog.TransferNewName
 		h.transferDestValidate.Invalidate()
 		d.DestPathInvalid = false
 		d.DestPathCheckPending = false

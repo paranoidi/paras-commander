@@ -7,22 +7,12 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/primitive"
-	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // TransferListMaxRows caps visible preview-list rows per paint in the multi-location
 // layout (full list still scrolls).
 const TransferListMaxRows = 10
-
-func drawTransferButtons(screen tcell.Screen, rect draw.Rect, y int, state TransferDialogState, styles theme.Theme) {
-	tform := NewTransferDialogLinearForm(TransferDialogEffectiveNumContent(state))
-	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
-		{Label: "Add paused", Shortcut: 'p', Focused: state.FocusField == tform.AddPausedIndex()},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},
-	}, styles)
-}
 
 func transferDialogMaxHeight(layoutHeight int) int {
 	maxH := layoutHeight * 80 / 100
@@ -39,13 +29,14 @@ func transferDialogMaxHeight(layoutHeight int) int {
 // other than the scrollable preview list itself (top/bottom border added separately):
 // Source label, root path, blank, Destination label, input row, separator,
 // preserve-permissions/timestamps/dereference-symlinks checkboxes (copy only) + flatten
-// checkbox, "Result" separator, separator, blank, button row.
+// checkbox, "Result" separator, button separator, button row, plus one spare row so the
+// preview height stays within the dialog's share of the screen.
 func transferMultiChromeRows(kind TransferKind) int {
 	checkboxRows := 1 // Flatten into destination
 	if kind == TransferKindCopy {
 		checkboxRows += 3 // Preserve permissions + Preserve timestamps + Dereference symlinks
 	}
-	const fixedRows = 10 // 6 rows through the destination separator + Result separator(1) + separator/blank/button(3)
+	const fixedRows = 10 // 6 rows through the destination separator + Result separator(1) + button separator/spare/buttons(3)
 	return fixedRows + checkboxRows
 }
 
@@ -101,15 +92,21 @@ func transferDestinationFrameWidth(layout Layout, state TransferDialogState, use
 	return width
 }
 
-// TransferDestinationTextWidth is the painted destination input text width (full content
-// width). Completion and scroll use this so FileDialogField.Scroll matches the row that is
-// actually drawn.
+// TransferDestinationTextWidth is the painted width of the phase's text input (the destination,
+// or the new name of the self-copy phase). Completion and scroll use this so FileDialogField.Scroll
+// matches the row that is actually drawn.
 func TransferDestinationTextWidth(layout Layout, state TransferDialogState, userHomeDir string, iconLead int) int {
-	w := transferDestinationFrameWidth(layout, state, userHomeDir, iconLead) - 4
-	if w < 1 {
-		return 1
+	spec := TransferView(state, TransferViewContext{Layout: layout, UserHomeDir: userHomeDir, IconLead: iconLead})
+	if p, ok := dlg.Place(layout.Width, layout.Height, spec); ok {
+		id := TransferDest
+		if state.Phase == TransferPhaseSelfCopyRename {
+			id = TransferNewName
+		}
+		if in, found := p.Item(id); found && in.Rect.Width > 0 {
+			return in.Rect.Width
+		}
 	}
-	return w
+	return max(transferDestinationFrameWidth(layout, state, userHomeDir, iconLead)-4, 1)
 }
 
 // transferMultiDialogWidth computes the multi-location dialog width from the common-root
@@ -133,196 +130,53 @@ func transferMultiDialogWidth(layout Layout, state TransferDialogState, userHome
 	return width
 }
 
+// DrawTransferDialog paints the copy / move modal from its widget spec (see TransferView), then the
+// multi-location Result rows (with their icons) and the destination's completion dropdown, both
+// anchored to rects of the placement.
 func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
-	styles := ctx.Styles
+	spec := TransferView(state, TransferViewContext{Layout: layout, UserHomeDir: ctx.UserHomeDir, IconLead: ctx.IconLead})
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
+	p, ok := dlg.Place(layout.Width, layout.Height, spec)
+	if !ok {
+		return
+	}
 	if state.MultiLocation() {
-		drawMultiLocationTransferDialog(screen, layout, state, ctx, paintIcon)
-		return
+		drawTransferResultRows(screen, p, state, ctx, paintIcon)
 	}
-
-	width := transferDestinationFrameWidth(layout, state, "", 0)
-	height := 11
-	title := "Copy"
-	if state.Kind == TransferKindMove {
-		height = 7
-		title = "Move"
-	}
-	if state.Phase == TransferPhaseSelfCopyRename {
-		height = 9
-		if state.Kind == TransferKindCopy {
-			title = "Copy — New name"
-		} else {
-			title = "Move — New name"
+	if state.Phase == TransferPhaseDestination {
+		if in, ok := p.Item(TransferDest); ok {
+			drawPathCompletionDropdown(screen, in.Rect.X, in.Rect.Y+1, state.Destination.Scroll, state.Destination.Completion, ctx.ScrollbarStyle, ctx.Styles)
 		}
 	}
-
-	rect := draw.CenteredDialogRect(layout, width, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-
-	if state.Phase == TransferPhaseSelfCopyRename {
-		reason := "Cannot copy onto itself."
-		if state.Kind == TransferKindMove {
-			reason = "Cannot move onto itself."
-		}
-		primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, reason, styles.DialogText.Background(dbg))
-
-		nameLabel := "New name:"
-		primitive.Text(screen, rect.X+2, rect.Y+3, rect.Width-4, nameLabel, styles.DialogText.Background(dbg))
-
-		inputY := rect.Y + 4
-		inputWidth := rect.Width - 4
-		drawInputField(screen, rect.X+2, inputY, inputWidth, state.SelfCopyNewName, state.FocusField == 0, styles)
-
-		sepY := rect.Y + 5
-		draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
-
-		buttonY := rect.Y + rect.Height - 2
-		drawTransferButtons(screen, rect, buttonY, state, styles)
-		return
-	}
-
-	destLabel := "Destination:"
-	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, destLabel, styles.DialogText.Background(dbg))
-
-	inputY := rect.Y + 2
-	inputWidth := TransferDestinationTextWidth(layout, state, "", 0)
-	rowFocused := state.FocusField == 0
-	destInvalid := state.Phase == TransferPhaseDestination && state.DestPathInvalid && !state.DestPathCheckPending
-	drawInputFieldInvalid(screen, rect.X+2, inputY, inputWidth, state.Destination, rowFocused, destInvalid, styles)
-	// Deferred so the dropdown paints over the checkboxes and buttons drawn below.
-	defer drawPathCompletionDropdown(screen, rect.X+2, inputY+1, state.Destination.Scroll, state.Destination.Completion, ctx.ScrollbarStyle, styles)
-
-	if state.Kind == TransferKindCopy {
-		sep1Y := rect.Y + 3
-		draw.DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
-
-		// One cell left of labels/fields so "[ ]" aligns with other dialog content (see mass rename).
-		derefDisabled := state.DereferenceUnsupported()
-		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+1, "Preserve permissions", 'r', state.PreservePermissions, state.FocusField == 1, false, styles)
-		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+2, "Preserve timestamps", 't', state.PreserveTimestamps, state.FocusField == 2, false, styles)
-		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+3, "Dereference symlinks", 'd', state.DereferenceSymlinks, state.FocusField == 3, derefDisabled, styles)
-
-		sep2Y := sep1Y + 4
-		draw.DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)
-
-		buttonY := rect.Y + rect.Height - 2
-		drawTransferButtons(screen, rect, buttonY, state, styles)
-		return
-	}
-
-	sepY := rect.Y + 3
-	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
-
-	buttonY := rect.Y + rect.Height - 2
-	drawTransferButtons(screen, rect, buttonY, state, styles)
 }
 
-// drawMultiLocationTransferDialog renders the Copy/Move dialog when the selection spans
-// multiple directories away from their common root (TransferDialogState.MultiLocation()):
-// a Source: header with the common root, the usual Destination block, preserve/flatten
-// checkboxes, and a scrollable "Result" preview of the selections.
-func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
+// drawTransferResultRows paints the visible slice of the Result preview into the reserved region:
+// a devicon (when icons are shown) and the root-relative or basename label of each entry.
+func drawTransferResultRows(screen tcell.Screen, p dlg.Placement, state TransferDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
+	region, ok := p.Item(transferResult)
+	if !ok {
+		return
+	}
 	styles := ctx.Styles
-	userHomeDir := ctx.UserHomeDir
-	showIcons := ctx.ShowIcons
-	iconLead := ctx.IconLead
-	title := "Copy"
-	if state.Kind == TransferKindMove {
-		title = "Move"
-	}
-	width := transferDestinationFrameWidth(layout, state, userHomeDir, iconLead)
-	vp := TransferListViewportRows(layout, state)
-	height := vp + transferMultiChromeRows(state.Kind) + 2
-
-	rect := draw.CenteredDialogRect(layout, width, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	textStyle := styles.DialogText.Background(dbg)
-
-	contentW := draw.DialogContentWidth(rect)
-	textX := draw.DialogTextX(rect)
-	optX := draw.DialogOptionX(rect)
-
-	y := rect.Y + 1
-	primitive.Text(screen, textX, y, contentW, "Source:", textStyle)
-	y++
-	rootLabel := primitive.FitPathForWidth(primitive.PathWithHomeTilde(state.CommonRoot, userHomeDir), contentW)
-	primitive.Text(screen, textX, y, contentW, rootLabel, textStyle)
-	y++
-	y++ // blank row between root path and Destination:
-	primitive.Text(screen, textX, y, contentW, "Destination:", textStyle)
-	y++
-
-	rowFocused := state.FocusField == 0
-	destInvalid := state.DestPathInvalid && !state.DestPathCheckPending
-	inputWidth := TransferDestinationTextWidth(layout, state, userHomeDir, iconLead)
-	destInputY := y
-	drawInputFieldInvalid(screen, textX, y, inputWidth, state.Destination, rowFocused, destInvalid, styles)
-	y++
-
-	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
-	y++
-
-	focusIdx := 1
-	if state.Kind == TransferKindCopy {
-		draw.DrawDialogCheckbox(screen, optX, y, "Preserve permissions", 'r', state.PreservePermissions, state.FocusField == focusIdx, false, styles)
-		y++
-		focusIdx++
-		draw.DrawDialogCheckbox(screen, optX, y, "Preserve timestamps", 't', state.PreserveTimestamps, state.FocusField == focusIdx, false, styles)
-		y++
-		focusIdx++
-		draw.DrawDialogCheckbox(screen, optX, y, "Dereference symlinks", 'd', state.DereferenceSymlinks, state.FocusField == focusIdx, state.DereferenceUnsupported(), styles)
-		y++
-		focusIdx++
-	}
-	draw.DrawDialogCheckbox(screen, optX, y, "Flatten into destination", 'i', state.FlattenIntoDest, state.FocusField == focusIdx, false, styles)
-	y++
-
-	bfg, _, _ := styles.DialogFrame.Decompose()
-	resultLabelStyle := styles.DialogTitle.Foreground(bfg).Background(dbg)
-	draw.DrawDialogHSeparatorWithCenteredLabel(screen, rect, y, borderStyle, resultLabelStyle, " Result ")
-	y++
-
-	n := len(state.Entries)
-	scroll := state.EntriesScroll
-	if scroll < 0 {
-		scroll = 0
-	}
-	if scroll > n {
-		scroll = n
-	}
-	end := scroll + vp
-	if end > n {
-		end = n
-	}
-
 	listStyle := styles.DialogOptionRowStyle(false, false)
-	listTextX, listTextW := textX, contentW
-	if showIcons && paintIcon != nil && iconLead > 0 {
-		listTextX = textX + iconLead
-		listTextW = contentW - iconLead
-		if listTextW < 1 {
-			listTextW = 1
+	textX, textW := region.Rect.X+1, region.Rect.Width-2
+	withIcons := ctx.ShowIcons && paintIcon != nil && ctx.IconLead > 0
+	if withIcons {
+		textX += ctx.IconLead
+		textW = max(textW-ctx.IconLead, 1)
+	}
+	n := len(state.Entries)
+	scroll := min(max(state.EntriesScroll, 0), n)
+	for i := 0; i < region.Rect.Height && scroll+i < n; i++ {
+		y := region.Rect.Y + i
+		if y >= p.ContentBottom {
+			break
 		}
-	}
-	for _, e := range state.Entries[scroll:end] {
-		if showIcons && paintIcon != nil && iconLead > 0 {
-			paintIcon(screen, textX, y, e, styles)
+		e := state.Entries[scroll+i]
+		if withIcons {
+			paintIcon(screen, region.Rect.X+1, y, e, styles)
 		}
-		label := transferEntryLabel(e, state.FlattenIntoDest)
-		line := DeleteListEntryNameFitsWidth(label, e.Path, listTextW)
-		primitive.Text(screen, listTextX, y, listTextW, line, listStyle)
-		y++
+		line := DeleteListEntryNameFitsWidth(transferEntryLabel(e, state.FlattenIntoDest), e.Path, textW)
+		primitive.Text(screen, textX, y, textW, line, listStyle)
 	}
-	for i := end - scroll; i < vp; i++ {
-		y++ // pad unused viewport rows (fewer entries than vp) so the button row stays put
-	}
-
-	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
-	y++
-	y++ // blank row above buttons
-
-	drawTransferButtons(screen, rect, y, state, styles)
-	drawPathCompletionDropdown(screen, textX, destInputY+1, state.Destination.Scroll, state.Destination.Completion, ctx.ScrollbarStyle, styles)
 }

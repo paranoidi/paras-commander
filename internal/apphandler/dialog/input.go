@@ -27,7 +27,7 @@ func (h *Handler) DialogInputRestoreFooterEligible() bool {
 	}
 	if h.model.TransferDialog.Open {
 		d := &h.model.TransferDialog
-		if d.FocusField != 0 {
+		if !d.FocusOnInput() {
 			return false
 		}
 		switch d.Phase {

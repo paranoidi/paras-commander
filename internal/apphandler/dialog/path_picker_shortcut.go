@@ -3,7 +3,6 @@ package dialog
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // PathPickerHostFooterEligible reports whether the currently focused dialog row is a
@@ -17,9 +16,7 @@ func (h *Handler) PathPickerHostFooterEligible() bool {
 		f := h.FocusedField()
 		return f != nil && f.PathPicker
 	}
-	if h.model.TransferDialog.Open &&
-		h.model.TransferDialog.Phase == dialog.TransferPhaseDestination &&
-		h.model.TransferDialog.FocusField == 0 {
+	if h.model.TransferDialog.Open && h.model.TransferDialog.FocusOnDest() {
 		return true
 	}
 	if h.model.FlattenDialog.Open && h.model.FlattenDialog.FocusOnDest() {

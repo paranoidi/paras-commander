@@ -158,8 +158,8 @@ func TestTransferDialogEnterFromDestinationConfirms(t *testing.T) {
 	}
 
 	app.dialogCtrl.OpenCopyDialog()
-	if app.model.TransferDialog.FocusField != 0 {
-		t.Fatalf("FocusField = %d, want destination row", app.model.TransferDialog.FocusField)
+	if !app.model.TransferDialog.FocusOnDest() {
+		t.Fatalf("Focus = %q, want destination row", app.model.TransferDialog.Focus)
 	}
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.TransferDialog.Open {
@@ -306,8 +306,8 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 
 	app.dialogCtrl.OpenCopyDialog()
 	d := &app.model.TransferDialog
-	if d.FocusField != 0 || d.Phase != dialog.TransferPhaseDestination {
-		t.Fatalf("unexpected initial dialog state: focus=%d phase=%v", d.FocusField, d.Phase)
+	if !d.FocusOnDest() {
+		t.Fatalf("unexpected initial dialog state: focus=%q phase=%v", d.Focus, d.Phase)
 	}
 	startCursor := d.Destination.Cursor
 	if startCursor == 0 {
@@ -363,8 +363,8 @@ func TestTransferDestinationFooterShowsActiveAndInactive(t *testing.T) {
 	}
 
 	app.dialogCtrl.OpenCopyDialog()
-	if app.model.TransferDialog.FocusField != 0 {
-		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
+	if !app.model.TransferDialog.FocusOnDest() {
+		t.Fatalf("Focus = %q, want the destination", app.model.TransferDialog.Focus)
 	}
 	keys := app.activeFooterKeys()
 	if !footerHasHint(keys, "Active path ◄", "S-left") {
@@ -423,8 +423,8 @@ func TestTransferDestinationShortcutNoOpDuringSelfCopyRename(t *testing.T) {
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{aaa: true}
 	app.jobsCtrl.EnqueueCopyJob()
-	if app.model.TransferDialog.Phase != dialog.TransferPhaseSelfCopyRename || app.model.TransferDialog.FocusField != 0 {
-		t.Fatalf("want self-copy rename dialog with FocusField 0, got %+v", app.model.TransferDialog)
+	if app.model.TransferDialog.Phase != dialog.TransferPhaseSelfCopyRename || !app.model.TransferDialog.FocusOnInput() {
+		t.Fatalf("want self-copy rename dialog focused on the new name, got %+v", app.model.TransferDialog)
 	}
 	want := app.model.TransferDialog.SelfCopyNewName.Value
 
@@ -719,8 +719,8 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 	if !app.model.TransferDialog.Open {
 		t.Fatal("copy dialog should open")
 	}
-	if app.model.TransferDialog.FocusField != 0 {
-		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
+	if !app.model.TransferDialog.FocusOnDest() {
+		t.Fatalf("Focus = %q, want the destination", app.model.TransferDialog.Focus)
 	}
 	keys := app.activeFooterKeys()
 	if len(keys) != 9 {
@@ -800,8 +800,8 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 	}
 
 	app.dialogCtrl.OpenCopyDialog()
-	if app.model.TransferDialog.FocusField != 0 {
-		t.Fatalf("FocusField = %d, want 0", app.model.TransferDialog.FocusField)
+	if !app.model.TransferDialog.FocusOnDest() {
+		t.Fatalf("Focus = %q, want the destination", app.model.TransferDialog.Focus)
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyCtrlG, 0, tcell.ModNone))
 	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != dialog.PathPickerPurposeApplyTransferDestination {

@@ -160,6 +160,10 @@ type Item struct {
 	// Disabled (radio and checkbox) draws the item in the disabled style and takes it out of
 	// focus, mnemonics and hits.
 	Disabled bool
+	// Inert (radio and checkbox) draws the item in the disabled style but keeps it focusable, a
+	// mnemonic target and a hit target: the caller ignores its activation (the transfer dialog's
+	// Dereference symlinks on a remote path).
+	Inert bool
 	// Seg names the Tab segment of an item inside its group (default 0). Items of one group that
 	// share a Seg are one Tab segment, whatever their layout order, so a grid whose rows hold a
 	// radio and its checkboxes can still Tab between the radios and the checkboxes. A segment

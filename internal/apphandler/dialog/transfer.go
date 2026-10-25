@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // OpenCopyDialog opens the unified transfer dialog in copy mode.
@@ -62,7 +63,7 @@ func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 		Open:        true,
 		Kind:        kind,
 		Destination: TransferPrefilledDestination(passive.PathString()),
-		FocusField:  0, // destination path row
+		Focus:       dialog.TransferDest,
 	}
 	if kind == dialog.TransferKindCopy {
 		h.applyCopyDefaults(&st)
@@ -159,7 +160,7 @@ func (h *Handler) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, abs
 		SelfCopyDestDir:      absDestDir,
 		SelfCopyOrigBasename: base,
 		SelfCopyNewName:      transferSelfCopyNewNamePrefilled(base),
-		FocusField:           0,
+		Focus:                dialog.TransferNewName,
 	}
 	if kind == dialog.TransferKindCopy {
 		h.applyCopyDefaults(&st)
@@ -187,128 +188,49 @@ func (h *Handler) applyCopyDefaults(st *dialog.TransferDialogState) {
 	st.SourceIsRemote = h.host.ActivePanel().Path.IsRemote()
 }
 
-// toggleDereferenceSymlinks flips the copy dialog's dereference checkbox unless it is disabled.
-func toggleDereferenceSymlinks(d *dialog.TransferDialogState) {
-	if !d.DereferenceUnsupported() {
-		d.DereferenceSymlinks = !d.DereferenceSymlinks
+// transferViewContext is what dialog.TransferView needs besides the state: the screen layout, the
+// home directory and the icon lead of the preview rows.
+func (h *Handler) transferViewContext() dialog.TransferViewContext {
+	w, ht := h.screen.Size()
+	return dialog.TransferViewContext{
+		Layout:      h.host.LayoutForTerminalSize(w, ht),
+		UserHomeDir: h.model.UserHomeDir,
+		IconLead:    ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons),
 	}
 }
 
-// handleTransferAltShortcut handles the Alt-letter mnemonics that must run before standard
-// dialog actions and field editing: Alt+R/Alt+T/Alt+D toggle preserve-permissions/timestamps/
-// dereference-symlinks on a copy's destination phase, and Alt+I toggles "Flatten into
-// destination" for a multi-location transfer. Returns true when the rune was handled.
-func (h *Handler) handleTransferAltShortcut(event *tcell.EventKey) bool {
-	d := &h.model.TransferDialog
-	if d.Phase == dialog.TransferPhaseDestination && d.Kind == dialog.TransferKindCopy {
-		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-			switch event.Rune() {
-			case 'r', 'R':
-				d.PreservePermissions = !d.PreservePermissions
-				return true
-			case 't', 'T':
-				d.PreserveTimestamps = !d.PreserveTimestamps
-				return true
-			case 'd', 'D':
-				toggleDereferenceSymlinks(d)
-				return true
-			}
-		}
-	}
-	// Alt+I toggles "Flatten into destination"; applies to both copy and move when
-	// the transfer is issued on a selection spanning multiple directories (MultiLocation).
-	if d.MultiLocation() {
-		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-			switch event.Rune() {
-			case 'i', 'I':
-				d.FlattenIntoDest = !d.FlattenIntoDest
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// handleTransferDestinationNav handles Left/Right cursor movement on the destination field
-// while it is focused. Returns true when the key was handled (caller should return); false to
-// fall through to the generic focus-move / Enter handling below.
-func (h *Handler) handleTransferDestinationNav(event *tcell.EventKey) bool {
-	d := &h.model.TransferDialog
-	if d.Phase != dialog.TransferPhaseDestination {
-		return false
-	}
-	return h.DestFieldNav(event, &d.Destination, d.FocusField == 0)
-}
-
-// handleTransferEnter handles Enter on the transfer dialog: confirm from the destination
-// text field or self-copy rename field, or activate the focused Cancel/OK/Add-paused
-// button. Returns true when handled (caller should return); false when the key isn't Enter
-// or Enter didn't land on a recognized target, so the caller falls through to field editing.
-func (h *Handler) handleTransferEnter(event *tcell.EventKey) bool {
-	d := &h.model.TransferDialog
-	if event.Key() != tcell.KeyEnter {
-		return false
-	}
-	tf := dialog.NewTransferDialogLinearForm(dialog.TransferDialogEffectiveNumContent(*d))
-	if d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0 {
+// applyTransferEvent acts on an activation from the widget spec: the checkboxes toggle, Enter in
+// the input or OK confirms, Add paused confirms paused, Cancel closes.
+func (h *Handler) applyTransferEvent(ev dlg.Event) {
+	h.model.TransferDialog.Apply(ev)
+	switch ev.ID {
+	case dialog.TransferDest, dialog.TransferNewName, dlg.OK:
 		h.confirmTransfer()
-		return true
-	}
-	if d.Phase == dialog.TransferPhaseSelfCopyRename && d.FocusField == 0 {
-		h.confirmTransfer()
-		return true
-	}
-	switch d.FocusField {
-	case tf.CancelIndex():
-		h.CloseTransferDialog()
-		return true
-	case tf.OKIndex():
-		h.confirmTransfer()
-		return true
-	case tf.AddPausedIndex():
+	case dialog.TransferAddPaused:
 		h.confirmTransferPaused()
-		return true
-	}
-	return false
-}
-
-// handleTransferCheckboxRune toggles the focused permissions/timestamps/dereference checkbox
-// or the multi-location flatten checkbox on Space. Mnemonic letters require Alt
-// (handleTransferAltShortcut).
-func (h *Handler) handleTransferCheckboxRune(event *tcell.EventKey) {
-	d := &h.model.TransferDialog
-	if d.Phase != dialog.TransferPhaseDestination || event.Key() != tcell.KeyRune || event.Modifiers() != tcell.ModNone || event.Rune() != ' ' {
-		return
-	}
-	if d.Kind == dialog.TransferKindCopy {
-		switch d.FocusField {
-		case 1:
-			d.PreservePermissions = !d.PreservePermissions
-		case 2:
-			d.PreserveTimestamps = !d.PreserveTimestamps
-		case 3:
-			toggleDereferenceSymlinks(d)
-		}
-	}
-	if d.MultiLocation() && d.FocusField == dialog.TransferDialogEffectiveNumContent(*d)-1 {
-		d.FlattenIntoDest = !d.FlattenIntoDest
+	case dlg.Cancel:
+		h.CloseTransferDialog()
 	}
 }
 
 // HandleTransferDialogKey routes a key event for the open unified transfer (copy/move) dialog.
+// Order: Alt mnemonics (options, Add paused) win over everything, also in the input; then the
+// completion dropdown, preview paging, the path-picker and destination shortcuts and the
+// destination's cursor keys; then the widget engine; and what it declines is text editing.
 func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 	d := &h.model.TransferDialog
-	if h.handleTransferAltShortcut(event) {
-		return
+	spec := dialog.TransferView(*d, h.transferViewContext())
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		prev := d.Focus
+		if ev, ok := dlg.HandleKey(spec, &d.Focus, event); ok {
+			if ev.ID == dialog.TransferAddPaused {
+				d.Focus = prev // a refused Alt+P leaves the user where they were typing
+			}
+			h.applyTransferEvent(ev)
+			return
+		}
 	}
-	if d.Phase == dialog.TransferPhaseDestination &&
-		h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusField == 0, h.ArmTransferDestinationValidateTimer) {
-		return
-	}
-	// Alt+P = Add paused (mnemonic; must run before field edit).
-	if dialog.TryDialogMnemonics(event, []dialog.ExtraMnemonic{
-		{Rune: 'p', Fn: h.confirmTransferPaused},
-	}) {
+	if h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusOnDest(), h.ArmTransferDestinationValidateTimer) {
 		return
 	}
 	if d.MultiLocation() {
@@ -327,29 +249,22 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 	if h.TryTransferDialogDestinationShortcut(event) {
 		return
 	}
-	if d.FocusField == 0 && d.Phase == dialog.TransferPhaseSelfCopyRename {
-		if h.editTransferFieldKey(event, &d.SelfCopyNewName) {
-			return
-		}
-	}
-	if h.handleTransferDestinationNav(event) {
+	if h.DestFieldNav(event, &d.Destination, d.FocusOnDest()) {
 		return
 	}
-	if focus, ok := dialog.TransferDialogMoveFocus(*d, d.FocusField, event.Key()); ok {
-		d.FocusField = focus
+	if ev, ok := dlg.HandleKey(spec, &d.Focus, event); ok {
+		h.applyTransferEvent(ev)
 		return
 	}
-	if h.handleTransferEnter(event) {
-		return
-	}
-	if d.FocusField == 0 && d.Phase != dialog.TransferPhaseSelfCopyRename {
+	switch {
+	case d.Phase == dialog.TransferPhaseSelfCopyRename && d.FocusOnInput():
+		h.editTransferFieldKey(event, &d.SelfCopyNewName)
+	case d.FocusOnDest():
 		if h.editTransferFieldKey(event, &d.Destination) {
 			h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 			h.ArmTransferDestinationValidateTimer()
-			return
 		}
 	}
-	h.handleTransferCheckboxRune(event)
 }
 
 func (h *Handler) editTransferFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {

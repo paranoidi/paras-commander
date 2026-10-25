@@ -64,7 +64,7 @@ func (h *Handler) TransferDialogOK() { h.confirmTransfer() }
 // TransferDialogCancel closes the destination completion dropdown, else the dialog.
 func (h *Handler) TransferDialogCancel() {
 	d := &h.model.TransferDialog
-	if d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0 && closeCompletion(&d.Destination.Completion) {
+	if d.FocusOnDest() && closeCompletion(&d.Destination.Completion) {
 		return
 	}
 	h.CloseTransferDialog()
