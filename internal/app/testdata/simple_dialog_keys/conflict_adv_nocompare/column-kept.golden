@@ -1,0 +1,810 @@
+== open ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbfffcfffffffffffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Right ==
+advanced focus=r0c1 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Right ==
+advanced focus=r0c2 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbfffffffbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Down ==
+advanced focus=r1c2 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbfffffffbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Down ==
+advanced focus=r2c2 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbfffffffbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Down ==
+advanced focus=r3c2 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbfffffffbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Down ==
+advanced focus=r4c2 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbfffffffbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Down ==
+advanced focus=r5c2 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbfffffffbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Down ==
+advanced focus=all time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbfffcfffffffffffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Up ==
+advanced focus=r5c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Up ==
+advanced focus=r4c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Up ==
+advanced focus=r3c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Up ==
+advanced focus=r2c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Up ==
+advanced focus=r1c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd
+== Up ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+-- text --
+  ↓Name   ┌─────────────────── Conflict rules ───────────────────┐          
+          │ Destination newer                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination older                                    │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same time                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ Destination smaller                                  │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Destination larger                                   │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          │ Same size                                            │          
+          │ 󰐾 Ask    󰐽 Overwrite    󰐽 Skip    󰐽 Keep both        │          
+          ├──────────────────────────────────────────────────────┤          
+          │ 󰡖 Apply to all conflicts                             │          
+          ├──────────────────────────────────────────────────────┤          
+          │                 [ OK ]    [ Cancel ]                 │          
+          └──────────────────────────────────────────────────────┘          
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+f fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbfffcfffffffffffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbbbbbbdddddddddd
+ddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddiiiiiiiiddddddddddddddddddddd

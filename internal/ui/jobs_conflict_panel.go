@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 const (
@@ -88,41 +89,30 @@ func blockerMismatch(b *jobs.BlockerDetails) bool {
 	return b != nil && b.Kind != jobs.BlockerKindDiskSpace && b.Conflict != nil && b.Conflict.Mismatch
 }
 
+// conflictPanelButtons are the panel buttons in focus-index order; the dialog's IDs carry the
+// decision (dialog.ConflictDecisionOf), and Advanced… opens the rules dialog instead.
+var (
+	conflictPanelButtons         = [...]dlg.ID{dialog.ConflictOverwrite, dialog.ConflictOverwriteAll, dialog.ConflictAdvanced, dialog.ConflictSkip, dialog.ConflictSkipAll, dialog.ConflictCancelJob}
+	conflictPanelMismatchButtons = [...]dlg.ID{dialog.ConflictRename, dialog.ConflictRenameAll, dialog.ConflictAdvanced, dialog.ConflictSkip, dialog.ConflictSkipAll, dialog.ConflictCancelJob}
+)
+
 // ConflictDecisionFromButtonIndex maps conflict panel button order to domain decisions.
 func ConflictDecisionFromButtonIndex(idx int, mismatch bool) jobs.ConflictDecision {
-	switch idx {
-	case 0:
-		if mismatch {
-			return jobs.DecisionRename
-		}
-		return jobs.DecisionOverwrite
-	case 1:
-		if mismatch {
-			return jobs.DecisionRenameAll
-		}
-		return jobs.DecisionOverwriteAll
-	case 2:
-		return "" // Advanced…: opens the advanced dialog, not a decision
-	case 3:
-		return jobs.DecisionSkip
-	case 4:
-		return jobs.DecisionSkipAll
-	default:
-		return jobs.DecisionCancel
+	buttons := conflictPanelButtons
+	if mismatch {
+		buttons = conflictPanelMismatchButtons
 	}
+	idx = min(max(idx, 0), len(buttons)-1)
+	d, _ := dialog.ConflictDecisionOf(buttons[idx]) // Advanced… submits no decision: ""
+	return d
 }
 
-// conflictAdvancedFocus is the button index of "Advanced…" in the conflict panel and dialog.
+// conflictAdvancedFocus is the button index of "Advanced…" in the conflict panel.
 const conflictAdvancedFocus = 2
 
 // JobBlockerPanelIsAdvanced reports whether panel button focus selects "Advanced…" (not a decision).
 func JobBlockerPanelIsAdvanced(sel JobEntry, btnIdx int) bool {
 	return sel.PendingBlocker != nil && sel.PendingBlocker.Kind != jobs.BlockerKindDiskSpace && !blockerMismatch(sel.PendingBlocker) && btnIdx == conflictAdvancedFocus
-}
-
-// JobBlockerDialogIsAdvanced reports whether dialog focus selects "Advanced…" (not a decision).
-func JobBlockerDialogIsAdvanced(b jobs.BlockerDetails, focus int) bool {
-	return b.Kind != jobs.BlockerKindDiskSpace && !blockerMismatch(&b) && focus == conflictAdvancedFocus
 }
 
 // JobBlockerDecisionFromFocus resolves the decision for the blocker pane from button focus.
@@ -136,139 +126,44 @@ func JobBlockerDecisionFromFocus(sel JobEntry, btnIdx int) jobs.ConflictDecision
 	return ConflictDecisionFromButtonIndex(btnIdx, blockerMismatch(sel.PendingBlocker))
 }
 
-// JobBlockerDialogMaxFocus returns the maximum button focus index for the quick blocker dialog.
-func JobBlockerDialogMaxFocus(b jobs.BlockerDetails) int {
-	if b.Kind == jobs.BlockerKindDiskSpace {
-		return 2
-	}
-	return 6
-}
-
-// JobBlockerDialogPostponeFocus returns the focus index of the Postpone button.
-func JobBlockerDialogPostponeFocus(b jobs.BlockerDetails) int {
-	if b.Kind == jobs.BlockerKindDiskSpace {
-		return 2
-	}
-	return 6
-}
-
-// JobBlockerDialogIsPostpone reports whether focus selects Postpone (not a ConflictDecision).
-func JobBlockerDialogIsPostpone(b jobs.BlockerDetails, focus int) bool {
-	return focus == JobBlockerDialogPostponeFocus(b)
-}
-
-// JobBlockerDialogDecision maps dialog button focus to a blocker decision.
-// The second return is false for Postpone or out-of-range focus.
-func JobBlockerDialogDecision(b jobs.BlockerDetails, focus int) (jobs.ConflictDecision, bool) {
-	if JobBlockerDialogIsPostpone(b, focus) {
-		return "", false
-	}
-	if b.Kind == jobs.BlockerKindDiskSpace {
-		if focus <= 0 {
-			return jobs.DecisionRetry, true
-		}
-		return jobs.DecisionCancel, true
-	}
-	mismatch := blockerMismatch(&b)
-	if focus < 0 || focus > 5 || focus == conflictAdvancedFocus {
-		return "", false
-	}
-	return ConflictDecisionFromButtonIndex(focus, mismatch), true
-}
-
-// JobBlockerDialogFocusFromShortcut maps Alt+letter shortcuts to button focus.
-func JobBlockerDialogFocusFromShortcut(b jobs.BlockerDetails, r rune) (int, bool) {
-	if b.Kind == jobs.BlockerKindDiskSpace {
-		switch r {
-		case 'r', 'R':
+// moveFocusInDiskRow applies navigation keys to the disk-space blocker pane buttons: Tab wraps,
+// Left/Right stop at the ends, Up/Down are consumed.
+func moveFocusInDiskRow(focus int, key tcell.Key) (int, bool) {
+	const maxFocus = 2
+	focus = min(max(focus, 0), maxFocus)
+	switch key {
+	case tcell.KeyTab:
+		if focus >= maxFocus {
 			return 0, true
-		case 'b', 'B':
-			return 1, true
-		case 'p', 'P':
-			return 2, true
 		}
-		return 0, false
+		return focus + 1, true
+	case tcell.KeyBacktab:
+		if focus <= 0 {
+			return maxFocus, true
+		}
+		return focus - 1, true
+	case tcell.KeyLeft:
+		return max(focus-1, 0), true
+	case tcell.KeyRight:
+		return min(focus+1, maxFocus), true
+	case tcell.KeyUp, tcell.KeyDown:
+		return focus, true
 	}
-	mismatch := blockerMismatch(&b)
-	switch r {
-	case 'o', 'O':
-		return 0, !mismatch
-	case 'r', 'R':
-		return 0, mismatch
-	case 'a', 'A':
-		return 1, true
-	case 'd', 'D':
-		return 2, !mismatch
-	case 's', 'S':
-		return 3, true
-	case 'l', 'L':
-		return 4, true
-	case 'c', 'C':
-		return 5, true
-	case 'p', 'P':
-		return 6, true
-	default:
-		return 0, false
-	}
+	return focus, false
 }
 
-// JobBlockerDialogMoveFocus applies dialog navigation keys to button focus.
-func JobBlockerDialogMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) (int, bool) {
-	max := JobBlockerDialogMaxFocus(b)
-	if focus < 0 {
-		focus = 0
-	}
-	if focus > max {
-		focus = max
-	}
-	if b.Kind == jobs.BlockerKindDiskSpace {
-		switch key {
-		case tcell.KeyTab:
-			if focus >= max {
-				return 0, true
-			}
-			return focus + 1, true
-		case tcell.KeyBacktab:
-			if focus <= 0 {
-				return max, true
-			}
-			return focus - 1, true
-		case tcell.KeyLeft:
-			if focus > 0 {
-				return focus - 1, true
-			}
-			return focus, true
-		case tcell.KeyRight:
-			if focus < max {
-				return focus + 1, true
-			}
-			return focus, true
-		case tcell.KeyUp, tcell.KeyDown:
-			return focus, true
-		default:
-			return focus, false
-		}
-	}
-	if blockerMismatch(&b) {
-		return moveFocusInButtonGrid(conflictDialogMismatchGrid, focus, key)
-	}
-	return moveFocusInButtonGrid(conflictDialogButtonGrid, focus, key)
-}
-
-// Conflict button rows as focus indexes (see ConflictDecisionFromButtonIndex; 6 is Postpone).
+// Conflict button rows as focus indexes (see ConflictDecisionFromButtonIndex).
 var (
-	conflictDialogButtonGrid = [][]int{{0, 1, 2}, {3, 4, 6}, {5}}
-	conflictPanelButtonGrid  = [][]int{{0, 1, 2}, {3, 4, 5}}
+	conflictPanelButtonGrid = [][]int{{0, 1, 2}, {3, 4, 5}}
 	// A directory mismatch has no Advanced… button (focus 2).
-	conflictDialogMismatchGrid = [][]int{{0, 1}, {3, 4, 6}, {5}}
-	conflictPanelMismatchGrid  = [][]int{{0, 1}, {3, 4, 5}}
+	conflictPanelMismatchGrid = [][]int{{0, 1}, {3, 4, 5}}
 )
 
 // JobsBlockerPanelMoveFocus applies navigation keys to the jobs-view blocker pane buttons,
 // which lay out like the quick dialog minus Postpone.
 func JobsBlockerPanelMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) (int, bool) {
 	if b.Kind == jobs.BlockerKindDiskSpace {
-		return JobBlockerDialogMoveFocus(b, focus, key)
+		return moveFocusInDiskRow(focus, key)
 	}
 	if blockerMismatch(&b) {
 		return moveFocusInButtonGrid(conflictPanelMismatchGrid, focus, key)

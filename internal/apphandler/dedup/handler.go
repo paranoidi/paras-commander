@@ -295,7 +295,7 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		DirsCollapsePending:   true,
 		GroupsCollapsePending: true,
 	}
-	h.model.DedupProgressDialog = dialog.DedupProgressDialogState{Open: true, ButtonFocus: 0}
+	h.model.DedupProgressDialog = dialog.DedupProgressDialogState{Open: true}
 
 	volGate := diskusage.ListingVolumeGate{}
 	if h.config.Compare.StayOnVolumeDefault {

@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // newBlockerTestHandler wires a Handler over a live jobs.State whose worker is running, so
@@ -112,7 +113,7 @@ func TestBlockerDialogSubmitDecision(t *testing.T) {
 	waitJobsWaitingDecision(t, h, state, 1)
 	h.HandleAnswerBlockerKey()
 
-	h.model.ConflictDialog.Focus = 3 // Skip
+	h.model.ConflictDialog.Focus = dialog.ConflictSkip
 	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if h.model.ConflictDialog.Open {
 		t.Fatal("dialog still open after confirm")
@@ -151,7 +152,7 @@ func TestBlockerDialogChainOpensNext(t *testing.T) {
 	if h.model.ConflictDialog.JobID != "chain-1" {
 		t.Fatalf("first dialog JobID = %q, want chain-1", h.model.ConflictDialog.JobID)
 	}
-	h.model.ConflictDialog.Focus = 3 // Skip
+	h.model.ConflictDialog.Focus = dialog.ConflictSkip
 	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	deadline := time.Now().Add(2 * time.Second)
@@ -193,7 +194,7 @@ func TestBlockerDialogAdvancedFlow(t *testing.T) {
 
 	key := func(k tcell.Key) { h.HandleBlockerDialogKey(tcell.NewEventKey(k, 0, tcell.ModNone)) }
 
-	h.model.ConflictDialog.Focus = 2 // Advanced…
+	h.model.ConflictDialog.Focus = dialog.ConflictAdvanced
 	key(tcell.KeyEnter)
 	st := h.model.ConflictDialog
 	if !st.Open || !st.Advanced {
@@ -218,8 +219,8 @@ func TestBlockerDialogAdvancedFlow(t *testing.T) {
 	key(tcell.KeyTab) // size block
 	key(tcell.KeyTab) // checkboxes
 	key(tcell.KeyDown)
-	if h.model.ConflictDialog.AdvFocus != h.model.ConflictDialog.ConflictAdvancedAllFocus() {
-		t.Fatalf("focus = %d, want apply-to-all checkbox", h.model.ConflictDialog.AdvFocus)
+	if h.model.ConflictDialog.AdvFocus != dialog.ConflictApplyAll {
+		t.Fatalf("focus = %q, want apply-to-all checkbox", h.model.ConflictDialog.AdvFocus)
 	}
 	h.HandleBlockerDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if h.model.ConflictDialog.AdvAll {

@@ -6,13 +6,11 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/dialogform"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
@@ -94,26 +92,6 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 	}
 }
 
-func scrollModeFromShortcut(ch rune, focus *int) (panel.ScrollMode, bool) {
-	for i, row := range panel.ScrollModeDialogRadios() {
-		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
-			*focus = dialog.ConfigDialogScrollModeFocus(i)
-			return row.Mode, true
-		}
-	}
-	return "", false
-}
-
-func panelScrollbarFromShortcut(ch rune, focus *int) (uiscrollbar.Style, bool) {
-	for i, row := range uiscrollbar.DialogRadios() {
-		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
-			*focus = dialog.ConfigDialogScrollbarFocus(i)
-			return row.Style, true
-		}
-	}
-	return "", false
-}
-
 func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
 	st := &a.model.ListingFormatDialog
 	ev, ok := dlg.HandleKey(dialog.ListingFormatView(*st), &st.Focus, event)
@@ -169,7 +147,6 @@ func (a *App) openConfigDialog() {
 		PanelScrollbar:         uiscrollbar.EffectiveStyle(sb),
 		PanelScrollbarInactive: a.config.UI.Scroll.ScrollbarInactive,
 		ListFormat:             panel.EffectiveListFormat(lf),
-		Focus:                  0,
 	}
 	def := config.DefaultCarouselSplit()
 	for i := range a.model.ConfigDialog.Split {
@@ -190,7 +167,7 @@ func (a *App) applyConfigDialog() {
 	if _, err := panelcarousel.ParseLayout(split, a.config.Carousel.ShowSize); err != nil {
 		for i, tok := range split {
 			if !panelcarousel.ValidSplitToken(tok, i) {
-				a.model.ConfigDialog.Focus = 12 + i
+				a.model.ConfigDialog.Focus = dialog.ConfigSplitID(i)
 				break
 			}
 		}
@@ -264,112 +241,43 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 	}
 	if event.Key() == tcell.KeyF8 && a.configFileExists() {
 		st.ResetDefaultsConfirm = true
-		st.ResetDefaultsConfirmFocus = 0
+		st.ResetDefaultsConfirmFocus = dialog.ConfigConfirmYes
 		return
 	}
-	if i, ok := dialog.ConfigDialogSplitIndex(st.Focus); ok {
-		if dialog.HandleFileDialogFieldKey(event, &st.Split[i], a.keys.DialogInput, nil) {
-			return
+	spec := dialog.ConfigDialogView(*st)
+	ev, handled := dlg.HandleKey(spec, &st.Focus, event)
+	if handled {
+		switch {
+		case ev.ID == dlg.OK:
+			a.applyConfigDialog()
+		case ev.ID == dlg.Cancel:
+			a.closeConfigDialog()
+		case ev.ID != "":
+			if _, isInput := dialog.ConfigSplitIndex(ev.ID); isInput {
+				a.applyConfigDialog() // Enter in a split input confirms
+			} else {
+				st.Apply(ev)
+			}
 		}
+		return
 	}
-	// Segments: view checkboxes(0-2) | scroll section(3-8) | listing radios(9-11) | split inputs(12,13,14 each) | buttons(15).
-	form := dialog.NewDialogLinearForm(15).WithSegments(0, 3, 9, 12, 13, 14, 15)
-	listRadios := panel.ListFormatDialogRadios()
-	scrollRadios := panel.ScrollModeDialogRadios()
-	sbRadios := uiscrollbar.DialogRadios()
-	dialogform.HandleKey(event, form, dialogform.Handlers{
-		Focus:              &st.Focus,
-		OnApply:            a.applyConfigDialog,
-		OnCancel:           a.closeConfigDialog,
-		AllowPlainOKCancel: true,
-		OnMoveFocus:        dialog.ConfigDialogMoveScrollFocus,
-		OnMnemonic: func(r rune) bool {
-			if mode, ok := scrollModeFromShortcut(r, &st.Focus); ok {
-				st.ScrollMode = mode
-				return true
-			}
-			if style, ok := panelScrollbarFromShortcut(r, &st.Focus); ok {
-				st.PanelScrollbar = style
-				return true
-			}
-			for i, row := range listRadios {
-				if unicode.ToLower(r) == unicode.ToLower(row.Shortcut) {
-					st.ListFormat = row.Format
-					st.Focus = 9 + i
-					return true
-				}
-			}
-			switch r {
-			case 'd', 'D':
-				st.UseNerdfontIcons = !st.UseNerdfontIcons
-				st.Focus = 0
-			case 'z', 'Z':
-				st.ZoomActivePanel = !st.ZoomActivePanel
-				st.Focus = 1
-			case 'h', 'H':
-				st.PaneSplitStacked = !st.PaneSplitStacked
-				st.Focus = 2
-			default:
-				return false
-			}
-			return true
-		},
-		OnSpace: func(focus int) bool {
-			switch focus {
-			case 0:
-				st.UseNerdfontIcons = !st.UseNerdfontIcons
-			case 1:
-				st.ZoomActivePanel = !st.ZoomActivePanel
-			case 2:
-				st.PaneSplitStacked = !st.PaneSplitStacked
-			case 9, 10, 11:
-				st.ListFormat = listRadios[focus-9].Format
-			case form.OKIndex():
-				a.applyConfigDialog()
-			case form.CancelIndex():
-				a.closeConfigDialog()
-			default:
-				if idx, ok := dialog.ConfigDialogScrollModeIndex(focus); ok {
-					st.ScrollMode = scrollRadios[idx].Mode
-					return true
-				}
-				if idx, ok := dialog.ConfigDialogScrollbarIndex(focus); ok {
-					st.PanelScrollbar = sbRadios[idx].Style
-					return true
-				}
-				return false
-			}
-			return true
-		},
-	})
+	// The engine declined: text keys go to the focused carousel split input.
+	if i, ok := dialog.ConfigSplitIndex(dlg.Focused(spec, st.Focus)); ok {
+		dialog.HandleFileDialogFieldKey(event, &st.Split[i], a.keys.DialogInput, nil)
+	}
 }
 
 // handleConfigEditStubConfirmKey handles Yes/No for the "config.toml does not exist, generate
 // default and open it?" confirmation shown from the Configuration dialog's F9 handler.
 func (a *App) handleConfigEditStubConfirmKey(event *tcell.EventKey) {
 	st := &a.model.ConfigDialog
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'y', 'Y':
-			st.EditStubConfirm = false
-			a.createAndEditConfigStub()
-			return
-		case 'n', 'N':
-			st.EditStubConfirm = false
-			return
-		}
+	ev, ok := dlg.HandleKey(dialog.ConfigEditStubView(), &st.EditStubConfirmFocus, event)
+	if !ok || ev.ID == "" {
+		return
 	}
-	switch event.Key() {
-	case tcell.KeyLeft:
-		st.EditStubConfirmFocus = dialog.DialogPairLeftRight(st.EditStubConfirmFocus, false)
-	case tcell.KeyRight:
-		st.EditStubConfirmFocus = dialog.DialogPairLeftRight(st.EditStubConfirmFocus, true)
-	case tcell.KeyEnter:
-		yes := st.EditStubConfirmFocus == 0
-		st.EditStubConfirm = false
-		if yes {
-			a.createAndEditConfigStub()
-		}
+	st.EditStubConfirm = false
+	if ev.ID == dialog.ConfigConfirmYes {
+		a.createAndEditConfigStub()
 	}
 }
 
@@ -377,28 +285,13 @@ func (a *App) handleConfigEditStubConfirmKey(event *tcell.EventKey) {
 // defaults?" confirmation shown from the Configuration dialog's F8 handler.
 func (a *App) handleConfigResetDefaultsConfirmKey(event *tcell.EventKey) {
 	st := &a.model.ConfigDialog
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'y', 'Y':
-			st.ResetDefaultsConfirm = false
-			a.resetConfigToDefaults()
-			return
-		case 'n', 'N':
-			st.ResetDefaultsConfirm = false
-			return
-		}
+	ev, ok := dlg.HandleKey(dialog.ConfigResetDefaultsView(), &st.ResetDefaultsConfirmFocus, event)
+	if !ok || ev.ID == "" {
+		return
 	}
-	switch event.Key() {
-	case tcell.KeyLeft:
-		st.ResetDefaultsConfirmFocus = dialog.DialogPairLeftRight(st.ResetDefaultsConfirmFocus, false)
-	case tcell.KeyRight:
-		st.ResetDefaultsConfirmFocus = dialog.DialogPairLeftRight(st.ResetDefaultsConfirmFocus, true)
-	case tcell.KeyEnter:
-		yes := st.ResetDefaultsConfirmFocus == 0
-		st.ResetDefaultsConfirm = false
-		if yes {
-			a.resetConfigToDefaults()
-		}
+	st.ResetDefaultsConfirm = false
+	if ev.ID == dialog.ConfigConfirmYes {
+		a.resetConfigToDefaults()
 	}
 }
 
@@ -450,7 +343,7 @@ func (a *App) editConfigTOMLFromDialog() {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			st.EditStubConfirm = true
-			st.EditStubConfirmFocus = 0
+			st.EditStubConfirmFocus = dialog.ConfigConfirmYes
 			return
 		}
 		a.setErrorMessage("Edit config", err)

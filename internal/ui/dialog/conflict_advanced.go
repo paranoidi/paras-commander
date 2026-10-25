@@ -1,9 +1,12 @@
 package dialog
 
-import "github.com/paranoidi/paras-commander/internal/jobs"
+import (
+	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+)
 
 // conflictRuleRowLabels are the condition rows of the "Conflict rules" dialog: rows 0..2 are
-// jobs.ConflictRules.Time, rows 3..5 are jobs.ConflictRules.Size. Render and key handling share it.
+// jobs.ConflictRules.Time, rows 3..5 are jobs.ConflictRules.Size. View and key handling share it.
 var conflictRuleRowLabels = [...]string{
 	"Destination newer", "Destination older", "Same time",
 	"Destination smaller", "Destination larger", "Same size",
@@ -22,7 +25,7 @@ var ConflictRuleChoices = [...]struct {
 
 const (
 	conflictRuleTimeRows = 3
-	// ConflictRuleRows is the number of condition rows; focus 0..ConflictRuleRows-1 are radio rows.
+	// ConflictRuleRows is the number of condition rows.
 	ConflictRuleRows = len(conflictRuleRowLabels)
 )
 
@@ -31,27 +34,11 @@ func (st ConflictDialogState) ConflictAdvancedNoCompare() bool {
 	return st.Blocker.Conflict != nil && st.Blocker.Conflict.NoCompare
 }
 
-// ConflictAdvancedSkipIdenticalFocus is the focus index of the Skip identical checkbox, or -1 when hidden.
-func (st ConflictDialogState) ConflictAdvancedSkipIdenticalFocus() int {
-	if st.ConflictAdvancedNoCompare() {
-		return -1
+func (st ConflictDialogState) ruleAction(row int) jobs.RuleAction {
+	if row < conflictRuleTimeRows {
+		return st.Rules.Time[row]
 	}
-	return ConflictRuleRows
-}
-
-// ConflictAdvancedAllFocus is the focus index of the Apply to all checkbox.
-func (st ConflictDialogState) ConflictAdvancedAllFocus() int {
-	if st.ConflictAdvancedNoCompare() {
-		return ConflictRuleRows
-	}
-	return ConflictRuleRows + 1
-}
-
-// ConflictAdvancedForm is the focus layout: six rule rows, the checkboxes, then OK and Cancel.
-// Tab jumps between the time rows, the size rows, the checkboxes and the buttons.
-func (st ConflictDialogState) ConflictAdvancedForm() DialogTrailingButtonsForm {
-	n := st.ConflictAdvancedAllFocus() + 1
-	return NewDialogTrailingButtonsForm(n, 2).WithSegments(0, conflictRuleTimeRows, ConflictRuleRows, n)
+	return st.Rules.Size[row-conflictRuleTimeRows]
 }
 
 func (st *ConflictDialogState) ruleSlot(row int) *jobs.RuleAction {
@@ -70,37 +57,19 @@ func (st ConflictDialogState) ConflictAdvancedChoiceEnabled(row, col int) bool {
 // StartAdvanced switches the dialog to the rules matrix with default rules.
 func (st *ConflictDialogState) StartAdvanced() {
 	st.Advanced = true
-	st.AdvFocus = 0
+	st.AdvFocus = ConflictRuleID(0, 0) // Ask, the default selection
 	st.AdvAll = true
 	st.Rules = jobs.ConflictRules{} // every row Ask, Skip identical off
-	st.AdvCol = 0                   // Ask, the default selection
 }
 
-// SyncAdvCol keeps the choice cursor in its column when focus changes rows; a greyed column on
-// the new row falls back to Ask, which is never greyed.
-func (st *ConflictDialogState) SyncAdvCol() {
-	if st.AdvFocus >= ConflictRuleRows || st.ConflictAdvancedChoiceEnabled(st.AdvFocus, st.AdvCol) {
+// ApplyRule picks the choice named by the rule radio id for its row (a greyed choice is ignored)
+// and resets size choices that now contradict the time rows.
+func (st *ConflictDialogState) ApplyRule(id dlg.ID) {
+	row, col, ok := ConflictRuleCell(id)
+	if !ok || row < 0 || row >= ConflictRuleRows || col < 0 || col >= len(ConflictRuleChoices) || !st.ConflictAdvancedChoiceEnabled(row, col) {
 		return
 	}
-	st.AdvCol = 0 // Ask
-}
-
-// AdvMoveChoice moves the choice cursor left/right on the focused row, skipping greyed choices.
-func (st *ConflictDialogState) AdvMoveChoice(delta int) {
-	for c := st.AdvCol + delta; c >= 0 && c < len(ConflictRuleChoices); c += delta {
-		if st.ConflictAdvancedChoiceEnabled(st.AdvFocus, c) {
-			st.AdvCol = c
-			return
-		}
-	}
-}
-
-// AdvSelectChoice picks the choice under the cursor for the focused row.
-func (st *ConflictDialogState) AdvSelectChoice() {
-	if st.AdvFocus >= ConflictRuleRows || !st.ConflictAdvancedChoiceEnabled(st.AdvFocus, st.AdvCol) {
-		return
-	}
-	*st.ruleSlot(st.AdvFocus) = ConflictRuleChoices[st.AdvCol].Action
+	*st.ruleSlot(row) = ConflictRuleChoices[col].Action
 	st.Rules.Normalize()
 }
 

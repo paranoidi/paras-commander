@@ -1,0 +1,59 @@
+-- text --
+                                                  
+                                                  
+ ┌─────────────── Conflict rules ───────────────┐ 
+ │ Destination newer                            │ 
+ │ ( ) Ask  ( ) Overwrite  (*) Skip  ( ) Keep … │ 
+ │ Destination older                            │ 
+ │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep … │ 
+ │ Same time                                    │ 
+ │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep … │ 
+ ├──────────────────────────────────────────────┤ 
+ │ Destination smaller                          │ 
+ │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep … │ 
+ │ Destination larger                           │ 
+ │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep … │ 
+ │ Same size                                    │ 
+ │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep … │ 
+ ├──────────────────────────────────────────────┤ 
+ │ [x] Skip identical files (slow)              │ 
+ │ [x] Apply to all conflicts                   │ 
+ ├──────────────────────────────────────────────┤ 
+ │             [ OK ]    [ Cancel ]             │ 
+ └──────────────────────────────────────────────┘ 
+                                                  
+                                                  
+-- legend --
+a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+abbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbdddddddddbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abddddddddbeeeeeeeeeeeeeebbbbbbbbbbbeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abddddddddbeeeeeeeeeeeeeebbbbbbbbbbbeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abddddddddbeeeeeeeeeeeeeebbbbbbbbbbbeeeeeeeeeeebba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abfffffffcffffffffffffffffffffffffbbbbbbbbbbbbbbba
+abdddddcdddddddddddddddddddddbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbggghggggbbggghggggggggbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

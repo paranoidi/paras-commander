@@ -4,8 +4,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gdamore/tcell/v2"
+
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func rulesState(noCompare bool) ConflictDialogState {
@@ -24,61 +27,89 @@ func TestConflictRulesDefaults(t *testing.T) {
 	}
 }
 
-func TestConflictRulesFormTabJumpsBetweenGroups(t *testing.T) {
+func TestConflictRulesTabJumpsBetweenGroups(t *testing.T) {
 	st := rulesState(false)
-	f := st.ConflictAdvancedForm()
-	for from, want := range map[int]int{0: 3, 2: 3, 3: 6, 5: 6, 6: f.OKIndex(), 7: f.OKIndex(), f.CancelIndex(): 0} {
-		if got := f.Tab(from); got != want {
-			t.Fatalf("Tab(%d) = %d, want %d", from, got, want)
+	spec := ConflictDialogView(st, "")
+	for from, want := range map[dlg.ID]dlg.ID{
+		ConflictRuleID(0, 0):  ConflictRuleID(3, 0),
+		ConflictRuleID(2, 2):  ConflictRuleID(3, 2),
+		ConflictRuleID(3, 0):  ConflictSkipIdentical,
+		ConflictRuleID(5, 0):  ConflictSkipIdentical,
+		ConflictSkipIdentical: dlg.OK,
+		ConflictApplyAll:      dlg.OK,
+		dlg.Cancel:            ConflictRuleID(0, 0),
+	} {
+		focus := from
+		dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+		if want == ConflictRuleID(3, 2) {
+			want = ConflictRuleID(3, 0) // a segment starts at its first item
+		}
+		if focus != want {
+			t.Fatalf("Tab from %q = %q, want %q", from, focus, want)
 		}
 	}
-	if f2 := rulesState(true).ConflictAdvancedForm(); f2.OKIndex() != 7 {
-		t.Fatalf("OK index without Skip identical = %d, want 7", f2.OKIndex())
+	// Without Skip identical the checkbox group is just Apply to all.
+	noCompare := ConflictDialogView(rulesState(true), "")
+	focus := ConflictRuleID(5, 0)
+	dlg.HandleKey(noCompare, &focus, tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if focus != ConflictApplyAll {
+		t.Fatalf("Tab into the checkboxes without Skip identical = %q, want Apply to all", focus)
 	}
 }
 
-func TestConflictRulesChoiceNavigationSkipsGreyed(t *testing.T) {
+func TestConflictRulesApplyRuleSkipsGreyed(t *testing.T) {
 	st := rulesState(false)
-	st.AdvFocus = 0 // Destination newer: pick Skip
-	st.AdvCol = 2
-	st.AdvSelectChoice()
-	st.AdvFocus = 1
-	st.SyncAdvCol()
-	st.AdvCol = 1 // Destination older: Overwrite
-	st.AdvSelectChoice()
+	st.ApplyRule(ConflictRuleID(0, 2)) // Destination newer: Skip
+	st.ApplyRule(ConflictRuleID(1, 1)) // Destination older: Overwrite
 
-	// Skip and Overwrite now contradict: only Ask is enabled in the size rows.
-	st.AdvFocus = ConflictRuleRows - 1
-	st.SyncAdvCol()
-	if st.AdvCol != 0 {
-		t.Fatalf("cursor = %d, want Ask", st.AdvCol)
+	// Skip and Overwrite now contradict: only Ask is enabled in the size rows, and the view
+	// greys the rest.
+	spec := ConflictDialogView(st, "")
+	size := spec.Groups[1].Columns[0][1] // the "Destination smaller" row
+	for col, c := range size.Cells {
+		if want := col != 0; c.Disabled != want {
+			t.Fatalf("size choice %d disabled = %v, want %v", col, c.Disabled, want)
+		}
 	}
-	st.AdvMoveChoice(1)
-	if st.AdvCol != 0 {
-		t.Fatalf("Right must skip greyed choices, cursor = %d", st.AdvCol)
-	}
-	st.AdvCol = 1
-	st.AdvSelectChoice()
+	st.ApplyRule(ConflictRuleID(5, 1))
 	if st.Rules.Size[jobs.SizeSame] != jobs.RuleAsk {
 		t.Fatal("greyed choice must not be selectable")
 	}
 
 	// Dropping the time conflict re-enables a matching size choice.
-	st.AdvFocus = 1
-	st.AdvCol = 2
-	st.AdvSelectChoice() // older: Skip, same as newer
-	st.AdvFocus = 5
-	st.AdvCol = 2
-	st.AdvSelectChoice()
+	st.ApplyRule(ConflictRuleID(1, 2)) // older: Skip, same as newer
+	st.ApplyRule(ConflictRuleID(5, 2))
 	if st.Rules.Size[jobs.SizeSame] != jobs.RuleSkip {
 		t.Fatal("Skip must be selectable when the time rows only hold Skip")
 	}
 	// A time change that contradicts it resets the size row to Ask.
-	st.AdvFocus = 0
-	st.AdvCol = 1
-	st.AdvSelectChoice()
+	st.ApplyRule(ConflictRuleID(0, 1))
 	if st.Rules.Size[jobs.SizeSame] != jobs.RuleAsk {
 		t.Fatalf("size selection must fall back to Ask, got %v", st.Rules.Size[jobs.SizeSame])
+	}
+	// Ids that are not a rule radio change nothing.
+	before := st.Rules
+	st.ApplyRule(ConflictApplyAll)
+	st.ApplyRule("rule-9-9")
+	if st.Rules != before {
+		t.Fatal("a non-rule id changed the rules")
+	}
+}
+
+func TestConflictRulesChoiceNavigationSkipsGreyed(t *testing.T) {
+	st := rulesState(false)
+	st.ApplyRule(ConflictRuleID(0, 2)) // time rows hold Skip: Overwrite and Keep both are greyed below
+	spec := ConflictDialogView(st, "")
+	focus := ConflictRuleID(3, 0)
+	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if focus != ConflictRuleID(3, 2) {
+		t.Fatalf("Right from Ask = %q, want the Skip choice (greyed ones are skipped)", focus)
+	}
+	// Down from a greyed column falls back to Ask, not to the nearest choice.
+	focus = ConflictRuleID(2, 3)
+	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if focus != ConflictRuleID(3, 0) {
+		t.Fatalf("Down onto a greyed column = %q, want Ask", focus)
 	}
 }
 
@@ -106,7 +137,6 @@ func TestConflictRulesDialogLayout(t *testing.T) {
 	st := rulesState(false)
 	DrawConflictDialog(screen, layout, st, theme.Default(), "")
 	rows := dialogScreenRows(screen)
-	assertSurfaceBlankRowAboveButtons(t, rows)
 	all := strings.Join(rows, "\n")
 	for _, want := range []string{"Conflict rules", "Destination newer", "Same size", "Keep both", "Skip identical files", "Apply to all conflicts"} {
 		if !strings.Contains(all, want) {
@@ -142,15 +172,5 @@ func assertLabelsAreFollowedByContent(t *testing.T, rows []string) {
 		if strings.Contains(r, "Destination newer") && !strings.Contains(rows[i+1], "Overwrite") {
 			t.Fatalf("row under label is %q", rows[i+1])
 		}
-	}
-}
-
-func TestConflictRulesRowChangeKeepsColumn(t *testing.T) {
-	st := rulesState(false)
-	st.AdvCol = 1 // Overwrite on "Destination newer"
-	st.AdvFocus = 1
-	st.SyncAdvCol()
-	if st.AdvCol != 1 {
-		t.Fatalf("cursor = %d, want column kept at Overwrite", st.AdvCol)
 	}
 }

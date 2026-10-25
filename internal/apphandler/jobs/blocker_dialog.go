@@ -4,9 +4,10 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // JobBlockerNextPayload wakes the event loop to open the next quick-blocker dialog after the
@@ -31,7 +32,6 @@ func (h *Handler) tryOpenBlockerDialog() {
 		Open:    true,
 		JobID:   job.ID,
 		Blocker: blocker,
-		Focus:   0,
 	}
 }
 
@@ -45,19 +45,26 @@ func (h *Handler) postponeBlockerDialog() {
 }
 
 func (h *Handler) confirmBlockerDialog() {
-	h.confirmBlockerDialogWithFocus(h.model.ConflictDialog.Focus)
+	st := &h.model.ConflictDialog
+	h.activateBlockerChoice(dlg.Focused(dialog.ConflictDialogView(*st, ""), st.Focus))
 }
 
-func (h *Handler) confirmBlockerDialogWithFocus(focus int) {
+// activateBlockerChoice runs the button id of the File exists / Disk space screen: Postpone
+// closes the dialog, Advanced… opens the rules screen, every other button submits its decision.
+func (h *Handler) activateBlockerChoice(id dlg.ID) {
 	st := h.model.ConflictDialog
 	if !st.Open {
 		return
 	}
-	if ui.JobBlockerDialogIsAdvanced(st.Blocker, focus) {
+	switch id {
+	case dialog.ConflictPostpone:
+		h.postponeBlockerDialog()
+		return
+	case dialog.ConflictAdvanced:
 		h.model.ConflictDialog.StartAdvanced()
 		return
 	}
-	d, ok := ui.JobBlockerDialogDecision(st.Blocker, focus)
+	d, ok := dialog.ConflictDecisionOf(id)
 	if !ok {
 		h.postponeBlockerDialog()
 		return
@@ -94,41 +101,19 @@ func (h *Handler) DialogCancel() {
 	h.postponeBlockerDialog()
 }
 
-// HandleBlockerDialogKey routes keys for the open quick-blocker (ConflictDialog) dialog.
-// No-op when the dialog is not open.
+// HandleBlockerDialogKey routes keys for the open quick-blocker (ConflictDialog) dialog: the
+// engine owns focus, Tab and the button mnemonics. No-op when the dialog is not open.
 func (h *Handler) HandleBlockerDialogKey(event *tcell.EventKey) {
 	st := &h.model.ConflictDialog
 	if !st.Open {
 		return
 	}
-
-	if st.Advanced {
+	if st.Advanced && st.Blocker.Kind != jobs.BlockerKindDiskSpace {
 		h.handleAdvancedKey(event)
 		return
 	}
-
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if focus, ok := ui.JobBlockerDialogFocusFromShortcut(st.Blocker, event.Rune()); ok {
-			if ui.JobBlockerDialogIsPostpone(st.Blocker, focus) {
-				h.postponeBlockerDialog()
-				return
-			}
-			h.confirmBlockerDialogWithFocus(focus)
-			return
-		}
-	}
-
-	if newFocus, handled := ui.JobBlockerDialogMoveFocus(st.Blocker, st.Focus, event.Key()); handled {
-		st.Focus = newFocus
-		return
-	}
-
-	if event.Key() == tcell.KeyEnter {
-		if ui.JobBlockerDialogIsPostpone(st.Blocker, st.Focus) {
-			h.postponeBlockerDialog()
-			return
-		}
-		h.confirmBlockerDialog()
+	if ev, ok := dlg.HandleKey(dialog.ConflictDialogView(*st, ""), &st.Focus, event); ok && ev.ID != "" {
+		h.activateBlockerChoice(ev.ID)
 	}
 }
 
@@ -170,48 +155,31 @@ func (h *Handler) applyAdvanced() {
 	h.scheduleBlockerDialogChain()
 }
 
-// handleAdvancedKey routes keys for the "Conflict rules" mode of the conflict dialog.
+// handleAdvancedKey routes keys for the "Conflict rules" mode of the conflict dialog. Space
+// and the mnemonics toggle a checkbox and pick a radio; Enter on a radio picks it, Enter on a
+// checkbox or OK applies the rules.
 func (h *Handler) handleAdvancedKey(event *tcell.EventKey) {
 	st := &h.model.ConflictDialog
-	form := st.ConflictAdvancedForm()
-	skipFocus, allFocus := st.ConflictAdvancedSkipIdenticalFocus(), st.ConflictAdvancedAllFocus()
-
-	extras := []dialog.ExtraMnemonic{{Rune: 'a', Fn: func() { st.AdvAll = !st.AdvAll }}}
-	if skipFocus >= 0 {
-		extras = append(extras, dialog.ExtraMnemonic{Rune: 'i', Fn: func() { st.Rules.SkipIdentical = !st.Rules.SkipIdentical }})
-	}
-	if dialog.TryDialogMnemonics(event, extras) {
+	ev, ok := dlg.HandleKey(dialog.ConflictDialogView(*st, ""), &st.AdvFocus, event)
+	if !ok || ev.ID == "" {
 		return
 	}
-	// Left/Right move between the choices of a rule row (not only buttons, like the config dialog's
-	// horizontal inputs).
-	if st.AdvFocus < dialog.ConflictRuleRows && (event.Key() == tcell.KeyLeft || event.Key() == tcell.KeyRight) {
-		if event.Key() == tcell.KeyLeft {
-			st.AdvMoveChoice(-1)
-		} else {
-			st.AdvMoveChoice(1)
-		}
-		return
-	}
-	if newFocus, handled := form.MoveFocus(st.AdvFocus, event.Key()); handled {
-		st.AdvFocus = newFocus
-		st.SyncAdvCol()
-		return
-	}
-	space := event.Key() == tcell.KeyRune && event.Rune() == ' '
-	switch {
-	case (space || event.Key() == tcell.KeyEnter) && st.AdvFocus < dialog.ConflictRuleRows:
-		st.AdvSelectChoice()
-	case space && st.AdvFocus == skipFocus:
-		st.Rules.SkipIdentical = !st.Rules.SkipIdentical
-	case space && st.AdvFocus == allFocus:
-		st.AdvAll = !st.AdvAll
-	case event.Key() == tcell.KeyEnter:
-		if st.AdvFocus == form.CancelIndex() {
-			h.cancelAdvanced()
-			return
-		}
+	switch ev.ID {
+	case dlg.OK:
 		h.applyAdvanced()
+	case dlg.Cancel:
+		h.cancelAdvanced()
+	case dialog.ConflictSkipIdentical, dialog.ConflictApplyAll:
+		switch {
+		case event.Key() == tcell.KeyEnter:
+			h.applyAdvanced()
+		case ev.ID == dialog.ConflictSkipIdentical:
+			st.Rules.SkipIdentical = !st.Rules.SkipIdentical
+		default:
+			st.AdvAll = !st.AdvAll
+		}
+	default:
+		st.ApplyRule(ev.ID)
 	}
 }
 

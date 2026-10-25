@@ -90,13 +90,12 @@ type ConflictDialogState struct {
 	Open    bool
 	JobID   string
 	Blocker jobs.BlockerDetails
-	Focus   int // button index; see ui.JobBlockerDialogMaxFocus
+	Focus   dlg.ID // a button of the File exists / Disk space screen ("" = the first)
 
 	// Advanced switches the dialog to "Conflict rules": a matrix of radio rows (Rules), the Skip
 	// identical and apply-to-all checkboxes, and OK/Cancel.
 	Advanced bool
-	AdvFocus int // see ConflictAdvancedForm
-	AdvCol   int // choice cursor within the focused rule row
+	AdvFocus dlg.ID // a ConflictRuleID radio, ConflictSkipIdentical, ConflictApplyAll, dlg.OK or dlg.Cancel
 	Rules    jobs.ConflictRules
 	AdvAll   bool // apply the rules to all remaining conflicts
 	// OpenedFromPanel: the advanced dialog came from the jobs-view panel, so Cancel closes

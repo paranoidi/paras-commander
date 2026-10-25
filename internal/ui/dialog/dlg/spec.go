@@ -57,6 +57,11 @@ const (
 	// KindRow lays Cells out left to right on one dialog row (see Item.Cells). It has no ID of its
 	// own: its cells are the widgets, each with its own placed rect, focus stop and mouse hit rect.
 	KindRow
+	// KindBar is a full-width progress meter: Frac (0..1) of the width is filled and Label is
+	// overlaid on it, fitted like a FitPath label. Fill and track are cell backgrounds (the
+	// theme's dialog.progress entries), so the meter has no glyphs of its own. It is static, never
+	// focusable or a hit target, and its ID is optional. Not allowed inside a row.
+	KindBar
 )
 
 // Fit says how a label that is wider than its cell is shortened.
@@ -78,6 +83,7 @@ const (
 	TextNormal       TextStyle = iota // DialogText on the surface
 	TextError                         // DialogText with the input error foreground
 	TextMessageError                  // the theme's MessageError style on the dialog surface (message dialog body)
+	TextWarn                          // the theme's MessageWarn style on the dialog surface
 )
 
 // Item is a radio or checkbox row, a static label row (KindLabel), a separator or a text input.
@@ -94,6 +100,10 @@ type Item struct {
 	Prefix string    // fixed text drawn before Label; only Label is shortened (FitPath)
 	Style  TextStyle // text style variant
 	Center bool      // center the text in the available width
+
+	// Bar rows only (KindBar): the filled fraction, clamped to [0, 1]. A started bar (Frac > 0)
+	// always shows at least one filled cell.
+	Frac float64
 
 	// Input rows only; they mirror draw.ScrollingInputState.
 	Value            string
@@ -167,6 +177,10 @@ type Item struct {
 	// EntryLast makes Up land on the row's last focusable cell, instead of its first, when focus
 	// comes from a widget that is not a cell of a row (a button or an item of another kind).
 	EntryLast bool
+	// FallbackFirst makes Up/Down, when the cell at the index of the cell they leave cannot be
+	// focused (a disabled choice), land on the row's first focusable cell instead of the nearest
+	// one to its left.
+	FallbackFirst bool
 
 	// Cell box (items inside Cells). The box starts where the previous one (plus its Gap) ends; radios
 	// and checkboxes start in the box's first cell, labels and inputs one cell in (the dialog's
@@ -200,7 +214,7 @@ type ListRow struct {
 // focusable reports whether keyboard focus and mouse clicks can land on the item.
 func (it Item) focusable() bool {
 	switch it.Kind {
-	case KindLabel, KindSeparator, KindSpacer:
+	case KindLabel, KindSeparator, KindSpacer, KindBar:
 		return false
 	case KindRadio, KindCheckbox:
 		return !it.Disabled
@@ -240,6 +254,10 @@ type Button struct {
 	Label       string
 	Mnemonic    rune
 	Destructive bool
+	// NewRow starts a new centered strip row with this button (ignored on the first button). The
+	// strip stays one Tab stop; Left/Right walk the buttons in reading order across rows and
+	// Up/Down jump to the visually nearest button of the adjacent row.
+	NewRow bool
 }
 
 // Spec describes a whole dialog.

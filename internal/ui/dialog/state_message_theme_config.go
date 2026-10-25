@@ -54,17 +54,20 @@ type ConfigDialogState struct {
 	PanelScrollbarInactive bool
 	ListFormat             panel.ListFormat
 	Split                  [3]FileDialogField // [carousel].split tokens: parent / center / child
-	Focus                  int                // 0=nerdfont icons, 1=zoom, 2=horizontal split, 3-8=scroll mode (left) / scrollbar (right), 9-11=listing format, 12-14=carousel split inputs, 15=OK, 16=Cancel
+	// Focus is the focused widget of ConfigDialogView ("" = the first checkbox): ConfigNerdfont,
+	// ConfigZoom, ConfigHorizontalSplit, a ConfigScrollModeID / ConfigScrollbarID / ConfigListingID
+	// radio, a ConfigSplitID input, dlg.OK or dlg.Cancel.
+	Focus dlg.ID
 
 	// EditStubConfirm shows the "config.toml does not exist, generate default and open it?"
 	// confirmation, entered via F9 when no config.toml exists yet.
 	EditStubConfirm      bool
-	EditStubConfirmFocus int // 0=Yes (default), 1=No
+	EditStubConfirmFocus dlg.ID // ConfigConfirmYes (the default) or ConfigConfirmNo
 
 	// ResetDefaultsConfirm shows the "delete config.toml and reset to defaults?" confirmation,
 	// entered via F8 when config.toml exists.
 	ResetDefaultsConfirm      bool
-	ResetDefaultsConfirmFocus int // 0=Yes (default), 1=No
+	ResetDefaultsConfirmFocus dlg.ID // ConfigConfirmYes (the default) or ConfigConfirmNo
 }
 
 // PreviewSettingsDialogState is the M-F3 preview settings modal: three tri-state terminal

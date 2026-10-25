@@ -60,7 +60,8 @@ func isInput(spec Spec, p pos) bool { return !p.isButton() && widgetAt(spec, p).
 
 // enterRow returns the focusable cell of a row that focus lands on when it moves onto the row.
 // idx is the cell index of the widget focus leaves (-1 when that is not a row cell): the cell with
-// that index, clamped to the row, else the nearest focusable cell to its left, else to its right.
+// that index, clamped to the row, else the nearest focusable cell to its left, else to its right
+// (with FallbackFirst, else the row's first focusable cell).
 // From a widget that is not a row cell, the first focusable cell, or the last one for Up into a
 // row with EntryLast.
 func enterRow(row Item, idx int, up bool) (ID, bool) {
@@ -78,6 +79,9 @@ func enterRow(row Item, idx int, up bool) (ID, bool) {
 		}
 	}
 	idx = min(idx, n-1)
+	if row.FallbackFirst && !row.Cells[idx].focusable() {
+		idx = 0
+	}
 	for i := idx; i >= 0; i-- {
 		if row.Cells[i].focusable() {
 			return row.Cells[i].ID, true
@@ -205,6 +209,10 @@ func segments(spec Spec) []ID {
 	return starts
 }
 
+// Focused is the widget that holds focus when the caller's focus is focus: focus itself when it
+// names a focusable widget, else the first one (an empty or stale ID).
+func Focused(spec Spec, focus ID) ID { return resolve(spec, focus) }
+
 // resolve maps an empty or unknown focus to the first focusable.
 func resolve(spec Spec, focus ID) ID {
 	if _, ok := find(spec, focus); ok {
@@ -237,6 +245,25 @@ func prevGroupLast(spec Spec, g, idx int) (ID, bool) {
 		}
 	}
 	return "", false
+}
+
+// adjacentButton is the button of the strip row above (d = -1) or below (d = 1) the row of button
+// b that sits visually nearest to it: the same relative position in the other row.
+func adjacentButton(spec Spec, b, d int) (ID, bool) {
+	rows := buttonRows(spec.Buttons)
+	row, col := 0, 0
+	for ri, r := range rows {
+		for ci, btn := range r {
+			if btn.ID == spec.Buttons[b].ID {
+				row, col = ri, ci
+			}
+		}
+	}
+	next := row + d
+	if next < 0 || next >= len(rows) {
+		return "", false
+	}
+	return rows[next][(2*col+1)*len(rows[next])/(2*len(rows[row]))].ID, true
 }
 
 // HandleKey applies one key to focus. Navigation (arrows, Tab/Backtab) returns (Event{}, true).
@@ -313,7 +340,7 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		return move(segs[(i+step+len(segs))%len(segs)], true)
 	case tcell.KeyDown:
 		if cur.isButton() {
-			return Event{}, true
+			return move(adjacentButton(spec, cur.button, 1))
 		}
 		if id, ok := nextFocusable(spec.Groups[cur.group].Columns[cur.col], cur.row, cur.cell); ok {
 			return move(id, true)
@@ -321,6 +348,9 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		return move(nextGroupFirst(spec, cur.group, cur.cell))
 	case tcell.KeyUp:
 		if cur.isButton() {
+			if id, ok := adjacentButton(spec, cur.button, -1); ok {
+				return move(id, true)
+			}
 			return move(prevGroupLast(spec, len(spec.Groups), -1))
 		}
 		if id, ok := prevFocusable(spec.Groups[cur.group].Columns[cur.col], cur.row, cur.cell); ok {

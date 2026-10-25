@@ -1,0 +1,67 @@
+-- text --
+                                             
+                                             
+                                             
+  ┌──────────── Configuration ────────────┐  
+  │ View options:                         │  
+  │ [ ] Use nerdfont icons                │  
+  │ [ ] Zoom active panel                 │  
+  │ [ ] Start in horizontal split mode    │  
+  ├───────────────────────────────────────┤  
+  │ Scroll m… Scrollbar style:            │  
+  │ ( ) Mini… ( ) None                    │  
+  │ (*) Edge  (*) Thumb                   │  
+  │ ( ) Cent… ( ) Bar                     │  
+  ├───────────────────────────────────────┤  
+  │ Default listing format:               │  
+  │ (*) Modified time                     │  
+  │ ( ) Permissions                       │  
+  │ ( ) Brief                             │  
+  ├───────────────────────────────────────┤  
+  │ Carousel split (parent / center / ch… │  
+  │ <<22%          <44%            *      │  
+  │                                       │  
+  ├───────────────────────────────────────┤  
+  │         [ OK ]    [ Cancel ]          │  
+  └───────────────────────────────────────┘  
+                                             
+                                             
+                                             
+-- legend --
+a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
+b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+d fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbbbbbbbbbbbbcccccccccccccccbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbcbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabdddddcdddbdddddddcddbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbcbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabdddddcddddddddddddbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbeeeeeebbbbbbbbbffffgfbbbbbbbbbbeeeeeebbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbeeeheeeebbeeeheeeeeeeebbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

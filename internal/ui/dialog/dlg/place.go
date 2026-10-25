@@ -37,6 +37,26 @@ func placeLabel(it Item, x, right, y int) PlacedItem {
 	return PlacedItem{ID: it.ID, Kind: KindLabel, Rect: Rect{X: x, Y: y, Width: w, Height: 1}, Label: text}
 }
 
+// buttonRows splits the strip into its rows (Button.NewRow starts a new one).
+func buttonRows(buttons []Button) [][]Button {
+	var rows [][]Button
+	for i, b := range buttons {
+		if i == 0 || b.NewRow {
+			rows = append(rows, nil)
+		}
+		rows[len(rows)-1] = append(rows[len(rows)-1], b)
+	}
+	return rows
+}
+
+func buttonLabels(row []Button) []string {
+	labels := make([]string, len(row))
+	for i, b := range row {
+		labels[i] = b.Label
+	}
+	return labels
+}
+
 // leaves returns the widgets of spec in layout order (group, column, item), with the cells of a
 // row in place of the row. Place lays them out in this order and Draw walks them in it.
 func leaves(spec Spec) []Item {
@@ -136,7 +156,7 @@ func placeRow(row Item, x, right, y, markerW int) []PlacedItem {
 func shrinkToFit(spec Spec, rect Rect) Spec {
 	avail := rect.Height - 2
 	if len(spec.Buttons) > 0 {
-		avail -= 2
+		avail -= 1 + len(buttonRows(spec.Buttons)) // separator + strip rows
 	}
 	need := 0
 	for _, g := range spec.Groups {
@@ -220,17 +240,14 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 	for _, g := range spec.Groups {
 		prefH += g.height()
 	}
-	if len(spec.Buttons) > 0 {
-		prefH += 2 // separator + button row
+	rows := buttonRows(spec.Buttons)
+	if len(rows) > 0 {
+		prefH += 1 + len(rows) // separator + button rows
 	}
 	prefH = max(prefH, spec.MinHeight)
 	prefW := spec.Width
-	labels := make([]string, len(spec.Buttons))
-	for i, b := range spec.Buttons {
-		labels[i] = b.Label
-	}
-	if len(labels) > 0 {
-		prefW = max(prefW, draw.ButtonRowWidth(labels)+2) // the strip must fit between the borders
+	for _, row := range rows {
+		prefW = max(prefW, draw.ButtonRowWidth(buttonLabels(row))+2) // each row must fit between the borders
 	}
 	layout := draw.Layout{Width: screenW, Height: screenH}
 	var rect Rect
@@ -266,6 +283,13 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 					continue
 				case KindLabel:
 					p.Items = append(p.Items, placeLabel(it, x, right, y+ri))
+					continue
+				case KindBar:
+					bar := it
+					bar.Fit, bar.Center, bar.Right = FitPath, false, false
+					pi := placeLabel(bar, x, right, y+ri)
+					pi.Kind = KindBar
+					p.Items = append(p.Items, pi)
 					continue
 				case KindSpacer:
 					p.Items = append(p.Items, PlacedItem{
@@ -313,12 +337,14 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 	if len(spec.Buttons) > 0 {
 		// The button strip always sits at the bottom of the frame; content that did not fit
 		// (nothing flexible left to shrink) is cut off above the separator.
-		y = min(y, rect.Y+rect.Height-3)
+		y = min(y, rect.Y+rect.Height-2-len(rows))
 		p.ContentBottom = y
 		p.SepY, p.ButtonY = y, y+1
-		for i, x := range draw.ButtonRowXs(rect, labels) {
-			b := spec.Buttons[i]
-			p.Items = append(p.Items, PlacedItem{ID: b.ID, Rect: Rect{X: x, Y: p.ButtonY, Width: draw.DialogButtonWidth(b.Label), Height: 1}, Label: b.Label})
+		for ri, row := range rows {
+			for i, x := range draw.ButtonRowXs(rect, buttonLabels(row)) {
+				b := row[i]
+				p.Items = append(p.Items, PlacedItem{ID: b.ID, Rect: Rect{X: x, Y: p.ButtonY + ri, Width: draw.DialogButtonWidth(b.Label), Height: 1}, Label: b.Label})
+			}
 		}
 	}
 	return p, true
@@ -360,8 +386,12 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 				style = style.Foreground(errFG)
 			case TextMessageError:
 				style = styles.MessageError.Background(surface)
+			case TextWarn:
+				style = styles.MessageWarn.Background(surface)
 			}
 			primitive.Text(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, style)
+		case KindBar:
+			drawBar(screen, pi.Rect, pi.Label, it.Frac, styles)
 		case KindSeparator:
 			if pi.Label == "" {
 				draw.DrawDialogHSeparator(screen, pi.Rect, pi.Rect.Y, borderStyle)
@@ -392,11 +422,13 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 		return
 	}
 	draw.DrawDialogHSeparator(screen, p.Rect, p.SepY, borderStyle)
-	specs := make([]draw.DialogButtonSpec, len(spec.Buttons))
-	for i, b := range spec.Buttons {
-		specs[i] = draw.DialogButtonSpec{Label: b.Label, Shortcut: b.Mnemonic, Focused: focus == b.ID, Destructive: b.Destructive}
+	for ri, row := range buttonRows(spec.Buttons) {
+		specs := make([]draw.DialogButtonSpec, len(row))
+		for i, b := range row {
+			specs[i] = draw.DialogButtonSpec{Label: b.Label, Shortcut: b.Mnemonic, Focused: focus == b.ID, Destructive: b.Destructive}
+		}
+		draw.DrawDialogButtonRowCentered(screen, p.Rect, p.ButtonY+ri, specs, styles)
 	}
-	draw.DrawDialogButtonRowCentered(screen, p.Rect, p.ButtonY, specs, styles)
 }
 
 func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.Theme) {
@@ -412,7 +444,7 @@ func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.
 func HitTest(p Placement, x, y int) (ID, bool) {
 	for _, it := range p.Items {
 		r := it.Rect
-		if it.Kind == KindLabel || it.Kind == KindSeparator || it.Kind == KindSpacer || it.Disabled {
+		if it.Kind == KindLabel || it.Kind == KindSeparator || it.Kind == KindSpacer || it.Kind == KindBar || it.Disabled {
 			continue
 		}
 		if x >= r.X && x < r.X+r.Width && y >= r.Y && y < r.Y+r.Height {

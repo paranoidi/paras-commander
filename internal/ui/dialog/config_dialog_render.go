@@ -1,184 +1,20 @@
 package dialog
 
 import (
-	"unicode/utf8"
-
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/panelcarousel"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
-	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-const configDialogScrollbarStyleLabel = "Scrollbar style:"
-
-// configDialogScrollbarColumns returns label and option x positions for the centered scrollbar-style block.
-func configDialogScrollbarColumns(rect draw.Rect) (labelCol, optionCol int) {
-	label := configDialogScrollbarStyleLabel
-	labelW := utf8.RuneCountInString(label)
-	contentWidth := draw.DialogContentWidth(rect)
-	centerCol := draw.DialogTextX(rect) + contentWidth/2
-	labelCol = centerCol - labelW/2
-	optionCol = labelCol - 1
-	return labelCol, optionCol
-}
-
-const (
-	configDialogSplitLabel  = "Carousel split (parent / center / child):"
-	configDialogSplitInputW = 6
-)
-
-// configDialogSplitColumns returns the x of each carousel-split input, spread evenly from the
-// left text margin to the right content margin, and whether the leftover width is odd (the
-// caller then widens the dialog by one cell so both gaps are equal).
-func configDialogSplitColumns(rect draw.Rect) (cols [3]int, odd bool) {
-	rem := draw.DialogContentWidth(rect) - 3*configDialogSplitInputW
-	gap := rem / 2
-	for i := range cols {
-		cols[i] = draw.DialogTextX(rect) + i*(configDialogSplitInputW+gap)
-	}
-	return cols, rem%2 != 0
-}
-
-const configDialogHorizontalSplitLabel = "Start in horizontal split mode"
-
+// DrawConfigDialog paints the Configuration modal, or one of its Yes/No sub-confirms, from the
+// widget specs (see ConfigDialogView, ConfigEditStubView, ConfigResetDefaultsView).
 func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogState, styles theme.Theme) {
-	if state.EditStubConfirm {
-		drawConfigEditStubConfirm(screen, layout, state, styles)
-		return
+	switch {
+	case state.EditStubConfirm:
+		dlg.Draw(screen, layout.Width, layout.Height, ConfigEditStubView(), state.EditStubConfirmFocus, styles)
+	case state.ResetDefaultsConfirm:
+		dlg.Draw(screen, layout.Width, layout.Height, ConfigResetDefaultsView(), state.ResetDefaultsConfirmFocus, styles)
+	default:
+		dlg.Draw(screen, layout.Width, layout.Height, ConfigDialogView(state), state.Focus, styles)
 	}
-	if state.ResetDefaultsConfirm {
-		drawConfigResetDefaultsConfirm(screen, layout, state, styles)
-		return
-	}
-	const (
-		width     = 54
-		minWidth  = 38
-		minHeight = 22
-	)
-	rect, ok := draw.ClampCenteredDialogRect(layout, width, minHeight, minWidth, minHeight)
-	if !ok {
-		return
-	}
-	if _, odd := configDialogSplitColumns(rect); odd {
-		rect, ok = draw.ClampCenteredDialogRect(layout, rect.Width+1, minHeight, minWidth, minHeight)
-		if !ok {
-			return
-		}
-	}
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Configuration", styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-
-	primaryCol := draw.DialogTextX(rect)
-	leftOptionCol := draw.DialogOptionX(rect)
-	y := rect.Y + 1
-	primitive.Text(screen, primaryCol, y, draw.DialogContentWidth(rect), "View options:", styles.DialogText.Background(dbg))
-	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Use nerdfont icons", 'd', state.UseNerdfontIcons, state.Focus == 0, false, styles)
-	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Zoom active panel", 'z', state.ZoomActivePanel, state.Focus == 1, false, styles)
-	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, configDialogHorizontalSplitLabel, 'h', state.PaneSplitStacked, state.Focus == 2, false, styles)
-	y++
-	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
-	y++
-
-	scrollModeLabel := "Scroll mode:"
-	sbLabel := configDialogScrollbarStyleLabel
-	sbLabelW := utf8.RuneCountInString(sbLabel)
-	rightLabelCol, rightOptionCol := configDialogScrollbarColumns(rect)
-
-	primitive.Text(screen, primaryCol, y, utf8.RuneCountInString(scrollModeLabel), scrollModeLabel, styles.DialogText.Background(dbg))
-	primitive.Text(screen, rightLabelCol, y, sbLabelW, sbLabel, styles.DialogText.Background(dbg))
-	y++
-
-	scrollRadios := panel.ScrollModeDialogRadios()
-	sbRadios := uiscrollbar.DialogRadios()
-	scrollMode := panel.EffectiveScrollMode(state.ScrollMode)
-	sb := uiscrollbar.EffectiveStyle(state.PanelScrollbar)
-	scrollRows := max(len(scrollRadios), len(sbRadios))
-	for i := 0; i < scrollRows; i++ {
-		if i < len(scrollRadios) {
-			r := scrollRadios[i]
-			draw.DrawDialogRadio(screen, leftOptionCol, y, r.Label, r.Shortcut, scrollMode == r.Mode, state.Focus == ConfigDialogScrollModeFocus(i), false, styles)
-		}
-		if i < len(sbRadios) {
-			r := sbRadios[i]
-			draw.DrawDialogRadio(screen, rightOptionCol, y, r.Label, r.Shortcut, sb == r.Style, state.Focus == ConfigDialogScrollbarFocus(i), false, styles)
-		}
-		y++
-	}
-	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
-	y++
-
-	primitive.Text(screen, primaryCol, y, draw.DialogContentWidth(rect), "Default listing format:", styles.DialogText.Background(dbg))
-	y++
-
-	lf := panel.EffectiveListFormat(state.ListFormat)
-	listRadios := panel.ListFormatDialogRadios()
-	for i, r := range listRadios {
-		draw.DrawDialogRadio(screen, leftOptionCol, y, r.Label, r.Shortcut, lf == r.Format, state.Focus == configDialogFocusListingFirst+i, false, styles)
-		y++
-	}
-	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
-	y++
-	primitive.Text(screen, primaryCol, y, draw.DialogContentWidth(rect), configDialogSplitLabel, styles.DialogText.Background(dbg))
-	y++
-	splitCols, _ := configDialogSplitColumns(rect)
-	for i, col := range splitCols {
-		focused := state.Focus == configDialogFocusSplitFirst+i
-		drawInputFieldInvalid(screen, col, y, configDialogSplitInputW, state.Split[i], focused, !panelcarousel.ValidSplitToken(state.Split[i].Value, i), styles)
-	}
-
-	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
-	okFocused := state.Focus == configDialogFocusOK
-	cancelFocused := state.Focus == configDialogFocusCancel
-	draw.DrawOKCancelButtonRow(screen, rect, buttonY, okFocused, cancelFocused, styles)
-}
-
-// drawConfigEditStubConfirm renders the "config.toml does not exist, generate default and open
-// it?" confirmation shown when F9 is pressed in the Configuration dialog with no config.toml yet.
-func drawConfigEditStubConfirm(screen tcell.Screen, layout Layout, state ConfigDialogState, styles theme.Theme) {
-	const width, height = 56, 7
-	rect := draw.CenteredDialogRect(layout, width, height)
-
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Edit Config", styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	textStyle := styles.DialogText.Background(dbg)
-	textX, textW := draw.DialogTextX(rect), draw.DialogContentWidth(rect)
-
-	primitive.Text(screen, textX, rect.Y+1, textW, "config.toml does not exist yet.", textStyle)
-	primitive.Text(screen, textX, rect.Y+2, textW, "Generate default and open in editor?", textStyle)
-
-	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "Yes", Shortcut: 'Y', Focused: state.EditStubConfirmFocus == 0},
-		{Label: "No", Shortcut: 'N', Focused: state.EditStubConfirmFocus == 1},
-	}, styles)
-}
-
-// drawConfigResetDefaultsConfirm renders the "delete config.toml and reset to defaults?"
-// confirmation shown when F8 is pressed in the Configuration dialog with config.toml present.
-func drawConfigResetDefaultsConfirm(screen tcell.Screen, layout Layout, state ConfigDialogState, styles theme.Theme) {
-	const width, height = 56, 7
-	rect := draw.CenteredDialogRect(layout, width, height)
-
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Reset To Defaults", styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	textStyle := styles.DialogText.Background(dbg)
-	textX, textW := draw.DialogTextX(rect), draw.DialogContentWidth(rect)
-
-	primitive.Text(screen, textX, rect.Y+1, textW, "This deletes config.toml and resets all", textStyle)
-	primitive.Text(screen, textX, rect.Y+2, textW, "settings to their defaults. Continue?", textStyle)
-
-	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "Yes", Shortcut: 'Y', Focused: state.ResetDefaultsConfirmFocus == 0, Destructive: true},
-		{Label: "No", Shortcut: 'N', Focused: state.ResetDefaultsConfirmFocus == 1},
-	}, styles)
 }

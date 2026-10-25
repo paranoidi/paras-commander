@@ -1,0 +1,57 @@
+== open ==
+focus=retry
+-- text --
+  ↓Name                                          Size││   ↓Name             
+                                                     ││                     
+                                                     ││                     
+                                                     ││                     
+┌─────────────────────────────── Disk space ───────────────────────────────┐
+│ Not enough free space.                                                   │
+│ Destination: /srv/willow/amber                                           │
+│ Required:    5.0M                                                        │
+│ Available:   900.0K                                                      │
+│ Next file:   /home/kestrel/meadow/orchard.dat                            │
+├──────────────────────────────────────────────────────────────────────────┤
+│ Make space or retry.                                                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│                  [ Retry ]    [ Abort ]    [ Postpone ]                  │
+└──────────────────────────────────────────────────────────────────────────┘
+                                                     ││                     
+                                                     ││                     
+                                                     ││                     
+                                                     ││                     
+                                                     ││                     
+-- legend --
+a fg=0x100000008 bg=0x0 attrs=1 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+c fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+f fg=0x100000000 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaaaaaaaaaaaaaaaa
+cccccccccccccccccccccccccccccccccccccccccccccccbbbbbbbbccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccbbbbbbbbccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccbbbbbbbbccccccccccccccccccccc
+ddddddddddddddddddddddddddddddddeeeeeeeeeeeedddddddddddddddddddddddddddddddd
+ddffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdd
+dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+ddffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdd
+dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+ddddddddddddddddddggghgggggggddiiiijiiiiiiddiiijiiiiiiiiiidddddddddddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+cccccccccccccccccccccccccccccccccccccccccccccccbbbbbbbbccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccbbbbbbbbccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccbbbbbbbbccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccbbbbbbbbccccccccccccccccccccc
+cccccccccccccccccccccccccccccccccccccccccccccccbbbbbbbbccccccccccccccccccccc
+== Alt+p ==
+CLOSED: submitted nothing (postponed or closed) quit=false

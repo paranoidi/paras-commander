@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestNewWithOptionsAppliesConfiguredHiddenFilesToBothPanels(t *testing.T) {
@@ -481,7 +482,7 @@ func TestConfigDialogApplyCarouselSplit(t *testing.T) {
 	})
 	typeInto := func(idx int, text string) {
 		st := &app.model.ConfigDialog
-		st.Focus = 12 + idx
+		st.Focus = dialog.ConfigSplitID(idx)
 		st.Split[idx].Clear()
 		for _, r := range text {
 			app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
@@ -491,8 +492,8 @@ func TestConfigDialogApplyCarouselSplit(t *testing.T) {
 	app.openConfigDialog()
 	typeInto(2, "<5")
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
-	if !app.model.ConfigDialog.Open || app.model.ConfigDialog.Focus != 14 {
-		t.Fatalf("invalid split: open=%v focus=%d, want open focus 14", app.model.ConfigDialog.Open, app.model.ConfigDialog.Focus)
+	if !app.model.ConfigDialog.Open || app.model.ConfigDialog.Focus != dialog.ConfigSplitID(2) {
+		t.Fatalf("invalid split: open=%v focus=%q, want open focus split-2", app.model.ConfigDialog.Open, app.model.ConfigDialog.Focus)
 	}
 	if got := app.config.Carousel.Split[2]; got != "*" {
 		t.Fatalf("config split[2] = %q, want unchanged", got)

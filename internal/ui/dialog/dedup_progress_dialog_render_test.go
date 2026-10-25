@@ -11,6 +11,7 @@ import (
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
@@ -35,7 +36,7 @@ func TestDrawDedupProgressDialogHashBarAndLabel(t *testing.T) {
 	}
 	DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, styles, "")
 
-	rect := draw.CenteredDialogRect(layout, PreferredFormDialogWidth, dedupProgressDialogHeight(snap.Phase))
+	rect := dedupProgressTestRect(layout, snap)
 	barY := dedupHashProgressBarRow(screen, rect, snap.Hashed, snap.HashTotal)
 	if barY < 0 {
 		t.Fatal("hash progress bar row not found")
@@ -112,7 +113,7 @@ func TestDrawDedupProgressDialogWalkingStatus(t *testing.T) {
 	}
 	DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, styles, "")
 
-	rect := draw.CenteredDialogRect(layout, PreferredFormDialogWidth, dedupProgressDialogHeight(snap.Phase))
+	rect := dedupProgressTestRect(layout, snap)
 	statusY, ok := dialogRowContaining(screen, rect, "Walking directories")
 	if !ok {
 		t.Fatal("walking status row not found")
@@ -176,7 +177,7 @@ func TestDrawDedupHashProgressBarFullWidth(t *testing.T) {
 		}
 		DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, styles, "")
 
-		rect = draw.CenteredDialogRect(layout, PreferredFormDialogWidth, dedupProgressDialogHeight(snap.Phase))
+		rect = dedupProgressTestRect(layout, snap)
 		textX := draw.DialogTextX(rect)
 		textW := draw.DialogContentWidth(rect)
 		barY = dedupHashProgressBarRow(screen, rect, snap.Hashed, snap.HashTotal)
@@ -204,8 +205,8 @@ func TestDrawDedupHashProgressBarFullWidth(t *testing.T) {
 	_, _, _, shortFill, shortTrack, shortLast := measure(t, "a")
 	longScreen, longRect, longBarY, longFill, longTrack, _ := measure(t, strings.Repeat("segment/", 12)+"verylongfilename.txt")
 
-	wantFilled := dedupBarFilledCols(draw.DialogContentWidth(draw.CenteredDialogRect(Layout{Width: 80, Height: 24}, PreferredFormDialogWidth, dedupProgressDialogHeight(comparepkg.DedupHashing))), dedupFrac(14, 56))
-	wantTrack := draw.DialogContentWidth(draw.CenteredDialogRect(Layout{Width: 80, Height: 24}, PreferredFormDialogWidth, dedupProgressDialogHeight(comparepkg.DedupHashing))) - wantFilled
+	wantFilled := dlg.BarFilledCols(draw.DialogContentWidth(dedupProgressTestRect(Layout{Width: 80, Height: 24}, comparepkg.DedupSnapshot{Phase: comparepkg.DedupHashing})), dedupFrac(14, 56))
+	wantTrack := draw.DialogContentWidth(dedupProgressTestRect(Layout{Width: 80, Height: 24}, comparepkg.DedupSnapshot{Phase: comparepkg.DedupHashing})) - wantFilled
 
 	if shortFill != wantFilled || longFill != wantFilled {
 		t.Fatalf("fill cols short=%d long=%d, want %d", shortFill, longFill, wantFilled)
@@ -258,7 +259,7 @@ func TestDedupProgressTrackLabelBackgroundMatch(t *testing.T) {
 	}
 	DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, styles, "")
 
-	rect := draw.CenteredDialogRect(layout, PreferredFormDialogWidth, dedupProgressDialogHeight(snap.Phase))
+	rect := dedupProgressTestRect(layout, snap)
 	textX := draw.DialogTextX(rect)
 	textW := draw.DialogContentWidth(rect)
 	barY := dedupHashProgressBarRow(screen, rect, snap.Hashed, snap.HashTotal)
@@ -267,7 +268,7 @@ func TestDedupProgressTrackLabelBackgroundMatch(t *testing.T) {
 	}
 
 	_, wantTrackBG, _ := styles.DialogProgressTrack.Decompose()
-	filled := dedupBarFilledCols(textW, dedupFrac(snap.HashedBytes, snap.HashBytesTotal))
+	filled := dlg.BarFilledCols(textW, dedupFrac(snap.HashedBytes, snap.HashBytesTotal))
 	var trackBarBG, trackTextBG tcell.Color
 	for col := textX + filled; col < textX+textW; col++ {
 		ch, st, _ := screen.Get(col, barY)
@@ -308,8 +309,8 @@ func TestDedupBarFilledCols(t *testing.T) {
 		{56, dedupFrac(1, 0), 0},     // unknown total
 	}
 	for _, c := range cases {
-		if got := dedupBarFilledCols(c.width, c.frac); got != c.want {
-			t.Fatalf("dedupBarFilledCols(%d, %v) = %d, want %d", c.width, c.frac, got, c.want)
+		if got := dlg.BarFilledCols(c.width, c.frac); got != c.want {
+			t.Fatalf("dlg.BarFilledCols(%d, %v) = %d, want %d", c.width, c.frac, got, c.want)
 		}
 	}
 }
@@ -338,7 +339,7 @@ func TestDrawDedupProgressDialogPerFileBar(t *testing.T) {
 	}
 	DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, styles, "")
 
-	rect := draw.CenteredDialogRect(layout, PreferredFormDialogWidth, dedupProgressDialogHeight(snap.Phase))
+	rect := dedupProgressTestRect(layout, snap)
 	barY := dedupHashProgressBarRow(screen, rect, snap.Hashed, snap.HashTotal)
 	if barY < 0 {
 		t.Fatal("hash progress bar row not found")
@@ -403,7 +404,7 @@ func TestDrawDedupProgressDialogHashingShowsETA(t *testing.T) {
 	}
 	DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, theme.Default(), "")
 
-	rect := draw.CenteredDialogRect(layout, PreferredFormDialogWidth, dedupProgressDialogHeight(snap.Phase))
+	rect := dedupProgressTestRect(layout, snap)
 	countY, ok := dialogRowContaining(screen, rect, "1/4")
 	if !ok {
 		t.Fatal("count row not found")
@@ -412,4 +413,10 @@ func TestDrawDedupProgressDialogHashingShowsETA(t *testing.T) {
 	if !strings.HasPrefix(line, "ETA ") || !strings.Contains(line, "s") {
 		t.Fatalf("row under count = %q, want ETA line", line)
 	}
+}
+
+// dedupProgressTestRect is where the progress dialog for snap lands on layout.
+func dedupProgressTestRect(layout Layout, snap comparepkg.DedupSnapshot) draw.Rect {
+	p, _ := dlg.Place(layout.Width, layout.Height, DedupProgressView(snap, "", time.Time{}))
+	return p.Rect
 }

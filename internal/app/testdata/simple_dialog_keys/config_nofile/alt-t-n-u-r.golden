@@ -1,0 +1,310 @@
+== open ==
+focus=nerdfont nerd=true zoom=true stacked=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+-- text --
+                                           ││ 󰉋  cfg    
+ ┌────────────────── Configuration ───────────────────┐ 
+ │ View options:                                      │ 
+ │ 󰡖 Use nerdfont icons                               │ 
+ │ 󰡖 Zoom active panel                                │ 
+ │ 󰄱 Start in horizontal split mode                   │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Scroll mode:     Scrollbar style:                  │ 
+ │ 󰐽 Minimal        󰐽 None                            │ 
+ │ 󰐾 Edge           󰐾 Thumb                           │ 
+ │ 󰐽 Center         󰐽 Bar                             │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Default listing format:                            │ 
+ │ 󰐽 Modified time                                    │ 
+ │ 󰐽 Permissions                                      │ 
+ │ 󰐾 Brief                                            │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Carousel split (parent / center / child):          │ 
+ │ <<22%                 <44%                  *      │ 
+ │                                                    │ 
+ ├────────────────────────────────────────────────────┤ 
+ │                [ OK ]    [ Cancel ]                │ 
+ └────────────────────────────────────────────────────┘ 
+                                           ││           
+-- legend --
+a fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+c fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbccaaaaaaaaaaa
+deeeeeeeeeeeeeeeeeeefffffffffffffffeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deggggggggggfggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dehhhfhhhhhhhhhhhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dehhhfhhheeeeeeeeeehhhhhfhheeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dehhhfhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
+== Alt+t ==
+focus=mode2 nerd=true zoom=true stacked=false mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+-- text --
+                                           ││ 󰉋  cfg    
+ ┌────────────────── Configuration ───────────────────┐ 
+ │ View options:                                      │ 
+ │ 󰡖 Use nerdfont icons                               │ 
+ │ 󰡖 Zoom active panel                                │ 
+ │ 󰄱 Start in horizontal split mode                   │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Scroll mode:     Scrollbar style:                  │ 
+ │ 󰐽 Minimal        󰐽 None                            │ 
+ │ 󰐽 Edge           󰐾 Thumb                           │ 
+ │ 󰐾 Center         󰐽 Bar                             │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Default listing format:                            │ 
+ │ 󰐽 Modified time                                    │ 
+ │ 󰐽 Permissions                                      │ 
+ │ 󰐾 Brief                                            │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Carousel split (parent / center / child):          │ 
+ │ <<22%                 <44%                  *      │ 
+ │                                                    │ 
+ ├────────────────────────────────────────────────────┤ 
+ │                [ OK ]    [ Cancel ]                │ 
+ └────────────────────────────────────────────────────┘ 
+                                           ││           
+-- legend --
+a fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+c fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbccaaaaaaaaaaa
+deeeeeeeeeeeeeeeeeeefffffffffffffffeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deggggggggggfggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+degggfggggggggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeegggggfggeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dehhhhhhfhheeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
+== Alt+n ==
+focus=bar0 nerd=true zoom=true stacked=false mode=center bar=none format=2 split=[<<22%|<44%|*] msg=""
+-- text --
+                                           ││ 󰉋  cfg    
+ ┌────────────────── Configuration ───────────────────┐ 
+ │ View options:                                      │ 
+ │ 󰡖 Use nerdfont icons                               │ 
+ │ 󰡖 Zoom active panel                                │ 
+ │ 󰄱 Start in horizontal split mode                   │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Scroll mode:     Scrollbar style:                  │ 
+ │ 󰐽 Minimal        󰐾 None                            │ 
+ │ 󰐽 Edge           󰐽 Thumb                           │ 
+ │ 󰐾 Center         󰐽 Bar                             │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Default listing format:                            │ 
+ │ 󰐽 Modified time                                    │ 
+ │ 󰐽 Permissions                                      │ 
+ │ 󰐾 Brief                                            │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Carousel split (parent / center / child):          │ 
+ │ <<22%                 <44%                  *      │ 
+ │                                                    │ 
+ ├────────────────────────────────────────────────────┤ 
+ │                [ OK ]    [ Cancel ]                │ 
+ └────────────────────────────────────────────────────┘ 
+                                           ││           
+-- legend --
+a fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+c fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbccaaaaaaaaaaa
+deeeeeeeeeeeeeeeeeeefffffffffffffffeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deggggggggggfggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+degggfggggggggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeefeeeeeeeeeeeehhhfhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deggggggfggeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
+== Alt+u ==
+focus=bar1 nerd=true zoom=true stacked=false mode=center bar=thumb format=2 split=[<<22%|<44%|*] msg=""
+-- text --
+                                           ││ 󰉋  cfg    
+ ┌────────────────── Configuration ───────────────────┐ 
+ │ View options:                                      │ 
+ │ 󰡖 Use nerdfont icons                               │ 
+ │ 󰡖 Zoom active panel                                │ 
+ │ 󰄱 Start in horizontal split mode                   │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Scroll mode:     Scrollbar style:                  │ 
+ │ 󰐽 Minimal        󰐽 None                            │ 
+ │ 󰐽 Edge           󰐾 Thumb                           │ 
+ │ 󰐾 Center         󰐽 Bar                             │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Default listing format:                            │ 
+ │ 󰐽 Modified time                                    │ 
+ │ 󰐽 Permissions                                      │ 
+ │ 󰐾 Brief                                            │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Carousel split (parent / center / child):          │ 
+ │ <<22%                 <44%                  *      │ 
+ │                                                    │ 
+ ├────────────────────────────────────────────────────┤ 
+ │                [ OK ]    [ Cancel ]                │ 
+ └────────────────────────────────────────────────────┘ 
+                                           ││           
+-- legend --
+a fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+c fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbccaaaaaaaaaaa
+deeeeeeeeeeeeeeeeeeefffffffffffffffeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deggggggggggfggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+degggfggggggggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeehhhhhfhheeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deggggggfggeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dddddddddddddddddddddddddddddddddddddccccccccddddddddddd
+== Alt+r ==
+focus=bar2 nerd=true zoom=true stacked=false mode=center bar=bar format=2 split=[<<22%|<44%|*] msg=""
+-- text --
+                                           ││ 󰉋  cfg    
+ ┌────────────────── Configuration ───────────────────┐ 
+ │ View options:                                      │ 
+ │ 󰡖 Use nerdfont icons                               │ 
+ │ 󰡖 Zoom active panel                                │ 
+ │ 󰄱 Start in horizontal split mode                   │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Scroll mode:     Scrollbar style:                  │ 
+ │ 󰐽 Minimal        󰐽 None                            │ 
+ │ 󰐽 Edge           󰐽 Thumb                           │ 
+ │ 󰐾 Center         󰐾 Bar                             │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Default listing format:                            │ 
+ │ 󰐽 Modified time                                    │ 
+ │ 󰐽 Permissions                                      │ 
+ │ 󰐾 Brief                                            │ 
+ ├────────────────────────────────────────────────────┤ 
+ │ Carousel split (parent / center / child):          │ 
+ │ <<22%                 <44%                  *      │ 
+ │                                                    │ 
+ ├────────────────────────────────────────────────────┤ 
+ │                [ OK ]    [ Cancel ]                │ 
+ └────────────────────────────────────────────────────┘ 
+                                           ││           
+-- legend --
+a fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+b fg=0x100000008 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+c fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
+d fg=0x100000007 bg=0x0 attrs=0 ul=0 ulc=0x0
+e fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+h fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+-- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbccaaaaaaaaaaa
+deeeeeeeeeeeeeeeeeeefffffffffffffffeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deggggggggggfggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+degggfggggggggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeefeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deggggggfggeeeeeeeehhhhhfeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+degggfggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeeeeeeeeeeeeeeeeaaaaaaeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeaaaiaaaaeeaaaiaaaaaaaaeeeeeeeeeeeeeeeed
+deeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+dddddddddddddddddddddddddddddddddddddccccccccddddddddddd

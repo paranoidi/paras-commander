@@ -27,116 +27,102 @@ func TestFirstJobEntryWaitingDecisionIndex(t *testing.T) {
 	}
 }
 
-func TestJobBlockerDialogDecision(t *testing.T) {
+func TestConflictDecisionFromButtonIndex(t *testing.T) {
 	t.Parallel()
-	conflict := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{}}
-	if d, ok := JobBlockerDialogDecision(conflict, 0); !ok || d != jobs.DecisionOverwrite {
-		t.Fatalf("focus 0 = %q %v, want overwrite", d, ok)
-	}
-	if d, ok := JobBlockerDialogDecision(conflict, 2); ok {
-		t.Fatalf("focus 2 (Advanced) must not map to a decision, got %q", d)
-	}
-	if !JobBlockerDialogIsAdvanced(conflict, 2) || JobBlockerDialogIsAdvanced(conflict, 0) {
-		t.Fatal("expected focus 2 to be Advanced")
-	}
-	if f, ok := JobBlockerDialogFocusFromShortcut(conflict, 'd'); !ok || f != 2 {
-		t.Fatalf("Alt+D focus = %d %v, want 2", f, ok)
-	}
-	if d, ok := JobBlockerDialogDecision(conflict, 5); !ok || d != jobs.DecisionCancel {
-		t.Fatalf("focus 5 = %q %v, want cancel", d, ok)
-	}
-	if d, ok := JobBlockerDialogDecision(conflict, JobBlockerDialogPostponeFocus(conflict)); ok {
-		t.Fatalf("postpone focus should not map to decision, got %q", d)
-	}
-	if !JobBlockerDialogIsPostpone(conflict, JobBlockerDialogPostponeFocus(conflict)) {
-		t.Fatal("expected postpone focus")
-	}
-	disk := jobs.BlockerDetails{Kind: jobs.BlockerKindDiskSpace, DiskSpace: &jobs.DiskSpaceBlockerDetails{}}
-	if d, ok := JobBlockerDialogDecision(disk, 0); !ok || d != jobs.DecisionRetry {
-		t.Fatalf("disk retry = %q %v", d, ok)
-	}
-	if d, ok := JobBlockerDialogDecision(disk, 2); ok {
-		t.Fatalf("disk postpone should not map, got %q", d)
+	for _, c := range []struct {
+		idx      int
+		mismatch bool
+		want     jobs.ConflictDecision
+	}{
+		{0, false, jobs.DecisionOverwrite},
+		{1, false, jobs.DecisionOverwriteAll},
+		{2, false, ""}, // Advanced… submits no decision
+		{3, false, jobs.DecisionSkip},
+		{4, false, jobs.DecisionSkipAll},
+		{5, false, jobs.DecisionCancel},
+		{0, true, jobs.DecisionRename},
+		{1, true, jobs.DecisionRenameAll},
+		{3, true, jobs.DecisionSkip},
+		{5, true, jobs.DecisionCancel},
+	} {
+		if got := ConflictDecisionFromButtonIndex(c.idx, c.mismatch); got != c.want {
+			t.Errorf("ConflictDecisionFromButtonIndex(%d, %v) = %q, want %q", c.idx, c.mismatch, got, c.want)
+		}
 	}
 }
 
-func TestJobBlockerDialogMoveFocusFileConflictRows(t *testing.T) {
+func TestJobBlockerDecisionFromFocus(t *testing.T) {
+	t.Parallel()
+	conflict := JobEntry{PendingBlocker: &jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{}}}
+	if d := JobBlockerDecisionFromFocus(conflict, 0); d != jobs.DecisionOverwrite {
+		t.Fatalf("focus 0 = %q, want overwrite", d)
+	}
+	if !JobBlockerPanelIsAdvanced(conflict, 2) || JobBlockerPanelIsAdvanced(conflict, 0) {
+		t.Fatal("expected focus 2 to be Advanced")
+	}
+	disk := JobEntry{PendingBlocker: &jobs.BlockerDetails{Kind: jobs.BlockerKindDiskSpace, DiskSpace: &jobs.DiskSpaceBlockerDetails{}}}
+	if d := JobBlockerDecisionFromFocus(disk, 0); d != jobs.DecisionRetry {
+		t.Fatalf("disk retry = %q", d)
+	}
+	if d := JobBlockerDecisionFromFocus(disk, 1); d != jobs.DecisionCancel {
+		t.Fatalf("disk abort = %q", d)
+	}
+	mismatch := JobEntry{PendingBlocker: &jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{Mismatch: true, DestIsDir: true}}}
+	if d := JobBlockerDecisionFromFocus(mismatch, 0); d != jobs.DecisionRename {
+		t.Fatalf("mismatch focus 0 = %q, want rename", d)
+	}
+	if JobBlockerPanelIsAdvanced(mismatch, 2) {
+		t.Fatal("Advanced must not be offered on a mismatch")
+	}
+}
+
+func TestJobsBlockerPanelMoveFocus(t *testing.T) {
 	t.Parallel()
 	conflict := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{}}
 
-	// Rows: [Overwrite 0, Overwrite All 1, Match Size 2] [Skip 3, Skip All 4, Postpone 6] [Cancel 5]
+	// Jobs panel: [Overwrite, Overwrite All, Advanced…] [Skip, Skip All, Cancel]
 	cases := []struct {
 		name string
 		from int
 		key  tcell.Key
 		want int
 	}{
-		{"Right from Match Size wraps to Skip", 2, tcell.KeyRight, 3},
-		{"Left from Skip back to Match Size", 3, tcell.KeyLeft, 2},
-		{"Right from Postpone to Cancel", 6, tcell.KeyRight, 5},
+		{"Right from Advanced wraps to Skip", 2, tcell.KeyRight, 3},
+		{"Left from Skip back to Advanced", 3, tcell.KeyLeft, 2},
 		{"Right from Cancel stays", 5, tcell.KeyRight, 5},
 		{"Left from Overwrite stays", 0, tcell.KeyLeft, 0},
-		{"Down from Advanced to Postpone", 2, tcell.KeyDown, 6},
-		{"Down from Skip All to Cancel", 4, tcell.KeyDown, 5},
-		{"Up from Cancel to Skip All", 5, tcell.KeyUp, 4},
+		{"Down from Advanced to Cancel", 2, tcell.KeyDown, 5},
+		{"Up from Cancel to Advanced", 5, tcell.KeyUp, 2},
 		{"Up from Overwrite stays", 0, tcell.KeyUp, 0},
 		{"Tab from Cancel wraps", 5, tcell.KeyTab, 0},
 		{"Backtab from Overwrite wraps", 0, tcell.KeyBacktab, 5},
 	}
 	for _, tc := range cases {
-		got, ok := JobBlockerDialogMoveFocus(conflict, tc.from, tc.key)
+		got, ok := JobsBlockerPanelMoveFocus(conflict, tc.from, tc.key)
 		if !ok || got != tc.want {
 			t.Fatalf("%s: got %d %v, want %d", tc.name, got, ok, tc.want)
 		}
 	}
 
-	// Jobs panel: [Overwrite, Overwrite All, Match Size] [Skip, Skip All, Cancel]
-	if got, _ := JobsBlockerPanelMoveFocus(conflict, 2, tcell.KeyDown); got != 5 {
-		t.Fatalf("panel Down from Advanced = %d, want 5", got)
+	mismatch := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{Mismatch: true, DestIsDir: true}}
+	if got, _ := JobsBlockerPanelMoveFocus(mismatch, 1, tcell.KeyRight); got != 3 {
+		t.Fatalf("Right from Rename All = %d, want 3 (Advanced is skipped)", got)
 	}
-	if got, _ := JobsBlockerPanelMoveFocus(conflict, 5, tcell.KeyUp); got != 2 {
-		t.Fatalf("panel Up from Cancel = %d, want 2", got)
-	}
-}
 
-func TestJobBlockerDialogFocusFromShortcutAdvanced(t *testing.T) {
-	t.Parallel()
-	conflict := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{}}
-	focus, ok := JobBlockerDialogFocusFromShortcut(conflict, 'd')
-	if !ok || focus != 2 {
-		t.Fatalf("shortcut d = %d %v, want focus 2", focus, ok)
-	}
-	focus, ok = JobBlockerDialogFocusFromShortcut(conflict, 'C')
-	if !ok || focus != 5 {
-		t.Fatalf("shortcut C = %d %v, want focus 5", focus, ok)
-	}
-	focus, ok = JobBlockerDialogFocusFromShortcut(conflict, 'P')
-	if !ok || focus != 6 {
-		t.Fatalf("shortcut P = %d %v, want focus 6", focus, ok)
-	}
-}
-
-func TestJobBlockerDialogMismatchOffersNoOverwrite(t *testing.T) {
-	t.Parallel()
-	b := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{Mismatch: true, DestIsDir: true}}
-	if d, ok := JobBlockerDialogDecision(b, 0); !ok || d != jobs.DecisionRename {
-		t.Fatalf("focus 0 = %q %v, want rename", d, ok)
-	}
-	if d, ok := JobBlockerDialogDecision(b, 1); !ok || d != jobs.DecisionRenameAll {
-		t.Fatalf("focus 1 = %q %v, want rename-all", d, ok)
-	}
-	if JobBlockerDialogIsAdvanced(b, 2) {
-		t.Fatal("Advanced must not be offered on a mismatch")
-	}
-	for _, r := range []rune{'o', 'd'} {
-		if _, ok := JobBlockerDialogFocusFromShortcut(b, r); ok {
-			t.Fatalf("Alt+%c must be inactive on a mismatch", r)
+	disk := jobs.BlockerDetails{Kind: jobs.BlockerKindDiskSpace, DiskSpace: &jobs.DiskSpaceBlockerDetails{}}
+	for _, tc := range []struct {
+		from int
+		key  tcell.Key
+		want int
+	}{
+		{0, tcell.KeyRight, 1}, {2, tcell.KeyRight, 2}, {1, tcell.KeyLeft, 0}, {0, tcell.KeyLeft, 0},
+		{2, tcell.KeyTab, 0}, {0, tcell.KeyBacktab, 2}, {1, tcell.KeyDown, 1}, {1, tcell.KeyUp, 1},
+	} {
+		if got, ok := JobsBlockerPanelMoveFocus(disk, tc.from, tc.key); !ok || got != tc.want {
+			t.Fatalf("disk %v from %d = %d %v, want %d", tc.key, tc.from, got, ok, tc.want)
 		}
 	}
-	if f, ok := JobBlockerDialogFocusFromShortcut(b, 'r'); !ok || f != 0 {
-		t.Fatalf("Alt+R = %d %v, want 0", f, ok)
-	}
-	if got, _ := JobBlockerDialogMoveFocus(b, 1, tcell.KeyRight); got != 3 {
-		t.Fatalf("Right from Rename All = %d, want 3 (Advanced is skipped)", got)
+	if _, ok := JobsBlockerPanelMoveFocus(disk, 0, tcell.KeyEnter); ok {
+		t.Fatal("Enter must not be consumed by the disk pane navigation")
 	}
 }
