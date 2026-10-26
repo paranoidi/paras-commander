@@ -3,13 +3,11 @@ package compare
 import (
 	"cmp"
 	"slices"
-
-	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // hashJobsNeeded returns the content work classification needs, ordered smallest-first so
 // quick wins land early in the UI. A same-path pair of equal size is one pair job compared
-// with SameContent (chunked, stops at the first differing chunk); unequal size is ContentDiff
+// with SameContent (stops at the first differing block); unequal size is ContentDiff
 // without reading. Unpaired files are hashed in full only when their size appears among
 // unpaired files on the other side (potential Relocated matches).
 func hashJobsNeeded(primary, secondary []FileRecord) []hashJob {
@@ -20,9 +18,7 @@ func hashJobsNeeded(primary, secondary []FileRecord) []hashJob {
 	pUnpaired := make([]FileRecord, 0)
 	sUnpaired := make([]FileRecord, 0)
 
-	sAbs := make(map[string]pathloc.Path, len(secondary))
 	for _, f := range secondary {
-		sAbs[f.Rel] = f.Abs
 		if _, ok := pByRel[f.Rel]; !ok {
 			sUnpaired = append(sUnpaired, f)
 		}
@@ -34,7 +30,7 @@ func hashJobsNeeded(primary, secondary []FileRecord) []hashJob {
 			continue
 		}
 		if f.Size == s.size {
-			jobs = append(jobs, hashJob{pair: true, rel: f.Rel, loc: f.Abs, other: sAbs[f.Rel], size: f.Size})
+			jobs = append(jobs, hashJob{pair: true, rel: f.Rel, loc: f.Abs, other: s.abs, size: f.Size})
 		}
 	}
 

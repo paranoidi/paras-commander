@@ -281,9 +281,9 @@ two files before any other row is looked at, and the **Same** and **Differ** row
   Operations panel; on a move its source stays.
 - **Delete source** is offered for moves only: the existing file is kept and the file being moved
   is deleted. The job then cannot be undone.
-- Files of different size differ without being read. Files of equal size are compared in
-  `compare.chunk_bytes` chunks (32 MiB by default), stopping at the first chunk that differs: the
-  same check as [Compare directories](compare-directories.md) and Find duplicates. A symlink
+- Files of different size differ without being read. Files of equal size are read side by side
+  and compared byte for byte, stopping at the first difference: the same check as
+  [Compare directories](compare-directories.md). A symlink
   always counts as differing. The Details panel shows a `Verifying:` line with the bytes read so
   far while a large file is checked.
 - Verify is not offered when extracting an archive (the archive is not comparable to the

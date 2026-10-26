@@ -14,9 +14,7 @@ type Options struct {
 	Walk        WalkOptions
 	HashWorkers int
 	ReadBuffer  []byte
-	// ChunkBytes is the SameContent chunk for same-path pairs (see config compare.chunk_bytes).
-	ChunkBytes int64
-	OnUpdate   func(Snapshot)
+	OnUpdate    func(Snapshot)
 }
 
 // hashJob is one unit of content work: a same-path pair compared with SameContent (pair set,
@@ -283,7 +281,7 @@ func (s *Session) run(ctx context.Context) {
 				mu.Unlock()
 
 				if job.pair {
-					same, err := SameContent(ctx, job.loc, job.other, s.opts.ChunkBytes, buf, nil)
+					same, err := SameContent(ctx, job.loc, job.other, buf, nil)
 					mu.Lock()
 					delete(hashingP, job.rel)
 					delete(hashingS, job.rel)

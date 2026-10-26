@@ -9,7 +9,7 @@ import (
 type Settings struct {
 	HashWorkers int
 	ReadBuffer  []byte
-	// ChunkBytes is the content-comparison chunk shared by compare, dedup and conflict verify.
+	// ChunkBytes is the find-duplicates hashing chunk (config compare.chunk_bytes).
 	ChunkBytes int64
 	ShouldSkip diskusage.ShouldIgnoreFolder
 }

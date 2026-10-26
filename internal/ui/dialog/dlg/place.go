@@ -37,8 +37,8 @@ func placeLabel(it Item, x, right, y int) PlacedItem {
 	return PlacedItem{ID: it.ID, Kind: KindLabel, Rect: Rect{X: x, Y: y, Width: w, Height: 1}, Label: text}
 }
 
-// buttonRows splits the strip into its rows (Button.NewRow starts a new one).
-func buttonRows(buttons []Button) [][]Button {
+// ButtonRows splits the strip into its rows (Button.NewRow starts a new one).
+func ButtonRows(buttons []Button) [][]Button {
 	var rows [][]Button
 	for i, b := range buttons {
 		if i == 0 || b.NewRow {
@@ -175,7 +175,7 @@ func placeRow(row Item, x, right, y, markerW int) []PlacedItem {
 func shrinkToFit(spec Spec, rect Rect) (_ Spec, ok bool) {
 	avail := rect.Height - 2
 	if len(spec.Buttons) > 0 {
-		avail -= 1 + len(buttonRows(spec.Buttons)) // separator + strip rows
+		avail -= 1 + len(ButtonRows(spec.Buttons)) // separator + strip rows
 	}
 	need := 0
 	for _, g := range spec.Groups {
@@ -302,7 +302,7 @@ func frame(screenW, screenH int, spec Spec) (Rect, bool) {
 	for _, g := range spec.Groups {
 		prefH += g.height()
 	}
-	rows := buttonRows(spec.Buttons)
+	rows := ButtonRows(spec.Buttons)
 	if len(rows) > 0 {
 		prefH += 1 + len(rows) // separator + button rows
 	}
@@ -356,7 +356,7 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 	if spec, ok = shrinkToFit(spec, rect); !ok {
 		return Placement{}, false
 	}
-	rows := buttonRows(spec.Buttons)
+	rows := ButtonRows(spec.Buttons)
 	p := Placement{Rect: rect}
 	markerW := draw.DialogOptionWidth("")
 	if spec.MarkerWidth > 0 {
@@ -522,7 +522,7 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 		labelStyle := styles.DialogStatusSelectionSizeStyle()
 		draw.DrawDialogHSeparatorWithCenteredLabel(screen, p.Rect, p.SepY, borderStyle, labelStyle, label)
 	}
-	for ri, row := range buttonRows(spec.Buttons) {
+	for ri, row := range ButtonRows(spec.Buttons) {
 		specs := make([]draw.DialogButtonSpec, len(row))
 		for i, b := range row {
 			specs[i] = draw.DialogButtonSpec{Label: b.Label, Shortcut: b.Mnemonic, Focused: focus == b.ID, Destructive: b.Destructive}

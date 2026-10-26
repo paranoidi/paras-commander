@@ -39,8 +39,8 @@ const (
 	conflictRuleTimeRows = 3
 	conflictRuleSizeEnd  = 6
 	// ConflictRuleSameRow and ConflictRuleDifferRow are the Verify rows.
-	ConflictRuleSameRow   = 6
-	ConflictRuleDifferRow = 7
+	ConflictRuleSameRow   = conflictRuleSizeEnd
+	ConflictRuleDifferRow = ConflictRuleSameRow + 1
 	// ConflictRuleRows is the number of condition rows.
 	ConflictRuleRows = len(conflictRuleRowLabels)
 	// conflictDifferWrap is the Differ choice that starts its second line.
@@ -127,7 +127,6 @@ func (st *ConflictDialogState) ApplyRule(id dlg.ID) {
 // ToggleVerify turns content verification on or off; the Same and Differ choices are kept.
 func (st *ConflictDialogState) ToggleVerify() {
 	st.Rules.Verify = !st.Rules.Verify
-	st.Rules.Normalize(st.conflictMove())
 }
 
 // ConflictAdvancedAnswer returns the answer the rules dialog would submit.
@@ -136,7 +135,6 @@ func (st ConflictDialogState) ConflictAdvancedAnswer() jobs.BlockerAnswer {
 	if st.ConflictAdvancedNoCompare() {
 		rules.Verify = false
 	}
-	rules.Normalize(st.conflictMove())
 	d := jobs.DecisionRules
 	if st.AdvAll {
 		d = d.All()

@@ -161,7 +161,6 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 		},
 		HashWorkers: hs.HashWorkers,
 		ReadBuffer:  hs.ReadBuffer,
-		ChunkBytes:  hs.ChunkBytes,
 		OnUpdate:    func(_ comparepkg.Snapshot) { h.postWake() },
 	})
 	h.model.CompareSnapshot = h.session.Snapshot()

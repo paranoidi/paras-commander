@@ -3,11 +3,14 @@ package compare
 import (
 	"cmp"
 	"slices"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 type fileMeta struct {
 	rel  string
 	size int64
+	abs  pathloc.Path
 }
 
 type hashBucket struct {
@@ -183,7 +186,7 @@ func addBucket(buckets map[[32]byte]*hashBucket, side int, f fileMeta, h [32]byt
 func indexFiles(files []FileRecord) map[string]fileMeta {
 	out := make(map[string]fileMeta, len(files))
 	for _, f := range files {
-		out[f.Rel] = fileMeta{rel: f.Rel, size: f.Size}
+		out[f.Rel] = fileMeta{rel: f.Rel, size: f.Size, abs: f.Abs}
 	}
 	return out
 }

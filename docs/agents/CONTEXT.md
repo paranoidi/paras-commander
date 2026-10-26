@@ -124,7 +124,7 @@ The per-condition answers (time, size and, with Verify, content Same / Differ) a
 _Avoid_: advanced options, match size
 
 **Verify**:
-Comparing the contents of a conflicting source and destination before the conflict rules decide; the same chunked check as panel compare.
+Comparing the contents of a conflicting source and destination before the conflict rules decide; the same pairwise check as panel compare.
 _Avoid_: skip identical, checksum
 
 **Delete source**:

@@ -489,7 +489,7 @@ Content comparison: twin-panel directory compare, find duplicates and the confli
 |---|---|---|---|
 | `hash_concurrency` | int | `8` | Number of files hashed in parallel during a compare or duplicate scan. |
 | `read_buffer_kib` | int | `256` | Per-worker read buffer size, in KiB, used while hashing or comparing. |
-| `chunk_bytes` | int64 | `33554432` (32 MiB) | Compare same-size files this many bytes at a time, stopping as soon as content diverges. Used by compare, find duplicates and conflict Verify. `0` disables chunked comparison. |
+| `chunk_bytes` | int64 | `33554432` (32 MiB) | Find duplicates hashes same-size files this many bytes at a time, dropping a file as soon as its prefix differs from all others. `0` disables chunked hashing. (Compare and conflict Verify read same-size pairs side by side and stop at the first difference regardless.) |
 | `stay_on_volume_default` | bool | `true` | Default state of the "stay on volume" option when opening compare. |
 
 ## `[dedup]`

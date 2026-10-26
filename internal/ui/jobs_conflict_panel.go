@@ -77,9 +77,14 @@ func focusedJobsPane(state JobsViewState, order []JobsPane) JobsPane {
 	return order[state.FocusPane]
 }
 
+// isFileConflict reports whether b is a file-conflict blocker (not none, not disk space).
+func isFileConflict(b *jobs.BlockerDetails) bool {
+	return b != nil && b.Kind != jobs.BlockerKindDiskSpace
+}
+
 // blockerConflict returns b's file conflict, or an empty one when b is not a file conflict.
 func blockerConflict(b *jobs.BlockerDetails) *jobs.ConflictEvent {
-	if b == nil || b.Kind == jobs.BlockerKindDiskSpace || b.Conflict == nil {
+	if !isFileConflict(b) || b.Conflict == nil {
 		return &jobs.ConflictEvent{}
 	}
 	return b.Conflict
@@ -106,7 +111,7 @@ func conflictPanelButtonID(b *jobs.BlockerDetails, idx int) dlg.ID {
 
 // JobBlockerPanelIsAdvanced reports whether panel button focus selects "Advanced…" (not a decision).
 func JobBlockerPanelIsAdvanced(sel JobEntry, btnIdx int) bool {
-	return sel.PendingBlocker != nil && sel.PendingBlocker.Kind != jobs.BlockerKindDiskSpace && conflictPanelButtonID(sel.PendingBlocker, btnIdx) == dialog.ConflictAdvanced
+	return isFileConflict(sel.PendingBlocker) && conflictPanelButtonID(sel.PendingBlocker, btnIdx) == dialog.ConflictAdvanced
 }
 
 // JobBlockerDecisionFromFocus resolves the decision for the blocker pane from button focus.
@@ -123,10 +128,10 @@ func JobBlockerDecisionFromFocus(sel JobEntry, btnIdx int) jobs.ConflictDecision
 
 // JobBlockerPanelMnemonic returns the conflict panel button whose mnemonic is r (any case).
 func JobBlockerPanelMnemonic(sel JobEntry, r rune) (dlg.ID, bool) {
-	if sel.PendingBlocker == nil || sel.PendingBlocker.Kind == jobs.BlockerKindDiskSpace {
+	if !isFileConflict(sel.PendingBlocker) {
 		return "", false
 	}
-	for _, b := range conflictPanelButtons(sel.PendingBlocker.Conflict) {
+	for _, b := range conflictPanelButtons(blockerConflict(sel.PendingBlocker)) {
 		if unicode.ToLower(b.Mnemonic) == unicode.ToLower(r) {
 			return b.ID, true
 		}
@@ -160,18 +165,6 @@ func moveFocusInDiskRow(focus int, key tcell.Key) (int, bool) {
 	return focus, false
 }
 
-// conflictPanelButtonRows splits the conflict panel buttons into their drawn rows.
-func conflictPanelButtonRows(c *jobs.ConflictEvent) [][]dlg.Button {
-	var rows [][]dlg.Button
-	for i, b := range conflictPanelButtons(c) {
-		if i == 0 || b.NewRow {
-			rows = append(rows, nil)
-		}
-		rows[len(rows)-1] = append(rows[len(rows)-1], b)
-	}
-	return rows
-}
-
 // JobsBlockerPanelMoveFocus applies navigation keys to the jobs-view blocker pane buttons,
 // which lay out like the quick dialog minus Postpone.
 func JobsBlockerPanelMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) (int, bool) {
@@ -180,7 +173,7 @@ func JobsBlockerPanelMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) 
 	}
 	var grid [][]int
 	idx := 0
-	for _, row := range conflictPanelButtonRows(blockerConflict(&b)) {
+	for _, row := range dlg.ButtonRows(conflictPanelButtons(blockerConflict(&b))) {
 		cells := make([]int, len(row))
 		for i := range row {
 			cells[i] = idx
@@ -343,7 +336,7 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	y++
 	y++
 
-	rows := conflictPanelButtonRows(c)
+	rows := dlg.ButtonRows(conflictPanelButtons(c))
 	f := state.ConflictButtonFocus
 	idx := 0
 	for i, row := range rows {

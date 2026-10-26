@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"io"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -24,7 +25,7 @@ func HashFile(ctx context.Context, loc pathloc.Path, buf []byte) ([32]byte, erro
 
 	h := sha256.New()
 	if len(buf) == 0 {
-		buf = make([]byte, 32*1024)
+		buf = make([]byte, config.DefaultCompareReadBufferKiB*1024)
 	}
 	for {
 		if ctx.Err() != nil {

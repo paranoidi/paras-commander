@@ -273,9 +273,8 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 			defer func() { onRenamed(renamed) }()
 		}
 		verifier := contentVerifier{
-			chunkBytes:  compareCfg.ChunkBytes,
 			bufBytes:    compareCfg.ReadBufferKiB * 1024,
-			minInterval: time.Duration(jobsCfg.WorkerProgressMinIntervalMS) * time.Millisecond,
+			minInterval: throttle.MinInterval,
 			emit:        emit,
 			jobID:       job.ID,
 		}
@@ -601,17 +600,18 @@ func trackIrreversible(resolver ops.ConflictResolver, irreversible *bool) ops.Co
 }
 
 // contentVerifier runs the conflict rules' Verify comparison and reports its progress as
-// throttled EventVerifyProgress samples.
+// throttled EventVerifyProgress samples. Used on the job goroutine only; buf is allocated on
+// the first verification and reused for the rest of the job.
 type contentVerifier struct {
-	chunkBytes  int64
 	bufBytes    int
+	buf         []byte
 	minInterval time.Duration
 	emit        func(jobs.Event)
 	jobID       string
 }
 
 // verdict compares src and dst: different sizes and symlinks differ without reading.
-func (v contentVerifier) verdict(ctx context.Context, src, dst string, facts ops.FileConflictFacts) (jobs.ContentVerdict, error) {
+func (v *contentVerifier) verdict(ctx context.Context, src, dst string, facts ops.FileConflictFacts) (jobs.ContentVerdict, error) {
 	if facts.Kind == "symlink" || facts.SourceSize != facts.DestSize {
 		return jobs.ContentDiffer, nil
 	}
@@ -629,17 +629,16 @@ func (v contentVerifier) verdict(ctx context.Context, src, dst string, facts ops
 		if v.emit == nil {
 			return
 		}
-		if now := time.Now(); read == 0 || read == total || now.Sub(last) >= v.minInterval {
+		if now := time.Now(); read == total || now.Sub(last) >= v.minInterval {
 			last = now
 			v.emit(jobs.Event{Type: jobs.EventVerifyProgress, JobID: v.jobID, Status: jobs.StatusRunning, CurrentPath: src, VerifyDone: read, VerifyTotal: total})
 		}
 	}
 	report(0)
-	var buf []byte
-	if v.bufBytes > 0 {
-		buf = make([]byte, v.bufBytes)
+	if v.buf == nil && v.bufBytes > 0 {
+		v.buf = make([]byte, v.bufBytes)
 	}
-	same, err := compare.SameContent(ctx, sp, dp, v.chunkBytes, buf, report)
+	same, err := compare.SameContent(ctx, sp, dp, v.buf, report)
 	if err != nil {
 		return jobs.ContentUnknown, err
 	}

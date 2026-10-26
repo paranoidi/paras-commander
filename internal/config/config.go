@@ -189,8 +189,8 @@ type DedupConfig struct {
 type CompareConfig struct {
 	HashConcurrency int `toml:"hash_concurrency"`
 	ReadBufferKiB   int `toml:"read_buffer_kib"`
-	// ChunkBytes compares same-size files this many bytes at a time, bailing out
-	// of a file as soon as its content diverges. Zero disables chunking.
+	// ChunkBytes makes find duplicates hash same-size files this many bytes at a
+	// time, dropping a file as soon as its prefix diverges. Zero disables chunking.
 	ChunkBytes          int64 `toml:"chunk_bytes"`
 	StayOnVolumeDefault bool  `toml:"stay_on_volume_default"`
 }

@@ -25,24 +25,24 @@ func TestSameContent(t *testing.T) {
 	cases := []struct {
 		name  string
 		other pathloc.Path
-		chunk int64
+		buf   []byte
 		want  bool
 	}{
-		{"identical chunked", meadow, 3, true},
-		{"identical whole", meadow, 0, true},
-		{"differs in last chunk", lastDiff, 3, false},
-		{"differs whole", lastDiff, 0, false},
-		{"size differs", shorter, 3, false},
+		{"identical small blocks", meadow, make([]byte, 6), true},
+		{"identical default buffer", meadow, nil, true},
+		{"differs in last block", lastDiff, make([]byte, 6), false},
+		{"differs default buffer", lastDiff, nil, false},
+		{"shorter file differs", shorter, make([]byte, 6), false},
 	}
 	for _, c := range cases {
-		got, err := SameContent(context.Background(), orchard, c.other, c.chunk, nil, nil)
+		got, err := SameContent(context.Background(), orchard, c.other, c.buf, nil)
 		if err != nil || got != c.want {
 			t.Errorf("%s: got %v, %v; want %v", c.name, got, err, c.want)
 		}
 	}
 }
 
-func TestSameContentStopsAtFirstDifferingChunk(t *testing.T) {
+func TestSameContentStopsAtFirstDifferingBlock(t *testing.T) {
 	dir := t.TempDir()
 	write := func(name, data string) pathloc.Path {
 		p := filepath.Join(dir, name)
@@ -58,15 +58,15 @@ func TestSameContentStopsAtFirstDifferingChunk(t *testing.T) {
 		wantSame bool
 		wantRead int64
 	}{
-		{"first chunk differs", "Xaaabbbbcccc", false, 8},
-		{"second chunk differs", "aaaaXbbbcccc", false, 16},
+		{"first block differs", "Xaaabbbbcccc", false, 8},
+		{"second block differs", "aaaaXbbbcccc", false, 16},
 		{"identical reads both whole", "aaaabbbbcccc", true, 24},
-		{"size differs reads nothing", "aaaa", false, 0},
+		{"shorter file stops when it ends", "aaaa", false, 12},
 	}
 	for _, c := range cases {
 		other := write("quarry.bin", c.data)
 		var read int64
-		same, err := SameContent(context.Background(), beacon, other, 4, make([]byte, 2), func(n int64) { read = n })
+		same, err := SameContent(context.Background(), beacon, other, make([]byte, 8), func(n int64) { read = n })
 		if err != nil || same != c.wantSame || read != c.wantRead {
 			t.Errorf("%s: same=%v read=%d err=%v; want same=%v read=%d", c.name, same, read, err, c.wantSame, c.wantRead)
 		}
