@@ -1,6 +1,7 @@
 package dlg
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"strings"
 	"testing"
 
@@ -798,5 +799,28 @@ func TestDrawMessageErrorLabelStyle(t *testing.T) {
 	r = p.Items[1].Rect
 	if _, st, _ := screen.Get(r.X, r.Y); st != styles.DialogText.Background(surface) {
 		t.Errorf("plain label style = %v, want DialogText", st)
+	}
+}
+
+func TestInputTextWidth(t *testing.T) {
+	spec := Spec{
+		Title: "Harbor", Width: 40, Unclamped: true,
+		Groups: []Group{{Columns: [][]Item{{
+			{ID: "plain", Kind: KindInput},
+			{ID: "search", Kind: KindInput, LeadingIcon: "/"},
+			{Kind: KindLabel, Label: "Lantern"},
+		}}}},
+		Buttons: OKCancelButtons(),
+	}
+	p := mustPlace(t, spec)
+	plain, _ := p.Item("plain")
+	if got := InputTextWidth(80, 24, spec, "plain"); got != plain.Rect.Width {
+		t.Errorf("plain input: %d, want its placed width %d", got, plain.Rect.Width)
+	}
+	if got, want := InputTextWidth(80, 24, spec, "search"), plain.Rect.Width-draw.LeadingIconCols("/"); got != want {
+		t.Errorf("input with a leading icon: %d, want %d (the icon's cells taken off)", got, want)
+	}
+	if got := InputTextWidth(80, 24, spec, "missing"); got != 0 {
+		t.Errorf("unknown input: %d, want 0", got)
 	}
 }

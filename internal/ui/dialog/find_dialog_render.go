@@ -103,11 +103,6 @@ func findDialogDepthFieldWidth(styles theme.Theme) int {
 	return draw.LeadingIconCols(styles.IconDialogDepth()) + findDialogDepthInputCells
 }
 
-// FindDialogQueryInputWidth is the query input width for a row of rowWidth cells.
-func FindDialogQueryInputWidth(rowWidth int, styles theme.Theme) int {
-	return max(0, rowWidth-findDialogDepthFieldWidth(styles)-findDialogDepthGap)
-}
-
 const findDialogPreferredWidth = 125 // preferred frame width; clamped to the terminal in FindDialogMetrics
 
 // FindRowIconPainter draws file-list devicons for one find dialog row; nil skips icons.

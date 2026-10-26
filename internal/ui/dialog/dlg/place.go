@@ -540,6 +540,25 @@ func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.
 		focused, it.Invalid, focused, it.Placeholder, it.LeadingIcon, styles)
 }
 
+// InputTextWidth is how many cells input id's text scrolls in when spec is drawn on a screenW x
+// screenH screen: its placed width less the cells its LeadingIcon takes (0 when the dialog does
+// not fit or has no such input). The caller's text editor keeps the input's Scroll for this width.
+func InputTextWidth(screenW, screenH int, spec Spec, id ID) int {
+	p, ok := Place(screenW, screenH, spec)
+	if !ok {
+		return 0
+	}
+	pi, found := p.Item(id)
+	it, _ := spec.Item(id)
+	if !found || pi.Kind != KindInput {
+		return 0
+	}
+	if it.LeadingIcon == "" {
+		return pi.Rect.Width
+	}
+	return max(pi.Rect.Width-draw.LeadingIconCols(it.LeadingIcon), 0)
+}
+
 // HitTest returns the widget under screen cell (x, y).
 func HitTest(p Placement, x, y int) (ID, bool) {
 	for _, it := range p.Items {

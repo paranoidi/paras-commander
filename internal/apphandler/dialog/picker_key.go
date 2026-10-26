@@ -30,8 +30,8 @@ func (h *Handler) pickerGeometry(spec dlg.Spec) (listRows, queryWidth int) {
 	if it, found := p.Item(dialog.PickerList); ok && found {
 		listRows = max(it.Rect.Height, 1)
 	}
-	if it, found := p.Item(dialog.PickerFilter); ok && found {
-		queryWidth = max(it.Rect.Width, 10)
+	if ok {
+		queryWidth = max(dlg.InputTextWidth(w, ht, spec, dialog.PickerFilter), 10)
 	}
 	return listRows, queryWidth
 }

@@ -47,7 +47,7 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon(),
 	}
 	depth := dlg.Item{
-		ID: FindDepth, Kind: dlg.KindInput, Width: findDialogDepthFieldWidth(styles) + 1,
+		ID: FindDepth, Kind: dlg.KindInput, Width: findDialogDepthFieldWidth(styles) + findDialogDepthGap,
 		Value: state.DepthInput, Cursor: utf8.RuneCountInString(state.DepthInput), LeadingIcon: styles.IconDialogDepth(),
 	}
 	var options []dlg.Item

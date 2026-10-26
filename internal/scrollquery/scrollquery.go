@@ -221,11 +221,3 @@ func HandleKey(dialogInputKeys *keymap.Map, ev *tcell.EventKey, inputFocused boo
 		return false
 	}
 }
-
-// DialogInputWidthFromFrame returns rect.Width-4 for a centered dialog frame width.
-func DialogInputWidthFromFrame(frameWidth int) int {
-	if frameWidth < 4 {
-		return 0
-	}
-	return frameWidth - 4
-}

@@ -37,8 +37,6 @@ func (h findHost) FindDialogScrollingQuery(st *dialog.FindDialogState, width int
 	return findctrl.NewScrollingQueryEdit(edit)
 }
 
-func (h findHost) FindDialogQueryWidth() int { return h.app.findDialogQueryWidth() }
-
 func (h findHost) Styles() theme.Theme { return h.app.styles }
 
 func (h findHost) GitignoreCache() *gitignore.Cache { return h.app.gitignoreCache }

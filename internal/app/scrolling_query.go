@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func (a *App) pathPickerScrollingQuery() scrollquery.Edit {
@@ -55,50 +56,23 @@ func (a *App) handleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, e s
 	return scrollquery.HandleKey(a.keys.DialogInput, ev, inputFocused, e)
 }
 
-func (a *App) findDialogQueryWidth() int {
-	termW, termH := a.screen.Size()
-	width, _, _, ok := dialog.FindDialogMetrics(a.layoutForTerminalSize(termW, termH), false)
-	if !ok {
-		width = 54 // ponytail: dialog not drawn below this; keep the old floor
-	}
-	return dialog.FindDialogQueryInputWidth(scrollquery.DialogInputWidthFromFrame(width), a.styles)
+// dialogInputWidth is the text width of input id in spec on the current screen
+// (dlg.InputTextWidth), at least 1.
+func (a *App) dialogInputWidth(spec dlg.Spec, id dlg.ID) int {
+	w, h := a.screen.Size()
+	return max(dlg.InputTextWidth(w, h, spec, id), 1)
 }
 
-func (a *App) helpDialogQueryWidth() int {
-	termW, termH := a.screen.Size()
-	layout := a.layoutForTerminalSize(termW, termH)
-	metrics, ok := dialog.ComputeHelpDialogListMetrics(layout)
-	if !ok {
-		return scrollquery.DialogInputWidthFromFrame(78)
-	}
-	return metrics.InputWidth
-}
+func (a *App) helpDialogQueryWidth() int { return a.dialogInputWidth(a.helpView(), dialog.HelpFilter) }
 
 func (a *App) historyDialogQueryWidth() int {
-	termW, _ := a.screen.Size()
-	width := 78
-	if width > termW-4 {
-		width = termW - 4
-	}
-	if width < 36 {
-		width = 36
-	}
-	return scrollquery.DialogInputWidthFromFrame(width)
+	return a.dialogInputWidth(a.historyView(), dialog.HistoryFilter)
 }
 
 func (a *App) sftpConnectDialogQueryWidth() int {
-	termW, _ := a.screen.Size()
-	width := 78
-	if width > termW-4 {
-		width = termW - 4
-	}
-	if width < 40 {
-		width = 40
-	}
-	return scrollquery.DialogInputWidthFromFrame(width)
+	return a.dialogInputWidth(a.sftpConnectView(), dialog.SFTPFilter)
 }
 
 func (a *App) groupSelectQueryWidth() int {
-	termW, _ := a.screen.Size()
-	return scrollquery.DialogInputWidthFromFrame(dialog.PatternDialogFrameWidth(termW))
+	return a.dialogInputWidth(a.groupSelectView(), dialog.PatternInput)
 }

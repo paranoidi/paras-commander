@@ -39,20 +39,3 @@ func TestHandleKeyIgnoredWhenNotFocused(t *testing.T) {
 		t.Fatalf("value mutated while not focused: %q", value)
 	}
 }
-
-func TestDialogInputWidthFromFrame(t *testing.T) {
-	cases := []struct {
-		frameWidth int
-		want       int
-	}{
-		{0, 0},
-		{3, 0},
-		{4, 0},
-		{10, 6},
-	}
-	for _, c := range cases {
-		if got := DialogInputWidthFromFrame(c.frameWidth); got != c.want {
-			t.Errorf("DialogInputWidthFromFrame(%d) = %d, want %d", c.frameWidth, got, c.want)
-		}
-	}
-}

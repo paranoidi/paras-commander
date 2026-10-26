@@ -206,19 +206,10 @@ func (h *Handler) ApplyPathPickerEvent(ev dlg.Event) {
 	}
 }
 
-// PathPickerQueryWidth returns the visible width of the query input row.
-// Mirrors the layout in drawPathPickerDialog: rect.Width - 4 with rect width = 78
-// clamped to layout.Width - 4.
+// PathPickerQueryWidth returns the text width of the query input on the current screen.
 func (h *Handler) PathPickerQueryWidth() int {
-	termW, _ := h.screen.Size()
-	width := 78
-	if width > termW-4 {
-		width = termW - 4
-	}
-	if width < 36 {
-		width = 36
-	}
-	return width - 4
+	termW, termH := h.screen.Size()
+	return max(dlg.InputTextWidth(termW, termH, h.PathPickerView(), dialog.PathPickerFilter), 1)
 }
 
 // PathPickerItemsHistory returns merged passive-first panel histories (deduped by cleaned

@@ -199,8 +199,8 @@ func (h *Handler) FilterDialogView() dlg.Spec {
 }
 
 func (h *Handler) filterDialogQueryWidth() int {
-	termW, _ := h.screen.Size()
-	return scrollquery.DialogInputWidthFromFrame(dialog.PatternDialogFrameWidth(termW))
+	termW, termH := h.screen.Size()
+	return max(dlg.InputTextWidth(termW, termH, h.FilterDialogView(), dialog.PatternInput), 1)
 }
 
 // tryRejectFilterDialogOK reports whether OK should be rejected because the (non-empty) pattern

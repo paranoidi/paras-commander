@@ -1366,10 +1366,16 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			st.Selected = 0
 			h.scheduleFindRank(-h.config.UI.Find.QueryDebounceMS)
 		}
-		h.host.HandleScrollingQueryKey(event, true, h.host.FindDialogScrollingQuery(st, h.host.FindDialogQueryWidth(), onChange))
+		h.host.HandleScrollingQueryKey(event, true, h.host.FindDialogScrollingQuery(st, h.queryWidth(), onChange))
 	case dialog.FindDepth:
 		h.handleFindDepthKey(event)
 	}
+}
+
+// queryWidth is the text width of the query input on the current screen.
+func (h *Handler) queryWidth() int {
+	termW, termH := h.screen.Size()
+	return max(dlg.InputTextWidth(termW, termH, h.DialogSpec(), dialog.FindQuery), 1)
 }
 
 // DialogSpec is the open find dialog's widget spec for the current screen.

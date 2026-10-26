@@ -100,15 +100,8 @@ func (h *Handler) SyncDialogRanks() {
 }
 
 func (h *Handler) queryWidth() int {
-	termW, _ := h.screen.Size()
-	width := 78
-	if width > termW-4 {
-		width = termW - 4
-	}
-	if width < 36 {
-		width = 36
-	}
-	return scrollquery.DialogInputWidthFromFrame(width)
+	termW, termH := h.screen.Size()
+	return max(dlg.InputTextWidth(termW, termH, h.DialogView(), dialog.PinFilter), 1)
 }
 
 // selectedItem resolves the Pin dialog's current selection to its index into PinnedItems

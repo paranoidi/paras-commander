@@ -21,7 +21,6 @@ type Host interface {
 	host.PanelNavigationHost
 	HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, edit ScrollingQueryEdit) bool
 	FindDialogScrollingQuery(st *dialog.FindDialogState, width int, onChange func()) ScrollingQueryEdit
-	FindDialogQueryWidth() int
 	// Styles is the live theme (the dialog spec's icon widths depend on it).
 	Styles() theme.Theme
 	GitignoreCache() *gitignore.Cache

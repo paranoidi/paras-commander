@@ -43,10 +43,10 @@ func PatternIsRadio(id dlg.ID) bool {
 	return id == PatternShellRadio || id == PatternRegexRadio || id == PatternSimpleRadio
 }
 
-// PatternDialogFrameWidth is the frame width of the Filter and Select group dialogs on a screen
+// patternDialogFrameWidth is the frame width of the Filter and Select group dialogs on a screen
 // layoutWidth wide: PatternDialogWidth, kept two cells off each side of the screen, and never
 // narrower than the 30 cells the pattern input needs to be usable.
-func PatternDialogFrameWidth(layoutWidth int) int {
+func patternDialogFrameWidth(layoutWidth int) int {
 	return max(min(PatternDialogWidth, layoutWidth-4), patternDialogMinWidth)
 }
 
@@ -181,7 +181,7 @@ func patternSpec(v patternView) dlg.Spec {
 	head = append(head, dlg.Item{Kind: dlg.KindSeparator})
 
 	// The live preview takes the rest of the Pattern row when it fits clear of the label.
-	frameW := PatternDialogFrameWidth(v.LayoutWidth)
+	frameW := patternDialogFrameWidth(v.LayoutWidth)
 	preview := v.Preview
 	if utf8.RuneCountInString(preview) >= frameW-4-len("Pattern:") {
 		preview = ""
