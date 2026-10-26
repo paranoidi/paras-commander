@@ -30,10 +30,15 @@ type hashJob struct {
 
 // files is how many files the job reads: progress counts a pair as two.
 func (j hashJob) files() int {
+	return len(j.sides())
+}
+
+// sides are the walk sides (0 primary, 1 secondary) the job reads.
+func (j hashJob) sides() []int {
 	if j.pair {
-		return 2
+		return []int{0, 1}
 	}
-	return 1
+	return []int{j.side}
 }
 
 // Session runs walk + hash + classify in the background.
@@ -179,12 +184,12 @@ func (s *Session) run(ctx context.Context) {
 
 	primary := pRes.files
 	secondary := sRes.files
-	pHash := make(map[string][32]byte)
-	sHash := make(map[string][32]byte)
-	pErr := make(map[string]string)
-	sErr := make(map[string]string)
+	// Per-side state indexed by walk side (0 primary, 1 secondary). A pair job's error is
+	// recorded on the primary side.
+	hashes := [2]map[string][32]byte{{}, {}}
+	errs := [2]map[string]string{{}, {}}
 	pairSame := make(map[string]bool)
-	classify := func() []Row { return Classify(primary, secondary, pHash, sHash, pairSame, pErr, sErr) }
+	classify := func() []Row { return Classify(primary, secondary, hashes[0], hashes[1], pairSame, errs[0], errs[1]) }
 
 	jobs := hashJobsNeeded(primary, secondary)
 	hashTotal := 0
@@ -226,8 +231,7 @@ func (s *Session) run(ctx context.Context) {
 	var wg sync.WaitGroup
 	var hashed atomic.Int32
 	var mu sync.Mutex
-	hashingP := map[string]struct{}{}
-	hashingS := map[string]struct{}{}
+	hashing := [2]map[string]struct{}{{}, {}}
 	publishRows := func(rows []Row, h int) {
 		s.publish(Snapshot{
 			PrimaryRoot:     s.primaryRoot,
@@ -254,7 +258,7 @@ func (s *Session) run(ctx context.Context) {
 				return
 			case <-t.C:
 				mu.Lock()
-				rows := MarkHashing(classify(), hashingP, hashingS)
+				rows := MarkHashing(classify(), hashing[0], hashing[1])
 				h := int(hashed.Load())
 				mu.Unlock()
 				publishRows(rows, h)
@@ -271,46 +275,34 @@ func (s *Session) run(ctx context.Context) {
 				if ctx.Err() != nil {
 					return
 				}
+				sides := job.sides()
 				mu.Lock()
-				if job.pair || job.side == 0 {
-					hashingP[job.rel] = struct{}{}
-				}
-				if job.pair || job.side == 1 {
-					hashingS[job.rel] = struct{}{}
+				for _, side := range sides {
+					hashing[side][job.rel] = struct{}{}
 				}
 				mu.Unlock()
 
+				var same bool
+				var sum [32]byte
+				var err error
 				if job.pair {
-					same, err := SameContent(ctx, job.loc, job.other, buf, nil)
-					mu.Lock()
-					delete(hashingP, job.rel)
-					delete(hashingS, job.rel)
-					if err != nil {
-						pErr[job.rel] = err.Error()
-					} else {
-						pairSame[job.rel] = same
-					}
+					same, err = SameContent(ctx, job.loc, job.other, buf, nil)
 				} else {
-					sum, err := HashFile(ctx, job.loc, buf)
-					mu.Lock()
-					if job.side == 0 {
-						delete(hashingP, job.rel)
-					} else {
-						delete(hashingS, job.rel)
-					}
-					if err != nil {
-						if job.side == 0 {
-							pErr[job.rel] = err.Error()
-						} else {
-							sErr[job.rel] = err.Error()
-						}
-					} else if job.side == 0 {
-						pHash[job.rel] = sum
-					} else {
-						sHash[job.rel] = sum
-					}
+					sum, err = HashFile(ctx, job.loc, buf)
 				}
-				hashed.Add(int32(job.files()))
+				mu.Lock()
+				for _, side := range sides {
+					delete(hashing[side], job.rel)
+				}
+				switch {
+				case err != nil:
+					errs[sides[0]][job.rel] = err.Error()
+				case job.pair:
+					pairSame[job.rel] = same
+				default:
+					hashes[job.side][job.rel] = sum
+				}
+				hashed.Add(int32(len(sides)))
 				mu.Unlock()
 			}
 		}()
