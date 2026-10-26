@@ -39,7 +39,12 @@ func (h *Handler) openDuplicateDialog() {
 		h.host.SetErrorMessage("Duplicate", err)
 		return
 	}
-	name := entry.Name
+	// Suggest a free ".N" name from the loaded listing (no filesystem IO); PlanDuplicate still
+	// rejects the original name and the copy job's conflict handling covers unlisted entries.
+	name := ops.SuggestDuplicateName(entry, func(path string) bool {
+		_, ok := p.ListingEntryAt(path)
+		return ok
+	})
 	nameRunes := len([]rune(name))
 	fields := []dialog.FileDialogField{
 		{Label: "Name", Value: name, Prefill: name, Cursor: nameRunes, PrefillPending: true},

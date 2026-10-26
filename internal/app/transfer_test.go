@@ -864,8 +864,8 @@ func TestDuplicateOpensRenameLikeDialogForSingleDirectory(t *testing.T) {
 	if app.model.FileDialog.DuplicateSource != src {
 		t.Fatalf("DuplicateSource = %q, want %q", app.model.FileDialog.DuplicateSource, src)
 	}
-	if len(app.model.FileDialog.Fields) != 1 || app.model.FileDialog.Fields[0].Value != "project" {
-		t.Fatalf("name field = %+v, want prefilled project", app.model.FileDialog.Fields)
+	if len(app.model.FileDialog.Fields) != 1 || app.model.FileDialog.Fields[0].Value != "project.1" {
+		t.Fatalf("name field = %+v, want prefilled project.1", app.model.FileDialog.Fields)
 	}
 }
 
@@ -914,8 +914,27 @@ func TestDuplicateOpensDialogForFile(t *testing.T) {
 	if app.model.FileDialog.DuplicateSource != file {
 		t.Fatalf("DuplicateSource = %q, want %q", app.model.FileDialog.DuplicateSource, file)
 	}
-	if got := app.model.FileDialog.Fields[0].Value; got != "note.txt" {
-		t.Fatalf("prefill value = %q, want %q", got, "note.txt")
+	if got := app.model.FileDialog.Fields[0].Value; got != "note.txt.1" {
+		t.Fatalf("prefill value = %q, want %q", got, "note.txt.1")
+	}
+}
+
+func TestDuplicateSuggestsNextFreeNumberedName(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "meadow.log")
+	for _, p := range []string{file, file + ".1", file + ".2"} {
+		writeFile(t, p)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{file: true}
+
+	app.dispatch(keymap.ActionFileDuplicate)
+	if got := app.model.FileDialog.Fields[0].Value; got != "meadow.log.3" {
+		t.Fatalf("prefill value = %q, want %q", got, "meadow.log.3")
 	}
 }
 

@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -43,4 +44,15 @@ func PlanDuplicate(source localfs.Entry, newName string, panelPath string) (Dupl
 		NewName:    trimmed,
 		DestPath:   destLoc.String(),
 	}, nil
+}
+
+// SuggestDuplicateName returns source's name with the first ".N" suffix (N = 1, 2, ...) whose
+// sibling path is not taken according to exists.
+func SuggestDuplicateName(source localfs.Entry, exists func(path string) bool) string {
+	for n := 1; ; n++ {
+		suffix := "." + strconv.Itoa(n)
+		if !exists(source.Path + suffix) {
+			return source.Name + suffix
+		}
+	}
 }

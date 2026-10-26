@@ -1,4 +1,4 @@
 == open ==
-focus=f0 phase=0 fields=["lantern.txt"@11/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
+focus=f0 phase=0 fields=["lantern.txt.1"@13/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
 == F2 ==
-focus=ok phase=1 fields=["lantern.txt"@11/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
+focus=ok phase=1 fields=["lantern.txt.1"@13/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""

@@ -205,3 +205,14 @@ func TestExecuteCopyExistingDestinationDirStillNestsBasename(t *testing.T) {
 		t.Fatalf("missing nested copy under destination dir at %q: %v", want, err)
 	}
 }
+
+func TestSuggestDuplicateNameSkipsTakenSuffixes(t *testing.T) {
+	src := localfs.Entry{Name: "harbor", Path: "/srv/harbor"}
+	taken := map[string]bool{"/srv/harbor.1": true, "/srv/harbor.2": true}
+	if got := SuggestDuplicateName(src, func(p string) bool { return taken[p] }); got != "harbor.3" {
+		t.Fatalf("SuggestDuplicateName() = %q, want harbor.3", got)
+	}
+	if got := SuggestDuplicateName(src, func(string) bool { return false }); got != "harbor.1" {
+		t.Fatalf("SuggestDuplicateName() = %q, want harbor.1", got)
+	}
+}

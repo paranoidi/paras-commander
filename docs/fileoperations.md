@@ -168,7 +168,8 @@ the size and time based Conflict rules and skipping identical files; see
 ### Duplicate
 
 Copies exactly one file or directory under a new name in the same place.
-The name field behaves like Rename, including Sanitize and Slugify and the
+The name is prefilled with the original name plus `.1`, or the next free
+number (`.2`, `.3`, ...) when that name is already listed. The name field behaves like Rename, including Sanitize and Slugify and the
 **Focus after duplicate** checkbox; the focus moves to the copy once the job
 has created it.
 
