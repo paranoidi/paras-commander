@@ -166,7 +166,7 @@ func FilterDialogRadios() []FilterDialogRadio {
 		{FilterEqual, "Equal", 'E'},
 		{FilterRelocated, "Relocated", 'R'},
 		{FilterPrimaryOnly, "Left only", 'L'},
-		{FilterSecondaryOnly, "Right only", 'O'},
+		{FilterSecondaryOnly, "Right only", 'I'},
 		{FilterContentDiff, "Content diff", 'D'},
 	}
 }
@@ -183,7 +183,7 @@ func SelectDialogRadios(focusSecondary bool) []FilterDialogRadio {
 		{FilterEqual, "Equal", 'E'},
 		{FilterRelocated, "Relocated", 'R'},
 		{FilterContentDiff, "Modified", 'M'},
-		{this, "Only this side", 'O'},
+		{this, "Only this side", 'T'},
 		{other, "Only other side", 'N'},
 	}
 }

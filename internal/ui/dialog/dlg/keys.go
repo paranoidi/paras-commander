@@ -23,13 +23,13 @@ func find(spec Spec, id ID) (pos, bool) {
 			for ri, it := range col {
 				if it.Kind == KindRow {
 					for ki, c := range it.Cells {
-						if c.focusable() && c.ID == id {
+						if c.Focusable() && c.ID == id {
 							return itemPos(gi, ci, ri, ki), true
 						}
 					}
 					continue
 				}
-				if it.focusable() && it.ID == id {
+				if it.Focusable() && it.ID == id {
 					return itemPos(gi, ci, ri, -1), true
 				}
 			}
@@ -71,7 +71,7 @@ func enterRow(row Item, idx int, up bool) (ID, bool) {
 			idx = n - 1
 		} else {
 			for _, c := range row.Cells {
-				if c.focusable() {
+				if c.Focusable() {
 					return c.ID, true
 				}
 			}
@@ -79,16 +79,16 @@ func enterRow(row Item, idx int, up bool) (ID, bool) {
 		}
 	}
 	idx = min(idx, n-1)
-	if row.FallbackFirst && !row.Cells[idx].focusable() {
+	if row.FallbackFirst && !row.Cells[idx].Focusable() {
 		idx = 0
 	}
 	for i := idx; i >= 0; i-- {
-		if row.Cells[i].focusable() {
+		if row.Cells[i].Focusable() {
 			return row.Cells[i].ID, true
 		}
 	}
 	for i := idx + 1; i < n; i++ {
-		if row.Cells[i].focusable() {
+		if row.Cells[i].Focusable() {
 			return row.Cells[i].ID, true
 		}
 	}
@@ -100,7 +100,7 @@ func entry(it Item, idx int, up bool) (ID, bool) {
 	if it.Kind == KindRow {
 		return enterRow(it, idx, up)
 	}
-	return it.ID, it.focusable()
+	return it.ID, it.Focusable()
 }
 
 // nextFocusable is where focus lands on the first focusable item of col strictly after row from
@@ -108,7 +108,7 @@ func entry(it Item, idx int, up bool) (ID, bool) {
 // the cell index of the widget focus leaves, or -1.
 func nextFocusable(col []Item, from, idx int) (ID, bool) {
 	for i := from + 1; i < len(col); i++ {
-		if col[i].focusable() {
+		if col[i].Focusable() {
 			return entry(col[i], idx, false)
 		}
 	}
@@ -117,7 +117,7 @@ func nextFocusable(col []Item, from, idx int) (ID, bool) {
 
 func prevFocusable(col []Item, from, idx int) (ID, bool) {
 	for i := from - 1; i >= 0; i-- {
-		if col[i].focusable() {
+		if col[i].Focusable() {
 			return entry(col[i], idx, true)
 		}
 	}
@@ -150,13 +150,13 @@ func groupFocusables(g Group) []Item {
 		for _, it := range col {
 			if it.Kind == KindRow {
 				for _, c := range it.Cells {
-					if c.focusable() {
+					if c.Focusable() {
 						out = append(out, c)
 					}
 				}
 				continue
 			}
-			if it.focusable() {
+			if it.Focusable() {
 				out = append(out, it)
 			}
 		}
@@ -236,7 +236,7 @@ func tabTarget(spec Spec, id ID) ID {
 		return id
 	}
 	for _, c := range row.Cells {
-		if c.On && c.focusable() {
+		if c.On && c.Focusable() {
 			return c.ID
 		}
 	}
@@ -396,7 +396,7 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		if cur.cell >= 0 { // along the row, over cells that cannot be focused
 			cells := itemAt(spec, cur).Cells
 			for c := cur.cell + d; c >= 0 && c < len(cells); c += d {
-				if cells[c].focusable() {
+				if cells[c].Focusable() {
 					*focus = cells[c].ID
 					break
 				}
@@ -404,7 +404,7 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 			return Event{}, true
 		}
 		cols := spec.Groups[cur.group].Columns
-		if c := cur.col + d; c >= 0 && c < len(cols) && cur.row < len(cols[c]) && cols[c][cur.row].focusable() {
+		if c := cur.col + d; c >= 0 && c < len(cols) && cur.row < len(cols[c]) && cols[c][cur.row].Focusable() {
 			if id, ok := entry(cols[c][cur.row], -1, false); ok {
 				*focus = id
 			}

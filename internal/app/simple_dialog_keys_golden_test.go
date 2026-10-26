@@ -52,6 +52,7 @@ func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
 	t.Helper()
 	dir := t.TempDir()
 	app := d.setup(t, dir)
+	checkDialogInvariantsOnce(t, d.name, app)
 	var sb strings.Builder
 	record := func(label string) {
 		app.render()

@@ -222,8 +222,8 @@ type ListRow struct {
 	Marks RowMarks
 }
 
-// focusable reports whether keyboard focus and mouse clicks can land on the item.
-func (it Item) focusable() bool {
+// Focusable reports whether keyboard focus and mouse clicks can land on the item.
+func (it Item) Focusable() bool {
 	switch it.Kind {
 	case KindLabel, KindSeparator, KindSpacer, KindBar:
 		return false
@@ -231,7 +231,7 @@ func (it Item) focusable() bool {
 		return !it.Disabled
 	case KindRow:
 		for _, c := range it.Cells {
-			if c.focusable() {
+			if c.Focusable() {
 				return true
 			}
 		}

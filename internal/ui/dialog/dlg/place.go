@@ -57,8 +57,10 @@ func buttonLabels(row []Button) []string {
 	return labels
 }
 
-// leaves returns the widgets of spec in layout order (group, column, item), with the cells of a
+// Widgets returns the widgets of spec in layout order (group, column, item), with the cells of a
 // row in place of the row. Place lays them out in this order and Draw walks them in it.
+func Widgets(spec Spec) []Item { return leaves(spec) }
+
 func leaves(spec Spec) []Item {
 	var out []Item
 	for _, g := range spec.Groups {

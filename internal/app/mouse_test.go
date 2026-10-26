@@ -13,7 +13,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -470,56 +469,5 @@ func TestMouseDialogInputPlacesCursor(t *testing.T) {
 	click(app, x+4, y, tcell.Button1)
 	if gs.Focus != dialog.PatternInput || gs.TextCursor != 4 {
 		t.Fatalf("input click: focus=%q cursor=%d want input / 4", gs.Focus, gs.TextCursor)
-	}
-}
-
-// TestDialogMouseSpecsMatchTheScreen guards the activeDialogMouse table: each entry's spec must
-// be the one the renderer draws, so every button the spec places shows its label on screen
-// exactly where TargetAt finds it.
-func TestDialogMouseSpecsMatchTheScreen(t *testing.T) {
-	openers := map[string]func(a *App){
-		"sort":             func(a *App) { a.openSortDialog() },
-		"listing format":   func(a *App) { a.openListingFormatDialog() },
-		"config":           func(a *App) { a.openConfigDialog() },
-		"preview settings": func(a *App) { a.openPreviewSettingsDialog() },
-		"debounce":         func(a *App) { a.openDebounceCalibrateDialog() },
-		"quit":             func(a *App) { a.openQuitConfirm() },
-		"group select":     func(a *App) { a.openGroupSelect("select", "panel") },
-		"filter":           func(a *App) { a.dialogCtrl.OpenFilterDialog() },
-		"message":          func(a *App) { a.openMessageDialog("Harbor", "lantern meadow") },
-		"history":          func(a *App) { a.openHistoryDialog(ui.PrimaryPanel) },
-		"find":             func(a *App) { a.findCtrl.OpenDialog(ui.PrimaryPanel) },
-		"mkdir":            func(a *App) { a.dialogCtrl.OpenMkdirDialog(false) },
-		"copy":             func(a *App) { a.dialogCtrl.ActivateCopyAction() },
-		"help":             func(a *App) { a.openHelpDialog() },
-		"meta":             func(a *App) { a.metaCtrl.OpenDialog(ui.PrimaryPanel) },
-	}
-	for name, open := range openers {
-		t.Run(name, func(t *testing.T) {
-			app := tallMouseTestApp(t)
-			open(app)
-			app.render()
-			dm, ok := app.activeDialogMouse()
-			if !ok {
-				t.Fatalf("no mouse table entry (input mode %v)", app.inputMode())
-			}
-			p, placed := dlg.Place(100, 30, dm.spec)
-			if !placed || len(dm.spec.Buttons) == 0 {
-				t.Fatalf("placed=%v buttons=%d", placed, len(dm.spec.Buttons))
-			}
-			screen := app.screen.(tcell.SimulationScreen)
-			for _, b := range dm.spec.Buttons {
-				it, ok := p.Item(b.ID)
-				if !ok {
-					t.Fatalf("button %q not placed", b.ID)
-				}
-				if got := tcelltest.TextAt(screen, it.Rect.X, it.Rect.Y, it.Rect.Width); !strings.Contains(got, b.Label) {
-					t.Errorf("button %q: screen shows %q at its rect, want %q", b.ID, got, b.Label)
-				}
-				if tg, ok := dlg.TargetAt(dm.spec, 100, 30, it.Rect.X+1, it.Rect.Y); !ok || tg.ID != b.ID {
-					t.Errorf("TargetAt on button %q = (%+v, %v)", b.ID, tg, ok)
-				}
-			}
-		})
 	}
 }
