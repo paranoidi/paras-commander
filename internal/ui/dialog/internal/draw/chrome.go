@@ -170,10 +170,16 @@ func ScrollingInputLayoutFor(scroll, width, contentLen int) ScrollingInputLayout
 	return ScrollingInputLayout{TextCols: textCols, LeftPad: leftPad, RightPad: rightPad}
 }
 
-// maxScrollFixedPointIters bounds the clamp iteration in ensureScrollInputVisible and
-// AdjustScrollForCompletion: LeftPad can only flip 0→1 once and scroll moves monotonically
-// toward the caret, so it converges in ≤3 passes; this is just a safety bound.
-const maxScrollFixedPointIters = 4
+// scrollToShow is the smallest scroll, at least from, at which index i of content contentLen long is
+// in the text area. The overflow markers make the text area depend on the scroll, so it is measured
+// at each candidate (measuring it at the old scroll overshoots by the marker it then drops).
+func scrollToShow(i, from, width, contentLen int) int {
+	s := max(from, i-width+1, 0) // no scroll shows i with fewer than i-width+1 runes hidden
+	for i >= s+ScrollingInputLayoutFor(s, width, contentLen).TextCols {
+		s++
+	}
+	return s
+}
 
 func ensureScrollInputVisible(valueLen, cursor, scroll, width, contentLen int) (int, int) {
 	if width < 1 {
@@ -188,30 +194,12 @@ func ensureScrollInputVisible(valueLen, cursor, scroll, width, contentLen int) (
 	if scroll < 0 {
 		scroll = 0
 	}
-	for range maxScrollFixedPointIters {
-		lay := ScrollingInputLayoutFor(scroll, width, contentLen)
-		maxScroll := contentLen - lay.TextCols
-		if maxScroll < 0 {
-			maxScroll = 0
-		}
-		next := scroll
-		if next > maxScroll {
-			next = maxScroll
-		}
-		if cursor < next {
-			next = cursor
-		} else if cursor >= next+lay.TextCols {
-			next = cursor - lay.TextCols + 1
-		}
-		if next < 0 {
-			next = 0
-		}
-		if next == scroll {
-			break
-		}
-		scroll = next
+	// Past the scroll that shows the content's last cell only blank cells would scroll in.
+	scroll = min(scroll, scrollToShow(contentLen-1, 0, width, contentLen))
+	if cursor < scroll {
+		scroll = cursor
 	}
-	return cursor, scroll
+	return cursor, scrollToShow(cursor, scroll, width, contentLen)
 }
 
 // EnsureScrollInputVisible adjusts scroll so the caret stays in the text area between
@@ -259,22 +247,7 @@ func AdjustScrollForCompletion(valueLen, cursor, scroll, width, suffixLen int) (
 	if cursor < scroll {
 		scroll = cursor
 	}
-	contentLen := ScrollContentLen(valueLen, cursor)
-	for range maxScrollFixedPointIters {
-		lay := ScrollingInputLayoutFor(scroll, width, contentLen)
-		if cursor < scroll+lay.TextCols {
-			break
-		}
-		next := cursor - lay.TextCols + 1
-		if next < 0 {
-			next = 0
-		}
-		if next == scroll {
-			break
-		}
-		scroll = next
-	}
-	return cursor, scroll
+	return cursor, scrollToShow(cursor, scroll, width, ScrollContentLen(valueLen, cursor))
 }
 
 // EnsurePathInputScroll keeps the caret visible in a path-shaped input row.

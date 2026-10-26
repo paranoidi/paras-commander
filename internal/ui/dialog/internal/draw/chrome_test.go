@@ -498,3 +498,21 @@ func TestDrawDialogFrameCentersShortTitle(t *testing.T) {
 		t.Fatalf("top inner row = %q\nwant          %q", inner, want)
 	}
 }
+
+// Scrolling to the caret measures the text area at the scroll it lands on, so erasing the last rune
+// of a long path always scrolls back: the reveal stops at a word start, and scrolling forward from
+// there to the caret must not overshoot by the right marker it drops on the way.
+func TestScrollToCaretDoesNotOvershoot(t *testing.T) {
+	path := []rune("/thicket/orchard/lantern/meadow/harbor/willow/pebble/ember/quartz/saffron/thistle/velvet/yarrow/")
+	n := len(path)
+	for width := 20; width <= 90; width++ {
+		_, before := EnsurePathInputScroll(n, n, 0, width, 0)
+		if before == 0 {
+			continue
+		}
+		cursor, revealed := AdjustScrollRevealOnErase(string(path[:n-1]), n-1, before, width, 0)
+		if _, after := EnsurePathInputScroll(n-1, cursor, revealed, width, 0); after >= before {
+			t.Fatalf("width %d: scroll %d after erasing the last rune, want below %d", width, after, before)
+		}
+	}
+}
