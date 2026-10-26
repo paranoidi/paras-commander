@@ -106,7 +106,7 @@ func TestOutputDialogRunningKeys(t *testing.T) {
 			}
 		}
 	}
-	// Esc / OK / Cancel are resolved centrally (App.activeDialogButtons) to these funcs.
+	// Esc / OK / Cancel are resolved centrally (App.activeDialog) to these funcs.
 	cases := []struct {
 		name       string
 		run        func(*Handler)

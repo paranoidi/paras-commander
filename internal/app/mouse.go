@@ -152,7 +152,7 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 			return false, false
 		}
 	default:
-		return a.handleDialogMouse(layout, x, y, buttons, pressed)
+		return a.handleDialogMouse(x, y, buttons, pressed)
 	}
 	id, row, ok := a.mouseHit(layout, x, y)
 	if !ok {

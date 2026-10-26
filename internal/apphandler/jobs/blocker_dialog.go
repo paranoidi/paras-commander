@@ -46,7 +46,7 @@ func (h *Handler) postponeBlockerDialog() {
 
 func (h *Handler) confirmBlockerDialog() {
 	st := &h.model.ConflictDialog
-	h.activateBlockerChoice(dlg.Focused(dialog.ConflictDialogView(*st, ""), st.Focus))
+	h.activateBlockerChoice(dlg.Focused(h.BlockerDialogSpec(), st.Focus))
 }
 
 // activateBlockerChoice runs the button id of the File exists / Disk space screen: Postpone
@@ -101,6 +101,11 @@ func (h *Handler) DialogCancel() {
 	h.postponeBlockerDialog()
 }
 
+// BlockerDialogSpec is the open conflict dialog's widget spec, the one the renderer draws.
+func (h *Handler) BlockerDialogSpec() dlg.Spec {
+	return dialog.ConflictDialogView(h.model.ConflictDialog, h.model.UserHomeDir)
+}
+
 // HandleBlockerDialogKey routes keys for the open quick-blocker (ConflictDialog) dialog: the
 // engine owns focus, Tab and the button mnemonics. No-op when the dialog is not open.
 func (h *Handler) HandleBlockerDialogKey(event *tcell.EventKey) {
@@ -108,7 +113,7 @@ func (h *Handler) HandleBlockerDialogKey(event *tcell.EventKey) {
 	if !st.Open {
 		return
 	}
-	if ev, ok := dlg.HandleKey(dialog.ConflictDialogView(*st, ""), st.ConflictDialogFocus(), event); ok {
+	if ev, ok := dlg.HandleKey(h.BlockerDialogSpec(), st.ConflictDialogFocus(), event); ok {
 		h.ApplyBlockerDialogEvent(ev)
 	}
 }

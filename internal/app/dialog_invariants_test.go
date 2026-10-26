@@ -31,14 +31,14 @@ func checkDialogInvariants(t *testing.T, app *App) {
 	t.Helper()
 	app.render()
 	w, h := app.screen.Size()
-	dm, ok := app.activeDialogMouse(app.layoutForTerminalSize(w, h))
+	d, ok := app.activeDialog(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if !ok {
-		t.Errorf("invariant: input mode %v has no activeDialogMouse entry", app.inputMode())
+		t.Errorf("invariant: input mode %v has no activeDialog entry", app.inputMode())
 		return
 	}
-	spec := dm.spec
+	spec, fit := d.spec()
 	p, placed := dlg.Place(w, h, spec)
-	if !placed {
+	if !fit || !placed {
 		return // too small to draw: nothing on screen to check
 	}
 
@@ -77,7 +77,7 @@ func checkDialogInvariants(t *testing.T, app *App) {
 
 	// Every focusable widget is reachable from the initial focus with Tab and the arrow keys.
 	keys := []tcell.Key{tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp, tcell.KeyLeft, tcell.KeyRight}
-	start := dlg.Focused(spec, *dm.focus)
+	start := dlg.Focused(spec, *d.focus)
 	reached := map[dlg.ID]bool{start: true}
 	for queue := []dlg.ID{start}; len(queue) > 0; queue = queue[1:] {
 		for _, k := range keys {
@@ -114,12 +114,11 @@ func checkDialogInvariants(t *testing.T, app *App) {
 	}
 
 	// The spec's OK / Cancel buttons have a central action.
-	b := app.activeDialogButtons(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if seenID[dlg.OK] && b.OK == nil {
-		t.Errorf("invariant: the spec has an OK button but activeDialogButtons has no OK")
+	if seenID[dlg.OK] && d.buttons.OK == nil {
+		t.Errorf("invariant: the spec has an OK button but activeDialog has no OK")
 	}
-	if seenID[dlg.Cancel] && b.Cancel == nil {
-		t.Errorf("invariant: the spec has a Cancel button but activeDialogButtons has no Cancel")
+	if seenID[dlg.Cancel] && d.buttons.Cancel == nil {
+		t.Errorf("invariant: the spec has a Cancel button but activeDialog has no Cancel")
 	}
 }
 

@@ -4,8 +4,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// OK / Cancel entry points for the dialogs this handler owns. App.activeDialogButtons maps
-// ui.input.dialog-ok / dialog-cancel to these (see internal/app/dialog_buttons.go); the key
+// OK / Cancel entry points for the dialogs this handler owns. App.activeDialog maps
+// ui.input.dialog-ok / dialog-cancel to these (see internal/app/active_dialog.go); the key
 // handlers here never see those chords. Dialogs with sub-phases or an open completion
 // dropdown pick the right layer themselves, so a Cancel closes the innermost layer first.
 

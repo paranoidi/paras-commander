@@ -66,9 +66,14 @@ func (a *App) openDedupDeleteDialog() {
 	a.model.FileDialog = fd
 }
 
+// dedupEmptyDirsConfirmView is the empty-dirs confirmation's widget spec, the one the renderer draws.
+func (a *App) dedupEmptyDirsConfirmView() dlg.Spec {
+	return dialog.DedupEmptyDirsConfirmView(a.model.DedupEmptyDirsConfirm, ui.DialogListIconLeadingWidth(a.model.UseNerdfontIcons))
+}
+
 func (a *App) handleDedupEmptyDirsConfirmKey(event *tcell.EventKey) bool {
 	st := &a.model.DedupEmptyDirsConfirm
-	if ev, ok := dlg.HandleKey(dialog.DedupEmptyDirsConfirmView(*st, 0), &st.Focus, event); ok {
+	if ev, ok := dlg.HandleKey(a.dedupEmptyDirsConfirmView(), &st.Focus, event); ok {
 		a.applyDedupEmptyDirsConfirmEvent(ev)
 	}
 	return false
