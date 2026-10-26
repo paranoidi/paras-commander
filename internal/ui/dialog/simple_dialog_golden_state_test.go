@@ -69,6 +69,19 @@ func compareFilterGoldenState(mode CompareFilterDialogMode, secondary bool, filt
 	return st
 }
 
+func jobsResultFilterGoldenState(filter JobResultFilter, focus string) JobsResultFilterDialogState {
+	st := JobsResultFilterDialogState{Open: true, Filter: filter}
+	switch focus {
+	case "ok":
+		st.Focus = dlg.OK
+	case "cancel":
+		st.Focus = dlg.Cancel
+	default:
+		st.Focus = JobsResultFilterView(st).Groups[0].Columns[0][goldenIndex(focus)].ID
+	}
+	return st
+}
+
 func hostKeyGoldenState(fingerprint, focus string) HostKeyDialogState {
 	st := HostKeyDialogState{
 		Open: true, Host: "harbor.example.net:22", KeyType: "ssh-ed25519", Fingerprint: fingerprint,

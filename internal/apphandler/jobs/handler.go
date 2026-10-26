@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"slices"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -45,7 +44,7 @@ func (h *Handler) OpenJobsView() {
 	h.model.ActiveSubFocus = ui.SubFocusFileList
 	h.model.MenuDefinitions = menu.JobsDefinitions(h.keys, h.keysJobs)
 	h.model.Menu.ActiveMenu = menu.DefaultIndexJobs()
-	h.model.JobsView = ui.JobsViewState{Selected: 0, FocusPane: 0, ListScroll: 0, DetailScroll: 0, ErrorsScroll: 0, SucceededScroll: 0, ConflictButtonFocus: 0}
+	h.model.JobsView = ui.JobsViewState{}
 	if h.listStale {
 		h.SyncJobsList()
 	} else if len(h.model.JobsList) == 0 {
@@ -60,8 +59,7 @@ func (h *Handler) focusJobsViewOnFirstPendingBlocker() {
 		h.model.JobsView.FocusPane = 1
 		h.model.JobsView.ConflictButtonFocus = 0
 		h.model.JobsView.DetailScroll = 0
-		h.model.JobsView.ErrorsScroll = 0
-		h.model.JobsView.SucceededScroll = 0
+		h.model.JobsView.OpsScroll = 0
 	}
 	h.ensureJobsViewSelectionVisible()
 }
@@ -72,6 +70,7 @@ func (h *Handler) closeJobsView() {
 	h.model.MenuDefinitions = menu.BrowserDefinitions(h.keys, h.host.DevMode())
 	h.model.Menu.ActiveMenu = menu.DefaultIndex()
 	h.model.JobsView = ui.JobsViewState{}
+	h.model.JobsResultFilterDialog = dialog.JobsResultFilterDialogState{}
 }
 
 func (h *Handler) applyJobsRetention() {
@@ -165,7 +164,7 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		if h.model.ViewMode != ui.ViewJobs {
 			return true
 		}
-		if pane, _, ok := h.maximizablePane(); ok && (pane == ui.JobsPaneErrors || pane == ui.JobsPaneSucceeded) {
+		if h.operationsFocused() {
 			h.model.JobsView.Maximized = true
 			return true
 		}
@@ -201,6 +200,16 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		}
 		h.adjustRateLimit(actionID == keymap.ActionJobsRateLimitIncrease)
 		return true
+	case keymap.ActionJobsResultFilter:
+		if h.model.ViewMode == ui.ViewJobs {
+			h.OpenResultFilterDialog()
+		}
+		return true
+	case keymap.ActionJobsResetFilter:
+		if h.model.ViewMode == ui.ViewJobs {
+			h.ResetOperationsFilter()
+		}
+		return true
 	case keymap.ActionJobsUndo:
 		if h.model.ViewMode == ui.ViewJobs {
 			h.undoSelectedJob()
@@ -218,7 +227,16 @@ func (h *Handler) TryDispatch(actionID string) bool {
 }
 
 func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
+	if h.model.JobsResultFilterDialog.Open {
+		h.HandleResultFilterDialogKey(event)
+		return false
+	}
 	h.clampJobsFocusPane()
+	// An open Operations fuzzy filter takes its editing keys before vi motion, leader letters
+	// and the maximized pane's own keys.
+	if h.operationsFocused() && h.handleOperationsFilterKey(event) {
+		return false
+	}
 	if h.model.JobsView.Maximized {
 		h.handleJobsMaximizedKey(event)
 		return false
@@ -294,6 +312,10 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 
 	if conflictVis && fp == 1 {
 		return h.handleJobsConflictPaneKey(event)
+	}
+	if nextAction == "" && plainRune(event) && h.operationsFocused() {
+		h.typeOperationsRune(event.Rune())
+		return false
 	}
 
 	h.handleJobsPaneScrollKey(event, fp)
@@ -375,9 +397,8 @@ func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
 	return false
 }
 
-// handleJobsPaneScrollKey handles Up/Down/PgUp/PgDn (and Home/End on the list pane) for
-// whichever pane currently has focus (list, Details, Errors or Succeeded). The conflict pane is
-// handled by handleJobsConflictPaneKey.
+// handleJobsPaneScrollKey handles Up/Down/PgUp/PgDn/Home/End for whichever pane currently has
+// focus (list, Details or Operations). The conflict pane is handled by handleJobsConflictPaneKey.
 func (h *Handler) handleJobsPaneScrollKey(event *tcell.EventKey, fp int) {
 	order, rects := h.jobsPaneLayout()
 	if fp < 0 || fp >= len(order) {
@@ -406,10 +427,8 @@ func (h *Handler) handleJobsPaneScrollKey(event *tcell.EventKey, fp int) {
 	switch pane {
 	case ui.JobsPaneDetail:
 		scroll, total = &h.model.JobsView.DetailScroll, h.jobsDetailLineCountForSelection()
-	case ui.JobsPaneErrors:
-		scroll, total = &h.model.JobsView.ErrorsScroll, ui.JobsLinesPanelLineCount(ui.JobErrorLines(h.selectedJobEntry()))
-	case ui.JobsPaneSucceeded:
-		scroll, total = &h.model.JobsView.SucceededScroll, ui.JobsLinesPanelLineCount(h.model.JobSucceeded[h.selectedJobEntry().ID])
+	case ui.JobsPaneOperations:
+		scroll, total = &h.model.JobsView.OpsScroll, ui.JobOperationsLineCount(h.visibleOperations(), rects[pane], false)
 	default:
 		return
 	}
@@ -417,9 +436,14 @@ func (h *Handler) handleJobsPaneScrollKey(event *tcell.EventKey, fp int) {
 	scrollPane(event.Key(), scroll, max(0, total-contentH))
 }
 
-// scrollPane applies Up/Down (one row) and PgUp/PgDn (five rows) to *scroll, clamped to [0, maxScroll].
+// scrollPane applies Up/Down (one row), PgUp/PgDn (five rows) and Home/End (top/bottom) to
+// *scroll, clamped to [0, maxScroll].
 func scrollPane(key tcell.Key, scroll *int, maxScroll int) {
 	switch key {
+	case tcell.KeyHome:
+		*scroll = 0
+	case tcell.KeyEnd:
+		*scroll = maxScroll
 	case tcell.KeyUp:
 		*scroll = max(0, *scroll-1)
 	case tcell.KeyDown:
@@ -464,8 +488,7 @@ func (h *Handler) setSelection(sel int) {
 	h.model.JobsView.Selected = sel
 	if beforeSel != sel {
 		h.model.JobsView.DetailScroll = 0
-		h.model.JobsView.ErrorsScroll = 0
-		h.model.JobsView.SucceededScroll = 0
+		h.model.JobsView.OpsScroll = 0
 		h.model.JobsView.ConflictButtonFocus = 0
 	}
 	h.ensureJobsViewSelectionVisible()
@@ -497,33 +520,14 @@ func (h *Handler) clampJobsFocusPane() {
 	if h.model.JobsView.FocusPane > maxPane {
 		h.model.JobsView.FocusPane = maxPane
 	}
-	if h.model.JobsView.Maximized {
-		if pane, _, ok := h.maximizablePane(); !ok || (pane != ui.JobsPaneErrors && pane != ui.JobsPaneSucceeded) {
-			h.model.JobsView.Maximized = false
-		}
+	if h.model.JobsView.Maximized && !h.operationsFocused() {
+		h.model.JobsView.Maximized = false
 	}
 }
 
-// maximizablePane returns the focused pane and its source lines; ok is false when the focus
-// index is out of range.
-func (h *Handler) maximizablePane() (ui.JobsPane, []string, bool) {
-	order, _ := h.jobsPaneLayout()
-	fp := h.model.JobsView.FocusPane
-	if fp < 0 || fp >= len(order) {
-		return 0, nil, false
-	}
-	switch pane := order[fp]; pane {
-	case ui.JobsPaneErrors:
-		return pane, ui.JobErrorLines(h.selectedJobEntry()), true
-	case ui.JobsPaneSucceeded:
-		return pane, h.model.JobSucceeded[h.selectedJobEntry().ID], true
-	default:
-		return pane, nil, true
-	}
-}
-
-// handleJobsMaximizedKey handles keys while an Errors/Succeeded pane is maximized: Esc, Enter,
-// Left and q restore the layout, Up/Down/PgUp/PgDn scroll the wrapped lines, the rest is swallowed.
+// handleJobsMaximizedKey handles keys while the Operations pane is maximized: Esc, Enter, Left
+// and q restore the layout, Up/Down/PgUp/PgDn/Home/End scroll the wrapped lines, the rest is
+// swallowed.
 func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyEnter, tcell.KeyLeft:
@@ -535,15 +539,10 @@ func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 		}
 		return
 	}
-	pane, lines, _ := h.maximizablePane()
 	width, height := h.screen.Size()
 	full := ui.JobsMaximizedRect(h.host.LayoutForTerminalSize(width, height))
-	total := ui.JobsLinesPanelLineCount(ui.WrapJobsPaneLines(lines, full))
-	scroll := &h.model.JobsView.ErrorsScroll
-	if pane == ui.JobsPaneSucceeded {
-		scroll = &h.model.JobsView.SucceededScroll
-	}
-	scrollPane(event.Key(), scroll, max(0, total-ui.JobsPanelContentRows(full)))
+	total := ui.JobOperationsLineCount(h.visibleOperations(), full, true)
+	scrollPane(event.Key(), &h.model.JobsView.OpsScroll, max(0, total-ui.JobsPanelContentRows(full)))
 }
 
 func (h *Handler) jobsDetailLineCountForSelection() int {
@@ -561,17 +560,16 @@ func (h *Handler) jobsPaneLayout() ([]ui.JobsPane, map[ui.JobsPane]ui.Rect) {
 	width, height := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(width, height)
 	if layout.TooSmall {
-		return ui.JobsPaneOrder(false, false, false), nil
+		return ui.JobsPaneOrder(false, false), nil
 	}
 	sel := h.selectedJobEntry()
 	showConflict := ui.JobEntryShowsConflictPanel(sel)
-	_, detailRect, errorsRect, succeededRect := ui.SplitJobsSecondaryPanels(layout.Secondary, showConflict, h.jobsDetailLineCountForSelection(), len(ui.JobErrorLines(sel)))
+	_, detailRect, opsRect := ui.SplitJobsSecondaryPanels(layout.Secondary, showConflict, h.jobsDetailLineCountForSelection())
 	rects := map[ui.JobsPane]ui.Rect{
-		ui.JobsPaneDetail:    detailRect,
-		ui.JobsPaneErrors:    errorsRect,
-		ui.JobsPaneSucceeded: succeededRect,
+		ui.JobsPaneDetail:     detailRect,
+		ui.JobsPaneOperations: opsRect,
 	}
-	return ui.JobsPaneOrder(showConflict, errorsRect.Height > 0, succeededRect.Height > 0), rects
+	return ui.JobsPaneOrder(showConflict, opsRect.Height > 0), rects
 }
 
 func (h *Handler) jobsViewFocusPaneCount() int {
@@ -982,7 +980,7 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 	var f batchFlags
 	for _, ev := range batch {
 		h.state.ApplyEvent(ev)
-		h.appendJobSucceeded(ev)
+		h.appendJobOperation(ev)
 		h.updateJobMessage(ev)
 		switch ev.Type {
 		case jobs.EventCompleted:
@@ -1084,36 +1082,6 @@ func (h *Handler) reloadJobWriteDestinationPanels() {
 		if marked, _ := ui.PanelInsideJobWriteTree(pan.PathString(), marks); marked {
 			_ = pan.Refresh(0)
 		}
-	}
-}
-
-// appendJobSucceeded records the progress-derived Succeeded line for ev, and on EventItemFailed
-// drops the failed item's label (a throttled progress sample may already have named the file).
-func (h *Handler) appendJobSucceeded(ev jobs.Event) {
-	switch ev.Type {
-	case jobs.EventProgress:
-		if ev.CurrentPath == "" {
-			return
-		}
-		label := jobbridge.ActivityDetailLabel(h.state.ActiveJob(), ev)
-		if h.model.JobSucceeded == nil {
-			h.model.JobSucceeded = make(map[string][]string)
-		}
-		lines := h.model.JobSucceeded[ev.JobID]
-		if len(lines) > 0 && lines[len(lines)-1] == label {
-			return
-		}
-		h.model.JobSucceeded[ev.JobID] = ui.CapJobSucceededLines(append(lines, label))
-	case jobs.EventItemFailed:
-		if ev.FailedItem == nil || h.model.JobSucceeded == nil {
-			return
-		}
-		label := jobbridge.ActivityDetailLabel(h.state.ActiveJob(), jobs.Event{
-			JobID:           ev.JobID,
-			CurrentPath:     ev.FailedItem.Item.Src.String(),
-			CurrentDestPath: ev.FailedItem.Item.Dst.String(),
-		})
-		h.model.JobSucceeded[ev.JobID] = slices.DeleteFunc(h.model.JobSucceeded[ev.JobID], func(l string) bool { return l == label })
 	}
 }
 

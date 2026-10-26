@@ -1,0 +1,12 @@
+== open ==
+focus=item0 pending=All
+== Down ==
+focus=item1 pending=All
+== Space ==
+focus=item1 pending=Failed
+== Tab ==
+focus=ok pending=Failed
+== Right ==
+focus=cancel pending=Failed
+== Enter ==
+CLOSED: shown=All view=true

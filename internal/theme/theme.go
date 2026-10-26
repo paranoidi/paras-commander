@@ -311,6 +311,10 @@ type Theme struct {
 	JobsIconsFailed    tcell.Style
 	JobsIconsDecision  tcell.Style
 	JobsIconsCompleted tcell.Style
+	// JobsOperationSuccess / JobsOperationFailed style the result icon of an Operations pane row
+	// (jobs.operations.success / .failed; optional, default to jobs.icons.completed / .failed).
+	JobsOperationSuccess tcell.Style
+	JobsOperationFailed  tcell.Style
 
 	// CompareHashing styles the compare-view pending disk icon while a file is
 	// actively being content-hashed (queued pending rows keep the row style).
@@ -1228,7 +1232,8 @@ var optionalStyleKeys = func() []string {
 		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
-		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty")
+		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
+		"jobs.operations.success", "jobs.operations.failed")
 	return keys
 }()
 
@@ -1528,6 +1533,14 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
+	jobsOperationSuccess, err := optionalStyle(specs, palette, "jobs.operations.success", styles["jobs.icons.completed"])
+	if err != nil {
+		return Theme{}, err
+	}
+	jobsOperationFailed, err := optionalStyle(specs, palette, "jobs.operations.failed", styles["jobs.icons.failed"])
+	if err != nil {
+		return Theme{}, err
+	}
 	menuSpeedCap, err := optionalStyle(specs, palette, "menu.speed.cap", tcell.StyleDefault.Foreground(tcell.ColorGray))
 	if err != nil {
 		return Theme{}, err
@@ -1815,14 +1828,16 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressLabelOnFill:  styles["jobs.progress.label.on_fill"],
 		JobsProgressLabelOnTrack: styles["jobs.progress.label.on_track"],
 
-		JobsIconsScanning:  styles["jobs.icons.scanning"],
-		JobsIconsQueued:    styles["jobs.icons.queued"],
-		JobsIconsRunning:   styles["jobs.icons.running"],
-		JobsIconsPaused:    styles["jobs.icons.paused"],
-		JobsIconsCanceled:  styles["jobs.icons.canceled"],
-		JobsIconsFailed:    styles["jobs.icons.failed"],
-		JobsIconsDecision:  styles["jobs.icons.decision"],
-		JobsIconsCompleted: styles["jobs.icons.completed"],
+		JobsIconsScanning:    styles["jobs.icons.scanning"],
+		JobsIconsQueued:      styles["jobs.icons.queued"],
+		JobsIconsRunning:     styles["jobs.icons.running"],
+		JobsIconsPaused:      styles["jobs.icons.paused"],
+		JobsIconsCanceled:    styles["jobs.icons.canceled"],
+		JobsIconsFailed:      styles["jobs.icons.failed"],
+		JobsIconsDecision:    styles["jobs.icons.decision"],
+		JobsIconsCompleted:   styles["jobs.icons.completed"],
+		JobsOperationSuccess: jobsOperationSuccess,
+		JobsOperationFailed:  jobsOperationFailed,
 
 		CompareHashing:     styles["compare.hashing"],
 		CompareEqual:       styles["compare.equal"],

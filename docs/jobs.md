@@ -8,7 +8,7 @@ transfer runs. A job waiting for your answer is shown as "N job(s) waiting".
 
 Open the jobs view with `Alt+J` (`jobs.open`, **Display -> Jobs**, Esc menu
 `j`). It has a Queue panel with Type, Status, ETA, Speed and Progress, plus
-Details, Errors and Succeeded panels for the selected job. When a job is
+Details and Operations panels for the selected job. When a job is
 waiting for an answer, opening the view selects it and focuses the conflict
 panel. Running and queued jobs are listed first in run order (so the queue
 move keys match the screen), followed by finished jobs with the most recent
@@ -21,9 +21,10 @@ first. Keys are rebindable under `[jobs]` in `keybindings.toml`.
 | `Ctrl+R` | Resume a paused job or retry a failed one (`jobs.resume`) |
 | `Ctrl+Up` / `Ctrl+Down` | Move the job in the queue (`jobs.queue-up`, `jobs.queue-down`) |
 | `F8` | Clear finished jobs (`jobs.clear-finished`) |
+| `F3` / `Shift+F3` | Filter the Operations panel by result / reset its filters (`jobs.result-filter`, `jobs.reset-filter`) |
 | `+` / `-` / `Ctrl+U` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
 | `Tab` | Cycle the panels |
-| `Enter` | Maximize the focused Errors or Succeeded panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `q`, `Enter` or `Left` restore it |
+| `Enter` | Maximize the focused Operations panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `q`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view (`jobs.close`) |
 
 Jobs copy and move one at a time; deletes start immediately. Add a transfer
@@ -58,7 +59,29 @@ With the Queue panel focused:
 The current limit appears on the right side of the Queue panel's border
 (e.g. `40MB/s`). Nothing is shown there when the limit is Unlimited.
 
-# Skipped items and the Errors panel
+# The Operations panel
+
+The Operations panel lists the files the selected job has processed, newest at
+the top. Each row starts with a result icon: green for a file that was copied,
+red for one that failed. A failed row ends with the reason. When the job has
+failures, the panel's top border shows `N failures` in red on the right.
+
+Filter the list while the panel is focused:
+
+- Type to fuzzy-match the file names, with the same matching as the file
+  list's quick filter. Rows that don't match are hidden. `Backspace` edits the
+  query, `Ctrl+L` or `Ctrl+Backspace` clears it, and `Esc` closes the filter.
+  `Esc` again leaves the jobs view.
+- `F3` opens the **Result** dialog: tick **Success**, **Failed**, or **All**.
+- `Shift+F3` clears both filters.
+
+The active filters are shown on the panel's bottom border, for example
+`Failed · > report`. They stay in place while you move between jobs and are
+cleared when you leave the jobs view. `Up`, `Down`, `PgUp`, `PgDn`, `Home` and
+`End` scroll the panel. The icons and colors come from the theme
+(`[icons.jobs.operations]` and `[jobs.operations]`).
+
+# Skipped items
 
 When a copy meets something it cannot copy, it skips that item and carries on
 with the rest: a file type that cannot be copied (a socket, FIFO or device), or
@@ -66,11 +89,10 @@ a source file that cannot be read or has vanished. Problems on the destination
 side (write errors, a full disk) still stop the job. Move jobs always stop at
 the first problem.
 
-A job that skipped items finishes as **failed** with `N item(s) failed`. In the
-jobs view the right column shows an **Errors** panel (above **Succeeded**) listing
-each skipped item as `<source path>: <reason>`. The panel appears only when the
-selected job has errors. Tab cycles Queue, blocker (when shown), Details,
-Errors (when shown), Succeeded.
+A job that skipped items finishes as **failed** with `N item(s) failed`. Each
+skipped item is a red row in the Operations panel, followed by its reason.
+Press `F3` and keep only **Failed** to list just those. Tab cycles Queue, blocker
+(when shown), Details, Operations.
 
 # Undoing a job
 
@@ -87,8 +109,8 @@ queue.
 - A move or rename undo moves each item back, and never overwrites: if the
   original name is taken again, that item is skipped. Several renamed files
   (including swaps such as `a` and `b` exchanging names) are reversed together.
-- Every item that could not be reversed is listed in the undo job's Errors
-  panel, and the job finishes as failed with `N item(s) failed`. The original
+- Every item that could not be reversed is listed as a failed row in the undo
+  job's Operations panel, and the job finishes as failed with `N item(s) failed`. The original
   job then shows `Undo: undone`; the leftovers are not retried.
 - A job that overwrote anything (or, for a move, replaced an identical file and
   deleted its source) cannot be undone; its Details panel shows

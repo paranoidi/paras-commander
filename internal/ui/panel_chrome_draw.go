@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -22,6 +23,13 @@ type AuxPanelChromeLayout struct {
 // When endLabel is non-empty, the top row uses a split layout (title left, endLabel right).
 // viMotion selects the vi-motion accent frame on the active, unblocked panel (selected strip).
 func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, active, blocked, viMotion bool, styles theme.Theme) AuxPanelChromeLayout {
+	return drawAuxPanelChromeEndStyled(screen, rect, title, endLabel, nil, active, blocked, viMotion, styles)
+}
+
+// drawAuxPanelChromeEndStyled is drawAuxPanelChrome with an optional end-label restyle: endOn
+// receives the default end-label style and returns the one to paint. A blocked panel ignores
+// it, so the label dims with the rest of the chrome.
+func drawAuxPanelChromeEndStyled(screen tcell.Screen, rect Rect, title, endLabel string, endOn func(tcell.Style) tcell.Style, active, blocked, viMotion bool, styles theme.Theme) AuxPanelChromeLayout {
 	chrome := styles.PanelChrome(active, blocked)
 	borderStyle := chrome.Frame
 	if viMotion && active && !blocked {
@@ -40,6 +48,9 @@ func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, 
 	}
 	if endLabel != "" {
 		endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, active, blocked)
+		if endOn != nil && !blocked {
+			endStyle = endOn(endStyle)
+		}
 		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, endLabel, chrome.Title, endStyle, borderStyle)
 	} else {
 		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, "", chrome.Title, chrome.Title, borderStyle)
@@ -132,6 +143,36 @@ func drawAuxPanelBottomCenterLabel(screen tcell.Screen, rect Rect, label string,
 	x := innerLeft + (innerW-runes)/2
 	y := rect.Y + rect.Height - 1
 	primitive.TextOverlay(screen, x, y, runes, label, style)
+}
+
+// drawAuxPanelBottomCenterSpans is drawAuxPanelBottomCenterLabel for a label made of
+// differently styled segments; the one-space padding on each side takes the first segment's style.
+func drawAuxPanelBottomCenterSpans(screen tcell.Screen, rect Rect, segs []styledSegment) {
+	var text strings.Builder
+	var spans []primitive.Span
+	for _, sg := range segs {
+		start := utf8.RuneCountInString(text.String())
+		text.WriteString(sg.Text)
+		spans = append(spans, primitive.Span{Start: start + 1, End: start + 1 + utf8.RuneCountInString(sg.Text), Style: sg.Style})
+	}
+	if text.Len() == 0 {
+		return
+	}
+	innerLeft := rect.X + 1
+	innerW := rect.Width - 2
+	if innerW <= 2 {
+		return
+	}
+	label := panelSelectionSizePadded(primitive.TruncateRight(text.String(), innerW-2))
+	runes := utf8.RuneCountInString(label)
+	x := innerLeft + (innerW-runes)/2
+	primitive.StyledText(screen, x, rect.Y+rect.Height-1, runes, label, segs[0].Style, spans)
+}
+
+// styledSegment is one differently styled piece of a border label.
+type styledSegment struct {
+	Text  string
+	Style tcell.Style
 }
 
 func auxPanelListHeaderStyle(chrome theme.PanelChrome, blocked bool, contentBG tcell.Color) tcell.Style {

@@ -1,0 +1,10 @@
+== open ==
+focus=item0 pending=All
+== Alt+s ==
+focus=item1 pending=Failed
+== Alt+f ==
+focus=item2 pending=None
+== Alt+a ==
+focus=item0 pending=All
+== Alt+f ==
+focus=item2 pending=Success

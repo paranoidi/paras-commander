@@ -333,7 +333,7 @@ func TestSplitJobsSecondaryColumnFlexTopReservesBottomMinimumWhenCramped(t *test
 
 func TestSplitJobsSecondaryPanelsReservesConflictAboveDetail(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 30}
-	conflict, detail, errs, activity := SplitJobsSecondaryPanels(col, true, 8, 0)
+	conflict, detail, ops := SplitJobsSecondaryPanels(col, true, 8)
 	if conflict.Height != jobsConflictPanelMinFrameH {
 		t.Fatalf("conflict.Height = %d, want %d", conflict.Height, jobsConflictPanelMinFrameH)
 	}
@@ -343,44 +343,23 @@ func TestSplitJobsSecondaryPanelsReservesConflictAboveDetail(t *testing.T) {
 	if detail.Y != col.Y+conflict.Height {
 		t.Fatalf("detail should sit below conflict, got detail=%+v conflictH=%d", detail, conflict.Height)
 	}
-	if errs.Height != 0 {
-		t.Fatalf("errors.Height = %d, want 0 without error lines", errs.Height)
+	if ops.Y != detail.Y+detail.Height {
+		t.Fatalf("operations should sit below detail, got ops=%+v detail=%+v", ops, detail)
 	}
-	if detail.Height+activity.Height+conflict.Height != col.Height {
-		t.Fatalf("sum of panel heights = %d+%d+%d want %d", conflict.Height, detail.Height, activity.Height, col.Height)
+	if detail.Height+ops.Height+conflict.Height != col.Height {
+		t.Fatalf("sum of panel heights = %d+%d+%d want %d", conflict.Height, detail.Height, ops.Height, col.Height)
 	}
 }
 
-func TestSplitJobsSecondaryPanelsNoConflictMatchesLegacySplit(t *testing.T) {
+func TestSplitJobsSecondaryPanelsNoConflictMatchesColumnSplit(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 28}
-	wantD, wantA := SplitJobsSecondaryColumn(col, 10)
-	conflict, detail, errs, activity := SplitJobsSecondaryPanels(col, false, 10, 0)
+	wantD, wantO := SplitJobsSecondaryColumn(col, 10)
+	conflict, detail, ops := SplitJobsSecondaryPanels(col, false, 10)
 	if conflict.Height != 0 {
 		t.Fatalf("conflict = %+v want height 0", conflict)
 	}
-	if errs.Height != 0 {
-		t.Fatalf("errors = %+v want height 0", errs)
-	}
-	if detail != wantD || activity != wantA {
-		t.Fatalf("detail=%+v activity=%+v want detail=%+v activity=%+v", detail, activity, wantD, wantA)
-	}
-}
-
-func TestSplitJobsSecondaryPanelsErrorsAboveSucceeded(t *testing.T) {
-	col := Rect{X: 0, Y: 0, Width: 50, Height: 40}
-	_, detail, errs, succeeded := SplitJobsSecondaryPanels(col, false, 6, 3)
-	if errs.Height != 3+jobsDetailChromeRows {
-		t.Fatalf("errors.Height = %d, want line count plus chrome", errs.Height)
-	}
-	if errs.Y != detail.Y+detail.Height || succeeded.Y != errs.Y+errs.Height {
-		t.Fatalf("panels not stacked detail/errors/succeeded: %+v %+v %+v", detail, errs, succeeded)
-	}
-	if detail.Height+errs.Height+succeeded.Height != col.Height {
-		t.Fatalf("heights do not fill the column")
-	}
-	_, _, errs, succeeded = SplitJobsSecondaryPanels(col, false, 6, 100)
-	if errs.Height > succeeded.Height+1 || succeeded.Height < jobsSubpanelMinFrameH {
-		t.Fatalf("long error list should share evenly: errors=%+v succeeded=%+v", errs, succeeded)
+	if detail != wantD || ops != wantO {
+		t.Fatalf("detail=%+v ops=%+v want detail=%+v ops=%+v", detail, ops, wantD, wantO)
 	}
 }
 

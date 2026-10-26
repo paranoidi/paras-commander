@@ -54,6 +54,34 @@ func (t Theme) IconFilelistQueued() rune {
 	return t.filelistIconRune(IconKeyJobsListQueued, '\uf017')
 }
 
+// IconJobsOperation returns the result icon of an Operations pane row ([icons.jobs.operations]
+// success / failed), falling back to the jobs list's completed / failed status icon.
+func (t Theme) IconJobsOperation(failed bool) string {
+	key, status := "jobs.operations.success", "completed"
+	if failed {
+		key, status = "jobs.operations.failed", "failed"
+	}
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[key]); s != "" {
+			return s
+		}
+	}
+	return t.IconJobsList(status)
+}
+
+// JobsOperationStyle returns the result icon style of an Operations pane row.
+func (t Theme) JobsOperationStyle(failed bool) tcell.Style {
+	if failed {
+		return t.JobsOperationFailed
+	}
+	return t.JobsOperationSuccess
+}
+
+// JobsOperationOn returns the Operations result style's foreground merged onto surface's background.
+func (t Theme) JobsOperationOn(failed bool, surface tcell.Style) tcell.Style {
+	return mergeForegroundOnSurface(t.JobsOperationStyle(failed), surface)
+}
+
 // JobsIconStyle returns the themed style for the leading icon of a job status in the jobs list.
 func (t Theme) JobsIconStyle(status string) tcell.Style {
 	switch status {

@@ -145,6 +145,11 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 	case InputModeDedupReturnDialog:
 		return found(fits(func() dlg.Spec { return ui.DedupReturnSpec(m) }), &m.DedupReturnDialog.Focus, noQuit(a.dedupCtrl.ApplyReturnDialogEvent),
 			dialogButtons{Cancel: a.dedupCtrl.ReturnDialogCancel})
+	case InputModeJobsView:
+		if m.JobsResultFilterDialog.Open {
+			return found(fits(func() dlg.Spec { return dialog.JobsResultFilterView(m.JobsResultFilterDialog) }), &m.JobsResultFilterDialog.Focus, noQuit(a.jobsCtrl.ApplyResultFilterDialogEvent),
+				dialogButtons{OK: a.jobsCtrl.ResultFilterDialogOK, Cancel: a.jobsCtrl.ResultFilterDialogCancel})
+		}
 	case InputModeCompareView:
 		switch {
 		case m.CompareFilterDialog.Open:

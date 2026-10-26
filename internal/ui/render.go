@@ -144,9 +144,14 @@ type Model struct {
 	// same bounded window SchedulePrefetchFromActivePanel schedules — used only to tint image/video
 	// file icons bright magenta (warm) vs standard magenta (cold) as a prefetch debugging aid.
 	PreviewPrefetchWarm map[string]struct{}
-	JobSucceeded        map[string][]string
-	CommandsView        CommandsViewState
-	CommandsList        []CommandRunEntry
+	// JobOperations is each job's Operations pane log (oldest first; see AppendJobOperation).
+	JobOperations map[string][]JobOperation
+	// JobsResultFilterDialog is the jobs view Operations result picker.
+	JobsResultFilterDialog dialog.JobsResultFilterDialogState
+	// JobsFilterCaseInsensitive mirrors [filter].case_insensitive for the Operations fuzzy filter.
+	JobsFilterCaseInsensitive bool
+	CommandsView              CommandsViewState
+	CommandsList              []CommandRunEntry
 	// CommandsDisplay is a mutex-backed snapshot refreshed in App.render for ViewCommands (avoids races with worker updates).
 	CommandsDisplay     []CommandRunEntry
 	MessagesView        MessagesViewState
@@ -651,7 +656,18 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 	case ViewJobs:
 		now := time.Now()
-		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobSucceeded, styles, now, chromeBlocked, model.UserHomeDir, model.JobsThroughputChartEnabled, model.JobsTransferRateLimitBPS)
+		drawJobsView(screen, layout, jobsViewRender{
+			State:                  model.JobsView,
+			Jobs:                   model.JobsList,
+			Operations:             model.JobOperations,
+			FilterCaseInsensitive:  model.JobsFilterCaseInsensitive,
+			UserHomeDir:            model.UserHomeDir,
+			ThroughputChartEnabled: model.JobsThroughputChartEnabled,
+			RateLimitBPS:           model.JobsTransferRateLimitBPS,
+		}, styles, now, chromeBlocked || model.JobsResultFilterDialog.Open)
+		if model.JobsResultFilterDialog.Open {
+			dialog.DrawJobsResultFilterDialog(screen, layout, model.JobsResultFilterDialog, styles)
+		}
 	case ViewCommands:
 		cmdEntries := model.CommandsList
 		if len(model.CommandsDisplay) > 0 {

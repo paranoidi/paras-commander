@@ -1,0 +1,6 @@
+== open ==
+focus=item0 pending=All
+== Alt+s ==
+focus=item1 pending=Failed
+== Alt+o ==
+CLOSED: shown=Failed view=true

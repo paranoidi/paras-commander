@@ -307,6 +307,10 @@ queued = { fg = "yellow", bold = true }
 scanning = { fg = "bright_cyan", bold = true }
 canceled = { fg = "bright_red", bold = true }
 
+[jobs.operations]            # Operations pane result icons
+success = { fg = "bright_green", bold = true }
+failed = { fg = "bright_red", bold = true }
+
 [compare]
 hashing = { fg = "bright_green", bold = true }
 equal = { fg = "bright_green" }
@@ -350,6 +354,10 @@ canceled = "\uf52f"
 failed = "\uf06a"
 decision = "\uf059"
 completed = "\uf05d"
+
+[icons.jobs.operations]      # Operations pane result icons
+success = "\uf05d"
+failed = "\uf06a"
 
 [icons.filelist]
 selection_subtree = ""

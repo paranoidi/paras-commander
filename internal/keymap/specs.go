@@ -1796,6 +1796,24 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"revert", "rollback", "restore"},
 			LeaderKey:   "z",
 		},
+		{
+			ID:          ActionJobsResultFilter,
+			Views:       HelpJobs,
+			Title:       "Filter operations by result",
+			Section:     "Jobs",
+			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
+			Keywords:    []string{"success", "failed", "errors", "operations"},
+			LeaderKey:   "f",
+		},
+		{
+			ID:          ActionJobsResetFilter,
+			Views:       HelpJobs,
+			Title:       "Reset operations filter",
+			Section:     "Jobs",
+			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
+			Keywords:    []string{"clear", "operations", "fuzzy"},
+			LeaderKey:   "F",
+		},
 
 		// ── Options dialogs ──
 		{

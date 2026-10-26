@@ -331,6 +331,56 @@ func TestCompareFilterKeyScripts(t *testing.T) {
 	})
 }
 
+// ---- jobs result filter ----
+
+func jobsResultFilterName(st dialog.JobsResultFilterDialogState) string {
+	switch st.Focus {
+	case dlg.OK:
+		return "ok"
+	case dlg.Cancel:
+		return "cancel"
+	}
+	for i, it := range dialog.JobsResultFilterView(st).Groups[0].Columns[0] {
+		if st.Focus == it.ID {
+			return fmt.Sprintf("item%d", i)
+		}
+	}
+	return "item0" // an unset focus is the first widget
+}
+
+var jobsResultFilterKeyDialog = keyGoldenDialog{
+	name: "jobs_result_filter",
+	setup: func(t *testing.T, dir string) *App {
+		app := newApp(t, newScreen(t, 80, 24), dir)
+		app.model.Message = ""
+		app.jobsCtrl.OpenJobsView()
+		app.jobsCtrl.OpenResultFilterDialog()
+		return app
+	},
+	state: func(app *App) string {
+		st := app.model.JobsResultFilterDialog
+		return fmt.Sprintf("focus=%s pending=%s", jobsResultFilterName(st), st.Filter.Label())
+	},
+	open: func(app *App) bool { return app.model.JobsResultFilterDialog.Open },
+	outcome: func(app *App, _ bool) string {
+		return fmt.Sprintf("shown=%s view=%v", app.model.JobsView.OpsResultShown().Label(), app.model.ViewMode == ui.ViewJobs)
+	},
+}
+
+func TestJobsResultFilterKeyScripts(t *testing.T) {
+	runKeyGoldenScripts(t, jobsResultFilterKeyDialog, []simpleKeyScript{
+		{"space-items", "Space Down Space Down Space Up Space"},
+		{"enter-ok", "Down Space Tab Enter"},
+		{"enter-cancel", "Down Space Tab Right Enter"},
+		{"mnemonics", "Alt+s Alt+f Alt+a Alt+f"},
+		{"alt-o-is-ok", "Alt+s Alt+o"},
+		{"alt-c", "Alt+s Alt+c"},
+		{"esc", "Alt+f Esc"},
+		{"home-end", "End Home Down End"},
+		{"plain-letters", "a s f o c"},
+	})
+}
+
 // ---- host key ----
 
 func hostKeyName(st dialog.HostKeyDialogState) string {

@@ -80,10 +80,10 @@ func SplitPanelColumn(column Rect, stripItemCount int, maxStripContentRows int, 
 	return geom.SplitPanelColumn(column, stripItemCount, maxStripContentRows, minFileContentRows)
 }
 
-// SplitJobsSecondaryPanels splits the secondary column into optional conflict (top), detail, optional
-// errors (zero height when errorLineCount is 0), then succeeded.
-func SplitJobsSecondaryPanels(column Rect, showConflict bool, detailLineCount, errorLineCount int) (conflict, detail, errors, succeeded Rect) {
-	return geom.SplitJobsSecondaryPanels(column, showConflict, detailLineCount, errorLineCount)
+// SplitJobsSecondaryPanels splits the secondary column into optional conflict (top), detail, then
+// operations.
+func SplitJobsSecondaryPanels(column Rect, showConflict bool, detailLineCount int) (conflict, detail, operations Rect) {
+	return geom.SplitJobsSecondaryPanels(column, showConflict, detailLineCount)
 }
 
 // SplitJobsSecondaryColumnFlexTop divides a column into a flexible top panel and a compact bottom panel.
@@ -96,7 +96,7 @@ func MergeTwinPanelRects(primary, secondary Rect, orientation SplitOrientation) 
 	return geom.MergePaneRects(primary, secondary, orientation)
 }
 
-// JobsPanelContentRows returns scrollable text lines inside a jobs detail/errors/succeeded frame (inner height).
+// JobsPanelContentRows returns scrollable text lines inside a jobs detail/operations frame (inner height).
 func JobsPanelContentRows(rect Rect) int {
 	return geom.JobsPanelContentRows(rect)
 }

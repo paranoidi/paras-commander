@@ -117,7 +117,7 @@ Same persistent PTY shell as `app.drop-to-shell`, drawn above the footer (`geom.
 
 ## Path fitting
 
-`primitive.FitPathForWidth` (`internal/primitive/path_fit.go`) keeps the basename and shortens earlier segments first (full name -> first rune + `...` -> single rune), then middle-ellipsis. `primitive.PathWithHomeTilde` (`path_home.go`) swaps the home prefix for `~/`; composed with `FitPathForWidth` for jobs Details rows, blocker panels and Selected strip paths. `primitive.StripCommonPathPrefix` removes shared leading segments for compare row columns. Jobs Details order: Sources, Destination, Current, then Progress/ETA or Took/throughput; Succeeded lines stay relative to the destination.
+`primitive.FitPathForWidth` (`internal/primitive/path_fit.go`) keeps the basename and shortens earlier segments first (full name -> first rune + `...` -> single rune), then middle-ellipsis. `primitive.PathWithHomeTilde` (`path_home.go`) swaps the home prefix for `~/`; composed with `FitPathForWidth` for jobs Details rows, blocker panels and Selected strip paths. `primitive.StripCommonPathPrefix` removes shared leading segments for compare row columns. Jobs Details order: Sources, Destination, Current, then Progress/ETA or Took/throughput; Operations rows stay relative to the destination.
 
 ## Mouse
 

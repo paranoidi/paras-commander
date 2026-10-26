@@ -228,6 +228,8 @@ const (
 	ActionJobsRateLimitDecrease = "jobs.rate-limit-decrease"
 	ActionJobsRateLimitClear    = "jobs.rate-limit-clear"
 	ActionJobsUndo              = "jobs.undo"
+	ActionJobsResultFilter      = "jobs.result-filter"
+	ActionJobsResetFilter       = "jobs.reset-filter"
 
 	// Commands screen + external command execution
 	ActionCommandsOpen      = "commands.open"
@@ -536,6 +538,8 @@ var KnownActions = map[string]struct{}{
 	ActionJobsRateLimitDecrease: {},
 	ActionJobsRateLimitClear:    {},
 	ActionJobsUndo:              {},
+	ActionJobsResultFilter:      {},
+	ActionJobsResetFilter:       {},
 
 	ActionCommandsOpen:      {},
 	ActionCommandsClose:     {},

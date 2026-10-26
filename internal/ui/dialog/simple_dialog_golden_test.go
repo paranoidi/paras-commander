@@ -152,6 +152,25 @@ func TestCompareFilterGoldenRender(t *testing.T) {
 	runSimpleGoldens(t, "compare_filter", cases)
 }
 
+func TestJobsResultFilterGoldenRender(t *testing.T) {
+	var cases []simpleGolden
+	add := func(w, h int, filter JobResultFilter, focus string) {
+		st := jobsResultFilterGoldenState(filter, focus)
+		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_filter%d_focus-%s", w, h, filter, focus), w, h, func(s tcell.Screen, l Layout) {
+			DrawJobsResultFilterDialog(s, l, st, asciiDialogStyles())
+		}})
+	}
+	for _, filter := range []JobResultFilter{JobResultAll, JobResultNone, JobResultFailed} {
+		add(80, 24, filter, "item0")
+	}
+	add(80, 24, JobResultSuccess, "item2")
+	add(80, 24, JobResultFailed, "ok")
+	add(80, 24, JobResultAll, "cancel")
+	add(27, 24, JobResultAll, "item1") // narrow: clamped
+	add(80, 8, JobResultAll, "item1")  // too short to draw
+	runSimpleGoldens(t, "jobs_result_filter", cases)
+}
+
 func TestHostKeyGoldenRender(t *testing.T) {
 	var cases []simpleGolden
 	add := func(w, h int, fp, focus string) {

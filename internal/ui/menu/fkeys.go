@@ -66,6 +66,7 @@ var FunctionKeys = []FunctionKey{
 var FunctionKeysJobs = []FunctionKey{
 	FooterEscClose,
 	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
+	{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "Filter", ActionID: keymap.ActionJobsResultFilter},
 	{Key: tcell.KeyCtrlC, KeyLabel: "C-c", Hint: "Cancel", RequiresActiveJob: true, ActionID: keymap.ActionJobsCancel},
 	{Key: tcell.KeyCtrlP, KeyLabel: "C-p", Hint: "Pause", RequiresActiveJob: true, ActionID: keymap.ActionJobsPause},
 	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume", RequiresActiveJob: true, ActionID: keymap.ActionJobsResume},

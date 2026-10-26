@@ -18,6 +18,8 @@ func DefinitionsJobs() []Definition {
 				{Action: keymap.ActionJobsClearFinished, Label: "Clear finished", Shortcut: 'l'},
 				{Action: keymap.ActionJobsUndo, Label: "Undo job", Shortcut: 'j'},
 				{Action: keymap.ActionJobsRateLimitClear, Label: "Clear rate limit", Shortcut: 'C'},
+				{Action: keymap.ActionJobsResultFilter, Label: "Filter by result", Shortcut: 'f'},
+				{Action: keymap.ActionJobsResetFilter, Label: "Reset filter", Shortcut: 'e'},
 				{Action: keymap.ActionJobsClose, Label: "Back to file view", Shortcut: 'b'},
 			},
 		},

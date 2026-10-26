@@ -1,12 +1,14 @@
 package jobs
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -533,8 +535,8 @@ func TestAddTransferJobCopyKeepsDereferenceSymlinks(t *testing.T) {
 	}
 }
 
-// newMaximizeTestHandler builds a jobs-view handler with a failed job selected and the Errors
-// pane focused (FocusPane 2: list, Details, Errors).
+// newMaximizeTestHandler builds a jobs-view handler with a failed job selected and the
+// Operations pane focused (FocusPane 2: list, Details, Operations).
 func newMaximizeTestHandler(t *testing.T) (*Handler, *ui.Model, *jobs.State) {
 	t.Helper()
 	screen := tcell.NewSimulationScreen("UTF-8")
@@ -570,7 +572,7 @@ func newMaximizeTestHandler(t *testing.T) (*Handler, *ui.Model, *jobs.State) {
 	return h, model, state
 }
 
-func TestJobsViewEnterMaximizesErrorsAndKeysRestore(t *testing.T) {
+func TestJobsViewEnterMaximizesOperationsAndKeysRestore(t *testing.T) {
 	t.Parallel()
 	keys := map[string]*tcell.EventKey{
 		"esc":   tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone),
@@ -584,7 +586,7 @@ func TestJobsViewEnterMaximizesErrorsAndKeysRestore(t *testing.T) {
 			h, model, _ := newMaximizeTestHandler(t)
 			h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 			if !model.JobsView.Maximized {
-				t.Fatal("Enter on Errors pane did not maximize")
+				t.Fatal("Enter on Operations pane did not maximize")
 			}
 			h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 			if !model.JobsView.Maximized || model.JobsView.FocusPane != 2 {
@@ -632,5 +634,103 @@ func TestJobsViewEnterOnBlockerPaneStillSubmits(t *testing.T) {
 	// submitJobsConflictDecision resets the button focus, so 0 proves Enter reached the buttons.
 	if model.JobsView.ConflictButtonFocus != 0 {
 		t.Fatalf("ConflictButtonFocus = %d, want 0 after Enter submitted", model.JobsView.ConflictButtonFocus)
+	}
+}
+
+func TestAppendJobOperationRecordsSuccessAndFailure(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	h.appendJobOperation(jobs.Event{Type: jobs.EventProgress, JobID: "failing", CurrentPath: "/orchard/acorn.txt"})
+	h.appendJobOperation(jobs.Event{Type: jobs.EventProgress, JobID: "failing", CurrentPath: "/orchard/bramble.txt"})
+	h.appendJobOperation(jobs.Event{Type: jobs.EventItemFailed, JobID: "failing", FailedItem: &jobs.FailedItem{
+		Item:  ops.PlanItem{Src: pathloc.MustParse("/orchard/bramble.txt")},
+		Error: "permission denied",
+	}})
+	got := model.JobOperations["failing"]
+	if len(got) != 2 || got[0].Failed || !got[1].Failed || got[1].Error != "permission denied" {
+		t.Fatalf("operations = %+v, want one success then the failure", got)
+	}
+	rows := h.visibleOperations()
+	if len(rows) != 2 || !rows[0].Op.Failed {
+		t.Fatalf("visible rows = %+v, want newest (the failure) first", rows)
+	}
+}
+
+func fillOperations(model *ui.Model, n int) {
+	ops := make([]ui.JobOperation, n)
+	for i := range ops {
+		ops[i] = ui.JobOperation{Label: fmt.Sprintf("pebble-%02d.txt", i)}
+	}
+	model.JobOperations = map[string][]ui.JobOperation{"failing": ops}
+}
+
+func TestJobsViewOperationsHomeEndScroll(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	fillOperations(model, 60)
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	if model.JobsView.OpsScroll == 0 {
+		t.Fatal("End did not scroll Operations to the bottom")
+	}
+	end := model.JobsView.OpsScroll
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if model.JobsView.OpsScroll != end {
+		t.Fatalf("Down past the bottom moved scroll %d -> %d", end, model.JobsView.OpsScroll)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
+	if model.JobsView.OpsScroll != 0 {
+		t.Fatalf("Home left scroll at %d", model.JobsView.OpsScroll)
+	}
+}
+
+func TestJobsViewOperationsFuzzyFilterKeys(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	rn := func(r rune) *tcell.EventKey { return tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone) }
+	h.HandleJobsViewKey(rn('q')) // q types while the filter is closed too (unbound in [jobs])
+	h.HandleJobsViewKey(rn('u'))
+	if q := model.JobsView.OpsFilter.Query; q != "qu" {
+		t.Fatalf("query = %q, want qu", q)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	if q := model.JobsView.OpsFilter.Query; q != "q" {
+		t.Fatalf("query after Backspace = %q, want q", q)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if model.JobsView.OpsFilter.Query != "" || model.ViewMode != ui.ViewJobs {
+		t.Fatalf("first Esc: query %q, view %v; want the filter cleared and the view open", model.JobsView.OpsFilter.Query, model.ViewMode)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if model.ViewMode == ui.ViewJobs {
+		t.Fatal("second Esc did not close the jobs view")
+	}
+}
+
+func TestJobsViewTypingOnListPaneDoesNotFilter(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	model.JobsView.FocusPane = 0
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRune, 'w', tcell.ModNone))
+	if model.JobsView.OpsFilter.Query != "" {
+		t.Fatalf("query = %q, want typing ignored on the list pane", model.JobsView.OpsFilter.Query)
+	}
+}
+
+func TestJobsViewResultFilterDialogAndReset(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	if !model.JobsResultFilterDialog.Open || model.JobsResultFilterDialog.Filter != dialog.JobResultAll {
+		t.Fatalf("F3 dialog = %+v, want open on All", model.JobsResultFilterDialog)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt)) // untick Success
+	h.ResultFilterDialogOK()
+	if model.JobsResultFilterDialog.Open || model.JobsView.OpsResultShown() != dialog.JobResultFailed {
+		t.Fatalf("after OK shown = %v, want Failed only", model.JobsView.OpsResultShown())
+	}
+	model.JobsView.OpsFilter.Query = "lantern"
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModShift))
+	if model.JobsView.OpsResultShown() != dialog.JobResultAll || model.JobsView.OpsFilter.Query != "" {
+		t.Fatalf("reset left shown=%v query=%q", model.JobsView.OpsResultShown(), model.JobsView.OpsFilter.Query)
 	}
 }

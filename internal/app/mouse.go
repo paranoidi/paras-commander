@@ -146,6 +146,9 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	}
 	switch a.inputMode() {
 	case InputModeJobsView, InputModeCommandsView, InputModeMessagesView:
+		if a.model.JobsResultFilterDialog.Open {
+			return a.handleDialogMouse(x, y, buttons, pressed)
+		}
 		return false, a.handleAuxListMouse(layout, x, y, buttons, pressed)
 	case InputModeNormal:
 		if a.model.ViewMode != ui.ViewBrowser {
