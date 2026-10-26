@@ -114,7 +114,7 @@ func conflictFileView(st ConflictDialogState, userHomeDir string) dlg.Spec {
 	}
 	buttons := append(first,
 		dlg.Button{ID: ConflictSkip, Label: "Skip", Mnemonic: 'S', NewRow: true},
-		dlg.Button{ID: ConflictSkipAll, Label: "Skip All", Mnemonic: 'L'},
+		dlg.Button{ID: ConflictSkipAll, Label: "Skip All", Mnemonic: 'K'},
 		dlg.Button{ID: ConflictPostpone, Label: "Postpone", Mnemonic: 'P'},
 		dlg.Button{ID: ConflictCancelJob, Label: "Cancel", Mnemonic: 'C', NewRow: true},
 	)

@@ -364,7 +364,7 @@ func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
 		case 'a', 'A':
 			h.submitJobsConflictDecision(jobs.DecisionOverwriteAll)
 			return false
-		case 'l', 'L':
+		case 'k', 'K': // not Alt+L: that is messages.open, a global key handled first
 			h.submitJobsConflictDecision(jobs.DecisionSkipAll)
 			return false
 		case 'd', 'D':

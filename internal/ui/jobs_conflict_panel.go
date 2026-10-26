@@ -340,7 +340,7 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	}
 	row2 := []dialog.DialogButtonSpec{
 		{Label: "Skip", Shortcut: 'S', Focused: focused && f == 3},
-		{Label: "Skip All", Shortcut: 'L', Focused: focused && f == 4},
+		{Label: "Skip All", Shortcut: 'K', Focused: focused && f == 4},
 		{Label: "Cancel", Shortcut: 'C', Focused: focused && f == 5},
 	}
 	if y <= rect.Y+rect.Height-3 {

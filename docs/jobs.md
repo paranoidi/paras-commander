@@ -200,7 +200,7 @@ for a decision. It is asked in the quick blocker dialog or in the conflict panel
 | Overwrite All | A | Replace this and every later conflict in the job |
 | Advanced... | D | Open the "Conflict rules" dialog |
 | Skip | S | Keep the existing file |
-| Skip All | L | Skip this and every later conflict in the job |
+| Skip All | K | Skip this and every later conflict in the job |
 | Cancel | C | Abort the job |
 | Postpone | P | Dismiss the quick dialog without answering (quick dialog only) |
 
