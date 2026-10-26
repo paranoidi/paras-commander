@@ -3,7 +3,6 @@ package compare
 import (
 	"context"
 	"crypto/sha256"
-	"fmt"
 	"io"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
@@ -12,10 +11,7 @@ import (
 )
 
 // HashFile reads loc and returns SHA-256 of its contents.
-func HashFile(ctx context.Context, loc pathloc.Path, size int64, buf []byte, maxBytes int64) ([32]byte, error) {
-	if maxBytes > 0 && size > maxBytes {
-		return [32]byte{}, fmt.Errorf("file exceeds compare max_hash_bytes (%d > %d)", size, maxBytes)
-	}
+func HashFile(ctx context.Context, loc pathloc.Path, buf []byte) ([32]byte, error) {
 	be, err := fsbackend.Default().Backend(loc)
 	if err != nil {
 		return [32]byte{}, err

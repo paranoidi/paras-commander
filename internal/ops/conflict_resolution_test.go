@@ -40,16 +40,54 @@ func TestCopyIdenticalLeavesBothFiles(t *testing.T) {
 	}
 }
 
-func TestMoveIdenticalRemovesSource(t *testing.T) {
+func TestMoveIdenticalKeepsSource(t *testing.T) {
 	src, dstDir := writeConflictPair(t, "orchard.txt", "same", "same")
-	if _, _, err := ExecuteMove(context.Background(), MustPaths(src), MustPath(dstDir), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, actionResolver(ActionIdentical), nil); err != nil {
+	var reason string
+	opts := Options{CopyBufferKiB: 4, OnItemDone: func(_ PlanItem, _ ItemResult, r string) { reason = r }}
+	if _, _, err := ExecuteMove(context.Background(), MustPaths(src), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, actionResolver(ActionIdentical), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(src); err != nil {
+		t.Fatalf("source must remain: %v", err)
+	}
+	if reason != ReasonIdentical {
+		t.Fatalf("reason = %q, want %q", reason, ReasonIdentical)
+	}
+}
+
+func TestMoveDeleteSourceKeepsDestination(t *testing.T) {
+	src, dstDir := writeConflictPair(t, "harbor.txt", "fresh", "stale")
+	var reason string
+	opts := Options{CopyBufferKiB: 4, OnItemDone: func(_ PlanItem, _ ItemResult, r string) { reason = r }}
+	if _, _, err := ExecuteMove(context.Background(), MustPaths(src), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, actionResolver(ActionDeleteSource), nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Fatalf("source must be removed, stat err = %v", err)
 	}
-	if b, _ := os.ReadFile(filepath.Join(dstDir, "orchard.txt")); string(b) != "same" {
-		t.Fatalf("dest = %q", b)
+	if b, _ := os.ReadFile(filepath.Join(dstDir, "harbor.txt")); string(b) != "stale" {
+		t.Fatalf("dest = %q, want the kept destination", b)
+	}
+	if reason != ReasonSourceDeleted {
+		t.Fatalf("reason = %q, want %q", reason, ReasonSourceDeleted)
+	}
+}
+
+func TestDeleteSourceNeverCrossesDirectoryBoundary(t *testing.T) {
+	srcDir := t.TempDir()
+	src := filepath.Join(srcDir, "willow")
+	if err := os.Mkdir(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dstDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dstDir, "willow"), []byte("file"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := ExecuteMove(context.Background(), MustPaths(src), MustPath(dstDir), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, actionResolver(ActionDeleteSource), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(src); err != nil {
+		t.Fatalf("source directory must remain: %v", err)
 	}
 }
 

@@ -556,6 +556,7 @@ func (s *State) ApplyEvent(ev Event) {
 		job := s.findJobUnlocked(ev.JobID)
 		if job != nil {
 			job.Status = StatusWaitingDecision
+			job.VerifyDone, job.VerifyTotal = 0, 0
 			if ev.Blocker != nil {
 				b := *ev.Blocker
 				job.PendingBlocker = &b
@@ -575,9 +576,15 @@ func (s *State) ApplyEvent(ev Event) {
 			j.DoneBytes = ev.DoneBytes
 			j.ProcessedItems = max(j.ProcessedItems, ev.ProcessedItems)
 			j.CurrentPath = ev.CurrentPath
+			j.VerifyDone, j.VerifyTotal = 0, 0
 			now := time.Now()
 			ApplyProgressETA(j, ev.DoneBytes, ev.DoneFiles, now)
 			j.PendingBlocker = nil
+		}
+	case EventVerifyProgress:
+		if j := s.findJobUnlocked(ev.JobID); j != nil {
+			j.CurrentPath = ev.CurrentPath
+			j.VerifyDone, j.VerifyTotal = ev.VerifyDone, ev.VerifyTotal
 		}
 	case EventItemFailed:
 		if j := s.findJobUnlocked(ev.JobID); j != nil && ev.FailedItem != nil {

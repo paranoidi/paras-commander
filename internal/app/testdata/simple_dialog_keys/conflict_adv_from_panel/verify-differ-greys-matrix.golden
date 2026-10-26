@@ -1,0 +1,26 @@
+== open ==
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
+== Alt+v ==
+advanced focus=verify time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Down ==
+advanced focus=r6c0 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Down ==
+advanced focus=r7c0 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Right ==
+advanced focus=r7c1 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Right ==
+advanced focus=r7c2 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Right ==
+advanced focus=r7c3 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Right ==
+advanced focus=r7c3 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Down ==
+advanced focus=r7c4 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Space ==
+advanced focus=r7c4 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=keep all=true panel=true
+== Up ==
+advanced focus=r7c0 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=keep all=true panel=true
+== Up ==
+advanced focus=r6c0 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=keep all=true panel=true
+== Up ==
+advanced focus=verify time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=keep all=true panel=true

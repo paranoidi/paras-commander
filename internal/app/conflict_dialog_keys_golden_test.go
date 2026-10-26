@@ -55,16 +55,18 @@ func conflictFocusName(st dialog.ConflictDialogState) string {
 		return "ok"
 	case dialog.ConflictApplyAll:
 		return "all"
+	case dialog.ConflictVerify:
+		return "verify"
 	}
 	return string(id)
 }
 
 func conflictRulesText(r jobs.ConflictRules) string {
+	names := [...]string{"ask", "overwrite", "skip", "keep", "delete-source", "rules"}
 	acts := func(a [3]jobs.RuleAction) string {
-		names := [...]string{"ask", "overwrite", "skip", "keep"}
 		return names[a[0]] + "," + names[a[1]] + "," + names[a[2]]
 	}
-	return fmt.Sprintf("time[%s] size[%s] skip-identical=%v", acts(r.Time), acts(r.Size), r.SkipIdentical)
+	return fmt.Sprintf("time[%s] size[%s] verify=%v same=%s differ=%s", acts(r.Time), acts(r.Size), r.Verify, names[r.Same], names[r.Differ])
 }
 
 func conflictKeyState(app *App) string {
@@ -236,14 +238,16 @@ func conflictAdvScripts() []simpleKeyScript {
 		{"enter-cancel", "Down Down Down Down Down Down Down Down Right Enter"},
 		{"space-ok", "Down Down Down Down Down Down Down Down Space"},
 		{"alt-a", "Alt+a Down Alt+a"},
-		{"alt-i", "Alt+i Alt+i Right"},
+		{"alt-v", "Alt+v Alt+v Right"},
+		{"verify-differ-greys-matrix", "Alt+v Down Down Right Right Right Right Down Space Up Up Up"},
+		{"verify-differ-rules-apply", "Alt+v Down Right Right Space Down Left Left Space Alt+Enter"},
 		{"alt-o", "Right Space Alt+o"},
 		{"alt-c", "Alt+c"},
 		{"esc", "Right Space Esc"},
 		{"f9", "F9"},
 		{"alt-enter", "Right Space Alt+Enter"},
 		{"alt-x", "Alt+x Alt+r Alt+s Alt+d Alt+p Down"},
-		{"plain-letters", "a i o c x Right"},
+		{"plain-letters", "a v o c x Right"},
 	}
 }
 
@@ -252,5 +256,25 @@ func TestConflictAdvancedKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, conflictKeyDialog(conflictKeyVariant{name: "adv_from_dialog", request: req}), prefixed("Alt+d", conflictAdvScripts()))
 	runKeyGoldenScripts(t, conflictKeyDialog(conflictKeyVariant{name: "adv_from_panel", request: req, panel: true}), conflictAdvScripts())
 	noCompare := conflictKeyRequest(func(c *jobs.ConflictRequest) { c.NoCompare = true })
-	runKeyGoldenScripts(t, conflictKeyDialog(conflictKeyVariant{name: "adv_nocompare", request: noCompare, panel: true}), conflictAdvScripts()[:20])
+	runKeyGoldenScripts(t, conflictKeyDialog(conflictKeyVariant{name: "adv_nocompare", request: noCompare, panel: true}), conflictAdvScripts()[:len(conflictAdvScripts())-1]) // all but plain-letters
+	move := conflictKeyRequest(func(c *jobs.ConflictRequest) { c.Move = true })
+	runKeyGoldenScripts(t, conflictKeyDialog(conflictKeyVariant{name: "adv_move", request: move, panel: true}), []simpleKeyScript{
+		{"verify-same-delete-source", "Alt+v Down Right Right Right Space Alt+Enter"},
+		{"verify-differ-delete-source", "Alt+v Down Down Down Right Space Down Down Enter"},
+	})
+}
+
+func TestConflictMoveKeyScripts(t *testing.T) {
+	scripts := []simpleKeyScript{
+		{"enter-delete-source", "Down Down Enter"},
+		{"enter-cancel", "Down Down Right Enter"},
+		{"alt-e", "Alt+e"},
+		{"alt-upper-e", "Alt+E"},
+	}
+	move := conflictKeyRequest(func(c *jobs.ConflictRequest) { c.Move = true })
+	runKeyGoldenScripts(t, conflictKeyDialog(conflictKeyVariant{name: "move", request: move}), scripts)
+	moveMismatch := conflictKeyRequest(func(c *jobs.ConflictRequest) { c.Move, c.Mismatch, c.DestIsDir = true, true, true })
+	runKeyGoldenScripts(t, conflictKeyDialog(conflictKeyVariant{name: "move_mismatch", request: moveMismatch}), []simpleKeyScript{
+		{"alt-e-absent", "Alt+e Down Down"},
+	})
 }

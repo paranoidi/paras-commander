@@ -214,3 +214,23 @@ func TestJobDetailLineCountOmitsThroughputGraphWhenDisabled(t *testing.T) {
 		t.Fatalf("line delta = %d want %d (graph body rows)", d, throughputGraphBodyRows)
 	}
 }
+
+func TestDetailLinesShowVerifyProgress(t *testing.T) {
+	j := JobEntry{ID: "mv", Type: string(jobs.TypeMove), Status: "running", Sources: []string{"/tmp/lantern"}, Destination: "/tmp/quarry", CurrentPath: "/tmp/lantern/beacon.bin"}
+	has := func(lines []string) bool {
+		for _, l := range lines {
+			if strings.HasPrefix(l, "Verifying:") {
+				return true
+			}
+		}
+		return false
+	}
+	if has(detailStaticLines(j, time.Now(), 80, "", false)) {
+		t.Fatal("no Verifying line without a running verification")
+	}
+	j.VerifyDone, j.VerifyTotal = 512, 2048
+	lines := detailStaticLines(j, time.Now(), 80, "", false)
+	if !has(lines) || !strings.Contains(strings.Join(lines, "\n"), "(25%)") {
+		t.Fatalf("lines = %q, want a 25%% Verifying line", lines)
+	}
+}

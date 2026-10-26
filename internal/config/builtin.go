@@ -140,9 +140,9 @@ const (
 	// find-duplicates dialog for files at or above this size (0 disables it).
 	DefaultDedupFileProgressBytes = 256 * 1024 * 1024
 
-	// DefaultDedupChunkBytes compares same-size files this many bytes at a time,
+	// DefaultCompareChunkBytes compares same-size files this many bytes at a time,
 	// bailing out of a file as soon as its content diverges (0 disables chunking).
-	DefaultDedupChunkBytes = 32 * 1024 * 1024
+	DefaultCompareChunkBytes = 32 * 1024 * 1024
 
 	// DefaultCompareHashConcurrency limits parallel file hashing during panel compare.
 	DefaultCompareHashConcurrency = 8

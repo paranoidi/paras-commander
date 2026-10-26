@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestFirstJobEntryWaitingDecisionIndex(t *testing.T) {
@@ -27,27 +28,52 @@ func TestFirstJobEntryWaitingDecisionIndex(t *testing.T) {
 	}
 }
 
-func TestConflictDecisionFromButtonIndex(t *testing.T) {
+func TestJobBlockerDecisionFromFocusButtonOrder(t *testing.T) {
 	t.Parallel()
+	entry := func(c jobs.ConflictEvent) JobEntry {
+		return JobEntry{PendingBlocker: &jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &c}}
+	}
 	for _, c := range []struct {
-		idx      int
-		mismatch bool
-		want     jobs.ConflictDecision
+		name     string
+		conflict jobs.ConflictEvent
+		want     []jobs.ConflictDecision
 	}{
-		{0, false, jobs.DecisionOverwrite},
-		{1, false, jobs.DecisionOverwriteAll},
-		{2, false, ""}, // Advanced… submits no decision
-		{3, false, jobs.DecisionSkip},
-		{4, false, jobs.DecisionSkipAll},
-		{5, false, jobs.DecisionCancel},
-		{0, true, jobs.DecisionRename},
-		{1, true, jobs.DecisionRenameAll},
-		{3, true, jobs.DecisionSkip},
-		{5, true, jobs.DecisionCancel},
+		{"copy", jobs.ConflictEvent{}, []jobs.ConflictDecision{
+			jobs.DecisionOverwrite, jobs.DecisionOverwriteAll, "", jobs.DecisionSkip, jobs.DecisionSkipAll, jobs.DecisionCancel}},
+		{"move", jobs.ConflictEvent{Move: true}, []jobs.ConflictDecision{
+			jobs.DecisionOverwrite, jobs.DecisionOverwriteAll, "", jobs.DecisionSkip, jobs.DecisionSkipAll, jobs.DecisionDeleteSource, jobs.DecisionCancel}},
+		{"mismatch", jobs.ConflictEvent{Mismatch: true}, []jobs.ConflictDecision{
+			jobs.DecisionRename, jobs.DecisionRenameAll, jobs.DecisionSkip, jobs.DecisionSkipAll, jobs.DecisionCancel}},
+		{"move mismatch", jobs.ConflictEvent{Move: true, Mismatch: true}, []jobs.ConflictDecision{
+			jobs.DecisionRename, jobs.DecisionRenameAll, jobs.DecisionSkip, jobs.DecisionSkipAll, jobs.DecisionCancel}},
 	} {
-		if got := ConflictDecisionFromButtonIndex(c.idx, c.mismatch); got != c.want {
-			t.Errorf("ConflictDecisionFromButtonIndex(%d, %v) = %q, want %q", c.idx, c.mismatch, got, c.want)
+		e := entry(c.conflict)
+		if got := JobsBlockerMaxButtonIndex(e); got != len(c.want)-1 {
+			t.Errorf("%s: max index = %d, want %d", c.name, got, len(c.want)-1)
 		}
+		for idx, want := range c.want {
+			if got := JobBlockerDecisionFromFocus(e, idx); got != want {
+				t.Errorf("%s: focus %d = %q, want %q", c.name, idx, got, want)
+			}
+		}
+	}
+}
+
+func TestJobBlockerPanelMnemonic(t *testing.T) {
+	t.Parallel()
+	move := JobEntry{PendingBlocker: &jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{Move: true}}}
+	if id, ok := JobBlockerPanelMnemonic(move, 'e'); !ok || id != dialog.ConflictDeleteSource {
+		t.Fatalf("move Alt+E = %q %v, want Delete source", id, ok)
+	}
+	if _, ok := JobBlockerPanelMnemonic(move, 'p'); ok {
+		t.Fatal("Postpone is not offered in the panel")
+	}
+	copyEntry := JobEntry{PendingBlocker: &jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{}}}
+	if _, ok := JobBlockerPanelMnemonic(copyEntry, 'e'); ok {
+		t.Fatal("a copy has no Delete source")
+	}
+	if id, ok := JobBlockerPanelMnemonic(copyEntry, 'D'); !ok || id != dialog.ConflictAdvanced {
+		t.Fatalf("Alt+D = %q %v, want Advanced", id, ok)
 	}
 }
 
@@ -71,8 +97,10 @@ func TestJobBlockerDecisionFromFocus(t *testing.T) {
 	if d := JobBlockerDecisionFromFocus(mismatch, 0); d != jobs.DecisionRename {
 		t.Fatalf("mismatch focus 0 = %q, want rename", d)
 	}
-	if JobBlockerPanelIsAdvanced(mismatch, 2) {
-		t.Fatal("Advanced must not be offered on a mismatch")
+	for i := range 5 {
+		if JobBlockerPanelIsAdvanced(mismatch, i) {
+			t.Fatal("Advanced must not be offered on a mismatch")
+		}
 	}
 }
 
@@ -80,7 +108,7 @@ func TestJobsBlockerPanelMoveFocus(t *testing.T) {
 	t.Parallel()
 	conflict := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{}}
 
-	// Jobs panel: [Overwrite, Overwrite All, Advanced…] [Skip, Skip All, Cancel]
+	// Jobs panel: [Overwrite, Overwrite All, Advanced…] [Skip, Skip All] [Cancel]
 	cases := []struct {
 		name string
 		from int
@@ -91,8 +119,9 @@ func TestJobsBlockerPanelMoveFocus(t *testing.T) {
 		{"Left from Skip back to Advanced", 3, tcell.KeyLeft, 2},
 		{"Right from Cancel stays", 5, tcell.KeyRight, 5},
 		{"Left from Overwrite stays", 0, tcell.KeyLeft, 0},
-		{"Down from Advanced to Cancel", 2, tcell.KeyDown, 5},
-		{"Up from Cancel to Advanced", 5, tcell.KeyUp, 2},
+		{"Down from Advanced to Skip All", 2, tcell.KeyDown, 4},
+		{"Down from Skip All to Cancel", 4, tcell.KeyDown, 5},
+		{"Up from Cancel to Skip All", 5, tcell.KeyUp, 4},
 		{"Up from Overwrite stays", 0, tcell.KeyUp, 0},
 		{"Tab from Cancel wraps", 5, tcell.KeyTab, 0},
 		{"Backtab from Overwrite wraps", 0, tcell.KeyBacktab, 5},
@@ -105,8 +134,12 @@ func TestJobsBlockerPanelMoveFocus(t *testing.T) {
 	}
 
 	mismatch := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{Mismatch: true, DestIsDir: true}}
-	if got, _ := JobsBlockerPanelMoveFocus(mismatch, 1, tcell.KeyRight); got != 3 {
-		t.Fatalf("Right from Rename All = %d, want 3 (Advanced is skipped)", got)
+	if got, _ := JobsBlockerPanelMoveFocus(mismatch, 1, tcell.KeyRight); got != 2 {
+		t.Fatalf("Right from Rename All = %d, want 2 (Skip; no Advanced)", got)
+	}
+	move := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{Move: true}}
+	if got, _ := JobsBlockerPanelMoveFocus(move, 4, tcell.KeyDown); got != 6 {
+		t.Fatalf("Down from Skip All = %d, want 6 (Cancel next to Delete source)", got)
 	}
 
 	disk := jobs.BlockerDetails{Kind: jobs.BlockerKindDiskSpace, DiskSpace: &jobs.DiskSpaceBlockerDetails{}}

@@ -1,24 +1,24 @@
 == open ==
-advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Right ==
-advanced focus=r0c1 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r0c1 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Right ==
-advanced focus=r0c2 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r0c2 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Space ==
-advanced focus=r0c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r0c2 time[skip,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r1c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r1c2 time[skip,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r2c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r2c2 time[skip,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r3c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r3c2 time[skip,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r4c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r4c2 time[skip,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Right ==
-advanced focus=r4c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r4c2 time[skip,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Right ==
-advanced focus=r4c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r4c2 time[skip,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Right ==
-advanced focus=r4c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r4c2 time[skip,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Up ==
-advanced focus=r3c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r3c2 time[skip,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true

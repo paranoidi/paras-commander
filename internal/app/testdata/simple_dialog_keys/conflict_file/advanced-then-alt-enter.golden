@@ -1,6 +1,6 @@
 == open ==
 focus=overwrite
 == Alt+d ==
-advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=false
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=false
 == Alt+Enter ==
-CLOSED: decision=rules-all time[ask,ask,ask] size[ask,ask,ask] skip-identical=false quit=false
+CLOSED: decision=rules-all time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules quit=false

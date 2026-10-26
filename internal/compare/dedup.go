@@ -150,10 +150,9 @@ func (s *DedupSession) walkRoot(ctx context.Context) ([]FileRecord, error) {
 
 // DedupOptions configures a dedup session.
 type DedupOptions struct {
-	Walk         WalkOptions
-	HashWorkers  int
-	ReadBuffer   []byte
-	MaxHashBytes int64
+	Walk        WalkOptions
+	HashWorkers int
+	ReadBuffer  []byte
 	// ChunkBytes compares same-size files this many bytes at a time so a file
 	// can be dropped as soon as its prefix diverges from every other file in
 	// its partition. Zero or negative disables chunking (whole file in one round).
@@ -260,12 +259,9 @@ func (s *DedupSession) run(ctx context.Context) {
 	}
 	var candidates []FileRecord
 	var sizeGroups [][]int // candidate indices per size class; each hashes as one unit
-	for size, group := range bySize {
+	for _, group := range bySize {
 		if len(group) < 2 {
 			continue
-		}
-		if s.opts.MaxHashBytes > 0 && size > s.opts.MaxHashBytes {
-			continue // oversize files are never opened (same outcome as the old per-file error)
 		}
 		idxs := make([]int, 0, len(group))
 		for _, f := range group {
@@ -640,43 +636,4 @@ func DedupGroupBySize(a, b DedupGroup) int {
 		return cmp.Compare(b.Size, a.Size) // largest first
 	}
 	return bytes.Compare(a.Hash[:], b.Hash[:])
-}
-
-// SameContent reports whether a and b hold identical bytes, using the same chunked prefix hashing
-// as the dedup scan and bailing out at the first differing chunk. chunkBytes <= 0 hashes each
-// whole file in one round. Files of different size are different without reading either.
-func SameContent(ctx context.Context, a, b pathloc.Path, chunkBytes int64, buf []byte) (bool, error) {
-	ea, err := fsbackend.Default().Stat(ctx, a)
-	if err != nil {
-		return false, err
-	}
-	eb, err := fsbackend.Default().Stat(ctx, b)
-	if err != nil {
-		return false, err
-	}
-	if ea.Size != eb.Size {
-		return false, nil
-	}
-	if chunkBytes <= 0 {
-		chunkBytes = math.MaxInt64
-	}
-	if len(buf) == 0 {
-		buf = make([]byte, 32*1024)
-	}
-	noProgress := func(int64) {}
-	for offset := int64(0); offset < ea.Size; {
-		n := min(chunkBytes, ea.Size-offset)
-		ha, hb := sha256.New(), sha256.New()
-		if err := hashChunk(ctx, a, ha, buf, offset, n, noProgress); err != nil {
-			return false, err
-		}
-		if err := hashChunk(ctx, b, hb, buf, offset, n, noProgress); err != nil {
-			return false, err
-		}
-		if !bytes.Equal(ha.Sum(nil), hb.Sum(nil)) {
-			return false, nil
-		}
-		offset += n
-	}
-	return true, nil
 }

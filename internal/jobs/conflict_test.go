@@ -106,9 +106,54 @@ func TestConflictRulesEvaluate(t *testing.T) {
 		{"same size row", ConflictRules{Size: [3]RuleAction{SizeSame: RuleSkip}}, base, base, 2, 2, RuleSkip},
 	}
 	for _, tt := range tests {
-		if got := tt.rules.Evaluate(tt.src, tt.dst, tt.srcSz, tt.dstSz); got != tt.want {
+		if got := tt.rules.Evaluate(tt.src, tt.dst, tt.srcSz, tt.dstSz, ContentUnknown); got != tt.want {
 			t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
 		}
+	}
+}
+
+func TestConflictRulesEvaluateVerify(t *testing.T) {
+	base := time.Unix(1_000_000, 0)
+	older := ConflictRules{Time: [3]RuleAction{TimeDestOlder: RuleOverwrite}}
+	tests := []struct {
+		name    string
+		rules   ConflictRules
+		content ContentVerdict
+		want    RuleAction
+	}{
+		{"verify off ignores the verdict", ConflictRules{Time: older.Time, Same: RuleSkip}, ContentSame, RuleOverwrite},
+		{"same row wins over time", ConflictRules{Time: older.Time, Verify: true, Same: RuleSkip, Differ: RuleFallback}, ContentSame, RuleSkip},
+		{"same ask prompts", ConflictRules{Time: older.Time, Verify: true, Same: RuleAsk, Differ: RuleFallback}, ContentSame, RuleAsk},
+		{"differ row wins over time", ConflictRules{Time: older.Time, Verify: true, Differ: RuleKeepBoth}, ContentDiffer, RuleKeepBoth},
+		{"differ fallback uses time", ConflictRules{Time: older.Time, Verify: true, Differ: RuleFallback}, ContentDiffer, RuleOverwrite},
+		{"differ fallback reaches size", ConflictRules{Size: [3]RuleAction{SizeSame: RuleSkip}, Verify: true, Differ: RuleFallback}, ContentDiffer, RuleSkip},
+		{"unknown verdict uses time", ConflictRules{Time: older.Time, Verify: true, Same: RuleSkip, Differ: RuleSkip}, ContentUnknown, RuleOverwrite},
+	}
+	for _, tt := range tests {
+		if got := tt.rules.Evaluate(base.Add(time.Hour), base, 4, 4, tt.content); got != tt.want {
+			t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestConflictRulesTimeSizeReachable(t *testing.T) {
+	if !(ConflictRules{}).TimeSizeReachable() || !(ConflictRules{Verify: true, Differ: RuleFallback}).TimeSizeReachable() {
+		t.Fatal("time and size rows decide without Verify and through the Differ fallback")
+	}
+	if (ConflictRules{Verify: true, Differ: RuleAsk}).TimeSizeReachable() {
+		t.Fatal("a non-fallback Differ leaves the time and size rows unreachable")
+	}
+}
+
+func TestConflictRulesNormalizeDeleteSource(t *testing.T) {
+	r := ConflictRules{Verify: true, Same: RuleDeleteSource, Differ: RuleDeleteSource}
+	r.Normalize(true)
+	if r.Same != RuleDeleteSource || r.Differ != RuleDeleteSource {
+		t.Fatal("a move keeps Delete source")
+	}
+	r.Normalize(false)
+	if r.Same != RuleAsk || r.Differ != RuleAsk {
+		t.Fatalf("a copy drops Delete source, got same=%v differ=%v", r.Same, r.Differ)
 	}
 }
 
@@ -119,7 +164,7 @@ func TestConflictRulesGreyingAndNormalize(t *testing.T) {
 	}
 	r.Size[SizeSame] = RuleSkip
 	r.Time[TimeDestOlder] = RuleOverwrite // now Skip and Overwrite conflict: only Ask is enabled
-	r.Normalize()
+	r.Normalize(false)
 	if r.Size[SizeSame] != RuleAsk {
 		t.Fatalf("greyed selection must fall back to Ask, got %v", r.Size[SizeSame])
 	}

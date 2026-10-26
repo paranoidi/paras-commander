@@ -60,6 +60,7 @@ func BlockerDetailsFromRequest(req BlockerRequest) *BlockerDetails {
 				DestTime:        c.DestTime,
 				Reprompt:        c.Reprompt,
 				NoCompare:       c.NoCompare,
+				Move:            c.Move,
 				Mismatch:        c.Mismatch,
 				DestIsDir:       c.DestIsDir,
 			},

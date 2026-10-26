@@ -11,18 +11,31 @@ import (
 
 // Options configures a compare session.
 type Options struct {
-	Walk         WalkOptions
-	HashWorkers  int
-	ReadBuffer   []byte
-	MaxHashBytes int64
-	OnUpdate     func(Snapshot)
+	Walk        WalkOptions
+	HashWorkers int
+	ReadBuffer  []byte
+	// ChunkBytes is the SameContent chunk for same-path pairs (see config compare.chunk_bytes).
+	ChunkBytes int64
+	OnUpdate   func(Snapshot)
 }
 
+// hashJob is one unit of content work: a same-path pair compared with SameContent (pair set,
+// loc primary, other secondary) or one unpaired file hashed for relocation matching (side).
 type hashJob struct {
-	side int // 0 primary, 1 secondary
-	rel  string
-	loc  pathloc.Path
-	size int64
+	side  int // 0 primary, 1 secondary; unpaired files only
+	pair  bool
+	rel   string
+	loc   pathloc.Path
+	other pathloc.Path
+	size  int64
+}
+
+// files is how many files the job reads: progress counts a pair as two.
+func (j hashJob) files() int {
+	if j.pair {
+		return 2
+	}
+	return 1
 }
 
 // Session runs walk + hash + classify in the background.
@@ -172,14 +185,20 @@ func (s *Session) run(ctx context.Context) {
 	sHash := make(map[string][32]byte)
 	pErr := make(map[string]string)
 	sErr := make(map[string]string)
+	pairSame := make(map[string]bool)
+	classify := func() []Row { return Classify(primary, secondary, pHash, sHash, pairSame, pErr, sErr) }
 
 	jobs := hashJobsNeeded(primary, secondary)
+	hashTotal := 0
+	for _, j := range jobs {
+		hashTotal += j.files()
+	}
 	if len(jobs) == 0 {
 		s.publish(Snapshot{
 			PrimaryRoot:     s.primaryRoot,
 			SecondaryRoot:   s.secondaryRoot,
 			Phase:           PhaseDone,
-			Rows:            Classify(primary, secondary, pHash, sHash, pErr, sErr),
+			Rows:            classify(),
 			WalkedPrimary:   len(primary),
 			WalkedSecondary: len(secondary),
 		})
@@ -199,10 +218,10 @@ func (s *Session) run(ctx context.Context) {
 		PrimaryRoot:     s.primaryRoot,
 		SecondaryRoot:   s.secondaryRoot,
 		Phase:           PhaseHashing,
-		Rows:            Classify(primary, secondary, pHash, sHash, pErr, sErr),
+		Rows:            classify(),
 		WalkedPrimary:   len(primary),
 		WalkedSecondary: len(secondary),
-		HashTotal:       len(jobs),
+		HashTotal:       hashTotal,
 	})
 
 	jobCh := make(chan hashJob)
@@ -220,7 +239,7 @@ func (s *Session) run(ctx context.Context) {
 			WalkedPrimary:   len(primary),
 			WalkedSecondary: len(secondary),
 			Hashed:          h,
-			HashTotal:       len(jobs),
+			HashTotal:       hashTotal,
 		})
 	}
 
@@ -237,7 +256,7 @@ func (s *Session) run(ctx context.Context) {
 				return
 			case <-t.C:
 				mu.Lock()
-				rows := MarkHashing(Classify(primary, secondary, pHash, sHash, pErr, sErr), hashingP, hashingS)
+				rows := MarkHashing(classify(), hashingP, hashingS)
 				h := int(hashed.Load())
 				mu.Unlock()
 				publishRows(rows, h)
@@ -255,32 +274,45 @@ func (s *Session) run(ctx context.Context) {
 					return
 				}
 				mu.Lock()
-				if job.side == 0 {
+				if job.pair || job.side == 0 {
 					hashingP[job.rel] = struct{}{}
-				} else {
+				}
+				if job.pair || job.side == 1 {
 					hashingS[job.rel] = struct{}{}
 				}
 				mu.Unlock()
 
-				sum, err := HashFile(ctx, job.loc, job.size, buf, s.opts.MaxHashBytes)
-				mu.Lock()
-				if job.side == 0 {
+				if job.pair {
+					same, err := SameContent(ctx, job.loc, job.other, s.opts.ChunkBytes, buf, nil)
+					mu.Lock()
 					delete(hashingP, job.rel)
-				} else {
 					delete(hashingS, job.rel)
-				}
-				if err != nil {
-					if job.side == 0 {
+					if err != nil {
 						pErr[job.rel] = err.Error()
 					} else {
-						sErr[job.rel] = err.Error()
+						pairSame[job.rel] = same
 					}
-				} else if job.side == 0 {
-					pHash[job.rel] = sum
 				} else {
-					sHash[job.rel] = sum
+					sum, err := HashFile(ctx, job.loc, buf)
+					mu.Lock()
+					if job.side == 0 {
+						delete(hashingP, job.rel)
+					} else {
+						delete(hashingS, job.rel)
+					}
+					if err != nil {
+						if job.side == 0 {
+							pErr[job.rel] = err.Error()
+						} else {
+							sErr[job.rel] = err.Error()
+						}
+					} else if job.side == 0 {
+						pHash[job.rel] = sum
+					} else {
+						sHash[job.rel] = sum
+					}
 				}
-				hashed.Add(1)
+				hashed.Add(int32(job.files()))
 				mu.Unlock()
 			}
 		}()
@@ -303,7 +335,7 @@ func (s *Session) run(ctx context.Context) {
 	}
 
 	mu.Lock()
-	rows := Classify(primary, secondary, pHash, sHash, pErr, sErr)
+	rows := classify()
 	mu.Unlock()
 	s.publish(Snapshot{
 		PrimaryRoot:     s.primaryRoot,
@@ -312,7 +344,7 @@ func (s *Session) run(ctx context.Context) {
 		Rows:            rows,
 		WalkedPrimary:   len(primary),
 		WalkedSecondary: len(secondary),
-		Hashed:          len(jobs),
-		HashTotal:       len(jobs),
+		Hashed:          hashTotal,
+		HashTotal:       hashTotal,
 	})
 }

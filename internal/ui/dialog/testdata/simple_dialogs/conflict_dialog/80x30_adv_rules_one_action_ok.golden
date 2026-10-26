@@ -1,26 +1,26 @@
 -- text --
                                                                                 
                                                                                 
-            ┌─────────────────── Conflict rules ───────────────────┐            
-            │ Destination newer                                    │            
-            │ ( ) Ask  ( ) Overwrite  (*) Skip  ( ) Keep both      │            
-            │ Destination older                                    │            
-            │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │            
-            │ Same time                                            │            
-            │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │            
-            ├──────────────────────────────────────────────────────┤            
-            │ Destination smaller                                  │            
-            │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │            
-            │ Destination larger                                   │            
-            │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │            
-            │ Same size                                            │            
-            │ (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │            
-            ├──────────────────────────────────────────────────────┤            
-            │ [x] Skip identical files (slow)                      │            
-            │ [ ] Apply to all conflicts                           │            
-            ├──────────────────────────────────────────────────────┤            
-            │                 [ OK ]    [ Cancel ]                 │            
-            └──────────────────────────────────────────────────────┘            
+                                                                                
+  ┌───────────────────────────── Conflict rules ─────────────────────────────┐  
+  │ Destination newer   ( ) Ask  ( ) Overwrite  (*) Skip  ( ) Keep both      │  
+  │ Destination older   (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │  
+  │ Same time           (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │  
+  ├──────────────────────────────────────────────────────────────────────────┤  
+  │ Destination smaller (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │  
+  │ Destination larger  (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │  
+  │ Same size           (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │  
+  ├──────────────────────────────────────────────────────────────────────────┤  
+  │ [x] Verify both to see if identical                                      │  
+  │ Same                (*) Ask  ( ) Overwrite  ( ) Skip                     │  
+  │ Differ              (*) Rules  ( ) Ask  ( ) Overwrite  ( ) Skip          │  
+  │                     ( ) Keep both                                        │  
+  ├──────────────────────────────────────────────────────────────────────────┤  
+  │ [ ] Apply to all conflicts                                               │  
+  ├──────────────────────────────────────────────────────────────────────────┤  
+  │                           [ OK ]    [ Cancel ]                           │  
+  └──────────────────────────────────────────────────────────────────────────┘  
+                                                                                
                                                                                 
                                                                                 
 -- legend --
@@ -36,25 +36,25 @@ i fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbdddddddddbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabddddddddbeeeeeeeeeeeeeebbbbbbbbbbbeeeeeeeeeeeeeebbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabddddddddbeeeeeeeeeeeeeebbbbbbbbbbbeeeeeeeeeeeeeebbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabddddddddbeeeeeeeeeeeeeebbbbbbbbbbbeeeeeeeeeeeeeebbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabdddddddcddddddddddddddddddddddddbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbfffgffffbbhhhihhhhhhhhbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
-aaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbddddddddbeeeeeeeeeeeeeebbbbbbbbbbbeeeeeeeeeeeeeebbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbddddddddbeeeeeeeeeeeeeebbbbbbbbbbbeeeeeeeeeeeeeebbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbddddddddbeeeeeeeeeeeeeebbbbbbbbbbbeeeeeeeeeeeeeebbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabdddddcddddddddddddddddddddddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbfffgffffbbhhhihhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

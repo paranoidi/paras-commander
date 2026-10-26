@@ -483,13 +483,13 @@ Saved mass-rename find/replace patterns (F2 Load pattern / F5 Save pattern in th
 
 ## `[compare]`
 
-Twin-panel directory compare (content hash diff).
+Content comparison: twin-panel directory compare, find duplicates and the conflict rules' Verify.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `hash_concurrency` | int | `8` | Number of files hashed in parallel during a compare. |
-| `read_buffer_kib` | int | `256` | Per-worker read buffer size, in KiB, used while hashing. |
-| `max_hash_bytes` | int64 | `0` | Cap on bytes read per file when hashing. `0` means unbounded (whole file is hashed). |
+| `hash_concurrency` | int | `8` | Number of files hashed in parallel during a compare or duplicate scan. |
+| `read_buffer_kib` | int | `256` | Per-worker read buffer size, in KiB, used while hashing or comparing. |
+| `chunk_bytes` | int64 | `33554432` (32 MiB) | Compare same-size files this many bytes at a time, stopping as soon as content diverges. Used by compare, find duplicates and conflict Verify. `0` disables chunked comparison. |
 | `stay_on_volume_default` | bool | `true` | Default state of the "stay on volume" option when opening compare. |
 
 ## `[dedup]`
@@ -499,8 +499,7 @@ Find-duplicates scan (within a single directory).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `hash_confirm_bytes` | int64 | `34359738368` (32 GiB) | Pause and ask for confirmation before hashing if the total size of hash candidates exceeds this. `0` disables the confirmation gate. |
-| `file_progress_bytes` | int64 | `268435456` (256 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. |
-| `chunk_bytes` | int64 | `33554432` (32 MiB) | Compare same-size files this many bytes at a time, stopping as soon as content diverges. `0` disables chunked comparison. |
+| `file_progress_bytes` | int64 | `268435456` (256 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. Chunk size comes from `[compare].chunk_bytes`. |
 
 ## `[status_command]`
 

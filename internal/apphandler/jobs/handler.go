@@ -344,37 +344,17 @@ func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
 			}
 			return false
 		}
-		mismatch := sel.PendingBlocker != nil && sel.PendingBlocker.Conflict != nil && sel.PendingBlocker.Conflict.Mismatch
-		switch r := event.Rune(); {
-		case mismatch && (r == 'r' || r == 'R'):
-			h.submitJobsConflictDecision(jobs.DecisionRename)
-			return false
-		case mismatch && (r == 'a' || r == 'A'):
-			h.submitJobsConflictDecision(jobs.DecisionRenameAll)
-			return false
-		case mismatch && (r == 'o' || r == 'O' || r == 'd' || r == 'D'):
-			return false // Overwrite and Advanced… are not offered across a directory boundary
-		}
-		switch event.Rune() {
-		case 'o', 'O':
-			h.submitJobsConflictDecision(jobs.DecisionOverwrite)
-			return false
-		case 's', 'S':
-			h.submitJobsConflictDecision(jobs.DecisionSkip)
-			return false
-		case 'a', 'A':
-			h.submitJobsConflictDecision(jobs.DecisionOverwriteAll)
-			return false
-		case 'k', 'K': // not Alt+L: that is messages.open, a global key handled first
-			h.submitJobsConflictDecision(jobs.DecisionSkipAll)
-			return false
-		case 'd', 'D':
+		id, ok := ui.JobBlockerPanelMnemonic(sel, event.Rune())
+		switch {
+		case !ok:
+		case id == dialog.ConflictAdvanced:
 			h.openAdvancedFromPanel(sel)
-			return false
-		case 'c', 'C':
-			h.submitJobsConflictDecision(jobs.DecisionCancel)
-			return false
+		default:
+			if d, ok := dialog.ConflictDecisionOf(id); ok {
+				h.submitJobsConflictDecision(d)
+			}
 		}
+		return false
 	}
 	switch event.Key() {
 	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown, tcell.KeyTab, tcell.KeyBacktab:
@@ -992,7 +972,7 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 			}
 		case jobs.EventFailed, jobs.EventCanceled:
 			f.Terminal = true
-		case jobs.EventProgress, jobs.EventScanProgress:
+		case jobs.EventProgress, jobs.EventScanProgress, jobs.EventVerifyProgress:
 			f.Progress = true
 		case jobs.EventJobBlockerRequest:
 			f.Blocker = true

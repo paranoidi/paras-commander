@@ -1,0 +1,4 @@
+== open ==
+focus=overwrite
+== Alt+E ==
+CLOSED: decision=delete-source quit=false

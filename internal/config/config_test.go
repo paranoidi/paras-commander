@@ -73,20 +73,20 @@ func TestValidateClampsNegativeDedupFileProgressBytes(t *testing.T) {
 	}
 }
 
-func TestDefaultDedupChunkBytes(t *testing.T) {
-	if got := Default().Dedup.ChunkBytes; got != DefaultDedupChunkBytes {
-		t.Fatalf("Dedup.ChunkBytes = %d, want %d", got, DefaultDedupChunkBytes)
+func TestDefaultCompareChunkBytes(t *testing.T) {
+	if got := Default().Compare.ChunkBytes; got != DefaultCompareChunkBytes {
+		t.Fatalf("Compare.ChunkBytes = %d, want %d", got, DefaultCompareChunkBytes)
 	}
 }
 
-func TestValidateClampsNegativeDedupChunkBytes(t *testing.T) {
+func TestValidateClampsNegativeCompareChunkBytes(t *testing.T) {
 	cfg := Default()
-	cfg.Dedup.ChunkBytes = -1
+	cfg.Compare.ChunkBytes = -1
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.Dedup.ChunkBytes != 0 {
-		t.Fatalf("Dedup.ChunkBytes = %d, want 0", cfg.Dedup.ChunkBytes)
+	if cfg.Compare.ChunkBytes != 0 {
+		t.Fatalf("Compare.ChunkBytes = %d, want 0", cfg.Compare.ChunkBytes)
 	}
 }
 

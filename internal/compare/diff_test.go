@@ -8,20 +8,38 @@ import (
 func TestClassifyEqualSamePath(t *testing.T) {
 	primary := []FileRecord{{Rel: "a.txt", Size: 10}}
 	secondary := []FileRecord{{Rel: "a.txt", Size: 10}}
-	h := [32]byte{1}
-	rows := Classify(primary, secondary, map[string][32]byte{"a.txt": h}, map[string][32]byte{"a.txt": h}, nil, nil)
+	rows := Classify(primary, secondary, nil, nil, map[string]bool{"a.txt": true}, nil, nil)
 	if len(rows) != 1 {
 		t.Fatalf("rows = %d, want 1", len(rows))
 	}
-	if rows[0].Kind != KindEqual {
-		t.Fatalf("kind = %v, want Equal", rows[0].Kind)
+	if rows[0].Kind != KindEqual || !rows[0].HashDone {
+		t.Fatalf("row = %+v, want settled Equal", rows[0])
+	}
+}
+
+func TestClassifySamePathPairVerdicts(t *testing.T) {
+	primary := []FileRecord{{Rel: "pebble.txt", Size: 10}, {Rel: "thistle.txt", Size: 10}, {Rel: "cobalt.txt", Size: 10}}
+	secondary := []FileRecord{{Rel: "pebble.txt", Size: 10}, {Rel: "thistle.txt", Size: 10}, {Rel: "cobalt.txt", Size: 10}}
+	rows := Classify(primary, secondary, nil, nil, map[string]bool{"pebble.txt": false}, map[string]string{"thistle.txt": "read failed"}, nil)
+	got := map[string]Row{}
+	for _, r := range rows {
+		got[r.PrimaryRel] = r
+	}
+	if r := got["pebble.txt"]; r.Kind != KindContentDiff || !r.HashDone {
+		t.Fatalf("pebble = %+v, want settled content diff", r)
+	}
+	if r := got["thistle.txt"]; r.Kind != KindSkipped || r.Err == "" {
+		t.Fatalf("thistle = %+v, want skipped with error", r)
+	}
+	if r := got["cobalt.txt"]; r.Kind != KindEqual || r.HashDone {
+		t.Fatalf("cobalt = %+v, want pending Equal", r)
 	}
 }
 
 func TestClassifyContentDiffBySize(t *testing.T) {
 	primary := []FileRecord{{Rel: "a.txt", Size: 10}}
 	secondary := []FileRecord{{Rel: "a.txt", Size: 20}}
-	rows := Classify(primary, secondary, nil, nil, nil, nil)
+	rows := Classify(primary, secondary, nil, nil, nil, nil, nil)
 	if len(rows) != 1 || rows[0].Kind != KindContentDiff {
 		t.Fatalf("rows = %+v, want content diff", rows)
 	}
@@ -34,7 +52,7 @@ func TestClassifyRelocated(t *testing.T) {
 	rows := Classify(primary, secondary,
 		map[string][32]byte{"old/name.txt": h},
 		map[string][32]byte{"new/name.txt": h},
-		nil, nil,
+		nil, nil, nil,
 	)
 	if len(rows) != 1 {
 		t.Fatalf("rows = %d, want 1", len(rows))
@@ -55,7 +73,7 @@ func TestClassifyPrimaryOnlySecondaryOnly(t *testing.T) {
 	rows := Classify(primary, secondary,
 		map[string][32]byte{"only-p.txt": hP},
 		map[string][32]byte{"only-s.txt": hS},
-		nil, nil,
+		nil, nil, nil,
 	)
 	if len(rows) != 2 {
 		t.Fatalf("rows = %d, want 2", len(rows))
@@ -73,7 +91,7 @@ func TestClassifyUniqueSizePrimaryOnlyIsHashDone(t *testing.T) {
 	// 0-byte sole-side file: never hashed, must not stay pending.
 	primary := []FileRecord{{Rel: "empty.txt", Size: 0}}
 	secondary := []FileRecord{{Rel: "other.txt", Size: 10}}
-	rows := Classify(primary, secondary, nil, nil, nil, nil)
+	rows := Classify(primary, secondary, nil, nil, nil, nil, nil)
 	if len(rows) != 2 {
 		t.Fatalf("rows = %d, want 2", len(rows))
 	}
@@ -91,7 +109,7 @@ func TestClassifyUniqueSizePrimaryOnlyIsHashDone(t *testing.T) {
 func TestClassifyRelocatedCandidatesStayPendingUntilHashed(t *testing.T) {
 	primary := []FileRecord{{Rel: "old/a.txt", Size: 5}}
 	secondary := []FileRecord{{Rel: "new/b.txt", Size: 5}}
-	rows := Classify(primary, secondary, nil, nil, nil, nil)
+	rows := Classify(primary, secondary, nil, nil, nil, nil, nil)
 	if len(rows) != 2 {
 		t.Fatalf("rows = %d, want 2", len(rows))
 	}

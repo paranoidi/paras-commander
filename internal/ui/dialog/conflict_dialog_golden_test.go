@@ -58,6 +58,8 @@ func conflictGoldenFileFocus(name string) dlg.ID {
 		return ConflictCancelJob
 	case "postpone":
 		return ConflictPostpone
+	case "delete-source":
+		return ConflictDeleteSource
 	}
 	panic("unknown file focus " + name)
 }
@@ -75,7 +77,7 @@ func conflictGoldenDiskFocus(name string) dlg.ID {
 }
 
 // conflictGoldenAdvFocus sets the advanced-mode focus: "r<row>c<col>" is a rule radio, or
-// skip-identical / all / ok / cancel.
+// verify / all / ok / cancel.
 func conflictGoldenAdvFocus(st *ConflictDialogState, name string) {
 	var row, col int
 	if n, _ := fmt.Sscanf(name, "r%dc%d", &row, &col); n == 2 {
@@ -83,8 +85,8 @@ func conflictGoldenAdvFocus(st *ConflictDialogState, name string) {
 		return
 	}
 	switch name {
-	case "skip-identical":
-		st.AdvFocus = ConflictSkipIdentical
+	case "verify":
+		st.AdvFocus = ConflictVerify
 	case "all":
 		st.AdvFocus = ConflictApplyAll
 	case "ok":
@@ -136,6 +138,12 @@ func TestConflictDialogGoldenRender(t *testing.T) {
 	reprompt := base
 	reprompt.Reprompt = "No rule matched."
 	add("file_reprompt", 80, 30, conflictFileState(reprompt, "overwrite"))
+	move := base
+	move.Move = true
+	add("file_move_focus-delete-source", 80, 30, conflictFileState(move, "delete-source"))
+	moveMismatch := dirDest
+	moveMismatch.Move = true
+	add("mismatch-dir_move", 80, 30, conflictFileState(moveMismatch, "rename"))
 	bare := jobs.ConflictEvent{Source: "/home/kestrel/a.txt", Destination: "/srv/b.txt"}
 	add("file_no_meta", 80, 30, conflictFileState(bare, "skip"))
 	add("file_long_paths", 80, 30, conflictFileState(conflictGoldenLong(base), "overwrite"))
@@ -172,14 +180,14 @@ func TestConflictDialogGoldenRender(t *testing.T) {
 	add("disk_short8", 80, 8, conflictDiskState(disk, "abort"))
 
 	// Conflict rules.
-	var none jobs.ConflictRules
-	for _, f := range []string{"r0c0", "skip-identical", "ok"} {
+	none := jobs.ConflictRules{Differ: jobs.RuleFallback}
+	for _, f := range []string{"r0c0", "verify", "ok"} {
 		add("adv_focus-"+f, 80, 30, conflictAdvState(base, f, none, true))
 	}
-	picked := jobs.ConflictRules{Time: [3]jobs.RuleAction{jobs.RuleOverwrite, jobs.RuleAsk, jobs.RuleSkip}, Size: [3]jobs.RuleAction{jobs.RuleAsk, jobs.RuleOverwrite, jobs.RuleAsk}, SkipIdentical: true}
-	picked.Normalize()
+	picked := jobs.ConflictRules{Time: [3]jobs.RuleAction{jobs.RuleOverwrite, jobs.RuleAsk, jobs.RuleSkip}, Size: [3]jobs.RuleAction{jobs.RuleAsk, jobs.RuleOverwrite, jobs.RuleAsk}, Verify: true, Differ: jobs.RuleFallback}
+	picked.Normalize(false)
 	add("adv_rules_conflicting", 80, 30, conflictAdvState(base, "r3c0", picked, false))
-	oneKind := jobs.ConflictRules{Time: [3]jobs.RuleAction{jobs.RuleSkip, jobs.RuleAsk, jobs.RuleAsk}, SkipIdentical: true}
+	oneKind := jobs.ConflictRules{Time: [3]jobs.RuleAction{jobs.RuleSkip, jobs.RuleAsk, jobs.RuleAsk}, Verify: true, Differ: jobs.RuleFallback}
 	add("adv_rules_one_action", 80, 30, conflictAdvState(base, "r4c2", oneKind, true))
 	add("adv_rules_one_action_ok", 80, 30, conflictAdvState(base, "ok", oneKind, false))
 	noCompare := base
@@ -189,7 +197,12 @@ func TestConflictDialogGoldenRender(t *testing.T) {
 	}
 	add("adv_wide120", 120, 30, conflictAdvState(base, "r1c1", oneKind, true))
 	add("adv_narrow56", 56, 30, conflictAdvState(base, "r1c1", oneKind, true))
-	add("adv_narrow50", 50, 30, conflictAdvState(base, "skip-identical", oneKind, true))
+	add("adv_narrow50", 50, 30, conflictAdvState(base, "verify", oneKind, true))
+	// Verify: a non-fallback Differ greys the time and size rows; a move offers Delete source.
+	decided := jobs.ConflictRules{Time: [3]jobs.RuleAction{jobs.RuleSkip}, Verify: true, Same: jobs.RuleDeleteSource, Differ: jobs.RuleKeepBoth}
+	add("adv_move_verify_decided", 80, 30, conflictAdvState(move, "r7c4", decided, true))
+	add("adv_move_verify_off", 80, 30, conflictAdvState(move, "verify", none, true))
+	add("adv_80x24_fits", 80, 24, conflictAdvState(move, "r7c5", oneKind, true))
 	add("adv_narrow40", 40, 30, conflictAdvState(base, "r0c0", none, true))
 	add("adv_short14", 80, 14, conflictAdvState(base, "ok", oneKind, true))
 	add("adv_short10_cancel", 80, 10, conflictAdvState(base, "cancel", none, true))

@@ -119,6 +119,18 @@ _Avoid_: task, transfer (as a general term)
 A decision a running job needs from the user, such as a file conflict or a lack of disk space.
 _Avoid_: prompt, conflict dialog
 
+**Conflict rules**:
+The per-condition answers (time, size and, with Verify, content Same / Differ) a job applies to file conflicts instead of asking.
+_Avoid_: advanced options, match size
+
+**Verify**:
+Comparing the contents of a conflicting source and destination before the conflict rules decide; the same chunked check as panel compare.
+_Avoid_: skip identical, checksum
+
+**Delete source**:
+A move's conflict answer that keeps the existing destination and removes the file being moved.
+_Avoid_: drop source, discard
+
 **Plan**:
 The enumeration of a job's sources, which runs alongside the transfer itself.
 _Avoid_: index (reserved for Find)

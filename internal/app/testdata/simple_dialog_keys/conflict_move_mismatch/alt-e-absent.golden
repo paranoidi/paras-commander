@@ -1,0 +1,8 @@
+== open ==
+focus=rename
+== Alt+e ==
+focus=rename
+== Down ==
+focus=skip
+== Down ==
+focus=cancel

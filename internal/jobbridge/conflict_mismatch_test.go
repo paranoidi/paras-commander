@@ -27,7 +27,7 @@ func runMismatch(t *testing.T, typ jobs.Type, answers ...jobs.BlockerAnswer) (ds
 		t.Fatal(err)
 	}
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs, 4, nil, nil, nil)
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, config.CompareConfig{ChunkBytes: 4}, nil, nil, nil)
 	job := &jobs.Job{
 		ID: jobs.NewJobID(), Type: typ, Status: jobs.StatusRunning,
 		Sources:     []pathloc.Path{pathloc.FileMust(src)},

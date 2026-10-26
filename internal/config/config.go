@@ -182,16 +182,16 @@ type DedupConfig struct {
 	// FileProgressBytes shows a per-file progress bar in the scan dialog for
 	// files at or above this size. Zero disables the per-file bar.
 	FileProgressBytes int64 `toml:"file_progress_bytes"`
-	// ChunkBytes compares same-size files this many bytes at a time, bailing out
-	// of a file as soon as its content diverges. Zero disables chunking.
-	ChunkBytes int64 `toml:"chunk_bytes"`
 }
 
-// CompareConfig controls panel compare hashing and walk options.
+// CompareConfig controls content comparison (panel compare, find duplicates, conflict
+// verification) and the compare walk options.
 type CompareConfig struct {
-	HashConcurrency     int   `toml:"hash_concurrency"`
-	ReadBufferKiB       int   `toml:"read_buffer_kib"`
-	MaxHashBytes        int64 `toml:"max_hash_bytes"`
+	HashConcurrency int `toml:"hash_concurrency"`
+	ReadBufferKiB   int `toml:"read_buffer_kib"`
+	// ChunkBytes compares same-size files this many bytes at a time, bailing out
+	// of a file as soon as its content diverges. Zero disables chunking.
+	ChunkBytes          int64 `toml:"chunk_bytes"`
 	StayOnVolumeDefault bool  `toml:"stay_on_volume_default"`
 }
 
@@ -828,13 +828,12 @@ func Default() Config {
 		Compare: CompareConfig{
 			HashConcurrency:     DefaultCompareHashConcurrency,
 			ReadBufferKiB:       DefaultCompareReadBufferKiB,
-			MaxHashBytes:        0,
+			ChunkBytes:          DefaultCompareChunkBytes,
 			StayOnVolumeDefault: DefaultCompareStayOnVolumeDefault,
 		},
 		Dedup: DedupConfig{
 			HashConfirmBytes:  DefaultDedupHashConfirmBytes,
 			FileProgressBytes: DefaultDedupFileProgressBytes,
-			ChunkBytes:        DefaultDedupChunkBytes,
 		},
 		StatusCommand: StatusCommandConfig{
 			Command:    "",
@@ -1138,8 +1137,8 @@ func (c *Config) validateCompareDedupShell(builtin *Config) {
 	if c.Dedup.FileProgressBytes < 0 {
 		c.Dedup.FileProgressBytes = 0
 	}
-	if c.Dedup.ChunkBytes < 0 {
-		c.Dedup.ChunkBytes = 0
+	if c.Compare.ChunkBytes < 0 {
+		c.Compare.ChunkBytes = 0
 	}
 	if c.Shell.TerminalPanelHeight < MinShellTerminalPanelHeight {
 		c.Shell.TerminalPanelHeight = builtin.Shell.TerminalPanelHeight

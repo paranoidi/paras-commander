@@ -316,10 +316,9 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		},
 		HashWorkers:       hs.HashWorkers,
 		ReadBuffer:        hs.ReadBuffer,
-		MaxHashBytes:      hs.MaxHashBytes,
 		ConfirmHashBytes:  h.config.Dedup.HashConfirmBytes,
 		FileProgressBytes: h.config.Dedup.FileProgressBytes,
-		ChunkBytes:        h.config.Dedup.ChunkBytes,
+		ChunkBytes:        hs.ChunkBytes,
 		CacheFile:         comparepkg.DefaultHashCachePath(),
 		OnUpdate:          func(_ comparepkg.DedupSnapshot) { h.postWake() },
 	})

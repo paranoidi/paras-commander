@@ -110,7 +110,10 @@ type Job struct {
 	// (ops.Options.SourceSizeHints). Never changes after enqueue.
 	SourceSizeHints []int64
 	CurrentPath     string
-	Error           string
+	// VerifyDone and VerifyTotal track a running conflict content verification of CurrentPath
+	// (bytes read from both files); VerifyTotal is 0 when none runs. Never part of DoneBytes.
+	VerifyDone, VerifyTotal int64
+	Error                   string
 	// Warnings collects non-fatal per-item issues encountered while building the transfer
 	// plan (currently: a symlink that could not be safely dereferenced and was relinked
 	// instead — see DereferenceSymlinks). Unlike Error, warnings never fail the job.

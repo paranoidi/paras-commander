@@ -46,7 +46,7 @@ func TestCopyRecordsEveryFile(t *testing.T) {
 		t.Skip("running with permissions that can read a mode-000 file")
 	}
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs, 4, nil, nil, nil)
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, config.CompareConfig{ChunkBytes: 4}, nil, nil, nil)
 	job := &jobs.Job{
 		ID: jobs.NewJobID(), Type: jobs.TypeCopy, Status: jobs.StatusRunning,
 		Sources:     []pathloc.Path{pathloc.FileMust(src)},

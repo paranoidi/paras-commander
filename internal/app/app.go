@@ -540,7 +540,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	jobState := jobs.NewState()
 	// app does not exist yet; the permission prompt is bound once it does.
 	var app *App
-	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, jobState.Wait,
+	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs, cfg.Compare, jobState.Wait,
 		func(ctx context.Context, req ops.PermissionRequest) ops.PermissionAnswer {
 			return app.promptElevate(ctx, req)
 		},

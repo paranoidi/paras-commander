@@ -21,6 +21,13 @@ type conflictCase struct {
 // paths plus the blocker requests seen. answers are consumed one per prompt.
 func runConflict(t *testing.T, typ jobs.Type, c conflictCase, answers ...jobs.BlockerAnswer) (src, dstDir string, reqs []jobs.ConflictRequest) {
 	t.Helper()
+	src, dstDir, reqs, _ = runConflictEvents(t, typ, c, answers...)
+	return src, dstDir, reqs
+}
+
+// runConflictEvents is runConflict that also returns the events the transfer emitted.
+func runConflictEvents(t *testing.T, typ jobs.Type, c conflictCase, answers ...jobs.BlockerAnswer) (src, dstDir string, reqs []jobs.ConflictRequest, events []jobs.Event) {
+	t.Helper()
 	dir := t.TempDir()
 	dstDir = filepath.Join(dir, "meadow")
 	if err := os.Mkdir(dstDir, 0o755); err != nil {
@@ -41,7 +48,7 @@ func runConflict(t *testing.T, typ jobs.Type, c conflictCase, answers ...jobs.Bl
 		}
 	}
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs, 4, nil, nil, nil) // tiny chunks exercise the chunk loop
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, config.CompareConfig{ChunkBytes: 4}, nil, nil, nil) // tiny chunks exercise the chunk loop
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        typ,
@@ -49,7 +56,7 @@ func runConflict(t *testing.T, typ jobs.Type, c conflictCase, answers ...jobs.Bl
 		Sources:     []pathloc.Path{pathloc.FileMust(src)},
 		Destination: pathloc.FileMust(dstDir),
 	}
-	err := transfer(context.Background(), job, func(jobs.Event) {}, func(r jobs.BlockerRequest) jobs.BlockerAnswer {
+	err := transfer(context.Background(), job, func(ev jobs.Event) { events = append(events, ev) }, func(r jobs.BlockerRequest) jobs.BlockerAnswer {
 		reqs = append(reqs, *r.Conflict)
 		if len(answers) == 0 {
 			t.Fatalf("unexpected extra prompt")
@@ -61,7 +68,7 @@ func runConflict(t *testing.T, typ jobs.Type, c conflictCase, answers ...jobs.Bl
 	if err != nil {
 		t.Fatalf("transfer: %v", err)
 	}
-	return src, dstDir, reqs
+	return src, dstDir, reqs, events
 }
 
 func readFile(t *testing.T, p string) string {
@@ -145,34 +152,80 @@ func TestConflictKeepBoth(t *testing.T) {
 	}
 }
 
-func TestConflictSkipIdentical(t *testing.T) {
+func verifyRules(same, differ jobs.RuleAction) jobs.ConflictRules {
+	return jobs.ConflictRules{Verify: true, Same: same, Differ: differ}
+}
+
+func TestConflictVerifySameSkipKeepsSource(t *testing.T) {
 	t.Parallel()
 	same := conflictCase{"0123456789", "0123456789", time.Hour, time.Hour}
-	rules := jobs.ConflictRules{SkipIdentical: true}
-	src, dstDir, reqs := runConflict(t, jobs.TypeCopy, same, rulesAnswer(rules, false))
-	if len(reqs) != 1 {
-		t.Fatalf("prompts = %d, want 1", len(reqs))
-	}
-	if _, err := os.Stat(src); err != nil {
-		t.Fatalf("copy must keep the source: %v", err)
-	}
-	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "0123456789" {
-		t.Fatalf("dest = %q", got)
-	}
-
-	src, dstDir, _ = runConflict(t, jobs.TypeMove, same, rulesAnswer(rules, false))
-	if _, err := os.Stat(src); !os.IsNotExist(err) {
-		t.Fatalf("move of an identical file must remove the source, stat err = %v", err)
-	}
-	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "0123456789" {
-		t.Fatalf("dest = %q", got)
+	for _, typ := range []jobs.Type{jobs.TypeCopy, jobs.TypeMove} {
+		src, dstDir, reqs, events := runConflictEvents(t, typ, same, rulesAnswer(verifyRules(jobs.RuleSkip, jobs.RuleFallback), false))
+		if len(reqs) != 1 {
+			t.Fatalf("%s: prompts = %d, want 1", typ, len(reqs))
+		}
+		if _, err := os.Stat(src); err != nil {
+			t.Fatalf("%s: Same → Skip must keep the source: %v", typ, err)
+		}
+		if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "0123456789" {
+			t.Fatalf("%s: dest = %q", typ, got)
+		}
+		if irreversible(events) {
+			t.Fatalf("%s: skipping an identical file must stay reversible", typ)
+		}
+		if last := lastVerify(events); last == nil || last.VerifyDone != 20 || last.VerifyTotal != 20 {
+			t.Fatalf("%s: verify progress = %+v, want 20/20", typ, last)
+		}
 	}
 }
 
-func TestConflictSkipIdenticalDifferentFallsToRows(t *testing.T) {
+func TestConflictVerifyDeleteSource(t *testing.T) {
+	t.Parallel()
+	same := conflictCase{"0123456789", "0123456789", time.Hour, time.Hour}
+	src, dstDir, _, events := runConflictEvents(t, jobs.TypeMove, same, rulesAnswer(verifyRules(jobs.RuleDeleteSource, jobs.RuleFallback), false))
+	if _, err := os.Stat(src); !os.IsNotExist(err) {
+		t.Fatalf("Same → Delete source must remove the source, stat err = %v", err)
+	}
+	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "0123456789" {
+		t.Fatalf("dest = %q", got)
+	}
+	if !irreversible(events) {
+		t.Fatal("deleting the source must mark the job irreversible")
+	}
+
+	// A copy never deletes its source, even with Delete source in the rules.
+	src, _, reqs := runConflict(t, jobs.TypeCopy, same, rulesAnswer(verifyRules(jobs.RuleDeleteSource, jobs.RuleFallback), false), jobs.BlockerAnswer{Decision: jobs.DecisionSkip})
+	if _, err := os.Stat(src); err != nil {
+		t.Fatalf("copy must keep the source: %v", err)
+	}
+	if len(reqs) != 2 || reqs[0].Move || reqs[1].Reprompt != "Contents identical. No rule matched." {
+		t.Fatalf("prompts = %+v, want a copy reprompt for identical contents", reqs)
+	}
+}
+
+func TestConflictDeleteSourceDecision(t *testing.T) {
+	t.Parallel()
+	diff := conflictCase{"aaaa", "bbbbbb", time.Hour, time.Hour}
+	src, dstDir, reqs, events := runConflictEvents(t, jobs.TypeMove, diff, jobs.BlockerAnswer{Decision: jobs.DecisionDeleteSource})
+	if len(reqs) != 1 || !reqs[0].Move {
+		t.Fatalf("prompts = %+v, want one move prompt", reqs)
+	}
+	if _, err := os.Stat(src); !os.IsNotExist(err) {
+		t.Fatalf("Delete source must remove the source, stat err = %v", err)
+	}
+	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "bbbbbb" {
+		t.Fatalf("dest = %q, want kept", got)
+	}
+	if !irreversible(events) {
+		t.Fatal("deleting the source must mark the job irreversible")
+	}
+}
+
+func TestConflictVerifyDifferFallsToRows(t *testing.T) {
 	t.Parallel()
 	// Same size, differing in the last chunk (chunk size 4 in runConflict): the rows decide.
-	rules := jobs.ConflictRules{SkipIdentical: true, Size: [3]jobs.RuleAction{jobs.SizeSame: jobs.RuleOverwrite}}
+	rules := verifyRules(jobs.RuleSkip, jobs.RuleFallback)
+	rules.Size[jobs.SizeSame] = jobs.RuleOverwrite
 	diff := conflictCase{"0123456789", "012345678X", time.Hour, time.Hour}
 	_, dstDir, reqs := runConflict(t, jobs.TypeCopy, diff, rulesAnswer(rules, false))
 	if len(reqs) != 1 {
@@ -183,11 +236,43 @@ func TestConflictSkipIdenticalDifferentFallsToRows(t *testing.T) {
 	}
 
 	// With every row on Ask the file is asked about again.
-	_, dstDir, reqs = runConflict(t, jobs.TypeCopy, diff, rulesAnswer(jobs.ConflictRules{SkipIdentical: true}, false), jobs.BlockerAnswer{Decision: jobs.DecisionSkip})
-	if len(reqs) != 2 || reqs[1].Reprompt == "" {
+	_, dstDir, reqs = runConflict(t, jobs.TypeCopy, diff, rulesAnswer(verifyRules(jobs.RuleSkip, jobs.RuleFallback), false), jobs.BlockerAnswer{Decision: jobs.DecisionSkip})
+	if len(reqs) != 2 || reqs[1].Reprompt != "Contents differ. No rule matched." {
 		t.Fatalf("prompts = %+v, want a reprompt", reqs)
 	}
 	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "012345678X" {
 		t.Fatalf("dest = %q, want untouched", got)
 	}
+}
+
+func TestConflictVerifyDifferRowBeatsTime(t *testing.T) {
+	t.Parallel()
+	rules := verifyRules(jobs.RuleAsk, jobs.RuleKeepBoth)
+	rules.Time[jobs.TimeDestOlder] = jobs.RuleOverwrite // unreachable: Differ decides
+	_, dstDir, _ := runConflict(t, jobs.TypeCopy, conflictCase{"aaaa", "bb", time.Hour, 2 * time.Hour}, rulesAnswer(rules, false))
+	if got := readFile(t, filepath.Join(dstDir, "harbor.txt")); got != "bb" {
+		t.Fatalf("existing = %q, want untouched", got)
+	}
+	if got := readFile(t, filepath.Join(dstDir, "harbor (1).txt")); got != "aaaa" {
+		t.Fatalf("copy = %q, want source content", got)
+	}
+}
+
+func irreversible(events []jobs.Event) bool {
+	for _, ev := range events {
+		if ev.Type == jobs.EventUndoJournal && ev.Irreversible {
+			return true
+		}
+	}
+	return false
+}
+
+func lastVerify(events []jobs.Event) *jobs.Event {
+	var last *jobs.Event
+	for i := range events {
+		if events[i].Type == jobs.EventVerifyProgress {
+			last = &events[i]
+		}
+	}
+	return last
 }

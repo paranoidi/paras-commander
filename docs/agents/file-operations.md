@@ -47,7 +47,7 @@ Foreground dialogs and their execution. Handlers live in `internal/apphandler/di
 
 ## Overwrite and directory mismatches
 
-A conflict where exactly one side is a directory (real, or a symlink to one), or a directory meets a symlink to a directory, can only be skipped, renamed or canceled; nothing is merged through a symlink. `ops.FileConflictFacts.OverwriteUnsafe()` (`SourceTarget`/`DestTarget`, filled by `StatFileConflictFacts` and `statConflictFacts`) decides it, and `resolveConflict` converts any overwrite on a mismatch into skip. The copy plan's directory items (`copyDirItem`) hit the same path: skipping drops the subtree (`copyRunState.skippedDirs`), renaming re-roots it (`renamedDirs`). Dialog details and remembered-decision handling are in [jobs.md](jobs.md); rationale in ADR 0011 and 0019.
+A conflict where exactly one side is a directory (real, or a symlink to one), or a directory meets a symlink to a directory, can only be skipped, renamed or canceled; nothing is merged through a symlink. `ops.FileConflictFacts.OverwriteUnsafe()` (`SourceTarget`/`DestTarget`, filled by `StatFileConflictFacts` and `statConflictFacts`) decides it, and `resolveConflict` converts any overwrite or delete-source on a mismatch into skip. The copy plan's directory items (`copyDirItem`) hit the same path: skipping drops the subtree (`copyRunState.skippedDirs`), renaming re-roots it (`renamedDirs`). Dialog details and remembered-decision handling are in [jobs.md](jobs.md); rationale in ADR 0011 and 0019.
 
 ## Copy/move destination dialog
 

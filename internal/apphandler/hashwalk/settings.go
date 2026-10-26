@@ -7,10 +7,11 @@ import (
 
 // Settings are shared walk/hash knobs for compare and dedup scans.
 type Settings struct {
-	HashWorkers  int
-	ReadBuffer   []byte
-	MaxHashBytes int64
-	ShouldSkip   diskusage.ShouldIgnoreFolder
+	HashWorkers int
+	ReadBuffer  []byte
+	// ChunkBytes is the content-comparison chunk shared by compare, dedup and conflict verify.
+	ChunkBytes int64
+	ShouldSkip diskusage.ShouldIgnoreFolder
 }
 
 // FromCompareConfig builds hash/walk settings from compare config and ignore hooks.
@@ -28,9 +29,9 @@ func FromCompareConfig(
 		workers = config.DefaultCompareHashConcurrency
 	}
 	return Settings{
-		HashWorkers:  workers,
-		ReadBuffer:   make([]byte, bufKiB*1024),
-		MaxHashBytes: cfg.MaxHashBytes,
-		ShouldSkip:   diskusage.ComposeListingVolumeIgnore(diskIgnore, volGate),
+		HashWorkers: workers,
+		ReadBuffer:  make([]byte, bufKiB*1024),
+		ChunkBytes:  cfg.ChunkBytes,
+		ShouldSkip:  diskusage.ComposeListingVolumeIgnore(diskIgnore, volGate),
 	}
 }

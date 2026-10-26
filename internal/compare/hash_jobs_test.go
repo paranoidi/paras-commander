@@ -33,7 +33,7 @@ func TestHashJobsNeededSkipsSamePathSizeMismatch(t *testing.T) {
 	}
 }
 
-func TestHashJobsNeededHashesSamePathSameSize(t *testing.T) {
+func TestHashJobsNeededPairsSamePathSameSize(t *testing.T) {
 	primary := []FileRecord{
 		{Rel: "same.txt", Abs: pathloc.MustParse("/p/same.txt"), Size: 42},
 	}
@@ -41,18 +41,12 @@ func TestHashJobsNeededHashesSamePathSameSize(t *testing.T) {
 		{Rel: "same.txt", Abs: pathloc.MustParse("/s/same.txt"), Size: 42},
 	}
 	jobs := hashJobsNeeded(primary, secondary)
-	if len(jobs) != 2 {
-		t.Fatalf("jobs = %d, want 2", len(jobs))
+	if len(jobs) != 1 || !jobs[0].pair {
+		t.Fatalf("jobs = %+v, want one pair job", jobs)
 	}
-	sides := map[int]bool{}
-	for _, j := range jobs {
-		if j.rel != "same.txt" {
-			t.Fatalf("unexpected rel %q", j.rel)
-		}
-		sides[j.side] = true
-	}
-	if !sides[0] || !sides[1] {
-		t.Fatalf("sides = %v, want both primary and secondary", sides)
+	j := jobs[0]
+	if j.rel != "same.txt" || j.loc.String() != "/p/same.txt" || j.other.String() != "/s/same.txt" || j.files() != 2 {
+		t.Fatalf("pair job = %+v", j)
 	}
 }
 
@@ -97,7 +91,7 @@ func TestHashJobsNeededMixedSkipsAndKeeps(t *testing.T) {
 	jobs := hashJobsNeeded(primary, secondary)
 	got := map[string]int{}
 	for _, j := range jobs {
-		got[j.rel]++
+		got[j.rel] += j.files()
 	}
 	want := map[string]int{
 		"pair.txt":    2,
@@ -129,8 +123,8 @@ func TestHashJobsNeededOrderedSmallestFirst(t *testing.T) {
 		{Rel: "mid.dat", Abs: pathloc.MustParse("/s/mid.dat"), Size: 50},
 	}
 	jobs := hashJobsNeeded(primary, secondary)
-	if len(jobs) != 6 {
-		t.Fatalf("jobs = %d, want 6", len(jobs))
+	if len(jobs) != 3 {
+		t.Fatalf("jobs = %d, want 3 pair jobs", len(jobs))
 	}
 	for i := 1; i < len(jobs); i++ {
 		if jobs[i].size < jobs[i-1].size {

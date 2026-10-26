@@ -252,7 +252,7 @@ baseLabel:
 
 // TransferFunc builds the job worker transfer function from config. permWait asks the user
 // whether to retry a permission-denied local step as root (nil disables elevation).
-func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, dedupChunkBytes int64, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc, onRenamed func(pairs [][2]string)) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
+func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, compareCfg config.CompareConfig, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc, onRenamed func(pairs [][2]string)) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 		// One Elevator per job: a sudo password the user types is remembered for this job only.
 		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
@@ -272,13 +272,20 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, ded
 			opts.OnRenamed = func(src, dst pathloc.Path) { renamed = append(renamed, [2]string{src.String(), dst.String()}) }
 			defer func() { onRenamed(renamed) }()
 		}
-		resolver := newConflictResolver(job, waitBlocker, dedupChunkBytes)
+		verifier := contentVerifier{
+			chunkBytes:  compareCfg.ChunkBytes,
+			bufBytes:    compareCfg.ReadBufferKiB * 1024,
+			minInterval: time.Duration(jobsCfg.WorkerProgressMinIntervalMS) * time.Millisecond,
+			emit:        emit,
+			jobID:       job.ID,
+		}
+		resolver := newConflictResolver(job, waitBlocker, verifier)
 		if job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove {
 			// One non-droppable journal event before the terminal one; ApplyEvent stores it on the job.
 			var journal []ops.UndoStep
 			var irreversible bool
 			opts.OnJournal = func(s ops.UndoStep) { journal = append(journal, s) }
-			resolver = trackIrreversible(job.Type, resolver, &irreversible)
+			resolver = trackIrreversible(resolver, &irreversible)
 			defer func() {
 				if len(journal) > 0 || irreversible {
 					emit(jobs.Event{Type: jobs.EventUndoJournal, JobID: job.ID, Status: jobs.StatusRunning, Undo: journal, Irreversible: irreversible})
@@ -477,9 +484,9 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 // newConflictResolver builds the per-file conflict resolver passed to ops.Execute*: it turns a
 // file conflict into a jobs.BlockerRequest, blocks on waitBlocker for the user's decision, and
 // evaluates that answer (including the conflict-rules matrix) into an ops.ConflictResolution.
-// Skip identical uses compare.SameContent (chunked, bails at the first difference); a file the
-// rules leave on Ask is asked about again with Reprompt set.
-func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer, chunkBytes int64) ops.ConflictResolver {
+// Verify compares contents with verifier (compare.SameContent, the same check as panel compare);
+// a file the rules leave on Ask is asked about again with Reprompt set.
+func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer, verifier contentVerifier) ops.ConflictResolver {
 	return func(ctx context.Context, src, dst string, facts ops.FileConflictFacts) (ops.ConflictResolution, error) {
 		kind := facts.Kind
 		if kind == "" {
@@ -495,16 +502,18 @@ func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jo
 			DestSize:        ops.FormatConflictSize(facts.DestSize),
 			DestTime:        ops.FormatConflictTime(facts.DestMod),
 			NoCompare:       job.Type == jobs.TypeExtract,
+			Move:            job.Type == jobs.TypeMove,
 			Mismatch:        facts.OverwriteUnsafe(),
 			DestIsDir:       facts.DestIsDir(),
 		}
+		content := jobs.ContentUnknown // verified once, kept across reprompts
 		for {
 			answer := waitBlocker(jobs.BlockerRequest{
 				Kind:     jobs.BlockerKindConflict,
 				Conflict: &req,
 			})
 			base := answer.Decision.Base()
-			if req.Mismatch && (base == jobs.DecisionOverwrite || base == jobs.DecisionRules) {
+			if req.Mismatch && (base == jobs.DecisionOverwrite || base == jobs.DecisionRules || base == jobs.DecisionDeleteSource) {
 				// A remembered Overwrite all or rule set must not decide a directory mismatch:
 				// ask, bypassing the job's apply-to-all policy.
 				req.Reprompt = "Overwrite not possible."
@@ -515,33 +524,28 @@ func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jo
 				return ops.ConflictResolution{Action: ops.ActionRename}, nil
 			case jobs.DecisionOverwrite:
 				return ops.ConflictResolution{Action: ops.ActionOverwrite}, nil
+			case jobs.DecisionDeleteSource:
+				if req.Move {
+					return ops.ConflictResolution{Action: ops.ActionDeleteSource}, nil
+				}
+				return ops.ConflictResolution{Action: ops.ActionSkip}, nil
 			case jobs.DecisionRules:
 				var rules jobs.ConflictRules // nil rules: everything is Ask
 				if answer.Rules != nil {
 					rules = *answer.Rules
 				}
-				note := "No rule matched."
-				if rules.SkipIdentical && !req.NoCompare {
-					same, err := sameContent(ctx, src, dst, facts, chunkBytes)
+				rules.Normalize(req.Move)
+				if rules.Verify && !req.NoCompare && content == jobs.ContentUnknown {
+					v, err := verifier.verdict(ctx, src, dst, facts)
 					if err != nil {
 						return ops.ConflictResolution{}, err
 					}
-					if same {
-						return ops.ConflictResolution{Action: ops.ActionIdentical}, nil
-					}
-					if facts.Kind != "symlink" && facts.SourceSize == facts.DestSize {
-						note = "Contents differ. No rule matched."
-					}
+					content = v
 				}
-				switch rules.Evaluate(facts.SourceMod, facts.DestMod, facts.SourceSize, facts.DestSize) {
-				case jobs.RuleOverwrite:
-					return ops.ConflictResolution{Action: ops.ActionOverwrite}, nil
-				case jobs.RuleSkip:
-					return ops.ConflictResolution{Action: ops.ActionSkip}, nil
-				case jobs.RuleKeepBoth:
-					return ops.ConflictResolution{Action: ops.ActionRename}, nil
+				if res, ok := ruleResolution(rules.Evaluate(facts.SourceMod, facts.DestMod, facts.SourceSize, facts.DestSize, content), content); ok {
+					return res, nil
 				}
-				req.Reprompt = note
+				req.Reprompt = rulesRepromptNote(content)
 			case jobs.DecisionCancel:
 				return ops.ConflictResolution{}, jobs.ErrUserCanceled
 			case jobs.DecisionRetry:
@@ -553,33 +557,96 @@ func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jo
 	}
 }
 
+// ruleResolution maps a rule action to its resolution; ok is false for Ask (prompt again). A
+// skipped file whose contents were verified identical reports as identical.
+func ruleResolution(a jobs.RuleAction, content jobs.ContentVerdict) (res ops.ConflictResolution, ok bool) {
+	switch a {
+	case jobs.RuleOverwrite:
+		return ops.ConflictResolution{Action: ops.ActionOverwrite}, true
+	case jobs.RuleSkip:
+		if content == jobs.ContentSame {
+			return ops.ConflictResolution{Action: ops.ActionIdentical}, true
+		}
+		return ops.ConflictResolution{Action: ops.ActionSkip}, true
+	case jobs.RuleKeepBoth:
+		return ops.ConflictResolution{Action: ops.ActionRename}, true
+	case jobs.RuleDeleteSource:
+		return ops.ConflictResolution{Action: ops.ActionDeleteSource}, true
+	}
+	return ops.ConflictResolution{}, false
+}
+
+// rulesRepromptNote is the File exists note when the rules left a file on Ask.
+func rulesRepromptNote(content jobs.ContentVerdict) string {
+	switch content {
+	case jobs.ContentSame:
+		return "Contents identical. No rule matched."
+	case jobs.ContentDiffer:
+		return "Contents differ. No rule matched."
+	}
+	return "No rule matched."
+}
+
 // trackIrreversible wraps resolver and sets *irreversible when an answer replaces or discards
-// existing data, which undo could not restore: an overwrite, or (move only) an identical
-// destination whose source is then removed. Called on the job goroutine only.
-func trackIrreversible(t jobs.Type, resolver ops.ConflictResolver, irreversible *bool) ops.ConflictResolver {
+// existing data, which undo could not restore: an overwrite, or a deleted source whose
+// destination was kept. Called on the job goroutine only.
+func trackIrreversible(resolver ops.ConflictResolver, irreversible *bool) ops.ConflictResolver {
 	return func(ctx context.Context, src, dst string, facts ops.FileConflictFacts) (ops.ConflictResolution, error) {
 		res, err := resolver(ctx, src, dst, facts)
-		if err == nil && ((res.Action == ops.ActionOverwrite && !facts.OverwriteUnsafe()) || (res.Action == ops.ActionIdentical && t == jobs.TypeMove)) {
+		if err == nil && (res.Action == ops.ActionOverwrite || res.Action == ops.ActionDeleteSource) && !facts.OverwriteUnsafe() {
 			*irreversible = true
 		}
 		return res, err
 	}
 }
 
-// sameContent reports whether src and dst hold identical bytes; symlinks never compare equal.
-func sameContent(ctx context.Context, src, dst string, facts ops.FileConflictFacts, chunkBytes int64) (bool, error) {
+// contentVerifier runs the conflict rules' Verify comparison and reports its progress as
+// throttled EventVerifyProgress samples.
+type contentVerifier struct {
+	chunkBytes  int64
+	bufBytes    int
+	minInterval time.Duration
+	emit        func(jobs.Event)
+	jobID       string
+}
+
+// verdict compares src and dst: different sizes and symlinks differ without reading.
+func (v contentVerifier) verdict(ctx context.Context, src, dst string, facts ops.FileConflictFacts) (jobs.ContentVerdict, error) {
 	if facts.Kind == "symlink" || facts.SourceSize != facts.DestSize {
-		return false, nil
+		return jobs.ContentDiffer, nil
 	}
 	sp, err := pathloc.Parse(src)
 	if err != nil {
-		return false, err
+		return jobs.ContentUnknown, err
 	}
 	dp, err := pathloc.Parse(dst)
 	if err != nil {
-		return false, err
+		return jobs.ContentUnknown, err
 	}
-	return compare.SameContent(ctx, sp, dp, chunkBytes, nil)
+	total := 2 * facts.SourceSize
+	var last time.Time
+	report := func(read int64) {
+		if v.emit == nil {
+			return
+		}
+		if now := time.Now(); read == 0 || read == total || now.Sub(last) >= v.minInterval {
+			last = now
+			v.emit(jobs.Event{Type: jobs.EventVerifyProgress, JobID: v.jobID, Status: jobs.StatusRunning, CurrentPath: src, VerifyDone: read, VerifyTotal: total})
+		}
+	}
+	report(0)
+	var buf []byte
+	if v.bufBytes > 0 {
+		buf = make([]byte, v.bufBytes)
+	}
+	same, err := compare.SameContent(ctx, sp, dp, v.chunkBytes, buf, report)
+	if err != nil {
+		return jobs.ContentUnknown, err
+	}
+	if same {
+		return jobs.ContentSame, nil
+	}
+	return jobs.ContentDiffer, nil
 }
 
 // transferExecCtx bundles the parameters executeJobByType needs to run the ops.Execute* call

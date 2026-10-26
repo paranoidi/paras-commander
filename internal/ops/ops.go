@@ -113,9 +113,10 @@ const (
 
 // Skip reasons reported with ItemSkipped.
 const (
-	ReasonExists     = "exists"
-	ReasonIdentical  = "identical"
-	ReasonPermission = "permission denied"
+	ReasonExists        = "exists"
+	ReasonIdentical     = "identical"
+	ReasonSourceDeleted = "source deleted"
+	ReasonPermission    = "permission denied"
 )
 
 // itemDone reports item through o.OnItemDone when set.

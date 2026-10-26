@@ -21,6 +21,9 @@ const (
 	// DecisionRename keeps both: the source is written under a free "name (N).ext" sibling.
 	DecisionRename ConflictDecision = "rename"
 
+	// DecisionDeleteSource (move only) keeps the destination and removes the source.
+	DecisionDeleteSource ConflictDecision = "delete-source"
+
 	DecisionOverwriteAll = DecisionOverwrite + allSuffix
 	DecisionRenameAll    = DecisionRename + allSuffix
 	DecisionSkipAll      = DecisionSkip + allSuffix
@@ -60,8 +63,10 @@ type ConflictRequest struct {
 	// Reprompt is the note for a repeat prompt after the rules left this file undecided
 	// ("No rule matched."); a non-empty value bypasses the job's apply-to-all policy.
 	Reprompt string
-	// NoCompare hides Skip identical: the source is not comparable to the destination (archive extract).
+	// NoCompare hides Verify: the source is not comparable to the destination (archive extract).
 	NoCompare bool
+	// Move offers Delete source: the job is a move, so the source may be removed instead.
+	Move bool
 	// Mismatch: exactly one side is a directory, so Overwrite is not offered (skip, rename, cancel only).
 	Mismatch bool
 	// DestIsDir tells which side of a Mismatch is the directory.
@@ -135,7 +140,18 @@ const (
 	RuleAsk RuleAction = iota // no rule: leave the decision to the next row, else prompt again
 	RuleOverwrite
 	RuleSkip
-	RuleKeepBoth // write the new file under the first free "name (N).ext"
+	RuleKeepBoth     // write the new file under the first free "name (N).ext"
+	RuleDeleteSource // move only: keep the destination, remove the source
+	RuleFallback     // Differ row only: let the time and size rows decide
+)
+
+// ContentVerdict is the outcome of comparing source and destination contents.
+type ContentVerdict int
+
+const (
+	ContentUnknown ContentVerdict = iota // not compared
+	ContentSame
+	ContentDiffer
 )
 
 // Row indexes of ConflictRules.Time and ConflictRules.Size (relative to the destination).
@@ -150,15 +166,31 @@ const (
 	SizeSame
 )
 
-// ConflictRules is the "Conflict rules" matrix: one action per time and size condition.
+// ConflictRules is the "Conflict rules" matrix: one action per time and size condition and,
+// when Verify is set, one per content verdict.
 type ConflictRules struct {
-	Time, Size    [3]RuleAction
-	SkipIdentical bool
+	Time, Size [3]RuleAction
+	// Verify compares contents before the time and size rows: Same decides identical files,
+	// Differ decides the rest unless it is RuleFallback.
+	Verify       bool
+	Same, Differ RuleAction
 }
 
-// Evaluate returns the action for a file: the matching time row if it is not Ask, else the
-// matching size row, else Ask. Times compare at whole-second precision (SFTP resolution).
-func (r ConflictRules) Evaluate(srcMod, dstMod time.Time, srcSize, dstSize int64) RuleAction {
+// Evaluate returns the action for a file. With Verify set, a known content verdict picks Same or
+// Differ first (Differ = RuleFallback passes on); otherwise the matching time row if it is not
+// Ask, else the matching size row, else Ask. Times compare at whole-second precision (SFTP
+// resolution).
+func (r ConflictRules) Evaluate(srcMod, dstMod time.Time, srcSize, dstSize int64, content ContentVerdict) RuleAction {
+	if r.Verify {
+		switch content {
+		case ContentSame:
+			return r.Same
+		case ContentDiffer:
+			if r.Differ != RuleFallback {
+				return r.Differ
+			}
+		}
+	}
 	t := TimeSame
 	switch s, d := srcMod.Unix(), dstMod.Unix(); {
 	case d > s:
@@ -179,6 +211,12 @@ func (r ConflictRules) Evaluate(srcMod, dstMod time.Time, srcSize, dstSize int64
 	return r.Size[z]
 }
 
+// TimeSizeReachable reports whether the time and size rows can decide any file: not when
+// Verify sends every file to Same or a non-fallback Differ.
+func (r ConflictRules) TimeSizeReachable() bool {
+	return !r.Verify || r.Differ == RuleFallback
+}
+
 // SizeChoiceEnabled reports whether action may be picked in size row: every size row overlaps
 // every time row, so a non-Ask choice must not contradict a different non-Ask time action.
 func (r ConflictRules) SizeChoiceEnabled(action RuleAction) bool {
@@ -193,11 +231,19 @@ func (r ConflictRules) SizeChoiceEnabled(action RuleAction) bool {
 	return true
 }
 
-// Normalize resets size choices that contradict the time rows to Ask.
-func (r *ConflictRules) Normalize() {
+// Normalize resets size choices that contradict the time rows to Ask and, unless the job is a
+// move, Delete source content choices to Ask.
+func (r *ConflictRules) Normalize(move bool) {
 	for i, a := range r.Size {
 		if !r.SizeChoiceEnabled(a) {
 			r.Size[i] = RuleAsk
+		}
+	}
+	if !move {
+		for _, a := range []*RuleAction{&r.Same, &r.Differ} {
+			if *a == RuleDeleteSource {
+				*a = RuleAsk
+			}
 		}
 	}
 }

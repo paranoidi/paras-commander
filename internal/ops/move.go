@@ -110,14 +110,16 @@ type renameOutcome struct {
 	// asking the resolver again.
 	keepBoth bool
 	staged   string // parked original destination after an overwrite; empty otherwise
-	// identical: the destination already held the same content and the source was just removed.
+	// sourceDeleted: the destination was kept and the source was just removed.
+	sourceDeleted bool
+	// identical: the destination already holds the same content; nothing moved, source kept.
 	identical bool
 	// final is the path the source ended up at when that is not the requested dst (keep-both).
 	final pathloc.Path
 }
 
-// renameSourceForMove handles conflict resolution then RenameFastPath for one source. An
-// identical destination removes the source. dstExists is the caller's stat of dst.
+// renameSourceForMove handles conflict resolution then RenameFastPath for one source. Delete
+// source removes the source and keeps the destination. dstExists is the caller's stat of dst.
 func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, dstExists bool, resolver ConflictResolver) (renameOutcome, error) {
 	if err := ctx.Err(); err != nil {
 		return renameOutcome{}, err
@@ -137,11 +139,13 @@ func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, dstExists b
 		return renameOutcome{}, err
 	}
 	switch action {
-	case ActionIdentical:
+	case ActionDeleteSource:
 		if err := removePathRecursive(ctx, src); err != nil {
-			return renameOutcome{}, fmt.Errorf("remove identical source %q: %w", src, err)
+			return renameOutcome{}, fmt.Errorf("remove source %q: %w", src, err)
 		}
-		return renameOutcome{renamed: true, identical: true}, nil // counts as moved
+		return renameOutcome{renamed: true, sourceDeleted: true}, nil // counts as moved
+	case ActionIdentical:
+		return renameOutcome{identical: true}, nil // skipped
 	case ActionRename:
 		out, err := renameFastPathOrFallback(ctx, src, newDst)
 		out.keepBoth = out.fallbackCopy
@@ -312,9 +316,11 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 		if !out.final.IsZero() {
 			dst = out.final
 		}
-		if !out.identical {
-			r.opts.journalMoved(ctx, src, dst)
+		if out.sourceDeleted {
+			r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSkipped, ReasonSourceDeleted)
+			return 0, 0, true, nil
 		}
+		r.opts.journalMoved(ctx, src, dst)
 		if out.staged != "" {
 			if loc, perr := pathloc.Parse(out.staged); perr == nil {
 				_ = removePathRecursive(ctx, loc)
@@ -323,7 +329,11 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 		r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemDone, "")
 		return 0, 0, true, nil
 	}
-	r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSkipped, ReasonExists)
+	reason := ReasonExists
+	if out.identical {
+		reason = ReasonIdentical
+	}
+	r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSkipped, reason)
 	return 0, 0, false, nil
 }
 

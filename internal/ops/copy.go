@@ -37,16 +37,17 @@ type PlanBuildOptions struct {
 
 // ConflictResolver is called when a destination path already exists.
 // It receives source and destination paths plus file metadata and returns what to do with the
-// destination (overwrite, skip, identical, rename), and an error to abort.
+// destination (overwrite, skip, identical, rename, delete source), and an error to abort.
 type ConflictResolver func(ctx context.Context, src, dest string, facts FileConflictFacts) (ConflictResolution, error)
 
 // copyResult is the outcome of copying one file or symlink.
 type copyResult int
 
 const (
-	copySkipped   copyResult = iota // resolver declined; nothing written
-	copyDone                        // written
-	copyIdentical                   // destination already identical; nothing written
+	copySkipped       copyResult = iota // resolver declined; nothing written
+	copyDone                            // written
+	copyIdentical                       // destination already identical; nothing written
+	copySourceDeleted                   // move only: destination kept, source to be removed
 )
 
 // BuildCopyPlanWithTotals prepares the destination (when needed), walks sources, and returns the flat plan plus totals.
@@ -356,7 +357,7 @@ func copySymlinkItem(ctx context.Context, item PlanItem, opts Options, resolver 
 		return nil
 	}
 	state.recordTransferred(item.Src)
-	if res == copyIdentical {
+	if res == copySourceDeleted {
 		return nil
 	}
 	state.doneFiles++
@@ -365,7 +366,8 @@ func copySymlinkItem(ctx context.Context, item PlanItem, opts Options, resolver 
 }
 
 // reportCopyResult reports a file or symlink copy outcome through opts.OnItemDone and returns
-// false when nothing was transferred (the resolver skipped it).
+// false when nothing was transferred (the resolver skipped it). Delete source counts as
+// transferred so a move's copy phase removes the source.
 func reportCopyResult(opts Options, item PlanItem, res copyResult) bool {
 	switch res {
 	case copySkipped:
@@ -373,6 +375,9 @@ func reportCopyResult(opts Options, item PlanItem, res copyResult) bool {
 		return false
 	case copyIdentical:
 		opts.itemDone(item, ItemSkipped, ReasonIdentical)
+		return false
+	case copySourceDeleted:
+		opts.itemDone(item, ItemSkipped, ReasonSourceDeleted)
 	default:
 		opts.itemDone(item, ItemDone, "")
 	}
@@ -421,7 +426,7 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 		return nil
 	}
 	state.recordTransferred(item.Src)
-	if res == copyIdentical {
+	if res == copySourceDeleted {
 		return nil
 	}
 
@@ -584,7 +589,8 @@ func journalLocalCreated(ctx context.Context, opts Options, dst string) {
 }
 
 // resolveLocalConflict adapts resolveConflict to local string paths. done is true when the
-// caller must stop and return res (skip or identical); otherwise write to the returned dst.
+// caller must stop and return res (skip, identical or delete source); otherwise write to the
+// returned dst.
 func resolveLocalConflict(ctx context.Context, src, dst string, resolver ConflictResolver, facts FileConflictFacts) (newDst string, res copyResult, done bool, err error) {
 	sp, err := pathloc.Parse(src)
 	if err != nil {
@@ -605,6 +611,8 @@ func resolveLocalConflict(ctx context.Context, src, dst string, resolver Conflic
 		return np.String(), copyDone, false, nil
 	case ActionIdentical:
 		return dst, copyIdentical, true, nil
+	case ActionDeleteSource:
+		return dst, copySourceDeleted, true, nil
 	}
 	return dst, copySkipped, true, nil
 }

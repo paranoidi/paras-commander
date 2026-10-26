@@ -1,0 +1,8 @@
+== open ==
+focus=overwrite
+== Down ==
+focus=skip
+== Down ==
+focus=delete-source
+== Enter ==
+CLOSED: decision=delete-source quit=false

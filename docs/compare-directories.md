@@ -1,6 +1,6 @@
 # Compare directories
 
-Compare shows how two directory trees differ: files that exist on only one side, identical files, files that moved to a different path, and files with different content. Content is compared by SHA-256 hash, so renamed or relocated copies are recognised. Local directories only.
+Compare shows how two directory trees differ: files that exist on only one side, identical files, files that moved to a different path, and files with different content. Files at the same path are compared chunk by chunk and the comparison stops at the first difference; files without a partner are hashed with SHA-256, so renamed or relocated copies are recognised. Local directories only.
 
 ![Compare results with every class](assets/compare.png)
 
@@ -19,7 +19,7 @@ Two columns, one per side, list the path of each file (only the differing part w
 | Only on one side | exists in one tree only |
 | Content differs | same path, different content |
 
-Files are hashed in parallel (`hash_concurrency`); rows show Pending or Hashing until settled. Same-path files of different size are marked as different without being read. Zero-byte files are hidden by default (`N empty hidden` in the border).
+Files are compared in parallel (`hash_concurrency`); rows show Pending or Hashing until settled. Same-path files of different size are marked as different without being read. Same-path files of equal size are read `chunk_bytes` at a time (32 MiB by default) and stop at the first differing chunk, the same check the [conflict rules](jobs.md#verify-both-to-see-if-identical) use. The Hashed count in the border counts both files of a pair. Zero-byte files are hidden by default (`N empty hidden` in the border).
 
 ## Keys
 
@@ -43,4 +43,4 @@ Selection acts on the focused column's panel: `Insert` / `Space` toggle the row'
 
 ## Options
 
-`[compare]` in [config.md](config.md#compare): `hash_concurrency`, `read_buffer_kib`, `max_hash_bytes`, `stay_on_volume_default`.
+`[compare]` in [config.md](config.md#compare): `hash_concurrency`, `read_buffer_kib`, `chunk_bytes`, `stay_on_volume_default`.

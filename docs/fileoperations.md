@@ -107,7 +107,7 @@ Overwrite replaces a file with a file (or a link). It never replaces a
 directory, and never replaces a file with a directory: when one side is a
 directory (or a link to one) and the other is not, the conflict dialog says
 `Destination is a directory` or `Destination is a file` and offers only Rename
-(keep both), Skip and Cancel. "Overwrite all" and the advanced conflict rules
+(keep both), Skip and Cancel (never Delete source). "Overwrite all" and the advanced conflict rules
 are not applied to such items; you are asked each time, while "Skip all" and
 "Rename all" apply as usual. This holds for copy, move and flatten.
 
@@ -162,8 +162,8 @@ for move). Move always asks for a destination; renaming in place is Rename.
   them (`remove_dangling_directories`).
 
 Name collisions are resolved in the jobs view or the quick dialog, including
-the size and time based Conflict rules and skipping identical files; see
-[File conflicts](jobs.md#file-conflicts).
+the size and time based Conflict rules, content verification (Same / Differ)
+and, for a move, Delete source; see [File conflicts](jobs.md#file-conflicts).
 
 ### Duplicate
 

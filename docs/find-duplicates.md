@@ -39,7 +39,7 @@ Zero-byte files are hidden by default; the title shows `N empty hidden`. Alt+E (
 
 ## Duplicate directories
 
-In **View: Dirs**, a folder whose whole contents duplicate another folder is marked with a trailing icon, computed in memory from the hashes already taken (no extra file reads). Only the outermost folders are marked, never the scan root, and any folder containing a file that was not fully hashed (unique size, differing prefix, over `max_hash_bytes`, unreadable) is never marked.
+In **View: Dirs**, a folder whose whole contents duplicate another folder is marked with a trailing icon, computed in memory from the hashes already taken (no extra file reads). Only the outermost folders are marked, never the scan root, and any folder containing a file that was not fully hashed (unique size, differing prefix, unreadable) is never marked.
 
 - **Exact copy** (`icons.dedup.full_dir`, style `panel.dedup.full_dir`): names, folder structure and file contents all match.
 - **Same content** (the renamed icon `icons.filelist.renamed`, style `panel.dedup.full_dir_content`, yellow): the multiset of file contents matches while names or layout differ. A folder in an exact group shows only the exact icon.

@@ -6,12 +6,15 @@ import "github.com/paranoidi/paras-commander/internal/ops"
 type EventType string
 
 const (
-	EventEnqueued          EventType = "enqueued"
-	EventStarted           EventType = "started"
-	EventScanProgress      EventType = "scan-progress"
-	EventScanTotals        EventType = "scan-totals"
-	EventPlanTotals        EventType = "plan-totals"
-	EventProgress          EventType = "progress"
+	EventEnqueued     EventType = "enqueued"
+	EventStarted      EventType = "started"
+	EventScanProgress EventType = "scan-progress"
+	EventScanTotals   EventType = "scan-totals"
+	EventPlanTotals   EventType = "plan-totals"
+	EventProgress     EventType = "progress"
+	// EventVerifyProgress reports conflict content verification of CurrentPath (VerifyDone of
+	// VerifyTotal bytes read from both files); the next EventProgress ends it.
+	EventVerifyProgress    EventType = "verify-progress"
 	EventJobBlockerRequest EventType = "job-blocker-request"
 	// EventJobResumed is emitted when a job resumes transfer after a blocker decision.
 	EventJobResumed EventType = "job-resumed"
@@ -31,7 +34,7 @@ const (
 // and blocker events must always be delivered.
 func (t EventType) DroppableWhenChannelFull() bool {
 	switch t {
-	case EventProgress, EventScanProgress:
+	case EventProgress, EventScanProgress, EventVerifyProgress:
 		return true
 	default:
 		return false
@@ -56,7 +59,9 @@ type Event struct {
 	CurrentPath string
 	// CurrentDestPath is set for EventProgress (destination path for the same item).
 	CurrentDestPath string
-	Error           string
+	// VerifyDone and VerifyTotal are set for EventVerifyProgress.
+	VerifyDone, VerifyTotal int64
+	Error                   string
 	// Err is set for EventFailed when the worker has the original error (for compact banners).
 	Err error
 	// Blocker is set when Type == EventJobBlockerRequest (file conflict or disk space).
@@ -80,8 +85,11 @@ type ConflictEvent struct {
 	DestTime   string
 	// Reprompt is the note shown when the rules left this file undecided.
 	Reprompt string
-	// NoCompare: Skip identical is meaningless for this conflict (archive extract); the dialog omits it.
+	// NoCompare: content verification is meaningless for this conflict (archive extract); the
+	// dialog omits it.
 	NoCompare bool
+	// Move: the job is a move, so Delete source is offered.
+	Move bool
 	// Mismatch and DestIsDir mirror ConflictRequest: overwrite is not offered across a directory boundary.
 	Mismatch  bool
 	DestIsDir bool

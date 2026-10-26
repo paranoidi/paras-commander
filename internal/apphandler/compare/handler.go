@@ -159,10 +159,10 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 			Gitignore:     h.gitignore,
 			ShouldSkipDir: hs.ShouldSkip,
 		},
-		HashWorkers:  hs.HashWorkers,
-		ReadBuffer:   hs.ReadBuffer,
-		MaxHashBytes: hs.MaxHashBytes,
-		OnUpdate:     func(_ comparepkg.Snapshot) { h.postWake() },
+		HashWorkers: hs.HashWorkers,
+		ReadBuffer:  hs.ReadBuffer,
+		ChunkBytes:  hs.ChunkBytes,
+		OnUpdate:    func(_ comparepkg.Snapshot) { h.postWake() },
 	})
 	h.model.CompareSnapshot = h.session.Snapshot()
 	return true

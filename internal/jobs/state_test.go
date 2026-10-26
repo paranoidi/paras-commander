@@ -1466,7 +1466,7 @@ func TestWorkerRepromptBypassesConflictPolicy(t *testing.T) {
 		}
 		_ = waitBlocker(conflict("")) // user answers with rules, applied to all
 		// A plain conflict is answered by the policy without prompting, rules included.
-		if a := waitBlocker(conflict("")); a.Decision != DecisionRules.All() || a.Rules == nil || !a.Rules.SkipIdentical {
+		if a := waitBlocker(conflict("")); a.Decision != DecisionRules.All() || a.Rules == nil || !a.Rules.Verify {
 			t.Errorf("policy answer = %+v, want rules-all with rules", a)
 		}
 		// A reprompt must prompt again despite the policy.
@@ -1489,7 +1489,7 @@ func TestWorkerRepromptBypassesConflictPolicy(t *testing.T) {
 			}
 			requests++
 			if requests == 1 {
-				s.SubmitBlockerAnswer("job-a", BlockerAnswer{Decision: DecisionRules.All(), Rules: &ConflictRules{SkipIdentical: true}})
+				s.SubmitBlockerAnswer("job-a", BlockerAnswer{Decision: DecisionRules.All(), Rules: &ConflictRules{Verify: true}})
 			} else {
 				if ev.Blocker == nil || ev.Blocker.Conflict == nil || ev.Blocker.Conflict.Reprompt == "" {
 					t.Fatalf("second prompt lacks Reprompt: %+v", ev.Blocker)
@@ -1505,5 +1505,22 @@ func TestWorkerRepromptBypassesConflictPolicy(t *testing.T) {
 		}
 	case <-deadline:
 		t.Fatal("timeout waiting for second answer")
+	}
+}
+
+func TestApplyEventVerifyProgress(t *testing.T) {
+	s := NewState()
+	job := &Job{ID: "verify-job", Type: TypeMove, Status: StatusRunning}
+	s.AddJob(job)
+	s.ApplyEvent(Event{Type: EventVerifyProgress, JobID: job.ID, CurrentPath: "/a/beacon.bin", VerifyDone: 10, VerifyTotal: 40})
+	if job.VerifyDone != 10 || job.VerifyTotal != 40 || job.CurrentPath != "/a/beacon.bin" {
+		t.Fatalf("job = %+v, want verify 10/40 on beacon.bin", job)
+	}
+	s.ApplyEvent(Event{Type: EventProgress, JobID: job.ID, DoneFiles: 1})
+	if job.VerifyTotal != 0 {
+		t.Fatal("progress must end the verification")
+	}
+	if !EventVerifyProgress.DroppableWhenChannelFull() {
+		t.Fatal("verify progress samples are droppable")
 	}
 }

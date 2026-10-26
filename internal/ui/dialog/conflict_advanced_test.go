@@ -22,7 +22,8 @@ func rulesState(noCompare bool) ConflictDialogState {
 
 func TestConflictRulesDefaults(t *testing.T) {
 	st := rulesState(false)
-	if !st.AdvAll || st.Rules.SkipIdentical || st.Rules.Time != [3]jobs.RuleAction{} || st.Rules.Size != [3]jobs.RuleAction{} {
+	if !st.AdvAll || st.Rules.Verify || st.Rules.Time != [3]jobs.RuleAction{} || st.Rules.Size != [3]jobs.RuleAction{} ||
+		st.Rules.Same != jobs.RuleAsk || st.Rules.Differ != jobs.RuleFallback {
 		t.Fatalf("unexpected defaults: %+v", st)
 	}
 }
@@ -31,13 +32,13 @@ func TestConflictRulesTabJumpsBetweenGroups(t *testing.T) {
 	st := rulesState(false)
 	spec := st.Screen("").Spec
 	for from, want := range map[dlg.ID]dlg.ID{
-		ConflictRuleID(0, 0):  ConflictRuleID(3, 0),
-		ConflictRuleID(2, 2):  ConflictRuleID(3, 2),
-		ConflictRuleID(3, 0):  ConflictSkipIdentical,
-		ConflictRuleID(5, 0):  ConflictSkipIdentical,
-		ConflictSkipIdentical: dlg.OK,
-		ConflictApplyAll:      dlg.OK,
-		dlg.Cancel:            ConflictRuleID(0, 0),
+		ConflictRuleID(0, 0): ConflictRuleID(3, 0),
+		ConflictRuleID(2, 2): ConflictRuleID(3, 2),
+		ConflictRuleID(3, 0): ConflictVerify,
+		ConflictRuleID(5, 0): ConflictVerify,
+		ConflictVerify:       ConflictApplyAll,
+		ConflictApplyAll:     dlg.OK,
+		dlg.Cancel:           ConflictRuleID(0, 0),
 	} {
 		focus := from
 		dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
@@ -48,13 +49,13 @@ func TestConflictRulesTabJumpsBetweenGroups(t *testing.T) {
 			t.Fatalf("Tab from %q = %q, want %q", from, focus, want)
 		}
 	}
-	// Without Skip identical the checkbox group is just Apply to all.
+	// Without Verify the next group is just Apply to all.
 	ns := rulesState(true)
 	noCompare := ns.Screen("").Spec
 	focus := ConflictRuleID(5, 0)
 	dlg.HandleKey(noCompare, &focus, tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 	if focus != ConflictApplyAll {
-		t.Fatalf("Tab into the checkboxes without Skip identical = %q, want Apply to all", focus)
+		t.Fatalf("Tab into the checkboxes without Verify = %q, want Apply to all", focus)
 	}
 }
 
@@ -66,8 +67,8 @@ func TestConflictRulesApplyRuleSkipsGreyed(t *testing.T) {
 	// Skip and Overwrite now contradict: only Ask is enabled in the size rows, and the view
 	// greys the rest.
 	spec := st.Screen("").Spec
-	size := spec.Groups[1].Columns[0][1] // the "Destination smaller" row
-	for col, c := range size.Cells {
+	size := spec.Groups[1].Columns[0][0] // the "Destination smaller" row: label, then radios
+	for col, c := range size.Cells[1:] {
 		if want := col != 0; c.Disabled != want {
 			t.Fatalf("size choice %d disabled = %v, want %v", col, c.Disabled, want)
 		}
@@ -116,9 +117,9 @@ func TestConflictRulesChoiceNavigationSkipsGreyed(t *testing.T) {
 
 func TestConflictRulesAnswer(t *testing.T) {
 	st := rulesState(false)
-	st.Rules.SkipIdentical = true
+	st.Rules.Verify = true
 	a := st.ConflictAdvancedAnswer()
-	if a.Decision != jobs.DecisionRules.All() || a.Rules == nil || !a.Rules.SkipIdentical {
+	if a.Decision != jobs.DecisionRules.All() || a.Rules == nil || !a.Rules.Verify {
 		t.Fatalf("answer = %+v", a)
 	}
 	st.AdvAll = false
@@ -126,9 +127,94 @@ func TestConflictRulesAnswer(t *testing.T) {
 		t.Fatalf("decision = %q", got)
 	}
 	ext := rulesState(true)
-	ext.Rules.SkipIdentical = true
-	if ext.ConflictAdvancedAnswer().Rules.SkipIdentical {
-		t.Fatal("extract must not skip identical")
+	ext.Rules.Verify = true
+	if ext.ConflictAdvancedAnswer().Rules.Verify {
+		t.Fatal("extract must not verify")
+	}
+}
+
+func moveRulesState() ConflictDialogState {
+	st := rulesState(false)
+	st.Blocker.Conflict.Move = true
+	return st
+}
+
+func TestConflictRulesVerifyGreying(t *testing.T) {
+	st := rulesState(false)
+	// Verify off: Same and Differ are greyed, the matrix is live.
+	for _, row := range []int{ConflictRuleSameRow, ConflictRuleDifferRow} {
+		if st.ConflictAdvancedChoiceEnabled(row, 0) {
+			t.Fatalf("row %d must be greyed without Verify", row)
+		}
+	}
+	st.ApplyRule(ConflictRuleID(ConflictRuleSameRow, 2))
+	if st.Rules.Same != jobs.RuleAsk {
+		t.Fatal("a greyed Same choice must not be selectable")
+	}
+	st.ToggleVerify()
+	// Verify on with Differ = Rules: everything is live.
+	if !st.ConflictAdvancedChoiceEnabled(0, 1) || !st.ConflictAdvancedChoiceEnabled(ConflictRuleSameRow, 2) {
+		t.Fatal("Verify with the Differ fallback keeps the matrix and Same live")
+	}
+	// Differ decides every differing file: the time and size rows go grey.
+	st.ApplyRule(ConflictRuleID(ConflictRuleDifferRow, 4)) // Keep both
+	if st.Rules.Differ != jobs.RuleKeepBoth {
+		t.Fatalf("Differ = %v, want Keep both", st.Rules.Differ)
+	}
+	for row := range 6 {
+		if st.ConflictAdvancedChoiceEnabled(row, 0) {
+			t.Fatalf("row %d must be greyed when Differ decides", row)
+		}
+	}
+	st.ApplyRule(ConflictRuleID(0, 1))
+	if st.Rules.Time[jobs.TimeDestNewer] != jobs.RuleAsk {
+		t.Fatal("a greyed time choice must not be selectable")
+	}
+	// Turning Verify off keeps the choices but brings the matrix back.
+	st.ToggleVerify()
+	if st.Rules.Differ != jobs.RuleKeepBoth || !st.ConflictAdvancedChoiceEnabled(0, 1) {
+		t.Fatal("Verify off keeps Differ and re-enables the matrix")
+	}
+}
+
+func TestConflictRulesDeleteSourceOnlyForMove(t *testing.T) {
+	cp := rulesState(false)
+	if n := len(cp.ConflictRuleChoices(ConflictRuleSameRow)); n != 3 {
+		t.Fatalf("copy Same choices = %d, want 3", n)
+	}
+	if n := len(cp.ConflictRuleChoices(ConflictRuleDifferRow)); n != 5 {
+		t.Fatalf("copy Differ choices = %d, want 5", n)
+	}
+	cp.ToggleVerify()
+	cp.ApplyRule(ConflictRuleID(ConflictRuleSameRow, 3))
+	if cp.Rules.Same != jobs.RuleAsk {
+		t.Fatal("a copy cannot pick Delete source")
+	}
+	mv := moveRulesState()
+	mv.ToggleVerify()
+	mv.ApplyRule(ConflictRuleID(ConflictRuleSameRow, 3))
+	mv.ApplyRule(ConflictRuleID(ConflictRuleDifferRow, 5))
+	if mv.Rules.Same != jobs.RuleDeleteSource || mv.Rules.Differ != jobs.RuleDeleteSource {
+		t.Fatalf("move rules = %+v, want Delete source on both", mv.Rules)
+	}
+	if a := mv.ConflictAdvancedAnswer(); a.Rules.Same != jobs.RuleDeleteSource {
+		t.Fatal("the answer keeps Delete source for a move")
+	}
+}
+
+func TestConflictRulesDifferWrapNavigation(t *testing.T) {
+	st := moveRulesState()
+	st.ToggleVerify()
+	spec := st.Screen("").Spec
+	// Down from Differ's Overwrite (first line) lands on its second line.
+	focus := ConflictRuleID(ConflictRuleDifferRow, 2)
+	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if row, col, _ := ConflictRuleCell(focus); row != ConflictRuleDifferRow || col < conflictDifferWrap {
+		t.Fatalf("Down from the first Differ line = %q, want the second line", focus)
+	}
+	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if focus != ConflictApplyAll {
+		t.Fatalf("Down from the second Differ line = %q, want Apply to all", focus)
 	}
 }
 
@@ -139,39 +225,42 @@ func TestConflictRulesDialogLayout(t *testing.T) {
 	DrawConflictDialog(screen, layout, st, theme.Default(), "")
 	rows := dialogScreenRows(screen)
 	all := strings.Join(rows, "\n")
-	for _, want := range []string{"Conflict rules", "Destination newer", "Same size", "Keep both", "Skip identical files", "Apply to all conflicts"} {
+	for _, want := range []string{"Conflict rules", "Destination newer", "Same size", "Keep both", "Verify both to see if identical", "Differ", "Apply to all conflicts"} {
 		if !strings.Contains(all, want) {
 			t.Fatalf("missing %q in:\n%s", want, all)
 		}
 	}
-	if n := strings.Count(all, "Ask"); n != 6 {
-		t.Fatalf("Ask choices = %d, want 6", n)
+	if n := strings.Count(all, "Ask"); n != 8 {
+		t.Fatalf("Ask choices = %d, want 8", n)
 	}
-	// 20 rows incl. borders, so the dialog fits a 24-row terminal.
+	if strings.Contains(all, "Delete source") {
+		t.Fatal("a copy offers no Delete source")
+	}
+	// 18 rows incl. borders, so the dialog fits a 24-row terminal.
 	height := 0
 	for _, r := range rows {
 		if strings.ContainsAny(r, "│┌└├") {
 			height++
 		}
 	}
-	if height != 20 {
-		t.Fatalf("dialog height = %d, want 20:\n%s", height, all)
+	if height != 18 {
+		t.Fatalf("dialog height = %d, want 18:\n%s", height, all)
 	}
 	assertLabelsAreFollowedByContent(t, rows)
 
 	st = rulesState(true)
 	screen = buttonBlankRowScreen(t)
 	DrawConflictDialog(screen, layout, st, theme.Default(), "")
-	if strings.Contains(strings.Join(dialogScreenRows(screen), "\n"), "Skip identical files") {
-		t.Fatal("Skip identical must be hidden for extract")
+	if strings.Contains(strings.Join(dialogScreenRows(screen), "\n"), "Verify both") {
+		t.Fatal("Verify must be hidden for extract")
 	}
 }
 
 func assertLabelsAreFollowedByContent(t *testing.T, rows []string) {
 	t.Helper()
-	for i, r := range rows {
-		if strings.Contains(r, "Destination newer") && !strings.Contains(rows[i+1], "Overwrite") {
-			t.Fatalf("row under label is %q", rows[i+1])
+	for _, r := range rows {
+		if strings.Contains(r, "Destination newer") && !strings.Contains(r, "Overwrite") {
+			t.Fatalf("label row has no choices: %q", r)
 		}
 	}
 }

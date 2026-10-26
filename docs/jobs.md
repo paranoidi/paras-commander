@@ -71,8 +71,10 @@ the top. Each row starts with a result icon:
 
 - green: copied, moved, deleted or extracted;
 - yellow: skipped, followed by why (`exists` when you chose Skip at a "file
-  exists" prompt, `identical` when the destination already had the same
-  content, `permission denied` when you skipped a permission prompt);
+  exists" prompt, `identical` when a verified rule skipped a destination with
+  the same content, `source deleted` when a move kept the destination and
+  deleted its source, `permission denied` when you skipped a permission
+  prompt);
 - red: failed, followed by the reason.
 
 Files and symlinks are listed one per row. A directory gets a row only when it
@@ -156,8 +158,8 @@ queue.
 - Every item that could not be reversed is listed as a failed row in the undo
   job's Operations panel, and the job finishes as failed with `N item(s) failed`. The original
   job then shows `Undo: undone`; the leftovers are not retried.
-- A job that overwrote anything (or, for a move, replaced an identical file and
-  deleted its source) cannot be undone; its Details panel shows
+- A job that overwrote anything (or, for a move, kept a destination and
+  deleted its source with Delete source) cannot be undone; its Details panel shows
   `Undo: irreversible (overwrote files)`. A canceled or failed copy can undo
   the part it did write.
 - Not undoable: flatten, delete, extract, and a cross-device move that kept
@@ -218,12 +220,14 @@ for a decision. It is asked in the quick blocker dialog or in the conflict panel
 | Advanced... | D | Open the "Conflict rules" dialog |
 | Skip | S | Keep the existing file |
 | Skip All | K | Skip this and every later conflict in the job |
+| Delete source | E | Move only: keep the existing file and delete the one being moved |
 | Cancel | C | Abort the job |
 | Postpone | P | Dismiss the quick dialog without answering (quick dialog only) |
 
 When exactly one side is a directory, the prompt says `Destination is a
 directory` or `Destination is a file` and offers Rename (`R`), Rename All
-(`A`), Skip, Skip All and Cancel instead of the overwrite buttons. When the
+(`A`), Skip, Skip All and Cancel instead of the overwrite buttons (and no
+Delete source). When the
 target disk is too full the prompt offers Retry (`R`) and Abort (`B`).
 
 ### Answering from the file view
@@ -237,12 +241,14 @@ answer, the next waiting job's dialog opens automatically.
 
 Advanced... opens a matrix where every condition picks its own action: Ask, Overwrite, Skip or
 Keep both. Up/Down move between rows, Left/Right between the choices of a row, Space or Enter picks
-one. Tab jumps between the time rows, the size rows, the checkboxes and the buttons.
+one. Tab jumps between the time rows, the size rows, the Verify section, Apply to all and the
+buttons.
 
 | Rows | Conditions (relative to the destination file) |
 | --- | --- |
 | Time | Destination newer, Destination older, Same time (compared to the whole second) |
 | Size | Destination smaller, Destination larger, Same size |
+| Verify | Same, Differ (contents, only with **Verify both to see if identical** ticked) |
 
 Every conflicting file matches exactly one time row and one size row. The action is the time row's
 if it is not Ask, else the size row's, else Ask. Ask means "no rule here": if no row decides, the
@@ -254,13 +260,34 @@ applied to all conflicts).
 - **Greyed choices:** the time rows take precedence. A size choice is greyed out when a time row
   holds a different non-Ask action, since a file can be newer and smaller at once. Changing a time
   row resets any size choice it greys out to Ask.
-- **Skip identical files (slow)** (Alt+I, off by default) runs first: files of equal size are compared with
-  the same chunked hashing as Find Duplicates (`dedup.chunk_bytes`), stopping at the first
-  differing chunk. Identical files are not copied; on a move the source is removed, so no
-  identical leftovers remain. Different files continue to the rows. The option is not offered when
-  extracting an archive (the archive is not comparable to the extracted output).
 - **Apply to all conflicts** (Alt+A, on by default) makes the rules the job's policy, so later
   conflicts are decided without asking; uncheck it to apply the rules to the current file only.
+
+### Verify both to see if identical
+
+Ticking **Verify both to see if identical** (Alt+V, off by default) compares the contents of the
+two files before any other row is looked at, and the **Same** and **Differ** rows decide first:
+
+| Row | Choices |
+| --- | --- |
+| Same | Ask, Overwrite, Skip, Delete source |
+| Differ | Rules, Ask, Overwrite, Skip, Keep both, Delete source |
+
+- **Rules** (Differ only, the default) hands a differing file to the time and size rows. Any other
+  Differ choice decides every differing file itself, so the time and size rows are greyed out.
+- **Same → Ask** asks with "Contents identical. No rule matched."; it does not fall back to the
+  time and size rows.
+- **Skip** keeps both files where they are. An identical file is listed as `identical` in the
+  Operations panel; on a move its source stays.
+- **Delete source** is offered for moves only: the existing file is kept and the file being moved
+  is deleted. The job then cannot be undone.
+- Files of different size differ without being read. Files of equal size are compared in
+  `compare.chunk_bytes` chunks (32 MiB by default), stopping at the first chunk that differs: the
+  same check as [Compare directories](compare-directories.md) and Find duplicates. A symlink
+  always counts as differing. The Details panel shows a `Verifying:` line with the bytes read so
+  far while a large file is checked.
+- Verify is not offered when extracting an archive (the archive is not comparable to the
+  extracted output).
 
 The rules replace a plain "match size" switch: use the Same size row (Skip or
 Overwrite) together with the time rows to express it.

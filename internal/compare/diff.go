@@ -15,8 +15,9 @@ type hashBucket struct {
 	secondary []fileMeta
 }
 
-// Classify builds compare rows from walked files and per-side content hashes (keyed by rel path).
-func Classify(primary, secondary []FileRecord, pHash, sHash map[string][32]byte, pErr, sErr map[string]string) []Row {
+// Classify builds compare rows from walked files, same-path pair verdicts (pairSame, keyed by
+// rel path) and per-side content hashes of unpaired files (keyed by rel path).
+func Classify(primary, secondary []FileRecord, pHash, sHash map[string][32]byte, pairSame map[string]bool, pErr, sErr map[string]string) []Row {
 	pByRel := indexFiles(primary)
 	sByRel := indexFiles(secondary)
 	allRels := unionRels(pByRel, sByRel)
@@ -32,9 +33,8 @@ func Classify(primary, secondary []FileRecord, pHash, sHash map[string][32]byte,
 		if !pOK || !sOK {
 			continue
 		}
-		ph, pHashed := pHash[rel]
-		sh, sHashed := sHash[rel]
-		row := classifySamePath(p, s, ph, sh, pHashed, sHashed, pErr[rel], sErr[rel])
+		same, compared := pairSame[rel]
+		row := classifySamePath(p, s, same, compared, pErr[rel], sErr[rel])
 		rows = append(rows, row)
 		pConsumed[rel] = true
 		sConsumed[rel] = true
@@ -147,7 +147,7 @@ func Classify(primary, secondary []FileRecord, pHash, sHash map[string][32]byte,
 	return rows
 }
 
-func classifySamePath(p, s fileMeta, ph, sh [32]byte, pHashed, sHashed bool, errP, errS string) Row {
+func classifySamePath(p, s fileMeta, same, compared bool, errP, errS string) Row {
 	if errP != "" || errS != "" {
 		err := errP
 		if err == "" {
@@ -158,13 +158,13 @@ func classifySamePath(p, s fileMeta, ph, sh [32]byte, pHashed, sHashed bool, err
 	if p.size != s.size {
 		return Row{Kind: KindContentDiff, PrimaryRel: p.rel, SecondaryRel: s.rel, Size: p.size, HashDone: true}
 	}
-	if !pHashed || !sHashed {
+	if !compared {
 		return Row{Kind: KindEqual, PrimaryRel: p.rel, SecondaryRel: s.rel, Size: p.size}
 	}
-	if ph == sh {
-		return Row{Kind: KindEqual, PrimaryRel: p.rel, SecondaryRel: s.rel, Size: p.size, Hash: ph, HashDone: true}
+	if same {
+		return Row{Kind: KindEqual, PrimaryRel: p.rel, SecondaryRel: s.rel, Size: p.size, HashDone: true}
 	}
-	return Row{Kind: KindContentDiff, PrimaryRel: p.rel, SecondaryRel: s.rel, Size: p.size, Hash: ph, HashDone: true}
+	return Row{Kind: KindContentDiff, PrimaryRel: p.rel, SecondaryRel: s.rel, Size: p.size, HashDone: true}
 }
 
 func addBucket(buckets map[[32]byte]*hashBucket, side int, f fileMeta, h [32]byte) {

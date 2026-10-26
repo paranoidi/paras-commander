@@ -30,7 +30,7 @@ func journalEvent(t *testing.T, preexisting bool, answer jobs.BlockerAnswer) *jo
 		}
 	}
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs, 4, nil, nil, nil)
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, config.CompareConfig{ChunkBytes: 4}, nil, nil, nil)
 	job := &jobs.Job{
 		ID: jobs.NewJobID(), Type: jobs.TypeCopy, Status: jobs.StatusRunning,
 		Sources:     []pathloc.Path{pathloc.FileMust(src)},
@@ -99,7 +99,7 @@ func TestCopyThenUndoThroughWorker(t *testing.T) {
 	}
 	s := jobs.NewState()
 	cfg := config.Default()
-	s.SetTransferFunc(TransferFunc(cfg.Operations, cfg.Jobs, cfg.Dedup.ChunkBytes, nil, nil, nil))
+	s.SetTransferFunc(TransferFunc(cfg.Operations, cfg.Jobs, cfg.Compare, nil, nil, nil))
 	stop := make(chan struct{})
 	defer close(stop)
 	s.StartWorker(stop)

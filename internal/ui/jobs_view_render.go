@@ -73,7 +73,7 @@ type JobsViewState struct {
 	// newest-first display row at the top of the pane.
 	OpsResultHidden dialog.JobResultFilter
 	OpsFilter       quickfilter.Filter
-	// ConflictButtonFocus is the focused action index in the conflict panel (0..5).
+	// ConflictButtonFocus is the focused button index in the blocker panel (JobsBlockerMaxButtonIndex).
 	ConflictButtonFocus int
 	// Maximized draws the focused Operations pane fullscreen with wrapped lines.
 	Maximized bool
@@ -455,6 +455,7 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	prefixError := "Error:       "
 	prefixSources := "Sources:     "
 	prefixCurrent := "Current:     "
+	prefixVerifying := "Verifying:   "
 	lines := []string{
 		fmt.Sprintf("Type:        %s", j.Type),
 		fmt.Sprintf("Status:      %s", j.Status),
@@ -504,6 +505,9 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	if j.CurrentPath != "" {
 		curDisplay := primitive.PathWithHomeTilde(j.CurrentPath, userHomeDir)
 		lines = append(lines, fmt.Sprintf(prefixCurrent+"%s", primitive.FitPathForWidth(curDisplay, jobsDetailPathBudget(pathMax, prefixCurrent))))
+	}
+	if j.VerifyTotal > 0 {
+		lines = append(lines, fmt.Sprintf(prefixVerifying+"%s / %s (%d%%)", formatJobBytes(j.VerifyDone), formatJobBytes(j.VerifyTotal), 100*j.VerifyDone/j.VerifyTotal))
 	}
 	lines = append(lines, jobDetailProgressLine(j))
 	lines = append(lines, detailDurationOrETALine(j, now))

@@ -3,13 +3,15 @@ package compare
 import (
 	"cmp"
 	"slices"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// hashJobsNeeded returns the subset of files that must be content-hashed for
-// classification, ordered smallest-first so quick wins land early in the UI.
-// Same-path pairs with unequal size are ContentDiff without hashing. Unpaired
-// files are hashed only when their size appears among unpaired files on the
-// other side (potential Relocated matches).
+// hashJobsNeeded returns the content work classification needs, ordered smallest-first so
+// quick wins land early in the UI. A same-path pair of equal size is one pair job compared
+// with SameContent (chunked, stops at the first differing chunk); unequal size is ContentDiff
+// without reading. Unpaired files are hashed in full only when their size appears among
+// unpaired files on the other side (potential Relocated matches).
 func hashJobsNeeded(primary, secondary []FileRecord) []hashJob {
 	pByRel := indexFiles(primary)
 	sByRel := indexFiles(secondary)
@@ -18,6 +20,13 @@ func hashJobsNeeded(primary, secondary []FileRecord) []hashJob {
 	pUnpaired := make([]FileRecord, 0)
 	sUnpaired := make([]FileRecord, 0)
 
+	sAbs := make(map[string]pathloc.Path, len(secondary))
+	for _, f := range secondary {
+		sAbs[f.Rel] = f.Abs
+		if _, ok := pByRel[f.Rel]; !ok {
+			sUnpaired = append(sUnpaired, f)
+		}
+	}
 	for _, f := range primary {
 		s, ok := sByRel[f.Rel]
 		if !ok {
@@ -25,17 +34,7 @@ func hashJobsNeeded(primary, secondary []FileRecord) []hashJob {
 			continue
 		}
 		if f.Size == s.size {
-			jobs = append(jobs, hashJob{side: 0, rel: f.Rel, loc: f.Abs, size: f.Size})
-		}
-	}
-	for _, f := range secondary {
-		p, ok := pByRel[f.Rel]
-		if !ok {
-			sUnpaired = append(sUnpaired, f)
-			continue
-		}
-		if f.Size == p.size {
-			jobs = append(jobs, hashJob{side: 1, rel: f.Rel, loc: f.Abs, size: f.Size})
+			jobs = append(jobs, hashJob{pair: true, rel: f.Rel, loc: f.Abs, other: sAbs[f.Rel], size: f.Size})
 		}
 	}
 
@@ -55,8 +54,6 @@ func hashJobsNeeded(primary, secondary []FileRecord) []hashJob {
 		if c := cmp.Compare(a.size, b.size); c != 0 {
 			return c
 		}
-		// Same size: both sides of one path before the next path, so same-path
-		// pairs leave Pending as soon as both hashes land.
 		if c := cmp.Compare(a.rel, b.rel); c != 0 {
 			return c
 		}

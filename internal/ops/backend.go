@@ -244,7 +244,7 @@ func entryTarget(ctx context.Context, loc pathloc.Path, e fsbackend.Entry) PathT
 }
 
 // resolveDestConflict returns copyDone with the path to write to (dst, or its free sibling for
-// a rename), or copySkipped/copyIdentical when nothing should be written.
+// a rename), or copySkipped/copyIdentical/copySourceDeleted when nothing should be written.
 func resolveDestConflict(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (copyResult, pathloc.Path, error) {
 	if err := ensureParentDirs(ctx, dst); err != nil {
 		return copySkipped, dst, fmt.Errorf("create parent for %q: %w", dst, err)
@@ -261,6 +261,8 @@ func resolveDestConflict(ctx context.Context, src, dst pathloc.Path, resolver Co
 		switch action {
 		case ActionIdentical:
 			return copyIdentical, dst, nil
+		case ActionDeleteSource:
+			return copySourceDeleted, dst, nil
 		case ActionRename:
 			return copyDone, newDst, nil
 		case ActionOverwrite:

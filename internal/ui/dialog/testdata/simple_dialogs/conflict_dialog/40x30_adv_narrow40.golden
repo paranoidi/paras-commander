@@ -1,26 +1,26 @@
 -- text --
                                         
                                         
+                                        
  ┌────────── Conflict rules ──────────┐ 
- │ Destination newer                  │ 
- │ (*) Ask  ( ) Overwrite  ( ) Skip   │ 
- │ Destination older                  │ 
- │ (*) Ask  ( ) Overwrite  ( ) Skip   │ 
- │ Same time                          │ 
- │ (*) Ask  ( ) Overwrite  ( ) Skip   │ 
+ │ Destination newer   (*) Ask  ( ) O │ 
+ │ Destination older   (*) Ask  ( ) O │ 
+ │ Same time           (*) Ask  ( ) O │ 
  ├────────────────────────────────────┤ 
- │ Destination smaller                │ 
- │ (*) Ask  ( ) Overwrite  ( ) Skip   │ 
- │ Destination larger                 │ 
- │ (*) Ask  ( ) Overwrite  ( ) Skip   │ 
- │ Same size                          │ 
- │ (*) Ask  ( ) Overwrite  ( ) Skip   │ 
+ │ Destination smaller (*) Ask  ( ) O │ 
+ │ Destination larger  (*) Ask  ( ) O │ 
+ │ Same size           (*) Ask  ( ) O │ 
  ├────────────────────────────────────┤ 
- │ [ ] Skip identical files (slow)    │ 
+ │ [ ] Verify both to see if identical│ 
+ │ Same                (*) Ask  ( ) O │ 
+ │ Differ              (*) Rules      │ 
+ │                     ( ) Keep both  │ 
+ ├────────────────────────────────────┤ 
  │ [x] Apply to all conflicts         │ 
  ├────────────────────────────────────┤ 
  │        [ OK ]    [ Cancel ]        │ 
  └────────────────────────────────────┘ 
+                                        
                                         
                                         
 -- legend --
@@ -29,30 +29,31 @@ b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
 e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+f fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 abbbbbbbbbbbccccccccccccccccbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbddddddddbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbeeeeeeeebbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbeeeeeeeebbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbeeeeeeeebbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbeeeeeeeebbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbeeeeeeeebbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbffffffffbffffffbba
+abbbbbbbbbbbbbbbbbbbbbffffffffffbbbbbbba
+abbbbbbbbbbbbbbbbbbbbbffffffffffffffbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abeeeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbbbfffgffffbbfffgffffffffbbbbbbbba
+abbbbbbbbggghggggbbggghggggggggbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

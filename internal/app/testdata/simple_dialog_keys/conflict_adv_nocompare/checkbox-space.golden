@@ -1,20 +1,20 @@
 == open ==
-advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r1c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r1c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r2c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r2c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r3c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r3c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r4c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r4c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r5c0 time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r5c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=all time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=all time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Space ==
-advanced focus=all time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=false panel=true
+advanced focus=all time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=false panel=true
 == Down ==
-advanced focus=ok time[ask,ask,ask] size[ask,ask,ask] skip-identical=false all=false panel=true
+advanced focus=ok time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=false panel=true
 == Space ==
-CLOSED: decision=rules time[ask,ask,ask] size[ask,ask,ask] skip-identical=false quit=false
+CLOSED: decision=rules time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules quit=false

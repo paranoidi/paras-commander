@@ -181,12 +181,12 @@ func (h *Handler) applyAdvancedEvent(ev dlg.Event) {
 		h.applyAdvanced()
 	case dlg.Cancel:
 		h.cancelAdvanced()
-	case dialog.ConflictSkipIdentical, dialog.ConflictApplyAll:
+	case dialog.ConflictVerify, dialog.ConflictApplyAll:
 		switch {
 		case ev.Enter:
 			h.applyAdvanced()
-		case ev.ID == dialog.ConflictSkipIdentical:
-			st.Rules.SkipIdentical = !st.Rules.SkipIdentical
+		case ev.ID == dialog.ConflictVerify:
+			st.ToggleVerify()
 		default:
 			st.AdvAll = !st.AdvAll
 		}

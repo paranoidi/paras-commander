@@ -18,11 +18,13 @@ const (
 	ActionSkip ConflictAction = iota
 	// ActionOverwrite replaces the destination.
 	ActionOverwrite
-	// ActionIdentical means source and destination hold the same content: nothing is copied and
-	// a move removes the source.
+	// ActionIdentical means source and destination hold the same content: nothing is written and
+	// the source stays in place (reported as skipped, identical).
 	ActionIdentical
 	// ActionRename writes the source under the first free "name (N).ext" sibling.
 	ActionRename
+	// ActionDeleteSource (move only) keeps the destination and removes the source.
+	ActionDeleteSource
 )
 
 // ConflictResolution is a ConflictResolver's answer.
@@ -63,8 +65,9 @@ func resolveConflict(ctx context.Context, src, dst pathloc.Path, resolver Confli
 	if err != nil {
 		return ActionSkip, dst, err
 	}
-	if res.Action == ActionOverwrite && facts.OverwriteUnsafe() {
-		// Single choke point: overwrite never crosses a directory boundary, whatever the resolver said.
+	if (res.Action == ActionOverwrite || res.Action == ActionDeleteSource) && facts.OverwriteUnsafe() {
+		// Single choke point: neither overwrite nor delete source crosses a directory boundary,
+		// whatever the resolver said.
 		return ActionSkip, dst, nil
 	}
 	if res.Action == ActionRename {

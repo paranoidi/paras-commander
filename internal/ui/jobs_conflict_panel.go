@@ -2,6 +2,7 @@ package ui
 
 import (
 	"slices"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -37,13 +38,10 @@ func FirstJobEntryWaitingDecisionIndex(entries []JobEntry) int {
 
 // JobsBlockerMaxButtonIndex returns the maximum focused button index for the blocker panel.
 func JobsBlockerMaxButtonIndex(j JobEntry) int {
-	if j.PendingBlocker == nil {
-		return 5
-	}
-	if j.PendingBlocker.Kind == jobs.BlockerKindDiskSpace {
+	if j.PendingBlocker != nil && j.PendingBlocker.Kind == jobs.BlockerKindDiskSpace {
 		return 1
 	}
-	return 5
+	return len(conflictPanelButtons(blockerConflict(j.PendingBlocker))) - 1
 }
 
 // JobsPane names a focusable panel of the jobs view. JobsViewState.FocusPane indexes the
@@ -79,36 +77,36 @@ func focusedJobsPane(state JobsViewState, order []JobsPane) JobsPane {
 	return order[state.FocusPane]
 }
 
-// blockerMismatch reports a directory/non-directory conflict, where the first button pair is
-// Rename / Rename All instead of Overwrite / Overwrite All and Advanced… is absent.
-func blockerMismatch(b *jobs.BlockerDetails) bool {
-	return b != nil && b.Kind != jobs.BlockerKindDiskSpace && b.Conflict != nil && b.Conflict.Mismatch
-}
-
-// conflictPanelButtons are the panel buttons in focus-index order; the dialog's IDs carry the
-// decision (dialog.ConflictDecisionOf), and Advanced… opens the rules dialog instead.
-var (
-	conflictPanelButtons         = [...]dlg.ID{dialog.ConflictOverwrite, dialog.ConflictOverwriteAll, dialog.ConflictAdvanced, dialog.ConflictSkip, dialog.ConflictSkipAll, dialog.ConflictCancelJob}
-	conflictPanelMismatchButtons = [...]dlg.ID{dialog.ConflictRename, dialog.ConflictRenameAll, dialog.ConflictAdvanced, dialog.ConflictSkip, dialog.ConflictSkipAll, dialog.ConflictCancelJob}
-)
-
-// ConflictDecisionFromButtonIndex maps conflict panel button order to domain decisions.
-func ConflictDecisionFromButtonIndex(idx int, mismatch bool) jobs.ConflictDecision {
-	buttons := conflictPanelButtons
-	if mismatch {
-		buttons = conflictPanelMismatchButtons
+// blockerConflict returns b's file conflict, or an empty one when b is not a file conflict.
+func blockerConflict(b *jobs.BlockerDetails) *jobs.ConflictEvent {
+	if b == nil || b.Kind == jobs.BlockerKindDiskSpace || b.Conflict == nil {
+		return &jobs.ConflictEvent{}
 	}
-	idx = min(max(idx, 0), len(buttons)-1)
-	d, _ := dialog.ConflictDecisionOf(buttons[idx]) // Advanced… submits no decision: ""
-	return d
+	return b.Conflict
 }
 
-// conflictAdvancedFocus is the button index of "Advanced…" in the conflict panel.
-const conflictAdvancedFocus = 2
+// conflictPanelButtons are the panel's file-conflict buttons in focus-index order, rows started
+// by NewRow: the quick dialog's buttons (dialog.ConflictFileButtons) minus Postpone. The
+// dialog's IDs carry the decision (dialog.ConflictDecisionOf); Advanced… opens the rules dialog.
+func conflictPanelButtons(c *jobs.ConflictEvent) []dlg.Button {
+	var out []dlg.Button
+	for _, b := range dialog.ConflictFileButtons(c) {
+		if b.ID != dialog.ConflictPostpone {
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
+// conflictPanelButtonID is the ID of the conflict panel button at focus index idx (clamped).
+func conflictPanelButtonID(b *jobs.BlockerDetails, idx int) dlg.ID {
+	buttons := conflictPanelButtons(blockerConflict(b))
+	return buttons[min(max(idx, 0), len(buttons)-1)].ID
+}
 
 // JobBlockerPanelIsAdvanced reports whether panel button focus selects "Advanced…" (not a decision).
 func JobBlockerPanelIsAdvanced(sel JobEntry, btnIdx int) bool {
-	return sel.PendingBlocker != nil && sel.PendingBlocker.Kind != jobs.BlockerKindDiskSpace && !blockerMismatch(sel.PendingBlocker) && btnIdx == conflictAdvancedFocus
+	return sel.PendingBlocker != nil && sel.PendingBlocker.Kind != jobs.BlockerKindDiskSpace && conflictPanelButtonID(sel.PendingBlocker, btnIdx) == dialog.ConflictAdvanced
 }
 
 // JobBlockerDecisionFromFocus resolves the decision for the blocker pane from button focus.
@@ -119,7 +117,21 @@ func JobBlockerDecisionFromFocus(sel JobEntry, btnIdx int) jobs.ConflictDecision
 		}
 		return jobs.DecisionCancel
 	}
-	return ConflictDecisionFromButtonIndex(btnIdx, blockerMismatch(sel.PendingBlocker))
+	d, _ := dialog.ConflictDecisionOf(conflictPanelButtonID(sel.PendingBlocker, btnIdx)) // Advanced… submits no decision: ""
+	return d
+}
+
+// JobBlockerPanelMnemonic returns the conflict panel button whose mnemonic is r (any case).
+func JobBlockerPanelMnemonic(sel JobEntry, r rune) (dlg.ID, bool) {
+	if sel.PendingBlocker == nil || sel.PendingBlocker.Kind == jobs.BlockerKindDiskSpace {
+		return "", false
+	}
+	for _, b := range conflictPanelButtons(sel.PendingBlocker.Conflict) {
+		if unicode.ToLower(b.Mnemonic) == unicode.ToLower(r) {
+			return b.ID, true
+		}
+	}
+	return "", false
 }
 
 // moveFocusInDiskRow applies navigation keys to the disk-space blocker pane buttons: Tab wraps,
@@ -148,12 +160,17 @@ func moveFocusInDiskRow(focus int, key tcell.Key) (int, bool) {
 	return focus, false
 }
 
-// Conflict button rows as focus indexes (see ConflictDecisionFromButtonIndex).
-var (
-	conflictPanelButtonGrid = [][]int{{0, 1, 2}, {3, 4, 5}}
-	// A directory mismatch has no Advanced… button (focus 2).
-	conflictPanelMismatchGrid = [][]int{{0, 1}, {3, 4, 5}}
-)
+// conflictPanelButtonRows splits the conflict panel buttons into their drawn rows.
+func conflictPanelButtonRows(c *jobs.ConflictEvent) [][]dlg.Button {
+	var rows [][]dlg.Button
+	for i, b := range conflictPanelButtons(c) {
+		if i == 0 || b.NewRow {
+			rows = append(rows, nil)
+		}
+		rows[len(rows)-1] = append(rows[len(rows)-1], b)
+	}
+	return rows
+}
 
 // JobsBlockerPanelMoveFocus applies navigation keys to the jobs-view blocker pane buttons,
 // which lay out like the quick dialog minus Postpone.
@@ -161,10 +178,17 @@ func JobsBlockerPanelMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) 
 	if b.Kind == jobs.BlockerKindDiskSpace {
 		return moveFocusInDiskRow(focus, key)
 	}
-	if blockerMismatch(&b) {
-		return moveFocusInButtonGrid(conflictPanelMismatchGrid, focus, key)
+	var grid [][]int
+	idx := 0
+	for _, row := range conflictPanelButtonRows(blockerConflict(&b)) {
+		cells := make([]int, len(row))
+		for i := range row {
+			cells[i] = idx
+			idx++
+		}
+		grid = append(grid, cells)
 	}
-	return moveFocusInButtonGrid(conflictPanelButtonGrid, focus, key)
+	return moveFocusInButtonGrid(grid, focus, key)
 }
 
 // moveFocusInButtonGrid moves focus through centered button rows: Tab/Left/Right step in
@@ -319,36 +343,21 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	y++
 	y++
 
+	rows := conflictPanelButtonRows(c)
 	f := state.ConflictButtonFocus
-	if f < 0 {
-		f = 0
-	}
-	if f > 5 {
-		f = 5
-	}
-
-	row1 := []dialog.DialogButtonSpec{
-		{Label: "Overwrite", Shortcut: 'O', Focused: focused && f == 0, Destructive: true},
-		{Label: "Overwrite All", Shortcut: 'A', Focused: focused && f == 1, Destructive: true},
-		{Label: "Advanced…", Shortcut: 'D', Focused: focused && f == 2, Destructive: true},
-	}
-	if c.Mismatch {
-		row1 = []dialog.DialogButtonSpec{
-			{Label: "Rename", Shortcut: 'R', Focused: focused && f == 0},
-			{Label: "Rename All", Shortcut: 'A', Focused: focused && f == 1},
+	idx := 0
+	for i, row := range rows {
+		specs := make([]dialog.DialogButtonSpec, len(row))
+		for k, b := range row {
+			specs[k] = dialog.DialogButtonSpec{Label: b.Label, Shortcut: b.Mnemonic, Focused: focused && f == idx, Destructive: b.Destructive}
+			idx++
 		}
-	}
-	row2 := []dialog.DialogButtonSpec{
-		{Label: "Skip", Shortcut: 'S', Focused: focused && f == 3},
-		{Label: "Skip All", Shortcut: 'K', Focused: focused && f == 4},
-		{Label: "Cancel", Shortcut: 'C', Focused: focused && f == 5},
-	}
-	if y <= rect.Y+rect.Height-3 {
-		dialog.DrawDialogButtonRowCentered(screen, rect, y, row1, styles)
+		// Each row keeps room for the rows still to come above the bottom border.
+		if y > rect.Y+rect.Height-1-(len(rows)-i) {
+			break
+		}
+		dialog.DrawDialogButtonRowCentered(screen, rect, y, specs, styles)
 		y++
-	}
-	if y <= rect.Y+rect.Height-2 {
-		dialog.DrawDialogButtonRowCentered(screen, rect, y, row2, styles)
 	}
 }
 

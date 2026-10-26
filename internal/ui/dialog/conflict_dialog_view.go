@@ -17,6 +17,7 @@ const (
 	ConflictRename       = dlg.ID("rename")
 	ConflictRenameAll    = dlg.ID("rename-all")
 	ConflictAdvanced     = dlg.ID("advanced")
+	ConflictDeleteSource = dlg.ID("delete-source")
 	ConflictSkip         = dlg.ID("skip")
 	ConflictSkipAll      = dlg.ID("skip-all")
 	ConflictPostpone     = dlg.ID("postpone")
@@ -24,9 +25,9 @@ const (
 	ConflictRetry        = dlg.ID("retry")
 	ConflictAbort        = dlg.ID("abort")
 
-	// ConflictSkipIdentical and ConflictApplyAll are the checkboxes of the Conflict rules screen.
-	ConflictSkipIdentical = dlg.ID("skip-identical")
-	ConflictApplyAll      = dlg.ID("apply-all")
+	// ConflictVerify and ConflictApplyAll are the checkboxes of the Conflict rules screen.
+	ConflictVerify   = dlg.ID("verify")
+	ConflictApplyAll = dlg.ID("apply-all")
 )
 
 // ConflictDecisionOf maps a button of the File exists / Disk space screens to the decision it
@@ -41,6 +42,8 @@ func ConflictDecisionOf(id dlg.ID) (d jobs.ConflictDecision, ok bool) {
 		return jobs.DecisionRename, true
 	case ConflictRenameAll:
 		return jobs.DecisionRenameAll, true
+	case ConflictDeleteSource:
+		return jobs.DecisionDeleteSource, true
 	case ConflictSkip:
 		return jobs.DecisionSkip, true
 	case ConflictSkipAll:
@@ -100,7 +103,18 @@ func conflictFileView(st ConflictDialogState, userHomeDir string) dlg.Spec {
 	items = append(items, conflictText(""))
 	items = append(items, conflictFileGroup(conflictDialogLabelExisting, c.Destination, c.DestSize, c.DestTime, userHomeDir)...)
 	items = append(items, dlg.Item{Kind: dlg.KindSeparator}, conflictText(ConflictPromptText(c)))
+	return dlg.Spec{
+		Title: "File exists", Width: 76, MinWidth: 48, Unclamped: true,
+		Groups:  []dlg.Group{{Columns: [][]dlg.Item{items}}},
+		Buttons: ConflictFileButtons(c),
+	}
+}
 
+// ConflictFileButtons are the File exists buttons in focus order, rows started by NewRow:
+// Overwrite / Overwrite All / Advanced… (Rename / Rename All for a directory mismatch), Skip /
+// Skip All / Postpone, then Delete source (a move without a mismatch) and Cancel. The jobs-view
+// blocker panel shows the same buttons minus Postpone.
+func ConflictFileButtons(c *jobs.ConflictEvent) []dlg.Button {
 	first := []dlg.Button{
 		{ID: ConflictOverwrite, Label: "Overwrite", Mnemonic: 'O', Destructive: true},
 		{ID: ConflictOverwriteAll, Label: "Overwrite All", Mnemonic: 'A', Destructive: true},
@@ -116,13 +130,13 @@ func conflictFileView(st ConflictDialogState, userHomeDir string) dlg.Spec {
 		dlg.Button{ID: ConflictSkip, Label: "Skip", Mnemonic: 'S', NewRow: true},
 		dlg.Button{ID: ConflictSkipAll, Label: "Skip All", Mnemonic: 'K'},
 		dlg.Button{ID: ConflictPostpone, Label: "Postpone", Mnemonic: 'P'},
-		dlg.Button{ID: ConflictCancelJob, Label: "Cancel", Mnemonic: 'C', NewRow: true},
 	)
-	return dlg.Spec{
-		Title: "File exists", Width: 76, MinWidth: 48, Unclamped: true,
-		Groups:  []dlg.Group{{Columns: [][]dlg.Item{items}}},
-		Buttons: buttons,
+	cancel := dlg.Button{ID: ConflictCancelJob, Label: "Cancel", Mnemonic: 'C', NewRow: true}
+	if c.Move && !c.Mismatch {
+		buttons = append(buttons, dlg.Button{ID: ConflictDeleteSource, Label: "Delete source", Mnemonic: 'E', Destructive: true, NewRow: true})
+		cancel.NewRow = false
 	}
+	return append(buttons, cancel)
 }
 
 func conflictDiskView(st ConflictDialogState, userHomeDir string) dlg.Spec {
@@ -169,40 +183,56 @@ func ConflictRuleCell(id dlg.ID) (row, col int, ok bool) {
 	return row, col, n == 2
 }
 
+// conflictRuleLabelWidth is the label column of the rule rows: the longest label plus a gap.
+const conflictRuleLabelWidth = len("Destination smaller") + 1
+
 func conflictRulesView(st ConflictDialogState) dlg.Spec {
+	// ruleRow is one line of rule row: its label (blank on a continuation line) and the radios of
+	// choices [from, to).
+	ruleRow := func(row, from, to int, label string) dlg.Item {
+		choices := st.ConflictRuleChoices(row)
+		cur := st.ruleAction(row)
+		cells := []dlg.Item{{Kind: dlg.KindLabel, Label: label, Width: conflictRuleLabelWidth}}
+		for col := from; col < min(to, len(choices)); col++ {
+			c := choices[col]
+			cell := dlg.Item{
+				ID: ConflictRuleID(row, col), Kind: dlg.KindRadio, Label: c.Label, On: cur == c.Action,
+				Disabled: !st.ConflictAdvancedChoiceEnabled(row, col),
+			}
+			if col < to-1 {
+				cell.Gap = 1
+			}
+			cells = append(cells, cell)
+		}
+		return dlg.Item{Kind: dlg.KindRow, Cells: cells}
+	}
 	ruleRows := func(from, to int) []dlg.Item {
 		var items []dlg.Item
 		for row := from; row < to; row++ {
-			cur := st.ruleAction(row)
-			cells := make([]dlg.Item, len(ConflictRuleChoices))
-			for col, c := range ConflictRuleChoices {
-				cells[col] = dlg.Item{
-					ID: ConflictRuleID(row, col), Kind: dlg.KindRadio, Label: c.Label, On: cur == c.Action,
-					Disabled: !st.ConflictAdvancedChoiceEnabled(row, col),
-				}
-				if col < len(ConflictRuleChoices)-1 {
-					cells[col].Gap = 1
-				}
-			}
-			items = append(items, conflictText(conflictRuleRowLabels[row]),
-				// A greyed choice under the cursor column falls back to Ask, which is never greyed.
-				dlg.Item{Kind: dlg.KindRow, Cells: cells})
+			items = append(items, ruleRow(row, 0, len(conflictMatrixChoices), conflictRuleRowLabels[row]))
 		}
 		return items
 	}
 	sep := dlg.Item{Kind: dlg.KindSeparator}
-	var checks []dlg.Item
-	if !st.ConflictAdvancedNoCompare() {
-		checks = append(checks, dlg.Item{ID: ConflictSkipIdentical, Kind: dlg.KindCheckbox, Label: "Skip identical files (slow)", Mnemonic: 'I', On: st.Rules.SkipIdentical})
+	groups := []dlg.Group{
+		{Columns: [][]dlg.Item{append(ruleRows(0, conflictRuleTimeRows), sep)}},
+		{Columns: [][]dlg.Item{append(ruleRows(conflictRuleTimeRows, conflictRuleSizeEnd), sep)}},
 	}
-	checks = append(checks, dlg.Item{ID: ConflictApplyAll, Kind: dlg.KindCheckbox, Label: "Apply to all conflicts", Mnemonic: 'A', On: st.AdvAll})
+	if !st.ConflictAdvancedNoCompare() {
+		groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{
+			{ID: ConflictVerify, Kind: dlg.KindCheckbox, Label: "Verify both to see if identical", Mnemonic: 'V', On: st.Rules.Verify},
+			ruleRow(ConflictRuleSameRow, 0, len(conflictSameChoices), conflictRuleRowLabels[ConflictRuleSameRow]),
+			ruleRow(ConflictRuleDifferRow, 0, conflictDifferWrap, conflictRuleRowLabels[ConflictRuleDifferRow]),
+			ruleRow(ConflictRuleDifferRow, conflictDifferWrap, len(conflictDifferChoices), ""),
+			sep,
+		}}})
+	}
+	groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{
+		{ID: ConflictApplyAll, Kind: dlg.KindCheckbox, Label: "Apply to all conflicts", Mnemonic: 'A', On: st.AdvAll},
+	}}})
 	return dlg.Spec{
-		Title: "Conflict rules", Width: 56, MinWidth: 52, Unclamped: true,
-		Groups: []dlg.Group{
-			{Columns: [][]dlg.Item{append(ruleRows(0, conflictRuleTimeRows), sep)}},
-			{Columns: [][]dlg.Item{append(ruleRows(conflictRuleTimeRows, ConflictRuleRows), sep)}},
-			{Columns: [][]dlg.Item{checks}},
-		},
+		Title: "Conflict rules", Width: 76, MinWidth: 72, Unclamped: true,
+		Groups:  groups,
 		Buttons: dlg.OKCancelButtons(),
 	}
 }
