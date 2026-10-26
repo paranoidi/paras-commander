@@ -1,7 +1,7 @@
 == open ==
 focus=list selected=0 style=default
 == PgDn ==
-focus=list selected=2 style=cinder-2
+focus=list selected=3 style=dune-3
 == PgUp ==
 focus=list selected=0 style=default
 == End ==
@@ -9,8 +9,8 @@ focus=list selected=3 style=dune-3
 == Home ==
 focus=list selected=0 style=default
 == PgDn ==
-focus=list selected=2 style=cinder-2
+focus=list selected=3 style=dune-3
 == End ==
 focus=list selected=3 style=dune-3
 == PgUp ==
-focus=list selected=1 style=birch-1
+focus=list selected=0 style=default

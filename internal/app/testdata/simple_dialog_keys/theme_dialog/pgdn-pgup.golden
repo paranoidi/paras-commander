@@ -1,12 +1,12 @@
 == open ==
 focus=list selected=0 style=default
 == PgDn ==
-focus=list selected=18 style=saffron-18
+focus=list selected=17 style=river-17
 == PgDn ==
-focus=list selected=11 style=lantern-11
+focus=list selected=9 style=jasper-9
 == PgUp ==
-focus=list selected=18 style=saffron-18
+focus=list selected=17 style=river-17
 == PgUp ==
 focus=list selected=0 style=default
 == PgUp ==
-focus=list selected=7 style=harbor-7
+focus=list selected=8 style=ivory-8

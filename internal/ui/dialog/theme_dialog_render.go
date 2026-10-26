@@ -55,7 +55,7 @@ func ThemeDialogView(state ThemeDialogState, layout Layout) dlg.Spec {
 	spec, _ = fillList(spec, layout, ThemeList, func(height, _ int) dlg.Item {
 		list := dlg.Item{
 			ID: ThemeList, Kind: dlg.KindList, Cursor: state.Selected, Height: height,
-			Wrap: true, CenterScroll: true, PageStep: height, Markers: true,
+			Wrap: true, CenterScroll: true, Markers: true,
 		}
 		for i, choice := range state.Choices {
 			list.Rows = append(list.Rows, dlg.ListRow{Text: choice.Label, Marked: i == state.Selected})
