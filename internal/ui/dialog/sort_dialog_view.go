@@ -36,7 +36,7 @@ func SortDialogView(s SortDialogState) dlg.Spec {
 		cols = append(cols, meta)
 	}
 	return dlg.Spec{
-		Title: "Sort order", Width: 56, MinWidth: 30, MinHeight: 11, PlainButtonKeys: true,
+		Title: "Sort order", Width: 56, MinWidth: 30, MustFit: true, PlainButtonKeys: true,
 		Groups: []dlg.Group{
 			{Columns: cols},
 			{Columns: [][]dlg.Item{{

@@ -19,7 +19,7 @@ func CompareFilterView(s CompareFilterDialogState) dlg.Spec {
 		}
 	}
 	return dlg.Spec{
-		Title: s.Title(), Width: 32, MinWidth: 24, MinHeight: len(radios) + 4, // border, rows, separator, buttons, border
+		Title: s.Title(), Width: 32, MinWidth: 24, MustFit: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
 			dlg.OKButton,

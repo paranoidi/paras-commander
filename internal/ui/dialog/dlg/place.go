@@ -170,7 +170,8 @@ func placeRow(row Item, x, right, y, markerW int) []PlacedItem {
 // takes a row from every column that makes its group as tall as it is (a shorter column gives no
 // row back), so the lists and spacers side by side in a group shrink together. Anything still too
 // tall is cut off by Place/Draw above the button separator; ok is false when a list held at its
-// MinHeight is what keeps it from fitting. spec itself is not modified.
+// MinHeight is what keeps it from fitting, and on a MustFit spec whenever anything would be cut
+// off. spec itself is not modified.
 func shrinkToFit(spec Spec, rect Rect) (_ Spec, ok bool) {
 	avail := rect.Height - 2
 	if len(spec.Buttons) > 0 {
@@ -214,7 +215,7 @@ func shrinkToFit(spec Spec, rect Rect) (_ Spec, ok bool) {
 			break
 		}
 	}
-	return spec, need <= avail || !floored
+	return spec, need <= avail || !floored && !spec.MustFit
 }
 
 // shrinkable returns the index of the item in col that gives up the column's next row: its first

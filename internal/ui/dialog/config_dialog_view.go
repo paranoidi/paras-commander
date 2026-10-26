@@ -151,7 +151,7 @@ func configDialogSpec(st ConfigDialogState, listingRow bool) dlg.Spec {
 	}
 
 	return dlg.Spec{
-		Title: "Configuration", Width: 54, MinWidth: 38, MinHeight: 22, PlainButtonKeys: true,
+		Title: "Configuration", Width: 54, MinWidth: 38, MustFit: true, PlainButtonKeys: true,
 		Groups: []dlg.Group{
 			{Columns: [][]dlg.Item{view}},
 			{Columns: [][]dlg.Item{scroll}},

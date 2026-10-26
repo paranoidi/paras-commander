@@ -119,3 +119,25 @@ func TestScrollOnlyPagesByTheFittedHeight(t *testing.T) {
 		t.Errorf("PgDn = (%+v, %v), want offset 10 (a full fitted page)", ev, ok)
 	}
 }
+
+// A MustFit dialog does not draw where content would be cut off; without it the content is cut
+// above the button separator.
+func TestMustFit(t *testing.T) {
+	col := []Item{check("c0", "Lantern", 'l'), check("c1", "Harbor", 'h'), check("c2", "Willow", 'w')}
+	spec := Spec{Title: "Harbor", Width: 40, Groups: []Group{{Columns: [][]Item{col}}}, Buttons: OKCancelButtons()}
+	// The frame is the three rows plus 4 (the borders, the button separator and the strip), and a
+	// clamped dialog keeps a row free above and below: a 9-row screen fits it exactly.
+	if _, ok := Place(80, 8, spec); !ok {
+		t.Fatal("without MustFit an 8-row screen still draws, cut off")
+	}
+	spec.MustFit = true
+	if _, ok := Place(80, 8, spec); ok {
+		t.Error("MustFit on an 8-row screen: drawn, want !ok")
+	}
+	if _, ok := FitSpec(80, 8, spec); ok {
+		t.Error("FitSpec of MustFit on an 8-row screen: ok, want !ok")
+	}
+	if _, ok := Place(80, 9, spec); !ok {
+		t.Error("MustFit on a 9-row screen: not drawn, want the whole dialog")
+	}
+}

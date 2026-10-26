@@ -327,11 +327,13 @@ func OKCancelButtons() []Button { return []Button{OKButton, CancelButton} }
 type Spec struct {
 	Title                      string
 	Width, MinWidth, MinHeight int
-	// MaxHeight caps the dialog's outer height below the screen's (0 = the screen); its lists
-	// shrink to fit it like they do to fit the screen. The cap gives way to fixed content (it
-	// never cuts off a row that is not a list or spacer row), but not to a list's MinHeight: a
-	// dialog whose list cannot keep its MinHeight under the cap does not fit.
-	MaxHeight       int
+	// MaxHeight is the tallest the dialog wants to be (0 = the screen); its lists shrink to fit
+	// it like they do to fit the screen. It is a preference: it gives way to rows that cannot
+	// shrink (fixed content, and lists at their MinHeight).
+	MaxHeight int
+	// MustFit makes the dialog not draw at all (Place and FitSpec report !ok) where any of its
+	// content would be cut off, instead of a MinHeight that restates the content's height.
+	MustFit         bool
 	Groups          []Group
 	Buttons         []Button // drawn after a horizontal separator, centered; also its own Tab segment
 	PlainButtonKeys bool     // plain (no Alt) button mnemonic letters press the button
