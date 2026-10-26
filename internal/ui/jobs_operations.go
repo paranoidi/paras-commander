@@ -85,7 +85,23 @@ func JobsOpsMaxScroll(total, contentRows int) int {
 // newest first, with a result icon and the active filters on the bottom border. wrap word-wraps
 // rows (maximized pane) instead of fitting them to one line; scrolling stays by row.
 func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState, win JobsOpsWindow, styles theme.Theme, chromeBlocked, focused, wrap bool) {
-	layout := drawAuxPanelChrome(screen, rect, " Operations ", "", focused, chromeBlocked, false, styles)
+	f := state.OpsFilter
+	queryOpen := f.Query != "" || f.Editing
+	title := " Operations "
+	if queryOpen {
+		title = "" // the fuzzy query owns the top row
+	}
+	layout := drawAuxPanelChrome(screen, rect, title, "", focused, chromeBlocked, false, styles)
+	if queryOpen {
+		input := styles.FuzzyInput
+		switch {
+		case chromeBlocked:
+			input = styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, focused, chromeBlocked)
+		case f.Query != "" && win.Total == 0 && !win.Scanning:
+			input = styles.FuzzyInputNomatch
+		}
+		drawFuzzyQueryTitle(screen, layout.TitleX, rect.Y, layout.TitleWidth, f.Query, f.Cursor, f.Editing && focused && !chromeBlocked, input)
+	}
 	drawJobsOperationsFilterLabel(screen, rect, state, win, styles, chromeBlocked, focused)
 
 	contentTop := rect.Y + 1
@@ -175,47 +191,17 @@ func fitJobOperation(op JobOperation, w int) (text string, labelEnd int, labelWh
 	return fit + primitive.TruncateRight(reasonPart, max(w-fitRunes, 0)), fitRunes, fit == op.Label
 }
 
-// drawJobsOperationsFilterLabel paints the active Operations filters centered on the bottom
-// border: the result filter (unless All), then the fuzzy query as "> query" (with a caret while
-// editing in the focused pane), then "filtering…" while the query is still being matched, all
-// joined by " · ".
+// drawJobsOperationsFilterLabel paints the result filter (unless All) and "filtering…" while
+// the fuzzy query is still being matched centered on the bottom border, joined by " · ".
 func drawJobsOperationsFilterLabel(screen tcell.Screen, rect Rect, state JobsViewState, win JobsOpsWindow, styles theme.Theme, chromeBlocked, focused bool) {
 	indicator := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, focused, chromeBlocked)
-	sep := styledSegment{Text: " · ", Style: indicator}
 	var segs []styledSegment
 	if shown := state.OpsResultShown(); shown != dialog.JobResultAll {
 		segs = append(segs, styledSegment{Text: shown.Label(), Style: indicator})
 	}
-	f := state.OpsFilter
-	if f.Query != "" || f.Editing {
-		if len(segs) > 0 {
-			segs = append(segs, sep)
-		}
-		input := styles.FuzzyInput
-		if f.Query != "" && win.Total == 0 && !win.Scanning {
-			input = styles.FuzzyInputNomatch
-		}
-		if chromeBlocked {
-			input = indicator
-		}
-		runes := []rune(f.Query)
-		if !f.Editing || !focused || chromeBlocked {
-			segs = append(segs, styledSegment{Text: "> " + f.Query, Style: input})
-		} else {
-			cur := min(max(f.Cursor, 0), len(runes))
-			at, rest := " ", ""
-			if cur < len(runes) {
-				at, rest = string(runes[cur]), string(runes[cur+1:])
-			}
-			segs = append(segs,
-				styledSegment{Text: "> " + string(runes[:cur]), Style: input},
-				styledSegment{Text: at, Style: input.Reverse(true)},
-				styledSegment{Text: rest, Style: input})
-		}
-	}
 	if win.Scanning {
 		if len(segs) > 0 {
-			segs = append(segs, sep)
+			segs = append(segs, styledSegment{Text: " · ", Style: indicator})
 		}
 		segs = append(segs, styledSegment{Text: "filtering…", Style: indicator})
 	}

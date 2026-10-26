@@ -46,15 +46,15 @@ func TestDrawJobsOperationsPanelRowsAndFilterLabel(t *testing.T) {
 	st.OpsFilter.Query = "quarry"
 	drawJobsOperationsPanel(screen, rect, st, win, theme.Default(), false, true, false)
 
-	if top := screenRowText(screen, rect, rect.Y); !strings.Contains(top, "Operations") || strings.Contains(top, "failure") {
-		t.Fatalf("top border = %q, want only the title", top)
+	if top := screenRowText(screen, rect, rect.Y); !strings.HasPrefix(top, "┌─> quarry ") || strings.Contains(top, "Operations") {
+		t.Fatalf("top border = %q, want the query at the top left in place of the title", top)
 	}
 	for i, want := range []string{"quarry/third.txt: permission denied", "quarry/second.txt: exists", "quarry/first.txt"} {
 		if row := screenRowText(screen, rect, rect.Y+1+i); !strings.Contains(row, want) {
 			t.Fatalf("row %d = %q, want %q", i, row, want)
 		}
 	}
-	if bottom := screenRowText(screen, rect, rect.Y+rect.Height-1); !strings.Contains(bottom, "Failed + Skipped · > quarry") {
+	if bottom := screenRowText(screen, rect, rect.Y+rect.Height-1); !strings.Contains(bottom, "─ Failed + Skipped ─") {
 		t.Fatalf("bottom border = %q, want the active filters", bottom)
 	}
 }
@@ -69,8 +69,26 @@ func TestDrawJobsOperationsPanelPendingAndScanning(t *testing.T) {
 	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, "…") {
 		t.Fatalf("pending row = %q, want a placeholder", row)
 	}
-	if bottom := screenRowText(screen, rect, rect.Y+rect.Height-1); !strings.Contains(bottom, "> lantern · filtering…") {
+	if bottom := screenRowText(screen, rect, rect.Y+rect.Height-1); !strings.Contains(bottom, "─ filtering… ─") {
 		t.Fatalf("bottom border = %q, want the scanning note", bottom)
+	}
+	if top := screenRowText(screen, rect, rect.Y); !strings.HasPrefix(top, "┌─> lantern ") {
+		t.Fatalf("top border = %q, want the query", top)
+	}
+}
+
+func TestDrawJobsOperationsPanelQueryNoMatchAndCaret(t *testing.T) {
+	screen := newOpsScreen(t)
+	rect := Rect{X: 0, Y: 0, Width: 70, Height: 8}
+	var st JobsViewState
+	st.OpsFilter.Query, st.OpsFilter.Cursor, st.OpsFilter.Editing = "fern", 4, true
+	styles := theme.Default()
+	drawJobsOperationsPanel(screen, rect, st, JobsOpsWindow{JobID: "copy-1"}, styles, false, true, false)
+	if _, style, _ := screen.Get(rect.X+2, rect.Y); style != styles.FuzzyInputNomatch {
+		t.Fatal("a query matching nothing must use the no-match style")
+	}
+	if _, style, _ := screen.Get(rect.X+2+len("> fern"), rect.Y); style != styles.FuzzyInputNomatch.Reverse(true) {
+		t.Fatal("editing query in the focused pane must show a caret after the text")
 	}
 }
 
@@ -118,5 +136,39 @@ func TestJobFilesLineColorsFailedAndSkipped(t *testing.T) {
 	dropped := jobFilesLineParts(JobEntry{OpsStats: oplog.Stats{Done: 10, Dropped: 4}})
 	if last := dropped[len(dropped)-1].Text; last != " (log incomplete, 4 dropped)" {
 		t.Fatalf("dropped note = %q", last)
+	}
+}
+
+func TestJobFilesLineShowsCanceledItems(t *testing.T) {
+	styles := theme.Default()
+	body := tcell.StyleDefault
+	for _, tc := range []struct {
+		name string
+		j    JobEntry
+		want string
+	}{
+		{"copy counted", JobEntry{Type: "copy", Status: "canceled", TotalFiles: 40, TotalDirs: 6, ProcessedItems: 13, TotalsComplete: true, OpsStats: oplog.Stats{Done: 12, Failed: 1}}, "Files:       12 done, 1 failed, 21 canceled"},
+		{"copy still scanning", JobEntry{Type: "copy", Status: "canceled", TotalFiles: 40, OpsStats: oplog.Stats{Done: 12}}, "Files:       12 done, unknown amount canceled"},
+		{"delete before any row", JobEntry{Type: "delete", Status: "canceled", TotalFiles: 3}, "Files:       0 done, 3 canceled"},
+		{"move", JobEntry{Type: "move", Status: "canceled", TotalFiles: 40, TotalsComplete: true, OpsStats: oplog.Stats{Done: 2}}, "Files:       2 done, canceled: unsupported"},
+		{"flatten", JobEntry{Type: "flatten", Status: "canceled", TotalFiles: 40, TotalsComplete: true}, "Files:       0 done, canceled: unsupported"},
+		{"completed", JobEntry{Type: "copy", Status: "completed", TotalFiles: 40, TotalsComplete: true, OpsStats: oplog.Stats{Done: 12}}, "Files:       12 done"},
+	} {
+		var text strings.Builder
+		for _, p := range jobFilesLineParts(tc.j) {
+			text.WriteString(p.Text)
+		}
+		if got := text.String(); got != tc.want {
+			t.Fatalf("%s: line = %q, want %q", tc.name, got, tc.want)
+		}
+		if tc.j.Status != "canceled" {
+			continue
+		}
+		spans := jobFilesLineSpans(tc.j, styles, body)
+		last := spans[len(spans)-1]
+		line := []rune(text.String())
+		if s := string(line[last.Start:last.End]); !strings.Contains(s, "canceled") || last.Style != styles.JobsOperationOn(theme.JobsOperationSkipped, body) {
+			t.Fatalf("%s: canceled span = %q, want it in the skipped (yellow) style", tc.name, s)
+		}
 	}
 }

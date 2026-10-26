@@ -41,15 +41,15 @@ func TestRetryCloneWithFailedItemsSkipsPreScan(t *testing.T) {
 	if clone.NeedsPreScan() {
 		t.Fatal("NeedsPreScan() = true, want false for a failed-items retry")
 	}
-	if clone.TotalFiles != 1 || clone.TotalBytes != 7 {
-		t.Fatalf("totals = %d files %d bytes, want 1 and 7", clone.TotalFiles, clone.TotalBytes)
+	if clone.TotalFiles != 1 || clone.TotalBytes != 7 || !clone.TotalsComplete {
+		t.Fatalf("totals = %d files %d bytes (complete %v), want final 1 and 7", clone.TotalFiles, clone.TotalBytes, clone.TotalsComplete)
 	}
 	if len(clone.FailedItems) != 0 {
 		t.Fatalf("clone FailedItems = %+v, want none", clone.FailedItems)
 	}
 	plain := (&Job{ID: "birch", Type: TypeCopy, Sources: j.Sources}).RetryClone()
-	if !plain.NeedsPreScan() {
-		t.Fatal("NeedsPreScan() = false for a copy retry without failed items")
+	if !plain.NeedsPreScan() || plain.TotalsComplete {
+		t.Fatal("a copy retry without failed items must pre-scan for its totals")
 	}
 }
 

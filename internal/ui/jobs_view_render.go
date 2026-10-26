@@ -297,11 +297,14 @@ type jobFilesPart struct {
 }
 
 // jobFilesLineParts is the Details "Files:" line (done, then failed and skipped when non-zero,
-// then a note when the log dropped rows) split into its colored parts: the one source of the
-// line's text and its spans. nil when the job has recorded nothing.
+// then what a canceled job left undone, then a note when the log dropped rows) split into its
+// colored parts: the one source of the line's text and its spans. nil when the job has recorded
+// nothing and was not canceled.
 func jobFilesLineParts(j JobEntry) []jobFilesPart {
 	st := j.OpsStats
-	if st.Done+st.Failed+st.Skipped == 0 {
+	recorded := st.Done + st.Failed + st.Skipped
+	canceled := jobs.Status(j.Status) == jobs.StatusCanceled
+	if recorded == 0 && !canceled {
 		return nil
 	}
 	parts := []jobFilesPart{{Text: fmt.Sprintf("%s%d done", jobDetailFilesPrefix, st.Done)}}
@@ -312,6 +315,20 @@ func jobFilesLineParts(j JobEntry) []jobFilesPart {
 	}{{st.Failed, "failed", theme.JobsOperationFailed}, {st.Skipped, "skipped", theme.JobsOperationSkipped}} {
 		if c.n > 0 {
 			parts = append(parts, jobFilesPart{Text: ", "}, jobFilesPart{Text: fmt.Sprintf("%d %s", c.n, c.word), Key: c.key})
+		}
+	}
+	if canceled {
+		text := ""
+		switch n, count := jobs.CanceledItems(jobs.Type(j.Type), j.TotalFiles, j.TotalDirs, j.TotalsComplete, j.ProcessedItems, recorded); {
+		case count == jobs.CanceledUnknown:
+			text = "unknown amount canceled"
+		case count == jobs.CanceledUnsupported:
+			text = "canceled: unsupported"
+		case n > 0:
+			text = fmt.Sprintf("%d canceled", n)
+		}
+		if text != "" {
+			parts = append(parts, jobFilesPart{Text: ", "}, jobFilesPart{Text: text, Key: theme.JobsOperationSkipped})
 		}
 	}
 	if st.Dropped > 0 {

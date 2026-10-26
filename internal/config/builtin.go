@@ -177,6 +177,11 @@ const (
 	DefaultJobsOperationsMemoryRows = 50000
 	// JobsOperationsMemoryRowsMin is the smallest non-zero jobs.operations_memory_rows.
 	JobsOperationsMemoryRowsMin = 1000
+	// DefaultJobsOperationsRefreshIntervalMS is the minimum time between Operations-pane rebuilds
+	// caused by job activity (0 rebuilds every frame); user actions always rebuild at once.
+	DefaultJobsOperationsRefreshIntervalMS = 250
+	// JobsOperationsRefreshIntervalMaxMS is the largest jobs.operations_refresh_interval_ms.
+	JobsOperationsRefreshIntervalMaxMS = 5000
 
 	// DefaultFreeSpaceOnProgressWake schedules async statfs on both panels after each progress UI wake.
 	DefaultFreeSpaceOnProgressWake = true

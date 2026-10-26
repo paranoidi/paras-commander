@@ -614,6 +614,7 @@ func TestWorkerUserCancelFromConflict(t *testing.T) {
 	s := NewState()
 	stop := make(chan struct{})
 	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
+		emit(Event{Type: EventProgress, JobID: job.ID, Status: StatusRunning, DoneFiles: 3, ProcessedItems: 7})
 		return ErrUserCanceled
 	})
 	s.StartWorker(stop)
@@ -644,6 +645,9 @@ func TestWorkerUserCancelFromConflict(t *testing.T) {
 	}
 	if gotCanceled.Status != StatusCanceled {
 		t.Fatalf("event status = %q, want %q", gotCanceled.Status, StatusCanceled)
+	}
+	if gotCanceled.ProcessedItems != 7 || all[0].ProcessedItems != 7 {
+		t.Fatalf("ProcessedItems: event %d, job %d, want 7 carried from the last progress", gotCanceled.ProcessedItems, all[0].ProcessedItems)
 	}
 }
 

@@ -29,7 +29,7 @@ total `(estimated)` until the exact size is counted (see
 | `F3` / `Shift+F3` | Filter the Operations panel by result / reset its filters (`jobs.result-filter`, `jobs.reset-filter`) |
 | `+` / `-` / `Ctrl+U` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
 | `Tab` | Cycle the panels |
-| `Enter` | Maximize the focused Operations panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `q`, `Enter` or `Left` restore it |
+| `Enter` | Maximize the focused Operations panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view (`jobs.close`) |
 
 Jobs copy and move one at a time; deletes start immediately. Add a transfer
@@ -81,24 +81,35 @@ item succeeds, its earlier failed row disappears.
 
 The Details panel above shows the totals on its `Files:` line, for example
 `1234 done, 2 failed, 5 skipped`, with the failed count in red and the skipped
-count in yellow.
+count in yellow. A canceled job adds the files it left undone in yellow, for example
+`120 done, 380 canceled`. Like the other counts it counts files, not folders, so
+it can differ from the `Progress:` line, whose item count includes folders. It shows `unknown amount canceled` when a copy was canceled before its
+files were counted, and `canceled: unsupported` for moves and flattens, which
+don't track what is left.
 
 Filter the list while the panel is focused:
 
 - Type to fuzzy-match the names, with the same matching as the file list's
-  quick filter. Rows that don't match are hidden. `Backspace` edits the query,
+  quick filter. This also works in the maximized panel, where every letter
+  (including `q`) goes to the filter. Rows that don't match are hidden. `Backspace` edits the query,
   `Ctrl+L` or `Ctrl+Backspace` clears it, and `Esc` closes the filter. `Esc`
   again leaves the jobs view.
 - `F3` opens the **Result** dialog: tick **Success**, **Failed**, **Skipped**,
   or **All**.
 - `Shift+F3` clears both filters.
 
-The active filters are shown on the panel's bottom border, for example
-`Failed · > report`, plus `filtering…` while a large list is still being
-searched. They stay in place while you move between jobs and are cleared when
+The query is shown as `> report` at the top left of the panel's border, in
+place of its title, like the file list's quick filter. The result filter is
+shown on the bottom border, for example `Failed`, plus `filtering…` while a
+large list is still being searched. They stay in place while you move between jobs and are cleared when
 you leave the jobs view. `Up`, `Down`, `PgUp`, `PgDn`, `Home` and `End` scroll
 the panel. The icons and colors come from the theme (`[icons.jobs.operations]`
 and `[jobs.operations]`).
+
+While a job runs, the panel updates at most four times a second, so new rows
+don't scroll past faster than you can read them (`operations_refresh_interval_ms`
+under `[jobs]` in `config.toml`, `0` updates on every frame). Scrolling, typing
+a filter and switching jobs update it immediately.
 
 ## Very large jobs
 

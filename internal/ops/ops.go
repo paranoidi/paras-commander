@@ -94,6 +94,12 @@ type Options struct {
 	// ReasonExists). Directories are reported only when skipped (their children are not).
 	// Source failures still go through OnItemError. nil means no-op; it runs on the job goroutine.
 	OnItemDone func(item PlanItem, res ItemResult, reason string)
+	// OnItemsProcessed receives, once when a copy's item loop returns (finished, failed or
+	// canceled), how many non-directory plan items it went through: written, skipped (including
+	// every file under a skipped directory) or failed. The counting walk's TotalFiles minus
+	// TotalDirs is the same unit, so the difference is the files a canceled copy left undone.
+	// nil means no-op.
+	OnItemsProcessed func(n int)
 }
 
 // ItemResult is the outcome OnItemDone (and the delete/extract item hooks) report.

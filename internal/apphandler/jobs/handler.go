@@ -522,16 +522,17 @@ func (h *Handler) clampJobsFocusPane() {
 	}
 }
 
-// handleJobsMaximizedKey handles keys while the Operations pane is maximized: Esc, Enter, Left
-// and q restore the layout, Up/Down/PgUp/PgDn/Home/End scroll by row, the rest is swallowed.
+// handleJobsMaximizedKey handles keys while the Operations pane is maximized: Esc, Enter and
+// Left restore the layout, printable runes type into the fuzzy filter, Up/Down/PgUp/PgDn/Home/End
+// scroll by row, the rest is swallowed.
 func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyEnter, tcell.KeyLeft:
 		h.model.JobsView.Maximized = false
 		return
 	case tcell.KeyRune:
-		if event.Rune() == 'q' && event.Modifiers() == tcell.ModNone {
-			h.model.JobsView.Maximized = false
+		if plainRune(event) {
+			h.typeOperationsRune(event.Rune())
 		}
 		return
 	}
@@ -542,7 +543,7 @@ func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 // scrollOperations scrolls the Operations pane (contentRows rows tall) by row within the
 // current view's row count.
 func (h *Handler) scrollOperations(key tcell.Key, contentRows int) {
-	h.RefreshOpsWindow()
+	h.refreshOpsWindow(true)
 	scrollPane(key, &h.model.JobsView.OpsScroll, ui.JobsOpsMaxScroll(h.model.JobsOpsWindow.Total, contentRows))
 }
 

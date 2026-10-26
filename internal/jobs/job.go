@@ -28,6 +28,33 @@ const (
 	TypeUndo Type = "undo"
 )
 
+// CanceledCount is how well CanceledItems can count what a canceled job left undone.
+type CanceledCount int
+
+const (
+	CanceledKnown       CanceledCount = iota
+	CanceledUnknown                   // a copy canceled before its counting walk finished
+	CanceledUnsupported               // move and flatten track no per-item remainder
+)
+
+// CanceledItems is how many items a canceled job of type t left undone, from its Job.TotalFiles,
+// TotalDirs, TotalsComplete and ProcessedItems and the rows its operation log recorded. A copy
+// counts files only, like its log rows: TotalFiles minus TotalDirs minus processed (rows miss
+// the files under a skipped directory); delete, extract and undo count their items at enqueue
+// and log one row each.
+func CanceledItems(t Type, totalFiles, totalDirs int, totalsComplete bool, processed, recorded int) (n int, count CanceledCount) {
+	switch t {
+	case TypeCopy:
+		if !totalsComplete {
+			return 0, CanceledUnknown
+		}
+		return max(0, totalFiles-totalDirs-processed), CanceledKnown
+	case TypeDelete, TypeExtract, TypeUndo:
+		return max(0, totalFiles-recorded), CanceledKnown
+	}
+	return 0, CanceledUnsupported
+}
+
 // Status represents the lifecycle state of a Job.
 type Status string
 
@@ -66,8 +93,11 @@ type Job struct {
 	TotalFiles int
 	TotalDirs  int
 	DoneFiles  int
-	TotalBytes int64
-	DoneBytes  int64
+	// ProcessedItems is how many non-directory plan items a copy went through (done, skipped or
+	// failed), in TotalFiles-TotalDirs units; set when the copy's item loop ends.
+	ProcessedItems int
+	TotalBytes     int64
+	DoneBytes      int64
 	// EstimatedBytes is the enqueue-time best guess of the payload size, taken from what the
 	// panel already knows (listing sizes and the disk-usage cache; see ui.SourceSizeEstimates).
 	// 0 means no estimate. A copy shows it as TotalBytes until its counting walk finishes
@@ -117,7 +147,8 @@ type Job struct {
 	// read it directly; see jobbridge.TransferFunc's streamed-job dispatch.
 	PlanComplete bool
 	// TotalsComplete is true once TotalFiles/TotalDirs/TotalBytes are final: the counting walk has
-	// finished. Unlike PlanComplete it does not wait for the delivery walk, which the transfer
+	// finished, or from the start for a failed-items retry (RetryClone). Unlike PlanComplete it
+	// does not wait for the delivery walk, which the transfer
 	// executor drains and so only ends near the end of the job. Same locking rule as PlanComplete.
 	TotalsComplete bool
 	// PausedAfterScan when true transitions to StatusPaused instead of StatusQueued when pre-scan completes.
@@ -271,7 +302,7 @@ type FailedItem struct {
 // their enqueue path (copy/move/flatten recompute it during scan). A copy with FailedItems
 // instead gets Plan = those items and their totals, so the retry re-runs only them without a scan.
 func (j *Job) RetryClone() *Job {
-	totalFiles := 0
+	totalFiles, totalDirs := 0, 0
 	if j.Type == TypeDelete || j.Type == TypeExtract {
 		totalFiles = len(j.Sources)
 	}
@@ -283,20 +314,23 @@ func (j *Job) RetryClone() *Job {
 		for _, f := range j.FailedItems {
 			plan = append(plan, f.Item)
 		}
-		totalFiles, _, planBytes = ops.SummarizePlan(plan)
+		totalFiles, totalDirs, planBytes = ops.SummarizePlan(plan)
 	}
 	clone := &Job{
-		Plan:                  plan,
-		TotalBytes:            planBytes,
-		EstimatedBytes:        estimated,
-		SourceSizeHints:       j.SourceSizeHints,
-		ID:                    j.ID,
-		Type:                  j.Type,
-		Status:                StatusScanning,
-		Sources:               j.Sources,
-		Destination:           j.Destination,
-		DestIsDir:             ops.DestinationIsDirAtEnqueue(j.Destination),
-		TotalFiles:            totalFiles,
+		Plan:            plan,
+		TotalBytes:      planBytes,
+		EstimatedBytes:  estimated,
+		SourceSizeHints: j.SourceSizeHints,
+		ID:              j.ID,
+		Type:            j.Type,
+		Status:          StatusScanning,
+		Sources:         j.Sources,
+		Destination:     j.Destination,
+		DestIsDir:       ops.DestinationIsDirAtEnqueue(j.Destination),
+		TotalFiles:      totalFiles,
+		TotalDirs:       totalDirs,
+		// A retry plan skips the pre-scan: SummarizePlan's totals are already final.
+		TotalsComplete:        len(plan) > 0,
 		FlattenRemoveEmpty:    j.FlattenRemoveEmpty,
 		FlattenRecursive:      j.FlattenRecursive,
 		DeleteRemoveEmptyDirs: j.DeleteRemoveEmptyDirs,

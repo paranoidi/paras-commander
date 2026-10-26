@@ -112,3 +112,36 @@ func TestDeletePathsReportsDone(t *testing.T) {
 		t.Fatalf("deleted = %v", got)
 	}
 }
+
+func TestCopyReportsItemsProcessedIncludingSkippedDirChildren(t *testing.T) {
+	srcDir := filepath.Join(t.TempDir(), "orchard")
+	dstDir := t.TempDir()
+	for _, rel := range []string{"acorn.txt", "grove/bramble.txt", "grove/clover.txt"} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(srcDir, rel)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(srcDir, rel), []byte(rel), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A file where the grove directory would go: the directory is skipped as a whole.
+	if err := os.MkdirAll(filepath.Join(dstDir, "orchard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dstDir, "orchard", "grove"), []byte("file"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plan, _, _, _, err := BuildCopyPlanWithTotalsCtx(context.Background(), MustPaths(srcDir), MustPath(dstDir), PlanBuildOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, dirs, _ := SummarizePlan(plan)
+	processed := -1
+	opts := Options{CopyBufferKiB: 4, OnItemsProcessed: func(n int) { processed = n }}
+	if _, _, err := ExecuteCopy(context.Background(), MustPaths(srcDir), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, actionResolver(ActionSkip), nil); err != nil {
+		t.Fatal(err)
+	}
+	if want := items - dirs; processed != want || want != 3 {
+		t.Fatalf("processed = %d, want every file of the plan (%d, expected 3)", processed, want)
+	}
+}

@@ -306,13 +306,16 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, ded
 		// (droppable when the UI channel is full); the worker copies this tally onto the
 		// non-droppable terminal event so a lost sample cannot freeze incomplete totals.
 		runTransfer := func(tc transferExecCtx) error {
+			var processed int
+			tc.opts.OnItemsProcessed = func(n int) { processed = n }
 			doneFiles, doneBytes, err := executeJobByType(tc)
 			emit(jobs.Event{
-				Type:      jobs.EventProgress,
-				JobID:     job.ID,
-				Status:    jobs.StatusRunning,
-				DoneFiles: doneFiles,
-				DoneBytes: doneBytes,
+				Type:           jobs.EventProgress,
+				JobID:          job.ID,
+				Status:         jobs.StatusRunning,
+				DoneFiles:      doneFiles,
+				DoneBytes:      doneBytes,
+				ProcessedItems: processed,
 			})
 			return mapOpsCanceled(err)
 		}

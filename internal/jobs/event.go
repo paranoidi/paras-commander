@@ -45,6 +45,9 @@ type Event struct {
 	Status    Status
 	DoneFiles int
 	DoneBytes int64
+	// ProcessedItems is ops.Options.OnItemsProcessed's count, set on a copy's final
+	// EventProgress and carried onto its terminal event (Job.ProcessedItems).
+	ProcessedItems int
 	// TotalFiles, TotalDirs, TotalBytes are set for EventScanTotals and EventPlanTotals.
 	TotalFiles int
 	TotalDirs  int

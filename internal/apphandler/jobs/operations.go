@@ -4,10 +4,12 @@ import (
 	"context"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
+	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -40,13 +42,38 @@ type opsState struct {
 	doneLog      *oplog.Log // last finished fetch
 	doneNums     []uint32
 	doneRecs     []oplog.Record
+
+	// UI-thread only: what the current window was built from, when, and the trailing wake that
+	// shows rows held back by the refresh rate limit.
+	lastInputs opsInputs
+	lastBuilt  time.Time
+	trailing   sched.Debouncer
+}
+
+// opsInputs is everything a user action changes about the Operations window. A change rebuilds
+// the window at once; job activity alone rebuilds it at most every
+// [jobs].operations_refresh_interval_ms.
+type opsInputs struct {
+	jobID        string
+	key          opsViewKey
+	ready        bool // the window was built at least once
+	scroll, rows int
 }
 
 // RefreshOpsWindow prepares Model.JobsOpsWindow, the rows the Operations pane draws, for the
 // selected job and the view's filters and scroll. It runs on the UI thread every frame while
 // the jobs view is open and never blocks on disk: rows held in memory are copied directly,
 // rows only in a spill file and fuzzy matching run in goroutines that wake the UI when done.
+//
+// Rebuilds driven only by job activity (new rows, scan progress) are rate limited to
+// [jobs].operations_refresh_interval_ms so the list stays readable; a trailing wake shows what
+// was held back. A changed job, filter, scroll or pane size, and rows still pending a spill
+// read, rebuild at once.
 func (h *Handler) RefreshOpsWindow() {
+	h.refreshOpsWindow(false)
+}
+
+func (h *Handler) refreshOpsWindow(force bool) {
 	if h.model.ViewMode != ui.ViewJobs {
 		h.stopOpsWork()
 		return
@@ -55,12 +82,17 @@ func (h *Handler) RefreshOpsWindow() {
 	win := ui.JobsOpsWindow{JobID: sel.ID}
 	if sel.Ops == nil {
 		h.model.JobsOpsWindow = win
+		h.ops.lastInputs = opsInputs{}
 		return
 	}
 	st := &h.model.JobsView
 	key := opsViewKey{log: sel.Ops, mask: st.OpsResultShown().Mask(), query: st.OpsFilter.Query, ci: h.model.JobsFilterCaseInsensitive}
-	query := search.Parse(key.query)
 	rows := h.opsContentRows()
+	inputs := opsInputs{jobID: sel.ID, key: key, ready: true, scroll: st.OpsScroll, rows: rows}
+	if !force && h.opsThrottled(inputs) {
+		return
+	}
+	query := search.Parse(key.query)
 
 	var nums []uint32
 	if query.Empty() {
@@ -95,6 +127,36 @@ func (h *Handler) RefreshOpsWindow() {
 		}
 	}
 	h.model.JobsOpsWindow = win
+	inputs.scroll = st.OpsScroll // after clamping, so the next frame sees the same inputs
+	h.ops.lastInputs, h.ops.lastBuilt = inputs, time.Now()
+}
+
+// opsThrottled reports whether the window must keep its current rows: inputs are unchanged, no
+// row is waiting for a spill read and the refresh interval has not passed since the last build.
+// It then arms the trailing wake (once) for when the interval ends.
+func (h *Handler) opsThrottled(inputs opsInputs) bool {
+	o := &h.ops
+	interval := time.Duration(h.config.Jobs.OperationsRefreshIntervalMS) * time.Millisecond
+	if interval <= 0 || inputs != o.lastInputs || opsWindowPending(h.model.JobsOpsWindow) {
+		return false
+	}
+	wait := interval - time.Since(o.lastBuilt)
+	if wait <= 0 {
+		return false
+	}
+	if !o.trailing.Armed() {
+		o.trailing.Arm(wait, h.postOpsWake)
+	}
+	return true
+}
+
+func opsWindowPending(win ui.JobsOpsWindow) bool {
+	for _, r := range win.Rows {
+		if r.Pending {
+			return true
+		}
+	}
+	return false
 }
 
 // opsContentRows is how many rows the Operations pane shows: the maximized pane's or the split
@@ -196,6 +258,8 @@ func (h *Handler) stopOpsWork() {
 	o.mu.Lock()
 	o.doneLog, o.doneNums, o.doneRecs = nil, nil, nil
 	o.mu.Unlock()
+	o.trailing.Invalidate()
+	o.lastInputs = opsInputs{}
 	h.model.JobsOpsWindow = ui.JobsOpsWindow{}
 }
 

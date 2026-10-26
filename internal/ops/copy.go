@@ -226,6 +226,7 @@ func planIterChan(ctx context.Context, planCh <-chan PlanItem, planErr func() er
 // across the per-item copy helpers invoked from executeCopyWithPlan's loop.
 type copyRunState struct {
 	doneFiles       int
+	processed       int // non-directory plan items gone through (Options.OnItemsProcessed)
 	doneBytes       int64
 	bytesSinceEmit  int64
 	lastEmit        time.Time
@@ -238,6 +239,14 @@ type copyRunState struct {
 
 	th       ProgressEmitThrottle
 	progress ProgressCallback
+}
+
+// countProcessed counts item toward Options.OnItemsProcessed unless it is a directory (IsDir,
+// the same rule the counting walk tallies TotalDirs by).
+func (s *copyRunState) countProcessed(item PlanItem) {
+	if !item.IsDir {
+		s.processed++
+	}
 }
 
 func (s *copyRunState) recordTransferred(src pathloc.Path) {
@@ -469,6 +478,9 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, []pathloc.Path, error) {
 	state := &copyRunState{th: effectiveProgressThrottle(throttle), progress: progress}
 	copyBuf := make([]byte, BufferSize(opts.CopyBufferKiB))
+	if opts.OnItemsProcessed != nil {
+		defer func() { opts.OnItemsProcessed(state.processed) }()
+	}
 
 	for {
 		if err := ctx.Err(); err != nil {
@@ -483,6 +495,7 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 		}
 
 		if state.skipsItem(&item) {
+			state.countProcessed(item)
 			continue
 		}
 
@@ -497,15 +510,14 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 			if err := copySymlinkItem(ctx, item, opts, resolver, state); err != nil {
 				return state.doneFiles, state.doneBytes, state.transferredOut, err
 			}
+			state.countProcessed(item)
 			continue
 		}
 
-		if err := copyRegularItem(ctx, item, opts, resolver, diskWait, destination, copyBuf, state); err != nil {
-			if skipSourceItemError(ctx, opts, item, err) {
-				continue
-			}
+		if err := copyRegularItem(ctx, item, opts, resolver, diskWait, destination, copyBuf, state); err != nil && !skipSourceItemError(ctx, opts, item, err) {
 			return state.doneFiles, state.doneBytes, state.transferredOut, err
 		}
+		state.countProcessed(item)
 	}
 
 	if err := applyDeferredDirMeta(ctx, opts, state); err != nil {

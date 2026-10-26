@@ -1066,3 +1066,21 @@ func TestValidateMediaPreviewDebounceMS(t *testing.T) {
 		t.Fatalf("MediaPreviewDebounceMS = %d, want clamp %d", cfg.UI.MediaPreviewDebounceMS, KeyRepeatDebounceMaxMS)
 	}
 }
+
+func TestValidateClampsJobsOperationsRefreshInterval(t *testing.T) {
+	for _, tc := range []struct{ in, want int }{
+		{-1, DefaultJobsOperationsRefreshIntervalMS},
+		{0, 0},
+		{120, 120},
+		{JobsOperationsRefreshIntervalMaxMS + 1, JobsOperationsRefreshIntervalMaxMS},
+	} {
+		cfg := Default()
+		cfg.Jobs.OperationsRefreshIntervalMS = tc.in
+		if err := cfg.Validate(); err != nil {
+			t.Fatal(err)
+		}
+		if got := cfg.Jobs.OperationsRefreshIntervalMS; got != tc.want {
+			t.Fatalf("operations_refresh_interval_ms %d -> %d, want %d", tc.in, got, tc.want)
+		}
+	}
+}

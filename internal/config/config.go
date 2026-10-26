@@ -564,6 +564,10 @@ type JobsConfig struct {
 	// OperationsMemoryRows is how many Operations-pane rows a job keeps in memory before its
 	// log spills to $XDG_CACHE_HOME/pc/jobs (0 = never spill; otherwise at least 1000).
 	OperationsMemoryRows int `toml:"operations_memory_rows"`
+	// OperationsRefreshIntervalMS is the minimum milliseconds between Operations-pane updates
+	// driven by job activity (0 = every frame, at most JobsOperationsRefreshIntervalMaxMS).
+	// Scrolling, typing and switching jobs update the pane at once.
+	OperationsRefreshIntervalMS int `toml:"operations_refresh_interval_ms"`
 }
 
 type OperationsConfig struct {
@@ -730,6 +734,7 @@ func Default() Config {
 			ScanProgressMinIntervalMS:   DefaultScanProgressMinIntervalMS,
 			ScanDisableAdaptiveThrottle: false,
 			OperationsMemoryRows:        DefaultJobsOperationsMemoryRows,
+			OperationsRefreshIntervalMS: DefaultJobsOperationsRefreshIntervalMS,
 		},
 		Operations: OperationsConfig{
 			ConfirmDelete:                true,
@@ -1279,6 +1284,12 @@ func (c *Config) validateJobs(builtin *Config) {
 		c.Jobs.OperationsMemoryRows = builtin.Jobs.OperationsMemoryRows
 	case rows > 0 && rows < JobsOperationsMemoryRowsMin:
 		c.Jobs.OperationsMemoryRows = JobsOperationsMemoryRowsMin
+	}
+	switch ms := c.Jobs.OperationsRefreshIntervalMS; {
+	case ms < 0:
+		c.Jobs.OperationsRefreshIntervalMS = builtin.Jobs.OperationsRefreshIntervalMS
+	case ms > JobsOperationsRefreshIntervalMaxMS:
+		c.Jobs.OperationsRefreshIntervalMS = JobsOperationsRefreshIntervalMaxMS
 	}
 	if c.Jobs.ProgressUIWakeDebounceMS <= 0 {
 		c.Jobs.ProgressUIWakeDebounceMS = builtin.Jobs.ProgressUIWakeDebounceMS

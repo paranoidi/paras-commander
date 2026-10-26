@@ -18,11 +18,13 @@ type JobEntry struct {
 	DestIsDir   bool
 	CurrentPath string
 	DoneFiles   int
-	TotalFiles  int
-	TotalDirs   int
-	DoneBytes   int64
-	TotalBytes  int64
-	Error       string
+	// ProcessedItems mirrors jobs.Job.ProcessedItems (a copy's files gone through).
+	ProcessedItems int
+	TotalFiles     int
+	TotalDirs      int
+	DoneBytes      int64
+	TotalBytes     int64
+	Error          string
 	// Warnings mirrors jobs.Job.Warnings: non-fatal per-item issues (e.g. a symlink relinked
 	// instead of dereferenced) that do not fail the job.
 	Warnings []string

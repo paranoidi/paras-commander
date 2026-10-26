@@ -579,7 +579,6 @@ func TestJobsViewEnterMaximizesOperationsAndKeysRestore(t *testing.T) {
 	t.Parallel()
 	keys := map[string]*tcell.EventKey{
 		"esc":   tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone),
-		"q":     tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone),
 		"enter": tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone),
 		"left":  tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone),
 	}
@@ -603,6 +602,29 @@ func TestJobsViewEnterMaximizesOperationsAndKeysRestore(t *testing.T) {
 				t.Fatalf("%s closed the jobs view", name)
 			}
 		})
+	}
+}
+
+func TestJobsViewMaximizedOperationsTypesIntoFilter(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	for _, r := range "quill" {
+		h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if !model.JobsView.Maximized {
+		t.Fatal("typing restored the maximized pane")
+	}
+	if got := model.JobsView.OpsFilter.Query; got != "quill" {
+		t.Fatalf("query = %q, want quill", got)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if model.JobsView.OpsFilter.Query != "" || !model.JobsView.Maximized {
+		t.Fatalf("first Esc must close the filter only: query %q, maximized %v", model.JobsView.OpsFilter.Query, model.JobsView.Maximized)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if model.JobsView.Maximized {
+		t.Fatal("second Esc did not restore the layout")
 	}
 }
 
@@ -703,6 +725,34 @@ func TestRefreshOpsWindowNewestFirstAndFilters(t *testing.T) {
 	win = waitOpsWindow(t, h, model, func(w ui.JobsOpsWindow) bool { return !w.Scanning && w.Total == 3 })
 	if win.Rows[0].Op.Label != "thicket/acorn.bin" {
 		t.Fatalf("rows appended after the scan were not matched: %s", opsLabels(win))
+	}
+}
+
+func TestRefreshOpsWindowRateLimitsJobActivity(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	h.config.Jobs.OperationsRefreshIntervalMS = 60_000
+	log := selectedOps(t, h)
+	log.Append(oplog.Record{Result: oplog.Done, Label: "meadow/thistle.txt"})
+	h.RefreshOpsWindow()
+	log.Append(oplog.Record{Result: oplog.Done, Label: "meadow/clover.txt"})
+	h.RefreshOpsWindow()
+	if model.JobsOpsWindow.Total != 1 {
+		t.Fatalf("job activity rebuilt the window inside the interval: Total %d", model.JobsOpsWindow.Total)
+	}
+	if !h.ops.trailing.Armed() {
+		t.Fatal("held-back rows armed no trailing wake")
+	}
+	model.JobsView.OpsResultHidden = dialog.JobResultFailed
+	h.RefreshOpsWindow()
+	if model.JobsOpsWindow.Total != 2 {
+		t.Fatalf("a filter change must rebuild at once: Total %d", model.JobsOpsWindow.Total)
+	}
+	h.config.Jobs.OperationsRefreshIntervalMS = 0
+	log.Append(oplog.Record{Result: oplog.Done, Label: "meadow/sorrel.txt"})
+	h.RefreshOpsWindow()
+	if model.JobsOpsWindow.Total != 3 {
+		t.Fatalf("interval 0 must rebuild every frame: Total %d", model.JobsOpsWindow.Total)
 	}
 }
 
