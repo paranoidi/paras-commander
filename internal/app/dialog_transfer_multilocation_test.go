@@ -221,7 +221,7 @@ func TestTransferPreviewListPgUpPgDnClampsScroll(t *testing.T) {
 		t.Fatalf("entries = %d, want 12", len(d.Entries))
 	}
 
-	vp := app.dialogCtrl.TransferPreviewListViewportRows()
+	vp := dialog.TransferListViewportRows(dialog.Layout{Width: 80, Height: 24}, *d)
 	if vp < 1 {
 		t.Fatalf("viewport rows = %d, want >= 1", vp)
 	}

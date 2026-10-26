@@ -5,8 +5,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
@@ -96,8 +98,8 @@ func massRenameMarkerWidth(st FileDialogState) int {
 
 // massRenameView is the widget spec of the mass rename main screen: the mode radios and the option
 // checkboxes sharing four columns, a rule, the mode's section (Find / Replace inputs with their
-// hints, the Capitalize checkboxes, or nothing for the external editor), a rule and the reserved
-// preview region (drawMassRenamePreview paints the before / after rows into it), above OK / Apply /
+// hints, the Capitalize checkboxes, or nothing for the external editor), a rule and the
+// before / after preview (massRenamePreviewList, a ScrollOnly list), above OK / Apply /
 // Cancel. The mode radios are Tab stops of one segment with the option row; each input is a
 // segment of its own.
 func massRenameView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
@@ -178,89 +180,99 @@ func massRenameView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 		}
 		spec.Groups = append(spec.Groups, dlg.Group{Columns: [][]dlg.Item{append(fields, dlg.Item{Kind: dlg.KindSeparator})}})
 	}
-	spec.Groups = append(spec.Groups, dlg.Group{Columns: [][]dlg.Item{{
-		{ID: massRenamePreview, Kind: dlg.KindSpacer, Height: MassRenamePreviewViewportRows(ctx.Layout.Height, st)},
-	}}})
+	// The rows are pre-fitted into a before and an after column, so the list's placed width comes
+	// first: Place the spec with the empty preview, then fill it.
+	height := MassRenamePreviewViewportRows(ctx.Layout.Height, st)
+	spec.Groups = append(spec.Groups, dlg.Group{Columns: [][]dlg.Item{{{ID: massRenamePreview, Kind: dlg.KindList, ScrollOnly: true, Height: height}}}})
+	width := 0
+	if p, ok := dlg.Place(ctx.Layout.Width, ctx.Layout.Height, spec); ok {
+		pi, _ := p.Item(massRenamePreview)
+		width = pi.Rect.Width
+	}
+	spec.Groups[len(spec.Groups)-1].Columns[0][0] = massRenamePreviewList(st, height, width, ctx.Styles)
+	spec.ScrollbarStyle = ctx.ScrollbarStyle
 	return spec
 }
 
-// drawMassRenamePreview paints the before / after preview rows (or the compute error) into the
-// reserved preview region, with the scrollbar on the dialog's right border.
-func drawMassRenamePreview(screen tcell.Screen, p dlg.Placement, state FileDialogState, ctx DialogRenderContext) {
-	region, ok := p.Item(massRenamePreview)
-	if !ok {
-		return
+// massRenamePreviewList is the before / after preview: a ScrollOnly list of rows pre-fitted to
+// width cells (the compute error alone when there is one).
+func massRenamePreviewList(st FileDialogState, height, width int, styles theme.Theme) dlg.Item {
+	_, bg, _ := styles.DialogSurface.Decompose()
+	if errMsg := strings.TrimSpace(st.MassRenameComputeError); errMsg != "" {
+		return scrollList(massRenamePreview, 1, height, 0, func(int) dlg.ListRow {
+			text := primitive.TruncateRight(errMsg, width)
+			text += strings.Repeat(" ", max(width-runewidth.StringWidth(text), 0))
+			return dlg.ListRow{Text: text, Spans: []primitive.Span{{End: utf8.RuneCountInString(text), Style: styles.MessageWarn.Background(bg)}}}
+		})
 	}
-	styles := ctx.Styles
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	_, surface, _ := styles.DialogSurface.Decompose()
-	borderStyle := styles.DialogFrame.Background(surface)
-	beforeBase := styles.DialogMassRenameBefore.Background(dbg)
-	beforeRemoved := styles.DialogMassRenameBeforeRemoved
-	beforeReplaced := styles.DialogMassRenameBeforeReplaced
-	afterBase := styles.DialogMassRenameAfter.Background(dbg)
-	afterAdded := styles.DialogMassRenameAfterAdded
-	afterError := styles.DialogMassRenameAfterError
-	primaryCol := region.Rect.X + 1
-	innerW := region.Rect.Width - 2
-	if innerW <= 0 {
-		return
-	}
-	vp := region.Rect.Height
-	y := region.Rect.Y
-	previewTopY := y
-	if errMsg := strings.TrimSpace(state.MassRenameComputeError); errMsg != "" {
-		primitive.Text(screen, primaryCol, y, innerW, errMsg, styles.MessageWarn.Background(dbg))
-		draw.DrawDialogListScrollbar(screen, p.Rect, previewTopY, vp, 1, 0, ctx.ScrollbarStyle, borderStyle, styles)
-		return
-	}
-	before := state.MassRenamePreviewBefore
-	after := state.MassRenamePreviewAfter
-	n := min(len(before), len(after))
-	scroll := min(max(state.MassRenamePreviewScroll, 0), max(n-vp, 0))
-	sepW := 0
-	primaryW := innerW / 2
-	secondaryW := innerW - primaryW
-	if innerW >= 3 {
+	n := min(len(st.MassRenamePreviewBefore), len(st.MassRenamePreviewAfter))
+	primaryW, sepW, secondaryW := massRenamePreviewColumns(width)
+	list := scrollList(massRenamePreview, n, height, st.MassRenamePreviewScroll, func(i int) dlg.ListRow {
+		return massRenamePreviewRow(st, i, primaryW, sepW, secondaryW, bg, styles)
+	})
+	list.Fit = dlg.FitNone
+	return list
+}
+
+// massRenamePreviewColumns splits the preview width into the before column, a one-cell separator
+// (when there is room) and the after column.
+func massRenamePreviewColumns(width int) (primaryW, sepW, secondaryW int) {
+	primaryW = width / 2
+	secondaryW = width - primaryW
+	if width >= 3 {
 		sepW = 1
-		avail := innerW - sepW
-		primaryW = avail / 2
-		secondaryW = avail - primaryW
+		primaryW = (width - sepW) / 2
+		secondaryW = width - sepW - primaryW
 	}
 	if primaryW < 1 {
 		primaryW = 1
-		secondaryW = max(innerW-sepW-primaryW, 0)
+		secondaryW = max(width-sepW-primaryW, 0)
 	}
-	for row := 0; row < vp; row++ {
-		i := scroll + row
-		if i >= n {
-			break
-		}
-		var removed, replaced, added []search.Range
-		var ignored search.Range
-		if i < len(state.MassRenamePreviewBeforeIgnored) {
-			ignored = state.MassRenamePreviewBeforeIgnored[i]
-		}
-		if i < len(state.MassRenamePreviewBeforeRemoved) {
-			removed = state.MassRenamePreviewBeforeRemoved[i]
-		}
-		if i < len(state.MassRenamePreviewBeforeReplaced) {
-			replaced = state.MassRenamePreviewBeforeReplaced[i]
-		}
-		if i < len(state.MassRenamePreviewAfterAdded) {
-			added = state.MassRenamePreviewAfterAdded[i]
-		}
-		lbText, lbSpans := massRenameBeforePreviewRow(before[i], removed, replaced, ignored, primaryW, beforeBase, beforeRemoved, beforeReplaced, styles.DialogOptionDisabledStyle())
-		rowError := i < len(state.MassRenamePreviewAfterError) && state.MassRenamePreviewAfterError[i]
-		rbText, rbSpans := massRenameAfterPreviewRow(after[i], added, secondaryW, afterBase, afterAdded, afterError.Background(dbg), rowError)
-		primitive.StyledText(screen, primaryCol, y, primaryW, lbText, beforeBase, lbSpans)
-		if sepW == 1 {
-			screen.SetContent(primaryCol+primaryW, y, ' ', nil, beforeBase)
-		}
-		primitive.StyledText(screen, primaryCol+primaryW+sepW, y, secondaryW, rbText, afterBase, rbSpans)
-		y++
+	return primaryW, sepW, secondaryW
+}
+
+// massRenamePreviewRow is preview row i: the before name (removed / replaced / ignored parts
+// styled) and the after name (added parts or the row error styled), each padded to its column in
+// its base style, with the separator between, as one pre-styled row.
+func massRenamePreviewRow(st FileDialogState, i, primaryW, sepW, secondaryW int, bg tcell.Color, styles theme.Theme) dlg.ListRow {
+	beforeBase := styles.DialogMassRenameBefore.Background(bg)
+	afterBase := styles.DialogMassRenameAfter.Background(bg)
+	var removed, replaced, added []search.Range
+	var ignored search.Range
+	if i < len(st.MassRenamePreviewBeforeIgnored) {
+		ignored = st.MassRenamePreviewBeforeIgnored[i]
 	}
-	draw.DrawDialogListScrollbar(screen, p.Rect, previewTopY, vp, n, scroll, ctx.ScrollbarStyle, borderStyle, styles)
+	if i < len(st.MassRenamePreviewBeforeRemoved) {
+		removed = st.MassRenamePreviewBeforeRemoved[i]
+	}
+	if i < len(st.MassRenamePreviewBeforeReplaced) {
+		replaced = st.MassRenamePreviewBeforeReplaced[i]
+	}
+	if i < len(st.MassRenamePreviewAfterAdded) {
+		added = st.MassRenamePreviewAfterAdded[i]
+	}
+	before, beforeSpans := massRenameBeforePreviewRow(st.MassRenamePreviewBefore[i], removed, replaced, ignored, primaryW, beforeBase,
+		styles.DialogMassRenameBeforeRemoved, styles.DialogMassRenameBeforeReplaced, styles.DialogOptionDisabledStyle())
+	rowError := i < len(st.MassRenamePreviewAfterError) && st.MassRenamePreviewAfterError[i]
+	after, afterSpans := massRenameAfterPreviewRow(st.MassRenamePreviewAfter[i], added, secondaryW, afterBase,
+		styles.DialogMassRenameAfterAdded, styles.DialogMassRenameAfterError.Background(bg), rowError)
+	pad := func(s string, w int) string {
+		s = primitive.TruncateRight(s, w)
+		return s + strings.Repeat(" ", max(w-runewidth.StringWidth(s), 0))
+	}
+	before = pad(before, primaryW)
+	after = pad(after, secondaryW)
+	afterStart := utf8.RuneCountInString(before) + sepW
+	text := before + strings.Repeat(" ", sepW) + after
+	spans := beforeSpans
+	for _, sp := range afterSpans {
+		spans = append(spans, primitive.Span{Start: sp.Start + afterStart, End: sp.End + afterStart, Style: sp.Style})
+	}
+	// Under the highlights (the first span covering a rune wins), each column's base style.
+	spans = append(spans,
+		primitive.Span{End: afterStart, Style: beforeBase},
+		primitive.Span{Start: afterStart, End: afterStart + utf8.RuneCountInString(after), Style: afterBase})
+	return dlg.ListRow{Text: text, Spans: spans}
 }
 
 // massRenamePatternPickerView is the spec of a pattern picker screen (load, history or overwrite).

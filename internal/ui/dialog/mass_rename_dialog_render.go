@@ -7,24 +7,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// MassRenameEnsurePreviewScroll clamps scroll so the viewport fits.
-func MassRenameEnsurePreviewScroll(state *FileDialogState, viewportRows, totalRows int) {
-	if viewportRows <= 0 || totalRows <= 0 {
-		state.MassRenamePreviewScroll = 0
-		return
-	}
-	maxScroll := totalRows - viewportRows
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if state.MassRenamePreviewScroll > maxScroll {
-		state.MassRenamePreviewScroll = maxScroll
-	}
-	if state.MassRenamePreviewScroll < 0 {
-		state.MassRenamePreviewScroll = 0
-	}
-}
-
 // massRenameDialogHeight returns the dialog outer height for mass rename.
 // The dialog is sized identically for all three modes (Simple / Regex / ExternalEditor) so
 // switching modes does not resize it. ExternalEditor skips the fields section at render time,

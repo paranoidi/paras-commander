@@ -1,5 +1,10 @@
 package dialog
 
+import (
+	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+)
+
 // helpVisualRowIndex returns the visual-row index of the entry row whose RankedIdx == selected.
 // Returns 0 if not found (should not happen for a valid selected index).
 func helpVisualRowIndex(rows []HelpVisualRow, selected int) int {
@@ -11,38 +16,18 @@ func helpVisualRowIndex(rows []HelpVisualRow, selected int) int {
 	return 0
 }
 
-// EnsureListScroll keeps ListScroll (the first visible *visual* row, which counts section
-// headers as well as entries) such that the selected entry's visual row stays within
-// [ListScroll, ListScroll+listRows). Scrolling up to reveal the selected entry also reveals
-// its section header immediately above it, if any — otherwise once ListScroll settled on the
-// entry's own row (e.g. after scrolling down and back up), that header could never come back
-// into view: it sits above the entry's row, but nothing ever asked for it to be shown.
+// EnsureListScroll clamps Selected to the ranked entries and sets ListScroll (the first visible
+// *visual* row, counting section headers as well as entries) to the list's viewport for a list of
+// listRows rows: dlg's sticky viewport, which also reveals the section header right above the
+// selected entry.
 func (st *HelpViewState) EnsureListScroll(listRows int) {
 	n := len(st.Ranked)
 	if n == 0 || listRows <= 0 {
 		st.ListScroll = 0
 		return
 	}
-	if st.Selected < 0 {
-		st.Selected = 0
-	}
-	if st.Selected >= n {
-		st.Selected = n - 1
-	}
-	visualRows := BuildHelpVisualRows(st.Entries, st.Ranked)
-	row := helpVisualRowIndex(visualRows, st.Selected)
-	// Walk backward over the section header immediately above the entry, if any, so revealing
-	// the entry also reveals its header rather than just the entry's own row.
-	revealRow := row
-	for revealRow > 0 && visualRows[revealRow-1].IsHeader {
-		revealRow--
-	}
-	if st.ListScroll > revealRow {
-		st.ListScroll = revealRow
-	}
-	if row >= st.ListScroll+listRows {
-		st.ListScroll = row - listRows + 1
-	}
+	st.Selected = min(max(st.Selected, 0), n-1)
+	st.ListScroll = helpListItem(*st, listRows, 0, theme.Theme{}).ViewOffset()
 }
 
 // helpLandOnEntry adjusts a visual-row index that may have landed on a non-selectable section
@@ -109,4 +94,14 @@ func (st *HelpViewState) PageUpSelection(listRows int) int {
 		topEntry = helpLandOnEntry(rows, top, false)
 	}
 	return rows[topEntry].RankedIdx
+}
+
+// ApplyListMove stores a list event of the help entry list: the cursor row (a visual row; header
+// rows never hold it) becomes the selected entry, and the viewport its ListScroll.
+func (st *HelpViewState) ApplyListMove(ev dlg.Event) {
+	visual := BuildHelpVisualRows(st.Entries, st.Ranked)
+	if ev.Index >= 0 && ev.Index < len(visual) && !visual[ev.Index].IsHeader {
+		st.Selected = visual[ev.Index].RankedIdx
+	}
+	st.ListScroll = ev.Offset
 }

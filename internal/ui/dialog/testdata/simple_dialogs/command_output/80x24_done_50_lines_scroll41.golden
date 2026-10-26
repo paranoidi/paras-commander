@@ -5,6 +5,7 @@
                                                                                 
                                                                                 
         ┌──────────────────────── Build willow ────────────────────────┐        
+        │ line 40 amber birch                                          │        
         │ line 41 birch ember                                          │        
         │ line 42 cinder harbor                                        │        
         │ line 43 dune cinder                                          │        
@@ -13,8 +14,7 @@
         │ line 46 glacier dune                                         │        
         │ line 47 harbor glacier                                       │        
         │ line 48 amber birch                                          │        
-        │ line 49 birch ember                                          │        
-        │                                                              ┃        
+        │ line 49 birch ember                                          ┃        
         ├──────────────────────────────────────────────────────────────┤        
         │                            [ OK ]                            │        
         └──────────────────────────────────────────────────────────────┘        

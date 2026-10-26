@@ -5,10 +5,8 @@ import (
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -60,6 +58,8 @@ type FileDialogViewContext struct {
 	IconLead int
 	// Styles supplies the theme's search icon for the picker sub-screens.
 	Styles theme.Theme
+	// ScrollbarStyle draws the delete list's and the mass rename preview's scrollbars.
+	ScrollbarStyle uiscrollbar.Style
 }
 
 // FileDialogView is the widget spec of every file dialog, built from the same parts:
@@ -70,8 +70,8 @@ type FileDialogViewContext struct {
 //     directory) under a whitespace warning row, mkdir's post-action radios;
 //   - the rename tool screens (Preview, then Sanitize checkboxes, Slugify radios or Encoding
 //     radios) in place of the inputs;
-//   - the delete confirmation: a reserved region for the name list (DrawFileDialog paints its rows,
-//     icons and scrollbar), the summary and OK / Cancel as Yes / No;
+//   - the delete confirmation: the name list (a ScrollOnly list; DrawFileDialog paints its
+//     devicons), the summary and OK / Cancel as Yes / No;
 //   - add bookmark's path head, the extract skipped-items note and the mass rename save prompt reuse
 //     the input groups; run-for-each (runForEachView, its history picker) and the mass rename main
 //     screen and pattern pickers (massRenameView, massRenamePatternPickerView) have their own views.
@@ -104,6 +104,7 @@ func FileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 			{ID: dlg.Cancel, Label: "No", Mnemonic: 'N'},
 		}
 		spec.Groups = deleteViewGroups(st, ctx)
+		spec.ScrollbarStyle = ctx.ScrollbarStyle
 	case renameToolActive(st):
 		spec.Groups = renameToolViewGroups(st)
 	case st.DialogType == FileDialogAddBookmark:
@@ -248,8 +249,15 @@ func deleteViewGroups(st FileDialogState, ctx FileDialogViewContext) []dlg.Group
 		summary = append(summary, dlg.Item{Kind: dlg.KindLabel, Label: strings.TrimSpace(st.DeleteWarning)})
 	}
 	summary = append(summary, dlg.Item{Kind: dlg.KindLabel, Label: st.DeleteSummary, Center: true})
+	icon := listIconPad(ctx.IconLead)
+	list := scrollList(fileDeleteList, len(st.DeleteEntries), DeleteDialogListViewportRows(ctx.Layout.Height, st), st.DeleteListScroll,
+		func(i int) dlg.ListRow {
+			e := st.DeleteEntries[i]
+			return dlg.ListRow{Text: deleteListRowText(e.Name, e.Path), Icon: icon}
+		})
+	list.Fit = dlg.FitPath
 	return []dlg.Group{
-		{Columns: [][]dlg.Item{{{ID: fileDeleteList, Kind: dlg.KindSpacer, Height: DeleteDialogListViewportRows(ctx.Layout.Height, st)}}}},
+		{Columns: [][]dlg.Item{{list}}},
 		{Columns: [][]dlg.Item{summary}},
 	}
 }
@@ -258,6 +266,14 @@ func deleteViewGroups(st FileDialogState, ctx FileDialogViewContext) []dlg.Group
 // toggle, mkdir radios select their action, the tool screen options toggle or select. The inputs
 // and the buttons are the caller's to handle.
 func (st *FileDialogState) Apply(ev dlg.Event) {
+	if ev.Kind == dlg.EventListMove {
+		switch ev.ID {
+		case fileDeleteList:
+			st.DeleteListScroll = ev.Offset
+		case massRenamePreview:
+			st.MassRenamePreviewScroll = ev.Offset
+		}
+	}
 	if st.DialogType == FileDialogRunForEach {
 		st.applyRunForEachEvent(ev)
 		return
@@ -303,11 +319,10 @@ func (st *FileDialogState) SpecFocusRef() *dlg.ID {
 	return &st.Focus
 }
 
-// drawFileDialogSpec paints a file dialog: the spec, then what lives in reserved
-// regions and on the input rects (the delete list with its icons and scrollbar, the focused path
-// field's completion dropdown).
+// drawFileDialogSpec paints a file dialog: the spec, then the overlays on its rects (the delete
+// list's devicons, the focused path field's completion dropdown).
 func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) {
-	spec := FileDialogView(state, FileDialogViewContext{Layout: layout, IconLead: ctx.IconLead, Styles: ctx.Styles})
+	spec := FileDialogView(state, FileDialogViewContext{Layout: layout, IconLead: ctx.IconLead, Styles: ctx.Styles, ScrollbarStyle: ctx.ScrollbarStyle})
 	if fileDialogWidth(layout.Width, state, ctx.IconLead) < 20 {
 		return
 	}
@@ -316,11 +331,9 @@ func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogStat
 		return
 	}
 	if state.DialogType == FileDialogDelete {
-		drawDeleteListRows(screen, p, state, ctx, paintDeleteIcon)
-		return
-	}
-	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {
-		drawMassRenamePreview(screen, p, state, ctx)
+		if ctx.ShowIcons && paintDeleteIcon != nil && ctx.IconLead > 0 {
+			paintListIcons(p, fileDeleteList, func(row, x, y int) { paintDeleteIcon(screen, x, y, state.DeleteEntries[row], ctx.Styles) })
+		}
 		return
 	}
 	if i := fileFocusedFieldIndex(state); i >= 0 && state.Fields[i].PathPicker && state.Fields[i].Completion.Open {
@@ -329,41 +342,4 @@ func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogStat
 			drawPathCompletionDropdown(screen, in.Rect.X, in.Rect.Y+1, f.Scroll, f.Completion, ctx.ScrollbarStyle, ctx.Styles)
 		}
 	}
-}
-
-// drawDeleteListRows paints the visible slice of the delete name list into the reserved region:
-// a devicon (when icons are shown), the fitted name, and the scrollbar on the right border.
-func drawDeleteListRows(screen tcell.Screen, p dlg.Placement, state FileDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
-	region, ok := p.Item(fileDeleteList)
-	if !ok {
-		return
-	}
-	styles := ctx.Styles
-	listStyle := styles.DialogOptionRowStyle(false, false)
-	textX, textW := region.Rect.X+1, region.Rect.Width-2
-	withIcons := ctx.ShowIcons && paintIcon != nil && ctx.IconLead > 0
-	if withIcons {
-		textX += ctx.IconLead
-		textW = max(textW-ctx.IconLead, 1)
-	}
-	vp := region.Rect.Height
-	n := len(state.DeleteEntries)
-	scroll := min(max(state.DeleteListScroll, 0), max(n-vp, 0))
-	for i := 0; i < vp && scroll+i < n; i++ {
-		y := region.Rect.Y + i
-		if y >= p.ContentBottom {
-			break
-		}
-		e := state.DeleteEntries[scroll+i]
-		if withIcons {
-			paintIcon(screen, region.Rect.X+1, y, e, styles)
-		}
-		primitive.Text(screen, textX, y, textW, DeleteListEntryNameFitsWidth(e.Name, e.Path, textW), listStyle)
-	}
-	_, surface, _ := styles.DialogSurface.Decompose()
-	sb := ctx.ScrollbarStyle
-	if sb == "" {
-		sb = uiscrollbar.StyleThumb
-	}
-	draw.DrawDialogListScrollbar(screen, p.Rect, region.Rect.Y, vp, n, scroll, sb, styles.DialogFrame.Background(surface), styles)
 }

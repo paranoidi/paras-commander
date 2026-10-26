@@ -8,7 +8,7 @@
   │ Replace:                                                                 │  
   │ harbor                                                                   │  
   ├──────────────────────────────────────────────────────────────────────────┤  
-  ├─lantern-0.txt                       harbor-0.txt                        ─┃  
+  ├──────────────────────────────────────────────────────────────────────────┤  
   │                    [ OK ]    [ Apply ]    [ Cancel ]                     │  
   └──────────────────────────────────────────────────────────────────────────┘  
 -- legend --
@@ -18,10 +18,7 @@ c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
 e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-h fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-i fg=0x100000002 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabdddddcddddddddddddddddddddbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbaa
@@ -32,6 +29,6 @@ aabbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbgggggggbbhhhhbbbbbbbbbbbbbbbbbbbbbbbiiiiiieeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbbbbbbbbbbfffjffffbbfffjfffffffbbfffjffffffffbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbfffgffffbbfffgfffffffbbfffgffffffffbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa

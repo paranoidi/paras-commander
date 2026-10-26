@@ -355,9 +355,22 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		}
 		i := index[*focus]
 		return move(tabTarget(spec, segs[(i+step+len(segs))%len(segs)]), true)
+	case tcell.KeyPgUp, tcell.KeyPgDn:
+		return scrollOnlyKey(spec, ev.Key())
+	case tcell.KeyHome, tcell.KeyEnd:
+		if isInput(spec, cur) {
+			return Event{}, false // the caller moves the text cursor
+		}
+		return scrollOnlyKey(spec, ev.Key())
 	case tcell.KeyDown:
 		if cur.isButton() {
-			return move(adjacentButton(spec, cur.button, 1))
+			if id, ok := adjacentButton(spec, cur.button, 1); ok {
+				return move(id, true)
+			}
+			if e, ok := scrollOnlyKey(spec, ev.Key()); ok {
+				return e, true // nowhere to move: scroll the view instead
+			}
+			return Event{}, true
 		}
 		if id, ok := nextFocusable(spec.Groups[cur.group].Columns[cur.col], cur.row, cur.cell); ok {
 			return move(id, true)
@@ -368,7 +381,13 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 			if id, ok := adjacentButton(spec, cur.button, -1); ok {
 				return move(id, true)
 			}
-			return move(prevGroupLast(spec, len(spec.Groups), -1))
+			if id, ok := prevGroupLast(spec, len(spec.Groups), -1); ok {
+				return move(id, true)
+			}
+			if e, ok := scrollOnlyKey(spec, ev.Key()); ok {
+				return e, true // nowhere to move: scroll the view instead
+			}
+			return Event{}, true
 		}
 		if id, ok := prevFocusable(spec.Groups[cur.group].Columns[cur.col], cur.row, cur.cell); ok {
 			return move(id, true)

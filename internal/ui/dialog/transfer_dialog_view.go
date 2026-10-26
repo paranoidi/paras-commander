@@ -3,6 +3,7 @@ package dialog
 import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Transfer dialog widget IDs. The buttons are dlg.OK, TransferAddPaused and dlg.Cancel.
@@ -14,7 +15,7 @@ const (
 	TransferDeref     = dlg.ID("dereference-symlinks")
 	TransferFlatten   = dlg.ID("flatten-into-destination")
 	TransferAddPaused = dlg.ID("add-paused")
-	// transferResult is the reserved region of the multi-location Result preview list.
+	// transferResult is the multi-location Result preview, a ScrollOnly list.
 	transferResult = dlg.ID("result")
 )
 
@@ -25,14 +26,16 @@ type TransferViewContext struct {
 	Layout      Layout
 	UserHomeDir string
 	IconLead    int
+	// ScrollbarStyle draws the Result preview's scrollbar.
+	ScrollbarStyle uiscrollbar.Style
 }
 
 // TransferView is the copy / move dialog's widget spec. The self-copy phase asks for a new name.
 // The destination phase has the destination input, for a copy the preserve / dereference
 // checkboxes, and for a multi-location selection the Source header, the Flatten into destination
-// checkbox and the Result preview. The preview rows are painted by DrawTransferDialog into the
-// reserved transferResult region (they carry per-type icons and are scrolled by the key handler);
-// the destination's completion dropdown is painted from the input's placed rect. Buttons are OK,
+// checkbox and the Result preview, a ScrollOnly list whose per-type devicons DrawTransferDialog
+// paints into the cells each row keeps free; the destination's completion dropdown is painted from
+// the input's placed rect. Buttons are OK,
 // Add paused and Cancel in both phases.
 func TransferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 	title := "Copy"
@@ -89,9 +92,17 @@ func TransferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 		spec.Groups = append(spec.Groups, dlg.Group{Columns: [][]dlg.Item{options}})
 	}
 	if st.MultiLocation() {
+		icon := listIconPad(ctx.IconLead)
+		result := scrollList(transferResult, len(st.Entries), TransferListViewportRows(ctx.Layout, st), st.EntriesScroll,
+			func(i int) dlg.ListRow {
+				e := st.Entries[i]
+				return dlg.ListRow{Text: deleteListRowText(transferEntryLabel(e, st.FlattenIntoDest), e.Path), Icon: icon}
+			})
+		result.Fit = dlg.FitPath
+		spec.ScrollbarStyle = ctx.ScrollbarStyle
 		spec.Groups = append(spec.Groups, dlg.Group{Columns: [][]dlg.Item{{
 			{Kind: dlg.KindSeparator, Label: "Result"},
-			{ID: transferResult, Kind: dlg.KindSpacer, Height: TransferListViewportRows(ctx.Layout, st)},
+			result,
 		}}})
 	}
 	return spec
@@ -101,6 +112,10 @@ func TransferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 // (Dereference symlinks does nothing where it is greyed out). The inputs and buttons are the
 // caller's to handle.
 func (st *TransferDialogState) Apply(ev dlg.Event) {
+	if ev.ID == transferResult && ev.Kind == dlg.EventListMove {
+		st.EntriesScroll = ev.Offset
+		return
+	}
 	switch ev.ID {
 	case TransferPerm:
 		st.PreservePermissions = !st.PreservePermissions

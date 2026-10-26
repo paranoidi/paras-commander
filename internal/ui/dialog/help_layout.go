@@ -35,8 +35,8 @@ func helpDialogSize(layout Layout) (prefW, listH int, ok bool) {
 	return prefW, listH, true
 }
 
-// ComputeHelpDialogListMetrics mirrors DrawHelpDialog sizing for the scrollable list area, taking
-// the rect from the dialog's placement. When ok is false, the help dialog would not render a
+// ComputeHelpDialogListMetrics is the help dialog's list geometry, from the dialog's placement: the
+// widths FormatHelpRow formats entries to and the visible rows. When ok is false, the help dialog would not render a
 // usable list at this terminal size.
 func ComputeHelpDialogListMetrics(layout Layout) (m HelpDialogListMetrics, ok bool) {
 	spec, listH, fits := HelpDialogView(HelpViewState{}, layout, theme.Theme{})
@@ -47,11 +47,6 @@ func ComputeHelpDialogListMetrics(layout Layout) (m HelpDialogListMetrics, ok bo
 	if !placed {
 		return m, false
 	}
-	return helpListMetrics(p, listH)
-}
-
-// helpListMetrics is the list geometry of the help dialog placed as p with listH list rows.
-func helpListMetrics(p dlg.Placement, listH int) (m HelpDialogListMetrics, ok bool) {
 	inputWidth := draw.DialogContentWidth(p.Rect)
 	if inputWidth < 10 {
 		return m, false

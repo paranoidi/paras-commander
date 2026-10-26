@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
@@ -149,6 +150,13 @@ type Item struct {
 	// as an option row; otherwise rows are plain dialog text and only the focused cursor row is
 	// highlighted.
 	Markers bool
+	// ScrollOnly makes a list a scrolling view without a cursor (the delete list, a preview,
+	// command output): never focused, Offset is its only state and clicks on it are misses. It
+	// scrolls with PgUp/PgDn from any widget that does not use them, with Up/Down when focus has
+	// nowhere to move (a lone button strip), with Home/End when a button or option is focused, and
+	// with the mouse wheel; each reports an EventListMove carrying only the new Offset. A spec has
+	// at most one ScrollOnly list.
+	ScrollOnly bool
 	// Scrollbar draws draw.DrawDialogListScrollbar on the dialog's right border when the rows
 	// overflow Height.
 	Scrollbar bool
@@ -227,6 +235,13 @@ type ListRow struct {
 	// Marks are the pinned / job / missing icons drawn after the text (see Item.MarksAfterText,
 	// Item.MarksWidth). Marks.Cursor is set by the engine.
 	Marks RowMarks
+	// Spans are pre-styled rune ranges of Text (ANSI colors, a key column, a diff), drawn under the
+	// Match highlights. They keep their offsets only while Text is not shortened in the middle, so
+	// they are used with FitNone or FitRight; on the cursor row the cursor style replaces them.
+	Spans []primitive.Span
+	// Header draws the row as a section header (dialog.help.section): the cursor never lands on it
+	// (motion skips it, a click on it is a miss) and revealing the row under it reveals it too.
+	Header bool
 }
 
 // Focusable reports whether keyboard focus and mouse clicks can land on the item.
@@ -244,7 +259,7 @@ func (it Item) Focusable() bool {
 		}
 		return false
 	case KindList:
-		return it.rowCount() > 0 && !it.Driven // an empty list has nothing to select
+		return it.rowCount() > 0 && !it.Driven && !it.ScrollOnly // an empty list has nothing to select
 	}
 	return true
 }
@@ -382,6 +397,19 @@ const (
 	EventListMove                  // a list's cursor / scroll offset moved
 	EventCaret                     // an input's text cursor moved (Click)
 )
+
+// EachListRow calls f for every drawn row of list id: its row index and screen row, from the
+// first visible row down to the last row or the content bottom. Overlays painted after Draw (row
+// devicons in the cells a row's Icon reserves) walk the rows with it.
+func (p Placement) EachListRow(id ID, f func(row, y int)) {
+	pi, ok := p.Item(id)
+	if !ok || pi.Kind != KindList {
+		return
+	}
+	for i := 0; i < pi.Rect.Height && pi.Offset+i < pi.Rows && pi.Rect.Y+i < p.ContentBottom; i++ {
+		f(pi.Offset+i, pi.Rect.Y+i)
+	}
+}
 
 // Item returns the placed widget named id (an input's Rect is where a caller anchors overlays such
 // as a completion dropdown or a validation hint).

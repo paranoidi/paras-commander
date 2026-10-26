@@ -131,51 +131,19 @@ func transferMultiDialogWidth(layout Layout, state TransferDialogState, userHome
 }
 
 // DrawTransferDialog paints the copy / move modal from its widget spec (see TransferView), then the
-// multi-location Result rows (with their icons) and the destination's completion dropdown, both
-// anchored to rects of the placement.
+// Result rows' devicons and the destination's completion dropdown, anchored to the placement.
 func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
-	spec := TransferView(state, TransferViewContext{Layout: layout, UserHomeDir: ctx.UserHomeDir, IconLead: ctx.IconLead})
+	spec := TransferView(state, TransferViewContext{Layout: layout, UserHomeDir: ctx.UserHomeDir, IconLead: ctx.IconLead, ScrollbarStyle: ctx.ScrollbarStyle})
 	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
 	if !ok {
 		return
 	}
-	if state.MultiLocation() {
-		drawTransferResultRows(screen, p, state, ctx, paintIcon)
+	if state.MultiLocation() && ctx.ShowIcons && paintIcon != nil && ctx.IconLead > 0 {
+		paintListIcons(p, transferResult, func(row, x, y int) { paintIcon(screen, x, y, state.Entries[row], ctx.Styles) })
 	}
 	if state.Phase == TransferPhaseDestination {
 		if in, ok := p.Item(TransferDest); ok {
 			drawPathCompletionDropdown(screen, in.Rect.X, in.Rect.Y+1, state.Destination.Scroll, state.Destination.Completion, ctx.ScrollbarStyle, ctx.Styles)
 		}
-	}
-}
-
-// drawTransferResultRows paints the visible slice of the Result preview into the reserved region:
-// a devicon (when icons are shown) and the root-relative or basename label of each entry.
-func drawTransferResultRows(screen tcell.Screen, p dlg.Placement, state TransferDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
-	region, ok := p.Item(transferResult)
-	if !ok {
-		return
-	}
-	styles := ctx.Styles
-	listStyle := styles.DialogOptionRowStyle(false, false)
-	textX, textW := region.Rect.X+1, region.Rect.Width-2
-	withIcons := ctx.ShowIcons && paintIcon != nil && ctx.IconLead > 0
-	if withIcons {
-		textX += ctx.IconLead
-		textW = max(textW-ctx.IconLead, 1)
-	}
-	n := len(state.Entries)
-	scroll := min(max(state.EntriesScroll, 0), n)
-	for i := 0; i < region.Rect.Height && scroll+i < n; i++ {
-		y := region.Rect.Y + i
-		if y >= p.ContentBottom {
-			break
-		}
-		e := state.Entries[scroll+i]
-		if withIcons {
-			paintIcon(screen, region.Rect.X+1, y, e, styles)
-		}
-		line := DeleteListEntryNameFitsWidth(transferEntryLabel(e, state.FlattenIntoDest), e.Path, textW)
-		primitive.Text(screen, textX, y, textW, line, listStyle)
 	}
 }

@@ -53,16 +53,29 @@ func (h *Handler) HandleOutputDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if h.scrollOutputDialog(st, scrollEv.Key()) {
-		return
-	}
-	if ev, ok := dlg.HandleKey(dialog.CommandOutputDialogKeys(*st), &st.Focus, event); ok {
+	// The engine scrolls the output (arrows, paging, Home/End) and owns the buttons.
+	if ev, ok := dlg.HandleKey(h.outputDialogView(), &st.Focus, scrollEv); ok {
 		h.ApplyOutputDialogEvent(ev)
 	}
 }
 
-// ApplyOutputDialogEvent acts on a widget event of the command-output dialog (key or click).
+// outputDialogView is the open command-output dialog's spec for the current screen, for key
+// handling (styles only shape the drawing).
+func (h *Handler) outputDialogView() dlg.Spec {
+	w, ht := h.screen.Size()
+	spec, _, _ := dialog.CommandOutputDialogView(h.host.LayoutForTerminalSize(w, ht), h.model.CommandOutputDialog, dialog.CommandOutputViewContext{})
+	return spec
+}
+
+// ApplyOutputDialogEvent acts on a widget event of the command-output dialog (key or click): a
+// scroll keeps Follow in sync (reaching the bottom follows, leaving it unfollows).
 func (h *Handler) ApplyOutputDialogEvent(ev dlg.Event) {
+	st := &h.model.CommandOutputDialog
+	if ev.Kind == dlg.EventListMove {
+		st.Scroll = ev.Offset
+		st.Follow = ev.Offset >= max(0, len(st.Lines)-h.outputDialogVisH(*st))
+		return
+	}
 	switch ev.ID {
 	case dialog.OutputBackground:
 		h.closeOutputDialogKeepRunning()
@@ -200,36 +213,4 @@ func (h *Handler) ensurePathVisible(st *dialog.CommandOutputDialogState) {
 func (h *Handler) outputDialogVisH(st dialog.CommandOutputDialogState) int {
 	w, ht := h.screen.Size()
 	return max(1, dialog.CommandOutputDialogListH(h.host.LayoutForTerminalSize(w, ht), st))
-}
-
-// scrollOutputDialog applies a scroll key to the dialog's Lines (valid in both Running and
-// finished states) and keeps Follow in sync: reaching the bottom follows, leaving it unfollows.
-// Returns false when key is not a scroll key.
-func (h *Handler) scrollOutputDialog(st *dialog.CommandOutputDialogState, key tcell.Key) bool {
-	switch key {
-	case tcell.KeyUp, tcell.KeyDown, tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd:
-	default:
-		return false
-	}
-	visH := h.outputDialogVisH(*st)
-	maxScroll := max(0, len(st.Lines)-visH)
-	if st.Follow {
-		st.Scroll = maxScroll
-	}
-	switch key {
-	case tcell.KeyUp:
-		st.Scroll = max(0, st.Scroll-1)
-	case tcell.KeyDown:
-		st.Scroll = min(maxScroll, st.Scroll+1)
-	case tcell.KeyPgUp:
-		st.Scroll = max(0, st.Scroll-visH)
-	case tcell.KeyPgDn:
-		st.Scroll = min(maxScroll, st.Scroll+visH)
-	case tcell.KeyHome:
-		st.Scroll = 0
-	case tcell.KeyEnd:
-		st.Scroll = maxScroll
-	}
-	st.Follow = st.Scroll >= maxScroll
-	return true
 }

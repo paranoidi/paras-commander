@@ -5,6 +5,7 @@
                                                                                 
                                                                                 
         ┌──────────────────────── Build willow ────────────────────────┐        
+        │ line 00 amber birch                                          │        
         │ line 01 birch ember                                          │        
         │ line 02 cinder harbor                                        │        
         │ line 03 dune cinder                                          │        
@@ -14,7 +15,6 @@
         │ line 07 harbor glacier                                       │        
         │ line 08 amber birch                                          │        
         │ line 09 birch ember                                          │        
-        │                                                              │        
         ├──────────────────────────────────────────────────────────────┤        
         │                            [ OK ]                            │        
         └──────────────────────────────────────────────────────────────┘        

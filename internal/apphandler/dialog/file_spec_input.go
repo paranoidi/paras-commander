@@ -85,27 +85,9 @@ func (h *Handler) cancelFileDialogLayer() {
 	h.CloseFileDialog()
 }
 
-// handleDeleteListScrollKey scrolls the delete confirmation's name list by a page on PgUp / PgDn.
-func (h *Handler) handleDeleteListScrollKey(key tcell.Key) bool {
-	d := &h.model.FileDialog
-	_, ht := h.screen.Size()
-	vp := dialog.DeleteDialogListViewportRows(ht, *d)
-	switch key {
-	case tcell.KeyPgUp:
-		d.DeleteListScroll = max(d.DeleteListScroll-vp, 0)
-	case tcell.KeyPgDn:
-		dialog.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
-		d.DeleteListScroll += vp
-		dialog.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
-	default:
-		return false
-	}
-	return true
-}
-
 // handleFileDialogSpecKey routes a key for the open file dialog (rename, duplicate, mkdir, delete,
 // chmod, chown, symlink, hardlink, add bookmark, SFTP password, extract, run-for-each, mass rename
-// and their sub-screens). Order: the sub-screen pickers, the dialog's own chords, list paging,
+// and their sub-screens). Order: the sub-screen pickers, the dialog's own chords,
 // Alt mnemonics (they win over everything, also in an input), the path-picker shortcuts and the
 // completion dropdown, then the widget engine; what it declines is text editing of the focused
 // input. Always returns false (the file dialog never quits).
@@ -137,9 +119,6 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 	if h.tryFileDialogChord(event) {
 		return false
 	}
-	if d.DialogType == dialog.FileDialogDelete && h.handleDeleteListScrollKey(event.Key()) {
-		return false
-	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && apply() {
 		return false
 	}
@@ -161,7 +140,7 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 
 // tryFileDialogChord handles the open dialog's own chords that run before the widget engine: the
 // rename and mkdir shortcuts, the extract destination shortcuts, the run-for-each history key and
-// the mass rename pattern, editor and preview keys. Returns true when the key was consumed.
+// the mass rename pattern and editor keys. Returns true when the key was consumed.
 func (h *Handler) tryFileDialogChord(event *tcell.EventKey) bool {
 	d := &h.model.FileDialog
 	switch d.DialogType {
@@ -172,7 +151,7 @@ func (h *Handler) tryFileDialogChord(event *tcell.EventKey) bool {
 	case dialog.FileDialogMassRename:
 		switch d.MassRenamePhase {
 		case dialog.MassRenamePhaseMain:
-			return h.tryMassRenameDialogShortcut(event) || h.handleMassRenamePreviewScrollKey(d, event.Key())
+			return h.tryMassRenameDialogShortcut(event) || h.handleMassRenameEditorKey(event.Key())
 		case dialog.MassRenamePhaseSavePrompt:
 			return h.tryMassRenameSavePromptShortcut(event)
 		}

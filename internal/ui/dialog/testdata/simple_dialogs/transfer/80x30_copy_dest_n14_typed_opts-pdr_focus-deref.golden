@@ -14,7 +14,7 @@
      │ [x] Dereference symlinks                                           │     
      │ [ ] Flatten into destination                                       │     
      ├────────────────────────────── Result ──────────────────────────────┤     
-     │ + lantern                                                          │     
+     │ + lantern                                                          ┃     
      │ # orchard/willow.txt                                               │     
      │ + meadow                                                           │     
      │ # timber/ribbon.txt                                                │     

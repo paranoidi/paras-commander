@@ -37,6 +37,9 @@ type bannerHost struct {
 func (b *bannerHost) SetTransientMessageBanner(string, string, ui.MessageUrgency) { b.banners++ }
 func (b *bannerHost) RefreshAfterBackgroundCommand()                              {}
 func (b *bannerHost) ActivePanel() *panel.State                                   { return b.pnl }
+func (b *bannerHost) LayoutForTerminalSize(w, h int) ui.Layout {
+	return ui.Layout{Width: w, Height: h}
+}
 
 func runningHandler(t *testing.T) (*Handler, *bannerHost, *bool) {
 	h, _ := newOutputDialogHandler(t)

@@ -45,7 +45,7 @@ func (a *App) activeDialogMouse(layout ui.Layout) (dialogMouse, bool) {
 			dialogctrl.ApplyPatternDialogEvent(a.groupSelectPatternKeys(), ev)
 		}))
 	case InputModeCommandOutputDialog:
-		if spec, _, ok := dialog.CommandOutputDialogView(layout, m.CommandOutputDialog, a.styles); ok {
+		if spec, _, ok := dialog.CommandOutputDialogView(layout, m.CommandOutputDialog, dialog.CommandOutputViewContext{Styles: a.styles}); ok {
 			return found(spec, &m.CommandOutputDialog.Focus, noQuit(a.commandsCtrl.ApplyOutputDialogEvent))
 		}
 	case InputModeMessageDialog:

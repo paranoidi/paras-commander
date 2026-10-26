@@ -113,31 +113,6 @@ func (h *Handler) multiDirSelectionCommonRoot() (string, bool) {
 	return root.String(), true
 }
 
-// TransferPreviewListViewportRows returns how many preview-list rows the multi-location
-// transfer dialog currently shows, for clamping EntriesScroll.
-func (h *Handler) TransferPreviewListViewportRows() int {
-	w, ht := h.screen.Size()
-	return dialog.TransferListViewportRows(dialog.Layout{Width: w, Height: ht}, h.model.TransferDialog)
-}
-
-// scrollTransferPreviewList moves the multi-location preview list scroll by delta rows,
-// clamped to the current viewport.
-func (h *Handler) scrollTransferPreviewList(delta int) {
-	st := &h.model.TransferDialog
-	vp := h.TransferPreviewListViewportRows()
-	maxScroll := len(st.Entries) - vp
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	st.EntriesScroll += delta
-	if st.EntriesScroll < 0 {
-		st.EntriesScroll = 0
-	}
-	if st.EntriesScroll > maxScroll {
-		st.EntriesScroll = maxScroll
-	}
-}
-
 func transferSelfCopyNewNamePrefilled(base string) dialog.FileDialogField {
 	rn := len([]rune(base))
 	return dialog.FileDialogField{
@@ -231,7 +206,7 @@ func (h *Handler) ApplyTransferEvent(ev dlg.Event) {
 
 // HandleTransferDialogKey routes a key event for the open unified transfer (copy/move) dialog.
 // Order: Alt mnemonics (options, Add paused) win over everything, also in the input; then the
-// completion dropdown, preview paging, the path-picker and destination shortcuts and the
+// completion dropdown, the path-picker and destination shortcuts and the
 // destination's cursor keys; then the widget engine; and what it declines is text editing.
 func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 	d := &h.model.TransferDialog
@@ -248,16 +223,6 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 	}
 	if h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusOnDest(), h.ArmTransferDestinationValidateTimer) {
 		return
-	}
-	if d.MultiLocation() {
-		switch event.Key() {
-		case tcell.KeyPgUp:
-			h.scrollTransferPreviewList(-h.TransferPreviewListViewportRows())
-			return
-		case tcell.KeyPgDn:
-			h.scrollTransferPreviewList(h.TransferPreviewListViewportRows())
-			return
-		}
 	}
 	if h.TryPathPickerHostShortcut(event) {
 		return

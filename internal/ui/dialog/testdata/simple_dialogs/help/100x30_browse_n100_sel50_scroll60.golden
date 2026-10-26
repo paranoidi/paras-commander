@@ -9,16 +9,16 @@
        ┌─────────────────────────────────────── Help ───────────────────────────────────────┐       
        │ /                                                                                  │       
        ├────────────────────────────────────────────────────────────────────────────────────┤       
+       │                        Alt+O Amber the birch                                       │       
+       │                       Insert Birch the ember                                       │       
+       │                Ctrl+Alt+PgDn Cinder the harbor                                     │       
+       │                          F10 Dune the amber                                        │       
+       │                     Shift+F6 Ember the dune                                        │       
+       │ Ctrl+Shift+Alt+PgDn | Ctrl+Shift+Alt+PgUp | Ctrl+Home Fable the glacier            │       
+       │                           F5 Glacier the jasper                                    │       
        │              Ctrl+Shift+Left Harbor the cinder                                     │       
        │                        Alt+O Ivory the fable                                       │       
        │                       Insert Jasper the ivory                                      │       
-       │ Panels                                                                             │       
-       │                Ctrl+Alt+PgDn Amber the birch                                       │       
-       │                          F10 Birch the ember                                       │       
-       │ Ctrl+Shift+Alt+PgDn | Ctrl+Shift+Alt+PgUp | Ctrl+Home Cinder the harbor            │       
-       │                    Backspace Dune the amber                                        │       
-       │                           F5 Ember the dune                                        │       
-       │              Ctrl+Shift+Left Fable the glacier                                     │       
        ├────────────────────────────────────────────────────────────────────────────────────┤       
        │                                     [ Close ]                                      │       
        └────────────────────────────────────────────────────────────────────────────────────┘       
@@ -36,8 +36,8 @@ c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
-g fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-h fg=0x100000006 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+h fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
@@ -51,16 +51,16 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbddefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbgggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbgggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbbbgggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbgggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbgggggggggggggggggggggggggggggggggggggggggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbbbbbbbgggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbgggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbbbhhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbbbbbbbbhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbhhhhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbiiijiiiiiiibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa

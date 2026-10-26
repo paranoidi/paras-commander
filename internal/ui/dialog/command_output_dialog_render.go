@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
@@ -18,10 +19,17 @@ import (
 const (
 	OutputBackground = dlg.ID("background")
 	OutputCancel     = dlg.ID("cancel")
-	// outputBody is the reserved region the output lines are painted into (ANSI colored cells
-	// with path highlights and a scrollbar are bespoke, so it is an overlay, not a dlg list).
+	// outputBody is the ScrollOnly list of output lines.
 	outputBody = dlg.ID("output")
 )
+
+// CommandOutputViewContext is what CommandOutputDialogView needs besides the layout and state.
+type CommandOutputViewContext struct {
+	Styles         theme.Theme
+	ScrollbarStyle uiscrollbar.Style
+	// IsSelected reports whether a detected path is selected in the active panel (nil: none is).
+	IsSelected func(path string) bool
+}
 
 // CommandOutputDialogMetrics holds computed geometry for the output dialog.
 type CommandOutputDialogMetrics struct {
@@ -89,10 +97,12 @@ func commandOutputSize(layout Layout, state CommandOutputDialogState) (prefW, li
 	return prefW, listH, true
 }
 
-// CommandOutputDialogView is the output dialog's widget spec: a reserved output region above the
-// OK button (finished) or the Background / Cancel buttons (running; the title carries the
-// Running / Queued status). ok is false when the dialog does not fit the layout.
-func CommandOutputDialogView(layout Layout, state CommandOutputDialogState, styles theme.Theme) (spec dlg.Spec, listH int, ok bool) {
+// CommandOutputDialogView is the output dialog's widget spec: the output lines, a ScrollOnly list
+// (following the end while Follow is set), above the OK button (finished) or the Background /
+// Cancel buttons (running; the title carries the Running / Queued status). ok is false when the
+// dialog does not fit the layout.
+func CommandOutputDialogView(layout Layout, state CommandOutputDialogState, ctx CommandOutputViewContext) (spec dlg.Spec, listH int, ok bool) {
+	styles := ctx.Styles
 	prefW, listH, ok := commandOutputSize(layout, state)
 	title := strings.TrimSpace(state.Title)
 	if title == "" {
@@ -105,11 +115,62 @@ func CommandOutputDialogView(layout Layout, state CommandOutputDialogState, styl
 		}
 		title += " " + status
 	}
+	scroll := state.Scroll
+	if state.Follow {
+		scroll = len(state.Lines) // clamped to the last page
+	}
+	_, bg, _ := styles.DialogSurface.Decompose()
+	lineStyle := styles.DialogText.Background(bg)
+	body := scrollList(outputBody, len(state.Lines), listH, scroll, func(i int) dlg.ListRow {
+		return outputRow(state, i, lineStyle, styles, ctx.IsSelected)
+	})
+	body.Fit = dlg.FitNone
 	return dlg.Spec{
-		Title: title, Width: prefW, Unclamped: true,
-		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{{ID: outputBody, Kind: dlg.KindSpacer, Height: listH}}}}},
+		Title: title, Width: prefW, Unclamped: true, ScrollbarStyle: ctx.ScrollbarStyle,
+		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{body}}}},
 		Buttons: commandOutputButtons(state.Running),
 	}, listH, ok
+}
+
+// outputRow is output line i as a list row: its ANSI colors and the detected path highlights
+// (cursor and selection states) as spans over the plain text.
+func outputRow(state CommandOutputDialogState, i int, lineStyle tcell.Style, styles theme.Theme, isSelected func(string) bool) dlg.ListRow {
+	// ponytail: per-line SGR parse; a color left open across \n does not carry to the next line.
+	// Parse the whole output once into cell rows if a tool needs that.
+	cells := previewpanel.AnsiStyledCells(state.Lines[i], lineStyle)
+	for pi := sort.Search(len(state.Paths), func(k int) bool { return state.Paths[k].Line >= i }); pi < len(state.Paths) && state.Paths[pi].Line == i; pi++ {
+		m := state.Paths[pi]
+		st := styles.DialogOptionInactive
+		sel := isSelected != nil && isSelected(m.Path)
+		switch {
+		case pi == state.PathCursor && sel:
+			st = styles.DialogOptionActiveSelected
+		case pi == state.PathCursor:
+			st = styles.DialogOptionActive
+		case sel:
+			st = styles.DialogOptionSelected
+		}
+		for c := m.Start; c < m.End && c < len(cells); c++ {
+			cells[c].St = styles.DialogTextSelectStyle(st)
+		}
+	}
+	var text strings.Builder
+	var spans []primitive.Span
+	for k, c := range cells { // one rune per cell, so cell k is rune k of the text
+		if c.R < ' ' {
+			c.R = ' ' // a tab or other control rune takes one blank cell
+		}
+		text.WriteRune(c.R)
+		if c.St == lineStyle {
+			continue
+		}
+		if n := len(spans); n > 0 && spans[n-1].End == k && spans[n-1].Style == c.St {
+			spans[n-1].End++
+			continue
+		}
+		spans = append(spans, primitive.Span{Start: k, End: k + 1, Style: c.St})
+	}
+	return dlg.ListRow{Text: text.String(), Spans: spans}
 }
 
 // commandOutputButtons is the button strip: OK when finished, Background / Cancel while running.
@@ -123,15 +184,9 @@ func commandOutputButtons(running bool) []dlg.Button {
 	return []dlg.Button{dlg.OKButton}
 }
 
-// CommandOutputDialogKeys is the spec for key handling alone: it carries the buttons but needs no
-// layout, since the output region is not focusable.
-func CommandOutputDialogKeys(state CommandOutputDialogState) dlg.Spec {
-	return dlg.Spec{Buttons: commandOutputButtons(state.Running)}
-}
-
 // ComputeCommandOutputDialogMetrics calculates dialog geometry from layout and state.
 func ComputeCommandOutputDialogMetrics(layout Layout, state CommandOutputDialogState) (m CommandOutputDialogMetrics, ok bool) {
-	spec, listH, fits := CommandOutputDialogView(layout, state, theme.Theme{})
+	spec, listH, fits := CommandOutputDialogView(layout, state, CommandOutputViewContext{})
 	if !fits {
 		return m, false
 	}
@@ -152,63 +207,14 @@ func CommandOutputDialogListH(layout Layout, state CommandOutputDialogState) int
 	return m.ListH
 }
 
-// DrawCommandOutputDialog renders the command output modal overlay: the dlg frame, separator and
-// buttons, then the output lines painted into the reserved output region.
+// DrawCommandOutputDialog renders the command output modal overlay from its widget spec.
 func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOutputDialogState, styles theme.Theme, scrollbarStyle uiscrollbar.Style, isSelected func(string) bool) {
 	if !state.Open {
 		return
 	}
-	spec, listH, ok := CommandOutputDialogView(layout, state, styles)
+	spec, _, ok := CommandOutputDialogView(layout, state, CommandOutputViewContext{Styles: styles, ScrollbarStyle: scrollbarStyle, IsSelected: isSelected})
 	if !ok {
 		return
 	}
-	p, placed := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
-	if !placed {
-		return
-	}
-	rect := p.Rect
-	contentW := draw.DialogContentWidth(rect)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	borderStyle := styles.DialogFrame.Background(dbg)
-	lineStyle := styles.DialogText.Background(dbg)
-
-	contentX := draw.DialogTextX(rect)
-	scroll := state.Scroll
-	if state.Follow {
-		scroll = max(0, len(state.Lines)-listH)
-	}
-	// Paths are ordered by Line: walk them alongside the visible rows.
-	pi := sort.Search(len(state.Paths), func(i int) bool { return state.Paths[i].Line >= scroll })
-	for row := range listH {
-		y := rect.Y + 1 + row
-		line := ""
-		if idx := scroll + row; idx < len(state.Lines) {
-			line = state.Lines[idx]
-		}
-		// ponytail: per-line SGR parse; a color left open across \n does not carry to the next
-		// line. Parse the whole output once into cell rows if a tool needs that.
-		cells := previewpanel.AnsiStyledCells(line, lineStyle)
-		for ; pi < len(state.Paths) && state.Paths[pi].Line == scroll+row; pi++ {
-			i, m := pi, state.Paths[pi]
-			st := styles.DialogOptionInactive
-			sel := isSelected != nil && isSelected(m.Path)
-			switch {
-			case i == state.PathCursor && sel:
-				st = styles.DialogOptionActiveSelected
-			case i == state.PathCursor:
-				st = styles.DialogOptionActive
-			case sel:
-				st = styles.DialogOptionSelected
-			}
-			for c := m.Start; c < m.End && c < len(cells); c++ {
-				cells[c].St = styles.DialogTextSelectStyle(st)
-			}
-			if m.End >= len(cells) {
-				// DrawCells pads with the last cell's style; keep the highlight on the text only.
-				cells = append(cells, previewpanel.AnsiCell{R: ' ', St: lineStyle})
-			}
-		}
-		previewpanel.DrawCells(screen, contentX, y, contentW, cells, lineStyle)
-	}
-	draw.DrawDialogListScrollbar(screen, rect, rect.Y+1, listH, len(state.Lines), scroll, scrollbarStyle, borderStyle, styles)
+	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 }

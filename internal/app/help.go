@@ -6,7 +6,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
-	"github.com/paranoidi/paras-commander/internal/filterlist"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -183,30 +182,6 @@ func (a *App) syncHelpRanks() {
 		st.Selected = 0
 	}
 	st.EnsureListScroll(a.helpListRows())
-}
-
-// applyHelpListNav applies PgUp/PgDn/Ctrl+Home/Ctrl+End to the ranked help
-// list when it has focus, updating scroll. Returns false (no-op) when the
-// list isn't focused, is empty, or key isn't a recognized list-navigation key.
-func (a *App) applyHelpListNav(key tcell.Key, mods tcell.ModMask) bool {
-	st := &a.model.HelpView
-	if st.Focus == dialog.HelpClose || len(st.Ranked) == 0 {
-		return false
-	}
-	switch key {
-	case tcell.KeyPgUp:
-		st.Selected = st.PageUpSelection(a.helpListRows())
-	case tcell.KeyPgDn:
-		st.Selected = st.PageDownSelection(a.helpListRows())
-	default:
-		sel, ok := filterlist.NavKey(key, mods, st.Selected, len(st.Ranked), 1)
-		if !ok {
-			return false
-		}
-		st.Selected = sel
-	}
-	st.EnsureListScroll(a.helpListRows())
-	return true
 }
 
 // helpListRows returns the visible list height, reusing dialog.ComputeHelpDialogListMetrics
@@ -640,18 +615,20 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		}
 	}
 
-	// The entry list is painted into a reserved region (section headers, key column, page-to-edge
-	// motion), so its motion keys are handled here rather than by the engine.
-	switch event.Key() {
-	case tcell.KeyUp, tcell.KeyDown, tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd:
-		a.handleHelpListKey(event)
+	if a.handleHelpListKey(event) {
 		return false
 	}
-
-	if ev, ok := dlg.HandleKey(dialog.HelpDialogKeys(), &st.Focus, event); ok {
+	if ev, ok := dlg.HandleKey(a.helpView(), &st.Focus, event); ok {
 		return a.applyHelpEvent(ev)
 	}
 	return false
+}
+
+// helpView is the help dialog's spec for the current screen.
+func (a *App) helpView() dlg.Spec {
+	w, h := a.screen.Size()
+	spec, _, _ := dialog.HelpDialogView(a.model.HelpView, a.layoutForTerminalSize(w, h), a.styles)
+	return spec
 }
 
 // applyHelpEvent acts on a widget event of the help dialog (key or click); reports whether the
@@ -660,6 +637,8 @@ func (a *App) applyHelpEvent(ev dlg.Event) bool {
 	switch {
 	case ev.Kind == dlg.EventCaret:
 		a.model.HelpView.QueryCursor = ev.Index
+	case ev.Kind == dlg.EventListMove:
+		a.model.HelpView.ApplyListMove(ev)
 	case ev.ID == dialog.HelpClose:
 		a.closeHelpDialog()
 	case ev.ID == dialog.HelpFilter: // Enter in the filter activates the selected entry
@@ -668,37 +647,42 @@ func (a *App) applyHelpEvent(ev dlg.Event) bool {
 	return false
 }
 
-// handleHelpListKey moves the selection with Up/Down/PgUp/PgDn/Ctrl+Home/Ctrl+End. Down from the
-// last entry focuses Close, and Up from Close returns to the filter on the last entry.
-func (a *App) handleHelpListKey(event *tcell.EventKey) {
+// handleHelpListKey handles the list keys the engine does not: Down from the last entry focuses
+// Close, Up from Close returns to the filter on the last entry, and PgUp/PgDn page help's way
+// (PageUpSelection / PageDownSelection: first to the edge of the view, then a page). Reports
+// whether it took the key.
+func (a *App) handleHelpListKey(event *tcell.EventKey) bool {
 	st := &a.model.HelpView
+	n := len(st.Ranked)
 	switch event.Key() {
 	case tcell.KeyUp:
 		if st.Focus != dialog.HelpClose {
-			if len(st.Ranked) > 0 {
-				st.Selected = filterlist.ClampedDelta(st.Selected, len(st.Ranked), -1)
-				st.EnsureListScroll(a.helpListRows())
-			}
-			return
+			return false
 		}
 		st.Focus = dialog.HelpFilter
-		if len(st.Ranked) > 0 {
-			st.Selected = len(st.Ranked) - 1
-			st.EnsureListScroll(a.helpListRows())
+		if n > 0 {
+			st.Selected = n - 1
 		}
 	case tcell.KeyDown:
-		if st.Focus == dialog.HelpClose || len(st.Ranked) == 0 {
-			return
+		if st.Focus == dialog.HelpClose || n == 0 || st.Selected < n-1 {
+			return false
 		}
-		if next := filterlist.ClampedDelta(st.Selected, len(st.Ranked), 1); next != st.Selected {
-			st.Selected = next
-			st.EnsureListScroll(a.helpListRows())
-		} else if st.Selected == len(st.Ranked)-1 {
-			st.Focus = dialog.HelpClose
+		st.Focus = dialog.HelpClose
+		return true
+	case tcell.KeyPgUp, tcell.KeyPgDn:
+		if st.Focus == dialog.HelpClose || n == 0 {
+			return false
+		}
+		if event.Key() == tcell.KeyPgUp {
+			st.Selected = st.PageUpSelection(a.helpListRows())
+		} else {
+			st.Selected = st.PageDownSelection(a.helpListRows())
 		}
 	default:
-		a.applyHelpListNav(event.Key(), event.Modifiers())
+		return false
 	}
+	st.EnsureListScroll(a.helpListRows())
+	return true
 }
 
 // activateHelpSelection runs the selected entry's action and closes the dialog. It closes without

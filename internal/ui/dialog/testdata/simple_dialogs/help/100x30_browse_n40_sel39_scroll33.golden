@@ -9,8 +9,6 @@
        ┌─────────────────────────────────────── Help ───────────────────────────────────────┐       
        │ /                                                                                  │       
        ├────────────────────────────────────────────────────────────────────────────────────┤       
-       │                          F10 Jasper the ivory                                      │       
-       │                     Shift+F6 Amber the birch                                       │       
        │                    Backspace Birch the ember                                       │       
        │ Views                                                                              │       
        │                           F5 Cinder the harbor                                     │       
@@ -19,6 +17,8 @@
        │                       Insert Fable the glacier                                     │       
        │                Ctrl+Alt+PgDn Glacier the jasper                                    │       
        │                          F10 Harbor the cinder                                     │       
+       │                     Shift+F6 Ivory the fable                                       │       
+       │                    Backspace Jasper the ivory                                      │       
        ├────────────────────────────────────────────────────────────────────────────────────┤       
        │                                     [ Close ]                                      │       
        └────────────────────────────────────────────────────────────────────────────────────┘       
@@ -38,8 +38,9 @@ e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
 g fg=0x100000005 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 h fg=0x100000006 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+i fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
+j fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -51,8 +52,6 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbddefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbgggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbbbbbbbbggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbgggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
@@ -61,8 +60,10 @@ aaaaaaabbgggggggggggggggggggggggggggggggggggggggggggggggggggggbbbbbbbbbbbbbbbbbb
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbgggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbgggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbbbbbbbbggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiibbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
-aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbiiijiiiiiiibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
+aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbjjjkjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

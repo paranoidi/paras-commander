@@ -213,9 +213,6 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	d.MassRenamePreviewBeforeIgnored = beforeIgnored
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
-	_, height := h.screen.Size()
-	vp := dialog.MassRenamePreviewViewportRows(height, *d)
-	dialog.MassRenameEnsurePreviewScroll(&h.model.FileDialog, vp, len(before))
 }
 
 func (h *Handler) recomputeMassRenameExternalEditorPreview() {
@@ -271,9 +268,6 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 	d.MassRenamePreviewBeforeIgnored = beforeIgnored
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
-	_, height := h.screen.Size()
-	vp := dialog.MassRenamePreviewViewportRows(height, *d)
-	dialog.MassRenameEnsurePreviewScroll(d, vp, len(before))
 }
 
 // recomputeMassRenameCapitalizePreview recomputes the before/after preview rows for
@@ -317,9 +311,6 @@ func (h *Handler) recomputeMassRenameCapitalizePreview() {
 	d.MassRenamePreviewBeforeIgnored = beforeIgnored
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
-	_, height := h.screen.Size()
-	vp := dialog.MassRenamePreviewViewportRows(height, *d)
-	dialog.MassRenameEnsurePreviewScroll(d, vp, len(before))
 }
 
 // massRenameSwitchMode sets the mass-rename mode, moves focus off a widget the new mode does not
@@ -365,13 +356,12 @@ func massRenameHomeFocus(mode dialog.MassRenameModeUI) dlg.ID {
 func (h *Handler) applyMassRenameEvent(ev dlg.Event) bool {
 	d := &h.model.FileDialog
 	if mode, ok := dialog.MassRenameModeFromRadio(ev.ID); ok {
-		enter := ev.Enter
-		if enter && mode == dialog.MassRenameModeUIExternalEditor {
+		if ev.Enter && mode == dialog.MassRenameModeUIExternalEditor {
 			h.LaunchMassRenameExternalEditor()
 			return true
 		}
 		h.massRenameSwitchMode(d, mode)
-		if enter {
+		if ev.Enter {
 			d.Focus = dialog.MassRenameOptShowModified
 		}
 		return true

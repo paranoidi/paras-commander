@@ -9,7 +9,7 @@ focus=list selected=0 scroll=0 query="zzz" qcursor=3 qscroll=0 ranked=0 title="H
 == q ==
 focus=list selected=0 scroll=0 query="zzzq" qcursor=4 qscroll=0 ranked=0 title="Help"
 == Down ==
-focus=list selected=0 scroll=0 query="zzzq" qcursor=4 qscroll=0 ranked=0 title="Help"
+focus=close selected=0 scroll=0 query="zzzq" qcursor=4 qscroll=0 ranked=0 title="Help"
 == Up ==
 focus=list selected=0 scroll=0 query="zzzq" qcursor=4 qscroll=0 ranked=0 title="Help"
 == PgDn ==

@@ -28,9 +28,8 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 	return p.Rect, ok
 }
 
-// DrawFileDialog paints the open file dialog: the spec FileDialogView describes, then what lives in
-// reserved regions and on the input rects (the delete list, the mass rename preview, the focused
-// path field's completion dropdown).
+// DrawFileDialog paints the open file dialog: the spec FileDialogView describes, then the overlays
+// on its rects (the delete list's devicons, the focused path field's completion dropdown).
 func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) {
 	if state.Open {
 		drawFileDialogSpec(screen, layout, state, ctx, paintDeleteIcon)

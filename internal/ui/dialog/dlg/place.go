@@ -534,12 +534,15 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 }
 
 // drawPlainRow paints one row of a list without Markers: the optional icon, the fitted text with
-// its fuzzy highlights and the trailing marks, in the cursor, invalid or plain row style.
+// its fuzzy highlights over its own spans and the trailing marks, in the header, cursor, invalid
+// or plain row style.
 func drawPlainRow(screen tcell.Screen, x, y, w int, rw ListRow, it Item, isCursor bool, styles theme.Theme) {
 	_, surface, _ := styles.DialogSurface.Decompose()
 	base := styles.DialogText.Background(surface)
 	match := styles.FuzzyHighlight
 	switch {
+	case rw.Header:
+		base = styles.DialogHelpSection.Background(surface)
 	case isCursor:
 		base = styles.DialogOptionRowStyle(true, rw.Marked)
 		match = styles.FuzzyHighlightCursor
@@ -579,6 +582,9 @@ func drawPlainRow(screen tcell.Screen, x, y, w int, rw ListRow, it Item, isCurso
 			fit = max(tw-marksW, 1)
 		}
 		text, spans := fitRow(rw, it.Fit, fit, match)
+		if !isCursor && (it.Fit == FitNone || it.Fit == FitRight) {
+			spans = append(spans, rw.Spans...) // the first span covering a rune wins: Match on top
+		}
 		primitive.StyledText(screen, tx, y, tw, text, base, spans)
 		if it.MarksAfterText {
 			markX = tx + min(runewidth.StringWidth(text), fit)

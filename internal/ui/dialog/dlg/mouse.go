@@ -14,18 +14,22 @@ import (
 //   - a list row: the EventListMove onto that row, or, when double and the row already holds the
 //     cursor, the activation Enter produces in that list (or in its driving input).
 //
-// ok is false on a miss: labels, separators, spacers (reserved regions), bars, disabled widgets
-// and list rows past the last row are not targets, and focus is left alone.
+// ok is false on a miss: labels, separators, spacers (reserved regions), bars, disabled widgets,
+// ScrollOnly lists, Header rows and list rows past the last row are not targets, and focus is
+// left alone.
 func Click(spec Spec, screenW, screenH int, focus *ID, x, y int, double bool) (Event, bool) {
 	pi, it, ok := hit(spec, screenW, screenH, x, y)
 	if !ok {
+		return Event{}, false
+	}
+	row := pi.Offset + (y - pi.Rect.Y)
+	if pi.Kind == KindList && (it.ScrollOnly || it.row(row).Header) {
 		return Event{}, false
 	}
 	*focus = pi.ID
 	switch pi.Kind {
 	case KindList:
 		*focus = listFocus(spec, it)
-		row := pi.Offset + (y - pi.Rect.Y)
 		if double && row == it.cursorRow() {
 			e := activation(spec, *focus)
 			e.Enter = true
@@ -44,14 +48,19 @@ func Click(spec Spec, screenW, screenH int, focus *ID, x, y int, double bool) (E
 
 // Wheel applies delta rows of mouse wheel at (x, y) to the list under the pointer: focus moves to
 // the list (or its driving input) and the result is the list's EventListMove, clamped to its
-// rows. ok is false when no list with rows is under the pointer.
+// rows. A ScrollOnly list scrolls by delta rows and focus stays. ok is false when no list with
+// rows is under the pointer.
 func Wheel(spec Spec, screenW, screenH int, focus *ID, x, y, delta int) (Event, bool) {
 	pi, it, ok := hit(spec, screenW, screenH, x, y)
 	if !ok || pi.Kind != KindList || it.rowCount() == 0 {
 		return Event{}, false
 	}
+	if it.ScrollOnly {
+		return scrollTo(it, it.ViewOffset()+delta), true
+	}
 	*focus = listFocus(spec, it)
-	return listMove(it, min(max(it.cursorRow()+delta, 0), it.rowCount()-1)), true
+	next := min(max(it.cursorRow()+delta, 0), it.rowCount()-1)
+	return listMove(it, it.landOnRow(next, delta)), true
 }
 
 // hit places spec and returns the placed widget under (x, y) and its spec item (zero for a button).

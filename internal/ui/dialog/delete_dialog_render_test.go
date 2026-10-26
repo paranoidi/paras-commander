@@ -105,11 +105,3 @@ func TestDeleteDialogListViewportRowsWithWarning(t *testing.T) {
 		t.Fatalf("viewport = %d, want %d", got, want)
 	}
 }
-
-func TestDeleteEnsureListScroll(t *testing.T) {
-	st := FileDialogState{DeleteListScroll: 100}
-	DeleteEnsureListScroll(&st, 5, 10)
-	if st.DeleteListScroll != 5 {
-		t.Fatalf("scroll = %d, want 5", st.DeleteListScroll)
-	}
-}

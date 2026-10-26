@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -492,5 +494,29 @@ func TestMouseDialogInputClickOnlyMovesCursor(t *testing.T) {
 	click(app, x+7, y, tcell.Button1)
 	if !st.Open || st.Focus != dialog.SFTPLocation || st.Location.Cursor != 7 {
 		t.Fatalf("input click: open=%v focus=%q cursor=%d, want the location focused at 7 and the dialog open", st.Open, st.Focus, st.Location.Cursor)
+	}
+}
+
+func TestMouseDialogWheelScrollsScrollOnlyList(t *testing.T) {
+	dir := t.TempDir()
+	app := newApp(t, newScreen(t, 100, 30), dir)
+	app.config.UI.Mouse = true
+	p := app.activePanel()
+	for i := 1; i <= 25; i++ {
+		name := filepath.Join(dir, fmt.Sprintf("thicket%02d.txt", i))
+		writeFile(t, name)
+		p.AddSelection(name)
+	}
+	dispatchFileOp(t, app, keymap.ActionFileDelete)
+	d := &app.model.FileDialog
+	focus := d.Focus
+	x, y := screenTextCell(t, app, "thicket01.txt")
+	click(app, x, y, tcell.Button1)
+	if d.Focus != focus || d.DeleteListScroll != 0 {
+		t.Fatalf("click on the delete list: focus %q scroll %d, want unchanged", d.Focus, d.DeleteListScroll)
+	}
+	app.handleMouse(mouseEv(x, y, tcell.WheelDown))
+	if d.DeleteListScroll != config.MouseWheelRows || d.Focus != focus {
+		t.Fatalf("wheel: scroll %d focus %q, want %d and focus kept", d.DeleteListScroll, d.Focus, config.MouseWheelRows)
 	}
 }

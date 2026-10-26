@@ -130,17 +130,10 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	if !ok || iconLead == 0 {
 		return
 	}
-	list, ok := p.Item(FindList)
-	if !ok {
-		return
-	}
-	for row := 0; row < list.Rect.Height; row++ {
-		idx := list.Offset + row
-		if idx >= len(state.Ranked) {
-			break
+	list, _ := p.Item(FindList)
+	p.EachListRow(FindList, func(row, y int) {
+		if ent, ok := state.FindEntryAt(state.Ranked[row]); ok {
+			paintIcon(screen, list.Rect.X, y, ent, ctx.Styles)
 		}
-		if ent, ok := state.FindEntryAt(state.Ranked[idx]); ok {
-			paintIcon(screen, list.Rect.X, list.Rect.Y+row, ent, ctx.Styles)
-		}
-	}
+	})
 }

@@ -10,7 +10,27 @@ import (
 // unless CenterScroll). Draw, Place and every list event use this one function, so the viewport
 // the caller stores from an event is the viewport that is painted.
 func (it Item) ViewOffset() int {
-	return ListViewOffset(it.Cursor, it.Offset, it.Height, it.rowCount(), it.CenterScroll)
+	n := it.rowCount()
+	if it.ScrollOnly {
+		return ScrollViewOffset(it.Offset, it.Height, n)
+	}
+	off := ListViewOffset(it.Cursor, it.Offset, it.Height, n, it.CenterScroll)
+	if it.CenterScroll || n == 0 {
+		return off
+	}
+	// Reveal the header rows right above the cursor row with it, as long as the cursor still fits.
+	cur := it.cursorRow()
+	top := cur
+	for top > 0 && it.row(top-1).Header && cur-(top-1) < it.Height {
+		top--
+	}
+	return min(off, top)
+}
+
+// ScrollViewOffset is the first visible row of a ScrollOnly list of n rows: offset, clamped so the
+// last page stays full.
+func ScrollViewOffset(offset, height, n int) int {
+	return min(max(offset, 0), max(n-max(height, 1), 0))
 }
 
 // rowCount is the number of rows of the list: RowCount for a windowed list, else len(Rows).
@@ -102,7 +122,67 @@ func listKey(it Item, ev *tcell.EventKey, driven bool) (Event, bool) {
 	default:
 		return Event{}, false
 	}
-	return listMove(it, next), true
+	return listMove(it, it.landOnRow(next, next-cur)), true
+}
+
+// landOnRow moves row i off a Header row: onward in the direction of motion dir (the sign of the
+// step that reached it; forward when 0), else back the other way. A list of headers alone stays.
+func (it Item) landOnRow(i, dir int) int {
+	n := it.rowCount()
+	step := 1
+	if dir < 0 {
+		step = -1
+	}
+	for _, d := range []int{step, -step} {
+		for j := i; j >= 0 && j < n; j += d {
+			if !it.row(j).Header {
+				return j
+			}
+		}
+	}
+	return i
+}
+
+// scrollOnlyList returns the spec's ScrollOnly list.
+func scrollOnlyList(spec Spec) (Item, bool) {
+	for _, it := range leaves(spec) {
+		if it.Kind == KindList && it.ScrollOnly {
+			return it, true
+		}
+	}
+	return Item{}, false
+}
+
+// scrollOnlyKey scrolls the spec's ScrollOnly list for a motion key: Up/Down one row, PgUp/PgDn
+// a page, Home/End to the ends. ok is false without such a list or for another key.
+func scrollOnlyKey(spec Spec, k tcell.Key) (Event, bool) {
+	it, ok := scrollOnlyList(spec)
+	if !ok {
+		return Event{}, false
+	}
+	off := it.ViewOffset()
+	switch k {
+	case tcell.KeyUp:
+		off--
+	case tcell.KeyDown:
+		off++
+	case tcell.KeyPgUp:
+		off -= it.pageStep()
+	case tcell.KeyPgDn:
+		off += it.pageStep()
+	case tcell.KeyHome:
+		off = 0
+	case tcell.KeyEnd:
+		off = it.rowCount()
+	default:
+		return Event{}, false
+	}
+	return scrollTo(it, off), true
+}
+
+// scrollTo is the EventListMove of ScrollOnly list it scrolled to first row off (clamped).
+func scrollTo(it Item, off int) Event {
+	return Event{ID: it.ID, Kind: EventListMove, Offset: ScrollViewOffset(off, it.Height, it.rowCount())}
 }
 
 // listByID returns the KindList item named id, focusable or not.

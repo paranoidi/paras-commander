@@ -5,116 +5,89 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 // Widget IDs of the help dialog. An empty state Focus is the filter. The entry list has no focus
-// of its own: the filter steers it, and it is painted into the reserved helpList region because
-// its section-header rows, key column, page-to-edge motion and header reveal are help specific.
+// of its own: the filter drives it, and its section titles are Header rows.
 const (
 	HelpFilter = dlg.ID("help-filter")
 	HelpClose  = dlg.ID("close")
 	helpList   = dlg.ID("help-list")
 )
 
-// HelpDialogView is the help dialog's widget spec: the search filter, a rule, the reserved list
-// region (listH rows) and a Close button. ok is false when the dialog does not fit the layout.
+// HelpDialogView is the help dialog's widget spec: the search filter, a rule, the entry list (the
+// filter drives it; section titles are Header rows, the key column a span) and a Close button. ok
+// is false when the dialog does not fit the layout.
 func HelpDialogView(state HelpViewState, layout Layout, styles theme.Theme) (spec dlg.Spec, listH int, ok bool) {
 	prefW, listH, ok := helpDialogSize(layout)
 	title := state.Title
 	if title == "" {
 		title = "Help"
 	}
-	return dlg.Spec{
+	spec = dlg.Spec{
 		Title: title, Width: prefW, MinWidth: prefW, Unclamped: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
-			{ID: HelpFilter, Kind: dlg.KindInput, LeadingIcon: styles.IconSearchIcon(), Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll},
+			{ID: HelpFilter, Kind: dlg.KindInput, Drives: helpList, LeadingIcon: styles.IconSearchIcon(), Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll},
 			{Kind: dlg.KindSeparator},
-			{ID: helpList, Kind: dlg.KindSpacer, Height: listH},
+			{ID: helpList, Kind: dlg.KindList, Driven: true, Height: listH},
 		}}}},
 		Buttons: []dlg.Button{{ID: HelpClose, Label: "Close", Mnemonic: 'C'}},
-	}, listH, ok
+	}
+	// The rows are formatted to the list's placed width (key column, title), so place it first.
+	width := 0
+	if p, placed := dlg.Place(layout.Width, layout.Height, spec); placed {
+		pi, _ := p.Item(helpList)
+		width = pi.Rect.Width
+	}
+	spec.Groups[0].Columns[0][2] = helpListItem(state, listH, width, styles)
+	return spec, listH, ok
 }
 
-// HelpDialogKeys is the spec for key handling alone: the filter and the Close button, which needs
-// no layout.
-func HelpDialogKeys() dlg.Spec {
-	return dlg.Spec{
-		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{{ID: HelpFilter, Kind: dlg.KindInput}}}}},
-		Buttons: []dlg.Button{{ID: HelpClose, Label: "Close", Mnemonic: 'C'}},
-	}
-}
-
-// DrawHelpDialog renders the centered help dialog with fuzzy shortcut search: the dlg frame, filter,
-// rules and Close button, then the entry rows painted into the reserved list region.
-func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, styles theme.Theme) {
-	spec, listH, fits := HelpDialogView(state, layout, styles)
-	if !fits {
-		return
-	}
-	p, placed := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
-	if !placed {
-		return
-	}
-	metrics, ok := helpListMetrics(p, listH)
-	pane, found := p.Item(helpList)
-	if !ok || !found {
-		return
-	}
-	_, itemBg, _ := styles.DialogSurface.Decompose()
-	primaryCol := draw.DialogTextX(metrics.Rect)
-	filterFocused := state.Focus != HelpClose
-
-	// List rows start right after the separator — no column-title row. Rows are always grouped
-	// under non-selectable section headers, in browse mode and while filtering alike.
-	rowWidth := metrics.InputWidth
-	visualRows := BuildHelpVisualRows(state.Entries, state.Ranked)
-	for row := 0; row < listH; row++ {
-		y := pane.Rect.Y + row
-		visualIdx := state.ListScroll + row
-		baseStyle := styles.DialogText.Background(itemBg)
-		line := ""
-		keyStart := -1
-		keyEnd := -1
-		var ranges []search.Range
-		isCursor := false
-		isHeader := false
-		if visualIdx >= 0 && visualIdx < len(visualRows) {
-			vr := visualRows[visualIdx]
-			if vr.IsHeader {
-				isHeader = true
-				line = vr.Header
-			} else if vr.RankedIdx < len(state.Ranked) {
-				entIdx := state.Ranked[vr.RankedIdx]
-				if entIdx >= 0 && entIdx < len(state.Entries) {
-					ent := state.Entries[entIdx]
-					line, keyStart, keyEnd = FormatHelpRow(ent, metrics.KeyColWidth, rowWidth)
-					if entIdx < len(state.MatchRanges) {
-						ranges = state.MatchRanges[entIdx]
-					}
-				}
-				isCursor = filterFocused && vr.RankedIdx == state.Selected
-			}
-		}
-		matchStyle := styles.FuzzyHighlight
+// helpListItem is the entry list: the visual rows of BuildHelpVisualRows (section Header rows and
+// entries formatted by FormatHelpRow to width, with their match ranges and the key column as a
+// span) with the cursor on the selected entry. With width <= 0 the rows carry only their Header
+// flags, enough for the viewport (HelpViewState.EnsureListScroll).
+func helpListItem(st HelpViewState, height, width int, styles theme.Theme) dlg.Item {
+	visual := BuildHelpVisualRows(st.Entries, st.Ranked)
+	_, bg, _ := styles.DialogSurface.Decompose()
+	keyStyle := styles.DialogHelpKey.Background(bg)
+	keyCol := min(28, width-3)
+	rows := make([]dlg.ListRow, len(visual))
+	cursor := 0
+	for i, vr := range visual {
 		switch {
-		case isHeader:
-			baseStyle = styles.DialogHelpSection.Background(itemBg)
-		case isCursor:
-			baseStyle = styles.DialogOptionRowStyle(true, false)
-			matchStyle = styles.FuzzyHighlightCursor
+		case vr.IsHeader:
+			rows[i] = dlg.ListRow{Text: vr.Header, Header: true}
+		case vr.RankedIdx == st.Selected:
+			cursor = i
 		}
-		_, rowBg, _ := baseStyle.Decompose()
-		matchStyle = matchStyle.Background(rowBg)
+		if vr.IsHeader || width <= 0 {
+			continue
+		}
+		entIdx := st.Ranked[vr.RankedIdx]
+		if entIdx < 0 || entIdx >= len(st.Entries) {
+			continue
+		}
+		line, keyStart, keyEnd := FormatHelpRow(st.Entries[entIdx], keyCol, width)
+		rows[i].Text = line
+		if entIdx < len(st.MatchRanges) {
+			rows[i].Match = st.MatchRanges[entIdx]
+		}
+		if keyStart >= 0 {
+			rows[i].Spans = []primitive.Span{{Start: keyStart, End: keyEnd, Style: keyStyle}}
+		}
+	}
+	return dlg.Item{
+		ID: helpList, Kind: dlg.KindList, Driven: true, Height: height, Rows: rows, Cursor: cursor, Offset: st.ListScroll,
+	}
+}
 
-		rendered, spans := helpRowContent(line, ranges, rowWidth, matchStyle)
-		if keyStart >= 0 && !isCursor {
-			spans = append(spans, primitive.Span{Start: keyStart, End: keyEnd, Style: styles.DialogHelpKey.Background(rowBg)})
-		}
-		primitive.StyledText(screen, primaryCol, y, rowWidth, rendered, baseStyle, spans)
+// DrawHelpDialog renders the centered help dialog with fuzzy shortcut search from its widget spec.
+func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, styles theme.Theme) {
+	if spec, _, fits := HelpDialogView(state, layout, styles); fits {
+		dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 	}
 }
 
@@ -174,40 +147,4 @@ func BuildHelpVisualRows(entries []HelpEntry, ranked []int) []HelpVisualRow {
 		havePrev = true
 	}
 	return rows
-}
-
-func helpRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style) (string, []primitive.Span) {
-	if width <= 0 {
-		return "", nil
-	}
-	orig := []rune(line)
-	var disp []rune
-	switch {
-	case len(orig) <= width:
-		disp = orig
-	case width == 1:
-		disp = orig[:1]
-	default:
-		disp = append(append([]rune{}, orig[:width-1]...), primitive.Ellipsis)
-	}
-	spans := make([]primitive.Span, 0, len(ranges))
-	truncated := len(orig) > width
-	for i := range disp {
-		if truncated && i == len(disp)-1 && disp[i] == primitive.Ellipsis {
-			continue
-		}
-		if helpRangeContains(ranges, i) {
-			spans = append(spans, primitive.Span{Start: i, End: i + 1, Style: matchStyle})
-		}
-	}
-	return string(disp), spans
-}
-
-func helpRangeContains(ranges []search.Range, index int) bool {
-	for _, r := range ranges {
-		if index >= r.Start && index < r.End {
-			return true
-		}
-	}
-	return false
 }

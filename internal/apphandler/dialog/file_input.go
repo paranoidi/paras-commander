@@ -29,30 +29,14 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	return h.handleFileDialogSpecKey(event)
 }
 
-// handleMassRenamePreviewScrollKey handles F4 (external editor) and PgUp/PgDn preview
-// scrolling on the mass-rename dialog. Returns true when the key was handled.
-func (h *Handler) handleMassRenamePreviewScrollKey(d *dialog.FileDialogState, key tcell.Key) bool {
-	switch key {
-	case tcell.KeyF4:
-		h.LaunchMassRenameExternalEditor()
-		return true
-	case tcell.KeyPgUp:
-		_, ht := h.screen.Size()
-		vp := dialog.MassRenamePreviewViewportRows(ht, *d)
-		d.MassRenamePreviewScroll -= vp
-		if d.MassRenamePreviewScroll < 0 {
-			d.MassRenamePreviewScroll = 0
-		}
-		return true
-	case tcell.KeyPgDn:
-		_, ht := h.screen.Size()
-		vp := dialog.MassRenamePreviewViewportRows(ht, *d)
-		dialog.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
-		d.MassRenamePreviewScroll += vp
-		dialog.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
-		return true
+// handleMassRenameEditorKey opens the external editor on F4 in the mass-rename dialog. Returns true
+// when the key was handled.
+func (h *Handler) handleMassRenameEditorKey(key tcell.Key) bool {
+	if key != tcell.KeyF4 {
+		return false
 	}
-	return false
+	h.LaunchMassRenameExternalEditor()
+	return true
 }
 
 // FocusedField returns the FileDialogField the file dialog currently has focus on, or nil when

@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"math"
 	"path/filepath"
 	"strings"
 
@@ -62,6 +63,12 @@ func DeleteListEntryNameFitsWidth(label, entryPath string, width int) string {
 		return label
 	}
 	return primitive.FitPathForWidth(label, width)
+}
+
+// deleteListRowText is a delete or transfer list label as its row text: a contextual (path) label
+// in its cleaned display form; the list's FitPath shortens it to the row.
+func deleteListRowText(label, entryPath string) string {
+	return DeleteListEntryNameFitsWidth(label, entryPath, math.MaxInt)
 }
 
 func deleteListLabelIsContextual(label, entryPath string) bool {

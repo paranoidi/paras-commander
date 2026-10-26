@@ -55,24 +55,6 @@ func DeleteDialogListViewportRows(layoutHeight int, state FileDialogState) int {
 	return available
 }
 
-// DeleteEnsureListScroll clamps DeleteListScroll so the viewport fits.
-func DeleteEnsureListScroll(state *FileDialogState, viewportRows, totalRows int) {
-	if viewportRows <= 0 || totalRows <= 0 {
-		state.DeleteListScroll = 0
-		return
-	}
-	maxScroll := totalRows - viewportRows
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if state.DeleteListScroll > maxScroll {
-		state.DeleteListScroll = maxScroll
-	}
-	if state.DeleteListScroll < 0 {
-		state.DeleteListScroll = 0
-	}
-}
-
 // ComputeDeleteDialogLayoutMinWidth returns the minimum outer dialog width from summary, warning,
 // and entry display names. Call once when opening the dialog and store in DeleteLayoutMinWidth.
 func ComputeDeleteDialogLayoutMinWidth(state FileDialogState, deleteListIconLead int) int {
