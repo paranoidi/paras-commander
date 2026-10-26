@@ -18,31 +18,31 @@ const (
 )
 
 // HelpDialogView is the help dialog's widget spec: the search filter, a rule, the entry list (the
-// filter drives it; section titles are Header rows, the key column a span) and a Close button. ok
-// is false when the dialog does not fit the layout.
+// filter drives it; section titles are Header rows, the key column a span) and a Close button,
+// fitted to the layout. listH is the list's height; ok is false when the dialog does not fit the
+// layout with at least helpMinListRows of them.
 func HelpDialogView(state HelpViewState, layout Layout, styles theme.Theme) (spec dlg.Spec, listH int, ok bool) {
-	prefW, listH, ok := helpDialogSize(layout)
+	prefW, height := helpDialogSize(layout)
 	title := state.Title
 	if title == "" {
 		title = "Help"
 	}
 	spec = dlg.Spec{
-		Title: title, Width: prefW, MinWidth: prefW, Unclamped: true,
+		Title: title, Width: prefW, MinWidth: prefW, MaxHeight: height, Unclamped: true, Margin: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
 			{ID: HelpFilter, Kind: dlg.KindInput, Drives: helpList, LeadingIcon: styles.IconSearchIcon(), Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll},
 			{Kind: dlg.KindSeparator},
-			{ID: helpList, Kind: dlg.KindList, Driven: true, Height: listH},
+			{ID: helpList, Kind: dlg.KindList, Height: height, MinHeight: helpMinListRows},
 		}}}},
 		Buttons: []dlg.Button{{ID: HelpClose, Label: "Close", Mnemonic: 'C'}},
 	}
-	// The rows are formatted to the list's placed width (key column, title), so place it first.
-	width := 0
-	if p, placed := dlg.Place(layout.Width, layout.Height, spec); placed {
-		pi, _ := p.Item(helpList)
-		width = pi.Rect.Width
+	// The rows are formatted to the list's placed width (key column, title).
+	spec, ok = fillList(spec, layout, helpList, func(height, width int) dlg.Item { return helpListItem(state, height, width, styles) })
+	if !ok {
+		return spec, 0, false
 	}
-	spec.Groups[0].Columns[0][2] = helpListItem(state, listH, width, styles)
-	return spec, listH, ok
+	list, _ := spec.Item(helpList)
+	return spec, list.Height, true
 }
 
 // helpListItem is the entry list: the visual rows of BuildHelpVisualRows (section Header rows and

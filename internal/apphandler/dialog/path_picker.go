@@ -100,7 +100,7 @@ func (h *Handler) SyncPathPickerScroll() {
 // PathPickerListRows returns how many rows the path picker's fuzzy list currently shows.
 func (h *Handler) PathPickerListRows() int {
 	termW, termH := h.screen.Size()
-	return dialog.PathPickerListRows(h.host.LayoutForTerminalSize(termW, termH).Height)
+	return max(dialog.PathPickerListRows(h.model.PathPicker, h.host.LayoutForTerminalSize(termW, termH)), 1)
 }
 
 // PathPickerView is the path picker's spec for the current terminal size, the one description

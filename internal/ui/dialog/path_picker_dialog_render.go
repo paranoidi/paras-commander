@@ -16,22 +16,13 @@ const (
 	PathPickerList   dlg.ID = "picker-list"
 )
 
-const (
-	// pathPickerMinWidth is the narrowest terminal-clamped dialog width that still draws.
-	pathPickerMinWidth = 36
-	// pathPickerChromeRows is the outer height of the rows that are not the list: borders, filter,
-	// two separators and the button strip.
-	pathPickerChromeRows = 6
-)
+// pathPickerMinWidth is the narrowest terminal-clamped dialog width that still draws.
+const pathPickerMinWidth = 36
 
-// PathPickerListRows is how many list rows the path picker shows on a layout of layoutHeight
-// rows (4..18; 4 when the dialog does not fit, in which case it is not drawn).
-func PathPickerListRows(layoutHeight int) int {
-	listH := min(max(layoutHeight-12, 4), 18)
-	if pathPickerChromeRows+listH > layoutHeight-2 {
-		listH = max(layoutHeight-2-pathPickerChromeRows, 4)
-	}
-	return listH
+// PathPickerListRows is how many list rows the path picker shows on layout, or 0 when the dialog
+// does not fit.
+func PathPickerListRows(state PathPickerState, layout Layout) int {
+	return fittedListHeight(pathPickerFrame(state, layout, theme.Theme{}, ""), layout, PathPickerList)
 }
 
 // pathPickerWidth is the dialog width on a layout of layoutWidth columns.
@@ -83,12 +74,18 @@ func EnsurePathPickerListScroll(state *PathPickerState, listRows int) {
 // the caller) that steers the item list below it, and OK / Cancel (Cancel only when the picker
 // navigates, since Enter already confirms). rowMarks may be nil (no pinned / job marks).
 func PathPickerView(state PathPickerState, layout Layout, styles theme.Theme, scrollbarStyle uiscrollbar.Style, rowMarks RowMarksFunc) dlg.Spec {
+	spec, _ := fillList(pathPickerFrame(state, layout, styles, scrollbarStyle), layout, PathPickerList, func(height, _ int) dlg.Item {
+		return pathPickerList(state, height, pathPickerWidth(layout.Width)-4, rowMarks)
+	})
+	return spec
+}
+
+// pathPickerFrame is the path picker spec with an empty list as tall as a picker list wants.
+func pathPickerFrame(state PathPickerState, layout Layout, styles theme.Theme, scrollbarStyle uiscrollbar.Style) dlg.Spec {
 	title := state.Title
 	if title == "" {
 		title = "Choose path"
 	}
-	width := pathPickerWidth(layout.Width)
-	listRows := PathPickerListRows(layout.Height)
 	filter := dlg.Item{
 		ID: PathPickerFilter, Kind: dlg.KindInput, Drives: PathPickerList, LeadingIcon: styles.IconSearchIcon(),
 		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll,
@@ -100,10 +97,11 @@ func PathPickerView(state PathPickerState, layout Layout, styles theme.Theme, sc
 		buttons = buttons[1:]
 	}
 	return dlg.Spec{
-		Title: title, Width: width, MinWidth: pathPickerMinWidth, MinHeight: pathPickerChromeRows + listRows,
+		Title: title, Width: pathPickerWidth(layout.Width), MinWidth: pathPickerMinWidth,
 		PlainButtonKeys: true, ScrollbarStyle: scrollbarStyle,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
-			filter, {Kind: dlg.KindSeparator}, pathPickerList(state, listRows, width-4, rowMarks),
+			filter, {Kind: dlg.KindSeparator},
+			{ID: PathPickerList, Kind: dlg.KindList, Height: pickerListHeight(layout.Height), MinHeight: pickerMinListRows},
 		}}}},
 		Buttons: buttons,
 	}

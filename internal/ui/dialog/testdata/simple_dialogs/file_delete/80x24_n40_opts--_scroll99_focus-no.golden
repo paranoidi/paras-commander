@@ -1,8 +1,8 @@
 -- text --
                                                                                 
                                                                                 
-                                                                                
                      ┌──────────── Delete ? ─────────────┐                      
+                     │ # anchor27.txt                    │                      
                      │ # marble28.txt                    │                      
                      │ + otter29                         │                      
                      │ # thicket/lantern30.txt           │                      
@@ -35,8 +35,8 @@ h fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbccccccccccbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa

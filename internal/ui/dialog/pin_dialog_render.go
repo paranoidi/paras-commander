@@ -16,30 +16,10 @@ const (
 // pinMinWidth is the narrowest terminal-clamped dialog width that still draws.
 const pinMinWidth = 36
 
-// PinDialogFixedChromeRows is the outer height consumed by rows that aren't the list:
-// top border, query row, separator, one blank row above the bottom border, bottom border. No
-// OK/Cancel row: Esc closes, the open-in-panel, remove and Enter actions cover every action a
-// button row would. The View sizes the dialog with it and internal/app sizes the list with it.
-const PinDialogFixedChromeRows = 5
-
-// PinDialogListRows returns the list row count for a dialog sized to layout, mirroring the
-// History/PathPicker dialogs' clamp shape (generous outer margin, 4..18 rows). Exported so
-// internal/app can size the dialog identically instead of duplicating this computation.
-func PinDialogListRows(layoutHeight int) int {
-	listH := layoutHeight - 12
-	switch {
-	case listH > 18:
-		listH = 18
-	case listH < 4:
-		listH = 4
-	}
-	if PinDialogFixedChromeRows+listH > layoutHeight-2 {
-		listH = layoutHeight - 2 - PinDialogFixedChromeRows
-		if listH < 4 {
-			return 4
-		}
-	}
-	return listH
+// PinDialogListRows returns the Pin dialog's list height on layout, or 0 when the dialog does not
+// fit.
+func PinDialogListRows(layout Layout) int {
+	return fittedListHeight(pinFrame(PinDialogState{}, layout, theme.Theme{}, ""), layout, PinList)
 }
 
 // pinList is the pin list item: the ranked items with their fuzzy highlights, icons and
@@ -75,16 +55,26 @@ func EnsurePinListScroll(state *PinDialogState, listRows int) {
 // PinDialogView describes the Pin dialog: a filter input that steers the pin list below it, a
 // blank row and no buttons. The filter always holds focus.
 func PinDialogView(state PinDialogState, items []PinDialogItem, layout Layout, styles theme.Theme, scrollbarStyle uiscrollbar.Style) dlg.Spec {
-	listRows := PinDialogListRows(layout.Height)
+	spec, _ := fillList(pinFrame(state, layout, styles, scrollbarStyle), layout, PinList, func(height, _ int) dlg.Item {
+		return pinList(state, items, height, styles)
+	})
+	return spec
+}
+
+// pinFrame is the Pin spec with an empty list as tall as a picker list wants. There is no button
+// strip: Esc closes, and the open-in-panel, remove and Enter actions cover what buttons would.
+func pinFrame(state PinDialogState, layout Layout, styles theme.Theme, scrollbarStyle uiscrollbar.Style) dlg.Spec {
 	filter := dlg.Item{
 		ID: PinFilter, Kind: dlg.KindInput, Drives: PinList, LeadingIcon: styles.IconSearchIcon(),
 		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll,
 	}
 	return dlg.Spec{
-		Title: "Pin", Width: min(78, layout.Width-4), MinWidth: pinMinWidth, MinHeight: PinDialogFixedChromeRows + listRows,
+		Title: "Pin", Width: min(78, layout.Width-4), MinWidth: pinMinWidth,
 		ScrollbarStyle: scrollbarStyle,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
-			filter, {Kind: dlg.KindSeparator}, pinList(state, items, listRows, styles), {Kind: dlg.KindLabel},
+			filter, {Kind: dlg.KindSeparator},
+			{ID: PinList, Kind: dlg.KindList, Height: pickerListHeight(layout.Height), MinHeight: pickerMinListRows},
+			{Kind: dlg.KindLabel},
 		}}}},
 	}
 }

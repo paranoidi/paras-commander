@@ -121,12 +121,11 @@ func TestDrawMassRenameDialogLastItemVisible(t *testing.T) {
 	}
 }
 
-// TestMassRenamePreviewViewportRowsMatchesRenderedRows guards against
-// MassRenamePreviewViewportRows (used for PgUp/PgDn paging and the scrollbar) drifting from the
-// row count drawMassRenameDialog actually paints — the two were independent hand-tuned formulas
-// before and disagreed by a couple of rows, capping scroll short of the list's true end. Runs
-// across every mode at a height that forces the dialog to clamp (the case that exposed the bug).
-func TestMassRenamePreviewViewportRowsMatchesRenderedRows(t *testing.T) {
+// TestMassRenamePreviewHeightMatchesRenderedRows checks that the preview height in the fitted
+// spec (what PgUp/PgDn page by and the scroll clamps to) is the row count DrawFileDialog paints:
+// scrolled to the last page by it, the last item is on screen. Runs across every mode at a height
+// that forces the dialog to clamp.
+func TestMassRenamePreviewHeightMatchesRenderedRows(t *testing.T) {
 	const n = 30
 	before := make([]string, n)
 	after := make([]string, n)
@@ -152,7 +151,7 @@ func TestMassRenamePreviewViewportRowsMatchesRenderedRows(t *testing.T) {
 				t.Fatalf("Init() error = %v", err)
 			}
 			defer screen.Fini()
-			screen.SetSize(80, 24) // short enough that massRenameDialogHeight clamps
+			screen.SetSize(80, 24) // short enough that the dialog clamps
 
 			state := tc.state
 			state.Open = true
@@ -161,7 +160,8 @@ func TestMassRenamePreviewViewportRowsMatchesRenderedRows(t *testing.T) {
 			state.MassRenamePreviewAfter = after
 
 			layout := Layout{Width: 80, Height: 24}
-			vp := MassRenamePreviewViewportRows(layout.Height, state)
+			preview, _ := FileDialogView(state, FileDialogViewContext{Layout: layout}).Item(massRenamePreview)
+			vp := preview.Height
 			state.MassRenamePreviewScroll = n - vp // scroll to the reported true last page
 
 			styles := theme.Default()
@@ -174,7 +174,7 @@ func TestMassRenamePreviewViewportRowsMatchesRenderedRows(t *testing.T) {
 			}
 			last := before[n-1]
 			if !strings.Contains(dump.String(), last) {
-				t.Fatalf("%s: last preview item (%s) not visible when scrolled to MassRenamePreviewViewportRows' reported max (vp=%d) — it has drifted from what drawMassRenameDialog actually draws:\n%s", tc.name, last, vp, dump.String())
+				t.Fatalf("%s: last preview item (%s) not visible when scrolled to the spec's last page (vp=%d):\n%s", tc.name, last, vp, dump.String())
 			}
 		})
 	}

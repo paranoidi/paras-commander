@@ -77,8 +77,11 @@ func (it Item) cursorRow() int {
 
 // pageStep is how many rows PgUp/PgDn move.
 func (it Item) pageStep() int {
-	if it.PageStep > 0 {
+	switch {
+	case it.PageStep > 0:
 		return it.PageStep
+	case it.ScrollOnly:
+		return max(it.Height, 1)
 	}
 	return max(it.Height-1, 1)
 }
@@ -187,7 +190,7 @@ func scrollTo(it Item, off int) Event {
 
 // listByID returns the KindList item named id, focusable or not.
 func listByID(spec Spec, id ID) (Item, bool) {
-	it, ok := leafByID(spec, id)
+	it, ok := spec.Item(id)
 	return it, ok && it.Kind == KindList
 }
 

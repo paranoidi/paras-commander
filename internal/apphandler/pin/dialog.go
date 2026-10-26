@@ -14,12 +14,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// listRows returns the list row count for a dialog sized to the terminal, delegating to
-// dialog.PinDialogListRows so app-side and render-side sizing can't drift.
+// listRows returns the list row count for a dialog sized to the terminal, from the fitted spec
+// (dialog.PinDialogListRows) so app-side and render-side sizing can't drift.
 func (h *Handler) listRows() int {
 	termW, termH := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(termW, termH)
-	return dialog.PinDialogListRows(layout.Height)
+	return max(dialog.PinDialogListRows(layout), 1)
 }
 
 // DialogView is the Pin dialog's spec for the current terminal size, the one description the

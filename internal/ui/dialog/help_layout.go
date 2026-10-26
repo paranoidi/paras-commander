@@ -6,11 +6,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
-// HelpDialogChromeRows is the number of fixed (non-list) rows in the help dialog: both
-// borders, the filter input, separator-before-list, separator-after-list, and the button
-// row. The single source of truth for total-height/list-height math shared by
-// ComputeHelpDialogListMetrics and App.helpListRows.
-const HelpDialogChromeRows = 6
+// helpMinListRows is the fewest entry rows the help dialog shows; below that it is not drawn.
+const helpMinListRows = 4
 
 // HelpDialogListMetrics holds list geometry for the help dialog (shared by draw and rank sync).
 type HelpDialogListMetrics struct {
@@ -20,19 +17,11 @@ type HelpDialogListMetrics struct {
 	ListH       int
 }
 
-// helpDialogSize returns the preferred outer width and the visible list row count for the layout;
-// ok is false when the dialog does not fit.
-func helpDialogSize(layout Layout) (prefW, listH int, ok bool) {
-	prefW = min(max(layout.Width-14, 40), 90)
-	maxH := min(max(layout.Height-14, 12), 36)
-	listH = max(maxH-HelpDialogChromeRows, 4)
-	if height := HelpDialogChromeRows + listH; height > layout.Height-2 {
-		listH = layout.Height - 2 - HelpDialogChromeRows
-		if listH < 4 {
-			return 0, 0, false
-		}
-	}
-	return prefW, listH, true
+// helpDialogSize returns the help dialog's preferred outer width and its outer height for the
+// layout: a margin around it and between 12 and 36 rows. The entry list takes the rows the filter
+// and the button strip leave.
+func helpDialogSize(layout Layout) (prefW, height int) {
+	return min(max(layout.Width-14, 40), 90), min(max(layout.Height-14, 12), 36)
 }
 
 // ComputeHelpDialogListMetrics is the help dialog's list geometry, from the dialog's placement: the

@@ -368,7 +368,7 @@ func TestPinDialogViewSelectedRestoresDialogAfterPreviewCloses(t *testing.T) {
 	}
 	termW, termH := screen.Size()
 	layout := app.layoutForTerminalSize(termW, termH)
-	dialog.EnsurePinListScroll(st, dialog.PinDialogListRows(layout.Height))
+	dialog.EnsurePinListScroll(st, dialog.PinDialogListRows(layout))
 	if st.ListScroll == 0 {
 		t.Fatal("test setup: expected a non-zero ListScroll to exercise restore")
 	}

@@ -101,8 +101,43 @@ func massRenameMarkerWidth(st FileDialogState) int {
 // hints, the Capitalize checkboxes, or nothing for the external editor), a rule and the
 // before / after preview (massRenamePreviewList, a ScrollOnly list), above OK / Apply /
 // Cancel. The mode radios are Tab stops of one segment with the option row; each input is a
-// segment of its own.
+// segment of its own. The dialog is massRenameDialogHeight tall and the preview fills what the
+// rows above it leave.
 func massRenameView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
+	// The rows are pre-fitted into a before and an after column. The preview wants the whole
+	// screen and gets what massRenameDialogHeight leaves it.
+	spec := massRenameHead(st, ctx)
+	spec.Groups = append(spec.Groups, massRenamePreviewGroup(ctx.Layout.Height))
+	spec.MaxHeight = massRenameDialogHeight(st, ctx)
+	spec.ScrollbarStyle = ctx.ScrollbarStyle
+	spec, _ = fillList(spec, ctx.Layout, massRenamePreview, func(height, width int) dlg.Item {
+		return massRenamePreviewList(st, height, width, ctx.Styles)
+	})
+	return spec
+}
+
+// massRenameDialogHeight is the mass rename dialog's outer height: what the Simple mode (Regex,
+// with its hint row, in Regex mode) needs to show every preview row, at most the screen less a row
+// above and below and at least 12 rows. Every mode gets this height, so switching modes does not
+// resize the dialog: the modes with fewer rows above the preview give them to it.
+func massRenameDialogHeight(st FileDialogState, ctx FileDialogViewContext) int {
+	if st.MassRenameMode != MassRenameModeUIRegex {
+		st.MassRenameMode = MassRenameModeUISimple
+	}
+	spec := massRenameHead(st, ctx)
+	spec.Groups = append(spec.Groups, massRenamePreviewGroup(max(len(st.MassRenamePreviewBefore), 1)))
+	spec.MaxHeight = ctx.Layout.Height - 2
+	p, _ := dlg.Place(ctx.Layout.Width, ctx.Layout.Height, spec)
+	return max(p.Rect.Height, 12)
+}
+
+// massRenamePreviewGroup is the group of an empty preview list height rows tall, for sizing.
+func massRenamePreviewGroup(height int) dlg.Group {
+	return dlg.Group{Columns: [][]dlg.Item{{{ID: massRenamePreview, Kind: dlg.KindList, Height: height}}}}
+}
+
+// massRenameHead is the mass rename spec without the preview.
+func massRenameHead(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 	markerW := massRenameMarkerWidth(st)
 	widths := massRenameColumnWidths(markerW)
 	spec := dlg.Spec{
@@ -180,17 +215,6 @@ func massRenameView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 		}
 		spec.Groups = append(spec.Groups, dlg.Group{Columns: [][]dlg.Item{append(fields, dlg.Item{Kind: dlg.KindSeparator})}})
 	}
-	// The rows are pre-fitted into a before and an after column, so the list's placed width comes
-	// first: Place the spec with the empty preview, then fill it.
-	height := MassRenamePreviewViewportRows(ctx.Layout.Height, st)
-	spec.Groups = append(spec.Groups, dlg.Group{Columns: [][]dlg.Item{{{ID: massRenamePreview, Kind: dlg.KindList, ScrollOnly: true, Height: height}}}})
-	width := 0
-	if p, ok := dlg.Place(ctx.Layout.Width, ctx.Layout.Height, spec); ok {
-		pi, _ := p.Item(massRenamePreview)
-		width = pi.Rect.Width
-	}
-	spec.Groups[len(spec.Groups)-1].Columns[0][0] = massRenamePreviewList(st, height, width, ctx.Styles)
-	spec.ScrollbarStyle = ctx.ScrollbarStyle
 	return spec
 }
 

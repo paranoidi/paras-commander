@@ -34,10 +34,10 @@
   │ timber-24.txt                       timber-24.txt                        │  
   │ ribbon-25.txt                       ribbon-25.txt                        │  
   │ velvet-26.txt                       velvet-26.txt                        │  
+  │ anchor-27.txt                       anchor-27.txt                        │  
   ├──────────────────────────────────────────────────────────────────────────┤  
   │                    [ OK ]    [ Apply ]    [ Cancel ]                     │  
   └──────────────────────────────────────────────────────────────────────────┘  
-                                                                                
                                                                                 
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
@@ -85,8 +85,8 @@ aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
 aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
 aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
 aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbhhhihhhhbbhhhihhhhhhhbbhhhihhhhhhhhbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

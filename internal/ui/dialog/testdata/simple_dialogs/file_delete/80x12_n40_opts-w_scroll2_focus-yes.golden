@@ -1,8 +1,8 @@
 -- text --
                                                                                 
-                                                                                
                 ┌────────────────── Delete ? ──────────────────┐                
                 │ # thicket/willow2.txt                        ┃                
+                │ # meadow3.txt                                │                
                 ├──────────────────────────────────────────────┤                
                 │ Directories are removed with their contents. │                
                 │      40 files, 2 directories (1.2 MiB)       │                
@@ -22,8 +22,8 @@ g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbccccccccccbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa

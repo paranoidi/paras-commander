@@ -75,7 +75,14 @@ type FileDialogViewContext struct {
 //   - add bookmark's path head, the extract skipped-items note and the mass rename save prompt reuse
 //     the input groups; run-for-each (runForEachView, its history picker) and the mass rename main
 //     screen and pattern pickers (massRenameView, massRenamePatternPickerView) have their own views.
+//
+// The spec comes fitted to ctx.Layout (dlg.FitSpec), so its lists are as tall as they are drawn.
 func FileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
+	spec, _ := dlg.FitSpec(ctx.Layout.Width, ctx.Layout.Height, fileDialogView(st, ctx))
+	return spec
+}
+
+func fileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 	if st.DialogType == FileDialogRunForEach {
 		if st.RunForEachHistoryOpen {
 			return runForEachHistoryView(st, ctx)
@@ -104,6 +111,7 @@ func FileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 			{ID: dlg.Cancel, Label: "No", Mnemonic: 'N'},
 		}
 		spec.Groups = deleteViewGroups(st, ctx)
+		spec.MaxHeight = listDialogMaxHeight(ctx.Layout.Height)
 		spec.ScrollbarStyle = ctx.ScrollbarStyle
 	case renameToolActive(st):
 		spec.Groups = renameToolViewGroups(st)
@@ -250,7 +258,7 @@ func deleteViewGroups(st FileDialogState, ctx FileDialogViewContext) []dlg.Group
 	}
 	summary = append(summary, dlg.Item{Kind: dlg.KindLabel, Label: st.DeleteSummary, Center: true})
 	icon := listIconPad(ctx.IconLead)
-	list := scrollList(fileDeleteList, len(st.DeleteEntries), DeleteDialogListViewportRows(ctx.Layout.Height, st), st.DeleteListScroll,
+	list := scrollList(fileDeleteList, len(st.DeleteEntries), deleteListHeight(st), st.DeleteListScroll,
 		func(i int) dlg.ListRow {
 			e := st.DeleteEntries[i]
 			return dlg.ListRow{Text: deleteListRowText(e.Name, e.Path), Icon: icon}

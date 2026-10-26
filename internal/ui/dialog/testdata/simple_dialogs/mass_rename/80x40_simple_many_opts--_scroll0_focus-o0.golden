@@ -34,10 +34,10 @@
   │ willow-22.txt                       willow-22.txt                        │  
   │ meadow-23.txt                       meadow-23.txt                        │  
   │ timber-24.txt                       timber-24.txt                        │  
+  │ ribbon-25.txt                       ribbon-25.txt                        │  
   ├──────────────────────────────────────────────────────────────────────────┤  
   │                    [ OK ]    [ Apply ]    [ Cancel ]                     │  
   └──────────────────────────────────────────────────────────────────────────┘  
-                                                                                
                                                                                 
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
@@ -85,8 +85,8 @@ aabbbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
+aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbfffiffffbbfffifffffffbbfffiffffffffbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

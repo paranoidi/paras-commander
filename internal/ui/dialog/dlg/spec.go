@@ -133,14 +133,20 @@ type Item struct {
 	// holds only rows [RowsFrom, RowsFrom+len(Rows)), at least the ones ListWindow names. Rows
 	// outside that range are never drawn, so the caller builds only the visible ones.
 	RowCount, RowsFrom int
-	// Height is the number of visible rows of a list, or the rows a KindSpacer reserves.
+	// Height is the number of visible rows of a list, or the rows a KindSpacer reserves. It is
+	// the most the item wants: Place (and FitSpec) shorten lists, then spacers, until the dialog fits
+	// its MaxHeight and the screen.
 	Height int
+	// MinHeight is the fewest rows a list keeps when shortened; a dialog that only fits with the
+	// list below it does not fit at all (Place and FitSpec report !ok). 0 means one row.
+	MinHeight int
 	// Wrap makes Up/Down/PgUp/PgDn wrap around the ends instead of stopping at them.
 	Wrap bool
 	// CenterScroll keeps the cursor row centered in the viewport (geom.ScrollOffset, Offset is
 	// ignored). Otherwise the viewport scrolls only as far as needed (Offset is sticky).
 	CenterScroll bool
-	// PageStep is how many rows PgUp/PgDn move; 0 means Height-1 (at least 1).
+	// PageStep is how many rows PgUp/PgDn move; 0 means Height-1 (at least 1), or a full Height on
+	// a ScrollOnly list.
 	PageStep int
 	// Driven marks a list whose focus lives in the input that Drives it: the list is never a focus
 	// stop or Tab segment itself, its cursor row is lit while that input is focused, and a click on
@@ -321,9 +327,14 @@ func OKCancelButtons() []Button { return []Button{OKButton, CancelButton} }
 type Spec struct {
 	Title                      string
 	Width, MinWidth, MinHeight int
-	Groups                     []Group
-	Buttons                    []Button // drawn after a horizontal separator, centered; also its own Tab segment
-	PlainButtonKeys            bool     // plain (no Alt) button mnemonic letters press the button
+	// MaxHeight caps the dialog's outer height below the screen's (0 = the screen); its lists
+	// shrink to fit it like they do to fit the screen. The cap gives way to fixed content (it
+	// never cuts off a row that is not a list or spacer row), but not to a list's MinHeight: a
+	// dialog whose list cannot keep its MinHeight under the cap does not fit.
+	MaxHeight       int
+	Groups          []Group
+	Buttons         []Button // drawn after a horizontal separator, centered; also its own Tab segment
+	PlainButtonKeys bool     // plain (no Alt) button mnemonic letters press the button
 	// ButtonsLabel, when set, is drawn centered in the separator above the buttons, padded with one
 	// space on each side, in the selection-size status style (find's marked-selection size).
 	ButtonsLabel string
@@ -331,6 +342,10 @@ type Spec struct {
 	// screen: width is min(Width, screen-4), widened to min(MinWidth, screen-2) when that is below
 	// MinWidth, and the height only shrinks to the screen. MinHeight still raises the height.
 	Unclamped bool
+	// Margin keeps a row free above and below an Unclamped dialog: its height shrinks to the
+	// screen less two rows, and a dialog whose lists cannot keep their MinHeight in that does not
+	// fit (Place and FitSpec report !ok).
+	Margin bool
 	// ScrollbarStyle is the scrollbar variant for lists with Item.Scrollbar (empty = thumb).
 	ScrollbarStyle uiscrollbar.Style
 	// MarkerWidth is the width in cells of a radio or checkbox marker (" ( ) ", " <icon> ") for
@@ -409,6 +424,17 @@ func (p Placement) EachListRow(id ID, f func(row, y int)) {
 	for i := 0; i < pi.Rect.Height && pi.Offset+i < pi.Rows && pi.Rect.Y+i < p.ContentBottom; i++ {
 		f(pi.Offset+i, pi.Rect.Y+i)
 	}
+}
+
+// Item returns the group item named id (a cell of a row included). On a fitted spec (FitSpec) a list's
+// Height is the number of rows it shows.
+func (s Spec) Item(id ID) (Item, bool) {
+	for _, it := range leaves(s) {
+		if it.ID == id && id != "" {
+			return it, true
+		}
+	}
+	return Item{}, false
 }
 
 // Item returns the placed widget named id (an input's Rect is where a caller anchors overlays such

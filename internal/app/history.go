@@ -242,7 +242,7 @@ func (a *App) syncHistoryDialogRanks() {
 func (a *App) historyDialogListRows() int {
 	termW, termH := a.screen.Size()
 	layout := a.layoutForTerminalSize(termW, termH)
-	return max(dialog.HistoryDialogListRows(layout.Height, a.model.HistoryDialog.ZoxideAvailable), 1)
+	return max(dialog.HistoryDialogListRows(a.model.HistoryDialog, layout), 1)
 }
 
 func (a *App) activateHistorySelection() {

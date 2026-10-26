@@ -18,10 +18,10 @@
   │ velvet-6.txt                        velvet-6.txt                         │  
   │ anchor-7.txt                        anchor-7.txt                         │  
   │ marble-8.txt                        marble-8.txt                         │  
+  │ otter-9.txt                         otter-9.txt                          │  
   ├──────────────────────────────────────────────────────────────────────────┤  
   │                    [ OK ]    [ Apply ]    [ Cancel ]                     │  
   └──────────────────────────────────────────────────────────────────────────┘  
-                                                                                
                                                                                 
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
@@ -55,8 +55,8 @@ aabbbbbbbbbbiiiibbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbiiiibbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbiiiibbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbiiiibbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
+aabbbbbbbbbiiiibbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbgggkggggbbgggkgggggggbbgggkggggggggbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

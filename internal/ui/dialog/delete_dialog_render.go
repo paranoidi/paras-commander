@@ -1,58 +1,24 @@
 package dialog
 
 import (
-	"strings"
 	"unicode/utf8"
 )
 
 // DeleteDialogMaxListRows caps visible name rows per paint (full list still scrolls).
 const DeleteDialogMaxListRows = 18
 
-func deleteDialogWarningLines(state FileDialogState) int {
-	if strings.TrimSpace(state.DeleteWarning) != "" {
-		return 1
-	}
-	return 0
+// listDialogMaxHeight caps the outer height of the delete and copy / move dialogs at 80% of a
+// layout of layoutHeight rows (at least 8, but never more than the screen less a row above and
+// below), so
+// their scrolling lists leave the panels visible around them.
+func listDialogMaxHeight(layoutHeight int) int {
+	return min(max(layoutHeight*80/100, 8), layoutHeight-2)
 }
 
-// deleteDialogChromeRows is interior rows not used by the scrollable name list
-// (footer block + blank + button row).
-func deleteDialogChromeRows(state FileDialogState) int {
-	return 7 + deleteDialogWarningLines(state)
-}
-
-func deleteDialogMaxHeight(layoutHeight int) int {
-	maxH := layoutHeight * 80 / 100
-	if maxH > layoutHeight-2 {
-		maxH = layoutHeight - 2
-	}
-	if maxH < 8 {
-		maxH = 8
-	}
-	return maxH
-}
-
-func deleteDialogCappedEntryCount(natural int) int {
-	if natural <= DeleteDialogMaxListRows {
-		return natural
-	}
-	return DeleteDialogMaxListRows
-}
-
-// DeleteDialogListViewportRows returns how many delete-list name rows fit for the terminal height.
-func DeleteDialogListViewportRows(layoutHeight int, state FileDialogState) int {
-	natural := len(state.DeleteEntries)
-	capped := deleteDialogCappedEntryCount(natural)
-	chrome := deleteDialogChromeRows(state)
-	maxH := deleteDialogMaxHeight(layoutHeight)
-	available := maxH - chrome
-	if available < 1 {
-		return 1
-	}
-	if capped <= available {
-		return capped
-	}
-	return available
+// deleteListHeight is the delete list's height before the dialog is fitted to the screen: one
+// row per entry, up to DeleteDialogMaxListRows.
+func deleteListHeight(st FileDialogState) int {
+	return max(min(len(st.DeleteEntries), DeleteDialogMaxListRows), 1)
 }
 
 // ComputeDeleteDialogLayoutMinWidth returns the minimum outer dialog width from summary, warning,

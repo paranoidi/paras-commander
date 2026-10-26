@@ -4,6 +4,7 @@
   │ ( ) Simple (replace text)  ( ) Regular expression  (*) External $EDITOR  │  
   │ [ ] Show only modified      [x] Trim whitespace                          │  
   ├──────────────────────────────────────────────────────────────────────────┤  
+  │ otter-9.txt                         otter-9.txt                          │  
   │ lantern-10.txt                      harbor-10.txt                        │  
   │ orchard-11.txt                      orchard-11.txt                       │  
   │ willow-12.txt                       willow-12.txt                        │  
@@ -38,15 +39,14 @@
   │                    [ OK ]    [ Apply ]    [ Cancel ]                     │  
   └──────────────────────────────────────────────────────────────────────────┘  
                                                                                 
-                                                                                
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
 b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
 e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-f fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-g fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+f fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 h fg=0x100000002 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 i fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
@@ -56,38 +56,38 @@ aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbdddddcdddddddddddddddbbbaa
 aabbbbbbbbbbbbbbbbcbbbbbbbbbbbbeeeeeceeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbfffffffbbbggggbbbbbbbbbbbbbbbbbbbbbbhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbfffffffbbbggggbbbbbbbbbbbbbbbbbbbbbbhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbfffffffbbbggggbbbbbbbbbbbbbbbbbbbbbbhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbgggggggbbbffffbbbbbbbbbbbbbbbbbbbbbbhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbgggggggbbbffffbbbbbbbbbbbbbbbbbbbbbbhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbgggggggbbbffffbbbbbbbbbbbbbbbbbbbbbbhhhhhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbiiijiiiibbiiijiiiiiiibbiiijiiiiiiiibbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

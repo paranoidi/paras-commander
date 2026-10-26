@@ -1,7 +1,6 @@
 -- text --
                                                                                 
                                                                                 
-                                                                                
                      ┌──────────── Delete ? ─────────────┐                      
                      │ # thicket/willow22.txt            │                      
                      │ # meadow23.txt                    │                      
@@ -11,10 +10,11 @@
                      │ # anchor27.txt                    │                      
                      │ # marble28.txt                    │                      
                      │ + otter29                         │                      
-                     │ # thicket/lantern30.txt           ┃                      
-                     │ # orchard31.txt                   │                      
+                     │ # thicket/lantern30.txt           │                      
+                     │ # orchard31.txt                   ┃                      
                      │ # willow32.txt                    │                      
                      │ + meadow33                        │                      
+                     │ # thicket/timber34.txt            │                      
                      ├───────────────────────────────────┤                      
                      │ 40 files, 2 directories (1.2 MiB) │                      
                      ├───────────────────────────────────┤                      
@@ -35,8 +35,8 @@ h fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbccccccccccbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa

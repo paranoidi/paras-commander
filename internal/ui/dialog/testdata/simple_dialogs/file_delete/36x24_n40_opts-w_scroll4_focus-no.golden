@@ -1,7 +1,6 @@
 -- text --
                                     
                                     
-                                    
   ┌────────── Delete ? ──────────┐  
   │ # timber4.txt                │  
   │ + ribbon5                    ┃  
@@ -14,6 +13,7 @@
   │ # willow12.txt               │  
   │ + meadow13                   │  
   │ # thicket/timber14.txt       │  
+  │ # ribbon15.txt               │  
   ├──────────────────────────────┤  
   │ Directories are removed wit… │  
   │ 40 files, 2 directories (1.… │  
@@ -35,8 +35,8 @@ h fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbccccccccccbbbbbbbbbbbaa
+aabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa

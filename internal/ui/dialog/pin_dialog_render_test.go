@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
@@ -39,13 +40,11 @@ func TestDrawPinDialogSmoke(t *testing.T) {
 	}
 	DrawPinDialog(screen, layout, state, items, styles, uiscrollbar.StyleNone)
 
-	width := 78
-	if width > layout.Width-4 {
-		width = layout.Width - 4
+	p, ok := dlg.Place(layout.Width, layout.Height, PinDialogView(state, items, layout, styles, uiscrollbar.StyleNone))
+	if !ok {
+		t.Fatal("pin dialog does not fit")
 	}
-	listH := PinDialogListRows(layout.Height)
-	height := PinDialogFixedChromeRows + listH
-	rect := draw.CenteredDialogRect(layout, width, height)
+	rect := p.Rect
 	queryCol := draw.DialogTextX(rect)
 
 	cell, _, _ := screen.Get(queryCol, rect.Y+1)
@@ -90,20 +89,25 @@ func TestEnsurePinListScroll(t *testing.T) {
 	}
 }
 
-func TestPinDialogListRowsNoLeftoverBlankRow(t *testing.T) {
-	// Sanity-check the fixed-chrome-row accounting: for a layout height, the computed
-	// dialog height (PinDialogFixedChromeRows + listH) must never exceed the space
-	// CenteredDialogRect is given, and must consume it exactly (no stray blank rows,
-	// no clipped bottom border) whenever the outer clamp isn't in effect.
-	for layoutHeight := 20; layoutHeight <= 60; layoutHeight++ {
-		listH := PinDialogListRows(layoutHeight)
-		height := PinDialogFixedChromeRows + listH
-		if height > layoutHeight-2 {
-			t.Fatalf("layoutHeight=%d: dialog height %d exceeds available %d", layoutHeight, height, layoutHeight-2)
+func TestPinDialogListRowsFitTheDialog(t *testing.T) {
+	// The list height PinDialogListRows reports is the one drawn, at least 4 rows, in a dialog
+	// that leaves a row free above and below it.
+	for layoutHeight := 11; layoutHeight <= 60; layoutHeight++ {
+		layout := Layout{Width: 80, Height: layoutHeight}
+		listH := PinDialogListRows(layout)
+		p, ok := dlg.Place(layout.Width, layout.Height, PinDialogView(PinDialogState{}, nil, layout, theme.Theme{}, uiscrollbar.StyleNone))
+		if !ok {
+			t.Fatalf("layoutHeight=%d: dialog does not fit", layoutHeight)
 		}
-		if listH < 4 {
-			t.Fatalf("layoutHeight=%d: listH = %d, want >= 4", layoutHeight, listH)
+		if p.Rect.Height > layoutHeight-2 {
+			t.Fatalf("layoutHeight=%d: dialog height %d exceeds available %d", layoutHeight, p.Rect.Height, layoutHeight-2)
 		}
+		if list, _ := p.Item(PinList); list.Rect.Height != listH || listH < 4 {
+			t.Fatalf("layoutHeight=%d: drawn list %d rows, PinDialogListRows %d, want equal and >= 4", layoutHeight, list.Rect.Height, listH)
+		}
+	}
+	if got := PinDialogListRows(Layout{Width: 80, Height: 10}); got != 0 {
+		t.Fatalf("layoutHeight=10: %d rows, want 0 (does not fit)", got)
 	}
 }
 

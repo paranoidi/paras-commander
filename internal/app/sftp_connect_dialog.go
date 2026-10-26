@@ -73,7 +73,7 @@ func (a *App) syncSFTPConnectDialogRanks() {
 
 func (a *App) sftpConnectListRows() int {
 	w, h := a.screen.Size()
-	return dialog.SFTPConnectListRows(a.layoutForTerminalSize(w, h))
+	return max(dialog.SFTPConnectListRows(a.layoutForTerminalSize(w, h)), 1)
 }
 
 func (a *App) sftpConnectView() dlg.Spec {

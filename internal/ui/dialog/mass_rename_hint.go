@@ -38,7 +38,3 @@ func massRenameReplacementHintText(state FileDialogState) string {
 	}
 	return ops.MassRenameReplacementSyntaxHint
 }
-
-func massRenameShowsReplacementHint(state FileDialogState) bool {
-	return massRenameReplacementHintText(state) != ""
-}

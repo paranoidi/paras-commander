@@ -184,9 +184,8 @@ func (a *App) syncHelpRanks() {
 	st.EnsureListScroll(a.helpListRows())
 }
 
-// helpListRows returns the visible list height, reusing dialog.ComputeHelpDialogListMetrics
-// (the single source of truth for help-dialog chrome/height math) so scroll bookkeeping stays
-// in lockstep with what actually gets drawn.
+// helpListRows returns the visible list height from dialog.ComputeHelpDialogListMetrics (the
+// fitted help spec), so scroll bookkeeping stays in lockstep with what actually gets drawn.
 func (a *App) helpListRows() int {
 	w, h := a.screen.Size()
 	if m, ok := dialog.ComputeHelpDialogListMetrics(dialog.Layout{Width: w, Height: h}); ok {

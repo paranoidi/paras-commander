@@ -2,14 +2,17 @@ package dialog
 
 import "testing"
 
-func TestThemeDialogListViewportRows(t *testing.T) {
+func TestThemeDialogListHeight(t *testing.T) {
 	t.Parallel()
-	layout := Layout{Width: 80, Height: 24}
-	if got := ThemeDialogListViewportRows(layout, 100); got != 18 {
+	state := ThemeDialogState{Choices: make([]ThemeChoice, 100)}
+	rows := func(layout Layout) int {
+		list, _ := ThemeDialogView(state, layout).Item(ThemeList)
+		return list.Height
+	}
+	if got := rows(Layout{Width: 80, Height: 24}); got != 18 {
 		t.Fatalf("tall dialog viewport = %d, want 18", got)
 	}
-	small := Layout{Width: 80, Height: 10}
-	if got := ThemeDialogListViewportRows(small, 100); got != 4 {
+	if got := rows(Layout{Width: 80, Height: 10}); got != 4 {
 		t.Fatalf("clamped dialog viewport = %d, want 4", got)
 	}
 }

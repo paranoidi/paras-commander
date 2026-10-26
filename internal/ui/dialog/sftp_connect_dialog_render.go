@@ -17,14 +17,10 @@ const (
 // sftpConnectMinWidth is the narrowest terminal-clamped dialog width that still draws.
 const sftpConnectMinWidth = 40
 
-// SFTPConnectListRows is how many host rows the dialog shows on this layout (the list grows with
-// the terminal, between 3 and 12 rows).
+// SFTPConnectListRows is how many host rows the dialog shows on layout (the list grows with the
+// terminal, up to 12 rows).
 func SFTPConnectListRows(layout Layout) int {
-	listH := min(max(layout.Height-16, 3), 12)
-	if 9+listH > layout.Height-2 {
-		listH = max(layout.Height-2-9, 3)
-	}
-	return listH
+	return fittedListHeight(sftpConnectFrame(SFTPConnectDialogState{}, layout, theme.Theme{}), layout, SFTPHosts)
 }
 
 // sftpHostList is the host list item: the ranked display lines with their fuzzy highlights.
@@ -54,6 +50,15 @@ func EnsureSFTPConnectListScroll(state *SFTPConnectDialogState, listRows int) {
 // SFTPConnectView describes the SFTP dialog: a filter input that steers the host list below it,
 // the location input and OK / Cancel.
 func SFTPConnectView(state SFTPConnectDialogState, layout Layout, styles theme.Theme) dlg.Spec {
+	spec, _ := fillList(sftpConnectFrame(state, layout, styles), layout, SFTPHosts, func(height, _ int) dlg.Item {
+		return sftpHostList(state, height)
+	})
+	return spec
+}
+
+// sftpConnectFrame is the SFTP spec with an empty host list as tall as it wants (3..12 rows,
+// leaving a margin around the dialog); on a screen too short for that the list shrinks first.
+func sftpConnectFrame(state SFTPConnectDialogState, layout Layout, styles theme.Theme) dlg.Spec {
 	filter := dlg.Item{
 		ID: SFTPFilter, Kind: dlg.KindInput, Drives: SFTPHosts, LeadingIcon: styles.IconSearchIcon(),
 		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll,
@@ -61,7 +66,7 @@ func SFTPConnectView(state SFTPConnectDialogState, layout Layout, styles theme.T
 	return dlg.Spec{
 		Title: "SFTP", Width: min(78, layout.Width-4), Unclamped: true,
 		Groups: []dlg.Group{
-			{Columns: [][]dlg.Item{{filter, {Kind: dlg.KindSeparator}, sftpHostList(state, SFTPConnectListRows(layout))}}},
+			{Columns: [][]dlg.Item{{filter, {Kind: dlg.KindSeparator}, {ID: SFTPHosts, Kind: dlg.KindList, Height: min(max(layout.Height-16, 3), 12)}}}},
 			{Columns: [][]dlg.Item{{
 				{Kind: dlg.KindSeparator},
 				{Kind: dlg.KindLabel, Label: "Location:"},

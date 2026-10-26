@@ -1,7 +1,6 @@
 -- text --
                                                                                 
                                                                                 
-                                                                                
                      ┌──────────── Delete ? ─────────────┐                      
                      │ # lantern0.txt                    ┃                      
                      │ + orchard1                        │                      
@@ -15,6 +14,7 @@
                      │ + otter9                          │                      
                      │ # thicket/lantern10.txt           │                      
                      │ # orchard11.txt                   │                      
+                     │ # willow12.txt                    │                      
                      ├───────────────────────────────────┤                      
                      │ 40 files, 2 directories (1.2 MiB) │                      
                      ├───────────────────────────────────┤                      
@@ -35,8 +35,8 @@ h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbccccccccccbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaabbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa

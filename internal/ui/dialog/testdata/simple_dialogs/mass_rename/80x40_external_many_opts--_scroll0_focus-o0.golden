@@ -34,10 +34,10 @@
   │ anchor-27.txt                       anchor-27.txt                        │  
   │ marble-28.txt                       marble-28.txt                        │  
   │ otter-29.txt                        otter-29.txt                         │  
+  │ lantern-30.txt                      harbor-30.txt                        │  
   ├──────────────────────────────────────────────────────────────────────────┤  
   │                    [ OK ]    [ Apply ]    [ Cancel ]                     │  
   └──────────────────────────────────────────────────────────────────────────┘  
-                                                                                
                                                                                 
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
@@ -85,8 +85,8 @@ aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
+aabbeeeeeeebbbffffbbbbbbbbbbbbbbbbbbbbbbggggggddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbhhhihhhhbbhhhihhhhhhhbbhhhihhhhhhhhbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

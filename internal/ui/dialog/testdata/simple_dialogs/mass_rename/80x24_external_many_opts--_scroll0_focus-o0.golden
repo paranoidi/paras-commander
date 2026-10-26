@@ -18,10 +18,10 @@
   │ orchard-11.txt                      orchard-11.txt                       │  
   │ willow-12.txt                       willow-12.txt                        │  
   │ meadow-13.txt                       meadow-13.txt                        │  
+  │ timber-14.txt                       timber-14.txt                        │  
   ├──────────────────────────────────────────────────────────────────────────┤  
   │                    [ OK ]    [ Apply ]    [ Cancel ]                     │  
   └──────────────────────────────────────────────────────────────────────────┘  
-                                                                                
                                                                                 
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
@@ -53,8 +53,8 @@ aabbeeeeeeebbbffffbbbbbbbbbbbbbbbbbbbbbbggggggddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
+aabbbbbbbbbbbffffbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbhhhihhhhbbhhhihhhhhhhbbhhhihhhhhhhhbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -74,7 +74,7 @@ func hit(spec Spec, screenW, screenH, x, y int) (PlacedItem, Item, bool) {
 		return PlacedItem{}, Item{}, false
 	}
 	pi, _ := p.Item(id)
-	it, _ := leafByID(spec, id)
+	it, _ := spec.Item(id)
 	return pi, it, true
 }
 
@@ -100,14 +100,4 @@ func caretIndex(it Item, col int) int {
 		w += rw
 	}
 	return i
-}
-
-// leafByID returns the group item named id.
-func leafByID(spec Spec, id ID) (Item, bool) {
-	for _, it := range leaves(spec) {
-		if it.ID == id && id != "" {
-			return it, true
-		}
-	}
-	return Item{}, false
 }

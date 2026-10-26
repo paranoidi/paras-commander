@@ -8,33 +8,14 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
-	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
-const (
-	// Preview column minimum inner height: top pad(1) + four input demos (label+input+gap each) + checkboxes(2) + pad(1) + sep(1) + buttons(1)
-	themeDialogPreviewRows = 17
-	// List uses y = rect.Y+1 through y = rect.Y+rect.Height-4 (row above outer separator at Height-3).
-	themeDialogListViewportExtra = 4
-)
+// themePreviewRows is how many rows the preview pane paints (a blank row, four input demos of
+// three rows, two checkboxes, a blank row, a rule and the buttons); on a short screen it is cut off.
+const themePreviewRows = 18
 
-// ThemeDialogListViewportRows is how many theme rows fit in the left column; use for PageUp/PageDown in the theme dialog.
-func ThemeDialogListViewportRows(layout geom.Layout, choiceCount int) int {
-	dh := themeDialogClampedHeight(layout, choiceCount)
-	if dh < 8 {
-		return 1
-	}
-	return dh - themeDialogListViewportExtra
-}
-
-func themeDialogClampedHeight(layout geom.Layout, choiceCount int) int {
-	const chromeHeight = 5 // border(1) + blank(1) + outer-sep(1) + outer-buttons(1) + border(1)
-	dialogHeight := max(choiceCount, themeDialogPreviewRows) + chromeHeight
-	if dialogHeight > layout.Height-2 {
-		dialogHeight = layout.Height - 2
-	}
-	return dialogHeight
-}
+// themeMinListRows is the fewest theme rows the dialog shows; below that it is not drawn.
+const themeMinListRows = 4
 
 // ThemeList is the theme list's widget ID; the dialog's Focus is ThemeList, dlg.OK or dlg.Cancel.
 const ThemeList dlg.ID = "themes"
@@ -54,35 +35,38 @@ func themeDialogListWidth(state ThemeDialogState) int {
 }
 
 // ThemeDialogView describes the theme dialog: a radio-marked list that wraps and stays centered
-// on the cursor next to a reserved preview pane (painted by DrawThemeDialog), over OK / Cancel.
-// layout fixes how many rows the list shows (ThemeDialogListViewportRows).
+// on the cursor next to a reserved preview pane (painted by DrawThemeDialog), over OK / Cancel,
+// fitted to layout: on a short screen the list and the pane shrink together.
 func ThemeDialogView(state ThemeDialogState, layout Layout) dlg.Spec {
 	const previewWidthMin = 40 // minimum width for the right column
 	listWidth := themeDialogListWidth(state)
-	rows := ThemeDialogListViewportRows(layout, len(state.Choices))
-	list := dlg.Item{
-		ID: ThemeList, Kind: dlg.KindList, Cursor: state.Selected, Height: rows,
-		Wrap: true, CenterScroll: true, PageStep: rows, Markers: true,
-	}
-	for i, choice := range state.Choices {
-		list.Rows = append(list.Rows, dlg.ListRow{Text: choice.Label, Marked: i == state.Selected})
-	}
-	return dlg.Spec{
-		Title: "Theme", Width: listWidth + 10 + previewWidthMin, MinWidth: listWidth + 10, Unclamped: true,
+	spec := dlg.Spec{
+		Title: "Theme", Width: listWidth + 10 + previewWidthMin, MinWidth: listWidth + 10, Unclamped: true, Margin: true,
 		PlainButtonKeys: true,
 		Groups: []dlg.Group{{
 			ColWidths: []int{listWidth + 2},
 			Columns: [][]dlg.Item{
-				{list},
-				{{ID: themePreviewPane, Kind: dlg.KindSpacer, Height: rows}},
+				{{ID: ThemeList, Kind: dlg.KindList, Height: len(state.Choices), MinHeight: themeMinListRows}},
+				{{ID: themePreviewPane, Kind: dlg.KindSpacer, Height: themePreviewRows}},
 			},
 		}},
 		Buttons: dlg.OKCancelButtons(),
 	}
+	spec, _ = fillList(spec, layout, ThemeList, func(height, _ int) dlg.Item {
+		list := dlg.Item{
+			ID: ThemeList, Kind: dlg.KindList, Cursor: state.Selected, Height: height,
+			Wrap: true, CenterScroll: true, PageStep: height, Markers: true,
+		}
+		for i, choice := range state.Choices {
+			list.Rows = append(list.Rows, dlg.ListRow{Text: choice.Label, Marked: i == state.Selected})
+		}
+		return list
+	})
+	return spec
 }
 
 func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState, styles theme.Theme) {
-	if len(state.Choices) == 0 || themeDialogClampedHeight(layout, len(state.Choices)) < 8 {
+	if len(state.Choices) == 0 {
 		return
 	}
 	spec := ThemeDialogView(state, layout)

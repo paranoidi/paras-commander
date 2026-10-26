@@ -38,8 +38,8 @@ type CommandOutputDialogMetrics struct {
 	ContentWidth int
 }
 
-// cmdOutputOverhead: top border/title + separator + button + bottom border.
-const cmdOutputOverhead = 4
+// cmdOutputMinListH is the fewest output rows the dialog shows; below that it is not drawn.
+const cmdOutputMinListH = 4
 
 // ParseDialogDimension parses "N%" as a percentage of total, or "N" as an absolute count.
 // Returns 0 for empty or unparseable input so the caller can substitute its own default.
@@ -62,10 +62,9 @@ func ParseDialogDimension(raw string, total int) int {
 	return n
 }
 
-// commandOutputSize returns the preferred outer width and the visible output row count for the
-// layout; ok is false when the dialog does not fit.
-func commandOutputSize(layout Layout, state CommandOutputDialogState) (prefW, listH int, ok bool) {
-	const minListH = 4
+// commandOutputSize returns the preferred outer width and height for the layout (the configured
+// size, or 80% x 60% of the screen); ok is false when the dialog does not fit.
+func commandOutputSize(layout Layout, state CommandOutputDialogState) (prefW, prefH int, ok bool) {
 	const minW = 40
 
 	prefW = ParseDialogDimension(state.PrefWidth, layout.Width)
@@ -83,27 +82,24 @@ func commandOutputSize(layout Layout, state CommandOutputDialogState) (prefW, li
 		prefW = maxW
 	}
 
-	prefH := ParseDialogDimension(state.PrefHeight, layout.Height)
+	prefH = ParseDialogDimension(state.PrefHeight, layout.Height)
 	if prefH == 0 {
 		prefH = layout.Height * 3 / 5
 	}
-	listH = max(prefH-cmdOutputOverhead, minListH)
-	if height := listH + cmdOutputOverhead; height > layout.Height-2 {
-		listH = layout.Height - 2 - cmdOutputOverhead
-		if listH < minListH {
-			return 0, 0, false
-		}
-	}
-	return prefW, listH, true
+	return prefW, prefH, true
 }
 
 // CommandOutputDialogView is the output dialog's widget spec: the output lines, a ScrollOnly list
 // (following the end while Follow is set), above the OK button (finished) or the Background /
-// Cancel buttons (running; the title carries the Running / Queued status). ok is false when the
-// dialog does not fit the layout.
+// Cancel buttons (running; the title carries the Running / Queued status), fitted to the layout:
+// the lines fill the dialog's preferred height. listH is the number of visible lines; ok is false
+// when the dialog does not fit the layout with at least cmdOutputMinListH of them.
 func CommandOutputDialogView(layout Layout, state CommandOutputDialogState, ctx CommandOutputViewContext) (spec dlg.Spec, listH int, ok bool) {
 	styles := ctx.Styles
-	prefW, listH, ok := commandOutputSize(layout, state)
+	prefW, prefH, ok := commandOutputSize(layout, state)
+	if !ok {
+		return spec, 0, false
+	}
 	title := strings.TrimSpace(state.Title)
 	if title == "" {
 		title = "Output"
@@ -121,15 +117,24 @@ func CommandOutputDialogView(layout Layout, state CommandOutputDialogState, ctx 
 	}
 	_, bg, _ := styles.DialogSurface.Decompose()
 	lineStyle := styles.DialogText.Background(bg)
-	body := scrollList(outputBody, len(state.Lines), listH, scroll, func(i int) dlg.ListRow {
-		return outputRow(state, i, lineStyle, styles, ctx.IsSelected)
-	})
-	body.Fit = dlg.FitNone
-	return dlg.Spec{
-		Title: title, Width: prefW, Unclamped: true, ScrollbarStyle: ctx.ScrollbarStyle,
-		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{body}}}},
+	spec = dlg.Spec{
+		Title: title, Width: prefW, MaxHeight: prefH, Unclamped: true, Margin: true, ScrollbarStyle: ctx.ScrollbarStyle,
+		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{{ID: outputBody, Kind: dlg.KindList, Height: prefH, MinHeight: cmdOutputMinListH}}}}},
 		Buttons: commandOutputButtons(state.Running),
-	}, listH, ok
+	}
+	// Only the visible lines are parsed.
+	spec, ok = fillList(spec, layout, outputBody, func(height, _ int) dlg.Item {
+		body := scrollList(outputBody, len(state.Lines), height, scroll, func(i int) dlg.ListRow {
+			return outputRow(state, i, lineStyle, styles, ctx.IsSelected)
+		})
+		body.Fit = dlg.FitNone
+		return body
+	})
+	if !ok {
+		return spec, 0, false
+	}
+	list, _ := spec.Item(outputBody)
+	return spec, list.Height, true
 }
 
 // outputRow is output line i as a list row: its ANSI colors and the detected path highlights

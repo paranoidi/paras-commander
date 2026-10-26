@@ -15,12 +15,12 @@ const (
 	TransferDeref     = dlg.ID("dereference-symlinks")
 	TransferFlatten   = dlg.ID("flatten-into-destination")
 	TransferAddPaused = dlg.ID("add-paused")
-	// transferResult is the multi-location Result preview, a ScrollOnly list.
-	transferResult = dlg.ID("result")
+	// TransferResult is the multi-location Result preview, a ScrollOnly list.
+	TransferResult = dlg.ID("result")
 )
 
 // TransferViewContext carries what TransferView needs besides the state: the screen layout (the
-// preview list height follows it), the home directory used to abbreviate the common root, and the
+// spec is fitted to it), the home directory used to abbreviate the common root, and the
 // cells kept free before each preview row for an icon (0 = none).
 type TransferViewContext struct {
 	Layout      Layout
@@ -36,8 +36,14 @@ type TransferViewContext struct {
 // checkbox and the Result preview, a ScrollOnly list whose per-type devicons DrawTransferDialog
 // paints into the cells each row keeps free; the destination's completion dropdown is painted from
 // the input's placed rect. Buttons are OK,
-// Add paused and Cancel in both phases.
+// Add paused and Cancel in both phases. The spec comes fitted to ctx.Layout (dlg.FitSpec): the
+// dialog takes at most listDialogMaxHeight rows and the Result list what is left of them.
 func TransferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
+	spec, _ := dlg.FitSpec(ctx.Layout.Width, ctx.Layout.Height, transferView(st, ctx))
+	return spec
+}
+
+func transferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 	title := "Copy"
 	if st.Kind == TransferKindMove {
 		title = "Move"
@@ -93,12 +99,13 @@ func TransferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 	}
 	if st.MultiLocation() {
 		icon := listIconPad(ctx.IconLead)
-		result := scrollList(transferResult, len(st.Entries), TransferListViewportRows(ctx.Layout, st), st.EntriesScroll,
+		result := scrollList(TransferResult, len(st.Entries), max(min(len(st.Entries), TransferListMaxRows), 1), st.EntriesScroll,
 			func(i int) dlg.ListRow {
 				e := st.Entries[i]
 				return dlg.ListRow{Text: deleteListRowText(transferEntryLabel(e, st.FlattenIntoDest), e.Path), Icon: icon}
 			})
 		result.Fit = dlg.FitPath
+		spec.MaxHeight = listDialogMaxHeight(ctx.Layout.Height)
 		spec.ScrollbarStyle = ctx.ScrollbarStyle
 		spec.Groups = append(spec.Groups, dlg.Group{Columns: [][]dlg.Item{{
 			{Kind: dlg.KindSeparator, Label: "Result"},
@@ -112,7 +119,7 @@ func TransferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 // (Dereference symlinks does nothing where it is greyed out). The inputs and buttons are the
 // caller's to handle.
 func (st *TransferDialogState) Apply(ev dlg.Event) {
-	if ev.ID == transferResult && ev.Kind == dlg.EventListMove {
+	if ev.ID == TransferResult && ev.Kind == dlg.EventListMove {
 		st.EntriesScroll = ev.Offset
 		return
 	}

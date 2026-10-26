@@ -19,30 +19,26 @@ func transferEntriesForTest(n int) []DeleteListEntry {
 	return entries
 }
 
-func TestTransferListViewportRowsSmallListUncapped(t *testing.T) {
-	st := TransferDialogState{Kind: TransferKindCopy, Entries: transferEntriesForTest(2)}
-	got := TransferListViewportRows(Layout{Height: 40}, st)
-	if got != 2 {
-		t.Fatalf("viewport = %d, want 2", got)
+// transferResultRows is the Result list's height in the copy dialog fitted to an 80 x layoutH screen.
+func transferResultRows(t *testing.T, layoutH int, st TransferDialogState) int {
+	t.Helper()
+	st.Kind, st.CommonRoot = TransferKindCopy, "/tmp"
+	list, ok := TransferView(st, TransferViewContext{Layout: Layout{Width: 80, Height: layoutH}}).Item(TransferResult)
+	if !ok {
+		t.Fatal("no Result list")
 	}
+	return list.Height
 }
 
-func TestTransferListViewportRowsCapsAtMaxListRows(t *testing.T) {
-	st := TransferDialogState{Kind: TransferKindCopy, Entries: transferEntriesForTest(100)}
-	got := TransferListViewportRows(Layout{Height: 100}, st)
-	if got != TransferListMaxRows {
-		t.Fatalf("viewport = %d, want max list cap %d", got, TransferListMaxRows)
+func TestTransferResultHeight(t *testing.T) {
+	if got := transferResultRows(t, 40, TransferDialogState{Entries: transferEntriesForTest(2)}); got != 2 {
+		t.Errorf("2 entries: height %d, want 2", got)
 	}
-}
-
-func TestTransferListViewportRowsShrinksForSmallLayout(t *testing.T) {
-	st := TransferDialogState{Kind: TransferKindCopy, Entries: transferEntriesForTest(20)}
-	got := TransferListViewportRows(Layout{Height: 10}, st)
-	if got < 1 {
-		t.Fatalf("viewport = %d, want >= 1", got)
+	if got := transferResultRows(t, 100, TransferDialogState{Entries: transferEntriesForTest(100)}); got != TransferListMaxRows {
+		t.Errorf("100 entries: height %d, want the cap %d", got, TransferListMaxRows)
 	}
-	if got >= TransferListMaxRows {
-		t.Fatalf("viewport = %d, want shrunk below max cap %d for small layout", got, TransferListMaxRows)
+	if got := transferResultRows(t, 24, TransferDialogState{Entries: transferEntriesForTest(20)}); got < 1 || got >= TransferListMaxRows {
+		t.Errorf("small screen: height %d, want shrunk below the cap %d", got, TransferListMaxRows)
 	}
 }
 

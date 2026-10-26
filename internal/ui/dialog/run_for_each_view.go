@@ -98,16 +98,21 @@ const (
 	PickerList   = dlg.ID("picker-list")
 )
 
-// PickerListRows is how many list rows a picker sub-screen shows on a layout of layoutHeight rows
-// (4..18).
-func PickerListRows(layoutHeight int) int { return min(max(layoutHeight-12, 4), 18) }
+// pickerListHeight is how many rows a fuzzy picker's list wants on a layout of layoutHeight rows
+// (4..18, leaving a margin around the dialog); dlg.FitSpec shortens it where the dialog's other
+// rows do not leave that many.
+func pickerListHeight(layoutHeight int) int { return min(max(layoutHeight-12, 4), 18) }
+
+// pickerMinListRows is the fewest rows a fuzzy picker's list shows; below that the dialog is not
+// drawn.
+const pickerMinListRows = 4
 
 // pickerView is the spec of a picker sub-screen: a search input steering the ranked list below it,
 // and OK / Cancel with plain letters. line returns the text of the item at an index into the
 // state's items; ranked, ranges, selected and offset are the picker state.
 func pickerView(st FileDialogState, ctx FileDialogViewContext, count int, line func(i int) string, ranked []int, ranges [][]search.Range, query string, cursor, scroll, selected, offset int) dlg.Spec {
 	list := dlg.Item{
-		ID: PickerList, Kind: dlg.KindList, Driven: true, Cursor: selected, Offset: offset, Height: PickerListRows(ctx.Layout.Height),
+		ID: PickerList, Kind: dlg.KindList, Driven: true, Cursor: selected, Offset: offset, Height: pickerListHeight(ctx.Layout.Height),
 	}
 	for _, ent := range ranked {
 		var row dlg.ListRow

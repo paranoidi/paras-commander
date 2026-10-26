@@ -165,10 +165,13 @@ func placeRow(row Item, x, right, y, markerW int) []PlacedItem {
 	return out
 }
 
-// shrinkToFit returns spec with its flexible items (lists, then spacers) shortened, down to one
-// row each, until the groups and the button strip fit inside rect. Anything still too tall is cut
-// off by Place/Draw above the button separator. spec itself is not modified.
-func shrinkToFit(spec Spec, rect Rect) Spec {
+// shrinkToFit returns spec with its flexible items (lists, then spacers) shortened, down to their
+// MinHeight (one row by default), until the groups and the button strip fit inside rect. Each pass
+// takes a row from every column that makes its group as tall as it is (a shorter column gives no
+// row back), so the lists and spacers side by side in a group shrink together. Anything still too
+// tall is cut off by Place/Draw above the button separator; ok is false when a list held at its
+// MinHeight is what keeps it from fitting. spec itself is not modified.
+func shrinkToFit(spec Spec, rect Rect) (_ Spec, ok bool) {
 	avail := rect.Height - 2
 	if len(spec.Buttons) > 0 {
 		avail -= 1 + len(buttonRows(spec.Buttons)) // separator + strip rows
@@ -178,7 +181,7 @@ func shrinkToFit(spec Spec, rect Rect) Spec {
 		need += g.height()
 	}
 	if need <= avail {
-		return spec
+		return spec, true
 	}
 	groups := make([]Group, len(spec.Groups))
 	for gi, g := range spec.Groups {
@@ -189,36 +192,79 @@ func shrinkToFit(spec Spec, rect Rect) Spec {
 		groups[gi] = Group{Columns: cols, ColWidths: g.ColWidths}
 	}
 	spec.Groups = groups
-	for _, kind := range []Kind{KindList, KindSpacer} {
-		for need > avail {
-			shrunk := false
-			for gi := range spec.Groups {
-				for ci := range spec.Groups[gi].Columns {
-					col := spec.Groups[gi].Columns[ci]
-					for i := range col {
-						if col[i].Kind == kind && col[i].Height > 1 && need > avail {
-							before := spec.Groups[gi].height()
-							col[i].Height--
-							need -= before - spec.Groups[gi].height()
-							shrunk = true
-						}
+	floored := false
+	for need > avail {
+		shrunk := false
+		for gi := range spec.Groups {
+			g := spec.Groups[gi]
+			before := g.height()
+			for _, col := range g.Columns {
+				if columnHeight(col) == before && need > avail {
+					i, atMin := shrinkable(col)
+					floored = floored || atMin
+					if i >= 0 {
+						col[i].Height--
+						shrunk = true
 					}
 				}
 			}
-			if !shrunk {
-				break
-			}
+			need -= before - g.height()
+		}
+		if !shrunk {
+			break
 		}
 	}
-	return spec
+	return spec, need <= avail || !floored
+}
+
+// shrinkable returns the index of the item in col that gives up the column's next row: its first
+// list above its MinHeight, else its first spacer taller than one row; -1 when there is none.
+// atMin reports a list held at its MinHeight.
+func shrinkable(col []Item) (i int, atMin bool) {
+	spacer := -1
+	for i, it := range col {
+		switch {
+		case it.Kind == KindList && it.Height > max(it.MinHeight, 1):
+			return i, atMin
+		case it.Kind == KindList && it.Height > 1:
+			atMin = true
+		case it.Kind == KindSpacer && it.Height > 1 && spacer < 0:
+			spacer = i
+		}
+	}
+	return spacer, atMin
+}
+
+// columnHeight is how many rows the items of col take.
+func columnHeight(col []Item) int {
+	n := 0
+	for _, it := range col {
+		n += it.span()
+	}
+	return n
 }
 
 func (g Group) height() int {
+	return g.measure(Item.span)
+}
+
+// minHeight is the group's height with its lists and spacers shrunk as far as shrinkToFit goes.
+func (g Group) minHeight() int {
+	return g.measure(func(it Item) int {
+		if it.Kind == KindList || it.Kind == KindSpacer {
+			return min(it.span(), max(it.MinHeight, 1))
+		}
+		return it.span()
+	})
+}
+
+// measure is the height of the group's tallest column, each item taking span(item) rows.
+func (g Group) measure(span func(Item) int) int {
 	h := 0
 	for _, col := range g.Columns {
 		n := 0
 		for _, it := range col {
-			n += it.span()
+			n += span(it)
 		}
 		h = max(h, n)
 	}
@@ -248,9 +294,9 @@ func (g Group) columnX(rect Rect, ci int) (x, right int) {
 	return x, right
 }
 
-// Place is the one layout pass: it clamps and centers the dialog on a screen of screenW x screenH
-// and positions every widget. ok is false when the screen is too small to show the dialog.
-func Place(screenW, screenH int, spec Spec) (Placement, bool) {
+// frame returns the dialog's outer rect on a screen of screenW x screenH, before any list is
+// shortened to fit it.
+func frame(screenW, screenH int, spec Spec) (Rect, bool) {
 	prefH := 2
 	for _, g := range spec.Groups {
 		prefH += g.height()
@@ -259,27 +305,58 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 	if len(rows) > 0 {
 		prefH += 1 + len(rows) // separator + button rows
 	}
+	if spec.MaxHeight > 0 {
+		// The cap only takes rows from lists and spacers, down to their MinHeight.
+		floor := prefH
+		for _, g := range spec.Groups {
+			floor -= g.height() - g.minHeight()
+		}
+		prefH = max(min(prefH, spec.MaxHeight), floor)
+	}
 	prefH = max(prefH, spec.MinHeight)
 	prefW := spec.Width
 	for _, row := range rows {
 		prefW = max(prefW, draw.ButtonRowWidth(buttonLabels(row))+2) // each row must fit between the borders
 	}
 	layout := draw.Layout{Width: screenW, Height: screenH}
-	var rect Rect
 	if spec.Unclamped {
 		w := min(prefW, screenW-4)
 		if w < spec.MinWidth {
 			w = min(spec.MinWidth, screenW-2)
 		}
-		rect = draw.CenteredDialogRect(layout, w, prefH)
-	} else {
-		var ok bool
-		if rect, ok = draw.ClampCenteredDialogRect(layout, prefW, prefH, spec.MinWidth, spec.MinHeight); !ok {
-			return Placement{}, false
+		if spec.Margin {
+			prefH = min(prefH, screenH-2)
 		}
+		return draw.CenteredDialogRect(layout, w, prefH), true
 	}
+	return draw.ClampCenteredDialogRect(layout, prefW, prefH, spec.MinWidth, spec.MinHeight)
+}
+
+// FitSpec returns spec with its lists and spacers shortened to the heights Place gives them on a screen
+// of screenW x screenH, so a view that returns the fitted spec hands HandleKey the same list heights
+// (paging, scroll clamping) that Draw shows, and callers read a list's height from it (Spec.Item)
+// instead of counting the dialog's other rows. ok is false when the dialog does not fit. Fitting
+// a fitted spec changes nothing.
+func FitSpec(screenW, screenH int, spec Spec) (Spec, bool) {
+	rect, ok := frame(screenW, screenH, spec)
+	if !ok {
+		return spec, false
+	}
+	return shrinkToFit(spec, rect)
+}
+
+// Place is the one layout pass: it clamps and centers the dialog on a screen of screenW x screenH
+// and positions every widget. ok is false when the screen is too small to show the dialog.
+func Place(screenW, screenH int, spec Spec) (Placement, bool) {
+	rect, ok := frame(screenW, screenH, spec)
+	if !ok {
+		return Placement{}, false
+	}
+	if spec, ok = shrinkToFit(spec, rect); !ok {
+		return Placement{}, false
+	}
+	rows := buttonRows(spec.Buttons)
 	p := Placement{Rect: rect}
-	spec = shrinkToFit(spec, rect)
 	markerW := draw.DialogOptionWidth("")
 	if spec.MarkerWidth > 0 {
 		markerW = spec.MarkerWidth

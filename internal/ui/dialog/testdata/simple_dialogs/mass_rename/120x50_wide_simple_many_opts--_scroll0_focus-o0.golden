@@ -44,10 +44,10 @@
           │ willow-32.txt                                   willow-32.txt                                    │          
           │ meadow-33.txt                                   meadow-33.txt                                    │          
           │ timber-34.txt                                   timber-34.txt                                    │          
+          │ ribbon-35.txt                                   ribbon-35.txt                                    │          
           ├──────────────────────────────────────────────────────────────────────────────────────────────────┤          
           │                                [ OK ]    [ Apply ]    [ Cancel ]                                 │          
           └──────────────────────────────────────────────────────────────────────────────────────────────────┘          
-                                                                                                                        
                                                                                                                         
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
@@ -105,8 +105,8 @@ aaaaaaaaaabbbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbdddddddddddddddddddd
 aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbbggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbfffiffffbbfffifffffffbbfffiffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

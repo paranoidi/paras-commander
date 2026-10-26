@@ -41,11 +41,6 @@ type FindViewContext struct {
 // DrawFindDialog (see FindRowIconPainter).
 func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	styles := ctx.Styles
-	_, _, listH, _ := FindDialogMetrics(ctx.Layout, state.ShowSearchSelectionsOption)
-	optionRows := 1
-	if state.ShowSearchSelectionsOption {
-		optionRows = 2
-	}
 
 	query := dlg.Item{
 		ID: FindQuery, Kind: dlg.KindInput, Grow: true, Drives: FindList,
@@ -74,23 +69,27 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	if state.ShowSearchSelectionsOption {
 		col = append(col, dlg.Item{ID: FindSelections, Kind: dlg.KindCheckbox, Label: "Search only from selected directories", Mnemonic: 'S', On: state.SearchOnlySelections})
 	}
-	from, to := dlg.ListWindow(state.Selected, state.ListScroll, listH, len(state.Ranked))
 	col = append(col,
 		dlg.Item{Kind: dlg.KindSeparator},
-		dlg.Item{
-			ID: FindList, Kind: dlg.KindList, Driven: true, Height: listH, Fit: dlg.FitPath, MarksAfterText: true, Scrollbar: true,
-			RowCount: len(state.Ranked), Rows: findListRows(state, ctx, from, to), RowsFrom: from,
-			Cursor: state.Selected, Offset: state.ListScroll,
-		},
+		dlg.Item{ID: FindList, Kind: dlg.KindList, Height: findListHeight(ctx.Layout.Height), MinHeight: findDialogMinListRows},
 	)
-	return dlg.Spec{
-		Title: findDialogTitle(*state, styles), Width: findDialogPreferredWidth,
-		MinWidth: findDialogMinWidth, MinHeight: findDialogBaseHeight(optionRows) + findDialogMinListRows,
+	spec := dlg.Spec{
+		Title: findDialogTitle(*state, styles), Width: findDialogPreferredWidth, MinWidth: findDialogMinWidth,
 		Groups:          []dlg.Group{{Columns: [][]dlg.Item{col}}},
 		Buttons:         dlg.OKCancelButtons(),
 		ButtonsLabel:    ctx.SelectionLabel,
 		PlainButtonKeys: true, ScrollbarStyle: ctx.ScrollbarStyle,
 	}
+	// Only the visible results are built, so the list's fitted height comes first.
+	spec, _ = fillList(spec, ctx.Layout, FindList, func(height, _ int) dlg.Item {
+		from, to := dlg.ListWindow(state.Selected, state.ListScroll, height, len(state.Ranked))
+		return dlg.Item{
+			ID: FindList, Kind: dlg.KindList, Driven: true, Height: height, Fit: dlg.FitPath, MarksAfterText: true, Scrollbar: true,
+			RowCount: len(state.Ranked), Rows: findListRows(state, ctx, from, to), RowsFrom: from,
+			Cursor: state.Selected, Offset: state.ListScroll,
+		}
+	})
+	return spec
 }
 
 // findListRows turns ranked results [from, to) into list rows: the display line (indexing may

@@ -30,7 +30,18 @@ func TestFileDialogOuterTitleDanglingDirsDelete(t *testing.T) {
 	}
 }
 
-func TestDeleteDialogListViewportRowsSmallListUncapped(t *testing.T) {
+// deleteListRows is the delete list's height in the dialog fitted to an 80 x layoutH screen.
+func deleteListRows(t *testing.T, layoutH int, state FileDialogState) int {
+	t.Helper()
+	state.DialogType = FileDialogDelete
+	list, ok := FileDialogView(state, FileDialogViewContext{Layout: Layout{Width: 80, Height: layoutH}}).Item(fileDeleteList)
+	if !ok {
+		t.Fatal("no delete list")
+	}
+	return list.Height
+}
+
+func TestDeleteListHeightSmallListUncapped(t *testing.T) {
 	state := FileDialogState{
 		DeleteSummary: "2 files (300 B)",
 		DeleteEntries: []DeleteListEntry{
@@ -38,13 +49,12 @@ func TestDeleteDialogListViewportRowsSmallListUncapped(t *testing.T) {
 			{Name: "b.txt", Type: localfs.EntryFile},
 		},
 	}
-	got := DeleteDialogListViewportRows(24, state)
-	if got != 2 {
-		t.Fatalf("viewport = %d, want 2", got)
+	if got := deleteListRows(t, 24, state); got != 2 {
+		t.Fatalf("list height = %d, want 2", got)
 	}
 }
 
-func TestDeleteDialogListViewportRowsCapsAtMaxListRows(t *testing.T) {
+func TestDeleteListHeightCapsAtMaxListRows(t *testing.T) {
 	entries := make([]DeleteListEntry, 100)
 	for i := range entries {
 		entries[i] = DeleteListEntry{Name: "file.txt", Type: localfs.EntryFile}
@@ -53,55 +63,42 @@ func TestDeleteDialogListViewportRowsCapsAtMaxListRows(t *testing.T) {
 		DeleteSummary: "100 files (1 KiB)",
 		DeleteEntries: entries,
 	}
-	const layoutH = 100
-	got := DeleteDialogListViewportRows(layoutH, state)
-	if got != DeleteDialogMaxListRows {
-		t.Fatalf("viewport = %d, want max list cap %d", got, DeleteDialogMaxListRows)
+	if got := deleteListRows(t, 100, state); got != DeleteDialogMaxListRows {
+		t.Fatalf("list height = %d, want max list cap %d", got, DeleteDialogMaxListRows)
 	}
 }
 
-func TestDeleteDialogListViewportRowsCapsAt80Percent(t *testing.T) {
-	entries := make([]DeleteListEntry, 30)
-	for i := range entries {
-		entries[i] = DeleteListEntry{Name: "file-" + strings.Repeat("x", 4) + ".txt", Type: localfs.EntryFile}
-	}
-	state := FileDialogState{
-		DialogType:    FileDialogDelete,
-		DeleteSummary: "30 files (1.2 GiB)",
-		DeleteEntries: entries,
-	}
-	const layoutH = 20
-	maxH := layoutH * 80 / 100 // 16
-	got := DeleteDialogListViewportRows(layoutH, state)
-	want := maxH - 7 // footer summary block + sep/blank/buttons chrome
-	if got != want {
-		t.Fatalf("viewport = %d, want %d", got, want)
-	}
-	p, ok := dlg.Place(80, layoutH, FileDialogView(state, FileDialogViewContext{Layout: Layout{Width: 80, Height: layoutH}}))
-	if !ok {
-		t.Fatal("delete dialog does not fit")
-	}
-	height := p.Rect.Height
-	if height > maxH {
-		t.Fatalf("height = %d, exceeds 80%% max %d", height, maxH)
-	}
-}
-
-func TestDeleteDialogListViewportRowsWithWarning(t *testing.T) {
-	entries := make([]DeleteListEntry, 20)
-	for i := range entries {
-		entries[i] = DeleteListEntry{Name: "dir", Type: localfs.EntryDirectory}
-	}
-	state := FileDialogState{
-		DeleteSummary: "842 files (1.2 GiB)",
-		DeleteWarning: "legacy warning line still reserves a row",
-		DeleteEntries: entries,
-	}
-	const layoutH = 20
-	maxH := layoutH * 80 / 100
-	got := DeleteDialogListViewportRows(layoutH, state)
-	want := maxH - 7 - 1
-	if got != want {
-		t.Fatalf("viewport = %d, want %d", got, want)
+// The list fills the dialog up to 80% of the screen: the dialog is exactly that tall, the list
+// what is left after the summary (and warning), the button strip and the borders.
+func TestDeleteListHeightCapsAt80Percent(t *testing.T) {
+	for _, warning := range []string{"", "legacy warning line still reserves a row"} {
+		entries := make([]DeleteListEntry, 30)
+		for i := range entries {
+			entries[i] = DeleteListEntry{Name: "file-" + strings.Repeat("x", 4) + ".txt", Type: localfs.EntryFile}
+		}
+		state := FileDialogState{
+			DialogType:    FileDialogDelete,
+			DeleteSummary: "30 files (1.2 GiB)",
+			DeleteWarning: warning,
+			DeleteEntries: entries,
+		}
+		const layoutH = 20
+		maxH := layoutH * 80 / 100 // 16
+		spec := FileDialogView(state, FileDialogViewContext{Layout: Layout{Width: 80, Height: layoutH}})
+		p, ok := dlg.Place(80, layoutH, spec)
+		if !ok {
+			t.Fatal("delete dialog does not fit")
+		}
+		if p.Rect.Height != maxH {
+			t.Fatalf("warning %q: height = %d, want the 80%% max %d", warning, p.Rect.Height, maxH)
+		}
+		list, _ := spec.Item(fileDeleteList)
+		placed, _ := p.Item(fileDeleteList)
+		if placed.Rect.Height != list.Height {
+			t.Fatalf("warning %q: drawn list height %d, spec says %d", warning, placed.Rect.Height, list.Height)
+		}
+		if got := deleteListRows(t, layoutH, state); placed.Rect.Y+got != p.SepY-2-min(len(warning), 1) {
+			t.Fatalf("warning %q: list of %d rows does not end above the summary", warning, got)
+		}
 	}
 }
