@@ -241,33 +241,34 @@ func (a *App) applyConfigDialog() {
 	a.ensurePanelsVisible()
 }
 
+// configDialogScreen is the Configuration dialog's screen on top for the current screen.
+func (a *App) configDialogScreen() dialog.DialogScreen {
+	w, _ := a.screen.Size()
+	return a.model.ConfigDialog.Screen(w)
+}
+
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 	st := &a.model.ConfigDialog
-	if st.EditStubConfirm {
-		a.handleConfigEditStubConfirmKey(event)
-		return
-	}
-	if st.ResetDefaultsConfirm {
-		a.handleConfigResetDefaultsConfirmKey(event)
-		return
-	}
-	if event.Key() == tcell.KeyF9 {
+	confirm := st.EditStubConfirm || st.ResetDefaultsConfirm
+	if !confirm && event.Key() == tcell.KeyF9 {
 		a.editConfigTOMLFromDialog()
 		return
 	}
-	if event.Key() == tcell.KeyF8 && a.configFileExists() {
+	if !confirm && event.Key() == tcell.KeyF8 && a.configFileExists() {
 		st.ResetDefaultsConfirm = true
 		st.ResetDefaultsConfirmFocus = dialog.ConfigConfirmYes
 		return
 	}
-	termW, _ := a.screen.Size()
-	spec := dialog.ConfigDialogView(*st, termW)
-	if ev, handled := dlg.HandleKey(spec, &st.Focus, event); handled {
+	s := a.configDialogScreen()
+	if ev, handled := dlg.HandleKey(s.Spec, s.Focus, event); handled {
 		a.applyConfigDialogEvent(ev)
 		return
 	}
+	if confirm {
+		return
+	}
 	// The engine declined: text keys go to the focused carousel split input.
-	if i, ok := dialog.ConfigSplitIndex(dlg.Focused(spec, st.Focus)); ok {
+	if i, ok := dialog.ConfigSplitIndex(dlg.Focused(s.Spec, st.Focus)); ok {
 		dialog.HandleFileDialogFieldKey(event, &st.Split[i], a.keys.DialogInput, nil)
 	}
 }
@@ -298,15 +299,6 @@ func (a *App) applyConfigDialogEvent(ev dlg.Event) {
 	}
 }
 
-// handleConfigEditStubConfirmKey handles Yes/No for the "config.toml does not exist, generate
-// default and open it?" confirmation shown from the Configuration dialog's F9 handler.
-func (a *App) handleConfigEditStubConfirmKey(event *tcell.EventKey) {
-	st := &a.model.ConfigDialog
-	if ev, ok := dlg.HandleKey(dialog.ConfigEditStubView(), &st.EditStubConfirmFocus, event); ok {
-		a.applyConfigEditStubConfirmEvent(ev)
-	}
-}
-
 func (a *App) applyConfigEditStubConfirmEvent(ev dlg.Event) {
 	st := &a.model.ConfigDialog
 	if ev.ID == "" {
@@ -315,15 +307,6 @@ func (a *App) applyConfigEditStubConfirmEvent(ev dlg.Event) {
 	st.EditStubConfirm = false
 	if ev.ID == dialog.ConfigConfirmYes {
 		a.createAndEditConfigStub()
-	}
-}
-
-// handleConfigResetDefaultsConfirmKey handles Yes/No for the "delete config.toml and reset to
-// defaults?" confirmation shown from the Configuration dialog's F8 handler.
-func (a *App) handleConfigResetDefaultsConfirmKey(event *tcell.EventKey) {
-	st := &a.model.ConfigDialog
-	if ev, ok := dlg.HandleKey(dialog.ConfigResetDefaultsView(), &st.ResetDefaultsConfirmFocus, event); ok {
-		a.applyConfigResetDefaultsConfirmEvent(ev)
 	}
 }
 

@@ -131,7 +131,8 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 		return found(fits(func() dlg.Spec { return dialog.HostKeyView(m.HostKeyDialog) }), &m.HostKeyDialog.Focus, noQuit(a.applyHostKeyEvent),
 			dialogButtons{Cancel: func() { a.finishHostKeyDialog(sftpb.HostKeyReject) }})
 	case InputModeFileDialog:
-		return found(fits(a.dialogCtrl.FileDialogSpec), m.FileDialog.SpecFocusRef(), noQuit(a.dialogCtrl.ApplyFileDialogEvent),
+		s := a.dialogCtrl.FileDialogScreen()
+		return found(fits(func() dlg.Spec { return s.Spec }), s.Focus, noQuit(a.dialogCtrl.ApplyFileDialogEvent),
 			dialogButtons{OK: a.dialogCtrl.FileDialogOK, Cancel: a.dialogCtrl.FileDialogCancel})
 	case InputModeDialog:
 		return a.modalActiveDialog(event)
@@ -157,33 +158,28 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 	return activeDialog{}, false
 }
 
-// configActiveDialog resolves the Configuration dialog: an open Yes/No sub-confirm is the dialog
-// and takes OK / Cancel, and F9 stays "edit config.toml". applyConfigDialogEvent routes the
-// sub-confirms' events itself.
+// configActiveDialog resolves the Configuration dialog: its screen on top (an open Yes/No
+// sub-confirm or the dialog), whose OK / Cancel answer the confirm first; F9 stays "edit
+// config.toml". applyConfigDialogEvent routes the sub-confirms' events itself.
 func (a *App) configActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 	st := &a.model.ConfigDialog
-	apply := noQuit(a.applyConfigDialogEvent)
+	s := a.configDialogScreen()
+	b := dialogButtons{OK: a.applyConfigDialog, Cancel: a.closeConfigDialog}
 	switch {
 	case st.EditStubConfirm:
-		return activeDialog{fits(dialog.ConfigEditStubView), &st.EditStubConfirmFocus, apply, dialogButtons{
+		b = dialogButtons{
 			OK:     func() { st.EditStubConfirm = false; a.createAndEditConfigStub() },
 			Cancel: func() { st.EditStubConfirm = false },
-		}}, true
+		}
 	case st.ResetDefaultsConfirm:
-		return activeDialog{fits(dialog.ConfigResetDefaultsView), &st.ResetDefaultsConfirmFocus, apply, dialogButtons{
+		b = dialogButtons{
 			OK:     func() { st.ResetDefaultsConfirm = false; a.resetConfigToDefaults() },
 			Cancel: func() { st.ResetDefaultsConfirm = false },
-		}}, true
-	}
-	b := dialogButtons{OK: a.applyConfigDialog, Cancel: a.closeConfigDialog}
-	if event.Key() == tcell.KeyF9 {
+		}
+	case event.Key() == tcell.KeyF9:
 		b = dialogButtons{}
 	}
-	view := func() dlg.Spec {
-		w, _ := a.screen.Size()
-		return dialog.ConfigDialogView(*st, w)
-	}
-	return activeDialog{fits(view), &st.Focus, apply, b}, true
+	return activeDialog{func() (dlg.Spec, bool) { return s.Spec, true }, s.Focus, noQuit(a.applyConfigDialogEvent), b}, true
 }
 
 // modalActiveDialog resolves the dialogs that share InputModeDialog, in handleDialogKey's order.
@@ -200,7 +196,8 @@ func (a *App) modalActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 		if !m.ConflictDialog.Advanced && event.Key() == tcell.KeyRune {
 			b = dialogButtons{}
 		}
-		return found(a.jobsCtrl.BlockerDialogSpec, m.ConflictDialog.ConflictDialogFocus(), noQuit(a.jobsCtrl.ApplyBlockerDialogEvent), b)
+		s := a.jobsCtrl.BlockerDialogScreen()
+		return found(func() dlg.Spec { return s.Spec }, s.Focus, noQuit(a.jobsCtrl.ApplyBlockerDialogEvent), b)
 	case m.TransferDialog.Open:
 		return found(a.dialogCtrl.TransferDialogSpec, &m.TransferDialog.Focus, noQuit(a.dialogCtrl.ApplyTransferEvent),
 			dialogButtons{OK: a.dialogCtrl.TransferDialogOK, Cancel: a.dialogCtrl.TransferDialogCancel})

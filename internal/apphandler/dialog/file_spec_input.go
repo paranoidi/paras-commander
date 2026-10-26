@@ -8,16 +8,19 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// FileDialogSpec is the widget spec of the open file dialog, built for the current
-// screen.
-func (h *Handler) FileDialogSpec() dlg.Spec {
+// FileDialogScreen is the open file dialog's screen on top (a picker sub-screen or the dialog),
+// built for the current screen size.
+func (h *Handler) FileDialogScreen() dialog.DialogScreen {
 	w, ht := h.screen.Size()
-	return dialog.FileDialogView(h.model.FileDialog, dialog.FileDialogViewContext{
+	return h.model.FileDialog.Screen(dialog.FileDialogViewContext{
 		Layout:   h.host.LayoutForTerminalSize(w, ht),
 		IconLead: ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons),
 		Styles:   h.host.Styles(),
 	})
 }
+
+// FileDialogSpec is the spec of FileDialogScreen.
+func (h *Handler) FileDialogSpec() dlg.Spec { return h.FileDialogScreen().Spec }
 
 // focusedFieldIndex is the index into Fields of the focused text input, or -1.
 func (h *Handler) focusedFieldIndex() int { return h.model.FileDialog.FileDialogFocusedField() }

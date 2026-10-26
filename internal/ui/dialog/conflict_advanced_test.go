@@ -29,7 +29,7 @@ func TestConflictRulesDefaults(t *testing.T) {
 
 func TestConflictRulesTabJumpsBetweenGroups(t *testing.T) {
 	st := rulesState(false)
-	spec := ConflictDialogView(st, "")
+	spec := st.Screen("").Spec
 	for from, want := range map[dlg.ID]dlg.ID{
 		ConflictRuleID(0, 0):  ConflictRuleID(3, 0),
 		ConflictRuleID(2, 2):  ConflictRuleID(3, 2),
@@ -49,7 +49,8 @@ func TestConflictRulesTabJumpsBetweenGroups(t *testing.T) {
 		}
 	}
 	// Without Skip identical the checkbox group is just Apply to all.
-	noCompare := ConflictDialogView(rulesState(true), "")
+	ns := rulesState(true)
+	noCompare := ns.Screen("").Spec
 	focus := ConflictRuleID(5, 0)
 	dlg.HandleKey(noCompare, &focus, tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 	if focus != ConflictApplyAll {
@@ -64,7 +65,7 @@ func TestConflictRulesApplyRuleSkipsGreyed(t *testing.T) {
 
 	// Skip and Overwrite now contradict: only Ask is enabled in the size rows, and the view
 	// greys the rest.
-	spec := ConflictDialogView(st, "")
+	spec := st.Screen("").Spec
 	size := spec.Groups[1].Columns[0][1] // the "Destination smaller" row
 	for col, c := range size.Cells {
 		if want := col != 0; c.Disabled != want {
@@ -99,7 +100,7 @@ func TestConflictRulesApplyRuleSkipsGreyed(t *testing.T) {
 func TestConflictRulesChoiceNavigationSkipsGreyed(t *testing.T) {
 	st := rulesState(false)
 	st.ApplyRule(ConflictRuleID(0, 2)) // time rows hold Skip: Overwrite and Keep both are greyed below
-	spec := ConflictDialogView(st, "")
+	spec := st.Screen("").Spec
 	focus := ConflictRuleID(3, 0)
 	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if focus != ConflictRuleID(3, 2) {

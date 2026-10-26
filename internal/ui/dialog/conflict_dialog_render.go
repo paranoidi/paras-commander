@@ -9,10 +9,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// DrawConflictDialog paints the quick job-blocker modal from its widget spec (see
-// ConflictDialogView).
+// DrawConflictDialog paints the quick job-blocker modal's screen on top (ConflictDialogState.Screen).
 func DrawConflictDialog(screen tcell.Screen, layout Layout, state ConflictDialogState, styles theme.Theme, userHomeDir string) {
-	dlg.Draw(screen, layout.Width, layout.Height, ConflictDialogView(state, userHomeDir), *state.ConflictDialogFocus(), styles)
+	s := state.Screen(userHomeDir)
+	dlg.Draw(screen, layout.Width, layout.Height, s.Spec, *s.Focus, styles)
 }
 
 // ConflictPromptText is the question under the file summaries; it carries the Reprompt note.

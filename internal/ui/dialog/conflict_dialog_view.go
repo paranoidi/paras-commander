@@ -60,25 +60,17 @@ const (
 	conflictDialogLabelModified = "Modified: "
 )
 
-// ConflictDialogView is the quick job-blocker modal's widget spec: File exists (with its
-// directory-mismatch variant), Disk space, or, once Advanced is set, Conflict rules. Focus lives
-// in st.Focus, or in st.AdvFocus on the rules screen.
-func ConflictDialogView(st ConflictDialogState, userHomeDir string) dlg.Spec {
+// Screen is the quick job-blocker modal's screen on top: File exists (with its directory-mismatch
+// variant) or Disk space, driven with st.Focus, or, once Advanced is set on a File exists blocker,
+// the Conflict rules driven with st.AdvFocus.
+func (st *ConflictDialogState) Screen(userHomeDir string) DialogScreen {
 	switch {
 	case st.Blocker.Kind == jobs.BlockerKindDiskSpace:
-		return conflictDiskView(st, userHomeDir)
+		return DialogScreen{conflictDiskView(*st, userHomeDir), &st.Focus}
 	case st.Advanced:
-		return conflictRulesView(st)
+		return DialogScreen{conflictRulesView(*st), &st.AdvFocus}
 	}
-	return conflictFileView(st, userHomeDir)
-}
-
-// ConflictDialogFocus is the focus ID the current screen of st is driven with.
-func (st *ConflictDialogState) ConflictDialogFocus() *dlg.ID {
-	if st.Advanced && st.Blocker.Kind != jobs.BlockerKindDiskSpace {
-		return &st.AdvFocus
-	}
-	return &st.Focus
+	return DialogScreen{conflictFileView(*st, userHomeDir), &st.Focus}
 }
 
 func conflictText(label string) dlg.Item { return dlg.Item{Kind: dlg.KindLabel, Label: label} }

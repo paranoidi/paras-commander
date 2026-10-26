@@ -43,8 +43,8 @@ func conflictKeyRequest(mod func(*jobs.ConflictRequest)) jobs.BlockerRequest {
 
 // conflictFocusName names the focused widget of the dialog.
 func conflictFocusName(st dialog.ConflictDialogState) string {
-	spec := dialog.ConflictDialogView(st, "")
-	id := dlg.Focused(spec, *st.ConflictDialogFocus())
+	s := st.Screen("")
+	id := dlg.Focused(s.Spec, *s.Focus)
 	if row, col, ok := dialog.ConflictRuleCell(id); ok {
 		return fmt.Sprintf("r%dc%d", row, col)
 	}

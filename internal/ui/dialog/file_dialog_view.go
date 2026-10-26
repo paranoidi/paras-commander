@@ -77,25 +77,35 @@ type FileDialogViewContext struct {
 //     screen and pattern pickers (massRenameView, massRenamePatternPickerView) have their own views.
 //
 // The spec comes fitted to ctx.Layout (dlg.FitSpec), so its lists are as tall as they are drawn.
+// It is the spec of the screen on top (Screen).
 func FileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
-	spec, _ := dlg.FitSpec(ctx.Layout.Width, ctx.Layout.Height, fileDialogView(st, ctx))
-	return spec
+	return st.Screen(ctx).Spec
+}
+
+// Screen is the file dialog's screen on top: a picker sub-screen (run-for-each command history,
+// the mass rename pattern pickers) with the picker's own focus, else the dialog with st.Focus.
+func (st *FileDialogState) Screen(ctx FileDialogViewContext) DialogScreen {
+	screen := DialogScreen{Focus: &st.Focus}
+	switch {
+	case st.DialogType == FileDialogRunForEach && st.RunForEachHistoryOpen:
+		screen = DialogScreen{runForEachHistoryView(*st, ctx), &st.RunForEachHistoryPicker.Focus}
+	case st.DialogType == FileDialogMassRename && st.MassRenamePhase == MassRenamePhaseHistoryPicker:
+		screen = DialogScreen{massRenamePatternPickerView(*st, ctx), &st.MassRenameHistoryPicker.Focus}
+	case st.DialogType == FileDialogMassRename && MassRenamePickerPhase(st.MassRenamePhase):
+		screen = DialogScreen{massRenamePatternPickerView(*st, ctx), &st.MassRenameLoadPicker.Focus}
+	default:
+		screen.Spec = fileDialogView(*st, ctx)
+	}
+	screen.Spec, _ = dlg.FitSpec(ctx.Layout.Width, ctx.Layout.Height, screen.Spec)
+	return screen
 }
 
 func fileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 	if st.DialogType == FileDialogRunForEach {
-		if st.RunForEachHistoryOpen {
-			return runForEachHistoryView(st, ctx)
-		}
 		return runForEachView(st, ctx)
 	}
-	if st.DialogType == FileDialogMassRename {
-		switch {
-		case MassRenamePickerPhase(st.MassRenamePhase):
-			return massRenamePatternPickerView(st, ctx)
-		case st.MassRenamePhase == MassRenamePhaseMain:
-			return massRenameView(st, ctx)
-		}
+	if st.DialogType == FileDialogMassRename && st.MassRenamePhase == MassRenamePhaseMain {
+		return massRenameView(st, ctx)
 	}
 	spec := dlg.Spec{
 		Title: fileDialogOuterTitle(st), Width: fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), Unclamped: true,
@@ -308,33 +318,14 @@ func (st *FileDialogState) Apply(ev dlg.Event) {
 	}
 }
 
-// SpecFocus is the focused widget of the screen FileDialogView describes: the form's Focus, or the
-// open picker sub-screen's own.
-func (st FileDialogState) SpecFocus() dlg.ID {
-	return *st.SpecFocusRef()
-}
-
-// SpecFocusRef is the field SpecFocus reads, for callers that move focus.
-func (st *FileDialogState) SpecFocusRef() *dlg.ID {
-	switch {
-	case st.DialogType == FileDialogRunForEach && st.RunForEachHistoryOpen:
-		return &st.RunForEachHistoryPicker.Focus
-	case st.DialogType == FileDialogMassRename && st.MassRenamePhase == MassRenamePhaseHistoryPicker:
-		return &st.MassRenameHistoryPicker.Focus
-	case st.DialogType == FileDialogMassRename && MassRenamePickerPhase(st.MassRenamePhase):
-		return &st.MassRenameLoadPicker.Focus
-	}
-	return &st.Focus
-}
-
 // drawFileDialogSpec paints a file dialog: the spec, then the overlays on its rects (the delete
 // list's devicons, the focused path field's completion dropdown).
 func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) {
-	spec := FileDialogView(state, FileDialogViewContext{Layout: layout, IconLead: ctx.IconLead, Styles: ctx.Styles, ScrollbarStyle: ctx.ScrollbarStyle})
+	s := state.Screen(FileDialogViewContext{Layout: layout, IconLead: ctx.IconLead, Styles: ctx.Styles, ScrollbarStyle: ctx.ScrollbarStyle})
 	if fileDialogWidth(layout.Width, state, ctx.IconLead) < 20 {
 		return
 	}
-	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.SpecFocus(), ctx.Styles)
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, s.Spec, *s.Focus, ctx.Styles)
 	if !ok {
 		return
 	}
