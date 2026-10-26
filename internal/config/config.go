@@ -552,8 +552,8 @@ type JobsConfig struct {
 	// ScanYieldIntervalMS is cooperative sleep during pre-scan walks, so they never fully
 	// saturate the scheduler at the UI's expense.
 	ScanYieldIntervalMS int `toml:"scan_yield_interval_ms"`
-	// ScanYieldEveryN triggers cooperative yield every N walk entries during pre-scan.
-	ScanYieldEveryN int `toml:"scan_yield_every_n"`
+	// ScanYieldWorkMS is how long a pre-scan walk runs between ScanYieldIntervalMS sleeps.
+	ScanYieldWorkMS int `toml:"scan_yield_work_ms"`
 	// ScanProgressMinIntervalMS throttles scan-progress events during pre-scan.
 	ScanProgressMinIntervalMS int `toml:"scan_progress_min_interval_ms"`
 	// ScanDisableAdaptiveThrottle disables the pre-scan counting walk's adaptive contention
@@ -726,7 +726,7 @@ func Default() Config {
 			FreeSpaceOnProgressWake:     DefaultFreeSpaceOnProgressWake,
 			FreeSpacePollIntervalSecs:   DefaultFreeSpacePollIntervalSecs,
 			ScanYieldIntervalMS:         DefaultScanYieldIntervalMS,
-			ScanYieldEveryN:             DefaultScanYieldEveryN,
+			ScanYieldWorkMS:             DefaultScanYieldWorkMS,
 			ScanProgressMinIntervalMS:   DefaultScanProgressMinIntervalMS,
 			ScanDisableAdaptiveThrottle: false,
 			OperationsMemoryRows:        DefaultJobsOperationsMemoryRows,
@@ -1365,11 +1365,14 @@ func (c *Config) validateJobsScan(builtin *Config) {
 	if c.Jobs.ScanYieldIntervalMS > jobsProgressTimingMaxMS {
 		c.Jobs.ScanYieldIntervalMS = jobsProgressTimingMaxMS
 	}
-	if c.Jobs.ScanYieldEveryN <= 0 {
-		c.Jobs.ScanYieldEveryN = builtin.Jobs.ScanYieldEveryN
+	if c.Jobs.ScanYieldWorkMS <= 0 {
+		c.Jobs.ScanYieldWorkMS = builtin.Jobs.ScanYieldWorkMS
 	}
-	if c.Jobs.ScanYieldEveryN > ScanYieldEveryNMax {
-		c.Jobs.ScanYieldEveryN = ScanYieldEveryNMax
+	if c.Jobs.ScanYieldWorkMS < jobsProgressTimingMinMS {
+		c.Jobs.ScanYieldWorkMS = jobsProgressTimingMinMS
+	}
+	if c.Jobs.ScanYieldWorkMS > jobsProgressTimingMaxMS {
+		c.Jobs.ScanYieldWorkMS = jobsProgressTimingMaxMS
 	}
 	if c.Jobs.ScanProgressMinIntervalMS <= 0 {
 		c.Jobs.ScanProgressMinIntervalMS = builtin.Jobs.ScanProgressMinIntervalMS

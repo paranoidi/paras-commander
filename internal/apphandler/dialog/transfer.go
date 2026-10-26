@@ -373,13 +373,13 @@ func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bo
 	}
 	finalDest := finalLoc.String()
 	sourcesCopy := append([]string(nil), sources...)
-	h.host.ActivePanel().ClearSelection()
 	preserve := jobs.TransferPreserve{
 		PreservePermissions: d.PreservePermissions,
 		PreserveTimestamps:  d.PreserveTimestamps,
 		DereferenceSymlinks: d.DereferenceSymlinks,
 	}
 	h.AddTransferJob(jobType, sourcesCopy, finalDest, startPaused, preserve)
+	h.host.ActivePanel().ClearSelection()
 	h.CloseTransferDialog()
 	h.setTransferQueuedMessage(jobType, startPaused)
 }

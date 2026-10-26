@@ -89,3 +89,43 @@ func pathImpact(
 	}
 	return 0, 0, true
 }
+
+// SourceSizeEstimates estimates the byte size of each transfer source from what is already
+// known without touching the filesystem (safe on the UI thread): listing entries via lookup and
+// the disk-usage cache, by the same rules as the panel's selection-size label (pathImpact). A path
+// lookup misses (a find or compare source outside the listing) still uses a cached disk-usage size.
+// per[i] is -1 when source i's size is unknown (still scanning, never scanned, or a remote
+// directory); total sums the known ones; complete is false when any source is unknown.
+func SourceSizeEstimates(
+	paths []string,
+	lookup func(string) (localfs.Entry, bool),
+	remote bool,
+	painter DiskUsagePainter,
+) (per []int64, total int64, complete bool) {
+	per = make([]int64, len(paths))
+	complete = true
+	for i, p := range paths {
+		entry, found := localfs.Entry{}, false
+		if lookup != nil {
+			entry, found = lookup(p)
+		}
+		var b int64
+		known := false
+		switch {
+		case found:
+			var pending bool
+			_, b, pending = pathImpact(p, lookup, false, remote, painter)
+			known = !pending && (!remote || entry.Type != localfs.EntryDirectory)
+		case painter != nil && !remote:
+			b, known = painter.ByteSize(p)
+		}
+		if !known {
+			per[i] = -1
+			complete = false
+			continue
+		}
+		per[i] = b
+		total += b
+	}
+	return per, total, complete
+}

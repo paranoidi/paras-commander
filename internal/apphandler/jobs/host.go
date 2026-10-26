@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -18,6 +19,9 @@ type Host interface {
 	OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, absDest, source string)
 	SetJobFailedTransientMessage(err error, fallback string)
 	DevMode() bool
+	// DiskUsagePainter is the disk-usage cache the panels paint sizes from (nil when disabled);
+	// AddTransferJob reads it for the enqueue-time size estimate.
+	DiskUsagePainter() ui.DiskUsagePainter
 	// PromptDanglingDirDelete opens (or, if another modal is already open, defers via a
 	// transient message for) the delete-confirmation dialog for directories a completed
 	// move/delete job left empty. dirs is non-empty.

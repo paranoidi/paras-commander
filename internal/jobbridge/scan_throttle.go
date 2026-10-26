@@ -48,7 +48,8 @@ func (t *adaptiveThrottle) recordProbe(now time.Time, before, after float64) {
 }
 
 // newAdaptiveThrottleYield wraps baseYield (the existing fixed-interval cooperative yield) with
-// the counting-walk contention probe. baseYield always runs first (baseline behavior preserved).
+// the counting-walk contention probe. ScanFunc wraps the result in newDutyCycleYield, so it runs
+// once per time-slice sleep, not per entry check. baseYield always runs first (baseline behavior preserved).
 // Then, on the probe cadence while throughputBPS reports a positive rate (a transfer is actively
 // moving bytes), the counting walk is paused for DefaultScanThrottleProbeWindowMS and the
 // resulting throughput change decides whether to grow or decay the duty-cycle pause. Between
@@ -72,5 +73,30 @@ func newAdaptiveThrottleYield(baseYield func(), throughputBPS func() float64) fu
 		if t.dutyPauseMS > 0 {
 			time.Sleep(time.Duration(t.dutyPauseMS * float64(time.Millisecond)))
 		}
+	}
+}
+
+// newDutyCycleYield turns sleep (one cooperative pause) into a time-sliced yield for
+// ops.PlanBuildOptions.Yield: the walk calls the returned func every
+// config.DefaultScanYieldCheckEveryN entries, and sleep runs only once work has elapsed since the
+// previous sleep ended. A fixed per-entry-count sleep would cap a walk over cached metadata at a
+// constant entries/sec rate whatever the disk speed. Each walk needs its own instance: the
+// returned func is not safe for concurrent use. now is time.Now outside tests.
+func newDutyCycleYield(sleep func(), work time.Duration, now func() time.Time) func() {
+	if sleep == nil {
+		return nil
+	}
+	var sliceStart time.Time
+	return func() {
+		t := now()
+		if sliceStart.IsZero() {
+			sliceStart = t
+			return
+		}
+		if t.Sub(sliceStart) < work {
+			return
+		}
+		sleep()
+		sliceStart = now()
 	}
 }

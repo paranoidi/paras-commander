@@ -88,3 +88,31 @@ func TestAdaptiveThrottleCapsAtMax(t *testing.T) {
 		t.Fatalf("expected dutyPauseMS to clamp at 500, got %v", th.dutyPauseMS)
 	}
 }
+
+// TestDutyCycleYieldSleepsPerTimeSlice checks that the time-sliced yield sleeps only once work
+// has elapsed since the previous sleep, however often the walk checks in.
+func TestDutyCycleYieldSleepsPerTimeSlice(t *testing.T) {
+	now := time.Unix(0, 0)
+	sleeps := 0
+	yield := newDutyCycleYield(func() { sleeps++ }, 200*time.Millisecond, func() time.Time { return now })
+
+	for range 50 { // many checks within one slice
+		yield()
+		now = now.Add(time.Millisecond)
+	}
+	if sleeps != 0 {
+		t.Fatalf("sleeps within the first 200ms slice = %d, want 0", sleeps)
+	}
+	now = now.Add(150 * time.Millisecond)
+	yield()
+	if sleeps != 1 {
+		t.Fatalf("sleeps after the slice elapsed = %d, want 1", sleeps)
+	}
+	yield()
+	if sleeps != 1 {
+		t.Fatalf("a new slice must start after a sleep; sleeps = %d, want 1", sleeps)
+	}
+	if newDutyCycleYield(nil, time.Second, time.Now) != nil {
+		t.Fatal("nil sleep must give a nil yield")
+	}
+}

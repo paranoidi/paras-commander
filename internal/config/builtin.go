@@ -102,9 +102,6 @@ const (
 	WorkerProgressMinBytesMin = 64 * 1024
 	WorkerProgressMinBytesMax = 64 * 1024 * 1024
 
-	// ScanYieldEveryNMax is the upper clamp for scan_yield_every_n in Config.Validate.
-	ScanYieldEveryNMax = 4096
-
 	// DefaultFindQueryDebounceMS waits after the last keystroke in the find dialog query field
 	// before re-ranking the indexed entries. Zero ranks on every keystroke (no debounce).
 	DefaultFindQueryDebounceMS = 150
@@ -188,13 +185,18 @@ const (
 
 	// DefaultScanYieldIntervalMS is cooperative sleep duration during pre-scan walks.
 	DefaultScanYieldIntervalMS = 50
-	// DefaultScanYieldEveryN invokes cooperative yield every N plan walk entries during pre-scan.
-	DefaultScanYieldEveryN = 64
+	// DefaultScanYieldWorkMS is how long a pre-scan walk runs between cooperative sleeps of
+	// DefaultScanYieldIntervalMS. Yields are per time slice, not per entry count, so a walk over
+	// cached metadata runs at disk speed instead of being capped at a fixed entries/sec rate.
+	DefaultScanYieldWorkMS = 200
+	// DefaultScanYieldCheckEveryN is how many walk entries pass between pre-scan yield checks;
+	// it only bounds how often the time-slice clock is read (not user config).
+	DefaultScanYieldCheckEveryN = 64
 	// DefaultScanProgressMinIntervalMS throttles scan-progress UI events during pre-scan walks.
 	DefaultScanProgressMinIntervalMS = 200
 	// DefaultPlanStreamBufferItems bounds the pre-scan producer's PlanItem channel so a
 	// multi-terabyte/million-file walk holds only a few hundred KB of buffered items in memory
-	// regardless of tree size, same order of magnitude as DefaultScanYieldEveryN.
+	// regardless of tree size, same order of magnitude as DefaultScanYieldCheckEveryN.
 	DefaultPlanStreamBufferItems = 256
 
 	// DefaultScanThrottleProbeIntervalSec is how often the pre-scan counting walk's adaptive

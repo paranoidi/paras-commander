@@ -68,8 +68,8 @@ func EventUpdatesMarks(t jobs.EventType) bool {
 func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 	return func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks jobs.ScanWalkHooks) jobs.PlanProducer {
 		opts := ops.PlanBuildOptions{
-			YieldEveryN:         hooks.YieldEveryN,
-			Yield:               hooks.Yield,
+			YieldEveryN:         config.DefaultScanYieldCheckEveryN,
+			Yield:               newDutyCycleYield(hooks.Yield, hooks.YieldWork, time.Now),
 			FlatDestNames:       hooks.FlatDestNames,
 			OnPath:              hooks.OnPath,
 			DereferenceSymlinks: hooks.DereferenceSymlinks,
@@ -78,8 +78,9 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 		}
 
 		// countOpts is the counting walk's own copy of opts (the delivery walk above keeps the
-		// original, untouched) with Yield wrapped by the adaptive throttle when a throughput
-		// signal is available and the probe isn't disabled. OnWarning and OnPath are cleared (OnItemError is replaced by a no-op): the
+		// original, untouched) with its own time-sliced Yield (the duty-cycle state is per walk),
+		// whose sleep is wrapped by the adaptive throttle when a throughput signal is available
+		// and the probe isn't disabled, so the probe and its pause run once per sleep. OnWarning and OnPath are cleared (OnItemError is replaced by a no-op): the
 		// counting walk enumerates the same tree independently, so leaving them wired would
 		// double-report every symlink-dereference fallback and every progress path (once per
 		// walk), and OnPath's rate-limit state is not safe for two concurrent walks.
@@ -90,9 +91,11 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 			// Skip silently like the delivery walk (which reports) so the totals walk does not abort.
 			countOpts.OnItemError = func(ops.PlanItem, error) {}
 		}
+		countSleep := hooks.Yield
 		if hooks.ThroughputBPS != nil && !jobsCfg.ScanDisableAdaptiveThrottle {
-			countOpts.Yield = newAdaptiveThrottleYield(opts.Yield, hooks.ThroughputBPS)
+			countSleep = newAdaptiveThrottleYield(hooks.Yield, hooks.ThroughputBPS)
 		}
+		countOpts.Yield = newDutyCycleYield(countSleep, hooks.YieldWork, time.Now)
 
 		// raw is the bounded channel BuildPlanStreamCtx's delivery-walk goroutine sends into; it
 		// is the one memory bound for the delivery pipeline (see
@@ -442,6 +445,7 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 		FlatDestNames:              job.FlatDestNames(),
 		DereferenceSymlinks:        job.DereferenceSymlinks,
 		RateLimit:                  rateWait,
+		SourceSizeHints:            job.SourceSizeHints,
 	}
 	if job.Destination.IsRemote() {
 		opts.CowFileCloning = false
@@ -614,12 +618,14 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		doneFiles, doneBytes, err = ops.ExecuteCopyFrom(tc.ctx, tc.planSource(), job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeMove:
 		// Move never pre-scans (ops.ExecuteMove renames first and plans only cross-device
-		// sources), so it announces one total per source.
+		// sources), so it announces one total per source and the enqueue-time byte estimate
+		// (an enqueue-time field, so reading it here is race-free; 0 keeps item progress).
 		tc.emit(jobs.Event{
 			Type:       jobs.EventPlanTotals,
 			JobID:      job.ID,
 			Status:     jobs.StatusRunning,
 			TotalFiles: len(job.Sources),
+			TotalBytes: job.EstimatedBytes,
 		})
 		doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeUndo:

@@ -14,6 +14,11 @@ panel. Running and queued jobs are listed first in run order (so the queue
 move keys match the screen), followed by finished jobs with the most recent
 first. Keys are rebindable under `[jobs]` in `keybindings.toml`.
 
+A copy or move starts with the size the panel already shows for the selection,
+so its percentage and ETA work immediately. The Details panel marks such a
+total `(estimated)` until the exact size is counted (see
+[Background scan throttling](background-scan-throttle.md#estimated-totals)).
+
 | Key | Action |
 |---|---|
 | `Ctrl+C` | Cancel the selected job (`jobs.cancel`) |

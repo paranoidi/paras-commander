@@ -33,9 +33,11 @@ type PlanProducer struct {
 
 // ScanWalkHooks are optional callbacks during a pre-scan walk.
 type ScanWalkHooks struct {
-	OnPath      func(path string) error
-	YieldEveryN int
-	Yield       func()
+	OnPath func(path string) error
+	// Yield is one cooperative sleep. The walk calls it after every YieldWork of walking (see
+	// jobbridge.newDutyCycleYield), not after a fixed number of entries.
+	Yield     func()
+	YieldWork time.Duration
 	// ThroughputBPS returns the job's current EMA-smoothed transfer throughput in bytes/sec
 	// (Job.ETABytesPerSec), read under State's lock. jobbridge's counting-walk throttle uses it
 	// to measure whether pausing the counting walk actually improves transfer throughput; zero
@@ -60,7 +62,7 @@ type ScanFunc func(ctx context.Context, sources []pathloc.Path, destination path
 // ScanConfig tunes background pre-scan walks for queued copy/move jobs.
 type ScanConfig struct {
 	YieldInterval       time.Duration
-	YieldEveryN         int
+	YieldWork           time.Duration
 	ProgressMinInterval time.Duration
 }
 
@@ -126,9 +128,9 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 	if yieldInterval <= 0 {
 		yieldInterval = time.Duration(config.DefaultScanYieldIntervalMS) * time.Millisecond
 	}
-	yieldEvery := cfg.YieldEveryN
-	if yieldEvery <= 0 {
-		yieldEvery = config.DefaultScanYieldEveryN
+	yieldWork := cfg.YieldWork
+	if yieldWork <= 0 {
+		yieldWork = time.Duration(config.DefaultScanYieldWorkMS) * time.Millisecond
 	}
 	progressMin := cfg.ProgressMinInterval
 	if progressMin <= 0 {
@@ -160,7 +162,7 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 			}
 			return nil
 		},
-		YieldEveryN: yieldEvery,
+		YieldWork: yieldWork,
 		Yield: func() {
 			select {
 			case <-ctx.Done():
@@ -200,6 +202,11 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 	writeTotalsAndEmit := func() {
 		files, dirs, bytes := producer.Totals()
 		s.mu.Lock()
+		// Until the counting walk is done its tally is a lower bound: keep the enqueue-time
+		// estimate when it is larger, then switch to the exact count even if it is smaller.
+		if !job.TotalsComplete {
+			bytes = max(bytes, job.EstimatedBytes)
+		}
 		job.TotalFiles = files
 		job.TotalDirs = dirs
 		job.TotalBytes = bytes

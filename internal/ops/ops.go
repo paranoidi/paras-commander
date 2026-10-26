@@ -39,7 +39,11 @@ type Options struct {
 	// OnItemError, when set (copy jobs only), makes the executor report a source-side failure
 	// (unreadable or vanished source file) and carry on with the next item instead of aborting.
 	// Move leaves it nil: its copy fallback deletes sources afterwards.
-	OnItemError         func(item PlanItem, err error)
+	OnItemError func(item PlanItem, err error)
+	// SourceSizeHints (ExecuteMove only) is an estimated byte size per top-level source, aligned
+	// with the sources slice (-1 = unknown). A source moved by rename credits its hint to the
+	// done bytes, so a move with a byte total shows byte progress. Ignored on a length mismatch.
+	SourceSizeHints     []int64
 	PreservePermissions bool
 	PreserveTimestamps  bool
 	CopyBufferKiB       int

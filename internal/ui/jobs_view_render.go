@@ -386,10 +386,29 @@ func jobDetailProgressLine(j JobEntry) string {
 		}
 		line += fmt.Sprintf("   (%s dirs)", tdLabel)
 	}
-	if jobStillScanningInBackground(j) {
+	if jobTotalsEstimated(j) {
+		line += "   (estimated)"
+	} else if jobStillScanningInBackground(j) {
 		line += "   (scanning…)"
 	}
 	return line
+}
+
+// jobTotalsEstimated reports whether TotalBytes is still the enqueue-time estimate
+// (jobs.Job.EstimatedBytes): a copy until its counting walk finishes, a move (no counting walk)
+// for its whole run.
+func jobTotalsEstimated(j JobEntry) bool {
+	if j.EstimatedBytes <= 0 || jobs.Status(j.Status).IsFinished() {
+		return false
+	}
+	switch jobs.Type(j.Type) {
+	case jobs.TypeMove:
+		return true
+	case jobs.TypeCopy:
+		return !j.TotalsComplete
+	default:
+		return false
+	}
 }
 
 // jobStillScanningInBackground reports whether a copy/move/flatten job's background pre-scan

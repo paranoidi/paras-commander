@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -1142,13 +1143,13 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 		h.host.OpenTransferDialogSelfCopyRename(opts.kind, absDest, sources[0])
 		return
 	}
-	h.host.ActivePanel().ClearSelection()
 	h.AddTransferJob(TransferJobRequest{
 		Type:     opts.jobType,
 		Sources:  sources,
 		Dest:     dest,
 		Preserve: jobs.TransferPreserveFromConfig(h.config.Operations.PreservePermissions, h.config.Operations.PreserveTimestamps, h.config.Operations.DereferenceSymlinks),
 	})
+	h.host.ActivePanel().ClearSelection()
 	h.host.SetTransientMessage(fmt.Sprintf("%s queued (%d %s)", opts.toastVerb, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 }
 
@@ -1198,7 +1199,39 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		DereferenceSymlinks: req.Preserve.DereferenceSymlinks && req.Type == jobs.TypeCopy,
 		PromptDanglingDirs:  req.Type == jobs.TypeMove && h.config.Operations.RemoveDanglingDirs,
 	}
+	h.applySizeEstimate(job, req.Sources)
 	h.commitJob(job)
+}
+
+// applySizeEstimate seeds a copy or move job's byte total from what the active panel already
+// knows about its sources (ui.SourceSizeEstimates: listing sizes and the disk-usage cache, no
+// filesystem access). Callers enqueue before clearing the selection so off-listing metadata is
+// still there. A copy takes any positive estimate as a floor its counting walk replaces; a move,
+// which has no counting walk, takes it only when every source is known, since an unknown source
+// would never be credited and stall the byte percent.
+func (h *Handler) applySizeEstimate(job *jobs.Job, sources []string) {
+	if job.Type != jobs.TypeCopy && job.Type != jobs.TypeMove {
+		return
+	}
+	active := h.host.ActivePanel()
+	if active == nil {
+		return
+	}
+	lookup := func(p string) (localfs.Entry, bool) {
+		if e, ok := active.ListingEntryAt(p); ok {
+			return e, true
+		}
+		return active.OffListingMetaAt(p)
+	}
+	per, total, complete := ui.SourceSizeEstimates(sources, lookup, active.Path.IsRemote(), h.host.DiskUsagePainter())
+	if total <= 0 || (job.Type == jobs.TypeMove && !complete) {
+		return
+	}
+	job.EstimatedBytes = total
+	job.TotalBytes = total
+	if job.Type == jobs.TypeMove {
+		job.SourceSizeHints = per
+	}
 }
 
 // EnqueueDeleteJob queues a delete job. promptDangling requests the post-completion

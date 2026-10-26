@@ -419,8 +419,8 @@ func (h *Handler) finishTransferEnqueue(st transferProbeApply, nSelf int, destIs
 		h.setEnqueueDestIsDir(destIsDir)
 	}
 	sourcesCopy := append([]string(nil), st.sources...)
-	h.host.ActivePanel().ClearSelection()
 	h.AddTransferJob(st.jobType, sourcesCopy, st.dest, st.startPaused, st.preserve)
+	h.host.ActivePanel().ClearSelection()
 	h.CloseTransferDialog()
 	h.setTransferQueuedMessage(st.jobType, st.startPaused)
 }

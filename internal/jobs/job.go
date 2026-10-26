@@ -62,14 +62,23 @@ type Job struct {
 	Destination pathloc.Path
 	// DestIsDir is whether Destination was an existing directory at enqueue time (same as ops.ResolveDestination Stat semantics).
 	// Used by UI path marks so listing render does not Stat the destination per row.
-	DestIsDir   bool
-	TotalFiles  int
-	TotalDirs   int
-	DoneFiles   int
-	TotalBytes  int64
-	DoneBytes   int64
-	CurrentPath string
-	Error       string
+	DestIsDir  bool
+	TotalFiles int
+	TotalDirs  int
+	DoneFiles  int
+	TotalBytes int64
+	DoneBytes  int64
+	// EstimatedBytes is the enqueue-time best guess of the payload size, taken from what the
+	// panel already knows (listing sizes and the disk-usage cache; see ui.SourceSizeEstimates).
+	// 0 means no estimate. A copy shows it as TotalBytes until its counting walk finishes
+	// (runJobScan); a move uses it as its byte total. Never changes after enqueue.
+	EstimatedBytes int64
+	// SourceSizeHints is the per-source estimate aligned with Sources (-1 = unknown), set only for
+	// a move whose every source has an estimate: a rename credits its source's hint as done bytes
+	// (ops.Options.SourceSizeHints). Never changes after enqueue.
+	SourceSizeHints []int64
+	CurrentPath     string
+	Error           string
 	// Warnings collects non-fatal per-item issues encountered while building the transfer
 	// plan (currently: a symlink that could not be safely dereferenced and was relinked
 	// instead — see DereferenceSymlinks). Unlike Error, warnings never fail the job.
@@ -267,8 +276,10 @@ func (j *Job) RetryClone() *Job {
 		totalFiles = len(j.Sources)
 	}
 	var plan []ops.PlanItem
-	var planBytes int64
+	planBytes := j.EstimatedBytes
+	estimated := j.EstimatedBytes
 	if j.Type == TypeCopy && len(j.FailedItems) > 0 {
+		estimated = 0
 		for _, f := range j.FailedItems {
 			plan = append(plan, f.Item)
 		}
@@ -277,6 +288,8 @@ func (j *Job) RetryClone() *Job {
 	clone := &Job{
 		Plan:                  plan,
 		TotalBytes:            planBytes,
+		EstimatedBytes:        estimated,
+		SourceSizeHints:       j.SourceSizeHints,
 		ID:                    j.ID,
 		Type:                  j.Type,
 		Status:                StatusScanning,

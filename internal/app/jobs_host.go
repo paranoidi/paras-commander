@@ -43,6 +43,13 @@ func (h jobsHost) SetJobFailedTransientMessage(err error, fallback string) {
 
 func (h jobsHost) DevMode() bool { return h.app.devMode }
 
+func (h jobsHost) DiskUsagePainter() ui.DiskUsagePainter {
+	if h.app.disk.engine == nil {
+		return nil
+	}
+	return h.app.disk.engine
+}
+
 func (h jobsHost) PromptDanglingDirDelete(dirs []string) {
 	h.app.dialogCtrl.PromptDanglingDirDelete(dirs)
 }

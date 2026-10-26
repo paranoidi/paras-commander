@@ -636,7 +636,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	// App.reconcileAfterEvent(), which runs at the end of every Run-loop iteration.
 	jobState.SetScanConfig(jobs.ScanConfig{
 		YieldInterval:       time.Duration(cfg.Jobs.ScanYieldIntervalMS) * time.Millisecond,
-		YieldEveryN:         cfg.Jobs.ScanYieldEveryN,
+		YieldWork:           time.Duration(cfg.Jobs.ScanYieldWorkMS) * time.Millisecond,
 		ProgressMinInterval: time.Duration(cfg.Jobs.ScanProgressMinIntervalMS) * time.Millisecond,
 	})
 	jobState.SetScanFunc(jobbridge.ScanFunc(cfg.Jobs))

@@ -53,4 +53,6 @@ type JobEntry struct {
 	// those totals are still growing in the background even though the transfer itself may
 	// already be running.
 	TotalsComplete bool
+	// EstimatedBytes matches jobs.Job.EstimatedBytes (enqueue-time size estimate, 0 = none).
+	EstimatedBytes int64
 }

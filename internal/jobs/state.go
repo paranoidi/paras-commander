@@ -162,7 +162,7 @@ func NewState() *State {
 		rateLimiter:            &RateLimiter{},
 		scanConfig: ScanConfig{
 			YieldInterval:       time.Duration(config.DefaultScanYieldIntervalMS) * time.Millisecond,
-			YieldEveryN:         config.DefaultScanYieldEveryN,
+			YieldWork:           time.Duration(config.DefaultScanYieldWorkMS) * time.Millisecond,
 			ProgressMinInterval: time.Duration(config.DefaultScanProgressMinIntervalMS) * time.Millisecond,
 		},
 	}

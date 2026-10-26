@@ -45,6 +45,7 @@ func (jobsHostStub) TryDispatchAuxiliaryScreens(string) bool    { return false }
 func (jobsHostStub) ActionFromKeyEvent(*tcell.EventKey) string  { return "" }
 func (jobsHostStub) SetJobFailedTransientMessage(error, string) {}
 func (jobsHostStub) DevMode() bool                              { return false }
+func (jobsHostStub) DiskUsagePainter() ui.DiskUsagePainter      { return nil }
 func (jobsHostStub) PromptDanglingDirDelete([]string)           {}
 func (jobsHostStub) ToggleLeaderMenu()                          {}
 func (jobsHostStub) DispatchLeaderLetter(*tcell.EventKey) bool  { return false }

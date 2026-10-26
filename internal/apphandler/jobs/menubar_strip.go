@@ -78,9 +78,10 @@ func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 		if f, ok := jobProgressFraction(prog); ok {
 			strip.ProgressFrac = f
 			strip.HasProgress = true
-			// Totals keep growing until the counting walk finishes, so the fraction is
-			// meaningless before that; the renderer shows an indeterminate bar.
-			strip.ProgressIndeterminate = prog.NeedsPreScan() && !prog.TotalsComplete
+			// Totals keep growing until the counting walk finishes, so without an enqueue-time
+			// estimate the fraction is meaningless before that; the renderer shows an
+			// indeterminate bar. With an estimate the total is already a usable best guess.
+			strip.ProgressIndeterminate = prog.NeedsPreScan() && !prog.TotalsComplete && prog.EstimatedBytes <= 0
 		}
 		strip.Deleting = prog.Type == jobs.TypeDelete || prog.RemovingSources
 		if prog.RemovingSources {

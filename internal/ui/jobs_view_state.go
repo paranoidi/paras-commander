@@ -60,6 +60,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			ThroughputStrip: strip,
 			PendingBlocker:  pending,
 			TotalsComplete:  j.TotalsComplete,
+			EstimatedBytes:  j.EstimatedBytes,
 		})
 	}
 	return entries

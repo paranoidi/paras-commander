@@ -116,6 +116,7 @@ func (f *identityTestHost) OpenTransferDialogSelfCopyRename(uidialog.TransferKin
 }
 func (f *identityTestHost) SetJobFailedTransientMessage(error, string) {}
 func (f *identityTestHost) DevMode() bool                              { return false }
+func (f *identityTestHost) DiskUsagePainter() ui.DiskUsagePainter      { return nil }
 func (f *identityTestHost) PromptDanglingDirDelete([]string)           {}
 func (f *identityTestHost) LaunchedAsFileViewer() bool                 { return false }
 func (f *identityTestHost) SwitchPanel()                               {}

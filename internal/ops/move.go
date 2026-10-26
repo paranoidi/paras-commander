@@ -199,7 +199,11 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 	r := moveRun{opts: opts, throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait}
 	var doneFiles int
 	var doneBytes int64
-	for _, src := range sources {
+	hints := opts.SourceSizeHints
+	if len(hints) != len(sources) {
+		hints = nil
+	}
+	for i, src := range sources {
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
 		}
@@ -213,9 +217,18 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 				return doneFiles, doneBytes, fmt.Errorf("create parent for %q: %w", dst, err)
 			}
 		}
+		before := doneBytes
 		doneFiles, doneBytes, err = r.moveAndCount(ctx, src, dst, destination, doneFiles, doneBytes)
 		if err != nil {
 			return doneFiles, doneBytes, err
+		}
+		// A rename moves no bytes through the copier: credit the source's estimate. A copy
+		// fallback already counted its real bytes, so take the larger rather than adding.
+		if hints != nil && hints[i] > 0 && before+hints[i] > doneBytes {
+			doneBytes = before + hints[i]
+			if r.progress != nil {
+				r.progress(src.String(), dst.String(), doneFiles, doneBytes)
+			}
 		}
 	}
 	return doneFiles, doneBytes, nil

@@ -40,16 +40,33 @@ which is never slowed by this — it's already self-limiting.
 
 ## Keeping the UI responsive
 
-Both background walks also sleep briefly on a fixed cadence
-(`scan_yield_interval_ms` every `scan_yield_every_n` entries) unconditionally,
+Both background walks also sleep briefly per time slice: after walking for
+`scan_yield_work_ms` they sleep `scan_yield_interval_ms`, unconditionally,
 not only while a transfer happens to be active. This keeps a large scan from
 ever fully saturating the CPU/scheduler at the terminal UI's expense, even
 before the first item has been found and the job has started transferring.
+Because the sleep follows elapsed time rather than a number of entries, a walk
+over metadata the kernel already has cached runs at full disk speed.
+The adaptive throttle's pause is added to these sleeps, so even a fully
+throttled counting walk keeps making progress.
 
-While a copy job's background counting walk hasn't finished
-enumerating the source tree yet, its entry in the jobs view **Details**
-panel shows a `(scanning…)` marker next to the progress line, since the
-totals and percentage shown are still provisional and will keep climbing.
+## Estimated totals
+
+When a copy or move is queued, the job starts with the size the panel already
+knows for the selection: file sizes from the listing plus directory sizes from
+the disk-usage cache. The percentage, ETA and menu-bar progress bar work right
+away, and the **Details** panel marks the total `(estimated)`.
+
+- A copy uses any non-zero estimate. Its total never drops below the estimate
+  while the counting walk runs, and switches to the exact counted size when the
+  walk finishes.
+- A move does not run a counting walk. It uses the estimate only when every
+  source's size is known, and each source moved by rename counts its estimated
+  size as done. A move without a full estimate counts moved items instead.
+
+While a copy without an estimate has not finished counting the source tree,
+its **Details** progress line shows `(scanning…)`, since the totals and
+percentage are still provisional and will keep climbing.
 
 ## Disabling it
 
