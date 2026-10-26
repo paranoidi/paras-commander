@@ -282,17 +282,6 @@ func DrawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 	drawInputField(screen, x, y, width, field, focused, styles)
 }
 
-func renameToolOptionCount(state FileDialogState) int {
-	switch state.RenamePhase {
-	case RenamePhaseEncoding:
-		return RenameEncodingOptionCount(state)
-	case RenamePhaseSanitize, RenamePhaseSlugify:
-		return 2
-	default:
-		return 2
-	}
-}
-
 func renameToolOptionLabels(state FileDialogState) []string {
 	if state.RenamePhase == RenamePhaseSanitize {
 		return []string{`Replace "." with space`, `Replace "_" with space`}

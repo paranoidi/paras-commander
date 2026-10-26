@@ -1,7 +1,6 @@
 package dialog
 
 import (
-	"strconv"
 	"strings"
 	"unicode"
 
@@ -29,40 +28,28 @@ const (
 )
 
 // FileFieldID is the widget ID of text input i of a file dialog (index into Fields).
-func FileFieldID(i int) dlg.ID { return dlg.ID(fileFieldPrefix + strconv.Itoa(i)) }
+func FileFieldID(i int) dlg.ID { return dlg.IndexedID(fileFieldPrefix, i) }
 
 // FileFieldIndex returns the Fields index named by a FileFieldID.
 func FileFieldIndex(id dlg.ID) (int, bool) {
-	rest, ok := strings.CutPrefix(string(id), fileFieldPrefix)
-	if !ok {
-		return 0, false
-	}
-	i, err := strconv.Atoi(rest)
-	return i, err == nil
+	i, ok := dlg.IDIndex(id, fileFieldPrefix)
+	return i, ok
 }
 
 // MkdirActionID is the radio ID of a mkdir post-action.
-func MkdirActionID(a MkdirAction) dlg.ID { return dlg.ID(fileMkdirPrefix + strconv.Itoa(int(a))) }
+func MkdirActionID(a MkdirAction) dlg.ID { return dlg.IndexedID(fileMkdirPrefix, int(a)) }
 
 // MkdirActionFromID returns the post-action of a MkdirActionID radio.
 func MkdirActionFromID(id dlg.ID) (MkdirAction, bool) {
-	rest, ok := strings.CutPrefix(string(id), fileMkdirPrefix)
-	if !ok {
-		return 0, false
-	}
-	i, err := strconv.Atoi(rest)
-	return MkdirAction(i), err == nil
+	i, ok := dlg.IDIndex(id, fileMkdirPrefix)
+	return MkdirAction(i), ok
 }
 
-func renameEncodingID(i int) dlg.ID { return dlg.ID(fileEncodingPrefix + strconv.Itoa(i)) }
+func renameEncodingID(i int) dlg.ID { return dlg.IndexedID(fileEncodingPrefix, i) }
 
 func renameEncodingIndex(id dlg.ID) (int, bool) {
-	rest, ok := strings.CutPrefix(string(id), fileEncodingPrefix)
-	if !ok {
-		return 0, false
-	}
-	i, err := strconv.Atoi(rest)
-	return i, err == nil
+	i, ok := dlg.IDIndex(id, fileEncodingPrefix)
+	return i, ok
 }
 
 // FileDialogViewContext carries what FileDialogView needs besides the state: the screen layout
@@ -106,8 +93,8 @@ func FileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 	spec := dlg.Spec{
 		Title: fileDialogOuterTitle(st), Width: fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), Unclamped: true,
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 	switch {
@@ -267,7 +254,7 @@ func deleteViewGroups(st FileDialogState, ctx FileDialogViewContext) []dlg.Group
 	}
 }
 
-// Apply folds an activation from dlg.HandleKey / dlg.Click into the state: the rename checkboxes
+// Apply folds an activation from dlg.HandleKey into the state: the rename checkboxes
 // toggle, mkdir radios select their action, the tool screen options toggle or select. The inputs
 // and the buttons are the caller's to handle.
 func (st *FileDialogState) Apply(ev dlg.Event) {
@@ -324,8 +311,7 @@ func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogStat
 	if fileDialogWidth(layout.Width, state, ctx.IconLead) < 20 {
 		return
 	}
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.SpecFocus(), ctx.Styles)
-	p, ok := dlg.Place(layout.Width, layout.Height, spec)
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.SpecFocus(), ctx.Styles)
 	if !ok {
 		return
 	}

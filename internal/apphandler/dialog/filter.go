@@ -6,7 +6,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -289,35 +288,16 @@ func (h *Handler) confirmFilterDialogFromInput() {
 // text editing runs when the engine declines a key.
 func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 	fd := &h.model.FilterDialog
-	ev, ok := dlg.HandleKey(h.FilterDialogView(), &fd.Focus, event)
-	switch {
-	case !ok:
-		h.editFilterPattern(event)
-	case ev.ID == dlg.OK || ev.ID == dialog.PatternInput:
-		h.confirmFilterDialogFromInput()
-	case ev.ID == dlg.Cancel:
-		h.CloseFilterDialog()
-	case ev.ID == "":
-	case event.Key() == tcell.KeyEnter && !dialog.PatternIsRadio(ev.ID):
-		h.confirmFilterDialogFromInput() // Enter on a checkbox confirms; Space toggles it
-	default:
-		if fd.Apply(ev) {
-			h.updateFilterDialogPreview()
-		}
-	}
+	HandlePatternDialogKey(PatternKeys{
+		Spec: h.FilterDialogView(), Focus: &fd.Focus,
+		Text: &fd.Text, Cursor: &fd.TextCursor, Scroll: &fd.TextScroll, QueryWidth: h.filterDialogQueryWidth,
+		Keys: h.keysDialogInput, OnEdit: h.updateFilterDialogPreview,
+		Confirm: h.confirmFilterDialogFromInput, Cancel: h.CloseFilterDialog,
+		Apply: func(ev dlg.Event) {
+			if fd.Apply(ev) {
+				h.updateFilterDialogPreview()
+			}
+		},
+	}, event)
 	return false
-}
-
-// editFilterPattern feeds a key the engine declined to the pattern input's editor. Alt+letter
-// keys that are mnemonics of the twin dialogs never edit, whether or not this dialog has them.
-func (h *Handler) editFilterPattern(event *tcell.EventKey) {
-	fd := &h.model.FilterDialog
-	if fd.Focus != dialog.PatternInput {
-		return
-	}
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune()) {
-		return
-	}
-	edit := scrollquery.NewEdit(&fd.Text, &fd.TextCursor, &fd.TextScroll, h.filterDialogQueryWidth(), h.updateFilterDialogPreview)
-	scrollquery.HandleKey(h.keysDialogInput, event, true, edit)
 }

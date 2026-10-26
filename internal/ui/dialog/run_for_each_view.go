@@ -1,7 +1,6 @@
 package dialog
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -18,16 +17,11 @@ const (
 )
 
 // RunForEachPoolID is the radio ID of configured worker pool i (index into RunForEachPools).
-func RunForEachPoolID(i int) dlg.ID { return dlg.ID(runForEachPoolPre + strconv.Itoa(i)) }
+func RunForEachPoolID(i int) dlg.ID { return dlg.IndexedID(runForEachPoolPre, i) }
 
 // runForEachPoolIndex returns the RunForEachPools index named by a RunForEachPoolID.
 func runForEachPoolIndex(id dlg.ID) (int, bool) {
-	rest, ok := strings.CutPrefix(string(id), runForEachPoolPre)
-	if !ok {
-		return 0, false
-	}
-	i, err := strconv.Atoi(rest)
-	return i, err == nil
+	return dlg.IDIndex(id, runForEachPoolPre)
 }
 
 // runForEachView is the widget spec of the run-for-each command form: the help text and a rule,
@@ -38,8 +32,8 @@ func runForEachView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 	spec := dlg.Spec{
 		Title: fileDialogOuterTitle(st), Width: fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), Unclamped: true,
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 	if strings.TrimSpace(st.Message) != "" {
@@ -132,7 +126,7 @@ func pickerView(st FileDialogState, ctx FileDialogViewContext, count int, line f
 	return dlg.Spec{
 		Title: fileDialogOuterTitle(st), Width: fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), Unclamped: true, PlainButtonKeys: true,
 		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{filter, {Kind: dlg.KindSeparator}, list}}}},
-		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}},
+		Buttons: dlg.OKCancelButtons(),
 	}
 }
 

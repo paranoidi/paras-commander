@@ -22,10 +22,10 @@ type pickerBinding struct {
 }
 
 // pickerGeometry returns the visible list rows and the filter input's width of the open file
-// dialog's picker screen, from the placed spec.
-func (h *Handler) pickerGeometry() (listRows, queryWidth int) {
+// dialog's picker screen, from its placed spec.
+func (h *Handler) pickerGeometry(spec dlg.Spec) (listRows, queryWidth int) {
 	w, ht := h.screen.Size()
-	p, ok := dlg.Place(w, ht, h.FileDialogSpec())
+	p, ok := dlg.Place(w, ht, spec)
 	listRows, queryWidth = 1, 10
 	if it, found := p.Item(dialog.PickerList); ok && found {
 		listRows = max(it.Rect.Height, 1)
@@ -38,7 +38,7 @@ func (h *Handler) pickerGeometry() (listRows, queryWidth int) {
 
 // pickerListRows is the visible list rows of the open picker screen.
 func (h *Handler) pickerListRows() int {
-	rows, _ := h.pickerGeometry()
+	rows, _ := h.pickerGeometry(h.FileDialogSpec())
 	return rows
 }
 
@@ -46,13 +46,14 @@ func (h *Handler) pickerListRows() int {
 // motion and the buttons; what it declines is editing of the filter text, which re-ranks the list
 // and puts the cursor on its first row.
 func (h *Handler) handlePickerKey(event *tcell.EventKey, b pickerBinding) {
-	ev, ok := dlg.HandleKey(h.FileDialogSpec(), b.focus, event)
+	spec := h.FileDialogSpec()
+	ev, ok := dlg.HandleKey(spec, b.focus, event)
 	switch {
 	case !ok:
 		if *b.focus != "" && *b.focus != dialog.PickerFilter {
 			return
 		}
-		rows, width := h.pickerGeometry()
+		rows, width := h.pickerGeometry(spec)
 		onChange := func() {
 			b.resync()
 			*b.selected = 0

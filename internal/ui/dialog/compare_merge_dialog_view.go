@@ -53,13 +53,13 @@ func CompareMergeView(s CompareMergeDialogState, userHomeDir string) dlg.Spec {
 			{Columns: [][]dlg.Item{{{Kind: dlg.KindLabel, Label: s.PreviewText}}}},
 		},
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 }
 
-// Apply folds an activation from dlg.HandleKey / dlg.Click into the state: the radios pick the
+// Apply folds an activation from dlg.HandleKey into the state: the radios pick the
 // direction and the operation, the checkboxes toggle. OK and Cancel are the caller's to handle.
 func (s *CompareMergeDialogState) Apply(ev dlg.Event) {
 	switch ev.ID {

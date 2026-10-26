@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"math"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -340,7 +341,9 @@ func pulldownRect(layout Layout, state menu.State, menus []menu.Definition) (Rec
 	if len(menuDefinition.Items) == 0 {
 		return Rect{}, false
 	}
-	menuX := layout.Menu.X + menuBarItemX(state.ActiveMenu, menus)
+	// Unclipped spans: the pulldown stays under its label even when the label is cut off.
+	spans, _ := menuBarLabelSpans(layout.Menu, menus, math.MaxInt)
+	menuX := spans[state.ActiveMenu].X
 	width := pulldownWidth(menuDefinition)
 	if menuX+width > layout.Width {
 		menuX = max(0, layout.Width-width)
@@ -418,14 +421,6 @@ func drawMenuLabel(screen tcell.Screen, x, y, width int, item menu.Item, style, 
 		screen.SetContent(x+column, y, r, nil, nextStyle)
 		column++
 	}
-}
-
-func menuBarItemX(activeIndex int, menus []menu.Definition) int {
-	x := 0
-	for index := 0; index < activeIndex && index < len(menus); index++ {
-		x += utf8.RuneCountInString(" "+menus[index].Label+" ") + 1
-	}
-	return x
 }
 
 func pulldownWidth(menuDefinition menu.Definition) int {

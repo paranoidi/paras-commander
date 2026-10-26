@@ -505,7 +505,7 @@ func leaderMenuCells(rect geom.Rect, items []LeaderMenuItem, showDirectKeys bool
 // group headers and empty space.
 func LeaderMenuActionAt(layout geom.Layout, state LeaderMenuState, x, y int) (action int, inside bool) {
 	rect, visibleItems, ok := leaderMenuPlacement(layout, state)
-	if !ok || x < rect.X || x >= rect.X+rect.Width || y < rect.Y || y >= rect.Y+rect.Height {
+	if !ok || !rect.Contains(x, y) {
 		return -1, false
 	}
 	for _, cell := range leaderMenuCells(rect, visibleItems, leaderMenuShowDirectKeys(layout, state.Items)) {

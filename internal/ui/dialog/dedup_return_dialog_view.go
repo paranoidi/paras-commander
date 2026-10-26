@@ -43,7 +43,7 @@ func DedupReturnView(s DedupReturnDialogState, root string, groups int, wasted i
 		Buttons: []dlg.Button{
 			{ID: DedupReturnFirst, Label: first, Mnemonic: rune(first[0])},
 			{ID: DedupReturnSecond, Label: second, Mnemonic: rune(second[0])},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.CancelButton,
 		},
 	}
 }

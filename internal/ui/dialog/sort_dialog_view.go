@@ -46,13 +46,13 @@ func SortDialogView(s SortDialogState) dlg.Spec {
 			}}},
 		},
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 }
 
-// Apply folds an activation from dlg.HandleKey / dlg.Click into the state: radios select their
+// Apply folds an activation from dlg.HandleKey into the state: radios select their
 // sort mode or meta column, checkboxes toggle. OK and Cancel are the caller's to handle.
 func (s *SortDialogState) Apply(ev dlg.Event) {
 	switch ev.ID {

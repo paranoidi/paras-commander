@@ -1,6 +1,6 @@
 package dlg
 
-import "github.com/mattn/go-runewidth"
+import "github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 
 // TargetKind is what a mouse press landed on.
 type TargetKind int
@@ -51,15 +51,15 @@ func TargetAt(spec Spec, screenW, screenH, x, y int) (Target, bool) {
 	case KindList:
 		t.Kind = TargetList
 		t.Row = pi.Offset + (y - pi.Rect.Y)
-		t.Cursor = min(max(it.Cursor, 0), max(len(it.Rows)-1, 0))
+		t.Cursor = it.cursorRow()
 		if driver, ok := driverOf(spec, id); ok && it.Driven {
 			t.Focus = driver
 		}
 	case KindInput:
 		t.Kind = TargetInput
 		col := x - pi.Rect.X
-		if it.LeadingIcon != "" && !it.Simple {
-			col -= runewidth.StringWidth(it.LeadingIcon) + 1
+		if !it.Simple {
+			col -= draw.LeadingIconCols(it.LeadingIcon)
 		}
 		t.TextCol = max(col, 0) + max(it.Scroll, 0)
 	default:

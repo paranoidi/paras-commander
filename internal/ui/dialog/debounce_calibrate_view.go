@@ -57,9 +57,9 @@ func DebounceCalibrateView(s DebounceCalibrateDialogState) dlg.Spec {
 		{Kind: dlg.KindLabel, Label: "Used for images, video/audio and preview command rules."},
 	}}}}
 	spec.Buttons = []dlg.Button{
-		{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
+		dlg.OKButton,
 		{ID: DebounceCalibrate, Label: "Calibrate", Mnemonic: 'L'},
-		{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+		dlg.CancelButton,
 	}
 	return spec
 }

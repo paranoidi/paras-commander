@@ -176,6 +176,7 @@ type findDialogSelectionScanNeedPayload struct {
 type App struct {
 	screen              tcell.Screen
 	mouse               mouseState // see mouse.go
+	renderHeld          int        // >0 turns render into a no-op; see replayDialogKeys
 	config              config.Config
 	styles              theme.Theme
 	themes              map[string]theme.Theme
@@ -1332,9 +1333,10 @@ func (a *App) Run() error {
 				a.stopWorker()
 				return nil
 			}
-			if mouseRendered {
-				didRender = true
-			}
+			// Every mouse event that changes state renders, and render() reconciles first, so
+			// an ignored event (a miss, a press nothing takes) skips the post-event pass.
+			didRender = mouseRendered
+			pollDiskUsageAfter = mouseRendered
 		case *tcell.EventInterrupt:
 			outcome := a.handleInterruptPayload(event.Data())
 			didRender = outcome.didRender

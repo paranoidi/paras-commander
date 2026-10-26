@@ -30,18 +30,6 @@ func TestRenameEncodingOptionCount(t *testing.T) {
 	}
 }
 
-func TestRenameToolOptionCountEncoding(t *testing.T) {
-	st := FileDialogState{
-		RenamePhase: RenamePhaseEncoding,
-		RenameEncodingCandidates: []RenameEncodingCandidate{
-			{Label: "Shift-JIS", UTF8: "a"},
-		},
-	}
-	if got := renameToolOptionCount(st); got != 1 {
-		t.Fatalf("got %d want 1", got)
-	}
-}
-
 func TestRenameToolPreviewTextEncoding(t *testing.T) {
 	st := FileDialogState{
 		DialogType:  FileDialogRename,

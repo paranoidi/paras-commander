@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestRowMarksWidth(t *testing.T) {
@@ -22,8 +23,8 @@ func TestRowMarksWidth(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := RowMarksWidth(tc.m); got != tc.want {
-				t.Fatalf("RowMarksWidth(%+v) = %d, want %d", tc.m, got, tc.want)
+			if got := dlg.RowMarksWidth(tc.m); got != tc.want {
+				t.Fatalf("dlg.RowMarksWidth(%+v) = %d, want %d", tc.m, got, tc.want)
 			}
 		})
 	}
@@ -51,7 +52,7 @@ func TestDrawRowMarksSuffixBlankFillWhenNoMarks(t *testing.T) {
 	styles := theme.Default()
 	bg := tcell.ColorBlack
 
-	used := DrawRowMarksSuffix(screen, 2, 1, 4, RowMarks{}, bg, styles)
+	used := dlg.DrawRowMarksSuffix(screen, 2, 1, 4, RowMarks{}, bg, styles)
 	if used != 0 {
 		t.Fatalf("used = %d, want 0", used)
 	}
@@ -68,13 +69,13 @@ func TestDrawRowMarksSuffixPaintsJobBeforePin(t *testing.T) {
 	bg := tcell.ColorBlack
 
 	m := RowMarks{Pinned: true, HasJob: true, JobStatus: "running", JobWrite: true}
-	used := DrawRowMarksSuffix(screen, 2, 1, RowMarksWidth(m), m, bg, styles)
+	used := dlg.DrawRowMarksSuffix(screen, 2, 1, dlg.RowMarksWidth(m), m, bg, styles)
 	if used != 4 {
 		t.Fatalf("used = %d, want 4", used)
 	}
 
 	wantJobIcon := styles.IconFilelistJob()
-	wantPinIcon := rowMarksPinRune(styles)
+	wantPinIcon := styles.IconPinRune()
 
 	if r := cellRune(screen, 2, 1); r != ' ' {
 		t.Fatalf("cell 2 = %q, want leading space before job icon", r)
@@ -109,7 +110,7 @@ func TestDrawRowMarksSuffixTruncatesToMaxWidth(t *testing.T) {
 
 	m := RowMarks{Pinned: true, HasJob: true}
 	// Only 2 cells available: job fits, pin does not.
-	used := DrawRowMarksSuffix(screen, 2, 1, 2, m, bg, styles)
+	used := dlg.DrawRowMarksSuffix(screen, 2, 1, 2, m, bg, styles)
 	if used != 2 {
 		t.Fatalf("used = %d, want 2", used)
 	}
@@ -125,7 +126,7 @@ func TestDrawRowMarksSuffixMissingColorFollowsCursor(t *testing.T) {
 	for _, cursor := range []bool{false, true} {
 		screen := newSimScreen(t, 20, 3)
 		m := RowMarks{Missing: true, Cursor: cursor}
-		if used := DrawRowMarksSuffix(screen, 2, 1, RowMarksWidth(m), m, tcell.ColorBlack, styles); used != 2 {
+		if used := dlg.DrawRowMarksSuffix(screen, 2, 1, dlg.RowMarksWidth(m), m, tcell.ColorBlack, styles); used != 2 {
 			t.Fatalf("cursor=%v: used = %d, want 2", cursor, used)
 		}
 		if r := cellRune(screen, 3, 1); string(r) != styles.IconDialogMissing() {

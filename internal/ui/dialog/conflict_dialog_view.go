@@ -211,6 +211,6 @@ func conflictRulesView(st ConflictDialogState) dlg.Spec {
 			{Columns: [][]dlg.Item{append(ruleRows(conflictRuleTimeRows, ConflictRuleRows), sep)}},
 			{Columns: [][]dlg.Item{checks}},
 		},
-		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}},
+		Buttons: dlg.OKCancelButtons(),
 	}
 }

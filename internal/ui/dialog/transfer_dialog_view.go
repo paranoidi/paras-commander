@@ -42,9 +42,9 @@ func TransferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 	spec := dlg.Spec{
 		Width: transferDestinationFrameWidth(ctx.Layout, st, ctx.UserHomeDir, ctx.IconLead), Unclamped: true,
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
+			dlg.OKButton,
 			{ID: TransferAddPaused, Label: "Add paused", Mnemonic: 'p'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.CancelButton,
 		},
 	}
 	if st.Phase == TransferPhaseSelfCopyRename {
@@ -97,7 +97,7 @@ func TransferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 	return spec
 }
 
-// Apply folds an activation from dlg.HandleKey / dlg.Click into the state: the checkboxes toggle
+// Apply folds an activation from dlg.HandleKey into the state: the checkboxes toggle
 // (Dereference symlinks does nothing where it is greyed out). The inputs and buttons are the
 // caller's to handle.
 func (st *TransferDialogState) Apply(ev dlg.Event) {

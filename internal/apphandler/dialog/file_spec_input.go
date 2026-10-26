@@ -95,9 +95,13 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 	case d.DialogType == dialog.FileDialogMassRename && massRenamePickerPhaseOpen(d.MassRenamePhase):
 		return h.handleMassRenamePickerKey(event)
 	}
-	spec := h.FileDialogSpec()
+	var spec *dlg.Spec // built on first use: most chords return before the engine runs
 	apply := func() bool {
-		ev, ok := dlg.HandleKey(spec, &d.Focus, event)
+		if spec == nil {
+			s := h.FileDialogSpec()
+			spec = &s
+		}
+		ev, ok := dlg.HandleKey(*spec, &d.Focus, event)
 		if ok {
 			h.applyFileDialogEvent(ev, event)
 		}

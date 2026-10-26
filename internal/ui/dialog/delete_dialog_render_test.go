@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestFileDialogOuterTitleDanglingDirsDelete(t *testing.T) {
@@ -65,6 +66,7 @@ func TestDeleteDialogListViewportRowsCapsAt80Percent(t *testing.T) {
 		entries[i] = DeleteListEntry{Name: "file-" + strings.Repeat("x", 4) + ".txt", Type: localfs.EntryFile}
 	}
 	state := FileDialogState{
+		DialogType:    FileDialogDelete,
 		DeleteSummary: "30 files (1.2 GiB)",
 		DeleteEntries: entries,
 	}
@@ -75,12 +77,13 @@ func TestDeleteDialogListViewportRowsCapsAt80Percent(t *testing.T) {
 	if got != want {
 		t.Fatalf("viewport = %d, want %d", got, want)
 	}
-	height := fileDeleteDialogHeight(layoutH, state)
+	p, ok := dlg.Place(80, layoutH, FileDialogView(state, FileDialogViewContext{Layout: Layout{Width: 80, Height: layoutH}}))
+	if !ok {
+		t.Fatal("delete dialog does not fit")
+	}
+	height := p.Rect.Height
 	if height > maxH {
 		t.Fatalf("height = %d, exceeds 80%% max %d", height, maxH)
-	}
-	if height != 7+got {
-		t.Fatalf("height = %d, want %d", height, 7+got)
 	}
 }
 

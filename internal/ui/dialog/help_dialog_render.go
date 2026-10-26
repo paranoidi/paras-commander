@@ -51,17 +51,21 @@ func HelpDialogKeys() dlg.Spec {
 // DrawHelpDialog renders the centered help dialog with fuzzy shortcut search: the dlg frame, filter,
 // rules and Close button, then the entry rows painted into the reserved list region.
 func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, styles theme.Theme) {
-	metrics, ok := ComputeHelpDialogListMetrics(layout)
-	if !ok {
+	spec, listH, fits := HelpDialogView(state, layout, styles)
+	if !fits {
 		return
 	}
-	spec, _, _ := HelpDialogView(state, layout, styles)
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
-	rect := metrics.Rect
+	p, placed := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
+	if !placed {
+		return
+	}
+	metrics, ok := helpListMetrics(p, listH)
+	pane, found := p.Item(helpList)
+	if !ok || !found {
+		return
+	}
 	_, itemBg, _ := styles.DialogSurface.Decompose()
-	primaryCol := draw.DialogTextX(rect)
-	listTop := rect.Y + 2
-	listH := metrics.ListH
+	primaryCol := draw.DialogTextX(metrics.Rect)
 	filterFocused := state.Focus != HelpClose
 
 	// List rows start right after the separator — no column-title row. Rows are always grouped
@@ -69,7 +73,7 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	rowWidth := metrics.InputWidth
 	visualRows := BuildHelpVisualRows(state.Entries, state.Ranked)
 	for row := 0; row < listH; row++ {
-		y := listTop + 1 + row
+		y := pane.Rect.Y + row
 		visualIdx := state.ListScroll + row
 		baseStyle := styles.DialogText.Background(itemBg)
 		line := ""

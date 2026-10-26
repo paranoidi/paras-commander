@@ -1103,31 +1103,6 @@ func formatByteSizeListed(n int64) string {
 	return panellist.FormatByteSizeCompact(n, panellist.SizeCells)
 }
 
-// FormatByteSize renders a byte count with binary prefixes (B, KiB, MiB, GiB, TiB) for dialogs and labels.
-func FormatByteSize(n int64) string {
-	if n < 0 {
-		n = 0
-	}
-	const (
-		KiB = int64(1024)
-		MiB = KiB * 1024
-		GiB = MiB * 1024
-		TiB = GiB * 1024
-	)
-	switch {
-	case n < KiB:
-		return fmt.Sprintf("%d B", n)
-	case n < MiB:
-		return fmt.Sprintf("%.1f KiB", float64(n)/float64(KiB))
-	case n < GiB:
-		return fmt.Sprintf("%.1f MiB", float64(n)/float64(MiB))
-	case n < TiB:
-		return fmt.Sprintf("%.1f GiB", float64(n)/float64(GiB))
-	default:
-		return fmt.Sprintf("%.1f TiB", float64(n)/float64(TiB))
-	}
-}
-
 func formatListedPerm(entry localfs.Entry) string {
 	s := entry.Mode.String()
 	if len(s) > panelListPermCells {

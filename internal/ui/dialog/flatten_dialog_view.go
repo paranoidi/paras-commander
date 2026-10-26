@@ -28,13 +28,13 @@ func FlattenView(s FlattenDialogState) dlg.Spec {
 			}}},
 		},
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 }
 
-// Apply folds an activation from dlg.HandleKey / dlg.Click into the state: the checkboxes toggle.
+// Apply folds an activation from dlg.HandleKey into the state: the checkboxes toggle.
 // The destination, OK and Cancel are the caller's to handle.
 func (s *FlattenDialogState) Apply(ev dlg.Event) {
 	switch ev.ID {

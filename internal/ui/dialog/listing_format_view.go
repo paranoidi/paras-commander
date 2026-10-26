@@ -22,8 +22,8 @@ func ListingFormatView(s ListingFormatDialogState) dlg.Spec {
 		Title: "Listing format", Width: 44, MinWidth: 28, MinHeight: 7, PlainButtonKeys: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 }

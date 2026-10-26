@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
@@ -60,9 +61,9 @@ func pathPickerRowMarksWidth(items []PathPickerItem, rowMarks RowMarksFunc) int 
 			m = rowMarks(item.Path)
 			m.Missing = item.PathMissing
 		}
-		if w := RowMarksWidth(m); w > max {
+		if w := dlg.RowMarksWidth(m); w > max {
 			max = w
-			if max >= rowMarksMaxWidth {
+			if max >= dlg.RowMarksMaxWidth {
 				break
 			}
 		}

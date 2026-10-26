@@ -36,5 +36,5 @@ func EnsurePickerScroll(n int, selected, offset *int, listRows int) {
 		return
 	}
 	*selected = min(max(*selected, 0), n-1)
-	*offset = dlg.Item{Kind: dlg.KindList, Rows: make([]dlg.ListRow, n), Cursor: *selected, Offset: *offset, Height: listRows}.ViewOffset()
+	*offset = dlg.ListViewOffset(*selected, *offset, listRows, n, false)
 }

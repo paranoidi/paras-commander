@@ -27,7 +27,7 @@ func PulldownItemAt(layout Layout, model *Model, x, y int) (item int, inside boo
 	}
 	menus := menu.ActiveDefinitions(model.MenuDefinitions)
 	rect, ok := pulldownRect(layout, model.Menu, menus)
-	if !ok || x < rect.X || x >= rect.X+rect.Width || y < rect.Y || y >= rect.Y+rect.Height {
+	if !ok || !rect.Contains(x, y) {
 		return -1, false
 	}
 	row := y - rect.Y - 1

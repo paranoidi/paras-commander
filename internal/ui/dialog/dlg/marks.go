@@ -46,12 +46,6 @@ func RowMarksWidth(m RowMarks) int {
 	return n
 }
 
-// rowMarksPinRune returns styles.IconPinRune() for the single-rune-wide suffix slot,
-// mirroring panellist's pinIconRune.
-func rowMarksPinRune(styles theme.Theme) rune {
-	return styles.IconPinRune()
-}
-
 // DrawRowMarksSuffix blank-fills [x, x+maxWidth) to bg, then paints the job icon
 // (Theme.IconFilelistJob, styled via Theme.PanelJobMarkStyle) followed by the pin icon
 // (Theme.IconPin, styled via Theme.PanelRowMarkPinned) within maxWidth. Job-before-pin
@@ -70,7 +64,7 @@ func DrawRowMarksSuffix(screen tcell.Screen, x, y, maxWidth int, m RowMarks, bg 
 	}
 	if m.Pinned && used+2 <= maxWidth {
 		fg, _, _ := styles.PanelRowMarkPinned.Decompose()
-		primitive.Text(screen, x+used, y, 2, " "+string(rowMarksPinRune(styles)), tcell.StyleDefault.Foreground(fg).Background(bg))
+		primitive.Text(screen, x+used, y, 2, " "+string(styles.IconPinRune()), tcell.StyleDefault.Foreground(fg).Background(bg))
 		used += 2
 	}
 	if m.Missing && used+2 <= maxWidth {

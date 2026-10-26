@@ -42,7 +42,7 @@ func ElevateView(s ElevateDialogState) dlg.Spec {
 		Buttons: []dlg.Button{
 			{ID: ElevateRetry, Label: "Elevate", Mnemonic: 'E'},
 			{ID: ElevateSkip, Label: "Skip", Mnemonic: 'S'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.CancelButton,
 		},
 	}
 }

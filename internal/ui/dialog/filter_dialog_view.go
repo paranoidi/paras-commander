@@ -29,7 +29,7 @@ func (s *FilterDialogState) toggles() patternToggles {
 	}
 }
 
-// Apply folds an activation from dlg.HandleKey / dlg.Click into the state: a radio selects its
+// Apply folds an activation from dlg.HandleKey into the state: a radio selects its
 // pattern mode, a checkbox toggles. It reports whether anything changed (the caller then
 // recomputes the live preview). OK, Cancel and the pattern input are the caller's.
 func (s *FilterDialogState) Apply(ev dlg.Event) bool { return s.toggles().apply(ev.ID) }

@@ -120,7 +120,7 @@ func commandOutputButtons(running bool) []dlg.Button {
 			{ID: OutputCancel, Label: "Cancel", Mnemonic: 'C', Destructive: true},
 		}
 	}
-	return []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}}
+	return []dlg.Button{dlg.OKButton}
 }
 
 // CommandOutputDialogKeys is the spec for key handling alone: it carries the buttons but needs no
@@ -162,8 +162,7 @@ func DrawCommandOutputDialog(screen tcell.Screen, layout Layout, state CommandOu
 	if !ok {
 		return
 	}
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
-	p, placed := dlg.Place(layout.Width, layout.Height, spec)
+	p, placed := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 	if !placed {
 		return
 	}

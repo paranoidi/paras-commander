@@ -19,7 +19,7 @@ func auxListRowAt(rect Rect, scroll, n, x, y int) (int, bool) {
 		return 0, false
 	}
 	visibleRows := PanelListRows(rect)
-	row := y - (rect.Y + 2)
+	row := y - PanelListTop(rect)
 	if row < 0 || row >= visibleRows {
 		return 0, false
 	}

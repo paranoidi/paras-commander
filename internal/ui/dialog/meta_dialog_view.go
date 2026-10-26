@@ -1,13 +1,11 @@
 package dialog
 
 import (
-	"strconv"
-
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // MetaEntryID is the widget ID of the checkbox row for entry i.
-func MetaEntryID(i int) dlg.ID { return dlg.ID("entry:" + strconv.Itoa(i)) }
+func MetaEntryID(i int) dlg.ID { return dlg.IndexedID("entry:", i) }
 
 // MetaDialogView is the meta column picker's widget spec: one checkbox per meta entry above OK /
 // Cancel. Plain o / c press the buttons.
@@ -24,8 +22,8 @@ func MetaDialogView(s MetaDialogState) dlg.Spec {
 		Title: "Meta", Width: 56, MinWidth: 28, MinHeight: 5, PlainButtonKeys: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 }

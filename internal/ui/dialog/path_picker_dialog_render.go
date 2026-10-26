@@ -2,10 +2,10 @@ package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -37,7 +37,8 @@ func PathPickerListRows(layoutHeight int) int {
 // pathPickerWidth is the dialog width on a layout of layoutWidth columns.
 func pathPickerWidth(layoutWidth int) int { return min(78, layoutWidth-4) }
 
-// pathPickerList is the item list: every ranked item as one pre-fitted row of aligned source,
+// pathPickerList is the item list (windowed: only the visible rows are built): each ranked item as
+// one pre-fitted row of aligned source,
 // name and path columns (the grid is computed over all items, so it stays put while the filter
 // changes), its fuzzy highlights mapped onto the columns, the missing-path variant and the
 // pinned / job marks rowMarks resolves.
@@ -47,8 +48,11 @@ func pathPickerList(state PathPickerState, listRows, rowWidth int, rowMarks RowM
 	list := dlg.Item{
 		ID: PathPickerList, Kind: dlg.KindList, Driven: true, Fit: dlg.FitNone, Scrollbar: true,
 		MarksWidth: marksW, Cursor: state.Selected, Offset: state.ListScroll, Height: listRows,
+		RowCount: len(state.Ranked),
 	}
-	for _, ent := range state.Ranked {
+	from, to := dlg.ListWindow(state.Selected, state.ListScroll, listRows, len(state.Ranked))
+	list.RowsFrom = from
+	for _, ent := range state.Ranked[from:to] {
 		var row dlg.ListRow
 		if ent >= 0 && ent < len(state.Items) {
 			item := state.Items[ent]
@@ -72,13 +76,7 @@ func pathPickerList(state PathPickerState, listRows, rowWidth int, rowMarks RowM
 
 // EnsurePathPickerListScroll keeps Selected in range and visible in the list of height listRows.
 func EnsurePathPickerListScroll(state *PathPickerState, listRows int) {
-	n := len(state.Ranked)
-	if n == 0 || listRows <= 0 {
-		state.ListScroll = 0
-		return
-	}
-	state.Selected = min(max(state.Selected, 0), n-1)
-	state.ListScroll = dlg.Item{Kind: dlg.KindList, Rows: make([]dlg.ListRow, n), Cursor: state.Selected, Offset: state.ListScroll, Height: listRows}.ViewOffset()
+	EnsurePickerScroll(len(state.Ranked), &state.Selected, &state.ListScroll, listRows)
 }
 
 // PathPickerView describes the path picker: a filter input (with filesystem completion drawn by
@@ -97,7 +95,7 @@ func PathPickerView(state PathPickerState, layout Layout, styles theme.Theme, sc
 		CompletionSuffix: state.Completion.GhostSuffix(state.Query),
 		Invalid:          state.QueryPathInvalid && !state.QueryPathCheckPending,
 	}
-	buttons := []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}}
+	buttons := dlg.OKCancelButtons()
 	if state.Purpose == PathPickerPurposeNavigate {
 		buttons = buttons[1:]
 	}
@@ -113,13 +111,12 @@ func PathPickerView(state PathPickerState, layout Layout, styles theme.Theme, sc
 
 func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerState, styles theme.Theme, scrollbarStyle uiscrollbar.Style, rowMarks RowMarksFunc) {
 	spec := PathPickerView(state, layout, styles, scrollbarStyle, rowMarks)
-	p, ok := dlg.Place(layout.Width, layout.Height, spec)
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 	if !ok {
 		return
 	}
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 	// The completion dropdown is an overlay anchored to the filter input, painted over the list.
 	if in, ok := p.Item(PathPickerFilter); ok {
-		drawPathCompletionDropdown(screen, in.Rect.X+runewidth.StringWidth(styles.IconSearchIcon())+1, in.Rect.Y+1, state.QueryScroll, state.Completion, scrollbarStyle, styles)
+		drawPathCompletionDropdown(screen, in.Rect.X+draw.LeadingIconCols(styles.IconSearchIcon()), in.Rect.Y+1, state.QueryScroll, state.Completion, scrollbarStyle, styles)
 	}
 }

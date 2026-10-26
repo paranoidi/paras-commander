@@ -84,8 +84,8 @@ func PreviewSettingsDialogView(s PreviewSettingsDialogState, markerWidth int) dl
 			}}},
 		},
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 }

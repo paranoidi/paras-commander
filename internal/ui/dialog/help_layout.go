@@ -9,9 +9,6 @@ import (
 // HelpDialogChromeRows is the number of fixed (non-list) rows in the help dialog: both
 // borders, the filter input, separator-before-list, separator-after-list, and the button
 // row. The single source of truth for total-height/list-height math shared by
-// HelpDialogChromeRows is the number of fixed (non-list) rows in the help dialog: both
-// borders, the filter input, separator-before-list, separator-after-list, and the button
-// row. The single source of truth for total-height/list-height math shared by
 // ComputeHelpDialogListMetrics and App.helpListRows.
 const HelpDialogChromeRows = 6
 
@@ -50,6 +47,11 @@ func ComputeHelpDialogListMetrics(layout Layout) (m HelpDialogListMetrics, ok bo
 	if !placed {
 		return m, false
 	}
+	return helpListMetrics(p, listH)
+}
+
+// helpListMetrics is the list geometry of the help dialog placed as p with listH list rows.
+func helpListMetrics(p dlg.Placement, listH int) (m HelpDialogListMetrics, ok bool) {
 	inputWidth := draw.DialogContentWidth(p.Rect)
 	if inputWidth < 10 {
 		return m, false

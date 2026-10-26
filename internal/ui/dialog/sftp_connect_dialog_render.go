@@ -48,13 +48,7 @@ func sftpHostList(state SFTPConnectDialogState, listRows int) dlg.Item {
 
 // EnsureSFTPConnectListScroll keeps Selected in range and visible in the host list.
 func EnsureSFTPConnectListScroll(state *SFTPConnectDialogState, listRows int) {
-	n := len(state.Ranked)
-	if n == 0 || listRows <= 0 {
-		state.ListScroll = 0
-		return
-	}
-	state.Selected = min(max(state.Selected, 0), n-1)
-	state.ListScroll = sftpHostList(*state, listRows).ViewOffset()
+	EnsurePickerScroll(len(state.Ranked), &state.Selected, &state.ListScroll, listRows)
 }
 
 // SFTPConnectView describes the SFTP dialog: a filter input that steers the host list below it,
@@ -74,7 +68,7 @@ func SFTPConnectView(state SFTPConnectDialogState, layout Layout, styles theme.T
 				fileFieldInput(SFTPLocation, state.Location, false),
 			}}},
 		},
-		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}},
+		Buttons: dlg.OKCancelButtons(),
 	}
 }
 

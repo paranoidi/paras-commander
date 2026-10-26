@@ -24,14 +24,14 @@ func DedupProgressView(snap comparepkg.DedupSnapshot, userHomeDir string, now ti
 		label(primitive.PathWithHomeTilde(snap.Root.String(), userHomeDir), dlg.FitPath, false),
 		{Kind: dlg.KindSeparator},
 	}
-	buttons := []dlg.Button{{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}}
+	buttons := []dlg.Button{dlg.CancelButton}
 	switch snap.Phase {
 	case comparepkg.DedupWalking:
 		items = append(items,
 			label("Walking directories"+string(primitive.Ellipsis)+dedupWalkFilesSuffix(snap.Walked), dlg.FitPath, false), blank, blank)
 	case comparepkg.DedupAwaitConfirm:
 		items = append(items, label(formatDedupByteSize(snap.HashBytesTotal)+" to hash. Continue?", dlg.FitRight, false), blank, blank)
-		buttons = []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, buttons[0]}
+		buttons = []dlg.Button{dlg.OKButton, buttons[0]}
 	case comparepkg.DedupHashing:
 		current := snap.Current
 		if current == "" {

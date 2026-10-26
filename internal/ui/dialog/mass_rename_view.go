@@ -106,9 +106,9 @@ func massRenameView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 	spec := dlg.Spec{
 		Title: fileDialogOuterTitle(st), Width: fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), Unclamped: true, MarkerWidth: markerW,
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
+			dlg.OKButton,
 			{ID: MassRenameApply, Label: "Apply", Mnemonic: 'A'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.CancelButton,
 		},
 	}
 	cell := func(id dlg.ID, kind dlg.Kind, label string, mnemonic rune, on bool, col int) dlg.Item {

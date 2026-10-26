@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 const (
@@ -155,7 +156,7 @@ func drawCompareView(
 			if data.RowMarks != nil {
 				leftMarks = data.RowMarks(entryPrimaryAbs(snap, entry))
 			}
-			leftMarksW := dialog.RowMarksWidth(leftMarks)
+			leftMarksW := dlg.RowMarksWidth(leftMarks)
 			leftFitW := leftPathW - leftMarksW
 			if leftFitW < 1 {
 				leftFitW = 1
@@ -164,7 +165,7 @@ func drawCompareView(
 			primitive.Text(screen, contentX, lineY, leftPathW, leftText, leftStyle)
 			if leftMarksW > 0 {
 				_, leftBG, _ := leftStyle.Decompose()
-				dialog.DrawRowMarksSuffix(screen, contentX+runewidth.StringWidth(leftText), lineY, leftMarksW, leftMarks, leftBG, styles)
+				dlg.DrawRowMarksSuffix(screen, contentX+runewidth.StringWidth(leftText), lineY, leftMarksW, leftMarks, leftBG, styles)
 			}
 		}
 		primitive.Text(screen, contentX+leftPathW, lineY, comparePathGapCol, "", leftBase)
@@ -182,7 +183,7 @@ func drawCompareView(
 			if data.RowMarks != nil {
 				rightMarks = data.RowMarks(entrySecondaryAbs(snap, entry))
 			}
-			rightMarksW := dialog.RowMarksWidth(rightMarks)
+			rightMarksW := dlg.RowMarksWidth(rightMarks)
 			rightFitW := pathW - rightMarksW
 			if rightFitW < 1 {
 				rightFitW = 1
@@ -191,7 +192,7 @@ func drawCompareView(
 			primitive.Text(screen, rightX, lineY, pathW+1, rightText, rightStyle)
 			if rightMarksW > 0 {
 				_, rightBG, _ := rightStyle.Decompose()
-				dialog.DrawRowMarksSuffix(screen, rightX+runewidth.StringWidth(rightText), lineY, rightMarksW, rightMarks, rightBG, styles)
+				dlg.DrawRowMarksSuffix(screen, rightX+runewidth.StringWidth(rightText), lineY, rightMarksW, rightMarks, rightBG, styles)
 			}
 		}
 	}

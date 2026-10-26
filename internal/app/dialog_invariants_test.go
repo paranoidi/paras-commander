@@ -30,13 +30,13 @@ func checkDialogInvariantsOnce(t *testing.T, fixture string, app *App) {
 func checkDialogInvariants(t *testing.T, app *App) {
 	t.Helper()
 	app.render()
-	dm, ok := app.activeDialogMouse()
+	w, h := app.screen.Size()
+	dm, ok := app.activeDialogMouse(app.layoutForTerminalSize(w, h))
 	if !ok {
 		t.Errorf("invariant: input mode %v has no activeDialogMouse entry", app.inputMode())
 		return
 	}
 	spec := dm.spec
-	w, h := app.screen.Size()
 	p, placed := dlg.Place(w, h, spec)
 	if !placed {
 		return // too small to draw: nothing on screen to check

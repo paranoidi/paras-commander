@@ -74,36 +74,35 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	if state.ShowSearchSelectionsOption {
 		col = append(col, dlg.Item{ID: FindSelections, Kind: dlg.KindCheckbox, Label: "Search only from selected directories", Mnemonic: 'S', On: state.SearchOnlySelections})
 	}
+	from, to := dlg.ListWindow(state.Selected, state.ListScroll, listH, len(state.Ranked))
 	col = append(col,
 		dlg.Item{Kind: dlg.KindSeparator},
 		dlg.Item{
 			ID: FindList, Kind: dlg.KindList, Driven: true, Height: listH, Fit: dlg.FitPath, MarksAfterText: true, Scrollbar: true,
-			Rows: findListRows(state, ctx), Cursor: state.Selected, Offset: state.ListScroll,
+			RowCount: len(state.Ranked), Rows: findListRows(state, ctx, from, to), RowsFrom: from,
+			Cursor: state.Selected, Offset: state.ListScroll,
 		},
 	)
 	return dlg.Spec{
 		Title: findDialogTitle(*state, styles), Width: findDialogPreferredWidth,
 		MinWidth: findDialogMinWidth, MinHeight: findDialogBaseHeight(optionRows) + findDialogMinListRows,
 		Groups:          []dlg.Group{{Columns: [][]dlg.Item{col}}},
-		Buttons:         findDialogButtons(),
+		Buttons:         dlg.OKCancelButtons(),
 		ButtonsLabel:    ctx.SelectionLabel,
 		PlainButtonKeys: true, ScrollbarStyle: ctx.ScrollbarStyle,
 	}
 }
 
-func findDialogButtons() []dlg.Button {
-	return []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}}
-}
-
-// findListRows turns the ranked results into list rows: the display line (indexing may show a
-// line before its entry lands), match ranges, marked state and row marks.
-func findListRows(state *FindDialogState, ctx FindViewContext) []dlg.ListRow {
-	rows := make([]dlg.ListRow, 0, len(state.Ranked))
+// findListRows turns ranked results [from, to) into list rows: the display line (indexing may
+// show a line before its entry lands), match ranges, marked state and row marks.
+func findListRows(state *FindDialogState, ctx FindViewContext, from, to int) []dlg.ListRow {
+	rows := make([]dlg.ListRow, 0, to-from)
 	icon := ""
 	if ctx.IconLead > 0 {
 		icon = strings.Repeat(findListIconPad, ctx.IconLead-1)
 	}
-	for i, entIdx := range state.Ranked {
+	for i := from; i < to; i++ {
+		entIdx := state.Ranked[i]
 		row := dlg.ListRow{Icon: icon}
 		var ranges []search.Range
 		if ent, ok := state.FindEntryAt(entIdx); ok {

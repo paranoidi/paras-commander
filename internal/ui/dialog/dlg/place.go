@@ -315,7 +315,7 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 					p.Items = append(p.Items, PlacedItem{
 						ID: it.ID, Kind: KindList,
 						Rect:   Rect{X: x + 1, Y: y + ri, Width: max(right-x-2, 0), Height: it.span()},
-						Offset: it.ViewOffset(), Rows: len(it.Rows),
+						Offset: it.ViewOffset(), Rows: it.rowCount(),
 					})
 					continue
 				case KindSeparator:
@@ -374,13 +374,14 @@ func MarkerWidth(styles theme.Theme) int {
 }
 
 // Draw paints spec with focus on the widget named by focus (an empty or unknown ID focuses the
-// first widget).
-func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles theme.Theme) {
-	p, ok := Place(screenW, screenH, spec)
+// first widget). It returns the placement it drew, for callers that paint overlays on its rects;
+// ok is false when the dialog does not fit and nothing was drawn.
+func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles theme.Theme) (p Placement, ok bool) {
+	p, ok = Place(screenW, screenH, spec)
 	if !ok {
-		return
+		return p, false
 	}
-	focus = resolve(spec, focus)
+	focus = Focused(spec, focus)
 	borderStyle := draw.DrawDialogFrame(screen, p.Rect, spec.Title, styles)
 	_, surface, _ := styles.DialogSurface.Decompose()
 	bottom := p.ContentBottom         // content stops above the button separator (or the bottom border)
@@ -434,7 +435,7 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 		}
 	}
 	if len(spec.Buttons) == 0 {
-		return
+		return p, true
 	}
 	if spec.ButtonsLabel == "" {
 		draw.DrawDialogHSeparator(screen, p.Rect, p.SepY, borderStyle)
@@ -450,6 +451,7 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 		}
 		draw.DrawDialogButtonRowCentered(screen, p.Rect, p.ButtonY+ri, specs, styles)
 	}
+	return p, true
 }
 
 func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.Theme) {
@@ -468,7 +470,7 @@ func HitTest(p Placement, x, y int) (ID, bool) {
 		if it.Kind == KindLabel || it.Kind == KindSeparator || it.Kind == KindSpacer || it.Kind == KindBar || it.Disabled {
 			continue
 		}
-		if x >= r.X && x < r.X+r.Width && y >= r.Y && y < r.Y+r.Height {
+		if r.Contains(x, y) {
 			if it.Kind == KindList && it.Offset+(y-r.Y) >= it.Rows {
 				continue // below the last row
 			}
@@ -498,7 +500,7 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 	for row := 0; row < r.Height; row++ {
 		y := r.Y + row
 		idx := pi.Offset + row
-		if idx >= len(it.Rows) {
+		if idx >= it.rowCount() {
 			if !it.Markers { // option-row lists leave unused rows as bare surface
 				w := r.Width
 				if it.MarksWidth > 0 && !it.MarksAfterText { // keep the reserved marks column painted
@@ -511,7 +513,7 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 			}
 			continue
 		}
-		rw := it.Rows[idx]
+		rw := it.row(idx)
 		isCursor := focused && idx == it.Cursor
 		if it.Markers {
 			style := styles.DialogOptionRowStyle(isCursor, rw.Marked)
@@ -527,7 +529,7 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 		if sbStyle == "" {
 			sbStyle = uiscrollbar.StyleThumb
 		}
-		draw.DrawDialogListScrollbar(screen, dialogRect, r.Y, r.Height, len(it.Rows), pi.Offset, sbStyle, borderStyle, styles)
+		draw.DrawDialogListScrollbar(screen, dialogRect, r.Y, r.Height, it.rowCount(), pi.Offset, sbStyle, borderStyle, styles)
 	}
 }
 

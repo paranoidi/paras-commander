@@ -102,12 +102,3 @@ func ComputeDeleteDialogLayoutMinWidth(state FileDialogState, deleteListIconLead
 	}
 	return minWidth
 }
-
-func fileDeleteDialogHeight(layoutHeight int, state FileDialogState) int {
-	listVP := DeleteDialogListViewportRows(layoutHeight, state)
-	height := deleteDialogChromeRows(state) + listVP
-	if height < 8 {
-		height = 8
-	}
-	return height
-}

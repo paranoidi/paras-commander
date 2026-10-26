@@ -9,9 +9,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -718,32 +718,11 @@ func (a *App) confirmGroupSelectFromInput() {
 // the mnemonics; the pattern input's text editing runs when the engine declines a key.
 func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	gs := &a.model.GroupSelect
-	ev, ok := dlg.HandleKey(a.groupSelectView(), &gs.Focus, event)
-	switch {
-	case !ok:
-		a.editGroupSelectPattern(event)
-	case ev.ID == dlg.OK || ev.ID == dialog.PatternInput:
-		a.confirmGroupSelectFromInput()
-	case ev.ID == dlg.Cancel:
-		a.closeGroupSelect()
-	case ev.ID == "":
-	case event.Key() == tcell.KeyEnter && !dialog.PatternIsRadio(ev.ID):
-		a.confirmGroupSelectFromInput() // Enter on a checkbox confirms; Space toggles it
-	default:
-		gs.Apply(ev)
-	}
-}
-
-// editGroupSelectPattern feeds a key the engine declined to the pattern input's editor. Alt+letter
-// keys that are mnemonics of the twin dialogs never edit, whether or not this dialog has them.
-func (a *App) editGroupSelectPattern(event *tcell.EventKey) {
-	gs := &a.model.GroupSelect
-	if gs.Focus != dialog.PatternInput {
-		return
-	}
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune()) {
-		return
-	}
-	edit := scrollquery.NewEdit(&gs.Text, &gs.TextCursor, &gs.TextScroll, a.groupSelectQueryWidth(), nil)
-	a.handleScrollingQueryKey(event, true, edit)
+	dialogctrl.HandlePatternDialogKey(dialogctrl.PatternKeys{
+		Spec: a.groupSelectView(), Focus: &gs.Focus,
+		Text: &gs.Text, Cursor: &gs.TextCursor, Scroll: &gs.TextScroll, QueryWidth: a.groupSelectQueryWidth,
+		Keys:    a.keys.DialogInput,
+		Confirm: a.confirmGroupSelectFromInput, Cancel: a.closeGroupSelect,
+		Apply: func(ev dlg.Event) { gs.Apply(ev) },
+	}, event)
 }

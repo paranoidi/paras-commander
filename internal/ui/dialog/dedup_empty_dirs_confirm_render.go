@@ -36,7 +36,7 @@ func dedupEmptyDirsConfirmWidth(state DedupEmptyDirsConfirmState, msg string, ic
 
 // dedupEmptyDirsRowID is the label ID of directory row i, so the caller can find the row's rect
 // to paint its icon.
-func dedupEmptyDirsRowID(i int) dlg.ID { return dlg.ID(fmt.Sprintf("dedup-dir-%d", i)) }
+func dedupEmptyDirsRowID(i int) dlg.ID { return dlg.IndexedID("dedup-dir-", i) }
 
 // DedupEmptyDirsConfirmView describes the confirmation: the question, the directories (capped at
 // dedupEmptyDirsConfirmMaxListRows rows, a trailing "(+N more)" line replacing the last one) and
@@ -69,7 +69,7 @@ func DedupEmptyDirsConfirmView(state DedupEmptyDirsConfirmState, iconLead int) d
 		Buttons: []dlg.Button{
 			{ID: DedupEmptyDirsYes, Label: "Yes", Mnemonic: 'Y'},
 			{ID: DedupEmptyDirsNo, Label: "No", Mnemonic: 'N'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.CancelButton,
 		},
 	}
 }
@@ -80,12 +80,8 @@ func DrawDedupEmptyDirsConfirmDialog(screen tcell.Screen, layout Layout, state D
 		iconLead = ctx.IconLead
 	}
 	spec := DedupEmptyDirsConfirmView(state, iconLead)
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
-	if iconLead == 0 {
-		return
-	}
-	p, ok := dlg.Place(layout.Width, layout.Height, spec)
-	if !ok {
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
+	if !ok || iconLead == 0 {
 		return
 	}
 	// Icons are the overlay: each sits in the cells the row's Indent left free.

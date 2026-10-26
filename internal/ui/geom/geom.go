@@ -10,6 +10,11 @@ type Rect struct {
 	Height int
 }
 
+// Contains reports whether the cell (x, y) lies inside r.
+func (r Rect) Contains(x, y int) bool {
+	return x >= r.X && x < r.X+r.Width && y >= r.Y && y < r.Y+r.Height
+}
+
 // SplitOrientation selects how the twin browser panes are arranged.
 type SplitOrientation int
 

@@ -1,6 +1,6 @@
 // Package dlg is a small declarative dialog engine. A dialog is described once as a plain-data
 // Spec (widgets, Tab groups, mnemonics, buttons); Place computes the geometry in a single pass,
-// and Draw, HitTest, HandleKey and Click all derive from that Spec and Placement, so painting,
+// and Draw, HandleKey and TargetAt (mouse hits) all derive from that Spec and Placement, so painting,
 // focus order, mnemonics and mouse hitboxes cannot drift apart. State stays with the caller
 // (View(state) -> Spec); the engine reports activations as Events instead of calling back.
 //
@@ -8,6 +8,9 @@
 package dlg
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
@@ -125,6 +128,10 @@ type Item struct {
 	// field) and Offset the first visible row; both stay in the caller's state.
 	Rows   []ListRow
 	Offset int
+	// RowCount > 0 makes the list windowed for long lists: it has RowCount rows, of which Rows
+	// holds only rows [RowsFrom, RowsFrom+len(Rows)), at least the ones ListWindow names. Rows
+	// outside that range are never drawn, so the caller builds only the visible ones.
+	RowCount, RowsFrom int
 	// Height is the number of visible rows of a list, or the rows a KindSpacer reserves.
 	Height int
 	// Wrap makes Up/Down/PgUp/PgDn wrap around the ends instead of stopping at them.
@@ -237,7 +244,7 @@ func (it Item) Focusable() bool {
 		}
 		return false
 	case KindList:
-		return len(it.Rows) > 0 && !it.Driven // an empty list has nothing to select
+		return it.rowCount() > 0 && !it.Driven // an empty list has nothing to select
 	}
 	return true
 }
@@ -270,6 +277,28 @@ type Button struct {
 	// Up/Down jump to the visually nearest button of the adjacent row.
 	NewRow bool
 }
+
+// IndexedID names widget i of a numbered family: prefix followed by i.
+func IndexedID(prefix string, i int) ID { return ID(prefix + strconv.Itoa(i)) }
+
+// IDIndex is the inverse of IndexedID: the i that IndexedID(prefix, i) turns into id.
+func IDIndex(id ID, prefix string) (int, bool) {
+	rest, ok := strings.CutPrefix(string(id), prefix)
+	if !ok {
+		return 0, false
+	}
+	i, err := strconv.Atoi(rest)
+	return i, err == nil && IndexedID(prefix, i) == id
+}
+
+// OKButton and CancelButton are the standard OK / Cancel pair; OKCancelButtons is the strip of both.
+var (
+	OKButton     = Button{ID: OK, Label: "OK", Mnemonic: 'O'}
+	CancelButton = Button{ID: Cancel, Label: "Cancel", Mnemonic: 'C'}
+)
+
+// OKCancelButtons returns a fresh OK / Cancel strip.
+func OKCancelButtons() []Button { return []Button{OKButton, CancelButton} }
 
 // Spec describes a whole dialog.
 //
@@ -330,15 +359,11 @@ type Placement struct {
 
 // Event reports an activation. A zero ID means the key was handled but only moved focus.
 //
-// Col is set only by Click on a KindInput: the clicked cell's offset from the input's left edge
-// (so the caller can place its cursor; an input with a LeadingIcon starts its text after the icon).
-//
 // List events carry the list's ID. EventActivate (the zero Kind) reports the activated row in
 // Index. EventListMove reports the list's new Cursor in Index and the new first visible row in
 // Offset; the caller stores both in its state.
 type Event struct {
 	ID     ID
-	Col    int
 	Kind   EventKind
 	Index  int
 	Offset int

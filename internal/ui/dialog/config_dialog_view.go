@@ -1,8 +1,6 @@
 package dialog
 
 import (
-	"fmt"
-
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -31,26 +29,20 @@ const (
 )
 
 // ConfigScrollModeID names the scroll-mode radio of row i of panel.ScrollModeDialogRadios.
-func ConfigScrollModeID(i int) dlg.ID { return dlg.ID(fmt.Sprintf("%s%d", configScrollModePrefix, i)) }
+func ConfigScrollModeID(i int) dlg.ID { return dlg.IndexedID(configScrollModePrefix, i) }
 
 // ConfigScrollbarID names the scrollbar-style radio of row i of uiscrollbar.DialogRadios.
-func ConfigScrollbarID(i int) dlg.ID { return dlg.ID(fmt.Sprintf("%s%d", configScrollbarPrefix, i)) }
+func ConfigScrollbarID(i int) dlg.ID { return dlg.IndexedID(configScrollbarPrefix, i) }
 
 // ConfigListingID names the listing-format radio of row i of panel.ListFormatDialogRadios.
-func ConfigListingID(i int) dlg.ID { return dlg.ID(fmt.Sprintf("%s%d", configListingPrefix, i)) }
+func ConfigListingID(i int) dlg.ID { return dlg.IndexedID(configListingPrefix, i) }
 
 // ConfigSplitID names carousel split input i (0 parent, 1 center, 2 child).
-func ConfigSplitID(i int) dlg.ID { return dlg.ID(fmt.Sprintf("%s%d", configSplitPrefix, i)) }
-
-func configIDIndex(id dlg.ID, prefix string) (int, bool) {
-	var i int
-	n, _ := fmt.Sscanf(string(id), prefix+"%d", &i)
-	return i, n == 1 && id == dlg.ID(fmt.Sprintf("%s%d", prefix, i))
-}
+func ConfigSplitID(i int) dlg.ID { return dlg.IndexedID(configSplitPrefix, i) }
 
 // ConfigSplitIndex is the inverse of ConfigSplitID: the split input a focus ID names.
 func ConfigSplitIndex(id dlg.ID) (int, bool) {
-	i, ok := configIDIndex(id, configSplitPrefix)
+	i, ok := dlg.IDIndex(id, configSplitPrefix)
 	return i, ok && i >= 0 && i < len(ConfigDialogState{}.Split)
 }
 
@@ -167,7 +159,7 @@ func configDialogSpec(st ConfigDialogState, listingRow bool) dlg.Spec {
 			{Columns: [][]dlg.Item{mouse}},
 			{Columns: [][]dlg.Item{split}},
 		},
-		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}},
+		Buttons: dlg.OKCancelButtons(),
 	}
 }
 
@@ -184,11 +176,11 @@ func (st *ConfigDialogState) Apply(ev dlg.Event) {
 	case ConfigMouse:
 		st.Mouse = !st.Mouse
 	default:
-		if i, ok := configIDIndex(ev.ID, configScrollModePrefix); ok && i < len(panel.ScrollModeDialogRadios()) {
+		if i, ok := dlg.IDIndex(ev.ID, configScrollModePrefix); ok && i < len(panel.ScrollModeDialogRadios()) {
 			st.ScrollMode = panel.ScrollModeDialogRadios()[i].Mode
-		} else if i, ok := configIDIndex(ev.ID, configScrollbarPrefix); ok && i < len(uiscrollbar.DialogRadios()) {
+		} else if i, ok := dlg.IDIndex(ev.ID, configScrollbarPrefix); ok && i < len(uiscrollbar.DialogRadios()) {
 			st.PanelScrollbar = uiscrollbar.DialogRadios()[i].Style
-		} else if i, ok := configIDIndex(ev.ID, configListingPrefix); ok && i < len(panel.ListFormatDialogRadios()) {
+		} else if i, ok := dlg.IDIndex(ev.ID, configListingPrefix); ok && i < len(panel.ListFormatDialogRadios()) {
 			st.ListFormat = panel.ListFormatDialogRadios()[i].Format
 		}
 	}

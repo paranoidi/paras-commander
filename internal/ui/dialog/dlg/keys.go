@@ -211,10 +211,7 @@ func segments(spec Spec) []ID {
 
 // Focused is the widget that holds focus when the caller's focus is focus: focus itself when it
 // names a focusable widget, else the first one (an empty or stale ID).
-func Focused(spec Spec, focus ID) ID { return resolve(spec, focus) }
-
-// resolve maps an empty or unknown focus to the first focusable.
-func resolve(spec Spec, focus ID) ID {
+func Focused(spec Spec, focus ID) ID {
 	if _, ok := find(spec, focus); ok {
 		return focus
 	}
@@ -320,7 +317,7 @@ func adjacentButton(spec Spec, b, d int) (ID, bool) {
 // empty list those keys move focus like for any input. Enter on the input still returns
 // Event{ID: input}; the caller reads the list cursor from its own state.
 func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
-	*focus = resolve(spec, *focus)
+	*focus = Focused(spec, *focus)
 	cur, ok := find(spec, *focus)
 	if !ok {
 		return Event{}, false
@@ -349,12 +346,11 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 	case tcell.KeyEnter:
 		return activation(spec, *focus), true
 	case tcell.KeyTab, tcell.KeyBacktab:
-		segs := segments(spec)
+		segs, index := segmentTable(spec)
 		step := 1
 		if ev.Key() == tcell.KeyBacktab {
 			step = -1
 		}
-		_, index := segmentTable(spec)
 		i := index[*focus]
 		return move(tabTarget(spec, segs[(i+step+len(segs))%len(segs)]), true)
 	case tcell.KeyDown:

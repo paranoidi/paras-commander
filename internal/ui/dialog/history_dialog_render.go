@@ -48,9 +48,11 @@ func historyList(state HistoryDialogState, listRows int, styles theme.Theme, row
 	list := dlg.Item{
 		ID: HistoryList, Kind: dlg.KindList, Driven: true, Fit: dlg.FitMiddle, Scrollbar: true,
 		IconOptionFG: true, MarksAfterText: true,
-		Cursor: state.Selected, Offset: state.ListScroll, Height: listRows,
+		Cursor: state.Selected, Offset: state.ListScroll, Height: listRows, RowCount: len(state.Ranked),
 	}
-	for _, ent := range state.Ranked {
+	from, to := dlg.ListWindow(state.Selected, state.ListScroll, listRows, len(state.Ranked))
+	list.RowsFrom = from
+	for _, ent := range state.Ranked[from:to] {
 		var row dlg.ListRow
 		if ent >= 0 && ent < len(state.DisplayLines) {
 			row.Text = state.DisplayLines[ent]
@@ -77,13 +79,7 @@ func historyList(state HistoryDialogState, listRows int, styles theme.Theme, row
 
 // EnsureHistoryListScroll keeps Selected in range and visible in the path list of height listRows.
 func EnsureHistoryListScroll(state *HistoryDialogState, listRows int) {
-	n := len(state.Ranked)
-	if n == 0 || listRows <= 0 {
-		state.ListScroll = 0
-		return
-	}
-	state.Selected = min(max(state.Selected, 0), n-1)
-	state.ListScroll = dlg.Item{Kind: dlg.KindList, Rows: make([]dlg.ListRow, n), Cursor: state.Selected, Offset: state.ListScroll, Height: listRows}.ViewOffset()
+	EnsurePickerScroll(len(state.Ranked), &state.Selected, &state.ListScroll, listRows)
 }
 
 // HistoryDialogView describes the History dialog: a filter input that steers the path list
@@ -109,7 +105,7 @@ func HistoryDialogView(state HistoryDialogState, layout Layout, styles theme.The
 		Title: title, Width: min(78, layout.Width-4), MinWidth: historyMinWidth, MinHeight: chrome + listRows,
 		PlainButtonKeys: true, ScrollbarStyle: scrollbarStyle,
 		Groups:  []dlg.Group{{Columns: [][]dlg.Item{items}}},
-		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}},
+		Buttons: dlg.OKCancelButtons(),
 	}
 }
 

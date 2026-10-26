@@ -24,7 +24,7 @@ func StashRestoreView(StashRestoreDialogState) dlg.Spec {
 			{ID: StashMerge, Label: "Merge", Mnemonic: 'M'},
 			{ID: StashDropStash, Label: "Drop stash", Mnemonic: 'D'},
 			{ID: StashDropAll, Label: "Drop all", Mnemonic: 'A'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.CancelButton,
 		},
 	}
 }

@@ -14,8 +14,8 @@ import (
 type mouseState struct {
 	// enabled mirrors whether mouse reporting is currently on at the screen.
 	enabled bool
-	// buttons is the button mask of the previous event; tcell repeats the held buttons on every
-	// drag report, so a press is only the bits that were not set before.
+	// buttons is the button mask of the previous event; a release report carries the buttons still
+	// held, so a press is only the bits that were not set before.
 	buttons tcell.ButtonMask
 	// lastTarget/lastRow/lastAt identify the previous left press for double-click detection.
 	lastTarget string
@@ -40,7 +40,7 @@ func (m *mouseState) doubleClick(target string, row int) bool {
 func (a *App) applyMouseConfig() {
 	switch {
 	case a.config.UI.Mouse && !a.mouse.enabled:
-		a.screen.EnableMouse(tcell.MouseButtonEvents | tcell.MouseDragEvents)
+		a.screen.EnableMouse(tcell.MouseButtonEvents)
 		a.mouse.enabled = true
 	case !a.config.UI.Mouse && a.mouse.enabled:
 		a.screen.DisableMouse()
@@ -59,27 +59,33 @@ func (a *App) releaseMouse() (restore func()) {
 	a.mouse.buttons = 0
 	return func() {
 		if a.config.UI.Mouse {
-			a.screen.EnableMouse(tcell.MouseButtonEvents | tcell.MouseDragEvents)
+			a.screen.EnableMouse(tcell.MouseButtonEvents)
 		} else {
 			a.mouse.enabled = false
 		}
 	}
 }
 
+// wheelDelta is the signed row step of a wheel report: rows down, -rows up, 0 for no wheel.
+func wheelDelta(buttons tcell.ButtonMask, rows int) int {
+	switch {
+	case buttons&tcell.WheelUp != 0:
+		return -rows
+	case buttons&tcell.WheelDown != 0:
+		return rows
+	}
+	return 0
+}
+
 // mouseHit locates a cell in the browser: the panel under it and, when it lies on an entry row,
 // the index of that entry (row < 0 otherwise). ok is false outside any clickable file panel.
-func (a *App) mouseHit(x, y int) (panelID, row int, ok bool) {
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
-	if layout.TooSmall {
-		return 0, -1, false
-	}
+func (a *App) mouseHit(layout ui.Layout, x, y int) (panelID, row int, ok bool) {
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
 		col, p := layout.Primary, &a.model.Primary
 		if id == ui.SecondaryPanel {
 			col, p = layout.Secondary, &a.model.Secondary
 		}
-		if x < col.X || x >= col.X+col.Width || y < col.Y || y >= col.Y+col.Height {
+		if !col.Contains(x, y) {
 			continue
 		}
 		// The inactive column shows a preview while quick view or file preview is open.
@@ -92,7 +98,7 @@ func (a *App) mouseHit(x, y int) (panelID, row int, ok bool) {
 		}
 		file := ui.FileListFrame(col, p, id, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(id, 0))
 		top := ui.PanelListTop(file)
-		if x >= file.X && x < file.X+file.Width && y >= top && y < top+ui.PanelListRows(file) {
+		if (ui.Rect{X: file.X, Y: top, Width: file.Width, Height: ui.PanelListRows(file)}).Contains(x, y) {
 			if idx := p.ScrollOffset + y - top; idx < p.VisibleEntryCount() {
 				return id, idx, true
 			}
@@ -125,33 +131,35 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	buttons := ev.Buttons()
 	pressed := buttons &^ a.mouse.buttons
 	a.mouse.buttons = buttons &^ (tcell.WheelUp | tcell.WheelDown | tcell.WheelLeft | tcell.WheelRight)
-	if a.terminalPanelHasKeyFocus() {
+	// Releases carry no new press and nothing reacts to them.
+	if pressed == 0 && wheelDelta(buttons, 1) == 0 || a.terminalPanelHasKeyFocus() {
+		return false, false
+	}
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall {
 		return false, false
 	}
 	x, y := ev.Position()
-	if handled, quit, rendered := a.handleChromeMouse(x, y, buttons, pressed); handled {
+	if handled, quit, rendered := a.handleChromeMouse(layout, x, y, buttons, pressed); handled {
 		return quit, rendered
 	}
 	switch a.inputMode() {
 	case InputModeJobsView, InputModeCommandsView, InputModeMessagesView:
-		return false, a.handleAuxListMouse(x, y, buttons, pressed)
+		return false, a.handleAuxListMouse(layout, x, y, buttons, pressed)
 	case InputModeNormal:
 		if a.model.ViewMode != ui.ViewBrowser {
 			return false, false
 		}
 	default:
-		return a.handleDialogMouse(x, y, buttons, pressed)
+		return a.handleDialogMouse(layout, x, y, buttons, pressed)
 	}
-	id, row, ok := a.mouseHit(x, y)
+	id, row, ok := a.mouseHit(layout, x, y)
 	if !ok {
 		return false, false
 	}
-	switch {
-	case buttons&(tcell.WheelUp|tcell.WheelDown) != 0:
-		step := config.MouseWheelRows
-		if buttons&tcell.WheelUp != 0 {
-			step = -step
-		}
+	switch step := wheelDelta(buttons, config.MouseWheelRows); {
+	case step != 0:
 		// The wheel scrolls the panel under the pointer without taking focus.
 		if id != a.model.ActivePanel {
 			return false, a.scrollInactivePanel(id, step)
@@ -189,12 +197,7 @@ func (a *App) scrollInactivePanel(id, delta int) bool {
 
 // handleChromeMouse handles the footer, the menu bar and the open pulldown. handled is false when
 // the event belongs to whatever lies below them.
-func (a *App) handleChromeMouse(x, y int, buttons, pressed tcell.ButtonMask) (handled, quit, rendered bool) {
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
-	if layout.TooSmall {
-		return false, false, false
-	}
+func (a *App) handleChromeMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (handled, quit, rendered bool) {
 	left := pressed&tcell.Button1 != 0
 	if fk, ok := ui.FooterKeyAt(layout, &a.model, x, y); ok {
 		if !left {
@@ -204,8 +207,16 @@ func (a *App) handleChromeMouse(x, y int, buttons, pressed tcell.ButtonMask) (ha
 		if !ok {
 			return true, false, false
 		}
+		// Paint even when the key path did not, so every mouse event that acts renders (the Run
+		// loop skips the post-event pass for mouse events that did not render).
 		quit, rendered := a.handleKey(ev)
-		return true, quit, rendered
+		if quit {
+			return true, true, false
+		}
+		if !rendered {
+			a.render()
+		}
+		return true, false, true
 	}
 	if index, ok := ui.MenuBarMenuAt(layout, &a.model, x, y); ok && a.menuBarAcceptsMouse() {
 		if !left {
@@ -228,14 +239,10 @@ func (a *App) handleChromeMouse(x, y int, buttons, pressed tcell.ButtonMask) (ha
 	}
 	// The menu is modal: wheel and clicks act on the pulldown, a click anywhere else closes it.
 	item, inside := ui.PulldownItemAt(layout, &a.model, x, y)
-	switch {
-	case buttons&(tcell.WheelUp|tcell.WheelDown) != 0:
+	switch delta := wheelDelta(buttons, 1); {
+	case delta != 0:
 		if !inside {
 			return true, false, false
-		}
-		delta := 1
-		if buttons&tcell.WheelUp != 0 {
-			delta = -1
 		}
 		a.moveMenuItem(delta)
 	case left && inside:
@@ -293,7 +300,7 @@ func (a *App) handleLeaderMenuMouse(layout ui.Layout, x, y int, pressed tcell.Bu
 
 // handleAuxListMouse handles the list pane of the Jobs, Commands and Messages views: a left click
 // focuses the list and selects the entry under the pointer, the wheel moves the selection.
-func (a *App) handleAuxListMouse(x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
+func (a *App) handleAuxListMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
 	var hit func(ui.Layout, *ui.Model, int, int) (int, bool)
 	var selectEntry, move func(int)
 	switch a.inputMode() {
@@ -306,21 +313,12 @@ func (a *App) handleAuxListMouse(x, y int, buttons, pressed tcell.ButtonMask) (r
 	default:
 		return false
 	}
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
-	if layout.TooSmall {
-		return false
-	}
 	idx, ok := hit(layout, &a.model, x, y)
 	if !ok {
 		return false
 	}
-	switch {
-	case buttons&(tcell.WheelUp|tcell.WheelDown) != 0:
-		step := config.MouseWheelRows
-		if buttons&tcell.WheelUp != 0 {
-			step = -step
-		}
+	switch step := wheelDelta(buttons, config.MouseWheelRows); {
+	case step != 0:
 		move(step)
 	case pressed&tcell.Button1 != 0:
 		selectEntry(idx)

@@ -69,13 +69,7 @@ func pinList(state PinDialogState, items []PinDialogItem, listRows int, styles t
 
 // EnsurePinListScroll keeps Selected in range and visible in the pin list of height listRows.
 func EnsurePinListScroll(state *PinDialogState, listRows int) {
-	n := len(state.Ranked)
-	if n == 0 || listRows <= 0 {
-		state.ListScroll = 0
-		return
-	}
-	state.Selected = min(max(state.Selected, 0), n-1)
-	state.ListScroll = dlg.Item{Kind: dlg.KindList, Rows: make([]dlg.ListRow, n), Cursor: state.Selected, Offset: state.ListScroll, Height: listRows}.ViewOffset()
+	EnsurePickerScroll(len(state.Ranked), &state.Selected, &state.ListScroll, listRows)
 }
 
 // PinDialogView describes the Pin dialog: a filter input that steers the pin list below it, a

@@ -22,9 +22,8 @@ type dialogMouse struct {
 // order as activeDialogButtons, and every dlg dialog adds one case. Each spec must be the one the
 // renderer draws (same builder, same layout inputs), or clicks land on the wrong widget. Dialogs
 // whose key handler keeps its own focus (message, pin) get a scratch focus.
-func (a *App) activeDialogMouse() (dialogMouse, bool) {
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
+func (a *App) activeDialogMouse(layout ui.Layout) (dialogMouse, bool) {
+	w, _ := a.screen.Size()
 	found := func(spec dlg.Spec, focus *dlg.ID) (dialogMouse, bool) { return dialogMouse{spec, focus}, true }
 	scratch := func(id dlg.ID) *dlg.ID { return &id }
 	m := &a.model
@@ -126,12 +125,12 @@ func (a *App) modalDialogMouse() (dialogMouse, bool) {
 // Space, a list row is reached with Up/Down from the cursor (Enter on a double click), an input
 // is focused and its cursor moved with Home and Right, and the wheel over a list sends Up/Down.
 // Presses that hit no widget (frame, labels, reserved regions) are swallowed.
-func (a *App) handleDialogMouse(x, y int, buttons, pressed tcell.ButtonMask) (quit, rendered bool) {
-	wheel := buttons & (tcell.WheelUp | tcell.WheelDown)
+func (a *App) handleDialogMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (quit, rendered bool) {
+	wheel := wheelDelta(buttons, config.MouseWheelRows)
 	if wheel == 0 && pressed&tcell.Button1 == 0 {
 		return false, false
 	}
-	dm, ok := a.activeDialogMouse()
+	dm, ok := a.activeDialogMouse(layout)
 	if !ok {
 		return false, false
 	}
@@ -153,11 +152,7 @@ func (a *App) handleDialogMouse(x, y int, buttons, pressed tcell.ButtonMask) (qu
 			return false, false
 		}
 		*dm.focus = t.Focus
-		delta := config.MouseWheelRows
-		if wheel&tcell.WheelUp != 0 {
-			delta = -delta
-		}
-		return a.replayDialogKeys(step(delta))
+		return a.replayDialogKeys(step(wheel))
 	}
 	switch t.Kind {
 	case dlg.TargetButton:
@@ -193,16 +188,27 @@ func (a *App) handleDialogMouse(x, y int, buttons, pressed tcell.ButtonMask) (qu
 }
 
 // replayDialogKeys feeds keys through handleKey while the dialog that took the press stays on top.
+// The per-key renders are held so the replay paints one frame at the end.
 func (a *App) replayDialogKeys(keys []*tcell.EventKey) (quit, rendered bool) {
+	if a.feedDialogKeys(keys) {
+		return true, false
+	}
+	a.render()
+	return false, true
+}
+
+// feedDialogKeys is replayDialogKeys without the final render; it reports whether a key quit.
+func (a *App) feedDialogKeys(keys []*tcell.EventKey) (quit bool) {
 	mode := a.inputMode()
+	a.renderHeld++
+	defer func() { a.renderHeld-- }()
 	for _, ev := range keys {
 		if a.inputMode() != mode {
 			break
 		}
 		if quit, _ := a.handleKey(ev); quit {
-			return true, false
+			return true
 		}
 	}
-	a.render()
-	return false, true
+	return false
 }

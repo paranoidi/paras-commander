@@ -1,13 +1,11 @@
 package dialog
 
 import (
-	"fmt"
-
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-func compareFilterItemID(f comparepkg.Filter) dlg.ID { return dlg.ID(fmt.Sprintf("kind:%d", f)) }
+func compareFilterItemID(f comparepkg.Filter) dlg.ID { return dlg.IndexedID("kind:", int(f)) }
 
 // CompareFilterView is the compare category / select-by-kind picker's widget spec: one checkbox
 // per kind (Radios depends on the mode) above OK / Cancel.
@@ -24,8 +22,8 @@ func CompareFilterView(s CompareFilterDialogState) dlg.Spec {
 		Title: s.Title(), Width: 32, MinWidth: 24, MinHeight: len(radios) + 4, // border, rows, separator, buttons, border
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 }

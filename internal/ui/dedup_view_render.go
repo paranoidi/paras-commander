@@ -14,6 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 const (
@@ -431,7 +432,7 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	if p.RowMarks != nil {
 		marks = p.RowMarks(dedupRowAbsPath(snap, d))
 	}
-	marksW := dialog.RowMarksWidth(marks)
+	marksW := dlg.RowMarksWidth(marks)
 	fitW := pathW - len([]rune(prefix))
 	if subtreeMark {
 		fitW -= 2 // room for subtree mark suffix, like panellist.SuffixDecorationLen
@@ -470,7 +471,7 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	}
 	cursorX := x + runewidth.StringWidth(pathText)
 	if marksW > 0 && cursorX+marksW <= pathX+pathW {
-		used := dialog.DrawRowMarksSuffix(screen, cursorX, lineY, marksW, marks, rowBG, styles)
+		used := dlg.DrawRowMarksSuffix(screen, cursorX, lineY, marksW, marks, rowBG, styles)
 		cursorX += used
 	}
 	if markX := cursorX + 1; subtreeMark && markX < pathX+pathW {

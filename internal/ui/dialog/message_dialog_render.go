@@ -159,7 +159,7 @@ func MessageDialogView(state MessageDialogState, layout Layout) dlg.Spec {
 	return dlg.Spec{
 		Title: title, Width: dialogW, MinWidth: dialogW, Unclamped: true,
 		Groups:  []dlg.Group{{Columns: [][]dlg.Item{items}}},
-		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}},
+		Buttons: []dlg.Button{dlg.OKButton},
 	}
 }
 

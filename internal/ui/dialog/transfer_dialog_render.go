@@ -135,8 +135,7 @@ func transferMultiDialogWidth(layout Layout, state TransferDialogState, userHome
 // anchored to rects of the placement.
 func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
 	spec := TransferView(state, TransferViewContext{Layout: layout, UserHomeDir: ctx.UserHomeDir, IconLead: ctx.IconLead})
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
-	p, ok := dlg.Place(layout.Width, layout.Height, spec)
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
 	if !ok {
 		return
 	}

@@ -29,19 +29,12 @@ const (
 )
 
 // PatternTypeID is the ID of the file-type checkbox i (FilterTypeLabels order).
-func PatternTypeID(i int) dlg.ID { return dlg.ID(fmt.Sprintf("%s%d", patternTypePrefix, i)) }
+func PatternTypeID(i int) dlg.ID { return dlg.IndexedID(patternTypePrefix, i) }
 
 // patternTypeIndex is the inverse of PatternTypeID.
 func patternTypeIndex(id dlg.ID) (int, bool) {
-	var i int
-	rest, ok := strings.CutPrefix(string(id), patternTypePrefix)
-	if !ok {
-		return 0, false
-	}
-	if _, err := fmt.Sscanf(rest, "%d", &i); err != nil || i < 0 || i >= FilterTypeCount {
-		return 0, false
-	}
-	return i, true
+	i, ok := dlg.IDIndex(id, patternTypePrefix)
+	return i, ok && i >= 0 && i < FilterTypeCount
 }
 
 // PatternIsRadio reports whether id is one of the pattern mode radios (Enter selects a radio but
@@ -238,8 +231,8 @@ func patternSpec(v patternView) dlg.Spec {
 			{Columns: [][]dlg.Item{options}},
 		},
 		Buttons: []dlg.Button{
-			{ID: dlg.OK, Label: "OK", Mnemonic: 'O'},
-			{ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'},
+			dlg.OKButton,
+			dlg.CancelButton,
 		},
 	}
 }

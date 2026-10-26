@@ -3,12 +3,11 @@ package dialog
 import (
 	"fmt"
 
-	"github.com/mattn/go-runewidth"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 // EnsureFindListScroll keeps Selected row visible in a list of height listRows.
@@ -101,7 +100,7 @@ const (
 )
 
 func findDialogDepthFieldWidth(styles theme.Theme) int {
-	return runewidth.StringWidth(styles.IconDialogDepth()) + 1 + findDialogDepthInputCells
+	return draw.LeadingIconCols(styles.IconDialogDepth()) + findDialogDepthInputCells
 }
 
 // FindDialogQueryInputWidth is the query input width for a row of rowWidth cells.
@@ -127,12 +126,8 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 		Layout: layout, Styles: ctx.Styles, IconLead: iconLead, ScrollbarStyle: ctx.ScrollbarStyle,
 		SelectionLabel: selectionSizeLabel, RowMarks: rowMarks,
 	})
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
-	if iconLead == 0 {
-		return
-	}
-	p, ok := dlg.Place(layout.Width, layout.Height, spec)
-	if !ok {
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
+	if !ok || iconLead == 0 {
 		return
 	}
 	list, ok := p.Item(FindList)

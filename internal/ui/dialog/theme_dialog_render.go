@@ -77,7 +77,7 @@ func ThemeDialogView(state ThemeDialogState, layout Layout) dlg.Spec {
 				{{ID: themePreviewPane, Kind: dlg.KindSpacer, Height: rows}},
 			},
 		}},
-		Buttons: []dlg.Button{{ID: dlg.OK, Label: "OK", Mnemonic: 'O'}, {ID: dlg.Cancel, Label: "Cancel", Mnemonic: 'C'}},
+		Buttons: dlg.OKCancelButtons(),
 	}
 }
 
@@ -86,8 +86,7 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 		return
 	}
 	spec := ThemeDialogView(state, layout)
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
-	p, ok := dlg.Place(layout.Width, layout.Height, spec)
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 	if !ok {
 		return
 	}

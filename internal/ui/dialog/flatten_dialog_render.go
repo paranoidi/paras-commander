@@ -11,8 +11,7 @@ import (
 // then the destination's completion dropdown anchored under the input row.
 func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogState, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
 	spec := FlattenView(state)
-	dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
-	p, ok := dlg.Place(layout.Width, layout.Height, spec)
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 	if !ok {
 		return
 	}

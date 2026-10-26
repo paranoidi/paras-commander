@@ -401,7 +401,7 @@ func PaintScrollingInputContent(
 
 	if leadingIcon != "" {
 		iconStyle := styles.DialogSearchIconStyle(committedStyle)
-		iconCols := runewidth.StringWidth(leadingIcon) + 1
+		iconCols := LeadingIconCols(leadingIcon)
 		col := 0
 		for _, r := range leadingIcon {
 			w := runewidth.RuneWidth(r)
@@ -662,4 +662,13 @@ func DrawDialogButtonRowCentered(screen tcell.Screen, rect Rect, y int, buttons 
 		b := buttons[i]
 		DrawDialogButton(screen, x, y, b.Label, b.Shortcut, b.Focused, b.Destructive, b.Disabled, styles)
 	}
+}
+
+// LeadingIconCols is how many cells an input's leading icon takes before its text: the icon and
+// one gap cell, or 0 without an icon.
+func LeadingIconCols(icon string) int {
+	if icon == "" {
+		return 0
+	}
+	return runewidth.StringWidth(icon) + 1
 }
