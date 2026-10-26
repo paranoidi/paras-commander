@@ -919,6 +919,42 @@ func TestDuplicateOpensDialogForFile(t *testing.T) {
 	}
 }
 
+func TestDuplicateDialogMarksActivePanelAsDestinationTarget(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "harbor.txt")
+	writeFile(t, file)
+	otherDir := filepath.Join(dir, "lantern")
+	if err := os.Mkdir(otherDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if err := app.inactivePanel().Load(otherDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+	applyNextInterruptEvent(t, app, screen)
+
+	app.activePanel().SelectedPaths = map[string]bool{file: true}
+	app.dispatch(keymap.ActionFileDuplicate)
+	if !app.model.FileDialog.Open {
+		t.Fatal("expected duplicate dialog open")
+	}
+	if !app.model.DestinationTargetPrimary {
+		t.Fatal("expected active (Primary) panel marked as destination target")
+	}
+	if app.model.DestinationTargetSecondary {
+		t.Fatal("inactive panel in another directory should not be marked")
+	}
+	if app.model.DestinationTargetWarning {
+		t.Fatal("duplicate is a copy; target should not use warning styles")
+	}
+
+	app.dialogCtrl.CloseFileDialog()
+	if app.model.DestinationTargetPrimary || app.model.DestinationTargetSecondary {
+		t.Fatal("closing the duplicate dialog should clear destination target markers")
+	}
+}
+
 func TestDuplicateSuggestsNextFreeNumberedName(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "meadow.log")

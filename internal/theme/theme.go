@@ -44,7 +44,7 @@ type Theme struct {
 	PanelActiveFrame   tcell.Style
 	PanelInactiveFrame tcell.Style
 	// PanelTargetFrame overrides the border for a panel whose current directory is the
-	// resolved Copy/Move/Flatten destination (see App.updateDestinationTargetPanels).
+	// resolved Copy/Move/Flatten/Duplicate destination (see App.updateDestinationTargetPanels).
 	PanelTargetFrame tcell.Style
 	// PanelTargetTitle overrides the top-border path title of that same destination panel.
 	PanelTargetTitle tcell.Style

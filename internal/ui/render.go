@@ -122,7 +122,7 @@ type Model struct {
 	SyncFollowEnabled bool
 	SyncFollowPanel   int
 	// DestinationTargetPrimary / DestinationTargetSecondary mark a panel as the resolved
-	// Copy/Move/Flatten destination (green border), updated on the debounced destination
+	// Copy/Move/Flatten/Duplicate destination (green border), updated on the debounced destination
 	// path validation tick (see App.updateDestinationTargetPanels).
 	DestinationTargetPrimary   bool
 	DestinationTargetSecondary bool

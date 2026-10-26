@@ -58,6 +58,8 @@ func (h *Handler) openDuplicateDialog() {
 		RenameSlugifySep: dialog.RenameSlugifyDot,
 		RenameFocusAfter: h.host.Config().Operations.RenameFocusAfter,
 	}
+	// The copy lands beside the source, so the active panel's cwd is the destination.
+	h.updateDestinationTargetPanels(p.PathString(), p.PathString(), false)
 }
 
 func (h *Handler) executeDuplicate() {
