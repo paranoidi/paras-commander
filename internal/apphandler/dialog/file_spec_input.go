@@ -27,7 +27,7 @@ func (h *Handler) focusedFieldIndex() int { return h.model.FileDialog.FileDialog
 // and returns to the name; on the mass rename save prompt: saves the pattern); Cancel closes the
 // innermost layer. Enter on a mkdir post-action radio selects it and runs the dialog. The mass
 // rename radios, checkboxes and Apply button are handled by applyMassRenameEvent.
-func (h *Handler) applyFileDialogEvent(ev dlg.Event, key *tcell.EventKey) {
+func (h *Handler) applyFileDialogEvent(ev dlg.Event) {
 	d := &h.model.FileDialog
 	d.Apply(ev)
 	switch d.DialogType {
@@ -36,7 +36,7 @@ func (h *Handler) applyFileDialogEvent(ev dlg.Event, key *tcell.EventKey) {
 			h.commands.RecomputeRunForEachValidation()
 		}
 	case dialog.FileDialogMassRename:
-		if h.applyMassRenameEvent(ev, key) {
+		if h.applyMassRenameEvent(ev) {
 			return
 		}
 	}
@@ -47,8 +47,30 @@ func (h *Handler) applyFileDialogEvent(ev dlg.Event, key *tcell.EventKey) {
 	case ev.ID == dlg.Cancel:
 		h.cancelFileDialogLayer()
 	default:
-		if _, radio := dialog.MkdirActionFromID(ev.ID); radio && key.Key() == tcell.KeyEnter {
+		if _, radio := dialog.MkdirActionFromID(ev.ID); radio && ev.Enter {
 			h.ExecuteFileDialog()
+		}
+	}
+}
+
+// ApplyFileDialogEvent acts on a widget event of the open file dialog from a click: on a picker
+// screen through the picker's handling, a click on a text input moves its cursor, anything else
+// through applyFileDialogEvent like the keys.
+func (h *Handler) ApplyFileDialogEvent(ev dlg.Event) {
+	if b, ok := h.openPickerBinding(); ok {
+		applyPickerEvent(ev, b)
+		return
+	}
+	if ev.Kind != dlg.EventCaret {
+		h.applyFileDialogEvent(ev)
+		return
+	}
+	d := &h.model.FileDialog
+	if i, ok := dialog.FileFieldIndex(ev.ID); ok && i < len(d.Fields) {
+		if f := &d.Fields[i]; f.PathPicker {
+			h.setPathFieldCursor(f, ev.Index)
+		} else {
+			f.SetCursor(ev.Index)
 		}
 	}
 }
@@ -91,7 +113,8 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 	d := &h.model.FileDialog
 	switch {
 	case d.DialogType == dialog.FileDialogRunForEach && d.RunForEachHistoryOpen:
-		return h.handleRunForEachHistoryPickerKey(event)
+		h.handlePickerKey(event, h.runForEachHistoryPickerBinding())
+		return false
 	case d.DialogType == dialog.FileDialogMassRename && massRenamePickerPhaseOpen(d.MassRenamePhase):
 		return h.handleMassRenamePickerKey(event)
 	}
@@ -103,7 +126,7 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 		}
 		ev, ok := dlg.HandleKey(*spec, &d.Focus, event)
 		if ok {
-			h.applyFileDialogEvent(ev, event)
+			h.applyFileDialogEvent(ev)
 		}
 		return ok
 	}

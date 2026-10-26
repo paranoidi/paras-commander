@@ -9,10 +9,17 @@ import (
 // handleUndoConfirmKey drives the undo confirmation; Yes queues the undo job.
 func (a *App) handleUndoConfirmKey(event *tcell.EventKey) bool {
 	d := &a.model.UndoConfirm
-	if ev, ok := dlg.HandleKey(dialog.UndoConfirmView(*d), &d.Focus, event); ok && ev.ID != "" {
-		a.answerUndoConfirm(ev.ID == dialog.UndoYes)
+	if ev, ok := dlg.HandleKey(dialog.UndoConfirmView(*d), &d.Focus, event); ok {
+		a.applyUndoConfirmEvent(ev)
 	}
 	return false
+}
+
+// applyUndoConfirmEvent answers the undo confirmation (key or click).
+func (a *App) applyUndoConfirmEvent(ev dlg.Event) {
+	if ev.ID != "" {
+		a.answerUndoConfirm(ev.ID == dialog.UndoYes)
+	}
 }
 
 // answerUndoConfirm closes the undo confirmation; yes queues the undo job.

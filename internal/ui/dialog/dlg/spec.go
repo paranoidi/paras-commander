@@ -1,6 +1,6 @@
 // Package dlg is a small declarative dialog engine. A dialog is described once as a plain-data
 // Spec (widgets, Tab groups, mnemonics, buttons); Place computes the geometry in a single pass,
-// and Draw, HandleKey and TargetAt (mouse hits) all derive from that Spec and Placement, so painting,
+// and Draw, HandleKey and Click / Wheel all derive from that Spec and Placement, so painting,
 // focus order, mnemonics and mouse hitboxes cannot drift apart. State stays with the caller
 // (View(state) -> Spec); the engine reports activations as Events instead of calling back.
 //
@@ -361,12 +361,17 @@ type Placement struct {
 //
 // List events carry the list's ID. EventActivate (the zero Kind) reports the activated row in
 // Index. EventListMove reports the list's new Cursor in Index and the new first visible row in
-// Offset; the caller stores both in its state.
+// Offset; the caller stores both in its state. EventCaret (Click on an input) reports the rune
+// index the input's text cursor goes to in Index.
+//
+// Enter is set on activations made with the Enter key (or a double click, which stands for it),
+// for dialogs where Enter on a checkbox confirms while Space or a click toggles it.
 type Event struct {
 	ID     ID
 	Kind   EventKind
 	Index  int
 	Offset int
+	Enter  bool
 }
 
 // EventKind says what an Event with a list ID reports.
@@ -375,6 +380,7 @@ type EventKind int
 const (
 	EventActivate EventKind = iota // a widget (or list row) was activated
 	EventListMove                  // a list's cursor / scroll offset moved
+	EventCaret                     // an input's text cursor moved (Click)
 )
 
 // Item returns the placed widget named id (an input's Rect is where a caller anchors overlays such

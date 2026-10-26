@@ -47,20 +47,40 @@ func (h *Handler) pickerListRows() int {
 // and puts the cursor on its first row.
 func (h *Handler) handlePickerKey(event *tcell.EventKey, b pickerBinding) {
 	spec := h.FileDialogSpec()
-	ev, ok := dlg.HandleKey(spec, b.focus, event)
+	if ev, ok := dlg.HandleKey(spec, b.focus, event); ok {
+		applyPickerEvent(ev, b)
+		return
+	}
+	if *b.focus != "" && *b.focus != dialog.PickerFilter {
+		return
+	}
+	rows, width := h.pickerGeometry(spec)
+	onChange := func() {
+		b.resync()
+		*b.selected = 0
+		dialog.EnsurePickerScroll(b.count(), b.selected, b.offset, rows)
+	}
+	edit := scrollquery.NewEdit(b.query, b.cursor, b.scroll, width, onChange)
+	scrollquery.HandleKey(h.keysDialogInput, event, true, edit)
+}
+
+// openPickerBinding returns the binding of the file dialog's open picker screen, if any.
+func (h *Handler) openPickerBinding() (pickerBinding, bool) {
+	d := &h.model.FileDialog
 	switch {
-	case !ok:
-		if *b.focus != "" && *b.focus != dialog.PickerFilter {
-			return
-		}
-		rows, width := h.pickerGeometry(spec)
-		onChange := func() {
-			b.resync()
-			*b.selected = 0
-			dialog.EnsurePickerScroll(b.count(), b.selected, b.offset, rows)
-		}
-		edit := scrollquery.NewEdit(b.query, b.cursor, b.scroll, width, onChange)
-		scrollquery.HandleKey(h.keysDialogInput, event, true, edit)
+	case d.DialogType == dialog.FileDialogRunForEach && d.RunForEachHistoryOpen:
+		return h.runForEachHistoryPickerBinding(), true
+	case d.DialogType == dialog.FileDialogMassRename && massRenamePickerPhaseOpen(d.MassRenamePhase):
+		return h.massRenamePickerBinding(), true
+	}
+	return pickerBinding{}, false
+}
+
+// applyPickerEvent acts on a widget event of a picker screen (key or click).
+func applyPickerEvent(ev dlg.Event, b pickerBinding) {
+	switch {
+	case ev.Kind == dlg.EventCaret:
+		*b.cursor = ev.Index
 	case ev.Kind == dlg.EventListMove:
 		*b.selected, *b.offset = ev.Index, ev.Offset
 	case ev.ID == dlg.Cancel:

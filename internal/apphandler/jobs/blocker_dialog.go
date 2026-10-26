@@ -108,13 +108,23 @@ func (h *Handler) HandleBlockerDialogKey(event *tcell.EventKey) {
 	if !st.Open {
 		return
 	}
-	if st.Advanced && st.Blocker.Kind != jobs.BlockerKindDiskSpace {
-		h.handleAdvancedKey(event)
+	if ev, ok := dlg.HandleKey(dialog.ConflictDialogView(*st, ""), st.ConflictDialogFocus(), event); ok {
+		h.ApplyBlockerDialogEvent(ev)
+	}
+}
+
+// ApplyBlockerDialogEvent acts on a widget event of the open conflict dialog (key or click): a
+// choice on the quick screens, a rule, option or button on the Conflict rules screen.
+func (h *Handler) ApplyBlockerDialogEvent(ev dlg.Event) {
+	st := &h.model.ConflictDialog
+	if ev.ID == "" {
 		return
 	}
-	if ev, ok := dlg.HandleKey(dialog.ConflictDialogView(*st, ""), &st.Focus, event); ok && ev.ID != "" {
-		h.activateBlockerChoice(ev.ID)
+	if st.Advanced && st.Blocker.Kind != jobs.BlockerKindDiskSpace {
+		h.applyAdvancedEvent(ev)
+		return
 	}
+	h.activateBlockerChoice(ev.ID)
 }
 
 // openAdvancedFromPanel opens the "Conflict rules" dialog for the job selected in the jobs-view
@@ -155,15 +165,11 @@ func (h *Handler) applyAdvanced() {
 	h.scheduleBlockerDialogChain()
 }
 
-// handleAdvancedKey routes keys for the "Conflict rules" mode of the conflict dialog. Space
+// applyAdvancedEvent acts on the "Conflict rules" mode of the conflict dialog. Space, a click
 // and the mnemonics toggle a checkbox and pick a radio; Enter on a radio picks it, Enter on a
 // checkbox or OK applies the rules.
-func (h *Handler) handleAdvancedKey(event *tcell.EventKey) {
+func (h *Handler) applyAdvancedEvent(ev dlg.Event) {
 	st := &h.model.ConflictDialog
-	ev, ok := dlg.HandleKey(dialog.ConflictDialogView(*st, ""), &st.AdvFocus, event)
-	if !ok || ev.ID == "" {
-		return
-	}
 	switch ev.ID {
 	case dlg.OK:
 		h.applyAdvanced()
@@ -171,7 +177,7 @@ func (h *Handler) handleAdvancedKey(event *tcell.EventKey) {
 		h.cancelAdvanced()
 	case dialog.ConflictSkipIdentical, dialog.ConflictApplyAll:
 		switch {
-		case event.Key() == tcell.KeyEnter:
+		case ev.Enter:
 			h.applyAdvanced()
 		case ev.ID == dialog.ConflictSkipIdentical:
 			st.Rules.SkipIdentical = !st.Rules.SkipIdentical

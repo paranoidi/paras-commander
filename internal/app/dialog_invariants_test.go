@@ -106,9 +106,10 @@ func checkDialogInvariants(t *testing.T, app *App) {
 				t.Errorf("invariant: %q shows %q at its rect, want its label %q", pi.ID, got, label)
 			}
 		}
-		tg, ok := dlg.TargetAt(spec, w, h, pi.Rect.X+pi.Rect.Width/2, pi.Rect.Y)
-		if !ok || tg.ID != pi.ID {
-			t.Errorf("invariant: TargetAt on %q = (%+v, %v)", pi.ID, tg, ok)
+		focus := dlg.ID("")
+		ev, ok := dlg.Click(spec, w, h, &focus, pi.Rect.X+pi.Rect.Width/2, pi.Rect.Y, false)
+		if !ok || ev.ID != pi.ID {
+			t.Errorf("invariant: Click on %q = (%+v, %v)", pi.ID, ev, ok)
 		}
 	}
 

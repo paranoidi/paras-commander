@@ -204,10 +204,21 @@ func (h *Handler) transferViewContext() dialog.TransferViewContext {
 	}
 }
 
-// applyTransferEvent acts on an activation from the widget spec: the checkboxes toggle, Enter in
-// the input or OK confirms, Add paused confirms paused, Cancel closes.
-func (h *Handler) applyTransferEvent(ev dlg.Event) {
-	h.model.TransferDialog.Apply(ev)
+// ApplyTransferEvent acts on a widget event (key or click): a click on an input moves its cursor,
+// the checkboxes toggle, Enter in the input or OK confirms, Add paused confirms paused, Cancel
+// closes.
+func (h *Handler) ApplyTransferEvent(ev dlg.Event) {
+	d := &h.model.TransferDialog
+	if ev.Kind == dlg.EventCaret {
+		switch ev.ID {
+		case dialog.TransferDest:
+			h.setPathFieldCursor(&d.Destination, ev.Index)
+		case dialog.TransferNewName:
+			d.SelfCopyNewName.SetCursor(ev.Index)
+		}
+		return
+	}
+	d.Apply(ev)
 	switch ev.ID {
 	case dialog.TransferDest, dialog.TransferNewName, dlg.OK:
 		h.confirmTransfer()
@@ -231,7 +242,7 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 			if ev.ID == dialog.TransferAddPaused {
 				d.Focus = prev // a refused Alt+P leaves the user where they were typing
 			}
-			h.applyTransferEvent(ev)
+			h.ApplyTransferEvent(ev)
 			return
 		}
 	}
@@ -258,7 +269,7 @@ func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if ev, ok := dlg.HandleKey(spec, &d.Focus, event); ok {
-		h.applyTransferEvent(ev)
+		h.ApplyTransferEvent(ev)
 		return
 	}
 	switch {

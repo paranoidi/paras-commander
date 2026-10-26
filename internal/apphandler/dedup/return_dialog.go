@@ -18,7 +18,14 @@ func (h *Handler) ReturnDialogCancel() { h.returnDialogActivate(dlg.Cancel) }
 func (h *Handler) HandleReturnDialogKey(event *tcell.EventKey) {
 	st := &h.model.DedupReturnDialog
 	// The summary only shapes the message lines, not the buttons or their mnemonics.
-	if ev, ok := dlg.HandleKey(dialog.DedupReturnView(*st, "", 0, 0, ""), &st.Focus, event); ok && ev.ID != "" {
+	if ev, ok := dlg.HandleKey(dialog.DedupReturnView(*st, "", 0, 0, ""), &st.Focus, event); ok {
+		h.ApplyReturnDialogEvent(ev)
+	}
+}
+
+// ApplyReturnDialogEvent acts on a widget event of the kept-results dialog (key or click).
+func (h *Handler) ApplyReturnDialogEvent(ev dlg.Event) {
+	if ev.ID != "" {
 		h.returnDialogActivate(ev.ID)
 	}
 }

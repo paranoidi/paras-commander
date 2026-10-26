@@ -167,12 +167,18 @@ func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	ev, ok := dlg.HandleKey(a.previewSettingsView(), &st.Focus, event)
-	switch {
-	case !ok:
-	case ev.ID == dlg.OK:
+	if ev, ok := dlg.HandleKey(a.previewSettingsView(), &st.Focus, event); ok {
+		a.applyPreviewSettingsEvent(ev)
+	}
+}
+
+// applyPreviewSettingsEvent acts on a widget event of the Preview settings dialog (key or click).
+func (a *App) applyPreviewSettingsEvent(ev dlg.Event) {
+	st := &a.model.PreviewSettingsDialog
+	switch ev.ID {
+	case dlg.OK:
 		a.applyPreviewSettingsDialog()
-	case ev.ID == dlg.Cancel:
+	case dlg.Cancel:
 		a.closePreviewSettingsDialog()
 	default:
 		st.Apply(ev)

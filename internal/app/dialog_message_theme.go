@@ -26,7 +26,14 @@ func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 	w, h := a.screen.Size()
 	spec := dialog.MessageDialogView(a.model.MessageDialog, a.layoutForTerminalSize(w, h))
 	focus := dlg.OK
-	if ev, ok := dlg.HandleKey(spec, &focus, event); ok && ev.ID == dlg.OK {
+	if ev, ok := dlg.HandleKey(spec, &focus, event); ok {
+		a.applyMessageDialogEvent(ev)
+	}
+}
+
+// applyMessageDialogEvent closes the message dialog on its OK button (key or click).
+func (a *App) applyMessageDialogEvent(ev dlg.Event) {
+	if ev.ID == dlg.OK {
 		a.closeMessageDialog()
 	}
 }
@@ -37,9 +44,16 @@ func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
 		return
 	}
 	td := &a.model.ThemeDialog
-	ev, ok := dlg.HandleKey(a.themeDialogView(), &td.Focus, event)
+	if ev, ok := dlg.HandleKey(a.themeDialogView(), &td.Focus, event); ok {
+		a.applyThemeDialogEvent(ev)
+	}
+}
+
+// applyThemeDialogEvent acts on a widget event of the theme dialog (key or click).
+func (a *App) applyThemeDialogEvent(ev dlg.Event) {
+	td := &a.model.ThemeDialog
 	switch {
-	case !ok || ev.ID == "": // not handled, or only focus moved
+	case ev.ID == "": // only focus moved
 	case ev.Kind == dlg.EventListMove:
 		td.Selected = ev.Index
 		a.previewThemeAtSelection()

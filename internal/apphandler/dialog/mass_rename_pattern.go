@@ -475,17 +475,21 @@ func (h *Handler) deleteSelectedMassRenamePattern() bool {
 // overwrite picker (identical key handling; currentMassRenamePickerState picks the right backing
 // state). The delete-pattern chord runs before the widget engine; handlePickerKey does the rest.
 func (h *Handler) handleMassRenamePickerKey(event *tcell.EventKey) bool {
-	st := h.currentMassRenamePickerState()
 	if h.keysMassRenameDialog != nil {
 		if id, ok := h.keysMassRenameDialog.Lookup(event); ok && id == keymap.ActionFileMassRenameDeletePattern {
 			h.deleteSelectedMassRenamePattern()
 			return false
 		}
 	}
-	h.handlePickerKey(event, pickerBinding{
+	h.handlePickerKey(event, h.massRenamePickerBinding())
+	return false
+}
+
+func (h *Handler) massRenamePickerBinding() pickerBinding {
+	st := h.currentMassRenamePickerState()
+	return pickerBinding{
 		focus: &st.Focus, query: &st.Query, cursor: &st.QueryCursor, scroll: &st.QueryScroll,
 		selected: &st.Selected, offset: &st.ListScroll, count: func() int { return len(st.Ranked) },
 		resync: h.syncMassRenamePickerRanks, activate: h.activateMassRenamePickerSelection, closePicker: h.closeMassRenamePicker,
-	})
-	return false
+	}
 }

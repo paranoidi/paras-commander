@@ -92,9 +92,13 @@ func (h *Handler) handleFlattenDestNavKey(event *tcell.EventKey) bool {
 	return h.DestFieldNav(event, &d.Destination, d.FocusOnDest())
 }
 
-// applyFlattenEvent acts on an activation from the widget spec: checkboxes toggle, Enter in the
-// destination field or OK confirms, Cancel closes.
-func (h *Handler) applyFlattenEvent(ev dlg.Event) {
+// ApplyFlattenEvent acts on a widget event (key or click): a click on the destination moves its
+// cursor, checkboxes toggle, Enter in the destination field or OK confirms, Cancel closes.
+func (h *Handler) ApplyFlattenEvent(ev dlg.Event) {
+	if ev.Kind == dlg.EventCaret {
+		h.setPathFieldCursor(&h.model.FlattenDialog.Destination, ev.Index)
+		return
+	}
 	h.model.FlattenDialog.Apply(ev)
 	switch ev.ID {
 	case dialog.FlattenDest, dlg.OK:
@@ -110,7 +114,7 @@ func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 	// Alt mnemonics (Recursive, Remove empty) win over every other chord, also in the destination field.
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		if ev, ok := dlg.HandleKey(dialog.FlattenView(*d), &d.Focus, event); ok {
-			h.applyFlattenEvent(ev)
+			h.ApplyFlattenEvent(ev)
 			return
 		}
 	}
@@ -127,7 +131,7 @@ func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if ev, ok := dlg.HandleKey(dialog.FlattenView(*d), &d.Focus, event); ok {
-		h.applyFlattenEvent(ev)
+		h.ApplyFlattenEvent(ev)
 		return
 	}
 	if d.FocusOnDest() && h.editFlattenFieldKey(event, &d.Destination) {

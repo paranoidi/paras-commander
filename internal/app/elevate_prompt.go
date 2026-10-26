@@ -108,13 +108,21 @@ func elevateDecision(id dlg.ID) ops.PermissionDecision {
 	}
 }
 
+// applyElevateEvent acts on a widget event of the elevation prompt (key or click).
+func (a *App) applyElevateEvent(e dlg.Event) {
+	switch {
+	case e.Kind == dlg.EventCaret:
+		a.model.ElevateDialog.Password.SetCursor(e.Index)
+	case e.ID != "":
+		a.finishElevate(elevateDecision(e.ID))
+	}
+}
+
 func (a *App) handleElevateDialogKey(ev *tcell.EventKey) {
 	d := &a.model.ElevateDialog
 	defer a.render()
 	if e, ok := dlg.HandleKey(dialog.ElevateView(*d), &d.Focus, ev); ok {
-		if e.ID != "" {
-			a.finishElevate(elevateDecision(e.ID))
-		}
+		a.applyElevateEvent(e)
 		return
 	}
 	if !d.FocusOnInput() {

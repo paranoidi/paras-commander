@@ -84,14 +84,13 @@ func (h *Handler) activateRunForEachHistorySelection() {
 	h.commands.RecomputeRunForEachValidation()
 }
 
-// handleRunForEachHistoryPickerKey routes a key event for the open command-history picker. It
-// always returns false (the picker never quits).
-func (h *Handler) handleRunForEachHistoryPickerKey(event *tcell.EventKey) bool {
+// runForEachHistoryPickerBinding binds the open command-history picker to handlePickerKey and
+// applyPickerEvent.
+func (h *Handler) runForEachHistoryPickerBinding() pickerBinding {
 	st := &h.model.FileDialog.RunForEachHistoryPicker
-	h.handlePickerKey(event, pickerBinding{
+	return pickerBinding{
 		focus: &st.Focus, query: &st.Query, cursor: &st.QueryCursor, scroll: &st.QueryScroll,
 		selected: &st.Selected, offset: &st.ListScroll, count: func() int { return len(st.Ranked) },
 		resync: h.syncRunForEachHistoryPickerRanks, activate: h.activateRunForEachHistorySelection, closePicker: h.closeRunForEachHistoryPicker,
-	})
-	return false
+	}
 }

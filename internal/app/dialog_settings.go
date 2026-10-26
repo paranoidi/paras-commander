@@ -80,12 +80,18 @@ func (a *App) applySortDialog() {
 
 func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 	st := &a.model.SortDialog
-	ev, ok := dlg.HandleKey(dialog.SortDialogView(*st), &st.Focus, event)
-	switch {
-	case !ok:
-	case ev.ID == dlg.OK:
+	if ev, ok := dlg.HandleKey(dialog.SortDialogView(*st), &st.Focus, event); ok {
+		a.applySortDialogEvent(ev)
+	}
+}
+
+// applySortDialogEvent acts on a widget event of the sort dialog (key or click).
+func (a *App) applySortDialogEvent(ev dlg.Event) {
+	st := &a.model.SortDialog
+	switch ev.ID {
+	case dlg.OK:
 		a.applySortDialog()
-	case ev.ID == dlg.Cancel:
+	case dlg.Cancel:
 		a.closeSortDialog()
 	default:
 		st.Apply(ev)
@@ -94,12 +100,18 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 
 func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
 	st := &a.model.ListingFormatDialog
-	ev, ok := dlg.HandleKey(dialog.ListingFormatView(*st), &st.Focus, event)
-	switch {
-	case !ok:
-	case ev.ID == dlg.OK:
+	if ev, ok := dlg.HandleKey(dialog.ListingFormatView(*st), &st.Focus, event); ok {
+		a.applyListingFormatEvent(ev)
+	}
+}
+
+// applyListingFormatEvent acts on a widget event of the listing format dialog (key or click).
+func (a *App) applyListingFormatEvent(ev dlg.Event) {
+	st := &a.model.ListingFormatDialog
+	switch ev.ID {
+	case dlg.OK:
 		a.applyListingFormatDialog()
-	case ev.ID == dlg.Cancel:
+	case dlg.Cancel:
 		a.closeListingFormatDialog()
 	default:
 		st.Apply(ev)
@@ -250,20 +262,8 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 	}
 	termW, _ := a.screen.Size()
 	spec := dialog.ConfigDialogView(*st, termW)
-	ev, handled := dlg.HandleKey(spec, &st.Focus, event)
-	if handled {
-		switch {
-		case ev.ID == dlg.OK:
-			a.applyConfigDialog()
-		case ev.ID == dlg.Cancel:
-			a.closeConfigDialog()
-		case ev.ID != "":
-			if _, isInput := dialog.ConfigSplitIndex(ev.ID); isInput {
-				a.applyConfigDialog() // Enter in a split input confirms
-			} else {
-				st.Apply(ev)
-			}
-		}
+	if ev, handled := dlg.HandleKey(spec, &st.Focus, event); handled {
+		a.applyConfigDialogEvent(ev)
 		return
 	}
 	// The engine declined: text keys go to the focused carousel split input.
@@ -272,12 +272,44 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 	}
 }
 
+// applyConfigDialogEvent acts on a widget event of the Configuration dialog (key or click),
+// including its Yes/No sub-confirms.
+func (a *App) applyConfigDialogEvent(ev dlg.Event) {
+	st := &a.model.ConfigDialog
+	switch {
+	case st.EditStubConfirm:
+		a.applyConfigEditStubConfirmEvent(ev)
+	case st.ResetDefaultsConfirm:
+		a.applyConfigResetDefaultsConfirmEvent(ev)
+	case ev.Kind == dlg.EventCaret:
+		if i, ok := dialog.ConfigSplitIndex(ev.ID); ok {
+			st.Split[i].SetCursor(ev.Index)
+		}
+	case ev.ID == dlg.OK:
+		a.applyConfigDialog()
+	case ev.ID == dlg.Cancel:
+		a.closeConfigDialog()
+	case ev.ID != "":
+		if _, isInput := dialog.ConfigSplitIndex(ev.ID); isInput {
+			a.applyConfigDialog() // Enter in a split input confirms
+		} else {
+			st.Apply(ev)
+		}
+	}
+}
+
 // handleConfigEditStubConfirmKey handles Yes/No for the "config.toml does not exist, generate
 // default and open it?" confirmation shown from the Configuration dialog's F9 handler.
 func (a *App) handleConfigEditStubConfirmKey(event *tcell.EventKey) {
 	st := &a.model.ConfigDialog
-	ev, ok := dlg.HandleKey(dialog.ConfigEditStubView(), &st.EditStubConfirmFocus, event)
-	if !ok || ev.ID == "" {
+	if ev, ok := dlg.HandleKey(dialog.ConfigEditStubView(), &st.EditStubConfirmFocus, event); ok {
+		a.applyConfigEditStubConfirmEvent(ev)
+	}
+}
+
+func (a *App) applyConfigEditStubConfirmEvent(ev dlg.Event) {
+	st := &a.model.ConfigDialog
+	if ev.ID == "" {
 		return
 	}
 	st.EditStubConfirm = false
@@ -290,8 +322,14 @@ func (a *App) handleConfigEditStubConfirmKey(event *tcell.EventKey) {
 // defaults?" confirmation shown from the Configuration dialog's F8 handler.
 func (a *App) handleConfigResetDefaultsConfirmKey(event *tcell.EventKey) {
 	st := &a.model.ConfigDialog
-	ev, ok := dlg.HandleKey(dialog.ConfigResetDefaultsView(), &st.ResetDefaultsConfirmFocus, event)
-	if !ok || ev.ID == "" {
+	if ev, ok := dlg.HandleKey(dialog.ConfigResetDefaultsView(), &st.ResetDefaultsConfirmFocus, event); ok {
+		a.applyConfigResetDefaultsConfirmEvent(ev)
+	}
+}
+
+func (a *App) applyConfigResetDefaultsConfirmEvent(ev dlg.Event) {
+	st := &a.model.ConfigDialog
+	if ev.ID == "" {
 		return
 	}
 	st.ResetDefaultsConfirm = false
@@ -717,12 +755,17 @@ func (a *App) confirmGroupSelectFromInput() {
 // handleGroupSelectKey routes a key for the open group select dialog. The engine owns focus and
 // the mnemonics; the pattern input's text editing runs when the engine declines a key.
 func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
+	dialogctrl.HandlePatternDialogKey(a.groupSelectPatternKeys(), event)
+}
+
+// groupSelectPatternKeys binds the open group select dialog to the shared pattern dialog handling.
+func (a *App) groupSelectPatternKeys() dialogctrl.PatternKeys {
 	gs := &a.model.GroupSelect
-	dialogctrl.HandlePatternDialogKey(dialogctrl.PatternKeys{
+	return dialogctrl.PatternKeys{
 		Spec: a.groupSelectView(), Focus: &gs.Focus,
 		Text: &gs.Text, Cursor: &gs.TextCursor, Scroll: &gs.TextScroll, QueryWidth: a.groupSelectQueryWidth,
 		Keys:    a.keys.DialogInput,
 		Confirm: a.confirmGroupSelectFromInput, Cancel: a.closeGroupSelect,
 		Apply: func(ev dlg.Event) { gs.Apply(ev) },
-	}, event)
+	}
 }

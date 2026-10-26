@@ -68,11 +68,17 @@ func (a *App) openDedupDeleteDialog() {
 
 func (a *App) handleDedupEmptyDirsConfirmKey(event *tcell.EventKey) bool {
 	st := &a.model.DedupEmptyDirsConfirm
-	ev, ok := dlg.HandleKey(dialog.DedupEmptyDirsConfirmView(*st, 0), &st.Focus, event)
-	if ok && ev.ID != "" {
-		a.answerDedupEmptyDirsConfirm(ev.ID)
+	if ev, ok := dlg.HandleKey(dialog.DedupEmptyDirsConfirmView(*st, 0), &st.Focus, event); ok {
+		a.applyDedupEmptyDirsConfirmEvent(ev)
 	}
 	return false
+}
+
+// applyDedupEmptyDirsConfirmEvent acts on a widget event of the empty-dirs confirmation.
+func (a *App) applyDedupEmptyDirsConfirmEvent(ev dlg.Event) {
+	if ev.ID != "" {
+		a.answerDedupEmptyDirsConfirm(ev.ID)
+	}
 }
 
 // answerDedupEmptyDirsConfirm closes the confirmation and, unless the answer is Cancel, queues the

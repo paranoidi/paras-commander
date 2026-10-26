@@ -358,10 +358,13 @@ func (a *App) handleHostKeyDialogKey(ev *tcell.EventKey) {
 	if !d.Open {
 		return
 	}
-	key, ok := dlg.HandleKey(dialog.HostKeyView(*d), &d.Focus, ev)
-	if !ok {
-		return
+	if key, ok := dlg.HandleKey(dialog.HostKeyView(*d), &d.Focus, ev); ok {
+		a.applyHostKeyEvent(key)
 	}
+}
+
+// applyHostKeyEvent acts on a widget event of the host key prompt (key or click).
+func (a *App) applyHostKeyEvent(key dlg.Event) {
 	switch key.ID {
 	case dialog.HostKeyAccept:
 		a.finishHostKeyDialog(sftpb.HostKeyTrustSession)

@@ -281,7 +281,7 @@ func TestInputDrivesList(t *testing.T) {
 	}
 }
 
-func TestListTargetAndHitRects(t *testing.T) {
+func TestListClickWheelAndHitRects(t *testing.T) {
 	spec := listOnlySpec(listItem(3, 1, 0, 6))
 	p := mustPlace(t, spec)
 	it, _ := p.Item("hosts")
@@ -291,12 +291,27 @@ func TestListTargetAndHitRects(t *testing.T) {
 			t.Errorf("row %d: HitTest = (%q, %v), want hit=%v", row, id, hit, want)
 		}
 	}
-	tg, ok := TargetAt(spec, 80, 24, it.Rect.X+1, it.Rect.Y+2)
-	if !ok || tg.Kind != TargetList || tg.ID != "hosts" || tg.Focus != "hosts" || tg.Row != 2 || tg.Cursor != 1 {
-		t.Errorf("row 2: (%+v, %v)", tg, ok)
+	var focus ID
+	ev, ok := Click(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+2, false)
+	if !ok || ev != (Event{ID: "hosts", Kind: EventListMove, Index: 2}) || focus != "hosts" {
+		t.Errorf("row 2: (%+v, %v), focus %q", ev, ok, focus)
 	}
-	if tg, ok := TargetAt(spec, 80, 24, it.Rect.X+1, it.Rect.Y+4); ok {
-		t.Errorf("past the last row: (%+v, %v), want a miss", tg, ok)
+	// A double click on the cursor row activates it like Enter; elsewhere it only moves.
+	if ev, ok := Click(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+1, true); !ok || ev != (Event{ID: "hosts", Index: 1, Enter: true}) {
+		t.Errorf("double click on the cursor row: (%+v, %v), want its activation", ev, ok)
+	}
+	if ev, ok := Click(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+2, true); !ok || ev.Kind != EventListMove {
+		t.Errorf("double click off the cursor row: (%+v, %v), want a move", ev, ok)
+	}
+	if ev, ok := Click(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+4, false); ok {
+		t.Errorf("past the last row: (%+v, %v), want a miss", ev, ok)
+	}
+	// The wheel moves the cursor, clamped to the rows.
+	if ev, ok := Wheel(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y, 3); !ok || ev.Kind != EventListMove || ev.Index != 2 {
+		t.Errorf("wheel down: (%+v, %v), want the last row 2", ev, ok)
+	}
+	if ev, ok := Wheel(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y, -3); !ok || ev.Index != 0 {
+		t.Errorf("wheel up: (%+v, %v), want row 0", ev, ok)
 	}
 	// A scrolled list maps the clicked line to the row at that line.
 	long := listOnlySpec(listItem(30, 12, 7, 6))
@@ -305,8 +320,8 @@ func TestListTargetAndHitRects(t *testing.T) {
 	if lit.Offset != 7 {
 		t.Fatalf("placed offset = %d, want 7", lit.Offset)
 	}
-	if tg, ok = TargetAt(long, 80, 24, lit.Rect.X, lit.Rect.Y+3); !ok || tg.Row != 10 || tg.Cursor != 12 {
-		t.Errorf("scrolled list: (%+v, %v), want row 10 cursor 12", tg, ok)
+	if ev, ok = Click(long, 80, 24, &focus, lit.Rect.X, lit.Rect.Y+3, false); !ok || ev.Index != 10 || ev.Offset != 7 {
+		t.Errorf("scrolled list: (%+v, %v), want row 10 at offset 7", ev, ok)
 	}
 }
 
@@ -332,8 +347,13 @@ func TestDrivenList(t *testing.T) {
 	// A row of a driven list gives focus to the driving input.
 	p := mustPlace(t, spec)
 	it, _ := p.Item("hosts")
-	if tg, ok := TargetAt(spec, 80, 24, it.Rect.X+1, it.Rect.Y+2); !ok || tg.Kind != TargetList || tg.ID != "hosts" || tg.Row != 2 || tg.Focus != "filter" {
-		t.Errorf("driven list target: (%+v, %v), want row 2 and focus filter", tg, ok)
+	focus = "where"
+	if ev, ok := Click(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+2, false); !ok || ev.Kind != EventListMove || ev.ID != "hosts" || ev.Index != 2 || focus != "filter" {
+		t.Errorf("driven list click: (%+v, %v), focus %q, want row 2 and focus filter", ev, ok, focus)
+	}
+	// A double click on the cursor row is Enter in the driving input.
+	if ev, ok := Click(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+5, true); !ok || ev != (Event{ID: "filter", Enter: true}) {
+		t.Errorf("driven list double click: (%+v, %v), want the filter's activation", ev, ok)
 	}
 }
 

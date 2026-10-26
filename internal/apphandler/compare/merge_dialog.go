@@ -68,10 +68,15 @@ func (h *Handler) HandleMergeDialogKey(event *tcell.EventKey) bool {
 	if !d.Open {
 		return false
 	}
-	ev, ok := dlg.HandleKey(dialog.CompareMergeView(*d, h.model.UserHomeDir), &d.Focus, event)
-	if !ok {
-		return true
+	if ev, ok := dlg.HandleKey(dialog.CompareMergeView(*d, h.model.UserHomeDir), &d.Focus, event); ok {
+		h.ApplyMergeDialogEvent(ev)
 	}
+	return true
+}
+
+// ApplyMergeDialogEvent acts on a widget event of the open merge dialog (key or click).
+func (h *Handler) ApplyMergeDialogEvent(ev dlg.Event) {
+	d := &h.model.CompareMergeDialog
 	switch ev.ID {
 	case "":
 	case dlg.OK:
@@ -82,7 +87,6 @@ func (h *Handler) HandleMergeDialogKey(event *tcell.EventKey) bool {
 		d.Apply(ev)
 		h.refreshMergePreview(d)
 	}
-	return true
 }
 
 func (h *Handler) confirmMerge() {

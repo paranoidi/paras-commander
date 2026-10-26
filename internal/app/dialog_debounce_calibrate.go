@@ -205,15 +205,7 @@ func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 		st.Status = ""
 	}
 	if ev, ok := dlg.HandleKey(dialog.DebounceCalibrateView(*st), &st.Focus, event); ok {
-		switch ev.ID {
-		case "":
-		case dlg.Cancel:
-			a.closeDebounceCalibrateDialog()
-		case dialog.DebounceCalibrate:
-			a.beginDebounceCalibrateMeasuring()
-		default: // OK, or Enter in an input
-			a.applyDebounceCalibrateDialog()
-		}
+		a.applyDebounceCalibrateEvent(ev)
 		return
 	}
 	switch st.Focus {
@@ -221,6 +213,24 @@ func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 		handleDebounceCalibrateInputKey(event, &st.Value, &st.Cursor)
 	case dialog.DebouncePreview:
 		handleDebounceCalibrateInputKey(event, &st.PreviewValue, &st.PreviewCursor)
+	}
+}
+
+// applyDebounceCalibrateEvent acts on a widget event of the calibration dialog (key or click).
+func (a *App) applyDebounceCalibrateEvent(ev dlg.Event) {
+	st := &a.model.DebounceCalibrateDialog
+	switch {
+	case ev.Kind == dlg.EventCaret && ev.ID == dialog.DebounceDelay:
+		st.Cursor = ev.Index
+	case ev.Kind == dlg.EventCaret:
+		st.PreviewCursor = ev.Index
+	case ev.ID == "":
+	case ev.ID == dlg.Cancel:
+		a.closeDebounceCalibrateDialog()
+	case ev.ID == dialog.DebounceCalibrate:
+		a.beginDebounceCalibrateMeasuring()
+	default: // OK, or Enter in an input
+		a.applyDebounceCalibrateDialog()
 	}
 }
 

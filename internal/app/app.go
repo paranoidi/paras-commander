@@ -176,7 +176,6 @@ type findDialogSelectionScanNeedPayload struct {
 type App struct {
 	screen              tcell.Screen
 	mouse               mouseState // see mouse.go
-	renderHeld          int        // >0 turns render into a no-op; see replayDialogKeys
 	config              config.Config
 	styles              theme.Theme
 	themes              map[string]theme.Theme

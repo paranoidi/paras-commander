@@ -56,10 +56,13 @@ func (h *Handler) HandleOutputDialogKey(event *tcell.EventKey) {
 	if h.scrollOutputDialog(st, scrollEv.Key()) {
 		return
 	}
-	ev, ok := dlg.HandleKey(dialog.CommandOutputDialogKeys(*st), &st.Focus, event)
-	if !ok {
-		return
+	if ev, ok := dlg.HandleKey(dialog.CommandOutputDialogKeys(*st), &st.Focus, event); ok {
+		h.ApplyOutputDialogEvent(ev)
 	}
+}
+
+// ApplyOutputDialogEvent acts on a widget event of the command-output dialog (key or click).
+func (h *Handler) ApplyOutputDialogEvent(ev dlg.Event) {
 	switch ev.ID {
 	case dialog.OutputBackground:
 		h.closeOutputDialogKeepRunning()

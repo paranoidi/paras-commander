@@ -14,10 +14,13 @@ import (
 func (h *Handler) HandleProgressDialogKey(event *tcell.EventKey) {
 	st := &h.model.DedupProgressDialog
 	spec := dialog.DedupProgressView(h.model.DedupSnapshot, "", time.Time{})
-	ev, ok := dlg.HandleKey(spec, &st.Focus, event)
-	if !ok {
-		return
+	if ev, ok := dlg.HandleKey(spec, &st.Focus, event); ok {
+		h.ApplyProgressDialogEvent(ev)
 	}
+}
+
+// ApplyProgressDialogEvent acts on a widget event of the scan-progress dialog (key or click).
+func (h *Handler) ApplyProgressDialogEvent(ev dlg.Event) {
 	switch ev.ID {
 	case dlg.OK:
 		h.Confirm()

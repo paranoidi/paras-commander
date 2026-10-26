@@ -182,12 +182,21 @@ func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	ev, ok := dlg.HandleKey(h.PathPickerView(), &st.Focus, event)
+	if ev, ok := dlg.HandleKey(h.PathPickerView(), &st.Focus, event); ok {
+		h.ApplyPathPickerEvent(ev)
+		return
+	}
+	if st.Focus == dialog.PathPickerFilter {
+		h.host.HandlePathPickerScrollingQueryKey(event)
+	}
+}
+
+// ApplyPathPickerEvent acts on a widget event of the open path picker (key or click).
+func (h *Handler) ApplyPathPickerEvent(ev dlg.Event) {
+	st := &h.model.PathPicker
 	switch {
-	case !ok:
-		if st.Focus == dialog.PathPickerFilter {
-			h.host.HandlePathPickerScrollingQueryKey(event)
-		}
+	case ev.Kind == dlg.EventCaret:
+		st.QueryCursor = ev.Index
 	case ev.Kind == dlg.EventListMove:
 		st.Selected, st.ListScroll = ev.Index, ev.Offset
 	case ev.ID == dlg.Cancel:

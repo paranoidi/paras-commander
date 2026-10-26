@@ -49,3 +49,10 @@ func (h *Handler) DestFieldTryCompletionKey(event *tcell.EventKey, field *dialog
 	}
 	return h.tryPathFieldCompletionKey(event, field, h.TransferDestinationTextWidth(), armValidate)
 }
+
+// setPathFieldCursor puts a path field's cursor at rune index i (a click on its text) and
+// re-syncs its completion, like the cursor keys of DestFieldNav.
+func (h *Handler) setPathFieldCursor(field *dialog.FileDialogField, i int) {
+	field.SetCursor(i)
+	h.SyncPathFieldCompletion(field, h.TransferDestinationTextWidth())
+}

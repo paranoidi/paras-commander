@@ -200,7 +200,7 @@ func TestPlaceClampsAndTruncates(t *testing.T) {
 	}
 }
 
-func TestHitTestAndTargetAt(t *testing.T) {
+func TestHitTestAndClick(t *testing.T) {
 	spec := testSpec()
 	p, _ := Place(80, 24, spec)
 	hit := func(x, y int) ID {
@@ -219,16 +219,17 @@ func TestHitTestAndTargetAt(t *testing.T) {
 		}
 	}
 
-	tg, ok := TargetAt(spec, 80, 24, 22, 11)
-	if !ok || tg.ID != "c0" || tg.Kind != TargetOption || tg.Focus != "c0" {
-		t.Fatalf("checkbox target: got (%+v, %v)", tg, ok)
+	focus := ID("a0")
+	ev, ok := Click(spec, 80, 24, &focus, 22, 11, false)
+	if !ok || ev != (Event{ID: "c0"}) || focus != "c0" {
+		t.Fatalf("checkbox click: got (%+v, %v), focus %q", ev, ok, focus)
 	}
-	tg, ok = TargetAt(spec, 80, 24, 45, 14)
-	if !ok || tg.ID != Cancel || tg.Kind != TargetButton {
-		t.Fatalf("Cancel target: got (%+v, %v)", tg, ok)
+	ev, ok = Click(spec, 80, 24, &focus, 45, 14, true)
+	if !ok || ev != (Event{ID: Cancel}) || focus != Cancel {
+		t.Fatalf("Cancel click: got (%+v, %v), focus %q", ev, ok, focus)
 	}
-	if _, ok := TargetAt(spec, 80, 24, 20, 8); ok {
-		t.Fatal("the border is no target")
+	if _, ok := Click(spec, 80, 24, &focus, 20, 8, false); ok || focus != Cancel {
+		t.Fatalf("the border is no target and leaves focus alone (focus %q)", focus)
 	}
 }
 
@@ -339,11 +340,12 @@ func TestLabelsAreNotHitTargets(t *testing.T) {
 	if id, ok := HitTest(p, 22, 9); !ok || id != "r0" {
 		t.Errorf("radio row hit = %q %v, want r0", id, ok)
 	}
-	if _, ok := TargetAt(spec, 80, 24, 22, 10); ok {
+	var focus ID
+	if _, ok := Click(spec, 80, 24, &focus, 22, 10, false); ok {
 		t.Error("a label is no target")
 	}
-	if tg, ok := TargetAt(spec, 80, 24, 22, 11); !ok || tg.ID != "r1" {
-		t.Errorf("radio below the label = (%+v, %v), want r1", tg, ok)
+	if ev, ok := Click(spec, 80, 24, &focus, 22, 11, false); !ok || ev.ID != "r1" {
+		t.Errorf("radio below the label = (%+v, %v), want r1", ev, ok)
 	}
 }
 
@@ -504,7 +506,8 @@ func TestSeparatorsAreNotFocusableOrHitTargets(t *testing.T) {
 			}
 		}
 	}
-	if _, ok := TargetAt(spec, 80, 24, 30, 10); ok {
+	var focus ID
+	if _, ok := Click(spec, 80, 24, &focus, 30, 10, false); ok {
 		t.Error("a separator is no target")
 	}
 	for from, want := range map[ID]ID{"repl": "c0", "c0": "r0", "r0": OK} {
@@ -599,27 +602,46 @@ func TestInputKeyContract(t *testing.T) {
 	}
 }
 
-func TestInputTarget(t *testing.T) {
+func TestInputClick(t *testing.T) {
 	spec := inputSpec()
-	tg, ok := TargetAt(spec, 80, 24, 22+5, 9) // 5 cells into the second input, which is empty
-	if !ok || tg.ID != "repl" || tg.Kind != TargetInput || tg.TextCol != 5 || tg.Focus != "repl" {
-		t.Fatalf("input target: got (%+v, %v), want repl with TextCol 5", tg, ok)
+	var focus ID
+	click := func(spec Spec, x, y int) Event {
+		t.Helper()
+		ev, ok := Click(spec, 80, 24, &focus, x, y, false)
+		if !ok || ev.Kind != EventCaret {
+			t.Fatalf("click (%d,%d) = (%+v, %v), want an EventCaret", x, y, ev, ok)
+		}
+		return ev
 	}
-	if tg, ok := TargetAt(spec, 80, 24, 22, 8); !ok || tg.ID != "find" || tg.TextCol != 0 {
-		t.Fatalf("first cell: got (%+v, %v)", tg, ok)
+	// The caret goes to the clicked rune, clamped to the end of the text ("anchor": 6 runes).
+	if ev := click(spec, 22+5, 9); ev.ID != "repl" || ev.Index != 0 || focus != "repl" {
+		t.Fatalf("empty input: got %+v (focus %q), want repl at 0", ev, focus)
 	}
-	if tg, ok := TargetAt(spec, 80, 24, 57, 8); !ok || tg.TextCol != 35 {
-		t.Fatalf("last cell: got (%+v, %v), want TextCol 35", tg, ok)
+	if ev := click(spec, 22+2, 8); ev.ID != "find" || ev.Index != 2 || focus != "find" {
+		t.Fatalf("third cell: got %+v, want find at 2", ev)
+	}
+	if ev := click(spec, 57, 8); ev.Index != 6 {
+		t.Fatalf("past the text: got %+v, want the end 6", ev)
 	}
 	// A leading icon (plus its space) comes before the text, and a scrolled input adds its Scroll.
 	icon := inputSpec()
+	icon.Groups[0].Columns[0][1].Value = "anchorage bay"
 	icon.Groups[0].Columns[0][1].LeadingIcon = ">"
 	icon.Groups[0].Columns[0][1].Scroll = 4
-	if tg, ok := TargetAt(icon, 80, 24, 22+5, 8); !ok || tg.TextCol != 3+4 {
-		t.Fatalf("icon input: got (%+v, %v), want TextCol 7", tg, ok)
+	if ev := click(icon, 22+5, 8); ev.Index != 3+4 {
+		t.Fatalf("icon input: got %+v, want 7", ev)
 	}
-	if tg, _ := TargetAt(icon, 80, 24, 22, 8); tg.TextCol != 4 {
-		t.Fatalf("click on the icon: TextCol %d, want the first visible character 4", tg.TextCol)
+	if ev := click(icon, 22, 8); ev.Index != 4 {
+		t.Fatalf("click on the icon: got %+v, want the first visible character 4", ev)
+	}
+	// Wide runes take two cells.
+	wide := inputSpec()
+	wide.Groups[0].Columns[0][1].Value = "港口bay"
+	if ev := click(wide, 22+3, 8); ev.Index != 1 {
+		t.Fatalf("second cell of the second wide rune: got %+v, want 1", ev)
+	}
+	if ev := click(wide, 22+4, 8); ev.Index != 2 {
+		t.Fatalf("cell after the wide runes: got %+v, want 2", ev)
 	}
 	for _, miss := range [][2]int{{21, 8}, {58, 8}} { // the margins around the input
 		if id, hit := HitTest(mustPlace(t, spec), miss[0], miss[1]); hit {

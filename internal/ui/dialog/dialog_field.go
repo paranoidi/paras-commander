@@ -93,6 +93,16 @@ func (f *FileDialogField) MoveCursor(delta int) {
 	f.Cursor = lineedit.ClampRuneCursor(f.Cursor+delta, len(runes))
 }
 
+// SetCursor puts the cursor at rune index i (clamped; a click on the text) and commits pending
+// prefill text.
+func (f *FileDialogField) SetCursor(i int) {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+	f.Cursor = lineedit.ClampRuneCursor(i, len([]rune(f.Value)))
+}
+
 // MoveCursorStart moves the cursor to the beginning and commits pending prefill text.
 func (f *FileDialogField) MoveCursorStart() {
 	if f == nil {

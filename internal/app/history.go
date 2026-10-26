@@ -300,18 +300,27 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 		}
 	}
 	st := &a.model.HistoryDialog
-	ev, ok := dlg.HandleKey(a.historyView(), &st.Focus, event)
-	switch {
-	case !ok:
-		if st.Focus == dialog.HistoryFilter {
-			onChange := func() {
-				a.syncHistoryDialogRanks()
-				st.Selected = 0
-				dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
-			}
-			edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.historyDialogQueryWidth(), onChange)
-			a.handleScrollingQueryKey(event, true, edit)
+	if ev, ok := dlg.HandleKey(a.historyView(), &st.Focus, event); ok {
+		a.applyHistoryEvent(ev)
+		return
+	}
+	if st.Focus == dialog.HistoryFilter {
+		onChange := func() {
+			a.syncHistoryDialogRanks()
+			st.Selected = 0
+			dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 		}
+		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.historyDialogQueryWidth(), onChange)
+		a.handleScrollingQueryKey(event, true, edit)
+	}
+}
+
+// applyHistoryEvent acts on a widget event of the History dialog (key or click).
+func (a *App) applyHistoryEvent(ev dlg.Event) {
+	st := &a.model.HistoryDialog
+	switch {
+	case ev.Kind == dlg.EventCaret:
+		st.QueryCursor = ev.Index
 	case ev.Kind == dlg.EventListMove:
 		st.Selected, st.ListScroll = ev.Index, ev.Offset
 	case ev.ID == dialog.HistoryZoxide:

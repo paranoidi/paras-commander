@@ -243,9 +243,6 @@ func (a *App) deleteDialogOpen() bool {
 }
 
 func (a *App) render() {
-	if a.renderHeld > 0 {
-		return
-	}
 	a.stopDiskUsageRedrawDebounce()
 	a.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	a.syncCursorNameHintNavCoalesceFlags()

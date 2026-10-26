@@ -648,14 +648,21 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 
-	ev, ok := dlg.HandleKey(dialog.HelpDialogKeys(), &st.Focus, event)
-	if !ok {
-		return false
+	if ev, ok := dlg.HandleKey(dialog.HelpDialogKeys(), &st.Focus, event); ok {
+		return a.applyHelpEvent(ev)
 	}
-	switch ev.ID {
-	case dialog.HelpClose:
+	return false
+}
+
+// applyHelpEvent acts on a widget event of the help dialog (key or click); reports whether the
+// app should quit.
+func (a *App) applyHelpEvent(ev dlg.Event) bool {
+	switch {
+	case ev.Kind == dlg.EventCaret:
+		a.model.HelpView.QueryCursor = ev.Index
+	case ev.ID == dialog.HelpClose:
 		a.closeHelpDialog()
-	case dialog.HelpFilter: // Enter in the filter activates the selected entry
+	case ev.ID == dialog.HelpFilter: // Enter in the filter activates the selected entry
 		return a.activateHelpSelection()
 	}
 	return false

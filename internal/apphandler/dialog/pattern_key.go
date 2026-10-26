@@ -27,23 +27,31 @@ type PatternKeys struct {
 // mnemonics; the pattern input's text editing runs when the engine declines a key. Alt+letter
 // keys that are mnemonics of either twin never edit, whether or not this dialog has them.
 func HandlePatternDialogKey(p PatternKeys, event *tcell.EventKey) {
-	ev, ok := dlg.HandleKey(p.Spec, p.Focus, event)
+	if ev, ok := dlg.HandleKey(p.Spec, p.Focus, event); ok {
+		ApplyPatternDialogEvent(p, ev)
+		return
+	}
+	if *p.Focus != dialog.PatternInput {
+		return
+	}
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune()) {
+		return
+	}
+	scrollquery.HandleKey(p.Keys, event, true, scrollquery.NewEdit(p.Text, p.Cursor, p.Scroll, p.QueryWidth(), p.OnEdit))
+}
+
+// ApplyPatternDialogEvent acts on a widget event of a pattern dialog (from a key or a click).
+func ApplyPatternDialogEvent(p PatternKeys, ev dlg.Event) {
 	switch {
-	case !ok:
-		if *p.Focus != dialog.PatternInput {
-			return
-		}
-		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune()) {
-			return
-		}
-		scrollquery.HandleKey(p.Keys, event, true, scrollquery.NewEdit(p.Text, p.Cursor, p.Scroll, p.QueryWidth(), p.OnEdit))
+	case ev.Kind == dlg.EventCaret:
+		*p.Cursor = ev.Index
 	case ev.ID == dlg.OK || ev.ID == dialog.PatternInput:
 		p.Confirm()
 	case ev.ID == dlg.Cancel:
 		p.Cancel()
 	case ev.ID == "":
-	case event.Key() == tcell.KeyEnter && !dialog.PatternIsRadio(ev.ID):
-		p.Confirm() // Enter on a checkbox confirms; Space toggles it
+	case ev.Enter && !dialog.PatternIsRadio(ev.ID):
+		p.Confirm() // Enter on a checkbox confirms; Space or a click toggles it
 	default:
 		p.Apply(ev)
 	}

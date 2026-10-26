@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -363,10 +362,10 @@ func massRenameHomeFocus(mode dialog.MassRenameModeUI) dlg.ID {
 // modified", and on the external editor radio launches the editor instead), a checkbox toggles
 // its option, Apply applies the batch and keeps the dialog open. It reports whether the event was
 // one of those.
-func (h *Handler) applyMassRenameEvent(ev dlg.Event, key *tcell.EventKey) bool {
+func (h *Handler) applyMassRenameEvent(ev dlg.Event) bool {
 	d := &h.model.FileDialog
 	if mode, ok := dialog.MassRenameModeFromRadio(ev.ID); ok {
-		enter := key.Key() == tcell.KeyEnter
+		enter := ev.Enter
 		if enter && mode == dialog.MassRenameModeUIExternalEditor {
 			h.LaunchMassRenameExternalEditor()
 			return true

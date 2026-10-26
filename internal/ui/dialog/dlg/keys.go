@@ -344,7 +344,9 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 	}
 	switch ev.Key() {
 	case tcell.KeyEnter:
-		return activation(spec, *focus), true
+		e := activation(spec, *focus)
+		e.Enter = true
+		return e, true
 	case tcell.KeyTab, tcell.KeyBacktab:
 		segs, index := segmentTable(spec)
 		step := 1

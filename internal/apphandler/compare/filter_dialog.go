@@ -139,12 +139,18 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 	if !d.Open {
 		return
 	}
-	ev, ok := dlg.HandleKey(dialog.CompareFilterView(*d), &d.Focus, event)
-	switch {
-	case !ok:
-	case ev.ID == dlg.OK:
+	if ev, ok := dlg.HandleKey(dialog.CompareFilterView(*d), &d.Focus, event); ok {
+		h.ApplyFilterDialogEvent(ev)
+	}
+}
+
+// ApplyFilterDialogEvent acts on a widget event of the open category-filter dialog (key or click).
+func (h *Handler) ApplyFilterDialogEvent(ev dlg.Event) {
+	d := &h.model.CompareFilterDialog
+	switch ev.ID {
+	case dlg.OK:
 		h.confirmFilterDialog()
-	case ev.ID == dlg.Cancel:
+	case dlg.Cancel:
 		h.closeFilterDialog()
 	default:
 		d.Apply(ev)

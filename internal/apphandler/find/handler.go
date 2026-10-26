@@ -1356,7 +1356,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		}
 	}
 	if ev, ok := dlg.HandleKey(spec, &st.Focus, event); ok {
-		h.applyFindDialogEvent(ev)
+		h.ApplyDialogEvent(ev)
 		return
 	}
 	// What the engine declines is text editing of the focused input.
@@ -1381,12 +1381,17 @@ func (h *Handler) DialogSpec() dlg.Spec {
 	})
 }
 
-// applyFindDialogEvent acts on an activation from the widget spec: list motion moves the cursor
-// (and arms the navigation-idle rank), Enter in the query or OK confirms, Enter in the depth
-// input commits it and returns to the query, the options toggle and Cancel closes.
-func (h *Handler) applyFindDialogEvent(ev dlg.Event) {
+// ApplyDialogEvent acts on a widget event (key or click): a click on the query moves its cursor,
+// list motion moves the list cursor (and arms the navigation-idle rank), Enter in the query or OK
+// confirms, Enter in the depth input commits it and returns to the query, the options toggle and
+// Cancel closes.
+func (h *Handler) ApplyDialogEvent(ev dlg.Event) {
 	st := &h.model.FindDialog
 	switch {
+	case ev.Kind == dlg.EventCaret:
+		if ev.ID == dialog.FindQuery {
+			st.QueryCursor = ev.Index
+		} // the depth input keeps its cursor at the end
 	case ev.ID == dialog.FindList && ev.Kind == dlg.EventListMove:
 		st.Selected, st.ListScroll = ev.Index, ev.Offset
 		h.armFindNavIdleTimer()

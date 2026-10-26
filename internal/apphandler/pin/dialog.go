@@ -252,14 +252,24 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	}
 	st := &h.model.PinDialog
 	focus := dialog.PinFilter
-	switch ev, ok := dlg.HandleKey(h.DialogView(), &focus, event); {
-	case !ok:
-		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, h.queryWidth(), func() {
-			h.SyncDialogRanks()
-			st.Selected = 0
-			dialog.EnsurePinListScroll(st, h.listRows())
-		})
-		scrollquery.HandleKey(h.keysDialogInput, event, true, edit)
+	if ev, ok := dlg.HandleKey(h.DialogView(), &focus, event); ok {
+		h.ApplyDialogEvent(ev)
+		return
+	}
+	edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, h.queryWidth(), func() {
+		h.SyncDialogRanks()
+		st.Selected = 0
+		dialog.EnsurePinListScroll(st, h.listRows())
+	})
+	scrollquery.HandleKey(h.keysDialogInput, event, true, edit)
+}
+
+// ApplyDialogEvent acts on a widget event of the Pin dialog (key or click).
+func (h *Handler) ApplyDialogEvent(ev dlg.Event) {
+	st := &h.model.PinDialog
+	switch {
+	case ev.Kind == dlg.EventCaret:
+		st.QueryCursor = ev.Index
 	case ev.Kind == dlg.EventListMove:
 		st.Selected, st.ListScroll = ev.Index, ev.Offset
 	case ev.ID == dialog.PinFilter:

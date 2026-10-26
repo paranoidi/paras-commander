@@ -287,8 +287,19 @@ func (h *Handler) confirmFilterDialogFromInput() {
 // should quit (always false here). The engine owns focus and the mnemonics; the pattern input's
 // text editing runs when the engine declines a key.
 func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
+	HandlePatternDialogKey(h.FilterPatternKeys(), event)
+	return false
+}
+
+// ApplyFilterDialogEvent acts on a widget event of the open Filter dialog (a mouse click).
+func (h *Handler) ApplyFilterDialogEvent(ev dlg.Event) {
+	ApplyPatternDialogEvent(h.FilterPatternKeys(), ev)
+}
+
+// FilterPatternKeys binds the open Filter dialog to the shared pattern dialog handling.
+func (h *Handler) FilterPatternKeys() PatternKeys {
 	fd := &h.model.FilterDialog
-	HandlePatternDialogKey(PatternKeys{
+	return PatternKeys{
 		Spec: h.FilterDialogView(), Focus: &fd.Focus,
 		Text: &fd.Text, Cursor: &fd.TextCursor, Scroll: &fd.TextScroll, QueryWidth: h.filterDialogQueryWidth,
 		Keys: h.keysDialogInput, OnEdit: h.updateFilterDialogPreview,
@@ -298,6 +309,5 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) bool {
 				h.updateFilterDialogPreview()
 			}
 		},
-	}, event)
-	return false
+	}
 }

@@ -471,3 +471,26 @@ func TestMouseDialogInputPlacesCursor(t *testing.T) {
 		t.Fatalf("input click: focus=%q cursor=%d want input / 4", gs.Focus, gs.TextCursor)
 	}
 }
+
+func TestMouseDialogCheckboxClickTogglesWhereEnterConfirms(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openGroupSelect("select", "panel")
+	gs := &app.model.GroupSelect
+	gs.Text = "harbor*.txt"
+	x, y := screenTextCell(t, app, "Case sensitive")
+	click(app, x, y, tcell.Button1)
+	if !gs.Open || !gs.CaseSensitive || gs.Focus != dialog.PatternCase {
+		t.Fatalf("checkbox click: open=%v case=%v focus=%q, want it toggled like Space, not confirmed like Enter", gs.Open, gs.CaseSensitive, gs.Focus)
+	}
+}
+
+func TestMouseDialogInputClickOnlyMovesCursor(t *testing.T) {
+	app := sftpKeyApp(t, t.TempDir(), 12)
+	st := &app.model.SFTPConnectDialog
+	st.Location.Value, st.Location.Cursor, st.Location.PrefillPending = "sftp://keel.example", 0, false
+	x, y := screenTextCell(t, app, "sftp://keel.example")
+	click(app, x+7, y, tcell.Button1)
+	if !st.Open || st.Focus != dialog.SFTPLocation || st.Location.Cursor != 7 {
+		t.Fatalf("input click: open=%v focus=%q cursor=%d, want the location focused at 7 and the dialog open", st.Open, st.Focus, st.Location.Cursor)
+	}
+}

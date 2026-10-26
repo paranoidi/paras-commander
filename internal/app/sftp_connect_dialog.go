@@ -118,10 +118,21 @@ func (a *App) executeSFTPConnectDialog() {
 
 func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 	st := &a.model.SFTPConnectDialog
-	ev, ok := dlg.HandleKey(a.sftpConnectView(), &st.Focus, event)
+	if ev, ok := dlg.HandleKey(a.sftpConnectView(), &st.Focus, event); ok {
+		a.applySFTPConnectEvent(ev)
+		return
+	}
+	a.editSFTPConnectDialog(event)
+}
+
+// applySFTPConnectEvent acts on a widget event of the SFTP dialog (key or click).
+func (a *App) applySFTPConnectEvent(ev dlg.Event) {
+	st := &a.model.SFTPConnectDialog
 	switch {
-	case !ok:
-		a.editSFTPConnectDialog(event)
+	case ev.Kind == dlg.EventCaret && ev.ID == dialog.SFTPFilter:
+		st.QueryCursor = ev.Index
+	case ev.Kind == dlg.EventCaret:
+		st.Location.SetCursor(ev.Index)
 	case ev.Kind == dlg.EventListMove:
 		st.Selected, st.ListScroll = ev.Index, ev.Offset
 	case ev.ID == dlg.Cancel:

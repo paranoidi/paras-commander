@@ -795,12 +795,18 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		h.editConfigFromDialog()
 		return
 	}
-	ev, ok := dlg.HandleKey(dialog.MetaDialogView(*st), &st.Focus, event)
-	switch {
-	case !ok:
-	case ev.ID == dlg.OK:
+	if ev, ok := dlg.HandleKey(dialog.MetaDialogView(*st), &st.Focus, event); ok {
+		h.ApplyDialogEvent(ev)
+	}
+}
+
+// ApplyDialogEvent acts on a widget event of the open meta dialog (key or click).
+func (h *Handler) ApplyDialogEvent(ev dlg.Event) {
+	st := &h.model.MetaDialog
+	switch ev.ID {
+	case dlg.OK:
 		h.ActivateSelection()
-	case ev.ID == dlg.Cancel:
+	case dlg.Cancel:
 		h.CloseDialog()
 	default:
 		st.Apply(ev)

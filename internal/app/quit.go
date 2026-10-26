@@ -82,10 +82,17 @@ func (a *App) openQuitConfirm() {
 
 func (a *App) handleQuitConfirmKey(event *tcell.EventKey) bool {
 	st := &a.model.QuitConfirm
-	ev, ok := dlg.HandleKey(dialog.QuitConfirmView(*st), &st.Focus, event)
-	if !ok || ev.ID == "" {
+	if ev, ok := dlg.HandleKey(dialog.QuitConfirmView(*st), &st.Focus, event); ok {
+		return a.applyQuitConfirmEvent(ev)
+	}
+	return false
+}
+
+// applyQuitConfirmEvent answers the quit confirmation (key or click); reports whether to quit.
+func (a *App) applyQuitConfirmEvent(ev dlg.Event) bool {
+	if ev.ID == "" {
 		return false
 	}
-	*st = dialog.QuitConfirmState{}
+	a.model.QuitConfirm = dialog.QuitConfirmState{}
 	return ev.ID == dialog.QuitQuit
 }

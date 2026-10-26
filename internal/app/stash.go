@@ -46,7 +46,14 @@ func (a *App) closeStashRestoreDialog() {
 
 func (a *App) handleStashRestoreDialogKey(event *tcell.EventKey) {
 	d := &a.model.StashRestoreDialog
-	if ev, ok := dlg.HandleKey(dialog.StashRestoreView(*d), &d.Focus, event); ok && ev.ID != "" {
+	if ev, ok := dlg.HandleKey(dialog.StashRestoreView(*d), &d.Focus, event); ok {
+		a.applyStashRestoreEvent(ev)
+	}
+}
+
+// applyStashRestoreEvent acts on a widget event of the stash restore dialog (key or click).
+func (a *App) applyStashRestoreEvent(ev dlg.Event) {
+	if ev.ID != "" {
 		a.applyStashRestoreChoice(stashRestoreFocusAction(ev.ID))
 	}
 }
