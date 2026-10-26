@@ -143,7 +143,7 @@ func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, dstExists b
 		if err := removePathRecursive(ctx, src); err != nil {
 			return renameOutcome{}, fmt.Errorf("remove source %q: %w", src, err)
 		}
-		return renameOutcome{renamed: true, sourceDeleted: true}, nil // counts as moved
+		return renameOutcome{sourceDeleted: true}, nil
 	case ActionIdentical:
 		return renameOutcome{identical: true}, nil // skipped
 	case ActionRename:
@@ -309,16 +309,16 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 			r.opts.journalMoved(ctx, src, dst)
 		}
 		return f, b, false, err
+	case out.sourceDeleted:
+		// Nothing was renamed: the kept destination's cache entries stay its own.
+		r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSkipped, ReasonSourceDeleted)
+		return 0, 0, true, nil // counts as moved
 	case out.renamed:
 		if r.opts.OnRenamed != nil && !src.IsRemote() && !dst.IsRemote() {
 			r.opts.OnRenamed(src, dst)
 		}
 		if !out.final.IsZero() {
 			dst = out.final
-		}
-		if out.sourceDeleted {
-			r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSkipped, ReasonSourceDeleted)
-			return 0, 0, true, nil
 		}
 		r.opts.journalMoved(ctx, src, dst)
 		if out.staged != "" {
