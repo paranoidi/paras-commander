@@ -3,11 +3,9 @@ package app
 import (
 	"fmt"
 	"os"
-	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -54,17 +52,6 @@ func effectiveTerminalCapability(v string) string {
 	switch v {
 	case config.PreviewTerminalCapabilityYes, config.PreviewTerminalCapabilityNo:
 		return v
-	default:
-		return config.PreviewTerminalCapabilityAuto
-	}
-}
-
-func cycleTerminalCapability(v string) string {
-	switch effectiveTerminalCapability(v) {
-	case config.PreviewTerminalCapabilityAuto:
-		return config.PreviewTerminalCapabilityYes
-	case config.PreviewTerminalCapabilityYes:
-		return config.PreviewTerminalCapabilityNo
 	default:
 		return config.PreviewTerminalCapabilityAuto
 	}
@@ -133,39 +120,11 @@ func (a *App) autoDetectPreviewSettingsDialog() {
 	st.SetKittyPlaceholder(capabilityFromDetect(placeholder))
 }
 
-// previewSettingsCapabilityMnemonic maps an Alt letter to the capability row it cycles. The row
-// labels carry no mnemonic widget, so the letters are handled before the engine.
-var previewSettingsCapabilityMnemonic = map[rune]string{
-	's': dialog.PreviewSixel, 'k': dialog.PreviewKitty, 'p': dialog.PreviewPlaceholder,
-}
-
-// cyclePreviewSettingsCapability advances the capability row to its next value and focuses that
-// value's radio.
-func cyclePreviewSettingsCapability(st *dialog.PreviewSettingsDialogState, row string) {
-	switch row {
-	case dialog.PreviewSixel:
-		st.Sixel = cycleTerminalCapability(st.Sixel)
-		st.Focus = dialog.PreviewCapabilityID(row, st.Sixel)
-	case dialog.PreviewKitty:
-		st.SetKitty(cycleTerminalCapability(st.Kitty))
-		st.Focus = dialog.PreviewCapabilityID(row, st.Kitty)
-	case dialog.PreviewPlaceholder:
-		st.SetKittyPlaceholder(cycleTerminalCapability(st.KittyPlaceholder))
-		st.Focus = dialog.PreviewCapabilityID(row, st.KittyPlaceholder)
-	}
-}
-
 func (a *App) handlePreviewSettingsDialogKey(event *tcell.EventKey) {
 	st := &a.model.PreviewSettingsDialog
 	if event.Key() == tcell.KeyF5 {
 		a.autoDetectPreviewSettingsDialog()
 		return
-	}
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if row, ok := previewSettingsCapabilityMnemonic[unicode.ToLower(event.Rune())]; ok {
-			cyclePreviewSettingsCapability(st, row)
-			return
-		}
 	}
 	if ev, ok := dlg.HandleKey(a.previewSettingsView(), &st.Focus, event); ok {
 		a.applyPreviewSettingsEvent(ev)

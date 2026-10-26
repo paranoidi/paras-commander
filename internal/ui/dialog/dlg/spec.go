@@ -31,9 +31,9 @@ type Kind int
 const (
 	KindRadio Kind = iota
 	KindCheckbox
-	// KindLabel is a static text row in the dialog's text style. It has no mnemonic and no state
-	// and is never focusable or hit-testable, so its ID is optional. An empty Label is a blank
-	// spacer row.
+	// KindLabel is a static text row in the dialog's text style. It has no state and is never
+	// focusable or hit-testable, so its ID is optional. An empty Label is a blank spacer row. A
+	// label cell of a row may carry a Mnemonic: Alt+letter steps the row's radios (HandleMnemonic).
 	KindLabel
 	// KindSeparator is a full-width horizontal rule (border to border) in the frame's border style.
 	// A non-empty Label is drawn centered in it, padded with one space on each side. It is never

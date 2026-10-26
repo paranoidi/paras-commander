@@ -435,7 +435,8 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 
 // HandleMnemonic is the Alt+letter stage of HandleKey on its own: Alt+letter activates the widget
 // or button with that mnemonic and focuses it, except that it never pulls focus out of a text
-// input (the user keeps typing where they were). Handlers whose own keys run before the engine
+// input (the user keeps typing where they were). The mnemonic of a label cell in a row steps the
+// row's radios: it activates the radio after the selected one (wrapping, skipping disabled ones). Handlers whose own keys run before the engine
 // (completion, path shortcuts, chords) run it first, so a mnemonic wins over every key of theirs.
 // Every other key is (Event{}, false).
 func HandleMnemonic(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
@@ -455,9 +456,29 @@ func HandleMnemonic(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		}
 		return Event{ID: id}, true
 	}
-	for _, it := range leaves(spec) {
-		if it.Mnemonic != 0 && !it.Disabled && unicode.ToLower(it.Mnemonic) == r {
-			return hit(it.ID)
+	match := func(it Item) bool { return it.Mnemonic != 0 && !it.Disabled && unicode.ToLower(it.Mnemonic) == r }
+	for _, g := range spec.Groups {
+		for _, col := range g.Columns {
+			for _, it := range col {
+				if it.Kind != KindRow {
+					if match(it) {
+						return hit(it.ID)
+					}
+					continue
+				}
+				for _, c := range it.Cells {
+					switch {
+					case !match(c):
+					case c.Kind == KindLabel:
+						if id, ok := nextRadio(it.Cells); ok {
+							return hit(id)
+						}
+						return Event{}, false
+					default:
+						return hit(c.ID)
+					}
+				}
+			}
 		}
 	}
 	for _, b := range spec.Buttons {
@@ -466,6 +487,25 @@ func HandleMnemonic(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		}
 	}
 	return Event{}, false
+}
+
+// nextRadio is the radio among cells after the selected one (the first when none is), wrapping
+// and skipping disabled radios.
+func nextRadio(cells []Item) (ID, bool) {
+	var radios []Item
+	on := -1
+	for _, c := range cells {
+		if c.Kind == KindRadio && !c.Disabled {
+			if c.On {
+				on = len(radios)
+			}
+			radios = append(radios, c)
+		}
+	}
+	if len(radios) == 0 {
+		return "", false
+	}
+	return radios[(on+1)%len(radios)].ID, true
 }
 
 func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, bool) {

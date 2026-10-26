@@ -29,10 +29,13 @@ func PreviewProtocolID(value string) dlg.ID { return dlg.ID(previewProtocolPrefi
 func PreviewMetadataID(value string) dlg.ID { return dlg.ID(previewMetadataPrefix + value) }
 
 // previewCapabilityRows are the horizontal capability rows in display order.
-var previewCapabilityRows = []struct{ id, label string }{
-	{PreviewSixel, "Sixel"},
-	{PreviewKitty, "Kitty"},
-	{PreviewPlaceholder, "Placeholder"},
+var previewCapabilityRows = []struct {
+	id, label string
+	mnemonic  rune // Alt+letter steps the row to its next value
+}{
+	{PreviewSixel, "Sixel", 's'},
+	{PreviewKitty, "Kitty", 'k'},
+	{PreviewPlaceholder, "Placeholder", 'p'},
 }
 
 // previewCapabilityLabelW is the label box of the capability rows: the longest label
@@ -49,13 +52,14 @@ func previewRadioItems(radios []PreviewSettingsDialogRadio, selected string, id 
 }
 
 // PreviewSettingsDialogView is the preview settings dialog's widget spec: the three capability
-// rows (a label and its auto / yes / no radios on one row, each row a Tab stop), the Active
+// rows (a label and its auto / yes / no radios on one row, each row a Tab stop; the label's
+// mnemonic steps the row to its next value), the Active
 // protocol and Image metadata radio groups and the Video metadata checkbox.
 func PreviewSettingsDialogView(s PreviewSettingsDialogState, markerWidth int) dlg.Spec {
 	values := map[string]string{PreviewSixel: s.Sixel, PreviewKitty: s.Kitty, PreviewPlaceholder: s.KittyPlaceholder}
 	caps := []dlg.Item{{Kind: dlg.KindLabel, Label: "Confirm terminal capabilities:"}}
 	for seg, row := range previewCapabilityRows {
-		cells := []dlg.Item{{Kind: dlg.KindLabel, Label: row.label, Width: previewCapabilityLabelW}}
+		cells := []dlg.Item{{Kind: dlg.KindLabel, Label: row.label, Mnemonic: row.mnemonic, Width: previewCapabilityLabelW}}
 		for _, r := range PreviewSettingsDialogCapabilityRadios() {
 			cells = append(cells, dlg.Item{
 				ID: PreviewCapabilityID(row.id, r.Value), Kind: dlg.KindRadio, Label: r.Label, Mnemonic: r.Shortcut,

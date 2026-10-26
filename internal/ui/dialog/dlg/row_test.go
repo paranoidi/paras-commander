@@ -670,3 +670,26 @@ func TestClampedHeightKeepsTheButtons(t *testing.T) {
 		t.Errorf("last radio %+v is cut off while the list could shrink", r.Rect)
 	}
 }
+
+// A label cell's mnemonic steps the radios of its row: the one after the selected radio, wrapping
+// and skipping disabled ones; with none selected, the first.
+func TestRowLabelMnemonicStepsRadios(t *testing.T) {
+	spec := func(on int, disabled ID) Spec {
+		cells := []Item{{Kind: KindLabel, Label: "Kitty", Mnemonic: 'k'}}
+		for i, id := range []ID{"auto", "yes", "no"} {
+			cells = append(cells, Item{ID: id, Kind: KindRadio, Label: string(id), On: i == on, Disabled: id == disabled})
+		}
+		return Spec{Title: "Harbor", Width: 40, Unclamped: true, Groups: []Group{{Columns: [][]Item{{{Kind: KindRow, Cells: cells}}}}}, Buttons: OKCancelButtons()}
+	}
+	for _, c := range []struct {
+		on       int
+		disabled ID
+		want     ID
+	}{{0, "", "yes"}, {1, "", "no"}, {2, "", "auto"}, {-1, "", "auto"}, {0, "yes", "no"}} {
+		focus := OK
+		ev, ok := HandleKey(spec(c.on, c.disabled), &focus, runeKey('K', tcell.ModAlt))
+		if !ok || ev.ID != c.want || focus != c.want {
+			t.Errorf("on %d (disabled %q): (%+v, %v), focus %q, want %q focused", c.on, c.disabled, ev, ok, focus, c.want)
+		}
+	}
+}
