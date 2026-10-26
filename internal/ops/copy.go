@@ -302,6 +302,7 @@ func copyDirItem(ctx context.Context, item PlanItem, opts Options, resolver Conf
 		}
 		if res != copyDone {
 			state.skippedDirs = append(state.skippedDirs, item.Src)
+			opts.itemDone(item, ItemSkipped, ReasonExists)
 			return nil
 		}
 		state.renamedDirs = append(state.renamedDirs, [2]pathloc.Path{item.Dst, newDst})
@@ -342,7 +343,7 @@ func copySymlinkItem(ctx context.Context, item PlanItem, opts Options, resolver 
 	if err != nil {
 		return err
 	}
-	if res == copySkipped {
+	if !reportCopyResult(opts, item, res) {
 		return nil
 	}
 	state.recordTransferred(item.Src)
@@ -352,6 +353,21 @@ func copySymlinkItem(ctx context.Context, item PlanItem, opts Options, resolver 
 	state.doneFiles++
 	state.emitMetaProgress(srcStr, dstStr)
 	return nil
+}
+
+// reportCopyResult reports a file or symlink copy outcome through opts.OnItemDone and returns
+// false when nothing was transferred (the resolver skipped it).
+func reportCopyResult(opts Options, item PlanItem, res copyResult) bool {
+	switch res {
+	case copySkipped:
+		opts.itemDone(item, ItemSkipped, ReasonExists)
+		return false
+	case copyIdentical:
+		opts.itemDone(item, ItemSkipped, ReasonIdentical)
+	default:
+		opts.itemDone(item, ItemDone, "")
+	}
+	return true
 }
 
 func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver ConflictResolver, diskWait DiskWaitFunc, destination pathloc.Path, copyBuf []byte, state *copyRunState) error {
@@ -392,7 +408,7 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 	if err != nil {
 		return err
 	}
-	if res == copySkipped {
+	if !reportCopyResult(opts, item, res) {
 		return nil
 	}
 	state.recordTransferred(item.Src)

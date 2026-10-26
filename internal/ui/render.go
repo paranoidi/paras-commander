@@ -144,8 +144,8 @@ type Model struct {
 	// same bounded window SchedulePrefetchFromActivePanel schedules — used only to tint image/video
 	// file icons bright magenta (warm) vs standard magenta (cold) as a prefetch debugging aid.
 	PreviewPrefetchWarm map[string]struct{}
-	// JobOperations is each job's Operations pane log (oldest first; see AppendJobOperation).
-	JobOperations map[string][]JobOperation
+	// JobsOpsWindow is the selected job's Operations rows the pane draws (jobs.Handler.RefreshOpsWindow).
+	JobsOpsWindow JobsOpsWindow
 	// JobsResultFilterDialog is the jobs view Operations result picker.
 	JobsResultFilterDialog dialog.JobsResultFilterDialogState
 	// JobsFilterCaseInsensitive mirrors [filter].case_insensitive for the Operations fuzzy filter.
@@ -659,8 +659,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		drawJobsView(screen, layout, jobsViewRender{
 			State:                  model.JobsView,
 			Jobs:                   model.JobsList,
-			Operations:             model.JobOperations,
-			FilterCaseInsensitive:  model.JobsFilterCaseInsensitive,
+			OpsWindow:              model.JobsOpsWindow,
 			UserHomeDir:            model.UserHomeDir,
 			ThroughputChartEnabled: model.JobsThroughputChartEnabled,
 			RateLimitBPS:           model.JobsTransferRateLimitBPS,

@@ -561,6 +561,9 @@ type JobsConfig struct {
 	// counting walk and measures whether that improves the job's transfer throughput, backing
 	// off the pause when it doesn't. Default false.
 	ScanDisableAdaptiveThrottle bool `toml:"scan_disable_adaptive_throttle"`
+	// OperationsMemoryRows is how many Operations-pane rows a job keeps in memory before its
+	// log spills to $XDG_CACHE_HOME/pc/jobs (0 = never spill; otherwise at least 1000).
+	OperationsMemoryRows int `toml:"operations_memory_rows"`
 }
 
 type OperationsConfig struct {
@@ -726,6 +729,7 @@ func Default() Config {
 			ScanYieldEveryN:             DefaultScanYieldEveryN,
 			ScanProgressMinIntervalMS:   DefaultScanProgressMinIntervalMS,
 			ScanDisableAdaptiveThrottle: false,
+			OperationsMemoryRows:        DefaultJobsOperationsMemoryRows,
 		},
 		Operations: OperationsConfig{
 			ConfirmDelete:                true,
@@ -1269,6 +1273,12 @@ func (c *Config) validateFilter(builtin *Config) {
 func (c *Config) validateJobs(builtin *Config) {
 	if c.Jobs.KeepFinished <= 0 {
 		c.Jobs.KeepFinished = builtin.Jobs.KeepFinished
+	}
+	switch rows := c.Jobs.OperationsMemoryRows; {
+	case rows < 0:
+		c.Jobs.OperationsMemoryRows = builtin.Jobs.OperationsMemoryRows
+	case rows > 0 && rows < JobsOperationsMemoryRowsMin:
+		c.Jobs.OperationsMemoryRows = JobsOperationsMemoryRowsMin
 	}
 	if c.Jobs.ProgressUIWakeDebounceMS <= 0 {
 		c.Jobs.ProgressUIWakeDebounceMS = builtin.Jobs.ProgressUIWakeDebounceMS

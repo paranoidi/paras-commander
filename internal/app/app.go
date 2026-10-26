@@ -35,6 +35,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
@@ -549,6 +550,13 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,
 		cfg.Jobs.ThroughputChartEnabled,
 	)
+	if cacheRoot, err := os.UserCacheDir(); err == nil {
+		opSession := oplog.NewSession(cacheRoot)
+		jobState.SetOperationLog(cfg.Jobs.OperationsMemoryRows, opSession)
+		go opSession.SweepStale()
+	} else {
+		jobState.SetOperationLog(cfg.Jobs.OperationsMemoryRows, nil)
+	}
 	homeDir, _ := os.UserHomeDir()
 	if homeDir != "" {
 		homeDir = filepath.Clean(homeDir)
@@ -595,7 +603,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			DiskUsage:                  duEngine,
 			DiskUsageShown:             false,
 			ViewMode:                   ui.ViewBrowser,
-			JobOperations:              make(map[string][]ui.JobOperation),
 			JobsFilterCaseInsensitive:  cfg.Filter.CaseInsensitive,
 			MenuDefinitions:            menu.BrowserDefinitions(keys.Global, opts.DevMode),
 			ThemeDialog: dialog.ThemeDialogState{
@@ -1176,6 +1183,13 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 	if out, ok := a.handlePreviewInterruptPayload(data); ok {
 		return out, true
+	}
+	if _, ok := data.(jobsctrl.OpsWakePayload); ok {
+		if a.model.ViewMode != ui.ViewJobs {
+			return eventOutcome{}, true
+		}
+		a.render()
+		return eventOutcome{didRender: true}, true
 	}
 	if p, ok := data.(dialogctrl.PathsMissingPayload); ok {
 		a.applyPathsMissing(p)

@@ -3,8 +3,8 @@ focus=item0 pending=All
 == Down ==
 focus=item1 pending=All
 == Space ==
-focus=item1 pending=Failed
+focus=item1 pending=Failed + Skipped
 == Tab ==
-focus=ok pending=Failed
+focus=ok pending=Failed + Skipped
 == Enter ==
-CLOSED: shown=Failed view=true
+CLOSED: shown=Failed + Skipped view=true

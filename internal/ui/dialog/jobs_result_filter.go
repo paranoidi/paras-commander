@@ -4,28 +4,26 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// JobResultFilter is a bitmask of the operation results the jobs view Operations pane shows.
-type JobResultFilter int
+// JobResultFilter is the set of operation results the jobs view Operations pane shows. Its bits
+// are oplog.Mask bits, so it converts with a cast.
+type JobResultFilter oplog.Mask
 
 const (
-	JobResultSuccess JobResultFilter = 1 << iota
-	JobResultFailed
+	JobResultSuccess = JobResultFilter(1 << oplog.Done)
+	JobResultSkipped = JobResultFilter(1 << oplog.Skipped)
+	JobResultFailed  = JobResultFilter(1 << oplog.Failed)
 
 	JobResultNone JobResultFilter = 0
-	JobResultAll                  = JobResultSuccess | JobResultFailed
+	JobResultAll                  = JobResultFilter(oplog.MaskAll)
 )
 
-// Shows reports whether a row with the given result passes f.
-func (f JobResultFilter) Shows(failed bool) bool {
-	if failed {
-		return f&JobResultFailed != 0
-	}
-	return f&JobResultSuccess != 0
-}
+// Mask is f as an oplog view mask.
+func (f JobResultFilter) Mask() oplog.Mask { return oplog.Mask(f) }
 
 // jobResultKinds are the result checkboxes in display order, after the All master row.
 var jobResultKinds = []struct {
@@ -35,6 +33,7 @@ var jobResultKinds = []struct {
 }{
 	{JobResultSuccess, "Success", 's'},
 	{JobResultFailed, "Failed", 'f'},
+	{JobResultSkipped, "Skipped", 'k'},
 }
 
 // Label names f for the Operations pane border: All, None, or the shown kinds joined by " + ".

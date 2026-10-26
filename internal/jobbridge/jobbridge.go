@@ -254,14 +254,10 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, ded
 		// One Elevator per job: a sudo password the user types is remembered for this job only.
 		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
+		opts.OnItemDone = job.RecordOperation
 		if job.Type == jobs.TypeCopy || job.Type == jobs.TypeUndo {
 			opts.OnItemError = func(item ops.PlanItem, err error) {
-				emit(jobs.Event{
-					Type:       jobs.EventItemFailed,
-					JobID:      job.ID,
-					Status:     jobs.StatusRunning,
-					FailedItem: &jobs.FailedItem{Item: item, Error: ops.RootFirstErrorText(err)},
-				})
+				job.FailItem(emit, jobs.StatusRunning, item, err)
 			}
 		}
 		opts.OnRemoveSources = func() {
@@ -654,7 +650,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 				CurrentPath: path,
 			})
 		}
-		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(job.Sources), deleteProgress)
+		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(job.Sources), deleteProgress, recordPathOperation(job))
 		if err == nil && job.DeleteRemoveEmptyDirs {
 			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, uniqueParents(job.Sources)); cleanErr != nil {
 				err = cleanErr
@@ -680,6 +676,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 			extractPlanErr = nil
 		}
 		plan.Conflict = tc.resolver
+		plan.OnItem = recordPathOperation(job)
 		if extractPlanErr != nil {
 			err = extractPlanErr
 		} else {
@@ -700,6 +697,17 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		return 0, 0, fmt.Errorf("unknown job type: %s", job.Type)
 	}
 	return doneFiles, doneBytes, err
+}
+
+// recordPathOperation adapts the delete and extract per-path hooks to job.RecordOperation.
+func recordPathOperation(job *jobs.Job) func(path string, res ops.ItemResult, reason string) {
+	return func(path string, res ops.ItemResult, reason string) {
+		src, err := pathloc.Parse(path)
+		if err != nil {
+			return
+		}
+		job.RecordOperation(ops.PlanItem{Src: src}, res, reason)
+	}
 }
 
 // Plural returns singular or plural noun form for n.

@@ -23,13 +23,6 @@ type AuxPanelChromeLayout struct {
 // When endLabel is non-empty, the top row uses a split layout (title left, endLabel right).
 // viMotion selects the vi-motion accent frame on the active, unblocked panel (selected strip).
 func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, active, blocked, viMotion bool, styles theme.Theme) AuxPanelChromeLayout {
-	return drawAuxPanelChromeEndStyled(screen, rect, title, endLabel, nil, active, blocked, viMotion, styles)
-}
-
-// drawAuxPanelChromeEndStyled is drawAuxPanelChrome with an optional end-label restyle: endOn
-// receives the default end-label style and returns the one to paint. A blocked panel ignores
-// it, so the label dims with the rest of the chrome.
-func drawAuxPanelChromeEndStyled(screen tcell.Screen, rect Rect, title, endLabel string, endOn func(tcell.Style) tcell.Style, active, blocked, viMotion bool, styles theme.Theme) AuxPanelChromeLayout {
 	chrome := styles.PanelChrome(active, blocked)
 	borderStyle := chrome.Frame
 	if viMotion && active && !blocked {
@@ -48,9 +41,6 @@ func drawAuxPanelChromeEndStyled(screen tcell.Screen, rect Rect, title, endLabel
 	}
 	if endLabel != "" {
 		endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, active, blocked)
-		if endOn != nil && !blocked {
-			endStyle = endOn(endStyle)
-		}
 		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, endLabel, chrome.Title, endStyle, borderStyle)
 	} else {
 		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, "", chrome.Title, chrome.Title, borderStyle)

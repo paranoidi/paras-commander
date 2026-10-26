@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/ops"
 )
 
@@ -60,6 +61,7 @@ type State struct {
 	throughputChartBin     time.Duration
 	throughputChartWindow  time.Duration
 	throughputChartEnabled bool
+	opLog                  oplog.Config
 
 	// itemFailures counts EventItemFailed emits per job ID so runJob can fail a job whose
 	// transfer returned nil without waiting for the UI loop to apply the events.
@@ -106,6 +108,23 @@ func (s *State) SetThroughputChart(columnDur, window time.Duration, enabled bool
 	s.throughputChartBin = columnDur
 	s.throughputChartWindow = window
 	s.throughputChartEnabled = enabled
+}
+
+// SetOperationLog configures the per-job operation logs created by AddJob: memoryRows before a
+// log spills ([jobs].operations_memory_rows) and the session spill directory.
+func (s *State) SetOperationLog(memoryRows int, session *oplog.Session) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.opLog = oplog.Config{MemoryRows: memoryRows, Session: session}
+}
+
+// closeOpLogs closes the operation logs of jobs leaving the state.
+func closeOpLogs(jobs []*Job) {
+	for _, j := range jobs {
+		if j != nil && j.Ops != nil {
+			j.Ops.Close()
+		}
+	}
 }
 
 // SampleActiveJobThroughput advances the active running job's fixed throughput-column clock to now,
@@ -253,6 +272,9 @@ func (s *State) AddJob(job *Job) {
 		}
 	}
 	s.mu.Lock()
+	if job.Ops == nil {
+		job.Ops = oplog.New(job.ID, s.opLog)
+	}
 	s.queue.Enqueue(job)
 	status := job.Status
 	s.mu.Unlock()
@@ -631,11 +653,14 @@ func (s *State) ApplyRetention(p RetentionPolicy) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !p.ShowFinished {
+		closeOpLogs(s.finished)
 		s.finished = nil
 		return
 	}
 	if p.KeepFinished > 0 && len(s.finished) > p.KeepFinished {
-		s.finished = s.finished[len(s.finished)-p.KeepFinished:]
+		drop := len(s.finished) - p.KeepFinished
+		closeOpLogs(s.finished[:drop])
+		s.finished = s.finished[drop:]
 	}
 }
 
@@ -643,6 +668,7 @@ func (s *State) ApplyRetention(p RetentionPolicy) {
 func (s *State) ClearFinishedArchive() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	closeOpLogs(s.finished)
 	s.finished = nil
 }
 
@@ -1018,6 +1044,13 @@ func (s *State) workerShutdown() {
 	}
 	s.mu.Unlock()
 	s.jobWg.Wait()
+	s.mu.Lock()
+	s.queue.mu.Lock()
+	closeOpLogs(s.collectAllJobsUnlocked())
+	s.queue.mu.Unlock()
+	session := s.opLog.Session
+	s.mu.Unlock()
+	_ = session.Remove()
 }
 
 // QueueTestEvent enqueues ev on the events channel (for tests).

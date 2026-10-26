@@ -233,6 +233,7 @@ func (q *Queue) ClearFinished() []*Job {
 		}
 	}
 	q.jobs = remaining
+	closeOpLogs(finished)
 	return finished
 }
 

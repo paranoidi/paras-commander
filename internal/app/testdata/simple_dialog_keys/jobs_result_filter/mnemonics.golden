@@ -1,10 +1,12 @@
 == open ==
 focus=item0 pending=All
 == Alt+s ==
-focus=item1 pending=Failed
+focus=item1 pending=Failed + Skipped
 == Alt+f ==
-focus=item2 pending=None
+focus=item2 pending=Skipped
+== Alt+k ==
+focus=item3 pending=None
 == Alt+a ==
 focus=item0 pending=All
-== Alt+f ==
-focus=item2 pending=Success
+== Alt+k ==
+focus=item3 pending=Success + Failed

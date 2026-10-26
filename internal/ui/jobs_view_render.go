@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -61,14 +62,15 @@ func LayoutHideInactivePanel(vm ViewMode, hideInactivePanel bool) bool {
 
 // JobsViewState holds focus and scroll positions for the jobs view screen.
 type JobsViewState struct {
-	Selected        int
+	Selected     int
 	FocusPane    int // index into JobsPaneOrder: list, blocker (if shown), Details, Operations (if shown)
 	ListScroll   int
 	DetailScroll int
 	OpsScroll    int
 	// OpsResultHidden is the set of results the Operations pane hides (zero shows all; see
 	// OpsResultShown). OpsFilter holds the Operations fuzzy query; only its Query, Cursor and
-	// Editing are used (VisibleJobOperations matches rows itself).
+	// Editing are used (the jobs handler matches the operation log itself). OpsScroll is the
+	// newest-first display row at the top of the pane.
 	OpsResultHidden dialog.JobResultFilter
 	OpsFilter       quickfilter.Filter
 	// ConflictButtonFocus is the focused action index in the conflict panel (0..5).
@@ -105,8 +107,7 @@ func jobsMaximizedPane(layout Layout, state JobsViewState, sel JobEntry, now tim
 type jobsViewRender struct {
 	State                  JobsViewState
 	Jobs                   []JobEntry
-	Operations             map[string][]JobOperation
-	FilterCaseInsensitive  bool
+	OpsWindow              JobsOpsWindow
 	UserHomeDir            string
 	ThroughputChartEnabled bool
 	RateLimitBPS           int64
@@ -118,9 +119,12 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	if state.Selected >= 0 && state.Selected < len(jobs) {
 		sel = jobs[state.Selected]
 	}
-	ops := v.Operations[sel.ID]
+	win := v.OpsWindow
+	if win.JobID != sel.ID {
+		win = JobsOpsWindow{JobID: sel.ID}
+	}
 	if _, ok := jobsMaximizedPane(layout, state, sel, now, v.ThroughputChartEnabled); ok {
-		drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, ops, v.FilterCaseInsensitive, styles, chromeBlocked, true, true)
+		drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, win, styles, chromeBlocked, true, true)
 		return
 	}
 	drawJobsListPanel(screen, layout.Primary, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS)
@@ -133,7 +137,7 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	}
 	drawJobsDetailPanel(screen, detailRect, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, v.UserHomeDir, v.ThroughputChartEnabled)
 	if opsRect.Height > 0 {
-		drawJobsOperationsPanel(screen, opsRect, state, ops, v.FilterCaseInsensitive, styles, chromeBlocked, focused == JobsPaneOperations, false)
+		drawJobsOperationsPanel(screen, opsRect, state, win, styles, chromeBlocked, focused == JobsPaneOperations, false)
 	}
 }
 
@@ -274,8 +278,60 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 			primitive.Text(screen, textX, contentTop+i, textW, styles.EmptyText(), styles.PanelEmptyStyle().Background(layout.ContentBG))
 			continue
 		}
-		primitive.Text(screen, textX, contentTop+i, textW, line, body)
+		var spans []primitive.Span
+		if strings.HasPrefix(line, jobDetailFilesPrefix) && !chromeBlocked {
+			spans = jobFilesLineSpans(sel, styles, body)
+		}
+		primitive.StyledText(screen, textX, contentTop+i, textW, line, body, spans)
 	}
+}
+
+// jobDetailFilesPrefix starts the Details line with the job's operation counts.
+const jobDetailFilesPrefix = "Files:       "
+
+// jobFilesPart is one piece of the Details Files line; Key, when set, is the result theme key
+// that colors it.
+type jobFilesPart struct {
+	Text string
+	Key  string
+}
+
+// jobFilesLineParts is the Details "Files:" line (done, then failed and skipped when non-zero,
+// then a note when the log dropped rows) split into its colored parts: the one source of the
+// line's text and its spans. nil when the job has recorded nothing.
+func jobFilesLineParts(j JobEntry) []jobFilesPart {
+	st := j.OpsStats
+	if st.Done+st.Failed+st.Skipped == 0 {
+		return nil
+	}
+	parts := []jobFilesPart{{Text: fmt.Sprintf("%s%d done", jobDetailFilesPrefix, st.Done)}}
+	for _, c := range []struct {
+		n    int
+		word string
+		key  string
+	}{{st.Failed, "failed", theme.JobsOperationFailed}, {st.Skipped, "skipped", theme.JobsOperationSkipped}} {
+		if c.n > 0 {
+			parts = append(parts, jobFilesPart{Text: ", "}, jobFilesPart{Text: fmt.Sprintf("%d %s", c.n, c.word), Key: c.key})
+		}
+	}
+	if st.Dropped > 0 {
+		parts = append(parts, jobFilesPart{Text: fmt.Sprintf(" (log incomplete, %d dropped)", st.Dropped)})
+	}
+	return parts
+}
+
+// jobFilesLineSpans colors the failed and skipped counts of the Details Files line.
+func jobFilesLineSpans(j JobEntry, styles theme.Theme, body tcell.Style) []primitive.Span {
+	var spans []primitive.Span
+	pos := 0
+	for _, p := range jobFilesLineParts(j) {
+		n := utf8.RuneCountInString(p.Text)
+		if p.Key != "" {
+			spans = append(spans, primitive.Span{Start: pos, End: pos + n, Style: styles.JobsOperationOn(p.Key, body)})
+		}
+		pos += n
+	}
+	return spans
 }
 
 func jobsDetailPathBudget(pathMax int, linePrefix string) int {
@@ -372,6 +428,13 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	}
 	if j.Error != "" {
 		lines = append(lines, fmt.Sprintf(prefixError+"%s", primitive.TruncateMiddle(j.Error, jobsDetailPathBudget(pathMax, prefixError))))
+	}
+	if parts := jobFilesLineParts(j); parts != nil {
+		var b strings.Builder
+		for _, p := range parts {
+			b.WriteString(p.Text)
+		}
+		lines = append(lines, b.String())
 	}
 	if len(j.Warnings) > 0 {
 		lines = append(lines, fmt.Sprintf("Warnings (%d):", len(j.Warnings)))

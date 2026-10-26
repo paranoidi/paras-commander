@@ -311,10 +311,12 @@ type Theme struct {
 	JobsIconsFailed    tcell.Style
 	JobsIconsDecision  tcell.Style
 	JobsIconsCompleted tcell.Style
-	// JobsOperationSuccess / JobsOperationFailed style the result icon of an Operations pane row
-	// (jobs.operations.success / .failed; optional, default to jobs.icons.completed / .failed).
+	// JobsOperationSuccess / JobsOperationFailed / JobsOperationSkipped style an Operations pane
+	// row's result icon and the Details result counts (jobs.operations.success / .failed /
+	// .skipped; optional, default to jobs.icons.completed / .failed / .paused).
 	JobsOperationSuccess tcell.Style
 	JobsOperationFailed  tcell.Style
+	JobsOperationSkipped tcell.Style
 
 	// CompareHashing styles the compare-view pending disk icon while a file is
 	// actively being content-hashed (queued pending rows keep the row style).
@@ -1233,7 +1235,7 @@ var optionalStyleKeys = func() []string {
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
-		"jobs.operations.success", "jobs.operations.failed")
+		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped")
 	return keys
 }()
 
@@ -1541,6 +1543,10 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
+	jobsOperationSkipped, err := optionalStyle(specs, palette, "jobs.operations.skipped", styles["jobs.icons.paused"])
+	if err != nil {
+		return Theme{}, err
+	}
 	menuSpeedCap, err := optionalStyle(specs, palette, "menu.speed.cap", tcell.StyleDefault.Foreground(tcell.ColorGray))
 	if err != nil {
 		return Theme{}, err
@@ -1838,6 +1844,7 @@ func parse(data []byte) (Theme, error) {
 		JobsIconsCompleted:   styles["jobs.icons.completed"],
 		JobsOperationSuccess: jobsOperationSuccess,
 		JobsOperationFailed:  jobsOperationFailed,
+		JobsOperationSkipped: jobsOperationSkipped,
 
 		CompareHashing:     styles["compare.hashing"],
 		CompareEqual:       styles["compare.equal"],

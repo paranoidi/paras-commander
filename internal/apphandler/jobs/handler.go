@@ -71,6 +71,7 @@ func (h *Handler) closeJobsView() {
 	h.model.Menu.ActiveMenu = menu.DefaultIndex()
 	h.model.JobsView = ui.JobsViewState{}
 	h.model.JobsResultFilterDialog = dialog.JobsResultFilterDialogState{}
+	h.stopOpsWork()
 }
 
 func (h *Handler) applyJobsRetention() {
@@ -422,18 +423,13 @@ func (h *Handler) handleJobsPaneScrollKey(event *tcell.EventKey, fp int) {
 		}
 		return
 	}
-	var scroll *int
-	var total int
+	contentH := ui.JobsPanelContentRows(rects[pane])
 	switch pane {
 	case ui.JobsPaneDetail:
-		scroll, total = &h.model.JobsView.DetailScroll, h.jobsDetailLineCountForSelection()
+		scrollPane(event.Key(), &h.model.JobsView.DetailScroll, max(0, h.jobsDetailLineCountForSelection()-contentH))
 	case ui.JobsPaneOperations:
-		scroll, total = &h.model.JobsView.OpsScroll, ui.JobOperationsLineCount(h.visibleOperations(), rects[pane], false)
-	default:
-		return
+		h.scrollOperations(event.Key(), contentH)
 	}
-	contentH := ui.JobsPanelContentRows(rects[pane])
-	scrollPane(event.Key(), scroll, max(0, total-contentH))
 }
 
 // scrollPane applies Up/Down (one row), PgUp/PgDn (five rows) and Home/End (top/bottom) to
@@ -526,8 +522,7 @@ func (h *Handler) clampJobsFocusPane() {
 }
 
 // handleJobsMaximizedKey handles keys while the Operations pane is maximized: Esc, Enter, Left
-// and q restore the layout, Up/Down/PgUp/PgDn/Home/End scroll the wrapped lines, the rest is
-// swallowed.
+// and q restore the layout, Up/Down/PgUp/PgDn/Home/End scroll by row, the rest is swallowed.
 func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyEnter, tcell.KeyLeft:
@@ -540,9 +535,14 @@ func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 		return
 	}
 	width, height := h.screen.Size()
-	full := ui.JobsMaximizedRect(h.host.LayoutForTerminalSize(width, height))
-	total := ui.JobOperationsLineCount(h.visibleOperations(), full, true)
-	scrollPane(event.Key(), &h.model.JobsView.OpsScroll, max(0, total-ui.JobsPanelContentRows(full)))
+	h.scrollOperations(event.Key(), ui.JobsPanelContentRows(ui.JobsMaximizedRect(h.host.LayoutForTerminalSize(width, height))))
+}
+
+// scrollOperations scrolls the Operations pane (contentRows rows tall) by row within the
+// current view's row count.
+func (h *Handler) scrollOperations(key tcell.Key, contentRows int) {
+	h.RefreshOpsWindow()
+	scrollPane(key, &h.model.JobsView.OpsScroll, ui.JobsOpsMaxScroll(h.model.JobsOpsWindow.Total, contentRows))
 }
 
 func (h *Handler) jobsDetailLineCountForSelection() int {
@@ -980,7 +980,6 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 	var f batchFlags
 	for _, ev := range batch {
 		h.state.ApplyEvent(ev)
-		h.appendJobOperation(ev)
 		h.updateJobMessage(ev)
 		switch ev.Type {
 		case jobs.EventCompleted:

@@ -45,7 +45,7 @@ func PlanDelete(source Source, confirmDelete bool) (DeletePlan, error) {
 // ExecuteDelete performs the deletion.
 // Directories are removed recursively.
 func ExecuteDelete(plan DeletePlan) error {
-	_, _, err := ExecuteDeletePaths(context.Background(), entryPaths(plan.Entries), nil)
+	_, _, err := ExecuteDeletePaths(context.Background(), entryPaths(plan.Entries), nil, nil)
 	return err
 }
 
@@ -60,8 +60,14 @@ func entryPaths(entries []localfs.Entry) []string {
 
 // ExecuteDeletePaths deletes the given canonical path strings.
 // ctx is checked before each entry. progress is called after each successful deletion
-// with the deleted path, cumulative file count, and cumulative deleted bytes.
-func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path string, doneFiles int, doneBytes int64)) (int, int64, error) {
+// with the deleted path, cumulative file count, and cumulative deleted bytes. onItem, when
+// set, reports each path deleted (ItemDone) or skipped after a permission error (ItemSkipped).
+func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path string, doneFiles int, doneBytes int64), onItem func(path string, res ItemResult, reason string)) (int, int64, error) {
+	report := func(path string, res ItemResult, reason string) {
+		if onItem != nil {
+			onItem(path, res, reason)
+		}
+	}
 	var doneFiles int
 	var doneBytes int64
 	for _, path := range paths {
@@ -89,6 +95,7 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 			return deletePathRecursive(ctx, loc)
 		})
 		if errors.Is(err, ErrPermissionSkipped) {
+			report(path, ItemSkipped, ReasonPermission)
 			continue
 		}
 		if err != nil {
@@ -99,6 +106,7 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 		}
 		doneFiles++
 		doneBytes += size
+		report(path, ItemDone, "")
 		if progress != nil {
 			progress(path, doneFiles, doneBytes)
 		}

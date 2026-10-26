@@ -54,32 +54,45 @@ func (t Theme) IconFilelistQueued() rune {
 	return t.filelistIconRune(IconKeyJobsListQueued, '\uf017')
 }
 
-// IconJobsOperation returns the result icon of an Operations pane row ([icons.jobs.operations]
-// success / failed), falling back to the jobs list's completed / failed status icon.
-func (t Theme) IconJobsOperation(failed bool) string {
-	key, status := "jobs.operations.success", "completed"
-	if failed {
-		key, status = "jobs.operations.failed", "failed"
-	}
+// Operations pane result keys ([icons.jobs.operations] and [jobs.operations] keys).
+const (
+	JobsOperationSuccess = "success"
+	JobsOperationFailed  = "failed"
+	JobsOperationSkipped = "skipped"
+)
+
+// IconJobsOperation returns the result icon of an Operations pane row for a result key
+// (JobsOperationSuccess, ...), from [icons.jobs.operations], falling back to the jobs list's
+// completed / failed icon or a built-in skipped glyph.
+func (t Theme) IconJobsOperation(result string) string {
 	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
+		if s := strings.TrimSpace(t.Icons["jobs.operations."+result]); s != "" {
 			return s
 		}
 	}
-	return t.IconJobsList(status)
+	switch result {
+	case JobsOperationFailed:
+		return t.IconJobsList("failed")
+	case JobsOperationSkipped:
+		return "\uf056"
+	}
+	return t.IconJobsList("completed")
 }
 
-// JobsOperationStyle returns the result icon style of an Operations pane row.
-func (t Theme) JobsOperationStyle(failed bool) tcell.Style {
-	if failed {
+// JobsOperationStyle returns the style of a result key (Operations icons, Details counts).
+func (t Theme) JobsOperationStyle(result string) tcell.Style {
+	switch result {
+	case JobsOperationFailed:
 		return t.JobsOperationFailed
+	case JobsOperationSkipped:
+		return t.JobsOperationSkipped
 	}
 	return t.JobsOperationSuccess
 }
 
-// JobsOperationOn returns the Operations result style's foreground merged onto surface's background.
-func (t Theme) JobsOperationOn(failed bool, surface tcell.Style) tcell.Style {
-	return mergeForegroundOnSurface(t.JobsOperationStyle(failed), surface)
+// JobsOperationOn returns a result key's style foreground merged onto surface's background.
+func (t Theme) JobsOperationOn(result string, surface tcell.Style) tcell.Style {
+	return mergeForegroundOnSurface(t.JobsOperationStyle(result), surface)
 }
 
 // JobsIconStyle returns the themed style for the leading icon of a job status in the jobs list.

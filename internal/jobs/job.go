@@ -4,9 +4,11 @@ package jobs
 
 import (
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -174,6 +176,11 @@ type Job struct {
 	// Irreversible is true when the job overwrote or discarded something, so Undo would not
 	// restore the previous state. Written only by State.ApplyEvent (EventUndoJournal).
 	Irreversible bool
+	// Ops is the job's per-item operation log (the jobs view Operations pane). Created by
+	// State.AddJob, shared by value copies of the job and kept across a retry; written by the
+	// transfer through ops.Options.OnItemDone / OnItemError (jobbridge), closed when the job
+	// leaves the state.
+	Ops *oplog.Log
 	// UndoOf is the ID of the job a TypeUndo job reverses.
 	UndoOf string
 	// Undone is set on the original job once an undo job has reversed (part of) it.
@@ -285,6 +292,7 @@ func (j *Job) RetryClone() *Job {
 		PreserveTimestamps:    j.PreserveTimestamps,
 		DereferenceSymlinks:   j.DereferenceSymlinks,
 		FlattenIntoDest:       j.FlattenIntoDest,
+		Ops:                   j.Ops,
 	}
 	return clone
 }
@@ -320,4 +328,51 @@ func deleteOverlapsTransfer(del, transfer *Job) bool {
 		}
 	}
 	return false
+}
+
+// RecordOperation appends one item outcome to the job's operation log (the Operations pane). It
+// is the single writer of Job.Ops and runs on the job or scan goroutine.
+func (j *Job) RecordOperation(item ops.PlanItem, res ops.ItemResult, reason string) {
+	if j.Ops == nil {
+		return
+	}
+	r := oplog.Done
+	switch res {
+	case ops.ItemSkipped:
+		r = oplog.Skipped
+	case ops.ItemFailed:
+		r = oplog.Failed
+	}
+	j.Ops.Append(oplog.Record{Result: r, Label: OperationLabel(j.Destination, item), Reason: reason})
+}
+
+// FailItem is the one way a job reports an item it could not process: it records the failed
+// row and emits EventItemFailed (FailedItems, retry, the "N item(s) failed" error). Both the
+// plan walk (unsupported source types) and the executor (source read errors) call it, with the
+// job's status at the time. It runs on the scan or job goroutine.
+func (j *Job) FailItem(emit func(Event), status Status, item ops.PlanItem, err error) {
+	reason := ops.RootFirstErrorText(err)
+	j.RecordOperation(item, ops.ItemFailed, reason)
+	emit(Event{
+		Type:       EventItemFailed,
+		JobID:      j.ID,
+		Status:     status,
+		FailedItem: &FailedItem{Item: item, Error: reason},
+	})
+}
+
+// OperationLabel is an Operations row label: the item's destination relative to the job
+// destination, else its source path (delete, extract, items outside the destination). A string
+// trim, not a path parse, because it runs once per file.
+func OperationLabel(dest pathloc.Path, item ops.PlanItem) string {
+	if !item.Dst.IsZero() && !dest.IsZero() {
+		root := strings.TrimSuffix(dest.String(), "/")
+		if rel, ok := strings.CutPrefix(item.Dst.String(), root+"/"); ok && rel != "" {
+			return rel
+		}
+	}
+	if !item.Src.IsZero() {
+		return item.Src.String()
+	}
+	return item.Dst.String()
 }

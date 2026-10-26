@@ -369,15 +369,15 @@ var jobsResultFilterKeyDialog = keyGoldenDialog{
 
 func TestJobsResultFilterKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, jobsResultFilterKeyDialog, []simpleKeyScript{
-		{"space-items", "Space Down Space Down Space Up Space"},
+		{"space-items", "Space Down Space Down Space Down Space Up Space"},
 		{"enter-ok", "Down Space Tab Enter"},
 		{"enter-cancel", "Down Space Tab Right Enter"},
-		{"mnemonics", "Alt+s Alt+f Alt+a Alt+f"},
+		{"mnemonics", "Alt+s Alt+f Alt+k Alt+a Alt+k"},
 		{"alt-o-is-ok", "Alt+s Alt+o"},
 		{"alt-c", "Alt+s Alt+c"},
 		{"esc", "Alt+f Esc"},
 		{"home-end", "End Home Down End"},
-		{"plain-letters", "a s f o c"},
+		{"plain-letters", "a s f k o c"},
 	})
 }
 

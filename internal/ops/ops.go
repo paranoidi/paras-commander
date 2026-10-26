@@ -85,6 +85,34 @@ type Options struct {
 	// OnJournal receives one UndoStep per item a copy created or a move relocated (undo.go); nil
 	// means no-op. It runs on the job goroutine after the item exists. Undo itself never journals.
 	OnJournal func(UndoStep)
+	// OnItemDone reports the outcome of each file, symlink or top-level moved entry: written or
+	// moved (ItemDone), or deliberately left alone (ItemSkipped, with a reason such as
+	// ReasonExists). Directories are reported only when skipped (their children are not).
+	// Source failures still go through OnItemError. nil means no-op; it runs on the job goroutine.
+	OnItemDone func(item PlanItem, res ItemResult, reason string)
+}
+
+// ItemResult is the outcome OnItemDone (and the delete/extract item hooks) report.
+type ItemResult int
+
+const (
+	ItemDone ItemResult = iota
+	ItemSkipped
+	ItemFailed
+)
+
+// Skip reasons reported with ItemSkipped.
+const (
+	ReasonExists     = "exists"
+	ReasonIdentical  = "identical"
+	ReasonPermission = "permission denied"
+)
+
+// itemDone reports item through o.OnItemDone when set.
+func (o Options) itemDone(item PlanItem, res ItemResult, reason string) {
+	if o.OnItemDone != nil {
+		o.OnItemDone(item, res, reason)
+	}
 }
 
 // RateLimiter throttles n bytes just spent, blocking until permitted or ctx is canceled.

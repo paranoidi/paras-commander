@@ -71,7 +71,7 @@ func ExecuteUndo(ctx context.Context, steps []UndoStep, opts Options, progress P
 		return nil
 	}
 	if rows, ok := undoRenameBatch(steps); ok {
-		return undoMassRename(ctx, rows, steps, fail, progress)
+		return undoMassRename(ctx, rows, steps, fail, progress, opts)
 	}
 	r := moveRun{opts: opts, progress: progress, resolver: func(context.Context, string, string, FileConflictFacts) (ConflictResolution, error) {
 		return ConflictResolution{Action: ActionSkip}, nil
@@ -90,6 +90,7 @@ func ExecuteUndo(ctx context.Context, steps []UndoStep, opts Options, progress P
 		default:
 			err = undoRemoveCreated(ctx, s)
 			if err == nil {
+				opts.itemDone(PlanItem{Src: s.Path, IsDir: s.IsDir}, ItemDone, "")
 				done++
 				if progress != nil {
 					progress(s.Path.String(), "", done, bytes)
@@ -191,7 +192,7 @@ func undoRenameBatch(steps []UndoStep) ([]MassRenameRow, bool) {
 // work. A row is dropped (and reported) when its item is gone or changed kind, or when its target
 // name is held by something the batch does not itself vacate; dropping a row can vacate less, so
 // the check repeats until it settles.
-func undoMassRename(ctx context.Context, rows []MassRenameRow, steps []UndoStep, fail func(UndoStep, error) error, progress ProgressCallback) (int, int64, error) {
+func undoMassRename(ctx context.Context, rows []MassRenameRow, steps []UndoStep, fail func(UndoStep, error) error, progress ProgressCallback, opts Options) (int, int64, error) {
 	keep := make([]bool, len(rows))
 	reasons := make([]error, len(rows))
 	for i, row := range rows {
@@ -236,6 +237,13 @@ func undoMassRename(ctx context.Context, rows []MassRenameRow, steps []UndoStep,
 	}
 	if err := ExecuteMassRename(work); err != nil {
 		return 0, 0, err
+	}
+	for _, row := range work {
+		src, serr := pathloc.Parse(row.SourcePath)
+		dst, derr := pathloc.Parse(row.NewPath())
+		if serr == nil && derr == nil {
+			opts.itemDone(PlanItem{Src: src, Dst: dst, IsDir: row.IsDir}, ItemDone, "")
+		}
 	}
 	if progress != nil && len(work) > 0 {
 		progress(work[len(work)-1].SourcePath, work[len(work)-1].NewPath(), len(work), 0)

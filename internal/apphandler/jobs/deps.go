@@ -57,4 +57,7 @@ type Handler struct {
 	// jobBlockerNextGen invalidates in-flight quick-blocker chain timers.
 	jobBlockerNextGen atomic.Uint64
 	jobBlockerNext    sched.Debouncer
+
+	// ops is the Operations window's background fetch and fuzzy-scan bookkeeping (operations.go).
+	ops opsState
 }

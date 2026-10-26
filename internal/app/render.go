@@ -267,6 +267,9 @@ func (a *App) render() {
 	a.model.FooterKeys = a.activeFooterKeys()
 	a.model.JobsTransferRateLimitBPS = a.jobState.TransferRateLimit()
 	a.model.JobsFilterCaseInsensitive = a.config.Filter.CaseInsensitive
+	if a.model.ViewMode == ui.ViewJobs {
+		a.jobsCtrl.RefreshOpsWindow()
+	}
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsage.DescendIntoMountPoints
 	a.model.DiskUsageGoduIgnore = a.disk.ignore
 	a.previewCtrl.SnapshotPreviewDrawStates()

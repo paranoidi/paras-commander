@@ -145,12 +145,7 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 			s.mu.Unlock()
 		},
 		OnItemError: func(item ops.PlanItem, err error) {
-			s.emit(Event{
-				Type:       EventItemFailed,
-				JobID:      job.ID,
-				Status:     StatusScanning,
-				FailedItem: &FailedItem{Item: item, Error: ops.RootFirstErrorText(err)},
-			})
+			job.FailItem(s.emit, StatusScanning, item, err)
 		},
 		OnPath: func(path string) error {
 			now := time.Now()

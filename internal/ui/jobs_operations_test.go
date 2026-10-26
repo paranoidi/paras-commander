@@ -1,89 +1,15 @@
 package ui
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/oplog"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
-
-func opLabels(ops []JobOperation) []string {
-	out := make([]string, len(ops))
-	for i, o := range ops {
-		out[i] = o.Label
-		if o.Failed {
-			out[i] += "!"
-		}
-	}
-	return out
-}
-
-func TestAppendJobOperationDedupesAndReplaces(t *testing.T) {
-	var ops []JobOperation
-	ops = AppendJobOperation(ops, JobOperation{Label: "lantern.txt"})
-	ops = AppendJobOperation(ops, JobOperation{Label: "lantern.txt"}) // repeated progress sample
-	ops = AppendJobOperation(ops, JobOperation{Label: "orchard.bin"})
-	ops = AppendJobOperation(ops, JobOperation{Label: "lantern.txt", Failed: true, Error: "permission denied"})
-	if got, want := strings.Join(opLabels(ops), ","), "orchard.bin,lantern.txt!"; got != want {
-		t.Fatalf("after failure = %s, want %s", got, want)
-	}
-	ops = AppendJobOperation(ops, JobOperation{Label: "lantern.txt"}) // retry succeeded
-	if got, want := strings.Join(opLabels(ops), ","), "orchard.bin,lantern.txt"; got != want {
-		t.Fatalf("after retry = %s, want %s", got, want)
-	}
-}
-
-func TestAppendJobOperationCapKeepsFailures(t *testing.T) {
-	var ops []JobOperation
-	ops = AppendJobOperation(ops, JobOperation{Label: "meadow.sock", Failed: true, Error: "unsupported"})
-	for i := 0; i < jobOperationsMaxRows+10; i++ {
-		ops = AppendJobOperation(ops, JobOperation{Label: fmt.Sprintf("pebble-%03d.txt", i)})
-	}
-	if len(ops) != jobOperationsMaxRows {
-		t.Fatalf("len = %d, want %d", len(ops), jobOperationsMaxRows)
-	}
-	if !ops[0].Failed || ops[0].Label != "meadow.sock" {
-		t.Fatalf("oldest row = %+v, want the kept failure", ops[0])
-	}
-	if last := ops[len(ops)-1].Label; last != fmt.Sprintf("pebble-%03d.txt", jobOperationsMaxRows+9) {
-		t.Fatalf("newest row = %q", last)
-	}
-}
-
-func TestVisibleJobOperationsNewestFirstAndFiltered(t *testing.T) {
-	ops := []JobOperation{
-		{Label: "harbor/anchor.txt"},
-		{Label: "harbor/beacon.log", Failed: true, Error: "input/output error"},
-		{Label: "valley/anchor.md"},
-	}
-	labels := func(rows []JobOperationRow) string {
-		var out []string
-		for _, r := range rows {
-			out = append(out, r.Op.Label)
-		}
-		return strings.Join(out, ",")
-	}
-	var st JobsViewState
-	if got, want := labels(VisibleJobOperations(ops, st, true)), "valley/anchor.md,harbor/beacon.log,harbor/anchor.txt"; got != want {
-		t.Fatalf("all = %s, want %s", got, want)
-	}
-	st.OpsResultHidden = dialog.JobResultSuccess
-	if got, want := labels(VisibleJobOperations(ops, st, true)), "harbor/beacon.log"; got != want {
-		t.Fatalf("failed only = %s, want %s", got, want)
-	}
-	st.OpsResultHidden = dialog.JobResultNone
-	st.OpsFilter.Query = "anchr"
-	rows := VisibleJobOperations(ops, st, true)
-	if got, want := labels(rows), "valley/anchor.md,harbor/anchor.txt"; got != want {
-		t.Fatalf("fuzzy = %s, want %s", got, want)
-	}
-	if len(rows[0].Ranges) == 0 {
-		t.Fatal("fuzzy match ranges missing")
-	}
-}
 
 func screenRowText(screen tcell.SimulationScreen, rect Rect, y int) string {
 	var b strings.Builder
@@ -97,44 +23,59 @@ func screenRowText(screen tcell.SimulationScreen, rect Rect, y int) string {
 	return b.String()
 }
 
-func TestDrawJobsOperationsPanelBordersAndOrder(t *testing.T) {
+func newOpsScreen(t *testing.T) tcell.SimulationScreen {
+	t.Helper()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatal(err)
 	}
-	defer screen.Fini()
+	t.Cleanup(screen.Fini)
 	screen.SetSize(70, 10)
+	return screen
+}
+
+func TestDrawJobsOperationsPanelRowsAndFilterLabel(t *testing.T) {
+	screen := newOpsScreen(t)
 	rect := Rect{X: 0, Y: 0, Width: 70, Height: 8}
-	ops := []JobOperation{
-		{Label: "quarry/first.txt"},
-		{Label: "quarry/second.txt", Failed: true, Error: "permission denied"},
-		{Label: "quarry/third.txt", Failed: true, Error: "unsupported file type"},
-		{Label: "quarry/fourth.txt"},
-	}
+	win := JobsOpsWindow{JobID: "copy-1", Total: 3, Rows: []JobOperationRow{
+		{Op: JobOperation{Result: oplog.Failed, Label: "quarry/third.txt", Reason: "permission denied"}, Ranges: []search.Range{{Start: 0, End: 6}}},
+		{Op: JobOperation{Result: oplog.Skipped, Label: "quarry/second.txt", Reason: "exists"}},
+		{Op: JobOperation{Result: oplog.Done, Label: "quarry/first.txt"}},
+	}}
 	st := JobsViewState{OpsResultHidden: dialog.JobResultSuccess}
 	st.OpsFilter.Query = "quarry"
-	drawJobsOperationsPanel(screen, rect, st, ops, true, theme.Default(), false, true, false)
+	drawJobsOperationsPanel(screen, rect, st, win, theme.Default(), false, true, false)
 
-	top := screenRowText(screen, rect, rect.Y)
-	if !strings.Contains(top, "Operations") || !strings.Contains(top, "2 failures") {
-		t.Fatalf("top border = %q, want title and failure count", top)
+	if top := screenRowText(screen, rect, rect.Y); !strings.Contains(top, "Operations") || strings.Contains(top, "failure") {
+		t.Fatalf("top border = %q, want only the title", top)
 	}
-	if first := screenRowText(screen, rect, rect.Y+1); !strings.Contains(first, "quarry/third.txt: unsupported file type") {
-		t.Fatalf("first row = %q, want the newest failure", first)
+	for i, want := range []string{"quarry/third.txt: permission denied", "quarry/second.txt: exists", "quarry/first.txt"} {
+		if row := screenRowText(screen, rect, rect.Y+1+i); !strings.Contains(row, want) {
+			t.Fatalf("row %d = %q, want %q", i, row, want)
+		}
 	}
-	if second := screenRowText(screen, rect, rect.Y+2); !strings.Contains(second, "quarry/second.txt") {
-		t.Fatalf("second row = %q", second)
-	}
-	if third := screenRowText(screen, rect, rect.Y+3); strings.Contains(third, "quarry") {
-		t.Fatalf("third row = %q, want successes hidden", third)
-	}
-	if bottom := screenRowText(screen, rect, rect.Y+rect.Height-1); !strings.Contains(bottom, "Failed · > quarry") {
+	if bottom := screenRowText(screen, rect, rect.Y+rect.Height-1); !strings.Contains(bottom, "Failed + Skipped · > quarry") {
 		t.Fatalf("bottom border = %q, want the active filters", bottom)
 	}
 }
 
-func TestFitJobOperationKeepsLabelAndError(t *testing.T) {
-	op := JobOperation{Label: "harbor/locked.dat", Failed: true, Error: "open /srv/harbor/locked.dat: permission denied"}
+func TestDrawJobsOperationsPanelPendingAndScanning(t *testing.T) {
+	screen := newOpsScreen(t)
+	rect := Rect{X: 0, Y: 0, Width: 70, Height: 8}
+	win := JobsOpsWindow{JobID: "copy-1", Total: 2, Scanning: true, Rows: []JobOperationRow{{Pending: true}, {Pending: true}}}
+	var st JobsViewState
+	st.OpsFilter.Query = "lantern"
+	drawJobsOperationsPanel(screen, rect, st, win, theme.Default(), false, true, false)
+	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, "…") {
+		t.Fatalf("pending row = %q, want a placeholder", row)
+	}
+	if bottom := screenRowText(screen, rect, rect.Y+rect.Height-1); !strings.Contains(bottom, "> lantern · filtering…") {
+		t.Fatalf("bottom border = %q, want the scanning note", bottom)
+	}
+}
+
+func TestFitJobOperationKeepsLabelAndReason(t *testing.T) {
+	op := JobOperation{Result: oplog.Failed, Label: "harbor/locked.dat", Reason: "open /srv/harbor/locked.dat: permission denied"}
 	text, labelEnd, whole := fitJobOperation(op, 200)
 	if text != op.Text() || labelEnd != len(op.Label) || !whole {
 		t.Fatalf("wide: %q %d %v", text, labelEnd, whole)
@@ -145,6 +86,37 @@ func TestFitJobOperationKeepsLabelAndError(t *testing.T) {
 	}
 	label := string([]rune(text)[:labelEnd])
 	if !strings.HasSuffix(label, "locked.dat") || !strings.HasPrefix(string([]rune(text)[labelEnd:]), ": open") {
-		t.Fatalf("narrow text %q: want the basename kept, then the error start", text)
+		t.Fatalf("narrow text %q: want the basename kept, then the reason start", text)
+	}
+}
+
+func TestJobFilesLineColorsFailedAndSkipped(t *testing.T) {
+	j := JobEntry{ID: "copy-1", OpsStats: oplog.Stats{Done: 1234, Failed: 2, Skipped: 5}}
+	var text strings.Builder
+	for _, p := range jobFilesLineParts(j) {
+		text.WriteString(p.Text)
+	}
+	if got, want := text.String(), "Files:       1234 done, 2 failed, 5 skipped"; got != want {
+		t.Fatalf("line = %q, want %q", got, want)
+	}
+	styles := theme.Default()
+	body := tcell.StyleDefault
+	spans := jobFilesLineSpans(j, styles, body)
+	if len(spans) != 2 {
+		t.Fatalf("spans = %+v, want failed and skipped", spans)
+	}
+	line := []rune(text.String())
+	if s := string(line[spans[0].Start:spans[0].End]); s != "2 failed" || spans[0].Style != styles.JobsOperationOn(theme.JobsOperationFailed, body) {
+		t.Fatalf("failed span = %q", s)
+	}
+	if s := string(line[spans[1].Start:spans[1].End]); s != "5 skipped" || spans[1].Style != styles.JobsOperationOn(theme.JobsOperationSkipped, body) {
+		t.Fatalf("skipped span = %q", s)
+	}
+	if parts := jobFilesLineParts(JobEntry{ID: "copy-2"}); parts != nil {
+		t.Fatalf("empty log parts = %+v, want no line", parts)
+	}
+	dropped := jobFilesLineParts(JobEntry{OpsStats: oplog.Stats{Done: 10, Dropped: 4}})
+	if last := dropped[len(dropped)-1].Text; last != " (log incomplete, 4 dropped)" {
+		t.Fatalf("dropped note = %q", last)
 	}
 }

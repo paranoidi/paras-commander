@@ -244,6 +244,7 @@ Background file-operation jobs: display, timing, and throttling.
 | `blocker_dialog_next_debounce_ms` | int | `200` | Delay before automatically opening the next queued blocker dialog (e.g. overwrite prompt) after answering one. `0` opens immediately (clamped 0–5000). |
 | `worker_progress_min_bytes` | int | `524288` (512 KiB) | Minimum bytes copied between worker progress events (clamped 64 KiB–64 MiB). |
 | `worker_progress_min_interval_ms` | int | `200` | Minimum milliseconds between worker progress events while copying (clamped 50–5000). |
+| `operations_memory_rows` | int | `50000` | Rows of the jobs view Operations pane a job keeps in memory. Past this, the job's log spills to `$XDG_CACHE_HOME/pc/jobs/` (file names are written there; the files are removed when the job is cleared or the app exits) and only the newest rows stay in memory. `0` keeps every row in memory; other values below `1000` become `1000`. |
 | `throughput_chart_window_sec` | int | `45` | Time span shown by the job details throughput chart, in seconds (clamped 20–120). |
 | `throughput_chart_column_ms` | int | `400` | Milliseconds represented by each throughput chart column (clamped 80–2000). This is also the sampling interval for the displayed transfer speed, so lowering it makes the Speed column react faster and raising it makes it steadier. |
 | `throughput_chart_enabled` | bool | `true` | Show the throughput strip and chart in job details. Disabling it stops recording chart history but not speed sampling. |

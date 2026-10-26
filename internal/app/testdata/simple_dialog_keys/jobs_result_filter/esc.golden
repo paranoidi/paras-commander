@@ -1,6 +1,6 @@
 == open ==
 focus=item0 pending=All
 == Alt+f ==
-focus=item2 pending=Success
+focus=item2 pending=Success + Skipped
 == Esc ==
 CLOSED: shown=All view=true

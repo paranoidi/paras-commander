@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/oplog"
 )
 
 // JobEntry is a renderable job summary for the jobs view.
@@ -25,10 +26,14 @@ type JobEntry struct {
 	// Warnings mirrors jobs.Job.Warnings: non-fatal per-item issues (e.g. a symlink relinked
 	// instead of dereferenced) that do not fail the job.
 	Warnings []string
-	// FailedItems mirrors jobs.Job.FailedItems: source items a copy skipped (Errors panel).
+	// FailedItems mirrors jobs.Job.FailedItems: source items a copy could not copy (retry plan).
 	FailedItems []jobs.FailedItem
-	StartedAt   time.Time
-	FinishedAt  time.Time
+	// Ops is the job's operation log (the Operations pane reads it through the jobs handler);
+	// OpsStats is its counters at list sync (the Details Files line).
+	Ops        *oplog.Log
+	OpsStats   oplog.Stats
+	StartedAt  time.Time
+	FinishedAt time.Time
 	// Undo is jobs.Job.UndoLabel: whether the job can be undone, and why not.
 	Undo string
 	// ETABytesPerSec is smoothed throughput from recent progress samples (bytes/s).

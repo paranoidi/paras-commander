@@ -310,6 +310,7 @@ canceled = { fg = "bright_red", bold = true }
 [jobs.operations]            # Operations pane result icons
 success = { fg = "bright_green", bold = true }
 failed = { fg = "bright_red", bold = true }
+skipped = { fg = "yellow", bold = true }
 
 [compare]
 hashing = { fg = "bright_green", bold = true }
@@ -358,6 +359,7 @@ completed = "\uf05d"
 [icons.jobs.operations]      # Operations pane result icons
 success = "\uf05d"
 failed = "\uf06a"
+skipped = "\uf056"
 
 [icons.filelist]
 selection_subtree = ""

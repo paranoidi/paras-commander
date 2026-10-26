@@ -266,6 +266,7 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 	}
 	out, err := renameSourceForMove(ctx, src, dst, dstExists, r.resolver)
 	if errors.Is(err, ErrPermissionSkipped) {
+		r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSkipped, ReasonPermission)
 		return 0, 0, false, nil // user skipped this source after a permission error
 	}
 	if err != nil {
@@ -306,8 +307,10 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 				_ = removePathRecursive(ctx, loc)
 			}
 		}
+		r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemDone, "")
 		return 0, 0, true, nil
 	}
+	r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSkipped, ReasonExists)
 	return 0, 0, false, nil
 }
 

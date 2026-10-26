@@ -9,8 +9,12 @@ focus=item1 pending=Success
 == Down ==
 focus=item2 pending=Success
 == Space ==
-focus=item2 pending=All
-== Up ==
-focus=item1 pending=All
+focus=item2 pending=Success + Failed
+== Down ==
+focus=item3 pending=Success + Failed
 == Space ==
-focus=item1 pending=Failed
+focus=item3 pending=All
+== Up ==
+focus=item2 pending=All
+== Space ==
+focus=item2 pending=Success + Skipped

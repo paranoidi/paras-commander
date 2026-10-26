@@ -37,6 +37,15 @@ type ExtractPlan struct {
 	// A nil resolver fails that item without replacing the file. Returning false
 	// skips the item. Returning an error cancels remaining archives.
 	Conflict ConflictResolver
+	// OnItem, when set, reports each archive extracted (ItemDone), skipped or failed, with the
+	// reason for the last two.
+	OnItem func(path string, res ItemResult, reason string)
+}
+
+func (p ExtractPlan) report(path string, res ItemResult, reason string) {
+	if p.OnItem != nil {
+		p.OnItem(path, res, reason)
+	}
 }
 
 // PlanExtract builds an extract plan from source paths and destination directory.
@@ -125,6 +134,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 		if item.Format.NeedsStdoutSink() {
 			name := archive.OutputBasename(item.Path, item.Format)
 			if prev, ok := claimedStream[name]; ok {
+				plan.report(item.Path, ItemFailed, fmt.Sprintf("output %q collides with %s", name, filepath.Base(prev)))
 				failCount++
 				if firstErr == nil {
 					firstErr = fmt.Errorf("%s: output %q collides with %s", filepath.Base(item.Path), name, filepath.Base(prev))
@@ -138,6 +148,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 		}
 		err := extractOne(ctx, item, plan.Destination, plan.Toolchain, plan.Conflict)
 		if errors.Is(err, errExtractSkipped) {
+			plan.report(item.Path, ItemSkipped, ReasonExists)
 			if progress != nil {
 				progress(item.Path, done)
 			}
@@ -151,11 +162,13 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 			return done, fmt.Errorf("%s: %w", filepath.Base(item.Path), err)
 		}
 		if err != nil {
+			plan.report(item.Path, ItemFailed, err.Error())
 			failCount++
 			if firstErr == nil {
 				firstErr = fmt.Errorf("%s: %w", filepath.Base(item.Path), err)
 			}
 		} else {
+			plan.report(item.Path, ItemDone, "")
 			done++
 		}
 		if progress != nil {

@@ -61,37 +61,64 @@ The current limit appears on the right side of the Queue panel's border
 
 # The Operations panel
 
-The Operations panel lists the files the selected job has processed, newest at
-the top. Each row starts with a result icon: green for a file that was copied,
-red for one that failed. A failed row ends with the reason. When the job has
-failures, the panel's top border shows `N failures` in red on the right.
+The Operations panel lists every item the selected job has processed, newest at
+the top. Each row starts with a result icon:
+
+- green: copied, moved, deleted or extracted;
+- yellow: skipped, followed by why (`exists` when you chose Skip at a "file
+  exists" prompt, `identical` when the destination already had the same
+  content, `permission denied` when you skipped a permission prompt);
+- red: failed, followed by the reason.
+
+Files and symlinks are listed one per row. A directory gets a row only when it
+was skipped as a whole; a move lists each moved top-level item. When a retried
+item succeeds, its earlier failed row disappears.
+
+The Details panel above shows the totals on its `Files:` line, for example
+`1234 done, 2 failed, 5 skipped`, with the failed count in red and the skipped
+count in yellow.
 
 Filter the list while the panel is focused:
 
-- Type to fuzzy-match the file names, with the same matching as the file
-  list's quick filter. Rows that don't match are hidden. `Backspace` edits the
-  query, `Ctrl+L` or `Ctrl+Backspace` clears it, and `Esc` closes the filter.
-  `Esc` again leaves the jobs view.
-- `F3` opens the **Result** dialog: tick **Success**, **Failed**, or **All**.
+- Type to fuzzy-match the names, with the same matching as the file list's
+  quick filter. Rows that don't match are hidden. `Backspace` edits the query,
+  `Ctrl+L` or `Ctrl+Backspace` clears it, and `Esc` closes the filter. `Esc`
+  again leaves the jobs view.
+- `F3` opens the **Result** dialog: tick **Success**, **Failed**, **Skipped**,
+  or **All**.
 - `Shift+F3` clears both filters.
 
 The active filters are shown on the panel's bottom border, for example
-`Failed · > report`. They stay in place while you move between jobs and are
-cleared when you leave the jobs view. `Up`, `Down`, `PgUp`, `PgDn`, `Home` and
-`End` scroll the panel. The icons and colors come from the theme
-(`[icons.jobs.operations]` and `[jobs.operations]`).
+`Failed · > report`, plus `filtering…` while a large list is still being
+searched. They stay in place while you move between jobs and are cleared when
+you leave the jobs view. `Up`, `Down`, `PgUp`, `PgDn`, `Home` and `End` scroll
+the panel. The icons and colors come from the theme (`[icons.jobs.operations]`
+and `[jobs.operations]`).
 
-# Skipped items
+## Very large jobs
 
-When a copy meets something it cannot copy, it skips that item and carries on
-with the rest: a file type that cannot be copied (a socket, FIFO or device), or
+A job keeps the newest 50,000 rows in memory (`operations_memory_rows` under
+`[jobs]` in `config.toml`; `0` keeps everything in memory). Past that, its list
+is written to `~/.cache/pc/jobs/` (or `$XDG_CACHE_HOME/pc/jobs/`) so a job of
+millions of files stays light. Scrolling into older rows briefly shows `…`
+while they are read back. These files hold the file names the job processed;
+they are readable only by you, and are deleted when the job is cleared from the
+jobs view and when paras-commander exits. If the cache cannot be written, the
+oldest rows are dropped instead and the Details panel says
+`log incomplete, N dropped`.
+
+# Items that cannot be copied
+
+When a copy meets something it cannot copy, it records that item as failed and
+carries on with the rest: a file type that cannot be copied (a socket, FIFO or device), or
 a source file that cannot be read or has vanished. Problems on the destination
 side (write errors, a full disk) still stop the job. Move jobs always stop at
 the first problem.
 
-A job that skipped items finishes as **failed** with `N item(s) failed`. Each
-skipped item is a red row in the Operations panel, followed by its reason.
-Press `F3` and keep only **Failed** to list just those. Tab cycles Queue, blocker
+A job with such items finishes as **failed** with `N item(s) failed`. Each
+such item is a red row in the Operations panel, followed by its reason, and
+the Details panel counts them. Press `F3` and keep only **Failed** to list just
+those. Tab cycles Queue, blocker
 (when shown), Details, Operations.
 
 # Undoing a job

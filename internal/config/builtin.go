@@ -175,6 +175,12 @@ const (
 	// progress bar's done span, and suppresses the menu-bar spinner for file-operation jobs.
 	DefaultProgressLightbar = true
 
+	// DefaultJobsOperationsMemoryRows is how many Operations-pane rows a job keeps in memory
+	// before its log spills to the cache directory (0 keeps every row in memory).
+	DefaultJobsOperationsMemoryRows = 50000
+	// JobsOperationsMemoryRowsMin is the smallest non-zero jobs.operations_memory_rows.
+	JobsOperationsMemoryRowsMin = 1000
+
 	// DefaultFreeSpaceOnProgressWake schedules async statfs on both panels after each progress UI wake.
 	DefaultFreeSpaceOnProgressWake = true
 	// DefaultFreeSpacePollIntervalSecs is the period for background volume free-space refresh while jobs run (0 disables).

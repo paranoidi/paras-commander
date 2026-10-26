@@ -2,13 +2,15 @@ package jobs
 
 import (
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -637,37 +639,103 @@ func TestJobsViewEnterOnBlockerPaneStillSubmits(t *testing.T) {
 	}
 }
 
-func TestAppendJobOperationRecordsSuccessAndFailure(t *testing.T) {
-	t.Parallel()
-	h, model, _ := newMaximizeTestHandler(t)
-	h.appendJobOperation(jobs.Event{Type: jobs.EventProgress, JobID: "failing", CurrentPath: "/orchard/acorn.txt"})
-	h.appendJobOperation(jobs.Event{Type: jobs.EventProgress, JobID: "failing", CurrentPath: "/orchard/bramble.txt"})
-	h.appendJobOperation(jobs.Event{Type: jobs.EventItemFailed, JobID: "failing", FailedItem: &jobs.FailedItem{
-		Item:  ops.PlanItem{Src: pathloc.MustParse("/orchard/bramble.txt")},
-		Error: "permission denied",
-	}})
-	got := model.JobOperations["failing"]
-	if len(got) != 2 || got[0].Failed || !got[1].Failed || got[1].Error != "permission denied" {
-		t.Fatalf("operations = %+v, want one success then the failure", got)
+// selectedOps returns the operation log of the job newMaximizeTestHandler selected.
+func selectedOps(t *testing.T, h *Handler) *oplog.Log {
+	t.Helper()
+	log := h.selectedJobEntry().Ops
+	if log == nil {
+		t.Fatal("selected job has no operation log")
 	}
-	rows := h.visibleOperations()
-	if len(rows) != 2 || !rows[0].Op.Failed {
-		t.Fatalf("visible rows = %+v, want newest (the failure) first", rows)
+	return log
+}
+
+// waitOpsWindow refreshes the Operations window until done reports true.
+func waitOpsWindow(t *testing.T, h *Handler, model *ui.Model, done func(ui.JobsOpsWindow) bool) ui.JobsOpsWindow {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		h.RefreshOpsWindow()
+		if done(model.JobsOpsWindow) {
+			return model.JobsOpsWindow
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("Operations window never settled: %+v", model.JobsOpsWindow)
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 }
 
-func fillOperations(model *ui.Model, n int) {
-	ops := make([]ui.JobOperation, n)
-	for i := range ops {
-		ops[i] = ui.JobOperation{Label: fmt.Sprintf("pebble-%02d.txt", i)}
+func opsLabels(win ui.JobsOpsWindow) string {
+	var out []string
+	for _, r := range win.Rows {
+		out = append(out, r.Op.Label)
 	}
-	model.JobOperations = map[string][]ui.JobOperation{"failing": ops}
+	return strings.Join(out, ",")
+}
+
+func TestRefreshOpsWindowNewestFirstAndFilters(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	log := selectedOps(t, h)
+	log.Append(oplog.Record{Result: oplog.Done, Label: "orchard/acorn.txt"})
+	log.Append(oplog.Record{Result: oplog.Failed, Label: "orchard/bramble.txt", Reason: "permission denied"})
+	log.Append(oplog.Record{Result: oplog.Skipped, Label: "valley/acorn.md", Reason: "exists"})
+	h.RefreshOpsWindow()
+	if got, want := opsLabels(model.JobsOpsWindow), "valley/acorn.md,orchard/bramble.txt,orchard/acorn.txt"; got != want {
+		t.Fatalf("all = %s, want %s", got, want)
+	}
+	model.JobsView.OpsResultHidden = dialog.JobResultAll &^ dialog.JobResultSkipped
+	h.RefreshOpsWindow()
+	if got := opsLabels(model.JobsOpsWindow); got != "valley/acorn.md" || model.JobsOpsWindow.Total != 1 {
+		t.Fatalf("skipped only = %s", got)
+	}
+	model.JobsView.OpsResultHidden = dialog.JobResultNone
+	model.JobsView.OpsFilter.Query = "acrn"
+	win := waitOpsWindow(t, h, model, func(w ui.JobsOpsWindow) bool { return !w.Scanning && w.Total > 0 })
+	if got := opsLabels(win); got != "valley/acorn.md,orchard/acorn.txt" {
+		t.Fatalf("fuzzy = %s", got)
+	}
+	if len(win.Rows[0].Ranges) == 0 {
+		t.Fatal("fuzzy rows carry no match ranges")
+	}
+	log.Append(oplog.Record{Result: oplog.Done, Label: "thicket/acorn.bin"})
+	win = waitOpsWindow(t, h, model, func(w ui.JobsOpsWindow) bool { return !w.Scanning && w.Total == 3 })
+	if win.Rows[0].Op.Label != "thicket/acorn.bin" {
+		t.Fatalf("rows appended after the scan were not matched: %s", opsLabels(win))
+	}
+}
+
+func TestRefreshOpsWindowReadsSpilledRowsAsync(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	log := oplog.New("spill", oplog.Config{MemoryRows: 1000, Session: oplog.NewSession(t.TempDir())})
+	t.Cleanup(log.Close)
+	for i := range 5000 {
+		log.Append(oplog.Record{Result: oplog.Done, Label: fmt.Sprintf("pebble-%04d.txt", i)})
+	}
+	model.JobsList[model.JobsView.Selected].Ops = log
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	h.RefreshOpsWindow()
+	if !model.JobsOpsWindow.Rows[0].Pending {
+		t.Fatal("rows only in the spill file must render pending first")
+	}
+	win := waitOpsWindow(t, h, model, func(w ui.JobsOpsWindow) bool { return len(w.Rows) > 0 && !w.Rows[0].Pending })
+	if last := win.Rows[len(win.Rows)-1].Op.Label; last != "pebble-0000.txt" {
+		t.Fatalf("bottom row = %q, want the oldest record", last)
+	}
+}
+
+func fillOperations(t *testing.T, h *Handler, n int) {
+	log := selectedOps(t, h)
+	for i := range n {
+		log.Append(oplog.Record{Result: oplog.Done, Label: fmt.Sprintf("pebble-%02d.txt", i)})
+	}
 }
 
 func TestJobsViewOperationsHomeEndScroll(t *testing.T) {
 	t.Parallel()
 	h, model, _ := newMaximizeTestHandler(t)
-	fillOperations(model, 60)
+	fillOperations(t, h, 60)
 	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
 	if model.JobsView.OpsScroll == 0 {
 		t.Fatal("End did not scroll Operations to the bottom")
@@ -725,8 +793,8 @@ func TestJobsViewResultFilterDialogAndReset(t *testing.T) {
 	}
 	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt)) // untick Success
 	h.ResultFilterDialogOK()
-	if model.JobsResultFilterDialog.Open || model.JobsView.OpsResultShown() != dialog.JobResultFailed {
-		t.Fatalf("after OK shown = %v, want Failed only", model.JobsView.OpsResultShown())
+	if model.JobsResultFilterDialog.Open || model.JobsView.OpsResultShown() != dialog.JobResultFailed|dialog.JobResultSkipped {
+		t.Fatalf("after OK shown = %v, want Failed + Skipped", model.JobsView.OpsResultShown())
 	}
 	model.JobsView.OpsFilter.Query = "lantern"
 	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModShift))
