@@ -321,7 +321,7 @@ func jobFilesLineParts(j JobEntry) []jobFilesPart {
 		text := ""
 		switch n, count := jobs.CanceledItems(jobs.Type(j.Type), j.TotalFiles, j.TotalDirs, j.TotalsComplete, j.ProcessedItems, recorded); {
 		case count == jobs.CanceledUnknown:
-			text = "unknown amount canceled"
+			text = "canceled: incomplete scan"
 		case count == jobs.CanceledUnsupported:
 			text = "canceled: unsupported"
 		case n > 0:

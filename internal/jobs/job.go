@@ -33,15 +33,15 @@ type CanceledCount int
 
 const (
 	CanceledKnown       CanceledCount = iota
-	CanceledUnknown                   // a copy canceled before its counting walk finished
-	CanceledUnsupported               // move and flatten track no per-item remainder
+	CanceledUnknown                   // no finished file count: a copy canceled mid-scan, any move
+	CanceledUnsupported               // flatten: its plan has no per-item total
 )
 
 // CanceledItems is how many items a canceled job of type t left undone, from its Job.TotalFiles,
 // TotalDirs, TotalsComplete and ProcessedItems and the rows its operation log recorded. A copy
 // counts files only, like its log rows: TotalFiles minus TotalDirs minus processed (rows miss
 // the files under a skipped directory); delete, extract and undo count their items at enqueue
-// and log one row each.
+// and log one row each. A move never runs the counting walk, so its remainder is unknown.
 func CanceledItems(t Type, totalFiles, totalDirs int, totalsComplete bool, processed, recorded int) (n int, count CanceledCount) {
 	switch t {
 	case TypeCopy:
@@ -49,6 +49,8 @@ func CanceledItems(t Type, totalFiles, totalDirs int, totalsComplete bool, proce
 			return 0, CanceledUnknown
 		}
 		return max(0, totalFiles-totalDirs-processed), CanceledKnown
+	case TypeMove:
+		return 0, CanceledUnknown
 	case TypeDelete, TypeExtract, TypeUndo:
 		return max(0, totalFiles-recorded), CanceledKnown
 	}

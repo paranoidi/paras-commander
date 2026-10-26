@@ -148,9 +148,9 @@ func TestJobFilesLineShowsCanceledItems(t *testing.T) {
 		want string
 	}{
 		{"copy counted", JobEntry{Type: "copy", Status: "canceled", TotalFiles: 40, TotalDirs: 6, ProcessedItems: 13, TotalsComplete: true, OpsStats: oplog.Stats{Done: 12, Failed: 1}}, "Files:       12 done, 1 failed, 21 canceled"},
-		{"copy still scanning", JobEntry{Type: "copy", Status: "canceled", TotalFiles: 40, OpsStats: oplog.Stats{Done: 12}}, "Files:       12 done, unknown amount canceled"},
+		{"copy still scanning", JobEntry{Type: "copy", Status: "canceled", TotalFiles: 40, OpsStats: oplog.Stats{Done: 12}}, "Files:       12 done, canceled: incomplete scan"},
 		{"delete before any row", JobEntry{Type: "delete", Status: "canceled", TotalFiles: 3}, "Files:       0 done, 3 canceled"},
-		{"move", JobEntry{Type: "move", Status: "canceled", TotalFiles: 40, TotalsComplete: true, OpsStats: oplog.Stats{Done: 2}}, "Files:       2 done, canceled: unsupported"},
+		{"move", JobEntry{Type: "move", Status: "canceled", TotalFiles: 40, TotalsComplete: true, OpsStats: oplog.Stats{Done: 2}}, "Files:       2 done, canceled: incomplete scan"},
 		{"flatten", JobEntry{Type: "flatten", Status: "canceled", TotalFiles: 40, TotalsComplete: true}, "Files:       0 done, canceled: unsupported"},
 		{"completed", JobEntry{Type: "copy", Status: "completed", TotalFiles: 40, TotalsComplete: true, OpsStats: oplog.Stats{Done: 12}}, "Files:       12 done"},
 	} {

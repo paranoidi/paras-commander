@@ -81,11 +81,12 @@ item succeeds, its earlier failed row disappears.
 
 The Details panel above shows the totals on its `Files:` line, for example
 `1234 done, 2 failed, 5 skipped`, with the failed count in red and the skipped
-count in yellow. A canceled job adds the files it left undone in yellow, for example
-`120 done, 380 canceled`. Like the other counts it counts files, not folders, so
-it can differ from the `Progress:` line, whose item count includes folders. It shows `unknown amount canceled` when a copy was canceled before its
-files were counted, and `canceled: unsupported` for moves and flattens, which
-don't track what is left.
+count in yellow. A canceled job adds the files it left undone in yellow, for
+example `120 done, 380 canceled`. Like the other counts it counts files, not
+folders, so it can differ from the `Progress:` line, whose item count includes
+folders. It shows `canceled: incomplete scan` when the files were never fully
+counted (a copy canceled while still counting, and moves, which don't count
+their files), and `canceled: unsupported` for flattens.
 
 Filter the list while the panel is focused:
 
