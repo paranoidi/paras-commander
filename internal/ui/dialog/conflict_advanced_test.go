@@ -106,11 +106,11 @@ func TestConflictRulesChoiceNavigationSkipsGreyed(t *testing.T) {
 	if focus != ConflictRuleID(3, 2) {
 		t.Fatalf("Right from Ask = %q, want the Skip choice (greyed ones are skipped)", focus)
 	}
-	// Down from a greyed column falls back to Ask, not to the nearest choice.
+	// Down onto a greyed column lands on the nearest choice that is not greyed.
 	focus = ConflictRuleID(2, 3)
 	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if focus != ConflictRuleID(3, 0) {
-		t.Fatalf("Down onto a greyed column = %q, want Ask", focus)
+	if focus != ConflictRuleID(3, 2) {
+		t.Fatalf("Down onto a greyed column = %q, want the nearest choice Skip", focus)
 	}
 }
 

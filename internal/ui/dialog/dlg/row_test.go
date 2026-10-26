@@ -277,48 +277,6 @@ func TestRowUpDownKeepsCellIndex(t *testing.T) {
 	}
 }
 
-func TestRowEntryLast(t *testing.T) {
-	spec := rowSpec()
-	spec.Groups[0].Columns[0][3].EntryLast = true // the mast row
-	// Up from a plain item lands on the last focusable cell of an EntryLast row.
-	focus := ID("p0")
-	HandleKey(spec, &focus, key(tcell.KeyUp))
-	if focus != "mast-no" {
-		t.Errorf("Up from p0 into an EntryLast row = %q, want its last cell", focus)
-	}
-	// Without EntryLast it lands on the first cell.
-	focus = "p0"
-	HandleKey(rowSpec(), &focus, key(tcell.KeyUp))
-	if focus != "mast-auto" {
-		t.Errorf("Up from p0 into a plain row = %q, want its first cell", focus)
-	}
-	// From another row's cell the cell index wins over EntryLast.
-	focus = "keel-yes"
-	HandleKey(spec, &focus, key(tcell.KeyDown))
-	if focus != "mast-yes" {
-		t.Errorf("Down from a row cell into an EntryLast row = %q, want mast-yes", focus)
-	}
-	// Up from a button goes to the last item of the last group, a plain radio here.
-	focus = Cancel
-	HandleKey(spec, &focus, key(tcell.KeyUp))
-	if focus != "p1" {
-		t.Errorf("Up from Cancel = %q, want p1", focus)
-	}
-	// A row that is the last item of the last group is entered from the buttons at its last cell.
-	last := Spec{
-		Title: "Harbor", Width: 40, MinWidth: 20, Unclamped: true,
-		Groups: []Group{{Columns: [][]Item{{
-			{Kind: KindRow, EntryLast: true, Cells: []Item{radio("a", "A", 0), radio("b", "B", 0)}},
-		}}}},
-		Buttons: []Button{{ID: OK, Label: "OK"}},
-	}
-	focus = OK
-	HandleKey(last, &focus, key(tcell.KeyUp))
-	if focus != "b" {
-		t.Errorf("Up from OK into an EntryLast row = %q, want its last cell", focus)
-	}
-}
-
 func TestRowIndexFallsBackToNearestFocusableCell(t *testing.T) {
 	spec := Spec{
 		Title: "Harbor", Width: 40, MinWidth: 20, Unclamped: true,
@@ -347,10 +305,11 @@ func TestRowIndexFallsBackToNearestFocusableCell(t *testing.T) {
 			t.Errorf("%s %v = %q, want %q", s.from, s.key, focus, s.want)
 		}
 	}
+	// c1 sits after a label cell, under b0: Up goes to where it is drawn, not to its index.
 	focus := ID("c1")
 	HandleKey(spec, &focus, key(tcell.KeyUp))
-	if focus != "b1" {
-		t.Errorf("Up from c1 = %q, want b1", focus)
+	if focus != "b0" {
+		t.Errorf("Up from c1 = %q, want b0 (drawn above it)", focus)
 	}
 }
 
@@ -375,7 +334,7 @@ func TestRowInputKeepsLeftRightForTextEditing(t *testing.T) {
 			}
 		}
 	}
-	// Every input of a row is its own Tab segment; Up/Down keep the cell index.
+	// Every input of a row is its own Tab segment; Up/Down go where the cells are drawn.
 	focus := ID("q")
 	HandleKey(spec, &focus, key(tcell.KeyTab))
 	if focus != "d" {
@@ -390,9 +349,10 @@ func TestRowInputKeepsLeftRightForTextEditing(t *testing.T) {
 	if focus != "b" {
 		t.Errorf("Down from input cell 1 = %q, want the checkbox at cell index 1", focus)
 	}
+	// The checkbox row is narrower than the input row: b is drawn under q, so Up goes there.
 	HandleKey(spec, &focus, key(tcell.KeyUp))
-	if focus != "d" {
-		t.Errorf("Up back = %q, want d", focus)
+	if focus != "q" {
+		t.Errorf("Up back = %q, want q (drawn above b)", focus)
 	}
 	// An Alt mnemonic flips the option and leaves focus in the input.
 	focus = "q"

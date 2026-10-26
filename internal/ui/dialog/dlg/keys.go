@@ -58,88 +58,18 @@ func widgetAt(spec Spec, p pos) Item {
 // isInput reports whether the focused widget p is a text input.
 func isInput(spec Spec, p pos) bool { return !p.isButton() && widgetAt(spec, p).Kind == KindInput }
 
-// enterRow returns the focusable cell of a row that focus lands on when it moves onto the row.
-// idx is the cell index of the widget focus leaves (-1 when that is not a row cell): the cell with
-// that index, clamped to the row, else the nearest focusable cell to its left, else to its right
-// (with FallbackFirst, else the row's first focusable cell).
-// From a widget that is not a row cell, the first focusable cell, or the last one for Up into a
-// row with EntryLast.
-func enterRow(row Item, idx int, up bool) (ID, bool) {
-	n := len(row.Cells)
-	if idx < 0 {
-		if up && row.EntryLast {
-			idx = n - 1
-		} else {
-			for _, c := range row.Cells {
-				if c.Focusable() {
-					return c.ID, true
-				}
-			}
-			return "", false
-		}
+// rowFirst is the first focusable cell of row it (it itself when it is not a row): where
+// Left/Right land when they move onto it from the next column.
+func rowFirst(it Item) (ID, bool) {
+	if it.Kind != KindRow {
+		return it.ID, it.Focusable()
 	}
-	idx = min(idx, n-1)
-	if row.FallbackFirst && !row.Cells[idx].Focusable() {
-		idx = 0
-	}
-	for i := idx; i >= 0; i-- {
-		if row.Cells[i].Focusable() {
-			return row.Cells[i].ID, true
-		}
-	}
-	for i := idx + 1; i < n; i++ {
-		if row.Cells[i].Focusable() {
-			return row.Cells[i].ID, true
+	for _, c := range it.Cells {
+		if c.Focusable() {
+			return c.ID, true
 		}
 	}
 	return "", false
-}
-
-// entry is the ID focus lands on when it moves onto item it (see enterRow for idx and up).
-func entry(it Item, idx int, up bool) (ID, bool) {
-	if it.Kind == KindRow {
-		return enterRow(it, idx, up)
-	}
-	return it.ID, it.Focusable()
-}
-
-// nextFocusable is where focus lands on the first focusable item of col strictly after row from
-// (from -1 starts at the top), and prevFocusable on the last one strictly before row from; idx is
-// the cell index of the widget focus leaves, or -1.
-func nextFocusable(col []Item, from, idx int) (ID, bool) {
-	for i := from + 1; i < len(col); i++ {
-		if col[i].Focusable() {
-			return entry(col[i], idx, false)
-		}
-	}
-	return "", false
-}
-
-func prevFocusable(col []Item, from, idx int) (ID, bool) {
-	for i := from - 1; i >= 0; i-- {
-		if col[i].Focusable() {
-			return entry(col[i], idx, true)
-		}
-	}
-	return "", false
-}
-
-// groupFirst is the first focusable of group g in column-major order.
-func groupFirst(g Group, idx int) (ID, bool) {
-	for _, col := range g.Columns {
-		if id, ok := nextFocusable(col, -1, idx); ok {
-			return id, true
-		}
-	}
-	return "", false
-}
-
-// col0Last is the last focusable item of column 0 of group g.
-func col0Last(g Group, idx int) (ID, bool) {
-	if len(g.Columns) == 0 {
-		return "", false
-	}
-	return prevFocusable(g.Columns[0], len(g.Columns[0]), idx)
 }
 
 // groupFocusables lists the focusable widgets of g in column-major order, a row's cells in place
@@ -240,53 +170,17 @@ func tabTarget(spec Spec, id ID) ID {
 	return id
 }
 
-// nextGroupFirst is the first item of the first non-empty group after g, else the first button.
-func nextGroupFirst(spec Spec, g, idx int) (ID, bool) {
-	for gi := g + 1; gi < len(spec.Groups); gi++ {
-		if id, ok := groupFirst(spec.Groups[gi], idx); ok {
-			return id, true
-		}
-	}
-	if len(spec.Buttons) > 0 {
-		return spec.Buttons[0].ID, true
-	}
-	return "", false
-}
-
-// prevGroupLast is the last item of column 0 of the closest non-empty group before g.
-func prevGroupLast(spec Spec, g, idx int) (ID, bool) {
-	for gi := g - 1; gi >= 0; gi-- {
-		if id, ok := col0Last(spec.Groups[gi], idx); ok {
-			return id, true
-		}
-	}
-	return "", false
-}
-
-// adjacentButton is the button of the strip row above (d = -1) or below (d = 1) the row of button
-// b that sits visually nearest to it: the same relative position in the other row.
-func adjacentButton(spec Spec, b, d int) (ID, bool) {
-	rows := buttonRows(spec.Buttons)
-	row, col := 0, 0
-	for ri, r := range rows {
-		for ci, btn := range r {
-			if btn.ID == spec.Buttons[b].ID {
-				row, col = ri, ci
-			}
-		}
-	}
-	next := row + d
-	if next < 0 || next >= len(rows) {
-		return "", false
-	}
-	return rows[next][(2*col+1)*len(rows[next])/(2*len(rows[row]))].ID, true
-}
-
 // HandleKey applies one key to focus. Navigation (arrows, Tab/Backtab) returns (Event{}, true).
 // Space and Enter return Event{ID: focus}; Alt+mnemonic focuses the widget and returns its Event;
 // with Spec.PlainButtonKeys a plain button mnemonic letter returns that button's Event without
 // moving focus. Anything else returns (Event{}, false). OK / Cancel / Esc chords are resolved by
 // the application before dialog keys reach here and are not handled.
+//
+// Up/Down move focus by where the widgets are drawn (spatialTarget): to the nearest row of
+// focusable widgets below / above, buttons included, and in it to the widget nearest the focused
+// one's columns (one sharing them first, so a column or a grid column is kept; the leftmost when
+// several do). The columns of a group are lanes Up/Down never cross: leaving a column at its end
+// goes on past the group. Where nothing is above / below, a ScrollOnly list scrolls instead.
 //
 // Text inputs (KindInput) are edited by the caller, not the engine. While an input is focused:
 //   - Up/Down and Tab/Backtab move focus as usual, and every input is a Tab segment of its own,
@@ -362,38 +256,16 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 			return Event{}, false // the caller moves the text cursor
 		}
 		return scrollOnlyKey(spec, ev.Key())
-	case tcell.KeyDown:
-		if cur.isButton() {
-			if id, ok := adjacentButton(spec, cur.button, 1); ok {
-				return move(id, true)
-			}
-			if e, ok := scrollOnlyKey(spec, ev.Key()); ok {
-				return e, true // nowhere to move: scroll the view instead
-			}
-			return Event{}, true
+	case tcell.KeyDown, tcell.KeyUp:
+		d := 1
+		if ev.Key() == tcell.KeyUp {
+			d = -1
 		}
-		if id, ok := nextFocusable(spec.Groups[cur.group].Columns[cur.col], cur.row, cur.cell); ok {
+		if id, ok := spatialTarget(spec, *focus, d); ok {
 			return move(id, true)
 		}
-		return move(nextGroupFirst(spec, cur.group, cur.cell))
-	case tcell.KeyUp:
-		if cur.isButton() {
-			if id, ok := adjacentButton(spec, cur.button, -1); ok {
-				return move(id, true)
-			}
-			if id, ok := prevGroupLast(spec, len(spec.Groups), -1); ok {
-				return move(id, true)
-			}
-			if e, ok := scrollOnlyKey(spec, ev.Key()); ok {
-				return e, true // nowhere to move: scroll the view instead
-			}
-			return Event{}, true
-		}
-		if id, ok := prevFocusable(spec.Groups[cur.group].Columns[cur.col], cur.row, cur.cell); ok {
-			return move(id, true)
-		}
-		if cur.col == 0 {
-			return move(prevGroupLast(spec, cur.group, cur.cell))
+		if e, ok := scrollOnlyKey(spec, ev.Key()); ok {
+			return e, true // nowhere to move: scroll the view instead
 		}
 		return Event{}, true
 	case tcell.KeyLeft, tcell.KeyRight:
@@ -422,7 +294,7 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		}
 		cols := spec.Groups[cur.group].Columns
 		if c := cur.col + d; c >= 0 && c < len(cols) && cur.row < len(cols[c]) && cols[c][cur.row].Focusable() {
-			if id, ok := entry(cols[c][cur.row], -1, false); ok {
+			if id, ok := rowFirst(cols[c][cur.row]); ok {
 				*focus = id
 			}
 		}

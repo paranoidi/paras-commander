@@ -13,4 +13,4 @@ advanced focus=r2c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false al
 == Right ==
 advanced focus=r2c3 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
 == Down ==
-advanced focus=r3c0 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true
+advanced focus=r3c2 time[skip,ask,ask] size[ask,ask,ask] skip-identical=false all=true panel=true

@@ -186,7 +186,7 @@ func conflictRulesView(st ConflictDialogState) dlg.Spec {
 			}
 			items = append(items, conflictText(conflictRuleRowLabels[row]),
 				// A greyed choice under the cursor column falls back to Ask, which is never greyed.
-				dlg.Item{Kind: dlg.KindRow, FallbackFirst: true, Cells: cells})
+				dlg.Item{Kind: dlg.KindRow, Cells: cells})
 		}
 		return items
 	}

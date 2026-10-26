@@ -100,7 +100,7 @@ func TestFilterFocusGrid(t *testing.T) {
 		{"invert right to case in regex", PatternInvert, tcell.KeyRight, regex, 0, PatternCase},
 		{"invert down to OK", PatternInvert, tcell.KeyDown, regex, 0, dlg.OK},
 		{"case down to meta", PatternCase, tcell.KeyDown, shell, 2, PatternOnlyMeta},
-		{"OK up to last row", dlg.OK, tcell.KeyUp, shell, 0, PatternInvert},
+		{"OK up to the last row, the cell drawn above it", dlg.OK, tcell.KeyUp, shell, 0, PatternCase},
 		{"OK up to meta row", dlg.OK, tcell.KeyUp, shell, 2, PatternIncludeMeta},
 		{"OK right to Cancel", dlg.OK, tcell.KeyRight, shell, 0, dlg.Cancel},
 		{"first row up nothing", videos, tcell.KeyUp, shell, 0, videos},

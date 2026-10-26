@@ -161,37 +161,6 @@ func TestDrawButtonRows(t *testing.T) {
 	}
 }
 
-func TestRowFallbackFirst(t *testing.T) {
-	mk := func(fallback bool) Spec {
-		off := radio("r3", "Keep", 0)
-		off.Disabled = true
-		return Spec{
-			Title: "Harbor", Width: 50, Unclamped: true,
-			Groups: []Group{{Columns: [][]Item{{
-				{Kind: KindRow, Cells: []Item{radio("t0", "Ask", 0), radio("t1", "Over", 0), radio("t2", "Skip", 0), radio("t3", "Keep", 0)}},
-				{Kind: KindRow, FallbackFirst: fallback, Cells: []Item{radio("s0", "Ask", 0), radio("s1", "Over", 0), radio("s2", "Skip", 0), off}},
-			}}}},
-			Buttons: []Button{{ID: OK, Label: "OK"}},
-		}
-	}
-	for _, c := range []struct {
-		fallback bool
-		want     ID
-	}{{false, "s2"}, {true, "s0"}} {
-		focus := ID("t3")
-		HandleKey(mk(c.fallback), &focus, key(tcell.KeyDown))
-		if focus != c.want {
-			t.Errorf("FallbackFirst=%v: Down from t3 -> %q, want %q", c.fallback, focus, c.want)
-		}
-	}
-	// An enabled cell at the leaving index is still preferred.
-	focus := ID("t1")
-	HandleKey(mk(true), &focus, key(tcell.KeyDown))
-	if focus != "s1" {
-		t.Errorf("Down from t1 -> %q, want s1", focus)
-	}
-}
-
 func TestFocusedResolvesStaleFocus(t *testing.T) {
 	spec := testSpec()
 	if got := Focused(spec, ""); got != "a0" {

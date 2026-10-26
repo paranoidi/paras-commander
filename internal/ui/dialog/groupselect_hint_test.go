@@ -99,7 +99,7 @@ func TestGroupSelectFocusFullPath(t *testing.T) {
 		{"left from full path goes to case", PatternFullPath, tcell.KeyLeft, PatternCase},
 		{"up from full path goes to dirs", PatternFullPath, tcell.KeyUp, PatternDirsOnly},
 		{"down from full path goes to ok", PatternFullPath, tcell.KeyDown, dlg.OK},
-		{"up from ok goes to full path when shown", dlg.OK, tcell.KeyUp, PatternFullPath},
+		{"up from ok goes to the case checkbox drawn above it", dlg.OK, tcell.KeyUp, PatternCase},
 		{"up from cancel goes to full path when shown", dlg.Cancel, tcell.KeyUp, PatternFullPath},
 	}
 	for _, tc := range cases {

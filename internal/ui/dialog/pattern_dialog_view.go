@@ -213,8 +213,6 @@ func patternSpec(v patternView) dlg.Spec {
 	case v.ShowFullPath:
 		row(check(PatternCase, "Case sensitive", PatternMnemonicCase, v.CaseSensitive),
 			dlg.Item{ID: PatternFullPath, Kind: dlg.KindCheckbox, Label: "Match full path", Mnemonic: PatternMnemonicFullPath, On: v.FullPath})
-		// Up from the buttons lands on Match full path, the last checkbox of the last row.
-		options[len(options)-1].EntryLast = v.MetaCount == 0
 	default:
 		row(check(PatternCase, "Case sensitive", PatternMnemonicCase, v.CaseSensitive))
 	}

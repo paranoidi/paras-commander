@@ -64,7 +64,7 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	col := []dlg.Item{
 		{Kind: dlg.KindRow, Cells: []dlg.Item{query, depth}},
 		{Kind: dlg.KindSeparator},
-		{Kind: dlg.KindRow, Cells: options, EntryLast: true}, // Up from below lands on Stay on current volume
+		{Kind: dlg.KindRow, Cells: options},
 	}
 	if state.ShowSearchSelectionsOption {
 		col = append(col, dlg.Item{ID: FindSelections, Kind: dlg.KindCheckbox, Label: "Search only from selected directories", Mnemonic: 'S', On: state.SearchOnlySelections})

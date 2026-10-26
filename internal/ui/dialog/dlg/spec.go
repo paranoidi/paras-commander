@@ -196,20 +196,12 @@ type Item struct {
 	// rows, lists or separators). The row ends one cell before the right border, like labels and
 	// inputs; a cell that does not fit is clipped, and one that would start past the end is not
 	// drawn (its Rect is empty). Left/Right move between the focusable cells of a row (never out of
-	// a focused input); Up/Down keep the cell index of the row they leave (clamped to the row, then
-	// the nearest focusable cell to the left, then to the right).
+	// a focused input); Up/Down go to the drawn cell nearest the widget they leave (see HandleKey).
 	Cells []Item
-	// EntryLast makes Up land on the row's last focusable cell, instead of its first, when focus
-	// comes from a widget that is not a cell of a row (a button or an item of another kind).
-	EntryLast bool
 	// TabToSelected makes Tab and Shift+Tab, when they land on this row (its first focusable cell
 	// starts a Tab segment), focus the row's selected cell (the first with On) instead: the mode
 	// radios of the mass rename dialog. Up/Down/Left/Right are unaffected.
 	TabToSelected bool
-	// FallbackFirst makes Up/Down, when the cell at the index of the cell they leave cannot be
-	// focused (a disabled choice), land on the row's first focusable cell instead of the nearest
-	// one to its left.
-	FallbackFirst bool
 
 	// Cell box (items inside Cells). The box starts where the previous one (plus its Gap) ends; radios
 	// and checkboxes start in the box's first cell, labels and inputs one cell in (the dialog's
@@ -295,7 +287,7 @@ type Button struct {
 	Destructive bool
 	// NewRow starts a new centered strip row with this button (ignored on the first button). The
 	// strip stays one Tab stop; Left/Right walk the buttons in reading order across rows and
-	// Up/Down jump to the visually nearest button of the adjacent row.
+	// Up/Down move to the button drawn nearest in the adjacent row.
 	NewRow bool
 }
 

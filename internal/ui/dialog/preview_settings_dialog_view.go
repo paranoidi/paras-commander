@@ -66,8 +66,7 @@ func PreviewSettingsDialogView(s PreviewSettingsDialogState, markerWidth int) dl
 				On: values[row.id] == r.Value, Seg: seg, Gap: 1,
 			})
 		}
-		// EntryLast: Up from the Active protocol group lands on the last capability radio.
-		caps = append(caps, dlg.Item{Kind: dlg.KindRow, Cells: cells, EntryLast: true})
+		caps = append(caps, dlg.Item{Kind: dlg.KindRow, Cells: cells})
 	}
 	caps = append(caps, dlg.Item{Kind: dlg.KindSeparator})
 	protocol := append([]dlg.Item{{Kind: dlg.KindLabel, Label: "Active protocol:"}},
