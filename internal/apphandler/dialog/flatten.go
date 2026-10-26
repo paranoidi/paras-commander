@@ -7,7 +7,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -112,11 +111,9 @@ func (h *Handler) ApplyFlattenEvent(ev dlg.Event) {
 func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
 	d := &h.model.FlattenDialog
 	// Alt mnemonics (Recursive, Remove empty) win over every other chord, also in the destination field.
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if ev, ok := dlg.HandleKey(dialog.FlattenView(*d), &d.Focus, event); ok {
-			h.ApplyFlattenEvent(ev)
-			return
-		}
+	if ev, ok := dlg.HandleMnemonic(dialog.FlattenView(*d), &d.Focus, event); ok {
+		h.ApplyFlattenEvent(ev)
+		return
 	}
 	if h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusOnDest(), h.ArmFlattenDestinationValidateTimer) {
 		return

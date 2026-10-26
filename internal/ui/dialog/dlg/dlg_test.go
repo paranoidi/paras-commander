@@ -583,10 +583,25 @@ func TestInputKeyContract(t *testing.T) {
 			t.Errorf("Alt+%c = (%q, %v, focus %q), want %q with focus kept", r, ev.ID, ok, f, want)
 		}
 	}
-	// A button mnemonic still focuses the button.
+	// A button mnemonic presses the button, also without pulling focus out of the input; off an
+	// input it focuses the button.
 	f = "find"
+	if ev, ok := HandleKey(inputSpec(), &f, runeKey('o', tcell.ModAlt)); !ok || ev.ID != OK || f != "find" {
+		t.Errorf("Alt+o = (%q, %v, focus %q), want OK with focus kept", ev.ID, ok, f)
+	}
+	f = "c0"
 	if ev, ok := HandleKey(inputSpec(), &f, runeKey('o', tcell.ModAlt)); !ok || ev.ID != OK || f != OK {
-		t.Errorf("Alt+o = (%q, %v, focus %q), want OK focused", ev.ID, ok, f)
+		t.Errorf("Alt+o from a checkbox = (%q, %v, focus %q), want OK focused", ev.ID, ok, f)
+	}
+	// HandleMnemonic is that stage alone: every other key is declined.
+	f = "find"
+	for _, k := range []*tcell.EventKey{key(tcell.KeyEnter), key(tcell.KeyTab), runeKey('l', tcell.ModNone), runeKey('z', tcell.ModAlt)} {
+		if ev, ok := HandleMnemonic(inputSpec(), &f, k); ok || f != "find" {
+			t.Errorf("HandleMnemonic(%v) = (%+v, %v), focus %q, want declined", k.Name(), ev, ok, f)
+		}
+	}
+	if ev, ok := HandleMnemonic(inputSpec(), &f, runeKey('L', tcell.ModAlt)); !ok || ev.ID != "c0" || f != "find" {
+		t.Errorf("HandleMnemonic(Alt+L) = (%+v, %v), focus %q, want c0 with focus kept", ev, ok, f)
 	}
 	// Off an input the same keys keep working: Space toggles, plain button letters press.
 	f = "c0"

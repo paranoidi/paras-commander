@@ -8,7 +8,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -196,15 +195,16 @@ func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 		return
 	}
 
-	if altDialogCalibrate(event) {
-		a.beginDebounceCalibrateMeasuring()
+	view := dialog.DebounceCalibrateView(*st)
+	if ev, ok := dlg.HandleMnemonic(view, &st.Focus, event); ok {
+		a.applyDebounceCalibrateEvent(ev) // Calibrate (Alt+L) wins over the inputs' editing
 		return
 	}
 	onInput := st.Focus == dialog.DebounceDelay || st.Focus == dialog.DebouncePreview
 	if onInput && event.Key() != tcell.KeyEnter {
 		st.Status = ""
 	}
-	if ev, ok := dlg.HandleKey(dialog.DebounceCalibrateView(*st), &st.Focus, event); ok {
+	if ev, ok := dlg.HandleKey(view, &st.Focus, event); ok {
 		a.applyDebounceCalibrateEvent(ev)
 		return
 	}
@@ -232,11 +232,6 @@ func (a *App) applyDebounceCalibrateEvent(ev dlg.Event) {
 	default: // OK, or Enter in an input
 		a.applyDebounceCalibrateDialog()
 	}
-}
-
-func altDialogCalibrate(ev *tcell.EventKey) bool {
-	return ev.Key() == tcell.KeyRune && keymap.AltLetterModifiers(ev.Modifiers()) &&
-		(ev.Rune() == 'l' || ev.Rune() == 'L')
 }
 
 // handleDebounceCalibrateInputKey edits one numeric field of the dialog; shared by both inputs.

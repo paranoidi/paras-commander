@@ -433,24 +433,45 @@ func HandleKey(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 	return Event{}, false
 }
 
+// HandleMnemonic is the Alt+letter stage of HandleKey on its own: Alt+letter activates the widget
+// or button with that mnemonic and focuses it, except that it never pulls focus out of a text
+// input (the user keeps typing where they were). Handlers whose own keys run before the engine
+// (completion, path shortcuts, chords) run it first, so a mnemonic wins over every key of theirs.
+// Every other key is (Event{}, false).
+func HandleMnemonic(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
+	if ev.Key() != tcell.KeyRune || !keymap.AltLetterModifiers(ev.Modifiers()) {
+		return Event{}, false
+	}
+	*focus = Focused(spec, *focus)
+	cur, ok := find(spec, *focus)
+	if !ok {
+		return Event{}, false
+	}
+	inInput := isInput(spec, cur)
+	r := unicode.ToLower(ev.Rune())
+	hit := func(id ID) (Event, bool) {
+		if !inInput {
+			*focus = id
+		}
+		return Event{ID: id}, true
+	}
+	for _, it := range leaves(spec) {
+		if it.Mnemonic != 0 && !it.Disabled && unicode.ToLower(it.Mnemonic) == r {
+			return hit(it.ID)
+		}
+	}
+	for _, b := range spec.Buttons {
+		if b.Mnemonic != 0 && unicode.ToLower(b.Mnemonic) == r {
+			return hit(b.ID)
+		}
+	}
+	return Event{}, false
+}
+
 func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, bool) {
 	r := unicode.ToLower(ev.Rune())
 	if keymap.AltLetterModifiers(ev.Modifiers()) {
-		for _, it := range leaves(spec) {
-			if it.Mnemonic != 0 && !it.Disabled && unicode.ToLower(it.Mnemonic) == r {
-				if !inInput { // a flipped option never pulls focus out of a text input
-					*focus = it.ID
-				}
-				return Event{ID: it.ID}, true
-			}
-		}
-		for _, b := range spec.Buttons {
-			if b.Mnemonic != 0 && unicode.ToLower(b.Mnemonic) == r {
-				*focus = b.ID
-				return Event{ID: b.ID}, true
-			}
-		}
-		return Event{}, false
+		return HandleMnemonic(spec, focus, ev)
 	}
 	if ev.Modifiers() != tcell.ModNone {
 		return Event{}, false

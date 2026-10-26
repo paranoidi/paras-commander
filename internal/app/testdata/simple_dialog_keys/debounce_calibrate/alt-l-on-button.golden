@@ -5,4 +5,4 @@ phase=0 focus=in1 value="0" cursor=1 preview="500" pcursor=3 status=""
 == Down ==
 phase=0 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
 == Alt+L ==
-phase=1 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
+phase=1 focus=calibrate value="0" cursor=1 preview="500" pcursor=3 status=""

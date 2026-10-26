@@ -6,7 +6,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -205,21 +204,16 @@ func (h *Handler) ApplyTransferEvent(ev dlg.Event) {
 }
 
 // HandleTransferDialogKey routes a key event for the open unified transfer (copy/move) dialog.
-// Order: Alt mnemonics (options, Add paused) win over everything, also in the input; then the
+// Order: Alt mnemonics (options, Add paused) win over everything, also in the input
+// (dlg.HandleMnemonic, which leaves focus in the input); then the
 // completion dropdown, the path-picker and destination shortcuts and the
 // destination's cursor keys; then the widget engine; and what it declines is text editing.
 func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 	d := &h.model.TransferDialog
 	spec := h.TransferDialogSpec()
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		prev := d.Focus
-		if ev, ok := dlg.HandleKey(spec, &d.Focus, event); ok {
-			if ev.ID == dialog.TransferAddPaused {
-				d.Focus = prev // a refused Alt+P leaves the user where they were typing
-			}
-			h.ApplyTransferEvent(ev)
-			return
-		}
+	if ev, ok := dlg.HandleMnemonic(spec, &d.Focus, event); ok {
+		h.ApplyTransferEvent(ev)
+		return
 	}
 	if h.DestFieldTryCompletionKey(event, &d.Destination, d.FocusOnDest(), h.ArmTransferDestinationValidateTimer) {
 		return

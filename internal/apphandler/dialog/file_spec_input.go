@@ -101,17 +101,18 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 		return h.handleMassRenamePickerKey(event)
 	}
 	var spec *dlg.Spec // built on first use: most chords return before the engine runs
-	apply := func() bool {
+	run := func(stage func(dlg.Spec, *dlg.ID, *tcell.EventKey) (dlg.Event, bool)) bool {
 		if spec == nil {
 			s := h.FileDialogSpec()
 			spec = &s
 		}
-		ev, ok := dlg.HandleKey(*spec, &d.Focus, event)
+		ev, ok := stage(*spec, &d.Focus, event)
 		if ok {
 			h.applyFileDialogEvent(ev)
 		}
 		return ok
 	}
+	apply := func() bool { return run(dlg.HandleKey) }
 	if dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != dialog.RenamePhaseMain {
 		apply()
 		return false
@@ -119,7 +120,7 @@ func (h *Handler) handleFileDialogSpecKey(event *tcell.EventKey) bool {
 	if h.tryFileDialogChord(event) {
 		return false
 	}
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && apply() {
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && run(dlg.HandleMnemonic) {
 		return false
 	}
 	if h.TryPathPickerHostShortcut(event) {
