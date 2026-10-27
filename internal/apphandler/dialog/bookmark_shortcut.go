@@ -122,7 +122,7 @@ func (h *Handler) deleteSelectedBookmark() bool {
 	if !ok {
 		return false
 	}
-	marksPath, err := bookmarks.ResolveFile(h.host.Config().Bookmarks.File, h.model.UserHomeDir)
+	marksPath, err := bookmarks.ResolveFile(h.host.Config().Bookmarks.File, h.model.UserHomeDir, h.getenv)
 	if err != nil {
 		h.host.SetErrorMessage("Delete bookmark", err)
 		return true

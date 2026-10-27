@@ -12,17 +12,20 @@ import (
 )
 
 // ResolveGTKFile returns $XDG_CONFIG_HOME/gtk-3.0/bookmarks, or ~/.config/gtk-3.0/bookmarks
-// when XDG_CONFIG_HOME is unset.
-func ResolveGTKFile(homeDir string) (string, error) {
-	cfgHome, err := configHomeDir(homeDir)
+// when XDG_CONFIG_HOME is unset. environ looks up env vars (nil means os.Getenv).
+func ResolveGTKFile(homeDir string, environ func(string) string) (string, error) {
+	cfgHome, err := configHomeDir(homeDir, environ)
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(cfgHome, "gtk-3.0", "bookmarks"), nil
 }
 
-func configHomeDir(homeDir string) (string, error) {
-	if v := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); v != "" {
+func configHomeDir(homeDir string, environ func(string) string) (string, error) {
+	if environ == nil {
+		environ = os.Getenv
+	}
+	if v := strings.TrimSpace(environ("XDG_CONFIG_HOME")); v != "" {
 		return expandHome(v, homeDir), nil
 	}
 	if homeDir == "" {

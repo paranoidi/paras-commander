@@ -116,6 +116,10 @@ type Deps struct {
 	// PromptElevate asks the user whether a permission-denied local file step may be retried as
 	// root (the app's single permission prompt). Nil disables elevation.
 	PromptElevate ops.PermissionWaitFunc
+
+	// Getenv looks up environment variables for bookmark file resolution (FZF_MARKS_FILE,
+	// XDG_CONFIG_HOME). Nil means os.Getenv.
+	Getenv func(string) string
 }
 
 // pendingPanelFocus defers a select-and-scroll until the target entry actually appears in the
@@ -160,6 +164,7 @@ type Handler struct {
 	diskUsage            *diskusage.Engine
 	diskUsageIgnore      diskusage.ShouldIgnoreFolder
 	promptElevate        ops.PermissionWaitFunc
+	getenv               func(string) string // nil: bookmarks fall back to os.Getenv
 
 	// deleteDialogScanFP is the last enqueued directory set fingerprint for the delete
 	// confirmation dialog.
@@ -253,5 +258,6 @@ func New(d Deps) *Handler {
 		diskUsage:            d.DiskUsage,
 		diskUsageIgnore:      d.DiskUsageIgnore,
 		promptElevate:        d.PromptElevate,
+		getenv:               d.Getenv,
 	}
 }

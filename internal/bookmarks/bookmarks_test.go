@@ -67,22 +67,20 @@ func TestParseReaderOrder(t *testing.T) {
 }
 
 func TestResolveFile(t *testing.T) {
-	t.Setenv(envMarksFile, "")
-	p, err := ResolveFile("/abs/custom", "/home/u")
+	none := func(string) string { return "" }
+	p, err := ResolveFile("/abs/custom", "/home/u", none)
 	if err != nil || p != filepath.Clean("/abs/custom") {
 		t.Fatalf("got %q %v", p, err)
 	}
-	t.Setenv(envMarksFile, "/env/marks")
-	p, err = ResolveFile("", "/home/u")
+	p, err = ResolveFile("", "/home/u", func(string) string { return "/env/marks" })
 	if err != nil || p != filepath.Clean("/env/marks") {
 		t.Fatalf("env: got %q %v", p, err)
 	}
-	t.Setenv(envMarksFile, "")
-	p, err = ResolveFile("", "/home/me")
+	p, err = ResolveFile("", "/home/me", none)
 	if err != nil || p != filepath.Join("/home/me", ".fzf-marks") {
 		t.Fatalf("default: got %q %v", p, err)
 	}
-	p, err = ResolveFile("~/marks.txt", "/home/me")
+	p, err = ResolveFile("~/marks.txt", "/home/me", none)
 	if err != nil {
 		t.Fatal(err)
 	}

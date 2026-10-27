@@ -35,8 +35,7 @@ func TestParseGTKLine(t *testing.T) {
 }
 
 func TestResolveGTKFile(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "")
-	p, err := ResolveGTKFile("/home/me")
+	p, err := ResolveGTKFile("/home/me", func(string) string { return "" })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,8 +43,12 @@ func TestResolveGTKFile(t *testing.T) {
 	if p != want {
 		t.Fatalf("got %q want %q", p, want)
 	}
-	t.Setenv("XDG_CONFIG_HOME", "/custom/config")
-	p, err = ResolveGTKFile("/home/me")
+	p, err = ResolveGTKFile("/home/me", func(k string) string {
+		if k == "XDG_CONFIG_HOME" {
+			return "/custom/config"
+		}
+		return ""
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,10 +76,14 @@ func TestLoadAllMergesAndDedupes(t *testing.T) {
 	if err := os.WriteFile(gtkPath, []byte(gtkBody), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
-	t.Setenv(envMarksFile, "")
+	env := func(k string) string {
+		if k == "XDG_CONFIG_HOME" {
+			return filepath.Join(dir, ".config")
+		}
+		return ""
+	}
 
-	marks, err := LoadAll(fzfPath, dir)
+	marks, err := LoadAll(fzfPath, dir, env)
 	if err != nil {
 		t.Fatal(err)
 	}

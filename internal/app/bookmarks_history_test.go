@@ -67,7 +67,6 @@ func TestBookmarkDialogF8DeletesFZFMark(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(xdg, "gtk-3.0"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("XDG_CONFIG_HOME", xdg)
 	target := filepath.Join(root, "marked")
 	if err := os.MkdirAll(target, 0o755); err != nil {
 		t.Fatal(err)
@@ -94,6 +93,12 @@ func TestBookmarkDialogF8DeletesFZFMark(t *testing.T) {
 		Config:       cfg,
 		KeymapBundle: bundle,
 	})
+	app.getenv = func(k string) string {
+		if k == "XDG_CONFIG_HOME" {
+			return xdg
+		}
+		return ""
+	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	if len(app.model.PathPicker.Items) != 1 {
 		t.Fatalf("items = %d, want 1", len(app.model.PathPicker.Items))
@@ -130,7 +135,6 @@ func TestBookmarkDialogDeleteFooterSkippedForGnomeMark(t *testing.T) {
 	if err := os.MkdirAll(gnomePath, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("XDG_CONFIG_HOME", xdg)
 	marksPath := filepath.Join(root, "marks")
 	if err := os.WriteFile(marksPath, []byte{}, 0o644); err != nil {
 		t.Fatal(err)
@@ -151,6 +155,12 @@ func TestBookmarkDialogDeleteFooterSkippedForGnomeMark(t *testing.T) {
 		Config:       cfg,
 		KeymapBundle: bundle,
 	})
+	app.getenv = func(k string) string {
+		if k == "XDG_CONFIG_HOME" {
+			return xdg
+		}
+		return ""
+	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	if len(app.model.PathPicker.Items) != 1 {
 		t.Fatalf("items = %d, want 1 gnome bookmark", len(app.model.PathPicker.Items))

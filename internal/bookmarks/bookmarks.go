@@ -103,8 +103,8 @@ func parseLines(r io.Reader, parse func(string) (Mark, bool)) ([]Mark, error) {
 // LoadAll reads the primary fzf-marks file plus GTK 3 bookmarks from
 // $XDG_CONFIG_HOME/gtk-3.0/bookmarks (read-only). Primary entries are listed first;
 // GTK paths already present in the primary file are skipped.
-func LoadAll(cfgFile, homeDir string) ([]Mark, error) {
-	primaryPath, err := ResolveFile(cfgFile, homeDir)
+func LoadAll(cfgFile, homeDir string, environ func(string) string) ([]Mark, error) {
+	primaryPath, err := ResolveFile(cfgFile, homeDir, environ)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func LoadAll(cfgFile, homeDir string) ([]Mark, error) {
 	if err != nil {
 		return nil, err
 	}
-	gtkPath, err := ResolveGTKFile(homeDir)
+	gtkPath, err := ResolveGTKFile(homeDir, environ)
 	if err != nil {
 		return nil, err
 	}
@@ -144,12 +144,15 @@ func mergeByPath(primary, extra []Mark) []Mark {
 }
 
 // ResolveFile returns the path to the marks file: cfgFile if non-empty, else
-// FZF_MARKS_FILE, else ~/.fzf-marks. Paths are cleaned; a leading ~ is expanded when home is non-empty.
-func ResolveFile(cfgFile, homeDir string) (string, error) {
+// FZF_MARKS_FILE (via environ; nil means os.Getenv), else ~/.fzf-marks. Paths are cleaned; a leading ~ is expanded when home is non-empty.
+func ResolveFile(cfgFile, homeDir string, environ func(string) string) (string, error) {
+	if environ == nil {
+		environ = os.Getenv
+	}
 	if p := strings.TrimSpace(cfgFile); p != "" {
 		return expandHome(strings.TrimSpace(p), homeDir), nil
 	}
-	if env := strings.TrimSpace(os.Getenv(envMarksFile)); env != "" {
+	if env := strings.TrimSpace(environ(envMarksFile)); env != "" {
 		return expandHome(env, homeDir), nil
 	}
 	if homeDir == "" {

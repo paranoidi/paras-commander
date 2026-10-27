@@ -28,11 +28,9 @@ func pickerFocusName(app *App) string {
 	return "filter"
 }
 
-// pickerKeyBookmarksDialog is pickerKeyDialog over pickerKeyBookmarksApp, kept serial because that
-// setup points XDG_CONFIG_HOME at its fixture marks.
+// pickerKeyBookmarksDialog is pickerKeyDialog over pickerKeyBookmarksApp.
 func pickerKeyBookmarksDialog(name string, n int) keyGoldenDialog {
 	d := pickerKeyDialog(name, func(t *testing.T, dir string) *App { return pickerKeyBookmarksApp(t, dir, n) })
-	d.serial = true
 	return d
 }
 
@@ -40,7 +38,6 @@ func pickerKeyBookmarksDialog(name string, n int) keyGoldenDialog {
 func pickerKeyBookmarksApp(t *testing.T, dir string, n int) *App {
 	t.Helper()
 	root := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(root, "xdg"))
 	var marks strings.Builder
 	for i := 0; i < n; i++ {
 		a, b := listGoldenWords[i%len(listGoldenWords)], listGoldenWords[(i*7+3)%len(listGoldenWords)]
@@ -53,6 +50,12 @@ func pickerKeyBookmarksApp(t *testing.T, dir string, n int) *App {
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
 	app := newTestApp(t, newScreen(t, 80, 24), Options{CWD: func() (string, error) { return dir, nil }, Config: cfg})
+	app.getenv = func(k string) string {
+		if k == "XDG_CONFIG_HOME" {
+			return filepath.Join(root, "xdg")
+		}
+		return ""
+	}
 	app.model.Message = ""
 	app.dialogCtrl.OpenBookmarkDialog()
 	app.model.Message = ""

@@ -751,6 +751,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		DiskUsage:            app.disk.engine,
 		DiskUsageIgnore:      duIgnorer,
 		PromptElevate:        app.promptElevate,
+		Getenv:               func(k string) string { return app.getenv(k) },
 	})
 	app.pinCtrl = pinctrl.New(pinctrl.Deps{
 		Host:            pinHost{appShellHost: appShellHost{app: app}},

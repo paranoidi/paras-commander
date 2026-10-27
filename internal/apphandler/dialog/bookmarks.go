@@ -235,7 +235,7 @@ func (h *Handler) ExecuteAddBookmark() {
 		h.CloseFileDialog()
 		return
 	}
-	marksPath, err := bookmarks.ResolveFile(h.host.Config().Bookmarks.File, h.model.UserHomeDir)
+	marksPath, err := bookmarks.ResolveFile(h.host.Config().Bookmarks.File, h.model.UserHomeDir, h.getenv)
 	if err != nil {
 		h.host.SetErrorMessage("Add bookmark", err)
 		h.CloseFileDialog()

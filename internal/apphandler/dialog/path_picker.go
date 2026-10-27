@@ -237,7 +237,7 @@ func (h *Handler) PathPickerItemsHistory() ([]dialog.PathPickerItem, error) {
 func (h *Handler) PathPickerItemsBookmarks() ([]dialog.PathPickerItem, error) {
 	home := h.model.UserHomeDir
 	cfg := h.host.Config()
-	marks, err := bookmarks.LoadAll(cfg.Bookmarks.File, home)
+	marks, err := bookmarks.LoadAll(cfg.Bookmarks.File, home, h.getenv)
 	if err != nil {
 		return nil, err
 	}
