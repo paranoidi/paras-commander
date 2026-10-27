@@ -41,9 +41,9 @@ func (a *App) applyCompareSelectionEvent(ev dlg.Event) {
 // a panel's existing stash.
 func (a *App) answerCompareSelection(choice dlg.ID) {
 	open := a.compareSelectionOpen
+	n := a.model.CompareSelection.Selected
 	a.compareSelectionOpen = nil
 	a.model.CompareSelection = dialog.CompareSelectionDialogState{}
-	n := a.model.Primary.SelectedPathCount() + a.model.Secondary.SelectedPathCount()
 	switch choice {
 	case dialog.CompareSelectionDrop:
 		a.model.Primary.ClearSelection()
