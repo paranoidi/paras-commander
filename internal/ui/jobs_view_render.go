@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -274,12 +275,49 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 			primitive.Text(screen, textX, contentTop+i, textW, styles.EmptyText(), styles.PanelEmptyStyle().Background(layout.ContentBG))
 			continue
 		}
+		lineStyle := body
 		var spans []primitive.Span
-		if strings.HasPrefix(line, jobDetailFilesPrefix) && !chromeBlocked {
-			spans = jobFilesLineSpans(sel, styles, body)
+		if !chromeBlocked {
+			lineStyle = styles.JobsDetailText.Background(layout.ContentBG)
+			if isJobsDetailPlotLine(line) {
+				lineStyle = styles.JobsDetailPlot.Background(layout.ContentBG)
+			} else if n := jobsDetailLabelRunes(line); n > 0 {
+				spans = append(spans, primitive.Span{Start: 0, End: n, Style: styles.JobsDetailLabel.Background(layout.ContentBG)})
+			}
+			if strings.HasPrefix(line, jobDetailFilesPrefix) {
+				spans = append(spans, jobFilesLineSpans(sel, styles, lineStyle)...)
+			}
 		}
-		primitive.StyledText(screen, textX, contentTop+i, textW, line, body, spans)
+		primitive.StyledText(screen, textX, contentTop+i, textW, line, lineStyle, spans)
 	}
+}
+
+// isJobsDetailPlotLine reports whether a Details line is a throughput chart row (holds braille dots).
+func isJobsDetailPlotLine(line string) bool {
+	for _, r := range line {
+		if r >= '\u2801' && r <= '\u28ff' {
+			return true
+		}
+	}
+	return false
+}
+
+// jobsDetailLabelRunes returns the rune length of a leading "Label:" plus its padding spaces, or 0
+// when the line has no label.
+func jobsDetailLabelRunes(line string) int {
+	runes := []rune(line)
+	colon := slices.Index(runes, ':')
+	if colon < 0 {
+		return 0
+	}
+	end := colon + 1
+	for end < len(runes) && runes[end] == ' ' {
+		end++
+	}
+	if end == colon+1 {
+		return 0
+	}
+	return end
 }
 
 // jobDetailFilesPrefix starts the Details line with the job's operation counts.

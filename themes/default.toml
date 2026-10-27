@@ -303,6 +303,11 @@ label.on_fill = { fg = "bright_white", bold = true }
 label.on_track = { fg = "bright_white", bold = true }
 track = { fg = "bright_black", bg = "black" }
 
+[jobs.detail]                # jobs view Details panel body
+label = { fg = "white" }
+text = { fg = "default" }
+plot = { fg = "green" }
+
 [jobs.icons]                 # leading icon column (1:1 with job status strings)
 completed = { fg = "bright_green", bold = true }
 failed = { fg = "bright_red", bold = true }

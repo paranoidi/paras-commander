@@ -302,6 +302,10 @@ type Theme struct {
 	JobsProgressFill         tcell.Style
 	JobsProgressLabelOnFill  tcell.Style
 	JobsProgressLabelOnTrack tcell.Style
+	// Jobs Details panel body: label prefix, plain text and the throughput chart rows.
+	JobsDetailLabel tcell.Style
+	JobsDetailText  tcell.Style
+	JobsDetailPlot  tcell.Style
 	// JobsProgressInactive* style paused/canceled job progress (grey fill, not green).
 	JobsProgressInactiveTrack        tcell.Style
 	JobsProgressInactiveFill         tcell.Style
@@ -1200,6 +1204,9 @@ var requiredStyleKeys = []string{
 	"jobs.progress.fill",
 	"jobs.progress.label.on_fill",
 	"jobs.progress.label.on_track",
+	"jobs.detail.label",
+	"jobs.detail.text",
+	"jobs.detail.plot",
 	"jobs.progress.inactive.track",
 	"jobs.progress.inactive.fill",
 	"jobs.progress.inactive.label.on_fill",
@@ -1855,6 +1862,10 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressFill:         styles["jobs.progress.fill"],
 		JobsProgressLabelOnFill:  styles["jobs.progress.label.on_fill"],
 		JobsProgressLabelOnTrack: styles["jobs.progress.label.on_track"],
+
+		JobsDetailLabel: styles["jobs.detail.label"],
+		JobsDetailText:  styles["jobs.detail.text"],
+		JobsDetailPlot:  styles["jobs.detail.plot"],
 
 		JobsProgressInactiveTrack:        styles["jobs.progress.inactive.track"],
 		JobsProgressInactiveFill:         styles["jobs.progress.inactive.fill"],
