@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -50,6 +51,7 @@ type State struct {
 	workerCtx    context.Context
 	workerCancel context.CancelFunc
 	jobWg        sync.WaitGroup
+	runs         atomic.Int32 // job run goroutines that have not returned (RunsInFlight)
 
 	// TransferFunc is called by the worker to copy/move files, allowing tests to inject
 	// custom implementations. emit must be used for all job-related UI events (same path as State.emit).
@@ -810,12 +812,19 @@ func (s *State) runWorker(stop <-chan struct{}) {
 			continue
 		}
 		s.jobWg.Add(1)
+		s.runs.Add(1)
 		go func(job *Job) {
 			defer s.jobWg.Done()
+			defer s.runs.Add(-1)
 			s.runJob(job, stop)
 		}(job)
 	}
 }
+
+// RunsInFlight is the number of job runs whose goroutine has not returned. A run sets the job's
+// final status before it queues the terminal event, and returns only once that event is on
+// Events(): with none in flight, every event of a finished job can be drained.
+func (s *State) RunsInFlight() int { return int(s.runs.Load()) }
 
 // takeItemFailures returns and clears the number of items job id skipped this run.
 func (s *State) takeItemFailures(id string) int {

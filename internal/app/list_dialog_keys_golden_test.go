@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -307,7 +306,6 @@ func dedupEmptyKeyDialog(name string) keyGoldenDialog {
 		outcome: func(app *App, quit bool) string {
 			fx := fixtures.get(app)
 			flushBackgroundJobs(fx.t, app)
-			waitUntilAppJobsFinished(fx.t, app, 5*time.Second)
 			_, err := os.Stat(fx.sub)
 			return fmt.Sprintf("quit=%v root_removed=%v message=%q", quit, os.IsNotExist(err), app.model.Message)
 		},

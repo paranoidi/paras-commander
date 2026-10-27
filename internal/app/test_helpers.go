@@ -213,12 +213,16 @@ func writeFile(t *testing.T, path string) {
 	testutil.WriteFile(t, path)
 }
 
+// flushBackgroundJobs drains job events until every job is done and its events are applied.
+// A run sets the job's final status before it queues the terminal event, so a finished status
+// alone is not enough: it waits for the run goroutines too (jobs.State.RunsInFlight), then
+// drains what they queued.
 func flushBackgroundJobs(t *testing.T, app *App) {
 	t.Helper()
 	const maxIter = 2000
 	for i := 0; i < maxIter; i++ {
 		app.jobsCtrl.PollEvents()
-		busy := false
+		busy := app.jobState.RunsInFlight() > 0
 		for _, j := range app.jobState.AllJobs() {
 			switch j.Status {
 			case jobs.StatusScanning, jobs.StatusQueued, jobs.StatusRunning, jobs.StatusWaitingDecision:
@@ -229,6 +233,8 @@ func flushBackgroundJobs(t *testing.T, app *App) {
 			}
 		}
 		if !busy {
+			for app.jobsCtrl.PollEvents() {
+			}
 			return
 		}
 		time.Sleep(5 * time.Millisecond)

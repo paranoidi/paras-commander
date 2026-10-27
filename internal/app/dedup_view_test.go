@@ -1135,7 +1135,6 @@ func TestDedupViewEmptyDirsConfirmDefaultsYesAndRemoves(t *testing.T) {
 			}
 
 			flushBackgroundJobs(t, app)
-			waitUntilAppJobsFinished(t, app, 5*time.Second)
 
 			_, err := os.Stat(sub)
 			if removeEmpty {
@@ -1655,7 +1654,6 @@ func TestDedupViewEmptyDirsConfirmCancelDeletesNothing(t *testing.T) {
 				t.Fatalf("marked paths = %d, want 2 (marks kept)", got)
 			}
 			flushBackgroundJobs(t, app)
-			waitUntilAppJobsFinished(t, app, 5*time.Second)
 			for _, n := range []string{"orchard.txt", "pebble.txt"} {
 				if _, err := os.Stat(filepath.Join(sub, n)); err != nil {
 					t.Fatalf("%s should still exist: %v", n, err)
