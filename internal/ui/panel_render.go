@@ -511,7 +511,10 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			(ctx.WorkingRowPath != "" && entry.Path == ctx.WorkingRowPath)
 		_, rowSuffix.Pinned = display.PinnedPaths[entry.Path]
 		rowSuffix.RangeAnchor = state.RangeAnchor != "" && entry.Path == state.RangeAnchor
-		if display.OtherMatchNames != nil && entry.Name != ".." && state.EntryDir(entry).String() == display.OtherMatchDir {
+		// A row a job is working on (the job icon: its source or destination tree) skips the
+		// mark: the other panel holding the same name is what the transfer is doing. Queued rows
+		// keep it.
+		if display.OtherMatchNames != nil && jobSuffix.JobIcon == 0 && entry.Name != ".." && state.EntryDir(entry).String() == display.OtherMatchDir {
 			_, rowSuffix.OtherMatch = display.OtherMatchNames[entry.Name]
 			rowSuffix.OtherMatchCursor = rowSuffix.OtherMatch && entry.Name == display.OtherMatchCursorName
 		}
