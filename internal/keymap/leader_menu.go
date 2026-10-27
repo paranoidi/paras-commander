@@ -258,6 +258,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionJobsUndo,
 				ActionJobsResultFilter,
 				ActionJobsResetFilter,
+				ActionJobsToggleOperationsLayout,
 			},
 		},
 		column: map[string]int{

@@ -14,6 +14,15 @@ panel. Running and queued jobs are listed first in run order (so the queue
 move keys match the screen), followed by finished jobs with the most recent
 first. Keys are rebindable under `[jobs]` in `keybindings.toml`.
 
+Operations spans the full width at the bottom of the screen, so long paths
+fit; the Queue and Details share the rows above it, as tall as Details needs.
+`Ctrl+Space` (`jobs.toggle-operations-layout`, **Jobs -> Operations layout**,
+Esc menu `o`) moves Operations under Details in the right column, giving the
+Queue the full height; press it again to move it back. The toggle lasts for
+the session; set `operations_layout = "side"` under `[jobs]` in `config.toml`
+to start with Operations in the right column. A terminal too short for the
+bottom layout uses the side layout.
+
 A job queued from several selected entries shows an expander icon after its
 type. `Alt+Right` (`jobs.expand`) lists each of its sources in a tree under
 the job, each with its own status icon (queued, running, completed, failed,
@@ -44,6 +53,7 @@ total `(estimated)` until the exact size is counted (see
 | `F3` / `Shift+F3` | Filter the Operations panel by result / reset its filters (`jobs.result-filter`, `jobs.reset-filter`) |
 | `+` / `-` / `Ctrl+U` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
 | `Tab` | Cycle the panels |
+| `Ctrl+Space` | Move the Operations panel between the right column and full width at the bottom (`jobs.toggle-operations-layout`) |
 | `Enter` | Maximize the focused Operations panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view (`jobs.close`) |
 

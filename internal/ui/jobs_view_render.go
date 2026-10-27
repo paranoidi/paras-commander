@@ -15,6 +15,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
 // jobsDetailLineBudgetFallback is used when line width is unknown (layout line counts only).
@@ -97,19 +98,22 @@ func (s JobsViewState) OpsResultShown() dialog.JobResultFilter {
 // JobsMaximizedRect is the bounding rect of the jobs Primary and Secondary columns, where a
 // maximized Operations pane is drawn.
 func JobsMaximizedRect(layout Layout) Rect {
-	p, s := layout.Primary, layout.Secondary
-	x, y := min(p.X, s.X), min(p.Y, s.Y)
-	return Rect{X: x, Y: y, Width: max(p.X+p.Width, s.X+s.Width) - x, Height: max(p.Y+p.Height, s.Y+s.Height) - y}
+	return geom.BoundingRect(layout.Primary, layout.Secondary)
+}
+
+// JobsViewLayout returns the jobs view pane frames for sel, with Operations across the bottom
+// when opsBottom is set. Every jobs view draw, hit test and scroll bound takes its frames here.
+func JobsViewLayout(layout Layout, opsBottom bool, sel JobEntry, now time.Time, throughputChartEnabled bool) JobsViewRects {
+	return SplitJobsView(layout.Primary, layout.Secondary, opsBottom, JobEntryShowsConflictPanel(sel), JobDetailLineCount(sel, now, throughputChartEnabled))
 }
 
 // jobsMaximizedPane returns the pane drawn full screen over the whole jobs view: the focused
 // Operations pane while maximized. ok is false when the normal split is drawn.
-func jobsMaximizedPane(layout Layout, state JobsViewState, sel JobEntry, now time.Time, throughputChartEnabled bool) (pane JobsPane, ok bool) {
+func jobsMaximizedPane(state JobsViewState, sel JobEntry, rects JobsViewRects) (pane JobsPane, ok bool) {
 	if !state.Maximized {
 		return JobsPaneList, false
 	}
-	_, _, opsRect := SplitJobsSecondaryPanels(layout.Secondary, JobEntryShowsConflictPanel(sel), JobDetailLineCount(sel, now, throughputChartEnabled))
-	pane = focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), opsRect.Height > 0))
+	pane = focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), rects.Operations.Height > 0))
 	return pane, pane == JobsPaneOperations
 }
 
@@ -120,6 +124,7 @@ type jobsViewRender struct {
 	OpsWindow              JobsOpsWindow
 	UserHomeDir            string
 	ThroughputChartEnabled bool
+	OpsBottom              bool
 	RateLimitBPS           int64
 }
 
@@ -137,21 +142,20 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	if src := state.SelectedSource(jobs); src != oplog.NoSource {
 		sourceLabel = jobSourceLabels(sel.Sources)[src]
 	}
-	if _, ok := jobsMaximizedPane(layout, state, sel, now, v.ThroughputChartEnabled); ok {
+	rects := JobsViewLayout(layout, v.OpsBottom, sel, now, v.ThroughputChartEnabled)
+	if _, ok := jobsMaximizedPane(state, sel, rects); ok {
 		drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, win, sourceLabel, styles, chromeBlocked, true, true)
 		return
 	}
-	drawJobsListPanel(screen, layout.Primary, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS)
-	detailLines := JobDetailLineCount(sel, now, v.ThroughputChartEnabled)
+	drawJobsListPanel(screen, rects.List, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS)
 	showConflict := JobEntryShowsConflictPanel(sel)
-	conflictRect, detailRect, opsRect := SplitJobsSecondaryPanels(layout.Secondary, showConflict, detailLines)
-	focused := focusedJobsPane(state, JobsPaneOrder(showConflict, opsRect.Height > 0))
-	if conflictRect.Height > 0 {
-		drawJobsConflictPanel(screen, conflictRect, state, sel, styles, chromeBlocked, focused == JobsPaneConflict, v.UserHomeDir)
+	focused := focusedJobsPane(state, JobsPaneOrder(showConflict, rects.Operations.Height > 0))
+	if rects.Conflict.Height > 0 {
+		drawJobsConflictPanel(screen, rects.Conflict, state, sel, styles, chromeBlocked, focused == JobsPaneConflict, v.UserHomeDir)
 	}
-	drawJobsDetailPanel(screen, detailRect, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, v.UserHomeDir, v.ThroughputChartEnabled)
-	if opsRect.Height > 0 {
-		drawJobsOperationsPanel(screen, opsRect, state, win, sourceLabel, styles, chromeBlocked, focused == JobsPaneOperations, false)
+	drawJobsDetailPanel(screen, rects.Detail, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, v.UserHomeDir, v.ThroughputChartEnabled)
+	if rects.Operations.Height > 0 {
+		drawJobsOperationsPanel(screen, rects.Operations, state, win, sourceLabel, styles, chromeBlocked, focused == JobsPaneOperations, false)
 	}
 }
 

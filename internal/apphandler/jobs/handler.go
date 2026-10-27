@@ -148,7 +148,7 @@ func (h *Handler) scrollToSelection(rows []ui.JobsListRow) {
 	layout := h.host.LayoutForTerminalSize(width, height)
 	visible := 0
 	if !layout.TooSmall {
-		visible = ui.PanelListRows(layout.Primary)
+		visible = ui.PanelListRows(h.jobsViewRects(layout).List)
 	}
 	h.model.JobsView.EnsureSelectionVisible(rows, visible)
 }
@@ -276,6 +276,11 @@ func (h *Handler) TryDispatch(actionID string) bool {
 			return true
 		}
 		h.state.SetTransferRateLimit(0)
+		return true
+	case keymap.ActionJobsToggleOperationsLayout:
+		if h.model.ViewMode == ui.ViewJobs {
+			h.toggleOperationsLayout()
+		}
 		return true
 	default:
 		return false
@@ -629,14 +634,33 @@ func (h *Handler) jobsPaneLayout() ([]ui.JobsPane, map[ui.JobsPane]ui.Rect) {
 	if layout.TooSmall {
 		return ui.JobsPaneOrder(false, false), nil
 	}
-	sel := h.selectedJobEntry()
-	showConflict := ui.JobEntryShowsConflictPanel(sel)
-	_, detailRect, opsRect := ui.SplitJobsSecondaryPanels(layout.Secondary, showConflict, h.jobsDetailLineCountForSelection())
+	r := h.jobsViewRects(layout)
 	rects := map[ui.JobsPane]ui.Rect{
-		ui.JobsPaneDetail:     detailRect,
-		ui.JobsPaneOperations: opsRect,
+		ui.JobsPaneDetail:     r.Detail,
+		ui.JobsPaneOperations: r.Operations,
 	}
-	return ui.JobsPaneOrder(showConflict, opsRect.Height > 0), rects
+	return ui.JobsPaneOrder(ui.JobEntryShowsConflictPanel(h.selectedJobEntry()), r.Operations.Height > 0), rects
+}
+
+// jobsViewRects returns the jobs view pane frames for the selected job (ui.JobsViewLayout).
+func (h *Handler) jobsViewRects(layout ui.Layout) ui.JobsViewRects {
+	return ui.JobsViewLayout(layout, h.model.JobsOpsBottom, h.selectedJobEntry(), time.Now(), h.config.Jobs.ThroughputChartEnabled)
+}
+
+// toggleOperationsLayout moves the Operations pane between the right column and the full-width
+// bottom for this session, then refits the panes to their new frames.
+func (h *Handler) toggleOperationsLayout() {
+	h.model.JobsOpsBottom = !h.model.JobsOpsBottom
+	h.clampJobsFocusPane()
+	h.scrollToSelection(h.model.JobsView.JobsListRows(h.model.JobsList))
+	h.refreshOpsWindow(true)
+	win := h.model.JobsOpsWindow
+	h.model.JobsView.OpsScroll = min(h.model.JobsView.OpsScroll, ui.JobsOpsMaxScroll(win.Total, win.RecordRows(h.opsContentRows())))
+	label := "side"
+	if h.model.JobsOpsBottom {
+		label = "bottom"
+	}
+	h.host.SetTransientMessage("Operations: "+label, ui.MessageUrgencyInfo)
 }
 
 func (h *Handler) jobsViewFocusPaneCount() int {

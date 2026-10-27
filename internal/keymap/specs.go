@@ -1839,6 +1839,15 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
 			Keywords:    []string{"collapse", "sources", "selection", "tree", "items"},
 		},
+		{
+			ID:          ActionJobsToggleOperationsLayout,
+			Views:       HelpJobs,
+			Title:       "Toggle Operations pane at bottom",
+			Section:     "Jobs",
+			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
+			Keywords:    []string{"layout", "operations", "bottom", "full width", "split"},
+			LeaderKey:   "o",
+		},
 
 		// ── Options dialogs ──
 		{

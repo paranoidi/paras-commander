@@ -432,6 +432,61 @@ func SplitJobsSecondaryPanels(column Rect, showConflict bool, detailLineCount in
 	return conflict, d, ops
 }
 
+// BoundingRect is the smallest rect containing a and b.
+func BoundingRect(a, b Rect) Rect {
+	x, y := min(a.X, b.X), min(a.Y, b.Y)
+	return Rect{X: x, Y: y, Width: max(a.X+a.Width, b.X+b.Width) - x, Height: max(a.Y+a.Height, b.Y+b.Height) - y}
+}
+
+// JobsViewRects are the jobs view pane frames. A zero-height Conflict or Operations is not drawn.
+type JobsViewRects struct {
+	List, Conflict, Detail, Operations Rect
+}
+
+// SplitJobsView lays out the jobs view over the primary and secondary columns. With opsBottom
+// false the Queue fills primary and secondary splits as SplitJobsSecondaryPanels. With opsBottom
+// true Operations spans the full width under a band holding the Queue (primary's width when the
+// columns are side by side, else half) and the optional conflict panel above Details; the band
+// is as tall as conflict plus Details need and Operations takes the rest (at least its minimum
+// frame). When the band cannot fit, the side layout is used.
+func SplitJobsView(primary, secondary Rect, opsBottom, showConflict bool, detailLineCount int) JobsViewRects {
+	if opsBottom {
+		if r, ok := splitJobsViewOpsBottom(primary, secondary, showConflict, detailLineCount); ok {
+			return r
+		}
+	}
+	conflict, detail, ops := SplitJobsSecondaryPanels(secondary, showConflict, detailLineCount)
+	return JobsViewRects{List: primary, Conflict: conflict, Detail: detail, Operations: ops}
+}
+
+func splitJobsViewOpsBottom(primary, secondary Rect, showConflict bool, detailLineCount int) (JobsViewRects, bool) {
+	area := BoundingRect(primary, secondary)
+	conflictH := 0
+	if showConflict {
+		conflictH = jobsConflictPanelMinFrameH
+	}
+	detailH := max(detailLineCount+jobsDetailChromeRows, 3)
+	bandH := min(conflictH+detailH, area.Height-jobsSubpanelMinFrameH)
+	if bandH < conflictH+3 {
+		return JobsViewRects{}, false
+	}
+	listW := area.Width / 2
+	if primary.Y == secondary.Y && primary.Width > 0 && primary.Width < area.Width {
+		listW = primary.Width
+	}
+	if listW < 1 || area.Width-listW < 1 {
+		return JobsViewRects{}, false
+	}
+	rightX := area.X + listW
+	rightW := area.Width - listW
+	return JobsViewRects{
+		List:       Rect{X: area.X, Y: area.Y, Width: listW, Height: bandH},
+		Conflict:   Rect{X: rightX, Y: area.Y, Width: rightW, Height: conflictH},
+		Detail:     Rect{X: rightX, Y: area.Y + conflictH, Width: rightW, Height: bandH - conflictH},
+		Operations: Rect{X: area.X, Y: area.Y + bandH, Width: area.Width, Height: area.Height - bandH},
+	}, true
+}
+
 // SplitJobsSecondaryColumn divides the jobs screen right column into a top Details panel and a lower
 // Operations area. The Details frame height is the minimum needed for
 // detailLineCount text rows (plus panel chrome), so the lower area receives all remaining vertical space. When

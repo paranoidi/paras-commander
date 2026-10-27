@@ -972,3 +972,29 @@ func TestProgressMovesPathMarksToActiveSource(t *testing.T) {
 		t.Fatal("the finished source's destination still counts as written")
 	}
 }
+
+func TestJobsViewCtrlSpaceTogglesOperationsAtBottom(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	_, side := h.jobsPaneLayout()
+	ctrlSpace := tcell.NewEventKey(tcell.KeyCtrlSpace, 0, tcell.ModCtrl)
+	h.HandleJobsViewKey(ctrlSpace)
+	if !model.JobsOpsBottom {
+		t.Fatal("Ctrl-Space did not move Operations to the bottom")
+	}
+	order, rects := h.jobsPaneLayout()
+	ops := rects[ui.JobsPaneOperations]
+	if ops.Width != 100 || ops.X != 0 {
+		t.Fatalf("bottom Operations = %+v, want full width", ops)
+	}
+	if detail := rects[ui.JobsPaneDetail]; ops.Y != detail.Y+detail.Height {
+		t.Fatalf("Operations %+v not under Details %+v", ops, detail)
+	}
+	if order[model.JobsView.FocusPane] != ui.JobsPaneOperations {
+		t.Fatal("toggle moved focus off Operations")
+	}
+	h.HandleJobsViewKey(ctrlSpace)
+	if _, back := h.jobsPaneLayout(); model.JobsOpsBottom || back[ui.JobsPaneOperations] != side[ui.JobsPaneOperations] {
+		t.Fatal("second Ctrl-Space did not restore the side layout")
+	}
+}

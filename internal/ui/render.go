@@ -189,6 +189,10 @@ type Model struct {
 	PanelScrollbarInactive bool
 	// JobsThroughputChartEnabled mirrors [jobs].throughput_chart_enabled (strip + graph off when false).
 	JobsThroughputChartEnabled bool
+	// JobsOpsBottom draws the jobs view Operations pane across the full width under Queue and
+	// Details ([jobs].operations_layout = "bottom"; jobs.toggle-operations-layout flips it for
+	// the session).
+	JobsOpsBottom bool
 	// JobsTransferRateLimitBPS is the global transfer rate limit in bytes/sec (session-only,
 	// not persisted); 0 means unlimited and shows nothing on the Queue panel border.
 	JobsTransferRateLimitBPS int64
@@ -663,6 +667,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			OpsWindow:              model.JobsOpsWindow,
 			UserHomeDir:            model.UserHomeDir,
 			ThroughputChartEnabled: model.JobsThroughputChartEnabled,
+			OpsBottom:              model.JobsOpsBottom,
 			RateLimitBPS:           model.JobsTransferRateLimitBPS,
 		}, styles, now, chromeBlocked || model.JobsResultFilterDialog.Open)
 		if model.JobsResultFilterDialog.Open {

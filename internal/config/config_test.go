@@ -1084,3 +1084,21 @@ func TestValidateClampsJobsOperationsRefreshInterval(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateNormalizesJobsOperationsLayout(t *testing.T) {
+	for in, want := range map[string]string{
+		" Bottom ": JobsOperationsLayoutBottom,
+		"side":     JobsOperationsLayoutSide,
+		"diagonal": DefaultJobsOperationsLayout,
+		"":         DefaultJobsOperationsLayout,
+	} {
+		cfg := Default()
+		cfg.Jobs.OperationsLayout = in
+		if err := cfg.Validate(); err != nil {
+			t.Fatalf("Validate(%q): %v", in, err)
+		}
+		if cfg.Jobs.OperationsLayout != want {
+			t.Fatalf("operations_layout %q = %q, want %q", in, cfg.Jobs.OperationsLayout, want)
+		}
+	}
+}

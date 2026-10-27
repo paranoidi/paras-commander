@@ -86,6 +86,15 @@ func SplitJobsSecondaryPanels(column Rect, showConflict bool, detailLineCount in
 	return geom.SplitJobsSecondaryPanels(column, showConflict, detailLineCount)
 }
 
+// JobsViewRects are the jobs view pane frames (geom.JobsViewRects).
+type JobsViewRects = geom.JobsViewRects
+
+// SplitJobsView lays out the jobs view panes over the primary and secondary columns, with
+// Operations in the right column or across the bottom (opsBottom).
+func SplitJobsView(primary, secondary Rect, opsBottom, showConflict bool, detailLineCount int) JobsViewRects {
+	return geom.SplitJobsView(primary, secondary, opsBottom, showConflict, detailLineCount)
+}
+
 // SplitJobsSecondaryColumnFlexTop divides a column into a flexible top panel and a compact bottom panel.
 func SplitJobsSecondaryColumnFlexTop(column Rect, bottomLineCount int) (top Rect, bottom Rect) {
 	return geom.SplitJobsSecondaryColumnFlexTop(column, bottomLineCount)

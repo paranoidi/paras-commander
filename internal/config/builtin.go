@@ -188,6 +188,12 @@ const (
 	// JobsOperationsRefreshIntervalMaxMS is the largest jobs.operations_refresh_interval_ms.
 	JobsOperationsRefreshIntervalMaxMS = 5000
 
+	// Jobs view Operations pane placement TOML values for [jobs].operations_layout.
+	JobsOperationsLayoutSide   = "side"
+	JobsOperationsLayoutBottom = "bottom"
+	// DefaultJobsOperationsLayout puts Operations across the full width below Queue and Details.
+	DefaultJobsOperationsLayout = JobsOperationsLayoutBottom
+
 	// DefaultFreeSpaceOnProgressWake schedules async statfs on both panels after each progress UI wake.
 	DefaultFreeSpaceOnProgressWake = true
 	// DefaultFreeSpacePollIntervalSecs is the period for background volume free-space refresh while jobs run (0 disables).

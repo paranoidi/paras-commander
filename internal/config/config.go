@@ -568,6 +568,10 @@ type JobsConfig struct {
 	// driven by job activity (0 = every frame, at most JobsOperationsRefreshIntervalMaxMS).
 	// Scrolling, typing and switching jobs update the pane at once.
 	OperationsRefreshIntervalMS int `toml:"operations_refresh_interval_ms"`
+	// OperationsLayout places the jobs view Operations pane: "side" (under Details in the
+	// right column) or "bottom" (full width under Queue and Details). The jobs view toggles it
+	// for the session.
+	OperationsLayout string `toml:"operations_layout"`
 }
 
 type OperationsConfig struct {
@@ -735,6 +739,7 @@ func Default() Config {
 			ScanDisableAdaptiveThrottle: false,
 			OperationsMemoryRows:        DefaultJobsOperationsMemoryRows,
 			OperationsRefreshIntervalMS: DefaultJobsOperationsRefreshIntervalMS,
+			OperationsLayout:            DefaultJobsOperationsLayout,
 		},
 		Operations: OperationsConfig{
 			ConfirmDelete:                true,
@@ -1289,6 +1294,12 @@ func (c *Config) validateJobs(builtin *Config) {
 		c.Jobs.OperationsRefreshIntervalMS = builtin.Jobs.OperationsRefreshIntervalMS
 	case ms > JobsOperationsRefreshIntervalMaxMS:
 		c.Jobs.OperationsRefreshIntervalMS = JobsOperationsRefreshIntervalMaxMS
+	}
+	switch strings.ToLower(strings.TrimSpace(c.Jobs.OperationsLayout)) {
+	case JobsOperationsLayoutSide, JobsOperationsLayoutBottom:
+		c.Jobs.OperationsLayout = strings.ToLower(strings.TrimSpace(c.Jobs.OperationsLayout))
+	default:
+		c.Jobs.OperationsLayout = DefaultJobsOperationsLayout
 	}
 	if c.Jobs.ProgressUIWakeDebounceMS <= 0 {
 		c.Jobs.ProgressUIWakeDebounceMS = builtin.Jobs.ProgressUIWakeDebounceMS

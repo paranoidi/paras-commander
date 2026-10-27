@@ -36,10 +36,11 @@ func JobsListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
 	if st.Selected >= 0 && st.Selected < len(model.JobsList) {
 		sel = model.JobsList[st.Selected]
 	}
-	if _, maximized := jobsMaximizedPane(layout, st, sel, time.Now(), model.JobsThroughputChartEnabled); maximized {
+	rects := JobsViewLayout(layout, model.JobsOpsBottom, sel, time.Now(), model.JobsThroughputChartEnabled)
+	if _, maximized := jobsMaximizedPane(st, sel, rects); maximized {
 		return 0, false
 	}
-	return auxListRowAt(layout.Primary, st.ListScroll, len(st.JobsListRows(model.JobsList)), x, y)
+	return auxListRowAt(rects.List, st.ListScroll, len(st.JobsListRows(model.JobsList)), x, y)
 }
 
 // MessagesListEntryAt returns the logical message drawn at (x, y): a continuation row (no time)

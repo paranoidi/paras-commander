@@ -614,6 +614,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			NarrowPanelsNameOnly:       cfg.UI.NarrowPanelsNameOnly,
 			OtherPanelMatchMarks:       cfg.UI.OtherPanelMatchMarks,
 			JobsThroughputChartEnabled: cfg.Jobs.ThroughputChartEnabled,
+			JobsOpsBottom:              cfg.Jobs.OperationsLayout == config.JobsOperationsLayoutBottom,
 			UserHomeDir:                homeDir,
 			DiskUsage:                  duEngine,
 			DiskUsageShown:             false,

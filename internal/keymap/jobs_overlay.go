@@ -28,6 +28,8 @@ func DefaultJobsOverlayKeys() map[string][]string {
 		ActionJobsResetFilter:       {"S-F3"},
 		ActionJobsExpand:            {"M-right"},
 		ActionJobsCollapse:          {"M-left"},
+
+		ActionJobsToggleOperationsLayout: {"C-space"},
 	}
 }
 

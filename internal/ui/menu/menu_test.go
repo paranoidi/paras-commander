@@ -254,6 +254,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Clear rate limit":   "C-u",
 		"Filter by result":   "F3",
 		"Reset filter":       "S-F3",
+		"Operations layout":  "C-space",
 		"Back to file view":  "left",
 	}
 	for _, item := range defs[0].Items {
