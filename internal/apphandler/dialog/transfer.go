@@ -292,11 +292,12 @@ func (h *Handler) confirmTransferEnqueue(startPaused bool) {
 		h.host.SetTransientMessage("Destination required", ui.MessageUrgencyWarn)
 		return
 	}
-	destLoc, err := pathloc.Parse(dest)
+	destLoc, err := h.resolveDestination(dest)
 	if err != nil {
 		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return
 	}
+	dest = destLoc.String()
 	var jobType jobs.Type
 	switch d.Kind {
 	case dialog.TransferKindCopy:

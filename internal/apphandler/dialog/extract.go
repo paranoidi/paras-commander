@@ -59,6 +59,16 @@ func (h *Handler) ExecuteExtract() {
 		h.host.SetTransientMessage("No archives to extract", ui.MessageUrgencyWarn)
 		return
 	}
+	if dest == "" {
+		h.host.SetTransientMessage("Destination required", ui.MessageUrgencyWarn)
+		return
+	}
+	destLoc, err := h.resolveDestination(dest)
+	if err != nil {
+		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
+		return
+	}
+	dest = destLoc.String()
 	if h.useRemoteFileOp(dest) {
 		h.startRemoteExtractProbe(sources, dest)
 		return

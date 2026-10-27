@@ -293,3 +293,26 @@ func writeGzipFile(t *testing.T, path, content string) {
 		t.Fatal(err)
 	}
 }
+
+func TestExecuteExtractResolvesTildeAgainstHome(t *testing.T) {
+	srcDir := t.TempDir()
+	home := t.TempDir()
+	h, host, jobState, _ := newExtractProbeHarness(t, srcDir, srcDir)
+	h.model.UserHomeDir = home
+
+	h.model.FileDialog = uidialog.FileDialogState{
+		Open:           true,
+		DialogType:     uidialog.FileDialogExtract,
+		Fields:         []uidialog.FileDialogField{{Label: "Destination", Value: "~/orchard"}},
+		ExtractSources: []string{filepath.Join(srcDir, "lantern.zip")},
+	}
+	h.ExecuteExtract()
+
+	want := filepath.Join(home, "orchard")
+	if len(jobState.Snapshot()) != 0 {
+		t.Fatalf("jobs queued for a missing destination")
+	}
+	if len(host.messageDialogs) != 1 || !strings.Contains(host.messageDialogs[0], want) {
+		t.Fatalf("message dialogs = %q, want one naming %q", host.messageDialogs, want)
+	}
+}

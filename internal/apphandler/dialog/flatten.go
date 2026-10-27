@@ -155,7 +155,7 @@ func (h *Handler) confirmFlatten() {
 		h.host.SetTransientMessage("Destination required", ui.MessageUrgencyWarn)
 		return
 	}
-	destLoc, err := pathloc.Parse(dest)
+	destLoc, err := h.resolveDestination(dest)
 	if err != nil {
 		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return

@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/pathpick"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -600,6 +601,16 @@ func (h *Handler) armTransferDestValidate(query string, flatten bool) {
 			Flatten: flatten,
 		}))
 	})
+}
+
+// resolveDestination resolves a typed destination against the active panel and home, matching
+// the dialogs' validation.
+func (h *Handler) resolveDestination(raw string) (pathloc.Path, error) {
+	panel, err := pathloc.Parse(h.host.ActivePanel().PathString())
+	if err != nil {
+		return pathloc.Path{}, err
+	}
+	return pathpick.ResolveDestination(panel, h.model.UserHomeDir, raw)
 }
 
 func pathExists(fn func(panelPath, home, raw string) bool, panelPath, home, raw string) bool {

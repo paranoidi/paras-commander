@@ -7,4 +7,4 @@ focus=f0 fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] mess
 == Down ==
 focus=ok fields=["~/projects/meadow/x"@19/0 pending=false dropdown=false/0] message=""
 == Enter ==
-CLOSED: jobs=0 messageDialog=true title="Extract" text="extract: destination \"~/projects/meadow/x\": stat ~/projects/meadow/x: no such file or directory (no such file or directory)" message=""
+CLOSED: jobs=0 messageDialog=true title="Extract" text="extract: destination \"<tmp>/projects/meadow/x\": stat <tmp>/projects/meadow/x: no such file or directory (no such file or directory)" message=""

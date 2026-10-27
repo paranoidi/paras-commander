@@ -176,19 +176,15 @@ func TestSFTPPasswordKeyScripts(t *testing.T) {
 // file, all selected when note is true (so the dialog carries the skipped-items note), else only
 // the archives. The destination is rewritten to a "~" path under the temp home so the state and the
 // completion never depend on the temp dir name; Enter on it fails the plan (no such directory)
-// and shows the failure in a message dialog, so no job runs. The extract does not expand "~", so
-// the test runs from the temp dir: the relative path it resolves stays inside the sandbox.
-// extractKeyDialog is formKeyDialog over openExtractOn, kept serial because its setup changes the
-// working directory (t.Chdir).
+// and shows the failure in a message dialog, so no job runs. The extract resolves "~" against the
+// app's home (the temp dir), so the path stays inside the sandbox.
+// extractKeyDialog is formKeyDialog over openExtractOn.
 func extractKeyDialog(name string, note bool) keyGoldenDialog {
-	d := formKeyDialog(name, openExtractOn(note), extractOutcome)
-	d.serial = true
-	return d
+	return formKeyDialog(name, openExtractOn(note), extractOutcome)
 }
 
 func openExtractOn(note bool) func(t *testing.T, app *App, dir string) {
 	return func(t *testing.T, app *App, dir string) {
-		t.Chdir(dir)
 		harbor := app.activePanel().PathString()
 		for _, d := range []string{"orchard", "otter", "oak"} {
 			if err := os.MkdirAll(filepath.Join(dir, "projects", "meadow", d), 0o755); err != nil {

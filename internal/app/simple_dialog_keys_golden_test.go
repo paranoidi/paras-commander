@@ -44,9 +44,6 @@ type keyGoldenDialog struct {
 	// settle, when set, runs after every key before the state is recorded: it drains the
 	// asynchronous work a key starts (find's ranking) so the transcript does not depend on timing.
 	settle func(t *testing.T, app *App)
-	// serial keeps the scripts off t.Parallel, for setups that call t.Setenv or t.Chdir
-	// (forbidden in parallel tests).
-	serial bool
 }
 
 // perApp is fixture state keyed by the App a script built, safe for the parallel scripts of one
@@ -121,10 +118,9 @@ func runKeyGoldenScripts(t *testing.T, d keyGoldenDialog, scripts []simpleKeyScr
 			// Each script builds its own App on its own screen and temp dir. A yank reads the
 			// process-wide lineedit kill buffer, which parallel scripts' kills would overwrite;
 			// serial subtests finish before the parallel ones are released.
-			if !d.serial && !slices.Contains(strings.Fields(sc.keys), "Ctrl+Y") {
+			if !slices.Contains(strings.Fields(sc.keys), "Ctrl+Y") {
 				t.Parallel()
 			}
-			// Resolved before the script runs: a setup may change the working directory (t.Chdir).
 			path, err := filepath.Abs(filepath.Join(simpleKeyGoldenDir, d.name, sc.name+".golden"))
 			if err != nil {
 				t.Fatal(err)

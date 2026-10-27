@@ -137,7 +137,7 @@ Symlinks, hard links, chmod and chown are local-only. All dialogs accept
 
 ### Copy and move
 
-The destination field starts with the other panel's path and supports path
+The destination field starts with the other panel's path; a leading `~` resolves against your home directory and a relative path against the active panel's directory. It supports path
 completion and the Bookmarks, History and Pinned pickers; `Shift+Left` and
 `Shift+Right` insert the active or inactive panel's path. While you type, the
 panel whose directory matches the destination is outlined (in a warning colour
