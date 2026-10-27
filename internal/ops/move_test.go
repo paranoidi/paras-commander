@@ -411,3 +411,23 @@ func TestMoveOnRenamedFiresForPlainDirRenameNotMerge(t *testing.T) {
 		t.Fatalf("OnRenamed calls = %v, want %v exactly once", got, want)
 	}
 }
+
+// TestMoveToFileTargetCreatesMissingParent: a single source moved onto a file path whose
+// directory does not exist yet (compare merge's in-tree rename) creates that directory.
+func TestMoveToFileTargetCreatesMissingParent(t *testing.T) {
+	root := t.TempDir()
+	src := filepath.Join(root, "compass.txt")
+	if err := os.WriteFile(src, []byte("needle"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(root, "harbor", "chart", "compass-renamed.txt")
+	if _, _, err := ExecuteMove(context.Background(), MustPaths(src), MustPath(dst), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, nil, nil); err != nil {
+		t.Fatalf("ExecuteMove: %v", err)
+	}
+	if got := readFileContent(t, dst); got != "needle" {
+		t.Fatalf("dest = %q, want needle", got)
+	}
+	if _, err := os.Stat(src); !os.IsNotExist(err) {
+		t.Fatalf("source still present: %v", err)
+	}
+}

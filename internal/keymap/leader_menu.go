@@ -188,6 +188,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionCompareRefresh,
 				ActionCompareMerge,
 				ActionCompareToggleEmpty,
+				ActionCompareRelocatedName,
 				ActionPanelExternalBrowser,
 			},
 			LeaderMenuGroupAddMark: {ActionPanelPinToggle},

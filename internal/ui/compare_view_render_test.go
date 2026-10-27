@@ -667,3 +667,24 @@ func TestCompareDimmedSides(t *testing.T) {
 		}
 	}
 }
+
+func TestCompareStatusIconShowsRelocatedNameChoice(t *testing.T) {
+	styles := theme.Default()
+	row := comparepkg.Row{Kind: comparepkg.KindRelocated, PrimaryRel: "harbor/compass.txt", SecondaryRel: "compass.txt", HashDone: true}
+	if got := compareStatusIcon(styles, row, nil); got != styles.IconCompareRelocated() {
+		t.Fatalf("no choice: icon = %q, want relocated", got)
+	}
+	names := map[comparepkg.RowKey]comparepkg.NameSide{row.Key(): comparepkg.NamePrimary}
+	if got := compareStatusIcon(styles, row, names); got != styles.IconCompareNameLeft() {
+		t.Fatalf("left choice: icon = %q, want name_left", got)
+	}
+	names[row.Key()] = comparepkg.NameSecondary
+	if got := compareStatusIcon(styles, row, names); got != styles.IconCompareNameRight() {
+		t.Fatalf("right choice: icon = %q, want name_right", got)
+	}
+	equal := comparepkg.Row{Kind: comparepkg.KindEqual, PrimaryRel: "a", SecondaryRel: "a", HashDone: true}
+	names[equal.Key()] = comparepkg.NamePrimary
+	if got := compareStatusIcon(styles, equal, names); got != styles.IconCompareEqual() {
+		t.Fatalf("non-relocated row: icon = %q, want equal", got)
+	}
+}

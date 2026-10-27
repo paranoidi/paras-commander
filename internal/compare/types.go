@@ -55,6 +55,16 @@ type Row struct {
 	Err     string
 }
 
+// RowKey identifies a row by its two relative paths; it stays stable across rescans as long
+// as the pairing does.
+type RowKey struct {
+	PrimaryRel   string
+	SecondaryRel string
+}
+
+// Key returns the row's RowKey.
+func (r Row) Key() RowKey { return RowKey{PrimaryRel: r.PrimaryRel, SecondaryRel: r.SecondaryRel} }
+
 // MarkHashing sets Hashing on pending rows whose primary and/or secondary rel is
 // currently being content-hashed. rows may be mutated in place; the same slice is returned.
 func MarkHashing(rows []Row, hashingPrimary, hashingSecondary map[string]struct{}) []Row {

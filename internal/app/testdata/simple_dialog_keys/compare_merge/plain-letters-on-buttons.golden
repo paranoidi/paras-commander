@@ -1,16 +1,18 @@
 == open ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == Tab ==
-focus=missing direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=missing direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == Tab ==
-focus=copy direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=copy direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == Tab ==
-focus=ok direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=keep-name direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
+== Tab ==
+focus=ok direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == o ==
-focus=ok direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=ok direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == c ==
-focus=ok direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=ok direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == l ==
-focus=ok direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=ok direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == r ==
-focus=ok direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=ok direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""

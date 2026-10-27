@@ -1,8 +1,8 @@
 == open ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == Alt+x ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == Alt+q ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == Down ==
-focus=right direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=right direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""

@@ -217,7 +217,9 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		if err != nil {
 			return doneFiles, doneBytes, err
 		}
-		if strings.ContainsAny(name, `/\`) {
+		// A nested child name or a file-target destination (dst is destination itself) may
+		// name a directory that does not exist yet.
+		if strings.ContainsAny(name, `/\`) || dst.Equal(destination) {
 			if err := ensureParentDirs(ctx, dst); err != nil {
 				return doneFiles, doneBytes, fmt.Errorf("create parent for %q: %w", dst, err)
 			}

@@ -121,13 +121,14 @@ const (
 	ActionPinView        = "pin.view"
 
 	// Compare view
-	ActionCompareClose        = "compare.close"
-	ActionCompareCycleFilter  = "compare.cycle-filter"
-	ActionCompareResetFilter  = "compare.reset-filter"
-	ActionCompareFilterDialog = "compare.filter-dialog"
-	ActionCompareRefresh      = "compare.refresh"
-	ActionCompareMerge        = "compare.merge"
-	ActionCompareToggleEmpty  = "compare.toggle-empty"
+	ActionCompareClose         = "compare.close"
+	ActionCompareCycleFilter   = "compare.cycle-filter"
+	ActionCompareResetFilter   = "compare.reset-filter"
+	ActionCompareFilterDialog  = "compare.filter-dialog"
+	ActionCompareRefresh       = "compare.refresh"
+	ActionCompareMerge         = "compare.merge"
+	ActionCompareToggleEmpty   = "compare.toggle-empty"
+	ActionCompareRelocatedName = "compare.relocated-name"
 
 	// Dedup (find-duplicates) view
 	ActionDedupClose          = "dedup.close"
@@ -444,13 +445,14 @@ var KnownActions = map[string]struct{}{
 	ActionPinRemoveAll:    {},
 	ActionPinView:         {},
 
-	ActionCompareClose:        {},
-	ActionCompareCycleFilter:  {},
-	ActionCompareResetFilter:  {},
-	ActionCompareFilterDialog: {},
-	ActionCompareRefresh:      {},
-	ActionCompareMerge:        {},
-	ActionCompareToggleEmpty:  {},
+	ActionCompareClose:         {},
+	ActionCompareCycleFilter:   {},
+	ActionCompareResetFilter:   {},
+	ActionCompareFilterDialog:  {},
+	ActionCompareRefresh:       {},
+	ActionCompareMerge:         {},
+	ActionCompareToggleEmpty:   {},
+	ActionCompareRelocatedName: {},
 
 	ActionDedupClose:          {},
 	ActionDedupToggleSort:     {},

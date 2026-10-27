@@ -13,6 +13,8 @@ const (
 	CompareMergeModified = dlg.ID("modified")
 	CompareMergeCopy     = dlg.ID("copy")
 	CompareMergeMove     = dlg.ID("move")
+	CompareMergeKeepName = dlg.ID("keep-name")
+	CompareMergeSrcName  = dlg.ID("source-name")
 )
 
 // compareMergePathIndent is how far the destination paths sit in from the radio labels above them.
@@ -20,7 +22,7 @@ const compareMergePathIndent = 4
 
 // CompareMergeView is the merge dialog's widget spec: the destination radios with their paths
 // below (home-tilde, shared prefix on its own row), the Transfer checkboxes, the Copy / Move
-// radios and the preview line, above OK / Cancel.
+// radios, the Relocated files name radios and the preview line, above OK / Cancel.
 func CompareMergeView(s CompareMergeDialogState, userHomeDir string) dlg.Spec {
 	sharedPrefix, leftPath, rightPath := FormatCompareMergePaths(s.PrimaryPath, s.SecondaryPath, userHomeDir)
 	dest := []dlg.Item{{Kind: dlg.KindLabel, Label: "Destination:"}}
@@ -50,6 +52,12 @@ func CompareMergeView(s CompareMergeDialogState, userHomeDir string) dlg.Spec {
 				{ID: CompareMergeMove, Kind: dlg.KindRadio, Label: "Move (delete source after transfer)", Mnemonic: 'D', On: s.MoveMode},
 				{Kind: dlg.KindSeparator},
 			}}},
+			{Columns: [][]dlg.Item{{
+				{Kind: dlg.KindLabel, Label: "Relocated files:"},
+				{ID: CompareMergeKeepName, Kind: dlg.KindRadio, Label: "Keep destination names", Mnemonic: 'E', On: !s.RelocatedUseSource},
+				{ID: CompareMergeSrcName, Kind: dlg.KindRadio, Label: "Rename to source names", Mnemonic: 'S', On: s.RelocatedUseSource},
+				{Kind: dlg.KindSeparator},
+			}}},
 			{Columns: [][]dlg.Item{{{Kind: dlg.KindLabel, Label: s.PreviewText}}}},
 		},
 		Buttons: []dlg.Button{
@@ -75,5 +83,9 @@ func (s *CompareMergeDialogState) Apply(ev dlg.Event) {
 		s.MoveMode = false
 	case CompareMergeMove:
 		s.MoveMode = true
+	case CompareMergeKeepName:
+		s.RelocatedUseSource = false
+	case CompareMergeSrcName:
+		s.RelocatedUseSource = true
 	}
 }

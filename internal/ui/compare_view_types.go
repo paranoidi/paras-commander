@@ -19,6 +19,9 @@ type CompareViewState struct {
 	// SwapPanels is set when the main panels were swapped on open: the left compare column
 	// then belongs to the Secondary panel (see PanelID).
 	SwapPanels bool
+	// RelocatedNames holds the per-row name choice for Relocated rows (compare.relocated-name);
+	// merge resolves rows absent here from its dialog default. Survives Refresh.
+	RelocatedNames map[comparepkg.RowKey]comparepkg.NameSide
 }
 
 // PanelID returns the main-panel ID that owns the left (secondary=false) or right column.

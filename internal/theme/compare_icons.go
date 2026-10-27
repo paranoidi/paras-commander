@@ -8,6 +8,8 @@ const (
 	IconKeyCompareContentDiff   = "compare.content_diff"
 	IconKeyComparePending       = "compare.pending"
 	IconKeyCompareError         = "compare.error"
+	IconKeyCompareNameLeft      = "compare.name_left"
+	IconKeyCompareNameRight     = "compare.name_right"
 )
 
 func (t Theme) IconCompareEqual() string { return t.iconOr(IconKeyCompareEqual, "=") }
@@ -27,3 +29,13 @@ func (t Theme) IconComparePending() string {
 	return t.iconOr(IconKeyComparePending, "\U000f02ca")
 }
 func (t Theme) IconCompareError() string { return t.iconOr(IconKeyCompareError, "!") }
+
+// IconCompareNameLeft replaces the relocated icon on a row whose merge takes the left path.
+func (t Theme) IconCompareNameLeft() string {
+	return t.iconOr(IconKeyCompareNameLeft, "\u2192")
+}
+
+// IconCompareNameRight replaces the relocated icon on a row whose merge takes the right path.
+func (t Theme) IconCompareNameRight() string {
+	return t.iconOr(IconKeyCompareNameRight, "\u2190")
+}
