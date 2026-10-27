@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -47,6 +48,8 @@ func (a *App) openDirInExternalBrowser(dir string) {
 }
 
 // openFileExternally opens a regular file with the default opener when open_files_externally is on.
+// When xdg-open is not on PATH the file opens in the fullscreen preview instead; its async preview
+// gate shows the reason in the pane for files it cannot render.
 func (a *App) openFileExternally(path string) {
 	if !a.config.Panels.OpenFilesExternally {
 		return
@@ -61,6 +64,12 @@ func (a *App) openFileExternally(path string) {
 		return
 	}
 	if err := runDetachedXDGOpen(p); err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			if err := a.previewCtrl.OpenFullscreenFilePreviewAt(p, false); err != nil {
+				a.setErrorMessage("External open", err)
+			}
+			return
+		}
 		a.setErrorMessage("External open", err)
 		return
 	}
