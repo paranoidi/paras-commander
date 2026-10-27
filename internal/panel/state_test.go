@@ -822,6 +822,31 @@ func TestEnterDirectoryAndParentPreservesExitedDirectory(t *testing.T) {
 	}
 }
 
+func TestParentAtFilesystemRootIsNoop(t *testing.T) {
+	state, err := New(string(filepath.Separator))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if len(state.Entries) < 2 {
+		t.Skip("filesystem root has too few entries")
+	}
+	state.Cursor = 1
+	historyLen := len(state.History)
+
+	if err := state.Parent(5); err != nil {
+		t.Fatalf("Parent() error = %v", err)
+	}
+	if state.Path.String() != string(filepath.Separator) {
+		t.Fatalf("Path = %q, want root", state.Path)
+	}
+	if state.Cursor != 1 {
+		t.Fatalf("Cursor = %d, want 1 (unchanged)", state.Cursor)
+	}
+	if len(state.History) != historyLen {
+		t.Fatalf("History len = %d, want %d (no visit recorded)", len(state.History), historyLen)
+	}
+}
+
 func TestEnterDirectorySymlinkFollowsTarget(t *testing.T) {
 	root := t.TempDir()
 	target := filepath.Join(root, "target")

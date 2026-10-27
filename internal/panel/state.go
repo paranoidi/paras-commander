@@ -822,17 +822,17 @@ func (s *State) Enter(viewportRows int) (bool, error) {
 }
 
 // Parent opens the parent directory and selects the directory just exited.
+// At a root (no parent) it is a no-op, leaving the listing and cursor untouched.
 func (s *State) Parent(viewportRows int) error {
 	if s.Path.IsZero() {
 		return nil
 	}
 	current := s.Path
 	parent := current.Parent()
-	selectedName := current.Base()
-	if parent.Equal(current) {
-		selectedName = ""
+	if parent.IsZero() || parent.Equal(current) {
+		return nil
 	}
-	return s.NavigateToPath(parent, selectedName, viewportRows)
+	return s.NavigateToPath(parent, current.Base(), viewportRows)
 }
 
 // NavigateTo loads path after recording it in navigation history (MRU timeline).
