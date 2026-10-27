@@ -64,50 +64,71 @@ type RowSuffix struct {
 // SuffixSlotCells is the width of one trailing suffix indicator: a separating space plus the icon.
 const SuffixSlotCells = 2
 
+// maxSuffixSlots is how many trailing suffix indicators a row can carry (suffixIcons).
+const maxSuffixSlots = 11
+
+// suffixSlots collects a row's trailing suffix icons in display order.
+type suffixSlots struct {
+	icons [maxSuffixSlots]rune
+	n     int
+	width int
+}
+
+// fits reports whether an indicator that is on gets a slot: each takes SuffixSlotCells and the
+// row keeps at least one cell for the name.
+func (s *suffixSlots) fits(on bool) bool {
+	return on && s.width > (s.n+1)*SuffixSlotCells
+}
+
+func (s *suffixSlots) push(icon rune) {
+	s.icons[s.n] = icon
+	s.n++
+}
+
+// suffixIcons returns the row's trailing suffix icons that fit in width, in display order.
+func suffixIcons(width int, suffix RowSuffix, entry localfs.Entry, th theme.Theme) suffixSlots {
+	s := suffixSlots{width: width}
+	for _, icon := range [...]rune{suffix.JobIcon, suffix.JobQueuedIcon, suffix.JobOpIcon} {
+		if s.fits(icon != 0) {
+			s.push(icon)
+		}
+	}
+	if s.fits(suffix.NewFileTier != NewFileMarkNone) {
+		s.push(th.IconFilelistNew())
+	}
+	if s.fits(suffix.RenameMark) {
+		s.push(th.IconFilelistRenamed())
+	}
+	if s.fits(suffix.Working) {
+		s.push(th.IconFilelistWorking())
+	}
+	if s.fits(suffix.Pinned) {
+		s.push(pinIconRune(th))
+	}
+	if s.fits(suffix.RangeAnchor) {
+		s.push(th.IconFilelistRangeAnchor())
+	}
+	if s.fits(suffix.OtherMatch) {
+		s.push(th.IconFilelistOtherMatch())
+	}
+	if s.fits(suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory) {
+		s.push(th.IconFilelistSelectionSubtree())
+	}
+	if s.fits(entry.AccessDenied) {
+		s.push(th.IconFilelistNoPermission())
+	}
+	return s
+}
+
 // SuffixDecorationLen returns how many trailing runes are reserved for row suffix indicators.
 func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th theme.Theme) int {
-	n := 0
-	if suffix.JobIcon != 0 && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	if suffix.JobQueuedIcon != 0 && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	if suffix.JobOpIcon != 0 && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	if suffix.NewFileTier != NewFileMarkNone && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	if suffix.RenameMark && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	if suffix.Working && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	if suffix.Pinned && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	if suffix.RangeAnchor && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	if suffix.OtherMatch && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
-	if subtree && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	if entry.AccessDenied && width > n+SuffixSlotCells {
-		n += SuffixSlotCells
-	}
-	return n
+	return suffixIcons(width, suffix, entry, th).n * SuffixSlotCells
 }
 
 // EntryDisplayRunes builds the display rune slice for an entry name, including decorations and suffix icons.
 func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffix RowSuffix, th theme.Theme) []DisplayRune {
-	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
-	suffixLen := SuffixDecorationLen(width, suffix, entry, th)
+	slots := suffixIcons(width, suffix, entry, th)
+	suffixLen := slots.n * SuffixSlotCells
 	innerW := width - suffixLen
 	if innerW < 1 {
 		innerW = 1
@@ -153,49 +174,8 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 	}
 	out := make([]DisplayRune, 0, len(core)+suffixLen)
 	out = append(out, core...)
-	used := 0
-	if suffix.JobIcon != 0 && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobIcon, NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if suffix.JobQueuedIcon != 0 && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobQueuedIcon, NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if suffix.JobOpIcon != 0 && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobOpIcon, NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if suffix.NewFileTier != NewFileMarkNone && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistNew(), NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if suffix.RenameMark && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistRenamed(), NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if suffix.Working && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistWorking(), NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if suffix.Pinned && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: pinIconRune(th), NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if suffix.RangeAnchor && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistRangeAnchor(), NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if suffix.OtherMatch && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistOtherMatch(), NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if subtree && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistSelectionSubtree(), NameIdx: -1})
-		used += SuffixSlotCells
-	}
-	if entry.AccessDenied && width > used+SuffixSlotCells {
-		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistNoPermission(), NameIdx: -1})
+	for _, icon := range slots.icons[:slots.n] {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: icon, NameIdx: -1})
 	}
 	return out
 }
