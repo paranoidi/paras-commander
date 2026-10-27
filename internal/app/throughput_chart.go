@@ -1,9 +1,11 @@
 package app
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -55,6 +57,37 @@ func (a *App) runThroughputChartTicker(columnDur time.Duration, stop <-chan stru
 			_ = a.screen.PostEvent(tcell.NewEventInterrupt(throughputChartTickPayload{}))
 		}
 	}
+}
+
+// restartThroughputChartTicker (re)starts the throughput sampling ticker from columnMS.
+func (a *App) restartThroughputChartTicker(columnMS int) {
+	if a.throughputChartStopCh != nil {
+		close(a.throughputChartStopCh)
+		a.throughputChartStopCh = nil
+	}
+	if columnMS <= 0 {
+		return
+	}
+	stop := make(chan struct{})
+	a.throughputChartStopCh = stop
+	go a.runThroughputChartTicker(time.Duration(columnMS)*time.Millisecond, stop)
+}
+
+// adjustJobsThroughputChartColumnMS moves the live graph column duration by deltaMS (clamped to
+// the config range) and re-times both the job state's columns and the sampling ticker.
+func (a *App) adjustJobsThroughputChartColumnMS(deltaMS int) {
+	next := min(max(a.throughputChartColumnMS+deltaMS, config.ThroughputChartColumnMinMS), config.ThroughputChartColumnMaxMS)
+	if next == a.throughputChartColumnMS {
+		return
+	}
+	a.throughputChartColumnMS = next
+	a.jobState.SetThroughputChart(
+		time.Duration(next)*time.Millisecond,
+		time.Duration(a.config.Jobs.ThroughputChartWindowSec)*time.Second,
+		a.config.Jobs.ThroughputChartEnabled,
+	)
+	a.restartThroughputChartTicker(next)
+	a.setTransientMessage(fmt.Sprintf("Graph tick: %d ms", next), ui.MessageUrgencyInfo)
 }
 
 func (a *App) applyThroughputChartTick() bool {

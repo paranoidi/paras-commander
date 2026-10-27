@@ -48,6 +48,7 @@ func (jobsHostStub) DevMode() bool                              { return false }
 func (jobsHostStub) DiskUsagePainter() ui.DiskUsagePainter      { return nil }
 func (jobsHostStub) PromptDanglingDirDelete([]string)           {}
 func (jobsHostStub) ToggleLeaderMenu()                          {}
+func (jobsHostStub) AdjustJobsThroughputChartColumnMS(int)      {}
 func (jobsHostStub) DispatchLeaderLetter(*tcell.EventKey) bool  { return false }
 
 func TestOpenJobsViewFocusesFirstPendingBlocker(t *testing.T) {

@@ -1343,16 +1343,14 @@ func (c *Config) validateJobsWorkerTiming(builtin *Config) {
 	if c.Jobs.ThroughputChartWindowSec > throughputChartWindowMaxSec {
 		c.Jobs.ThroughputChartWindowSec = throughputChartWindowMaxSec
 	}
-	const throughputChartColumnMinMS = 80
-	const throughputChartColumnMaxMS = 2000
 	if c.Jobs.ThroughputChartColumnMS <= 0 {
 		c.Jobs.ThroughputChartColumnMS = builtin.Jobs.ThroughputChartColumnMS
 	}
-	if c.Jobs.ThroughputChartColumnMS < throughputChartColumnMinMS {
-		c.Jobs.ThroughputChartColumnMS = throughputChartColumnMinMS
+	if c.Jobs.ThroughputChartColumnMS < ThroughputChartColumnMinMS {
+		c.Jobs.ThroughputChartColumnMS = ThroughputChartColumnMinMS
 	}
-	if c.Jobs.ThroughputChartColumnMS > throughputChartColumnMaxMS {
-		c.Jobs.ThroughputChartColumnMS = throughputChartColumnMaxMS
+	if c.Jobs.ThroughputChartColumnMS > ThroughputChartColumnMaxMS {
+		c.Jobs.ThroughputChartColumnMS = ThroughputChartColumnMaxMS
 	}
 }
 

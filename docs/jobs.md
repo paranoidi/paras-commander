@@ -140,6 +140,11 @@ the Details panel counts them. Press `F3` and keep only **Failed** to list just
 those. Tab cycles Queue, blocker
 (when shown), Details, Operations.
 
+With the Details panel focused, `+` and `-` shorten or lengthen the transfer
+graph's column time (the tickrate, and so how fast the Speed column reacts)
+by 50 ms. The change lasts for the session; set `throughput_chart_column_ms`
+in `[jobs]` to make it permanent.
+
 # Undoing a job
 
 A finished copy, move, rename or mass rename can be reversed from the jobs view

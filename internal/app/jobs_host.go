@@ -13,6 +13,10 @@ type jobsHost struct {
 	appShellHost
 }
 
+func (h jobsHost) AdjustJobsThroughputChartColumnMS(deltaMS int) {
+	h.app.adjustJobsThroughputChartColumnMS(deltaMS)
+}
+
 func (h jobsHost) SetUnsupportedMessage(msg string) {
 	h.app.setUnsupportedMessage(msg)
 }

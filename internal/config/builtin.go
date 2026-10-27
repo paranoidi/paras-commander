@@ -166,6 +166,11 @@ const (
 	DefaultThroughputChartWindowSec = 45
 	// DefaultThroughputChartColumnMS is wall time per chart column and chart ticker interval (clamped in Validate).
 	DefaultThroughputChartColumnMS = 400
+	// ThroughputChartColumnMinMS / ThroughputChartColumnMaxMS clamp [jobs].throughput_chart_column_ms in Validate.
+	ThroughputChartColumnMinMS = 80
+	ThroughputChartColumnMaxMS = 2000
+	// ThroughputChartColumnMSLiveStep is the +/- adjustment step in the jobs Details panel (not persisted).
+	ThroughputChartColumnMSLiveStep = 50
 	// DefaultThroughputChartEnabled turns on the jobs details throughput strip + chart rendering.
 	DefaultThroughputChartEnabled = true
 	// DefaultProgressLightbar turns on the moving light-bar highlight over the menu-bar job

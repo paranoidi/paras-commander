@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -407,10 +408,30 @@ func (h *Handler) handleJobsPaneScrollKey(event *tcell.EventKey, fp int) {
 	contentH := ui.JobsPanelContentRows(rects[pane])
 	switch pane {
 	case ui.JobsPaneDetail:
+		if h.handleJobsDetailPaneKey(event) {
+			return
+		}
 		scrollPane(event.Key(), &h.model.JobsView.DetailScroll, max(0, h.jobsDetailLineCountForSelection()-contentH))
 	case ui.JobsPaneOperations:
 		h.scrollOperations(event.Key(), contentH)
 	}
+}
+
+// handleJobsDetailPaneKey adjusts the graph tickrate with + / - while Details has focus. It is a
+// session-only change (not written to config).
+func (h *Handler) handleJobsDetailPaneKey(event *tcell.EventKey) bool {
+	if !plainRune(event) {
+		return false
+	}
+	switch event.Rune() {
+	case '+', '=':
+		h.host.AdjustJobsThroughputChartColumnMS(-config.ThroughputChartColumnMSLiveStep)
+	case '-', '_':
+		h.host.AdjustJobsThroughputChartColumnMS(config.ThroughputChartColumnMSLiveStep)
+	default:
+		return false
+	}
+	return true
 }
 
 // scrollPane applies Up/Down (one row), PgUp/PgDn (five rows) and Home/End (top/bottom) to

@@ -26,4 +26,6 @@ type Host interface {
 	// transient message for) the delete-confirmation dialog for directories a completed
 	// move/delete job left empty. dirs is non-empty.
 	PromptDanglingDirDelete(dirs []string)
+	// AdjustJobsThroughputChartColumnMS changes the graph tickrate by deltaMS at runtime (not persisted).
+	AdjustJobsThroughputChartColumnMS(deltaMS int)
 }

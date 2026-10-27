@@ -311,6 +311,11 @@ type App struct {
 	statusCmdRunning atomic.Bool
 	statusCmdStopCh  chan struct{}
 
+	// throughputChartStopCh stops the sampling ticker; throughputChartColumnMS is the live column
+	// duration, which +/- in the jobs Details panel changes without touching config.
+	throughputChartStopCh   chan struct{}
+	throughputChartColumnMS int
+
 	sftp           sftpState
 	elevate        elevateState
 	image          imageOverlay
@@ -780,10 +785,8 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		go app.runPanelRefreshTicker(time.Duration(ms)*time.Millisecond, app.jobStopCh)
 	}
 	app.restartStatusCommandTicker(cfg.StatusCommand)
-	go app.runThroughputChartTicker(
-		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
-		app.jobStopCh,
-	)
+	app.throughputChartColumnMS = cfg.Jobs.ThroughputChartColumnMS
+	app.restartThroughputChartTicker(app.throughputChartColumnMS)
 	if opts.ChooserFile != "" {
 		app.chooserFile = opts.ChooserFile
 	}
