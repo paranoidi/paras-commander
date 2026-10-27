@@ -193,14 +193,14 @@ func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState
 	}
 }
 
-// drawJobsOperationActive draws the pinned row of the item the job is working on: the job icon
-// (icons.filelist.job, as on the panel rows under the job) and its path-fitted label.
+// drawJobsOperationActive draws the pinned row of the item the job is working on: the running
+// status icon (icons.jobs.list.running, as in the queue) and its path-fitted label.
 func drawJobsOperationActive(screen tcell.Screen, x, y, w int, label string, styles theme.Theme, body tcell.Style, chromeBlocked bool) {
 	iconStyle := body
 	if !chromeBlocked {
 		iconStyle = styles.JobsIconStyleOn("running", body)
 	}
-	primitive.Text(screen, x, y, 1, string(styles.IconFilelistJob()), iconStyle)
+	primitive.Text(screen, x, y, 1, styles.IconJobsList("running"), iconStyle)
 	lineW := max(w-jobOperationIconCols, 1)
 	primitive.Text(screen, x+jobOperationIconCols, y, lineW, primitive.FitPathForWidth(label, lineW), body)
 }

@@ -205,7 +205,7 @@ func TestDrawJobsOperationsPanelActiveRow(t *testing.T) {
 	th := theme.Default()
 	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false)
 
-	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, string(th.IconFilelistJob())+" harbor/willow.bin") {
+	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, th.IconJobsList("running")+" harbor/willow.bin") {
 		t.Fatalf("top row = %q, want the job icon and the active item", row)
 	}
 	if row := screenRowText(screen, rect, rect.Y+2); !strings.Contains(row, "harbor/lantern.txt") {
