@@ -637,3 +637,16 @@ func TestEmptyTextAndStyle(t *testing.T) {
 		t.Fatalf("default fg = %v", fg)
 	}
 }
+
+func TestResolveColorUsesPalette(t *testing.T) {
+	th := Default()
+	if c, err := th.ResolveColor("bright_black"); err != nil || c != tcell.PaletteColor(8) {
+		t.Fatalf("bright_black = %v, %v", c, err)
+	}
+	if c, err := th.ResolveColor("#ff8800"); err != nil || c != tcell.GetColor("#ff8800") {
+		t.Fatalf("#ff8800 = %v, %v", c, err)
+	}
+	if _, err := th.ResolveColor("nonesuch"); err == nil {
+		t.Fatal("unknown color resolved")
+	}
+}

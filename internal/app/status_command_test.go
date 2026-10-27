@@ -22,6 +22,7 @@ command = "echo harbor"
 name = "pebble"
 label = "Pebble"
 command = "echo gravel"
+color = "bright_yellow"
 `
 
 func TestStatusCommandsDialogSavesShowAndRestarts(t *testing.T) {
@@ -41,7 +42,7 @@ func TestStatusCommandsDialogSavesShowAndRestarts(t *testing.T) {
 	app.config.UI.KeyRepeatDebounceMS = 0
 
 	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool {
-		return slices.Equal(app.statusCommandTexts(), []string{"harbor"})
+		return slices.Equal(statusTexts(app), []string{"harbor"})
 	})
 	staleGen := app.statusCmdGen
 
@@ -71,6 +72,31 @@ func TestStatusCommandsDialogSavesShowAndRestarts(t *testing.T) {
 		t.Fatal("stale-generation result applied")
 	}
 	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool {
-		return slices.Equal(app.statusCommandTexts(), []string{"gravel"})
+		return slices.Equal(statusTexts(app), []string{"gravel"})
 	})
+	yellow, err := app.styles.ResolveColor("bright_yellow")
+	if err != nil {
+		t.Fatalf("ResolveColor: %v", err)
+	}
+	if got := app.statusCommandSegments()[0].Style; got != app.styles.MenuStatus.Foreground(yellow) {
+		t.Fatalf("pebble style = %v, want menu.status with bright_yellow foreground", got)
+	}
+}
+
+// An unresolvable color keeps menu.status rather than dropping the segment.
+func TestStatusCommandUnknownColorFallsBack(t *testing.T) {
+	app := testAppMinimal(t)
+	app.statusCmds = []*statusCmdRunner{{def: statuscmds.Def{Name: "quartz", Color: "nonesuch"}, text: "flint"}}
+	segs := app.statusCommandSegments()
+	if len(segs) != 1 || segs[0].Style != app.styles.MenuStatus {
+		t.Fatalf("segments = %+v, want flint in menu.status", segs)
+	}
+}
+
+func statusTexts(app *App) []string {
+	var out []string
+	for _, s := range app.statusCommandSegments() {
+		out = append(out, s.Text)
+	}
+	return out
 }

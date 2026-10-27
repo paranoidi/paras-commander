@@ -68,23 +68,30 @@ func menuBarRightTailRuneCount(attention, perm string, showMenuBarSpinner bool) 
 // of each separator glyph.
 const statusCommandGap = " "
 
-// StatusCommandWidth is the column count drawMenuBarStatusCommands paints for texts:
-// " t1 · t2 · " (one leading gap, then each text followed by gap, separator, gap). The
-// texts are already capped to their max_width by the caller. Zero texts reserve nothing.
-func StatusCommandWidth(texts []string) int {
-	if len(texts) == 0 {
+// StatusCommandSegment is one status command's output as drawn in the menu bar.
+type StatusCommandSegment struct {
+	Text  string      // already capped to the command's max_width
+	Style tcell.Style // menu.status, or that with the command's color as foreground
+}
+
+// StatusCommandWidth is the column count drawMenuBarStatusCommands paints for segs:
+// " t1 · t2 · " (one leading gap, then each text followed by gap, separator, gap). Zero
+// segments reserve nothing.
+func StatusCommandWidth(segs []StatusCommandSegment) int {
+	if len(segs) == 0 {
 		return 0
 	}
 	w := len(statusCommandGap)
-	for _, t := range texts {
-		w += utf8.RuneCountInString(t) + 2*len(statusCommandGap) + 1
+	for _, s := range segs {
+		w += utf8.RuneCountInString(s.Text) + 2*len(statusCommandGap) + 1
 	}
 	return w
 }
 
 // drawMenuBarStatusCommands paints the status-command segments in the reserved top-left
-// rect: texts in menu.status, the separator glyph after each in menu.status.separator.
-func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, texts []string, styles theme.Theme) {
+// rect: each text in its segment style, gaps in menu.status, the separator glyph after each
+// in menu.status.separator.
+func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, segs []StatusCommandSegment, styles theme.Theme) {
 	sep := string(styles.IconMenuStatusSeparator())
 	x, end := rect.X, rect.X+rect.Width
 	put := func(s string, style tcell.Style) {
@@ -94,8 +101,9 @@ func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, texts []string, s
 		x += utf8.RuneCountInString(s)
 	}
 	put(statusCommandGap, styles.MenuStatus)
-	for _, t := range texts {
-		put(t+statusCommandGap, styles.MenuStatus)
+	for _, s := range segs {
+		put(s.Text, s.Style)
+		put(statusCommandGap, styles.MenuStatus)
 		put(sep, styles.MenuStatusSeparator)
 		put(statusCommandGap, styles.MenuStatus)
 	}

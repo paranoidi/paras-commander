@@ -299,10 +299,10 @@ type Model struct {
 	FooterKeys        []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
-	// StatusCommandTexts are the shown status commands' latest output lines (status.toml),
-	// in show order with empty outputs dropped, drawn at the top-left of the menu bar
+	// StatusCommands are the shown status commands' latest output lines (status.toml), in
+	// show order with empty outputs dropped, drawn at the top-left of the menu bar
 	// (layout.StatusCmd). Empty when none are shown or none has output yet.
-	StatusCommandTexts []string
+	StatusCommands []StatusCommandSegment
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with
 	// spaces on both sides for themed backgrounds and separates it from the activity spinner.
 	MenuBarJobsAttention string
@@ -578,13 +578,13 @@ func (m *Model) MenuBarInteractive() bool {
 	return m.MenuBarLayoutReserved() && !m.ModalDialogOpen()
 }
 
-// statusCmdWidth returns the columns to reserve for model.StatusCommandTexts at the
+// statusCmdWidth returns the columns to reserve for model.StatusCommands at the
 // top-left of the menu bar.
 func statusCmdWidth(model Model, reserveMenu bool) int {
 	if !reserveMenu {
 		return 0
 	}
-	return StatusCommandWidth(model.StatusCommandTexts)
+	return StatusCommandWidth(model.StatusCommands)
 }
 
 // Render paints model into the screen's logical cell buffer. The caller must invoke
@@ -632,7 +632,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
 		}
 		if layout.StatusCmd.Width > 0 {
-			drawMenuBarStatusCommands(screen, layout.StatusCmd, model.StatusCommandTexts, styles)
+			drawMenuBarStatusCommands(screen, layout.StatusCmd, model.StatusCommands, styles)
 		}
 	}
 	chromeBlocked := model.PanelsChromeBlocked()

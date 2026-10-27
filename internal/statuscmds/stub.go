@@ -30,6 +30,8 @@ const StatusStubTOML = `# status.toml — menu-bar status commands
 #   command      string  required; run via sh -c, no %f-style macros
 #   interval_ms  int     default 3000, values below 500 use the default
 #   max_width    int     default 15, clamped to [1, 200]; longer output is ellipsized
+#   color        string  text color: a theme [palette] name (e.g. "yellow"), "#RRGGBB"
+#                        or "default"; empty uses the theme's menu.status style
 #
 # [[command]]
 # name = "clock"
@@ -37,6 +39,7 @@ const StatusStubTOML = `# status.toml — menu-bar status commands
 # command = "date +%H:%M"
 # interval_ms = 10000
 # max_width = 5
+# color = "bright_yellow"
 #
 # --- end of documentation ---
 `

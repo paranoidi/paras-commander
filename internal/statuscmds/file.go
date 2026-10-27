@@ -26,6 +26,9 @@ type Def struct {
 	IntervalMS int
 	// MaxWidth caps the displayed text's column width (longer output is ellipsized).
 	MaxWidth int
+	// Color is the text's foreground as a theme color value (palette name, "#RRGGBB" or
+	// "default"), resolved against the active theme; empty uses the menu.status style.
+	Color string
 }
 
 // File is the decoded status.toml.
@@ -46,6 +49,7 @@ type commandRaw struct {
 	Command    string `toml:"command"`
 	IntervalMS int    `toml:"interval_ms"`
 	MaxWidth   int    `toml:"max_width"`
+	Color      string `toml:"color"`
 }
 
 // Path returns status.toml under configDir ("" when configDir is unknown).
@@ -82,6 +86,7 @@ func Decode(data []byte) (*File, error) {
 			Command:    c.Command,
 			IntervalMS: c.IntervalMS,
 			MaxWidth:   c.MaxWidth,
+			Color:      strings.TrimSpace(c.Color),
 		}))
 	}
 	return out, nil

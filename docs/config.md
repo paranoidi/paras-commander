@@ -520,6 +520,7 @@ Each `[[command]]` table (a built-in's `name` replaces that built-in):
 | `command` | string | required | Shell command line, run via `sh -c` (no `%f`/`%d`/… macro expansion, unlike `meta.toml` commands). The first output line is shown. |
 | `interval_ms` | int | `3000` | How often `command` runs. Values below `500` use the default. |
 | `max_width` | int | `15` | Column cap for the displayed text; longer output is ellipsized. Values below `1` use the default; clamped to `200`. |
+| `color` | string | `""` | Text color, written like a theme color: a `[palette]` name of the active theme (e.g. `"yellow"`, `"bright_cyan"`), `"#RRGGBB"`, or `"default"`. Empty uses the theme's `menu.status` style. An unknown name shows an error and falls back to `menu.status`. |
 
 ## `keybindings.toml`
 

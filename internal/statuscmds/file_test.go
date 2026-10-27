@@ -22,6 +22,7 @@ max_width = 500
 name = "meadow"
 label = "Meadow clock"
 command = "echo orchard"
+color = " #ff8800 "
 `))
 	if err != nil {
 		t.Fatalf("Decode: %v", err)
@@ -31,7 +32,7 @@ command = "echo orchard"
 		t.Fatalf("harbor = %+v, want label=name, default interval, max width clamp", h)
 	}
 	m := f.Commands[1]
-	if m.Label != "Meadow clock" || m.MaxWidth != config.DefaultStatusCommandMaxWidth {
+	if m.Label != "Meadow clock" || m.MaxWidth != config.DefaultStatusCommandMaxWidth || m.Color != "#ff8800" {
 		t.Fatalf("meadow = %+v", m)
 	}
 }

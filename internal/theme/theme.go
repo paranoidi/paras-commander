@@ -342,6 +342,10 @@ type Theme struct {
 	// from the [icons] section of the theme file.
 	Icons map[string]string
 
+	// palette is the theme's [palette] table, kept so colors named outside the theme file
+	// (status.toml command colors) resolve the same way (see ResolveColor).
+	palette map[string]tcell.Color
+
 	// UseNerdfontIcons is set at runtime from config.UI.UseNerdfontIcons; when false,
 	// dialogs use plain ASCII markers (forcing legacy mode regardless of theme icons).
 	UseNerdfontIcons bool
@@ -1186,7 +1190,7 @@ func Default() Theme {
 	return value
 }
 
-// ponytail: cached Themes share their inner maps (Icons, PanelFileIconFG); callers treat them read-only.
+// ponytail: cached Themes share their inner maps (Icons, PanelFileIconFG, palette); callers treat them read-only.
 var (
 	builtInCacheMu sync.Mutex
 	builtInCache   = map[string]Theme{}
@@ -1798,7 +1802,8 @@ func parse(data []byte) (Theme, error) {
 		CompareEqual:       styles["compare.equal"],
 		CompareContentDiff: styles["compare.content_diff"],
 
-		Icons: icons,
+		Icons:   icons,
+		palette: palette,
 
 		FooterKey:        styles["footer.key"],
 		FooterLabel:      styles["footer.label"],
@@ -2105,6 +2110,12 @@ func buildStyle(spec styleSpec, palette map[string]tcell.Color) (tcell.Style, er
 		style = style.Reverse(true)
 	}
 	return style, nil
+}
+
+// ResolveColor resolves a color value the way theme style fields do: a [palette] name,
+// "#RRGGBB", or "default".
+func (t Theme) ResolveColor(value string) (tcell.Color, error) {
+	return resolveColor(strings.TrimSpace(value), t.palette)
 }
 
 func resolveColor(value string, palette map[string]tcell.Color) (tcell.Color, error) {

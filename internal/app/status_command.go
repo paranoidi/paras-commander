@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/statuscmds"
 	"github.com/paranoidi/paras-commander/internal/textutil"
+	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
 // statusCmdRunner is one shown status command: its definition, the overlap guard shared
@@ -32,7 +34,16 @@ func (a *App) restartStatusCommands() {
 	if err != nil {
 		a.setErrorMessage("Status commands", err)
 	}
-	a.startStatusCommands(set.Shown())
+	shown := set.Shown()
+	for _, d := range shown {
+		if d.Color == "" {
+			continue
+		}
+		if _, err := a.styles.ResolveColor(d.Color); err != nil {
+			a.setErrorMessage("Status commands", fmt.Errorf("status.toml: command %q color: %w", d.Name, err))
+		}
+	}
+	a.startStatusCommands(shown)
 }
 
 // startStatusCommands replaces the running status commands with defs.
@@ -129,13 +140,22 @@ func (a *App) applyStatusCommandResult(d statusCommandResultPayload) bool {
 	return true
 }
 
-// statusCommandTexts returns the shown status commands' non-empty outputs in show order.
-func (a *App) statusCommandTexts() []string {
-	var out []string
+// statusCommandSegments returns the shown status commands' non-empty outputs in show order,
+// each styled menu.status with its color (resolved against the current theme) as foreground.
+// A color the theme can't resolve keeps menu.status; restartStatusCommands reports it.
+func (a *App) statusCommandSegments() []ui.StatusCommandSegment {
+	var out []ui.StatusCommandSegment
 	for _, r := range a.statusCmds {
-		if r.text != "" {
-			out = append(out, r.text)
+		if r.text == "" {
+			continue
 		}
+		style := a.styles.MenuStatus
+		if r.def.Color != "" {
+			if c, err := a.styles.ResolveColor(r.def.Color); err == nil {
+				style = style.Foreground(c)
+			}
+		}
+		out = append(out, ui.StatusCommandSegment{Text: r.text, Style: style})
 	}
 	return out
 }
