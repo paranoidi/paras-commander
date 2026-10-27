@@ -18,15 +18,15 @@ const (
 func (t Theme) FolderIcon(kind FolderIconKind) string {
 	switch kind {
 	case FolderIconExcluded:
-		return t.folderIconValue(IconKeyFoldersExcluded, "\uf114")
+		return t.iconOr(IconKeyFoldersExcluded, "\uf114")
 	case FolderIconScanning:
-		return t.folderIconValue(IconKeyFoldersScanning, "\U000F0D0B")
+		return t.iconOr(IconKeyFoldersScanning, "\U000F0D0B")
 	case FolderIconOpen, FolderIconTreeExpanded:
-		return t.folderIconValue(IconKeyFoldersOpen, "\U000F0770")
+		return t.iconOr(IconKeyFoldersOpen, "\U000F0770")
 	case FolderIconMount:
-		return t.folderIconValue(IconKeyFoldersMount, "\U000F0256")
+		return t.iconOr(IconKeyFoldersMount, "\U000F0256")
 	default:
-		return t.folderIconValue(IconKeyFoldersFolder, "\U000F024B")
+		return t.iconOr(IconKeyFoldersFolder, "\U000F024B")
 	}
 }
 

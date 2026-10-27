@@ -673,307 +673,202 @@ const (
 
 // IconWorking returns the in-progress icon appended to selection-size indicators.
 func (t Theme) IconWorking() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeyWorking]); s != "" {
-			return s
-		}
-	}
-	return "\uf017"
+	return t.iconOr(IconKeyWorking, "\uf017")
 }
 
 // IconFile returns the generic file icon (e.g. group-select result preview counts) from
 // [icons] file.
 func (t Theme) IconFile() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeyFile]); s != "" {
-			return s
-		}
-	}
-	return ""
+	return t.iconOr(IconKeyFile, "")
 }
 
 // IconFolder returns the generic folder icon (e.g. group-select result preview counts) from
 // [icons] folder.
 func (t Theme) IconFolder() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeyFolder]); s != "" {
-			return s
-		}
-	}
-	return ""
+	return t.iconOr(IconKeyFolder, "")
 }
 
 // IconHiddenDotfiles returns the dotfiles-hidden bottom-indicator icon from [icons] hidden_dotfiles.
 func (t Theme) IconHiddenDotfiles() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeyHiddenDotfiles]); s != "" {
-			return s
-		}
-	}
-	return "\U000F06D1" // nf-md-eye_off_outline (Material Design / Nerd Fonts PUA)
+	return t.iconOr(IconKeyHiddenDotfiles, "\U000F06D1") // nf-md-eye_off_outline (Material Design / Nerd Fonts PUA)
 }
 
 // IconMetaRunning returns the icon shown in the meta column while a command is executing.
 func (t Theme) IconMetaRunning() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeyMetaRunning]); s != "" {
-			return s
-		}
-	}
-	return "\uf141"
+	return t.iconOr(IconKeyMetaRunning, "\uf141")
 }
 
 // IconStash returns the selection-stash bottom-indicator icon from [icons] stash.
 func (t Theme) IconStash() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeyStash]); s != "" {
-			return s
-		}
-	}
-	return "\ue73d"
+	return t.iconOr(IconKeyStash, "\ue73d")
 }
 
 // IconPin returns the menu-bar pin-count badge icon from [icons] pin.
 func (t Theme) IconPin() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeyPin]); s != "" {
-			return s
-		}
-	}
-	return "\U000F0403"
+	return t.iconOr(IconKeyPin, "\U000F0403")
 }
 
 // IconPinRune returns IconPin() as a single rune (zero-alloc), for row-suffix icon
 // slots that are always one rune wide.
 func (t Theme) IconPinRune() rune {
-	return t.filelistIconRune(IconKeyPin, '\U000F0403')
+	return t.iconRuneOr(IconKeyPin, '\U000F0403')
 }
 
 // IconGit returns the panel Git column header icon from [icons] git.
 func (t Theme) IconGit() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeyGit]); s != "" {
-			return s
-		}
-	}
-	return "\uf1d3" // Font Awesome git (Nerd Fonts)
+	return t.iconOr(IconKeyGit, "\uf1d3") // Font Awesome git (Nerd Fonts)
 }
 
 // IconSelectedMultiLocation returns the icon prepended to the selected strip title
 // when the panel's selections span multiple parent directories.
 func (t Theme) IconSelectedMultiLocation() string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[IconKeySelectedMultiLocation]); s != "" {
-			return s
-		}
-	}
-	return "\uef81"
+	return t.iconOr(IconKeySelectedMultiLocation, "\uef81")
 }
 
 // IconFilelistSelectionSubtree returns the directory nested-selection suffix icon.
 func (t Theme) IconFilelistSelectionSubtree() rune {
-	return t.filelistIconRune(IconKeyFilelistSelectionSubtree, '\u25cb') // ○
+	return t.iconRuneOr(IconKeyFilelistSelectionSubtree, '\u25cb') // ○
 }
 
 // IconDedupRelated returns the dedup view suffix icon for rows that are copies of the
 // cursor row's file (same duplicate group), visible even when kept/marked colors win.
 func (t Theme) IconDedupRelated() rune {
-	return t.filelistIconRune(IconKeyDedupRelated, '\uf067')
+	return t.iconRuneOr(IconKeyDedupRelated, '\uf067')
 }
 
 // IconDedupRelatedWithin returns the dedup view suffix icon for collapsed folders
 // that contain a related copy (rather than being one).
 func (t Theme) IconDedupRelatedWithin() rune {
-	return t.filelistIconRune(IconKeyDedupRelatedWithin, '\U000f17a9')
+	return t.iconRuneOr(IconKeyDedupRelatedWithin, '\U000f17a9')
 }
 
 // IconDedupFullDir returns the dedup view suffix icon for directories that exactly
 // duplicate another directory (the content-only tier reuses IconFilelistRenamed).
 func (t Theme) IconDedupFullDir() rune {
-	return t.filelistIconRune(IconKeyDedupFullDir, '\uee86')
+	return t.iconRuneOr(IconKeyDedupFullDir, '\uee86')
 }
 
 // IconDedupHidden returns the dedup view suffix icon warning that a duplicate
 // directory holds entries the scan skipped (hidden, ignored, symlinks, empty dirs).
 func (t Theme) IconDedupHidden() rune {
-	return t.filelistIconRune(IconKeyDedupHidden, '\uf06e')
+	return t.iconRuneOr(IconKeyDedupHidden, '\uf06e')
 }
 
 // IconFilelistNew returns the recently-transferred file suffix icon.
 func (t Theme) IconFilelistNew() rune {
-	return t.filelistIconRune(IconKeyFilelistNew, '\uea7f')
+	return t.iconRuneOr(IconKeyFilelistNew, '\uea7f')
 }
 
 // IconFilelistRenamed returns the recently-renamed file suffix icon.
 func (t Theme) IconFilelistRenamed() rune {
-	return t.filelistIconRune(IconKeyFilelistRenamed, '\U000f11e8')
+	return t.iconRuneOr(IconKeyFilelistRenamed, '\U000f11e8')
 }
 
 // IconFilelistRangeAnchor returns the suffix icon marking the pending range-select anchor row.
 func (t Theme) IconFilelistRangeAnchor() rune {
-	return t.filelistIconRune(IconKeyFilelistRangeAnchor, '\uf11d')
+	return t.iconRuneOr(IconKeyFilelistRangeAnchor, '\uf11d')
 }
 
 // IconFilelistOtherMatch returns the suffix icon for names also present in the other panel.
 func (t Theme) IconFilelistOtherMatch() rune {
-	return t.filelistIconRune(IconKeyFilelistOtherMatch, '\U000f01fc')
+	return t.iconRuneOr(IconKeyFilelistOtherMatch, '\U000f01fc')
 }
 
 // IconFilelistJob returns the file-list job mark icon (role/status colored via
 // Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
 func (t Theme) IconFilelistJob() rune {
-	return t.filelistIconRune(IconKeyFilelistJob, '\U000f02ca')
+	return t.iconRuneOr(IconKeyFilelistJob, '\U000f02ca')
 }
 
 // IconFilelistMove returns the file-list operation suffix icon for move/flatten jobs
 // (styled via Theme.PanelRowMarkJobMove).
 func (t Theme) IconFilelistMove() rune {
-	return t.filelistIconRune(IconKeyFilelistMove, '\U000f0ab9')
+	return t.iconRuneOr(IconKeyFilelistMove, '\U000f0ab9')
 }
 
 // IconFilelistDelete returns the file-list operation suffix icon for delete jobs
 // (styled via Theme.PanelRowMarkJobDelete).
 func (t Theme) IconFilelistDelete() rune {
-	return t.filelistIconRune(IconKeyFilelistDelete, '\U000f09e7')
+	return t.iconRuneOr(IconKeyFilelistDelete, '\U000f09e7')
 }
 
 // IconFilelistWorking returns the row-suffix icon for a directory whose async navigation
 // load has been pending longer than the working-indicator delay (colored via
 // Theme.PanelIconFolderScanning, the same style used for disk-scan-pending folder icons).
 func (t Theme) IconFilelistWorking() rune {
-	return t.filelistIconRune(IconKeyWorking, '')
+	return t.iconRuneOr(IconKeyWorking, '')
 }
 
 // IconFilelistPreviewLoading returns the icon that replaces the leading file icon while a
 // still/video thumb is prefetching (colored via panel.icon.folder.scanning).
 func (t Theme) IconFilelistPreviewLoading() rune {
-	return t.filelistIconRune(IconKeyFilelistPreviewLoading, '\uf03e')
+	return t.iconRuneOr(IconKeyFilelistPreviewLoading, '\uf03e')
 }
 
 // IconFilelistNoPermission returns the suffix icon for entries the current user cannot access.
 func (t Theme) IconFilelistNoPermission() rune {
-	return t.filelistIconRune(IconKeyFilelistNoPermission, '\uf023')
+	return t.iconRuneOr(IconKeyFilelistNoPermission, '\uf023')
 }
 
 // IconLeaderMenuArrow returns the separator icon between shortcut key and label in the leader menu.
 func (t Theme) IconLeaderMenuArrow() rune {
-	if s := strings.TrimSpace(t.Icons[IconKeyLeaderMenuArrow]); s != "" {
-		for _, r := range s {
-			return r
-		}
-	}
-	return '\uea9c'
+	return t.iconRuneOr(IconKeyLeaderMenuArrow, '\uea9c')
 }
 
 // IconTreeExpand returns the collapsed-node expander icon for tree-style lists
 // (duplicates view; the file-list tree layout later).
 func (t Theme) IconTreeExpand() rune {
-	return t.filelistIconRune(IconKeyTreeExpand, '▶') // ▶
+	return t.iconRuneOr(IconKeyTreeExpand, '▶') // ▶
 }
 
 // IconTreeCollapse returns the expanded-node expander icon for tree-style lists.
 func (t Theme) IconTreeCollapse() rune {
-	return t.filelistIconRune(IconKeyTreeCollapse, '▼') // ▼
+	return t.iconRuneOr(IconKeyTreeCollapse, '▼') // ▼
 }
 
 // IconTreeLeaf returns the leaf-row gutter icon for tree-style lists.
 func (t Theme) IconTreeLeaf() rune {
-	return t.filelistIconRune(IconKeyTreeLeaf, '·') // ·
+	return t.iconRuneOr(IconKeyTreeLeaf, '·') // ·
 }
 
 // IconTreeContinue returns the ancestor continuation icon for tree-style lists.
 func (t Theme) IconTreeContinue() string {
-	return t.treeIcon(IconKeyTreeContinue, "│")
+	return t.iconOr(IconKeyTreeContinue, "│")
 }
 
 // IconTreeBranch returns the non-last-sibling branch icon for tree-style lists.
 func (t Theme) IconTreeBranch() string {
-	return t.treeIcon(IconKeyTreeBranch, "├─")
+	return t.iconOr(IconKeyTreeBranch, "├─")
 }
 
 // IconTreeEnd returns the last-sibling branch icon for tree-style lists.
 func (t Theme) IconTreeEnd() string {
-	return t.treeIcon(IconKeyTreeEnd, "└─")
+	return t.iconOr(IconKeyTreeEnd, "└─")
 }
 
 // IconScrollbarThumb returns the panel scrollbar thumb-style position icon.
 func (t Theme) IconScrollbarThumb() rune {
-	return t.filelistIconRune(IconKeyScrollbarThumb, '\u25cf') // ●
-}
-
-func (t Theme) filelistIconRune(key string, fallback rune) rune {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
-			for _, r := range s {
-				return r
-			}
-		}
-	}
-	return fallback
-}
-
-func (t Theme) folderIconValue(key, fallback string) string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
-			return s
-		}
-	}
-	return fallback
-}
-
-func (t Theme) treeIcon(key, fallback string) string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
-			return s
-		}
-	}
-	return fallback
+	return t.iconRuneOr(IconKeyScrollbarThumb, '\u25cf') // ●
 }
 
 // IconMenuProgressDone returns the filled segment icon for the menu-bar progress bar.
 func (t Theme) IconMenuProgressDone() rune {
-	if g := t.menuBarIconTrim(IconKeyMenuProgressDone); g != 0 {
-		return g
-	}
-	return '\u25cf' // ●
+	return t.iconRuneOr(IconKeyMenuProgressDone, '\u25cf') // ●
 }
 
 // IconMenuProgressRemaining returns the empty segment icon for the menu-bar progress bar.
 func (t Theme) IconMenuProgressRemaining() rune {
-	if g := t.menuBarIconTrim(IconKeyMenuProgressRemaining); g != 0 {
-		return g
-	}
-	return '\u25cb' // ○
+	return t.iconRuneOr(IconKeyMenuProgressRemaining, '\u25cb') // ○
 }
 
 // IconMenuSpeedLeft returns the left cap icon for the menu-bar transfer-speed pill.
 func (t Theme) IconMenuSpeedLeft() rune {
-	if g := t.menuBarIconTrim(IconKeyMenuSpeedLeft); g != 0 {
-		return g
-	}
-	return '['
+	return t.iconRuneOr(IconKeyMenuSpeedLeft, '[')
 }
 
 // IconMenuSpeedRight returns the right cap icon for the menu-bar transfer-speed pill.
 func (t Theme) IconMenuSpeedRight() rune {
-	if g := t.menuBarIconTrim(IconKeyMenuSpeedRight); g != 0 {
-		return g
-	}
-	return ']'
-}
-
-func (t Theme) menuBarIconTrim(key string) rune {
-	if t.Icons == nil {
-		return 0
-	}
-	s := strings.TrimSpace(t.Icons[key])
-	if s == "" {
-		return 0
-	}
-	for _, r := range s {
-		return r
-	}
-	return 0
+	return t.iconRuneOr(IconKeyMenuSpeedRight, ']')
 }
 
 // IconMenuJob returns the queue icon for a job status string (e.g. "queued", "running").
@@ -981,7 +876,7 @@ func (t Theme) menuBarIconTrim(key string) rune {
 // the jobs-list Nerd Font keys like icons.running — those are too wide/noisy on the menu bar).
 func (t Theme) IconMenuJob(status string) rune {
 	key := "menu.job." + status
-	if g := t.menuBarIconTrim(key); g != 0 {
+	if g := t.iconRuneOr(key, 0); g != 0 {
 		return g
 	}
 	switch status {
@@ -2242,4 +2137,20 @@ func themeLabel(name string) string {
 		return name
 	}
 	return strings.Join(words, " ")
+}
+
+// iconOr is the [icons] value of key (trimmed), or fallback when the theme leaves it unset.
+func (t Theme) iconOr(key, fallback string) string {
+	if s := strings.TrimSpace(t.Icons[key]); s != "" {
+		return s
+	}
+	return fallback
+}
+
+// iconRuneOr is the first rune of iconOr(key), or fallback when the theme leaves it unset.
+func (t Theme) iconRuneOr(key string, fallback rune) rune {
+	for _, r := range t.iconOr(key, "") {
+		return r
+	}
+	return fallback
 }

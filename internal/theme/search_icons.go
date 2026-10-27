@@ -1,7 +1,5 @@
 package theme
 
-import "strings"
-
 const IconKeySearchIcon = "search.icon"
 
 // IconSearchIcon returns the leading icon painted inside scrollquery-based filter/search
@@ -13,14 +11,5 @@ func (t Theme) IconSearchIcon() string {
 	if !t.UseNerdfontIcons {
 		return "/"
 	}
-	return t.searchIcon(IconKeySearchIcon, "\uF002")
-}
-
-func (t Theme) searchIcon(key, fallback string) string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
-			return s
-		}
-	}
-	return fallback
+	return t.iconOr(IconKeySearchIcon, "\uF002")
 }

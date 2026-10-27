@@ -1,8 +1,6 @@
 package theme
 
 import (
-	"strings"
-
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -18,12 +16,7 @@ func (t Theme) commandsIcon(key, fallback, ascii string) string {
 	if !t.UseNerdfontIcons {
 		return ascii
 	}
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
-			return s
-		}
-	}
-	return fallback
+	return t.iconOr(key, fallback)
 }
 
 const IconKeyEmpty = "empty"
@@ -34,10 +27,7 @@ var panelEmptyFallback = tcell.StyleDefault.Foreground(tcell.PaletteColor(8))
 // EmptyText returns the plain text shown in empty lists; it is not a glyph, so it is
 // returned whether or not Nerd Font icons are enabled.
 func (t Theme) EmptyText() string {
-	if s := strings.TrimSpace(t.Icons[IconKeyEmpty]); s != "" {
-		return s
-	}
-	return "[empty]"
+	return t.iconOr(IconKeyEmpty, "[empty]")
 }
 
 // PanelEmptyStyle returns the empty-list text style (foreground only), falling back to

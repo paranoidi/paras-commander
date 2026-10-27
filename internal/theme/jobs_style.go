@@ -1,8 +1,6 @@
 package theme
 
 import (
-	"strings"
-
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -36,10 +34,8 @@ func (t Theme) IconJobsListSources(expanded bool) string {
 // IconJobsList returns the Nerd Font icon for a job status in the jobs list column.
 func (t Theme) IconJobsList(status string) string {
 	key := "jobs.list." + status
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
-			return s
-		}
+	if s := t.iconOr(key, ""); s != "" {
+		return s
 	}
 	switch status {
 	case "scanning":
@@ -66,7 +62,7 @@ func (t Theme) IconJobsList(status string) string {
 // IconFilelistQueued returns the file-list row-suffix icon shown while a matched job is still
 // queued (the same glyph as the jobs list's queued status icon, jobs.list.queued).
 func (t Theme) IconFilelistQueued() rune {
-	return t.filelistIconRune(IconKeyJobsListQueued, '\uf017')
+	return t.iconRuneOr(IconKeyJobsListQueued, '\uf017')
 }
 
 // Operations pane result keys ([icons.jobs.operations] and [jobs.operations] keys).
@@ -83,10 +79,8 @@ const (
 // (JobsOperationSuccess, ...), from [icons.jobs.operations], falling back to the jobs list's
 // completed / failed icon or a built-in skipped / source deleted glyph.
 func (t Theme) IconJobsOperation(result string) string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons["jobs.operations."+result]); s != "" {
-			return s
-		}
+	if s := t.iconOr("jobs.operations."+result, ""); s != "" {
+		return s
 	}
 	switch result {
 	case JobsOperationFailed:

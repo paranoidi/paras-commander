@@ -1,8 +1,6 @@
 package theme
 
 import (
-	"strings"
-
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -120,14 +118,4 @@ func (t Theme) IconDialogRadio(selected bool) string {
 		return t.iconOr(IconKeyDialogRadioSelected, "\U000F043E")
 	}
 	return t.iconOr(IconKeyDialogRadioUnselected, "\U000F043D")
-}
-
-// iconOr is the theme icon for key, or fallback when the theme leaves it unset.
-func (t Theme) iconOr(key, fallback string) string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
-			return s
-		}
-	}
-	return fallback
 }
