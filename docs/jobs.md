@@ -14,6 +14,13 @@ panel. Running and queued jobs are listed first in run order (so the queue
 move keys match the screen), followed by finished jobs with the most recent
 first. Keys are rebindable under `[jobs]` in `keybindings.toml`.
 
+A job queued from several selected entries shows an expander icon after its
+type. `Alt+Right` (`jobs.expand`) lists each of its sources in a tree under
+the job, each with its own status icon (queued, running, completed, failed,
+canceled) and done / failed / skipped counts; `Alt+Left` (`jobs.collapse`)
+folds them away. With the cursor on a source, the Operations panel shows only
+that source's rows and names the source on its top border.
+
 A copy or move starts with the size the panel already shows for the selection,
 so its percentage and ETA work immediately. The Details panel marks such a
 total `(estimated)` until the exact size is counted (see
@@ -26,6 +33,7 @@ total `(estimated)` until the exact size is counted (see
 | `Ctrl+R` | Resume a paused job or retry a failed or canceled one (`jobs.resume`) |
 | `Ctrl+Up` / `Ctrl+Down` | Move the job in the queue (`jobs.queue-up`, `jobs.queue-down`) |
 | `F8` | Clear finished jobs (`jobs.clear-finished`) |
+| `Alt+Right` / `Alt+Left` | Expand / collapse a multi-source job into its sources (`jobs.expand`, `jobs.collapse`) |
 | `F3` / `Shift+F3` | Filter the Operations panel by result / reset its filters (`jobs.result-filter`, `jobs.reset-filter`) |
 | `+` / `-` / `Ctrl+U` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
 | `Tab` | Cycle the panels |

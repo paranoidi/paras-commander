@@ -28,6 +28,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 		if includeThroughputStrip && len(j.ThroughputStrip) > 0 {
 			strip = append([]float64(nil), j.ThroughputStrip...)
 		}
+		sourceStats, lastSource := j.Ops.SourceStats()
 		queueETA := ""
 		if queueETAs != nil {
 			queueETA = queueETAs[j.ID]
@@ -54,6 +55,8 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			FailedItems:     j.FailedItems,
 			Ops:             j.Ops,
 			OpsStats:        j.Ops.Stats(),
+			SourceStats:     sourceStats,
+			LastSource:      lastSource,
 			StartedAt:       j.StartedAt,
 			FinishedAt:      j.FinishedAt,
 			ETABytesPerSec:  j.ETABytesPerSec,
@@ -115,9 +118,17 @@ func ensureSelectionVisible(selected *int, listScrollPos *int, total int, visibl
 	}
 }
 
-// EnsureSelectionVisible clamps the selected job row and scroll offset.
-func (s *JobsViewState) EnsureSelectionVisible(total int, visibleRows int) {
-	ensureSelectionVisible(&s.Selected, &s.ListScroll, total, visibleRows)
+// EnsureSelectionVisible clamps the selected Queue row (a job or source sub-row) and the
+// scroll offset over the flattened rows of jobList.
+func (s *JobsViewState) EnsureSelectionVisible(jobList []JobEntry, visibleRows int) {
+	rows := s.JobsListRows(jobList)
+	row := s.SelectedRow(rows)
+	ensureSelectionVisible(&row, &s.ListScroll, len(rows), visibleRows)
+	if len(rows) == 0 {
+		s.Selected, s.SelectedSub = 0, 0
+		return
+	}
+	s.SelectRow(rows[row])
 }
 
 // EnsureSelectionVisible clamps the selected compare row and scroll offset.

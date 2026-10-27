@@ -37,12 +37,17 @@ const MaskAll Mask = 1<<Done | 1<<Skipped | 1<<Failed
 func (m Mask) Has(r Result) bool { return m&(1<<r) != 0 }
 
 // Record is one processed item: its display label (the destination path relative to the job
-// destination, or the source for jobs without one) and, for skipped or failed items, why.
+// destination, or the source for jobs without one), for skipped or failed items why, and the
+// index of the job source it belongs to (NoSource when unattributed).
 type Record struct {
 	Result Result
 	Label  string
 	Reason string
+	Source int32
 }
+
+// NoSource is a Record.Source outside every job source. As a view source it means all sources.
+const NoSource = -1
 
 // checkpointEvery is the record spacing of the file offset index used for seeking.
 const checkpointEvery = 1024
@@ -52,10 +57,13 @@ const writeBufferBytes = 64 << 10
 
 // Config sets how a Log keeps its records. MemoryRows is the row count kept in memory before
 // spilling (0 keeps everything in memory). Session supplies the spill directory; nil means no
-// spill is possible and the log drops its oldest rows past MemoryRows (Incomplete).
+// spill is possible and the log drops its oldest rows past MemoryRows (Incomplete). Sources is
+// the job's source count: above one the log also indexes records per source (SourceStats and
+// the source argument of the views).
 type Config struct {
 	MemoryRows int
 	Session    *Session
+	Sources    int
 }
 
 // Log is one job's operation records. All methods are safe for concurrent use; appends come
@@ -76,7 +84,13 @@ type Log struct {
 	supVersion    int
 	version       uint64
 
-	merged map[Mask]*mergedView // multi-result views, extended incrementally
+	merged map[viewKey]*mergedView // multi-result views, extended incrementally
+
+	// srcLists and srcCounts index records per source like lists and counts (nil unless
+	// Config.Sources > 1); lastSource is the source of the newest attributed record.
+	srcLists   [][numResults][]uint32
+	srcCounts  [][numResults]int
+	lastSource int
 
 	file        *os.File
 	path        string
@@ -90,7 +104,22 @@ type Log struct {
 
 // New returns an empty log for jobID.
 func New(jobID string, cfg Config) *Log {
-	return &Log{cfg: cfg, jobID: jobID, failedByLabel: map[string]uint32{}, superseded: map[uint32]struct{}{}}
+	l := &Log{cfg: cfg, jobID: jobID, failedByLabel: map[string]uint32{}, superseded: map[uint32]struct{}{}, lastSource: NoSource}
+	l.resetSourcesUnlocked()
+	return l
+}
+
+func (l *Log) resetSourcesUnlocked() {
+	l.srcLists, l.srcCounts, l.lastSource = nil, nil, NoSource
+	if l.cfg.Sources > 1 {
+		l.srcLists = make([][numResults][]uint32, l.cfg.Sources)
+		l.srcCounts = make([][numResults]int, l.cfg.Sources)
+	}
+}
+
+// sourceIndexed reports whether src has its own per-source index.
+func (l *Log) sourceIndexed(src int32) bool {
+	return src >= 0 && int(src) < len(l.srcLists)
 }
 
 // Append records one item. A done or skipped record supersedes (hides) an earlier failure of
@@ -111,6 +140,11 @@ func (l *Log) Append(rec Record) {
 	}
 	l.lists[rec.Result] = append(l.lists[rec.Result], num)
 	l.counts[rec.Result]++
+	if l.sourceIndexed(rec.Source) {
+		l.srcLists[rec.Source][rec.Result] = append(l.srcLists[rec.Source][rec.Result], num)
+		l.srcCounts[rec.Source][rec.Result]++
+		l.lastSource = int(rec.Source)
+	}
 	l.mem = append(l.mem, rec)
 	l.version++
 
@@ -133,6 +167,13 @@ func (l *Log) supersedeUnlocked(label string, num uint32) {
 	if i, ok := slices.BinarySearch(l.lists[Failed], num); ok {
 		l.lists[Failed] = slices.Delete(l.lists[Failed], i, i+1)
 		l.counts[Failed]--
+	}
+	for s := range l.srcLists {
+		if i, ok := slices.BinarySearch(l.srcLists[s][Failed], num); ok {
+			l.srcLists[s][Failed] = slices.Delete(l.srcLists[s][Failed], i, i+1)
+			l.srcCounts[s][Failed]--
+			break
+		}
 	}
 	l.supVersion++
 }
@@ -158,9 +199,10 @@ func (l *Log) writeUnlocked(num uint32, rec Record) {
 	if num%checkpointEvery == 0 {
 		l.checkpoints = append(l.checkpoints, l.written)
 	}
-	var hdr [1 + 2*binary.MaxVarintLen64]byte
+	var hdr [1 + 3*binary.MaxVarintLen64]byte
 	hdr[0] = byte(rec.Result)
-	k := 1 + binary.PutUvarint(hdr[1:], uint64(len(rec.Label)))
+	k := 1 + binary.PutVarint(hdr[1:], int64(rec.Source))
+	k += binary.PutUvarint(hdr[k:], uint64(len(rec.Label)))
 	buf := append(hdr[:k:k], rec.Label...)
 	buf = binary.AppendUvarint(buf, uint64(len(rec.Reason)))
 	buf = append(buf, rec.Reason...)
@@ -196,6 +238,7 @@ func (l *Log) Close() {
 	l.mem, l.lists, l.merged = nil, [numResults][]uint32{}, nil
 	l.failedByLabel, l.superseded = map[string]uint32{}, map[uint32]struct{}{}
 	l.spilled, l.broken = false, false
+	l.resetSourcesUnlocked()
 }
 
 // Len is the number of records appended (including superseded and dropped ones).
@@ -230,6 +273,24 @@ func (l *Log) Stats() Stats {
 	}
 }
 
+// SourceStats returns the counters of each source (nil unless Config.Sources > 1; Dropped and
+// Version are not set) and the source of the newest attributed record (NoSource before any).
+func (l *Log) SourceStats() (per []Stats, last int) {
+	if l == nil {
+		return nil, NoSource
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if len(l.srcCounts) == 0 {
+		return nil, l.lastSource
+	}
+	per = make([]Stats, len(l.srcCounts))
+	for i, c := range l.srcCounts {
+		per[i] = Stats{Done: c[Done], Skipped: c[Skipped], Failed: c[Failed]}
+	}
+	return per, l.lastSource
+}
+
 // lowestUnlocked is the oldest readable record number.
 func (l *Log) lowestUnlocked() uint32 {
 	if l.broken {
@@ -246,17 +307,30 @@ type mergedView struct {
 	supVersion int
 }
 
-// viewUnlocked returns the ascending record numbers of mask, or nil with all=true when the
-// view is every record from lowest to n (no superseded rows hidden).
-func (l *Log) viewUnlocked(mask Mask) (nums []uint32, all bool) {
+// viewKey identifies a view: a result mask within one source (NoSource for all sources).
+type viewKey struct {
+	mask   Mask
+	source int
+}
+
+// viewUnlocked returns the ascending record numbers of mask within source (NoSource for all
+// sources), or nil with all=true when the view is every record from lowest to n (no superseded
+// rows hidden). A source without a per-source index has no records.
+func (l *Log) viewUnlocked(mask Mask, source int) (nums []uint32, all bool) {
 	mask &= MaskAll
-	if mask == MaskAll && len(l.superseded) == 0 {
+	lists := &l.lists
+	if source != NoSource {
+		if source < 0 || source >= len(l.srcLists) {
+			return []uint32{}, false
+		}
+		lists = &l.srcLists[source]
+	} else if mask == MaskAll && len(l.superseded) == 0 {
 		return nil, true
 	}
 	var parts [][]uint32
 	for r := range numResults {
 		if mask.Has(r) {
-			parts = append(parts, l.lists[r])
+			parts = append(parts, lists[r])
 		}
 	}
 	switch len(parts) {
@@ -266,12 +340,13 @@ func (l *Log) viewUnlocked(mask Mask) (nums []uint32, all bool) {
 		return parts[0], false
 	}
 	if l.merged == nil {
-		l.merged = map[Mask]*mergedView{}
+		l.merged = map[viewKey]*mergedView{}
 	}
-	mv := l.merged[mask]
+	key := viewKey{mask: mask, source: source}
+	mv := l.merged[key]
 	if mv == nil || mv.supVersion != l.supVersion {
 		mv = &mergedView{supVersion: l.supVersion}
-		l.merged[mask] = mv
+		l.merged[key] = mv
 	}
 	if mv.upto < l.n {
 		tails := make([][]uint32, len(parts))
@@ -304,30 +379,31 @@ func clip(nums []uint32, lowest uint32) []uint32 {
 	return nums[i:]
 }
 
-// ViewLen is the number of readable records whose result is in mask.
-func (l *Log) ViewLen(mask Mask) int {
+// ViewLen is the number of readable records of source (NoSource for all) whose result is in
+// mask.
+func (l *Log) ViewLen(mask Mask, source int) int {
 	if l == nil {
 		return 0
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	nums, all := l.viewUnlocked(mask)
+	nums, all := l.viewUnlocked(mask, source)
 	if all {
 		return int(l.n - l.lowestUnlocked())
 	}
 	return len(clip(nums, l.lowestUnlocked()))
 }
 
-// ViewNums returns the record numbers of the display rows [offset, offset+count) of mask,
-// newest first.
-func (l *Log) ViewNums(mask Mask, offset, count int) []uint32 {
+// ViewNums returns the record numbers of the display rows [offset, offset+count) of mask
+// within source (NoSource for all), newest first.
+func (l *Log) ViewNums(mask Mask, source, offset, count int) []uint32 {
 	if l == nil {
 		return nil
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	lowest := l.lowestUnlocked()
-	nums, all := l.viewUnlocked(mask)
+	nums, all := l.viewUnlocked(mask, source)
 	var total int
 	if all {
 		total = int(l.n - lowest)
@@ -450,6 +526,10 @@ func decode(br *bufio.Reader) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
+	src, err := binary.ReadVarint(br)
+	if err != nil {
+		return Record{}, err
+	}
 	label, err := readString(br)
 	if err != nil {
 		return Record{}, err
@@ -458,7 +538,7 @@ func decode(br *bufio.Reader) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	return Record{Result: Result(res), Label: label, Reason: reason}, nil
+	return Record{Result: Result(res), Label: label, Reason: reason, Source: int32(src)}, nil
 }
 
 func readString(br *bufio.Reader) (string, error) {

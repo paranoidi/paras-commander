@@ -45,7 +45,7 @@ func TestDrawJobsOperationsPanelRowsAndFilterLabel(t *testing.T) {
 	}}
 	st := JobsViewState{OpsResultHidden: dialog.JobResultSuccess}
 	st.OpsFilter.Query = "quarry"
-	drawJobsOperationsPanel(screen, rect, st, win, theme.Default(), false, true, false)
+	drawJobsOperationsPanel(screen, rect, st, win, "", theme.Default(), false, true, false)
 
 	if top := screenRowText(screen, rect, rect.Y); !strings.HasPrefix(top, "┌─> quarry ") || strings.Contains(top, "Operations") {
 		t.Fatalf("top border = %q, want the query at the top left in place of the title", top)
@@ -66,7 +66,7 @@ func TestDrawJobsOperationsPanelPendingAndScanning(t *testing.T) {
 	win := JobsOpsWindow{JobID: "copy-1", Total: 2, Scanning: true, Rows: []JobOperationRow{{Pending: true}, {Pending: true}}}
 	var st JobsViewState
 	st.OpsFilter.Query = "lantern"
-	drawJobsOperationsPanel(screen, rect, st, win, theme.Default(), false, true, false)
+	drawJobsOperationsPanel(screen, rect, st, win, "", theme.Default(), false, true, false)
 	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, "…") {
 		t.Fatalf("pending row = %q, want a placeholder", row)
 	}
@@ -84,7 +84,7 @@ func TestDrawJobsOperationsPanelQueryNoMatchAndCaret(t *testing.T) {
 	var st JobsViewState
 	st.OpsFilter.Query, st.OpsFilter.Cursor, st.OpsFilter.Editing = "fern", 4, true
 	styles := theme.Default()
-	drawJobsOperationsPanel(screen, rect, st, JobsOpsWindow{JobID: "copy-1"}, styles, false, true, false)
+	drawJobsOperationsPanel(screen, rect, st, JobsOpsWindow{JobID: "copy-1"}, "", styles, false, true, false)
 	if _, style, _ := screen.Get(rect.X+2, rect.Y); style != styles.FuzzyInputNomatch {
 		t.Fatal("a query matching nothing must use the no-match style")
 	}
@@ -182,7 +182,7 @@ func TestDrawJobsOperationsPanelSourceDeletedIcon(t *testing.T) {
 		{Op: JobOperation{Result: oplog.Skipped, Label: "harbor/meadow.txt", Reason: ops.ReasonExists}},
 	}}
 	th := theme.Default()
-	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, th, false, true, false)
+	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false)
 
 	for i, want := range []string{th.IconJobsOperation(theme.JobsOperationSourceDeleted), th.IconJobsOperation(theme.JobsOperationSkipped)} {
 		if row := screenRowText(screen, rect, rect.Y+1+i); !strings.Contains(row, want) {

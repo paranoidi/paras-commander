@@ -43,13 +43,13 @@ func TestAppendCountsAndNewestFirstView(t *testing.T) {
 	if st.Done != 1 || st.Skipped != 1 || st.Failed != 1 || st.Dropped != 0 {
 		t.Fatalf("stats = %+v", st)
 	}
-	if got := labels(t, l, l.ViewNums(MaskAll, 0, 10)); fmt.Sprint(got) != "[orchard/clover.txt orchard/bramble.txt orchard/acorn.txt]" {
+	if got := labels(t, l, l.ViewNums(MaskAll, NoSource, 0, 10)); fmt.Sprint(got) != "[orchard/clover.txt orchard/bramble.txt orchard/acorn.txt]" {
 		t.Fatalf("all view = %v", got)
 	}
-	if got := labels(t, l, l.ViewNums(1<<Skipped, 0, 10)); fmt.Sprint(got) != "[orchard/bramble.txt]" {
+	if got := labels(t, l, l.ViewNums(1<<Skipped, NoSource, 0, 10)); fmt.Sprint(got) != "[orchard/bramble.txt]" {
 		t.Fatalf("skipped view = %v", got)
 	}
-	if n := l.ViewLen(1<<Done | 1<<Failed); n != 2 {
+	if n := l.ViewLen(1<<Done|1<<Failed, NoSource); n != 2 {
 		t.Fatalf("done+failed len = %d", n)
 	}
 }
@@ -63,10 +63,10 @@ func TestRetrySupersedesFailure(t *testing.T) {
 	if st.Failed != 0 || st.Done != 2 {
 		t.Fatalf("stats = %+v, want the failure superseded", st)
 	}
-	if got := labels(t, l, l.ViewNums(MaskAll, 0, 10)); fmt.Sprint(got) != "[harbor/willow.bin harbor/copper.bin]" {
+	if got := labels(t, l, l.ViewNums(MaskAll, NoSource, 0, 10)); fmt.Sprint(got) != "[harbor/willow.bin harbor/copper.bin]" {
 		t.Fatalf("all view = %v, want the failed row hidden", got)
 	}
-	if n := l.ViewLen(1 << Failed); n != 0 {
+	if n := l.ViewLen(1<<Failed, NoSource); n != 0 {
 		t.Fatalf("failed view len = %d", n)
 	}
 }
@@ -86,11 +86,11 @@ func TestSpillKeepsNewestInMemoryAndReadsOldFromDisk(t *testing.T) {
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("spill file: %v", err)
 	}
-	newest := l.ViewNums(MaskAll, 0, rows)
+	newest := l.ViewNums(MaskAll, NoSource, 0, rows)
 	if _, ok := l.RecordsInMemory(newest); !ok {
 		t.Fatal("the newest MemoryRows rows must stay in memory")
 	}
-	oldest := l.ViewNums(MaskAll, total-3, 3)
+	oldest := l.ViewNums(MaskAll, NoSource, total-3, 3)
 	if _, ok := l.RecordsInMemory(oldest); ok {
 		t.Fatal("the oldest rows should only be on disk")
 	}
@@ -104,7 +104,7 @@ func TestSpillKeepsNewestInMemoryAndReadsOldFromDisk(t *testing.T) {
 	if recs[0].Label != label(3001) || recs[1].Reason != "reason-0" || recs[2].Result != Done || recs[1].Result != Failed {
 		t.Fatalf("scattered read = %+v", recs)
 	}
-	failed := l.ViewNums(1<<Failed, 0, 100)
+	failed := l.ViewNums(1<<Failed, NoSource, 0, 100)
 	if len(failed) != total/250+1 {
 		t.Fatalf("failed rows = %d", len(failed))
 	}
@@ -124,7 +124,7 @@ func TestSpillFailureDropsOldestRows(t *testing.T) {
 	if st.Dropped == 0 || st.Done != 2500 {
 		t.Fatalf("stats = %+v, want dropped rows and the true done count", st)
 	}
-	if n := l.ViewLen(MaskAll); n != 2500-st.Dropped {
+	if n := l.ViewLen(MaskAll, NoSource); n != 2500-st.Dropped {
 		t.Fatalf("view len = %d, want %d", n, 2500-st.Dropped)
 	}
 	if _, err := l.ReadRecords([]uint32{0}); err == nil {
@@ -142,7 +142,7 @@ func TestScanAcrossDiskAndMemory(t *testing.T) {
 		l.Append(Record{Result: Done, Label: name})
 	}
 	var got []uint32
-	upto, err := l.Scan(context.Background(), 0, MaskAll, search.Parse("beacon"), search.Options{CaseInsensitive: true}, func(b []uint32) { got = append(got, b...) })
+	upto, err := l.Scan(context.Background(), 0, MaskAll, NoSource, search.Parse("beacon"), search.Options{CaseInsensitive: true}, func(b []uint32) { got = append(got, b...) })
 	if err != nil || upto != 4000 {
 		t.Fatalf("Scan = %d, %v", upto, err)
 	}
@@ -151,12 +151,12 @@ func TestScanAcrossDiskAndMemory(t *testing.T) {
 	}
 	l.Append(Record{Result: Done, Label: "thistle/beacon-new.log"})
 	got = nil
-	if upto, _ = l.Scan(context.Background(), upto, MaskAll, search.Parse("beacon"), search.Options{}, func(b []uint32) { got = append(got, b...) }); upto != 4001 || fmt.Sprint(got) != "[4000]" {
+	if upto, _ = l.Scan(context.Background(), upto, MaskAll, NoSource, search.Parse("beacon"), search.Options{}, func(b []uint32) { got = append(got, b...) }); upto != 4001 || fmt.Sprint(got) != "[4000]" {
 		t.Fatalf("incremental scan = %d %v", upto, got)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := l.Scan(ctx, 0, MaskAll, search.Parse("beacon"), search.Options{}, func([]uint32) {}); err == nil {
+	if _, err := l.Scan(ctx, 0, MaskAll, NoSource, search.Parse("beacon"), search.Options{}, func([]uint32) {}); err == nil {
 		t.Fatal("canceled scan returned no error")
 	}
 }
@@ -195,16 +195,73 @@ func TestConcurrentAppendAndRead(t *testing.T) {
 	for {
 		select {
 		case <-done:
-			if n := l.ViewLen(MaskAll); n != 20000 {
+			if n := l.ViewLen(MaskAll, NoSource); n != 20000 {
 				t.Fatalf("len = %d", n)
 			}
 			return
 		default:
 		}
-		nums := l.ViewNums(1<<Done|1<<Skipped, l.ViewLen(1<<Done|1<<Skipped)/2, 20)
+		nums := l.ViewNums(1<<Done|1<<Skipped, NoSource, l.ViewLen(1<<Done|1<<Skipped, NoSource)/2, 20)
 		if _, err := l.ReadRecords(nums); err != nil {
 			t.Fatalf("ReadRecords: %v", err)
 		}
-		_, _ = l.Scan(context.Background(), 0, MaskAll, search.Parse("lantern-0001"), search.Options{}, func([]uint32) {})
+		_, _ = l.Scan(context.Background(), 0, MaskAll, NoSource, search.Parse("lantern-0001"), search.Options{}, func([]uint32) {})
+	}
+}
+
+func TestPerSourceViewsAndStats(t *testing.T) {
+	sess := NewSession(t.TempDir())
+	l := New("job-ridge", Config{MemoryRows: 100, Session: sess, Sources: 3})
+	t.Cleanup(l.Close)
+	for i := range 300 {
+		src := int32(i % 3)
+		res := Done
+		if i%50 == 0 {
+			res = Failed
+		}
+		l.Append(Record{Result: res, Label: label(i), Source: src})
+	}
+	l.Append(Record{Result: Done, Label: "ledger/undo-step.txt", Source: NoSource})
+	l.Append(Record{Result: Done, Label: label(0), Source: 0}) // retry supersedes source 0's failure
+
+	per, last := l.SourceStats()
+	if len(per) != 3 || last != 0 {
+		t.Fatalf("SourceStats = %+v, last %d", per, last)
+	}
+	// Failures at i = 0, 150 (source 0), 50, 200 (source 2), 100, 250 (source 1); i=0 retried.
+	if per[0].Failed != 1 || per[0].Done != 99 || per[1].Failed != 2 || per[2].Failed != 2 {
+		t.Fatalf("per-source stats = %+v", per)
+	}
+	if n := l.ViewLen(MaskAll, 1); n != 100 {
+		t.Fatalf("source 1 view len = %d", n)
+	}
+	if n := l.ViewLen(MaskAll, NoSource); n != 302-1 {
+		t.Fatalf("all view len = %d", n)
+	}
+	if n := l.ViewLen(MaskAll, 7); n != 0 {
+		t.Fatalf("unknown source view len = %d", n)
+	}
+	oldest := l.ViewNums(MaskAll, 2, 99, 1)
+	recs, err := l.ReadRecords(oldest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recs[0].Label != label(2) || recs[0].Source != 2 {
+		t.Fatalf("oldest source 2 record (from the spill file) = %+v", recs[0])
+	}
+	var got []uint32
+	if _, err := l.Scan(context.Background(), 0, 1<<Failed, 1, search.Parse("lantern"), search.Options{}, func(b []uint32) { got = append(got, b...) }); err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprint(got) != "[100 250]" {
+		t.Fatalf("source 1 failed scan = %v", got)
+	}
+}
+
+func TestSingleSourceLogHasNoSourceStats(t *testing.T) {
+	l, _ := newTestLog(t, 0)
+	l.Append(Record{Result: Done, Label: "orchard/acorn.txt"})
+	if per, last := l.SourceStats(); per != nil || last != NoSource {
+		t.Fatalf("SourceStats = %v, %d", per, last)
 	}
 }

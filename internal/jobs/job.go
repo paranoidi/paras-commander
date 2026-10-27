@@ -231,6 +231,9 @@ type Job struct {
 	// transfer through ops.Options.OnItemDone / OnItemError (jobbridge), closed when the job
 	// leaves the state.
 	Ops *oplog.Log
+	// sources resolves an item path to its source index for Ops records (nil for a
+	// single-source job). Created with Ops by State.AddJob and kept across a retry.
+	sources *sourceIndex
 	// UndoOf is the ID of the job a TypeUndo job reverses.
 	UndoOf string
 	// Undone is set on the original job once an undo job has reversed (part of) it.
@@ -350,6 +353,7 @@ func (j *Job) RetryClone() *Job {
 		DereferenceSymlinks:   j.DereferenceSymlinks,
 		FlattenIntoDest:       j.FlattenIntoDest,
 		Ops:                   j.Ops,
+		sources:               j.sources,
 	}
 	return clone
 }
@@ -400,7 +404,11 @@ func (j *Job) RecordOperation(item ops.PlanItem, res ops.ItemResult, reason stri
 	case ops.ItemFailed:
 		r = oplog.Failed
 	}
-	j.Ops.Append(oplog.Record{Result: r, Label: OperationLabel(j.Destination, item), Reason: reason})
+	src := j.sources.indexOf(item.Src)
+	if src == oplog.NoSource {
+		src = j.sources.indexOf(item.Dst) // an undo step moving an item back into its source
+	}
+	j.Ops.Append(oplog.Record{Result: r, Label: OperationLabel(j.Destination, item), Reason: reason, Source: src})
 }
 
 // FailItem is the one way a job reports an item it could not process: it records the failed

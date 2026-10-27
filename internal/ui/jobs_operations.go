@@ -94,14 +94,19 @@ func JobsOpsMaxScroll(total, contentRows int) int {
 // drawJobsOperationsPanel draws the Operations pane from the prepared window: one row per item,
 // newest first, with a result icon and the active filters on the bottom border. wrap word-wraps
 // rows (maximized pane) instead of fitting them to one line; scrolling stays by row.
-func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState, win JobsOpsWindow, styles theme.Theme, chromeBlocked, focused, wrap bool) {
+func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState, win JobsOpsWindow, sourceLabel string, styles theme.Theme, chromeBlocked, focused, wrap bool) {
 	f := state.OpsFilter
 	queryOpen := f.Query != "" || f.Editing
 	title := " Operations "
 	if queryOpen {
 		title = "" // the fuzzy query owns the top row
 	}
-	layout := drawAuxPanelChrome(screen, rect, title, "", focused, chromeBlocked, false, styles)
+	endLabel := ""
+	if sourceLabel != "" {
+		// Rows filtered to one source; at most half the border so the title keeps its room.
+		endLabel = panelSelectionSizePadded(primitive.FitPathForWidth(sourceLabel, max(rect.Width/2-2, 1)))
+	}
+	layout := drawAuxPanelChrome(screen, rect, title, endLabel, focused, chromeBlocked, false, styles)
 	if queryOpen {
 		input := styles.FuzzyInput
 		switch {

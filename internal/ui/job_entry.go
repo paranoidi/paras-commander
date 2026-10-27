@@ -35,10 +35,14 @@ type JobEntry struct {
 	FailedItems []jobs.FailedItem
 	// Ops is the job's operation log (the Operations pane reads it through the jobs handler);
 	// OpsStats is its counters at list sync (the Details Files line).
-	Ops        *oplog.Log
-	OpsStats   oplog.Stats
-	StartedAt  time.Time
-	FinishedAt time.Time
+	Ops      *oplog.Log
+	OpsStats oplog.Stats
+	// SourceStats and LastSource are the log's per-source counters and newest attributed
+	// source at list sync (Queue source sub-rows; nil for a single-source job).
+	SourceStats []oplog.Stats
+	LastSource  int
+	StartedAt   time.Time
+	FinishedAt  time.Time
 	// Undo is jobs.Job.UndoLabel: whether the job can be undone, and why not.
 	Undo string
 	// ETABytesPerSec is smoothed throughput from recent progress samples (bytes/s).

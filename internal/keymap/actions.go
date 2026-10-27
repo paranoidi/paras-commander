@@ -230,6 +230,8 @@ const (
 	ActionJobsUndo              = "jobs.undo"
 	ActionJobsResultFilter      = "jobs.result-filter"
 	ActionJobsResetFilter       = "jobs.reset-filter"
+	ActionJobsExpand            = "jobs.expand"
+	ActionJobsCollapse          = "jobs.collapse"
 
 	// Commands screen + external command execution
 	ActionCommandsOpen      = "commands.open"
@@ -540,6 +542,8 @@ var KnownActions = map[string]struct{}{
 	ActionJobsUndo:              {},
 	ActionJobsResultFilter:      {},
 	ActionJobsResetFilter:       {},
+	ActionJobsExpand:            {},
+	ActionJobsCollapse:          {},
 
 	ActionCommandsOpen:      {},
 	ActionCommandsClose:     {},

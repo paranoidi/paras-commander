@@ -62,7 +62,7 @@ func TestCopyRecordsEveryFile(t *testing.T) {
 	if st.Done != files-2 || st.Skipped != 2 || st.Failed != 1 {
 		t.Fatalf("stats = %+v, want %d done, 2 skipped, 1 failed", st, files-2)
 	}
-	recs, err := job.Ops.ReadRecords(job.Ops.ViewNums(1<<oplog.Skipped, 0, 2))
+	recs, err := job.Ops.ReadRecords(job.Ops.ViewNums(1<<oplog.Skipped, oplog.NoSource, 0, 2))
 	if err != nil {
 		t.Fatal(err)
 	}

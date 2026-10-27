@@ -115,6 +115,10 @@ _Avoid_: host terminal
 A queued background file operation (copy, move, delete, flatten, extract).
 _Avoid_: task, transfer (as a general term)
 
+**Job source**:
+One top-level path a job was queued with (one per selected entry); a job with several expands into one Queue sub-row per source.
+_Avoid_: item (an item is any file the job processes), selection (the panel's set)
+
 **Blocker**:
 A decision a running job needs from the user, such as a file conflict or a lack of disk space.
 _Avoid_: prompt, conflict dialog

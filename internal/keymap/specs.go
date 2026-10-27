@@ -1814,6 +1814,22 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"clear", "operations", "fuzzy"},
 			LeaderKey:   "F",
 		},
+		{
+			ID:          ActionJobsExpand,
+			Views:       HelpJobs,
+			Title:       "Expand job into its sources",
+			Section:     "Jobs",
+			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
+			Keywords:    []string{"expand", "sources", "selection", "tree", "items"},
+		},
+		{
+			ID:          ActionJobsCollapse,
+			Views:       HelpJobs,
+			Title:       "Collapse job sources",
+			Section:     "Jobs",
+			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
+			Keywords:    []string{"collapse", "sources", "selection", "tree", "items"},
+		},
 
 		// ── Options dialogs ──
 		{

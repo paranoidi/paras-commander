@@ -19,10 +19,11 @@ import (
 // opsViewKey identifies what the Operations window lists: a job's log, a result mask and a
 // fuzzy query.
 type opsViewKey struct {
-	log   *oplog.Log
-	mask  oplog.Mask
-	query string
-	ci    bool
+	log    *oplog.Log
+	mask   oplog.Mask
+	source int // oplog.NoSource, or the selected source sub-row's source
+	query  string
+	ci     bool
 }
 
 // opsState is the Operations window's background work: a fuzzy scan of the current query and
@@ -86,7 +87,7 @@ func (h *Handler) refreshOpsWindow(force bool) {
 		return
 	}
 	st := &h.model.JobsView
-	key := opsViewKey{log: sel.Ops, mask: st.OpsResultShown().Mask(), query: st.OpsFilter.Query, ci: h.model.JobsFilterCaseInsensitive}
+	key := opsViewKey{log: sel.Ops, mask: st.OpsResultShown().Mask(), source: st.SelectedSource(h.model.JobsList), query: st.OpsFilter.Query, ci: h.model.JobsFilterCaseInsensitive}
 	rows := h.opsContentRows()
 	inputs := opsInputs{jobID: sel.ID, key: key, ready: true, scroll: st.OpsScroll, rows: rows}
 	if !force && h.opsThrottled(inputs) {
@@ -97,9 +98,9 @@ func (h *Handler) refreshOpsWindow(force bool) {
 	var nums []uint32
 	if query.Empty() {
 		h.stopScan()
-		win.Total = key.log.ViewLen(key.mask)
+		win.Total = key.log.ViewLen(key.mask, key.source)
 		st.OpsScroll = min(max(st.OpsScroll, 0), ui.JobsOpsMaxScroll(win.Total, rows))
-		nums = key.log.ViewNums(key.mask, st.OpsScroll, rows)
+		nums = key.log.ViewNums(key.mask, key.source, st.OpsScroll, rows)
 	} else {
 		var matches []uint32
 		matches, win.Scanning = h.scanFor(key)
@@ -196,7 +197,7 @@ func (h *Handler) startScanLocked(key opsViewKey, from uint32) {
 	o.scanRunning, o.scanCancel = true, cancel
 	go func() {
 		current := func() bool { return o.scanKey == key && ctx.Err() == nil }
-		upto, err := key.log.Scan(ctx, from, key.mask, search.Parse(key.query), search.Options{CaseInsensitive: key.ci}, func(batch []uint32) {
+		upto, err := key.log.Scan(ctx, from, key.mask, key.source, search.Parse(key.query), search.Options{CaseInsensitive: key.ci}, func(batch []uint32) {
 			o.mu.Lock()
 			if current() {
 				o.scanMatches = append(o.scanMatches, batch...)

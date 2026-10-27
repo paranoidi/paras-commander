@@ -27,8 +27,9 @@ func auxListRowAt(rect Rect, scroll, n, x, y int) (int, bool) {
 	return idx, idx < n
 }
 
-// JobsListEntryAt returns the Jobs queue entry drawn at (x, y). There is none while an Errors or
-// Succeeded pane is maximized over the view.
+// JobsListEntryAt returns the index of the Jobs queue row (in JobsViewState.JobsListRows: a job
+// or a source sub-row) drawn at (x, y). There is none while the Operations pane is maximized
+// over the view.
 func JobsListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
 	st := model.JobsView
 	var sel JobEntry
@@ -38,7 +39,7 @@ func JobsListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
 	if _, maximized := jobsMaximizedPane(layout, st, sel, time.Now(), model.JobsThroughputChartEnabled); maximized {
 		return 0, false
 	}
-	return auxListRowAt(layout.Primary, st.ListScroll, len(model.JobsList), x, y)
+	return auxListRowAt(layout.Primary, st.ListScroll, len(st.JobsListRows(model.JobsList)), x, y)
 }
 
 // MessagesListEntryAt returns the logical message drawn at (x, y): a continuation row (no time)

@@ -366,6 +366,8 @@ canceled = "\uf52f"
 failed = "\uf06a"
 decision = "\uf059"
 completed = "\uf05d"
+sources_collapsed = "\uf196"   # appended to a multi-source job's Type
+sources_expanded = "\uf147"
 
 [icons.jobs.operations]      # Operations pane result icons
 success = "\uf05d"

@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -57,7 +58,7 @@ func (h *Handler) OpenJobsView() {
 
 func (h *Handler) focusJobsViewOnFirstPendingBlocker() {
 	if idx := ui.FirstJobEntryWaitingDecisionIndex(h.model.JobsList); idx >= 0 {
-		h.model.JobsView.Selected = idx
+		h.model.JobsView.Selected, h.model.JobsView.SelectedSub = idx, 0
 		h.model.JobsView.FocusPane = 1
 		h.model.JobsView.ConflictButtonFocus = 0
 		h.model.JobsView.DetailScroll = 0
@@ -90,6 +91,7 @@ func (h *Handler) SyncJobsList() {
 	now := time.Now()
 	queueETAs := jobs.ComputeQueueETAs(all, now)
 	h.model.JobsList = ui.JobEntriesFromJobs(all, h.config.Jobs.ThroughputChartEnabled, queueETAs)
+	h.pruneExpandedJobs()
 	h.listStale = false
 	h.listVersion++
 }
@@ -135,15 +137,53 @@ func (h *Handler) promptDanglingDirsIfAny() {
 }
 
 func (h *Handler) ensureJobsViewSelectionVisible() {
-	n := len(h.model.JobsList)
 	width, height := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(width, height)
 	if layout.TooSmall {
-		h.model.JobsView.EnsureSelectionVisible(n, 0)
+		h.model.JobsView.EnsureSelectionVisible(h.model.JobsList, 0)
 		return
 	}
 	visible := ui.PanelListRows(layout.Primary)
-	h.model.JobsView.EnsureSelectionVisible(n, visible)
+	h.model.JobsView.EnsureSelectionVisible(h.model.JobsList, visible)
+}
+
+// pruneExpandedJobs forgets expanded jobs that left the list or no longer have sub-rows, so
+// the expanded set stays bounded by the list.
+func (h *Handler) pruneExpandedJobs() {
+	exp := h.model.JobsView.Expanded
+	if len(exp) == 0 {
+		return
+	}
+	keep := make(map[string]bool, len(exp))
+	for _, e := range h.model.JobsList {
+		if exp[e.ID] && ui.JobEntryHasSources(e) {
+			keep[e.ID] = true
+		}
+	}
+	h.model.JobsView.Expanded = keep
+}
+
+// setJobExpanded expands or collapses the selected job's source sub-rows (list pane only).
+// Collapsing from a sub-row moves the cursor to its job row.
+func (h *Handler) setJobExpanded(expand bool) {
+	st := &h.model.JobsView
+	if st.FocusPane != 0 {
+		return
+	}
+	sel := h.selectedJobEntry()
+	if !ui.JobEntryHasSources(sel) || st.Expanded[sel.ID] == expand {
+		return
+	}
+	if expand {
+		if st.Expanded == nil {
+			st.Expanded = map[string]bool{}
+		}
+		st.Expanded[sel.ID] = true
+	} else {
+		delete(st.Expanded, sel.ID)
+		h.setSelection(ui.JobsListRow{Job: st.Selected, Source: oplog.NoSource})
+	}
+	h.ensureJobsViewSelectionVisible()
 }
 
 // TryDispatch handles jobs.* actions. It returns true if actionID is a jobs-domain
@@ -211,6 +251,11 @@ func (h *Handler) TryDispatch(actionID string) bool {
 	case keymap.ActionJobsResetFilter:
 		if h.model.ViewMode == ui.ViewJobs {
 			h.ResetOperationsFilter()
+		}
+		return true
+	case keymap.ActionJobsExpand, keymap.ActionJobsCollapse:
+		if h.model.ViewMode == ui.ViewJobs {
+			h.setJobExpanded(actionID == keymap.ActionJobsExpand)
 		}
 		return true
 	case keymap.ActionJobsUndo:
@@ -456,38 +501,50 @@ func scrollPane(key tcell.Key, scroll *int, maxScroll int) {
 // MoveSelection moves the jobs-list primary-pane cursor by delta rows (clamped), scrolling
 // into view and resetting detail/activity scroll + conflict focus when the row actually
 // changes. Shared by the raw arrow-key handling below and by help-dialog activation.
+// MoveSelection moves the jobs-list cursor by delta rows (jobs and expanded source sub-rows).
 func (h *Handler) MoveSelection(delta int) {
-	n := len(h.model.JobsList)
-	sel := max(0, h.model.JobsView.Selected+delta)
-	if n > 0 && sel > n-1 {
-		sel = n - 1
+	rows := h.model.JobsView.JobsListRows(h.model.JobsList)
+	if len(rows) == 0 {
+		return
 	}
-	h.setSelection(sel)
+	row := min(max(0, h.model.JobsView.SelectedRow(rows)+delta), len(rows)-1)
+	h.setSelection(rows[row])
 }
 
 // SelectEdge moves the jobs-list cursor to the first (toEnd=false) or last (toEnd=true) row.
 func (h *Handler) SelectEdge(toEnd bool) {
-	n := len(h.model.JobsList)
-	sel := 0
-	if toEnd && n > 0 {
-		sel = n - 1
+	rows := h.model.JobsView.JobsListRows(h.model.JobsList)
+	if len(rows) == 0 {
+		return
 	}
-	h.setSelection(sel)
+	row := 0
+	if toEnd {
+		row = len(rows) - 1
+	}
+	h.setSelection(rows[row])
 }
 
-// FocusListRow focuses the queue list and moves its cursor to row sel (a mouse click).
-func (h *Handler) FocusListRow(sel int) {
+// FocusListRow focuses the queue list and moves its cursor to row index row of
+// JobsListRows (a mouse click).
+func (h *Handler) FocusListRow(row int) {
 	h.model.JobsView.FocusPane = 0
-	h.setSelection(sel)
+	rows := h.model.JobsView.JobsListRows(h.model.JobsList)
+	if row < 0 || row >= len(rows) {
+		return
+	}
+	h.setSelection(rows[row])
 }
 
-func (h *Handler) setSelection(sel int) {
-	beforeSel := h.model.JobsView.Selected
-	h.model.JobsView.Selected = sel
-	if beforeSel != sel {
-		h.model.JobsView.DetailScroll = 0
-		h.model.JobsView.OpsScroll = 0
-		h.model.JobsView.ConflictButtonFocus = 0
+func (h *Handler) setSelection(r ui.JobsListRow) {
+	st := &h.model.JobsView
+	beforeSel, beforeSub := st.Selected, st.SelectedSub
+	st.SelectRow(r)
+	if beforeSel != st.Selected {
+		st.DetailScroll = 0
+		st.ConflictButtonFocus = 0
+	}
+	if beforeSel != st.Selected || beforeSub != st.SelectedSub {
+		st.OpsScroll = 0
 	}
 	h.ensureJobsViewSelectionVisible()
 }

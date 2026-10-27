@@ -18,6 +18,27 @@ const (
 	IconKeyJobsListCompleted = "jobs.list.completed"
 )
 
+// Jobs list expander icon keys ([icons.jobs.list]): appended to the Type of a job with more
+// than one source, collapsed or expanded into its source sub-rows.
+const (
+	IconKeyJobsListSourcesCollapsed = "jobs.list.sources_collapsed"
+	IconKeyJobsListSourcesExpanded  = "jobs.list.sources_expanded"
+)
+
+// IconJobsListSources returns the expander icon of a multi-source job row.
+func (t Theme) IconJobsListSources(expanded bool) string {
+	key, fallback := IconKeyJobsListSourcesCollapsed, "\uf196"
+	if expanded {
+		key, fallback = IconKeyJobsListSourcesExpanded, "\uf147"
+	}
+	if t.Icons != nil {
+		if s := strings.TrimSpace(t.Icons[key]); s != "" {
+			return s
+		}
+	}
+	return fallback
+}
+
 // IconJobsList returns the Nerd Font icon for a job status in the jobs list column.
 func (t Theme) IconJobsList(status string) string {
 	key := "jobs.list." + status

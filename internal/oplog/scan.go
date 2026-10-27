@@ -11,12 +11,12 @@ import (
 // scanBatch is how many records Scan examines between onBatch calls and cancel checks.
 const scanBatch = 16384
 
-// Scan finds the records from..n-1 whose result is in mask and whose label matches query,
-// calling onBatch with each batch of new matches (ascending record numbers) as it goes. It
-// returns the record number it scanned up to, so a later Scan can continue from there for
-// records appended meanwhile. It reads the spill file sequentially and may block on disk IO:
+// Scan finds the records from..n-1 of source (NoSource for all) whose result is in mask and
+// whose label matches query, calling onBatch with each batch of new matches (ascending record
+// numbers) as it goes. It returns the record number it scanned up to, so a later Scan can
+// continue from there for records appended meanwhile. It reads the spill file sequentially and may block on disk IO:
 // never call it from the UI thread.
-func (l *Log) Scan(ctx context.Context, from uint32, mask Mask, query search.Query, opts search.Options, onBatch func([]uint32)) (uint32, error) {
+func (l *Log) Scan(ctx context.Context, from uint32, mask Mask, source int, query search.Query, opts search.Options, onBatch func([]uint32)) (uint32, error) {
 	l.mu.Lock()
 	if l.spilled {
 		if err := l.w.Flush(); err != nil {
@@ -36,7 +36,9 @@ func (l *Log) Scan(ctx context.Context, from uint32, mask Mask, query search.Que
 	var batch []uint32
 	examined := 0
 	check := func(num uint32, rec Record) error {
-		if _, hidden := superseded[num]; !hidden && mask.Has(rec.Result) && query.Match(rec.Label, opts).Matched {
+		_, hidden := superseded[num]
+		inSource := source == NoSource || int(rec.Source) == source
+		if !hidden && inSource && mask.Has(rec.Result) && query.Match(rec.Label, opts).Matched {
 			batch = append(batch, num)
 		}
 		examined++

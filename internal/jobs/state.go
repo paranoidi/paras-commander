@@ -273,7 +273,10 @@ func (s *State) AddJob(job *Job) {
 	}
 	s.mu.Lock()
 	if job.Ops == nil {
-		job.Ops = oplog.New(job.ID, s.opLog)
+		cfg := s.opLog
+		cfg.Sources = len(job.Sources)
+		job.Ops = oplog.New(job.ID, cfg)
+		job.sources = newSourceIndex(job.Sources)
 	}
 	s.queue.Enqueue(job)
 	status := job.Status

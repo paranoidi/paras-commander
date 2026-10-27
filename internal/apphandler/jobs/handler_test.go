@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/oplog"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -852,5 +854,59 @@ func TestJobsViewResultFilterDialogAndReset(t *testing.T) {
 	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModShift))
 	if model.JobsView.OpsResultShown() != dialog.JobResultAll || model.JobsView.OpsFilter.Query != "" {
 		t.Fatalf("reset left shown=%v query=%q", model.JobsView.OpsResultShown(), model.JobsView.OpsFilter.Query)
+	}
+}
+
+func TestJobsViewExpandSourcesFiltersOperations(t *testing.T) {
+	t.Parallel()
+	h, model, state := newMaximizeTestHandler(t)
+	job := &jobs.Job{
+		ID:          "multi",
+		Type:        jobs.TypeCopy,
+		Status:      jobs.StatusFailed,
+		Sources:     pathloc.PathsForTest("/harbor/lantern", "/harbor/willow"),
+		Destination: pathloc.MustParse("/meadow"),
+	}
+	state.AddJob(job)
+	item := func(src string) ops.PlanItem {
+		return ops.PlanItem{Src: pathloc.MustParse(src), Dst: pathloc.MustParse("/meadow" + src)}
+	}
+	job.RecordOperation(item("/harbor/lantern/acorn.txt"), ops.ItemDone, "")
+	job.RecordOperation(item("/harbor/lantern/bramble.txt"), ops.ItemDone, "")
+	job.RecordOperation(item("/harbor/willow/clover.txt"), ops.ItemFailed, "permission denied")
+	h.SyncJobsList()
+	idx := slices.IndexFunc(model.JobsList, func(e ui.JobEntry) bool { return e.ID == "multi" })
+	model.JobsView.FocusPane = 0
+	model.JobsView.Selected = idx
+
+	key := func(k tcell.Key, mod tcell.ModMask) { h.HandleJobsViewKey(tcell.NewEventKey(k, 0, mod)) }
+	key(tcell.KeyRight, tcell.ModAlt)
+	if !model.JobsView.Expanded["multi"] {
+		t.Fatal("jobs.expand did not expand the selected job")
+	}
+	key(tcell.KeyDown, tcell.ModNone)
+	key(tcell.KeyDown, tcell.ModNone)
+	if model.JobsView.Selected != idx || model.JobsView.SelectedSource(model.JobsList) != 1 {
+		t.Fatalf("cursor = job %d sub %d, want job %d source 1", model.JobsView.Selected, model.JobsView.SelectedSub, idx)
+	}
+	h.RefreshOpsWindow()
+	if got := opsLabels(model.JobsOpsWindow); got != "harbor/willow/clover.txt" {
+		t.Fatalf("source 1 operations = %s", got)
+	}
+	key(tcell.KeyUp, tcell.ModNone)
+	h.RefreshOpsWindow()
+	if got := opsLabels(model.JobsOpsWindow); got != "harbor/lantern/bramble.txt,harbor/lantern/acorn.txt" {
+		t.Fatalf("source 0 operations = %s", got)
+	}
+	key(tcell.KeyLeft, tcell.ModAlt)
+	if model.JobsView.Expanded["multi"] || model.JobsView.SelectedSub != 0 || model.JobsView.Selected != idx {
+		t.Fatalf("jobs.collapse left expanded=%v sub=%d job=%d", model.JobsView.Expanded["multi"], model.JobsView.SelectedSub, model.JobsView.Selected)
+	}
+	h.RefreshOpsWindow()
+	if model.JobsOpsWindow.Total != 3 {
+		t.Fatalf("job row operations = %d rows, want all 3", model.JobsOpsWindow.Total)
+	}
+	if model.ViewMode != ui.ViewJobs {
+		t.Fatal("jobs.collapse must not close the view")
 	}
 }
