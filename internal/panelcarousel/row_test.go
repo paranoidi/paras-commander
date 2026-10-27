@@ -147,7 +147,7 @@ func TestMeasureFitColumnWidthsParentNoIconsNoSize(t *testing.T) {
 	center := panel.State{}
 
 	got := MeasureFitColumnWidths(layout, parent, center, false, true, uiscrollbar.StyleThumb, 10, 0)
-	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile})
+	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile}) + fitSuffixReserve
 	want := longest + 1 // +1 right margin
 	if got[0] != want {
 		t.Fatalf("MeasureFitColumnWidths col[0] = %d, want %d (no icons/size, no scrollbar)", got[0], want)
@@ -172,7 +172,7 @@ func TestMeasureFitColumnWidthsParentWithIconsAndSize(t *testing.T) {
 	center := panel.State{}
 
 	got := MeasureFitColumnWidths(layout, parent, center, true, true, uiscrollbar.StyleThumb, 10, 0)
-	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile})
+	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile}) + fitSuffixReserve
 	want := longest + columnListLeadingGutter() + columnListIconStrip() + 1 + panellist.SizeCells + 1 // +1 right margin
 	if got[0] != want {
 		t.Fatalf("MeasureFitColumnWidths col[0] = %d, want %d (icons+size, no scrollbar)", got[0], want)
@@ -199,7 +199,7 @@ func TestMeasureFitColumnWidthsReservesScrollbarLane(t *testing.T) {
 	const visibleRows = 5 // fewer than len(entries): scrollbar lane needed
 
 	got := MeasureFitColumnWidths(layout, parent, center, false, true, uiscrollbar.StyleThumb, visibleRows, 0)
-	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile})
+	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile}) + fitSuffixReserve
 	want := longest + 1 /* right margin */ + 1 /* scrollbar reserve */
 	if got[0] != want {
 		t.Fatalf("MeasureFitColumnWidths col[0] = %d, want %d (+1 margin +1 scrollbar reserve)", got[0], want)
@@ -215,7 +215,7 @@ func TestMeasureFitColumnWidthsCenterColumn(t *testing.T) {
 	parent := Column{}
 
 	got := MeasureFitColumnWidths(layout, parent, center, false, true, uiscrollbar.StyleThumb, 10, 0)
-	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile})
+	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile}) + fitSuffixReserve
 	want := longest + 1 // +1 right margin
 	if got[1] != want {
 		t.Fatalf("MeasureFitColumnWidths col[1] = %d, want %d", got[1], want)
@@ -316,7 +316,7 @@ func TestMeasureFitColumnWidthsIgnoresOutlier(t *testing.T) {
 		Snapshot:  panel.ListingSnapshot{Entries: fitEntriesFromNames("cat", "otter", "fox", giant)},
 	}
 	got := MeasureFitColumnWidths(layout, parent, panel.State{}, false, true, uiscrollbar.StyleThumb, 10, 0)
-	want := fitEntryTextLen(localfs.Entry{Name: "otter", Type: localfs.EntryFile}) + 1 // +1 right margin
+	want := fitEntryTextLen(localfs.Entry{Name: "otter", Type: localfs.EntryFile}) + fitSuffixReserve + 1 // +1 right margin
 	if got[0] != want {
 		t.Fatalf("MeasureFitColumnWidths col[0] = %d, want %d (2nd-longest, not outlier)", got[0], want)
 	}
@@ -334,7 +334,7 @@ func TestMeasureFitColumnWidthsPlainFitKeepsOutlier(t *testing.T) {
 		Snapshot:  panel.ListingSnapshot{Entries: fitEntriesFromNames("cat", "otter", "fox", giant)},
 	}
 	got := MeasureFitColumnWidths(layout, parent, panel.State{}, false, true, uiscrollbar.StyleThumb, 10, 0)
-	want := fitEntryTextLen(localfs.Entry{Name: giant, Type: localfs.EntryFile}) + 1
+	want := fitEntryTextLen(localfs.Entry{Name: giant, Type: localfs.EntryFile}) + fitSuffixReserve + 1
 	if got[0] != want {
 		t.Fatalf("MeasureFitColumnWidths col[0] = %d, want %d (plain fit keeps longest)", got[0], want)
 	}
@@ -351,7 +351,7 @@ func TestCenterNameWidthFitMode(t *testing.T) {
 	frame := geom.Rect{X: 0, Y: 0, Width: 120, Height: 20}
 
 	measured := MeasureFitColumnWidths(layout, Column{}, center, false, true, uiscrollbar.StyleThumb, 10, 0)
-	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile})
+	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile}) + fitSuffixReserve
 	want := longest + 1 // +1 right margin
 	if measured[1] != want {
 		t.Fatalf("measured[1] = %d, want %d", measured[1], want)
@@ -367,5 +367,32 @@ func TestCenterNameWidthFitMode(t *testing.T) {
 	gotUnmeasured := CenterNameWidth(frame, layout, center, false, true, uiscrollbar.StyleThumb, 10, [3]int{}, 0)
 	if gotUnmeasured != 39 {
 		t.Fatalf("CenterNameWidth (unmeasured) = %d, want cap 40 minus separator", gotUnmeasured)
+	}
+}
+
+func TestFitColumnKeepsFullNameWithSuffixIcons(t *testing.T) {
+	t.Parallel()
+	layout := DefaultLayout()
+	layout.Splits[0] = ColumnSplitSpec{Kind: SplitFitChars, Value: 64}
+	entries := fitTestWordEntries()
+	for i := range entries {
+		if entries[i].Name == "hippopotamus" {
+			entries[i].Type = localfs.EntryDirectory
+		}
+	}
+	parent := Column{Kind: ColumnParent, Populated: true, Snapshot: panel.ListingSnapshot{Entries: entries}}
+	got := MeasureFitColumnWidths(layout, parent, panel.State{}, true, true, uiscrollbar.StyleThumb, 10, 0)
+
+	th := theme.Default()
+	suffix := panellist.RowSuffix{SubtreeSelection: true, Pinned: true, RangeAnchor: true}
+	dir := localfs.Entry{Name: "hippopotamus", Type: localfs.EntryDirectory}
+	row := formatBriefRow(dir, got[0], true, true, suffix, th, nil, columnTextReserve(0, 0, true), 0, "", false)
+	if !strings.Contains(row, "hippopotamus") {
+		t.Fatalf("row %q truncates the name with three suffix icons", row)
+	}
+	for _, icon := range []rune{th.IconFilelistSelectionSubtree(), th.IconPinRune(), th.IconFilelistRangeAnchor()} {
+		if !strings.ContainsRune(row, icon) {
+			t.Fatalf("row %q is missing suffix icon %q", row, icon)
+		}
 	}
 }

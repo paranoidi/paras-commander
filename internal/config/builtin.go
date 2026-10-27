@@ -352,6 +352,11 @@ const (
 	// (unless HideInactivePanel gives the active panel full terminal width).
 	MinCarouselFilePreviewColumnWidth = 32
 
+	// CarouselFitSuffixSlots is how many row suffix indicators (subtree selection, pin, job
+	// marks, ...) a fit-to-content carousel column reserves room for beyond its longest name, so
+	// a marked row keeps its full name instead of truncating.
+	CarouselFitSuffixSlots = 3
+
 	// DefaultCarouselSplit is the default carousel column width spec (parent | center | child).
 	// Parent uses "<<22%" (fit with outlier ignore); center uses plain "<44%" fit.
 	DefaultCarouselSplit0 = "<<22%"
