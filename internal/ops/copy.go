@@ -377,7 +377,7 @@ func reportCopyResult(opts Options, item PlanItem, res copyResult) bool {
 		opts.itemDone(item, ItemSkipped, ReasonIdentical)
 		return false
 	case copySourceDeleted:
-		opts.itemDone(item, ItemSkipped, ReasonSourceDeleted)
+		opts.itemDone(item, ItemSourceDeleted, ReasonSourceDeleted)
 	default:
 		opts.itemDone(item, ItemDone, "")
 	}

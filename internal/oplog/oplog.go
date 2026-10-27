@@ -38,13 +38,18 @@ func (m Mask) Has(r Result) bool { return m&(1<<r) != 0 }
 
 // Record is one processed item: its display label (the destination path relative to the job
 // destination, or the source for jobs without one), for skipped or failed items why, and the
-// index of the job source it belongs to (NoSource when unattributed).
+// index of the job source it belongs to (NoSource when unattributed). SourceDeleted marks a
+// Skipped record whose conflict answer deleted the source (counted and filtered as skipped).
 type Record struct {
-	Result Result
-	Label  string
-	Reason string
-	Source int32
+	Result        Result
+	Label         string
+	Reason        string
+	Source        int32
+	SourceDeleted bool
 }
+
+// sourceDeletedBit flags Record.SourceDeleted in the spill file's result byte.
+const sourceDeletedBit = 0x80
 
 // NoSource is a Record.Source outside every job source. As a view source it means all sources.
 const NoSource = -1
@@ -209,6 +214,9 @@ func (l *Log) writeUnlocked(num uint32, rec Record) {
 	}
 	var hdr [1 + 3*binary.MaxVarintLen64]byte
 	hdr[0] = byte(rec.Result)
+	if rec.SourceDeleted {
+		hdr[0] |= sourceDeletedBit
+	}
 	k := 1 + binary.PutVarint(hdr[1:], int64(rec.Source))
 	k += binary.PutUvarint(hdr[k:], uint64(len(rec.Label)))
 	buf := append(hdr[:k:k], rec.Label...)
@@ -546,7 +554,7 @@ func decode(br *bufio.Reader) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	return Record{Result: Result(res), Label: label, Reason: reason, Source: int32(src)}, nil
+	return Record{Result: Result(res &^ sourceDeletedBit), Label: label, Reason: reason, Source: int32(src), SourceDeleted: res&sourceDeletedBit != 0}, nil
 }
 
 func readString(br *bufio.Reader) (string, error) {

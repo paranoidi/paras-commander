@@ -132,6 +132,9 @@ const (
 	ItemDone ItemResult = iota
 	ItemSkipped
 	ItemFailed
+	// ItemSourceDeleted is a skip whose conflict answer deleted the source instead of moving it
+	// (reason ReasonSourceDeleted).
+	ItemSourceDeleted
 )
 
 // Skip reasons reported with ItemSkipped.

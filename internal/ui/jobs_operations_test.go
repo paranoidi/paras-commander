@@ -178,8 +178,8 @@ func TestDrawJobsOperationsPanelSourceDeletedIcon(t *testing.T) {
 	screen := newOpsScreen(t)
 	rect := Rect{X: 0, Y: 0, Width: 70, Height: 8}
 	win := JobsOpsWindow{JobID: "move-1", Total: 2, Rows: []JobOperationRow{
-		{Op: JobOperation{Result: oplog.Skipped, Label: "harbor/lantern.txt", Reason: ops.ReasonSourceDeleted}},
-		{Op: JobOperation{Result: oplog.Skipped, Label: "harbor/meadow.txt", Reason: ops.ReasonExists}},
+		{Op: JobOperation{Result: oplog.Skipped, Label: "harbor/lantern.txt", Reason: ops.ReasonSourceDeleted, SourceDeleted: true}},
+		{Op: JobOperation{Result: oplog.Skipped, Label: "harbor/meadow.txt", Reason: ops.ReasonSourceDeleted}}, // the reason text alone is not the outcome
 	}}
 	th := theme.Default()
 	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false)

@@ -265,3 +265,23 @@ func TestSingleSourceLogHasNoSourceStats(t *testing.T) {
 		t.Fatalf("SourceStats = %v", per)
 	}
 }
+
+// TestSourceDeletedSurvivesSpill: the flag rides in the result byte and the record still counts
+// and filters as skipped.
+func TestSourceDeletedSurvivesSpill(t *testing.T) {
+	l, _ := newTestLog(t, 2)
+	l.Append(Record{Result: Skipped, Label: "harbor/lantern.txt", Reason: "source deleted", SourceDeleted: true})
+	for i := range 4 {
+		l.Append(Record{Result: Done, Label: fmt.Sprintf("harbor/meadow-%d.txt", i)})
+	}
+	recs, err := l.ReadRecords([]uint32{0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := recs[0]; r.Result != Skipped || !r.SourceDeleted || r.Reason != "source deleted" {
+		t.Fatalf("spilled record = %+v", r)
+	}
+	if st := l.Stats(); st.Skipped != 1 || l.ViewLen(1<<Skipped, NoSource) != 1 {
+		t.Fatalf("stats = %+v, skipped view = %d", st, l.ViewLen(1<<Skipped, NoSource))
+	}
+}

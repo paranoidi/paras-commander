@@ -399,12 +399,12 @@ func (j *Job) RecordOperation(item ops.PlanItem, res ops.ItemResult, reason stri
 	}
 	r := oplog.Done
 	switch res {
-	case ops.ItemSkipped:
+	case ops.ItemSkipped, ops.ItemSourceDeleted:
 		r = oplog.Skipped
 	case ops.ItemFailed:
 		r = oplog.Failed
 	}
-	j.Ops.Append(oplog.Record{Result: r, Label: OperationLabel(j.Destination, item), Reason: reason, Source: item.Source})
+	j.Ops.Append(oplog.Record{Result: r, Label: OperationLabel(j.Destination, item), Reason: reason, Source: item.Source, SourceDeleted: res == ops.ItemSourceDeleted})
 }
 
 // FailItem is the one way a job reports an item it could not process: it records the failed

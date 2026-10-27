@@ -24,7 +24,7 @@ func recordItems(out *[]itemOutcome) func(PlanItem, ItemResult, string) {
 func outcomesString(out []itemOutcome) string {
 	var parts []string
 	for _, o := range out {
-		s := o.name + "=" + []string{"done", "skipped", "failed"}[o.res]
+		s := o.name + "=" + []string{"done", "skipped", "failed", "source-deleted"}[o.res]
 		if o.reason != "" {
 			s += "(" + o.reason + ")"
 		}

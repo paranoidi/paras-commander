@@ -60,10 +60,11 @@ func TestMoveIdenticalKeepsSource(t *testing.T) {
 func TestMoveDeleteSourceKeepsDestination(t *testing.T) {
 	src, dstDir := writeConflictPair(t, "harbor.txt", "fresh", "stale")
 	var reason string
+	var res ItemResult
 	var renamed int
 	opts := Options{
 		CopyBufferKiB: 4,
-		OnItemDone:    func(_ PlanItem, _ ItemResult, r string) { reason = r },
+		OnItemDone:    func(_ PlanItem, rr ItemResult, r string) { res, reason = rr, r },
 		OnRenamed:     func(_, _ pathloc.Path) { renamed++ },
 	}
 	if _, _, err := ExecuteMove(context.Background(), MustPaths(src), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, actionResolver(ActionDeleteSource), nil); err != nil {
@@ -78,8 +79,8 @@ func TestMoveDeleteSourceKeepsDestination(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(dstDir, "harbor.txt")); string(b) != "stale" {
 		t.Fatalf("dest = %q, want the kept destination", b)
 	}
-	if reason != ReasonSourceDeleted {
-		t.Fatalf("reason = %q, want %q", reason, ReasonSourceDeleted)
+	if res != ItemSourceDeleted || reason != ReasonSourceDeleted {
+		t.Fatalf("outcome = %d %q, want ItemSourceDeleted %q", res, reason, ReasonSourceDeleted)
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/oplog"
-	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -15,14 +14,15 @@ import (
 // JobOperation is one row of the jobs view Operations pane: an item the job processed, its
 // result and, for skipped or failed items, why.
 type JobOperation struct {
-	Result oplog.Result
-	Label  string
-	Reason string
+	Result        oplog.Result
+	Label         string
+	Reason        string
+	SourceDeleted bool
 }
 
 // JobOperationFromRecord converts an operation log record to a pane row.
 func JobOperationFromRecord(r oplog.Record) JobOperation {
-	return JobOperation{Result: r.Result, Label: r.Label, Reason: r.Reason}
+	return JobOperation{Result: r.Result, Label: r.Label, Reason: r.Reason, SourceDeleted: r.SourceDeleted}
 }
 
 // Text is the row's displayed text: the label, plus ": <reason>" when it has one.
@@ -47,7 +47,7 @@ func JobOperationResultKey(r oplog.Result) string {
 // IconKey is the row's [icons.jobs.operations] key: its result key, except a skipped row whose
 // conflict resolution deleted the source, which has its own glyph.
 func (o JobOperation) IconKey() string {
-	if o.Result == oplog.Skipped && o.Reason == ops.ReasonSourceDeleted {
+	if o.SourceDeleted {
 		return theme.JobsOperationSourceDeleted
 	}
 	return JobOperationResultKey(o.Result)

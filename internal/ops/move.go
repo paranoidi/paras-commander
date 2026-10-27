@@ -312,7 +312,7 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 		return f, b, false, err
 	case out.sourceDeleted:
 		// Nothing was renamed: the kept destination's cache entries stay its own.
-		r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSkipped, ReasonSourceDeleted)
+		r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSourceDeleted, ReasonSourceDeleted)
 		return 0, 0, true, nil // counts as moved
 	case out.renamed:
 		if r.opts.OnRenamed != nil && !src.IsRemote() && !dst.IsRemote() {
