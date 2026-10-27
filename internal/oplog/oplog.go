@@ -79,7 +79,7 @@ type Log struct {
 
 	counts        [numResults]int
 	lists         [numResults][]uint32 // record numbers per result, ascending (superseded removed)
-	failedByLabel map[string]uint32
+	failedByLabel map[string]failedRef
 	superseded    map[uint32]struct{}
 	supVersion    int
 	version       uint64
@@ -104,7 +104,7 @@ type Log struct {
 
 // New returns an empty log for jobID.
 func New(jobID string, cfg Config) *Log {
-	l := &Log{cfg: cfg, jobID: jobID, failedByLabel: map[string]uint32{}, superseded: map[uint32]struct{}{}, lastSource: NoSource}
+	l := &Log{cfg: cfg, jobID: jobID, failedByLabel: map[string]failedRef{}, superseded: map[uint32]struct{}{}, lastSource: NoSource}
 	l.resetSourcesUnlocked()
 	return l
 }
@@ -136,7 +136,7 @@ func (l *Log) Append(rec Record) {
 		l.supersedeUnlocked(rec.Label, old)
 	}
 	if rec.Result == Failed {
-		l.failedByLabel[rec.Label] = num
+		l.failedByLabel[rec.Label] = failedRef{num: num, source: rec.Source}
 	}
 	l.lists[rec.Result] = append(l.lists[rec.Result], num)
 	l.counts[rec.Result]++
@@ -161,21 +161,31 @@ func (l *Log) Append(rec Record) {
 	}
 }
 
-func (l *Log) supersedeUnlocked(label string, num uint32) {
+// failedRef is the newest failed record of a label and the source it belongs to.
+type failedRef struct {
+	num    uint32
+	source int32
+}
+
+func (l *Log) supersedeUnlocked(label string, old failedRef) {
 	delete(l.failedByLabel, label)
-	l.superseded[num] = struct{}{}
-	if i, ok := slices.BinarySearch(l.lists[Failed], num); ok {
-		l.lists[Failed] = slices.Delete(l.lists[Failed], i, i+1)
+	l.superseded[old.num] = struct{}{}
+	if removeNum(&l.lists[Failed], old.num) {
 		l.counts[Failed]--
 	}
-	for s := range l.srcLists {
-		if i, ok := slices.BinarySearch(l.srcLists[s][Failed], num); ok {
-			l.srcLists[s][Failed] = slices.Delete(l.srcLists[s][Failed], i, i+1)
-			l.srcCounts[s][Failed]--
-			break
-		}
+	if l.sourceIndexed(old.source) && removeNum(&l.srcLists[old.source][Failed], old.num) {
+		l.srcCounts[old.source][Failed]--
 	}
 	l.supVersion++
+}
+
+// removeNum deletes num from the ascending list, reporting whether it was there.
+func removeNum(list *[]uint32, num uint32) bool {
+	i, ok := slices.BinarySearch(*list, num)
+	if ok {
+		*list = slices.Delete(*list, i, i+1)
+	}
+	return ok
 }
 
 func (l *Log) spillUnlocked() {
@@ -236,7 +246,7 @@ func (l *Log) Close() {
 	l.removeFileUnlocked()
 	l.n, l.memBase, l.counts, l.version = 0, 0, [numResults]int{}, l.version+1
 	l.mem, l.lists, l.merged = nil, [numResults][]uint32{}, nil
-	l.failedByLabel, l.superseded = map[string]uint32{}, map[uint32]struct{}{}
+	l.failedByLabel, l.superseded = map[string]failedRef{}, map[uint32]struct{}{}
 	l.spilled, l.broken = false, false
 	l.resetSourcesUnlocked()
 }
@@ -282,7 +292,7 @@ func (l *Log) SourceStats() (per []Stats, last int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if len(l.srcCounts) == 0 {
-		return nil, l.lastSource
+		return nil, NoSource
 	}
 	per = make([]Stats, len(l.srcCounts))
 	for i, c := range l.srcCounts {

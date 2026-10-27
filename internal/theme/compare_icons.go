@@ -1,7 +1,5 @@
 package theme
 
-import "strings"
-
 const (
 	IconKeyCompareEqual         = "compare.equal"
 	IconKeyCompareRelocated     = "compare.relocated"
@@ -12,29 +10,20 @@ const (
 	IconKeyCompareError         = "compare.error"
 )
 
-func (t Theme) IconCompareEqual() string { return t.compareIcon(IconKeyCompareEqual, "=") }
+func (t Theme) IconCompareEqual() string { return t.iconOr(IconKeyCompareEqual, "=") }
 func (t Theme) IconCompareRelocated() string {
-	return t.compareIcon(IconKeyCompareRelocated, "\u2194")
+	return t.iconOr(IconKeyCompareRelocated, "\u2194")
 }
 func (t Theme) IconComparePrimaryOnly() string {
-	return t.compareIcon(IconKeyComparePrimaryOnly, "<")
+	return t.iconOr(IconKeyComparePrimaryOnly, "<")
 }
 func (t Theme) IconCompareSecondaryOnly() string {
-	return t.compareIcon(IconKeyCompareSecondaryOnly, ">")
+	return t.iconOr(IconKeyCompareSecondaryOnly, ">")
 }
 func (t Theme) IconCompareContentDiff() string {
-	return t.compareIcon(IconKeyCompareContentDiff, "\u2260")
+	return t.iconOr(IconKeyCompareContentDiff, "\u2260")
 }
 func (t Theme) IconComparePending() string {
-	return t.compareIcon(IconKeyComparePending, "\U000f02ca")
+	return t.iconOr(IconKeyComparePending, "\U000f02ca")
 }
-func (t Theme) IconCompareError() string { return t.compareIcon(IconKeyCompareError, "!") }
-
-func (t Theme) compareIcon(key, fallback string) string {
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
-			return s
-		}
-	}
-	return fallback
-}
+func (t Theme) IconCompareError() string { return t.iconOr(IconKeyCompareError, "!") }

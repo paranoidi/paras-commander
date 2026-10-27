@@ -27,16 +27,10 @@ const (
 
 // IconJobsListSources returns the expander icon of a multi-source job row.
 func (t Theme) IconJobsListSources(expanded bool) string {
-	key, fallback := IconKeyJobsListSourcesCollapsed, "\uf196"
 	if expanded {
-		key, fallback = IconKeyJobsListSourcesExpanded, "\uf147"
+		return t.iconOr(IconKeyJobsListSourcesExpanded, "\uf147")
 	}
-	if t.Icons != nil {
-		if s := strings.TrimSpace(t.Icons[key]); s != "" {
-			return s
-		}
-	}
-	return fallback
+	return t.iconOr(IconKeyJobsListSourcesCollapsed, "\uf196")
 }
 
 // IconJobsList returns the Nerd Font icon for a job status in the jobs list column.
@@ -119,6 +113,11 @@ func (t Theme) JobsOperationStyle(result string) tcell.Style {
 // JobsOperationOn returns a result key's style foreground merged onto surface's background.
 func (t Theme) JobsOperationOn(result string, surface tcell.Style) tcell.Style {
 	return mergeForegroundOnSurface(t.JobsOperationStyle(result), surface)
+}
+
+// JobsIconStyleOn is JobsIconStyle's foreground and attributes on surface's background.
+func (t Theme) JobsIconStyleOn(status string, surface tcell.Style) tcell.Style {
+	return mergeForegroundOnSurface(t.JobsIconStyle(status), surface)
 }
 
 // JobsIconStyle returns the themed style for the leading icon of a job status in the jobs list.

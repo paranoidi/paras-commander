@@ -94,35 +94,38 @@ func jobSourceStatus(e JobEntry, i int) string {
 	if i >= 0 && i < len(e.SourceStats) {
 		stats = e.SourceStats[i]
 	}
-	finished := func() string {
-		if stats.Failed > 0 {
-			return string(jobs.StatusFailed)
-		}
-		return string(jobs.StatusCompleted)
+	finished := string(jobs.StatusCompleted)
+	if stats.Failed > 0 {
+		finished = string(jobs.StatusFailed)
 	}
 	if !st.IsFinished() && i == max(e.LastSource, 0) {
 		return e.Status
 	}
 	if i < e.LastSource || stats.Done+stats.Skipped+stats.Failed > 0 {
-		return finished()
+		return finished
 	}
 	switch st {
 	case jobs.StatusCompleted:
-		return finished()
+		return finished
 	case jobs.StatusCanceled, jobs.StatusFailed:
 		return string(jobs.StatusCanceled)
 	}
 	return string(jobs.StatusQueued)
 }
 
-// jobSourceLabel is the Queue sub-row label of source i: its base name, or the whole path when
-// another source shares that base name.
-func jobSourceLabel(sources []string, i int) string {
-	base := path.Base(sources[i])
-	for j, other := range sources {
-		if j != i && path.Base(other) == base {
-			return sources[i]
+// jobSourceLabels are the Queue sub-row labels of sources: each base name, or the whole path
+// when another source shares that base name.
+func jobSourceLabels(sources []string) []string {
+	bases := make([]string, len(sources))
+	count := make(map[string]int, len(sources))
+	for i, src := range sources {
+		bases[i] = path.Base(src)
+		count[bases[i]]++
+	}
+	for i, base := range bases {
+		if count[base] > 1 {
+			bases[i] = sources[i]
 		}
 	}
-	return base
+	return bases
 }

@@ -30,7 +30,7 @@ func (t Theme) IconDialogInfo() string {
 	if !t.UseNerdfontIcons {
 		return IconDialogInfoASCII
 	}
-	return t.dialogIcon(IconKeyDialogInfo, "\uf05a")
+	return t.iconOr(IconKeyDialogInfo, "\uf05a")
 }
 
 // IconMessageSuccess returns the prefix of success toasts from [icons.message] success, or ""
@@ -39,7 +39,7 @@ func (t Theme) IconMessageSuccess() string {
 	if !t.UseNerdfontIcons {
 		return ""
 	}
-	return t.dialogIcon(IconKeyMessageSuccess, "\uf05d")
+	return t.iconOr(IconKeyMessageSuccess, "\uf05d")
 }
 
 // IconDialogMissing returns the trailing mark painted on picker rows (history, bookmarks,
@@ -49,7 +49,7 @@ func (t Theme) IconDialogMissing() string {
 	if !t.UseNerdfontIcons {
 		return "!"
 	}
-	return t.dialogIcon(IconKeyDialogMissing, "\U000F09E7")
+	return t.iconOr(IconKeyDialogMissing, "\U000F09E7")
 }
 
 // IconDialogHistory returns the prefix on History rows from the app's own panel history.
@@ -58,7 +58,7 @@ func (t Theme) IconDialogHistory() string {
 	if !t.UseNerdfontIcons {
 		return "h"
 	}
-	return t.dialogIcon(IconKeyDialogHistory, "\uf1da")
+	return t.iconOr(IconKeyDialogHistory, "\uf1da")
 }
 
 // IconDialogZoxide returns the prefix on History rows that come from zoxide.
@@ -67,7 +67,7 @@ func (t Theme) IconDialogZoxide() string {
 	if !t.UseNerdfontIcons {
 		return "z"
 	}
-	return t.dialogIcon(IconKeyDialogZoxide, "\uf0e7")
+	return t.iconOr(IconKeyDialogZoxide, "\uf0e7")
 }
 
 // IconDialogDepth returns the marker before the find indexing depth in the find dialog
@@ -76,7 +76,7 @@ func (t Theme) IconDialogDepth() string {
 	if !t.UseNerdfontIcons {
 		return "Depth"
 	}
-	return t.dialogIcon(IconKeyDialogDepth, "\uef81")
+	return t.iconOr(IconKeyDialogDepth, "\uef81")
 }
 
 // DialogMissingIconForeground is the missing-path mark color: dialog.option.active on the
@@ -101,9 +101,9 @@ func (t Theme) IconDialogCheckbox(checked bool) string {
 		return "[ ]"
 	}
 	if checked {
-		return t.dialogIcon(IconKeyDialogCheckboxChecked, "\U000F0856")
+		return t.iconOr(IconKeyDialogCheckboxChecked, "\U000F0856")
 	}
-	return t.dialogIcon(IconKeyDialogCheckboxUnchecked, "\U000F0131")
+	return t.iconOr(IconKeyDialogCheckboxUnchecked, "\U000F0131")
 }
 
 // IconDialogRadio returns the radio marker icon for the given state.
@@ -117,12 +117,13 @@ func (t Theme) IconDialogRadio(selected bool) string {
 		return "( )"
 	}
 	if selected {
-		return t.dialogIcon(IconKeyDialogRadioSelected, "\U000F043E")
+		return t.iconOr(IconKeyDialogRadioSelected, "\U000F043E")
 	}
-	return t.dialogIcon(IconKeyDialogRadioUnselected, "\U000F043D")
+	return t.iconOr(IconKeyDialogRadioUnselected, "\U000F043D")
 }
 
-func (t Theme) dialogIcon(key, fallback string) string {
+// iconOr is the theme icon for key, or fallback when the theme leaves it unset.
+func (t Theme) iconOr(key, fallback string) string {
 	if t.Icons != nil {
 		if s := strings.TrimSpace(t.Icons[key]); s != "" {
 			return s

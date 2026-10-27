@@ -69,11 +69,12 @@ func TestJobSourceStatus(t *testing.T) {
 
 func TestJobSourceLabelDisambiguatesSharedBaseNames(t *testing.T) {
 	sources := []string{"/meadow/lantern", "/harbor/lantern", "/harbor/copper"}
-	if got := jobSourceLabel(sources, 0); got != "/meadow/lantern" {
-		t.Fatalf("shared base name = %q", got)
+	labels := jobSourceLabels(sources)
+	if labels[0] != "/meadow/lantern" || labels[1] != "/harbor/lantern" {
+		t.Fatalf("shared base name = %q", labels[:2])
 	}
-	if got := jobSourceLabel(sources, 2); got != "copper" {
-		t.Fatalf("unique base name = %q", got)
+	if labels[2] != "copper" {
+		t.Fatalf("unique base name = %q", labels[2])
 	}
 }
 

@@ -11,8 +11,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -156,7 +156,7 @@ func (h *Handler) pruneExpandedJobs() {
 	}
 	keep := make(map[string]bool, len(exp))
 	for _, e := range h.model.JobsList {
-		if exp[e.ID] && ui.JobEntryHasSources(e) {
+		if h.model.JobsView.JobExpanded(e) {
 			keep[e.ID] = true
 		}
 	}
@@ -498,9 +498,6 @@ func scrollPane(key tcell.Key, scroll *int, maxScroll int) {
 	}
 }
 
-// MoveSelection moves the jobs-list primary-pane cursor by delta rows (clamped), scrolling
-// into view and resetting detail/activity scroll + conflict focus when the row actually
-// changes. Shared by the raw arrow-key handling below and by help-dialog activation.
 // MoveSelection moves the jobs-list cursor by delta rows (jobs and expanded source sub-rows).
 func (h *Handler) MoveSelection(delta int) {
 	rows := h.model.JobsView.JobsListRows(h.model.JobsList)

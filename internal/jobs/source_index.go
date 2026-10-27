@@ -1,8 +1,6 @@
 package jobs
 
 import (
-	"strings"
-
 	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -22,19 +20,11 @@ func newSourceIndex(sources []pathloc.Path) *sourceIndex {
 	}
 	m := make(map[string]int32, len(sources))
 	for i, s := range sources {
-		key := sourceKey(s.String())
-		if _, dup := m[key]; !dup {
-			m[key] = int32(i)
+		if _, dup := m[s.String()]; !dup {
+			m[s.String()] = int32(i)
 		}
 	}
 	return &sourceIndex{bySource: m}
-}
-
-func sourceKey(s string) string {
-	if len(s) > 1 {
-		return strings.TrimSuffix(s, "/")
-	}
-	return s
 }
 
 // indexOf returns the index of the source p equals or lies under, else oplog.NoSource.
@@ -42,18 +32,14 @@ func (x *sourceIndex) indexOf(p pathloc.Path) int32 {
 	if x == nil || p.IsZero() {
 		return oplog.NoSource
 	}
-	s := sourceKey(p.String())
 	for {
-		if i, ok := x.bySource[s]; ok {
+		if i, ok := x.bySource[p.String()]; ok {
 			return i
 		}
-		cut := strings.LastIndexByte(s, '/')
-		if cut <= 0 {
-			if i, ok := x.bySource["/"]; ok && cut == 0 {
-				return i
-			}
+		parent := p.Parent()
+		if parent.IsZero() || parent.Equal(p) {
 			return oplog.NoSource
 		}
-		s = s[:cut]
+		p = parent
 	}
 }

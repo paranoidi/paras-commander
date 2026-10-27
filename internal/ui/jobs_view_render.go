@@ -133,7 +133,7 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	}
 	sourceLabel := ""
 	if src := state.SelectedSource(jobs); src != oplog.NoSource {
-		sourceLabel = jobSourceLabel(sel.Sources, src)
+		sourceLabel = jobSourceLabels(sel.Sources)[src]
 	}
 	if _, ok := jobsMaximizedPane(layout, state, sel, now, v.ThroughputChartEnabled); ok {
 		drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, win, sourceLabel, styles, chromeBlocked, true, true)
@@ -193,6 +193,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 	selectedRow := state.SelectedRow(rows)
 
 	rowBase := styles.JobsRow.Background(bg)
+	sourceLabels := map[int][]string{} // per expanded job, built on its first visible sub-row
 	for row := 0; row < visibleRows; row++ {
 		idx := scroll + row
 		y := rect.Y + 2 + row
@@ -210,33 +211,36 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		// cyan cursor background never touches the progress bar's own colors.
 		paintAuxPanelRowMargin(screen, xProg-1, y, rowBase)
 		if r.Source != oplog.NoSource {
+			labels, ok := sourceLabels[r.Job]
+			if !ok {
+				labels = jobSourceLabels(entry.Sources)
+				sourceLabels[r.Job] = labels
+			}
 			last := r.Source == len(entry.Sources)-1
-			drawJobsListSourceRow(screen, contentX, y, xProg, barW, entry, r.Source, last, lineStyle, selected, chromeBlocked, styles)
+			drawJobsListSourceRow(screen, contentX, y, xProg, barW, entry, r.Source, labels[r.Source], last, lineStyle, selected, chromeBlocked, styles)
 			continue
 		}
 		drawJobsListJobRow(screen, contentX, y, xProg, barW, entry, state.JobExpanded(entry), lineStyle, selected, styles, now)
 	}
 }
 
-// jobsListIconStyle is a Queue status icon's style on a row background: the icon's foreground
-// and attributes, or the whole selected-row style on the cursor row.
-func jobsListIconStyle(styles theme.Theme, status string, lineStyle tcell.Style, selected bool) tcell.Style {
+// jobsListOnRow is st on the row's background, or the whole selected-row style on the cursor
+// row.
+func jobsListOnRow(st, lineStyle tcell.Style, selected bool) tcell.Style {
 	if selected {
 		return lineStyle
 	}
 	_, lineBG, _ := lineStyle.Decompose()
-	iconFG, _, iconAttrs := styles.JobsIconStyle(status).Decompose()
-	st := tcell.StyleDefault.Foreground(iconFG).Background(lineBG)
-	if iconAttrs&tcell.AttrBold != 0 {
-		st = st.Bold(true)
+	return st.Background(lineBG)
+}
+
+// jobsListIconStyle is a Queue status icon's style on a row: the icon's foreground and
+// attributes, or the whole selected-row style on the cursor row.
+func jobsListIconStyle(styles theme.Theme, status string, lineStyle tcell.Style, selected bool) tcell.Style {
+	if selected {
+		return lineStyle
 	}
-	if iconAttrs&tcell.AttrUnderline != 0 {
-		st = st.Underline(true)
-	}
-	if iconAttrs&tcell.AttrReverse != 0 {
-		st = st.Reverse(true)
-	}
-	return st
+	return styles.JobsIconStyleOn(status, lineStyle)
 }
 
 // jobsListTypeLabel is the Type cell text: the job type, then the expander icon for a job
@@ -249,11 +253,7 @@ func jobsListTypeLabel(entry JobEntry, expanded bool, styles theme.Theme) string
 }
 
 func drawJobsListJobRow(screen tcell.Screen, contentX, y, xProg, barW int, entry JobEntry, expanded bool, lineStyle tcell.Style, selected bool, styles theme.Theme, now time.Time) {
-	_, lineBG, _ := lineStyle.Decompose()
-	statusStyle := styles.JobsStatusStyle(entry.Status).Background(lineBG)
-	if selected {
-		statusStyle = lineStyle
-	}
+	statusStyle := jobsListOnRow(styles.JobsStatusStyle(entry.Status), lineStyle, selected)
 	primitive.Text(screen, contentX, y, jobsListColIcon, styles.IconJobsList(entry.Status), jobsListIconStyle(styles, entry.Status, lineStyle, selected))
 	line := fmt.Sprintf("%-*s ", jobsListColTypeRunes, primitive.TruncateRight(jobsListTypeLabel(entry, expanded, styles), jobsListColTypeRunes))
 	primitive.Text(screen, contentX+jobsListColIcon, y, jobsListColTypeCell, line, lineStyle)
@@ -270,37 +270,26 @@ func drawJobsListJobRow(screen tcell.Screen, contentX, y, xProg, barW int, entry
 // drawJobsListSourceRow paints the sub-row of source src under an expanded job: the tree
 // connector in the icon column, the source's status icon and label across Type..Speed, and
 // its done / failed / skipped counts in the Progress column.
-func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int, entry JobEntry, src int, last bool, lineStyle tcell.Style, selected, chromeBlocked bool, styles theme.Theme) {
-	_, lineBG, _ := lineStyle.Decompose()
-	connectorStyle := styles.PanelRowTreeConnector.Background(lineBG)
-	if selected {
-		connectorStyle = lineStyle
-	}
-	primitive.Text(screen, contentX, y, jobsListColIcon, panellist.TreeConnectorPrefix(1, last, nil, styles), connectorStyle)
+func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int, entry JobEntry, src int, label string, last bool, lineStyle tcell.Style, selected, chromeBlocked bool, styles theme.Theme) {
+	connector := jobsListOnRow(styles.PanelRowTreeConnector, lineStyle, selected)
+	primitive.Text(screen, contentX, y, jobsListColIcon, panellist.TreeConnectorPrefix(1, last, nil, styles), connector)
 	status := jobSourceStatus(entry, src)
 	x := contentX + jobsListColIcon
 	icon := styles.IconJobsList(status)
 	primitive.Text(screen, x, y, 2, icon+" ", jobsListIconStyle(styles, status, lineStyle, selected))
 	labelW := max(xProg-1-(x+2), 0)
-	primitive.Text(screen, x+2, y, labelW, primitive.FitPathForWidth(jobSourceLabel(entry.Sources, src), labelW), lineStyle)
+	primitive.Text(screen, x+2, y, labelW, primitive.FitPathForWidth(label, labelW), lineStyle)
 	var stats oplog.Stats
 	if src < len(entry.SourceStats) {
 		stats = entry.SourceStats[src]
 	}
 	parts := jobResultCountsParts(stats, "")
-	text := ""
-	for _, p := range parts {
-		text += p.Text
-	}
-	body := styles.JobsRow.Background(lineBG)
-	if selected {
-		body = lineStyle
-	}
+	body := jobsListOnRow(styles.JobsRow, lineStyle, selected)
 	var spans []primitive.Span
 	if !chromeBlocked && !selected {
 		spans = jobFilesPartSpans(parts, styles, body)
 	}
-	primitive.StyledText(screen, xProg, y, countsW, text, body, spans)
+	primitive.StyledText(screen, xProg, y, countsW, jobFilesPartsText(parts), body, spans)
 }
 
 func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, focused bool, userHomeDir string, throughputChartEnabled bool) {
@@ -451,6 +440,15 @@ func jobFilesLineSpans(j JobEntry, styles theme.Theme, body tcell.Style) []primi
 	return jobFilesPartSpans(jobFilesLineParts(j), styles, body)
 }
 
+// jobFilesPartsText joins the parts' text.
+func jobFilesPartsText(parts []jobFilesPart) string {
+	var b strings.Builder
+	for _, p := range parts {
+		b.WriteString(p.Text)
+	}
+	return b.String()
+}
+
 // jobFilesPartSpans colors the parts that carry a result key.
 func jobFilesPartSpans(parts []jobFilesPart, styles theme.Theme, body tcell.Style) []primitive.Span {
 	var spans []primitive.Span
@@ -581,11 +579,7 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 		lines = append(lines, fmt.Sprintf(prefixError+"%s", primitive.TruncateMiddle(j.Error, jobsDetailPathBudget(pathMax, prefixError))))
 	}
 	if parts := jobFilesLineParts(j); parts != nil {
-		var b strings.Builder
-		for _, p := range parts {
-			b.WriteString(p.Text)
-		}
-		lines = append(lines, b.String())
+		lines = append(lines, jobFilesPartsText(parts))
 	}
 	if len(j.Warnings) > 0 {
 		lines = append(lines, fmt.Sprintf("Warnings (%d):", len(j.Warnings)))
