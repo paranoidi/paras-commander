@@ -8,7 +8,11 @@ focus=listing0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb
 focus=mouse nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Tab ==
 focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+== Home ==
+focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[0|4|1] msg=""
 == Ctrl+K ==
+focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[|<44%|*] cursors=[0|4|1] msg=""
+== Ctrl+Y ==
 focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Ctrl+Y ==
 focus=split0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%<<22%|<44%|*] cursors=[10|4|1] msg=""

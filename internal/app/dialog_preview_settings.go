@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -114,7 +113,7 @@ func capabilityFromDetect(detected bool) string {
 // what can be guessed about terminal capabilities.
 func (a *App) autoDetectPreviewSettingsDialog() {
 	st := &a.model.PreviewSettingsDialog
-	sixel, kitty, placeholder := preview.DetectTerminalCapabilities(os.Getenv)
+	sixel, kitty, placeholder := preview.DetectTerminalCapabilities(a.getenv)
 	st.Sixel = capabilityFromDetect(sixel)
 	st.SetKitty(capabilityFromDetect(kitty))
 	st.SetKittyPlaceholder(capabilityFromDetect(placeholder))

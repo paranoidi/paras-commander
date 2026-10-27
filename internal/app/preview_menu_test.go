@@ -184,12 +184,10 @@ func TestPreviewMenuEditLetter(t *testing.T) {
 	openFullscreenPreviewForMenuTest(t, app, path, "hello\n")
 
 	var edited string
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, p string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, p string, _ bool) error {
 		edited = p
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModNone))

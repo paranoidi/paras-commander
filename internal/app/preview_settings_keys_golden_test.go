@@ -33,12 +33,10 @@ func previewKeyFocusName(app *App) string {
 // shorter engine one share the same top row.
 func previewKeyDialog(name string, env map[string]string) keyGoldenDialog {
 	return keyGoldenDialog{
-		name: name, serial: true,
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
-			for _, k := range []string{"TMUX", "TERM_PROGRAM", "TERM"} {
-				t.Setenv(k, env[k])
-			}
 			app := newApp(t, newScreen(t, 80, 31), dir)
+			app.getenv = func(k string) string { return env[k] }
 			app.model.Message = ""
 			app.openPreviewSettingsDialog()
 			return app

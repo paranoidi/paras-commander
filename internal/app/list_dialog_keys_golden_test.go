@@ -154,9 +154,6 @@ func sftpFocusNameOf(app *App) string {
 // ~/.ssh). The connection attempt is stubbed so Enter on OK never touches the network.
 func sftpKeyApp(t *testing.T, dir string, n int) *App {
 	t.Helper()
-	origTouch := sftpTouchConn
-	sftpTouchConn = func(context.Context, pathloc.Path) error { return fmt.Errorf("stubbed") }
-	t.Cleanup(func() { sftpTouchConn = origTouch })
 	var cfg strings.Builder
 	for i := 0; i < n; i++ {
 		w := listGoldenWords[i%len(listGoldenWords)]
@@ -167,6 +164,7 @@ func sftpKeyApp(t *testing.T, dir string, n int) *App {
 		t.Fatal(err)
 	}
 	app := newApp(t, newScreen(t, 80, 24), dir)
+	app.sftp.touchConn = func(context.Context, pathloc.Path) error { return fmt.Errorf("stubbed") }
 	app.config.SFTP.SSHConfigFile = sshConfig
 	app.model.Message = ""
 	app.openSFTPConnectDialogForPanel(ui.PrimaryPanel)
@@ -175,9 +173,8 @@ func sftpKeyApp(t *testing.T, dir string, n int) *App {
 
 func sftpKeyDialog(name string, n int) keyGoldenDialog {
 	return keyGoldenDialog{
-		name:   name, // the dialog only: the panels behind it show the host's free disk space
-		serial: true, // setup swaps the package-level sftpTouchConn
-		setup:  func(t *testing.T, dir string) *App { return sftpKeyApp(t, dir, n) },
+		name:  name, // the dialog only: the panels behind it show the host's free disk space
+		setup: func(t *testing.T, dir string) *App { return sftpKeyApp(t, dir, n) },
 		state: func(app *App) string {
 			st := app.model.SFTPConnectDialog
 			return fmt.Sprintf("focus=%s selected=%d scroll=%d query=%q qcursor=%d ranked=%d location=%q lcursor=%d pending=%v",
@@ -266,17 +263,20 @@ func dedupEmptyFocusName(app *App) string {
 	return "yes"
 }
 
+// dedupEmptyFixture is the scan root and the script's *testing.T for the outcome's job waits.
+type dedupEmptyFixture struct {
+	sub string
+	t   *testing.T
+}
+
 // dedupEmptyKeyDialog opens the confirmation through the real flow (a scan root holding only a
 // duplicate pair, so deleting both leaves it empty) and reports whether the root survived.
 func dedupEmptyKeyDialog(name string) keyGoldenDialog {
-	var sub string
-	var tt *testing.T
+	var fixtures perApp[dedupEmptyFixture]
 	return keyGoldenDialog{
-		name:   name,
-		serial: true, // setup writes the sub and tt variables shared by this dialog's scripts
+		name: name,
 		setup: func(t *testing.T, _ string) *App {
-			tt = t
-			sub = filepath.Join(t.TempDir(), "orchard")
+			sub := filepath.Join(t.TempDir(), "orchard")
 			if err := os.Mkdir(sub, 0o755); err != nil {
 				t.Fatal(err)
 			}
@@ -287,6 +287,7 @@ func dedupEmptyKeyDialog(name string) keyGoldenDialog {
 			}
 			app := newApp(t, newScreen(t, 80, 24), sub)
 			app.model.Message = ""
+			fixtures.set(t, app, dedupEmptyFixture{sub: sub, t: t})
 			app.openFindDuplicates()
 			waitDedupDone(t, app)
 			app.handleDedupViewKey(goldenKeyEvent(t, "Insert"))
@@ -304,9 +305,10 @@ func dedupEmptyKeyDialog(name string) keyGoldenDialog {
 		},
 		open: func(app *App) bool { return app.model.DedupEmptyDirsConfirm.Open },
 		outcome: func(app *App, quit bool) string {
-			flushBackgroundJobs(tt, app)
-			waitUntilAppJobsFinished(tt, app, 5*time.Second)
-			_, err := os.Stat(sub)
+			fx := fixtures.get(app)
+			flushBackgroundJobs(fx.t, app)
+			waitUntilAppJobsFinished(fx.t, app, 5*time.Second)
+			_, err := os.Stat(fx.sub)
 			return fmt.Sprintf("quit=%v root_removed=%v message=%q", quit, os.IsNotExist(err), app.model.Message)
 		},
 	}

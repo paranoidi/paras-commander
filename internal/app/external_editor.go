@@ -12,7 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// externalEditorRunner runs the external editor on path. Tests may replace this.
+// externalEditorRunner runs the external editor on path; NewWithOptions copies it into App.runExternalEditor.
 // When elevate is true and path is not writable, the editor runs via sudoedit.
 var externalEditorRunner = func(ctx context.Context, path string, elevate bool) error {
 	argv, env, elevated, err := editor.Command(editor.ResolveEditor(), path, elevate)
@@ -67,7 +67,7 @@ func (a *App) openFileInExternalEditor(path string) error {
 		return fmt.Errorf("no file path")
 	}
 	return a.withTerminalReleased(func() error {
-		return externalEditorRunner(context.Background(), path, a.config.Editor.Elevate)
+		return a.runExternalEditor(context.Background(), path, a.config.Editor.Elevate)
 	})
 }
 

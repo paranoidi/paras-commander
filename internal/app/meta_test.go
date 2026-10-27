@@ -66,14 +66,12 @@ file = "wc -l"
 
 	app := testMetaDialogApp(t, dir, cfgDir)
 
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		if path != metaPath {
 			t.Fatalf("editor path = %q, want %q", path, metaPath)
 		}
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	if !app.metaCtrl.OpenFileEditor(metaPath) {
 		t.Fatal("OpenFileEditor should succeed")

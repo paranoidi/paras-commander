@@ -20,7 +20,7 @@ import (
 
 // ---- elevate ----
 
-var elevateReply chan ops.PermissionAnswer
+var elevateReplies perApp[chan ops.PermissionAnswer]
 
 func elevateName(st dialog.ElevateDialogState) string {
 	return elevateFocusName(st)
@@ -28,13 +28,13 @@ func elevateName(st dialog.ElevateDialogState) string {
 
 func elevateKeyDialog(name string, req ops.PermissionRequest) keyGoldenDialog {
 	return keyGoldenDialog{
-		name:   name,
-		serial: true, // setup writes the package-level elevateReply
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""
-			elevateReply = make(chan ops.PermissionAnswer, 1)
-			app.elevate.wait = &elevateWait{id: 1, reply: elevateReply}
+			reply := make(chan ops.PermissionAnswer, 1)
+			elevateReplies.set(t, app, reply)
+			app.elevate.wait = &elevateWait{id: 1, reply: reply}
 			app.applyElevateOpen(elevateOpenPayload{req: req})
 			return app
 		},
@@ -45,7 +45,7 @@ func elevateKeyDialog(name string, req ops.PermissionRequest) keyGoldenDialog {
 		open: func(app *App) bool { return app.model.ElevateDialog.Open },
 		outcome: func(app *App, _ bool) string {
 			select {
-			case ans := <-elevateReply:
+			case ans := <-elevateReplies.get(app):
 				return fmt.Sprintf("decision=%v password=%q", ans.Decision, ans.Password)
 			default:
 				return "no answer"

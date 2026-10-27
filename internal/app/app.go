@@ -139,6 +139,7 @@ type diskUsageState struct {
 // prompt serialization and per-panel connect generations, and the SFTP connect
 // dialog's target panel and host list.
 type sftpState struct {
+	touchConn          func(context.Context, pathloc.Path) error // defaults to sftpTouchConn; tests set it per App
 	mu                 sync.Mutex
 	hostKeyWait        *sftpHostKeyWait
 	passwordWait       *sftpPasswordWait
@@ -175,6 +176,10 @@ type findDialogSelectionScanNeedPayload struct {
 
 // App owns lifecycle, state, and input dispatch.
 type App struct {
+	// runExternalEditor and getenv default to the package-level externalEditorRunner and os.Getenv;
+	// tests set them per App so parallel tests never share a swapped global.
+	runExternalEditor   func(ctx context.Context, path string, elevate bool) error
+	getenv              func(string) string
 	screen              tcell.Screen
 	mouse               mouseState // see mouse.go
 	config              config.Config
@@ -577,16 +582,19 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	cmdCtx, cmdCancel := context.WithCancel(context.Background())
 	app = &App{
-		screen:         screen,
-		config:         cfg,
-		styles:         styles,
-		themes:         availableThemes,
-		paths:          resolvedPaths,
-		keys:           keys,
-		devMode:        opts.DevMode,
-		commandsCtx:    cmdCtx,
-		commandsCancel: cmdCancel,
-		workPools:      workpool.NewRegistry(poolDefs),
+		runExternalEditor: externalEditorRunner,
+		getenv:            os.Getenv,
+		sftp:              sftpState{touchConn: sftpTouchConn},
+		screen:            screen,
+		config:            cfg,
+		styles:            styles,
+		themes:            availableThemes,
+		paths:             resolvedPaths,
+		keys:              keys,
+		devMode:           opts.DevMode,
+		commandsCtx:       cmdCtx,
+		commandsCancel:    cmdCancel,
+		workPools:         workpool.NewRegistry(poolDefs),
 		model: ui.Model{
 			Primary:                    left,
 			Secondary:                  right,

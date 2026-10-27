@@ -47,12 +47,10 @@ func TestOpenUserMenuCreatesStubWhenMissing(t *testing.T) {
 	app := testUserMenuApp(t, dir, cfgDir)
 
 	var edited []string
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		edited = append(edited, path)
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.openUserMenu()
 
@@ -87,12 +85,10 @@ command = "true"
 	app := testUserMenuApp(t, dir, cfgDir)
 
 	var edited []string
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		edited = append(edited, path)
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.editUserMenu()
 
@@ -117,13 +113,11 @@ func TestOpenUserMenuInvalidFileCritical(t *testing.T) {
 
 	app := testUserMenuApp(t, dir, cfgDir)
 
-	prev := externalEditorRunner
 	var called bool
-	externalEditorRunner = func(_ context.Context, _ string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, _ string, _ bool) error {
 		called = true
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.openUserMenu()
 
@@ -154,13 +148,11 @@ func TestOpenUserMenuExistingStubNoEditor(t *testing.T) {
 
 	app := testUserMenuApp(t, dir, cfgDir)
 
-	prev := externalEditorRunner
 	var called bool
-	externalEditorRunner = func(_ context.Context, _ string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, _ string, _ bool) error {
 		called = true
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.openUserMenu()
 
@@ -192,16 +184,14 @@ command = "true"
 
 	app := testUserMenuApp(t, dir, cfgDir)
 
-	prev := externalEditorRunner
 	var mu sync.Mutex
 	called := false
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		mu.Lock()
 		called = true
 		mu.Unlock()
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.openUserMenu()
 

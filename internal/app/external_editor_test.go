@@ -28,12 +28,10 @@ func TestEditActiveFileRejectsDirectory(t *testing.T) {
 			break
 		}
 	}
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		t.Fatalf("editor should not run for directory, got %q", path)
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 	app.editActiveFile()
 }
 
@@ -54,12 +52,10 @@ func TestEditActiveFileOpensEditorForFile(t *testing.T) {
 	}
 
 	var edited string
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		edited = path
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.editActiveFile()
 	if edited != filePath {
@@ -85,12 +81,10 @@ func TestEditFullscreenPreviewFileReturnsToBrowser(t *testing.T) {
 	app.commandsMu.Unlock()
 
 	var edited string
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		edited = path
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.editFullscreenPreviewFile()
 	if edited != filePath {

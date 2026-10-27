@@ -104,6 +104,7 @@ func massRenameKeyDialog(name string, savedPatterns bool) keyGoldenDialog {
 				t.Fatal(err)
 			}
 			app := newApp(t, newScreen(t, 100, 40), harbor)
+			useFakeMassRenameEditor(app)
 			app.model.Message = ""
 			app.model.UserHomeDir = dir
 			app.config.MassRename.File = filepath.Join(dir, "patterns.toml")
@@ -144,12 +145,10 @@ func massRenameKeyDialog(name string, savedPatterns bool) keyGoldenDialog {
 	}
 }
 
-// useFakeMassRenameEditor replaces the external editor with one that prefixes every line of the
-// file, until the calling test (and its parallel scripts) finishes.
-func useFakeMassRenameEditor(t *testing.T) {
-	t.Helper()
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+// useFakeMassRenameEditor replaces app's external editor with one that prefixes every line of the
+// file.
+func useFakeMassRenameEditor(app *App) {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -160,7 +159,6 @@ func useFakeMassRenameEditor(t *testing.T) {
 		}
 		return os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644)
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 }
 
 // typeWord is the script tokens that type s one rune at a time.
@@ -177,7 +175,6 @@ func typeWord(s string) string {
 }
 
 func TestMassRenameKeyScripts(t *testing.T) {
-	useFakeMassRenameEditor(t)
 	find := typeWord("lantern")
 	repl := typeWord("harbor")
 	runKeyGoldenScripts(t, massRenameKeyDialog("mass_rename", false), []simpleKeyScript{
@@ -313,7 +310,6 @@ var (
 )
 
 func TestMassRenameSaveKeyScripts(t *testing.T) {
-	useFakeMassRenameEditor(t)
 	open := massRenameFind + " Tab " + massRenameRepl + " F5 "
 	runKeyGoldenScripts(t, massRenameKeyDialog("mass_rename_save", false), []simpleKeyScript{
 		{"open", open + "a"},
@@ -358,7 +354,6 @@ func TestMassRenameSaveKeyScripts(t *testing.T) {
 }
 
 func TestMassRenameLoadKeyScripts(t *testing.T) {
-	useFakeMassRenameEditor(t)
 	runKeyGoldenScripts(t, massRenameKeyDialog("mass_rename_load", true), massRenamePickerScripts("F2 "))
 	runKeyGoldenScripts(t, massRenameKeyDialog("mass_rename_load_empty", false), []simpleKeyScript{
 		{"defaults", "F2"},
@@ -366,7 +361,6 @@ func TestMassRenameLoadKeyScripts(t *testing.T) {
 }
 
 func TestMassRenameHistoryKeyScripts(t *testing.T) {
-	useFakeMassRenameEditor(t)
 	// The history holds the patterns applied so far in the session.
 	seed := massRenameFind + " Tab " + massRenameRepl + " Down Right Enter " +
 		"Tab " + typeWord("harbor") + " Tab " + typeWord("lantern") + " Down Right Enter "
@@ -379,7 +373,6 @@ func TestMassRenameHistoryKeyScripts(t *testing.T) {
 }
 
 func TestMassRenameOverwriteKeyScripts(t *testing.T) {
-	useFakeMassRenameEditor(t)
 	open := massRenameFind + " Tab " + massRenameRepl + " F5 F5 "
 	runKeyGoldenScripts(t, massRenameKeyDialog("mass_rename_overwrite", true), massRenamePickerScripts(open))
 }

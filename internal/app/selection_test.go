@@ -395,12 +395,10 @@ func setupSelectedStripFileFocusTest(t *testing.T) (*App, string) {
 func TestSelectedStripFileEditViaF4(t *testing.T) {
 	app, filePath := setupSelectedStripFileFocusTest(t)
 	var edited string
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		edited = path
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.dispatch(keymap.ActionFileEdit)
 	if edited != filePath {

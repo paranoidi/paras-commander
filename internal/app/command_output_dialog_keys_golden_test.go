@@ -19,7 +19,10 @@ import (
 // the finished result. The cancel func counts how often Cancel killed the run. Path fixtures are
 // created in the temp dir and shown relative to it, so no absolute temp path reaches a golden.
 
-var cmdOutCancels = map[*App]*int{}
+var cmdOutCancels perApp[*int]
+
+// cmdOutWorkDirs holds the temp dir of each script under test.
+var cmdOutWorkDirs perApp[string]
 
 func cmdOutLines(n int) []string {
 	words := []string{"amber", "birch", "cinder", "dune", "ember", "fable", "glacier", "harbor"}
@@ -67,17 +70,14 @@ func cmdOutStdout(n int, withPaths bool) string {
 // cmdOutDialog describes one scenario. mode: "running" or "queued" (streaming dialog opened with
 // a few lines) or "done" (finished result).
 func cmdOutDialog(name, mode string, lines int, withPaths bool, exit int) keyGoldenDialog {
-	var workDir string // the temp dir of the script under test (scripts run one at a time)
 	return keyGoldenDialog{
-		name:   name,
-		serial: true, // setup writes workDir and the shared cmdOutCancels map
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
-			workDir = dir
 			app := newApp(t, newScreen(t, 80, 24), dir)
 			app.model.Message = ""
 			cancels := new(int)
-			cmdOutCancels[app] = cancels
-			t.Cleanup(func() { delete(cmdOutCancels, app) })
+			cmdOutCancels.set(t, app, cancels)
+			cmdOutWorkDirs.set(t, app, dir)
 			if withPaths {
 				cmdOutPathFiles(t, dir)
 			}
@@ -105,11 +105,11 @@ func cmdOutDialog(name, mode string, lines int, withPaths bool, exit int) keyGol
 			}
 			return fmt.Sprintf("title=%q focus=%s running=%v queued=%v lines=%d scroll=%d follow=%v paths=%d cursor=%d(line %d) selected=%d cancels=%d groupselect=%v",
 				st.Title, cmdOutFocusName(st), st.Running, st.Queued, len(st.Lines), st.Scroll, st.Follow,
-				len(st.Paths), st.PathCursor, cursorLine, sel, *cmdOutCancels[app], app.model.GroupSelect.Open)
+				len(st.Paths), st.PathCursor, cursorLine, sel, *cmdOutCancels.get(app), app.model.GroupSelect.Open)
 		},
 		open: func(app *App) bool { return app.model.CommandOutputDialog.Open },
 		outcome: func(app *App, quit bool) string {
-			return fmt.Sprintf("quit=%v cancels=%d message=%q", quit, *cmdOutCancels[app], app.model.Message)
+			return fmt.Sprintf("quit=%v cancels=%d message=%q", quit, *cmdOutCancels.get(app), app.model.Message)
 		},
 		action: func(t *testing.T, app *App, tok string) {
 			switch {
@@ -124,7 +124,7 @@ func cmdOutDialog(name, mode string, lines int, withPaths bool, exit int) keyGol
 				app.commandsCtrl.ApplyWake(commandsctrl.WakePayload{OutputDialogLive: &commandsctrl.OutputDialogLive{RunID: "row1", Stdout: stdout}})
 			case tok == "@done":
 				res := cmdrun.RunResult{Stdout: []byte(cmdOutStdout(len(app.model.CommandOutputDialog.Lines)+2, withPaths))}
-				st := commandsctrl.OutputDialogResult("row1", "Build willow", res, "", "", workDir)
+				st := commandsctrl.OutputDialogResult("row1", "Build willow", res, "", "", cmdOutWorkDirs.get(app))
 				app.commandsCtrl.ApplyWake(commandsctrl.WakePayload{OpenOutputDialog: &st})
 			default:
 				t.Fatalf("bad token %q", tok)

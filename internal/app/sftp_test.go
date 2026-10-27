@@ -325,14 +325,11 @@ func TestStartSFTPConnectStaleResultDoesNotOverwrite(t *testing.T) {
 	app.config.UI.Status.MessageTTLSeconds = 0
 	app.config.SFTP.DialTimeoutSecs = 30
 
-	orig := sftpTouchConn
-	t.Cleanup(func() { sftpTouchConn = orig })
-
 	locA := pathloc.MustParse("sftp://host-a.example/")
 	locB := pathloc.MustParse("sftp://host-b.example/")
 	startedA := make(chan struct{})
 	releaseA := make(chan struct{})
-	sftpTouchConn = func(_ context.Context, loc pathloc.Path) error {
+	app.sftp.touchConn = func(_ context.Context, loc pathloc.Path) error {
 		if strings.Contains(loc.String(), "host-a.example") {
 			close(startedA)
 			<-releaseA
@@ -369,14 +366,11 @@ func TestSFTPConnectGenerationIsPerPanel(t *testing.T) {
 	app.config.UI.Status.MessageTTLSeconds = 0
 	app.config.SFTP.DialTimeoutSecs = 30
 
-	orig := sftpTouchConn
-	t.Cleanup(func() { sftpTouchConn = orig })
-
 	locA := pathloc.MustParse("sftp://host-a.example/")
 	locB := pathloc.MustParse("sftp://host-b.example/")
 	startedA := make(chan struct{})
 	releaseA := make(chan struct{})
-	sftpTouchConn = func(_ context.Context, loc pathloc.Path) error {
+	app.sftp.touchConn = func(_ context.Context, loc pathloc.Path) error {
 		if strings.Contains(loc.String(), "host-a.example") {
 			close(startedA)
 			<-releaseA

@@ -50,6 +50,7 @@ type sftpConnectPayload struct {
 	gen     uint64
 }
 
+// sftpTouchConn is the default for sftpState.touchConn.
 var sftpTouchConn = sftpb.TouchConn
 
 func (s *sftpState) ensurePromptSem() chan struct{} {
@@ -143,7 +144,7 @@ func (a *App) executeSFTPConnectURI(panelID int, raw string) {
 func (a *App) startSFTPConnect(panelID int, loc pathloc.Path) {
 	gen := a.nextSFTPConnectGen(panelID)
 	a.setTransientMessage("Connecting to "+loc.Display(48)+"...", ui.MessageUrgencyInfo)
-	touch := sftpTouchConn // read on the UI goroutine: tests swap the hook
+	touch := a.sftp.touchConn
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.config.SFTP.DialTimeoutSecs)*time.Second)
 		defer cancel()

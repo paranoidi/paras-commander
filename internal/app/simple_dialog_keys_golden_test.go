@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -43,9 +44,39 @@ type keyGoldenDialog struct {
 	// settle, when set, runs after every key before the state is recorded: it drains the
 	// asynchronous work a key starts (find's ranking) so the transcript does not depend on timing.
 	settle func(t *testing.T, app *App)
-	// serial keeps the scripts off t.Parallel, for setups that call t.Setenv (forbidden in
-	// parallel tests) or share fixture state between scripts.
+	// serial keeps the scripts off t.Parallel, for setups that call t.Setenv or t.Chdir
+	// (forbidden in parallel tests).
 	serial bool
+}
+
+// perApp is fixture state keyed by the App a script built, safe for the parallel scripts of one
+// dialog to share. The zero value is ready to use.
+type perApp[T any] struct {
+	mu sync.Mutex
+	m  map[*App]T
+}
+
+// set registers v for app until t finishes.
+func (p *perApp[T]) set(t *testing.T, app *App, v T) {
+	t.Helper()
+	p.mu.Lock()
+	if p.m == nil {
+		p.m = map[*App]T{}
+	}
+	p.m[app] = v
+	p.mu.Unlock()
+	t.Cleanup(func() {
+		p.mu.Lock()
+		delete(p.m, app)
+		p.mu.Unlock()
+	})
+}
+
+// get returns app's value, or the zero value when none is registered.
+func (p *perApp[T]) get(app *App) T {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.m[app]
 }
 
 func runKeyGolden(t *testing.T, d keyGoldenDialog, keys []string) string {
@@ -393,17 +424,15 @@ func hostKeyName(st dialog.HostKeyDialogState) string {
 // hostKeyReply is the channel the dialog's decision lands on.
 type hostKeyReply = chan sftpHostKeyReply
 
-var hostKeyReplies = map[*App]hostKeyReply{}
+var hostKeyReplies perApp[hostKeyReply]
 
 var hostKeyKeyDialog = keyGoldenDialog{
-	name:   "hostkey",
-	serial: true, // setup writes the shared hostKeyReplies map
+	name: "hostkey",
 	setup: func(t *testing.T, dir string) *App {
 		app := newApp(t, newScreen(t, 80, 24), dir)
 		reply := make(hostKeyReply, 1)
 		app.sftp.hostKeyWait = &sftpHostKeyWait{id: 1, reply: reply}
-		hostKeyReplies[app] = reply
-		t.Cleanup(func() { delete(hostKeyReplies, app) })
+		hostKeyReplies.set(t, app, reply)
 		app.openHostKeyDialog(sftpb.HostKeyPrompt{
 			Host: "harbor.example.net:22", KeyType: "ssh-ed25519", Fingerprint: "tulip+meadow/harbor+lantern=willow",
 		})
@@ -411,7 +440,7 @@ var hostKeyKeyDialog = keyGoldenDialog{
 	},
 	state:   func(app *App) string { return "focus=" + hostKeyName(app.model.HostKeyDialog) },
 	open:    func(app *App) bool { return app.model.HostKeyDialog.Open },
-	outcome: func(app *App, _ bool) string { return hostKeyDecision(hostKeyReplies[app]) },
+	outcome: func(app *App, _ bool) string { return hostKeyDecision(hostKeyReplies.get(app)) },
 }
 
 func hostKeyDecision(reply hostKeyReply) string {
@@ -478,8 +507,7 @@ file = "echo meta"
 `
 
 var metaKeyDialog = keyGoldenDialog{
-	name:   "meta",
-	serial: true, // setup swaps the package-level externalEditorRunner
+	name: "meta",
 	setup: func(t *testing.T, dir string) *App {
 		cfgDir := filepath.Join(dir, "config")
 		if err := os.MkdirAll(cfgDir, 0o755); err != nil {
@@ -490,9 +518,7 @@ var metaKeyDialog = keyGoldenDialog{
 		}
 		app := testMetaDialogApp(t, dir, cfgDir)
 		app.model.Message = ""
-		prev := externalEditorRunner
-		externalEditorRunner = func(context.Context, string, bool) error { return nil }
-		t.Cleanup(func() { externalEditorRunner = prev })
+		app.runExternalEditor = func(context.Context, string, bool) error { return nil }
 		app.model.MetaDialog = dialog.MetaDialogState{
 			Open: true, PanelID: ui.PrimaryPanel,
 			Entries: []dialog.MetaEntry{

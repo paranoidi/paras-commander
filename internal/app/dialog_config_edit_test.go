@@ -83,8 +83,7 @@ file = "wc -l"
 	app := testMetaDialogApp(t, dir, cfgDir)
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
 
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		if path != metaPath {
 			t.Fatalf("editor path = %q, want %q", path, metaPath)
 		}
@@ -103,7 +102,6 @@ file = "wc -l"
 		}
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
@@ -134,8 +132,7 @@ file = "wc -l"
 		t.Fatalf("entries len = %d, want lines", len(app.model.MetaDialog.Entries))
 	}
 
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		if path != metaPath {
 			t.Fatalf("editor path = %q, want %q", path, metaPath)
 		}
@@ -147,7 +144,6 @@ file = "wc -c"
 `
 		return os.WriteFile(path, []byte(updated), 0o644)
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
@@ -181,8 +177,7 @@ command = "true"
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
 
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		if path != menuPath {
 			t.Fatalf("editor path = %q, want %q", path, menuPath)
 		}
@@ -201,7 +196,6 @@ command = "true"
 		}
 		return nil
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
@@ -232,8 +226,7 @@ command = "true"
 		t.Fatalf("items len = %d, want 1", len(app.model.LeaderMenu.Items))
 	}
 
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		if path != menuPath {
 			t.Fatalf("editor path = %q, want %q", path, menuPath)
 		}
@@ -245,7 +238,6 @@ command = "true"
 `
 		return os.WriteFile(path, []byte(updated), 0o644)
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
@@ -279,11 +271,9 @@ command = "true"
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
 
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		return os.WriteFile(path, []byte("shell_patterns = []\n"), 0o644)
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
@@ -315,11 +305,9 @@ file = "wc -l"
 	app.model.MetaDialog.Checked[0] = true
 	app.model.MetaDialog.Focus = dialog.MetaEntryID(0)
 
-	prev := externalEditorRunner
-	externalEditorRunner = func(_ context.Context, path string, _ bool) error {
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
 		return os.WriteFile(path, []byte("not valid meta\n"), 0o644)
 	}
-	t.Cleanup(func() { externalEditorRunner = prev })
 
 	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 

@@ -19,7 +19,7 @@ import (
 // directory (nofile: no config.toml yet; withfile: the default stub exists) and a fake external
 // editor that only counts its calls. Closing the dialog reports what it did to App.config.
 
-var configKeyEditorCalls = map[*App]*int{}
+var configKeyEditorCalls perApp[*int]
 
 func configFocusName(st dialog.ConfigDialogState) string {
 	id := dlg.Focused(dialog.ConfigDialogView(st, 80), st.Focus)
@@ -57,13 +57,12 @@ func configKeyOutcome(app *App, quit bool) string {
 	_, statErr := os.Stat(app.paths.ConfigFile)
 	return fmt.Sprintf("quit=%v nerd=%v zoom=%v orientation=%s mouse=%v mode=%s bar=%s format=%s split=%v editor-calls=%d file-exists=%v message=%q",
 		quit, c.UI.UseNerdfontIcons, c.UI.Zoom.ActivePanel, c.UI.Zoom.Orientation, c.UI.Mouse, c.UI.Scroll.Mode, c.UI.Scroll.Scrollbar,
-		c.Panels.DefaultListingFormat, c.Carousel.Split, *configKeyEditorCalls[app], statErr == nil, app.model.Message)
+		c.Panels.DefaultListingFormat, c.Carousel.Split, *configKeyEditorCalls.get(app), statErr == nil, app.model.Message)
 }
 
 func configKeyDialog(name string, withFile bool) keyGoldenDialog {
 	return keyGoldenDialog{
-		name:   name,
-		serial: true, // setup swaps the package-level externalEditorRunner
+		name: name,
 		setup: func(t *testing.T, dir string) *App {
 			cfgDir := filepath.Join(dir, "cfg")
 			if err := os.MkdirAll(cfgDir, 0o755); err != nil {
@@ -85,10 +84,8 @@ func configKeyDialog(name string, withFile bool) keyGoldenDialog {
 			app.config.Shell.Persistent = false
 			app.model.Message = ""
 			calls := new(int)
-			configKeyEditorCalls[app] = calls
-			prev := externalEditorRunner
-			externalEditorRunner = func(_ context.Context, _ string, _ bool) error { *calls++; return nil }
-			t.Cleanup(func() { externalEditorRunner = prev; delete(configKeyEditorCalls, app) })
+			configKeyEditorCalls.set(t, app, calls)
+			app.runExternalEditor = func(_ context.Context, _ string, _ bool) error { *calls++; return nil }
 			app.openConfigDialog()
 			return app
 		},
@@ -139,7 +136,7 @@ func TestConfigDialogKeyScripts(t *testing.T) {
 		{"input-valid-edit-ok", "Tab Tab Tab Tab Tab Tab Backspace Backspace 3 0 % Alt+o"},
 		{"input-ctrl-keys", "Tab Tab Tab Tab Ctrl+K a b Ctrl+W"},
 		{"input-ctrl-u", "Tab Tab Tab Tab Ctrl+U a"},
-		{"input-ctrl-y", "Tab Tab Tab Tab Ctrl+K Ctrl+Y"},
+		{"input-ctrl-y", "Tab Tab Tab Tab Home Ctrl+K Ctrl+Y Ctrl+Y"},
 		{"input-home-end", "Tab Tab Tab Tab Home End"},
 		{"input-restore-default", "Tab Tab Tab Tab Backspace Backspace Backspace Ctrl+L"},
 		{"f8-nofile", "F8"},
