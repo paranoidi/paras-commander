@@ -1671,8 +1671,8 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Status commands",
 			Section:      "Display",
-			DefaultKeys:  []string{"M-a"},
-			PreferredKey: "M-a",
+			DefaultKeys:  []string{"C-M-y"},
+			PreferredKey: "C-M-y",
 			Keywords:     []string{"status.toml", "menu bar", "load average", "memory", "battery"},
 		},
 

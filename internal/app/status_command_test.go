@@ -46,10 +46,10 @@ func TestStatusCommandsDialogSavesShowAndRestarts(t *testing.T) {
 	})
 	staleGen := app.statusCmdGen
 
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	app.handleKey(tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt|tcell.ModCtrl))
 	st := &app.model.StatusCommandsDialog
 	if !st.Open {
-		t.Fatal("status commands dialog not open after Alt+A")
+		t.Fatal("status commands dialog not open after Ctrl+Alt+Y")
 	}
 	if len(st.Rows) != len(statuscmds.Builtins())+2 {
 		t.Fatalf("rows = %+v, want built-ins + walnut + pebble", st.Rows)
