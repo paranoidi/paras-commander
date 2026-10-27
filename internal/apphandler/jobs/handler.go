@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"slices"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -1049,6 +1050,7 @@ type batchFlags struct {
 // applyJobEventBatch's accumulation loop.
 func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 	var f batchFlags
+	var progressed []string
 	for _, ev := range batch {
 		h.state.ApplyEvent(ev)
 		h.updateJobMessage(ev)
@@ -1063,8 +1065,8 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 			f.Terminal = true
 		case jobs.EventProgress, jobs.EventVerifyProgress:
 			f.Progress = true
-			if h.followActiveSource(ev.JobID) {
-				f.ActiveSource = true
+			if !slices.Contains(progressed, ev.JobID) {
+				progressed = append(progressed, ev.JobID)
 			}
 		case jobs.EventScanProgress:
 			f.Progress = true
@@ -1073,6 +1075,12 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 		}
 		if jobbridge.EventUpdatesMarks(ev.Type) {
 			f.MarkUpdate = true
+		}
+	}
+	// Once per job after the whole batch is applied: only its final active source matters.
+	for _, id := range progressed {
+		if h.followActiveSource(id) {
+			f.ActiveSource = true
 		}
 	}
 	return f
