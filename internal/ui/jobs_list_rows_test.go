@@ -150,3 +150,26 @@ func TestDrawJobsListPanelHighlightsActiveSource(t *testing.T) {
 		t.Fatalf("active source row = %q, want the counts then the current file", row)
 	}
 }
+
+// TestDrawJobsListPanelProgressGap: the cell before the Progress column stays unhighlighted on
+// the cursor row (job and source sub-row), so the cursor never touches the bar.
+func TestDrawJobsListPanelProgressGap(t *testing.T) {
+	screen := newOpsScreen(t)
+	screen.SetSize(90, 10)
+	rect := Rect{X: 0, Y: 0, Width: 90, Height: 9}
+	list := sourcesJobs()
+	styles := theme.Default()
+	gapX := rect.X + 2 + jobsListColPrefix + jobsListColStatus + jobsListColETA + jobsListColSpeed - 1
+	for _, sub := range []int{0, 1} { // the job row, then its first source sub-row
+		st := JobsViewState{Expanded: map[string]bool{"harbor": true}, SelectedSub: sub}
+		drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0)
+		y := 2 + sub
+		_, gap, _ := screen.Get(gapX, y)
+		_, label, _ := screen.Get(gapX-3, y)
+		_, gapBG, _ := gap.Decompose()
+		_, cursorBG, _ := label.Decompose()
+		if gapBG == cursorBG {
+			t.Errorf("row %d: gap before the progress bar has the cursor background %v", y, gapBG)
+		}
+	}
+}

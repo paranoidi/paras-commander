@@ -209,9 +209,6 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		paintAuxPanelRowMargin(screen, rect.X+1, y, lineStyle)
 		xProg := contentX + jobsListColPrefix + jobsListColStatus + jobsListColETA + jobsListColSpeed
 		barW := max(rect.X+rect.Width-1-xProg, 0) // reach the border, no trailing margin
-		// Leave a one-cell gap, unhighlighted even on the selected row, so the
-		// cyan cursor background never touches the progress bar's own colors.
-		paintAuxPanelRowMargin(screen, xProg-1, y, rowBase)
 		if r.Source != oplog.NoSource {
 			labels, ok := sourceLabels[r.Job]
 			if !ok {
@@ -220,9 +217,13 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 			}
 			last := r.Source == len(entry.Sources)-1
 			drawJobsListSourceRow(screen, contentX, y, xProg, barW, entry, r.Source, labels[r.Source], last, lineStyle, selected, chromeBlocked, styles)
-			continue
+		} else {
+			drawJobsListJobRow(screen, contentX, y, xProg, barW, entry, state.JobExpanded(entry), lineStyle, selected, styles, now)
 		}
-		drawJobsListJobRow(screen, contentX, y, xProg, barW, entry, state.JobExpanded(entry), lineStyle, selected, styles, now)
+		// Leave a one-cell gap, unhighlighted even on the selected row, so the cyan cursor
+		// background never touches the progress bar's own colors. Painted after the row: the
+		// Speed column's cell runs up to it.
+		paintAuxPanelRowMargin(screen, xProg-1, y, rowBase)
 	}
 }
 
