@@ -169,7 +169,7 @@ func drawCompareView(
 			}
 		}
 		primitive.Text(screen, contentX+leftPathW, lineY, comparePathGapCol, "", leftBase)
-		icon := compareIconCentered(compareRowIcon(styles, entry))
+		icon := compareIconCentered(compareStatusIcon(styles, entry, view.RelocatedNames))
 		primitive.Text(screen, statusX, lineY, compareStatusCol, icon, compareIconStyle(styles, entry, statusBase))
 		primitive.Text(screen, rightX-1, lineY, 1, "", rightStyle)
 		if rightPath == "" {
@@ -200,8 +200,11 @@ func drawCompareView(
 	legend := ""
 	if view.Selected >= 0 && view.Selected < len(rows) {
 		row := rows[view.Selected]
-		icon := compareRowIcon(styles, row)
+		icon := compareStatusIcon(styles, row, view.RelocatedNames)
 		legend = comparepkg.RowLegend(row, icon)
+		if side := view.RelocatedNames[row.Key()]; row.Kind == comparepkg.KindRelocated && side != comparepkg.NameDefault {
+			legend += compareNameLegend(side)
+		}
 		if row.Err != "" {
 			legend = primitive.FitPathForWidth(row.Err, rect.Width-4)
 		}
@@ -349,4 +352,26 @@ func compareRowIcon(styles theme.Theme, row comparepkg.Row) string {
 	default:
 		return styles.IconCompareError()
 	}
+}
+
+// compareStatusIcon is compareRowIcon with a Relocated row's per-row merge name choice shown
+// as an arrow pointing from the column whose path wins.
+func compareStatusIcon(styles theme.Theme, row comparepkg.Row, names map[comparepkg.RowKey]comparepkg.NameSide) string {
+	if row.Kind == comparepkg.KindRelocated {
+		switch names[row.Key()] {
+		case comparepkg.NamePrimary:
+			return styles.IconCompareNameLeft()
+		case comparepkg.NameSecondary:
+			return styles.IconCompareNameRight()
+		}
+	}
+	return compareRowIcon(styles, row)
+}
+
+// compareNameLegend is the legend suffix naming the column whose path a merge gives the row.
+func compareNameLegend(side comparepkg.NameSide) string {
+	if side == comparepkg.NamePrimary {
+		return "; merge uses the left name"
+	}
+	return "; merge uses the right name"
 }

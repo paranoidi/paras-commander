@@ -300,6 +300,10 @@ func compareMergeName(st dialog.CompareMergeDialogState) string {
 		return "copy"
 	case dialog.CompareMergeMove:
 		return "move"
+	case dialog.CompareMergeKeepName:
+		return "keep-name"
+	case dialog.CompareMergeSrcName:
+		return "source-name"
 	case dlg.OK:
 		return "ok"
 	case dlg.Cancel:
@@ -323,14 +327,15 @@ func compareMergeKeyDialog(name string, primary, secondary string) keyGoldenDial
 				{Kind: comparepkg.KindPrimaryOnly, PrimaryRel: "lantern.txt", Size: 1 << 20},
 				{Kind: comparepkg.KindSecondaryOnly, SecondaryRel: "anchor.txt", Size: 2 << 20},
 				{Kind: comparepkg.KindContentDiff, PrimaryRel: "marble.txt", SecondaryRel: "marble.txt", Size: 3 << 20},
+				{Kind: comparepkg.KindRelocated, PrimaryRel: "harbor/compass.txt", SecondaryRel: "compass.txt", Size: 4 << 20},
 			}
 			app.compareCtrl.OpenMergeDialog()
 			return app
 		},
 		state: func(app *App) string {
 			st := app.model.CompareMergeDialog
-			return fmt.Sprintf("focus=%s direction=%v missing=%v modified=%v move=%v preview=%q message=%q",
-				compareMergeName(st), st.Direction, st.CopyMissing, st.CopyModified, st.MoveMode, st.PreviewText, app.model.Message)
+			return fmt.Sprintf("focus=%s direction=%v missing=%v modified=%v move=%v source-names=%v preview=%q message=%q",
+				compareMergeName(st), st.Direction, st.CopyMissing, st.CopyModified, st.MoveMode, st.RelocatedUseSource, st.PreviewText, app.model.Message)
 		},
 		open: func(app *App) bool { return app.model.CompareMergeDialog.Open },
 		outcome: func(app *App, _ bool) string {
@@ -343,25 +348,26 @@ func TestCompareMergeKeyScripts(t *testing.T) {
 	scripts := []simpleKeyScript{
 		{"space-all-rows", "Space Down Space Down Space Down Space Down Space Down Space Down Space Down Space"},
 		{"enter-items", "Enter Down Enter Down Enter Down Enter Down Enter Down Enter"},
-		{"enter-ok", "Tab Tab Tab Enter"},
-		{"enter-cancel", "Tab Tab Tab Right Enter"},
-		{"space-ok", "Tab Tab Tab Space"},
-		{"space-cancel", "Tab Tab Tab Right Space"},
-		{"mnemonics", "Alt+l Alt+r Alt+m Alt+f Alt+k Alt+d Alt+L Alt+M"},
+		{"enter-ok", "Tab Tab Tab Tab Enter"},
+		{"enter-cancel", "Tab Tab Tab Tab Right Enter"},
+		{"space-ok", "Tab Tab Tab Tab Space"},
+		{"space-cancel", "Tab Tab Tab Tab Right Space"},
+		{"mnemonics", "Alt+l Alt+r Alt+m Alt+f Alt+k Alt+d Alt+s Alt+e Alt+L Alt+M"},
 		{"mnemonics-from-items", "Down Down Alt+d Alt+l Alt+m"},
-		{"mnemonics-from-buttons", "Tab Tab Tab Alt+m Alt+d Right Alt+r"},
+		{"mnemonics-from-buttons", "Tab Tab Tab Tab Alt+m Alt+d Right Alt+r"},
 		{"plain-letters", "l r m f k d x"},
-		{"plain-letters-on-buttons", "Tab Tab Tab o c l r"},
+		{"plain-letters-on-buttons", "Tab Tab Tab Tab o c l r"},
 		{"mnemonic-unknown", "Alt+x Alt+q Down"},
-		{"toggles-then-ok", "Alt+f Alt+d Alt+r Tab Tab Tab Enter"},
+		{"toggles-then-ok", "Alt+f Alt+d Alt+r Tab Tab Tab Tab Enter"},
 		{"alt-o", "Alt+m Alt+o"},
 		{"alt-c", "Alt+m Alt+c"},
 		{"alt-enter", "Alt+m Alt+Enter"},
 		{"esc", "Alt+m Esc"},
-		{"esc-from-button", "Tab Tab Tab Right Esc"},
+		{"esc-from-button", "Tab Tab Tab Tab Right Esc"},
+		{"source-names-then-ok", "Alt+s Tab Enter"},
 	}
 	runKeyGoldenScripts(t, compareMergeKeyDialog("compare_merge", "/home/alice/projects/harbor/orchard", "/home/alice/projects/harbor/willow/meadow"), scripts)
 	runKeyGoldenScripts(t, compareMergeKeyDialog("compare_merge_plain", "/srv/orchard", "/mnt/willow"), []simpleKeyScript{
-		{"toggle-and-ok", "Space Down Space Tab Tab Enter"},
+		{"toggle-and-ok", "Space Down Space Tab Tab Tab Enter"},
 	})
 }

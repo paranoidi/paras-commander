@@ -1,16 +1,18 @@
 == open ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == Alt+f ==
-focus=modified direction=0 missing=true modified=false move=false preview="Preview: 1 to copy (1 MiB)" message=""
+focus=modified direction=0 missing=true modified=false move=false source-names=false preview="Preview: 1 to copy (1 MiB)" message=""
 == Alt+d ==
-focus=move direction=0 missing=true modified=false move=true preview="Preview: 1 to move (1 MiB)" message=""
+focus=move direction=0 missing=true modified=false move=true source-names=false preview="Preview: 1 to move (1 MiB)" message=""
 == Alt+r ==
-focus=right direction=0 missing=true modified=false move=true preview="Preview: 1 to move (1 MiB)" message=""
+focus=right direction=0 missing=true modified=false move=true source-names=false preview="Preview: 1 to move (1 MiB)" message=""
 == Tab ==
-focus=missing direction=0 missing=true modified=false move=true preview="Preview: 1 to move (1 MiB)" message=""
+focus=missing direction=0 missing=true modified=false move=true source-names=false preview="Preview: 1 to move (1 MiB)" message=""
 == Tab ==
-focus=copy direction=0 missing=true modified=false move=true preview="Preview: 1 to move (1 MiB)" message=""
+focus=copy direction=0 missing=true modified=false move=true source-names=false preview="Preview: 1 to move (1 MiB)" message=""
 == Tab ==
-focus=ok direction=0 missing=true modified=false move=true preview="Preview: 1 to move (1 MiB)" message=""
+focus=keep-name direction=0 missing=true modified=false move=true source-names=false preview="Preview: 1 to move (1 MiB)" message=""
+== Tab ==
+focus=ok direction=0 missing=true modified=false move=true source-names=false preview="Preview: 1 to move (1 MiB)" message=""
 == Enter ==
 CLOSED: message="Merge queued (1 moves)"

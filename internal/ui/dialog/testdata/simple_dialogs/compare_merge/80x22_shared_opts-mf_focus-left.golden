@@ -1,5 +1,4 @@
 -- text --
-                                                                                
      ┌────────────────────────────── Merge ───────────────────────────────┐     
      │ Destination:                                                       │     
      │ Shared: ~/projects/harbor                                          │     
@@ -16,11 +15,12 @@
      │ (*) Copy (keep source files)                                       │     
      │ ( ) Move (delete source after transfer)                            │     
      ├────────────────────────────────────────────────────────────────────┤     
-     │ Preview: 12 to copy (3.4 MiB)                                      │     
+     │ Relocated files:                                                   │     
+     │ (*) Keep destination names                                         │     
+     │ ( ) Rename to source names                                         │     
      ├────────────────────────────────────────────────────────────────────┤     
      │                        [ OK ]    [ Cancel ]                        │     
      └────────────────────────────────────────────────────────────────────┘     
-                                                                                
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
 b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
@@ -30,7 +30,6 @@ e fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 f fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 g fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
@@ -48,7 +47,8 @@ aaaaabeeeeeeeeeeeceeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaaabeeeeeeceeeeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
+aaaaabbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbfffgffffbbfffgffffffffbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

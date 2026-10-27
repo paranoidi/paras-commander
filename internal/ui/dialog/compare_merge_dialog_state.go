@@ -9,12 +9,15 @@ import (
 type CompareMergeDialogState struct {
 	Open bool
 	// Focus is the focused widget (the CompareMerge* IDs, dlg.OK or dlg.Cancel); empty is the first.
-	Focus         dlg.ID
-	Direction     comparepkg.MergeDirection
-	CopyMissing   bool
-	CopyModified  bool
-	MoveMode      bool
-	PrimaryPath   string
-	SecondaryPath string
-	PreviewText   string
+	Focus        dlg.ID
+	Direction    comparepkg.MergeDirection
+	CopyMissing  bool
+	CopyModified bool
+	MoveMode     bool
+	// RelocatedUseSource renames the destination's copy of each Relocated row to the source's
+	// path (rows with a per-file name choice in the Compare view override it).
+	RelocatedUseSource bool
+	PrimaryPath        string
+	SecondaryPath      string
+	PreviewText        string
 }

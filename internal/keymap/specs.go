@@ -647,6 +647,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "t",
 		},
 		{
+			ID:          ActionCompareRelocatedName,
+			Views:       HelpCompare,
+			Title:       "Merge relocated file with this column's name",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"relocated", "rename", "name", "merge", "moved"},
+			LeaderKey:   "N",
+		},
+		{
 			ID:          ActionDedupClose,
 			Views:       HelpDedup,
 			Title:       "Close view",

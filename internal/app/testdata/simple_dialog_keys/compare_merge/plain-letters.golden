@@ -1,16 +1,16 @@
 == open ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == l ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == r ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == m ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == f ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == k ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == d ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""
 == x ==
-focus=left direction=0 missing=true modified=true move=false preview="Preview: 2 to copy (4 MiB)" message=""
+focus=left direction=0 missing=true modified=true move=false source-names=false preview="Preview: 2 to copy (4 MiB)" message=""

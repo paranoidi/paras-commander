@@ -1438,3 +1438,20 @@ func newTestPanel(t *testing.T, dir string, filenames ...string) panel.State {
 	}
 	return p
 }
+
+// TestCopyToFileTargetCreatesMissingParent: a single file copied onto a new file path whose
+// directory does not exist (compare merge's missing files) lands at that path.
+func TestCopyToFileTargetCreatesMissingParent(t *testing.T) {
+	root := t.TempDir()
+	src := filepath.Join(root, "lantern.txt")
+	if err := os.WriteFile(src, []byte("glow"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(root, "harbor", "dock", "lantern.txt")
+	if _, _, err := ExecuteCopy(context.Background(), MustPaths(src), MustPath(dst), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, nil, nil); err != nil {
+		t.Fatalf("ExecuteCopy: %v", err)
+	}
+	if got := readFileContent(t, dst); got != "glow" {
+		t.Fatalf("dest = %q, want glow", got)
+	}
+}

@@ -139,6 +139,11 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 			a.compareCtrl.ToggleIgnoreEmpty()
 		}
 		return true
+	case keymap.ActionCompareRelocatedName:
+		if a.model.ViewMode == ui.ViewCompare {
+			a.compareCtrl.ToggleRelocatedName()
+		}
+		return true
 	default:
 		return false
 	}

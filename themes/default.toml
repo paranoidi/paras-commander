@@ -450,3 +450,5 @@ secondary_only = ">"
 content_diff = "\u2260"
 pending = "\U000f02ca"
 error = "!"
+name_left = "\u2192"    # relocated row whose merge takes the left path (compare.relocated-name)
+name_right = "\u2190"   # relocated row whose merge takes the right path

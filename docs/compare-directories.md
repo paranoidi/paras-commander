@@ -33,7 +33,8 @@ Files are compared in parallel (`hash_concurrency`); rows show Pending or Hashin
 | `Alt+F` | `compare.filter-dialog`: filter by name, see [Panel filter](panel-filter.md#compare-view) |
 | `Alt+E` | `compare.toggle-empty` |
 | `Alt+R` | `compare.refresh`: rescan, keeping cursor and filters |
-| `F5` | `compare.merge`: merge dialog: choose the destination side and optionally delete duplicates; runs as jobs |
+| `F5` | `compare.merge`: merge dialog, see [Merge](#merge) |
+| `Alt+N` | `compare.relocated-name`: choose the focused column's name for a relocated file when merging; press again to drop the choice |
 | `F8` | delete the focused column's file(s) |
 | `Esc` | `compare.close` |
 
@@ -42,6 +43,18 @@ Files are compared in parallel (`hash_concurrency`); rows show Pending or Hashin
 Selection acts on the focused column's panel: `Insert` / `Space` toggle the row's path, `Alt+K` selects a range, `*` inverts, `Ctrl+U` clears. `+` and `-` open the category dialog in select or unselect mode, choosing every visible row of the ticked classes (including one-sided classes). Selections persist in the panels after leaving the view and feed copy, move and delete as usual ([Selections](selections.md)).
 
 Because delete in the view acts on the whole panel selection, opening Compare (from the panels or from Find duplicates) while either panel has selected paths first asks what to do with the selection: **Drop** clears it, **Stash** (the default) moves it into each panel's stash (merging with a stash already there) so `panel.stash-toggle` brings it back later, and **Cancel** leaves the selection and does not open Compare. Deleted files drop out of the results without a rescan.
+
+## Merge
+
+`F5` opens the merge dialog. Pick the destination side (left or right); the other side is the source. Merge acts on the selected rows of either panel, or on every visible row when nothing is selected, and runs as jobs.
+
+- **Transfer**: copy files missing from the destination, and files whose content differs (overwriting asks through the usual [conflict](jobs.md) prompt).
+- **Operation**: copy, or move (delete the source after transfer).
+- **Relocated files**: a relocated file already exists in the destination under a different path. *Keep destination names* leaves it alone; *Rename to source names* renames the destination's copy to the source's path inside the destination tree (no data is copied, missing directories are created).
+
+To decide per file, put the cursor on a relocated row, focus the column whose name should win and press `Alt+N` (`compare.relocated-name`, Actions menu, Name from this column). The row's icon turns into an arrow pointing away from the winning column (`→` left name, `←` right name) and the legend says which name merge uses; pressing it again in the same column returns the row to the dialog's choice. Per-file choices override the dialog and survive a refresh.
+
+The preview line counts the files to copy or move and the files to rename.
 
 ## Options
 

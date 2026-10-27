@@ -15,12 +15,26 @@ const (
 	MergeTowardPrimary
 )
 
+// NameSide picks the compare column whose relative path a Relocated row's file takes on merge.
+type NameSide int
+
+const (
+	NameDefault   NameSide = iota // follow MergeOptions.RelocatedUseSource
+	NamePrimary                   // the primary (left) column's path
+	NameSecondary                 // the secondary (right) column's path
+)
+
 // MergeOptions configures merge plan generation.
 type MergeOptions struct {
 	Direction    MergeDirection
 	CopyMissing  bool
 	CopyModified bool
 	MoveMode     bool
+	// RelocatedUseSource renames the destination's copy of each Relocated row to the source
+	// side's path; false keeps the destination's name (nothing to do).
+	RelocatedUseSource bool
+	// RelocatedNames overrides RelocatedUseSource per row (absent or NameDefault: follow it).
+	RelocatedNames map[RowKey]NameSide
 }
 
 // MergeCopyItem is one file copy in a merge plan.
@@ -29,9 +43,12 @@ type MergeCopyItem struct {
 	Dst string
 }
 
-// MergePlan is the resolved copy/move operations for a merge.
+// MergePlan is the resolved copy/move operations for a merge. Renames move a Relocated row's
+// destination file to the source's relative path inside the destination tree; MoveMode does
+// not apply to them.
 type MergePlan struct {
 	Copies     []MergeCopyItem
+	Renames    []MergeCopyItem
 	TotalBytes int64
 }
 
@@ -56,8 +73,11 @@ func BuildMergePlan(snap Snapshot, rows []Row, in MergeInput, opts MergeOptions)
 		if err := appendMergeCopies(&plan, snap, row, opts); err != nil {
 			return MergePlan{}, err
 		}
+		if err := appendMergeRename(&plan, snap, row, opts); err != nil {
+			return MergePlan{}, err
+		}
 	}
-	if len(plan.Copies) == 0 {
+	if len(plan.Copies) == 0 && len(plan.Renames) == 0 {
 		return MergePlan{}, fmt.Errorf("nothing to do with current options")
 	}
 	return plan, nil
@@ -155,32 +175,46 @@ func appendMergeCopies(plan *MergePlan, snap Snapshot, row Row, opts MergeOption
 			return err
 		}
 		plan.addCopy(src, dst.String(), row.Size)
-	case KindRelocated:
-		if !opts.CopyMissing {
-			return nil
-		}
-		if opts.Direction == MergeTowardSecondary {
-			src, err := rowPrimaryAbs(snap, row)
-			if err != nil {
-				return err
-			}
-			dst, err := JoinRel(snap.SecondaryRoot, row.SecondaryRel)
-			if err != nil {
-				return err
-			}
-			plan.addCopy(src, dst.String(), row.Size)
-			return nil
-		}
-		src, err := rowSecondaryAbs(snap, row)
-		if err != nil {
-			return err
-		}
-		dst, err := JoinRel(snap.PrimaryRoot, row.PrimaryRel)
-		if err != nil {
-			return err
-		}
-		plan.addCopy(src, dst.String(), row.Size)
 	}
+	return nil
+}
+
+// RelocatedNameSide resolves which side's path a Relocated row's file takes when merging in
+// direction: the row's override, else the source side when useSource, else the destination.
+func RelocatedNameSide(row Row, direction MergeDirection, useSource bool, names map[RowKey]NameSide) NameSide {
+	if side := names[row.Key()]; side != NameDefault {
+		return side
+	}
+	sourceIsPrimary := direction == MergeTowardSecondary
+	if useSource == sourceIsPrimary {
+		return NamePrimary
+	}
+	return NameSecondary
+}
+
+// appendMergeRename adds the in-destination rename for a Relocated row whose resolved name
+// side is the source; a row keeping the destination's name needs nothing.
+func appendMergeRename(plan *MergePlan, snap Snapshot, row Row, opts MergeOptions) error {
+	if row.Kind != KindRelocated {
+		return nil
+	}
+	side := RelocatedNameSide(row, opts.Direction, opts.RelocatedUseSource, opts.RelocatedNames)
+	root, from, to := snap.SecondaryRoot, row.SecondaryRel, row.PrimaryRel
+	if opts.Direction == MergeTowardPrimary {
+		root, from, to = snap.PrimaryRoot, row.PrimaryRel, row.SecondaryRel
+	}
+	if (side == NamePrimary) == (opts.Direction == MergeTowardPrimary) {
+		return nil // the destination's own name wins
+	}
+	src, err := JoinRel(root, from)
+	if err != nil {
+		return err
+	}
+	dst, err := JoinRel(root, to)
+	if err != nil {
+		return err
+	}
+	plan.Renames = append(plan.Renames, MergeCopyItem{Src: src.String(), Dst: dst.String()})
 	return nil
 }
 
@@ -211,13 +245,13 @@ func rowSecondaryAbs(snap Snapshot, row Row) (string, error) {
 	return filepath.Clean(loc.String()), nil
 }
 
-// PreviewMergePlan returns counts for dialog preview without error on empty plan.
-func PreviewMergePlan(snap Snapshot, rows []Row, in MergeInput, opts MergeOptions) (copies int, bytes int64) {
+// PreviewMergePlan returns the plan for the dialog preview, empty instead of an error.
+func PreviewMergePlan(snap Snapshot, rows []Row, in MergeInput, opts MergeOptions) MergePlan {
 	plan, err := BuildMergePlan(snap, rows, in, opts)
 	if err != nil {
-		return 0, 0
+		return MergePlan{}
 	}
-	return len(plan.Copies), plan.TotalBytes
+	return plan
 }
 
 // CopyDestinationDir returns the parent directory to pass as a copy job destination.
