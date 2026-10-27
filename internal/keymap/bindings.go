@@ -37,6 +37,11 @@ func (m *Map) ActionBindings() []Binding {
 	if m == nil {
 		return nil
 	}
+	m.bindingsOnce.Do(func() { m.bindings = m.buildActionBindings() })
+	return slices.Clone(m.bindings)
+}
+
+func (m *Map) buildActionBindings() []Binding {
 	// Collect unique action order first.
 	seen := make(map[string]bool)
 	var actionOrder []string

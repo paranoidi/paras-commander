@@ -243,6 +243,7 @@ func (c videoPNGCache) SnapshotInFlight() []string                        { retu
 // encode exceeds tmux's sixel byte cap: it must shrink (or fall back with an explicit
 // "too large for tmux" caption), same as stills — not silently drop the image.
 func TestRunMediaThumbsSixelUnderTmuxShrinksToFit(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "grid.png")
 	writeNoisyTestPNG(t, path, 700, 700)

@@ -126,6 +126,7 @@ func writeNoisyTestPNG(t *testing.T, path string, w, h int) {
 }
 
 func TestRunImageSixelUnderTmuxUsesSmallerPalette(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "noisy.png")
 	writeNoisyTestPNG(t, path, 300, 300)
@@ -159,6 +160,7 @@ func TestRunImageSixelUnderTmuxUsesSmallerPalette(t *testing.T) {
 }
 
 func TestRunImageSixelUnderTmuxShrinksToFit(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "huge-noisy.png")
 	// Large enough and noisy enough that the initial fit-to-panel-budget encode at 700x700
@@ -193,6 +195,7 @@ func TestRunImageSixelUnderTmuxShrinksToFit(t *testing.T) {
 }
 
 func TestShrinkSixelForTmuxFailsAtFloor(t *testing.T) {
+	t.Parallel()
 	img := image.NewRGBA(image.Rect(0, 0, 700, 700))
 	for y := 0; y < 700; y++ {
 		for x := 0; x < 700; x++ {

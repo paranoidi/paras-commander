@@ -176,6 +176,7 @@ func TestRunImageRenderCacheIsolatesDistinctBoxes(t *testing.T) {
 // TestRunImageRenderCacheKeepsShrunkTmuxPayload confirms the tmux-sixel shrink-retry result —
 // not the pre-shrink oversized encode — is what gets cached and re-served on a second visit.
 func TestRunImageRenderCacheKeepsShrunkTmuxPayload(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "cascade.png")
 	// Large and noisy enough that the initial fit-to-panel-budget encode overflows

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/BurntSushi/toml"
 	"github.com/gdamore/tcell/v2"
@@ -1264,10 +1265,21 @@ func Default() Theme {
 	return value
 }
 
+// ponytail: cached Themes share their inner maps (Icons, PanelFileIconFG); callers treat them read-only.
+var (
+	builtInCacheMu sync.Mutex
+	builtInCache   = map[string]Theme{}
+)
+
 // LoadBuiltIn loads one embedded built-in theme by stable name.
 func LoadBuiltIn(name string) (Theme, error) {
 	if strings.TrimSpace(name) == "" {
 		return Theme{}, fmt.Errorf("theme name is required")
+	}
+	builtInCacheMu.Lock()
+	defer builtInCacheMu.Unlock()
+	if t, ok := builtInCache[name]; ok {
+		return t, nil
 	}
 	data, err := themes.Files.ReadFile(name + ".toml")
 	if err != nil {
@@ -1280,6 +1292,7 @@ func LoadBuiltIn(name string) (Theme, error) {
 	if value.Name != name {
 		return Theme{}, fmt.Errorf("load built-in theme %q: file declares name %q", name, value.Name)
 	}
+	builtInCache[name] = value
 	return value, nil
 }
 

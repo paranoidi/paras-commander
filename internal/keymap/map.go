@@ -3,6 +3,7 @@ package keymap
 import (
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -10,6 +11,9 @@ import (
 // Map resolves key events to action IDs.
 type Map struct {
 	keyToAction map[Chord]string
+
+	bindingsOnce sync.Once
+	bindings     []Binding
 }
 
 // Lookup returns the bound action ID for event, if any.

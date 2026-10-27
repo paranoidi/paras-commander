@@ -12,6 +12,7 @@ import (
 )
 
 func TestExtractFramePNGAndMediaThumbs(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
 		t.Skip("ffmpeg not on PATH")
 	}
