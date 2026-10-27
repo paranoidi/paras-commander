@@ -25,6 +25,7 @@ Many combinations don't reach the app. Known traps:
 - **Ctrl+Enter** is indistinguishable from Enter; **Shift+Enter** needs kitty-protocol terminals (works via tcell CSI-u).
 - **Shift+Alt+comma** may arrive as **Alt+;** — provide both when relevant (see `panel.meta-edit`).
 - **Ctrl+C / Ctrl+Space / Ctrl+O** may be intercepted by terminal or shell settings.
+- **Ctrl+Alt+Space** arrives as legacy `ESC NUL` without CSI-u (always under tmux 3.4); tcell decodes that as Alt+Ctrl+'`', which `CanonicalChord` folds back to Ctrl+Space with Alt.
 - Probe tests in `internal/keymap/*_probe_test.go` document tcell chord behavior — check them before inventing a chord.
 
 If the requested chord is already taken in that context, pick a reasonable alternative and **tell the user** (repo CLAUDE.md rule).

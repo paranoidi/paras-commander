@@ -2,6 +2,7 @@ package subshell
 
 import (
 	"fmt"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -17,6 +18,11 @@ func EncodeKey(ev *tcell.EventKey, appCursor bool) []byte {
 
 	switch ev.Key() {
 	case tcell.KeyRune:
+		if mod&tcell.ModCtrl != 0 {
+			if c, ok := ctrlRuneByte(ev.Rune()); ok {
+				return withAlt(alt, c)
+			}
+		}
 		b := []byte(string(ev.Rune()))
 		if alt {
 			return append([]byte{0x1b}, b...)
@@ -87,6 +93,21 @@ func EncodeKey(ev *tcell.EventKey, appCursor bool) []byte {
 	}
 
 	return nil
+}
+
+// ctrlRuneByte maps a Ctrl-modified rune event to its C0 control byte. tcell reports
+// CSI-u Ctrl+letter as the plain letter with ModCtrl, and its legacy ESC+C0 path
+// (Alt+Ctrl+letter, e.g. under tmux 3.4) adds 0x60 to the control byte, so ESC NUL
+// arrives as Alt+Ctrl+'`'.
+func ctrlRuneByte(r rune) (byte, bool) {
+	r = unicode.ToLower(r)
+	switch {
+	case r == ' ' || r == '`':
+		return 0, true
+	case r >= 'a' && r <= 'z':
+		return byte(r - 'a' + 1), true
+	}
+	return 0, false
 }
 
 // withAlt returns b, prefixed with ESC when alt is set.

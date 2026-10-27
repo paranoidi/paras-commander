@@ -21,6 +21,11 @@ func TestEncodeKey(t *testing.T) {
 
 		{"ctrl c", tcell.KeyCtrlC, 0, tcell.ModCtrl, false, "\x03"},
 		{"alt ctrl letter", tcell.KeyCtrlC, 0, tcell.ModCtrl | tcell.ModAlt, false, "\x1b\x03"},
+		{"ctrl rune letter", tcell.KeyRune, 'c', tcell.ModCtrl, false, "\x03"},
+		{"alt ctrl rune letter", tcell.KeyRune, 'a', tcell.ModCtrl | tcell.ModAlt, false, "\x1b\x01"},
+		{"alt ctrl space", tcell.KeyRune, ' ', tcell.ModCtrl | tcell.ModAlt, false, "\x1b\x00"},
+		{"alt ctrl backtick (legacy ESC NUL)", tcell.KeyRune, '`', tcell.ModCtrl | tcell.ModAlt, false, "\x1b\x00"},
+		{"ctrl rune digit", tcell.KeyRune, '1', tcell.ModCtrl, false, "1"},
 
 		{"enter", tcell.KeyEnter, 0, tcell.ModNone, false, "\r"},
 		{"tab", tcell.KeyTab, 0, tcell.ModNone, false, "\t"},

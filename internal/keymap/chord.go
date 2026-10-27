@@ -120,7 +120,9 @@ func CanonicalChord(ch Chord) Chord {
 			Mod:  mod &^ tcell.ModCtrl,
 		}
 	}
-	if r == ' ' {
+	// tcell's legacy ESC+C0 path adds 0x60 to the control byte, so Alt+Ctrl+Space (ESC NUL, as
+	// tmux 3.4 always delivers it) arrives as Alt+Ctrl+'`'.
+	if r == ' ' || r == '`' {
 		return Chord{
 			Key:  tcell.KeyCtrlSpace,
 			Rune: 0,
