@@ -92,11 +92,11 @@ const (
 	rootDone
 )
 
-// rootPhase is the phase of source src's roots. Roots outside every source (src < 0), jobs
-// that are not active, single-source jobs and jobs before their first source started mark
-// every root active.
-func (j JobPathMark) rootPhase(src int32) rootPhase {
-	if src < 0 || j.ActiveSource < 0 || int(src) >= len(j.SourcePhases) || !jobs.Status(j.Status).IsActive() {
+// rootPhase is the phase of source src's roots. A nil mark, roots outside every source
+// (src < 0), jobs that are not active, single-source jobs and jobs before their first source
+// started mark every root active.
+func (j *JobPathMark) rootPhase(src int32) rootPhase {
+	if j == nil || src < 0 || j.ActiveSource < 0 || int(src) >= len(j.SourcePhases) || !jobs.Status(j.Status).IsActive() {
 		return rootActive
 	}
 	switch j.SourcePhases[src] {

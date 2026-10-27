@@ -93,23 +93,17 @@ func walkRoots(absPath string, hit func(path string) bool) {
 
 // rootMatch returns the length of the longest source or destination root containing absPath,
 // whether that root is a destination (destinations win when both match at the same depth) and
-// whether it is a pending source, or (0, false, false) when nothing matches. phase (nil marks
-// every root active) drops done roots and pending destinations; the walk then continues to
-// the outer roots.
-func (idx *jobPathIndex) rootMatch(absPath string, phase func(int32) rootPhase) (maxLen int, isDest, pending bool) {
-	phaseOf := func(src int32) rootPhase {
-		if phase == nil {
-			return rootActive
-		}
-		return phase(src)
-	}
+// whether it is a pending source, or (0, false, false) when nothing matches. m's phases (nil
+// marks every root active, JobPathMark.rootPhase) drop done roots and pending destinations; the
+// walk then continues to the outer roots.
+func (idx *jobPathIndex) rootMatch(absPath string, m *JobPathMark) (maxLen int, isDest, pending bool) {
 	walkRoots(absPath, func(s string) bool {
-		if src, ok := idx.dests[s]; ok && phaseOf(src) == rootActive {
+		if src, ok := idx.dests[s]; ok && m.rootPhase(src) == rootActive {
 			maxLen, isDest = len(s), true
 			return true
 		}
 		if src, ok := idx.sources[s]; ok {
-			if p := phaseOf(src); p != rootDone {
+			if p := m.rootPhase(src); p != rootDone {
 				maxLen, isDest, pending = len(s), false, p == rootPending
 				return true
 			}
@@ -120,12 +114,12 @@ func (idx *jobPathIndex) rootMatch(absPath string, phase func(int32) rootPhase) 
 }
 
 // destMatch reports whether absPath is at or under one of the resolved destination roots whose
-// phase (nil: any) is active.
-func (idx *jobPathIndex) destMatch(absPath string, phase func(int32) rootPhase) bool {
+// phase in m (nil: any) is active.
+func (idx *jobPathIndex) destMatch(absPath string, m *JobPathMark) bool {
 	found := false
 	walkRoots(absPath, func(s string) bool {
 		src, ok := idx.dests[s]
-		found = ok && (phase == nil || phase(src) == rootActive)
+		found = ok && m.rootPhase(src) == rootActive
 		return found
 	})
 	return found
@@ -151,7 +145,7 @@ func jobTypeMarkPriority(t string) int {
 // destination root (destination preferred on equal length) and whether it is a pending source
 // (JobPathMark.rootPhase), or (0, false, false) if none.
 func longestMatchingRootLen(j JobPathMark, absPath string) (maxLen int, isDest, pending bool) {
-	return j.index().rootMatch(absPath, j.rootPhase)
+	return j.index().rootMatch(absPath, &j)
 }
 
 // JobRowMark is the best non-finished job matching a row's path, per EntryPathJobMark. Pending
@@ -281,7 +275,7 @@ func PanelInsideJobWriteTree(panelPath string, jobMarks []JobPathMark) (bool, st
 		// Every per-source resolved destination lives at-or-under j.Destination, so panelPath can
 		// only match one if it is itself at-or-under j.Destination — skip the index walk otherwise.
 		if !hit && pathloc.EqualOrUnderStrings(j.Destination, panelPath) {
-			hit = j.index().destMatch(panelPath, j.rootPhase)
+			hit = j.index().destMatch(panelPath, &j)
 		}
 		if !hit {
 			continue

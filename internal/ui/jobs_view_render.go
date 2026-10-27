@@ -221,8 +221,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 			drawJobsListJobRow(screen, contentX, y, xProg, barW, entry, state.JobExpanded(entry), lineStyle, selected, styles, now)
 		}
 		// Leave a one-cell gap, unhighlighted even on the selected row, so the cyan cursor
-		// background never touches the progress bar's own colors. Painted after the row: the
-		// Speed column's cell runs up to it.
+		// background never touches the progress bar's own colors.
 		paintAuxPanelRowMargin(screen, xProg-1, y, rowBase)
 	}
 }
@@ -265,7 +264,7 @@ func drawJobsListJobRow(screen tcell.Screen, contentX, y, xProg, barW int, entry
 	xETA := xStatus + jobsListColStatus
 	primitive.Text(screen, xETA, y, jobsListColETA, primitive.TruncateRight(formatJobETA(entry, now), 9), lineStyle)
 	xSpeed := xETA + jobsListColETA
-	primitive.Text(screen, xSpeed, y, jobsListColSpeed, primitive.TruncateRight(formatJobSpeed(entry, now), jobsListColSpeed-1), lineStyle)
+	primitive.Text(screen, xSpeed, y, jobsListColSpeed-1, primitive.TruncateRight(formatJobSpeed(entry, now), jobsListColSpeed-1), lineStyle)
 	progFill, progTrack, progLabelOnFill, progLabelOnTrack := styles.JobsProgressStyles(entry.Status)
 	drawJobsProgressBar(screen, xProg, y, barW, jobPercentDone(entry), progFill, progTrack, progLabelOnFill, progLabelOnTrack)
 }
@@ -301,7 +300,10 @@ func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int,
 	text := jobFilesPartsText(parts)
 	primitive.StyledText(screen, xProg, y, countsW, text, body, spans)
 	// The file being worked on follows the counts: " · <path under the source>".
-	if cur := jobSourceCurrentFile(entry, src); active && cur != "" {
+	if !active {
+		return
+	}
+	if cur := jobSourceCurrentFile(entry, src); cur != "" {
 		const sep = " · "
 		textW := utf8.RuneCountInString(text)
 		if room := countsW - textW - utf8.RuneCountInString(sep); room > 0 {
