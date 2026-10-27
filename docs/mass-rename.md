@@ -19,6 +19,11 @@ the conflicts are gone.
 - **External $EDITOR**: opens the names in your editor, one per line, in the same order as the preview. Keep the line count unchanged; OK stays disabled until you have saved a result, and `Enter` on the mode reopens the editor.
 - **Capitalize**: capitalizes words. **Capitalize each word** capitalizes every word, and **Treat punctuation as separators** (which turns the former on) also starts a new word after punctuation. By default only the first character of the name is capitalized, and only when it is a letter (a name starting with a digit, space or symbol is left unchanged).
 
+In every mode the preview colors the same way: in the before column, text that is dropped is
+red and text that is swapped for something else is yellow; in the after column, the new text
+is green. External $EDITOR and Capitalize work out the changed parts by comparing each old
+name with its new one character by character.
+
 **Show only modified** hides unchanged rows in the preview. **Case insensitive** applies to Simple and Regular expression matching. **Trim whitespace** strips leading and trailing whitespace from the new names.
 
 **Ignore extension** (on by default, `Alt+X`) limits Simple, Regular expression and Capitalize

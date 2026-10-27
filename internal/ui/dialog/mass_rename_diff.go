@@ -7,27 +7,24 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
-// MassRenameDiff returns rune-index half-open ranges in old for removed segments and in new
-// for added segments, using an LCS alignment so scattered edits highlight only changed runes.
-func MassRenameDiff(old, new string) (removedInOld, addedInNew []search.Range) {
+// MassRenameDiff aligns old and new with an LCS so scattered edits highlight only changed
+// runes, and returns rune-index half-open ranges: in old, the segments dropped with nothing in
+// their place (removed) and the segments new swaps for other text (replaced); in new, the
+// segments not in old (added). The before preview column styles removed and replaced like a
+// find/replace match, so every mode colors its changes the same way.
+func MassRenameDiff(old, new string) (removed, replaced, added []search.Range) {
 	if old == new {
-		return nil, nil
+		return nil, nil, nil
 	}
 	a := []rune(old)
 	b := []rune(new)
 	if len(a) == 0 {
-		if len(b) > 0 {
-			return nil, []search.Range{{Start: 0, End: len(b)}}
-		}
-		return nil, nil
+		return nil, nil, []search.Range{{Start: 0, End: len(b)}}
 	}
 	if len(b) == 0 {
-		return []search.Range{{Start: 0, End: len(a)}}, nil
+		return []search.Range{{Start: 0, End: len(a)}}, nil, nil
 	}
-
-	pairs := massRenameLCSMatches(a, b)
-	removedInOld, addedInNew = massRenameDiffFromLCS(a, b, pairs)
-	return removedInOld, addedInNew
+	return massRenameDiffFromLCS(a, b, massRenameLCSMatches(a, b))
 }
 
 func massRenameLCSMatches(a, b []rune) [][2]int {
@@ -63,27 +60,26 @@ func massRenameLCSMatches(a, b []rune) [][2]int {
 	return pairs
 }
 
-func massRenameDiffFromLCS(a, b []rune, pairs [][2]int) (removed, added []search.Range) {
+// massRenameDiffFromLCS walks the gaps between matched rune pairs: an old gap opposite a new
+// gap is replaced, an old gap alone is removed, and every new gap is added.
+func massRenameDiffFromLCS(a, b []rune, pairs [][2]int) (removed, replaced, added []search.Range) {
 	ai, bi := 0, 0
+	gap := func(aEnd, bEnd int) {
+		if ai < aEnd {
+			if bi < bEnd {
+				replaced = massRenameAppendRange(replaced, ai, aEnd)
+			} else {
+				removed = massRenameAppendRange(removed, ai, aEnd)
+			}
+		}
+		added = massRenameAppendRange(added, bi, bEnd)
+	}
 	for _, p := range pairs {
-		if ai < p[0] {
-			removed = massRenameAppendRange(removed, ai, p[0])
-			ai = p[0]
-		}
-		if bi < p[1] {
-			added = massRenameAppendRange(added, bi, p[1])
-			bi = p[1]
-		}
-		ai++
-		bi++
+		gap(p[0], p[1])
+		ai, bi = p[0]+1, p[1]+1
 	}
-	if ai < len(a) {
-		removed = massRenameAppendRange(removed, ai, len(a))
-	}
-	if bi < len(b) {
-		added = massRenameAppendRange(added, bi, len(b))
-	}
-	return removed, added
+	gap(len(a), len(b))
+	return removed, replaced, added
 }
 
 func massRenameAppendRange(ranges []search.Range, start, end int) []search.Range {
