@@ -6,6 +6,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
@@ -141,8 +142,9 @@ func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int, show
 
 // fitEntryTextLen returns one entry's rendered name-text cell width (leading prefix rune +
 // name + '@' suffix for symlinks), matching panellist.EntryDisplayRunes' body construction.
-// Per-row transient decorations (job marks, new-file/rename badges) are excluded on purpose:
-// those change independent of directory content and would make column width flicker.
+// Per-row suffix indicators (job marks, new-file/rename badges, subtree selection) are excluded
+// on purpose: those change independent of directory content and would make column width
+// flicker. MeasureFitColumnWidths instead reserves a fixed fitSuffixReserve for them.
 func fitEntryTextLen(e localfs.Entry) int {
 	n := 1 + runewidth.StringWidth(e.Name)
 	if e.Type == localfs.EntrySymlink {
@@ -150,6 +152,10 @@ func fitEntryTextLen(e localfs.Entry) int {
 	}
 	return n
 }
+
+// fitSuffixReserve is the fixed room a fit-to-content column keeps after the longest name for
+// row suffix indicators (config.CarouselFitSuffixSlots slots).
+const fitSuffixReserve = config.CarouselFitSuffixSlots * panellist.SuffixSlotCells
 
 // Fit-to-content outlier thresholds (see fitListingTextLen).
 const (
@@ -242,6 +248,7 @@ func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, sh
 		if layout.Splits[i].IgnoreOutlier {
 			contentLen = fitListingTextLen(entries)
 		}
+		contentLen += fitSuffixReserve
 		if contentLen > longest {
 			longest = contentLen
 		}

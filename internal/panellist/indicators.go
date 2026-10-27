@@ -61,42 +61,45 @@ type RowSuffix struct {
 	OtherMatch, OtherMatchCursor bool
 }
 
+// SuffixSlotCells is the width of one trailing suffix indicator: a separating space plus the icon.
+const SuffixSlotCells = 2
+
 // SuffixDecorationLen returns how many trailing runes are reserved for row suffix indicators.
 func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th theme.Theme) int {
 	n := 0
-	if suffix.JobIcon != 0 && width > n+2 {
-		n += 2
+	if suffix.JobIcon != 0 && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
-	if suffix.JobQueuedIcon != 0 && width > n+2 {
-		n += 2
+	if suffix.JobQueuedIcon != 0 && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
-	if suffix.JobOpIcon != 0 && width > n+2 {
-		n += 2
+	if suffix.JobOpIcon != 0 && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
-	if suffix.NewFileTier != NewFileMarkNone && width > n+2 {
-		n += 2
+	if suffix.NewFileTier != NewFileMarkNone && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
-	if suffix.RenameMark && width > n+2 {
-		n += 2
+	if suffix.RenameMark && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
-	if suffix.Working && width > n+2 {
-		n += 2
+	if suffix.Working && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
-	if suffix.Pinned && width > n+2 {
-		n += 2
+	if suffix.Pinned && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
-	if suffix.RangeAnchor && width > n+2 {
-		n += 2
+	if suffix.RangeAnchor && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
-	if suffix.OtherMatch && width > n+2 {
-		n += 2
+	if suffix.OtherMatch && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
-	if subtree && width > n+2 {
-		n += 2
+	if subtree && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
-	if entry.AccessDenied && width > n+2 {
-		n += 2
+	if entry.AccessDenied && width > n+SuffixSlotCells {
+		n += SuffixSlotCells
 	}
 	return n
 }
@@ -151,47 +154,47 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 	out := make([]DisplayRune, 0, len(core)+suffixLen)
 	out = append(out, core...)
 	used := 0
-	if suffix.JobIcon != 0 && width > used+2 {
+	if suffix.JobIcon != 0 && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobIcon, NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if suffix.JobQueuedIcon != 0 && width > used+2 {
+	if suffix.JobQueuedIcon != 0 && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobQueuedIcon, NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if suffix.JobOpIcon != 0 && width > used+2 {
+	if suffix.JobOpIcon != 0 && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobOpIcon, NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if suffix.NewFileTier != NewFileMarkNone && width > used+2 {
+	if suffix.NewFileTier != NewFileMarkNone && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistNew(), NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if suffix.RenameMark && width > used+2 {
+	if suffix.RenameMark && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistRenamed(), NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if suffix.Working && width > used+2 {
+	if suffix.Working && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistWorking(), NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if suffix.Pinned && width > used+2 {
+	if suffix.Pinned && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: pinIconRune(th), NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if suffix.RangeAnchor && width > used+2 {
+	if suffix.RangeAnchor && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistRangeAnchor(), NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if suffix.OtherMatch && width > used+2 {
+	if suffix.OtherMatch && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistOtherMatch(), NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if subtree && width > used+2 {
+	if subtree && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistSelectionSubtree(), NameIdx: -1})
-		used += 2
+		used += SuffixSlotCells
 	}
-	if entry.AccessDenied && width > used+2 {
+	if entry.AccessDenied && width > used+SuffixSlotCells {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.IconFilelistNoPermission(), NameIdx: -1})
 	}
 	return out
