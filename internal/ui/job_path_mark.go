@@ -97,10 +97,17 @@ const (
 	rootDone
 )
 
-// rootPhase is the phase of source src's roots. A nil mark, roots outside every source
-// (src < 0), jobs that are not active, single-source jobs and jobs before their first source
-// started mark every root active.
-func (j *JobPathMark) rootPhase(src int32) rootPhase {
+// rootPhase is the phase of source src's source roots, or its destination roots when dest is
+// set. While the job is removing its sources every source root is active and every destination
+// root done. Otherwise a nil mark, roots outside every source (src < 0), jobs that are not
+// active, single-source jobs and jobs before their first source started mark every root active.
+func (j *JobPathMark) rootPhase(src int32, dest bool) rootPhase {
+	if j.removing() {
+		if dest {
+			return rootDone
+		}
+		return rootActive
+	}
 	if j == nil || src < 0 || j.ActiveSource < 0 || int(src) >= len(j.SourcePhases) || !jobs.Status(j.Status).IsActive() {
 		return rootActive
 	}
