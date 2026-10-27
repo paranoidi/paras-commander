@@ -674,8 +674,8 @@ func (h *Handler) pauseSelectedQueuedJob() {
 	h.ensureJobsViewSelectionVisible()
 }
 
-// resumeOrRetrySelectedJob resumes a paused job or retries a failed one, whichever the
-// selected job is — the same ActionJobsResume key/menu entry doubles as Retry on a failed job.
+// resumeOrRetrySelectedJob resumes a paused job or retries a failed or canceled one, whichever
+// the selected job is — the same ActionJobsResume key/menu entry doubles as Retry on a failed job.
 func (h *Handler) resumeOrRetrySelectedJob() {
 	n := len(h.model.JobsList)
 	if n == 0 {
@@ -692,13 +692,13 @@ func (h *Handler) resumeOrRetrySelectedJob() {
 			h.host.SetTransientMessage("Could not resume job", ui.MessageUrgencyWarn)
 			return
 		}
-	case jobs.StatusFailed:
+	case jobs.StatusFailed, jobs.StatusCanceled:
 		if !h.state.RetryJob(id) {
 			h.host.SetTransientMessage("Could not retry job", ui.MessageUrgencyWarn)
 			return
 		}
 	default:
-		h.host.SetTransientMessage("Selected job is not paused or failed", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Selected job is not paused, failed or canceled", ui.MessageUrgencyWarn)
 		return
 	}
 	h.SyncJobsList()

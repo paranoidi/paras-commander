@@ -23,7 +23,7 @@ total `(estimated)` until the exact size is counted (see
 |---|---|
 | `Ctrl+C` | Cancel the selected job (`jobs.cancel`) |
 | `Ctrl+P` | Pause a queued job (`jobs.pause`) |
-| `Ctrl+R` | Resume a paused job or retry a failed one (`jobs.resume`) |
+| `Ctrl+R` | Resume a paused job or retry a failed or canceled one (`jobs.resume`) |
 | `Ctrl+Up` / `Ctrl+Down` | Move the job in the queue (`jobs.queue-up`, `jobs.queue-down`) |
 | `F8` | Clear finished jobs (`jobs.clear-finished`) |
 | `F3` / `Shift+F3` | Filter the Operations panel by result / reset its filters (`jobs.result-filter`, `jobs.reset-filter`) |
@@ -166,12 +166,12 @@ queue.
   both files under a new name. Jobs are not kept across restarts, so neither
   is their undo.
 
-# Retrying a failed job
+# Retrying a failed or canceled job
 
 A copy, move, flatten, delete, or extract job that fails (e.g. `permission
 denied` on the destination) stays in the Queue panel as a failed row instead
-of disappearing. Select it and press `Ctrl+R` — the footer shows **Retry**
-and the `:` leader menu shows "Retry failed job" while a failed job is
+of disappearing; a canceled one stays as a canceled row. Select it and press `Ctrl+R` — the footer shows **Retry**
+and the `:` leader menu shows "Retry job" while a failed or canceled job is
 selected — to re-run it from scratch under the same job ID. A copy that
 failed only because it skipped items re-runs just those items. Any files
 already transferred before the failure hit the normal overwrite/skip
@@ -179,7 +179,7 @@ conflict prompt on retry.
 
 `Ctrl+R` (**Jobs → Resume / retry job**) is the same key used to resume a
 paused job; it resumes when the selected job is paused and retries when it
-is failed.
+is failed or canceled.
 
 ## File list indicators
 

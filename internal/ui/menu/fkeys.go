@@ -80,16 +80,16 @@ var FunctionKeysJobs = []FunctionKey{
 
 // FunctionKeysJobsView returns hints for the jobs screen footer. selectedFinished hides the
 // cancel/pause/resume/reorder actions, which are no-ops on a completed, failed, or canceled
-// job — except Resume, which selectedFailed keeps around relabeled "Retry" since it doubles
-// as retry on a failed job. Undo (RequiresFinishedJob) shows only on a finished job.
-func FunctionKeysJobsView(selectedFinished, selectedFailed bool) []FunctionKey {
+// job — except Resume, which selectedRetryable (failed or canceled) keeps around relabeled
+// "Retry" since it doubles as retry on such a job. Undo (RequiresFinishedJob) shows only on a finished job.
+func FunctionKeysJobsView(selectedFinished, selectedRetryable bool) []FunctionKey {
 	out := make([]FunctionKey, 0, len(FunctionKeysJobs))
 	for _, fk := range FunctionKeysJobs {
 		if fk.RequiresFinishedJob && !selectedFinished {
 			continue
 		}
 		if fk.RequiresActiveJob && selectedFinished {
-			if selectedFailed && fk.ActionID == keymap.ActionJobsResume {
+			if selectedRetryable && fk.ActionID == keymap.ActionJobsResume {
 				fk.Hint = "Retry"
 				out = append(out, fk)
 			}

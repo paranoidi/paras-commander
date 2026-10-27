@@ -395,12 +395,12 @@ func (s *State) PauseQueuedJob(id string) bool {
 	return s.queue.pauseQueuedJobUnlocked(id)
 }
 
-// RetryJob re-queues a failed job as a fresh run with the same ID and spec.
-// Returns false when id is not a failed job.
+// RetryJob re-queues a failed or canceled job as a fresh run with the same ID and spec.
+// Returns false when id is not such a job.
 func (s *State) RetryJob(id string) bool {
 	s.mu.Lock()
 	job := s.findJobUnlocked(id)
-	if job == nil || job.Status != StatusFailed || job.Type == TypeRename || job.Type == TypeUndo {
+	if job == nil || !job.Status.IsRetryable() || job.Type == TypeRename || job.Type == TypeUndo {
 		s.mu.Unlock()
 		return false
 	}

@@ -7,7 +7,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -417,7 +416,7 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 	}
 	if a.model.ViewMode == ui.ViewJobs && !a.inQuickFilterUI() {
 		status := a.jobsCtrl.SelectedJobStatus()
-		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsView(status.IsFinished(), status == jobs.StatusFailed)), true
+		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsView(status.IsFinished(), status.IsRetryable())), true
 	}
 	return nil, false
 }

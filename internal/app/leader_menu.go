@@ -5,7 +5,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
-	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -198,10 +197,10 @@ func (a *App) openViewLeaderMenu() {
 		a.setTransientMessage(prefix+": no entries configured", ui.MessageUrgencyWarn)
 		return
 	}
-	if a.model.ViewMode == ui.ViewJobs && a.jobsCtrl.SelectedJobStatus() == jobs.StatusFailed {
+	if a.model.ViewMode == ui.ViewJobs && a.jobsCtrl.SelectedJobStatus().IsRetryable() {
 		for i := range entries {
 			if entries[i].ActionID == keymap.ActionJobsResume {
-				entries[i].Label = "Retry failed job"
+				entries[i].Label = "Retry job"
 			}
 		}
 	}

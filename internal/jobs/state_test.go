@@ -1524,3 +1524,16 @@ func TestApplyEventVerifyProgress(t *testing.T) {
 		t.Fatal("verify progress samples are droppable")
 	}
 }
+
+// TestRetryJobRequeuesCanceledJob covers RetryJob accepting a canceled job.
+func TestRetryJobRequeuesCanceledJob(t *testing.T) {
+	s := NewState()
+	s.finished = append(s.finished, &Job{ID: "cancel-me", Type: TypeDelete, Status: StatusCanceled, Sources: pathloc.PathsForTest("/x"), TotalFiles: 1})
+	if !s.RetryJob("cancel-me") {
+		t.Fatal("RetryJob() = false, want true for a canceled job")
+	}
+	all := s.AllJobs()
+	if len(all) != 1 || all[0].Status != StatusQueued {
+		t.Fatalf("AllJobs after retry = %+v, want one queued job", all)
+	}
+}
