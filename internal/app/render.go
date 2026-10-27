@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
@@ -419,7 +418,7 @@ func (a *App) statusCommandWidth() int {
 	if a.config.StatusCommand.Command == "" {
 		return 0
 	}
-	return min(utf8.RuneCountInString(a.statusCmdText), a.config.StatusCommand.MaxWidth)
+	return ui.StatusCommandWidth(a.statusCmdText)
 }
 
 func (a *App) menuBarPermissionText() string {

@@ -510,7 +510,7 @@ Runs a shell command on an interval and shows its first line of output at the to
 |---|---|---|---|
 | `command` | string | `""` | Shell command line, run via `sh -c` (no `%f`/`%d`/… macro expansion, unlike `meta.toml` commands). Empty disables the feature. |
 | `interval_ms` | int | `3000` | How often `command` runs. Values below `500` are clamped up to the default. |
-| `max_width` | int | `15` | Reserved column width for the displayed text; longer output is ellipsized. Clamped to `[1, 200]`. |
+| `max_width` | int | `15` | Maximum terminal cells for the displayed text; longer output is cut so it fits, `…` included. Clamped to `[1, 200]`. |
 
 ## `keybindings.toml`
 

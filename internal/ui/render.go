@@ -3,9 +3,9 @@ package ui
 import (
 	"path/filepath"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
@@ -581,14 +581,19 @@ func (m *Model) MenuBarInteractive() bool {
 	return m.MenuBarLayoutReserved() && !m.ModalDialogOpen()
 }
 
-// statusCmdWidth returns the columns to reserve for model.StatusCommandText at the
-// top-left of the menu bar. The text is already capped to the configured max width by
-// the caller (App.render), so this only measures it.
+// StatusCommandWidth returns the cells to reserve for status_command text at the top-left
+// of the menu bar. The producer already truncates the text to the configured max width, so
+// this only measures it. Every layout path (full render and partial paints) must use it so
+// Layout.Menu.X never differs between frames.
+func StatusCommandWidth(text string) int {
+	return runewidth.StringWidth(text)
+}
+
 func statusCmdWidth(model Model, reserveMenu bool) int {
-	if !reserveMenu || model.StatusCommandText == "" {
+	if !reserveMenu {
 		return 0
 	}
-	return utf8.RuneCountInString(model.StatusCommandText)
+	return StatusCommandWidth(model.StatusCommandText)
 }
 
 // Render paints model into the screen's logical cell buffer. The caller must invoke

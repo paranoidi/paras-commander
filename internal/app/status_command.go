@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 )
 
@@ -71,10 +72,17 @@ func (a *App) requestStatusCommandRun(command string, maxWidth int) {
 		line := ""
 		// A failing (or timed-out) command clears the text so stale output never lingers.
 		if result.LaunchErr == nil && result.ExitCode == 0 {
-			line = textutil.TruncateBannerRunes(textutil.FirstLine(string(result.Stdout)), maxWidth)
+			line = statusCommandLine(string(result.Stdout), maxWidth)
 		}
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(statusCommandResultPayload{Text: line}))
 	}()
+}
+
+// statusCommandLine reduces status_command stdout to its first line, truncated by cell width
+// with the ellipsis counted inside maxWidth, so the reserved menu-bar area never exceeds
+// max_width.
+func statusCommandLine(stdout string, maxWidth int) string {
+	return primitive.TruncateRight(textutil.FirstLine(stdout), maxWidth)
 }
 
 // applyStatusCommandResult merges an async status_command result into app state. It
