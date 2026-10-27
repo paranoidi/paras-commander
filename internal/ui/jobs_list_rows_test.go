@@ -37,7 +37,7 @@ func TestJobsListRowsAndSelection(t *testing.T) {
 	if st.SelectedRow(st.JobsListRows(list)) != 0 || st.SelectedSource(list) != oplog.NoSource {
 		t.Fatal("a collapsed job's sub-row selection must resolve to the job row")
 	}
-	st.EnsureSelectionVisible(list, 10)
+	st.EnsureSelectionVisible(st.JobsListRows(list), 10)
 	if st.SelectedSub != 0 {
 		t.Fatalf("SelectedSub = %d after clamping a collapsed job", st.SelectedSub)
 	}

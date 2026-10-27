@@ -31,7 +31,7 @@ func TestEnsureSelectionVisibleTable(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			jobs := JobsViewState{Selected: tt.selected, ListScroll: tt.listScroll}
-			jobs.EnsureSelectionVisible(make([]JobEntry, tt.total), tt.visibleRows)
+			jobs.EnsureSelectionVisible(jobs.JobsListRows(make([]JobEntry, tt.total)), tt.visibleRows)
 			if jobs.Selected != tt.wantSel || jobs.ListScroll != tt.wantScroll {
 				t.Fatalf("jobs Selected=%d ListScroll=%d, want %d %d", jobs.Selected, jobs.ListScroll, tt.wantSel, tt.wantScroll)
 			}
@@ -57,7 +57,7 @@ func TestEnsureSelectionVisibleTable(t *testing.T) {
 func TestJobsViewStateEnsureSelectionVisible(t *testing.T) {
 	state := JobsViewState{Selected: 9, ListScroll: 0}
 
-	state.EnsureSelectionVisible(make([]JobEntry, 10), 4)
+	state.EnsureSelectionVisible(state.JobsListRows(make([]JobEntry, 10)), 4)
 
 	if state.Selected != 9 {
 		t.Fatalf("Selected = %d, want 9", state.Selected)
@@ -70,7 +70,7 @@ func TestJobsViewStateEnsureSelectionVisible(t *testing.T) {
 func TestJobsViewStateEnsureSelectionVisibleEmpty(t *testing.T) {
 	state := JobsViewState{Selected: 3, ListScroll: 2}
 
-	state.EnsureSelectionVisible(nil, 4)
+	state.EnsureSelectionVisible(state.JobsListRows(nil), 4)
 
 	if state.Selected != 0 || state.ListScroll != 0 {
 		t.Fatalf("state = %+v, want zero selection and scroll", state)

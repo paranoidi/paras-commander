@@ -126,9 +126,8 @@ func ensureSelectionVisible(selected *int, listScrollPos *int, total int, visibl
 }
 
 // EnsureSelectionVisible clamps the selected Queue row (a job or source sub-row) and the
-// scroll offset over the flattened rows of jobList.
-func (s *JobsViewState) EnsureSelectionVisible(jobList []JobEntry, visibleRows int) {
-	rows := s.JobsListRows(jobList)
+// scroll offset over rows, the current JobsListRows.
+func (s *JobsViewState) EnsureSelectionVisible(rows []JobsListRow, visibleRows int) {
 	row := s.SelectedRow(rows)
 	ensureSelectionVisible(&row, &s.ListScroll, len(rows), visibleRows)
 	if len(rows) == 0 {

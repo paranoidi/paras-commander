@@ -137,14 +137,19 @@ func (h *Handler) promptDanglingDirsIfAny() {
 }
 
 func (h *Handler) ensureJobsViewSelectionVisible() {
+	h.scrollToSelection(h.model.JobsView.JobsListRows(h.model.JobsList))
+}
+
+// scrollToSelection clamps the Queue cursor and scroll over rows, the current JobsListRows
+// (callers that already built them pass them on instead of rebuilding).
+func (h *Handler) scrollToSelection(rows []ui.JobsListRow) {
 	width, height := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(width, height)
-	if layout.TooSmall {
-		h.model.JobsView.EnsureSelectionVisible(h.model.JobsList, 0)
-		return
+	visible := 0
+	if !layout.TooSmall {
+		visible = ui.PanelListRows(layout.Primary)
 	}
-	visible := ui.PanelListRows(layout.Primary)
-	h.model.JobsView.EnsureSelectionVisible(h.model.JobsList, visible)
+	h.model.JobsView.EnsureSelectionVisible(rows, visible)
 }
 
 // pruneExpandedJobs forgets expanded jobs that left the list or no longer have sub-rows, so
@@ -182,7 +187,8 @@ func (h *Handler) setJobExpanded(expand bool) {
 		h.SyncJobsList() // collapsed entries carry no per-source data: fetch it now
 	} else {
 		delete(st.Expanded, sel.ID)
-		h.setSelection(ui.JobsListRow{Job: st.Selected, Source: oplog.NoSource})
+		h.setSelection(st.JobsListRows(h.model.JobsList), ui.JobsListRow{Job: st.Selected, Source: oplog.NoSource})
+		return
 	}
 	h.ensureJobsViewSelectionVisible()
 }
@@ -506,7 +512,7 @@ func (h *Handler) MoveSelection(delta int) {
 		return
 	}
 	row := min(max(0, h.model.JobsView.SelectedRow(rows)+delta), len(rows)-1)
-	h.setSelection(rows[row])
+	h.setSelection(rows, rows[row])
 }
 
 // SelectEdge moves the jobs-list cursor to the first (toEnd=false) or last (toEnd=true) row.
@@ -519,7 +525,7 @@ func (h *Handler) SelectEdge(toEnd bool) {
 	if toEnd {
 		row = len(rows) - 1
 	}
-	h.setSelection(rows[row])
+	h.setSelection(rows, rows[row])
 }
 
 // FocusListRow focuses the queue list and moves its cursor to row index row of
@@ -530,10 +536,11 @@ func (h *Handler) FocusListRow(row int) {
 	if row < 0 || row >= len(rows) {
 		return
 	}
-	h.setSelection(rows[row])
+	h.setSelection(rows, rows[row])
 }
 
-func (h *Handler) setSelection(r ui.JobsListRow) {
+// setSelection moves the Queue cursor to r, one of rows (the current JobsListRows).
+func (h *Handler) setSelection(rows []ui.JobsListRow, r ui.JobsListRow) {
 	st := &h.model.JobsView
 	beforeSel, beforeSub := st.Selected, st.SelectedSub
 	st.SelectRow(r)
@@ -544,7 +551,7 @@ func (h *Handler) setSelection(r ui.JobsListRow) {
 	if beforeSel != st.Selected || beforeSub != st.SelectedSub {
 		st.OpsScroll = 0
 	}
-	h.ensureJobsViewSelectionVisible()
+	h.scrollToSelection(rows)
 }
 
 func (h *Handler) jobsViewConflictVisible() bool {
