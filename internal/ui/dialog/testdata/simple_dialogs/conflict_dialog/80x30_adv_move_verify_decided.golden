@@ -13,8 +13,8 @@
   ├──────────────────────────────────────────────────────────────────────────┤  
   │ [x] Verify both to see if identical                                      │  
   │ Same                ( ) Ask  ( ) Overwrite  ( ) Skip  (*) Delete source  │  
-  │ Differ              ( ) Rules  ( ) Ask  ( ) Overwrite  ( ) Skip          │  
-  │                     (*) Keep both  ( ) Delete source                     │  
+  │ Differ   ( ) Rules  ( ) Ask  ( ) Overwrite  ( ) Skip  ( ) Delete source  │  
+  │                     (*) Keep both                                        │  
   ├──────────────────────────────────────────────────────────────────────────┤  
   │ [x] Apply to all conflicts                                               │  
   ├──────────────────────────────────────────────────────────────────────────┤  

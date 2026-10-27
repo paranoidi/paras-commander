@@ -5,16 +5,14 @@ advanced focus=verify time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask d
 == Down ==
 advanced focus=r6c0 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
 == Down ==
-advanced focus=r7c0 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
-== Down ==
-advanced focus=r7c4 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+advanced focus=r7c1 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Right ==
+advanced focus=r7c2 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
+== Right ==
+advanced focus=r7c3 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
 == Right ==
 advanced focus=r7c5 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
 == Space ==
 advanced focus=r7c5 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=delete-source all=true panel=true
-== Down ==
-advanced focus=all time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=delete-source all=true panel=true
-== Down ==
-advanced focus=ok time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=delete-source all=true panel=true
-== Enter ==
+== Alt+Enter ==
 CLOSED: decision=rules-all time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=delete-source quit=false

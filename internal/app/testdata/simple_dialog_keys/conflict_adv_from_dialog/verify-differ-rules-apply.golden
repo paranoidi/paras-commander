@@ -13,6 +13,8 @@ advanced focus=r6c2 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask dif
 == Space ==
 advanced focus=r6c2 time[ask,ask,ask] size[ask,ask,ask] verify=true same=skip differ=rules all=true panel=false
 == Down ==
+advanced focus=r7c3 time[ask,ask,ask] size[ask,ask,ask] verify=true same=skip differ=rules all=true panel=false
+== Left ==
 advanced focus=r7c2 time[ask,ask,ask] size[ask,ask,ask] verify=true same=skip differ=rules all=true panel=false
 == Left ==
 advanced focus=r7c1 time[ask,ask,ask] size[ask,ask,ask] verify=true same=skip differ=rules all=true panel=false

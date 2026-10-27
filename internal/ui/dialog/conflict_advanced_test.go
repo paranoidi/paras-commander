@@ -209,7 +209,7 @@ func TestConflictRulesDifferWrapNavigation(t *testing.T) {
 	// Down from Differ's Overwrite (first line) lands on its second line.
 	focus := ConflictRuleID(ConflictRuleDifferRow, 2)
 	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if row, col, _ := ConflictRuleCell(focus); row != ConflictRuleDifferRow || col < conflictDifferWrap {
+	if focus != ConflictRuleID(ConflictRuleDifferRow, 4) {
 		t.Fatalf("Down from the first Differ line = %q, want the second line", focus)
 	}
 	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))

@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 // Button IDs of the quick job-blocker dialog. Cancel here cancels the job (ConflictCancelJob);
@@ -186,33 +187,49 @@ func ConflictRuleCell(id dlg.ID) (row, col int, ok bool) {
 // conflictRuleLabelWidth is the label column of the rule rows: the longest label plus a gap.
 const conflictRuleLabelWidth = len("Destination smaller") + 1
 
+// Differ choice columns per line: Rules sits in the label column so Ask, Overwrite, Skip and
+// Delete source line up with the Same row; Keep both wraps under Ask.
+var (
+	conflictDifferFirstLine  = []int{0, 1, 2, 3, 5}
+	conflictDifferSecondLine = []int{4}
+)
+
 func conflictRulesView(st ConflictDialogState) dlg.Spec {
-	// ruleRow is one line of rule row: its label (blank on a continuation line) and the radios of
-	// choices [from, to).
-	ruleRow := func(row, from, to int, label string) dlg.Item {
+	// ruleRow is one line of rule row: its label in a labelW box (blank on a continuation line)
+	// and the radios of choices cols (columns past the row's choices are left out).
+	ruleRow := func(row int, cols []int, label string, labelW int) dlg.Item {
 		choices := st.ConflictRuleChoices(row)
 		cur := st.ruleAction(row)
-		cells := []dlg.Item{{Kind: dlg.KindLabel, Label: label, Width: conflictRuleLabelWidth}}
-		for col := from; col < min(to, len(choices)); col++ {
+		cells := []dlg.Item{{Kind: dlg.KindLabel, Label: label, Width: labelW}}
+		for _, col := range cols {
+			if col >= len(choices) {
+				continue
+			}
 			c := choices[col]
-			cell := dlg.Item{
+			cells = append(cells, dlg.Item{
 				ID: ConflictRuleID(row, col), Kind: dlg.KindRadio, Label: c.Label, On: cur == c.Action,
-				Disabled: !st.ConflictAdvancedChoiceEnabled(row, col),
-			}
-			if col < to-1 {
-				cell.Gap = 1
-			}
-			cells = append(cells, cell)
+				Disabled: !st.ConflictAdvancedChoiceEnabled(row, col), Gap: 1,
+			})
 		}
+		cells[len(cells)-1].Gap = 0
 		return dlg.Item{Kind: dlg.KindRow, Cells: cells}
+	}
+	allCols := func(n int) []int {
+		cols := make([]int, n)
+		for i := range cols {
+			cols[i] = i
+		}
+		return cols
 	}
 	ruleRows := func(from, to int) []dlg.Item {
 		var items []dlg.Item
 		for row := from; row < to; row++ {
-			items = append(items, ruleRow(row, 0, len(conflictMatrixChoices), conflictRuleRowLabels[row]))
+			items = append(items, ruleRow(row, allCols(len(conflictMatrixChoices)), conflictRuleRowLabels[row], conflictRuleLabelWidth))
 		}
 		return items
 	}
+	// The Differ label shares its column with the Rules radio and its gap.
+	differLabelW := conflictRuleLabelWidth - draw.DialogOptionWidth(conflictDifferChoices[0].Label) - 1
 	sep := dlg.Item{Kind: dlg.KindSeparator}
 	groups := []dlg.Group{
 		{Columns: [][]dlg.Item{append(ruleRows(0, conflictRuleTimeRows), sep)}},
@@ -221,9 +238,9 @@ func conflictRulesView(st ConflictDialogState) dlg.Spec {
 	if !st.ConflictAdvancedNoCompare() {
 		groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{
 			{ID: ConflictVerify, Kind: dlg.KindCheckbox, Label: "Verify both to see if identical", Mnemonic: 'V', On: st.Rules.Verify},
-			ruleRow(ConflictRuleSameRow, 0, len(conflictSameChoices), conflictRuleRowLabels[ConflictRuleSameRow]),
-			ruleRow(ConflictRuleDifferRow, 0, conflictDifferWrap, conflictRuleRowLabels[ConflictRuleDifferRow]),
-			ruleRow(ConflictRuleDifferRow, conflictDifferWrap, len(conflictDifferChoices), ""),
+			ruleRow(ConflictRuleSameRow, allCols(len(conflictSameChoices)), conflictRuleRowLabels[ConflictRuleSameRow], conflictRuleLabelWidth),
+			ruleRow(ConflictRuleDifferRow, conflictDifferFirstLine, conflictRuleRowLabels[ConflictRuleDifferRow], differLabelW),
+			ruleRow(ConflictRuleDifferRow, conflictDifferSecondLine, "", conflictRuleLabelWidth),
 			sep,
 		}}})
 	}

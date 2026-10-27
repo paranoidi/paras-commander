@@ -43,8 +43,6 @@ const (
 	ConflictRuleDifferRow = ConflictRuleSameRow + 1
 	// ConflictRuleRows is the number of condition rows.
 	ConflictRuleRows = len(conflictRuleRowLabels)
-	// conflictDifferWrap is the Differ choice that starts its second line.
-	conflictDifferWrap = 4
 )
 
 // ConflictAdvancedNoCompare reports whether Verify is hidden (archive extract).

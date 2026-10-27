@@ -16,6 +16,8 @@ advanced focus=r2c2 time[ask,skip,ask] size[ask,ask,ask] verify=false same=ask d
 advanced focus=r2c1 time[ask,skip,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Left ==
 advanced focus=r2c0 time[ask,skip,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
+== Left ==
+advanced focus=r2c0 time[ask,skip,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Space ==
 advanced focus=r2c0 time[ask,skip,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Alt+Enter ==

@@ -13,7 +13,7 @@
  ├────────────────────────────────────────────────────┤ 
  │ [x] Verify both to see if identical                │ 
  │ Same                (*) Ask  ( ) Overwrite  ( ) S… │ 
- │ Differ              (*) Rules  ( ) Ask  ( ) Overw… │ 
+ │ Differ   (*) Rules  ( ) Ask  ( ) Overwrite  ( ) S… │ 
  │                     ( ) Keep both                  │ 
  ├────────────────────────────────────────────────────┤ 
  │ [x] Apply to all conflicts                         │ 
@@ -47,7 +47,7 @@ abbbbbbbbbbbbbbbbbbbbbddddddddbffffffffffffffbbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abdddddcddddddddddddddddddddddddddddddbbbbbbbbbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbddddddddbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbbbbbbbbbbbbbbbbddddddddddbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abdddddcdddddddddddddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbba

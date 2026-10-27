@@ -13,7 +13,7 @@
  ├────────────────────────────────────┤ 
  │ [ ] Verify both to see if identical│ 
  │ Same                (*) Ask  ( ) O │ 
- │ Differ              (*) Rules      │ 
+ │ Differ   (*) Rules  ( ) Ask  ( ) O │ 
  │                     ( ) Keep both  │ 
  ├────────────────────────────────────┤ 
  │ [x] Apply to all conflicts         │ 
@@ -47,7 +47,7 @@ abbbbbbbbbbbbbbbbbbbbbeeeeeeeebbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbffffffffbffffffbba
-abbbbbbbbbbbbbbbbbbbbbffffffffffbbbbbbba
+abbbbbbbbbbffffffffffbffffffffbffffffbba
 abbbbbbbbbbbbbbbbbbbbbffffffffffffffbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
 abeeeeeceeeeeeeeeeeeeeeeeeeeebbbbbbbbbba
