@@ -648,3 +648,16 @@ func TestFunctionKeysSelectedStripView(t *testing.T) {
 		t.Fatalf("empty clear label len = %d, want F1 + F2 + F3 + F4 + F10", len(empty))
 	}
 }
+
+func TestFunctionKeysJobsDetailViewTickrateKeysReplay(t *testing.T) {
+	t.Parallel()
+	for _, fk := range FunctionKeysJobsDetailView {
+		if fk.KeyLabel != "+" && fk.KeyLabel != "-" {
+			continue
+		}
+		ev, ok := fk.Event()
+		if !ok || ev.Key() != tcell.KeyRune || string(ev.Rune()) != fk.KeyLabel {
+			t.Fatalf("%q footer click event = %v, %v", fk.KeyLabel, ev, ok)
+		}
+	}
+}

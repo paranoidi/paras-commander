@@ -78,6 +78,17 @@ var FunctionKeysJobs = []FunctionKey{
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 }
 
+// FunctionKeysJobsDetailView is the footer legend while the jobs Details panel has focus.
+// + and - are in-widget keys (not actions), so a footer click replays them from KeyLabel.
+var FunctionKeysJobsDetailView = []FunctionKey{
+	FooterEscClose,
+	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
+	{KeyLabel: "+", Hint: "Tick faster"},
+	{KeyLabel: "-", Hint: "Tick slower"},
+	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
+	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
+}
+
 // FunctionKeysJobsView returns hints for the jobs screen footer. selectedFinished hides the
 // cancel/pause/resume/reorder actions, which are no-ops on a completed, failed, or canceled
 // job — except Resume, which selectedRetryable (failed or canceled) keeps around relabeled

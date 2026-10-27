@@ -275,6 +275,13 @@ func (h *Handler) operationsFocused() bool {
 	return fp >= 0 && fp < len(order) && order[fp] == ui.JobsPaneOperations
 }
 
+// DetailFocused reports whether the Details pane has focus (the footer then lists its keys).
+func (h *Handler) DetailFocused() bool {
+	order, _ := h.jobsPaneLayout()
+	fp := h.model.JobsView.FocusPane
+	return fp >= 0 && fp < len(order) && order[fp] == ui.JobsPaneDetail
+}
+
 // plainRune reports an unmodified (or shifted) printable key, the keys that type into the
 // Operations fuzzy filter.
 func plainRune(event *tcell.EventKey) bool {

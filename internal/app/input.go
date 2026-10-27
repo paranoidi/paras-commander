@@ -415,6 +415,9 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysMessagesView()), true
 	}
 	if a.model.ViewMode == ui.ViewJobs && !a.inQuickFilterUI() {
+		if a.jobsCtrl.DetailFocused() {
+			return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsDetailView), true
+		}
 		status := a.jobsCtrl.SelectedJobStatus()
 		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsView(status.IsFinished(), status.IsRetryable())), true
 	}
