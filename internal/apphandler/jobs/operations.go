@@ -7,7 +7,10 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/oplog"
+	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -59,6 +62,7 @@ type opsInputs struct {
 	key          opsViewKey
 	ready        bool // the window was built at least once
 	scroll, rows int
+	active       string
 }
 
 // RefreshOpsWindow prepares Model.JobsOpsWindow, the rows the Operations pane draws, for the
@@ -88,8 +92,9 @@ func (h *Handler) refreshOpsWindow(force bool) {
 	}
 	st := &h.model.JobsView
 	key := opsViewKey{log: sel.Ops, mask: st.OpsResultShown().Mask(), source: st.SelectedSource(h.model.JobsList), query: st.OpsFilter.Query, ci: h.model.JobsFilterCaseInsensitive}
-	rows := h.opsContentRows()
-	inputs := opsInputs{jobID: sel.ID, key: key, ready: true, scroll: st.OpsScroll, rows: rows}
+	win.Active = opsActiveLabel(sel, key)
+	rows := win.RecordRows(h.opsContentRows())
+	inputs := opsInputs{jobID: sel.ID, key: key, ready: true, scroll: st.OpsScroll, rows: rows, active: win.Active}
 	if !force && h.opsThrottled(inputs) {
 		return
 	}
@@ -130,6 +135,38 @@ func (h *Handler) refreshOpsWindow(force bool) {
 	h.model.JobsOpsWindow = win
 	inputs.scroll = st.OpsScroll // after clamping, so the next frame sees the same inputs
 	h.ops.lastInputs, h.ops.lastBuilt = inputs, time.Now()
+}
+
+// opsActiveLabel is the Operations label of the item job sel is working on now (worded like
+// its record will be, jobs.OperationLabel), or "" when the pane shows none: the job is not
+// transferring, a fuzzy query or result filter narrows the rows, a selected source sub-row is
+// not the source being worked on, or the newest record already is that item (it just finished).
+func opsActiveLabel(sel ui.JobEntry, key opsViewKey) string {
+	if st := jobs.Status(sel.Status); st != jobs.StatusRunning && st != jobs.StatusWaitingDecision {
+		return ""
+	}
+	if sel.CurrentPath == "" || key.query != "" || key.mask != oplog.MaskAll {
+		return ""
+	}
+	if key.source != oplog.NoSource && (key.source >= len(sel.SourcePhases) || sel.SourcePhases[key.source] != jobs.SourceStarted) {
+		return ""
+	}
+	var item ops.PlanItem
+	item.Src, _ = pathloc.Parse(sel.CurrentPath)
+	if sel.CurrentDestPath != "" {
+		item.Dst, _ = pathloc.Parse(sel.CurrentDestPath)
+	}
+	var dest pathloc.Path
+	if sel.Destination != "" {
+		dest, _ = pathloc.Parse(sel.Destination)
+	}
+	label := jobs.OperationLabel(dest, item)
+	if nums := key.log.ViewNums(oplog.MaskAll, key.source, 0, 1); len(nums) == 1 {
+		if recs, ok := key.log.RecordsInMemory(nums); ok && recs[0].Label == label {
+			return ""
+		}
+	}
+	return label
 }
 
 // opsThrottled reports whether the window must keep its current rows: inputs are unchanged, no

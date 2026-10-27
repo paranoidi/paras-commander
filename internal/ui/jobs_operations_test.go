@@ -193,3 +193,25 @@ func TestDrawJobsOperationsPanelSourceDeletedIcon(t *testing.T) {
 		t.Fatalf("source deleted icon = %q", th.IconJobsOperation(theme.JobsOperationSourceDeleted))
 	}
 }
+
+// TestDrawJobsOperationsPanelActiveRow: the item being worked on is pinned on the top row with
+// the job icon, and the records start one row lower.
+func TestDrawJobsOperationsPanelActiveRow(t *testing.T) {
+	screen := newOpsScreen(t)
+	rect := Rect{X: 0, Y: 0, Width: 70, Height: 8}
+	win := JobsOpsWindow{JobID: "copy-1", Total: 1, Active: "harbor/willow.bin", Rows: []JobOperationRow{
+		{Op: JobOperation{Result: oplog.Done, Label: "harbor/lantern.txt"}},
+	}}
+	th := theme.Default()
+	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false)
+
+	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, string(th.IconFilelistJob())+" harbor/willow.bin") {
+		t.Fatalf("top row = %q, want the job icon and the active item", row)
+	}
+	if row := screenRowText(screen, rect, rect.Y+2); !strings.Contains(row, "harbor/lantern.txt") {
+		t.Fatalf("second row = %q, want the newest record", row)
+	}
+	if got := win.RecordRows(6); got != 5 {
+		t.Fatalf("RecordRows = %d, want 5", got)
+	}
+}

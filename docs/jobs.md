@@ -82,7 +82,11 @@ The current limit appears on the right side of the Queue panel's border
 # The Operations panel
 
 The Operations panel lists every item the selected job has processed, newest at
-the top. Each row starts with a result icon:
+the top. While the job is running, the item it is working on right now is
+pinned above them with the hard-disk icon (the one panel rows show while a job
+works on them); it is hidden while a fuzzy query or result filter narrows the
+list, or when a source row other than the active one is selected. Each
+processed row starts with a result icon:
 
 - green: copied, moved, deleted or extracted;
 - yellow: skipped, followed by why (`exists` when you chose Skip at a "file

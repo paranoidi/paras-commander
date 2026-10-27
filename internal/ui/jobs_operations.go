@@ -72,6 +72,18 @@ type JobsOpsWindow struct {
 	Rows   []JobOperationRow
 	// Scanning is set while a fuzzy query is still being matched against the log.
 	Scanning bool
+	// Active is the label of the item the job is working on now, drawn pinned above the rows
+	// with the job icon; empty when the pane shows none (jobs.Handler.RefreshOpsWindow).
+	Active string
+}
+
+// RecordRows is how many of a pane's contentRows rows show records: one fewer while the
+// active item takes the top row.
+func (w JobsOpsWindow) RecordRows(contentRows int) int {
+	if w.Active != "" {
+		return max(contentRows-1, 1)
+	}
+	return contentRows
 }
 
 // row returns display row i of the window; ok is false when it is outside the prepared rows.
@@ -127,6 +139,14 @@ func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	textX := rect.X + 2
 	textW := max(rect.Width-4, 1)
+	if win.Active != "" {
+		drawJobsOperationActive(screen, textX, contentTop, textW, win.Active, styles, body, chromeBlocked)
+		contentTop++
+		contentH--
+		if contentH <= 0 || win.Total == 0 {
+			return
+		}
+	}
 	if win.Total == 0 {
 		if contentH > 1 && !win.Scanning {
 			primitive.Text(screen, textX, contentTop+1, textW, styles.EmptyText(), styles.PanelEmptyStyle().Background(layout.ContentBG))
@@ -171,6 +191,18 @@ func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState
 		primitive.StyledText(screen, textX+jobOperationIconCols, y, lineW, text, body, spans)
 		y++
 	}
+}
+
+// drawJobsOperationActive draws the pinned row of the item the job is working on: the job icon
+// (icons.filelist.job, as on the panel rows under the job) and its path-fitted label.
+func drawJobsOperationActive(screen tcell.Screen, x, y, w int, label string, styles theme.Theme, body tcell.Style, chromeBlocked bool) {
+	iconStyle := body
+	if !chromeBlocked {
+		iconStyle = styles.JobsIconStyleOn("running", body)
+	}
+	primitive.Text(screen, x, y, 1, string(styles.IconFilelistJob()), iconStyle)
+	lineW := max(w-jobOperationIconCols, 1)
+	primitive.Text(screen, x+jobOperationIconCols, y, lineW, primitive.FitPathForWidth(label, lineW), body)
 }
 
 // jobOperationSpans highlights a row's fuzzy matches (only on an unshortened label) and colors

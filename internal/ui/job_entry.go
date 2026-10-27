@@ -17,6 +17,8 @@ type JobEntry struct {
 	// DestIsDir matches jobs.Job.DestIsDir (destination was a directory when the job was queued).
 	DestIsDir   bool
 	CurrentPath string
+	// CurrentDestPath mirrors jobs.Job.CurrentDestPath.
+	CurrentDestPath string
 	// VerifyDone and VerifyTotal mirror jobs.Job: a running conflict content verification of
 	// CurrentPath (VerifyTotal 0 = none).
 	VerifyDone, VerifyTotal int64

@@ -115,6 +115,9 @@ type Job struct {
 	// (ops.Options.SourceSizeHints). Never changes after enqueue.
 	SourceSizeHints []int64
 	CurrentPath     string
+	// CurrentDestPath is the destination of CurrentPath from the last progress event (empty
+	// for jobs without one, e.g. delete); the Operations pane labels the active item with it.
+	CurrentDestPath string
 	// VerifyDone and VerifyTotal track a running conflict content verification of CurrentPath
 	// (bytes read from both files); VerifyTotal is 0 when none runs. Never part of DoneBytes.
 	VerifyDone, VerifyTotal int64

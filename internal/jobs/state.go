@@ -540,7 +540,7 @@ func (s *State) ApplyEvent(ev Event) {
 	case EventScanProgress:
 		job := s.findJobUnlocked(ev.JobID)
 		if job != nil && job.Status == StatusScanning {
-			job.CurrentPath = ev.CurrentPath
+			job.CurrentPath, job.CurrentDestPath = ev.CurrentPath, ""
 		}
 	case EventScanTotals:
 		// No job mutation here: runJobScan already writes TotalFiles/TotalDirs/TotalBytes/
@@ -580,7 +580,7 @@ func (s *State) ApplyEvent(ev Event) {
 			j.DoneFiles = ev.DoneFiles
 			j.DoneBytes = ev.DoneBytes
 			j.ProcessedItems = max(j.ProcessedItems, ev.ProcessedItems)
-			j.CurrentPath = ev.CurrentPath
+			j.CurrentPath, j.CurrentDestPath = ev.CurrentPath, ev.CurrentDestPath
 			j.VerifyDone, j.VerifyTotal = 0, 0
 			now := time.Now()
 			ApplyProgressETA(j, ev.DoneBytes, ev.DoneFiles, now)

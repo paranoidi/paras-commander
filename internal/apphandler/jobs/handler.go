@@ -607,7 +607,8 @@ func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 // current view's row count.
 func (h *Handler) scrollOperations(key tcell.Key, contentRows int) {
 	h.refreshOpsWindow(true)
-	scrollPane(key, &h.model.JobsView.OpsScroll, ui.JobsOpsMaxScroll(h.model.JobsOpsWindow.Total, contentRows))
+	win := h.model.JobsOpsWindow
+	scrollPane(key, &h.model.JobsView.OpsScroll, ui.JobsOpsMaxScroll(win.Total, win.RecordRows(contentRows)))
 }
 
 func (h *Handler) jobsDetailLineCountForSelection() int {
