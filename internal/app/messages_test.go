@@ -307,3 +307,20 @@ func TestSetJobFailedTransientMessageLogsFullError(t *testing.T) {
 		t.Fatalf("banner too long, got %q", app.model.Message)
 	}
 }
+
+// TestToastSweepSkipsInfoUrgency verifies info toasts appear at once while warn, error and
+// success toasts sweep in.
+func TestToastSweepSkipsInfoUrgency(t *testing.T) {
+	app := testAppMinimal(t)
+	app.config.UI.Status.Sweep = true
+	app.setTransientMessage("plain", ui.MessageUrgencyInfo)
+	if !app.model.MessageSweepStart.IsZero() {
+		t.Fatal("info toast should not sweep")
+	}
+	for _, u := range []ui.MessageUrgency{ui.MessageUrgencyWarn, ui.MessageUrgencyError, ui.MessageUrgencySuccess} {
+		app.setTransientMessage("loud", u)
+		if app.model.MessageSweepStart.IsZero() {
+			t.Fatalf("urgency %d toast should sweep", u)
+		}
+	}
+}

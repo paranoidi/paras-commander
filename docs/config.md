@@ -204,7 +204,7 @@ Transient status banners and the Messages view log.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `message_ttl_seconds` | float | `4.5` | How long transient status banners stay visible before clearing automatically. `0` keeps a message until it's replaced or explicitly cleared. |
-| `sweep` | bool | `true` | Animate new status banners in with a 200 ms left-to-right sweep (leading edge styled by theme key `message.sweep`). `false` shows them at once. |
+| `sweep` | bool | `true` | Animate new warning, error and success status banners in with a 200 ms left-to-right sweep (info banners always appear at once) (leading edge styled by theme key `message.sweep`). `false` shows them at once. |
 | `log_max_entries` | int | `500` | Maximum number of status/toast lines retained for the Messages view (oldest entries are dropped first). |
 
 ## `[filter]`

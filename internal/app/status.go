@@ -118,9 +118,10 @@ func (a *App) appendTransientMessageLines(banner string, lines []string, urgency
 }
 
 // startToastSweep starts the toast sweep-in and posts sweep-frame statusMessagePayloads until it
-// completes; a newer message (gen bump) stops the frames.
+// completes; a newer message (gen bump) stops the frames. Info toasts appear at once; only
+// warn/error/critical/success sweep.
 func (a *App) startToastSweep(gen uint64) {
-	if !a.config.UI.Status.Sweep {
+	if !a.config.UI.Status.Sweep || a.model.MessageUrgency == ui.MessageUrgencyInfo {
 		a.model.MessageSweepStart = time.Time{}
 		return
 	}
