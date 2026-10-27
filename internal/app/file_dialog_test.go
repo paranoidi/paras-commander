@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -2179,4 +2180,47 @@ func fileDialogFocusCount(app *App) int {
 		seen[dialog.FileFieldID(0)] = true // the unset focus is the first input
 	}
 	return len(seen)
+}
+
+func TestMassRenameExternalEditorPreviewHighlightsBothColumns(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "copper-lantern.txt")
+	bPath := filepath.Join(dir, "silent-harbor.txt")
+	writeFile(t, aPath)
+	writeFile(t, bPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true, bPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	d.MassRenameMode = dialog.MassRenameModeUIExternalEditor
+	edited := map[string]string{
+		"copper-lantern.txt": "lantern.txt",       // prefix dropped: removed only
+		"silent-harbor.txt":  "silent-meadow.txt", // word swapped: replaced and added
+	}
+	d.MassRenameExternalNames = nil
+	for _, src := range d.MassRenameSources {
+		d.MassRenameExternalNames = append(d.MassRenameExternalNames, edited[src.Name])
+	}
+	app.dialogCtrl.RecomputeMassRenamePreview()
+
+	if len(d.MassRenamePreviewBefore) != 2 {
+		t.Fatalf("preview rows = %d, want 2", len(d.MassRenamePreviewBefore))
+	}
+	for i, before := range d.MassRenamePreviewBefore {
+		removed, replaced, added := dialog.MassRenameDiff(before, edited[before])
+		if !reflect.DeepEqual(d.MassRenamePreviewBeforeRemoved[i], removed) ||
+			!reflect.DeepEqual(d.MassRenamePreviewBeforeReplaced[i], replaced) ||
+			!reflect.DeepEqual(d.MassRenamePreviewAfterAdded[i], added) {
+			t.Fatalf("row %q: removed=%v replaced=%v added=%v, want %v %v %v", before,
+				d.MassRenamePreviewBeforeRemoved[i], d.MassRenamePreviewBeforeReplaced[i], d.MassRenamePreviewAfterAdded[i],
+				removed, replaced, added)
+		}
+		if len(removed)+len(replaced) == 0 {
+			t.Fatalf("row %q: before column has no highlight", before)
+		}
+	}
 }

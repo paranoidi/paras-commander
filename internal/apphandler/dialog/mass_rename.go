@@ -250,15 +250,11 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 		}
 		before = append(before, src.Name)
 		after = append(after, newBase)
-		beforeRemoved = append(beforeRemoved, nil)
-		beforeReplaced = append(beforeReplaced, nil)
+		removed, replaced, added := dialog.MassRenameDiff(src.Name, newBase)
+		beforeRemoved = append(beforeRemoved, removed)
+		beforeReplaced = append(beforeReplaced, replaced)
 		beforeIgnored = append(beforeIgnored, search.Range{})
-		if namesReady {
-			_, added := dialog.MassRenameDiff(src.Name, newBase)
-			afterAdded = append(afterAdded, added)
-		} else {
-			afterAdded = append(afterAdded, nil)
-		}
+		afterAdded = append(afterAdded, added)
 		afterError = append(afterError, i < len(rowErrs) && rowErrs[i] != nil)
 	}
 	d.MassRenamePreviewBefore = before
@@ -272,8 +268,8 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 
 // recomputeMassRenameCapitalizePreview recomputes the before/after preview rows for
 // Capitalize mode. Mirrors recomputeMassRenameExternalEditorPreview's structure: no
-// find/regex match ranges exist in this mode, so before-column highlights are always nil
-// and after-column highlights come from dialog.MassRenameDiff like the external-editor path.
+// find/regex match ranges exist in this mode, so both columns' highlights come from
+// dialog.MassRenameDiff like the external-editor path.
 func (h *Handler) recomputeMassRenameCapitalizePreview() {
 	d := &h.model.FileDialog
 	entries := massRenameEntries(d)
@@ -297,10 +293,10 @@ func (h *Handler) recomputeMassRenameCapitalizePreview() {
 		}
 		before = append(before, r.OldBase)
 		after = append(after, r.NewBase)
-		beforeRemoved = append(beforeRemoved, nil)
-		beforeReplaced = append(beforeReplaced, nil)
+		removed, replaced, added := dialog.MassRenameDiff(r.OldBase, r.NewBase)
+		beforeRemoved = append(beforeRemoved, removed)
+		beforeReplaced = append(beforeReplaced, replaced)
 		beforeIgnored = append(beforeIgnored, ops.MassRenameIgnoredExtRange(r, d.MassRenameIgnoreExt))
-		_, added := dialog.MassRenameDiff(r.OldBase, r.NewBase)
 		afterAdded = append(afterAdded, added)
 		afterError = append(afterError, i < len(rowErrs) && rowErrs[i] != nil)
 	}
