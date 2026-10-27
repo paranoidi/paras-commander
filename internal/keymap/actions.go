@@ -256,6 +256,9 @@ const (
 	ActionUIOpenTheme         = "ui.open-theme"
 	ActionUIOpenConfig        = "ui.open-config"
 	ActionUICalibrateDebounce = "ui.calibrate-debounce"
+	// ActionUIStatusCommands opens the dialog choosing which status.toml status commands are
+	// drawn at the top-left of the menu bar.
+	ActionUIStatusCommands = "ui.status-commands"
 
 	// ActionPreviewSettingsDialog opens the M-F3 preview settings dialog (Sixel/Kitty/Kitty-
 	// placeholder confirmation checkboxes, Auto/Sixel/Kitty protocol radio, image-metadata
@@ -564,6 +567,7 @@ var KnownActions = map[string]struct{}{
 	ActionUIOpenTheme:           {},
 	ActionUIOpenConfig:          {},
 	ActionUICalibrateDebounce:   {},
+	ActionUIStatusCommands:      {},
 	ActionPreviewSettingsDialog: {},
 
 	ActionDialogOK:                  {},

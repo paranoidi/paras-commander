@@ -43,14 +43,14 @@ A style is a table with `fg`, `bg` and flags such as `bold`; colors are palette 
 |---|---|
 | `[palette]` | The 16 named colors the rest of the file refers to |
 | `[panel.*]` | Active, inactive and blocked (dimmed under dialogs) panel chrome; rows, marks, folder icons, git status, scrollbar, disk usage |
-| `[menu.*]` | Menu bar, pulldowns, status command, job strip, progress bar, speed pill |
+| `[menu.*]` | Menu bar, pulldowns, status commands (`menu.status`, `menu.status.separator`), job strip, progress bar, speed pill |
 | `[dialog.*]` | Dialog frame, buttons, inputs, options, progress |
 | `[jobs.*]`, `[compare]`, `terminal.text` | Jobs view, compare view, embedded terminal |
 | `[icons.*]` | Glyphs |
 
 ## Status glyphs
 
-Job states each have an icon and a color: scanning, queued, running, paused, canceled, failed, decision and completed. Glyphs are under `[icons.jobs.list]` and colors under `[jobs.icons]`; the menu-bar job strip uses `[icons.menu.job]`. The result icons of the jobs view Operations panel are `[icons.jobs.operations]` `success` / `failed` / `skipped`, colored by `[jobs.operations]` (the same colors mark the failed and skipped counts in the Details panel); without them the completed / failed / paused job colors and matching icons are used. Other icon groups: `[icons.filelist]` (row suffixes such as new, renamed, selection, pinned), `[icons.dialog]` (missing, history), `[icons.tree]`, `[icons.scrollbar]`. Without Nerd Font icons (`use_nerdfont_icons = false`) ASCII markers are used instead.
+Job states each have an icon and a color: scanning, queued, running, paused, canceled, failed, decision and completed. Glyphs are under `[icons.jobs.list]` and colors under `[jobs.icons]`; the menu-bar job strip uses `[icons.menu.job]`. The result icons of the jobs view Operations panel are `[icons.jobs.operations]` `success` / `failed` / `skipped`, colored by `[jobs.operations]` (the same colors mark the failed and skipped counts in the Details panel); without them the completed / failed / paused job colors and matching icons are used. Other icon groups: `[icons.menu.status]` (`separator` between status commands), `[icons.filelist]` (row suffixes such as new, renamed, selection, pinned), `[icons.dialog]` (missing, history), `[icons.tree]`, `[icons.scrollbar]`. Without Nerd Font icons (`use_nerdfont_icons = false`) ASCII markers are used instead.
 
 Changing the theme also changes how the Messages toasts look (`message.info`, `message.warn`, `message.error`).
 

@@ -21,6 +21,7 @@ New here? Start with [Getting started](getting-started.md), then
 - **Commands** — run a command for each selected file, user menu with background and worker-pool commands, [meta columns](meta-columns.md) fed by external commands. See [Commands](commands.md).
 - **Remote** — browse SFTP hosts from `~/.ssh/config`. See [SFTP](sftp.md).
 - **Subshell** — `Ctrl+O` shell with selected filenames at hand. See [Subshell](subshell.md).
+- **Status commands** — load average, memory, battery or your own commands at the top-left of the menu bar. See [Status commands](status-commands.md).
 - **Mouse** — optional click, double click, right click and wheel in the file browser. See [Mouse](mouse.md).
 - **Editor integration** — file chooser mode for Helix and others. See [Chooser mode](chooser-mode.md).
 - **Configurable** — [config](config.md), [keybindings](keybindings.md), [themes](themes.md).

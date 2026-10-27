@@ -20,8 +20,8 @@ pc --config-stub
 ```
 
 This writes a `config.toml` containing every key at its current built-in
-default, plus `keybindings.toml`, `menu.toml`, `meta.toml`, `pools.toml` and
-`patterns.toml` (the built-in example mass-rename patterns). Existing files are
+default, plus `keybindings.toml`, `menu.toml`, `meta.toml`, `pools.toml`,
+`status.toml` and `patterns.toml` (the built-in example mass-rename patterns). Existing files are
 left unchanged. It's the fastest way to get a copy of every available key, correctly
 named and up to date with the installed binary — treat it as more
 authoritative than any example in this document if the two ever disagree.
@@ -38,6 +38,7 @@ These live alongside `config.toml` in the same config directory but are
 | `meta.toml` | Meta column command definitions. | `[meta].file` |
 | `pools.toml` | Worker pool definitions. | `[pools].file` |
 | `patterns.toml` | Saved mass-rename find/replace patterns. | `[mass_rename].file` |
+| `status.toml` | Menu-bar [status commands](status-commands.md) and which are shown. See [`status.toml`](#statustoml). | — |
 | `themes/*.toml` | Color themes. | top-level `theme` key |
 
 ## Contents
@@ -67,6 +68,7 @@ These live alongside `config.toml` in the same config directory but are
 - [\[pools\]](#pools)
 - [\[compare\]](#compare)
 - [\[dedup\]](#dedup)
+- [status.toml](#statustoml)
 
 ## General (root keys)
 
@@ -502,15 +504,24 @@ Find-duplicates scan (within a single directory).
 | `hash_confirm_bytes` | int64 | `34359738368` (32 GiB) | Pause and ask for confirmation before hashing if the total size of hash candidates exceeds this. `0` disables the confirmation gate. |
 | `file_progress_bytes` | int64 | `268435456` (256 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. Chunk size comes from `[compare].chunk_bytes`. |
 
-## `[status_command]`
+## `status.toml`
 
-Runs a shell command on an interval and shows its first line of output at the top-left of the menu bar. Menu labels and the job-progress strip shift right to make room. Empty output, a non-zero exit, or a run exceeding 10 s clears the text.
+Separate file in the config directory defining the [status commands](status-commands.md) shown at the top-left of the menu bar. Built-in commands `loadavg`, `memory` and `battery` exist without any entry and are drawn in `"bright_black"` (dark grey). Empty output, a non-zero exit, or a run exceeding 10 s hides that segment.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `command` | string | `""` | Shell command line, run via `sh -c` (no `%f`/`%d`/… macro expansion, unlike `meta.toml` commands). Empty disables the feature. |
-| `interval_ms` | int | `3000` | How often `command` runs. Values below `500` are clamped up to the default. |
-| `max_width` | int | `15` | Maximum terminal cells for the displayed text; longer output is cut so it fits, `…` included. Clamped to `[1, 200]`. |
+| `show` | [string] | `[]` | Names of the commands to show, in order. Rewritten by the Display → Status commands dialog. Unknown names are ignored. |
+
+Each `[[command]]` table (a built-in's `name` replaces that built-in):
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | string | required | Unique identifier, used in `show`. |
+| `label` | string | `name` | Checkbox text in the Status commands dialog. |
+| `command` | string | required | Shell command line, run via `sh -c` (no `%f`/`%d`/… macro expansion, unlike `meta.toml` commands). The first output line is shown. |
+| `interval_ms` | int | `3000` | How often `command` runs. Values below `500` use the default. |
+| `max_width` | int | `15` | Maximum terminal cells for the displayed text; longer output is cut so it fits, `…` included. Values below `1` use the default; clamped to `200`. |
+| `color` | string | `""` | Text color, written like a theme color: a `[palette]` name of the active theme (e.g. `"yellow"`, `"bright_cyan"`), `"#RRGGBB"`, or `"default"`. Empty uses the theme's `menu.status` style. An unknown name shows an error and falls back to `menu.status`. |
 
 ## `keybindings.toml`
 

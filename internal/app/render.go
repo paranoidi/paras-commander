@@ -260,7 +260,7 @@ func (a *App) render() {
 	a.reconcileAfterEvent()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
 	a.model.MenuBarJobsAttention = a.menuBarJobsAttentionText()
-	a.model.StatusCommandText = a.statusCmdText
+	a.model.StatusCommands = a.statusCommandSegments()
 	a.refreshMenuBarJobsStrip()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerVisible()
 	a.model.FooterKeys = a.activeFooterKeys()
@@ -413,12 +413,9 @@ func (a *App) menuBarJobsAttentionText() string {
 }
 
 // statusCommandWidth returns the columns to reserve at the top-left of the menu bar for
-// the status_command text this frame (0 when the feature is disabled).
+// the status-command segments this frame (0 when none is shown or has output).
 func (a *App) statusCommandWidth() int {
-	if a.config.StatusCommand.Command == "" {
-		return 0
-	}
-	return ui.StatusCommandWidth(a.statusCmdText)
+	return ui.StatusCommandWidth(a.statusCommandSegments())
 }
 
 func (a *App) menuBarPermissionText() string {

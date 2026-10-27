@@ -113,6 +113,9 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 	case InputModeSortDialog:
 		return found(fits(func() dlg.Spec { return dialog.SortDialogView(m.SortDialog) }), &m.SortDialog.Focus, noQuit(a.applySortDialogEvent),
 			dialogButtons{OK: a.applySortDialog, Cancel: a.closeSortDialog})
+	case InputModeStatusCommandsDialog:
+		return found(fits(func() dlg.Spec { return dialog.StatusCommandsDialogView(m.StatusCommandsDialog) }), &m.StatusCommandsDialog.Focus, noQuit(a.applyStatusCommandsDialogEvent),
+			dialogButtons{OK: a.applyStatusCommandsDialog, Cancel: a.closeStatusCommandsDialog})
 	case InputModeListingFormatDialog:
 		return found(fits(func() dlg.Spec { return dialog.ListingFormatView(m.ListingFormatDialog) }), &m.ListingFormatDialog.Focus, noQuit(a.applyListingFormatEvent),
 			dialogButtons{OK: a.applyListingFormatDialog, Cancel: a.closeListingFormatDialog})

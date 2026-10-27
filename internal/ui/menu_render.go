@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -64,9 +65,55 @@ func menuBarRightTailRuneCount(attention, perm string, showMenuBarSpinner bool) 
 	return attW + 1 + base
 }
 
-// drawMenuBarStatusCommand paints the status_command text in the reserved top-left rect.
-func drawMenuBarStatusCommand(screen tcell.Screen, rect Rect, text string, style tcell.Style) {
-	primitive.Text(screen, rect.X, rect.Y, rect.Width, text, style)
+// statusCommandGap is the blank cell before each status-command segment and on both sides
+// of each separator glyph.
+const statusCommandGap = " "
+
+// StatusCommandSegment is one status command's output as drawn in the menu bar.
+type StatusCommandSegment struct {
+	Text  string      // already capped to the command's max_width
+	Style tcell.Style // menu.status, or that with the command's color as foreground
+}
+
+// StatusCommandWidth is the cell count drawMenuBarStatusCommands paints for segs:
+// " t1 · t2 " (one leading gap, each text followed by a gap, and a separator plus gap
+// between segments only). Zero segments reserve nothing. It is the single measure for the
+// full render and partial paints, so Layout.Menu.X never differs between frames.
+func StatusCommandWidth(segs []StatusCommandSegment) int {
+	if len(segs) == 0 {
+		return 0
+	}
+	w := len(statusCommandGap)
+	for i, s := range segs {
+		if i > 0 {
+			w += 1 + len(statusCommandGap)
+		}
+		w += runewidth.StringWidth(s.Text) + len(statusCommandGap)
+	}
+	return w
+}
+
+// drawMenuBarStatusCommands paints the status-command segments in the reserved top-left
+// rect: each text in its segment style, gaps in menu.status, the separator glyph between
+// segments in menu.status.separator.
+func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, segs []StatusCommandSegment, styles theme.Theme) {
+	sep := string(styles.IconMenuStatusSeparator())
+	x, end := rect.X, rect.X+rect.Width
+	put := func(s string, style tcell.Style) {
+		if x < end {
+			primitive.Text(screen, x, rect.Y, end-x, s, style)
+		}
+		x += runewidth.StringWidth(s)
+	}
+	put(statusCommandGap, styles.MenuStatus)
+	for i, s := range segs {
+		if i > 0 {
+			put(sep, styles.MenuStatusSeparator)
+			put(statusCommandGap, styles.MenuStatus)
+		}
+		put(s.Text, s.Style)
+		put(statusCommandGap, styles.MenuStatus)
+	}
 }
 
 // drawMenuBarJobsGapWithPinBadge draws the pin-count badge (if any) at the start of the gap

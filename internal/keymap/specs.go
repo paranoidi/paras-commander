@@ -1666,6 +1666,16 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "c",
 		},
 
+		{
+			ID:           ActionUIStatusCommands,
+			Views:        HelpBrowser,
+			Title:        "Status commands",
+			Section:      "Display",
+			DefaultKeys:  []string{"C-M-y"},
+			PreferredKey: "C-M-y",
+			Keywords:     []string{"status.toml", "menu bar", "load average", "memory", "battery"},
+		},
+
 		// ── Jobs ──
 		// jobs.open defaults belong in [main] (global). Other
 		// jobs.* defaults live in DefaultJobsOverlayKeys ([jobs]).

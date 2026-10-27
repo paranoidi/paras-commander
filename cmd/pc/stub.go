@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pools"
+	"github.com/paranoidi/paras-commander/internal/statuscmds"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
@@ -33,6 +34,7 @@ func writeConfigDirStubs(dir string, stderr io.Writer) error {
 	metaPath := filepath.Join(dir, config.DefaultMetaFileName)
 	poolsPath := filepath.Join(dir, config.DefaultPoolsFileName)
 	patternsPath := filepath.Join(dir, config.DefaultMassRenamePatternsFileName)
+	statusPath := statuscmds.Path(dir)
 
 	type stub struct {
 		path  string
@@ -45,6 +47,7 @@ func writeConfigDirStubs(dir string, stderr io.Writer) error {
 		{metaPath, func() (bool, error) { return metacmds.WriteMetaStub(metaPath) }},
 		{poolsPath, func() (bool, error) { return pools.WritePoolsStub(poolsPath) }},
 		{patternsPath, func() (bool, error) { return writeEncodedStub(patternsPath, ops.EncodeDefaultMassRenamePatterns) }},
+		{statusPath, func() (bool, error) { return statuscmds.WriteStub(statusPath) }},
 	}
 
 	for _, s := range stubs {
