@@ -1,7 +1,8 @@
 package panel
 
 import (
-	"sort"
+	"maps"
+	"slices"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
@@ -28,29 +29,11 @@ func (s *State) StashSaveFromSelection() bool {
 	if len(s.SelectedPaths) == 0 {
 		return false
 	}
-	seen := make(map[string]bool, len(s.SelectionStashPaths)+len(s.SelectedPaths))
-	paths := make([]string, 0, len(s.SelectionStashPaths)+len(s.SelectedPaths))
-	for _, p := range s.SelectionStashPaths {
-		seen[p] = true
-		paths = append(paths, p)
-	}
-	for p := range s.SelectedPaths {
-		if !seen[p] {
-			paths = append(paths, p)
-		}
-	}
-	sort.Strings(paths)
 	hadStash := len(s.SelectionStashPaths) > 0
-	s.SelectionStashPaths = paths
-	var strip []string
-	stripSeen := make(map[string]bool, len(s.SelectionStashStripOrder)+len(s.SelectedStripOrder))
-	for _, p := range append(append([]string(nil), s.SelectionStashStripOrder...), s.SelectedStripOrder...) {
-		if !stripSeen[p] {
-			stripSeen[p] = true
-			strip = append(strip, p)
-		}
-	}
-	s.SelectionStashStripOrder = strip
+	paths := slices.AppendSeq(slices.Clone(s.SelectionStashPaths), maps.Keys(s.SelectedPaths))
+	slices.Sort(paths)
+	s.SelectionStashPaths = slices.Compact(paths)
+	s.SelectionStashStripOrder = uniqueConcat(s.SelectionStashStripOrder, s.SelectedStripOrder)
 	if !hadStash || s.SelectionStashStripCursorPath == "" {
 		s.SelectionStashStripCursorPath = s.StripCursorPath
 	}
@@ -167,6 +150,22 @@ func filterSelectedStripOrder(stripOrder []string, selected map[string]bool) []s
 	}
 	if len(out) == 0 {
 		return nil
+	}
+	return out
+}
+
+// uniqueConcat concatenates lists in order, keeping each path's first occurrence (nil when
+// all are empty).
+func uniqueConcat(lists ...[]string) []string {
+	var out []string
+	seen := make(map[string]bool)
+	for _, l := range lists {
+		for _, p := range l {
+			if !seen[p] {
+				seen[p] = true
+				out = append(out, p)
+			}
+		}
 	}
 	return out
 }
