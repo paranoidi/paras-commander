@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
@@ -11,8 +12,10 @@ import (
 
 // JobEntriesFromJobs converts domain jobs to the render DTO used by the jobs view.
 // When includeThroughputStrip is false, ThroughputStrip is left nil so progress does not copy strip memory for the UI.
-// queueETAs maps job ID to cumulative queue ETA strings from jobs.ComputeQueueETAs.
-func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueETAs map[string]string) []JobEntry {
+// queueETAs maps job ID to cumulative queue ETA strings from jobs.ComputeQueueETAs. Per-source
+// data (SourceStats, SourcePhases) is copied only for the jobs in expanded, the ones showing
+// source sub-rows (JobsViewState.Expanded).
+func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueETAs map[string]string, expanded map[string]bool) []JobEntry {
 	entries := make([]JobEntry, 0, len(jobList))
 	for _, j := range jobList {
 		if j == nil {
@@ -27,6 +30,11 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 		var strip []float64
 		if includeThroughputStrip && len(j.ThroughputStrip) > 0 {
 			strip = append([]float64(nil), j.ThroughputStrip...)
+		}
+		var sourceStats []oplog.Stats
+		var sourcePhases []jobs.SourcePhase
+		if expanded[j.ID] {
+			sourceStats, sourcePhases = j.Ops.SourceStats(), j.SourcePhases()
 		}
 		queueETA := ""
 		if queueETAs != nil {
@@ -54,8 +62,8 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			FailedItems:     j.FailedItems,
 			Ops:             j.Ops,
 			OpsStats:        j.Ops.Stats(),
-			SourceStats:     j.Ops.SourceStats(),
-			SourcePhases:    j.SourcePhases(),
+			SourceStats:     sourceStats,
+			SourcePhases:    sourcePhases,
 			StartedAt:       j.StartedAt,
 			FinishedAt:      j.FinishedAt,
 			ETABytesPerSec:  j.ETABytesPerSec,

@@ -90,7 +90,7 @@ func (h *Handler) SyncJobsList() {
 	all := h.state.AllJobs()
 	now := time.Now()
 	queueETAs := jobs.ComputeQueueETAs(all, now)
-	h.model.JobsList = ui.JobEntriesFromJobs(all, h.config.Jobs.ThroughputChartEnabled, queueETAs)
+	h.model.JobsList = ui.JobEntriesFromJobs(all, h.config.Jobs.ThroughputChartEnabled, queueETAs, h.model.JobsView.Expanded)
 	h.pruneExpandedJobs()
 	h.listStale = false
 	h.listVersion++
@@ -179,6 +179,7 @@ func (h *Handler) setJobExpanded(expand bool) {
 			st.Expanded = map[string]bool{}
 		}
 		st.Expanded[sel.ID] = true
+		h.SyncJobsList() // collapsed entries carry no per-source data: fetch it now
 	} else {
 		delete(st.Expanded, sel.ID)
 		h.setSelection(ui.JobsListRow{Job: st.Selected, Source: oplog.NoSource})

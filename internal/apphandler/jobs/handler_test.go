@@ -910,3 +910,27 @@ func TestJobsViewExpandSourcesFiltersOperations(t *testing.T) {
 		t.Fatal("jobs.collapse must not close the view")
 	}
 }
+
+// TestJobsListCopiesSourceDataOnlyWhenExpanded: list sync skips per-source data of collapsed
+// jobs, and expanding fetches it at once.
+func TestJobsListCopiesSourceDataOnlyWhenExpanded(t *testing.T) {
+	t.Parallel()
+	h, model, state := newMaximizeTestHandler(t)
+	state.AddJob(&jobs.Job{
+		ID:          "thicket",
+		Type:        jobs.TypeCopy,
+		Status:      jobs.StatusQueued,
+		Sources:     pathloc.PathsForTest("/harbor/lantern", "/harbor/willow"),
+		Destination: pathloc.MustParse("/meadow"),
+	})
+	h.SyncJobsList()
+	idx := slices.IndexFunc(model.JobsList, func(e ui.JobEntry) bool { return e.ID == "thicket" })
+	if e := model.JobsList[idx]; e.SourceStats != nil || e.SourcePhases != nil {
+		t.Fatalf("collapsed entry carries source data: %+v %+v", e.SourceStats, e.SourcePhases)
+	}
+	model.JobsView.FocusPane, model.JobsView.Selected = 0, idx
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	if e := model.JobsList[idx]; len(e.SourceStats) != 2 || len(e.SourcePhases) != 2 {
+		t.Fatalf("expanded entry source data: %+v %+v", e.SourceStats, e.SourcePhases)
+	}
+}
