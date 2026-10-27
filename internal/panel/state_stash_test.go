@@ -109,3 +109,26 @@ func TestStashClear(t *testing.T) {
 		t.Fatal("stash should be empty after StashClear")
 	}
 }
+
+func TestStashSaveFromSelectionMergesIntoStash(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "orchard.txt")
+	bPath := filepath.Join(dir, "pebble.txt")
+	s := &State{SelectedPaths: map[string]bool{aPath: true}, SelectedStripOrder: []string{aPath}}
+	s.StashSaveFromSelection()
+	s.SelectedPaths = map[string]bool{aPath: true, bPath: true}
+	s.SelectedStripOrder = []string{bPath, aPath}
+	if !s.StashSaveFromSelection() {
+		t.Fatal("StashSaveFromSelection() = false, want true")
+	}
+	if got := s.SelectionStashPaths; len(got) != 2 || got[0] != aPath || got[1] != bPath {
+		t.Fatalf("stash paths = %v, want [%s %s]", got, aPath, bPath)
+	}
+	if got := s.SelectionStashStripOrder; len(got) != 2 || got[0] != aPath || got[1] != bPath {
+		t.Fatalf("stash strip = %v, want stash order first", got)
+	}
+	if s.SelectedPathCount() != 0 {
+		t.Fatalf("live selection = %d, want 0", s.SelectedPathCount())
+	}
+}

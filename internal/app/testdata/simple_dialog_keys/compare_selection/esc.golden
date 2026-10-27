@@ -1,0 +1,6 @@
+== open ==
+focus=stash
+== Left ==
+focus=drop
+== Esc ==
+CLOSED: compare=false live=1 stash=0 message=""

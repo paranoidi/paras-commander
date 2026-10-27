@@ -624,6 +624,53 @@ func TestStashRestoreKeyScripts(t *testing.T) {
 	})
 }
 
+// ---- compare selection ----
+
+var compareSelectionKeyDialog = keyGoldenDialog{
+	name: "compare_selection",
+	setup: func(t *testing.T, dir string) *App {
+		left, right := filepath.Join(dir, "willow"), filepath.Join(dir, "quarry")
+		for _, d := range []string{left, right} {
+			if err := os.Mkdir(d, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(d, "ember.txt"), []byte("x"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		app := newApp(t, newScreen(t, 80, 24), left)
+		app.model.Primary.Path = pathloc.MustParse(left)
+		app.model.Secondary.Path = pathloc.MustParse(right)
+		app.model.Primary.AddSelection(filepath.Join(left, "ember.txt"))
+		app.openComparePanels()
+		app.model.Message = ""
+		return app
+	},
+	state: func(app *App) string { return "focus=" + string(app.model.CompareSelection.Focus) },
+	open:  func(app *App) bool { return app.model.CompareSelection.Open },
+	outcome: func(app *App, _ bool) string {
+		p := &app.model.Primary
+		return fmt.Sprintf("compare=%v live=%d stash=%d message=%q", app.model.ViewMode == ui.ViewCompare, p.SelectedPathCount(), p.StashPathCount(), app.model.Message)
+	},
+}
+
+func TestCompareSelectionKeyScripts(t *testing.T) {
+	runKeyGoldenScripts(t, compareSelectionKeyDialog, []simpleKeyScript{
+		{"enter-stash", "Enter"},
+		{"enter-drop", "Left Enter"},
+		{"enter-cancel", "Right Enter"},
+		{"space", "Left Space"},
+		{"alt-d", "Alt+d"},
+		{"alt-s", "Left Alt+s"},
+		{"plain-letters", "d s c x"},
+		{"esc", "Left Esc"},
+		{"alt-o-stash", "Alt+o"},
+		{"alt-o-drop", "Left Alt+o"},
+		{"alt-c", "Alt+c"},
+		{"alt-unknown", "Alt+x Alt+q Left"},
+	})
+}
+
 // ---- dedup return ----
 
 func dedupReturnKeyDialog(name string, scope []string) keyGoldenDialog {

@@ -13,7 +13,10 @@ import (
 )
 
 func (a *App) openComparePanels() {
-	a.compareCtrl.Open()
+	if ui.IsAuxiliaryView(a.model.ViewMode) {
+		return // compareCtrl.Open would refuse; don't ask about the selection first
+	}
+	a.resolveSelectionBeforeCompare(a.compareCtrl.Open)
 }
 
 func (a *App) closeCompareView() {

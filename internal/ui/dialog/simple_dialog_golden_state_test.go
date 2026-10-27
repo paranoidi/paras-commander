@@ -110,6 +110,11 @@ func metaGoldenState(n int, checked, focus string) MetaDialogState {
 	return st
 }
 
+func compareSelectionGoldenState(selected int, focus string) CompareSelectionDialogState {
+	ids := map[string]dlg.ID{"drop": CompareSelectionDrop, "stash": CompareSelectionStash, "cancel": dlg.Cancel}
+	return CompareSelectionDialogState{Open: true, Focus: ids[focus], Selected: selected}
+}
+
 func stashRestoreGoldenState(focus string) StashRestoreDialogState {
 	ids := map[string]dlg.ID{"replace": StashReplace, "merge": StashMerge, "drop-stash": StashDropStash, "drop-all": StashDropAll, "cancel": dlg.Cancel}
 	return StashRestoreDialogState{Open: true, Focus: ids[focus]}

@@ -46,4 +46,6 @@ Each panel has one stash slot. `Ctrl+Alt+Insert` (`panel.stash-toggle`):
 - no selection and a stash: restore it;
 - both: a dialog offers Replace, Merge, Drop stash, Drop all or Cancel.
 
+Opening [Compare](compare-directories.md) with a selection offers to stash it; a panel that already has a stash gets the selection merged into it.
+
 A stash count appears on the panel's bottom border.

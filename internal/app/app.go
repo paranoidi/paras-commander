@@ -194,6 +194,8 @@ type App struct {
 	model               ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
+	// compareSelectionOpen opens Compare once the compare selection dialog is answered Drop or Stash.
+	compareSelectionOpen func()
 	// jobState manages background job queue and worker lifecycle.
 	jobState       *jobs.State
 	jobsCtrl       *jobsctrl.Handler
@@ -1430,6 +1432,9 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 		return a.handleUndoConfirmKey(event)
 	case a.model.StashRestoreDialog.Open:
 		a.handleStashRestoreDialogKey(event)
+		return false
+	case a.model.CompareSelection.Open:
+		a.handleCompareSelectionKey(event)
 		return false
 	}
 	return false

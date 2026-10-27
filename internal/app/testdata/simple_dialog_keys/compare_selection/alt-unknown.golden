@@ -1,0 +1,8 @@
+== open ==
+focus=stash
+== Alt+x ==
+focus=stash
+== Alt+q ==
+focus=stash
+== Left ==
+focus=drop

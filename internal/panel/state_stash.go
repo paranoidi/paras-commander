@@ -21,24 +21,39 @@ func (s State) SelectedPathCount() int {
 	return len(s.SelectedPaths)
 }
 
-// StashSaveFromSelection copies the current selection into the stash and clears live selection.
-// Returns false when there is nothing to stash.
+// StashSaveFromSelection moves the current selection into the stash and clears live selection.
+// A non-empty stash is merged with the selection (stash strip order first). Returns false when
+// there is nothing to stash.
 func (s *State) StashSaveFromSelection() bool {
 	if len(s.SelectedPaths) == 0 {
 		return false
 	}
-	paths := make([]string, 0, len(s.SelectedPaths))
-	for p := range s.SelectedPaths {
+	seen := make(map[string]bool, len(s.SelectionStashPaths)+len(s.SelectedPaths))
+	paths := make([]string, 0, len(s.SelectionStashPaths)+len(s.SelectedPaths))
+	for _, p := range s.SelectionStashPaths {
+		seen[p] = true
 		paths = append(paths, p)
 	}
-	sort.Strings(paths)
-	s.SelectionStashPaths = paths
-	if len(s.SelectedStripOrder) == 0 {
-		s.SelectionStashStripOrder = nil
-	} else {
-		s.SelectionStashStripOrder = append([]string(nil), s.SelectedStripOrder...)
+	for p := range s.SelectedPaths {
+		if !seen[p] {
+			paths = append(paths, p)
+		}
 	}
-	s.SelectionStashStripCursorPath = s.StripCursorPath
+	sort.Strings(paths)
+	hadStash := len(s.SelectionStashPaths) > 0
+	s.SelectionStashPaths = paths
+	var strip []string
+	stripSeen := make(map[string]bool, len(s.SelectionStashStripOrder)+len(s.SelectedStripOrder))
+	for _, p := range append(append([]string(nil), s.SelectionStashStripOrder...), s.SelectedStripOrder...) {
+		if !stripSeen[p] {
+			stripSeen[p] = true
+			strip = append(strip, p)
+		}
+	}
+	s.SelectionStashStripOrder = strip
+	if !hadStash || s.SelectionStashStripCursorPath == "" {
+		s.SelectionStashStripCursorPath = s.StripCursorPath
+	}
 	s.ClearSelection()
 	return true
 }

@@ -287,6 +287,7 @@ type Model struct {
 	DedupEmptyDirsConfirm  dialog.DedupEmptyDirsConfirmState
 	UndoConfirm            dialog.UndoConfirmState
 	StashRestoreDialog     dialog.StashRestoreDialogState
+	CompareSelection       dialog.CompareSelectionDialogState
 	MessageDialog          dialog.MessageDialogState
 	DedupProgressDialog    dialog.DedupProgressDialogState
 	DedupReturnDialog      dialog.DedupReturnDialogState
@@ -537,7 +538,7 @@ func (m *Model) nonLeaderModalOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -553,7 +554,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open ||
-		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open ||
+		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.LeaderMenu.Open ||
 		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open
 }
 
@@ -561,7 +562,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 // dedicated Jobs/Commands view keyboard handling. inputMode checks this only after earlier cases have ruled
 // out other modals.
 func (m *Model) AuxiliaryViewDialogKeysBlocked() bool {
-	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.Menu.Open
+	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.Menu.Open
 }
 
 // MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config
@@ -962,6 +963,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	PaintTransientStatusMessage(screen, layout, model, styles)
 	if model.StashRestoreDialog.Open {
 		dialog.DrawStashRestoreDialog(screen, layout, model.StashRestoreDialog, styles)
+	}
+	if model.CompareSelection.Open {
+		dialog.DrawCompareSelectionDialog(screen, layout, model.CompareSelection, styles)
 	}
 	if model.MessageDialog.Open {
 		dialog.DrawMessageDialog(screen, layout, model.MessageDialog, styles)
