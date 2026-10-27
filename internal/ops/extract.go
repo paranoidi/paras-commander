@@ -42,6 +42,8 @@ type ExtractPlan struct {
 	// OnItem, when set, reports each archive extracted (ItemDone), skipped or failed, with the
 	// reason for the last two.
 	OnItem ItemFunc
+	// OnSourceStart, when set, reports each archive's ExtractItem.Source as it begins.
+	OnSourceStart func(i int32)
 }
 
 func (p ExtractPlan) report(item ExtractItem, res ItemResult, reason string) {
@@ -137,6 +139,9 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 	for _, item := range plan.Items {
 		if err := ctx.Err(); err != nil {
 			return done, err
+		}
+		if plan.OnSourceStart != nil {
+			plan.OnSourceStart(item.Source)
 		}
 		if item.Format.NeedsStdoutSink() {
 			name := archive.OutputBasename(item.Path, item.Format)

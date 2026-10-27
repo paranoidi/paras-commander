@@ -93,7 +93,7 @@ func TestExecuteDeletePathsCancelMidRecursiveWalk(t *testing.T) {
 
 	done := make(chan error, 1)
 	go func() {
-		_, _, err := ExecuteDeletePaths(ctx, []string{root}, nil, nil)
+		_, _, err := ExecuteDeletePaths(ctx, []string{root}, nil, nil, nil)
 		done <- err
 	}()
 

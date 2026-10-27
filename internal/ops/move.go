@@ -211,7 +211,7 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
 		}
-		r.opts.source = int32(i)
+		r.opts.enterSource(int32(i))
 		name := TransferDestName(src, nameRoot)
 		dst, err := resolveMoveDestination(ctx, destination, name)
 		if err != nil {

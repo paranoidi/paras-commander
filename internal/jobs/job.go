@@ -231,6 +231,9 @@ type Job struct {
 	// transfer through ops.Options.OnItemDone / OnItemError (jobbridge), closed when the job
 	// leaves the state.
 	Ops *oplog.Log
+	// sourcePhases is the executor's progress through a multi-source job's sources (StartSource,
+	// SourcePhases); created with Ops by State.AddJob and kept across a retry.
+	sourcePhases *sourceProgress
 	// UndoOf is the ID of the job a TypeUndo job reverses.
 	UndoOf string
 	// Undone is set on the original job once an undo job has reversed (part of) it.
@@ -350,6 +353,7 @@ func (j *Job) RetryClone() *Job {
 		DereferenceSymlinks:   j.DereferenceSymlinks,
 		FlattenIntoDest:       j.FlattenIntoDest,
 		Ops:                   j.Ops,
+		sourcePhases:          j.sourcePhases,
 	}
 	return clone
 }

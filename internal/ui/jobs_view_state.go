@@ -28,7 +28,6 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 		if includeThroughputStrip && len(j.ThroughputStrip) > 0 {
 			strip = append([]float64(nil), j.ThroughputStrip...)
 		}
-		sourceStats, lastSource := j.Ops.SourceStats()
 		queueETA := ""
 		if queueETAs != nil {
 			queueETA = queueETAs[j.ID]
@@ -55,8 +54,8 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			FailedItems:     j.FailedItems,
 			Ops:             j.Ops,
 			OpsStats:        j.Ops.Stats(),
-			SourceStats:     sourceStats,
-			LastSource:      lastSource,
+			SourceStats:     j.Ops.SourceStats(),
+			SourcePhases:    j.SourcePhases(),
 			StartedAt:       j.StartedAt,
 			FinishedAt:      j.FinishedAt,
 			ETABytesPerSec:  j.ETABytesPerSec,

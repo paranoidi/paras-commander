@@ -226,7 +226,7 @@ func TestExecuteDeletePathsSkipContinues(t *testing.T) {
 	h := &elevHarness{answers: []PermissionAnswer{{Decision: PermissionSkip}}}
 	files, _, err := ExecuteDeletePaths(h.ctx(true), []string{
 		pathloc.FileMust(locked).String(), pathloc.FileMust(free).String(),
-	}, nil, nil)
+	}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("err = %v", err)
 	}

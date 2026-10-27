@@ -105,7 +105,7 @@ func TestDeletePathsReportsDone(t *testing.T) {
 		if res == ItemDone {
 			got = append(got, item.Src.Base())
 		}
-	}); err != nil {
+	}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Join(got, ",") != "thistle.log" {

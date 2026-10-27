@@ -174,7 +174,7 @@ func TestDeleteAttributesPathsToSources(t *testing.T) {
 	writeTree(t, quarry, map[string]string{"slate.txt": "s"})
 	writeTestFile(t, pebble, "p")
 	var items []PlanItem
-	if _, _, err := ExecuteDeletePaths(context.Background(), []string{MustPath(quarry).String(), MustPath(pebble).String()}, nil, collectItems(&items)); err != nil {
+	if _, _, err := ExecuteDeletePaths(context.Background(), []string{MustPath(quarry).String(), MustPath(pebble).String()}, nil, collectItems(&items), nil); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := sourceOf(items), "pebble.txt=1 quarry=0"; got != want {
@@ -242,5 +242,36 @@ func TestUndoMassRenameAttributesRowsToSteps(t *testing.T) {
 	}
 	if got, want := sourceOf(done), "amber.txt=0 basil.txt=1"; got != want {
 		t.Fatalf("done = %s, want %s", got, want)
+	}
+}
+
+func TestExecutorsReportSourceStarts(t *testing.T) {
+	base, dst := t.TempDir(), t.TempDir()
+	harbor, meadow := filepath.Join(base, "harbor"), filepath.Join(base, "meadow")
+	writeTree(t, harbor, map[string]string{"lantern.txt": "l", "deep/acorn.bin": "a"})
+	writeTree(t, meadow, map[string]string{"willow.txt": "w"})
+	var starts []int32
+	var journal []UndoStep
+	opts := Options{CopyBufferKiB: 4, OnSourceStart: func(i int32) { starts = append(starts, i) }, OnJournal: func(s UndoStep) { journal = append(journal, s) }}
+	if _, _, err := ExecuteCopy(context.Background(), MustPaths(harbor, meadow), MustPath(dst), opts, ProgressEmitThrottle{}, nil, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprint(starts) != "[0 1]" {
+		t.Fatalf("copy starts = %v, want each source once in order", starts)
+	}
+	starts = nil
+	opts.OnJournal = nil
+	if _, _, err := ExecuteUndo(context.Background(), journal, opts, nil); err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprint(starts) != "[1 0]" {
+		t.Fatalf("undo starts = %v, want the sources in reverse", starts)
+	}
+	starts = nil
+	if _, _, err := ExecuteDeletePaths(context.Background(), []string{MustPath(harbor).String(), MustPath(meadow).String()}, nil, nil, func(i int32) { starts = append(starts, i) }); err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprint(starts) != "[0 1]" {
+		t.Fatalf("delete starts = %v", starts)
 	}
 }

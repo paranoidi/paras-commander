@@ -85,7 +85,8 @@ func ExecuteUndo(ctx context.Context, steps []UndoStep, opts Options, progress P
 			return done, bytes, err
 		}
 		s := steps[i]
-		opts.source, r.opts.source = s.Source, s.Source
+		opts.enterSource(s.Source)
+		r.opts = opts
 		var err error
 		switch s.Kind {
 		case UndoMoveBack:
@@ -247,7 +248,7 @@ func undoMassRename(ctx context.Context, rows []MassRenameRow, steps []UndoStep,
 		src, serr := pathloc.Parse(row.SourcePath)
 		dst, derr := pathloc.Parse(row.NewPath())
 		if serr == nil && derr == nil {
-			opts.source = workSources[i]
+			opts.enterSource(workSources[i])
 			opts.itemDone(PlanItem{Src: src, Dst: dst, IsDir: row.IsDir}, ItemDone, "")
 		}
 	}

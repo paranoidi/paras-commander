@@ -224,9 +224,9 @@ func TestPerSourceViewsAndStats(t *testing.T) {
 	l.Append(Record{Result: Done, Label: "ledger/undo-step.txt", Source: NoSource})
 	l.Append(Record{Result: Done, Label: label(0), Source: 0}) // retry supersedes source 0's failure
 
-	per, last := l.SourceStats()
-	if len(per) != 3 || last != 0 {
-		t.Fatalf("SourceStats = %+v, last %d", per, last)
+	per := l.SourceStats()
+	if len(per) != 3 {
+		t.Fatalf("SourceStats = %+v", per)
 	}
 	// Failures at i = 0, 150 (source 0), 50, 200 (source 2), 100, 250 (source 1); i=0 retried.
 	if per[0].Failed != 1 || per[0].Done != 99 || per[1].Failed != 2 || per[2].Failed != 2 {
@@ -261,7 +261,7 @@ func TestPerSourceViewsAndStats(t *testing.T) {
 func TestSingleSourceLogHasNoSourceStats(t *testing.T) {
 	l, _ := newTestLog(t, 0)
 	l.Append(Record{Result: Done, Label: "orchard/acorn.txt"})
-	if per, last := l.SourceStats(); per != nil || last != NoSource {
-		t.Fatalf("SourceStats = %v, %d", per, last)
+	if per := l.SourceStats(); per != nil {
+		t.Fatalf("SourceStats = %v", per)
 	}
 }

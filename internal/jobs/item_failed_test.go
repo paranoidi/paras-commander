@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -103,8 +104,31 @@ func TestRecordOperationKeepsItemSource(t *testing.T) {
 	job.RecordOperation(item("/meadow/copper/thistle", 1), ops.ItemFailed, "permission denied")
 	job.RetryClone().RecordOperation(item("/meadow/copper/clover", 1), ops.ItemSkipped, "exists")
 
-	per, _ := job.Ops.SourceStats()
+	per := job.Ops.SourceStats()
 	if len(per) != 2 || per[0].Done != 1 || per[1].Failed != 1 || per[1].Skipped != 1 {
 		t.Fatalf("per-source stats = %+v", per)
+	}
+}
+
+func TestStartSourceAdvancesPhases(t *testing.T) {
+	s := NewState()
+	job := &Job{ID: "lantern", Type: TypeUndo, Status: StatusQueued,
+		Sources: pathloc.PathsForTest("/harbor/acorn", "/harbor/bramble", "/harbor/clover")}
+	s.AddJob(job)
+	job.StartSource(2)
+	job.StartSource(2) // repeated start of the current source changes nothing
+	job.StartSource(0)
+	job.StartSource(7) // out of range is ignored
+	if got := job.SourcePhases(); !slices.Equal(got, []SourcePhase{SourceStarted, SourceQueued, SourceFinished}) {
+		t.Fatalf("phases = %v", got)
+	}
+	if got := job.RetryClone().SourcePhases(); len(got) != 3 || got[2] != SourceFinished {
+		t.Fatalf("retry phases = %v, want the shared progress", got)
+	}
+	single := &Job{ID: "willow", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/harbor/acorn")}
+	s.AddJob(single)
+	single.StartSource(0)
+	if single.SourcePhases() != nil {
+		t.Fatal("a single-source job has no per-source phases")
 	}
 }

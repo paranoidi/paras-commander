@@ -409,7 +409,7 @@ func TestExecuteDeleteDirectory(t *testing.T) {
 func TestExecuteDeleteMissingPath(t *testing.T) {
 	t.Parallel()
 	missing := filepath.Join(t.TempDir(), "gone.txt")
-	_, _, err := ExecuteDeletePaths(context.Background(), []string{missing}, nil, nil)
+	_, _, err := ExecuteDeletePaths(context.Background(), []string{missing}, nil, nil, nil)
 	if err == nil {
 		t.Fatal("ExecuteDeletePaths() error = nil, want does not exist")
 	}

@@ -83,7 +83,7 @@ func ExecuteFlatten(ctx context.Context, roots []pathloc.Path, dest pathloc.Path
 		moveRun: moveRun{opts: opts, throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait},
 	}
 	for i, root := range roots {
-		w.opts.source = int32(i)
+		w.opts.enterSource(int32(i))
 		if err := w.walk(ctx, root); err != nil {
 			return w.doneFiles, w.doneBytes, err
 		}

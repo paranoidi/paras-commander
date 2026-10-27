@@ -80,37 +80,36 @@ func (s *JobsViewState) SelectRow(r JobsListRow) {
 	s.Selected, s.SelectedSub = r.Job, r.Source+1
 }
 
-// jobSourceStatus is the job status string shown for source i of job e. Sources are processed
-// in order, so a source below the newest attributed record's source (or one with records) is
-// finished: failed when it has failures, else completed. The newest record's source carries
-// the active job's status; the rest are queued, or, once the job finished, canceled when the
-// job did not complete.
+// jobSourceStatus is the job status string shown for source i of job e, from the phase the
+// executor reported (JobEntry.SourcePhases): a started source carries the job's status (once
+// the job completed, its own outcome), a finished one is failed when it has failed records,
+// else completed. An unreached source is queued while the job is active; once the job is over
+// it is completed (or failed) when the job completed or it has records, else canceled.
 func jobSourceStatus(e JobEntry, i int) string {
 	st := jobs.Status(e.Status)
-	if st == jobs.StatusScanning || st == jobs.StatusQueued {
-		return string(jobs.StatusQueued)
+	phase := jobs.SourceQueued
+	if i >= 0 && i < len(e.SourcePhases) {
+		phase = e.SourcePhases[i]
 	}
 	var stats oplog.Stats
 	if i >= 0 && i < len(e.SourceStats) {
 		stats = e.SourceStats[i]
 	}
-	finished := string(jobs.StatusCompleted)
+	outcome := string(jobs.StatusCompleted)
 	if stats.Failed > 0 {
-		finished = string(jobs.StatusFailed)
+		outcome = string(jobs.StatusFailed)
 	}
-	if !st.IsFinished() && i == max(e.LastSource, 0) {
+	switch {
+	case phase == jobs.SourceStarted && st != jobs.StatusCompleted:
 		return e.Status
+	case phase != jobs.SourceQueued:
+		return outcome
+	case !st.IsFinished():
+		return string(jobs.StatusQueued)
+	case st == jobs.StatusCompleted || stats.Done+stats.Skipped+stats.Failed > 0:
+		return outcome
 	}
-	if i < e.LastSource || stats.Done+stats.Skipped+stats.Failed > 0 {
-		return finished
-	}
-	switch st {
-	case jobs.StatusCompleted:
-		return finished
-	case jobs.StatusCanceled, jobs.StatusFailed:
-		return string(jobs.StatusCanceled)
-	}
-	return string(jobs.StatusQueued)
+	return string(jobs.StatusCanceled)
 }
 
 // jobSourceLabels are the Queue sub-row labels of sources: each base name, or the whole path

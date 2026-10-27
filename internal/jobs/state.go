@@ -276,6 +276,7 @@ func (s *State) AddJob(job *Job) {
 		cfg := s.opLog
 		cfg.Sources = len(job.Sources)
 		job.Ops = oplog.New(job.ID, cfg)
+		job.sourcePhases = newSourceProgress(len(job.Sources))
 	}
 	s.queue.Enqueue(job)
 	status := job.Status

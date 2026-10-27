@@ -87,10 +87,9 @@ type Log struct {
 	merged map[viewKey]*mergedView // multi-result views, extended incrementally
 
 	// srcLists and srcCounts index records per source like lists and counts (nil unless
-	// Config.Sources > 1); lastSource is the source of the newest attributed record.
-	srcLists   [][numResults][]uint32
-	srcCounts  [][numResults]int
-	lastSource int
+	// Config.Sources > 1).
+	srcLists  [][numResults][]uint32
+	srcCounts [][numResults]int
 
 	file        *os.File
 	path        string
@@ -104,13 +103,13 @@ type Log struct {
 
 // New returns an empty log for jobID.
 func New(jobID string, cfg Config) *Log {
-	l := &Log{cfg: cfg, jobID: jobID, failedByLabel: map[string]failedRef{}, superseded: map[uint32]struct{}{}, lastSource: NoSource}
+	l := &Log{cfg: cfg, jobID: jobID, failedByLabel: map[string]failedRef{}, superseded: map[uint32]struct{}{}}
 	l.resetSourcesUnlocked()
 	return l
 }
 
 func (l *Log) resetSourcesUnlocked() {
-	l.srcLists, l.srcCounts, l.lastSource = nil, nil, NoSource
+	l.srcLists, l.srcCounts = nil, nil
 	if l.cfg.Sources > 1 {
 		l.srcLists = make([][numResults][]uint32, l.cfg.Sources)
 		l.srcCounts = make([][numResults]int, l.cfg.Sources)
@@ -143,7 +142,6 @@ func (l *Log) Append(rec Record) {
 	if l.sourceIndexed(rec.Source) {
 		l.srcLists[rec.Source][rec.Result] = append(l.srcLists[rec.Source][rec.Result], num)
 		l.srcCounts[rec.Source][rec.Result]++
-		l.lastSource = int(rec.Source)
 	}
 	l.mem = append(l.mem, rec)
 	l.version++
@@ -284,21 +282,21 @@ func (l *Log) Stats() Stats {
 }
 
 // SourceStats returns the counters of each source (nil unless Config.Sources > 1; Dropped and
-// Version are not set) and the source of the newest attributed record (NoSource before any).
-func (l *Log) SourceStats() (per []Stats, last int) {
+// Version are not set).
+func (l *Log) SourceStats() []Stats {
 	if l == nil {
-		return nil, NoSource
+		return nil
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if len(l.srcCounts) == 0 {
-		return nil, NoSource
+		return nil
 	}
-	per = make([]Stats, len(l.srcCounts))
+	per := make([]Stats, len(l.srcCounts))
 	for i, c := range l.srcCounts {
 		per[i] = Stats{Done: c[Done], Skipped: c[Skipped], Failed: c[Failed]}
 	}
-	return per, l.lastSource
+	return per
 }
 
 // lowestUnlocked is the oldest readable record number.

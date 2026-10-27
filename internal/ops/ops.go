@@ -100,11 +100,26 @@ type Options struct {
 	// TotalDirs is the same unit, so the difference is the files a canceled copy left undone.
 	// nil means no-op.
 	OnItemsProcessed func(n int)
+	// OnSourceStart reports that the executor began work on job source i (enterSource), before
+	// any of its items; nil means no-op. It runs on the job goroutine.
+	OnSourceStart func(i int32)
 
-	// source is the index of the job source being processed. Executors set it per source (copy:
-	// per plan item) and every item report and undo step carries it (PlanItem.Source,
-	// UndoStep.Source).
-	source int32
+	// source is the index of the job source being processed. Executors move it with
+	// enterSource (copy: per plan item) and every item report and undo step carries it
+	// (PlanItem.Source, UndoStep.Source). entered is false until the first enterSource.
+	source  int32
+	entered bool
+}
+
+// enterSource makes i the source being processed, reporting OnSourceStart when it changes.
+func (o *Options) enterSource(i int32) {
+	if o.entered && o.source == i {
+		return
+	}
+	o.source, o.entered = i, true
+	if o.OnSourceStart != nil {
+		o.OnSourceStart(i)
+	}
 }
 
 // ItemFunc reports one item outcome: OnItemDone and the delete/extract item hooks.

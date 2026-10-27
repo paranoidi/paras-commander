@@ -44,24 +44,31 @@ func TestJobsListRowsAndSelection(t *testing.T) {
 }
 
 func TestJobSourceStatus(t *testing.T) {
+	const (
+		q = jobs.SourceQueued
+		s = jobs.SourceStarted
+		f = jobs.SourceFinished
+	)
 	stats := []oplog.Stats{{Done: 4}, {Done: 1, Failed: 1}, {}}
 	tests := []struct {
 		status string
-		last   int
+		phases []jobs.SourcePhase
 		want   []jobs.Status
 	}{
-		{string(jobs.StatusQueued), oplog.NoSource, []jobs.Status{jobs.StatusQueued, jobs.StatusQueued, jobs.StatusQueued}},
-		{string(jobs.StatusRunning), oplog.NoSource, []jobs.Status{jobs.StatusRunning, jobs.StatusFailed, jobs.StatusQueued}},
-		{string(jobs.StatusRunning), 1, []jobs.Status{jobs.StatusCompleted, jobs.StatusRunning, jobs.StatusQueued}},
-		{string(jobs.StatusPaused), 2, []jobs.Status{jobs.StatusCompleted, jobs.StatusFailed, jobs.StatusPaused}},
-		{string(jobs.StatusCompleted), 1, []jobs.Status{jobs.StatusCompleted, jobs.StatusFailed, jobs.StatusCompleted}},
-		{string(jobs.StatusCanceled), 1, []jobs.Status{jobs.StatusCompleted, jobs.StatusFailed, jobs.StatusCanceled}},
+		{string(jobs.StatusQueued), []jobs.SourcePhase{q, q, q}, []jobs.Status{jobs.StatusQueued, jobs.StatusQueued, jobs.StatusQueued}},
+		{string(jobs.StatusRunning), []jobs.SourcePhase{s, q, q}, []jobs.Status{jobs.StatusRunning, jobs.StatusQueued, jobs.StatusQueued}},
+		{string(jobs.StatusRunning), []jobs.SourcePhase{f, s, q}, []jobs.Status{jobs.StatusCompleted, jobs.StatusRunning, jobs.StatusQueued}},
+		{string(jobs.StatusPaused), []jobs.SourcePhase{f, f, s}, []jobs.Status{jobs.StatusCompleted, jobs.StatusFailed, jobs.StatusPaused}},
+		// Undo works through sources in reverse: no ordering is assumed.
+		{string(jobs.StatusRunning), []jobs.SourcePhase{q, f, s}, []jobs.Status{jobs.StatusQueued, jobs.StatusFailed, jobs.StatusRunning}},
+		{string(jobs.StatusCompleted), []jobs.SourcePhase{f, f, s}, []jobs.Status{jobs.StatusCompleted, jobs.StatusFailed, jobs.StatusCompleted}},
+		{string(jobs.StatusCanceled), []jobs.SourcePhase{f, s, q}, []jobs.Status{jobs.StatusCompleted, jobs.StatusCanceled, jobs.StatusCanceled}},
 	}
 	for _, tt := range tests {
-		e := JobEntry{Status: tt.status, Sources: make([]string, 3), SourceStats: stats, LastSource: tt.last}
+		e := JobEntry{Status: tt.status, Sources: make([]string, 3), SourceStats: stats, SourcePhases: tt.phases}
 		for i, want := range tt.want {
 			if got := jobSourceStatus(e, i); got != string(want) {
-				t.Errorf("%s last=%d source %d = %s, want %s", tt.status, tt.last, i, got, want)
+				t.Errorf("%s phases=%v source %d = %s, want %s", tt.status, tt.phases, i, got, want)
 			}
 		}
 	}
@@ -84,7 +91,7 @@ func TestDrawJobsListPanelExpandedSources(t *testing.T) {
 	rect := Rect{X: 0, Y: 0, Width: 90, Height: 9}
 	list := sourcesJobs()
 	list[0].SourceStats = []oplog.Stats{{Done: 3}, {Done: 1, Failed: 2}, {}}
-	list[0].LastSource = 1
+	list[0].SourcePhases = []jobs.SourcePhase{jobs.SourceFinished, jobs.SourceStarted, jobs.SourceQueued}
 	styles := theme.Default()
 	st := JobsViewState{Expanded: map[string]bool{"harbor": true}}
 	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0)

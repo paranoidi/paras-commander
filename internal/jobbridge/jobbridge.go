@@ -258,6 +258,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
 		opts.OnItemDone = job.RecordOperation
+		opts.OnSourceStart = job.StartSource
 		if job.Type == jobs.TypeCopy || job.Type == jobs.TypeUndo {
 			opts.OnItemError = func(item ops.PlanItem, err error) {
 				job.FailItem(emit, jobs.StatusRunning, item, err)
@@ -725,7 +726,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 				CurrentPath: path,
 			})
 		}
-		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(job.Sources), deleteProgress, job.RecordOperation)
+		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(job.Sources), deleteProgress, job.RecordOperation, job.StartSource)
 		if err == nil && job.DeleteRemoveEmptyDirs {
 			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, uniqueParents(job.Sources)); cleanErr != nil {
 				err = cleanErr
@@ -752,6 +753,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		}
 		plan.Conflict = tc.resolver
 		plan.OnItem = job.RecordOperation
+		plan.OnSourceStart = job.StartSource
 		if extractPlanErr != nil {
 			err = extractPlanErr
 		} else {
