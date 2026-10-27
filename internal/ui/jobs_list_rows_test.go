@@ -173,3 +173,26 @@ func TestDrawJobsListPanelProgressGap(t *testing.T) {
 		}
 	}
 }
+
+// TestDrawJobsListPanelSourceCountsOffCursor: on a source sub-row under the cursor, the counts in
+// the Progress column keep the plain row background, like the job row's progress bar.
+func TestDrawJobsListPanelSourceCountsOffCursor(t *testing.T) {
+	screen := newOpsScreen(t)
+	screen.SetSize(90, 10)
+	rect := Rect{X: 0, Y: 0, Width: 90, Height: 9}
+	list := sourcesJobs()
+	list[0].SourceStats = []oplog.Stats{{Done: 11}, {Done: 7}, {}}
+	styles := theme.Default()
+	st := JobsViewState{Expanded: map[string]bool{"harbor": true}, SelectedSub: 1}
+	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0)
+	xProg := rect.X + 2 + jobsListColPrefix + jobsListColStatus + jobsListColETA + jobsListColSpeed
+	y := 3
+	_, label, _ := screen.Get(xProg-3, y)
+	_, cursorBG, _ := label.Decompose()
+	for x := xProg; x < xProg+len("11 done"); x++ {
+		_, cell, _ := screen.Get(x, y)
+		if _, bg, _ := cell.Decompose(); bg == cursorBG {
+			t.Fatalf("counts cell x=%d has the cursor background %v", x, bg)
+		}
+	}
+}

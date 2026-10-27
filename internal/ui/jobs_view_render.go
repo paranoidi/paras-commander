@@ -220,7 +220,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 				sourceLabels[r.Job] = labels
 			}
 			last := r.Source == len(entry.Sources)-1
-			drawJobsListSourceRow(screen, contentX, y, xProg, barW, entry, r.Source, labels[r.Source], last, lineStyle, selected, chromeBlocked, styles)
+			drawJobsListSourceRow(screen, contentX, y, xProg, barW, entry, r.Source, labels[r.Source], last, lineStyle, rowBase, selected, chromeBlocked, styles)
 		} else {
 			drawJobsListJobRow(screen, contentX, y, xProg, barW, entry, state.JobExpanded(entry), lineStyle, selected, styles, now)
 		}
@@ -275,8 +275,9 @@ func drawJobsListJobRow(screen tcell.Screen, contentX, y, xProg, barW int, entry
 
 // drawJobsListSourceRow paints the sub-row of source src under an expanded job: the tree
 // connector in the icon column, the source's status icon and label across Type..Speed, and
-// its done / failed / skipped counts in the Progress column.
-func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int, entry JobEntry, src int, label string, last bool, lineStyle tcell.Style, selected, chromeBlocked bool, styles theme.Theme) {
+// its done / failed / skipped counts in the Progress column. The counts draw on rowBase, like the
+// job row's progress bar, so the cursor background stops at the Speed column.
+func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int, entry JobEntry, src int, label string, last bool, lineStyle, rowBase tcell.Style, selected, chromeBlocked bool, styles theme.Theme) {
 	connector := jobsListOnRow(styles.PanelRowTreeConnector, lineStyle, selected)
 	primitive.Text(screen, contentX, y, jobsListColIcon, panellist.TreeConnectorPrefix(1, last, nil, styles), connector)
 	status := jobSourceStatus(entry, src)
@@ -296,9 +297,9 @@ func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int,
 		stats = entry.SourceStats[src]
 	}
 	parts := jobResultCountsParts(stats, "")
-	body := jobsListOnRow(styles.JobsRow, lineStyle, selected)
+	body := rowBase
 	var spans []primitive.Span
-	if !chromeBlocked && !selected {
+	if !chromeBlocked {
 		spans = jobFilesPartSpans(parts, styles, body)
 	}
 	text := jobFilesPartsText(parts)
