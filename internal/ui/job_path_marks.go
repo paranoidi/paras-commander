@@ -14,9 +14,9 @@ import (
 // duration of the job. Matching walks the row path's own ancestors against these sets instead,
 // so cost depends on path depth, never on how many files the job moves.
 type jobPathIndex struct {
-	sources    map[string]struct{} // normalized source paths
-	sourceDirs []string            // deduplicated parents of sources
-	dests      map[string]struct{} // normalized per-source destination paths
+	sources    map[string]int32 // normalized source path -> source index
+	sourceDirs []string         // deduplicated parents of sources
+	dests      map[string]int32 // normalized per-source destination path -> source index (-1: shared)
 }
 
 // newJobPathIndex resolves each source's destination the same way ops.ResolveDestination does
@@ -26,8 +26,8 @@ type jobPathIndex struct {
 // (ops.TransferDestName) would need a common-root walk per source.
 func newJobPathIndex(m JobPathMark) *jobPathIndex {
 	idx := &jobPathIndex{
-		sources: make(map[string]struct{}, len(m.Sources)),
-		dests:   make(map[string]struct{}, len(m.Sources)),
+		sources: make(map[string]int32, len(m.Sources)),
+		dests:   make(map[string]int32, len(m.Sources)),
 	}
 	var destLoc pathloc.Path
 	destOK := false
@@ -37,7 +37,7 @@ func newJobPathIndex(m JobPathMark) *jobPathIndex {
 		}
 	}
 	seenDir := make(map[string]struct{})
-	for _, src := range m.Sources {
+	for i, src := range m.Sources {
 		loc, err := pathloc.Parse(src)
 		if err != nil {
 			continue
@@ -46,7 +46,9 @@ func newJobPathIndex(m JobPathMark) *jobPathIndex {
 		if s == "" || s == "." {
 			continue
 		}
-		idx.sources[s] = struct{}{}
+		if _, dup := idx.sources[s]; !dup {
+			idx.sources[s] = int32(i)
+		}
 		if dir := loc.Parent().String(); dir != "" && dir != "." {
 			if _, seen := seenDir[dir]; !seen {
 				seenDir[dir] = struct{}{}
@@ -57,11 +59,13 @@ func newJobPathIndex(m JobPathMark) *jobPathIndex {
 			continue
 		}
 		if !m.DestIsDir {
-			idx.dests[destLoc.String()] = struct{}{}
+			idx.dests[destLoc.String()] = -1 // every source writes this one root
 			continue
 		}
 		if child, err := destLoc.Join(loc.Base()); err == nil {
-			idx.dests[child.String()] = struct{}{}
+			if _, dup := idx.dests[child.String()]; !dup {
+				idx.dests[child.String()] = int32(i)
+			}
 		}
 	}
 	return idx
@@ -87,29 +91,41 @@ func walkRoots(absPath string, hit func(path string) bool) {
 	}
 }
 
-// rootMatch returns the length of the longest source or destination root containing absPath and
-// whether that root is a destination (destinations win when both match at the same depth), or
-// (0, false) when nothing matches.
-func (idx *jobPathIndex) rootMatch(absPath string) (maxLen int, isDest bool) {
+// rootMatch returns the length of the longest source or destination root containing absPath,
+// whether that root is a destination (destinations win when both match at the same depth) and
+// whether it is a pending source, or (0, false, false) when nothing matches. phase (nil marks
+// every root active) drops done roots and pending destinations; the walk then continues to
+// the outer roots.
+func (idx *jobPathIndex) rootMatch(absPath string, phase func(int32) rootPhase) (maxLen int, isDest, pending bool) {
+	phaseOf := func(src int32) rootPhase {
+		if phase == nil {
+			return rootActive
+		}
+		return phase(src)
+	}
 	walkRoots(absPath, func(s string) bool {
-		if _, ok := idx.dests[s]; ok {
+		if src, ok := idx.dests[s]; ok && phaseOf(src) == rootActive {
 			maxLen, isDest = len(s), true
 			return true
 		}
-		if _, ok := idx.sources[s]; ok {
-			maxLen, isDest = len(s), false
-			return true
+		if src, ok := idx.sources[s]; ok {
+			if p := phaseOf(src); p != rootDone {
+				maxLen, isDest, pending = len(s), false, p == rootPending
+				return true
+			}
 		}
 		return false
 	})
-	return maxLen, isDest
+	return maxLen, isDest, pending
 }
 
-// destMatch reports whether absPath is at or under one of the resolved destination roots.
-func (idx *jobPathIndex) destMatch(absPath string) bool {
+// destMatch reports whether absPath is at or under one of the resolved destination roots whose
+// phase (nil: any) is active.
+func (idx *jobPathIndex) destMatch(absPath string, phase func(int32) rootPhase) bool {
 	found := false
 	walkRoots(absPath, func(s string) bool {
-		_, found = idx.dests[s]
+		src, ok := idx.dests[s]
+		found = ok && (phase == nil || phase(src) == rootActive)
 		return found
 	})
 	return found
@@ -131,17 +147,20 @@ func jobTypeMarkPriority(t string) int {
 }
 
 // longestMatchingRootLen returns the maximum length of a path (source or resolved
-// destination) that matches absPath as root-of-subtree, and whether that best match is a
-// destination root (destination preferred on equal length), or (0, false) if none.
-func longestMatchingRootLen(j JobPathMark, absPath string) (maxLen int, isDest bool) {
-	return j.index().rootMatch(absPath)
+// destination) that matches absPath as root-of-subtree, whether that best match is a
+// destination root (destination preferred on equal length) and whether it is a pending source
+// (JobPathMark.rootPhase), or (0, false, false) if none.
+func longestMatchingRootLen(j JobPathMark, absPath string) (maxLen int, isDest, pending bool) {
+	return j.index().rootMatch(absPath, j.rootPhase)
 }
 
-// JobRowMark is the best non-finished job matching a row's path, per EntryPathJobMark.
+// JobRowMark is the best non-finished job matching a row's path, per EntryPathJobMark. Pending
+// is set for a source the job has not started yet (a multi-source job working on another one).
 type JobRowMark struct {
-	Status string
-	Type   string
-	Write  bool
+	Status  string
+	Type    string
+	Write   bool
+	Pending bool
 }
 
 // EntryPathJobMark returns the best non-finished job that affects absPath (whether any such
@@ -163,7 +182,7 @@ func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool)
 		if jobs.Status(j.Status).IsFinished() {
 			continue
 		}
-		rootLen, isDest := longestMatchingRootLen(j, p)
+		rootLen, isDest, pending := longestMatchingRootLen(j, p)
 		if rootLen == 0 {
 			continue
 		}
@@ -175,9 +194,10 @@ func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool)
 			bestPri = pri
 			bestLen = rootLen
 			best = JobRowMark{
-				Status: j.Status,
-				Type:   j.Type,
-				Write:  isDest || jobs.Type(j.Type) == jobs.TypeDelete,
+				Status:  j.Status,
+				Type:    j.Type,
+				Write:   isDest || jobs.Type(j.Type) == jobs.TypeDelete,
+				Pending: pending,
 			}
 		}
 	}
@@ -218,7 +238,7 @@ func PanelTouchedByJobs(panelPath string, jobMarks []JobPathMark) bool {
 			continue
 		}
 		idx := j.index()
-		if n, _ := idx.rootMatch(panelPath); n > 0 {
+		if n, _, _ := idx.rootMatch(panelPath, nil); n > 0 {
 			return true
 		}
 		for _, dir := range idx.sourceDirs {
@@ -235,7 +255,9 @@ func PanelTouchedByJobs(panelPath string, jobMarks []JobPathMark) bool {
 
 // PanelInsideJobWriteTree reports whether panelPath is the destination dir of, or
 // at-or-under a resolved destination root of, any non-finished job with a
-// non-empty Destination; decision status wins over any other matched status.
+// non-empty Destination; decision status wins over any other matched status. Of a multi-source
+// job's resolved roots only the active source's counts (JobPathMark.rootPhase); the destination
+// dir itself always does, since every source is written into it.
 func PanelInsideJobWriteTree(panelPath string, jobMarks []JobPathMark) (bool, string) {
 	if panelPath == "" || len(jobMarks) == 0 {
 		return false, ""
@@ -259,7 +281,7 @@ func PanelInsideJobWriteTree(panelPath string, jobMarks []JobPathMark) (bool, st
 		// Every per-source resolved destination lives at-or-under j.Destination, so panelPath can
 		// only match one if it is itself at-or-under j.Destination — skip the index walk otherwise.
 		if !hit && pathloc.EqualOrUnderStrings(j.Destination, panelPath) {
-			hit = j.index().destMatch(panelPath)
+			hit = j.index().destMatch(panelPath, j.rootPhase)
 		}
 		if !hit {
 			continue

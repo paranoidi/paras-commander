@@ -934,3 +934,41 @@ func TestJobsListCopiesSourceDataOnlyWhenExpanded(t *testing.T) {
 		t.Fatalf("expanded entry source data: %+v %+v", e.SourceStats, e.SourcePhases)
 	}
 }
+
+func TestProgressMovesPathMarksToActiveSource(t *testing.T) {
+	t.Parallel()
+	h, model, state := newMaximizeTestHandler(t)
+	h.closeJobsView()
+	job := &jobs.Job{
+		ID:          "walnut",
+		Type:        jobs.TypeCopy,
+		Status:      jobs.StatusRunning,
+		Sources:     pathloc.PathsForTest("/harbor/lantern", "/harbor/willow"),
+		Destination: pathloc.MustParse("/meadow"),
+		DestIsDir:   true,
+	}
+	state.AddJob(job)
+	job.StartSource(0)
+	h.SyncJobPathMarks()
+	i := slices.IndexFunc(model.JobPathMarks, func(m ui.JobPathMark) bool { return m.ID == "walnut" })
+	before := model.JobPathMarks[i]
+	if before.ActiveSource != 0 {
+		t.Fatalf("synced ActiveSource = %d, want 0", before.ActiveSource)
+	}
+	if ok, _ := ui.PanelInsideJobWriteTree("/meadow/willow", model.JobPathMarks); ok {
+		t.Fatal("a pending source's destination counts as written")
+	}
+
+	job.StartSource(1)
+	h.applyJobEventBatch([]jobs.Event{{Type: jobs.EventProgress, JobID: "walnut", Status: jobs.StatusRunning, CurrentPath: "/harbor/willow/clover.txt"}})
+	after := model.JobPathMarks[i]
+	if after.ActiveSource != 1 || after.SourcePhases[0] != jobs.SourceFinished {
+		t.Fatalf("mark after progress = active %d phases %v", after.ActiveSource, after.SourcePhases)
+	}
+	if ok, _ := ui.PanelInsideJobWriteTree("/meadow/willow", model.JobPathMarks); !ok {
+		t.Fatal("the active source's destination is not a write tree after the move")
+	}
+	if ok, _ := ui.PanelInsideJobWriteTree("/meadow/lantern", model.JobPathMarks); ok {
+		t.Fatal("the finished source's destination still counts as written")
+	}
+}

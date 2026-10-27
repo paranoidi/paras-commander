@@ -1012,7 +1012,8 @@ func (h *Handler) applyJobEventBatch(batch []jobs.Event) {
 			h.refreshProgress = true
 		}
 		// MarkUpdate (started/resumed/…) and progress both need a dest-panel readdir so
-		// newly written names appear in the file list with job icons while the job runs.
+		// newly written names appear in the file list with job icons while the job runs. A
+		// moved active source (ActiveSource) always comes with progress.
 		if (flags.Progress || flags.MarkUpdate) && !h.refreshTerminal {
 			h.refreshDestListing = true
 		}
@@ -1037,6 +1038,9 @@ type batchFlags struct {
 	Progress   bool
 	Blocker    bool
 	MarkUpdate bool
+	// ActiveSource is set when a multi-source job's executor moved to another source: its
+	// path marks were updated in place (followActiveSource), without a SyncJobPathMarks rebuild.
+	ActiveSource bool
 }
 
 // scanBatchFlags applies each event in the batch to UI model state (jobs.State, activity log,
@@ -1056,7 +1060,12 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 			}
 		case jobs.EventFailed, jobs.EventCanceled:
 			f.Terminal = true
-		case jobs.EventProgress, jobs.EventScanProgress, jobs.EventVerifyProgress:
+		case jobs.EventProgress, jobs.EventVerifyProgress:
+			f.Progress = true
+			if h.followActiveSource(ev.JobID) {
+				f.ActiveSource = true
+			}
+		case jobs.EventScanProgress:
 			f.Progress = true
 		case jobs.EventJobBlockerRequest:
 			f.Blocker = true
@@ -1068,12 +1077,22 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 	return f
 }
 
+// followActiveSource moves job id's file-list marks to the source its executor works on now
+// (O(1) per progress event, the path index is kept) and reports whether it moved.
+func (h *Handler) followActiveSource(id string) bool {
+	job := h.state.Job(id)
+	if job == nil {
+		return false
+	}
+	return ui.SetJobPathMarkSources(h.model.JobPathMarks, id, job.ActiveSource(), job.SourcePhases)
+}
+
 // batchAffectsVisible reports whether the batch requires an immediate visible-area repaint
 // (independent of whether the Jobs view itself is open — the caller ORs in viewJobs), moved
 // out of applyJobEventBatch's dense affectVisible boolean expression.
 func (h *Handler) batchAffectsVisible(f batchFlags) bool {
 	return f.Terminal || f.Blocker ||
-		(f.MarkUpdate && (ui.PanelTouchedByJobs(h.model.Primary.PathString(), h.model.JobPathMarks) ||
+		((f.MarkUpdate || f.ActiveSource) && (ui.PanelTouchedByJobs(h.model.Primary.PathString(), h.model.JobPathMarks) ||
 			ui.PanelTouchedByJobs(h.model.Secondary.PathString(), h.model.JobPathMarks) ||
 			h.state.JobsWaitingDecision() > 0)) ||
 		(f.Progress && h.model.MenuBarLayoutReserved() && h.state.HasNonFinishedJob())
@@ -1083,7 +1102,7 @@ func (h *Handler) batchAffectsVisible(f batchFlags) bool {
 // repainted (progress with a live non-finished job, and nothing terminal/blocker/mark-related),
 // moved out of applyJobEventBatch's dense lastBatchMenuBarStripOnly boolean expression.
 func (h *Handler) batchIsMenuBarStripOnly(f batchFlags) bool {
-	return f.Progress && !f.Terminal && !f.Blocker && !f.MarkUpdate &&
+	return f.Progress && !f.Terminal && !f.Blocker && !f.MarkUpdate && !f.ActiveSource &&
 		h.model.MenuBarLayoutReserved() && h.state.HasNonFinishedJob()
 }
 

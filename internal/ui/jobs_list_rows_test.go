@@ -117,3 +117,36 @@ func TestDrawJobsListPanelExpandedSources(t *testing.T) {
 		t.Fatalf("single-source job row = %q, want no expander", next)
 	}
 }
+
+// TestDrawJobsListPanelHighlightsActiveSource: the sub-row of the source being worked on reads
+// in the job's status color and names the current file after its counts; the others do not.
+func TestDrawJobsListPanelHighlightsActiveSource(t *testing.T) {
+	screen := newOpsScreen(t)
+	screen.SetSize(90, 10)
+	rect := Rect{X: 0, Y: 0, Width: 90, Height: 9}
+	list := sourcesJobs()
+	list[0].SourceStats = []oplog.Stats{{Done: 3}, {Done: 1}, {Done: 2}}
+	list[0].SourcePhases = []jobs.SourcePhase{jobs.SourceFinished, jobs.SourceFinished, jobs.SourceStarted}
+	list[0].CurrentPath = "/meadow/copper/sorrel/pebble.bin"
+	styles := theme.Default()
+	st := JobsViewState{Expanded: map[string]bool{"harbor": true}, FocusPane: 1} // cursor style off the rows
+	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0)
+
+	labelX := rect.X + 2 + jobsListColIcon + 2
+	wantFG, _, _ := styles.JobsStatusStyle(string(jobs.StatusRunning)).Decompose()
+	for i, active := range []bool{false, false, true} {
+		y := 3 + i
+		_, style, _ := screen.Get(labelX, y)
+		fg, _, _ := style.Decompose()
+		if (fg == wantFG) != active {
+			t.Errorf("source row %d label fg = %v, want status color %v: %v", i, fg, wantFG, active)
+		}
+		row := screenRowText(screen, rect, y)
+		if strings.Contains(row, "sorrel/pebble.bin") != active {
+			t.Errorf("source row %d = %q, current file shown: want %v", i, row, active)
+		}
+	}
+	if row := screenRowText(screen, rect, 5); !strings.Contains(row, "2 done · sorrel/pebble.bin") {
+		t.Fatalf("active source row = %q, want the counts then the current file", row)
+	}
+}

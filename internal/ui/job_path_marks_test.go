@@ -533,3 +533,32 @@ func TestEntryPathJobMarkStatus_matchesRowsForVeryLargeSourceLists(t *testing.T)
 		t.Fatal("path that is neither a source nor a destination must not be marked")
 	}
 }
+
+func TestPanelInsideJobWriteTreeFollowsActiveSource(t *testing.T) {
+	marks := []JobPathMark{withIndex(JobPathMark{
+		ID: "harbor", Type: string(jobs.TypeCopy), Status: string(jobs.StatusRunning),
+		Sources:     []string{"/orchard/acorn", "/orchard/bramble"},
+		Destination: "/meadow", DestIsDir: true,
+		SourcePhases: []jobs.SourcePhase{jobs.SourceStarted, jobs.SourceQueued}, ActiveSource: 0,
+	})}
+	for path, want := range map[string]bool{
+		"/meadow":              true, // every source is written into the destination dir
+		"/meadow/acorn/pebble": true,
+		"/meadow/bramble":      false,
+	} {
+		if got, _ := PanelInsideJobWriteTree(path, marks); got != want {
+			t.Errorf("PanelInsideJobWriteTree(%s) = %v, want %v", path, got, want)
+		}
+	}
+	idx := marks[0].idx
+	phases := func() []jobs.SourcePhase { return []jobs.SourcePhase{jobs.SourceFinished, jobs.SourceStarted} }
+	if !SetJobPathMarkSources(marks, "harbor", 1, phases) || SetJobPathMarkSources(marks, "harbor", 1, phases) {
+		t.Fatal("SetJobPathMarkSources must report only a change of source")
+	}
+	if marks[0].idx != idx {
+		t.Fatal("moving the active source rebuilt the path index")
+	}
+	if got, _ := PanelInsideJobWriteTree("/meadow/bramble", marks); !got {
+		t.Fatal("the new active source's destination is not a write tree")
+	}
+}

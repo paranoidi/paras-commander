@@ -277,8 +277,13 @@ func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int,
 	x := contentX + jobsListColIcon
 	icon := styles.IconJobsList(status)
 	primitive.Text(screen, x, y, 2, icon+" ", jobsListIconStyle(styles, status, lineStyle, selected))
+	active := jobSourceActive(entry, src)
+	labelStyle := lineStyle
+	if active { // the source being worked on now reads in the job's status color
+		labelStyle = jobsListOnRow(styles.JobsStatusStyle(entry.Status), lineStyle, selected)
+	}
 	labelW := max(xProg-1-(x+2), 0)
-	primitive.Text(screen, x+2, y, labelW, primitive.FitPathForWidth(label, labelW), lineStyle)
+	primitive.Text(screen, x+2, y, labelW, primitive.FitPathForWidth(label, labelW), labelStyle)
 	var stats oplog.Stats
 	if src < len(entry.SourceStats) {
 		stats = entry.SourceStats[src]
@@ -289,7 +294,16 @@ func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int,
 	if !chromeBlocked && !selected {
 		spans = jobFilesPartSpans(parts, styles, body)
 	}
-	primitive.StyledText(screen, xProg, y, countsW, jobFilesPartsText(parts), body, spans)
+	text := jobFilesPartsText(parts)
+	primitive.StyledText(screen, xProg, y, countsW, text, body, spans)
+	// The file being worked on follows the counts: " · <path under the source>".
+	if cur := jobSourceCurrentFile(entry, src); active && cur != "" {
+		const sep = " · "
+		textW := utf8.RuneCountInString(text)
+		if room := countsW - textW - utf8.RuneCountInString(sep); room > 0 {
+			primitive.Text(screen, xProg+textW, y, countsW-textW, sep+primitive.FitPathForWidth(cur, room), body)
+		}
+	}
 }
 
 func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, focused bool, userHomeDir string, throughputChartEnabled bool) {

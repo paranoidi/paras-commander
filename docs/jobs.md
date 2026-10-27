@@ -19,7 +19,14 @@ type. `Alt+Right` (`jobs.expand`) lists each of its sources in a tree under
 the job, each with its own status icon (queued, running, completed, failed,
 canceled) and done / failed / skipped counts; `Alt+Left` (`jobs.collapse`)
 folds them away. With the cursor on a source, the Operations panel shows only
-that source's rows and names the source on its top border.
+that source's rows and names the source on its top border. The source being
+worked on is drawn in the job's status color and followed by the file it is
+on.
+
+While such a job runs, the file panels mark only the item it is working on
+with the job icon, on both the source and the destination side. Items still to
+come show the queued icon on their source, and finished items show no job
+icon.
 
 A copy or move starts with the size the panel already shows for the selection,
 so its percentage and ETA work immediately. The Details panel marks such a

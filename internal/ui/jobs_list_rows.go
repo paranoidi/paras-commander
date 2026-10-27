@@ -2,6 +2,7 @@ package ui
 
 import (
 	"path"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/oplog"
@@ -110,6 +111,26 @@ func jobSourceStatus(e JobEntry, i int) string {
 		return outcome
 	}
 	return string(jobs.StatusCanceled)
+}
+
+// jobSourceActive reports whether source i is the one job e is working on now: started by the
+// executor while the job is not finished. The Queue highlights that sub-row.
+func jobSourceActive(e JobEntry, i int) bool {
+	return i >= 0 && i < len(e.SourcePhases) && e.SourcePhases[i] == jobs.SourceStarted &&
+		!jobs.Status(e.Status).IsFinished()
+}
+
+// jobSourceCurrentFile is job e's current path relative to source i, or "" when it is the
+// source itself or lies outside it.
+func jobSourceCurrentFile(e JobEntry, i int) string {
+	if i < 0 || i >= len(e.Sources) {
+		return ""
+	}
+	rel, _ := strings.CutPrefix(e.CurrentPath, strings.TrimSuffix(e.Sources[i], "/")+"/")
+	if rel == e.CurrentPath {
+		return ""
+	}
+	return rel
 }
 
 // jobSourceLabels are the Queue sub-row labels of sources: each base name, or the whole path

@@ -9,11 +9,15 @@ import (
 // jobRowSuffix resolves the <job><queued><operation> suffix icons for absPath, plus the matched
 // job's status for Theme.PanelJobMarkStyle. Zero JobSuffix when no unfinished job matches. The
 // job (HDD) icon is only set while the job is actually working on the tree (Status.IsActive);
-// a queued or paused job shows just the clock/operation icons.
+// a queued or paused job shows just the clock/operation icons, and so does a source a running
+// multi-source job has not started yet (JobRowMark.Pending; its status reads queued).
 func jobRowSuffix(absPath string, jobMarks []JobPathMark, th theme.Theme) (panellist.JobSuffix, string) {
 	m, ok := EntryPathJobMark(absPath, jobMarks)
 	if !ok {
 		return panellist.JobSuffix{}, ""
+	}
+	if m.Pending {
+		m.Status = string(jobs.StatusQueued)
 	}
 	var s panellist.JobSuffix
 	if jobs.Status(m.Status).IsActive() {

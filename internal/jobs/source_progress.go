@@ -45,6 +45,18 @@ func (j *Job) StartSource(i int32) {
 	p.phases[i], p.current = SourceStarted, i
 }
 
+// ActiveSource returns the source the executor started last, or -1 before any (always -1
+// for a single-source job). It is the cheap change check for SourcePhases.
+func (j *Job) ActiveSource() int {
+	p := j.sourcePhases
+	if p == nil {
+		return -1
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return int(p.current)
+}
+
 // SourcePhases returns a copy of each source's phase (nil for a single-source job).
 func (j *Job) SourcePhases() []SourcePhase {
 	p := j.sourcePhases
