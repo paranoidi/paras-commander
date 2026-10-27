@@ -95,14 +95,20 @@ func walkRoots(absPath string, hit func(path string) bool) {
 // whether that root is a destination (destinations win when both match at the same depth) and
 // whether it is a pending source, or (0, false, false) when nothing matches. m's phases (nil
 // marks every root active, JobPathMark.rootPhase) drop done roots and pending destinations; the
-// walk then continues to the outer roots.
+// walk then continues to the outer roots. While m is removing its sources every source root is
+// active and no destination root matches.
 func (idx *jobPathIndex) rootMatch(absPath string, m *JobPathMark) (maxLen int, isDest, pending bool) {
+	removing := m.removing()
 	walkRoots(absPath, func(s string) bool {
-		if src, ok := idx.dests[s]; ok && m.rootPhase(src) == rootActive {
+		if src, ok := idx.dests[s]; ok && !removing && m.rootPhase(src) == rootActive {
 			maxLen, isDest = len(s), true
 			return true
 		}
 		if src, ok := idx.sources[s]; ok {
+			if removing {
+				maxLen, isDest, pending = len(s), false, false
+				return true
+			}
 			if p := m.rootPhase(src); p != rootDone {
 				maxLen, isDest, pending = len(s), false, p == rootPending
 				return true
@@ -114,8 +120,11 @@ func (idx *jobPathIndex) rootMatch(absPath string, m *JobPathMark) (maxLen int, 
 }
 
 // destMatch reports whether absPath is at or under one of the resolved destination roots whose
-// phase in m (nil: any) is active.
+// phase in m (nil: any) is active; none is while m is removing its sources.
 func (idx *jobPathIndex) destMatch(absPath string, m *JobPathMark) bool {
+	if m.removing() {
+		return false
+	}
 	found := false
 	walkRoots(absPath, func(s string) bool {
 		src, ok := idx.dests[s]
@@ -149,12 +158,14 @@ func longestMatchingRootLen(j JobPathMark, absPath string) (maxLen int, isDest, 
 }
 
 // JobRowMark is the best non-finished job matching a row's path, per EntryPathJobMark. Pending
-// is set for a source the job has not started yet (a multi-source job working on another one).
+// is set for a source the job has not started yet (a multi-source job working on another one);
+// Removing for a source a move is deleting after copying it (JobPathMark.RemovingSources).
 type JobRowMark struct {
-	Status  string
-	Type    string
-	Write   bool
-	Pending bool
+	Status   string
+	Type     string
+	Write    bool
+	Pending  bool
+	Removing bool
 }
 
 // EntryPathJobMark returns the best non-finished job that affects absPath (whether any such
@@ -188,10 +199,11 @@ func EntryPathJobMark(absPath string, jobMarks []JobPathMark) (JobRowMark, bool)
 			bestPri = pri
 			bestLen = rootLen
 			best = JobRowMark{
-				Status:  j.Status,
-				Type:    j.Type,
-				Write:   isDest || jobs.Type(j.Type) == jobs.TypeDelete,
-				Pending: pending,
+				Status:   j.Status,
+				Type:     j.Type,
+				Write:    isDest || jobs.Type(j.Type) == jobs.TypeDelete,
+				Pending:  pending,
+				Removing: !isDest && j.removing(),
 			}
 		}
 	}

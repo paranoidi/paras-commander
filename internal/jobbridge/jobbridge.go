@@ -45,7 +45,7 @@ func CoalesceEventBatch(batch []jobs.Event) []jobs.Event {
 // EventUpdatesMarks reports whether a job event type should refresh path marks.
 func EventUpdatesMarks(t jobs.EventType) bool {
 	switch t {
-	case jobs.EventEnqueued, jobs.EventScanTotals, jobs.EventStarted, jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled, jobs.EventJobBlockerRequest, jobs.EventJobResumed:
+	case jobs.EventEnqueued, jobs.EventScanTotals, jobs.EventStarted, jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled, jobs.EventJobBlockerRequest, jobs.EventJobResumed, jobs.EventRemovingSources:
 		return true
 	default:
 		return false

@@ -17,6 +17,9 @@ func TestEventUpdatesMarks(t *testing.T) {
 	if !EventUpdatesMarks(jobs.EventJobResumed) {
 		t.Fatal("EventJobResumed should refresh path marks")
 	}
+	if !EventUpdatesMarks(jobs.EventRemovingSources) {
+		t.Fatal("EventRemovingSources should refresh path marks")
+	}
 	if EventUpdatesMarks(jobs.EventProgress) {
 		t.Fatal("EventProgress should not refresh path marks")
 	}

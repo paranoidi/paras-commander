@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -100,5 +101,40 @@ func TestJobRowSuffixFollowsActiveSource(t *testing.T) {
 		if !queued && active.JobIcon == 0 || queued && active.JobQueuedIcon == 0 {
 			t.Fatalf("%s active=%d: finished-source destination lost its mark: %+v", m[0].Status, m[0].ActiveSource, active)
 		}
+	}
+}
+
+// TestJobRowSuffixMoveRemovingSources: once a move's copy fallback deletes its sources, every
+// source row (finished ones included) shows the job icon and the removing icon, and no
+// destination row is marked.
+func TestJobRowSuffixMoveRemovingSources(t *testing.T) {
+	t.Parallel()
+	th := theme.Default()
+	marks := []JobPathMark{withIndex(JobPathMark{
+		ID: "harbor", Type: string(jobs.TypeMove), Status: string(jobs.StatusRunning),
+		Sources:     []string{"/orchard/acorn", "/orchard/bramble", "/orchard/clover"},
+		Destination: "/meadow", DestIsDir: true,
+		SourcePhases:    []jobs.SourcePhase{jobs.SourceFinished, jobs.SourceFinished, jobs.SourceStarted},
+		ActiveSource:    2,
+		RemovingSources: true,
+	})}
+	for _, p := range []string{"/orchard/acorn", "/orchard/bramble/deep/thistle.txt", "/orchard/clover"} {
+		s, _ := jobRowSuffix(p, marks, th)
+		if s.JobIcon != th.IconFilelistJob() || s.JobOpIcon != th.IconFilelistMoveRemoving() || s.JobOpStyle != th.PanelRowMarkJobRemoving || s.JobWrite {
+			t.Errorf("%s: %+v, want job + removing icons", p, s)
+		}
+	}
+	for _, p := range []string{"/meadow/acorn", "/meadow/clover"} {
+		if s, _ := jobRowSuffix(p, marks, th); s != (panellist.JobSuffix{}) {
+			t.Errorf("%s: destination marked while removing sources: %+v", p, s)
+		}
+	}
+	if hit, _ := PanelInsideJobWriteTree("/meadow/clover", marks); hit {
+		t.Error("destination tree still reported as written while removing sources")
+	}
+
+	marks[0].RemovingSources = false
+	if s, _ := jobRowSuffix("/orchard/clover", marks, th); s.JobOpIcon != th.IconFilelistMove() {
+		t.Fatalf("move source before removal: %+v", s)
 	}
 }

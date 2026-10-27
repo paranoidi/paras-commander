@@ -28,7 +28,10 @@ func jobRowSuffix(absPath string, jobMarks []JobPathMark, th theme.Theme) (panel
 	}
 	switch jobs.Type(m.Type) {
 	case jobs.TypeMove, jobs.TypeFlatten:
-		if !m.Write { // source rows only: the glyph says "this will vanish"
+		switch {
+		case m.Removing: // the copy is done and the source is being deleted now
+			s.JobOpIcon, s.JobOpStyle = th.IconFilelistMoveRemoving(), th.PanelRowMarkJobRemoving
+		case !m.Write: // source rows only: the glyph says "this will vanish"
 			s.JobOpIcon, s.JobOpStyle = th.IconFilelistMove(), th.PanelRowMarkJobMove
 		}
 	case jobs.TypeDelete:

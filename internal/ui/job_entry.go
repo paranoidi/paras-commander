@@ -43,8 +43,10 @@ type JobEntry struct {
 	// per-source progress at list sync (Queue source sub-rows; nil for a single-source job).
 	SourceStats  []oplog.Stats
 	SourcePhases []jobs.SourcePhase
-	StartedAt    time.Time
-	FinishedAt   time.Time
+	// RemovingSources matches jobs.Job.RemovingSources (a move removing its copied sources).
+	RemovingSources bool
+	StartedAt       time.Time
+	FinishedAt      time.Time
 	// Undo is jobs.Job.UndoLabel: whether the job can be undone, and why not.
 	Undo string
 	// ETABytesPerSec is smoothed throughput from recent progress samples (bytes/s).

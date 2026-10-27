@@ -103,6 +103,7 @@ job.read = { fg = "yellow" }
 job.decision = { fg = "red" }
 job.move = { fg = "red" }
 job.delete = { fg = "red" }
+job.removing = { fg = "red" }   # move source being deleted after its copy (optional)
 
 [panel.icon.folder]          # folder icon colors
 open = { fg = "bright_cyan" }
@@ -386,6 +387,7 @@ no_permission = "\uf023"
 job = "\U000f02ca"
 move = "\U000f0ab9"
 delete = "\U000f09e7"
+move_removing = "\U000f10a5"   # md-delete_alert: move source being deleted after its copy
 preview_loading = "\uf03e"
 
 [icons.dedup]

@@ -21,6 +21,9 @@ type JobPathMark struct {
 	// SetJobPathMarkSources refreshes both in place when the active source moves.
 	SourcePhases []jobs.SourcePhase
 	ActiveSource int
+	// RemovingSources is jobs.Job.RemovingSources: a move's copy fallback is deleting its
+	// sources, so every source root is marked again and no destination root is (removing).
+	RemovingSources bool
 
 	// idx is the ancestor lookup index built by the constructors below (see jobPathIndex).
 	// Marks built as bare literals leave it nil and fall back to building one per call.
@@ -50,14 +53,15 @@ func JobPathMarksFromJobs(jobList []*jobs.Job) []JobPathMark {
 			continue
 		}
 		marks = append(marks, withIndex(JobPathMark{
-			ID:           j.ID,
-			Type:         string(j.Type),
-			Status:       string(j.Status),
-			Sources:      pathloc.Strings(j.Sources),
-			Destination:  j.Destination.String(),
-			DestIsDir:    j.DestIsDir,
-			SourcePhases: j.SourcePhases(),
-			ActiveSource: j.ActiveSource(),
+			ID:              j.ID,
+			Type:            string(j.Type),
+			Status:          string(j.Status),
+			Sources:         pathloc.Strings(j.Sources),
+			Destination:     j.Destination.String(),
+			DestIsDir:       j.DestIsDir,
+			SourcePhases:    j.SourcePhases(),
+			ActiveSource:    j.ActiveSource(),
+			RemovingSources: j.RemovingSources,
 		}))
 	}
 	return marks
@@ -68,14 +72,15 @@ func JobPathMarksFromEntries(entries []JobEntry) []JobPathMark {
 	marks := make([]JobPathMark, 0, len(entries))
 	for _, e := range entries {
 		marks = append(marks, withIndex(JobPathMark{
-			ID:           e.ID,
-			Type:         e.Type,
-			Status:       e.Status,
-			Sources:      append([]string(nil), e.Sources...),
-			Destination:  e.Destination,
-			DestIsDir:    e.DestIsDir,
-			SourcePhases: e.SourcePhases,
-			ActiveSource: slices.Index(e.SourcePhases, jobs.SourceStarted),
+			ID:              e.ID,
+			Type:            e.Type,
+			Status:          e.Status,
+			Sources:         append([]string(nil), e.Sources...),
+			Destination:     e.Destination,
+			DestIsDir:       e.DestIsDir,
+			SourcePhases:    e.SourcePhases,
+			ActiveSource:    slices.Index(e.SourcePhases, jobs.SourceStarted),
+			RemovingSources: e.RemovingSources,
 		}))
 	}
 	return marks
@@ -106,6 +111,11 @@ func (j *JobPathMark) rootPhase(src int32) rootPhase {
 		return rootDone
 	}
 	return rootActive
+}
+
+// removing reports whether the job is active and removing its transferred sources.
+func (j *JobPathMark) removing() bool {
+	return j != nil && j.RemovingSources && jobs.Status(j.Status).IsActive()
 }
 
 // SetJobPathMarkSources sets the active source and source phases of job id's mark in place,

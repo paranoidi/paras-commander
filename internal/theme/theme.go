@@ -118,6 +118,9 @@ type Theme struct {
 	// and delete jobs respectively.
 	PanelRowMarkJobMove   tcell.Style
 	PanelRowMarkJobDelete tcell.Style
+	// PanelRowMarkJobRemoving styles icons.filelist.move_removing, the operation icon of a move
+	// source being deleted after its copy (falls back to PanelRowMarkJobDelete).
+	PanelRowMarkJobRemoving tcell.Style
 	// PanelRowTreeConnector styles tree branch/continuation icons in tree-style lists.
 	PanelRowTreeConnector tcell.Style
 	// PanelIconFolderOpen styles the open-folder icon strip when the other panel is in that directory.
@@ -640,6 +643,7 @@ const (
 	IconKeyFilelistJob              = "filelist.job"
 	IconKeyFilelistMove             = "filelist.move"
 	IconKeyFilelistDelete           = "filelist.delete"
+	IconKeyFilelistMoveRemoving     = "filelist.move_removing"
 	IconKeyFilelistNoPermission     = "filelist.no_permission"
 	IconKeyFilelistPreviewLoading   = "filelist.preview_loading"
 	IconKeyFoldersFolder            = "folders.folder"
@@ -798,6 +802,12 @@ func (t Theme) IconFilelistMove() rune {
 // (styled via Theme.PanelRowMarkJobDelete).
 func (t Theme) IconFilelistDelete() rune {
 	return t.iconRuneOr(IconKeyFilelistDelete, '\U000f09e7')
+}
+
+// IconFilelistMoveRemoving returns the file-list operation suffix icon for a move source being
+// deleted after its copy (styled via Theme.PanelRowMarkJobRemoving).
+func (t Theme) IconFilelistMoveRemoving() rune {
+	return t.iconRuneOr(IconKeyFilelistMoveRemoving, '\U000f10a5')
 }
 
 // IconFilelistWorking returns the row-suffix icon for a directory whose async navigation
@@ -1161,7 +1171,7 @@ var optionalStyleKeys = func() []string {
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
-		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped")
+		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing")
 	return keys
 }()
 
@@ -1485,6 +1495,10 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
+	panelRowMarkJobRemoving, err := optionalStyle(specs, palette, "panel.row.mark.job.removing", styles["panel.row.mark.job.delete"])
+	if err != nil {
+		return Theme{}, err
+	}
 	menuSpeedCap, err := optionalStyle(specs, palette, "menu.speed.cap", tcell.StyleDefault.Foreground(tcell.ColorGray))
 	if err != nil {
 		return Theme{}, err
@@ -1629,6 +1643,7 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkJobDecision:             styles["panel.row.mark.job.decision"],
 		PanelRowMarkJobMove:                 styles["panel.row.mark.job.move"],
 		PanelRowMarkJobDelete:               styles["panel.row.mark.job.delete"],
+		PanelRowMarkJobRemoving:             panelRowMarkJobRemoving,
 		PanelRowTreeConnector:               styles["panel.row.tree.connector"],
 		PanelIconFolderOpen:                 styles["panel.icon.folder.open"],
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
