@@ -3,7 +3,7 @@
 Status commands are small shell commands whose output is shown at the top-left of the menu bar, for example the load average or memory use. Any number of them can be shown at once, or none.
 
 ```
- 0.52 0.48 0.40 · 5.2G/31G · File  Command  Display  Options
+ 0.52 0.48 0.40 · 5.2G/31G File  Command  Display  Options
 ```
 
 ## Choosing what is shown
@@ -17,6 +17,8 @@ Open **Display → Status commands** (`ui.status-commands`) to get a checkbox li
 | `loadavg` | Load average | 1, 5 and 15 minute load average from `/proc/loadavg` | 3 s |
 | `memory` | Memory used | used / total RAM from `/proc/meminfo`, e.g. `5.2G/31G` | 5 s |
 | `battery` | Battery | charge of the first battery, e.g. `87%`; hidden on machines without one | 30 s |
+
+Built-ins are drawn in dark grey (`color = "bright_black"`). To change that, replace the built-in with a `[[command]]` of the same name.
 
 ## status.toml
 
@@ -44,4 +46,4 @@ Field reference: [`status.toml`](config.md#statustoml).
 
 ## Appearance
 
-The commands' output should not contain a separator: the menu bar draws one after each segment. The separator glyph is `[icons.menu.status] separator` and its color `menu.status.separator` (dark grey by default); the text uses `menu.status` unless the command sets its own `color`. See [Themes](themes.md).
+The commands' output should not contain a separator: the menu bar draws one between segments (a single segment has none). The separator glyph is `[icons.menu.status] separator` and its color `menu.status.separator` (dark grey by default); the text uses `menu.status` unless the command sets its own `color`. See [Themes](themes.md).

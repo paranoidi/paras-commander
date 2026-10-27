@@ -75,22 +75,25 @@ type StatusCommandSegment struct {
 }
 
 // StatusCommandWidth is the column count drawMenuBarStatusCommands paints for segs:
-// " t1 · t2 · " (one leading gap, then each text followed by gap, separator, gap). Zero
-// segments reserve nothing.
+// " t1 · t2 " (one leading gap, each text followed by a gap, and a separator plus gap
+// between segments only). Zero segments reserve nothing.
 func StatusCommandWidth(segs []StatusCommandSegment) int {
 	if len(segs) == 0 {
 		return 0
 	}
 	w := len(statusCommandGap)
-	for _, s := range segs {
-		w += utf8.RuneCountInString(s.Text) + 2*len(statusCommandGap) + 1
+	for i, s := range segs {
+		if i > 0 {
+			w += 1 + len(statusCommandGap)
+		}
+		w += utf8.RuneCountInString(s.Text) + len(statusCommandGap)
 	}
 	return w
 }
 
 // drawMenuBarStatusCommands paints the status-command segments in the reserved top-left
-// rect: each text in its segment style, gaps in menu.status, the separator glyph after each
-// in menu.status.separator.
+// rect: each text in its segment style, gaps in menu.status, the separator glyph between
+// segments in menu.status.separator.
 func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, segs []StatusCommandSegment, styles theme.Theme) {
 	sep := string(styles.IconMenuStatusSeparator())
 	x, end := rect.X, rect.X+rect.Width
@@ -101,10 +104,12 @@ func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, segs []StatusComm
 		x += utf8.RuneCountInString(s)
 	}
 	put(statusCommandGap, styles.MenuStatus)
-	for _, s := range segs {
+	for i, s := range segs {
+		if i > 0 {
+			put(sep, styles.MenuStatusSeparator)
+			put(statusCommandGap, styles.MenuStatus)
+		}
 		put(s.Text, s.Style)
-		put(statusCommandGap, styles.MenuStatus)
-		put(sep, styles.MenuStatusSeparator)
 		put(statusCommandGap, styles.MenuStatus)
 	}
 }

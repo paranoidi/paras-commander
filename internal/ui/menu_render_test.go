@@ -108,7 +108,7 @@ func TestDrawMenuBarBlankKeepsMarginAfterStatusCommand(t *testing.T) {
 	}
 }
 
-// The reserved width must equal what drawMenuBarStatusCommands paints: " t1 · t2 · ", each
+// The reserved width must equal what drawMenuBarStatusCommands paints: " t1 · t2 ", each
 // text in its segment style, gaps in menu.status and the separator in menu.status.separator.
 func TestDrawMenuBarStatusCommandsMatchesWidth(t *testing.T) {
 	t.Parallel()
@@ -122,7 +122,7 @@ func TestDrawMenuBarStatusCommandsMatchesWidth(t *testing.T) {
 	colored := styles.MenuStatus.Foreground(tcell.ColorYellow)
 	segs := []StatusCommandSegment{{Text: "0.52 0.48", Style: styles.MenuStatus}, {Text: "5.2G/31G", Style: colored}}
 	w := StatusCommandWidth(segs)
-	if want := utf8.RuneCountInString(" 0.52 0.48 · 5.2G/31G · "); w != want {
+	if want := utf8.RuneCountInString(" 0.52 0.48 · 5.2G/31G "); w != want {
 		t.Fatalf("StatusCommandWidth = %d, want %d", w, want)
 	}
 	drawMenuBarStatusCommands(screen, Rect{Width: w, Height: 1}, segs, styles)
@@ -142,8 +142,12 @@ func TestDrawMenuBarStatusCommandsMatchesWidth(t *testing.T) {
 			t.Fatalf("cell %d %q style = %v, want %v", x, r, style, want)
 		}
 	}
-	if want := " 0.52 0.48 " + sep + " 5.2G/31G " + sep + " "; got != want {
+	if want := " 0.52 0.48 " + sep + " 5.2G/31G "; got != want {
 		t.Fatalf("drawn %q, want %q", got, want)
+	}
+	one := segs[:1]
+	if w := StatusCommandWidth(one); w != len(" 0.52 0.48 ") {
+		t.Fatalf("single segment width = %d, want no separator", w)
 	}
 	if StatusCommandWidth(nil) != 0 {
 		t.Fatal("no segments must reserve nothing")
