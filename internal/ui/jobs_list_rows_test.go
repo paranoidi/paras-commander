@@ -107,7 +107,7 @@ func TestDrawJobsListPanelExpandedSources(t *testing.T) {
 	}
 	for i, w := range wants {
 		row := screenRowText(screen, rect, 3+i)
-		for _, part := range []string{w.connector, w.status + " " + w.label, w.counts} {
+		for _, part := range []string{w.connector, w.status + "  " + w.label, w.counts} {
 			if !strings.Contains(row, part) {
 				t.Fatalf("source row %d = %q, want %q", i, row, part)
 			}
@@ -132,7 +132,7 @@ func TestDrawJobsListPanelHighlightsActiveSource(t *testing.T) {
 	st := JobsViewState{Expanded: map[string]bool{"harbor": true}, FocusPane: 1} // cursor style off the rows
 	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0)
 
-	labelX := rect.X + 2 + jobsListColIcon + 2
+	labelX := rect.X + 2 + jobsListColIcon + jobsListSourceIconCell
 	wantFG, _, _ := styles.JobsStatusStyle(string(jobs.StatusRunning)).Decompose()
 	for i, active := range []bool{false, false, true} {
 		y := 3 + i

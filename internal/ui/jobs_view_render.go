@@ -26,6 +26,8 @@ const (
 	jobsListColTypeRunes = 9 // internal/jobs.Type: extract (longest), a space, the sources expander icon
 	jobsListColTypeCell  = jobsListColTypeRunes + 1
 	jobsListColPrefix    = jobsListColIcon + jobsListColTypeCell // offset from row start to Status column
+	// jobsListSourceIconCell is a source sub-row's status icon plus the two spaces before its label.
+	jobsListSourceIconCell = 3
 )
 const jobsListColStatus = 10
 const jobsListColETA = 10
@@ -276,14 +278,15 @@ func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int,
 	status := jobSourceStatus(entry, src)
 	x := contentX + jobsListColIcon
 	icon := styles.IconJobsList(status)
-	primitive.Text(screen, x, y, 2, icon+" ", jobsListIconStyle(styles, status, lineStyle, selected))
+	primitive.Text(screen, x, y, jobsListSourceIconCell, icon+"  ", jobsListIconStyle(styles, status, lineStyle, selected))
 	active := jobSourceActive(entry, src)
 	labelStyle := lineStyle
 	if active { // the source being worked on now reads in the job's status color
 		labelStyle = jobsListOnRow(styles.JobsStatusStyle(entry.Status), lineStyle, selected)
 	}
-	labelW := max(xProg-1-(x+2), 0)
-	primitive.Text(screen, x+2, y, labelW, primitive.FitPathForWidth(label, labelW), labelStyle)
+	labelX := x + jobsListSourceIconCell
+	labelW := max(xProg-1-labelX, 0)
+	primitive.Text(screen, labelX, y, labelW, primitive.FitPathForWidth(label, labelW), labelStyle)
 	var stats oplog.Stats
 	if src < len(entry.SourceStats) {
 		stats = entry.SourceStats[src]
