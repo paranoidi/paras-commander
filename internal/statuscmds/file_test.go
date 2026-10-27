@@ -132,3 +132,11 @@ func TestSaveShowCreatesStubAndKeepsCommands(t *testing.T) {
 		t.Fatalf("Show after clearing = %v", s.Show)
 	}
 }
+
+func TestBuiltinsUseDarkGrey(t *testing.T) {
+	for _, d := range Builtins() {
+		if d.Color != "bright_black" {
+			t.Fatalf("built-in %q color = %q, want bright_black", d.Name, d.Color)
+		}
+	}
+}

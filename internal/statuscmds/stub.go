@@ -22,7 +22,7 @@ const StatusStubTOML = `# status.toml — menu-bar status commands
 # show  [string]  names of the commands to draw, in order ([] = none). The
 #                 Display → Status commands dialog rewrites this line.
 #
-# Built-in commands: loadavg, memory, battery.
+# Built-in commands: loadavg, memory, battery (drawn in color "bright_black").
 #
 # [[command]] fields (a built-in name replaces that built-in):
 #   name         string  required, unique

@@ -505,7 +505,7 @@ Find-duplicates scan (within a single directory).
 
 ## `status.toml`
 
-Separate file in the config directory defining the [status commands](status-commands.md) shown at the top-left of the menu bar. Built-in commands `loadavg`, `memory` and `battery` exist without any entry. Empty output, a non-zero exit, or a run exceeding 10 s hides that segment.
+Separate file in the config directory defining the [status commands](status-commands.md) shown at the top-left of the menu bar. Built-in commands `loadavg`, `memory` and `battery` exist without any entry and are drawn in `"bright_black"` (dark grey). Empty output, a non-zero exit, or a run exceeding 10 s hides that segment.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
