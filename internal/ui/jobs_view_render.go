@@ -229,12 +229,8 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		// Leave a one-cell gap, unhighlighted even on the selected row, so the
 		// cyan cursor background never touches the progress bar's own colors.
 		paintAuxPanelRowMargin(screen, xProg-1, y, rowBase)
-		drawJobsProgressBar(screen, xProg, y, barW, pct,
-			styles.JobsProgressFill,
-			styles.JobsProgressTrack,
-			styles.JobsProgressLabelOnFill,
-			styles.JobsProgressLabelOnTrack,
-		)
+		progFill, progTrack, progLabelOnFill, progLabelOnTrack := styles.JobsProgressStyles(entry.Status)
+		drawJobsProgressBar(screen, xProg, y, barW, pct, progFill, progTrack, progLabelOnFill, progLabelOnTrack)
 	}
 }
 

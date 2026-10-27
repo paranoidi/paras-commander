@@ -131,6 +131,19 @@ func (t Theme) PanelJobMarkStyle(status string, write bool) tcell.Style {
 	return t.PanelRowMarkJobRead
 }
 
+// JobsProgressStyles returns progress-bar fill/track/label styles for the jobs list.
+// Paused and canceled jobs use the inactive palette (grey fill instead of green).
+func (t Theme) JobsProgressStyles(status string) (fill, track, labelOnFill, labelOnTrack tcell.Style) {
+	switch status {
+	case "paused", "canceled":
+		return t.JobsProgressInactiveFill, t.JobsProgressInactiveTrack,
+			t.JobsProgressInactiveLabelOnFill, t.JobsProgressInactiveLabelOnTrack
+	default:
+		return t.JobsProgressFill, t.JobsProgressTrack,
+			t.JobsProgressLabelOnFill, t.JobsProgressLabelOnTrack
+	}
+}
+
 // JobsStatusStyle returns the themed style for the status column in the jobs list.
 func (t Theme) JobsStatusStyle(status string) tcell.Style {
 	switch status {

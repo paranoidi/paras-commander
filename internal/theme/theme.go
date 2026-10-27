@@ -302,6 +302,11 @@ type Theme struct {
 	JobsProgressFill         tcell.Style
 	JobsProgressLabelOnFill  tcell.Style
 	JobsProgressLabelOnTrack tcell.Style
+	// JobsProgressInactive* style paused/canceled job progress (grey fill, not green).
+	JobsProgressInactiveTrack        tcell.Style
+	JobsProgressInactiveFill         tcell.Style
+	JobsProgressInactiveLabelOnFill  tcell.Style
+	JobsProgressInactiveLabelOnTrack tcell.Style
 
 	// JobsIcon* styles for the leading icon column in the jobs list (keys match job status strings).
 	JobsIconsScanning  tcell.Style
@@ -1195,6 +1200,10 @@ var requiredStyleKeys = []string{
 	"jobs.progress.fill",
 	"jobs.progress.label.on_fill",
 	"jobs.progress.label.on_track",
+	"jobs.progress.inactive.track",
+	"jobs.progress.inactive.fill",
+	"jobs.progress.inactive.label.on_fill",
+	"jobs.progress.inactive.label.on_track",
 	"jobs.icons.scanning",
 	"jobs.icons.queued",
 	"jobs.icons.running",
@@ -1846,6 +1855,11 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressFill:         styles["jobs.progress.fill"],
 		JobsProgressLabelOnFill:  styles["jobs.progress.label.on_fill"],
 		JobsProgressLabelOnTrack: styles["jobs.progress.label.on_track"],
+
+		JobsProgressInactiveTrack:        styles["jobs.progress.inactive.track"],
+		JobsProgressInactiveFill:         styles["jobs.progress.inactive.fill"],
+		JobsProgressInactiveLabelOnFill:  styles["jobs.progress.inactive.label.on_fill"],
+		JobsProgressInactiveLabelOnTrack: styles["jobs.progress.inactive.label.on_track"],
 
 		JobsIconsScanning:    styles["jobs.icons.scanning"],
 		JobsIconsQueued:      styles["jobs.icons.queued"],

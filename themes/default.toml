@@ -297,6 +297,12 @@ label.on_fill = { fg = "black", bold = true }
 label.on_track = { fg = "bright_white", bold = true }
 track = { fg = "bright_black", bg = "black" }
 
+[jobs.progress.inactive]       # paused / canceled job progress (grey fill)
+fill = { fg = "bright_white", bg = "bright_black" }
+label.on_fill = { fg = "bright_white", bold = true }
+label.on_track = { fg = "bright_white", bold = true }
+track = { fg = "bright_black", bg = "black" }
+
 [jobs.icons]                 # leading icon column (1:1 with job status strings)
 completed = { fg = "bright_green", bold = true }
 failed = { fg = "bright_red", bold = true }
