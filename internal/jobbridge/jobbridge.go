@@ -725,7 +725,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 				CurrentPath: path,
 			})
 		}
-		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(job.Sources), deleteProgress, recordPathOperation(job))
+		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(job.Sources), deleteProgress, job.RecordOperation)
 		if err == nil && job.DeleteRemoveEmptyDirs {
 			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, uniqueParents(job.Sources)); cleanErr != nil {
 				err = cleanErr
@@ -751,7 +751,7 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 			extractPlanErr = nil
 		}
 		plan.Conflict = tc.resolver
-		plan.OnItem = recordPathOperation(job)
+		plan.OnItem = job.RecordOperation
 		if extractPlanErr != nil {
 			err = extractPlanErr
 		} else {
@@ -772,17 +772,6 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 		return 0, 0, fmt.Errorf("unknown job type: %s", job.Type)
 	}
 	return doneFiles, doneBytes, err
-}
-
-// recordPathOperation adapts the delete and extract per-path hooks to job.RecordOperation.
-func recordPathOperation(job *jobs.Job) func(path string, res ops.ItemResult, reason string) {
-	return func(path string, res ops.ItemResult, reason string) {
-		src, err := pathloc.Parse(path)
-		if err != nil {
-			return
-		}
-		job.RecordOperation(ops.PlanItem{Src: src}, res, reason)
-	}
 }
 
 // Plural returns singular or plural noun form for n.
@@ -811,7 +800,7 @@ func extractPlanItems(sources []pathloc.Path, dest string, tc archive.Toolchain)
 		return nil
 	}
 	items := make([]ops.ExtractItem, 0, len(sources))
-	for _, src := range sources {
+	for i, src := range sources {
 		p, err := src.FilePath()
 		if err != nil {
 			continue
@@ -825,7 +814,7 @@ func extractPlanItems(sources []pathloc.Path, dest string, tc archive.Toolchain)
 		if !ok || !f.Available(tc) {
 			continue
 		}
-		items = append(items, ops.ExtractItem{Path: p, Format: f})
+		items = append(items, ops.ExtractItem{Path: p, Format: f, Source: int32(i)})
 	}
 	return items
 }

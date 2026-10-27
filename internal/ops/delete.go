@@ -61,16 +61,12 @@ func entryPaths(entries []localfs.Entry) []string {
 // ExecuteDeletePaths deletes the given canonical path strings.
 // ctx is checked before each entry. progress is called after each successful deletion
 // with the deleted path, cumulative file count, and cumulative deleted bytes. onItem, when
-// set, reports each path deleted (ItemDone) or skipped after a permission error (ItemSkipped).
-func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path string, doneFiles int, doneBytes int64), onItem func(path string, res ItemResult, reason string)) (int, int64, error) {
-	report := func(path string, res ItemResult, reason string) {
-		if onItem != nil {
-			onItem(path, res, reason)
-		}
-	}
+// set, reports each path deleted (ItemDone) or skipped after a permission error (ItemSkipped),
+// with its index in paths as PlanItem.Source.
+func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path string, doneFiles int, doneBytes int64), onItem ItemFunc) (int, int64, error) {
 	var doneFiles int
 	var doneBytes int64
-	for _, path := range paths {
+	for i, path := range paths {
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
 		}
@@ -94,8 +90,13 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 		err = withElevation(ctx, "delete", host, append(rmArgv, host), func() error {
 			return deletePathRecursive(ctx, loc)
 		})
+		report := func(res ItemResult, reason string) {
+			if onItem != nil {
+				onItem(PlanItem{Src: loc, IsDir: ent.Type == fsbackend.EntryDirectory, Source: int32(i)}, res, reason)
+			}
+		}
 		if errors.Is(err, ErrPermissionSkipped) {
-			report(path, ItemSkipped, ReasonPermission)
+			report(ItemSkipped, ReasonPermission)
 			continue
 		}
 		if err != nil {
@@ -106,7 +107,7 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 		}
 		doneFiles++
 		doneBytes += size
-		report(path, ItemDone, "")
+		report(ItemDone, "")
 		if progress != nil {
 			progress(path, doneFiles, doneBytes)
 		}

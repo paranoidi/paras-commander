@@ -101,9 +101,9 @@ func TestDeletePathsReportsDone(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got []string
-	if _, _, err := ExecuteDeletePaths(context.Background(), []string{MustPath(path).String()}, nil, func(p string, res ItemResult, _ string) {
+	if _, _, err := ExecuteDeletePaths(context.Background(), []string{MustPath(path).String()}, nil, func(item PlanItem, res ItemResult, _ string) {
 		if res == ItemDone {
-			got = append(got, filepath.Base(p))
+			got = append(got, item.Src.Base())
 		}
 	}); err != nil {
 		t.Fatal(err)

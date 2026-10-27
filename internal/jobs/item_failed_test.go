@@ -87,3 +87,24 @@ func TestRunJobFailsWhenItemsWereSkipped(t *testing.T) {
 		}
 	}
 }
+
+// TestRecordOperationKeepsItemSource: records take the source the executor tagged the item
+// with, and a retry appends to the same per-source log.
+func TestRecordOperationKeepsItemSource(t *testing.T) {
+	s := NewState()
+	job := &Job{ID: "quarry", Type: TypeCopy, Status: StatusQueued,
+		Sources:     pathloc.PathsForTest("/harbor/lantern", "/meadow/copper"),
+		Destination: pathloc.PathsForTest("/orchard")[0]}
+	s.AddJob(job)
+	item := func(src string, source int32) ops.PlanItem {
+		return ops.PlanItem{Src: pathloc.PathsForTest(src)[0], Source: source}
+	}
+	job.RecordOperation(item("/harbor/lantern/acorn.bin", 0), ops.ItemDone, "")
+	job.RecordOperation(item("/meadow/copper/thistle", 1), ops.ItemFailed, "permission denied")
+	job.RetryClone().RecordOperation(item("/meadow/copper/clover", 1), ops.ItemSkipped, "exists")
+
+	per, _ := job.Ops.SourceStats()
+	if len(per) != 2 || per[0].Done != 1 || per[1].Failed != 1 || per[1].Skipped != 1 {
+		t.Fatalf("per-source stats = %+v", per)
+	}
+}

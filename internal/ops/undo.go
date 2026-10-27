@@ -30,6 +30,8 @@ type UndoStep struct {
 	IsDir   bool
 	Size    int64
 	ModTime time.Time
+	// Source is the index of the original job source the step belongs to.
+	Source int32
 }
 
 // journalCreated reports a path a copy just created through opts.OnJournal. The one Lstat of the
@@ -42,7 +44,7 @@ func (o Options) journalCreated(ctx context.Context, dst pathloc.Path) {
 	if err != nil {
 		return
 	}
-	o.OnJournal(UndoStep{Kind: UndoRemoveCreated, Path: dst, IsDir: ent.Type == fsbackend.EntryDirectory, Size: ent.Size, ModTime: ent.ModifiedAt})
+	o.OnJournal(UndoStep{Kind: UndoRemoveCreated, Path: dst, IsDir: ent.Type == fsbackend.EntryDirectory, Size: ent.Size, ModTime: ent.ModifiedAt, Source: o.source})
 }
 
 // journalMoved reports that from now lives at to, through opts.OnJournal.
@@ -54,7 +56,7 @@ func (o Options) journalMoved(ctx context.Context, from, to pathloc.Path) {
 	if err != nil {
 		return
 	}
-	o.OnJournal(UndoStep{Kind: UndoMoveBack, Path: to, From: from, IsDir: ent.Type == fsbackend.EntryDirectory})
+	o.OnJournal(UndoStep{Kind: UndoMoveBack, Path: to, From: from, IsDir: ent.Type == fsbackend.EntryDirectory, Source: o.source})
 }
 
 // ExecuteUndo reverses steps in reverse order, checking each one first so it never touches
@@ -67,7 +69,7 @@ func ExecuteUndo(ctx context.Context, steps []UndoStep, opts Options, progress P
 		if opts.OnItemError == nil {
 			return err
 		}
-		opts.OnItemError(PlanItem{Src: s.Path, Dst: s.From, IsDir: s.IsDir}, err)
+		opts.OnItemError(PlanItem{Src: s.Path, Dst: s.From, IsDir: s.IsDir, Source: s.Source}, err)
 		return nil
 	}
 	if rows, ok := undoRenameBatch(steps); ok {
@@ -83,6 +85,7 @@ func ExecuteUndo(ctx context.Context, steps []UndoStep, opts Options, progress P
 			return done, bytes, err
 		}
 		s := steps[i]
+		opts.source, r.opts.source = s.Source, s.Source
 		var err error
 		switch s.Kind {
 		case UndoMoveBack:
@@ -223,9 +226,11 @@ func undoMassRename(ctx context.Context, rows []MassRenameRow, steps []UndoStep,
 		}
 	}
 	var work []MassRenameRow
+	var workSources []int32
 	for i, row := range rows {
 		if keep[i] {
 			work = append(work, row)
+			workSources = append(workSources, steps[i].Source)
 			continue
 		}
 		if err := fail(steps[i], reasons[i]); err != nil {
@@ -238,10 +243,11 @@ func undoMassRename(ctx context.Context, rows []MassRenameRow, steps []UndoStep,
 	if err := ExecuteMassRename(work); err != nil {
 		return 0, 0, err
 	}
-	for _, row := range work {
+	for i, row := range work {
 		src, serr := pathloc.Parse(row.SourcePath)
 		dst, derr := pathloc.Parse(row.NewPath())
 		if serr == nil && derr == nil {
+			opts.source = workSources[i]
 			opts.itemDone(PlanItem{Src: src, Dst: dst, IsDir: row.IsDir}, ItemDone, "")
 		}
 	}

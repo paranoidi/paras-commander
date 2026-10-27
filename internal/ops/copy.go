@@ -499,6 +499,7 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 			break
 		}
 
+		opts.source = item.Source
 		if state.skipsItem(&item) {
 			state.countProcessed(item)
 			continue

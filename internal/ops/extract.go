@@ -26,6 +26,8 @@ func (e *extractCancelError) Unwrap() error { return e.err }
 type ExtractItem struct {
 	Path   string
 	Format archive.Format
+	// Source is the index of the archive among the paths the plan was built from.
+	Source int32
 }
 
 // ExtractPlan describes a validated extract operation.
@@ -39,13 +41,18 @@ type ExtractPlan struct {
 	Conflict ConflictResolver
 	// OnItem, when set, reports each archive extracted (ItemDone), skipped or failed, with the
 	// reason for the last two.
-	OnItem func(path string, res ItemResult, reason string)
+	OnItem ItemFunc
 }
 
-func (p ExtractPlan) report(path string, res ItemResult, reason string) {
-	if p.OnItem != nil {
-		p.OnItem(path, res, reason)
+func (p ExtractPlan) report(item ExtractItem, res ItemResult, reason string) {
+	if p.OnItem == nil {
+		return
 	}
+	src, err := pathloc.File(item.Path)
+	if err != nil {
+		return
+	}
+	p.OnItem(PlanItem{Src: src, Source: item.Source}, res, reason)
 }
 
 // PlanExtract builds an extract plan from source paths and destination directory.
@@ -70,7 +77,7 @@ func PlanExtract(paths []string, destDir string, tc archive.Toolchain) (ExtractP
 	var unavailable []string
 	claimedStream := make(map[string]string)
 
-	for _, p := range paths {
+	for i, p := range paths {
 		p = filepath.Clean(p)
 		fi, err := os.Stat(p)
 		if err != nil {
@@ -94,7 +101,7 @@ func PlanExtract(paths []string, destDir string, tc archive.Toolchain) (ExtractP
 			skipped = append(skipped, reason)
 			continue
 		}
-		items = append(items, ExtractItem{Path: p, Format: f})
+		items = append(items, ExtractItem{Path: p, Format: f, Source: int32(i)})
 	}
 
 	if len(items) == 0 {
@@ -134,7 +141,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 		if item.Format.NeedsStdoutSink() {
 			name := archive.OutputBasename(item.Path, item.Format)
 			if prev, ok := claimedStream[name]; ok {
-				plan.report(item.Path, ItemFailed, fmt.Sprintf("output %q collides with %s", name, filepath.Base(prev)))
+				plan.report(item, ItemFailed, fmt.Sprintf("output %q collides with %s", name, filepath.Base(prev)))
 				failCount++
 				if firstErr == nil {
 					firstErr = fmt.Errorf("%s: output %q collides with %s", filepath.Base(item.Path), name, filepath.Base(prev))
@@ -148,7 +155,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 		}
 		err := extractOne(ctx, item, plan.Destination, plan.Toolchain, plan.Conflict)
 		if errors.Is(err, errExtractSkipped) {
-			plan.report(item.Path, ItemSkipped, ReasonExists)
+			plan.report(item, ItemSkipped, ReasonExists)
 			if progress != nil {
 				progress(item.Path, done)
 			}
@@ -162,13 +169,13 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 			return done, fmt.Errorf("%s: %w", filepath.Base(item.Path), err)
 		}
 		if err != nil {
-			plan.report(item.Path, ItemFailed, err.Error())
+			plan.report(item, ItemFailed, err.Error())
 			failCount++
 			if firstErr == nil {
 				firstErr = fmt.Errorf("%s: %w", filepath.Base(item.Path), err)
 			}
 		} else {
-			plan.report(item.Path, ItemDone, "")
+			plan.report(item, ItemDone, "")
 			done++
 		}
 		if progress != nil {

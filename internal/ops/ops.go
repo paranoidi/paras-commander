@@ -93,14 +93,22 @@ type Options struct {
 	// moved (ItemDone), or deliberately left alone (ItemSkipped, with a reason such as
 	// ReasonExists). Directories are reported only when skipped (their children are not).
 	// Source failures still go through OnItemError. nil means no-op; it runs on the job goroutine.
-	OnItemDone func(item PlanItem, res ItemResult, reason string)
+	OnItemDone ItemFunc
 	// OnItemsProcessed receives, once when a copy's item loop returns (finished, failed or
 	// canceled), how many non-directory plan items it went through: written, skipped (including
 	// every file under a skipped directory) or failed. The counting walk's TotalFiles minus
 	// TotalDirs is the same unit, so the difference is the files a canceled copy left undone.
 	// nil means no-op.
 	OnItemsProcessed func(n int)
+
+	// source is the index of the job source being processed. Executors set it per source (copy:
+	// per plan item) and every item report and undo step carries it (PlanItem.Source,
+	// UndoStep.Source).
+	source int32
 }
+
+// ItemFunc reports one item outcome: OnItemDone and the delete/extract item hooks.
+type ItemFunc func(item PlanItem, res ItemResult, reason string)
 
 // ItemResult is the outcome OnItemDone (and the delete/extract item hooks) report.
 type ItemResult int
@@ -119,9 +127,10 @@ const (
 	ReasonPermission    = "permission denied"
 )
 
-// itemDone reports item through o.OnItemDone when set.
+// itemDone reports item, tagged with the current source, through o.OnItemDone when set.
 func (o Options) itemDone(item PlanItem, res ItemResult, reason string) {
 	if o.OnItemDone != nil {
+		item.Source = o.source
 		o.OnItemDone(item, res, reason)
 	}
 }
@@ -422,6 +431,9 @@ type PlanItem struct {
 	Mode       fs.FileMode // source permission bits when known; zero uses mkdir default
 	AccessTime time.Time   // zero when unknown (remote backends may omit atime)
 	ModTime    time.Time   // zero when unknown
+	// Source is the index of the job source the item belongs to (its position in the sources
+	// passed to the planner or executor that produced it).
+	Source int32
 }
 
 // BuildPlan walks sources and creates a flat list of files to copy/move.
@@ -493,10 +505,11 @@ func buildPlan(ctx context.Context, sources []pathloc.Path, destination pathloc.
 	if !opts.FlatDestNames {
 		nameRoot = TransferNameRoot(sources)
 	}
-	for _, srcLoc := range sources {
+	for i, srcLoc := range sources {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		srcSink, srcOpts := sourceStamped(int32(i), sink, opts)
 		dstLoc, err := resolveDestinationNamedCtx(ctx, destination, TransferDestName(srcLoc, nameRoot))
 		if err != nil {
 			return err
@@ -505,16 +518,32 @@ func buildPlan(ctx context.Context, sources []pathloc.Path, destination pathloc.
 			return fmt.Errorf("cannot copy %s into a subdirectory of itself", srcLoc)
 		}
 		if srcLoc.IsRemote() || destination.IsRemote() || !useLocalFastPath(srcLoc, dstLoc) {
-			if err := planRemoteSource(ctx, srcLoc, dstLoc, followDirChildren, opts, sink, afterVisit); err != nil {
+			if err := planRemoteSource(ctx, srcLoc, dstLoc, followDirChildren, srcOpts, srcSink, afterVisit); err != nil {
 				return err
 			}
 			continue
 		}
-		if err := planLocalSource(srcLoc, dstLoc, followDirChildren, opts, sink, afterVisit); err != nil {
+		if err := planLocalSource(srcLoc, dstLoc, followDirChildren, srcOpts, srcSink, afterVisit); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// sourceStamped wraps sink and opts.OnItemError so every item planned under one source carries
+// its index: the one place planned items get PlanItem.Source.
+func sourceStamped(source int32, sink func(PlanItem) error, opts PlanBuildOptions) (func(PlanItem) error, PlanBuildOptions) {
+	stamped := func(it PlanItem) error {
+		it.Source = source
+		return sink(it)
+	}
+	if onErr := opts.OnItemError; onErr != nil {
+		opts.OnItemError = func(it PlanItem, err error) {
+			it.Source = source
+			onErr(it, err)
+		}
+	}
+	return stamped, opts
 }
 
 // planRemoteSource plans one buildPlan source through the fsbackend stat/walk path: used

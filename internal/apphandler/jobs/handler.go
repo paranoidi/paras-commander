@@ -835,8 +835,9 @@ func (h *Handler) RecordRename(steps []ops.UndoStep) {
 		return
 	}
 	sources := make([]pathloc.Path, len(steps))
-	for i, s := range steps {
-		sources[i] = s.From
+	for i := range steps {
+		sources[i] = steps[i].From
+		steps[i].Source = int32(i) // each renamed item is its own source
 	}
 	h.state.AddFinishedJob(&jobs.Job{
 		ID:          jobs.NewJobID(),

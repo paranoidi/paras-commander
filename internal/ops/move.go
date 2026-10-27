@@ -211,6 +211,7 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
 		}
+		r.opts.source = int32(i)
 		name := TransferDestName(src, nameRoot)
 		dst, err := resolveMoveDestination(ctx, destination, name)
 		if err != nil {
@@ -413,6 +414,9 @@ func (r moveRun) moveCopyFallback(ctx context.Context, src, dst, destination pat
 	plan, _, _, tb, err := BuildCopyPlanWithTotalsCtx(ctx, sources, planDest, planOpts)
 	if err != nil {
 		return 0, 0, fmt.Errorf("move copy phase plan: %w", err)
+	}
+	for k := range plan { // planned as a lone source: re-tag with the job source being moved
+		plan[k].Source = r.opts.source
 	}
 	if err := EnsureDiskSpace(r.diskWait, planDest, tb, pathloc.Path{}); err != nil {
 		return 0, 0, err

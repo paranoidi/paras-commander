@@ -868,12 +868,12 @@ func TestJobsViewExpandSourcesFiltersOperations(t *testing.T) {
 		Destination: pathloc.MustParse("/meadow"),
 	}
 	state.AddJob(job)
-	item := func(src string) ops.PlanItem {
-		return ops.PlanItem{Src: pathloc.MustParse(src), Dst: pathloc.MustParse("/meadow" + src)}
+	item := func(src string, source int32) ops.PlanItem {
+		return ops.PlanItem{Src: pathloc.MustParse(src), Dst: pathloc.MustParse("/meadow" + src), Source: source}
 	}
-	job.RecordOperation(item("/harbor/lantern/acorn.txt"), ops.ItemDone, "")
-	job.RecordOperation(item("/harbor/lantern/bramble.txt"), ops.ItemDone, "")
-	job.RecordOperation(item("/harbor/willow/clover.txt"), ops.ItemFailed, "permission denied")
+	job.RecordOperation(item("/harbor/lantern/acorn.txt", 0), ops.ItemDone, "")
+	job.RecordOperation(item("/harbor/lantern/bramble.txt", 0), ops.ItemDone, "")
+	job.RecordOperation(item("/harbor/willow/clover.txt", 1), ops.ItemFailed, "permission denied")
 	h.SyncJobsList()
 	idx := slices.IndexFunc(model.JobsList, func(e ui.JobEntry) bool { return e.ID == "multi" })
 	model.JobsView.FocusPane = 0
