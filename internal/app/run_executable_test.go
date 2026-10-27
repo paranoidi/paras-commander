@@ -2,6 +2,7 @@ package app
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -245,5 +246,33 @@ func TestNavOpenExecuteRuleOverridesToForeground(t *testing.T) {
 
 	if app.model.ViewMode != ui.ViewCommands {
 		t.Fatalf("ViewMode = %v, want ViewCommands (earlier rule should override the built-in background one)", app.model.ViewMode)
+	}
+}
+
+func TestNavOpenFallsBackToFullscreenPreviewWithoutXDGOpen(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "harbor-lantern.md")
+	if err := os.WriteFile(path, []byte("# Meadow\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.Panels.OpenFilesExternally = true
+	app.config.Panels.RunExecutablesOnEnter = false
+	old := runDetachedXDGOpen
+	runDetachedXDGOpen = func(string) error {
+		return &exec.Error{Name: "xdg-open", Err: exec.ErrNotFound}
+	}
+	t.Cleanup(func() { runDetachedXDGOpen = old })
+	selectEntryByName(t, app, "harbor-lantern.md")
+
+	app.dispatch(keymap.ActionNavOpen)
+
+	if app.model.ViewMode != ui.ViewFilePreview {
+		t.Fatalf("ViewMode = %v, want ViewFilePreview", app.model.ViewMode)
+	}
+	if got := app.model.FullscreenFilePreview.Path; got != path {
+		t.Fatalf("FullscreenFilePreview.Path = %q, want %q", got, path)
 	}
 }
