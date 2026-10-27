@@ -1,7 +1,10 @@
 package preview
 
 import (
+	"bytes"
 	"context"
+	"image"
+	"image/jpeg"
 	"os"
 	"path/filepath"
 	"testing"
@@ -163,7 +166,14 @@ func TestSyncPrefetchLoadingMarksRefreshesWarmMap(t *testing.T) {
 
 	root := t.TempDir()
 	aPath := filepath.Join(root, "a.jpg")
-	if err := os.WriteFile(aPath, []byte("fake-jpg"), 0o644); err != nil {
+	// A real JPEG: the prefetch scheduled below decodes it in the background under the same
+	// cache key as the LoadStill further down, and whichever finishes first must warm the key
+	// (an undecodable file would cache a failure that LoadStill then returns).
+	var jpg bytes.Buffer
+	if err := jpeg.Encode(&jpg, image.NewRGBA(image.Rect(0, 0, 2, 2)), nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(aPath, jpg.Bytes(), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	fi, err := os.Stat(aPath)
