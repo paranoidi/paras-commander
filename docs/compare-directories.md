@@ -39,7 +39,9 @@ Files are compared in parallel (`hash_concurrency`); rows show Pending or Hashin
 
 ## Selecting in results
 
-Selection acts on the focused column's panel: `Insert` / `Space` toggle the row's path, `Alt+K` selects a range, `*` inverts, `Ctrl+U` clears. `+` and `-` open the category dialog in select or unselect mode, choosing every visible row of the ticked classes (including one-sided classes). Selections persist in the panels after leaving the view and feed copy, move and delete as usual ([Selections](selections.md)). Deleted files drop out of the results without a rescan.
+Selection acts on the focused column's panel: `Insert` / `Space` toggle the row's path, `Alt+K` selects a range, `*` inverts, `Ctrl+U` clears. `+` and `-` open the category dialog in select or unselect mode, choosing every visible row of the ticked classes (including one-sided classes). Selections persist in the panels after leaving the view and feed copy, move and delete as usual ([Selections](selections.md)).
+
+Because delete in the view acts on the whole panel selection, opening Compare (from the panels or from Find duplicates) while either panel has selected paths first asks what to do with the selection: **Drop** clears it, **Stash** (the default) moves it into each panel's stash (merging with a stash already there) so `panel.stash-toggle` brings it back later, and **Cancel** leaves the selection and does not open Compare. Deleted files drop out of the results without a rescan.
 
 ## Options
 

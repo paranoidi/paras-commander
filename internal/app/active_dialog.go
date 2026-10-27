@@ -228,6 +228,11 @@ func (a *App) modalActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 			OK:     func() { a.applyStashRestoreChoice(stashRestoreFocusAction(m.StashRestoreDialog.Focus)) },
 			Cancel: a.closeStashRestoreDialog,
 		})
+	case m.CompareSelection.Open:
+		return found(func() dlg.Spec { return dialog.CompareSelectionView(m.CompareSelection) }, &m.CompareSelection.Focus, noQuit(a.applyCompareSelectionEvent), dialogButtons{
+			OK:     func() { a.answerCompareSelection(m.CompareSelection.Focus) },
+			Cancel: func() { a.answerCompareSelection(dlg.Cancel) },
+		})
 	}
 	return activeDialog{}, false
 }

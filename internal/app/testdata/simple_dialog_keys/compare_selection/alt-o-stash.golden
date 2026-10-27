@@ -1,0 +1,4 @@
+== open ==
+focus=stash
+== Alt+o ==
+CLOSED: compare=true live=0 stash=1 message="1 selection(s) stashed"

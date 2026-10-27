@@ -1,0 +1,4 @@
+== open ==
+focus=stash
+== Alt+d ==
+CLOSED: compare=true live=0 stash=0 message="1 selection(s) dropped"

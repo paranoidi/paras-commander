@@ -202,8 +202,10 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		return true
 	case keymap.ActionDedupCompare:
 		if p, s, ok := a.dedupCtrl.CompareDirsFromSelection(); ok {
-			a.compareCtrl.OpenPaths(p, s, a.activePanel().ShowHidden,
-				func() { a.dedupCtrl.ReopenPreservingState() })
+			showHidden := a.activePanel().ShowHidden
+			a.resolveSelectionBeforeCompare(func() {
+				a.compareCtrl.OpenPaths(p, s, showHidden, func() { a.dedupCtrl.ReopenPreservingState() })
+			})
 		}
 		return true
 	case keymap.ActionPanelClearSelection:

@@ -231,6 +231,20 @@ func TestStashRestoreGoldenRender(t *testing.T) {
 	runSimpleGoldens(t, "stash_restore", cases)
 }
 
+func TestCompareSelectionGoldenRender(t *testing.T) {
+	var cases []simpleGolden
+	add := func(w, h, selected int, focus string) {
+		st := compareSelectionGoldenState(selected, focus)
+		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_sel-%d_focus-%s", w, h, selected, focus), w, h, func(s tcell.Screen, l Layout) {
+			DrawCompareSelectionDialog(s, l, st, asciiDialogStyles())
+		}})
+	}
+	add(80, 24, 3, "stash")
+	add(80, 24, 1, "drop")
+	add(50, 24, 12, "cancel") // narrower than the 60 wide spec
+	runSimpleGoldens(t, "compare_selection", cases)
+}
+
 func TestDedupReturnGoldenRender(t *testing.T) {
 	var cases []simpleGolden
 	add := func(w, h int, scope, focus string) {

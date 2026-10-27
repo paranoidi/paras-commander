@@ -45,6 +45,7 @@ Each has a reason it cannot move to `apphandler/dialog`:
 - SFTP connect and password (`sftp*.go`): they own connection state and credentials.
 - Per-panel navigation history (`history.go`).
 - Quit/stash confirmations: they sit on the shutdown path.
+- Compare selection guard (`compare_selection.go`): it gates opening Compare from both the browser and the dedup view, and runs a parked open of either.
 - Dedup view (`dedup_view.go`, handler `a.dedupCtrl`), including `DedupEmptyDirsConfirm` key handling: `apphandler/dialog` only opens that confirmation.
 
 ### Shared App-independent packages
