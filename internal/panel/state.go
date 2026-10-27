@@ -1612,10 +1612,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	// Activate disk-total primary sort before ApplySort so the first paint matches MC-style
 	// disk ordering when a user-initiated analysis has run and cache already covers this listing
 	// (no idle timer / reconcile delay). Selection-size cache alone must not enable this.
-	if s.Sort.DiskUsageIdleSizeSort && s.DiskUsageIdleSortEligible && len(s.Entries) > 0 && s.ListingFullyDiskCached() {
-		s.DiskUsageIdleSortActivated = true
-		s.IdleDiskTotalsSort = true
-	}
+	s.activateDiskTotalsSortIfCached()
 	s.ApplySort()
 	if s.ListLayout == ListLayoutTree {
 		// TreeRoots is always re-rooted fresh from the just-fetched listing — cached subtree
@@ -2373,6 +2370,9 @@ func (s *State) ApplySortFromDialog(sort SortState, viewportRows int) {
 		s.DiskUsageIdleSortActivated = false
 	} else {
 		s.DiskUsageIdleSortActivated = true
+		// Enabling (or keeping) the toggle over an already-analysed, fully cached listing
+		// orders by disk totals now instead of waiting for the next directory load.
+		s.activateDiskTotalsSortIfCached()
 	}
 	entry, ok := s.CurrentEntry()
 	s.ApplySort()
@@ -2382,6 +2382,16 @@ func (s *State) ApplySortFromDialog(sort SortState, viewportRows int) {
 	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
+}
+
+// activateDiskTotalsSortIfCached latches disk-total primary ordering when the disk-usage sort
+// toggle is on, a user-initiated analysis has run (DiskUsageIdleSortEligible) and the cache
+// already covers the listing. Selection-size cache alone must not enable this.
+func (s *State) activateDiskTotalsSortIfCached() {
+	if s.Sort.DiskUsageIdleSizeSort && s.DiskUsageIdleSortEligible && len(s.Entries) > 0 && s.ListingFullyDiskCached() {
+		s.DiskUsageIdleSortActivated = true
+		s.IdleDiskTotalsSort = true
+	}
 }
 
 // ListingFullyDiskCached reports whether every listed entry has a disk-usage sort key: a cached
