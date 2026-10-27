@@ -3185,3 +3185,46 @@ func TestSelectGroupTypesOnly(t *testing.T) {
 		t.Fatal("empty spec must match nothing")
 	}
 }
+
+func TestApplySortFromDialogEnablesDiskTotalsSortWhenListingFullyCached(t *testing.T) {
+	dir := t.TempDir()
+	smallDir := filepath.Join(dir, "anchor")
+	largeDir := filepath.Join(dir, "willow")
+	for _, d := range []string{smallDir, largeDir} {
+		if err := os.Mkdir(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state := State{
+		FilterOptions:             ciFilterOptions,
+		Sort:                      SortState{Mode: SortName},
+		DiskUsageIdleSortEligible: true,
+	}
+	state.DiskSorter = func(abs string) (int64, bool) {
+		switch filepath.Clean(abs) {
+		case filepath.Clean(smallDir):
+			return 10, true
+		case filepath.Clean(largeDir):
+			return 9999, true
+		default:
+			return 0, false
+		}
+	}
+	if err := state.load(pathloc.MustParse(dir), "", 10, noIndexCursorFallback, asyncLoadOpts{}); err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if state.IdleDiskTotalsSort || state.Entries[0].Name != "anchor" {
+		t.Fatalf("precondition: name sort expected, got IdleDiskTotalsSort=%v first=%q", state.IdleDiskTotalsSort, state.Entries[0].Name)
+	}
+
+	sort := state.Sort
+	sort.DiskUsageIdleSizeSort = true
+	state.ApplySortFromDialog(sort, 10)
+
+	if !state.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort should be true right after enabling disk usage sort over a fully cached listing")
+	}
+	if state.Entries[0].Name != "willow" {
+		t.Fatalf("first entry = %q, want willow (larger disk total sorts first)", state.Entries[0].Name)
+	}
+}
