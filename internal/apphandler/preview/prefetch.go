@@ -39,10 +39,21 @@ func (h *Handler) ensurePrefetch() {
 		h.stopPrefetch()
 	}
 	h.prefetchCfg = want
-	h.prefetch = prefetch.NewEngine(h.ctx, want, func() {
+	engine := prefetch.NewEngine(h.ctx, want, func() {
 		h.syncPrefetchLoadingMarks()
 		h.postRenderWake()
 	})
+	h.mu.Lock()
+	h.prefetch = engine
+	h.mu.Unlock()
+}
+
+// prefetchEngine reads h.prefetch for callers off the UI goroutine (the Cache's OnChange worker
+// callback and the warm-map debounce timer); the UI goroutine writes it under h.mu.
+func (h *Handler) prefetchEngine() *prefetch.Engine {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.prefetch
 }
 
 // prefetchEngineConfig derives the engine config from live preview settings. The two max-edge
@@ -78,8 +89,8 @@ func (h *Handler) stopPrefetch() {
 	if h.prefetch == nil {
 		return
 	}
+	// Close outside h.mu: it waits for workers whose OnChange callback takes h.mu.
 	h.prefetch.Close()
-	h.prefetch = nil
 	// Clear the skip-rebuild guard too: a restart (ensurePrefetch noticing changed settings)
 	// leaves the caret exactly where it was, so without this the next
 	// SchedulePrefetchFromActivePanel call would short-circuit and the fresh engine would sit
@@ -89,6 +100,7 @@ func (h *Handler) stopPrefetch() {
 	h.prefetchLastCursor = 0
 	h.prefetchLastEntryCount = 0
 	h.mu.Lock()
+	h.prefetch = nil
 	h.model.PreviewPrefetchLoading = nil
 	h.model.PreviewPrefetchWarm = nil
 	h.prefetchLastEntries = nil
@@ -101,14 +113,15 @@ func (h *Handler) stopPrefetch() {
 // Cache's OnChange callback and can fire from a background prefetch-worker goroutine whenever a
 // decode/render completes — not just when the cursor moves.
 func (h *Handler) syncPrefetchLoadingMarks() {
-	if h.prefetch == nil {
+	engine := h.prefetchEngine()
+	if engine == nil {
 		h.mu.Lock()
 		h.model.PreviewPrefetchLoading = nil
 		h.mu.Unlock()
 		h.scheduleWarmMapRebuild()
 		return
 	}
-	paths := h.prefetch.Cache().SnapshotInFlight()
+	paths := engine.Cache().SnapshotInFlight()
 	m := make(map[string]struct{}, len(paths))
 	for _, p := range paths {
 		m[p] = struct{}{}
@@ -139,7 +152,8 @@ func (h *Handler) scheduleWarmMapRebuild() {
 // Cache's OnChange handler), so the tint also refreshes as background work completes between
 // cursor moves, not only when the cursor itself moves.
 func (h *Handler) rebuildPrefetchWarmMap() {
-	if h.prefetch == nil {
+	engine := h.prefetchEngine()
+	if engine == nil {
 		h.mu.Lock()
 		h.model.PreviewPrefetchWarm = nil
 		h.mu.Unlock()
@@ -151,7 +165,7 @@ func (h *Handler) rebuildPrefetchWarmMap() {
 	h.mu.RUnlock()
 	warm := make(map[string]struct{}, len(entries))
 	for _, ent := range entries {
-		if h.prefetch.IsEntryWarm(ent, box) {
+		if engine.IsEntryWarm(ent, box) {
 			warm[ent.Path] = struct{}{}
 		}
 	}
