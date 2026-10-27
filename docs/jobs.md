@@ -77,6 +77,9 @@ the top. Each row starts with a result icon:
   prompt);
 - red: failed, followed by the reason.
 
+A row whose conflict was resolved with Delete source has its own icon instead
+of the skip icon; it still counts as skipped.
+
 Files and symlinks are listed one per row. A directory gets a row only when it
 was skipped as a whole; a move lists each moved top-level item. When a retried
 item succeeds, its earlier failed row disappears.

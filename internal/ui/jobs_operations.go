@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/oplog"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -41,6 +42,15 @@ func JobOperationResultKey(r oplog.Result) string {
 		return theme.JobsOperationSkipped
 	}
 	return theme.JobsOperationSuccess
+}
+
+// IconKey is the row's [icons.jobs.operations] key: its result key, except a skipped row whose
+// conflict resolution deleted the source, which has its own glyph.
+func (o JobOperation) IconKey() string {
+	if o.Result == oplog.Skipped && o.Reason == ops.ReasonSourceDeleted {
+		return theme.JobsOperationSourceDeleted
+	}
+	return JobOperationResultKey(o.Result)
 }
 
 // JobOperationRow is a row the Operations pane shows: the operation and the label's fuzzy match
@@ -133,7 +143,7 @@ func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState
 		if !chromeBlocked {
 			resultStyle = styles.JobsOperationOn(key, body)
 		}
-		primitive.Text(screen, textX, y, 1, styles.IconJobsOperation(key), resultStyle)
+		primitive.Text(screen, textX, y, 1, styles.IconJobsOperation(r.Op.IconKey()), resultStyle)
 		if wrap {
 			for li, part := range WrapTextLines(r.Op.Text(), lineW) {
 				if y >= contentTop+contentH {

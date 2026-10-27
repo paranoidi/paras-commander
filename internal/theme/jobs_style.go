@@ -59,11 +59,14 @@ const (
 	JobsOperationSuccess = "success"
 	JobsOperationFailed  = "failed"
 	JobsOperationSkipped = "skipped"
+	// JobsOperationSourceDeleted is an icon-only key: a skipped row whose conflict resolution
+	// deleted the source. Its style is the skipped one.
+	JobsOperationSourceDeleted = "source_deleted"
 )
 
 // IconJobsOperation returns the result icon of an Operations pane row for a result key
 // (JobsOperationSuccess, ...), from [icons.jobs.operations], falling back to the jobs list's
-// completed / failed icon or a built-in skipped glyph.
+// completed / failed icon or a built-in skipped / source deleted glyph.
 func (t Theme) IconJobsOperation(result string) string {
 	if t.Icons != nil {
 		if s := strings.TrimSpace(t.Icons["jobs.operations."+result]); s != "" {
@@ -75,6 +78,8 @@ func (t Theme) IconJobsOperation(result string) string {
 		return t.IconJobsList("failed")
 	case JobsOperationSkipped:
 		return "\uf056"
+	case JobsOperationSourceDeleted:
+		return "\uf05c"
 	}
 	return t.IconJobsList("completed")
 }

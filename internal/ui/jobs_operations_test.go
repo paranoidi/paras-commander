@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/oplog"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -170,5 +171,25 @@ func TestJobFilesLineShowsCanceledItems(t *testing.T) {
 		if s := string(line[last.Start:last.End]); !strings.Contains(s, "canceled") || last.Style != styles.JobsOperationOn(theme.JobsOperationSkipped, body) {
 			t.Fatalf("%s: canceled span = %q, want it in the skipped (yellow) style", tc.name, s)
 		}
+	}
+}
+
+func TestDrawJobsOperationsPanelSourceDeletedIcon(t *testing.T) {
+	screen := newOpsScreen(t)
+	rect := Rect{X: 0, Y: 0, Width: 70, Height: 8}
+	win := JobsOpsWindow{JobID: "move-1", Total: 2, Rows: []JobOperationRow{
+		{Op: JobOperation{Result: oplog.Skipped, Label: "harbor/lantern.txt", Reason: ops.ReasonSourceDeleted}},
+		{Op: JobOperation{Result: oplog.Skipped, Label: "harbor/meadow.txt", Reason: ops.ReasonExists}},
+	}}
+	th := theme.Default()
+	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, th, false, true, false)
+
+	for i, want := range []string{th.IconJobsOperation(theme.JobsOperationSourceDeleted), th.IconJobsOperation(theme.JobsOperationSkipped)} {
+		if row := screenRowText(screen, rect, rect.Y+1+i); !strings.Contains(row, want) {
+			t.Fatalf("row %d = %q, want icon %q", i, row, want)
+		}
+	}
+	if th.IconJobsOperation(theme.JobsOperationSourceDeleted) != "" {
+		t.Fatalf("source deleted icon = %q", th.IconJobsOperation(theme.JobsOperationSourceDeleted))
 	}
 }

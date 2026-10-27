@@ -371,6 +371,7 @@ completed = "\uf05d"
 success = "\uf05d"
 failed = "\uf06a"
 skipped = "\uf056"
+source_deleted = "\uf05c"
 
 [icons.filelist]
 selection_subtree = ""
