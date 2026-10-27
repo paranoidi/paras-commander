@@ -25,11 +25,15 @@ import (
 func (h *Handler) CloseFileDialog() {
 	wasSFTPPassword := h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogSFTPPassword
 	wasDuplicate := h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogDuplicate
+	massRenameApplied := h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogMassRename && h.model.FileDialog.MassRenameApplied
 	h.ClearDeleteDialogReconcileCache()
 	h.model.FileDialog = dialog.FileDialogState{}
 	if wasDuplicate {
 		h.model.DestinationTargetPrimary = false
 		h.model.DestinationTargetSecondary = false
+	}
+	if massRenameApplied {
+		h.host.ActivePanel().ClearSelection()
 	}
 	if wasSFTPPassword {
 		h.host.CancelSFTPPassword()

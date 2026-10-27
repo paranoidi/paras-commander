@@ -47,7 +47,7 @@ number to 3 digits* (F2 Load pattern) do exactly this.
 
 ## Apply, saved patterns and history
 
-- **Apply** (`Alt+A`) renames now and keeps the dialog open: the panels refresh, the batch is re-selected under its new names and the Find and Replace fields are cleared, ready for the next rule. OK renames and closes.
+- **Apply** (`Alt+A`) renames now and keeps the dialog open: the panels refresh, the batch is re-selected under its new names and the Find and Replace fields are cleared, ready for the next rule. OK renames and closes. Each successful pass shows a success message; once the dialog closes after any rename (OK, or Cancel after an Apply) the selection is cleared.
 - Patterns (mode, Find, Replace and options) can be saved and reused. In the dialog: `F2` Load pattern, `F5` Save pattern (asks for a name and description; `F5` again offers to overwrite an existing pattern), `F3` History (patterns used in this session only), `F8` deletes the selected saved pattern in the pickers.
 - Saved patterns live in `patterns.toml` (`[mass_rename] file`, default `<config dir>/patterns.toml`). Until the file exists, Load shows the two built-in pad patterns above. See [Config](config.md#mass_rename).
 - The dialog keys are under `[dialog.mass_rename]` in `keybindings.toml`.

@@ -541,6 +541,19 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 	if _, err := os.Stat(aPath); !os.IsNotExist(err) {
 		t.Fatal("old path foo_a.txt should not exist")
 	}
+	assertMassRenameDone(t, app)
+}
+
+// assertMassRenameDone checks the state a successful mass rename that closed the dialog leaves:
+// a success toast and an empty active-panel selection.
+func assertMassRenameDone(t *testing.T, app *App) {
+	t.Helper()
+	if app.model.MessageUrgency != ui.MessageUrgencySuccess {
+		t.Fatalf("toast urgency = %v, want success (message %q)", app.model.MessageUrgency, app.model.Message)
+	}
+	if n := len(app.activePanel().SelectedPaths); n != 0 {
+		t.Fatalf("selection = %+v, want cleared", app.activePanel().SelectedPaths)
+	}
 }
 
 func TestMassRenameBangPrefixedDirectory(t *testing.T) {
@@ -687,6 +700,59 @@ func TestMassRenameApplyKeepsDialogOpenAndReselects(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "baz_b.txt")); err != nil {
 		t.Fatalf("baz_b.txt: %v", err)
+	}
+	assertMassRenameDone(t, app)
+}
+
+func TestMassRenameApplyThenCancelClearsSelection(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "lantern_a.txt")
+	bPath := filepath.Join(dir, "lantern_b.txt")
+	writeFile(t, aPath)
+	writeFile(t, bPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.activePanel().SelectedPaths = map[string]bool{aPath: true, bPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	for _, r := range "lantern_" {
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.Focus = dialog.FileFieldID(1)
+	for _, r := range "meadow_" {
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.Focus = dialog.MassRenameApply
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if len(app.activePanel().SelectedPaths) != 2 {
+		t.Fatalf("selection after Apply = %+v, want the renamed batch", app.activePanel().SelectedPaths)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Escape")
+	}
+	assertMassRenameDone(t, app)
+}
+
+func TestMassRenameCancelWithoutApplyKeepsSelection(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "harbor_a.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.activePanel().SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Escape")
+	}
+	if !app.activePanel().SelectedPaths[aPath] {
+		t.Fatalf("selection = %+v, want kept after a plain cancel", app.activePanel().SelectedPaths)
 	}
 }
 

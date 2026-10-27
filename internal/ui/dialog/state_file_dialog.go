@@ -219,6 +219,9 @@ type FileDialogState struct {
 	// MassRenameExternalNames holds the per-file basenames returned by the external editor (ExternalEditor mode).
 	// Nil means the editor has not been run yet.
 	MassRenameExternalNames []string
+	// MassRenameApplied is set once an Apply pass renamed files; closing the dialog then
+	// clears the active panel's selection (Apply re-selects the renamed batch).
+	MassRenameApplied bool
 	// MassRenamePhase selects between the main find/replace form and the save/load/history
 	// pattern sub-screens (see MassRenamePhase).
 	MassRenamePhase MassRenamePhase

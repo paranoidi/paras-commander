@@ -534,7 +534,7 @@ func (h *Handler) ExecuteMassRename() {
 	h.RefreshBothPanels()
 	h.addRenameMarks(renamedPaths)
 	h.host.ActivePanel().ClearSelection()
-	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", len(renamedPaths)), ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", len(renamedPaths)), ui.MessageUrgencySuccess)
 }
 
 // applyMassRenameRows patches the active panel and the disk-usage cache for each row that
@@ -619,9 +619,10 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 	d.Fields[0].Clear()
 	d.Fields[1].Clear()
 	d.MassRenameExternalNames = nil
+	d.MassRenameApplied = true
 	d.Focus = massRenameHomeFocus(d.MassRenameMode)
 	h.RecomputeMassRenamePreview()
-	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", len(renamedPaths)), ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", len(renamedPaths)), ui.MessageUrgencySuccess)
 }
 
 // MassRenameEditorFooterEligible reports whether the F4 "Editor" footer hint should show:
