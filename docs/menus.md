@@ -8,7 +8,7 @@ Three ways to reach commands besides direct shortcuts: the menu bar, the leader 
 
 Press `F9` (`app.open-menu`) to focus the bar. Enter or Down opens a pulldown, each row has a mnemonic letter that runs it, and `Esc` steps back (pulldown, bar, normal). `Alt+letter` jumps straight to a top-level menu. Rows show the current key binding for each action, resolved from your `keybindings.toml`.
 
-Browser pulldowns: Left, File, Command, Display, Options, Right. Left and Right hold the per-panel commands (sort, hidden files, history, find, jump, listing format, carousel, tree, SFTP) for the panel at that screen position. File has copy, move, rename, delete, mkdir, links, chmod/chown, extract, flatten and selection commands. Command has user menu, run for each, split/swap, compare panels, find duplicates and bookmarks. Display switches to Commands, Messages, Duplicates, Jobs and the shell. Options has Configuration, Preview settings, Calibrate Debounce and Theme.
+Browser pulldowns: Left, File, Command, Display, Options, Right. Left and Right hold the per-panel commands (sort, hidden files, history, find, jump, listing format, carousel, tree, SFTP) for the panel at that screen position. File has copy, move, rename, delete, mkdir, links, chmod/chown, extract, flatten and selection commands. Command has user menu, run for each, split/swap, compare panels, find duplicates and bookmarks. Display switches to Commands, Messages, Duplicates, Jobs and the shell, and opens Status commands (which [status commands](status-commands.md) the menu bar shows). Options has Configuration, Preview settings, Calibrate Debounce and Theme.
 
 Hide the bar with `show_menu_bar = false` ([Layout](layout.md#menu-bar)). The fullscreen preview has no bar.
 

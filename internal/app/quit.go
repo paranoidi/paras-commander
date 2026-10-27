@@ -38,10 +38,7 @@ func (a *App) stopWorker() {
 		a.jobStopOnce = true
 		close(a.jobStopCh)
 	}
-	if a.statusCmdStopCh != nil {
-		close(a.statusCmdStopCh)
-		a.statusCmdStopCh = nil
-	}
+	a.stopStatusCommands()
 	if a.throughputChartStopCh != nil {
 		close(a.throughputChartStopCh)
 		a.throughputChartStopCh = nil

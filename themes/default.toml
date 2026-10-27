@@ -22,7 +22,8 @@ bright_white = 15
 
 [menu]                       # misc menu chrome
 detail = { fg = "white" }
-status = { fg = "cyan" }     # status_command text at top-left of menu bar
+status = { fg = "cyan" }     # status-command text at top-left of menu bar (status.toml)
+status.separator = { fg = "bright_black" }  # glyph between and after status-command segments
 spinner = { fg = "bright_magenta", bold = true }
 # dropdown is both a leaf style and a parent of .accent/.frame/.selected — keep dotted here
 dropdown = { fg = "black", bg = "blue" }
@@ -419,6 +420,9 @@ remaining = "■"
 [icons.menu.speed]
 left = ""   # powerline left half-circle
 right = ""  # powerline right half-circle
+
+[icons.menu.status]
+separator = "·"  # between and after status-command segments
 
 [icons.menu.job]
 scanning = "\U000f02ca"

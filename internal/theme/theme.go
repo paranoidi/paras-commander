@@ -40,7 +40,7 @@ type Theme struct {
 	MenuBarAlert         tcell.Style // jobs need input (before permission tail)
 	MenuDropdownAccent   tcell.Style
 	MenuDetail           tcell.Style
-	MenuStatus           tcell.Style // status_command text at top-left of menu bar
+	MenuStatus           tcell.Style // status-command text at top-left of menu bar
 
 	PanelActiveFrame   tcell.Style
 	PanelInactiveFrame tcell.Style
@@ -208,6 +208,9 @@ type Theme struct {
 	// theme's values.
 	MenuSpeedCap  tcell.Style
 	MenuSpeedText tcell.Style
+	// MenuStatusSeparator styles the glyph between (and after) status-command segments at the
+	// top-left of the menu bar (menu.status.separator, optional; falls back to dark grey).
+	MenuStatusSeparator tcell.Style
 	// MenuJob* styles one-cell queue icon per live job status in the menu bar.
 	MenuJobScanning                  tcell.Style
 	MenuJobQueued                    tcell.Style
@@ -669,6 +672,7 @@ const (
 	IconKeyMenuJobCompleted      = "menu.job.completed"
 	IconKeyMenuSpeedLeft         = "menu.speed.left"
 	IconKeyMenuSpeedRight        = "menu.speed.right"
+	IconKeyMenuStatusSeparator   = "menu.status.separator"
 )
 
 // IconWorking returns the in-progress icon appended to selection-size indicators.
@@ -869,6 +873,12 @@ func (t Theme) IconMenuSpeedLeft() rune {
 // IconMenuSpeedRight returns the right cap icon for the menu-bar transfer-speed pill.
 func (t Theme) IconMenuSpeedRight() rune {
 	return t.iconRuneOr(IconKeyMenuSpeedRight, ']')
+}
+
+// IconMenuStatusSeparator returns the glyph drawn between and after status-command segments
+// at the top-left of the menu bar.
+func (t Theme) IconMenuStatusSeparator() rune {
+	return t.iconRuneOr(IconKeyMenuStatusSeparator, '\u00b7') // ·
 }
 
 // IconMenuJob returns the queue icon for a job status string (e.g. "queued", "running").
@@ -1145,7 +1155,7 @@ var optionalStyleKeys = func() []string {
 	for i := 0; i < 10; i++ {
 		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
 	}
-	keys = append(keys, "menu.speed.cap", "menu.speed.text", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
+	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped")
 	return keys
@@ -1479,6 +1489,10 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
+	menuStatusSeparator, err := optionalStyle(specs, palette, "menu.status.separator", tcell.StyleDefault.Foreground(tcell.ColorGray))
+	if err != nil {
+		return Theme{}, err
+	}
 
 	messageSweep, err := optionalStyle(specs, palette, "message.sweep", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite))
 	if err != nil {
@@ -1667,6 +1681,7 @@ func parse(data []byte) (Theme, error) {
 		MenuProgressDeleteGfx:            menuProgressDeleteGfx,
 		MenuSpeedCap:                     menuSpeedCap,
 		MenuSpeedText:                    menuSpeedText,
+		MenuStatusSeparator:              menuStatusSeparator,
 		MenuJobScanning:                  styles["menu.job.scanning"],
 		MenuJobQueued:                    styles["menu.job.queued"],
 		MenuJobRunning:                   styles["menu.job.running"],

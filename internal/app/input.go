@@ -50,6 +50,7 @@ const (
 	InputModeElevateDialog
 	InputModeSFTPConnectDialog
 	InputModeCommandOutputDialog
+	InputModeStatusCommandsDialog
 )
 
 // viewActiveForInput reports whether vm is the active view and eligible to receive
@@ -92,6 +93,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeThemeDialog
 	case a.model.SortDialog.Open:
 		return InputModeSortDialog
+	case a.model.StatusCommandsDialog.Open:
+		return InputModeStatusCommandsDialog
 	case a.model.ListingFormatDialog.Open:
 		return InputModeListingFormatDialog
 	case a.model.ConfigDialog.Open:
@@ -655,6 +658,10 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 	},
 	InputModeThemeDialog: func(a *App, ev *tcell.EventKey) bool {
 		a.handleThemeDialogKey(ev)
+		return false
+	},
+	InputModeStatusCommandsDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleStatusCommandsDialogKey(ev)
 		return false
 	},
 	InputModeSortDialog: func(a *App, ev *tcell.EventKey) bool {
@@ -1226,6 +1233,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openPreviewSettingsDialog()
 	case keymap.ActionUICalibrateDebounce:
 		a.openDebounceCalibrateDialog()
+	case keymap.ActionUIStatusCommands:
+		a.openStatusCommandsDialog()
 	case keymap.ActionPanelViMotionToggle:
 		a.model.ViMotionMode = !a.model.ViMotionMode
 	case keymap.ActionMenuFileChattr:

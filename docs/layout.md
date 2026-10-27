@@ -34,18 +34,9 @@ The carousel shows the parent directory, the current directory and a child colum
 
 The top row is the menu bar ([Menus](menus.md)). Hide it with `show_menu_bar = false` in `[ui]`; panels then start at the top row. Between the menu labels and the right edge it shows job status groups and progress ([Jobs](jobs.md)).
 
-### Status command
+### Status commands
 
-`[status_command]` runs a shell command periodically and shows the first line of its output at the left of the menu bar, for example a clock or a load average:
-
-```toml
-[status_command]
-command = "date +%H:%M"
-interval_ms = 3000
-max_width = 15
-```
-
-Empty output, a failing command or a run over 10 s clears the text; an empty `command` disables it. The command runs via `sh -c` with no `%f`-style macro expansion. Style key: `menu.status` ([Themes](themes.md)). See [`[status_command]`](config.md#status_command).
+The left end of the menu bar can show the output of small shell commands such as the load average or memory use, separated by a theme glyph. Choose them under Display → Status commands; define more in `status.toml`. See [Status commands](status-commands.md).
 
 ## Footer
 

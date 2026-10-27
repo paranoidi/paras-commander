@@ -64,9 +64,41 @@ func menuBarRightTailRuneCount(attention, perm string, showMenuBarSpinner bool) 
 	return attW + 1 + base
 }
 
-// drawMenuBarStatusCommand paints the status_command text in the reserved top-left rect.
-func drawMenuBarStatusCommand(screen tcell.Screen, rect Rect, text string, style tcell.Style) {
-	primitive.Text(screen, rect.X, rect.Y, rect.Width, text, style)
+// statusCommandGap is the blank cell before each status-command segment and on both sides
+// of each separator glyph.
+const statusCommandGap = " "
+
+// StatusCommandWidth is the column count drawMenuBarStatusCommands paints for texts:
+// " t1 · t2 · " (one leading gap, then each text followed by gap, separator, gap). The
+// texts are already capped to their max_width by the caller. Zero texts reserve nothing.
+func StatusCommandWidth(texts []string) int {
+	if len(texts) == 0 {
+		return 0
+	}
+	w := len(statusCommandGap)
+	for _, t := range texts {
+		w += utf8.RuneCountInString(t) + 2*len(statusCommandGap) + 1
+	}
+	return w
+}
+
+// drawMenuBarStatusCommands paints the status-command segments in the reserved top-left
+// rect: texts in menu.status, the separator glyph after each in menu.status.separator.
+func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, texts []string, styles theme.Theme) {
+	sep := string(styles.IconMenuStatusSeparator())
+	x, end := rect.X, rect.X+rect.Width
+	put := func(s string, style tcell.Style) {
+		if x < end {
+			primitive.Text(screen, x, rect.Y, end-x, s, style)
+		}
+		x += utf8.RuneCountInString(s)
+	}
+	put(statusCommandGap, styles.MenuStatus)
+	for _, t := range texts {
+		put(t+statusCommandGap, styles.MenuStatus)
+		put(sep, styles.MenuStatusSeparator)
+		put(statusCommandGap, styles.MenuStatus)
+	}
 }
 
 // drawMenuBarJobsGapWithPinBadge draws the pin-count badge (if any) at the start of the gap

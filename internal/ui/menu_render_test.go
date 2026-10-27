@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"unicode/utf8"
+
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -103,5 +105,43 @@ func TestDrawMenuBarBlankKeepsMarginAfterStatusCommand(t *testing.T) {
 	}
 	if r, _, _ := screen.Get(statusW+1, 0); r == " " {
 		t.Fatalf("cell (%d,0) is blank, want pin badge", statusW+1)
+	}
+}
+
+// The reserved width must equal what drawMenuBarStatusCommands paints: " t1 · t2 · ", text in
+// menu.status and the separator glyph in menu.status.separator.
+func TestDrawMenuBarStatusCommandsMatchesWidth(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(40, 1)
+	styles := theme.Default()
+	texts := []string{"0.52 0.48", "5.2G/31G"}
+	w := StatusCommandWidth(texts)
+	if want := utf8.RuneCountInString(" 0.52 0.48 · 5.2G/31G · "); w != want {
+		t.Fatalf("StatusCommandWidth = %d, want %d", w, want)
+	}
+	drawMenuBarStatusCommands(screen, Rect{Width: w, Height: 1}, texts, styles)
+	sep := string(styles.IconMenuStatusSeparator())
+	var got string
+	for x := range w {
+		r, style, _ := screen.Get(x, 0)
+		got += r
+		want := styles.MenuStatus
+		if r == sep {
+			want = styles.MenuStatusSeparator
+		}
+		if style != want {
+			t.Fatalf("cell %d %q style = %v, want %v", x, r, style, want)
+		}
+	}
+	if want := " 0.52 0.48 " + sep + " 5.2G/31G " + sep + " "; got != want {
+		t.Fatalf("drawn %q, want %q", got, want)
+	}
+	if StatusCommandWidth(nil) != 0 {
+		t.Fatal("no texts must reserve nothing")
 	}
 }

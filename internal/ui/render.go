@@ -3,7 +3,6 @@ package ui
 import (
 	"path/filepath"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -223,6 +222,7 @@ type Model struct {
 	PreviewSettingsDialog   dialog.PreviewSettingsDialogState
 	DebounceCalibrateDialog dialog.DebounceCalibrateDialogState
 	SortDialog              dialog.SortDialogState
+	StatusCommandsDialog    dialog.StatusCommandsDialogState
 	ListingFormatDialog     dialog.ListingFormatDialogState
 	GroupSelect             dialog.GroupSelectState
 	FilterDialog            dialog.FilterDialogState
@@ -299,9 +299,10 @@ type Model struct {
 	FooterKeys        []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
-	// StatusCommandText is the latest status_command output line, drawn at the top-left of
-	// the menu bar (layout.StatusCmd). Empty when the feature is disabled or has no output yet.
-	StatusCommandText string
+	// StatusCommandTexts are the shown status commands' latest output lines (status.toml),
+	// in show order with empty outputs dropped, drawn at the top-left of the menu bar
+	// (layout.StatusCmd). Empty when none are shown or none has output yet.
+	StatusCommandTexts []string
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with
 	// spaces on both sides for themed backgrounds and separates it from the activity spinner.
 	MenuBarJobsAttention string
@@ -340,7 +341,7 @@ func (m *Model) PrimaryModal() dialog.PrimaryModal {
 // "a dialog owns the keyboard" checks.
 func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
-		m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
+		m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
 		m.FindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
 }
@@ -538,7 +539,7 @@ func (m *Model) nonLeaderModalOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -551,7 +552,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		return true
 	}
 	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.PinDialog.Open ||
-		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
+		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open || m.StatusCommandsDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.LeaderMenu.Open ||
@@ -577,14 +578,13 @@ func (m *Model) MenuBarInteractive() bool {
 	return m.MenuBarLayoutReserved() && !m.ModalDialogOpen()
 }
 
-// statusCmdWidth returns the columns to reserve for model.StatusCommandText at the
-// top-left of the menu bar. The text is already capped to the configured max width by
-// the caller (App.render), so this only measures it.
+// statusCmdWidth returns the columns to reserve for model.StatusCommandTexts at the
+// top-left of the menu bar.
 func statusCmdWidth(model Model, reserveMenu bool) int {
-	if !reserveMenu || model.StatusCommandText == "" {
+	if !reserveMenu {
 		return 0
 	}
-	return utf8.RuneCountInString(model.StatusCommandText)
+	return StatusCommandWidth(model.StatusCommandTexts)
 }
 
 // Render paints model into the screen's logical cell buffer. The caller must invoke
@@ -632,7 +632,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
 		}
 		if layout.StatusCmd.Width > 0 {
-			drawMenuBarStatusCommand(screen, layout.StatusCmd, model.StatusCommandText, styles.MenuStatus)
+			drawMenuBarStatusCommands(screen, layout.StatusCmd, model.StatusCommandTexts, styles)
 		}
 	}
 	chromeBlocked := model.PanelsChromeBlocked()
@@ -909,6 +909,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	}
 	if model.SortDialog.Open {
 		dialog.DrawSortDialog(screen, layout, model.SortDialog, styles)
+	}
+	if model.StatusCommandsDialog.Open {
+		dialog.DrawStatusCommandsDialog(screen, layout, model.StatusCommandsDialog, styles)
 	}
 	if model.ListingFormatDialog.Open {
 		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)

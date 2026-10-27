@@ -309,9 +309,11 @@ type App struct {
 	// goroutine, read on the main goroutine in schedulePanelListingRefresh, hence atomic.
 	panelRefreshNotBefore [2]atomic.Int64
 
-	statusCmdText    string
-	statusCmdRunning atomic.Bool
-	statusCmdStopCh  chan struct{}
+	// statusCmds are the shown status commands (status.toml); statusCmdGen tags their results
+	// so a restart drops output from the previous set; statusCmdStopCh stops their tickers.
+	statusCmds      []*statusCmdRunner
+	statusCmdGen    int
+	statusCmdStopCh chan struct{}
 
 	// throughputChartStopCh stops the sampling ticker; throughputChartColumnMS is the live column
 	// duration, which +/- in the jobs Details panel changes without touching config.
@@ -786,7 +788,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if ms := cfg.Panels.RefreshIntervalMS; ms > 0 {
 		go app.runPanelRefreshTicker(time.Duration(ms)*time.Millisecond, app.jobStopCh)
 	}
-	app.restartStatusCommandTicker(cfg.StatusCommand)
+	app.restartStatusCommands()
 	app.throughputChartColumnMS = cfg.Jobs.ThroughputChartColumnMS
 	app.restartThroughputChartTicker(app.throughputChartColumnMS)
 	if opts.ChooserFile != "" {

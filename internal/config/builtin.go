@@ -379,6 +379,10 @@ const (
 	// directory when [pools].file is empty.
 	DefaultPoolsFileName = "pools.toml"
 
+	// DefaultStatusCommandsFileName is the basename of the status-command definitions file
+	// (menu-bar status segments) under the config directory.
+	DefaultStatusCommandsFileName = "status.toml"
+
 	// DefaultMassRenamePatternsFileName is the basename of the saved mass-rename patterns file
 	// under the config directory when [mass_rename].file is empty.
 	DefaultMassRenamePatternsFileName = "patterns.toml"
@@ -574,13 +578,15 @@ const (
 	// MinShellTerminalPanelHeight is the lower clamp for [shell].terminal_panel_height in Config.Validate.
 	MinShellTerminalPanelHeight = 3
 
-	// DefaultStatusCommandIntervalMS is how often [status_command].command runs.
+	// DefaultStatusCommandIntervalMS is how often a status.toml [[command]] runs when it sets no
+	// interval_ms.
 	DefaultStatusCommandIntervalMS = 3000
-	// StatusCommandIntervalMinMS is the lower clamp for [status_command].interval_ms in Config.Validate.
+	// StatusCommandIntervalMinMS is the lower clamp for status.toml interval_ms (smaller values
+	// fall back to DefaultStatusCommandIntervalMS).
 	StatusCommandIntervalMinMS = 500
-	// DefaultStatusCommandMaxWidth is the default reserved column width for the status-command text.
+	// DefaultStatusCommandMaxWidth is the default column cap for one status command's text.
 	DefaultStatusCommandMaxWidth = 15
-	// StatusCommandMaxWidthMin/Max clamp [status_command].max_width in Config.Validate.
+	// StatusCommandMaxWidthMin/Max clamp status.toml max_width.
 	StatusCommandMaxWidthMin = 1
 	StatusCommandMaxWidthMax = 200
 )
