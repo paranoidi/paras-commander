@@ -61,14 +61,14 @@ const (
 	// mean "use this default," not "disable."
 	DefaultDiskUsageIdleSortDelayMS = 500
 
-	// DefaultFSWalkInitialWorkers is the starting concurrent directory branches for disk-usage and find walks.
-	DefaultFSWalkInitialWorkers = 1
-	// DefaultFSWalkMaxWorkers caps adaptive walk concurrency for disk-usage and find walks.
-	DefaultFSWalkMaxWorkers = 32
-	// DefaultFSWalkAdaptIntervalMS is the measure window for adaptive disk-usage walk worker tuning.
-	DefaultFSWalkAdaptIntervalMS = 800
-	// FSWalkAdaptIntervalMinMS is the lower clamp for [fs_walk].adapt_interval_ms in Config.Validate.
-	FSWalkAdaptIntervalMinMS = 500
+	// DefaultAdaptiveIOInitialWorkers is the starting concurrency shared by disk-usage walks, find indexing and find-duplicates reads.
+	DefaultAdaptiveIOInitialWorkers = 1
+	// DefaultAdaptiveIOMaxWorkers caps adaptive concurrency for disk-usage walks, find indexing and find-duplicates reads.
+	DefaultAdaptiveIOMaxWorkers = 32
+	// DefaultAdaptiveIOAdaptIntervalMS is the measure window for adaptive worker tuning.
+	DefaultAdaptiveIOAdaptIntervalMS = 800
+	// AdaptiveIOAdaptIntervalMinMS is the lower clamp for [adaptive_io].adapt_interval_ms in Config.Validate.
+	AdaptiveIOAdaptIntervalMinMS = 500
 
 	// DefaultRefreshIntervalMS is how often both file panels re-read their directories from disk (0 disables).
 	DefaultRefreshIntervalMS = 2500
@@ -140,15 +140,6 @@ const (
 	// find-duplicates dialog for files at or above this size (0 disables it).
 	DefaultDedupFileProgressBytes = 256 * 1024 * 1024
 
-	// DefaultDedupReadMaxWorkers caps adaptive concurrent chunk reads during
-	// find-duplicates hashing ([dedup].max_read_workers).
-	DefaultDedupReadMaxWorkers = 32
-	// DedupReadInitialWorkers is where the adaptive find-duplicates read limit
-	// starts before it hill-climbs toward max_read_workers.
-	DedupReadInitialWorkers = 2
-	// DedupReadAdaptIntervalMS is the measure window for find-duplicates read
-	// concurrency tuning.
-	DedupReadAdaptIntervalMS = 500
 	// DedupMaxOpenFiles caps how many find-duplicates candidates stay open
 	// between hashing rounds; past it, a candidate is reopened (and seeked)
 	// each round. Keeps fd and SFTP handle use bounded on huge size groups.

@@ -532,7 +532,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if cfg.Panels.RespectGitignore {
 		giCache = gitignore.NewCache()
 	}
-	duEngine := diskusage.NewWithFSWalk(cfg.FSWalk)
+	duEngine := diskusage.NewWithAdaptiveIO(cfg.AdaptiveIO)
 
 	ui.SetListScroll(scrollModeFromConfig(cfg.UI.Scroll.Mode), cfg.UI.Scroll.EdgeMargin)
 	panelOpts := browserPanelOptions{

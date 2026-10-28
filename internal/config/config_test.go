@@ -90,31 +90,31 @@ func TestValidateClampsNegativeCompareChunkBytes(t *testing.T) {
 	}
 }
 
-func TestValidateClampsFSWalk(t *testing.T) {
+func TestValidateClampsAdaptiveIO(t *testing.T) {
 	cfg := Default()
-	cfg.FSWalk.InitialWorkers = 0
-	cfg.FSWalk.MaxWorkers = 0
-	cfg.FSWalk.AdaptIntervalMS = 100
+	cfg.AdaptiveIO.InitialWorkers = 0
+	cfg.AdaptiveIO.MaxWorkers = 0
+	cfg.AdaptiveIO.AdaptIntervalMS = 100
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.FSWalk.InitialWorkers != DefaultFSWalkInitialWorkers {
-		t.Fatalf("FSWalk.InitialWorkers = %d, want %d", cfg.FSWalk.InitialWorkers, DefaultFSWalkInitialWorkers)
+	if cfg.AdaptiveIO.InitialWorkers != DefaultAdaptiveIOInitialWorkers {
+		t.Fatalf("AdaptiveIO.InitialWorkers = %d, want %d", cfg.AdaptiveIO.InitialWorkers, DefaultAdaptiveIOInitialWorkers)
 	}
-	if cfg.FSWalk.MaxWorkers != DefaultFSWalkInitialWorkers {
-		t.Fatalf("FSWalk.MaxWorkers = %d, want %d", cfg.FSWalk.MaxWorkers, DefaultFSWalkInitialWorkers)
+	if cfg.AdaptiveIO.MaxWorkers != DefaultAdaptiveIOInitialWorkers {
+		t.Fatalf("AdaptiveIO.MaxWorkers = %d, want %d", cfg.AdaptiveIO.MaxWorkers, DefaultAdaptiveIOInitialWorkers)
 	}
-	if cfg.FSWalk.AdaptIntervalMS != DefaultFSWalkAdaptIntervalMS {
-		t.Fatalf("FSWalk.AdaptIntervalMS = %d, want %d", cfg.FSWalk.AdaptIntervalMS, DefaultFSWalkAdaptIntervalMS)
+	if cfg.AdaptiveIO.AdaptIntervalMS != DefaultAdaptiveIOAdaptIntervalMS {
+		t.Fatalf("AdaptiveIO.AdaptIntervalMS = %d, want %d", cfg.AdaptiveIO.AdaptIntervalMS, DefaultAdaptiveIOAdaptIntervalMS)
 	}
-	cfg.FSWalk.InitialWorkers = 4
-	cfg.FSWalk.MaxWorkers = 8
-	cfg.FSWalk.AdaptIntervalMS = 3000
+	cfg.AdaptiveIO.InitialWorkers = 4
+	cfg.AdaptiveIO.MaxWorkers = 8
+	cfg.AdaptiveIO.AdaptIntervalMS = 3000
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.FSWalk.InitialWorkers != 4 || cfg.FSWalk.MaxWorkers != 8 || cfg.FSWalk.AdaptIntervalMS != 3000 {
-		t.Fatalf("FSWalk = %+v, want InitialWorkers=4 MaxWorkers=8 AdaptIntervalMS=3000", cfg.FSWalk)
+	if cfg.AdaptiveIO.InitialWorkers != 4 || cfg.AdaptiveIO.MaxWorkers != 8 || cfg.AdaptiveIO.AdaptIntervalMS != 3000 {
+		t.Fatalf("AdaptiveIO = %+v, want InitialWorkers=4 MaxWorkers=8 AdaptIntervalMS=3000", cfg.AdaptiveIO)
 	}
 }
 
@@ -730,29 +730,28 @@ func TestLoadFromPathsRejectsMatchPathSegments(t *testing.T) {
 	}
 }
 
-func TestConfigDocsFSWalkIsDiskUsageOnly(t *testing.T) {
+func TestConfigDocsAdaptiveIONamesConsumers(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "docs", "config.md"))
 	if err != nil {
 		t.Fatalf("read docs/config.md: %v", err)
 	}
 	text := string(data)
-	const heading = "## `[fs_walk]`"
+	const heading = "## `[adaptive_io]`"
 	start := strings.Index(text, heading)
 	if start < 0 {
-		t.Fatal("docs/config.md missing [fs_walk] section")
+		t.Fatal("docs/config.md missing [adaptive_io] section")
 	}
 	rest := text[start+len(heading):]
 	end := strings.Index(rest, "\n## ")
 	if end < 0 {
-		t.Fatal("docs/config.md [fs_walk] section has no following heading")
+		t.Fatal("docs/config.md [adaptive_io] section has no following heading")
 	}
 	section := rest[:end]
 	lower := strings.ToLower(section)
-	if strings.Contains(lower, "shared by") && strings.Contains(lower, "find") {
-		t.Fatalf("[fs_walk] docs still claim find shares this table:\n%s", section)
-	}
-	if !strings.Contains(lower, "disk-usage") && !strings.Contains(lower, "disk usage") {
-		t.Fatalf("[fs_walk] docs do not say the table is for disk-usage:\n%s", section)
+	for _, want := range []string{"disk-usage", "find", "duplicates"} {
+		if !strings.Contains(lower, want) {
+			t.Fatalf("[adaptive_io] docs do not mention %q:\n%s", want, section)
+		}
 	}
 }
 

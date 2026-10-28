@@ -158,11 +158,7 @@ func (h *Handler) stopFindIndexer() {
 }
 
 func (h *Handler) findWalkParams() fswalk.Params {
-	return fswalk.Params{
-		InitialWorkers:  h.config.FSWalk.InitialWorkers,
-		MaxWorkers:      h.config.FSWalk.MaxWorkers,
-		AdaptIntervalMS: h.config.FSWalk.AdaptIntervalMS,
-	}
+	return h.config.AdaptiveIO.Params()
 }
 
 func (h *Handler) finishFindIndexing(st *dialog.FindDialogState) {

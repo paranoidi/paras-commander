@@ -13,6 +13,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 )
 
@@ -87,7 +88,7 @@ type Config struct {
 	Theme      string           `toml:"theme"`
 	Panels     PanelsConfig     `toml:"panels"`
 	DiskUsage  DiskUsageConfig  `toml:"disk_usage"`
-	FSWalk     FSWalkConfig     `toml:"fs_walk"`
+	AdaptiveIO AdaptiveIOConfig `toml:"adaptive_io"`
 	Carousel   CarouselConfig   `toml:"carousel"`
 	UI         UIConfig         `toml:"ui"`
 	Filter     FilterConfig     `toml:"filter"`
@@ -150,11 +151,21 @@ type DiskUsageConfig struct {
 	DescendIntoMountPoints bool `toml:"descend_into_mount_points"`
 }
 
-// FSWalkConfig controls adaptive concurrency for disk-usage tree walks and find indexing.
-type FSWalkConfig struct {
+// AdaptiveIOConfig controls adaptive concurrency shared by disk-usage tree walks, find
+// indexing and find-duplicates hashing reads.
+type AdaptiveIOConfig struct {
 	InitialWorkers  int `toml:"initial_workers"`
 	MaxWorkers      int `toml:"max_workers"`
 	AdaptIntervalMS int `toml:"adapt_interval_ms"`
+}
+
+// Params converts the section to the limiter parameters used by every adaptive consumer.
+func (c AdaptiveIOConfig) Params() fswalk.Params {
+	return fswalk.Params{
+		InitialWorkers:  c.InitialWorkers,
+		MaxWorkers:      c.MaxWorkers,
+		AdaptIntervalMS: c.AdaptIntervalMS,
+	}
 }
 
 // CarouselConfig controls the carousel (multi-column) panel layout.
@@ -180,10 +191,6 @@ type DedupConfig struct {
 	// FileProgressBytes shows a per-file progress bar in the scan dialog for
 	// files at or above this size. Zero disables the per-file bar.
 	FileProgressBytes int64 `toml:"file_progress_bytes"`
-	// MaxReadWorkers caps concurrent chunk reads while hashing. The limit starts
-	// low and climbs while byte throughput keeps improving (SSDs gain from deep
-	// queues, spinning disks settle low).
-	MaxReadWorkers int `toml:"max_read_workers"`
 }
 
 // CompareConfig controls content comparison (panel compare, find duplicates, conflict
@@ -646,10 +653,10 @@ func Default() Config {
 			IdleSortDelayMS:        DefaultDiskUsageIdleSortDelayMS,
 			DescendIntoMountPoints: false,
 		},
-		FSWalk: FSWalkConfig{
-			InitialWorkers:  DefaultFSWalkInitialWorkers,
-			MaxWorkers:      DefaultFSWalkMaxWorkers,
-			AdaptIntervalMS: DefaultFSWalkAdaptIntervalMS,
+		AdaptiveIO: AdaptiveIOConfig{
+			InitialWorkers:  DefaultAdaptiveIOInitialWorkers,
+			MaxWorkers:      DefaultAdaptiveIOMaxWorkers,
+			AdaptIntervalMS: DefaultAdaptiveIOAdaptIntervalMS,
 		},
 		Carousel: CarouselConfig{
 			Split:                 DefaultCarouselSplit(),
@@ -830,7 +837,6 @@ func Default() Config {
 		Dedup: DedupConfig{
 			HashConfirmBytes:  DefaultDedupHashConfirmBytes,
 			FileProgressBytes: DefaultDedupFileProgressBytes,
-			MaxReadWorkers:    DefaultDedupReadMaxWorkers,
 		},
 	}
 }
@@ -1105,14 +1111,14 @@ func (c *Config) validateGeneral(builtin *Config) {
 			c.Panels.RefreshIntervalMS = RefreshIntervalMaxMS
 		}
 	}
-	if c.FSWalk.InitialWorkers < 1 {
-		c.FSWalk.InitialWorkers = builtin.FSWalk.InitialWorkers
+	if c.AdaptiveIO.InitialWorkers < 1 {
+		c.AdaptiveIO.InitialWorkers = builtin.AdaptiveIO.InitialWorkers
 	}
-	if c.FSWalk.MaxWorkers < c.FSWalk.InitialWorkers {
-		c.FSWalk.MaxWorkers = c.FSWalk.InitialWorkers
+	if c.AdaptiveIO.MaxWorkers < c.AdaptiveIO.InitialWorkers {
+		c.AdaptiveIO.MaxWorkers = c.AdaptiveIO.InitialWorkers
 	}
-	if c.FSWalk.AdaptIntervalMS < FSWalkAdaptIntervalMinMS {
-		c.FSWalk.AdaptIntervalMS = builtin.FSWalk.AdaptIntervalMS
+	if c.AdaptiveIO.AdaptIntervalMS < AdaptiveIOAdaptIntervalMinMS {
+		c.AdaptiveIO.AdaptIntervalMS = builtin.AdaptiveIO.AdaptIntervalMS
 	}
 }
 
@@ -1134,9 +1140,6 @@ func (c *Config) validateCompareDedupShell(builtin *Config) {
 	}
 	if c.Compare.FirstChunkBytes < 0 {
 		c.Compare.FirstChunkBytes = 0
-	}
-	if c.Dedup.MaxReadWorkers < 1 {
-		c.Dedup.MaxReadWorkers = builtin.Dedup.MaxReadWorkers
 	}
 	if c.Shell.TerminalPanelHeight < MinShellTerminalPanelHeight {
 		c.Shell.TerminalPanelHeight = builtin.Shell.TerminalPanelHeight
