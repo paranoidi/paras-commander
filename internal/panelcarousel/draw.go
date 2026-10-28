@@ -212,7 +212,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve, showSize, metaW)
 		fillCols := 0
 		if !p.ChromeBlocked && diskDenom > 0 {
-			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, p.DiskUsage.Source), diskDenom, nameColOffset+nameWidth)
+			fillCols = diskUsageFillColumns(panellist.EntryUsageBytes(entry, p.DiskUsage.Source), diskDenom, nameColOffset+nameWidth)
 		}
 		blendCell := func(absCol int) tcell.Style {
 			if fillCols > 0 && absCol >= 0 && absCol < fillCols {

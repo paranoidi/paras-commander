@@ -361,32 +361,102 @@ func (e *Engine) IsKnownExcluded(absPath string) bool {
 	return e.excluded[filepath.Clean(absPath)]
 }
 
-// InvalidateSubtree drops cached sizes and file counts for rootAbs and every indexed path under it.
-func (e *Engine) InvalidateSubtree(rootAbs string) {
-	if e == nil {
+// DropSubtrees drops cached sizes, file counts and exclusion marks of each root and every indexed
+// path under it, in one sweep of the cache. Roots in gone no longer exist: their cached size and
+// file count are first subtracted from their cached ancestors, so a scanned parent shrinks. Roots
+// in present still exist with an unknown size (a failed or skipped item): ancestors keep their
+// totals. A sweep stalls on a large cache, so call it off the UI goroutine (jobbridge does, after
+// a move or delete).
+func (e *Engine) DropSubtrees(gone, present []string) {
+	if e == nil || len(gone)+len(present) == 0 {
 		return
 	}
-	root := filepath.Clean(rootAbs)
+	isGone := make(map[string]bool, len(gone)+len(present))
+	for _, r := range present {
+		isGone[filepath.Clean(r)] = false
+	}
+	for _, r := range gone {
+		isGone[filepath.Clean(r)] = true
+	}
+	under := func(k string) bool {
+		_, ok := nearestAncestor(k, isGone)
+		return ok
+	}
 	e.mu.Lock()
-	for k := range e.cache {
-		if pathIsOrUnder(k, root) {
+	d := ancestorDeltas{}
+	for r, g := range isGone {
+		if g && !nestedInOther(r, isGone) { // a nested root's size is inside the outer root's
+			e.addAncestorDeltasLocked(d, r, r, -1)
+		}
+	}
+	e.applyAncestorDeltasLocked(d)
+	for k := range e.cache { // fileCounts keys are always a subset of cache keys
+		if under(k) {
 			delete(e.cache, k)
 			delete(e.fileCounts, k)
 		}
 	}
-	for k := range e.excluded {
-		if pathIsOrUnder(k, root) {
-			delete(e.excluded, k)
-		}
-	}
+	maps.DeleteFunc(e.excluded, func(k string, _ bool) bool { return under(k) })
+	e.cacheVersion.Add(1)
 	e.mu.Unlock()
 	e.poke()
 }
 
+// nestedInOther reports whether a strict ancestor of p is a key of m.
+func nestedInOther[V any](p string, m map[string]V) bool {
+	parent := filepath.Dir(p)
+	if parent == p {
+		return false
+	}
+	_, ok := nearestAncestor(parent, m)
+	return ok
+}
+
+// ancestorDelta is a pending change to one ancestor's cached total.
+type ancestorDelta struct{ bytes, files int64 }
+
+// ancestorDeltas accumulates changes per ancestor path, so a tree leaving one ancestor and
+// entering another sharing it nets out before any total is clamped.
+type ancestorDeltas map[string]ancestorDelta
+
+// addAncestorDeltasLocked adds sign × the cached size and file count of sizeKey to every cached
+// strict ancestor of at. Walks skip excluded trees, so the climb stops at an excluded ancestor:
+// totals above it never held at. An excluded or uncached sizeKey adds nothing. Caller holds e.mu.
+func (e *Engine) addAncestorDeltasLocked(d ancestorDeltas, sizeKey, at string, sign int64) {
+	bytes, ok := e.cache[sizeKey]
+	if !ok || e.excluded[sizeKey] {
+		return
+	}
+	files := e.fileCounts[sizeKey]
+	for a := at; ; {
+		parent := filepath.Dir(a)
+		if parent == a || e.excluded[parent] {
+			return
+		}
+		a = parent
+		if _, cached := e.cache[a]; cached {
+			v := d[a]
+			d[a] = ancestorDelta{v.bytes + sign*bytes, v.files + sign*files}
+		}
+	}
+}
+
+// applyAncestorDeltasLocked writes d into the cache, clamping at zero: an ancestor scanned before
+// a descendant grew can hold less than that descendant does now. Caller holds e.mu.
+func (e *Engine) applyAncestorDeltasLocked(d ancestorDeltas) {
+	for a, v := range d {
+		e.cache[a] = max(e.cache[a]+v.bytes, 0)
+		if n, ok := e.fileCounts[a]; ok {
+			e.fileCounts[a] = max(n+v.files, 0)
+		}
+	}
+}
+
 // RenamePaths moves cached sizes, file counts and exclusion marks of each pair's old path and
 // every descendant to the matching new path, dropping stale keys already under a new path (a move
-// that replaced an existing tree). Moves are collected before any is written, so swaps
-// (a->b, b->a) work. O(cache size × path depth), like InvalidateSubtree's full sweep.
+// that replaced an existing tree). Cached ancestor totals follow: the old path's ancestors lose its
+// size, the new path's gain it (less a replaced tree's). Moves are collected before any is
+// written, so swaps (a->b, b->a) work. O(cache size × path depth), like DropSubtrees.
 func (e *Engine) RenamePaths(pairs [][2]string) {
 	if e == nil || len(pairs) == 0 {
 		return
@@ -409,6 +479,18 @@ func (e *Engine) RenamePaths(pairs [][2]string) {
 		return ok
 	}
 	e.mu.Lock()
+	d := ancestorDeltas{}
+	for from, to := range renames {
+		if nestedInOther(from, renames) {
+			continue // carried inside the outer rename's size
+		}
+		e.addAncestorDeltasLocked(d, from, from, -1)
+		e.addAncestorDeltasLocked(d, from, to, +1)
+		if _, moving := renames[to]; !moving {
+			e.addAncestorDeltasLocked(d, to, to, -1) // the tree this move replaced
+		}
+	}
+	e.applyAncestorDeltasLocked(d)
 	rebaseKeys(e.cache, rebase, stale)
 	rebaseKeys(e.fileCounts, rebase, stale)
 	rebaseKeys(e.excluded, rebase, stale)
@@ -418,7 +500,7 @@ func (e *Engine) RenamePaths(pairs [][2]string) {
 }
 
 // nearestAncestor returns k or the closest of its ancestors (cache keys are clean) present in m.
-func nearestAncestor(k string, m map[string]string) (string, bool) {
+func nearestAncestor[V any](k string, m map[string]V) (string, bool) {
 	for p := k; ; {
 		if _, ok := m[p]; ok {
 			return p, true
@@ -446,7 +528,7 @@ func rebaseKeys[V any](m map[string]V, rebase func(string) (string, bool), stale
 }
 
 // InvalidateRoots drops the cached size, file count and exclusion mark of each path itself,
-// leaving descendants cached. O(len(paths)), unlike InvalidateSubtree's full cache sweep, so it
+// leaving descendants cached. O(len(paths)), unlike DropSubtrees' full cache sweep, so it
 // is cheap enough for the UI goroutine. A rescan of each root overwrites its descendants anyway.
 func (e *Engine) InvalidateRoots(paths []string) {
 	if e == nil || len(paths) == 0 {

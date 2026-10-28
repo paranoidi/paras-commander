@@ -3,6 +3,7 @@ package panelcarousel
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 )
 
 // DiskUsageSource surfaces size cache and scan state for carousel row painting.
@@ -24,29 +25,13 @@ type DiskUsage struct {
 	Source                 DiskUsageSource
 }
 
-func entryDiskUsageBytes(entry localfs.Entry, src DiskUsageSource) int64 {
-	if src == nil {
-		if entry.Type != localfs.EntryDirectory {
-			return entry.Size
-		}
-		return 0
-	}
-	if sz, ok := src.ByteSize(entry.Path); ok {
-		return sz
-	}
-	if entry.Type != localfs.EntryDirectory {
-		return entry.Size
-	}
-	return 0
-}
-
 func diskUsageDenom(src DiskUsageSource, entries []localfs.Entry) int64 {
 	if src == nil || len(entries) == 0 {
 		return 0
 	}
 	var max int64
 	for _, e := range entries {
-		sz := entryDiskUsageBytes(e, src)
+		sz := panellist.EntryUsageBytes(e, src)
 		if sz > max {
 			max = sz
 		}

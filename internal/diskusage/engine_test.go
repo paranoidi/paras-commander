@@ -233,12 +233,12 @@ func TestInvalidateSubtreeRemovesRootAndDescendants(t *testing.T) {
 		return okSub && okOther
 	}, 5*time.Second, "sizes not cached")
 
-	e.InvalidateSubtree(sub)
+	e.DropSubtrees(nil, []string{sub})
 	if _, ok := e.Size(sub); ok {
-		t.Fatal("sub size should be gone after InvalidateSubtree")
+		t.Fatal("sub size should be gone after DropSubtrees")
 	}
 	if _, ok := e.Size(nested); ok {
-		t.Fatal("nested size should be gone after InvalidateSubtree")
+		t.Fatal("nested size should be gone after DropSubtrees")
 	}
 	if _, ok := e.Size(other); !ok {
 		t.Fatal("unrelated path should remain cached")
@@ -695,4 +695,104 @@ func TestRenamePathsDropsStaleDestination(t *testing.T) {
 			t.Fatalf("%s still cached", p)
 		}
 	}
+}
+
+func TestDropSubtreesDropsEveryRootAndBumpsVersion(t *testing.T) {
+	t.Parallel()
+	e := New()
+	for _, p := range []string{"/srv/lantern", "/srv/lantern/orchard", "/srv/harbor", "/srv/harborside"} {
+		e.SetSize(p, 1, 10)
+	}
+	v := e.CacheVersion()
+	e.DropSubtrees([]string{"/srv/lantern/"}, []string{"/srv/harbor"})
+	for _, p := range []string{"/srv/lantern", "/srv/lantern/orchard", "/srv/harbor"} {
+		if _, ok := e.Size(p); ok {
+			t.Fatalf("%s still cached", p)
+		}
+	}
+	if _, ok := e.Size("/srv/harborside"); !ok {
+		t.Fatal("sibling sharing a name prefix was dropped")
+	}
+	if e.CacheVersion() == v {
+		t.Fatal("cache version not bumped")
+	}
+}
+
+func seedSizes(e *Engine, sizes map[string]int64) {
+	for p, n := range sizes {
+		e.SetSize(p, int(n/10), n)
+	}
+}
+
+func wantSizes(t *testing.T, e *Engine, sizes map[string]int64) {
+	t.Helper()
+	for p, want := range sizes {
+		n, ok := e.Size(p)
+		if want < 0 {
+			if ok {
+				t.Errorf("%s still cached (%d)", p, n)
+			}
+			continue
+		}
+		if !ok || n != want {
+			t.Errorf("%s = %d, %v; want %d", p, n, ok, want)
+		}
+		if fc, _ := e.FileCount(p); fc != want/10 {
+			t.Errorf("%s file count = %d, want %d", p, fc, want/10)
+		}
+	}
+}
+
+func TestDropSubtreesGoneShrinksAncestors(t *testing.T) {
+	t.Parallel()
+	e := New()
+	seedSizes(e, map[string]int64{"/srv": 1000, "/srv/lantern": 600, "/srv/lantern/orchard": 200, "/srv/meadow": 400})
+	// The nested root is inside the outer one's size: subtracted once.
+	e.DropSubtrees([]string{"/srv/lantern", "/srv/lantern/orchard"}, nil)
+	wantSizes(t, e, map[string]int64{"/srv": 400, "/srv/meadow": 400, "/srv/lantern": -1, "/srv/lantern/orchard": -1})
+}
+
+func TestDropSubtreesStopsAtExcludedAncestor(t *testing.T) {
+	t.Parallel()
+	e := New()
+	seedSizes(e, map[string]int64{"/srv": 50, "/srv/mnt": 0, "/srv/mnt/lantern": 300, "/srv/mnt/lantern/orchard": 100})
+	e.MarkExcluded("/srv/mnt")
+	e.DropSubtrees([]string{"/srv/mnt/lantern/orchard"}, nil)
+	wantSizes(t, e, map[string]int64{"/srv/mnt/lantern": 200, "/srv/mnt": 0, "/srv": 50})
+}
+
+func TestDropSubtreesClampsAtZero(t *testing.T) {
+	t.Parallel()
+	e := New()
+	seedSizes(e, map[string]int64{"/srv": 100, "/srv/lantern": 300})
+	e.DropSubtrees([]string{"/srv/lantern"}, nil)
+	wantSizes(t, e, map[string]int64{"/srv": 0})
+}
+
+func TestDropSubtreesPresentKeepsAncestors(t *testing.T) {
+	t.Parallel()
+	e := New()
+	seedSizes(e, map[string]int64{"/srv": 1000, "/srv/lantern": 600})
+	e.DropSubtrees(nil, []string{"/srv/lantern"})
+	wantSizes(t, e, map[string]int64{"/srv": 1000, "/srv/lantern": -1})
+}
+
+func TestRenamePathsMovesAncestorTotals(t *testing.T) {
+	t.Parallel()
+	e := New()
+	seedSizes(e, map[string]int64{
+		"/srv": 1000, "/srv/lantern": 600, "/srv/lantern/orchard": 600,
+		"/srv/harbor": 300, "/srv/harbor/orchard": 100,
+	})
+	// orchard replaces harbor/orchard: harbor gains 600, loses the replaced 100; /srv nets -100.
+	e.RenamePaths([][2]string{{"/srv/lantern/orchard", "/srv/harbor/orchard"}})
+	wantSizes(t, e, map[string]int64{"/srv": 900, "/srv/lantern": 0, "/srv/harbor": 800, "/srv/harbor/orchard": 600, "/srv/lantern/orchard": -1})
+}
+
+func TestRenamePathsSwapKeepsAncestorTotals(t *testing.T) {
+	t.Parallel()
+	e := New()
+	seedSizes(e, map[string]int64{"/srv/a": 100, "/srv/a/lantern": 100, "/srv/b": 300, "/srv/b/meadow": 300})
+	e.RenamePaths([][2]string{{"/srv/a", "/srv/b"}, {"/srv/b", "/srv/a"}})
+	wantSizes(t, e, map[string]int64{"/srv/a": 300, "/srv/a/meadow": 300, "/srv/b": 100, "/srv/b/lantern": 100})
 }

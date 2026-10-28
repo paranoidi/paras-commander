@@ -21,6 +21,21 @@ type ByteSizer interface {
 	ByteSize(absPath string) (int64, bool)
 }
 
+// EntryUsageBytes is the byte total a disk-usage bar draws for entry: a directory's cached size
+// (0 while unknown), a file's own listed size. Files never read the cache: its key is a path, and
+// a file reusing the name of a removed directory would inherit that directory's total.
+func EntryUsageBytes(entry localfs.Entry, disk ByteSizer) int64 {
+	if entry.Type != localfs.EntryDirectory {
+		return entry.Size
+	}
+	if disk != nil {
+		if sz, ok := disk.ByteSize(entry.Path); ok {
+			return sz
+		}
+	}
+	return 0
+}
+
 // FormatListedSize renders entry's size cell: a directory shows its cached disk-usage size (via
 // disk, if non-nil and the cache has an entry), or pendingIcon while that size is still being
 // calculated (queued or walking, centered in SizeCells like a pending meta cell), or "" when

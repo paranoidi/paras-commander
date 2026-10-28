@@ -64,3 +64,26 @@ func TestJoinRowWideNameKeepsSizeColumn(t *testing.T) {
 		t.Fatalf("row cells = %d, want %d (%q)", w, nameWidth+1+SizeCells, row)
 	}
 }
+
+type fixedSizer map[string]int64
+
+func (f fixedSizer) ByteSize(p string) (int64, bool) {
+	n, ok := f[p]
+	return n, ok
+}
+
+func TestEntryUsageBytesFileIgnoresCache(t *testing.T) {
+	t.Parallel()
+	disk := fixedSizer{"/srv/lantern": 1 << 30}
+	file := localfs.Entry{Name: "lantern", Path: "/srv/lantern", Type: localfs.EntryFile}
+	if got := EntryUsageBytes(file, disk); got != 0 {
+		t.Fatalf("empty file reusing a cached directory name = %d, want 0", got)
+	}
+	dir := localfs.Entry{Name: "lantern", Path: "/srv/lantern", Type: localfs.EntryDirectory}
+	if got := EntryUsageBytes(dir, disk); got != 1<<30 {
+		t.Fatalf("cached directory = %d, want %d", got, 1<<30)
+	}
+	if got := EntryUsageBytes(dir, nil); got != 0 {
+		t.Fatalf("directory without cache = %d, want 0", got)
+	}
+}

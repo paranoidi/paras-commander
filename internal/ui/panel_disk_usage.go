@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 )
 
 var menuBarSpinnerRunes = []rune("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
@@ -43,19 +44,10 @@ func diskUsagePaintExcluded(painter DiskUsagePainter, absPath string) bool {
 }
 
 func entryDiskUsageBytes(entry localfs.Entry, show bool, painter DiskUsagePainter) int64 {
-	if !show || painter == nil {
-		if entry.Type != localfs.EntryDirectory {
-			return entry.Size
-		}
-		return 0
+	if !show {
+		painter = nil
 	}
-	if sz, ok := painter.ByteSize(entry.Path); ok {
-		return sz
-	}
-	if entry.Type != localfs.EntryDirectory {
-		return entry.Size
-	}
-	return 0
+	return panellist.EntryUsageBytes(entry, painter)
 }
 
 func panelDiskUsageDenom(show bool, painter DiskUsagePainter, entries []localfs.Entry) int64 {
