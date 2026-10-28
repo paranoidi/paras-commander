@@ -64,7 +64,7 @@ Editor integration (Helix file picker): [Chooser mode](https://paranoidi.github.
 
 ## Test and lint
 
-CI (and a merge-ready local run) is **golangci-lint v2.12.1** plus **`go test -race ./...`**. A local `pc` artifact is **`go build -o pc ./cmd/pc`**. `govulncheck` is optional and is not a merge gate.
+CI is **golangci-lint v2.12.1** plus **`go test -race ./...`**. Locally the race suite is opt-in (`task race`); the local gate runs plain `go test ./...`. A local `pc` artifact is **`go build -o pc ./cmd/pc`**. `govulncheck` is optional and is not a merge gate.
 
 Fast inner loop (no race detector):
 
@@ -73,11 +73,11 @@ go test ./...
 # or: task test
 ```
 
-Merge-ready / pre-push (same guarantees as CI, plus the local `pc` binary):
+Pre-push (CI adds the race detector, plus the local `pc` binary):
 
 ```bash
 golangci-lint run ./...
-go test -race ./...
+go test ./...
 go build -o pc ./cmd/pc
 # or: task verify
 ```
@@ -88,7 +88,7 @@ Requires [go-task](https://taskfile.dev) for the Taskfile targets. Install tools
 task setup   # install golangci-lint v2.12.1, errcheck, ineffassign, gocyclo into ./bin
 task lint    # golangci-lint (includes errcheck, ineffassign, gocyclo)
 task race    # go test -race ./...
-task verify  # lint + race + go build -o pc ./cmd/pc
+task verify  # lint + test + go build -o pc ./cmd/pc
 ```
 
 `task errcheck`, `task ineffassign`, and `task gocyclo` are optional debug helpers; `task lint` already covers them. `task govulncheck` is optional.

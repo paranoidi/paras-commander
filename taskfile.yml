@@ -116,8 +116,8 @@ tasks:
           done'
 
   verify:
-    desc: Merge-ready local gate (lint + race tests + pc artifact)
+    desc: Local gate (lint + tests + pc artifact); CI runs the race suite
     cmds:
       - task: lint
-      - task: race
+      - task: test
       - task: build
