@@ -86,11 +86,10 @@ func (e *Engine) applyBatches(batches [][]fschange.Change) {
 // touchWalkRootsLocked marks every active walk root that c's paths overlap, so the planner walks
 // it again instead of merging sizes read before c. Caller holds e.mu.
 func (e *Engine) touchWalkRootsLocked(c fschange.Change) {
+	overlaps := func(p, r string) bool { return p != "" && (pathIsOrUnder(p, r) || pathIsOrUnder(r, p)) }
 	for r := range e.activeWalkRoots {
-		for _, p := range []string{c.Path, c.From} {
-			if p != "" && (pathIsOrUnder(p, r) || pathIsOrUnder(r, p)) {
-				e.touchedWalkRoots[r] = true
-			}
+		if overlaps(c.Path, r) || overlaps(c.From, r) {
+			e.touchedWalkRoots[r] = true
 		}
 	}
 }
@@ -188,8 +187,19 @@ func (e *Engine) createdLocked(p string, bytes int64, isDir bool) {
 			oldFiles = e.fileCounts[p]
 		}
 	}
+	scanned := e.growAncestorsLocked(p, ancestorDelta{bytes - old, files - oldFiles}, ancestorDelta{bytes, files})
+	if scanned || had { // an overwritten file with no scanned ancestor still keeps its entry current
+		e.cache[p], e.fileCounts[p] = bytes, files
+	}
+}
+
+// growAncestorsLocked moves every cached ancestor of p by d, stopping at an excluded one (walks
+// never counted below it) and clamping at zero. A walk caches every node, so the directories
+// between p and its nearest cached ancestor are new: they get total as their own entry. It
+// reports whether any ancestor is cached. Caller holds e.mu.
+func (e *Engine) growAncestorsLocked(p string, d, total ancestorDelta) bool {
+	deltas := ancestorDeltas{}
 	var missing []string
-	scanned := false
 	for a := p; ; {
 		parent := filepath.Dir(a)
 		if parent == a || e.excluded[parent] {
@@ -197,25 +207,19 @@ func (e *Engine) createdLocked(p string, bytes int64, isDir bool) {
 		}
 		a = parent
 		if _, ok := e.cache[a]; ok {
-			scanned = true
-			e.cache[a] = max(e.cache[a]+bytes-old, 0)
-			if n, ok := e.fileCounts[a]; ok {
-				e.fileCounts[a] = max(n+files-oldFiles, 0)
-			}
-		} else if !scanned {
+			deltas[a] = d
+		} else if len(deltas) == 0 {
 			missing = append(missing, a)
 		}
 	}
-	if !scanned {
-		if had { // an overwritten file with no scanned ancestor: keep its own entry current
-			e.cache[p], e.fileCounts[p] = bytes, files
-		}
-		return
+	if len(deltas) == 0 {
+		return false
 	}
-	e.cache[p], e.fileCounts[p] = bytes, files
+	e.applyAncestorDeltasLocked(deltas)
 	for _, m := range missing {
-		e.cache[m], e.fileCounts[m] = bytes, files
+		e.cache[m], e.fileCounts[m] = total.bytes, total.files
 	}
+	return true
 }
 
 // sweepGroup is a set of renames and removals applied together. Paths of one group never overlap

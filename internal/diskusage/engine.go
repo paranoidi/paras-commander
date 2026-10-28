@@ -24,6 +24,11 @@ type scanJob struct {
 // anyPanel is the sourcePanel of a refresh scan: it is pending in every panel.
 const anyPanel = -2
 
+// forPanel reports whether work started from sourcePanel shows as pending in panelID.
+func forPanel(sourcePanel, panelID int) bool {
+	return sourcePanel == panelID || sourcePanel == anyPanel
+}
+
 // maxTouchedRewalks bounds how often a walk root changed by applied filesystem changes is walked
 // again before its result is merged anyway.
 const maxTouchedRewalks = 3
@@ -272,7 +277,7 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 
 	e.mu.RLock()
 	for r, pan := range e.activeWalkRoots {
-		if (pan == panelID || pan == anyPanel) && pathIsOrUnder(c, r) {
+		if forPanel(pan, panelID) && pathIsOrUnder(c, r) {
 			e.mu.RUnlock()
 			return true
 		}
@@ -281,7 +286,7 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 
 	e.jobMu.Lock()
 	for _, j := range e.queue {
-		if j.sourcePanel != panelID && j.sourcePanel != anyPanel {
+		if !forPanel(j.sourcePanel, panelID) {
 			continue
 		}
 		for _, raw := range j.childAbs {
@@ -291,7 +296,7 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 			}
 		}
 	}
-	if e.curJobRoots != nil && (e.curJobSourcePanel == panelID || e.curJobSourcePanel == anyPanel) {
+	if e.curJobRoots != nil && forPanel(e.curJobSourcePanel, panelID) {
 		for r := range e.curJobRoots {
 			if pathIsOrUnder(c, r) {
 				e.jobMu.Unlock()
@@ -695,6 +700,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 // dirty path pending refresh is at or under the root, the root's cached ancestors move by its
 // change in total as the root's own key is written. False when the session went stale.
 func (e *Engine) walkAndMerge(ctx context.Context, sess uint64, jobPath string, walkIgnore ShouldIgnoreFolder) bool {
+walk:
 	for rewalks := 0; ; rewalks++ {
 		tree := WalkFolder(ctx, jobPath, e.walkReadDir, walkIgnore, nil, e.fsWalk)
 		if e.gen.Load() != sess {
@@ -708,32 +714,29 @@ func (e *Engine) walkAndMerge(ctx context.Context, sess uint64, jobPath string, 
 		for k := range merged {
 			keys = append(keys, k)
 		}
-		touched := false
-		for i := 0; i < len(keys) && !touched; i += cacheMergeChunkSize {
+		for i := 0; i < len(keys); i += cacheMergeChunkSize {
 			if e.gen.Load() != sess {
 				return false
 			}
-			end := min(i+cacheMergeChunkSize, len(keys))
 			e.mu.Lock()
-			if touched = e.touchedWalkRoots[jobPath] && rewalks < maxTouchedRewalks; touched {
+			if e.touchedWalkRoots[jobPath] && rewalks < maxTouchedRewalks {
 				delete(e.touchedWalkRoots, jobPath)
-			} else {
-				for _, k := range keys[i:end] {
-					if k == jobPath && e.takeRefreshPendingLocked(jobPath) {
-						e.addRefreshedLocked(jobPath, merged[k], mergedFiles[k])
-					}
-					e.cache[k] = merged[k]
-					if fc, ok := mergedFiles[k]; ok {
-						e.fileCounts[k] = fc
-					}
-				}
-				e.cacheVersion.Add(1)
+				e.mu.Unlock()
+				continue walk
 			}
+			for _, k := range keys[i:min(i+cacheMergeChunkSize, len(keys))] {
+				if k == jobPath && e.takeRefreshPendingLocked(jobPath) {
+					e.addRefreshedLocked(jobPath, merged[k], mergedFiles[k])
+				}
+				e.cache[k] = merged[k]
+				if fc, ok := mergedFiles[k]; ok {
+					e.fileCounts[k] = fc
+				}
+			}
+			e.cacheVersion.Add(1)
 			e.mu.Unlock()
 		}
-		if !touched {
-			return e.gen.Load() == sess
-		}
+		return e.gen.Load() == sess
 	}
 }
 
@@ -752,37 +755,13 @@ func (e *Engine) takeRefreshPendingLocked(root string) bool {
 
 // addRefreshedLocked moves root's cached ancestors by the change from root's cached total to the
 // freshly walked one, just before that is written. A dirty path was dropped, so the ancestors of
-// a root at or above it regain what the walk found there. Directories
-// between root and its nearest cached ancestor are new (a walk caches every node), so they get
-// root's total as their own. Caller holds e.mu.
+// a root at or above it regain what the walk found there. Caller holds e.mu.
 func (e *Engine) addRefreshedLocked(root string, bytes, files int64) {
 	if e.excluded[root] {
 		return
 	}
-	d := ancestorDelta{bytes - e.cache[root], files - e.fileCounts[root]}
-	if d == (ancestorDelta{}) {
-		return
-	}
-	deltas := ancestorDeltas{}
-	var missing []string
-	for a := root; ; {
-		parent := filepath.Dir(a)
-		if parent == a || e.excluded[parent] {
-			break
-		}
-		a = parent
-		if _, ok := e.cache[a]; ok {
-			deltas[a] = d
-		} else if len(deltas) == 0 {
-			missing = append(missing, a)
-		}
-	}
-	if len(deltas) == 0 {
-		return
-	}
-	e.applyAncestorDeltasLocked(deltas)
-	for _, m := range missing {
-		e.cache[m], e.fileCounts[m] = bytes, files
+	if d := (ancestorDelta{bytes - e.cache[root], files - e.fileCounts[root]}); d != (ancestorDelta{}) {
+		e.growAncestorsLocked(root, d, ancestorDelta{bytes, files})
 	}
 }
 

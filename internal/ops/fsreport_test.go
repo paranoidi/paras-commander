@@ -74,20 +74,10 @@ func (s *recSink) want(t *testing.T, want ...string) {
 	}
 }
 
-func writeFile(t *testing.T, path, content string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestReportWithoutSinkIsSilent(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "kettle.txt"), "abc")
+	writeTestFile(t, filepath.Join(dir, "kettle.txt"), "abc")
 	plan := RenamePlan{SourcePath: filepath.Join(dir, "kettle.txt"), NewPath: filepath.Join(dir, "teapot.txt")}
 	if err := ExecuteRename(context.Background(), plan); err != nil {
 		t.Fatal(err)
@@ -97,7 +87,7 @@ func TestReportWithoutSinkIsSilent(t *testing.T) {
 func TestReportRenameMkdirAndLinks(t *testing.T) {
 	t.Parallel()
 	s, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "kettle.txt"), "abcd")
+	writeTestFile(t, filepath.Join(root, "kettle.txt"), "abcd")
 	if err := ExecuteRename(ctx, RenamePlan{SourcePath: filepath.Join(root, "kettle.txt"), NewPath: filepath.Join(root, "teapot.txt")}); err != nil {
 		t.Fatal(err)
 	}
@@ -121,8 +111,8 @@ func TestReportRenameMkdirAndLinks(t *testing.T) {
 func TestReportMassRenameIsOneNetBatch(t *testing.T) {
 	t.Parallel()
 	s, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "amber"), "a")
-	writeFile(t, filepath.Join(root, "basil"), "bb")
+	writeTestFile(t, filepath.Join(root, "amber"), "a")
+	writeTestFile(t, filepath.Join(root, "basil"), "bb")
 	rows := []MassRenameRow{
 		{SourcePath: filepath.Join(root, "amber"), OldBase: "amber", NewBase: "basil"},
 		{SourcePath: filepath.Join(root, "basil"), OldBase: "basil", NewBase: "amber"},
@@ -135,8 +125,8 @@ func TestReportMassRenameIsOneNetBatch(t *testing.T) {
 
 func TestReportMoveRenameAndCrossDeviceFallback(t *testing.T) {
 	s, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "src/kettle.txt"), "abc")
-	writeFile(t, filepath.Join(root, "far/orchard/fig.txt"), "figs")
+	writeTestFile(t, filepath.Join(root, "src/kettle.txt"), "abc")
+	writeTestFile(t, filepath.Join(root, "far/orchard/fig.txt"), "figs")
 	if err := os.MkdirAll(filepath.Join(root, "dst"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -157,8 +147,8 @@ func TestReportMoveRenameAndCrossDeviceFallback(t *testing.T) {
 func TestReportMergeMoveRemovesEmptiedSource(t *testing.T) {
 	t.Parallel()
 	s, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "src/basket/fig.txt"), "f")
-	writeFile(t, filepath.Join(root, "dst/basket/pear.txt"), "pp")
+	writeTestFile(t, filepath.Join(root, "src/basket/fig.txt"), "f")
+	writeTestFile(t, filepath.Join(root, "dst/basket/pear.txt"), "pp")
 	if _, _, err := ExecuteMove(ctx, MustPaths(filepath.Join(root, "src/basket")), MustPath(filepath.Join(root, "dst")), Options{}, ProgressEmitThrottle{}, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -171,9 +161,9 @@ func TestReportMergeMoveRemovesEmptiedSource(t *testing.T) {
 func TestReportCopyCreatesAndOverwrites(t *testing.T) {
 	t.Parallel()
 	s, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "src/basket/fig.txt"), "figs")
-	writeFile(t, filepath.Join(root, "src/pear.txt"), "pear!")
-	writeFile(t, filepath.Join(root, "dst/pear.txt"), "old")
+	writeTestFile(t, filepath.Join(root, "src/basket/fig.txt"), "figs")
+	writeTestFile(t, filepath.Join(root, "src/pear.txt"), "pear!")
+	writeTestFile(t, filepath.Join(root, "dst/pear.txt"), "old")
 	srcs := MustPaths(filepath.Join(root, "src/basket"), filepath.Join(root, "src/pear.txt"))
 	if _, _, err := ExecuteCopy(ctx, srcs, MustPath(filepath.Join(root, "dst")), Options{CopyBufferKiB: 4}, ProgressEmitThrottle{}, nil, actionResolver(ActionOverwrite), nil); err != nil {
 		t.Fatal(err)
@@ -188,7 +178,7 @@ func TestReportCopyCreatesAndOverwrites(t *testing.T) {
 func TestReportUndoOfCopyRemovesCreated(t *testing.T) {
 	t.Parallel()
 	_, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "src/basket/fig.txt"), "figs")
+	writeTestFile(t, filepath.Join(root, "src/basket/fig.txt"), "figs")
 	if err := os.MkdirAll(filepath.Join(root, "dst"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -207,8 +197,8 @@ func TestReportUndoOfCopyRemovesCreated(t *testing.T) {
 func TestReportDeleteAndRemoveEmpty(t *testing.T) {
 	t.Parallel()
 	s, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "attic/trunk/quilt.txt"), "q")
-	writeFile(t, filepath.Join(root, "attic/lamp.txt"), "l")
+	writeTestFile(t, filepath.Join(root, "attic/trunk/quilt.txt"), "q")
+	writeTestFile(t, filepath.Join(root, "attic/lamp.txt"), "l")
 	if err := os.MkdirAll(filepath.Join(root, "attic/empty/hollow"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +221,7 @@ func TestReportDeleteAndRemoveEmpty(t *testing.T) {
 func TestReportDeleteCanceledMidTreeIsDirty(t *testing.T) {
 	t.Parallel()
 	s, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "attic/trunk/quilt.txt"), "q")
+	writeTestFile(t, filepath.Join(root, "attic/trunk/quilt.txt"), "q")
 	ctx, cancel := context.WithCancel(ctx)
 	_, _, err := ExecuteDeletePaths(ctx, []string{filepath.Join(root, "attic")}, nil, nil, func(int32) {
 		cancel() // canceled once the source starts: the tree walk stops part way
@@ -245,8 +235,8 @@ func TestReportDeleteCanceledMidTreeIsDirty(t *testing.T) {
 func TestReportMoveDeleteSourceRenamesNothing(t *testing.T) {
 	t.Parallel()
 	s, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "src/harbor.txt"), "fresh")
-	writeFile(t, filepath.Join(root, "dst/harbor.txt"), "stale")
+	writeTestFile(t, filepath.Join(root, "src/harbor.txt"), "fresh")
+	writeTestFile(t, filepath.Join(root, "dst/harbor.txt"), "stale")
 	if _, _, err := ExecuteMove(ctx, MustPaths(filepath.Join(root, "src/harbor.txt")), MustPath(filepath.Join(root, "dst")), Options{}, ProgressEmitThrottle{}, nil, actionResolver(ActionDeleteSource), nil); err != nil {
 		t.Fatal(err)
 	}
@@ -259,14 +249,14 @@ func TestReportArchiveExtractMarksNewAndChangedTopLevelDirty(t *testing.T) {
 		t.Skip("tar not in PATH")
 	}
 	s, ctx, root := newRecSink(t)
-	writeFile(t, filepath.Join(root, "pack/basket/fig.txt"), "fig")
-	writeFile(t, filepath.Join(root, "pack/kettle.txt"), "k")
+	writeTestFile(t, filepath.Join(root, "pack/basket/fig.txt"), "fig")
+	writeTestFile(t, filepath.Join(root, "pack/kettle.txt"), "k")
 	archivePath := filepath.Join(root, "pack.tar")
 	if out, err := exec.Command("tar", "-cf", archivePath, "-C", filepath.Join(root, "pack"), "basket", "kettle.txt").CombinedOutput(); err != nil {
 		t.Fatalf("tar: %v %s", err, out)
 	}
 	dest := filepath.Join(root, "dest")
-	writeFile(t, filepath.Join(dest, "untouched.txt"), "u")
+	writeTestFile(t, filepath.Join(dest, "untouched.txt"), "u")
 	// basket exists already: tar merges into it and its mtime moves.
 	if err := os.MkdirAll(filepath.Join(dest, "basket"), 0o755); err != nil {
 		t.Fatal(err)

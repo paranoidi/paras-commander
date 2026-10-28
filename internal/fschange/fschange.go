@@ -55,11 +55,8 @@ func WithSink(ctx context.Context, s Sink) context.Context {
 // Report hands batch, with every path cleaned, to ctx's sink. A context without a sink, or an
 // empty batch, reports nothing.
 func Report(ctx context.Context, batch ...Change) {
-	if len(batch) == 0 || ctx == nil {
-		return
-	}
-	s, _ := ctx.Value(sinkKey{}).(Sink)
-	if s == nil {
+	s := sinkFrom(ctx)
+	if len(batch) == 0 || s == nil {
 		return
 	}
 	for i := range batch {
@@ -73,9 +70,13 @@ func Report(ctx context.Context, batch ...Change) {
 
 // Enabled reports whether ctx carries a sink, so a caller can skip the Lstat a report needs.
 func Enabled(ctx context.Context) bool {
+	return sinkFrom(ctx) != nil
+}
+
+func sinkFrom(ctx context.Context) Sink {
 	if ctx == nil {
-		return false
+		return nil
 	}
 	s, _ := ctx.Value(sinkKey{}).(Sink)
-	return s != nil
+	return s
 }
