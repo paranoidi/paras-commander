@@ -11,7 +11,7 @@ When the active panel has selected directories, a dialog first asks whether to s
 1. **Walking** collects every regular file (symlinks are skipped).
 2. **Size prefilter.** A file whose size is unique in the tree cannot have a duplicate and is never opened.
 3. **Confirm** (only when the candidates exceed `dedup.hash_confirm_bytes`) asks before hashing that many bytes.
-4. **Hashing** compares same-size files chunk by chunk and drops a file as soon as its prefix differs from all others; files that reach the end are grouped by SHA-256. The first chunk is small (`compare.first_chunk_bytes`) and each round doubles it up to `compare.chunk_bytes`, so files that differ early cost little. Files are read in parallel; the number of concurrent reads adapts to the disk, climbing while throughput improves up to `dedup.max_read_workers`. With three or more same-size files, each file is read once: every round reads the next chunk of all remaining files and splits them by what they have in common so far.
+4. **Hashing** compares same-size files chunk by chunk and drops a file as soon as its prefix differs from all others; files that reach the end are grouped by SHA-256. The first chunk is small (`compare.first_chunk_bytes`) and each round doubles it up to `compare.chunk_bytes`, so files that differ early cost little. Files are read in parallel; the number of concurrent reads adapts to the disk, climbing while throughput improves up to `adaptive_io.max_workers`. With three or more same-size files, each file is read once: every round reads the next chunk of all remaining files and splits them by what they have in common so far.
 
 Esc cancels the scan.
 

@@ -120,11 +120,11 @@ const cacheMergeChunkSize = 4096
 
 // New returns an engine with the same default walk settings as config.Default().
 func New() *Engine {
-	return NewWithFSWalk(config.Default().FSWalk)
+	return NewWithAdaptiveIO(config.Default().AdaptiveIO)
 }
 
-// NewWithFSWalk creates an engine using adaptive walk params from config.
-func NewWithFSWalk(cfg config.FSWalkConfig) *Engine {
+// NewWithAdaptiveIO creates an engine using adaptive walk params from config.
+func NewWithAdaptiveIO(cfg config.AdaptiveIOConfig) *Engine {
 	e := &Engine{
 		cache:            make(map[string]int64),
 		fileCounts:       make(map[string]int64),
@@ -135,11 +135,7 @@ func NewWithFSWalk(cfg config.FSWalkConfig) *Engine {
 		updates:          make(chan struct{}, 1),
 		events:           make(chan Event, 256),
 		applyWake:        make(chan struct{}, 1),
-		fsWalk: fswalk.Params{
-			InitialWorkers:  cfg.InitialWorkers,
-			MaxWorkers:      cfg.MaxWorkers,
-			AdaptIntervalMS: cfg.AdaptIntervalMS,
-		},
+		fsWalk:           cfg.Params(),
 	}
 	// Start at 1 so a caller's zero-value "last checked version" never matches a live engine's
 	// version, forcing that caller's first check to actually run.

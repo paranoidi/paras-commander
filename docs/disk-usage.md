@@ -31,4 +31,4 @@ While a copy or move job is using the same volume, automatic scans and refreshes
 ## Options
 
 - `[disk_usage]`: `idle_size_sort`, `idle_sort_delay_ms`, `descend_into_mount_points` ([config.md](config.md#disk_usage)).
-- `[fs_walk]`: `initial_workers`, `max_workers`, `adapt_interval_ms`. A walk starts with `initial_workers` concurrent directory branches (default 1), raises concurrency while throughput improves and freezes at the best limit ([config.md](config.md#fs_walk)).
+- `[adaptive_io]`: `initial_workers`, `max_workers`, `adapt_interval_ms`. A walk starts with `initial_workers` concurrent directory branches (default 1), raises concurrency while throughput improves and freezes at the best limit ([config.md](config.md#adaptive_io)).
