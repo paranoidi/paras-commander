@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -13,8 +14,9 @@ import (
 type Options struct {
 	Walk        WalkOptions
 	HashWorkers int
-	ReadBuffer  []byte
-	OnUpdate    func(Snapshot)
+	// ReadBufferBytes sizes each worker's read buffer; zero uses the built-in default.
+	ReadBufferBytes int
+	OnUpdate        func(Snapshot)
 }
 
 // hashJob is one unit of content work: a same-path pair compared with SameContent (pair set,
@@ -212,9 +214,9 @@ func (s *Session) run(ctx context.Context) {
 	if workers < 1 {
 		workers = 1
 	}
-	bufSize := len(s.opts.ReadBuffer)
-	if bufSize == 0 {
-		bufSize = 256 * 1024
+	bufSize := s.opts.ReadBufferBytes
+	if bufSize <= 0 {
+		bufSize = config.DefaultCompareReadBufferKiB * 1024
 	}
 
 	s.publish(Snapshot{

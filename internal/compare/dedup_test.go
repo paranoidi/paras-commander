@@ -37,7 +37,7 @@ func startDedup(t *testing.T, dir string, confirmHashBytes int64) (*DedupSession
 	}
 	phases := make(chan DedupSnapshot, 8)
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		ReadWorkers:      fswalk.Params{InitialWorkers: 2, MaxWorkers: 2},
+		ReadWorkers:      fixedWorkers(2),
 		ConfirmHashBytes: confirmHashBytes,
 		OnUpdate: func(s DedupSnapshot) {
 			switch s.Phase {
@@ -168,7 +168,7 @@ func TestDedupHashingPublishesCurrentPath(t *testing.T) {
 
 	var hashing []DedupSnapshot
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		ReadWorkers: fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
+		ReadWorkers: fixedWorkers(1),
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase == DedupHashing && s.Current != "" {
 				hashing = append(hashing, s)
@@ -219,7 +219,7 @@ func TestDedupHashingProgressRateLimited(t *testing.T) {
 	var pathChanges int
 	var prev string
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		ReadWorkers: fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
+		ReadWorkers: fixedWorkers(1),
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase != DedupHashing || s.Current == "" {
 				return
@@ -261,8 +261,8 @@ func TestDedupHashedBytesMonotonic(t *testing.T) {
 	var mu sync.Mutex
 	var seen []DedupSnapshot
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		ReadWorkers: fswalk.Params{InitialWorkers: 2, MaxWorkers: 2},
-		ReadBuffer:  make([]byte, 4),
+		ReadWorkers:     fixedWorkers(2),
+		ReadBufferBytes: 4,
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase == DedupHashing || s.Phase == DedupDone {
 				mu.Lock()
@@ -315,8 +315,8 @@ func TestDedupCurrentFileAboveThreshold(t *testing.T) {
 		var mu sync.Mutex
 		var hashing []DedupSnapshot
 		sess := StartDedup(context.Background(), root, DedupOptions{
-			ReadWorkers:       fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
-			ReadBuffer:        make([]byte, 8), // several callbacks per file before completion
+			ReadWorkers:       fixedWorkers(1),
+			ReadBufferBytes:   8, // several callbacks per file before completion
 			FileProgressBytes: fileProgressBytes,
 			OnUpdate: func(s DedupSnapshot) {
 				if s.Phase == DedupHashing {
@@ -384,22 +384,10 @@ func TestDedupChunkedEarlyBail(t *testing.T) {
 	writeFile(t, dir, "e/willow.dat", "prefix00aaaaaaaa")
 	writeFile(t, dir, "f/willow.dat", "prefix00bbbbbbbb")
 
-	root, err := pathloc.File(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	done := make(chan DedupSnapshot, 1)
-	sess := StartDedup(context.Background(), root, DedupOptions{
-		ReadWorkers: fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
+	snap := runDedup(t, dir, DedupOptions{
+		ReadWorkers: fixedWorkers(1),
 		ChunkBytes:  8,
-		OnUpdate: func(s DedupSnapshot) {
-			if s.Phase == DedupDone || s.Phase == DedupError {
-				done <- s
-			}
-		},
 	})
-	defer sess.Close()
-	snap := <-done
 
 	if snap.Phase != DedupDone {
 		t.Fatalf("phase = %v (err %q), want DedupDone", snap.Phase, snap.Err)
@@ -606,20 +594,29 @@ func TestDedupWithTrimmedDisplayRoot(t *testing.T) {
 // scanDedupCached runs a scan with the hash cache enabled and returns the Done snapshot.
 func scanDedupCached(t *testing.T, dir, cacheFile string) DedupSnapshot {
 	t.Helper()
+	return runDedup(t, dir, DedupOptions{ReadWorkers: fixedWorkers(2), CacheFile: cacheFile})
+}
+
+// fixedWorkers pins the adaptive read limit so tests run at a known concurrency.
+func fixedWorkers(n int) fswalk.Params {
+	return fswalk.Params{InitialWorkers: n, MaxWorkers: n}
+}
+
+// runDedup scans dir with opts (OnUpdate is replaced) and returns the Done or
+// Error snapshot.
+func runDedup(t *testing.T, dir string, opts DedupOptions) DedupSnapshot {
+	t.Helper()
 	root, err := pathloc.File(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan DedupSnapshot, 8)
-	sess := StartDedup(context.Background(), root, DedupOptions{
-		ReadWorkers: fswalk.Params{InitialWorkers: 2, MaxWorkers: 2},
-		CacheFile:   cacheFile,
-		OnUpdate: func(s DedupSnapshot) {
-			if s.Phase == DedupDone || s.Phase == DedupError {
-				done <- s
-			}
-		},
-	})
+	opts.OnUpdate = func(s DedupSnapshot) {
+		if s.Phase == DedupDone || s.Phase == DedupError {
+			done <- s
+		}
+	}
+	sess := StartDedup(context.Background(), root, opts)
 	defer sess.Close()
 	select {
 	case s := <-done:
@@ -706,7 +703,7 @@ func TestDedupHashCachePersistsAfterCancel(t *testing.T) {
 	var once sync.Once
 	resolved := make(chan struct{})
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		ReadWorkers: fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
+		ReadWorkers: fixedWorkers(1),
 		CacheFile:   cache,
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase == DedupHashing && s.Hashed >= 1 {
@@ -871,23 +868,11 @@ func TestDedupGrowingChunksAcrossRounds(t *testing.T) {
 	writeFile(t, dir, "e/third.bin", diverge(20))
 	writeFile(t, dir, "f/last.bin", diverge(46))
 
-	root, err := pathloc.File(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	done := make(chan DedupSnapshot, 1)
-	sess := StartDedup(context.Background(), root, DedupOptions{
-		ReadWorkers:     fswalk.Params{InitialWorkers: 3, MaxWorkers: 3},
+	snap := runDedup(t, dir, DedupOptions{
+		ReadWorkers:     fixedWorkers(3),
 		ChunkBytes:      16,
 		FirstChunkBytes: 4,
-		OnUpdate: func(s DedupSnapshot) {
-			if s.Phase == DedupDone || s.Phase == DedupError {
-				done <- s
-			}
-		},
 	})
-	defer sess.Close()
-	snap := <-done
 
 	if snap.Phase != DedupDone {
 		t.Fatalf("phase = %v (err %q), want DedupDone", snap.Phase, snap.Err)
@@ -915,23 +900,11 @@ func TestDedupParallelReadsGroupManyClasses(t *testing.T) {
 		writeFile(t, dir, fmt.Sprintf("odd/%02d/stone.txt", class), "X"+body[1:])
 		writeFile(t, dir, fmt.Sprintf("odd/%02d/cloud.txt", class), body[:len(body)-1]+"Y")
 	}
-	root, err := pathloc.File(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	done := make(chan DedupSnapshot, 1)
-	sess := StartDedup(context.Background(), root, DedupOptions{
-		ReadWorkers:     fswalk.Params{InitialWorkers: 4, MaxWorkers: 4},
+	snap := runDedup(t, dir, DedupOptions{
+		ReadWorkers:     fixedWorkers(4),
 		ChunkBytes:      8,
 		FirstChunkBytes: 2,
-		OnUpdate: func(s DedupSnapshot) {
-			if s.Phase == DedupDone || s.Phase == DedupError {
-				done <- s
-			}
-		},
 	})
-	defer sess.Close()
-	snap := <-done
 
 	if snap.Phase != DedupDone {
 		t.Fatalf("phase = %v (err %q), want DedupDone", snap.Phase, snap.Err)

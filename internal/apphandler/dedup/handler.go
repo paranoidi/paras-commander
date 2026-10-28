@@ -320,7 +320,7 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 			MaxWorkers:      h.config.Dedup.MaxReadWorkers,
 			AdaptIntervalMS: config.DedupReadAdaptIntervalMS,
 		},
-		ReadBuffer:        hs.ReadBuffer,
+		ReadBufferBytes:   hs.ReadBufferBytes,
 		ConfirmHashBytes:  h.config.Dedup.HashConfirmBytes,
 		FileProgressBytes: h.config.Dedup.FileProgressBytes,
 		ChunkBytes:        hs.ChunkBytes,

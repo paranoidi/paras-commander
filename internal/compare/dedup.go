@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -155,7 +156,8 @@ type DedupOptions struct {
 	// ReadWorkers bounds concurrent chunk reads; the limit hill-climbs from
 	// InitialWorkers toward MaxWorkers while byte throughput keeps improving.
 	ReadWorkers fswalk.Params
-	ReadBuffer  []byte
+	// ReadBufferBytes sizes each pooled read buffer; zero uses the built-in default.
+	ReadBufferBytes int
 	// ChunkBytes caps how many bytes of each same-size file one round reads, so
 	// a file can be dropped as soon as its prefix diverges from every other file
 	// in its partition. Zero or negative disables chunking (whole file in one round).
@@ -347,9 +349,9 @@ func (s *DedupSession) run(ctx context.Context) {
 		}
 	}
 
-	bufSize := len(s.opts.ReadBuffer)
-	if bufSize == 0 {
-		bufSize = 256 * 1024
+	bufSize := s.opts.ReadBufferBytes
+	if bufSize <= 0 {
+		bufSize = config.DefaultCompareReadBufferKiB * 1024
 	}
 	bufPool := sync.Pool{New: func() any {
 		b := make([]byte, bufSize)
@@ -542,10 +544,9 @@ func (s *DedupSession) run(ctx context.Context) {
 	// Dispatchers only hand out reads: each one acquires the read semaphore per
 	// member, so MaxWorkers dispatchers keep it saturated even when every group
 	// has only two members.
-	dispatchers := max(s.opts.ReadWorkers.MaxWorkers, s.opts.ReadWorkers.InitialWorkers, 1)
 	jobCh := make(chan []int)
 	var wg sync.WaitGroup
-	for range dispatchers {
+	for range adapt.MaxWorkers() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -617,11 +618,7 @@ func hashChunk(ctx context.Context, loc pathloc.Path, h hash.Hash, buf []byte, o
 	}
 	defer func() { _ = rc.Close() }()
 	if offset > 0 {
-		if sk, ok := rc.(io.Seeker); ok {
-			if _, err := sk.Seek(offset, io.SeekStart); err != nil {
-				return err
-			}
-		} else if _, err := io.CopyN(io.Discard, rc, offset); err != nil {
+		if _, err := rc.Seek(offset, io.SeekStart); err != nil {
 			return err
 		}
 	}

@@ -188,7 +188,7 @@ func (b *Backend) Stat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, 
 }
 
 // OpenRead implements fsbackend.Backend.
-func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadCloser, error) {
+func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadSeekCloser, error) {
 	var last error
 	for attempt := 0; attempt < 2; attempt++ {
 		client, remote, release, err := b.withResolvedRemote(ctx, loc)
@@ -218,7 +218,7 @@ func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadCloser
 			return nil, err
 		}
 		b.pool.convertOpToStream(hostPart)
-		return &leasedReadCloser{ReadCloser: f, pool: b.pool, hostPart: hostPart}, nil
+		return &leasedReadCloser{ReadSeekCloser: f, pool: b.pool, hostPart: hostPart}, nil
 	}
 	return nil, last
 }

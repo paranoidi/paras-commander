@@ -84,7 +84,7 @@ func (b *blockingMoveBackend) Rename(ctx context.Context, _, _ pathloc.Path) err
 func (b *blockingMoveBackend) List(context.Context, pathloc.Path) ([]fsbackend.Entry, error) {
 	return nil, nil
 }
-func (b *blockingMoveBackend) OpenRead(context.Context, pathloc.Path) (io.ReadCloser, error) {
+func (b *blockingMoveBackend) OpenRead(context.Context, pathloc.Path) (io.ReadSeekCloser, error) {
 	return nil, fs.ErrInvalid
 }
 func (b *blockingMoveBackend) OpenWrite(context.Context, pathloc.Path, int64, fsbackend.CreateOpts) (io.WriteCloser, error) {

@@ -8,7 +8,8 @@ import (
 // Settings are shared walk/hash knobs for compare and dedup scans.
 type Settings struct {
 	HashWorkers int
-	ReadBuffer  []byte
+	// ReadBufferBytes is the per-reader buffer size (config compare.read_buffer_kib).
+	ReadBufferBytes int
 	// ChunkBytes is the find-duplicates hashing chunk (config compare.chunk_bytes).
 	ChunkBytes int64
 	// FirstChunkBytes is the first find-duplicates round's read (config
@@ -33,7 +34,7 @@ func FromCompareConfig(
 	}
 	return Settings{
 		HashWorkers:     workers,
-		ReadBuffer:      make([]byte, bufKiB*1024),
+		ReadBufferBytes: bufKiB * 1024,
 		ChunkBytes:      cfg.ChunkBytes,
 		FirstChunkBytes: cfg.FirstChunkBytes,
 		ShouldSkip:      diskusage.ComposeListingVolumeIgnore(diskIgnore, volGate),

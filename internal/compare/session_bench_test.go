@@ -52,8 +52,8 @@ func TestSessionHashBench(t *testing.T) {
 
 	start := time.Now()
 	sess := Start(context.Background(), mustFilePath(t, a), mustFilePath(t, b), Options{
-		HashWorkers: workers,
-		ReadBuffer:  make([]byte, 256*1024),
+		HashWorkers:     workers,
+		ReadBufferBytes: 256 * 1024,
 	})
 	defer sess.Close()
 	for {

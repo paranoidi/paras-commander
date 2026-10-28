@@ -7,7 +7,9 @@ import (
 	"time"
 )
 
-// Adaptive hill-climbs walk concurrency until throughput stops improving, then freezes.
+// Adaptive hill-climbs a concurrency limit until throughput stops improving, then freezes.
+// Callers report throughput in their own unit: directory walks count entries, find
+// duplicates counts bytes read.
 type Adaptive struct {
 	sem       *DynSem
 	max       int
@@ -49,7 +51,7 @@ func NewAdaptive(ctx context.Context, p Params) *Adaptive {
 	return a
 }
 
-// Sem returns the walk semaphore whose limit Adaptive adjusts.
+// Sem returns the semaphore whose limit Adaptive adjusts.
 func (a *Adaptive) Sem() *DynSem { return a.sem }
 
 // Bump records one throughput unit (indexed entry or completed ReadDir, per caller).
@@ -57,6 +59,9 @@ func (a *Adaptive) Bump() { a.count.Add(1) }
 
 // Add records n throughput units (bytes read, for byte-rate callers).
 func (a *Adaptive) Add(n int64) { a.count.Add(n) }
+
+// MaxWorkers returns the ceiling the limit can climb to (Params.MaxWorkers, clamped).
+func (a *Adaptive) MaxWorkers() int { return a.max }
 
 // Workers returns the current concurrency limit.
 func (a *Adaptive) Workers() int { return a.sem.Limit() }

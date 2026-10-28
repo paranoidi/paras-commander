@@ -96,7 +96,7 @@ func (b *Backend) Stat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, 
 }
 
 // OpenRead implements fsbackend.Backend.
-func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadCloser, error) {
+func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadSeekCloser, error) {
 	_ = ctx
 	host, err := loc.FilePath()
 	if err != nil {

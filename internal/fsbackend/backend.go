@@ -49,7 +49,9 @@ type Backend interface {
 	Scheme() pathloc.Scheme
 	List(ctx context.Context, dir pathloc.Path) ([]Entry, error)
 	Stat(ctx context.Context, loc pathloc.Path) (Entry, error)
-	OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadCloser, error)
+	// OpenRead returns a seekable reader so offset reads (find-duplicates chunk
+	// hashing) skip ahead instead of re-reading the prefix.
+	OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadSeekCloser, error)
 	OpenWrite(ctx context.Context, loc pathloc.Path, size int64, opts CreateOpts) (io.WriteCloser, error)
 	Mkdir(ctx context.Context, dir pathloc.Path, perm fs.FileMode) error
 	Remove(ctx context.Context, loc pathloc.Path) error

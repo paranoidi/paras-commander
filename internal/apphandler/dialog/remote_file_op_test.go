@@ -71,7 +71,7 @@ func (b *passwordBackend) List(context.Context, pathloc.Path) ([]fsbackend.Entry
 	return nil, nil
 }
 
-func (b *passwordBackend) OpenRead(context.Context, pathloc.Path) (io.ReadCloser, error) {
+func (b *passwordBackend) OpenRead(context.Context, pathloc.Path) (io.ReadSeekCloser, error) {
 	return nil, fs.ErrInvalid
 }
 func (b *passwordBackend) OpenWrite(context.Context, pathloc.Path, int64, fsbackend.CreateOpts) (io.WriteCloser, error) {

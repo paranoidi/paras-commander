@@ -260,7 +260,7 @@ func (extractRemoteBackend) Mkdir(context.Context, pathloc.Path, fs.FileMode) er
 func (extractRemoteBackend) Rename(context.Context, pathloc.Path, pathloc.Path) error {
 	return fs.ErrInvalid
 }
-func (extractRemoteBackend) OpenRead(context.Context, pathloc.Path) (io.ReadCloser, error) {
+func (extractRemoteBackend) OpenRead(context.Context, pathloc.Path) (io.ReadSeekCloser, error) {
 	return nil, fs.ErrInvalid
 }
 func (extractRemoteBackend) OpenWrite(context.Context, pathloc.Path, int64, fsbackend.CreateOpts) (io.WriteCloser, error) {

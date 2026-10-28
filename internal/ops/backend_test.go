@@ -59,7 +59,7 @@ func (b *remoteDeleteBackend) Remove(_ context.Context, loc pathloc.Path) error 
 	return nil
 }
 
-func (b *remoteDeleteBackend) OpenRead(context.Context, pathloc.Path) (io.ReadCloser, error) {
+func (b *remoteDeleteBackend) OpenRead(context.Context, pathloc.Path) (io.ReadSeekCloser, error) {
 	return nil, fs.ErrInvalid
 }
 func (b *remoteDeleteBackend) OpenWrite(context.Context, pathloc.Path, int64, fsbackend.CreateOpts) (io.WriteCloser, error) {
