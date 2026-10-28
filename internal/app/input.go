@@ -1258,6 +1258,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.setTransientMessage(devLongMessage("success"), ui.MessageUrgencySuccess)
 	case keymap.ActionDevDemoDeleteBar:
 		a.devDeleteBarDemoStart = time.Now()
+	case keymap.ActionDevDemoMoveBar:
+		a.devMoveBarDemoStart = time.Now()
 	}
 	return false
 }

@@ -339,6 +339,7 @@ const (
 	ActionDevShowLongError   = "dev.show-long-error"
 	ActionDevShowLongSuccess = "dev.show-long-success"
 	ActionDevDemoDeleteBar   = "dev.demo-delete-bar"
+	ActionDevDemoMoveBar     = "dev.demo-move-bar"
 )
 
 // KnownActions lists action IDs accepted in keybindings.toml for the current app.

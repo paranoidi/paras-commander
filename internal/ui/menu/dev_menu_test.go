@@ -17,6 +17,7 @@ func TestDevDefinitionShortcuts(t *testing.T) {
 		"Long error":      'n',
 		"Long success":    'g',
 		"Delete bar demo": 'd',
+		"Move bar demo":   'm',
 	}
 	for _, item := range def.Items {
 		got, ok := want[item.Label]

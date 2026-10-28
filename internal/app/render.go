@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -365,6 +366,9 @@ func (a *App) refreshMenuBarJobsStrip() {
 			ProgressFrac: frac,
 		}
 	}
+	if a.devMoveBarDemoActive() {
+		a.model.MenuBarJobs = devMoveBarDemoStrip(time.Since(a.devMoveBarDemoStart))
+	}
 	a.model.MenuBarJobs.LightbarHead = a.lightbarHead
 }
 
@@ -375,6 +379,33 @@ const (
 
 func (a *App) devDeleteBarDemoActive() bool {
 	return !a.devDeleteBarDemoStart.IsZero() && time.Since(a.devDeleteBarDemoStart) < devDeleteBarDemoTotal
+}
+
+const (
+	// devMoveBarDemoTotal is how long Dev → Move bar demo runs; the bar fills over all of it.
+	devMoveBarDemoTotal = 15 * time.Second
+	// devMoveBarDemoRemoveEvery and devMoveBarDemoRemoveFor time the simulated source removals:
+	// one delete-coloured phase of RemoveFor at the end of every RemoveEvery.
+	devMoveBarDemoRemoveEvery = 3 * time.Second
+	devMoveBarDemoRemoveFor   = 500 * time.Millisecond
+)
+
+func (a *App) devMoveBarDemoActive() bool {
+	return !a.devMoveBarDemoStart.IsZero() && time.Since(a.devMoveBarDemoStart) < devMoveBarDemoTotal
+}
+
+// devMoveBarDemoStrip is the menu-bar strip of a simulated move elapsed into Dev → Move bar demo:
+// one running job filling over devMoveBarDemoTotal, switching to the removal colours (fill, speed
+// slot and groups unchanged) while a source removal is simulated.
+func devMoveBarDemoStrip(elapsed time.Duration) ui.MenuBarJobsStrip {
+	return ui.MenuBarJobsStrip{
+		Groups:       []ui.MenuBarJobGroup{{Status: string(jobs.StatusRunning), Count: 1}},
+		HasProgress:  true,
+		ProgressFrac: min(float64(elapsed)/float64(devMoveBarDemoTotal), 1),
+		Removing:     elapsed%devMoveBarDemoRemoveEvery >= devMoveBarDemoRemoveEvery-devMoveBarDemoRemoveFor,
+		SpeedSlot:    true,
+		Speed:        "120MB/s",
+	}
 }
 
 // paintMenuBarJobsStripOnly updates Model.MenuBarJobs and repaints only the menu-bar jobs gap

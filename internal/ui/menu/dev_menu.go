@@ -19,6 +19,7 @@ func DevDefinition() Definition {
 			{Action: keymap.ActionDevShowLongError, Label: "Long error", Shortcut: 'n'},
 			{Action: keymap.ActionDevShowLongSuccess, Label: "Long success", Shortcut: 'g'},
 			{Action: keymap.ActionDevDemoDeleteBar, Label: "Delete bar demo", Shortcut: 'd'},
+			{Action: keymap.ActionDevDemoMoveBar, Label: "Move bar demo", Shortcut: 'm'},
 		},
 	}
 }

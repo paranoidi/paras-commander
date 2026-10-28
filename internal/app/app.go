@@ -250,6 +250,8 @@ type App struct {
 	menuBarSpeedStale bool
 	// devDeleteBarDemoStart is the wall time when Dev → Delete bar demo began; zero when inactive.
 	devDeleteBarDemoStart time.Time
+	// devMoveBarDemoStart is the wall time when Dev → Move bar demo began; zero when inactive.
+	devMoveBarDemoStart time.Time
 	// syncFollowNav, while held, suppresses syncFollowFromActive in reconcileAfterEvent
 	// until the debounce flush runs or the hold is cleared.
 	syncFollowNav sched.Hold
