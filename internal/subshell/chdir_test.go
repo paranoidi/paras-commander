@@ -15,3 +15,12 @@ func TestQuoteArg(t *testing.T) {
 		}
 	}
 }
+
+func TestChdirCommand(t *testing.T) {
+	if got, want := string(chdirCommand("/tmp/maple leaf", 0)), " cd '/tmp/maple leaf'\n"; got != want {
+		t.Errorf("chdirCommand(no ack) = %q, want %q", got, want)
+	}
+	if got, want := string(chdirCommand("/tmp/maple leaf", 7)), " cd '/tmp/maple leaf'; echo "+chdirAckPrefix+"7 >&3\n"; got != want {
+		t.Errorf("chdirCommand(ack 7) = %q, want %q", got, want)
+	}
+}

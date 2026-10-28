@@ -73,20 +73,21 @@ func (s *Subshell) Chdir(dir string) error {
 	if feed != nil {
 		feed.Mute()
 	}
-	s.mu.Lock()
-	beforeGen := s.cwdGen
-	s.mu.Unlock()
-	clearLine := chdirDiscardLine
+	clearLine, ack := chdirDiscardLine, 0
 	if s.hasPrecmdHook {
+		s.mu.Lock()
+		s.chdirSeq++
+		ack = s.chdirSeq
+		s.mu.Unlock()
 		clearLine = chdirStashLine
 	}
-	if _, err := s.WritePTY(append([]byte(clearLine), chdirCommand(dir)...)); err != nil {
+	if _, err := s.WritePTY(append([]byte(clearLine), chdirCommand(dir, ack)...)); err != nil {
 		if feed != nil {
 			feed.Unmute()
 		}
 		return err
 	}
-	s.waitForPromptCycle(beforeGen)
+	s.waitForPromptCycle(ack)
 	if feed != nil {
 		feed.Unmute()
 	}
@@ -106,11 +107,13 @@ func (s *Subshell) Chdir(dir string) error {
 	return nil
 }
 
-// waitForPromptCycle blocks until the prompt hook reports a fresh cycle (cwdGen bumps on
-// every line, even an unchanged $PWD, so a failed cd's prompt still unblocks this promptly)
-// or subshellChdirSyncTimeout elapses. Shells without a hook have no signal to wait on, so
-// this just waits a fixed settle window instead.
-func (s *Subshell) waitForPromptCycle(beforeGen int) {
+// waitForPromptCycle blocks until the injected cd numbered ack has echoed its ack on the cwd
+// pipe and the prompt hook has reported once after it (the cd's own prompt cycle; a failed
+// cd still acks and prompts, so it unblocks promptly), or subshellChdirSyncTimeout elapses.
+// Waiting on the ack rather than any fresh cwdGen ignores a prompt report still in flight
+// from before the injection (e.g. the shell's first prompt right after Start). Shells without
+// a hook have no signal to wait on, so this just waits a fixed settle window instead.
+func (s *Subshell) waitForPromptCycle(ack int) {
 	if !s.hasPrecmdHook {
 		time.Sleep(subshellChdirQuietFallback)
 		return
@@ -119,7 +122,7 @@ func (s *Subshell) waitForPromptCycle(beforeGen int) {
 	timer := time.AfterFunc(subshellChdirSyncTimeout, s.cwdCond.Broadcast)
 	defer timer.Stop()
 	s.mu.Lock()
-	for s.cwdGen == beforeGen && time.Now().Before(deadline) {
+	for (s.chdirAck < ack || s.cwdGen == s.cwdGenAtAck) && time.Now().Before(deadline) {
 		s.cwdCond.Wait()
 	}
 	s.mu.Unlock()

@@ -1,6 +1,9 @@
 package subshell
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 // QuoteArg single-quotes s for injection into the shell command line. POSIX shells and fish
 // both parse this form ('\” ends the quote, escapes one quote, reopens).
@@ -9,10 +12,20 @@ func QuoteArg(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
+// chdirAckPrefix starts the line an injected cd writes to the cwd pipe once it has run. Prompt
+// hook lines are absolute paths, so the prefix never collides with a reported $PWD.
+const chdirAckPrefix = "pc-chdir-ack "
+
 // chdirCommand is the line written to the PTY by [Subshell.Chdir]. The leading space keeps the
-// injected cd out of bash/zsh/fish history.
-func chdirCommand(dir string) []byte {
-	return []byte(" cd " + QuoteArg(dir) + "\n")
+// injected cd out of bash/zsh/fish history. A non-zero ack appends a write of
+// chdirAckPrefix+ack to the cwd pipe (fd 3), so Chdir can tell its own prompt cycle from a
+// stale prompt report still in flight; it runs whether or not the cd succeeds.
+func chdirCommand(dir string, ack int) []byte {
+	line := " cd " + QuoteArg(dir)
+	if ack > 0 {
+		line += "; echo " + chdirAckPrefix + strconv.Itoa(ack) + " >&3"
+	}
+	return []byte(line + "\n")
 }
 
 // Private key sequences bound by [precmdInit] to stash/restore the line editor's pending

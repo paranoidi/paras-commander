@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -30,9 +31,15 @@ type Subshell struct {
 	alive   bool
 	cwdPipe string // last $PWD reported by the shell's prompt hook (empty until first prompt)
 	// cwdGen bumps on every line the prompt hook reports (even an unchanged $PWD, e.g. a
-	// failed cd) — Chdir waits on cwdCond for a fresh generation instead of polling.
-	cwdGen        int
-	cwdCond       *sync.Cond
+	// failed cd); Chdir waits on cwdCond (see waitForPromptCycle) instead of polling.
+	cwdGen  int
+	cwdCond *sync.Cond
+	// chdirSeq numbers Chdir injections; chdirAck is the last number the shell echoed back on
+	// the cwd pipe and cwdGenAtAck the cwdGen when it did. The prompt report after the ack is
+	// the injected cd's own prompt cycle.
+	chdirSeq      int
+	chdirAck      int
+	cwdGenAtAck   int
 	hasPrecmdHook bool // true once Start actually wrote a prompt hook (see precmdInit)
 	feed          *PanelFeed
 	wait          sync.WaitGroup
@@ -100,13 +107,22 @@ func Start(opts StartOptions) (*Subshell, error) {
 		defer func() { _ = pipeR.Close() }()
 		scanner := bufio.NewScanner(pipeR)
 		for scanner.Scan() {
-			if line := strings.TrimSpace(scanner.Text()); line != "" {
-				s.mu.Lock()
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" {
+				continue
+			}
+			s.mu.Lock()
+			if ack, ok := strings.CutPrefix(line, chdirAckPrefix); ok {
+				if n, err := strconv.Atoi(ack); err == nil {
+					s.chdirAck = n
+					s.cwdGenAtAck = s.cwdGen
+				}
+			} else {
 				s.cwdPipe = line
 				s.cwdGen++
-				s.cwdCond.Broadcast()
-				s.mu.Unlock()
 			}
+			s.cwdCond.Broadcast()
+			s.mu.Unlock()
 		}
 	})
 
