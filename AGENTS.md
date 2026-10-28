@@ -89,6 +89,16 @@ CRITICAL:
 - Each feature should live it's own file, update the file as feature evolves
 - Feature is a large functionality, not a simple button or a toggle. Examples: (terminal graphics, job queue, panel comparison)
 
+# Auto-commit
+
+When a requested change to functionality is done, commit it without asking, provided all of these hold:
+
+- The local gate (see Verification) passes.
+- No open questions, unresolved design choices, or considerations remain that the user should weigh.
+- Nothing significant from the request was skipped, stubbed, or deferred.
+
+If any of these fails, stop, report, and wait for the user. Stage only the files the change touched: never untracked files you did not create, never unrelated pre-existing modifications. Follow the commit message rules below, do not push, and name the commit subject in your final reply.
+
 # Commit messages
 
 - Subject: Conventional Commits, `<type>(<scope>): <summary>` — lowercase imperative summary, no trailing period.
