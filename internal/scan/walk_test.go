@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 )
 
@@ -127,5 +128,38 @@ func TestWalkProgressReportsLastLevel(t *testing.T) {
 	depth, done, total := w.Progress()
 	if depth != 4 || done != 1 || total != 1 {
 		t.Fatalf("Progress = %d,%d,%d, want 4,1,1", depth, done, total)
+	}
+}
+
+func TestWalkConcurrentMatchesSequentialOrder(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	words := []string{"anchor", "bramble", "cobalt", "dune", "ember", "fjord", "glacier", "heron"}
+	for _, a := range words {
+		for _, b := range words[:4] {
+			dir := filepath.Join(root, a, b)
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "willow.txt"), []byte("x"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	collect := func(opts WalkOptions) []string {
+		w := startRootWalk(t.Context(), root, opts)
+		defer w.Close()
+		var got []string
+		for batch := range w.Results() {
+			for _, e := range batch {
+				got = append(got, e.RelLine)
+			}
+		}
+		return got
+	}
+	want := collect(WalkOptions{})
+	got := collect(WalkOptions{Walk: fswalk.Params{InitialWorkers: 4, MaxWorkers: 8, AdaptIntervalMS: 1}})
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("concurrent walk differs:\n got %v\nwant %v", got, want)
 	}
 }

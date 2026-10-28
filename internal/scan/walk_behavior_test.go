@@ -1,4 +1,4 @@
-package find
+package scan
 
 import (
 	"context"
@@ -9,19 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 )
 
-func testWalkParams() fswalk.Params {
-	return fswalk.Params{InitialWorkers: 1, MaxWorkers: 32, AdaptIntervalMS: 2000}
-}
-
-func collectSession(t *testing.T, root string, opts Options) []Entry {
+func collectWalk(t *testing.T, root string, opts WalkOptions) []Entry {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	s := Start(ctx, root, opts, testWalkParams())
+	s := startRootWalk(ctx, root, opts)
 	defer s.Close()
 
 	var all []Entry
@@ -41,13 +36,13 @@ func collectSession(t *testing.T, root string, opts Options) []Entry {
 	}
 }
 
-func TestSessionIndexesTree(t *testing.T) {
+func TestWalkIndexesTree(t *testing.T) {
 	root := t.TempDir()
 	mustMkdir(t, filepath.Join(root, "pkg"))
 	mustWrite(t, filepath.Join(root, "pkg", "a.go"), "x")
 	mustWrite(t, filepath.Join(root, "README"), "y")
 
-	entries := collectSession(t, root, Options{IncludeHidden: false})
+	entries := collectWalk(t, root, WalkOptions{IncludeHidden: false})
 	if len(entries) != 3 {
 		t.Fatalf("len(entries) = %d, want 3 (pkg, pkg/a.go, README)", len(entries))
 	}
@@ -63,14 +58,14 @@ func TestSessionIndexesTree(t *testing.T) {
 	}
 }
 
-func TestSessionSkipsHidden(t *testing.T) {
+func TestWalkSkipsHidden(t *testing.T) {
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, ".hidden"), "x")
 	mustWrite(t, filepath.Join(root, "visible"), "y")
 	mustMkdir(t, filepath.Join(root, ".dotdir"))
 	mustWrite(t, filepath.Join(root, ".dotdir", "inner.txt"), "z")
 
-	s := Start(context.Background(), root, Options{}, testWalkParams())
+	s := startRootWalk(context.Background(), root, WalkOptions{})
 	defer s.Close()
 	var entries []Entry
 	for batch := range s.Results() {
@@ -93,14 +88,14 @@ func TestSessionSkipsHidden(t *testing.T) {
 	}
 }
 
-func TestSessionIncludeHiddenIndexesDots(t *testing.T) {
+func TestWalkIncludeHiddenIndexesDots(t *testing.T) {
 	root := t.TempDir()
 	mustMkdir(t, filepath.Join(root, ".git"))
 	mustWrite(t, filepath.Join(root, ".git", "config"), "x")
 	mustWrite(t, filepath.Join(root, ".gitignore"), "y")
 	mustWrite(t, filepath.Join(root, "readme"), "z")
 
-	entries := collectSession(t, root, Options{IncludeHidden: true})
+	entries := collectWalk(t, root, WalkOptions{IncludeHidden: true})
 	byRel := map[string]bool{}
 	for _, e := range entries {
 		byRel[e.RelLine] = true
@@ -112,7 +107,7 @@ func TestSessionIncludeHiddenIndexesDots(t *testing.T) {
 	}
 }
 
-func TestSessionSkipsGitignoredDir(t *testing.T) {
+func TestWalkSkipsGitignoredDir(t *testing.T) {
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
@@ -123,7 +118,7 @@ func TestSessionSkipsGitignoredDir(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "outer.txt"), "y")
 
 	cache := gitignore.NewCache()
-	entries := collectSession(t, root, Options{Gitignore: cache})
+	entries := collectWalk(t, root, WalkOptions{Gitignore: cache})
 	for _, e := range entries {
 		if strings.Contains(e.RelLine, "skipdir") {
 			t.Fatalf("unexpected gitignored path in index: %q", e.RelLine)
@@ -131,7 +126,7 @@ func TestSessionSkipsGitignoredDir(t *testing.T) {
 	}
 }
 
-func TestSessionShouldSkipDir(t *testing.T) {
+func TestWalkShouldSkipDir(t *testing.T) {
 	root := t.TempDir()
 	skipDir := filepath.Join(root, "skipme")
 	mustMkdir(t, skipDir)
@@ -141,7 +136,7 @@ func TestSessionShouldSkipDir(t *testing.T) {
 	skip := func(abs string) bool {
 		return filepath.Clean(abs) == filepath.Clean(skipDir)
 	}
-	entries := collectSession(t, root, Options{ShouldSkipDir: skip})
+	entries := collectWalk(t, root, WalkOptions{ShouldSkipDir: skip})
 	for _, e := range entries {
 		if strings.Contains(e.RelLine, "inner") {
 			t.Fatalf("should not index inside skipme: %q", e.RelLine)
@@ -158,7 +153,7 @@ func TestSessionShouldSkipDir(t *testing.T) {
 	}
 }
 
-func TestSessionConcurrentFlushStress(t *testing.T) {
+func TestWalkConcurrentFlushStress(t *testing.T) {
 	root := t.TempDir()
 	for i := range 300 {
 		name := filepath.Join(root, fmt.Sprintf("dir%d", i))
@@ -167,17 +162,17 @@ func TestSessionConcurrentFlushStress(t *testing.T) {
 			mustWrite(t, filepath.Join(name, fmt.Sprintf("f%d.txt", j)), "x")
 		}
 	}
-	entries := collectSession(t, root, Options{})
+	entries := collectWalk(t, root, WalkOptions{})
 	if len(entries) < 300*8 {
 		t.Fatalf("expected many entries, got %d", len(entries))
 	}
 }
 
-func TestSessionCancel(t *testing.T) {
+func TestWalkCancel(t *testing.T) {
 	root := t.TempDir()
 	mustMkdir(t, filepath.Join(root, "a", "b", "c"))
 	ctx := context.Background()
-	s := Start(ctx, root, Options{}, testWalkParams())
+	s := startRootWalk(ctx, root, WalkOptions{})
 	s.Close()
 	select {
 	case <-s.Done():
@@ -197,5 +192,29 @@ func mustWrite(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestWalkDoesNotStatSizeDuringIndex(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	path := filepath.Join(root, "sized.txt")
+	content := []byte("hello-find-size")
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sess := startRootWalk(context.Background(), root, WalkOptions{})
+	defer sess.Close()
+	var got int64
+	for batch := range sess.Results() {
+		for _, e := range batch {
+			if e.RelLine == "sized.txt" {
+				got = e.Size
+			}
+		}
+	}
+	<-sess.Done()
+	if got != 0 {
+		t.Fatalf("Size during walk = %d, want 0 (lazy stat on mark)", got)
 	}
 }

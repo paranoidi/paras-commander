@@ -61,9 +61,9 @@ const (
 	// mean "use this default," not "disable."
 	DefaultDiskUsageIdleSortDelayMS = 500
 
-	// DefaultFSWalkInitialWorkers is the starting concurrent directory branches for disk-usage walks.
+	// DefaultFSWalkInitialWorkers is the starting concurrent directory branches for disk-usage and find walks.
 	DefaultFSWalkInitialWorkers = 1
-	// DefaultFSWalkMaxWorkers caps adaptive walk concurrency for disk-usage walks.
+	// DefaultFSWalkMaxWorkers caps adaptive walk concurrency for disk-usage and find walks.
 	DefaultFSWalkMaxWorkers = 32
 	// DefaultFSWalkAdaptIntervalMS is the measure window for adaptive disk-usage walk worker tuning.
 	DefaultFSWalkAdaptIntervalMS = 800
