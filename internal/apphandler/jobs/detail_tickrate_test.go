@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -15,6 +16,17 @@ type tickrateHost struct {
 }
 
 func (h tickrateHost) AdjustJobsThroughputChartColumnMS(d int) { *h.deltas = append(*h.deltas, d) }
+
+// ActionFromKeyEvent mirrors the jobs overlay, which binds + / - to the rate-limit actions.
+func (tickrateHost) ActionFromKeyEvent(ev *tcell.EventKey) string {
+	switch ev.Rune() {
+	case '+':
+		return keymap.ActionJobsRateLimitIncrease
+	case '-':
+		return keymap.ActionJobsRateLimitDecrease
+	}
+	return ""
+}
 
 func TestDetailPaneTickrateKeys(t *testing.T) {
 	t.Parallel()
@@ -32,5 +44,30 @@ func TestDetailPaneTickrateKeys(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("deltas = %v, want %v", got, want)
 		}
+	}
+}
+
+// The overlay's rate-limit actions must not swallow + / - while Details has focus.
+func TestDetailPaneTickrateKeysThroughViewKey(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(100, 30)
+	var got []int
+	model := &ui.Model{}
+	h := New(Deps{Host: tickrateHost{deltas: &got}, Screen: screen, Model: model, State: jobs.NewState(), Config: config.Default()})
+	h.OpenJobsView()
+	model.JobsView.FocusPane = 1 // no blocker: list, Details, ...
+	if !h.DetailFocused() {
+		t.Fatal("Details not focused")
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModNone))
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRune, '-', tcell.ModNone))
+	step := config.ThroughputChartColumnMSLiveStep
+	if len(got) != 2 || got[0] != -step || got[1] != step {
+		t.Fatalf("deltas = %v, want [%d %d]", got, -step, step)
 	}
 }

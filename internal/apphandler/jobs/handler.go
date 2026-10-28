@@ -246,6 +246,9 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		}
 		return true
 	case keymap.ActionJobsRateLimitIncrease, keymap.ActionJobsRateLimitDecrease:
+		if h.model.ViewMode == ui.ViewJobs && h.DetailFocused() {
+			return false // let the key reach the Details pane's tickrate keys
+		}
 		if h.model.ViewMode != ui.ViewJobs || h.model.JobsView.FocusPane != 0 {
 			return true
 		}
