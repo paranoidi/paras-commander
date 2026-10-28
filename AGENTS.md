@@ -28,7 +28,7 @@ Tracked architecture, import, and state rules live in this file. Per-area agent 
 
 Recipes: adding a config option, keybinding, menu item, theme key, or dialog → follow `docs/agents/recipes/<add-config-option|add-keybinding|add-menu-item|add-theme-key|new-dialog>.md`.
 
-Leave compiled binary after running tests. Build with `CGO_ENABLED=0 go build -ldflags="-s -w" -o pc ./cmd/pc` — the binary must be named `pc`, not `paras-commander` (the module/repo directory name). Merge-ready verification is `golangci-lint run ./...` (v2.12.1) plus `go test -race ./...`, matching CI; `task test` is the fast non-race inner loop and `task verify` runs lint + race + that `pc` build.
+Leave compiled binary after running tests. Build with `CGO_ENABLED=0 go build -ldflags="-s -w" -o pc ./cmd/pc` — the binary must be named `pc`, not `paras-commander` (the module/repo directory name). Local verification is `golangci-lint run ./...` (v2.12.1) plus `go test ./...`; `task verify` runs lint + tests + that `pc` build. CI runs `go test -race ./...` (see Verification).
 
 When user request shortcut to be added it needs to be configurable in `keybindings.toml`. Check if requested shortcut works in terminal. Many shortcut combinations do not. If user requests a shortcut that is already taken in that context, choose a reasonable next best option and notify the user.
 
@@ -67,13 +67,15 @@ Whenever a field is added, removed, renamed, or its default/behavior changes in 
 
 # Verification
 
-Merge-ready (same as CI, plus the local artifact):
+Local gate:
 
 - `golangci-lint run ./...` with the repo `.golangci.yml` and **golangci-lint v2.12.1** (see https://golangci-lint.run/).
-- `go test -race ./...`
+- `go test ./...`
 - `CGO_ENABLED=0 go build -ldflags="-s -w" -o pc ./cmd/pc` (binary must be named `pc`)
 
-`task verify` runs that sequence. `task test` / `go test ./...` is the fast non-race inner loop only. `govulncheck` is optional and is not a merge requirement.
+`task verify` runs that sequence. `govulncheck` is optional and is not a merge requirement.
+
+The race suite (`go test -race ./...`, `task race`) is slow and runs in CI on every push and PR. Do not run it locally unless the user asks, or the change touches concurrency (goroutines, channels, mutexes, atomics, state shared across goroutines). Then run it scoped to the touched packages (`go test -race ./internal/<pkg>/...`), not `./...`.
 
 # File deletions
 
