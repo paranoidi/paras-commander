@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -159,5 +160,14 @@ func TestFindDialogSelectParentDirsNoSelection(t *testing.T) {
 	}
 	if host.transientMsg != "No selection" {
 		t.Fatalf("got message %q, want %q", host.transientMsg, "No selection")
+	}
+}
+
+func TestFindWalkParamsFromAdaptiveIO(t *testing.T) {
+	t.Parallel()
+	h := &Handler{}
+	h.config.AdaptiveIO = config.AdaptiveIOConfig{InitialWorkers: 3, MaxWorkers: 7, AdaptIntervalMS: 900}
+	if got, want := h.findWalkParams(), h.config.AdaptiveIO.Params(); got != want {
+		t.Fatalf("findWalkParams = %+v, want %+v", got, want)
 	}
 }

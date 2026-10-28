@@ -1,6 +1,7 @@
 package dedup
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -627,5 +628,24 @@ func TestSetCopiesCollapsed_noopInGroupsMode(t *testing.T) {
 	h.SetCopiesCollapsed(false)
 	if !model.DedupView.Main.Collapsed["d:plane"] {
 		t.Error("groups mode should not expand")
+	}
+}
+
+func TestOpenRootPassesAdaptiveIOToScan(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	var got comparepkg.DedupOptions
+	orig := startDedup
+	startDedup = func(ctx context.Context, root pathloc.Path, opts comparepkg.DedupOptions) *comparepkg.DedupSession {
+		got = opts
+		return orig(ctx, root, opts)
+	}
+	t.Cleanup(func() { startDedup = orig })
+
+	h := New(Deps{Host: &dedupHandlerHost{}, Model: &ui.Model{ViewMode: ui.ViewBrowser}})
+	h.config.AdaptiveIO = config.AdaptiveIOConfig{InitialWorkers: 3, MaxWorkers: 7, AdaptIntervalMS: 900}
+	h.openRoot(pathloc.MustParse(t.TempDir()), nil)
+	h.Close()
+	if want := h.config.AdaptiveIO.Params(); got.ReadWorkers != want {
+		t.Fatalf("ReadWorkers = %+v, want %+v", got.ReadWorkers, want)
 	}
 }
