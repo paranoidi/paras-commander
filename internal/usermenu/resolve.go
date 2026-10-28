@@ -7,20 +7,8 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/filetrust"
 )
-
-// MenuFileTrusted reports whether path is safe to load (MC menu_file_own semantics).
-// Owner must be root or current euid; file must not be group- or world-writable.
-func MenuFileTrusted(path string) bool {
-	st, err := os.Lstat(path)
-	if err != nil || st.IsDir() {
-		return false
-	}
-	if st.Mode().Perm()&0o022 != 0 {
-		return false
-	}
-	return fileOwnerTrusted(st)
-}
 
 func expandHome(p, home string) string {
 	p = filepath.Clean(strings.TrimSpace(p))
@@ -61,8 +49,8 @@ func ResolveMenuTOML(cfg config.Config, homeDir, configDir, panelPath string) (p
 		if _, err := os.Stat(cand); err != nil {
 			continue
 		}
-		if !MenuFileTrusted(cand) {
-			warnings = append(warnings, fmt.Sprintf("user menu: ignoring untrusted file %q", cand))
+		if why := filetrust.Check(cand); why != "" {
+			warnings = append(warnings, fmt.Sprintf("user menu: ignoring untrusted file %q: %s", cand, why))
 			continue
 		}
 		return cand, warnings
@@ -74,8 +62,8 @@ func ResolveMenuTOML(cfg config.Config, homeDir, configDir, panelPath string) (p
 	if _, err := os.Stat(global); err != nil {
 		return "", warnings
 	}
-	if !MenuFileTrusted(global) {
-		warnings = append(warnings, fmt.Sprintf("user menu: ignoring untrusted file %q", global))
+	if why := filetrust.Check(global); why != "" {
+		warnings = append(warnings, fmt.Sprintf("user menu: ignoring untrusted file %q: %s", global, why))
 		return "", warnings
 	}
 	return global, warnings

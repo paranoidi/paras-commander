@@ -36,7 +36,7 @@ The Commands view, command-output dialog, run-for-each dialog and batch backend 
 
 ## User menu (`app.user-menu`)
 
-Loads `menu.toml` per `[user_menu]` (`internal/usermenu`: resolve order, trusted-owner skip, `Decode` path-based table walker, `FilterVisible`/`EvalWhen`, macros). Opens the shared bottom leader-menu strip (`LeaderMenuState.UserMenu`; see [menus.md](menus.md)), not a modal.
+Loads `menu.toml` per `[user_menu]` (`internal/usermenu`: resolve order, untrusted-file skip via `internal/filetrust`, `Decode` path-based table walker, `FilterVisible`/`EvalWhen`, macros). Opens the shared bottom leader-menu strip (`LeaderMenuState.UserMenu`; see [menus.md](menus.md)), not a modal.
 
 - **Format**: entries are uniquely named TOML tables (`[pwd]`, `[tools.disk_use]`), not array-of-tables; display order is file order. A table with nested child tables instead of `command` is a **submenu** (mutually exclusive with `command`/`run_for_each`/`pool`/`toast`/`interactive`/`detach`/`background`/`dialog`/`pty`) and nests arbitrarily. The old `[[entry]]` syntax is rejected with a migration error.
 - **Load errors** are critical messages (`usermenu.ShortLoadError`): unknown fields, non-single-letter `key`, bad `when`, `run_for_each` without `%f`, `pty` without `run_for_each`, more than one `default = true` per level, unknown `pool`. A duplicate `key` within one level is not fatal: it goes to `MenuFile.Warnings`, the later entry falls back to an auto letter, and a warning toast shows every time a level is displayed.

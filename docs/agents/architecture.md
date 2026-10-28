@@ -13,6 +13,7 @@ Code map, package layout, twin-panel model, chrome/layout, transient messages, m
 - **Panel state**: `internal/panel`. **Fuzzy matching**: `internal/search`. **Theme**: `internal/theme` + `themes/*.toml` (`theming.md`).
 - **Rendering**: `internal/ui` (+ `internal/ui/menu` for menu definitions/state). `[ui].screen_render_hash_cache` skips redundant `screen.Show` when the logical frame is unchanged (`internal/ui/screen_hash.go`, `App.emitScreenAfterFullRender`).
 - **Status commands**: `internal/statuscmds` (`status.toml`), `internal/app/status_command.go` (tickers), `internal/app/status_commands_dialog.go` (Display → Status commands). See Menu bar row below.
+- **Config file trust**: `internal/filetrust` (`Check`) is the one rule for loading user-editable command files (`meta.toml`, `menu.toml`): regular file, owned by root or euid, not world-writable, group-writable only by the owner's private group (group name == owner's username).
 - **User menu / editor / shell**: `internal/usermenu`, `internal/app/user_menu.go`, `leader_menu.go` (see `menus.md`); `file.edit` via `internal/app/external_editor.go` + `internal/editor`; `app.drop-to-shell` via `internal/app/drop_to_shell.go` + `internal/shell`, which suspends/resumes through `withTerminalReleased` (not a PTY toggle). See `subshell.md`.
 
 ### Partial repaints must not overwrite overlays

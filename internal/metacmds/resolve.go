@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/filetrust"
 )
 
 // ResolveMetaGlobalPath returns the path to the user-wide meta.toml (may not exist).
@@ -34,8 +35,8 @@ func ResolveMetaTOML(cfg config.Config, homeDir, configDir, panelPath string) (p
 		if _, err := os.Stat(cand); err != nil {
 			continue
 		}
-		if !MetaFileTrusted(cand) {
-			warnings = append(warnings, fmt.Sprintf("meta: ignoring untrusted file %q", cand))
+		if why := filetrust.Check(cand); why != "" {
+			warnings = append(warnings, fmt.Sprintf("meta: ignoring untrusted file %q: %s", cand, why))
 			continue
 		}
 		return cand, warnings
@@ -47,24 +48,11 @@ func ResolveMetaTOML(cfg config.Config, homeDir, configDir, panelPath string) (p
 	if _, err := os.Stat(global); err != nil {
 		return "", warnings
 	}
-	if !MetaFileTrusted(global) {
-		warnings = append(warnings, fmt.Sprintf("meta: ignoring untrusted file %q", global))
+	if why := filetrust.Check(global); why != "" {
+		warnings = append(warnings, fmt.Sprintf("meta: ignoring untrusted file %q: %s", global, why))
 		return "", warnings
 	}
 	return global, warnings
-}
-
-// MetaFileTrusted reports whether path is safe to load.
-// Owner must be root or current euid; file must not be group- or world-writable.
-func MetaFileTrusted(path string) bool {
-	st, err := os.Lstat(path)
-	if err != nil || st.IsDir() {
-		return false
-	}
-	if st.Mode().Perm()&0o022 != 0 {
-		return false
-	}
-	return fileOwnerTrusted(st)
 }
 
 func expandHome(p, home string) string {

@@ -101,6 +101,11 @@ func (a *App) openUserMenu() {
 		a.setTransientMessage(w, ui.MessageUrgencyWarn)
 	}
 	if menuPath == "" {
+		if len(warns) > 0 {
+			// A menu.toml exists but was skipped (untrusted): leave the warning up rather than
+			// opening the editor on a file that would still be ignored afterwards.
+			return
+		}
 		path, err := a.ensureGlobalUserMenuStub()
 		if err != nil {
 			a.setErrorMessage("User menu", err)
