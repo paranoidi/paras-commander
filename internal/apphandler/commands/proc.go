@@ -4,6 +4,8 @@ import (
 	"os"
 	"syscall"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 )
 
 // procHandle lets terminateSelectedCommand/killSelectedCommand reach a running Commands-view
@@ -46,7 +48,7 @@ func (h *Handler) signalCommandRow(idx int, sig syscall.Signal) bool {
 		handle, ok := h.procs[idx]
 		h.procsMu.Unlock()
 		if ok && handle.proc != nil {
-			return syscall.Kill(-handle.proc.Pid, sig) == nil
+			return cmdrun.SignalGroup(handle.proc, sig) == nil
 		}
 		if time.Now().After(deadline) {
 			return false

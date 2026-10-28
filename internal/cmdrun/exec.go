@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -76,27 +75,7 @@ func RunTracked(ctx context.Context, argv, extraEnv []string, dir string, maxStr
 	// so a normal, already-finished command doesn't sit around waiting on a daemon
 	// that was never going to close the pipe.
 	cmd.WaitDelay = 200 * time.Millisecond
-	// New session so the child has no controlling terminal. Without this, interactive
-	// shells (e.g. bash -i) call tcsetpgrp() to grab the terminal and receive SIGTTOU,
-	// which suspends the child and sends the app to the background. Setsid also
-	// makes the child the process-group leader (pgid == pid); CommandContext's
-	// default Cancel only SIGKILLs that one pid, so a shell that already forked
-	// would leave descendants holding the pipes. Kill the group on ctx cancel
-	// (quit/rerun) so the wait cannot stall on an orphaned grandchild.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	cmd.Cancel = func() error {
-		if cmd.Process == nil {
-			return os.ErrProcessDone
-		}
-		err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		if err == nil || err == syscall.ESRCH {
-			if err == syscall.ESRCH {
-				return os.ErrProcessDone
-			}
-			return nil
-		}
-		return err
-	}
+	detachProcessGroup(cmd)
 
 	if live == nil {
 		live = &Live{}
