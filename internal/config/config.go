@@ -569,6 +569,9 @@ type JobsConfig struct {
 	// right column) or "bottom" (full width under Queue and Details). The jobs view toggles it
 	// for the session.
 	OperationsLayout string `toml:"operations_layout"`
+	// OperationsOrder sorts the jobs view Operations rows: "newest_first" (newest at the top)
+	// or "newest_last" (newest at the bottom, like a log).
+	OperationsOrder string `toml:"operations_order"`
 }
 
 type OperationsConfig struct {
@@ -737,6 +740,7 @@ func Default() Config {
 			OperationsMemoryRows:        DefaultJobsOperationsMemoryRows,
 			OperationsRefreshIntervalMS: DefaultJobsOperationsRefreshIntervalMS,
 			OperationsLayout:            DefaultJobsOperationsLayout,
+			OperationsOrder:             DefaultJobsOperationsOrder,
 		},
 		Operations: OperationsConfig{
 			ConfirmDelete:                true,
@@ -1287,6 +1291,12 @@ func (c *Config) validateJobs(builtin *Config) {
 		c.Jobs.OperationsLayout = strings.ToLower(strings.TrimSpace(c.Jobs.OperationsLayout))
 	default:
 		c.Jobs.OperationsLayout = DefaultJobsOperationsLayout
+	}
+	switch order := strings.ToLower(strings.TrimSpace(c.Jobs.OperationsOrder)); order {
+	case JobsOperationsOrderNewestFirst, JobsOperationsOrderNewestLast:
+		c.Jobs.OperationsOrder = order
+	default:
+		c.Jobs.OperationsOrder = DefaultJobsOperationsOrder
 	}
 	if c.Jobs.ProgressUIWakeDebounceMS <= 0 {
 		c.Jobs.ProgressUIWakeDebounceMS = builtin.Jobs.ProgressUIWakeDebounceMS

@@ -52,6 +52,9 @@ type opsState struct {
 	lastInputs opsInputs
 	lastBuilt  time.Time
 	trailing   sched.Debouncer
+	// lastDisplayTotal is the window's display row count at the last build, the base for
+	// keeping a scrolled viewport on its rows.
+	lastDisplayTotal int
 }
 
 // opsInputs is everything a user action changes about the Operations window. A change rebuilds
@@ -66,7 +69,8 @@ type opsInputs struct {
 }
 
 // RefreshOpsWindow prepares Model.JobsOpsWindow, the rows the Operations pane draws, for the
-// selected job and the view's filters and scroll. It runs on the UI thread every frame while
+// selected job and the view's filters and scroll. An unfocused pane is scrolled back to the
+// newest row; a focused one scrolled away from it stays on the same rows as new ones arrive. It runs on the UI thread every frame while
 // the jobs view is open and never blocks on disk: rows held in memory are copied directly,
 // rows only in a spill file and fuzzy matching run in goroutines that wake the UI when done.
 //
@@ -83,6 +87,10 @@ func (h *Handler) refreshOpsWindow(force bool) {
 		h.stopOpsWork()
 		return
 	}
+	st := &h.model.JobsView
+	if !h.operationsFocused() {
+		st.OpsScroll = 0 // an unfocused pane follows the newest rows
+	}
 	sel := h.selectedJobEntry()
 	win := ui.JobsOpsWindow{JobID: sel.ID}
 	if sel.Ops == nil {
@@ -90,32 +98,39 @@ func (h *Handler) refreshOpsWindow(force bool) {
 		h.ops.lastInputs = opsInputs{}
 		return
 	}
-	st := &h.model.JobsView
 	key := opsViewKey{log: sel.Ops, mask: st.OpsResultShown().Mask(), source: st.SelectedSource(h.model.JobsList), query: st.OpsFilter.Query, ci: h.model.JobsFilterCaseInsensitive}
 	win.Active = opsActiveLabel(sel, key)
-	rows := win.RecordRows(h.opsContentRows())
+	rows := h.opsContentRows()
 	inputs := opsInputs{jobID: sel.ID, key: key, ready: true, scroll: st.OpsScroll, rows: rows, active: win.Active}
 	if !force && h.opsThrottled(inputs) {
 		return
 	}
 	query := search.Parse(key.query)
 
-	var nums []uint32
+	var matches []uint32
 	if query.Empty() {
 		h.stopScan()
 		win.Total = key.log.ViewLen(key.mask, key.source)
-		st.OpsScroll = min(max(st.OpsScroll, 0), ui.JobsOpsMaxScroll(win.Total, rows))
-		nums = key.log.ViewNums(key.mask, key.source, st.OpsScroll, rows)
 	} else {
-		var matches []uint32
 		matches, win.Scanning = h.scanFor(key)
 		win.Total = len(matches)
-		st.OpsScroll = min(max(st.OpsScroll, 0), ui.JobsOpsMaxScroll(win.Total, rows))
-		for i := st.OpsScroll; i < st.OpsScroll+rows && i < win.Total; i++ {
+	}
+	// Rows only ever come and go at the newest edge, so a viewport scrolled away from it moves
+	// by the same count to keep showing the same rows.
+	if last := h.ops.lastInputs; st.OpsScroll > 0 && last.ready && last.jobID == sel.ID && last.key == key {
+		st.OpsScroll += win.DisplayTotal() - h.ops.lastDisplayTotal
+	}
+	st.OpsScroll = min(max(st.OpsScroll, 0), ui.JobsOpsMaxScroll(win.DisplayTotal(), rows))
+	offset, count := win.RecordSpan(st.OpsScroll, rows)
+	var nums []uint32
+	if query.Empty() {
+		nums = key.log.ViewNums(key.mask, key.source, offset, count)
+	} else {
+		for i := offset; i < offset+count && i < win.Total; i++ {
 			nums = append(nums, matches[win.Total-1-i])
 		}
 	}
-	win.Offset = st.OpsScroll
+	win.Offset = offset
 	recs, ok := key.log.RecordsInMemory(nums)
 	if !ok {
 		recs, ok = h.fetchFor(key.log, nums)
@@ -133,8 +148,8 @@ func (h *Handler) refreshOpsWindow(force bool) {
 		}
 	}
 	h.model.JobsOpsWindow = win
-	inputs.scroll = st.OpsScroll // after clamping, so the next frame sees the same inputs
-	h.ops.lastInputs, h.ops.lastBuilt = inputs, time.Now()
+	inputs.scroll = st.OpsScroll // after anchoring and clamping, so the next frame sees the same inputs
+	h.ops.lastInputs, h.ops.lastBuilt, h.ops.lastDisplayTotal = inputs, time.Now(), win.DisplayTotal()
 }
 
 // opsActiveLabel is the Operations label of the item job sel is working on now (worded like

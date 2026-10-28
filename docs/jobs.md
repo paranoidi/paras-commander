@@ -92,10 +92,12 @@ The current limit appears on the right side of the Queue panel's border
 # The Operations panel
 
 The Operations panel lists every item the selected job has processed, newest at
-the top. While the job is running, the item it is working on right now is
-pinned above them with the hard-disk icon (the one panel rows show while a job
-works on them); it is hidden while a fuzzy query or result filter narrows the
-list, or when a source row other than the active one is selected. Each
+the top. Set `operations_order = "newest_last"` under `[jobs]` in `config.toml`
+to list them the other way round, oldest first with the newest at the bottom
+like a log. While the job is running, the item it is working on right now is
+the newest row, marked with the hard-disk icon (the one panel rows show while a
+job works on them); it is hidden while a fuzzy query or result filter narrows
+the list, or when a source row other than the active one is selected. Each
 processed row starts with a result icon:
 
 - green: copied, moved, deleted or extracted;
@@ -108,6 +110,12 @@ processed row starts with a result icon:
 
 A row whose conflict was resolved with Delete source has its own icon instead
 of the skip icon; it still counts as skipped.
+
+The panel follows new rows as they arrive. Once you scroll away from the newest
+row in a focused Operations panel, the rows on screen stay put while the job
+adds more; scrolling back to the newest row (`Home`, or `End` with
+`newest_last`) follows again. Moving focus to another panel jumps back to the
+newest row.
 
 Files and symlinks are listed one per row. A directory gets a row only when it
 was skipped as a whole; a move lists each moved top-level item. When a retried

@@ -613,11 +613,34 @@ func (h *Handler) handleJobsMaximizedKey(event *tcell.EventKey) {
 }
 
 // scrollOperations scrolls the Operations pane (contentRows rows tall) by row within the
-// current view's row count.
+// current view's display rows. OpsScroll counts from the newest row, so with the newest row at
+// the bottom ([jobs].operations_order = "newest_last") the keys move the other way.
 func (h *Handler) scrollOperations(key tcell.Key, contentRows int) {
 	h.refreshOpsWindow(true)
-	win := h.model.JobsOpsWindow
-	scrollPane(key, &h.model.JobsView.OpsScroll, ui.JobsOpsMaxScroll(win.Total, win.RecordRows(contentRows)))
+	if h.model.JobsOpsNewestLast {
+		key = opsNewestLastKey(key)
+	}
+	scrollPane(key, &h.model.JobsView.OpsScroll, ui.JobsOpsMaxScroll(h.model.JobsOpsWindow.DisplayTotal(), contentRows))
+}
+
+// opsNewestLastKey maps a scroll key of a bottom-newest Operations pane to its newest-first
+// equivalent: Up moves away from the newest row, End returns to it.
+func opsNewestLastKey(key tcell.Key) tcell.Key {
+	switch key {
+	case tcell.KeyUp:
+		return tcell.KeyDown
+	case tcell.KeyDown:
+		return tcell.KeyUp
+	case tcell.KeyPgUp:
+		return tcell.KeyPgDn
+	case tcell.KeyPgDn:
+		return tcell.KeyPgUp
+	case tcell.KeyHome:
+		return tcell.KeyEnd
+	case tcell.KeyEnd:
+		return tcell.KeyHome
+	}
+	return key
 }
 
 func (h *Handler) jobsDetailLineCountForSelection() int {
@@ -656,9 +679,7 @@ func (h *Handler) toggleOperationsLayout() {
 	h.model.JobsOpsBottom = !h.model.JobsOpsBottom
 	h.clampJobsFocusPane()
 	h.scrollToSelection(h.model.JobsView.JobsListRows(h.model.JobsList))
-	h.refreshOpsWindow(true)
-	win := h.model.JobsOpsWindow
-	h.model.JobsView.OpsScroll = min(h.model.JobsView.OpsScroll, ui.JobsOpsMaxScroll(win.Total, win.RecordRows(h.opsContentRows())))
+	h.refreshOpsWindow(true) // clamps the Operations scroll to the new frame
 	label := "side"
 	if h.model.JobsOpsBottom {
 		label = "bottom"

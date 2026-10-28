@@ -80,8 +80,9 @@ type JobsViewState struct {
 	OpsScroll    int
 	// OpsResultHidden is the set of results the Operations pane hides (zero shows all; see
 	// OpsResultShown). OpsFilter holds the Operations fuzzy query; only its Query, Cursor and
-	// Editing are used (the jobs handler matches the operation log itself). OpsScroll is the
-	// newest-first display row at the top of the pane.
+	// Editing are used (the jobs handler matches the operation log itself). OpsScroll is how
+	// many display rows (JobsOpsWindow) lie between the newest one and the pane's newest edge:
+	// 0 follows new rows, more keeps the viewport on the same rows while Operations is focused.
 	OpsResultHidden dialog.JobResultFilter
 	OpsFilter       quickfilter.Filter
 	// ConflictButtonFocus is the focused button index in the blocker panel (JobsBlockerMaxButtonIndex).
@@ -125,6 +126,7 @@ type jobsViewRender struct {
 	UserHomeDir            string
 	ThroughputChartEnabled bool
 	OpsBottom              bool
+	OpsNewestLast          bool
 	RateLimitBPS           int64
 }
 
@@ -144,7 +146,7 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	}
 	rects := JobsViewLayout(layout, v.OpsBottom, sel, now, v.ThroughputChartEnabled)
 	if _, ok := jobsMaximizedPane(state, sel, rects); ok {
-		drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, win, sourceLabel, styles, chromeBlocked, true, true)
+		drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, win, sourceLabel, styles, chromeBlocked, true, true, v.OpsNewestLast)
 		return
 	}
 	drawJobsListPanel(screen, rects.List, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS)
@@ -155,7 +157,7 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	}
 	drawJobsDetailPanel(screen, rects.Detail, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, v.UserHomeDir, v.ThroughputChartEnabled)
 	if rects.Operations.Height > 0 {
-		drawJobsOperationsPanel(screen, rects.Operations, state, win, sourceLabel, styles, chromeBlocked, focused == JobsPaneOperations, false)
+		drawJobsOperationsPanel(screen, rects.Operations, state, win, sourceLabel, styles, chromeBlocked, focused == JobsPaneOperations, false, v.OpsNewestLast)
 	}
 }
 

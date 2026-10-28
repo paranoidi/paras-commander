@@ -620,6 +620,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			OtherPanelMatchMarks:       cfg.UI.OtherPanelMatchMarks,
 			JobsThroughputChartEnabled: cfg.Jobs.ThroughputChartEnabled,
 			JobsOpsBottom:              cfg.Jobs.OperationsLayout == config.JobsOperationsLayoutBottom,
+			JobsOpsNewestLast:          cfg.Jobs.OperationsOrder == config.JobsOperationsOrderNewestLast,
 			UserHomeDir:                homeDir,
 			DiskUsage:                  duEngine,
 			DiskUsageShown:             false,

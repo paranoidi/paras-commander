@@ -805,6 +805,69 @@ func TestJobsViewOperationsHomeEndScroll(t *testing.T) {
 	}
 }
 
+// TestOperationsScrolledViewportStaysWhileRowsArrive: scrolled away from the newest row, new
+// records keep the same rows on screen; at the newest edge the pane follows them; leaving the
+// pane returns it to the newest row.
+func TestOperationsScrolledViewportStaysWhileRowsArrive(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	fillOperations(t, h, 60)
+	h.refreshOpsWindow(true)
+	if top := model.JobsOpsWindow.Rows[0].Op.Label; top != "pebble-59.txt" {
+		t.Fatalf("top row = %q, want the newest record", top)
+	}
+	for range 3 {
+		h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	}
+	top := model.JobsOpsWindow.Rows[0].Op.Label
+	h.refreshOpsWindow(true)
+	if got := model.JobsOpsWindow.Rows[0].Op.Label; got != "pebble-56.txt" {
+		t.Fatalf("scrolled top row = %q (before refresh %q), want pebble-56.txt", got, top)
+	}
+	log := selectedOps(t, h)
+	log.Append(oplog.Record{Result: oplog.Done, Label: "pebble-60.txt"})
+	log.Append(oplog.Record{Result: oplog.Done, Label: "pebble-61.txt"})
+	h.refreshOpsWindow(true)
+	if got := model.JobsOpsWindow.Rows[0].Op.Label; got != "pebble-56.txt" || model.JobsView.OpsScroll != 5 {
+		t.Fatalf("after appends: top row %q, scroll %d; want pebble-56.txt at 5", got, model.JobsView.OpsScroll)
+	}
+
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
+	log.Append(oplog.Record{Result: oplog.Done, Label: "pebble-62.txt"})
+	h.refreshOpsWindow(true)
+	if got := model.JobsOpsWindow.Rows[0].Op.Label; got != "pebble-62.txt" {
+		t.Fatalf("at the newest edge: top row %q, want the new record", got)
+	}
+
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyPgDn, 0, tcell.ModNone))
+	model.JobsView.FocusPane = 0
+	h.refreshOpsWindow(false)
+	if model.JobsView.OpsScroll != 0 {
+		t.Fatalf("unfocused scroll = %d, want 0", model.JobsView.OpsScroll)
+	}
+}
+
+// TestOperationsNewestLastKeys: with the newest row at the bottom, Up moves away from it and End
+// returns to it.
+func TestOperationsNewestLastKeys(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	model.JobsOpsNewestLast = true
+	fillOperations(t, h, 60)
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	if model.JobsView.OpsScroll != 1 {
+		t.Fatalf("Up: scroll = %d, want 1", model.JobsView.OpsScroll)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
+	if model.JobsView.OpsScroll == 1 || model.JobsView.OpsScroll == 0 {
+		t.Fatalf("Home: scroll = %d, want the oldest rows", model.JobsView.OpsScroll)
+	}
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	if model.JobsView.OpsScroll != 0 {
+		t.Fatalf("End: scroll = %d, want 0", model.JobsView.OpsScroll)
+	}
+}
+
 func TestJobsViewOperationsFuzzyFilterKeys(t *testing.T) {
 	t.Parallel()
 	h, model, _ := newMaximizeTestHandler(t)

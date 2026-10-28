@@ -203,6 +203,12 @@ const (
 	// DefaultJobsOperationsLayout puts Operations across the full width below Queue and Details.
 	DefaultJobsOperationsLayout = JobsOperationsLayoutBottom
 
+	// Jobs view Operations pane row order TOML values for [jobs].operations_order.
+	JobsOperationsOrderNewestFirst = "newest_first"
+	JobsOperationsOrderNewestLast  = "newest_last"
+	// DefaultJobsOperationsOrder lists the newest Operations row at the top.
+	DefaultJobsOperationsOrder = JobsOperationsOrderNewestFirst
+
 	// DefaultFreeSpaceOnProgressWake schedules async statfs on both panels after each progress UI wake.
 	DefaultFreeSpaceOnProgressWake = true
 	// DefaultFreeSpacePollIntervalSecs is the period for background volume free-space refresh while jobs run (0 disables).

@@ -192,6 +192,9 @@ type Model struct {
 	// Details ([jobs].operations_layout = "bottom"; jobs.toggle-operations-layout flips it for
 	// the session).
 	JobsOpsBottom bool
+	// JobsOpsNewestLast lists the Operations rows oldest first, newest at the bottom
+	// ([jobs].operations_order = "newest_last").
+	JobsOpsNewestLast bool
 	// JobsTransferRateLimitBPS is the global transfer rate limit in bytes/sec (session-only,
 	// not persisted); 0 means unlimited and shows nothing on the Queue panel border.
 	JobsTransferRateLimitBPS int64
@@ -668,6 +671,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			UserHomeDir:            model.UserHomeDir,
 			ThroughputChartEnabled: model.JobsThroughputChartEnabled,
 			OpsBottom:              model.JobsOpsBottom,
+			OpsNewestLast:          model.JobsOpsNewestLast,
 			RateLimitBPS:           model.JobsTransferRateLimitBPS,
 		}, styles, now, chromeBlocked || model.JobsResultFilterDialog.Open)
 		if model.JobsResultFilterDialog.Open {

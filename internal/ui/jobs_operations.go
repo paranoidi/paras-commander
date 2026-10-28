@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -63,8 +64,10 @@ type JobOperationRow struct {
 
 // JobsOpsWindow is the part of the selected job's Operations rows the pane draws, prepared by
 // the jobs handler each frame (jobs.Handler.RefreshOpsWindow) so rendering never reads the
-// operation log or the disk. Rows are display rows Offset.., newest first; Total is the row
-// count of the current view (result filter and fuzzy query applied).
+// operation log or the disk. The pane's display rows are the active item (when Active is set)
+// followed by the records, newest first; JobsViewState.OpsScroll counts display rows from that
+// newest edge. Rows are the records Offset.. (record rows, not counting the active row); Total
+// is the record count of the current view (result filter and fuzzy query applied).
 type JobsOpsWindow struct {
 	JobID  string
 	Offset int
@@ -72,21 +75,35 @@ type JobsOpsWindow struct {
 	Rows   []JobOperationRow
 	// Scanning is set while a fuzzy query is still being matched against the log.
 	Scanning bool
-	// Active is the label of the item the job is working on now, drawn pinned above the rows
+	// Active is the label of the item the job is working on now, the newest display row, drawn
 	// with the job icon; empty when the pane shows none (jobs.Handler.RefreshOpsWindow).
 	Active string
 }
 
-// RecordRows is how many of a pane's contentRows rows show records: one fewer while the
-// active item takes the top row.
-func (w JobsOpsWindow) RecordRows(contentRows int) int {
+// activeRows is 1 while the active item takes display row 0, else 0.
+func (w JobsOpsWindow) activeRows() int {
 	if w.Active != "" {
-		return max(contentRows-1, 1)
+		return 1
 	}
-	return contentRows
+	return 0
 }
 
-// row returns display row i of the window; ok is false when it is outside the prepared rows.
+// DisplayTotal is the pane's display row count: the records plus the active row.
+func (w JobsOpsWindow) DisplayTotal() int {
+	return w.Total + w.activeRows()
+}
+
+// RecordSpan maps a viewport of rows display rows starting scroll rows from the newest edge to
+// the records it shows: the first record row and how many.
+func (w JobsOpsWindow) RecordSpan(scroll, rows int) (offset, count int) {
+	act := w.activeRows()
+	if scroll < act {
+		return 0, max(rows-act, 0)
+	}
+	return scroll - act, rows
+}
+
+// row returns record row i of the window; ok is false when it is outside the prepared rows.
 func (w JobsOpsWindow) row(i int) (JobOperationRow, bool) {
 	if i < w.Offset || i >= w.Offset+len(w.Rows) {
 		return JobOperationRow{}, false
@@ -97,16 +114,28 @@ func (w JobsOpsWindow) row(i int) (JobOperationRow, bool) {
 // jobOperationIconCols is the icon column width: a one-cell result icon and one space.
 const jobOperationIconCols = 2
 
-// JobsOpsMaxScroll is the largest Operations scroll offset for a pane of contentRows rows:
-// the pane scrolls by row, newest at the top.
+// JobsOpsMaxScroll is the largest Operations scroll offset for a pane of contentRows rows
+// showing total display rows: the pane scrolls by row away from the newest edge.
 func JobsOpsMaxScroll(total, contentRows int) int {
 	return max(0, total-max(contentRows, 1))
 }
 
-// drawJobsOperationsPanel draws the Operations pane from the prepared window: one row per item,
-// newest first, with a result icon and the active filters on the bottom border. wrap word-wraps
-// rows (maximized pane) instead of fitting them to one line; scrolling stays by row.
-func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState, win JobsOpsWindow, sourceLabel string, styles theme.Theme, chromeBlocked, focused, wrap bool) {
+// jobOperationLine is one screen line of the Operations pane: an optional one-cell icon and
+// the text after the icon column.
+type jobOperationLine struct {
+	icon      string
+	iconStyle tcell.Style
+	text      string
+	style     tcell.Style
+	spans     []primitive.Span
+}
+
+// drawJobsOperationsPanel draws the Operations pane from the prepared window: one row per item
+// with a result icon, the item in progress first, and the active filters on the bottom border.
+// Rows run newest first from the top, or with newestLast oldest first so the newest is the last
+// line (a short list stays at the top). wrap word-wraps rows (maximized pane) instead of
+// fitting them to one line; scrolling stays by row.
+func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState, win JobsOpsWindow, sourceLabel string, styles theme.Theme, chromeBlocked, focused, wrap, newestLast bool) {
 	f := state.OpsFilter
 	queryOpen := f.Query != "" || f.Editing
 	title := " Operations "
@@ -139,15 +168,7 @@ func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	textX := rect.X + 2
 	textW := max(rect.Width-4, 1)
-	if win.Active != "" {
-		drawJobsOperationActive(screen, textX, contentTop, textW, win.Active, styles, body, chromeBlocked)
-		contentTop++
-		contentH--
-		if contentH <= 0 || win.Total == 0 {
-			return
-		}
-	}
-	if win.Total == 0 {
+	if win.DisplayTotal() == 0 {
 		if contentH > 1 && !win.Scanning {
 			primitive.Text(screen, textX, contentTop+1, textW, styles.EmptyText(), styles.PanelEmptyStyle().Background(layout.ContentBG))
 		}
@@ -155,54 +176,88 @@ func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState
 	}
 	lineW := max(textW-jobOperationIconCols, 1)
 	matchStyle := styles.FuzzyHighlight.Background(layout.ContentBG)
-	y := contentTop
-	for i := min(max(state.OpsScroll, 0), JobsOpsMaxScroll(win.Total, contentH)); i < win.Total && y < contentTop+contentH; i++ {
-		r, ok := win.row(i)
-		if !ok || r.Pending {
-			primitive.Text(screen, textX+jobOperationIconCols, y, lineW, "…", styles.PanelEmptyStyle().Background(layout.ContentBG))
-			y++
-			continue
+	pending := styles.PanelEmptyStyle().Background(layout.ContentBG)
+
+	// Collect whole rows from the newest visible one until the pane is full.
+	var groups [][]jobOperationLine
+	lines := 0
+	for d := min(max(state.OpsScroll, 0), JobsOpsMaxScroll(win.DisplayTotal(), contentH)); d < win.DisplayTotal() && lines < contentH; d++ {
+		var g []jobOperationLine
+		if d < win.activeRows() {
+			g = []jobOperationLine{jobOperationActiveLine(win.Active, lineW, styles, body, chromeBlocked)}
+		} else if r, ok := win.row(d - win.activeRows()); !ok || r.Pending {
+			g = []jobOperationLine{{text: "…", style: pending}}
+		} else {
+			g = jobOperationRowLines(r, lineW, wrap, styles, body, matchStyle, chromeBlocked)
 		}
-		key := JobOperationResultKey(r.Op.Result)
-		resultStyle := body
-		if !chromeBlocked {
-			resultStyle = styles.JobsOperationOn(key, body)
+		groups = append(groups, g)
+		lines += len(g)
+	}
+	if newestLast {
+		slices.Reverse(groups)
+	}
+	var out []jobOperationLine
+	for _, g := range groups {
+		out = append(out, g...)
+	}
+	if len(out) > contentH {
+		if newestLast {
+			out = out[len(out)-contentH:] // keep the newest row whole at the bottom
+		} else {
+			out = out[:contentH]
 		}
-		primitive.Text(screen, textX, y, 1, styles.IconJobsOperation(r.Op.IconKey()), resultStyle)
-		if wrap {
-			for li, part := range WrapTextLines(r.Op.Text(), lineW) {
-				if y >= contentTop+contentH {
-					break
-				}
-				var spans []primitive.Span
-				if li == 0 && part == r.Op.Text() && !chromeBlocked {
-					spans = jobOperationSpans(r, utf8.RuneCountInString(r.Op.Label), true, part, matchStyle, resultStyle)
-				}
-				primitive.StyledText(screen, textX+jobOperationIconCols, y, lineW, part, body, spans)
-				y++
-			}
-			continue
+	}
+	for i, l := range out {
+		y := contentTop + i
+		if l.icon != "" {
+			primitive.Text(screen, textX, y, 1, l.icon, l.iconStyle)
 		}
-		text, labelEnd, labelWhole := fitJobOperation(r.Op, lineW)
-		var spans []primitive.Span
-		if !chromeBlocked {
-			spans = jobOperationSpans(r, labelEnd, labelWhole, text, matchStyle, resultStyle)
-		}
-		primitive.StyledText(screen, textX+jobOperationIconCols, y, lineW, text, body, spans)
-		y++
+		primitive.StyledText(screen, textX+jobOperationIconCols, y, lineW, l.text, l.style, l.spans)
 	}
 }
 
-// drawJobsOperationActive draws the pinned row of the item the job is working on: the running
-// status icon (icons.jobs.list.running, as in the queue) and its path-fitted label.
-func drawJobsOperationActive(screen tcell.Screen, x, y, w int, label string, styles theme.Theme, body tcell.Style, chromeBlocked bool) {
+// jobOperationActiveLine is the row of the item the job is working on: the running status icon
+// (icons.jobs.list.running, as in the queue) and its path-fitted label.
+func jobOperationActiveLine(label string, lineW int, styles theme.Theme, body tcell.Style, chromeBlocked bool) jobOperationLine {
 	iconStyle := body
 	if !chromeBlocked {
 		iconStyle = styles.JobsIconStyleOn("running", body)
 	}
-	primitive.Text(screen, x, y, 1, styles.IconJobsList("running"), iconStyle)
-	lineW := max(w-jobOperationIconCols, 1)
-	primitive.Text(screen, x+jobOperationIconCols, y, lineW, primitive.FitPathForWidth(label, lineW), body)
+	return jobOperationLine{icon: styles.IconJobsList("running"), iconStyle: iconStyle, text: primitive.FitPathForWidth(label, lineW), style: body}
+}
+
+// jobOperationRowLines is a record row's lines: one fitted line, or with wrap its word-wrapped
+// text, the result icon on the first.
+func jobOperationRowLines(r JobOperationRow, lineW int, wrap bool, styles theme.Theme, body, matchStyle tcell.Style, chromeBlocked bool) []jobOperationLine {
+	resultStyle := body
+	if !chromeBlocked {
+		resultStyle = styles.JobsOperationOn(JobOperationResultKey(r.Op.Result), body)
+	}
+	first := jobOperationLine{icon: styles.IconJobsOperation(r.Op.IconKey()), iconStyle: resultStyle, style: body}
+	if !wrap {
+		text, labelEnd, labelWhole := fitJobOperation(r.Op, lineW)
+		first.text = text
+		if !chromeBlocked {
+			first.spans = jobOperationSpans(r, labelEnd, labelWhole, text, matchStyle, resultStyle)
+		}
+		return []jobOperationLine{first}
+	}
+	var out []jobOperationLine
+	for li, part := range WrapTextLines(r.Op.Text(), lineW) {
+		l := jobOperationLine{text: part, style: body}
+		if li == 0 {
+			l = first
+			l.text = part
+			if part == r.Op.Text() && !chromeBlocked {
+				l.spans = jobOperationSpans(r, utf8.RuneCountInString(r.Op.Label), true, part, matchStyle, resultStyle)
+			}
+		}
+		out = append(out, l)
+	}
+	if len(out) == 0 {
+		out = append(out, first)
+	}
+	return out
 }
 
 // jobOperationSpans highlights a row's fuzzy matches (only on an unshortened label) and colors

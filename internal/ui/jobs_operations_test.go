@@ -45,7 +45,7 @@ func TestDrawJobsOperationsPanelRowsAndFilterLabel(t *testing.T) {
 	}}
 	st := JobsViewState{OpsResultHidden: dialog.JobResultSuccess}
 	st.OpsFilter.Query = "quarry"
-	drawJobsOperationsPanel(screen, rect, st, win, "", theme.Default(), false, true, false)
+	drawJobsOperationsPanel(screen, rect, st, win, "", theme.Default(), false, true, false, false)
 
 	if top := screenRowText(screen, rect, rect.Y); !strings.HasPrefix(top, "┌─> quarry ") || strings.Contains(top, "Operations") {
 		t.Fatalf("top border = %q, want the query at the top left in place of the title", top)
@@ -66,7 +66,7 @@ func TestDrawJobsOperationsPanelPendingAndScanning(t *testing.T) {
 	win := JobsOpsWindow{JobID: "copy-1", Total: 2, Scanning: true, Rows: []JobOperationRow{{Pending: true}, {Pending: true}}}
 	var st JobsViewState
 	st.OpsFilter.Query = "lantern"
-	drawJobsOperationsPanel(screen, rect, st, win, "", theme.Default(), false, true, false)
+	drawJobsOperationsPanel(screen, rect, st, win, "", theme.Default(), false, true, false, false)
 	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, "…") {
 		t.Fatalf("pending row = %q, want a placeholder", row)
 	}
@@ -84,7 +84,7 @@ func TestDrawJobsOperationsPanelQueryNoMatchAndCaret(t *testing.T) {
 	var st JobsViewState
 	st.OpsFilter.Query, st.OpsFilter.Cursor, st.OpsFilter.Editing = "fern", 4, true
 	styles := theme.Default()
-	drawJobsOperationsPanel(screen, rect, st, JobsOpsWindow{JobID: "copy-1"}, "", styles, false, true, false)
+	drawJobsOperationsPanel(screen, rect, st, JobsOpsWindow{JobID: "copy-1"}, "", styles, false, true, false, false)
 	if _, style, _ := screen.Get(rect.X+2, rect.Y); style != styles.FuzzyInputNomatch {
 		t.Fatal("a query matching nothing must use the no-match style")
 	}
@@ -182,7 +182,7 @@ func TestDrawJobsOperationsPanelSourceDeletedIcon(t *testing.T) {
 		{Op: JobOperation{Result: oplog.Skipped, Label: "harbor/meadow.txt", Reason: ops.ReasonSourceDeleted}}, // the reason text alone is not the outcome
 	}}
 	th := theme.Default()
-	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false)
+	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false, false)
 
 	for i, want := range []string{th.IconJobsOperation(theme.JobsOperationSourceDeleted), th.IconJobsOperation(theme.JobsOperationSkipped)} {
 		if row := screenRowText(screen, rect, rect.Y+1+i); !strings.Contains(row, want) {
@@ -194,8 +194,8 @@ func TestDrawJobsOperationsPanelSourceDeletedIcon(t *testing.T) {
 	}
 }
 
-// TestDrawJobsOperationsPanelActiveRow: the item being worked on is pinned on the top row with
-// the job icon, and the records start one row lower.
+// TestDrawJobsOperationsPanelActiveRow: the item being worked on is the newest row, drawn with
+// the job icon above the records, and it scrolls away with them.
 func TestDrawJobsOperationsPanelActiveRow(t *testing.T) {
 	screen := newOpsScreen(t)
 	rect := Rect{X: 0, Y: 0, Width: 70, Height: 8}
@@ -203,7 +203,7 @@ func TestDrawJobsOperationsPanelActiveRow(t *testing.T) {
 		{Op: JobOperation{Result: oplog.Done, Label: "harbor/lantern.txt"}},
 	}}
 	th := theme.Default()
-	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false)
+	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false, false)
 
 	if row := screenRowText(screen, rect, rect.Y+1); !strings.Contains(row, th.IconJobsList("running")+" harbor/willow.bin") {
 		t.Fatalf("top row = %q, want the job icon and the active item", row)
@@ -211,7 +211,74 @@ func TestDrawJobsOperationsPanelActiveRow(t *testing.T) {
 	if row := screenRowText(screen, rect, rect.Y+2); !strings.Contains(row, "harbor/lantern.txt") {
 		t.Fatalf("second row = %q, want the newest record", row)
 	}
-	if got := win.RecordRows(6); got != 5 {
-		t.Fatalf("RecordRows = %d, want 5", got)
+	if got := win.DisplayTotal(); got != 2 {
+		t.Fatalf("DisplayTotal = %d, want 2", got)
+	}
+	if off, n := win.RecordSpan(0, 6); off != 0 || n != 5 {
+		t.Fatalf("RecordSpan(0, 6) = %d, %d, want 0, 5", off, n)
+	}
+	if off, n := win.RecordSpan(3, 6); off != 2 || n != 6 {
+		t.Fatalf("RecordSpan(3, 6) = %d, %d, want 2, 6", off, n)
+	}
+}
+
+// opsWindowOf builds a window of n done records named by words, newest first, from record row
+// offset on, with total records in the view.
+func opsWindowOf(active string, total, offset int, words ...string) JobsOpsWindow {
+	win := JobsOpsWindow{JobID: "copy-1", Total: total, Offset: offset, Active: active}
+	for _, w := range words {
+		win.Rows = append(win.Rows, JobOperationRow{Op: JobOperation{Result: oplog.Done, Label: "orchard/" + w + ".txt"}})
+	}
+	return win
+}
+
+// TestDrawJobsOperationsPanelScrolledHidesActive: scrolled away from the newest row, the active
+// item is out of view instead of pinned on top.
+func TestDrawJobsOperationsPanelScrolledHidesActive(t *testing.T) {
+	screen := newOpsScreen(t)
+	rect := Rect{X: 0, Y: 0, Width: 70, Height: 5} // 3 content rows
+	win := opsWindowOf("orchard/kettle.bin", 5, 1, "pebble", "thistle", "marble")
+	st := JobsViewState{OpsScroll: 2}
+	drawJobsOperationsPanel(screen, rect, st, win, "", theme.Default(), false, true, false, false)
+	for i, want := range []string{"orchard/pebble.txt", "orchard/thistle.txt", "orchard/marble.txt"} {
+		if row := screenRowText(screen, rect, rect.Y+1+i); !strings.Contains(row, want) {
+			t.Fatalf("row %d = %q, want %q", i, row, want)
+		}
+	}
+}
+
+// TestDrawJobsOperationsPanelNewestLast: rows run oldest first with the active item last, and a
+// short list stays at the top.
+func TestDrawJobsOperationsPanelNewestLast(t *testing.T) {
+	screen := newOpsScreen(t)
+	rect := Rect{X: 0, Y: 0, Width: 70, Height: 8} // 6 content rows
+	th := theme.Default()
+	win := opsWindowOf("orchard/kettle.bin", 2, 0, "pebble", "thistle")
+	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", th, false, true, false, true)
+	for i, want := range []string{"orchard/thistle.txt", "orchard/pebble.txt", th.IconJobsList("running") + " orchard/kettle.bin"} {
+		if row := screenRowText(screen, rect, rect.Y+1+i); !strings.Contains(row, want) {
+			t.Fatalf("row %d = %q, want %q", i, row, want)
+		}
+	}
+	if row := screenRowText(screen, rect, rect.Y+4); strings.TrimSpace(strings.Trim(row, "│")) != "" {
+		t.Fatalf("row 3 = %q, want empty below the newest row", row)
+	}
+}
+
+// TestDrawJobsOperationsPanelNewestLastWrapKeepsNewestWhole: in a full wrapped pane the newest
+// row is whole on the last lines and the oldest row is cut at the top.
+func TestDrawJobsOperationsPanelNewestLastWrapKeepsNewestWhole(t *testing.T) {
+	screen := newOpsScreen(t)
+	rect := Rect{X: 0, Y: 0, Width: 20, Height: 5} // 3 content rows, 14 text columns
+	win := JobsOpsWindow{JobID: "copy-1", Total: 2, Rows: []JobOperationRow{
+		{Op: JobOperation{Result: oplog.Failed, Label: "meadow/a.txt", Reason: "denied"}},
+		{Op: JobOperation{Result: oplog.Failed, Label: "meadow/b.txt", Reason: "denied"}},
+	}}
+	drawJobsOperationsPanel(screen, rect, JobsViewState{}, win, "", theme.Default(), false, true, true, true)
+	if row := screenRowText(screen, rect, rect.Y+2); !strings.Contains(row, "meadow/a.txt") {
+		t.Fatalf("row 1 = %q, want the newest row's first line", row)
+	}
+	if row := screenRowText(screen, rect, rect.Y+3); !strings.Contains(row, "denied") {
+		t.Fatalf("row 2 = %q, want the newest row's reason", row)
 	}
 }

@@ -1063,6 +1063,24 @@ func TestValidateClampsJobsOperationsRefreshInterval(t *testing.T) {
 	}
 }
 
+func TestValidateNormalizesJobsOperationsOrder(t *testing.T) {
+	for in, want := range map[string]string{
+		" Newest_Last ": JobsOperationsOrderNewestLast,
+		"newest_first":  JobsOperationsOrderNewestFirst,
+		"sideways":      DefaultJobsOperationsOrder,
+		"":              DefaultJobsOperationsOrder,
+	} {
+		cfg := Default()
+		cfg.Jobs.OperationsOrder = in
+		if err := cfg.Validate(); err != nil {
+			t.Fatalf("Validate(%q): %v", in, err)
+		}
+		if cfg.Jobs.OperationsOrder != want {
+			t.Fatalf("operations_order %q = %q, want %q", in, cfg.Jobs.OperationsOrder, want)
+		}
+	}
+}
+
 func TestValidateNormalizesJobsOperationsLayout(t *testing.T) {
 	for in, want := range map[string]string{
 		" Bottom ": JobsOperationsLayoutBottom,
