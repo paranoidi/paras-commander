@@ -113,7 +113,7 @@ Same persistent PTY shell as `app.drop-to-shell`, drawn above the footer (`geom.
 
 ## Menu system
 
-- Definitions/state in `internal/ui/menu`, rendering in `internal/ui`. `app.open-menu` opens the bar; Enter/Down opens a pulldown; Esc steps pulldown -> bar -> normal; Alt+letter jumps to a top-level menu. Item mnemonic rules and add-item steps: `recipes/add-menu-item.md`.
+- Definitions/state in `internal/ui/menu`, rendering in `internal/ui`. `app.open-menu` opens the bar; Enter/Down opens a pulldown; Esc steps pulldown -> bar -> normal; Alt+letter jumps to a top-level menu; on the focused bar a plain letter opens it. A `Definition` with `MenuBarOnly` (Display, whose Alt+D belongs to disk-usage chords) takes only the plain letter. Item mnemonic rules and add-item steps: `recipes/add-menu-item.md`.
 - Pulldown `KeyLabel`s come from the loaded keymap (`menu.ApplyMenuKeyLabels` -> `keymap.Map.MenuBindingLabel`). Definitions: `menu.BrowserDefinitions`, `JobsDefinitions`, `CommandsDefinitions` (`ApplyCommandsMenuKeyLabels`), `MessagesDefinitions` (`ApplyMessagesMenuKeyLabels`). Jobs/Commands/Messages also carry the shared Display pulldown (`menu.DisplayDefinition`); their global open chords work there via `App.tryDispatchAuxiliaryScreens`.
 - Dev menu (`pc -dev`): `menu.DevDefinition` (top shortcut `v`) with `dev.show-info/warn/error/success` test toasts plus `dev.show-long-*` variants (wrap in the Messages log, clip on the banner) via `setTransientMessage`; menu-only actions, not in `keybindings.toml`.
 - Unsupported items close the menu and show a concise "not implemented" message (e.g. `menu.file.*` chattr stub).

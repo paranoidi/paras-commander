@@ -231,6 +231,23 @@ func TestMenuShortcutCopyOpensTransferDialog(t *testing.T) {
 	}
 }
 
+func TestMenuBarLetterOpensDisplayButAltDoesNot(t *testing.T) {
+	t.Parallel()
+	app := testAppMinimal(t)
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
+	menus := menu.ActiveDefinitions(app.model.MenuDefinitions)
+	if !app.model.Menu.PulldownOpen || menus[app.model.Menu.ActiveMenu].ID != menu.TopDisplay {
+		t.Fatal("plain d on the menu bar should open the Display pulldown")
+	}
+
+	app.closeMenu()
+	if app.openMenuByShortcut('d') {
+		t.Fatal("Alt+D must not open the Display menu")
+	}
+}
+
 func TestQuitImmediateSkipsConfirmation(t *testing.T) {
 	t.Parallel()
 	app := testAppMinimal(t)

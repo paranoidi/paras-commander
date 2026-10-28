@@ -92,7 +92,7 @@ func (a *App) handleMenuKey(event *tcell.EventKey) bool {
 		} else {
 			// Menu bar active (no pulldown): plain letters open the matching
 			// top menu's pulldown. Pulldown item shortcuts are not active here.
-			if a.openMenuByShortcut(event.Rune()) {
+			if a.openMenuByMenuBarLetter(event.Rune()) {
 				a.model.Menu.PulldownOpen = true
 			}
 		}
@@ -113,18 +113,35 @@ func (a *App) openMenu() {
 	a.model.Menu.SelectedItem = 0
 }
 
+// openMenuByShortcut opens the top menu whose Alt+letter shortcut matches.
 func (a *App) openMenuByShortcut(shortcut rune) bool {
+	return a.openTopMenuByShortcut(shortcut, true)
+}
+
+// openMenuByMenuBarLetter opens the top menu whose letter matches while the menu bar is active.
+func (a *App) openMenuByMenuBarLetter(shortcut rune) bool {
+	return a.openTopMenuByShortcut(shortcut, false)
+}
+
+func (a *App) openTopMenuByShortcut(shortcut rune, alt bool) bool {
 	if a.model.ViewMode == ui.ViewFilePreview {
 		return false
 	}
 	menus := menu.ActiveDefinitions(a.model.MenuDefinitions)
 	for index, def := range menus {
-		if def.Shortcut != 0 && unicode.ToLower(def.Shortcut) == unicode.ToLower(shortcut) {
+		if topMenuShortcutMatches(def, shortcut, alt) {
 			a.openMenuAt(index)
 			return true
 		}
 	}
 	return false
+}
+
+func topMenuShortcutMatches(def menu.Definition, shortcut rune, alt bool) bool {
+	if def.Shortcut == 0 || (alt && def.MenuBarOnly) {
+		return false
+	}
+	return unicode.ToLower(def.Shortcut) == unicode.ToLower(shortcut)
 }
 
 // openMenuAt opens top menu index with its pulldown, on its first selectable item.
@@ -321,7 +338,7 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 func (a *App) selectTopMenuShortcut(shortcut rune) bool {
 	menus := menu.ActiveDefinitions(a.model.MenuDefinitions)
 	for index, def := range menus {
-		if def.Shortcut != 0 && unicode.ToLower(def.Shortcut) == unicode.ToLower(shortcut) && index != a.model.Menu.ActiveMenu {
+		if topMenuShortcutMatches(def, shortcut, true) && index != a.model.Menu.ActiveMenu {
 			a.model.Menu.ActiveMenu = index
 			a.model.Menu.SelectedItem = firstSelectableMenuItem(menus[index])
 			return true

@@ -30,7 +30,10 @@ type Definition struct {
 	PanelScope int // PanelScopeNone, or PanelScopePrimary / PanelScopeSecondary
 	Label      string
 	Shortcut   rune
-	Items      []Item
+	// MenuBarOnly limits Shortcut to the open menu bar (plain letter); Alt+Shortcut does not
+	// open this menu, leaving the Alt chord to other actions.
+	MenuBarOnly bool
+	Items       []Item
 }
 
 // ActiveDefinitions returns defs if non-empty, otherwise the built-in defaults.

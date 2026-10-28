@@ -9,8 +9,7 @@ import (
 
 func TestMenuDefinitionsHaveShortcutKeys(t *testing.T) {
 	for _, menu := range Definitions() {
-		// Display has no Alt shortcut on purpose: Alt+D belongs to disk-usage chords.
-		if menu.Shortcut == 0 && menu.ID != TopDisplay {
+		if menu.Shortcut == 0 {
 			t.Fatalf("menu %q has no shortcut", menu.Label)
 		}
 	}
@@ -459,8 +458,9 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 			if display == nil {
 				t.Fatalf("%s view menus missing Display", name)
 			}
-			if display.Shortcut != 0 {
-				t.Fatalf("Display shortcut = %q, want none", display.Shortcut)
+			// Alt+D belongs to disk-usage chords, so Display's letter works only from the menu bar.
+			if display.Shortcut != 'd' || !display.MenuBarOnly {
+				t.Fatalf("Display shortcut = %q MenuBarOnly=%v, want 'd' menu-bar only", display.Shortcut, display.MenuBarOnly)
 			}
 			assertMenuItemKeyLabels(t, display, map[string]string{
 				"Commands":   "M-c",
