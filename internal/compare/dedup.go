@@ -162,6 +162,9 @@ type DedupOptions struct {
 	// a file can be dropped as soon as its prefix diverges from every other file
 	// in its partition. Zero or negative disables chunking (whole file in one round).
 	ChunkBytes int64
+	// MaxOpenFiles caps candidates kept open between rounds (the rest reopen
+	// and seek each round). Zero uses config.DedupMaxOpenFiles.
+	MaxOpenFiles int
 	// FirstChunkBytes is the first round's read; each later round doubles it up
 	// to ChunkBytes, so files differing near the start bail after a small read.
 	// Zero or negative (or above ChunkBytes) starts at ChunkBytes; ignored when
@@ -430,10 +433,13 @@ func (s *DedupSession) run(ctx context.Context) {
 		pubMu.Unlock()
 	}
 
+	readers := newCandidateReaders(len(candidates), s.opts.MaxOpenFiles)
+
 	// resolve retires a candidate (EOF, early bail, or read error). Charging the
 	// full size even for bailed/errored files keeps HashedBytes monotonic and
 	// reaching HashBytesTotal; skipped bytes just jump the bar forward.
 	resolve := func(idx int) {
+		readers.close(idx)
 		pubMu.Lock()
 		delete(inProgress, idx)
 		doneFiles++
@@ -472,6 +478,11 @@ func (s *DedupSession) run(ctx context.Context) {
 			inProgress[idx] = 0
 		}
 		pubMu.Unlock()
+		defer func() { // canceled mid-group: release kept readers
+			for _, idx := range group {
+				readers.close(idx)
+			}
+		}()
 		stack := []partition{{idxs: group, chunk: first}}
 		for len(stack) > 0 {
 			if ctx.Err() != nil {
@@ -504,8 +515,14 @@ func (s *DedupSession) run(ctx context.Context) {
 					defer sem.Release()
 					buf := bufPool.Get().(*[]byte)
 					defer bufPool.Put(buf)
+					rc, done, err := readers.get(ctx, idx, candidates[idx].Abs, p.offset)
+					if err != nil {
+						resolve(idx) // unreadable: drop it, keep comparing the rest
+						return
+					}
+					defer done()
 					var reported int64
-					err := hashChunk(ctx, candidates[idx].Abs, hashers[idx], *buf, p.offset, end-p.offset, func(read int64) {
+					err = hashChunk(ctx, rc, hashers[idx], *buf, end-p.offset, func(read int64) {
 						adapt.Add(read - reported)
 						reported = read
 						pubMu.Lock()
@@ -605,23 +622,75 @@ func (s *DedupSession) run(ctx context.Context) {
 	})
 }
 
-// hashChunk feeds bytes [offset, offset+n) of loc into h, reporting cumulative
-// bytes read within the chunk via onRead after every buffer read.
-func hashChunk(ctx context.Context, loc pathloc.Path, h hash.Hash, buf []byte, offset, n int64, onRead func(read int64)) error {
+// dedupOpen opens a hash candidate for a round; tests swap it to count opens.
+var dedupOpen = openAt
+
+// candidateReaders keeps a candidate's reader open between hashing rounds, so a
+// round continues where the last one stopped instead of reopening (an SFTP open
+// is several round trips). At most max stay open; others reopen and seek each
+// round. Slot idx is only touched by the goroutine owning idx's size group.
+type candidateReaders struct {
+	open []io.ReadSeekCloser
+	kept atomic.Int64
+	max  int64
+}
+
+func newCandidateReaders(n, maxOpen int) *candidateReaders {
+	if maxOpen <= 0 {
+		maxOpen = config.DedupMaxOpenFiles
+	}
+	return &candidateReaders{open: make([]io.ReadSeekCloser, n), max: int64(maxOpen)}
+}
+
+// get returns idx's reader positioned at offset, opening it if it is not kept.
+// done closes a reader that could not be kept; call it after the round's read.
+func (r *candidateReaders) get(ctx context.Context, idx int, loc pathloc.Path, offset int64) (io.ReadSeekCloser, func(), error) {
+	if rc := r.open[idx]; rc != nil {
+		return rc, func() {}, nil
+	}
+	rc, err := dedupOpen(ctx, loc, offset)
+	if err != nil {
+		return nil, nil, err
+	}
+	if r.kept.Add(1) <= r.max {
+		r.open[idx] = rc
+		return rc, func() {}, nil
+	}
+	r.kept.Add(-1)
+	return rc, func() { _ = rc.Close() }, nil
+}
+
+// close releases idx's kept reader, if any.
+func (r *candidateReaders) close(idx int) {
+	if rc := r.open[idx]; rc != nil {
+		_ = rc.Close()
+		r.open[idx] = nil
+		r.kept.Add(-1)
+	}
+}
+
+// openAt opens loc positioned at offset.
+func openAt(ctx context.Context, loc pathloc.Path, offset int64) (io.ReadSeekCloser, error) {
 	be, err := fsbackend.Default().Backend(loc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	rc, err := be.OpenRead(ctx, loc)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer func() { _ = rc.Close() }()
 	if offset > 0 {
 		if _, err := rc.Seek(offset, io.SeekStart); err != nil {
-			return err
+			_ = rc.Close()
+			return nil, err
 		}
 	}
+	return rc, nil
+}
+
+// hashChunk feeds the next n bytes of rc into h, reporting cumulative bytes
+// read within the chunk via onRead after every buffer read.
+func hashChunk(ctx context.Context, rc io.Reader, h hash.Hash, buf []byte, n int64, onRead func(read int64)) error {
 	var read int64
 	for read < n {
 		if ctx.Err() != nil {

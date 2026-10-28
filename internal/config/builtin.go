@@ -149,6 +149,10 @@ const (
 	// DedupReadAdaptIntervalMS is the measure window for find-duplicates read
 	// concurrency tuning.
 	DedupReadAdaptIntervalMS = 500
+	// DedupMaxOpenFiles caps how many find-duplicates candidates stay open
+	// between hashing rounds; past it, a candidate is reopened (and seeked)
+	// each round. Keeps fd and SFTP handle use bounded on huge size groups.
+	DedupMaxOpenFiles = 512
 
 	// DefaultCompareChunkBytes caps how many bytes of each same-size file one
 	// find-duplicates round hashes, dropping a file once its prefix diverges

@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -868,24 +870,59 @@ func TestDedupGrowingChunksAcrossRounds(t *testing.T) {
 	writeFile(t, dir, "e/third.bin", diverge(20))
 	writeFile(t, dir, "f/last.bin", diverge(46))
 
-	snap := runDedup(t, dir, DedupOptions{
-		ReadWorkers:     fixedWorkers(3),
-		ChunkBytes:      16,
-		FirstChunkBytes: 4,
-	})
+	// MaxOpenFiles 0 keeps every candidate open across rounds; 1 keeps one and
+	// reopens (seeking to the round's offset) the rest.
+	for _, maxOpen := range []int{0, 1} {
+		t.Run(fmt.Sprintf("max_open_%d", maxOpen), func(t *testing.T) {
+			var opens atomic.Int32
+			dedupOpen = func(ctx context.Context, loc pathloc.Path, offset int64) (io.ReadSeekCloser, error) {
+				opens.Add(1)
+				return openAt(ctx, loc, offset)
+			}
+			t.Cleanup(func() { dedupOpen = openAt })
+			fdsBefore := openFDs(t)
+			snap := runDedup(t, dir, DedupOptions{
+				ReadWorkers:     fixedWorkers(3),
+				ChunkBytes:      16,
+				FirstChunkBytes: 4,
+				MaxOpenFiles:    maxOpen,
+			})
 
-	if snap.Phase != DedupDone {
-		t.Fatalf("phase = %v (err %q), want DedupDone", snap.Phase, snap.Err)
+			if snap.Phase != DedupDone {
+				t.Fatalf("phase = %v (err %q), want DedupDone", snap.Phase, snap.Err)
+			}
+			if len(snap.Groups) != 1 || len(snap.Groups[0].Files) != 2 {
+				t.Fatalf("groups = %v, want only the meadow.bin pair", snap.Groups)
+			}
+			if want := sha256.Sum256([]byte(base)); snap.Groups[0].Hash != want {
+				t.Fatalf("group hash = %x, want full-file sha256 %x", snap.Groups[0].Hash, want)
+			}
+			if snap.HashedBytes != snap.HashBytesTotal {
+				t.Fatalf("done HashedBytes = %d, want HashBytesTotal %d", snap.HashedBytes, snap.HashBytesTotal)
+			}
+			// Six candidates: kept readers open each file once; with one slot the
+			// rest reopen every round they survive.
+			if got := opens.Load(); maxOpen == 0 && got != 6 {
+				t.Fatalf("opens = %d, want 6 (one per candidate)", got)
+			} else if maxOpen == 1 && got <= 6 {
+				t.Fatalf("opens = %d, want > 6 when only one reader may stay open", got)
+			}
+			if after := openFDs(t); fdsBefore >= 0 && after != fdsBefore {
+				t.Fatalf("open fds = %d after scan, want %d (readers leaked)", after, fdsBefore)
+			}
+		})
 	}
-	if len(snap.Groups) != 1 || len(snap.Groups[0].Files) != 2 {
-		t.Fatalf("groups = %v, want only the meadow.bin pair", snap.Groups)
+}
+
+// openFDs counts this process's open file descriptors, or -1 where
+// /proc/self/fd is unavailable.
+func openFDs(t *testing.T) int {
+	t.Helper()
+	entries, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		return -1
 	}
-	if want := sha256.Sum256([]byte(base)); snap.Groups[0].Hash != want {
-		t.Fatalf("group hash = %x, want full-file sha256 %x", snap.Groups[0].Hash, want)
-	}
-	if snap.HashedBytes != snap.HashBytesTotal {
-		t.Fatalf("done HashedBytes = %d, want HashBytesTotal %d", snap.HashedBytes, snap.HashBytesTotal)
-	}
+	return len(entries)
 }
 
 func TestDedupParallelReadsGroupManyClasses(t *testing.T) {
