@@ -77,16 +77,16 @@ func (a *App) restartThroughputChartTicker(columnMS int) {
 // the config range) and re-times both the job state's columns and the sampling ticker.
 func (a *App) adjustJobsThroughputChartColumnMS(deltaMS int) {
 	next := min(max(a.throughputChartColumnMS+deltaMS, config.ThroughputChartColumnMinMS), config.ThroughputChartColumnMaxMS)
-	if next == a.throughputChartColumnMS {
-		return
+	if next != a.throughputChartColumnMS {
+		a.throughputChartColumnMS = next
+		a.jobState.SetThroughputChart(
+			time.Duration(next)*time.Millisecond,
+			time.Duration(a.config.Jobs.ThroughputChartWindowSec)*time.Second,
+			a.config.Jobs.ThroughputChartEnabled,
+		)
+		a.restartThroughputChartTicker(next)
 	}
-	a.throughputChartColumnMS = next
-	a.jobState.SetThroughputChart(
-		time.Duration(next)*time.Millisecond,
-		time.Duration(a.config.Jobs.ThroughputChartWindowSec)*time.Second,
-		a.config.Jobs.ThroughputChartEnabled,
-	)
-	a.restartThroughputChartTicker(next)
+	// Toast even at a clamp so the key always gives feedback.
 	a.setTransientMessage(fmt.Sprintf("Graph tick: %d ms", next), ui.MessageUrgencyInfo)
 }
 
