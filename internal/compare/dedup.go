@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -150,13 +151,20 @@ func (s *DedupSession) walkRoot(ctx context.Context) ([]FileRecord, error) {
 
 // DedupOptions configures a dedup session.
 type DedupOptions struct {
-	Walk        WalkOptions
-	HashWorkers int
+	Walk WalkOptions
+	// ReadWorkers bounds concurrent chunk reads; the limit hill-climbs from
+	// InitialWorkers toward MaxWorkers while byte throughput keeps improving.
+	ReadWorkers fswalk.Params
 	ReadBuffer  []byte
-	// ChunkBytes compares same-size files this many bytes at a time so a file
-	// can be dropped as soon as its prefix diverges from every other file in
-	// its partition. Zero or negative disables chunking (whole file in one round).
+	// ChunkBytes caps how many bytes of each same-size file one round reads, so
+	// a file can be dropped as soon as its prefix diverges from every other file
+	// in its partition. Zero or negative disables chunking (whole file in one round).
 	ChunkBytes int64
+	// FirstChunkBytes is the first round's read; each later round doubles it up
+	// to ChunkBytes, so files differing near the start bail after a small read.
+	// Zero or negative (or above ChunkBytes) starts at ChunkBytes; ignored when
+	// ChunkBytes disables chunking.
+	FirstChunkBytes int64
 	// ConfirmHashBytes, when >0, pauses before hashing (phase DedupAwaitConfirm)
 	// once the total byte size of hash candidates exceeds it, until Confirm() is called.
 	ConfirmHashBytes int64
@@ -339,11 +347,14 @@ func (s *DedupSession) run(ctx context.Context) {
 		}
 	}
 
-	workers := max(s.opts.HashWorkers, 1)
 	bufSize := len(s.opts.ReadBuffer)
 	if bufSize == 0 {
 		bufSize = 256 * 1024
 	}
+	bufPool := sync.Pool{New: func() any {
+		b := make([]byte, bufSize)
+		return &b
+	}}
 
 	hashStarted := time.Now()
 	s.publish(DedupSnapshot{
@@ -356,9 +367,13 @@ func (s *DedupSession) run(ctx context.Context) {
 		HashStarted:    hashStarted,
 	})
 
-	chunk := s.opts.ChunkBytes
-	if chunk <= 0 {
-		chunk = math.MaxInt64
+	maxChunk := s.opts.ChunkBytes
+	if maxChunk <= 0 {
+		maxChunk = math.MaxInt64
+	}
+	firstChunk := s.opts.FirstChunkBytes
+	if s.opts.ChunkBytes <= 0 || firstChunk <= 0 || firstChunk > maxChunk {
+		firstChunk = maxChunk
 	}
 
 	// Progress is byte-based so large files advance the bar smoothly instead of
@@ -427,21 +442,26 @@ func (s *DedupSession) run(ctx context.Context) {
 
 	// processGroup compares one size class chunk by chunk: each round hashes the
 	// next chunk of every member, then splits the partition by prefix digest.
-	// Singleton partitions are provably unique and stop reading immediately;
-	// partitions that reach EOF are duplicate sets and their hashers now hold the
-	// true full-file SHA-256.
-	// ponytail: one worker walks a whole size group serially; parallelize files
-	// inside a giant group if that ever shows up in practice.
+	// Rounds start at firstChunk and double up to maxChunk, so files that differ
+	// near the start bail after a small read while long survivors still read in
+	// big chunks. Singleton partitions are provably unique and stop reading
+	// immediately; partitions that reach EOF are duplicate sets and their hashers
+	// now hold the true full-file SHA-256. Members of a round read in parallel,
+	// bounded by the adaptive semaphore shared by every group.
 	type partition struct {
 		idxs   []int
 		offset int64
+		chunk  int64
 	}
+	adapt := fswalk.NewAdaptive(ctx, s.opts.ReadWorkers)
+	defer adapt.Stop()
+	sem := adapt.Sem()
 	// full forces whole-file digests (chunk = MaxInt64, singletons included) so
 	// uncached members of a partly cached group compare against cached digests.
-	processGroup := func(group []int, buf []byte, full bool) {
-		chunk := chunk
+	processGroup := func(group []int, full bool) {
+		first := firstChunk
 		if full {
-			chunk = math.MaxInt64
+			first = math.MaxInt64
 		}
 		size := candidates[group[0]].Size
 		pubMu.Lock()
@@ -450,7 +470,7 @@ func (s *DedupSession) run(ctx context.Context) {
 			inProgress[idx] = 0
 		}
 		pubMu.Unlock()
-		stack := []partition{{idxs: group}}
+		stack := []partition{{idxs: group, chunk: first}}
 		for len(stack) > 0 {
 			if ctx.Err() != nil {
 				return
@@ -465,40 +485,68 @@ func (s *DedupSession) run(ctx context.Context) {
 				}
 				continue
 			}
-			end := p.offset + chunk
+			end := p.offset + p.chunk
 			if end > size || end < 0 { // end < 0: offset+MaxInt64 overflow
 				end = size
 			}
+			var keyMu sync.Mutex
+			var reads sync.WaitGroup
 			byKey := map[string][]int{}
 			for _, idx := range p.idxs {
-				err := hashChunk(ctx, candidates[idx].Abs, hashers[idx], buf, p.offset, end-p.offset, func(read int64) {
-					pubMu.Lock()
-					inProgress[idx] = p.offset + read
-					pubMu.Unlock()
-					publishProgress()
-				})
-				if err != nil {
-					resolve(idx) // unreadable: drop it, keep comparing the rest
-					continue
+				if sem.Acquire(ctx) != nil {
+					break
 				}
-				key := string(hashers[idx].Sum(nil))
-				byKey[key] = append(byKey[key], idx)
+				reads.Add(1)
+				go func() {
+					defer reads.Done()
+					defer sem.Release()
+					buf := bufPool.Get().(*[]byte)
+					defer bufPool.Put(buf)
+					var reported int64
+					err := hashChunk(ctx, candidates[idx].Abs, hashers[idx], *buf, p.offset, end-p.offset, func(read int64) {
+						adapt.Add(read - reported)
+						reported = read
+						pubMu.Lock()
+						inProgress[idx] = p.offset + read
+						pubMu.Unlock()
+						publishProgress()
+					})
+					if err != nil {
+						resolve(idx) // unreadable: drop it, keep comparing the rest
+						return
+					}
+					key := string(hashers[idx].Sum(nil))
+					keyMu.Lock()
+					byKey[key] = append(byKey[key], idx)
+					keyMu.Unlock()
+				}()
+			}
+			reads.Wait()
+			next := maxChunk
+			if p.chunk <= maxChunk/2 { // doubling, capped without overflow
+				next = p.chunk * 2
 			}
 			for _, sub := range byKey {
 				if len(sub) == 1 && !full {
 					resolve(sub[0]) // unique prefix: no duplicate possible, skip the rest
 					continue
 				}
-				stack = append(stack, partition{idxs: sub, offset: end})
+				// Read order varies with parallel reads; sorting keeps the
+				// partition (and the cache-write order) deterministic.
+				slices.Sort(sub)
+				stack = append(stack, partition{idxs: sub, offset: end, chunk: next})
 			}
 		}
 	}
 
+	// Dispatchers only hand out reads: each one acquires the read semaphore per
+	// member, so MaxWorkers dispatchers keep it saturated even when every group
+	// has only two members.
+	dispatchers := max(s.opts.ReadWorkers.MaxWorkers, s.opts.ReadWorkers.InitialWorkers, 1)
 	jobCh := make(chan []int)
 	var wg sync.WaitGroup
-	for range workers {
+	for range dispatchers {
 		wg.Add(1)
-		buf := make([]byte, bufSize)
 		go func() {
 			defer wg.Done()
 			for group := range jobCh {
@@ -513,10 +561,10 @@ func (s *DedupSession) run(ctx context.Context) {
 				}
 				switch {
 				case len(misses) == len(group):
-					processGroup(group, buf, false)
+					processGroup(group, false)
 				case len(misses) > 0:
 					// ponytail: mixed groups lose early-bail for uncached members; cache prefix digests if that bites.
-					processGroup(misses, buf, true)
+					processGroup(misses, true)
 				}
 			}
 		}()

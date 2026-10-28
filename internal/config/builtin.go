@@ -140,9 +140,23 @@ const (
 	// find-duplicates dialog for files at or above this size (0 disables it).
 	DefaultDedupFileProgressBytes = 256 * 1024 * 1024
 
-	// DefaultCompareChunkBytes makes find duplicates hash same-size files this many
-	// bytes at a time, dropping a file once its prefix diverges (0 disables chunking).
+	// DefaultDedupReadMaxWorkers caps adaptive concurrent chunk reads during
+	// find-duplicates hashing ([dedup].max_read_workers).
+	DefaultDedupReadMaxWorkers = 32
+	// DedupReadInitialWorkers is where the adaptive find-duplicates read limit
+	// starts before it hill-climbs toward max_read_workers.
+	DedupReadInitialWorkers = 2
+	// DedupReadAdaptIntervalMS is the measure window for find-duplicates read
+	// concurrency tuning.
+	DedupReadAdaptIntervalMS = 500
+
+	// DefaultCompareChunkBytes caps how many bytes of each same-size file one
+	// find-duplicates round hashes, dropping a file once its prefix diverges
+	// (0 disables chunking).
 	DefaultCompareChunkBytes = 32 * 1024 * 1024
+	// DefaultCompareFirstChunkBytes is the first find-duplicates round's read;
+	// later rounds double it up to DefaultCompareChunkBytes.
+	DefaultCompareFirstChunkBytes = 64 * 1024
 
 	// DefaultCompareHashConcurrency limits parallel file hashing during panel compare.
 	DefaultCompareHashConcurrency = 8

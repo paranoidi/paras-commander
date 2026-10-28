@@ -490,9 +490,10 @@ Content comparison: twin-panel directory compare, find duplicates and the confli
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `hash_concurrency` | int | `8` | Number of files hashed in parallel during a compare or duplicate scan. |
+| `hash_concurrency` | int | `8` | Number of files hashed or compared in parallel during a directory compare. Find duplicates sizes its reads adaptively instead (`[dedup].max_read_workers`). |
 | `read_buffer_kib` | int | `256` | Per-worker read buffer size, in KiB, used while hashing or comparing. |
-| `chunk_bytes` | int64 | `33554432` (32 MiB) | Find duplicates hashes same-size files this many bytes at a time, dropping a file as soon as its prefix differs from all others. `0` disables chunked hashing. (Compare and conflict Verify read same-size pairs side by side and stop at the first difference regardless.) |
+| `chunk_bytes` | int64 | `33554432` (32 MiB) | Largest read per round when find duplicates hashes same-size files chunk by chunk, dropping a file as soon as its prefix differs from all others. `0` disables chunked hashing (whole file in one round). (Compare and conflict Verify read same-size pairs side by side and stop at the first difference regardless.) |
+| `first_chunk_bytes` | int64 | `65536` (64 KiB) | First round's read in find duplicates; each later round doubles it up to `chunk_bytes`, so files that differ near the start are dropped after a small read. `0`, or a value above `chunk_bytes`, starts at `chunk_bytes`; ignored when `chunk_bytes` is `0`. |
 | `stay_on_volume_default` | bool | `true` | Default state of the "stay on volume" option when opening compare. |
 
 ## `[dedup]`
@@ -502,7 +503,8 @@ Find-duplicates scan (within a single directory).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `hash_confirm_bytes` | int64 | `34359738368` (32 GiB) | Pause and ask for confirmation before hashing if the total size of hash candidates exceeds this. `0` disables the confirmation gate. |
-| `file_progress_bytes` | int64 | `268435456` (256 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. Chunk size comes from `[compare].chunk_bytes`. |
+| `file_progress_bytes` | int64 | `268435456` (256 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. Chunk sizes come from `[compare].first_chunk_bytes` and `[compare].chunk_bytes`. |
+| `max_read_workers` | int | `32` | Upper bound on concurrent file reads while hashing. The limit starts at 2 and grows by one every 500 ms while read throughput keeps improving, then stays at the best level: SSDs typically climb high, spinning disks settle low. Values below `1` use the default. |
 
 ## `status.toml`
 

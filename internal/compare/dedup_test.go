@@ -12,6 +12,7 @@ import (
 	"time"
 
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/file" // register default backend for HashFile
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -36,7 +37,7 @@ func startDedup(t *testing.T, dir string, confirmHashBytes int64) (*DedupSession
 	}
 	phases := make(chan DedupSnapshot, 8)
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		HashWorkers:      2,
+		ReadWorkers:      fswalk.Params{InitialWorkers: 2, MaxWorkers: 2},
 		ConfirmHashBytes: confirmHashBytes,
 		OnUpdate: func(s DedupSnapshot) {
 			switch s.Phase {
@@ -167,7 +168,7 @@ func TestDedupHashingPublishesCurrentPath(t *testing.T) {
 
 	var hashing []DedupSnapshot
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		HashWorkers: 1,
+		ReadWorkers: fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase == DedupHashing && s.Current != "" {
 				hashing = append(hashing, s)
@@ -218,7 +219,7 @@ func TestDedupHashingProgressRateLimited(t *testing.T) {
 	var pathChanges int
 	var prev string
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		HashWorkers: 1,
+		ReadWorkers: fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase != DedupHashing || s.Current == "" {
 				return
@@ -260,7 +261,7 @@ func TestDedupHashedBytesMonotonic(t *testing.T) {
 	var mu sync.Mutex
 	var seen []DedupSnapshot
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		HashWorkers: 2,
+		ReadWorkers: fswalk.Params{InitialWorkers: 2, MaxWorkers: 2},
 		ReadBuffer:  make([]byte, 4),
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase == DedupHashing || s.Phase == DedupDone {
@@ -314,7 +315,7 @@ func TestDedupCurrentFileAboveThreshold(t *testing.T) {
 		var mu sync.Mutex
 		var hashing []DedupSnapshot
 		sess := StartDedup(context.Background(), root, DedupOptions{
-			HashWorkers:       1,
+			ReadWorkers:       fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
 			ReadBuffer:        make([]byte, 8), // several callbacks per file before completion
 			FileProgressBytes: fileProgressBytes,
 			OnUpdate: func(s DedupSnapshot) {
@@ -389,7 +390,7 @@ func TestDedupChunkedEarlyBail(t *testing.T) {
 	}
 	done := make(chan DedupSnapshot, 1)
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		HashWorkers: 1,
+		ReadWorkers: fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
 		ChunkBytes:  8,
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase == DedupDone || s.Phase == DedupError {
@@ -611,7 +612,7 @@ func scanDedupCached(t *testing.T, dir, cacheFile string) DedupSnapshot {
 	}
 	done := make(chan DedupSnapshot, 8)
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		HashWorkers: 2,
+		ReadWorkers: fswalk.Params{InitialWorkers: 2, MaxWorkers: 2},
 		CacheFile:   cacheFile,
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase == DedupDone || s.Phase == DedupError {
@@ -705,7 +706,7 @@ func TestDedupHashCachePersistsAfterCancel(t *testing.T) {
 	var once sync.Once
 	resolved := make(chan struct{})
 	sess := StartDedup(context.Background(), root, DedupOptions{
-		HashWorkers: 1,
+		ReadWorkers: fswalk.Params{InitialWorkers: 1, MaxWorkers: 1},
 		CacheFile:   cache,
 		OnUpdate: func(s DedupSnapshot) {
 			if s.Phase == DedupHashing && s.Hashed >= 1 {
@@ -854,5 +855,98 @@ func TestDedupDirGroupsWithoutPathsAndTrim(t *testing.T) {
 	}
 	if snap.DirGroups[0].Rels[0] != "outer/birch" {
 		t.Fatal("trim mutated the original snapshot")
+	}
+}
+
+func TestDedupGrowingChunksAcrossRounds(t *testing.T) {
+	dir := t.TempDir()
+	// First chunk 4, cap 16: rounds read [0,4) [4,12) [12,28) [28,44) [44,48).
+	// Each odd file diverges inside a different round, the pair reaches EOF.
+	base := "lanternharborquietmeadowsilverorchardpebblefoxes"
+	diverge := func(at int) string { return base[:at] + "#" + base[at+1:] }
+	writeFile(t, dir, "a/meadow.bin", base)
+	writeFile(t, dir, "b/meadow.bin", base)
+	writeFile(t, dir, "c/first.bin", diverge(1))
+	writeFile(t, dir, "d/second.bin", diverge(9))
+	writeFile(t, dir, "e/third.bin", diverge(20))
+	writeFile(t, dir, "f/last.bin", diverge(46))
+
+	root, err := pathloc.File(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan DedupSnapshot, 1)
+	sess := StartDedup(context.Background(), root, DedupOptions{
+		ReadWorkers:     fswalk.Params{InitialWorkers: 3, MaxWorkers: 3},
+		ChunkBytes:      16,
+		FirstChunkBytes: 4,
+		OnUpdate: func(s DedupSnapshot) {
+			if s.Phase == DedupDone || s.Phase == DedupError {
+				done <- s
+			}
+		},
+	})
+	defer sess.Close()
+	snap := <-done
+
+	if snap.Phase != DedupDone {
+		t.Fatalf("phase = %v (err %q), want DedupDone", snap.Phase, snap.Err)
+	}
+	if len(snap.Groups) != 1 || len(snap.Groups[0].Files) != 2 {
+		t.Fatalf("groups = %v, want only the meadow.bin pair", snap.Groups)
+	}
+	if want := sha256.Sum256([]byte(base)); snap.Groups[0].Hash != want {
+		t.Fatalf("group hash = %x, want full-file sha256 %x", snap.Groups[0].Hash, want)
+	}
+	if snap.HashedBytes != snap.HashBytesTotal {
+		t.Fatalf("done HashedBytes = %d, want HashBytesTotal %d", snap.HashedBytes, snap.HashBytesTotal)
+	}
+}
+
+func TestDedupParallelReadsGroupManyClasses(t *testing.T) {
+	dir := t.TempDir()
+	// 12 size classes x 5 files: three copies plus two distinct files each, so
+	// reads inside a round and across groups run concurrently.
+	for class := range 12 {
+		body := strings.Repeat(fmt.Sprintf("%02d", class), 20+class)
+		for copyN := range 3 {
+			writeFile(t, dir, fmt.Sprintf("copies/%02d/river%d.txt", class, copyN), body)
+		}
+		writeFile(t, dir, fmt.Sprintf("odd/%02d/stone.txt", class), "X"+body[1:])
+		writeFile(t, dir, fmt.Sprintf("odd/%02d/cloud.txt", class), body[:len(body)-1]+"Y")
+	}
+	root, err := pathloc.File(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan DedupSnapshot, 1)
+	sess := StartDedup(context.Background(), root, DedupOptions{
+		ReadWorkers:     fswalk.Params{InitialWorkers: 4, MaxWorkers: 4},
+		ChunkBytes:      8,
+		FirstChunkBytes: 2,
+		OnUpdate: func(s DedupSnapshot) {
+			if s.Phase == DedupDone || s.Phase == DedupError {
+				done <- s
+			}
+		},
+	})
+	defer sess.Close()
+	snap := <-done
+
+	if snap.Phase != DedupDone {
+		t.Fatalf("phase = %v (err %q), want DedupDone", snap.Phase, snap.Err)
+	}
+	if len(snap.Groups) != 12 {
+		t.Fatalf("groups = %d, want 12", len(snap.Groups))
+	}
+	for _, g := range snap.Groups {
+		if len(g.Files) != 3 {
+			t.Fatalf("group %v has %d files, want the 3 river copies", g.Files, len(g.Files))
+		}
+		for _, f := range g.Files {
+			if !strings.HasPrefix(f.Rel, "copies/") {
+				t.Fatalf("unexpected group member %q", f.Rel)
+			}
+		}
 	}
 }

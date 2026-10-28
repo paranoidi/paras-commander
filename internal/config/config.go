@@ -180,6 +180,10 @@ type DedupConfig struct {
 	// FileProgressBytes shows a per-file progress bar in the scan dialog for
 	// files at or above this size. Zero disables the per-file bar.
 	FileProgressBytes int64 `toml:"file_progress_bytes"`
+	// MaxReadWorkers caps concurrent chunk reads while hashing. The limit starts
+	// low and climbs while byte throughput keeps improving (SSDs gain from deep
+	// queues, spinning disks settle low).
+	MaxReadWorkers int `toml:"max_read_workers"`
 }
 
 // CompareConfig controls content comparison (panel compare, find duplicates, conflict
@@ -187,9 +191,13 @@ type DedupConfig struct {
 type CompareConfig struct {
 	HashConcurrency int `toml:"hash_concurrency"`
 	ReadBufferKiB   int `toml:"read_buffer_kib"`
-	// ChunkBytes makes find duplicates hash same-size files this many bytes at a
-	// time, dropping a file as soon as its prefix diverges. Zero disables chunking.
-	ChunkBytes          int64 `toml:"chunk_bytes"`
+	// ChunkBytes caps how many bytes of each same-size file one find-duplicates
+	// round hashes, dropping a file as soon as its prefix diverges. Zero disables
+	// chunking.
+	ChunkBytes int64 `toml:"chunk_bytes"`
+	// FirstChunkBytes is the first find-duplicates round's read; each later round
+	// doubles it up to ChunkBytes. Zero (or above ChunkBytes) starts at ChunkBytes.
+	FirstChunkBytes     int64 `toml:"first_chunk_bytes"`
 	StayOnVolumeDefault bool  `toml:"stay_on_volume_default"`
 }
 
@@ -816,11 +824,13 @@ func Default() Config {
 			HashConcurrency:     DefaultCompareHashConcurrency,
 			ReadBufferKiB:       DefaultCompareReadBufferKiB,
 			ChunkBytes:          DefaultCompareChunkBytes,
+			FirstChunkBytes:     DefaultCompareFirstChunkBytes,
 			StayOnVolumeDefault: DefaultCompareStayOnVolumeDefault,
 		},
 		Dedup: DedupConfig{
 			HashConfirmBytes:  DefaultDedupHashConfirmBytes,
 			FileProgressBytes: DefaultDedupFileProgressBytes,
+			MaxReadWorkers:    DefaultDedupReadMaxWorkers,
 		},
 	}
 }
@@ -1121,6 +1131,12 @@ func (c *Config) validateCompareDedupShell(builtin *Config) {
 	}
 	if c.Compare.ChunkBytes < 0 {
 		c.Compare.ChunkBytes = 0
+	}
+	if c.Compare.FirstChunkBytes < 0 {
+		c.Compare.FirstChunkBytes = 0
+	}
+	if c.Dedup.MaxReadWorkers < 1 {
+		c.Dedup.MaxReadWorkers = builtin.Dedup.MaxReadWorkers
 	}
 	if c.Shell.TerminalPanelHeight < MinShellTerminalPanelHeight {
 		c.Shell.TerminalPanelHeight = builtin.Shell.TerminalPanelHeight

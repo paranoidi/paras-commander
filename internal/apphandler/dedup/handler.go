@@ -22,6 +22,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -314,11 +315,16 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 			ShouldSkipDir: hs.ShouldSkip,
 			Only:          only,
 		},
-		HashWorkers:       hs.HashWorkers,
+		ReadWorkers: fswalk.Params{
+			InitialWorkers:  config.DedupReadInitialWorkers,
+			MaxWorkers:      h.config.Dedup.MaxReadWorkers,
+			AdaptIntervalMS: config.DedupReadAdaptIntervalMS,
+		},
 		ReadBuffer:        hs.ReadBuffer,
 		ConfirmHashBytes:  h.config.Dedup.HashConfirmBytes,
 		FileProgressBytes: h.config.Dedup.FileProgressBytes,
 		ChunkBytes:        hs.ChunkBytes,
+		FirstChunkBytes:   hs.FirstChunkBytes,
 		CacheFile:         comparepkg.DefaultHashCachePath(),
 		OnUpdate:          func(_ comparepkg.DedupSnapshot) { h.postWake() },
 	})

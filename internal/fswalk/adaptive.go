@@ -55,6 +55,9 @@ func (a *Adaptive) Sem() *DynSem { return a.sem }
 // Bump records one throughput unit (indexed entry or completed ReadDir, per caller).
 func (a *Adaptive) Bump() { a.count.Add(1) }
 
+// Add records n throughput units (bytes read, for byte-rate callers).
+func (a *Adaptive) Add(n int64) { a.count.Add(n) }
+
 // Workers returns the current concurrency limit.
 func (a *Adaptive) Workers() int { return a.sem.Limit() }
 

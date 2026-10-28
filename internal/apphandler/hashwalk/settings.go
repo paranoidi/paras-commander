@@ -11,7 +11,10 @@ type Settings struct {
 	ReadBuffer  []byte
 	// ChunkBytes is the find-duplicates hashing chunk (config compare.chunk_bytes).
 	ChunkBytes int64
-	ShouldSkip diskusage.ShouldIgnoreFolder
+	// FirstChunkBytes is the first find-duplicates round's read (config
+	// compare.first_chunk_bytes); rounds double up to ChunkBytes.
+	FirstChunkBytes int64
+	ShouldSkip      diskusage.ShouldIgnoreFolder
 }
 
 // FromCompareConfig builds hash/walk settings from compare config and ignore hooks.
@@ -29,9 +32,10 @@ func FromCompareConfig(
 		workers = config.DefaultCompareHashConcurrency
 	}
 	return Settings{
-		HashWorkers: workers,
-		ReadBuffer:  make([]byte, bufKiB*1024),
-		ChunkBytes:  cfg.ChunkBytes,
-		ShouldSkip:  diskusage.ComposeListingVolumeIgnore(diskIgnore, volGate),
+		HashWorkers:     workers,
+		ReadBuffer:      make([]byte, bufKiB*1024),
+		ChunkBytes:      cfg.ChunkBytes,
+		FirstChunkBytes: cfg.FirstChunkBytes,
+		ShouldSkip:      diskusage.ComposeListingVolumeIgnore(diskIgnore, volGate),
 	}
 }
