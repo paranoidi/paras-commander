@@ -26,14 +26,17 @@ type MenuBarJobsStrip struct {
 	ProgressIndeterminate bool
 	// Deleting means the bar represents removal — a delete job or a move's source-removal phase.
 	// The light-bar gradient uses MenuProgressDeleteGfx (falling back to MenuProgressDoneGfx when
-	// the theme defines none).
+	// the theme defines none); the fill and layout are unchanged.
 	Deleting bool
+	// SpeedSlot reserves the fixed-width speed-pill slot left of the bar (a transfer job, not a
+	// delete), whether or not Speed is set, so the bar keeps its position.
+	SpeedSlot bool
 	// LightbarHead is the light-bar gradient's frame counter: the done-span cell index of the
 	// head (MenuProgressDoneGfx[0]), trailing gradient cells behind it. The caller advances it
 	// one per animation frame and resets it to 0 when DrawMenuBarJobsGap reports lightbarExited.
 	LightbarHead int
-	// Speed is the formatted transfer throughput (e.g. "120MB/s") shown as a pill left of the
-	// progress bar. Empty means no pill (no running transfer, or Deleting).
+	// Speed is the formatted transfer throughput (e.g. "120MB/s") shown as a pill in the speed
+	// slot. Empty means no pill (no running transfer).
 	Speed string
 }
 
@@ -122,7 +125,7 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 	stripWidth := MenuBarJobsGroupsWidth(strip.Groups, styles)
 	queueW, progW := LayoutMenuBarJobsStrip(totalWidth, stripWidth, wantProgress)
 	speedW := 0
-	if progW > 0 && !strip.Deleting && progW >= menuBarSpeedSlotWidth+1+menuBarJobsProgressMinWidth {
+	if progW > 0 && strip.SpeedSlot && progW >= menuBarSpeedSlotWidth+1+menuBarJobsProgressMinWidth {
 		speedW = menuBarSpeedSlotWidth
 		progW -= speedW + 1 // slot + one-space margin before the bar
 	}

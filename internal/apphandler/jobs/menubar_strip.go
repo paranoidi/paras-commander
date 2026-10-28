@@ -83,13 +83,11 @@ func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 			// indeterminate bar. With an estimate the total is already a usable best guess.
 			strip.ProgressIndeterminate = prog.CountsTotals() && !prog.TotalsComplete && prog.EstimatedBytes <= 0
 		}
+		// A move removing its copied sources keeps its fraction and speed slot: only the light
+		// bar's colours change, so the bar does not jump.
 		strip.Deleting = prog.Type == jobs.TypeDelete || prog.RemovingSources
-		if prog.RemovingSources {
-			// Copy is done; the bar is full while sources are removed.
-			strip.ProgressFrac, strip.ProgressIndeterminate = 1, false
-			strip.HasProgress = true
-		}
-		if prog.Status == jobs.StatusRunning && !strip.Deleting {
+		strip.SpeedSlot = prog.Type != jobs.TypeDelete
+		if prog.Status == jobs.StatusRunning && strip.SpeedSlot {
 			bps := jobs.EffectiveDisplayThroughputBPS(prog.Status, prog.StartedAt, time.Now(), prog.DoneBytes, prog.DisplaySpeedBPS)
 			if bps > 0 {
 				strip.Speed = jobs.FormatThroughputWhole(bps)
@@ -101,6 +99,7 @@ func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 			if j != nil && j.Status == jobs.StatusScanning {
 				strip.HasProgress = true
 				strip.ProgressIndeterminate = true
+				strip.SpeedSlot = true
 				break
 			}
 		}

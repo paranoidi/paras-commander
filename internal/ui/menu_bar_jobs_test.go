@@ -252,7 +252,7 @@ func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
 		t.Run("speed_"+speed, func(t *testing.T) {
 			t.Parallel()
 			screen := newScreen(t)
-			strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 0.5, Speed: speed}
+			strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 0.5, Speed: speed, SpeedSlot: true}
 			DrawMenuBarJobsGap(screen, 0, 0, totalWidth, strip, styles)
 
 			gotBarX := barStartX(t, screen, totalWidth)
@@ -297,13 +297,29 @@ func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
 		})
 	}
 
-	t.Run("deleting hides the pill", func(t *testing.T) {
+	t.Run("no speed slot for a delete job", func(t *testing.T) {
 		t.Parallel()
 		screen := newScreen(t)
-		strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 0.5, Speed: "120MB/s", Deleting: true}
+		strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 0.5, Deleting: true}
 		DrawMenuBarJobsGap(screen, 0, 0, totalWidth, strip, styles)
 		if gotBarX := barStartX(t, screen, totalWidth); gotBarX != 0 {
-			t.Fatalf("Deleting: bar starts at x=%d, want 0 (no pill slot)", gotBarX)
+			t.Fatalf("delete job: bar starts at x=%d, want 0 (no pill slot)", gotBarX)
+		}
+	})
+
+	t.Run("move removing sources keeps the slot and fill", func(t *testing.T) {
+		t.Parallel()
+		transfer, removing := newScreen(t), newScreen(t)
+		strip := MenuBarJobsStrip{Groups: []MenuBarJobGroup{{Status: "running", Count: 1}}, HasProgress: true, ProgressFrac: 0.5, Speed: "120MB/s", SpeedSlot: true}
+		DrawMenuBarJobsGap(transfer, 0, 0, totalWidth+6, strip, styles)
+		strip.Deleting = true
+		DrawMenuBarJobsGap(removing, 0, 0, totalWidth+6, strip, styles)
+		for x := 0; x < totalWidth+6; x++ {
+			a, _, _ := transfer.Get(x, 0)
+			b, _, _ := removing.Get(x, 0)
+			if a != b {
+				t.Fatalf("cell %d = %q while removing, %q while copying; want the same layout and fill", x, b, a)
+			}
 		}
 	})
 
@@ -311,7 +327,7 @@ func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
 		t.Parallel()
 		screen := newScreen(t)
 		const narrowWidth = 10 // < 12 (slot) + 1 (margin) + 3 (min bar)
-		strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 0.5, Speed: "120MB/s"}
+		strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 0.5, Speed: "120MB/s", SpeedSlot: true}
 		DrawMenuBarJobsGap(screen, 0, 0, narrowWidth, strip, styles)
 		if gotBarX := barStartX(t, screen, narrowWidth); gotBarX != 0 {
 			t.Fatalf("narrow gap: bar starts at x=%d, want 0 (bar keeps full span)", gotBarX)
