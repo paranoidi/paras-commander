@@ -31,8 +31,8 @@ func TestMenuBarStripMoveRemovingSourcesKeepsLayout(t *testing.T) {
 	state.ApplyEvent(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning, Removing: true})
 	removing := h.MenuBarStripSnapshot()
 
-	if !removing.Deleting || copying.Deleting {
-		t.Fatalf("Deleting = %v while copying, %v while removing; want false, true", copying.Deleting, removing.Deleting)
+	if !removing.Removing || copying.Removing || removing.Deleting {
+		t.Fatalf("Removing = %v while copying, %v while removing (Deleting %v); want false, true, false", copying.Removing, removing.Removing, removing.Deleting)
 	}
 	if removing.ProgressFrac != copying.ProgressFrac || removing.ProgressFrac != 0.4 {
 		t.Fatalf("ProgressFrac = %v while removing, %v while copying; want 0.4 both", removing.ProgressFrac, copying.ProgressFrac)

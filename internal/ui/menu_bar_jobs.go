@@ -24,10 +24,13 @@ type MenuBarJobsStrip struct {
 	// ProgressFrac is meaningless; the bar renders indeterminate: an empty track with the gradient
 	// ping-ponging across it.
 	ProgressIndeterminate bool
-	// Deleting means the bar represents removal — a delete job or a move's source-removal phase.
-	// The light-bar gradient uses MenuProgressDeleteGfx (falling back to MenuProgressDoneGfx when
-	// the theme defines none); the fill and layout are unchanged.
+	// Deleting means the bar represents a delete job: the light-bar gradient uses
+	// MenuProgressDeleteGfx (falling back to MenuProgressDoneGfx when the theme defines none).
 	Deleting bool
+	// Removing means a move is removing the sources it copied: the light-bar gradient uses
+	// MenuProgressRemoveGfx (falling back to MenuProgressDeleteGfx, then MenuProgressDoneGfx);
+	// the fill and layout are unchanged.
+	Removing bool
 	// SpeedSlot reserves the fixed-width speed-pill slot left of the bar (a transfer job, not a
 	// delete), whether or not Speed is set, so the bar keeps its position.
 	SpeedSlot bool
@@ -176,8 +179,11 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 	doneStyle := styles.MenuProgressDone
 	remStyle := styles.MenuProgressRemaining
 	gfx := styles.MenuProgressDoneGfx
-	if strip.Deleting && len(styles.MenuProgressDeleteGfx) > 0 {
+	if (strip.Deleting || strip.Removing) && len(styles.MenuProgressDeleteGfx) > 0 {
 		gfx = styles.MenuProgressDeleteGfx
+	}
+	if strip.Removing && len(styles.MenuProgressRemoveGfx) > 0 {
+		gfx = styles.MenuProgressRemoveGfx
 	}
 
 	if strip.ProgressIndeterminate {

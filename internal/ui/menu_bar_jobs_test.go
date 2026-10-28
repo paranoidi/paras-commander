@@ -152,6 +152,40 @@ func TestDrawMenuBarJobsGapDeleteLightbar(t *testing.T) {
 	}
 }
 
+// TestDrawMenuBarJobsGapRemovingUsesRemoveGradient checks a move's source removal draws
+// MenuProgressRemoveGfx, and falls back to the delete gradient when the theme defines none.
+func TestDrawMenuBarJobsGapRemovingUsesRemoveGradient(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	delGfx := []tcell.Style{tcell.StyleDefault.Foreground(tcell.ColorPurple), tcell.StyleDefault.Foreground(tcell.ColorOrange)}
+	remGfx := []tcell.Style{tcell.StyleDefault.Foreground(tcell.ColorRed), tcell.StyleDefault.Foreground(tcell.ColorYellow)}
+	styles.MenuProgressDeleteGfx = delGfx
+	styles.MenuProgressRemoveGfx = nil // as a theme without remove.gfx keys
+
+	headAndTrail := func(styles theme.Theme) (tcell.Style, tcell.Style) {
+		t.Helper()
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init() error = %v", err)
+		}
+		defer screen.Fini()
+		screen.SetSize(10, 2)
+		strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 1, Removing: true, LightbarHead: 1}
+		DrawMenuBarJobsGap(screen, 0, 0, 5, strip, styles)
+		_, head, _ := screen.Get(1, 0)
+		_, trail, _ := screen.Get(0, 0)
+		return head, trail
+	}
+
+	if head, trail := headAndTrail(styles); head != delGfx[0] || trail != delGfx[1] {
+		t.Fatalf("no remove gradient: head/trail = %v/%v, want delete gradient %v/%v", head, trail, delGfx[0], delGfx[1])
+	}
+	styles.MenuProgressRemoveGfx = remGfx
+	if head, trail := headAndTrail(styles); head != remGfx[0] || trail != remGfx[1] {
+		t.Fatalf("head/trail = %v/%v, want remove gradient %v/%v", head, trail, remGfx[0], remGfx[1])
+	}
+}
+
 func TestDrawMenuBarJobsGapIndeterminatePingPong(t *testing.T) {
 	t.Parallel()
 	styles := theme.Default()
@@ -312,7 +346,7 @@ func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
 		transfer, removing := newScreen(t), newScreen(t)
 		strip := MenuBarJobsStrip{Groups: []MenuBarJobGroup{{Status: "running", Count: 1}}, HasProgress: true, ProgressFrac: 0.5, Speed: "120MB/s", SpeedSlot: true}
 		DrawMenuBarJobsGap(transfer, 0, 0, totalWidth+6, strip, styles)
-		strip.Deleting = true
+		strip.Removing = true
 		DrawMenuBarJobsGap(removing, 0, 0, totalWidth+6, strip, styles)
 		for x := 0; x < totalWidth+6; x++ {
 			a, _, _ := transfer.Get(x, 0)

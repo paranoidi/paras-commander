@@ -55,6 +55,8 @@ delete.gfx.0 = { fg = "bright_red" }   # delete light bar head (optional, gfx.0.
 delete.gfx.1 = { fg = "red" }
 delete.gfx.2 = { fg = "bright_yellow" }
 delete.gfx.3 = { fg = "yellow" }
+remove.gfx.0 = { fg = "red" }          # light bar head while a move removes copied sources (optional, gfx.0..gfx.9)
+remove.gfx.1 = { fg = "yellow" }
 remaining = { fg = "black" }
 
 [menu.speed]                 # menu-bar transfer speed pill left of the progress bar

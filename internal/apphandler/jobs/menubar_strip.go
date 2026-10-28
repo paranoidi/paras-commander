@@ -85,7 +85,8 @@ func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 		}
 		// A move removing its copied sources keeps its fraction and speed slot: only the light
 		// bar's colours change, so the bar does not jump.
-		strip.Deleting = prog.Type == jobs.TypeDelete || prog.RemovingSources
+		strip.Deleting = prog.Type == jobs.TypeDelete
+		strip.Removing = prog.RemovingSources
 		strip.SpeedSlot = prog.Type != jobs.TypeDelete
 		if prog.Status == jobs.StatusRunning && strip.SpeedSlot {
 			bps := jobs.EffectiveDisplayThroughputBPS(prog.Status, prog.StartedAt, time.Now(), prog.DoneBytes, prog.DisplaySpeedBPS)

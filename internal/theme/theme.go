@@ -206,6 +206,10 @@ type Theme struct {
 	// deletion (menu.progress.delete.gfx.0..gfx.9). Empty when the theme defines none —
 	// the renderer falls back to MenuProgressDoneGfx.
 	MenuProgressDeleteGfx []tcell.Style
+	// MenuProgressRemoveGfx is the optional light-bar gradient used while a move removes the
+	// sources it copied (menu.progress.remove.gfx.0..gfx.9). Empty when the theme defines none —
+	// the renderer falls back to MenuProgressDeleteGfx, then MenuProgressDoneGfx.
+	MenuProgressRemoveGfx []tcell.Style
 	// MenuSpeedCap and MenuSpeedText style the transfer-speed pill left of the menu-bar progress
 	// bar (menu.speed.cap, menu.speed.text). Both are optional; the fallbacks match the default
 	// theme's values.
@@ -1158,16 +1162,15 @@ var requiredStyleKeys = []string{
 
 var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
 
-// optionalStyleKeys are style keys a theme may omit; menu.progress.done.gfx.0..9 and
-// menu.progress.delete.gfx.0..9 are the optional light-bar gradients over the menu-bar
-// progress bar's done span (gfx.0 = head).
+// optionalStyleKeys are style keys a theme may omit; menu.progress.done.gfx.0..9,
+// menu.progress.delete.gfx.0..9 and menu.progress.remove.gfx.0..9 are the optional light-bar
+// gradients over the menu-bar progress bar's done span (gfx.0 = head).
 var optionalStyleKeys = func() []string {
-	keys := make([]string, 0, 20)
-	for i := 0; i < 10; i++ {
-		keys = append(keys, fmt.Sprintf("menu.progress.done.gfx.%d", i))
-	}
-	for i := 0; i < 10; i++ {
-		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
+	keys := make([]string, 0, 30)
+	for _, gfx := range []string{"done", "delete", "remove"} {
+		for i := 0; i < 10; i++ {
+			keys = append(keys, fmt.Sprintf("menu.progress.%s.gfx.%d", gfx, i))
+		}
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
@@ -1483,6 +1486,10 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
+	menuProgressRemoveGfx, err := optionalGfx(specs, palette, "menu.progress.remove.gfx")
+	if err != nil {
+		return Theme{}, err
+	}
 	jobsOperationSuccess, err := optionalStyle(specs, palette, "jobs.operations.success", styles["jobs.icons.completed"])
 	if err != nil {
 		return Theme{}, err
@@ -1698,6 +1705,7 @@ func parse(data []byte) (Theme, error) {
 		MenuProgressRemaining:            styles["menu.progress.remaining"],
 		MenuProgressDoneGfx:              menuProgressDoneGfx,
 		MenuProgressDeleteGfx:            menuProgressDeleteGfx,
+		MenuProgressRemoveGfx:            menuProgressRemoveGfx,
 		MenuSpeedCap:                     menuSpeedCap,
 		MenuSpeedText:                    menuSpeedText,
 		MenuStatusSeparator:              menuStatusSeparator,
