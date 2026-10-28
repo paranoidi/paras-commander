@@ -25,15 +25,8 @@ type WalkOptions struct {
 	DirsOnly bool
 	// MaxDepth limits the levels read below Root (1 = Root's children only); 0 = unlimited.
 	MaxDepth int
-}
-
-// RootWalk runs one recursive directory index (tests and legacy callers).
-type RootWalk = rootWalk
-
-// StartRootWalk begins indexing root. Call Close when finished.
-// The fswalk.Params argument is unused: find walks are sequential.
-func StartRootWalk(ctx context.Context, root string, opts WalkOptions, _ fswalk.Params) *RootWalk {
-	return startRootWalk(ctx, root, opts)
+	// Walk tunes the adaptive directory-read concurrency within a level; zero runs sequentially.
+	Walk fswalk.Params
 }
 
 type rootWalk struct {
@@ -162,7 +155,9 @@ func (w *rootWalk) run(ctx context.Context, opts WalkOptions) {
 		listOpts.Gitignore = matcher
 	}
 
-	w.runBFS(ctx, opts, listOpts, batch)
+	adapt := fswalk.NewAdaptive(ctx, opts.Walk)
+	defer adapt.Stop()
+	w.runBFS(ctx, opts, listOpts, batch, adapt)
 	batch.flush()
 	close(w.results)
 }
@@ -170,8 +165,9 @@ func (w *rootWalk) run(ctx context.Context, opts WalkOptions) {
 // runBFS indexes level by level (all depth-1 entries, then depth-2, ...) so
 // shallow results appear first. Hidden and gitignored entries are skipped and
 // recorded for the Include hidden replay; ShouldSkipDir dirs are indexed but not
-// descended; symlinks are not followed.
-func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localfs.ListOptions, batch *walkBatch) {
+// descended; symlinks are not followed. Directory reads of a level run
+// concurrently under adapt; results are consumed in level order.
+func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localfs.ListOptions, batch *walkBatch, adapt *fswalk.Adaptive) {
 	level := []string{w.root}
 	for len(level) > 0 {
 		var next []string
@@ -181,11 +177,20 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 		w.depth.Add(1)
 		w.levelDone.Store(0)
 		w.levelTotal.Store(int64(len(level)))
-		for _, dir := range level {
+		slots, stop := w.readLevel(ctx, level, adapt)
+		for i, dir := range level {
 			if ctx.Err() != nil || w.tooDeep(w.depth.Load()) {
+				stop()
 				return
 			}
-			children, err := os.ReadDir(dir)
+			select {
+			case <-slots[i].done:
+			case <-ctx.Done():
+				stop()
+				return
+			}
+			children, err := slots[i].children, slots[i].err
+			slots[i].children = nil
 			w.levelDone.Add(1)
 			if err != nil {
 				continue // unreadable dir: skip
@@ -213,9 +218,47 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 				}
 			}
 		}
+		stop()
 		batch.flush() // show each level as soon as it is indexed
 		level = next
 	}
+}
+
+type dirRead struct {
+	children []os.DirEntry
+	err      error
+	done     chan struct{}
+}
+
+// readLevel reads dirs concurrently, bounded by the adaptive semaphore. A slot's
+// done channel closes once its dir is read. stop cancels the remaining reads and
+// waits for every goroutine to exit.
+func (w *rootWalk) readLevel(ctx context.Context, dirs []string, adapt *fswalk.Adaptive) ([]dirRead, func()) {
+	slots := make([]dirRead, len(dirs))
+	for i := range slots {
+		slots[i].done = make(chan struct{})
+	}
+	lctx, cancel := context.WithCancel(ctx)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sem := adapt.Sem()
+		for i, dir := range dirs {
+			if sem.Acquire(lctx) != nil {
+				return
+			}
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				defer sem.Release()
+				slots[i].children, slots[i].err = os.ReadDir(dir)
+				adapt.Bump()
+				close(slots[i].done)
+			}()
+		}
+	}()
+	return slots, func() { cancel(); wg.Wait() }
 }
 
 func (w *rootWalk) recordSkippedHidden(path string, isDir bool) {

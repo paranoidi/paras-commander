@@ -413,6 +413,7 @@ func (s *session) startWalk(root string, skipIndexedSelectionSubtrees bool) {
 		Gitignore:     gi,
 		ShouldSkipDir: s.shouldSkipForRoot(root, skipIndexedSelectionSubtrees),
 		DirsOnly:      s.opts.DirsOnly,
+		Walk:          s.opts.Walk,
 	}
 	sess := startRootWalk(s.ctx, root, wopts)
 	s.walks[root] = &walkHandle{root: root, sess: sess}
