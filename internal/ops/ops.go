@@ -80,9 +80,13 @@ type Options struct {
 	// RateLimit throttles transfer throughput when set; nil (the default) means unlimited.
 	// Callers must check for nil before calling it.
 	RateLimit RateLimiter
-	// OnRemoveSources is called once when a move's copy fallback starts removing transferred
-	// sources; nil means no-op.
-	OnRemoveSources func()
+	// OnRemoveSources is called with true when a move's copy fallback starts removing the sources
+	// it transferred and with false once that removal ends; nil means no-op. It may block (the job
+	// holds removal until its totals are final).
+	OnRemoveSources func(removing bool)
+	// OnCopyPhase (ExecuteMove only) is called once between the rename phase and the copy phase
+	// with what the rename phase settled; nil means no-op. It must not block.
+	OnCopyPhase func(MoveCopyPhase)
 	// OnJournal receives one UndoStep per item a copy created or a move relocated (undo.go); nil
 	// means no-op. It runs on the job goroutine after the item exists. Undo itself never journals.
 	OnJournal func(UndoStep)
@@ -397,6 +401,19 @@ func BufferSize(copyBufferKiB int) int {
 		return config.DefaultCopyBufferKiB * 1024
 	}
 	return copyBufferKiB * 1024
+}
+
+// MoveCopyPhase is what ExecuteMove knows once its rename phase is done. Items and Bytes are the
+// progress units already settled: one item per top-level source moved by rename or merge (a merge
+// still copying counts once its directory is removed) and the size hints credited for renamed
+// sources. Count, nil when nothing needs copying, walks every source left for the copy phase the
+// way the copy will plan it and feeds sink one PlanItem each, so Items plus the walked items (and
+// Bytes plus their file sizes) are the move's totals in the units its progress reports. opts
+// supplies the walk's pacing and item-error handling.
+type MoveCopyPhase struct {
+	Items int
+	Bytes int64
+	Count func(ctx context.Context, opts PlanBuildOptions, sink func(PlanItem)) error
 }
 
 // ProgressCallback is called during copy/move to report progress.

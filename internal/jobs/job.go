@@ -160,7 +160,8 @@ type Job struct {
 	// read it directly; see jobbridge.TransferFunc's streamed-job dispatch.
 	PlanComplete bool
 	// TotalsComplete is true once TotalFiles/TotalDirs/TotalBytes are final: the counting walk has
-	// finished, or from the start for a failed-items retry (RetryClone). Unlike PlanComplete it
+	// finished (a copy's pre-scan, or a move's count of the sources it copies, delivered by
+	// EventPlanTotals), or from the start for a failed-items retry (RetryClone). Unlike PlanComplete it
 	// does not wait for the delivery walk, which the transfer
 	// executor drains and so only ends near the end of the job. Same locking rule as PlanComplete.
 	TotalsComplete bool
@@ -242,7 +243,7 @@ type Job struct {
 	// Undone is set on the original job once an undo job has reversed (part of) it.
 	Undone bool
 
-	// RemovingSources is true once a move's copy fallback is deleting its transferred sources.
+	// RemovingSources is true while a move's copy fallback is deleting its transferred sources.
 	RemovingSources bool
 }
 
@@ -302,6 +303,13 @@ func FinishedStatuses() []Status {
 // copy fallback (see ops.ExecuteMove). Flatten-into-dest copy is TypeCopy and keeps the pre-scan.
 func (j *Job) NeedsPreScan() bool {
 	return j != nil && j.Type == TypeCopy && len(j.Plan) == 0
+}
+
+// CountsTotals reports whether the job's totals come from a background counting walk: a copy's
+// pre-scan, or a move's count of the sources its copy phase copies (jobbridge). Until
+// TotalsComplete they are a lower bound.
+func (j *Job) CountsTotals() bool {
+	return j != nil && (j.NeedsPreScan() || j.Type == TypeMove)
 }
 
 // FailedItem is a source item a copy skipped, with the error text shown in the Errors panel.

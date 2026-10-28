@@ -60,13 +60,16 @@ away, and the **Details** panel marks the total `(estimated)`.
 - A copy uses any non-zero estimate. Its total never drops below the estimate
   while the counting walk runs, and switches to the exact counted size when the
   walk finishes.
-- A move does not run a counting walk. It uses the estimate only when every
-  source's size is known, and each source moved by rename counts its estimated
-  size as done. A move without a full estimate counts moved items instead.
+- A move first renames every source it can, which is instant. It uses the
+  estimate only when every source's size is known, and each source moved by
+  rename counts its estimated size as done. Sources that cannot be renamed
+  (another device or host) are copied, and the move counts just those in the
+  background while the copy runs. The total switches to the exact counted size
+  when that count finishes, and no source is deleted before it has.
 
-While a copy without an estimate has not finished counting the source tree,
-its **Details** progress line shows `(scanning…)`, since the totals and
-percentage are still provisional and will keep climbing.
+While a copy or move has not finished counting, its **Details** progress line
+shows `(scanning…)`, since the totals and percentage are still provisional and
+will keep climbing.
 
 ## Disabling it
 

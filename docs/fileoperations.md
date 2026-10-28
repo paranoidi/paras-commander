@@ -89,6 +89,15 @@ delete the source while the destination is still only in RAM. paras-commander
 defaults to the stricter semantics; `sync_after_each_file = false` gives you
 the mc/yazi behaviour if you prefer it.
 
+## Moving to another device
+
+A move first renames every item it can, which is instant on the same
+filesystem. Items that cannot be renamed (another device or another host) are
+then copied and their sources deleted. The job counts those items in the
+background while the copy starts, so its progress and ETA reflect the real size
+of what is being copied; the **Details** panel shows `(scanning…)` until the
+count finishes. Sources are deleted only once the count is done.
+
 ## Moving onto an existing directory
 
 Move tries a plain rename first. When a moved directory meets a directory of

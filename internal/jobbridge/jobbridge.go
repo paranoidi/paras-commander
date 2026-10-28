@@ -267,8 +267,8 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 				job.FailItem(emit, jobs.StatusRunning, item, err)
 			}
 		}
-		opts.OnRemoveSources = func() {
-			emit(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning})
+		opts.OnRemoveSources = func(removing bool) {
+			emit(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning, Removing: removing})
 		}
 		verifier := contentVerifier{
 			bufBytes:    compareCfg.ReadBufferKiB * 1024,
@@ -336,14 +336,15 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 		// at all); see docs/agents/jobs.md.
 		if job.PlanCh != nil || job.Type != jobs.TypeCopy {
 			return runTransfer(transferExecCtx{
-				ctx:      ctx,
-				job:      job,
-				opts:     opts,
-				throttle: throttle,
-				progress: progress,
-				resolver: resolver,
-				diskWait: diskWait,
-				emit:     emit,
+				ctx:           ctx,
+				job:           job,
+				opts:          opts,
+				throttle:      throttle,
+				progress:      progress,
+				resolver:      resolver,
+				diskWait:      diskWait,
+				emit:          emit,
+				countInterval: time.Duration(jobsCfg.ScanProgressMinIntervalMS) * time.Millisecond,
 			})
 		}
 
@@ -659,6 +660,8 @@ type transferExecCtx struct {
 	resolver ops.ConflictResolver
 	diskWait ops.DiskWaitFunc
 	emit     func(jobs.Event)
+	// countInterval paces a move's background count totals (jobs.scan_progress_min_interval_ms).
+	countInterval time.Duration
 }
 
 // planSource names where a copy's plan comes from, for ops.ExecuteCopyFrom: a streaming
@@ -684,17 +687,9 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 	case jobs.TypeCopy:
 		doneFiles, doneBytes, err = ops.ExecuteCopyFrom(tc.ctx, tc.planSource(), job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeMove:
-		// Move never pre-scans (ops.ExecuteMove renames first and plans only cross-device
-		// sources), so it announces one total per source and the enqueue-time byte estimate
-		// (an enqueue-time field, so reading it here is race-free; 0 keeps item progress).
-		tc.emit(jobs.Event{
-			Type:       jobs.EventPlanTotals,
-			JobID:      job.ID,
-			Status:     jobs.StatusRunning,
-			TotalFiles: len(job.Sources),
-			TotalBytes: job.EstimatedBytes,
-		})
-		doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
+		// Move never pre-scans (ops.ExecuteMove renames first); executeMove counts only the
+		// sources its copy phase copies, in the background.
+		doneFiles, doneBytes, err = executeMove(tc)
 	case jobs.TypeUndo:
 		tc.emit(jobs.Event{
 			Type:       jobs.EventPlanTotals,

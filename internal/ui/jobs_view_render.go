@@ -549,32 +549,26 @@ func jobDetailProgressLine(j JobEntry) string {
 }
 
 // jobTotalsEstimated reports whether TotalBytes is still the enqueue-time estimate
-// (jobs.Job.EstimatedBytes): a copy until its counting walk finishes, a move (no counting walk)
-// for its whole run.
+// (jobs.Job.EstimatedBytes): a copy or move until its counting walk finishes.
 func jobTotalsEstimated(j JobEntry) bool {
-	if j.EstimatedBytes <= 0 || jobs.Status(j.Status).IsFinished() {
-		return false
-	}
-	switch jobs.Type(j.Type) {
-	case jobs.TypeMove:
-		return true
-	case jobs.TypeCopy:
-		return !j.TotalsComplete
-	default:
-		return false
-	}
+	return j.EstimatedBytes > 0 && jobCountingInBackground(j)
 }
 
-// jobStillScanningInBackground reports whether a copy/move/flatten job's background pre-scan
-// (jobbridge.ScanFunc's counting walk) is still enumerating the source tree after the job has
-// already left the "scanning" status and started transferring — meaning TotalFiles/TotalDirs/
-// TotalBytes above are still provisional and will keep growing.
+// jobStillScanningInBackground reports whether a copy or move job's background counting walk (a
+// copy's pre-scan, jobbridge.ScanFunc; a move's count of the sources it copies,
+// jobbridge.executeMove) is still enumerating after the job left the "scanning" status, meaning
+// TotalFiles/TotalDirs/TotalBytes above are still provisional and will keep growing.
 func jobStillScanningInBackground(j JobEntry) bool {
-	if j.TotalsComplete || j.Status == "scanning" || jobs.Status(j.Status).IsFinished() {
+	return j.Status != "scanning" && jobCountingInBackground(j)
+}
+
+// jobCountingInBackground reports whether an unfinished copy or move job's totals are not final yet.
+func jobCountingInBackground(j JobEntry) bool {
+	if j.TotalsComplete || jobs.Status(j.Status).IsFinished() {
 		return false
 	}
 	switch jobs.Type(j.Type) {
-	case jobs.TypeCopy, jobs.TypeMove, jobs.TypeFlatten:
+	case jobs.TypeCopy, jobs.TypeMove:
 		return true
 	default:
 		return false

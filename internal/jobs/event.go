@@ -23,7 +23,8 @@ const (
 	EventCanceled   EventType = "canceled"
 	// EventItemFailed reports one skipped copy item (Event.FailedItem); the copy carries on.
 	EventItemFailed EventType = "item-failed"
-	// EventRemovingSources is emitted once when a move's copy fallback starts deleting its sources.
+	// EventRemovingSources reports a move's copy fallback starting (Event.Removing) or ending the
+	// deletion of the sources it copied.
 	EventRemovingSources EventType = "removing-sources"
 	// EventUndoJournal delivers the job's undo journal (Event.Undo, Event.Irreversible) once, before its terminal event.
 	EventUndoJournal EventType = "undo-journal"
@@ -55,6 +56,10 @@ type Event struct {
 	TotalFiles int
 	TotalDirs  int
 	TotalBytes int64
+	// TotalsComplete on EventPlanTotals marks the totals final (Job.TotalsComplete).
+	TotalsComplete bool
+	// Removing is set for EventRemovingSources: true when the removal starts, false when it ends.
+	Removing bool
 	// CurrentPath is set for EventProgress (source path being processed).
 	CurrentPath string
 	// CurrentDestPath is set for EventProgress (destination path for the same item).

@@ -194,6 +194,18 @@ func TestJobDetailProgressLineShowsScanningIndicatorWhileBackgroundScanIncomplet
 	if line := jobDetailProgressLine(del); strings.Contains(line, "scanning") {
 		t.Fatalf("delete jobs never pre-scan; must not show scanning indicator; got %q", line)
 	}
+
+	flatten := running
+	flatten.Type = string(jobs.TypeFlatten)
+	if line := jobDetailProgressLine(flatten); strings.Contains(line, "scanning") {
+		t.Fatalf("flatten jobs never count; must not show scanning indicator; got %q", line)
+	}
+
+	movedEstimate := complete
+	movedEstimate.Type, movedEstimate.EstimatedBytes, movedEstimate.TotalBytes = string(jobs.TypeMove), 4096, 8192
+	if line := jobDetailProgressLine(movedEstimate); strings.Contains(line, "scanning") || strings.Contains(line, "estimated") {
+		t.Fatalf("move with a finished count shows exact totals; got %q", line)
+	}
 }
 
 func TestJobDetailLineCountOmitsThroughputGraphWhenDisabled(t *testing.T) {

@@ -556,6 +556,9 @@ func (s *State) ApplyEvent(ev Event) {
 				job.TotalDirs = ev.TotalDirs
 			}
 			job.TotalBytes = ev.TotalBytes
+			if ev.TotalsComplete {
+				job.TotalsComplete = true
+			}
 		}
 	case EventJobBlockerRequest:
 		job := s.findJobUnlocked(ev.JobID)
@@ -597,7 +600,7 @@ func (s *State) ApplyEvent(ev Event) {
 		}
 	case EventRemovingSources:
 		if j := s.findJobUnlocked(ev.JobID); j != nil {
-			j.RemovingSources = true
+			j.RemovingSources = ev.Removing
 		}
 	case EventUndoJournal:
 		if j := s.findJobUnlocked(ev.JobID); j != nil {
