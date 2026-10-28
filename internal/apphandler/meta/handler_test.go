@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -63,7 +64,7 @@ func (f *fakeHost) MessageLogWrapCols() int { return 80 }
 func (f *fakeHost) AppendTransientMessageLines(banner string, _ []string, _ ui.MessageUrgency) {
 	f.messages = append(f.messages, banner)
 }
-func (f *fakeHost) ClearTransientMessage() {}
+func (f *fakeHost) ClearTransientMessage() { f.messages = nil }
 
 func TestRunCommand_expandsF(t *testing.T) {
 	t.Parallel()
@@ -347,7 +348,7 @@ file = "echo b"
 
 	fh := &fakeHost{panels: [2]*panel.State{testPanel(t, dir, nil)}}
 	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
-	if mf := h.loadMetaFile(0); mf != nil {
+	if mf := h.loadMetaFile(0).MF; mf != nil {
 		t.Fatal("expected load to fail on duplicate names")
 	}
 	if len(fh.messages) == 0 {
@@ -455,24 +456,46 @@ func testPanel(t *testing.T, dir string, entries []localfs.Entry) *panel.State {
 	return &panel.State{Path: p, Entries: entries}
 }
 
-func unblockFIFO(path string) {
-	f, err := os.OpenFile(path, os.O_WRONLY, 0)
-	if err != nil {
-		return
+// blockMetaLoad writes a trusted meta.toml into dir and makes loadMetaPath block until the test
+// ends. The returned channel closes when a load starts.
+func blockMetaLoad(t *testing.T, dir string) <-chan struct{} {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, "meta.toml"), []byte("# blocked\n"), 0o600); err != nil {
+		t.Fatal(err)
 	}
-	_ = f.Close()
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var once sync.Once
+	prev := loadMetaPath
+	loadMetaPath = func(string) (*metacmds.MetaFile, error) {
+		once.Do(func() { close(entered) })
+		<-release
+		return nil, errors.New("released")
+	}
+	t.Cleanup(func() {
+		close(release)
+		// Restore only once the async load has read the seam.
+		select {
+		case <-entered:
+		case <-time.After(2 * time.Second):
+		}
+		loadMetaPath = prev
+	})
+	return entered
+}
+
+func waitMetaLoadStarted(t *testing.T, entered <-chan struct{}) {
+	t.Helper()
+	select {
+	case <-entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("meta.toml load never started")
+	}
 }
 
 func TestReconcileForPanel_doesNotReadMetaOnEventLoop(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("named pipe blocking load is Unix-only")
-	}
 	dir := t.TempDir()
-	fifo := filepath.Join(dir, "meta.toml")
-	if err := syscall.Mkfifo(fifo, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { unblockFIFO(fifo) })
+	entered := blockMetaLoad(t, dir)
 
 	alpha := filepath.Join(dir, "alpha")
 	bravo := filepath.Join(dir, "bravo")
@@ -497,18 +520,12 @@ func TestReconcileForPanel_doesNotReadMetaOnEventLoop(t *testing.T) {
 	case <-time.After(300 * time.Millisecond):
 		t.Fatal("ReconcileForPanel blocked on meta.toml read")
 	}
+	waitMetaLoadStarted(t, entered)
 }
 
 func TestActivateSelection_doesNotReadMetaOnEventLoop(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("named pipe blocking load is Unix-only")
-	}
 	dir := t.TempDir()
-	fifo := filepath.Join(dir, "meta.toml")
-	if err := syscall.Mkfifo(fifo, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { unblockFIFO(fifo) })
+	entered := blockMetaLoad(t, dir)
 
 	fh := &fakeHost{panels: [2]*panel.State{testPanel(t, dir, nil)}}
 	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
@@ -529,6 +546,7 @@ func TestActivateSelection_doesNotReadMetaOnEventLoop(t *testing.T) {
 	case <-time.After(300 * time.Millisecond):
 		t.Fatal("ActivateSelection blocked on meta.toml read")
 	}
+	waitMetaLoadStarted(t, entered)
 	if got := h.activeEntries[0]; len(got) != 1 || got[0] != "size" {
 		t.Fatalf("activeEntries = %v, want [size] before the load finishes", got)
 	}
@@ -813,5 +831,61 @@ func TestReconcileForPanel_dispatchesOnlyNewEntries(t *testing.T) {
 	}
 	if h.runGen[0] != gen || h.loadPending[0] {
 		t.Fatal("reconcile restarted the run instead of dispatching into it")
+	}
+}
+
+func TestOpenDialog_notice(t *testing.T) {
+	const valid = `
+[[entry]]
+name = "lines"
+description = "Line count"
+file = "wc -l < %f"
+`
+	cases := []struct {
+		name       string
+		content    string // "" writes no meta.toml
+		perm       os.FileMode
+		wantNotice string // substring; "" means no notice
+		wantMsg    bool   // a transient message survives the open
+	}{
+		{name: "valid", content: valid, perm: 0o644},
+		{name: "missing", wantNotice: "no commands defined"},
+		{name: "world-writable", content: valid, perm: 0o646, wantNotice: "untrusted", wantMsg: true},
+		{name: "invalid", content: "[[entry]]\nname = \"x\"\n", perm: 0o644, wantNotice: "description is required", wantMsg: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if runtime.GOOS == "windows" && tc.perm&0o022 != 0 {
+				t.Skip("permission bits are not enforced on windows")
+			}
+			dir := t.TempDir()
+			if tc.content != "" {
+				path := filepath.Join(dir, "meta.toml")
+				if err := os.WriteFile(path, []byte(tc.content), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chmod(path, tc.perm); err != nil {
+					t.Fatal(err)
+				}
+			}
+			fh := &fakeHost{panels: [2]*panel.State{testPanel(t, dir, nil)}}
+			h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
+			h.OpenDialog(0)
+
+			st := h.model.MetaDialog
+			if !st.Open {
+				t.Fatal("dialog not open")
+			}
+			if tc.wantNotice == "" {
+				if st.Notice != "" || len(st.Entries) != 1 {
+					t.Fatalf("Notice = %q, entries = %d; want no notice and 1 entry", st.Notice, len(st.Entries))
+				}
+			} else if !strings.Contains(st.Notice, tc.wantNotice) {
+				t.Fatalf("Notice = %q, want it to contain %q", st.Notice, tc.wantNotice)
+			}
+			if got := len(fh.messages) > 0; got != tc.wantMsg {
+				t.Fatalf("transient messages after open = %q, want present=%v", fh.messages, tc.wantMsg)
+			}
+		})
 	}
 }

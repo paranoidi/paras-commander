@@ -1,9 +1,11 @@
 package dialog_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 func TestMetaEntryShortcuts_noneAndNames(t *testing.T) {
@@ -61,5 +63,31 @@ func TestMetaEntryShortcuts_duplicateFirstLetters(t *testing.T) {
 	}
 	if got[1] != 'b' {
 		t.Fatalf("noble shortcut = %q, want b (n taken, o reserved for OK)", got[1])
+	}
+}
+
+func TestMetaDialogView_noticeReplacesEmptyList(t *testing.T) {
+	notice := `meta: ignoring untrusted file "/home/walnut/.config/pc/meta.toml": group-writable by a shared group (chmod g-w)`
+	spec := dialog.MetaDialogView(dialog.MetaDialogState{Open: true, Notice: notice})
+	items := spec.Groups[0].Columns[0]
+	if len(items) < 2 {
+		t.Fatalf("notice rows = %d, want it wrapped over several rows", len(items))
+	}
+	var joined []string
+	for _, it := range items {
+		if it.Kind != dlg.KindLabel || it.Style != dlg.TextWarn {
+			t.Fatalf("row %+v, want a TextWarn label", it)
+		}
+		joined = append(joined, it.Label)
+	}
+	if got := strings.Join(joined, " "); !strings.Contains(got, "chmod g-w") {
+		t.Fatalf("wrapped notice %q lost its tail", got)
+	}
+
+	spec = dialog.MetaDialogView(dialog.MetaDialogState{
+		Open: true, Notice: notice, Entries: []dialog.MetaEntry{{Name: "cedar"}}, Checked: []bool{false},
+	})
+	if items := spec.Groups[0].Columns[0]; len(items) != 1 || items[0].Kind != dlg.KindCheckbox {
+		t.Fatalf("with entries the notice must not render, got %+v", items)
 	}
 }

@@ -7,8 +7,10 @@ import (
 // MetaEntryID is the widget ID of the checkbox row for entry i.
 func MetaEntryID(i int) dlg.ID { return dlg.IndexedID("entry:", i) }
 
+const metaDialogWidth = 56
+
 // MetaDialogView is the meta column picker's widget spec: one checkbox per meta entry above OK /
-// Cancel. Plain o / c press the buttons.
+// Cancel, or the wrapped Notice when there are no entries. Plain o / c press the buttons.
 func MetaDialogView(s MetaDialogState) dlg.Spec {
 	shortcuts := MetaEntryShortcuts(s.Entries)
 	items := make([]dlg.Item, len(s.Entries))
@@ -18,8 +20,13 @@ func MetaDialogView(s MetaDialogState) dlg.Spec {
 			On: i < len(s.Checked) && s.Checked[i],
 		}
 	}
+	if len(s.Entries) == 0 && s.Notice != "" {
+		for _, line := range wrapMessageBody(s.Notice, metaDialogWidth-4) {
+			items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: line, Style: dlg.TextWarn})
+		}
+	}
 	return dlg.Spec{
-		Title: "Meta", Width: 56, MinWidth: 28, MinHeight: 5, PlainButtonKeys: true,
+		Title: "Meta", Width: metaDialogWidth, MinWidth: 28, MinHeight: 5, PlainButtonKeys: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
 			dlg.OKButton,

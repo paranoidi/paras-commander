@@ -48,8 +48,8 @@ func (h *Handler) refreshDialogAfterConfigEdit() {
 	prevFocusName := focusedEntryName(st)
 	prevFocus := st.Focus
 
-	mf := h.loadMetaFile(panelID)
-	entries := entriesFromFile(mf)
+	res := h.loadMetaFile(panelID)
+	entries := entriesFromFile(res.MF)
 	checked := make([]bool, len(entries))
 	for i, e := range entries {
 		checked[i] = prevChecked[e.Name]
@@ -57,6 +57,7 @@ func (h *Handler) refreshDialogAfterConfigEdit() {
 
 	st.Entries = entries
 	st.Checked = checked
+	st.Notice = dialogNotice(res)
 	st.Focus = refocusAfterEdit(entries, prevFocus, prevFocusName)
 }
 

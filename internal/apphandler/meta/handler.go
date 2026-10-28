@@ -20,6 +20,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 func (h *Handler) postResult(panelID int, entryName, path, value string, gen uint64) {
@@ -132,12 +133,15 @@ type loadedMetaFile struct {
 	LoadErr string
 }
 
+// loadMetaPath reads and decodes a resolved meta.toml (a seam for tests that block the read).
+var loadMetaPath = metacmds.LoadFile
+
 func (h *Handler) fetchMetaFile(panelPath string) loadedMetaFile {
 	path, warns := metacmds.ResolveMetaTOML(h.config, h.model.UserHomeDir, h.configDir, panelPath)
 	if path == "" {
 		return loadedMetaFile{Warns: warns}
 	}
-	mf, err := metacmds.LoadFile(path)
+	mf, err := loadMetaPath(path)
 	if err != nil {
 		return loadedMetaFile{Warns: warns, LoadErr: "meta: " + err.Error()}
 	}
@@ -146,17 +150,36 @@ func (h *Handler) fetchMetaFile(panelPath string) loadedMetaFile {
 
 // loadMetaFile resolves and loads the meta.toml for the given panel path on the caller
 // goroutine. Used by dialog/editor paths that already released the terminal.
-// Returns nil when no file is found (not an error). Warnings are shown as transient messages.
-func (h *Handler) loadMetaFile(panelID int) *metacmds.MetaFile {
+// MF is nil when no file is found (not an error) or it failed to load. Warnings and the load
+// error are shown as transient messages.
+func (h *Handler) loadMetaFile(panelID int) loadedMetaFile {
 	res := h.fetchMetaFile(h.host.PanelByID(panelID).PathString())
 	for _, w := range res.Warns {
 		h.host.SetTransientMessage(w, ui.MessageUrgencyWarn)
 	}
 	if res.LoadErr != "" {
 		h.host.SetTransientMessage(res.LoadErr, ui.MessageUrgencyCritical)
-		return nil
+		res.MF = nil
 	}
-	return res.MF
+	return res
+}
+
+// dialogNotice explains why the meta picker has no entries: the load error, else the last
+// skipped-file warning (e.g. an untrusted meta.toml), else that no commands are defined.
+// Empty when res has entries.
+func dialogNotice(res loadedMetaFile) string {
+	if res.MF != nil && len(res.MF.Entries) > 0 {
+		return ""
+	}
+	editHint := menu.FunctionKeyEditConfig.KeyLabel + " edits meta.toml."
+	switch {
+	case res.LoadErr != "":
+		return res.LoadErr + "\n" + editHint
+	case len(res.Warns) > 0:
+		return res.Warns[len(res.Warns)-1]
+	default:
+		return "meta: no commands defined. " + editHint
+	}
 }
 
 func (h *Handler) startAsyncLoad(panelID int, activeNames []string) {
@@ -209,7 +232,7 @@ func (h *Handler) rerunSinglePanel(panelID int) {
 		return
 	}
 	h.invalidatePendingLoads(panelID)
-	mf := h.loadMetaFile(panelID)
+	mf := h.loadMetaFile(panelID).MF
 	if mf == nil {
 		return
 	}
@@ -314,8 +337,10 @@ func (h *Handler) OpenDialog(panelID int) {
 	if h.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	mf := h.loadMetaFile(panelID)
-	entries := entriesFromFile(mf)
+	// Clear before loading so the load's own warnings (untrusted or invalid meta.toml) stay up.
+	h.host.ClearTransientMessage()
+	res := h.loadMetaFile(panelID)
+	entries := entriesFromFile(res.MF)
 
 	activeSet := make(map[string]struct{}, len(h.activeEntries[panelID]))
 	for _, n := range h.activeEntries[panelID] {
@@ -331,8 +356,8 @@ func (h *Handler) OpenDialog(panelID int) {
 		PanelID: panelID,
 		Entries: entries,
 		Checked: checked,
+		Notice:  dialogNotice(res),
 	}
-	h.host.ClearTransientMessage()
 }
 
 func (h *Handler) CloseDialog() {
