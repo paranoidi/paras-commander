@@ -1218,6 +1218,7 @@ func (a *App) dispatch(actionID string) bool {
 		keymap.ActionClipboardCopyDirURL,
 		keymap.ActionClipboardCopyFilename,
 		keymap.ActionClipboardCopyFilenameWithoutExt,
+		keymap.ActionClipboardCopyFileContents,
 		keymap.ActionClipboardCopyGitFilePath,
 		keymap.ActionClipboardCopyGitDirPath:
 		a.copyToClipboard(actionID)

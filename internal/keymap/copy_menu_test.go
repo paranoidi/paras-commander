@@ -23,14 +23,15 @@ func TestDefaultCopyMenuKeysLetters(t *testing.T) {
 
 func TestBuildCopyMenuEntriesOrder(t *testing.T) {
 	entries := BuildCopyMenuEntries(DefaultCopyMenuKeys())
-	if len(entries) != 5 {
-		t.Fatalf("len = %d, want 5", len(entries))
+	if len(entries) != 6 {
+		t.Fatalf("len = %d, want 6", len(entries))
 	}
 	want := []string{
 		ActionClipboardCopyFileURL,
 		ActionClipboardCopyDirURL,
 		ActionClipboardCopyFilename,
 		ActionClipboardCopyFilenameWithoutExt,
+		ActionClipboardCopyFileContents,
 		ActionClipboardGitMenu,
 	}
 	for i, id := range want {
@@ -53,8 +54,8 @@ func TestDefaultBundleCopyMenuKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(b.CopyMenuKey) != 7 {
-		t.Fatalf("CopyMenuKey len = %d, want 7", len(b.CopyMenuKey))
+	if len(b.CopyMenuKey) != 8 {
+		t.Fatalf("CopyMenuKey len = %d, want 8", len(b.CopyMenuKey))
 	}
 	git := b.CopyMenuGitEntries()
 	if len(git) != 2 || git[0].ActionID != ActionClipboardCopyGitFilePath || git[0].Label != "Copy file URL" ||

@@ -1,10 +1,13 @@
 package app
 
 import (
+	"bytes"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/clipboard"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -40,6 +43,9 @@ func (a *App) toggleCopyMenu() {
 			// Same submenu marker as the user menu (userMenuLeaderMenuItems).
 			label += " " + string(a.styles.IconTreeExpand())
 			disabled = hasTarget && gitignore.ValidWorkTreeRoot(dirPath) == ""
+		}
+		if e.ActionID == keymap.ActionClipboardCopyFileContents {
+			disabled = !a.fullscreenTextPreviewOpen()
 		}
 		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: label, Disabled: disabled})
 		actions = append(actions, e.ActionID)
@@ -107,7 +113,38 @@ func (a *App) copyTargets() (paths []string, entries []localfs.Entry, dirPath, w
 	return nil, nil, "", "", false
 }
 
+// fullscreenTextPreviewOpen reports whether the F3 fullscreen preview shows a
+// text file (not an image or a directory), the only place file contents copy.
+func (a *App) fullscreenTextPreviewOpen() bool {
+	fp := &a.model.FullscreenFilePreview
+	return a.model.ViewMode == ui.ViewFilePreview && fp.Path != "" && !fp.IsDir && fp.ImagePayload == ""
+}
+
+// readTextFileForClipboard reads path for clipboard.copy-file-contents, refusing
+// files over the preview read cap or containing NUL bytes (binary).
+func readTextFileForClipboard(path string) (string, string) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", "Copy: cannot read file"
+	}
+	if info.Size() > config.DefaultMaxPreviewBytes {
+		return "", "Copy: file too large"
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", "Copy: cannot read file"
+	}
+	if bytes.IndexByte(data, 0) >= 0 {
+		return "", "Copy: not a text file"
+	}
+	return string(data), ""
+}
+
 func (a *App) copyToClipboard(actionID string) {
+	if actionID == keymap.ActionClipboardCopyFileContents {
+		a.copyFileContentsToClipboard()
+		return
+	}
 	paths, entries, dirPath, warn, ok := a.copyTargets()
 	if !ok {
 		if warn != "" {
@@ -186,4 +223,24 @@ func (a *App) copyToClipboard(actionID string) {
 	}
 	preview := textutil.TruncateBannerRunes(strings.ReplaceAll(text, "\n", ", "), textutil.BannerMaxRunes)
 	a.setTransientMessage("Copied: "+preview, ui.MessageUrgencyInfo)
+}
+
+// copyFileContentsToClipboard copies the fullscreen-previewed text file verbatim.
+// ponytail: synchronous read, bounded by DefaultMaxPreviewBytes like the preview itself.
+func (a *App) copyFileContentsToClipboard() {
+	if !a.fullscreenTextPreviewOpen() {
+		a.setTransientMessage("Copy: file contents only from the fullscreen text preview", ui.MessageUrgencyWarn)
+		return
+	}
+	path := a.model.FullscreenFilePreview.Path
+	text, warn := readTextFileForClipboard(path)
+	if warn != "" {
+		a.setTransientMessage(warn, ui.MessageUrgencyWarn)
+		return
+	}
+	if err := clipboard.Set(text); err != nil {
+		a.setTransientMessage("Copy failed: no clipboard tool available", ui.MessageUrgencyWarn)
+		return
+	}
+	a.setTransientMessage("Copied contents of "+filepath.Base(path), ui.MessageUrgencyInfo)
 }

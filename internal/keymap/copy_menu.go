@@ -10,6 +10,7 @@ var copyMenuActionOrder = []string{
 	ActionClipboardCopyDirURL,
 	ActionClipboardCopyFilename,
 	ActionClipboardCopyFilenameWithoutExt,
+	ActionClipboardCopyFileContents,
 	ActionClipboardGitMenu,
 }
 

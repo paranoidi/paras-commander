@@ -16,6 +16,7 @@ const (
 	ActionClipboardCopyDirURL             = "clipboard.copy-dir-url"
 	ActionClipboardCopyFilename           = "clipboard.copy-filename"
 	ActionClipboardCopyFilenameWithoutExt = "clipboard.copy-filename-without-ext"
+	ActionClipboardCopyFileContents       = "clipboard.copy-file-contents"
 	ActionClipboardGitMenu                = "clipboard.git-menu"
 	ActionClipboardCopyGitFilePath        = "clipboard.copy-git-file-path"
 	ActionClipboardCopyGitDirPath         = "clipboard.copy-git-dir-path"
@@ -357,6 +358,7 @@ var KnownActions = map[string]struct{}{
 	ActionClipboardCopyDirURL:             {},
 	ActionClipboardCopyFilename:           {},
 	ActionClipboardCopyFilenameWithoutExt: {},
+	ActionClipboardCopyFileContents:       {},
 	ActionClipboardGitMenu:                {},
 	ActionClipboardCopyGitFilePath:        {},
 	ActionClipboardCopyGitDirPath:         {},

@@ -19,7 +19,7 @@ Press `:` (`app.leader-menu`; press again to close) for a grouped, multi-column 
 - Letters come from `[leader_key]` in `keybindings.toml`; set one to `""` to drop the row. Keys must be unique within each menu; upper and lower case are distinct. Letters can differ between menus.
 - `F3` toggles showing each action's direct key after its name (`[ui] leader_menu_show_direct_keys`).
 - `Esc` closes the strip.
-- `"` (`app.copy-menu`) opens the copy-to-clipboard menu (`[copy_menu]`) with file URL, directory URL, file name and git-relative paths. In the fullscreen preview, `:` opens a preview menu (`[preview_menu]`) instead.
+- `"` (`app.copy-menu`) opens the copy-to-clipboard menu (`[copy_menu]`) with file URL, directory URL, file name and git-relative paths. In the fullscreen preview of a text file it also copies the file's contents (the row is dimmed elsewhere). In the fullscreen preview, `:` opens a preview menu (`[preview_menu]`) instead.
 - `Alt+G` (`panel.git-filter-menu`) opens a small menu to filter by git state (staged, unstaged, tracked, untracked).
 
 ## Vi-motion mode

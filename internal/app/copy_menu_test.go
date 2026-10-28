@@ -52,8 +52,8 @@ func TestOpenCopyMenuShowsCopyActions(t *testing.T) {
 	if app.model.LeaderMenu.UserMenu {
 		t.Fatal("expected UserMenu=false")
 	}
-	if len(app.model.LeaderMenu.Items) != 5 {
-		t.Fatalf("items len = %d, want 5", len(app.model.LeaderMenu.Items))
+	if len(app.model.LeaderMenu.Items) != 6 {
+		t.Fatalf("items len = %d, want 6", len(app.model.LeaderMenu.Items))
 	}
 }
 
@@ -241,7 +241,7 @@ func TestCopyMenuGitSubmenuLeftReturnsToTop(t *testing.T) {
 		}
 		app.handleLeaderMenuKey(ev)
 		st := app.model.LeaderMenu
-		if !st.Open || !st.CopyMenu || st.CopyGit || len(st.Items) != 5 {
+		if !st.Open || !st.CopyMenu || st.CopyGit || len(st.Items) != 6 {
 			t.Fatalf("vi=%v: expected top copy menu, got %+v", vi, st)
 		}
 	}
@@ -260,5 +260,49 @@ func TestCopyMenuLeftCloses(t *testing.T) {
 		if app.model.LeaderMenu.Open {
 			t.Fatalf("vi=%v: copy menu still open after Left", vi)
 		}
+	}
+}
+
+func copyMenuItemByKey(app *App, key rune) ui.LeaderMenuItem {
+	for _, it := range app.model.LeaderMenu.Items {
+		if it.Key == key {
+			return it
+		}
+	}
+	return ui.LeaderMenuItem{}
+}
+
+func TestCopyMenuFileContentsOnlyInFullscreenTextPreview(t *testing.T) {
+	app, filePath := testCopyMenuApp(t)
+	if err := os.WriteFile(filePath, []byte("lantern harbor\nquiet orchard\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	app.toggleCopyMenu()
+	if !copyMenuItemByKey(app, 'o').Disabled {
+		t.Fatal("file contents row should be dimmed in the browser")
+	}
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
+	if got := clipboard.LastSet(); got != "" {
+		t.Fatalf("clipboard = %q, want empty outside preview", got)
+	}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.model.FullscreenFilePreview.Path = filePath
+	app.toggleCopyMenu()
+	if copyMenuItemByKey(app, 'o').Disabled {
+		t.Fatal("file contents row should be enabled in fullscreen text preview")
+	}
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
+	if got := clipboard.LastSet(); got != "lantern harbor\nquiet orchard\n" {
+		t.Fatalf("clipboard = %q", got)
+	}
+
+	clipboard.Reset()
+	if err := os.WriteFile(filePath, []byte("pebble\x00crane"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	app.copyToClipboard(keymap.ActionClipboardCopyFileContents)
+	if got := clipboard.LastSet(); got != "" {
+		t.Fatalf("binary file copied: %q", got)
 	}
 }

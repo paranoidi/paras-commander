@@ -197,6 +197,14 @@ func DefaultActionSpecs() []ActionSpec {
 			CopyMenuKey: "n",
 		},
 		{
+			ID:          ActionClipboardCopyFileContents,
+			Views:       HelpBrowser,
+			Title:       "Copy file contents",
+			Section:     "App",
+			Keywords:    []string{"clipboard", "contents", "text", "copy"},
+			CopyMenuKey: "o",
+		},
+		{
 			ID:          ActionClipboardGitMenu,
 			Views:       HelpBrowser,
 			Title:       "Relative to git root",
