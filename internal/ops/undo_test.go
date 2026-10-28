@@ -129,7 +129,7 @@ func TestUndoMassRenameSwap(t *testing.T) {
 		{SourcePath: apple, OldBase: "apple", NewBase: "pear"},
 		{SourcePath: pear, OldBase: "pear", NewBase: "apple"},
 	}
-	if err := ExecuteMassRename(rows); err != nil {
+	if err := ExecuteMassRename(context.Background(), rows); err != nil {
 		t.Fatal(err)
 	}
 	steps := []UndoStep{

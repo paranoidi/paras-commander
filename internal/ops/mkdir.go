@@ -76,7 +76,11 @@ func ExecuteMkdir(ctx context.Context, plan MkdirPlan) error {
 	if err != nil {
 		return err
 	}
-	return withElevation(ctx, "mkdir", host, []string{"mkdir", "--", host}, func() error {
+	if err := withElevation(ctx, "mkdir", host, []string{"mkdir", "--", host}, func() error {
 		return localfs.Mkdir(host, 0o755)
-	})
+	}); err != nil {
+		return err
+	}
+	reportCreatedHost(ctx, host)
+	return nil
 }

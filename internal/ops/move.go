@@ -317,9 +317,6 @@ func (r moveRun) moveOne(ctx context.Context, src, dst, destination pathloc.Path
 		r.opts.itemDone(PlanItem{Src: src, Dst: dst}, ItemSourceDeleted, ReasonSourceDeleted)
 		return 0, 0, true, nil // counts as moved
 	case out.renamed:
-		if r.opts.OnRenamed != nil && !src.IsRemote() && !dst.IsRemote() {
-			r.opts.OnRenamed(src, dst)
-		}
 		if !out.final.IsZero() {
 			dst = out.final
 		}

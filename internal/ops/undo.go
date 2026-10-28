@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -34,17 +35,30 @@ type UndoStep struct {
 	Source int32
 }
 
-// journalCreated reports a path a copy just created through opts.OnJournal. The one Lstat of the
-// destination supplies the size and mtime the undo check needs; a failed stat drops the step.
-func (o Options) journalCreated(ctx context.Context, dst pathloc.Path) {
-	if o.OnJournal == nil {
+// noteCreated reports a path a copy just created through opts.OnJournal and ctx's fschange sink.
+// The one Lstat of the destination supplies the size and mtime the undo check needs; a failed
+// stat drops the step.
+func (o Options) noteCreated(ctx context.Context, dst pathloc.Path) {
+	host := hostPathOf(dst)
+	report := host != "" && fschange.Enabled(ctx)
+	if o.OnJournal == nil && !report {
 		return
 	}
 	ent, err := statEntry(ctx, dst)
 	if err != nil {
 		return
 	}
-	o.OnJournal(UndoStep{Kind: UndoRemoveCreated, Path: dst, IsDir: ent.Type == fsbackend.EntryDirectory, Size: ent.Size, ModTime: ent.ModifiedAt, Source: o.source})
+	isDir := ent.Type == fsbackend.EntryDirectory
+	if report {
+		c := fschange.Change{Kind: fschange.Created, Path: host, IsDir: isDir}
+		if !isDir {
+			c.Bytes = ent.Size
+		}
+		fschange.Report(ctx, c)
+	}
+	if o.OnJournal != nil {
+		o.OnJournal(UndoStep{Kind: UndoRemoveCreated, Path: dst, IsDir: isDir, Size: ent.Size, ModTime: ent.ModifiedAt, Source: o.source})
+	}
 }
 
 // journalMoved reports that from now lives at to, through opts.OnJournal.
@@ -143,7 +157,11 @@ func undoRemoveCreated(ctx context.Context, s UndoStep) error {
 		}
 		return nil
 	}
-	return be.Remove(ctx, s.Path)
+	if err := be.Remove(ctx, s.Path); err != nil {
+		return err
+	}
+	reportRemoved(ctx, s.Path, false)
+	return nil
 }
 
 // undoMoveBack moves s.Path back to s.From through the move path (copy fallback across devices
@@ -241,7 +259,7 @@ func undoMassRename(ctx context.Context, rows []MassRenameRow, steps []UndoStep,
 	if err := ctx.Err(); err != nil {
 		return 0, 0, err
 	}
-	if err := ExecuteMassRename(work); err != nil {
+	if err := ExecuteMassRename(ctx, work); err != nil {
 		return 0, 0, err
 	}
 	for i, row := range work {

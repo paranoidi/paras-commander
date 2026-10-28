@@ -56,9 +56,13 @@ func PlanSymlink(target, linkPath string, activePanelPath string, passivePanelPa
 
 // ExecuteSymlink creates the symlink. A permission failure is retried as root when ctx carries an Elevator.
 func ExecuteSymlink(ctx context.Context, plan SymlinkPlan) error {
-	return withElevation(ctx, "symlink", plan.LinkPath, []string{"ln", "-s", "-T", "--", plan.Target, plan.LinkPath}, func() error {
+	if err := withElevation(ctx, "symlink", plan.LinkPath, []string{"ln", "-s", "-T", "--", plan.Target, plan.LinkPath}, func() error {
 		return localfs.Symlink(plan.Target, plan.LinkPath)
-	})
+	}); err != nil {
+		return err
+	}
+	reportCreatedHost(ctx, plan.LinkPath)
+	return nil
 }
 
 // HardlinkPlan describes a validated hardlink creation operation.
@@ -117,7 +121,11 @@ func PlanHardlink(source, newPath string, activePanelPath string, passivePanelPa
 
 // ExecuteHardlink creates the hardlink. A permission failure is retried as root when ctx carries an Elevator.
 func ExecuteHardlink(ctx context.Context, plan HardlinkPlan) error {
-	return withElevation(ctx, "hardlink", plan.NewPath, []string{"ln", "-T", "--", plan.Source, plan.NewPath}, func() error {
+	if err := withElevation(ctx, "hardlink", plan.NewPath, []string{"ln", "-T", "--", plan.Source, plan.NewPath}, func() error {
 		return localfs.Link(plan.Source, plan.NewPath)
-	})
+	}); err != nil {
+		return err
+	}
+	reportCreatedHost(ctx, plan.NewPath)
+	return nil
 }

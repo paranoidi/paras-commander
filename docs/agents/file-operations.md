@@ -45,6 +45,15 @@ Foreground dialogs and their execution. Handlers live in `internal/apphandler/di
 - Remove-empty-dirs removes each directory right after its children when empty, roots included.
 - No total is announced (jobs view shows `?`); `DoneFiles` counts moved items.
 
+## Filesystem change reports
+
+Every local primitive reports what it did through `ctx`'s `fschange.Sink` (ADR 0023; helpers `report*` in `internal/ops/fsreport.go`, the only place remote paths are dropped). Jobs get the sink from `jobbridge.TransferFunc`. Dialog operations get it from `Handler.fsCtx`, which `elevatedCtx` builds on, so async and elevated retries report too. Each report follows the step's success:
+
+- **Renamed**: `RenameFastPath` (move renames, merge children, undo move-back), `ExecuteRename`, flatten's deferred park and final renames, and `ExecuteMassRename(ctx, rows)` as one batch of net source -> target renames (never the temp hops).
+- **Removed**: `ExecuteDeletePaths` per source, `removePathRecursive` (delete-source answers, a move fallback's sources, staged overwrites), `removeDirIfEmpty` (merge sources, flatten, undo, `RemoveEmptyDirsUnder`), `undoRemoveCreated` files, `removePartialTransferDest`, and a failed stream extract's output.
+- **Created**: `Options.noteCreated` (one `Lstat` shared with the undo journal) for copied files, symlinks and directories; `ensureParentDirs`, a copy's created destination directory, `ExecuteMkdir`, `ExecuteSymlink`, `ExecuteHardlink`, and stream extract output.
+- **Dirty**: a delete source that failed, was cancelled or was skipped after a permission error; a failed local `CopyFile` (it truncates in place); and, for archive-tool extracts, each top-level entry of the destination that is new or whose mtime, size or kind changed (`snapshotTopLevel` before and after `extractOne`). A member added only to an existing nested directory leaves its top-level directory's mtime unchanged, so it is missed until a rescan; container tools run with keep-existing flags, so nothing is overwritten in place.
+
 ## Overwrite and directory mismatches
 
 A conflict where exactly one side is a directory (real, or a symlink to one), or a directory meets a symlink to a directory, can only be skipped, renamed or canceled; nothing is merged through a symlink. `ops.FileConflictFacts.OverwriteUnsafe()` (`SourceTarget`/`DestTarget`, filled by `StatFileConflictFacts` and `statConflictFacts`) decides it, and `resolveConflict` converts any overwrite or delete-source on a mismatch into skip. The copy plan's directory items (`copyDirItem`) hit the same path: skipping drops the subtree (`copyRunState.skippedDirs`), renaming re-roots it (`renamedDirs`). Dialog details and remembered-decision handling are in [jobs.md](jobs.md); rationale in ADR 0011 and 0019.

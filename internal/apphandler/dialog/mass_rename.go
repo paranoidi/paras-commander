@@ -512,7 +512,7 @@ func (h *Handler) ExecuteMassRename() {
 		h.host.SetTransientMessage("Nothing to rename", ui.MessageUrgencyInfo)
 		return
 	}
-	if err := ops.ExecuteMassRename(rows); err != nil {
+	if err := ops.ExecuteMassRename(h.fsCtx(), rows); err != nil {
 		h.host.SetErrorMessage("Mass rename failed", err)
 		h.CloseFileDialog()
 		return
@@ -533,11 +533,10 @@ func (h *Handler) ExecuteMassRename() {
 	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", len(renamedPaths)), ui.MessageUrgencySuccess)
 }
 
-// applyMassRenameRows patches the active panel and the disk-usage cache for each row that
-// changed name, records the batch as one finished rename job, and returns the new paths.
+// applyMassRenameRows patches the active panel for each row that changed name, records the batch
+// as one finished rename job, and returns the new paths.
 func (h *Handler) applyMassRenameRows(rows []ops.MassRenameRow) []string {
 	var renamedPaths []string
-	var pairs [][2]string
 	var steps []ops.UndoStep
 	active := h.host.ActivePanel()
 	vr := h.host.ActiveViewportRows()
@@ -547,11 +546,9 @@ func (h *Handler) applyMassRenameRows(rows []ops.MassRenameRow) []string {
 		}
 		newPath := r.NewPath()
 		renamedPaths = append(renamedPaths, newPath)
-		pairs = append(pairs, [2]string{r.SourcePath, newPath})
 		steps = append(steps, renameStep(r.SourcePath, newPath, r.IsDir)...)
 		active.RenameEntry(r.SourcePath, r.NewBase, vr)
 	}
-	h.diskUsageRenamed(pairs)
 	h.recordRename(steps)
 	return renamedPaths
 }
@@ -582,7 +579,7 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 		h.host.SetTransientMessage("Nothing to rename", ui.MessageUrgencyInfo)
 		return
 	}
-	if err := ops.ExecuteMassRename(rows); err != nil {
+	if err := ops.ExecuteMassRename(h.fsCtx(), rows); err != nil {
 		h.host.SetErrorMessage("Mass rename failed", err)
 		return
 	}

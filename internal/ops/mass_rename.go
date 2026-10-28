@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
@@ -695,18 +697,20 @@ func MassRenameHasWork(rows []MassRenameRow) bool {
 	return false
 }
 
+// massRenamePair is one row of a mass rename that changes its name.
+type massRenamePair struct {
+	src     string
+	dir     string
+	newBase string
+}
+
 // ExecuteMassRename applies validated rows using a two-phase temp rename so swaps and chains work.
 // Caller must pass rows that passed MassRenameValidateRows.
-func ExecuteMassRename(rows []MassRenameRow) error {
-	type pair struct {
-		src     string
-		dir     string
-		newBase string
-	}
-	var work []pair
+func ExecuteMassRename(ctx context.Context, rows []MassRenameRow) error {
+	var work []massRenamePair
 	for _, r := range rows {
 		if r.NewBase != r.OldBase {
-			work = append(work, pair{src: r.SourcePath, dir: filepath.Dir(r.SourcePath), newBase: r.NewBase})
+			work = append(work, massRenamePair{src: r.SourcePath, dir: filepath.Dir(r.SourcePath), newBase: r.NewBase})
 		}
 	}
 	if len(work) == 0 {
@@ -744,7 +748,24 @@ func ExecuteMassRename(rows []MassRenameRow) error {
 			return fmt.Errorf("mass rename stage2 %q -> %q: %w", temps[i], dst, err)
 		}
 	}
+	reportMassRenamed(ctx, work)
 	return nil
+}
+
+// reportMassRenamed reports the net src -> dst renames of a finished mass rename as one batch:
+// the renames happened together (swaps, chains) and the temporary hops are not reported.
+func reportMassRenamed(ctx context.Context, work []massRenamePair) {
+	if !fschange.Enabled(ctx) {
+		return
+	}
+	batch := make([]fschange.Change, 0, len(work))
+	for _, w := range work {
+		if c, ok := statChange(fschange.Renamed, filepath.Join(w.dir, w.newBase)); ok {
+			c.From = w.src
+			batch = append(batch, c)
+		}
+	}
+	fschange.Report(ctx, batch...)
 }
 
 func pickMassRenameTemp(dir string, avoid map[string]struct{}) (string, error) {

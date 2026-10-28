@@ -477,7 +477,7 @@ func (h *Handler) executeRename() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteRename(context.Background(), plan); err != nil {
+	if err := ops.ExecuteRename(h.fsCtx(), plan); err != nil {
 		if h.canElevate(err) {
 			retry.entry = entry
 			h.startRemoteRename(retry, newName, panelPath) // asynchronously asks to retry as root
@@ -503,14 +503,6 @@ func (h *Handler) addRenameMarks(newPaths []string) {
 	}
 }
 
-// diskUsageRenamed carries cached disk-usage sizes from old paths to new ones after a local rename.
-func (h *Handler) diskUsageRenamed(pairs [][2]string) {
-	if h.diskUsage == nil || h.host.ActivePanel().Path.IsRemote() {
-		return
-	}
-	h.diskUsage.RenamePaths(pairs)
-}
-
 // renameStep is the undo step for one rename of from to to; empty when either path is unparsable.
 func renameStep(from, to string, isDir bool) []ops.UndoStep {
 	f, err1 := pathloc.Parse(from)
@@ -530,7 +522,6 @@ func (h *Handler) recordRename(steps []ops.UndoStep) {
 
 func (h *Handler) applyRenameSuccess(st renameApply) {
 	p := h.host.ActivePanel()
-	h.diskUsageRenamed([][2]string{{st.entry.Path, st.plan.NewPath}})
 	h.recordRename(renameStep(st.entry.Path, st.plan.NewPath, st.entry.Type == localfs.EntryDirectory))
 	p.RenameEntry(st.entry.Path, st.plan.NewName, h.host.PanelViewportRows(st.panelID))
 	if st.focusAfter {
@@ -619,7 +610,7 @@ func (h *Handler) executeMkdir() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteMkdir(context.Background(), plan); err != nil {
+	if err := ops.ExecuteMkdir(h.fsCtx(), plan); err != nil {
 		if h.canElevate(err) {
 			h.startRemoteMkdir(st) // asynchronously asks to retry as root
 			return
@@ -881,7 +872,7 @@ func (h *Handler) executeSymlink() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteSymlink(context.Background(), plan); err != nil {
+	if err := ops.ExecuteSymlink(h.fsCtx(), plan); err != nil {
 		if h.canElevate(err) {
 			h.startAttrOp("Symlink", fmt.Sprintf("Created symlink: %s -> %s", filepath.Base(plan.LinkPath), plan.TargetSrc), func(ctx context.Context) error {
 				return ops.ExecuteSymlink(ctx, plan)
@@ -911,7 +902,7 @@ func (h *Handler) executeHardlink() {
 		h.CloseFileDialog()
 		return
 	}
-	if err := ops.ExecuteHardlink(context.Background(), plan); err != nil {
+	if err := ops.ExecuteHardlink(h.fsCtx(), plan); err != nil {
 		if h.canElevate(err) {
 			h.startAttrOp("Hardlink", fmt.Sprintf("Created hardlink: %s", filepath.Base(plan.NewPath)), func(ctx context.Context) error {
 				return ops.ExecuteHardlink(ctx, plan)

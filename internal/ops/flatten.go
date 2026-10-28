@@ -167,7 +167,11 @@ func (w *flattenWalk) walk(ctx context.Context, dir pathloc.Path) error {
 // (false, nil) from a real error without parsing backend-specific error codes.
 func removeDirIfEmpty(ctx context.Context, be fsbackend.Backend, dir pathloc.Path, op string) (bool, error) {
 	removeErr := be.Remove(ctx, dir)
-	if removeErr == nil || isNotExist(removeErr) {
+	if removeErr == nil {
+		reportRemoved(ctx, dir, true)
+		return true, nil
+	}
+	if isNotExist(removeErr) {
 		return true, nil
 	}
 	entries, err := be.List(ctx, dir)
@@ -205,6 +209,7 @@ func (w *flattenWalk) finishDeferred(ctx context.Context) error {
 		if err := be.Rename(ctx, src, temp); err != nil {
 			return &Error{Op: "flatten", Text: fmt.Sprintf("move %q aside: %v", src, err), Err: err}
 		}
+		reportRenamed(ctx, src, temp)
 		items = append(items, parked{temp, final})
 	}
 	if w.removeEmpty {
@@ -235,6 +240,7 @@ func (w *flattenWalk) finishDeferred(ctx context.Context) error {
 		if err := be.Rename(ctx, it.temp, it.final); err != nil {
 			return &Error{Op: "flatten", Text: fmt.Sprintf("rename %q: %v", it.temp, err), Err: err}
 		}
+		reportRenamed(ctx, it.temp, it.final)
 		w.doneFiles++
 	}
 	return nil

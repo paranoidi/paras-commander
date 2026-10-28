@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func actionResolver(a ConflictAction) ConflictResolver {
@@ -61,17 +59,12 @@ func TestMoveDeleteSourceKeepsDestination(t *testing.T) {
 	src, dstDir := writeConflictPair(t, "harbor.txt", "fresh", "stale")
 	var reason string
 	var res ItemResult
-	var renamed int
 	opts := Options{
 		CopyBufferKiB: 4,
 		OnItemDone:    func(_ PlanItem, rr ItemResult, r string) { res, reason = rr, r },
-		OnRenamed:     func(_, _ pathloc.Path) { renamed++ },
 	}
 	if _, _, err := ExecuteMove(context.Background(), MustPaths(src), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, actionResolver(ActionDeleteSource), nil); err != nil {
 		t.Fatal(err)
-	}
-	if renamed != 0 {
-		t.Fatalf("OnRenamed called %d times; a deleted source renames nothing", renamed)
 	}
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Fatalf("source must be removed, stat err = %v", err)

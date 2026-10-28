@@ -8,9 +8,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -204,6 +206,9 @@ func extractOne(ctx context.Context, item ExtractItem, destDir string, tc archiv
 	if item.Format.NeedsStdoutSink() {
 		return extractViaStdout(ctx, argv, item, destDir, resolver)
 	}
+	// The archive tool picks the names it writes: report what changed at destDir's top level.
+	before := snapshotTopLevel(ctx, destDir)
+	defer reportTopLevelChanges(ctx, destDir, before)
 	res := cmdrun.Run(ctx, argv, filepath.Dir(item.Path), cmdrun.MaxStreamBytes)
 	if res.LaunchErr != nil {
 		return res.LaunchErr
@@ -299,12 +304,15 @@ func extractViaStdout(ctx context.Context, argv []string, item ExtractItem, dest
 	cmd.Stderr = &stderrBuf
 
 	if err := cmd.Run(); err != nil {
-		_ = os.Remove(outPath)
+		if os.Remove(outPath) == nil {
+			reportRemovedHost(ctx, outPath, false) // an overwrite already truncated the old file
+		}
 		if msg := strings.TrimSpace(stderrBuf.String()); msg != "" {
 			return fmt.Errorf("%s", msg)
 		}
 		return err
 	}
+	reportCreatedHost(ctx, outPath)
 	return nil
 }
 
@@ -331,4 +339,43 @@ func FilterArchiveEntries(entries []localfs.Entry) (archives []string, skipped i
 		archives = append(archives, e.Path)
 	}
 	return archives, skipped
+}
+
+// topLevelEntry is what snapshotTopLevel keeps of one entry of a directory.
+type topLevelEntry struct {
+	modTime time.Time
+	size    int64
+	isDir   bool
+}
+
+// snapshotTopLevel lists dir's entries when ctx has an fschange sink (nil otherwise, or when dir
+// does not exist yet).
+func snapshotTopLevel(ctx context.Context, dir string) map[string]topLevelEntry {
+	if !fschange.Enabled(ctx) {
+		return nil
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	snap := make(map[string]topLevelEntry, len(entries))
+	for _, de := range entries {
+		if fi, err := de.Info(); err == nil {
+			snap[de.Name()] = topLevelEntry{modTime: fi.ModTime(), size: fi.Size(), isDir: fi.IsDir()}
+		}
+	}
+	return snap
+}
+
+// reportTopLevelChanges reports each entry of dir that is new or whose mtime, size or kind
+// differs from before as dirty: its size is unknown, so it is rescanned (a directory's mtime
+// moves when an entry is added to it). Unchanged entries are not rescanned.
+func reportTopLevelChanges(ctx context.Context, dir string, before map[string]topLevelEntry) {
+	after := snapshotTopLevel(ctx, dir)
+	for name, a := range after {
+		if b, ok := before[name]; ok && b == a {
+			continue
+		}
+		reportDirtyHost(ctx, filepath.Join(dir, name), a.isDir)
+	}
 }

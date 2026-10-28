@@ -83,9 +83,6 @@ type Options struct {
 	// OnRemoveSources is called once when a move's copy fallback starts removing transferred
 	// sources; nil means no-op.
 	OnRemoveSources func()
-	// OnRenamed is called after a move completes a plain rename of src to dst (not a merge or
-	// copy fallback) when both paths are local; nil means no-op.
-	OnRenamed func(src, dst pathloc.Path)
 	// OnJournal receives one UndoStep per item a copy created or a move relocated (undo.go); nil
 	// means no-op. It runs on the job goroutine after the item exists. Undo itself never journals.
 	OnJournal func(UndoStep)
@@ -385,6 +382,7 @@ func RenameFastPath(ctx context.Context, src, dest pathloc.Path) (ok bool, err e
 		return osRename(srcHost, destHost)
 	})
 	if err == nil {
+		reportRenamedHost(ctx, srcHost, destHost)
 		return true, nil
 	}
 	if localfs.IsCrossDeviceRenameError(err) {

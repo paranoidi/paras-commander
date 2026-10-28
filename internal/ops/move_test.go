@@ -379,39 +379,6 @@ func ow(overwrite bool) ConflictResolution {
 	return ConflictResolution{Action: ActionSkip}
 }
 
-func TestMoveOnRenamedFiresForPlainDirRenameNotMerge(t *testing.T) {
-	srcDir, dstDir := t.TempDir(), t.TempDir()
-	plain := filepath.Join(srcDir, "walnut")
-	merged := filepath.Join(srcDir, "poplar")
-	for _, d := range []string{plain, merged, filepath.Join(dstDir, "poplar")} {
-		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := os.WriteFile(filepath.Join(merged, "a.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	var got [][2]string
-	opts := Options{CopyBufferKiB: 4, OnRenamed: func(s, d pathloc.Path) { got = append(got, [2]string{s.String(), d.String()}) }}
-	if _, _, err := ExecuteMove(context.Background(), MustPaths(plain, merged), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil); err != nil {
-		t.Fatal(err)
-	}
-	// The merged dir itself must not fire; its children renaming individually is fine.
-	want := [2]string{plain, filepath.Join(dstDir, "walnut")}
-	n := 0
-	for _, c := range got {
-		if c == want {
-			n++
-		}
-		if c[0] == merged {
-			t.Fatalf("OnRenamed fired for merged dir: %v", c)
-		}
-	}
-	if n != 1 {
-		t.Fatalf("OnRenamed calls = %v, want %v exactly once", got, want)
-	}
-}
-
 // TestMoveToFileTargetCreatesMissingParent: a single source moved onto a file path whose
 // directory does not exist yet (compare merge's in-tree rename) creates that directory.
 func TestMoveToFileTargetCreatesMissingParent(t *testing.T) {

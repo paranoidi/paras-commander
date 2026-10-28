@@ -108,6 +108,7 @@ func prepareCopyDestinationCtx(ctx context.Context, sources []pathloc.Path, dest
 			if err := be.Mkdir(ctx, destination, 0o755); err != nil {
 				return fmt.Errorf("create destination dir %q: %w", destination, err)
 			}
+			reportCreated(ctx, destination)
 			return nil
 		}
 		return nil
@@ -328,7 +329,7 @@ func copyDirItem(ctx context.Context, item PlanItem, opts Options, resolver Conf
 		if err := be.Mkdir(ctx, item.Dst, mkdirModeForItem(item, opts)); err != nil {
 			return fmt.Errorf("create directory %q: %w", dstStr, err)
 		}
-		opts.journalCreated(ctx, item.Dst)
+		opts.noteCreated(ctx, item.Dst)
 	} else if statErr != nil {
 		return fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(statErr))
 	}
@@ -573,19 +574,17 @@ func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, re
 func copyLocalFile(ctx context.Context, src, dst string, opts Options, buf []byte, onWritten func(int64)) (copyResult, error) {
 	err := localfs.CopyFile(ctx, src, dst, BufferSize(opts.CopyBufferKiB), opts.PreservePermissions, opts.PreserveTimestamps, false, opts.CowFileCloning, opts.LocalCopyFileOpts(buf), onWritten)
 	if err != nil {
+		reportDirtyHost(ctx, dst, false) // opened with O_TRUNC: a partial or emptied file may remain
 		return copySkipped, err
 	}
-	journalLocalCreated(ctx, opts, dst)
+	noteLocalCreated(ctx, opts, dst)
 	return copyDone, nil
 }
 
-// journalLocalCreated is Options.journalCreated for a local path string.
-func journalLocalCreated(ctx context.Context, opts Options, dst string) {
-	if opts.OnJournal == nil {
-		return
-	}
+// noteLocalCreated is Options.noteCreated for a local path string.
+func noteLocalCreated(ctx context.Context, opts Options, dst string) {
 	if loc, err := pathloc.Parse(dst); err == nil {
-		opts.journalCreated(ctx, loc)
+		opts.noteCreated(ctx, loc)
 	}
 }
 
@@ -646,6 +645,6 @@ func copySymlinkWithConflict(ctx context.Context, src, dst string, opts Options,
 	if err := CopySymlink(src, dst, nil); err != nil {
 		return copySkipped, err
 	}
-	journalLocalCreated(ctx, opts, dst)
+	noteLocalCreated(ctx, opts, dst)
 	return copyDone, nil
 }

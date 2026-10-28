@@ -52,7 +52,11 @@ func ExecuteRename(ctx context.Context, plan RenamePlan) error {
 	}
 	do := func() error { return be.Rename(ctx, oldLoc, newLoc) }
 	if oldHost, newHost := hostPathOf(oldLoc), hostPathOf(newLoc); oldHost != "" && newHost != "" {
-		return withElevation(ctx, "rename", oldHost, []string{"mv", "-T", "--", oldHost, newHost}, do)
+		if err := withElevation(ctx, "rename", oldHost, []string{"mv", "-T", "--", oldHost, newHost}, do); err != nil {
+			return err
+		}
+		reportRenamedHost(ctx, oldHost, newHost)
+		return nil
 	}
 	return do()
 }

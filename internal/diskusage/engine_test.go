@@ -203,7 +203,7 @@ func TestAbortClearsQueuedJobs(t *testing.T) {
 	}
 }
 
-func TestInvalidateSubtreeRemovesRootAndDescendants(t *testing.T) {
+func TestApplyRemovedDropsScannedRootAndDescendants(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
@@ -233,12 +233,12 @@ func TestInvalidateSubtreeRemovesRootAndDescendants(t *testing.T) {
 		return okSub && okOther
 	}, 5*time.Second, "sizes not cached")
 
-	e.DropSubtrees(nil, []string{sub})
+	applyWait(t, e, removed(sub, true))
 	if _, ok := e.Size(sub); ok {
-		t.Fatal("sub size should be gone after DropSubtrees")
+		t.Fatal("sub size should be gone after removal")
 	}
 	if _, ok := e.Size(nested); ok {
-		t.Fatal("nested size should be gone after DropSubtrees")
+		t.Fatal("nested size should be gone after removal")
 	}
 	if _, ok := e.Size(other); !ok {
 		t.Fatal("unrelated path should remain cached")
@@ -649,75 +649,6 @@ func TestPriorityScanPreemptsAndRequeuesRest(t *testing.T) {
 	}
 }
 
-func TestRenamePathsMovesSubtreeAndSwaps(t *testing.T) {
-	e := New()
-	e.SetSize("/r/maple", 2, 10)
-	e.SetSize("/r/maple/leaf", 1, 4)
-	e.SetSize("/r/birch", 1, 7)
-	e.RenamePaths([][2]string{{"/r/maple", "/r/cedar"}})
-	for p, want := range map[string]int64{"/r/cedar": 10, "/r/cedar/leaf": 4, "/r/birch": 7} {
-		if got, ok := e.Size(p); !ok || got != want {
-			t.Fatalf("Size(%s) = %d ok=%v want %d", p, got, ok, want)
-		}
-	}
-	for _, p := range []string{"/r/maple", "/r/maple/leaf"} {
-		if _, ok := e.Size(p); ok {
-			t.Fatalf("%s still cached", p)
-		}
-	}
-	if n, ok := e.FileCount("/r/cedar"); !ok || n != 2 {
-		t.Fatalf("FileCount(/r/cedar) = %d ok=%v want 2", n, ok)
-	}
-	e.RenamePaths([][2]string{{"/r/cedar", "/r/birch"}, {"/r/birch", "/r/cedar"}})
-	if got, _ := e.Size("/r/birch"); got != 10 {
-		t.Fatalf("swapped birch = %d want 10", got)
-	}
-	if got, _ := e.Size("/r/cedar"); got != 7 {
-		t.Fatalf("swapped cedar = %d want 7", got)
-	}
-}
-
-func TestRenamePathsDropsStaleDestination(t *testing.T) {
-	e := New()
-	e.SetSize("/r/maple", 2, 10)
-	e.SetSize("/r/maple/leaf", 1, 4)
-	e.SetSize("/r/birch", 3, 30)
-	e.SetSize("/r/birch/leaf", 1, 9)
-	e.SetSize("/r/birch/acorn", 2, 21)
-	e.RenamePaths([][2]string{{"/r/maple", "/r/birch"}})
-	for p, want := range map[string]int64{"/r/birch": 10, "/r/birch/leaf": 4} {
-		if got, ok := e.Size(p); !ok || got != want {
-			t.Fatalf("Size(%s) = %d ok=%v want %d", p, got, ok, want)
-		}
-	}
-	for _, p := range []string{"/r/birch/acorn", "/r/maple", "/r/maple/leaf"} {
-		if _, ok := e.Size(p); ok {
-			t.Fatalf("%s still cached", p)
-		}
-	}
-}
-
-func TestDropSubtreesDropsEveryRootAndBumpsVersion(t *testing.T) {
-	t.Parallel()
-	e := New()
-	for _, p := range []string{"/srv/lantern", "/srv/lantern/orchard", "/srv/harbor", "/srv/harborside"} {
-		e.SetSize(p, 1, 10)
-	}
-	v := e.CacheVersion()
-	e.DropSubtrees([]string{"/srv/lantern/"}, []string{"/srv/harbor"})
-	for _, p := range []string{"/srv/lantern", "/srv/lantern/orchard", "/srv/harbor"} {
-		if _, ok := e.Size(p); ok {
-			t.Fatalf("%s still cached", p)
-		}
-	}
-	if _, ok := e.Size("/srv/harborside"); !ok {
-		t.Fatal("sibling sharing a name prefix was dropped")
-	}
-	if e.CacheVersion() == v {
-		t.Fatal("cache version not bumped")
-	}
-}
-
 func seedSizes(e *Engine, sizes map[string]int64) {
 	for p, n := range sizes {
 		e.SetSize(p, int(n/10), n)
@@ -741,58 +672,4 @@ func wantSizes(t *testing.T, e *Engine, sizes map[string]int64) {
 			t.Errorf("%s file count = %d, want %d", p, fc, want/10)
 		}
 	}
-}
-
-func TestDropSubtreesGoneShrinksAncestors(t *testing.T) {
-	t.Parallel()
-	e := New()
-	seedSizes(e, map[string]int64{"/srv": 1000, "/srv/lantern": 600, "/srv/lantern/orchard": 200, "/srv/meadow": 400})
-	// The nested root is inside the outer one's size: subtracted once.
-	e.DropSubtrees([]string{"/srv/lantern", "/srv/lantern/orchard"}, nil)
-	wantSizes(t, e, map[string]int64{"/srv": 400, "/srv/meadow": 400, "/srv/lantern": -1, "/srv/lantern/orchard": -1})
-}
-
-func TestDropSubtreesStopsAtExcludedAncestor(t *testing.T) {
-	t.Parallel()
-	e := New()
-	seedSizes(e, map[string]int64{"/srv": 50, "/srv/mnt": 0, "/srv/mnt/lantern": 300, "/srv/mnt/lantern/orchard": 100})
-	e.MarkExcluded("/srv/mnt")
-	e.DropSubtrees([]string{"/srv/mnt/lantern/orchard"}, nil)
-	wantSizes(t, e, map[string]int64{"/srv/mnt/lantern": 200, "/srv/mnt": 0, "/srv": 50})
-}
-
-func TestDropSubtreesClampsAtZero(t *testing.T) {
-	t.Parallel()
-	e := New()
-	seedSizes(e, map[string]int64{"/srv": 100, "/srv/lantern": 300})
-	e.DropSubtrees([]string{"/srv/lantern"}, nil)
-	wantSizes(t, e, map[string]int64{"/srv": 0})
-}
-
-func TestDropSubtreesPresentKeepsAncestors(t *testing.T) {
-	t.Parallel()
-	e := New()
-	seedSizes(e, map[string]int64{"/srv": 1000, "/srv/lantern": 600})
-	e.DropSubtrees(nil, []string{"/srv/lantern"})
-	wantSizes(t, e, map[string]int64{"/srv": 1000, "/srv/lantern": -1})
-}
-
-func TestRenamePathsMovesAncestorTotals(t *testing.T) {
-	t.Parallel()
-	e := New()
-	seedSizes(e, map[string]int64{
-		"/srv": 1000, "/srv/lantern": 600, "/srv/lantern/orchard": 600,
-		"/srv/harbor": 300, "/srv/harbor/orchard": 100,
-	})
-	// orchard replaces harbor/orchard: harbor gains 600, loses the replaced 100; /srv nets -100.
-	e.RenamePaths([][2]string{{"/srv/lantern/orchard", "/srv/harbor/orchard"}})
-	wantSizes(t, e, map[string]int64{"/srv": 900, "/srv/lantern": 0, "/srv/harbor": 800, "/srv/harbor/orchard": 600, "/srv/lantern/orchard": -1})
-}
-
-func TestRenamePathsSwapKeepsAncestorTotals(t *testing.T) {
-	t.Parallel()
-	e := New()
-	seedSizes(e, map[string]int64{"/srv/a": 100, "/srv/a/lantern": 100, "/srv/b": 300, "/srv/b/meadow": 300})
-	e.RenamePaths([][2]string{{"/srv/a", "/srv/b"}, {"/srv/b", "/srv/a"}})
-	wantSizes(t, e, map[string]int64{"/srv/a": 300, "/srv/a/meadow": 300, "/srv/b": 100, "/srv/b/lantern": 100})
 }

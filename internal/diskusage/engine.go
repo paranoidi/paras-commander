@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 )
 
@@ -19,6 +20,13 @@ type scanJob struct {
 	sourcePanel    int // 0=left, 1=right; matches ui.PrimaryPanel / ui.SecondaryPanel.
 	listingVolGate ListingVolumeGate
 }
+
+// anyPanel is the sourcePanel of a refresh scan: it is pending in every panel.
+const anyPanel = -2
+
+// maxTouchedRewalks bounds how often a walk root changed by applied filesystem changes is walked
+// again before its result is merged anyway.
+const maxTouchedRewalks = 3
 
 // Engine tracks cached subtree sizes and runs sequential subtree walks keyed by listing children.
 type Engine struct {
@@ -37,6 +45,14 @@ type Engine struct {
 	excluded map[string]bool
 	// activeWalkRoots maps an in-flight walk root to the panel that started that subtree scan.
 	activeWalkRoots map[string]int
+	// refreshPending holds dirty paths whose size was dropped from their cached ancestors and is
+	// not walked back yet. Whichever walk next merges such a path, or a root above it, moves that
+	// root's cached ancestors by its change in total (addRefreshedLocked); other walks leave
+	// ancestors alone.
+	refreshPending map[string]bool
+	// touchedWalkRoots marks active walk roots that applied filesystem changes overlapped while
+	// they were walked: the walk may hold sizes from before the change, so it is walked again.
+	touchedWalkRoots map[string]bool
 
 	updates chan struct{}
 
@@ -78,6 +94,21 @@ type Engine struct {
 
 	// fsWalk configures adaptive concurrent subdirectory walks in WalkFolder.
 	fsWalk fswalk.Params
+
+	// refreshIgnore and refreshDescend configure refresh scans of dirty paths (SetRefreshIgnore);
+	// guarded by jobMu.
+	refreshIgnore  ShouldIgnoreFolder
+	refreshDescend bool
+
+	// applyMu guards pending, the filesystem change batches Apply queued for applyLoop.
+	applyMu   sync.Mutex
+	pending   [][]fschange.Change
+	applyWake chan struct{}
+	// applyQueued and applyDone count batches queued and applied, so tests can wait for a pass.
+	applyQueued atomic.Uint64
+	applyDone   atomic.Uint64
+	// sweeps counts full passes over the cache made by applied changes (tests).
+	sweeps atomic.Uint64
 }
 
 const cacheMergeChunkSize = 4096
@@ -90,12 +121,15 @@ func New() *Engine {
 // NewWithFSWalk creates an engine using adaptive walk params from config.
 func NewWithFSWalk(cfg config.FSWalkConfig) *Engine {
 	e := &Engine{
-		cache:           make(map[string]int64),
-		fileCounts:      make(map[string]int64),
-		excluded:        make(map[string]bool),
-		activeWalkRoots: make(map[string]int),
-		updates:         make(chan struct{}, 1),
-		events:          make(chan Event, 256),
+		cache:            make(map[string]int64),
+		fileCounts:       make(map[string]int64),
+		excluded:         make(map[string]bool),
+		activeWalkRoots:  make(map[string]int),
+		touchedWalkRoots: make(map[string]bool),
+		refreshPending:   make(map[string]bool),
+		updates:          make(chan struct{}, 1),
+		events:           make(chan Event, 256),
+		applyWake:        make(chan struct{}, 1),
 		fsWalk: fswalk.Params{
 			InitialWorkers:  cfg.InitialWorkers,
 			MaxWorkers:      cfg.MaxWorkers,
@@ -107,6 +141,7 @@ func NewWithFSWalk(cfg config.FSWalkConfig) *Engine {
 	e.cacheVersion.Store(1)
 	e.jobCond = sync.NewCond(&e.jobMu)
 	go e.workerLoop()
+	go e.applyLoop()
 	return e
 }
 
@@ -237,7 +272,7 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 
 	e.mu.RLock()
 	for r, pan := range e.activeWalkRoots {
-		if pan == panelID && pathIsOrUnder(c, r) {
+		if (pan == panelID || pan == anyPanel) && pathIsOrUnder(c, r) {
 			e.mu.RUnlock()
 			return true
 		}
@@ -246,7 +281,7 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 
 	e.jobMu.Lock()
 	for _, j := range e.queue {
-		if j.sourcePanel != panelID {
+		if j.sourcePanel != panelID && j.sourcePanel != anyPanel {
 			continue
 		}
 		for _, raw := range j.childAbs {
@@ -256,7 +291,7 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 			}
 		}
 	}
-	if e.curJobRoots != nil && e.curJobSourcePanel == panelID {
+	if e.curJobRoots != nil && (e.curJobSourcePanel == panelID || e.curJobSourcePanel == anyPanel) {
 		for r := range e.curJobRoots {
 			if pathIsOrUnder(c, r) {
 				e.jobMu.Unlock()
@@ -361,47 +396,6 @@ func (e *Engine) IsKnownExcluded(absPath string) bool {
 	return e.excluded[filepath.Clean(absPath)]
 }
 
-// DropSubtrees drops cached sizes, file counts and exclusion marks of each root and every indexed
-// path under it, in one sweep of the cache. Roots in gone no longer exist: their cached size and
-// file count are first subtracted from their cached ancestors, so a scanned parent shrinks. Roots
-// in present still exist with an unknown size (a failed or skipped item): ancestors keep their
-// totals. A sweep stalls on a large cache, so call it off the UI goroutine (jobbridge does, after
-// a move or delete).
-func (e *Engine) DropSubtrees(gone, present []string) {
-	if e == nil || len(gone)+len(present) == 0 {
-		return
-	}
-	isGone := make(map[string]bool, len(gone)+len(present))
-	for _, r := range present {
-		isGone[filepath.Clean(r)] = false
-	}
-	for _, r := range gone {
-		isGone[filepath.Clean(r)] = true
-	}
-	under := func(k string) bool {
-		_, ok := nearestAncestor(k, isGone)
-		return ok
-	}
-	e.mu.Lock()
-	d := ancestorDeltas{}
-	for r, g := range isGone {
-		if g && !nestedInOther(r, isGone) { // a nested root's size is inside the outer root's
-			e.addAncestorDeltasLocked(d, r, r, -1)
-		}
-	}
-	e.applyAncestorDeltasLocked(d)
-	for k := range e.cache { // fileCounts keys are always a subset of cache keys
-		if under(k) {
-			delete(e.cache, k)
-			delete(e.fileCounts, k)
-		}
-	}
-	maps.DeleteFunc(e.excluded, func(k string, _ bool) bool { return under(k) })
-	e.cacheVersion.Add(1)
-	e.mu.Unlock()
-	e.poke()
-}
-
 // nestedInOther reports whether a strict ancestor of p is a key of m.
 func nestedInOther[V any](p string, m map[string]V) bool {
 	parent := filepath.Dir(p)
@@ -452,53 +446,6 @@ func (e *Engine) applyAncestorDeltasLocked(d ancestorDeltas) {
 	}
 }
 
-// RenamePaths moves cached sizes, file counts and exclusion marks of each pair's old path and
-// every descendant to the matching new path, dropping stale keys already under a new path (a move
-// that replaced an existing tree). Cached ancestor totals follow: the old path's ancestors lose its
-// size, the new path's gain it (less a replaced tree's). Moves are collected before any is
-// written, so swaps (a->b, b->a) work. O(cache size × path depth), like DropSubtrees.
-func (e *Engine) RenamePaths(pairs [][2]string) {
-	if e == nil || len(pairs) == 0 {
-		return
-	}
-	renames := make(map[string]string, len(pairs))
-	targets := make(map[string]string, len(pairs))
-	for _, p := range pairs {
-		from, to := filepath.Clean(p[0]), filepath.Clean(p[1])
-		renames[from] = to
-		targets[to] = from
-	}
-	rebase := func(k string) (string, bool) {
-		if p, ok := nearestAncestor(k, renames); ok {
-			return renames[p] + k[len(p):], true
-		}
-		return "", false
-	}
-	stale := func(k string) bool {
-		_, ok := nearestAncestor(k, targets)
-		return ok
-	}
-	e.mu.Lock()
-	d := ancestorDeltas{}
-	for from, to := range renames {
-		if nestedInOther(from, renames) {
-			continue // carried inside the outer rename's size
-		}
-		e.addAncestorDeltasLocked(d, from, from, -1)
-		e.addAncestorDeltasLocked(d, from, to, +1)
-		if _, moving := renames[to]; !moving {
-			e.addAncestorDeltasLocked(d, to, to, -1) // the tree this move replaced
-		}
-	}
-	e.applyAncestorDeltasLocked(d)
-	rebaseKeys(e.cache, rebase, stale)
-	rebaseKeys(e.fileCounts, rebase, stale)
-	rebaseKeys(e.excluded, rebase, stale)
-	e.cacheVersion.Add(1)
-	e.mu.Unlock()
-	e.poke()
-}
-
 // nearestAncestor returns k or the closest of its ancestors (cache keys are clean) present in m.
 func nearestAncestor[V any](k string, m map[string]V) (string, bool) {
 	for p := k; ; {
@@ -528,8 +475,8 @@ func rebaseKeys[V any](m map[string]V, rebase func(string) (string, bool), stale
 }
 
 // InvalidateRoots drops the cached size, file count and exclusion mark of each path itself,
-// leaving descendants cached. O(len(paths)), unlike DropSubtrees' full cache sweep, so it
-// is cheap enough for the UI goroutine. A rescan of each root overwrites its descendants anyway.
+// leaving descendants cached. O(len(paths)), unlike an applied directory removal's full cache
+// sweep, so it is cheap enough for the UI goroutine. A rescan of each root overwrites its descendants anyway.
 func (e *Engine) InvalidateRoots(paths []string) {
 	if e == nil || len(paths) == 0 {
 		return
@@ -562,6 +509,7 @@ func (e *Engine) ClearCache() {
 	for k := range e.excluded {
 		delete(e.excluded, k)
 	}
+	clear(e.refreshPending)
 	e.cacheVersion.Add(1)
 	e.mu.Unlock()
 	e.poke()
@@ -583,9 +531,8 @@ func (e *Engine) Abort() {
 	}
 
 	e.mu.Lock()
-	for p := range e.activeWalkRoots {
-		delete(e.activeWalkRoots, p)
-	}
+	clear(e.activeWalkRoots)
+	clear(e.touchedWalkRoots)
 	e.mu.Unlock()
 
 	e.poke()
@@ -682,6 +629,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 
 			e.mu.Lock()
 			e.activeWalkRoots[jobPath] = sourcePanel
+			delete(e.touchedWalkRoots, jobPath)
 			e.mu.Unlock()
 			e.poke()
 
@@ -689,6 +637,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 			if err != nil {
 				e.mu.Lock()
 				delete(e.activeWalkRoots, jobPath)
+				e.takeRefreshPendingLocked(jobPath) // gone: its removal already left ancestors right
 				e.mu.Unlock()
 				e.finishCurJobRoot(jobPath)
 				e.poke()
@@ -704,6 +653,9 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 					continue
 				}
 				e.mu.Lock()
+				if e.takeRefreshPendingLocked(jobPath) {
+					e.addRefreshedLocked(jobPath, fi.Size(), 1)
+				}
 				e.cache[jobPath] = fi.Size()
 				e.fileCounts[jobPath] = 1
 				e.cacheVersion.Add(1)
@@ -715,47 +667,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 				continue
 			}
 
-			tree := WalkFolder(ctx, jobPath, e.walkReadDir, walkIgnore, nil, e.fsWalk)
-
-			if e.gen.Load() != sess {
-				e.mu.Lock()
-				delete(e.activeWalkRoots, jobPath)
-				e.mu.Unlock()
-				e.finishCurJobRoot(jobPath)
-				e.poke()
-				return
-			}
-
-			merged := map[string]int64{}
-			FlattenSizes(tree, merged)
-			mergedFiles := map[string]int64{}
-			FlattenFileCounts(tree, mergedFiles)
-
-			keys := make([]string, 0, len(merged))
-			for k := range merged {
-				keys = append(keys, k)
-			}
-			for i := 0; i < len(keys); i += cacheMergeChunkSize {
-				if e.gen.Load() != sess {
-					e.mu.Lock()
-					delete(e.activeWalkRoots, jobPath)
-					e.mu.Unlock()
-					e.finishCurJobRoot(jobPath)
-					e.poke()
-					return
-				}
-				end := min(i+cacheMergeChunkSize, len(keys))
-				e.mu.Lock()
-				for _, k := range keys[i:end] {
-					e.cache[k] = merged[k]
-					if fc, ok := mergedFiles[k]; ok {
-						e.fileCounts[k] = fc
-					}
-				}
-				e.cacheVersion.Add(1)
-				e.mu.Unlock()
-			}
-			if e.gen.Load() != sess {
+			if !e.walkAndMerge(ctx, sess, jobPath, walkIgnore) {
 				e.mu.Lock()
 				delete(e.activeWalkRoots, jobPath)
 				e.mu.Unlock()
@@ -774,6 +686,103 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 	}
 	if e.gen.Load() == sess {
 		e.signalJobFinished(sess)
+	}
+}
+
+// walkAndMerge walks the directory jobPath and merges every node's size and file count into the
+// cache in chunks. When applied filesystem changes touch the root mid-walk or mid-merge, the walk
+// may hold sizes from before them, so it starts over (up to maxTouchedRewalks times). When a
+// dirty path pending refresh is at or under the root, the root's cached ancestors move by its
+// change in total as the root's own key is written. False when the session went stale.
+func (e *Engine) walkAndMerge(ctx context.Context, sess uint64, jobPath string, walkIgnore ShouldIgnoreFolder) bool {
+	for rewalks := 0; ; rewalks++ {
+		tree := WalkFolder(ctx, jobPath, e.walkReadDir, walkIgnore, nil, e.fsWalk)
+		if e.gen.Load() != sess {
+			return false
+		}
+		merged := map[string]int64{}
+		FlattenSizes(tree, merged)
+		mergedFiles := map[string]int64{}
+		FlattenFileCounts(tree, mergedFiles)
+		keys := make([]string, 0, len(merged))
+		for k := range merged {
+			keys = append(keys, k)
+		}
+		touched := false
+		for i := 0; i < len(keys) && !touched; i += cacheMergeChunkSize {
+			if e.gen.Load() != sess {
+				return false
+			}
+			end := min(i+cacheMergeChunkSize, len(keys))
+			e.mu.Lock()
+			if touched = e.touchedWalkRoots[jobPath] && rewalks < maxTouchedRewalks; touched {
+				delete(e.touchedWalkRoots, jobPath)
+			} else {
+				for _, k := range keys[i:end] {
+					if k == jobPath && e.takeRefreshPendingLocked(jobPath) {
+						e.addRefreshedLocked(jobPath, merged[k], mergedFiles[k])
+					}
+					e.cache[k] = merged[k]
+					if fc, ok := mergedFiles[k]; ok {
+						e.fileCounts[k] = fc
+					}
+				}
+				e.cacheVersion.Add(1)
+			}
+			e.mu.Unlock()
+		}
+		if !touched {
+			return e.gen.Load() == sess
+		}
+	}
+}
+
+// takeRefreshPendingLocked clears every pending refresh at or under root and reports whether
+// there was one. Caller holds e.mu.
+func (e *Engine) takeRefreshPendingLocked(root string) bool {
+	found := false
+	for p := range e.refreshPending {
+		if pathIsOrUnder(p, root) {
+			delete(e.refreshPending, p)
+			found = true
+		}
+	}
+	return found
+}
+
+// addRefreshedLocked moves root's cached ancestors by the change from root's cached total to the
+// freshly walked one, just before that is written. A dirty path was dropped, so the ancestors of
+// a root at or above it regain what the walk found there. Directories
+// between root and its nearest cached ancestor are new (a walk caches every node), so they get
+// root's total as their own. Caller holds e.mu.
+func (e *Engine) addRefreshedLocked(root string, bytes, files int64) {
+	if e.excluded[root] {
+		return
+	}
+	d := ancestorDelta{bytes - e.cache[root], files - e.fileCounts[root]}
+	if d == (ancestorDelta{}) {
+		return
+	}
+	deltas := ancestorDeltas{}
+	var missing []string
+	for a := root; ; {
+		parent := filepath.Dir(a)
+		if parent == a || e.excluded[parent] {
+			break
+		}
+		a = parent
+		if _, ok := e.cache[a]; ok {
+			deltas[a] = d
+		} else if len(deltas) == 0 {
+			missing = append(missing, a)
+		}
+	}
+	if len(deltas) == 0 {
+		return
+	}
+	e.applyAncestorDeltasLocked(deltas)
+	for _, m := range missing {
+		e.cache[m], e.fileCounts[m] = bytes, files
 	}
 }
 

@@ -19,6 +19,12 @@ func listingVolumeGateForScan(p *panel.State, descendIntoMountPoints bool) disku
 	}
 }
 
+// applyDiskUsageConfig hands the engine the ignore rule and mount-point setting for the refresh
+// scans it starts on its own for dirty paths.
+func (a *App) applyDiskUsageConfig() {
+	a.disk.engine.SetRefreshIgnore(a.disk.ignore, a.config.DiskUsage.DescendIntoMountPoints)
+}
+
 func (a *App) pollDiskUsageUpdates() {
 	if a.disk.engine == nil {
 		return

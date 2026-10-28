@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -304,7 +305,7 @@ func TestMassRenameExecuteSwap(t *testing.T) {
 	if err := MassRenameValidateRows(rows); err != nil {
 		t.Fatal(err)
 	}
-	if err := ExecuteMassRename(rows); err != nil {
+	if err := ExecuteMassRename(context.Background(), rows); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "a.txt")); err != nil {
@@ -337,7 +338,7 @@ func TestMassRenameExecuteChain(t *testing.T) {
 	if err := MassRenameValidateRows(rows); err != nil {
 		t.Fatal(err)
 	}
-	if err := ExecuteMassRename(rows); err != nil {
+	if err := ExecuteMassRename(context.Background(), rows); err != nil {
 		t.Fatal(err)
 	}
 	for _, n := range paths {
@@ -462,7 +463,7 @@ func TestMassRenameExecuteMultiDirectory(t *testing.T) {
 	if err := MassRenameValidateRows(rows); err != nil {
 		t.Fatal(err)
 	}
-	if err := ExecuteMassRename(rows); err != nil {
+	if err := ExecuteMassRename(context.Background(), rows); err != nil {
 		t.Fatal(err)
 	}
 	if b, err := os.ReadFile(filepath.Join(dirA, "renamed.txt")); err != nil || string(b) != "A" {

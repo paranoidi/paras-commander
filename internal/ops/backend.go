@@ -117,7 +117,11 @@ func ensureParentDirs(ctx context.Context, loc pathloc.Path) error {
 	if err != nil {
 		return err
 	}
-	return be.Mkdir(ctx, parent, 0o755)
+	if err := be.Mkdir(ctx, parent, 0o755); err != nil {
+		return err
+	}
+	reportCreated(ctx, parent)
+	return nil
 }
 
 func removePathRecursive(ctx context.Context, loc pathloc.Path) error {
@@ -133,14 +137,23 @@ func removePathRecursive(ctx context.Context, loc pathloc.Path) error {
 		return err
 	}
 	if ent.Type != fsbackend.EntryDirectory {
-		return be.Remove(ctx, loc)
+		if err := be.Remove(ctx, loc); err != nil {
+			return err
+		}
+		reportRemoved(ctx, loc, false)
+		return nil
 	}
 	if loc.Scheme() == pathloc.SchemeFile {
 		host, err := loc.FilePath()
 		if err != nil {
 			return err
 		}
-		return localfs.RemoveAll(host)
+		if err := localfs.RemoveAll(host); err != nil {
+			reportDirty(ctx, loc, true) // part of the tree may be gone
+			return err
+		}
+		reportRemoved(ctx, loc, true)
+		return nil
 	}
 	children, err := be.List(ctx, loc)
 	if err != nil {
@@ -165,7 +178,9 @@ func removePartialTransferDest(ctx context.Context, dst pathloc.Path) {
 	if err != nil {
 		return
 	}
-	_ = be.Remove(ctx, dst)
+	if be.Remove(ctx, dst) == nil {
+		reportRemoved(ctx, dst, false) // an overwrite may already have truncated the old file
+	}
 }
 
 func statConflictFacts(ctx context.Context, src, dst pathloc.Path) (FileConflictFacts, error) {
@@ -353,7 +368,7 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 	if err := applyTransferMetadata(ctx, src, dst, srcEnt, opts); err != nil {
 		return copySkipped, err
 	}
-	opts.journalCreated(ctx, dst)
+	opts.noteCreated(ctx, dst)
 	return copyDone, nil
 }
 
@@ -378,7 +393,7 @@ func copySymlinkTransfer(ctx context.Context, src, dst pathloc.Path, opts Option
 	if err := dstBE.Symlink(ctx, dst, target); err != nil {
 		return copySkipped, fmt.Errorf("create symlink %q -> %q: %w", dst, target, err)
 	}
-	opts.journalCreated(ctx, dst)
+	opts.noteCreated(ctx, dst)
 	return copyDone, nil
 }
 

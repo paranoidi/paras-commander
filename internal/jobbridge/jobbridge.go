@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -206,36 +206,6 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 	}
 }
 
-// syncDiskUsageCache rebases renamed paths, then drops the other local sources of a job that can
-// remove its sources (a renamed source is already rebased away). A source that is gone leaves its
-// cached ancestors smaller by its size; one still present (a failed, cancelled or skipped item, or
-// a flattened folder left in place) only loses its own sizes, since what remains is unknown.
-func syncDiskUsageCache(c DiskUsageCache, job *jobs.Job, renamed [][2]string) {
-	if len(renamed) > 0 {
-		c.RenamePaths(renamed)
-	}
-	if job.Type != jobs.TypeMove && job.Type != jobs.TypeDelete && job.Type != jobs.TypeFlatten {
-		return
-	}
-	rebased := make(map[string]bool, len(renamed))
-	for _, r := range renamed {
-		rebased[r[0]] = true
-	}
-	var gone, present []string
-	for _, src := range job.Sources {
-		p := src.String()
-		if src.IsRemote() || rebased[p] {
-			continue
-		}
-		if _, err := os.Lstat(p); errors.Is(err, fs.ErrNotExist) {
-			gone = append(gone, p)
-		} else {
-			present = append(present, p)
-		}
-	}
-	c.DropSubtrees(gone, present)
-}
-
 // ActivityDetailLabel formats the activity line for a progress event.
 func ActivityDetailLabel(active *jobs.Job, ev jobs.Event) string {
 	if active != nil && active.ID == ev.JobID &&
@@ -281,21 +251,14 @@ baseLabel:
 	return label
 }
 
-// DiskUsageCache is the disk-usage cache a job keeps in step with the paths it moves or removes
-// (satisfied by *diskusage.Engine). Both calls sweep the cache, so they run on the job goroutine.
-type DiskUsageCache interface {
-	RenamePaths(pairs [][2]string)
-	DropSubtrees(gone, present []string)
-}
-
 // TransferFunc builds the job worker transfer function from config. permWait asks the user
-// whether to retry a permission-denied local step as root (nil disables elevation). duCache (nil
-// disables it) follows renames and drops sizes of moved, deleted or flattened sources, so a new entry reusing
-// a removed name does not inherit its cached size.
-func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, compareCfg config.CompareConfig, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc, duCache DiskUsageCache) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
+// whether to retry a permission-denied local step as root (nil disables elevation). fsSink (nil
+// disables it) receives the filesystem changes the job's operations report (ADR 0023).
+func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, compareCfg config.CompareConfig, rateWait ops.RateLimiter, permWait ops.PermissionWaitFunc, fsSink fschange.Sink) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.BlockerAnswer) error {
 		// One Elevator per job: a sudo password the user types is remembered for this job only.
 		ctx = ops.WithElevator(ctx, ops.NewElevator(opsCfg.Elevate, permWait))
+		ctx = fschange.WithSink(ctx, fsSink)
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
 		opts.OnItemDone = job.RecordOperation
 		opts.OnSourceStart = job.StartSource
@@ -306,12 +269,6 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 		}
 		opts.OnRemoveSources = func() {
 			emit(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning})
-		}
-		if duCache != nil {
-			// Batched: a merge renames each child separately, and each RenamePaths sweeps the cache.
-			var renamed [][2]string
-			opts.OnRenamed = func(src, dst pathloc.Path) { renamed = append(renamed, [2]string{src.String(), dst.String()}) }
-			defer func() { syncDiskUsageCache(duCache, job, renamed) }()
 		}
 		verifier := contentVerifier{
 			bufBytes:    compareCfg.ReadBufferKiB * 1024,

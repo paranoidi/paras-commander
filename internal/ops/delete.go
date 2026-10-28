@@ -94,10 +94,14 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 		err = withElevation(ctx, "delete", host, append(rmArgv, host), func() error {
 			return deletePathRecursive(ctx, loc)
 		})
+		isDir := ent.Type == fsbackend.EntryDirectory
 		report := func(res ItemResult, reason string) {
 			if onItem != nil {
-				onItem(PlanItem{Src: loc, IsDir: ent.Type == fsbackend.EntryDirectory, Source: int32(i)}, res, reason)
+				onItem(PlanItem{Src: loc, IsDir: isDir, Source: int32(i)}, res, reason)
 			}
+		}
+		if err != nil {
+			reportDirty(ctx, loc, isDir) // part of the tree may be gone
 		}
 		if errors.Is(err, ErrPermissionSkipped) {
 			report(ItemSkipped, ReasonPermission)
@@ -109,6 +113,7 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 			}
 			return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to delete " + ent.Name, Err: err}
 		}
+		reportRemoved(ctx, loc, isDir)
 		doneFiles++
 		doneBytes += size
 		report(ItemDone, "")

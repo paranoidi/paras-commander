@@ -482,6 +482,7 @@ func Run(cfg LaunchConfig) (err error) {
 		return err
 	}
 	app.applyMouseConfig()
+	app.applyDiskUsageConfig()
 	if useBuiltIn {
 		app.setTransientMessage("Started with built-in defaults (configuration failed to load).", ui.MessageUrgencyWarn)
 	}

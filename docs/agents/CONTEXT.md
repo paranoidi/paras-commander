@@ -55,6 +55,10 @@ _Avoid_: search, entry filter
 **Disk usage scan**:
 A background measurement of directory sizes, shown as size bars and used for size sorting.
 
+**Filesystem change report**:
+What an operation tells the disk-usage cache it did to a local path: renamed, removed, created, or dirty (changed by an unknown amount, so rescanned). Reported where the change happens, in `internal/ops`, never by the dialogs or jobs that call it.
+_Avoid_: fs event, notification (those suggest a filesystem watcher, which this is not)
+
 ### Navigation
 
 **History**:

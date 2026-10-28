@@ -58,6 +58,7 @@ Each has a reason it cannot move to `apphandler/dialog`:
 - **`internal/pathpick`**: path-picker query validation, resolution and completion.
 - **`internal/sched`**: `Debouncer` (`Arm`/`Stop`/`Invalidate`/`Armed`). Each `Arm` bumps a generation so stale timers exit without running; `Invalidate` also drops in-flight callbacks.
 - **`internal/app/helpkeys`**, **`internal/jobbridge`**: stateless helpers extracted from the app layer.
+- **`internal/fschange`**: filesystem change reports (ADR 0023). A stdlib-only leaf: `ops` primitives report through `Report(ctx, ...)` (helpers in `internal/ops/fsreport.go`), and the sink on the context (`WithSink`) is `diskusage.Engine`. `jobbridge.TransferFunc` installs it for jobs, and `apphandler/dialog` installs it through `Handler.fsCtx` (also the base of `elevatedCtx`).
 - **`internal/oplog`**: per-job operation log (done / skipped / failed records) with disk spill to the session cache directory (ADR 0021). It imports only `internal/search`; `jobs.Job.Ops` holds one, the jobs handler reads it.
 
 ## CLI startup
