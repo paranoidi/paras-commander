@@ -266,6 +266,9 @@ func (h *Handler) Leave() {
 	}
 }
 
+// startDedup is a test seam for capturing the options openRoot builds.
+var startDedup = comparepkg.StartDedup
+
 // openRoot cancels any previous scan and starts a new one on root. Walk options
 // (hidden files, volume gate) still come from the active panel — panels cannot
 // navigate while the dedup or compare view is open.
@@ -307,7 +310,7 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 	}
 	hs := hashwalk.FromCompareConfig(h.config.Compare, h.diskIgnore, volGate)
 
-	h.session = comparepkg.StartDedup(context.Background(), root, comparepkg.DedupOptions{
+	h.session = startDedup(context.Background(), root, comparepkg.DedupOptions{
 		Walk: comparepkg.WalkOptions{
 			ShowHidden:    p.ShowHidden,
 			Gitignore:     h.gitignore,

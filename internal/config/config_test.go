@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 )
 
@@ -1077,5 +1078,20 @@ func TestValidateNormalizesJobsOperationsLayout(t *testing.T) {
 		if cfg.Jobs.OperationsLayout != want {
 			t.Fatalf("operations_layout %q = %q, want %q", in, cfg.Jobs.OperationsLayout, want)
 		}
+	}
+}
+
+func TestLoadFromPathsAdaptiveIOParams(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "config.toml")
+	body := "[adaptive_io]\ninitial_workers = 3\nmax_workers = 7\nadapt_interval_ms = 900\n"
+	if err := os.WriteFile(file, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadFromPaths(Paths{ConfigFile: file})
+	if err != nil {
+		t.Fatalf("LoadFromPaths() error = %v", err)
+	}
+	if got, want := cfg.AdaptiveIO.Params(), (fswalk.Params{InitialWorkers: 3, MaxWorkers: 7, AdaptIntervalMS: 900}); got != want {
+		t.Fatalf("Params() = %+v, want %+v", got, want)
 	}
 }

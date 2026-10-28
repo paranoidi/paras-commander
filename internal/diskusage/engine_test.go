@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 )
 
@@ -671,5 +672,12 @@ func wantSizes(t *testing.T, e *Engine, sizes map[string]int64) {
 		if fc, _ := e.FileCount(p); fc != want/10 {
 			t.Errorf("%s file count = %d, want %d", p, fc, want/10)
 		}
+	}
+}
+
+func TestNewWithAdaptiveIOUsesConfigParams(t *testing.T) {
+	cfg := config.AdaptiveIOConfig{InitialWorkers: 3, MaxWorkers: 7, AdaptIntervalMS: 900}
+	if e := NewWithAdaptiveIO(cfg); e.fsWalk != cfg.Params() {
+		t.Fatalf("fsWalk = %+v, want %+v", e.fsWalk, cfg.Params())
 	}
 }
