@@ -281,7 +281,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 
 	a.setDiskUsageScanScope(p.PathString(), childPaths)
 
-	a.disk.engine.StartScanFromListing(childPaths, a.disk.ignore, panelID, listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints))
+	a.disk.engine.StartScanFromDirectory(p.PathString(), childPaths, a.disk.ignore, panelID, listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints))
 	a.setDiskUsageShown(true)
 	a.disk.scanToastArmed = true
 	a.model.DiskUsagePanelID = panelID

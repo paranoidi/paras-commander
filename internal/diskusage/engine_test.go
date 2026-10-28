@@ -681,3 +681,39 @@ func TestNewWithAdaptiveIOUsesConfigParams(t *testing.T) {
 		t.Fatalf("fsWalk = %+v, want %+v", e.fsWalk, cfg.Params())
 	}
 }
+
+// TestStartScanFromDirectoryCachesOriginTotal proves a directory scan caches the origin's own
+// total, counting children the listing left out (hidden dotfiles).
+func TestStartScanFromDirectoryCachesOriginTotal(t *testing.T) {
+	t.Parallel()
+
+	origin := filepath.Join(t.TempDir(), "harbor")
+	lantern := filepath.Join(origin, "lantern")
+	if err := os.MkdirAll(lantern, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{
+		filepath.Join(lantern, "meadow.txt"): "abcd",
+		filepath.Join(origin, "pebble.txt"):  "xy",
+		filepath.Join(origin, ".whisper"):    "hidden",
+	}
+	for p, body := range files {
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	e := New()
+	e.StartScanFromDirectory(origin, []string{lantern, filepath.Join(origin, "pebble.txt")}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool {
+		_, ok := e.Size(origin)
+		return ok
+	}, 5*time.Second, "origin size not cached")
+
+	if got, _ := e.Size(origin); got != 4+2+6 {
+		t.Fatalf("origin size = %d, want 12", got)
+	}
+	if got, _ := e.FileCount(origin); got != 3 {
+		t.Fatalf("origin file count = %d, want 3", got)
+	}
+}

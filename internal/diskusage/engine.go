@@ -19,6 +19,9 @@ type scanJob struct {
 	ignore         ShouldIgnoreFolder
 	sourcePanel    int // 0=left, 1=right; matches ui.PrimaryPanel / ui.SecondaryPanel.
 	listingVolGate ListingVolumeGate
+	// origin, when set, is the directory childAbs lists: its unlisted children are walked too,
+	// and its own total is cached once every child is.
+	origin string
 }
 
 // anyPanel is the sourcePanel of a refresh scan: it is pending in every panel.
@@ -80,6 +83,8 @@ type Engine struct {
 	curJobRoots map[string]struct{}
 	// curJobSourcePanel is the panel that queued the current job (valid while curJobRoots != nil).
 	curJobSourcePanel int
+	// curJobOrigin is the origin of the current job ("" when none), pending until the job ends.
+	curJobOrigin string
 	// curJob is the job the worker is processing (valid while curJobRoots != nil), kept so
 	// StartPriorityScan can requeue its unfinished roots after preempting it.
 	curJob scanJob
@@ -160,6 +165,7 @@ func (e *Engine) workerLoop() {
 		}
 		e.curJobRoots = roots
 		e.curJobSourcePanel = job.sourcePanel
+		e.curJobOrigin = job.origin
 		e.curJob = job
 		sess := e.gen.Add(1)
 		ctx, cancel := context.WithCancel(context.Background())
@@ -175,6 +181,7 @@ func (e *Engine) workerLoop() {
 				e.jobMu.Lock()
 				e.curJobRoots = nil
 				e.curJobSourcePanel = -1
+				e.curJobOrigin = ""
 				e.sessionCancel = nil
 				e.jobMu.Unlock()
 			}()
@@ -188,7 +195,7 @@ func (e *Engine) workerLoop() {
 			if e.runPlannerHook != nil {
 				e.runPlannerHook(sess, job.childAbs, combined, job.sourcePanel)
 			} else {
-				e.runPlanner(ctx, sess, job.childAbs, combined, job.sourcePanel)
+				e.runPlanner(ctx, sess, job.childAbs, combined, job.sourcePanel, job.origin)
 			}
 		}()
 	}
@@ -285,6 +292,10 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 		if !forPanel(j.sourcePanel, panelID) {
 			continue
 		}
+		if j.origin != "" && c == j.origin {
+			e.jobMu.Unlock()
+			return true
+		}
 		for _, raw := range j.childAbs {
 			if pathIsOrUnder(c, filepath.Clean(raw)) {
 				e.jobMu.Unlock()
@@ -293,6 +304,10 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 		}
 	}
 	if e.curJobRoots != nil && forPanel(e.curJobSourcePanel, panelID) {
+		if e.curJobOrigin != "" && c == e.curJobOrigin {
+			e.jobMu.Unlock()
+			return true
+		}
 		for r := range e.curJobRoots {
 			if pathIsOrUnder(c, r) {
 				e.jobMu.Unlock()
@@ -544,12 +559,23 @@ func (e *Engine) Abort() {
 // Caller supplies absolute filepath.Clean child paths consistent with filesystem listing Paths.
 // sourcePanel is the panel that initiated the scan (same values as ui.PrimaryPanel / ui.SecondaryPanel).
 func (e *Engine) StartScanFromListing(childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, volGate ListingVolumeGate) {
+	e.enqueue(scanJob{childAbs: childAbs, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate})
+}
+
+// StartScanFromDirectory is StartScanFromListing for childAbs listed from origin. Children
+// missing from childAbs (e.g. dotfiles hidden in the panel) are walked too, so once every child
+// is walked the origin's own total is cached and shows on its row in the parent listing.
+func (e *Engine) StartScanFromDirectory(origin string, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, volGate ListingVolumeGate) {
+	e.enqueue(scanJob{childAbs: childAbs, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate, origin: filepath.Clean(origin)})
+}
+
+func (e *Engine) enqueue(job scanJob) {
 	if e == nil {
 		return
 	}
-	dup := append([]string(nil), childAbs...)
+	job.childAbs = append([]string(nil), job.childAbs...)
 	e.jobMu.Lock()
-	e.queue = append([]scanJob{{childAbs: dup, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate}}, e.queue...)
+	e.queue = append([]scanJob{job}, e.queue...)
 	e.jobCond.Signal()
 	e.jobMu.Unlock()
 }
@@ -587,9 +613,16 @@ func (e *Engine) StartPriorityScan(childAbs []string, shouldIgnore ShouldIgnoreF
 	}
 }
 
-func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int) {
+func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, origin string) {
+	originComplete := false
+	if origin != "" {
+		childAbs, originComplete = withUnlistedChildren(origin, childAbs)
+	}
 	if len(childAbs) == 0 {
 		if e.gen.Load() == sess {
+			if originComplete {
+				e.cacheOriginTotal(origin, nil)
+			}
 			e.signalJobFinished(sess)
 		}
 		return
@@ -620,6 +653,9 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 	e.classifyListingExclusions(childAbs, shouldIgnore)
 	walkIgnore := e.markingIgnore(shouldIgnore)
 
+	// walked lists the children whose totals this job cached; a child gone before its walk
+	// counts as nothing toward the origin's total.
+	walked := make([]string, 0, len(childAbs))
 	for _, grp := range passes {
 		for _, job := range grp {
 			if e.gen.Load() != sess || ctx.Err() != nil {
@@ -663,6 +699,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 				delete(e.activeWalkRoots, jobPath)
 				e.mu.Unlock()
 				e.finishCurJobRoot(jobPath)
+				walked = append(walked, jobPath)
 				e.signalSubtreeIndexed(sess, jobPath, sourcePanel)
 				e.poke()
 				continue
@@ -681,13 +718,56 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 			e.mu.Unlock()
 
 			e.finishCurJobRoot(jobPath)
+			walked = append(walked, jobPath)
 			e.signalSubtreeIndexed(sess, jobPath, sourcePanel)
 			e.poke()
 		}
 	}
 	if e.gen.Load() == sess {
+		if originComplete {
+			e.cacheOriginTotal(origin, walked)
+		}
 		e.signalJobFinished(sess)
 	}
+}
+
+// withUnlistedChildren appends origin's children missing from childAbs. complete is false when
+// origin could not be read, so its total would be a guess.
+func withUnlistedChildren(origin string, childAbs []string) (all []string, complete bool) {
+	entries, err := os.ReadDir(origin)
+	if err != nil {
+		return childAbs, false
+	}
+	listed := make(map[string]struct{}, len(childAbs))
+	for _, raw := range childAbs {
+		listed[filepath.Clean(raw)] = struct{}{}
+	}
+	all = childAbs
+	for _, entry := range entries {
+		p := filepath.Join(origin, entry.Name())
+		if _, ok := listed[p]; !ok {
+			all = append(all, p)
+		}
+	}
+	return all, true
+}
+
+// cacheOriginTotal caches origin's total as the sum of its walked direct children's totals.
+func (e *Engine) cacheOriginTotal(origin string, walked []string) {
+	var bytes, files int64
+	e.mu.Lock()
+	for _, p := range walked {
+		if filepath.Dir(p) != origin {
+			continue
+		}
+		bytes += e.cache[p]
+		files += e.fileCounts[p]
+	}
+	e.cache[origin] = bytes
+	e.fileCounts[origin] = files
+	e.cacheVersion.Add(1)
+	e.mu.Unlock()
+	e.poke()
 }
 
 // walkAndMerge walks the directory jobPath and merges every node's size and file count into the
