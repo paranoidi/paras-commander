@@ -1148,14 +1148,14 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 	return f
 }
 
-// followActiveSource moves job id's file-list marks to the source its executor works on now
-// (O(1) per progress event, the path index is kept) and reports whether it moved.
+// followActiveSource moves job id's file-list marks to the source phases its executor reports
+// now (O(1) per progress event, the path index is kept) and reports whether they changed.
 func (h *Handler) followActiveSource(id string) bool {
 	job := h.state.Job(id)
 	if job == nil {
 		return false
 	}
-	return ui.SetJobPathMarkSources(h.model.JobPathMarks, id, job.ActiveSource(), job.SourcePhases)
+	return ui.SetJobPathMarkSources(h.model.JobPathMarks, id, job.ActiveSource(), job.SourceVersion(), job.SourcePhases)
 }
 
 // batchAffectsVisible reports whether the batch requires an immediate visible-area repaint

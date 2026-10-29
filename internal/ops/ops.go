@@ -104,6 +104,10 @@ type Options struct {
 	// OnSourceStart reports that the executor began work on job source i (enterSource), before
 	// any of its items; nil means no-op. It runs on the job goroutine.
 	OnSourceStart func(i int32)
+	// OnSourceDeferred reports that the executor set job source i aside for later work after
+	// entering it (deferSource; a move source whose rename fell back to copy), so it is queued
+	// again rather than finished; nil means no-op. It runs on the job goroutine.
+	OnSourceDeferred func(i int32)
 
 	// source is the index of the job source being processed. Executors move it with
 	// enterSource (copy: per plan item) and every item report and undo step carries it
@@ -120,6 +124,15 @@ func (o *Options) enterSource(i int32) {
 	o.source, o.entered = i, true
 	if o.OnSourceStart != nil {
 		o.OnSourceStart(i)
+	}
+}
+
+// deferSource reports that source i's work was set aside for later. The next enterSource
+// reports OnSourceStart again, even for the same index.
+func (o *Options) deferSource(i int32) {
+	o.entered = false
+	if o.OnSourceDeferred != nil {
+		o.OnSourceDeferred(i)
 	}
 }
 

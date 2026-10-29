@@ -228,9 +228,14 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 				return doneFiles, doneBytes, fmt.Errorf("create parent for %q: %w", dst, err)
 			}
 		}
+		setAside := len(pending)
 		moved, err := r.collect(ctx, src, dst, destination, true)
 		if err != nil {
 			return doneFiles, doneBytes, err
+		}
+		if len(pending) > setAside {
+			// The copy phase moves the rest: the source is queued again, not finished.
+			r.opts.deferSource(int32(i))
 		}
 		if !moved {
 			continue

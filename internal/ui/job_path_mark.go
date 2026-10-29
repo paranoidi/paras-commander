@@ -18,9 +18,11 @@ type JobPathMark struct {
 	// SourcePhases is the executor's phase of each source (jobs.Job.SourcePhases; nil for a
 	// single-source job) and ActiveSource the source it started last (-1 before any). While the
 	// job is active and a source has started they narrow its marks to that source (rootPhase).
-	// SetJobPathMarkSources refreshes both in place when the active source moves.
-	SourcePhases []jobs.SourcePhase
-	ActiveSource int
+	// SourceVersion is jobs.Job.SourceVersion when they were read; SetJobPathMarkSources
+	// refreshes all three in place when it changes.
+	SourcePhases  []jobs.SourcePhase
+	ActiveSource  int
+	SourceVersion uint32
 	// RemovingSources is jobs.Job.RemovingSources: a move's copy fallback is deleting its
 	// sources, so every source root is marked again and no destination root is (removing).
 	RemovingSources bool
@@ -61,6 +63,7 @@ func JobPathMarksFromJobs(jobList []*jobs.Job) []JobPathMark {
 			DestIsDir:       j.DestIsDir,
 			SourcePhases:    j.SourcePhases(),
 			ActiveSource:    j.ActiveSource(),
+			SourceVersion:   j.SourceVersion(),
 			RemovingSources: j.RemovingSources,
 		}))
 	}
@@ -126,17 +129,17 @@ func (j *JobPathMark) removing() bool {
 }
 
 // SetJobPathMarkSources sets the active source and source phases of job id's mark in place,
-// keeping its path index, and reports whether the active source changed. It runs on progress
+// keeping its path index, and reports whether its source version changed. It runs on progress
 // events, so a multi-source job's marks follow the executor without rebuilding the index.
-func SetJobPathMarkSources(marks []JobPathMark, id string, active int, phases func() []jobs.SourcePhase) bool {
+func SetJobPathMarkSources(marks []JobPathMark, id string, active int, version uint32, phases func() []jobs.SourcePhase) bool {
 	for i := range marks {
 		if marks[i].ID != id {
 			continue
 		}
-		if marks[i].ActiveSource == active {
+		if marks[i].SourceVersion == version {
 			return false
 		}
-		marks[i].ActiveSource, marks[i].SourcePhases = active, phases()
+		marks[i].ActiveSource, marks[i].SourceVersion, marks[i].SourcePhases = active, version, phases()
 		return true
 	}
 	return false

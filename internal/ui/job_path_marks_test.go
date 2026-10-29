@@ -552,8 +552,8 @@ func TestPanelInsideJobWriteTreeFollowsActiveSource(t *testing.T) {
 	}
 	idx := marks[0].idx
 	phases := func() []jobs.SourcePhase { return []jobs.SourcePhase{jobs.SourceFinished, jobs.SourceStarted} }
-	if !SetJobPathMarkSources(marks, "harbor", 1, phases) || SetJobPathMarkSources(marks, "harbor", 1, phases) {
-		t.Fatal("SetJobPathMarkSources must report only a change of source")
+	if !SetJobPathMarkSources(marks, "harbor", 1, 2, phases) || SetJobPathMarkSources(marks, "harbor", 1, 2, phases) {
+		t.Fatal("SetJobPathMarkSources must report only a change of source version")
 	}
 	if marks[0].idx != idx {
 		t.Fatal("moving the active source rebuilt the path index")

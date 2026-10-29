@@ -2,8 +2,10 @@ package ops
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -175,5 +177,31 @@ func TestMoveRenameOnlyHasNoCount(t *testing.T) {
 	}
 	if phase == nil || phase.Count != nil || phase.Items != 1 {
 		t.Fatalf("phase = %+v; want 1 item and no count", phase)
+	}
+}
+
+// TestMoveFallbackDefersSetAsideSourcesFake: the rename phase reports every source it sets aside
+// for the copy phase as deferred, and the copy phase starts each of them again, the last one
+// included, so per-source phases never call a source finished before it is moved.
+func TestMoveFallbackDefersSetAsideSourcesFake(t *testing.T) {
+	base, dst := t.TempDir(), t.TempDir()
+	first, renamed, last := filepath.Join(base, "lantern"), filepath.Join(base, "meadow"), filepath.Join(base, "pebble")
+	writeTree(t, first, map[string]string{"quill.txt": "q"})
+	writeTree(t, renamed, map[string]string{"tulip.txt": "t"})
+	writeTree(t, last, map[string]string{"sorrel.txt": "s"})
+	refuseRenameFrom(t, first, last)
+
+	var events []string
+	opts := Options{
+		CopyBufferKiB: 4, FlatDestNames: true,
+		OnSourceStart:    func(i int32) { events = append(events, fmt.Sprintf("start %d", i)) },
+		OnSourceDeferred: func(i int32) { events = append(events, fmt.Sprintf("defer %d", i)) },
+	}
+	if _, _, err := ExecuteMove(context.Background(), MustPaths(first, renamed, last), MustPath(dst), opts, ProgressEmitThrottle{}, nil, overwriteAllResolver(), nil); err != nil {
+		t.Fatalf("ExecuteMove: %v", err)
+	}
+	want := []string{"start 0", "defer 0", "start 1", "start 2", "defer 2", "start 0", "start 2"}
+	if !slices.Equal(events, want) {
+		t.Fatalf("source events = %v, want %v", events, want)
 	}
 }

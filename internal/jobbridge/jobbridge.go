@@ -262,6 +262,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, com
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
 		opts.OnItemDone = job.RecordOperation
 		opts.OnSourceStart = job.StartSource
+		opts.OnSourceDeferred = job.DeferSource
 		if job.Type == jobs.TypeCopy || job.Type == jobs.TypeUndo {
 			opts.OnItemError = func(item ops.PlanItem, err error) {
 				job.FailItem(emit, jobs.StatusRunning, item, err)
