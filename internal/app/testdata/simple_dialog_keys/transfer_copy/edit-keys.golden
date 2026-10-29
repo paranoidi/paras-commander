@@ -1,24 +1,24 @@
 == open ==
-phase=0 focus=dest dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == x ==
-phase=0 focus=dest dest="x" cursor=1 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="x" cursor=1 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == y ==
-phase=0 focus=dest dest="xy" cursor=2 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="xy" cursor=2 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == z ==
-phase=0 focus=dest dest="xyz" cursor=3 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="xyz" cursor=3 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Ctrl+W ==
-phase=0 focus=dest dest="" cursor=0 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == a ==
-phase=0 focus=dest dest="a" cursor=1 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="a" cursor=1 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == b ==
-phase=0 focus=dest dest="ab" cursor=2 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="ab" cursor=2 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Ctrl+U ==
-phase=0 focus=dest dest="" cursor=0 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == c ==
-phase=0 focus=dest dest="c" cursor=1 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="c" cursor=1 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == d ==
-phase=0 focus=dest dest="cd" cursor=2 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="cd" cursor=2 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Ctrl+K ==
-phase=0 focus=dest dest="cd" cursor=2 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="cd" cursor=2 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == e ==
-phase=0 focus=dest dest="cde" cursor=3 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="cde" cursor=3 scroll=0 pending=false name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""

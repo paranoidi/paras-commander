@@ -238,9 +238,9 @@ func conflictAdvScripts() []simpleKeyScript {
 		{"enter-cancel", "Down Down Down Down Down Down Down Down Right Enter"},
 		{"space-ok", "Down Down Down Down Down Down Down Down Space"},
 		{"alt-a", "Alt+a Down Alt+a"},
-		{"alt-v", "Alt+v Alt+v Right"},
-		{"verify-differ-greys-matrix", "Alt+v Down Down Right Right Right Right Down Space Up Up Up"},
-		{"verify-differ-rules-apply", "Alt+v Down Right Right Space Down Left Left Left Space Alt+Enter"},
+		{"alt-f", "Alt+f Alt+f Right"},
+		{"verify-differ-greys-matrix", "Alt+f Down Down Right Right Right Right Down Space Up Up Up"},
+		{"verify-differ-rules-apply", "Alt+f Down Right Right Space Down Left Left Left Space Alt+Enter"},
 		{"alt-o", "Right Space Alt+o"},
 		{"alt-c", "Alt+c"},
 		{"esc", "Right Space Esc"},
@@ -259,8 +259,8 @@ func TestConflictAdvancedKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, conflictKeyDialog(conflictKeyVariant{name: "adv_nocompare", request: noCompare, panel: true}), conflictAdvScripts()[:len(conflictAdvScripts())-1]) // all but plain-letters
 	move := conflictKeyRequest(func(c *jobs.ConflictRequest) { c.Move = true })
 	runKeyGoldenScripts(t, conflictKeyDialog(conflictKeyVariant{name: "adv_move", request: move, panel: true}), []simpleKeyScript{
-		{"verify-same-delete-source", "Alt+v Down Right Right Right Space Alt+Enter"},
-		{"verify-differ-delete-source", "Alt+v Down Down Right Right Right Space Alt+Enter"},
+		{"verify-same-delete-source", "Alt+f Down Right Right Right Space Alt+Enter"},
+		{"verify-differ-delete-source", "Alt+f Down Down Right Right Right Space Alt+Enter"},
 	})
 }
 

@@ -1,14 +1,14 @@
 == open ==
-phase=0 focus=dest dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Down ==
-phase=0 focus=perm dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=perm dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Space ==
-phase=0 focus=perm dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=perm dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Down ==
-phase=0 focus=ts dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=ts dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Space ==
-phase=0 focus=ts dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=ts dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Down ==
-phase=0 focus=deref dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=deref dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Space ==
-phase=0 focus=deref dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=false deref=true flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=deref dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=false deref=true flat=false listScroll=0 dropdown=false selected=0 message=""

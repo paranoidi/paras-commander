@@ -61,9 +61,14 @@ func (h *Handler) FileDialogCancel() {
 // TransferDialogOK confirms the transfer (copy / move) dialog.
 func (h *Handler) TransferDialogOK() { h.confirmTransfer() }
 
-// TransferDialogCancel closes the destination completion dropdown, else the dialog.
+// TransferDialogCancel leaves the Advanced screen, else closes the destination completion
+// dropdown, else the dialog.
 func (h *Handler) TransferDialogCancel() {
 	d := &h.model.TransferDialog
+	if d.Advanced {
+		d.Advanced = false
+		return
+	}
 	if d.FocusOnDest() && closeCompletion(&d.Destination.Completion) {
 		return
 	}

@@ -11,7 +11,7 @@
  │ Destination larger  (*) Ask  ( ) O │ 
  │ Same size           (*) Ask  ( ) O │ 
  ├────────────────────────────────────┤ 
- │ [ ] Verify both to see if identical│ 
+ │ [ ] Compare files                  │ 
  │ Same                (*) Ask  ( ) O │ 
  │ Differ   (*) Rules  ( ) Ask  ( ) O │ 
  │                     ( ) Keep both  │ 
@@ -45,7 +45,7 @@ abbbbbbbbbbbbbbbbbbbbbeeeeeeeebbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbeeeeeeeebbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbeeeeeeeebbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
-abbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba
+abbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbba
 abbbbbbbbbbbbbbbbbbbbbffffffffbffffffbba
 abbbbbbbbbbffffffffffbffffffffbffffffbba
 abbbbbbbbbbbbbbbbbbbbbffffffffffffffbbba

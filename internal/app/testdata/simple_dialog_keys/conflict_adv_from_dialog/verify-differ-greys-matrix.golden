@@ -2,7 +2,7 @@
 focus=overwrite
 == Alt+d ==
 advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=false
-== Alt+v ==
+== Alt+f ==
 advanced focus=verify time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=false
 == Down ==
 advanced focus=r6c0 time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=false

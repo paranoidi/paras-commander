@@ -6,15 +6,18 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-// Transfer dialog widget IDs. The buttons are dlg.OK, TransferAddPaused and dlg.Cancel.
+// Transfer dialog widget IDs. The buttons are dlg.OK, TransferAdvanced and dlg.Cancel.
 const (
-	TransferDest      = dlg.ID("dest")
-	TransferNewName   = dlg.ID("new-name")
-	TransferPerm      = dlg.ID("preserve-permissions")
-	TransferTimes     = dlg.ID("preserve-timestamps")
-	TransferDeref     = dlg.ID("dereference-symlinks")
-	TransferFlatten   = dlg.ID("flatten-into-destination")
-	TransferAddPaused = dlg.ID("add-paused")
+	TransferDest     = dlg.ID("dest")
+	TransferNewName  = dlg.ID("new-name")
+	TransferPerm     = dlg.ID("preserve-permissions")
+	TransferTimes    = dlg.ID("preserve-timestamps")
+	TransferDeref    = dlg.ID("dereference-symlinks")
+	TransferFlatten  = dlg.ID("flatten-into-destination")
+	TransferAdvanced = dlg.ID("advanced")
+	// TransferStartPaused and TransferRemoveEmpty are the checkboxes of the Advanced screen.
+	TransferStartPaused = dlg.ID("add-paused")
+	TransferRemoveEmpty = dlg.ID("remove-empty-dirs")
 	// TransferResult is the multi-location Result preview, a ScrollOnly list.
 	TransferResult = dlg.ID("result")
 )
@@ -35,12 +38,34 @@ type TransferViewContext struct {
 // checkboxes, and for a multi-location selection the Source header, the Flatten into destination
 // checkbox and the Result preview, a ScrollOnly list whose per-type devicons DrawTransferDialog
 // paints into the cells each row keeps free; the destination's completion dropdown is painted from
-// the input's placed rect. Buttons are OK,
-// Add paused and Cancel in both phases. The spec comes fitted to ctx.Layout (dlg.FitSpec): the
+// the input's placed rect. Buttons are OK, Advanced and Cancel in both phases; Advanced swaps the
+// dialog for the Conflict rules screen (conflictRuleGroups) plus the Add paused and, for a move,
+// Remove empty directories checkboxes. The spec comes fitted to ctx.Layout (dlg.FitSpec): the
 // dialog takes at most listDialogMaxHeight rows and the Result list what is left of them.
 func TransferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 	spec, _ := dlg.FitSpec(ctx.Layout.Width, ctx.Layout.Height, transferView(st, ctx))
 	return spec
+}
+
+// Screen is the dialog's spec on top and the focus pointer that goes with it.
+func (st *TransferDialogState) Screen(ctx TransferViewContext) DialogScreen {
+	if st.Advanced {
+		return DialogScreen{TransferView(*st, ctx), &st.AdvFocus}
+	}
+	return DialogScreen{TransferView(*st, ctx), &st.Focus}
+}
+
+func transferAdvancedView(st TransferDialogState, title string) dlg.Spec {
+	var options []dlg.Item
+	if st.Kind == TransferKindMove {
+		options = append(options, dlg.Item{ID: TransferRemoveEmpty, Kind: dlg.KindCheckbox, Label: "Remove empty directories", Mnemonic: 'r', On: st.RemoveEmptyDirs})
+	}
+	options = append(options, dlg.Item{ID: TransferStartPaused, Kind: dlg.KindCheckbox, Label: "Add paused", Mnemonic: 'a', On: st.StartPaused})
+	return dlg.Spec{
+		Title: title + " — Conflict rules", Width: 76, MinWidth: 72, Unclamped: true,
+		Groups:  append(conflictRuleGroups(st.Rules), dlg.Group{Columns: [][]dlg.Item{options}}),
+		Buttons: dlg.OKCancelButtons(),
+	}
 }
 
 func transferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
@@ -48,11 +73,14 @@ func transferView(st TransferDialogState, ctx TransferViewContext) dlg.Spec {
 	if st.Kind == TransferKindMove {
 		title = "Move"
 	}
+	if st.Advanced {
+		return transferAdvancedView(st, title)
+	}
 	spec := dlg.Spec{
 		Width: transferDestinationFrameWidth(ctx.Layout, st, ctx.UserHomeDir, ctx.IconLead), Unclamped: true,
 		Buttons: []dlg.Button{
 			dlg.OKButton,
-			{ID: TransferAddPaused, Label: "Add paused", Mnemonic: 'p'},
+			{ID: TransferAdvanced, Label: "Advanced", Mnemonic: 'a'},
 			dlg.CancelButton,
 		},
 	}
@@ -124,6 +152,10 @@ func (st *TransferDialogState) Apply(ev dlg.Event) {
 		return
 	}
 	switch ev.ID {
+	case TransferStartPaused:
+		st.StartPaused = !st.StartPaused
+	case TransferRemoveEmpty:
+		st.RemoveEmptyDirs = !st.RemoveEmptyDirs
 	case TransferPerm:
 		st.PreservePermissions = !st.PreservePermissions
 	case TransferTimes:

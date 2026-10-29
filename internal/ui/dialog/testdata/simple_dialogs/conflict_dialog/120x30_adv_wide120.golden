@@ -11,7 +11,7 @@
                       │ Destination larger  (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │                      
                       │ Same size           (*) Ask  ( ) Overwrite  ( ) Skip  ( ) Keep both      │                      
                       ├──────────────────────────────────────────────────────────────────────────┤                      
-                      │ [x] Verify both to see if identical                                      │                      
+                      │ [x] Compare files                                                        │                      
                       │ Same                (*) Ask  ( ) Overwrite  ( ) Skip                     │                      
                       │ Differ   (*) Rules  ( ) Ask  ( ) Overwrite  ( ) Skip                     │                      
                       │                     ( ) Keep both                                        │                      
@@ -45,7 +45,7 @@ aaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbddddddddbffffffffffffffbbbbbbbbbbbfff
 aaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbddddddddbffffffffffffffbbbbbbbbbbbffffffffffffffbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbddddddddbffffffffffffffbbbbbbbbbbbffffffffffffffbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaabdddddcddddddddddddddddddddddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaabdddddddddddddcddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbddddddddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaaaa

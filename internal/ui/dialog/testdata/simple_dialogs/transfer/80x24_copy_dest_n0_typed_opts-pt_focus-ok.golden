@@ -14,7 +14,7 @@
      │ [x] Preserve timestamps                                            │     
      │ [ ] Dereference symlinks                                           │     
      ├────────────────────────────────────────────────────────────────────┤     
-     │               [ OK ]    [ Add paused ]    [ Cancel ]               │     
+     │                [ OK ]    [ Advanced ]    [ Cancel ]                │     
      └────────────────────────────────────────────────────────────────────┘     
                                                                                 
                                                                                 
@@ -48,7 +48,7 @@ aaaaabeeeeeeceeeeeeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabeeeeeeeeeeeeeeceeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbfffgffffbbdddddddhddddddddbbdddhddddddddbbbbbbbbbbbbbbbaaaaa
+aaaaabbbbbbbbbbbbbbbbfffgffffbbdddhddddddddddbbdddhddddddddbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

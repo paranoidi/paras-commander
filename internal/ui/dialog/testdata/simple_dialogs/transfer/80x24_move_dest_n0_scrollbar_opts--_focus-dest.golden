@@ -12,7 +12,7 @@
      │ Destination:                                                       │     
      │ /srv/harbor/                                                       │     
      ├──────────── mast/   │──────────────────────────────────────────────┤     
-     │             moss/   │   [ Add paused ]    [ Cancel ]               │     
+     │             moss/   │    [ Advanced ]    [ Cancel ]                │     
      └──────────── mill/   ┃──────────────────────────────────────────────┘     
                    maple/  │                                                    
                    mint/   │                                                    
@@ -46,7 +46,7 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbddddddddddddedddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaa
 aaaaabbbbbbbbbbbbbffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbffffffffffbbfffffffgffffffffbbfffgffffffffbbbbbbbbbbbbbbbaaaaa
+aaaaabbbbbbbbbbbbbfffffffffffbbfffgffffffffffbbfffgffffffffbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaaaaaaaaaaaaaaaffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaahhhhhhhhhfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

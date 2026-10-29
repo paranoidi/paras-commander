@@ -1,4 +1,4 @@
 == open ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Enter ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message="New name must differ from the original"
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message="New name must differ from the original"

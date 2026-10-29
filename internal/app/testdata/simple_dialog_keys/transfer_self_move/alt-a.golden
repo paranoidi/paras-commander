@@ -1,0 +1,26 @@
+== open ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== j ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="j" ncursor=1 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== u ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="ju" ncursor=2 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== n ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="jun" ncursor=3 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== i ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="juni" ncursor=4 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== p ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="junip" ncursor=5 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== e ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="junipe" ncursor=6 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== r ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="juniper" ncursor=7 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== . ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="juniper." ncursor=8 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== t ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="juniper.t" ncursor=9 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== x ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="juniper.tx" ncursor=10 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== t ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="juniper.txt" ncursor=11 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== Alt+a ==
+phase=1 adv=true focus=dest dest="" cursor=0 scroll=0 pending=false name="juniper.txt" ncursor=11 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""

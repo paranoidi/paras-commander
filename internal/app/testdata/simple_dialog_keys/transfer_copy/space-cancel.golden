@@ -1,12 +1,12 @@
 == open ==
-phase=0 focus=dest dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Tab ==
-phase=0 focus=perm dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=perm dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Tab ==
-phase=0 focus=ok dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=ok dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Right ==
-phase=0 focus=paused dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=advanced dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Right ==
-phase=0 focus=cancel dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=cancel dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Space ==
 CLOSED: message="" jobs=[] selected=0

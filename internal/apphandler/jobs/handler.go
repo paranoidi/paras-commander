@@ -109,10 +109,14 @@ func (h *Handler) applyNewFileMarksForCompletedJob(job *jobs.Job) {
 
 // stashDanglingSourcesForCompletedJob queues job.Sources for the dangling-dirs check
 // (see promptDanglingDirsIfAny) when the just-completed job was enqueued with
-// PromptDanglingDirs. No filesystem I/O here — this runs on the event-batch path.
+// PromptDanglingDirs, or into the no-prompt stash when it has RemoveDanglingDirs. No
+// filesystem I/O here — this runs on the event-batch path.
 func (h *Handler) stashDanglingSourcesForCompletedJob(job *jobs.Job) {
 	if job.PromptDanglingDirs {
 		h.pendingDanglingSources = append(h.pendingDanglingSources, job.Sources...)
+	}
+	if job.RemoveDanglingDirs {
+		h.pendingRemoveDanglingSources = append(h.pendingRemoveDanglingSources, job.Sources...)
 	}
 }
 
@@ -121,20 +125,30 @@ func (h *Handler) stashDanglingSourcesForCompletedJob(job *jobs.Job) {
 // Best-effort: filesystem errors are swallowed (skip the prompt) since this cleanup is
 // a convenience, not part of the job itself. Must only run from ApplyRefreshes.
 func (h *Handler) promptDanglingDirsIfAny() {
-	if len(h.pendingDanglingSources) == 0 {
-		return
+	if paths := danglingPaths(&h.pendingRemoveDanglingSources); len(paths) > 0 {
+		h.EnqueueDeleteJob(paths, false, false)
 	}
-	sources := h.pendingDanglingSources
-	h.pendingDanglingSources = nil
+	if paths := danglingPaths(&h.pendingDanglingSources); len(paths) > 0 {
+		h.host.PromptDanglingDirDelete(paths)
+	}
+}
+
+// danglingPaths takes the stashed sources and returns the directories they left empty.
+func danglingPaths(stash *[]pathloc.Path) []string {
+	sources := *stash
+	*stash = nil
+	if len(sources) == 0 {
+		return nil
+	}
 	dirs, err := ops.DanglingDirsAfter(context.Background(), sources)
-	if err != nil || len(dirs) == 0 {
-		return
+	if err != nil {
+		return nil
 	}
 	paths := make([]string, len(dirs))
 	for i, d := range dirs {
 		paths[i] = d.String()
 	}
-	h.host.PromptDanglingDirDelete(paths)
+	return paths
 }
 
 func (h *Handler) ensureJobsViewSelectionVisible() {
@@ -1338,8 +1352,10 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		// written onto the job, and it is unconditionally false for Move regardless of what
 		// the dialog/request asked for.
 		DereferenceSymlinks: req.Preserve.DereferenceSymlinks && req.Type == jobs.TypeCopy,
-		PromptDanglingDirs:  req.Type == jobs.TypeMove && h.config.Operations.RemoveDanglingDirs,
+		RemoveDanglingDirs:  req.Type == jobs.TypeMove && req.Preserve.RemoveEmptyDirs,
+		ConflictRules:       req.Preserve.ConflictRules,
 	}
+	job.PromptDanglingDirs = req.Type == jobs.TypeMove && !job.RemoveDanglingDirs && h.config.Operations.RemoveDanglingDirs
 	h.applySizeEstimate(job, req.Sources)
 	h.commitJob(job)
 }

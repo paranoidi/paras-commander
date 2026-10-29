@@ -107,12 +107,12 @@ func transferGoldenState(kind TransferKind, phase string, entries int, value, op
 }
 
 // setTransferGoldenFocus names a focus position: dest (the destination, or the new name in the
-// self phase), perm, ts, deref, flat, ok, paused and cancel. It is the only code that knows how
+// self phase), perm, ts, deref, flat, ok, advanced and cancel. It is the only code that knows how
 // the state encodes focus.
 func setTransferGoldenFocus(st *TransferDialogState, focus string) {
 	st.Focus = map[string]dlg.ID{
 		"dest": TransferDest, "perm": TransferPerm, "ts": TransferTimes, "deref": TransferDeref, "flat": TransferFlatten,
-		"ok": dlg.OK, "paused": TransferAddPaused, "cancel": dlg.Cancel,
+		"ok": dlg.OK, "advanced": TransferAdvanced, "cancel": dlg.Cancel,
 	}[focus]
 	if focus == "dest" && st.Phase == TransferPhaseSelfCopyRename {
 		st.Focus = TransferNewName
@@ -159,7 +159,7 @@ func TestTransferGoldenRender(t *testing.T) {
 	add(80, 24, copyK, "dest", 0, "typed", "pr", "deref") // dereference greyed out (remote source)
 	add(80, 24, copyK, "dest", 0, "typed", "pdr", "ok")
 	add(80, 24, copyK, "dest", 0, "dropdown", "p", "perm") // an open dropdown stays painted off the input
-	add(80, 24, copyK, "dest", 0, "dropdown", "pt", "paused")
+	add(80, 24, copyK, "dest", 0, "dropdown", "pt", "advanced")
 	add(60, 24, copyK, "dest", 0, "long", "p", "dest") // narrow
 	add(60, 24, copyK, "dest", 0, "dropdown", "pt", "ok")
 	add(36, 24, copyK, "dest", 0, "typed", "p", "cancel") // narrower still
@@ -175,10 +175,10 @@ func TestTransferGoldenRender(t *testing.T) {
 		add(80, 24, moveK, "dest", 0, value, "-", "dest")
 	}
 	add(80, 24, moveK, "dest", 0, "typed", "i", "dest")
-	add(80, 24, moveK, "dest", 0, "typed", "i", "paused")
+	add(80, 24, moveK, "dest", 0, "typed", "i", "advanced")
 	add(80, 24, moveK, "dest", 0, "dropdown", "-", "ok")
 	add(60, 24, moveK, "dest", 0, "long", "-", "dest")
-	add(36, 24, moveK, "dest", 0, "typed", "-", "paused")
+	add(36, 24, moveK, "dest", 0, "typed", "-", "advanced")
 	add(80, 8, moveK, "dest", 0, "dropdown", "-", "dest")
 	add(80, 6, moveK, "dest", 0, "typed", "-", "cancel")
 

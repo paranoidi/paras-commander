@@ -1,8 +1,8 @@
 == open ==
-phase=0 focus=dest dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="/srv/thicket-lantern/" cursor=21 scroll=0 pending=true name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == a ==
-phase=0 focus=dest dest="a" cursor=1 scroll=0 pending=false name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="a" cursor=1 scroll=0 pending=false name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Backspace ==
-phase=0 focus=dest dest="" cursor=0 scroll=0 pending=false name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=0 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Enter ==
-phase=0 focus=dest dest="" cursor=0 scroll=0 pending=false name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message="Destination required"
+phase=0 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="" ncursor=0 npending=false perm=false ts=false deref=false flat=false listScroll=0 dropdown=false selected=0 message="Destination required"

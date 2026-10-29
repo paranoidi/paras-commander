@@ -13,7 +13,7 @@
      │ New name:                                                          │     
      │ /srv/harbor/orchard/                                               │     
      ├────────────────────────────────────────────────────────────────────┤     
-     │               [ OK ]    [ Add paused ]    [ Cancel ]               │     
+     │                [ OK ]    [ Advanced ]    [ Cancel ]                │     
      └────────────────────────────────────────────────────────────────────┘     
                                                                                 
                                                                                 
@@ -45,7 +45,7 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbeeefeeeebbeeeeeeefeeeeeeeebbeeefeeeeeeeebbbbbbbbbbbbbbbaaaaa
+aaaaabbbbbbbbbbbbbbbbeeefeeeebbeeefeeeeeeeeeebbeeefeeeeeeeebbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

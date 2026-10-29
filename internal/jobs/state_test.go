@@ -1508,6 +1508,34 @@ func TestWorkerRepromptBypassesConflictPolicy(t *testing.T) {
 	}
 }
 
+func TestWorkerPresetConflictRulesAnswerWithoutBlocker(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	answer := make(chan BlockerAnswer, 1)
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) BlockerAnswer) error {
+		answer <- waitBlocker(BlockerRequest{
+			Kind:     BlockerKindConflict,
+			Conflict: &ConflictRequest{JobID: job.ID, Source: "/a", Destination: "/b"},
+		})
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+	rules := &ConflictRules{Differ: RuleFallback}
+	rules.Time[0] = RuleSkip // destination newer
+	s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, ConflictRules: rules,
+		Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
+
+	select {
+	case a := <-answer:
+		if a.Decision != DecisionRules.All() || a.Rules != rules || a.Rules.Time[0] != RuleSkip {
+			t.Fatalf("answer = %+v, want the preset rules applied to all", a)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout: preset rules should answer without a blocker")
+	}
+}
+
 func TestApplyEventVerifyProgress(t *testing.T) {
 	s := NewState()
 	job := &Job{ID: "verify-job", Type: TypeMove, Status: StatusRunning}

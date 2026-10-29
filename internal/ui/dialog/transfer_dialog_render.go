@@ -86,14 +86,18 @@ func transferMultiDialogWidth(layout Layout, state TransferDialogState, userHome
 // Result rows' devicons and the destination's completion dropdown, anchored to the placement.
 func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
 	spec := TransferView(state, TransferViewContext{Layout: layout, UserHomeDir: ctx.UserHomeDir, IconLead: ctx.IconLead, ScrollbarStyle: ctx.ScrollbarStyle})
-	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
+	focus := state.Focus
+	if state.Advanced {
+		focus = state.AdvFocus
+	}
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, focus, ctx.Styles)
 	if !ok {
 		return
 	}
-	if state.MultiLocation() && ctx.ShowIcons && paintIcon != nil && ctx.IconLead > 0 {
+	if state.MultiLocation() && !state.Advanced && ctx.ShowIcons && paintIcon != nil && ctx.IconLead > 0 {
 		paintListIcons(p, TransferResult, func(row, x, y int) { paintIcon(screen, x, y, state.Entries[row], ctx.Styles) })
 	}
-	if state.Phase == TransferPhaseDestination {
+	if state.Phase == TransferPhaseDestination && !state.Advanced {
 		if in, ok := p.Item(TransferDest); ok {
 			drawPathCompletionDropdown(screen, in.Rect.X, in.Rect.Y+1, state.Destination.Scroll, state.Destination.Completion, ctx.ScrollbarStyle, ctx.Styles)
 		}

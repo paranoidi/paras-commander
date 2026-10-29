@@ -23,7 +23,7 @@
      │ + pebble                                                           │     
      │ # quartz/lichen.txt                                                │     
      ├────────────────────────────────────────────────────────────────────┤     
-     │               [ OK ]    [ Add paused ]    [ Cancel ]               │     
+     │                [ OK ]    [ Advanced ]    [ Cancel ]                │     
      └────────────────────────────────────────────────────────────────────┘     
                                                                                 
                                                                                 
@@ -63,7 +63,7 @@ aaaaabbfbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbfbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbfbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbbbggghggggbbggggggghggggggggbbggghggggggggbbbbbbbbbbbbbbbaaaaa
+aaaaabbbbbbbbbbbbbbbbggghggggbbggghggggggggggbbggghggggggggbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
