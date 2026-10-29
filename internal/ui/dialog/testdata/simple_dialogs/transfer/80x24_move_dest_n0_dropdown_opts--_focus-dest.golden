@@ -12,7 +12,7 @@
      │ Destination:                                                       │     
      │ /srv/harbor/                                                       │     
      ├──────────── orchard/ ──────────────────────────────────────────────┤     
-     │             otter/      [ Add paused ]    [ Cancel ]               │     
+     │             otter/       [ Advanced ]    [ Cancel ]                │     
      └──────────── oak/     ──────────────────────────────────────────────┘     
                                                                                 
                                                                                 
@@ -46,7 +46,7 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaabbddddddddddddedddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaaaa
 aaaaabbbbbbbbbbbbbffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
-aaaaabbbbbbbbbbbbbggggggggggbbggggggghggggggggbbggghggggggggbbbbbbbbbbbbbbbaaaaa
+aaaaabbbbbbbbbbbbbgggggggggggbbggghggggggggggbbggghggggggggbbbbbbbbbbbbbbbbaaaaa
 aaaaabbbbbbbbbbbbbggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

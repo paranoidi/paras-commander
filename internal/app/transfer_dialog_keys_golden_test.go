@@ -32,8 +32,8 @@ func transferName(st dialog.TransferDialogState) string {
 		return "flat"
 	case dlg.OK:
 		return "ok"
-	case dialog.TransferAddPaused:
-		return "paused"
+	case dialog.TransferAdvanced:
+		return "advanced"
 	case dlg.Cancel:
 		return "cancel"
 	}
@@ -115,8 +115,8 @@ func transferKeyDialog(name string, o transferKeyOpts) keyGoldenDialog {
 			if strings.Contains(st.Destination.Value, app.model.UserHomeDir) {
 				cursor, scroll = fmt.Sprintf("end-%d", len([]rune(st.Destination.Value))-st.Destination.Cursor), "-"
 			}
-			return fmt.Sprintf("phase=%d focus=%s dest=%q cursor=%s scroll=%s pending=%v name=%q ncursor=%d npending=%v perm=%v ts=%v deref=%v flat=%v listScroll=%d dropdown=%v selected=%d message=%q",
-				st.Phase, transferName(st), mask(st.Destination.Value), cursor, scroll, st.Destination.PrefillPending,
+			return fmt.Sprintf("phase=%d adv=%v focus=%s dest=%q cursor=%s scroll=%s pending=%v name=%q ncursor=%d npending=%v perm=%v ts=%v deref=%v flat=%v listScroll=%d dropdown=%v selected=%d message=%q",
+				st.Phase, st.Advanced, transferName(st), mask(st.Destination.Value), cursor, scroll, st.Destination.PrefillPending,
 				st.SelfCopyNewName.Value, st.SelfCopyNewName.Cursor, st.SelfCopyNewName.PrefillPending, st.PreservePermissions, st.PreserveTimestamps, st.DereferenceSymlinks,
 				st.FlattenIntoDest, st.EntriesScroll, c.Open, c.Selected, mask(app.model.Message))
 		},
@@ -178,17 +178,17 @@ func TestTransferCopyKeyScripts(t *testing.T) {
 		{"enter-dest-empty", "a Backspace Enter"},
 		{"enter-dest-whitespace", "Space Space Enter"},
 		{"enter-ok", "@tmpdest Tab Tab Enter"},
-		{"enter-paused", "@tmpdest Tab Tab Right Enter"},
+		{"enter-advanced", "@tmpdest Tab Tab Right Enter"},
 		{"enter-cancel", "Tab Tab Right Right Enter"},
 		{"space-ok", "@tmpdest Tab Tab Space"},
-		{"space-paused", "@tmpdest Tab Tab Right Space"},
+		{"space-advanced", "@tmpdest Tab Tab Right Space"},
 		{"space-cancel", "Tab Tab Right Right Space"},
 		{"alt-o", "@tmpdest Alt+o"},
 		{"alt-o-from-checkbox", "@tmpdest Down Alt+o"},
-		{"alt-p", "@tmpdest Alt+p"},
-		{"alt-p-upper", "@tmpdest Alt+P"},
-		{"alt-p-from-checkbox", "@tmpdest Down Alt+p"},
-		{"alt-p-empty", "a Backspace Alt+p"},
+		{"alt-a", "@tmpdest Alt+a"},
+		{"alt-a-upper", "@tmpdest Alt+A"},
+		{"alt-a-from-checkbox", "@tmpdest Down Alt+a"},
+		{"alt-a-empty", "a Backspace Alt+a"},
 		{"alt-c", "a Alt+c"},
 		{"alt-enter", "@tmpdest Alt+Enter"},
 		{"esc", "a Esc"},
@@ -232,12 +232,12 @@ func TestTransferMoveKeyScripts(t *testing.T) {
 		{"enter-dest-queues", "@tmpdest Enter"},
 		{"enter-dest-empty", "a Backspace Enter"},
 		{"enter-ok", "@tmpdest Down Enter"},
-		{"enter-paused", "@tmpdest Down Right Enter"},
+		{"enter-advanced", "@tmpdest Down Right Enter"},
 		{"enter-cancel", "Down Right Right Enter"},
 		{"space-ok", "@tmpdest Down Space"},
 		{"space-cancel", "Down Right Right Space"},
 		{"alt-o", "@tmpdest Alt+o"},
-		{"alt-p", "@tmpdest Alt+p"},
+		{"alt-a", "@tmpdest Alt+a"},
 		{"alt-c", "Alt+c"},
 		{"esc", "a Esc"},
 		{"esc-from-button", "Down Right Esc"},
@@ -267,15 +267,15 @@ func TestTransferSelfCopyKeyScripts(t *testing.T) {
 		{"enter-bad-name", "a / b Enter"},
 		{"enter-new-name", "e m b e r . t x t Enter"},
 		{"enter-ok", "e m b e r . t x t Down Enter"},
-		{"enter-paused", "e m b e r . t x t Down Right Enter"},
+		{"enter-advanced", "e m b e r . t x t Down Right Enter"},
 		{"enter-cancel", "Down Right Right Enter"},
 		{"space-ok", "p e b b l e . t x t Down Space"},
-		{"space-paused", "p e b b l e . t x t Down Right Space"},
+		{"space-advanced", "p e b b l e . t x t Down Right Space"},
 		{"space-cancel", "Down Right Right Space"},
 		{"alt-o", "q u a r t z . t x t Alt+o"},
 		{"alt-o-same-name", "Alt+o"},
-		{"alt-p", "q u a r t z . t x t Alt+p"},
-		{"alt-p-same-name", "Alt+p"},
+		{"alt-a", "q u a r t z . t x t Alt+a"},
+		{"alt-a-same-name", "Alt+a"},
 		{"alt-c", "a Alt+c"},
 		{"alt-enter", "q u a r t z . t x t Alt+Enter"},
 		{"esc", "a Esc"},
@@ -283,7 +283,7 @@ func TestTransferSelfCopyKeyScripts(t *testing.T) {
 	})
 	runKeyGoldenScripts(t, transferKeyDialog("transfer_self_move", transferKeyOpts{self: true, move: true}), []simpleKeyScript{
 		{"enter-new-name", "j u n i p e r . t x t Enter"},
-		{"alt-p", "j u n i p e r . t x t Alt+p"},
+		{"alt-a", "j u n i p e r . t x t Alt+a"},
 		{"esc", "Esc"},
 	})
 }
@@ -304,11 +304,11 @@ func TestTransferMultiLocationKeyScripts(t *testing.T) {
 		{"enter-dest-queues", "@tmpdest Enter"},
 		{"enter-flatten-queues", "@tmpdest Alt+i Enter"},
 		{"enter-ok", "@tmpdest Tab Tab Enter"},
-		{"enter-paused", "@tmpdest Tab Tab Right Enter"},
+		{"enter-advanced", "@tmpdest Tab Tab Right Enter"},
 		{"enter-cancel", "Tab Tab Right Right Enter"},
 		{"space-ok", "@tmpdest Tab Tab Space"},
 		{"alt-o", "@tmpdest Alt+o"},
-		{"alt-p", "@tmpdest Alt+p"},
+		{"alt-a", "@tmpdest Alt+a"},
 		{"alt-c", "Alt+c"},
 		{"esc", "Down Esc"},
 		{"complete-open-tab", "~ / p r o j e c t s / Tab"},
@@ -317,8 +317,8 @@ func TestTransferMultiLocationKeyScripts(t *testing.T) {
 		{"space-flatten", "Down Space Space"},
 		{"mnemonics", "a Alt+i Alt+r Alt+d b"},
 		{"enter-queues", "@tmpdest Alt+i Enter"},
-		{"enter-paused", "@tmpdest Down Down Right Enter"},
-		{"alt-p", "@tmpdest Alt+p"},
+		{"enter-advanced", "@tmpdest Down Down Right Enter"},
+		{"alt-a", "@tmpdest Alt+a"},
 		{"alt-c", "Alt+c"},
 		{"esc", "Esc"},
 	})

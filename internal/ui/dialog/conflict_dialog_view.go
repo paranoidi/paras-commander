@@ -194,7 +194,8 @@ var (
 	conflictDifferSecondLine = []int{4}
 )
 
-func conflictRulesView(st ConflictDialogState) dlg.Spec {
+// conflictRuleGroups are the rule groups of the Conflict rules screen: time, size and the Verify rows.
+func conflictRuleGroups(st ConflictDialogState) []dlg.Group {
 	// ruleRow is one line of rule row: its label in a labelW box (blank on a continuation line)
 	// and the radios of choices cols (columns past the row's choices are left out).
 	ruleRow := func(row int, cols []int, label string, labelW int) dlg.Item {
@@ -237,13 +238,18 @@ func conflictRulesView(st ConflictDialogState) dlg.Spec {
 	}
 	if !st.ConflictAdvancedNoCompare() {
 		groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{
-			{ID: ConflictVerify, Kind: dlg.KindCheckbox, Label: "Verify both to see if identical", Mnemonic: 'V', On: st.Rules.Verify},
+			{ID: ConflictVerify, Kind: dlg.KindCheckbox, Label: "Compare files", Mnemonic: 'F', On: st.Rules.Verify},
 			ruleRow(ConflictRuleSameRow, allCols(len(conflictSameChoices)), conflictRuleRowLabels[ConflictRuleSameRow], conflictRuleLabelWidth),
 			ruleRow(ConflictRuleDifferRow, conflictDifferFirstLine, conflictRuleRowLabels[ConflictRuleDifferRow], differLabelW),
 			ruleRow(ConflictRuleDifferRow, conflictDifferSecondLine, "", conflictRuleLabelWidth),
 			sep,
 		}}})
 	}
+	return groups
+}
+
+func conflictRulesView(st ConflictDialogState) dlg.Spec {
+	groups := conflictRuleGroups(st)
 	groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{
 		{ID: ConflictApplyAll, Kind: dlg.KindCheckbox, Label: "Apply to all conflicts", Mnemonic: 'A', On: st.AdvAll},
 	}}})

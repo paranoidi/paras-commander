@@ -207,7 +207,8 @@ func (a *App) modalActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 		s := a.jobsCtrl.BlockerDialogScreen()
 		return found(func() dlg.Spec { return s.Spec }, s.Focus, noQuit(a.jobsCtrl.ApplyBlockerDialogEvent), b)
 	case m.TransferDialog.Open:
-		return found(a.dialogCtrl.TransferDialogSpec, &m.TransferDialog.Focus, noQuit(a.dialogCtrl.ApplyTransferEvent),
+		s := a.dialogCtrl.TransferDialogScreen()
+		return found(func() dlg.Spec { return s.Spec }, s.Focus, noQuit(a.dialogCtrl.ApplyTransferEvent),
 			dialogButtons{OK: a.dialogCtrl.TransferDialogOK, Cancel: a.dialogCtrl.TransferDialogCancel})
 	case m.FlattenDialog.Open:
 		return found(func() dlg.Spec { return dialog.FlattenView(m.FlattenDialog) }, &m.FlattenDialog.Focus, noQuit(a.dialogCtrl.ApplyFlattenEvent),

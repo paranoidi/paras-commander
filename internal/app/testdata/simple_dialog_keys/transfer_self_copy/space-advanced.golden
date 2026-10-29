@@ -1,0 +1,28 @@
+== open ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== p ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="p" ncursor=1 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== e ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="pe" ncursor=2 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== b ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="peb" ncursor=3 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== b ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="pebb" ncursor=4 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== l ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="pebbl" ncursor=5 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== e ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="pebble" ncursor=6 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== . ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="pebble." ncursor=7 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== t ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="pebble.t" ncursor=8 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== x ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="pebble.tx" ncursor=9 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== t ==
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="pebble.txt" ncursor=10 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== Down ==
+phase=1 adv=false focus=ok dest="" cursor=0 scroll=0 pending=false name="pebble.txt" ncursor=10 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== Right ==
+phase=1 adv=false focus=advanced dest="" cursor=0 scroll=0 pending=false name="pebble.txt" ncursor=10 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+== Space ==
+phase=1 adv=true focus=advanced dest="" cursor=0 scroll=0 pending=false name="pebble.txt" ncursor=10 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""

@@ -840,6 +840,9 @@ func (s *State) takeItemFailures(id string) int {
 
 func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	var policy ConflictPolicy
+	if job.ConflictRules != nil {
+		policy = ConflictPolicy{activeDecision: DecisionRules.All(), rules: job.ConflictRules}
+	}
 	waitBlocker := func(req BlockerRequest) BlockerAnswer {
 		if req.Kind == BlockerKindConflict && req.Conflict != nil {
 			if policy.Decision() != "" && req.Conflict.Reprompt == "" {

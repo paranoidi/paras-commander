@@ -59,7 +59,7 @@ total `(estimated)` until the exact size is counted (see
 | `Left` | Back to the file view (`jobs.close`) |
 
 Jobs copy and move one at a time; deletes start immediately. Add a transfer
-paused from the copy or move dialog (**Add paused**) and start it later with
+paused from the copy or move dialog (**Advanced**, then **Add paused**) and start it later with
 `Ctrl+R`. See [File operations](fileoperations.md#operation-dialogs).
 
 # Transfer rate limit
@@ -294,7 +294,7 @@ buttons.
 | --- | --- |
 | Time | Destination newer, Destination older, Same time (compared to the whole second) |
 | Size | Destination smaller, Destination larger, Same size |
-| Verify | Same, Differ (contents, only with **Verify both to see if identical** ticked) |
+| Verify | Same, Differ (contents, only with **Compare files** ticked) |
 
 Every conflicting file matches exactly one time row and one size row. The action is the time row's
 if it is not Ask, else the size row's, else Ask. Ask means "no rule here": if no row decides, the
@@ -309,9 +309,9 @@ applied to all conflicts).
 - **Apply to all conflicts** (Alt+A, on by default) makes the rules the job's policy, so later
   conflicts are decided without asking; uncheck it to apply the rules to the current file only.
 
-### Verify both to see if identical
+### Compare files
 
-Ticking **Verify both to see if identical** (Alt+V, off by default) compares the contents of the
+Ticking **Compare files** (Alt+F, off by default) compares the contents of the
 two files before any other row is looked at, and the **Same** and **Differ** rows decide first:
 
 | Row | Choices |

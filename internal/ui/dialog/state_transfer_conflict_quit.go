@@ -52,8 +52,15 @@ type TransferDialogState struct {
 	SourceIsRemote      bool // copy only; true when the source panel is SFTP
 	FlattenIntoDest     bool // last content row when MultiLocation(); copies as dest/<basename>
 	// Focus is the focused widget (TransferDest, TransferNewName, a checkbox ID, dlg.OK,
-	// TransferAddPaused or dlg.Cancel); empty is the first widget (the destination or new name input).
-	Focus                dlg.ID
+	// TransferAdvanced or dlg.Cancel); empty is the first widget (the destination or new name input).
+	Focus dlg.ID
+	// Advanced switches the dialog to the Conflict rules screen (Rules) with the Add paused and
+	// Remove empty directories checkboxes; AdvFocus is its focused widget.
+	Advanced             bool
+	AdvFocus             dlg.ID
+	Rules                ConflictDialogState // seeded by StartAdvanced; only its Rules and Blocker are used
+	StartPaused          bool
+	RemoveEmptyDirs      bool // move only
 	SelfCopyDestDir      string
 	SelfCopyOrigBasename string
 	SelfCopyNewName      FileDialogField
@@ -71,6 +78,22 @@ type TransferDialogState struct {
 	// or basename labels depending on FlattenIntoDest).
 	Entries       []DeleteListEntry
 	EntriesScroll int
+}
+
+// StartAdvanced switches to the Conflict rules screen. The rules are seeded the first time only,
+// so leaving and re-entering keeps the user's choices.
+func (st *TransferDialogState) StartAdvanced() {
+	if st.Rules.Blocker.Conflict == nil {
+		st.Rules.StartAdvanced()
+		st.Rules.Blocker = jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{Move: st.Kind == TransferKindMove}}
+	}
+	st.Advanced = true
+	st.AdvFocus = ConflictRuleID(0, 0)
+}
+
+// RulesChanged reports whether the user picked rules other than the untouched default.
+func (st TransferDialogState) RulesChanged() bool {
+	return st.Rules.Blocker.Conflict != nil && st.Rules.Rules != (jobs.ConflictRules{Differ: jobs.RuleFallback})
 }
 
 // MultiLocation reports whether the destination phase should show the multi-location

@@ -225,7 +225,7 @@ func TestConflictRulesDialogLayout(t *testing.T) {
 	DrawConflictDialog(screen, layout, st, theme.Default(), "")
 	rows := dialogScreenRows(screen)
 	all := strings.Join(rows, "\n")
-	for _, want := range []string{"Conflict rules", "Destination newer", "Same size", "Keep both", "Verify both to see if identical", "Differ", "Apply to all conflicts"} {
+	for _, want := range []string{"Conflict rules", "Destination newer", "Same size", "Keep both", "Compare files", "Differ", "Apply to all conflicts"} {
 		if !strings.Contains(all, want) {
 			t.Fatalf("missing %q in:\n%s", want, all)
 		}
@@ -251,8 +251,8 @@ func TestConflictRulesDialogLayout(t *testing.T) {
 	st = rulesState(true)
 	screen = buttonBlankRowScreen(t)
 	DrawConflictDialog(screen, layout, st, theme.Default(), "")
-	if strings.Contains(strings.Join(dialogScreenRows(screen), "\n"), "Verify both") {
-		t.Fatal("Verify must be hidden for extract")
+	if strings.Contains(strings.Join(dialogScreenRows(screen), "\n"), "Compare files") {
+		t.Fatal("Compare files must be hidden for extract")
 	}
 }
 

@@ -1,8 +1,8 @@
 == open ==
 advanced focus=r0c0 time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
-== Alt+v ==
+== Alt+f ==
 advanced focus=verify time[ask,ask,ask] size[ask,ask,ask] verify=true same=ask differ=rules all=true panel=true
-== Alt+v ==
+== Alt+f ==
 advanced focus=verify time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true
 == Right ==
 advanced focus=verify time[ask,ask,ask] size[ask,ask,ask] verify=false same=ask differ=rules all=true panel=true

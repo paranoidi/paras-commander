@@ -14,7 +14,7 @@
   │ [ ] Preserve timestamps      │  
   │ [ ] Dereference symlinks     │  
   ├──────────────────────────────┤  
-  │ [ OK ]    [ Add paused ]    [ Ca
+  │ [ OK ]    [ Advanced ]    [ Canc
   └──────────────────────────────┘  
                                     
                                     
@@ -48,7 +48,7 @@ aabeeeeeeceeeeeeeeeeeeeeeeeebbbbbbaa
 aabbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbaa
 aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabdddfddddbbdddddddfddddddddbbggghg
+aabdddfddddbbdddfddddddddddbbggghggg
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

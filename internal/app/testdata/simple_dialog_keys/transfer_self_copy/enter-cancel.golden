@@ -1,10 +1,10 @@
 == open ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Down ==
-phase=1 focus=ok dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=ok dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Right ==
-phase=1 focus=paused dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=advanced dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Right ==
-phase=1 focus=cancel dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=cancel dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == Enter ==
 CLOSED: message="" jobs=[] selected=0

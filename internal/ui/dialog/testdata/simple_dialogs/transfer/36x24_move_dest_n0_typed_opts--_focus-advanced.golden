@@ -12,7 +12,7 @@
   │ Destination:                 │  
   │ /srv/harbor/orchard          │  
   ├──────────────────────────────┤  
-  │ [ OK ]    [ Add paused ]    [ Ca
+  │ [ OK ]    [ Advanced ]    [ Canc
   └──────────────────────────────┘  
                                     
                                     
@@ -45,7 +45,7 @@ aabbbbbbbbbbbbbccccccbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabdddeddddbbfffffffgffffffffbbddded
+aabdddeddddbbfffgffffffffffbbdddeddd
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -169,6 +169,11 @@ func (h *Handler) TransferDialogSpec() dlg.Spec {
 	return dialog.TransferView(h.model.TransferDialog, h.transferViewContext())
 }
 
+// TransferDialogScreen is the open transfer dialog's screen on top: its spec and focus pointer.
+func (h *Handler) TransferDialogScreen() dialog.DialogScreen {
+	return h.model.TransferDialog.Screen(h.transferViewContext())
+}
+
 func (h *Handler) transferViewContext() dialog.TransferViewContext {
 	w, ht := h.screen.Size()
 	return dialog.TransferViewContext{
@@ -179,8 +184,8 @@ func (h *Handler) transferViewContext() dialog.TransferViewContext {
 }
 
 // ApplyTransferEvent acts on a widget event (key or click): a click on an input moves its cursor,
-// the checkboxes toggle, Enter in the input or OK confirms, Add paused confirms paused, Cancel
-// closes.
+// the checkboxes toggle, Enter in the input or OK confirms, Advanced opens the rules screen
+// (where Cancel returns to the main one), Cancel closes.
 func (h *Handler) ApplyTransferEvent(ev dlg.Event) {
 	d := &h.model.TransferDialog
 	if ev.Kind == dlg.EventCaret {
@@ -193,24 +198,46 @@ func (h *Handler) ApplyTransferEvent(ev dlg.Event) {
 		return
 	}
 	d.Apply(ev)
+	if d.Advanced {
+		switch _, _, isRule := dialog.ConflictRuleCell(ev.ID); {
+		case ev.ID == dlg.OK:
+			h.confirmTransfer()
+		case ev.ID == dlg.Cancel:
+			d.Advanced = false
+		case ev.ID == dialog.ConflictVerify:
+			d.Rules.ToggleVerify()
+		case isRule:
+			d.Rules.ApplyRule(ev.ID)
+		}
+		return
+	}
 	switch ev.ID {
 	case dialog.TransferDest, dialog.TransferNewName, dlg.OK:
 		h.confirmTransfer()
-	case dialog.TransferAddPaused:
-		h.confirmTransferPaused()
+	case dialog.TransferAdvanced:
+		d.StartAdvanced()
 	case dlg.Cancel:
 		h.CloseTransferDialog()
 	}
 }
 
 // HandleTransferDialogKey routes a key event for the open unified transfer (copy/move) dialog.
-// Order: Alt mnemonics (options, Add paused) win over everything, also in the input
+// Order: Alt mnemonics (options, Advanced) win over everything, also in the input
 // (dlg.HandleMnemonic, which leaves focus in the input); then the
 // completion dropdown, the path-picker and destination shortcuts and the
 // destination's cursor keys; then the widget engine; and what it declines is text editing.
 func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
 	d := &h.model.TransferDialog
-	spec := h.TransferDialogSpec()
+	screen := h.TransferDialogScreen()
+	if d.Advanced {
+		if ev, ok := dlg.HandleMnemonic(screen.Spec, screen.Focus, event); ok {
+			h.ApplyTransferEvent(ev)
+		} else if ev, ok := dlg.HandleKey(screen.Spec, screen.Focus, event); ok {
+			h.ApplyTransferEvent(ev)
+		}
+		return
+	}
+	spec := screen.Spec
 	if ev, ok := dlg.HandleMnemonic(spec, &d.Focus, event); ok {
 		h.ApplyTransferEvent(ev)
 		return
@@ -263,15 +290,8 @@ func transferBasenameIssue(name string) string {
 }
 
 func (h *Handler) confirmTransfer() {
-	h.confirmTransferEnqueue(false)
-}
-
-func (h *Handler) confirmTransferPaused() {
-	h.confirmTransferEnqueue(true)
-}
-
-func (h *Handler) confirmTransferEnqueue(startPaused bool) {
 	d := &h.model.TransferDialog
+	startPaused := d.StartPaused
 	sources := h.ActivePanelSources()
 	if len(sources) == 0 {
 		if d.Kind == dialog.TransferKindCopy {
@@ -315,6 +335,7 @@ func (h *Handler) confirmTransferEnqueue(startPaused bool) {
 		FlattenIntoDest:     flat,
 		DereferenceSymlinks: d.DereferenceSymlinks,
 	}
+	h.applyTransferAdvanced(&preserve)
 	st := transferProbeApply{
 		sources:     sources,
 		dest:        dest,
@@ -334,6 +355,16 @@ func (h *Handler) confirmTransferEnqueue(startPaused bool) {
 	}
 	nSelf := ops.SelfTargetCount(srcLocs, destLoc, flat)
 	h.finishTransferEnqueue(st, nSelf, false, false)
+}
+
+// applyTransferAdvanced puts the Advanced screen's rules and Remove empty directories choice on
+// preserve; untouched rules stay nil so conflicts ask as usual.
+func (h *Handler) applyTransferAdvanced(preserve *jobs.TransferPreserve) {
+	d := &h.model.TransferDialog
+	if d.RulesChanged() {
+		preserve.ConflictRules = d.Rules.ConflictAdvancedAnswer().Rules
+	}
+	preserve.RemoveEmptyDirs = d.Kind == dialog.TransferKindMove && d.RemoveEmptyDirs
 }
 
 func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bool) {
@@ -379,6 +410,7 @@ func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bo
 		PreserveTimestamps:  d.PreserveTimestamps,
 		DereferenceSymlinks: d.DereferenceSymlinks,
 	}
+	h.applyTransferAdvanced(&preserve)
 	h.AddTransferJob(jobType, sourcesCopy, finalDest, startPaused, preserve)
 	h.host.ActivePanel().ClearSelection()
 	h.CloseTransferDialog()

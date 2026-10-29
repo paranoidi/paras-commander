@@ -12,7 +12,7 @@
   │ Destination:                                         │  
   │ ◀arbor-orchard-meadow/harbor-orchard-meadow/lantern  │  
   ├──────────────────────────────────────────────────────┤  
-  │        [ OK ]    [ Add paused ]    [ Cancel ]        │  
+  │         [ OK ]    [ Advanced ]    [ Cancel ]         │  
   └──────────────────────────────────────────────────────┘  
                                                             
                                                             
@@ -45,7 +45,7 @@ aabbbbbbbbbbbbbbbbbbbbbbbbbccccccbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddebbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbfffgffffbbfffffffgffffffffbbfffgffffffffbbbbbbbbaa
+aabbbbbbbbbfffgffffbbfffgffffffffffbbfffgffffffffbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -1,20 +1,20 @@
 == open ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="lantern.txt" ncursor=11 npending=true perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == r ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="r" ncursor=1 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="r" ncursor=1 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == t ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="rt" ncursor=2 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="rt" ncursor=2 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == d ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="rtd" ncursor=3 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="rtd" ncursor=3 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == i ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdi" ncursor=4 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdi" ncursor=4 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == o ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdio" ncursor=5 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdio" ncursor=5 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == c ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdioc" ncursor=6 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdioc" ncursor=6 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == p ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdiocp" ncursor=7 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdiocp" ncursor=7 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == y ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdiocpy" ncursor=8 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdiocpy" ncursor=8 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
 == n ==
-phase=1 focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdiocpyn" ncursor=9 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""
+phase=1 adv=false focus=dest dest="" cursor=0 scroll=0 pending=false name="rtdiocpyn" ncursor=9 npending=false perm=true ts=true deref=false flat=false listScroll=0 dropdown=false selected=0 message=""

@@ -161,7 +161,14 @@ for move). Move always asks for a destination; renaming in place is Rename.
   every item directly into the destination. Without it the structure relative
   to the sources' common parent is kept, and when the selection spans several
   directories the dialog shows the common source and a preview of the result.
-- **Add paused** (`Alt+P`) queues the job without starting it.
+- **Advanced** (`Alt+A`) switches the dialog to the Conflict rules screen, the
+  same rule matrix the job offers at its first "File exists" prompt, so the
+  rules can be set up front (the Delete source choices appear for a move). The
+  screen also has, for a move, **Remove empty directories** (`Alt+R`), which
+  removes the source directories the move left empty once it finishes, without
+  asking, and **Add paused** (`Alt+A`), which queues the job without starting
+  it. OK queues the job; Cancel returns to the main screen and keeps what
+  was set. Rules left untouched leave conflicts to ask as usual.
 - Copying or moving a single item onto itself asks for a new name; copying a
   directory into itself is refused.
 - After a copy or move into the other panel's current directory finishes, the

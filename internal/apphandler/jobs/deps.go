@@ -53,6 +53,9 @@ type Handler struct {
 	// then possibly prompted) in ApplyRefreshes — never on the event-batch path,
 	// which must stay free of filesystem I/O.
 	pendingDanglingSources []pathloc.Path
+	// pendingRemoveDanglingSources is the same for RemoveDanglingDirs jobs, whose empty
+	// directories are queued for deletion without a prompt.
+	pendingRemoveDanglingSources []pathloc.Path
 
 	// jobBlockerNextGen invalidates in-flight quick-blocker chain timers.
 	jobBlockerNextGen atomic.Uint64

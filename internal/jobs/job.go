@@ -212,6 +212,12 @@ type Job struct {
 	// Set at enqueue from [operations].remove_dangling_directories; see
 	// apphandler/jobs.Handler.promptDanglingDirsIfAny.
 	PromptDanglingDirs bool
+	// RemoveDanglingDirs removes directories left empty by this move on completion without
+	// asking (transfer-dialog "Remove empty directories"); PromptDanglingDirs is then false.
+	RemoveDanglingDirs bool
+	// ConflictRules presets the conflict policy of every run (transfer-dialog Advanced rules);
+	// nil leaves conflicts to ask.
+	ConflictRules *ConflictRules
 
 	// Per-job copy/move metadata options (from transfer dialog or config at enqueue).
 	PreservePermissions bool
@@ -359,6 +365,8 @@ func (j *Job) RetryClone() *Job {
 		FlattenRecursive:      j.FlattenRecursive,
 		DeleteRemoveEmptyDirs: j.DeleteRemoveEmptyDirs,
 		PromptDanglingDirs:    j.PromptDanglingDirs,
+		RemoveDanglingDirs:    j.RemoveDanglingDirs,
+		ConflictRules:         j.ConflictRules,
 		PreservePermissions:   j.PreservePermissions,
 		PreserveTimestamps:    j.PreserveTimestamps,
 		DereferenceSymlinks:   j.DereferenceSymlinks,

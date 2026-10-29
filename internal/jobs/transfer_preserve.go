@@ -9,6 +9,11 @@ type TransferPreserve struct {
 	// DereferenceSymlinks requests copying through symlinks instead of recreating them.
 	// Copy only — AddTransferJob forces this false for Move regardless of this value.
 	DereferenceSymlinks bool
+	// ConflictRules presets the job's conflict rules (transfer-dialog Advanced); nil asks as usual.
+	ConflictRules *ConflictRules
+	// RemoveEmptyDirs removes the source directories a move leaves empty, without the prompt
+	// (move only).
+	RemoveEmptyDirs bool
 }
 
 // TransferPreserveFromConfig returns transfer preserve flags from operations config defaults.
