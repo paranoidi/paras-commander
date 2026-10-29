@@ -407,6 +407,10 @@ const jobsSubpanelMinFrameH = 4 // Operations panel: title row + bottom border +
 // jobsDetailChromeRows is non-content rows in drawJobsDetailPanel (inner area is Height - 2).
 const jobsDetailChromeRows = 2
 
+// jobsOpsBottomMinBandH is the minimum height of the Queue/Details band above Operations in the
+// bottom layout, so the band does not shrink to a short job's Details.
+const jobsOpsBottomMinBandH = 15
+
 // jobsConflictPanelMinFrameH is the minimum frame height for the file-exists conflict panel above Details.
 const jobsConflictPanelMinFrameH = 17
 
@@ -447,7 +451,7 @@ type JobsViewRects struct {
 // false the Queue fills primary and secondary splits as SplitJobsSecondaryPanels. With opsBottom
 // true Operations spans the full width under a band holding the Queue (primary's width when the
 // columns are side by side, else half) and the optional conflict panel above Details; the band
-// is as tall as conflict plus Details need and Operations takes the rest (at least its minimum
+// is as tall as conflict plus Details need (at least jobsOpsBottomMinBandH) and Operations takes the rest (at least its minimum
 // frame). When the band cannot fit, the side layout is used.
 func SplitJobsView(primary, secondary Rect, opsBottom, showConflict bool, detailLineCount int) JobsViewRects {
 	if opsBottom {
@@ -466,7 +470,7 @@ func splitJobsViewOpsBottom(primary, secondary Rect, showConflict bool, detailLi
 		conflictH = jobsConflictPanelMinFrameH
 	}
 	detailH := max(detailLineCount+jobsDetailChromeRows, 3)
-	bandH := min(conflictH+detailH, area.Height-jobsSubpanelMinFrameH)
+	bandH := min(max(conflictH+detailH, jobsOpsBottomMinBandH), area.Height-jobsSubpanelMinFrameH)
 	if bandH < conflictH+3 {
 		return JobsViewRects{}, false
 	}

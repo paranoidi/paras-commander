@@ -15,7 +15,8 @@ move keys match the screen), followed by finished jobs with the most recent
 first. Keys are rebindable under `[jobs]` in `keybindings.toml`.
 
 Operations spans the full width at the bottom of the screen, so long paths
-fit; the Queue and Details share the rows above it, as tall as Details needs.
+fit; the Queue and Details share the rows above it, as tall as Details needs
+(at least 15 rows).
 `Ctrl+Space` (`jobs.toggle-operations-layout`, **Jobs -> Operations layout**,
 Esc menu `o`) moves Operations under Details in the right column, giving the
 Queue the full height; press it again to move it back. The toggle lasts for

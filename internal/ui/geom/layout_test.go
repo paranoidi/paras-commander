@@ -579,8 +579,8 @@ func TestSplitJobsViewSideKeepsQueueInPrimary(t *testing.T) {
 func TestSplitJobsViewBottomSpansFullWidth(t *testing.T) {
 	primary := Rect{X: 0, Y: 1, Width: 40, Height: 28}
 	secondary := Rect{X: 40, Y: 1, Width: 60, Height: 28}
-	r := SplitJobsView(primary, secondary, true, false, 10)
-	bandH := 10 + jobsDetailChromeRows
+	r := SplitJobsView(primary, secondary, true, false, 15)
+	bandH := 15 + jobsDetailChromeRows
 	if r.List != (Rect{X: 0, Y: 1, Width: 40, Height: bandH}) {
 		t.Fatalf("list = %+v", r.List)
 	}
@@ -592,6 +592,15 @@ func TestSplitJobsViewBottomSpansFullWidth(t *testing.T) {
 	}
 	if r.Operations != (Rect{X: 0, Y: 1 + bandH, Width: 100, Height: 28 - bandH}) {
 		t.Fatalf("operations = %+v", r.Operations)
+	}
+}
+
+func TestSplitJobsViewBottomKeepsMinimumBand(t *testing.T) {
+	primary := Rect{X: 0, Y: 0, Width: 40, Height: 40}
+	secondary := Rect{X: 40, Y: 0, Width: 60, Height: 40}
+	r := SplitJobsView(primary, secondary, true, false, 3)
+	if r.List.Height != jobsOpsBottomMinBandH || r.Detail.Height != jobsOpsBottomMinBandH || r.Operations.Y != jobsOpsBottomMinBandH {
+		t.Fatalf("short details layout = %+v, want %d-row band", r, jobsOpsBottomMinBandH)
 	}
 }
 
