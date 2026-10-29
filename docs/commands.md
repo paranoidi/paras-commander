@@ -50,7 +50,7 @@ Quitting with commands still running asks for confirmation, like unfinished jobs
 
 ## User menu
 
-`F2` (`app.user-menu`, also `<`; menu **Command -> User menu**, Esc menu `X`) opens a strip of your own commands. Press the highlighted letter to run an entry; `Left` or `Backspace` leaves a submenu, `Esc` closes the menu. `F9` inside the menu, or `Shift+F2` (`app.user-menu-edit`) anywhere, opens `menu.toml` in `$EDITOR` and reloads it. A missing file is created with a commented reference of every field.
+`F2` (`app.user-menu`, also `§` or `;`; menu **Command -> User menu**, Esc menu `X`) opens a strip of your own commands. Press the highlighted letter to run an entry; `Left` or `Backspace` leaves a submenu, `Esc` closes the menu. `F9` inside the menu, or `Shift+F2` (`app.user-menu-edit`) anywhere, opens `menu.toml` in `$EDITOR` and reloads it. A missing file is created with a commented reference of every field.
 
 A `menu.toml` in the active directory (name from `local_names`, default `menu.toml`) takes precedence over the global one; see [Config](config.md#user_menu). The same trust rule as [Meta columns](meta-columns.md#open) applies: a group- or world-writable `menu.toml` (other than one writable only by your private group) or one owned by another user is skipped with a warning, and the user menu then shows that warning instead of opening the editor.
 
