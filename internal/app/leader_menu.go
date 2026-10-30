@@ -112,7 +112,7 @@ func (a *App) previewLeaderMenuOpen() bool {
 
 func (a *App) gitFilterMenuOpen() bool {
 	st := a.model.LeaderMenu
-	return st.Open && st.GitFilterMenu
+	return st.Open && st.GitFilterMenu && !st.FolderColorMenu
 }
 
 func (a *App) userMenuOpen() bool {

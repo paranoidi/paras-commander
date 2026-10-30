@@ -786,6 +786,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 			a.render()
 			return false, true
 		}
+		if resolvedAction == keymap.ActionPanelFolderColorMenu && a.folderColorMenuOpen() {
+			a.closeLeaderMenu()
+			a.render()
+			return false, true
+		}
 		if resolvedAction == keymap.ActionAppCopyMenu && a.copyMenuOpen() {
 			a.closeLeaderMenu()
 			a.render()

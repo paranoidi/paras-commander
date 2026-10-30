@@ -40,3 +40,24 @@ func TestAltGTogglesGitFilterMenuClosed(t *testing.T) {
 		t.Fatal("second Alt-G should close the git filter menu")
 	}
 }
+
+func TestFolderColorKeyTogglesMenuClosed(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.model.ViewMode = ui.ViewBrowser
+	items := []ui.LeaderMenuItem{{Label: "Amber"}, {Label: "Default"}}
+	app.model.LeaderMenu.FolderColorMenu = app.openLeaderMenuStrip(items, false, false, false, true, "Folder color", func(int) bool { return false })
+	if !app.folderColorMenuOpen() || app.gitFilterMenuOpen() {
+		t.Fatalf("LeaderMenu = %+v, want folder color menu open", app.model.LeaderMenu)
+	}
+
+	altA := tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt)
+	if id := app.actionFromKeyEvent(altA); id != keymap.ActionPanelFolderColorMenu {
+		t.Fatalf("Alt-A resolves to %q, want %q", id, keymap.ActionPanelFolderColorMenu)
+	}
+	if _, rendered := app.handleKey(altA); !rendered {
+		t.Fatal("second Alt-A should render after closing the folder color menu")
+	}
+	if app.model.LeaderMenu.Open {
+		t.Fatal("second Alt-A should close the folder color menu")
+	}
+}

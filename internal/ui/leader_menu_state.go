@@ -19,5 +19,7 @@ type LeaderMenuState struct {
 	CopyGit       bool // with CopyMenu: the "Relative to git root" submenu
 	PreviewMenu   bool // true = ':' fullscreen-preview menu (ui.ViewFilePreview only)
 	GitFilterMenu bool // true = Alt-G git filter menu
-	Items         []LeaderMenuItem
+	// FolderColorMenu: with GitFilterMenu, the panel.folder-color-menu strip (shares its layout).
+	FolderColorMenu bool
+	Items           []LeaderMenuItem
 }

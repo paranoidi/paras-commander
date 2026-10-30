@@ -67,7 +67,7 @@ func (a *App) openFolderColorMenu(panelID int) {
 	}
 	items = append(items, ui.LeaderMenuItem{Label: "Default"})
 	// The bool return is the app-quit signal, not a success flag (see toggleGitFilterMenu).
-	a.openLeaderMenuStrip(items, false, false, false, true, "Folder color", func(i int) bool {
+	opened := a.openLeaderMenuStrip(items, false, false, false, true, "Folder color", func(i int) bool {
 		var choice *foldercolor.Choice
 		if i >= 0 && i < len(choices) {
 			choice = &choices[i]
@@ -77,6 +77,12 @@ func (a *App) openFolderColorMenu(panelID int) {
 		a.applyFolderColor(dirs, choice)
 		return false
 	})
+	a.model.LeaderMenu.FolderColorMenu = opened
+}
+
+func (a *App) folderColorMenuOpen() bool {
+	st := a.model.LeaderMenu
+	return st.Open && st.FolderColorMenu
 }
 
 // applyFolderColor runs foldercolor.Apply off the UI thread, then reloads the snapshot and
