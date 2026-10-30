@@ -71,10 +71,7 @@ func DrawFilePreviewThemePicker(screen tcell.Screen, rect geom.Rect, state FileP
 			_, bg, _ := baseStyle.Decompose()
 			matchStyle = matchStyle.Background(bg)
 		}
-		marker := "( ) "
-		if entIdx >= 0 && entIdx == selectedEntIdx {
-			marker = "(*) "
-		}
+		marker := styles.IconDialogRadio(entIdx >= 0 && entIdx == selectedEntIdx) + " "
 		markerWidth := len([]rune(marker))
 		labelWidth := rowWidth - markerWidth
 		if labelWidth < 1 {
