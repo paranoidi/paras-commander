@@ -1,6 +1,7 @@
 package foldercolor
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"maps"
@@ -32,8 +33,8 @@ type snapshot struct {
 	choices []Choice               // colours of the current icon-theme style
 }
 
-// Store is an in-memory copy of the folder colours. Reload and Changed do file I/O and belong on a
-// background goroutine; Lookup only reads the last published snapshot and is safe on the UI thread.
+// Store is an in-memory copy of the folder colours. Reload, Refresh and WatchIconTheme do file I/O
+// and belong on background goroutines; Lookup only reads the last published snapshot and is safe on the UI thread.
 type Store struct {
 	home, dir string
 	snap      atomic.Pointer[snapshot]
@@ -43,7 +44,17 @@ type Store struct {
 	sig     string
 	mounts  mountCache
 	palette paletteCache
+	theme   string // icon theme followed by WatchIconTheme
+	watched bool   // WatchIconTheme is running: load uses theme instead of forking gsettings
 }
+
+// gsettings locates the desktop icon theme; the binary is a var so tests can substitute a script.
+var gsettingsBin = "gsettings"
+
+const (
+	iconThemeSchema = "org.cinnamon.desktop.interface"
+	iconThemeKey    = "icon-theme"
+)
 
 // New returns a Store reading the current user's GVfs metadata. Nothing is loaded until Reload.
 func New() *Store {
@@ -157,12 +168,14 @@ func (s *Store) load(mounts []devMount, sig string) {
 	}
 	refs := make([]map[string]iconRef, len(names))
 	tagv := make([]uint32, len(names))
-	var iconTheme string
+	iconTheme := s.theme
 	var wg sync.WaitGroup
 	for i, n := range names {
 		wg.Go(func() { refs[i], tagv[i] = s.readTreeDB(n) })
 	}
-	wg.Go(func() { iconTheme = currentIconTheme() })
+	if !s.watched {
+		wg.Go(func() { iconTheme = currentIconTheme() })
+	}
 	pal := s.palette.load()
 	wg.Wait()
 	loaded := map[string]map[string]iconRef{}
@@ -203,11 +216,56 @@ func (s *Store) load(mounts []devMount, sig string) {
 	s.tags, s.sig = tags, sig
 }
 
+// WatchIconTheme follows the desktop icon theme through `gsettings monitor` until ctx ends, so a
+// reload never forks gsettings and a theme change swaps the colour choices at once. onChange runs
+// after each swap. It blocks; when gsettings is missing or the monitor exits, load falls back to
+// reading the theme itself.
+func (s *Store) WatchIconTheme(ctx context.Context, onChange func()) {
+	cmd := exec.CommandContext(ctx, gsettingsBin, "monitor", iconThemeSchema, iconThemeKey)
+	out, err := cmd.StdoutPipe()
+	if err != nil || cmd.Start() != nil {
+		return
+	}
+	defer func() {
+		_ = cmd.Wait()
+		s.mu.Lock()
+		s.watched = false
+		s.mu.Unlock()
+	}()
+	// The monitor is already listening, so a change during this initial read is not lost.
+	s.setTheme(currentIconTheme(), true)
+	onChange()
+	sc := bufio.NewScanner(out)
+	for sc.Scan() {
+		// Lines look like: icon-theme: 'Mint-Y-Sand'
+		if _, v, ok := strings.Cut(sc.Text(), ": "); ok {
+			s.setTheme(strings.Trim(v, "'"), false)
+			onChange()
+		}
+	}
+}
+
+// setTheme records the icon theme and republishes the snapshot with that theme's colour choices.
+func (s *Store) setTheme(theme string, startWatch bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.theme = theme
+	if startWatch {
+		s.watched = true
+	}
+	if sn := s.snap.Load(); sn != nil {
+		pal := s.palette.load()
+		next := *sn
+		next.choices = pal.styles[pal.styleFor(theme)]
+		s.snap.Store(&next)
+	}
+}
+
 // currentIconTheme returns the desktop's icon theme (e.g. "Mint-Y-Sand"), or "" when unknown.
 func currentIconTheme() string {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "gsettings", "get", "org.cinnamon.desktop.interface", "icon-theme").Output()
+	out, err := exec.CommandContext(ctx, gsettingsBin, "get", iconThemeSchema, iconThemeKey).Output()
 	if err != nil {
 		return ""
 	}

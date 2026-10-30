@@ -2,6 +2,7 @@ package foldercolor
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"os"
 	"os/exec"
@@ -424,4 +425,52 @@ func waitFor(t *testing.T, s *Store, cond func() bool) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatal("lookup state did not change in time")
+}
+
+func TestWatchIconTheme(t *testing.T) {
+	dir := t.TempDir()
+	js := `{"styles":[
+		{"name":"Mint-Y","icon-themes":[{"name":"Blue","color":"#5294e2","theme":"Mint-Y-Blue"}]},
+		{"name":"Mint-L","icon-themes":[{"name":"Sand","color":"#c8ac69","theme":"Mint-L-Sand"}]}]}`
+	if err := os.WriteFile(filepath.Join(dir, "Mint.json"), []byte(js), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// Fake gsettings: "get" answers Mint-Y, "monitor" reports a switch to Mint-L and stays alive.
+	script := filepath.Join(dir, "gsettings")
+	body := "#!/bin/sh\nif [ \"$1\" = get ]; then echo \"'Mint-Y'\"; exit; fi\necho \"icon-theme: 'Mint-L-Sand'\"\nexec sleep 30\n"
+	if err := os.WriteFile(script, []byte(body), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	oldC, oldG := colorsDir, gsettingsBin
+	colorsDir, gsettingsBin = dir, script
+	t.Cleanup(func() { colorsDir, gsettingsBin = oldC, oldG })
+
+	s := &Store{home: t.TempDir(), dir: t.TempDir()}
+	s.Reload()
+	if got := s.Choices(); len(got) != 1 || got[0].Name != "Blue" {
+		t.Fatalf("initial choices %v", got)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	changes := make(chan struct{}, 4)
+	done := make(chan struct{})
+	go func() { s.WatchIconTheme(ctx, func() { changes <- struct{}{} }); close(done) }()
+	for range 2 { // initial read, then the monitor line
+		select {
+		case <-changes:
+		case <-time.After(5 * time.Second):
+			t.Fatal("no theme change reported")
+		}
+	}
+	if got := s.Choices(); len(got) != 1 || got[0].Name != "Sand" {
+		t.Fatalf("watched choices %v", got)
+	}
+	s.Reload() // must keep the watched theme, not re-read "get"
+	if got := s.Choices(); got[0].Name != "Sand" {
+		t.Fatalf("reload lost the watched theme: %v", got)
+	}
+	cancel()
+	<-done
+	if s.watched {
+		t.Fatal("still marked watched after the monitor stopped")
+	}
 }

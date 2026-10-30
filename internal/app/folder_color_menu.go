@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -13,12 +14,18 @@ import (
 // folderColorsPayload wakes the main loop after the folder-colour snapshot was replaced.
 type folderColorsPayload struct{ err error } // err: a failed Apply, reported on the UI thread
 
-// runFolderColorRefresh loads the folder colours, then re-checks the GVfs metadata every
-// config.FolderColorRefreshInterval and reloads it when another program changed it. Started
-// from Run, not the constructor, so tests keep an empty event queue. Each reload posts
-// folderColorsPayload so the panels repaint; painting itself only reads the in-memory snapshot.
+// runFolderColorRefresh loads the folder colours, follows the icon theme (WatchIconTheme, stopped
+// with the loop), then re-checks the GVfs metadata every config.FolderColorRefreshInterval and
+// reloads it when another program changed it. Started from Run, not the constructor, so tests
+// keep an empty event queue. Each reload posts folderColorsPayload so the panels repaint;
+// painting itself only reads the in-memory snapshot.
 func (a *App) runFolderColorRefresh(stop <-chan struct{}) {
 	a.reloadFolderColors(nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go a.folderColors.WatchIconTheme(ctx, func() {
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(folderColorsPayload{}))
+	})
 	ticker := time.NewTicker(config.FolderColorRefreshInterval)
 	defer ticker.Stop()
 	for {
