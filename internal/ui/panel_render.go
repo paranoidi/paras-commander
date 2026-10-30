@@ -554,6 +554,10 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		}); len(suffixSpans) > 0 {
 			spans = append(suffixSpans, spans...)
 		}
+		nameDisplay := panellist.EntryDisplayRunes(cur, nameWidth, display.ShowIcons, rowSuffix, panelStyle.Styles)
+		spans = append(spans, panellist.ListingCutSpans(nameDisplay, func(di int) tcell.Style {
+			return blendCell(di + leftGutter + gitStrip + iconStrip + treeGutterWidth)
+		})...)
 	}
 
 	if display.ShowIcons && leftGutter > 0 {

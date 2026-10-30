@@ -8,6 +8,7 @@ UI theme TOML only; preview syntax highlighting (Chroma) is a separate system (`
 - `themes/imports/` holds Alacritty color schemes for `import_alacritty.py`, which uses `default.toml` as its template and swaps only `[palette]`, so a new style key in `default.toml` appears in regenerated themes; regenerate rather than hand-edit. `themes/trash/` is discards; `themes/preview/` is Chroma XML.
 - Every new key needs a runtime fallback in `internal/theme` so imported/user themes without it still render.
 - Which TOML fields reach pixels must be checked against resolution in `internal/theme` and use in `internal/ui`. Regression tests for `AccentIconStyle` and dialog title composition: `internal/ui/dialog/internal/draw/`.
+- Derived, not keyed: `theme.CutMarkStyle` (listing name cut points, `panels.md`) swaps the cell's own foreground for its counterpart shade (ANSI 0–7 ↔ 8–15, RGB moved `cutMarkShade` toward white or black, default foreground toggles bold), so it follows every row style without a theme key.
 
 ## Key groups
 

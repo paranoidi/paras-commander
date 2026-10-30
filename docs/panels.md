@@ -18,6 +18,26 @@ Press `Alt+T` (`panel.cycle-listing-format`) to cycle the active panel through t
 
 `default_listing_format` in [config.md](config.md#panels) picks the startup format. A narrow panel can show only the name column (`[ui].shrunken_shows_name_only`, see [config.md](config.md#ui)). `Alt+Z` (`panel.toggle-zoom-active-panel`) zooms the active panel for the session, and `Shift+Tab` (`panel.toggle-hide-inactive`) hides the inactive one. See [Layout](layout.md).
 
+### Long names
+
+A name too long for its column is shortened word by word (words are split at `.`, `-`, `_` and spaces) rather than cut in the middle:
+
+1. The longest words are abbreviated first, down to five letters (`Lantern` → `Lant` happens only later; a word loses at least three letters at once so it never looks like a typo).
+2. Words in the middle are then dropped as one gap shown as `…`, growing outward from the centre. The first and last words stay.
+3. The remaining words are abbreviated further, down to four letters, then the last word is dropped and the first word shortened.
+
+A short file extension (up to five letters, such as `.odt`) is always kept, and words containing digits (`2019`, `v3`, `0042`) are never abbreviated, only dropped whole. Each step only removes text, so dragging a panel narrower never brings back a part that a wider panel had hidden.
+
+The letter where a word was abbreviated, and the `…`, are drawn in the row colour's counterpart shade (blue ↔ bright blue, white ↔ bright white; other colours are lightened or darkened), so the cut is visible without spending a character:
+
+```
+Garden.Lantern.Whisper.2019.Pebble.Draft.odt
+Garden.Lantern.Whisper…Pebble.Draft.odt
+Garden.Lantern…Draft.odt
+Garden…Draft.odt
+Garden….odt
+```
+
 ## Sorting
 
 `Alt+S` (`panel.sort-dialog`, leader `s`, Left/Right menu, Sort...) opens the Sort dialog for the active panel: sort key (Name, Extension, Size, Modified, and any active [meta column](meta-columns.md)), reverse, directories first, and optional size ordering while a [disk usage](disk-usage.md) scan runs. The header arrow shows the sorted column and points toward larger values. `default_sort`, `sort_reverse` and `directories_first` set the startup behaviour. `panel.cycle-sort` and `panel.reverse-sort` are unbound by default and can be bound in `keybindings.toml`.

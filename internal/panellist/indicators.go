@@ -9,10 +9,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// DisplayRune is one icon in the listing name column; NameIdx is -1 for decorations.
+// DisplayRune is one icon in the listing name column; NameIdx is -1 for decorations. Cut marks
+// where a shortened name was cut (an abbreviated word's last rune, or an Ellipsis).
 type DisplayRune struct {
 	Rune    rune
 	NameIdx int
+	Cut     bool
 }
 
 // NewFileMarkTier selects new-file suffix coloring (latest, previous or older batch).
@@ -161,13 +163,18 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 	} else if innerW <= 3 {
 		core = body[:takeCellsLeft(body, innerW)]
 	} else {
-		prefixWidth := (innerW - 1) / 2
-		suffixWidth := innerW - prefixWidth - 1
-		truncated := make([]DisplayRune, 0, len(body))
-		truncated = append(truncated, body[:takeCellsLeft(body, prefixWidth)]...)
-		truncated = append(truncated, DisplayRune{Rune: primitive.Ellipsis, NameIdx: -1})
-		truncated = append(truncated, body[takeCellsRight(body, suffixWidth):]...)
-		core = truncated
+		// Prefix and symlink '@' are one cell each and stay; the name shortens word by word.
+		symlink := entry.Type == localfs.EntrySymlink
+		nameW := innerW - 1
+		if symlink {
+			nameW--
+		}
+		core = make([]DisplayRune, 0, len(body))
+		core = append(core, body[0])
+		core = append(core, shortenName(entryRunes, nameW, entry.Type != localfs.EntryDirectory)...)
+		if symlink {
+			core = append(core, body[len(body)-1])
+		}
 	}
 
 	if suffixLen == 0 {
@@ -199,18 +206,6 @@ func takeCellsLeft(d []DisplayRune, width int) int {
 		}
 	}
 	return len(d)
-}
-
-// takeCellsRight returns the start index of the longest tail of d that fits in width cells.
-func takeCellsRight(d []DisplayRune, width int) int {
-	used := 0
-	for i := len(d) - 1; i >= 0; i-- {
-		used += runewidth.RuneWidth(d[i].Rune)
-		if used > width {
-			return i + 1
-		}
-	}
-	return 0
 }
 
 // pinIconRune returns th.IconPinRune() for row-suffix icon slots, which are always one
