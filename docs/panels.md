@@ -28,7 +28,7 @@ A name too long for its column is shortened word by word (words are split at `.`
 
 A short file extension (up to five letters, such as `.odt`) is always kept, and words containing digits (`2019`, `v3`, `0042`) are never abbreviated, only dropped whole. Each step only removes text, so dragging a panel narrower never brings back a part that a wider panel had hidden.
 
-The letter where a word was abbreviated, and the `…`, are drawn in the row colour's counterpart shade (blue ↔ bright blue, white ↔ bright white; other colours are lightened or darkened), so the cut is visible without spending a character:
+The letter where a word was abbreviated, and the `…`, are drawn in the row colour's counterpart shade (blue ↔ bright blue, white ↔ bright white; bold blue, which most terminals already draw bright, marks with plain blue; other colours are lightened or darkened), so the cut is visible without spending a character:
 
 ```
 Garden.Lantern.Whisper.2019.Pebble.Draft.odt

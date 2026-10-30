@@ -9,12 +9,15 @@ const cutMarkShade = 0.4
 // CutMarkStyle returns st with its foreground swapped for the counterpart shade, marking where
 // shortened text was cut without spending a cell: the 8 standard ANSI colours swap with their
 // bright twins (blue ↔ bright_blue), other colours lighten or darken, and a terminal-default
-// foreground toggles bold instead.
+// foreground toggles bold instead. A bold ANSI colour already renders bright on most terminals
+// (bold-is-bright), so its mark is the normal-intensity twin without bold.
 func CutMarkStyle(st tcell.Style) tcell.Style {
 	fg, _, attrs := st.Decompose()
 	switch {
 	case !fg.Valid():
 		return st.Bold(attrs&tcell.AttrBold == 0)
+	case !fg.IsRGB() && fg-tcell.ColorValid < 16 && attrs&tcell.AttrBold != 0:
+		return st.Foreground(tcell.PaletteColor(int(fg-tcell.ColorValid) &^ 8)).Bold(false)
 	case !fg.IsRGB() && fg-tcell.ColorValid < 16:
 		return st.Foreground(tcell.PaletteColor(int(fg-tcell.ColorValid) ^ 8))
 	}

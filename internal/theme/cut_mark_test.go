@@ -20,6 +20,16 @@ func TestCutMarkStyleSwapsAnsiShades(t *testing.T) {
 	}
 }
 
+func TestCutMarkStyleBoldAnsiDropsToNormalIntensity(t *testing.T) {
+	// Bold blue already shows as bright blue on bold-is-bright terminals.
+	for _, in := range []tcell.Color{tcell.ColorNavy, tcell.ColorBlue} {
+		fg, _, attrs := CutMarkStyle(tcell.StyleDefault.Foreground(in).Bold(true)).Decompose()
+		if fg != tcell.ColorNavy || attrs&tcell.AttrBold != 0 {
+			t.Fatalf("bold %v -> %v bold=%v, want navy without bold", in, fg, attrs&tcell.AttrBold != 0)
+		}
+	}
+}
+
 func TestCutMarkStyleShadesRGB(t *testing.T) {
 	dark := tcell.NewRGBColor(20, 40, 120)
 	fg, _, _ := CutMarkStyle(tcell.StyleDefault.Foreground(dark)).Decompose()
