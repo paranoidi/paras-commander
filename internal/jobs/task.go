@@ -39,10 +39,10 @@ type TaskReporter interface {
 	Progress(TaskProgress)
 	// Warn adds a non-fatal line to the job's Warnings.
 	Warn(msg string)
-	// StartSource marks source i (an index into Job.Sources) started and the one started
-	// before it finished, so a task working through its sources one at a time clears their
-	// file-list marks as it goes (Job.StartSource).
-	StartSource(i int)
+	// FinishSource marks source i (an index into Job.Sources) done, so its file-list mark
+	// clears while the task works on the others (every source starts with the task,
+	// Job.StartAllSources).
+	FinishSource(i int)
 }
 
 // NewTaskJob builds a queued TypeTask job for task. sources are the paths the task works on:
@@ -122,7 +122,15 @@ func (r *taskReporter) Warn(msg string) {
 	r.s.mu.Unlock()
 }
 
-func (r *taskReporter) StartSource(i int) { r.job.StartSource(int32(i)) }
+// FinishSource sends the latest sample at once, so the file-list marks follow the new source
+// phases without waiting for the next progress report.
+func (r *taskReporter) FinishSource(i int) {
+	r.job.FinishSource(int32(i))
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.lastEmit = time.Now()
+	r.emitUnlocked()
+}
 
 // finish flushes the last sample and returns its counts for the terminal event.
 func (r *taskReporter) finish() (doneFiles int, doneBytes int64) {
@@ -140,6 +148,7 @@ func (s *State) runTask(ctx context.Context, job *Job) (doneFiles int, doneBytes
 	r := &taskReporter{s: s, job: job, min: s.scanConfig.ProgressMinInterval, ctx: s.workerCtx}
 	s.mu.Unlock()
 	if job.Task != nil && job.Task.Run != nil {
+		job.StartAllSources()
 		err = job.Task.Run(ctx, r)
 	}
 	doneFiles, doneBytes = r.finish()

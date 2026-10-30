@@ -62,9 +62,9 @@ func TestTaskJobReportsProgressAndWarnings(t *testing.T) {
 	}
 }
 
-// TestTaskJobStartSourceAdvancesPhases: a task working through its sources finishes each one
-// as it starts the next.
-func TestTaskJobStartSourceAdvancesPhases(t *testing.T) {
+// TestTaskJobFinishSource: a task starts with every source started and finishes them one by
+// one.
+func TestTaskJobFinishSource(t *testing.T) {
 	s := NewState()
 	stop := make(chan struct{})
 	s.StartWorker(stop)
@@ -73,14 +73,13 @@ func TestTaskJobStartSourceAdvancesPhases(t *testing.T) {
 	var mid []SourcePhase
 	var job *Job
 	job = NewTaskJob(&Task{Title: "ferry", Lease: "ferry", Run: func(_ context.Context, r TaskReporter) error {
-		r.StartSource(0)
-		r.StartSource(1)
+		r.FinishSource(1)
 		mid = job.SourcePhases()
 		return nil
 	}}, pathloc.PathsForTest("/orchard/acorn", "/orchard/bramble", "/orchard/clover"))
 	s.AddJob(job)
 	applyUntilFinished(t, s, job.ID)
-	if want := []SourcePhase{SourceFinished, SourceStarted, SourceQueued}; !slices.Equal(mid, want) {
+	if want := []SourcePhase{SourceStarted, SourceFinished, SourceStarted}; !slices.Equal(mid, want) {
 		t.Fatalf("phases = %v, want %v", mid, want)
 	}
 }

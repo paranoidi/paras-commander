@@ -101,8 +101,8 @@ again instead.
 
 While a scan or prune works on an entry, its panel row carries the database
 icon (`[icons] fileindex`, the HDD job icon without Nerd Font icons). A scan
-goes through the chosen entries one at a time, so each entry's icon clears
-when it is done and entries still to come show the queued icon.
+hashes all chosen entries together and clears each entry's icon as soon as
+its files are committed.
 
 The index does not yet follow renames, moves and deletes that pc makes on
 disk; rescan or prune to bring it up to date.
