@@ -26,8 +26,8 @@ func (a *App) runFolderColorRefresh(stop <-chan struct{}) {
 		case <-stop:
 			return
 		case <-ticker.C:
-			if a.folderColors.Changed() {
-				a.reloadFolderColors(nil)
+			if a.folderColors.Refresh() {
+				_ = a.screen.PostEvent(tcell.NewEventInterrupt(folderColorsPayload{}))
 			}
 		}
 	}

@@ -25,6 +25,26 @@ type palette struct {
 	styles   map[string][]Choice // style name ("Mint-Y") -> colours
 }
 
+// paletteCache re-parses colors.d only when the directory's mtime changes (package installs
+// replace or add files there), so a reload normally costs one stat.
+type paletteCache struct {
+	dir   string
+	mtime int64
+	pal   *palette
+}
+
+func (c *paletteCache) load() *palette {
+	fi, err := os.Stat(colorsDir)
+	if err == nil && c.pal != nil && c.dir == colorsDir && c.mtime == fi.ModTime().UnixNano() {
+		return c.pal
+	}
+	c.pal, c.dir, c.mtime = loadPalette(), colorsDir, 0
+	if err == nil {
+		c.mtime = fi.ModTime().UnixNano()
+	}
+	return c.pal
+}
+
 func loadPalette() *palette {
 	p := &palette{themeHex: map[string]string{}, nameHex: map[string]string{}, styles: map[string][]Choice{}}
 	files, _ := filepath.Glob(filepath.Join(colorsDir, "*.json"))

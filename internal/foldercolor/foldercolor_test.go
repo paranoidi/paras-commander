@@ -218,7 +218,7 @@ func TestPaletteResolve(t *testing.T) {
 	}
 }
 
-func TestStoreReloadAndChanged(t *testing.T) {
+func TestStoreReloadAndRefresh(t *testing.T) {
 	writeFixturePalette(t)
 	home, meta := t.TempDir(), t.TempDir()
 	s := &Store{home: home, dir: meta}
@@ -233,21 +233,20 @@ func TestStoreReloadAndChanged(t *testing.T) {
 	if c, ok := s.Lookup(filepath.Join(home, "tundra")); !ok || c != tcell.GetColor("#5294e2") {
 		t.Fatalf("lookup: %v %v", c, ok)
 	}
-	if s.Changed() {
+	if s.Refresh() {
 		t.Fatal("unchanged files reported as changed")
 	}
 	j := encodeJournal(5, jEntry{jSet, []string{"/glacier", keyName, "folder-red"}})
 	if err := os.WriteFile(s.journalPath(homeTree, 5), j, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if !s.Changed() {
+	if !s.Refresh() {
 		t.Fatal("journal rewrite not detected")
 	}
-	s.Reload()
 	if c, ok := s.Lookup(filepath.Join(home, "glacier")); !ok || c != tcell.GetColor("#f54f54") {
 		t.Fatalf("journal lookup: %v %v", c, ok)
 	}
-	if s.Changed() {
+	if s.Refresh() {
 		t.Fatal("still changed after reload")
 	}
 }
@@ -338,7 +337,7 @@ func TestStoreRootAndDeviceTrees(t *testing.T) {
 	}
 }
 
-func TestDevicePrecedenceAndChanged(t *testing.T) {
+func TestDevicePrecedenceAndRefresh(t *testing.T) {
 	writeFixturePalette(t)
 	s := &Store{home: "/nowhere/home", dir: t.TempDir()}
 	writeTree(t, s, "root", fixtureDir{name: "mnt", children: []fixtureDir{{name: "key", children: []fixtureDir{{name: "maple", icon: uri("Mint-Y-Blue", "folder")}}}}})
@@ -348,18 +347,17 @@ func TestDevicePrecedenceAndChanged(t *testing.T) {
 	if c, _ := s.Lookup("/mnt/key/maple"); c != tcell.GetColor("#5294e2") {
 		t.Fatalf("unmounted device read: %v", c)
 	}
-	if s.Changed() {
+	if s.Refresh() {
 		t.Fatal("changed without a change")
 	}
 	setMounts(mountLine("8:1", "/", "/mnt/key"))
-	if !s.Changed() {
+	if !s.Refresh() {
 		t.Fatal("mount not detected")
 	}
-	s.Reload()
 	if c, _ := s.Lookup("/mnt/key/maple"); c != tcell.GetColor("#f54f54") {
 		t.Fatalf("device should beat root: %v", c)
 	}
-	if s.Changed() {
+	if s.Refresh() {
 		t.Fatal("changed after reload")
 	}
 }

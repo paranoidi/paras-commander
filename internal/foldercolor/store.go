@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -37,9 +38,11 @@ type Store struct {
 	home, dir string
 	snap      atomic.Pointer[snapshot]
 
-	mu   sync.Mutex        // serializes Reload and guards tags/sig
-	tags map[string]uint32 // tree name -> random_tag of the loaded tree (names its journal)
-	sig  string
+	mu      sync.Mutex        // serializes Reload/Refresh and guards everything below
+	tags    map[string]uint32 // tree name -> random_tag of the loaded tree (names its journal)
+	sig     string
+	mounts  mountCache
+	palette paletteCache
 }
 
 // New returns a Store reading the current user's GVfs metadata. Nothing is loaded until Reload.
@@ -86,15 +89,16 @@ func (s *Store) signature(mounts []devMount, tags map[string]uint32) string {
 		fmt.Fprintf(&b, "%s@%s:%s;", m.tree, m.point, m.root)
 	}
 	for _, t := range trees {
-		jp := s.journalPath(t, tags[t])
-		for _, p := range []string{s.treePath(t), jp} {
-			if fi, err := os.Stat(p); err == nil {
+		if fi, err := os.Stat(s.treePath(t)); err == nil {
+			fmt.Fprintf(&b, "%d:%d;", fi.Size(), fi.ModTime().UnixNano())
+		}
+		// One open per journal: fstat and the header read share the descriptor.
+		if f, err := os.Open(s.journalPath(t, tags[t])); err == nil {
+			if fi, err := f.Stat(); err == nil {
 				fmt.Fprintf(&b, "%d:%d;", fi.Size(), fi.ModTime().UnixNano())
 			}
-		}
-		if f, err := os.Open(jp); err == nil {
 			hdr := make([]byte, journalHeaderLen)
-			if n, _ := f.Read(hdr); n == journalHeaderLen {
+			if n, _ := f.ReadAt(hdr, 0); n == journalHeaderLen {
 				c, _ := journalEntryCount(hdr)
 				fmt.Fprintf(&b, "%d;", c)
 			}
@@ -104,12 +108,18 @@ func (s *Store) signature(mounts []devMount, tags map[string]uint32) string {
 	return b.String()
 }
 
-// Changed reports whether the metadata files or the mounted drives differ from what the last
-// Reload read.
-func (s *Store) Changed() bool {
+// Refresh reloads when the metadata files or the mounted drives differ from what the last load
+// read, reusing the mount scan and signature of that check; it reports whether it reloaded.
+func (s *Store) Refresh() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.signature(deviceMounts(), s.tags) != s.sig
+	mounts := s.mounts.deviceMounts()
+	sig := s.signature(mounts, s.tags)
+	if sig == s.sig {
+		return false
+	}
+	s.load(mounts, sig)
+	return true
 }
 
 // readTreeDB loads one tree with its journal replayed; a missing or malformed file yields nothing.
@@ -127,17 +137,45 @@ func (s *Store) readTreeDB(tree string) (map[string]iconRef, uint32) {
 	return refs, tag
 }
 
-// Reload re-reads the trees, journals and palette and publishes a new snapshot. Entries are
-// applied root first, then mounted devices, then home, so the more specific tree wins.
+// Reload re-reads the trees, journals and palette unconditionally and publishes a new snapshot.
 func (s *Store) Reload() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	mounts := deviceMounts()
-	// Signature first: a write during the read below then shows up as Changed on the next tick.
-	sig := s.signature(mounts, s.tags)
-	pal := loadPalette()
-	sn := &snapshot{colors: map[string]tcell.Color{}, bases: map[string]string{}}
+	mounts := s.mounts.deviceMounts()
+	// Signature first: a write during the read below then shows up on the next Refresh.
+	s.load(mounts, s.signature(mounts, s.tags))
+}
+
+type treeDB struct {
+	refs map[string]iconRef
+	tag  uint32
+}
+
+// load reads every tree in parallel (and the icon theme alongside), then applies entries root
+// first, then mounted devices, then home, so the more specific tree wins. Caller holds s.mu.
+func (s *Store) load(mounts []devMount, sig string) {
+	names := []string{rootTree, homeTree}
+	for _, m := range mounts {
+		if !slices.Contains(names, m.tree) { // a filesystem mounted twice is read once
+			names = append(names, m.tree)
+		}
+	}
+	dbs := make([]treeDB, len(names))
+	var iconTheme string
+	var wg sync.WaitGroup
+	for i, n := range names {
+		wg.Go(func() { dbs[i].refs, dbs[i].tag = s.readTreeDB(n) })
+	}
+	wg.Go(func() { iconTheme = currentIconTheme() })
+	pal := s.palette.load()
+	wg.Wait()
+	loaded := map[string]treeDB{}
 	tags := map[string]uint32{}
+	for i, n := range names {
+		loaded[n], tags[n] = dbs[i], dbs[i].tag
+	}
+
+	sn := &snapshot{colors: map[string]tcell.Color{}, bases: map[string]string{}}
 	add := func(abs string, ref iconRef) {
 		delete(sn.colors, abs)
 		delete(sn.bases, abs)
@@ -148,28 +186,20 @@ func (s *Store) Reload() {
 			sn.bases[abs] = strings.TrimSuffix(path.Base(ref.icon), path.Ext(ref.icon))
 		}
 	}
-	refs, tag := s.readTreeDB(rootTree)
-	tags[rootTree] = tag
-	for rel, ref := range refs {
+	for rel, ref := range loaded[rootTree].refs {
 		add(filepath.Join("/", rel), ref)
 	}
-	loaded := map[string]map[string]iconRef{} // a filesystem mounted twice is read once
 	for _, m := range mounts {
-		if _, ok := loaded[m.tree]; !ok {
-			loaded[m.tree], tags[m.tree] = s.readTreeDB(m.tree)
-		}
-		for rel, ref := range loaded[m.tree] {
+		for rel, ref := range loaded[m.tree].refs {
 			if abs, ok := m.abs("/" + rel); ok {
 				add(abs, ref)
 			}
 		}
 	}
-	refs, tag = s.readTreeDB(homeTree)
-	tags[homeTree] = tag
-	for rel, ref := range refs {
+	for rel, ref := range loaded[homeTree].refs {
 		add(filepath.Join(s.home, rel), ref)
 	}
-	sn.choices = pal.styles[pal.styleFor(currentIconTheme())]
+	sn.choices = pal.styles[pal.styleFor(iconTheme)]
 	if !maps.Equal(tags, s.tags) {
 		sig = s.signature(mounts, tags) // the pre-read signature named the previous generation's journals
 	}
