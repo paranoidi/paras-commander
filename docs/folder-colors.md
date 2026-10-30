@@ -8,7 +8,7 @@ A colored folder has its name and icon drawn in the color Nemo uses for that fol
 
 ## Setting a color
 
-`Alt+A` (`panel.folder-color-menu`, also Left/Right menu, Folder color...) opens a strip with the colors of your current icon theme style plus **Default**, which clears the color. The choice applies to the selected directories, or to the directory under the cursor when nothing is selected.
+`Alt+Shift+C` (`panel.folder-color-menu`, also Left/Right menu, Folder color...) opens a strip with the colors of your current icon theme style plus **Default**, which clears the color. The choice applies to the selected directories, or to the directory under the cursor when nothing is selected.
 
 ## Requirements
 

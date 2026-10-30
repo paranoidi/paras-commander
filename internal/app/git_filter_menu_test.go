@@ -50,14 +50,14 @@ func TestFolderColorKeyTogglesMenuClosed(t *testing.T) {
 		t.Fatalf("LeaderMenu = %+v, want folder color menu open", app.model.LeaderMenu)
 	}
 
-	altA := tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt)
-	if id := app.actionFromKeyEvent(altA); id != keymap.ActionPanelFolderColorMenu {
-		t.Fatalf("Alt-A resolves to %q, want %q", id, keymap.ActionPanelFolderColorMenu)
+	altC := tcell.NewEventKey(tcell.KeyRune, 'C', tcell.ModAlt)
+	if id := app.actionFromKeyEvent(altC); id != keymap.ActionPanelFolderColorMenu {
+		t.Fatalf("Alt-Shift-C resolves to %q, want %q", id, keymap.ActionPanelFolderColorMenu)
 	}
-	if _, rendered := app.handleKey(altA); !rendered {
-		t.Fatal("second Alt-A should render after closing the folder color menu")
+	if _, rendered := app.handleKey(altC); !rendered {
+		t.Fatal("second Alt-Shift-C should render after closing the folder color menu")
 	}
 	if app.model.LeaderMenu.Open {
-		t.Fatal("second Alt-A should close the folder color menu")
+		t.Fatal("second Alt-Shift-C should close the folder color menu")
 	}
 }

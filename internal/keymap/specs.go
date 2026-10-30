@@ -466,8 +466,8 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Folder color menu",
 			Section:      "View",
-			DefaultKeys:  []string{"M-a"},
-			PreferredKey: "M-a",
+			DefaultKeys:  []string{"M-C"},
+			PreferredKey: "M-C",
 			Keywords:     []string{"folder", "color", "colour", "nemo", "icon", "tint"},
 		},
 		{
