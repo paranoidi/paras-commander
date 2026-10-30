@@ -1,10 +1,10 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Down ==
-focus=list selected=1 style=birch-1
+focus=filter query="" selected=1 style=birch-1
 == Down ==
-focus=list selected=2 style=cinder-2
+focus=filter query="" selected=2 style=cinder-2
 == Down ==
-focus=list selected=3 style=dune-3
+focus=filter query="" selected=3 style=dune-3
 == Down ==
-focus=list selected=4 style=ember-4
+focus=filter query="" selected=4 style=ember-4

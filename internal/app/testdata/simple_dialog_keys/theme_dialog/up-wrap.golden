@@ -1,8 +1,8 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Up ==
-focus=list selected=24 style=zephyr-24
+focus=filter query="" selected=0 style=default
 == Up ==
-focus=list selected=23 style=yarrow-23
+focus=filter query="" selected=0 style=default
 == Down ==
-focus=list selected=24 style=zephyr-24
+focus=filter query="" selected=1 style=birch-1

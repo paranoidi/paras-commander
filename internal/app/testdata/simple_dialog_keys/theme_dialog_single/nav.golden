@@ -1,20 +1,20 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Down ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Up ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == PgDn ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == PgUp ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == End ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Home ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Tab ==
-focus=ok selected=0 style=default
+focus=ok query="" selected=0 style=default
 == Up ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Enter ==
 CLOSED: quit=false config=default style=default current="default" message="Theme changed to default"

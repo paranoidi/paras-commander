@@ -32,13 +32,16 @@ func themeGoldenChoices(n int) []ThemeChoice {
 
 func themeGoldenState(n, selected int, focus string) ThemeDialogState {
 	st := ThemeDialogState{Open: true, Selected: selected, Choices: themeGoldenChoices(n), CurrentName: "meadow-theme"}
+	for i := range n {
+		st.Ranked = append(st.Ranked, i)
+	}
 	switch focus {
 	case "ok":
 		st.Focus = dlg.OK
 	case "cancel":
 		st.Focus = dlg.Cancel
 	default:
-		st.Focus = ThemeList
+		st.Focus = ThemeFilter
 	}
 	return st
 }
@@ -49,40 +52,41 @@ func TestThemeDialogGoldenRender(t *testing.T) {
 	add := func(w, h, n, sel int, focus string) {
 		st := themeGoldenState(n, sel, focus)
 		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_n%d_sel%d_focus-%s", w, h, n, sel, focus), w, h, func(s tcell.Screen, l Layout) {
+			EnsureThemeListScroll(&st, ThemeDialogListRows(st, l, asciiDialogStyles()))
 			DrawThemeDialog(s, l, st, asciiDialogStyles())
 		}})
 	}
-	for _, focus := range []string{"list", "ok"} {
+	for _, focus := range []string{"filter", "ok"} {
 		add(100, 40, 5, 2, focus)
 	}
 	// shorter than the viewport (rows = max(n,17)+1)
-	add(100, 40, 1, 0, "list")
-	add(100, 40, 17, 0, "list")
-	add(100, 40, 17, 8, "list")
-	add(100, 40, 17, 16, "list")
-	add(100, 40, 25, 24, "list")
+	add(100, 40, 1, 0, "filter")
+	add(100, 40, 17, 0, "filter")
+	add(100, 40, 17, 8, "filter")
+	add(100, 40, 17, 16, "filter")
+	add(100, 40, 25, 24, "filter")
 	// exactly filling / overflowing a short screen (viewport 14 rows)
-	add(100, 20, 14, 0, "list")
-	add(100, 20, 14, 13, "list")
-	add(100, 20, 30, 0, "list")
-	add(100, 20, 30, 6, "list")
-	add(100, 20, 30, 7, "list")
-	add(100, 20, 30, 15, "list")
-	add(100, 20, 30, 22, "list")
-	add(100, 20, 30, 23, "list")
-	add(100, 20, 30, 29, "list")
+	add(100, 20, 14, 0, "filter")
+	add(100, 20, 14, 13, "filter")
+	add(100, 20, 30, 0, "filter")
+	add(100, 20, 30, 6, "filter")
+	add(100, 20, 30, 7, "filter")
+	add(100, 20, 30, 15, "filter")
+	add(100, 20, 30, 22, "filter")
+	add(100, 20, 30, 23, "filter")
+	add(100, 20, 30, 29, "filter")
 	add(100, 20, 30, 15, "ok")
 	add(100, 20, 30, 15, "cancel")
 	// default terminal
-	add(80, 24, 30, 0, "list")
-	add(80, 24, 30, 12, "list")
-	add(80, 24, 30, 29, "list")
+	add(80, 24, 30, 0, "filter")
+	add(80, 24, 30, 12, "filter")
+	add(80, 24, 30, 29, "filter")
 	// narrow
-	add(60, 24, 30, 12, "list")
-	add(40, 24, 5, 3, "list")
+	add(60, 24, 30, 12, "filter")
+	add(40, 24, 5, 3, "filter")
 	// too short to draw
-	add(100, 9, 5, 1, "list")
+	add(100, 9, 5, 1, "filter")
 	// empty list draws nothing
-	add(100, 40, 0, 0, "list")
+	add(100, 40, 0, 0, "filter")
 	runSimpleGoldens(t, "theme_dialog", cases)
 }

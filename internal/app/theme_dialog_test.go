@@ -108,6 +108,10 @@ func TestThemeDialogNavigatePreviewsWithoutPersist(t *testing.T) {
 	if !app.model.ThemeDialog.Open {
 		t.Fatal("theme dialog open = false, want true")
 	}
+	if app.styles.Name != defaultTheme.Name || !app.themePreviewDebounce.Armed() {
+		t.Fatalf("preview before debounce = %q (armed %v), want %q pending", app.styles.Name, app.themePreviewDebounce.Armed(), defaultTheme.Name)
+	}
+	app.handleInterruptPayload(themePreviewFlushPayload{})
 	if app.styles.Name != "test-theme" {
 		t.Fatalf("preview theme name = %q, want test-theme", app.styles.Name)
 	}

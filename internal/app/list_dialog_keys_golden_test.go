@@ -66,7 +66,7 @@ func themeKeyDialog(name string, n int) keyGoldenDialog {
 		setup: func(t *testing.T, dir string) *App { return themeKeyApp(t, dir, n) },
 		state: func(app *App) string {
 			st := app.model.ThemeDialog
-			return fmt.Sprintf("focus=%s selected=%d style=%s", themeFocusName(app), st.Selected, app.styles.Name)
+			return fmt.Sprintf("focus=%s query=%q selected=%d style=%s", themeFocusName(app), st.Query, st.Selected, app.styles.Name)
 		},
 		open: func(app *App) bool { return app.model.ThemeDialog.Open },
 		outcome: func(app *App, quit bool) string {
@@ -112,6 +112,7 @@ func TestThemeDialogKeyScripts(t *testing.T) {
 		{"alt-unknown", "Alt+x Down"},
 		{"f5", "Down Down F5 Down"},
 		{"backspace-delete", "Backspace Delete Down"},
+		{"filter", "Down o r Up Backspace Down Enter"},
 	})
 	short := themeKeyDialog("theme_dialog_short", 4)
 	runKeyGoldenScripts(t, short, []simpleKeyScript{
@@ -132,7 +133,7 @@ func themeFocusNameOf(app *App) string {
 	case dlg.Cancel:
 		return "cancel"
 	}
-	return "list"
+	return "filter"
 }
 
 // ---- SFTP connect ----

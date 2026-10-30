@@ -1,12 +1,12 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Down ==
-focus=list selected=1 style=birch-1
+focus=filter query="" selected=1 style=birch-1
 == Down ==
-focus=list selected=2 style=cinder-2
+focus=filter query="" selected=2 style=cinder-2
 == Tab ==
-focus=ok selected=2 style=cinder-2
+focus=ok query="" selected=2 style=cinder-2
 == Tab ==
-focus=list selected=2 style=cinder-2
+focus=filter query="" selected=2 style=cinder-2
 == Enter ==
 CLOSED: quit=false config=cinder-2 style=cinder-2 current="cinder-2" message="Theme changed to cinder-2"

@@ -17,8 +17,12 @@ const themePreviewRows = 18
 // themeMinListRows is the fewest theme rows the dialog shows; below that it is not drawn.
 const themeMinListRows = 4
 
-// ThemeList is the theme list's widget ID; the dialog's Focus is ThemeList, dlg.OK or dlg.Cancel.
-const ThemeList dlg.ID = "themes"
+// Widget IDs of the theme dialog. The list is driven by the filter input and has no focus of its
+// own; the dialog's Focus is ThemeFilter, dlg.OK or dlg.Cancel.
+const (
+	ThemeFilter dlg.ID = "theme-filter"
+	ThemeList   dlg.ID = "themes"
+)
 
 // themePreviewPane is the reserved region the live widget preview is painted into.
 const themePreviewPane dlg.ID = "theme-preview"
@@ -34,43 +38,70 @@ func themeDialogListWidth(state ThemeDialogState) int {
 	return max(16, listWidth)
 }
 
-// ThemeDialogView describes the theme dialog: a radio-marked list that wraps and stays centered
-// on the cursor next to a reserved preview pane (painted by DrawThemeDialog), over OK / Cancel,
-// fitted to layout: on a short screen the list and the pane shrink together.
-func ThemeDialogView(state ThemeDialogState, layout Layout) dlg.Spec {
-	const previewWidthMin = 40 // minimum width for the right column
-	listWidth := themeDialogListWidth(state)
-	spec := dlg.Spec{
-		Title: "Theme", Width: listWidth + 10 + previewWidthMin, MinWidth: listWidth + 10, Unclamped: true, Margin: true,
-		PlainButtonKeys: true,
-		Groups: []dlg.Group{{
-			ColWidths: []int{listWidth + 2},
-			Columns: [][]dlg.Item{
-				{{ID: ThemeList, Kind: dlg.KindList, Height: len(state.Choices), MinHeight: themeMinListRows}},
-				{{ID: themePreviewPane, Kind: dlg.KindSpacer, Height: themePreviewRows}},
-			},
-		}},
-		Buttons: dlg.OKCancelButtons(),
-	}
-	spec, _ = fillList(spec, layout, ThemeList, func(height, _ int) dlg.Item {
+// ThemeDialogListRows returns the theme list's height on layout, or 0 when the dialog does not fit.
+func ThemeDialogListRows(state ThemeDialogState, layout Layout, styles theme.Theme) int {
+	return fittedListHeight(themeFrame(state, layout, styles), layout, ThemeList)
+}
+
+// EnsureThemeListScroll keeps Selected in range and visible in the theme list of height listRows.
+func EnsureThemeListScroll(state *ThemeDialogState, listRows int) {
+	EnsurePickerScroll(len(state.Ranked), &state.Selected, &state.ListScroll, listRows)
+}
+
+// ThemeDialogView describes the theme dialog: a fuzzy filter input steering a radio-marked list
+// (the cursor row's radio is lit) next to a reserved preview pane (painted by DrawThemeDialog),
+// over OK / Cancel, fitted to layout: on a short screen the list and the pane shrink together.
+func ThemeDialogView(state ThemeDialogState, layout Layout, styles theme.Theme) dlg.Spec {
+	spec, _ := fillList(themeFrame(state, layout, styles), layout, ThemeList, func(height, _ int) dlg.Item {
 		list := dlg.Item{
-			ID: ThemeList, Kind: dlg.KindList, Cursor: state.Selected, Height: height,
-			Wrap: true, CenterScroll: true, Markers: true,
+			ID: ThemeList, Kind: dlg.KindList, Driven: true, Markers: true,
+			Cursor: state.Selected, Offset: state.ListScroll, Height: height,
 		}
-		for i, choice := range state.Choices {
-			list.Rows = append(list.Rows, dlg.ListRow{Text: choice.Label, Marked: i == state.Selected})
+		for i, ent := range state.Ranked {
+			var row dlg.ListRow
+			if ent >= 0 && ent < len(state.Choices) {
+				row = dlg.ListRow{Text: state.Choices[ent].Label, Marked: i == state.Selected}
+				if ent < len(state.MatchRanges) {
+					row.Match = state.MatchRanges[ent]
+				}
+			}
+			list.Rows = append(list.Rows, row)
 		}
 		return list
 	})
 	return spec
 }
 
+// themeFrame is the theme dialog spec with an empty list as tall as the choices.
+func themeFrame(state ThemeDialogState, layout Layout, styles theme.Theme) dlg.Spec {
+	const previewWidthMin = 40 // minimum width for the right column
+	listWidth := themeDialogListWidth(state)
+	filter := dlg.Item{
+		ID: ThemeFilter, Kind: dlg.KindInput, Drives: ThemeList, LeadingIcon: styles.IconSearchIcon(),
+		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll,
+	}
+	return dlg.Spec{
+		Title: "Theme", Width: listWidth + 10 + previewWidthMin, MinWidth: listWidth + 10, Unclamped: true, Margin: true,
+		Groups: []dlg.Group{{
+			ColWidths: []int{listWidth + 2},
+			Columns: [][]dlg.Item{
+				{filter, {ID: ThemeList, Kind: dlg.KindList, Height: len(state.Choices), MinHeight: themeMinListRows}},
+				{{ID: themePreviewPane, Kind: dlg.KindSpacer, Height: themePreviewRows}},
+			},
+		}},
+		Buttons: dlg.OKCancelButtons(),
+	}
+}
+
 func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState, styles theme.Theme) {
 	if len(state.Choices) == 0 {
 		return
 	}
-	spec := ThemeDialogView(state, layout)
-	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
+	focus := state.Focus
+	if focus == "" {
+		focus = ThemeFilter
+	}
+	p, ok := dlg.Draw(screen, layout.Width, layout.Height, ThemeDialogView(state, layout, styles), focus, styles)
 	if !ok {
 		return
 	}

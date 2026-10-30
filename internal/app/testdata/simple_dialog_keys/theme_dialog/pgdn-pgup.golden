@@ -1,12 +1,12 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == PgDn ==
-focus=list selected=17 style=river-17
+focus=filter query="" selected=16 style=quartz-16
 == PgDn ==
-focus=list selected=9 style=jasper-9
+focus=filter query="" selected=24 style=zephyr-24
 == PgUp ==
-focus=list selected=17 style=river-17
+focus=filter query="" selected=8 style=ivory-8
 == PgUp ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == PgUp ==
-focus=list selected=8 style=ivory-8
+focus=filter query="" selected=0 style=default

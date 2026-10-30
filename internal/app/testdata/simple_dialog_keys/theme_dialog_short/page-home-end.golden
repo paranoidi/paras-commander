@@ -1,16 +1,16 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == PgDn ==
-focus=list selected=3 style=dune-3
+focus=filter query="" selected=3 style=dune-3
 == PgUp ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == End ==
-focus=list selected=3 style=dune-3
+focus=filter query="" selected=0 style=default
 == Home ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == PgDn ==
-focus=list selected=3 style=dune-3
+focus=filter query="" selected=3 style=dune-3
 == End ==
-focus=list selected=3 style=dune-3
+focus=filter query="" selected=0 style=default
 == PgUp ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default

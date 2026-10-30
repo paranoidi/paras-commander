@@ -37,10 +37,18 @@ type MessageDialogState struct {
 // ThemeDialogState is the renderable state for the theme selection modal.
 type ThemeDialogState struct {
 	Open        bool
-	Selected    int
-	Focus       dlg.ID // ThemeList, dlg.OK or dlg.Cancel ("" = the list)
+	Focus       dlg.ID // ThemeFilter, dlg.OK or dlg.Cancel ("" = the filter)
 	CurrentName string
 	Choices     []ThemeChoice
+	// Query is the fuzzy filter; Ranked holds the Choices indices that match it, best first, and
+	// MatchRanges the highlight ranges per Choices index.
+	Query       string
+	QueryCursor int
+	QueryScroll int
+	Ranked      []int
+	MatchRanges [][]search.Range
+	Selected    int // index into Ranked
+	ListScroll  int
 }
 
 // ConfigDialogState is the Options → Configuration modal (runtime UI toggles persisted to config.toml).

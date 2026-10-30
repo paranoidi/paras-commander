@@ -195,6 +195,8 @@ type App struct {
 	model               ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
+	// themePreviewDebounce delays the theme dialog's live preview until list motion settles.
+	themePreviewDebounce sched.Debouncer
 	// compareSelectionOpen opens Compare once the compare selection dialog is answered Drop or Stash.
 	compareSelectionOpen func()
 	// jobState manages background job queue and worker lifecycle.
@@ -1309,6 +1311,10 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 			a.render()
 			out.didRender = true
 		}
+	case themePreviewFlushPayload:
+		a.previewThemeAtSelection()
+		a.render()
+		out.didRender = true
 	case previewctrl.StylePickerFlushPayload:
 		if a.previewCtrl.ApplyPreviewStylePickerFlush(d) {
 			a.render()

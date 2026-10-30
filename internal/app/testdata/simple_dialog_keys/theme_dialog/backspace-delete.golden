@@ -1,8 +1,8 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Backspace ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Delete ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Down ==
-focus=list selected=1 style=birch-1
+focus=filter query="" selected=1 style=birch-1

@@ -597,6 +597,7 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 		ThemeDialog: dialog.ThemeDialogState{
 			Open:        true,
 			Selected:    1,
+			Ranked:      []int{0, 1},
 			CurrentName: "default",
 			Choices: []dialog.ThemeChoice{
 				{Name: "default", Label: "Default"},
@@ -609,8 +610,8 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 	Render(screen, model, styles)
 
 	// Dialog now has dual-column layout with preview.
-	// Theme list is left column, second item at row 3.
-	row := tcelltest.TextAt(screen, 0, 3, width)
+	// Theme list is left column under the filter row, second item at row 4.
+	row := tcelltest.TextAt(screen, 0, 4, width)
 	if !strings.Contains(row, "Test Theme") {
 		t.Fatalf("theme dialog row = %q, want Test Theme", strings.TrimRight(row, " "))
 	}
@@ -618,7 +619,7 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 	if styleCol < 0 {
 		t.Fatal("Catppuccin Frappe substring not found in row")
 	}
-	_, rowStyle, _ := screen.Get(styleCol, 3)
+	_, rowStyle, _ := screen.Get(styleCol, 4)
 	wantStyle := styles.DialogOptionRowStyle(true, true)
 	if rowStyle != wantStyle {
 		t.Fatalf("selected theme row style = %v, want dialog.option.active.selected %v", rowStyle, wantStyle)
@@ -1008,7 +1009,7 @@ func TestRenderTransientStatusAboveFooterAfterThemeDialog(t *testing.T) {
 		ThemeDialog: dialog.ThemeDialogState{
 			Open:     true,
 			Selected: 0,
-			Focus:    dialog.ThemeList,
+			Focus:    dialog.ThemeFilter,
 			Choices:  []dialog.ThemeChoice{{Name: "default", Label: "default"}},
 		},
 		Message:        "theme-reload-err",

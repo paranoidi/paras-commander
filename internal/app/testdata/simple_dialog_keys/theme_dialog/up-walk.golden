@@ -1,16 +1,16 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Down ==
-focus=list selected=1 style=birch-1
+focus=filter query="" selected=1 style=birch-1
 == Down ==
-focus=list selected=2 style=cinder-2
+focus=filter query="" selected=2 style=cinder-2
 == Down ==
-focus=list selected=3 style=dune-3
+focus=filter query="" selected=3 style=dune-3
 == Up ==
-focus=list selected=2 style=cinder-2
+focus=filter query="" selected=2 style=cinder-2
 == Up ==
-focus=list selected=1 style=birch-1
+focus=filter query="" selected=1 style=birch-1
 == Up ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Up ==
-focus=list selected=24 style=zephyr-24
+focus=filter query="" selected=0 style=default

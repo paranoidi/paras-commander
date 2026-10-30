@@ -4,7 +4,7 @@ Colors, text styles and status glyphs come from a TOML theme file. One theme shi
 
 ## Selecting a theme
 
-- Options -> Theme opens the theme picker. Moving the cursor previews each theme live, `Enter` applies it and saves `theme` in `config.toml`, `Esc` restores the previous theme, and `F5` reloads the highlighted theme from disk (handy while editing it).
+- Options -> Theme opens the theme picker. Typing fuzzy-filters the list. Moving the cursor previews the highlighted theme live once you stop (holding an arrow key does not load every theme on the way), `Enter` applies it and saves `theme` in `config.toml`, `Esc` restores the previous theme, and `F5` reloads the highlighted theme from disk (handy while editing it).
 - Or set it directly:
 
 ```toml

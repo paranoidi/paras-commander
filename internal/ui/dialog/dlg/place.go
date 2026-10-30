@@ -617,7 +617,14 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 			part := " " + styles.IconDialogRadio(rw.Marked) + " "
 			partW := runewidth.StringWidth(part)
 			primitive.Text(screen, r.X, y, partW, part, style)
-			primitive.StyledText(screen, r.X+partW, y, max(r.Width-partW, 0), rw.Text, style, nil)
+			match := styles.FuzzyHighlight
+			if isCursor {
+				match = styles.FuzzyHighlightCursor
+			}
+			_, bg, _ := style.Decompose()
+			textW := max(r.Width-partW, 0)
+			text, spans := fitRow(rw, it.Fit, textW, match.Background(bg))
+			primitive.StyledText(screen, r.X+partW, y, textW, text, style, spans)
 			continue
 		}
 		drawPlainRow(screen, r.X, y, r.Width, rw, it, isCursor, styles)

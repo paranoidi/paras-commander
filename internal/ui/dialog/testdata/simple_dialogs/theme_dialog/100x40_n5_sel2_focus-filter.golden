@@ -9,12 +9,12 @@
                                                                                                     
                                                                                                     
                 ┌─────────────────────┬─────── Theme ──────────────────────────────┐                
-                │  ( ) Amber Theme    │                                            │                
-                │  ( ) Birch Theme    │ Inactive input with text:                  │                
-                │  (*) Cinder Theme   │ /home/user/demo.txt                        │                
-                │  ( ) Dune Theme     │                                            │                
-                │  ( ) Ember Theme    │ Inactive input with default value:         │                
-                │                     │ /home/user/demo.txt                        │                
+                │ /                   │                                            │                
+                │  ( ) Amber Theme    │ Inactive input with text:                  │                
+                │  ( ) Birch Theme    │ /home/user/demo.txt                        │                
+                │  (*) Cinder Theme   │                                            │                
+                │  ( ) Dune Theme     │ Inactive input with default value:         │                
+                │  ( ) Ember Theme    │ /home/user/demo.txt                        │                
                 │                     │                                            │                
                 │                     │ Active input with text:                    │                
                 │                     │ /home/user/demo.txt                        │                
@@ -43,15 +43,16 @@
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
 b fg=0x100000007 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-d fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
-e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+e fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
 f fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
-g fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
-h fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
-i fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
-k fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
-l fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+g fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
+h fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+i fg=0x0 bg=0x0 attrs=4 ul=0 ulc=0x0
+j fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
+k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+l fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
+m fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -63,26 +64,26 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbddefffffffffffffffffbfffffffffffffffffffffffffffffffffffffffffffbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbhhhhhhhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbddddddddddddddddddbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbffffffffffffffffffefffffffffffffffffffffffbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaiaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbffffffffffffffffffgfffffffffffffffffffffffbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaahaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbiiiiiciiiiiiibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbjjjjjcjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbeeejeeeeeeeeeebbkkklkkkkkkkkkkkkbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbgggkggggggggggbblllmllllllllllllbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbeeejeeeebbeeejeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbgggkggggbbgggkggggggggbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

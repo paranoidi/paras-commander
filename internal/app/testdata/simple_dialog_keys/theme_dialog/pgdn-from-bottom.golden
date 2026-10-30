@@ -1,8 +1,8 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == End ==
-focus=list selected=24 style=zephyr-24
+focus=filter query="" selected=0 style=default
 == PgDn ==
-focus=list selected=16 style=quartz-16
+focus=filter query="" selected=16 style=quartz-16
 == PgDn ==
-focus=list selected=8 style=ivory-8
+focus=filter query="" selected=24 style=zephyr-24

@@ -1,8 +1,8 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Tab ==
-focus=ok selected=0 style=default
+focus=ok query="" selected=0 style=default
 == Right ==
-focus=cancel selected=0 style=default
+focus=cancel query="" selected=0 style=default
 == Esc ==
 CLOSED: quit=false config=default style=default current="default" message=""

@@ -1,6 +1,6 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Down ==
-focus=list selected=1 style=birch-1
+focus=filter query="" selected=1 style=birch-1
 == Alt+O ==
 CLOSED: quit=false config=birch-1 style=birch-1 current="birch-1" message="Theme changed to birch-1"

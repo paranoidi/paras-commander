@@ -1,0 +1,16 @@
+== open ==
+focus=filter query="" selected=0 style=default
+== Down ==
+focus=filter query="" selected=1 style=birch-1
+== o ==
+focus=filter query="o" selected=0 style=orchard-14
+== r ==
+focus=filter query="or" selected=0 style=orchard-14
+== Up ==
+focus=filter query="or" selected=0 style=orchard-14
+== Backspace ==
+focus=filter query="o" selected=0 style=orchard-14
+== Down ==
+focus=filter query="o" selected=1 style=ivory-8
+== Enter ==
+CLOSED: quit=false config=ivory-8 style=ivory-8 current="ivory-8" message="Theme changed to ivory-8"

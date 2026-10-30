@@ -1,46 +1,46 @@
 == open ==
-focus=list selected=0 style=default
+focus=filter query="" selected=0 style=default
 == Down ==
-focus=list selected=1 style=birch-1
+focus=filter query="" selected=1 style=birch-1
 == Down ==
-focus=list selected=2 style=cinder-2
+focus=filter query="" selected=2 style=cinder-2
 == Down ==
-focus=list selected=3 style=dune-3
+focus=filter query="" selected=3 style=dune-3
 == Down ==
-focus=list selected=4 style=ember-4
+focus=filter query="" selected=4 style=ember-4
 == Down ==
-focus=list selected=5 style=fable-5
+focus=filter query="" selected=5 style=fable-5
 == Down ==
-focus=list selected=6 style=glacier-6
+focus=filter query="" selected=6 style=glacier-6
 == Down ==
-focus=list selected=7 style=harbor-7
+focus=filter query="" selected=7 style=harbor-7
 == Down ==
-focus=list selected=8 style=ivory-8
+focus=filter query="" selected=8 style=ivory-8
 == Down ==
-focus=list selected=9 style=jasper-9
+focus=filter query="" selected=9 style=jasper-9
 == Down ==
-focus=list selected=10 style=kestrel-10
+focus=filter query="" selected=10 style=kestrel-10
 == Down ==
-focus=list selected=11 style=lantern-11
+focus=filter query="" selected=11 style=lantern-11
 == Down ==
-focus=list selected=12 style=meadow-12
+focus=filter query="" selected=12 style=meadow-12
 == Down ==
-focus=list selected=13 style=nectar-13
+focus=filter query="" selected=13 style=nectar-13
 == Down ==
-focus=list selected=14 style=orchard-14
+focus=filter query="" selected=14 style=orchard-14
 == Down ==
-focus=list selected=15 style=pebble-15
+focus=filter query="" selected=15 style=pebble-15
 == Down ==
-focus=list selected=16 style=quartz-16
+focus=filter query="" selected=16 style=quartz-16
 == Down ==
-focus=list selected=17 style=river-17
+focus=filter query="" selected=17 style=river-17
 == Down ==
-focus=list selected=18 style=saffron-18
+focus=filter query="" selected=18 style=saffron-18
 == Down ==
-focus=list selected=19 style=thistle-19
+focus=filter query="" selected=19 style=thistle-19
 == Down ==
-focus=list selected=20 style=umber-20
+focus=filter query="" selected=20 style=umber-20
 == Down ==
-focus=list selected=21 style=velvet-21
+focus=filter query="" selected=21 style=velvet-21
 == Down ==
-focus=list selected=22 style=willow-22
+focus=filter query="" selected=22 style=willow-22
