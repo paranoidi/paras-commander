@@ -26,6 +26,8 @@ const (
 	FileDialogExtract
 	FileDialogSFTPConnect
 	FileDialogSFTPPassword
+	// FileDialogIndexTags adds or removes fileindex tags (apphandler/fileindex).
+	FileDialogIndexTags
 )
 
 // MassRenameModeUI selects literal vs regexp transform in the mass rename dialog.
@@ -236,6 +238,13 @@ type FileDialogState struct {
 	// MassRenamePhase == MassRenamePhaseHistoryPicker. Same widget shape as MassRenameLoadPicker,
 	// backed by a different, session-only item source (see apphandler/dialog's massRenameHistory).
 	MassRenameHistoryPicker MassRenamePatternPickerState
+
+	// Fileindex tag prompt (DialogType == FileDialogIndexTags): Fields[0] holds the tags.
+	// IndexTagsRemove picks Remove over Add; IndexTagsRecursive extends directories to their
+	// whole tree; IndexTagsTargets are the panel paths the tags apply to.
+	IndexTagsRemove    bool
+	IndexTagsRecursive bool
+	IndexTagsTargets   []string
 
 	// SchemeNote says what a rename or delete on the panel's scheme really changes when that is
 	// not the disk (SchemeNote); empty on local and SFTP panels.

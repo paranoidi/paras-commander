@@ -10,6 +10,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/configdoc"
+	"github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -128,8 +129,9 @@ file = "wc -l"
 
 	app := testMetaDialogApp(t, dir, cfgDir)
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
-	if len(app.model.MetaDialog.Entries) != 1 {
-		t.Fatalf("entries len = %d, want lines", len(app.model.MetaDialog.Entries))
+	// lines, then the built-in fileindex tags column (Go column provider).
+	if len(app.model.MetaDialog.Entries) != 2 || app.model.MetaDialog.Entries[0].Name != "lines" {
+		t.Fatalf("entries = %+v, want lines then the built-in column", app.model.MetaDialog.Entries)
 	}
 
 	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
@@ -150,8 +152,8 @@ file = "wc -c"
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open after F4 edit")
 	}
-	if len(app.model.MetaDialog.Entries) != 2 {
-		t.Fatalf("entries len = %d, want lines + size", len(app.model.MetaDialog.Entries))
+	if len(app.model.MetaDialog.Entries) != 3 {
+		t.Fatalf("entries len = %d, want lines + size + the built-in column", len(app.model.MetaDialog.Entries))
 	}
 	if app.model.MetaDialog.Entries[1].Name != "size" {
 		t.Fatalf("second entry = %+v, want size", app.model.MetaDialog.Entries[1])
@@ -314,7 +316,7 @@ file = "wc -l"
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open")
 	}
-	if len(app.model.MetaDialog.Entries) != 0 {
-		t.Fatalf("entries = %+v, want empty after invalid meta.toml", app.model.MetaDialog.Entries)
+	if e := app.model.MetaDialog.Entries; len(e) != 1 || e[0].Name != fileindex.TagsColumn {
+		t.Fatalf("entries = %+v, want only the built-in column after invalid meta.toml", e)
 	}
 }

@@ -50,6 +50,10 @@ type Host interface {
 	// dialogs and their state remain owned by internal/app.
 	ExecuteSFTPPassword()
 
+	// ExecuteIndexTags runs the fileindex tag prompt's OK action (FileDialogIndexTags); the
+	// fileindex handler owns what it does.
+	ExecuteIndexTags()
+
 	// CancelSFTPPassword releases the SFTP password waiter when FileDialogSFTPPassword is
 	// dismissed (Esc, Alt+C, or CloseFileDialog).
 	CancelSFTPPassword()

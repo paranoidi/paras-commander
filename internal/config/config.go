@@ -115,6 +115,8 @@ type Config struct {
 	Compare CompareConfig `toml:"compare"`
 	// Dedup configures find-duplicates within a single directory.
 	Dedup DedupConfig `toml:"dedup"`
+	// FileIndex configures the built-in fileindex feature (index browsing, tags, scan).
+	FileIndex FileIndexConfig `toml:"fileindex"`
 }
 
 // PanelsConfig controls file panel browsing, sorting, and listing.
@@ -181,6 +183,17 @@ type CarouselConfig struct {
 	// it until carousel is off on both panels. With autohide in effect, quick view from a carousel
 	// panel puts the preview in the right (bottom) slot. Has no effect outside carousel mode.
 	AutohideInactivePanel bool `toml:"autohide_inactive_panel"`
+}
+
+// FileIndexConfig configures the built-in fileindex feature. Scan include/exclude rules come
+// from fileindex's own config.ini, so the fileindex CLI and pc index the same files.
+type FileIndexConfig struct {
+	// Database is the fileindex SQLite database (absolute or ~/…). Empty uses the database path
+	// from fileindex's config.ini.
+	Database string `toml:"database"`
+	// Workers is the number of hash workers a scan uses. Zero uses config.ini's
+	// parallel_workers (auto-scaling when that is unset or "auto").
+	Workers int `toml:"workers"`
 }
 
 // DedupConfig controls find-duplicates scanning.
@@ -842,6 +855,10 @@ func Default() Config {
 			HashConfirmBytes:  DefaultDedupHashConfirmBytes,
 			FileProgressBytes: DefaultDedupFileProgressBytes,
 		},
+		FileIndex: FileIndexConfig{
+			Database: DefaultFileIndexDatabase,
+			Workers:  DefaultFileIndexWorkers,
+		},
 	}
 }
 
@@ -1148,6 +1165,7 @@ func (c *Config) validateCompareDedupShell(builtin *Config) {
 	if c.Shell.TerminalPanelHeight < MinShellTerminalPanelHeight {
 		c.Shell.TerminalPanelHeight = builtin.Shell.TerminalPanelHeight
 	}
+	c.FileIndex.Workers = min(max(c.FileIndex.Workers, 0), FileIndexWorkersMax)
 }
 
 func (c *Config) validateSortAndDelete(builtin *Config) {

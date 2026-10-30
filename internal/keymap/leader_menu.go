@@ -15,6 +15,7 @@ const (
 	LeaderMenuGroupAddMark    = "Add mark"
 	LeaderMenuGroupDisplay    = "Display"
 	LeaderMenuGroupApp        = "App"
+	LeaderMenuGroupFileIndex  = "fileindex"
 )
 
 // Per-view leader-menu group titles (used by leaderMenuViewSpecs below), in addition to the
@@ -34,6 +35,7 @@ const (
 // (0=File, 1=Selection+View, 2=Navigation+Tools, 3=Add mark+Display+App).
 var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupFile:       0,
+	LeaderMenuGroupFileIndex:  0,
 	LeaderMenuGroupSelection:  1,
 	LeaderMenuGroupView:       1,
 	LeaderMenuGroupNavigation: 2,
@@ -45,6 +47,7 @@ var leaderMenuGroupColumn = map[string]int{
 
 var leaderMenuGroupOrder = []string{
 	LeaderMenuGroupFile,
+	LeaderMenuGroupFileIndex,
 	LeaderMenuGroupSelection,
 	LeaderMenuGroupView,
 	LeaderMenuGroupNavigation,
@@ -68,6 +71,14 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileDuplicate,
 		ActionFileView,
 		ActionFileQuickView,
+	},
+	LeaderMenuGroupFileIndex: {
+		ActionFileIndexOpen,
+		ActionFileIndexReveal,
+		ActionFileIndexScan,
+		ActionFileIndexPrune,
+		ActionFileIndexTagAdd,
+		ActionFileIndexTagRemove,
 	},
 	LeaderMenuGroupSelection: {
 		ActionPanelSelectRange,

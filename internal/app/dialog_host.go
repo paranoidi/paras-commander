@@ -48,6 +48,8 @@ func (h dialogHost) ExecuteSFTPPassword() {
 
 func (h dialogHost) CancelSFTPPassword() { h.app.cancelSFTPPassword() }
 
+func (h dialogHost) ExecuteIndexTags() { h.app.fileindexCtrl.SubmitTags() }
+
 func (h dialogHost) OpenMessageDialog(title, message string) { h.app.openMessageDialog(title, message) }
 
 func (h dialogHost) InQuickFilterUI() bool { return h.app.inQuickFilterUI() }

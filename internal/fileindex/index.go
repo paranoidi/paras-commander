@@ -1,0 +1,138 @@
+// Package fileindex is pc's built-in fileindex feature (ADR 0024): the lazily opened index
+// database, the fileindex:// filesystem backend, the tags column provider, the scan and prune
+// task jobs and tag edits. Every function here may do disk or database I/O and must run off the
+// UI goroutine; internal/apphandler/fileindex owns the UI side.
+package fileindex
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
+	ficonfig "github.com/paranoidi/fileindex/config"
+	"github.com/paranoidi/fileindex/db"
+	"github.com/paranoidi/fileindex/scan"
+	"github.com/paranoidi/paras-commander/internal/config"
+)
+
+// ErrNoIndex is wrapped by DB when no index database exists at the configured path.
+var ErrNoIndex = errors.New("no fileindex database")
+
+// Index is the shared fileindex database handle. DB opens it once, lazily, and checks its
+// schema; pc never creates or migrates the database.
+type Index struct {
+	cfg config.FileIndexConfig
+	// configPath is fileindex's config.ini (ficonfig.DefaultPath() unless a test sets it).
+	configPath string
+	home       string
+
+	mu  sync.Mutex
+	db  *db.DB
+	err error // the last open failure; the next DB call tries again
+
+	// OnOpenError, when set, is called once, from the goroutine that hit it, with the first
+	// open failure, so the UI can report it once instead of on every action.
+	OnOpenError func(error)
+	reported    sync.Once
+}
+
+// New returns an Index for pc's [fileindex] settings. Nothing is read until DB is called.
+func New(cfg config.FileIndexConfig) *Index {
+	home, _ := os.UserHomeDir()
+	return &Index{cfg: cfg, configPath: ficonfig.DefaultPath(), home: home}
+}
+
+// readConfig loads fileindex's config.ini without writing it (defaults when it is missing).
+func (x *Index) readConfig() (*ficonfig.Config, error) {
+	return ficonfig.Read(x.configPath)
+}
+
+// DatabasePath is the index database pc opens: [fileindex].database, else config.ini's.
+func (x *Index) DatabasePath() (string, error) {
+	if p := strings.TrimSpace(x.cfg.Database); p != "" {
+		if p == "~" || strings.HasPrefix(p, "~/") {
+			p = filepath.Join(x.home, p[1:])
+		}
+		return p, nil
+	}
+	c, err := x.readConfig()
+	if err != nil {
+		return "", err
+	}
+	return c.DatabasePath(), nil
+}
+
+// DB returns the open database, opening it on first use. A missing database wraps ErrNoIndex;
+// one on another schema version fails with fileindex's own explanation. Failures are not
+// cached, so an index created later is picked up by the next call.
+func (x *Index) DB() (*db.DB, error) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if x.db != nil {
+		return x.db, nil
+	}
+	d, err := x.open()
+	if err != nil {
+		x.err = err
+		if x.OnOpenError != nil {
+			x.reported.Do(func() { x.OnOpenError(err) })
+		}
+		return nil, err
+	}
+	x.db, x.err = d, nil
+	return d, nil
+}
+
+func (x *Index) open() (*db.DB, error) {
+	path, err := x.DatabasePath()
+	if err != nil {
+		return nil, fmt.Errorf("fileindex: %w", err)
+	}
+	// db.Open creates the parent directory and SQLite the file: check first so a missing
+	// index stays missing.
+	if _, err := os.Stat(path); err != nil {
+		return nil, fmt.Errorf("%w at %s (run `fileindex init`)", ErrNoIndex, path)
+	}
+	d, err := db.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("fileindex: %w", err)
+	}
+	if err := d.RequireSchema(); err != nil {
+		_ = d.Close()
+		return nil, fmt.Errorf("fileindex %s: %w", path, err)
+	}
+	return d, nil
+}
+
+// Close closes the database if it was opened.
+func (x *Index) Close() error {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if x.db == nil {
+		return nil
+	}
+	err := x.db.Close()
+	x.db = nil
+	return err
+}
+
+// scanSettings returns the include/exclude rules from config.ini and the hash worker count:
+// [fileindex].workers, else config.ini's parallel_workers (0 = auto).
+func (x *Index) scanSettings() (scan.Rules, int, error) {
+	c, err := x.readConfig()
+	if err != nil {
+		return scan.Rules{}, 0, err
+	}
+	rules, err := scan.RulesFromConfig(c)
+	if err != nil {
+		return scan.Rules{}, 0, err
+	}
+	if x.cfg.Workers > 0 {
+		return rules, x.cfg.Workers, nil
+	}
+	workers, err := c.ParallelWorkers()
+	return rules, workers, err
+}

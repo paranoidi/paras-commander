@@ -89,6 +89,10 @@ _Avoid_: master/slave, source/target panel
 **Find**:
 Recursive name search under a panel's directory, backed by a background index.
 
+**Index view**:
+A panel showing the fileindex database as a filesystem (`fileindex://` + a host path): entries the index recorded, including files gone from disk; renames and deletes there change only the index.
+_Avoid_: index panel, database view
+
 **Remote panel**:
 A panel browsing an `sftp://` location.
 

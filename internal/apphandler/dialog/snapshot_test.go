@@ -69,6 +69,7 @@ func (f *identityTestHost) ForgetComparePaths([]string)                 {}
 func (f *identityTestHost) OpenFileInExternalEditor(string) error       { return nil }
 func (f *identityTestHost) ExecuteSFTPPassword()                        {}
 func (f *identityTestHost) CancelSFTPPassword()                         {}
+func (f *identityTestHost) ExecuteIndexTags()                           {}
 func (f *identityTestHost) HandlePathPickerScrollingQueryKey(*tcell.EventKey) bool {
 	return false
 }

@@ -11,7 +11,7 @@ Because its commands run as you, a `meta.toml` is loaded only when it is a regul
 ## Built-in columns
 
 Some features add their own columns to the picker, listed beside your `meta.toml` entries (for
-example a fileindex tags column). They are computed inside pc once per directory listing instead of
+example the [fileindex](fileindex.md) tags column). They are computed inside pc once per directory listing instead of
 running a command per entry, need no `meta.toml`, and otherwise behave like any meta column:
 the same picker, column limit, sorting and filtering. A built-in column replaces a `meta.toml`
 entry with the same name.

@@ -1,6 +1,6 @@
 # fileindex is a built-in feature linked as a Go module; no extension registry yet
 
-Status: proposed (not implemented).
+Status: accepted.
 
 pc integrates fileindex (a SQLite content-hash index of Files, Instances, Dirs and Tags) as an ordinary built-in feature: `github.com/paranoidi/fileindex` is a Go module dependency, `internal/fileindex` holds the backend, column provider and job runner, and `internal/apphandler/fileindex` owns its UI behaviour behind a `Host` (ADR 0001). Its actions are built-in action specs like any other. Three pieces are built general because they are useful on their own: task jobs, Go column providers and a third path scheme. An extension registry is deferred until a second extension or Lua addons (ADR 0022) exist.
 

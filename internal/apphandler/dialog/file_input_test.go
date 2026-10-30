@@ -14,6 +14,7 @@ type sftpPasswordCancelHost struct {
 }
 
 func (f *sftpPasswordCancelHost) CancelSFTPPassword() { f.cancelCalls++ }
+func (f *sftpPasswordCancelHost) ExecuteIndexTags()   {}
 
 func newSFTPPasswordCancelHandler(t *testing.T) (*sftpPasswordCancelHost, *Handler) {
 	t.Helper()

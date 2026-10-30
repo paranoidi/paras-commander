@@ -59,7 +59,7 @@ total `(estimated)` until the exact size is counted (see
 | `Left` | Back to the file view (`jobs.close`) |
 
 Some features run their own background work as a **task** job (for example a
-fileindex scan). A task shows `task` as its type and its name
+[fileindex](fileindex.md) scan). A task shows `task` as its type and its name
 in the Details panel, reports items, bytes and the current path like a
 transfer, and can be canceled. It cannot be paused or retried; run the action
 again instead. One task of each kind runs at a time, beside any copy or move.

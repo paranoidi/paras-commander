@@ -214,6 +214,14 @@ const (
 	// Remote
 	ActionRemoteSFTPLink = "remote.sftp-link"
 
+	// fileindex (the built-in index feature, internal/apphandler/fileindex)
+	ActionFileIndexScan      = "fileindex.scan"
+	ActionFileIndexPrune     = "fileindex.prune"
+	ActionFileIndexTagAdd    = "fileindex.tag-add"
+	ActionFileIndexTagRemove = "fileindex.tag-remove"
+	ActionFileIndexOpen      = "fileindex.open"
+	ActionFileIndexReveal    = "fileindex.reveal"
+
 	// Jobs dialog
 	ActionJobsOpen          = "jobs.open"
 	ActionDedupOpen         = "dedup.open"
@@ -533,6 +541,13 @@ var KnownActions = map[string]struct{}{
 	ActionMove:          {},
 
 	ActionRemoteSFTPLink: {},
+
+	ActionFileIndexScan:      {},
+	ActionFileIndexPrune:     {},
+	ActionFileIndexTagAdd:    {},
+	ActionFileIndexTagRemove: {},
+	ActionFileIndexOpen:      {},
+	ActionFileIndexReveal:    {},
 
 	ActionMenuFileChattr: {},
 

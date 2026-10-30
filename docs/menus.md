@@ -14,7 +14,7 @@ Hide the bar with `show_menu_bar = false` ([Layout](layout.md#menu-bar)). The fu
 
 ## Leader (function) menu
 
-Press `:` (`app.leader-menu`; press again to close) for a grouped, multi-column strip docked at the bottom: File, Selection, View, Navigation, Tools, Add mark, Display, App. Press the letter shown next to an entry to run it.
+Press `:` (`app.leader-menu`; press again to close) for a grouped, multi-column strip docked at the bottom: File, fileindex, Selection, View, Navigation, Tools, Add mark, Display, App. Press the letter shown next to an entry to run it.
 
 - Letters come from `[leader_key]` in `keybindings.toml`; set one to `""` to drop the row. Keys must be unique within each menu; upper and lower case are distinct. Letters can differ between menus.
 - `F3` toggles showing each action's direct key after its name (`[ui] leader_menu_show_direct_keys`).

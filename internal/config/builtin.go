@@ -414,6 +414,22 @@ const (
 	// under the config directory when [mass_rename].file is empty.
 	DefaultMassRenamePatternsFileName = "patterns.toml"
 
+	// DefaultFileIndexDatabase is [fileindex].database: empty uses fileindex's config.ini path.
+	DefaultFileIndexDatabase = ""
+	// DefaultFileIndexWorkers is [fileindex].workers: 0 uses config.ini's parallel_workers.
+	DefaultFileIndexWorkers = 0
+	// FileIndexWorkersMax clamps [fileindex].workers.
+	FileIndexWorkersMax = 256
+	// FileIndexScanBatchFiles is how many hashed files a pc scan commits per batch: smaller than
+	// the fileindex CLI's batch so canceling the scan job lands quickly.
+	FileIndexScanBatchFiles = 200
+	// FileIndexTagsColumnOrder is the meta order of the fileindex tags column: after meta.toml
+	// entries (order 0 unless set), so built-in columns sit right of the user's own.
+	FileIndexTagsColumnOrder = 1000
+	// FileIndexMaxWarnings caps the warning lines a scan or prune job keeps (per-file errors and
+	// pruning log lines); the rest are counted in one final line.
+	FileIndexMaxWarnings = 200
+
 	// DefaultMetaEntryWorkers is the number of concurrent background workers used per meta column
 	// entry when the entry does not specify its own workers value in meta.toml.
 	DefaultMetaEntryWorkers = 2

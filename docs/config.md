@@ -68,6 +68,7 @@ These live alongside `config.toml` in the same config directory but are
 - [\[pools\]](#pools)
 - [\[compare\]](#compare)
 - [\[dedup\]](#dedup)
+- [\[fileindex\]](#fileindex)
 - [status.toml](#statustoml)
 
 ## General (root keys)
@@ -505,6 +506,15 @@ Find-duplicates scan (within a single directory).
 |---|---|---|---|
 | `hash_confirm_bytes` | int64 | `34359738368` (32 GiB) | Pause and ask for confirmation before hashing if the total size of hash candidates exceeds this. `0` disables the confirmation gate. |
 | `file_progress_bytes` | int64 | `268435456` (256 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. Chunk sizes come from `[compare].first_chunk_bytes` and `[compare].chunk_bytes`. |
+
+## `[fileindex]`
+
+The built-in [fileindex](fileindex.md) feature. Which files a scan includes or skips comes from fileindex's own `~/.config/fileindex/config.ini` (`[scanning]`), so the `fileindex` command and pc index the same files; pc only reads that file.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `database` | string | `""` | The fileindex database (absolute or `~/…`). Empty uses `[database].path` from fileindex's `config.ini`. pc never creates or upgrades it: run `fileindex init` first. |
+| `workers` | int | `0` | Hash workers a scan uses (clamped to 256). `0` uses `parallel_workers` from `config.ini` (auto-scaling when that is `auto` or unset). |
 
 ## `status.toml`
 

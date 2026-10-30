@@ -9,4 +9,4 @@ focus=ok checked=[false true false]
 == Right ==
 focus=cancel checked=[false true false]
 == F9 ==
-focus=cancel checked=[false true false]
+focus=cancel checked=[false true false false]

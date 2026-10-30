@@ -20,6 +20,7 @@ import (
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
+	fileindexctrl "github.com/paranoidi/paras-commander/internal/apphandler/fileindex"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
@@ -27,6 +28,7 @@ import (
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/foldercolor"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/file"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
@@ -36,6 +38,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -200,10 +203,14 @@ type App struct {
 	// compareSelectionOpen opens Compare once the compare selection dialog is answered Drop or Stash.
 	compareSelectionOpen func()
 	// jobState manages background job queue and worker lifecycle.
-	jobState       *jobs.State
-	jobsCtrl       *jobsctrl.Handler
-	findCtrl       *findctrl.Handler
-	metaCtrl       *metactrl.Handler
+	jobState      *jobs.State
+	jobsCtrl      *jobsctrl.Handler
+	findCtrl      *findctrl.Handler
+	metaCtrl      *metactrl.Handler
+	fileindexCtrl *fileindexctrl.Handler
+	// fileIndex is the shared fileindex database handle behind fileindex://, the tags column
+	// and the scan/prune tasks (internal/fileindex).
+	fileIndex      *fileindex.Index
 	commandsCtrl   *commandsctrl.Handler
 	compareCtrl    *comparectrl.Handler
 	dedupCtrl      *dedupctrl.Handler
@@ -706,12 +713,18 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Keys:           keys.Global,
 		KeysFindDialog: keys.FindDialog,
 	})
+	app.fileIndex = fileindex.New(cfg.FileIndex)
+	if err := fileindex.Register(app.fileIndex); err != nil {
+		app.stopWorker()
+		return nil, fmt.Errorf("register fileindex backend: %w", err)
+	}
 	app.metaCtrl = metactrl.New(metactrl.Deps{
 		Host:      metaHost{appShellHost: appShellHost{app: app}},
 		Screen:    screen,
 		Model:     &app.model,
 		Config:    cfg,
 		ConfigDir: resolvedPaths.ConfigDir,
+		Providers: []*metacmds.Provider{app.fileIndex.TagsProvider()},
 	})
 	app.commandsCtrl = commandsctrl.New(commandsctrl.Deps{
 		Host:                    commandsHost{appShellHost: appShellHost{app: app}},
@@ -776,6 +789,12 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		DiskUsageIgnore:      duIgnorer,
 		PromptElevate:        app.promptElevate,
 		Getenv:               func(k string) string { return app.getenv(k) },
+	})
+	app.fileindexCtrl = fileindexctrl.New(fileindexctrl.Deps{
+		Host:   fileindexHost{appShellHost: appShellHost{app: app}},
+		Screen: screen,
+		Model:  &app.model,
+		Index:  app.fileIndex,
 	})
 	app.pinCtrl = pinctrl.New(pinctrl.Deps{
 		Host:            pinHost{appShellHost: appShellHost{app: app}},
@@ -1221,6 +1240,10 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		}
 		a.render()
 		return eventOutcome{didRender: true}, true
+	}
+	if a.fileindexCtrl.HandleWake(data) {
+		a.render()
+		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
 	}
 	if p, ok := data.(folderColorsPayload); ok {
 		a.setErrorMessage("Folder color failed", p.err)
