@@ -47,6 +47,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pools"
 	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/subshell"
@@ -535,6 +536,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, err
 	}
 	styles.UseNerdfontIcons = cfg.UI.UseNerdfontIcons
+	syncPathDisplayPrefixes(styles)
 	path, err := cwd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
@@ -1357,6 +1359,17 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 func (a *App) setStyles(t theme.Theme) {
 	t.UseNerdfontIcons = a.config.UI.UseNerdfontIcons
 	a.styles = t
+	syncPathDisplayPrefixes(t)
+}
+
+// syncPathDisplayPrefixes shows fileindex:// paths as the theme's fileindex icon + "://" when
+// Nerd Font icons are on (primitive.PathWithHomeTilde), else in full.
+func syncPathDisplayPrefixes(t theme.Theme) {
+	m := map[string]string{}
+	if icon := t.IconFileIndex(); icon != "" {
+		m[pathloc.FileIndexPrefix] = icon + "://"
+	}
+	primitive.SetPathDisplayPrefixes(m)
 }
 
 // Run starts the event loop.

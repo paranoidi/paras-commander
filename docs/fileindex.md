@@ -15,10 +15,14 @@ same files. `workers` sets the number of hash workers (see
 When there is no database at that location, the first fileindex action (or
 the tags column, or a `fileindex://` path) asks whether to create an empty one.
 **Yes** creates it and carries on with the action; **No** leaves everything as
-it was, and the next action asks again. pc never upgrades an existing
-database: one from another fileindex version is reported in the Messages log,
-and fileindex actions say so instead of running (run `fileindex init` to
-upgrade it).
+it was, and the next action asks again.
+
+A database from an older fileindex version gets the same kind of question:
+**Yes** upgrades it (what `fileindex init` does) and carries on. Upgrading
+rebuilds the search indexes and can take minutes on a large index; other
+fileindex work waits until it is done. A database from a newer fileindex
+version is reported in the Messages log, and fileindex actions say so instead
+of running; it needs a newer pc.
 
 ## Actions
 
@@ -43,7 +47,9 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 `fileindex.open` shows the current directory as `fileindex:///path/to/dir`,
 with the same entry under the cursor. Navigation then works as usual: history,
 bookmarks and the path picker accept `fileindex://` paths too. The index root is
-`fileindex:///`.
+`fileindex:///`. With Nerd Font icons on (`use_nerdfont_icons`), panel titles
+and other path displays show `fileindex://` as the database icon followed by
+`://`.
 
 An index view lists what the index recorded, including files that have since
 gone from disk. Files show their indexed size and modification time;

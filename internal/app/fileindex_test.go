@@ -227,6 +227,51 @@ func TestFileIndexOpenAndReveal(t *testing.T) {
 	}
 }
 
+func TestFileIndexOutdatedIndexAsksToUpgrade(t *testing.T) {
+	screen := newScreen(t, 100, 30)
+	opts := testOptions(t.TempDir())
+	dbPath := opts.Config.FileIndex.Database
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(dbPath, nil, 0o644); err != nil { // never initialised: needs `init`
+		t.Fatal(err)
+	}
+	a := newTestApp(t, screen, opts)
+	t.Cleanup(func() { _ = a.fileIndex.Close() })
+
+	a.dispatch(keymap.ActionFileIndexTagAdd)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		fd := a.model.FileDialog
+		return fd.Open && fd.DialogType == dialog.FileDialogIndexInit
+	})
+	if !a.model.FileDialog.IndexUpgrade || a.model.FileDialog.Message != dbPath {
+		t.Fatalf("prompt = upgrade %v at %q, want the upgrade prompt for %q", a.model.FileDialog.IndexUpgrade, a.model.FileDialog.Message, dbPath)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	waitTagPrompt(t, a, screen)
+	if !strings.HasPrefix(a.model.Message, "Upgraded fileindex database") {
+		t.Fatalf("message = %q", a.model.Message)
+	}
+	if _, err := a.fileIndex.DB(); err != nil {
+		t.Fatalf("after upgrade = %v", err)
+	}
+}
+
+func TestFileIndexPathShownWithIconPrefix(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	a.config.UI.UseNerdfontIcons = true
+	a.setStyles(a.styles)
+	if got := ui.PanelTitlePath("fileindex:///srv/orchard", "", 40); got != a.styles.IconFileIndex()+":///srv/orchard" {
+		t.Fatalf("with icons = %q", got)
+	}
+	a.config.UI.UseNerdfontIcons = false
+	a.setStyles(a.styles)
+	if got := ui.PanelTitlePath("fileindex:///srv/orchard", "", 40); got != "fileindex:///srv/orchard" {
+		t.Fatalf("without icons = %q", got)
+	}
+}
+
 func TestFileIndexMissingIndexAsksToCreate(t *testing.T) {
 	screen := newScreen(t, 100, 30)
 	dir := t.TempDir()

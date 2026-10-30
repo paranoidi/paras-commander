@@ -28,7 +28,8 @@ const (
 	FileDialogSFTPPassword
 	// FileDialogIndexTags adds or removes fileindex tags (apphandler/fileindex).
 	FileDialogIndexTags
-	// FileDialogIndexInit asks whether to create the missing fileindex database at Message.
+	// FileDialogIndexInit asks whether to create the missing fileindex database at Message, or
+	// with IndexUpgrade whether to upgrade the outdated one there.
 	FileDialogIndexInit
 )
 
@@ -247,6 +248,8 @@ type FileDialogState struct {
 	IndexTagsRemove    bool
 	IndexTagsRecursive bool
 	IndexTagsTargets   []string
+	// IndexUpgrade turns the FileDialogIndexInit prompt from "create" into "upgrade".
+	IndexUpgrade bool
 
 	// SchemeNote says what a rename or delete on the panel's scheme really changes when that is
 	// not the disk (SchemeNote); empty on local and SFTP panels.

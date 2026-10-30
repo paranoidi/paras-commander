@@ -144,10 +144,14 @@ const messageTitle = "fileindex"
 
 // HandleOpenError handles the index's first open failure, from whatever touched it first (an
 // action, the tags column, a fileindex:// panel): a missing database asks whether to create it,
-// any other failure goes to the Messages log once.
+// an outdated one whether to upgrade it, any other failure goes to the Messages log once.
 func (h *Handler) HandleOpenError(p OpenErrorPayload) {
-	if errors.Is(p.Err, fi.ErrNoIndex) {
-		h.promptInit(p.Path, nil)
+	switch {
+	case errors.Is(p.Err, fi.ErrNoIndex):
+		h.promptInit(p.Path, false, nil)
+		return
+	case fi.NeedsUpgrade(p.Err):
+		h.promptInit(p.Path, true, nil)
 		return
 	}
 	h.host.SetErrorMessage(messageTitle, p.Err)

@@ -513,7 +513,7 @@ The built-in [fileindex](fileindex.md) feature. Which files a scan includes or s
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `database` | string | `""` | The fileindex database (absolute or `~/…`). Empty uses `[database].path` from fileindex's `config.ini`. When it is missing, pc asks whether to create an empty one; pc never upgrades an existing one. |
+| `database` | string | `""` | The fileindex database (absolute or `~/…`). Empty uses `[database].path` from fileindex's `config.ini`. When it is missing, pc asks whether to create an empty one; when it is from an older fileindex, whether to upgrade it. |
 | `workers` | int | `0` | Hash workers a scan uses (clamped to 256). `0` uses `parallel_workers` from `config.ini` (auto-scaling when that is `auto` or unset). |
 
 ## `status.toml`

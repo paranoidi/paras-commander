@@ -794,6 +794,18 @@ func (t Theme) IconFilelistOtherMatch() rune {
 
 // IconFilelistJob returns the file-list job mark icon (role/status colored via
 // Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
+// IconKeyFileIndex replaces "fileindex" in a displayed fileindex:// path (Theme.IconFileIndex).
+const IconKeyFileIndex = "fileindex"
+
+// IconFileIndex is the glyph shown instead of "fileindex" in a displayed fileindex:// path
+// ([icons] fileindex, nf-fa-database), or "" without Nerd Font icons (the path is shown in full).
+func (t Theme) IconFileIndex() string {
+	if !t.UseNerdfontIcons {
+		return ""
+	}
+	return t.iconOr(IconKeyFileIndex, "\uf1c0")
+}
+
 func (t Theme) IconFilelistJob() rune {
 	return t.iconRuneOr(IconKeyFilelistJob, '\U000f02ca')
 }

@@ -2,6 +2,8 @@ package ui
 
 import (
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 func TestPanelTitlePathHomeTilde(t *testing.T) {
@@ -54,5 +56,17 @@ func TestPanelTitlePathEmptyHomeNoTilde(t *testing.T) {
 	got := PanelTitlePath(path, "", 200)
 	if got != path {
 		t.Fatalf("got %q, want %q", got, path)
+	}
+}
+
+func TestPanelTitlePathAbbreviatesURIPathOnly(t *testing.T) {
+	t.Cleanup(func() { primitive.SetPathDisplayPrefixes(nil) })
+	primitive.SetPathDisplayPrefixes(map[string]string{"fileindex://": "://"})
+	got := PanelTitlePath("fileindex:///home/wren/orchard/lantern/meadow", "/home/wren", 18)
+	if got != "://~/o/l/meadow" {
+		t.Fatalf("title = %q, want the scheme kept whole and the path abbreviated", got)
+	}
+	if got := PanelTitlePath("sftp://user@harbor/srv/orchard/lantern", "", 30); got != "sftp://user@harbor/s/o/lantern" {
+		t.Fatalf("sftp title = %q", got)
 	}
 }

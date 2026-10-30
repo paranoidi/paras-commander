@@ -28,3 +28,21 @@ func TestPathWithHomeTildeEmptyHome(t *testing.T) {
 		t.Fatalf("got %q, want %q", got, path)
 	}
 }
+
+func TestPathWithHomeTildeURIs(t *testing.T) {
+	t.Cleanup(func() { SetPathDisplayPrefixes(nil) })
+	SetPathDisplayPrefixes(nil)
+	if got := PathWithHomeTilde("fileindex:///home/wren/orchard", "/home/wren"); got != "fileindex:///home/wren/orchard" {
+		t.Fatalf("unregistered URI = %q, want it unchanged", got)
+	}
+	if got := PathWithHomeTilde("sftp://user@harbor/meadow", "/home/wren"); got != "sftp://user@harbor/meadow" {
+		t.Fatalf("sftp = %q", got)
+	}
+	SetPathDisplayPrefixes(map[string]string{"fileindex://": "://"})
+	if got := PathWithHomeTilde("fileindex:///home/wren/orchard", "/home/wren"); got != "://~/orchard" {
+		t.Fatalf("registered = %q", got)
+	}
+	if got := PathWithHomeTilde("fileindex:///", "/home/wren"); got != ":///" {
+		t.Fatalf("index root = %q", got)
+	}
+}

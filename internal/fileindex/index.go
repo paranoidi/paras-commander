@@ -23,8 +23,7 @@ import (
 var ErrNoIndex = errors.New("no fileindex database")
 
 // Index is the shared fileindex database handle. DB opens it once, lazily, and checks its
-// schema. pc never migrates the database; it creates an empty one only through Create, which
-// the UI calls when the user confirms.
+// schema. pc creates (Create) or upgrades (Upgrade) a database only when the user confirms.
 type Index struct {
 	cfg config.FileIndexConfig
 	// configPath is fileindex's config.ini (ficonfig.DefaultPath() unless a test sets it).
@@ -131,6 +130,44 @@ func (x *Index) Create() (string, error) {
 	if err := d.Init(io.Discard); err != nil {
 		_ = d.Close()
 		return path, fmt.Errorf("fileindex: create %s: %w", path, err)
+	}
+	if x.db != nil {
+		_ = x.db.Close()
+	}
+	x.db, x.err = d, nil
+	return path, nil
+}
+
+// NeedsUpgrade reports whether a DB error is a database that exists but fileindex's Init must
+// bring to the current schema: an older schema, or a file that was never initialised. A newer
+// schema is not: only a newer pc can open it.
+func NeedsUpgrade(err error) bool {
+	return errors.Is(err, db.ErrOutdatedSchema) || errors.Is(err, db.ErrNotInitialised)
+}
+
+// Upgrade runs fileindex's Init on the existing database (migrating an older schema, which
+// rebuilds its search indexes and can take minutes on a large index) and keeps it open.
+func (x *Index) Upgrade() (string, error) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	path, err := x.DatabasePath()
+	if err != nil {
+		return "", fmt.Errorf("fileindex: %w", err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		return path, fmt.Errorf("%w at %s", ErrNoIndex, path)
+	}
+	d, err := db.Open(path)
+	if err != nil {
+		return path, fmt.Errorf("fileindex: %w", err)
+	}
+	if err := d.Init(io.Discard); err != nil {
+		_ = d.Close()
+		return path, fmt.Errorf("fileindex: upgrade %s: %w", path, err)
+	}
+	if err := d.RequireSchema(); err != nil {
+		_ = d.Close()
+		return path, fmt.Errorf("fileindex %s: %w", path, err)
 	}
 	if x.db != nil {
 		_ = x.db.Close()

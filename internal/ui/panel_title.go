@@ -47,6 +47,15 @@ func abbreviatePanelTitlePath(display string, maxRunes int) string {
 }
 
 func splitPanelTitlePath(s string) (prefix string, segs []string, ok bool) {
+	// A URI keeps its scheme part ("sftp://host", " ://") whole; only the path after it shortens.
+	if i := strings.Index(s, "://"); i > 0 {
+		head, rest := s[:i+3], s[i+3:]
+		if slash := strings.Index(rest, "/"); slash > 0 {
+			head, rest = head+rest[:slash], rest[slash:] // sftp host part
+		}
+		p, segs, ok := splitPanelTitlePath(rest)
+		return head + p, segs, ok
+	}
 	switch {
 	case strings.HasPrefix(s, "~/"):
 		rest := s[2:]
@@ -71,12 +80,5 @@ func joinPanelTitlePath(prefix string, segs []string) string {
 	if len(segs) == 0 {
 		return prefix
 	}
-	switch prefix {
-	case "~/":
-		return "~/" + strings.Join(segs, "/")
-	case "/":
-		return "/" + strings.Join(segs, "/")
-	default:
-		return strings.Join(segs, "/")
-	}
+	return prefix + strings.Join(segs, "/")
 }

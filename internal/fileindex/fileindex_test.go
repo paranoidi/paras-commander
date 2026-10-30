@@ -3,6 +3,7 @@ package fileindex
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -326,5 +327,29 @@ func TestCreateMakesUsableIndexOnce(t *testing.T) {
 	}
 	if _, err := x.Create(); !errors.Is(err, ErrIndexExists) {
 		t.Fatalf("second create = %v, want ErrIndexExists", err)
+	}
+}
+
+func TestUpgradeInitialisesExistingDatabase(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "index.sqlite")
+	if err := os.WriteFile(path, nil, 0o644); err != nil { // a file `fileindex init` never ran on
+		t.Fatal(err)
+	}
+	x := testIndex(t, path)
+	_, err := x.DB()
+	if !NeedsUpgrade(err) {
+		t.Fatalf("open = %v, want an error NeedsUpgrade accepts", err)
+	}
+	if _, err := x.Upgrade(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.DB(); err != nil {
+		t.Fatalf("after upgrade = %v", err)
+	}
+	if !NeedsUpgrade(fmt.Errorf("wrapped: %w", db.ErrOutdatedSchema)) || NeedsUpgrade(db.ErrNewerSchema) || NeedsUpgrade(ErrNoIndex) {
+		t.Fatal("NeedsUpgrade must accept older or uninitialised schemas only")
+	}
+	if _, err := testIndex(t, filepath.Join(t.TempDir(), "absent.sqlite")).Upgrade(); !errors.Is(err, ErrNoIndex) {
+		t.Fatalf("upgrade of a missing database = %v", err)
 	}
 }

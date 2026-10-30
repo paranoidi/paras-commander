@@ -129,12 +129,7 @@ func fileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 			{ID: dlg.OK, Label: "Yes", Mnemonic: 'Y'},
 			{ID: dlg.Cancel, Label: "No", Mnemonic: 'N'},
 		}
-		spec.Groups = []dlg.Group{{Columns: [][]dlg.Item{{
-			{Kind: dlg.KindLabel, Label: "No fileindex database at:"},
-			{Kind: dlg.KindLabel, Label: st.Message, Fit: dlg.FitPath, Indent: 2},
-			{Kind: dlg.KindLabel},
-			{Kind: dlg.KindLabel, Label: "Create an empty one?"},
-		}}}}
+		spec.Groups = []dlg.Group{{Columns: [][]dlg.Item{indexInitLabels(st)}}}
 	case renameToolActive(st):
 		spec.Groups = renameToolViewGroups(st)
 	case st.DialogType == FileDialogAddBookmark:
@@ -363,4 +358,23 @@ func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogStat
 			drawPathCompletionDropdown(screen, in.Rect.X, in.Rect.Y+1, f.Scroll, f.Completion, ctx.ScrollbarStyle, ctx.Styles)
 		}
 	}
+}
+
+// indexInitLabels is the FileDialogIndexInit message: the database path and the question,
+// create for a missing database, upgrade (IndexUpgrade) for an outdated one.
+func indexInitLabels(st FileDialogState) []dlg.Item {
+	head, ask := "No fileindex database at:", []string{"Create an empty one?"}
+	if st.IndexUpgrade {
+		head = "The fileindex database at:"
+		ask = []string{"is from an older fileindex. Upgrade it now?", "This can take minutes on a large index."}
+	}
+	items := []dlg.Item{
+		{Kind: dlg.KindLabel, Label: head},
+		{Kind: dlg.KindLabel, Label: st.Message, Fit: dlg.FitPath, Indent: 2},
+		{Kind: dlg.KindLabel},
+	}
+	for _, l := range ask {
+		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: l})
+	}
+	return items
 }
