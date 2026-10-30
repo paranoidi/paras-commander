@@ -214,3 +214,18 @@ func TestEqual(t *testing.T) {
 		t.Fatal("expected equal")
 	}
 }
+
+func TestUnavailable(t *testing.T) {
+	for _, tc := range []struct{ loc, want string }{
+		{"sftp://host/x", "Run is not available on SFTP panels"},
+		{FileIndexPrefix + "/x", "Run is not available on fileindex panels"},
+	} {
+		p, err := Parse(tc.loc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := Unavailable("Run", p); got != tc.want {
+			t.Errorf("%s: got %q want %q", tc.loc, got, tc.want)
+		}
+	}
+}

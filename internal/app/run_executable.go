@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/entrymatch"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -105,7 +106,7 @@ func (a *App) runExecutableFromPanel(path string) {
 	}
 	p := a.activePanel()
 	if !p.Path.IsLocal() {
-		a.setTransientMessage("Run is not available on remote panels", ui.MessageUrgencyWarn)
+		a.setTransientMessage(pathloc.Unavailable("Run", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	path = filepath.Clean(path)

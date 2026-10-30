@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -108,7 +110,7 @@ func (a *App) openTerminalPanel(focus bool) {
 		return
 	}
 	if !a.activePanel().Path.IsLocal() {
-		a.setTransientMessage("Terminal panel is not available on remote panels", ui.MessageUrgencyWarn)
+		a.setTransientMessage(pathloc.Unavailable("Terminal panel", a.activePanel().Path), ui.MessageUrgencyWarn)
 		return
 	}
 	panelDir := a.localActivePanelDir()

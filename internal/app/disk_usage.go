@@ -8,6 +8,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -268,7 +269,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 	}
 	p := a.panelByID(panelID)
 	if !p.Path.IsLocal() {
-		a.setTransientMessage("Disk usage is not available on remote panels", ui.MessageUrgencyWarn)
+		a.setTransientMessage(pathloc.Unavailable("Disk usage", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	p.IdleDiskTotalsSort = false
@@ -297,7 +298,7 @@ func (a *App) scanCursorDirSize() {
 	}
 	p := a.activePanel()
 	if !p.Path.IsLocal() {
-		a.setTransientMessage("Disk usage is not available on remote panels", ui.MessageUrgencyWarn)
+		a.setTransientMessage(pathloc.Unavailable("Disk usage", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	entry, ok := p.CurrentEntry()

@@ -286,7 +286,7 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		return
 	}
 	if !root.IsLocal() {
-		h.host.SetTransientMessage("Find duplicates: remote paths not supported", ui.MessageUrgencyError)
+		h.host.SetTransientMessage(pathloc.Unavailable("Find duplicates", root), ui.MessageUrgencyError)
 		return
 	}
 

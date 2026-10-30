@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/foldercolor"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -48,7 +50,7 @@ func (a *App) openFolderColorMenu(panelID int) {
 		return
 	}
 	if !p.Path.IsLocal() {
-		a.setTransientMessage("Folder color: not available on remote panels", ui.MessageUrgencyWarn)
+		a.setTransientMessage(pathloc.Unavailable("Folder color", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	dirs := p.SelectedDirectoryPaths()

@@ -248,7 +248,7 @@ func (s *DedupSession) run(ctx context.Context) {
 	defer s.wg.Done()
 
 	if !s.root.IsLocal() {
-		s.publish(DedupSnapshot{Root: s.root, Phase: DedupError, Err: errRemoteNotSupported.Error()})
+		s.publish(DedupSnapshot{Root: s.root, Phase: DedupError, Err: pathloc.Unavailable("Find duplicates", s.root)})
 		return
 	}
 

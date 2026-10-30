@@ -316,7 +316,7 @@ func (h *Handler) openDanglingDirsDeleteDialog(dirs []string) {
 
 func (h *Handler) openChmodDialog(p *panel.State) {
 	if !p.Path.IsLocal() {
-		h.host.SetTransientMessage("Chmod is not available on remote panels", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage(pathloc.Unavailable("Chmod", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	_, err := ops.ResolveSource(p)
@@ -337,7 +337,7 @@ func (h *Handler) openChmodDialog(p *panel.State) {
 
 func (h *Handler) openChownDialog(p *panel.State) {
 	if !p.Path.IsLocal() {
-		h.host.SetTransientMessage("Chown is not available on remote panels", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage(pathloc.Unavailable("Chown", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	_, err := ops.ResolveSource(p)
@@ -358,7 +358,7 @@ func (h *Handler) openChownDialog(p *panel.State) {
 
 func (h *Handler) openSymlinkDialog(p *panel.State) {
 	if !p.Path.IsLocal() {
-		h.host.SetTransientMessage("Symlink is not available on remote panels", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage(pathloc.Unavailable("Symlink", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	entry, err := ops.ResolveSourceSingle(p)
@@ -382,7 +382,7 @@ func (h *Handler) openSymlinkDialog(p *panel.State) {
 
 func (h *Handler) openHardlinkDialog(p *panel.State) {
 	if !p.Path.IsLocal() {
-		h.host.SetTransientMessage("Hardlink is not available on remote panels", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage(pathloc.Unavailable("Hardlink", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	entry, err := ops.ResolveSourceSingle(p)

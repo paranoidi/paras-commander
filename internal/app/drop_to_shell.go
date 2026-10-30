@@ -10,6 +10,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/shell"
 	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -32,7 +33,7 @@ func (a *App) dropToShell() {
 	}
 	p := a.activePanel()
 	if !p.Path.IsLocal() {
-		a.setErrorMessage("Shell", fmt.Errorf("shell is not available on remote panels"))
+		a.setErrorMessage("Shell", errors.New(pathloc.Unavailable("shell", p.Path)))
 		return
 	}
 	panelDir, err := p.Path.FilePath()
@@ -224,7 +225,7 @@ func (a *App) shellInsertPaths() {
 	}
 	p := a.activePanel()
 	if !p.Path.IsLocal() {
-		a.setTransientMessage("Send paths to shell is not available on remote panels", ui.MessageUrgencyWarn)
+		a.setTransientMessage(pathloc.Unavailable("Send paths to shell", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	paths := shellInsertPathList(p)

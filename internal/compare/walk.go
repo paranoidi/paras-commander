@@ -51,7 +51,7 @@ func walkScope(rel string, only []string) (inside, ancestor bool) {
 // WalkRoot indexes regular files under root (local paths only in phase 1).
 func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileRecord, error) {
 	if !root.IsLocal() {
-		return nil, errRemoteNotSupported
+		return nil, unsupportedRoot(root)
 	}
 	host, err := root.FilePath()
 	if err != nil {

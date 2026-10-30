@@ -468,3 +468,21 @@ func SFTPRemotePath(p Path) (string, error) {
 	_, remote, err := splitSFTP(p.s)
 	return remote, err
 }
+
+// Label names the scheme for user-facing messages.
+func (s Scheme) Label() string {
+	switch s {
+	case SchemeFile:
+		return "local"
+	case SchemeSFTP:
+		return "SFTP"
+	case SchemeFileIndex:
+		return "fileindex"
+	}
+	return string(s)
+}
+
+// Unavailable is the one refusal message for a feature that cannot run on loc's panel.
+func Unavailable(feature string, loc Path) string {
+	return fmt.Sprintf("%s is not available on %s panels", feature, loc.Scheme().Label())
+}

@@ -50,7 +50,7 @@ Loads `menu.toml` per `[user_menu]` (`internal/usermenu`: resolve order, untrust
 
 ## Drop to shell (`app.drop-to-shell`)
 
-With `[shell].persistent` (Linux) toggles the persistent subshell ([subshell.md](subshell.md)). Falls back to a one-shot shell on non-Linux, when `[shell].command` is set, or when the PTY fails to start: `screen.Suspend`/`Resume` via `App.withTerminalReleased` (same as `file.edit`; never `Fini`/`Init`), runs `$SHELL` with cwd = the active local panel dir. `[shell].sync_cwd_on_return` navigates the panel to the shell cwd afterward (both modes). One-shot is blocked on remote panels; both are blocked while modal dialogs are open (`Model.ModalDialogOpen`). Non-zero exit is ignored; launch/suspend/resume failures are status errors. Code: `internal/app/drop_to_shell.go`, `internal/subshell`, `internal/shell`. `app.shell-insert-paths` is covered in [subshell.md](subshell.md).
+With `[shell].persistent` (Linux) toggles the persistent subshell ([subshell.md](subshell.md)). Falls back to a one-shot shell on non-Linux, when `[shell].command` is set, or when the PTY fails to start: `screen.Suspend`/`Resume` via `App.withTerminalReleased` (same as `file.edit`; never `Fini`/`Init`), runs `$SHELL` with cwd = the active local panel dir. `[shell].sync_cwd_on_return` navigates the panel to the shell cwd afterward (both modes). One-shot is blocked on non-local panels (`pathloc.Unavailable`); both are blocked while modal dialogs are open (`Model.ModalDialogOpen`). Non-zero exit is ignored; launch/suspend/resume failures are status errors. Code: `internal/app/drop_to_shell.go`, `internal/subshell`, `internal/shell`. `app.shell-insert-paths` is covered in [subshell.md](subshell.md).
 
 ## Commands view (`ViewCommands`)
 

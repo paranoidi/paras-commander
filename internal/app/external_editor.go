@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/editor"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -113,7 +115,7 @@ func (a *App) resolveLocalEditFilePath() (string, error) {
 	}
 	p := a.activePanel()
 	if !p.Path.IsLocal() {
-		return "", fmt.Errorf("edit is not available on remote panels")
+		return "", errors.New(pathloc.Unavailable("edit", p.Path))
 	}
 	path, mode := a.editTargetFilePath(p)
 	switch mode {

@@ -120,12 +120,12 @@ func (s *Session) publish(snap Snapshot) {
 func (s *Session) run(ctx context.Context) {
 	defer s.wg.Done()
 
-	if !s.primaryRoot.IsLocal() || !s.secondaryRoot.IsLocal() {
+	if bad, ok := firstNonLocal(s.primaryRoot, s.secondaryRoot); ok {
 		s.publish(Snapshot{
 			PrimaryRoot:   s.primaryRoot,
 			SecondaryRoot: s.secondaryRoot,
 			Phase:         PhaseError,
-			Err:           errRemoteNotSupported.Error(),
+			Err:           unsupportedRoot(bad).Error(),
 		})
 		return
 	}

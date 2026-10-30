@@ -10,7 +10,7 @@ Press `Ctrl+O` again inside the shell to return. If the shell is busy with a ful
 - **Shell to panel** (`sync_cwd_on_return`, default on): after leaving the shell, the active panel navigates to the shell's directory.
 - The shell is started on the first `Ctrl+O` and ends when you `exit` it; the next toggle starts a fresh one.
 
-If the persistent shell is switched off, unsupported (anything but Linux), or `command` is set, `Ctrl+O` suspends the TUI and runs a one-shot shell until it exits. This mode is not available on remote panels. Shell toggling is blocked while a modal dialog is open.
+If the persistent shell is switched off, unsupported (anything but Linux), or `command` is set, `Ctrl+O` suspends the TUI and runs a one-shot shell until it exits. This mode is not available on non-local (SFTP, fileindex) panels. Shell toggling is blocked while a modal dialog is open.
 
 ## Sending file names to the shell
 

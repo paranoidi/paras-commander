@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -19,7 +20,7 @@ import (
 // OpenMassRenameDialog opens the mass-rename dialog for p's selection.
 func (h *Handler) OpenMassRenameDialog(p *panel.State) {
 	if !p.Path.IsLocal() {
-		h.host.SetTransientMessage("Mass rename is not available on remote panels", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage(pathloc.Unavailable("Mass rename", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	src, err := ops.ResolveSource(p)
