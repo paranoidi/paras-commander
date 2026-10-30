@@ -30,8 +30,9 @@ type Index struct {
 	configPath string
 	home       string
 
-	mu sync.Mutex
-	db *db.DB
+	mu     sync.Mutex
+	db     *db.DB
+	failed *openFailure // the last open failure, returned again while the file is unchanged
 
 	// OnOpenError, when set, is called once, from the goroutine that hit it, with the first
 	// open failure, so the UI can report it once instead of on every action.
@@ -66,44 +67,77 @@ func (x *Index) DatabasePath() (string, error) {
 }
 
 // DB returns the open database, opening it on first use. A missing database wraps ErrNoIndex;
-// one on another schema version fails with fileindex's own explanation. Failures are not
-// cached, so an index created later is picked up by the next call.
+// one on another schema version fails with fileindex's own explanation. A failure is returned
+// again without reopening until the database file appears or changes (an index created or
+// upgraded outside pc), or Create or Upgrade replaces it.
 func (x *Index) DB() (*db.DB, error) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	if x.db != nil {
 		return x.db, nil
 	}
-	d, err := x.open()
+	if f := x.failed; f != nil && statDBFile(f.path) == f.file {
+		return nil, f.err
+	}
+	path, d, err := x.open()
 	if err != nil {
+		// ponytail: the file is stat'ed after the failed open (opening can touch it), so a change
+		// made during that open goes unseen until the file changes again. No path (config.ini
+		// unreadable) has no file to watch, so that failure is not kept.
+		if path != "" {
+			x.failed = &openFailure{err: err, path: path, file: statDBFile(path)}
+		}
 		if x.OnOpenError != nil {
 			x.reported.Do(func() { x.OnOpenError(err) })
 		}
 		return nil, err
 	}
-	x.db = d
+	x.db, x.failed = d, nil
 	return d, nil
 }
 
-func (x *Index) open() (*db.DB, error) {
+// openFailure is a failed open and the database file as it was then.
+type openFailure struct {
+	err  error
+	path string
+	file dbFile
+}
+
+// dbFile is what DB compares to tell whether the database file changed since a failed open.
+type dbFile struct {
+	exists  bool
+	size    int64
+	modTime int64
+}
+
+func statDBFile(path string) dbFile {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return dbFile{}
+	}
+	return dbFile{exists: true, size: fi.Size(), modTime: fi.ModTime().UnixNano()}
+}
+
+// open opens and schema-checks the database at DatabasePath and returns that path.
+func (x *Index) open() (string, *db.DB, error) {
 	path, err := x.DatabasePath()
 	if err != nil {
-		return nil, fmt.Errorf("fileindex: %w", err)
+		return "", nil, fmt.Errorf("fileindex: %w", err)
 	}
 	// db.Open creates the parent directory and SQLite the file: check first so a missing
 	// index stays missing.
 	if _, err := os.Stat(path); err != nil {
-		return nil, fmt.Errorf("%w at %s (run `fileindex init`)", ErrNoIndex, path)
+		return path, nil, fmt.Errorf("%w at %s (run `fileindex init`)", ErrNoIndex, path)
 	}
 	d, err := db.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("fileindex: %w", err)
+		return path, nil, fmt.Errorf("fileindex: %w", err)
 	}
 	if err := d.RequireSchema(); err != nil {
 		_ = d.Close()
-		return nil, fmt.Errorf("fileindex %s: %w", path, err)
+		return path, nil, fmt.Errorf("fileindex %s: %w", path, err)
 	}
-	return d, nil
+	return path, d, nil
 }
 
 // ErrIndexExists is returned by Create when a database is already at the path.
@@ -160,7 +194,7 @@ func (x *Index) initDB(upgrade bool) (string, error) {
 	if x.db != nil {
 		_ = x.db.Close()
 	}
-	x.db = d
+	x.db, x.failed = d, nil
 	return path, nil
 }
 

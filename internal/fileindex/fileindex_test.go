@@ -106,6 +106,29 @@ func names(entries []fsbackend.Entry) []string {
 	return out
 }
 
+func TestOpenFailureKeptUntilFileChanges(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "orchard.sqlite")
+	x := testIndex(t, path)
+	_, first := x.DB()
+	if !errors.Is(first, ErrNoIndex) {
+		t.Fatalf("err = %v, want ErrNoIndex", first)
+	}
+	if _, again := x.DB(); again != first {
+		t.Fatalf("unchanged file reopened: %v", again)
+	}
+	src := initIndex(t)
+	body, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.DB(); err != nil {
+		t.Fatalf("database created outside pc not picked up: %v", err)
+	}
+}
+
 func TestMissingIndexReportsOnce(t *testing.T) {
 	x := testIndex(t, filepath.Join(t.TempDir(), "nowhere", "index.sqlite"))
 	var reports int
