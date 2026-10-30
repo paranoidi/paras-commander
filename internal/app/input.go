@@ -1204,6 +1204,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.pinCtrl.OpenDialog()
 	case keymap.ActionPanelGitFilterMenu:
 		a.toggleGitFilterMenu()
+	case keymap.ActionPanelFolderColorMenu:
+		a.openFolderColorMenu(a.model.ActivePanel)
 	case keymap.ActionPanelFindDialog:
 		a.findCtrl.OpenDialog(a.model.ActivePanel)
 	case keymap.ActionPanelJumpDialog:

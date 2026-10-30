@@ -27,6 +27,7 @@ import (
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/foldercolor"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/file"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
@@ -299,6 +300,9 @@ type App struct {
 	// asyncWakes coalesces listing, git-status, and carousel snapshot completions so a burst
 	// of goroutines posts at most one tcell interrupt per queue. See asyncWakeQueues.
 	asyncWakes asyncWakeQueues
+
+	// folderColors is the in-memory Nemo-compatible folder-colour snapshot (internal/foldercolor).
+	folderColors *foldercolor.Store
 	// lastFullRenderToast is the Model.Message last committed by a full render. Partial
 	// painters consult it so a shorter replacement cannot leave fragments of the previous banner.
 	lastFullRenderToast string
@@ -574,6 +578,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	} else {
 		jobState.SetOperationLog(cfg.Jobs.OperationsMemoryRows, nil)
 	}
+	folderColors := foldercolor.New()
 	homeDir, _ := os.UserHomeDir()
 	if homeDir != "" {
 		homeDir = filepath.Clean(homeDir)
@@ -622,6 +627,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			JobsOpsBottom:              cfg.Jobs.OperationsLayout == config.JobsOperationsLayoutBottom,
 			JobsOpsNewestLast:          cfg.Jobs.OperationsOrder == config.JobsOperationsOrderNewestLast,
 			UserHomeDir:                homeDir,
+			FolderColor:                folderColors.Lookup,
 			DiskUsage:                  duEngine,
 			DiskUsageShown:             false,
 			ViewMode:                   ui.ViewBrowser,
@@ -640,8 +646,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 				Rows: cfg.Shell.TerminalPanelHeight,
 			},
 		},
-		jobState:  jobState,
-		jobStopCh: make(chan struct{}),
+		jobState:     jobState,
+		jobStopCh:    make(chan struct{}),
+		folderColors: folderColors,
 
 		disk: diskUsageState{
 			engine: duEngine,
@@ -1212,6 +1219,11 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		a.render()
 		return eventOutcome{didRender: true}, true
 	}
+	if p, ok := data.(folderColorsPayload); ok {
+		a.setErrorMessage("Folder color failed", p.err)
+		a.render()
+		return eventOutcome{didRender: true}, true
+	}
 	if p, ok := data.(dialogctrl.PathsMissingPayload); ok {
 		a.applyPathsMissing(p)
 		a.render()
@@ -1323,6 +1335,7 @@ func (a *App) Run() error {
 	a.ensurePanelsVisible()
 	a.render()
 	a.loadStartupPanelListings()
+	go a.runFolderColorRefresh(a.jobStopCh)
 	for {
 		event := a.screen.PollEvent()
 		var jobsDirty bool

@@ -319,6 +319,8 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		a.openListingFormatDialogForPanel(panelScope)
 	case keymap.ActionPanelToggleCarousel:
 		a.toggleCarousel(panelScope, true)
+	case keymap.ActionPanelFolderColorMenu:
+		a.openFolderColorMenu(panelScope)
 	case keymap.ActionPanelToggleTree:
 		p := a.panelByID(panelScope)
 		if a.toggleTreeForPanel(p, a.panelViewportRows(panelScope)) {

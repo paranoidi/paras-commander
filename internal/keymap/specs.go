@@ -462,6 +462,15 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"git", "filter", "staged", "unstaged", "tracked", "untracked"},
 		},
 		{
+			ID:           ActionPanelFolderColorMenu,
+			Views:        HelpBrowser,
+			Title:        "Folder color menu",
+			Section:      "View",
+			DefaultKeys:  []string{"M-a"},
+			PreferredKey: "M-a",
+			Keywords:     []string{"folder", "color", "colour", "nemo", "icon", "tint"},
+		},
+		{
 			ID:           ActionPanelHistoryBothPanels,
 			Title:        "Both panels history",
 			Section:      "Navigation",

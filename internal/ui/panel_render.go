@@ -99,7 +99,9 @@ type PanelStyleConfig struct {
 
 // PanelContext carries panel-identity, focus, and twin-panel coordination inputs to drawPanel.
 type PanelContext struct {
-	PanelID        int
+	PanelID int
+	// FolderColor, when set, tints directory names (and, through the row style, their icons).
+	FolderColor    func(path string) (tcell.Color, bool)
 	FileListActive bool
 	// CursorRowActive selects the cursor row's active/inactive highlight and icon key
 	// independent of FileListActive (which also drives border/header chrome). Floating
@@ -611,6 +613,11 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 // per-entry style-resolution block.
 func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx PanelContext, styles theme.Theme) (style tcell.Style, selected bool) {
 	style = styles.PanelListingEntryStyle(entry.Type, ctx.ChromeBlocked)
+	if entry.Type == localfs.EntryDirectory && ctx.FolderColor != nil && !ctx.ChromeBlocked {
+		if c, ok := ctx.FolderColor(entry.Path); ok {
+			style = style.Foreground(c)
+		}
+	}
 	selected = state.IsSelected(entry)
 	if selected {
 		style = styles.PanelListingSelectedStyle(ctx.ChromeBlocked)

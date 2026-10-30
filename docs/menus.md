@@ -21,6 +21,7 @@ Press `:` (`app.leader-menu`; press again to close) for a grouped, multi-column 
 - `Esc` closes the strip.
 - `"` (`app.copy-menu`) opens the copy-to-clipboard menu (`[copy_menu]`) with file URL, directory URL, file name and git-relative paths. In the fullscreen preview of a text file it also copies the file's contents (the row is dimmed elsewhere). In the fullscreen preview, `:` opens a preview menu (`[preview_menu]`) instead.
 - `Alt+G` (`panel.git-filter-menu`) opens a small menu to filter by git state (staged, unstaged, tracked, untracked).
+- `Alt+A` (`panel.folder-color-menu`) opens a menu to set or clear the folder color (see `folder-colors.md`).
 
 ## Vi-motion mode
 

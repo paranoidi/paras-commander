@@ -198,6 +198,8 @@ type Model struct {
 	// JobsTransferRateLimitBPS is the global transfer rate limit in bytes/sec (session-only,
 	// not persisted); 0 means unlimited and shows nothing on the Queue panel border.
 	JobsTransferRateLimitBPS int64
+	// FolderColor looks up the Nemo-compatible colour of a local directory path (in-memory, nil = none).
+	FolderColor func(path string) (tcell.Color, bool)
 	// UserHomeDir is filepath.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
 	UserHomeDir string
 	// CursorNameHintPinOutPrimary / CursorNameHintPinOutSecondary are set by App for one paint
@@ -777,7 +779,8 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			model.QuickViewDisplayActive(), false, false, ownState.PathString(), model.UserHomeDir, model.PanelScrollbar, -1, tcell.Style{})
 	} else if side.ColumnWidth > 0 {
 		panelCtx := PanelContext{
-			PanelID: side.PanelID, FileListActive: side.FileListFocus,
+			FolderColor: model.folderColorFor(ownState),
+			PanelID:     side.PanelID, FileListActive: side.FileListFocus,
 			CursorRowActive: side.FileListFocus && !model.LeaderMenu.Open, ChromeBlocked: side.ChromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: side.OtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,

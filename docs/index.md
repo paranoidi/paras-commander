@@ -14,6 +14,7 @@ New here? Start with [Getting started](getting-started.md), then
 - **Background job queue** — copy, move and delete run queued in the background with progress, transfer graphs, rate limits and retry. See [Jobs](jobs.md), [File operations](fileoperations.md).
 - **Undo** — undo a finished copy, move, rename or mass rename from the jobs view; items changed since are left alone and reported. See [Undoing a job](jobs.md#undoing-a-job).
 - **Git aware** — gitignore filtering and eza-style git status column, stage/unstage, diff preview. See [Panels](panels.md).
+- **Folder colors** — shows and sets the colors Nemo gives folders. See [Folder colors](folder-colors.md).
 - **Previews** — quick view, fullscreen preview, carousel, syntax highlighting, markdown, images, archives. See [Quick view and preview](quick-view-preview.md), [Graphics](graphics.md), [Archives](archives.md).
 - **Selections** — across multiple paths, group select, stash and restore. See [Selections](selections.md).
 - **Navigation** — history, pins, bookmarks (`~/.fzf-marks`, GTK), panel sync, jump to directory, recursive find over millions of files. See [Navigation](navigation.md), [Find files](find-files.md).

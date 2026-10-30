@@ -50,6 +50,7 @@ const (
 	ActionNavBackward            = "nav.backward"
 	ActionPanelHistoryDialog     = "panel.history-dialog"
 	ActionPanelGitFilterMenu     = "panel.git-filter-menu"
+	ActionPanelFolderColorMenu   = "panel.folder-color-menu"
 	ActionPanelHistoryBothPanels = "panel.history-both-panels"
 	// ActionHelpTextEditKeys is bound via [dialog.help], not [main].
 	ActionHelpTextEditKeys = "help.text-edit-keys"
@@ -384,6 +385,7 @@ var KnownActions = map[string]struct{}{
 	ActionNavBackward:                 {},
 	ActionPanelHistoryDialog:          {},
 	ActionPanelGitFilterMenu:          {},
+	ActionPanelFolderColorMenu:        {},
 	ActionPanelHistoryBothPanels:      {},
 	ActionHelpTextEditKeys:            {},
 	ActionUserMenuBack:                {},

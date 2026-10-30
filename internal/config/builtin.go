@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 // Built-in defaults for fields populated by Default() and used elsewhere (e.g. ops, diskusage).
 // Single source of truth: do not duplicate these in internal/ops.
 
@@ -72,6 +74,10 @@ const (
 
 	// DefaultRefreshIntervalMS is how often both file panels re-read their directories from disk (0 disables).
 	DefaultRefreshIntervalMS = 2500
+
+	// FolderColorRefreshInterval is how often the GVfs folder-color metadata is checked for
+	// changes made by other programs (Nemo); a change triggers a background reload and repaint.
+	FolderColorRefreshInterval = 5 * time.Second
 
 	// DefaultPanelRefreshSlowBackoffFactor sets the start-to-start spacing enforced on periodic
 	// panel refreshes: a refresh that started at start and took elapsed may next start no sooner

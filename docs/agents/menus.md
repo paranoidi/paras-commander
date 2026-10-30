@@ -13,6 +13,7 @@ The bottom-docked strip behind the built-in leader menu (`app.leader-menu`), the
 | Copy-path | `app.copy-menu` | |
 | Fullscreen preview | `preview.menu` | `internal/app/preview_menu.go`, `preview.md` |
 | Git filter | `panel.git-filter-menu` | `internal/app/git_filter_menu.go` |
+| Folder colour | `panel.folder-color-menu` | `internal/app/folder_color_menu.go` |
 
 - `LeaderMenuState.UserMenu` / `CopyMenu` / `PreviewMenu` flag the active caller (all false for the git filter menu). `LeaderMenuItem.GroupTitle` marks a group header; the built-in, per-view and git filter menus set it; the user and preview menus are flat. The leader menu's Tools group lists **User menu** (`X`), which closes it and opens the user menu.
 - **Grouped layout** (`leaderMenuMacroColumnLayout`, `internal/ui/leader_menu_render.go`): with all `leaderMenuMacroColumns` (4) macro columns in use, column 0 is left-anchored, the last right-anchored, and the middle ones evenly spaced. With fewer non-empty columns (`leaderMenuSlotLayout`) the content width is split into 4 equal slots and the used columns sit on consecutive slots, centered (2 columns take the middle slots). Both fall back to uniform division when the columns don't fit.
@@ -21,6 +22,7 @@ The bottom-docked strip behind the built-in leader menu (`app.leader-menu`), the
 - **Direct-key hints** (`[ui].leader_menu_show_direct_keys`, F3 toggles, `toggleLeaderMenuDirectKeys`) apply to the built-in leader menu (looked up in `Global`) and the preview menu (`[preview]` overlay via `refreshLeaderMenuDirectKeys`); not to the user or copy-path menus.
 - Panel chrome stays active/inactive underneath (`Model.PanelsChromeBlocked` excludes `LeaderMenu.Open`) but the cursor-row highlight dims (`CursorRowActive = FileListFocus && !LeaderMenu.Open`).
 - **Git filter menu** (`openGitFilterMenu`): a grouped strip with two columns: Filter (No filtering / Staged / Unstaged / Tracked / Untracked) and Repository (Commit / Pull `p` / Push `P`, matching lazygit) via `openLeaderMenuStrip`; filter rows call `panel.State.SetEntryFilter` on the active panel, Commit calls `gitCommitActive` (`internal/app/git_stage.go`: interactive `git commit` under `withTerminalReleased`, skipped when nothing is staged); Push/Pull call `gitRemoteActive` (async `cmdrun.RunTracked`, `GIT_TERMINAL_PROMPT=0`, no controlling terminal). Filter framework: `panels.md`.
+- **Folder colour menu** (`openFolderColorMenu(panelID)`): a flat strip via `openLeaderMenuStrip` (it reuses the `GitFilterMenu` flag, so it is not the built-in menu) with one row per `foldercolor.Store.Choices()` colour plus **Default**; mnemonics are automatic. Targets are the panel's selected directories, else the cursor directory; remote panels, no target and no palette each show a warning. Activation calls `applyFolderColor`, which runs `Store.Apply` on a goroutine and posts `folderColorsPayload`. Details: `panels.md`.
 
 ## User menu and submenus
 
