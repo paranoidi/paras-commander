@@ -64,7 +64,7 @@ Directories show a summary of their contents. Status is read in the background w
 
 Symbols at the end of a name:
 
-- A new-file mark on entries created by the last copy, move or flatten into this directory; older batches are dimmed. The marks clear when you leave the directory.
+- A new-file mark on entries created by the last copy, move or flatten into this directory; the previous batch is shown in a second color and all earlier ones are dimmed. The marks clear when you leave the directory or refresh the panel.
 - An open-folder symbol on a directory the other panel currently shows.
 - A name-match mark on rows whose name also exists in the other panel's directory (`other_panel_match_marks` in [config.md](config.md#ui)); the name under the cursor is highlighted in both panels.
 - Job, queued, pinned and no-permission marks; see [Jobs](jobs.md).

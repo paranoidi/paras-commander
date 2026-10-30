@@ -15,13 +15,14 @@ type DisplayRune struct {
 	NameIdx int
 }
 
-// NewFileMarkTier selects new-file suffix coloring (latest vs previous batch).
+// NewFileMarkTier selects new-file suffix coloring (latest, previous or older batch).
 type NewFileMarkTier int
 
 const (
 	NewFileMarkNone NewFileMarkTier = iota
 	NewFileMarkLatest
 	NewFileMarkPrevious
+	NewFileMarkOlder
 )
 
 // JobSuffix is the job part of RowSuffix, painted after the name as <job><queued><operation>.
@@ -242,8 +243,11 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, suffix.JobOpStyle)), true
 	case r == th.IconFilelistNew() && suffix.NewFileTier != NewFileMarkNone:
 		base := th.PanelRowMarkNew
-		if suffix.NewFileTier == NewFileMarkPrevious {
+		switch suffix.NewFileTier {
+		case NewFileMarkPrevious:
 			base = th.PanelRowMarkNewPrevious
+		case NewFileMarkOlder:
+			base = th.PanelRowMarkNewOlder
 		}
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == th.IconFilelistRenamed() && suffix.RenameMark:

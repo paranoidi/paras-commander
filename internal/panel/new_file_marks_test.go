@@ -137,3 +137,31 @@ func TestNewFileMarkTierRecopyPromotesToLatest(t *testing.T) {
 		t.Fatalf("beta tier = %v, want previous", got)
 	}
 }
+
+func TestNewFileMarkTierAgesToOlderUntilCleared(t *testing.T) {
+	t.Parallel()
+	dest := pathloc.MustParse(t.TempDir())
+	s := State{Path: dest}
+	s.AddNewFileMarks(dest, []string{"meadow.txt"})
+	s.AddNewFileMarks(dest, []string{"harbor.txt"})
+	s.AddNewFileMarks(dest, []string{"lantern.txt"})
+	s.AddNewFileMarks(dest, []string{"pebble.txt"})
+
+	meadow := localfs.Entry{Name: "meadow.txt", Type: localfs.EntryFile}
+	harbor := localfs.Entry{Name: "harbor.txt", Type: localfs.EntryFile}
+	lantern := localfs.Entry{Name: "lantern.txt", Type: localfs.EntryFile}
+
+	if got := s.NewFileMarkTier(meadow); got != panellist.NewFileMarkOlder {
+		t.Fatalf("meadow tier = %v, want older", got)
+	}
+	if got := s.NewFileMarkTier(harbor); got != panellist.NewFileMarkOlder {
+		t.Fatalf("harbor tier = %v, want older", got)
+	}
+	if got := s.NewFileMarkTier(lantern); got != panellist.NewFileMarkPrevious {
+		t.Fatalf("lantern tier = %v, want previous", got)
+	}
+	s.ClearNewFileMarks()
+	if got := s.NewFileMarkTier(meadow); got != panellist.NewFileMarkNone {
+		t.Fatalf("meadow tier after clear = %v, want none", got)
+	}
+}

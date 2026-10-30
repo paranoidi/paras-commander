@@ -96,6 +96,8 @@ type Theme struct {
 	PanelRowMarkNew tcell.Style
 	// PanelRowMarkNewPrevious styles the file-list suffix for earlier new-file marks in the same directory.
 	PanelRowMarkNewPrevious tcell.Style
+	// PanelRowMarkNewOlder styles new-file marks older than the previous batch.
+	PanelRowMarkNewOlder tcell.Style
 	// PanelRowMarkRenamed styles the file-list suffix for recently renamed entries.
 	PanelRowMarkRenamed tcell.Style
 	// PanelRowMarkNoPermission styles the file-list suffix for entries the current user cannot access.
@@ -1014,6 +1016,7 @@ var requiredStyleKeys = []string{
 	"panel.row.mark.selection_subtree",
 	"panel.row.mark.new",
 	"panel.row.mark.new.previous",
+	"panel.row.mark.new.older",
 	"panel.row.mark.renamed",
 	"panel.row.mark.no_permission",
 	"panel.row.mark.pinned",
@@ -1640,6 +1643,7 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkSelectionSubtree:        styles["panel.row.mark.selection_subtree"],
 		PanelRowMarkNew:                     styles["panel.row.mark.new"],
 		PanelRowMarkNewPrevious:             styles["panel.row.mark.new.previous"],
+		PanelRowMarkNewOlder:                styles["panel.row.mark.new.older"],
 		PanelRowMarkRenamed:                 styles["panel.row.mark.renamed"],
 		PanelRowMarkNoPermission:            styles["panel.row.mark.no_permission"],
 		PanelRowMarkPinned:                  styles["panel.row.mark.pinned"],

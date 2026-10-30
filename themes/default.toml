@@ -94,6 +94,7 @@ tree.connector = { fg = "bright_black" }
 selection_subtree = { fg = "yellow" }
 new = { fg = "bright_green" }
 new.previous = { fg = "bright_yellow" }
+new.older = { fg = "bright_black" }
 renamed = { fg = "cyan" }
 no_permission = { fg = "bright_black" }
 pinned = { fg = "magenta" }

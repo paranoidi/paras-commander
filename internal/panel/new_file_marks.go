@@ -9,10 +9,12 @@ import (
 type dirNewFileMarks struct {
 	latest   map[string]struct{}
 	previous map[string]struct{}
+	older    map[string]struct{}
 }
 
 // AddNewFileMarks records base names as the latest "new" batch in the listing directory dir.
-// Names from the prior latest batch not in this batch move to the previous tier.
+// Names from the prior latest batch not in this batch move to the previous tier, and the prior
+// previous tier moves to older, which persists until the directory is left or explicitly refreshed.
 func (s *State) AddNewFileMarks(dir pathloc.Path, names []string) {
 	if len(names) == 0 {
 		return
@@ -29,6 +31,7 @@ func (s *State) AddNewFileMarks(dir pathloc.Path, names []string) {
 		dm = &dirNewFileMarks{
 			latest:   make(map[string]struct{}),
 			previous: make(map[string]struct{}),
+			older:    make(map[string]struct{}),
 		}
 		s.NewFileMarksByDir[key] = dm
 	}
@@ -38,8 +41,13 @@ func (s *State) AddNewFileMarks(dir pathloc.Path, names []string) {
 			continue
 		}
 		delete(dm.previous, n)
+		delete(dm.older, n)
 		newLatest[n] = struct{}{}
 	}
+	for name := range dm.previous {
+		dm.older[name] = struct{}{}
+	}
+	dm.previous = make(map[string]struct{}, len(dm.latest))
 	for name := range dm.latest {
 		if _, inNew := newLatest[name]; !inNew {
 			dm.previous[name] = struct{}{}
@@ -76,6 +84,7 @@ func (s *State) clearNewFileMarks(key string, names []string) {
 	for _, n := range names {
 		delete(dm.latest, n)
 		delete(dm.previous, n)
+		delete(dm.older, n)
 	}
 }
 
@@ -89,6 +98,12 @@ func (s *State) dropNewFileMarks(dir string) {
 			delete(s.NewFileMarksByDir, k)
 		}
 	}
+}
+
+// ClearNewFileMarks drops every new-file mark under the current listing directory (explicit
+// panel refresh).
+func (s *State) ClearNewFileMarks() {
+	s.dropNewFileMarks(s.Path.String())
 }
 
 // keyUnderDir reports whether mark key is dir itself or a directory nested under it (tree layout
@@ -122,6 +137,9 @@ func (s *State) NewFileMarkTier(entry localfs.Entry) panellist.NewFileMarkTier {
 	}
 	if _, ok := dm.previous[entry.Name]; ok {
 		return panellist.NewFileMarkPrevious
+	}
+	if _, ok := dm.older[entry.Name]; ok {
+		return panellist.NewFileMarkOlder
 	}
 	return panellist.NewFileMarkNone
 }

@@ -152,8 +152,9 @@ func (a *App) reloadActive(successMessage string) {
 }
 
 // userRefreshPanel is the panel.refresh entry point: reloads the listing and recalculates
-// meta columns, bypassing their result cache.
+// meta columns, bypassing their result cache. It also clears the directory's new-file marks.
 func (a *App) userRefreshPanel(panelID int, successMessage string) {
+	a.panelByID(panelID).ClearNewFileMarks()
 	if a.reloadPanel(panelID, successMessage) {
 		a.metaCtrl.RefreshPanel(panelID)
 	}
