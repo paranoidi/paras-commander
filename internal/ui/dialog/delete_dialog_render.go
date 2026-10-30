@@ -30,7 +30,7 @@ func ComputeDeleteDialogLayoutMinWidth(state FileDialogState, deleteListIconLead
 		iconLead = 0
 	}
 	lineWidth := 30
-	for _, line := range []string{state.DeleteSummary, state.DeleteWarning} {
+	for _, line := range []string{state.DeleteSummary, state.DeleteWarning, state.SchemeNote} {
 		if line == "" {
 			continue
 		}

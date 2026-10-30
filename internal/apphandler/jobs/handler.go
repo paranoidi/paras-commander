@@ -1352,6 +1352,10 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
+	if msg := indexTransferRefusal(req.Type, srcLocs, destLoc); msg != "" {
+		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
+		return
+	}
 	job := &jobs.Job{
 		ID:                  jobs.NewJobID(),
 		Type:                req.Type,
@@ -1373,6 +1377,23 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 	job.PromptDanglingDirs = req.Type == jobs.TypeMove && !job.RemoveDanglingDirs && h.config.Operations.RemoveDanglingDirs
 	h.applySizeEstimate(job, req.Sources)
 	h.commitJob(job)
+}
+
+// indexTransferRefusal explains why a transfer touching fileindex:// cannot be queued, or "": the
+// index is read-only for copies into it, and a move across its boundary would copy the file and
+// then remove only its index entry. Copying out of it and moving inside it are fine.
+func indexTransferRefusal(t jobs.Type, sources []pathloc.Path, dest pathloc.Path) string {
+	destIndex := dest.Scheme() == pathloc.SchemeFileIndex
+	for _, src := range sources {
+		srcIndex := src.Scheme() == pathloc.SchemeFileIndex
+		switch {
+		case destIndex && !srcIndex:
+			return "The fileindex is read-only: files cannot be copied or moved into it"
+		case srcIndex && !destIndex && t != jobs.TypeCopy:
+			return "Moving out of the fileindex is not supported: copy instead"
+		}
+	}
+	return ""
 }
 
 // applySizeEstimate seeds a copy or move job's byte total from what the active panel already

@@ -172,6 +172,7 @@ func (h *Handler) OpenRenameDialog(p *panel.State) {
 		RenameSourceIsDir:        entry.ResolvesToDir(),
 		RenameEncodingCandidates: renameEnc,
 		RenameEncodingSelected:   0,
+		SchemeNote:               dialog.SchemeNote(p.Path.Scheme(), dialog.FileDialogRename),
 	}
 }
 
@@ -240,6 +241,7 @@ func (h *Handler) OpenDeleteDialog(panelID int) {
 		DeleteSummary: h.DeleteDialogSummary(p, source),
 		DeleteEntries: entries,
 		Focus:         dlg.Cancel, // No is the safe default
+		SchemeNote:    dialog.SchemeNote(p.Path.Scheme(), dialog.FileDialogDelete),
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
 	h.model.FileDialog = fd

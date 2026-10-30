@@ -60,6 +60,17 @@ type Backend interface {
 	Symlink(ctx context.Context, loc pathloc.Path, target string) error
 }
 
+// TreeRemover is implemented by a backend that removes a directory and everything under it in
+// one call (the fileindex backend's index-only remove); recursive deletes use it instead of
+// listing and removing child by child.
+type TreeRemover interface {
+	RemoveTree(ctx context.Context, dir pathloc.Path) error
+}
+
+// ErrReadOnly is returned by a backend that cannot write: mkdir, symlink and writes on a
+// read-only scheme.
+var ErrReadOnly = errors.New("read-only location")
+
 // Registry maps schemes to backends.
 type Registry struct {
 	backends map[pathloc.Scheme]Backend

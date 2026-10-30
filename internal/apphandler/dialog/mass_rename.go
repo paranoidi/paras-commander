@@ -18,6 +18,10 @@ import (
 
 // OpenMassRenameDialog opens the mass-rename dialog for p's selection.
 func (h *Handler) OpenMassRenameDialog(p *panel.State) {
+	if p.Path.IsRemote() {
+		h.host.SetTransientMessage("Mass rename is not available on remote panels", ui.MessageUrgencyWarn)
+		return
+	}
 	src, err := ops.ResolveSource(p)
 	if err != nil {
 		h.host.SetErrorMessage("Mass rename", err)

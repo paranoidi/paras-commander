@@ -61,11 +61,11 @@ func ResolveQuery(panelPath, home, raw string) string {
 }
 
 // ResolveDestination resolves a typed Copy/Move/Flatten/Extract destination exactly as the dialogs
-// validate it (ResolveQuery): sftp:// URIs as given, a leading ~ against home, and a relative
+// validate it (ResolveQuery): sftp:// and fileindex:// URIs as given, a leading ~ against home, and a relative
 // path against the panel directory.
 func ResolveDestination(panel pathloc.Path, home, raw string) (pathloc.Path, error) {
 	raw = strings.TrimSpace(raw)
-	if strings.HasPrefix(raw, "sftp://") || panel.IsRemote() {
+	if pathloc.HasURIPrefix(raw) || panel.IsRemote() {
 		// ponytail: relative/~ destinations typed on a remote panel are not resolved against the
 		// remote directory; join via pathloc when needed.
 		return pathloc.Parse(raw)
@@ -82,7 +82,7 @@ func TypedDoesNotExist(panelPath, home, raw string) bool {
 	if raw == "" {
 		return false
 	}
-	if strings.HasPrefix(raw, "sftp://") {
+	if pathloc.HasURIPrefix(raw) {
 		loc, err := pathloc.Parse(raw)
 		if err != nil {
 			return true

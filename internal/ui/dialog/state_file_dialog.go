@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
@@ -236,6 +237,10 @@ type FileDialogState struct {
 	// backed by a different, session-only item source (see apphandler/dialog's massRenameHistory).
 	MassRenameHistoryPicker MassRenamePatternPickerState
 
+	// SchemeNote says what a rename or delete on the panel's scheme really changes when that is
+	// not the disk (SchemeNote); empty on local and SFTP panels.
+	SchemeNote string
+
 	// Delete confirmation (DialogType == FileDialogDelete).
 	DeleteSummary        string
 	DeleteWarning        string
@@ -254,4 +259,19 @@ type DeleteListEntry struct {
 	Name string
 	Path string
 	Type localfs.EntryType
+}
+
+// SchemeNote is the rename or delete dialog's note for a panel on scheme, for the dialog types
+// whose wording assumes the disk changes; empty when the operation does change the disk.
+func SchemeNote(scheme pathloc.Scheme, t FileDialogType) string {
+	if scheme != pathloc.SchemeFileIndex {
+		return ""
+	}
+	switch t {
+	case FileDialogRename:
+		return "Renames in the fileindex only; files on disk are not touched."
+	case FileDialogDelete:
+		return "Removes from the fileindex only; files on disk are not touched."
+	}
+	return ""
 }

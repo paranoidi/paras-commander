@@ -174,6 +174,9 @@ func fieldViewGroups(st FileDialogState) []dlg.Group {
 			items = append(items, dlg.Item{Kind: dlg.KindLabel})
 		}
 	}
+	if st.SchemeNote != "" {
+		items = append(items, dlg.Item{Kind: dlg.KindLabel}, dlg.Item{Kind: dlg.KindLabel, Label: st.SchemeNote, Style: dlg.TextWarn})
+	}
 	if st.DialogType == FileDialogExtract {
 		// The note under the destination (skipped items) keeps the warning style.
 		for _, line := range strings.Split(strings.TrimSpace(st.Message), "\n") {
@@ -265,6 +268,9 @@ func deleteViewGroups(st FileDialogState, ctx FileDialogViewContext) []dlg.Group
 	summary := []dlg.Item{{Kind: dlg.KindSeparator}}
 	if strings.TrimSpace(st.DeleteWarning) != "" {
 		summary = append(summary, dlg.Item{Kind: dlg.KindLabel, Label: strings.TrimSpace(st.DeleteWarning)})
+	}
+	if st.SchemeNote != "" {
+		summary = append(summary, dlg.Item{Kind: dlg.KindLabel, Label: st.SchemeNote, Style: dlg.TextWarn})
 	}
 	summary = append(summary, dlg.Item{Kind: dlg.KindLabel, Label: st.DeleteSummary, Center: true})
 	icon := listIconPad(ctx.IconLead)

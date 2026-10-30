@@ -372,7 +372,7 @@ func RenameFastPath(ctx context.Context, src, dest pathloc.Path) (ok bool, err e
 		return false, nil
 	}
 	if src.IsRemote() {
-		if !sameSFTPHost(src, dest) {
+		if !sameRenameRoot(src, dest) {
 			return false, nil
 		}
 		be, err := backendFor(src)

@@ -308,7 +308,7 @@ func (h *Handler) ApplyPathPickerMissing(p PathsMissingPayload) {
 // PathEntryMissing reports whether path (typed relative to panelPath/home) currently resolves
 // to an existing filesystem entry. Shared by the path picker and the bookmarks dialog.
 func PathEntryMissing(panelPath, home, path string) bool {
-	if strings.HasPrefix(path, "sftp://") {
+	if pathloc.HasURIPrefix(path) {
 		return pathpick.TypedDoesNotExist(panelPath, home, path)
 	}
 	_, err := os.Lstat(path)

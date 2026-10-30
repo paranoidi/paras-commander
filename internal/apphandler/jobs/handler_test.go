@@ -1061,3 +1061,27 @@ func TestJobsViewCtrlSpaceTogglesOperationsAtBottom(t *testing.T) {
 		t.Fatal("second Ctrl-Space did not restore the side layout")
 	}
 }
+
+func TestIndexTransferRefusal(t *testing.T) {
+	idx := pathloc.MustParse("fileindex:///orchard/harbor.txt")
+	idxDir := pathloc.MustParse("fileindex:///cedar")
+	disk := pathloc.MustParse("/tmp/meadow")
+	cases := []struct {
+		name  string
+		typ   jobs.Type
+		src   pathloc.Path
+		dest  pathloc.Path
+		allow bool
+	}{
+		{"copy out", jobs.TypeCopy, idx, disk, true},
+		{"move inside", jobs.TypeMove, idx, idxDir, true},
+		{"move out", jobs.TypeMove, idx, disk, false},
+		{"copy in", jobs.TypeCopy, disk, idxDir, false},
+		{"plain copy", jobs.TypeCopy, disk, disk, true},
+	}
+	for _, c := range cases {
+		if got := indexTransferRefusal(c.typ, []pathloc.Path{c.src}, c.dest) == ""; got != c.allow {
+			t.Errorf("%s: allowed = %v, want %v", c.name, got, c.allow)
+		}
+	}
+}

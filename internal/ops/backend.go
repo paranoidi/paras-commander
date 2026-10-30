@@ -31,6 +31,15 @@ func useLocalFastPath(src, dst pathloc.Path) bool {
 	return src.Scheme() == pathloc.SchemeFile && dst.Scheme() == pathloc.SchemeFile
 }
 
+// sameRenameRoot reports whether one backend Rename can move a to b: both on the same SFTP
+// host, or both in the fileindex (one database).
+func sameRenameRoot(a, b pathloc.Path) bool {
+	if a.Scheme() == pathloc.SchemeFileIndex && b.Scheme() == pathloc.SchemeFileIndex {
+		return true
+	}
+	return sameSFTPHost(a, b)
+}
+
 func sameSFTPHost(a, b pathloc.Path) bool {
 	if a.Scheme() != pathloc.SchemeSFTP || b.Scheme() != pathloc.SchemeSFTP {
 		return false
@@ -81,7 +90,7 @@ func resolveChild(parent pathloc.Path, name string) (pathloc.Path, error) {
 	if name == "" {
 		return pathloc.Path{}, errors.New("empty name")
 	}
-	if strings.HasPrefix(name, "sftp://") {
+	if pathloc.HasURIPrefix(name) {
 		return pathloc.Parse(name)
 	}
 	if parent.IsRemote() {
@@ -141,6 +150,13 @@ func removePathRecursive(ctx context.Context, loc pathloc.Path) error {
 			return err
 		}
 		reportRemoved(ctx, loc, false)
+		return nil
+	}
+	if tr, ok := be.(fsbackend.TreeRemover); ok {
+		if err := tr.RemoveTree(ctx, loc); err != nil {
+			return err
+		}
+		reportRemoved(ctx, loc, true)
 		return nil
 	}
 	if loc.Scheme() == pathloc.SchemeFile {

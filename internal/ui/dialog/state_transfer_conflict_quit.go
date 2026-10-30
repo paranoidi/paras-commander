@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
@@ -105,9 +106,10 @@ func (st TransferDialogState) MultiLocation() bool {
 }
 
 // DereferenceUnsupported reports whether "Dereference symlinks" should be disabled:
-// SFTP has no inode-equivalent identity to dereference against, on either side of the copy.
+// a non-local scheme (SFTP, fileindex) has no inode-equivalent identity to dereference against,
+// on either side of the copy.
 func (st TransferDialogState) DereferenceUnsupported() bool {
-	return st.SourceIsRemote || strings.HasPrefix(strings.TrimSpace(st.Destination.Value), "sftp://")
+	return st.SourceIsRemote || pathloc.HasURIPrefix(strings.TrimSpace(st.Destination.Value))
 }
 
 // ConflictDialogState holds the quick job-blocker answer dialog (Ctrl+Q).
