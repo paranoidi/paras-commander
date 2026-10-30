@@ -129,7 +129,7 @@ func (b *Backend) List(_ context.Context, dir pathloc.Path) ([]fsbackend.Entry, 
 }
 
 // Stat stats an indexed directory or file; the index root always exists.
-func (b *Backend) Stat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
+func (b *Backend) Stat(_ context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
 	host, err := pathloc.IndexHostPath(loc)
 	if err != nil {
 		return fsbackend.Entry{}, err
@@ -143,19 +143,14 @@ func (b *Backend) Stat(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, 
 	} else if isDir || host == "/" {
 		return dirEntry(loc, loc.Base()), nil
 	}
-	parent := loc.Parent()
-	if !parent.Equal(loc) {
-		entries, err := b.List(ctx, parent)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fsbackend.Entry{}, err
-		}
-		for _, e := range entries {
-			if e.Name == loc.Base() && e.Type == fsbackend.EntryFile {
-				return e, nil
-			}
-		}
+	rec, found, err := d.FileInfo(host)
+	if err != nil {
+		return fsbackend.Entry{}, err
 	}
-	return fsbackend.Entry{}, &fs.PathError{Op: "stat", Path: loc.String(), Err: fs.ErrNotExist}
+	if !found {
+		return fsbackend.Entry{}, &fs.PathError{Op: "stat", Path: loc.String(), Err: fs.ErrNotExist}
+	}
+	return fileEntry(loc, db.ListedFile{Name: loc.Base(), Size: rec.Size, Mtime: rec.Mtime}), nil
 }
 
 // OpenRead opens the real file the index entry names, so copying out of the index goes through
@@ -223,7 +218,8 @@ func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
 	} else if isDir {
 		return b.RemoveTree(ctx, loc)
 	}
-	return removeInstance(d, host)
+	_, err = d.RemoveInstance(host)
+	return err
 }
 
 // RemoveTree removes an indexed directory and everything under it from the index.
@@ -237,26 +233,6 @@ func (b *Backend) RemoveTree(_ context.Context, dir pathloc.Path) error {
 		return err
 	}
 	_, err = d.RemoveTree(host)
-	return err
-}
-
-// removeInstance deletes the instance at host and the file and dir rows it leaves orphaned.
-// ponytail: fileindex has no public RemoveInstance; this mirrors RemoveTree for one instance.
-func removeInstance(d *db.DB, host string) error {
-	id, found, err := d.InstanceID(host)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return &fs.PathError{Op: "remove", Path: host, Err: fs.ErrNotExist}
-	}
-	if _, err := d.Exec("DELETE FROM instance WHERE id = ?", id); err != nil {
-		return err
-	}
-	if _, err := d.DeleteOrphanedFiles(); err != nil {
-		return err
-	}
-	_, err = d.DeleteOrphanedDirs()
 	return err
 }
 
