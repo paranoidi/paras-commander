@@ -208,7 +208,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if ctx.ShowSelectionSizeOnBottom && state.SelectedPathCount() > 0 {
 		selectionSizeLabel, _ = SelectionSizeLabel(
 			&state,
-			state.Path.IsRemote(),
+			!state.Path.IsLocal(),
 			display.Painter,
 			panelStyle.Styles.IconWorking(),
 		)

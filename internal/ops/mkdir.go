@@ -40,7 +40,7 @@ func PlanMkdir(input string, panelPath string) (MkdirPlan, error) {
 	}
 
 	name := input
-	if !parent.IsRemote() {
+	if parent.IsLocal() {
 		if host, err := parent.FilePath(); err == nil {
 			if destHost, err := dest.FilePath(); err == nil {
 				if rel, err := filepath.Rel(host, destHost); err == nil {
@@ -69,7 +69,7 @@ func ExecuteMkdir(ctx context.Context, plan MkdirPlan) error {
 	if err != nil {
 		return err
 	}
-	if loc.IsRemote() {
+	if !loc.IsLocal() {
 		return be.Mkdir(ctx, loc, 0o755)
 	}
 	host, err := loc.FilePath()

@@ -72,7 +72,7 @@ func drawSelectedStrip(
 	if showSelectionSizeOnBottom {
 		if raw, ok := SelectionSizeLabel(
 			&state,
-			state.Path.IsRemote(),
+			!state.Path.IsLocal(),
 			painter,
 			styles.IconWorking(),
 		); ok {

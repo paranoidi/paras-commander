@@ -82,7 +82,7 @@ func installOpsBackend(t *testing.T, be fsbackend.Backend) {
 	t.Helper()
 	prev := backendFor
 	backendFor = func(loc pathloc.Path) (fsbackend.Backend, error) {
-		if loc.IsRemote() {
+		if !loc.IsLocal() {
 			return be, nil
 		}
 		return prev(loc)

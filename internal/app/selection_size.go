@@ -31,7 +31,7 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		a.selectionSizeScanDebounce[panelID].Invalidate()
 		return
 	}
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		a.selectionSizeScanFP[panelID] = ""
 		a.selectionSizeScanGen[panelID] = 0
 		a.selectionSizeScanPath[panelID] = ""

@@ -100,7 +100,7 @@ func ElevationCandidate(err error) bool {
 
 // hostPathOf returns loc's host path, or "" for a non-local location (never elevated).
 func hostPathOf(loc pathloc.Path) string {
-	if loc.IsRemote() || loc.Scheme() != pathloc.SchemeFile {
+	if !loc.IsLocal() {
 		return ""
 	}
 	p, err := loc.FilePath()

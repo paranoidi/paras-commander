@@ -282,7 +282,7 @@ waitLoop:
 	// counting walk also skips symlink entries' own sizes and ignores .goduignore where the
 	// disk-usage walk does the opposite, so the cached total can be off by a few bytes — not
 	// worth reconciling.
-	if sink != nil && job.Type == TypeCopy && !job.DereferenceSymlinks && len(job.Sources) == 1 && !job.Sources[0].IsRemote() {
+	if sink != nil && job.Type == TypeCopy && !job.DereferenceSymlinks && len(job.Sources) == 1 && job.Sources[0].IsLocal() {
 		if p, err := job.Sources[0].FilePath(); err == nil {
 			files, _, bytes := producer.Totals()
 			sink(p, files, bytes)

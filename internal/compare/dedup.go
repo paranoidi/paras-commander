@@ -247,7 +247,7 @@ func (s *DedupSession) publish(snap DedupSnapshot) {
 func (s *DedupSession) run(ctx context.Context) {
 	defer s.wg.Done()
 
-	if s.root.IsRemote() {
+	if !s.root.IsLocal() {
 		s.publish(DedupSnapshot{Root: s.root, Phase: DedupError, Err: errRemoteNotSupported.Error()})
 		return
 	}

@@ -135,7 +135,7 @@ func (h *Handler) Open() {
 	if h.model.ActivePanel == ui.SecondaryPanel {
 		p = &h.model.Secondary
 	}
-	if len(p.SelectedDirPaths) > 0 && !path.IsRemote() {
+	if len(p.SelectedDirPaths) > 0 && path.IsLocal() {
 		dirs := slices.Sorted(maps.Keys(p.SelectedDirPaths))
 		h.model.DedupReturnDialog = dialog.DedupReturnDialogState{Open: true, Dir: path.String(), ScopeDirs: dirs}
 		return
@@ -285,7 +285,7 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		h.host.SetTransientMessage("Find duplicates: panel needs a path", ui.MessageUrgencyError)
 		return
 	}
-	if root.IsRemote() {
+	if !root.IsLocal() {
 		h.host.SetTransientMessage("Find duplicates: remote paths not supported", ui.MessageUrgencyError)
 		return
 	}

@@ -684,7 +684,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	jobState.SetSourceSizeSink(duEngine.SetSize)
 	jobState.StartWorker(app.jobStopCh)
 	suppressHeavyPathProbes := func(loc pathloc.Path) bool {
-		if loc.IsRemote() {
+		if !loc.IsLocal() {
 			return true
 		}
 		host, err := loc.FilePath()

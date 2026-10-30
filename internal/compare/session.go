@@ -120,7 +120,7 @@ func (s *Session) publish(snap Snapshot) {
 func (s *Session) run(ctx context.Context) {
 	defer s.wg.Done()
 
-	if s.primaryRoot.IsRemote() || s.secondaryRoot.IsRemote() {
+	if !s.primaryRoot.IsLocal() || !s.secondaryRoot.IsLocal() {
 		s.publish(Snapshot{
 			PrimaryRoot:   s.primaryRoot,
 			SecondaryRoot: s.secondaryRoot,

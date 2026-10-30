@@ -267,7 +267,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 		return
 	}
 	p := a.panelByID(panelID)
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		a.setTransientMessage("Disk usage is not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}
@@ -296,7 +296,7 @@ func (a *App) scanCursorDirSize() {
 		return
 	}
 	p := a.activePanel()
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		a.setTransientMessage("Disk usage is not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}

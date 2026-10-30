@@ -59,7 +59,7 @@ func (h *Handler) DeleteDialogSummary(p *panel.State, source ops.Source) string 
 
 func (h *Handler) deleteDialogSummaryFromPruned(p *panel.State, pruned []string) string {
 	byPath := p.EntriesByPath()
-	remote := p.Path.IsRemote()
+	remote := !p.Path.IsLocal()
 	files, bytes, pending := ui.PathsDeleteImpact(pruned, byPath, remote, h.diskUsage)
 	return ui.FormatDeleteImpactSummary(files, bytes, pending, h.host.Styles().IconWorking())
 }
@@ -68,7 +68,7 @@ func (h *Handler) deleteDialogSummaryFromPruned(p *panel.State, pruned []string)
 // root keys are dropped (no stat, no full cache sweep): this runs on the UI goroutine, and a
 // subtree sweep over a cache grown by a large running scan stalls the dialog for seconds.
 func (h *Handler) invalidateDeleteDialogDiskCache(p *panel.State, pruned []string) {
-	if h.diskUsage == nil || p.Path.IsRemote() {
+	if h.diskUsage == nil || !p.Path.IsLocal() {
 		return
 	}
 	h.diskUsage.InvalidateRoots(pruned)
@@ -108,7 +108,7 @@ func (h *Handler) ReconcileDeleteDialogScans() {
 	if !ok {
 		return
 	}
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		h.deleteDialogScanFP = ""
 		h.deleteDialogScanDebounce.Invalidate()
 		return

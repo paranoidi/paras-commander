@@ -112,7 +112,7 @@ func (a *App) resolveLocalEditFilePath() (string, error) {
 		return "", fmt.Errorf("edit is only available in the file browser")
 	}
 	p := a.activePanel()
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		return "", fmt.Errorf("edit is not available on remote panels")
 	}
 	path, mode := a.editTargetFilePath(p)

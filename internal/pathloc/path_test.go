@@ -44,7 +44,7 @@ func TestParseSFTP(t *testing.T) {
 		if p.String() != tc.want {
 			t.Fatalf("%q got %q want %q", tc.in, p.String(), tc.want)
 		}
-		if !p.IsRemote() {
+		if p.IsLocal() {
 			t.Fatalf("%q should be remote", tc.in)
 		}
 	}

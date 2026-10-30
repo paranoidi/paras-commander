@@ -65,7 +65,7 @@ func ResolveQuery(panelPath, home, raw string) string {
 // path against the panel directory.
 func ResolveDestination(panel pathloc.Path, home, raw string) (pathloc.Path, error) {
 	raw = strings.TrimSpace(raw)
-	if pathloc.HasURIPrefix(raw) || panel.IsRemote() {
+	if pathloc.HasURIPrefix(raw) || !panel.IsLocal() {
 		// ponytail: relative/~ destinations typed on a remote panel are not resolved against the
 		// remote directory; join via pathloc when needed.
 		return pathloc.Parse(raw)

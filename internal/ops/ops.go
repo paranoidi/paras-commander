@@ -371,7 +371,7 @@ func RenameFastPath(ctx context.Context, src, dest pathloc.Path) (ok bool, err e
 	if src.Scheme() != dest.Scheme() {
 		return false, nil
 	}
-	if src.IsRemote() {
+	if !src.IsLocal() {
 		if !sameRenameRoot(src, dest) {
 			return false, nil
 		}
@@ -563,7 +563,7 @@ func buildPlan(ctx context.Context, sources []pathloc.Path, destination pathloc.
 		if DestinationUnderSource(srcLoc, dstLoc) {
 			return fmt.Errorf("cannot copy %s into a subdirectory of itself", srcLoc)
 		}
-		if srcLoc.IsRemote() || destination.IsRemote() || !useLocalFastPath(srcLoc, dstLoc) {
+		if !srcLoc.IsLocal() || !destination.IsLocal() || !useLocalFastPath(srcLoc, dstLoc) {
 			if err := planRemoteSource(ctx, srcLoc, dstLoc, followDirChildren, srcOpts, srcSink, afterVisit); err != nil {
 				return err
 			}

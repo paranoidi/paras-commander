@@ -31,7 +31,7 @@ func (a *App) dropToShell() {
 		return
 	}
 	p := a.activePanel()
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		a.setErrorMessage("Shell", fmt.Errorf("shell is not available on remote panels"))
 		return
 	}
@@ -223,7 +223,7 @@ func (a *App) shellInsertPaths() {
 		return
 	}
 	p := a.activePanel()
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		a.setTransientMessage("Send paths to shell is not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}
@@ -274,7 +274,7 @@ func shellInsertPathList(p *panel.State) []string {
 // unavailable (the persistent shell then keeps its current cwd).
 func (a *App) localActivePanelDir() string {
 	p := a.activePanel()
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		return ""
 	}
 	dir, err := p.Path.FilePath()

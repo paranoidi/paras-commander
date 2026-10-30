@@ -27,7 +27,7 @@ type PathProbes struct {
 // git work-tree lookup always runs. Remote locations probe nothing.
 func ProbeListingPath(loc pathloc.Path, includeVolume bool) PathProbes {
 	var pr PathProbes
-	if loc.IsRemote() {
+	if !loc.IsLocal() {
 		return pr
 	}
 	host, err := loc.FilePath()

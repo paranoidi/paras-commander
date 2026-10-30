@@ -159,7 +159,7 @@ func (h *Handler) applyCopyDefaults(st *dialog.TransferDialogState) {
 	st.PreservePermissions = cfg.Operations.PreservePermissions
 	st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
 	st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
-	st.SourceIsRemote = h.host.ActivePanel().Path.IsRemote()
+	st.SourceIsRemote = !h.host.ActivePanel().Path.IsLocal()
 }
 
 // transferViewContext is what dialog.TransferView needs besides the state: the screen layout, the

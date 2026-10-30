@@ -47,7 +47,7 @@ func (a *App) openFolderColorMenu(panelID int) {
 	if p == nil {
 		return
 	}
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		a.setTransientMessage("Folder color: not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}

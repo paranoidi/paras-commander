@@ -315,7 +315,7 @@ func (h *Handler) openDanglingDirsDeleteDialog(dirs []string) {
 }
 
 func (h *Handler) openChmodDialog(p *panel.State) {
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		h.host.SetTransientMessage("Chmod is not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}
@@ -336,7 +336,7 @@ func (h *Handler) openChmodDialog(p *panel.State) {
 }
 
 func (h *Handler) openChownDialog(p *panel.State) {
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		h.host.SetTransientMessage("Chown is not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}
@@ -357,7 +357,7 @@ func (h *Handler) openChownDialog(p *panel.State) {
 }
 
 func (h *Handler) openSymlinkDialog(p *panel.State) {
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		h.host.SetTransientMessage("Symlink is not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}
@@ -381,7 +381,7 @@ func (h *Handler) openSymlinkDialog(p *panel.State) {
 }
 
 func (h *Handler) openHardlinkDialog(p *panel.State) {
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		h.host.SetTransientMessage("Hardlink is not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}
@@ -574,7 +574,7 @@ func (h *Handler) executeMkdir() {
 	// panels use the listing snapshot (no Stat) so reauth cannot deadlock the loop.
 	var sources []string
 	if action == dialog.MkdirActionCreateCopySelect || action == dialog.MkdirActionCreateMoveSelect {
-		if p.Path.IsRemote() {
+		if !p.Path.IsLocal() {
 			sources = selectedPanelSources(p)
 			if len(sources) == 0 {
 				h.host.SetErrorMessage("Mkdir", &ops.Error{Op: "mkdir", Text: "no files selected for transfer"})

@@ -83,7 +83,7 @@ func resolveChild(parent pathloc.Path, name string) (pathloc.Path, error) {
 	if pathloc.HasURIPrefix(name) {
 		return pathloc.Parse(name)
 	}
-	if parent.IsRemote() {
+	if !parent.IsLocal() {
 		if strings.Contains(name, "/") || strings.Contains(name, string(filepath.Separator)) {
 			return pathloc.Path{}, fmt.Errorf("name must be a single path element")
 		}
@@ -459,7 +459,7 @@ func entryFromPathString(path string) (localfs.Entry, error) {
 	if err != nil {
 		return localfs.Entry{}, err
 	}
-	if loc.IsRemote() {
+	if !loc.IsLocal() {
 		ent, err := statEntry(context.Background(), loc)
 		if err != nil {
 			return localfs.Entry{}, err

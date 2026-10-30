@@ -21,7 +21,7 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 	if a.model.ViewMode != ui.ViewBrowser || !a.config.Panels.RunExecutablesOnEnter {
 		return "", false
 	}
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		return "", false
 	}
 
@@ -104,7 +104,7 @@ func (a *App) runExecutableFromPanel(path string) {
 		return
 	}
 	p := a.activePanel()
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		a.setTransientMessage("Run is not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}

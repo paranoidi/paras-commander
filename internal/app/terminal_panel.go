@@ -107,7 +107,7 @@ func (a *App) openTerminalPanel(focus bool) {
 		a.setTransientMessage("Terminal panel requires the persistent shell", ui.MessageUrgencyWarn)
 		return
 	}
-	if a.activePanel().Path.IsRemote() {
+	if !a.activePanel().Path.IsLocal() {
 		a.setTransientMessage("Terminal panel is not available on remote panels", ui.MessageUrgencyWarn)
 		return
 	}
@@ -161,7 +161,7 @@ func (a *App) closeTerminalPanel() {
 
 // syncPanelFromSubshellCwd mirrors [shell].sync_cwd_on_return when focus leaves the shell.
 func (a *App) syncPanelFromSubshellCwd() {
-	if !a.config.Shell.SyncCwdOnReturn || a.subshell == nil || a.activePanel().Path.IsRemote() {
+	if !a.config.Shell.SyncCwdOnReturn || a.subshell == nil || !a.activePanel().Path.IsLocal() {
 		return
 	}
 	if cwd, err := a.subshell.Cwd(); err == nil {

@@ -86,9 +86,11 @@ func (p Path) IsZero() bool {
 	return p.s == ""
 }
 
-// IsRemote reports whether the location is not on the local host file backend.
-func (p Path) IsRemote() bool {
-	return p.Scheme() != SchemeFile
+// IsLocal reports whether the location is served by the local file backend
+// (plain host paths). SFTP and fileindex:// are not: their files go through
+// their fsbackend.Backend.
+func (p Path) IsLocal() bool {
+	return p.Scheme() == SchemeFile
 }
 
 // Equal reports whether two paths denote the same location.

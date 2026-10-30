@@ -171,7 +171,7 @@ func (s *State) finishTreeChildLoadApply(dirID string, viewportRows int) bool {
 // the cwd listing that put the panel in an active-git-column state, so this reuses the work-tree
 // root prepareGitColumn already resolved (s.gitWorkRoot) instead of recomputing it per directory.
 func (s *State) scheduleTreeChildGitStatus(dirID string, entries []localfs.Entry) {
-	if s.Path.IsRemote() || !s.GitColumnActive || s.ScheduleGitStatus == nil || len(entries) == 0 {
+	if !s.Path.IsLocal() || !s.GitColumnActive || s.ScheduleGitStatus == nil || len(entries) == 0 {
 		return
 	}
 	paths := make([]gitstatus.ListingPaths, len(entries))

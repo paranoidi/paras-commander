@@ -55,7 +55,7 @@ func FetchListing(ctx context.Context, snap ListingRefreshSnapshot) ([]fsbackend
 }
 
 func fetchListingAt(ctx context.Context, snap ListingRefreshSnapshot, loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
-	if loc.IsRemote() {
+	if !loc.IsLocal() {
 		be, berr := fsbackend.Default().Backend(loc)
 		if berr != nil {
 			return nil, pathloc.Path{}, false, false, berr

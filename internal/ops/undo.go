@@ -197,7 +197,7 @@ func undoRenameBatch(steps []UndoStep) ([]MassRenameRow, bool) {
 	}
 	rows := make([]MassRenameRow, 0, len(steps))
 	for _, s := range steps {
-		if s.Kind != UndoMoveBack || s.Path.IsRemote() || s.From.IsRemote() {
+		if s.Kind != UndoMoveBack || !s.Path.IsLocal() || !s.From.IsLocal() {
 			return nil, false
 		}
 		from, err1 := s.Path.FilePath()

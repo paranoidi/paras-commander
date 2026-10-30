@@ -85,7 +85,7 @@ type extractProbeApply struct {
 
 func locationIsRemote(raw string) bool {
 	loc, err := pathloc.Parse(strings.TrimSpace(raw))
-	return err == nil && loc.IsRemote()
+	return err == nil && !loc.IsLocal()
 }
 
 func (h *Handler) useRemoteFileOp(paths ...string) bool {
@@ -381,7 +381,7 @@ func (h *Handler) destIsDirForEnqueue(dest string) bool {
 		return v
 	}
 	loc, err := pathloc.Parse(dest)
-	if err != nil || loc.IsRemote() {
+	if err != nil || !loc.IsLocal() {
 		return false
 	}
 	return ops.DestinationIsDirAtEnqueue(loc)

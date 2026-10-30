@@ -4,8 +4,8 @@ import "testing"
 
 func TestFileIndexPathRules(t *testing.T) {
 	p := MustParse("fileindex:///orchard/lantern//meadow.txt")
-	if p.Scheme() != SchemeFileIndex || !p.IsRemote() {
-		t.Fatalf("scheme = %s remote = %v", p.Scheme(), p.IsRemote())
+	if p.Scheme() != SchemeFileIndex || p.IsLocal() {
+		t.Fatalf("scheme = %s remote = %v", p.Scheme(), !p.IsLocal())
 	}
 	if p.String() != "fileindex:///orchard/lantern/meadow.txt" {
 		t.Fatalf("String = %q, want the cleaned host path", p.String())
