@@ -306,3 +306,25 @@ func TestScanTaskThroughJobQueue(t *testing.T) {
 		t.Fatalf("job = %s %d/%d (%s)", got.Status, got.DoneFiles, got.TotalFiles, got.Error)
 	}
 }
+
+func TestCreateMakesUsableIndexOnce(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "orchard", "index.sqlite")
+	x := testIndex(t, path)
+	if _, err := x.DB(); !errors.Is(err, ErrNoIndex) {
+		t.Fatalf("before create = %v", err)
+	}
+	got, err := x.Create()
+	if err != nil || got != path {
+		t.Fatalf("create = %q, %v", got, err)
+	}
+	d, err := x.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := d.RequireSchema(); err != nil {
+		t.Fatalf("created schema: %v", err)
+	}
+	if _, err := x.Create(); !errors.Is(err, ErrIndexExists) {
+		t.Fatalf("second create = %v, want ErrIndexExists", err)
+	}
+}

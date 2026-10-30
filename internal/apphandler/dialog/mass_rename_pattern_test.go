@@ -54,6 +54,7 @@ func (f *fakeMassRenamePatternHost) OpenFileInExternalEditor(string) error      
 func (f *fakeMassRenamePatternHost) ExecuteSFTPPassword()                          {}
 func (f *fakeMassRenamePatternHost) CancelSFTPPassword()                           {}
 func (f *fakeMassRenamePatternHost) ExecuteIndexTags()                             {}
+func (f *fakeMassRenamePatternHost) ExecuteIndexInit()                             {}
 func (f *fakeMassRenamePatternHost) HandlePathPickerScrollingQueryKey(*tcell.EventKey) bool {
 	return false
 }

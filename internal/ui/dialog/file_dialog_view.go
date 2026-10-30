@@ -124,6 +124,17 @@ func fileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 		spec.Groups = deleteViewGroups(st, ctx)
 		spec.MaxHeight = listDialogMaxHeight(ctx.Layout.Height)
 		spec.ScrollbarStyle = ctx.ScrollbarStyle
+	case st.DialogType == FileDialogIndexInit:
+		spec.Buttons = []dlg.Button{
+			{ID: dlg.OK, Label: "Yes", Mnemonic: 'Y'},
+			{ID: dlg.Cancel, Label: "No", Mnemonic: 'N'},
+		}
+		spec.Groups = []dlg.Group{{Columns: [][]dlg.Item{{
+			{Kind: dlg.KindLabel, Label: "No fileindex database at:"},
+			{Kind: dlg.KindLabel, Label: st.Message, Fit: dlg.FitPath, Indent: 2},
+			{Kind: dlg.KindLabel},
+			{Kind: dlg.KindLabel, Label: "Create an empty one?"},
+		}}}}
 	case renameToolActive(st):
 		spec.Groups = renameToolViewGroups(st)
 	case st.DialogType == FileDialogAddBookmark:

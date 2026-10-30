@@ -7,6 +7,7 @@ package fileindex
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,7 +23,8 @@ import (
 var ErrNoIndex = errors.New("no fileindex database")
 
 // Index is the shared fileindex database handle. DB opens it once, lazily, and checks its
-// schema; pc never creates or migrates the database.
+// schema. pc never migrates the database; it creates an empty one only through Create, which
+// the UI calls when the user confirms.
 type Index struct {
 	cfg config.FileIndexConfig
 	// configPath is fileindex's config.ini (ficonfig.DefaultPath() unless a test sets it).
@@ -105,6 +107,36 @@ func (x *Index) open() (*db.DB, error) {
 		return nil, fmt.Errorf("fileindex %s: %w", path, err)
 	}
 	return d, nil
+}
+
+// ErrIndexExists is returned by Create when a database is already at the path.
+var ErrIndexExists = errors.New("fileindex database already exists")
+
+// Create makes an empty, schema-current database at DatabasePath (fileindex's `init` on a new
+// file) and keeps it open for DB. It refuses an existing file, so it never migrates one.
+func (x *Index) Create() (string, error) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	path, err := x.DatabasePath()
+	if err != nil {
+		return "", fmt.Errorf("fileindex: %w", err)
+	}
+	if _, err := os.Stat(path); err == nil {
+		return path, fmt.Errorf("%w at %s", ErrIndexExists, path)
+	}
+	d, err := db.Open(path)
+	if err != nil {
+		return path, fmt.Errorf("fileindex: %w", err)
+	}
+	if err := d.Init(io.Discard); err != nil {
+		_ = d.Close()
+		return path, fmt.Errorf("fileindex: create %s: %w", path, err)
+	}
+	if x.db != nil {
+		_ = x.db.Close()
+	}
+	x.db, x.err = d, nil
+	return path, nil
 }
 
 // Close closes the database if it was opened.

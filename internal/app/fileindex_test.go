@@ -72,7 +72,7 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 }
 
 func TestFileIndexMenuOpensOnLessThanAndRunsLetter(t *testing.T) {
-	a, _, _, _ := fileIndexApp(t)
+	a, screen, _, _ := fileIndexApp(t)
 	cursorTo(t, a, "harbor.txt")
 	a.handleKey(tcell.NewEventKey(tcell.KeyRune, '<', tcell.ModNone))
 	if !a.leaderMenuOpen(ui.LeaderMenuFileIndex) {
@@ -82,6 +82,7 @@ func TestFileIndexMenuOpensOnLessThanAndRunsLetter(t *testing.T) {
 	if a.model.LeaderMenu.Open {
 		t.Fatal("activating an entry should close the menu")
 	}
+	waitTagPrompt(t, a, screen)
 	if fd := a.model.FileDialog; !fd.Open || fd.DialogType != dialog.FileDialogIndexTags || fd.IndexTagsRemove {
 		t.Fatalf("dialog = %+v, want the add-tags prompt", fd)
 	}
@@ -131,6 +132,14 @@ func fileIndexApp(t *testing.T) (*App, tcell.SimulationScreen, string, string) {
 	return a, screen, dir, dbPath
 }
 
+// waitTagPrompt lands the tag prompt, which opens once the index check comes back.
+func waitTagPrompt(t *testing.T, a *App, screen tcell.SimulationScreen) {
+	t.Helper()
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		return a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogIndexTags
+	})
+}
+
 func cursorTo(t *testing.T, a *App, name string) {
 	t.Helper()
 	p := a.activePanel()
@@ -148,6 +157,7 @@ func TestFileIndexTagPromptTagsCursorEntry(t *testing.T) {
 	cursorTo(t, a, "harbor.txt")
 
 	a.dispatch(keymap.ActionFileIndexTagAdd)
+	waitTagPrompt(t, a, screen)
 	fd := a.model.FileDialog
 	if !fd.Open || fd.DialogType != dialog.FileDialogIndexTags || fd.IndexTagsRemove {
 		t.Fatalf("dialog = %+v, want the add-tags prompt", fd)
@@ -217,15 +227,47 @@ func TestFileIndexOpenAndReveal(t *testing.T) {
 	}
 }
 
-func TestFileIndexMissingIndexReportedOnce(t *testing.T) {
+func TestFileIndexMissingIndexAsksToCreate(t *testing.T) {
 	screen := newScreen(t, 100, 30)
-	a := newTestApp(t, screen, testOptions(t.TempDir()))
+	dir := t.TempDir()
+	opts := testOptions(dir)
+	dbPath := opts.Config.FileIndex.Database
+	a := newTestApp(t, screen, opts)
+	t.Cleanup(func() { _ = a.fileIndex.Close() })
+	initPrompt := func() bool {
+		fd := a.model.FileDialog
+		return fd.Open && fd.DialogType == dialog.FileDialogIndexInit
+	}
+
+	// No: nothing is created and the action does not run.
 	a.dispatch(keymap.ActionFileIndexOpen)
-	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
-		return strings.Contains(a.model.Message, "no fileindex database")
-	})
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, initPrompt)
+	if a.model.FileDialog.Message != dbPath {
+		t.Fatalf("prompt path = %q, want %q", a.model.FileDialog.Message, dbPath)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if a.model.FileDialog.Open {
+		t.Fatal("Esc should close the prompt")
+	}
+	if _, err := os.Stat(dbPath); !os.IsNotExist(err) {
+		t.Fatal("declining must not create the database")
+	}
 	if a.activePanel().Path.Scheme() == pathloc.SchemeFileIndex {
 		t.Fatal("panel must stay put without an index")
+	}
+
+	// Yes: the database is created and the waiting action continues.
+	a.dispatch(keymap.ActionFileIndexTagAdd)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, initPrompt)
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		return a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogIndexTags
+	})
+	if _, err := os.Stat(dbPath); err != nil {
+		t.Fatalf("database not created: %v", err)
+	}
+	if !strings.HasPrefix(a.model.Message, "Created fileindex database") {
+		t.Fatalf("message = %q", a.model.Message)
 	}
 	if a.model.ViewMode != ui.ViewBrowser {
 		t.Fatalf("view = %v", a.model.ViewMode)

@@ -28,6 +28,8 @@ const (
 	FileDialogSFTPPassword
 	// FileDialogIndexTags adds or removes fileindex tags (apphandler/fileindex).
 	FileDialogIndexTags
+	// FileDialogIndexInit asks whether to create the missing fileindex database at Message.
+	FileDialogIndexInit
 )
 
 // MassRenameModeUI selects literal vs regexp transform in the mass rename dialog.

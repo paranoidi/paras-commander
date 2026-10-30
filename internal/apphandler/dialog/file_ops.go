@@ -433,6 +433,8 @@ func (h *Handler) ExecuteFileDialog() {
 		h.host.ExecuteSFTPPassword()
 	case dialog.FileDialogIndexTags:
 		h.host.ExecuteIndexTags()
+	case dialog.FileDialogIndexInit:
+		h.host.ExecuteIndexInit()
 	default:
 		h.CloseFileDialog()
 	}

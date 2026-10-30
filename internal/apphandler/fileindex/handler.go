@@ -52,19 +52,28 @@ type Handler struct {
 	screen tcell.Screen
 	model  *ui.Model
 	index  *fi.Index
+	// pendingInit is the action waiting on the open "create the database?" prompt (nil: none).
+	pendingInit func()
 }
 
 // New constructs the handler and routes the index's one-time open failure to HandleOpenError.
 func New(deps Deps) *Handler {
 	h := &Handler{host: deps.Host, screen: deps.Screen, model: deps.Model, index: deps.Index}
 	if h.index != nil {
-		h.index.OnOpenError = func(err error) { h.post(OpenErrorPayload{Err: err}) }
+		h.index.OnOpenError = func(err error) {
+			path, _ := h.index.DatabasePath()
+			h.post(OpenErrorPayload{Err: err, Path: path})
+		}
 	}
 	return h
 }
 
-// OpenErrorPayload carries the index's first open failure (no index, wrong schema).
-type OpenErrorPayload struct{ Err error }
+// OpenErrorPayload carries the index's first open failure (no index, wrong schema) and the
+// database path.
+type OpenErrorPayload struct {
+	Err  error
+	Path string
+}
 
 // TagsPayload carries the outcome of a tag edit.
 type TagsPayload struct {
@@ -88,15 +97,15 @@ func (h *Handler) Dispatch(actionID string) bool {
 	case keymap.ActionFileIndexMenu:
 		h.host.ToggleFileIndexMenu()
 	case keymap.ActionFileIndexScan:
-		h.Scan()
+		h.withIndex(h.Scan)
 	case keymap.ActionFileIndexPrune:
-		h.Prune()
+		h.withIndex(h.Prune)
 	case keymap.ActionFileIndexTagAdd:
-		h.OpenTagDialog(false)
+		h.withIndex(func() { h.OpenTagDialog(false) })
 	case keymap.ActionFileIndexTagRemove:
-		h.OpenTagDialog(true)
+		h.withIndex(func() { h.OpenTagDialog(true) })
 	case keymap.ActionFileIndexOpen:
-		h.Open()
+		h.withIndex(h.Open)
 	case keymap.ActionFileIndexReveal:
 		h.Reveal()
 	default:
@@ -111,6 +120,10 @@ func (h *Handler) HandleWake(data any) bool {
 	switch p := data.(type) {
 	case OpenErrorPayload:
 		h.HandleOpenError(p)
+	case ReadyPayload:
+		h.HandleReady(p)
+	case InitPayload:
+		h.HandleInit(p)
 	case TagsPayload:
 		h.HandleTags(p)
 	case NavigatePayload:
@@ -129,8 +142,14 @@ func (h *Handler) post(payload any) {
 
 const messageTitle = "fileindex"
 
-// HandleOpenError reports the index open failure once, to the Messages log.
+// HandleOpenError handles the index's first open failure, from whatever touched it first (an
+// action, the tags column, a fileindex:// panel): a missing database asks whether to create it,
+// any other failure goes to the Messages log once.
 func (h *Handler) HandleOpenError(p OpenErrorPayload) {
+	if errors.Is(p.Err, fi.ErrNoIndex) {
+		h.promptInit(p.Path, nil)
+		return
+	}
 	h.host.SetErrorMessage(messageTitle, p.Err)
 }
 

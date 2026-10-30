@@ -5,15 +5,20 @@ SQLite index of your files by content hash, with tags. In pc you can browse the
 index like a directory tree, show tags as a panel column, add and remove tags,
 and run scans and prunes as background jobs.
 
-pc reads and changes an index that the `fileindex` command created. Run
-`fileindex init` once before using it from pc; pc never creates or upgrades the
-database. The database path and which files a scan includes come from
-fileindex's `~/.config/fileindex/config.ini`, so the command and pc index the
-same files. `[fileindex]` in pc's `config.toml` can override the database path
-and the number of hash workers (see [Config](config.md#fileindex)).
+pc shares its index with the `fileindex` command. Set the database location
+with `database` under `[fileindex]` in pc's `config.toml`; left empty, pc uses
+the path from fileindex's `~/.config/fileindex/config.ini`. Which files a scan
+includes always comes from that `config.ini`, so the command and pc index the
+same files. `workers` sets the number of hash workers (see
+[Config](config.md#fileindex)).
 
-When there is no index, or its version does not match, pc reports it once in
-the Messages log and each fileindex action says so instead of running.
+When there is no database at that location, the first fileindex action (or
+the tags column, or a `fileindex://` path) asks whether to create an empty one.
+**Yes** creates it and carries on with the action; **No** leaves everything as
+it was, and the next action asks again. pc never upgrades an existing
+database: one from another fileindex version is reported in the Messages log,
+and fileindex actions say so instead of running (run `fileindex init` to
+upgrade it).
 
 ## Actions
 

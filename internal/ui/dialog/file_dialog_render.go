@@ -115,6 +115,8 @@ func fileDialogTitle(dialogType FileDialogType) string {
 		return "SSH password"
 	case FileDialogIndexTags:
 		return "Add tags"
+	case FileDialogIndexInit:
+		return "fileindex"
 	default:
 		return ""
 	}
