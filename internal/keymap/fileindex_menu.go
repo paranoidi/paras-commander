@@ -22,9 +22,8 @@ type FileIndexMenuEntry struct {
 	Label    string
 }
 
-// DefaultFileIndexMenuKeys returns built-in default fileindex-menu letters per action. Each
-// matches its action's default chord letter: lowercase for a Ctrl chord, uppercase for an
-// Alt+Shift one.
+// DefaultFileIndexMenuKeys returns built-in default fileindex-menu letters per action. Each is
+// its action's default chord letter in lowercase (every fileindex chord is Alt+Shift+letter).
 func DefaultFileIndexMenuKeys() map[string]string {
 	out := make(map[string]string)
 	for _, spec := range DefaultActionSpecs() {

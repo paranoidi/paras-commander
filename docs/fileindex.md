@@ -19,22 +19,19 @@ the Messages log and each fileindex action says so instead of running.
 
 `<` (`fileindex.menu`) opens the fileindex menu at the bottom of the screen;
 the `:` leader menu lists it under Tools with the same `<`. Each action's
-letter in the menu matches its own shortcut: lowercase for a `Ctrl` shortcut,
-uppercase for an `Alt+Shift` one. All actions are also in Help (`F1`) under
+letter in the menu is the letter of its own shortcut, in lowercase: every
+fileindex shortcut is `Alt+Shift` plus that letter. All actions are also in Help (`F1`) under
 fileindex. The keys below are the defaults; rebind the shortcuts under
 `[main]` and the menu letters under `[fileindex_menu]` in `keybindings.toml`.
 
 | Key | Menu | Action | |
 |---|---|---|---|
-| `Alt+Shift+I` | `I` | `fileindex.open` | Show the current directory in the index |
-| `Alt+Shift+R` | `R` | `fileindex.reveal` | From the index, go to the entry's real location |
-| `Ctrl+A` | `a` | `fileindex.scan` | Scan the selection, else the entry under the cursor, else the directory |
-| `Alt+Shift+P` | `P` | `fileindex.prune` | Remove what is gone from disk under the current directory |
-| `Ctrl+T` | `t` | `fileindex.tag-add` | Add tags |
-| `Ctrl+W` | `w` | `fileindex.tag-remove` | Remove tags |
-
-Under tmux or screen with `Ctrl+A` as the prefix key, use `<` then `a`, or bind
-`fileindex.scan` to another key.
+| `Alt+Shift+I` | `i` | `fileindex.open` | Show the current directory in the index |
+| `Alt+Shift+R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
+| `Alt+Shift+S` | `s` | `fileindex.scan` | Scan the selection, else the entry under the cursor, else the directory |
+| `Alt+Shift+P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
+| `Alt+Shift+T` | `t` | `fileindex.tag-add` | Add tags |
+| `Alt+Shift+U` | `u` | `fileindex.tag-remove` | Remove tags |
 
 ## Browsing the index
 

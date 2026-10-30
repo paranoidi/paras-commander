@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/fileindex/db"
@@ -43,8 +44,8 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 		}
 	}
 
-	// The fileindex menu lists every action under the letter of its default chord: lowercase
-	// for Ctrl+letter, uppercase for Alt+Shift+letter.
+	// The fileindex menu lists every action under the lowercase letter of its default chord, and
+	// every fileindex chord is Alt+Shift+letter.
 	var inMenu []string
 	for _, e := range a.keys.FileIndexMenuEntries() {
 		inMenu = append(inMenu, e.ActionID)
@@ -52,7 +53,7 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ch.Rune != e.Key && rune('a'+ch.Key-tcell.KeyCtrlA) != e.Key {
+		if ch.Mod != tcell.ModAlt || !unicode.IsUpper(ch.Rune) || unicode.ToLower(ch.Rune) != e.Key {
 			t.Errorf("%s: menu key %q does not match its chord %s", e.ActionID, e.Key, keymap.FormatChord(ch))
 		}
 	}

@@ -53,7 +53,7 @@ type ActionSpec struct {
 	// CopyMenuLabel overrides Title for the copy-menu row label (empty = Title).
 	CopyMenuLabel string
 	// FileIndexMenuKey is the activation letter in the fileindex menu (ActionFileIndexMenu;
-	// empty = excluded). Case-sensitive; it matches the action's default chord letter.
+	// empty = excluded). Case-sensitive; it is the action's default chord letter in lowercase.
 	FileIndexMenuKey string
 	// PreviewMenuKey is the activation character for the `:` fullscreen-preview menu
 	// (empty = excluded). Letters only; case-sensitive (r vs R).
@@ -1289,10 +1289,10 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:            HelpBrowser,
 			Title:            "Scan into index",
 			Section:          "fileindex",
-			DefaultKeys:      []string{"C-a"},
-			PreferredKey:     "C-a",
+			DefaultKeys:      []string{"M-S"},
+			PreferredKey:     "M-S",
 			Keywords:         []string{"fileindex", "index", "hash", "scan"},
-			FileIndexMenuKey: "a",
+			FileIndexMenuKey: "s",
 		},
 		{
 			ID:               ActionFileIndexPrune,
@@ -1302,15 +1302,15 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:      []string{"M-P"},
 			PreferredKey:     "M-P",
 			Keywords:         []string{"fileindex", "index", "prune", "missing", "cleanup"},
-			FileIndexMenuKey: "P",
+			FileIndexMenuKey: "p",
 		},
 		{
 			ID:               ActionFileIndexTagAdd,
 			Views:            HelpBrowser,
 			Title:            "Add tags",
 			Section:          "fileindex",
-			DefaultKeys:      []string{"C-t"},
-			PreferredKey:     "C-t",
+			DefaultKeys:      []string{"M-T"},
+			PreferredKey:     "M-T",
 			Keywords:         []string{"fileindex", "tag", "label"},
 			FileIndexMenuKey: "t",
 		},
@@ -1319,10 +1319,10 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:            HelpBrowser,
 			Title:            "Remove tags",
 			Section:          "fileindex",
-			DefaultKeys:      []string{"C-w"},
-			PreferredKey:     "C-w",
+			DefaultKeys:      []string{"M-U"},
+			PreferredKey:     "M-U",
 			Keywords:         []string{"fileindex", "tag", "untag", "label"},
-			FileIndexMenuKey: "w",
+			FileIndexMenuKey: "u",
 		},
 		{
 			ID:               ActionFileIndexOpen,
@@ -1332,7 +1332,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:      []string{"M-I"},
 			PreferredKey:     "M-I",
 			Keywords:         []string{"fileindex", "index", "browse", "fileindex://"},
-			FileIndexMenuKey: "I",
+			FileIndexMenuKey: "i",
 		},
 		{
 			ID:               ActionFileIndexReveal,
@@ -1342,7 +1342,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:      []string{"M-R"},
 			PreferredKey:     "M-R",
 			Keywords:         []string{"fileindex", "reveal", "real", "location", "disk"},
-			FileIndexMenuKey: "R",
+			FileIndexMenuKey: "r",
 		},
 
 		// ── File operations ──

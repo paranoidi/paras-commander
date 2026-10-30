@@ -20,7 +20,7 @@ Press `:` (`app.leader-menu`; press again to close) for a grouped, multi-column 
 - `F3` toggles showing each action's direct key after its name (`[ui] leader_menu_show_direct_keys`).
 - `Esc` closes the strip.
 - `"` (`app.copy-menu`) opens the copy-to-clipboard menu (`[copy_menu]`) with file URL, directory URL, file name and git-relative paths. In the fullscreen preview of a text file it also copies the file's contents (the row is dimmed elsewhere). In the fullscreen preview, `:` opens a preview menu (`[preview_menu]`) instead.
-- `<` (`fileindex.menu`, also `<` in the `:` menu's Tools group) opens the [fileindex](fileindex.md) menu (`[fileindex_menu]`). Its letters match the actions' own shortcuts: `t` for `Ctrl+T`, `I` for `Alt+Shift+I`.
+- `<` (`fileindex.menu`, also `<` in the `:` menu's Tools group) opens the [fileindex](fileindex.md) menu (`[fileindex_menu]`). Its letters are the actions' own shortcut letters in lowercase; those shortcuts are all `Alt+Shift` plus the letter (`t` for `Alt+Shift+T`).
 - `Alt+G` (`panel.git-filter-menu`) opens a small menu to filter by git state (staged, unstaged, tracked, untracked).
 - `Alt+Shift+C` (`panel.folder-color-menu`) opens a menu to set or clear the folder color (see `folder-colors.md`).
 
