@@ -247,6 +247,13 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 			minWidth = hw
 		}
 	}
+	if state.DialogType == FileDialogIndexInit {
+		// Fit the whole database path (and the question) when the screen allows; a narrower
+		// screen falls back to the path's FitPath shortening.
+		for _, it := range indexInitLabels(state) {
+			minWidth = max(minWidth, it.Indent+utf8.RuneCountInString(it.Label)+4)
+		}
+	}
 	if minWidth > screenWidth-4 {
 		minWidth = screenWidth - 4
 	}
