@@ -285,7 +285,7 @@ func (a *App) handleLeaderMenuMouse(layout ui.Layout, x, y int, pressed tcell.Bu
 	action, inside := ui.LeaderMenuActionAt(layout, a.model.LeaderMenu, x, y)
 	switch {
 	case !inside:
-		if a.model.LeaderMenu.UserMenu {
+		if a.model.LeaderMenu.Kind == ui.LeaderMenuUser {
 			a.closeUserMenu()
 		} else {
 			a.closeLeaderMenu()

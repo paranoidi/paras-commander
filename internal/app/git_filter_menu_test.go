@@ -45,7 +45,7 @@ func TestFolderColorKeyTogglesMenuClosed(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser
 	items := []ui.LeaderMenuItem{{Label: "Amber"}, {Label: "Default"}}
-	app.model.LeaderMenu.FolderColorMenu = app.openLeaderMenuStrip(items, false, false, false, true, "Folder color", func(int) bool { return false })
+	app.openLeaderMenuStrip(items, ui.LeaderMenuFolderColor, "Folder color", func(int) bool { return false })
 	if !app.folderColorMenuOpen() || app.gitFilterMenuOpen() {
 		t.Fatalf("LeaderMenu = %+v, want folder color menu open", app.model.LeaderMenu)
 	}

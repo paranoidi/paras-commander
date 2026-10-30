@@ -10,16 +10,22 @@ type LeaderMenuItem struct {
 	DirectKey   string // compact global binding, e.g. "C-s"; built-in Esc menu only
 }
 
-// LeaderMenuState is the renderable bottom function menu (Esc built-in / F2 user menu / `"` copy
-// menu / `:` fullscreen-preview menu).
+// LeaderMenuKind says which menu the leader-menu strip is showing.
+type LeaderMenuKind int
+
+const (
+	LeaderMenuBuiltin     LeaderMenuKind = iota // app.leader-menu, per-view and find menus
+	LeaderMenuUser                              // app.user-menu (menu.toml)
+	LeaderMenuCopy                              // app.copy-menu
+	LeaderMenuPreview                           // preview.menu (ui.ViewFilePreview only)
+	LeaderMenuGitFilter                         // panel.git-filter-menu
+	LeaderMenuFolderColor                       // panel.folder-color-menu
+)
+
+// LeaderMenuState is the renderable bottom function menu strip.
 type LeaderMenuState struct {
-	Open          bool
-	UserMenu      bool // true = F2/menu.toml
-	CopyMenu      bool // true = `"` copy menu
-	CopyGit       bool // with CopyMenu: the "Relative to git root" submenu
-	PreviewMenu   bool // true = ':' fullscreen-preview menu (ui.ViewFilePreview only)
-	GitFilterMenu bool // true = Alt-G git filter menu
-	// FolderColorMenu: with GitFilterMenu, the panel.folder-color-menu strip (shares its layout).
-	FolderColorMenu bool
-	Items           []LeaderMenuItem
+	Open    bool
+	Kind    LeaderMenuKind
+	CopyGit bool // with LeaderMenuCopy: the "Relative to git root" submenu
+	Items   []LeaderMenuItem
 }

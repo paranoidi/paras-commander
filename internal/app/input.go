@@ -161,19 +161,19 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		})
 	}
 	if a.model.LeaderMenu.Open {
-		if a.model.LeaderMenu.UserMenu {
+		if a.model.LeaderMenu.Kind == ui.LeaderMenuUser {
 			keys := footerWithEscClose([]menu.FunctionKey{
 				menu.FunctionKeyEditConfig,
 				{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 			})
 			return keys
 		}
-		if a.model.LeaderMenu.CopyMenu {
+		if a.model.LeaderMenu.Kind == ui.LeaderMenuCopy {
 			return footerWithEscClose([]menu.FunctionKey{
 				{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 			})
 		}
-		if a.model.LeaderMenu.PreviewMenu {
+		if a.model.LeaderMenu.Kind == ui.LeaderMenuPreview {
 			return footerWithEscClose([]menu.FunctionKey{
 				menu.FunctionKeyLeaderMenuToggleChords,
 				{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},

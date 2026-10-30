@@ -40,7 +40,7 @@ func TestColonOpensPreviewMenuOnlyInFilePreview(t *testing.T) {
 		t.Fatalf("browser ':' resolves to %q, want %q", id, keymap.ActionAppLeaderMenu)
 	}
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionAppLeaderMenu)
-	if !app.model.LeaderMenu.Open || app.model.LeaderMenu.PreviewMenu || app.model.LeaderMenu.CopyMenu {
+	if !app.model.LeaderMenu.Open || app.model.LeaderMenu.Kind == ui.LeaderMenuPreview || app.model.LeaderMenu.Kind == ui.LeaderMenuCopy {
 		t.Fatalf("LeaderMenu = %+v, want built-in function menu open", app.model.LeaderMenu)
 	}
 	app.closeLeaderMenu()
@@ -51,7 +51,7 @@ func TestColonOpensPreviewMenuOnlyInFilePreview(t *testing.T) {
 		t.Fatalf("preview ':' resolves to %q, want %q", id, keymap.ActionPreviewMenu)
 	}
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
-	if !app.model.LeaderMenu.Open || !app.model.LeaderMenu.PreviewMenu {
+	if !app.model.LeaderMenu.Open || app.model.LeaderMenu.Kind != ui.LeaderMenuPreview {
 		t.Fatalf("LeaderMenu = %+v, want preview menu open", app.model.LeaderMenu)
 	}
 	if len(app.model.LeaderMenu.Items) != 9 {
@@ -68,7 +68,7 @@ func TestPreviewMenuColonToggles(t *testing.T) {
 	openFullscreenPreviewForMenuTest(t, app, path, "hello\n")
 
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
-	if !app.model.LeaderMenu.Open || !app.model.LeaderMenu.PreviewMenu {
+	if !app.model.LeaderMenu.Open || app.model.LeaderMenu.Kind != ui.LeaderMenuPreview {
 		t.Fatalf("first ':' should open preview menu, got LeaderMenu=%+v", app.model.LeaderMenu)
 	}
 

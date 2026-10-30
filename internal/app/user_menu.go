@@ -169,7 +169,7 @@ func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry
 func (a *App) openUserMenuLevel(entries []usermenu.MenuEntry) {
 	a.userMenuVisible = entries
 	items := userMenuLeaderMenuItems(entries, a.styles)
-	opened := a.openLeaderMenuStrip(items, true, false, false, false, "User menu", func(i int) bool {
+	opened := a.openLeaderMenuStrip(items, ui.LeaderMenuUser, "User menu", func(i int) bool {
 		if i < 0 || i >= len(a.userMenuVisible) {
 			return false
 		}

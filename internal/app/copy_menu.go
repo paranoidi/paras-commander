@@ -50,7 +50,7 @@ func (a *App) toggleCopyMenu() {
 		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: label, Disabled: disabled})
 		actions = append(actions, e.ActionID)
 	}
-	a.openLeaderMenuDispatch(items, actions, false, true, "Copy menu", a.dispatchActionLikeKeyboardShortcut)
+	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuCopy, "Copy menu", a.dispatchActionLikeKeyboardShortcut)
 }
 
 // openCopyGitMenu opens the "Relative to git root" submenu, or warns when the
@@ -70,7 +70,7 @@ func (a *App) openCopyGitMenu() {
 		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: e.Label})
 		actions = append(actions, e.ActionID)
 	}
-	a.openLeaderMenuDispatch(items, actions, false, true, "Copy menu", a.dispatchActionLikeKeyboardShortcut)
+	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuCopy, "Copy menu", a.dispatchActionLikeKeyboardShortcut)
 	a.model.LeaderMenu.CopyGit = true
 }
 

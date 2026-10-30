@@ -37,7 +37,7 @@ func TestOpenBuiltinLeaderMenuShowsActionsNotUserMenu(t *testing.T) {
 	if !app.model.LeaderMenu.Open {
 		t.Fatal("expected built-in leader menu open")
 	}
-	if app.model.LeaderMenu.UserMenu {
+	if app.model.LeaderMenu.Kind == ui.LeaderMenuUser {
 		t.Fatal("expected UserMenu=false for Esc menu")
 	}
 	if len(app.model.LeaderMenu.Items) == 0 {
@@ -232,8 +232,8 @@ command = "lazygit"
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'X', tcell.ModNone))
 
 	st := app.model.LeaderMenu
-	if !st.Open || !st.UserMenu {
-		t.Fatalf("leader menu = open %v user %v, want F2 user menu open after X", st.Open, st.UserMenu)
+	if !st.Open || st.Kind != ui.LeaderMenuUser {
+		t.Fatalf("leader menu = open %v user %v, want F2 user menu open after X", st.Open, st.Kind == ui.LeaderMenuUser)
 	}
 }
 
@@ -610,7 +610,7 @@ func TestColonKeyOpensPerViewLeaderMenuInCompare(t *testing.T) {
 	if !app.model.LeaderMenu.Open {
 		t.Fatal("expected leader menu open in Compare view")
 	}
-	if app.model.LeaderMenu.UserMenu || app.model.LeaderMenu.CopyMenu || app.model.LeaderMenu.PreviewMenu {
+	if app.model.LeaderMenu.Kind == ui.LeaderMenuUser || app.model.LeaderMenu.Kind == ui.LeaderMenuCopy || app.model.LeaderMenu.Kind == ui.LeaderMenuPreview {
 		t.Fatalf("leader menu state = %+v, want plain builtin menu", app.model.LeaderMenu)
 	}
 	var foundGroup, foundClose bool

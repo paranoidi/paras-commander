@@ -9,20 +9,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-func (a *App) openLeaderMenu(userMenu, copyMenu, previewMenu, gitFilterMenu bool, items []ui.LeaderMenuItem) {
-	a.model.LeaderMenu = ui.LeaderMenuState{
-		Open:          true,
-		UserMenu:      userMenu,
-		CopyMenu:      copyMenu,
-		PreviewMenu:   previewMenu,
-		GitFilterMenu: gitFilterMenu,
-		Items:         items,
-	}
+func (a *App) openLeaderMenu(kind ui.LeaderMenuKind, items []ui.LeaderMenuItem) {
+	a.model.LeaderMenu = ui.LeaderMenuState{Open: true, Kind: kind, Items: items}
 }
 
 func (a *App) refreshLeaderMenuDirectKeys() {
 	st := &a.model.LeaderMenu
-	if st.UserMenu || st.CopyMenu || len(st.Items) == 0 {
+	if st.Kind == ui.LeaderMenuUser || st.Kind == ui.LeaderMenuCopy || len(st.Items) == 0 {
 		return
 	}
 	actionIdx := 0
@@ -33,7 +26,7 @@ func (a *App) refreshLeaderMenuDirectKeys() {
 		directKey := ""
 		if a.config.UI.LeaderMenuShowDirectKeys && a.keys != nil && actionIdx < len(a.leaderMenuActions) {
 			keyMap := a.keys.Global
-			if st.PreviewMenu {
+			if st.Kind == ui.LeaderMenuPreview {
 				keyMap = a.keys.FilePreview
 			}
 			if keyMap != nil {
@@ -65,7 +58,7 @@ func (a *App) toggleLeaderMenuDirectKeys() {
 }
 
 // openLeaderMenuStrip opens the bottom function menu when items fit; cancels an active quick filter first.
-func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu, previewMenu, gitFilterMenu bool, prefix string, onActivate func(int) bool) bool {
+func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, kind ui.LeaderMenuKind, prefix string, onActivate func(int) bool) bool {
 	if a.inQuickFilterUI() {
 		a.cancelActiveQuickFilter()
 	}
@@ -76,7 +69,7 @@ func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu,
 		return false
 	}
 	a.leaderMenuOnActivate = onActivate
-	a.openLeaderMenu(userMenu, copyMenu, previewMenu, gitFilterMenu, items)
+	a.openLeaderMenu(kind, items)
 	a.leaderMenuHiddenWarning(items, prefix)
 	a.clearTransientMessage()
 	return true
@@ -86,13 +79,13 @@ func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu,
 // activate runs the chosen action; the browser's builtin/copy menus pass
 // dispatchActionLikeKeyboardShortcut, while per-view menus (openViewLeaderMenu) pass
 // activateHelpAction so the action runs through that view's own controller.
-func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string, userMenu, copyMenu bool, prefix string, activate func(actionID string) bool) {
+func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string, kind ui.LeaderMenuKind, prefix string, activate func(actionID string) bool) {
 	if len(actions) == 0 {
 		a.setTransientMessage(prefix+": no entries configured", ui.MessageUrgencyWarn)
 		return
 	}
 	a.leaderMenuActions = actions
-	a.openLeaderMenuStrip(items, userMenu, copyMenu, false, false, prefix, func(i int) bool {
+	a.openLeaderMenuStrip(items, kind, prefix, func(i int) bool {
 		if i < 0 || i >= len(actions) {
 			return false
 		}
@@ -102,27 +95,27 @@ func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string
 
 func (a *App) builtinLeaderMenuOpen() bool {
 	st := a.model.LeaderMenu
-	return st.Open && !st.UserMenu && !st.CopyMenu && !st.PreviewMenu && !st.GitFilterMenu
+	return st.Open && st.Kind == ui.LeaderMenuBuiltin
 }
 
 func (a *App) previewLeaderMenuOpen() bool {
 	st := a.model.LeaderMenu
-	return st.Open && st.PreviewMenu
+	return st.Open && st.Kind == ui.LeaderMenuPreview
 }
 
 func (a *App) gitFilterMenuOpen() bool {
 	st := a.model.LeaderMenu
-	return st.Open && st.GitFilterMenu && !st.FolderColorMenu
+	return st.Open && st.Kind == ui.LeaderMenuGitFilter
 }
 
 func (a *App) userMenuOpen() bool {
 	st := a.model.LeaderMenu
-	return st.Open && st.UserMenu
+	return st.Open && st.Kind == ui.LeaderMenuUser
 }
 
 func (a *App) copyMenuOpen() bool {
 	st := a.model.LeaderMenu
-	return st.Open && st.CopyMenu
+	return st.Open && st.Kind == ui.LeaderMenuCopy
 }
 
 func (a *App) toggleBuiltinLeaderMenu() {
@@ -155,7 +148,7 @@ func (a *App) openBuiltinLeaderMenu() {
 		return
 	}
 	items, actions := a.buildLeaderMenuItems(entries)
-	a.openLeaderMenuDispatch(items, actions, false, false, prefix, a.dispatchActionLikeKeyboardShortcut)
+	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuBuiltin, prefix, a.dispatchActionLikeKeyboardShortcut)
 }
 
 // openFindLeaderMenu opens the `:` leader menu scoped to the find dialog.
@@ -169,7 +162,7 @@ func (a *App) openFindLeaderMenu() {
 		return
 	}
 	items, actions := a.buildLeaderMenuItems(entries)
-	a.openLeaderMenuDispatch(items, actions, false, false, "Find menu", func(id string) bool {
+	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuBuiltin, "Find menu", func(id string) bool {
 		if a.findCtrl.RunAction(id) {
 			return false
 		}
@@ -205,7 +198,7 @@ func (a *App) openViewLeaderMenu() {
 		}
 	}
 	items, actions := a.buildLeaderMenuItems(entries)
-	a.openLeaderMenuDispatch(items, actions, false, false, prefix, a.activateHelpAction)
+	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuBuiltin, prefix, a.activateHelpAction)
 }
 
 // buildLeaderMenuItems converts leader-menu entries into UI items plus their parallel action-ID
@@ -308,7 +301,7 @@ func (a *App) activateLeaderMenu(i int) bool {
 }
 
 func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
-	if event.Key() == tcell.KeyF9 && a.model.LeaderMenu.UserMenu {
+	if event.Key() == tcell.KeyF9 && a.model.LeaderMenu.Kind == ui.LeaderMenuUser {
 		a.editUserMenuConfigFromDialog()
 		return false
 	}
@@ -318,7 +311,7 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 		return false
 	}
 
-	backNav := st.UserMenu || st.CopyMenu
+	backNav := st.Kind == ui.LeaderMenuUser || st.Kind == ui.LeaderMenuCopy
 	if backNav && a.model.ViMotionMode {
 		// An entry bound to h/j/k/l keeps its key; otherwise h acts as Left (usermenu.back).
 		if _, isEntry := ui.LeaderMenuIndexForKey(st.Items, event.Rune()); !isEntry {
@@ -334,7 +327,7 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 				return false
 			}
 			n := len(a.userMenuStack)
-			if n == 0 || st.CopyMenu {
+			if n == 0 || st.Kind == ui.LeaderMenuCopy {
 				a.closeUserMenu()
 				return false
 			}
@@ -347,14 +340,14 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 
 	switch event.Key() {
 	case tcell.KeyEsc:
-		if st.UserMenu {
+		if st.Kind == ui.LeaderMenuUser {
 			a.closeUserMenu()
 			return false
 		}
 		a.closeLeaderMenu()
 		return false
 	case tcell.KeyF3:
-		if !st.UserMenu && !st.CopyMenu {
+		if st.Kind != ui.LeaderMenuUser && st.Kind != ui.LeaderMenuCopy {
 			a.toggleLeaderMenuDirectKeys()
 		}
 		return false

@@ -46,10 +46,10 @@ func TestOpenCopyMenuShowsCopyActions(t *testing.T) {
 	if !app.model.LeaderMenu.Open {
 		t.Fatal("expected copy menu open")
 	}
-	if !app.model.LeaderMenu.CopyMenu {
+	if app.model.LeaderMenu.Kind != ui.LeaderMenuCopy {
 		t.Fatal("expected CopyMenu=true")
 	}
-	if app.model.LeaderMenu.UserMenu {
+	if app.model.LeaderMenu.Kind == ui.LeaderMenuUser {
 		t.Fatal("expected UserMenu=false")
 	}
 	if len(app.model.LeaderMenu.Items) != 6 {
@@ -213,7 +213,7 @@ func TestCopyMenuGitSubmenuInsideRepo(t *testing.T) {
 	}
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
 	st := app.model.LeaderMenu
-	if !st.Open || !st.CopyMenu || !st.CopyGit || len(st.Items) != 2 {
+	if !st.Open || st.Kind != ui.LeaderMenuCopy || !st.CopyGit || len(st.Items) != 2 {
 		t.Fatalf("expected open git submenu with 2 rows, got %+v", st)
 	}
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
@@ -241,7 +241,7 @@ func TestCopyMenuGitSubmenuLeftReturnsToTop(t *testing.T) {
 		}
 		app.handleLeaderMenuKey(ev)
 		st := app.model.LeaderMenu
-		if !st.Open || !st.CopyMenu || st.CopyGit || len(st.Items) != 6 {
+		if !st.Open || st.Kind != ui.LeaderMenuCopy || st.CopyGit || len(st.Items) != 6 {
 			t.Fatalf("vi=%v: expected top copy menu, got %+v", vi, st)
 		}
 	}

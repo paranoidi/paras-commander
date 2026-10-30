@@ -16,7 +16,7 @@ func (a *App) resolveUserMenuEditPath() (string, error) {
 }
 
 func (a *App) editUserMenuConfigFromDialog() {
-	if !a.model.LeaderMenu.Open || !a.model.LeaderMenu.UserMenu {
+	if !a.model.LeaderMenu.Open || a.model.LeaderMenu.Kind != ui.LeaderMenuUser {
 		return
 	}
 	path := a.userMenuPath
@@ -43,7 +43,7 @@ func (a *App) editUserMenuConfigFromDialog() {
 }
 
 func (a *App) reloadLeaderMenu() {
-	if !a.model.LeaderMenu.Open || !a.model.LeaderMenu.UserMenu {
+	if !a.model.LeaderMenu.Open || a.model.LeaderMenu.Kind != ui.LeaderMenuUser {
 		return
 	}
 
