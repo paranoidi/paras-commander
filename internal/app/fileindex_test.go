@@ -26,7 +26,7 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexTagRemove,
 }
 
-func TestFileIndexActionsInHelpAndLeaderMenu(t *testing.T) {
+func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	var inHelp []string
 	for _, e := range a.buildHelpEntries() {
@@ -37,25 +37,59 @@ func TestFileIndexActionsInHelpAndLeaderMenu(t *testing.T) {
 			inHelp = append(inHelp, e.ActionID)
 		}
 	}
-	for _, id := range fileIndexActions {
+	for _, id := range append([]string{keymap.ActionFileIndexMenu}, fileIndexActions...) {
 		if !slices.Contains(inHelp, id) {
 			t.Errorf("%s missing from help", id)
 		}
 	}
 
-	var group string
+	// The fileindex menu lists every action under the letter of its default chord: lowercase
+	// for Ctrl+letter, uppercase for Alt+Shift+letter.
 	var inMenu []string
-	for _, e := range a.keys.LeaderMenuEntries() {
-		if e.GroupTitle != "" {
-			group = e.GroupTitle
-			continue
+	for _, e := range a.keys.FileIndexMenuEntries() {
+		inMenu = append(inMenu, e.ActionID)
+		ch, err := keymap.ParseKey(a.keys.Global.MenuBindingLabel(e.ActionID))
+		if err != nil {
+			t.Fatal(err)
 		}
-		if group == keymap.LeaderMenuGroupFileIndex {
-			inMenu = append(inMenu, e.ActionID)
+		if ch.Rune != e.Key && rune('a'+ch.Key-tcell.KeyCtrlA) != e.Key {
+			t.Errorf("%s: menu key %q does not match its chord %s", e.ActionID, e.Key, keymap.FormatChord(ch))
 		}
 	}
 	if !slices.Equal(inMenu, fileIndexActions) {
-		t.Fatalf("fileindex leader group = %v, want %v", inMenu, fileIndexActions)
+		t.Fatalf("fileindex menu = %v, want %v", inMenu, fileIndexActions)
+	}
+
+	// The `:` leader menu reaches the fileindex menu, not the actions themselves.
+	var leader []string
+	for _, e := range a.keys.LeaderMenuEntries() {
+		leader = append(leader, e.ActionID)
+	}
+	if !slices.Contains(leader, keymap.ActionFileIndexMenu) || slices.Contains(leader, keymap.ActionFileIndexScan) {
+		t.Fatalf("leader menu actions = %v", leader)
+	}
+}
+
+func TestFileIndexMenuOpensOnLessThanAndRunsLetter(t *testing.T) {
+	a, _, _, _ := fileIndexApp(t)
+	cursorTo(t, a, "harbor.txt")
+	a.handleKey(tcell.NewEventKey(tcell.KeyRune, '<', tcell.ModNone))
+	if !a.leaderMenuOpen(ui.LeaderMenuFileIndex) {
+		t.Fatalf("leader menu = %+v, want the fileindex menu", a.model.LeaderMenu)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	if a.model.LeaderMenu.Open {
+		t.Fatal("activating an entry should close the menu")
+	}
+	if fd := a.model.FileDialog; !fd.Open || fd.DialogType != dialog.FileDialogIndexTags || fd.IndexTagsRemove {
+		t.Fatalf("dialog = %+v, want the add-tags prompt", fd)
+	}
+
+	a.dialogCtrl.CloseFileDialog()
+	a.handleKey(tcell.NewEventKey(tcell.KeyRune, '<', tcell.ModNone))
+	a.handleKey(tcell.NewEventKey(tcell.KeyRune, '<', tcell.ModNone))
+	if a.model.LeaderMenu.Open {
+		t.Fatal("the menu key again should close the menu")
 	}
 }
 

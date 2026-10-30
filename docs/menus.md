@@ -14,12 +14,13 @@ Hide the bar with `show_menu_bar = false` ([Layout](layout.md#menu-bar)). The fu
 
 ## Leader (function) menu
 
-Press `:` (`app.leader-menu`; press again to close) for a grouped, multi-column strip docked at the bottom: File, fileindex, Selection, View, Navigation, Tools, Add mark, Display, App. Press the letter shown next to an entry to run it.
+Press `:` (`app.leader-menu`; press again to close) for a grouped, multi-column strip docked at the bottom: File, Selection, View, Navigation, Tools, Add mark, Display, App. Press the letter shown next to an entry to run it.
 
 - Letters come from `[leader_key]` in `keybindings.toml`; set one to `""` to drop the row. Keys must be unique within each menu; upper and lower case are distinct. Letters can differ between menus.
 - `F3` toggles showing each action's direct key after its name (`[ui] leader_menu_show_direct_keys`).
 - `Esc` closes the strip.
 - `"` (`app.copy-menu`) opens the copy-to-clipboard menu (`[copy_menu]`) with file URL, directory URL, file name and git-relative paths. In the fullscreen preview of a text file it also copies the file's contents (the row is dimmed elsewhere). In the fullscreen preview, `:` opens a preview menu (`[preview_menu]`) instead.
+- `<` (`fileindex.menu`, also `<` in the `:` menu's Tools group) opens the [fileindex](fileindex.md) menu (`[fileindex_menu]`). Its letters match the actions' own shortcuts: `t` for `Ctrl+T`, `I` for `Alt+Shift+I`.
 - `Alt+G` (`panel.git-filter-menu`) opens a small menu to filter by git state (staged, unstaged, tracked, untracked).
 - `Alt+Shift+C` (`panel.folder-color-menu`) opens a menu to set or clear the folder color (see `folder-colors.md`).
 

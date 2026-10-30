@@ -1175,7 +1175,7 @@ func (a *App) dispatch(actionID string) bool {
 		a.dialogCtrl.OpenAddBookmarkDialog()
 	case keymap.ActionRemoteSFTPLink:
 		a.openSFTPConnectDialog()
-	case keymap.ActionFileIndexScan, keymap.ActionFileIndexPrune, keymap.ActionFileIndexTagAdd,
+	case keymap.ActionFileIndexMenu, keymap.ActionFileIndexScan, keymap.ActionFileIndexPrune, keymap.ActionFileIndexTagAdd,
 		keymap.ActionFileIndexTagRemove, keymap.ActionFileIndexOpen, keymap.ActionFileIndexReveal:
 		a.fileindexCtrl.Dispatch(actionID)
 	case keymap.ActionPanelToggleSync:

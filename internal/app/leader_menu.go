@@ -107,6 +107,7 @@ var leaderMenuToggleAction = map[ui.LeaderMenuKind]string{
 	ui.LeaderMenuPreview:     keymap.ActionPreviewMenu,
 	ui.LeaderMenuGitFilter:   keymap.ActionPanelGitFilterMenu,
 	ui.LeaderMenuFolderColor: keymap.ActionPanelFolderColorMenu,
+	ui.LeaderMenuFileIndex:   keymap.ActionFileIndexMenu,
 }
 
 func (a *App) toggleBuiltinLeaderMenu() {

@@ -28,6 +28,8 @@ func (h fileindexHost) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
 	h.app.jobsCtrl.AddTaskJob(task, sources)
 }
 
+func (h fileindexHost) ToggleFileIndexMenu() { h.app.toggleFileIndexMenu() }
+
 func (h fileindexHost) RefreshMetaColumns() {
 	h.app.metaCtrl.RefreshPanel(ui.PrimaryPanel)
 	h.app.metaCtrl.RefreshPanel(ui.SecondaryPanel)

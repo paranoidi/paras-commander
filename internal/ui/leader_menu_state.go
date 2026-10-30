@@ -20,6 +20,7 @@ const (
 	LeaderMenuPreview                           // preview.menu (ui.ViewFilePreview only)
 	LeaderMenuGitFilter                         // panel.git-filter-menu
 	LeaderMenuFolderColor                       // panel.folder-color-menu
+	LeaderMenuFileIndex                         // fileindex.menu
 )
 
 // LeaderMenuState is the renderable bottom function menu strip.

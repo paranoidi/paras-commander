@@ -34,6 +34,8 @@ type Host interface {
 	AddTaskJob(task *jobs.Task, sources []pathloc.Path)
 	// RefreshMetaColumns re-runs both panels' meta columns, so the tags column shows an edit.
 	RefreshMetaColumns()
+	// ToggleFileIndexMenu opens or closes the fileindex menu strip (app-owned leader-menu chrome).
+	ToggleFileIndexMenu()
 }
 
 // Deps wires the fileindex handler at app construction.
@@ -83,6 +85,8 @@ type NavigatePayload struct {
 // Dispatch runs a fileindex.* action; it reports false for any other action id.
 func (h *Handler) Dispatch(actionID string) bool {
 	switch actionID {
+	case keymap.ActionFileIndexMenu:
+		h.host.ToggleFileIndexMenu()
 	case keymap.ActionFileIndexScan:
 		h.Scan()
 	case keymap.ActionFileIndexPrune:

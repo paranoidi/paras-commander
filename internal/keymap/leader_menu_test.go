@@ -140,11 +140,12 @@ func TestLeaderMenuKeysOverrideAndOmit(t *testing.T) {
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, _, modeUser, _, _, err := parseKeybindingsFile([]byte(body), path)
+	_, _, menuUser, err := parseKeybindingsFile([]byte(body), path)
+	modeUser := menuUser[LeaderKeyShortcutsTable]
 	if err != nil {
 		t.Fatal(err)
 	}
-	merged := mergeLeaderKeys(DefaultLeaderKeys(), modeUser)
+	merged := mergeMenuKeys(DefaultLeaderKeys(), modeUser)
 	if merged[ActionFileMkdir] != "k" {
 		t.Fatalf("mkdir key = %q, want k", merged[ActionFileMkdir])
 	}
@@ -195,8 +196,8 @@ func TestDefaultBundleLeaderKey(t *testing.T) {
 			t.Fatalf("invalid entry: %+v", e)
 		}
 	}
-	if actions != 48 {
-		t.Fatalf("action entries = %d, want 48", actions)
+	if actions != 43 {
+		t.Fatalf("action entries = %d, want 43", actions)
 	}
 }
 
@@ -381,7 +382,7 @@ func TestParseLeaderKeyRejectsNonString(t *testing.T) {
 	body := `[leader_key]
 "file.mkdir" = ["m"]
 `
-	_, _, _, _, _, err := parseKeybindingsFile([]byte(body), "test.toml")
+	_, _, _, err := parseKeybindingsFile([]byte(body), "test.toml")
 	if err == nil || !strings.Contains(err.Error(), "expected string") {
 		t.Fatalf("err = %v, want expected string", err)
 	}

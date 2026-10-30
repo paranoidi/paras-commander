@@ -215,6 +215,7 @@ const (
 	ActionRemoteSFTPLink = "remote.sftp-link"
 
 	// fileindex (the built-in index feature, internal/apphandler/fileindex)
+	ActionFileIndexMenu      = "fileindex.menu"
 	ActionFileIndexScan      = "fileindex.scan"
 	ActionFileIndexPrune     = "fileindex.prune"
 	ActionFileIndexTagAdd    = "fileindex.tag-add"
@@ -542,6 +543,7 @@ var KnownActions = map[string]struct{}{
 
 	ActionRemoteSFTPLink: {},
 
+	ActionFileIndexMenu:      {},
 	ActionFileIndexScan:      {},
 	ActionFileIndexPrune:     {},
 	ActionFileIndexTagAdd:    {},

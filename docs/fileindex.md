@@ -17,21 +17,24 @@ the Messages log and each fileindex action says so instead of running.
 
 ## Actions
 
-All actions are in the leader menu's **fileindex** group and in Help (`F1`)
-under fileindex. The keys below are the defaults; rebind them in
-`keybindings.toml`.
+`<` (`fileindex.menu`) opens the fileindex menu at the bottom of the screen;
+the `:` leader menu lists it under Tools with the same `<`. Each action's
+letter in the menu matches its own shortcut: lowercase for a `Ctrl` shortcut,
+uppercase for an `Alt+Shift` one. All actions are also in Help (`F1`) under
+fileindex. The keys below are the defaults; rebind the shortcuts under
+`[main]` and the menu letters under `[fileindex_menu]` in `keybindings.toml`.
 
-| Key | Action | |
-|---|---|---|
-| `Alt+Shift+I` | `fileindex.open` | Show the current directory in the index |
-| `Alt+Shift+R` | `fileindex.reveal` | From the index, go to the entry's real location |
-| `Ctrl+A` | `fileindex.scan` | Scan the selection, else the entry under the cursor, else the directory |
-| `Alt+Shift+P` | `fileindex.prune` | Remove what is gone from disk under the current directory |
-| `Ctrl+T` | `fileindex.tag-add` | Add tags |
-| `Ctrl+W` | `fileindex.tag-remove` | Remove tags |
+| Key | Menu | Action | |
+|---|---|---|---|
+| `Alt+Shift+I` | `I` | `fileindex.open` | Show the current directory in the index |
+| `Alt+Shift+R` | `R` | `fileindex.reveal` | From the index, go to the entry's real location |
+| `Ctrl+A` | `a` | `fileindex.scan` | Scan the selection, else the entry under the cursor, else the directory |
+| `Alt+Shift+P` | `P` | `fileindex.prune` | Remove what is gone from disk under the current directory |
+| `Ctrl+T` | `t` | `fileindex.tag-add` | Add tags |
+| `Ctrl+W` | `w` | `fileindex.tag-remove` | Remove tags |
 
-Under tmux or screen with `Ctrl+A` as the prefix key, use the leader menu
-(`S`) or bind `fileindex.scan` to another key.
+Under tmux or screen with `Ctrl+A` as the prefix key, use `<` then `a`, or bind
+`fileindex.scan` to another key.
 
 ## Browsing the index
 

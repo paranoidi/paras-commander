@@ -5,6 +5,42 @@ import (
 	"strings"
 )
 
+// letterMenu is one single-letter menu table of keybindings.toml ([leader_key], [copy_menu], ...):
+// its built-in letters and its validation.
+type letterMenu struct {
+	table    string
+	defaults func() map[string]string
+	validate func(map[string]string) error
+}
+
+// letterMenus is the one list of single-letter menu tables: LoadFromPaths layers each, buildBundle
+// validates each, parseKeybindingsFile reads each and the stub writes each.
+var letterMenus = []letterMenu{
+	{LeaderKeyShortcutsTable, DefaultLeaderKeys, validateLeaderKeysPerScope},
+	{CopyMenuShortcutsTable, DefaultCopyMenuKeys, validateCopyMenuKeys},
+	{PreviewMenuShortcutsTable, DefaultPreviewMenuKeys, validatePreviewMenuKeys},
+	{FileIndexMenuShortcutsTable, DefaultFileIndexMenuKeys, validateFileIndexMenuKeys},
+}
+
+// defaultLetterMenuKeys returns every letter-menu table's built-in letters, keyed by table name.
+func defaultLetterMenuKeys() map[string]map[string]string {
+	out := make(map[string]map[string]string, len(letterMenus))
+	for _, m := range letterMenus {
+		out[m.table] = m.defaults()
+	}
+	return out
+}
+
+// isLetterMenuTable reports whether table is one of letterMenus.
+func isLetterMenuTable(table string) bool {
+	for _, m := range letterMenus {
+		if m.table == table {
+			return true
+		}
+	}
+	return false
+}
+
 // mergeMenuKeys overlays user single-letter bindings on defaults; empty user value omits the action.
 func mergeMenuKeys(defaults, user map[string]string) map[string]string {
 	out := make(map[string]string, len(defaults))

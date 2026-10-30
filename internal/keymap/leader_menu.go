@@ -15,7 +15,6 @@ const (
 	LeaderMenuGroupAddMark    = "Add mark"
 	LeaderMenuGroupDisplay    = "Display"
 	LeaderMenuGroupApp        = "App"
-	LeaderMenuGroupFileIndex  = "fileindex"
 )
 
 // Per-view leader-menu group titles (used by leaderMenuViewSpecs below), in addition to the
@@ -35,7 +34,6 @@ const (
 // (0=File, 1=Selection+View, 2=Navigation+Tools, 3=Add mark+Display+App).
 var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupFile:       0,
-	LeaderMenuGroupFileIndex:  0,
 	LeaderMenuGroupSelection:  1,
 	LeaderMenuGroupView:       1,
 	LeaderMenuGroupNavigation: 2,
@@ -47,7 +45,6 @@ var leaderMenuGroupColumn = map[string]int{
 
 var leaderMenuGroupOrder = []string{
 	LeaderMenuGroupFile,
-	LeaderMenuGroupFileIndex,
 	LeaderMenuGroupSelection,
 	LeaderMenuGroupView,
 	LeaderMenuGroupNavigation,
@@ -72,14 +69,6 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileView,
 		ActionFileQuickView,
 	},
-	LeaderMenuGroupFileIndex: {
-		ActionFileIndexOpen,
-		ActionFileIndexReveal,
-		ActionFileIndexScan,
-		ActionFileIndexPrune,
-		ActionFileIndexTagAdd,
-		ActionFileIndexTagRemove,
-	},
 	LeaderMenuGroupSelection: {
 		ActionPanelSelectRange,
 		ActionPanelSelectGroup,
@@ -102,6 +91,7 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileExtract,
 		ActionFileFlatten,
 		ActionAppUserMenu,
+		ActionFileIndexMenu,
 	},
 	LeaderMenuGroupNavigation: {
 		ActionPanelJumpDialog,
@@ -334,17 +324,12 @@ func DefaultLeaderKeys() map[string]string {
 	return out
 }
 
-// mergeLeaderKeys overlays user letters on defaults.
-func mergeLeaderKeys(defaults, user map[string]string) map[string]string {
-	return mergeMenuKeys(defaults, user)
-}
-
 func validLeaderKeyRune(r rune) bool {
-	return unicode.IsLetter(r) || r == '?' || r == ',' || r == '.'
+	return unicode.IsLetter(r) || r == '?' || r == ',' || r == '.' || r == '<'
 }
 
 func validateLeaderKeys(keys map[string]string) error {
-	return validateMenuKeys("leader_key", keys, validLeaderKeyRune, "a letter, ?, comma, or period")
+	return validateMenuKeys("leader_key", keys, validLeaderKeyRune, "a letter, ?, comma, period or <")
 }
 
 func leaderMenuEntryForAction(keys map[string]string, actionID string) (LeaderMenuEntry, bool) {

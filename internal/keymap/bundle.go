@@ -31,6 +31,8 @@ type Bundle struct {
 	CopyMenuKey map[string]string
 	// PreviewMenuKey maps action ID → single-letter `:` fullscreen-preview-menu key (merged defaults + user).
 	PreviewMenuKey map[string]string
+	// FileIndexMenuKey maps action ID → single-letter fileindex-menu key (merged defaults + user).
+	FileIndexMenuKey map[string]string
 }
 
 // ActionForLeaderKey returns the action ID bound to the Esc function-menu leader key r,
