@@ -388,6 +388,7 @@ type App struct {
 	userMenuWarnings []string
 
 	// userMenuStack holds ancestor levels while a submenu is open, for usermenu.back navigation.
+	// closeLeaderMenu clears it; activateLeaderMenu keeps it (resetLeaderMenu) for the push.
 	userMenuStack [][]usermenu.MenuEntry
 }
 

@@ -271,20 +271,22 @@ func (a *App) dispatchAuxiliaryViewCommonKeys(event *tcell.EventKey, nextAction 
 	return false, false
 }
 
+// closeLeaderMenu dismisses the strip of any kind, including the user menu's submenu stack.
 func (a *App) closeLeaderMenu() {
+	a.userMenuStack = nil
+	a.resetLeaderMenu()
+}
+
+// resetLeaderMenu clears the strip but keeps userMenuStack, so an activation can push a submenu.
+func (a *App) resetLeaderMenu() {
 	a.model.LeaderMenu = ui.LeaderMenuState{}
 	a.leaderMenuOnActivate = nil
 	a.leaderMenuActions = nil
 }
 
-func (a *App) closeUserMenu() {
-	a.userMenuStack = nil
-	a.closeLeaderMenu()
-}
-
 func (a *App) activateLeaderMenu(i int) bool {
 	onActivate := a.leaderMenuOnActivate
-	a.closeLeaderMenu()
+	a.resetLeaderMenu()
 	if onActivate != nil {
 		return onActivate(i)
 	}
@@ -319,7 +321,7 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 			}
 			n := len(a.userMenuStack)
 			if n == 0 || st.Kind == ui.LeaderMenuCopy {
-				a.closeUserMenu()
+				a.closeLeaderMenu()
 				return false
 			}
 			parent := a.userMenuStack[n-1]
@@ -331,10 +333,6 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 
 	switch event.Key() {
 	case tcell.KeyEsc:
-		if st.Kind == ui.LeaderMenuUser {
-			a.closeUserMenu()
-			return false
-		}
 		a.closeLeaderMenu()
 		return false
 	case tcell.KeyF3:

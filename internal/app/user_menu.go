@@ -86,7 +86,7 @@ func (a *App) editUserMenu() {
 
 func (a *App) toggleUserMenu() {
 	if a.leaderMenuOpen(ui.LeaderMenuUser) {
-		a.closeUserMenu()
+		a.closeLeaderMenu()
 		return
 	}
 	a.openUserMenu()

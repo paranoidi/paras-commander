@@ -28,19 +28,17 @@ type palette struct {
 // paletteCache re-parses colors.d only when the directory's mtime changes (package installs
 // replace or add files there), so a reload normally costs one stat.
 type paletteCache struct {
-	dir   string
-	mtime int64
+	mtime int64 // 0 = colors.d unreadable at the last load: re-parse next time
 	pal   *palette
 }
 
 func (c *paletteCache) load() *palette {
-	fi, err := os.Stat(colorsDir)
-	if err == nil && c.pal != nil && c.dir == colorsDir && c.mtime == fi.ModTime().UnixNano() {
-		return c.pal
+	var mt int64
+	if fi, err := os.Stat(colorsDir); err == nil {
+		mt = fi.ModTime().UnixNano()
 	}
-	c.pal, c.dir, c.mtime = loadPalette(), colorsDir, 0
-	if err == nil {
-		c.mtime = fi.ModTime().UnixNano()
+	if c.pal == nil || mt == 0 || mt != c.mtime {
+		c.pal, c.mtime = loadPalette(), mt
 	}
 	return c.pal
 }

@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"sync"
 )
 
 // iconsDir is where icon themes live; a var so tests can point it at a fixture.
@@ -21,37 +23,56 @@ func (s *Store) Apply(dirs []string, c *Choice) error {
 		return errors.New("gio not found")
 	}
 	sn := s.snap.Load()
-	var errs []error
-	for _, dir := range dirs {
-		fi, err := os.Stat(dir)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
+	uris := map[string]string{} // icon basename -> URI: iconURI's stats run once per basename
+	cmds := make([][][]string, len(dirs))
+	errs := make([]error, len(dirs))
+	for i, dir := range dirs {
 		if c == nil {
 			// Both keys: Nautilus-style tools set custom-icon-name instead. Unsetting a key that is
 			// not set is harmless, so the second error is ignored.
-			err = exec.Command(gio, "set", "-t", "unset", dir, "metadata::custom-icon").Run()
-			_ = exec.Command(gio, "set", "-t", "unset", dir, "metadata::custom-icon-name").Run()
-		} else {
-			base := "folder"
-			if sn != nil && sn.bases[dir] != "" {
-				base = sn.bases[dir]
-			}
-			uri := iconURI(c.Theme, base)
-			if uri == "" {
-				errs = append(errs, fmt.Errorf("no folder icon in theme %s", c.Theme))
-				continue
-			}
-			err = exec.Command(gio, "set", dir, "metadata::custom-icon", uri).Run()
-		}
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", dir, err))
+			cmds[i] = [][]string{{"set", "-t", "unset", dir, "metadata::custom-icon"}, {"set", "-t", "unset", dir, "metadata::custom-icon-name"}}
 			continue
 		}
-		// ponytail: atime is set to the mtime (touch -r would keep the real atime).
-		_ = os.Chtimes(dir, fi.ModTime(), fi.ModTime())
+		base := "folder"
+		if sn != nil && sn.bases[dir] != "" {
+			base = sn.bases[dir]
+		}
+		uri, ok := uris[base]
+		if !ok {
+			uri = iconURI(c.Theme, base)
+			uris[base] = uri
+		}
+		if uri == "" {
+			errs[i] = fmt.Errorf("no folder icon in theme %s", c.Theme)
+			continue
+		}
+		cmds[i] = [][]string{{"set", dir, "metadata::custom-icon", uri}}
 	}
+	sem := make(chan struct{}, runtime.NumCPU()) // ponytail: a fork per dir, capped at NumCPU in flight
+	var wg sync.WaitGroup
+	for i, dir := range dirs {
+		if cmds[i] == nil {
+			continue
+		}
+		wg.Go(func() {
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			fi, err := os.Stat(dir)
+			if err != nil {
+				errs[i] = err
+				return
+			}
+			for j, args := range cmds[i] {
+				if err := exec.Command(gio, args...).Run(); err != nil && j == 0 {
+					errs[i] = fmt.Errorf("%s: %w", dir, err)
+					return
+				}
+			}
+			// ponytail: atime is set to the mtime (touch -r would keep the real atime).
+			_ = os.Chtimes(dir, fi.ModTime(), fi.ModTime())
+		})
+	}
+	wg.Wait()
 	return errors.Join(errs...)
 }
 

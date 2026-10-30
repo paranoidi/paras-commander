@@ -772,11 +772,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return false, true
 	case InputModeLeaderMenu:
 		if st := a.model.LeaderMenu; st.Open && resolvedAction != "" && resolvedAction == leaderMenuToggleAction[st.Kind] {
-			if st.Kind == ui.LeaderMenuUser {
-				a.closeUserMenu()
-			} else {
-				a.closeLeaderMenu()
-			}
+			a.closeLeaderMenu()
 			a.render()
 			return false, true
 		}

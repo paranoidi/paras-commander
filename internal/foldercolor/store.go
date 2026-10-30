@@ -146,11 +146,6 @@ func (s *Store) Reload() {
 	s.load(mounts, s.signature(mounts, s.tags))
 }
 
-type treeDB struct {
-	refs map[string]iconRef
-	tag  uint32
-}
-
 // load reads every tree in parallel (and the icon theme alongside), then applies entries root
 // first, then mounted devices, then home, so the more specific tree wins. Caller holds s.mu.
 func (s *Store) load(mounts []devMount, sig string) {
@@ -160,19 +155,20 @@ func (s *Store) load(mounts []devMount, sig string) {
 			names = append(names, m.tree)
 		}
 	}
-	dbs := make([]treeDB, len(names))
+	refs := make([]map[string]iconRef, len(names))
+	tagv := make([]uint32, len(names))
 	var iconTheme string
 	var wg sync.WaitGroup
 	for i, n := range names {
-		wg.Go(func() { dbs[i].refs, dbs[i].tag = s.readTreeDB(n) })
+		wg.Go(func() { refs[i], tagv[i] = s.readTreeDB(n) })
 	}
 	wg.Go(func() { iconTheme = currentIconTheme() })
 	pal := s.palette.load()
 	wg.Wait()
-	loaded := map[string]treeDB{}
+	loaded := map[string]map[string]iconRef{}
 	tags := map[string]uint32{}
 	for i, n := range names {
-		loaded[n], tags[n] = dbs[i], dbs[i].tag
+		loaded[n], tags[n] = refs[i], tagv[i]
 	}
 
 	sn := &snapshot{colors: map[string]tcell.Color{}, bases: map[string]string{}}
@@ -186,17 +182,17 @@ func (s *Store) load(mounts []devMount, sig string) {
 			sn.bases[abs] = strings.TrimSuffix(path.Base(ref.icon), path.Ext(ref.icon))
 		}
 	}
-	for rel, ref := range loaded[rootTree].refs {
+	for rel, ref := range loaded[rootTree] {
 		add(filepath.Join("/", rel), ref)
 	}
 	for _, m := range mounts {
-		for rel, ref := range loaded[m.tree].refs {
+		for rel, ref := range loaded[m.tree] {
 			if abs, ok := m.abs("/" + rel); ok {
 				add(abs, ref)
 			}
 		}
 	}
-	for rel, ref := range loaded[homeTree].refs {
+	for rel, ref := range loaded[homeTree] {
 		add(filepath.Join(s.home, rel), ref)
 	}
 	sn.choices = pal.styles[pal.styleFor(iconTheme)]
