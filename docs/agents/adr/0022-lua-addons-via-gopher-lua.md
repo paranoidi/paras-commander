@@ -1,6 +1,6 @@
 # Scriptable addons are sandboxed Lua run by gopher-lua, one state per addon goroutine
 
-Status: proposed (not implemented). Extensions compiled into pc (ADR 0024) are the first extension mechanism; Lua addons would register into the same registry.
+Status: proposed (not implemented). fileindex is integrated as a built-in feature (ADR 0024); its task jobs, Go column providers and extra path scheme are the contracts an addon registry would build on.
 
 Addons are Lua 5.1 scripts run in-process by `github.com/yuin/gopher-lua`. Each addon owns one `*lua.LState` on its own goroutine, sees only a `pc` API module (no `os`, `io` or native loading), and reaches the app only through a `Host` interface in `internal/addon`. Addon-defined actions join the keymap as ordinary action ids, so they bind in `keybindings.toml` and show in help and menus like built-ins.
 
