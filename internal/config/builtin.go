@@ -77,7 +77,7 @@ const (
 
 	// FolderColorRefreshInterval is how often the GVfs folder-color metadata is checked for
 	// changes made by other programs (Nemo); a change triggers a background reload and repaint.
-	FolderColorRefreshInterval = 5 * time.Second
+	FolderColorRefreshInterval = 30 * time.Second
 
 	// DefaultPanelRefreshSlowBackoffFactor sets the start-to-start spacing enforced on periodic
 	// panel refreshes: a refresh that started at start and took elapsed may next start no sooner

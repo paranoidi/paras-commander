@@ -17,6 +17,6 @@ A colored folder has its name and icon drawn in the color Nemo uses for that fol
 
 ## How it stays current
 
-The colors are read from `~/.local/share/gvfs-metadata` once at startup, in the background, and checked again every 5 seconds. A color changed in Nemo shows up in pc within a few seconds without flicker; painting never touches the disk. A folder shown in the very first frame at startup can get its color a moment after the listing appears.
+The colors are read from `~/.local/share/gvfs-metadata` once at startup, in the background, and checked again every 30 seconds. A color changed in Nemo shows up in pc within 30 seconds without flicker (colors set from pc show immediately); painting never touches the disk. A folder shown in the very first frame at startup can get its color a moment after the listing appears.
 
 Folders carrying a Nautilus-style icon name (`folder-red`) are colored too, matched by color name against the palette.
