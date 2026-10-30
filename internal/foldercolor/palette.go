@@ -16,7 +16,6 @@ var colorsDir = "/usr/share/folder-color-switcher/colors.d"
 // Choice is one selectable folder colour of an icon-theme style.
 type Choice struct {
 	Name  string // e.g. "Red"
-	Hex   string // e.g. "#f54f54"
 	Theme string // icon theme directory, e.g. "Mint-Y-Red"
 }
 
@@ -50,7 +49,7 @@ func loadPalette() *palette {
 		}
 		for _, st := range doc.Styles {
 			for _, t := range st.Themes {
-				p.styles[st.Name] = append(p.styles[st.Name], Choice{Name: t.Name, Hex: t.Color, Theme: t.Theme})
+				p.styles[st.Name] = append(p.styles[st.Name], Choice{Name: t.Name, Theme: t.Theme})
 				p.themeHex[t.Theme] = t.Color
 				if _, ok := p.nameHex[strings.ToLower(t.Name)]; !ok {
 					p.nameHex[strings.ToLower(t.Name)] = t.Color

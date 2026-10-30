@@ -165,25 +165,18 @@ func replayJournal(data []byte, tag uint32, m map[string]iconRef) {
 		f := strings.Split(string(body[1:]), "\x00")
 		rel := func(s string) string { return strings.Trim(s, "/") }
 		switch {
-		case typ == jSet && len(f) >= 3:
-			ref := m[rel(f[0])]
-			switch f[1] {
-			case keyIcon:
-				ref.icon = f[2]
-			case keyName:
-				ref.name = f[2]
-			default:
-				continue
+		case (typ == jSet && len(f) >= 3) || (typ == jUnset && len(f) >= 2):
+			val := "" // UNSET clears the key
+			if typ == jSet {
+				val = f[2]
 			}
-			m[rel(f[0])] = ref
-		case typ == jUnset && len(f) >= 2:
 			p := rel(f[0])
 			ref := m[p]
 			switch f[1] {
 			case keyIcon:
-				ref.icon = ""
+				ref.icon = val
 			case keyName:
-				ref.name = ""
+				ref.name = val
 			default:
 				continue
 			}

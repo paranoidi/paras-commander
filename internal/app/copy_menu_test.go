@@ -104,7 +104,7 @@ func TestQuoteKeyOpensCopyMenu(t *testing.T) {
 		t.Fatalf("lookup = %q %v, want %q", id, ok, keymap.ActionAppCopyMenu)
 	}
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionAppCopyMenu)
-	if !app.copyMenuOpen() {
+	if !app.leaderMenuOpen(ui.LeaderMenuCopy) {
 		t.Fatalf("LeaderMenu = %+v, want copy menu open", app.model.LeaderMenu)
 	}
 }
@@ -112,7 +112,7 @@ func TestQuoteKeyOpensCopyMenu(t *testing.T) {
 func TestQuoteKeyTogglesCopyMenuClosed(t *testing.T) {
 	app, _ := testCopyMenuApp(t)
 	app.toggleCopyMenu()
-	if !app.copyMenuOpen() {
+	if !app.leaderMenuOpen(ui.LeaderMenuCopy) {
 		t.Fatal("expected copy menu open")
 	}
 

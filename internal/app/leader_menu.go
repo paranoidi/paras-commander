@@ -93,33 +93,24 @@ func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string
 	})
 }
 
-func (a *App) builtinLeaderMenuOpen() bool {
+// leaderMenuOpen reports whether the strip is open showing kind.
+func (a *App) leaderMenuOpen(kind ui.LeaderMenuKind) bool {
 	st := a.model.LeaderMenu
-	return st.Open && st.Kind == ui.LeaderMenuBuiltin
+	return st.Open && st.Kind == kind
 }
 
-func (a *App) previewLeaderMenuOpen() bool {
-	st := a.model.LeaderMenu
-	return st.Open && st.Kind == ui.LeaderMenuPreview
-}
-
-func (a *App) gitFilterMenuOpen() bool {
-	st := a.model.LeaderMenu
-	return st.Open && st.Kind == ui.LeaderMenuGitFilter
-}
-
-func (a *App) userMenuOpen() bool {
-	st := a.model.LeaderMenu
-	return st.Open && st.Kind == ui.LeaderMenuUser
-}
-
-func (a *App) copyMenuOpen() bool {
-	st := a.model.LeaderMenu
-	return st.Open && st.Kind == ui.LeaderMenuCopy
+// leaderMenuToggleAction is the action that opens each menu kind; pressing it again closes it.
+var leaderMenuToggleAction = map[ui.LeaderMenuKind]string{
+	ui.LeaderMenuBuiltin:     keymap.ActionAppLeaderMenu,
+	ui.LeaderMenuUser:        keymap.ActionAppUserMenu,
+	ui.LeaderMenuCopy:        keymap.ActionAppCopyMenu,
+	ui.LeaderMenuPreview:     keymap.ActionPreviewMenu,
+	ui.LeaderMenuGitFilter:   keymap.ActionPanelGitFilterMenu,
+	ui.LeaderMenuFolderColor: keymap.ActionPanelFolderColorMenu,
 }
 
 func (a *App) toggleBuiltinLeaderMenu() {
-	if a.builtinLeaderMenuOpen() {
+	if a.leaderMenuOpen(ui.LeaderMenuBuiltin) {
 		a.closeLeaderMenu()
 		return
 	}

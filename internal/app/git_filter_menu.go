@@ -6,7 +6,7 @@ import (
 )
 
 func (a *App) toggleGitFilterMenu() {
-	if a.gitFilterMenuOpen() {
+	if a.leaderMenuOpen(ui.LeaderMenuGitFilter) {
 		a.closeLeaderMenu()
 		return
 	}

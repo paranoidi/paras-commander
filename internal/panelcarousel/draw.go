@@ -324,12 +324,7 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 		return carouselColumnEntry{}, false
 	}
 	entry := entries[entryIndex]
-	style := p.Styles.PanelListingEntryStyle(entry.Type, p.ChromeBlocked)
-	if entry.Type == localfs.EntryDirectory && p.FolderColor != nil && !p.ChromeBlocked {
-		if fc, ok := p.FolderColor(entry.Path); ok {
-			style = style.Foreground(fc)
-		}
-	}
+	style := p.Styles.PanelListingFolderStyle(entry, p.ChromeBlocked, p.FolderColor)
 	selected := selState.IsSelected(entry)
 	isCursor := entryIndex == cursor
 	if isCursor {

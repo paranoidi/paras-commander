@@ -17,7 +17,7 @@ func TestAltGOpensGitFilterMenu(t *testing.T) {
 		t.Fatalf("Alt-G resolves to %q, want %q", id, keymap.ActionPanelGitFilterMenu)
 	}
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelGitFilterMenu)
-	if !app.gitFilterMenuOpen() {
+	if !app.leaderMenuOpen(ui.LeaderMenuGitFilter) {
 		t.Fatalf("LeaderMenu = %+v, want git filter menu open", app.model.LeaderMenu)
 	}
 }
@@ -27,7 +27,7 @@ func TestAltGTogglesGitFilterMenuClosed(t *testing.T) {
 	app.model.ViewMode = ui.ViewBrowser
 
 	app.toggleGitFilterMenu()
-	if !app.gitFilterMenuOpen() {
+	if !app.leaderMenuOpen(ui.LeaderMenuGitFilter) {
 		t.Fatal("expected git filter menu open")
 	}
 
@@ -46,7 +46,7 @@ func TestFolderColorKeyTogglesMenuClosed(t *testing.T) {
 	app.model.ViewMode = ui.ViewBrowser
 	items := []ui.LeaderMenuItem{{Label: "Amber"}, {Label: "Default"}}
 	app.openLeaderMenuStrip(items, ui.LeaderMenuFolderColor, "Folder color", func(int) bool { return false })
-	if !app.folderColorMenuOpen() || app.gitFilterMenuOpen() {
+	if !app.leaderMenuOpen(ui.LeaderMenuFolderColor) || app.leaderMenuOpen(ui.LeaderMenuGitFilter) {
 		t.Fatalf("LeaderMenu = %+v, want folder color menu open", app.model.LeaderMenu)
 	}
 

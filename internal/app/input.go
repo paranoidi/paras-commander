@@ -771,33 +771,12 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 		return false, true
 	case InputModeLeaderMenu:
-		if resolvedAction == keymap.ActionAppLeaderMenu && a.builtinLeaderMenuOpen() {
-			a.closeLeaderMenu()
-			a.render()
-			return false, true
-		}
-		if resolvedAction == keymap.ActionPreviewMenu && a.previewLeaderMenuOpen() {
-			a.closeLeaderMenu()
-			a.render()
-			return false, true
-		}
-		if resolvedAction == keymap.ActionPanelGitFilterMenu && a.gitFilterMenuOpen() {
-			a.closeLeaderMenu()
-			a.render()
-			return false, true
-		}
-		if resolvedAction == keymap.ActionPanelFolderColorMenu && a.folderColorMenuOpen() {
-			a.closeLeaderMenu()
-			a.render()
-			return false, true
-		}
-		if resolvedAction == keymap.ActionAppCopyMenu && a.copyMenuOpen() {
-			a.closeLeaderMenu()
-			a.render()
-			return false, true
-		}
-		if resolvedAction == keymap.ActionAppUserMenu && a.userMenuOpen() {
-			a.closeUserMenu()
+		if st := a.model.LeaderMenu; st.Open && resolvedAction != "" && resolvedAction == leaderMenuToggleAction[st.Kind] {
+			if st.Kind == ui.LeaderMenuUser {
+				a.closeUserMenu()
+			} else {
+				a.closeLeaderMenu()
+			}
 			a.render()
 			return false, true
 		}

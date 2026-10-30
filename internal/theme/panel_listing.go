@@ -19,6 +19,18 @@ type PanelListingCursorOpts struct {
 	RangePending bool
 }
 
+// PanelListingFolderStyle is PanelListingEntryStyle with a directory tinted by its folder colour
+// (folderColor nil = no tint; blocked chrome is never tinted).
+func (t Theme) PanelListingFolderStyle(entry localfs.Entry, chromeBlocked bool, folderColor func(string) (tcell.Color, bool)) tcell.Style {
+	style := t.PanelListingEntryStyle(entry.Type, chromeBlocked)
+	if entry.Type == localfs.EntryDirectory && folderColor != nil && !chromeBlocked {
+		if c, ok := folderColor(entry.Path); ok {
+			style = style.Foreground(c)
+		}
+	}
+	return style
+}
+
 // PanelListingEntryStyle returns the base row style for a listing entry by type and chrome state.
 func (t Theme) PanelListingEntryStyle(entryType localfs.EntryType, chromeBlocked bool) tcell.Style {
 	if chromeBlocked {

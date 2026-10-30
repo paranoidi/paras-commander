@@ -582,7 +582,7 @@ func TestColonKeyOpensBuiltinLeaderMenu(t *testing.T) {
 		t.Fatalf("lookup = %q %v, want %q", id, ok, keymap.ActionAppLeaderMenu)
 	}
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionAppLeaderMenu)
-	if !app.builtinLeaderMenuOpen() {
+	if !app.leaderMenuOpen(ui.LeaderMenuBuiltin) {
 		t.Fatal("expected builtin leader menu open after :")
 	}
 }
@@ -590,7 +590,7 @@ func TestColonKeyOpensBuiltinLeaderMenu(t *testing.T) {
 func TestColonKeyTogglesBuiltinLeaderMenuClosed(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.openBuiltinLeaderMenu()
-	if !app.builtinLeaderMenuOpen() {
+	if !app.leaderMenuOpen(ui.LeaderMenuBuiltin) {
 		t.Fatal("expected menu open")
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))

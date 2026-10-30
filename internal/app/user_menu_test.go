@@ -262,7 +262,7 @@ command = "true"
 	app.model.ViewMode = ui.ViewBrowser
 
 	app.toggleUserMenu()
-	if !app.userMenuOpen() {
+	if !app.leaderMenuOpen(ui.LeaderMenuUser) {
 		t.Fatal("expected user menu open")
 	}
 
@@ -825,14 +825,14 @@ func TestUserMenuKeepOpenStaysOpenWithToast(t *testing.T) {
 
 		app.openUserMenu()
 		app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone))
-		if !app.userMenuOpen() {
+		if !app.leaderMenuOpen(ui.LeaderMenuUser) {
 			t.Fatal("menu should stay open")
 		}
 		if app.model.Message != tc.want {
 			t.Fatalf("Message = %q, want %q", app.model.Message, tc.want)
 		}
 		app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
-		if app.userMenuOpen() {
+		if app.leaderMenuOpen(ui.LeaderMenuUser) {
 			t.Fatal("non-keep_open entry should close the menu")
 		}
 	}

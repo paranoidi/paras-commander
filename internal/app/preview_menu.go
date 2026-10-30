@@ -3,7 +3,7 @@ package app
 import "github.com/paranoidi/paras-commander/internal/ui"
 
 func (a *App) togglePreviewLeaderMenu() {
-	if a.previewLeaderMenuOpen() {
+	if a.leaderMenuOpen(ui.LeaderMenuPreview) {
 		a.closeLeaderMenu()
 		return
 	}

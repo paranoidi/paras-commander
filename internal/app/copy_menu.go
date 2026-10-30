@@ -16,7 +16,7 @@ import (
 )
 
 func (a *App) toggleCopyMenu() {
-	if a.copyMenuOpen() && !a.model.LeaderMenu.CopyGit {
+	if a.leaderMenuOpen(ui.LeaderMenuCopy) && !a.model.LeaderMenu.CopyGit {
 		a.closeLeaderMenu()
 		return
 	}

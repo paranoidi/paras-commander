@@ -612,12 +612,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 // panelRowStyle resolves the row's file/selected/cursor style, moved out of drawPanelRow's
 // per-entry style-resolution block.
 func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx PanelContext, styles theme.Theme) (style tcell.Style, selected bool) {
-	style = styles.PanelListingEntryStyle(entry.Type, ctx.ChromeBlocked)
-	if entry.Type == localfs.EntryDirectory && ctx.FolderColor != nil && !ctx.ChromeBlocked {
-		if c, ok := ctx.FolderColor(entry.Path); ok {
-			style = style.Foreground(c)
-		}
-	}
+	style = styles.PanelListingFolderStyle(entry, ctx.ChromeBlocked, ctx.FolderColor)
 	selected = state.IsSelected(entry)
 	if selected {
 		style = styles.PanelListingSelectedStyle(ctx.ChromeBlocked)
