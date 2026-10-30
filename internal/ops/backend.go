@@ -31,28 +31,18 @@ func useLocalFastPath(src, dst pathloc.Path) bool {
 	return src.Scheme() == pathloc.SchemeFile && dst.Scheme() == pathloc.SchemeFile
 }
 
-// sameRenameRoot reports whether one backend Rename can move a to b: both on the same SFTP
-// host, or both in the fileindex (one database).
+// sameRenameRoot reports whether one backend Rename can move a to b: the backend of a says so
+// (fsbackend.RenameRooter) for two paths of its own scheme.
 func sameRenameRoot(a, b pathloc.Path) bool {
-	if a.Scheme() == pathloc.SchemeFileIndex && b.Scheme() == pathloc.SchemeFileIndex {
-		return true
-	}
-	return sameSFTPHost(a, b)
-}
-
-func sameSFTPHost(a, b pathloc.Path) bool {
-	if a.Scheme() != pathloc.SchemeSFTP || b.Scheme() != pathloc.SchemeSFTP {
+	if a.Scheme() != b.Scheme() {
 		return false
 	}
-	ha, err := pathloc.SFTPHostPart(a)
+	be, err := backendFor(a)
 	if err != nil {
 		return false
 	}
-	hb, err := pathloc.SFTPHostPart(b)
-	if err != nil {
-		return false
-	}
-	return ha == hb
+	rr, ok := be.(fsbackend.RenameRooter)
+	return ok && rr.SameRenameRoot(a, b)
 }
 
 func statEntry(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {

@@ -32,6 +32,8 @@ func newMemIndex(dirs, files []string) *memIndexBackend {
 	return m
 }
 
+func (m *memIndexBackend) SameRenameRoot(_, _ pathloc.Path) bool { return true }
+
 func (m *memIndexBackend) Scheme() pathloc.Scheme { return pathloc.SchemeFileIndex }
 
 func (m *memIndexBackend) List(_ context.Context, dir pathloc.Path) ([]fsbackend.Entry, error) {

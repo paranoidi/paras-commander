@@ -50,6 +50,12 @@ func NewBackend(idx *Index) *Backend {
 
 func (b *Backend) Scheme() pathloc.Scheme { return pathloc.SchemeFileIndex }
 
+// IndexOnly marks the backend as records of files kept elsewhere (fsbackend.IndexOnly).
+func (b *Backend) IndexOnly() {}
+
+// SameRenameRoot is always true: every fileindex:// path lives in one database.
+func (b *Backend) SameRenameRoot(_, _ pathloc.Path) bool { return true }
+
 func (b *Backend) open() (*db.DB, error) {
 	idx := b.idx()
 	if idx == nil {

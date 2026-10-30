@@ -42,6 +42,8 @@ func newBlockingMoveBackend(mode string) *blockingMoveBackend {
 
 func (b *blockingMoveBackend) Scheme() pathloc.Scheme { return pathloc.SchemeSFTP }
 
+func (b *blockingMoveBackend) SameRenameRoot(_, _ pathloc.Path) bool { return true }
+
 func (b *blockingMoveBackend) Phase() string {
 	s, _ := b.phase.Load().(string)
 	return s

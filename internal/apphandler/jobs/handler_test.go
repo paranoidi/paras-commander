@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"fmt"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"slices"
 	"strings"
 	"testing"
@@ -1062,7 +1063,16 @@ func TestJobsViewCtrlSpaceTogglesOperationsAtBottom(t *testing.T) {
 	}
 }
 
+// indexOnlyStub stands in for the fileindex backend: only its scheme and IndexOnly marker matter.
+type indexOnlyStub struct{ fsbackend.Backend }
+
+func (indexOnlyStub) Scheme() pathloc.Scheme { return pathloc.SchemeFileIndex }
+func (indexOnlyStub) IndexOnly()             {}
+
 func TestIndexTransferRefusal(t *testing.T) {
+	if err := fsbackend.RegisterDefault(indexOnlyStub{}); err != nil {
+		t.Fatal(err)
+	}
 	idx := pathloc.MustParse("fileindex:///orchard/harbor.txt")
 	idxDir := pathloc.MustParse("fileindex:///cedar")
 	disk := pathloc.MustParse("/tmp/meadow")

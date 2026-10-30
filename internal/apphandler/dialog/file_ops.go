@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/filenameenc"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -172,7 +173,7 @@ func (h *Handler) OpenRenameDialog(p *panel.State) {
 		RenameSourceIsDir:        entry.ResolvesToDir(),
 		RenameEncodingCandidates: renameEnc,
 		RenameEncodingSelected:   0,
-		SchemeNote:               dialog.SchemeNote(p.Path.Scheme(), dialog.FileDialogRename),
+		Note:                     h.indexOnlyNote(p, renameIndexNote),
 	}
 }
 
@@ -241,7 +242,7 @@ func (h *Handler) OpenDeleteDialog(panelID int) {
 		DeleteSummary: h.DeleteDialogSummary(p, source),
 		DeleteEntries: entries,
 		Focus:         dlg.Cancel, // No is the safe default
-		SchemeNote:    dialog.SchemeNote(p.Path.Scheme(), dialog.FileDialogDelete),
+		Note:          h.indexOnlyNote(p, deleteIndexNote),
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
 	h.model.FileDialog = fd
@@ -922,4 +923,19 @@ func (h *Handler) executeHardlink() {
 	h.CloseFileDialog()
 	h.RefreshBothPanels()
 	h.host.SetTransientMessage(fmt.Sprintf("Created hardlink: %s", filepath.Base(plan.NewPath)), ui.MessageUrgencyInfo)
+}
+
+// Notes for the rename and delete dialogs on an index-only panel (fsbackend.IndexOnly), whose
+// wording otherwise assumes the disk changes.
+const (
+	renameIndexNote = "Renames in the fileindex only; files on disk are not touched."
+	deleteIndexNote = "Removes from the fileindex only; files on disk are not touched."
+)
+
+// indexOnlyNote returns note when p's backend is index-only, else "".
+func (h *Handler) indexOnlyNote(p *panel.State, note string) string {
+	if fsbackend.Default().IsIndexOnly(p.Path) {
+		return note
+	}
+	return ""
 }

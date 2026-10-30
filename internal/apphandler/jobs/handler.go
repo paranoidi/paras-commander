@@ -9,6 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -1377,13 +1378,14 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 	h.commitJob(job)
 }
 
-// indexTransferRefusal explains why a transfer touching fileindex:// cannot be queued, or "": the
-// index is read-only for copies into it, and a move across its boundary would copy the file and
-// then remove only its index entry. Copying out of it and moving inside it are fine.
+// indexTransferRefusal explains why a transfer touching an index-only location (fsbackend.IndexOnly)
+// cannot be queued, or "": the index is read-only for copies into it, and a move across its
+// boundary would copy the file and then remove only its index entry. Copying out of it and
+// moving inside it are fine.
 func indexTransferRefusal(t jobs.Type, sources []pathloc.Path, dest pathloc.Path) string {
-	destIndex := dest.Scheme() == pathloc.SchemeFileIndex
+	destIndex := fsbackend.Default().IsIndexOnly(dest)
 	for _, src := range sources {
-		srcIndex := src.Scheme() == pathloc.SchemeFileIndex
+		srcIndex := fsbackend.Default().IsIndexOnly(src)
 		switch {
 		case destIndex && !srcIndex:
 			return "The fileindex is read-only: files cannot be copied or moved into it"
