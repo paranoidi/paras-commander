@@ -218,7 +218,7 @@ func (s *Store) load(mounts []devMount, sig string) {
 
 // WatchIconTheme follows the desktop icon theme through `gsettings monitor` until ctx ends, so a
 // reload never forks gsettings and a theme change swaps the colour choices at once. onChange runs
-// after each swap. It blocks; when gsettings is missing or the monitor exits, load falls back to
+// only when the choices actually changed (not for the startup read that matches the first load). It blocks; when gsettings is missing or the monitor exits, load falls back to
 // reading the theme itself.
 func (s *Store) WatchIconTheme(ctx context.Context, onChange func()) {
 	cmd := exec.CommandContext(ctx, gsettingsBin, "monitor", iconThemeSchema, iconThemeKey)
@@ -233,32 +233,40 @@ func (s *Store) WatchIconTheme(ctx context.Context, onChange func()) {
 		s.mu.Unlock()
 	}()
 	// The monitor is already listening, so a change during this initial read is not lost.
-	s.setTheme(currentIconTheme(), true)
-	onChange()
+	if s.setTheme(currentIconTheme(), true) {
+		onChange()
+	}
 	sc := bufio.NewScanner(out)
 	for sc.Scan() {
 		// Lines look like: icon-theme: 'Mint-Y-Sand'
-		if _, v, ok := strings.Cut(sc.Text(), ": "); ok {
-			s.setTheme(strings.Trim(v, "'"), false)
+		if _, v, ok := strings.Cut(sc.Text(), ": "); ok && s.setTheme(strings.Trim(v, "'"), false) {
 			onChange()
 		}
 	}
 }
 
-// setTheme records the icon theme and republishes the snapshot with that theme's colour choices.
-func (s *Store) setTheme(theme string, startWatch bool) {
+// setTheme records the icon theme and, when its style's colour choices differ from the published
+// ones, republishes the snapshot with them; it reports whether it did.
+func (s *Store) setTheme(theme string, startWatch bool) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.theme = theme
 	if startWatch {
 		s.watched = true
 	}
-	if sn := s.snap.Load(); sn != nil {
-		pal := s.palette.load()
-		next := *sn
-		next.choices = pal.styles[pal.styleFor(theme)]
-		s.snap.Store(&next)
+	sn := s.snap.Load()
+	if sn == nil {
+		return false
 	}
+	pal := s.palette.load()
+	choices := pal.styles[pal.styleFor(theme)]
+	if slices.Equal(choices, sn.choices) {
+		return false
+	}
+	next := *sn
+	next.choices = choices
+	s.snap.Store(&next)
+	return true
 }
 
 // currentIconTheme returns the desktop's icon theme (e.g. "Mint-Y-Sand"), or "" when unknown.

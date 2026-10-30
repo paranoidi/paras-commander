@@ -454,12 +454,11 @@ func TestWatchIconTheme(t *testing.T) {
 	changes := make(chan struct{}, 4)
 	done := make(chan struct{})
 	go func() { s.WatchIconTheme(ctx, func() { changes <- struct{}{} }); close(done) }()
-	for range 2 { // initial read, then the monitor line
-		select {
-		case <-changes:
-		case <-time.After(5 * time.Second):
-			t.Fatal("no theme change reported")
-		}
+	// The startup read matches the first load (Mint-Y) and must not report; the monitor line must.
+	select {
+	case <-changes:
+	case <-time.After(5 * time.Second):
+		t.Fatal("no theme change reported")
 	}
 	if got := s.Choices(); len(got) != 1 || got[0].Name != "Sand" {
 		t.Fatalf("watched choices %v", got)
@@ -470,6 +469,9 @@ func TestWatchIconTheme(t *testing.T) {
 	}
 	cancel()
 	<-done
+	if n := len(changes); n != 0 {
+		t.Fatalf("%d extra change reports, want only the monitor's", n)
+	}
 	if s.watched {
 		t.Fatal("still marked watched after the monitor stopped")
 	}
