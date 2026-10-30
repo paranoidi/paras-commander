@@ -67,13 +67,36 @@ func tree(t *testing.T) string {
 }
 
 type recReporter struct {
-	mu    sync.Mutex
-	last  jobs.TaskProgress
-	warns []string
+	mu      sync.Mutex
+	last    jobs.TaskProgress
+	warns   []string
+	started []int
 }
 
 func (r *recReporter) Progress(p jobs.TaskProgress) { r.mu.Lock(); r.last = p; r.mu.Unlock() }
 func (r *recReporter) Warn(m string)                { r.mu.Lock(); r.warns = append(r.warns, m); r.mu.Unlock() }
+func (r *recReporter) StartSource(i int) {
+	r.mu.Lock()
+	r.started = append(r.started, i)
+	r.mu.Unlock()
+}
+
+// TestScanTaskScansPathsInTurn: each path is started in order and the counts add up across them.
+func TestScanTaskScansPathsInTurn(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	root := tree(t)
+	rep := &recReporter{}
+	paths := []string{filepath.Join(root, "harbor.txt"), filepath.Join(root, "lantern")}
+	if err := x.ScanTask(paths).Run(context.Background(), rep); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(rep.started, []int{0, 1}) {
+		t.Fatalf("started = %v, want [0 1]", rep.started)
+	}
+	if rep.last.DoneFiles != 3 || rep.last.TotalFiles != 3 || rep.last.DoneBytes != int64(len("anchor and rope")+len("clover")+len("bramble patch")) {
+		t.Fatalf("scan progress = %+v, want 3/3 files and their bytes", rep.last)
+	}
+}
 
 func scanned(t *testing.T) (*Index, string) {
 	t.Helper()

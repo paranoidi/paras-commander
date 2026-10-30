@@ -39,6 +39,10 @@ type TaskReporter interface {
 	Progress(TaskProgress)
 	// Warn adds a non-fatal line to the job's Warnings.
 	Warn(msg string)
+	// StartSource marks source i (an index into Job.Sources) started and the one started
+	// before it finished, so a task working through its sources one at a time clears their
+	// file-list marks as it goes (Job.StartSource).
+	StartSource(i int)
 }
 
 // NewTaskJob builds a queued TypeTask job for task. sources are the paths the task works on:
@@ -117,6 +121,8 @@ func (r *taskReporter) Warn(msg string) {
 	r.job.Warnings = append(r.job.Warnings, msg)
 	r.s.mu.Unlock()
 }
+
+func (r *taskReporter) StartSource(i int) { r.job.StartSource(int32(i)) }
 
 // finish flushes the last sample and returns its counts for the terminal event.
 func (r *taskReporter) finish() (doneFiles int, doneBytes int64) {

@@ -16,7 +16,10 @@ const TaskLease = "fileindex"
 
 // ScanTask returns the task job scanning paths (local host paths) into the index: hashing new
 // and changed files, then pruning what is gone under them (fileindex's scan.Run with its
-// config.ini rules).
+// config.ini rules). Paths are scanned one at a time (jobs.TaskReporter.StartSource), so each
+// one's file-list mark clears when it is done.
+// ponytail: one scan.Run per path loses hashing parallelism across many small selected files;
+// batch paths into one run if that gets slow.
 func (x *Index) ScanTask(paths []string) *jobs.Task {
 	return &jobs.Task{
 		Title: "fileindex scan",
@@ -31,22 +34,32 @@ func (x *Index) ScanTask(paths []string) *jobs.Task {
 				return err
 			}
 			rep := newScanReporter(r)
-			stats, err := scan.Run(ctx, d, paths, scan.Options{
-				Rules:       rules,
-				Workers:     workers,
-				MissingOnly: true,
-				BatchFiles:  config.FileIndexScanBatchFiles,
-			}, rep)
-			for _, e := range stats.Errors {
-				rep.warn(e)
+			var total scan.Stats
+			for i, p := range paths {
+				r.StartSource(i)
+				rep.next(total)
+				stats, err := scan.Run(ctx, d, []string{p}, scan.Options{
+					Rules:       rules,
+					Workers:     workers,
+					MissingOnly: true,
+					BatchFiles:  config.FileIndexScanBatchFiles,
+				}, rep)
+				for _, e := range stats.Errors {
+					rep.warn(e)
+				}
+				total.Processed += stats.Processed
+				total.Errored += stats.Errored
+				total.TotalSize += stats.TotalSize
+				total.Interrupted = stats.Interrupted
+				if err != nil || stats.Interrupted {
+					rep.finish(total)
+					if err != nil {
+						return err
+					}
+					return context.Canceled
+				}
 			}
-			rep.finish(stats)
-			if err != nil {
-				return err
-			}
-			if stats.Interrupted {
-				return context.Canceled
-			}
+			rep.finish(total)
 			return nil
 		},
 	}
@@ -106,8 +119,9 @@ func (w *warnings) flush() {
 
 // scanReporter maps scan.Reporter onto task progress: discovery sets the total, a hash worker
 // starting its next file counts the previous one done, Speed samples add the bytes hashed since
-// the last sample, and pruning shows the directory being checked. Its methods are called from
-// scan's goroutines concurrently.
+// the last sample, and pruning shows the directory being checked. Each scan.Run's counts add to
+// those of the runs before it (next). Its methods are called from scan's goroutines
+// concurrently.
 type scanReporter struct {
 	r jobs.TaskReporter
 	w warnings
@@ -117,10 +131,23 @@ type scanReporter struct {
 	busy     map[int]bool
 	bytes    float64
 	lastTick time.Time
+	base     scan.Stats // committed counts of the finished runs
+	baseNew  int        // files to hash found by the finished runs
 }
 
 func newScanReporter(r jobs.TaskReporter) *scanReporter {
 	return &scanReporter{r: r, w: warnings{r: r}, busy: map[int]bool{}}
+}
+
+// next starts the next scan.Run on top of the finished runs' committed counts done.
+func (s *scanReporter) next(done scan.Stats) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.base, s.baseNew = done, s.p.TotalFiles
+	s.p.DoneFiles = done.Processed + done.Errored
+	s.bytes = float64(done.TotalSize)
+	s.busy = map[int]bool{}
+	s.lastTick = time.Time{}
 }
 
 // report sends the current sample; caller holds s.mu.
@@ -154,7 +181,7 @@ func (s *scanReporter) Speed(_ int, bps float64) {
 func (s *scanReporter) Scan(dir string, _, newFiles, _ int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.p.TotalFiles = max(s.p.TotalFiles, newFiles)
+	s.p.TotalFiles = max(s.p.TotalFiles, s.baseNew+newFiles)
 	if dir != "" && len(s.busy) == 0 {
 		s.p.CurrentPath = dir
 	}
@@ -165,9 +192,9 @@ func (s *scanReporter) Scan(dir string, _, newFiles, _ int) {
 func (s *scanReporter) Hashed(res scan.Stats) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.p.DoneFiles = res.Processed + res.Errored
+	s.p.DoneFiles = s.base.Processed + s.base.Errored + res.Processed + res.Errored
 	s.p.TotalFiles = max(s.p.TotalFiles, s.p.DoneFiles)
-	s.bytes = float64(res.TotalSize)
+	s.bytes = float64(s.base.TotalSize + res.TotalSize)
 	s.report()
 }
 
@@ -183,7 +210,7 @@ func (s *scanReporter) Log(msg string) { s.w.warn(msg) }
 func (s *scanReporter) warn(msg string) { s.w.warn(msg) }
 
 // finish flushes the dropped-warning count and, for a scan that completed its hashing, the
-// committed counts.
+// committed counts of every run (stats).
 func (s *scanReporter) finish(stats scan.Stats) {
 	s.w.flush()
 	if stats.Interrupted {

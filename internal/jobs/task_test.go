@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -58,6 +59,29 @@ func TestTaskJobReportsProgressAndWarnings(t *testing.T) {
 	}
 	if len(got.Warnings) != 1 || got.Warnings[0] != "skipped /orchard/thistle: unreadable" {
 		t.Fatalf("warnings = %v", got.Warnings)
+	}
+}
+
+// TestTaskJobStartSourceAdvancesPhases: a task working through its sources finishes each one
+// as it starts the next.
+func TestTaskJobStartSourceAdvancesPhases(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	var mid []SourcePhase
+	var job *Job
+	job = NewTaskJob(&Task{Title: "ferry", Lease: "ferry", Run: func(_ context.Context, r TaskReporter) error {
+		r.StartSource(0)
+		r.StartSource(1)
+		mid = job.SourcePhases()
+		return nil
+	}}, pathloc.PathsForTest("/orchard/acorn", "/orchard/bramble", "/orchard/clover"))
+	s.AddJob(job)
+	applyUntilFinished(t, s, job.ID)
+	if want := []SourcePhase{SourceFinished, SourceStarted, SourceQueued}; !slices.Equal(mid, want) {
+		t.Fatalf("phases = %v, want %v", mid, want)
 	}
 }
 

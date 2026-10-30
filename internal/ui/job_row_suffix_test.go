@@ -43,6 +43,12 @@ func TestJobRowSuffixIconsByTypeAndStatus(t *testing.T) {
 	if s.JobIcon != th.IconFilelistJob() || !s.JobWrite || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 {
 		t.Fatalf("running copy destination: %+v", s)
 	}
+	nf := th
+	nf.UseNerdfontIcons = true
+	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeTask, jobs.StatusRunning), nf)
+	if s.JobIcon != '\uf1c0' {
+		t.Fatalf("running task: %+v", s)
+	}
 	if s, _ := jobRowSuffix("/elsewhere.txt", mark(jobs.TypeMove, jobs.StatusQueued), th); s.JobIcon != 0 {
 		t.Fatalf("unrelated path got job suffix: %+v", s)
 	}
