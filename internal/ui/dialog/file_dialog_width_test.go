@@ -157,7 +157,7 @@ func TestFileDialogDeleteWidthUsesCachedLayoutMinWidth(t *testing.T) {
 func TestFileDialogIndexInitWidthFitsPath(t *testing.T) {
 	path := "/home/wren/projects/orchard/.no-fileindex/lantern/index.sqlite"
 	st := FileDialogState{Open: true, DialogType: FileDialogIndexInit, Message: path}
-	if w := fileDialogWidth(200, st, 0); w < len(path)+2+4 {
+	if w := fileDialogWidth(200, st, 0); w < len(path)+4 {
 		t.Fatalf("width = %d, want room for the %d-cell path", w, len(path))
 	}
 	if w := fileDialogWidth(40, st, 0); w != 36 {

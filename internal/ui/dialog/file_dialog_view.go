@@ -370,7 +370,7 @@ func indexInitLabels(st FileDialogState) []dlg.Item {
 	}
 	items := []dlg.Item{
 		{Kind: dlg.KindLabel, Label: head},
-		{Kind: dlg.KindLabel, Label: st.Message, Fit: dlg.FitPath, Indent: 2},
+		{Kind: dlg.KindLabel, Label: st.Message, Fit: dlg.FitPath},
 		{Kind: dlg.KindLabel},
 	}
 	for _, l := range ask {
