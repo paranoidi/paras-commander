@@ -1,6 +1,7 @@
 package primitive
 
 import (
+	"maps"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -45,10 +46,7 @@ var displayPrefixes atomic.Pointer[map[string]string]
 // SetPathDisplayPrefixes replaces the URI prefixes PathWithHomeTilde shows differently (canonical
 // prefix -> display text). Prefixes absent from m are shown as is.
 func SetPathDisplayPrefixes(m map[string]string) {
-	cp := make(map[string]string, len(m))
-	for k, v := range m {
-		cp[k] = v
-	}
+	cp := maps.Clone(m)
 	displayPrefixes.Store(&cp)
 }
 

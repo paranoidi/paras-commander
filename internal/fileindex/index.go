@@ -30,9 +30,8 @@ type Index struct {
 	configPath string
 	home       string
 
-	mu  sync.Mutex
-	db  *db.DB
-	err error // the last open failure; the next DB call tries again
+	mu sync.Mutex
+	db *db.DB
 
 	// OnOpenError, when set, is called once, from the goroutine that hit it, with the first
 	// open failure, so the UI can report it once instead of on every action.
@@ -77,13 +76,12 @@ func (x *Index) DB() (*db.DB, error) {
 	}
 	d, err := x.open()
 	if err != nil {
-		x.err = err
 		if x.OnOpenError != nil {
 			x.reported.Do(func() { x.OnOpenError(err) })
 		}
 		return nil, err
 	}
-	x.db, x.err = d, nil
+	x.db = d
 	return d, nil
 }
 
@@ -113,30 +111,7 @@ var ErrIndexExists = errors.New("fileindex database already exists")
 
 // Create makes an empty, schema-current database at DatabasePath (fileindex's `init` on a new
 // file) and keeps it open for DB. It refuses an existing file, so it never migrates one.
-func (x *Index) Create() (string, error) {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	path, err := x.DatabasePath()
-	if err != nil {
-		return "", fmt.Errorf("fileindex: %w", err)
-	}
-	if _, err := os.Stat(path); err == nil {
-		return path, fmt.Errorf("%w at %s", ErrIndexExists, path)
-	}
-	d, err := db.Open(path)
-	if err != nil {
-		return path, fmt.Errorf("fileindex: %w", err)
-	}
-	if err := d.Init(io.Discard); err != nil {
-		_ = d.Close()
-		return path, fmt.Errorf("fileindex: create %s: %w", path, err)
-	}
-	if x.db != nil {
-		_ = x.db.Close()
-	}
-	x.db, x.err = d, nil
-	return path, nil
-}
+func (x *Index) Create() (string, error) { return x.initDB(false) }
 
 // NeedsUpgrade reports whether a DB error is a database that exists but fileindex's Init must
 // bring to the current schema: an older schema, or a file that was never initialised. A newer
@@ -147,15 +122,26 @@ func NeedsUpgrade(err error) bool {
 
 // Upgrade runs fileindex's Init on the existing database (migrating an older schema, which
 // rebuilds its search indexes and can take minutes on a large index) and keeps it open.
-func (x *Index) Upgrade() (string, error) {
+func (x *Index) Upgrade() (string, error) { return x.initDB(true) }
+
+// initDB runs fileindex's Init on the database at DatabasePath and keeps it open: upgrade
+// requires the file to exist (and checks the schema afterwards), otherwise it must not.
+func (x *Index) initDB(upgrade bool) (string, error) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	path, err := x.DatabasePath()
 	if err != nil {
 		return "", fmt.Errorf("fileindex: %w", err)
 	}
-	if _, err := os.Stat(path); err != nil {
-		return path, fmt.Errorf("%w at %s", ErrNoIndex, path)
+	verb := "create"
+	_, statErr := os.Stat(path)
+	if upgrade {
+		verb = "upgrade"
+		if statErr != nil {
+			return path, fmt.Errorf("%w at %s", ErrNoIndex, path)
+		}
+	} else if statErr == nil {
+		return path, fmt.Errorf("%w at %s", ErrIndexExists, path)
 	}
 	d, err := db.Open(path)
 	if err != nil {
@@ -163,16 +149,18 @@ func (x *Index) Upgrade() (string, error) {
 	}
 	if err := d.Init(io.Discard); err != nil {
 		_ = d.Close()
-		return path, fmt.Errorf("fileindex: upgrade %s: %w", path, err)
+		return path, fmt.Errorf("fileindex: %s %s: %w", verb, path, err)
 	}
-	if err := d.RequireSchema(); err != nil {
-		_ = d.Close()
-		return path, fmt.Errorf("fileindex %s: %w", path, err)
+	if upgrade {
+		if err := d.RequireSchema(); err != nil {
+			_ = d.Close()
+			return path, fmt.Errorf("fileindex %s: %w", path, err)
+		}
 	}
 	if x.db != nil {
 		_ = x.db.Close()
 	}
-	x.db, x.err = d, nil
+	x.db = d
 	return path, nil
 }
 

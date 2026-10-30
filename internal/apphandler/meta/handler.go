@@ -44,11 +44,18 @@ func (h *Handler) postExecFailed(panelID int, gen uint64, exitCode int, stderr, 
 	}))
 }
 
-// HandleWake applies one async command result and schedules a debounced repaint.
+// HandleWake applies one async command result (or one provider batch) and schedules a debounced repaint.
 // Called from Run's interrupt switch for WakePayload.
 func (h *Handler) HandleWake(d WakePayload) {
 	if d.Gen == h.runGen[d.PanelID] {
-		h.applyWakeResult(d)
+		if d.Values != nil {
+			for path, v := range d.Values {
+				d.Path, d.Value = path, v
+				h.applyWakeResult(d)
+			}
+		} else {
+			h.applyWakeResult(d)
+		}
 		if p := h.host.PanelByID(d.PanelID); p != nil && p.Sort.Mode == panel.SortMeta && p.Sort.MetaColumn == d.EntryName {
 			h.resortPending[d.PanelID] = true
 		}
@@ -765,8 +772,9 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 	}()
 }
 
-// runProvider calls a Go column provider once for entries and posts every entry's value
-// through postResult, like the per-entry shell commands, so pending markers clear the same way.
+// runProvider calls a Go column provider once for entries and posts every entry's value in ONE
+// WakePayload (Values; missing entries get ""), so a large listing cannot flood the event queue
+// and drop wakes that would leave pending markers stuck.
 // A provider error is reported once (ExecFailedPayload) and leaves the cells empty.
 func (h *Handler) runProvider(ctx context.Context, panelID int, gen uint64, p *metacmds.Provider, entries []localfs.Entry, dir string) {
 	vals, err := p.Values(ctx, dir, entries)
@@ -777,9 +785,11 @@ func (h *Handler) runProvider(ctx context.Context, panelID int, gen uint64, p *m
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(ExecFailedPayload{PanelID: panelID, Gen: gen, Provider: p.Name, Stderr: err.Error()}))
 		vals = nil
 	}
+	batch := make(map[string]string, len(entries))
 	for _, e := range entries {
-		h.postResult(panelID, p.Name, e.Path, vals[e.Path], gen)
+		batch[e.Path] = vals[e.Path]
 	}
+	_ = h.screen.PostEvent(tcell.NewEventInterrupt(WakePayload{PanelID: panelID, EntryName: p.Name, Values: batch, Gen: gen}))
 }
 
 // entryCmd returns the shell command to run for entry e under cmdDef.

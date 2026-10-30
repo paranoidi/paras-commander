@@ -1267,11 +1267,9 @@ func (h *Handler) commitJob(job *jobs.Job) {
 	h.SyncJobPathMarks()
 }
 
-// AddTaskJob queues a task job working on sources (see jobs.Task) and returns it.
-func (h *Handler) AddTaskJob(task *jobs.Task, sources []pathloc.Path) *jobs.Job {
-	job := jobs.NewTaskJob(task, sources)
-	h.commitJob(job)
-	return job
+// AddTaskJob queues a task job working on sources (see jobs.Task).
+func (h *Handler) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
+	h.commitJob(jobs.NewTaskJob(task, sources))
 }
 
 type transferEnqueueOpts struct {

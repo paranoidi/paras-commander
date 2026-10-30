@@ -792,8 +792,6 @@ func (t Theme) IconFilelistOtherMatch() rune {
 	return t.iconRuneOr(IconKeyFilelistOtherMatch, '\U000f01fc')
 }
 
-// IconFilelistJob returns the file-list job mark icon (role/status colored via
-// Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
 // IconKeyFileIndex replaces "fileindex" in a displayed fileindex:// path (Theme.IconFileIndex).
 const IconKeyFileIndex = "fileindex"
 
@@ -806,6 +804,8 @@ func (t Theme) IconFileIndex() string {
 	return t.iconOr(IconKeyFileIndex, "\uf1c0")
 }
 
+// IconFilelistJob returns the file-list job mark icon (role/status colored via
+// Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
 func (t Theme) IconFilelistJob() rune {
 	return t.iconRuneOr(IconKeyFilelistJob, '\U000f02ca')
 }

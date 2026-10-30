@@ -84,7 +84,10 @@ type WakePayload struct {
 	EntryName string
 	Path      string
 	Value     string
-	Gen       uint64
+	// Values, when non-nil, is a batch (path -> value) applied in one pass instead of Path/Value;
+	// a provider column posts one event for the whole listing.
+	Values map[string]string
+	Gen    uint64
 }
 
 // RenderFlushPayload is posted by the debounced meta render timer to coalesce frequent

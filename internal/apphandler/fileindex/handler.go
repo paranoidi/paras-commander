@@ -56,23 +56,16 @@ type Handler struct {
 	pendingInit func()
 }
 
-// New constructs the handler and routes the index's one-time open failure to HandleOpenError.
+// New constructs the handler and routes the index's one-time open failure to HandleReady.
 func New(deps Deps) *Handler {
 	h := &Handler{host: deps.Host, screen: deps.Screen, model: deps.Model, index: deps.Index}
 	if h.index != nil {
 		h.index.OnOpenError = func(err error) {
 			path, _ := h.index.DatabasePath()
-			h.post(OpenErrorPayload{Err: err, Path: path})
+			h.post(ReadyPayload{Err: err, Path: path})
 		}
 	}
 	return h
-}
-
-// OpenErrorPayload carries the index's first open failure (no index, wrong schema) and the
-// database path.
-type OpenErrorPayload struct {
-	Err  error
-	Path string
 }
 
 // TagsPayload carries the outcome of a tag edit.
@@ -118,8 +111,6 @@ func (h *Handler) Dispatch(actionID string) bool {
 // for any other payload.
 func (h *Handler) HandleWake(data any) bool {
 	switch p := data.(type) {
-	case OpenErrorPayload:
-		h.HandleOpenError(p)
 	case ReadyPayload:
 		h.HandleReady(p)
 	case InitPayload:
@@ -141,21 +132,6 @@ func (h *Handler) post(payload any) {
 }
 
 const messageTitle = "fileindex"
-
-// HandleOpenError handles the index's first open failure, from whatever touched it first (an
-// action, the tags column, a fileindex:// panel): a missing database asks whether to create it,
-// an outdated one whether to upgrade it, any other failure goes to the Messages log once.
-func (h *Handler) HandleOpenError(p OpenErrorPayload) {
-	switch {
-	case errors.Is(p.Err, fi.ErrNoIndex):
-		h.promptInit(p.Path, false, nil)
-		return
-	case fi.NeedsUpgrade(p.Err):
-		h.promptInit(p.Path, true, nil)
-		return
-	}
-	h.host.SetErrorMessage(messageTitle, p.Err)
-}
 
 // targets returns the active panel's selection, else its cursor entry, else its directory.
 func (h *Handler) targets() []string {
@@ -294,8 +270,8 @@ func (h *Handler) Open() {
 	case pathloc.SchemeFileIndex:
 		h.host.SetTransientMessage("Already browsing the fileindex", ui.MessageUrgencyInfo)
 		return
-	case pathloc.SchemeSFTP:
-		h.host.SetTransientMessage("fileindex covers local paths only", ui.MessageUrgencyWarn)
+	}
+	if !h.localOrIndex() {
 		return
 	}
 	panelID, dir := h.model.ActivePanel, p.PathString()

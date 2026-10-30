@@ -38,7 +38,7 @@ func (x *Index) ScanTask(paths []string) *jobs.Task {
 				BatchFiles:  config.FileIndexScanBatchFiles,
 			}, rep)
 			for _, e := range stats.Errors {
-				rep.warn(e)
+				rep.Log(e)
 			}
 			rep.finish(stats)
 			if err != nil {
@@ -180,8 +180,6 @@ func (s *scanReporter) Prune(dir string, _ int) {
 
 func (s *scanReporter) Log(msg string) { s.w.warn(msg) }
 
-func (s *scanReporter) warn(msg string) { s.w.warn(msg) }
-
 // finish flushes the dropped-warning count and, for a scan that completed its hashing, the
 // committed counts.
 func (s *scanReporter) finish(stats scan.Stats) {
@@ -190,12 +188,9 @@ func (s *scanReporter) finish(stats scan.Stats) {
 		return
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.p.DoneFiles = stats.Processed + stats.Errored
-	s.p.TotalFiles = max(s.p.TotalFiles, s.p.DoneFiles)
-	s.bytes = float64(stats.TotalSize)
 	s.p.CurrentPath = ""
-	s.report()
+	s.mu.Unlock()
+	s.Hashed(stats)
 }
 
 // compile-time check: scanReporter is a scan.Reporter.

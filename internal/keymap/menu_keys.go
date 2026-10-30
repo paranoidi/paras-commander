@@ -2,6 +2,7 @@ package keymap
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -14,7 +15,7 @@ type letterMenu struct {
 }
 
 // letterMenus is the one list of single-letter menu tables: LoadFromPaths layers each, buildBundle
-// validates each, parseKeybindingsFile reads each and the stub writes each.
+// validates each, parseKeybindingsFile reads each and the stub's defaults (defaultLetterMenuKeys) come from each.
 var letterMenus = []letterMenu{
 	{LeaderKeyShortcutsTable, DefaultLeaderKeys, validateLeaderKeysPerScope},
 	{CopyMenuShortcutsTable, DefaultCopyMenuKeys, validateCopyMenuKeys},
@@ -33,12 +34,7 @@ func defaultLetterMenuKeys() map[string]map[string]string {
 
 // isLetterMenuTable reports whether table is one of letterMenus.
 func isLetterMenuTable(table string) bool {
-	for _, m := range letterMenus {
-		if m.table == table {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(letterMenus, func(m letterMenu) bool { return m.table == table })
 }
 
 // mergeMenuKeys overlays user single-letter bindings on defaults; empty user value omits the action.

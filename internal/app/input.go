@@ -1090,6 +1090,9 @@ func (a *App) dispatch(actionID string) bool {
 	if a.jobsCtrl.TryDispatch(actionID) {
 		return false
 	}
+	if a.fileindexCtrl.Dispatch(actionID) {
+		return false
+	}
 	if a.tryDispatchMessages(actionID) {
 		return false
 	}
@@ -1175,9 +1178,6 @@ func (a *App) dispatch(actionID string) bool {
 		a.dialogCtrl.OpenAddBookmarkDialog()
 	case keymap.ActionRemoteSFTPLink:
 		a.openSFTPConnectDialog()
-	case keymap.ActionFileIndexMenu, keymap.ActionFileIndexScan, keymap.ActionFileIndexPrune, keymap.ActionFileIndexTagAdd,
-		keymap.ActionFileIndexTagRemove, keymap.ActionFileIndexOpen, keymap.ActionFileIndexReveal:
-		a.fileindexCtrl.Dispatch(actionID)
 	case keymap.ActionPanelToggleSync:
 		a.toggleSyncFollow()
 	case keymap.ActionPanelHistoryDialog:

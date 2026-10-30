@@ -12,15 +12,6 @@ func (a *App) toggleFileIndexMenu() {
 	if a.model.ViewMode != ui.ViewBrowser || a.keys == nil {
 		return
 	}
-	var items []ui.LeaderMenuItem
-	var actions []string
-	for _, e := range a.keys.FileIndexMenuEntries() {
-		directKey := ""
-		if a.config.UI.LeaderMenuShowDirectKeys && a.keys.Global != nil {
-			directKey = a.keys.Global.MenuBindingLabel(e.ActionID)
-		}
-		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: e.Label, DirectKey: directKey})
-		actions = append(actions, e.ActionID)
-	}
+	items, actions := a.buildLeaderMenuItems(a.keys.FileIndexMenuEntries())
 	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuFileIndex, "fileindex menu", a.dispatchActionLikeKeyboardShortcut)
 }

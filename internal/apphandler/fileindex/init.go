@@ -40,11 +40,14 @@ func (h *Handler) withIndex(then func()) {
 	}()
 }
 
-// HandleReady runs the waiting action, or asks to create or upgrade the database.
+// HandleReady runs the waiting action, or asks to create or upgrade the database. The index's
+// own first open failure (from whatever touched it first) arrives here with no action waiting.
 func (h *Handler) HandleReady(p ReadyPayload) {
 	switch {
 	case p.Err == nil:
-		p.then()
+		if p.then != nil {
+			p.then()
+		}
 	case errors.Is(p.Err, fi.ErrNoIndex):
 		h.promptInit(p.Path, false, p.then)
 	case fi.NeedsUpgrade(p.Err):
