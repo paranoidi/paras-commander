@@ -119,8 +119,12 @@ _Avoid_: host terminal
 ### Jobs
 
 **Job**:
-A queued background file operation (copy, move, delete, flatten, extract).
-_Avoid_: task, transfer (as a general term)
+A queued background file operation (copy, move, delete, flatten, extract), or a task job.
+_Avoid_: task (for a transfer), transfer (as a general term)
+
+**Task job**:
+A job that runs a built-in feature's own function (`jobs.TypeTask`, e.g. a fileindex scan) instead of a file transfer: progress, cancel and failure like any job, but no pre-scan, conflicts, undo, retry or pause; one task per lease name runs at a time.
+_Avoid_: background task, worker job
 
 **Job source**:
 One top-level path a job was queued with (one per selected entry); a job with several expands into one Queue sub-row per source.

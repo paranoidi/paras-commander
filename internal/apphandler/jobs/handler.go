@@ -811,6 +811,10 @@ func (h *Handler) pauseSelectedQueuedJob() {
 		h.host.SetTransientMessage("Only queued jobs can be paused", ui.MessageUrgencyWarn)
 		return
 	}
+	if !jobs.Type(h.model.JobsList[sel].Type).Pausable() {
+		h.host.SetTransientMessage("Task jobs cannot be paused", ui.MessageUrgencyWarn)
+		return
+	}
 	id := h.model.JobsList[sel].ID
 	if !h.state.PauseQueuedJob(id) {
 		h.host.SetTransientMessage("Could not pause job", ui.MessageUrgencyWarn)
@@ -840,6 +844,10 @@ func (h *Handler) resumeOrRetrySelectedJob() {
 			return
 		}
 	case jobs.StatusFailed, jobs.StatusCanceled:
+		if !jobs.Type(h.model.JobsList[sel].Type).Retryable() {
+			h.host.SetTransientMessage("This job type cannot be retried", ui.MessageUrgencyWarn)
+			return
+		}
 		if !h.state.RetryJob(id) {
 			h.host.SetTransientMessage("Could not retry job", ui.MessageUrgencyWarn)
 			return
@@ -1257,6 +1265,13 @@ func (h *Handler) commitJob(job *jobs.Job) {
 	h.state.AddJob(job)
 	h.SyncJobsList()
 	h.SyncJobPathMarks()
+}
+
+// AddTaskJob queues a task job working on sources (see jobs.Task) and returns it.
+func (h *Handler) AddTaskJob(task *jobs.Task, sources []pathloc.Path) *jobs.Job {
+	job := jobs.NewTaskJob(task, sources)
+	h.commitJob(job)
+	return job
 }
 
 type transferEnqueueOpts struct {

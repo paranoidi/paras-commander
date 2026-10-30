@@ -58,6 +58,12 @@ total `(estimated)` until the exact size is counted (see
 | `Enter` | Maximize the focused Operations panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view (`jobs.close`) |
 
+Some features run their own background work as a **task** job (for example a
+fileindex scan). A task shows `task` as its type and its name
+in the Details panel, reports items, bytes and the current path like a
+transfer, and can be canceled. It cannot be paused or retried; run the action
+again instead. One task of each kind runs at a time, beside any copy or move.
+
 Jobs copy and move one at a time; deletes start immediately. Add a transfer
 paused from the copy or move dialog (**Advanced**, then **Add paused**) and start it later with
 `Ctrl+R`. See [File operations](fileoperations.md#operation-dialogs).

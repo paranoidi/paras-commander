@@ -26,6 +26,8 @@ const (
 	TypeRename Type = "rename"
 	// TypeUndo reverses the journal of another job (UndoOf).
 	TypeUndo Type = "undo"
+	// TypeTask runs a built-in feature's Task (Job.Task) instead of a file transfer.
+	TypeTask Type = "task"
 )
 
 // CanceledCount is how well CanceledItems can count what a canceled job left undone.
@@ -53,6 +55,8 @@ func CanceledItems(t Type, totalFiles, totalDirs int, totalsComplete bool, proce
 		return 0, CanceledUnknown
 	case TypeDelete, TypeExtract, TypeUndo:
 		return max(0, totalFiles-recorded), CanceledKnown
+	case TypeTask:
+		return 0, CanceledKnown // a task logs no items; its Progress line says how far it got
 	}
 	return 0, CanceledUnsupported
 }
@@ -251,7 +255,25 @@ type Job struct {
 
 	// RemovingSources is true while a move's copy fallback is deleting its transferred sources.
 	RemovingSources bool
+
+	// Task is the work of a TypeTask job (nil for every other type). It runs under its own
+	// lease (Task.Lease), never the transfer lease, and cannot be paused or retried.
+	Task *Task
 }
+
+// Title is the job's display title: the task title for a TypeTask job, else empty.
+func (j *Job) Title() string {
+	if j == nil || j.Task == nil {
+		return ""
+	}
+	return j.Task.Title
+}
+
+// Pausable reports whether a queued job of this type can be paused (every type but TypeTask).
+func (t Type) Pausable() bool { return t != TypeTask }
+
+// Retryable reports whether State.RetryJob may re-run a finished job of this type.
+func (t Type) Retryable() bool { return t != TypeRename && t != TypeUndo && t != TypeTask }
 
 // journaled reports whether jobs of type t record an undo journal.
 func (t Type) journaled() bool {
@@ -378,17 +400,21 @@ func (j *Job) RetryClone() *Job {
 }
 
 // holdsTransferLease reports whether the job must serialize on the single transfer lease.
-// Copy/move/flatten/extract always take the lease. A delete takes it only when its source
-// roots overlap other (an active transfer's sources or destination). other may be nil.
+// Copy/move/flatten/extract/undo always take the lease. A delete takes it only when its source
+// roots overlap other (an active transfer's sources or destination). other may be nil. A task
+// never does: it serializes on its own Task.Lease.
 // ponytail: global lease; becomes a per-device lane key when device queues land
 func (j *Job) holdsTransferLease(other *Job) bool {
 	if j == nil {
 		return false
 	}
-	if j.Type != TypeDelete {
-		return true
+	switch j.Type {
+	case TypeTask:
+		return false
+	case TypeDelete:
+		return deleteOverlapsTransfer(j, other)
 	}
-	return deleteOverlapsTransfer(j, other)
+	return true
 }
 
 // deleteOverlapsTransfer reports whether del's source roots share a tree with

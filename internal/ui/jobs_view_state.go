@@ -43,6 +43,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 		entries = append(entries, JobEntry{
 			ID:              j.ID,
 			Type:            string(j.Type),
+			Title:           j.Title(),
 			Status:          string(j.Status),
 			Sources:         sources,
 			Destination:     j.Destination.String(),

@@ -36,6 +36,8 @@ type State struct {
 
 	// transferLease serializes filesystem transfer work across concurrent job goroutines.
 	transferLease sync.Mutex
+	// taskLeases serializes TypeTask jobs per Task.Lease name (taskLeaseUnlocked); guarded by mu.
+	taskLeases map[string]*sync.Mutex
 
 	// blockerWait maps job ID -> channel for one in-flight blocker prompt per job.
 	blockerRegMu sync.Mutex
@@ -391,10 +393,14 @@ func (s *State) ResumeJob(id string) bool {
 	return true
 }
 
-// PauseQueuedJob pauses a queued job still waiting in the FIFO. Returns false if not found or not StatusQueued.
+// PauseQueuedJob pauses a queued job still waiting in the FIFO. Returns false if not found, not
+// StatusQueued, or a type that cannot pause (Type.Pausable).
 func (s *State) PauseQueuedJob(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if j := s.findJobUnlocked(id); j != nil && !j.Type.Pausable() {
+		return false
+	}
 	s.queue.mu.Lock()
 	defer s.queue.mu.Unlock()
 	return s.queue.pauseQueuedJobUnlocked(id)
@@ -405,7 +411,7 @@ func (s *State) PauseQueuedJob(id string) bool {
 func (s *State) RetryJob(id string) bool {
 	s.mu.Lock()
 	job := s.findJobUnlocked(id)
-	if job == nil || !job.Status.IsRetryable() || job.Type == TypeRename || job.Type == TypeUndo {
+	if job == nil || !job.Status.IsRetryable() || !job.Type.Retryable() {
 		s.mu.Unlock()
 		return false
 	}
@@ -927,12 +933,20 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	s.cancelRun[job.ID] = cancel
 	holder := s.leaseHolderUnlocked()
 	needLease := job.holdsTransferLease(holder)
+	var taskLease *sync.Mutex
+	if job.Type == TypeTask && job.Task != nil {
+		taskLease = s.taskLeaseUnlocked(job.Task.Lease)
+	}
 	s.mu.Unlock()
 	defer cancel()
 
 	if needLease {
 		s.transferLease.Lock()
 		defer s.transferLease.Unlock()
+	}
+	if taskLease != nil {
+		taskLease.Lock()
+		defer taskLease.Unlock()
 	}
 
 	s.mu.Lock()
@@ -965,7 +979,11 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	}
 
 	var transferErr error
-	if s.TransferFunc != nil {
+	switch {
+	case job.Type == TypeTask:
+		// A task reports through its own reporter; its counts become the terminal totals.
+		lastDoneFiles, lastDoneBytes, transferErr = s.runTask(jobCtx, job)
+	case s.TransferFunc != nil:
 		transferErr = s.TransferFunc(jobCtx, job, emit, waitBlocker)
 	}
 

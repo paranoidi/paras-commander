@@ -9,8 +9,10 @@ import (
 
 // JobEntry is a renderable job summary for the jobs view.
 type JobEntry struct {
-	ID          string
-	Type        string
+	ID   string
+	Type string
+	// Title mirrors jobs.Job.Title (a task's title; empty for transfers).
+	Title       string
 	Status      string
 	Sources     []string
 	Destination string
