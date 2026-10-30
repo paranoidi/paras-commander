@@ -740,6 +740,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		Source:                 display.Painter,
 	}
 	panelcarousel.DrawBody(screen, panelcarousel.BodyParams{
+		FolderColor:           ctx.FolderColor,
 		Frame:                 rect,
 		Center:                state,
 		Parent:                parent,

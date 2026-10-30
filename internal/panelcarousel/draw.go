@@ -51,6 +51,8 @@ type BodyParams struct {
 	Layout                Layout
 	MeasuredFitWidth      [3]int
 	Meta                  Meta
+	// FolderColor, when set, tints directory names in every column (nil = none).
+	FolderColor func(path string) (tcell.Color, bool)
 }
 
 // DrawBody paints the column header row and three listing columns.
@@ -323,6 +325,11 @@ func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColum
 	}
 	entry := entries[entryIndex]
 	style := p.Styles.PanelListingEntryStyle(entry.Type, p.ChromeBlocked)
+	if entry.Type == localfs.EntryDirectory && p.FolderColor != nil && !p.ChromeBlocked {
+		if fc, ok := p.FolderColor(entry.Path); ok {
+			style = style.Foreground(fc)
+		}
+	}
 	selected := selState.IsSelected(entry)
 	isCursor := entryIndex == cursor
 	if isCursor {
