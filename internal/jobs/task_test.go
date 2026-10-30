@@ -30,6 +30,23 @@ func applyUntilFinished(t *testing.T, s *State, id string) *Job {
 	}
 }
 
+// applyUntilAllFinished applies events until every job in ids has finished, in any order.
+func applyUntilAllFinished(t *testing.T, s *State, ids ...string) {
+	t.Helper()
+	deadline := time.After(5 * time.Second)
+	for len(ids) > 0 {
+		select {
+		case ev := <-s.Events():
+			s.ApplyEvent(ev)
+			if ev.Status.IsFinished() {
+				ids = slices.DeleteFunc(ids, func(id string) bool { return id == ev.JobID })
+			}
+		case <-deadline:
+			t.Fatalf("jobs %v did not finish", ids)
+		}
+	}
+}
+
 func TestTaskJobReportsProgressAndWarnings(t *testing.T) {
 	s := NewState()
 	s.SetScanConfig(ScanConfig{ProgressMinInterval: 0})
@@ -177,8 +194,7 @@ func TestTaskLeaseSerializesSameName(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("a task on its own lease must run while the copy holds the transfer lease")
 	}
-	applyUntilFinished(t, s, a.ID)
-	applyUntilFinished(t, s, b.ID)
+	applyUntilAllFinished(t, s, a.ID, b.ID) // the lease mutex is not FIFO: b may run first
 	close(release)
 	mu.Lock()
 	defer mu.Unlock()
