@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -222,10 +223,10 @@ func TestStoreReloadAndChanged(t *testing.T) {
 	home, meta := t.TempDir(), t.TempDir()
 	s := &Store{home: home, dir: meta}
 	tree := encodeTree(5, []fixtureDir{{name: "tundra", icon: uri("Mint-Y-Blue", "folder")}})
-	if err := os.WriteFile(s.treePath(), tree, 0o600); err != nil {
+	if err := os.WriteFile(s.treePath(homeTree), tree, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(s.journalPath(5), encodeJournal(5), 0o600); err != nil {
+	if err := os.WriteFile(s.journalPath(homeTree, 5), encodeJournal(5), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	s.Reload()
@@ -236,7 +237,7 @@ func TestStoreReloadAndChanged(t *testing.T) {
 		t.Fatal("unchanged files reported as changed")
 	}
 	j := encodeJournal(5, jEntry{jSet, []string{"/glacier", keyName, "folder-red"}})
-	if err := os.WriteFile(s.journalPath(5), j, 0o600); err != nil {
+	if err := os.WriteFile(s.journalPath(homeTree, 5), j, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if !s.Changed() {
@@ -248,6 +249,127 @@ func TestStoreReloadAndChanged(t *testing.T) {
 	}
 	if s.Changed() {
 		t.Fatal("still changed after reload")
+	}
+}
+
+// fakeDisks points the mount table and udev links at fixtures. links maps "uuid-<n>" / "label-<n>"
+// to a "major:minor"; lines are mountinfo lines.
+func fakeDisks(t *testing.T, links map[string]string, lines ...string) (setMounts func(...string)) {
+	t.Helper()
+	dir := t.TempDir()
+	byName := map[string]string{}
+	for tree, dev := range links {
+		kind, name, _ := strings.Cut(tree, "-")
+		p := filepath.Join(dir, "disk", "by-"+kind, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		byName[p] = dev
+	}
+	oldM, oldD, oldN := mountInfoPath, diskDir, devNumOf
+	mountInfoPath, diskDir = filepath.Join(dir, "mountinfo"), filepath.Join(dir, "disk")
+	devNumOf = func(p string) (string, bool) { d, ok := byName[p]; return d, ok }
+	t.Cleanup(func() { mountInfoPath, diskDir, devNumOf = oldM, oldD, oldN })
+	setMounts = func(l ...string) {
+		if err := os.WriteFile(mountInfoPath, []byte(strings.Join(l, "\n")+"\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setMounts(lines...)
+	return setMounts
+}
+
+func mountLine(dev, root, point string) string {
+	return "36 25 " + dev + " " + root + " " + point + " rw,relatime shared:1 - ext4 /dev/x rw"
+}
+
+func writeTree(t *testing.T, s *Store, tree string, root ...fixtureDir) {
+	t.Helper()
+	if err := os.WriteFile(s.treePath(tree), encodeTree(9, root), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStoreRootAndDeviceTrees(t *testing.T) {
+	writeFixturePalette(t)
+	blue, red := uri("Mint-Y-Blue", "folder"), uri("Mint-Y-Red", "folder")
+	green := uri("Mint-Y", "folder")
+	s := &Store{home: "/nowhere/home", dir: t.TempDir()}
+	// root: absolute paths; device trees: paths inside the filesystem.
+	writeTree(t, s, "root",
+		fixtureDir{name: "silver", children: []fixtureDir{{name: "pond", icon: blue}}},
+		fixtureDir{name: "nowhere", children: []fixtureDir{{name: "home", children: []fixtureDir{{name: "both", icon: blue}}}}})
+	writeTree(t, s, "uuid-AAAA-1111", fixtureDir{name: "maple", icon: red}, fixtureDir{name: "sub", children: []fixtureDir{{name: "cedar", icon: red}}}, fixtureDir{name: "other", icon: red})
+	writeTree(t, s, "label-quiet_disk", fixtureDir{name: "birch", icon: green})
+	writeTree(t, s, "uuid-GONE", fixtureDir{name: "willow", icon: green})
+	writeTree(t, s, "home", fixtureDir{name: "both", icon: green})
+	fakeDisks(t, map[string]string{"uuid-AAAA-1111": "8:1", "label-AAAA-1111": "8:1", "label-quiet_disk": "8:2", "uuid-GONE": "8:9"},
+		mountLine("8:1", "/", "/mnt/key"),
+		mountLine("8:1", "/sub", `/mnt/two\040words`),
+		mountLine("8:2", "/", "/mnt/quiet"),
+		mountLine("0:44", "/", "/mnt/tmp"),
+		mountLine("8:3", "/", "/"),
+	)
+	s.Reload()
+	want := map[string]string{
+		"/silver/pond":         "#5294e2", // root
+		"/mnt/key/maple":       "#f54f54", // uuid tree
+		"/mnt/key/sub/cedar":   "#f54f54",
+		"/mnt/two words/cedar": "#f54f54", // second mount of the same filesystem, root "/sub", escaped mount point
+		"/mnt/quiet/birch":     "#50c16f", // label tree, no by-uuid link for the device
+	}
+	for p, hex := range want {
+		if c, ok := s.Lookup(p); !ok || c != tcell.GetColor(hex) {
+			t.Errorf("%s: %v %v", p, c, ok)
+		}
+	}
+	for _, p := range []string{"/mnt/two words/other", "/mnt/two words/maple", "/mnt/key/willow", "/mnt/tmp/willow"} {
+		if _, ok := s.Lookup(p); ok {
+			t.Errorf("%s should not be coloured", p)
+		}
+	}
+	// home beats root for the same absolute path.
+	s.Reload()
+	if c, _ := s.Lookup("/nowhere/home/both"); c != tcell.GetColor("#50c16f") {
+		t.Errorf("precedence: %v", c)
+	}
+}
+
+func TestDevicePrecedenceAndChanged(t *testing.T) {
+	writeFixturePalette(t)
+	s := &Store{home: "/nowhere/home", dir: t.TempDir()}
+	writeTree(t, s, "root", fixtureDir{name: "mnt", children: []fixtureDir{{name: "key", children: []fixtureDir{{name: "maple", icon: uri("Mint-Y-Blue", "folder")}}}}})
+	writeTree(t, s, "uuid-AAAA", fixtureDir{name: "maple", icon: uri("Mint-Y-Red", "folder")})
+	setMounts := fakeDisks(t, map[string]string{"uuid-AAAA": "8:1"})
+	s.Reload()
+	if c, _ := s.Lookup("/mnt/key/maple"); c != tcell.GetColor("#5294e2") {
+		t.Fatalf("unmounted device read: %v", c)
+	}
+	if s.Changed() {
+		t.Fatal("changed without a change")
+	}
+	setMounts(mountLine("8:1", "/", "/mnt/key"))
+	if !s.Changed() {
+		t.Fatal("mount not detected")
+	}
+	s.Reload()
+	if c, _ := s.Lookup("/mnt/key/maple"); c != tcell.GetColor("#f54f54") {
+		t.Fatalf("device should beat root: %v", c)
+	}
+	if s.Changed() {
+		t.Fatal("changed after reload")
+	}
+}
+
+func TestUnescapeMount(t *testing.T) {
+	if got := unescapeMount(`/mnt/a\040b\134c`); got != `/mnt/a b\c` {
+		t.Fatalf("%q", got)
+	}
+	if got := unescapeMount(`/mnt/plain`); got != `/mnt/plain` {
+		t.Fatal(got)
 	}
 }
 

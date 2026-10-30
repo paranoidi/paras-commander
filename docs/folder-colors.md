@@ -4,7 +4,7 @@ pc shows the folder colors you set in Linux Mint's Nemo (the *folder-color-switc
 
 ## How it looks
 
-A colored folder has its name and icon drawn in the color Nemo uses for that folder. The cursor row and selected rows keep their normal highlight colors. Folders on SFTP panels are never colored, and neither are folders outside your home directory.
+A colored folder has its name and icon drawn in the color Nemo uses for that folder. The cursor row and selected rows keep their normal highlight colors. Folders on SFTP panels are never colored. Local folders are colored wherever they live: your home directory, the rest of the system, and drives that are currently mounted. Folders on network or device backends (MTP phones, Google Drive, network shares, `admin:`) are not.
 
 ## Setting a color
 
@@ -17,6 +17,6 @@ A colored folder has its name and icon drawn in the color Nemo uses for that fol
 
 ## How it stays current
 
-The colors are read from `~/.local/share/gvfs-metadata` once at startup, in the background, and checked again every 30 seconds. A color changed in Nemo shows up in pc within 30 seconds without flicker (colors set from pc show immediately); painting never touches the disk. A folder shown in the very first frame at startup can get its color a moment after the listing appears.
+The colors are read from `~/.local/share/gvfs-metadata` (the databases for your home directory, the rest of the system, and each mounted drive that has a filesystem UUID or label) once at startup, in the background, and checked again every 30 seconds; plugging or unplugging a drive counts as a change. A color changed in Nemo shows up in pc within 30 seconds without flicker (colors set from pc show immediately); painting never touches the disk. A folder shown in the very first frame at startup can get its color a moment after the listing appears.
 
 Folders carrying a Nautilus-style icon name (`folder-red`) are colored too, matched by color name against the palette.

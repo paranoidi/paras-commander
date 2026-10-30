@@ -59,7 +59,7 @@ Each has a reason it cannot move to `apphandler/dialog`:
 - **`internal/pathpick`**: path-picker query validation, resolution and completion.
 - **`internal/sched`**: `Debouncer` (`Arm`/`Stop`/`Invalidate`/`Armed`). Each `Arm` bumps a generation so stale timers exit without running; `Invalidate` also drops in-flight callbacks.
 - **`internal/app/helpkeys`**, **`internal/jobbridge`**: stateless helpers extracted from the app layer.
-- **`internal/foldercolor`**: Nemo-compatible folder colours. A leaf (tcell only): decodes the GVfs metadata tree and journal, resolves colours through folder-color-switcher palettes, and writes via `gio`. `internal/app` owns the `Store` (`App.folderColors`) and `ui.Model.FolderColor` carries its `Lookup`; details in `panels.md`.
+- **`internal/foldercolor`**: Nemo-compatible folder colours. A leaf (tcell only): decodes the GVfs metadata trees (home, root, mounted-drive) and journals, resolves colours through folder-color-switcher palettes, and writes via `gio`. `internal/app` owns the `Store` (`App.folderColors`) and `ui.Model.FolderColor` carries its `Lookup`; details in `panels.md`.
 - **`internal/fschange`**: filesystem change reports (ADR 0023). A stdlib-only leaf: `ops` primitives report through `Report(ctx, ...)` (helpers in `internal/ops/fsreport.go`), and the sink on the context (`WithSink`) is `diskusage.Engine`. `jobbridge.TransferFunc` installs it for jobs, and `apphandler/dialog` installs it through `Handler.fsCtx` (also the base of `elevatedCtx`).
 - **`internal/oplog`**: per-job operation log (done / skipped / failed records) with disk spill to the session cache directory (ADR 0021). It imports only `internal/search`; `jobs.Job.Ops` holds one, the jobs handler reads it.
 
