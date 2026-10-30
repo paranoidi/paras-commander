@@ -141,3 +141,38 @@ func TestRenderFilePreviewThemePickerFilteredOmitsEmptyRows(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderFilePreviewThemePickerSearchIconUsesPanelSurface(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	styles := theme.Default()
+	styles.UseNerdfontIcons = true
+	choices := []dialog.ThemeChoice{{Name: "monokai", Label: "monokai"}}
+	model := Model{
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
+		ViewMode:    ViewFilePreview,
+		FullscreenFilePreviewDraw: FilePreviewState{
+			Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n",
+		},
+		FilePreviewThemePicker: dialog.FilePreviewThemePickerState{
+			Open: true, Choices: choices, DisplayLines: []string{"monokai"}, Ranked: []int{0},
+		},
+	}
+	Render(screen, model, styles)
+
+	layout := CalculateLayout(80, 24, false, PanelWidthSplit{})
+	union := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
+	_, picker := SplitFullscreenPreviewRects(union, true, choices)
+	_, wantBG, _ := styles.PanelChrome(true, false).Surface.Decompose()
+	_, style, _ := screen.Get(picker.X+2, picker.Y+1)
+	if _, bg, _ := style.Decompose(); bg != wantBG {
+		t.Fatalf("search icon bg = %v, want panel surface %v", bg, wantBG)
+	}
+}
