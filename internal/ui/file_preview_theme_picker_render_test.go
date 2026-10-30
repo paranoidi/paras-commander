@@ -136,7 +136,7 @@ func TestRenderFilePreviewThemePickerFilteredOmitsEmptyRows(t *testing.T) {
 	for row := 2; row < FilePreviewThemePickerListRows(picker); row++ {
 		y := listTop + row
 		got := strings.TrimSpace(tcelltest.TextAt(screen, picker.X+2, y, picker.Width-4))
-		if strings.Contains(got, "( )") || strings.Contains(got, "(*)") {
+		if got != "" {
 			t.Fatalf("row %d should be blank after filtered matches, got %q", row, got)
 		}
 	}
