@@ -41,6 +41,9 @@ type MetaEntry struct {
 	SortOnActivation bool
 	// SortReverse reverses that sort. Ignored when SortOnActivation is false.
 	SortReverse bool
+	// Provider is set for a Go column provider (WithProviders): its values come from
+	// Provider.Values, and File, Dirs, When, Cache and Workers do not apply.
+	Provider *Provider
 }
 
 type metaFileRaw struct {

@@ -82,6 +82,9 @@ func (h *Handler) HandleExecFailed(d ExecFailedPayload) {
 	}
 	const urgency = ui.MessageUrgencyWarn
 	banner := "meta: command failed to execute"
+	if d.Provider != "" {
+		banner = "meta: " + d.Provider + " failed"
+	}
 
 	wrapCols := h.host.MessageLogWrapCols()
 
@@ -136,7 +139,15 @@ type loadedMetaFile struct {
 // loadMetaPath reads and decodes a resolved meta.toml (a seam for tests that block the read).
 var loadMetaPath = metacmds.LoadFile
 
+// fetchMetaFile loads the panel's meta.toml and adds the Go column providers, which stay
+// available when there is no meta.toml or it failed to load (MF then holds only them).
 func (h *Handler) fetchMetaFile(panelPath string) loadedMetaFile {
+	res := h.fetchMetaTOML(panelPath)
+	res.MF = metacmds.WithProviders(res.MF, h.providers)
+	return res
+}
+
+func (h *Handler) fetchMetaTOML(panelPath string) loadedMetaFile {
 	path, warns := metacmds.ResolveMetaTOML(h.config, h.model.UserHomeDir, h.configDir, panelPath)
 	if path == "" {
 		return loadedMetaFile{Warns: warns}
@@ -150,8 +161,8 @@ func (h *Handler) fetchMetaFile(panelPath string) loadedMetaFile {
 
 // loadMetaFile resolves and loads the meta.toml for the given panel path on the caller
 // goroutine. Used by dialog/editor paths that already released the terminal.
-// MF is nil when no file is found (not an error) or it failed to load. Warnings and the load
-// error are shown as transient messages.
+// MF holds only the Go column providers (nil without any) when no file is found (not an error)
+// or it failed to load. Warnings and the load error are shown as transient messages.
 func (h *Handler) loadMetaFile(panelID int) loadedMetaFile {
 	res := h.fetchMetaFile(h.host.PanelByID(panelID).PathString())
 	for _, w := range res.Warns {
@@ -159,7 +170,6 @@ func (h *Handler) loadMetaFile(panelID int) loadedMetaFile {
 	}
 	if res.LoadErr != "" {
 		h.host.SetTransientMessage(res.LoadErr, ui.MessageUrgencyCritical)
-		res.MF = nil
 	}
 	return res
 }
@@ -513,8 +523,8 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 		h.host.SetTransientMessage(w, ui.MessageUrgencyWarn)
 	}
 	if d.LoadErr != "" {
+		// A broken meta.toml still leaves the Go column providers to run.
 		h.host.SetTransientMessage(d.LoadErr, ui.MessageUrgencyCritical)
-		return
 	}
 	if d.MF == nil {
 		return
@@ -659,8 +669,10 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 		}
 
 		for _, e := range entries {
-			if _, ok := h.entryCmd(cmdDef, e, dir); !ok {
-				continue
+			if cmdDef.Provider == nil {
+				if _, ok := h.entryCmd(cmdDef, e, dir); !ok {
+					continue
+				}
 			}
 			results[e.Path] = runningMarker
 			cols[i].PendingCount++
@@ -682,6 +694,14 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 	dispatch:
 		for _, cmdDef := range cmdDefs {
 			cmdDef := cmdDef
+			if cmdDef.Provider != nil {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					h.runProvider(ctx, panelID, gen, cmdDef.Provider, entries, dir)
+				}()
+				continue
+			}
 			workers := cmdDef.Workers
 			if workers < 1 {
 				workers = h.config.Meta.DefaultEntryWorkers
@@ -743,6 +763,23 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 		}
 		wg.Wait()
 	}()
+}
+
+// runProvider calls a Go column provider once for entries and posts every entry's value
+// through postResult, like the per-entry shell commands, so pending markers clear the same way.
+// A provider error is reported once (ExecFailedPayload) and leaves the cells empty.
+func (h *Handler) runProvider(ctx context.Context, panelID int, gen uint64, p *metacmds.Provider, entries []localfs.Entry, dir string) {
+	vals, err := p.Values(ctx, dir, entries)
+	if ctx.Err() != nil {
+		return
+	}
+	if err != nil {
+		_ = h.screen.PostEvent(tcell.NewEventInterrupt(ExecFailedPayload{PanelID: panelID, Gen: gen, Provider: p.Name, Stderr: err.Error()}))
+		vals = nil
+	}
+	for _, e := range entries {
+		h.postResult(panelID, p.Name, e.Path, vals[e.Path], gen)
+	}
 }
 
 // entryCmd returns the shell command to run for entry e under cmdDef.

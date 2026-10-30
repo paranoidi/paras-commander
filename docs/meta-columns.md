@@ -8,6 +8,14 @@ Meta columns add computed columns to a panel by running a shell command per entr
 
 Because its commands run as you, a `meta.toml` is loaded only when it is a regular file owned by you (or root) that no one else can write: not world-writable, and group-writable only when its group is your own private group (named after your user, the usual setup with umask `0002`). An untrusted file is skipped with a warning. When the picker has nothing to offer it says why in place of the list: the file was skipped (with a `chmod` hint), it failed to parse, or no commands are defined yet.
 
+## Built-in columns
+
+Some features add their own columns to the picker, listed beside your `meta.toml` entries (for
+example a fileindex tags column). They are computed inside pc once per directory listing instead of
+running a command per entry, need no `meta.toml`, and otherwise behave like any meta column:
+the same picker, column limit, sorting and filtering. A built-in column replaces a `meta.toml`
+entry with the same name.
+
 ## Defining a column
 
 Each `[[entry]]` in `meta.toml` has a unique `name`, a `description` for the picker, and a script per entry type: `file` for files, `dirs` for directories. `%f` expands to the entry's absolute path (do not quote it). Scripts run through `sh -c`. The generated file lists every field in its header; the main ones:

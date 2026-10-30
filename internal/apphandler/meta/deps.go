@@ -23,6 +23,8 @@ type Deps struct {
 	Model     *ui.Model
 	Config    config.Config
 	ConfigDir string
+	// Providers are the Go column providers offered beside the meta.toml entries.
+	Providers []*metacmds.Provider
 }
 
 // Handler owns meta.toml command dispatch and the meta checkbox dialog.
@@ -32,6 +34,7 @@ type Handler struct {
 	model     *ui.Model
 	config    config.Config
 	configDir string
+	providers []*metacmds.Provider
 
 	// activeEntries holds ordered entry names for active meta columns per panel.
 	activeEntries [2][]string
@@ -69,6 +72,7 @@ func New(deps Deps) *Handler {
 		model:     deps.Model,
 		config:    deps.Config,
 		configDir: strings.TrimSpace(deps.ConfigDir),
+		providers: deps.Providers,
 	}
 }
 
@@ -98,10 +102,12 @@ type LoadPayload struct {
 	LoadErr     string // non-empty if LoadFile failed
 }
 
-// ExecFailedPayload notifies the main goroutine once per meta run when a shell command fails.
+// ExecFailedPayload notifies the main goroutine once per meta run when a shell command fails,
+// or when a Go column provider (Provider set) returns an error (Stderr).
 type ExecFailedPayload struct {
 	PanelID     int
 	Gen         uint64
+	Provider    string // name of the failed Go column provider; empty for a shell command
 	ExitCode    int
 	Stderr      string
 	ConfCmd     string // original template from meta.toml
