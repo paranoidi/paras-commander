@@ -1416,7 +1416,7 @@ func (h *Handler) applySizeEstimate(job *jobs.Job, sources []string) {
 		}
 		return active.OffListingMetaAt(p)
 	}
-	per, total, complete := ui.SourceSizeEstimates(sources, lookup, !active.Path.IsLocal(), h.host.DiskUsagePainter())
+	per, total, complete := ui.SourceSizeEstimates(sources, lookup, !active.Path.HasSubtreeSizes(), h.host.DiskUsagePainter())
 	if total <= 0 || (job.Type == jobs.TypeMove && !complete) {
 		return
 	}

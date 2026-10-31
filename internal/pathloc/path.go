@@ -93,6 +93,12 @@ func (p Path) IsLocal() bool {
 	return p.Scheme() == SchemeFile
 }
 
+// HasSubtreeSizes reports whether disk-usage totals exist for directories under the location:
+// walked on the local disk, or totalled from the index for fileindex://. SFTP has none.
+func (p Path) HasSubtreeSizes() bool {
+	return p.Scheme() == SchemeFile || p.Scheme() == SchemeFileIndex
+}
+
 // Equal reports whether two paths denote the same location.
 func (p Path) Equal(other Path) bool {
 	return p.Scheme() == other.Scheme() && p.s == other.s

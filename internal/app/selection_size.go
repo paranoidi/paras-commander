@@ -10,6 +10,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -31,7 +32,7 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		a.selectionSizeScanDebounce[panelID].Invalidate()
 		return
 	}
-	if !p.Path.IsLocal() {
+	if !p.Path.HasSubtreeSizes() {
 		a.selectionSizeScanFP[panelID] = ""
 		a.selectionSizeScanGen[panelID] = 0
 		a.selectionSizeScanPath[panelID] = ""
@@ -53,10 +54,11 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 	// allocates a fresh map.
 	roots := append([]string(nil), p.PrunedSelectionRoots()...)
 	// Roots outside the listing (selection kept after navigating away) have no metadata for the
-	// selection-size label; the background pass Lstats them so render never has to.
+	// selection-size label; the background pass Lstats them so render never has to. A URI
+	// (fileindex://) is no host path to Lstat: it stays unknown, as on remote panels.
 	var offListing []string
 	for _, r := range roots {
-		if _, ok := p.ListingEntryAt(r); ok {
+		if _, ok := p.ListingEntryAt(r); ok || pathloc.HasURIPrefix(r) {
 			continue
 		}
 		if _, ok := p.OffListingMetaAt(r); !ok {

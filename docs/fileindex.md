@@ -54,7 +54,8 @@ and other path displays show `fileindex://` as the database icon followed by
 
 An index view lists what the index recorded, including files that have since
 gone from disk. Files show their indexed size and modification time;
-directories show neither. `fileindex.reveal` goes back to the real directory
+directories show no modification time, and their size once it is requested,
+as on a local panel (see Disk usage below). `fileindex.reveal` goes back to the real directory
 with the entry highlighted, or says the entry is no longer on disk.
 
 In an index view:
@@ -76,8 +77,15 @@ In an index view:
 - **Find duplicates** compares the stored SHA-256 hashes in the index
   (metadata-free for JPEGs) and reads nothing from disk (see
   [find-duplicates.md](find-duplicates.md)).
-- Git status, disk usage and folder colours are not available, as on
-  [SFTP](sftp.md) panels.
+- **Disk usage** works as on a local panel ([disk-usage.md](disk-usage.md)):
+  the directory scan, sizing the directory under the cursor, selected
+  directories, expanded tree directories and the delete summary all fill the
+  size column. The totals are the indexed sizes of the files under each
+  directory, read from the index without touching the disk, so they include
+  files gone from disk and match the file rows. A scan, prune, move or delete
+  in the index drops the totals; request them again to see the new ones.
+- Git status and folder colours are not available, as on [SFTP](sftp.md)
+  panels.
 
 ## Finding in the index
 
@@ -127,11 +135,11 @@ index views, and sort and filter like any meta column:
 | **First seen** | `fileindex.first-seen` | when the file or directory was first indexed at this path, in local time |
 | **Last seen** | `fileindex.last-seen` | when a scan last saw the file or directory, in local time |
 | **Tree files** | `fileindex.tree-files` | for a directory, how many indexed files are under it |
-| **Tree size** | `fileindex.tree-size` | for a directory, the total size of the indexed files under it, read from the index without walking the disk |
 | **Hash** | `fileindex.hash` | the first 12 hex digits of the file's SHA-256 |
 
-Tree files and Tree size add up the whole subtree, which at the index root is
-the whole index.
+Tree files adds up the whole subtree, which at the index root is the whole
+index. A directory's indexed size shows in the size column of an index view
+(see Browsing the index).
 
 A panel with no meta columns switches on the columns in
 `[fileindex] default_columns` ([config.toml](config.md); the tags column by

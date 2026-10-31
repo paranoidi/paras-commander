@@ -720,6 +720,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		app.stopWorker()
 		return nil, fmt.Errorf("register fileindex backend: %w", err)
 	}
+	// fileindex:// directory sizes come from the index, not a disk walk.
+	app.disk.engine.SetSubtreeSizer(pathloc.FileIndexPrefix, app.fileIndex.SubtreeSize)
+	app.fileIndex.OnChange = app.disk.engine.ForgetSized
 	app.metaCtrl = metactrl.New(metactrl.Deps{
 		Host:      metaHost{appShellHost: appShellHost{app: app}},
 		Screen:    screen,

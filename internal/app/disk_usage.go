@@ -1,7 +1,6 @@
 package app
 
 import (
-	"path/filepath"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -128,7 +127,7 @@ func (a *App) setDiskUsageScanScope(origin string, childRoots []string) {
 	if origin == "" {
 		a.model.DiskUsageScanOrigin = ""
 	} else {
-		a.model.DiskUsageScanOrigin = filepath.Clean(origin)
+		a.model.DiskUsageScanOrigin = diskusage.CleanKey(origin)
 	}
 	if len(childRoots) == 0 {
 		a.model.DiskUsageScanRoots = nil
@@ -136,7 +135,7 @@ func (a *App) setDiskUsageScanScope(origin string, childRoots []string) {
 	}
 	roots := make([]string, len(childRoots))
 	for i, raw := range childRoots {
-		roots[i] = filepath.Clean(raw)
+		roots[i] = diskusage.CleanKey(raw)
 	}
 	a.model.DiskUsageScanRoots = roots
 }
@@ -268,7 +267,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 		return
 	}
 	p := a.panelByID(panelID)
-	if !p.Path.IsLocal() {
+	if !p.Path.HasSubtreeSizes() {
 		a.setTransientMessage(pathloc.Unavailable("Disk usage", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
@@ -277,7 +276,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 
 	childPaths := make([]string, 0, len(p.Entries))
 	for _, entry := range p.Entries {
-		childPaths = append(childPaths, filepath.Clean(entry.Path))
+		childPaths = append(childPaths, diskusage.CleanKey(entry.Path))
 	}
 
 	a.setDiskUsageScanScope(p.PathString(), childPaths)
@@ -287,7 +286,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 	a.disk.scanToastArmed = true
 	a.model.DiskUsagePanelID = panelID
 	a.model.DiskUsage = a.disk.engine
-	a.setTransientMessage("Disk usage scan started ("+filepath.Clean(p.PathString())+")", ui.MessageUrgencyInfo)
+	a.setTransientMessage("Disk usage scan started ("+diskusage.CleanKey(p.PathString())+")", ui.MessageUrgencyInfo)
 }
 
 // scanCursorDirSize walks the directory under the cursor (like Insert's selection-size scan,
@@ -297,7 +296,7 @@ func (a *App) scanCursorDirSize() {
 		return
 	}
 	p := a.activePanel()
-	if !p.Path.IsLocal() {
+	if !p.Path.HasSubtreeSizes() {
 		a.setTransientMessage(pathloc.Unavailable("Disk usage", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
@@ -307,7 +306,7 @@ func (a *App) scanCursorDirSize() {
 	}
 	if entry.IsDir() && entry.Name != ".." {
 		// Explicit request: count the directory even when it is itself a mount point.
-		a.disk.engine.StartScanFromListing([]string{filepath.Clean(entry.Path)}, a.disk.ignore,
+		a.disk.engine.StartScanFromListing([]string{diskusage.CleanKey(entry.Path)}, a.disk.ignore,
 			a.model.ActivePanel, diskusage.ListingVolumeGate{
 				Enabled:  !a.config.DiskUsage.DescendIntoMountPoints,
 				FromRoot: true,

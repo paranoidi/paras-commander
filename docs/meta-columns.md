@@ -12,7 +12,7 @@ Because its commands run as you, a `meta.toml` is loaded only when it is a regul
 
 Some features add their own columns to the picker, each feature in its own section below your
 `meta.toml` entries, under a separator headed by the feature's name (for example **Status**, **Tags** and
-**Tree size** under **File Index**, the [fileindex](fileindex.md#columns) columns, listed only while the fileindex database
+**Tree files** under **File Index**, the [fileindex](fileindex.md#columns) columns, listed only while the fileindex database
 opens). They are computed inside pc once per directory listing instead of
 running a command per entry, need no `meta.toml`, and otherwise behave like any meta column:
 the same picker, column limit, sorting and filtering. A built-in column replaces a `meta.toml`

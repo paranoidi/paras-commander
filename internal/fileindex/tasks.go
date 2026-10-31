@@ -23,6 +23,7 @@ func (x *Index) ScanTask(paths []string) *jobs.Task {
 		Title: "fileindex scan",
 		Lease: TaskLease,
 		Run: func(ctx context.Context, r jobs.TaskReporter) error {
+			defer x.changed()
 			d, err := x.DB()
 			if err != nil {
 				return err
@@ -60,6 +61,7 @@ func (x *Index) PruneTask(path string) *jobs.Task {
 		Title: "fileindex prune",
 		Lease: TaskLease,
 		Run: func(ctx context.Context, r jobs.TaskReporter) error {
+			defer x.changed()
 			d, err := x.DB()
 			if err != nil {
 				return err

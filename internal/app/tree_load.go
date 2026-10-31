@@ -186,7 +186,7 @@ func (a *App) applyTreeChildResults() bool {
 // expand-all is seen queuing duplicate scans.
 func (a *App) startTreeChildDiskScans(panelID int, dirIDs []string) {
 	pan := a.panelByID(panelID)
-	if len(dirIDs) == 0 || a.disk.engine == nil || !pan.Path.IsLocal() {
+	if len(dirIDs) == 0 || a.disk.engine == nil || !pan.Path.HasSubtreeSizes() {
 		return
 	}
 	var need []string

@@ -596,3 +596,27 @@ func TestIndexFindSearchOnlySelectionsAndHiddenDepth(t *testing.T) {
 }
 
 func dlgEvent(id dlg.ID) dlg.Event { return dlg.Event{ID: id} }
+
+// Sizing an index directory (panel.dir-size) fills its size column from the index.
+func TestFileIndexDirSizeFromIndex(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	parent := pathloc.FileIndexPrefix + filepath.Dir(dir)
+	if err := a.navigatePanelToDirectory(a.model.ActivePanel, parent, filepath.Base(dir)); err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		p := a.activePanel()
+		return p.PathString() == parent && !p.ListingPending
+	})
+	cursorTo(t, a, filepath.Base(dir))
+	entry, _ := a.activePanel().CurrentEntry()
+	a.scanCursorDirSize()
+	want := int64(len("harbor.txt") + len("meadow.txt"))
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		n, ok := a.disk.engine.ByteSize(entry.Path)
+		return ok && n == want
+	})
+	if n, _ := a.disk.engine.FileCount(entry.Path); n != 2 {
+		t.Fatalf("file count = %d, want 2", n)
+	}
+}

@@ -38,6 +38,10 @@ type Index struct {
 	// open failure, so the UI can report it once instead of on every action.
 	OnOpenError func(error)
 	reported    sync.Once
+	// OnChange, when set, is called (from the goroutine that made it) after a change to what the
+	// index holds: a scan or prune task ends, an entry is moved or removed, or the database is
+	// created or upgraded.
+	OnChange func()
 }
 
 // New returns an Index for pc's [fileindex] settings. Nothing is read until DB is called.
@@ -210,6 +214,7 @@ func (x *Index) initDB(upgrade bool) (string, error) {
 		_ = x.db.Close()
 	}
 	x.db, x.failed = d, nil
+	defer x.changed()
 	return path, nil
 }
 

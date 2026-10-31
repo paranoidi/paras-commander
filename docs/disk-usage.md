@@ -1,6 +1,6 @@
 # Disk usage
 
-Disk usage scans directory sizes in the background and draws a proportional bar behind each row, so you can see where the space goes. It is not available on SFTP panels.
+Disk usage scans directory sizes in the background and draws a proportional bar behind each row, so you can see where the space goes. It is not available on SFTP panels. In an [index view](fileindex.md#browsing-the-index) (`fileindex://`) sizes come from the index instead of the disk: each directory totals the indexed sizes of the files under it.
 
 ![Disk usage sizes sorted by size](assets/disk-usage.png)
 

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -226,8 +226,36 @@ func TestBackendListsStatsAndReads(t *testing.T) {
 	}
 }
 
+// TestSubtreeSize: a directory totals the indexed files under it, the index root everything, a
+// file its own size; a path the index lacks does not exist.
+func TestSubtreeSize(t *testing.T) {
+	x, root := scanned(t)
+	ctx := context.Background()
+	lantern := int64(len("clover") + len("bramble patch"))
+	all := lantern + int64(len("anchor and rope"))
+	for _, c := range []struct {
+		host         string
+		bytes, files int64
+	}{
+		{filepath.Join(root, "lantern"), lantern, 2},
+		{root, all, 3},
+		{"/", all, 3},
+		{filepath.Join(root, "harbor.txt"), int64(len("anchor and rope")), 1},
+	} {
+		bytes, files, err := x.SubtreeSize(ctx, at(t, c.host).String())
+		if err != nil || bytes != c.bytes || files != c.files {
+			t.Fatalf("SubtreeSize(%s) = %d bytes %d files %v, want %d %d", c.host, bytes, files, err, c.bytes, c.files)
+		}
+	}
+	if _, _, err := x.SubtreeSize(ctx, at(t, filepath.Join(root, "pebble")).String()); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("missing path = %v, want not exist", err)
+	}
+}
+
 func TestBackendIsReadOnlyButRenamesAndRemovesInIndex(t *testing.T) {
 	x, root := scanned(t)
+	changes := 0
+	x.OnChange = func() { changes++ }
 	b := NewBackend(x)
 	ctx := context.Background()
 	if err := b.Mkdir(ctx, at(t, filepath.Join(root, "pebble")), 0o755); !errors.Is(err, fsbackend.ErrReadOnly) {
@@ -262,6 +290,9 @@ func TestBackendIsReadOnlyButRenamesAndRemovesInIndex(t *testing.T) {
 	}
 	if _, err := b.List(ctx, at(t, filepath.Join(root, "lantern"))); err == nil {
 		t.Fatal("removed tree still listed")
+	}
+	if changes != 3 {
+		t.Fatalf("OnChange called %d times, want once per rename, remove and remove tree", changes)
 	}
 }
 
@@ -504,12 +535,8 @@ func TestColumns(t *testing.T) {
 	if h := values(HashColumn, lanternDir, thistle)[thistle.Path]; len(h) != hashCells {
 		t.Fatalf("hash = %q, want %d hex digits", h, hashCells)
 	}
-	size := len("clover")*2 + len("bramble patch")
 	if v := values(TreeFilesColumn, root, lantern, harbor); v[lantern.Path] != "3" || v[harbor.Path] != "" {
 		t.Fatalf("tree files = %v, want 3 for lantern and none for a file", v)
-	}
-	if got := values(TreeSizeColumn, root, lantern)[lantern.Path]; got != strconv.Itoa(size) {
-		t.Fatalf("tree size = %q, want %d", got, size)
 	}
 
 	// Status on a local panel: from the listing's size and mtime.

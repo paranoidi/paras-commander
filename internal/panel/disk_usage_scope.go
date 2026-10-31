@@ -3,6 +3,8 @@ package panel
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/diskusage"
 )
 
 // ListingPathInDiskUsageScanScope reports whether listingPath is the scan origin or under a scan root.
@@ -10,8 +12,8 @@ func ListingPathInDiskUsageScanScope(listingPath, origin string, roots []string)
 	if origin == "" || len(roots) == 0 {
 		return false
 	}
-	cur := filepath.Clean(listingPath)
-	if cur == filepath.Clean(origin) {
+	cur := diskusage.CleanKey(listingPath)
+	if cur == diskusage.CleanKey(origin) {
 		return true
 	}
 	for _, root := range roots {
@@ -23,8 +25,8 @@ func ListingPathInDiskUsageScanScope(listingPath, origin string, roots []string)
 }
 
 func pathEqualOrUnder(child, root string) bool {
-	r := filepath.Clean(root)
-	c := filepath.Clean(child)
+	r := diskusage.CleanKey(root)
+	c := diskusage.CleanKey(child)
 	if c == r {
 		return true
 	}

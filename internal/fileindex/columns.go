@@ -15,7 +15,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
-	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -27,7 +26,6 @@ const (
 	FirstSeenColumn = "fileindex.first-seen"
 	LastSeenColumn  = "fileindex.last-seen"
 	TreeFilesColumn = "fileindex.tree-files"
-	TreeSizeColumn  = "fileindex.tree-size"
 	HashColumn      = "fileindex.hash"
 )
 
@@ -59,10 +57,7 @@ func (x *Index) Providers() []*metacmds.Provider {
 		{CopiesColumn, "Copies", byName(copiesQuery, strconv.Itoa)},
 		{FirstSeenColumn, "First seen", byName(timestampQuery("created_at"), formatTimestamp)},
 		{LastSeenColumn, "Last seen", byName(timestampQuery("last_seen"), formatTimestamp)},
-		{TreeFilesColumn, "Tree files", treeValues(func(files, _ int64) string { return strconv.FormatInt(files, 10) })},
-		{TreeSizeColumn, "Tree size", treeValues(func(_, size int64) string {
-			return panellist.FormatByteSizeCompact(size, panellist.SizeCells)
-		})},
+		{TreeFilesColumn, "Tree files", treeFilesValues},
 		{HashColumn, "Hash", byName(hashQuery, func(h string) string { return h[:min(len(h), hashCells)] })},
 	}
 	out := make([]*metacmds.Provider, len(cols))
@@ -187,38 +182,34 @@ FROM instance i JOIN file f ON f.id = i.file_id WHERE i.dir_id IS ?`
 const hashQuery = `SELECT i.filename, f.sha256 FROM instance i JOIN file f ON f.id = i.file_id
 WHERE i.dir_id IS ?`
 
-// treeQuery totals the indexed files and bytes under each subdirectory directly in a dir.
-const treeQuery = `WITH RECURSIVE t(top, id) AS (
+// treeFilesQuery counts the indexed files under each subdirectory directly in a dir.
+const treeFilesQuery = `WITH RECURSIVE t(top, id) AS (
   SELECT id, id FROM dir WHERE parent_id IS ?
   UNION ALL SELECT t.top, d.id FROM dir d JOIN t ON d.parent_id = t.id)
-SELECT top.name, COUNT(i.id), COALESCE(SUM(f.filesize), 0) FROM t JOIN dir top ON top.id = t.top
-LEFT JOIN instance i ON i.dir_id = t.id LEFT JOIN file f ON f.id = i.file_id GROUP BY t.top`
+SELECT top.name, COUNT(i.id) FROM t JOIN dir top ON top.id = t.top
+LEFT JOIN instance i ON i.dir_id = t.id GROUP BY t.top`
 
-// treeValues formats treeQuery's totals for each subdirectory; files get no value.
-// ponytail: the tree-files and tree-size columns each run treeQuery, which walks the whole
-// subtree (the whole index at its root); share one result per listing if that shows up.
-func treeValues(format func(files, size int64) string) columnValues {
-	return func(_ context.Context, d *db.DB, host string, _ []localfs.Entry, _ bool) (map[string]string, error) {
-		id, found, err := db.DirByPath(d, host)
-		if err != nil || !found {
-			return nil, err
-		}
-		rows, err := d.Query(treeQuery, id)
-		if err != nil {
-			return nil, err
-		}
-		defer func() { _ = rows.Close() }()
-		out := map[string]string{}
-		for rows.Next() {
-			var name string
-			var files, size int64
-			if err := rows.Scan(&name, &files, &size); err != nil {
-				return nil, err
-			}
-			out[name] = format(files, size)
-		}
-		return out, rows.Err()
+// treeFilesValues shows treeFilesQuery's count for each subdirectory; files get no value.
+func treeFilesValues(_ context.Context, d *db.DB, host string, _ []localfs.Entry, _ bool) (map[string]string, error) {
+	id, found, err := db.DirByPath(d, host)
+	if err != nil || !found {
+		return nil, err
 	}
+	rows, err := d.Query(treeFilesQuery, id)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	out := map[string]string{}
+	for rows.Next() {
+		var name string
+		var files int64
+		if err := rows.Scan(&name, &files); err != nil {
+			return nil, err
+		}
+		out[name] = strconv.FormatInt(files, 10)
+	}
+	return out, rows.Err()
 }
 
 // statusValues compares each entry with the index: a file by size and mtime, a directory by

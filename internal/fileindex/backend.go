@@ -199,6 +199,7 @@ func (b *Backend) Rename(_ context.Context, oldLoc, newLoc pathloc.Path) error {
 		return err
 	}
 	_, err = d.Move(src, dst, nil)
+	b.idx().changed()
 	return err
 }
 
@@ -219,6 +220,7 @@ func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
 		return b.RemoveTree(ctx, loc)
 	}
 	_, err = d.RemoveInstance(host)
+	b.idx().changed()
 	return err
 }
 
@@ -233,6 +235,7 @@ func (b *Backend) RemoveTree(_ context.Context, dir pathloc.Path) error {
 		return err
 	}
 	_, err = d.RemoveTree(host)
+	b.idx().changed()
 	return err
 }
 
