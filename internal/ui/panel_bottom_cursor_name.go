@@ -321,7 +321,7 @@ func drawPanelCursorNameHintForState(
 		return
 	}
 	subtreeMark := entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
-	jobSuffix, _ := jobRowSuffix(entry.Path, jobMarks, ctx.Styles)
+	jobSuffix, _ := jobRowSuffix(entry.Path, jobMarks, ctx.Styles, state.WithIndex && entry.IndexStatus != "")
 	suffix := panellist.RowSuffix{
 		JobSuffix:        jobSuffix,
 		NewFileTier:      state.NewFileMarkTier(entry),

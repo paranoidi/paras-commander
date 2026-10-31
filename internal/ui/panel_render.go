@@ -503,7 +503,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		subtreeMark = entry.Type == localfs.EntryDirectory && effNameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
 		newFileTier = state.NewFileMarkTier(entry)
 		renameMark = state.IsRenameMarked(entry)
-		jobSuffix, jobStatus = jobRowSuffix(entry.Path, display.JobMarks, panelStyle.Styles)
+		jobSuffix, jobStatus = jobRowSuffix(entry.Path, display.JobMarks, panelStyle.Styles, state.WithIndex && entry.IndexStatus != "")
 		metaText := ""
 		if showMetaEffective {
 			metaText = MetaRowText(metaLayouts, entry.Path)
@@ -765,7 +765,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		MeasuredFitWidth:      measuredFitWidth,
 		Meta:                  meta,
 		JobMark: func(path string) (panellist.JobSuffix, string) {
-			return jobRowSuffix(path, display.JobMarks, panelStyle.Styles)
+			return jobRowSuffix(path, display.JobMarks, panelStyle.Styles, false) // carousel has no index column
 		},
 		PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
 			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles,

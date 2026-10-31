@@ -2,16 +2,19 @@ package ui
 
 import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 // jobRowSuffix resolves the <job><queued><operation> suffix icons for absPath, plus the matched
 // job's status for Theme.PanelJobMarkStyle. Zero JobSuffix when no unfinished job matches. The
-// job (HDD) icon, the fileindex icon for a task job, is only set while the job is actually working on the tree (Status.IsActive);
-// a queued or paused job shows just the clock/operation icons, and so does a source a running
-// multi-source job has not started yet (JobRowMark.Pending; its status reads queued).
-func jobRowSuffix(absPath string, jobMarks []JobPathMark, th theme.Theme) (panellist.JobSuffix, string) {
+// job (HDD) icon, the fileindex scanning state icon for a task job, is only set while the job is
+// actually working on the tree (Status.IsActive); a queued or paused job shows just the
+// clock/operation icons, and so does a source a running multi-source job has not started yet
+// (JobRowMark.Pending; its status reads queued). indexStateShown drops a task job's icon: the
+// row's fileindex state column already shows scanning (indexRowState).
+func jobRowSuffix(absPath string, jobMarks []JobPathMark, th theme.Theme, indexStateShown bool) (panellist.JobSuffix, string) {
 	m, ok := EntryPathJobMark(absPath, jobMarks)
 	if !ok {
 		return panellist.JobSuffix{}, ""
@@ -22,8 +25,11 @@ func jobRowSuffix(absPath string, jobMarks []JobPathMark, th theme.Theme) (panel
 	var s panellist.JobSuffix
 	if jobs.Status(m.Status).IsActive() {
 		s.JobIcon, s.JobWrite = th.IconFilelistJob(), m.Write
-		if ic := []rune(th.IconFileIndex()); jobs.Type(m.Type) == jobs.TypeTask && len(ic) > 0 {
-			s.JobIcon = ic[0] // every task job is a fileindex scan or prune
+		if jobs.Type(m.Type) == jobs.TypeTask { // every task job is a fileindex scan or prune
+			s.JobIcon = 0
+			if !indexStateShown {
+				s.JobIcon = th.IconFileIndexState(localfs.IndexStatusScanning)
+			}
 		}
 	}
 	if jobs.Status(m.Status) == jobs.StatusQueued {
