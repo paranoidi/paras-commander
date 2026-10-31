@@ -73,12 +73,27 @@ removals refresh the panel.
 | `excluded` | Not in the index, and the scan rules in fileindex's `config.ini` (`exclude_dirs`, `exclude_files`, file patterns) skip it |
 | `scanning` | A scan or prune task job is working on the row |
 | `differs` | An indexed directory with something different below it: a new, resized or missing file |
+| `unchecked` | An indexed directory with nothing different found in the folders the automatic check reached, but with deeper folders it did not look into |
 | `tagged` | Indexed and carrying tags |
 
 When several apply, the first of: scanning, missing, changed, excluded, new,
-differs, tagged, indexed. The `differs` state comes from a background walk of each indexed
-directory in the listing and appears a moment after the listing (flat
-layout only; it compares sizes, not modification times). The glyphs are under
+differs, tagged, unchecked, indexed. Directories are checked in the background
+(flat layout only; sizes are compared, not modification times). After each
+listing, every indexed directory is checked down to `folder_scan_max_depth`
+levels (default 3). A difference within that depth shows as `differs`; if there
+is none but the directory has folders deeper than that, it shows `unchecked`
+(too deep to check automatically). In `config.toml`, `folder_scan_max_depth`
+(label "Folder scan max depth") is `N` for N levels, `-1` for unlimited (the
+automatic check then never shows `unchecked`) and `0` to turn the automatic
+check off; see [config](config.md#fileindex).
+
+Asking for directory sizes checks without a depth limit: the directory-size
+action on the cursor directory, the whole-panel disk usage scan, and selecting
+directories (each selected directory once per listing). The result replaces
+`unchecked` or `indexed` with `differs`, or turns `unchecked` into `indexed`
+when nothing differs, so a difference below the automatic depth shows only
+after such a request. A tagged directory keeps `tagged` instead of showing
+`unchecked`. The glyphs are under
 `[icons.fileindex_state]` and the colors under `[panel.fileindex]` in the
 theme; without Nerd Font icons a letter is shown instead.
 

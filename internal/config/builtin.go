@@ -420,6 +420,13 @@ const (
 	DefaultFileIndexWorkers = 0
 	// FileIndexWorkersMax clamps [fileindex].workers.
 	FileIndexWorkersMax = 256
+	// DefaultFileIndexFolderScanMaxDepth is [fileindex].folder_scan_max_depth: how many directory
+	// levels the automatic drift check of an indexed folder descends. -1 is unlimited, 0 turns
+	// the automatic check off.
+	DefaultFileIndexFolderScanMaxDepth = 3
+	// FileIndexFolderScanMaxDepthUnlimited is the [fileindex].folder_scan_max_depth value for
+	// no depth limit; lower values are clamped to it.
+	FileIndexFolderScanMaxDepthUnlimited = -1
 	// FileIndexScanBatchFiles is how many hashed files a pc scan commits per batch: smaller than
 	// the fileindex CLI's batch so canceling the scan job lands quickly.
 	FileIndexScanBatchFiles = 200

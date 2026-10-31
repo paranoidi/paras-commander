@@ -149,6 +149,7 @@ missing = { fg = "red" }
 excluded = { fg = "bright_black" }
 scanning = { fg = "cyan", bold = true }
 differs = { fg = "yellow", bold = true }
+unchecked = { fg = "bright_black" }
 tagged = { fg = "magenta" }
 
 [panel.scrollbar]             # scrollbar track/thumb colors
@@ -363,6 +364,7 @@ missing = "\U000F01BA"    # nf-md-database_plus: in the index only (ghost row)
 excluded = "\U000F1640"   # nf-md-database_off: not indexed, skipped by the scan rules
 scanning = "\U000F0CFF"   # nf-md-database_sync: a scan or prune job works on it
 differs = "\U000F163A"    # nf-md-database_alert: indexed directory with differences below
+unchecked = "\U000F1920"  # nf-md-database_eye_off: indexed directory too deep to check automatically
 tagged = "\U000F12F6"     # nf-md-database_marker: indexed and tagged
 
 [icons.dialog]

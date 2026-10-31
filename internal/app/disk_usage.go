@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -282,6 +283,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 	a.setDiskUsageScanScope(p.PathString(), childPaths)
 
 	a.disk.engine.StartScanFromDirectory(p.PathString(), childPaths, a.disk.ignore, panelID, listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints))
+	p.RequestIndexDrift(entryNames(p.Entries)...)
 	a.setDiskUsageShown(true)
 	a.disk.scanToastArmed = true
 	a.model.DiskUsagePanelID = panelID
@@ -311,6 +313,7 @@ func (a *App) scanCursorDirSize() {
 				Enabled:  !a.config.DiskUsage.DescendIntoMountPoints,
 				FromRoot: true,
 			})
+		p.RequestIndexDrift(entry.Name)
 	}
 	if p.Cursor < p.VisibleEntryCount()-1 {
 		p.Move(1, a.activeViewportRows())
@@ -424,4 +427,13 @@ func (a *App) handlePanelDirChanged(panelID int) {
 		p.RefreshDiskUsageOrdering(a.panelViewportRows(panelID), true)
 		return
 	}
+}
+
+// entryNames lists the names of entries.
+func entryNames(entries []localfs.Entry) []string {
+	names := make([]string, len(entries))
+	for i, e := range entries {
+		names[i] = e.Name
+	}
+	return names
 }

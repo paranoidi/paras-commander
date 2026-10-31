@@ -14,7 +14,10 @@ import (
 	"github.com/paranoidi/fileindex/db"
 	fileindexctrl "github.com/paranoidi/paras-commander/internal/apphandler/fileindex"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -754,5 +757,95 @@ func TestFileIndexGhostRowRefusesCopyAndDeletesFromIndex(t *testing.T) {
 	})
 	if _, found, _ := d.FileInfo(filepath.Join(dir, "harbor.txt")); !found {
 		t.Fatal("deleting a real file must leave its index entry for prune, not touch it")
+	}
+}
+
+// openIndexedParent browses the parent of the fixture directory with fileindex, recording the
+// drift requests the panel makes.
+func openIndexedParent(t *testing.T, a *App, screen tcell.SimulationScreen, dir string, reqs *[]panel.IndexDriftRequest) {
+	t.Helper()
+	p := a.activePanel()
+	p.ScheduleIndexDrift = func(r panel.IndexDriftRequest) bool { *reqs = append(*reqs, r); return true }
+	parent := filepath.Dir(dir)
+	if err := a.navigatePanelToDirectory(a.model.ActivePanel, parent, filepath.Base(dir)); err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return p.PathString() == parent && !p.ListingPending })
+	browseWith(t, a, screen)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		st, _ := entryStatus(a, filepath.Base(dir))
+		return st == localfs.IndexStatusIndexed
+	})
+}
+
+// A plain listing only runs the depth-limited automatic pass; the unlimited pass runs when the
+// user asks for a directory size.
+func TestFileIndexDirSizeRequestsUnlimitedDrift(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	var reqs []panel.IndexDriftRequest
+	openIndexedParent(t, a, screen, dir, &reqs)
+	for _, r := range reqs {
+		if r.MaxDepth != config.DefaultFileIndexFolderScanMaxDepth {
+			t.Fatalf("listing load requested %+v, want only the automatic depth", r)
+		}
+	}
+	if len(reqs) == 0 {
+		t.Fatal("the automatic pass did not run")
+	}
+	reqs = nil
+	cursorTo(t, a, filepath.Base(dir))
+	a.scanCursorDirSize()
+	if len(reqs) != 1 || reqs[0].MaxDepth != 0 || len(reqs[0].Subdirs) != 1 || reqs[0].Subdirs[0] != filepath.Base(dir) {
+		t.Fatalf("drift requests = %+v, want one unlimited request for %s", reqs, filepath.Base(dir))
+	}
+}
+
+// folder_scan_max_depth = 0 turns the automatic pass off.
+func TestFileIndexAutoDriftOff(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	var reqs []panel.IndexDriftRequest
+	a.activePanel().IndexAutoDriftDepth = (config.FileIndexConfig{FolderScanMaxDepth: 0}).AutoDriftDepth()
+	openIndexedParent(t, a, screen, dir, &reqs)
+	if len(reqs) != 0 {
+		t.Fatalf("automatic pass ran with depth 0: %+v", reqs)
+	}
+}
+
+// Selecting an indexed directory requests its unlimited drift once per listing, even after the
+// automatic pass already ran.
+func TestFileIndexSelectionRequestsDriftOnce(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	var reqs []panel.IndexDriftRequest
+	openIndexedParent(t, a, screen, dir, &reqs)
+	reqs = nil
+	p := a.activePanel()
+	cursorTo(t, a, filepath.Base(dir))
+	entry, _ := p.CurrentEntry()
+	for range 3 {
+		p.TogglePathSelection(entry.Path)
+		a.reconcileSelectionSizeScans(a.model.ActivePanel)
+	}
+	if len(reqs) != 1 || reqs[0].MaxDepth != 0 || reqs[0].Subdirs[0] != filepath.Base(dir) {
+		t.Fatalf("drift requests = %+v, want exactly one unlimited request", reqs)
+	}
+}
+
+// An automatic drift result arriving after an explicit one must not change the status.
+func TestFileIndexAutoDriftNeverOverwritesExplicit(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	var reqs []panel.IndexDriftRequest
+	openIndexedParent(t, a, screen, dir, &reqs)
+	id, p, name := a.model.ActivePanel, a.activePanel(), filepath.Base(dir)
+	send := func(explicit bool, status string) {
+		a.applyIndexDrift(indexDriftPayload{panelID: id, dir: p.Path, dirs: map[string]string{name: status}, explicit: explicit})
+	}
+	send(false, localfs.IndexStatusUnchecked)
+	if st, _ := entryStatus(a, name); st != localfs.IndexStatusUnchecked {
+		t.Fatalf("status = %q, want unchecked", st)
+	}
+	send(true, localfs.IndexStatusIndexed)
+	send(false, localfs.IndexStatusUnchecked)
+	if st, _ := entryStatus(a, name); st != localfs.IndexStatusIndexed {
+		t.Fatalf("status = %q, a late automatic result must not override the explicit one", st)
 	}
 }

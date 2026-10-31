@@ -197,6 +197,22 @@ type FileIndexConfig struct {
 	// DefaultColumns are the meta column names (meta.toml entries or Go providers) switched on
 	// when a panel with no active meta columns enters fileindex://. Empty switches none on.
 	DefaultColumns []string `toml:"default_columns"`
+	// FolderScanMaxDepth is how many directory levels the automatic check of indexed folders
+	// descends while browsing with fileindex: N levels, -1 unlimited, 0 off (see AutoDriftDepth).
+	FolderScanMaxDepth int `toml:"folder_scan_max_depth"`
+}
+
+// AutoDriftDepth maps FolderScanMaxDepth to the panel's automatic drift depth: the directory
+// levels to check, 0 for unlimited, -1 for off. It is the one place that translates the
+// config meaning (-1 unlimited, 0 off) to the DirDrift meaning.
+func (f FileIndexConfig) AutoDriftDepth() int {
+	switch {
+	case f.FolderScanMaxDepth == FileIndexFolderScanMaxDepthUnlimited:
+		return 0
+	case f.FolderScanMaxDepth <= 0:
+		return -1
+	}
+	return f.FolderScanMaxDepth
 }
 
 // DedupConfig controls find-duplicates scanning.
@@ -859,9 +875,10 @@ func Default() Config {
 			FileProgressBytes: DefaultDedupFileProgressBytes,
 		},
 		FileIndex: FileIndexConfig{
-			Database:       DefaultFileIndexDatabase,
-			Workers:        DefaultFileIndexWorkers,
-			DefaultColumns: DefaultFileIndexColumns(),
+			Database:           DefaultFileIndexDatabase,
+			Workers:            DefaultFileIndexWorkers,
+			DefaultColumns:     DefaultFileIndexColumns(),
+			FolderScanMaxDepth: DefaultFileIndexFolderScanMaxDepth,
 		},
 	}
 }
@@ -1170,6 +1187,7 @@ func (c *Config) validateCompareDedupShell(builtin *Config) {
 		c.Shell.TerminalPanelHeight = builtin.Shell.TerminalPanelHeight
 	}
 	c.FileIndex.Workers = min(max(c.FileIndex.Workers, 0), FileIndexWorkersMax)
+	c.FileIndex.FolderScanMaxDepth = max(c.FileIndex.FolderScanMaxDepth, FileIndexFolderScanMaxDepthUnlimited)
 }
 
 func (c *Config) validateSortAndDelete(builtin *Config) {

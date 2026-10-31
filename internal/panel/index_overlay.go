@@ -16,40 +16,72 @@ import (
 // import fileindex; the app installs the function. It runs on the listing fetch goroutine.
 type IndexOverlayFunc func(ctx context.Context, dir pathloc.Path, entries []fsbackend.Entry) ([]fsbackend.Entry, error)
 
-// IndexDriftRequest asks for the indexed subdirectories of Dir (by name) that differ from the
-// index somewhere below.
+// IndexDriftRequest asks for the state of the indexed subdirectories of Dir (by name) against
+// the index: MaxDepth directory levels are checked, 0 means unlimited (fileindex.Index.DirDrift).
 type IndexDriftRequest struct {
-	Dir     pathloc.Path
-	Subdirs []string
+	Dir      pathloc.Path
+	Subdirs  []string
+	MaxDepth int
+	// Explicit marks a request made by the user (directory size) rather than the automatic pass.
+	Explicit bool
 }
 
 // IndexDriftScheduler starts the drift pass off the UI goroutine and reports whether it did.
 type IndexDriftScheduler func(req IndexDriftRequest) bool
 
-// scheduleIndexDrift dispatches the directory-drift pass for the current listing of a
-// WithIndex panel. Only the flat layout shows the result.
-func (s *State) scheduleIndexDrift() {
+// driftCandidate reports whether e is a directory a drift pass can say something about.
+func driftCandidate(e localfs.Entry) bool {
+	return e.Type == localfs.EntryDirectory && slices.Contains([]string{localfs.IndexStatusIndexed, localfs.IndexStatusTagged, localfs.IndexStatusUnchecked}, e.IndexStatus)
+}
+
+// requestIndexDrift dispatches one drift pass at maxDepth for the candidate entries that want
+// accepts. Only the flat layout shows the result.
+func (s *State) requestIndexDrift(maxDepth int, explicit bool, want func(name string) bool) {
 	if !s.WithIndex || s.ScheduleIndexDrift == nil || s.ListLayout == ListLayoutTree || !s.Path.IsLocal() {
 		return
 	}
 	var subdirs []string
 	for _, e := range s.Entries {
-		if e.Type == localfs.EntryDirectory && (e.IndexStatus == localfs.IndexStatusIndexed || e.IndexStatus == localfs.IndexStatusTagged) {
+		if driftCandidate(e) && want(e.Name) {
 			subdirs = append(subdirs, e.Name)
 		}
 	}
 	if len(subdirs) > 0 {
-		s.ScheduleIndexDrift(IndexDriftRequest{Dir: s.Path, Subdirs: subdirs})
+		s.ScheduleIndexDrift(IndexDriftRequest{Dir: s.Path, Subdirs: subdirs, MaxDepth: maxDepth, Explicit: explicit})
 	}
 }
 
-// ApplyIndexDrift marks the named indexed directories as differing from the index. Entries of
-// another state (new, missing, excluded) are left alone.
-func (s *State) ApplyIndexDrift(dirs map[string]bool) {
+// scheduleIndexDrift is the automatic pass after a listing lands: every indexed directory is
+// checked down to IndexAutoDriftDepth levels (negative: off).
+func (s *State) scheduleIndexDrift() {
+	if s.IndexAutoDriftDepth < 0 {
+		return
+	}
+	s.requestIndexDrift(s.IndexAutoDriftDepth, false, func(string) bool { return true })
+}
+
+// RequestIndexDrift is the explicit pass of the directory-size requests: the named indexed or
+// tagged directories are checked without a depth limit (the walk costs as much as a size scan).
+func (s *State) RequestIndexDrift(names ...string) {
+	s.requestIndexDrift(0, true, func(name string) bool { return slices.Contains(names, name) })
+}
+
+// ApplyIndexDrift applies a drift result (name to differs, unchecked or indexed). differs
+// replaces indexed, tagged and unchecked; unchecked replaces indexed only (a tagged directory
+// keeps its mark); indexed clears unchecked. Entries of another state (new, missing, excluded)
+// are left alone.
+func (s *State) ApplyIndexDrift(res map[string]string) {
 	changed := false
 	for i, e := range s.Entries {
-		if dirs[e.Name] && e.Type == localfs.EntryDirectory && slices.Contains([]string{localfs.IndexStatusIndexed, localfs.IndexStatusTagged}, e.IndexStatus) {
-			s.Entries[i].IndexStatus = localfs.IndexStatusDiffers
+		st, ok := res[e.Name]
+		if !ok || !driftCandidate(e) {
+			continue
+		}
+		switch {
+		case st == localfs.IndexStatusDiffers,
+			st == localfs.IndexStatusUnchecked && e.IndexStatus == localfs.IndexStatusIndexed,
+			st == localfs.IndexStatusIndexed && e.IndexStatus == localfs.IndexStatusUnchecked:
+			s.Entries[i].IndexStatus = st
 			changed = true
 		}
 	}

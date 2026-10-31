@@ -65,6 +65,19 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 			offListing = append(offListing, r)
 		}
 	}
+	if p.WithIndex {
+		ex := a.explicitDriftFor(panelID)
+		var names []string
+		for _, r := range roots {
+			if e, ok := p.ListingEntryAt(r); ok && !ex.asked[e.Name] {
+				ex.asked[e.Name] = true
+				names = append(names, e.Name)
+			}
+		}
+		if len(names) > 0 {
+			p.RequestIndexDrift(names...)
+		}
+	}
 	hasDirs := p.SelectionHasDirs() && a.disk.engine != nil
 	if !hasDirs && len(offListing) == 0 {
 		a.selectionSizeScanFP[panelID] = ""

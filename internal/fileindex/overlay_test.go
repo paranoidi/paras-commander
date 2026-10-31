@@ -72,9 +72,9 @@ func TestOverlayStatesAndGhosts(t *testing.T) {
 	writeFile(t, root, "bramble.txt", "gone soon")
 	overlayFixture(t, x, root, "harbor.txt", "thistle.txt", "clover.txt", "bramble.txt", "lantern/meadow.txt")
 	writeFile(t, root, "thistle.txt", "now a much longer body") // changed
-	writeFile(t, root, "willow.txt", "fresh")                    // new
-	writeFile(t, root, "Thumbs.db", "junk")                      // excluded by the default rules
-	writeFile(t, root, "node_modules/pebble.txt", "x")           // excluded dir
+	writeFile(t, root, "willow.txt", "fresh")                   // new
+	writeFile(t, root, "Thumbs.db", "junk")                     // excluded by the default rules
+	writeFile(t, root, "node_modules/pebble.txt", "x")          // excluded dir
 	if err := os.Remove(filepath.Join(root, "bramble.txt")); err != nil {
 		t.Fatal(err)
 	}
@@ -168,25 +168,63 @@ func TestDirDrift(t *testing.T) {
 	writeFile(t, root, "quarry/stone/slate.txt", "slate")
 	overlayFixture(t, x, root, "orchard/apple/pear.txt", "pasture/clover/hay.txt", "marsh/reed/heron.txt", "quarry/stone/slate.txt")
 
-	writeFile(t, root, "orchard/apple/plum.txt", "new below")      // new file
+	writeFile(t, root, "orchard/apple/plum.txt", "new below")     // new file
 	writeFile(t, root, "pasture/clover/hay.txt", "hay, but more") // size differs
 	if err := os.Remove(filepath.Join(root, "marsh/reed/heron.txt")); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := x.DirDrift(context.Background(), root, []string{"orchard", "pasture", "marsh", "quarry"})
+	got, err := x.DirDrift(context.Background(), root, []string{"orchard", "pasture", "marsh", "quarry"}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, want := range map[string]bool{"orchard": true, "pasture": true, "marsh": true, "quarry": false} {
+	for name, want := range map[string]string{"orchard": StatusDiffers, "pasture": StatusDiffers, "marsh": StatusDiffers, "quarry": StatusIndexed} {
 		if got[name] != want {
-			t.Errorf("drift[%s] = %v, want %v", name, got[name], want)
+			t.Errorf("drift[%s] = %q, want %q", name, got[name], want)
 		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := x.DirDrift(ctx, root, []string{"orchard"}); err == nil {
+	if _, err := x.DirDrift(ctx, root, []string{"orchard"}, 0); err == nil {
 		t.Fatal("a cancelled drift pass must return the context error")
+	}
+}
+
+func TestDirDriftDepthLimit(t *testing.T) {
+	root := tree(t)
+	x := testIndex(t, initIndex(t))
+	writeFile(t, root, "willow/shallow/reed.txt", "reed")
+	writeFile(t, root, "willow/a/b/c/lily.txt", "lily")
+	writeFile(t, root, "thistle/a/b/c/d/moss.txt", "moss")
+	writeFile(t, root, "bramble/a/b/c/d/fern.txt", "fern")
+	overlayFixture(t, x, root, "willow/shallow/reed.txt", "willow/a/b/c/lily.txt", "thistle/a/b/c/d/moss.txt", "bramble/a/b/c/d/fern.txt")
+
+	writeFile(t, root, "willow/shallow/sedge.txt", "new within depth") // differs within depth 3
+	writeFile(t, root, "bramble/a/b/c/d/rush.txt", "new below depth")  // only visible unlimited
+	names := []string{"willow", "thistle", "bramble"}
+
+	got, err := x.DirDrift(context.Background(), root, names, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"willow": StatusDiffers, "thistle": StatusUnchecked, "bramble": StatusUnchecked}
+	for n, w := range want {
+		if got[n] != w {
+			t.Errorf("depth 3: drift[%s] = %q, want %q", n, got[n], w)
+		}
+	}
+
+	// A deep clean tree is indexed once the depth is unlimited; a difference below the limit
+	// shows only then.
+	got, err = x.DirDrift(context.Background(), root, names, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = map[string]string{"willow": StatusDiffers, "thistle": StatusIndexed, "bramble": StatusDiffers}
+	for n, w := range want {
+		if got[n] != w {
+			t.Errorf("unlimited: drift[%s] = %q, want %q", n, got[n], w)
+		}
 	}
 }

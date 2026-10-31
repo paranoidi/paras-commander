@@ -6,8 +6,10 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/paranoidi/fileindex/db"
+	"github.com/paranoidi/fileindex/scan"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -96,13 +98,17 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 	return out, nil
 }
 
-// DirDrift reports which of host's indexed subdirectories (names) hold a difference from the
-// index anywhere below: a file the scan would add (same rules as the scan), a file whose size
-// differs, or an indexed file gone from disk. It walks each subtree, so it runs on its own
-// goroutine and stops when ctx is cancelled.
+// DirDrift checks each of host's indexed subdirectories (names) against the index and returns
+// IndexStatusDiffers (a file the scan would add under the same rules, a file whose size differs,
+// or an indexed file gone from disk), IndexStatusUnchecked (nothing differs within maxDepth, but
+// a directory lies deeper) or IndexStatusIndexed. maxDepth counts directory levels below the
+// subdirectory; 0 means unlimited (never unchecked). Only recorded files within the depth are
+// compared. It walks each subtree, so it runs on its own goroutine and stops when ctx is
+// cancelled.
 // ponytail: a full walk per subdir and size-only comparison (FilesUnder has no mtime); cache by
-// dir mtime or compare mtimes if it proves slow or too coarse.
-func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string) (map[string]bool, error) {
+// dir mtime or compare mtimes if it proves slow or too coarse. The depth-limited walk
+// re-implements scan.Rules.Walk's file filters; share them if fileindex exports a depth option.
+func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, maxDepth int) (map[string]string, error) {
 	if len(subdirs) == 0 {
 		return nil, nil
 	}
@@ -114,7 +120,7 @@ func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string) (ma
 	if err != nil {
 		return nil, err
 	}
-	out := map[string]bool{}
+	out := map[string]string{}
 	for _, name := range subdirs {
 		root := filepath.Join(host, name)
 		id, found, err := db.DirByPath(d, root)
@@ -130,27 +136,112 @@ func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string) (ma
 		}
 		size := make(map[string]int64, len(recorded))
 		for _, e := range recorded {
-			size[e.Path] = e.Size
+			if maxDepth == 0 || dirDepth(root, e.Path) <= maxDepth {
+				size[e.Path] = e.Size
+			}
 		}
-		seen := 0
-		for p := range rules.Walk(root) {
+		differs, seen, deeper := false, 0, false
+		visit := func(p string) bool {
 			if ctx.Err() != nil {
-				return nil, ctx.Err()
+				return false
 			}
 			want, ok := size[p]
 			if !ok {
-				out[name] = true
-				break
+				differs = true
+				return false
 			}
 			seen++
 			if fi, err := os.Stat(p); err == nil && fi.Size() != want {
-				out[name] = true
-				break
+				differs = true
+				return false
 			}
+			return true
 		}
-		if !out[name] && seen < len(recorded) {
-			out[name] = true
+		if maxDepth == 0 {
+			for p := range rules.Walk(root) {
+				if !visit(p) {
+					break
+				}
+			}
+		} else {
+			deeper = walkToDepth(rules, root, maxDepth, visit)
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		switch {
+		case differs || seen < len(size):
+			out[name] = StatusDiffers
+		case deeper:
+			out[name] = StatusUnchecked
+		default:
+			out[name] = StatusIndexed
 		}
 	}
 	return out, nil
+}
+
+// dirDepth is the number of directory levels file lies below root.
+func dirDepth(root, file string) int {
+	rel, err := filepath.Rel(root, file)
+	if err != nil {
+		return 0
+	}
+	return strings.Count(rel, string(filepath.Separator))
+}
+
+// walkToDepth yields the files rules include in root and its directories down to maxDepth
+// levels (the file filters of scan.Rules.Walk), stopping when yield returns false. It reports
+// whether it skipped a directory below the limit.
+func walkToDepth(rules scan.Rules, root string, maxDepth int, yield func(string) bool) (deeper bool) {
+	visited := map[scan.DirKey]bool{}
+	var walk func(dir string, depth int) bool
+	walk = func(dir string, depth int) bool {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return true
+		}
+		var subdirs []string
+		for _, e := range entries {
+			p := filepath.Join(dir, e.Name())
+			isDir, viaLink := e.IsDir(), false
+			if e.Type()&fs.ModeSymlink != 0 {
+				if t, err := os.Stat(p); err == nil && t.IsDir() {
+					isDir, viaLink = true, true
+				}
+			}
+			if isDir {
+				if !rules.ExcludeDir(e.Name()) && (!viaLink || rules.FollowSymlinks) {
+					subdirs = append(subdirs, p)
+				}
+				continue
+			}
+			if !rules.IncludeFile(e.Name()) {
+				continue
+			}
+			if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && fi.Size() > 0 && !yield(p) {
+				return false
+			}
+		}
+		for _, sub := range subdirs {
+			if depth == maxDepth {
+				deeper = true
+				continue
+			}
+			if fi, err := os.Stat(sub); err == nil {
+				if k, ok := scan.KeyOf(fi); ok {
+					if visited[k] {
+						continue
+					}
+					visited[k] = true
+				}
+			}
+			if !walk(sub, depth+1) {
+				return false
+			}
+		}
+		return true
+	}
+	walk(root, 0)
+	return deeper
 }

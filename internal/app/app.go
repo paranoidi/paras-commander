@@ -230,6 +230,8 @@ type App struct {
 	// selection-derived input is unchanged.
 	selectionSizeScanGen  [2]uint64
 	selectionSizeScanPath [2]string
+	// explicitDrift is the per-panel record of explicit index drift requests and results.
+	explicitDrift [2]explicitDriftNames
 	// selectionSizeScanDebounce defers the per-directory mount-exclusion stat check (which
 	// selected directories still need a background disk-usage scan) to a background goroutine
 	// instead of running it inline in reconcileSelectionSizeScans on the main goroutine.

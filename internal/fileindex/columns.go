@@ -32,13 +32,14 @@ const (
 
 // Index status values shown by the status column and the browse-with overlay (localfs.IndexStatus*).
 const (
-	StatusIndexed  = localfs.IndexStatusIndexed
-	StatusChanged  = localfs.IndexStatusChanged
-	StatusNew      = localfs.IndexStatusNew
-	StatusMissing  = localfs.IndexStatusMissing
-	StatusExcluded = localfs.IndexStatusExcluded
-	StatusTagged   = localfs.IndexStatusTagged
-	StatusDiffers  = localfs.IndexStatusDiffers
+	StatusIndexed   = localfs.IndexStatusIndexed
+	StatusChanged   = localfs.IndexStatusChanged
+	StatusNew       = localfs.IndexStatusNew
+	StatusMissing   = localfs.IndexStatusMissing
+	StatusExcluded  = localfs.IndexStatusExcluded
+	StatusTagged    = localfs.IndexStatusTagged
+	StatusDiffers   = localfs.IndexStatusDiffers
+	StatusUnchecked = localfs.IndexStatusUnchecked
 )
 
 // hashCells is how many hex digits the hash column shows.

@@ -47,7 +47,7 @@ func TestApplyIndexDriftMarksOnlyIndexedDirs(t *testing.T) {
 		{Name: "marsh", Path: "/vol/marsh", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusTagged},
 		{Name: "reed.txt", Path: "/vol/reed.txt", Type: localfs.EntryFile, IndexStatus: localfs.IndexStatusIndexed},
 	}}
-	s.ApplyIndexDrift(map[string]bool{"orchard": true, "pasture": true, "marsh": true, "reed.txt": true})
+	s.ApplyIndexDrift(map[string]string{"orchard": localfs.IndexStatusDiffers, "pasture": localfs.IndexStatusDiffers, "marsh": localfs.IndexStatusDiffers, "reed.txt": localfs.IndexStatusDiffers})
 	var got []string
 	for _, e := range s.Entries {
 		got = append(got, e.IndexStatus)
@@ -60,17 +60,56 @@ func TestApplyIndexDriftMarksOnlyIndexedDirs(t *testing.T) {
 	}
 }
 
-func TestScheduleIndexDriftWantsIndexedDirsOnly(t *testing.T) {
+func TestRequestIndexDriftWantsNamedIndexedDirsOnly(t *testing.T) {
 	root, _ := pathloc.File("/vol")
 	var req IndexDriftRequest
 	s := State{Path: root, WithIndex: true, ScheduleIndexDrift: func(r IndexDriftRequest) bool { req = r; return true }, Entries: []localfs.Entry{
 		{Name: "orchard", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed},
 		{Name: "pasture", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusNew},
 		{Name: "reed.txt", Type: localfs.EntryFile, IndexStatus: localfs.IndexStatusIndexed},
+		{Name: "thicket", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusTagged},
 	}}
-	s.scheduleIndexDrift()
+	s.RequestIndexDrift("orchard", "pasture", "reed.txt")
 	if len(req.Subdirs) != 1 || req.Subdirs[0] != "orchard" {
 		t.Fatalf("drift request = %+v, want only orchard", req)
+	}
+}
+
+func TestApplyIndexDriftUncheckedLifecycle(t *testing.T) {
+	s := State{Entries: []localfs.Entry{
+		{Name: "orchard", Path: "/vol/orchard", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed},
+		{Name: "marsh", Path: "/vol/marsh", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusTagged},
+		{Name: "pasture", Path: "/vol/pasture", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed},
+	}}
+	s.ApplyIndexDrift(map[string]string{"orchard": localfs.IndexStatusUnchecked, "marsh": localfs.IndexStatusUnchecked, "pasture": localfs.IndexStatusUnchecked})
+	if s.Entries[0].IndexStatus != localfs.IndexStatusUnchecked || s.Entries[1].IndexStatus != localfs.IndexStatusTagged {
+		t.Fatalf("unchecked must replace indexed but not tagged: %+v", s.Entries)
+	}
+	s.ApplyIndexDrift(map[string]string{"orchard": localfs.IndexStatusIndexed, "pasture": localfs.IndexStatusDiffers})
+	if s.Entries[0].IndexStatus != localfs.IndexStatusIndexed || s.Entries[2].IndexStatus != localfs.IndexStatusDiffers {
+		t.Fatalf("explicit result must clear unchecked or mark differs: %+v", s.Entries)
+	}
+}
+
+func TestIndexDriftAutoPassUsesDepthAndCanBeOff(t *testing.T) {
+	root, _ := pathloc.File("/vol")
+	var reqs []IndexDriftRequest
+	s := State{Path: root, WithIndex: true, IndexAutoDriftDepth: 3, ScheduleIndexDrift: func(r IndexDriftRequest) bool { reqs = append(reqs, r); return true }, Entries: []localfs.Entry{
+		{Name: "orchard", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusIndexed},
+		{Name: "pasture", Type: localfs.EntryDirectory, IndexStatus: localfs.IndexStatusUnchecked},
+	}}
+	s.scheduleIndexDrift()
+	if len(reqs) != 1 || reqs[0].MaxDepth != 3 || len(reqs[0].Subdirs) != 2 {
+		t.Fatalf("auto request = %+v", reqs)
+	}
+	s.RequestIndexDrift("pasture")
+	if len(reqs) != 2 || reqs[1].MaxDepth != 0 || len(reqs[1].Subdirs) != 1 {
+		t.Fatalf("explicit request = %+v", reqs)
+	}
+	s.IndexAutoDriftDepth = -1
+	s.scheduleIndexDrift()
+	if len(reqs) != 2 {
+		t.Fatalf("a negative depth must turn the automatic pass off: %+v", reqs)
 	}
 }
 

@@ -16,6 +16,7 @@ var fileIndexStates = []struct {
 	{"excluded", "\U000F1640", "x", tcell.ColorGray},  // nf-md-database_off
 	{"scanning", "\U000F0CFF", "*", tcell.ColorTeal},  // nf-md-database_sync
 	{"differs", "\U000F163A", "!", tcell.ColorYellow}, // nf-md-database_alert
+	{"unchecked", "\U000F1920", "?", tcell.ColorGray}, // nf-md-database_eye_off
 	{"tagged", "\U000F12F6", "#", tcell.ColorFuchsia}, // nf-md-database_marker
 }
 
