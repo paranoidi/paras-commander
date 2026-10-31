@@ -644,3 +644,25 @@ func TestFindDepthHiddenAndRoots(t *testing.T) {
 		t.Fatalf("roots = %d, want 2", n)
 	}
 }
+
+// TestCloseIsFinal: after Close the index does not reopen the database, so goroutines still
+// asking for it cannot recreate files under a directory being removed.
+func TestCloseIsFinal(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	x.OnOpenError = func(err error) { t.Fatalf("closing reported %v", err) }
+	if _, err := x.DB(); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.DB(); !errors.Is(err, ErrClosed) {
+		t.Fatalf("DB after Close = %v, want ErrClosed", err)
+	}
+	if x.Available() {
+		t.Fatal("closed index reported available")
+	}
+	if _, err := x.Upgrade(); !errors.Is(err, ErrClosed) {
+		t.Fatalf("Upgrade after Close = %v, want ErrClosed", err)
+	}
+}

@@ -22,6 +22,9 @@ import (
 // ErrNoIndex is wrapped by DB when no index database exists at the configured path.
 var ErrNoIndex = errors.New("no fileindex database")
 
+// ErrClosed is returned by DB after Close.
+var ErrClosed = errors.New("fileindex database closed")
+
 // Index is the shared fileindex database handle. DB opens it once, lazily, and checks its
 // schema. pc creates (Create) or upgrades (Upgrade) a database only when the user confirms.
 type Index struct {
@@ -33,6 +36,7 @@ type Index struct {
 	mu     sync.Mutex
 	db     *db.DB
 	failed *openFailure // the last open failure, returned again while the file is unchanged
+	closed bool         // set by Close
 
 	// OnOpenError, when set, is called once, from the goroutine that hit it, with the first
 	// open failure, so the UI can report it once instead of on every action.
@@ -78,7 +82,7 @@ func (x *Index) DB() (*db.DB, error) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	d, err := x.dbLocked()
-	if err != nil && x.OnOpenError != nil {
+	if err != nil && !errors.Is(err, ErrClosed) && x.OnOpenError != nil {
 		x.reported.Do(func() { x.OnOpenError(err) })
 	}
 	return d, err
@@ -95,6 +99,9 @@ func (x *Index) Available() bool {
 
 // dbLocked is DB with x.mu held and without OnOpenError.
 func (x *Index) dbLocked() (*db.DB, error) {
+	if x.closed {
+		return nil, ErrClosed
+	}
 	if x.db != nil {
 		return x.db, nil
 	}
@@ -182,6 +189,9 @@ func (x *Index) Upgrade() (string, error) { return x.initDB(true) }
 func (x *Index) initDB(upgrade bool) (string, error) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
+	if x.closed {
+		return "", ErrClosed
+	}
 	path, err := x.DatabasePath()
 	if err != nil {
 		return "", fmt.Errorf("fileindex: %w", err)
@@ -218,10 +228,12 @@ func (x *Index) initDB(upgrade bool) (string, error) {
 	return path, nil
 }
 
-// Close closes the database if it was opened.
+// Close closes the database if it was opened. The index stays closed: later calls fail with
+// ErrClosed instead of reopening the file.
 func (x *Index) Close() error {
 	x.mu.Lock()
 	defer x.mu.Unlock()
+	x.closed = true
 	if x.db == nil {
 		return nil
 	}
