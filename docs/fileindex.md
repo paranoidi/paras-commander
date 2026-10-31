@@ -51,7 +51,7 @@ with the same entry under the cursor; on an index panel it does what
 bookmarks and the path picker accept `fileindex://` paths too. The index root is
 `fileindex:///`. With Nerd Font icons on (`use_nerdfont_icons`), panel titles
 and other path displays show `fileindex://` as the database icon followed by
-`://`.
+a space.
 
 An index view lists what the index recorded, including files that have since
 gone from disk. Files show their indexed size and modification time;

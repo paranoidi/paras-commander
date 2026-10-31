@@ -272,7 +272,7 @@ func TestFileIndexPathShownWithIconPrefix(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	a.config.UI.UseNerdfontIcons = true
 	a.setStyles(a.styles)
-	if got := ui.PanelTitlePath("fileindex:///srv/orchard", "", 40); got != a.styles.IconFileIndex()+":///srv/orchard" {
+	if got := ui.PanelTitlePath("fileindex:///srv/orchard", "", 40); got != a.styles.IconFileIndex()+" /srv/orchard" {
 		t.Fatalf("with icons = %q", got)
 	}
 	a.config.UI.UseNerdfontIcons = false

@@ -38,11 +38,11 @@ func TestPathWithHomeTildeURIs(t *testing.T) {
 	if got := PathWithHomeTilde("sftp://user@harbor/meadow", "/home/wren"); got != "sftp://user@harbor/meadow" {
 		t.Fatalf("sftp = %q", got)
 	}
-	SetPathDisplayPrefixes(map[string]string{"fileindex://": "://"})
-	if got := PathWithHomeTilde("fileindex:///home/wren/orchard", "/home/wren"); got != "://~/orchard" {
+	SetPathDisplayPrefixes(map[string]string{"fileindex://": " "})
+	if got := PathWithHomeTilde("fileindex:///home/wren/orchard", "/home/wren"); got != " ~/orchard" {
 		t.Fatalf("registered = %q", got)
 	}
-	if got := PathWithHomeTilde("fileindex:///", "/home/wren"); got != ":///" {
+	if got := PathWithHomeTilde("fileindex:///", "/home/wren"); got != " /" {
 		t.Fatalf("index root = %q", got)
 	}
 }

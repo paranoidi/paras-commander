@@ -1371,12 +1371,12 @@ func (a *App) setStyles(t theme.Theme) {
 	syncPathDisplayPrefixes(t)
 }
 
-// syncPathDisplayPrefixes shows fileindex:// paths as the theme's fileindex icon + "://" when
+// syncPathDisplayPrefixes shows fileindex:// paths as the theme's fileindex icon + " " when
 // Nerd Font icons are on (primitive.PathWithHomeTilde), else in full.
 func syncPathDisplayPrefixes(t theme.Theme) {
 	m := map[string]string{}
 	if icon := t.IconFileIndex(); icon != "" {
-		m[pathloc.FileIndexPrefix] = icon + "://"
+		m[pathloc.FileIndexPrefix] = icon + " "
 	}
 	primitive.SetPathDisplayPrefixes(m)
 }

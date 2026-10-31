@@ -61,9 +61,9 @@ func TestPanelTitlePathEmptyHomeNoTilde(t *testing.T) {
 
 func TestPanelTitlePathAbbreviatesURIPathOnly(t *testing.T) {
 	t.Cleanup(func() { primitive.SetPathDisplayPrefixes(nil) })
-	primitive.SetPathDisplayPrefixes(map[string]string{"fileindex://": "://"})
+	primitive.SetPathDisplayPrefixes(map[string]string{"fileindex://": " "})
 	got := PanelTitlePath("fileindex:///home/wren/orchard/lantern/meadow", "/home/wren", 18)
-	if got != "://~/o/l/meadow" {
+	if got != " ~/o/l/meadow" {
 		t.Fatalf("title = %q, want the scheme kept whole and the path abbreviated", got)
 	}
 	if got := PanelTitlePath("sftp://user@harbor/srv/orchard/lantern", "", 30); got != "sftp://user@harbor/s/o/lantern" {
