@@ -38,7 +38,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 |---|---|---|---|
 | `Alt+Shift+I` | `i` | `fileindex.open` | Show the current directory in the index |
 | `Alt+Shift+R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
-| `Alt+Shift+S` | `s` | `fileindex.scan` | Scan the selection, else the entry under the cursor, else the directory |
+| `Alt+Shift+S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
 | `Alt+Shift+P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
 | `Alt+Shift+T` | `t` | `fileindex.tag-add` | Add tags |
 | `Alt+Shift+U` | `u` | `fileindex.tag-remove` | Remove tags |

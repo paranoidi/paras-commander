@@ -175,14 +175,19 @@ func (h *Handler) queueTask(title string, task *jobs.Task, paths []string) {
 	h.host.SetTransientMessage(title+" queued", ui.MessageUrgencyInfo)
 }
 
-// Scan queues a scan of the selection, else the cursor entry, else the panel directory (the
+// Scan queues a scan of the selection, else the panel directory (the
 // real paths, also from a fileindex:// panel).
 func (h *Handler) Scan() {
 	if !h.localOrIndex() {
 		return
 	}
+	// Explicit selections only; never the cursor entry.
+	targets := []string{h.host.ActivePanel().PathString()}
+	if len(h.host.ActivePanel().SelectedPaths) > 0 {
+		targets = h.targets()
+	}
 	var paths []string
-	for _, t := range h.targets() {
+	for _, t := range targets {
 		p, err := hostPath(t)
 		if err != nil {
 			h.host.SetErrorMessage(messageTitle, err)

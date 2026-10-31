@@ -1287,7 +1287,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:               ActionFileIndexScan,
 			Views:            HelpBrowser,
-			Title:            "Scan into index",
+			Title:            "Scan selection or directory",
 			Section:          "fileindex",
 			DefaultKeys:      []string{"M-S"},
 			PreferredKey:     "M-S",

@@ -382,3 +382,25 @@ func TestFileIndexMenuDimsCurrentBrowseSide(t *testing.T) {
 		a.closeLeaderMenu()
 	}
 }
+
+// The scan row names what fileindex.scan targets: the selection, else the directory.
+func TestFileIndexMenuScanLabel(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	scanLabel := func() string {
+		a.toggleFileIndexMenu()
+		defer a.closeLeaderMenu()
+		for _, it := range a.model.LeaderMenu.Items {
+			if it.Key == 's' {
+				return it.Label
+			}
+		}
+		return ""
+	}
+	if got := scanLabel(); got != "Scan directory" {
+		t.Fatalf("no selection: %q", got)
+	}
+	a.activePanel().AddSelection(filepath.Join(a.activePanel().PathString(), "meadow"))
+	if got := scanLabel(); got != "Scan selection" {
+		t.Fatalf("with selection: %q", got)
+	}
+}
