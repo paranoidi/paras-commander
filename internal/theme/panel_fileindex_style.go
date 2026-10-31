@@ -9,15 +9,15 @@ var fileIndexStates = []struct {
 	key, icon, ascii string
 	fg               tcell.Color
 }{
-	{"indexed", "\U000F0AA9", "=", tcell.ColorGray},   // nf-md-database_check
-	{"changed", "\U000F0B86", "~", tcell.ColorYellow}, // nf-md-database_edit
-	{"new", "\U000F01BB", "+", tcell.ColorGreen},      // nf-md-database_minus
-	{"missing", "\U000F01BA", "-", tcell.ColorRed},    // nf-md-database_plus
-	{"excluded", "\U000F1640", "x", tcell.ColorGray},  // nf-md-database_off
-	{"scanning", "\U000F0CFF", "*", tcell.ColorTeal},  // nf-md-database_sync
-	{"differs", "\U000F163A", "!", tcell.ColorYellow}, // nf-md-database_alert
-	{"unchecked", "\U000F1920", "?", tcell.ColorGray}, // nf-md-database_eye_off
-	{"tagged", "\U000F12F6", "#", tcell.ColorFuchsia}, // nf-md-database_marker
+	{"indexed", "\U000F0AA9", "=", tcell.ColorGray},     // nf-md-database_check
+	{"changed", "\U000F0B86", "~", tcell.ColorYellow},   // nf-md-database_edit
+	{"new", "\U000F01BB", "+", tcell.ColorRed},          // nf-md-database_minus
+	{"missing", "\U000F01BA", "-", tcell.ColorRed},      // nf-md-database_plus
+	{"excluded", "\U000F1640", "x", tcell.ColorGray},    // nf-md-database_off
+	{"scanning", "\U000F0CFF", "*", tcell.ColorTeal},    // nf-md-database_sync
+	{"differs", "\U000F163A", "!", tcell.ColorYellow},   // nf-md-database_alert
+	{"unchecked", "\U000F1920", "?", tcell.ColorYellow}, // nf-md-database_eye_off
+	{"tagged", "\U000F12F6", "#", tcell.ColorFuchsia},   // nf-md-database_marker
 }
 
 // fileIndexStateStyleKeys are the optional [panel.fileindex] style keys.

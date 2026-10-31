@@ -146,12 +146,12 @@ typechange = { fg = "magenta" }
 [panel.fileindex]             # "browse with fileindex" state icon colors (replace git status)
 indexed = { fg = "bright_black" }
 changed = { fg = "yellow" }
-new = { fg = "green" }
+new = { fg = "red" }
 missing = { fg = "red" }
 excluded = { fg = "bright_black" }
 scanning = { fg = "cyan", bold = true }
 differs = { fg = "yellow", bold = true }
-unchecked = { fg = "bright_black" }
+unchecked = { fg = "yellow" }
 tagged = { fg = "magenta" }
 
 [panel.scrollbar]             # scrollbar track/thumb colors
