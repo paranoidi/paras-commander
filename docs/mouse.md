@@ -31,6 +31,7 @@ In the menu bar and the footer:
 | Left click on a pulldown item | Runs the item, like Enter on it. |
 | Wheel over the pulldown | Moves the highlighted item. |
 | Left click outside the pulldown | Closes the menu. The click does nothing else. |
+| Left click on the status commands (top-left) | Opens the Status commands dialog. Closes an open menu first. |
 | Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. |
 
 In dialogs:
@@ -47,7 +48,7 @@ In dialogs:
 
 Clicks on the dialog frame, on text labels and outside the dialog do nothing. The help dialog's entry list, the command output body, the delete and mass rename previews do not take clicks yet.
 
-Menu titles take clicks in the file browser and in the jobs, commands, messages, compare and duplicates views, but not while a dialog is open. Footer entries take clicks everywhere the footer shows them, dialogs included.
+Menu titles and the status commands take clicks in the file browser and in the jobs, commands, messages, compare and duplicates views, but not while a dialog is open. Footer entries take clicks everywhere the footer shows them, dialogs included.
 
 In the leader menu strip (and the user, copy-path, preview and git filter menus it hosts), a left click on an entry runs it, like its letter. A click outside the strip closes it.
 

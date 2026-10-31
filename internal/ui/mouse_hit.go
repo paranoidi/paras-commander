@@ -22,6 +22,12 @@ func MenuBarMenuAt(layout Layout, model *Model, x, y int) (int, bool) {
 	return 0, false
 }
 
+// StatusCommandsAt reports whether (x, y) lies in the top-left status-command area
+// (layout.StatusCmd), which is only reserved while at least one status command is drawn.
+func StatusCommandsAt(layout Layout, model *Model, x, y int) bool {
+	return model.MenuBarInteractive() && layout.StatusCmd.Contains(x, y)
+}
+
 // PulldownItemAt reports whether (x, y) lies on the open pulldown's frame and, when it is on an
 // item row, that item's index; item is -1 on the border and on separators.
 func PulldownItemAt(layout Layout, model *Model, x, y int) (item int, inside bool) {

@@ -384,6 +384,17 @@ func (a *App) handleChromeMouse(layout ui.Layout, x, y int, buttons, pressed tce
 		a.render()
 		return true, false, true
 	}
+	if ui.StatusCommandsAt(layout, &a.model, x, y) && a.menuBarAcceptsMouse() {
+		if !left {
+			return true, false, false
+		}
+		if a.model.Menu.Open {
+			a.closeMenu()
+		}
+		a.openStatusCommandsDialog()
+		a.render()
+		return true, false, true
+	}
 	switch a.inputMode() {
 	case InputModeLeaderMenu:
 		return a.handleLeaderMenuMouse(layout, x, y, pressed)

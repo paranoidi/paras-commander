@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/statuscmds"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -704,5 +705,29 @@ func TestMousePulldownSelectionFollowsPointer(t *testing.T) {
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if !app.model.SortDialog.Open {
 		t.Fatal("Enter did not run the item under the pointer")
+	}
+}
+
+func TestMouseStatusCommandsClickOpensDialog(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.statusCmds = []*statusCmdRunner{{def: statuscmds.Def{Name: "quartz"}, text: "flint"}}
+	app.render()
+	x, y := screenTextCell(t, app, "flint")
+	click(app, x, y, tcell.Button1)
+	if !app.model.StatusCommandsDialog.Open {
+		t.Fatal("click on the status-command area did not open the Status commands dialog")
+	}
+}
+
+func TestMouseStatusCommandsClickClosesMenu(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.statusCmds = []*statusCmdRunner{{def: statuscmds.Def{Name: "quartz"}, text: "flint"}}
+	app.render()
+	x, y := screenTextCell(t, app, " File ")
+	click(app, x+2, y, tcell.Button1)
+	x, y = screenTextCell(t, app, "flint")
+	click(app, x, y, tcell.Button1)
+	if app.model.Menu.Open || !app.model.StatusCommandsDialog.Open {
+		t.Fatalf("menu open=%v dialog open=%v want closed/open", app.model.Menu.Open, app.model.StatusCommandsDialog.Open)
 	}
 }
