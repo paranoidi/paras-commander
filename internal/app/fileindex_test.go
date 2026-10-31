@@ -349,6 +349,15 @@ func TestFileIndexHostPathFeatures(t *testing.T) {
 	if got := a.localActivePanelDir(); got != dir {
 		t.Fatalf("panel dir = %q, want %q", got, dir)
 	}
+	var opened []string
+	oldOpen := runDetachedXDGOpen
+	runDetachedXDGOpen = func(p string) error { opened = append(opened, p); return nil }
+	t.Cleanup(func() { runDetachedXDGOpen = oldOpen })
+	a.config.Panels.OpenFilesExternally = true
+	a.openFileExternally(pathloc.FileIndexPrefix + want)
+	if !slices.Equal(opened, []string{want}) {
+		t.Fatalf("external open = %v, want %v", opened, want)
+	}
 	gone := filepath.Join(dir, "willow", "birch")
 	if got := existingHostDir(gone); got != dir {
 		t.Fatalf("existingHostDir(%q) = %q, want %q", gone, got, dir)
