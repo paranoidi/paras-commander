@@ -417,6 +417,8 @@ type LaunchConfig struct {
 	QuickPreview bool
 	// Carousel starts the primary panel directly in carousel view (pc --carousel).
 	Carousel bool
+	// CwdFile receives the active panel's directory on quit (pc --cwd-file). See writeCwdFile.
+	CwdFile string
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -512,7 +514,13 @@ func Run(cfg LaunchConfig) (err error) {
 	// Registered after screen.Fini's defer so the shell child dies before tcell releases the TTY.
 	defer app.closeSubshell()
 	defer app.ueberzug.close()
-	return app.Run()
+	if err := app.Run(); err != nil {
+		return err
+	}
+	if cfg.CwdFile != "" {
+		return app.writeCwdFile(cfg.CwdFile)
+	}
+	return nil
 }
 
 // New creates an App. The cwd function keeps startup state easy to test.

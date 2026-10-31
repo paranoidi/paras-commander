@@ -25,5 +25,6 @@ New here? Start with [Getting started](getting-started.md), then
 - **Subshell** — `Ctrl+O` shell with selected filenames at hand. See [Subshell](subshell.md).
 - **Status commands** — load average, memory, battery or your own commands at the top-left of the menu bar. See [Status commands](status-commands.md).
 - **Mouse** — optional click, double click, right click and wheel in the file browser. See [Mouse](mouse.md).
+- **cd on exit** — the shell follows the active panel's directory when `pc` quits. See [Change directory on exit](cd-on-exit.md).
 - **Editor integration** — file chooser mode for Helix and others. See [Chooser mode](chooser-mode.md).
 - **Configurable** — [config](config.md), [keybindings](keybindings.md), [themes](themes.md).

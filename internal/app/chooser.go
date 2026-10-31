@@ -26,16 +26,33 @@ func expandUserPath(raw, homeDir string) (string, error) {
 	}
 }
 
-func writeChooserSelection(chooserFile, path string) error {
+// writePathFile writes path's absolute form plus a newline to file (--chooser-file, --cwd-file).
+func writePathFile(file, path string) error {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return err
 	}
-	dir := filepath.Dir(chooserFile)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("create chooser directory: %w", err)
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		return fmt.Errorf("create directory for %s: %w", file, err)
 	}
-	return os.WriteFile(chooserFile, []byte(abs+"\n"), 0o600)
+	return os.WriteFile(file, []byte(abs+"\n"), 0o600)
+}
+
+// writeCwdFile writes the active panel's directory to file (--cwd-file) so a shell wrapper
+// can cd there. SFTP panels have no host directory: the file is left untouched.
+func (a *App) writeCwdFile(file string) error {
+	p := a.activePanel()
+	dir, ok := p.Path.HostPath()
+	if !ok {
+		return nil
+	}
+	if !p.Path.IsLocal() {
+		dir = existingHostDir(dir) // an indexed directory may be gone from disk
+		if dir == "" {
+			return nil
+		}
+	}
+	return writePathFile(file, dir)
 }
 
 func (a *App) chooserMode() bool {
@@ -116,7 +133,7 @@ func (a *App) handleChooserOpen(activePanel *panel.State) bool {
 		a.setErrorMessage("Chooser", err)
 		return false
 	}
-	if err := writeChooserSelection(a.chooserFile, p); err != nil {
+	if err := writePathFile(a.chooserFile, p); err != nil {
 		a.setErrorMessage("Chooser", err)
 		return false
 	}

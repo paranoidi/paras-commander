@@ -200,8 +200,8 @@ func TestWriteChooserSelection(t *testing.T) {
 	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	if err := writeChooserSelection(out, file); err != nil {
-		t.Fatalf("writeChooserSelection: %v", err)
+	if err := writePathFile(out, file); err != nil {
+		t.Fatalf("writePathFile: %v", err)
 	}
 	data, err := os.ReadFile(out)
 	if err != nil {
@@ -213,5 +213,24 @@ func TestWriteChooserSelection(t *testing.T) {
 	}
 	if strings.TrimSpace(string(data)) != want {
 		t.Fatalf("got %q, want %q", strings.TrimSpace(string(data)), want)
+	}
+}
+
+func TestWriteCwdFileWritesActivePanelDir(t *testing.T) {
+	dir := t.TempDir()
+	app := newTestApp(t, uitest.Screen(t, 80, 24), Options{
+		CWD:    func() (string, error) { return dir, nil },
+		Config: config.Default(),
+	})
+	out := filepath.Join(t.TempDir(), "lastdir")
+	if err := app.writeCwdFile(out); err != nil {
+		t.Fatalf("writeCwdFile: %v", err)
+	}
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != dir+"\n" {
+		t.Fatalf("got %q, want %q", data, dir+"\n")
 	}
 }

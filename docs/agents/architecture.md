@@ -69,6 +69,8 @@ Each has a reason it cannot move to `apphandler/dialog`:
 
 Zero to two positionals (not combinable with `--chooser-file`). Wiring: `cmd/pc/main.go` -> `app.LaunchConfig.StartPaths`; classification in `internal/app/startup_paths.go` (`applyStartPaths`); fullscreen open via `previewCtrl.OpenFullscreenFilePreviewAt` (`internal/apphandler/preview/view.go`).
 
+`--cwd-file` -> `LaunchConfig.CwdFile`; after a clean `App.Run` return, `Run` calls `App.writeCwdFile` (`internal/app/chooser.go`), which writes the active panel's host directory through `writePathFile` (shared with `--chooser-file`). SFTP writes nothing; `fileindex://` uses `existingHostDir`.
+
 | Args | Behavior |
 |------|----------|
 | none | both panels at cwd |

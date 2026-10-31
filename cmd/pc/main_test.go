@@ -126,3 +126,13 @@ func TestRunRejectsQuickPreviewWithoutPath(t *testing.T) {
 		t.Fatalf("error = %v, want -qp path requirement", err)
 	}
 }
+
+func TestRunRejectsEmptyCwdFile(t *testing.T) {
+	for _, arg := range []string{"--cwd-file", "--cwd-file="} {
+		var stdout, stderr bytes.Buffer
+		err := run([]string{arg}, &stderr, &stdout)
+		if err == nil || !strings.Contains(err.Error(), "--cwd-file") {
+			t.Fatalf("run(%q) error = %v, want --cwd-file rejection", arg, err)
+		}
+	}
+}
