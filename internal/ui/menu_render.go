@@ -404,7 +404,7 @@ func pulldownRect(layout Layout, state menu.State, menus []menu.Definition) (Rec
 	return rect, true
 }
 
-func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, hover MenuHover, menus []menu.Definition, styles theme.Theme) {
+func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, menus []menu.Definition, styles theme.Theme) {
 	rect, ok := pulldownRect(layout, state, menus)
 	if !ok {
 		return
@@ -420,7 +420,7 @@ func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, hove
 			continue
 		}
 		style := styles.MenuDropdown
-		if row == state.SelectedItem || hover.Active && row == hover.Index {
+		if row == state.SelectedItem {
 			style = styles.MenuDropdownSelected
 		}
 		drawMenuItem(screen, rect.X+1, rect.Y+1+row, rect.Width-2, item, style, styles.MenuDropdownAccent)

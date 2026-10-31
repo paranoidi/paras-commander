@@ -678,27 +678,31 @@ func TestMouseHoverHighlightsMenuTitle(t *testing.T) {
 	}
 }
 
-func TestMouseHoverHighlightsPulldownItem(t *testing.T) {
+func TestMousePulldownSelectionFollowsPointer(t *testing.T) {
 	app := tallMouseTestApp(t)
 	x, y := screenTextCell(t, app, " Left ")
 	click(app, x+2, y, tcell.Button1)
-	ix, iy := screenTextCell(t, app, "Sort...") // ix+1 is "o", past the mnemonic
-	selected := app.model.Menu.SelectedItem
-	plain := styleAt(app, ix+1, iy)
-	if _, rendered := app.handleMouse(mouseEv(ix+1, iy, tcell.ButtonNone)); !rendered {
-		t.Fatal("entering a pulldown item must render")
+	ix, iy := screenTextCell(t, app, "Sort...")
+	w, h := app.screen.Size()
+	want, _ := ui.PulldownItemAt(app.layoutForTerminalSize(w, h), &app.model, ix, iy)
+	if want == app.model.Menu.SelectedItem {
+		t.Fatal("fixture: Sort... is already selected")
 	}
-	if got := styleAt(app, ix+1, iy); got != app.styles.MenuDropdownSelected {
-		t.Fatalf("hovered item style = %v want %v", got, app.styles.MenuDropdownSelected)
+	if _, rendered := app.handleMouse(mouseEv(ix, iy, tcell.ButtonNone)); !rendered {
+		t.Fatal("moving onto another item must render")
 	}
-	if app.model.Menu.SelectedItem != selected {
-		t.Fatalf("hover moved the selection to %d", app.model.Menu.SelectedItem)
+	if app.model.Menu.SelectedItem != want {
+		t.Fatalf("selected = %d want %d", app.model.Menu.SelectedItem, want)
 	}
-	if _, rendered := app.handleMouse(mouseEv(ix+2, iy, tcell.ButtonNone)); rendered {
+	if _, rendered := app.handleMouse(mouseEv(ix+1, iy, tcell.ButtonNone)); rendered {
 		t.Fatal("motion within the same item must not render")
 	}
 	app.handleMouse(mouseEv(90, 20, tcell.ButtonNone))
-	if got := styleAt(app, ix+1, iy); got != plain {
-		t.Fatalf("item style after leaving = %v want %v", got, plain)
+	if !app.model.Menu.Open || app.model.Menu.SelectedItem != want {
+		t.Fatalf("leaving the pulldown changed the menu: open=%v selected=%d", app.model.Menu.Open, app.model.Menu.SelectedItem)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if !app.model.SortDialog.Open {
+		t.Fatal("Enter did not run the item under the pointer")
 	}
 }

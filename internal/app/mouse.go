@@ -200,26 +200,29 @@ func (a *App) menuBarHover() ui.MenuHover {
 	return ui.MenuHover{Active: ok, Index: index}
 }
 
-// pulldownHover is the open pulldown's item under the last pointer position (not the frame or a
-// separator).
-func (a *App) pulldownHover() ui.MenuHover {
-	if !a.mouse.pointer || a.inputMode() != InputModeMenu {
-		return ui.MenuHover{}
+// selectPulldownItemUnderPointer moves the open pulldown's selection onto the item under (x, y)
+// (not the frame or a separator) and reports whether it moved.
+func (a *App) selectPulldownItemUnderPointer(layout ui.Layout, x, y int) bool {
+	if a.inputMode() != InputModeMenu {
+		return false
 	}
-	w, h := a.screen.Size()
-	item, inside := ui.PulldownItemAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
-	return ui.MenuHover{Active: inside && item >= 0, Index: item}
+	item, _ := ui.PulldownItemAt(layout, &a.model, x, y)
+	if item < 0 || item == a.model.Menu.SelectedItem {
+		return false
+	}
+	a.model.Menu.SelectedItem = item
+	return true
 }
 
 // refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons,
-// menu titles, pulldown items) and reports whether one changed. render calls it, so they track the screen as it
+// menu titles) and reports whether one changed. render calls it, so they track the screen as it
 // changes under a still pointer; motion calls it and renders on a change.
 func (a *App) refreshPointerHovers() bool {
-	button, menuTitle, item := a.dialogButtonHover(), a.menuBarHover(), a.pulldownHover()
+	button, menuTitle := a.dialogButtonHover(), a.menuBarHover()
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
-		menuTitle != a.model.MenuBarHover || item != a.model.PulldownHover
-	a.model.DialogButtonHover, a.model.MenuBarHover, a.model.PulldownHover = button, menuTitle, item
+		menuTitle != a.model.MenuBarHover
+	a.model.DialogButtonHover, a.model.MenuBarHover = button, menuTitle
 	return changed
 }
 
@@ -266,7 +269,10 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		if layout.TooSmall {
 			return false, false
 		}
-		if a.refreshPointerHovers() || a.updatePanelTitleHover(layout, x, y) {
+		// Each one updates its own state, so all of them run before deciding to render.
+		moved := a.selectPulldownItemUnderPointer(layout, x, y)
+		hovers := a.refreshPointerHovers()
+		if title := a.updatePanelTitleHover(layout, x, y); moved || hovers || title {
 			a.render()
 			return false, true
 		}

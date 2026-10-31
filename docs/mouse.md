@@ -27,7 +27,7 @@ In the menu bar and the footer:
 |---|---|
 | Pointer over a menu title | Highlights the title in the open menu's colors. Nothing opens. |
 | Left click on a menu title | Opens that menu's pulldown. Clicking the title of the open menu closes it. |
-| Pointer over a pulldown item | Highlights the item in the selected item colors. The keyboard selection stays where it was. |
+| Pointer over a pulldown item | Selects the item, as the arrow keys would. Enter then runs it. |
 | Left click on a pulldown item | Runs the item, like Enter on it. |
 | Wheel over the pulldown | Moves the highlighted item. |
 | Left click outside the pulldown | Closes the menu. The click does nothing else. |
