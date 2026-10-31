@@ -210,6 +210,9 @@ type Model struct {
 	// MenuBarHover is the menu title under the mouse pointer (set by App each render), drawn in
 	// the open menu's title style.
 	MenuBarHover MenuHover
+	// StatusCommandsHover is the mouse pointer on the status-command area (set by App each
+	// render), drawn in the open menu's title style.
+	StatusCommandsHover bool
 	// FooterHover is the footer entry under the mouse pointer (set by App each render), drawn in
 	// footer.hover.
 	FooterHover FooterHover
@@ -682,7 +685,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawMenuBar(screen, layout.Menu, model.Menu, model.MenuBarHover, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
 		}
 		if layout.StatusCmd.Width > 0 {
-			drawMenuBarStatusCommands(screen, layout.StatusCmd, model.StatusCommands, styles)
+			drawMenuBarStatusCommands(screen, layout.StatusCmd, model.StatusCommands, styles, model.StatusCommandsHover)
 		}
 	}
 	chromeBlocked := model.PanelsChromeBlocked()

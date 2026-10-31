@@ -223,15 +223,29 @@ func (a *App) footerHover() ui.FooterHover {
 	return ui.FooterHoverAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
 }
 
+// statusCommandsHover reports whether the last pointer position is on the status-command area,
+// where a click would open the Status commands dialog.
+func (a *App) statusCommandsHover() bool {
+	if !a.mouse.pointer || !a.menuBarAcceptsMouse() {
+		return false
+	}
+	w, h := a.screen.Size()
+	return ui.StatusCommandsAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+}
+
 // refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons,
-// menu titles, footer entries) and reports whether one changed. render calls it, so they track
-// the screen as it changes under a still pointer; motion calls it and renders on a change.
+// menu titles, the status commands, footer entries) and reports whether one changed. render
+// calls it, so they track the screen as it changes under a still pointer; motion calls it and
+// renders on a change.
 func (a *App) refreshPointerHovers() bool {
 	button, menuTitle, footer := a.dialogButtonHover(), a.menuBarHover(), a.footerHover()
+	status := a.statusCommandsHover()
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
-		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover
+		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover ||
+		status != a.model.StatusCommandsHover
 	a.model.DialogButtonHover, a.model.MenuBarHover, a.model.FooterHover = button, menuTitle, footer
+	a.model.StatusCommandsHover = status
 	return changed
 }
 

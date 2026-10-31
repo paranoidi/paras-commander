@@ -95,11 +95,15 @@ func StatusCommandWidth(segs []StatusCommandSegment) int {
 
 // drawMenuBarStatusCommands paints the status-command segments in the reserved top-left
 // rect: each text in its segment style, gaps in menu.status, the separator glyph between
-// segments in menu.status.separator.
-func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, segs []StatusCommandSegment, styles theme.Theme) {
+// segments in menu.status.separator. Under the mouse pointer (hover) the whole area is drawn in
+// menu.bar.selected, like a hovered menu title, since a click opens the Status commands dialog.
+func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, segs []StatusCommandSegment, styles theme.Theme, hover bool) {
 	sep := string(styles.IconMenuStatusSeparator())
 	x, end := rect.X, rect.X+rect.Width
 	put := func(s string, style tcell.Style) {
+		if hover {
+			style = styles.MenuBarSelected
+		}
 		if x < end {
 			primitive.Text(screen, x, rect.Y, end-x, s, style)
 		}

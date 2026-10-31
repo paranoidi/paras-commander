@@ -31,6 +31,7 @@ In the menu bar and the footer:
 | Left click on a pulldown item | Runs the item, like Enter on it. |
 | Wheel over the pulldown | Moves the highlighted item. |
 | Left click outside the pulldown | Closes the menu. The click does nothing else. |
+| Pointer over the status commands (top-left) | Highlights them in the open menu's colors. |
 | Left click on the status commands (top-left) | Opens the Status commands dialog. Closes an open menu first. |
 | Pointer over a footer entry | Highlights the entry (key and label). |
 | Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. |
