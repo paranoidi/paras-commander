@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // metaHost implements apphandler/meta.Host for *App.
@@ -23,6 +24,7 @@ func (h metaHost) NoteMetaColumnResolved(panelID int) {
 }
 
 func (h metaHost) IconMetaRunning() string { return h.app.styles.IconMetaRunning() }
+func (h metaHost) DialogMarkerWidth() int  { return dlg.MarkerWidth(h.app.styles) }
 
 func (h metaHost) OpenFileInExternalEditor(path string) error {
 	return h.app.openFileInExternalEditor(path)

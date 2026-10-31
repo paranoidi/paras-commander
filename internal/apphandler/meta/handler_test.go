@@ -56,6 +56,7 @@ func (f *fakeHost) NoteMetaColumnResolved(id int) {
 	f.resolvedCalls = append(f.resolvedCalls, id)
 }
 func (f *fakeHost) IconMetaRunning() string { return "*" }
+func (f *fakeHost) DialogMarkerWidth() int  { return 0 }
 func (f *fakeHost) OpenFileInExternalEditor(path string) error {
 	f.editedPath = path
 	return f.editErr

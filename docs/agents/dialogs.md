@@ -109,7 +109,7 @@ Each dialog's key handler is `dlg.HandleKey` followed by one event function (`ap
 | Listing format | `ListingFormatView`, `ListingFormatDialogState.Apply` | radios; plain letters press OK / Cancel |
 | Compare category / select / unselect | `CompareFilterView`, `CompareFilterDialogState.Apply` | checkboxes, `All` is the master toggle |
 | Jobs Operations result | `JobsResultFilterView`, `JobsResultFilterDialogState.Apply` | checkboxes, `All` is the master toggle |
-| Meta columns | `MetaDialogView`, `MetaDialogState.Apply` | checkboxes from `MetaEntryID(i)`, each `MetaEntry.Section` in its own group under a separator labelled with the section; F9 (edit config) is handled before the engine |
+| Meta columns | `MetaDialogView`, `MetaDialogState.Apply` | checkboxes from `MetaEntryID(i)`, each `MetaEntry.Section` in its own group under a separator labelled with the section; a section whose longest label fits twice across (checked against the ASCII marker) is laid out by `metaSectionGroup` as `KindRow`s of two checkboxes filled column by column (first column gets the odd one), first boxes padded with `Gap` to the longest first-column label; `Spec.MarkerWidth` is `MetaDialogState.MarkerWidth`, cached at open from `Host.DialogMarkerWidth` (`dlg.MarkerWidth`) so draw, keys and mouse share one spec; F9 (edit config) is handled before the engine |
 | Undo confirm | `UndoConfirmView` | message labels, `UndoYes` / `UndoNo`, unclamped |
 | Quit confirm | `QuitConfirmView` | message labels, `QuitStay` / `QuitQuit`, unclamped |
 | Host key | `HostKeyView` | detail labels, `HostKeyAccept` / `HostKeySave` / `HostKeyReject`, plain letters press buttons, unclamped |

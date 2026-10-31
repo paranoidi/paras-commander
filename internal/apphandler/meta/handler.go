@@ -370,11 +370,12 @@ func (h *Handler) OpenDialog(panelID int) {
 	}
 
 	h.model.MetaDialog = dialog.MetaDialogState{
-		Open:    true,
-		PanelID: panelID,
-		Entries: entries,
-		Checked: checked,
-		Notice:  dialogNotice(res),
+		Open:        true,
+		PanelID:     panelID,
+		Entries:     entries,
+		Checked:     checked,
+		MarkerWidth: h.host.DialogMarkerWidth(),
+		Notice:      dialogNotice(res),
 	}
 }
 

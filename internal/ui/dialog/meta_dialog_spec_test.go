@@ -1,6 +1,7 @@
 package dialog_test
 
 import (
+	"github.com/gdamore/tcell/v2"
 	"strings"
 	"testing"
 
@@ -106,5 +107,40 @@ func TestMetaDialogView_sectionUnderHeadedSeparator(t *testing.T) {
 	}
 	if got := spec.Groups[2].Columns[0][0]; got.ID != dialog.MetaEntryID(1) || got.Label != "Tags" {
 		t.Fatalf("section row = %+v, want Tags as entry 1", got)
+	}
+}
+
+func TestMetaDialogView_sectionInTwoColumns(t *testing.T) {
+	st := dialog.MetaDialogState{Entries: []dialog.MetaEntry{{Name: "walnut", Description: "A long description that keeps one column"}}}
+	for _, n := range []string{"Status", "Tags", "Copies", "First seen", "Last seen"} {
+		st.Entries = append(st.Entries, dialog.MetaEntry{Name: n, Label: n, Section: "File Index"})
+	}
+	st.Checked = make([]bool, len(st.Entries))
+	spec := dialog.MetaDialogView(st)
+	if top := spec.Groups[0].Columns[0]; len(top) != 1 || top[0].Kind != dlg.KindCheckbox {
+		t.Fatalf("top section = %+v, want one plain checkbox", top)
+	}
+	rows := spec.Groups[2].Columns[0]
+	if len(rows) != 3 || rows[0].Kind != dlg.KindRow || rows[2].Kind != dlg.KindCheckbox {
+		t.Fatalf("section = %+v, want two rows of two then the odd one out", rows)
+	}
+	// Filled column by column: Status beside First seen, Copies alone.
+	if l, r := rows[0].Cells[0], rows[0].Cells[1]; l.ID != dialog.MetaEntryID(1) || r.ID != dialog.MetaEntryID(4) {
+		t.Fatalf("first row = %v %v, want Status and First seen", l.Label, r.Label)
+	}
+	if rows[2].ID != dialog.MetaEntryID(3) {
+		t.Fatalf("last row = %v, want Copies", rows[2].Label)
+	}
+
+	// Right crosses to the second column, Down walks the first.
+	focus := dialog.MetaEntryID(1)
+	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if focus != dialog.MetaEntryID(4) {
+		t.Fatalf("Right from Status focuses %q, want First seen", focus)
+	}
+	focus = dialog.MetaEntryID(2)
+	dlg.HandleKey(spec, &focus, tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if focus != dialog.MetaEntryID(3) {
+		t.Fatalf("Down from Tags focuses %q, want Copies", focus)
 	}
 }
