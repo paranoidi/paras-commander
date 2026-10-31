@@ -89,10 +89,10 @@ for directories only. The query runs as you type; results are capped at
 
 Two query modes (radios):
 
-- **Name** matches file and directory names, ignoring case. Plain text finds
+- **Pattern** matches file and directory names, ignoring case. Plain text finds
   names containing it (`holiday`). With `*` (any run) or `?` (one character)
   the whole name must match the pattern (`*.jpg`, `report-??.pdf`).
-- **Words** matches file names word by word (files only; Only directories is
+- **Boolean** matches file names word by word (files only; Only directories is
   off). Words are whole words or prefixes with `*` (`holi*`), `"quoted
   phrases"`, and `AND`, `OR`, `NOT` combine them (`beach AND NOT 2019`). A
   syntax error is shown in the dialog.

@@ -3,7 +3,7 @@
                                                                                                     
   ┌───────────────────────────────────── Find in index (12) ─────────────────────────────────────┐  
   │ / lantern                                                                          Depth 3   │  
-  │ (*) Name      ( ) Words                                                                      │  
+  │ (*) Pattern      ( ) Boolean                                                                 │  
   │ ( ) Only directories      ( ) Only files      [x] Include hidden                             │  
   │ [x] Search only from selected directories                                                    │  
   ├──────────────────────────────────────────────────────────────────────────────────────────────┤  
@@ -45,8 +45,8 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbddeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebddddddgggbbaa
-aabhhhhhchhhbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbhhhhhchhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabhhhhhchhhhhhbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbhhhhhchhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabhhhhhchhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiibbaa

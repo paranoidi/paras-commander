@@ -26,8 +26,8 @@ type IndexFindDialogState struct {
 	Query       string
 	QueryCursor int // rune offset of caret within Query
 	QueryScroll int // first visible rune offset for horizontal scrolling
-	// Words picks the FTS5 filename search instead of the name glob.
-	Words     bool
+	// Boolean picks the FTS5 filename search instead of the pattern glob.
+	Boolean   bool
 	OnlyDirs  bool
 	OnlyFiles bool
 	// IncludeHidden keeps results under dot-prefixed path components.
@@ -75,10 +75,10 @@ func (s *IndexFindDialogState) MarkedCount() int {
 // Apply acts on a radio event: the mode and the result filters.
 func (s *IndexFindDialogState) Apply(id dlg.ID) {
 	switch id {
-	case IndexFindName:
-		s.Words = false
-	case IndexFindWords:
-		s.Words, s.OnlyDirs = true, false // FTS5 matches files only
+	case IndexFindPattern:
+		s.Boolean = false
+	case IndexFindBoolean:
+		s.Boolean, s.OnlyDirs = true, false // FTS5 matches files only
 	case IndexFindHidden:
 		s.IncludeHidden = !s.IncludeHidden
 	case IndexFindSelections:

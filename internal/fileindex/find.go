@@ -8,12 +8,12 @@ import (
 	"github.com/paranoidi/fileindex/db"
 )
 
-// FindQuery is one find-in-index search. Words picks the FTS5 filename search (files only);
+// FindQuery is one find-in-index search. Boolean picks the FTS5 filename search (files only);
 // otherwise Text is a case-insensitive glob on basenames, matched as a substring when it has no
 // wildcard.
 type FindQuery struct {
 	Text      string
-	Words     bool
+	Boolean   bool
 	OnlyDirs  bool
 	OnlyFiles bool
 	// Roots, when set, are searched instead of the root Find is given (results merged and
@@ -55,12 +55,12 @@ func (x *Index) Find(root string, q FindQuery, limit int) (found []db.Found, tru
 		}
 	}
 	pattern := q.Text
-	if !q.Words && !strings.ContainsAny(pattern, "*?") {
+	if !q.Boolean && !strings.ContainsAny(pattern, "*?") {
 		pattern = "*" + pattern + "*"
 	}
 	for _, r := range roots {
 		var part []db.Found
-		if q.Words {
+		if q.Boolean {
 			part, err = d.FindByWords(q.Text, r)
 		} else {
 			part, err = d.FindByName(pattern, r, !q.OnlyDirs, !q.OnlyFiles)

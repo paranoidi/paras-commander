@@ -506,15 +506,15 @@ func TestFind(t *testing.T) {
 	if len(got) != 0 {
 		t.Fatalf("files only matched a dir: %v", rels(got))
 	}
-	got, _, err = x.Find(root, FindQuery{Text: "thistle", Words: true}, 0)
+	got, _, err = x.Find(root, FindQuery{Text: "thistle", Boolean: true}, 0)
 	if err != nil || !slices.Equal(rels(got), []string{"lantern/thistle.md"}) {
-		t.Fatalf("words = %v err=%v", rels(got), err)
+		t.Fatalf("boolean = %v err=%v", rels(got), err)
 	}
 	got, trunc, _ = x.Find(root, FindQuery{Text: "*.*"}, 2)
 	if len(got) != 2 || !trunc {
 		t.Fatalf("cap = %d trunc=%v, want 2 and truncated", len(got), trunc)
 	}
-	if _, _, err = x.Find(root, FindQuery{Text: `"unbalanced`, Words: true}, 0); err == nil {
+	if _, _, err = x.Find(root, FindQuery{Text: `"unbalanced`, Boolean: true}, 0); err == nil {
 		t.Fatal("an FTS syntax error must be returned")
 	}
 }

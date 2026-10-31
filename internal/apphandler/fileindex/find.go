@@ -88,7 +88,7 @@ func (h *Handler) scheduleFind(delay time.Duration) {
 	st.Searching = true
 	gen, root, limit := st.Gen, st.Root, h.config.UI.Find.MaxResults
 	q := fi.FindQuery{
-		Text: st.Query, Words: st.Words, OnlyDirs: st.OnlyDirs, OnlyFiles: st.OnlyFiles,
+		Text: st.Query, Boolean: st.Boolean, OnlyDirs: st.OnlyDirs, OnlyFiles: st.OnlyFiles,
 		MaxDepth: st.MaxDepth, IncludeHidden: st.IncludeHidden,
 	}
 	if st.SearchOnlySelections {

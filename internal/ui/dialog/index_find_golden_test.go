@@ -9,7 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-// Render goldens for the find-in-index dialog: default focus with results and marks, Words mode
+// Render goldens for the find-in-index dialog: default focus with results and marks, Boolean mode
 // (Only directories greyed), jump mode (no radio rows), the truncated count, an error and the
 // empty list.
 
@@ -36,9 +36,9 @@ func TestIndexFindGoldenRender(t *testing.T) {
 	marked.Selected = 2
 	marked.Marked = map[string]bool{st.Results[1].Path: true, st.Results[3].Path: true}
 	add("marked_cursor2", 100, 30, marked)
-	words := st
-	words.Words, words.OnlyFiles = true, true
-	add("words", 100, 30, words)
+	boolean := st
+	boolean.Boolean, boolean.OnlyFiles = true, true
+	add("boolean", 100, 30, boolean)
 	jump := st
 	jump.JumpMode, jump.OnlyDirs = true, true
 	add("jump", 100, 30, jump)
@@ -49,7 +49,7 @@ func TestIndexFindGoldenRender(t *testing.T) {
 	searching.Searching = true
 	add("searching", 100, 30, searching)
 	bad := indexFindGoldenState(0)
-	bad.Words, bad.Err = true, "fts5: syntax error near \"\""
+	bad.Boolean, bad.Err = true, "fts5: syntax error near \"\""
 	add("error", 100, 30, bad)
 	add("empty", 100, 30, indexFindGoldenState(0))
 	opts := st

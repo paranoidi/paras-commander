@@ -4,7 +4,7 @@
                                                             
   ┌───────────────── Find in index (12) ─────────────────┐  
   │ / lantern                                  Depth     │  
-  │ (*) Name      ( ) Words                              │  
+  │ (*) Pattern      ( ) Boolean                         │  
   │ ( ) Only directories  ( ) Only files  [ ] Include h… │  
   ├──────────────────────────────────────────────────────┤  
   │ amber/dune-0.txt                                     ┃  
@@ -40,8 +40,8 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbbbbbccccccccccccccccccccbbbbbbbbbbbbbbbbbbaa
 aabbddeeeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebddddddgggbbaa
-aabhhhhhchhhbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbcbbbbbbbbbbbaa
+aabhhhhhchhhhhhbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbcbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiibbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa

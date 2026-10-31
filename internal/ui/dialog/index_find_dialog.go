@@ -14,8 +14,8 @@ import (
 // Find-in-index dialog widget IDs. IndexFindQuery drives IndexFindList.
 const (
 	IndexFindQuery      = dlg.ID("index-find:query")
-	IndexFindName       = dlg.ID("index-find:name")
-	IndexFindWords      = dlg.ID("index-find:words")
+	IndexFindPattern    = dlg.ID("index-find:pattern")
+	IndexFindBoolean    = dlg.ID("index-find:boolean")
 	IndexFindOnlyDirs   = dlg.ID("index-find:only-dirs")
 	IndexFindOnlyFiles  = dlg.ID("index-find:only-files")
 	IndexFindHidden     = dlg.ID("index-find:hidden")
@@ -58,7 +58,7 @@ func indexFindTitle(st *IndexFindDialogState, styles theme.Theme) string {
 	return title
 }
 
-// IndexFindDialogView is the find-in-index dialog's widget spec: the query, the Name / Words and
+// IndexFindDialogView is the find-in-index dialog's widget spec: the query, the Pattern / Boolean and
 // Only directories / Only files radios (hidden in jump mode), the result list driven by the
 // query and OK / Cancel.
 func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg.Spec {
@@ -71,12 +71,12 @@ func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg
 	options := []dlg.Item{}
 	if !st.JumpMode {
 		col = append(col, dlg.Item{Kind: dlg.KindRow, Cells: []dlg.Item{
-			{ID: IndexFindName, Kind: dlg.KindRadio, Label: "Name", Mnemonic: 'N', On: !st.Words, Gap: gap},
-			{ID: IndexFindWords, Kind: dlg.KindRadio, Label: "Words", Mnemonic: 'W', On: st.Words},
+			{ID: IndexFindPattern, Kind: dlg.KindRadio, Label: "Pattern", Mnemonic: 'P', On: !st.Boolean, Gap: gap},
+			{ID: IndexFindBoolean, Kind: dlg.KindRadio, Label: "Boolean", Mnemonic: 'B', On: st.Boolean},
 		}})
 		options = append(options,
-			dlg.Item{ID: IndexFindOnlyDirs, Kind: dlg.KindRadio, Label: "Only directories", Mnemonic: 'D', On: st.OnlyDirs, Disabled: st.Words, Gap: gap},
-			dlg.Item{ID: IndexFindOnlyFiles, Kind: dlg.KindRadio, Label: "Only files", Mnemonic: 'F', On: st.OnlyFiles, Gap: gap},
+			dlg.Item{ID: IndexFindOnlyDirs, Kind: dlg.KindRadio, Label: "Only directories", Mnemonic: 'N', On: st.OnlyDirs, Disabled: st.Boolean, Gap: gap},
+			dlg.Item{ID: IndexFindOnlyFiles, Kind: dlg.KindRadio, Label: "Only files", Mnemonic: 'Y', On: st.OnlyFiles, Gap: gap},
 		)
 	}
 	options = append(options, dlg.Item{ID: IndexFindHidden, Kind: dlg.KindCheckbox, Label: "Include hidden", Mnemonic: 'I', On: st.IncludeHidden})
