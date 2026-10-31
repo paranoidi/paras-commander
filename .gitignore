@@ -21,3 +21,4 @@ test-data/
 themes/imports/
 /site/
 !/docs/tapes/*.sh
+/dist/
