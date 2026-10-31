@@ -7,4 +7,4 @@ focus=item2 checked=[false true false]
 == Down ==
 focus=ok checked=[false true false]
 == F9 ==
-focus=ok checked=[false true false false]
+focus=ok checked=[false true false]

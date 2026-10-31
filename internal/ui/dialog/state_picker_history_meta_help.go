@@ -230,6 +230,11 @@ type HistoryDialogState struct {
 type MetaEntry struct {
 	Name        string
 	Description string
+	// Label replaces Name in the picker row when set (a provider's column title).
+	Label string
+	// Section is the heading the entry is listed under; "" is the top (meta.toml) section.
+	// Entries are ordered section by section.
+	Section string
 	// SortOnActivation switches the panel's sort to this column when the entry is newly
 	// activated from the meta picker.
 	SortOnActivation bool

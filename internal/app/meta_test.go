@@ -44,9 +44,8 @@ file = "echo meta"
 	}
 
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
-	// mkvinfo, then the built-in fileindex tags column.
-	if c := app.model.MetaDialog.Checked; len(c) != 2 || !c[0] || c[1] {
-		t.Fatalf("reopen Checked = %v, want [true false]", c)
+	if c := app.model.MetaDialog.Checked; len(c) != 1 || !c[0] {
+		t.Fatalf("reopen Checked = %v, want [true]", c)
 	}
 }
 

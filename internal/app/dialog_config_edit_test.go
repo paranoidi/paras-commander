@@ -10,7 +10,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/configdoc"
-	"github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -21,6 +20,7 @@ func testMetaDialogApp(t *testing.T, dir, cfgDir string) *App {
 	th, _ := loadTestTheme(t)
 	cfg := config.Default()
 	cfg.Meta = config.MetaConfig{LocalNames: []string{"meta.toml"}}
+	cfg.FileIndex.Database = filepath.Join(dir, ".no-fileindex", "index.sqlite")
 	screen := newScreen(t, 80, 24)
 	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
@@ -129,9 +129,9 @@ file = "wc -l"
 
 	app := testMetaDialogApp(t, dir, cfgDir)
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
-	// lines, then the built-in fileindex tags column (Go column provider).
-	if len(app.model.MetaDialog.Entries) != 2 || app.model.MetaDialog.Entries[0].Name != "lines" {
-		t.Fatalf("entries = %+v, want lines then the built-in column", app.model.MetaDialog.Entries)
+	// No fileindex database, so the built-in tags column is not listed.
+	if len(app.model.MetaDialog.Entries) != 1 || app.model.MetaDialog.Entries[0].Name != "lines" {
+		t.Fatalf("entries = %+v, want only lines", app.model.MetaDialog.Entries)
 	}
 
 	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
@@ -152,8 +152,8 @@ file = "wc -c"
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open after F4 edit")
 	}
-	if len(app.model.MetaDialog.Entries) != 3 {
-		t.Fatalf("entries len = %d, want lines + size + the built-in column", len(app.model.MetaDialog.Entries))
+	if len(app.model.MetaDialog.Entries) != 2 {
+		t.Fatalf("entries len = %d, want lines + size", len(app.model.MetaDialog.Entries))
 	}
 	if app.model.MetaDialog.Entries[1].Name != "size" {
 		t.Fatalf("second entry = %+v, want size", app.model.MetaDialog.Entries[1])
@@ -316,7 +316,8 @@ file = "wc -l"
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open")
 	}
-	if e := app.model.MetaDialog.Entries; len(e) != 1 || e[0].Name != fileindex.TagsColumn {
-		t.Fatalf("entries = %+v, want only the built-in column after invalid meta.toml", e)
+	// No fileindex database: the built-in tags column is not offered either.
+	if e := app.model.MetaDialog.Entries; len(e) != 0 {
+		t.Fatalf("entries = %+v, want none after invalid meta.toml", e)
 	}
 }

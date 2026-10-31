@@ -109,7 +109,7 @@ Each dialog's key handler is `dlg.HandleKey` followed by one event function (`ap
 | Listing format | `ListingFormatView`, `ListingFormatDialogState.Apply` | radios; plain letters press OK / Cancel |
 | Compare category / select / unselect | `CompareFilterView`, `CompareFilterDialogState.Apply` | checkboxes, `All` is the master toggle |
 | Jobs Operations result | `JobsResultFilterView`, `JobsResultFilterDialogState.Apply` | checkboxes, `All` is the master toggle |
-| Meta columns | `MetaDialogView`, `MetaDialogState.Apply` | checkboxes from `MetaEntryID(i)`; F9 (edit config) is handled before the engine |
+| Meta columns | `MetaDialogView`, `MetaDialogState.Apply` | checkboxes from `MetaEntryID(i)`, each `MetaEntry.Section` in its own group under a separator labelled with the section; F9 (edit config) is handled before the engine |
 | Undo confirm | `UndoConfirmView` | message labels, `UndoYes` / `UndoNo`, unclamped |
 | Quit confirm | `QuitConfirmView` | message labels, `QuitStay` / `QuitQuit`, unclamped |
 | Host key | `HostKeyView` | detail labels, `HostKeyAccept` / `HostKeySave` / `HostKeyReject`, plain letters press buttons, unclamped |

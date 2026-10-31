@@ -438,3 +438,14 @@ func TestDedupFilesUsesIndexedHashes(t *testing.T) {
 		t.Fatalf("missing dir = %v, %v", got, err)
 	}
 }
+
+func TestAvailableIsQuiet(t *testing.T) {
+	x := testIndex(t, filepath.Join(t.TempDir(), "nowhere", "index.sqlite"))
+	x.OnOpenError = func(err error) { t.Fatalf("Available reported %v", err) }
+	if x.Available() || x.TagsProvider().Available() {
+		t.Fatal("missing index reported available")
+	}
+	if !testIndex(t, initIndex(t)).Available() {
+		t.Fatal("initialised index reported unavailable")
+	}
+}

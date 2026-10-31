@@ -382,7 +382,8 @@ func (h *Handler) CloseDialog() {
 	h.model.MetaDialog = dialog.MetaDialogState{}
 }
 
-// entriesFromFile returns MetaEntry slice sorted by order+name from a MetaFile (nil-safe).
+// entriesFromFile returns MetaEntry slice sorted by section, then order+name, from a MetaFile
+// (nil-safe).
 func entriesFromFile(mf *metacmds.MetaFile) []dialog.MetaEntry {
 	if mf == nil || len(mf.Entries) == 0 {
 		return nil
@@ -396,7 +397,15 @@ func entriesFromFile(mf *metacmds.MetaFile) []dialog.MetaEntry {
 			SortOnActivation: e.SortOnActivation,
 			SortReverse:      e.SortReverse,
 		}
+		if e.Provider != nil {
+			out[i].Section = e.Provider.Section
+			if out[i].Section != "" {
+				out[i].Label = e.Column
+			}
+		}
 	}
+	// Sectioned providers go below the meta.toml entries, grouped by section.
+	slices.SortStableFunc(out, func(a, b dialog.MetaEntry) int { return strings.Compare(a.Section, b.Section) })
 	return out
 }
 

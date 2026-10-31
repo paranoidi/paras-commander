@@ -73,6 +73,24 @@ func (x *Index) DatabasePath() (string, error) {
 func (x *Index) DB() (*db.DB, error) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
+	d, err := x.dbLocked()
+	if err != nil && x.OnOpenError != nil {
+		x.reported.Do(func() { x.OnOpenError(err) })
+	}
+	return d, err
+}
+
+// Available reports whether the database opens, like DB but without reporting a failure to
+// OnOpenError (so asking does not prompt to create or upgrade the index).
+func (x *Index) Available() bool {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	_, err := x.dbLocked()
+	return err == nil
+}
+
+// dbLocked is DB with x.mu held and without OnOpenError.
+func (x *Index) dbLocked() (*db.DB, error) {
 	if x.db != nil {
 		return x.db, nil
 	}
@@ -86,9 +104,6 @@ func (x *Index) DB() (*db.DB, error) {
 		// unreadable) has no file to watch, so that failure is not kept.
 		if path != "" {
 			x.failed = &openFailure{err: err, path: path, file: statDBFile(path)}
-		}
-		if x.OnOpenError != nil {
-			x.reported.Do(func() { x.OnOpenError(err) })
 		}
 		return nil, err
 	}

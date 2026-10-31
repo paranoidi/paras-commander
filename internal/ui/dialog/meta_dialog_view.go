@@ -10,24 +10,36 @@ func MetaEntryID(i int) dlg.ID { return dlg.IndexedID("entry:", i) }
 const metaDialogWidth = 56
 
 // MetaDialogView is the meta column picker's widget spec: one checkbox per meta entry above OK /
-// Cancel, or the wrapped Notice when there are no entries. Plain o / c press the buttons.
+// Cancel, each entry Section in its own group under a separator headed by the section name, or
+// the wrapped Notice when there are no entries. Plain o / c press the buttons.
 func MetaDialogView(s MetaDialogState) dlg.Spec {
 	shortcuts := MetaEntryShortcuts(s.Entries)
-	items := make([]dlg.Item, len(s.Entries))
+	var groups []dlg.Group
+	var items []dlg.Item
+	section := ""
 	for i, e := range s.Entries {
-		items[i] = dlg.Item{
+		if e.Section != section {
+			if len(items) > 0 {
+				groups = append(groups, dlg.Group{Columns: [][]dlg.Item{items}})
+			}
+			section = e.Section
+			groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{{Kind: dlg.KindSeparator, Label: section}}}})
+			items = nil
+		}
+		items = append(items, dlg.Item{
 			ID: MetaEntryID(i), Kind: dlg.KindCheckbox, Label: metaEntryDisplayLabel(e), Mnemonic: shortcuts[i],
 			On: i < len(s.Checked) && s.Checked[i],
-		}
+		})
 	}
 	if len(s.Entries) == 0 && s.Notice != "" {
 		for _, line := range wrapMessageBody(s.Notice, metaDialogWidth-4) {
 			items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: line, Style: dlg.TextWarn})
 		}
 	}
+	groups = append(groups, dlg.Group{Columns: [][]dlg.Item{items}})
 	return dlg.Spec{
 		Title: "Meta", Width: metaDialogWidth, MinWidth: 28, MinHeight: 5, PlainButtonKeys: true,
-		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
+		Groups: groups,
 		Buttons: []dlg.Button{
 			dlg.OKButton,
 			dlg.CancelButton,

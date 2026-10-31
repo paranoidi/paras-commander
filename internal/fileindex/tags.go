@@ -18,13 +18,14 @@ const TagsColumn = config.FileIndexTagsColumn
 // TagsProvider returns the Go column provider showing each entry's fileindex tags (a file's
 // instance tags, a directory's dir tags), comma separated. It reads the whole listing in one
 // EntryTags call, on local panels and fileindex:// panels alike; other schemes show no tags.
-// With no usable index it shows empty cells (the open failure is reported once by Index).
+// It is offered only while the index opens (Available).
 func (x *Index) TagsProvider() *metacmds.Provider {
 	return &metacmds.Provider{
 		Name:        TagsColumn,
-		Description: "fileindex tags",
 		Column:      "Tags",
+		Section:     "Fileindex",
 		Order:       config.FileIndexTagsColumnOrder,
+		Available:   x.Available,
 		Values: func(ctx context.Context, dir string, entries []localfs.Entry) (map[string]string, error) {
 			loc, err := pathloc.Parse(dir)
 			if err != nil || loc.Scheme() == pathloc.SchemeSFTP || len(entries) == 0 {
