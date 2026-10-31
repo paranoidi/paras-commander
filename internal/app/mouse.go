@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // mouseState is the click bookkeeping behind handleMouse.
@@ -21,6 +22,10 @@ type mouseState struct {
 	lastTarget string
 	lastRow    int
 	lastAt     time.Time
+	// pointer/x/y are the last reported pointer cell, for the dialog button hover (pointer is
+	// false until a report arrives and while reporting is off).
+	pointer bool
+	x, y    int
 }
 
 // doubleClick records a left press on row of target and reports whether it completes a double
@@ -50,6 +55,7 @@ func (a *App) applyMouseConfig() {
 		a.screen.DisableMouse()
 		a.mouse.enabled = false
 		a.mouse.buttons = 0
+		a.mouse.pointer = false
 		a.clearPanelTitleHover()
 	}
 }
@@ -62,6 +68,7 @@ func (a *App) releaseMouse() (restore func()) {
 	}
 	a.screen.DisableMouse()
 	a.mouse.buttons = 0
+	a.mouse.pointer = false
 	a.clearPanelTitleHover()
 	return func() {
 		if a.config.UI.Mouse {
@@ -153,6 +160,58 @@ func (a *App) updatePanelTitleHover(layout ui.Layout, x, y int) bool {
 	return prev.Panel != next.Panel || !nextSeg.Contains(prev.X)
 }
 
+// mouseGoesToDialog reports whether presses below the chrome belong to the top-most dlg dialog
+// (handleDialogMouse): every mode but the browser and the Jobs, Commands and Messages lists.
+func (a *App) mouseGoesToDialog() bool {
+	switch a.inputMode() {
+	case InputModeJobsView, InputModeCommandsView, InputModeMessagesView:
+		return a.model.JobsResultFilterDialog.Open
+	case InputModeNormal:
+		return false
+	}
+	return true
+}
+
+// dialogButtonHover is the top-most dlg dialog's button under the last pointer position. render
+// sets Model.DialogButtonHover from it, so the highlight follows the dialog as it changes.
+func (a *App) dialogButtonHover() dlg.ButtonHover {
+	if !a.mouse.pointer || !a.mouseGoesToDialog() {
+		return dlg.ButtonHover{}
+	}
+	d, ok := a.activeDialog(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if !ok {
+		return dlg.ButtonHover{}
+	}
+	spec, fit := d.spec()
+	if !fit {
+		return dlg.ButtonHover{}
+	}
+	w, h := a.screen.Size()
+	return dlg.HoveredButton(spec, w, h, a.mouse.x, a.mouse.y)
+}
+
+// menuBarHover is the menu title under the last pointer position, where a click would open it.
+func (a *App) menuBarHover() ui.MenuBarHover {
+	if !a.mouse.pointer || !a.menuBarAcceptsMouse() {
+		return ui.MenuBarHover{}
+	}
+	w, h := a.screen.Size()
+	index, ok := ui.MenuBarMenuAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+	return ui.MenuBarHover{Active: ok, Index: index}
+}
+
+// refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons,
+// menu titles) and reports whether one changed. render calls it, so they track the screen as it
+// changes under a still pointer; motion calls it and renders on a change.
+func (a *App) refreshPointerHovers() bool {
+	button, menuTitle := a.dialogButtonHover(), a.menuBarHover()
+	prev := a.model.DialogButtonHover
+	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
+		menuTitle != a.model.MenuBarHover
+	a.model.DialogButtonHover, a.model.MenuBarHover = button, menuTitle
+	return changed
+}
+
 // clearPanelTitleHover drops the title path highlight; it reports whether one was shown.
 func (a *App) clearPanelTitleHover() bool {
 	was := a.model.PanelTitleHover.Active
@@ -183,18 +242,20 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	buttons := ev.Buttons()
 	pressed := buttons &^ a.mouse.buttons
 	a.mouse.buttons = buttons &^ (tcell.WheelUp | tcell.WheelDown | tcell.WheelLeft | tcell.WheelRight)
+	a.mouse.pointer = true
+	a.mouse.x, a.mouse.y = ev.Position()
 	if a.terminalPanelHasKeyFocus() {
 		return false, false
 	}
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
 	x, y := ev.Position()
-	// Motion and releases carry no new press: only the title path hover reacts to them.
+	// Motion and releases carry no new press: only the hover highlights react to them.
 	if pressed == 0 && wheelDelta(buttons, 1) == 0 {
 		if layout.TooSmall {
 			return false, false
 		}
-		if a.updatePanelTitleHover(layout, x, y) {
+		if a.refreshPointerHovers() || a.updatePanelTitleHover(layout, x, y) {
 			a.render()
 			return false, true
 		}
@@ -206,18 +267,16 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	if handled, quit, rendered := a.handleChromeMouse(layout, x, y, buttons, pressed); handled {
 		return quit, rendered
 	}
+	if a.mouseGoesToDialog() {
+		return a.handleDialogMouse(x, y, buttons, pressed)
+	}
 	switch a.inputMode() {
 	case InputModeJobsView, InputModeCommandsView, InputModeMessagesView:
-		if a.model.JobsResultFilterDialog.Open {
-			return a.handleDialogMouse(x, y, buttons, pressed)
-		}
 		return false, a.handleAuxListMouse(layout, x, y, buttons, pressed)
 	case InputModeNormal:
 		if a.model.ViewMode != ui.ViewBrowser {
 			return false, false
 		}
-	default:
-		return a.handleDialogMouse(x, y, buttons, pressed)
 	}
 	if id, seg, ok := a.panelTitleHit(layout, x, y); ok && pressed&tcell.Button1 != 0 {
 		a.focusPanelByMouse(id)

@@ -25,6 +25,7 @@ In the menu bar and the footer:
 
 | Action | Result |
 |---|---|
+| Pointer over a menu title | Highlights the title in the open menu's colors. Nothing opens. |
 | Left click on a menu title | Opens that menu's pulldown. Clicking the title of the open menu closes it. |
 | Left click on a pulldown item | Runs the item, like Enter on it. |
 | Wheel over the pulldown | Moves the highlighted item. |
@@ -35,6 +36,7 @@ In dialogs:
 
 | Action | Result |
 |---|---|
+| Pointer over a button | Highlights the button in the focused button colors. Focus stays where it was. |
 | Left click on a button | Presses it. |
 | Left click on a radio or checkbox | Selects the radio or toggles the checkbox, like Space. |
 | Left click in a text field | Focuses the field and puts the cursor under the pointer. |

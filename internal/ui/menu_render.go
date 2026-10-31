@@ -138,7 +138,9 @@ func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsSt
 	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
 }
 
-func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8, pinCount int) {
+// drawMenuBar paints the top menu row; a title under the mouse pointer (hover) is drawn like the
+// open menu's title.
+func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, hover MenuBarHover, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8, pinCount int) {
 	x := rect.X
 	barStyle := styles.MenuBarInactive
 	if state.Open {
@@ -150,7 +152,7 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.
 	spans, x := menuBarLabelSpans(rect, menus, clipExclusive)
 	for index, span := range spans {
 		style := barStyle
-		if state.Open && index == state.ActiveMenu {
+		if state.Open && index == state.ActiveMenu || hover.Active && index == hover.Index {
 			style = styles.MenuBarSelected
 		}
 		drawMenuBarLabel(screen, span.X, rect.Y, span.Width, " "+menus[index].Label+" ", menus[index].Shortcut, style, styles.MenuBarAccent, state.Open && !state.PulldownOpen)

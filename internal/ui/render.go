@@ -204,6 +204,12 @@ type Model struct {
 	UserHomeDir string
 	// PanelTitleHover is the mouse pointer on a browser panel's title row (set by App on motion).
 	PanelTitleHover PanelTitleHover
+	// DialogButtonHover is the top-most dialog's button under the mouse pointer (set by App each
+	// render), painted in the focused button style without moving focus.
+	DialogButtonHover dlg.ButtonHover
+	// MenuBarHover is the menu title under the mouse pointer (set by App each render), drawn in
+	// the open menu's title style.
+	MenuBarHover MenuBarHover
 	// CursorNameHintPinOutPrimary / CursorNameHintPinOutSecondary are set by App for one paint
 	// and point at live panel.State.CursorNameHintPinned fields (not the Model snapshot copy).
 	CursorNameHintPinOutPrimary   *string
@@ -516,6 +522,12 @@ func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (tit
 	return ownPath, endLabel, true
 }
 
+// MenuBarHover names the menu bar title under the mouse pointer; Active is false off the titles.
+type MenuBarHover struct {
+	Active bool
+	Index  int
+}
+
 // PanelTitleHover is the mouse pointer on a browser panel's title row.
 type PanelTitleHover struct {
 	Active bool
@@ -656,7 +668,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if model.ModalDialogOpen() {
 			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
 		} else {
-			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
+			drawMenuBar(screen, layout.Menu, model.Menu, model.MenuBarHover, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
 		}
 		if layout.StatusCmd.Width > 0 {
 			drawMenuBarStatusCommands(screen, layout.StatusCmd, model.StatusCommands, styles)
@@ -724,6 +736,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		drawBrowserView(screen, layout, model, styles, chromeBlocked)
 	}
 	drawModalOverlays(screen, layout, model, menus, styles)
+	dlg.DrawButtonHover(screen, model.DialogButtonHover, styles)
 	// Caller must invoke screen.Show() or screen.Sync() so the terminal updates.
 }
 

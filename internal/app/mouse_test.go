@@ -625,3 +625,55 @@ func TestMouseClickTitlePanelDirectoryRefreshes(t *testing.T) {
 		t.Fatalf("click on the panel directory did not refresh it (path %q)", app.model.Primary.PathString())
 	}
 }
+
+// styleAt is the style drawn at (x, y).
+func styleAt(a *App, x, y int) tcell.Style {
+	_, style, _ := a.screen.Get(x, y)
+	return style
+}
+
+func TestMouseHoverHighlightsDialogButton(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openSortDialog()
+	x, y := screenTextCell(t, app, "[ Cancel ]") // x+3 is "a", past the mnemonic
+	focus := app.model.SortDialog.Focus
+	plain := styleAt(app, x+3, y)
+	if _, rendered := app.handleMouse(mouseEv(x+3, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("entering a button must render")
+	}
+	if got := styleAt(app, x+3, y); got != app.styles.DialogButtonActive {
+		t.Fatalf("hovered button style = %v want %v (plain %v)", got, app.styles.DialogButtonActive, plain)
+	}
+	if app.model.SortDialog.Focus != focus {
+		t.Fatalf("hover moved focus to %q", app.model.SortDialog.Focus)
+	}
+	if _, rendered := app.handleMouse(mouseEv(x+4, y, tcell.ButtonNone)); rendered {
+		t.Fatal("motion within the same button must not render")
+	}
+	if _, rendered := app.handleMouse(mouseEv(1, 1, tcell.ButtonNone)); !rendered {
+		t.Fatal("leaving the button must render")
+	}
+	if got := styleAt(app, x+3, y); got != plain {
+		t.Fatalf("button style after leaving = %v want %v", got, plain)
+	}
+}
+
+func TestMouseHoverHighlightsMenuTitle(t *testing.T) {
+	app := tallMouseTestApp(t)
+	x, y := screenTextCell(t, app, " File ")
+	plain := styleAt(app, x+2, y)
+	if _, rendered := app.handleMouse(mouseEv(x+2, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("entering a menu title must render")
+	}
+	if got := styleAt(app, x+2, y); got != app.styles.MenuBarSelected {
+		t.Fatalf("hovered title style = %v want %v", got, app.styles.MenuBarSelected)
+	}
+	if app.model.Menu.Open {
+		t.Fatal("hover opened the menu")
+	}
+	cx, cy := cellOf(t, app, ui.PrimaryPanel, 1)
+	app.handleMouse(mouseEv(cx, cy, tcell.ButtonNone))
+	if got := styleAt(app, x+2, y); got != plain {
+		t.Fatalf("title style after leaving = %v want %v", got, plain)
+	}
+}

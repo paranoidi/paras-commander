@@ -1,7 +1,9 @@
 package dlg
 
 import (
+	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
@@ -100,4 +102,38 @@ func caretIndex(it Item, col int) int {
 		w += rw
 	}
 	return i
+}
+
+// ButtonHover is the strip button under the mouse pointer, as Place laid it out. Active is false
+// when the pointer is on no button.
+type ButtonHover struct {
+	Active      bool
+	ID          ID
+	Rect        Rect
+	Label       string
+	Mnemonic    rune
+	Destructive bool
+}
+
+// HoveredButton returns the strip button of spec under (x, y), placed as Draw places it.
+func HoveredButton(spec Spec, screenW, screenH, x, y int) ButtonHover {
+	pi, _, ok := hit(spec, screenW, screenH, x, y)
+	if !ok {
+		return ButtonHover{}
+	}
+	for _, b := range spec.Buttons {
+		if b.ID == pi.ID {
+			return ButtonHover{Active: true, ID: b.ID, Rect: pi.Rect, Label: b.Label, Mnemonic: b.Mnemonic, Destructive: b.Destructive}
+		}
+	}
+	return ButtonHover{}
+}
+
+// DrawButtonHover repaints the hovered button h in the focused button style, over the strip Draw
+// painted; focus itself does not move.
+func DrawButtonHover(screen tcell.Screen, h ButtonHover, styles theme.Theme) {
+	if !h.Active {
+		return
+	}
+	draw.DrawDialogButton(screen, h.Rect.X, h.Rect.Y, h.Label, h.Mnemonic, true, h.Destructive, false, styles)
 }
