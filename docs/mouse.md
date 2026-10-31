@@ -32,6 +32,7 @@ In the menu bar and the footer:
 | Wheel over the pulldown | Moves the highlighted item. |
 | Left click outside the pulldown | Closes the menu. The click does nothing else. |
 | Left click on the status commands (top-left) | Opens the Status commands dialog. Closes an open menu first. |
+| Pointer over a footer entry | Highlights the entry (key and label). |
 | Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. |
 
 In dialogs:
@@ -42,6 +43,7 @@ In dialogs:
 | Left click on a button | Presses it. |
 | Left click on a radio or checkbox | Selects the radio or toggles the checkbox, like Space. |
 | Left click in a text field | Focuses the field and puts the cursor under the pointer. |
+| Pointer over a list row | Moves the list cursor to the row. Focus does not leave a text field, so typing carries on. |
 | Left click on a list row | Moves the list cursor to the row. |
 | Double click on a list row | Moves there and confirms, like Enter. |
 | Wheel over a list | Moves the list cursor. |

@@ -55,12 +55,29 @@ func footerHintSpans(rect Rect, fkeys []menu.FunctionKey) []footerHintSpan {
 	return spans
 }
 
-func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu.FunctionKey) {
+// footerSpanAt returns the index of the span drawn at column x: its key label or its hint, not
+// the gaps.
+func footerSpanAt(spans []footerHintSpan, x int) (int, bool) {
+	for i, span := range spans {
+		if x >= span.X && x < span.X+span.Width {
+			return i, true
+		}
+	}
+	return -1, false
+}
+
+// drawFooter paints the footer row; the entry under the mouse pointer (hover) is drawn whole in
+// footer.hover.
+func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu.FunctionKey, hover FooterHover) {
 	for col := rect.X; col < rect.X+rect.Width; col++ {
 		screen.SetContent(col, rect.Y, ' ', nil, styles.FooterLabel)
 	}
-	for _, span := range footerHintSpans(rect, fkeys) {
+	for i, span := range footerHintSpans(rect, fkeys) {
 		item, layout, x := span.Item, span.layout, span.X
+		keyStyle, labelStyle, shiftStyle := styles.FooterKey, styles.FooterLabel, styles.FooterLabelShift
+		if hover.Active && hover.Index == i {
+			keyStyle, labelStyle, shiftStyle = styles.FooterHover, styles.FooterHover, styles.FooterHover
+		}
 		keyRunes := utf8.RuneCountInString(item.KeyLabel)
 		prefix := ""
 		if layout.showPrefix {
@@ -68,19 +85,19 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 		}
 		prefixRunes := utf8.RuneCountInString(prefix)
 		primaryRunes := utf8.RuneCountInString(layout.primary)
-		primitive.TextOverlay(screen, x, rect.Y, keyRunes, item.KeyLabel, styles.FooterKey)
+		primitive.TextOverlay(screen, x, rect.Y, keyRunes, item.KeyLabel, keyStyle)
 		x += keyRunes
 		if prefixRunes+primaryRunes == 0 {
 			continue
 		}
-		screen.SetContent(x, rect.Y, ' ', nil, styles.FooterLabel)
+		screen.SetContent(x, rect.Y, ' ', nil, labelStyle)
 		x++
 		if primaryRunes > 0 {
-			primitive.TextOverlay(screen, x, rect.Y, primaryRunes, layout.primary, styles.FooterLabel)
+			primitive.TextOverlay(screen, x, rect.Y, primaryRunes, layout.primary, labelStyle)
 			x += primaryRunes
 		}
 		if prefixRunes > 0 {
-			primitive.TextOverlay(screen, x, rect.Y, prefixRunes, prefix, styles.FooterLabelShift)
+			primitive.TextOverlay(screen, x, rect.Y, prefixRunes, prefix, shiftStyle)
 		}
 	}
 }

@@ -365,6 +365,9 @@ type Theme struct {
 	FooterKey        tcell.Style
 	FooterLabel      tcell.Style
 	FooterLabelShift tcell.Style
+	// FooterHover paints the whole footer entry (key and hint) under the mouse pointer
+	// (optional footer.hover; fallback black on cyan).
+	FooterHover tcell.Style
 
 	// TerminalText styles the embedded terminal panel strip ([terminal] in TOML). Optional
 	// (zero value falls back — see TerminalTextStyle) so imported/user themes without a
@@ -1190,7 +1193,7 @@ var optionalStyleKeys = func() []string {
 			keys = append(keys, fmt.Sprintf("menu.progress.%s.gfx.%d", gfx, i))
 		}
 	}
-	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
+	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing")
 	keys = append(keys, fileIndexStateStyleKeys()...)
@@ -1538,6 +1541,11 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	footerHover, err := optionalStyle(specs, palette, "footer.hover", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorTeal))
+	if err != nil {
+		return Theme{}, err
+	}
+
 	messageSweep, err := optionalStyle(specs, palette, "message.sweep", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite))
 	if err != nil {
 		return Theme{}, err
@@ -1856,6 +1864,7 @@ func parse(data []byte) (Theme, error) {
 		FooterKey:        styles["footer.key"],
 		FooterLabel:      styles["footer.label"],
 		FooterLabelShift: styles["footer.label.shift"],
+		FooterHover:      footerHover,
 
 		TerminalText: styles["terminal.text"],
 	}, nil

@@ -52,12 +52,20 @@ func FooterKeyAt(layout Layout, model *Model, x, y int) (menu.FunctionKey, bool)
 	if layout.Footer.Height <= 0 || y != layout.Footer.Y {
 		return menu.FunctionKey{}, false
 	}
-	for _, span := range footerHintSpans(layout.Footer, model.FooterKeys) {
-		if x >= span.X && x < span.X+span.Width {
-			return span.Item, true
-		}
+	spans := footerHintSpans(layout.Footer, model.FooterKeys)
+	if i, ok := footerSpanAt(spans, x); ok {
+		return spans[i].Item, true
 	}
 	return menu.FunctionKey{}, false
+}
+
+// FooterHoverAt is the footer entry under (x, y) as a FooterHover (the span FooterKeyAt hits).
+func FooterHoverAt(layout Layout, model *Model, x, y int) FooterHover {
+	if layout.Footer.Height <= 0 || y != layout.Footer.Y {
+		return FooterHover{}
+	}
+	i, ok := footerSpanAt(footerHintSpans(layout.Footer, model.FooterKeys), x)
+	return FooterHover{Active: ok, Index: i}
 }
 
 // PanelTitleSegmentAt returns the path segment drawn at (x, y) in the title on the top border of

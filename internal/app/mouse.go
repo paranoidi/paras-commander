@@ -214,15 +214,24 @@ func (a *App) selectPulldownItemUnderPointer(layout ui.Layout, x, y int) bool {
 	return true
 }
 
+// footerHover is the footer entry under the last pointer position, where a click would press it.
+func (a *App) footerHover() ui.FooterHover {
+	if !a.mouse.pointer {
+		return ui.FooterHover{}
+	}
+	w, h := a.screen.Size()
+	return ui.FooterHoverAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+}
+
 // refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons,
-// menu titles) and reports whether one changed. render calls it, so they track the screen as it
-// changes under a still pointer; motion calls it and renders on a change.
+// menu titles, footer entries) and reports whether one changed. render calls it, so they track
+// the screen as it changes under a still pointer; motion calls it and renders on a change.
 func (a *App) refreshPointerHovers() bool {
-	button, menuTitle := a.dialogButtonHover(), a.menuBarHover()
+	button, menuTitle, footer := a.dialogButtonHover(), a.menuBarHover(), a.footerHover()
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
-		menuTitle != a.model.MenuBarHover
-	a.model.DialogButtonHover, a.model.MenuBarHover = button, menuTitle
+		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover
+	a.model.DialogButtonHover, a.model.MenuBarHover, a.model.FooterHover = button, menuTitle, footer
 	return changed
 }
 

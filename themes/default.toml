@@ -74,6 +74,7 @@ sweep = { fg = "black", bg = "bright_white" } # leading edge of a toast sweeping
 key = { fg = "magenta", bold = true }
 label = { fg = "default" }
 label.shift = { fg = "bright_black" }
+hover = { fg = "black", bg = "cyan" }  # entry under the mouse pointer
 
 [panel]                      # panel-wide text
 text = { fg = "white" }

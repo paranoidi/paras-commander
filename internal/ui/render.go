@@ -210,6 +210,9 @@ type Model struct {
 	// MenuBarHover is the menu title under the mouse pointer (set by App each render), drawn in
 	// the open menu's title style.
 	MenuBarHover MenuHover
+	// FooterHover is the footer entry under the mouse pointer (set by App each render), drawn in
+	// footer.hover.
+	FooterHover FooterHover
 	// CursorNameHintPinOutPrimary / CursorNameHintPinOutSecondary are set by App for one paint
 	// and point at live panel.State.CursorNameHintPinned fields (not the Model snapshot copy).
 	CursorNameHintPinOutPrimary   *string
@@ -525,6 +528,13 @@ func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (tit
 // MenuHover names the menu bar title (Index) under the mouse pointer; Active is false off the
 // titles.
 type MenuHover struct {
+	Active bool
+	Index  int
+}
+
+// FooterHover names the footer entry (Index into the drawn entries) under the mouse pointer;
+// Active is false off the entries.
+type FooterHover struct {
 	Active bool
 	Index  int
 }
@@ -1008,7 +1018,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	if model.LeaderMenu.Open {
 		DrawLeaderMenu(screen, layout, model.LeaderMenu, styles)
 	}
-	drawFooter(screen, layout.Footer, styles, model.FooterKeys)
+	drawFooter(screen, layout.Footer, styles, model.FooterKeys, model.FooterHover)
 	// Transient status must be drawn after modal chrome so it is not overwritten (e.g. theme picker).
 	// Draw before the generic message dialog so that modal stays the topmost curated surface when both apply.
 	PaintTransientStatusMessage(screen, layout, model, styles)
