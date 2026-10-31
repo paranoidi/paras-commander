@@ -147,7 +147,7 @@ typechange = { fg = "magenta" }
 indexed = { fg = "bright_black" }
 changed = { fg = "yellow" }
 new = { fg = "red" }
-missing = { fg = "red" }
+missing = { fg = "bright_red" }
 excluded = { fg = "bright_black" }
 scanning = { fg = "cyan", bold = true }
 differs = { fg = "yellow", bold = true }
