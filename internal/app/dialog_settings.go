@@ -538,6 +538,11 @@ func (a *App) updateGroupSelectPreview() {
 		}
 		return
 	}
+	if context == "index-find" {
+		gs.PreviewFiles, gs.PreviewFolders = a.fileindexCtrl.CountGroupMatches(a.groupSelectRequest(gs), !selectMode)
+		gs.PreviewShow = true
+		return
+	}
 	if context == "find" {
 		key := groupSelectPreviewKey{
 			Text:          gs.Text,
@@ -683,6 +688,8 @@ func (a *App) executeGroupSelect() {
 	switch context {
 	case "find":
 		a.findCtrl.ApplyGroupSelect(a.groupSelectRequest(gs))
+	case "index-find":
+		a.fileindexCtrl.ApplyGroupSelect(a.groupSelectRequest(gs))
 	case "output":
 		a.applyOutputGroupSelect(gs)
 	default:

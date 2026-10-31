@@ -239,6 +239,7 @@ type Model struct {
 	HistoryDialog           dialog.HistoryDialogState
 	SFTPConnectDialog       dialog.SFTPConnectDialogState
 	FindDialog              dialog.FindDialogState
+	IndexFindDialog         dialog.IndexFindDialogState
 	// PinnedItems is the ad-hoc, session-only pin list (most-recently-pinned first),
 	// shared by the main panel, Find dialog, Compare view, and Dedup view. Never persisted.
 	PinnedItems []PinnedItem
@@ -352,7 +353,7 @@ func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
 		m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
-		m.FindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
+		m.FindDialog.Open || m.IndexFindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
 }
 
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
@@ -548,7 +549,7 @@ func (m *Model) nonLeaderModalOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -560,7 +561,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.PinDialog.Open ||
+	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.PinDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open || m.StatusCommandsDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open ||
@@ -939,6 +940,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	}
 	if model.SFTPConnectDialog.Open {
 		dialog.DrawSFTPConnectDialog(screen, layout, model.SFTPConnectDialog, styles)
+	}
+	if model.IndexFindDialog.Open {
+		dialog.DrawIndexFindDialog(screen, layout, model.IndexFindDialog, dialogRenderContext(model, styles), rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	}
 	if model.FindDialog.Open {
 		selectionLabel := FindDialogSelectionSizeLabel(

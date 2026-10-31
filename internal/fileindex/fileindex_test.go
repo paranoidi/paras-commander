@@ -540,3 +540,80 @@ func TestColumns(t *testing.T) {
 		t.Fatalf("unparsed timestamp = %q", got)
 	}
 }
+
+func TestFind(t *testing.T) {
+	x, root := scanned(t)
+	rels := func(f []db.Found) []string {
+		var out []string
+		for _, e := range f {
+			rel, _ := filepath.Rel(root, e.Path)
+			out = append(out, rel)
+		}
+		return out
+	}
+	got, trunc, err := x.Find(root, FindQuery{Text: "ANT"}, 0)
+	if err != nil || trunc || !slices.Equal(rels(got), []string{"lantern"}) {
+		t.Fatalf("substring = %v trunc=%v err=%v, want the lantern dir", rels(got), trunc, err)
+	}
+	got, _, _ = x.Find(root, FindQuery{Text: "*.txt"}, 0)
+	if want := []string{"harbor.txt", "lantern/meadow.txt"}; !slices.Equal(rels(got), want) {
+		t.Fatalf("glob = %v, want %v", rels(got), want)
+	}
+	got, _, _ = x.Find(root, FindQuery{Text: "t", OnlyDirs: true}, 0)
+	if !slices.Equal(rels(got), []string{"lantern"}) {
+		t.Fatalf("dirs only = %v", rels(got))
+	}
+	got, _, _ = x.Find(root, FindQuery{Text: "lantern", OnlyFiles: true}, 0)
+	if len(got) != 0 {
+		t.Fatalf("files only matched a dir: %v", rels(got))
+	}
+	got, _, err = x.Find(root, FindQuery{Text: "thistle", Boolean: true}, 0)
+	if err != nil || !slices.Equal(rels(got), []string{"lantern/thistle.md"}) {
+		t.Fatalf("boolean = %v err=%v", rels(got), err)
+	}
+	got, trunc, _ = x.Find(root, FindQuery{Text: "*.*"}, 2)
+	if len(got) != 2 || !trunc {
+		t.Fatalf("cap = %d trunc=%v, want 2 and truncated", len(got), trunc)
+	}
+	if _, _, err = x.Find(root, FindQuery{Text: `"unbalanced`, Boolean: true}, 0); err == nil {
+		t.Fatal("an FTS syntax error must be returned")
+	}
+}
+
+func TestFindDepthHiddenAndRoots(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	root := tree(t)
+	for name, body := range map[string]string{".hollow/ghost.txt": "g", "lantern/deep/leaf.txt": "l", ".quiet.txt": "q"} {
+		p := filepath.Join(root, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	count := func(q FindQuery) int {
+		got, _, err := x.Find(root, q, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(got)
+	}
+	if n := count(FindQuery{Text: "*.txt"}); n != 3 { // harbor, meadow, leaf: hidden ones are left out
+		t.Fatalf("visible = %d, want 3", n)
+	}
+	if n := count(FindQuery{Text: "*.txt", IncludeHidden: true}); n != 5 {
+		t.Fatalf("with hidden = %d, want 5", n)
+	}
+	if n := count(FindQuery{Text: "*.txt", MaxDepth: 1}); n != 1 { // harbor.txt only
+		t.Fatalf("depth 1 = %d, want 1", n)
+	}
+	lantern := filepath.Join(root, "lantern")
+	both := FindQuery{Text: "*.txt", Roots: []string{lantern, filepath.Join(lantern, "deep")}}
+	if n := count(both); n != 2 { // meadow and leaf, the nested root's leaf not repeated
+		t.Fatalf("roots = %d, want 2", n)
+	}
+}

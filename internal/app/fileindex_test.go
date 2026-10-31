@@ -12,10 +12,13 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/fileindex/db"
+	fileindexctrl "github.com/paranoidi/paras-commander/internal/apphandler/fileindex"
+	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 var fileIndexActions = []string{
@@ -404,3 +407,192 @@ func TestFileIndexMenuScanLabel(t *testing.T) {
 		t.Fatalf("with selection: %q", got)
 	}
 }
+
+// openIndexFind browses the app's directory through fileindex:// and opens the find dialog there.
+func openIndexFind(t *testing.T, a *App, screen tcell.SimulationScreen, dir string) {
+	t.Helper()
+	a.dispatch(keymap.ActionFileIndexOpen)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		p := a.activePanel()
+		return p.PathString() == "fileindex://"+dir && !p.ListingPending
+	})
+	a.dispatch(keymap.ActionPanelFindDialog)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.IndexFindDialog.Open })
+}
+
+func typeIndexFindQuery(t *testing.T, a *App, screen tcell.SimulationScreen, query string, want int) {
+	t.Helper()
+	for _, r := range query {
+		a.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		st := a.model.IndexFindDialog
+		return !st.Searching && len(st.Results) == want
+	})
+}
+
+func TestFindDialogOnFileIndexPanelOpensIndexFind(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	openIndexFind(t, a, screen, dir)
+	if a.model.FindDialog.Open || a.inputMode() != InputModeIndexFindDialog {
+		t.Fatalf("find open=%v mode=%v, want only the index find dialog", a.model.FindDialog.Open, a.inputMode())
+	}
+	if st := a.model.IndexFindDialog; st.Root != dir || st.JumpMode {
+		t.Fatalf("state = %+v", st)
+	}
+	typeIndexFindQuery(t, a, screen, "HARBOR", 1)
+	if r := a.model.IndexFindDialog.Results[0]; r.Path != filepath.Join(dir, "harbor.txt") || r.Rel != "harbor.txt" {
+		t.Fatalf("result = %+v", r)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
+	if a.model.IndexFindDialog.Open {
+		t.Fatal("Esc should close the dialog")
+	}
+}
+
+func TestFindDialogOnLocalPanelStillOpensFind(t *testing.T) {
+	a, _, _, _ := fileIndexApp(t)
+	a.dispatch(keymap.ActionPanelFindDialog)
+	if !a.model.FindDialog.Open || a.model.IndexFindDialog.Open {
+		t.Fatal("a local panel must open the walking Find dialog")
+	}
+}
+
+func TestIndexFindIgnoresStaleResults(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	openIndexFind(t, a, screen, dir)
+	typeIndexFindQuery(t, a, screen, "harbor", 1)
+	st := &a.model.IndexFindDialog
+	a.fileindexCtrl.HandleFind(fileindexctrl.FindPayload{Gen: st.Gen - 1, Results: []dialog.IndexFindResult{{Path: "/x", Rel: "x"}, {Path: "/y", Rel: "y"}}})
+	if len(st.Results) != 1 {
+		t.Fatalf("a stale result replaced the list: %+v", st.Results)
+	}
+	a.fileindexCtrl.HandleFind(fileindexctrl.FindPayload{Gen: st.Gen, Results: []dialog.IndexFindResult{{Path: "/x", Rel: "x"}}})
+	if len(st.Results) != 1 || st.Results[0].Path != "/x" {
+		t.Fatalf("the current result was dropped: %+v", st.Results)
+	}
+}
+
+func TestIndexFindEnterWithMarksAddsSelections(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	openIndexFind(t, a, screen, dir)
+	typeIndexFindQuery(t, a, screen, ".txt", 2)
+	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if n := a.model.IndexFindDialog.MarkedCount(); n != 2 {
+		t.Fatalf("marked = %d, want 2", n)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if a.model.IndexFindDialog.Open {
+		t.Fatal("Enter should close the dialog")
+	}
+	sel := a.activePanel().SelectedPaths
+	for _, name := range []string{"harbor.txt", "meadow.txt"} {
+		if !sel["fileindex://"+filepath.Join(dir, name)] {
+			t.Errorf("%s not selected: %v", name, sel)
+		}
+	}
+	if a.model.Message != "Added 2 to selection" {
+		t.Fatalf("message = %q", a.model.Message)
+	}
+}
+
+func TestIndexFindEnterWithoutMarksNavigates(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	openIndexFind(t, a, screen, dir)
+	typeIndexFindQuery(t, a, screen, "meadow", 1)
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		e, ok := a.activePanel().CurrentEntry()
+		return ok && e.Name == "meadow.txt" && !a.activePanel().ListingPending
+	})
+	if a.model.IndexFindDialog.Open || a.activePanel().PathString() != "fileindex://"+dir {
+		t.Fatalf("open=%v path=%s", a.model.IndexFindDialog.Open, a.activePanel().PathString())
+	}
+}
+
+func TestIndexFindPinToggleOnResult(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	openIndexFind(t, a, screen, dir)
+	typeIndexFindQuery(t, a, screen, "harbor", 1)
+	want := "fileindex://" + filepath.Join(dir, "harbor.txt")
+	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModAlt))
+	if len(a.model.PinnedItems) != 1 || a.model.PinnedItems[0].Path != want || !a.model.IndexFindDialog.Open {
+		t.Fatalf("pinned = %+v open=%v, want %s pinned and the dialog open", a.model.PinnedItems, a.model.IndexFindDialog.Open, want)
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModAlt))
+	if len(a.model.PinnedItems) != 0 {
+		t.Fatalf("second toggle should unpin: %+v", a.model.PinnedItems)
+	}
+}
+
+func TestIndexFindGroupSelectAndParentDirs(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	openIndexFind(t, a, screen, dir)
+	typeIndexFindQuery(t, a, screen, ".txt", 2)
+	req := findctrl.GroupSelectRequest{Mode: findctrl.GroupSelectModeSelect, Pattern: "harb*"}
+	if files, dirs := a.fileindexCtrl.CountGroupMatches(req, false); files != 1 || dirs != 0 {
+		t.Fatalf("preview = %d files %d dirs, want 1 file", files, dirs)
+	}
+	a.fileindexCtrl.ApplyGroupSelect(req)
+	st := a.model.IndexFindDialog
+	if st.MarkedCount() != 1 || !st.Marked[filepath.Join(dir, "harbor.txt")] {
+		t.Fatalf("marked = %v", st.Marked)
+	}
+	req.Mode = findctrl.GroupSelectModeUnselect
+	a.fileindexCtrl.ApplyGroupSelect(req)
+	if a.model.IndexFindDialog.MarkedCount() != 0 {
+		t.Fatalf("unselect left marks: %v", a.model.IndexFindDialog.Marked)
+	}
+	// every result already sits in the panel's own directory: nothing to select
+	a.handleKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	if a.model.Message != "Already in the containing directory" || !a.model.IndexFindDialog.Open {
+		t.Fatalf("message = %q open=%v", a.model.Message, a.model.IndexFindDialog.Open)
+	}
+	// F6 opens the group dialog in its index context
+	a.handleKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	if gs := a.model.GroupSelect; !gs.Open || gs.Context != "index-find" {
+		t.Fatalf("group select = %+v", gs)
+	}
+}
+
+func TestIndexFindSearchOnlySelectionsAndHiddenDepth(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	sub := filepath.Join(dir, "orchard")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	d, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := strings.Repeat("c", 32)
+	if _, err := d.CommitScanBatch([]db.ScannedFile{{Dir: sub, Name: "thistle.txt", Size: 1, Mtime: time.Now(), MD5: sum, SHA256: sum + sum}}); err != nil {
+		t.Fatal(err)
+	}
+	a.dispatch(keymap.ActionFileIndexOpen)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		p := a.activePanel()
+		return p.PathString() == "fileindex://"+dir && !p.ListingPending
+	})
+	a.activePanel().BulkAddSelections([]string{"fileindex://" + sub}, func(string) bool { return true })
+	a.dispatch(keymap.ActionPanelFindDialog)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.IndexFindDialog.Open })
+	st := &a.model.IndexFindDialog
+	if !st.ShowSearchSelectionsOption || !slices.Equal(st.SelectionDirRoots, []string{sub}) {
+		t.Fatalf("selection scope = %v %v", st.ShowSearchSelectionsOption, st.SelectionDirRoots)
+	}
+	a.fileindexCtrl.ApplyFindEvent(dlgEvent(dialog.IndexFindSelections))
+	typeIndexFindQuery(t, a, screen, ".txt", 1) // only orchard/thistle.txt, not the panel directory's files
+	if !st.SearchOnlySelections || st.Results[0].Rel != "orchard/thistle.txt" {
+		t.Fatalf("scoped = %v results = %+v", st.SearchOnlySelections, st.Results)
+	}
+	// depth 1 keeps direct children; the radios and the hidden checkbox rerun the query
+	st.Focus = dialog.IndexFindDepth
+	a.handleKey(tcell.NewEventKey(tcell.KeyRune, '1', tcell.ModNone))
+	if st.MaxDepth != 1 || st.Focus != dialog.IndexFindQuery {
+		t.Fatalf("depth = %d focus = %q", st.MaxDepth, st.Focus)
+	}
+}
+
+func dlgEvent(id dlg.ID) dlg.Event { return dlg.Event{ID: id} }

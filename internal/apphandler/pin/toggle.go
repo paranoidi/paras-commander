@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -11,7 +12,13 @@ import (
 // pinned, or removes it if it is (toggle semantics — an accidental double-pin can't create
 // duplicates). Returns true when the item was added, false when removed.
 func (h *Handler) Toggle(path string, isDir bool) bool {
-	path = filepath.Clean(path)
+	// A URI (fileindex://, sftp://) is cleaned by its scheme's rules: filepath.Clean would collapse
+	// the // after the scheme.
+	if loc, err := pathloc.Parse(path); err == nil && loc.Scheme() != pathloc.SchemeFile {
+		path = loc.String()
+	} else {
+		path = filepath.Clean(path)
+	}
 	for i, it := range h.model.PinnedItems {
 		if it.Path == path {
 			h.model.PinnedItems = append(h.model.PinnedItems[:i], h.model.PinnedItems[i+1:]...)

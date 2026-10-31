@@ -11,15 +11,20 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
+	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
+	"github.com/paranoidi/paras-commander/internal/config"
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -27,6 +32,7 @@ import (
 // Host supplies the app services the fileindex handler cannot import from internal/app.
 type Host interface {
 	host.MessageHost
+	host.LayoutHost
 	host.PanelHost
 	host.PanelNavigationHost
 
@@ -34,6 +40,17 @@ type Host interface {
 	AddTaskJob(task *jobs.Task, sources []pathloc.Path)
 	// RefreshMetaColumns re-runs both panels' meta columns, so the tags column shows an edit.
 	RefreshMetaColumns()
+	// PanelByID and PanelViewportRows resolve the panel the find dialog works on.
+	PanelByID(panelID int) *panel.State
+	PanelViewportRows(panelID int) int
+	// Styles is the live theme (the find dialog's spec depends on its icons).
+	Styles() theme.Theme
+	// OpenGroupSelectDialog opens the select / unselect group dialog for the find-in-index results.
+	OpenGroupSelectDialog(mode findctrl.GroupSelectMode)
+	// PinTogglePath pins or unpins path and shows the status message (name: display basename).
+	PinTogglePath(name, path string, isDir bool)
+	// OpenFullscreenFilePreviewAt opens path in the fullscreen file viewer.
+	OpenFullscreenFilePreviewAt(path string, isDir bool) error
 	// ToggleFileIndexMenu opens or closes the fileindex menu strip (app-owned leader-menu chrome).
 	ToggleFileIndexMenu()
 }
@@ -44,21 +61,34 @@ type Deps struct {
 	Screen tcell.Screen
 	Model  *ui.Model
 	Index  *fi.Index
+	Config config.Config
+	// Keys is the global keymap; KeysFindDialog the [dialog.find] overlay the find-in-index
+	// dialog shares with Find; KeysDialogInput the [dialog.input] overlay for the query.
+	Keys            *keymap.Map
+	KeysFindDialog  *keymap.Map
+	KeysDialogInput *keymap.Map
 }
 
 // Handler runs the fileindex.* actions.
 type Handler struct {
-	host   Host
-	screen tcell.Screen
-	model  *ui.Model
-	index  *fi.Index
+	host                            Host
+	screen                          tcell.Screen
+	model                           *ui.Model
+	index                           *fi.Index
+	config                          config.Config
+	keys, keysFind, keysDialogInput *keymap.Map
+	// findTimer is the debounce of the find-in-index dialog's pending query (UI goroutine only).
+	findTimer *time.Timer
 	// pendingInit is the action waiting on the open "create the database?" prompt (nil: none).
 	pendingInit func()
 }
 
 // New constructs the handler and routes the index's one-time open failure to HandleReady.
 func New(deps Deps) *Handler {
-	h := &Handler{host: deps.Host, screen: deps.Screen, model: deps.Model, index: deps.Index}
+	h := &Handler{
+		host: deps.Host, screen: deps.Screen, model: deps.Model, index: deps.Index, config: deps.Config,
+		keys: deps.Keys, keysFind: deps.KeysFindDialog, keysDialogInput: deps.KeysDialogInput,
+	}
 	if h.index != nil {
 		h.index.OnOpenError = func(err error) {
 			path, _ := h.index.DatabasePath()
@@ -119,6 +149,8 @@ func (h *Handler) HandleWake(data any) bool {
 		h.HandleTags(p)
 	case NavigatePayload:
 		h.HandleNavigate(p)
+	case FindPayload:
+		h.HandleFind(p)
 	default:
 		return false
 	}

@@ -43,6 +43,7 @@ const (
 	InputModeHistoryDialog
 	InputModePinDialog
 	InputModeFindDialog
+	InputModeIndexFindDialog
 	InputModeMetaDialog
 	InputModeLeaderMenu
 	InputModeHelpView
@@ -85,6 +86,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeLeaderMenu
 	case a.model.FindDialog.Open:
 		return InputModeFindDialog
+	case a.model.IndexFindDialog.Open:
+		return InputModeIndexFindDialog
 	case a.model.MetaDialog.Open:
 		return InputModeMetaDialog
 	case a.model.HelpView.Open:
@@ -187,6 +190,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	if a.model.FindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.FindDialog.JumpMode), rest...)
+		return footerWithEscClose(rest)
+	}
+	if a.model.IndexFindDialog.Open {
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.IndexFindDialog.JumpMode), rest...)
 		return footerWithEscClose(rest)
 	}
 	if a.model.HistoryDialog.Open {
@@ -639,6 +647,10 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 	},
 	InputModeHistoryDialog: func(a *App, ev *tcell.EventKey) bool {
 		a.handleHistoryDialogKey(ev)
+		return false
+	},
+	InputModeIndexFindDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.fileindexCtrl.HandleFindKey(ev)
 		return false
 	},
 	InputModePinDialog: func(a *App, ev *tcell.EventKey) bool {
@@ -1190,9 +1202,9 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelFolderColorMenu:
 		a.openFolderColorMenu(a.model.ActivePanel)
 	case keymap.ActionPanelFindDialog:
-		a.findCtrl.OpenDialog(a.model.ActivePanel)
+		a.openFindDialog(a.model.ActivePanel, false)
 	case keymap.ActionPanelJumpDialog:
-		a.findCtrl.OpenJumpDialog(a.model.ActivePanel)
+		a.openFindDialog(a.model.ActivePanel, true)
 	case keymap.ActionAppUserMenu:
 		a.toggleUserMenu()
 	case keymap.ActionAppLeaderMenu:

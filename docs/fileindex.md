@@ -79,6 +79,39 @@ In an index view:
 - Git status, disk usage and folder colours are not available, as on
   [SFTP](sftp.md) panels.
 
+## Finding in the index
+
+`panel.find-dialog` on an index view opens **Find in index**, which searches
+the index under the panel directory instead of walking the disk (files that
+have gone from disk are found too). `panel.jump-dialog` opens the same dialog
+for directories only. The query runs as you type; results are capped at
+`[ui.find].max_results` and the title shows `N+` when more matched.
+
+Two query modes (radios):
+
+- **Pattern** matches file and directory names, ignoring case. Plain text finds
+  names containing it (`holiday`). With `*` (any run) or `?` (one character)
+  the whole name must match the pattern (`*.jpg`, `report-??.pdf`).
+- **Boolean** matches file names word by word (files only; Only directories is
+  off). Words are whole words or prefixes with `*` (`holi*`), `"quoted
+  phrases"`, and `AND`, `OR`, `NOT` combine them (`beach AND NOT 2019`). A
+  syntax error is shown in the dialog.
+
+Other options: **Only directories** / **Only files**, **Include hidden**
+(names with a dot-prefixed path component are left out by default), the depth
+box (1-9 levels below the panel directory, empty or 0 for unlimited), and
+**Search only from selected directories** when directories are selected in the
+panel.
+
+Keys work as in Find: mark results and press OK to add them to the panel
+selection (`find.select-all`, `find.unselect-all`, `find.select-group`,
+`find.unselect-group`, `find.select-parent-dirs`, `panel.select-toggle`);
+`find.view` opens the real file in the viewer; `ui.open-primary` and
+`ui.open-secondary` show a result in a panel without closing; `panel.pin-toggle`
+pins it. OK without marks shows the result under the cursor in the panel: a
+directory itself, a file in its directory with the file highlighted. The
+marked summary counts files by their indexed size; directories add no size.
+
 ## Columns
 
 The index adds columns to the meta-column picker (`panel.meta`, see

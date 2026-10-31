@@ -798,6 +798,11 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Screen: screen,
 		Model:  &app.model,
 		Index:  app.fileIndex,
+		Config: cfg,
+
+		Keys:            keys.Global,
+		KeysFindDialog:  keys.FindDialog,
+		KeysDialogInput: keys.DialogInput,
 	})
 	app.pinCtrl = pinctrl.New(pinctrl.Deps{
 		Host:            pinHost{appShellHost: appShellHost{app: app}},
