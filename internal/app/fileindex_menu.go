@@ -38,5 +38,5 @@ func (a *App) toggleFileIndexMenu() {
 		}
 		row++
 	}
-	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuFileIndex, "fileindex menu", a.dispatchActionLikeKeyboardShortcut)
+	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuFileIndex, "File Index menu", a.dispatchActionLikeKeyboardShortcut)
 }

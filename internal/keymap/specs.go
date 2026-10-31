@@ -1277,7 +1277,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionFileIndexMenu,
 			Views:        HelpBrowser,
-			Title:        "fileindex menu",
+			Title:        "File Index menu",
 			Section:      "File Index",
 			DefaultKeys:  []string{"<"},
 			PreferredKey: "<",

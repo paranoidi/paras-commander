@@ -26,7 +26,7 @@ of running; it needs a newer pc.
 
 ## Actions
 
-`<` (`fileindex.menu`) opens the fileindex menu at the bottom of the screen;
+`<` (`fileindex.menu`) opens the **File Index menu** at the bottom of the screen;
 the `:` leader menu lists it under Tools with the same `<`. The menu groups
 its actions into Browse, Tagging and Actions columns. Each action's
 letter in the menu is the letter of its own shortcut, in lowercase: every
