@@ -9,8 +9,9 @@ pc shares its index with the `fileindex` command. Set the database location
 with `database` under `[fileindex]` in pc's `config.toml`; left empty, pc uses
 the path from fileindex's `~/.config/fileindex/config.ini`. Which files a scan
 includes always comes from that `config.ini`, so the command and pc index the
-same files. `workers` sets the number of hash workers (see
-[Config](config.md#fileindex)).
+same files. `workers` sets the number of hash workers and
+`scan_commit_interval_ms` how often a scan saves its progress to the database
+(see [Config](config.md#fileindex)).
 
 When there is no database at that location, the first fileindex action (or
 the tags column, or a `fileindex://` path) asks whether to create an empty one.
@@ -230,16 +231,19 @@ removes from the index whatever under them is gone from disk.
 index view both act on the real paths.
 
 Both run as **task** jobs in the [jobs view](jobs.md): the Details panel shows
-the files done, bytes hashed and current path, and per-file errors and pruning
-removals are listed as warnings. Cancel stops a scan between files and keeps
+the files done, bytes hashed, current path and, while a scan hashes, how many
+hash workers it runs; per-file errors and pruning removals are listed as
+warnings. With `parallel_workers = auto` the worker count grows while more
+workers make hashing faster. A scan saves what it hashed every
+`scan_commit_interval_ms`. Cancel stops a scan between files and keeps
 everything already committed. One fileindex job runs at a time; another
 waits in the queue. Task jobs cannot be paused or retried; run the action
 again instead.
 
-While a scan or prune works on an entry, its panel row carries the database
-icon (`[icons] fileindex`, the HDD job icon without Nerd Font icons). A scan
-hashes all chosen entries together and clears each entry's icon as soon as
-its files are committed.
+While a scan or prune works on an entry, its panel row shows the `scanning`
+state icon: in the state column while browsing with fileindex, else at the end
+of the row. A scan hashes all chosen entries together and clears each entry's
+icon as soon as its files are committed.
 
 The index does not yet follow renames, moves and deletes that pc makes on
 disk; rescan or prune to bring it up to date.

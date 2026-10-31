@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -244,5 +245,18 @@ func TestDetailLinesShowVerifyProgress(t *testing.T) {
 	lines := detailStaticLines(j, time.Now(), 80, "", false)
 	if !has(lines) || !strings.Contains(strings.Join(lines, "\n"), "(25%)") {
 		t.Fatalf("lines = %q, want a 25%% Verifying line", lines)
+	}
+}
+
+func TestDetailStaticLinesShowsTaskWorkers(t *testing.T) {
+	j := JobEntry{ID: "1", Type: string(jobs.TypeTask), Title: "fileindex scan", Status: "running", Workers: 4}
+	if lines := detailStaticLines(j, time.Now(), 80, "", false); !slices.Contains(lines, "Workers:     4") {
+		t.Fatalf("lines = %q, want a Workers: 4 row", lines)
+	}
+	j.Workers = 0
+	for _, line := range detailStaticLines(j, time.Now(), 80, "", false) {
+		if strings.HasPrefix(line, "Workers:") {
+			t.Fatalf("Workers row shown with no workers reported: %q", line)
+		}
 	}
 }

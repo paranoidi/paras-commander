@@ -21,6 +21,8 @@ type JobEntry struct {
 	CurrentPath string
 	// CurrentDestPath mirrors jobs.Job.CurrentDestPath.
 	CurrentDestPath string
+	// Workers mirrors jobs.Job.Workers (a task's parallel workers; 0 = not shown).
+	Workers int
 	// VerifyDone and VerifyTotal mirror jobs.Job: a running conflict content verification of
 	// CurrentPath (VerifyTotal 0 = none).
 	VerifyDone, VerifyTotal int64

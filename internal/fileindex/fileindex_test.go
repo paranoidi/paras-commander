@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/paranoidi/fileindex/db"
+	"github.com/paranoidi/fileindex/scan"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobs"
@@ -664,5 +665,20 @@ func TestCloseIsFinal(t *testing.T) {
 	}
 	if _, err := x.Upgrade(); !errors.Is(err, ErrClosed) {
 		t.Fatalf("Upgrade after Close = %v, want ErrClosed", err)
+	}
+}
+
+// TestScanReporterWorkers: Speed carries the hash worker count into the task progress until
+// hashing is done.
+func TestScanReporterWorkers(t *testing.T) {
+	rep := &recReporter{}
+	s := newScanReporter(rep)
+	s.Speed(3, 0)
+	if rep.last.Workers != 3 {
+		t.Fatalf("Workers after Speed = %d, want 3", rep.last.Workers)
+	}
+	s.Hashed(scan.Stats{})
+	if rep.last.Workers != 0 {
+		t.Fatalf("Workers after Hashed = %d, want 0", rep.last.Workers)
 	}
 }

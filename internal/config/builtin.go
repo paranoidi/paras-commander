@@ -427,9 +427,14 @@ const (
 	// FileIndexFolderScanMaxDepthUnlimited is the [fileindex].folder_scan_max_depth value for
 	// no depth limit; lower values are clamped to it.
 	FileIndexFolderScanMaxDepthUnlimited = -1
-	// FileIndexScanBatchFiles is how many hashed files a pc scan commits per batch: smaller than
-	// the fileindex CLI's batch so canceling the scan job lands quickly.
-	FileIndexScanBatchFiles = 200
+	// DefaultFileIndexScanCommitIntervalMS is [fileindex].scan_commit_interval_ms: a scan commits
+	// what it hashed this often. Every commit flushes the index's full-text index, so with many
+	// small files per-count batches made the single database writer the bottleneck.
+	DefaultFileIndexScanCommitIntervalMS = 1000
+	// FileIndexScanCommitIntervalMinMS and FileIndexScanCommitIntervalMaxMS clamp
+	// [fileindex].scan_commit_interval_ms.
+	FileIndexScanCommitIntervalMinMS = 100
+	FileIndexScanCommitIntervalMaxMS = 60000
 	// FileIndexTagsColumn is the meta entry name of the fileindex tags column provider.
 	FileIndexTagsColumn = "fileindex.tags"
 	// FileIndexColumnOrder is the meta order of the first fileindex column; the others follow

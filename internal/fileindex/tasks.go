@@ -34,10 +34,10 @@ func (x *Index) ScanTask(paths []string) *jobs.Task {
 			}
 			rep := newScanReporter(r)
 			stats, err := scan.Run(ctx, d, paths, scan.Options{
-				Rules:       rules,
-				Workers:     workers,
-				MissingOnly: true,
-				BatchFiles:  config.FileIndexScanBatchFiles,
+				Rules:         rules,
+				Workers:       workers,
+				MissingOnly:   true,
+				BatchInterval: x.cfg.ScanCommitInterval(),
 			}, rep)
 			for _, e := range stats.Errors {
 				rep.Log(e)
@@ -143,9 +143,10 @@ func (s *scanReporter) Worker(id int, path string) {
 	s.report()
 }
 
-func (s *scanReporter) Speed(_ int, bps float64) {
+func (s *scanReporter) Speed(workers int, bps float64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.p.Workers = workers
 	now := time.Now()
 	if !s.lastTick.IsZero() {
 		s.bytes += bps * now.Sub(s.lastTick).Seconds()
@@ -169,6 +170,7 @@ func (s *scanReporter) Hashed(res scan.Stats) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.p.DoneFiles = res.Processed + res.Errored
+	s.p.Workers = 0 // hashing is over; pruning runs on one goroutine
 	s.p.TotalFiles = max(s.p.TotalFiles, s.p.DoneFiles)
 	s.bytes = float64(res.TotalSize)
 	s.report()

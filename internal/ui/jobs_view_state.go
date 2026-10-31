@@ -50,6 +50,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			DestIsDir:       j.DestIsDir,
 			CurrentPath:     j.CurrentPath,
 			CurrentDestPath: j.CurrentDestPath,
+			Workers:         j.Workers,
 			VerifyDone:      j.VerifyDone,
 			VerifyTotal:     j.VerifyTotal,
 			DoneFiles:       j.DoneFiles,

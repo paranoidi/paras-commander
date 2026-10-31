@@ -594,6 +594,9 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 		lines = append(lines, "Task:        "+j.Title)
 	}
 	lines = append(lines, fmt.Sprintf("Status:      %s", j.Status))
+	if j.Workers > 0 {
+		lines = append(lines, fmt.Sprintf("Workers:     %d", j.Workers))
+	}
 	if j.Undo != "" {
 		lines = append(lines, "Undo:        "+j.Undo)
 	}

@@ -122,6 +122,8 @@ type Job struct {
 	// CurrentDestPath is the destination of CurrentPath from the last progress event (empty
 	// for jobs without one, e.g. delete); the Operations pane labels the active item with it.
 	CurrentDestPath string
+	// Workers is a task's parallel worker count from its last progress event (0 = none).
+	Workers int
 	// VerifyDone and VerifyTotal track a running conflict content verification of CurrentPath
 	// (bytes read from both files); VerifyTotal is 0 when none runs. Never part of DoneBytes.
 	VerifyDone, VerifyTotal int64

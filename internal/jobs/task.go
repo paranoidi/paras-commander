@@ -29,6 +29,8 @@ type TaskProgress struct {
 	DoneFiles   int
 	DoneBytes   int64
 	CurrentPath string
+	// Workers is how many parallel workers the task runs now (0 = not reported).
+	Workers int
 }
 
 // TaskReporter receives a task's progress and warnings. Implementations are safe for
@@ -113,6 +115,7 @@ func (r *taskReporter) emitUnlocked() {
 		DoneFiles:   r.last.DoneFiles,
 		DoneBytes:   r.last.DoneBytes,
 		CurrentPath: r.last.CurrentPath,
+		Workers:     r.last.Workers,
 	})
 }
 

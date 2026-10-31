@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
@@ -200,6 +201,13 @@ type FileIndexConfig struct {
 	// FolderScanMaxDepth is how many directory levels the automatic check of indexed folders
 	// descends while browsing with fileindex: N levels, -1 unlimited, 0 off (see AutoDriftDepth).
 	FolderScanMaxDepth int `toml:"folder_scan_max_depth"`
+	// ScanCommitIntervalMS is how often a scan commits what it hashed (see ScanCommitInterval).
+	ScanCommitIntervalMS int `toml:"scan_commit_interval_ms"`
+}
+
+// ScanCommitInterval is ScanCommitIntervalMS as a duration.
+func (f FileIndexConfig) ScanCommitInterval() time.Duration {
+	return time.Duration(f.ScanCommitIntervalMS) * time.Millisecond
 }
 
 // AutoDriftDepth maps FolderScanMaxDepth to the panel's automatic drift depth: the directory
@@ -875,10 +883,11 @@ func Default() Config {
 			FileProgressBytes: DefaultDedupFileProgressBytes,
 		},
 		FileIndex: FileIndexConfig{
-			Database:           DefaultFileIndexDatabase,
-			Workers:            DefaultFileIndexWorkers,
-			DefaultColumns:     DefaultFileIndexColumns(),
-			FolderScanMaxDepth: DefaultFileIndexFolderScanMaxDepth,
+			Database:             DefaultFileIndexDatabase,
+			Workers:              DefaultFileIndexWorkers,
+			DefaultColumns:       DefaultFileIndexColumns(),
+			FolderScanMaxDepth:   DefaultFileIndexFolderScanMaxDepth,
+			ScanCommitIntervalMS: DefaultFileIndexScanCommitIntervalMS,
 		},
 	}
 }
@@ -1188,6 +1197,7 @@ func (c *Config) validateCompareDedupShell(builtin *Config) {
 	}
 	c.FileIndex.Workers = min(max(c.FileIndex.Workers, 0), FileIndexWorkersMax)
 	c.FileIndex.FolderScanMaxDepth = max(c.FileIndex.FolderScanMaxDepth, FileIndexFolderScanMaxDepthUnlimited)
+	c.FileIndex.ScanCommitIntervalMS = min(max(c.FileIndex.ScanCommitIntervalMS, FileIndexScanCommitIntervalMinMS), FileIndexScanCommitIntervalMaxMS)
 }
 
 func (c *Config) validateSortAndDelete(builtin *Config) {
