@@ -513,6 +513,15 @@ func TestDrawLeaderMenuLegendDrawsAndWraps(t *testing.T) {
 	if !strings.Contains(row, "= indexed") || !strings.Contains(row, "~ changed") || !strings.Contains(row, "+ not in index") {
 		t.Fatalf("legend row = %q", row)
 	}
+	lineW := 0
+	for _, it := range state.Legend {
+		lineW += leaderMenuLegendWidth(it)
+	}
+	lineW += leaderMenuLegendGap * (len(state.Legend) - 1)
+	right := rect.X + rect.Width - leaderMenuRightMargin
+	if want := rect.X + leaderMenuLeftMargin + (right-rect.X-leaderMenuLeftMargin-lineW)/2; strings.Index(row, "=") != want {
+		t.Fatalf("legend starts at %d, want centered at %d", strings.Index(row, "="), want)
+	}
 	_, st, _ := screen.Get(strings.Index(row, "="), rect.Y+rect.Height-2)
 	if fg, _, _ := st.Decompose(); fg != tcell.ColorGreen {
 		t.Fatalf("icon fg = %v, want green", fg)

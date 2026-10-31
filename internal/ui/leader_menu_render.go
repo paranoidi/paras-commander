@@ -612,12 +612,12 @@ func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuSta
 		drawLeaderMenuCell(screen, cell.X, cell.Y, cell.Width, keys[cell.Item], arrow, it.Label, directKey, ks, arrowStyle, ls, surface)
 	}
 	if len(legendLines) > 0 {
-		drawLeaderMenuLegend(screen, rect, leaderMenuContentRows(visibleItems), state.Legend, legendLines, disabledStyle, surfBG)
+		drawLeaderMenuLegend(screen, rect, leaderMenuContentRows(visibleItems), state.Legend, legendLines, labelStyle, surfBG)
 	}
 }
 
 // drawLeaderMenuLegend paints the wrapped legend lines below the item rows: each icon in its own
-// state style, each label dimmed.
+// state style, each label in the normal item label style. Each line is centered within the content area.
 func drawLeaderMenuLegend(screen tcell.Screen, rect geom.Rect, itemRows int, legend []LeaderMenuLegendItem, lines [][]int, labelStyle tcell.Style, surfBG tcell.Color) {
 	x0 := rect.X + leaderMenuLeftMargin
 	right := rect.X + rect.Width - leaderMenuRightMargin
@@ -626,7 +626,14 @@ func drawLeaderMenuLegend(screen tcell.Screen, rect geom.Rect, itemRows int, leg
 	}
 	y := rect.Y + leaderMenuMarginRows + itemRows + 1
 	for _, line := range lines {
+		w := leaderMenuLegendGap * (len(line) - 1)
+		for _, idx := range line {
+			w += leaderMenuLegendWidth(legend[idx])
+		}
 		x := x0
+		if free := right - x0 - w; free > 0 {
+			x += free / 2 // centered; a line wider than the area stays left-aligned
+		}
 		for _, idx := range line {
 			it := legend[idx]
 			fg, _, attrs := it.Style.Decompose()

@@ -64,17 +64,17 @@ fileindex covers local paths only). On a `fileindex://` panel the action goes to
 the real location with the mode on. Scans, prunes, tag edits and index
 removals refresh the panel.
 
-| State | Meaning |
-|---|---|
-| `indexed` | In the index, the same size and modification time (files) |
-| `changed` | A file whose size or modification time differs from the index |
-| `new` | On disk but not in the index |
-| `missing` | Only in the index (ghost row) |
-| `excluded` | Not in the index, and the scan rules in fileindex's `config.ini` (`exclude_dirs`, `exclude_files`, file patterns) skip it |
-| `scanning` | A scan or prune task job is working on the row |
-| `differs` | An indexed directory with something different below it: a new, resized or missing file |
-| `unchecked` | An indexed directory with nothing different found in the folders the automatic check reached, but with deeper folders it did not look into |
-| `tagged` | Indexed and carrying tags |
+| State | Legend | Meaning |
+|---|---|---|
+| `indexed` | indexed | In the index, the same size and modification time (files) |
+| `changed` | changed | A file whose size or modification time differs from the index |
+| `new` | not in index | On disk but not in the index |
+| `missing` | only in index | Only in the index (ghost row) |
+| `excluded` | excluded | Not in the index, and the scan rules in fileindex's `config.ini` (`exclude_dirs`, `exclude_files`, file patterns) skip it |
+| `scanning` | scanning | A scan or prune task job is working on the row |
+| `differs` | differs below | An indexed directory with something different below it: a new, resized or missing file |
+| `unchecked` | scan depth exceeded | An indexed directory with nothing different found in the folders the automatic check reached, but with deeper folders it did not look into |
+| `tagged` | tagged | Indexed and carrying tags |
 
 When several apply, the first of: scanning, missing, changed, excluded, new,
 differs, tagged, unchecked, indexed. Directories are checked in the background
@@ -82,7 +82,7 @@ differs, tagged, unchecked, indexed. Directories are checked in the background
 listing, every indexed directory is checked down to `folder_scan_max_depth`
 levels (default 3). A difference within that depth shows as `differs`; if there
 is none but the directory has folders deeper than that, it shows `unchecked`
-(too deep to check automatically). In `config.toml`, `folder_scan_max_depth`
+(scan depth exceeded). In `config.toml`, `folder_scan_max_depth`
 (label "Folder scan max depth") is `N` for N levels, `-1` for unlimited (the
 automatic check then never shows `unchecked`) and `0` to turn the automatic
 check off; see [config](config.md#fileindex).
