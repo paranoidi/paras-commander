@@ -143,6 +143,10 @@ type PanelContext struct {
 	// there is inverted (Model.PanelTitleHover).
 	TitleHover  bool
 	TitleHoverX int
+	// RowHover marks the pointer on entry RowHoverEntry: a row other than the cursor row is
+	// painted in the inactive panel cursor style (Model.PanelRowHover).
+	RowHover      bool
+	RowHoverEntry int
 	// QuickViewIndicator marks this panel's cursor row with a one-cell arrow icon overlapping
 	// the border, pointing toward the quick-view preview panel. QuickViewIndicatorRight selects
 	// which border/icon: true draws U+E0B0 on the right border, false draws U+E0B2 on the left.
@@ -536,7 +540,9 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	}
 
 	cursorIconKey := ""
-	if hasEntry {
+	if hasEntry && rowHovered(entryIndex, state, ctx) {
+		cursorIconKey = panelCursorIconThemeKey(false, false, entryIndex, entryIndex, selected, false, false)
+	} else if hasEntry {
 		cursorIconKey = panelCursorIconThemeKey(ctx.CursorRowActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.CursorRowActive && state.FilterUniqueMatch(), state.RangeAnchor != "")
 	}
 	if hasEntry {
@@ -625,8 +631,16 @@ func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx P
 			FilterUniqueMatch: ctx.CursorRowActive && state.FilterUniqueMatch(),
 			RangePending:      state.RangeAnchor != "",
 		})
+	} else if rowHovered(entryIndex, state, ctx) {
+		style = styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{Selected: selected})
 	}
 	return style, selected
+}
+
+// rowHovered reports whether entryIndex is the hovered row drawn in the inactive cursor style:
+// under the pointer, not the cursor row, and not while panel chrome is blocked.
+func rowHovered(entryIndex int, state panel.State, ctx PanelContext) bool {
+	return ctx.RowHover && ctx.RowHoverEntry == entryIndex && entryIndex != state.Cursor && !ctx.ChromeBlocked
 }
 
 // panelRowPaintState carries the per-entry values drawPanelRow computes in its body that the

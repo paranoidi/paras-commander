@@ -255,7 +255,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 func viMotionFooterKeys(fkeys []menu.FunctionKey, letters map[string]string) []menu.FunctionKey {
 	out := make([]menu.FunctionKey, len(fkeys))
 	for i, fk := range fkeys {
-		fk.HintShiftPrefix = ""
+		fk.HintShiftPrefix, fk.ShiftKeyLabel = "", ""
 		if letter, ok := letters[fk.ActionID]; ok {
 			fk.KeyLabel = letter
 		}
@@ -513,8 +513,8 @@ func pinDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	out = append(out, openInPanelFooterKeys(keys)...)
 	if lbl := keys.MenuBindingLabel(keymap.ActionPinRemove); lbl != "" {
 		fk := menu.FunctionKey{KeyLabel: lbl, Hint: "Remove"}
-		if keys.MenuBindingLabel(keymap.ActionPinRemoveAll) != "" {
-			fk.HintShiftPrefix = "All"
+		if all := keys.MenuBindingLabel(keymap.ActionPinRemoveAll); all != "" {
+			fk.HintShiftPrefix, fk.ShiftKeyLabel = "All", all
 		}
 		out = append(out, fk)
 	}

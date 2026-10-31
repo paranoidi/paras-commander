@@ -14,6 +14,10 @@ type FunctionKey struct {
 	KeyLabel        string        // "F1"
 	Hint            string        // primary footer label suffix (e.g. "Mkdir")
 	HintShiftPrefix string        // Shift-alternative suffix shown after Hint (e.g. "Ren" in MovRen)
+	// ShiftKeyLabel is the binding (keymap.ParseKey form, e.g. "S-F6") of the action
+	// HintShiftPrefix names; a footer click on that word replays it. Empty when the suffix is
+	// informational only (the compare filter label), so a click on it presses the entry's key.
+	ShiftKeyLabel string
 	// RequiresActiveJob marks jobs-view actions (cancel/pause/resume/reorder) that are
 	// no-ops once the selected job has reached a terminal state; FunctionKeysJobsView
 	// hides them in that case.
@@ -31,6 +35,15 @@ func (fk FunctionKey) Event() (*tcell.EventKey, bool) {
 		return tcell.NewEventKey(fk.Key, 0, fk.Mod), true
 	}
 	return keymap.EventForKey(fk.KeyLabel)
+}
+
+// ShiftEvent is the key press of the Shift-alternative word (ShiftKeyLabel); ok is false when
+// the entry has none.
+func (fk FunctionKey) ShiftEvent() (*tcell.EventKey, bool) {
+	if fk.ShiftKeyLabel == "" {
+		return nil, false
+	}
+	return keymap.EventForKey(fk.ShiftKeyLabel)
 }
 
 // FullHint returns the combined footer hint text for width layout.
@@ -51,15 +64,15 @@ var FunctionKeyLeaderMenuToggleChords = FunctionKey{Key: tcell.KeyF3, KeyLabel: 
 // and used to route quick-filter function-key presses to menu items.
 var FunctionKeys = []FunctionKey{
 	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
-	{Key: tcell.KeyF2, KeyLabel: "F2", HintShiftPrefix: "Edit", Hint: "UserCmd", ActionID: keymap.ActionAppUserMenu},
-	{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View", ActionID: keymap.ActionFileView},
+	{Key: tcell.KeyF2, KeyLabel: "F2", HintShiftPrefix: "Edit", ShiftKeyLabel: "S-F2", Hint: "UserCmd", ActionID: keymap.ActionAppUserMenu},
+	{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", ShiftKeyLabel: "S-F3", Hint: "View", ActionID: keymap.ActionFileView},
 	{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit", ActionID: keymap.ActionFileEdit},
-	{Key: tcell.KeyF5, KeyLabel: "F5", HintShiftPrefix: "Duplicate", Hint: "Copy", ActionID: keymap.ActionCopy},
-	{Key: tcell.KeyF6, KeyLabel: "F6", HintShiftPrefix: "Ren", Hint: "Mov", ActionID: keymap.ActionMove},
-	{Key: tcell.KeyF7, KeyLabel: "F7", HintShiftPrefix: "Open", Hint: "Mkdir", ActionID: keymap.ActionFileMkdir},
+	{Key: tcell.KeyF5, KeyLabel: "F5", HintShiftPrefix: "Duplicate", ShiftKeyLabel: "S-F5", Hint: "Copy", ActionID: keymap.ActionCopy},
+	{Key: tcell.KeyF6, KeyLabel: "F6", HintShiftPrefix: "Ren", ShiftKeyLabel: "S-F6", Hint: "Mov", ActionID: keymap.ActionMove},
+	{Key: tcell.KeyF7, KeyLabel: "F7", HintShiftPrefix: "Open", ShiftKeyLabel: "S-F7", Hint: "Mkdir", ActionID: keymap.ActionFileMkdir},
 	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete", ActionID: keymap.ActionFileDelete},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
-	{Key: tcell.KeyF10, KeyLabel: "F10", HintShiftPrefix: "Now", Hint: "Quit", ActionID: keymap.ActionAppQuit},
+	{Key: tcell.KeyF10, KeyLabel: "F10", HintShiftPrefix: "Now", ShiftKeyLabel: "S-F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 }
 
 // FunctionKeysJobs is the footer legend while the jobs view is active.
@@ -115,7 +128,7 @@ func FunctionKeysJobsView(selectedFinished, selectedRetryable bool) []FunctionKe
 var FunctionKeysCommands = []FunctionKey{
 	FooterEscClose,
 	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
-	{Key: tcell.KeyF8, KeyLabel: "F8", HintShiftPrefix: "Kill", Hint: "Term", ActionID: keymap.ActionCommandsTerminate},
+	{Key: tcell.KeyF8, KeyLabel: "F8", HintShiftPrefix: "Kill", ShiftKeyLabel: "S-F8", Hint: "Term", ActionID: keymap.ActionCommandsTerminate},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 }

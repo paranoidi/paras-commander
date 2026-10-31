@@ -204,6 +204,9 @@ type Model struct {
 	UserHomeDir string
 	// PanelTitleHover is the mouse pointer on a browser panel's title row (set by App on motion).
 	PanelTitleHover PanelTitleHover
+	// PanelRowHover is the file list entry under the mouse pointer (set by App each render),
+	// painted in the inactive panel cursor style without moving the cursor.
+	PanelRowHover PanelRowHover
 	// DialogButtonHover is the top-most dialog's button under the mouse pointer (set by App each
 	// render), painted in the focused button style without moving focus.
 	DialogButtonHover dlg.ButtonHover
@@ -535,11 +538,27 @@ type MenuHover struct {
 	Index  int
 }
 
-// FooterHover names the footer entry (Index into the drawn entries) under the mouse pointer;
-// Active is false off the entries.
+// FooterHover names the footer entry (Index into the drawn entries) under the mouse pointer and
+// whether the pointer is on its Shift-alternative word (Shift); Active is false off the entries.
 type FooterHover struct {
 	Active bool
 	Index  int
+	Shift  bool
+}
+
+// PanelRowHover names the browser panel entry (visible entry index) under the mouse pointer.
+type PanelRowHover struct {
+	Active bool
+	Panel  int
+	Entry  int
+}
+
+// at returns whether the pointer is on an entry of panelID and that entry's index.
+func (h PanelRowHover) at(panelID int) (bool, int) {
+	if !h.Active || h.Panel != panelID {
+		return false, -1
+	}
+	return true, h.Entry
 }
 
 // PanelTitleHover is the mouse pointer on a browser panel's title row.
@@ -845,6 +864,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			panelCtx.TitleEndLabel = endLabel
 		}
 		panelCtx.TitleHover, panelCtx.TitleHoverX = model.PanelTitleHover.at(side.PanelID)
+		panelCtx.RowHover, panelCtx.RowHoverEntry = model.PanelRowHover.at(side.PanelID)
 		otherNames, otherCursor, otherDir := otherPanelMatchNames(model, side.PanelID)
 		drawPanel(screen, side.FileRect, model.PanelForFileListRender(side.PanelID),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},

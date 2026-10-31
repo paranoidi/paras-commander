@@ -747,3 +747,32 @@ func TestMouseDialogListFollowsPointer(t *testing.T) {
 		t.Fatal("motion within the same row must not render")
 	}
 }
+
+func TestMouseHoverHighlightsPanelRow(t *testing.T) {
+	app, _ := mouseTestApp(t)
+	app.render()
+	x, y := cellOf(t, app, ui.PrimaryPanel, 3)
+	cursor := app.model.Primary.Cursor
+	plain := styleAt(app, x, y)
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("entering a row must render")
+	}
+	_, wantBG, _ := app.styles.PanelCursorInactive.Decompose()
+	if _, bg, _ := plain.Decompose(); bg == wantBG {
+		t.Fatal("fixture: theme draws plain rows with the inactive cursor background")
+	}
+	if _, bg, _ := styleAt(app, x, y).Decompose(); bg != wantBG {
+		t.Fatalf("hovered row background = %v want the inactive cursor background %v", bg, wantBG)
+	}
+	if app.model.Primary.Cursor != cursor {
+		t.Fatalf("hover moved the cursor to %d", app.model.Primary.Cursor)
+	}
+	if _, rendered := app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone)); rendered {
+		t.Fatal("motion within the same row must not render")
+	}
+	tx, ty := titleSegmentAt(t, app, ui.PrimaryPanel, 1)
+	app.handleMouse(mouseEv(tx, ty, tcell.ButtonNone))
+	if got := styleAt(app, x, y); got != plain {
+		t.Fatalf("row style after leaving = %v want %v", got, plain)
+	}
+}

@@ -13,6 +13,7 @@ In the file browser:
 | Double click on a row | Opens it, like Enter. |
 | Right click on a row | Focuses the panel, moves the cursor and toggles the row's selection. |
 | Wheel | Scrolls the panel under the pointer by a few rows. Focus does not change. |
+| Pointer over a row | Highlights the row in the inactive panel's cursor colors. The cursor does not move. |
 | Pointer over the path in a panel's top border | Inverts the colors of the path element under it (`~`, `/`, a directory name). |
 | Left click on a path element | Focuses the panel and opens that directory, with the cursor on the directory you came from. |
 | Left click on the last path element | Focuses the panel and refreshes its directory (the panel's own directory). |
@@ -33,8 +34,8 @@ In the menu bar and the footer:
 | Left click outside the pulldown | Closes the menu. The click does nothing else. |
 | Pointer over the status commands (top-left) | Highlights them in the open menu's colors. |
 | Left click on the status commands (top-left) | Opens the Status commands dialog. Closes an open menu first. |
-| Pointer over a footer entry | Highlights the entry (key and label). |
-| Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. |
+| Pointer over a footer entry | Highlights the entry. The part a click would press stands out in brighter text: the key and its main label, or the grey Shift word after it (`Quick` in `F3 ViewQuick`). |
+| Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. A click on the grey Shift word presses the Shift variant: `Ren` in `F6 MovRen` renames. |
 
 In dialogs:
 

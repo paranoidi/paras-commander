@@ -47,25 +47,17 @@ func PulldownItemAt(layout Layout, model *Model, x, y int) (item int, inside boo
 	return row, true
 }
 
-// FooterKeyAt returns the footer entry drawn at (x, y): its key label or its hint, not the gaps.
-func FooterKeyAt(layout Layout, model *Model, x, y int) (menu.FunctionKey, bool) {
-	if layout.Footer.Height <= 0 || y != layout.Footer.Y {
-		return menu.FunctionKey{}, false
-	}
-	spans := footerHintSpans(layout.Footer, model.FooterKeys)
-	if i, ok := footerSpanAt(spans, x); ok {
-		return spans[i].Item, true
-	}
-	return menu.FunctionKey{}, false
+// FooterKeyAt returns the footer entry drawn at (x, y) (its key label or its hint, not the gaps)
+// and whether x is on its Shift-alternative word (menu.FunctionKey.ShiftEvent).
+func FooterKeyAt(layout Layout, model *Model, x, y int) (fk menu.FunctionKey, shift, ok bool) {
+	hover, fk := footerHit(layout.Footer, model.FooterKeys, x, y)
+	return fk, hover.Shift, hover.Active
 }
 
-// FooterHoverAt is the footer entry under (x, y) as a FooterHover (the span FooterKeyAt hits).
+// FooterHoverAt is the footer entry under (x, y) as a FooterHover (the hit FooterKeyAt reports).
 func FooterHoverAt(layout Layout, model *Model, x, y int) FooterHover {
-	if layout.Footer.Height <= 0 || y != layout.Footer.Y {
-		return FooterHover{}
-	}
-	i, ok := footerSpanAt(footerHintSpans(layout.Footer, model.FooterKeys), x)
-	return FooterHover{Active: ok, Index: i}
+	hover, _ := footerHit(layout.Footer, model.FooterKeys, x, y)
+	return hover
 }
 
 // PanelTitleSegmentAt returns the path segment drawn at (x, y) in the title on the top border of

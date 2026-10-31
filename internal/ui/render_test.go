@@ -1086,42 +1086,96 @@ func TestDrawFooterShiftHintPrefixUsesShiftLabelStyle(t *testing.T) {
 	}
 }
 
-func TestDrawFooterPaintsHoveredEntryInHoverStyle(t *testing.T) {
+func footerHoverTestScreen(t *testing.T) tcell.SimulationScreen {
+	t.Helper()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
-	defer screen.Fini()
+	t.Cleanup(screen.Fini)
 	screen.SetSize(80, 12)
+	return screen
+}
 
+// footerStylesInRange fails unless columns [from, to) of row 0 are drawn in want.
+func footerStylesInRange(t *testing.T, screen tcell.SimulationScreen, from, to int, want tcell.Style, name string) {
+	t.Helper()
+	for col := from; col < to; col++ {
+		if r, st, _ := screen.Get(col, 0); st != want {
+			t.Fatalf("col %d %q: style = %v, want %s", col, r, st, name)
+		}
+	}
+}
+
+func TestDrawFooterPaintsHoveredEntryInHoverStyle(t *testing.T) {
+	screen := footerHoverTestScreen(t)
 	styles := theme.Default()
 	rect := Rect{X: 0, Y: 0, Width: 80, Height: 1}
 	keys := []menu.FunctionKey{
-		{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View"},
+		{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", ShiftKeyLabel: "S-F3", Hint: "View"},
 		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
 	}
 	layout := Layout{Footer: rect}
 	model := &Model{FooterKeys: keys}
 	spans := footerHintSpans(rect, keys)
 	hover := FooterHoverAt(layout, model, spans[1].X+1, 0)
-	if !hover.Active || hover.Index != 1 {
-		t.Fatalf("FooterHoverAt on F4 = %+v, want entry 1", hover)
+	if !hover.Active || hover.Index != 1 || hover.Shift {
+		t.Fatalf("FooterHoverAt on F4 = %+v, want entry 1, main part", hover)
 	}
 	if gap := FooterHoverAt(layout, model, spans[1].X-1, 0); gap.Active {
 		t.Fatalf("FooterHoverAt in the gap = %+v, want inactive", gap)
 	}
 	drawFooter(screen, rect, styles, keys, hover)
 
-	for col := spans[1].X; col < spans[1].X+spans[1].Width; col++ {
-		if _, st, _ := screen.Get(col, 0); st != styles.FooterHover {
-			t.Fatalf("hovered col %d: style = %v, want FooterHover", col, st)
-		}
-	}
+	footerStylesInRange(t, screen, spans[1].X, spans[1].X+spans[1].Width, styles.FooterHoverActive, "FooterHoverActive")
 	if _, st, _ := screen.Get(spans[0].X, 0); st != styles.FooterKey {
 		t.Fatalf("other entry key style = %v, want FooterKey", st)
 	}
 	if _, st, _ := screen.Get(spans[1].X+spans[1].Width, 0); st != styles.FooterLabel {
 		t.Fatalf("cell after hovered entry style = %v, want FooterLabel", st)
+	}
+}
+
+// "F3 ViewQuick": the pointer on "Quick" selects the Shift word, which alone is drawn active;
+// on "F3 View" the main part is active and "Quick" keeps the plain hover style.
+func TestFooterHoverSplitsMainAndShiftWord(t *testing.T) {
+	styles := theme.Default()
+	rect := Rect{X: 0, Y: 0, Width: 80, Height: 1}
+	keys := []menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", ShiftKeyLabel: "S-F3", Hint: "View"}}
+	layout := Layout{Footer: rect}
+	model := &Model{FooterKeys: keys}
+	const shiftAt = len("F3 View")
+	end := shiftAt + len("Quick")
+
+	fk, shift, ok := FooterKeyAt(layout, model, shiftAt, 0)
+	if !ok || !shift {
+		t.Fatalf("FooterKeyAt on Quick = shift %v ok %v, want the shift word", shift, ok)
+	}
+	if ev, ok := fk.ShiftEvent(); !ok || ev.Key() != tcell.KeyF3 || ev.Modifiers()&tcell.ModShift == 0 {
+		t.Fatalf("ShiftEvent = %v %v, want Shift+F3", ev, ok)
+	}
+	if _, shift, _ := FooterKeyAt(layout, model, shiftAt-1, 0); shift {
+		t.Fatal("FooterKeyAt on View reports the shift word")
+	}
+
+	screen := footerHoverTestScreen(t)
+	drawFooter(screen, rect, styles, keys, FooterHoverAt(layout, model, end-1, 0))
+	footerStylesInRange(t, screen, 0, shiftAt, styles.FooterHover, "FooterHover")
+	footerStylesInRange(t, screen, shiftAt, end, styles.FooterHoverActive, "FooterHoverActive")
+
+	screen = footerHoverTestScreen(t)
+	drawFooter(screen, rect, styles, keys, FooterHoverAt(layout, model, 0, 0))
+	footerStylesInRange(t, screen, 0, shiftAt, styles.FooterHoverActive, "FooterHoverActive")
+	footerStylesInRange(t, screen, shiftAt, end, styles.FooterHover, "FooterHover")
+}
+
+// A suffix without its own binding (the compare filter label) is part of the main hit.
+func TestFooterHoverInformationalSuffixIsMainPart(t *testing.T) {
+	rect := Rect{X: 0, Y: 0, Width: 80, Height: 1}
+	keys := []menu.FunctionKey{{KeyLabel: "F3", HintShiftPrefix: "Moved", Hint: "Category"}}
+	model := &Model{FooterKeys: keys}
+	if _, shift, ok := FooterKeyAt(Layout{Footer: rect}, model, len("F3 Category"), 0); !ok || shift {
+		t.Fatalf("FooterKeyAt on the label = shift %v ok %v, want the main part", shift, ok)
 	}
 }
 

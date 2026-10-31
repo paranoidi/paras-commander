@@ -256,19 +256,37 @@ func (a *App) statusCommandsHover() bool {
 	return ui.StatusCommandsAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
 }
 
+// panelRowHover is the browser panel entry under the last pointer position (mouseHit), in
+// normal mode only.
+func (a *App) panelRowHover() ui.PanelRowHover {
+	if !a.mouse.pointer || a.inputMode() != InputModeNormal || a.model.ViewMode != ui.ViewBrowser {
+		return ui.PanelRowHover{}
+	}
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall {
+		return ui.PanelRowHover{}
+	}
+	id, row, ok := a.mouseHit(layout, a.mouse.x, a.mouse.y)
+	if !ok || row < 0 {
+		return ui.PanelRowHover{}
+	}
+	return ui.PanelRowHover{Active: true, Panel: id, Entry: row}
+}
+
 // refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons,
-// menu titles, the status commands, footer entries) and reports whether one changed. render
-// calls it, so they track the screen as it changes under a still pointer; motion calls it and
-// renders on a change.
+// menu titles, the status commands, footer entries, file list rows) and reports whether one
+// changed. render calls it, so they track the screen as it changes under a still pointer; motion
+// calls it and renders on a change.
 func (a *App) refreshPointerHovers() bool {
 	button, menuTitle, footer := a.dialogButtonHover(), a.menuBarHover(), a.footerHover()
-	status := a.statusCommandsHover()
+	status, row := a.statusCommandsHover(), a.panelRowHover()
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
 		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover ||
-		status != a.model.StatusCommandsHover
+		status != a.model.StatusCommandsHover || row != a.model.PanelRowHover
 	a.model.DialogButtonHover, a.model.MenuBarHover, a.model.FooterHover = button, menuTitle, footer
-	a.model.StatusCommandsHover = status
+	a.model.StatusCommandsHover, a.model.PanelRowHover = status, row
 	return changed
 }
 
@@ -404,11 +422,15 @@ func (a *App) scrollInactivePanel(id, delta int) bool {
 // the event belongs to whatever lies below them.
 func (a *App) handleChromeMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (handled, quit, rendered bool) {
 	left := pressed&tcell.Button1 != 0
-	if fk, ok := ui.FooterKeyAt(layout, &a.model, x, y); ok {
+	if fk, shift, ok := ui.FooterKeyAt(layout, &a.model, x, y); ok {
 		if !left {
 			return true, false, false
 		}
-		ev, ok := fk.Event()
+		event := fk.Event
+		if shift {
+			event = fk.ShiftEvent
+		}
+		ev, ok := event()
 		if !ok {
 			return true, false, false
 		}

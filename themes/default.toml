@@ -75,6 +75,7 @@ key = { fg = "magenta", bold = true }
 label = { fg = "default" }
 label.shift = { fg = "bright_black" }
 hover = { fg = "black", bg = "cyan" }  # entry under the mouse pointer
+hover.active = { fg = "bright_white", bg = "cyan" }  # its part a click presses (key + hint, or the shift word)
 
 [panel]                      # panel-wide text
 text = { fg = "white" }
