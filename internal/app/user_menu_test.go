@@ -100,6 +100,19 @@ command = "true"
 	}
 }
 
+// assertUserMenuDisabled checks a broken menu.toml still opens the user-menu strip with a
+// single dimmed row, so the edit-config key stays reachable.
+func assertUserMenuDisabled(t *testing.T, app *App) {
+	t.Helper()
+	st := app.model.LeaderMenu
+	if !st.Open || st.Kind != ui.LeaderMenuUser {
+		t.Fatalf("LeaderMenu = %+v, want open user menu", st)
+	}
+	if len(st.Items) != 1 || !st.Items[0].Disabled {
+		t.Fatalf("items = %+v, want one disabled row", st.Items)
+	}
+}
+
 func TestOpenUserMenuInvalidFileCritical(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
@@ -124,9 +137,7 @@ func TestOpenUserMenuInvalidFileCritical(t *testing.T) {
 	if called {
 		t.Fatal("editor should not run for invalid menu.toml")
 	}
-	if app.model.LeaderMenu.Open {
-		t.Fatal("user menu dialog should not open")
-	}
+	assertUserMenuDisabled(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
 		t.Fatalf("MessageUrgency = %v, want critical", app.model.MessageUrgency)
 	}
@@ -159,9 +170,7 @@ func TestOpenUserMenuExistingStubNoEditor(t *testing.T) {
 	if called {
 		t.Fatal("editor should not run when menu file exists but has no entries")
 	}
-	if app.model.LeaderMenu.Open {
-		t.Fatal("user menu dialog should not open without entries")
-	}
+	assertUserMenuDisabled(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
 		t.Fatalf("MessageUrgency = %v, want warn", app.model.MessageUrgency)
 	}
@@ -606,9 +615,7 @@ pool = "missing"
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
 
-	if app.model.LeaderMenu.Open {
-		t.Fatal("user menu dialog should not open for unknown pool")
-	}
+	assertUserMenuDisabled(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
 		t.Fatalf("MessageUrgency = %v, want critical", app.model.MessageUrgency)
 	}

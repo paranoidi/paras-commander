@@ -16,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
@@ -44,13 +45,6 @@ func (a *App) ensureGlobalUserMenuStub() (path string, err error) {
 		return "", err
 	}
 	return path, nil
-}
-
-func (a *App) setUserMenuCritical(err error) {
-	if err == nil {
-		return
-	}
-	a.setTransientMessage(usermenu.ShortLoadError(err), ui.MessageUrgencyCritical)
 }
 
 func (a *App) openUserMenuEditor(path string) bool {
@@ -115,34 +109,57 @@ func (a *App) openUserMenu() {
 		return
 	}
 
-	visible, warnings, ok := a.loadUserMenuVisible(menuPath)
-	if !ok {
+	a.showUserMenu(menuPath)
+}
+
+// showUserMenu loads menuPath and opens its top level. When the file cannot be shown
+// (parse/validation error, no entries) the strip still opens, disabled, so the footer's
+// edit-config key can reach menu.toml and fix it. Shared by openUserMenu and reloadLeaderMenu.
+func (a *App) showUserMenu(menuPath string) {
+	a.userMenuPath = menuPath
+	a.userMenuStack = nil
+	visible, warnings, problem, urg := a.loadUserMenuVisible(menuPath)
+	if problem != "" {
+		a.openUserMenuDisabled(problem, urg)
 		return
 	}
-	a.userMenuPath = menuPath
 	a.userMenuWarnings = warnings
-	a.userMenuStack = nil
 	a.openUserMenuLevel(visible)
 }
 
+// openUserMenuDisabled opens the user-menu strip with one dimmed row and shows problem.
+// Activating the row only reopens the same disabled strip.
+func (a *App) openUserMenuDisabled(problem string, urg ui.MessageUrgency) {
+	a.userMenuVisible = nil
+	a.userMenuWarnings = nil
+	items := []ui.LeaderMenuItem{{
+		Label:    "Menu unavailable: " + menu.FunctionKeyEditConfig.KeyLabel + " to edit",
+		Disabled: true,
+	}}
+	if !a.openLeaderMenuStrip(items, ui.LeaderMenuUser, "User menu", func(int) bool {
+		a.openUserMenuDisabled(problem, urg)
+		return false
+	}) {
+		a.setTransientMessage(problem, urg)
+		return
+	}
+	// openLeaderMenuStrip clears the transient message, so set it afterwards.
+	a.setTransientMessage(problem, urg)
+}
+
 // loadUserMenuVisible loads menuPath, validates it, and resolves the entries visible for the
-// current panel context — the shared block behind both openUserMenu and reloadLeaderMenu.
-// On any failure it emits the appropriate message itself (setUserMenuCritical/
-// setTransientMessage) and returns ok=false; the caller only needs to decide what to do next
-// (return, or close the strip). warnings is mf.Warnings (e.g. a duplicate key= at one level).
-func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry, warnings []string, ok bool) {
+// current panel context. On failure it returns a non-empty problem message and its urgency
+// instead of entries. warnings is mf.Warnings (e.g. a duplicate key= at one level).
+func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry, warnings []string, problem string, urg ui.MessageUrgency) {
 	mf, err := usermenu.LoadFile(menuPath)
 	if err != nil {
-		a.setUserMenuCritical(err)
-		return nil, nil, false
+		return nil, nil, usermenu.ShortLoadError(err), ui.MessageUrgencyCritical
 	}
 	if err := mf.ValidatePoolRefs(usermenu.PoolNameSet(a.workPools.Names())); err != nil {
-		a.setUserMenuCritical(err)
-		return nil, nil, false
+		return nil, nil, usermenu.ShortLoadError(err), ui.MessageUrgencyCritical
 	}
 	if len(mf.Entries) == 0 {
-		a.setTransientMessage("User menu: no entries (edit with Shift+F2)", ui.MessageUrgencyWarn)
-		return nil, nil, false
+		return nil, nil, "User menu: no entries", ui.MessageUrgencyWarn
 	}
 
 	active := a.panelByID(a.model.ActivePanel)
@@ -150,14 +167,12 @@ func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry
 	ctx := &usermenu.EvalContext{Active: active, Other: other}
 	v, _, err := usermenu.FilterVisible(mf, ctx)
 	if err != nil {
-		a.setUserMenuCritical(err)
-		return nil, nil, false
+		return nil, nil, usermenu.ShortLoadError(err), ui.MessageUrgencyCritical
 	}
 	if len(v) == 0 {
-		a.setTransientMessage("User menu: no visible entries", ui.MessageUrgencyWarn)
-		return nil, nil, false
+		return nil, nil, "User menu: no visible entries", ui.MessageUrgencyWarn
 	}
-	return v, mf.Warnings, true
+	return v, mf.Warnings, "", ui.MessageUrgencyInfo
 }
 
 // openUserMenuLevel opens (or swaps the already-open strip to) one menu level: entries is

@@ -58,14 +58,5 @@ func (a *App) reloadLeaderMenu() {
 		}
 	}
 
-	visible, warnings, ok := a.loadUserMenuVisible(menuPath)
-	if !ok {
-		a.closeLeaderMenu()
-		return
-	}
-
-	a.userMenuPath = menuPath
-	a.userMenuWarnings = warnings
-	a.userMenuStack = nil
-	a.openUserMenuLevel(visible)
+	a.showUserMenu(menuPath)
 }

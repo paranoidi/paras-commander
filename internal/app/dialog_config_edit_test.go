@@ -254,7 +254,7 @@ command = "true"
 	}
 }
 
-func TestUserMenuDialogF9ClosesOnInvalidFile(t *testing.T) {
+func TestUserMenuDialogF9DisablesOnInvalidFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -279,11 +279,35 @@ command = "true"
 
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
-	if app.model.LeaderMenu.Open {
-		t.Fatal("user menu dialog should close after invalid menu.toml")
-	}
+	assertUserMenuDisabled(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
 		t.Fatalf("MessageUrgency = %v, want critical", app.model.MessageUrgency)
+	}
+}
+
+func TestUserMenuDisabledF9RecoversAfterFix(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(menuPath, []byte("shell_patterns = []\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	assertUserMenuDisabled(t, app)
+
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
+		return os.WriteFile(path, []byte("[lantern]\nkey = \"l\"\ntitle = \"Lantern\"\ncommand = \"true\"\n"), 0o644)
+	}
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+
+	st := app.model.LeaderMenu
+	if !st.Open || len(st.Items) != 1 || st.Items[0].Disabled || st.Items[0].Label != "Lantern" {
+		t.Fatalf("LeaderMenu = %+v, want enabled Lantern row", st)
 	}
 }
 
