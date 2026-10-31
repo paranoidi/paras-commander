@@ -56,8 +56,8 @@ func FooterKeyAt(layout Layout, model *Model, x, y int) (menu.FunctionKey, bool)
 
 // PanelTitleSegmentAt returns the path segment drawn at (x, y) in the title on the top border of
 // panelID's file list frame file. It reuses the title painter's layout (newPanelTitleRow), so it
-// is false wherever no segment is drawn, on the panel directory itself (depth 0), and while the
-// title shows the quick filter or a quick-view directory overlay.
+// is false wherever no segment is drawn and while the title shows the quick filter or a
+// quick-view directory overlay.
 func PanelTitleSegmentAt(file Rect, model *Model, panelID int, styles theme.Theme, x, y int) (PanelTitleSegment, bool) {
 	if file.Width <= 0 || file.Height <= 0 || y != file.Y {
 		return PanelTitleSegment{}, false
@@ -73,7 +73,7 @@ func PanelTitleSegmentAt(file Rect, model *Model, panelID int, styles theme.Them
 	row := newPanelTitleRow(file, state, styles, "")
 	for _, seg := range row.segments(state.PathString(), model.UserHomeDir) {
 		if seg.Contains(x) {
-			return seg, seg.Depth > 0
+			return seg, true
 		}
 	}
 	return PanelTitleSegment{}, false

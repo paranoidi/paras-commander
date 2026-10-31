@@ -592,7 +592,7 @@ func TestMouseClickTitleSegmentNavigatesToAncestor(t *testing.T) {
 	}
 }
 
-func TestMouseTitleIgnoresPanelDirectory(t *testing.T) {
+func TestMouseClickTitlePanelDirectoryRefreshes(t *testing.T) {
 	app, dir := mouseTestApp(t)
 	// The panel directory starts after the parent segment and its "/" separator.
 	px, y := titleSegmentAt(t, app, ui.PrimaryPanel, 1)
@@ -606,8 +606,22 @@ func TestMouseTitleIgnoresPanelDirectory(t *testing.T) {
 	if x < 0 {
 		t.Fatal("no separator after the parent segment")
 	}
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if _, style, _ := app.screen.Get(x, y); func() bool { _, _, attrs := style.Decompose(); return attrs&tcell.AttrReverse == 0 }() {
+		t.Fatal("hovered panel directory not inverted")
+	}
+	writeFile(t, filepath.Join(dir, "zz-sparrow.txt"))
 	click(app, x, y, tcell.Button1)
-	if app.model.PanelTitleHover.Active || app.model.Primary.PathString() != dir {
-		t.Fatalf("click on the panel directory acted: hover %+v path %q", app.model.PanelTitleHover, app.model.Primary.PathString())
+	listed := func() bool {
+		for i := 0; i < app.model.Primary.VisibleEntryCount(); i++ {
+			if e, _, ok := app.model.Primary.VisibleEntry(i); ok && e.Name == "zz-sparrow.txt" {
+				return true
+			}
+		}
+		return false
+	}
+	drainInterruptEventsUntil(t, app, app.screen.(tcell.SimulationScreen), 2*time.Second, listed)
+	if !listed() || app.model.Primary.PathString() != dir {
+		t.Fatalf("click on the panel directory did not refresh it (path %q)", app.model.Primary.PathString())
 	}
 }

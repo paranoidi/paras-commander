@@ -15,8 +15,9 @@ In the file browser:
 | Wheel | Scrolls the panel under the pointer by a few rows. Focus does not change. |
 | Pointer over the path in a panel's top border | Inverts the colors of the path element under it (`~`, `/`, a directory name). |
 | Left click on a path element | Focuses the panel and opens that directory, with the cursor on the directory you came from. |
+| Left click on the last path element | Focuses the panel and refreshes its directory (the panel's own directory). |
 
-The last path element is the panel's own directory: it is not highlighted and does nothing on click. A shortened element (`p` for `projects` in a narrow panel) opens the full directory it stands for. The path does not react while the panel's top border shows the quick filter or a quick-view directory.
+A shortened element (`p` for `projects` in a narrow panel) opens the full directory it stands for. The path does not react while the panel's top border shows the quick filter or a quick-view directory.
 
 Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. While quick view or a file preview fills the inactive column, clicks and the wheel there are ignored.
 

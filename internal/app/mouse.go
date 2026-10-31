@@ -221,6 +221,10 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	}
 	if id, seg, ok := a.panelTitleHit(layout, x, y); ok && pressed&tcell.Button1 != 0 {
 		a.focusPanelByMouse(id)
+		if seg.Depth == 0 {
+			// The panel directory itself: reload it.
+			return a.finishResolvedKeyboardAction(keymap.ActionPanelRefresh)
+		}
 		if err := a.navigatePanelToAncestor(id, seg.Depth); err != nil {
 			a.setErrorMessage("Navigate failed", err)
 		}

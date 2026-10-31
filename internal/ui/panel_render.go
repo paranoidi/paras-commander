@@ -871,7 +871,7 @@ func panelTitleShowsFilter(state panel.State, fileListActive bool) bool {
 
 // paintPanelTopTitleRow paints the panel top border path on the start and an optional end label
 // (volume overview with decorative dashes, or a plain title-styled suffix such as a filename).
-// The path segment under hoverX (-1 for none), other than the panel directory, is inverted.
+// The path segment under hoverX (-1 for none) is inverted.
 func paintPanelTopTitleRow(screen tcell.Screen, row panelTitleRow, y int, panelPath, userHomeDir string, ts panelTitleStyles, hoverX int) {
 	endLabel := row.EndLabel
 	endRunes := utf8.RuneCountInString(endLabel)
@@ -902,7 +902,7 @@ func paintPanelTopTitleRow(screen tcell.Screen, row panelTitleRow, y int, panelP
 // paintPanelTitleHover inverts the colors of the title path segment under hoverX.
 func paintPanelTitleHover(screen tcell.Screen, row panelTitleRow, y int, panelPath, userHomeDir string, pathStyle tcell.Style, hoverX int) {
 	for _, seg := range row.segments(panelPath, userHomeDir) {
-		if seg.Depth == 0 || !seg.Contains(hoverX) {
+		if !seg.Contains(hoverX) {
 			continue
 		}
 		for x := seg.X; x < seg.X+seg.Width; x++ {
