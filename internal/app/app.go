@@ -758,6 +758,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Config:     cfg,
 		Gitignore:  giCache,
 		DiskIgnore: duIgnorer,
+		FileIndex:  app.fileIndex,
 	})
 	app.previewCtrl = previewctrl.New(previewctrl.Deps{
 		Host:            previewHost{appShellHost: appShellHost{app: app}},

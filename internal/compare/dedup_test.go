@@ -960,3 +960,50 @@ func TestDedupParallelReadsGroupManyClasses(t *testing.T) {
 		}
 	}
 }
+
+func TestDedupIndexedGroupsScopeAndNoOpens(t *testing.T) {
+	opens := 0
+	dedupOpen = func(ctx context.Context, loc pathloc.Path, offset int64) (io.ReadSeekCloser, error) {
+		opens++
+		return nil, io.ErrUnexpectedEOF
+	}
+	t.Cleanup(func() { dedupOpen = openAt })
+
+	root := pathloc.MustParse("fileindex:///orchard")
+	same, other := [32]byte{1}, [32]byte{2}
+	rels := map[string][32]byte{"pear/a.txt": same, "plum/b.txt": same, "fig/c.txt": same, "fig/d.txt": other, "nohash.txt": {}}
+	var files []FileRecord
+	for rel := range rels {
+		abs, err := pathloc.FileIndex("/orchard/" + rel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, FileRecord{Abs: abs, Rel: rel, Size: 5})
+	}
+	delete(rels, "nohash.txt")
+	run := func(only []string) DedupSnapshot {
+		done := make(chan DedupSnapshot, 4)
+		sess := StartDedup(context.Background(), root, DedupOptions{
+			Walk:    WalkOptions{Only: only},
+			Indexed: func(context.Context) ([]FileRecord, map[string][32]byte, error) { return files, rels, nil },
+			OnUpdate: func(s DedupSnapshot) {
+				if s.Phase == DedupDone || s.Phase == DedupError {
+					done <- s
+				}
+			},
+		})
+		defer sess.Close()
+		return <-done
+	}
+	snap := run(nil)
+	if snap.Phase != DedupDone || len(snap.Groups) != 1 || len(snap.Groups[0].Files) != 3 {
+		t.Fatalf("snapshot = %+v, want one group of three", snap)
+	}
+	snap = run([]string{"pear", "plum"})
+	if len(snap.Groups) != 1 || len(snap.Groups[0].Files) != 2 {
+		t.Fatalf("scoped groups = %+v, want one pair", snap.Groups)
+	}
+	if opens != 0 {
+		t.Fatalf("opens = %d, want 0", opens)
+	}
+}

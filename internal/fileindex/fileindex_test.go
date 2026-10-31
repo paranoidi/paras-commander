@@ -400,3 +400,41 @@ func TestUpgradeInitialisesExistingDatabase(t *testing.T) {
 		t.Fatalf("upgrade of a missing database = %v", err)
 	}
 }
+
+func TestDedupFilesUsesIndexedHashes(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range map[string]string{"willow/reed.txt": "cattail", "marsh/sedge.txt": "cattail", "marsh/rush.txt": "bulrush"} {
+		p := filepath.Join(root, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	files, hashes, err := x.DedupFiles(context.Background(), at(t, root))
+	if err != nil || len(files) != 3 || len(hashes) != 3 {
+		t.Fatalf("files = %v, hashes = %v, err = %v", files, hashes, err)
+	}
+	for _, f := range files {
+		if f.Abs.String() != "fileindex://"+filepath.Join(root, filepath.FromSlash(f.Rel)) {
+			t.Fatalf("abs %s does not match rel %s", f.Abs, f.Rel)
+		}
+	}
+	if hashes["willow/reed.txt"] != hashes["marsh/sedge.txt"] || hashes["marsh/rush.txt"] == hashes["marsh/sedge.txt"] {
+		t.Fatalf("hashes = %v", hashes)
+	}
+	if all, _, err := x.DedupFiles(context.Background(), at(t, "/")); err != nil || len(all) != 3 {
+		t.Fatalf("index root = %v, %v", all, err)
+	}
+	if got, _, err := x.DedupFiles(context.Background(), at(t, filepath.Join(root, "pebble"))); err != nil || len(got) != 0 {
+		t.Fatalf("missing dir = %v, %v", got, err)
+	}
+}

@@ -180,7 +180,11 @@ type DedupOptions struct {
 	// CacheFile, when non-empty, persists full-file hashes keyed by path, size
 	// and mtime so later scans skip unchanged files. Empty disables the cache.
 	CacheFile string
-	OnUpdate  func(DedupSnapshot)
+	// Indexed, when set, supplies every file under the root with its known content
+	// hash (keyed by Rel) from an index. The session then neither walks nor reads
+	// anything and publishes the result at once.
+	Indexed  func(ctx context.Context) ([]FileRecord, map[string][32]byte, error)
+	OnUpdate func(DedupSnapshot)
 }
 
 // DedupSession walks one root, size-prefilters, hashes candidates, and groups duplicates.
@@ -247,6 +251,10 @@ func (s *DedupSession) publish(snap DedupSnapshot) {
 func (s *DedupSession) run(ctx context.Context) {
 	defer s.wg.Done()
 
+	if s.opts.Indexed != nil {
+		s.runIndexed(ctx)
+		return
+	}
 	if !s.root.IsLocal() {
 		s.publish(DedupSnapshot{Root: s.root, Phase: DedupError, Err: pathloc.Unavailable("Find duplicates", s.root)})
 		return
@@ -619,6 +627,52 @@ func (s *DedupSession) run(ctx context.Context) {
 		HashTotal:      len(candidates),
 		HashBytesTotal: candidateBytes,
 		HashedBytes:    candidateBytes,
+	})
+}
+
+// runIndexed publishes duplicates from the Indexed source without touching the filesystem.
+// ponytail: empty directories are not in index results, so they never affect dir digests.
+func (s *DedupSession) runIndexed(ctx context.Context) {
+	all, hashOf, err := s.opts.Indexed(ctx)
+	if err != nil {
+		if ctx.Err() != nil {
+			s.publish(DedupSnapshot{Root: s.root, Phase: DedupCanceled})
+			return
+		}
+		s.publish(DedupSnapshot{Root: s.root, Phase: DedupError, Err: err.Error()})
+		return
+	}
+	var files []FileRecord
+	var hashes [][32]byte
+	var total int64
+	for _, f := range all {
+		h, ok := hashOf[f.Rel]
+		if !ok {
+			continue
+		}
+		if len(s.opts.Walk.Only) > 0 {
+			if inside, _ := walkScope(f.Rel, s.opts.Walk.Only); !inside {
+				continue
+			}
+		}
+		files = append(files, f)
+		hashes = append(hashes, h)
+		total += f.Size
+	}
+	hashOK := make([]bool, len(files))
+	for i := range hashOK {
+		hashOK[i] = true
+	}
+	s.publish(DedupSnapshot{
+		Root:           s.root,
+		Phase:          DedupDone,
+		Groups:         groupByHash(files, hashes, hashOK),
+		DirGroups:      groupDirsByDigest(files, hashOf, nil, nil, s.opts.Walk.Only),
+		Walked:         len(files),
+		Hashed:         len(files),
+		HashTotal:      len(files),
+		HashBytesTotal: total,
+		HashedBytes:    total,
 	})
 }
 

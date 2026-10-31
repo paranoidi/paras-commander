@@ -21,6 +21,7 @@ import (
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -40,6 +41,7 @@ type Deps struct {
 	Config     config.Config
 	Gitignore  *gitignore.Cache
 	DiskIgnore diskusage.ShouldIgnoreFolder
+	FileIndex  *fileindex.Index
 }
 
 // Host is the app shell surface dedup needs.
@@ -67,6 +69,7 @@ type Handler struct {
 	config     config.Config
 	gitignore  *gitignore.Cache
 	diskIgnore diskusage.ShouldIgnoreFolder
+	fileIndex  *fileindex.Index
 
 	session *comparepkg.DedupSession
 	wake    host.WakeCoalescer
@@ -106,6 +109,7 @@ func New(d Deps) *Handler {
 		config:     d.Config,
 		gitignore:  d.Gitignore,
 		diskIgnore: d.DiskIgnore,
+		fileIndex:  d.FileIndex,
 	}
 }
 
@@ -135,7 +139,7 @@ func (h *Handler) Open() {
 	if h.model.ActivePanel == ui.SecondaryPanel {
 		p = &h.model.Secondary
 	}
-	if len(p.SelectedDirPaths) > 0 && path.IsLocal() {
+	if len(p.SelectedDirPaths) > 0 && (path.IsLocal() || path.Scheme() == pathloc.SchemeFileIndex) {
 		dirs := slices.Sorted(maps.Keys(p.SelectedDirPaths))
 		h.model.DedupReturnDialog = dialog.DedupReturnDialogState{Open: true, Dir: path.String(), ScopeDirs: dirs}
 		return
@@ -285,7 +289,8 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		h.host.SetTransientMessage("Find duplicates: panel needs a path", ui.MessageUrgencyError)
 		return
 	}
-	if !root.IsLocal() {
+	indexed := root.Scheme() == pathloc.SchemeFileIndex
+	if !root.IsLocal() && !indexed {
 		h.host.SetTransientMessage(pathloc.Unavailable("Find duplicates", root), ui.MessageUrgencyError)
 		return
 	}
@@ -310,7 +315,7 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 	}
 	hs := hashwalk.FromCompareConfig(h.config.Compare, h.diskIgnore, volGate)
 
-	h.session = startDedup(context.Background(), root, comparepkg.DedupOptions{
+	opts := comparepkg.DedupOptions{
 		Walk: comparepkg.WalkOptions{
 			ShowHidden:    p.ShowHidden,
 			Gitignore:     h.gitignore,
@@ -325,7 +330,14 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		FirstChunkBytes:   hs.FirstChunkBytes,
 		CacheFile:         comparepkg.DefaultHashCachePath(),
 		OnUpdate:          func(_ comparepkg.DedupSnapshot) { h.postWake() },
-	})
+	}
+	if indexed {
+		opts.CacheFile, opts.ConfirmHashBytes = "", 0
+		opts.Indexed = func(ctx context.Context) ([]comparepkg.FileRecord, map[string][32]byte, error) {
+			return h.fileIndex.DedupFiles(ctx, root)
+		}
+	}
+	h.session = startDedup(context.Background(), root, opts)
 	h.model.DedupSnapshot = h.session.Snapshot()
 }
 
