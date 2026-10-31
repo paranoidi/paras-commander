@@ -1,64 +1,29 @@
 package fileindex
 
 import (
-	"context"
 	"path/filepath"
 	"strings"
 
 	"github.com/paranoidi/fileindex/db"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
-	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// TagsColumn is the name of the fileindex tags column provider (its meta picker entry).
-const TagsColumn = config.FileIndexTagsColumn
-
-// TagsProvider returns the Go column provider showing each entry's fileindex tags (a file's
-// instance tags, a directory's dir tags), comma separated. It reads the whole listing in one
-// EntryTags call, on local panels and fileindex:// panels alike; other schemes show no tags.
-// It is offered only while the index opens (Available).
+// TagsProvider returns the column provider showing each entry's fileindex tags (a file's
+// instance tags, a directory's dir tags), comma separated.
 func (x *Index) TagsProvider() *metacmds.Provider {
-	return &metacmds.Provider{
-		Name:        TagsColumn,
-		Column:      "Tags",
-		Section:     "Fileindex",
-		Order:       config.FileIndexTagsColumnOrder,
-		Available:   x.Available,
-		Values: func(ctx context.Context, dir string, entries []localfs.Entry) (map[string]string, error) {
-			loc, err := pathloc.Parse(dir)
-			if err != nil || loc.Scheme() == pathloc.SchemeSFTP || len(entries) == 0 {
-				return nil, nil
-			}
-			host, err := indexPath(loc)
-			if err != nil {
-				return nil, nil
-			}
-			d, err := x.DB()
-			if err != nil {
-				return nil, nil
-			}
-			if ctx.Err() != nil {
-				return nil, ctx.Err()
-			}
-			names := make([]string, len(entries))
-			for i, e := range entries {
-				names[i] = e.Name
-			}
+	return x.provider(TagsColumn, "Tags", config.FileIndexTagsColumnOrder,
+		func(d *db.DB, host string, names []string) (map[string]string, error) {
 			tags, err := d.EntryTags(host, names)
 			if err != nil {
 				return nil, err
 			}
 			out := make(map[string]string, len(tags))
-			for _, e := range entries {
-				if t := tags[e.Name]; len(t) > 0 {
-					out[e.Path] = strings.Join(t, ", ")
-				}
+			for n, t := range tags {
+				out[n] = strings.Join(t, ", ")
 			}
 			return out, nil
-		},
-	}
+		})
 }
 
 // ParseTags splits a typed tag list on commas and whitespace, dropping empties and repeats.

@@ -79,17 +79,24 @@ In an index view:
 - Git status, disk usage and folder colours are not available, as on
   [SFTP](sftp.md) panels.
 
-## Tags
+## Columns
 
-Tags are shown by the **fileindex tags** column. A panel with no meta columns
-switches it on when it enters an index view and off again when it leaves
-(`[fileindex] default_columns` in [config.toml](config.md) picks those
-columns). Switch it on or off per panel from the meta-column picker
-(`panel.meta`, see [Meta columns](meta-columns.md)), where it is **Tags** in the
-**Fileindex** section, shown only while the index database exists and opens.
-It works on local panels and in index views, and lists a file's or a
-directory's tags, comma separated. It can be sorted and filtered like any meta
-column.
+The index adds columns to the meta-column picker (`panel.meta`, see
+[Meta columns](meta-columns.md)), in its **Fileindex** section, listed only
+while the index database exists and opens. They work on local panels and in
+index views, and sort and filter like any meta column:
+
+| Column | Name | Shows |
+|---|---|---|
+| **Tags** | `fileindex.tags` | a file's or a directory's tags, comma separated |
+| **Last seen** | `fileindex.last-seen` | when a scan last saw the file or directory, in local time |
+
+A panel with no meta columns switches on the columns in
+`[fileindex] default_columns` ([config.toml](config.md); the tags column by
+default) when it enters an index view, and switches them off again when it
+leaves.
+
+## Tags
 
 `fileindex.tag-add` and `fileindex.tag-remove` open a prompt for the
 selection, else the entry under the cursor, else the current directory. Type

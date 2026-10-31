@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 
@@ -38,7 +39,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
-	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/oplog"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -726,7 +726,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Model:     &app.model,
 		Config:    cfg,
 		ConfigDir: resolvedPaths.ConfigDir,
-		Providers: []*metacmds.Provider{app.fileIndex.TagsProvider()},
+		Providers: app.fileIndex.Providers(),
 	})
 	app.commandsCtrl = commandsctrl.New(commandsctrl.Deps{
 		Host:                    commandsHost{appShellHost: appShellHost{app: app}},

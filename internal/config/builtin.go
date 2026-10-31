@@ -425,9 +425,13 @@ const (
 	FileIndexScanBatchFiles = 200
 	// FileIndexTagsColumn is the meta entry name of the fileindex tags column provider.
 	FileIndexTagsColumn = "fileindex.tags"
+	// FileIndexLastSeenColumn is the meta entry name of the fileindex last-seen column provider.
+	FileIndexLastSeenColumn = "fileindex.last-seen"
 	// FileIndexTagsColumnOrder is the meta order of the fileindex tags column: after meta.toml
 	// entries (order 0 unless set), so built-in columns sit right of the user's own.
 	FileIndexTagsColumnOrder = 1000
+	// FileIndexLastSeenColumnOrder puts the last-seen column right of the tags column.
+	FileIndexLastSeenColumnOrder = 1001
 	// FileIndexMaxWarnings caps the warning lines a scan or prune job keeps (per-file errors and
 	// pruning log lines); the rest are counted in one final line.
 	FileIndexMaxWarnings = 200

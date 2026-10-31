@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/fileindex/db"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -447,5 +449,33 @@ func TestAvailableIsQuiet(t *testing.T) {
 	}
 	if !testIndex(t, initIndex(t)).Available() {
 		t.Fatal("initialised index reported unavailable")
+	}
+}
+
+func TestLastSeenColumn(t *testing.T) {
+	x, root := scanned(t)
+	values := func(dir string, es ...localfs.Entry) map[string]string {
+		t.Helper()
+		v, err := x.LastSeenProvider().Values(context.Background(), dir, es)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	harbor := localfs.Entry{Name: "harbor.txt", Path: filepath.Join(root, "harbor.txt"), Type: localfs.EntryFile}
+	lantern := localfs.Entry{Name: "lantern", Path: filepath.Join(root, "lantern"), Type: localfs.EntryDirectory}
+	pebble := localfs.Entry{Name: "pebble.txt", Path: filepath.Join(root, "pebble.txt"), Type: localfs.EntryFile}
+	v := values(root, harbor, lantern, pebble)
+	today := time.Now().Format("2006-01-02")
+	for _, e := range []localfs.Entry{harbor, lantern} {
+		if !strings.HasPrefix(v[e.Path], today) || len(v[e.Path]) != len("2006-01-02 15:04") {
+			t.Fatalf("%s last seen = %q, want today to the minute", e.Name, v[e.Path])
+		}
+	}
+	if _, ok := v[pebble.Path]; ok {
+		t.Fatal("an unindexed file has a last-seen value")
+	}
+	if got := formatTimestamp("not a time"); got != "not a time" {
+		t.Fatalf("unparsed timestamp = %q", got)
 	}
 }
