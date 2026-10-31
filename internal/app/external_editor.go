@@ -117,6 +117,11 @@ func (a *App) resolveLocalEditFilePath() (string, error) {
 	if _, ok := p.Path.HostPath(); !ok {
 		return "", errors.New(pathloc.Unavailable("edit", p.Path))
 	}
+	if entry, ok := p.CurrentEntry(); ok {
+		if msg := panel.GhostRefusal(p.GhostSources(entry.Path)); msg != "" {
+			return "", errors.New(msg)
+		}
+	}
 	path, mode := a.editTargetFilePath(p)
 	switch mode {
 	case editTargetNone:

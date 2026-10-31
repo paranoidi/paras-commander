@@ -53,6 +53,8 @@ type Host interface {
 	OpenFullscreenFilePreviewAt(path string, isDir bool) error
 	// ToggleFileIndexMenu opens or closes the fileindex menu strip (app-owned leader-menu chrome).
 	ToggleFileIndexMenu()
+	// ReloadPanel re-reads the panel's listing (the overlay is applied or dropped by it).
+	ReloadPanel(panelID int)
 }
 
 // Deps wires the fileindex handler at app construction.
@@ -114,6 +116,8 @@ type NavigatePayload struct {
 	Dir     string
 	Select  string
 	Err     error
+	// WithIndex turns the browse-with-fileindex overlay on for the panel before it navigates.
+	WithIndex bool
 }
 
 // Dispatch runs a fileindex.* action; it reports false for any other action id.
@@ -129,8 +133,10 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.withIndex(func() { h.OpenTagDialog(false) })
 	case keymap.ActionFileIndexTagRemove:
 		h.withIndex(func() { h.OpenTagDialog(true) })
-	case keymap.ActionFileIndexOpen:
-		h.withIndex(h.Open)
+	case keymap.ActionFileIndexBrowseWith:
+		h.withIndex(h.BrowseWith)
+	case keymap.ActionFileIndexBrowse:
+		h.withIndex(h.Browse)
 	case keymap.ActionFileIndexReveal:
 		h.Reveal()
 	default:
@@ -302,8 +308,30 @@ func (h *Handler) HandleTags(p TagsPayload) {
 	h.host.RefreshMetaColumns()
 }
 
-// Open shows the active panel's directory in fileindex://, keeping the cursor entry.
-func (h *Handler) Open() {
+// BrowseWith toggles "browse with fileindex" on the active panel: the real directory with the
+// index merged in (state icons, ghost rows for index-only entries). On a fileindex:// panel it
+// goes to the real location with the overlay on.
+func (h *Handler) BrowseWith() {
+	if !h.localOrIndex() {
+		return
+	}
+	p := h.host.ActivePanel()
+	if p.Path.Scheme() == pathloc.SchemeFileIndex {
+		h.reveal(true)
+		return
+	}
+	p.WithIndex = !p.WithIndex
+	h.host.ReloadPanel(h.model.ActivePanel)
+	msg := "Browse with fileindex off"
+	if p.WithIndex {
+		msg = "Browse with fileindex on"
+	}
+	h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
+}
+
+// Browse shows the active panel's directory in fileindex://, keeping the cursor entry; on a
+// fileindex:// panel it goes back to the real location.
+func (h *Handler) Browse() {
 	p := h.host.ActivePanel()
 	if p.Path.Scheme() == pathloc.SchemeFileIndex {
 		h.Reveal() // toggle back to the real location
@@ -331,7 +359,10 @@ func (h *Handler) Open() {
 
 // Reveal shows the cursor entry of a fileindex:// panel at its real location (its parent
 // directory on disk, the entry highlighted), or the panel's own directory with no entry.
-func (h *Handler) Reveal() {
+func (h *Handler) Reveal() { h.reveal(false) }
+
+// reveal is Reveal; withIndex also turns the browse-with-fileindex overlay on for the target.
+func (h *Handler) reveal(withIndex bool) {
 	p := h.host.ActivePanel()
 	if p.Path.Scheme() != pathloc.SchemeFileIndex {
 		h.host.SetTransientMessage("Reveal works on fileindex:// panels", ui.MessageUrgencyWarn)
@@ -356,15 +387,18 @@ func (h *Handler) Reveal() {
 		if errors.Is(err, fs.ErrNotExist) {
 			err = fmt.Errorf("%s is not on disk", host)
 		}
-		h.post(NavigatePayload{PanelID: panelID, Dir: dir, Select: sel, Err: err})
+		h.post(NavigatePayload{PanelID: panelID, Dir: dir, Select: sel, Err: err, WithIndex: withIndex})
 	}()
 }
 
-// HandleNavigate applies an Open or Reveal once its target was checked.
+// HandleNavigate applies a Browse or Reveal once its target was checked.
 func (h *Handler) HandleNavigate(p NavigatePayload) {
 	if p.Err != nil {
 		h.host.SetErrorMessage(messageTitle, p.Err)
 		return
+	}
+	if p.WithIndex {
+		h.host.PanelByID(p.PanelID).WithIndex = true
 	}
 	if err := h.host.NavigatePanelToPath(p.PanelID, p.Dir, p.Select); err != nil {
 		h.host.SetErrorMessage(messageTitle, err)

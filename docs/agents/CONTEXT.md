@@ -93,6 +93,13 @@ Recursive name search under a panel's directory, backed by a background index.
 A panel showing the fileindex database as a filesystem (`fileindex://` + a host path): entries the index recorded, including files gone from disk; renames and deletes there change only the index.
 _Avoid_: index panel, database view
 
+**Browse with fileindex**:
+A local panel (`State.WithIndex`) whose listing has the index merged in: each row carries an `IndexStatus` shown as an icon in the git strip, and entries only the index knows appear as ghost rows. Contrast with the index view, which replaces the filesystem.
+_Avoid_: index overlay mode
+
+**Ghost row**:
+A row of a browse-with-fileindex panel for an entry recorded in the index but gone from disk. Its path is a `fileindex://` path, so delete removes it from the index; copy, move, view and edit refuse it.
+
 **Remote panel**:
 A panel browsing an `sftp://` location.
 

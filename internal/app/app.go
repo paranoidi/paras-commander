@@ -346,6 +346,7 @@ type App struct {
 	// ui.QuickViewOverlayPanel / ui.DedupBrowsePanel).
 	panelAsyncLoadGen [ui.PanelIDCount]atomic.Uint64
 	gitStatusLoadGen  [ui.PanelIDCount]atomic.Uint64
+	indexDrift        indexDriftState
 	// dedupBrowseOn / dedupBrowseFP track the dedup Dirs-view browse panel (dedup_browse.go).
 	dedupBrowseOn bool
 	dedupBrowseFP [2]string
@@ -722,7 +723,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	// fileindex:// directory sizes come from the index, not a disk walk.
 	app.disk.engine.SetSubtreeSizer(pathloc.FileIndexPrefix, app.fileIndex.SubtreeSize)
-	app.fileIndex.OnChange = app.disk.engine.ForgetSized
 	app.metaCtrl = metactrl.New(metactrl.Deps{
 		Host:      metaHost{appShellHost: appShellHost{app: app}},
 		Screen:    screen,
@@ -824,6 +824,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	app.wireAsyncPanelLoaders()
 	app.wireTreeChildLoaders()
 	app.wireGitStatusLoaders()
+	app.wireIndexOverlay()
 	app.model.Primary.RescheduleGitStatusIfNeeded()
 	app.model.Secondary.RescheduleGitStatusIfNeeded()
 	app.jobsCtrl.SyncJobPathMarks()
@@ -1251,6 +1252,9 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		}
 		a.render()
 		return eventOutcome{didRender: true}, true
+	}
+	if out, ok := a.handleIndexOverlayPayload(data); ok {
+		return out, true
 	}
 	if a.fileindexCtrl.HandleWake(data) {
 		a.render()

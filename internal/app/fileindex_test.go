@@ -22,7 +22,8 @@ import (
 )
 
 var fileIndexActions = []string{
-	keymap.ActionFileIndexOpen,
+	keymap.ActionFileIndexBrowseWith,
+	keymap.ActionFileIndexBrowse,
 	keymap.ActionFileIndexReveal,
 	keymap.ActionFileIndexTagAdd,
 	keymap.ActionFileIndexTagRemove,
@@ -205,7 +206,7 @@ func TestFileIndexOpenAndReveal(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	cursorTo(t, a, "meadow.txt")
 
-	a.dispatch(keymap.ActionFileIndexOpen)
+	a.dispatch(keymap.ActionFileIndexBrowse)
 	want := "fileindex://" + dir
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
 		p := a.activePanel()
@@ -295,7 +296,7 @@ func TestFileIndexMissingIndexAsksToCreate(t *testing.T) {
 	}
 
 	// No: nothing is created and the action does not run.
-	a.dispatch(keymap.ActionFileIndexOpen)
+	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, initPrompt)
 	if a.model.FileDialog.Message != dbPath {
 		t.Fatalf("prompt path = %q, want %q", a.model.FileDialog.Message, dbPath)
@@ -332,7 +333,7 @@ func TestFileIndexMissingIndexAsksToCreate(t *testing.T) {
 func TestFileIndexHostPathFeatures(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	cursorTo(t, a, "meadow.txt")
-	a.dispatch(keymap.ActionFileIndexOpen)
+	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
 		p := a.activePanel()
 		return p.Path.Scheme() == pathloc.SchemeFileIndex && !p.ListingPending
@@ -421,7 +422,7 @@ func TestFileIndexMenuScanLabel(t *testing.T) {
 // openIndexFind browses the app's directory through fileindex:// and opens the find dialog there.
 func openIndexFind(t *testing.T, a *App, screen tcell.SimulationScreen, dir string) {
 	t.Helper()
-	a.dispatch(keymap.ActionFileIndexOpen)
+	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
 		p := a.activePanel()
 		return p.PathString() == "fileindex://"+dir && !p.ListingPending
@@ -580,7 +581,7 @@ func TestIndexFindSearchOnlySelectionsAndHiddenDepth(t *testing.T) {
 	if _, err := d.CommitScanBatch([]db.ScannedFile{{Dir: sub, Name: "thistle.txt", Size: 1, Mtime: time.Now(), MD5: sum, SHA256: sum + sum}}); err != nil {
 		t.Fatal(err)
 	}
-	a.dispatch(keymap.ActionFileIndexOpen)
+	a.dispatch(keymap.ActionFileIndexBrowse)
 	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
 		p := a.activePanel()
 		return p.PathString() == "fileindex://"+dir && !p.ListingPending
@@ -628,5 +629,130 @@ func TestFileIndexDirSizeFromIndex(t *testing.T) {
 	})
 	if n, _ := a.disk.engine.FileCount(entry.Path); n != 2 {
 		t.Fatalf("file count = %d, want 2", n)
+	}
+}
+
+// browseWith turns the overlay on for the active panel and waits for its listing.
+func browseWith(t *testing.T, a *App, screen tcell.SimulationScreen) {
+	t.Helper()
+	a.dispatch(keymap.ActionFileIndexBrowseWith)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		p := a.activePanel()
+		return p.WithIndex && !p.ListingPending && p.Path.IsLocal()
+	})
+}
+
+func entryStatus(a *App, name string) (string, bool) {
+	for _, e := range a.activePanel().Entries {
+		if e.Name == name {
+			return e.IndexStatus, true
+		}
+	}
+	return "", false
+}
+
+func TestFileIndexBrowseWithOverlayAndToggle(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	if err := os.Remove(filepath.Join(dir, "meadow.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "willow.txt"), []byte("fresh"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a.dispatch(keymap.ActionPanelRefresh)
+	browseWith(t, a, screen)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		_, ok := entryStatus(a, "meadow.txt")
+		return ok
+	})
+	if st, _ := entryStatus(a, "meadow.txt"); st != "missing" {
+		t.Fatalf("meadow.txt (gone from disk) = %q, want a missing ghost row", st)
+	}
+	if st, _ := entryStatus(a, "willow.txt"); st != "new" {
+		t.Fatalf("willow.txt (not indexed) = %q, want new", st)
+	}
+	if a.activePanel().GitColumnActive {
+		t.Fatal("the index strip replaces git status while WithIndex is on")
+	}
+
+	// The mode survives navigation to another local directory.
+	sub := filepath.Join(dir, "lantern")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.activePanel().Load(sub); err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		p := a.activePanel()
+		return p.PathString() == sub && !p.ListingPending
+	})
+	if !a.activePanel().WithIndex {
+		t.Fatal("WithIndex must persist across chdir")
+	}
+
+	// Toggling off drops the overlay (and the ghost rows with it).
+	a.dispatch(keymap.ActionFileIndexBrowseWith)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.activePanel().WithIndex })
+}
+
+func TestFileIndexBrowseWithRefusesSFTP(t *testing.T) {
+	a, screen, _, _ := fileIndexApp(t)
+	a.activePanel().Path = pathloc.MustParse("sftp://paras@example.invalid/srv")
+	a.dispatch(keymap.ActionFileIndexBrowseWith)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message != "" })
+	if a.activePanel().WithIndex {
+		t.Fatal("browse-with must not turn on for an sftp panel")
+	}
+	if !strings.Contains(a.model.Message, "local paths only") {
+		t.Fatalf("message = %q", a.model.Message)
+	}
+}
+
+func TestFileIndexGhostRowRefusesCopyAndDeletesFromIndex(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	if err := os.Remove(filepath.Join(dir, "meadow.txt")); err != nil {
+		t.Fatal(err)
+	}
+	a.dispatch(keymap.ActionPanelRefresh)
+	browseWith(t, a, screen)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		_, ok := entryStatus(a, "meadow.txt")
+		return ok
+	})
+	cursorTo(t, a, "meadow.txt")
+
+	a.dispatch(keymap.ActionCopy)
+	if a.model.TransferDialog.Open {
+		t.Fatal("copy of a ghost row must be refused")
+	}
+	if !strings.Contains(a.model.Message, "Only in the index: meadow.txt") {
+		t.Fatalf("message = %q", a.model.Message)
+	}
+
+	// Delete a local file together with the ghost row: each path goes to its own backend.
+	p := a.activePanel()
+	p.SelectedPaths = map[string]bool{
+		filepath.Join(dir, "harbor.txt"):                           true,
+		pathloc.FileIndexPrefix + filepath.Join(dir, "meadow.txt"): true,
+	}
+	dispatchFileOp(t, a, keymap.ActionFileDelete)
+	if a.model.FileDialog.Open {
+		if !strings.Contains(a.model.FileDialog.Note, "removed from the index") {
+			t.Fatalf("delete note = %q, want the ghost note", a.model.FileDialog.Note)
+		}
+		a.dialogCtrl.ExecuteDelete()
+	}
+	d, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		_, found, _ := d.FileInfo(filepath.Join(dir, "meadow.txt"))
+		_, onDisk := os.Stat(filepath.Join(dir, "harbor.txt"))
+		return !found && onDisk != nil
+	})
+	if _, found, _ := d.FileInfo(filepath.Join(dir, "harbor.txt")); !found {
+		t.Fatal("deleting a real file must leave its index entry for prune, not touch it")
 	}
 }

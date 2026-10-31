@@ -264,7 +264,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, rect.Y,
 			titlePath, display.UserHomeDir,
 			panelTitleStyles{Path: titleStyle, End: endStyle, Border: borderStyle},
-			endLabel, volumeDecorated)
+			endLabel, volumeDecorated, indexTitlePrefix(state, panelStyle.Styles))
 	}
 
 	visibleRows := PanelListRows(rect)
@@ -315,7 +315,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		}
 	}
 	if showGit {
-		paintGitHeader(screen, gitStart, headerY, headerStyle, panelStyle.Styles)
+		paintGitHeader(screen, gitStart, headerY, headerStyle, panelStyle.Styles, state.WithIndex)
 	}
 	if display.ShowIcons && state.ListLayout != panel.ListLayoutTree {
 		paintPanelIconStripBlank(screen, iconStart, headerY, headerStyle)
@@ -658,7 +658,10 @@ func drawPanelRowGitStrip(screen tcell.Screen, p panelRowParams, rp panelRowPain
 	if gitUnderUsage {
 		gitUsageAccent = p.PanelStyle.Styles.DiskUsageBarStyle(p.Ctx.FileListActive, rp.EntryIndex == p.State.Cursor, rp.Selected)
 	}
-	if rp.HasEntry {
+	if rp.HasEntry && p.State.WithIndex {
+		paintIndexColumn(screen, p.GitStart, rp.Y, indexRowState(rp.Entry, p.Display.JobMarks), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor)
+		paintGitRowTrailingGap(screen, p.GitStart, rp.Y, gitStyle)
+	} else if rp.HasEntry {
 		paintGitColumn(screen, p.GitStart, rp.Y, panelGitCell(rp.Entry, p.State.GitByPath), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, gitUnderUsage, gitUsageAccent)
 		paintGitRowTrailingGap(screen, p.GitStart, rp.Y, gitStyle)
 	} else {
@@ -812,10 +815,19 @@ type panelTitleStyles struct {
 	Path, End, Border tcell.Style
 }
 
+// indexTitlePrefix is the fileindex icon ahead of the title path while the panel browses with
+// fileindex ("" otherwise, and without Nerd Font icons).
+func indexTitlePrefix(state panel.State, styles theme.Theme) string {
+	if icon := styles.IconFileIndex(); state.WithIndex && icon != "" {
+		return icon + " "
+	}
+	return ""
+}
+
 // paintPanelTopTitleRow paints the panel top border path on the start and an optional end label
 // (volume overview with decorative dashes, or a plain title-styled suffix such as a filename).
 func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols, y int,
-	panelPath, userHomeDir string, ts panelTitleStyles, endLabel string, volumeDecorated bool) {
+	panelPath, userHomeDir string, ts panelTitleStyles, endLabel string, volumeDecorated bool, pathPrefix string) {
 	endRunes := utf8.RuneCountInString(endLabel)
 	// Plain end labels (filename / QV dir basename) leave one frame-dash before the corner;
 	// volume labels already include a trailer " ─".
@@ -827,11 +839,11 @@ func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols,
 	showEnd := slots.ShowEnd
 	endStartX := slots.EndStartX
 	pathSlotCols := slots.PathSlotCols
-	pathMax := pathSlotCols - 2
+	pathMax := pathSlotCols - 2 - utf8.RuneCountInString(pathPrefix)
 	if pathMax < 0 {
 		pathMax = 0
 	}
-	left := " " + PanelTitlePath(panelPath, userHomeDir, pathMax) + " "
+	left := " " + pathPrefix + PanelTitlePath(panelPath, userHomeDir, pathMax) + " "
 	primitive.TextOverlay(screen, titleX, y, pathSlotCols, left, ts.Path)
 	if !showEnd {
 		return

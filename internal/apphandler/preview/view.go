@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -415,6 +416,10 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 	}
 	if mode != quickViewWantFile && mode != quickViewWantEmpty {
 		h.host.SetTransientMessage("View: select a file", ui.MessageUrgencyWarn)
+		return
+	}
+	if msg := panel.GhostRefusal(h.host.ActivePanel().GhostSources(path)); msg != "" {
+		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
 		return
 	}
 	if err := h.OpenFullscreenFilePreviewAt(path, false); err != nil {

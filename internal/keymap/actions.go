@@ -215,13 +215,14 @@ const (
 	ActionRemoteSFTPLink = "remote.sftp-link"
 
 	// fileindex (the built-in index feature, internal/apphandler/fileindex)
-	ActionFileIndexMenu      = "fileindex.menu"
-	ActionFileIndexScan      = "fileindex.scan"
-	ActionFileIndexPrune     = "fileindex.prune"
-	ActionFileIndexTagAdd    = "fileindex.tag-add"
-	ActionFileIndexTagRemove = "fileindex.tag-remove"
-	ActionFileIndexOpen      = "fileindex.open"
-	ActionFileIndexReveal    = "fileindex.reveal"
+	ActionFileIndexMenu       = "fileindex.menu"
+	ActionFileIndexScan       = "fileindex.scan"
+	ActionFileIndexPrune      = "fileindex.prune"
+	ActionFileIndexTagAdd     = "fileindex.tag-add"
+	ActionFileIndexTagRemove  = "fileindex.tag-remove"
+	ActionFileIndexBrowse     = "fileindex.browse"
+	ActionFileIndexBrowseWith = "fileindex.browse-with"
+	ActionFileIndexReveal     = "fileindex.reveal"
 
 	// Jobs dialog
 	ActionJobsOpen          = "jobs.open"
@@ -543,13 +544,14 @@ var KnownActions = map[string]struct{}{
 
 	ActionRemoteSFTPLink: {},
 
-	ActionFileIndexMenu:      {},
-	ActionFileIndexScan:      {},
-	ActionFileIndexPrune:     {},
-	ActionFileIndexTagAdd:    {},
-	ActionFileIndexTagRemove: {},
-	ActionFileIndexOpen:      {},
-	ActionFileIndexReveal:    {},
+	ActionFileIndexMenu:       {},
+	ActionFileIndexScan:       {},
+	ActionFileIndexPrune:      {},
+	ActionFileIndexTagAdd:     {},
+	ActionFileIndexTagRemove:  {},
+	ActionFileIndexBrowse:     {},
+	ActionFileIndexBrowseWith: {},
+	ActionFileIndexReveal:     {},
 
 	ActionMenuFileChattr: {},
 

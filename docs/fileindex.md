@@ -36,16 +36,65 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 
 | Key | Menu | Action | |
 |---|---|---|---|
-| `Alt+Shift+I` | `i` | `fileindex.open` | Toggle: show the current directory in the index, or from the index go to the real location |
+| `Alt+Shift+I` | `i` | `fileindex.browse-with` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
+| `Alt+Shift+B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
 | `Alt+Shift+R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
 | `Alt+Shift+S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
 | `Alt+Shift+P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
 | `Alt+Shift+T` | `t` | `fileindex.tag-add` | Add tags |
 | `Alt+Shift+U` | `u` | `fileindex.tag-remove` | Remove tags |
 
+## Browsing with fileindex
+
+`fileindex.browse-with` turns **Browse with fileindex** on or off for the active
+panel. The panel stays a normal local panel (real paths, every file operation
+works on the disk), and the index is merged into it:
+
+- The git status column is replaced by one icon per row saying how the entry
+  relates to the index. The column header and the panel title show the
+  fileindex icon. In a git repository the git column is not shown while the
+  mode is on.
+- Entries the index recorded but that are gone from disk appear as extra
+  **ghost rows** (icon `missing`), with their indexed size and modification
+  time.
+
+The mode stays on while you navigate to other local directories and turns off
+when the panel leaves local paths (SFTP; on an SFTP panel the action says
+fileindex covers local paths only). On a `fileindex://` panel the action goes to
+the real location with the mode on. Scans, prunes, tag edits and index
+removals refresh the panel.
+
+| State | Meaning |
+|---|---|
+| `indexed` | In the index, the same size and modification time (files) |
+| `changed` | A file whose size or modification time differs from the index |
+| `new` | On disk but not in the index |
+| `missing` | Only in the index (ghost row) |
+| `excluded` | Not in the index, and the scan rules in fileindex's `config.ini` (`exclude_dirs`, `exclude_files`, file patterns) skip it |
+| `scanning` | A scan or prune task job is working on the row |
+| `differs` | An indexed directory with something different below it: a new, resized or missing file |
+| `tagged` | Indexed and carrying tags |
+
+When several apply, the first of: scanning, missing, changed, excluded, new,
+differs, tagged, indexed. The `differs` state comes from a background walk of each indexed
+directory in the listing and appears a moment after the listing (flat
+layout only; it compares sizes, not modification times). The glyphs are under
+`[icons.fileindex_state]` and the colors under `[panel.fileindex]` in the
+theme; without Nerd Font icons a letter is shown instead.
+
+On a ghost row:
+
+- **Delete** removes it from the index only (the delete dialog says so). A
+  selection mixing ghost rows and real entries deletes the real ones from disk
+  and the ghost rows from the index.
+- **Copy, move, view and edit** are refused with "Only in the index: name":
+  there is no file to read.
+
+`fileindex.status` shows the same words as the overlay in its column.
+
 ## Browsing the index
 
-`fileindex.open` shows the current directory as `fileindex:///path/to/dir`,
+`fileindex.browse` shows the current directory as `fileindex:///path/to/dir`,
 with the same entry under the cursor; on an index panel it does what
 `fileindex.reveal` does, so the one shortcut toggles. Navigation then works as usual: history,
 bookmarks and the path picker accept `fileindex://` paths too. The index root is
@@ -130,7 +179,7 @@ index views, and sort and filter like any meta column:
 
 | Column | Name | Shows |
 |---|---|---|
-| **Status** | `fileindex.status` | how the entry compares with the index: `indexed` (a file with the same size and modification time as when scanned, or a known directory), `changed` (a file whose size or modification time differs), `new` (not in the index, including files the scan rules exclude) or `missing` (in an index view, gone from disk) |
+| **Status** | `fileindex.status` | how the entry compares with the index: `indexed` (a file with the same size and modification time as when scanned, or a known directory), `changed` (a file whose size or modification time differs), `new` (not in the index), `excluded` (not in the index and skipped by the scan rules) or `missing` (in an index view, gone from disk) |
 | **Tags** | `fileindex.tags` | a file's or a directory's tags, comma separated |
 | **Copies** | `fileindex.copies` | how many indexed files have the same content, this one included; JPEGs compare their metadata-free hash, as [find duplicates](find-duplicates.md) does |
 | **First seen** | `fileindex.first-seen` | when the file or directory was first indexed at this path, in local time |

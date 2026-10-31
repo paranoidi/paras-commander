@@ -141,6 +141,16 @@ not_modified = { fg = "bright_black", bold = true }
 renamed = { fg = "yellow" }
 typechange = { fg = "magenta" }
 
+[panel.fileindex]             # "browse with fileindex" state icon colors (replace git status)
+indexed = { fg = "bright_black" }
+changed = { fg = "yellow" }
+new = { fg = "green" }
+missing = { fg = "red" }
+excluded = { fg = "bright_black" }
+scanning = { fg = "cyan", bold = true }
+differs = { fg = "yellow", bold = true }
+tagged = { fg = "magenta" }
+
 [panel.scrollbar]             # scrollbar track/thumb colors
 track = { fg = "bright_black" }
 thumb = { fg = "white" }
@@ -344,6 +354,16 @@ pin = "\U000F0403"
 # U+F06D1 (nf-md-eye_off_outline); use 8-digit escape — \uf06d1 is U+F06D + "1"
 hidden_dotfiles = "\U000F06D1"
 fileindex = "\uf1c0"   # nf-fa-database: shown instead of "fileindex" in fileindex:// paths
+
+[icons.fileindex_state]   # one cell per row while browsing with fileindex; 8-digit escapes
+indexed = "\U000F0AA9"    # nf-md-database_check: in the index, unchanged
+changed = "\U000F0B86"    # nf-md-database_edit: size or mtime differs from the index
+new = "\U000F01BB"        # nf-md-database_minus: on disk, not in the index
+missing = "\U000F01BA"    # nf-md-database_plus: in the index only (ghost row)
+excluded = "\U000F1640"   # nf-md-database_off: not indexed, skipped by the scan rules
+scanning = "\U000F0CFF"   # nf-md-database_sync: a scan or prune job works on it
+differs = "\U000F163A"    # nf-md-database_alert: indexed directory with differences below
+tagged = "\U000F12F6"     # nf-md-database_marker: indexed and tagged
 
 [icons.dialog]
 info = "\uf05a"

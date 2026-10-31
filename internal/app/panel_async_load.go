@@ -47,9 +47,11 @@ func (q *coalescingQueue[T]) drain() []T {
 
 // asyncWakeQueues is per-App storage for the listing/git/carousel coalescing queues.
 type asyncWakeQueues struct {
-	panel    [ui.PanelIDCount]coalescingQueue[panelAsyncLoadPayload]
-	git      coalescingQueue[gitStatusPayload]
-	carousel [ui.PanelIDCount]coalescingQueue[carouselSnapshotPayload]
+	panel [ui.PanelIDCount]coalescingQueue[panelAsyncLoadPayload]
+	git   coalescingQueue[gitStatusPayload]
+	// indexDrift holds fileindex directory-drift results (index_overlay.go).
+	indexDrift coalescingQueue[indexDriftPayload]
+	carousel   [ui.PanelIDCount]coalescingQueue[carouselSnapshotPayload]
 }
 
 func asyncWakes(a *App) *asyncWakeQueues {

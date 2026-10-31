@@ -42,7 +42,7 @@ A style is a table with `fg`, `bg` and flags such as `bold`; colors are palette 
 | Section | Styles |
 |---|---|
 | `[palette]` | The 16 named colors the rest of the file refers to |
-| `[panel.*]` | Active, inactive and blocked (dimmed under dialogs) panel chrome; rows, marks, folder icons, git status, scrollbar, disk usage |
+| `[panel.*]` | Active, inactive and blocked (dimmed under dialogs) panel chrome; rows, marks, folder icons, git status, fileindex states (`[panel.fileindex]`, glyphs in `[icons.fileindex_state]`), scrollbar, disk usage |
 | `[menu.*]` | Menu bar, pulldowns, status commands (`menu.status`, `menu.status.separator`), job strip, progress bar, speed pill |
 | `[dialog.*]` | Dialog frame, buttons, inputs, options, progress |
 | `[jobs.*]`, `[compare]`, `terminal.text` | Jobs view, compare view, embedded terminal |

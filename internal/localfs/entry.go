@@ -38,7 +38,23 @@ type Entry struct {
 	// AccessDenied is derived from the listing Lstat (no re-stat at paint time), same
 	// rationale as Dev above.
 	AccessDenied bool
+	// IndexStatus is the fileindex state of the row (an IndexStatus* value), set only on
+	// listings of a panel browsing with the fileindex overlay; "" elsewhere.
+	IndexStatus string
 }
+
+// Fileindex states a row can carry in Entry.IndexStatus. The fileindex.status column shows the
+// same words; scanning is never stored, the renderer derives it from the row's task-job mark.
+const (
+	IndexStatusIndexed  = "indexed"  // in the index and, for a file, the same size and mtime on disk
+	IndexStatusChanged  = "changed"  // a file whose size or mtime on disk differs from the index
+	IndexStatusNew      = "new"      // on disk but not in the index
+	IndexStatusMissing  = "missing"  // in the index but gone from disk (a ghost row)
+	IndexStatusExcluded = "excluded" // on disk, not in the index, and the scan rules skip it
+	IndexStatusTagged   = "tagged"   // indexed and carrying tags
+	IndexStatusDiffers  = "differs"  // an indexed directory whose subtree differs from the index
+	IndexStatusScanning = "scanning" // render-only: a scan or prune task job works on the row
+)
 
 // ListOptions controls directory listing behavior.
 type ListOptions struct {

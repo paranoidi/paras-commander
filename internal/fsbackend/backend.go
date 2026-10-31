@@ -36,6 +36,8 @@ type Entry struct {
 	// AccessDenied carries a permission fact captured at listing time (local backend only;
 	// see localfs.Entry).
 	AccessDenied bool
+	// IndexStatus is localfs.Entry.IndexStatus: the fileindex overlay's state for the row.
+	IndexStatus string
 }
 
 // CreateOpts controls OpenWrite behavior (phase 2+).

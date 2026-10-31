@@ -32,7 +32,15 @@ func (h fileindexHost) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
 
 func (h fileindexHost) ToggleFileIndexMenu() { h.app.toggleFileIndexMenu() }
 
+func (h fileindexHost) ReloadPanel(panelID int) {
+	if err := h.app.panelByID(panelID).Refresh(h.app.panelViewportRows(panelID)); err != nil {
+		h.app.setErrorMessage("Refresh failed", err)
+	}
+}
+
 func (h fileindexHost) RefreshMetaColumns() {
+	h.app.reloadIndexPanels() // a tag edit changes the tagged state
+
 	h.app.metaCtrl.RefreshPanel(ui.PrimaryPanel)
 	h.app.metaCtrl.RefreshPanel(ui.SecondaryPanel)
 }

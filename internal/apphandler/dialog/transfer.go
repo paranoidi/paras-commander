@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -58,6 +59,12 @@ func TransferPrefilledDestination(path string) dialog.FileDialogField {
 
 func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 	passive := h.host.InactivePanel()
+	if source, err := ops.ResolveSource(h.host.ActivePanel()); err == nil {
+		if msg := panel.GhostRefusal(h.host.ActivePanel().GhostSources(ops.SourcePaths(source)...)); msg != "" {
+			h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
+			return
+		}
+	}
 	st := dialog.TransferDialogState{
 		Open:        true,
 		Kind:        kind,

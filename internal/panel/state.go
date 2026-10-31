@@ -251,6 +251,14 @@ type State struct {
 	OnAsyncLoadPending func()
 	// ScheduleGitStatus runs git status for the current listing off the UI thread (set by app).
 	ScheduleGitStatus GitStatusScheduler
+	// WithIndex is "browse with fileindex": the local listing carries the fileindex overlay
+	// (IndexStatus per row, ghost rows) and the git strip shows index states instead of git
+	// status. It persists across navigation and clears when the listing is not local.
+	WithIndex bool
+	// IndexOverlay merges the index into a WithIndex listing during the fetch (set by app).
+	IndexOverlay IndexOverlayFunc
+	// ScheduleIndexDrift runs the directory-drift pass after a WithIndex listing lands (set by app).
+	ScheduleIndexDrift IndexDriftScheduler
 	// ScheduleTreeChildLoad runs a tree-mode directory's first-expand child listing off the UI
 	// thread (set by app; nil = synchronous fallback, see setTreeNodeExpanded).
 	ScheduleTreeChildLoad TreeChildLoadScheduler
@@ -1568,6 +1576,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	s.listingApplied = true
 	s.Path = listingLoc
 	if !listingLoc.IsLocal() {
+		s.WithIndex = false
 		s.GitignoreActive = false
 		s.GitColumnActive = false
 		s.GitPending = false
@@ -1687,6 +1696,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 			s.HistoryIndex = 0
 		}
 	}
+	s.scheduleIndexDrift()
 	if s.OnDirectoryChange != nil {
 		s.OnDirectoryChange()
 	}
@@ -1705,6 +1715,12 @@ func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entr
 	}
 	host, err := listingLoc.FilePath()
 	if err != nil {
+		s.GitColumnActive = false
+		s.GitPending = false
+		s.GitByPath = nil
+		return
+	}
+	if s.WithIndex { // the strip shows index states, so no git query
 		s.GitColumnActive = false
 		s.GitPending = false
 		s.GitByPath = nil

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/paranoidi/fileindex/db"
+	"github.com/paranoidi/fileindex/scan"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
@@ -29,12 +30,15 @@ const (
 	HashColumn      = "fileindex.hash"
 )
 
-// Index status values shown by the status column.
+// Index status values shown by the status column and the browse-with overlay (localfs.IndexStatus*).
 const (
-	StatusIndexed = "indexed" // in the index and, for a file, the same size and mtime on disk
-	StatusChanged = "changed" // a file whose size or mtime on disk differs from the index
-	StatusNew     = "new"     // on disk but not in the index
-	StatusMissing = "missing" // in the index but gone from disk
+	StatusIndexed  = localfs.IndexStatusIndexed
+	StatusChanged  = localfs.IndexStatusChanged
+	StatusNew      = localfs.IndexStatusNew
+	StatusMissing  = localfs.IndexStatusMissing
+	StatusExcluded = localfs.IndexStatusExcluded
+	StatusTagged   = localfs.IndexStatusTagged
+	StatusDiffers  = localfs.IndexStatusDiffers
 )
 
 // hashCells is how many hex digits the hash column shows.
@@ -52,7 +56,7 @@ func (x *Index) Providers() []*metacmds.Provider {
 		name, title string
 		values      columnValues
 	}{
-		{StatusColumn, "Status", statusValues},
+		{StatusColumn, "Status", x.statusValues},
 		{TagsColumn, "Tags", tagValues},
 		{CopiesColumn, "Copies", byName(copiesQuery, strconv.Itoa)},
 		{FirstSeenColumn, "First seen", byName(timestampQuery("created_at"), formatTimestamp)},
@@ -212,11 +216,19 @@ func treeFilesValues(_ context.Context, d *db.DB, host string, _ []localfs.Entry
 	return out, rows.Err()
 }
 
-// statusValues compares each entry with the index: a file by size and mtime, a directory by
-// whether the index has it. Entries of a local panel carry their disk state; entries of a
-// fileindex:// panel are stat'ed. Other entry types (symlinks, devices) get no status.
-// ponytail: files the scan rules in config.ini exclude show as new.
-func statusValues(ctx context.Context, d *db.DB, host string, entries []localfs.Entry, onDisk bool) (map[string]string, error) {
+// statusValues is entryStatuses with the scan rules from config.ini.
+// ponytail: an unreadable config.ini means no rules, so nothing shows as excluded.
+func (x *Index) statusValues(ctx context.Context, d *db.DB, host string, entries []localfs.Entry, onDisk bool) (map[string]string, error) {
+	rules, _, _ := x.scanSettings()
+	return entryStatuses(ctx, d, host, entries, onDisk, rules)
+}
+
+// entryStatuses compares each entry with the index: a file by size and mtime, a directory by
+// whether the index has it; an entry the index lacks that the scan rules skip is excluded.
+// Entries of a local panel carry their disk state; entries of a fileindex:// panel are stat'ed.
+// Other entry types (symlinks, devices) get no status. It is the one status source for the
+// status column and the browse-with overlay.
+func entryStatuses(ctx context.Context, d *db.DB, host string, entries []localfs.Entry, onDisk bool, rules scan.Rules) (map[string]string, error) {
 	files, err := d.DirFiles(host)
 	if err != nil {
 		return nil, err
@@ -254,6 +266,8 @@ func statusValues(ctx context.Context, d *db.DB, host string, entries []localfs.
 		case localfs.EntryFile:
 			r, ok := files[e.Name]
 			switch {
+			case !ok && !rules.IncludeFile(e.Name):
+				out[e.Name] = StatusExcluded
 			case !ok:
 				out[e.Name] = StatusNew
 			case r.Unchanged(size, mtime):
@@ -262,9 +276,12 @@ func statusValues(ctx context.Context, d *db.DB, host string, entries []localfs.
 				out[e.Name] = StatusChanged
 			}
 		case localfs.EntryDirectory:
-			if dirs[e.Name] {
+			switch {
+			case dirs[e.Name]:
 				out[e.Name] = StatusIndexed
-			} else {
+			case rules.ExcludeDir(e.Name):
+				out[e.Name] = StatusExcluded
+			default:
 				out[e.Name] = StatusNew
 			}
 		}

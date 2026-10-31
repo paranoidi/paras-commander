@@ -242,7 +242,7 @@ func (h *Handler) OpenDeleteDialog(panelID int) {
 		DeleteSummary: h.DeleteDialogSummary(p, source),
 		DeleteEntries: entries,
 		Focus:         dlg.Cancel, // No is the safe default
-		Note:          h.indexOnlyNote(p, deleteIndexNote),
+		Note:          h.deleteNote(p, ops.SourcePaths(source)),
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
 	h.model.FileDialog = fd
@@ -931,6 +931,18 @@ const (
 	renameIndexNote = "Renames in the fileindex only; files on disk are not touched."
 	deleteIndexNote = "Removes from the fileindex only; files on disk are not touched."
 )
+
+// deleteGhostNote is the delete dialog note when some rows exist only in the index (ghost rows).
+const deleteGhostNote = "Rows only in the fileindex are removed from the index; everything else is deleted from disk."
+
+// deleteNote is the delete dialog note: the index-only one on a fileindex:// panel, the ghost one
+// when a local panel's selection includes ghost rows.
+func (h *Handler) deleteNote(p *panel.State, paths []string) string {
+	if len(p.GhostSources(paths...)) > 0 {
+		return deleteGhostNote
+	}
+	return h.indexOnlyNote(p, deleteIndexNote)
+}
 
 // indexOnlyNote returns note when p's backend is index-only, else "".
 func (h *Handler) indexOnlyNote(p *panel.State, note string) string {

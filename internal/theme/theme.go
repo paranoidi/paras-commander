@@ -244,6 +244,9 @@ type Theme struct {
 	PanelGitIgnored     tcell.Style
 	PanelGitConflicted  tcell.Style
 
+	// PanelFileIndex styles the fileindex state icons ([panel.fileindex]) by state name.
+	PanelFileIndex map[string]tcell.Style
+
 	FuzzyInput           tcell.Style
 	FuzzyInputNomatch    tcell.Style
 	FuzzyHighlight       tcell.Style
@@ -1190,6 +1193,7 @@ var optionalStyleKeys = func() []string {
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing")
+	keys = append(keys, fileIndexStateStyleKeys()...)
 	return keys
 }()
 
@@ -1557,6 +1561,10 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	panelFileIndex, err := fileIndexStateStyles(specs, palette)
+	if err != nil {
+		return Theme{}, err
+	}
 	panelRowMarkRangeAnchor, err := optionalStyle(specs, palette, "panel.row.mark.range_anchor", tcell.StyleDefault.Foreground(tcell.ColorYellow))
 	if err != nil {
 		return Theme{}, err
@@ -1747,6 +1755,7 @@ func parse(data []byte) (Theme, error) {
 		PanelGitTypechange:  styles["panel.git.typechange"],
 		PanelGitIgnored:     styles["panel.git.ignored"],
 		PanelGitConflicted:  styles["panel.git.conflicted"],
+		PanelFileIndex:      panelFileIndex,
 
 		FuzzyInput:           styles["fuzzy.input"],
 		FuzzyInputNomatch:    styles["fuzzy.input.nomatch"],

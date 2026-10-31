@@ -144,6 +144,7 @@ func (dst *State) CloneListingFrom(src *State) {
 	dst.GitignoreActive = src.GitignoreActive
 	dst.DotfilesHiddenActive = src.DotfilesHiddenActive
 	dst.GitColumnActive = src.GitColumnActive
+	dst.WithIndex = src.WithIndex
 	dst.GitPending = src.GitPending
 	dst.GitByPath = src.GitByPath
 	dst.ListingPending = false
