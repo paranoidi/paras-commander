@@ -340,9 +340,9 @@ func (a *App) menuBarSpinnerVisible() bool {
 }
 
 // menuBarOtherActivity is every menu-bar spinner source other than file-operation jobs:
-// disk-usage scans, running commands, and directory loads.
+// disk-usage scans, running commands, directory loads, and fileindex database creates/upgrades.
 func (a *App) menuBarOtherActivity() bool {
-	return a.diskUsageScanBusy() || a.commandsCtrl.HasRunning() ||
+	return a.diskUsageScanBusy() || a.commandsCtrl.HasRunning() || a.fileindexCtrl.InitRunning() ||
 		a.model.Primary.ShowLoadingIcon || a.model.Secondary.ShowLoadingIcon
 }
 

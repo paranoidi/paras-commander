@@ -81,6 +81,8 @@ type Handler struct {
 	findTimer *time.Timer
 	// pendingInit is the action waiting on the open "create the database?" prompt (nil: none).
 	pendingInit func()
+	// initRunning is set while a confirmed create or upgrade runs (menu-bar spinner).
+	initRunning bool
 }
 
 // New constructs the handler and routes the index's one-time open failure to HandleReady.

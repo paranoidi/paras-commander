@@ -19,8 +19,8 @@ it was, and the next action asks again.
 
 A database from an older fileindex version gets the same kind of question:
 **Yes** upgrades it (what `fileindex init` does) and carries on. Upgrading
-rebuilds the search indexes and can take minutes on a large index; other
-fileindex work waits until it is done. A database from a newer fileindex
+rebuilds the search indexes and can take minutes on a large index; the menu-bar spinner
+turns while it runs, and other fileindex work waits until it is done. A database from a newer fileindex
 version is reported in the Messages log, and fileindex actions say so instead
 of running; it needs a newer pc.
 

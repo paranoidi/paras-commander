@@ -93,6 +93,7 @@ func (h *Handler) SubmitInit() {
 	upgrade := h.model.FileDialog.IndexUpgrade
 	h.pendingInit = nil
 	h.model.FileDialog = dialog.FileDialogState{}
+	h.initRunning = true
 	if upgrade {
 		h.host.SetTransientMessage("Upgrading fileindex database…", ui.MessageUrgencyInfo)
 	}
@@ -106,8 +107,12 @@ func (h *Handler) SubmitInit() {
 	}()
 }
 
+// InitRunning reports whether a confirmed create or upgrade of the database is still running.
+func (h *Handler) InitRunning() bool { return h.initRunning }
+
 // HandleInit reports the created database and runs the action that asked for it.
 func (h *Handler) HandleInit(p InitPayload) {
+	h.initRunning = false
 	if p.Err != nil {
 		h.host.SetErrorMessage(messageTitle, p.Err)
 		return
