@@ -65,6 +65,27 @@ func Wheel(spec Spec, screenW, screenH int, focus *ID, x, y, delta int) (Event, 
 	return listMove(it, it.landOnRow(next, delta)), true
 }
 
+// Hover applies pointer motion at (x, y): over a list row other than the cursor row, the list
+// cursor follows the pointer and the result is the EventListMove onto that row (the one Click
+// returns). Focus moves to the list (or its driving input) as for a click, except that it never
+// leaves an input, so motion does not interrupt typing. A CenterScroll list does not follow,
+// since recentering it would scroll the rows under a still pointer. ok is false when the cursor
+// does not move: off a list, on a ScrollOnly list, a Header row or a row past the last.
+func Hover(spec Spec, screenW, screenH int, focus *ID, x, y int) (Event, bool) {
+	pi, it, ok := hit(spec, screenW, screenH, x, y)
+	if !ok || pi.Kind != KindList || it.ScrollOnly || it.CenterScroll {
+		return Event{}, false
+	}
+	row := pi.Offset + (y - pi.Rect.Y)
+	if row >= it.rowCount() || row == it.cursorRow() || it.row(row).Header {
+		return Event{}, false
+	}
+	if cur, ok := spec.Item(Focused(spec, *focus)); !ok || cur.Kind != KindInput {
+		*focus = listFocus(spec, it)
+	}
+	return listMove(it, row), true
+}
+
 // hit places spec and returns the placed widget under (x, y) and its spec item (zero for a button).
 func hit(spec Spec, screenW, screenH, x, y int) (PlacedItem, Item, bool) {
 	p, placed := Place(screenW, screenH, spec)

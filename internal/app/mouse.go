@@ -200,6 +200,29 @@ func (a *App) menuBarHover() ui.MenuHover {
 	return ui.MenuHover{Active: ok, Index: index}
 }
 
+// followDialogListPointer moves the top-most dlg dialog's list cursor onto the row under (x, y)
+// (dlg.Hover) through the dialog's own event function, as a click on the row would. moved
+// reports whether the cursor moved; quit whether applying it quit the app.
+func (a *App) followDialogListPointer(x, y int) (quit, moved bool) {
+	if !a.mouseGoesToDialog() {
+		return false, false
+	}
+	d, ok := a.activeDialog(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if !ok {
+		return false, false
+	}
+	spec, fit := d.spec()
+	if !fit {
+		return false, false
+	}
+	w, h := a.screen.Size()
+	ev, ok := dlg.Hover(spec, w, h, d.focus, x, y)
+	if !ok {
+		return false, false
+	}
+	return d.apply(ev), true
+}
+
 // selectPulldownItemUnderPointer moves the open pulldown's selection onto the item under (x, y)
 // (not the frame or a separator) and reports whether it moved.
 func (a *App) selectPulldownItemUnderPointer(layout ui.Layout, x, y int) bool {
@@ -294,6 +317,11 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		}
 		// Each one updates its own state, so all of them run before deciding to render.
 		moved := a.selectPulldownItemUnderPointer(layout, x, y)
+		listQuit, listMoved := a.followDialogListPointer(x, y)
+		if listQuit {
+			return true, false
+		}
+		moved = moved || listMoved
 		hovers := a.refreshPointerHovers()
 		if title := a.updatePanelTitleHover(layout, x, y); moved || hovers || title {
 			a.render()

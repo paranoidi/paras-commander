@@ -526,3 +526,43 @@ func TestDrawListMarkers(t *testing.T) {
 		t.Errorf("unused row style = %v, want the dialog surface", st)
 	}
 }
+
+func TestListHoverFollowsPointer(t *testing.T) {
+	spec := listOnlySpec(listItem(3, 1, 0, 6))
+	it, _ := mustPlace(t, spec).Item("hosts")
+	focus := ID(OK)
+	if ev, ok := Hover(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+2); !ok || ev != (Event{ID: "hosts", Kind: EventListMove, Index: 2}) || focus != "hosts" {
+		t.Errorf("hover row 2: (%+v, %v), focus %q, want the move and focus on the list", ev, ok, focus)
+	}
+	if ev, ok := Hover(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+1); ok {
+		t.Errorf("hover on the cursor row: (%+v, %v), want no move", ev, ok)
+	}
+	if ev, ok := Hover(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+4); ok {
+		t.Errorf("hover past the last row: (%+v, %v), want a miss", ev, ok)
+	}
+	centered := listItem(3, 1, 0, 6)
+	centered.CenterScroll = true
+	cspec := listOnlySpec(centered)
+	cit, _ := mustPlace(t, cspec).Item("hosts")
+	if ev, ok := Hover(cspec, 80, 24, &focus, cit.Rect.X+1, cit.Rect.Y+2); ok {
+		t.Errorf("hover on a CenterScroll list: (%+v, %v), want no move", ev, ok)
+	}
+	headed := listItem(3, 0, 0, 6)
+	headed.Rows[2].Header = true
+	hspec := listOnlySpec(headed)
+	hit, _ := mustPlace(t, hspec).Item("hosts")
+	if ev, ok := Hover(hspec, 80, 24, &focus, hit.Rect.X+1, hit.Rect.Y+2); ok {
+		t.Errorf("hover on a header row: (%+v, %v), want no move", ev, ok)
+	}
+}
+
+func TestListHoverKeepsInputFocus(t *testing.T) {
+	spec := listSpec(listItem(3, 0, 0, 6))
+	it, _ := mustPlace(t, spec).Item("hosts")
+	for _, start := range []ID{"filter", "where"} {
+		focus := start
+		if ev, ok := Hover(spec, 80, 24, &focus, it.Rect.X+1, it.Rect.Y+2); !ok || ev.Index != 2 || focus != start {
+			t.Errorf("focus %q: (%+v, %v), focus now %q, want the move and focus kept", start, ev, ok, focus)
+		}
+	}
+}

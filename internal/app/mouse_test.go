@@ -731,3 +731,19 @@ func TestMouseStatusCommandsClickClosesMenu(t *testing.T) {
 		t.Fatalf("menu open=%v dialog open=%v want closed/open", app.model.Menu.Open, app.model.StatusCommandsDialog.Open)
 	}
 }
+
+func TestMouseDialogListFollowsPointer(t *testing.T) {
+	app := sftpKeyApp(t, t.TempDir(), 12)
+	st := &app.model.SFTPConnectDialog
+	focus := st.Focus
+	x, y := screenTextCell(t, app, listGoldenWords[2])
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("moving onto another row must render")
+	}
+	if st.Selected != 2 || st.Focus != focus {
+		t.Fatalf("hover: selected=%d focus=%q want 2 / %q", st.Selected, st.Focus, focus)
+	}
+	if _, rendered := app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone)); rendered {
+		t.Fatal("motion within the same row must not render")
+	}
+}
