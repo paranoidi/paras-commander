@@ -21,10 +21,10 @@ import (
 var fileIndexActions = []string{
 	keymap.ActionFileIndexOpen,
 	keymap.ActionFileIndexReveal,
-	keymap.ActionFileIndexScan,
-	keymap.ActionFileIndexPrune,
 	keymap.ActionFileIndexTagAdd,
 	keymap.ActionFileIndexTagRemove,
+	keymap.ActionFileIndexScan,
+	keymap.ActionFileIndexPrune,
 }
 
 func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
@@ -46,8 +46,12 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 
 	// The fileindex menu lists every action under the lowercase letter of its default chord, and
 	// every fileindex chord is Alt+Shift+letter.
-	var inMenu []string
+	var inMenu, groups []string
 	for _, e := range a.keys.FileIndexMenuEntries() {
+		if e.GroupTitle != "" {
+			groups = append(groups, e.GroupTitle)
+			continue
+		}
 		inMenu = append(inMenu, e.ActionID)
 		ch, err := keymap.ParseKey(a.keys.Global.MenuBindingLabel(e.ActionID))
 		if err != nil {
@@ -59,6 +63,9 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 	}
 	if !slices.Equal(inMenu, fileIndexActions) {
 		t.Fatalf("fileindex menu = %v, want %v", inMenu, fileIndexActions)
+	}
+	if want := []string{"Browse", "Tagging", "Actions"}; !slices.Equal(groups, want) {
+		t.Fatalf("fileindex menu groups = %v, want %v", groups, want)
 	}
 
 	// The `:` leader menu reaches the fileindex menu, not the actions themselves.
@@ -342,5 +349,36 @@ func TestFileIndexHostPathFeatures(t *testing.T) {
 	gone := filepath.Join(dir, "willow", "birch")
 	if got := existingHostDir(gone); got != dir {
 		t.Fatalf("existingHostDir(%q) = %q, want %q", gone, got, dir)
+	}
+}
+
+// The fileindex menu dims the browse action for the side the active panel is already on.
+func TestFileIndexMenuDimsCurrentBrowseSide(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	dimmed := func() map[string]bool {
+		out := map[string]bool{}
+		for _, it := range a.model.LeaderMenu.Items {
+			if it.GroupTitle == "" && it.Disabled {
+				out[it.Label] = true
+			}
+		}
+		return out
+	}
+	for _, tc := range []struct {
+		dir, want string
+	}{
+		{"/srv/orchard", "Browse filesystem"},
+		{"fileindex:///srv/orchard", "Browse index"},
+	} {
+		p, err := pathloc.Parse(tc.dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		a.activePanel().Path = p
+		a.toggleFileIndexMenu()
+		if got := dimmed(); len(got) != 1 || !got[tc.want] {
+			t.Errorf("%s: dimmed = %v, want only %q", tc.dir, got, tc.want)
+		}
+		a.closeLeaderMenu()
 	}
 }

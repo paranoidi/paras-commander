@@ -5,14 +5,14 @@ import (
 	"unicode"
 )
 
-// fileIndexMenuActionOrder is the fileindex menu's row order.
-var fileIndexMenuActionOrder = []string{
-	ActionFileIndexOpen,
-	ActionFileIndexReveal,
-	ActionFileIndexScan,
-	ActionFileIndexPrune,
-	ActionFileIndexTagAdd,
-	ActionFileIndexTagRemove,
+// fileIndexMenuGroups is the fileindex menu's grouped layout: one macro column per group, in order.
+var fileIndexMenuGroups = []struct {
+	title   string
+	actions []string
+}{
+	{"Browse", []string{ActionFileIndexOpen, ActionFileIndexReveal}},
+	{"Tagging", []string{ActionFileIndexTagAdd, ActionFileIndexTagRemove}},
+	{"Actions", []string{ActionFileIndexScan, ActionFileIndexPrune}},
 }
 
 // DefaultFileIndexMenuKeys returns built-in default fileindex-menu letters per action. Each is
@@ -31,16 +31,27 @@ func validateFileIndexMenuKeys(keys map[string]string) error {
 	return validateMenuKeys(FileIndexMenuShortcutsTable, keys, unicode.IsLetter, "a letter")
 }
 
-// FileIndexMenuEntries returns the fileindex menu rows from the bundle's merged keys.
+// FileIndexMenuEntries returns the fileindex menu rows from the bundle's merged keys, grouped
+// under a header per column; a group with no bound actions is omitted.
 func (b *Bundle) FileIndexMenuEntries() []LeaderMenuEntry {
 	if b == nil {
 		return nil
 	}
 	var out []LeaderMenuEntry
-	for _, id := range fileIndexMenuActionOrder {
-		if key, ok := parseMenuKeyRune(b.FileIndexMenuKey, id); ok {
-			out = append(out, LeaderMenuEntry{ActionID: id, Key: key, Label: actionSpecTitle(id)})
+	col := 0
+	for _, g := range fileIndexMenuGroups {
+		var rows []LeaderMenuEntry
+		for _, id := range g.actions {
+			if key, ok := parseMenuKeyRune(b.FileIndexMenuKey, id); ok {
+				rows = append(rows, LeaderMenuEntry{GroupColumn: col, ActionID: id, Key: key, Label: actionSpecTitle(id)})
+			}
 		}
+		if len(rows) == 0 {
+			continue
+		}
+		out = append(out, LeaderMenuEntry{GroupTitle: g.title, GroupColumn: col})
+		out = append(out, rows...)
+		col++
 	}
 	return out
 }

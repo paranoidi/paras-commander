@@ -1327,7 +1327,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:               ActionFileIndexOpen,
 			Views:            HelpBrowser,
-			Title:            "Go to index",
+			Title:            "Browse index",
 			Section:          "fileindex",
 			DefaultKeys:      []string{"M-I"},
 			PreferredKey:     "M-I",
@@ -1337,7 +1337,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:               ActionFileIndexReveal,
 			Views:            HelpBrowser,
-			Title:            "Jump to disk",
+			Title:            "Browse filesystem",
 			Section:          "fileindex",
 			DefaultKeys:      []string{"M-R"},
 			PreferredKey:     "M-R",
