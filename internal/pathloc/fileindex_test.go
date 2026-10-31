@@ -49,3 +49,25 @@ func TestFileIndexPathRules(t *testing.T) {
 		t.Fatal("HasURIPrefix")
 	}
 }
+
+func TestHostPath(t *testing.T) {
+	tests := []struct {
+		raw  string
+		want string
+		ok   bool
+	}{
+		{"/orchard/lantern/meadow.txt", "/orchard/lantern/meadow.txt", true},
+		{"fileindex:///orchard/lantern/meadow.txt", "/orchard/lantern/meadow.txt", true},
+		{"fileindex:///", "/", true},
+		{"sftp://harbor/orchard", "", false},
+	}
+	for _, tc := range tests {
+		got, ok := MustParse(tc.raw).HostPath()
+		if got != tc.want || ok != tc.ok {
+			t.Errorf("HostPath(%q) = %q, %v; want %q, %v", tc.raw, got, ok, tc.want, tc.ok)
+		}
+	}
+	if got, ok := (Path{}).HostPath(); ok {
+		t.Errorf("zero Path HostPath = %q, true", got)
+	}
+}

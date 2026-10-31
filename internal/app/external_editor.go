@@ -114,7 +114,7 @@ func (a *App) resolveLocalEditFilePath() (string, error) {
 		return "", fmt.Errorf("edit is only available in the file browser")
 	}
 	p := a.activePanel()
-	if !p.Path.IsLocal() {
+	if _, ok := p.Path.HostPath(); !ok {
 		return "", errors.New(pathloc.Unavailable("edit", p.Path))
 	}
 	path, mode := a.editTargetFilePath(p)
@@ -147,7 +147,7 @@ func (a *App) editTargetFilePath(p *panel.State) (path string, mode editTargetMo
 		if !ok {
 			return "", editTargetNone
 		}
-		return classifyEditPath(filepath.Clean(selPath))
+		return classifyEditPath(cleanHostPath(selPath))
 	}
 	entry, ok := p.CurrentEntry()
 	if !ok {
@@ -156,7 +156,16 @@ func (a *App) editTargetFilePath(p *panel.State) (path string, mode editTargetMo
 	if entry.Type == localfs.EntryDirectory {
 		return "", editTargetDir
 	}
-	return classifyEditPath(filepath.Clean(entry.Path))
+	return classifyEditPath(cleanHostPath(entry.Path))
+}
+
+// cleanHostPath is the cleaned real local path of a panel entry path, "" when it has none.
+func cleanHostPath(raw string) string {
+	host, ok := hostPathOf(raw)
+	if !ok {
+		return ""
+	}
+	return filepath.Clean(host)
 }
 
 func classifyEditPath(path string) (string, editTargetMode) {

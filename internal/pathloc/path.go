@@ -219,6 +219,25 @@ func (p Path) FilePath() (string, error) {
 	return p.s, nil
 }
 
+// HostPath returns the real local path loc names: a file:// path itself, a fileindex:// path's
+// indexed host path. SFTP has none.
+func (p Path) HostPath() (string, bool) {
+	if p.IsZero() {
+		return "", false
+	}
+	var host string
+	var err error
+	switch p.Scheme() {
+	case SchemeFile:
+		host, err = p.FilePath()
+	case SchemeFileIndex:
+		host, err = IndexHostPath(p)
+	default:
+		return "", false
+	}
+	return host, err == nil
+}
+
 // FilePathMust returns FilePath or panics.
 func (p Path) FilePathMust() string {
 	s, err := p.FilePath()

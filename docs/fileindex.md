@@ -66,8 +66,14 @@ In an index view:
   the index only. The delete dialog says so.
 - **New directories, copies into the index, and moves out of it** are
   refused: the index is read-only for new content.
-- Git status, disk usage, folder colours, the shell, the terminal panel and
-  the external editor are not available, as on [SFTP](sftp.md) panels.
+- **Edit**, **run** (Enter on an executable), **drop to shell**, **send paths
+  to shell** and the **terminal panel** work on the real files and
+  directories the entries name. Edits change the real file; the index picks
+  the change up on the next scan. When an indexed directory is gone from
+  disk, the shell and terminal panel start in its nearest existing parent.
+  The panel does not follow the shell's directory back into the index view.
+- Git status, disk usage and folder colours are not available, as on
+  [SFTP](sftp.md) panels.
 
 ## Tags
 

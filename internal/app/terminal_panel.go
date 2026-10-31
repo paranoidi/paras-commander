@@ -109,7 +109,7 @@ func (a *App) openTerminalPanel(focus bool) {
 		a.setTransientMessage("Terminal panel requires the persistent shell", ui.MessageUrgencyWarn)
 		return
 	}
-	if !a.activePanel().Path.IsLocal() {
+	if _, ok := a.activePanel().Path.HostPath(); !ok {
 		a.setTransientMessage(pathloc.Unavailable("Terminal panel", a.activePanel().Path), ui.MessageUrgencyWarn)
 		return
 	}

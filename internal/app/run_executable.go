@@ -22,7 +22,7 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 	if a.model.ViewMode != ui.ViewBrowser || !a.config.Panels.RunExecutablesOnEnter {
 		return "", false
 	}
-	if !p.Path.IsLocal() {
+	if _, ok := p.Path.HostPath(); !ok {
 		return "", false
 	}
 
@@ -33,7 +33,7 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 		if !ok {
 			return "", false
 		}
-		path, mode = classifyEditPath(filepath.Clean(selPath))
+		path, mode = classifyEditPath(cleanHostPath(selPath))
 	} else {
 		entry, ok := p.CurrentEntry()
 		if !ok {
@@ -42,7 +42,7 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 		if entry.Type == localfs.EntryDirectory {
 			return "", false
 		}
-		path = filepath.Clean(entry.Path)
+		path = cleanHostPath(entry.Path)
 		runnable, err := localfs.PathLooksRunnable(path)
 		if err != nil || !runnable {
 			return "", false
@@ -105,7 +105,7 @@ func (a *App) runExecutableFromPanel(path string) {
 		return
 	}
 	p := a.activePanel()
-	if !p.Path.IsLocal() {
+	if _, ok := p.Path.HostPath(); !ok {
 		a.setTransientMessage(pathloc.Unavailable("Run", p.Path), ui.MessageUrgencyWarn)
 		return
 	}

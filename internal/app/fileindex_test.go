@@ -318,3 +318,29 @@ func TestFileIndexMissingIndexAsksToCreate(t *testing.T) {
 		t.Fatalf("view = %v", a.model.ViewMode)
 	}
 }
+
+func TestFileIndexHostPathFeatures(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	cursorTo(t, a, "meadow.txt")
+	a.dispatch(keymap.ActionFileIndexOpen)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		p := a.activePanel()
+		return p.Path.Scheme() == pathloc.SchemeFileIndex && !p.ListingPending
+	})
+	cursorTo(t, a, "meadow.txt")
+	want := filepath.Join(dir, "meadow.txt")
+
+	if got, err := a.resolveLocalEditFilePath(); err != nil || got != want {
+		t.Fatalf("edit path = %q, %v; want %q", got, err, want)
+	}
+	if got := shellInsertPathList(a.activePanel()); !slices.Equal(got, []string{want}) {
+		t.Fatalf("send paths = %v, want %v", got, want)
+	}
+	if got := a.localActivePanelDir(); got != dir {
+		t.Fatalf("panel dir = %q, want %q", got, dir)
+	}
+	gone := filepath.Join(dir, "willow", "birch")
+	if got := existingHostDir(gone); got != dir {
+		t.Fatalf("existingHostDir(%q) = %q, want %q", gone, got, dir)
+	}
+}

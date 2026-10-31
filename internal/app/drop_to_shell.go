@@ -32,14 +32,13 @@ func (a *App) dropToShell() {
 		return
 	}
 	p := a.activePanel()
-	if !p.Path.IsLocal() {
+	panelDir, ok := p.Path.HostPath()
+	if !ok {
 		a.setErrorMessage("Shell", errors.New(pathloc.Unavailable("shell", p.Path)))
 		return
 	}
-	panelDir, err := p.Path.FilePath()
-	if err != nil {
-		a.setErrorMessage("Shell", err)
-		return
+	if !p.Path.IsLocal() {
+		panelDir = existingHostDir(panelDir) // an indexed directory may be gone from disk
 	}
 	panelDir = strings.TrimSpace(panelDir)
 	if panelDir == "" || panelDir == "." {
@@ -224,7 +223,7 @@ func (a *App) shellInsertPaths() {
 		return
 	}
 	p := a.activePanel()
-	if !p.Path.IsLocal() {
+	if _, ok := p.Path.HostPath(); !ok {
 		a.setTransientMessage(pathloc.Unavailable("Send paths to shell", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
@@ -266,30 +265,39 @@ func (a *App) shellInsertPaths() {
 }
 
 // shellInsertPathList returns the sorted selected paths, or the focused entry, as absolute
-// cleaned paths. The parent (..) row yields nothing.
+// cleaned real local paths (a fileindex:// entry yields its host path). The parent (..) row
+// yields nothing.
 func shellInsertPathList(p *panel.State) []string {
-	return panelTargetPaths(p)
+	paths := panelTargetPaths(p)
+	out := paths[:0]
+	for _, s := range paths {
+		if host, ok := hostPathOf(s); ok {
+			out = append(out, host)
+		}
+	}
+	return out
 }
 
-// localActivePanelDir returns the active panel directory, or "" when it is remote or
-// unavailable (the persistent shell then keeps its current cwd).
+// localActivePanelDir returns the active panel's real directory, or "" when it is remote or
+// unavailable (the persistent shell then keeps its current cwd). A fileindex panel yields the
+// nearest existing ancestor of its indexed directory.
 func (a *App) localActivePanelDir() string {
 	p := a.activePanel()
-	if !p.Path.IsLocal() {
-		return ""
-	}
-	dir, err := p.Path.FilePath()
-	if err != nil {
+	dir, ok := p.Path.HostPath()
+	if !ok {
 		return ""
 	}
 	dir = strings.TrimSpace(dir)
 	if dir == "" || dir == "." {
 		return ""
 	}
-	if fi, statErr := os.Stat(dir); statErr != nil || !fi.IsDir() {
-		return ""
+	if p.Path.IsLocal() {
+		if fi, statErr := os.Stat(dir); statErr != nil || !fi.IsDir() {
+			return ""
+		}
+		return dir
 	}
-	return dir
+	return existingHostDir(dir)
 }
 
 // subshellChdirIfNeeded injects cd into the idle subshell when its cwd differs from dir.
