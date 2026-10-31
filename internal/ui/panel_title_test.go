@@ -70,3 +70,55 @@ func TestPanelTitlePathAbbreviatesURIPathOnly(t *testing.T) {
 		t.Fatalf("sftp title = %q", got)
 	}
 }
+
+func TestPanelTitleSegments(t *testing.T) {
+	home := "/home/plover"
+	type want struct {
+		text  string
+		depth int
+	}
+	tests := []struct {
+		name     string
+		path     string
+		maxRunes int
+		want     []want
+	}{
+		{"root", "/", 40, []want{{"/", 0}}},
+		{"absolute", "/srv/harbor/lantern", 40, []want{{"/", 3}, {"srv", 2}, {"harbor", 1}, {"lantern", 0}}},
+		{"home", "/home/plover", 40, []want{{"~", 0}}},
+		{"under home", "/home/plover/meadow/copper", 40, []want{{"~", 2}, {"meadow", 1}, {"copper", 0}}},
+		{"abbreviated", "/home/plover/meadow/copper", 10, []want{{"~", 2}, {"m", 1}, {"copper", 0}}},
+		{"truncated", "/home/plover/meadow/copperwillow", 12, []want{{"~", 2}, {"m", 1}, {"copperw", 0}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			const startX = 5
+			shown := PanelTitlePath(tc.path, home, tc.maxRunes)
+			segs := panelTitleSegments(tc.path, home, startX, tc.maxRunes)
+			if len(segs) != len(tc.want) {
+				t.Fatalf("segments of %q = %+v, want %d", shown, segs, len(tc.want))
+			}
+			for i, seg := range segs {
+				got := string([]rune(shown)[seg.X-startX : seg.X-startX+seg.Width])
+				if got != tc.want[i].text || seg.Depth != tc.want[i].depth {
+					t.Fatalf("segment %d of %q = %q depth %d, want %q depth %d", i, shown, got, seg.Depth, tc.want[i].text, tc.want[i].depth)
+				}
+			}
+		})
+	}
+}
+
+func TestPanelTitleSegmentsSkipDisplayPrefix(t *testing.T) {
+	primitive.SetPathDisplayPrefixes(map[string]string{"fileindex://": "# "})
+	t.Cleanup(func() { primitive.SetPathDisplayPrefixes(nil) })
+	segs := panelTitleSegments("fileindex:///srv/orchid", "", 0, 40)
+	want := []PanelTitleSegment{{X: 2, Width: 1, Depth: 2}, {X: 3, Width: 3, Depth: 1}, {X: 7, Width: 6, Depth: 0}}
+	if len(segs) != len(want) {
+		t.Fatalf("segments = %+v, want %+v", segs, want)
+	}
+	for i := range want {
+		if segs[i] != want[i] {
+			t.Fatalf("segments = %+v, want %+v", segs, want)
+		}
+	}
+}

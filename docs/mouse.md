@@ -13,6 +13,10 @@ In the file browser:
 | Double click on a row | Opens it, like Enter. |
 | Right click on a row | Focuses the panel, moves the cursor and toggles the row's selection. |
 | Wheel | Scrolls the panel under the pointer by a few rows. Focus does not change. |
+| Pointer over the path in a panel's top border | Inverts the colors of the path element under it (`~`, `/`, a directory name). |
+| Left click on a path element | Focuses the panel and opens that directory, with the cursor on the directory you came from. |
+
+The last path element is the panel's own directory: it is not highlighted and does nothing on click. A shortened element (`p` for `projects` in a narrow panel) opens the full directory it stands for. The path does not react while the panel's top border shows the quick filter or a quick-view directory.
 
 Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. While quick view or a file preview fills the inactive column, clicks and the wheel there are ignored.
 
@@ -49,6 +53,7 @@ Everything else ignores the mouse for now: the other panes of the jobs and comma
 
 ## Caveats
 
+- Mouse support asks the terminal for pointer motion reports (for the path highlight), not only clicks.
 - With mouse reporting on, the terminal no longer selects text on a plain drag. Hold Shift while dragging (or your terminal's own modifier) to select and copy text.
 - Inside tmux, mouse events only reach the application when tmux has mouse mode on: `set -g mouse on`.
 - The mouse is switched off while another program owns the terminal (external editor, drop to shell, the persistent subshell) and switched on again when you return.

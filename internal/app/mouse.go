@@ -36,16 +36,21 @@ func (m *mouseState) doubleClick(target string, row int) bool {
 	return double
 }
 
+// mouseEventMask is the reporting mode while mouse support is on: buttons plus all motion, for
+// the title path hover highlight.
+const mouseEventMask = tcell.MouseButtonEvents | tcell.MouseMotionEvents
+
 // applyMouseConfig switches terminal mouse reporting to match [ui].mouse.
 func (a *App) applyMouseConfig() {
 	switch {
 	case a.config.UI.Mouse && !a.mouse.enabled:
-		a.screen.EnableMouse(tcell.MouseButtonEvents)
+		a.screen.EnableMouse(mouseEventMask)
 		a.mouse.enabled = true
 	case !a.config.UI.Mouse && a.mouse.enabled:
 		a.screen.DisableMouse()
 		a.mouse.enabled = false
 		a.mouse.buttons = 0
+		a.clearPanelTitleHover()
 	}
 }
 
@@ -57,9 +62,10 @@ func (a *App) releaseMouse() (restore func()) {
 	}
 	a.screen.DisableMouse()
 	a.mouse.buttons = 0
+	a.clearPanelTitleHover()
 	return func() {
 		if a.config.UI.Mouse {
-			a.screen.EnableMouse(tcell.MouseButtonEvents)
+			a.screen.EnableMouse(mouseEventMask)
 		} else {
 			a.mouse.enabled = false
 		}
@@ -77,9 +83,10 @@ func wheelDelta(buttons tcell.ButtonMask, rows int) int {
 	return 0
 }
 
-// mouseHit locates a cell in the browser: the panel under it and, when it lies on an entry row,
-// the index of that entry (row < 0 otherwise). ok is false outside any clickable file panel.
-func (a *App) mouseHit(layout ui.Layout, x, y int) (panelID, row int, ok bool) {
+// mousePanelAt returns the browser panel whose column holds (x, y) and its file list frame. ok is
+// false outside both columns and on the inactive column while quick view or file preview paints
+// a preview there.
+func (a *App) mousePanelAt(layout ui.Layout, x, y int) (panelID int, file ui.Rect, ok bool) {
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
 		col, p := layout.Primary, &a.model.Primary
 		if id == ui.SecondaryPanel {
@@ -88,24 +95,69 @@ func (a *App) mouseHit(layout ui.Layout, x, y int) (panelID, row int, ok bool) {
 		if !col.Contains(x, y) {
 			continue
 		}
-		// The inactive column shows a preview while quick view or file preview is open.
 		if id != a.model.ActivePanel && (a.model.QuickViewDisplayActive() || a.model.FilePreviewDraw.Open) {
-			return 0, -1, false
+			return 0, ui.Rect{}, false
 		}
-		if p.CarouselMode {
-			// ponytail: carousel columns have their own row layout; clicks only focus the panel.
-			return id, -1, true
-		}
-		file := ui.FileListFrame(col, p, id, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(id, 0))
-		top := ui.PanelListTop(file)
-		if (ui.Rect{X: file.X, Y: top, Width: file.Width, Height: ui.PanelListRows(file)}).Contains(x, y) {
-			if idx := p.ScrollOffset + y - top; idx < p.VisibleEntryCount() {
-				return id, idx, true
-			}
-		}
+		return id, ui.FileListFrame(col, p, id, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(id, 0)), true
+	}
+	return 0, ui.Rect{}, false
+}
+
+// mouseHit locates a cell in the browser: the panel under it and, when it lies on an entry row,
+// the index of that entry (row < 0 otherwise). ok is false outside any clickable file panel.
+func (a *App) mouseHit(layout ui.Layout, x, y int) (panelID, row int, ok bool) {
+	id, file, ok := a.mousePanelAt(layout, x, y)
+	if !ok {
+		return 0, -1, false
+	}
+	p := a.panelByID(id)
+	if p.CarouselMode {
+		// ponytail: carousel columns have their own row layout; clicks only focus the panel.
 		return id, -1, true
 	}
-	return 0, -1, false
+	top := ui.PanelListTop(file)
+	if (ui.Rect{X: file.X, Y: top, Width: file.Width, Height: ui.PanelListRows(file)}).Contains(x, y) {
+		if idx := p.ScrollOffset + y - top; idx < p.VisibleEntryCount() {
+			return id, idx, true
+		}
+	}
+	return id, -1, true
+}
+
+// panelTitleHit returns the panel and the title path segment under (x, y) (ui.PanelTitleSegmentAt).
+func (a *App) panelTitleHit(layout ui.Layout, x, y int) (panelID int, seg ui.PanelTitleSegment, ok bool) {
+	id, file, ok := a.mousePanelAt(layout, x, y)
+	if !ok {
+		return 0, ui.PanelTitleSegment{}, false
+	}
+	seg, ok = ui.PanelTitleSegmentAt(file, &a.model, id, a.styles, x, y)
+	return id, seg, ok
+}
+
+// updatePanelTitleHover tracks the pointer for the title path highlight and reports whether the
+// highlighted segment changed (the caller then renders). Motion that keeps the same segment, or
+// none, under the pointer changes nothing visible and does not render.
+func (a *App) updatePanelTitleHover(layout ui.Layout, x, y int) bool {
+	prev := a.model.PanelTitleHover
+	var next ui.PanelTitleHover
+	var nextSeg ui.PanelTitleSegment
+	if a.inputMode() == InputModeNormal && a.model.ViewMode == ui.ViewBrowser {
+		if id, seg, ok := a.panelTitleHit(layout, x, y); ok {
+			next, nextSeg = ui.PanelTitleHover{Active: true, Panel: id, X: x}, seg
+		}
+	}
+	a.model.PanelTitleHover = next
+	if !prev.Active || !next.Active {
+		return prev.Active != next.Active
+	}
+	return prev.Panel != next.Panel || !nextSeg.Contains(prev.X)
+}
+
+// clearPanelTitleHover drops the title path highlight; it reports whether one was shown.
+func (a *App) clearPanelTitleHover() bool {
+	was := a.model.PanelTitleHover.Active
+	a.model.PanelTitleHover = ui.PanelTitleHover{}
+	return was
 }
 
 // focusPanelByMouse makes id the active panel with the file list focused.
@@ -131,16 +183,26 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	buttons := ev.Buttons()
 	pressed := buttons &^ a.mouse.buttons
 	a.mouse.buttons = buttons &^ (tcell.WheelUp | tcell.WheelDown | tcell.WheelLeft | tcell.WheelRight)
-	// Releases carry no new press and nothing reacts to them.
-	if pressed == 0 && wheelDelta(buttons, 1) == 0 || a.terminalPanelHasKeyFocus() {
+	if a.terminalPanelHasKeyFocus() {
 		return false, false
 	}
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
+	x, y := ev.Position()
+	// Motion and releases carry no new press: only the title path hover reacts to them.
+	if pressed == 0 && wheelDelta(buttons, 1) == 0 {
+		if layout.TooSmall {
+			return false, false
+		}
+		if a.updatePanelTitleHover(layout, x, y) {
+			a.render()
+			return false, true
+		}
+		return false, false
+	}
 	if layout.TooSmall {
 		return false, false
 	}
-	x, y := ev.Position()
 	if handled, quit, rendered := a.handleChromeMouse(layout, x, y, buttons, pressed); handled {
 		return quit, rendered
 	}
@@ -156,6 +218,15 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		}
 	default:
 		return a.handleDialogMouse(x, y, buttons, pressed)
+	}
+	if id, seg, ok := a.panelTitleHit(layout, x, y); ok && pressed&tcell.Button1 != 0 {
+		a.focusPanelByMouse(id)
+		if err := a.navigatePanelToAncestor(id, seg.Depth); err != nil {
+			a.setErrorMessage("Navigate failed", err)
+		}
+		a.updatePanelTitleHover(layout, x, y)
+		a.render()
+		return false, true
 	}
 	id, row, ok := a.mouseHit(layout, x, y)
 	if !ok {

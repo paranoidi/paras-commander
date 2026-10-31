@@ -520,3 +520,94 @@ func TestMouseDialogWheelScrollsScrollOnlyList(t *testing.T) {
 		t.Fatalf("wheel: scroll %d focus %q, want %d and focus kept", d.DeleteListScroll, d.Focus, config.MouseWheelRows)
 	}
 }
+
+// titleSegmentAt returns a cell on the title path segment depth levels above panel id's
+// directory, scanning the title row through ui.PanelTitleSegmentAt.
+func titleSegmentAt(t *testing.T, a *App, id, depth int) (int, int) {
+	t.Helper()
+	w, h := a.screen.Size()
+	lay := a.layoutForTerminalSize(w, h)
+	col := lay.Primary
+	if id == ui.SecondaryPanel {
+		col = lay.Secondary
+	}
+	_, file, ok := a.mousePanelAt(lay, col.X+1, col.Y+1)
+	if !ok {
+		t.Fatal("panel not under the pointer")
+	}
+	for x := file.X; x < file.X+file.Width; x++ {
+		if seg, ok := ui.PanelTitleSegmentAt(file, &a.model, id, a.styles, x, file.Y); ok && seg.Depth == depth {
+			return x, file.Y
+		}
+	}
+	t.Fatalf("no title segment at depth %d", depth)
+	return 0, 0
+}
+
+func TestMouseHoverInvertsTitleSegment(t *testing.T) {
+	app, _ := mouseTestApp(t)
+	x, y := titleSegmentAt(t, app, ui.PrimaryPanel, 1)
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("entering a title segment must render")
+	}
+	if h := app.model.PanelTitleHover; !h.Active || h.Panel != ui.PrimaryPanel || h.X != x {
+		t.Fatalf("hover = %+v", h)
+	}
+	_, style, _ := app.screen.Get(x, y)
+	if _, _, attrs := style.Decompose(); attrs&tcell.AttrReverse == 0 {
+		t.Fatal("hovered segment not inverted")
+	}
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); rendered {
+		t.Fatal("motion within the same segment must not render")
+	}
+	cx, cy := cellOf(t, app, ui.PrimaryPanel, 2)
+	if _, rendered := app.handleMouse(mouseEv(cx, cy, tcell.ButtonNone)); !rendered || app.model.PanelTitleHover.Active {
+		t.Fatalf("leaving the title must clear the hover and render (hover %+v)", app.model.PanelTitleHover)
+	}
+	_, style, _ = app.screen.Get(x, y)
+	if _, _, attrs := style.Decompose(); attrs&tcell.AttrReverse != 0 {
+		t.Fatal("segment still inverted after the pointer left")
+	}
+}
+
+func TestMouseClickTitleSegmentNavigatesToAncestor(t *testing.T) {
+	app, dir := mouseTestApp(t)
+	x, y := titleSegmentAt(t, app, ui.PrimaryPanel, 1)
+	click(app, x, y, tcell.Button1)
+	want := filepath.Dir(dir)
+	drainInterruptEventsUntil(t, app, app.screen.(tcell.SimulationScreen), 2*time.Second, func() bool {
+		return app.model.Primary.PathString() == want
+	})
+	if got := app.model.Primary.PathString(); got != want {
+		t.Fatalf("path = %q want %q", got, want)
+	}
+	if app.model.ActivePanel != ui.PrimaryPanel {
+		t.Fatalf("active = %d want primary", app.model.ActivePanel)
+	}
+	if e, ok := app.model.Primary.CurrentEntry(); !ok || e.Name != filepath.Base(dir) {
+		t.Fatalf("cursor entry = %+v, want %q", e, filepath.Base(dir))
+	}
+	if app.model.Secondary.PathString() != dir {
+		t.Fatal("other panel must not navigate")
+	}
+}
+
+func TestMouseTitleIgnoresPanelDirectory(t *testing.T) {
+	app, dir := mouseTestApp(t)
+	// The panel directory starts after the parent segment and its "/" separator.
+	px, y := titleSegmentAt(t, app, ui.PrimaryPanel, 1)
+	app.render()
+	x := -1
+	for cx := px; cx < px+100 && x < 0; cx++ {
+		if str, _, _ := app.screen.Get(cx, y); str == "/" {
+			x = cx + 1
+		}
+	}
+	if x < 0 {
+		t.Fatal("no separator after the parent segment")
+	}
+	click(app, x, y, tcell.Button1)
+	if app.model.PanelTitleHover.Active || app.model.Primary.PathString() != dir {
+		t.Fatalf("click on the panel directory acted: hover %+v path %q", app.model.PanelTitleHover, app.model.Primary.PathString())
+	}
+}

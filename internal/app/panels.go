@@ -416,6 +416,20 @@ func (a *App) navigatePanelToDirectory(panelID int, dirPath, selectedName string
 	return p.NavigateToPath(loc, selectedName, vr)
 }
 
+// navigatePanelToAncestor loads the directory depth levels above panelID's path, with the cursor
+// on the child it came from (as nav.parent does for one level).
+func (a *App) navigatePanelToAncestor(panelID, depth int) error {
+	p := a.panelByID(panelID)
+	child, loc := p.Path, p.Path
+	for range depth {
+		child, loc = loc, loc.Parent()
+	}
+	if loc.IsZero() || loc.Equal(child) {
+		return nil
+	}
+	return p.NavigateToPath(loc, child.Base(), a.panelViewportRows(panelID))
+}
+
 // disableSyncFollowIfEnabled turns off latched panel sync; returns whether it was on.
 func (a *App) disableSyncFollowIfEnabled() bool {
 	if !a.model.SyncFollowEnabled {

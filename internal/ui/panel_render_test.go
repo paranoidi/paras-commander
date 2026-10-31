@@ -159,10 +159,9 @@ func TestPaintPanelTopTitleRowEndLabelCases(t *testing.T) {
 			for col := 0; col < contentCols; col++ {
 				screen.SetContent(titleX+col, y, '─', nil, chrome.Frame)
 			}
-			paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, y,
-				path, home,
-				panelTitleStyles{Path: chrome.Title, End: chrome.Title, Border: chrome.Frame},
-				tt.endLabel, false, "")
+			row := newPanelTitleRow(Rect{Width: tt.width, Height: 4}, panel.State{}, theme.Default(), tt.endLabel)
+			paintPanelTopTitleRow(screen, row, y, path, home,
+				panelTitleStyles{Path: chrome.Title, End: chrome.Title, Border: chrome.Frame}, -1)
 			got := tcelltest.TextAt(screen, titleX, y, contentCols)
 			if tt.wantEnd {
 				if !strings.Contains(got, tt.endLabel) {

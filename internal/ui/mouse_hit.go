@@ -1,6 +1,9 @@
 package ui
 
-import "github.com/paranoidi/paras-commander/internal/ui/menu"
+import (
+	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
+)
 
 // MenuBarMenuAt returns the index of the top menu whose label is drawn at (x, y). It reuses the
 // menu bar's own label layout, so it is false wherever drawMenuBar shows no label.
@@ -49,4 +52,29 @@ func FooterKeyAt(layout Layout, model *Model, x, y int) (menu.FunctionKey, bool)
 		}
 	}
 	return menu.FunctionKey{}, false
+}
+
+// PanelTitleSegmentAt returns the path segment drawn at (x, y) in the title on the top border of
+// panelID's file list frame file. It reuses the title painter's layout (newPanelTitleRow), so it
+// is false wherever no segment is drawn, on the panel directory itself (depth 0), and while the
+// title shows the quick filter or a quick-view directory overlay.
+func PanelTitleSegmentAt(file Rect, model *Model, panelID int, styles theme.Theme, x, y int) (PanelTitleSegment, bool) {
+	if file.Width <= 0 || file.Height <= 0 || y != file.Y {
+		return PanelTitleSegment{}, false
+	}
+	state := model.PanelForFileListRender(panelID)
+	fileListActive := model.ActivePanel == panelID && model.renderSubFocus() == SubFocusFileList
+	if panelTitleShowsFilter(state, fileListActive) {
+		return PanelTitleSegment{}, false
+	}
+	if _, _, overlay := model.quickViewDirOverlayTitleChrome(panelID, state.PathString()); overlay {
+		return PanelTitleSegment{}, false
+	}
+	row := newPanelTitleRow(file, state, styles, "")
+	for _, seg := range row.segments(state.PathString(), model.UserHomeDir) {
+		if seg.Contains(x) {
+			return seg, seg.Depth > 0
+		}
+	}
+	return PanelTitleSegment{}, false
 }

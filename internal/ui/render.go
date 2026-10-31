@@ -202,6 +202,8 @@ type Model struct {
 	FolderColor func(path string) (tcell.Color, bool)
 	// UserHomeDir is filepath.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
 	UserHomeDir string
+	// PanelTitleHover is the mouse pointer on a browser panel's title row (set by App on motion).
+	PanelTitleHover PanelTitleHover
 	// CursorNameHintPinOutPrimary / CursorNameHintPinOutSecondary are set by App for one paint
 	// and point at live panel.State.CursorNameHintPinned fields (not the Model snapshot copy).
 	CursorNameHintPinOutPrimary   *string
@@ -514,6 +516,21 @@ func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (tit
 	return ownPath, endLabel, true
 }
 
+// PanelTitleHover is the mouse pointer on a browser panel's title row.
+type PanelTitleHover struct {
+	Active bool
+	Panel  int
+	X      int
+}
+
+// at returns whether the pointer is on panelID's title row and its column there.
+func (h PanelTitleHover) at(panelID int) (bool, int) {
+	if !h.Active || h.Panel != panelID {
+		return false, -1
+	}
+	return true, h.X
+}
+
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
 // styles because a menu or modal has taken focus. The leader menu (Esc built-in / F2 user menu)
 // on its own is excluded: it docks above the footer without taking over navigation context, so the
@@ -800,6 +817,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			panelCtx.TitlePath = titlePath
 			panelCtx.TitleEndLabel = endLabel
 		}
+		panelCtx.TitleHover, panelCtx.TitleHoverX = model.PanelTitleHover.at(side.PanelID)
 		otherNames, otherCursor, otherDir := otherPanelMatchNames(model, side.PanelID)
 		drawPanel(screen, side.FileRect, model.PanelForFileListRender(side.PanelID),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
