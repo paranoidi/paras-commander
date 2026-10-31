@@ -677,3 +677,28 @@ func TestMouseHoverHighlightsMenuTitle(t *testing.T) {
 		t.Fatalf("title style after leaving = %v want %v", got, plain)
 	}
 }
+
+func TestMouseHoverHighlightsPulldownItem(t *testing.T) {
+	app := tallMouseTestApp(t)
+	x, y := screenTextCell(t, app, " Left ")
+	click(app, x+2, y, tcell.Button1)
+	ix, iy := screenTextCell(t, app, "Sort...") // ix+1 is "o", past the mnemonic
+	selected := app.model.Menu.SelectedItem
+	plain := styleAt(app, ix+1, iy)
+	if _, rendered := app.handleMouse(mouseEv(ix+1, iy, tcell.ButtonNone)); !rendered {
+		t.Fatal("entering a pulldown item must render")
+	}
+	if got := styleAt(app, ix+1, iy); got != app.styles.MenuDropdownSelected {
+		t.Fatalf("hovered item style = %v want %v", got, app.styles.MenuDropdownSelected)
+	}
+	if app.model.Menu.SelectedItem != selected {
+		t.Fatalf("hover moved the selection to %d", app.model.Menu.SelectedItem)
+	}
+	if _, rendered := app.handleMouse(mouseEv(ix+2, iy, tcell.ButtonNone)); rendered {
+		t.Fatal("motion within the same item must not render")
+	}
+	app.handleMouse(mouseEv(90, 20, tcell.ButtonNone))
+	if got := styleAt(app, ix+1, iy); got != plain {
+		t.Fatalf("item style after leaving = %v want %v", got, plain)
+	}
+}

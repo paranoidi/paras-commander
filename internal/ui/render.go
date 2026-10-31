@@ -209,7 +209,10 @@ type Model struct {
 	DialogButtonHover dlg.ButtonHover
 	// MenuBarHover is the menu title under the mouse pointer (set by App each render), drawn in
 	// the open menu's title style.
-	MenuBarHover MenuBarHover
+	MenuBarHover MenuHover
+	// PulldownHover is the open pulldown's item under the mouse pointer (set by App each render),
+	// drawn in the selected item style without moving Menu.SelectedItem.
+	PulldownHover MenuHover
 	// CursorNameHintPinOutPrimary / CursorNameHintPinOutSecondary are set by App for one paint
 	// and point at live panel.State.CursorNameHintPinned fields (not the Model snapshot copy).
 	CursorNameHintPinOutPrimary   *string
@@ -522,8 +525,9 @@ func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (tit
 	return ownPath, endLabel, true
 }
 
-// MenuBarHover names the menu bar title under the mouse pointer; Active is false off the titles.
-type MenuBarHover struct {
+// MenuHover names the menu bar title or pulldown item (Index) under the mouse pointer; Active is
+// false off them.
+type MenuHover struct {
 	Active bool
 	Index  int
 }
@@ -924,7 +928,7 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 
 func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, menus []menu.Definition, styles theme.Theme) {
 	if model.Menu.Open && model.MenuBarInteractive() {
-		drawPulldownMenu(screen, layout, model.Menu, menus, styles)
+		drawPulldownMenu(screen, layout, model.Menu, model.PulldownHover, menus, styles)
 	}
 	switch model.PrimaryModal() {
 	case dialog.PrimaryModalTheme:

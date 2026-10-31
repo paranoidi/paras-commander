@@ -140,7 +140,7 @@ func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsSt
 
 // drawMenuBar paints the top menu row; a title under the mouse pointer (hover) is drawn like the
 // open menu's title.
-func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, hover MenuBarHover, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8, pinCount int) {
+func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, hover MenuHover, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8, pinCount int) {
 	x := rect.X
 	barStyle := styles.MenuBarInactive
 	if state.Open {
@@ -404,7 +404,7 @@ func pulldownRect(layout Layout, state menu.State, menus []menu.Definition) (Rec
 	return rect, true
 }
 
-func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, menus []menu.Definition, styles theme.Theme) {
+func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, hover MenuHover, menus []menu.Definition, styles theme.Theme) {
 	rect, ok := pulldownRect(layout, state, menus)
 	if !ok {
 		return
@@ -420,7 +420,7 @@ func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, menu
 			continue
 		}
 		style := styles.MenuDropdown
-		if row == state.SelectedItem {
+		if row == state.SelectedItem || hover.Active && row == hover.Index {
 			style = styles.MenuDropdownSelected
 		}
 		drawMenuItem(screen, rect.X+1, rect.Y+1+row, rect.Width-2, item, style, styles.MenuDropdownAccent)

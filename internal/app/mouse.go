@@ -191,24 +191,35 @@ func (a *App) dialogButtonHover() dlg.ButtonHover {
 }
 
 // menuBarHover is the menu title under the last pointer position, where a click would open it.
-func (a *App) menuBarHover() ui.MenuBarHover {
+func (a *App) menuBarHover() ui.MenuHover {
 	if !a.mouse.pointer || !a.menuBarAcceptsMouse() {
-		return ui.MenuBarHover{}
+		return ui.MenuHover{}
 	}
 	w, h := a.screen.Size()
 	index, ok := ui.MenuBarMenuAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
-	return ui.MenuBarHover{Active: ok, Index: index}
+	return ui.MenuHover{Active: ok, Index: index}
+}
+
+// pulldownHover is the open pulldown's item under the last pointer position (not the frame or a
+// separator).
+func (a *App) pulldownHover() ui.MenuHover {
+	if !a.mouse.pointer || a.inputMode() != InputModeMenu {
+		return ui.MenuHover{}
+	}
+	w, h := a.screen.Size()
+	item, inside := ui.PulldownItemAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+	return ui.MenuHover{Active: inside && item >= 0, Index: item}
 }
 
 // refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons,
-// menu titles) and reports whether one changed. render calls it, so they track the screen as it
+// menu titles, pulldown items) and reports whether one changed. render calls it, so they track the screen as it
 // changes under a still pointer; motion calls it and renders on a change.
 func (a *App) refreshPointerHovers() bool {
-	button, menuTitle := a.dialogButtonHover(), a.menuBarHover()
+	button, menuTitle, item := a.dialogButtonHover(), a.menuBarHover(), a.pulldownHover()
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
-		menuTitle != a.model.MenuBarHover
-	a.model.DialogButtonHover, a.model.MenuBarHover = button, menuTitle
+		menuTitle != a.model.MenuBarHover || item != a.model.PulldownHover
+	a.model.DialogButtonHover, a.model.MenuBarHover, a.model.PulldownHover = button, menuTitle, item
 	return changed
 }
 
