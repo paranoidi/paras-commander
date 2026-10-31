@@ -48,7 +48,7 @@ const hashCells = 12
 type columnValues func(ctx context.Context, d *db.DB, host string, entries []localfs.Entry, onDisk bool) (map[string]string, error)
 
 // Providers returns the fileindex column providers in picker (and left-to-right) order, listed
-// in the meta picker's Fileindex section while the index opens.
+// in the meta picker's File Index section while the index opens.
 func (x *Index) Providers() []*metacmds.Provider {
 	cols := []struct {
 		name, title string
@@ -89,7 +89,7 @@ func (x *Index) provider(name, title string, order int, values columnValues) *me
 		Name:      name,
 		Column:    title,
 		Order:     order,
-		Section:   "Fileindex",
+		Section:   "File Index",
 		Available: x.Available,
 		Values: func(ctx context.Context, dir string, entries []localfs.Entry) (map[string]string, error) {
 			loc, err := pathloc.Parse(dir)

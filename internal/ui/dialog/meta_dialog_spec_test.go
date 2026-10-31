@@ -94,15 +94,15 @@ func TestMetaDialogView_noticeReplacesEmptyList(t *testing.T) {
 
 func TestMetaDialogView_sectionUnderHeadedSeparator(t *testing.T) {
 	spec := dialog.MetaDialogView(dialog.MetaDialogState{
-		Entries: []dialog.MetaEntry{{Name: "walnut"}, {Name: "fileindex.tags", Label: "Tags", Section: "Fileindex"}},
+		Entries: []dialog.MetaEntry{{Name: "walnut"}, {Name: "fileindex.tags", Label: "Tags", Section: "File Index"}},
 		Checked: []bool{false, false},
 	})
 	if len(spec.Groups) != 3 {
 		t.Fatalf("groups = %d, want entries, separator, section", len(spec.Groups))
 	}
 	sep := spec.Groups[1].Columns[0][0]
-	if sep.Kind != dlg.KindSeparator || sep.Label != "Fileindex" {
-		t.Fatalf("separator = %+v, want one headed Fileindex", sep)
+	if sep.Kind != dlg.KindSeparator || sep.Label != "File Index" {
+		t.Fatalf("separator = %+v, want one headed File Index", sep)
 	}
 	if got := spec.Groups[2].Columns[0][0]; got.ID != dialog.MetaEntryID(1) || got.Label != "Tags" {
 		t.Fatalf("section row = %+v, want Tags as entry 1", got)

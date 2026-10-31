@@ -82,7 +82,7 @@ In an index view:
 ## Columns
 
 The index adds columns to the meta-column picker (`panel.meta`, see
-[Meta columns](meta-columns.md)), in its **Fileindex** section, listed only
+[Meta columns](meta-columns.md)), in its **File Index** section, listed only
 while the index database exists and opens. They work on local panels and in
 index views, and sort and filter like any meta column:
 
