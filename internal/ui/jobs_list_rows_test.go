@@ -106,7 +106,7 @@ func TestDrawJobsListPanelHoverRow(t *testing.T) {
 		}
 	}
 	_, status, _ := screen.Get(xStatus, quarryY)
-	wantFG, _, _ := styles.JobsStatusStyle(string(jobs.StatusQueued)).Decompose()
+	wantFG, _, _ := styles.StatusStyle(string(jobs.StatusQueued)).Decompose()
 	if fg, _, _ := status.Decompose(); fg != wantFG {
 		t.Fatalf("hovered status fg = %v, want the queued color %v", fg, wantFG)
 	}
@@ -173,7 +173,7 @@ func TestDrawJobsListPanelHighlightsActiveSource(t *testing.T) {
 	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0, ListRowHover{})
 
 	labelX := rect.X + 2 + jobsListColIcon + jobsListSourceIconCell
-	wantFG, _, _ := styles.JobsStatusStyle(string(jobs.StatusRunning)).Decompose()
+	wantFG, _, _ := styles.StatusStyle(string(jobs.StatusRunning)).Decompose()
 	for i, active := range []bool{false, false, true} {
 		y := 3 + i
 		_, style, _ := screen.Get(labelX, y)

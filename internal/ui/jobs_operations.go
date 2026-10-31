@@ -221,7 +221,7 @@ func drawJobsOperationsPanel(screen tcell.Screen, rect Rect, state JobsViewState
 func jobOperationActiveLine(label string, lineW int, styles theme.Theme, body tcell.Style, chromeBlocked bool) jobOperationLine {
 	iconStyle := body
 	if !chromeBlocked {
-		iconStyle = styles.JobsIconStyleOn("running", body)
+		iconStyle = styles.StatusStyleOn("running", body)
 	}
 	return jobOperationLine{icon: styles.IconJobsList("running"), iconStyle: iconStyle, text: primitive.FitPathForWidth(label, lineW), style: body}
 }

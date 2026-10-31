@@ -315,12 +315,12 @@ func commandPhaseStyle(e CommandRunEntry, styles theme.Theme) tcell.Style {
 	case CommandRunPending:
 		return styles.JobsRow
 	case CommandRunRunning:
-		return styles.JobsRunning
+		return styles.StatusRunning
 	case CommandRunDone:
 		if e.ExitCode == 0 {
-			return styles.JobsDone
+			return styles.StatusCompleted
 		}
-		return styles.JobsFailed
+		return styles.StatusFailed
 	default:
 		return styles.JobsRow
 	}

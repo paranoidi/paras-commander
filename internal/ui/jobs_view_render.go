@@ -251,7 +251,7 @@ func jobsListIconStyle(styles theme.Theme, status string, lineStyle tcell.Style,
 	if selected {
 		return lineStyle
 	}
-	return styles.JobsIconStyleOn(status, lineStyle)
+	return styles.StatusStyleOn(status, lineStyle)
 }
 
 // jobsListTypeLabel is the Type cell text: the job type, then the expander icon for a job
@@ -264,7 +264,7 @@ func jobsListTypeLabel(entry JobEntry, expanded bool, styles theme.Theme) string
 }
 
 func drawJobsListJobRow(screen tcell.Screen, contentX, y, xProg, barW int, entry JobEntry, expanded bool, lineStyle tcell.Style, selected bool, styles theme.Theme, now time.Time) {
-	statusStyle := jobsListOnRow(styles.JobsStatusStyle(entry.Status), lineStyle, selected)
+	statusStyle := jobsListOnRow(styles.StatusStyle(entry.Status), lineStyle, selected)
 	primitive.Text(screen, contentX, y, jobsListColIcon, styles.IconJobsList(entry.Status), jobsListIconStyle(styles, entry.Status, lineStyle, selected))
 	line := fmt.Sprintf("%-*s ", jobsListColTypeRunes, primitive.TruncateRight(jobsListTypeLabel(entry, expanded, styles), jobsListColTypeRunes))
 	primitive.Text(screen, contentX+jobsListColIcon, y, jobsListColTypeCell, line, lineStyle)
@@ -292,7 +292,7 @@ func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int,
 	active := jobSourceActive(entry, src)
 	labelStyle := lineStyle
 	if active { // the source being worked on now reads in the job's status color
-		labelStyle = jobsListOnRow(styles.JobsStatusStyle(entry.Status), lineStyle, selected)
+		labelStyle = jobsListOnRow(styles.StatusStyle(entry.Status), lineStyle, selected)
 	}
 	labelX := x + jobsListSourceIconCell
 	labelW := max(xProg-1-labelX, 0)

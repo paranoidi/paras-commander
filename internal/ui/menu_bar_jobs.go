@@ -146,7 +146,7 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 					break
 				}
 			}
-			style := styles.MenuJobStyle(g.Status)
+			style := styles.StatusStyle(g.Status)
 			icon := styles.IconMenuJob(g.Status)
 			screen.SetContent(x, y, icon, nil, style)
 			x += runewidth.RuneWidth(icon)

@@ -20,8 +20,15 @@ bright_magenta = 13
 bright_cyan = 14
 bright_white = 15
 
-[status]                     # shared work-state colors
-scanning = { fg = "bright_magenta", bold = true }   # disk usage, fileindex scans, spinners, scanning jobs
+[status]                     # job and work states: menu-bar job strip, Jobs view, Commands view, file-list marks
+scanning = { fg = "bright_magenta", bold = true }   # also disk usage, fileindex scans, spinners
+queued = { fg = "bright_blue", bold = true }
+running = { fg = "bright_green", bold = true }
+paused = { fg = "yellow", bold = true }
+decision = { fg = "cyan", bold = true }
+failed = { fg = "bright_red", bold = true }
+canceled = { fg = "red", bold = true }
+completed = { fg = "green", bold = true }
 
 [menu]                       # misc menu chrome
 detail = { fg = "white" }
@@ -39,14 +46,6 @@ inactive = { fg = "bright_black" }
 accent = { fg = "magenta", bold = true }
 alert = { fg = "bright_red", bold = true }
 selected = { fg = "black", bg = "cyan", bold = true }
-
-[menu.job]                   # menu-bar job status groups
-completed = { fg = "green" }
-decision = { fg = "cyan" }
-failed = { fg = "red" }
-paused = { fg = "yellow" }
-queued = { fg = "bright_blue" }
-running = { fg = "white" }
 
 [menu.progress]              # menu-bar aggregate progress
 done = { fg = "green" }
@@ -302,12 +301,9 @@ after = { fg = "yellow" }
 after.added = { fg = "green", bold = true }
 after.error = { fg = "bright_red", bold = true }
 
-[jobs]                       # status-column bucket styles
-done = { fg = "bright_green", bold = true }
-failed = { fg = "bright_red", bold = true }
+[jobs]                       # jobs list row text
 row = { fg = "white" }
 row.hover = { fg = "bright_white", bg = "bright_black" }  # queue row under the mouse pointer
-running = { fg = "bright_cyan", bold = true }
 
 [jobs.progress]
 fill = { fg = "black", bg = "green" }
@@ -325,15 +321,6 @@ track = { fg = "bright_black", bg = "black" }
 label = { fg = "white" }
 text = { fg = "default" }
 plot = { fg = "green" }
-
-[jobs.icons]                 # leading icon column (1:1 with job status strings)
-completed = { fg = "bright_green", bold = true }
-failed = { fg = "bright_red", bold = true }
-decision = { fg = "cyan", bold = true }
-running = { fg = "bright_green", bold = true }
-paused = { fg = "yellow", bold = true }
-queued = { fg = "yellow", bold = true }
-canceled = { fg = "bright_red", bold = true }
 
 [jobs.operations]            # Operations pane result icons
 success = { fg = "bright_green", bold = true }
