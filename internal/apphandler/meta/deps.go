@@ -43,6 +43,9 @@ type Handler struct {
 	// inFileIndex is whether the panel was on fileindex:// at the last dir-change check, so
 	// default columns switch on only when it enters the index.
 	inFileIndex [2]bool
+	// autoColumns is whether the panel's columns are the fileindex defaults switched on by
+	// entering the index (cleared when the picker applies), so leaving it switches them off.
+	autoColumns [2]bool
 	// run is the in-flight meta run per panel (nil if none), kept so ReconcileForPanel can
 	// dispatch only newly appeared entries into it.
 	run [2]*metaRun

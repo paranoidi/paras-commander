@@ -901,11 +901,20 @@ func TestHandlePanelDirChanged_fileIndexDefaultColumns(t *testing.T) {
 		t.Fatalf("activeEntries = %v, want [%s]", got, config.FileIndexTagsColumn)
 	}
 
-	// Switched off inside the index: navigating within it must not switch them back on.
-	h.activeEntries[0], h.model.MetaResults[0] = nil, nil
-	fh.panels[0] = testPanel(t, "fileindex:///orchard/meadow", nil)
+	// Leaving the index switches the defaults off.
+	fh.panels[0] = testPanel(t, t.TempDir(), nil)
 	h.HandlePanelDirChanged(0)
-	if len(h.activeEntries[0]) != 0 {
-		t.Fatalf("activeEntries = %v, want none while staying in the index", h.activeEntries[0])
+	if len(h.activeEntries[0]) != 0 || h.model.MetaResults[0] != nil {
+		t.Fatalf("activeEntries = %v, want none after leaving the index", h.activeEntries[0])
+	}
+
+	// Columns picked by the user stay on after leaving.
+	fh.panels[0] = testPanel(t, "fileindex:///orchard", nil)
+	h.HandlePanelDirChanged(0)
+	h.autoColumns[0] = false // as ActivateSelection does
+	fh.panels[0] = testPanel(t, t.TempDir(), nil)
+	h.HandlePanelDirChanged(0)
+	if len(h.activeEntries[0]) != 1 {
+		t.Fatalf("activeEntries = %v, want picker columns kept", h.activeEntries[0])
 	}
 }

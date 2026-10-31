@@ -82,8 +82,9 @@ In an index view:
 ## Tags
 
 Tags are shown by the **fileindex tags** column. A panel with no meta columns
-switches it on when it enters an index view (`[fileindex] default_columns` in
-[config.toml](config.md) picks those columns). Switch it on or off per panel
+switches it on when it enters an index view and off again when it leaves
+(`[fileindex] default_columns` in [config.toml](config.md) picks those
+columns). Switch it on or off per panel
 from the meta-column picker (`panel.meta`, see [Meta columns](meta-columns.md)).
 It works on local panels and in index views, and lists a file's or a
 directory's tags, comma separated. It can be sorted and filtered like any meta

@@ -418,28 +418,9 @@ func (h *Handler) ActivateSelection() {
 		}
 	}
 
+	h.autoColumns[panelID] = false
 	if len(activeNames) == 0 {
-		h.invalidatePendingLoads(panelID)
-		h.stopRun(panelID)
-		h.model.MetaResults[panelID] = nil
-		h.activeEntries[panelID] = nil
-		h.navPath[panelID] = ""
-		h.resortPending[panelID] = false
-		if p := h.host.PanelByID(panelID); p != nil {
-			if p.Sort.Mode == panel.SortMeta {
-				// The sorted-on column no longer exists — fall back to Name immediately (like an
-				// explicit Sort dialog apply), rather than leaving the panel sorted by a column
-				// that just vanished from the header.
-				p.Sort.Mode = panel.SortName
-				p.Sort.MetaColumn = ""
-				h.host.ResortPanel(panelID)
-			}
-			if p.ActiveEntryFilter != nil && p.ActiveEntryFilter.ID == panel.PatternMetaFilterID {
-				// Meta columns just went away: the filter's closure now reads an empty
-				// MetaResults, so re-run it immediately rather than waiting for the next flush.
-				p.RefreshEntryFilter()
-			}
-		}
+		h.deactivate(panelID)
 		return
 	}
 
@@ -474,6 +455,31 @@ func (h *Handler) ActivateSelection() {
 	h.activate(panelID, activeNames)
 }
 
+// deactivate clears the panel's meta columns, falling back from a meta sort or filter.
+func (h *Handler) deactivate(panelID int) {
+	h.invalidatePendingLoads(panelID)
+	h.stopRun(panelID)
+	h.model.MetaResults[panelID] = nil
+	h.activeEntries[panelID] = nil
+	h.navPath[panelID] = ""
+	h.resortPending[panelID] = false
+	if p := h.host.PanelByID(panelID); p != nil {
+		if p.Sort.Mode == panel.SortMeta {
+			// The sorted-on column no longer exists — fall back to Name immediately (like an
+			// explicit Sort dialog apply), rather than leaving the panel sorted by a column
+			// that just vanished from the header.
+			p.Sort.Mode = panel.SortName
+			p.Sort.MetaColumn = ""
+			h.host.ResortPanel(panelID)
+		}
+		if p.ActiveEntryFilter != nil && p.ActiveEntryFilter.ID == panel.PatternMetaFilterID {
+			// Meta columns just went away: the filter's closure now reads an empty
+			// MetaResults, so re-run it immediately rather than waiting for the next flush.
+			p.RefreshEntryFilter()
+		}
+	}
+}
+
 // activate switches the panel's meta columns to names and starts loading them.
 func (h *Handler) activate(panelID int, activeNames []string) {
 	h.stopRun(panelID)
@@ -496,7 +502,8 @@ func (h *Handler) activate(panelID int, activeNames []string) {
 
 // HandlePanelDirChanged re-runs active meta commands when the panel navigates to a new directory.
 // The meta file is resolved and loaded off the UI goroutine to avoid blocking on disk I/O.
-// A panel with no active columns entering fileindex:// switches on [fileindex].default_columns.
+// A panel with no active columns entering fileindex:// switches on [fileindex].default_columns,
+// and leaving it switches them off again unless the picker changed the columns meanwhile.
 func (h *Handler) HandlePanelDirChanged(panelID int) {
 	p := h.host.PanelByID(panelID)
 	if p == nil {
@@ -504,9 +511,16 @@ func (h *Handler) HandlePanelDirChanged(panelID int) {
 	}
 	inIndex := p.Path.Scheme() == pathloc.SchemeFileIndex
 	entered := inIndex && !h.inFileIndex[panelID]
+	left := !inIndex && h.inFileIndex[panelID]
 	h.inFileIndex[panelID] = inIndex
 	if entered && len(h.activeEntries[panelID]) == 0 && len(h.config.FileIndex.DefaultColumns) > 0 {
 		h.activate(panelID, h.config.FileIndex.DefaultColumns)
+		h.autoColumns[panelID] = true
+		return
+	}
+	if left && h.autoColumns[panelID] {
+		h.autoColumns[panelID] = false
+		h.deactivate(panelID)
 		return
 	}
 	if len(h.model.MetaResults[panelID]) == 0 {
