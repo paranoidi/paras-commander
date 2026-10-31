@@ -423,6 +423,8 @@ const (
 	// FileIndexScanBatchFiles is how many hashed files a pc scan commits per batch: smaller than
 	// the fileindex CLI's batch so canceling the scan job lands quickly.
 	FileIndexScanBatchFiles = 200
+	// FileIndexTagsColumn is the meta entry name of the fileindex tags column provider.
+	FileIndexTagsColumn = "fileindex.tags"
 	// FileIndexTagsColumnOrder is the meta order of the fileindex tags column: after meta.toml
 	// entries (order 0 unless set), so built-in columns sit right of the user's own.
 	FileIndexTagsColumnOrder = 1000
@@ -643,3 +645,9 @@ const (
 	DefaultFilterTypeAudio     = `(?i)\.(mp3|flac|wav|ogg|oga|opus|m4a|aac|wma|alac|aiff?|ape|mka|mid|midi|dsf|wv)$`
 	DefaultFilterTypeDocuments = `(?i)\.(pdf|docx?|odt|rtf|txt|md|xlsx?|ods|csv|pptx?|odp|epub|mobi|djvu|tex|pages|numbers|key)$`
 )
+
+// DefaultFileIndexColumns is [fileindex].default_columns: the meta columns switched on when a
+// panel enters fileindex://.
+func DefaultFileIndexColumns() []string {
+	return []string{FileIndexTagsColumn}
+}

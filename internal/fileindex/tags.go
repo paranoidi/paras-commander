@@ -13,7 +13,7 @@ import (
 )
 
 // TagsColumn is the name of the fileindex tags column provider (its meta picker entry).
-const TagsColumn = "fileindex.tags"
+const TagsColumn = config.FileIndexTagsColumn
 
 // TagsProvider returns the Go column provider showing each entry's fileindex tags (a file's
 // instance tags, a directory's dir tags), comma separated. It reads the whole listing in one

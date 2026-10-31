@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -470,6 +471,11 @@ func (h *Handler) ActivateSelection() {
 		}
 	}
 
+	h.activate(panelID, activeNames)
+}
+
+// activate switches the panel's meta columns to names and starts loading them.
+func (h *Handler) activate(panelID int, activeNames []string) {
 	h.stopRun(panelID)
 	h.runGen[panelID]++
 
@@ -490,7 +496,19 @@ func (h *Handler) ActivateSelection() {
 
 // HandlePanelDirChanged re-runs active meta commands when the panel navigates to a new directory.
 // The meta file is resolved and loaded off the UI goroutine to avoid blocking on disk I/O.
+// A panel with no active columns entering fileindex:// switches on [fileindex].default_columns.
 func (h *Handler) HandlePanelDirChanged(panelID int) {
+	p := h.host.PanelByID(panelID)
+	if p == nil {
+		return
+	}
+	inIndex := p.Path.Scheme() == pathloc.SchemeFileIndex
+	entered := inIndex && !h.inFileIndex[panelID]
+	h.inFileIndex[panelID] = inIndex
+	if entered && len(h.activeEntries[panelID]) == 0 && len(h.config.FileIndex.DefaultColumns) > 0 {
+		h.activate(panelID, h.config.FileIndex.DefaultColumns)
+		return
+	}
 	if len(h.model.MetaResults[panelID]) == 0 {
 		return
 	}
@@ -548,6 +566,10 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 	}
 	sorted := metacmds.SortEntriesForDisplay(d.ActiveNames, d.MF)
 	if len(sorted) == 0 {
+		// None of the names exist (e.g. a stale [fileindex].default_columns): drop the
+		// placeholder columns rather than leaving empty headers.
+		h.model.MetaResults[d.PanelID] = nil
+		h.activeEntries[d.PanelID] = nil
 		return
 	}
 	cols := make([]ui.MetaColumnState, len(sorted))

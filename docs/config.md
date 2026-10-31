@@ -515,6 +515,7 @@ The built-in [fileindex](fileindex.md) feature. Which files a scan includes or s
 |---|---|---|---|
 | `database` | string | `""` | The fileindex database (absolute or `~/…`). Empty uses `[database].path` from fileindex's `config.ini`. When it is missing, pc asks whether to create an empty one; when it is from an older fileindex, whether to upgrade it. |
 | `workers` | int | `0` | Hash workers a scan uses (clamped to 256). `0` uses `parallel_workers` from `config.ini` (auto-scaling when that is `auto` or unset). |
+| `default_columns` | string list | `["fileindex.tags"]` | [Meta columns](meta-columns.md) (`meta.toml` entry names or `fileindex.tags`) switched on when a panel with no meta columns enters a `fileindex://` view. Columns stay on after leaving the index; `[]` switches none on. |
 
 ## `status.toml`
 

@@ -194,6 +194,9 @@ type FileIndexConfig struct {
 	// Workers is the number of hash workers a scan uses. Zero uses config.ini's
 	// parallel_workers (auto-scaling when that is unset or "auto").
 	Workers int `toml:"workers"`
+	// DefaultColumns are the meta column names (meta.toml entries or Go providers) switched on
+	// when a panel with no active meta columns enters fileindex://. Empty switches none on.
+	DefaultColumns []string `toml:"default_columns"`
 }
 
 // DedupConfig controls find-duplicates scanning.
@@ -856,8 +859,9 @@ func Default() Config {
 			FileProgressBytes: DefaultDedupFileProgressBytes,
 		},
 		FileIndex: FileIndexConfig{
-			Database: DefaultFileIndexDatabase,
-			Workers:  DefaultFileIndexWorkers,
+			Database:       DefaultFileIndexDatabase,
+			Workers:        DefaultFileIndexWorkers,
+			DefaultColumns: DefaultFileIndexColumns(),
 		},
 	}
 }

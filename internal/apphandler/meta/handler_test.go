@@ -889,3 +889,23 @@ file = "wc -l < %f"
 		})
 	}
 }
+
+func TestHandlePanelDirChanged_fileIndexDefaultColumns(t *testing.T) {
+	fh := &fakeHost{}
+	fh.panels[0] = testPanel(t, "fileindex:///orchard", nil)
+	cfg := config.Default()
+	h := &Handler{host: fh, model: &ui.Model{}, config: cfg}
+
+	h.HandlePanelDirChanged(0)
+	if got := h.activeEntries[0]; len(got) != 1 || got[0] != config.FileIndexTagsColumn {
+		t.Fatalf("activeEntries = %v, want [%s]", got, config.FileIndexTagsColumn)
+	}
+
+	// Switched off inside the index: navigating within it must not switch them back on.
+	h.activeEntries[0], h.model.MetaResults[0] = nil, nil
+	fh.panels[0] = testPanel(t, "fileindex:///orchard/meadow", nil)
+	h.HandlePanelDirChanged(0)
+	if len(h.activeEntries[0]) != 0 {
+		t.Fatalf("activeEntries = %v, want none while staying in the index", h.activeEntries[0])
+	}
+}

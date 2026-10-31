@@ -40,6 +40,9 @@ type Handler struct {
 	activeEntries [2][]string
 	// navPath holds the last panel path for which meta was run (used to detect navigation).
 	navPath [2]string
+	// inFileIndex is whether the panel was on fileindex:// at the last dir-change check, so
+	// default columns switch on only when it enters the index.
+	inFileIndex [2]bool
 	// run is the in-flight meta run per panel (nil if none), kept so ReconcileForPanel can
 	// dispatch only newly appeared entries into it.
 	run [2]*metaRun
