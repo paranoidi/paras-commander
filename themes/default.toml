@@ -105,7 +105,6 @@ other_match = { fg = "bright_black" }
 other_match.cursor = { fg = "cyan" }
 job = { fg = "green" }
 job.read = { fg = "yellow" }
-job.decision = { fg = "red" }
 job.move = { fg = "red" }
 job.delete = { fg = "red" }
 job.removing = { fg = "red" }   # move source being deleted after its copy (optional)

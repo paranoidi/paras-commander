@@ -110,11 +110,10 @@ type Theme struct {
 	PanelRowMarkOtherMatchCursor tcell.Style
 	// PanelRowMarkJob styles the file-list job mark when the row is under a job's
 	// write (destination) tree; PanelRowMarkJobRead styles the read (source) tree;
-	// PanelRowMarkJobDecision styles either while the matched job waits on a user
-	// decision. See Theme.PanelJobMarkStyle.
-	PanelRowMarkJob         tcell.Style
-	PanelRowMarkJobRead     tcell.Style
-	PanelRowMarkJobDecision tcell.Style
+	// StatusDecision styles either while the matched job waits on a user decision. See
+	// Theme.PanelJobMarkStyle.
+	PanelRowMarkJob     tcell.Style
+	PanelRowMarkJobRead tcell.Style
 	// PanelRowMarkJobMove and PanelRowMarkJobDelete style the file-list operation icon
 	// (icons.filelist.move / .delete) appended after the job/queued icons for move-or-flatten
 	// and delete jobs respectively.
@@ -1045,7 +1044,6 @@ var requiredStyleKeys = []string{
 	"panel.row.mark.pinned",
 	"panel.row.mark.job",
 	"panel.row.mark.job.read",
-	"panel.row.mark.job.decision",
 	"panel.row.mark.job.move",
 	"panel.row.mark.job.delete",
 	"panel.row.tree.connector",
@@ -1682,7 +1680,6 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkOtherMatchCursor:        panelRowMarkOtherMatchCursor,
 		PanelRowMarkJob:                     styles["panel.row.mark.job"],
 		PanelRowMarkJobRead:                 styles["panel.row.mark.job.read"],
-		PanelRowMarkJobDecision:             styles["panel.row.mark.job.decision"],
 		PanelRowMarkJobMove:                 styles["panel.row.mark.job.move"],
 		PanelRowMarkJobDelete:               styles["panel.row.mark.job.delete"],
 		PanelRowMarkJobRemoving:             panelRowMarkJobRemoving,
