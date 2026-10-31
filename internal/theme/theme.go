@@ -799,12 +799,12 @@ func (t Theme) IconFilelistOtherMatch() rune {
 const IconKeyFileIndex = "fileindex"
 
 // IconFileIndex is the glyph shown instead of "fileindex" in a displayed fileindex:// path
-// ([icons] fileindex, nf-fa-database), or "" without Nerd Font icons (the path is shown in full).
+// ([icons] fileindex, nf-md-database), or "" without Nerd Font icons (the path is shown in full).
 func (t Theme) IconFileIndex() string {
 	if !t.UseNerdfontIcons {
 		return ""
 	}
-	return t.iconOr(IconKeyFileIndex, "\uf1c0")
+	return t.iconOr(IconKeyFileIndex, "\U000F01BC")
 }
 
 // IconFilelistJob returns the file-list job mark icon (role/status colored via
