@@ -355,8 +355,9 @@ func TestFileIndexHostPathFeatures(t *testing.T) {
 	}
 }
 
-// The fileindex menu dims the browse action for the side the active panel is already on.
-func TestFileIndexMenuDimsCurrentBrowseSide(t *testing.T) {
+// The fileindex menu dims Browse filesystem off an index panel; Browse index toggles, so it
+// never dims.
+func TestFileIndexMenuDimsReveal(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	dimmed := func() map[string]bool {
 		out := map[string]bool{}
@@ -371,7 +372,7 @@ func TestFileIndexMenuDimsCurrentBrowseSide(t *testing.T) {
 		dir, want string
 	}{
 		{"/srv/orchard", "Browse filesystem"},
-		{"fileindex:///srv/orchard", "Browse index"},
+		{"fileindex:///srv/orchard", ""},
 	} {
 		p, err := pathloc.Parse(tc.dir)
 		if err != nil {
@@ -379,7 +380,7 @@ func TestFileIndexMenuDimsCurrentBrowseSide(t *testing.T) {
 		}
 		a.activePanel().Path = p
 		a.toggleFileIndexMenu()
-		if got := dimmed(); len(got) != 1 || !got[tc.want] {
+		if got := dimmed(); (tc.want == "" && len(got) != 0) || (tc.want != "" && (len(got) != 1 || !got[tc.want])) {
 			t.Errorf("%s: dimmed = %v, want only %q", tc.dir, got, tc.want)
 		}
 		a.closeLeaderMenu()

@@ -305,9 +305,8 @@ func (h *Handler) HandleTags(p TagsPayload) {
 // Open shows the active panel's directory in fileindex://, keeping the cursor entry.
 func (h *Handler) Open() {
 	p := h.host.ActivePanel()
-	switch p.Path.Scheme() {
-	case pathloc.SchemeFileIndex:
-		h.host.SetTransientMessage("Already browsing the fileindex", ui.MessageUrgencyInfo)
+	if p.Path.Scheme() == pathloc.SchemeFileIndex {
+		h.Reveal() // toggle back to the real location
 		return
 	}
 	if !h.localOrIndex() {

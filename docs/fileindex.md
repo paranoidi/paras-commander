@@ -36,7 +36,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 
 | Key | Menu | Action | |
 |---|---|---|---|
-| `Alt+Shift+I` | `i` | `fileindex.open` | Show the current directory in the index |
+| `Alt+Shift+I` | `i` | `fileindex.open` | Toggle: show the current directory in the index, or from the index go to the real location |
 | `Alt+Shift+R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
 | `Alt+Shift+S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
 | `Alt+Shift+P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
@@ -46,7 +46,8 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 ## Browsing the index
 
 `fileindex.open` shows the current directory as `fileindex:///path/to/dir`,
-with the same entry under the cursor. Navigation then works as usual: history,
+with the same entry under the cursor; on an index panel it does what
+`fileindex.reveal` does, so the one shortcut toggles. Navigation then works as usual: history,
 bookmarks and the path picker accept `fileindex://` paths too. The index root is
 `fileindex:///`. With Nerd Font icons on (`use_nerdfont_icons`), panel titles
 and other path displays show `fileindex://` as the database icon followed by
