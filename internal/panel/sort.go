@@ -2,12 +2,14 @@ package panel
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 )
 
 // SortState describes the panel-local sort configuration.
@@ -275,12 +277,36 @@ func MetaValuesNumeric(values map[string]string, pending string) bool {
 		if v == "" {
 			continue
 		}
-		if _, err := strconv.ParseFloat(v, 64); err != nil {
+		if _, ok := MetaNumber(v); !ok {
 			return false
 		}
 		found = true
 	}
 	return found
+}
+
+// MetaNumber parses a trimmed meta value as a number: a plain float, or a byte size with a
+// binary unit as the panel size column and du -h print it ("5.6G", "800K", "1.2 GiB", "3 MB"),
+// so size columns sort by size.
+func MetaNumber(v string) (float64, bool) {
+	if f, err := strconv.ParseFloat(v, 64); err == nil {
+		return f, true
+	}
+	num := strings.TrimRight(v, "BiKMGTPE ")
+	unit := strings.ToUpper(strings.TrimSpace(v[len(num):]))
+	unit = strings.TrimSuffix(strings.TrimSuffix(unit, "B"), "I")
+	f, err := strconv.ParseFloat(num, 64)
+	if err != nil || len(unit) > 1 {
+		return 0, false
+	}
+	if unit == "" { // "512 B"
+		return f, true
+	}
+	i := strings.IndexByte(string(panellist.ByteCompactSuffixes[:]), unit[0])
+	if i < 0 {
+		return 0, false
+	}
+	return f * math.Pow(1024, float64(i+1)), true
 }
 
 // buildMetaSortKeys resolves col's values once via metaValue and precomputes each entry's sort
@@ -309,7 +335,7 @@ func buildMetaSortKeys(entries []localfs.Entry, col string, metaValue func(colum
 			keys[e.Path] = metaSortKey{missing: true}
 			continue
 		}
-		if f, err := strconv.ParseFloat(v, 64); err == nil {
+		if f, ok := MetaNumber(v); ok {
 			keys[e.Path] = metaSortKey{numeric: true, num: f}
 			continue
 		}

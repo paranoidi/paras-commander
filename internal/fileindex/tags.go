@@ -5,26 +5,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/fileindex/db"
-	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/metacmds"
 )
-
-// TagsProvider returns the column provider showing each entry's fileindex tags (a file's
-// instance tags, a directory's dir tags), comma separated.
-func (x *Index) TagsProvider() *metacmds.Provider {
-	return x.provider(TagsColumn, "Tags", config.FileIndexTagsColumnOrder,
-		func(d *db.DB, host string, names []string) (map[string]string, error) {
-			tags, err := d.EntryTags(host, names)
-			if err != nil {
-				return nil, err
-			}
-			out := make(map[string]string, len(tags))
-			for n, t := range tags {
-				out[n] = strings.Join(t, ", ")
-			}
-			return out, nil
-		})
-}
 
 // ParseTags splits a typed tag list on commas and whitespace, dropping empties and repeats.
 func ParseTags(raw string) []string {

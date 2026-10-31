@@ -88,8 +88,17 @@ index views, and sort and filter like any meta column:
 
 | Column | Name | Shows |
 |---|---|---|
+| **Status** | `fileindex.status` | how the entry compares with the index: `indexed` (a file with the same size and modification time as when scanned, or a known directory), `changed` (a file whose size or modification time differs), `new` (not in the index, including files the scan rules exclude) or `missing` (in an index view, gone from disk) |
 | **Tags** | `fileindex.tags` | a file's or a directory's tags, comma separated |
+| **Copies** | `fileindex.copies` | how many indexed files have the same content, this one included; JPEGs compare their metadata-free hash, as [find duplicates](find-duplicates.md) does |
+| **First seen** | `fileindex.first-seen` | when the file or directory was first indexed at this path, in local time |
 | **Last seen** | `fileindex.last-seen` | when a scan last saw the file or directory, in local time |
+| **Tree files** | `fileindex.tree-files` | for a directory, how many indexed files are under it |
+| **Tree size** | `fileindex.tree-size` | for a directory, the total size of the indexed files under it, read from the index without walking the disk |
+| **Hash** | `fileindex.hash` | the first 12 hex digits of the file's SHA-256 |
+
+Tree files and Tree size add up the whole subtree, which at the index root is
+the whole index.
 
 A panel with no meta columns switches on the columns in
 `[fileindex] default_columns` ([config.toml](config.md); the tags column by

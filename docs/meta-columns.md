@@ -11,8 +11,8 @@ Because its commands run as you, a `meta.toml` is loaded only when it is a regul
 ## Built-in columns
 
 Some features add their own columns to the picker, each feature in its own section below your
-`meta.toml` entries, under a separator headed by the feature's name (for example **Tags** and **Last seen**
-under **Fileindex**, the [fileindex](fileindex.md) columns, listed only while the fileindex database
+`meta.toml` entries, under a separator headed by the feature's name (for example **Status**, **Tags** and
+**Tree size** under **Fileindex**, the [fileindex](fileindex.md#columns) columns, listed only while the fileindex database
 opens). They are computed inside pc once per directory listing instead of
 running a command per entry, need no `meta.toml`, and otherwise behave like any meta column:
 the same picker, column limit, sorting and filtering. A built-in column replaces a `meta.toml`
@@ -45,7 +45,7 @@ cache = true
 
 ## Display
 
-Up to 8 columns can be active per panel, ordered by `order` then name. Output is filled in as commands finish; a pending cell shows an icon. If the output contains tabs or newlines it is split into aligned sub-columns. Numeric cells are right-aligned and text is left-aligned; wide columns shrink first and are clipped with an ellipsis. In the carousel view meta columns appear only in the centre column.
+Up to 8 columns can be active per panel, ordered by `order` then name. Output is filled in as commands finish; a pending cell shows an icon. If the output contains tabs or newlines it is split into aligned sub-columns. Numeric cells (sizes such as `5.6G` or `1.2 GiB` included) are right-aligned and text is left-aligned; wide columns shrink first and are clipped with an ellipsis. In the carousel view meta columns appear only in the centre column.
 
 A failing command leaves the cell empty and shows one warning toast per run, not one per file.
 
@@ -53,6 +53,6 @@ A failing command leaves the cell empty and shows one warning toast per run, not
 
 ## Sorting and filtering
 
-Active meta columns appear in the Sort dialog (`Alt+S`, up to four). Values that parse as numbers sort numerically; empty, missing and still-running cells sort last. An all-numeric column sorts high-first, others A to Z; the header arrow points toward larger values. Once every value has arrived the panel re-sorts after `[disk_usage].idle_sort_delay_ms` of cursor inactivity rather than reshuffling while results stream in.
+Active meta columns appear in the Sort dialog (`Alt+S`, up to four). Values that parse as numbers sort numerically, and so do byte sizes with a binary unit (`512`, `800K`, `5.6G`, `1.2 GiB`, `3 MB`), so `du -h`-style output sorts by size; empty, missing and still-running cells sort last. An all-numeric column sorts high-first, others A to Z; the header arrow points toward larger values. Once every value has arrived the panel re-sorts after `[disk_usage].idle_sort_delay_ms` of cursor inactivity rather than reshuffling while results stream in.
 
 The [panel Filter](panel-filter.md) can match meta values with "Include meta" or "Only meta".

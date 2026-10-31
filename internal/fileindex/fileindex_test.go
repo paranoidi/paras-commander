@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -281,7 +283,7 @@ func TestTagsOnFileGoneFromDiskAndColumn(t *testing.T) {
 
 	values := func(dir string, es ...localfs.Entry) map[string]string {
 		t.Helper()
-		v, err := x.TagsProvider().Values(context.Background(), dir, es)
+		v, err := x.Provider(TagsColumn).Values(context.Background(), dir, es)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -444,7 +446,7 @@ func TestDedupFilesUsesIndexedHashes(t *testing.T) {
 func TestAvailableIsQuiet(t *testing.T) {
 	x := testIndex(t, filepath.Join(t.TempDir(), "nowhere", "index.sqlite"))
 	x.OnOpenError = func(err error) { t.Fatalf("Available reported %v", err) }
-	if x.Available() || x.TagsProvider().Available() {
+	if x.Available() || x.Provider(TagsColumn).Available() {
 		t.Fatal("missing index reported available")
 	}
 	if !testIndex(t, initIndex(t)).Available() {
@@ -452,29 +454,88 @@ func TestAvailableIsQuiet(t *testing.T) {
 	}
 }
 
-func TestLastSeenColumn(t *testing.T) {
+func TestColumns(t *testing.T) {
 	x, root := scanned(t)
-	values := func(dir string, es ...localfs.Entry) map[string]string {
+	lanternDir := filepath.Join(root, "lantern")
+	// A second copy of meadow.txt's content, scanned too.
+	if err := os.WriteFile(filepath.Join(lanternDir, "clover.txt"), []byte("clover"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	values := func(col, dir string, es ...localfs.Entry) map[string]string {
 		t.Helper()
-		v, err := x.LastSeenProvider().Values(context.Background(), dir, es)
+		v, err := x.Provider(col).Values(context.Background(), dir, es)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return v
 	}
-	harbor := localfs.Entry{Name: "harbor.txt", Path: filepath.Join(root, "harbor.txt"), Type: localfs.EntryFile}
-	lantern := localfs.Entry{Name: "lantern", Path: filepath.Join(root, "lantern"), Type: localfs.EntryDirectory}
-	pebble := localfs.Entry{Name: "pebble.txt", Path: filepath.Join(root, "pebble.txt"), Type: localfs.EntryFile}
-	v := values(root, harbor, lantern, pebble)
+	file := func(dir, name string) localfs.Entry {
+		t.Helper()
+		fi, err := os.Stat(filepath.Join(dir, name))
+		if err != nil {
+			return localfs.Entry{Name: name, Path: filepath.Join(dir, name), Type: localfs.EntryFile}
+		}
+		typ := localfs.EntryFile
+		if fi.IsDir() {
+			typ = localfs.EntryDirectory
+		}
+		return localfs.Entry{Name: name, Path: filepath.Join(dir, name), Type: typ, Size: fi.Size(), ModifiedAt: fi.ModTime()}
+	}
+
+	// Last seen / first seen: today, to the minute, for files and directories alike.
+	harbor, lantern := file(root, "harbor.txt"), file(root, "lantern")
 	today := time.Now().Format("2006-01-02")
-	for _, e := range []localfs.Entry{harbor, lantern} {
-		if !strings.HasPrefix(v[e.Path], today) || len(v[e.Path]) != len("2006-01-02 15:04") {
-			t.Fatalf("%s last seen = %q, want today to the minute", e.Name, v[e.Path])
+	for _, col := range []string{FirstSeenColumn, LastSeenColumn} {
+		v := values(col, root, harbor, lantern)
+		for _, e := range []localfs.Entry{harbor, lantern} {
+			if !strings.HasPrefix(v[e.Path], today) || len(v[e.Path]) != len("2006-01-02 15:04") {
+				t.Fatalf("%s of %s = %q, want today to the minute", col, e.Name, v[e.Path])
+			}
 		}
 	}
-	if _, ok := v[pebble.Path]; ok {
-		t.Fatal("an unindexed file has a last-seen value")
+
+	meadow, clover, thistle := file(lanternDir, "meadow.txt"), file(lanternDir, "clover.txt"), file(lanternDir, "thistle.md")
+	if v := values(CopiesColumn, lanternDir, meadow, clover, thistle); v[meadow.Path] != "2" || v[clover.Path] != "2" || v[thistle.Path] != "1" {
+		t.Fatalf("copies = %v, want meadow and clover 2, thistle 1", v)
 	}
+	if h := values(HashColumn, lanternDir, thistle)[thistle.Path]; len(h) != hashCells {
+		t.Fatalf("hash = %q, want %d hex digits", h, hashCells)
+	}
+	size := len("clover")*2 + len("bramble patch")
+	if v := values(TreeFilesColumn, root, lantern, harbor); v[lantern.Path] != "3" || v[harbor.Path] != "" {
+		t.Fatalf("tree files = %v, want 3 for lantern and none for a file", v)
+	}
+	if got := values(TreeSizeColumn, root, lantern)[lantern.Path]; got != strconv.Itoa(size) {
+		t.Fatalf("tree size = %q, want %d", got, size)
+	}
+
+	// Status on a local panel: from the listing's size and mtime.
+	if err := os.WriteFile(harbor.Path, []byte("anchor, rope and chain"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "pebble.txt"), []byte("gravel"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	harbor, pebble := file(root, "harbor.txt"), file(root, "pebble.txt")
+	want := map[string]string{harbor.Path: StatusChanged, lantern.Path: StatusIndexed, pebble.Path: StatusNew}
+	if v := values(StatusColumn, root, harbor, lantern, pebble); !maps.Equal(v, want) {
+		t.Fatalf("local status = %v, want %v", v, want)
+	}
+	// On an index panel: stat'ed, and gone from disk is missing.
+	if err := os.Remove(meadow.Path); err != nil {
+		t.Fatal(err)
+	}
+	idx := "fileindex://" + lanternDir
+	meadowIdx := localfs.Entry{Name: "meadow.txt", Path: idx + "/meadow.txt", Type: localfs.EntryFile}
+	thistleIdx := localfs.Entry{Name: "thistle.md", Path: idx + "/thistle.md", Type: localfs.EntryFile}
+	want = map[string]string{meadowIdx.Path: StatusMissing, thistleIdx.Path: StatusIndexed}
+	if v := values(StatusColumn, idx, meadowIdx, thistleIdx); !maps.Equal(v, want) {
+		t.Fatalf("index status = %v, want %v", v, want)
+	}
+
 	if got := formatTimestamp("not a time"); got != "not a time" {
 		t.Fatalf("unparsed timestamp = %q", got)
 	}
