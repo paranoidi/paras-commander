@@ -20,11 +20,13 @@ bright_magenta = 13
 bright_cyan = 14
 bright_white = 15
 
+[status]                     # shared work-state colors
+scanning = { fg = "bright_magenta", bold = true }   # disk usage, fileindex scans, spinners, scanning jobs
+
 [menu]                       # misc menu chrome
 detail = { fg = "white" }
 status = { fg = "cyan" }     # status-command text at top-left of menu bar (status.toml)
 status.separator = { fg = "bright_black" }  # glyph between and after status-command segments
-spinner = { fg = "bright_magenta", bold = true }
 # dropdown is both a leaf style and a parent of .accent/.frame/.selected — keep dotted here
 dropdown = { fg = "black", bg = "blue" }
 dropdown.accent = { fg = "white"}
@@ -45,7 +47,6 @@ failed = { fg = "red" }
 paused = { fg = "yellow" }
 queued = { fg = "bright_blue" }
 running = { fg = "white" }
-scanning = { fg = "magenta" }
 
 [menu.progress]              # menu-bar aggregate progress
 done = { fg = "green" }
@@ -113,7 +114,6 @@ job.removing = { fg = "red" }   # move source being deleted after its copy (opti
 [panel.icon.folder]          # folder icon colors
 open = { fg = "bright_cyan" }
 mount = { fg = "bright_blue" }
-scanning = { fg = "bright_magenta" }
 excluded = { fg = "black" }
 
 [panel.icon.preview]          # prefetch-cache debug tint for image/video file icons
@@ -149,10 +149,9 @@ changed = { fg = "yellow" }
 new = { fg = "red" }
 missing = { fg = "bright_red" }
 excluded = { fg = "bright_black" }
-scanning = { fg = "cyan", bold = true }
 differs = { fg = "yellow", bold = true }
 unchecked = { fg = "yellow" }
-tagged = { fg = "magenta" }
+tagged = { fg = "blue" }
 
 [panel.scrollbar]             # scrollbar track/thumb colors
 track = { fg = "bright_black" }
@@ -334,7 +333,6 @@ decision = { fg = "cyan", bold = true }
 running = { fg = "bright_green", bold = true }
 paused = { fg = "yellow", bold = true }
 queued = { fg = "yellow", bold = true }
-scanning = { fg = "bright_cyan", bold = true }
 canceled = { fg = "bright_red", bold = true }
 
 [jobs.operations]            # Operations pane result icons

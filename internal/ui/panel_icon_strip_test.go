@@ -34,9 +34,9 @@ func TestFolderIconForegroundScanningUsesDiskscanColor(t *testing.T) {
 	th := theme.Default()
 	rowStyle := th.PanelListingEntryStyle(localfs.EntryDirectory, false)
 	fg := th.FolderIconForeground(theme.FolderIconScanning, "", rowStyle)
-	wantFG, _, _ := th.PanelIconFolderScanning.Decompose()
+	wantFG, _, _ := th.StatusScanning.Decompose()
 	if fg != wantFG {
-		t.Fatalf("scanning fg = %v, want panel.icon.folder.scanning %v", fg, wantFG)
+		t.Fatalf("scanning fg = %v, want status.scanning %v", fg, wantFG)
 	}
 }
 

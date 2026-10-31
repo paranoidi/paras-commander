@@ -139,7 +139,7 @@ func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsSt
 	gapStart := min(menuBarContentStart(rect), clipExclusive)
 	gapWidth := clipExclusive - gapStart
 	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, jobsStrip, pinCount, styles)
-	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
+	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.StatusScanning, showMenuBarSpinner, spinPhase)
 }
 
 // drawMenuBar paints the top menu row; a title under the mouse pointer (hover) is drawn like the
@@ -164,7 +164,7 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, hover MenuHov
 	gapStart := min(max(x, menuBarContentStart(rect)), clipExclusive)
 	gapWidth := clipExclusive - gapStart
 	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, jobsStrip, pinCount, styles)
-	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
+	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.StatusScanning, showMenuBarSpinner, spinPhase)
 }
 
 // menuBarContentStart is the first column menu-bar content may use: one cell past rect.X
@@ -264,7 +264,7 @@ func DrawMenuBarPermissionTailOnly(screen tcell.Screen, layout Layout, model Mod
 		barStyle = styles.MenuBarActive
 	}
 	primitive.Text(screen, tailStart, rect.Y, rect.X+rect.Width-tailStart, "", barStyle)
-	drawMenuBarRightTail(screen, rect, model.MenuBarJobsAttention, model.MenuBarPermission, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showSpinner, model.SpinPhase)
+	drawMenuBarRightTail(screen, rect, model.MenuBarJobsAttention, model.MenuBarPermission, styles.MenuBarAlert, styles.MenuDetail, styles.StatusScanning, showSpinner, model.SpinPhase)
 	return true
 }
 
@@ -281,7 +281,7 @@ func DrawMenuBarSpinnerOnly(screen tcell.Screen, layout Layout, model Model, sty
 	if !model.MenuBarActivitySpinner || !ok {
 		return false
 	}
-	screen.SetContent(last, rect.Y, MenuBarSpinnerIcon(model.SpinPhase), nil, styles.MenuSpinner)
+	screen.SetContent(last, rect.Y, MenuBarSpinnerIcon(model.SpinPhase), nil, styles.StatusScanning)
 	return true
 }
 

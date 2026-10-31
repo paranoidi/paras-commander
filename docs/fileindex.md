@@ -96,7 +96,7 @@ when nothing differs, so a difference below the automatic depth shows only
 after such a request. A tagged directory keeps `tagged` instead of showing
 `unchecked`. The glyphs are under
 `[icons.fileindex_state]` and the colors under `[panel.fileindex]` in the
-theme; without Nerd Font icons a letter is shown instead. The fileindex menu
+theme (scanning uses `[status] scanning`); without Nerd Font icons a letter is shown instead. The fileindex menu
 (`fileindex.menu`) shows a legend of these icons at the bottom.
 
 On a ghost row:

@@ -45,7 +45,7 @@ func drawFullscreenPreviewSpinner(screen tcell.Screen, layout Layout, model Mode
 	chromaStyleName := filePreviewChromaStyleName(model.FullscreenFilePreviewDraw)
 	frame := filePreviewFrameStyle(styles, true, chromeBlocked, false, chromaStyleName)
 	header := previewpanel.ContentPadStyle(frame, styles.PanelChrome(true, chromeBlocked).Surface, FilePreviewBodyStyle(styles, chromeBlocked))
-	fg, _, attrs := styles.MenuSpinner.Decompose()
+	fg, _, attrs := styles.StatusScanning.Decompose()
 	style := chromaformat.TokenFrameStyle(header.Foreground(fg).Attributes(attrs), chromaStyleName, chroma.LiteralNumber)
 	screen.SetContent(x, previewRect.Y, MenuBarSpinnerIcon(model.SpinPhase), nil, style)
 	return true

@@ -118,7 +118,7 @@ func (t Theme) JobsIconStyleOn(status string, surface tcell.Style) tcell.Style {
 func (t Theme) JobsIconStyle(status string) tcell.Style {
 	switch status {
 	case "scanning":
-		return t.JobsIconsScanning
+		return t.StatusScanning
 	case "queued":
 		return t.JobsIconsQueued
 	case "running":

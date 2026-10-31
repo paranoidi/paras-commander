@@ -967,8 +967,8 @@ func TestRenderMenuBarShowsActivitySpinnerAfterPermission(t *testing.T) {
 	if rFirst != wantSpinner {
 		t.Fatalf("menu row spinner rune = %q (%U), want %q (%U)", rFirst, rFirst, wantSpinner, wantSpinner)
 	}
-	if st != styles.MenuSpinner {
-		t.Fatalf("spinner style = %v, want MenuSpinner %v", st, styles.MenuSpinner)
+	if st != styles.StatusScanning {
+		t.Fatalf("spinner style = %v, want StatusScanning %v", st, styles.StatusScanning)
 	}
 	gapCol := spinnerCol - 1
 	grCell, _, _ := screen.Get(gapCol, 0)

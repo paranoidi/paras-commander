@@ -187,16 +187,16 @@ type Theme struct {
 	PanelBlockedCursor            tcell.Style
 	PanelBlockedCursorSelected    tcell.Style
 
-	// PanelIconFolderScanning styles disk-scan-pending directory icon strip.
-	PanelIconFolderScanning tcell.Style
+	// StatusScanning ([status] scanning) is the one "work in progress" style: disk-scan-pending
+	// folder icons, slow-load and preview-loading icons, spinners, the fileindex scanning state,
+	// and scanning jobs in the menu bar and the Jobs view.
+	StatusScanning tcell.Style
 	// PanelIconFolderExcluded styles directory rows skipped by disk-usage traversal (devicons).
 	PanelIconFolderExcluded tcell.Style
 	// PanelIconPreviewWarm styles image/video file icons whose prefetch cache is warm (a debug tint).
 	PanelIconPreviewWarm tcell.Style
 	// PanelIconPreviewCold styles image/video file icons whose prefetch cache is not yet warm.
 	PanelIconPreviewCold tcell.Style
-	// MenuSpinner styles the menu-bar activity spinner (braille dot spinner).
-	MenuSpinner tcell.Style
 	// MenuProgress* styles segmented progress in the menu-bar jobs strip.
 	MenuProgressDone      tcell.Style
 	MenuProgressRemaining tcell.Style
@@ -221,7 +221,6 @@ type Theme struct {
 	// top-left of the menu bar (menu.status.separator, optional; falls back to dark grey).
 	MenuStatusSeparator tcell.Style
 	// MenuJob* styles one-cell queue icon per live job status in the menu bar.
-	MenuJobScanning                  tcell.Style
 	MenuJobQueued                    tcell.Style
 	MenuJobRunning                   tcell.Style
 	MenuJobPaused                    tcell.Style
@@ -332,7 +331,6 @@ type Theme struct {
 	JobsProgressInactiveLabelOnTrack tcell.Style
 
 	// JobsIcon* styles for the leading icon column in the jobs list (keys match job status strings).
-	JobsIconsScanning  tcell.Style
 	JobsIconsQueued    tcell.Style
 	JobsIconsRunning   tcell.Style
 	JobsIconsPaused    tcell.Style
@@ -844,13 +842,13 @@ func (t Theme) IconFilelistMoveRemoving() rune {
 
 // IconFilelistWorking returns the row-suffix icon for a directory whose async navigation
 // load has been pending longer than the working-indicator delay (colored via
-// Theme.PanelIconFolderScanning, the same style used for disk-scan-pending folder icons).
+// Theme.StatusScanning).
 func (t Theme) IconFilelistWorking() rune {
 	return t.iconRuneOr(IconKeyWorking, '')
 }
 
 // IconFilelistPreviewLoading returns the icon that replaces the leading file icon while a
-// still/video thumb is prefetching (colored via panel.icon.folder.scanning).
+// still/video thumb is prefetching (colored via status.scanning).
 func (t Theme) IconFilelistPreviewLoading() rune {
 	return t.iconRuneOr(IconKeyFilelistPreviewLoading, '\uf03e')
 }
@@ -959,7 +957,7 @@ func (t Theme) IconMenuJob(status string) rune {
 func (t Theme) MenuJobStyle(status string) tcell.Style {
 	switch status {
 	case "scanning":
-		return t.MenuJobScanning
+		return t.StatusScanning
 	case "queued":
 		return t.MenuJobQueued
 	case "running":
@@ -1082,11 +1080,10 @@ var requiredStyleKeys = []string{
 	"panel.blocked.row.cursor",
 	"panel.blocked.row.cursor.selected",
 	"panel.blocked.text",
-	"panel.icon.folder.scanning",
+	"status.scanning",
 	"panel.icon.folder.excluded",
 	"panel.icon.preview.warm",
 	"panel.icon.preview.cold",
-	"menu.spinner",
 	"panel.usage.normal",
 	"panel.usage.selected",
 	"panel.git.not_modified",
@@ -1163,7 +1160,6 @@ var requiredStyleKeys = []string{
 	"jobs.progress.inactive.fill",
 	"jobs.progress.inactive.label.on_fill",
 	"jobs.progress.inactive.label.on_track",
-	"jobs.icons.scanning",
 	"jobs.icons.queued",
 	"jobs.icons.running",
 	"jobs.icons.paused",
@@ -1176,7 +1172,6 @@ var requiredStyleKeys = []string{
 	"compare.content_diff",
 	"menu.progress.done",
 	"menu.progress.remaining",
-	"menu.job.scanning",
 	"menu.job.queued",
 	"menu.job.running",
 	"menu.job.paused",
@@ -1211,7 +1206,7 @@ var optionalStyleKeys = func() []string {
 var optionalStyleKeySet = makeStyleKeySet(optionalStyleKeys)
 
 // styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
-var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare"}
+var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare", "status"}
 
 var styleSectionRootSet = makeStyleKeySet(styleSectionRoots)
 
@@ -1441,7 +1436,7 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 	if _, ok := raw["styles"]; ok {
-		return Theme{}, fmt.Errorf("[styles] is not supported; use [menu], [panel], [dialog], [jobs], [message], [footer], and [fuzzy] sections")
+		return Theme{}, fmt.Errorf("[styles] is not supported; use [status], [menu], [panel], [dialog], [jobs], [message], [footer], and [fuzzy] sections")
 	}
 	for key := range raw {
 		if key == "name" || key == "palette" || key == "icons" {
@@ -1746,11 +1741,10 @@ func parse(data []byte) (Theme, error) {
 		PanelBlockedCursor:            styles["panel.blocked.row.cursor"],
 		PanelBlockedCursorSelected:    styles["panel.blocked.row.cursor.selected"],
 
-		PanelIconFolderScanning:          styles["panel.icon.folder.scanning"],
+		StatusScanning:                   styles["status.scanning"],
 		PanelIconFolderExcluded:          styles["panel.icon.folder.excluded"],
 		PanelIconPreviewWarm:             styles["panel.icon.preview.warm"],
 		PanelIconPreviewCold:             styles["panel.icon.preview.cold"],
-		MenuSpinner:                      styles["menu.spinner"],
 		MenuProgressDone:                 styles["menu.progress.done"],
 		MenuProgressRemaining:            styles["menu.progress.remaining"],
 		MenuProgressDoneGfx:              menuProgressDoneGfx,
@@ -1759,7 +1753,6 @@ func parse(data []byte) (Theme, error) {
 		MenuSpeedCap:                     menuSpeedCap,
 		MenuSpeedText:                    menuSpeedText,
 		MenuStatusSeparator:              menuStatusSeparator,
-		MenuJobScanning:                  styles["menu.job.scanning"],
 		MenuJobQueued:                    styles["menu.job.queued"],
 		MenuJobRunning:                   styles["menu.job.running"],
 		MenuJobPaused:                    styles["menu.job.paused"],
@@ -1861,7 +1854,6 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressInactiveLabelOnFill:  styles["jobs.progress.inactive.label.on_fill"],
 		JobsProgressInactiveLabelOnTrack: styles["jobs.progress.inactive.label.on_track"],
 
-		JobsIconsScanning:    styles["jobs.icons.scanning"],
 		JobsIconsQueued:      styles["jobs.icons.queued"],
 		JobsIconsRunning:     styles["jobs.icons.running"],
 		JobsIconsPaused:      styles["jobs.icons.paused"],

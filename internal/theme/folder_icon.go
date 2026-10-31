@@ -41,7 +41,7 @@ func (t Theme) FolderIconForeground(kind FolderIconKind, cursorStyleKey string, 
 	}
 	switch kind {
 	case FolderIconScanning:
-		dfg, _, _ := t.PanelIconFolderScanning.Decompose()
+		dfg, _, _ := t.StatusScanning.Decompose()
 		if dfg != tcell.ColorDefault {
 			return dfg
 		}

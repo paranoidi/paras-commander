@@ -29,7 +29,7 @@ func TestPaintPanelIconStripPreviewLoadingUsesScanningColor(t *testing.T) {
 		t.Fatalf("icon rune = %q, want preview_loading %q", string(gotRune), string(wantIcon))
 	}
 	gotFG, _, _ := style.Decompose()
-	wantFG, _, _ := th.PanelIconFolderScanning.Decompose()
+	wantFG, _, _ := th.StatusScanning.Decompose()
 	if gotFG != wantFG {
 		t.Fatalf("icon fg = %v, want scanning magenta %v", gotFG, wantFG)
 	}
