@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -462,4 +463,97 @@ func findScreenText(t *testing.T, screen tcell.SimulationScreen, text string) (i
 	}
 	t.Fatalf("%q not drawn", text)
 	return 0, 0
+}
+
+func legendTestState() LeaderMenuState {
+	return LeaderMenuState{
+		Open: true,
+		Items: []LeaderMenuItem{
+			{GroupTitle: "Tools", GroupColumn: 0},
+			{Key: 'a', Label: "Alpha", GroupColumn: 0},
+			{Key: 'b', Label: "Bravo", GroupColumn: 0},
+		},
+		Legend: []LeaderMenuLegendItem{
+			{Icon: "=", Style: tcell.StyleDefault.Foreground(tcell.ColorGreen), Label: "indexed"},
+			{Icon: "~", Style: tcell.StyleDefault.Foreground(tcell.ColorYellow), Label: "changed"},
+			{Icon: "+", Style: tcell.StyleDefault.Foreground(tcell.ColorRed), Label: "not in index"},
+		},
+	}
+}
+
+func legendRowText(screen tcell.Screen, y, w int) string {
+	s := ""
+	for x := 0; x < w; x++ {
+		c, _, _ := screen.Get(x, y)
+		s += c
+	}
+	return s
+}
+
+func TestDrawLeaderMenuLegendDrawsAndWraps(t *testing.T) {
+	screen := tcell.NewSimulationScreen("")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 30)
+	state := legendTestState()
+
+	wide := geom.Layout{Width: 80, Height: 30, Footer: geom.Rect{Y: 29, Height: 1}}
+	rect, _, lines, ok := leaderMenuPlacement(wide, state)
+	if !ok || len(lines) != 1 {
+		t.Fatalf("wide: ok=%v lines=%v, want one legend line", ok, lines)
+	}
+	// margin + 3 item rows (header, a, b) ... grouped column = 3 rows, + blank + legend + margin.
+	if want := 2 + 3 + 1 + 1; rect.Height != want {
+		t.Fatalf("wide height = %d, want %d", rect.Height, want)
+	}
+	DrawLeaderMenu(screen, wide, state, theme.Default())
+	row := legendRowText(screen, rect.Y+rect.Height-2, 80)
+	if !strings.Contains(row, "= indexed") || !strings.Contains(row, "~ changed") || !strings.Contains(row, "+ not in index") {
+		t.Fatalf("legend row = %q", row)
+	}
+	_, st, _ := screen.Get(strings.Index(row, "="), rect.Y+rect.Height-2)
+	if fg, _, _ := st.Decompose(); fg != tcell.ColorGreen {
+		t.Fatalf("icon fg = %v, want green", fg)
+	}
+
+	narrow := geom.Layout{Width: 30, Height: 30, Footer: geom.Rect{Y: 29, Height: 1}}
+	nrect, _, nlines, ok := leaderMenuPlacement(narrow, state)
+	if !ok || len(nlines) < 2 {
+		t.Fatalf("narrow: ok=%v lines=%v, want wrapped legend", ok, nlines)
+	}
+	if nrect.Height != 2+3+1+len(nlines) {
+		t.Fatalf("narrow height = %d", nrect.Height)
+	}
+	screen.Clear()
+	DrawLeaderMenu(screen, narrow, state, theme.Default())
+	for y := 0; y < 30; y++ {
+		if r := legendRowText(screen, y, 80); strings.TrimSpace(r[30:]) != "" {
+			t.Fatalf("row %d painted outside the strip: %q", y, r)
+		}
+	}
+
+	state.Legend = nil
+	if r2, _, _, _ := leaderMenuPlacement(wide, state); r2.Height != 2+3 {
+		t.Fatalf("no legend height = %d", r2.Height)
+	}
+}
+
+func TestLeaderMenuActionAtIgnoresLegend(t *testing.T) {
+	layout := geom.Layout{Width: 80, Height: 30, Footer: geom.Rect{Y: 29, Height: 1}}
+	state := legendTestState()
+	rect, visible, lines, _ := leaderMenuPlacement(layout, state)
+	for _, c := range leaderMenuCells(rect, visible, false) {
+		if c.Action < 0 {
+			continue
+		}
+		if got, in := LeaderMenuActionAt(layout, state, c.X, c.Y); !in || got != c.Action {
+			t.Fatalf("cell action %d at (%d,%d) = %d %v", c.Action, c.X, c.Y, got, in)
+		}
+	}
+	legendY := rect.Y + rect.Height - 1 - len(lines)
+	if got, in := LeaderMenuActionAt(layout, state, leaderMenuLeftMargin, legendY); !in || got != -1 {
+		t.Fatalf("legend click = %d %v, want -1 true", got, in)
+	}
 }

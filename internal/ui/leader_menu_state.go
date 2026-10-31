@@ -1,5 +1,7 @@
 package ui
 
+import "github.com/gdamore/tcell/v2"
+
 // LeaderMenuItem is one row in the bottom leader menu (group title or action shortcut).
 type LeaderMenuItem struct {
 	GroupTitle  string // non-empty = group header row (built-in Esc menu)
@@ -23,10 +25,19 @@ const (
 	LeaderMenuFileIndex                         // fileindex.menu
 )
 
+// LeaderMenuLegendItem is one "icon label" entry of the strip's legend row(s). Style's
+// foreground and attributes color the icon; the strip supplies the background.
+type LeaderMenuLegendItem struct {
+	Icon  string
+	Style tcell.Style
+	Label string
+}
+
 // LeaderMenuState is the renderable bottom function menu strip.
 type LeaderMenuState struct {
 	Open    bool
 	Kind    LeaderMenuKind
 	CopyGit bool // with LeaderMenuCopy: the "Relative to git root" submenu
 	Items   []LeaderMenuItem
+	Legend  []LeaderMenuLegendItem // optional; drawn below the items, wrapped; clicks on it do nothing
 }

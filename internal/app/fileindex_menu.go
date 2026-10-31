@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -37,4 +38,33 @@ func (a *App) toggleFileIndexMenu() {
 		row++
 	}
 	a.openLeaderMenuDispatch(items, actions, ui.LeaderMenuFileIndex, "File Index menu", a.dispatchActionLikeKeyboardShortcut)
+	if a.leaderMenuOpen(ui.LeaderMenuFileIndex) {
+		a.model.LeaderMenu.Legend = a.fileIndexLegend()
+	}
+}
+
+// fileIndexLegendStates are the index state icons in the panel's precedence order
+// (docs/fileindex.md) with their legend labels.
+var fileIndexLegendStates = []struct{ state, label string }{
+	{localfs.IndexStatusScanning, "scanning"},
+	{localfs.IndexStatusMissing, "only in index"},
+	{localfs.IndexStatusChanged, "changed"},
+	{localfs.IndexStatusExcluded, "excluded"},
+	{localfs.IndexStatusNew, "not in index"},
+	{localfs.IndexStatusDiffers, "differs below"},
+	{localfs.IndexStatusTagged, "tagged"},
+	{localfs.IndexStatusUnchecked, "too deep"},
+	{localfs.IndexStatusIndexed, "indexed"},
+}
+
+// fileIndexLegend lists the index column's state icons with the theme's glyph and style, the
+// same lookups paintIndexColumn uses.
+func (a *App) fileIndexLegend() []ui.LeaderMenuLegendItem {
+	legend := make([]ui.LeaderMenuLegendItem, 0, len(fileIndexLegendStates))
+	for _, s := range fileIndexLegendStates {
+		if r := a.styles.IconFileIndexState(s.state); r != 0 {
+			legend = append(legend, ui.LeaderMenuLegendItem{Icon: string(r), Style: a.styles.PanelFileIndexStyle(s.state), Label: s.label})
+		}
+	}
+	return legend
 }

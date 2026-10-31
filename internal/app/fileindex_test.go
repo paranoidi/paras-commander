@@ -849,3 +849,20 @@ func TestFileIndexAutoDriftNeverOverwritesExplicit(t *testing.T) {
 		t.Fatalf("status = %q, a late automatic result must not override the explicit one", st)
 	}
 }
+
+func TestFileIndexMenuSetsLegendOtherMenusDoNot(t *testing.T) {
+	a, _, _, _ := fileIndexApp(t)
+	a.dispatchActionLikeKeyboardShortcut(keymap.ActionFileIndexMenu)
+	leg := a.model.LeaderMenu.Legend
+	if len(leg) != len(fileIndexLegendStates) || leg[0].Label != "scanning" || leg[len(leg)-1].Label != "indexed" {
+		t.Fatalf("legend = %+v", leg)
+	}
+	if want := a.styles.IconFileIndexState("changed"); leg[2].Icon != string(want) {
+		t.Fatalf("changed icon = %q, want %q", leg[2].Icon, string(want))
+	}
+	a.closeLeaderMenu()
+	a.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelGitFilterMenu)
+	if !a.leaderMenuOpen(ui.LeaderMenuGitFilter) || a.model.LeaderMenu.Legend != nil {
+		t.Fatalf("git filter menu = %+v, want no legend", a.model.LeaderMenu)
+	}
+}

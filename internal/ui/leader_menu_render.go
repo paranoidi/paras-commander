@@ -437,22 +437,61 @@ func leaderMenuSlotLayout(rect geom.Rect, used []int, natural [leaderMenuMacroCo
 	return xs, widths, false
 }
 
+const leaderMenuLegendGap = 3 // blank columns between legend entries
+
+// leaderMenuLegendWidth is the columns one legend entry needs: icon, space, label.
+func leaderMenuLegendWidth(it LeaderMenuLegendItem) int {
+	return utf8.RuneCountInString(it.Icon) + 1 + utf8.RuneCountInString(it.Label)
+}
+
+// leaderMenuLegendLines flows the legend entries left to right into lines of at most width
+// columns (each line holds legend indices); an entry wider than a line gets a line of its own
+// and is truncated when drawn.
+func leaderMenuLegendLines(legend []LeaderMenuLegendItem, width int) [][]int {
+	var lines [][]int
+	used := 0
+	for i, it := range legend {
+		w := leaderMenuLegendWidth(it)
+		if n := len(lines); n > 0 && used+leaderMenuLegendGap+w <= width {
+			lines[n-1] = append(lines[n-1], i)
+			used += leaderMenuLegendGap + w
+			continue
+		}
+		lines = append(lines, []int{i})
+		used = w
+	}
+	return lines
+}
+
 // leaderMenuPlacement resolves the drawn strip: its rect and the items that fit in it. ok is false
-// when the menu is closed, empty, or the terminal has no room for it.
-func leaderMenuPlacement(layout geom.Layout, state LeaderMenuState) (rect geom.Rect, visibleItems []LeaderMenuItem, ok bool) {
+// when the menu is closed, empty, or the terminal has no room for it. legendLines are the wrapped
+// legend entries (legend indices per line) that fit below the items after one blank separator row;
+// items take priority, so a short terminal drops or cuts the legend first.
+func leaderMenuPlacement(layout geom.Layout, state LeaderMenuState) (rect geom.Rect, visibleItems []LeaderMenuItem, legendLines [][]int, ok bool) {
 	if len(state.Items) == 0 || !state.Open {
-		return geom.Rect{}, nil, false
+		return geom.Rect{}, nil, nil, false
 	}
 	visibleItems = LeaderMenuVisibleItems(layout, state.Items)
 	if len(visibleItems) == 0 {
-		return geom.Rect{}, nil, false
+		return geom.Rect{}, nil, nil, false
 	}
-	rect = LeaderMenuRect(layout, leaderMenuContentRows(visibleItems))
+	itemRows := leaderMenuContentRows(visibleItems)
+	rows := itemRows
+	if len(state.Legend) > 0 && layout.Width > leaderMenuLeftMargin {
+		legendLines = leaderMenuLegendLines(state.Legend, max(layout.Width-leaderMenuLeftMargin-leaderMenuRightMargin, 1))
+		if room := leaderMenuMaxContentRows(layout) - itemRows - 1; room < len(legendLines) {
+			legendLines = legendLines[:max(room, 0)]
+		}
+		if len(legendLines) > 0 {
+			rows += 1 + len(legendLines)
+		}
+	}
+	rect = LeaderMenuRect(layout, rows)
 	minHeight := 2*leaderMenuMarginRows + 1
 	if rect.Height < minHeight || rect.Width <= leaderMenuLeftMargin {
-		return geom.Rect{}, nil, false
+		return geom.Rect{}, nil, nil, false
 	}
-	return rect, visibleItems, true
+	return rect, visibleItems, legendLines, true
 }
 
 // leaderMenuCell is where one visible item is drawn.
@@ -509,7 +548,7 @@ func leaderMenuCells(rect geom.Rect, items []LeaderMenuItem, showDirectKeys bool
 // on an action's cell, that action's index (as LeaderMenuIndexForKey returns); action is -1 on
 // group headers and empty space.
 func LeaderMenuActionAt(layout geom.Layout, state LeaderMenuState, x, y int) (action int, inside bool) {
-	rect, visibleItems, ok := leaderMenuPlacement(layout, state)
+	rect, visibleItems, _, ok := leaderMenuPlacement(layout, state)
 	if !ok || !rect.Contains(x, y) {
 		return -1, false
 	}
@@ -523,7 +562,7 @@ func LeaderMenuActionAt(layout geom.Layout, state LeaderMenuState, x, y int) (ac
 
 // DrawLeaderMenu paints the bottom function menu above the footer.
 func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuState, styles theme.Theme) {
-	rect, visibleItems, ok := leaderMenuPlacement(layout, state)
+	rect, visibleItems, legendLines, ok := leaderMenuPlacement(layout, state)
 	if !ok {
 		return
 	}
@@ -571,6 +610,32 @@ func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuSta
 		}
 		ks, ls := leaderMenuItemStyles(it, keyStyle, labelStyle, disabledStyle)
 		drawLeaderMenuCell(screen, cell.X, cell.Y, cell.Width, keys[cell.Item], arrow, it.Label, directKey, ks, arrowStyle, ls, surface)
+	}
+	if len(legendLines) > 0 {
+		drawLeaderMenuLegend(screen, rect, leaderMenuContentRows(visibleItems), state.Legend, legendLines, disabledStyle, surfBG)
+	}
+}
+
+// drawLeaderMenuLegend paints the wrapped legend lines below the item rows: each icon in its own
+// state style, each label dimmed.
+func drawLeaderMenuLegend(screen tcell.Screen, rect geom.Rect, itemRows int, legend []LeaderMenuLegendItem, lines [][]int, labelStyle tcell.Style, surfBG tcell.Color) {
+	x0 := rect.X + leaderMenuLeftMargin
+	right := rect.X + rect.Width - leaderMenuRightMargin
+	if right <= x0 {
+		right = rect.X + rect.Width
+	}
+	y := rect.Y + leaderMenuMarginRows + itemRows + 1
+	for _, line := range lines {
+		x := x0
+		for _, idx := range line {
+			it := legend[idx]
+			fg, _, attrs := it.Style.Decompose()
+			iconStyle := tcell.StyleDefault.Foreground(fg).Background(surfBG).Attributes(attrs)
+			primitive.TextOverlay(screen, x, y, right-x, it.Icon, iconStyle)
+			primitive.TextOverlay(screen, x+utf8.RuneCountInString(it.Icon), y, right-x-utf8.RuneCountInString(it.Icon), " "+it.Label, labelStyle)
+			x += leaderMenuLegendWidth(it) + leaderMenuLegendGap
+		}
+		y++
 	}
 }
 
