@@ -11,8 +11,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// DedupFiles lists every indexed file under root with its exact SHA-256 (not the
-// noexif content hash, so groups stay byte-identical), keyed by Rel. Nothing on
+// DedupFiles lists every indexed file under root with its content hash (the
+// metadata-free hash for JPEGs, else SHA-256), keyed by Rel. Nothing on
 // disk is read. Entries without a valid hash are skipped.
 func (x *Index) DedupFiles(ctx context.Context, root pathloc.Path) ([]compare.FileRecord, map[string][32]byte, error) {
 	host, err := pathloc.IndexHostPath(root)
@@ -47,7 +47,7 @@ func (x *Index) DedupFiles(ctx context.Context, root pathloc.Path) ([]compare.Fi
 		if i%1024 == 0 && ctx.Err() != nil {
 			return nil, nil, ctx.Err()
 		}
-		b, err := hex.DecodeString(e.SHA256)
+		b, err := hex.DecodeString(e.Content)
 		if err != nil || len(b) != 32 {
 			continue
 		}

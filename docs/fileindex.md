@@ -73,8 +73,9 @@ In an index view:
   the change up on the next scan. When an indexed directory is gone from
   disk, the shell and terminal panel start in its nearest existing parent.
   The panel does not follow the shell's directory back into the index view.
-- **Find duplicates** compares the stored SHA-256 hashes in the index and reads
-  nothing from disk (see [find-duplicates.md](find-duplicates.md)).
+- **Find duplicates** compares the stored SHA-256 hashes in the index
+  (metadata-free for JPEGs) and reads nothing from disk (see
+  [find-duplicates.md](find-duplicates.md)).
 - Git status, disk usage and folder colours are not available, as on
   [SFTP](sftp.md) panels.
 

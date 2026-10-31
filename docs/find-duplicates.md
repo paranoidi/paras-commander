@@ -2,7 +2,7 @@
 
 Find duplicates (`Ctrl+Alt+F`, Command menu, leader `P`) scans the active panel's directory tree for files with identical content and opens a full-screen results view. It works on local paths and on `fileindex://` panels; SFTP paths are rejected.
 
-On a `fileindex://` panel the duplicates come from the fileindex database: each indexed file's stored SHA-256 is compared, so nothing on disk is walked, opened or hashed (files not yet indexed, or without a stored hash, are not considered; rescan to refresh the index). There is no hash-confirm prompt. Deleting a copy removes its index entry, like any other delete on a fileindex panel.
+On a `fileindex://` panel the duplicates come from the fileindex database: each indexed file's stored SHA-256 is compared (for JPEGs the hash of the image data without metadata, so photos that differ only in EXIF count as duplicates), so nothing on disk is walked, opened or hashed (files not yet indexed, or without a stored hash, are not considered; rescan to refresh the index). There is no hash-confirm prompt. Deleting a copy removes its index entry, like any other delete on a fileindex panel.
 
 <video src="assets/find-duplicates.webm" autoplay loop muted playsinline></video>
 
