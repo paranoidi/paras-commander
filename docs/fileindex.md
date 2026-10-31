@@ -105,5 +105,10 @@ everything already committed. One fileindex job runs at a time; another
 waits in the queue. Task jobs cannot be paused or retried; run the action
 again instead.
 
+While a scan or prune works on an entry, its panel row carries the database
+icon (`[icons] fileindex`, the HDD job icon without Nerd Font icons). A scan
+hashes all chosen entries together and clears each entry's icon as soon as
+its files are committed.
+
 The index does not yet follow renames, moves and deletes that pc makes on
 disk; rescan or prune to bring it up to date.

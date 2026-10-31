@@ -16,7 +16,8 @@ const TaskLease = "fileindex"
 
 // ScanTask returns the task job scanning paths (local host paths) into the index: hashing new
 // and changed files, then pruning what is gone under them (fileindex's scan.Run with its
-// config.ini rules).
+// config.ini rules). Each path is reported done (jobs.TaskReporter.FinishSource) once its files
+// are committed, while the others are still hashed, so its file-list mark clears.
 func (x *Index) ScanTask(paths []string) *jobs.Task {
 	return &jobs.Task{
 		Title: "fileindex scan",
@@ -106,8 +107,8 @@ func (w *warnings) flush() {
 
 // scanReporter maps scan.Reporter onto task progress: discovery sets the total, a hash worker
 // starting its next file counts the previous one done, Speed samples add the bytes hashed since
-// the last sample, and pruning shows the directory being checked. Its methods are called from
-// scan's goroutines concurrently.
+// the last sample, pruning shows the directory being checked and a finished root finishes its
+// job source. Its methods are called from scan's goroutines concurrently.
 type scanReporter struct {
 	r jobs.TaskReporter
 	w warnings
@@ -180,6 +181,9 @@ func (s *scanReporter) Prune(dir string, _ int) {
 
 func (s *scanReporter) Log(msg string) { s.w.warn(msg) }
 
+// RootDone finishes source i: scan.Run's roots are ScanTask's paths, which are the job's sources.
+func (s *scanReporter) RootDone(i int) { s.r.FinishSource(i) }
+
 // finish flushes the dropped-warning count and, for a scan that completed its hashing, the
 // committed counts.
 func (s *scanReporter) finish(stats scan.Stats) {
@@ -193,5 +197,8 @@ func (s *scanReporter) finish(stats scan.Stats) {
 	s.Hashed(stats)
 }
 
-// compile-time check: scanReporter is a scan.Reporter.
-var _ scan.Reporter = (*scanReporter)(nil)
+// compile-time check: scanReporter is a scan.Reporter and a scan.RootReporter.
+var (
+	_ scan.Reporter     = (*scanReporter)(nil)
+	_ scan.RootReporter = (*scanReporter)(nil)
+)

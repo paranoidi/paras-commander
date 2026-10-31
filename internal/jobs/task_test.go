@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -25,6 +26,23 @@ func applyUntilFinished(t *testing.T, s *State, id string) *Job {
 		case <-deadline:
 			t.Fatalf("job %s did not finish", id)
 			return nil
+		}
+	}
+}
+
+// applyUntilAllFinished applies events until every job in ids has finished, in any order.
+func applyUntilAllFinished(t *testing.T, s *State, ids ...string) {
+	t.Helper()
+	deadline := time.After(5 * time.Second)
+	for len(ids) > 0 {
+		select {
+		case ev := <-s.Events():
+			s.ApplyEvent(ev)
+			if ev.Status.IsFinished() {
+				ids = slices.DeleteFunc(ids, func(id string) bool { return id == ev.JobID })
+			}
+		case <-deadline:
+			t.Fatalf("jobs %v did not finish", ids)
 		}
 	}
 }
@@ -58,6 +76,28 @@ func TestTaskJobReportsProgressAndWarnings(t *testing.T) {
 	}
 	if len(got.Warnings) != 1 || got.Warnings[0] != "skipped /orchard/thistle: unreadable" {
 		t.Fatalf("warnings = %v", got.Warnings)
+	}
+}
+
+// TestTaskJobFinishSource: a task starts with every source started and finishes them one by
+// one.
+func TestTaskJobFinishSource(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	var mid []SourcePhase
+	var job *Job
+	job = NewTaskJob(&Task{Title: "ferry", Lease: "ferry", Run: func(_ context.Context, r TaskReporter) error {
+		r.FinishSource(1)
+		mid = job.SourcePhases()
+		return nil
+	}}, pathloc.PathsForTest("/orchard/acorn", "/orchard/bramble", "/orchard/clover"))
+	s.AddJob(job)
+	applyUntilFinished(t, s, job.ID)
+	if want := []SourcePhase{SourceStarted, SourceFinished, SourceStarted}; !slices.Equal(mid, want) {
+		t.Fatalf("phases = %v, want %v", mid, want)
 	}
 }
 
@@ -154,8 +194,7 @@ func TestTaskLeaseSerializesSameName(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("a task on its own lease must run while the copy holds the transfer lease")
 	}
-	applyUntilFinished(t, s, a.ID)
-	applyUntilFinished(t, s, b.ID)
+	applyUntilAllFinished(t, s, a.ID, b.ID) // the lease mutex is not FIFO: b may run first
 	close(release)
 	mu.Lock()
 	defer mu.Unlock()

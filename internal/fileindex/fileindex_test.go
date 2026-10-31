@@ -67,13 +67,37 @@ func tree(t *testing.T) string {
 }
 
 type recReporter struct {
-	mu    sync.Mutex
-	last  jobs.TaskProgress
-	warns []string
+	mu       sync.Mutex
+	last     jobs.TaskProgress
+	warns    []string
+	finished []int
 }
 
 func (r *recReporter) Progress(p jobs.TaskProgress) { r.mu.Lock(); r.last = p; r.mu.Unlock() }
 func (r *recReporter) Warn(m string)                { r.mu.Lock(); r.warns = append(r.warns, m); r.mu.Unlock() }
+func (r *recReporter) FinishSource(i int) {
+	r.mu.Lock()
+	r.finished = append(r.finished, i)
+	r.mu.Unlock()
+}
+
+// TestScanTaskFinishesEachPath: every path is reported done once and the counts cover them all.
+func TestScanTaskFinishesEachPath(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	root := tree(t)
+	rep := &recReporter{}
+	paths := []string{filepath.Join(root, "harbor.txt"), filepath.Join(root, "lantern")}
+	if err := x.ScanTask(paths).Run(context.Background(), rep); err != nil {
+		t.Fatal(err)
+	}
+	slices.Sort(rep.finished)
+	if !slices.Equal(rep.finished, []int{0, 1}) {
+		t.Fatalf("finished = %v, want [0 1]", rep.finished)
+	}
+	if rep.last.DoneFiles != 3 || rep.last.TotalFiles != 3 || rep.last.DoneBytes != int64(len("anchor and rope")+len("clover")+len("bramble patch")) {
+		t.Fatalf("scan progress = %+v, want 3/3 files and their bytes", rep.last)
+	}
+}
 
 func scanned(t *testing.T) (*Index, string) {
 	t.Helper()

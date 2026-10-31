@@ -57,8 +57,8 @@ github.com/micro-editor/terminal v0.0.0-20250324214352-e587e959c6b5 h1:czSkYUNmH
 github.com/micro-editor/terminal v0.0.0-20250324214352-e587e959c6b5/go.mod h1:OszIG7ockt4osicVHq6gI2QmV4PBDK6H5/Bj8GDGv4Q=
 github.com/ncruces/go-strftime v1.0.0 h1:HMFp8mLCTPp341M/ZnA4qaf7ZlsbTc+miZjCLOFAw7w=
 github.com/ncruces/go-strftime v1.0.0/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
-github.com/paranoidi/fileindex v0.0.0-20261030233809-b7fd28e8fa5f h1:i4fNDa1B3ZYYNPwroCvuPfnu9IXYgh2GCmCdQUN/3w0=
-github.com/paranoidi/fileindex v0.0.0-20261030233809-b7fd28e8fa5f/go.mod h1:0OS+gcr6MrdG3yQs9ZEuS+og9W7gk8CG+2XooPdsEuQ=
+github.com/paranoidi/fileindex v0.0.0-20261030233919-db3db58cc6c1 h1:h3civjx67Aqtt5ZuwUlOusRGrt/2bU/S/GEB0GzBlYM=
+github.com/paranoidi/fileindex v0.0.0-20261030233919-db3db58cc6c1/go.mod h1:0OS+gcr6MrdG3yQs9ZEuS+og9W7gk8CG+2XooPdsEuQ=
 github.com/pkg/sftp v1.13.10 h1:+5FbKNTe5Z9aspU88DPIKJ9z2KZoaGCu6Sr6kKR/5mU=
 github.com/pkg/sftp v1.13.10/go.mod h1:bJ1a7uDhrX/4OII+agvy28lzRvQrmIQuaHrcI1HbeGA=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
