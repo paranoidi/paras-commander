@@ -155,6 +155,11 @@ func LeaderMenuRect(layout geom.Layout, contentRows int) geom.Rect {
 	return geom.Rect{X: 0, Y: y, Width: layout.Width, Height: height}
 }
 
+// LeaderMenuTextWidth is the columns a strip row can show between the side margins.
+func LeaderMenuTextWidth(layout geom.Layout) int {
+	return max(layout.Width-leaderMenuLeftMargin-leaderMenuRightMargin, 1)
+}
+
 // LeaderMenuMinContentY is the first row the leader menu may occupy (below the menu bar when shown).
 func LeaderMenuMinContentY(layout geom.Layout) int {
 	if layout.Menu.Height > 0 {

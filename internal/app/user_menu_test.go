@@ -101,15 +101,20 @@ command = "true"
 }
 
 // assertUserMenuDisabled checks a broken menu.toml still opens the user-menu strip with a
-// single dimmed row, so the edit-config key stays reachable.
+// the error as key-less title rows, so the edit-config key stays reachable.
 func assertUserMenuDisabled(t *testing.T, app *App) {
 	t.Helper()
 	st := app.model.LeaderMenu
 	if !st.Open || st.Kind != ui.LeaderMenuUser {
 		t.Fatalf("LeaderMenu = %+v, want open user menu", st)
 	}
-	if len(st.Items) != 1 || !st.Items[0].Disabled {
-		t.Fatalf("items = %+v, want one disabled row", st.Items)
+	if len(st.Items) == 0 {
+		t.Fatal("want the error as title rows")
+	}
+	for _, it := range st.Items {
+		if it.GroupTitle == "" {
+			t.Fatalf("items = %+v, want only title rows", st.Items)
+		}
 	}
 }
 
@@ -619,7 +624,7 @@ pool = "missing"
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
 		t.Fatalf("MessageUrgency = %v, want critical", app.model.MessageUrgency)
 	}
-	if !strings.Contains(app.model.Message, "unknown pool") {
+	if !strings.Contains(app.model.Message, "unknown pool") || !strings.Contains(app.model.LeaderMenu.Items[0].GroupTitle, "unknown pool") {
 		t.Fatalf("Message = %q, want unknown pool", app.model.Message)
 	}
 }

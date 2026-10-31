@@ -16,8 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-	"github.com/paranoidi/paras-commander/internal/ui/menu"
-	"github.com/paranoidi/paras-commander/internal/usermenu"
+		"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
 var userMenuInteractiveRunner = func(ctx context.Context, argv []string, dir string) error {
@@ -127,36 +126,32 @@ func (a *App) showUserMenu(menuPath string) {
 	a.openUserMenuLevel(visible)
 }
 
-// openUserMenuDisabled opens the user-menu strip with one dimmed row and shows problem.
-// Activating the row only reopens the same disabled strip.
+// openUserMenuDisabled opens the user-menu strip showing problem word-wrapped as group-title
+// rows: no row has an activation key, so only the footer keys (edit config, close) apply.
 func (a *App) openUserMenuDisabled(problem string, urg ui.MessageUrgency) {
 	a.userMenuVisible = nil
 	a.userMenuWarnings = nil
-	items := []ui.LeaderMenuItem{{
-		Label:    "Menu unavailable: " + menu.FunctionKeyEditConfig.KeyLabel + " to edit",
-		Disabled: true,
-	}}
-	if !a.openLeaderMenuStrip(items, ui.LeaderMenuUser, "User menu", func(int) bool {
-		a.openUserMenuDisabled(problem, urg)
-		return false
-	}) {
-		a.setTransientMessage(problem, urg)
-		return
+	w, h := a.screen.Size()
+	lines := ui.WrapWordsToWidth(problem, ui.LeaderMenuTextWidth(a.layoutForTerminalSize(w, h)))
+	items := make([]ui.LeaderMenuItem, len(lines))
+	for i, line := range lines {
+		items[i] = ui.LeaderMenuItem{GroupTitle: line}
 	}
-	// openLeaderMenuStrip clears the transient message, so set it afterwards.
+	a.openLeaderMenuStrip(items, ui.LeaderMenuUser, "User menu", nil)
+	// After the strip: openLeaderMenuStrip clears the transient message.
 	a.setTransientMessage(problem, urg)
 }
 
 // loadUserMenuVisible loads menuPath, validates it, and resolves the entries visible for the
-// current panel context. On failure it returns a non-empty problem message and its urgency
+// current panel context. On failure it returns the full problem text and its urgency
 // instead of entries. warnings is mf.Warnings (e.g. a duplicate key= at one level).
 func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry, warnings []string, problem string, urg ui.MessageUrgency) {
 	mf, err := usermenu.LoadFile(menuPath)
 	if err != nil {
-		return nil, nil, usermenu.ShortLoadError(err), ui.MessageUrgencyCritical
+		return nil, nil, err.Error(), ui.MessageUrgencyCritical
 	}
 	if err := mf.ValidatePoolRefs(usermenu.PoolNameSet(a.workPools.Names())); err != nil {
-		return nil, nil, usermenu.ShortLoadError(err), ui.MessageUrgencyCritical
+		return nil, nil, err.Error(), ui.MessageUrgencyCritical
 	}
 	if len(mf.Entries) == 0 {
 		return nil, nil, "User menu: no entries", ui.MessageUrgencyWarn
@@ -167,7 +162,7 @@ func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry
 	ctx := &usermenu.EvalContext{Active: active, Other: other}
 	v, _, err := usermenu.FilterVisible(mf, ctx)
 	if err != nil {
-		return nil, nil, usermenu.ShortLoadError(err), ui.MessageUrgencyCritical
+		return nil, nil, err.Error(), ui.MessageUrgencyCritical
 	}
 	if len(v) == 0 {
 		return nil, nil, "User menu: no visible entries", ui.MessageUrgencyWarn
