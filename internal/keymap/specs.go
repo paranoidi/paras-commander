@@ -1202,7 +1202,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Title:        "Advanced options",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
-			PreferredKey: "M-e",
+			PreferredKey: "M-a",
 			Keywords:     []string{"find dialog", "advanced", "criteria", "age", "mtime", "size", "owner", "exclude"},
 		},
 		{

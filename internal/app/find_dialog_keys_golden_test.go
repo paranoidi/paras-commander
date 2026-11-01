@@ -232,11 +232,11 @@ func findKeyScripts() []simpleKeyScript {
 		{"esc", findQuery("har") + " Esc"},
 		{"esc-from-option", "Tab Tab Tab Esc"},
 		{"hidden-toggle-reindexes", "Alt+i Down Alt+i"},
-		{"advanced-toggle-and-tab", "Alt+e Tab Tab Tab Tab Space Alt+e"},
+		{"advanced-toggle-and-tab", "Alt+a Tab Tab Tab Tab Space Alt+a"},
 		{"advanced-space-on-toggle", "Tab Tab Space Space"},
 		{"match-mode-cycle", findQuery("*.md") + " Alt+m Alt+m Alt+m Alt+m"},
-		{"advanced-size-field", "Alt+e Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab " + findQuery("1x") + " Backspace k Tab"},
-		{"advanced-reset", "Alt+m Alt+e Alt+r"},
+		{"advanced-size-field", "Alt+a Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab " + findQuery("1x") + " Backspace k Tab"},
+		{"advanced-reset", "Alt+m Alt+a Alt+r"},
 	}
 }
 

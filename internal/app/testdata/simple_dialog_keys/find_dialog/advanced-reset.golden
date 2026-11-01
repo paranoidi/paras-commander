@@ -2,7 +2,7 @@
 focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Alt+m ==
 focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=false focusid=find:query mode=1 invalid=false fields=[] summary="Criteria: glob"
-== Alt+e ==
+== Alt+a ==
 focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:query mode=1 invalid=false fields=[] summary="Criteria: glob"
 == Alt+r ==
 focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:query mode=0 invalid=false fields=[] summary=""

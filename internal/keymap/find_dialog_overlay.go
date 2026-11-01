@@ -5,11 +5,11 @@ func DefaultFindDialogOverlayKeys() map[string][]string {
 	return withOpenInPanelKeys(map[string][]string{
 		ActionFindView:             {"F3"},
 		ActionFindUnselectAll:      {"F4"},
-		ActionFindSelectAll:        {"F5", "M-a"},
+		ActionFindSelectAll:        {"F5", "C-a"},
 		ActionFindSelectGroup:      {"F6"},
 		ActionFindUnselectGroup:    {"F7"},
 		ActionFindSelectParentDirs: {"F2"},
-		ActionFindToggleAdvanced:   {"M-e"},
+		ActionFindToggleAdvanced:   {"M-a"},
 		ActionFindCycleMatchMode:   {"M-m"},
 		ActionFindResetAdvanced:    {"M-r"},
 	})

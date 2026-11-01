@@ -16,7 +16,7 @@ Options in the dialog:
 - **Include hidden** (`M-i`, default off): add dot-entries and git-ignored paths. This does not change the panel's own hidden-file setting.
 - **Stay on current volume** (`M-v`, default on): do not descend into other mounted file systems.
 - **Only directories** (`M-n`) / **Only files** (`M-y`): filter the result list without re-scanning.
-- **Advanced** (checkbox at the end of the query row, or `M-e`): show the [advanced criteria](#advanced-criteria).
+- **Advanced** (checkbox at the end of the query row, or `M-a`): show the [advanced criteria](#advanced-criteria).
 - **Search only from selected directories** (`M-s`, shown only when directories are selected in the panel, default on): the search is limited to those directories; uncheck it to widen to the whole panel path.
 
 ## Match modes
@@ -33,7 +33,7 @@ Matching ignores case when `[filter] case_insensitive` is on, unless **Case sens
 
 ## Advanced criteria
 
-`M-e` (`find.toggle-advanced`) or the **Advanced** checkbox opens a section under the options. Every filled field must hold; results update as you change it. Check boxes apply at once; text fields apply on Enter or when focus leaves them. A field that does not parse turns red and is ignored. While the section is closed, the criteria in effect are summarized on the line above the results, so nothing filters invisibly. `M-r` (`find.reset-advanced`) clears the mode and every criterion. The section and its values stay for the rest of the session.
+`M-a` (`find.toggle-advanced`) or the **Advanced** checkbox opens a section under the options. Every filled field must hold; results update as you change it. Check boxes apply at once; text fields apply on Enter or when focus leaves them. A field that does not parse turns red and is ignored. While the section is closed, the criteria in effect are summarized on the line above the results, so nothing filters invisibly. `M-r` (`find.reset-advanced`) clears the mode and every criterion. The section and its values stay for the rest of the session.
 
 | Field | Keeps | Input |
 |---|---|---|
@@ -55,12 +55,12 @@ Age, size, owner, executable and empty criteria need file metadata, so the first
 |---|---|
 | `Enter` | Navigate: a directory opens in the panel; a file opens its parent with the file highlighted. If rows are marked, they are added to the panel selection instead |
 | `Insert` or `Space` | Mark / unmark the row |
-| `F5` or `M-a` | Mark all matching results (`find.select-all`) |
+| `F5` or `C-a` | Mark all matching results (`find.select-all`) |
 | `F4` | Unmark all (`find.unselect-all`) |
 | `F6` / `F7` | Mark / unmark by group pattern (`find.select-group`, `find.unselect-group`) |
 | `F2` | Replace the selection with the parent directories of the marked results (`find.select-parent-dirs`) |
 | `F3` | View the highlighted file fullscreen (`find.view`) |
-| `M-e` | Show / hide the advanced criteria (`find.toggle-advanced`) |
+| `M-a` | Show / hide the advanced criteria (`find.toggle-advanced`) |
 | `M-m` | Next match mode (`find.cycle-match-mode`) |
 | `M-r` | Reset the match mode and criteria (`find.reset-advanced`) |
 | `S-←` / `S-→` | Open the result in the left / right panel and keep Find open |
