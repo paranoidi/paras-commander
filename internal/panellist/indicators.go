@@ -41,6 +41,9 @@ type JobSuffix struct {
 	JobOpIcon rune
 	// JobOpStyle is the foreground style for JobOpIcon (panel.row.mark.job.move / .delete).
 	JobOpStyle tcell.Style
+	// JobWrite is true when JobIcon marks a job's write (destination) tree rather
+	// than its read (source) tree; see Theme.PanelJobMarkStyle.
+	JobWrite bool
 }
 
 // RowSuffix selects which trailing indicators to reserve and paint on a listing row.
@@ -225,7 +228,7 @@ func RunesFromDisplay(display []DisplayRune) []rune {
 func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, cursorStyleKey string, th theme.Theme, chromeBlocked bool) (tcell.Style, bool) {
 	switch {
 	case r == suffix.JobIcon && suffix.JobIcon != 0:
-		base := th.StatusStyle(jobStatus)
+		base := th.PanelJobMarkStyle(jobStatus, suffix.JobWrite)
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == suffix.JobQueuedIcon && suffix.JobQueuedIcon != 0:
 		fg, _, _ := th.StatusQueued.Decompose()

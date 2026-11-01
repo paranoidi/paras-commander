@@ -12,8 +12,8 @@ func rowMarksResolver(pinnedItems []PinnedItem, jobMarks []JobPathMark) dialog.R
 			return dialog.RowMarks{}
 		}
 		_, isPinned := pinned[absPath]
-		hasJob, status, _ := EntryPathJobMarkStatus(absPath, jobMarks)
-		return dialog.RowMarks{Pinned: isPinned, HasJob: hasJob, JobStatus: status}
+		hasJob, status, write := EntryPathJobMarkStatus(absPath, jobMarks)
+		return dialog.RowMarks{Pinned: isPinned, HasJob: hasJob, JobStatus: status, JobWrite: write}
 	}
 }
 

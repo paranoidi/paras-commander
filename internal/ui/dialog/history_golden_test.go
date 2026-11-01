@@ -39,7 +39,7 @@ func historyGoldenMarks(path string) RowMarks {
 	case strings.HasSuffix(path, "3"):
 		m.Pinned = true
 	case strings.HasSuffix(path, "5"):
-		m.HasJob, m.JobStatus = true, "running"
+		m.HasJob, m.JobStatus, m.JobWrite = true, "running", true
 	case strings.HasSuffix(path, "7"):
 		m.Pinned, m.HasJob, m.JobStatus = true, true, "queued"
 	}

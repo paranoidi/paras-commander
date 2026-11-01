@@ -109,6 +109,18 @@ func (t Theme) JobsOperationOn(result string, surface tcell.Style) tcell.Style {
 	return mergeForegroundOnSurface(t.JobsOperationStyle(result), surface)
 }
 
+// PanelJobMarkStyle returns the file-panel job mark style: write (green) /
+// read (yellow), status.decision while the matched job waits on a user decision.
+func (t Theme) PanelJobMarkStyle(status string, write bool) tcell.Style {
+	if status == "decision" {
+		return t.StatusDecision
+	}
+	if write {
+		return t.PanelRowMarkJob
+	}
+	return t.PanelRowMarkJobRead
+}
+
 // JobsProgressStyles returns progress-bar fill/track/label styles for the jobs list.
 // Paused and canceled jobs use the inactive palette (grey fill instead of green).
 func (t Theme) JobsProgressStyles(status string) (fill, track, labelOnFill, labelOnTrack tcell.Style) {
@@ -121,3 +133,4 @@ func (t Theme) JobsProgressStyles(status string) (fill, track, labelOnFill, labe
 			t.JobsProgressLabelOnFill, t.JobsProgressLabelOnTrack
 	}
 }
+

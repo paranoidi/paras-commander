@@ -14,6 +14,7 @@ type RowMarks struct {
 	Pinned    bool
 	HasJob    bool
 	JobStatus string
+	JobWrite  bool
 	// Missing marks a path that no longer exists (Theme.IconDialogMissing); Cursor switches
 	// its color to dialog.option.active (Theme.DialogMissingIconForeground).
 	Missing bool
@@ -46,7 +47,7 @@ func RowMarksWidth(m RowMarks) int {
 }
 
 // DrawRowMarksSuffix blank-fills [x, x+maxWidth) to bg, then paints the job icon
-// (Theme.IconFilelistJob, styled via Theme.StatusStyle) followed by the pin icon
+// (Theme.IconFilelistJob, styled via Theme.PanelJobMarkStyle) followed by the pin icon
 // (Theme.IconPin, styled via Theme.PanelRowMarkPinned) within maxWidth. Job-before-pin
 // matches panellist.EntryDisplayRunes's suffix order exactly, so the look is identical to the
 // main panel's row marks. Returns cells used.
@@ -57,7 +58,7 @@ func DrawRowMarksSuffix(screen tcell.Screen, x, y, maxWidth int, m RowMarks, bg 
 	primitive.Text(screen, x, y, maxWidth, "", tcell.StyleDefault.Background(bg))
 	used := 0
 	if m.HasJob && used+2 <= maxWidth {
-		fg, _, _ := styles.StatusStyle(m.JobStatus).Decompose()
+		fg, _, _ := styles.PanelJobMarkStyle(m.JobStatus, m.JobWrite).Decompose()
 		primitive.Text(screen, x+used, y, 2, " "+string(styles.IconFilelistJob()), tcell.StyleDefault.Foreground(fg).Background(bg))
 		used += 2
 	}

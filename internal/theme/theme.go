@@ -108,6 +108,12 @@ type Theme struct {
 	// in the other panel's directory (the Cursor variant marks the active cursor's name).
 	PanelRowMarkOtherMatch       tcell.Style
 	PanelRowMarkOtherMatchCursor tcell.Style
+	// PanelRowMarkJob styles the file-list job mark when the row is under a job's
+	// write (destination) tree; PanelRowMarkJobRead styles the read (source) tree;
+	// StatusDecision styles either while the matched job waits on a user decision. See
+	// Theme.PanelJobMarkStyle.
+	PanelRowMarkJob     tcell.Style
+	PanelRowMarkJobRead tcell.Style
 	// PanelRowMarkJobMove and PanelRowMarkJobDelete style the file-list operation icon
 	// (icons.filelist.move / .delete) appended after the job/queued icons for move-or-flatten
 	// and delete jobs respectively.
@@ -801,8 +807,8 @@ func (t Theme) IconFileIndex() string {
 	return t.iconOr(IconKeyFileIndex, "\U000F01BC")
 }
 
-// IconFilelistJob returns the file-list job mark icon (colored by the job's status via
-// Theme.StatusStyle).
+// IconFilelistJob returns the file-list job mark icon (role/status colored via
+// Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
 func (t Theme) IconFilelistJob() rune {
 	return t.iconRuneOr(IconKeyFilelistJob, '\U000f02ca')
 }
@@ -1036,6 +1042,8 @@ var requiredStyleKeys = []string{
 	"panel.row.mark.renamed",
 	"panel.row.mark.no_permission",
 	"panel.row.mark.pinned",
+	"panel.row.mark.job",
+	"panel.row.mark.job.read",
 	"panel.row.mark.job.move",
 	"panel.row.mark.job.delete",
 	"panel.row.tree.connector",
@@ -1670,6 +1678,8 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkPinned:                  styles["panel.row.mark.pinned"],
 		PanelRowMarkOtherMatch:              panelRowMarkOtherMatch,
 		PanelRowMarkOtherMatchCursor:        panelRowMarkOtherMatchCursor,
+		PanelRowMarkJob:                     styles["panel.row.mark.job"],
+		PanelRowMarkJobRead:                 styles["panel.row.mark.job.read"],
 		PanelRowMarkJobMove:                 styles["panel.row.mark.job.move"],
 		PanelRowMarkJobDelete:               styles["panel.row.mark.job.delete"],
 		PanelRowMarkJobRemoving:             panelRowMarkJobRemoving,

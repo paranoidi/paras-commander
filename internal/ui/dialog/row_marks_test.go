@@ -68,7 +68,7 @@ func TestDrawRowMarksSuffixPaintsJobBeforePin(t *testing.T) {
 	styles := theme.Default()
 	bg := tcell.ColorBlack
 
-	m := RowMarks{Pinned: true, HasJob: true, JobStatus: "running"}
+	m := RowMarks{Pinned: true, HasJob: true, JobStatus: "running", JobWrite: true}
 	used := dlg.DrawRowMarksSuffix(screen, 2, 1, dlg.RowMarksWidth(m), m, bg, styles)
 	if used != 4 {
 		t.Fatalf("used = %d, want 4", used)
@@ -90,7 +90,7 @@ func TestDrawRowMarksSuffixPaintsJobBeforePin(t *testing.T) {
 		t.Fatalf("cell 5 = %q, want pin icon %q", r, wantPinIcon)
 	}
 
-	jobFG, _, _ := styles.StatusStyle(m.JobStatus).Decompose()
+	jobFG, _, _ := styles.PanelJobMarkStyle(m.JobStatus, m.JobWrite).Decompose()
 	_, jobStyle, _ := screen.Get(3, 1)
 	if fg, _, _ := jobStyle.Decompose(); fg != jobFG {
 		t.Fatalf("job icon fg = %v, want %v", fg, jobFG)
