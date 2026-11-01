@@ -281,3 +281,12 @@ func TestJobTaskStepStatus(t *testing.T) {
 		}
 	}
 }
+
+func TestDetailStaticLinesOmitWarnings(t *testing.T) {
+	j := JobEntry{ID: "w1", Type: string(jobs.TypeCopy), Warnings: []string{"relinked birch", "relinked maple"}}
+	for _, l := range detailStaticLines(j, time.Now(), 80, "", false) {
+		if strings.Contains(l, "Warnings") || strings.Contains(l, "birch") {
+			t.Fatalf("Details must not list warnings; got %q", l)
+		}
+	}
+}

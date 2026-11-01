@@ -64,6 +64,7 @@ func (h *Handler) focusJobsViewOnFirstPendingBlocker() {
 		h.model.JobsView.FocusPane = 1
 		h.model.JobsView.ConflictButtonFocus = 0
 		h.model.JobsView.DetailScroll = 0
+		h.model.JobsView.MessagesScroll = 0
 		h.model.JobsView.OpsScroll = 0
 	}
 	h.ensureJobsViewSelectionVisible()
@@ -488,6 +489,8 @@ func (h *Handler) handleJobsPaneScrollKey(event *tcell.EventKey, fp int) {
 			return
 		}
 		scrollPane(event.Key(), &h.model.JobsView.DetailScroll, max(0, h.jobsDetailLineCountForSelection()-contentH))
+	case ui.JobsPaneMessages:
+		scrollPane(event.Key(), &h.model.JobsView.MessagesScroll, max(0, len(h.selectedJobEntry().Warnings)-contentH))
 	case ui.JobsPaneOperations:
 		h.scrollOperations(event.Key(), contentH)
 	}
@@ -570,6 +573,7 @@ func (h *Handler) setSelection(rows []ui.JobsListRow, r ui.JobsListRow) {
 	st.SelectRow(r)
 	if beforeSel != st.Selected {
 		st.DetailScroll = 0
+		st.MessagesScroll = 0
 		st.ConflictButtonFocus = 0
 	}
 	if beforeSel != st.Selected || beforeSub != st.SelectedSub {
@@ -673,14 +677,15 @@ func (h *Handler) jobsPaneLayout() ([]ui.JobsPane, map[ui.JobsPane]ui.Rect) {
 	width, height := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(width, height)
 	if layout.TooSmall {
-		return ui.JobsPaneOrder(false, false), nil
+		return ui.JobsPaneOrder(false, false, false), nil
 	}
 	r := h.jobsViewRects(layout)
 	rects := map[ui.JobsPane]ui.Rect{
 		ui.JobsPaneDetail:     r.Detail,
+		ui.JobsPaneMessages:   r.Messages,
 		ui.JobsPaneOperations: r.Operations,
 	}
-	return ui.JobsPaneOrder(ui.JobEntryShowsConflictPanel(h.selectedJobEntry()), r.Operations.Height > 0), rects
+	return ui.JobsPaneOrder(ui.JobEntryShowsConflictPanel(h.selectedJobEntry()), r.Messages.Height > 0, r.Operations.Height > 0), rects
 }
 
 // jobsViewRects returns the jobs view pane frames for the selected job (ui.JobsViewLayout).

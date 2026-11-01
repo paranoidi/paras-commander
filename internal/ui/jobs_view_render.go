@@ -71,13 +71,14 @@ type JobsViewState struct {
 	// Selected is the selected job's index; SelectedSub is 0 on its job row and n on the
 	// sub-row of source n-1 (see SelectedSource). Expanded holds the IDs of jobs showing their
 	// source sub-rows (JobsListRows).
-	Selected     int
-	SelectedSub  int
-	Expanded     map[string]bool
-	FocusPane    int // index into JobsPaneOrder: list, blocker (if shown), Details, Operations (if shown)
-	ListScroll   int
-	DetailScroll int
-	OpsScroll    int
+	Selected       int
+	SelectedSub    int
+	Expanded       map[string]bool
+	FocusPane      int // index into JobsPaneOrder: list, blocker (if shown), Details, Messages (if shown), Operations (if shown)
+	ListScroll     int
+	DetailScroll   int
+	MessagesScroll int
+	OpsScroll      int
 	// OpsResultHidden is the set of results the Operations pane hides (zero shows all; see
 	// OpsResultShown). OpsFilter holds the Operations fuzzy query; only its Query, Cursor and
 	// Editing are used (the jobs handler matches the operation log itself). OpsScroll is how
@@ -105,7 +106,7 @@ func JobsMaximizedRect(layout Layout) Rect {
 // JobsViewLayout returns the jobs view pane frames for sel, with Operations across the bottom
 // when opsBottom is set. Every jobs view draw, hit test and scroll bound takes its frames here.
 func JobsViewLayout(layout Layout, opsBottom bool, sel JobEntry, now time.Time, throughputChartEnabled bool) JobsViewRects {
-	return SplitJobsView(layout.Primary, layout.Secondary, opsBottom, JobEntryShowsConflictPanel(sel), JobDetailLineCount(sel, now, throughputChartEnabled))
+	return SplitJobsView(layout.Primary, layout.Secondary, opsBottom, JobEntryShowsConflictPanel(sel), JobDetailLineCount(sel, now, throughputChartEnabled), len(sel.Warnings))
 }
 
 // jobsMaximizedPane returns the pane drawn full screen over the whole jobs view: the focused
@@ -114,7 +115,7 @@ func jobsMaximizedPane(state JobsViewState, sel JobEntry, rects JobsViewRects) (
 	if !state.Maximized {
 		return JobsPaneList, false
 	}
-	pane = focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), rects.Operations.Height > 0))
+	pane = focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), rects.Messages.Height > 0, rects.Operations.Height > 0))
 	return pane, pane == JobsPaneOperations
 }
 
@@ -152,11 +153,14 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	}
 	drawJobsListPanel(screen, rects.List, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS, v.ListHover)
 	showConflict := JobEntryShowsConflictPanel(sel)
-	focused := focusedJobsPane(state, JobsPaneOrder(showConflict, rects.Operations.Height > 0))
+	focused := focusedJobsPane(state, JobsPaneOrder(showConflict, rects.Messages.Height > 0, rects.Operations.Height > 0))
 	if rects.Conflict.Height > 0 {
 		drawJobsConflictPanel(screen, rects.Conflict, state, sel, styles, chromeBlocked, focused == JobsPaneConflict, v.UserHomeDir)
 	}
 	drawJobsDetailPanel(screen, rects.Detail, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, v.UserHomeDir, v.ThroughputChartEnabled)
+	if rects.Messages.Height > 0 {
+		drawJobsMessagesPanel(screen, rects.Messages, state.MessagesScroll, sel.Warnings, styles, chromeBlocked, focused == JobsPaneMessages)
+	}
 	if rects.Operations.Height > 0 {
 		drawJobsOperationsPanel(screen, rects.Operations, state, win, sourceLabel, styles, chromeBlocked, focused == JobsPaneOperations, false, v.OpsNewestLast)
 	}
@@ -382,6 +386,21 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 			}
 		}
 		primitive.StyledText(screen, textX, contentTop+i, textW, line, lineStyle, spans)
+	}
+}
+
+// drawJobsMessagesPanel draws the job's warnings, one truncated line each, scrolled by scroll.
+func drawJobsMessagesPanel(screen tcell.Screen, rect Rect, scroll int, warnings []string, styles theme.Theme, chromeBlocked, focused bool) {
+	layout := drawAuxPanelChrome(screen, rect, fmt.Sprintf(" Messages (%d) ", len(warnings)), "", focused, chromeBlocked, false, styles)
+	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
+	if !chromeBlocked {
+		body = styles.JobsDetailText.Background(layout.ContentBG)
+	}
+	textW := max(1, rect.Width-4)
+	contentH := rect.Height - 2
+	scroll = max(0, min(scroll, len(warnings)-contentH))
+	for i := 0; i < contentH && i+scroll < len(warnings); i++ {
+		primitive.Text(screen, rect.X+2, rect.Y+1+i, textW, primitive.TruncateMiddle(warnings[i+scroll], textW), body)
 	}
 }
 
@@ -625,12 +644,6 @@ func detailLinesIcons(j JobEntry, now time.Time, pathMax int, userHomeDir string
 	}
 	if parts := jobFilesLineParts(j); parts != nil {
 		lines = append(lines, jobFilesPartsText(parts))
-	}
-	if len(j.Warnings) > 0 {
-		lines = append(lines, fmt.Sprintf("Warnings (%d):", len(j.Warnings)))
-		for _, w := range j.Warnings {
-			lines = append(lines, primitive.TruncateMiddle(w, pathMax))
-		}
 	}
 	src := "—"
 	if len(j.Sources) > 0 {

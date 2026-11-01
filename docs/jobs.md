@@ -185,7 +185,12 @@ A job with such items finishes as **failed** with `N item(s) failed`. Each
 such item is a red row in the Operations panel, followed by its reason, and
 the Details panel counts them. Press `F3` and keep only **Failed** to list just
 those. Tab cycles Queue, blocker
-(when shown), Details, Operations.
+(when shown), Details, Messages (when shown), Operations.
+
+When the selected job has warnings (non-fatal issues such as a symlink that
+had to be dereferenced, or fileindex scan problems), a **Messages (N)** panel
+lists them between Details and Operations. It is at most 8 rows tall and
+scrolls with the arrow, `PgUp`/`PgDn` and `Home`/`End` keys while focused.
 
 With the Details panel focused, `+` and `-` shorten or lengthen the transfer
 graph's column time (the tickrate, and so how fast the Speed column reacts)
