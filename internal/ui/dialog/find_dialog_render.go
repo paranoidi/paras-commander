@@ -126,9 +126,23 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 		return
 	}
 	list, _ := p.Item(FindList)
+	inert := state.AdvancedFocused()
 	p.EachListRow(FindList, func(row, y int) {
 		if ent, ok := state.FindEntryAt(state.Ranked[row]); ok {
 			paintIcon(screen, list.Rect.X, y, ent, ctx.Styles)
+			if inert {
+				restyleCells(screen, list.Rect.X, y, iconLead, ctx.Styles.DialogOptionDisabledStyle())
+			}
 		}
 	})
+}
+
+// restyleCells redraws the cells in [x, x+w) on row y in style, keeping their content; a wide
+// glyph is redrawn once, from its first cell.
+func restyleCells(screen tcell.Screen, x, y, w int, style tcell.Style) {
+	for cx := x; cx < x+w; {
+		str, _, width := screen.Get(cx, y)
+		screen.Put(cx, y, str, style)
+		cx += max(width, 1)
+	}
 }

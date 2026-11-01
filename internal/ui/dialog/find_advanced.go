@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -74,6 +75,55 @@ func FindAdvTypeID(i int) dlg.ID { return dlg.IndexedID(findAdvTypePrefix, i) }
 func FindAdvTypeOf(id dlg.ID) (int, bool) {
 	i, ok := dlg.IDIndex(id, findAdvTypePrefix)
 	return i, ok && i >= 0 && i < FilterTypeCount
+}
+
+// findAdvancedLabel is the label of the checkbox that shows the advanced section.
+const findAdvancedLabel = "Advanced"
+
+// FindAdvancedMnemonic is the letter of the Advanced checkbox to highlight for the chords bound
+// to find.toggle-advanced: the first plain Alt+letter chord whose letter is in the label, upper
+// case (0 when none is).
+func FindAdvancedMnemonic(chords []string) rune {
+	for _, c := range chords {
+		rest, ok := strings.CutPrefix(c, "M-")
+		if !ok || len(rest) != 1 {
+			continue
+		}
+		r := unicode.ToUpper(rune(rest[0]))
+		if strings.ContainsRune(strings.ToUpper(findAdvancedLabel), r) {
+			return r
+		}
+	}
+	return 0
+}
+
+// textInputFocused reports whether focus is on a text input (the query, depth or an advanced
+// field), where letters are text.
+func (s *FindDialogState) textInputFocused() bool {
+	if _, ok := FindAdvFieldOf(s.Focus); ok {
+		return true
+	}
+	return s.Focus == "" || s.Focus == FindQuery || s.Focus == FindDepth
+}
+
+// AdvancedFocused reports whether focus is on a widget of the advanced section (the result
+// list's keys do not reach it then, so the list is drawn inert).
+func (s *FindDialogState) AdvancedFocused() bool {
+	id := s.Focus
+	if _, ok := FindAdvFieldOf(id); ok {
+		return true
+	}
+	if _, ok := FindAdvModeOf(id); ok {
+		return true
+	}
+	if _, ok := FindAdvTypeOf(id); ok {
+		return true
+	}
+	switch id {
+	case FindAdvEmpty, FindAdvSymlinks, FindAdvBroken, FindAdvExecutable, FindAdvNotMine, FindAdvCase:
+		return true
+	}
+	return false
 }
 
 // FindAdvInput is one advanced text input: its text, caret, scroll and validity.
@@ -189,7 +239,40 @@ const (
 // findAdvancedRows are the advanced section's rows for a row width of rowW cells: the match
 // mode, kind and file-type rows on one aligned grid, then the three time rows beside size /
 // owner / exclude when two chunks fit side by side (else one chunk per row).
-func findAdvancedRows(a FindAdvancedState, rowW int) []dlg.Item {
+func findAdvancedRows(a FindAdvancedState, rowW int, letters bool) []dlg.Item {
+	rows := findAdvancedLayout(a, rowW)
+	if letters {
+		for i := range rows {
+			for j := range rows[i].Cells {
+				rows[i].Cells[j].Mnemonic = findAdvMnemonics[rows[i].Cells[j].ID]
+			}
+		}
+	}
+	return rows
+}
+
+// findAdvMnemonics are the letters of the advanced section's options. They are live (and
+// highlighted) only while focus is off the text inputs, where they work plain or with Alt; they
+// avoid the letters of the rest of the dialog (N, Y, I, V, S, the Advanced key, OK, Cancel).
+var findAdvMnemonics = map[dlg.ID]rune{
+	FindAdvModeID(findcrit.ModeFuzzy): 'F',
+	FindAdvModeID(findcrit.ModeGlob):  'G',
+	FindAdvModeID(findcrit.ModeRegex): 'X',
+	FindAdvCase:                       'E',
+	FindAdvEmpty:                      'P',
+	FindAdvSymlinks:                   'K',
+	FindAdvBroken:                     'B',
+	FindAdvExecutable:                 'L',
+	FindAdvTypeID(0):                  'D', // Videos
+	FindAdvTypeID(1):                  'R', // Pictures
+	FindAdvTypeID(2):                  'H', // Archives
+	FindAdvTypeID(3):                  'U', // Audio
+	FindAdvTypeID(4):                  'M', // Documents
+	FindAdvNotMine:                    'T',
+}
+
+// findAdvancedLayout lays out the advanced section's rows (see findAdvancedRows).
+func findAdvancedLayout(a FindAdvancedState, rowW int) []dlg.Item {
 	input := func(f FindAdvField, w int) dlg.Item {
 		in := a.Fields[f]
 		it := dlg.Item{ID: FindAdvFieldID(f), Kind: dlg.KindInput, Width: w, Value: in.Value, Cursor: in.Cursor, Scroll: in.Scroll, Invalid: in.Invalid}

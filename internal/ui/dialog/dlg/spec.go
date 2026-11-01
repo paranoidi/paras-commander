@@ -183,7 +183,9 @@ type Item struct {
 	Disabled bool
 	// Inert (radio and checkbox) draws the item in the disabled style but keeps it focusable, a
 	// mnemonic target and a hit target: the caller ignores its activation (the transfer dialog's
-	// Dereference symlinks on a remote path).
+	// Dereference symlinks on a remote path). On a list it draws every row's text in the disabled
+	// style without a cursor row, while the keys that move it are elsewhere (find's results while
+	// focus is in its Advanced section).
 	Inert bool
 	// Seg names the Tab segment of an item inside its group (default 0). Items of one group that
 	// share a Seg are one Tab segment, whatever their layout order, so a grid whose rows hold a
@@ -329,6 +331,9 @@ type Spec struct {
 	Groups          []Group
 	Buttons         []Button // drawn after a horizontal separator, centered; also its own Tab segment
 	PlainButtonKeys bool     // plain (no Alt) button mnemonic letters press the button
+	// PlainMnemonics makes a plain letter act as its Alt+letter mnemonic while focus is not in a
+	// text input (after PlainButtonKeys' buttons).
+	PlainMnemonics bool
 	// ButtonsLabel, when set, is drawn centered in the separator above the buttons, padded with one
 	// space on each side, in the selection-size status style (find's marked-selection size).
 	ButtonsLabel string

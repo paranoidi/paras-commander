@@ -59,7 +59,7 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	queryRow := []dlg.Item{query, depth}
 	if advanced {
 		depth.Gap = 1
-		queryRow = []dlg.Item{query, depth, {ID: FindAdvanced, Kind: dlg.KindCheckbox, Label: "Advanced", On: adv.Expanded, Seg: 1}}
+		queryRow = []dlg.Item{query, depth, {ID: FindAdvanced, Kind: dlg.KindCheckbox, Label: findAdvancedLabel, Mnemonic: state.AdvancedMnemonic, On: adv.Expanded, Seg: 1}}
 	}
 	var options []dlg.Item
 	if !state.JumpMode {
@@ -84,33 +84,36 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	rowW := dlg.RowWidth(ctx.Layout.Width, ctx.Layout.Height, frame)
 	groups := []dlg.Group{{Columns: [][]dlg.Item{col}}}
 	listSep := dlg.Item{Kind: dlg.KindSeparator}
+	list := dlg.Item{ID: FindList, Kind: dlg.KindList, Height: findListHeight(ctx.Layout.Height), MinHeight: findDialogMinListRows}
 	switch {
 	case advanced && adv.Expanded:
-		advCol := append([]dlg.Item{{Kind: dlg.KindSeparator, Label: "Advanced"}}, findAdvancedRows(adv, rowW)...)
+		advCol := append([]dlg.Item{{Kind: dlg.KindSeparator, Label: "Advanced"}}, findAdvancedRows(adv, rowW, !state.textInputFocused())...)
 		groups = append(groups, dlg.Group{Columns: [][]dlg.Item{advCol}})
+		// The open section takes its rows from the results: the frame keeps the height it
+		// has with the section closed (down to a one-row list).
+		closed := *state
+		closed.Advanced.Expanded = false
+		if _, _, listH, ok := FindDialogMetrics(ctx.Layout, &closed); ok {
+			list.Height = max(listH-len(advCol), 1)
+		}
+		list.MinHeight = 1
 	case advanced:
 		listSep.Label = adv.Summary(styles, rowW-4) // the separator pads its label by a cell each side
 	}
-	list := dlg.Item{ID: FindList, Kind: dlg.KindList, Height: findListHeight(ctx.Layout.Height), MinHeight: findDialogMinListRows}
 	groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{listSep, list}}})
 	spec := dlg.Spec{
 		Title: findDialogTitle(*state, styles), Width: frame.Width, MinWidth: frame.MinWidth,
 		Groups:          groups,
 		Buttons:         frame.Buttons,
 		ButtonsLabel:    ctx.SelectionLabel,
-		PlainButtonKeys: true, ScrollbarStyle: ctx.ScrollbarStyle,
-	}
-	if _, fits := dlg.FitSpec(ctx.Layout.Width, ctx.Layout.Height, spec); !fits && advanced && adv.Expanded {
-		// On a short screen the open section may leave the results a single row rather than
-		// hiding the whole dialog.
-		last := &spec.Groups[len(spec.Groups)-1].Columns[0][1]
-		last.MinHeight = 1
+		PlainButtonKeys: true, PlainMnemonics: true, ScrollbarStyle: ctx.ScrollbarStyle,
 	}
 	// Only the visible results are built, so the list's fitted height comes first.
 	spec, _ = fillList(spec, ctx.Layout, FindList, func(height, _ int) dlg.Item {
 		from, to := dlg.ListWindow(state.Selected, state.ListScroll, height, len(state.Ranked))
 		return dlg.Item{
 			ID: FindList, Kind: dlg.KindList, Driven: true, Height: height, Fit: dlg.FitPath, MarksAfterText: true, Scrollbar: true,
+			Inert:    state.AdvancedFocused(),
 			RowCount: len(state.Ranked), Rows: findListRows(state, ctx, from, to), RowsFrom: from,
 			Cursor: state.Selected, Offset: state.ListScroll,
 		}

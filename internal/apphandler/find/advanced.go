@@ -156,7 +156,10 @@ func (h *Handler) ToggleAdvanced() {
 		return
 	}
 	st.Advanced.Expanded = !st.Advanced.Expanded
-	if !st.Advanced.Expanded && advancedSectionID(st.Focus) {
+	if st.Advanced.Expanded {
+		h.commitLeftAdvField()
+		st.Focus = dialog.FindAdvModeID(st.Advanced.Mode) // the section's first row: the selected match mode
+	} else if st.AdvancedFocused() {
 		h.commitLeftAdvField()
 		st.Focus = dialog.FindQuery
 	}
@@ -187,25 +190,6 @@ func (h *Handler) ResetAdvanced() {
 	}
 	st.Advanced.Clear()
 	h.commitAdvanced()
-}
-
-// advancedSectionID reports whether id is a widget of the advanced section.
-func advancedSectionID(id dlg.ID) bool {
-	if _, ok := dialog.FindAdvFieldOf(id); ok {
-		return true
-	}
-	if _, ok := dialog.FindAdvModeOf(id); ok {
-		return true
-	}
-	if _, ok := dialog.FindAdvTypeOf(id); ok {
-		return true
-	}
-	switch id {
-	case dialog.FindAdvEmpty, dialog.FindAdvSymlinks, dialog.FindAdvBroken, dialog.FindAdvExecutable,
-		dialog.FindAdvNotMine, dialog.FindAdvCase:
-		return true
-	}
-	return false
 }
 
 // applyAdvancedEvent acts on an advanced-section widget event; it reports false for any other

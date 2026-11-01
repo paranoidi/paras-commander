@@ -39,6 +39,13 @@ func (a *App) paintFindDialogOverlay() bool {
 	if layout.TooSmall {
 		return false
 	}
+	fw, fh, _, _ := dialog.FindDialogMetrics(layout, &a.model.FindDialog)
+	size := [2]int{fw, fh}
+	prev := a.findOverlaySize
+	a.findOverlaySize = size
+	if prev != [2]int{} && prev != size {
+		return false // the frame changed: repaint the panels the old one covered
+	}
 	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.UseNerdfontIcons, a.model.PanelScrollbar, a.model.DiskUsage, a.model.PinnedItems, a.model.JobPathMarks)
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model, a.styles)
 	a.emitScreenAfterPartialPaint()

@@ -401,5 +401,8 @@ func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, 
 			}
 		}
 	}
+	if spec.PlainMnemonics {
+		return HandleMnemonic(spec, focus, tcell.NewEventKey(tcell.KeyRune, ev.Rune(), tcell.ModAlt))
+	}
 	return Event{}, false
 }

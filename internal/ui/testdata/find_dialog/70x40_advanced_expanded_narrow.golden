@@ -1,5 +1,7 @@
 -- text --
                                                                       
+                                                                      
+                                                                      
   ┌────────────────────────── Find (49) ───────────────────────────┐  
   │ /                                      Depth      [x] Advanced │  
   ├────────────────────────────────────────────────────────────────┤  
@@ -31,13 +33,11 @@
   │  cinder/delta_fable.png                                       │  
   │ 󰈙 cinder/ember_harbor.txt                                      │  
   │  cinder/fable_juniper.toml                                    │  
-  │ 󰉋 delta                                                        │  
-  │ 󰈙 delta/ember_glacier.txt                                      │  
-  │  delta/fable_ivory.toml                                       │  
-  │  delta/glacier_kestrel.mp4                                    │  
   ├────────────────────────────────────────────────────────────────┤  
   │                      [ OK ]    [ Cancel ]                      │  
   └────────────────────────────────────────────────────────────────┘  
+                                                                      
+                                                                      
                                                                       
 -- legend --
 a fg=0x0 bg=0x0 attrs=0 ul=0 ulc=0x0
@@ -47,51 +47,45 @@ d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 f fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 g fg=0x100000003 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-h fg=0x100000004 bg=0x100000008 attrs=1 ul=0 ulc=0x0
-i fg=0x300519aba bg=0x100000008 attrs=0 ul=0 ulc=0x0
-j fg=0x300dddddd bg=0x100000008 attrs=0 ul=0 ulc=0x0
-k fg=0x100000005 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-l fg=0x30089e051 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-m fg=0x3009c4221 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-n fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
+h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebddddddeeebfffffffffffffbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbggggggggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbfffffcffffbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbgggggcggggggggggggggbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbeeeeeeeeeeeeebbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbkbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbkbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabblbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbkbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabblbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabblbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbkbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbeeeneeeebbeeeneeeeeeeebbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbeeeheeeebbeeeheeeeeeeebbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

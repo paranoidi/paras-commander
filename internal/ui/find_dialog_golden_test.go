@@ -217,6 +217,12 @@ func findGoldenCases() []findGolden {
 			st.Focus = dialog.FindAdvFieldID(dialog.FindAdvModifiedNewer)
 			rankQuery(st, "an")
 		}},
+		findGolden{name: "100x30_advanced_focus_inert", w: 100, h: 30, icons: true, nerdfont: true, state: func(st *dialog.FindDialogState) {
+			st.Advanced.Expanded = true
+			st.AdvancedMnemonic = 'A'
+			st.Focus = dialog.FindAdvFieldID(dialog.FindAdvSizeMin)
+			st.Selected = 2
+		}},
 		findGolden{name: "70x40_advanced_expanded_narrow", w: 70, h: 40, icons: true, state: func(st *dialog.FindDialogState) {
 			st.Advanced.Expanded = true
 			st.Focus = dialog.FindAdvBroken

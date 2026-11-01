@@ -56,6 +56,7 @@ func (h *Handler) openDialog(panelID int, jump bool) {
 		JumpMode:                   jump,
 		OnlyDirectories:            jump,
 		Advanced:                   h.savedAdvanced,
+		AdvancedMnemonic:           dialog.FindAdvancedMnemonic(h.keysFindDialog.BindingsForAction(keymap.ActionFindToggleAdvanced)),
 	}
 	h.bindFindDialogPathMeta(&h.model.FindDialog)
 	h.loadAdvanced(&h.model.FindDialog)

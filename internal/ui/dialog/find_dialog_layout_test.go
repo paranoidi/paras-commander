@@ -27,3 +27,25 @@ func centeredDialogRectForTest(layout Layout, width, height int) Rect {
 	y := (layout.Height - height) / 2
 	return Rect{X: x, Y: y, Width: width, Height: height}
 }
+
+func TestFindDialogAdvancedKeepsFrameHeight(t *testing.T) {
+	for _, size := range [][2]int{{130, 40}, {125, 40}, {100, 30}, {80, 24}, {70, 40}, {80, 30}} {
+		layout := Layout{Width: size[0], Height: size[1]}
+		closed := &FindDialogState{}
+		_, closedH, closedList, ok := FindDialogMetrics(layout, closed)
+		if !ok {
+			t.Fatalf("%v: closed dialog does not fit", size)
+		}
+		open := &FindDialogState{Advanced: FindAdvancedState{Expanded: true}}
+		_, openH, openList, ok := FindDialogMetrics(layout, open)
+		if !ok {
+			t.Fatalf("%v: open dialog does not fit", size)
+		}
+		if openList > 1 && openH != closedH {
+			t.Errorf("%v: frame height closed %d, open %d; want equal", size, closedH, openH)
+		}
+		if openList >= closedList {
+			t.Errorf("%v: list rows closed %d, open %d; want fewer when open", size, closedList, openList)
+		}
+	}
+}

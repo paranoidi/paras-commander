@@ -155,6 +155,9 @@ type FindDialogState struct {
 	markedSelCache findMarkedSelCache
 	// Advanced is the advanced section (match mode and criteria); kept across dialogs for the session.
 	Advanced FindAdvancedState
+	// AdvancedMnemonic is the letter of the Advanced checkbox label highlighted as its key: the
+	// Alt+letter find.toggle-advanced is bound to, when that letter is in the label (0 = none).
+	AdvancedMnemonic rune
 	// QueryInvalid marks a glob or regex query that does not compile (no match is run for it).
 	QueryInvalid bool
 	// IndexStat and IndexExclude are the metadata level and exclude patterns the running index

@@ -623,9 +623,12 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 			continue
 		}
 		rw := it.row(idx)
-		isCursor := focused && idx == it.Cursor
+		isCursor := focused && idx == it.Cursor && !it.Inert
 		if it.Markers {
 			style := styles.DialogOptionRowStyle(isCursor, rw.Marked)
+			if it.Inert {
+				style = styles.DialogOptionDisabledStyle()
+			}
 			part := " " + styles.IconDialogRadio(rw.Marked) + " "
 			partW := runewidth.StringWidth(part)
 			primitive.Text(screen, r.X, y, partW, part, style)
@@ -669,6 +672,10 @@ func drawPlainRow(screen tcell.Screen, x, y, w int, rw ListRow, it Item, isCurso
 	}
 	_, bg, _ := base.Decompose()
 	match = match.Background(bg)
+	if it.Inert {
+		base = styles.DialogOptionDisabledStyle()
+		match = base
+	}
 	marks := rw.Marks
 	marks.Missing = marks.Missing || rw.Missing
 	marks.Cursor = isCursor

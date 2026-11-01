@@ -1,0 +1,20 @@
+== open ==
+focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== Alt+a ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-mode-0 mode=0 invalid=false fields=[] summary=""
+== g ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-mode-1 mode=1 invalid=false fields=[] summary="Criteria: glob"
+== k ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-symlinks mode=1 invalid=false fields=[] summary="Criteria: glob · symlinks"
+== p ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-empty mode=1 invalid=false fields=[] summary="Criteria: glob · empty · symlinks"
+== x ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-mode-2 mode=2 invalid=false fields=[] summary="Criteria: regex · empty · symlinks"
+== Tab ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-case mode=2 invalid=false fields=[] summary="Criteria: regex · empty · symlinks"
+== Alt+b ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-broken mode=2 invalid=false fields=[] summary="Criteria: regex · empty · symlinks · broken symlinks"
+== f ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-mode-0 mode=0 invalid=false fields=[] summary="Criteria: empty · symlinks · broken symlinks"
+== q ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-mode-0 mode=0 invalid=false fields=[] summary="Criteria: empty · symlinks · broken symlinks"

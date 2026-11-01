@@ -315,6 +315,10 @@ type App struct {
 
 	// folderColors is the in-memory Nemo-compatible folder-colour snapshot (internal/foldercolor).
 	folderColors *foldercolor.Store
+	// findOverlaySize is the find dialog frame (width, height) the last find-only partial paint
+	// drew; a different frame (the Advanced section opened or closed) needs a full render so
+	// the panels repaint where the old frame was.
+	findOverlaySize [2]int
 	// lastFullRenderToast is the Model.Message last committed by a full render. Partial
 	// painters consult it so a shorter replacement cannot leave fragments of the previous banner.
 	lastFullRenderToast string
