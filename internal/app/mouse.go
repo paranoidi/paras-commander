@@ -172,22 +172,24 @@ func (a *App) mouseGoesToDialog() bool {
 	return true
 }
 
-// dialogButtonHover is the top-most dlg dialog's button under the last pointer position. render
-// sets Model.DialogButtonHover from it, so the highlight follows the dialog as it changes.
-func (a *App) dialogButtonHover() dlg.ButtonHover {
+// dialogHovers are the top-most dlg dialog's button and list row under the last pointer position.
+// render sets Model.DialogButtonHover and Model.DialogListHover from them, so the highlights follow
+// the dialog as it changes.
+func (a *App) dialogHovers() (dlg.ButtonHover, dlg.Rect) {
 	if !a.mouse.pointer || !a.mouseGoesToDialog() {
-		return dlg.ButtonHover{}
+		return dlg.ButtonHover{}, dlg.Rect{}
 	}
 	d, ok := a.activeDialog(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if !ok {
-		return dlg.ButtonHover{}
+		return dlg.ButtonHover{}, dlg.Rect{}
 	}
 	spec, fit := d.spec()
 	if !fit {
-		return dlg.ButtonHover{}
+		return dlg.ButtonHover{}, dlg.Rect{}
 	}
 	w, h := a.screen.Size()
-	return dlg.HoveredButton(spec, w, h, a.mouse.x, a.mouse.y)
+	row, _ := dlg.HoveredListRow(spec, w, h, *d.focus, a.mouse.x, a.mouse.y)
+	return dlg.HoveredButton(spec, w, h, a.mouse.x, a.mouse.y), row
 }
 
 // menuBarHover is the menu title under the last pointer position, where a click would open it.
@@ -198,29 +200,6 @@ func (a *App) menuBarHover() ui.MenuHover {
 	w, h := a.screen.Size()
 	index, ok := ui.MenuBarMenuAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
 	return ui.MenuHover{Active: ok, Index: index}
-}
-
-// followDialogListPointer moves the top-most dlg dialog's list cursor onto the row under (x, y)
-// (dlg.Hover) through the dialog's own event function, as a click on the row would. moved
-// reports whether the cursor moved; quit whether applying it quit the app.
-func (a *App) followDialogListPointer(x, y int) (quit, moved bool) {
-	if !a.mouseGoesToDialog() {
-		return false, false
-	}
-	d, ok := a.activeDialog(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if !ok {
-		return false, false
-	}
-	spec, fit := d.spec()
-	if !fit {
-		return false, false
-	}
-	w, h := a.screen.Size()
-	ev, ok := dlg.Hover(spec, w, h, d.focus, x, y)
-	if !ok {
-		return false, false
-	}
-	return d.apply(ev), true
 }
 
 // selectPulldownItemUnderPointer moves the open pulldown's selection onto the item under (x, y)
@@ -302,19 +281,22 @@ func (a *App) panelRowHover() ui.PanelRowHover {
 	return ui.PanelRowHover{Active: true, Panel: id, Entry: row}
 }
 
-// refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons,
+// refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons
+// and list rows,
 // menu titles, the status commands, footer entries, file list rows, Jobs, Commands and Messages rows) and reports
 // whether one changed. render calls it, so they track the screen as it changes under a still
 // pointer; motion calls it and renders on a change.
 func (a *App) refreshPointerHovers() bool {
-	button, menuTitle, footer := a.dialogButtonHover(), a.menuBarHover(), a.footerHover()
+	button, dialogRow := a.dialogHovers()
+	menuTitle, footer := a.menuBarHover(), a.footerHover()
 	status, row, listRow := a.statusCommandsHover(), a.panelRowHover(), a.auxListHover()
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
 		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover ||
 		status != a.model.StatusCommandsHover || row != a.model.PanelRowHover ||
-		listRow != a.model.AuxListHover
-	a.model.DialogButtonHover, a.model.MenuBarHover, a.model.FooterHover = button, menuTitle, footer
+		listRow != a.model.AuxListHover || dialogRow != a.model.DialogListHover
+	a.model.DialogButtonHover, a.model.DialogListHover = button, dialogRow
+	a.model.MenuBarHover, a.model.FooterHover = menuTitle, footer
 	a.model.StatusCommandsHover, a.model.PanelRowHover, a.model.AuxListHover = status, row, listRow
 	return changed
 }
@@ -364,11 +346,6 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		}
 		// Each one updates its own state, so all of them run before deciding to render.
 		moved := a.selectPulldownItemUnderPointer(layout, x, y)
-		listQuit, listMoved := a.followDialogListPointer(x, y)
-		if listQuit {
-			return true, false
-		}
-		moved = moved || listMoved
 		hovers := a.refreshPointerHovers()
 		if title := a.updatePanelTitleHover(layout, x, y); moved || hovers || title {
 			a.render()

@@ -210,6 +210,9 @@ type Model struct {
 	// DialogButtonHover is the top-most dialog's button under the mouse pointer (set by App each
 	// render), painted in the focused button style without moving focus.
 	DialogButtonHover dlg.ButtonHover
+	// DialogListHover is the top-most dialog's list row under the mouse pointer (set by App each
+	// render; zero width for none), drawn on the jobs.row.hover background.
+	DialogListHover dlg.Rect
 	// MenuBarHover is the menu title under the mouse pointer (set by App each render), drawn in
 	// the open menu's title style.
 	MenuBarHover MenuHover
@@ -781,6 +784,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	drawModalOverlays(screen, layout, model, menus, styles)
 	dlg.DrawButtonHover(screen, model.DialogButtonHover, styles)
+	dlg.DrawListRowHover(screen, model.DialogListHover, styles)
 	// Caller must invoke screen.Show() or screen.Sync() so the terminal updates.
 }
 
