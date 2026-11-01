@@ -76,11 +76,38 @@ func TestDrawCommandsListNewestFirst(t *testing.T) {
 	screen.SetSize(80, 12)
 	layout := Layout{Primary: Rect{X: 0, Y: 0, Width: 40, Height: 12}, Secondary: Rect{X: 40, Y: 0, Width: 40, Height: 12}}
 	entries := []CommandRunEntry{{UserCommandLine: "meadow"}, {UserCommandLine: "lantern"}, {UserCommandLine: "orchard"}}
-	drawCommandsView(screen, layout, CommandsViewState{Selected: 2}, entries, theme.Default(), false, "")
+	drawCommandsView(screen, layout, CommandsViewState{Selected: 2}, entries, theme.Default(), false, "", ListRowHover{})
 
 	for i, want := range []string{"orchard", "lantern", "meadow"} {
 		if got := dedupBottomRowText(screen, 1+i, 40); !strings.Contains(got, want) {
 			t.Errorf("row %d = %q, want it to contain %q", i, got, want)
+		}
+	}
+}
+
+// Every row of the hovered entry (its command line and macro lines) takes the hover background.
+func TestDrawCommandsListHoverCoversEntryRows(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 12)
+	styles := theme.Default()
+	layout := Layout{Primary: Rect{X: 0, Y: 0, Width: 40, Height: 12}, Secondary: Rect{X: 40, Y: 0, Width: 40, Height: 12}}
+	entries := []CommandRunEntry{
+		{UserCommandLine: "meadow"},
+		{UserCommandLine: "lantern", Macros: []cmdmacro.MacroUse{{Letter: 'f', Values: []string{"/harbor/quill"}}}},
+		{UserCommandLine: "orchard"},
+	}
+	drawCommandsView(screen, layout, CommandsViewState{Selected: 2}, entries, styles, false, "", ListRowHover{Active: true, Row: 1})
+
+	_, hoverBG, _ := styles.JobsRowHover.Decompose()
+	// Newest first: orchard (cursor), lantern and its macro line (hovered), meadow.
+	for i, hovered := range []bool{false, true, true, false} {
+		_, st, _ := screen.Get(layout.Primary.X+5, 1+i)
+		if _, bg, _ := st.Decompose(); (bg == hoverBG) != hovered {
+			t.Fatalf("row %d %q bg = %v, hovered %v", i, dedupBottomRowText(screen, 1+i, 40), bg, hovered)
 		}
 	}
 }

@@ -1,5 +1,14 @@
 package ui
 
+// messageLogHead is the head row (the one with a time) of the message row idx belongs to: a
+// continuation row belongs to the message above it.
+func messageLogHead(entries []MessageLogEntry, idx int) int {
+	for idx > 0 && entries[idx].Time == "" {
+		idx--
+	}
+	return idx
+}
+
 // AdjacentMessageLogIndex moves to the next logical message (skipping wrapped continuation lines).
 // delta is +1 for newer (toward index 0) or -1 for older. Returns cur when no further message exists.
 func AdjacentMessageLogIndex(entries []MessageLogEntry, cur, delta int) int {

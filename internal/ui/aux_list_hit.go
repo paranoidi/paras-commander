@@ -52,10 +52,7 @@ func MessagesListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	for idx > 0 && log[idx].Time == "" {
-		idx--
-	}
-	return idx, true
+	return messageLogHead(log, idx), true
 }
 
 // commandsListRow is one drawn line of the Commands list: an entry's command line (Macro -1) or

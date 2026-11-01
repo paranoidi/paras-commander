@@ -214,10 +214,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		r := rows[idx]
 		entry := jobs[r.Job]
 		selected := idx == selectedRow
-		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
-		if !selected && !chromeBlocked && hover.Active && hover.Row == idx {
-			lineStyle = styles.JobsRowHover
-		}
+		lineStyle := auxListRowStyle(styles, rowBase, selected, chromeBlocked, active, hover, idx)
 		paintAuxPanelRowMargin(screen, rect.X+1, y, lineStyle)
 		xProg := contentX + jobsListColPrefix + jobsListColStatus + jobsListColETA + jobsListColSpeed
 		barW := max(rect.X+rect.Width-1-xProg, 0) // reach the border, no trailing margin

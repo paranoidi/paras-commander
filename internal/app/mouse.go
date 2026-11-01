@@ -246,15 +246,31 @@ func (a *App) footerHover() ui.FooterHover {
 	return ui.FooterHoverAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
 }
 
-// jobsListHover is the Jobs queue row under the last pointer position. It only highlights: the
-// selection stays put, so crossing the list on the way to the Details or Conflict pane does not
-// switch the job they show.
-func (a *App) jobsListHover() ui.ListRowHover {
-	if !a.mouse.pointer || a.inputMode() != InputModeJobsView || a.mouseGoesToDialog() {
+// auxListHit is the row hit-test of the open Jobs, Commands or Messages list (ok false in
+// other modes).
+func (a *App) auxListHit() (hit func(ui.Layout, *ui.Model, int, int) (int, bool), ok bool) {
+	switch a.inputMode() {
+	case InputModeJobsView:
+		return ui.JobsListEntryAt, true
+	case InputModeCommandsView:
+		return ui.CommandsListEntryAt, true
+	case InputModeMessagesView:
+		return ui.MessagesListEntryAt, true
+	}
+	return nil, false
+}
+
+// auxListHover is the row of the open Jobs, Commands or Messages list under the last pointer
+// position: a job or source row, a command entry, a whole message. It only highlights: the
+// selection stays put, so crossing the list on the way to the Details, Conflict or output panes
+// does not switch what they show.
+func (a *App) auxListHover() ui.ListRowHover {
+	hit, ok := a.auxListHit()
+	if !ok || !a.mouse.pointer || a.mouseGoesToDialog() {
 		return ui.ListRowHover{}
 	}
 	w, h := a.screen.Size()
-	row, ok := ui.JobsListEntryAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+	row, ok := hit(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
 	return ui.ListRowHover{Active: ok, Row: row}
 }
 
@@ -287,19 +303,19 @@ func (a *App) panelRowHover() ui.PanelRowHover {
 }
 
 // refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons,
-// menu titles, the status commands, footer entries, file list and Jobs queue rows) and reports
+// menu titles, the status commands, footer entries, file list rows, Jobs, Commands and Messages rows) and reports
 // whether one changed. render calls it, so they track the screen as it changes under a still
 // pointer; motion calls it and renders on a change.
 func (a *App) refreshPointerHovers() bool {
 	button, menuTitle, footer := a.dialogButtonHover(), a.menuBarHover(), a.footerHover()
-	status, row, jobsRow := a.statusCommandsHover(), a.panelRowHover(), a.jobsListHover()
+	status, row, listRow := a.statusCommandsHover(), a.panelRowHover(), a.auxListHover()
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
 		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover ||
 		status != a.model.StatusCommandsHover || row != a.model.PanelRowHover ||
-		jobsRow != a.model.JobsListHover
+		listRow != a.model.AuxListHover
 	a.model.DialogButtonHover, a.model.MenuBarHover, a.model.FooterHover = button, menuTitle, footer
-	a.model.StatusCommandsHover, a.model.PanelRowHover, a.model.JobsListHover = status, row, jobsRow
+	a.model.StatusCommandsHover, a.model.PanelRowHover, a.model.AuxListHover = status, row, listRow
 	return changed
 }
 
@@ -546,19 +562,21 @@ func (a *App) handleLeaderMenuMouse(layout ui.Layout, x, y int, pressed tcell.Bu
 }
 
 // handleAuxListMouse handles the list pane of the Jobs, Commands and Messages views: a left click
-// focuses the list and selects the entry under the pointer, the wheel moves the selection.
+// focuses the list and selects the entry under the pointer (in Messages it also copies the
+// message), the wheel moves the selection.
 func (a *App) handleAuxListMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
-	var hit func(ui.Layout, *ui.Model, int, int) (int, bool)
+	hit, ok := a.auxListHit()
+	if !ok {
+		return false
+	}
 	var selectEntry, move func(int)
 	switch a.inputMode() {
 	case InputModeJobsView:
-		hit, selectEntry, move = ui.JobsListEntryAt, a.jobsCtrl.FocusListRow, a.jobsCtrl.MoveSelection
+		selectEntry, move = a.jobsCtrl.FocusListRow, a.jobsCtrl.MoveSelection
 	case InputModeCommandsView:
-		hit, selectEntry, move = ui.CommandsListEntryAt, a.commandsCtrl.FocusListRow, a.commandsCtrl.MoveSelection
-	case InputModeMessagesView:
-		hit, selectEntry, move = ui.MessagesListEntryAt, a.selectMessage, a.moveMessagesSelection
+		selectEntry, move = a.commandsCtrl.FocusListRow, a.commandsCtrl.MoveSelection
 	default:
-		return false
+		selectEntry, move = a.copyMessage, a.moveMessagesSelection
 	}
 	idx, ok := hit(layout, &a.model, x, y)
 	if !ok {

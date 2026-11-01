@@ -83,7 +83,7 @@ func (a *App) setTransientMessageBanner(logMsg, bannerMsg string, urgency ui.Mes
 	gen := a.messageExpiryGen.Add(1)
 	a.model.Message = banner
 	a.model.MessageUrgency = urgency
-	a.appendMessageLogLines(lines, urgency)
+	a.appendMessageLogLines(lines, strings.TrimSpace(logMsg), urgency)
 	a.startToastSweep(gen)
 	ttl := a.statusMessageTTL()
 	if ttl <= 0 {
@@ -105,7 +105,7 @@ func (a *App) appendTransientMessageLines(banner string, lines []string, urgency
 	gen := a.messageExpiryGen.Add(1)
 	a.model.Message = banner
 	a.model.MessageUrgency = urgency
-	a.appendMessageLogLines(lines, urgency)
+	a.appendMessageLogLines(lines, strings.Join(lines, "\n"), urgency)
 	a.startToastSweep(gen)
 	ttl := a.statusMessageTTL()
 	if ttl <= 0 {
@@ -165,7 +165,9 @@ func (a *App) applyStatusMessageExpiry(p statusMessagePayload) {
 	a.model.MessageUrgency = ui.MessageUrgencyInfo
 }
 
-func (a *App) appendMessageLogLines(lines []string, urgency ui.MessageUrgency) {
+// appendMessageLogLines prepends lines to the message log as one timestamped message; full is the
+// unwrapped text, kept on its head row (MessageLogEntry.Full).
+func (a *App) appendMessageLogLines(lines []string, full string, urgency ui.MessageUrgency) {
 	if len(lines) == 0 {
 		return
 	}
@@ -179,14 +181,9 @@ func (a *App) appendMessageLogLines(lines []string, urgency ui.MessageUrgency) {
 	ts := time.Now().Format("15:04:05")
 	batch := make([]ui.MessageLogEntry, len(lines))
 	for i, line := range lines {
-		tm := ""
+		batch[i] = ui.MessageLogEntry{Text: line, Urg: urgency}
 		if i == 0 {
-			tm = ts
-		}
-		batch[i] = ui.MessageLogEntry{
-			Time: tm,
-			Text: line,
-			Urg:  urgency,
+			batch[i].Time, batch[i].Full = ts, full
 		}
 	}
 	a.model.MessageLog = append(batch, a.model.MessageLog...)

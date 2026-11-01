@@ -19,6 +19,7 @@ func drawMessagesView(
 	styles theme.Theme,
 	chromeBlocked bool,
 	orientation SplitOrientation,
+	hover ListRowHover,
 ) {
 	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, orientation)
 	layoutChrome := drawAuxPanelChrome(screen, rect, " Messages ", "", true, chromeBlocked, false, styles)
@@ -56,6 +57,7 @@ func drawMessagesView(
 	scroll := auxListScroll(state.ListScroll, n, visibleRows)
 
 	rowBase := styles.JobsRow.Background(bg)
+	head := messageLogHead(entries, scroll)
 	for row := 0; row < visibleRows; row++ {
 		idx := scroll + row
 		y := rect.Y + 2 + row
@@ -63,12 +65,21 @@ func drawMessagesView(
 			break
 		}
 		entry := entries[idx]
+		if entry.Time != "" {
+			head = idx
+		}
 		selected := idx == state.Selected
-		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, true)
+		// Hover covers the whole message under the pointer: its head row and continuation rows.
+		lineStyle := auxListRowStyle(styles, rowBase, selected, chromeBlocked, true, hover, head)
 		paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
+		_, lineBG, _ := lineStyle.Decompose()
 
 		timeStyle := rowBase
 		urgStyle := messageUrgencyListStyle(styles, entry.Urg, bg)
+		if lineStyle != rowBase {
+			timeStyle = lineStyle
+			urgStyle = messageUrgencyListStyle(styles, entry.Urg, lineBG)
+		}
 		if selected {
 			timeStyle = lineStyle
 			urgStyle = lineStyle

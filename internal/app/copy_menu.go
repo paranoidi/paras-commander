@@ -217,12 +217,18 @@ func (a *App) copyToClipboard(actionID string) {
 		a.setTransientMessage("Copy: nothing to copy", ui.MessageUrgencyWarn)
 		return
 	}
+	preview := textutil.TruncateBannerRunes(strings.ReplaceAll(text, "\n", ", "), textutil.BannerMaxRunes)
+	a.setClipboard(text, "Copied: "+preview)
+}
+
+// setClipboard puts text on the system clipboard and toasts done, or a warning when no clipboard
+// tool is available.
+func (a *App) setClipboard(text, done string) {
 	if err := clipboard.Set(text); err != nil {
 		a.setTransientMessage("Copy failed: no clipboard tool available", ui.MessageUrgencyWarn)
 		return
 	}
-	preview := textutil.TruncateBannerRunes(strings.ReplaceAll(text, "\n", ", "), textutil.BannerMaxRunes)
-	a.setTransientMessage("Copied: "+preview, ui.MessageUrgencyInfo)
+	a.setTransientMessage(done, ui.MessageUrgencyInfo)
 }
 
 // copyFileContentsToClipboard copies the fullscreen-previewed text file verbatim.
@@ -238,9 +244,5 @@ func (a *App) copyFileContentsToClipboard() {
 		a.setTransientMessage(warn, ui.MessageUrgencyWarn)
 		return
 	}
-	if err := clipboard.Set(text); err != nil {
-		a.setTransientMessage("Copy failed: no clipboard tool available", ui.MessageUrgencyWarn)
-		return
-	}
-	a.setTransientMessage("Copied contents of "+filepath.Base(path), ui.MessageUrgencyInfo)
+	a.setClipboard(text, "Copied contents of "+filepath.Base(path))
 }

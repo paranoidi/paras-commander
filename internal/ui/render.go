@@ -216,9 +216,9 @@ type Model struct {
 	// StatusCommandsHover is the mouse pointer on the status-command area (set by App each
 	// render), drawn in the open menu's title style.
 	StatusCommandsHover bool
-	// JobsListHover is the Jobs queue row under the mouse pointer (set by App each render),
-	// drawn in jobs.row.hover unless it is the cursor row.
-	JobsListHover ListRowHover
+	// AuxListHover is the row under the mouse pointer in the open Jobs, Commands or Messages list
+	// (set by App each render), drawn in jobs.row.hover unless it is the cursor row.
+	AuxListHover ListRowHover
 	// FooterHover is the footer entry under the mouse pointer (set by App each render), drawn in
 	// footer.hover.
 	FooterHover FooterHover
@@ -748,7 +748,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			OpsBottom:              model.JobsOpsBottom,
 			OpsNewestLast:          model.JobsOpsNewestLast,
 			RateLimitBPS:           model.JobsTransferRateLimitBPS,
-			ListHover:              model.JobsListHover,
+			ListHover:              model.AuxListHover,
 		}, styles, now, chromeBlocked || model.JobsResultFilterDialog.Open)
 		if model.JobsResultFilterDialog.Open {
 			dialog.DrawJobsResultFilterDialog(screen, layout, model.JobsResultFilterDialog, styles)
@@ -758,7 +758,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if len(model.CommandsDisplay) > 0 {
 			cmdEntries = model.CommandsDisplay
 		}
-		drawCommandsView(screen, layout, model.CommandsView, cmdEntries, styles, chromeBlocked, model.UserHomeDir)
+		drawCommandsView(screen, layout, model.CommandsView, cmdEntries, styles, chromeBlocked, model.UserHomeDir, model.AuxListHover)
 	case ViewCompare:
 		filtered := comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter, model.CompareView.IgnoreEmpty, model.CompareView.NameFilter)
 		dimLeft, dimRight := compareDimmedSides(model.CompareFilterDialog)
@@ -775,7 +775,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 		drawDedupBrowsePanel(screen, layout, model, styles, chromeBlocked)
 	case ViewMessages:
-		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation)
+		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation, model.AuxListHover)
 	default:
 		drawBrowserView(screen, layout, model, styles, chromeBlocked)
 	}

@@ -309,9 +309,9 @@ type Theme struct {
 	MessageSuccess tcell.Style
 
 	JobsRow tcell.Style
-	// JobsRowHover is a Jobs queue row under the mouse pointer (not the cursor row): its
-	// background (and plain text foreground) under the row's own status colors (optional
-	// jobs.row.hover; fallback white on grey).
+	// JobsRowHover is the Jobs, Commands or Messages list row under the mouse pointer (not the
+	// cursor row; JobsRow is their row base): its background (and plain text foreground) under
+	// the row's own status colors (optional jobs.row.hover; fallback white on grey).
 	JobsRowHover tcell.Style
 	JobsRunning  tcell.Style
 	JobsDone     tcell.Style

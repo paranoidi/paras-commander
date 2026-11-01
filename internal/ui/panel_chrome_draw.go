@@ -184,6 +184,15 @@ func auxPanelListRowStyle(styles theme.Theme, rowBase tcell.Style, selected, chr
 	})
 }
 
+// auxListRowStyle is auxPanelListRowStyle for row of a Jobs, Commands or Messages list, with the
+// row under the mouse pointer (hover) in jobs.row.hover unless it is the cursor row.
+func auxListRowStyle(styles theme.Theme, rowBase tcell.Style, selected, chromeBlocked, active bool, hover ListRowHover, row int) tcell.Style {
+	if !selected && !chromeBlocked && hover.Active && hover.Row == row {
+		return styles.JobsRowHover
+	}
+	return auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
+}
+
 // paintAuxPanelRowMargin fills the single-cell margin column at x (e.g. the row's left
 // or right edge, just inside the panel border) with style.
 func paintAuxPanelRowMargin(screen tcell.Screen, x, y int, style tcell.Style) {

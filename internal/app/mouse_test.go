@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/clipboard"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -350,29 +351,69 @@ func TestMouseLeaderMenuOutsideClickCloses(t *testing.T) {
 	}
 }
 
-func TestMouseMessagesListClickAndWheel(t *testing.T) {
+func TestMouseMessagesListClickCopiesAndWheel(t *testing.T) {
+	prevWriter := clipboard.OSWriter
+	clipboard.OSWriter = func(string) error { return nil }
+	t.Cleanup(func() { clipboard.OSWriter = prevWriter; clipboard.Reset() })
 	app := tallMouseTestApp(t)
 	app.model.MessageLog = []ui.MessageLogEntry{
-		{Time: "10:00:01", Text: "harbor opened"},
+		{Time: "10:00:01", Text: "harbor opened", Full: "harbor opened harbor continued"},
 		{Text: "harbor continued"},
 		{Time: "10:00:02", Text: "meadow copied"},
 		{Time: "10:00:03", Text: "lantern moved"},
 		{Time: "10:00:04", Text: "velvet deleted"},
 	}
 	app.openMessagesView()
-	x, y := screenTextCell(t, app, "meadow copied")
+	selectedText := func() string { return app.model.MessageLog[app.model.MessagesView.Selected].Text }
+
+	// The top message: the logged toast must not take the selection from it.
+	x, y := screenTextCell(t, app, "harbor continued")
 	click(app, x, y, tcell.Button1)
-	if got := app.model.MessagesView.Selected; got != 2 {
-		t.Fatalf("selected = %d want 2", got)
+	if got := clipboard.LastSet(); got != "harbor opened harbor continued" {
+		t.Fatalf("clipboard = %q, want the whole message", got)
 	}
-	x, y = screenTextCell(t, app, "harbor continued")
+	if got := app.model.MessageLog[0].Text; got != "Copied message to clipboard" {
+		t.Fatalf("newest log entry = %q, want the copy toast", got)
+	}
+	if got := selectedText(); got != "harbor opened" {
+		t.Fatalf("continuation row selected %q, want its message", got)
+	}
+
+	x, y = screenTextCell(t, app, "meadow copied")
 	click(app, x, y, tcell.Button1)
-	if got := app.model.MessagesView.Selected; got != 0 {
-		t.Fatalf("continuation row selected %d want its message 0", got)
+	if got := clipboard.LastSet(); got != "meadow copied" {
+		t.Fatalf("clipboard = %q, want meadow copied", got)
+	}
+	if got := selectedText(); got != "meadow copied" {
+		t.Fatalf("selected %q, want meadow copied", got)
 	}
 	app.handleMouse(mouseEv(x, y, tcell.WheelDown))
-	if got := app.model.MessagesView.Selected; got != 4 {
-		t.Fatalf("after wheel selected = %d want 4", got)
+	if got := selectedText(); got != "velvet deleted" {
+		t.Fatalf("after wheel selected %q, want velvet deleted", got)
+	}
+}
+
+// Motion over a list row highlights it without moving the selection.
+func TestMouseAuxListHoverKeepsSelection(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.model.MessageLog = []ui.MessageLogEntry{
+		{Time: "10:00:01", Text: "harbor opened"},
+		{Text: "harbor continued"},
+		{Time: "10:00:02", Text: "meadow copied"},
+	}
+	app.openMessagesView()
+	x, y := screenTextCell(t, app, "harbor continued")
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || got.Row != 0 {
+		t.Fatalf("hover on a continuation row = %+v, want its message 0", got)
+	}
+	x, y = screenTextCell(t, app, "meadow copied")
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || got.Row != 2 {
+		t.Fatalf("hover = %+v, want row 2", got)
+	}
+	if app.model.MessagesView.Selected != 0 {
+		t.Fatalf("selected = %d, want 0: hover must not move the selection", app.model.MessagesView.Selected)
 	}
 }
 
