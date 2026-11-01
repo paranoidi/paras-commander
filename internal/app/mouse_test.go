@@ -10,6 +10,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/clipboard"
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -825,5 +826,160 @@ func TestMousePanelRowHoverHiddenByKeyboard(t *testing.T) {
 	app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone))
 	if !app.model.PanelRowHover.Active {
 		t.Fatal("pointer motion must bring the row hover back")
+	}
+}
+
+func compareMouseTestApp(t *testing.T) *App {
+	t.Helper()
+	app := tallMouseTestApp(t)
+	app.model.ViewMode = ui.ViewCompare
+	app.model.CompareView = ui.CompareViewState{FocusColumn: ui.CompareColumnPrimary, Filter: comparepkg.FilterAll}
+	var rows []comparepkg.Row
+	for _, n := range []string{"harbor", "meadow", "lantern", "falcon"} {
+		rows = append(rows, comparepkg.Row{PrimaryRel: n + ".txt", SecondaryRel: n + ".txt", Kind: comparepkg.KindContentDiff, HashDone: true})
+	}
+	app.model.CompareSnapshot = comparepkg.Snapshot{Rows: rows}
+	return app
+}
+
+func TestMouseCompareHoverKeepsSelection(t *testing.T) {
+	app := compareMouseTestApp(t)
+	x, y := screenTextCell(t, app, "lantern.txt")
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || got.Row != 2 {
+		t.Fatalf("hover = %+v, want row 2", got)
+	}
+	if app.model.CompareView.Selected != 0 {
+		t.Fatalf("selected = %d, want 0: hover must not move the selection", app.model.CompareView.Selected)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.AuxListHover.Active {
+		t.Fatal("a key press must hide the row hover")
+	}
+	app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone))
+	if !app.model.AuxListHover.Active {
+		t.Fatal("pointer motion must bring the row hover back")
+	}
+}
+
+func TestMouseCompareClickSelectsRow(t *testing.T) {
+	app := compareMouseTestApp(t)
+	x, y := screenTextCell(t, app, "lantern.txt")
+	click(app, x, y, tcell.Button1)
+	if app.model.CompareView.Selected != 2 {
+		t.Fatalf("selected = %d, want 2", app.model.CompareView.Selected)
+	}
+}
+
+func dedupMouseTestApp(t *testing.T) *App {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt"), filepath.Join("meadow", "beacon.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	app := newApp(t, newScreen(t, 100, 30), dir)
+	app.config.UI.Mouse = true
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if len(app.model.DedupList) < 2 || len(app.model.DedupCopiesList) < 2 {
+		t.Fatalf("need two rows per pane, got %d/%d", len(app.model.DedupList), len(app.model.DedupCopiesList))
+	}
+	return app
+}
+
+// dedupPaneCell is a cell on row idx of the main tree or the Copies pane.
+func dedupPaneCell(a *App, copies bool, idx int) (int, int) {
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	rect := layout.Primary
+	if copies {
+		rect, _ = ui.DedupSecondaryRects(layout.Secondary)
+	}
+	return rect.X + 3, ui.PanelListTop(rect) + idx
+}
+
+func TestMouseDedupHoverKeepsSelection(t *testing.T) {
+	app := dedupMouseTestApp(t)
+	app.render()
+	sel := app.model.DedupView.Main.Selected
+	row := 0
+	if sel == 0 {
+		row = 1
+	}
+	x, y := dedupPaneCell(app, false, row)
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || got.Copies || got.Row != row {
+		t.Fatalf("hover = %+v, want main row %d", got, row)
+	}
+	x2, y2 := dedupPaneCell(app, true, 1)
+	app.handleMouse(mouseEv(x2, y2, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || !got.Copies || got.Row != 1 {
+		t.Fatalf("hover = %+v, want copies row 1", got)
+	}
+	if app.model.DedupView.Main.Selected != sel || app.model.DedupView.FocusCopies {
+		t.Fatal("hover must not move the selection or focus")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.AuxListHover.Active {
+		t.Fatal("a key press must hide the row hover")
+	}
+	app.handleMouse(mouseEv(x2+1, y2, tcell.ButtonNone))
+	if !app.model.AuxListHover.Active {
+		t.Fatal("pointer motion must bring the row hover back")
+	}
+}
+
+func TestMouseDedupClickSelectsAndFocusesPane(t *testing.T) {
+	app := dedupMouseTestApp(t)
+	app.render()
+	x, y := dedupPaneCell(app, true, 1)
+	click(app, x, y, tcell.Button1)
+	if !app.model.DedupView.FocusCopies || app.model.DedupView.Copies.Selected != 1 {
+		t.Fatalf("focusCopies=%v copies selected=%d, want true/1", app.model.DedupView.FocusCopies, app.model.DedupView.Copies.Selected)
+	}
+	x, y = dedupPaneCell(app, false, 0)
+	click(app, x, y, tcell.Button1)
+	if app.model.DedupView.FocusCopies || app.model.DedupView.Main.Selected != 0 {
+		t.Fatalf("focusCopies=%v main selected=%d, want false/0", app.model.DedupView.FocusCopies, app.model.DedupView.Main.Selected)
+	}
+}
+
+func TestMouseDedupBrowsePanelHoverAndClick(t *testing.T) {
+	app := dedupMouseTestApp(t)
+	dedupBrowseSettle(t, app, app.screen.(tcell.SimulationScreen))
+	app.render()
+	if app.model.DedupPanel.VisibleEntryCount() < 2 {
+		t.Fatalf("browse panel has %d entries, want at least 2", app.model.DedupPanel.VisibleEntryCount())
+	}
+	w, h := app.screen.Size()
+	_, rect := ui.DedupSecondaryRects(app.layoutForTerminalSize(w, h).Secondary)
+	want := 0
+	if app.model.DedupPanel.Cursor == 0 {
+		want = 1
+	}
+	x, y := rect.X+3, ui.PanelListTop(rect)+want
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.PanelRowHover; !got.Active || got.Panel != ui.DedupBrowsePanel || got.Entry != want {
+		t.Fatalf("hover = %+v, want browse entry %d", got, want)
+	}
+	if app.model.DedupPanel.Cursor == want || app.model.DedupView.FocusPanel {
+		t.Fatal("hover must not move the cursor or focus")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.PanelRowHover.Active {
+		t.Fatal("a key press must hide the row hover")
+	}
+	click(app, x, y, tcell.Button1)
+	if !app.model.DedupView.FocusPanel || app.model.DedupPanel.Cursor != want {
+		t.Fatalf("focusPanel=%v cursor=%d, want true/%d", app.model.DedupView.FocusPanel, app.model.DedupPanel.Cursor, want)
 	}
 }

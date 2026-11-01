@@ -219,7 +219,7 @@ type Model struct {
 	// StatusCommandsHover is the mouse pointer on the status-command area (set by App each
 	// render), drawn in the open menu's title style.
 	StatusCommandsHover bool
-	// AuxListHover is the row under the mouse pointer in the open Jobs, Commands or Messages list
+	// AuxListHover is the row under the mouse pointer in the open Jobs, Commands, Messages, Compare or Duplicates list
 	// (set by App each render), drawn in jobs.row.hover unless it is the cursor row.
 	AuxListHover ListRowHover
 	// FooterHover is the footer entry under the mouse pointer (set by App each render), drawn in
@@ -545,10 +545,12 @@ type MenuHover struct {
 }
 
 // ListRowHover names the list row (Row, an index into the list's rows) under the mouse pointer;
-// Active is false off the rows.
+// Active is false off the rows. Copies names the Duplicates view's Copies pane (false: the main
+// tree); no other list reads it.
 type ListRowHover struct {
 	Active bool
 	Row    int
+	Copies bool
 }
 
 // FooterHover names the footer entry (Index into the drawn entries) under the mouse pointer and
@@ -766,7 +768,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		filtered := comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter, model.CompareView.IgnoreEmpty, model.CompareView.NameFilter)
 		dimLeft, dimRight := compareDimmedSides(model.CompareFilterDialog)
 		drawCompareView(screen, layout, model.CompareView,
-			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary, RowMarks: withRangeAnchor(rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.CompareView.RangeAnchor), DimLeft: dimLeft, DimRight: dimRight},
+			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary, RowMarks: withRangeAnchor(rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.CompareView.RangeAnchor), DimLeft: dimLeft, DimRight: dimRight, Hover: model.AuxListHover},
 			styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
 		if model.CompareMergeDialog.Open {
 			dialog.DrawCompareMergeDialog(screen, layout, model.CompareMergeDialog, styles, model.UserHomeDir)
@@ -775,7 +777,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			dialog.DrawCompareFilterDialog(screen, layout, model.CompareFilterDialog, styles)
 		}
 	case ViewDedup:
-		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.AuxListHover)
 		drawDedupBrowsePanel(screen, layout, model, styles, chromeBlocked)
 	case ViewMessages:
 		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation, model.AuxListHover)

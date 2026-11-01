@@ -31,6 +31,8 @@ type compareViewData struct {
 	RowMarks dialog.RowMarksFunc
 	// DimLeft / DimRight render a column in panel.blocked.* styles (see compareDimmedSides).
 	DimLeft, DimRight bool
+	// Hover is the row under the mouse pointer (jobs.row.hover unless it is the cursor row).
+	Hover ListRowHover
 }
 
 // compareDimmedSides reports which compare columns render dimmed: both behind the
@@ -139,6 +141,17 @@ func drawCompareView(
 		statusBase := pathBase
 		if dimLeft && dimRight {
 			statusBase = dimBase
+		}
+		if data.Hover.Active && data.Hover.Row == idx && !rowSelected {
+			if !dimLeft {
+				leftBase = styles.JobsRowHover
+			}
+			if !dimRight {
+				rightBase = styles.JobsRowHover
+			}
+			if !dimLeft || !dimRight {
+				statusBase = styles.JobsRowHover
+			}
 		}
 		absentStyle := styles.PanelBlockedText.Background(bg)
 		leftStyle := comparePathCellStyle(leftBase, view.FocusColumn == CompareColumnPrimary, rowSelected, primary.IsSelectedPath(entryPrimaryAbs(snap, entry)), styles, dimLeft, bg, view.RangeAnchor != "")

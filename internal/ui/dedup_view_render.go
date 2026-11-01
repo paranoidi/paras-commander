@@ -102,11 +102,13 @@ func drawDedupBrowsePanel(screen tcell.Screen, layout Layout, model Model, style
 		return
 	}
 	focus := model.DedupView.FocusPanel
+	rowHover, rowHoverEntry := model.PanelRowHover.at(DedupBrowsePanel)
 	drawPanel(screen, rect, model.DedupPanel,
 		PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 		PanelContext{
 			PanelID: DedupBrowsePanel, FileListActive: focus, CursorRowActive: focus,
 			ChromeBlocked: chromeBlocked, ActivePanel: model.ActivePanel,
+			RowHover: rowHover, RowHoverEntry: rowHoverEntry,
 			SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SplitOrientation: model.SplitOrientation,
 		},
 		PanelDisplayConfig{
@@ -129,6 +131,7 @@ func drawDedupView(
 	userHomeDir string,
 	orientation SplitOrientation,
 	rowMarks dialog.RowMarksFunc,
+	hover ListRowHover,
 ) {
 	if snap.Phase != comparepkg.DedupDone {
 		return
@@ -172,6 +175,7 @@ func drawDedupView(
 		DangerMarkedDirs: dangerMarkedDirs,
 		KeptDirs:         keptDirs,
 		RowMarks:         withRangeAnchor(rowMarks, mainAnchor),
+		Hover:            dedupPaneHover(hover, false),
 	}, snap, view, styles, chromeBlocked)
 
 	copiesHeader := ""
@@ -202,6 +206,7 @@ func drawDedupView(
 		DangerMarkedDirs: dangerMarkedDirs,
 		KeptDirs:         keptDirs,
 		RowMarks:         withRangeAnchor(rowMarks, copiesAnchor),
+		Hover:            dedupPaneHover(hover, true),
 	}, snap, view, styles, chromeBlocked)
 }
 
@@ -231,6 +236,15 @@ type dedupPaneParams struct {
 	KeptDirs         map[string]bool     // DirRel keys of dirs whose subtree has a kept file
 	RangePending     bool                // focused pane with a pending range-select anchor: cursor row uses panel.row.cursor.range
 	RowMarks         dialog.RowMarksFunc // resolves the pin/in-progress-job trailing marks for one row's absolute path
+	Hover            ListRowHover        // row under the mouse pointer in this pane (jobs.row.hover unless it is the cursor row)
+}
+
+// dedupPaneHover is hover when it is on the pane (copies selects the Copies pane), else none.
+func dedupPaneHover(hover ListRowHover, copies bool) ListRowHover {
+	if hover.Copies != copies {
+		return ListRowHover{}
+	}
+	return hover
 }
 
 // drawDedupTreePane paints one tree pane: chrome, header line, and tree rows
@@ -316,6 +330,9 @@ func drawDedupTreePane(
 			RangePending:   rowSelected && p.RangePending,
 		}
 		lineStyle := dedupRowStyle(styles, p, d, entry, flags, chromeBlocked, base, bg)
+		if !rowSelected && !chromeBlocked && p.Hover.Active && p.Hover.Row == idx {
+			lineStyle = styles.JobsRowHover
+		}
 
 		primitive.Text(screen, rect.X+1, lineY, 1, "", lineStyle)
 
