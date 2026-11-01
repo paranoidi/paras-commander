@@ -371,9 +371,9 @@ func (a *App) runUserMenuDetached(argv []string, workDir, toast string) bool {
 		return false
 	}
 	if toast != "" {
-		a.setTransientMessage(toast, ui.MessageUrgencyInfo)
+		a.setTransientMessage(toast, ui.MessageUrgencySuccess)
 	} else {
-		a.setTransientMessage("Started "+cmdrun.FormatArgvDisplay(argv), ui.MessageUrgencyInfo)
+		a.setTransientMessage("Started "+cmdrun.FormatArgvDisplay(argv), ui.MessageUrgencySuccess)
 	}
 	return true
 }

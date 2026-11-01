@@ -48,7 +48,7 @@ func (a *App) openDirInExternalBrowser(dir string) {
 		a.setErrorMessage("External browser", err)
 		return
 	}
-	a.setTransientMessage("Opened folder in external browser", ui.MessageUrgencyInfo)
+	a.setTransientMessage("Opened folder in external browser", ui.MessageUrgencySuccess)
 }
 
 // openFileExternally opens a regular file with the default opener when open_files_externally is on.
@@ -81,5 +81,5 @@ func (a *App) openFileExternally(path string) {
 		a.setErrorMessage("External open", err)
 		return
 	}
-	a.setTransientMessage("Opened file externally", ui.MessageUrgencyInfo)
+	a.setTransientMessage("Opened file externally", ui.MessageUrgencySuccess)
 }
