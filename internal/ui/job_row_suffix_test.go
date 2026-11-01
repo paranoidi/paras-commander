@@ -17,7 +17,7 @@ func TestJobRowSuffixIconsByTypeAndStatus(t *testing.T) {
 	}
 
 	s, st := jobRowSuffix("/src/willow.txt", mark(jobs.TypeMove, jobs.StatusQueued), th, false)
-	if st != string(jobs.StatusQueued) || s.JobIcon != 0 || s.JobQueuedIcon != th.IconFilelistQueued() || s.JobOpIcon != th.IconFilelistMove() || s.JobWrite {
+	if st != string(jobs.StatusQueued) || s.JobIcon != 0 || s.JobQueuedIcon != th.IconFilelistQueued() || s.JobOpIcon != th.IconFilelistMove() {
 		t.Fatalf("queued move: %+v status=%q", s, st)
 	}
 	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeMove, jobs.StatusScanning), th, false)
@@ -25,15 +25,15 @@ func TestJobRowSuffixIconsByTypeAndStatus(t *testing.T) {
 		t.Fatalf("scanning move: %+v", s)
 	}
 	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeMove, jobs.StatusRunning), th, false)
-	if s.JobIcon != th.IconFilelistJob() || !s.JobWrite || s.JobOpIcon != 0 {
+	if s.JobIcon != th.IconFilelistJob() || s.JobOpIcon != 0 {
 		t.Fatalf("running move destination: %+v", s)
 	}
 	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeCopy, jobs.StatusPaused), th, false)
-	if s.JobIcon != 0 || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 || s.JobWrite {
+	if s.JobIcon != 0 || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 {
 		t.Fatalf("paused copy: %+v", s)
 	}
 	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeDelete, jobs.StatusRunning), th, false)
-	if s.JobQueuedIcon != 0 || s.JobOpIcon != th.IconFilelistDelete() || !s.JobWrite {
+	if s.JobQueuedIcon != 0 || s.JobOpIcon != th.IconFilelistDelete() {
 		t.Fatalf("running delete: %+v", s)
 	}
 	s, _ = jobRowSuffix("/src/willow.txt", mark(jobs.TypeCopy, jobs.StatusRunning), th, false)
@@ -41,7 +41,7 @@ func TestJobRowSuffixIconsByTypeAndStatus(t *testing.T) {
 		t.Fatalf("running copy: %+v", s)
 	}
 	s, _ = jobRowSuffix("/dst/willow.txt", mark(jobs.TypeCopy, jobs.StatusRunning), th, false)
-	if s.JobIcon != th.IconFilelistJob() || !s.JobWrite || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 {
+	if s.JobIcon != th.IconFilelistJob() || s.JobQueuedIcon != 0 || s.JobOpIcon != 0 {
 		t.Fatalf("running copy destination: %+v", s)
 	}
 	nf := th
@@ -76,20 +76,20 @@ func TestJobRowSuffixFollowsActiveSource(t *testing.T) {
 	copyMarks := build(jobs.TypeCopy, jobs.StatusRunning, 1, midway)
 
 	cases := []struct {
-		path               string
-		job, queued, write bool
+		path        string
+		job, queued bool
 	}{
-		{"/orchard/bramble/deep/thistle.txt", true, false, false},
-		{"/meadow/bramble/deep/thistle.txt", true, false, true},
-		{"/orchard/clover", false, true, false},
-		{"/meadow/clover", false, false, false},
-		{"/orchard/acorn/sorrel.txt", false, false, false},
-		{"/meadow/acorn", false, false, false},
+		{"/orchard/bramble/deep/thistle.txt", true, false},
+		{"/meadow/bramble/deep/thistle.txt", true, false},
+		{"/orchard/clover", false, true},
+		{"/meadow/clover", false, false},
+		{"/orchard/acorn/sorrel.txt", false, false},
+		{"/meadow/acorn", false, false},
 	}
 	for _, c := range cases {
 		s, _ := jobRowSuffix(c.path, copyMarks, th, false)
-		if (s.JobIcon != 0) != c.job || (s.JobQueuedIcon != 0) != c.queued || s.JobWrite != c.write {
-			t.Errorf("%s: %+v, want job=%v queued=%v write=%v", c.path, s, c.job, c.queued, c.write)
+		if (s.JobIcon != 0) != c.job || (s.JobQueuedIcon != 0) != c.queued {
+			t.Errorf("%s: %+v, want job=%v queued=%v", c.path, s, c.job, c.queued)
 		}
 	}
 	if _, st := jobRowSuffix("/orchard/clover", copyMarks, th, false); st != string(jobs.StatusQueued) {
@@ -130,7 +130,7 @@ func TestJobRowSuffixMoveRemovingSources(t *testing.T) {
 	})}
 	for _, p := range []string{"/orchard/acorn", "/orchard/bramble/deep/thistle.txt", "/orchard/clover"} {
 		s, _ := jobRowSuffix(p, marks, th, false)
-		if s.JobIcon != th.IconFilelistJob() || s.JobOpIcon != th.IconFilelistMoveRemoving() || s.JobOpStyle != th.PanelRowMarkJobRemoving || s.JobWrite {
+		if s.JobIcon != th.IconFilelistJob() || s.JobOpIcon != th.IconFilelistMoveRemoving() || s.JobOpStyle != th.PanelRowMarkJobRemoving {
 			t.Errorf("%s: %+v, want job + removing icons", p, s)
 		}
 	}

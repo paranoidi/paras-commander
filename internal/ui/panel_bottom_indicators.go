@@ -107,7 +107,7 @@ type panelBottomIndicatorSegment struct {
 func panelBottomIndicatorStyle(ctx PanelBottomIndicatorContext, id PanelBottomIndicatorID) tcell.Style {
 	switch id {
 	case PanelBottomIndicatorJobWrite:
-		return ctx.Styles.PanelJobMarkStyle(ctx.JobWriteStatus, true)
+		return ctx.Styles.StatusStyle(ctx.JobWriteStatus)
 	default:
 		return ctx.Styles.PanelBottomIndicator(string(id), ctx.FileListActive, ctx.ChromeBlocked)
 	}
