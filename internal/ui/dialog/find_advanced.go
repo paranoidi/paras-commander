@@ -251,6 +251,20 @@ func findAdvancedRows(a FindAdvancedState, rowW int, letters bool) []dlg.Item {
 	return rows
 }
 
+// findAdvHints are the example texts of the advanced inputs, shown while they are empty.
+var findAdvHints = [FindAdvFieldCount]string{
+	FindAdvModifiedNewer: "3d",
+	FindAdvModifiedOlder: "2026-01-31",
+	FindAdvChangedNewer:  "12h",
+	FindAdvChangedOlder:  "1w2d",
+	FindAdvAccessedNewer: "30m",
+	FindAdvAccessedOlder: "6mo",
+	FindAdvSizeMin:       "10M",
+	FindAdvSizeMax:       "1.5G",
+	FindAdvOwner:         "root or 1000",
+	FindAdvExclude:       "node_modules, .git, *.o, build/out",
+}
+
 // findAdvMnemonics are the letters of the advanced section's options. They are live (and
 // highlighted) only while focus is off the text inputs, where they work plain or with Alt; they
 // avoid the letters of the rest of the dialog (N, Y, I, V, S, the Advanced key, OK, Cancel).
@@ -275,7 +289,10 @@ var findAdvMnemonics = map[dlg.ID]rune{
 func findAdvancedLayout(a FindAdvancedState, rowW int) []dlg.Item {
 	input := func(f FindAdvField, w int) dlg.Item {
 		in := a.Fields[f]
-		it := dlg.Item{ID: FindAdvFieldID(f), Kind: dlg.KindInput, Width: w, Value: in.Value, Cursor: in.Cursor, Scroll: in.Scroll, Invalid: in.Invalid}
+		it := dlg.Item{
+			ID: FindAdvFieldID(f), Kind: dlg.KindInput, Width: w, Hint: findAdvHints[f],
+			Value: in.Value, Cursor: in.Cursor, Scroll: in.Scroll, Invalid: in.Invalid,
+		}
 		if w == 0 {
 			it.Grow = true
 		}

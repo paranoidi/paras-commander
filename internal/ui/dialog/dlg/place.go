@@ -551,6 +551,9 @@ func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.
 	}
 	draw.PaintScrollingInputContent(screen, r.X, r.Y, r.Width, it.Value, it.CompletionSuffix, it.Cursor, it.Scroll,
 		focused, it.Invalid, focused, it.Placeholder, it.LeadingIcon, styles)
+	if it.Value == "" && it.CompletionSuffix == "" && it.Hint != "" {
+		draw.PaintInputHint(screen, r.X, r.Y, r.Width, it.Hint, it.LeadingIcon, focused, styles)
+	}
 }
 
 // InputTextWidth is how many cells input id's text scrolls in when spec is drawn on a screenW x

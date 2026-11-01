@@ -260,6 +260,8 @@ active.placeholder = { fg = "default" }
 inactive = { fg = "white", bg = "black" }
 inactive.error = { fg = "red", bg = "black" }
 inactive.placeholder = { fg = "white", bg = "black" }
+active.hint = { fg = "bright_black" }       # example text in an empty input (find advanced fields)
+inactive.hint = { fg = "bright_black", bg = "black" }
 
 [dialog.option]
 active = { fg = "yellow", bold = true }

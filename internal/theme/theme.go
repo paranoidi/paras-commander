@@ -270,6 +270,11 @@ type Theme struct {
 	DialogInputInactive            tcell.Style
 	DialogInputInactivePlaceholder tcell.Style
 	DialogInputInactiveError       tcell.Style
+	// DialogInputActiveHint / DialogInputInactiveHint are the example text an empty input shows
+	// (optional dialog.input.active.hint / inactive.hint; fallback the placeholder style).
+	// Unlike the placeholder, a hint is never part of the value.
+	DialogInputActiveHint          tcell.Style
+	DialogInputInactiveHint        tcell.Style
 	DialogButtonInactive           tcell.Style
 	DialogButtonActive             tcell.Style
 	DialogButtonActiveDestructive  tcell.Style
@@ -414,6 +419,14 @@ func (t Theme) DialogInputPair(focused bool) (base, placeholder tcell.Style) {
 		return t.DialogInputActive, t.DialogInputActivePlaceholder
 	}
 	return t.DialogInputInactive, t.DialogInputInactivePlaceholder
+}
+
+// DialogInputHintStyle is the style of an empty input's example text.
+func (t Theme) DialogInputHintStyle(focused bool) tcell.Style {
+	if focused {
+		return t.DialogInputActiveHint
+	}
+	return t.DialogInputInactiveHint
 }
 
 // DialogInputBaseStyle returns the row fill + committed text style for a simple one-line input
@@ -1195,7 +1208,8 @@ var optionalStyleKeys = func() []string {
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty", "panel.scrollbar.match",
-		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing")
+		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing",
+		"dialog.input.active.hint", "dialog.input.inactive.hint")
 	keys = append(keys, fileIndexStateStyleKeys()...)
 	return keys
 }()
@@ -1551,6 +1565,15 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	dialogInputActiveHint, err := optionalStyle(specs, palette, "dialog.input.active.hint", styles["dialog.input.active.placeholder"])
+	if err != nil {
+		return Theme{}, err
+	}
+	dialogInputInactiveHint, err := optionalStyle(specs, palette, "dialog.input.inactive.hint", styles["dialog.input.inactive.placeholder"])
+	if err != nil {
+		return Theme{}, err
+	}
+
 	jobsRowHover, err := optionalStyle(specs, palette, "jobs.row.hover", tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorGray))
 	if err != nil {
 		return Theme{}, err
@@ -1840,6 +1863,9 @@ func parse(data []byte) (Theme, error) {
 
 		JobsRow:      styles["jobs.row"],
 		JobsRowHover: jobsRowHover,
+
+		DialogInputActiveHint:   dialogInputActiveHint,
+		DialogInputInactiveHint: dialogInputInactiveHint,
 
 		JobsProgressTrack:        styles["jobs.progress.track"],
 		JobsProgressFill:         styles["jobs.progress.fill"],

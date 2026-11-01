@@ -116,6 +116,10 @@ type Item struct {
 	LeadingIcon      string
 	Invalid          bool // error styling
 	Placeholder      bool // Value is a suggested default: drawn in the placeholder style
+	// Hint is example text drawn in the hint style (dialog.input.*.hint) while Value is empty. It
+	// documents the input and is never part of its value, unlike Placeholder (a suggested default
+	// the first keystroke replaces).
+	Hint string
 	// Simple draws draw.DrawSimpleDialogInput (no scrolling, no ghost text, no icon) instead of the
 	// scrolling input.
 	Simple bool

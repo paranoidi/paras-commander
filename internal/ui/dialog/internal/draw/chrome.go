@@ -482,6 +482,28 @@ func PaintScrollingInputContent(
 	return cursor, scroll
 }
 
+// PaintInputHint paints hint over an empty input row painted by PaintScrollingInputContent
+// (after leadingIcon's cells), in the hint style and clipped to the row; focused keeps the caret
+// (the first cell) reversed.
+func PaintInputHint(screen tcell.Screen, x, y, width int, hint, leadingIcon string, focused bool, styles theme.Theme) {
+	iconCols := LeadingIconCols(leadingIcon)
+	x, width = x+iconCols, width-iconCols
+	style := styles.DialogInputHintStyle(focused)
+	col := 0
+	for _, r := range hint {
+		w := max(runewidth.RuneWidth(r), 1)
+		if col+w > width {
+			break
+		}
+		st := style
+		if focused && col == 0 {
+			st = style.Reverse(true)
+		}
+		screen.SetContent(x+col, y, r, nil, st)
+		col += w
+	}
+}
+
 // ScrollingInputState holds the content state for DrawScrollingDialogInput.
 type ScrollingInputState struct {
 	Value            string
