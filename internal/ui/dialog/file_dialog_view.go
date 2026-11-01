@@ -19,6 +19,7 @@ const (
 	FileSanitizeUnderscores = dlg.ID("sanitize-underscores")
 	FileSlugifyDot          = dlg.ID("slugify-dot")
 	FileSlugifyUnderscore   = dlg.ID("slugify-underscore")
+	FileIndexTagsRecursive  = dlg.ID("index-tags-recursive")
 	fileDeleteList          = dlg.ID("delete-list")
 	fileFieldPrefix         = "field-"
 	fileEncodingPrefix      = "encoding-"
@@ -123,6 +124,12 @@ func fileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 		spec.Groups = deleteViewGroups(st, ctx)
 		spec.MaxHeight = listDialogMaxHeight(ctx.Layout.Height)
 		spec.ScrollbarStyle = ctx.ScrollbarStyle
+	case st.DialogType == FileDialogIndexInit:
+		spec.Buttons = []dlg.Button{
+			{ID: dlg.OK, Label: "Yes", Mnemonic: 'Y'},
+			{ID: dlg.Cancel, Label: "No", Mnemonic: 'N'},
+		}
+		spec.Groups = []dlg.Group{{Columns: [][]dlg.Item{indexInitLabels(st)}}}
 	case renameToolActive(st):
 		spec.Groups = renameToolViewGroups(st)
 	case st.DialogType == FileDialogAddBookmark:
@@ -174,6 +181,9 @@ func fieldViewGroups(st FileDialogState) []dlg.Group {
 			items = append(items, dlg.Item{Kind: dlg.KindLabel})
 		}
 	}
+	if st.Note != "" {
+		items = append(items, dlg.Item{Kind: dlg.KindLabel}, dlg.Item{Kind: dlg.KindLabel, Label: st.Note, Style: dlg.TextWarn})
+	}
 	if st.DialogType == FileDialogExtract {
 		// The note under the destination (skipped items) keeps the warning style.
 		for _, line := range strings.Split(strings.TrimSpace(st.Message), "\n") {
@@ -190,6 +200,8 @@ func fieldViewGroups(st FileDialogState) []dlg.Group {
 		if renameHasOpenOtherCheckbox(st) {
 			options = append(options, dlg.Item{ID: FileRenameOpenOther, Kind: dlg.KindCheckbox, Label: renameOpenOtherLabel, Mnemonic: 'p', On: st.RenameOpenInOther})
 		}
+	case st.DialogType == FileDialogIndexTags:
+		options = append(options, dlg.Item{ID: FileIndexTagsRecursive, Kind: dlg.KindCheckbox, Label: "Recursive (whole directory trees)", Mnemonic: 'R', On: st.IndexTagsRecursive})
 	case mkdirHasActions(st):
 		for _, r := range MkdirActionRadioSpecs() {
 			options = append(options, dlg.Item{ID: MkdirActionID(r.Action), Kind: dlg.KindRadio, Label: r.Label, Mnemonic: r.Shortcut, On: st.MkdirAction == r.Action})
@@ -266,6 +278,9 @@ func deleteViewGroups(st FileDialogState, ctx FileDialogViewContext) []dlg.Group
 	if strings.TrimSpace(st.DeleteWarning) != "" {
 		summary = append(summary, dlg.Item{Kind: dlg.KindLabel, Label: strings.TrimSpace(st.DeleteWarning)})
 	}
+	if st.Note != "" {
+		summary = append(summary, dlg.Item{Kind: dlg.KindLabel, Label: st.Note, Style: dlg.TextWarn})
+	}
 	summary = append(summary, dlg.Item{Kind: dlg.KindLabel, Label: st.DeleteSummary, Center: true})
 	icon := listIconPad(ctx.IconLead)
 	list := scrollList(fileDeleteList, len(st.DeleteEntries), deleteListHeight(st), st.DeleteListScroll,
@@ -301,6 +316,8 @@ func (st *FileDialogState) Apply(ev dlg.Event) {
 		st.RenameFocusAfter = !st.RenameFocusAfter
 	case FileRenameOpenOther:
 		st.RenameOpenInOther = !st.RenameOpenInOther
+	case FileIndexTagsRecursive:
+		st.IndexTagsRecursive = !st.IndexTagsRecursive
 	case FileSanitizeDots:
 		st.RenameSanitizeDots = !st.RenameSanitizeDots
 	case FileSanitizeUnderscores:
@@ -341,4 +358,23 @@ func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogStat
 			drawPathCompletionDropdown(screen, in.Rect.X, in.Rect.Y+1, f.Scroll, f.Completion, ctx.ScrollbarStyle, ctx.Styles)
 		}
 	}
+}
+
+// indexInitLabels is the FileDialogIndexInit message: the database path and the question,
+// create for a missing database, upgrade (IndexUpgrade) for an outdated one.
+func indexInitLabels(st FileDialogState) []dlg.Item {
+	head, ask := "No fileindex database at:", []string{"Create an empty one?"}
+	if st.IndexUpgrade {
+		head = "The fileindex database at:"
+		ask = []string{"is from an older fileindex. Upgrade it now?", "This can take minutes on a large index."}
+	}
+	items := []dlg.Item{
+		{Kind: dlg.KindLabel, Label: head},
+		{Kind: dlg.KindLabel, Label: st.Message, Fit: dlg.FitPath},
+		{Kind: dlg.KindLabel},
+	}
+	for _, l := range ask {
+		items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: l})
+	}
+	return items
 }

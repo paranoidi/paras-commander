@@ -58,6 +58,12 @@ total `(estimated)` until the exact size is counted (see
 | `Enter` | Maximize the focused Operations panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view (`jobs.close`) |
 
+Some features run their own background work as a **task** job (for example a
+[fileindex](fileindex.md) scan). A task shows `task` as its type and its name
+in the Details panel, reports items, bytes and the current path like a
+transfer, and can be canceled. It cannot be paused or retried; run the action
+again instead. One task of each kind runs at a time, beside any copy or move.
+
 Jobs copy and move one at a time; deletes start immediately. Add a transfer
 paused from the copy or move dialog (**Advanced**, then **Add paused**) and start it later with
 `Ctrl+R`. See [File operations](fileoperations.md#operation-dialogs).
@@ -179,7 +185,14 @@ A job with such items finishes as **failed** with `N item(s) failed`. Each
 such item is a red row in the Operations panel, followed by its reason, and
 the Details panel counts them. Press `F3` and keep only **Failed** to list just
 those. Tab cycles Queue, blocker
-(when shown), Details, Operations.
+(when shown), Details, Messages (when shown), Operations.
+
+When the selected job has warnings (non-fatal issues such as a symlink that
+had to be dereferenced, or fileindex scan problems), a **Messages (N)** panel
+lists them between Details and Operations. It is at most 8 rows tall and
+has a cursor line that moves with the arrow, `PgUp`/`PgDn` and `Home`/`End`
+keys while focused. `jobs.copy-message` (**Jobs -> Copy message**) copies the
+selected message's full text to the clipboard.
 
 With the Details panel focused, `+` and `-` shorten or lengthen the transfer
 graph's column time (the tickrate, and so how fast the Speed column reacts)

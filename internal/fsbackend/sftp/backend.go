@@ -36,6 +36,19 @@ func (b *Backend) Scheme() pathloc.Scheme {
 	return pathloc.SchemeSFTP
 }
 
+// SameRenameRoot reports whether a and b are on the same SFTP host, so one Rename can move a to b.
+func (b *Backend) SameRenameRoot(a, c pathloc.Path) bool {
+	ha, err := pathloc.SFTPHostPart(a)
+	if err != nil {
+		return false
+	}
+	hc, err := pathloc.SFTPHostPart(c)
+	if err != nil {
+		return false
+	}
+	return ha == hc
+}
+
 func (b *Backend) withResolvedRemote(ctx context.Context, loc pathloc.Path) (*pkgsftp.Client, string, func(), error) {
 	client, release, err := b.pool.withSFTP(ctx, loc)
 	if err != nil {

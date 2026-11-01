@@ -295,6 +295,7 @@ func (a *App) render() {
 	// Copy a.model under commandsMu: passing it by value into ui.Render otherwise reads
 	// every field (including CarouselFilePreview/FilePreview/FullscreenFilePreview, which
 	// background preview goroutines mutate under this same lock) without synchronization.
+	a.refreshPointerHovers()
 	a.commandsMu.RLock()
 	modelSnapshot := a.model
 	a.commandsMu.RUnlock()

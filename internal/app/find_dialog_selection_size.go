@@ -30,7 +30,7 @@ func (a *App) reconcileFindDialogSelectionSizeScans() {
 	a.findDialogSelectionScanGen = gen
 
 	p := a.panelByID(st.PanelID)
-	if p.Path.IsRemote() {
+	if !p.Path.IsLocal() {
 		a.findDialogSelectionScanFP = ""
 		a.findDialogSelectionScanDebounce.Invalidate()
 		return

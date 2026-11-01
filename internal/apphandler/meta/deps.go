@@ -23,6 +23,8 @@ type Deps struct {
 	Model     *ui.Model
 	Config    config.Config
 	ConfigDir string
+	// Providers are the Go column providers offered beside the meta.toml entries.
+	Providers []*metacmds.Provider
 }
 
 // Handler owns meta.toml command dispatch and the meta checkbox dialog.
@@ -32,11 +34,18 @@ type Handler struct {
 	model     *ui.Model
 	config    config.Config
 	configDir string
+	providers []*metacmds.Provider
 
 	// activeEntries holds ordered entry names for active meta columns per panel.
 	activeEntries [2][]string
 	// navPath holds the last panel path for which meta was run (used to detect navigation).
 	navPath [2]string
+	// inFileIndex is whether the panel was on fileindex:// at the last dir-change check, so
+	// default columns switch on only when it enters the index.
+	inFileIndex [2]bool
+	// autoColumns is whether the panel's columns are the fileindex defaults switched on by
+	// entering the index (cleared when the picker applies), so leaving it switches them off.
+	autoColumns [2]bool
 	// run is the in-flight meta run per panel (nil if none), kept so ReconcileForPanel can
 	// dispatch only newly appeared entries into it.
 	run [2]*metaRun
@@ -69,6 +78,7 @@ func New(deps Deps) *Handler {
 		model:     deps.Model,
 		config:    deps.Config,
 		configDir: strings.TrimSpace(deps.ConfigDir),
+		providers: deps.Providers,
 	}
 }
 
@@ -80,7 +90,10 @@ type WakePayload struct {
 	EntryName string
 	Path      string
 	Value     string
-	Gen       uint64
+	// Values, when non-nil, is a batch (path -> value) applied in one pass instead of Path/Value;
+	// a provider column posts one event for the whole listing.
+	Values map[string]string
+	Gen    uint64
 }
 
 // RenderFlushPayload is posted by the debounced meta render timer to coalesce frequent
@@ -98,10 +111,12 @@ type LoadPayload struct {
 	LoadErr     string // non-empty if LoadFile failed
 }
 
-// ExecFailedPayload notifies the main goroutine once per meta run when a shell command fails.
+// ExecFailedPayload notifies the main goroutine once per meta run when a shell command fails,
+// or when a Go column provider (Provider set) returns an error (Stderr).
 type ExecFailedPayload struct {
 	PanelID     int
 	Gen         uint64
+	Provider    string // name of the failed Go column provider; empty for a shell command
 	ExitCode    int
 	Stderr      string
 	ConfCmd     string // original template from meta.toml

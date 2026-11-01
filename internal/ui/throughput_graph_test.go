@@ -24,13 +24,10 @@ func TestThroughputGraphBodyBrailleFlatSeries(t *testing.T) {
 	}
 }
 
-func TestThroughputDetailLinesRunningPlaceholder(t *testing.T) {
+func TestThroughputDetailLinesRunningNoSamples(t *testing.T) {
 	lines := ThroughputDetailLines(nil, 40, true)
-	if len(lines) != 1 {
-		t.Fatalf("len = %d want 1", len(lines))
-	}
-	if !strings.Contains(lines[0], "collecting") {
-		t.Fatalf("want collecting placeholder: %#v", lines)
+	if len(lines) != 0 {
+		t.Fatalf("want no lines before the first sample: %#v", lines)
 	}
 }
 

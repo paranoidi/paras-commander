@@ -40,8 +40,8 @@ func RenameFastPathCtx(ctx context.Context, src, dest pathloc.Path) (ok bool, er
 	if src.Scheme() != dest.Scheme() {
 		return false, nil
 	}
-	if src.IsRemote() {
-		if !sameSFTPHost(src, dest) {
+	if !src.IsLocal() {
+		if !sameRenameRoot(src, dest) {
 			return false, nil
 		}
 		be, err := backendFor(src)
@@ -156,7 +156,7 @@ func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, dstExists b
 	default:
 		return renameOutcome{}, nil // skipped
 	}
-	if !dst.IsRemote() {
+	if dst.IsLocal() {
 		// rename(2) atomically replaces a non-directory target; the mismatch gate in
 		// resolveConflict guarantees dst is not a directory here.
 		return renameFastPathOrFallback(ctx, src, dst)

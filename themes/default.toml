@@ -1,7 +1,9 @@
 name = "default"
 
-# Values may be hex "#RRGGBB", integers 0–255 (ANSI/xterm index), or "default" for the
-# emulator’s configured default foreground/background (separate from ANSI black/white).
+# [palette] values may be hex "#RRGGBB", integers 0–255 (ANSI/xterm index), or "default" for
+# the emulator’s configured default foreground/background (separate from ANSI black/white).
+# Style fg/bg/icon values are strings: a [palette] name, hex "#RRGGBB", or "default"; add a
+# palette entry to use another xterm index.
 [palette]
 black = 0
 red = 1
@@ -20,11 +22,20 @@ bright_magenta = 13
 bright_cyan = 14
 bright_white = 15
 
+[status]                     # job and work states: menu-bar job strip, Jobs view, Commands view, file-list marks
+scanning = { fg = "bright_magenta", bold = true }   # also disk usage, fileindex scans, spinners
+queued = { fg = "bright_blue", bold = true }
+running = { fg = "bright_green", bold = true }
+paused = { fg = "yellow", bold = true }
+decision = { fg = "cyan", bold = true }
+failed = { fg = "bright_red", bold = true }
+canceled = { fg = "red", bold = true }
+completed = { fg = "green", bold = true }
+
 [menu]                       # misc menu chrome
 detail = { fg = "white" }
 status = { fg = "cyan" }     # status-command text at top-left of menu bar (status.toml)
 status.separator = { fg = "bright_black" }  # glyph between and after status-command segments
-spinner = { fg = "bright_magenta", bold = true }
 # dropdown is both a leaf style and a parent of .accent/.frame/.selected — keep dotted here
 dropdown = { fg = "black", bg = "blue" }
 dropdown.accent = { fg = "white"}
@@ -37,15 +48,6 @@ inactive = { fg = "bright_black" }
 accent = { fg = "magenta", bold = true }
 alert = { fg = "bright_red", bold = true }
 selected = { fg = "black", bg = "cyan", bold = true }
-
-[menu.job]                   # menu-bar job status groups
-completed = { fg = "green" }
-decision = { fg = "cyan" }
-failed = { fg = "red" }
-paused = { fg = "yellow" }
-queued = { fg = "bright_blue" }
-running = { fg = "white" }
-scanning = { fg = "magenta" }
 
 [menu.progress]              # menu-bar aggregate progress
 done = { fg = "green" }
@@ -74,6 +76,8 @@ sweep = { fg = "black", bg = "bright_white" } # leading edge of a toast sweeping
 key = { fg = "magenta", bold = true }
 label = { fg = "default" }
 label.shift = { fg = "bright_black" }
+hover = { fg = "black", bg = "cyan" }  # entry under the mouse pointer
+hover.active = { fg = "bright_white", bg = "cyan" }  # its part a click presses (key + hint, or the shift word)
 
 [panel]                      # panel-wide text
 text = { fg = "white" }
@@ -103,7 +107,6 @@ other_match = { fg = "bright_black" }
 other_match.cursor = { fg = "cyan" }
 job = { fg = "green" }
 job.read = { fg = "yellow" }
-job.decision = { fg = "red" }
 job.move = { fg = "red" }
 job.delete = { fg = "red" }
 job.removing = { fg = "red" }   # move source being deleted after its copy (optional)
@@ -111,7 +114,6 @@ job.removing = { fg = "red" }   # move source being deleted after its copy (opti
 [panel.icon.folder]          # folder icon colors
 open = { fg = "bright_cyan" }
 mount = { fg = "bright_blue" }
-scanning = { fg = "bright_magenta" }
 excluded = { fg = "black" }
 
 [panel.icon.preview]          # prefetch-cache debug tint for image/video file icons
@@ -141,9 +143,21 @@ not_modified = { fg = "bright_black", bold = true }
 renamed = { fg = "yellow" }
 typechange = { fg = "magenta" }
 
-[panel.scrollbar]             # scrollbar track/thumb colors
+[panel.fileindex]             # "browse with fileindex" state icon colors (replace git status)
+indexed = { fg = "bright_black" }
+unhashed = { fg = "cyan" }       # indexed, hash pending
+changed = { fg = "yellow" }
+new = { fg = "red" }
+missing = { fg = "bright_red" }
+excluded = { fg = "bright_black" }
+differs = { fg = "yellow", bold = true }
+unchecked = { fg = "yellow" }
+tagged = { fg = "blue" }
+
+[panel.scrollbar]             # scrollbar track/thumb colors and search match markers
 track = { fg = "bright_black" }
 thumb = { fg = "white" }
+match = { fg = "red" }
 
 [panel.usage]                 # disk usage bar colors
 normal = { fg = "white", bg = "bright_black" }
@@ -290,11 +304,9 @@ after = { fg = "yellow" }
 after.added = { fg = "green", bold = true }
 after.error = { fg = "bright_red", bold = true }
 
-[jobs]                       # status-column bucket styles
-done = { fg = "bright_green", bold = true }
-failed = { fg = "bright_red", bold = true }
+[jobs]                       # jobs list row text
 row = { fg = "white" }
-running = { fg = "bright_cyan", bold = true }
+row.hover = { fg = "bright_white", bg = "bright_black" }  # queue row under the mouse pointer
 
 [jobs.progress]
 fill = { fg = "black", bg = "green" }
@@ -312,16 +324,6 @@ track = { fg = "bright_black", bg = "black" }
 label = { fg = "white" }
 text = { fg = "default" }
 plot = { fg = "green" }
-
-[jobs.icons]                 # leading icon column (1:1 with job status strings)
-completed = { fg = "bright_green", bold = true }
-failed = { fg = "bright_red", bold = true }
-decision = { fg = "cyan", bold = true }
-running = { fg = "bright_green", bold = true }
-paused = { fg = "yellow", bold = true }
-queued = { fg = "yellow", bold = true }
-scanning = { fg = "bright_cyan", bold = true }
-canceled = { fg = "bright_red", bold = true }
 
 [jobs.operations]            # Operations pane result icons
 success = { fg = "bright_green", bold = true }
@@ -343,6 +345,19 @@ stash = "\uef0d"
 pin = "\U000F0403"
 # U+F06D1 (nf-md-eye_off_outline); use 8-digit escape — \uf06d1 is U+F06D + "1"
 hidden_dotfiles = "\U000F06D1"
+fileindex = "\U000F01BC"   # nf-md-database: shown instead of "fileindex" in fileindex:// paths
+
+[icons.fileindex_state]   # one cell per row while browsing with fileindex; 8-digit escapes
+indexed = "\U000F0AA9"    # nf-md-database_check: in the index, unchanged
+changed = "\U000F0B86"    # nf-md-database_edit: size or mtime differs from the index
+new = "\U000F01BB"        # nf-md-database_minus: on disk, not in the index
+missing = "\U000F01BA"    # nf-md-database_plus: in the index only (ghost row)
+excluded = "\U000F1640"   # nf-md-database_off: not indexed, skipped by the scan rules
+scanning = "\U000F0CFF"   # nf-md-database_sync: a scan or prune job works on it
+differs = "\U000F163A"    # nf-md-database_alert: indexed directory with differences below
+unchecked = "\U000F1920"  # nf-md-database_eye_off: indexed directory too deep to check automatically
+tagged = "\U000F12F6"     # nf-md-database_marker: indexed and tagged
+unhashed = "\U000F163F"   # nf-md-database_clock: indexed, not hashed yet
 
 [icons.dialog]
 info = "\uf05a"
@@ -408,6 +423,7 @@ excluded = "\uf114"
 
 [icons.scrollbar]
 thumb = "┃"
+match = "◇"                  # rail rows holding a preview search match
 
 [icons.tree]
 continue = "│"

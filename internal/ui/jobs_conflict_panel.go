@@ -52,17 +52,21 @@ const (
 	JobsPaneList JobsPane = iota
 	JobsPaneConflict
 	JobsPaneDetail
+	JobsPaneMessages
 	JobsPaneOperations
 )
 
 // JobsPaneOrder is the Tab focus order of the shown panels: list, blocker (when shown), Details
-// (always), Operations (when shown).
-func JobsPaneOrder(showConflict, showOperations bool) []JobsPane {
+// (always), Messages (when shown), Operations (when shown).
+func JobsPaneOrder(showConflict, showMessages, showOperations bool) []JobsPane {
 	order := []JobsPane{JobsPaneList}
 	if showConflict {
 		order = append(order, JobsPaneConflict)
 	}
 	order = append(order, JobsPaneDetail)
+	if showMessages {
+		order = append(order, JobsPaneMessages)
+	}
 	if showOperations {
 		order = append(order, JobsPaneOperations)
 	}

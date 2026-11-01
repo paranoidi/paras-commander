@@ -277,9 +277,12 @@ func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 	// Both panel reloads race an unrelated leftover async reload of the quick-view overlay's
 	// pre-delete snapshot (scheduled by the setup ApplyQuickViewPreviewImmediately above, before
 	// alpha was removed) for the same bounded screen event queue, so drain until both panels have
-	// actually landed rather than assuming a fixed 2-event order.
+	// actually landed rather than assuming a fixed 2-event order. The overlay's own reload of the
+	// next highlight (beta) is a further async load that can land after both panels (always on a
+	// single CPU), so wait for it too.
 	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
-		return !app.model.Primary.ListingPending && !app.model.Secondary.ListingPending
+		return !app.model.Primary.ListingPending && !app.model.Secondary.ListingPending &&
+			!app.model.QuickViewDirOverlay.ListingPending
 	})
 
 	if !app.model.QuickViewDirOverlayActive {

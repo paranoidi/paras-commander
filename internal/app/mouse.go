@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // mouseState is the click bookkeeping behind handleMouse.
@@ -21,7 +22,17 @@ type mouseState struct {
 	lastTarget string
 	lastRow    int
 	lastAt     time.Time
+	// pointer/x/y are the last reported pointer cell, for the dialog button hover (pointer is
+	// false until a report arrives and while reporting is off).
+	pointer bool
+	x, y    int
+	// keyed hides every hover highlight from a key press until the next mouse event.
+	keyed bool
 }
+
+// hovers reports whether pointer hover highlights show: the pointer has reported and no key was
+// pressed since. Every hover goes through it.
+func (m *mouseState) hovers() bool { return m.pointer && !m.keyed }
 
 // doubleClick records a left press on row of target and reports whether it completes a double
 // click: the previous press hit the same row within config.MouseDoubleClickMS. A third press
@@ -36,16 +47,22 @@ func (m *mouseState) doubleClick(target string, row int) bool {
 	return double
 }
 
+// mouseEventMask is the reporting mode while mouse support is on: buttons plus all motion, for
+// the title path hover highlight.
+const mouseEventMask = tcell.MouseButtonEvents | tcell.MouseMotionEvents
+
 // applyMouseConfig switches terminal mouse reporting to match [ui].mouse.
 func (a *App) applyMouseConfig() {
 	switch {
 	case a.config.UI.Mouse && !a.mouse.enabled:
-		a.screen.EnableMouse(tcell.MouseButtonEvents)
+		a.screen.EnableMouse(mouseEventMask)
 		a.mouse.enabled = true
 	case !a.config.UI.Mouse && a.mouse.enabled:
 		a.screen.DisableMouse()
 		a.mouse.enabled = false
 		a.mouse.buttons = 0
+		a.mouse.pointer = false
+		a.clearPanelTitleHover()
 	}
 }
 
@@ -57,9 +74,11 @@ func (a *App) releaseMouse() (restore func()) {
 	}
 	a.screen.DisableMouse()
 	a.mouse.buttons = 0
+	a.mouse.pointer = false
+	a.clearPanelTitleHover()
 	return func() {
 		if a.config.UI.Mouse {
-			a.screen.EnableMouse(tcell.MouseButtonEvents)
+			a.screen.EnableMouse(mouseEventMask)
 		} else {
 			a.mouse.enabled = false
 		}
@@ -77,9 +96,10 @@ func wheelDelta(buttons tcell.ButtonMask, rows int) int {
 	return 0
 }
 
-// mouseHit locates a cell in the browser: the panel under it and, when it lies on an entry row,
-// the index of that entry (row < 0 otherwise). ok is false outside any clickable file panel.
-func (a *App) mouseHit(layout ui.Layout, x, y int) (panelID, row int, ok bool) {
+// mousePanelAt returns the browser panel whose column holds (x, y) and its file list frame. ok is
+// false outside both columns and on the inactive column while quick view or file preview paints
+// a preview there.
+func (a *App) mousePanelAt(layout ui.Layout, x, y int) (panelID int, file ui.Rect, ok bool) {
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
 		col, p := layout.Primary, &a.model.Primary
 		if id == ui.SecondaryPanel {
@@ -88,24 +108,228 @@ func (a *App) mouseHit(layout ui.Layout, x, y int) (panelID, row int, ok bool) {
 		if !col.Contains(x, y) {
 			continue
 		}
-		// The inactive column shows a preview while quick view or file preview is open.
 		if id != a.model.ActivePanel && (a.model.QuickViewDisplayActive() || a.model.FilePreviewDraw.Open) {
-			return 0, -1, false
+			return 0, ui.Rect{}, false
 		}
-		if p.CarouselMode {
-			// ponytail: carousel columns have their own row layout; clicks only focus the panel.
-			return id, -1, true
-		}
-		file := ui.FileListFrame(col, p, id, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(id, 0))
-		top := ui.PanelListTop(file)
-		if (ui.Rect{X: file.X, Y: top, Width: file.Width, Height: ui.PanelListRows(file)}).Contains(x, y) {
-			if idx := p.ScrollOffset + y - top; idx < p.VisibleEntryCount() {
-				return id, idx, true
-			}
-		}
+		return id, ui.FileListFrame(col, p, id, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectedStripSplitParams(id, 0)), true
+	}
+	return 0, ui.Rect{}, false
+}
+
+// mouseHit locates a cell in the browser: the panel under it and, when it lies on an entry row,
+// the index of that entry (row < 0 otherwise). ok is false outside any clickable file panel.
+func (a *App) mouseHit(layout ui.Layout, x, y int) (panelID, row int, ok bool) {
+	id, file, ok := a.mousePanelAt(layout, x, y)
+	if !ok {
+		return 0, -1, false
+	}
+	p := a.panelByID(id)
+	if p.CarouselMode {
+		// ponytail: carousel columns have their own row layout; clicks only focus the panel.
 		return id, -1, true
 	}
-	return 0, -1, false
+	top := ui.PanelListTop(file)
+	if (ui.Rect{X: file.X, Y: top, Width: file.Width, Height: ui.PanelListRows(file)}).Contains(x, y) {
+		if idx := p.ScrollOffset + y - top; idx < p.VisibleEntryCount() {
+			return id, idx, true
+		}
+	}
+	return id, -1, true
+}
+
+// panelTitleHit returns the panel and the title path segment under (x, y) (ui.PanelTitleSegmentAt).
+func (a *App) panelTitleHit(layout ui.Layout, x, y int) (panelID int, seg ui.PanelTitleSegment, ok bool) {
+	id, file, ok := a.mousePanelAt(layout, x, y)
+	if !ok {
+		return 0, ui.PanelTitleSegment{}, false
+	}
+	seg, ok = ui.PanelTitleSegmentAt(file, &a.model, id, a.styles, x, y)
+	return id, seg, ok
+}
+
+// updatePanelTitleHover tracks the pointer for the title path highlight and reports whether the
+// highlighted segment changed (the caller then renders). Motion that keeps the same segment, or
+// none, under the pointer changes nothing visible and does not render.
+func (a *App) updatePanelTitleHover(layout ui.Layout, x, y int) bool {
+	prev := a.model.PanelTitleHover
+	var next ui.PanelTitleHover
+	var nextSeg ui.PanelTitleSegment
+	if a.inputMode() == InputModeNormal && a.model.ViewMode == ui.ViewBrowser {
+		if id, seg, ok := a.panelTitleHit(layout, x, y); ok {
+			next, nextSeg = ui.PanelTitleHover{Active: true, Panel: id, X: x}, seg
+		}
+	}
+	a.model.PanelTitleHover = next
+	if !prev.Active || !next.Active {
+		return prev.Active != next.Active
+	}
+	return prev.Panel != next.Panel || !nextSeg.Contains(prev.X)
+}
+
+// mouseGoesToDialog reports whether presses below the chrome belong to the top-most dlg dialog
+// (handleDialogMouse): every mode but the browser and the Jobs, Commands, Messages, Compare and
+// Duplicates lists.
+func (a *App) mouseGoesToDialog() bool {
+	switch a.inputMode() {
+	case InputModeJobsView, InputModeCommandsView, InputModeMessagesView:
+		return a.model.JobsResultFilterDialog.Open
+	case InputModeCompareView:
+		return a.model.CompareFilterDialog.Open || a.model.CompareMergeDialog.Open
+	case InputModeNormal, InputModeDedupView:
+		return false
+	}
+	return true
+}
+
+// dialogHovers are the top-most dlg dialog's button and list row under the last pointer position.
+// render sets Model.DialogButtonHover and Model.DialogListHover from them, so the highlights follow
+// the dialog as it changes.
+func (a *App) dialogHovers() (dlg.ButtonHover, dlg.Rect) {
+	if !a.mouse.hovers() || !a.mouseGoesToDialog() {
+		return dlg.ButtonHover{}, dlg.Rect{}
+	}
+	d, ok := a.activeDialog(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if !ok {
+		return dlg.ButtonHover{}, dlg.Rect{}
+	}
+	spec, fit := d.spec()
+	if !fit {
+		return dlg.ButtonHover{}, dlg.Rect{}
+	}
+	w, h := a.screen.Size()
+	row, _ := dlg.HoveredListRow(spec, w, h, *d.focus, a.mouse.x, a.mouse.y)
+	return dlg.HoveredButton(spec, w, h, a.mouse.x, a.mouse.y), row
+}
+
+// menuBarHover is the menu title under the last pointer position, where a click would open it.
+func (a *App) menuBarHover() ui.MenuHover {
+	if !a.mouse.hovers() || !a.menuBarAcceptsMouse() {
+		return ui.MenuHover{}
+	}
+	w, h := a.screen.Size()
+	index, ok := ui.MenuBarMenuAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+	return ui.MenuHover{Active: ok, Index: index}
+}
+
+// selectPulldownItemUnderPointer moves the open pulldown's selection onto the item under (x, y)
+// (not the frame or a separator) and reports whether it moved.
+func (a *App) selectPulldownItemUnderPointer(layout ui.Layout, x, y int) bool {
+	if a.inputMode() != InputModeMenu {
+		return false
+	}
+	item, _ := ui.PulldownItemAt(layout, &a.model, x, y)
+	if item < 0 || item == a.model.Menu.SelectedItem {
+		return false
+	}
+	a.model.Menu.SelectedItem = item
+	return true
+}
+
+// footerHover is the footer entry under the last pointer position, where a click would press it.
+func (a *App) footerHover() ui.FooterHover {
+	if !a.mouse.hovers() {
+		return ui.FooterHover{}
+	}
+	w, h := a.screen.Size()
+	return ui.FooterHoverAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+}
+
+// auxListHit is the row hit-test of the open Jobs, Commands or Messages list (ok false in
+// other modes).
+func (a *App) auxListHit() (hit func(ui.Layout, *ui.Model, int, int) (int, bool), ok bool) {
+	switch a.inputMode() {
+	case InputModeJobsView:
+		return ui.JobsListEntryAt, true
+	case InputModeCommandsView:
+		return ui.CommandsListEntryAt, true
+	case InputModeMessagesView:
+		return ui.MessagesListEntryAt, true
+	case InputModeCompareView:
+		return ui.CompareListEntryAt, true
+	}
+	return nil, false
+}
+
+// auxListHover is the row of the open Jobs, Commands, Messages, Compare or Duplicates list under the last pointer
+// position: a job or source row, a command entry, a whole message. It only highlights: the
+// selection stays put, so crossing the list on the way to the Details, Conflict or output panes
+// does not switch what they show. A key press hides it until the pointer reports again.
+func (a *App) auxListHover() ui.ListRowHover {
+	hit, ok := a.auxListHit()
+	dedup := a.inputMode() == InputModeDedupView
+	if (!ok && !dedup) || !a.mouse.hovers() || a.mouseGoesToDialog() {
+		return ui.ListRowHover{}
+	}
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if dedup {
+		row, copies, ok := ui.DedupListEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)
+		return ui.ListRowHover{Active: ok, Row: row, Copies: copies}
+	}
+	row, ok := hit(layout, &a.model, a.mouse.x, a.mouse.y)
+	return ui.ListRowHover{Active: ok, Row: row}
+}
+
+// statusCommandsHover reports whether the last pointer position is on the status-command area,
+// where a click would open the Status commands dialog.
+func (a *App) statusCommandsHover() bool {
+	if !a.mouse.hovers() || !a.menuBarAcceptsMouse() {
+		return false
+	}
+	w, h := a.screen.Size()
+	return ui.StatusCommandsAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+}
+
+// panelRowHover is the browser panel entry under the last pointer position (mouseHit), in
+// normal mode only, hidden after a key press until the pointer reports again.
+func (a *App) panelRowHover() ui.PanelRowHover {
+	if !a.mouse.hovers() {
+		return ui.PanelRowHover{}
+	}
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall {
+		return ui.PanelRowHover{}
+	}
+	if a.inputMode() == InputModeDedupView {
+		row, ok := ui.DedupBrowseEntryAt(layout, &a.model, a.mouse.x, a.mouse.y)
+		return ui.PanelRowHover{Active: ok, Panel: ui.DedupBrowsePanel, Entry: row}
+	}
+	if a.inputMode() != InputModeNormal || a.model.ViewMode != ui.ViewBrowser {
+		return ui.PanelRowHover{}
+	}
+	id, row, ok := a.mouseHit(layout, a.mouse.x, a.mouse.y)
+	if !ok || row < 0 {
+		return ui.PanelRowHover{}
+	}
+	return ui.PanelRowHover{Active: true, Panel: id, Entry: row}
+}
+
+// refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons
+// and list rows,
+// menu titles, the status commands, footer entries, file list rows, Jobs, Commands and Messages rows) and reports
+// whether one changed. render calls it, so they track the screen as it changes under a still
+// pointer; motion calls it and renders on a change.
+func (a *App) refreshPointerHovers() bool {
+	button, dialogRow := a.dialogHovers()
+	menuTitle, footer := a.menuBarHover(), a.footerHover()
+	status, row, listRow := a.statusCommandsHover(), a.panelRowHover(), a.auxListHover()
+	prev := a.model.DialogButtonHover
+	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
+		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover ||
+		status != a.model.StatusCommandsHover || row != a.model.PanelRowHover ||
+		listRow != a.model.AuxListHover || dialogRow != a.model.DialogListHover
+	a.model.DialogButtonHover, a.model.DialogListHover = button, dialogRow
+	a.model.MenuBarHover, a.model.FooterHover = menuTitle, footer
+	a.model.StatusCommandsHover, a.model.PanelRowHover, a.model.AuxListHover = status, row, listRow
+	return changed
+}
+
+// clearPanelTitleHover drops the title path highlight; it reports whether one was shown.
+func (a *App) clearPanelTitleHover() bool {
+	was := a.model.PanelTitleHover.Active
+	a.model.PanelTitleHover = ui.PanelTitleHover{}
+	return was
 }
 
 // focusPanelByMouse makes id the active panel with the file list focused.
@@ -131,31 +355,64 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	buttons := ev.Buttons()
 	pressed := buttons &^ a.mouse.buttons
 	a.mouse.buttons = buttons &^ (tcell.WheelUp | tcell.WheelDown | tcell.WheelLeft | tcell.WheelRight)
-	// Releases carry no new press and nothing reacts to them.
-	if pressed == 0 && wheelDelta(buttons, 1) == 0 || a.terminalPanelHasKeyFocus() {
+	a.mouse.pointer, a.mouse.keyed = true, false
+	a.mouse.x, a.mouse.y = ev.Position()
+	if a.terminalPanelHasKeyFocus() {
 		return false, false
 	}
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
+	x, y := ev.Position()
+	// Motion and releases carry no new press: only the hover highlights react to them.
+	if pressed == 0 && wheelDelta(buttons, 1) == 0 {
+		if layout.TooSmall {
+			return false, false
+		}
+		// Each one updates its own state, so all of them run before deciding to render.
+		moved := a.selectPulldownItemUnderPointer(layout, x, y)
+		hovers := a.refreshPointerHovers()
+		if title := a.updatePanelTitleHover(layout, x, y); moved || hovers || title {
+			a.render()
+			return false, true
+		}
+		return false, false
+	}
 	if layout.TooSmall {
 		return false, false
 	}
-	x, y := ev.Position()
 	if handled, quit, rendered := a.handleChromeMouse(layout, x, y, buttons, pressed); handled {
 		return quit, rendered
 	}
+	if a.mouseGoesToDialog() {
+		return a.handleDialogMouse(x, y, buttons, pressed)
+	}
 	switch a.inputMode() {
 	case InputModeJobsView, InputModeCommandsView, InputModeMessagesView:
-		if a.model.JobsResultFilterDialog.Open {
-			return a.handleDialogMouse(x, y, buttons, pressed)
-		}
 		return false, a.handleAuxListMouse(layout, x, y, buttons, pressed)
+	case InputModeCompareView:
+		return false, a.handleAuxListMouse(layout, x, y, buttons, pressed)
+	case InputModeDedupView:
+		return false, a.handleDedupMouse(layout, x, y, buttons, pressed)
 	case InputModeNormal:
 		if a.model.ViewMode != ui.ViewBrowser {
 			return false, false
 		}
-	default:
-		return a.handleDialogMouse(x, y, buttons, pressed)
+	}
+	if id, seg, ok := a.panelTitleHit(layout, x, y); ok && pressed&tcell.Button1 != 0 {
+		a.focusPanelByMouse(id)
+		if seg.Depth == 0 {
+			// The panel directory itself: reload it.
+			return a.finishResolvedKeyboardAction(keymap.ActionPanelRefresh)
+		}
+		if err := a.navigatePanelToAncestor(id, seg.Depth); err != nil {
+			a.setErrorMessage("Navigate failed", err)
+		}
+		a.updatePanelTitleHover(layout, x, y)
+		a.render()
+		return false, true
+	}
+	if handled, rendered := a.handlePanelHeaderMouse(layout, x, y, pressed); handled {
+		return false, rendered
 	}
 	id, row, ok := a.mouseHit(layout, x, y)
 	if !ok {
@@ -190,6 +447,31 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	return false, false
 }
 
+// handlePanelHeaderMouse handles a left press on a file list's column header row: a sortable
+// column title sorts by it (reversing when already sorted by it), anywhere else opens the sort
+// dialog for that panel.
+func (a *App) handlePanelHeaderMouse(layout ui.Layout, x, y int, pressed tcell.ButtonMask) (handled, rendered bool) {
+	if pressed&tcell.Button1 == 0 {
+		return false, false
+	}
+	id, file, ok := a.mousePanelAt(layout, x, y)
+	if !ok {
+		return false, false
+	}
+	col, onTitle, onHeader := ui.PanelHeaderColumnAt(file, &a.model, id, x, y)
+	if !onHeader {
+		return false, false
+	}
+	a.focusPanelByMouse(id)
+	if onTitle {
+		a.applyPanelSort(id, a.panelByID(id).HeaderColumnSort(col.Mode, col.MetaColumn))
+	} else {
+		a.openSortDialogForPanel(id)
+	}
+	a.render()
+	return true, true
+}
+
 // scrollInactivePanel moves the cursor of a non-focused panel by delta rows.
 func (a *App) scrollInactivePanel(id, delta int) bool {
 	p := a.panelByID(id)
@@ -202,11 +484,15 @@ func (a *App) scrollInactivePanel(id, delta int) bool {
 // the event belongs to whatever lies below them.
 func (a *App) handleChromeMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (handled, quit, rendered bool) {
 	left := pressed&tcell.Button1 != 0
-	if fk, ok := ui.FooterKeyAt(layout, &a.model, x, y); ok {
+	if fk, shift, ok := ui.FooterKeyAt(layout, &a.model, x, y); ok {
 		if !left {
 			return true, false, false
 		}
-		ev, ok := fk.Event()
+		event := fk.Event
+		if shift {
+			event = fk.ShiftEvent
+		}
+		ev, ok := event()
 		if !ok {
 			return true, false, false
 		}
@@ -230,6 +516,17 @@ func (a *App) handleChromeMouse(layout ui.Layout, x, y int, buttons, pressed tce
 		} else {
 			a.openMenuAt(index)
 		}
+		a.render()
+		return true, false, true
+	}
+	if ui.StatusCommandsAt(layout, &a.model, x, y) && a.menuBarAcceptsMouse() {
+		if !left {
+			return true, false, false
+		}
+		if a.model.Menu.Open {
+			a.closeMenu()
+		}
+		a.openStatusCommandsDialog()
 		a.render()
 		return true, false, true
 	}
@@ -298,19 +595,24 @@ func (a *App) handleLeaderMenuMouse(layout ui.Layout, x, y int, pressed tcell.Bu
 }
 
 // handleAuxListMouse handles the list pane of the Jobs, Commands and Messages views: a left click
-// focuses the list and selects the entry under the pointer, the wheel moves the selection.
+// focuses the list and selects the entry under the pointer (in Messages it also copies the
+// message), the wheel moves the selection.
 func (a *App) handleAuxListMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
-	var hit func(ui.Layout, *ui.Model, int, int) (int, bool)
+	hit, ok := a.auxListHit()
+	if !ok {
+		return false
+	}
 	var selectEntry, move func(int)
 	switch a.inputMode() {
 	case InputModeJobsView:
-		hit, selectEntry, move = ui.JobsListEntryAt, a.jobsCtrl.FocusListRow, a.jobsCtrl.MoveSelection
+		selectEntry, move = a.jobsCtrl.FocusListRow, a.jobsCtrl.MoveSelection
 	case InputModeCommandsView:
-		hit, selectEntry, move = ui.CommandsListEntryAt, a.commandsCtrl.FocusListRow, a.commandsCtrl.MoveSelection
-	case InputModeMessagesView:
-		hit, selectEntry, move = ui.MessagesListEntryAt, a.selectMessage, a.moveMessagesSelection
+		selectEntry, move = a.commandsCtrl.FocusListRow, a.commandsCtrl.MoveSelection
+	case InputModeCompareView:
+		selectEntry = func(idx int) { a.moveCompareSelection(idx - a.model.CompareView.Selected) }
+		move = a.moveCompareSelection
 	default:
-		return false
+		selectEntry, move = a.copyMessage, a.moveMessagesSelection
 	}
 	idx, ok := hit(layout, &a.model, x, y)
 	if !ok {
@@ -321,6 +623,47 @@ func (a *App) handleAuxListMouse(layout ui.Layout, x, y int, buttons, pressed tc
 		move(step)
 	case pressed&tcell.Button1 != 0:
 		selectEntry(idx)
+	default:
+		return false
+	}
+	a.render()
+	return true
+}
+
+// handleDedupMouse handles the Duplicates view's two tree panes: a left click focuses the pane
+// under the pointer and selects the row, the wheel moves the focused pane's selection.
+func (a *App) handleDedupMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
+	row, copies, ok := ui.DedupListEntryAt(layout, &a.model, x, y)
+	if !ok {
+		return a.handleDedupBrowseMouse(layout, x, y, buttons, pressed)
+	}
+	switch step := wheelDelta(buttons, config.MouseWheelRows); {
+	case step != 0:
+		a.dedupCtrl.MoveSelection(step)
+	case pressed&tcell.Button1 != 0:
+		a.dedupCtrl.FocusPaneRow(copies, row)
+	default:
+		return false
+	}
+	a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+	a.render()
+	return true
+}
+
+// handleDedupBrowseMouse handles the Duplicates browse panel: a left click focuses it and moves
+// its cursor to the entry under the pointer, the wheel moves the cursor.
+func (a *App) handleDedupBrowseMouse(layout ui.Layout, x, y int, buttons, pressed tcell.ButtonMask) (rendered bool) {
+	row, ok := ui.DedupBrowseEntryAt(layout, &a.model, x, y)
+	if !ok {
+		return false
+	}
+	p, rows := &a.model.DedupPanel, a.dedupBrowseRows(layout)
+	switch step := wheelDelta(buttons, config.MouseWheelRows); {
+	case step != 0:
+		a.doListNav(func() { p.Move(step, rows) })
+	case pressed&tcell.Button1 != 0:
+		a.dedupCtrl.FocusBrowsePanel()
+		a.doListNav(func() { p.Move(row-p.Cursor, rows) })
 	default:
 		return false
 	}

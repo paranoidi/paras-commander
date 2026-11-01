@@ -25,7 +25,11 @@ func (a *App) openPanelPathInExternalBrowser(panelID int) {
 }
 
 // openDirInExternalBrowser is the single entry point for "open this directory in the GUI file manager".
+// A fileindex:// dir opens its real directory on disk.
 func (a *App) openDirInExternalBrowser(dir string) {
+	if host, ok := hostPathOf(dir); ok {
+		dir = host
+	}
 	p := filepath.Clean(dir)
 	if p == "" || p == "." {
 		a.setErrorMessage("External browser", fmt.Errorf("no panel path"))
@@ -49,10 +53,14 @@ func (a *App) openDirInExternalBrowser(dir string) {
 
 // openFileExternally opens a regular file with the default opener when open_files_externally is on.
 // When xdg-open is not on PATH the file opens in the fullscreen preview instead; its async preview
-// gate shows the reason in the pane for files it cannot render.
+// gate shows the reason in the pane for files it cannot render. A fileindex:// path opens its
+// real file on disk.
 func (a *App) openFileExternally(path string) {
 	if !a.config.Panels.OpenFilesExternally {
 		return
+	}
+	if host, ok := hostPathOf(path); ok {
+		path = host
 	}
 	p := filepath.Clean(path)
 	if p == "" || p == "." {

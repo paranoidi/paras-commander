@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Widget IDs of the help dialog. An empty state Focus is the filter. The entry list has no focus
@@ -80,13 +81,15 @@ func helpListItem(st HelpViewState, height, width int, styles theme.Theme) dlg.I
 		}
 	}
 	return dlg.Item{
-		ID: helpList, Kind: dlg.KindList, Driven: true, Height: height, Rows: rows, Cursor: cursor, Offset: st.ListScroll,
+		ID: helpList, Kind: dlg.KindList, Driven: true, Scrollbar: true, Height: height, Rows: rows, Cursor: cursor, Offset: st.ListScroll,
 	}
 }
 
-// DrawHelpDialog renders the centered help dialog with fuzzy shortcut search from its widget spec.
-func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, styles theme.Theme) {
+// DrawHelpDialog renders the centered help dialog with fuzzy shortcut search from its widget spec,
+// with the entry list's scrollbar in scrollbarStyle.
+func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
 	if spec, _, fits := HelpDialogView(state, layout, styles); fits {
+		spec.ScrollbarStyle = scrollbarStyle
 		dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, styles)
 	}
 }

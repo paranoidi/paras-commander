@@ -4,7 +4,7 @@ package dialog
 // and output contexts only — panel entries all share one directory, so it would be
 // meaningless there.
 func GroupSelectShowsFullPath(state GroupSelectState) bool {
-	return state.Context == "find" || state.Context == "output"
+	return state.Context == "find" || state.Context == "index-find" || state.Context == "output"
 }
 
 // groupSelectPatternHintText is the compile-error hint under the Select group pattern input.

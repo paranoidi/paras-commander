@@ -414,6 +414,38 @@ const (
 	// under the config directory when [mass_rename].file is empty.
 	DefaultMassRenamePatternsFileName = "patterns.toml"
 
+	// DefaultFileIndexDatabase is [fileindex].database: empty uses fileindex's config.ini path.
+	DefaultFileIndexDatabase = ""
+	// DefaultFileIndexWorkers is [fileindex].workers: 0 uses config.ini's parallel_workers.
+	DefaultFileIndexWorkers = 0
+	// FileIndexWorkersMax clamps [fileindex].workers.
+	FileIndexWorkersMax = 256
+	// DefaultFileIndexFolderScanMaxDepth is [fileindex].folder_scan_max_depth: how many directory
+	// levels the automatic drift check of an indexed folder descends. -1 is unlimited, 0 turns
+	// the automatic check off.
+	DefaultFileIndexFolderScanMaxDepth = 3
+	// FileIndexFolderScanMaxDepthUnlimited is the [fileindex].folder_scan_max_depth value for
+	// no depth limit; lower values are clamped to it.
+	FileIndexFolderScanMaxDepthUnlimited = -1
+	// DefaultFileIndexHash is [fileindex].hash: scans hash the files they index.
+	DefaultFileIndexHash = true
+	// DefaultFileIndexScanCommitIntervalMS is [fileindex].scan_commit_interval_ms: a scan commits
+	// what it hashed this often. Every commit flushes the index's full-text index, so with many
+	// small files per-count batches made the single database writer the bottleneck.
+	DefaultFileIndexScanCommitIntervalMS = 1000
+	// FileIndexScanCommitIntervalMinMS and FileIndexScanCommitIntervalMaxMS clamp
+	// [fileindex].scan_commit_interval_ms.
+	FileIndexScanCommitIntervalMinMS = 100
+	FileIndexScanCommitIntervalMaxMS = 60000
+	// FileIndexTagsColumn is the meta entry name of the fileindex tags column provider.
+	FileIndexTagsColumn = "fileindex.tags"
+	// FileIndexColumnOrder is the meta order of the first fileindex column; the others follow
+	// one step each, all after meta.toml columns (default order 0).
+	FileIndexColumnOrder = 1000
+	// FileIndexMaxWarnings caps the warning lines a scan or prune job keeps (per-file errors and
+	// pruning log lines); the rest are counted in one final line.
+	FileIndexMaxWarnings = 200
+
 	// DefaultMetaEntryWorkers is the number of concurrent background workers used per meta column
 	// entry when the entry does not specify its own workers value in meta.toml.
 	DefaultMetaEntryWorkers = 2
@@ -627,3 +659,9 @@ const (
 	DefaultFilterTypeAudio     = `(?i)\.(mp3|flac|wav|ogg|oga|opus|m4a|aac|wma|alac|aiff?|ape|mka|mid|midi|dsf|wv)$`
 	DefaultFilterTypeDocuments = `(?i)\.(pdf|docx?|odt|rtf|txt|md|xlsx?|ods|csv|pptx?|odp|epub|mobi|djvu|tex|pages|numbers|key)$`
 )
+
+// DefaultFileIndexColumns is [fileindex].default_columns: the meta columns switched on when a
+// panel enters fileindex://.
+func DefaultFileIndexColumns() []string {
+	return []string{FileIndexTagsColumn}
+}

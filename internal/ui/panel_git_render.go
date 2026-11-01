@@ -3,6 +3,7 @@ package ui
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -27,7 +28,7 @@ func panelListReservedBeforeName(showGit, nameOnly bool) int {
 }
 
 func panelListGitColumnActive(state panel.State, nameOnly bool) bool {
-	return state.GitColumnActive && !nameOnly
+	return (state.GitColumnActive || state.WithIndex) && !nameOnly
 }
 
 func panelGitCell(entry localfs.Entry, byPath map[string]gitstatus.Cell) gitstatus.Cell {
@@ -65,12 +66,49 @@ func paintGitColumn(screen tcell.Screen, x, y int, cell gitstatus.Cell, rowStyle
 	}
 }
 
+// indexRowState is the fileindex state icon key of a row: scanning while a task job (a scan or
+// prune) works on it, else the overlay's IndexStatus ("" for rows the index has no opinion on).
+func indexRowState(entry localfs.Entry, jobMarks []JobPathMark) string {
+	if entry.IndexStatus == "" {
+		return ""
+	}
+	if m, ok := EntryPathJobMark(entry.Path, jobMarks); ok && jobs.Type(m.Type) == jobs.TypeTask && jobs.Status(m.Status).IsActive() {
+		return localfs.IndexStatusScanning
+	}
+	return entry.IndexStatus
+}
+
+// paintIndexColumn paints a row's fileindex state icon in the git strip while the panel browses
+// with fileindex; the second cell stays blank.
+func paintIndexColumn(screen tcell.Screen, x, y int, state string, rowStyle tcell.Style, styles theme.Theme, cursorRow bool) {
+	_, rowBG, rowAttrs := rowStyle.Decompose()
+	icon := ' '
+	s := tcell.StyleDefault.Background(rowBG).Attributes(rowAttrs)
+	if r := styles.IconFileIndexState(state); state != "" && r != 0 {
+		icon = r
+		fg, _, attrs := styles.PanelFileIndexStyle(state).Decompose()
+		if cursorRow {
+			fg, _, _ = rowStyle.Decompose()
+			attrs = rowAttrs
+		}
+		s = tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)
+	}
+	screen.SetContent(x, y, icon, nil, s)
+	screen.SetContent(x+1, y, ' ', nil, s)
+}
+
 func paintGitGap(screen tcell.Screen, x, y int, style tcell.Style) {
 	screen.SetContent(x+panelListGitCells, y, ' ', nil, style)
 }
 
-func paintGitHeader(screen tcell.Screen, x, y int, headerStyle tcell.Style, styles theme.Theme) {
-	primitive.Text(screen, x, y, panelListGitCells, styles.IconGit(), headerStyle)
+func paintGitHeader(screen tcell.Screen, x, y int, headerStyle tcell.Style, styles theme.Theme, withIndex bool) {
+	icon := styles.IconGit()
+	if withIndex {
+		if icon = styles.IconFileIndex(); icon == "" {
+			icon = "ix" // no Nerd Font icons
+		}
+	}
+	primitive.Text(screen, x, y, panelListGitCells, icon, headerStyle)
 	paintGitGap(screen, x, y, headerStyle)
 }
 

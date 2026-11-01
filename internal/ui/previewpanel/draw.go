@@ -366,6 +366,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 				Screen: screen, X: scrollGutterX, ListTopY: contentTop, Visible: contentH,
 				Metrics: metrics, Style: p.ScrollbarStyle, Active: scrollbarActive,
 				Blocked: p.ChromeBlocked, FrameStyle: railStyle, Theme: p.Theme,
+				Marks: st.Search.searchMarkRows(lines, contentH), MarkStyle: p.Theme.PanelScrollbarMatch,
 			})
 		}
 	}

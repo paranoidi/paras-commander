@@ -85,6 +85,46 @@ func TestJobSourceLabelDisambiguatesSharedBaseNames(t *testing.T) {
 	}
 }
 
+// The row under the pointer takes the jobs.row.hover background with its status colors kept;
+// hovering the cursor row leaves the cursor style alone.
+func TestDrawJobsListPanelHoverRow(t *testing.T) {
+	styles := theme.Default()
+	rect := Rect{X: 0, Y: 0, Width: 90, Height: 9}
+	list := sourcesJobs()
+	st := JobsViewState{} // cursor on row 0 (harbor)
+	_, hoverBG, _ := styles.JobsRowHover.Decompose()
+
+	screen := newOpsScreen(t)
+	screen.SetSize(90, 10)
+	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0, ListRowHover{Active: true, Row: 1})
+	const quarryY = 3
+	xStatus := rect.X + 2 + jobsListColPrefix
+	for _, x := range []int{rect.X + 1, rect.X + 2 + jobsListColIcon, xStatus} {
+		_, style, _ := screen.Get(x, quarryY)
+		if _, bg, _ := style.Decompose(); bg != hoverBG {
+			t.Fatalf("hovered row col %d style = %v, want the hover background", x, style)
+		}
+	}
+	_, status, _ := screen.Get(xStatus, quarryY)
+	wantFG, _, _ := styles.StatusStyle(string(jobs.StatusQueued)).Decompose()
+	if fg, _, _ := status.Decompose(); fg != wantFG {
+		t.Fatalf("hovered status fg = %v, want the queued color %v", fg, wantFG)
+	}
+
+	plain := newOpsScreen(t)
+	plain.SetSize(90, 10)
+	drawJobsListPanel(plain, rect, st, list, styles, time.Now(), false, 0, ListRowHover{})
+	hovered := newOpsScreen(t)
+	hovered.SetSize(90, 10)
+	drawJobsListPanel(hovered, rect, st, list, styles, time.Now(), false, 0, ListRowHover{Active: true, Row: 0})
+	for x := rect.X; x < rect.X+rect.Width; x++ {
+		_, want, _ := plain.Get(x, 2)
+		if _, got, _ := hovered.Get(x, 2); got != want {
+			t.Fatalf("hovered cursor row col %d style = %v, want the cursor style %v", x, got, want)
+		}
+	}
+}
+
 func TestDrawJobsListPanelExpandedSources(t *testing.T) {
 	screen := newOpsScreen(t)
 	screen.SetSize(90, 10)
@@ -94,7 +134,7 @@ func TestDrawJobsListPanelExpandedSources(t *testing.T) {
 	list[0].SourcePhases = []jobs.SourcePhase{jobs.SourceFinished, jobs.SourceStarted, jobs.SourceQueued}
 	styles := theme.Default()
 	st := JobsViewState{Expanded: map[string]bool{"harbor": true}}
-	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0)
+	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0, ListRowHover{})
 
 	jobRow := screenRowText(screen, rect, 2)
 	if !strings.Contains(jobRow, "copy "+styles.IconJobsListSources(true)) {
@@ -130,10 +170,10 @@ func TestDrawJobsListPanelHighlightsActiveSource(t *testing.T) {
 	list[0].CurrentPath = "/meadow/copper/sorrel/pebble.bin"
 	styles := theme.Default()
 	st := JobsViewState{Expanded: map[string]bool{"harbor": true}, FocusPane: 1} // cursor style off the rows
-	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0)
+	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0, ListRowHover{})
 
 	labelX := rect.X + 2 + jobsListColIcon + jobsListSourceIconCell
-	wantFG, _, _ := styles.JobsStatusStyle(string(jobs.StatusRunning)).Decompose()
+	wantFG, _, _ := styles.StatusStyle(string(jobs.StatusRunning)).Decompose()
 	for i, active := range []bool{false, false, true} {
 		y := 3 + i
 		_, style, _ := screen.Get(labelX, y)
@@ -162,7 +202,7 @@ func TestDrawJobsListPanelProgressGap(t *testing.T) {
 	gapX := rect.X + 2 + jobsListColPrefix + jobsListColStatus + jobsListColETA + jobsListColSpeed - 1
 	for _, sub := range []int{0, 1} { // the job row, then its first source sub-row
 		st := JobsViewState{Expanded: map[string]bool{"harbor": true}, SelectedSub: sub}
-		drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0)
+		drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0, ListRowHover{})
 		y := 2 + sub
 		_, gap, _ := screen.Get(gapX, y)
 		_, label, _ := screen.Get(gapX-3, y)
@@ -184,7 +224,7 @@ func TestDrawJobsListPanelSourceCountsOffCursor(t *testing.T) {
 	list[0].SourceStats = []oplog.Stats{{Done: 11}, {Done: 7}, {}}
 	styles := theme.Default()
 	st := JobsViewState{Expanded: map[string]bool{"harbor": true}, SelectedSub: 1}
-	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0)
+	drawJobsListPanel(screen, rect, st, list, styles, time.Now(), false, 0, ListRowHover{})
 	xProg := rect.X + 2 + jobsListColPrefix + jobsListColStatus + jobsListColETA + jobsListColSpeed
 	y := 3
 	_, label, _ := screen.Get(xProg-3, y)

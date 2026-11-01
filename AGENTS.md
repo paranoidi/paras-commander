@@ -17,7 +17,7 @@ Tracked architecture, import, and state rules live in this file. Per-area agent 
 | Jobs | job queue, progress, conflicts, rate limit, quit safety | `docs/agents/jobs.md` |
 | Dialogs | any dialog's navigation, layout, styling; labels on borders; Filter ↔ Select group twins | `docs/agents/dialogs.md` |
 | File operations | copy/move/delete/rename/mkdir dialogs, extract, flatten | `docs/agents/file-operations.md` |
-| Navigation | history, pin, latched sync, find, bookmarks, path picker, SFTP | `docs/agents/navigation.md` |
+| Navigation | history, pin, latched sync, find, find in index (fileindex:// twin of find), bookmarks, path picker, SFTP | `docs/agents/navigation.md` |
 | Menus | leader-menu strip, user menu, per-view menus, vi-motion | `docs/agents/menus.md` |
 | Commands | Commands view, run-for-each, work pools, user-menu commands | `docs/agents/commands.md` |
 | Views | messages, compare, dedup, help | `docs/agents/views.md` |

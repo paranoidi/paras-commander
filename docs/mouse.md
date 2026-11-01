@@ -13,42 +13,60 @@ In the file browser:
 | Double click on a row | Opens it, like Enter. |
 | Right click on a row | Focuses the panel, moves the cursor and toggles the row's selection. |
 | Wheel | Scrolls the panel under the pointer by a few rows. Focus does not change. |
+| Pointer over a row | Highlights the row in the inactive panel's cursor colors. The cursor does not move. A key press hides the highlight until the mouse moves again. |
+| Pointer over the path in a panel's top border | Inverts the colors of the path element under it (`~`, `/`, a directory name). |
+| Left click on a path element | Focuses the panel and opens that directory, with the cursor on the directory you came from. |
+| Left click on the last path element | Focuses the panel and refreshes its directory (the panel's own directory). |
+| Left click on a column title (Name, Size, Modified, a meta column) | Focuses the panel and sorts by that column. Clicking the column already sorted on reverses the order. Name also counts as sorted while sorting by extension. |
+| Left click elsewhere on the column header row | Focuses the panel and opens its Sort order dialog. |
 
-Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. While quick view or a file preview fills the inactive column, clicks and the wheel there are ignored.
+A shortened element (`p` for `projects` in a narrow panel) opens the full directory it stands for. The path does not react while the panel's top border shows the quick filter or a quick-view directory.
+
+Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. Picking a column turns the sort dialog's disk-usage size ordering off, so it does not take over again; while that ordering is in effect, Size counts as the sorted column. A narrow name-only panel shows one header title, so a click anywhere on its header opens the dialog. While quick view or a file preview fills the inactive column, clicks and the wheel there are ignored.
 
 In the menu bar and the footer:
 
 | Action | Result |
 |---|---|
+| Pointer over a menu title | Highlights the title in the open menu's colors. Nothing opens. |
 | Left click on a menu title | Opens that menu's pulldown. Clicking the title of the open menu closes it. |
+| Pointer over a pulldown item | Selects the item, as the arrow keys would. Enter then runs it. |
 | Left click on a pulldown item | Runs the item, like Enter on it. |
 | Wheel over the pulldown | Moves the highlighted item. |
 | Left click outside the pulldown | Closes the menu. The click does nothing else. |
-| Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. |
+| Pointer over the status commands (top-left) | Highlights them in the open menu's colors. |
+| Left click on the status commands (top-left) | Opens the Status commands dialog. Closes an open menu first. |
+| Pointer over a footer entry | Highlights the entry. The part a click would press stands out in brighter text: the key and its main label, or the grey Shift word after it (`Quick` in `F3 ViewQuick`). |
+| Left click on a footer entry | Presses that entry's key: `F5 Copy` copies, `Esc Close` closes the open dialog. A click on the grey Shift word presses the Shift variant: `Ren` in `F6 MovRen` renames. |
 
 In dialogs:
 
 | Action | Result |
 |---|---|
+| Pointer over a button | Highlights the button in the focused button colors. Focus stays where it was. |
 | Left click on a button | Presses it. |
 | Left click on a radio or checkbox | Selects the radio or toggles the checkbox, like Space. |
 | Left click in a text field | Focuses the field and puts the cursor under the pointer. |
+| Pointer over a list row | Highlights the row. The list cursor and focus stay where they were. A key press hides the highlight until the mouse moves again. |
 | Left click on a list row | Moves the list cursor to the row. |
 | Double click on a list row | Moves there and confirms, like Enter. |
 | Wheel over a list | Moves the list cursor. |
 
 Clicks on the dialog frame, on text labels and outside the dialog do nothing. The help dialog's entry list, the command output body, the delete and mass rename previews do not take clicks yet.
 
-Menu titles take clicks in the file browser and in the jobs, commands, messages, compare and duplicates views, but not while a dialog is open. Footer entries take clicks everywhere the footer shows them, dialogs included.
+A key press hides every pointer highlight (rows, path segments, buttons, menu titles, status commands, footer entries) until the mouse moves again.
+
+Menu titles and the status commands take clicks in the file browser and in the jobs, commands, messages, compare and duplicates views, but not while a dialog is open. Footer entries take clicks everywhere the footer shows them, dialogs included.
 
 In the leader menu strip (and the user, copy-path, preview and git filter menus it hosts), a left click on an entry runs it, like its letter. A click outside the strip closes it.
 
-In the jobs, commands and messages views, a left click on a list row selects that job, command or message and focuses the list; the wheel over the list moves the selection. In the messages view a click on the second line of a wrapped message selects the whole message.
+In the jobs, commands, messages, compare and duplicates views, a left click on a list row selects that job, command, message, compare row or duplicates row (in the duplicates view it also focuses the main tree, the Copies pane or the browse panel under the pointer); the wheel over the list moves the selection. The row under the pointer is highlighted (a whole command or message, across its lines; in the compare view both columns of the row); a key press hides the highlight until the mouse moves again. The selection does not follow it, so moving across the list to the details or output does not switch what they show. In the messages view a click also copies the whole message to the clipboard and confirms it with a toast; a click on the second line of a wrapped message selects and copies the whole message.
 
-Everything else ignores the mouse for now: the other panes of the jobs and commands views, the compare, duplicates and fullscreen preview views, the quick filter and the embedded terminal panel.
+Everything else ignores the mouse for now: the other panes of the jobs and commands views, the fullscreen preview view, the quick filter and the embedded terminal panel.
 
 ## Caveats
 
+- Mouse support asks the terminal for pointer motion reports (for the path highlight), not only clicks.
 - With mouse reporting on, the terminal no longer selects text on a plain drag. Hold Shift while dragging (or your terminal's own modifier) to select and copy text.
 - Inside tmux, mouse events only reach the application when tmux has mouse mode on: `set -g mouse on`.
 - The mouse is switched off while another program owns the terminal (external editor, drop to shell, the persistent subshell) and switched on again when you return.

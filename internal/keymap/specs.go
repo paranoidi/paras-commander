@@ -52,6 +52,9 @@ type ActionSpec struct {
 	CopyMenuKey string
 	// CopyMenuLabel overrides Title for the copy-menu row label (empty = Title).
 	CopyMenuLabel string
+	// FileIndexMenuKey is the activation letter in the fileindex menu (ActionFileIndexMenu;
+	// empty = excluded). Case-sensitive; it is the action's default chord letter in lowercase.
+	FileIndexMenuKey string
 	// PreviewMenuKey is the activation character for the `:` fullscreen-preview menu
 	// (empty = excluded). Letters only; case-sensitive (r vs R).
 	PreviewMenuKey string
@@ -69,6 +72,7 @@ var HelpSectionOrder = []string{
 	"View",
 	"Tools",
 	"Navigation",
+	"File Index",
 	"Display",
 	"App",
 	"Find",
@@ -1269,6 +1273,88 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"ssh", "sftp", "remote", "connect"},
 		},
 
+		// ── fileindex ──
+		{
+			ID:           ActionFileIndexMenu,
+			Views:        HelpBrowser,
+			Title:        "File Index menu",
+			Section:      "File Index",
+			DefaultKeys:  []string{"<"},
+			PreferredKey: "<",
+			Keywords:     []string{"fileindex", "index", "tags", "menu"},
+			LeaderKey:    "<",
+		},
+		{
+			ID:               ActionFileIndexScan,
+			Views:            HelpBrowser,
+			Title:            "Scan selection or directory",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-S"},
+			PreferredKey:     "M-S",
+			Keywords:         []string{"fileindex", "index", "hash", "scan"},
+			FileIndexMenuKey: "s",
+		},
+		{
+			ID:               ActionFileIndexPrune,
+			Views:            HelpBrowser,
+			Title:            "Prune index",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-P"},
+			PreferredKey:     "M-P",
+			Keywords:         []string{"fileindex", "index", "prune", "missing", "cleanup"},
+			FileIndexMenuKey: "p",
+		},
+		{
+			ID:               ActionFileIndexTagAdd,
+			Views:            HelpBrowser,
+			Title:            "Add tags",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-T"},
+			PreferredKey:     "M-T",
+			Keywords:         []string{"fileindex", "tag", "label"},
+			FileIndexMenuKey: "t",
+		},
+		{
+			ID:               ActionFileIndexTagRemove,
+			Views:            HelpBrowser,
+			Title:            "Remove tags",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-U"},
+			PreferredKey:     "M-U",
+			Keywords:         []string{"fileindex", "tag", "untag", "label"},
+			FileIndexMenuKey: "u",
+		},
+		{
+			ID:               ActionFileIndexBrowseWith,
+			Views:            HelpBrowser,
+			Title:            "Browse with fileindex",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-I"},
+			PreferredKey:     "M-I",
+			Keywords:         []string{"fileindex", "index", "browse", "overlay", "status", "ghost"},
+			FileIndexMenuKey: "i",
+		},
+		{
+			ID:               ActionFileIndexBrowse,
+			Views:            HelpBrowser,
+			Title:            "Browse fileindex",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-B"},
+			PreferredKey:     "M-B",
+			Keywords:         []string{"fileindex", "index", "browse", "fileindex://"},
+			FileIndexMenuKey: "b",
+		},
+		{
+			ID:               ActionFileIndexReveal,
+			Views:            HelpBrowser,
+			Title:            "Browse filesystem",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-R"},
+			PreferredKey:     "M-R",
+			Keywords:         []string{"fileindex", "reveal", "real", "location", "disk"},
+			FileIndexMenuKey: "r",
+		},
+
 		// ── File operations ──
 		{
 			ID:           ActionFileRename,
@@ -1682,6 +1768,16 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"log", "toast", "status"},
 			LeaderKey:   "c",
 		},
+		{
+			ID:           ActionMessagesCopy,
+			Views:        HelpMessages,
+			Title:        "Copy message to clipboard",
+			Section:      "Messages",
+			DefaultKeys:  nil, // overlay: DefaultMessagesOverlayKeys
+			PreferredKey: "\"",
+			Keywords:     []string{"clipboard", "yank", "quote", "log", "toast"},
+			LeaderKey:    "y",
+		},
 
 		{
 			ID:           ActionUIStatusCommands,
@@ -1874,6 +1970,15 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
 			Keywords:    []string{"layout", "operations", "bottom", "full width", "split"},
 			LeaderKey:   "o",
+		},
+		{
+			ID:           ActionJobsCopyMessage,
+			Views:        HelpJobs,
+			Title:        "Copy selected job message to clipboard",
+			Section:      "Jobs",
+			DefaultKeys:  nil, // overlay: DefaultJobsOverlayKeys
+			PreferredKey: "\"",
+			Keywords:     []string{"clipboard", "yank", "quote", "warning", "messages"},
 		},
 
 		// ── Options dialogs ──

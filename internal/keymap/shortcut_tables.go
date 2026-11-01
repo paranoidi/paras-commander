@@ -28,6 +28,7 @@ const (
 	LeaderKeyShortcutsTable           = "leader_key"
 	CopyMenuShortcutsTable            = "copy_menu"
 	PreviewMenuShortcutsTable         = "preview_menu"
+	FileIndexMenuShortcutsTable       = "fileindex_menu"
 )
 
 var dialogShortcutSubtables = map[string]struct{}{

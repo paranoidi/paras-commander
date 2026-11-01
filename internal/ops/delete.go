@@ -155,6 +155,9 @@ func deletePathRecursive(ctx context.Context, loc pathloc.Path) error {
 	if err != nil {
 		return err
 	}
+	if tr, ok := be.(fsbackend.TreeRemover); ok {
+		return tr.RemoveTree(ctx, loc)
+	}
 	children, err := be.List(ctx, loc)
 	if err != nil {
 		return err

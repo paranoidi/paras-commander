@@ -139,6 +139,14 @@ type PanelContext struct {
 	TitlePath string
 	// TitleEndLabel, when non-empty, replaces volume free-space on the title end (title style).
 	TitleEndLabel string
+	// TitleHover marks the pointer on the title row at column TitleHoverX: the path segment
+	// there is inverted (Model.PanelTitleHover).
+	TitleHover  bool
+	TitleHoverX int
+	// RowHover marks the pointer on entry RowHoverEntry: a row other than the cursor row is
+	// painted in the inactive panel cursor style (Model.PanelRowHover).
+	RowHover      bool
+	RowHoverEntry int
 	// QuickViewIndicator marks this panel's cursor row with a one-cell arrow icon overlapping
 	// the border, pointing toward the quick-view preview panel. QuickViewIndicatorRight selects
 	// which border/icon: true draws U+E0B0 on the right border, false draws U+E0B2 on the left.
@@ -208,7 +216,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if ctx.ShowSelectionSizeOnBottom && state.SelectedPathCount() > 0 {
 		selectionSizeLabel, _ = SelectionSizeLabel(
 			&state,
-			state.Path.IsRemote(),
+			!state.Path.HasSubtreeSizes(),
 			display.Painter,
 			panelStyle.Styles.IconWorking(),
 		)
@@ -240,31 +248,23 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if inner.Width > 0 && inner.Height > 0 {
 		primitive.Fill(screen, inner, ' ', chrome.Surface)
 	}
-	titleX := rect.X + 2
-	innerRight := rect.X + rect.Width - 2
-	contentCols := innerRight - titleX + 1
-	if contentCols < 1 {
-		contentCols = 1
-	}
-	if ctx.FileListActive && (state.Filter.Active || state.Filter.Editing) {
-		drawQuickFilterTitle(screen, titleX, rect.Y, contentCols, state.Filter, panelStyle.Styles)
+	titleRow := newPanelTitleRow(rect, state, panelStyle.Styles, ctx.TitleEndLabel)
+	if panelTitleShowsFilter(state, ctx.FileListActive) {
+		drawQuickFilterTitle(screen, titleRow.X, rect.Y, titleRow.ContentCols, state.Filter, panelStyle.Styles)
 	} else {
 		titlePath := state.PathString()
+		hoverX := -1
 		if ctx.TitlePath != "" {
 			titlePath = ctx.TitlePath
+		} else if ctx.TitleHover && !ctx.ChromeBlocked {
+			hoverX = ctx.TitleHoverX
 		}
-		endLabel := panelVolumeFreeSpaceTitle(state.VolumeSpaceOK, state.VolumeAvailBytes, state.VolumeTotalBytes)
 		endStyle := chrome.DiskUsageOverview
-		volumeDecorated := true
-		if ctx.TitleEndLabel != "" {
-			endLabel = ctx.TitleEndLabel
+		if !titleRow.VolumeDecorated {
 			endStyle = titleStyle
-			volumeDecorated = false
 		}
-		paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, rect.Y,
-			titlePath, display.UserHomeDir,
-			panelTitleStyles{Path: titleStyle, End: endStyle, Border: borderStyle},
-			endLabel, volumeDecorated)
+		paintPanelTopTitleRow(screen, titleRow, rect.Y, titlePath, display.UserHomeDir,
+			panelTitleStyles{Path: titleStyle, End: endStyle, Border: borderStyle}, hoverX)
 	}
 
 	visibleRows := PanelListRows(rect)
@@ -297,17 +297,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	showMeta := len(metaLayouts) > 0
 	showMetaEffective := showMeta && !nameOnlyDisplay
 	listTextWidth := rowTextWidth
-	// In tree mode, panelColumnLayout zeroes iconStrip (icons move into each row's tree gutter
-	// instead of a shared strip), but drawPanelRow still reserves panelIconStripCells of gutter
-	// width at depth 0 (see treeGutterWidth there). The header has no per-depth gutter of its own,
-	// so shift/narrow it by that same fixed amount — this is the single place that offset is
-	// computed; row drawing keeps deriving its own (per-depth) gutter independently.
-	headerTreeGutter := 0
-	if state.ListLayout == panel.ListLayoutTree && panelIconStripCells > 0 && panelIconStripCells < listTextWidth {
-		headerTreeGutter = panelIconStripCells
-	}
-	headerTextWidth := listTextWidth - headerTreeGutter
-	header := panelListHeader(headerTextWidth, state, display.ShowIcons, showMetaEffective, metaLayouts, nameOnlyDisplay, showGit)
+	headerRow := newPanelHeaderRow(layoutRes, state, display.ShowIcons, metaLayouts)
+	headerTreeGutter := headerRow.TreeGutter
 	headerY := rect.Y + 1
 	if leftGutter > 0 {
 		for i := 0; i < leftGutter; i++ {
@@ -315,7 +306,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		}
 	}
 	if showGit {
-		paintGitHeader(screen, gitStart, headerY, headerStyle, panelStyle.Styles)
+		paintGitHeader(screen, gitStart, headerY, headerStyle, panelStyle.Styles, state.WithIndex)
 	}
 	if display.ShowIcons && state.ListLayout != panel.ListLayoutTree {
 		paintPanelIconStripBlank(screen, iconStart, headerY, headerStyle)
@@ -326,7 +317,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			screen.SetContent(listContentStart+i, headerY, ' ', nil, headerStyle)
 		}
 	}
-	primitive.Text(screen, listContentStart+headerTreeGutter, headerY, headerTextWidth, header, headerStyle)
+	primitive.Text(screen, headerRow.X, headerY, headerRow.Width, headerRow.Text, headerStyle)
 
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
 	// listTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
@@ -503,7 +494,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		subtreeMark = entry.Type == localfs.EntryDirectory && effNameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
 		newFileTier = state.NewFileMarkTier(entry)
 		renameMark = state.IsRenameMarked(entry)
-		jobSuffix, jobStatus = jobRowSuffix(entry.Path, display.JobMarks, panelStyle.Styles)
+		jobSuffix, jobStatus = jobRowSuffix(entry.Path, display.JobMarks, panelStyle.Styles, state.WithIndex && entry.IndexStatus != "")
 		metaText := ""
 		if showMetaEffective {
 			metaText = MetaRowText(metaLayouts, entry.Path)
@@ -540,7 +531,9 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	}
 
 	cursorIconKey := ""
-	if hasEntry {
+	if hasEntry && rowHovered(entryIndex, state, ctx) {
+		cursorIconKey = panelCursorIconThemeKey(false, false, entryIndex, entryIndex, selected, false, false)
+	} else if hasEntry {
 		cursorIconKey = panelCursorIconThemeKey(ctx.CursorRowActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.CursorRowActive && state.FilterUniqueMatch(), state.RangeAnchor != "")
 	}
 	if hasEntry {
@@ -629,8 +622,16 @@ func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx P
 			FilterUniqueMatch: ctx.CursorRowActive && state.FilterUniqueMatch(),
 			RangePending:      state.RangeAnchor != "",
 		})
+	} else if rowHovered(entryIndex, state, ctx) {
+		style = styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{Selected: selected})
 	}
 	return style, selected
+}
+
+// rowHovered reports whether entryIndex is the hovered row drawn in the inactive cursor style:
+// under the pointer, not the cursor row, and not while panel chrome is blocked.
+func rowHovered(entryIndex int, state panel.State, ctx PanelContext) bool {
+	return ctx.RowHover && ctx.RowHoverEntry == entryIndex && entryIndex != state.Cursor && !ctx.ChromeBlocked
 }
 
 // panelRowPaintState carries the per-entry values drawPanelRow computes in its body that the
@@ -658,7 +659,10 @@ func drawPanelRowGitStrip(screen tcell.Screen, p panelRowParams, rp panelRowPain
 	if gitUnderUsage {
 		gitUsageAccent = p.PanelStyle.Styles.DiskUsageBarStyle(p.Ctx.FileListActive, rp.EntryIndex == p.State.Cursor, rp.Selected)
 	}
-	if rp.HasEntry {
+	if rp.HasEntry && p.State.WithIndex {
+		paintIndexColumn(screen, p.GitStart, rp.Y, indexRowState(rp.Entry, p.Display.JobMarks), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor)
+		paintGitRowTrailingGap(screen, p.GitStart, rp.Y, gitStyle)
+	} else if rp.HasEntry {
 		paintGitColumn(screen, p.GitStart, rp.Y, panelGitCell(rp.Entry, p.State.GitByPath), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, gitUnderUsage, gitUsageAccent)
 		paintGitRowTrailingGap(screen, p.GitStart, rp.Y, gitStyle)
 	} else {
@@ -762,7 +766,7 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		MeasuredFitWidth:      measuredFitWidth,
 		Meta:                  meta,
 		JobMark: func(path string) (panellist.JobSuffix, string) {
-			return jobRowSuffix(path, display.JobMarks, panelStyle.Styles)
+			return jobRowSuffix(path, display.JobMarks, panelStyle.Styles, false) // carousel has no index column
 		},
 		PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
 			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles,
@@ -812,31 +816,81 @@ type panelTitleStyles struct {
 	Path, End, Border tcell.Style
 }
 
-// paintPanelTopTitleRow paints the panel top border path on the start and an optional end label
-// (volume overview with decorative dashes, or a plain title-styled suffix such as a filename).
-func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols, y int,
-	panelPath, userHomeDir string, ts panelTitleStyles, endLabel string, volumeDecorated bool) {
-	endRunes := utf8.RuneCountInString(endLabel)
+// indexTitlePrefix is the fileindex icon ahead of the title path while the panel browses with
+// fileindex ("" otherwise, and without Nerd Font icons).
+func indexTitlePrefix(state panel.State, styles theme.Theme) string {
+	if icon := styles.IconFileIndex(); state.WithIndex && icon != "" {
+		return icon + " "
+	}
+	return ""
+}
+
+// panelTitleRow is the top border title layout of a file panel, shared by drawPanel and
+// PanelTitleSegmentAt so a hit is exactly what is drawn.
+type panelTitleRow struct {
+	X, InnerRight, ContentCols int
+	// PathPrefix is drawn ahead of the path (indexTitlePrefix).
+	PathPrefix string
+	// EndLabel is the volume overview, or the title-styled override when VolumeDecorated is false.
+	EndLabel        string
+	VolumeDecorated bool
+	Slots           titleEndLabelSlots
+}
+
+// newPanelTitleRow lays out rect's top border title; endOverride replaces the volume overview
+// (PanelContext.TitleEndLabel) when non-empty.
+func newPanelTitleRow(rect Rect, state panel.State, styles theme.Theme, endOverride string) panelTitleRow {
+	r := panelTitleRow{X: rect.X + 2, InnerRight: rect.X + rect.Width - 2, PathPrefix: indexTitlePrefix(state, styles)}
+	r.ContentCols = max(r.InnerRight-r.X+1, 1)
+	r.EndLabel = panelVolumeFreeSpaceTitle(state.VolumeSpaceOK, state.VolumeAvailBytes, state.VolumeTotalBytes)
+	r.VolumeDecorated = true
 	// Plain end labels (filename / QV dir basename) leave one frame-dash before the corner;
 	// volume labels already include a trailer " ─".
 	endRightMargin := 0
-	if !volumeDecorated {
-		endRightMargin = 1
+	if endOverride != "" {
+		r.EndLabel, r.VolumeDecorated, endRightMargin = endOverride, false, 1
 	}
-	slots := titleEndLabelLayout(titleX, innerRight, contentCols, endRunes, endRightMargin, gapBeforePanelTitleEnd)
-	showEnd := slots.ShowEnd
-	endStartX := slots.EndStartX
-	pathSlotCols := slots.PathSlotCols
-	pathMax := pathSlotCols - 2
-	if pathMax < 0 {
-		pathMax = 0
+	r.Slots = titleEndLabelLayout(r.X, r.InnerRight, r.ContentCols, utf8.RuneCountInString(r.EndLabel), endRightMargin, gapBeforePanelTitleEnd)
+	return r
+}
+
+// pathX is the first column of the path text (after the leading space and PathPrefix).
+func (r panelTitleRow) pathX() int {
+	return r.X + 1 + utf8.RuneCountInString(r.PathPrefix)
+}
+
+// pathMax is the cell budget PanelTitlePath gets for the path.
+func (r panelTitleRow) pathMax() int {
+	return max(r.Slots.PathSlotCols-2-utf8.RuneCountInString(r.PathPrefix), 0)
+}
+
+// segments lays out the clickable path elements of panelPath in this title row.
+func (r panelTitleRow) segments(panelPath, userHomeDir string) []PanelTitleSegment {
+	return panelTitleSegments(panelPath, userHomeDir, r.pathX(), r.pathMax())
+}
+
+// panelTitleShowsFilter reports whether the top border shows the quick filter instead of the path.
+func panelTitleShowsFilter(state panel.State, fileListActive bool) bool {
+	return fileListActive && (state.Filter.Active || state.Filter.Editing)
+}
+
+// paintPanelTopTitleRow paints the panel top border path on the start and an optional end label
+// (volume overview with decorative dashes, or a plain title-styled suffix such as a filename).
+// The path segment under hoverX (-1 for none) is inverted.
+func paintPanelTopTitleRow(screen tcell.Screen, row panelTitleRow, y int, panelPath, userHomeDir string, ts panelTitleStyles, hoverX int) {
+	endLabel := row.EndLabel
+	endRunes := utf8.RuneCountInString(endLabel)
+	showEnd := row.Slots.ShowEnd
+	endStartX := row.Slots.EndStartX
+	left := " " + row.PathPrefix + PanelTitlePath(panelPath, userHomeDir, row.pathMax()) + " "
+	primitive.TextOverlay(screen, row.X, y, row.Slots.PathSlotCols, left, ts.Path)
+	if hoverX >= 0 {
+		paintPanelTitleHover(screen, row, y, panelPath, userHomeDir, ts.Path, hoverX)
 	}
-	left := " " + PanelTitlePath(panelPath, userHomeDir, pathMax) + " "
-	primitive.TextOverlay(screen, titleX, y, pathSlotCols, left, ts.Path)
 	if !showEnd {
 		return
 	}
-	if volumeDecorated {
+	if row.VolumeDecorated {
 		leaderRunes := utf8.RuneCountInString(panelVolumeTitleLeader)
 		trailerRunes := utf8.RuneCountInString(panelVolumeTitleTrailer)
 		primitive.TextOverlay(screen, endStartX, y, leaderRunes, panelVolumeTitleLeader, ts.Border)
@@ -848,6 +902,20 @@ func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols,
 		return
 	}
 	primitive.TextOverlay(screen, endStartX, y, endRunes, endLabel, ts.End)
+}
+
+// paintPanelTitleHover inverts the colors of the title path segment under hoverX.
+func paintPanelTitleHover(screen tcell.Screen, row panelTitleRow, y int, panelPath, userHomeDir string, pathStyle tcell.Style, hoverX int) {
+	for _, seg := range row.segments(panelPath, userHomeDir) {
+		if !seg.Contains(hoverX) {
+			continue
+		}
+		for x := seg.X; x < seg.X+seg.Width; x++ {
+			str, _, _ := screen.Get(x, y)
+			screen.Put(x, y, str, pathStyle.Reverse(true))
+		}
+		return
+	}
 }
 
 const (
@@ -906,12 +974,80 @@ func metaSortArrowLayouts(layouts []MetaColumnLayout, state panel.State) []MetaC
 	return layouts
 }
 
-func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaLayouts []MetaColumnLayout, nameOnly, showGit bool) string {
+// PanelHeaderColumn is one sortable column title on the file list header row: the cells its
+// text (sort arrow included) occupies and the sort a click on it picks.
+type PanelHeaderColumn struct {
+	X, Width int
+	Mode     panel.SortMode
+	// MetaColumn is the meta column's EntryName when Mode is panel.SortMeta.
+	MetaColumn string
+}
+
+// panelHeaderRow is the file list header row layout, shared by drawPanel and
+// PanelHeaderColumnAt so a hit is exactly what is drawn: where the text starts, its width, the
+// text and its sortable column titles (screen x).
+type panelHeaderRow struct {
+	X, Width, TreeGutter int
+	Text                 string
+	Columns              []PanelHeaderColumn
+}
+
+func newPanelHeaderRow(layoutRes panelColumnLayoutResult, state panel.State, showIcons bool, metaLayouts []MetaColumnLayout) panelHeaderRow {
+	// In tree mode, panelColumnLayout zeroes iconStrip (icons move into each row's tree gutter
+	// instead of a shared strip), but drawPanelRow still reserves panelIconStripCells of gutter
+	// width at depth 0 (see treeGutterWidth there). The header has no per-depth gutter of its own,
+	// so shift/narrow it by that same fixed amount — this is the single place that offset is
+	// computed; row drawing keeps deriving its own (per-depth) gutter independently.
+	r := panelHeaderRow{}
+	if state.ListLayout == panel.ListLayoutTree && panelIconStripCells > 0 && panelIconStripCells < layoutRes.RowTextWidth {
+		r.TreeGutter = panelIconStripCells
+	}
+	r.X = layoutRes.IconStart + layoutRes.IconStrip + r.TreeGutter
+	r.Width = layoutRes.RowTextWidth - r.TreeGutter
+	showMeta := len(metaLayouts) > 0 && !layoutRes.NameOnlyDisplay
+	r.Text, r.Columns = panelListHeader(r.Width, state, showIcons, showMeta, metaLayouts, layoutRes.NameOnlyDisplay, layoutRes.ShowGit)
+	for i := range r.Columns {
+		r.Columns[i].X += r.X
+	}
+	return r
+}
+
+// headerTitleSpan trims the cells [start, end) of header to the title text drawn there.
+func headerTitleSpan(cells []rune, start, end int, mode panel.SortMode, metaColumn string) (PanelHeaderColumn, bool) {
+	end = min(end, len(cells))
+	for start < end && cells[start] == ' ' {
+		start++
+	}
+	for end > start && cells[end-1] == ' ' {
+		end--
+	}
+	if start >= end {
+		return PanelHeaderColumn{}, false
+	}
+	return PanelHeaderColumn{X: start, Width: end - start, Mode: mode, MetaColumn: metaColumn}, true
+}
+
+// headerCells is s one rune per terminal cell (a wide rune's second cell is 0, never a space).
+func headerCells(s string) []rune {
+	var out []rune
+	for _, r := range s {
+		out = append(out, r)
+		for range runewidth.RuneWidth(r) - 1 {
+			out = append(out, 0)
+		}
+	}
+	return out
+}
+
+// panelListHeader returns the header text and its sortable column titles (x relative to the
+// text). The name-only header shows one title and has no columns: a click there opens the sort
+// dialog.
+func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaLayouts []MetaColumnLayout, nameOnly, showGit bool) (string, []PanelHeaderColumn) {
 	if nameOnly {
 		nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 		title := panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle)
 		title = truncateHeaderRunes(rowTextWidth, title)
-		return fmt.Sprintf("%-*s", rowTextWidth, title)
+		return fmt.Sprintf("%-*s", rowTextWidth, title), nil
 	}
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
 	tw := panelListThirdColumnWidth(listFmt, false)
@@ -927,18 +1063,42 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	if showMeta {
 		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaTotalW, listFmt, false, false)
 	}
-	metaHdr := MetaHeaderText(metaSortArrowLayouts(metaLayouts, state))
+	metaHdr, metaStarts := metaHeader(metaSortArrowLayouts(metaLayouts, state))
 	if showMeta && runewidth.StringWidth(metaHdr) > metaTotalW {
 		nameWidth-- // first meta column's sort arrow spills into the name→meta gap
 	}
 	nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 	nameTitle = truncateHeaderRunes(nameWidth, nameTitle)
 	sizeTitle = truncateHeaderRunes(panellist.SizeCells, sizeTitle)
-	if tw == 0 {
-		return panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true)
+	text := panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true)
+	joinW := runewidth.StringWidth(text)
+	if tw > 0 {
+		thirdTitle = truncateHeaderRunes(tw, thirdTitle)
+		text = fmt.Sprintf("%s  %-*s", text, tw, thirdTitle)
 	}
-	thirdTitle = truncateHeaderRunes(tw, thirdTitle)
-	return fmt.Sprintf("%s  %-*s", panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true), tw, thirdTitle)
+	cells := headerCells(text)
+	var cols []PanelHeaderColumn
+	add := func(start, end int, mode panel.SortMode, metaColumn string) {
+		if c, ok := headerTitleSpan(cells, start, end, mode, metaColumn); ok {
+			cols = append(cols, c)
+		}
+	}
+	add(0, nameWidth, panel.SortName, "")
+	if showMeta {
+		metaX := nameWidth + 2
+		for i, lay := range metaLayouts {
+			end := metaX + runewidth.StringWidth(metaHdr)
+			if i+1 < len(metaStarts) {
+				end = metaX + metaStarts[i+1]
+			}
+			add(metaX+metaStarts[i], end, panel.SortMeta, lay.EntryName)
+		}
+	}
+	add(joinW-panellist.SizeCells, joinW, panel.SortSize, "")
+	if tw > 0 && panel.EffectiveListFormat(state.ListFormat) == panel.ListFormatMtime {
+		add(joinW+2, joinW+2+tw, panel.SortMtime, "")
+	}
+	return text, cols
 }
 
 // panelRowOpts holds display options shared by formatEntry and matchSpans.

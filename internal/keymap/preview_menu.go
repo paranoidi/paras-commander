@@ -35,10 +35,6 @@ func DefaultPreviewMenuKeys() map[string]string {
 	return out
 }
 
-func mergePreviewMenuKeys(defaults, user map[string]string) map[string]string {
-	return mergeMenuKeys(defaults, user)
-}
-
 func validPreviewMenuKeyRune(r rune) bool {
 	return unicode.IsLetter(r)
 }

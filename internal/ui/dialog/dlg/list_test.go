@@ -526,3 +526,28 @@ func TestDrawListMarkers(t *testing.T) {
 		t.Errorf("unused row style = %v, want the dialog surface", st)
 	}
 }
+
+func TestHoveredListRow(t *testing.T) {
+	spec := listOnlySpec(listItem(3, 1, 0, 6))
+	it, _ := mustPlace(t, spec).Item("hosts")
+	focus := ID("hosts")
+	if r, ok := HoveredListRow(spec, 80, 24, focus, it.Rect.X+1, it.Rect.Y+2); !ok || r != (Rect{X: it.Rect.X, Y: it.Rect.Y + 2, Width: it.Rect.Width, Height: 1}) {
+		t.Errorf("hover row 2: (%+v, %v), want the row rect", r, ok)
+	}
+	if _, ok := HoveredListRow(spec, 80, 24, focus, it.Rect.X+1, it.Rect.Y+1); ok {
+		t.Error("hover on the focused cursor row: want no highlight")
+	}
+	if _, ok := HoveredListRow(spec, 80, 24, ID(OK), it.Rect.X+1, it.Rect.Y+1); !ok {
+		t.Error("hover on the cursor row of an unfocused list: want the highlight")
+	}
+	if _, ok := HoveredListRow(spec, 80, 24, focus, it.Rect.X+1, it.Rect.Y+4); ok {
+		t.Error("hover past the last row: want a miss")
+	}
+	headed := listItem(3, 0, 0, 6)
+	headed.Rows[2].Header = true
+	hspec := listOnlySpec(headed)
+	hit, _ := mustPlace(t, hspec).Item("hosts")
+	if _, ok := HoveredListRow(hspec, 80, 24, focus, hit.Rect.X+1, hit.Rect.Y+2); ok {
+		t.Error("hover on a header row: want a miss")
+	}
+}

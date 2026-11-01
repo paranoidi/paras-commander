@@ -64,6 +64,10 @@ type Event struct {
 	CurrentPath string
 	// CurrentDestPath is set for EventProgress (destination path for the same item).
 	CurrentDestPath string
+	// Workers is set for a task's EventProgress (TaskProgress.Workers).
+	Workers int
+	// Step is set for a task's EventProgress (TaskProgress.Step).
+	Step int
 	// VerifyDone and VerifyTotal are set for EventVerifyProgress.
 	VerifyDone, VerifyTotal int64
 	Error                   string

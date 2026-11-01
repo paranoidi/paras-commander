@@ -231,7 +231,7 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 		base := th.PanelJobMarkStyle(jobStatus, suffix.JobWrite)
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == suffix.JobQueuedIcon && suffix.JobQueuedIcon != 0:
-		fg, _, _ := th.JobsIconStyle("queued").Decompose()
+		fg, _, _ := th.StatusQueued.Decompose()
 		base := tcell.StyleDefault.Foreground(fg)
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == suffix.JobOpIcon && suffix.JobOpIcon != 0:
@@ -249,7 +249,7 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 		base := th.PanelRowMarkRenamed
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == th.IconFilelistWorking() && suffix.Working:
-		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelIconFolderScanning)), true
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.StatusScanning)), true
 	case r == pinIconRune(th) && suffix.Pinned:
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelRowMarkPinned)), true
 	case r == th.IconFilelistRangeAnchor() && suffix.RangeAnchor:

@@ -66,6 +66,37 @@ func (j *Job) DeferSource(i int32) {
 	p.version++
 }
 
+// StartAllSources marks every source started: a task works on all its sources at once and
+// finishes them one by one (FinishSource).
+func (j *Job) StartAllSources() {
+	p := j.sourcePhases
+	if p == nil {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i := range p.phases {
+		p.phases[i] = SourceStarted
+	}
+	p.current = 0
+	p.version++
+}
+
+// FinishSource marks source i finished.
+func (j *Job) FinishSource(i int32) {
+	p := j.sourcePhases
+	if p == nil {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if i < 0 || int(i) >= len(p.phases) || p.phases[i] == SourceFinished {
+		return
+	}
+	p.phases[i] = SourceFinished
+	p.version++
+}
+
 // SourceVersion changes whenever any source phase changes (0 for a single-source job). It is
 // the cheap change check for SourcePhases.
 func (j *Job) SourceVersion() uint32 {

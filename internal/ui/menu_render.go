@@ -95,11 +95,15 @@ func StatusCommandWidth(segs []StatusCommandSegment) int {
 
 // drawMenuBarStatusCommands paints the status-command segments in the reserved top-left
 // rect: each text in its segment style, gaps in menu.status, the separator glyph between
-// segments in menu.status.separator.
-func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, segs []StatusCommandSegment, styles theme.Theme) {
+// segments in menu.status.separator. Under the mouse pointer (hover) the whole area is drawn in
+// menu.bar.selected, like a hovered menu title, since a click opens the Status commands dialog.
+func drawMenuBarStatusCommands(screen tcell.Screen, rect Rect, segs []StatusCommandSegment, styles theme.Theme, hover bool) {
 	sep := string(styles.IconMenuStatusSeparator())
 	x, end := rect.X, rect.X+rect.Width
 	put := func(s string, style tcell.Style) {
+		if hover {
+			style = styles.MenuBarSelected
+		}
 		if x < end {
 			primitive.Text(screen, x, rect.Y, end-x, s, style)
 		}
@@ -135,10 +139,12 @@ func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsSt
 	gapStart := min(menuBarContentStart(rect), clipExclusive)
 	gapWidth := clipExclusive - gapStart
 	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, jobsStrip, pinCount, styles)
-	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
+	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.StatusScanning, showMenuBarSpinner, spinPhase)
 }
 
-func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8, pinCount int) {
+// drawMenuBar paints the top menu row; a title under the mouse pointer (hover) is drawn like the
+// open menu's title.
+func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, hover MenuHover, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8, pinCount int) {
 	x := rect.X
 	barStyle := styles.MenuBarInactive
 	if state.Open {
@@ -150,7 +156,7 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.
 	spans, x := menuBarLabelSpans(rect, menus, clipExclusive)
 	for index, span := range spans {
 		style := barStyle
-		if state.Open && index == state.ActiveMenu {
+		if state.Open && index == state.ActiveMenu || hover.Active && index == hover.Index {
 			style = styles.MenuBarSelected
 		}
 		drawMenuBarLabel(screen, span.X, rect.Y, span.Width, " "+menus[index].Label+" ", menus[index].Shortcut, style, styles.MenuBarAccent, state.Open && !state.PulldownOpen)
@@ -158,7 +164,7 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.
 	gapStart := min(max(x, menuBarContentStart(rect)), clipExclusive)
 	gapWidth := clipExclusive - gapStart
 	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, jobsStrip, pinCount, styles)
-	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
+	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.StatusScanning, showMenuBarSpinner, spinPhase)
 }
 
 // menuBarContentStart is the first column menu-bar content may use: one cell past rect.X
@@ -258,7 +264,7 @@ func DrawMenuBarPermissionTailOnly(screen tcell.Screen, layout Layout, model Mod
 		barStyle = styles.MenuBarActive
 	}
 	primitive.Text(screen, tailStart, rect.Y, rect.X+rect.Width-tailStart, "", barStyle)
-	drawMenuBarRightTail(screen, rect, model.MenuBarJobsAttention, model.MenuBarPermission, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showSpinner, model.SpinPhase)
+	drawMenuBarRightTail(screen, rect, model.MenuBarJobsAttention, model.MenuBarPermission, styles.MenuBarAlert, styles.MenuDetail, styles.StatusScanning, showSpinner, model.SpinPhase)
 	return true
 }
 
@@ -275,7 +281,7 @@ func DrawMenuBarSpinnerOnly(screen tcell.Screen, layout Layout, model Model, sty
 	if !model.MenuBarActivitySpinner || !ok {
 		return false
 	}
-	screen.SetContent(last, rect.Y, MenuBarSpinnerIcon(model.SpinPhase), nil, styles.MenuSpinner)
+	screen.SetContent(last, rect.Y, MenuBarSpinnerIcon(model.SpinPhase), nil, styles.StatusScanning)
 	return true
 }
 

@@ -97,6 +97,8 @@ func paintBrowserPanelsInScope(
 			primaryCtx.TitlePath = titlePath
 			primaryCtx.TitleEndLabel = endLabel
 		}
+		primaryCtx.TitleHover, primaryCtx.TitleHoverX = model.PanelTitleHover.at(PrimaryPanel)
+		primaryCtx.RowHover, primaryCtx.RowHoverEntry = model.PanelRowHover.at(PrimaryPanel)
 		otherNames, otherCursor, otherDir := otherPanelMatchNames(model, PrimaryPanel)
 		drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
@@ -143,6 +145,8 @@ func paintBrowserPanelsInScope(
 			secondaryCtx.TitlePath = titlePath
 			secondaryCtx.TitleEndLabel = endLabel
 		}
+		secondaryCtx.TitleHover, secondaryCtx.TitleHoverX = model.PanelTitleHover.at(SecondaryPanel)
+		secondaryCtx.RowHover, secondaryCtx.RowHoverEntry = model.PanelRowHover.at(SecondaryPanel)
 		otherNames, otherCursor, otherDir := otherPanelMatchNames(model, SecondaryPanel)
 		drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},

@@ -334,7 +334,7 @@ func TestApplyTreeChildLoadSchedulesGitStatusForChildren(t *testing.T) {
 // nested child's load in turn; only once both land does the tree show both levels expanded with
 // the cursor reattached to the originally highlighted nested file.
 //
-// A synthetic sftp:// root is used, with no real network I/O: State.Path.IsRemote() is what
+// A synthetic sftp:// root is used, with no real network I/O: !State.Path.IsLocal() is what
 // routes restoreTreeExpansionsIn through the async branch instead of the local synchronous one
 // (see its doc comment), so the test must actually be remote to exercise that branch — a local
 // temp dir would now restore synchronously in one call and never touch ScheduleTreeChildLoad.

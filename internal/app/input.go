@@ -43,6 +43,7 @@ const (
 	InputModeHistoryDialog
 	InputModePinDialog
 	InputModeFindDialog
+	InputModeIndexFindDialog
 	InputModeMetaDialog
 	InputModeLeaderMenu
 	InputModeHelpView
@@ -85,6 +86,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeLeaderMenu
 	case a.model.FindDialog.Open:
 		return InputModeFindDialog
+	case a.model.IndexFindDialog.Open:
+		return InputModeIndexFindDialog
 	case a.model.MetaDialog.Open:
 		return InputModeMetaDialog
 	case a.model.HelpView.Open:
@@ -189,6 +192,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.FindDialog.JumpMode), rest...)
 		return footerWithEscClose(rest)
 	}
+	if a.model.IndexFindDialog.Open {
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.IndexFindDialog.JumpMode), rest...)
+		return footerWithEscClose(rest)
+	}
 	if a.model.HistoryDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		rest = append(historyDialogOverlayFooterKeys(a.keys.HistoryDialog, a.model.HistoryDialog.BothPanels), rest...)
@@ -247,7 +255,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 func viMotionFooterKeys(fkeys []menu.FunctionKey, letters map[string]string) []menu.FunctionKey {
 	out := make([]menu.FunctionKey, len(fkeys))
 	for i, fk := range fkeys {
-		fk.HintShiftPrefix = ""
+		fk.HintShiftPrefix, fk.ShiftKeyLabel = "", ""
 		if letter, ok := letters[fk.ActionID]; ok {
 			fk.KeyLabel = letter
 		}
@@ -505,8 +513,8 @@ func pinDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	out = append(out, openInPanelFooterKeys(keys)...)
 	if lbl := keys.MenuBindingLabel(keymap.ActionPinRemove); lbl != "" {
 		fk := menu.FunctionKey{KeyLabel: lbl, Hint: "Remove"}
-		if keys.MenuBindingLabel(keymap.ActionPinRemoveAll) != "" {
-			fk.HintShiftPrefix = "All"
+		if all := keys.MenuBindingLabel(keymap.ActionPinRemoveAll); all != "" {
+			fk.HintShiftPrefix, fk.ShiftKeyLabel = "All", all
 		}
 		out = append(out, fk)
 	}
@@ -641,6 +649,10 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 		a.handleHistoryDialogKey(ev)
 		return false
 	},
+	InputModeIndexFindDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.fileindexCtrl.HandleFindKey(ev)
+		return false
+	},
 	InputModePinDialog: func(a *App, ev *tcell.EventKey) bool {
 		a.pinCtrl.HandleDialogKey(ev)
 		return false
@@ -734,6 +746,8 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 }
 
 func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
+	a.mouse.keyed = true // hides every hover until the pointer reports again (mouseState.hovers)
+	a.clearPanelTitleHover()
 	a.deferDiskIdleSortOnUserActivity()
 	a.deferMetaIdleSortOnUserActivity()
 	resolvedAction := a.actionFromKeyEvent(event)
@@ -1090,6 +1104,9 @@ func (a *App) dispatch(actionID string) bool {
 	if a.jobsCtrl.TryDispatch(actionID) {
 		return false
 	}
+	if a.fileindexCtrl.Dispatch(actionID) {
+		return false
+	}
 	if a.tryDispatchMessages(actionID) {
 		return false
 	}
@@ -1187,9 +1204,9 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelFolderColorMenu:
 		a.openFolderColorMenu(a.model.ActivePanel)
 	case keymap.ActionPanelFindDialog:
-		a.findCtrl.OpenDialog(a.model.ActivePanel)
+		a.openFindDialog(a.model.ActivePanel, false)
 	case keymap.ActionPanelJumpDialog:
-		a.findCtrl.OpenJumpDialog(a.model.ActivePanel)
+		a.openFindDialog(a.model.ActivePanel, true)
 	case keymap.ActionAppUserMenu:
 		a.toggleUserMenu()
 	case keymap.ActionAppLeaderMenu:

@@ -36,7 +36,7 @@ type DiskWaitFunc func(req DiskSpaceWaitRequest) DiskSpaceWaitDecision
 // EnsureDiskSpace loops until required bytes are available on the volume containing destRoot,
 // the host cannot measure free space (best-effort proceed), or the user aborts.
 func EnsureDiskSpace(wait DiskWaitFunc, destRoot pathloc.Path, required int64, nextSource pathloc.Path) error {
-	if wait == nil || required <= 0 || destRoot.IsRemote() {
+	if wait == nil || required <= 0 || !destRoot.IsLocal() {
 		return nil
 	}
 	destHost, err := destRoot.FilePath()

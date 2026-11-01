@@ -230,6 +230,11 @@ type HistoryDialogState struct {
 type MetaEntry struct {
 	Name        string
 	Description string
+	// Label replaces Name in the picker row when set (a provider's column title).
+	Label string
+	// Section is the heading the entry is listed under; "" is the top (meta.toml) section.
+	// Entries are ordered section by section.
+	Section string
 	// SortOnActivation switches the panel's sort to this column when the entry is newly
 	// activated from the meta picker.
 	SortOnActivation bool
@@ -244,6 +249,9 @@ type MetaDialogState struct {
 	Entries []MetaEntry
 	Checked []bool // parallel to Entries
 	Focus   dlg.ID // MetaEntryID(i) for a checkbox row, dlg.OK or dlg.Cancel; empty is the first row
+	// MarkerWidth is the theme's checkbox marker width (dlg.MarkerWidth), set at open; 0 lays
+	// out for the ASCII marker.
+	MarkerWidth int
 	// Notice explains an empty Entries list (no meta.toml, an untrusted or invalid one); drawn
 	// wrapped in the warning style in place of the checkbox rows.
 	Notice string

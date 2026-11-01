@@ -9,6 +9,7 @@ func DefaultMessagesOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionMessagesClose: {"left"},
 		ActionMessagesClear: {"F8"},
+		ActionMessagesCopy:  {"\""}, // the global copy menu has nothing to copy here
 	}
 }
 

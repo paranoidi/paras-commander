@@ -1,13 +1,14 @@
 package app
 
 import (
-	"path/filepath"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -127,7 +128,7 @@ func (a *App) setDiskUsageScanScope(origin string, childRoots []string) {
 	if origin == "" {
 		a.model.DiskUsageScanOrigin = ""
 	} else {
-		a.model.DiskUsageScanOrigin = filepath.Clean(origin)
+		a.model.DiskUsageScanOrigin = diskusage.CleanKey(origin)
 	}
 	if len(childRoots) == 0 {
 		a.model.DiskUsageScanRoots = nil
@@ -135,7 +136,7 @@ func (a *App) setDiskUsageScanScope(origin string, childRoots []string) {
 	}
 	roots := make([]string, len(childRoots))
 	for i, raw := range childRoots {
-		roots[i] = filepath.Clean(raw)
+		roots[i] = diskusage.CleanKey(raw)
 	}
 	a.model.DiskUsageScanRoots = roots
 }
@@ -267,8 +268,8 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 		return
 	}
 	p := a.panelByID(panelID)
-	if p.Path.IsRemote() {
-		a.setTransientMessage("Disk usage is not available on remote panels", ui.MessageUrgencyWarn)
+	if !p.Path.HasSubtreeSizes() {
+		a.setTransientMessage(pathloc.Unavailable("Disk usage", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	p.IdleDiskTotalsSort = false
@@ -276,17 +277,18 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 
 	childPaths := make([]string, 0, len(p.Entries))
 	for _, entry := range p.Entries {
-		childPaths = append(childPaths, filepath.Clean(entry.Path))
+		childPaths = append(childPaths, diskusage.CleanKey(entry.Path))
 	}
 
 	a.setDiskUsageScanScope(p.PathString(), childPaths)
 
 	a.disk.engine.StartScanFromDirectory(p.PathString(), childPaths, a.disk.ignore, panelID, listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints))
+	p.RequestIndexDrift(entryNames(p.Entries)...)
 	a.setDiskUsageShown(true)
 	a.disk.scanToastArmed = true
 	a.model.DiskUsagePanelID = panelID
 	a.model.DiskUsage = a.disk.engine
-	a.setTransientMessage("Disk usage scan started ("+filepath.Clean(p.PathString())+")", ui.MessageUrgencyInfo)
+	a.setTransientMessage("Disk usage scan started ("+diskusage.CleanKey(p.PathString())+")", ui.MessageUrgencyInfo)
 }
 
 // scanCursorDirSize walks the directory under the cursor (like Insert's selection-size scan,
@@ -296,8 +298,8 @@ func (a *App) scanCursorDirSize() {
 		return
 	}
 	p := a.activePanel()
-	if p.Path.IsRemote() {
-		a.setTransientMessage("Disk usage is not available on remote panels", ui.MessageUrgencyWarn)
+	if !p.Path.HasSubtreeSizes() {
+		a.setTransientMessage(pathloc.Unavailable("Disk usage", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	entry, ok := p.CurrentEntry()
@@ -306,11 +308,12 @@ func (a *App) scanCursorDirSize() {
 	}
 	if entry.IsDir() && entry.Name != ".." {
 		// Explicit request: count the directory even when it is itself a mount point.
-		a.disk.engine.StartScanFromListing([]string{filepath.Clean(entry.Path)}, a.disk.ignore,
+		a.disk.engine.StartScanFromListing([]string{diskusage.CleanKey(entry.Path)}, a.disk.ignore,
 			a.model.ActivePanel, diskusage.ListingVolumeGate{
 				Enabled:  !a.config.DiskUsage.DescendIntoMountPoints,
 				FromRoot: true,
 			})
+		p.RequestIndexDrift(entry.Name)
 	}
 	if p.Cursor < p.VisibleEntryCount()-1 {
 		p.Move(1, a.activeViewportRows())
@@ -340,9 +343,9 @@ func (a *App) menuBarSpinnerVisible() bool {
 }
 
 // menuBarOtherActivity is every menu-bar spinner source other than file-operation jobs:
-// disk-usage scans, running commands, and directory loads.
+// disk-usage scans, running commands, directory loads, and fileindex database creates/upgrades.
 func (a *App) menuBarOtherActivity() bool {
-	return a.diskUsageScanBusy() || a.commandsCtrl.HasRunning() ||
+	return a.diskUsageScanBusy() || a.commandsCtrl.HasRunning() || a.fileindexCtrl.InitRunning() ||
 		a.model.Primary.ShowLoadingIcon || a.model.Secondary.ShowLoadingIcon
 }
 
@@ -424,4 +427,13 @@ func (a *App) handlePanelDirChanged(panelID int) {
 		p.RefreshDiskUsageOrdering(a.panelViewportRows(panelID), true)
 		return
 	}
+}
+
+// entryNames lists the names of entries.
+func entryNames(entries []localfs.Entry) []string {
+	names := make([]string, len(entries))
+	for i, e := range entries {
+		names[i] = e.Name
+	}
+	return names
 }

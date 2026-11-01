@@ -23,12 +23,19 @@ func run(args []string, stderr, stdout io.Writer) error {
 		if arg == "--chooser-file" {
 			return fmt.Errorf("--chooser-file requires a path argument")
 		}
+		if arg == "--cwd-file" {
+			return fmt.Errorf("--cwd-file requires a path argument")
+		}
 		if arg == "--select" {
 			return fmt.Errorf("--select requires a path argument")
 		}
 		const chooserPrefix = "--chooser-file="
 		if strings.HasPrefix(arg, chooserPrefix) && strings.TrimSpace(strings.TrimPrefix(arg, chooserPrefix)) == "" {
 			return fmt.Errorf("--chooser-file requires a non-empty path")
+		}
+		const cwdPrefix = "--cwd-file="
+		if strings.HasPrefix(arg, cwdPrefix) && strings.TrimSpace(strings.TrimPrefix(arg, cwdPrefix)) == "" {
+			return fmt.Errorf("--cwd-file requires a non-empty path")
 		}
 		const selectPrefix = "--select="
 		if strings.HasPrefix(arg, selectPrefix) && strings.TrimSpace(strings.TrimPrefix(arg, selectPrefix)) == "" {
@@ -47,6 +54,7 @@ func run(args []string, stderr, stdout io.Writer) error {
 	selectPath := flags.String("select", "", "file or directory to open and highlight at startup (chooser mode)")
 	noCarousel := flags.Bool("no-carousel", false, "disable carousel view on the left panel at startup (chooser mode only)")
 	carousel := flags.Bool("carousel", false, "start directly in carousel view on the left panel")
+	cwdFile := flags.String("cwd-file", "", "write the active panel directory here on quit (shell cd-on-exit wrapper)")
 	quickPreview := flags.Bool("qp", false, "enable quick preview at startup (requires a path argument)")
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -101,5 +109,6 @@ func run(args []string, stderr, stdout io.Writer) error {
 		StartPaths:        startPaths,
 		QuickPreview:      *quickPreview,
 		Carousel:          *carousel,
+		CwdFile:           strings.TrimSpace(*cwdFile),
 	})
 }

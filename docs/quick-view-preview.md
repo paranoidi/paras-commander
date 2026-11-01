@@ -36,7 +36,7 @@ The preview takes the whole screen (no menu bar; the filename is the top row). B
 | `Ctrl+D` / `Ctrl+U` | `preview.half-page-down` / `-up` | Half page |
 | `Ctrl+F` / `Ctrl+B` | `preview.page-down` / `-up` | Full page |
 | `g` / `G` | `preview.top` / `preview.bottom` | Start / end |
-| `/` | `preview.search-start` | Search (case-insensitive, literal); Enter accepts, Esc cancels |
+| `/` | `preview.search-start` | Search (case-insensitive, literal); Enter accepts, Esc cancels; match locations are marked on the scrollbar |
 | `n` / `p` | `preview.search-next` / `-prev` | Next / previous match (wraps) |
 | `F5` | `preview.reload` | Re-read the file from disk, keeping scroll and search |
 | `F6` | `preview.toggle-raw` | Markdown: switch between rendered and raw source |

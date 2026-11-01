@@ -967,8 +967,8 @@ func TestRenderMenuBarShowsActivitySpinnerAfterPermission(t *testing.T) {
 	if rFirst != wantSpinner {
 		t.Fatalf("menu row spinner rune = %q (%U), want %q (%U)", rFirst, rFirst, wantSpinner, wantSpinner)
 	}
-	if st != styles.MenuSpinner {
-		t.Fatalf("spinner style = %v, want MenuSpinner %v", st, styles.MenuSpinner)
+	if st != styles.StatusScanning {
+		t.Fatalf("spinner style = %v, want StatusScanning %v", st, styles.StatusScanning)
 	}
 	gapCol := spinnerCol - 1
 	grCell, _, _ := screen.Get(gapCol, 0)
@@ -1038,7 +1038,7 @@ func TestDrawFooterShowsViewEditAndOmitsUnusedFKeys(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	styles := theme.Default()
-	drawFooter(screen, Rect{X: 0, Y: 0, Width: 80, Height: 1}, styles, menu.FunctionKeys)
+	drawFooter(screen, Rect{X: 0, Y: 0, Width: 80, Height: 1}, styles, menu.FunctionKeys, FooterHover{})
 
 	str0, st0, _ := screen.Get(0, 0)
 	if str0 != "F" || st0 != styles.FooterKey {
@@ -1068,7 +1068,7 @@ func TestDrawFooterShiftHintPrefixUsesShiftLabelStyle(t *testing.T) {
 	styles := theme.Default()
 	drawFooter(screen, Rect{X: 0, Y: 0, Width: 120, Height: 1}, styles, []menu.FunctionKey{
 		{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View"},
-	})
+	}, FooterHover{})
 
 	const primaryStart = 3 // "F3" + space
 	for col := primaryStart; col < primaryStart+len("View"); col++ {
@@ -1083,6 +1083,99 @@ func TestDrawFooterShiftHintPrefixUsesShiftLabelStyle(t *testing.T) {
 		if st != styles.FooterLabelShift {
 			t.Fatalf("shift hint col %d: style = %v, want FooterLabelShift", col, st)
 		}
+	}
+}
+
+func footerHoverTestScreen(t *testing.T) tcell.SimulationScreen {
+	t.Helper()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 12)
+	return screen
+}
+
+// footerStylesInRange fails unless columns [from, to) of row 0 are drawn in want.
+func footerStylesInRange(t *testing.T, screen tcell.SimulationScreen, from, to int, want tcell.Style, name string) {
+	t.Helper()
+	for col := from; col < to; col++ {
+		if r, st, _ := screen.Get(col, 0); st != want {
+			t.Fatalf("col %d %q: style = %v, want %s", col, r, st, name)
+		}
+	}
+}
+
+func TestDrawFooterPaintsHoveredEntryInHoverStyle(t *testing.T) {
+	screen := footerHoverTestScreen(t)
+	styles := theme.Default()
+	rect := Rect{X: 0, Y: 0, Width: 80, Height: 1}
+	keys := []menu.FunctionKey{
+		{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", ShiftKeyLabel: "S-F3", Hint: "View"},
+		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
+	}
+	layout := Layout{Footer: rect}
+	model := &Model{FooterKeys: keys}
+	spans := footerHintSpans(rect, keys)
+	hover := FooterHoverAt(layout, model, spans[1].X+1, 0)
+	if !hover.Active || hover.Index != 1 || hover.Shift {
+		t.Fatalf("FooterHoverAt on F4 = %+v, want entry 1, main part", hover)
+	}
+	if gap := FooterHoverAt(layout, model, spans[1].X-1, 0); gap.Active {
+		t.Fatalf("FooterHoverAt in the gap = %+v, want inactive", gap)
+	}
+	drawFooter(screen, rect, styles, keys, hover)
+
+	footerStylesInRange(t, screen, spans[1].X, spans[1].X+spans[1].Width, styles.FooterHoverActive, "FooterHoverActive")
+	if _, st, _ := screen.Get(spans[0].X, 0); st != styles.FooterKey {
+		t.Fatalf("other entry key style = %v, want FooterKey", st)
+	}
+	if _, st, _ := screen.Get(spans[1].X+spans[1].Width, 0); st != styles.FooterLabel {
+		t.Fatalf("cell after hovered entry style = %v, want FooterLabel", st)
+	}
+}
+
+// "F3 ViewQuick": the pointer on "Quick" selects the Shift word, which alone is drawn active;
+// on "F3 View" the main part is active and "Quick" keeps the plain hover style.
+func TestFooterHoverSplitsMainAndShiftWord(t *testing.T) {
+	styles := theme.Default()
+	rect := Rect{X: 0, Y: 0, Width: 80, Height: 1}
+	keys := []menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", ShiftKeyLabel: "S-F3", Hint: "View"}}
+	layout := Layout{Footer: rect}
+	model := &Model{FooterKeys: keys}
+	const shiftAt = len("F3 View")
+	end := shiftAt + len("Quick")
+
+	fk, shift, ok := FooterKeyAt(layout, model, shiftAt, 0)
+	if !ok || !shift {
+		t.Fatalf("FooterKeyAt on Quick = shift %v ok %v, want the shift word", shift, ok)
+	}
+	if ev, ok := fk.ShiftEvent(); !ok || ev.Key() != tcell.KeyF3 || ev.Modifiers()&tcell.ModShift == 0 {
+		t.Fatalf("ShiftEvent = %v %v, want Shift+F3", ev, ok)
+	}
+	if _, shift, _ := FooterKeyAt(layout, model, shiftAt-1, 0); shift {
+		t.Fatal("FooterKeyAt on View reports the shift word")
+	}
+
+	screen := footerHoverTestScreen(t)
+	drawFooter(screen, rect, styles, keys, FooterHoverAt(layout, model, end-1, 0))
+	footerStylesInRange(t, screen, 0, shiftAt, styles.FooterHover, "FooterHover")
+	footerStylesInRange(t, screen, shiftAt, end, styles.FooterHoverActive, "FooterHoverActive")
+
+	screen = footerHoverTestScreen(t)
+	drawFooter(screen, rect, styles, keys, FooterHoverAt(layout, model, 0, 0))
+	footerStylesInRange(t, screen, 0, shiftAt, styles.FooterHoverActive, "FooterHoverActive")
+	footerStylesInRange(t, screen, shiftAt, end, styles.FooterHover, "FooterHover")
+}
+
+// A suffix without its own binding (the compare filter label) is part of the main hit.
+func TestFooterHoverInformationalSuffixIsMainPart(t *testing.T) {
+	rect := Rect{X: 0, Y: 0, Width: 80, Height: 1}
+	keys := []menu.FunctionKey{{KeyLabel: "F3", HintShiftPrefix: "Moved", Hint: "Category"}}
+	model := &Model{FooterKeys: keys}
+	if _, shift, ok := FooterKeyAt(Layout{Footer: rect}, model, len("F3 Category"), 0); !ok || shift {
+		t.Fatalf("FooterKeyAt on the label = shift %v ok %v, want the main part", shift, ok)
 	}
 }
 
@@ -1122,7 +1215,7 @@ func TestDrawFooterUsesFullRowForFunctionKeys(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	styles := theme.Default()
-	drawFooter(screen, Rect{X: 0, Y: 0, Width: 80, Height: 1}, styles, menu.FunctionKeys)
+	drawFooter(screen, Rect{X: 0, Y: 0, Width: 80, Height: 1}, styles, menu.FunctionKeys, FooterHover{})
 	lastS, _, _ := screen.Get(79, 0)
 	lastR, _ := utf8.DecodeRuneInString(lastS)
 	if lastR != 't' {
@@ -1139,7 +1232,7 @@ func TestDrawFooterSpacesKeyHintWithLabelStyle(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	styles := theme.Default()
-	drawFooter(screen, Rect{X: 0, Y: 0, Width: 80, Height: 1}, styles, []menu.FunctionKey{menu.FooterEscClose})
+	drawFooter(screen, Rect{X: 0, Y: 0, Width: 80, Height: 1}, styles, []menu.FunctionKey{menu.FooterEscClose}, FooterHover{})
 
 	line := tcelltest.TextAt(screen, 0, 0, 80)
 	idx := strings.Index(line, "Esc")

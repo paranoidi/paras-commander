@@ -39,10 +39,6 @@ func DefaultCopyMenuKeys() map[string]string {
 	return out
 }
 
-func mergeCopyMenuKeys(defaults, user map[string]string) map[string]string {
-	return mergeMenuKeys(defaults, user)
-}
-
 func validCopyMenuKeyRune(r rune) bool {
 	return unicode.IsLetter(r)
 }

@@ -19,7 +19,7 @@ import (
 // contention heuristic can afford to miss.
 func (j *Job) ComputeVolumeDevs() {
 	j.VolumeDevs = nil
-	if j.Destination.IsRemote() {
+	if !j.Destination.IsLocal() {
 		return
 	}
 	add := func(host string) {

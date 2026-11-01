@@ -221,12 +221,12 @@ func TestPanelListHeader_metaSortArrowSpillsIntoGap(t *testing.T) {
 	}
 	titles := map[string]string{"rating": "Tmdb", "votes": "Votes"}
 	st := panel.State{}
-	plain := panelListHeader(80, st, false, true, layouts, false, false)
+	plain, _ := panelListHeader(80, st, false, true, layouts, false, false)
 	col := func(s, sub string) int { return runewidth.StringWidth(s[:strings.Index(s, sub)]) }
 	for entry, title := range titles {
 		for _, rev := range []bool{false, true} {
 			st.Sort = panel.SortState{Mode: panel.SortMeta, MetaColumn: entry, Reverse: rev}
-			hdr := panelListHeader(80, st, false, true, layouts, false, false)
+			hdr, _ := panelListHeader(80, st, false, true, layouts, false, false)
 			if runewidth.StringWidth(hdr) != runewidth.StringWidth(plain) {
 				t.Fatalf("%s rev=%v: width changed\n%q\n%q", entry, rev, hdr, plain)
 			}
@@ -259,11 +259,11 @@ func TestMetaSortArrowLayouts_textColumnAscendingPointsDown(t *testing.T) {
 func TestPanelListHeader_diskUsageSortOwnsTheArrow(t *testing.T) {
 	layouts := []MetaColumnLayout{{EntryName: "rating", Title: "Tmdb", Width: 4, RightAlign: true, Numeric: true}}
 	st := panel.State{Sort: panel.SortState{Mode: panel.SortMeta, MetaColumn: "rating", DiskUsageIdleSizeSort: true}}
-	if hdr := panelListHeader(80, st, false, true, layouts, false, false); !strings.Contains(hdr, "↑Tmdb") || strings.Contains(hdr, "↑Size") {
+	if hdr, _ := panelListHeader(80, st, false, true, layouts, false, false); !strings.Contains(hdr, "↑Tmdb") || strings.Contains(hdr, "↑Size") {
 		t.Fatalf("totals not cached: header %q, want ↑Tmdb only", hdr)
 	}
 	st.IdleDiskTotalsSort = true
-	hdr := panelListHeader(80, st, false, true, layouts, false, false)
+	hdr, _ := panelListHeader(80, st, false, true, layouts, false, false)
 	if strings.ContainsAny(strings.ReplaceAll(hdr, "↑Size", ""), "↑↓") || !strings.Contains(hdr, "↑Size") {
 		t.Fatalf("totals cached: header %q, want ↑Size only", hdr)
 	}

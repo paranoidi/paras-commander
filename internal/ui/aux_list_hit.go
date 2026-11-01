@@ -1,6 +1,10 @@
 package ui
 
-import "time"
+import (
+	"time"
+
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+)
 
 // auxListScroll clamps the scroll offset of a one-line-per-entry aux list (Jobs queue, Messages)
 // so the last page stays full.
@@ -52,10 +56,7 @@ func MessagesListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	for idx > 0 && log[idx].Time == "" {
-		idx--
-	}
-	return idx, true
+	return messageLogHead(log, idx), true
 }
 
 // commandsListRow is one drawn line of the Commands list: an entry's command line (Macro -1) or
@@ -107,4 +108,34 @@ func CommandsListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+// CompareListEntryAt returns the index of the Compare row (in the filtered rows) drawn at (x, y).
+func CompareListEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
+	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, model.SplitOrientation)
+	n := len(comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter, model.CompareView.IgnoreEmpty, model.CompareView.NameFilter))
+	return auxListRowAt(rect, model.CompareView.ListScroll, n, x, y)
+}
+
+// DedupListEntryAt returns the Duplicates tree row drawn at (x, y) and the pane it is in
+// (copies: the Copies pane, else the main tree). There are none until the scan is done.
+func DedupListEntryAt(layout Layout, model *Model, x, y int) (row int, copies, ok bool) {
+	if model.DedupSnapshot.Phase != comparepkg.DedupDone {
+		return 0, false, false
+	}
+	if row, ok = auxListRowAt(layout.Primary, model.DedupView.Main.ListScroll, len(model.DedupList), x, y); ok {
+		return row, false, true
+	}
+	copiesRect, _ := DedupSecondaryRects(layout.Secondary)
+	row, ok = auxListRowAt(copiesRect, model.DedupView.Copies.ListScroll, len(model.DedupCopiesList), x, y)
+	return row, true, ok
+}
+
+// DedupBrowseEntryAt returns the visible entry of the Duplicates browse panel drawn at (x, y).
+func DedupBrowseEntryAt(layout Layout, model *Model, x, y int) (int, bool) {
+	if model.DedupSnapshot.Phase != comparepkg.DedupDone {
+		return 0, false
+	}
+	_, rect := DedupSecondaryRects(layout.Secondary)
+	return auxListRowAt(rect, model.DedupPanel.ScrollOffset, model.DedupPanel.VisibleEntryCount(), x, y)
 }

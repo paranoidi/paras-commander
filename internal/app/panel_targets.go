@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -47,6 +49,30 @@ func panelTargetEntries(p *panel.State) []localfs.Entry {
 		return nil
 	}
 	return []localfs.Entry{entry}
+}
+
+// hostPathOf maps a panel entry path (host path or fileindex:// URI) to the real local path.
+func hostPathOf(raw string) (string, bool) {
+	loc, err := pathloc.Parse(raw)
+	if err != nil {
+		return "", false
+	}
+	return loc.HostPath()
+}
+
+// existingHostDir returns dir, or its nearest existing ancestor directory when dir (an indexed
+// path) is gone from disk; "" when none exists.
+func existingHostDir(dir string) string {
+	for {
+		if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
 }
 
 func canonicalTargetPath(raw string) string {

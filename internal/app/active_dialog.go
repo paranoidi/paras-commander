@@ -96,6 +96,9 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 	case InputModeFindDialog:
 		return found(fits(a.findCtrl.DialogSpec), &m.FindDialog.Focus, noQuit(a.findCtrl.ApplyDialogEvent),
 			dialogButtons{OK: a.findCtrl.ActivateDialogOK, Cancel: a.findCtrl.CloseDialog})
+	case InputModeIndexFindDialog:
+		return found(fits(a.fileindexCtrl.DialogSpec), &m.IndexFindDialog.Focus, noQuit(a.fileindexCtrl.ApplyFindEvent),
+			dialogButtons{OK: a.fileindexCtrl.ActivateFindOK, Cancel: a.fileindexCtrl.CloseFindDialog})
 	case InputModeMetaDialog:
 		b := dialogButtons{OK: a.metaCtrl.ActivateSelection, Cancel: a.metaCtrl.CloseDialog}
 		if event.Key() == tcell.KeyF9 {

@@ -444,7 +444,18 @@ func BoundingRect(a, b Rect) Rect {
 
 // JobsViewRects are the jobs view pane frames. A zero-height Conflict or Operations is not drawn.
 type JobsViewRects struct {
-	List, Conflict, Detail, Operations Rect
+	List, Conflict, Detail, Messages, Operations Rect
+}
+
+// jobsMessagesMaxFrameH caps the Messages frame so Operations keeps its space; the pane scrolls.
+const jobsMessagesMaxFrameH = 8
+
+// jobsMessagesFrameH is the Messages frame height for messageCount lines (0 when none).
+func jobsMessagesFrameH(messageCount int) int {
+	if messageCount <= 0 {
+		return 0
+	}
+	return min(messageCount+jobsDetailChromeRows, jobsMessagesMaxFrameH)
 }
 
 // SplitJobsView lays out the jobs view over the primary and secondary columns. With opsBottom
@@ -452,27 +463,39 @@ type JobsViewRects struct {
 // true Operations spans the full width under a band holding the Queue (primary's width when the
 // columns are side by side, else half) and the optional conflict panel above Details; the band
 // is as tall as conflict plus Details need (at least jobsOpsBottomMinBandH) and Operations takes the rest (at least its minimum
-// frame). When the band cannot fit, the side layout is used.
-func SplitJobsView(primary, secondary Rect, opsBottom, showConflict bool, detailLineCount int) JobsViewRects {
+// frame). When the band cannot fit, the side layout is used. A positive messageCount adds a
+// Messages frame under Details (at most jobsMessagesMaxFrameH rows, in the band's right column
+// in the bottom layout); in the side layout it is dropped when Operations could not keep its
+// minimum frame.
+func SplitJobsView(primary, secondary Rect, opsBottom, showConflict bool, detailLineCount, messageCount int) JobsViewRects {
 	if opsBottom {
-		if r, ok := splitJobsViewOpsBottom(primary, secondary, showConflict, detailLineCount); ok {
+		if r, ok := splitJobsViewOpsBottom(primary, secondary, showConflict, detailLineCount, messageCount); ok {
 			return r
 		}
 	}
 	conflict, detail, ops := SplitJobsSecondaryPanels(secondary, showConflict, detailLineCount)
-	return JobsViewRects{List: primary, Conflict: conflict, Detail: detail, Operations: ops}
+	r := JobsViewRects{List: primary, Conflict: conflict, Detail: detail, Operations: ops}
+	if h := jobsMessagesFrameH(messageCount); h > 0 && ops.Height-h >= jobsSubpanelMinFrameH {
+		r.Messages = Rect{X: ops.X, Y: ops.Y, Width: ops.Width, Height: h}
+		r.Operations = Rect{X: ops.X, Y: ops.Y + h, Width: ops.Width, Height: ops.Height - h}
+	}
+	return r
 }
 
-func splitJobsViewOpsBottom(primary, secondary Rect, showConflict bool, detailLineCount int) (JobsViewRects, bool) {
+func splitJobsViewOpsBottom(primary, secondary Rect, showConflict bool, detailLineCount, messageCount int) (JobsViewRects, bool) {
 	area := BoundingRect(primary, secondary)
 	conflictH := 0
 	if showConflict {
 		conflictH = jobsConflictPanelMinFrameH
 	}
 	detailH := max(detailLineCount+jobsDetailChromeRows, 3)
-	bandH := min(max(conflictH+detailH, jobsOpsBottomMinBandH), area.Height-jobsSubpanelMinFrameH)
+	msgH := jobsMessagesFrameH(messageCount)
+	bandH := min(max(conflictH+detailH+msgH, jobsOpsBottomMinBandH), area.Height-jobsSubpanelMinFrameH)
 	if bandH < conflictH+3 {
 		return JobsViewRects{}, false
+	}
+	if bandH-conflictH-msgH < 3 { // too short for Details beside Messages
+		msgH = 0
 	}
 	listW := area.Width / 2
 	if primary.Y == secondary.Y && primary.Width > 0 && primary.Width < area.Width {
@@ -486,7 +509,8 @@ func splitJobsViewOpsBottom(primary, secondary Rect, showConflict bool, detailLi
 	return JobsViewRects{
 		List:       Rect{X: area.X, Y: area.Y, Width: listW, Height: bandH},
 		Conflict:   Rect{X: rightX, Y: area.Y, Width: rightW, Height: conflictH},
-		Detail:     Rect{X: rightX, Y: area.Y + conflictH, Width: rightW, Height: bandH - conflictH},
+		Detail:     Rect{X: rightX, Y: area.Y + conflictH, Width: rightW, Height: bandH - conflictH - msgH},
+		Messages:   Rect{X: rightX, Y: area.Y + bandH - msgH, Width: rightW, Height: msgH},
 		Operations: Rect{X: area.X, Y: area.Y + bandH, Width: area.Width, Height: area.Height - bandH},
 	}, true
 }

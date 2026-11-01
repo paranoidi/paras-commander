@@ -9,9 +9,12 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/clipboard"
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/statuscmds"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -349,29 +352,78 @@ func TestMouseLeaderMenuOutsideClickCloses(t *testing.T) {
 	}
 }
 
-func TestMouseMessagesListClickAndWheel(t *testing.T) {
+func TestMouseMessagesListClickCopiesAndWheel(t *testing.T) {
+	prevWriter := clipboard.OSWriter
+	clipboard.OSWriter = func(string) error { return nil }
+	t.Cleanup(func() { clipboard.OSWriter = prevWriter; clipboard.Reset() })
 	app := tallMouseTestApp(t)
 	app.model.MessageLog = []ui.MessageLogEntry{
-		{Time: "10:00:01", Text: "harbor opened"},
+		{Time: "10:00:01", Text: "harbor opened", Full: "harbor opened harbor continued"},
 		{Text: "harbor continued"},
 		{Time: "10:00:02", Text: "meadow copied"},
 		{Time: "10:00:03", Text: "lantern moved"},
 		{Time: "10:00:04", Text: "velvet deleted"},
 	}
 	app.openMessagesView()
-	x, y := screenTextCell(t, app, "meadow copied")
+	selectedText := func() string { return app.model.MessageLog[app.model.MessagesView.Selected].Text }
+
+	// The top message: the logged toast must not take the selection from it.
+	x, y := screenTextCell(t, app, "harbor continued")
 	click(app, x, y, tcell.Button1)
-	if got := app.model.MessagesView.Selected; got != 2 {
-		t.Fatalf("selected = %d want 2", got)
+	if got := clipboard.LastSet(); got != "harbor opened harbor continued" {
+		t.Fatalf("clipboard = %q, want the whole message", got)
 	}
-	x, y = screenTextCell(t, app, "harbor continued")
+	if got := app.model.MessageLog[0].Text; got != "Copied message to clipboard" {
+		t.Fatalf("newest log entry = %q, want the copy toast", got)
+	}
+	if got := selectedText(); got != "harbor opened" {
+		t.Fatalf("continuation row selected %q, want its message", got)
+	}
+
+	x, y = screenTextCell(t, app, "meadow copied")
 	click(app, x, y, tcell.Button1)
-	if got := app.model.MessagesView.Selected; got != 0 {
-		t.Fatalf("continuation row selected %d want its message 0", got)
+	if got := clipboard.LastSet(); got != "meadow copied" {
+		t.Fatalf("clipboard = %q, want meadow copied", got)
+	}
+	if got := selectedText(); got != "meadow copied" {
+		t.Fatalf("selected %q, want meadow copied", got)
 	}
 	app.handleMouse(mouseEv(x, y, tcell.WheelDown))
-	if got := app.model.MessagesView.Selected; got != 4 {
-		t.Fatalf("after wheel selected = %d want 4", got)
+	if got := selectedText(); got != "velvet deleted" {
+		t.Fatalf("after wheel selected %q, want velvet deleted", got)
+	}
+}
+
+// Motion over a list row highlights it without moving the selection.
+func TestMouseAuxListHoverKeepsSelection(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.model.MessageLog = []ui.MessageLogEntry{
+		{Time: "10:00:01", Text: "harbor opened"},
+		{Text: "harbor continued"},
+		{Time: "10:00:02", Text: "meadow copied"},
+	}
+	app.openMessagesView()
+	x, y := screenTextCell(t, app, "harbor continued")
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || got.Row != 0 {
+		t.Fatalf("hover on a continuation row = %+v, want its message 0", got)
+	}
+	x, y = screenTextCell(t, app, "meadow copied")
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || got.Row != 2 {
+		t.Fatalf("hover = %+v, want row 2", got)
+	}
+	if app.model.MessagesView.Selected != 0 {
+		t.Fatalf("selected = %d, want 0: hover must not move the selection", app.model.MessagesView.Selected)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.AuxListHover.Active {
+		t.Fatal("a key press must hide the row hover")
+	}
+	app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone))
+	if !app.model.AuxListHover.Active {
+		t.Fatal("pointer motion must bring the row hover back")
 	}
 }
 
@@ -518,5 +570,440 @@ func TestMouseDialogWheelScrollsScrollOnlyList(t *testing.T) {
 	app.handleMouse(mouseEv(x, y, tcell.WheelDown))
 	if d.DeleteListScroll != config.MouseWheelRows || d.Focus != focus {
 		t.Fatalf("wheel: scroll %d focus %q, want %d and focus kept", d.DeleteListScroll, d.Focus, config.MouseWheelRows)
+	}
+}
+
+// titleSegmentAt returns a cell on the title path segment depth levels above panel id's
+// directory, scanning the title row through ui.PanelTitleSegmentAt.
+func titleSegmentAt(t *testing.T, a *App, id, depth int) (int, int) {
+	t.Helper()
+	w, h := a.screen.Size()
+	lay := a.layoutForTerminalSize(w, h)
+	col := lay.Primary
+	if id == ui.SecondaryPanel {
+		col = lay.Secondary
+	}
+	_, file, ok := a.mousePanelAt(lay, col.X+1, col.Y+1)
+	if !ok {
+		t.Fatal("panel not under the pointer")
+	}
+	for x := file.X; x < file.X+file.Width; x++ {
+		if seg, ok := ui.PanelTitleSegmentAt(file, &a.model, id, a.styles, x, file.Y); ok && seg.Depth == depth {
+			return x, file.Y
+		}
+	}
+	t.Fatalf("no title segment at depth %d", depth)
+	return 0, 0
+}
+
+func TestMouseHoverInvertsTitleSegment(t *testing.T) {
+	app, _ := mouseTestApp(t)
+	x, y := titleSegmentAt(t, app, ui.PrimaryPanel, 1)
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("entering a title segment must render")
+	}
+	if h := app.model.PanelTitleHover; !h.Active || h.Panel != ui.PrimaryPanel || h.X != x {
+		t.Fatalf("hover = %+v", h)
+	}
+	_, style, _ := app.screen.Get(x, y)
+	if _, _, attrs := style.Decompose(); attrs&tcell.AttrReverse == 0 {
+		t.Fatal("hovered segment not inverted")
+	}
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); rendered {
+		t.Fatal("motion within the same segment must not render")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.PanelTitleHover.Active {
+		t.Fatal("a key press must hide the title hover")
+	}
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); !rendered || !app.model.PanelTitleHover.Active {
+		t.Fatal("pointer motion must bring the title hover back")
+	}
+	cx, cy := cellOf(t, app, ui.PrimaryPanel, 2)
+	if _, rendered := app.handleMouse(mouseEv(cx, cy, tcell.ButtonNone)); !rendered || app.model.PanelTitleHover.Active {
+		t.Fatalf("leaving the title must clear the hover and render (hover %+v)", app.model.PanelTitleHover)
+	}
+	_, style, _ = app.screen.Get(x, y)
+	if _, _, attrs := style.Decompose(); attrs&tcell.AttrReverse != 0 {
+		t.Fatal("segment still inverted after the pointer left")
+	}
+}
+
+func TestMouseClickTitleSegmentNavigatesToAncestor(t *testing.T) {
+	app, dir := mouseTestApp(t)
+	x, y := titleSegmentAt(t, app, ui.PrimaryPanel, 1)
+	click(app, x, y, tcell.Button1)
+	want := filepath.Dir(dir)
+	drainInterruptEventsUntil(t, app, app.screen.(tcell.SimulationScreen), 2*time.Second, func() bool {
+		return app.model.Primary.PathString() == want
+	})
+	if got := app.model.Primary.PathString(); got != want {
+		t.Fatalf("path = %q want %q", got, want)
+	}
+	if app.model.ActivePanel != ui.PrimaryPanel {
+		t.Fatalf("active = %d want primary", app.model.ActivePanel)
+	}
+	if e, ok := app.model.Primary.CurrentEntry(); !ok || e.Name != filepath.Base(dir) {
+		t.Fatalf("cursor entry = %+v, want %q", e, filepath.Base(dir))
+	}
+	if app.model.Secondary.PathString() != dir {
+		t.Fatal("other panel must not navigate")
+	}
+}
+
+func TestMouseClickTitlePanelDirectoryRefreshes(t *testing.T) {
+	app, dir := mouseTestApp(t)
+	// The panel directory starts after the parent segment and its "/" separator.
+	px, y := titleSegmentAt(t, app, ui.PrimaryPanel, 1)
+	app.render()
+	x := -1
+	for cx := px; cx < px+100 && x < 0; cx++ {
+		if str, _, _ := app.screen.Get(cx, y); str == "/" {
+			x = cx + 1
+		}
+	}
+	if x < 0 {
+		t.Fatal("no separator after the parent segment")
+	}
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if _, style, _ := app.screen.Get(x, y); func() bool { _, _, attrs := style.Decompose(); return attrs&tcell.AttrReverse == 0 }() {
+		t.Fatal("hovered panel directory not inverted")
+	}
+	writeFile(t, filepath.Join(dir, "zz-sparrow.txt"))
+	click(app, x, y, tcell.Button1)
+	listed := func() bool {
+		for i := 0; i < app.model.Primary.VisibleEntryCount(); i++ {
+			if e, _, ok := app.model.Primary.VisibleEntry(i); ok && e.Name == "zz-sparrow.txt" {
+				return true
+			}
+		}
+		return false
+	}
+	drainInterruptEventsUntil(t, app, app.screen.(tcell.SimulationScreen), 2*time.Second, listed)
+	if !listed() || app.model.Primary.PathString() != dir {
+		t.Fatalf("click on the panel directory did not refresh it (path %q)", app.model.Primary.PathString())
+	}
+}
+
+// styleAt is the style drawn at (x, y).
+func styleAt(a *App, x, y int) tcell.Style {
+	_, style, _ := a.screen.Get(x, y)
+	return style
+}
+
+func TestMouseHoverHighlightsDialogButton(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.openSortDialog()
+	x, y := screenTextCell(t, app, "[ Cancel ]") // x+3 is "a", past the mnemonic
+	focus := app.model.SortDialog.Focus
+	plain := styleAt(app, x+3, y)
+	if _, rendered := app.handleMouse(mouseEv(x+3, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("entering a button must render")
+	}
+	if got := styleAt(app, x+3, y); got != app.styles.DialogButtonActive {
+		t.Fatalf("hovered button style = %v want %v (plain %v)", got, app.styles.DialogButtonActive, plain)
+	}
+	if app.model.SortDialog.Focus != focus {
+		t.Fatalf("hover moved focus to %q", app.model.SortDialog.Focus)
+	}
+	if _, rendered := app.handleMouse(mouseEv(x+4, y, tcell.ButtonNone)); rendered {
+		t.Fatal("motion within the same button must not render")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.render()
+	if app.model.DialogButtonHover.Active {
+		t.Fatal("a key press must hide the button hover")
+	}
+	if app.handleMouse(mouseEv(x+3, y, tcell.ButtonNone)); !app.model.DialogButtonHover.Active {
+		t.Fatal("pointer motion must bring the button hover back")
+	}
+	if _, rendered := app.handleMouse(mouseEv(1, 1, tcell.ButtonNone)); !rendered {
+		t.Fatal("leaving the button must render")
+	}
+	if got := styleAt(app, x+3, y); got != plain {
+		t.Fatalf("button style after leaving = %v want %v", got, plain)
+	}
+}
+
+func TestMouseHoverHighlightsMenuTitle(t *testing.T) {
+	app := tallMouseTestApp(t)
+	x, y := screenTextCell(t, app, " File ")
+	plain := styleAt(app, x+2, y)
+	if _, rendered := app.handleMouse(mouseEv(x+2, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("entering a menu title must render")
+	}
+	if got := styleAt(app, x+2, y); got != app.styles.MenuBarSelected {
+		t.Fatalf("hovered title style = %v want %v", got, app.styles.MenuBarSelected)
+	}
+	if app.model.Menu.Open {
+		t.Fatal("hover opened the menu")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.MenuBarHover.Active {
+		t.Fatal("a key press must hide the title hover")
+	}
+	app.handleMouse(mouseEv(x+3, y, tcell.ButtonNone))
+	if !app.model.MenuBarHover.Active {
+		t.Fatal("pointer motion must bring the title hover back")
+	}
+	cx, cy := cellOf(t, app, ui.PrimaryPanel, 1)
+	app.handleMouse(mouseEv(cx, cy, tcell.ButtonNone))
+	if got := styleAt(app, x+2, y); got != plain {
+		t.Fatalf("title style after leaving = %v want %v", got, plain)
+	}
+}
+
+func TestMousePulldownSelectionFollowsPointer(t *testing.T) {
+	app := tallMouseTestApp(t)
+	x, y := screenTextCell(t, app, " Left ")
+	click(app, x+2, y, tcell.Button1)
+	ix, iy := screenTextCell(t, app, "Sort...")
+	w, h := app.screen.Size()
+	want, _ := ui.PulldownItemAt(app.layoutForTerminalSize(w, h), &app.model, ix, iy)
+	if want == app.model.Menu.SelectedItem {
+		t.Fatal("fixture: Sort... is already selected")
+	}
+	if _, rendered := app.handleMouse(mouseEv(ix, iy, tcell.ButtonNone)); !rendered {
+		t.Fatal("moving onto another item must render")
+	}
+	if app.model.Menu.SelectedItem != want {
+		t.Fatalf("selected = %d want %d", app.model.Menu.SelectedItem, want)
+	}
+	if _, rendered := app.handleMouse(mouseEv(ix+1, iy, tcell.ButtonNone)); rendered {
+		t.Fatal("motion within the same item must not render")
+	}
+	app.handleMouse(mouseEv(90, 20, tcell.ButtonNone))
+	if !app.model.Menu.Open || app.model.Menu.SelectedItem != want {
+		t.Fatalf("leaving the pulldown changed the menu: open=%v selected=%d", app.model.Menu.Open, app.model.Menu.SelectedItem)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if !app.model.SortDialog.Open {
+		t.Fatal("Enter did not run the item under the pointer")
+	}
+}
+
+func TestMouseStatusCommandsClickOpensDialog(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.statusCmds = []*statusCmdRunner{{def: statuscmds.Def{Name: "quartz"}, text: "flint"}}
+	app.render()
+	x, y := screenTextCell(t, app, "flint")
+	click(app, x, y, tcell.Button1)
+	if !app.model.StatusCommandsDialog.Open {
+		t.Fatal("click on the status-command area did not open the Status commands dialog")
+	}
+}
+
+func TestMouseStatusCommandsClickClosesMenu(t *testing.T) {
+	app := tallMouseTestApp(t)
+	app.statusCmds = []*statusCmdRunner{{def: statuscmds.Def{Name: "quartz"}, text: "flint"}}
+	app.render()
+	x, y := screenTextCell(t, app, " File ")
+	click(app, x+2, y, tcell.Button1)
+	x, y = screenTextCell(t, app, "flint")
+	click(app, x, y, tcell.Button1)
+	if app.model.Menu.Open || !app.model.StatusCommandsDialog.Open {
+		t.Fatalf("menu open=%v dialog open=%v want closed/open", app.model.Menu.Open, app.model.StatusCommandsDialog.Open)
+	}
+}
+
+func TestMouseDialogListHoverKeepsCursor(t *testing.T) {
+	app := sftpKeyApp(t, t.TempDir(), 12)
+	st := &app.model.SFTPConnectDialog
+	selected, focus := st.Selected, st.Focus
+	x, y := screenTextCell(t, app, listGoldenWords[2])
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); !rendered {
+		t.Fatal("moving onto another row must render its hover")
+	}
+	if st.Selected != selected || st.Focus != focus {
+		t.Fatalf("hover: selected=%d focus=%q want %d / %q", st.Selected, st.Focus, selected, focus)
+	}
+	if app.model.DialogListHover.Y != y || app.model.DialogListHover.Width == 0 {
+		t.Fatalf("hover row = %+v, want row %d", app.model.DialogListHover, y)
+	}
+	if _, rendered := app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone)); rendered {
+		t.Fatal("motion within the same row must not render")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.render()
+	if app.model.DialogListHover.Width != 0 {
+		t.Fatal("a key press must hide the row hover")
+	}
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if app.model.DialogListHover.Width == 0 {
+		t.Fatal("pointer motion must bring the row hover back")
+	}
+}
+
+func TestMousePanelRowHoverHiddenByKeyboard(t *testing.T) {
+	app, _ := mouseTestApp(t)
+	x, y := cellOf(t, app, ui.PrimaryPanel, 3)
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if !app.model.PanelRowHover.Active {
+		t.Fatal("pointer over a row must show its hover")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.PanelRowHover.Active {
+		t.Fatal("a key press must hide the row hover")
+	}
+	app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone))
+	if !app.model.PanelRowHover.Active {
+		t.Fatal("pointer motion must bring the row hover back")
+	}
+}
+
+func compareMouseTestApp(t *testing.T) *App {
+	t.Helper()
+	app := tallMouseTestApp(t)
+	app.model.ViewMode = ui.ViewCompare
+	app.model.CompareView = ui.CompareViewState{FocusColumn: ui.CompareColumnPrimary, Filter: comparepkg.FilterAll}
+	var rows []comparepkg.Row
+	for _, n := range []string{"harbor", "meadow", "lantern", "falcon"} {
+		rows = append(rows, comparepkg.Row{PrimaryRel: n + ".txt", SecondaryRel: n + ".txt", Kind: comparepkg.KindContentDiff, HashDone: true})
+	}
+	app.model.CompareSnapshot = comparepkg.Snapshot{Rows: rows}
+	return app
+}
+
+func TestMouseCompareHoverKeepsSelection(t *testing.T) {
+	app := compareMouseTestApp(t)
+	x, y := screenTextCell(t, app, "lantern.txt")
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || got.Row != 2 {
+		t.Fatalf("hover = %+v, want row 2", got)
+	}
+	if app.model.CompareView.Selected != 0 {
+		t.Fatalf("selected = %d, want 0: hover must not move the selection", app.model.CompareView.Selected)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.AuxListHover.Active {
+		t.Fatal("a key press must hide the row hover")
+	}
+	app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone))
+	if !app.model.AuxListHover.Active {
+		t.Fatal("pointer motion must bring the row hover back")
+	}
+}
+
+func TestMouseCompareClickSelectsRow(t *testing.T) {
+	app := compareMouseTestApp(t)
+	x, y := screenTextCell(t, app, "lantern.txt")
+	click(app, x, y, tcell.Button1)
+	if app.model.CompareView.Selected != 2 {
+		t.Fatalf("selected = %d, want 2", app.model.CompareView.Selected)
+	}
+}
+
+func dedupMouseTestApp(t *testing.T) *App {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt"), filepath.Join("meadow", "beacon.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	app := newApp(t, newScreen(t, 100, 30), dir)
+	app.config.UI.Mouse = true
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if len(app.model.DedupList) < 2 || len(app.model.DedupCopiesList) < 2 {
+		t.Fatalf("need two rows per pane, got %d/%d", len(app.model.DedupList), len(app.model.DedupCopiesList))
+	}
+	return app
+}
+
+// dedupPaneCell is a cell on row idx of the main tree or the Copies pane.
+func dedupPaneCell(a *App, copies bool, idx int) (int, int) {
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	rect := layout.Primary
+	if copies {
+		rect, _ = ui.DedupSecondaryRects(layout.Secondary)
+	}
+	return rect.X + 3, ui.PanelListTop(rect) + idx
+}
+
+func TestMouseDedupHoverKeepsSelection(t *testing.T) {
+	app := dedupMouseTestApp(t)
+	app.render()
+	sel := app.model.DedupView.Main.Selected
+	row := 0
+	if sel == 0 {
+		row = 1
+	}
+	x, y := dedupPaneCell(app, false, row)
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || got.Copies || got.Row != row {
+		t.Fatalf("hover = %+v, want main row %d", got, row)
+	}
+	x2, y2 := dedupPaneCell(app, true, 1)
+	app.handleMouse(mouseEv(x2, y2, tcell.ButtonNone))
+	if got := app.model.AuxListHover; !got.Active || !got.Copies || got.Row != 1 {
+		t.Fatalf("hover = %+v, want copies row 1", got)
+	}
+	if app.model.DedupView.Main.Selected != sel || app.model.DedupView.FocusCopies {
+		t.Fatal("hover must not move the selection or focus")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.AuxListHover.Active {
+		t.Fatal("a key press must hide the row hover")
+	}
+	app.handleMouse(mouseEv(x2+1, y2, tcell.ButtonNone))
+	if !app.model.AuxListHover.Active {
+		t.Fatal("pointer motion must bring the row hover back")
+	}
+}
+
+func TestMouseDedupClickSelectsAndFocusesPane(t *testing.T) {
+	app := dedupMouseTestApp(t)
+	app.render()
+	x, y := dedupPaneCell(app, true, 1)
+	click(app, x, y, tcell.Button1)
+	if !app.model.DedupView.FocusCopies || app.model.DedupView.Copies.Selected != 1 {
+		t.Fatalf("focusCopies=%v copies selected=%d, want true/1", app.model.DedupView.FocusCopies, app.model.DedupView.Copies.Selected)
+	}
+	x, y = dedupPaneCell(app, false, 0)
+	click(app, x, y, tcell.Button1)
+	if app.model.DedupView.FocusCopies || app.model.DedupView.Main.Selected != 0 {
+		t.Fatalf("focusCopies=%v main selected=%d, want false/0", app.model.DedupView.FocusCopies, app.model.DedupView.Main.Selected)
+	}
+}
+
+func TestMouseDedupBrowsePanelHoverAndClick(t *testing.T) {
+	app := dedupMouseTestApp(t)
+	dedupBrowseSettle(t, app, app.screen.(tcell.SimulationScreen))
+	app.render()
+	if app.model.DedupPanel.VisibleEntryCount() < 2 {
+		t.Fatalf("browse panel has %d entries, want at least 2", app.model.DedupPanel.VisibleEntryCount())
+	}
+	w, h := app.screen.Size()
+	_, rect := ui.DedupSecondaryRects(app.layoutForTerminalSize(w, h).Secondary)
+	want := 0
+	if app.model.DedupPanel.Cursor == 0 {
+		want = 1
+	}
+	x, y := rect.X+3, ui.PanelListTop(rect)+want
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if got := app.model.PanelRowHover; !got.Active || got.Panel != ui.DedupBrowsePanel || got.Entry != want {
+		t.Fatalf("hover = %+v, want browse entry %d", got, want)
+	}
+	if app.model.DedupPanel.Cursor == want || app.model.DedupView.FocusPanel {
+		t.Fatal("hover must not move the cursor or focus")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.PanelRowHover.Active {
+		t.Fatal("a key press must hide the row hover")
+	}
+	click(app, x, y, tcell.Button1)
+	if !app.model.DedupView.FocusPanel || app.model.DedupPanel.Cursor != want {
+		t.Fatalf("focusPanel=%v cursor=%d, want true/%d", app.model.DedupView.FocusPanel, app.model.DedupPanel.Cursor, want)
 	}
 }

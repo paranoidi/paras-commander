@@ -131,3 +131,23 @@ func (st *State) CancelSearch() {
 	st.Search = SearchState{Current: -1}
 	st.clearWrapCache()
 }
+
+// searchMarkRows maps wrapped lines containing highlighted matches onto `rows` scrollbar rows.
+// ponytail: identifies matches by their baked-in highlight style (a Chroma token with an identical
+// style would add a stray mark) and is an O(cells) scan per frame while searching; upgrade path =
+// record wrapped match rows when building the wrap cache.
+func (s SearchState) searchMarkRows(lines [][]AnsiCell, rows int) []bool {
+	if !s.Active || len(s.Matches) == 0 || rows <= 0 || len(lines) == 0 {
+		return nil
+	}
+	marks := make([]bool, rows)
+	for i, line := range lines {
+		for _, c := range line {
+			if c.St == s.MatchStyle || c.St == s.CurrentStyle {
+				marks[min(rows-1, i*rows/len(lines))] = true
+				break
+			}
+		}
+	}
+	return marks
+}

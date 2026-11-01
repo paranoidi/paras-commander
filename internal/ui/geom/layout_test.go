@@ -569,7 +569,7 @@ func TestEffectiveSelectedPanelMaxRowsUsesConfigDefault(t *testing.T) {
 func TestSplitJobsViewSideKeepsQueueInPrimary(t *testing.T) {
 	primary := Rect{X: 0, Y: 1, Width: 50, Height: 28}
 	secondary := Rect{X: 50, Y: 1, Width: 50, Height: 28}
-	r := SplitJobsView(primary, secondary, false, false, 10)
+	r := SplitJobsView(primary, secondary, false, false, 10, 0)
 	_, detail, ops := SplitJobsSecondaryPanels(secondary, false, 10)
 	if r.List != primary || r.Detail != detail || r.Operations != ops {
 		t.Fatalf("side layout = %+v, want list %+v detail %+v ops %+v", r, primary, detail, ops)
@@ -579,7 +579,7 @@ func TestSplitJobsViewSideKeepsQueueInPrimary(t *testing.T) {
 func TestSplitJobsViewBottomSpansFullWidth(t *testing.T) {
 	primary := Rect{X: 0, Y: 1, Width: 40, Height: 28}
 	secondary := Rect{X: 40, Y: 1, Width: 60, Height: 28}
-	r := SplitJobsView(primary, secondary, true, false, 15)
+	r := SplitJobsView(primary, secondary, true, false, 15, 0)
 	bandH := 15 + jobsDetailChromeRows
 	if r.List != (Rect{X: 0, Y: 1, Width: 40, Height: bandH}) {
 		t.Fatalf("list = %+v", r.List)
@@ -598,7 +598,7 @@ func TestSplitJobsViewBottomSpansFullWidth(t *testing.T) {
 func TestSplitJobsViewBottomKeepsMinimumBand(t *testing.T) {
 	primary := Rect{X: 0, Y: 0, Width: 40, Height: 40}
 	secondary := Rect{X: 40, Y: 0, Width: 60, Height: 40}
-	r := SplitJobsView(primary, secondary, true, false, 3)
+	r := SplitJobsView(primary, secondary, true, false, 3, 0)
 	if r.List.Height != jobsOpsBottomMinBandH || r.Detail.Height != jobsOpsBottomMinBandH || r.Operations.Y != jobsOpsBottomMinBandH {
 		t.Fatalf("short details layout = %+v, want %d-row band", r, jobsOpsBottomMinBandH)
 	}
@@ -607,7 +607,7 @@ func TestSplitJobsViewBottomKeepsMinimumBand(t *testing.T) {
 func TestSplitJobsViewBottomStacksConflictAboveDetail(t *testing.T) {
 	primary := Rect{X: 0, Y: 0, Width: 50, Height: 40}
 	secondary := Rect{X: 50, Y: 0, Width: 50, Height: 40}
-	r := SplitJobsView(primary, secondary, true, true, 8)
+	r := SplitJobsView(primary, secondary, true, true, 8, 0)
 	if r.Conflict != (Rect{X: 50, Y: 0, Width: 50, Height: jobsConflictPanelMinFrameH}) {
 		t.Fatalf("conflict = %+v", r.Conflict)
 	}
@@ -622,7 +622,7 @@ func TestSplitJobsViewBottomStacksConflictAboveDetail(t *testing.T) {
 func TestSplitJobsViewBottomReservesOperationsMinimum(t *testing.T) {
 	primary := Rect{X: 0, Y: 0, Width: 50, Height: 14}
 	secondary := Rect{X: 50, Y: 0, Width: 50, Height: 14}
-	r := SplitJobsView(primary, secondary, true, false, 100)
+	r := SplitJobsView(primary, secondary, true, false, 100, 0)
 	if r.Operations.Height != jobsSubpanelMinFrameH || r.Operations.Width != 100 {
 		t.Fatalf("operations = %+v, want full width minimum frame", r.Operations)
 	}
@@ -631,7 +631,7 @@ func TestSplitJobsViewBottomReservesOperationsMinimum(t *testing.T) {
 func TestSplitJobsViewBottomFallsBackToSideWhenTooShort(t *testing.T) {
 	primary := Rect{X: 0, Y: 0, Width: 50, Height: 20}
 	secondary := Rect{X: 50, Y: 0, Width: 50, Height: 20}
-	r := SplitJobsView(primary, secondary, true, true, 4)
+	r := SplitJobsView(primary, secondary, true, true, 4, 0)
 	if r.List != primary {
 		t.Fatalf("list = %+v, want side layout fallback", r.List)
 	}
@@ -640,8 +640,39 @@ func TestSplitJobsViewBottomFallsBackToSideWhenTooShort(t *testing.T) {
 func TestSplitJobsViewBottomHalvesStackedColumns(t *testing.T) {
 	primary := Rect{X: 0, Y: 0, Width: 100, Height: 15}
 	secondary := Rect{X: 0, Y: 15, Width: 100, Height: 15}
-	r := SplitJobsView(primary, secondary, true, false, 6)
+	r := SplitJobsView(primary, secondary, true, false, 6, 0)
 	if r.List.Width != 50 || r.Detail.X != 50 || r.Detail.Width != 50 || r.Operations.Width != 100 {
 		t.Fatalf("stacked bottom layout = %+v", r)
+	}
+}
+
+func TestSplitJobsViewMessagesSideBetweenDetailAndOperations(t *testing.T) {
+	primary := Rect{X: 0, Y: 1, Width: 50, Height: 40}
+	secondary := Rect{X: 50, Y: 1, Width: 50, Height: 40}
+	base := SplitJobsView(primary, secondary, false, false, 10, 0)
+	if base.Messages.Height != 0 {
+		t.Fatalf("no warnings: messages = %+v, want hidden", base.Messages)
+	}
+	r := SplitJobsView(primary, secondary, false, false, 10, 80)
+	if r.Messages.Height != jobsMessagesMaxFrameH || r.Messages.Y != r.Detail.Y+r.Detail.Height {
+		t.Fatalf("messages = %+v, want capped frame under detail %+v", r.Messages, r.Detail)
+	}
+	if r.Operations.Y != r.Messages.Y+r.Messages.Height || r.Operations.Height != base.Operations.Height-jobsMessagesMaxFrameH {
+		t.Fatalf("operations = %+v, base %+v", r.Operations, base.Operations)
+	}
+	if few := SplitJobsView(primary, secondary, false, false, 10, 2); few.Messages.Height != 4 {
+		t.Fatalf("two warnings: messages height = %d, want 4", few.Messages.Height)
+	}
+}
+
+func TestSplitJobsViewMessagesBottomInBandRightColumn(t *testing.T) {
+	primary := Rect{X: 0, Y: 1, Width: 40, Height: 40}
+	secondary := Rect{X: 40, Y: 1, Width: 60, Height: 40}
+	r := SplitJobsView(primary, secondary, true, false, 10, 80)
+	if r.Messages.Height != jobsMessagesMaxFrameH || r.Messages.X != r.Detail.X {
+		t.Fatalf("messages = %+v", r.Messages)
+	}
+	if r.Messages.Y != r.Detail.Y+r.Detail.Height || r.Messages.Y+r.Messages.Height != r.Operations.Y {
+		t.Fatalf("messages %+v not between detail %+v and operations %+v", r.Messages, r.Detail, r.Operations)
 	}
 }

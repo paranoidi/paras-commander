@@ -89,6 +89,17 @@ _Avoid_: master/slave, source/target panel
 **Find**:
 Recursive name search under a panel's directory, backed by a background index.
 
+**Index view**:
+A panel showing the fileindex database as a filesystem (`fileindex://` + a host path): entries the index recorded, including files gone from disk; renames and deletes there change only the index.
+_Avoid_: index panel, database view
+
+**Browse with fileindex**:
+A local panel (`State.WithIndex`) whose listing has the index merged in: each row carries an `IndexStatus` shown as an icon in the git strip, and entries only the index knows appear as ghost rows. Contrast with the index view, which replaces the filesystem.
+_Avoid_: index overlay mode
+
+**Ghost row**:
+A row of a browse-with-fileindex panel for an entry recorded in the index but gone from disk. Its path is a `fileindex://` path, so delete removes it from the index; copy, move, view and edit refuse it.
+
 **Remote panel**:
 A panel browsing an `sftp://` location.
 
@@ -119,8 +130,12 @@ _Avoid_: host terminal
 ### Jobs
 
 **Job**:
-A queued background file operation (copy, move, delete, flatten, extract).
-_Avoid_: task, transfer (as a general term)
+A queued background file operation (copy, move, delete, flatten, extract), or a task job.
+_Avoid_: task (for a transfer), transfer (as a general term)
+
+**Task job**:
+A job that runs a built-in feature's own function (`jobs.TypeTask`, e.g. a fileindex scan) instead of a file transfer: progress, cancel and failure like any job, but no pre-scan, conflicts, undo, retry or pause; one task per lease name runs at a time.
+_Avoid_: background task, worker job
 
 **Job source**:
 One top-level path a job was queued with (one per selected entry); a job with several expands into one Queue sub-row per source.

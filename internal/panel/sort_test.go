@@ -187,3 +187,18 @@ func TestListingFullyDiskCached_OnlyDirsNeedTotals(t *testing.T) {
 	}
 	checkNames(t, s.Entries, []string{"lantern.bin", "harbor", "orphan", "meadow"})
 }
+
+func TestHeaderColumnSort(t *testing.T) {
+	s := State{Sort: SortState{Mode: SortExtension, DiskUsageIdleSizeSort: true}}
+	if got := s.HeaderColumnSort(SortName, ""); got.Mode != SortExtension || !got.Reverse {
+		t.Fatalf("name over extension sort = %+v, want extension reversed", got)
+	}
+	got := s.HeaderColumnSort(SortSize, "")
+	if got.Mode != SortSize || got.Reverse || got.DiskUsageIdleSizeSort {
+		t.Fatalf("size click = %+v, want size, not reversed, idle disk sort off", got)
+	}
+	s.Sort = SortState{Mode: SortMeta, MetaColumn: "harbor", Reverse: true}
+	if got := s.HeaderColumnSort(SortMeta, "willow"); got.MetaColumn != "willow" || got.Reverse {
+		t.Fatalf("other meta column = %+v, want willow, not reversed", got)
+	}
+}

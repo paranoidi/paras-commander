@@ -137,9 +137,12 @@ func testAppMinimal(t *testing.T) *App {
 // testOptions returns the Options an app-level test starts from: cwd fixed at dir with the
 // built-in default config. Callers tweak the returned struct before passing it to newTestApp.
 func testOptions(dir string) Options {
+	cfg := config.Default()
+	// Never let a test open the user's real fileindex database; tests that need one set this.
+	cfg.FileIndex.Database = filepath.Join(dir, ".no-fileindex", "index.sqlite")
 	return Options{
 		CWD:    func() (string, error) { return dir, nil },
-		Config: config.Default(),
+		Config: cfg,
 	}
 }
 

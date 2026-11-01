@@ -109,40 +109,11 @@ func (t Theme) JobsOperationOn(result string, surface tcell.Style) tcell.Style {
 	return mergeForegroundOnSurface(t.JobsOperationStyle(result), surface)
 }
 
-// JobsIconStyleOn is JobsIconStyle's foreground and attributes on surface's background.
-func (t Theme) JobsIconStyleOn(status string, surface tcell.Style) tcell.Style {
-	return mergeForegroundOnSurface(t.JobsIconStyle(status), surface)
-}
-
-// JobsIconStyle returns the themed style for the leading icon of a job status in the jobs list.
-func (t Theme) JobsIconStyle(status string) tcell.Style {
-	switch status {
-	case "scanning":
-		return t.JobsIconsScanning
-	case "queued":
-		return t.JobsIconsQueued
-	case "running":
-		return t.JobsIconsRunning
-	case "paused":
-		return t.JobsIconsPaused
-	case "canceled":
-		return t.JobsIconsCanceled
-	case "failed":
-		return t.JobsIconsFailed
-	case "decision":
-		return t.JobsIconsDecision
-	case "completed":
-		return t.JobsIconsCompleted
-	default:
-		return t.JobsRow
-	}
-}
-
 // PanelJobMarkStyle returns the file-panel job mark style: write (green) /
-// read (yellow), red while the matched job waits on a user decision.
+// read (yellow), status.decision while the matched job waits on a user decision.
 func (t Theme) PanelJobMarkStyle(status string, write bool) tcell.Style {
 	if status == "decision" {
-		return t.PanelRowMarkJobDecision
+		return t.StatusDecision
 	}
 	if write {
 		return t.PanelRowMarkJob
@@ -163,16 +134,3 @@ func (t Theme) JobsProgressStyles(status string) (fill, track, labelOnFill, labe
 	}
 }
 
-// JobsStatusStyle returns the themed style for the status column in the jobs list.
-func (t Theme) JobsStatusStyle(status string) tcell.Style {
-	switch status {
-	case "running", "queued", "scanning", "paused", "decision":
-		return t.JobsRunning
-	case "completed":
-		return t.JobsDone
-	case "failed", "canceled":
-		return t.JobsFailed
-	default:
-		return t.JobsRow
-	}
-}

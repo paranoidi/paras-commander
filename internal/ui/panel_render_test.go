@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -85,7 +86,7 @@ func TestPanelVolumeFreeSpaceTitle(t *testing.T) {
 
 func TestPanelListHeaderWidthMatchesFormatEntryLayout(t *testing.T) {
 	rowText := 50
-	hdr := panelListHeader(rowText, panel.State{}, false, false, nil, false, false)
+	hdr, _ := panelListHeader(rowText, panel.State{}, false, false, nil, false, false)
 	nameW := panelListNameWidth(rowText, panel.ListFormatMtime, false, false)
 	wantLen := nameW + panelListReservedAfterName(panel.ListFormatMtime, false)
 	if utf8.RuneCountInString(hdr) != wantLen {
@@ -96,7 +97,7 @@ func TestPanelListHeaderWidthMatchesFormatEntryLayout(t *testing.T) {
 func TestPanelListHeaderIconsLeadingSpaceMatchesNamePrefix(t *testing.T) {
 	const rowText = 50
 	nameW := panelListNameWidth(rowText, panel.ListFormatMtime, false, false)
-	hdr := panelListHeader(rowText, panel.State{}, true, false, nil, false, false)
+	hdr, _ := panelListHeader(rowText, panel.State{}, true, false, nil, false, false)
 	nameField := strings.TrimRight(hdr[:nameW], " ")
 	want := "↓Name"
 	if len(want) > nameW {
@@ -159,10 +160,9 @@ func TestPaintPanelTopTitleRowEndLabelCases(t *testing.T) {
 			for col := 0; col < contentCols; col++ {
 				screen.SetContent(titleX+col, y, '─', nil, chrome.Frame)
 			}
-			paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, y,
-				path, home,
-				panelTitleStyles{Path: chrome.Title, End: chrome.Title, Border: chrome.Frame},
-				tt.endLabel, false)
+			row := newPanelTitleRow(Rect{Width: tt.width, Height: 4}, panel.State{}, theme.Default(), tt.endLabel)
+			paintPanelTopTitleRow(screen, row, y, path, home,
+				panelTitleStyles{Path: chrome.Title, End: chrome.Title, Border: chrome.Frame}, -1)
 			got := tcelltest.TextAt(screen, titleX, y, contentCols)
 			if tt.wantEnd {
 				if !strings.Contains(got, tt.endLabel) {
@@ -179,5 +179,20 @@ func TestPaintPanelTopTitleRowEndLabelCases(t *testing.T) {
 				t.Fatalf("row = %q, want title %q", got, tt.wantTitle)
 			}
 		})
+	}
+}
+
+func TestPanelListHeaderColumnsCoverTitles(t *testing.T) {
+	layouts := []MetaColumnLayout{{EntryName: "lantern", Title: "Lantern", Width: 9}}
+	st := panel.State{Sort: panel.SortState{Mode: panel.SortMeta, MetaColumn: "lantern"}}
+	hdr, cols := panelListHeader(60, st, false, true, layouts, false, false)
+	cells := headerCells(hdr)
+	var got []string
+	for _, c := range cols {
+		got = append(got, fmt.Sprintf("%s=%v/%s", string(cells[c.X:c.X+c.Width]), c.Mode, c.MetaColumn))
+	}
+	want := []string{"Name=Name/", "↓Lantern=Meta/lantern", "Size=Size/", "Modified=Modified/"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("columns = %v, want %v (header %q)", got, want, hdr)
 	}
 }

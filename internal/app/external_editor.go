@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/editor"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -112,8 +114,13 @@ func (a *App) resolveLocalEditFilePath() (string, error) {
 		return "", fmt.Errorf("edit is only available in the file browser")
 	}
 	p := a.activePanel()
-	if p.Path.IsRemote() {
-		return "", fmt.Errorf("edit is not available on remote panels")
+	if _, ok := p.Path.HostPath(); !ok {
+		return "", errors.New(pathloc.Unavailable("edit", p.Path))
+	}
+	if entry, ok := p.CurrentEntry(); ok {
+		if msg := panel.GhostRefusal(p.GhostSources(entry.Path)); msg != "" {
+			return "", errors.New(msg)
+		}
 	}
 	path, mode := a.editTargetFilePath(p)
 	switch mode {
@@ -145,7 +152,7 @@ func (a *App) editTargetFilePath(p *panel.State) (path string, mode editTargetMo
 		if !ok {
 			return "", editTargetNone
 		}
-		return classifyEditPath(filepath.Clean(selPath))
+		return classifyEditPath(cleanHostPath(selPath))
 	}
 	entry, ok := p.CurrentEntry()
 	if !ok {
@@ -154,7 +161,16 @@ func (a *App) editTargetFilePath(p *panel.State) (path string, mode editTargetMo
 	if entry.Type == localfs.EntryDirectory {
 		return "", editTargetDir
 	}
-	return classifyEditPath(filepath.Clean(entry.Path))
+	return classifyEditPath(cleanHostPath(entry.Path))
+}
+
+// cleanHostPath is the cleaned real local path of a panel entry path, "" when it has none.
+func cleanHostPath(raw string) string {
+	host, ok := hostPathOf(raw)
+	if !ok {
+		return ""
+	}
+	return filepath.Clean(host)
 }
 
 func classifyEditPath(path string) (string, editTargetMode) {

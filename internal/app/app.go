@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 
@@ -20,6 +21,7 @@ import (
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
+	fileindexctrl "github.com/paranoidi/paras-commander/internal/apphandler/fileindex"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
@@ -27,6 +29,7 @@ import (
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/foldercolor"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/file"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
@@ -44,6 +47,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pools"
 	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/subshell"
@@ -200,10 +204,14 @@ type App struct {
 	// compareSelectionOpen opens Compare once the compare selection dialog is answered Drop or Stash.
 	compareSelectionOpen func()
 	// jobState manages background job queue and worker lifecycle.
-	jobState       *jobs.State
-	jobsCtrl       *jobsctrl.Handler
-	findCtrl       *findctrl.Handler
-	metaCtrl       *metactrl.Handler
+	jobState      *jobs.State
+	jobsCtrl      *jobsctrl.Handler
+	findCtrl      *findctrl.Handler
+	metaCtrl      *metactrl.Handler
+	fileindexCtrl *fileindexctrl.Handler
+	// fileIndex is the shared fileindex database handle behind fileindex://, the tags column
+	// and the scan/prune tasks (internal/fileindex).
+	fileIndex      *fileindex.Index
 	commandsCtrl   *commandsctrl.Handler
 	compareCtrl    *comparectrl.Handler
 	dedupCtrl      *dedupctrl.Handler
@@ -222,6 +230,8 @@ type App struct {
 	// selection-derived input is unchanged.
 	selectionSizeScanGen  [2]uint64
 	selectionSizeScanPath [2]string
+	// explicitDrift is the per-panel record of explicit index drift requests and results.
+	explicitDrift [2]explicitDriftNames
 	// selectionSizeScanDebounce defers the per-directory mount-exclusion stat check (which
 	// selected directories still need a background disk-usage scan) to a background goroutine
 	// instead of running it inline in reconcileSelectionSizeScans on the main goroutine.
@@ -338,6 +348,7 @@ type App struct {
 	// ui.QuickViewOverlayPanel / ui.DedupBrowsePanel).
 	panelAsyncLoadGen [ui.PanelIDCount]atomic.Uint64
 	gitStatusLoadGen  [ui.PanelIDCount]atomic.Uint64
+	indexDrift        indexDriftState
 	// dedupBrowseOn / dedupBrowseFP track the dedup Dirs-view browse panel (dedup_browse.go).
 	dedupBrowseOn bool
 	dedupBrowseFP [2]string
@@ -406,6 +417,8 @@ type LaunchConfig struct {
 	QuickPreview bool
 	// Carousel starts the primary panel directly in carousel view (pc --carousel).
 	Carousel bool
+	// CwdFile receives the active panel's directory on quit (pc --cwd-file). See writeCwdFile.
+	CwdFile string
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -501,7 +514,13 @@ func Run(cfg LaunchConfig) (err error) {
 	// Registered after screen.Fini's defer so the shell child dies before tcell releases the TTY.
 	defer app.closeSubshell()
 	defer app.ueberzug.close()
-	return app.Run()
+	if err := app.Run(); err != nil {
+		return err
+	}
+	if cfg.CwdFile != "" {
+		return app.writeCwdFile(cfg.CwdFile)
+	}
+	return nil
 }
 
 // New creates an App. The cwd function keeps startup state easy to test.
@@ -528,6 +547,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, err
 	}
 	styles.UseNerdfontIcons = cfg.UI.UseNerdfontIcons
+	syncPathDisplayPrefixes(styles)
 	path, err := cwd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
@@ -675,7 +695,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	jobState.SetSourceSizeSink(duEngine.SetSize)
 	jobState.StartWorker(app.jobStopCh)
 	suppressHeavyPathProbes := func(loc pathloc.Path) bool {
-		if loc.IsRemote() {
+		if !loc.IsLocal() {
 			return true
 		}
 		host, err := loc.FilePath()
@@ -706,12 +726,20 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Keys:           keys.Global,
 		KeysFindDialog: keys.FindDialog,
 	})
+	app.fileIndex = fileindex.New(cfg.FileIndex)
+	if err := fileindex.Register(app.fileIndex); err != nil {
+		app.stopWorker()
+		return nil, fmt.Errorf("register fileindex backend: %w", err)
+	}
+	// fileindex:// directory sizes come from the index, not a disk walk.
+	app.disk.engine.SetSubtreeSizer(pathloc.FileIndexPrefix, app.fileIndex.SubtreeSize)
 	app.metaCtrl = metactrl.New(metactrl.Deps{
 		Host:      metaHost{appShellHost: appShellHost{app: app}},
 		Screen:    screen,
 		Model:     &app.model,
 		Config:    cfg,
 		ConfigDir: resolvedPaths.ConfigDir,
+		Providers: app.fileIndex.Providers(),
 	})
 	app.commandsCtrl = commandsctrl.New(commandsctrl.Deps{
 		Host:                    commandsHost{appShellHost: appShellHost{app: app}},
@@ -743,6 +771,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Config:     cfg,
 		Gitignore:  giCache,
 		DiskIgnore: duIgnorer,
+		FileIndex:  app.fileIndex,
 	})
 	app.previewCtrl = previewctrl.New(previewctrl.Deps{
 		Host:            previewHost{appShellHost: appShellHost{app: app}},
@@ -777,6 +806,17 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		PromptElevate:        app.promptElevate,
 		Getenv:               func(k string) string { return app.getenv(k) },
 	})
+	app.fileindexCtrl = fileindexctrl.New(fileindexctrl.Deps{
+		Host:   fileindexHost{appShellHost: appShellHost{app: app}},
+		Screen: screen,
+		Model:  &app.model,
+		Index:  app.fileIndex,
+		Config: cfg,
+
+		Keys:            keys.Global,
+		KeysFindDialog:  keys.FindDialog,
+		KeysDialogInput: keys.DialogInput,
+	})
 	app.pinCtrl = pinctrl.New(pinctrl.Deps{
 		Host:            pinHost{appShellHost: appShellHost{app: app}},
 		Screen:          screen,
@@ -794,6 +834,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	app.wireAsyncPanelLoaders()
 	app.wireTreeChildLoaders()
 	app.wireGitStatusLoaders()
+	app.wireIndexOverlay()
 	app.model.Primary.RescheduleGitStatusIfNeeded()
 	app.model.Secondary.RescheduleGitStatusIfNeeded()
 	app.jobsCtrl.SyncJobPathMarks()
@@ -1222,6 +1263,13 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		a.render()
 		return eventOutcome{didRender: true}, true
 	}
+	if out, ok := a.handleIndexOverlayPayload(data); ok {
+		return out, true
+	}
+	if a.fileindexCtrl.HandleWake(data) {
+		a.render()
+		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
+	}
 	if p, ok := data.(folderColorsPayload); ok {
 		a.setErrorMessage("Folder color failed", p.err)
 		a.render()
@@ -1334,6 +1382,17 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 func (a *App) setStyles(t theme.Theme) {
 	t.UseNerdfontIcons = a.config.UI.UseNerdfontIcons
 	a.styles = t
+	syncPathDisplayPrefixes(t)
+}
+
+// syncPathDisplayPrefixes shows fileindex:// paths as the theme's fileindex icon + " " when
+// Nerd Font icons are on (primitive.PathWithHomeTilde), else in full.
+func syncPathDisplayPrefixes(t theme.Theme) {
+	m := map[string]string{}
+	if icon := t.IconFileIndex(); icon != "" {
+		m[pathloc.FileIndexPrefix] = icon + " "
+	}
+	primitive.SetPathDisplayPrefixes(m)
 }
 
 // Run starts the event loop.

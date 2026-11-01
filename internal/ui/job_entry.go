@@ -9,8 +9,10 @@ import (
 
 // JobEntry is a renderable job summary for the jobs view.
 type JobEntry struct {
-	ID          string
-	Type        string
+	ID   string
+	Type string
+	// Title mirrors jobs.Job.Title (a task's title; empty for transfers).
+	Title       string
 	Status      string
 	Sources     []string
 	Destination string
@@ -19,6 +21,11 @@ type JobEntry struct {
 	CurrentPath string
 	// CurrentDestPath mirrors jobs.Job.CurrentDestPath.
 	CurrentDestPath string
+	// Workers mirrors jobs.Job.Workers (a task's parallel workers; 0 = not shown).
+	Workers int
+	// Steps and Step mirror jobs.Task.Steps and jobs.Job.Step (nil Steps = no step list).
+	Steps []string
+	Step  int
 	// VerifyDone and VerifyTotal mirror jobs.Job: a running conflict content verification of
 	// CurrentPath (VerifyTotal 0 = none).
 	VerifyDone, VerifyTotal int64

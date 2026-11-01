@@ -44,7 +44,7 @@ Bindings are grouped by context. While a view or dialog has focus, its table is 
 | `[terminal]` | Embedded terminal panel |
 | `[dialog.input]` | Text inputs and the OK/Cancel chords of every dialog |
 | `[dialog.rename]`, `[dialog.mass_rename]`, `[dialog.mkdir]`, `[dialog.bookmark]`, `[dialog.find]`, `[dialog.history]`, `[dialog.pin]`, `[dialog.flatten]`, `[dialog.transfer]`, `[dialog.run_for_each]`, `[dialog.command_output]`, `[dialog.help]`, `[dialog.user_menu]` | The matching dialog |
-| `[leader_key]`, `[copy_menu]`, `[preview_menu]` | Single-letter keys inside the `:`, `"` and preview menus ([Menus](menus.md)) |
+| `[leader_key]`, `[copy_menu]`, `[preview_menu]`, `[fileindex_menu]` | Single-letter keys inside the `:`, `"`, preview and `<` (fileindex) menus ([Menus](menus.md)) |
 
 `[jobs]` and `[dialog.input]` here are unrelated to the same-named tables in `config.toml`. Shortcut tables in `config.toml` are rejected.
 
@@ -56,7 +56,7 @@ Problems abort startup with a message naming the problem:
 - one chord bound to two actions within a table, or listed twice for one action
 - an unknown key name, an empty key, or a multi-stroke value
 - values that are not lists of strings
-- `[leader_key]`, `[copy_menu]` and `[preview_menu]` values that are not valid letters, or are duplicated within one menu
+- `[leader_key]`, `[copy_menu]`, `[preview_menu]` and `[fileindex_menu]` values that are not valid letters, or are duplicated within one menu
 
 Fix the file or move it aside and run `pc` again.
 

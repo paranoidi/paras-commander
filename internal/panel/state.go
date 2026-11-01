@@ -251,6 +251,18 @@ type State struct {
 	OnAsyncLoadPending func()
 	// ScheduleGitStatus runs git status for the current listing off the UI thread (set by app).
 	ScheduleGitStatus GitStatusScheduler
+	// WithIndex is "browse with fileindex": the local listing carries the fileindex overlay
+	// (IndexStatus per row, ghost rows) and the git strip shows index states instead of git
+	// status. It persists across navigation and clears when the listing is not local.
+	WithIndex bool
+	// IndexOverlay merges the index into a WithIndex listing during the fetch (set by app).
+	IndexOverlay IndexOverlayFunc
+	// ScheduleIndexDrift runs a directory-drift pass (set by app): the automatic one after a WithIndex
+	// listing and the explicit one from RequestIndexDrift.
+	ScheduleIndexDrift IndexDriftScheduler
+	// IndexAutoDriftDepth is the depth of the automatic drift pass after a WithIndex listing:
+	// levels to check, 0 unlimited, negative off (set by app from [fileindex].folder_scan_max_depth).
+	IndexAutoDriftDepth int
 	// ScheduleTreeChildLoad runs a tree-mode directory's first-expand child listing off the UI
 	// thread (set by app; nil = synchronous fallback, see setTreeNodeExpanded).
 	ScheduleTreeChildLoad TreeChildLoadScheduler
@@ -895,7 +907,7 @@ func (s *State) historyNavigate(viewportRows int, step int) (bool, string, error
 		if target == "" {
 			continue
 		}
-		if loc, err := pathloc.Parse(target); err == nil && !loc.IsRemote() && !DirectoryExists(loc) {
+		if loc, err := pathloc.Parse(target); err == nil && loc.IsLocal() && !DirectoryExists(loc) {
 			skipped = append(skipped, target)
 			continue
 		}
@@ -1567,7 +1579,8 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 	s.entriesShowHidden = s.ShowHidden
 	s.listingApplied = true
 	s.Path = listingLoc
-	if listingLoc.IsRemote() {
+	if !listingLoc.IsLocal() {
+		s.WithIndex = false
 		s.GitignoreActive = false
 		s.GitColumnActive = false
 		s.GitPending = false
@@ -1687,6 +1700,7 @@ func (s *State) ApplyListingPrefetched(listingLoc pathloc.Path, backendEntries [
 			s.HistoryIndex = 0
 		}
 	}
+	s.scheduleIndexDrift()
 	if s.OnDirectoryChange != nil {
 		s.OnDirectoryChange()
 	}
@@ -1700,11 +1714,17 @@ func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entr
 	// eventual arrival will be rejected by applyGitStatusLoad's isWithinDir/GitColumnActive checks
 	// anyway, so stop waiting on them rather than leaving the counter stuck non-zero forever.
 	s.gitStatusChildPending = 0
-	if listingLoc.IsRemote() {
+	if !listingLoc.IsLocal() {
 		return
 	}
 	host, err := listingLoc.FilePath()
 	if err != nil {
+		s.GitColumnActive = false
+		s.GitPending = false
+		s.GitByPath = nil
+		return
+	}
+	if s.WithIndex { // the strip shows index states, so no git query
 		s.GitColumnActive = false
 		s.GitPending = false
 		s.GitByPath = nil
@@ -1751,7 +1771,7 @@ func (s *State) RescheduleGitStatusIfNeeded() {
 	if !s.GitColumnActive || s.GitPending || s.GitByPath != nil || s.ScheduleGitStatus == nil {
 		return
 	}
-	if s.Path.IsRemote() {
+	if !s.Path.IsLocal() {
 		return
 	}
 	host, err := s.Path.FilePath()

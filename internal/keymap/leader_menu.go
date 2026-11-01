@@ -91,6 +91,7 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileExtract,
 		ActionFileFlatten,
 		ActionAppUserMenu,
+		ActionFileIndexMenu,
 	},
 	LeaderMenuGroupNavigation: {
 		ActionPanelJumpDialog,
@@ -292,6 +293,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 			LeaderMenuGroupDisplay: {ActionDedupOpen, ActionJobsOpen, ActionCommandsOpen},
 			LeaderMenuGroupMessages: {
 				ActionMessagesClose,
+				ActionMessagesCopy,
 				ActionMessagesClear,
 			},
 		},
@@ -323,17 +325,12 @@ func DefaultLeaderKeys() map[string]string {
 	return out
 }
 
-// mergeLeaderKeys overlays user letters on defaults.
-func mergeLeaderKeys(defaults, user map[string]string) map[string]string {
-	return mergeMenuKeys(defaults, user)
-}
-
 func validLeaderKeyRune(r rune) bool {
-	return unicode.IsLetter(r) || r == '?' || r == ',' || r == '.'
+	return unicode.IsLetter(r) || r == '?' || r == ',' || r == '.' || r == '<'
 }
 
 func validateLeaderKeys(keys map[string]string) error {
-	return validateMenuKeys("leader_key", keys, validLeaderKeyRune, "a letter, ?, comma, or period")
+	return validateMenuKeys("leader_key", keys, validLeaderKeyRune, "a letter, ?, comma, period or <")
 }
 
 func leaderMenuEntryForAction(keys map[string]string, actionID string) (LeaderMenuEntry, bool) {

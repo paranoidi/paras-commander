@@ -20,6 +20,7 @@ func testMetaDialogApp(t *testing.T, dir, cfgDir string) *App {
 	th, _ := loadTestTheme(t)
 	cfg := config.Default()
 	cfg.Meta = config.MetaConfig{LocalNames: []string{"meta.toml"}}
+	cfg.FileIndex.Database = filepath.Join(dir, ".no-fileindex", "index.sqlite")
 	screen := newScreen(t, 80, 24)
 	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
@@ -128,8 +129,9 @@ file = "wc -l"
 
 	app := testMetaDialogApp(t, dir, cfgDir)
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
-	if len(app.model.MetaDialog.Entries) != 1 {
-		t.Fatalf("entries len = %d, want lines", len(app.model.MetaDialog.Entries))
+	// No fileindex database, so the built-in tags column is not listed.
+	if len(app.model.MetaDialog.Entries) != 1 || app.model.MetaDialog.Entries[0].Name != "lines" {
+		t.Fatalf("entries = %+v, want only lines", app.model.MetaDialog.Entries)
 	}
 
 	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
@@ -252,7 +254,7 @@ command = "true"
 	}
 }
 
-func TestUserMenuDialogF9ClosesOnInvalidFile(t *testing.T) {
+func TestUserMenuDialogF9DisablesOnInvalidFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -277,11 +279,35 @@ command = "true"
 
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
-	if app.model.LeaderMenu.Open {
-		t.Fatal("user menu dialog should close after invalid menu.toml")
-	}
+	assertUserMenuDisabled(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
 		t.Fatalf("MessageUrgency = %v, want critical", app.model.MessageUrgency)
+	}
+}
+
+func TestUserMenuDisabledF9RecoversAfterFix(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(menuPath, []byte("shell_patterns = []\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	assertUserMenuDisabled(t, app)
+
+	app.runExternalEditor = func(_ context.Context, path string, _ bool) error {
+		return os.WriteFile(path, []byte("[lantern]\nkey = \"l\"\ntitle = \"Lantern\"\ncommand = \"true\"\n"), 0o644)
+	}
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+
+	st := app.model.LeaderMenu
+	if !st.Open || len(st.Items) != 1 || st.Items[0].Disabled || st.Items[0].Label != "Lantern" {
+		t.Fatalf("LeaderMenu = %+v, want enabled Lantern row", st)
 	}
 }
 
@@ -314,7 +340,8 @@ file = "wc -l"
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open")
 	}
-	if len(app.model.MetaDialog.Entries) != 0 {
-		t.Fatalf("entries = %+v, want empty after invalid meta.toml", app.model.MetaDialog.Entries)
+	// No fileindex database: the built-in tags column is not offered either.
+	if e := app.model.MetaDialog.Entries; len(e) != 0 {
+		t.Fatalf("entries = %+v, want none after invalid meta.toml", e)
 	}
 }

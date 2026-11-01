@@ -44,7 +44,7 @@ func TestParseSFTP(t *testing.T) {
 		if p.String() != tc.want {
 			t.Fatalf("%q got %q want %q", tc.in, p.String(), tc.want)
 		}
-		if !p.IsRemote() {
+		if p.IsLocal() {
 			t.Fatalf("%q should be remote", tc.in)
 		}
 	}
@@ -212,5 +212,20 @@ func TestEqual(t *testing.T) {
 	b := FileMust("/tmp")
 	if !a.Equal(b) {
 		t.Fatal("expected equal")
+	}
+}
+
+func TestUnavailable(t *testing.T) {
+	for _, tc := range []struct{ loc, want string }{
+		{"sftp://host/x", "Run is not available on SFTP panels"},
+		{FileIndexPrefix + "/x", "Run is not available on fileindex panels"},
+	} {
+		p, err := Parse(tc.loc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := Unavailable("Run", p); got != tc.want {
+			t.Errorf("%s: got %q want %q", tc.loc, got, tc.want)
+		}
 	}
 }

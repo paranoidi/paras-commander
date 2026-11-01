@@ -18,17 +18,23 @@ type ListingRefreshSnapshot struct {
 	Gitignore               *gitignore.Cache
 	ListTimeout             time.Duration
 	ClimbToExistingAncestor bool
+	// IndexOverlay, when set, merges the fileindex into a local listing (State.WithIndex).
+	IndexOverlay IndexOverlayFunc
 }
 
 // ListingRefreshSnapshot builds a snapshot for loc using the panel's current visibility options.
 func (s *State) ListingRefreshSnapshot(loc pathloc.Path, listTimeout time.Duration) ListingRefreshSnapshot {
-	return ListingRefreshSnapshot{
+	snap := ListingRefreshSnapshot{
 		Loc:                     loc,
 		ShowHidden:              s.ShowHidden,
 		Gitignore:               s.Gitignore,
 		ListTimeout:             listTimeout,
 		ClimbToExistingAncestor: s.climbToExistingAncestor,
 	}
+	if s.WithIndex {
+		snap.IndexOverlay = s.IndexOverlay
+	}
+	return snap
 }
 
 // FetchListing reads a directory listing using snap (safe to call from a worker goroutine).
@@ -55,7 +61,7 @@ func FetchListing(ctx context.Context, snap ListingRefreshSnapshot) ([]fsbackend
 }
 
 func fetchListingAt(ctx context.Context, snap ListingRefreshSnapshot, loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
-	if loc.IsRemote() {
+	if !loc.IsLocal() {
 		be, berr := fsbackend.Default().Backend(loc)
 		if berr != nil {
 			return nil, pathloc.Path{}, false, false, berr
@@ -93,6 +99,12 @@ func fetchListingAt(ctx context.Context, snap ListingRefreshSnapshot, loc pathlo
 	listingLoc, err := pathloc.File(host)
 	if err != nil {
 		return nil, pathloc.Path{}, false, false, err
+	}
+	if snap.IndexOverlay != nil {
+		// A failed overlay degrades to the plain listing.
+		if merged, oerr := snap.IndexOverlay(ctx, listingLoc, entries); oerr == nil {
+			entries = fsbackend.FilterHidden(merged, snap.ShowHidden)
+		}
 	}
 	return entries, listingLoc, gitMatcher != nil, dotfilesHiddenActive, nil
 }

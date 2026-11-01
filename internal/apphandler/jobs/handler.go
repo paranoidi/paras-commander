@@ -9,6 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -63,6 +64,7 @@ func (h *Handler) focusJobsViewOnFirstPendingBlocker() {
 		h.model.JobsView.FocusPane = 1
 		h.model.JobsView.ConflictButtonFocus = 0
 		h.model.JobsView.DetailScroll = 0
+		h.model.JobsView.MessagesScroll, h.model.JobsView.MessagesSelected = 0, 0
 		h.model.JobsView.OpsScroll = 0
 	}
 	h.ensureJobsViewSelectionVisible()
@@ -294,6 +296,11 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		}
 		h.state.SetTransferRateLimit(0)
 		return true
+	case keymap.ActionJobsCopyMessage:
+		if h.model.ViewMode == ui.ViewJobs {
+			h.copySelectedMessage()
+		}
+		return true
 	case keymap.ActionJobsToggleOperationsLayout:
 		if h.model.ViewMode == ui.ViewJobs {
 			h.toggleOperationsLayout()
@@ -487,6 +494,8 @@ func (h *Handler) handleJobsPaneScrollKey(event *tcell.EventKey, fp int) {
 			return
 		}
 		scrollPane(event.Key(), &h.model.JobsView.DetailScroll, max(0, h.jobsDetailLineCountForSelection()-contentH))
+	case ui.JobsPaneMessages:
+		h.moveMessagesCursor(event.Key(), len(h.selectedJobEntry().Warnings), contentH)
 	case ui.JobsPaneOperations:
 		h.scrollOperations(event.Key(), contentH)
 	}
@@ -507,6 +516,49 @@ func (h *Handler) handleJobsDetailPaneKey(event *tcell.EventKey) bool {
 		return false
 	}
 	return true
+}
+
+// moveMessagesCursor applies Up/Down, PgUp/PgDn and Home/End to the Messages pane cursor
+// (clamped to [0, n-1]) and scrolls so it stays within the contentH visible rows.
+func (h *Handler) moveMessagesCursor(key tcell.Key, n, contentH int) {
+	st := &h.model.JobsView
+	sel := st.MessagesSelected
+	switch key {
+	case tcell.KeyHome:
+		sel = 0
+	case tcell.KeyEnd:
+		sel = n - 1
+	case tcell.KeyUp:
+		sel--
+	case tcell.KeyDown:
+		sel++
+	case tcell.KeyPgUp:
+		sel -= 5
+	case tcell.KeyPgDn:
+		sel += 5
+	}
+	st.MessagesSelected = max(0, min(sel, n-1))
+	if st.MessagesSelected < st.MessagesScroll {
+		st.MessagesScroll = st.MessagesSelected
+	} else if contentH > 0 && st.MessagesSelected >= st.MessagesScroll+contentH {
+		st.MessagesScroll = st.MessagesSelected - contentH + 1
+	}
+}
+
+// messagesFocused reports whether the Messages pane has focus.
+func (h *Handler) messagesFocused() bool {
+	order, _ := h.jobsPaneLayout()
+	fp := h.model.JobsView.FocusPane
+	return fp >= 0 && fp < len(order) && order[fp] == ui.JobsPaneMessages
+}
+
+// copySelectedMessage copies the Messages pane's selected warning (full text) to the clipboard.
+func (h *Handler) copySelectedMessage() {
+	w := h.selectedJobEntry().Warnings
+	if !h.messagesFocused() || h.model.JobsView.MessagesSelected >= len(w) {
+		return
+	}
+	h.host.CopyToClipboard(w[h.model.JobsView.MessagesSelected], "Copied message to clipboard")
 }
 
 // scrollPane applies Up/Down (one row), PgUp/PgDn (five rows) and Home/End (top/bottom) to
@@ -569,6 +621,7 @@ func (h *Handler) setSelection(rows []ui.JobsListRow, r ui.JobsListRow) {
 	st.SelectRow(r)
 	if beforeSel != st.Selected {
 		st.DetailScroll = 0
+		st.MessagesScroll, st.MessagesSelected = 0, 0
 		st.ConflictButtonFocus = 0
 	}
 	if beforeSel != st.Selected || beforeSub != st.SelectedSub {
@@ -672,14 +725,15 @@ func (h *Handler) jobsPaneLayout() ([]ui.JobsPane, map[ui.JobsPane]ui.Rect) {
 	width, height := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(width, height)
 	if layout.TooSmall {
-		return ui.JobsPaneOrder(false, false), nil
+		return ui.JobsPaneOrder(false, false, false), nil
 	}
 	r := h.jobsViewRects(layout)
 	rects := map[ui.JobsPane]ui.Rect{
 		ui.JobsPaneDetail:     r.Detail,
+		ui.JobsPaneMessages:   r.Messages,
 		ui.JobsPaneOperations: r.Operations,
 	}
-	return ui.JobsPaneOrder(ui.JobEntryShowsConflictPanel(h.selectedJobEntry()), r.Operations.Height > 0), rects
+	return ui.JobsPaneOrder(ui.JobEntryShowsConflictPanel(h.selectedJobEntry()), r.Messages.Height > 0, r.Operations.Height > 0), rects
 }
 
 // jobsViewRects returns the jobs view pane frames for the selected job (ui.JobsViewLayout).
@@ -811,6 +865,10 @@ func (h *Handler) pauseSelectedQueuedJob() {
 		h.host.SetTransientMessage("Only queued jobs can be paused", ui.MessageUrgencyWarn)
 		return
 	}
+	if !jobs.Type(h.model.JobsList[sel].Type).Pausable() {
+		h.host.SetTransientMessage("Task jobs cannot be paused", ui.MessageUrgencyWarn)
+		return
+	}
 	id := h.model.JobsList[sel].ID
 	if !h.state.PauseQueuedJob(id) {
 		h.host.SetTransientMessage("Could not pause job", ui.MessageUrgencyWarn)
@@ -840,6 +898,10 @@ func (h *Handler) resumeOrRetrySelectedJob() {
 			return
 		}
 	case jobs.StatusFailed, jobs.StatusCanceled:
+		if !jobs.Type(h.model.JobsList[sel].Type).Retryable() {
+			h.host.SetTransientMessage("This job type cannot be retried", ui.MessageUrgencyWarn)
+			return
+		}
 		if !h.state.RetryJob(id) {
 			h.host.SetTransientMessage("Could not retry job", ui.MessageUrgencyWarn)
 			return
@@ -1259,6 +1321,11 @@ func (h *Handler) commitJob(job *jobs.Job) {
 	h.SyncJobPathMarks()
 }
 
+// AddTaskJob queues a task job working on sources (see jobs.Task).
+func (h *Handler) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
+	h.commitJob(jobs.NewTaskJob(task, sources))
+}
+
 type transferEnqueueOpts struct {
 	kind                   dialog.TransferKind
 	jobType                jobs.Type
@@ -1337,6 +1404,10 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
+	if msg := indexTransferRefusal(req.Type, srcLocs, destLoc); msg != "" {
+		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
+		return
+	}
 	job := &jobs.Job{
 		ID:                  jobs.NewJobID(),
 		Type:                req.Type,
@@ -1360,6 +1431,24 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 	h.commitJob(job)
 }
 
+// indexTransferRefusal explains why a transfer touching an index-only location (fsbackend.IndexOnly)
+// cannot be queued, or "": the index is read-only for copies into it, and a move across its
+// boundary would copy the file and then remove only its index entry. Copying out of it and
+// moving inside it are fine.
+func indexTransferRefusal(t jobs.Type, sources []pathloc.Path, dest pathloc.Path) string {
+	destIndex := fsbackend.Default().IsIndexOnly(dest)
+	for _, src := range sources {
+		srcIndex := fsbackend.Default().IsIndexOnly(src)
+		switch {
+		case destIndex && !srcIndex:
+			return "The fileindex is read-only: files cannot be copied or moved into it"
+		case srcIndex && !destIndex && t != jobs.TypeCopy:
+			return "Moving out of the fileindex is not supported: copy instead"
+		}
+	}
+	return ""
+}
+
 // applySizeEstimate seeds a copy or move job's byte total from what the active panel already
 // knows about its sources (ui.SourceSizeEstimates: listing sizes and the disk-usage cache, no
 // filesystem access). Callers enqueue before clearing the selection so off-listing metadata is
@@ -1380,7 +1469,7 @@ func (h *Handler) applySizeEstimate(job *jobs.Job, sources []string) {
 		}
 		return active.OffListingMetaAt(p)
 	}
-	per, total, complete := ui.SourceSizeEstimates(sources, lookup, active.Path.IsRemote(), h.host.DiskUsagePainter())
+	per, total, complete := ui.SourceSizeEstimates(sources, lookup, !active.Path.HasSubtreeSizes(), h.host.DiskUsagePainter())
 	if total <= 0 || (job.Type == jobs.TypeMove && !complete) {
 		return
 	}

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -244,5 +245,48 @@ func TestDetailLinesShowVerifyProgress(t *testing.T) {
 	lines := detailStaticLines(j, time.Now(), 80, "", false)
 	if !has(lines) || !strings.Contains(strings.Join(lines, "\n"), "(25%)") {
 		t.Fatalf("lines = %q, want a 25%% Verifying line", lines)
+	}
+}
+
+func TestDetailStaticLinesShowsTaskWorkers(t *testing.T) {
+	j := JobEntry{ID: "1", Type: string(jobs.TypeTask), Title: "fileindex scan", Status: "running", Workers: 4}
+	if lines := detailStaticLines(j, time.Now(), 80, "", false); !slices.Contains(lines, "Workers:     4") {
+		t.Fatalf("lines = %q, want a Workers: 4 row", lines)
+	}
+	j.Workers = 0
+	for _, line := range detailStaticLines(j, time.Now(), 80, "", false) {
+		if strings.HasPrefix(line, "Workers:") {
+			t.Fatalf("Workers row shown with no workers reported: %q", line)
+		}
+	}
+}
+
+func TestJobTaskStepStatus(t *testing.T) {
+	for _, tc := range []struct {
+		status string
+		step   int
+		want   [3]string
+	}{
+		{"running", 1, [3]string{"completed", "running", "queued"}},
+		{"completed", 2, [3]string{"completed", "completed", "completed"}},
+		{"canceled", 1, [3]string{"completed", "canceled", "queued"}},
+		{"failed", 0, [3]string{"failed", "queued", "queued"}},
+		{"queued", 0, [3]string{"queued", "queued", "queued"}},
+	} {
+		j := JobEntry{Status: tc.status, Step: tc.step, Steps: []string{"a", "b", "c"}}
+		for i, w := range tc.want {
+			if got := jobTaskStepStatus(j, i); got != w {
+				t.Errorf("%s step %d: status[%d] = %q, want %q", tc.status, tc.step, i, got, w)
+			}
+		}
+	}
+}
+
+func TestDetailStaticLinesOmitWarnings(t *testing.T) {
+	j := JobEntry{ID: "w1", Type: string(jobs.TypeCopy), Warnings: []string{"relinked birch", "relinked maple"}}
+	for _, l := range detailStaticLines(j, time.Now(), 80, "", false) {
+		if strings.Contains(l, "Warnings") || strings.Contains(l, "birch") {
+			t.Fatalf("Details must not list warnings; got %q", l)
+		}
 	}
 }

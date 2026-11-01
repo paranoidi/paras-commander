@@ -44,8 +44,8 @@ file = "echo meta"
 	}
 
 	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
-	if len(app.model.MetaDialog.Checked) != 1 || !app.model.MetaDialog.Checked[0] {
-		t.Fatalf("reopen Checked = %v, want [true]", app.model.MetaDialog.Checked)
+	if c := app.model.MetaDialog.Checked; len(c) != 1 || !c[0] {
+		t.Fatalf("reopen Checked = %v, want [true]", c)
 	}
 }
 

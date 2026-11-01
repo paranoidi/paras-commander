@@ -129,3 +129,26 @@ func TestDraw_noneSkipsPaint(t *testing.T) {
 		t.Fatalf("cell = %q, want unchanged X", got)
 	}
 }
+
+func TestDraw_markedRowThumb(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	m, _ := ComputeMetrics(50, 5, 0) // thumb at row 0
+	frame := tcell.StyleDefault.Background(tcell.ColorFuchsia)
+	Draw(DrawParams{
+		Screen: screen, X: 3, ListTopY: 0, Visible: 5, Metrics: m, Style: StyleThumb,
+		FrameStyle: frame, Theme: theme.Default(),
+		Marks: []bool{false, false, true}, MarkStyle: tcell.StyleDefault.Foreground(tcell.ColorRed),
+	})
+	cell, st, _ := screen.Get(3, 2)
+	if r, _ := utf8.DecodeRuneInString(cell); r != theme.Default().IconScrollbarMatch() {
+		t.Fatalf("marked row glyph = %q", cell)
+	}
+	if fg, bg, _ := st.Decompose(); fg != tcell.ColorRed || bg != tcell.ColorFuchsia {
+		t.Fatalf("marked row fg/bg = %v/%v", fg, bg)
+	}
+}

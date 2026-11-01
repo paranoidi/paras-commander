@@ -56,6 +56,7 @@ func (f *fakeHost) NoteMetaColumnResolved(id int) {
 	f.resolvedCalls = append(f.resolvedCalls, id)
 }
 func (f *fakeHost) IconMetaRunning() string { return "*" }
+func (f *fakeHost) DialogMarkerWidth() int  { return 0 }
 func (f *fakeHost) OpenFileInExternalEditor(path string) error {
 	f.editedPath = path
 	return f.editErr
@@ -887,5 +888,34 @@ file = "wc -l < %f"
 				t.Fatalf("transient messages after open = %q, want present=%v", fh.messages, tc.wantMsg)
 			}
 		})
+	}
+}
+
+func TestHandlePanelDirChanged_fileIndexDefaultColumns(t *testing.T) {
+	fh := &fakeHost{}
+	fh.panels[0] = testPanel(t, "fileindex:///orchard", nil)
+	cfg := config.Default()
+	h := &Handler{host: fh, model: &ui.Model{}, config: cfg}
+
+	h.HandlePanelDirChanged(0)
+	if got := h.activeEntries[0]; len(got) != 1 || got[0] != config.FileIndexTagsColumn {
+		t.Fatalf("activeEntries = %v, want [%s]", got, config.FileIndexTagsColumn)
+	}
+
+	// Leaving the index switches the defaults off.
+	fh.panels[0] = testPanel(t, t.TempDir(), nil)
+	h.HandlePanelDirChanged(0)
+	if len(h.activeEntries[0]) != 0 || h.model.MetaResults[0] != nil {
+		t.Fatalf("activeEntries = %v, want none after leaving the index", h.activeEntries[0])
+	}
+
+	// Columns picked by the user stay on after leaving.
+	fh.panels[0] = testPanel(t, "fileindex:///orchard", nil)
+	h.HandlePanelDirChanged(0)
+	h.autoColumns[0] = false // as ActivateSelection does
+	fh.panels[0] = testPanel(t, t.TempDir(), nil)
+	h.HandlePanelDirChanged(0)
+	if len(h.activeEntries[0]) != 1 {
+		t.Fatalf("activeEntries = %v, want picker columns kept", h.activeEntries[0])
 	}
 }

@@ -214,6 +214,16 @@ const (
 	// Remote
 	ActionRemoteSFTPLink = "remote.sftp-link"
 
+	// fileindex (the built-in index feature, internal/apphandler/fileindex)
+	ActionFileIndexMenu       = "fileindex.menu"
+	ActionFileIndexScan       = "fileindex.scan"
+	ActionFileIndexPrune      = "fileindex.prune"
+	ActionFileIndexTagAdd     = "fileindex.tag-add"
+	ActionFileIndexTagRemove  = "fileindex.tag-remove"
+	ActionFileIndexBrowse     = "fileindex.browse"
+	ActionFileIndexBrowseWith = "fileindex.browse-with"
+	ActionFileIndexReveal     = "fileindex.reveal"
+
 	// Jobs dialog
 	ActionJobsOpen          = "jobs.open"
 	ActionDedupOpen         = "dedup.open"
@@ -237,6 +247,7 @@ const (
 	ActionJobsCollapse          = "jobs.collapse"
 
 	ActionJobsToggleOperationsLayout = "jobs.toggle-operations-layout"
+	ActionJobsCopyMessage            = "jobs.copy-message"
 
 	// Commands screen + external command execution
 	ActionCommandsOpen      = "commands.open"
@@ -249,6 +260,7 @@ const (
 	ActionMessagesOpen  = "messages.open"
 	ActionMessagesClose = "messages.close"
 	ActionMessagesClear = "messages.clear"
+	ActionMessagesCopy  = "messages.copy"
 
 	// UI dialog controls (handled internally, not in keybindings.toml)
 	ActionUILeft     = "ui.left"
@@ -534,6 +546,15 @@ var KnownActions = map[string]struct{}{
 
 	ActionRemoteSFTPLink: {},
 
+	ActionFileIndexMenu:       {},
+	ActionFileIndexScan:       {},
+	ActionFileIndexPrune:      {},
+	ActionFileIndexTagAdd:     {},
+	ActionFileIndexTagRemove:  {},
+	ActionFileIndexBrowse:     {},
+	ActionFileIndexBrowseWith: {},
+	ActionFileIndexReveal:     {},
+
 	ActionMenuFileChattr: {},
 
 	ActionJobsOpen:          {},
@@ -558,6 +579,7 @@ var KnownActions = map[string]struct{}{
 	ActionJobsCollapse:          {},
 
 	ActionJobsToggleOperationsLayout: {},
+	ActionJobsCopyMessage:            {},
 
 	ActionCommandsOpen:      {},
 	ActionCommandsClose:     {},
@@ -568,6 +590,7 @@ var KnownActions = map[string]struct{}{
 	ActionMessagesOpen:  {},
 	ActionMessagesClose: {},
 	ActionMessagesClear: {},
+	ActionMessagesCopy:  {},
 
 	ActionUIOpenTheme:           {},
 	ActionUIOpenConfig:          {},

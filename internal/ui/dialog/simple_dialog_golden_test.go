@@ -211,6 +211,14 @@ func TestMetaDialogGoldenRender(t *testing.T) {
 	add(32, 24, 3, "all", "ok")      // narrow: 28 wide is the smallest
 	add(80, 24, 3, "mixed", "item1")
 	add(80, 7, 3, "mixed", "item2") // too short: height clamps to 5
+	sectioned := metaGoldenState(2, "mixed", "item2")
+	for i, label := range []string{"Status", "Tags", "Copies", "First seen", "Last seen"} {
+		sectioned.Entries = append(sectioned.Entries, MetaEntry{Name: label, Label: label, Section: "File Index"})
+		sectioned.Checked = append(sectioned.Checked, i < 2)
+	}
+	cases = append(cases, simpleGolden{"80x24_n7_section_focus-item2", 80, 24, func(s tcell.Screen, l Layout) {
+		DrawMetaDialog(s, l, sectioned, asciiDialogStyles())
+	}})
 	runSimpleGoldens(t, "meta", cases)
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/filenameenc"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -172,6 +173,7 @@ func (h *Handler) OpenRenameDialog(p *panel.State) {
 		RenameSourceIsDir:        entry.ResolvesToDir(),
 		RenameEncodingCandidates: renameEnc,
 		RenameEncodingSelected:   0,
+		Note:                     h.indexOnlyNote(p, renameIndexNote),
 	}
 }
 
@@ -240,6 +242,7 @@ func (h *Handler) OpenDeleteDialog(panelID int) {
 		DeleteSummary: h.DeleteDialogSummary(p, source),
 		DeleteEntries: entries,
 		Focus:         dlg.Cancel, // No is the safe default
+		Note:          h.deleteNote(p, ops.SourcePaths(source)),
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
 	h.model.FileDialog = fd
@@ -312,8 +315,8 @@ func (h *Handler) openDanglingDirsDeleteDialog(dirs []string) {
 }
 
 func (h *Handler) openChmodDialog(p *panel.State) {
-	if p.Path.IsRemote() {
-		h.host.SetTransientMessage("Chmod is not available on remote panels", ui.MessageUrgencyWarn)
+	if !p.Path.IsLocal() {
+		h.host.SetTransientMessage(pathloc.Unavailable("Chmod", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	_, err := ops.ResolveSource(p)
@@ -333,8 +336,8 @@ func (h *Handler) openChmodDialog(p *panel.State) {
 }
 
 func (h *Handler) openChownDialog(p *panel.State) {
-	if p.Path.IsRemote() {
-		h.host.SetTransientMessage("Chown is not available on remote panels", ui.MessageUrgencyWarn)
+	if !p.Path.IsLocal() {
+		h.host.SetTransientMessage(pathloc.Unavailable("Chown", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	_, err := ops.ResolveSource(p)
@@ -354,8 +357,8 @@ func (h *Handler) openChownDialog(p *panel.State) {
 }
 
 func (h *Handler) openSymlinkDialog(p *panel.State) {
-	if p.Path.IsRemote() {
-		h.host.SetTransientMessage("Symlink is not available on remote panels", ui.MessageUrgencyWarn)
+	if !p.Path.IsLocal() {
+		h.host.SetTransientMessage(pathloc.Unavailable("Symlink", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	entry, err := ops.ResolveSourceSingle(p)
@@ -378,8 +381,8 @@ func (h *Handler) openSymlinkDialog(p *panel.State) {
 }
 
 func (h *Handler) openHardlinkDialog(p *panel.State) {
-	if p.Path.IsRemote() {
-		h.host.SetTransientMessage("Hardlink is not available on remote panels", ui.MessageUrgencyWarn)
+	if !p.Path.IsLocal() {
+		h.host.SetTransientMessage(pathloc.Unavailable("Hardlink", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	entry, err := ops.ResolveSourceSingle(p)
@@ -429,6 +432,10 @@ func (h *Handler) ExecuteFileDialog() {
 		h.ExecuteAddBookmark()
 	case dialog.FileDialogSFTPPassword:
 		h.host.ExecuteSFTPPassword()
+	case dialog.FileDialogIndexTags:
+		h.host.ExecuteIndexTags()
+	case dialog.FileDialogIndexInit:
+		h.host.ExecuteIndexInit()
 	default:
 		h.CloseFileDialog()
 	}
@@ -567,7 +574,7 @@ func (h *Handler) executeMkdir() {
 	// panels use the listing snapshot (no Stat) so reauth cannot deadlock the loop.
 	var sources []string
 	if action == dialog.MkdirActionCreateCopySelect || action == dialog.MkdirActionCreateMoveSelect {
-		if p.Path.IsRemote() {
+		if !p.Path.IsLocal() {
 			sources = selectedPanelSources(p)
 			if len(sources) == 0 {
 				h.host.SetErrorMessage("Mkdir", &ops.Error{Op: "mkdir", Text: "no files selected for transfer"})
@@ -916,4 +923,31 @@ func (h *Handler) executeHardlink() {
 	h.CloseFileDialog()
 	h.RefreshBothPanels()
 	h.host.SetTransientMessage(fmt.Sprintf("Created hardlink: %s", filepath.Base(plan.NewPath)), ui.MessageUrgencyInfo)
+}
+
+// Notes for the rename and delete dialogs on an index-only panel (fsbackend.IndexOnly), whose
+// wording otherwise assumes the disk changes.
+const (
+	renameIndexNote = "Renames in the fileindex only; files on disk are not touched."
+	deleteIndexNote = "Removes from the fileindex only; files on disk are not touched."
+)
+
+// deleteGhostNote is the delete dialog note when some rows exist only in the index (ghost rows).
+const deleteGhostNote = "Rows only in the fileindex are removed from the index; everything else is deleted from disk."
+
+// deleteNote is the delete dialog note: the index-only one on a fileindex:// panel, the ghost one
+// when a local panel's selection includes ghost rows.
+func (h *Handler) deleteNote(p *panel.State, paths []string) string {
+	if len(p.GhostSources(paths...)) > 0 {
+		return deleteGhostNote
+	}
+	return h.indexOnlyNote(p, deleteIndexNote)
+}
+
+// indexOnlyNote returns note when p's backend is index-only, else "".
+func (h *Handler) indexOnlyNote(p *panel.State, note string) string {
+	if fsbackend.Default().IsIndexOnly(p.Path) {
+		return note
+	}
+	return ""
 }

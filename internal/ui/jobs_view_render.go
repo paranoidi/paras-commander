@@ -71,13 +71,16 @@ type JobsViewState struct {
 	// Selected is the selected job's index; SelectedSub is 0 on its job row and n on the
 	// sub-row of source n-1 (see SelectedSource). Expanded holds the IDs of jobs showing their
 	// source sub-rows (JobsListRows).
-	Selected     int
-	SelectedSub  int
-	Expanded     map[string]bool
-	FocusPane    int // index into JobsPaneOrder: list, blocker (if shown), Details, Operations (if shown)
-	ListScroll   int
-	DetailScroll int
-	OpsScroll    int
+	Selected       int
+	SelectedSub    int
+	Expanded       map[string]bool
+	FocusPane      int // index into JobsPaneOrder: list, blocker (if shown), Details, Messages (if shown), Operations (if shown)
+	ListScroll     int
+	DetailScroll   int
+	MessagesScroll int
+	// MessagesSelected is the Messages pane cursor (index into the job's Warnings); MessagesScroll follows it.
+	MessagesSelected int
+	OpsScroll        int
 	// OpsResultHidden is the set of results the Operations pane hides (zero shows all; see
 	// OpsResultShown). OpsFilter holds the Operations fuzzy query; only its Query, Cursor and
 	// Editing are used (the jobs handler matches the operation log itself). OpsScroll is how
@@ -105,7 +108,7 @@ func JobsMaximizedRect(layout Layout) Rect {
 // JobsViewLayout returns the jobs view pane frames for sel, with Operations across the bottom
 // when opsBottom is set. Every jobs view draw, hit test and scroll bound takes its frames here.
 func JobsViewLayout(layout Layout, opsBottom bool, sel JobEntry, now time.Time, throughputChartEnabled bool) JobsViewRects {
-	return SplitJobsView(layout.Primary, layout.Secondary, opsBottom, JobEntryShowsConflictPanel(sel), JobDetailLineCount(sel, now, throughputChartEnabled))
+	return SplitJobsView(layout.Primary, layout.Secondary, opsBottom, JobEntryShowsConflictPanel(sel), JobDetailLineCount(sel, now, throughputChartEnabled), len(sel.Warnings))
 }
 
 // jobsMaximizedPane returns the pane drawn full screen over the whole jobs view: the focused
@@ -114,7 +117,7 @@ func jobsMaximizedPane(state JobsViewState, sel JobEntry, rects JobsViewRects) (
 	if !state.Maximized {
 		return JobsPaneList, false
 	}
-	pane = focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), rects.Operations.Height > 0))
+	pane = focusedJobsPane(state, JobsPaneOrder(JobEntryShowsConflictPanel(sel), rects.Messages.Height > 0, rects.Operations.Height > 0))
 	return pane, pane == JobsPaneOperations
 }
 
@@ -128,6 +131,7 @@ type jobsViewRender struct {
 	OpsBottom              bool
 	OpsNewestLast          bool
 	RateLimitBPS           int64
+	ListHover              ListRowHover
 }
 
 func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles theme.Theme, now time.Time, chromeBlocked bool) {
@@ -149,13 +153,16 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 		drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, win, sourceLabel, styles, chromeBlocked, true, true, v.OpsNewestLast)
 		return
 	}
-	drawJobsListPanel(screen, rects.List, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS)
+	drawJobsListPanel(screen, rects.List, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS, v.ListHover)
 	showConflict := JobEntryShowsConflictPanel(sel)
-	focused := focusedJobsPane(state, JobsPaneOrder(showConflict, rects.Operations.Height > 0))
+	focused := focusedJobsPane(state, JobsPaneOrder(showConflict, rects.Messages.Height > 0, rects.Operations.Height > 0))
 	if rects.Conflict.Height > 0 {
 		drawJobsConflictPanel(screen, rects.Conflict, state, sel, styles, chromeBlocked, focused == JobsPaneConflict, v.UserHomeDir)
 	}
 	drawJobsDetailPanel(screen, rects.Detail, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, v.UserHomeDir, v.ThroughputChartEnabled)
+	if rects.Messages.Height > 0 {
+		drawJobsMessagesPanel(screen, rects.Messages, state.MessagesScroll, state.MessagesSelected, sel.Warnings, styles, chromeBlocked, focused == JobsPaneMessages)
+	}
 	if rects.Operations.Height > 0 {
 		drawJobsOperationsPanel(screen, rects.Operations, state, win, sourceLabel, styles, chromeBlocked, focused == JobsPaneOperations, false, v.OpsNewestLast)
 	}
@@ -172,7 +179,9 @@ func formatRateLimitLabel(bps int64) string {
 	return panelSelectionSizePadded(jobs.FormatThroughput(float64(bps)))
 }
 
-func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, rateLimitBPS int64) {
+// drawJobsListPanel paints the Queue pane; the row under the mouse pointer (hover), unless it is
+// the cursor row, takes the jobs.row.hover background under its own status colors.
+func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, rateLimitBPS int64, hover ListRowHover) {
 	active := state.FocusPane == 0
 	layout := drawAuxPanelChrome(screen, rect, " Queue ", formatRateLimitLabel(rateLimitBPS), active, chromeBlocked, false, styles)
 	bg := layout.ContentBG
@@ -211,7 +220,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		r := rows[idx]
 		entry := jobs[r.Job]
 		selected := idx == selectedRow
-		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
+		lineStyle := auxListRowStyle(styles, rowBase, selected, chromeBlocked, active, hover, idx)
 		paintAuxPanelRowMargin(screen, rect.X+1, y, lineStyle)
 		xProg := contentX + jobsListColPrefix + jobsListColStatus + jobsListColETA + jobsListColSpeed
 		barW := max(rect.X+rect.Width-1-xProg, 0) // reach the border, no trailing margin
@@ -248,7 +257,7 @@ func jobsListIconStyle(styles theme.Theme, status string, lineStyle tcell.Style,
 	if selected {
 		return lineStyle
 	}
-	return styles.JobsIconStyleOn(status, lineStyle)
+	return styles.StatusStyleOn(status, lineStyle)
 }
 
 // jobsListTypeLabel is the Type cell text: the job type, then the expander icon for a job
@@ -261,7 +270,7 @@ func jobsListTypeLabel(entry JobEntry, expanded bool, styles theme.Theme) string
 }
 
 func drawJobsListJobRow(screen tcell.Screen, contentX, y, xProg, barW int, entry JobEntry, expanded bool, lineStyle tcell.Style, selected bool, styles theme.Theme, now time.Time) {
-	statusStyle := jobsListOnRow(styles.JobsStatusStyle(entry.Status), lineStyle, selected)
+	statusStyle := jobsListOnRow(styles.StatusStyle(entry.Status), lineStyle, selected)
 	primitive.Text(screen, contentX, y, jobsListColIcon, styles.IconJobsList(entry.Status), jobsListIconStyle(styles, entry.Status, lineStyle, selected))
 	line := fmt.Sprintf("%-*s ", jobsListColTypeRunes, primitive.TruncateRight(jobsListTypeLabel(entry, expanded, styles), jobsListColTypeRunes))
 	primitive.Text(screen, contentX+jobsListColIcon, y, jobsListColTypeCell, line, lineStyle)
@@ -289,7 +298,7 @@ func drawJobsListSourceRow(screen tcell.Screen, contentX, y, xProg, countsW int,
 	active := jobSourceActive(entry, src)
 	labelStyle := lineStyle
 	if active { // the source being worked on now reads in the job's status color
-		labelStyle = jobsListOnRow(styles.JobsStatusStyle(entry.Status), lineStyle, selected)
+		labelStyle = jobsListOnRow(styles.StatusStyle(entry.Status), lineStyle, selected)
 	}
 	labelX := x + jobsListSourceIconCell
 	labelW := max(xProg-1-labelX, 0)
@@ -339,7 +348,8 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 		sel = jobs[state.Selected]
 	}
 
-	all := detailStaticLines(sel, now, textW, userHomeDir, throughputChartEnabled)
+	all := detailLinesIcons(sel, now, textW, userHomeDir, throughputChartEnabled, styles.IconJobsList)
+	stepsAt := slices.Index(all, "Steps:       ")
 
 	scroll := state.DetailScroll
 	if scroll < 0 {
@@ -368,11 +378,36 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 			} else if n := jobsDetailLabelRunes(line); n > 0 {
 				spans = append(spans, primitive.Span{Start: 0, End: n, Style: styles.JobsDetailLabel.Background(layout.ContentBG)})
 			}
+			if k := i + scroll - stepsAt - 1; stepsAt >= 0 && k >= 0 && k < len(sel.Steps) {
+				st := jobTaskStepStatus(sel, k)
+				n := utf8.RuneCountInString(styles.IconJobsList(st))
+				spans = append(spans, primitive.Span{Start: 2, End: 2 + n, Style: styles.StatusStyle(st).Background(layout.ContentBG)})
+			}
 			if strings.HasPrefix(line, jobDetailFilesPrefix) {
 				spans = append(spans, jobFilesLineSpans(sel, styles, lineStyle)...)
 			}
 		}
 		primitive.StyledText(screen, textX, contentTop+i, textW, line, lineStyle, spans)
+	}
+}
+
+// drawJobsMessagesPanel draws the job's warnings, one truncated line each, scrolled by scroll.
+func drawJobsMessagesPanel(screen tcell.Screen, rect Rect, scroll, selected int, warnings []string, styles theme.Theme, chromeBlocked, focused bool) {
+	layout := drawAuxPanelChrome(screen, rect, fmt.Sprintf(" Messages (%d) ", len(warnings)), "", focused, chromeBlocked, false, styles)
+	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
+	if !chromeBlocked {
+		body = styles.JobsDetailText.Background(layout.ContentBG)
+	}
+	textW := max(1, rect.Width-4)
+	contentH := rect.Height - 2
+	scroll = max(0, min(scroll, len(warnings)-contentH))
+	for i := 0; i < contentH && i+scroll < len(warnings); i++ {
+		style := body
+		if focused && i+scroll == selected {
+			style = auxPanelListRowStyle(styles, body, true, chromeBlocked, true)
+			paintAuxPanelRowMargins(screen, rect, rect.X+2, textW, rect.Y+1+i, style)
+		}
+		primitive.Text(screen, rect.X+2, rect.Y+1+i, textW, primitive.TruncateMiddle(warnings[i+scroll], textW), style)
 	}
 }
 
@@ -518,7 +553,11 @@ func detailDurationOrETALine(j JobEntry, now time.Time) string {
 		}
 		return fmt.Sprintf("Took:        %s", label)
 	}
-	return fmt.Sprintf("ETA:         %s", formatJobETAFull(j, now))
+	eta := formatJobETAFull(j, now)
+	if eta == "—" && j.Status == "running" {
+		eta = "waiting for data" + string(primitive.Ellipsis)
+	}
+	return fmt.Sprintf("ETA:         %s", eta)
 }
 
 // jobDetailProgressLine formats the Details panel progress row. Byte totals are shown
@@ -578,6 +617,11 @@ func jobCountingInBackground(j JobEntry) bool {
 }
 
 func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir string, throughputChartEnabled bool) []string {
+	return detailLinesIcons(j, now, pathMax, userHomeDir, throughputChartEnabled, func(string) string { return "•" })
+}
+
+// detailLinesIcons is detailStaticLines with icon giving the glyph of a step's status.
+func detailLinesIcons(j JobEntry, now time.Time, pathMax int, userHomeDir string, throughputChartEnabled bool, icon func(status string) string) []string {
 	if pathMax < 1 {
 		pathMax = jobsDetailLineBudgetFallback
 	}
@@ -589,9 +633,19 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	prefixSources := "Sources:     "
 	prefixCurrent := "Current:     "
 	prefixVerifying := "Verifying:   "
-	lines := []string{
-		fmt.Sprintf("Type:        %s", j.Type),
-		fmt.Sprintf("Status:      %s", j.Status),
+	lines := []string{fmt.Sprintf("Type:        %s", j.Type)}
+	if j.Title != "" {
+		lines = append(lines, "Task:        "+j.Title)
+	}
+	lines = append(lines, fmt.Sprintf("Status:      %s", j.Status))
+	if j.Workers > 0 {
+		lines = append(lines, fmt.Sprintf("Workers:     %d", j.Workers))
+	}
+	if len(j.Steps) > 0 {
+		lines = append(lines, "Steps:       ")
+		for i, name := range j.Steps {
+			lines = append(lines, "  "+icon(jobTaskStepStatus(j, i))+" "+name)
+		}
 	}
 	if j.Undo != "" {
 		lines = append(lines, "Undo:        "+j.Undo)
@@ -601,12 +655,6 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	}
 	if parts := jobFilesLineParts(j); parts != nil {
 		lines = append(lines, jobFilesPartsText(parts))
-	}
-	if len(j.Warnings) > 0 {
-		lines = append(lines, fmt.Sprintf("Warnings (%d):", len(j.Warnings)))
-		for _, w := range j.Warnings {
-			lines = append(lines, primitive.TruncateMiddle(w, pathMax))
-		}
 	}
 	src := "—"
 	if len(j.Sources) > 0 {
@@ -623,7 +671,7 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 		src = primitive.FitPathForWidth(displaySrc, budget) + suffix
 	}
 	lines = append(lines, fmt.Sprintf(prefixSources+"%s", src))
-	if j.Type != string(jobs.TypeDelete) {
+	if t := jobs.Type(j.Type); t != jobs.TypeDelete && t != jobs.TypeTask {
 		dest := "—"
 		if j.Destination != "" {
 			destDisplay := primitive.PathWithHomeTilde(j.Destination, userHomeDir)
@@ -769,4 +817,20 @@ func formatJobBytes(n int64) string {
 		return fmt.Sprintf("%.1fK", float64(n)/1024)
 	}
 	return fmt.Sprintf("%.1fM", float64(n)/(1024*1024))
+}
+
+// jobTaskStepStatus is the status shown for step i of a task job: completed before the running
+// step, the running step takes the job's status (running, failed, canceled), the rest are queued.
+func jobTaskStepStatus(j JobEntry, i int) string {
+	switch {
+	case j.Status == "completed":
+		return "completed"
+	case j.Status == "queued" || i > j.Step:
+		return "queued"
+	case i < j.Step:
+		return "completed"
+	case j.Status == "failed" || j.Status == "canceled":
+		return j.Status
+	}
+	return "running"
 }

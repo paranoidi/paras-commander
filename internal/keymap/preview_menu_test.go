@@ -63,7 +63,7 @@ func TestPreviewMenuKeysMergeOverrideAndOmit(t *testing.T) {
 		ActionPreviewThemePicker: "z",
 		ActionFileDelete:         "",
 	}
-	merged := mergePreviewMenuKeys(DefaultPreviewMenuKeys(), user)
+	merged := mergeMenuKeys(DefaultPreviewMenuKeys(), user)
 	if merged[ActionPreviewThemePicker] != "z" {
 		t.Fatalf("theme picker key = %q, want z", merged[ActionPreviewThemePicker])
 	}

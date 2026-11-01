@@ -26,8 +26,9 @@ func drawCommandsView(
 	styles theme.Theme,
 	chromeBlocked bool,
 	userHomeDir string,
+	hover ListRowHover,
 ) {
-	drawCommandsListPanel(screen, layout.Primary, state, entries, styles, chromeBlocked, userHomeDir)
+	drawCommandsListPanel(screen, layout.Primary, state, entries, styles, chromeBlocked, userHomeDir, hover)
 	var sel CommandRunEntry
 	if state.Selected >= 0 && state.Selected < len(entries) {
 		sel = entries[state.Selected]
@@ -104,7 +105,9 @@ func CommandsStreamMaxScroll(column Rect, entry CommandRunEntry) (stdoutMax, std
 		max(0, len(stderrLines)-JobsPanelContentRows(stderrRect))
 }
 
-func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewState, entries []CommandRunEntry, styles theme.Theme, chromeBlocked bool, userHomeDir string) {
+// drawCommandsListPanel paints the Commands list; every row of the entry under the mouse pointer
+// (hover, an entry index), unless it is the cursor entry, takes the jobs.row.hover background.
+func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewState, entries []CommandRunEntry, styles theme.Theme, chromeBlocked bool, userHomeDir string, hover ListRowHover) {
 	active := state.FocusPane == 0
 	filterUI := active && state.Filter.UIActive()
 	title := " Commands "
@@ -142,7 +145,7 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 		idx, y := row.Entry, row.Y
 		entry := entries[idx]
 		selected := idx == state.Selected
-		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
+		lineStyle := auxListRowStyle(styles, rowBase, selected, chromeBlocked, active, hover, idx)
 		_, lineBG, _ := lineStyle.Decompose()
 		matchStyle := styles.FuzzyHighlight
 		if selected && active {
@@ -312,12 +315,12 @@ func commandPhaseStyle(e CommandRunEntry, styles theme.Theme) tcell.Style {
 	case CommandRunPending:
 		return styles.JobsRow
 	case CommandRunRunning:
-		return styles.JobsRunning
+		return styles.StatusRunning
 	case CommandRunDone:
 		if e.ExitCode == 0 {
-			return styles.JobsDone
+			return styles.StatusCompleted
 		}
-		return styles.JobsFailed
+		return styles.StatusFailed
 	default:
 		return styles.JobsRow
 	}

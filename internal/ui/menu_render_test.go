@@ -108,6 +108,29 @@ func TestDrawMenuBarBlankKeepsMarginAfterStatusCommand(t *testing.T) {
 	}
 }
 
+// Under the pointer the whole status-command area is drawn in menu.bar.selected.
+func TestDrawMenuBarStatusCommandsHoverUsesMenuBarSelected(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(40, 1)
+	styles := theme.Default()
+	segs := []StatusCommandSegment{
+		{Text: "0.52", Style: styles.MenuStatus.Foreground(tcell.ColorYellow)},
+		{Text: "5.2G", Style: styles.MenuStatus},
+	}
+	w := StatusCommandWidth(segs)
+	drawMenuBarStatusCommands(screen, Rect{Width: w, Height: 1}, segs, styles, true)
+	for x := range w {
+		if r, style, _ := screen.Get(x, 0); style != styles.MenuBarSelected {
+			t.Fatalf("cell %d %q style = %v, want MenuBarSelected", x, r, style)
+		}
+	}
+}
+
 // The reserved width must equal what drawMenuBarStatusCommands paints: " t1 · t2 ", each
 // text in its segment style, gaps in menu.status and the separator in menu.status.separator.
 func TestDrawMenuBarStatusCommandsMatchesWidth(t *testing.T) {
@@ -125,7 +148,7 @@ func TestDrawMenuBarStatusCommandsMatchesWidth(t *testing.T) {
 	if want := utf8.RuneCountInString(" 0.52 0.48 · 5.2G/31G "); w != want {
 		t.Fatalf("StatusCommandWidth = %d, want %d", w, want)
 	}
-	drawMenuBarStatusCommands(screen, Rect{Width: w, Height: 1}, segs, styles)
+	drawMenuBarStatusCommands(screen, Rect{Width: w, Height: 1}, segs, styles, false)
 	sep := string(styles.IconMenuStatusSeparator())
 	var got string
 	for x := range w {

@@ -24,6 +24,9 @@ type Host interface {
 	// IconMetaRunning returns the theme icon shown for a meta command still in flight.
 	// Fetched per call (not snapshotted) because the active theme can change at runtime.
 	IconMetaRunning() string
+	// DialogMarkerWidth is the theme's checkbox marker width (dlg.MarkerWidth), cached in the
+	// picker state at open so its two-column sections line up.
+	DialogMarkerWidth() int
 	OpenFileInExternalEditor(path string) error
 	MessageLogWrapCols() int
 	AppendTransientMessageLines(banner string, lines []string, urgency ui.MessageUrgency)

@@ -102,6 +102,16 @@ type Engine struct {
 	// workerBusy is true while the worker is executing a dequeued scan job (runPlanner or hook).
 	workerBusy atomic.Bool
 
+	// sizerPrefix and sizer total paths that are not walked on disk (SetSubtreeSizer); set
+	// once before the first scan. sizedEpoch counts ForgetSized calls, so a sizer query that
+	// raced one is not cached.
+	sizerPrefix string
+	sizer       SubtreeSizer
+	sizedEpoch  atomic.Uint64
+	// sizedKeys are the cache keys the sizer filled (guarded by mu), so ForgetSized drops them
+	// without sweeping the whole cache.
+	sizedKeys map[string]struct{}
+
 	// fsWalk configures adaptive concurrent subdirectory walks in WalkFolder.
 	fsWalk fswalk.Params
 
@@ -137,6 +147,7 @@ func NewWithAdaptiveIO(cfg config.AdaptiveIOConfig) *Engine {
 		activeWalkRoots:  make(map[string]int),
 		touchedWalkRoots: make(map[string]bool),
 		refreshPending:   make(map[string]bool),
+		sizedKeys:        make(map[string]struct{}),
 		updates:          make(chan struct{}, 1),
 		events:           make(chan Event, 256),
 		applyWake:        make(chan struct{}, 1),
@@ -161,7 +172,7 @@ func (e *Engine) workerLoop() {
 		e.queue = e.queue[1:]
 		roots := make(map[string]struct{}, len(job.childAbs))
 		for _, raw := range job.childAbs {
-			roots[filepath.Clean(raw)] = struct{}{}
+			roots[CleanKey(raw)] = struct{}{}
 		}
 		e.curJobRoots = roots
 		e.curJobSourcePanel = job.sourcePanel
@@ -233,7 +244,7 @@ func (e *Engine) signalSubtreeIndexed(sess uint64, rootAbs string, sourcePanel i
 	case e.events <- Event{
 		Kind:        EventSubtreeIndexed,
 		Generation:  sess,
-		RootAbs:     filepath.Clean(rootAbs),
+		RootAbs:     CleanKey(rootAbs),
 		SourcePanel: sourcePanel,
 	}:
 	default:
@@ -261,8 +272,8 @@ func (e *Engine) DiskScanBusy() bool {
 
 // pathIsOrUnder reports whether child is root or a strict descendant of root (path segments).
 func pathIsOrUnder(child, root string) bool {
-	r := filepath.Clean(root)
-	c := filepath.Clean(child)
+	r := CleanKey(root)
+	c := CleanKey(child)
 	if c == r {
 		return true
 	}
@@ -276,7 +287,7 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 	if e == nil {
 		return false
 	}
-	c := filepath.Clean(childAbs)
+	c := CleanKey(childAbs)
 
 	e.mu.RLock()
 	for r, pan := range e.activeWalkRoots {
@@ -297,7 +308,7 @@ func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 			return true
 		}
 		for _, raw := range j.childAbs {
-			if pathIsOrUnder(c, filepath.Clean(raw)) {
+			if pathIsOrUnder(c, CleanKey(raw)) {
 				e.jobMu.Unlock()
 				return true
 			}
@@ -323,7 +334,7 @@ func (e *Engine) finishCurJobRoot(abs string) {
 	if e == nil {
 		return
 	}
-	p := filepath.Clean(abs)
+	p := CleanKey(abs)
 	e.jobMu.Lock()
 	if e.curJobRoots != nil {
 		delete(e.curJobRoots, p)
@@ -341,7 +352,7 @@ func (e *Engine) CacheVersion() uint64 {
 func (e *Engine) Size(absPath string) (int64, bool) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	n, ok := e.cache[filepath.Clean(absPath)]
+	n, ok := e.cache[CleanKey(absPath)]
 	return n, ok
 }
 
@@ -356,7 +367,7 @@ func (e *Engine) SetSize(absPath string, files int, bytes int64) {
 	if e == nil {
 		return
 	}
-	p := filepath.Clean(absPath)
+	p := CleanKey(absPath)
 	e.mu.Lock()
 	e.cache[p] = bytes
 	e.fileCounts[p] = int64(files)
@@ -372,7 +383,7 @@ func (e *Engine) FileCount(absPath string) (int64, bool) {
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	n, ok := e.fileCounts[filepath.Clean(absPath)]
+	n, ok := e.fileCounts[CleanKey(absPath)]
 	return n, ok
 }
 
@@ -380,7 +391,7 @@ func (e *Engine) FileCount(absPath string) (int64, bool) {
 // covering many paths (e.g. a render loop over a large selection) should prefer IsKnownExcluded
 // plus a background pass that calls MarkExcluded, rather than calling this per path inline.
 func (e *Engine) DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool {
-	if e == nil {
+	if e == nil || e.sized(CleanKey(absPath)) {
 		return false
 	}
 	var gi ShouldIgnoreFolder
@@ -397,7 +408,7 @@ func (e *Engine) MarkExcluded(absPath string) {
 		return
 	}
 	e.mu.Lock()
-	e.excluded[filepath.Clean(absPath)] = true
+	e.excluded[CleanKey(absPath)] = true
 	e.mu.Unlock()
 }
 
@@ -409,7 +420,7 @@ func (e *Engine) IsKnownExcluded(absPath string) bool {
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return e.excluded[filepath.Clean(absPath)]
+	return e.excluded[CleanKey(absPath)]
 }
 
 // nestedInOther reports whether a strict ancestor of p is a key of m.
@@ -499,7 +510,7 @@ func (e *Engine) InvalidateRoots(paths []string) {
 	}
 	e.mu.Lock()
 	for _, raw := range paths {
-		k := filepath.Clean(raw)
+		k := CleanKey(raw)
 		delete(e.cache, k)
 		delete(e.fileCounts, k)
 		delete(e.excluded, k)
@@ -526,6 +537,7 @@ func (e *Engine) ClearCache() {
 		delete(e.excluded, k)
 	}
 	clear(e.refreshPending)
+	clear(e.sizedKeys)
 	e.cacheVersion.Add(1)
 	e.mu.Unlock()
 	e.poke()
@@ -566,7 +578,7 @@ func (e *Engine) StartScanFromListing(childAbs []string, shouldIgnore ShouldIgno
 // missing from childAbs (e.g. dotfiles hidden in the panel) are walked too, so once every child
 // is walked the origin's own total is cached and shows on its row in the parent listing.
 func (e *Engine) StartScanFromDirectory(origin string, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, volGate ListingVolumeGate) {
-	e.enqueue(scanJob{childAbs: childAbs, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate, origin: filepath.Clean(origin)})
+	e.enqueue(scanJob{childAbs: childAbs, ignore: shouldIgnore, sourcePanel: sourcePanel, listingVolGate: volGate, origin: CleanKey(origin)})
 }
 
 func (e *Engine) enqueue(job scanJob) {
@@ -595,7 +607,7 @@ func (e *Engine) StartPriorityScan(childAbs []string, shouldIgnore ShouldIgnoreF
 		rest := e.curJob
 		rest.childAbs = nil
 		for _, raw := range e.curJob.childAbs {
-			if _, ok := e.curJobRoots[filepath.Clean(raw)]; ok {
+			if _, ok := e.curJobRoots[CleanKey(raw)]; ok {
 				rest.childAbs = append(rest.childAbs, raw)
 			}
 		}
@@ -615,16 +627,26 @@ func (e *Engine) StartPriorityScan(childAbs []string, shouldIgnore ShouldIgnoreF
 
 func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, origin string) {
 	originComplete := false
-	if origin != "" {
+	if origin != "" && !e.sized(origin) {
 		childAbs, originComplete = withUnlistedChildren(origin, childAbs)
 	}
-	if len(childAbs) == 0 {
-		if e.gen.Load() == sess {
-			if originComplete {
-				e.cacheOriginTotal(origin, nil)
-			}
-			e.signalJobFinished(sess)
+	// finish caches the origin's total, from its walked children or from the sizer.
+	finish := func(walked []string) {
+		if e.gen.Load() != sess {
+			return
 		}
+		switch {
+		case originComplete:
+			e.cacheOriginTotal(origin, walked)
+		case origin != "" && e.sized(origin):
+			if e.cacheSized(ctx, sess, origin) {
+				e.poke()
+			}
+		}
+		e.signalJobFinished(sess)
+	}
+	if len(childAbs) == 0 {
+		finish(nil)
 		return
 	}
 
@@ -637,7 +659,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 
 	e.mu.RLock()
 	for _, raw := range childAbs {
-		p := filepath.Clean(raw)
+		p := CleanKey(raw)
 		if _, cached := e.cache[p]; cached {
 			if _, fc := e.fileCounts[p]; fc {
 				passKnown = append(passKnown, stage{path: p})
@@ -662,13 +684,27 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 				return
 			}
 
-			jobPath := filepath.Clean(job.path)
+			jobPath := CleanKey(job.path)
 
 			e.mu.Lock()
 			e.activeWalkRoots[jobPath] = sourcePanel
 			delete(e.touchedWalkRoots, jobPath)
 			e.mu.Unlock()
 			e.poke()
+
+			if e.sized(jobPath) {
+				ok := e.cacheSized(ctx, sess, jobPath)
+				e.mu.Lock()
+				delete(e.activeWalkRoots, jobPath)
+				e.mu.Unlock()
+				e.finishCurJobRoot(jobPath)
+				if ok {
+					walked = append(walked, jobPath)
+					e.signalSubtreeIndexed(sess, jobPath, sourcePanel)
+				}
+				e.poke()
+				continue
+			}
 
 			fi, err := os.Stat(jobPath)
 			if err != nil {
@@ -723,12 +759,7 @@ func (e *Engine) runPlanner(ctx context.Context, sess uint64, childAbs []string,
 			e.poke()
 		}
 	}
-	if e.gen.Load() == sess {
-		if originComplete {
-			e.cacheOriginTotal(origin, walked)
-		}
-		e.signalJobFinished(sess)
-	}
+	finish(walked)
 }
 
 // withUnlistedChildren appends origin's children missing from childAbs. complete is false when
@@ -740,7 +771,7 @@ func withUnlistedChildren(origin string, childAbs []string) (all []string, compl
 	}
 	listed := make(map[string]struct{}, len(childAbs))
 	for _, raw := range childAbs {
-		listed[filepath.Clean(raw)] = struct{}{}
+		listed[CleanKey(raw)] = struct{}{}
 	}
 	all = childAbs
 	for _, entry := range entries {
@@ -848,8 +879,8 @@ func (e *Engine) classifyListingExclusions(childAbs []string, shouldIgnore Shoul
 		return
 	}
 	for _, raw := range childAbs {
-		p := filepath.Clean(raw)
-		if shouldIgnore(p) {
+		p := CleanKey(raw)
+		if !e.sized(p) && shouldIgnore(p) {
 			e.MarkExcluded(p)
 		}
 	}

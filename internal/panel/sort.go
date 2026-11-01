@@ -2,12 +2,14 @@ package panel
 
 import (
 	"fmt"
+	"math"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 )
 
 // SortState describes the panel-local sort configuration.
@@ -195,6 +197,29 @@ func (s *State) primarySortUsesDiskTotals() bool {
 	return s.Sort.DiskUsageIdleSizeSort && s.IdleDiskTotalsSort
 }
 
+// HeaderColumnSort is the sort a click on the header column for mode (meta: the column named
+// metaColumn) applies: the current sort reversed when entries are already ordered by that column
+// (Name covers the Extension sort, Size the disk-usage size sort), otherwise that column in its
+// default direction with the disk-usage idle size sort off, so the pick is not taken over again.
+func (s State) HeaderColumnSort(mode SortMode, metaColumn string) SortState {
+	next := s.Sort
+	var sorted bool
+	switch {
+	case s.primarySortUsesDiskTotals():
+		sorted = mode == SortSize
+	case mode == SortName:
+		sorted = s.Sort.Mode == SortName || s.Sort.Mode == SortExtension
+	default:
+		sorted = s.Sort.Mode == mode && (mode != SortMeta || s.Sort.MetaColumn == metaColumn)
+	}
+	if sorted {
+		next.Reverse = !next.Reverse
+		return next
+	}
+	next.Mode, next.MetaColumn, next.Reverse, next.DiskUsageIdleSizeSort = mode, metaColumn, false, false
+	return next
+}
+
 // ActiveMetaSortColumn returns the meta column entries are actually ordered by, or "" when
 // the sort is not by a meta column or the disk-usage size sort has taken over (see SortEntries).
 func (s *State) ActiveMetaSortColumn() string {
@@ -275,12 +300,36 @@ func MetaValuesNumeric(values map[string]string, pending string) bool {
 		if v == "" {
 			continue
 		}
-		if _, err := strconv.ParseFloat(v, 64); err != nil {
+		if _, ok := MetaNumber(v); !ok {
 			return false
 		}
 		found = true
 	}
 	return found
+}
+
+// MetaNumber parses a trimmed meta value as a number: a plain float, or a byte size with a
+// binary unit as the panel size column and du -h print it ("5.6G", "800K", "1.2 GiB", "3 MB"),
+// so size columns sort by size.
+func MetaNumber(v string) (float64, bool) {
+	if f, err := strconv.ParseFloat(v, 64); err == nil {
+		return f, true
+	}
+	num := strings.TrimRight(v, "BiKMGTPE ")
+	unit := strings.ToUpper(strings.TrimSpace(v[len(num):]))
+	unit = strings.TrimSuffix(strings.TrimSuffix(unit, "B"), "I")
+	f, err := strconv.ParseFloat(num, 64)
+	if err != nil || len(unit) > 1 {
+		return 0, false
+	}
+	if unit == "" { // "512 B"
+		return f, true
+	}
+	i := strings.IndexByte(string(panellist.ByteCompactSuffixes[:]), unit[0])
+	if i < 0 {
+		return 0, false
+	}
+	return f * math.Pow(1024, float64(i+1)), true
 }
 
 // buildMetaSortKeys resolves col's values once via metaValue and precomputes each entry's sort
@@ -309,7 +358,7 @@ func buildMetaSortKeys(entries []localfs.Entry, col string, metaValue func(colum
 			keys[e.Path] = metaSortKey{missing: true}
 			continue
 		}
-		if f, err := strconv.ParseFloat(v, 64); err == nil {
+		if f, ok := MetaNumber(v); ok {
 			keys[e.Path] = metaSortKey{numeric: true, num: f}
 			continue
 		}

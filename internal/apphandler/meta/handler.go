@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -44,11 +45,18 @@ func (h *Handler) postExecFailed(panelID int, gen uint64, exitCode int, stderr, 
 	}))
 }
 
-// HandleWake applies one async command result and schedules a debounced repaint.
+// HandleWake applies one async command result (or one provider batch) and schedules a debounced repaint.
 // Called from Run's interrupt switch for WakePayload.
 func (h *Handler) HandleWake(d WakePayload) {
 	if d.Gen == h.runGen[d.PanelID] {
-		h.applyWakeResult(d)
+		if d.Values != nil {
+			for path, v := range d.Values {
+				d.Path, d.Value = path, v
+				h.applyWakeResult(d)
+			}
+		} else {
+			h.applyWakeResult(d)
+		}
 		if p := h.host.PanelByID(d.PanelID); p != nil && p.Sort.Mode == panel.SortMeta && p.Sort.MetaColumn == d.EntryName {
 			h.resortPending[d.PanelID] = true
 		}
@@ -82,6 +90,9 @@ func (h *Handler) HandleExecFailed(d ExecFailedPayload) {
 	}
 	const urgency = ui.MessageUrgencyWarn
 	banner := "meta: command failed to execute"
+	if d.Provider != "" {
+		banner = "meta: " + d.Provider + " failed"
+	}
 
 	wrapCols := h.host.MessageLogWrapCols()
 
@@ -136,7 +147,15 @@ type loadedMetaFile struct {
 // loadMetaPath reads and decodes a resolved meta.toml (a seam for tests that block the read).
 var loadMetaPath = metacmds.LoadFile
 
+// fetchMetaFile loads the panel's meta.toml and adds the Go column providers, which stay
+// available when there is no meta.toml or it failed to load (MF then holds only them).
 func (h *Handler) fetchMetaFile(panelPath string) loadedMetaFile {
+	res := h.fetchMetaTOML(panelPath)
+	res.MF = metacmds.WithProviders(res.MF, h.providers)
+	return res
+}
+
+func (h *Handler) fetchMetaTOML(panelPath string) loadedMetaFile {
 	path, warns := metacmds.ResolveMetaTOML(h.config, h.model.UserHomeDir, h.configDir, panelPath)
 	if path == "" {
 		return loadedMetaFile{Warns: warns}
@@ -150,8 +169,8 @@ func (h *Handler) fetchMetaFile(panelPath string) loadedMetaFile {
 
 // loadMetaFile resolves and loads the meta.toml for the given panel path on the caller
 // goroutine. Used by dialog/editor paths that already released the terminal.
-// MF is nil when no file is found (not an error) or it failed to load. Warnings and the load
-// error are shown as transient messages.
+// MF holds only the Go column providers (nil without any) when no file is found (not an error)
+// or it failed to load. Warnings and the load error are shown as transient messages.
 func (h *Handler) loadMetaFile(panelID int) loadedMetaFile {
 	res := h.fetchMetaFile(h.host.PanelByID(panelID).PathString())
 	for _, w := range res.Warns {
@@ -159,7 +178,6 @@ func (h *Handler) loadMetaFile(panelID int) loadedMetaFile {
 	}
 	if res.LoadErr != "" {
 		h.host.SetTransientMessage(res.LoadErr, ui.MessageUrgencyCritical)
-		res.MF = nil
 	}
 	return res
 }
@@ -352,11 +370,12 @@ func (h *Handler) OpenDialog(panelID int) {
 	}
 
 	h.model.MetaDialog = dialog.MetaDialogState{
-		Open:    true,
-		PanelID: panelID,
-		Entries: entries,
-		Checked: checked,
-		Notice:  dialogNotice(res),
+		Open:        true,
+		PanelID:     panelID,
+		Entries:     entries,
+		Checked:     checked,
+		MarkerWidth: h.host.DialogMarkerWidth(),
+		Notice:      dialogNotice(res),
 	}
 }
 
@@ -364,7 +383,8 @@ func (h *Handler) CloseDialog() {
 	h.model.MetaDialog = dialog.MetaDialogState{}
 }
 
-// entriesFromFile returns MetaEntry slice sorted by order+name from a MetaFile (nil-safe).
+// entriesFromFile returns MetaEntry slice sorted by section, then order+name, from a MetaFile
+// (nil-safe).
 func entriesFromFile(mf *metacmds.MetaFile) []dialog.MetaEntry {
 	if mf == nil || len(mf.Entries) == 0 {
 		return nil
@@ -378,7 +398,15 @@ func entriesFromFile(mf *metacmds.MetaFile) []dialog.MetaEntry {
 			SortOnActivation: e.SortOnActivation,
 			SortReverse:      e.SortReverse,
 		}
+		if e.Provider != nil {
+			out[i].Section = e.Provider.Section
+			if out[i].Section != "" {
+				out[i].Label = e.Column
+			}
+		}
 	}
+	// Sectioned providers go below the meta.toml entries, grouped by section.
+	slices.SortStableFunc(out, func(a, b dialog.MetaEntry) int { return strings.Compare(a.Section, b.Section) })
 	return out
 }
 
@@ -400,28 +428,9 @@ func (h *Handler) ActivateSelection() {
 		}
 	}
 
+	h.autoColumns[panelID] = false
 	if len(activeNames) == 0 {
-		h.invalidatePendingLoads(panelID)
-		h.stopRun(panelID)
-		h.model.MetaResults[panelID] = nil
-		h.activeEntries[panelID] = nil
-		h.navPath[panelID] = ""
-		h.resortPending[panelID] = false
-		if p := h.host.PanelByID(panelID); p != nil {
-			if p.Sort.Mode == panel.SortMeta {
-				// The sorted-on column no longer exists — fall back to Name immediately (like an
-				// explicit Sort dialog apply), rather than leaving the panel sorted by a column
-				// that just vanished from the header.
-				p.Sort.Mode = panel.SortName
-				p.Sort.MetaColumn = ""
-				h.host.ResortPanel(panelID)
-			}
-			if p.ActiveEntryFilter != nil && p.ActiveEntryFilter.ID == panel.PatternMetaFilterID {
-				// Meta columns just went away: the filter's closure now reads an empty
-				// MetaResults, so re-run it immediately rather than waiting for the next flush.
-				p.RefreshEntryFilter()
-			}
-		}
+		h.deactivate(panelID)
 		return
 	}
 
@@ -453,6 +462,36 @@ func (h *Handler) ActivateSelection() {
 		}
 	}
 
+	h.activate(panelID, activeNames)
+}
+
+// deactivate clears the panel's meta columns, falling back from a meta sort or filter.
+func (h *Handler) deactivate(panelID int) {
+	h.invalidatePendingLoads(panelID)
+	h.stopRun(panelID)
+	h.model.MetaResults[panelID] = nil
+	h.activeEntries[panelID] = nil
+	h.navPath[panelID] = ""
+	h.resortPending[panelID] = false
+	if p := h.host.PanelByID(panelID); p != nil {
+		if p.Sort.Mode == panel.SortMeta {
+			// The sorted-on column no longer exists — fall back to Name immediately (like an
+			// explicit Sort dialog apply), rather than leaving the panel sorted by a column
+			// that just vanished from the header.
+			p.Sort.Mode = panel.SortName
+			p.Sort.MetaColumn = ""
+			h.host.ResortPanel(panelID)
+		}
+		if p.ActiveEntryFilter != nil && p.ActiveEntryFilter.ID == panel.PatternMetaFilterID {
+			// Meta columns just went away: the filter's closure now reads an empty
+			// MetaResults, so re-run it immediately rather than waiting for the next flush.
+			p.RefreshEntryFilter()
+		}
+	}
+}
+
+// activate switches the panel's meta columns to names and starts loading them.
+func (h *Handler) activate(panelID int, activeNames []string) {
 	h.stopRun(panelID)
 	h.runGen[panelID]++
 
@@ -473,7 +512,27 @@ func (h *Handler) ActivateSelection() {
 
 // HandlePanelDirChanged re-runs active meta commands when the panel navigates to a new directory.
 // The meta file is resolved and loaded off the UI goroutine to avoid blocking on disk I/O.
+// A panel with no active columns entering fileindex:// switches on [fileindex].default_columns,
+// and leaving it switches them off again unless the picker changed the columns meanwhile.
 func (h *Handler) HandlePanelDirChanged(panelID int) {
+	p := h.host.PanelByID(panelID)
+	if p == nil {
+		return
+	}
+	inIndex := p.Path.Scheme() == pathloc.SchemeFileIndex
+	entered := inIndex && !h.inFileIndex[panelID]
+	left := !inIndex && h.inFileIndex[panelID]
+	h.inFileIndex[panelID] = inIndex
+	if entered && len(h.activeEntries[panelID]) == 0 && len(h.config.FileIndex.DefaultColumns) > 0 {
+		h.activate(panelID, h.config.FileIndex.DefaultColumns)
+		h.autoColumns[panelID] = true
+		return
+	}
+	if left && h.autoColumns[panelID] {
+		h.autoColumns[panelID] = false
+		h.deactivate(panelID)
+		return
+	}
 	if len(h.model.MetaResults[panelID]) == 0 {
 		return
 	}
@@ -513,8 +572,8 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 		h.host.SetTransientMessage(w, ui.MessageUrgencyWarn)
 	}
 	if d.LoadErr != "" {
+		// A broken meta.toml still leaves the Go column providers to run.
 		h.host.SetTransientMessage(d.LoadErr, ui.MessageUrgencyCritical)
-		return
 	}
 	if d.MF == nil {
 		return
@@ -531,6 +590,10 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 	}
 	sorted := metacmds.SortEntriesForDisplay(d.ActiveNames, d.MF)
 	if len(sorted) == 0 {
+		// None of the names exist (e.g. a stale [fileindex].default_columns): drop the
+		// placeholder columns rather than leaving empty headers.
+		h.model.MetaResults[d.PanelID] = nil
+		h.activeEntries[d.PanelID] = nil
 		return
 	}
 	cols := make([]ui.MetaColumnState, len(sorted))
@@ -659,8 +722,10 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 		}
 
 		for _, e := range entries {
-			if _, ok := h.entryCmd(cmdDef, e, dir); !ok {
-				continue
+			if cmdDef.Provider == nil {
+				if _, ok := h.entryCmd(cmdDef, e, dir); !ok {
+					continue
+				}
 			}
 			results[e.Path] = runningMarker
 			cols[i].PendingCount++
@@ -682,6 +747,14 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 	dispatch:
 		for _, cmdDef := range cmdDefs {
 			cmdDef := cmdDef
+			if cmdDef.Provider != nil {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					h.runProvider(ctx, panelID, gen, cmdDef.Provider, entries, dir)
+				}()
+				continue
+			}
 			workers := cmdDef.Workers
 			if workers < 1 {
 				workers = h.config.Meta.DefaultEntryWorkers
@@ -743,6 +816,26 @@ func (h *Handler) dispatch(ctx context.Context, panelID int, cmdDefs []metacmds.
 		}
 		wg.Wait()
 	}()
+}
+
+// runProvider calls a Go column provider once for entries and posts every entry's value in ONE
+// WakePayload (Values; missing entries get ""), so a large listing cannot flood the event queue
+// and drop wakes that would leave pending markers stuck.
+// A provider error is reported once (ExecFailedPayload) and leaves the cells empty.
+func (h *Handler) runProvider(ctx context.Context, panelID int, gen uint64, p *metacmds.Provider, entries []localfs.Entry, dir string) {
+	vals, err := p.Values(ctx, dir, entries)
+	if ctx.Err() != nil {
+		return
+	}
+	if err != nil {
+		_ = h.screen.PostEvent(tcell.NewEventInterrupt(ExecFailedPayload{PanelID: panelID, Gen: gen, Provider: p.Name, Stderr: err.Error()}))
+		vals = nil
+	}
+	batch := make(map[string]string, len(entries))
+	for _, e := range entries {
+		batch[e.Path] = vals[e.Path]
+	}
+	_ = h.screen.PostEvent(tcell.NewEventInterrupt(WakePayload{PanelID: panelID, EntryName: p.Name, Values: batch, Gen: gen}))
 }
 
 // entryCmd returns the shell command to run for entry e under cmdDef.

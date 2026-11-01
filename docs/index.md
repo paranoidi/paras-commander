@@ -21,8 +21,10 @@ New here? Start with [Getting started](getting-started.md), then
 - **Tools** — [disk usage](disk-usage.md), [directory compare](compare-directories.md), [find duplicates](find-duplicates.md), [mass rename](mass-rename.md).
 - **Commands** — run a command for each selected file, user menu with background and worker-pool commands, [meta columns](meta-columns.md) fed by external commands. See [Commands](commands.md).
 - **Remote** — browse SFTP hosts from `~/.ssh/config`. See [SFTP](sftp.md).
+- **fileindex** — browse a [fileindex](fileindex.md) content-hash index as `fileindex://`, show and edit its tags as a column, scan and prune it as background jobs.
 - **Subshell** — `Ctrl+O` shell with selected filenames at hand. See [Subshell](subshell.md).
 - **Status commands** — load average, memory, battery or your own commands at the top-left of the menu bar. See [Status commands](status-commands.md).
 - **Mouse** — optional click, double click, right click and wheel in the file browser. See [Mouse](mouse.md).
+- **cd on exit** — the shell follows the active panel's directory when `pc` quits. See [Change directory on exit](cd-on-exit.md).
 - **Editor integration** — file chooser mode for Helix and others. See [Chooser mode](chooser-mode.md).
 - **Configurable** — [config](config.md), [keybindings](keybindings.md), [themes](themes.md).

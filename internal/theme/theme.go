@@ -110,11 +110,10 @@ type Theme struct {
 	PanelRowMarkOtherMatchCursor tcell.Style
 	// PanelRowMarkJob styles the file-list job mark when the row is under a job's
 	// write (destination) tree; PanelRowMarkJobRead styles the read (source) tree;
-	// PanelRowMarkJobDecision styles either while the matched job waits on a user
-	// decision. See Theme.PanelJobMarkStyle.
-	PanelRowMarkJob         tcell.Style
-	PanelRowMarkJobRead     tcell.Style
-	PanelRowMarkJobDecision tcell.Style
+	// StatusDecision styles either while the matched job waits on a user decision. See
+	// Theme.PanelJobMarkStyle.
+	PanelRowMarkJob     tcell.Style
+	PanelRowMarkJobRead tcell.Style
 	// PanelRowMarkJobMove and PanelRowMarkJobDelete style the file-list operation icon
 	// (icons.filelist.move / .delete) appended after the job/queued icons for move-or-flatten
 	// and delete jobs respectively.
@@ -167,6 +166,9 @@ type Theme struct {
 	PanelStatusImageSixelTmux tcell.Style
 	PanelScrollbarTrack       tcell.Style
 	PanelScrollbarThumb       tcell.Style
+	// PanelScrollbarMatch marks search-match rows on the scrollbar rail; optional, falls back to the
+	// fuzzy.highlight.cursor foreground.
+	PanelScrollbarMatch tcell.Style
 	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
 	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
@@ -187,16 +189,26 @@ type Theme struct {
 	PanelBlockedCursor            tcell.Style
 	PanelBlockedCursorSelected    tcell.Style
 
-	// PanelIconFolderScanning styles disk-scan-pending directory icon strip.
-	PanelIconFolderScanning tcell.Style
+	// StatusScanning ([status] scanning) is the one "work in progress" style: disk-scan-pending
+	// folder icons, slow-load and preview-loading icons, spinners, the fileindex scanning state,
+	// and scanning jobs in the menu bar and the Jobs view.
+	StatusScanning tcell.Style
+	// Status* ([status] <job status>) style a job status wherever it shows: the menu-bar job
+	// strip, the Jobs view icon and status columns, the file-list queued mark and Commands view
+	// runs (Theme.StatusStyle).
+	StatusQueued    tcell.Style
+	StatusRunning   tcell.Style
+	StatusPaused    tcell.Style
+	StatusDecision  tcell.Style
+	StatusFailed    tcell.Style
+	StatusCanceled  tcell.Style
+	StatusCompleted tcell.Style
 	// PanelIconFolderExcluded styles directory rows skipped by disk-usage traversal (devicons).
 	PanelIconFolderExcluded tcell.Style
 	// PanelIconPreviewWarm styles image/video file icons whose prefetch cache is warm (a debug tint).
 	PanelIconPreviewWarm tcell.Style
 	// PanelIconPreviewCold styles image/video file icons whose prefetch cache is not yet warm.
 	PanelIconPreviewCold tcell.Style
-	// MenuSpinner styles the menu-bar activity spinner (braille dot spinner).
-	MenuSpinner tcell.Style
 	// MenuProgress* styles segmented progress in the menu-bar jobs strip.
 	MenuProgressDone      tcell.Style
 	MenuProgressRemaining tcell.Style
@@ -219,15 +231,7 @@ type Theme struct {
 	MenuSpeedText tcell.Style
 	// MenuStatusSeparator styles the glyph between (and after) status-command segments at the
 	// top-left of the menu bar (menu.status.separator, optional; falls back to dark grey).
-	MenuStatusSeparator tcell.Style
-	// MenuJob* styles one-cell queue icon per live job status in the menu bar.
-	MenuJobScanning                  tcell.Style
-	MenuJobQueued                    tcell.Style
-	MenuJobRunning                   tcell.Style
-	MenuJobPaused                    tcell.Style
-	MenuJobFailed                    tcell.Style
-	MenuJobDecision                  tcell.Style
-	MenuJobCompleted                 tcell.Style
+	MenuStatusSeparator              tcell.Style
 	PanelUsageNormal                 tcell.Style
 	PanelUsageSelected               tcell.Style
 	PanelUsageCursorActive           tcell.Style
@@ -243,6 +247,9 @@ type Theme struct {
 	PanelGitTypechange  tcell.Style
 	PanelGitIgnored     tcell.Style
 	PanelGitConflicted  tcell.Style
+
+	// PanelFileIndex styles the fileindex state icons ([panel.fileindex]) by state name.
+	PanelFileIndex map[string]tcell.Style
 
 	FuzzyInput           tcell.Style
 	FuzzyInputNomatch    tcell.Style
@@ -305,10 +312,11 @@ type Theme struct {
 	// MessageSuccess styles success toasts (optional message.success, black on green).
 	MessageSuccess tcell.Style
 
-	JobsRow     tcell.Style
-	JobsRunning tcell.Style
-	JobsDone    tcell.Style
-	JobsFailed  tcell.Style
+	JobsRow tcell.Style
+	// JobsRowHover is the Jobs, Commands or Messages list row under the mouse pointer (not the
+	// cursor row; JobsRow is their row base): its background (and plain text foreground) under
+	// the row's own status colors (optional jobs.row.hover; fallback white on grey).
+	JobsRowHover tcell.Style
 	// Jobs list progress column (horizontal bar with centered percentage).
 	JobsProgressTrack        tcell.Style
 	JobsProgressFill         tcell.Style
@@ -324,18 +332,9 @@ type Theme struct {
 	JobsProgressInactiveLabelOnFill  tcell.Style
 	JobsProgressInactiveLabelOnTrack tcell.Style
 
-	// JobsIcon* styles for the leading icon column in the jobs list (keys match job status strings).
-	JobsIconsScanning  tcell.Style
-	JobsIconsQueued    tcell.Style
-	JobsIconsRunning   tcell.Style
-	JobsIconsPaused    tcell.Style
-	JobsIconsCanceled  tcell.Style
-	JobsIconsFailed    tcell.Style
-	JobsIconsDecision  tcell.Style
-	JobsIconsCompleted tcell.Style
 	// JobsOperationSuccess / JobsOperationFailed / JobsOperationSkipped style an Operations pane
 	// row's result icon and the Details result counts (jobs.operations.success / .failed /
-	// .skipped; optional, default to jobs.icons.completed / .failed / .paused).
+	// .skipped; optional, default to status.completed / .failed / .paused).
 	JobsOperationSuccess tcell.Style
 	JobsOperationFailed  tcell.Style
 	JobsOperationSkipped tcell.Style
@@ -362,6 +361,13 @@ type Theme struct {
 	FooterKey        tcell.Style
 	FooterLabel      tcell.Style
 	FooterLabelShift tcell.Style
+	// FooterHover paints the whole footer entry (key and hint) under the mouse pointer
+	// (optional footer.hover; fallback black on cyan).
+	FooterHover tcell.Style
+	// FooterHoverActive paints the part of the hovered footer entry a click would press (its
+	// Shift-alternative word, or its key label and main hint) (optional footer.hover.active;
+	// fallback bright white on cyan).
+	FooterHoverActive tcell.Style
 
 	// TerminalText styles the embedded terminal panel strip ([terminal] in TOML). Optional
 	// (zero value falls back — see TerminalTextStyle) so imported/user themes without a
@@ -658,6 +664,7 @@ const (
 	IconKeyFoldersMount             = "folders.mount"
 	IconKeyFoldersExcluded          = "folders.excluded"
 	IconKeyScrollbarThumb           = "scrollbar.thumb"
+	IconKeyScrollbarMatch           = "scrollbar.match"
 	IconKeyMetaRunning              = "meta.running"
 	IconKeyTreeExpand               = "tree.expand"
 	IconKeyTreeCollapse             = "tree.collapse"
@@ -792,6 +799,18 @@ func (t Theme) IconFilelistOtherMatch() rune {
 	return t.iconRuneOr(IconKeyFilelistOtherMatch, '\U000f01fc')
 }
 
+// IconKeyFileIndex replaces "fileindex" in a displayed fileindex:// path (Theme.IconFileIndex).
+const IconKeyFileIndex = "fileindex"
+
+// IconFileIndex is the glyph shown instead of "fileindex" in a displayed fileindex:// path
+// ([icons] fileindex, nf-md-database), or "" without Nerd Font icons (the path is shown in full).
+func (t Theme) IconFileIndex() string {
+	if !t.UseNerdfontIcons {
+		return ""
+	}
+	return t.iconOr(IconKeyFileIndex, "\U000F01BC")
+}
+
 // IconFilelistJob returns the file-list job mark icon (role/status colored via
 // Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
 func (t Theme) IconFilelistJob() rune {
@@ -818,13 +837,13 @@ func (t Theme) IconFilelistMoveRemoving() rune {
 
 // IconFilelistWorking returns the row-suffix icon for a directory whose async navigation
 // load has been pending longer than the working-indicator delay (colored via
-// Theme.PanelIconFolderScanning, the same style used for disk-scan-pending folder icons).
+// Theme.StatusScanning).
 func (t Theme) IconFilelistWorking() rune {
 	return t.iconRuneOr(IconKeyWorking, '')
 }
 
 // IconFilelistPreviewLoading returns the icon that replaces the leading file icon while a
-// still/video thumb is prefetching (colored via panel.icon.folder.scanning).
+// still/video thumb is prefetching (colored via status.scanning).
 func (t Theme) IconFilelistPreviewLoading() rune {
 	return t.iconRuneOr(IconKeyFilelistPreviewLoading, '\uf03e')
 }
@@ -873,6 +892,11 @@ func (t Theme) IconTreeEnd() string {
 // IconScrollbarThumb returns the panel scrollbar thumb-style position icon.
 func (t Theme) IconScrollbarThumb() rune {
 	return t.iconRuneOr(IconKeyScrollbarThumb, '\u25cf') // ●
+}
+
+// IconScrollbarMatch returns the scrollbar rail glyph for rows marked as search matches.
+func (t Theme) IconScrollbarMatch() rune {
+	return t.iconRuneOr(IconKeyScrollbarMatch, '\u2588') // █
 }
 
 // IconMenuProgressDone returns the filled segment icon for the menu-bar progress bar.
@@ -929,26 +953,33 @@ func (t Theme) IconMenuJob(status string) rune {
 	}
 }
 
-// MenuJobStyle returns the style for one queue cell by job status string.
-func (t Theme) MenuJobStyle(status string) tcell.Style {
+// StatusStyle returns the [status] style of a job status string (JobsRow for an unknown one).
+func (t Theme) StatusStyle(status string) tcell.Style {
 	switch status {
 	case "scanning":
-		return t.MenuJobScanning
+		return t.StatusScanning
 	case "queued":
-		return t.MenuJobQueued
+		return t.StatusQueued
 	case "running":
-		return t.MenuJobRunning
+		return t.StatusRunning
 	case "paused":
-		return t.MenuJobPaused
-	case "failed":
-		return t.MenuJobFailed
+		return t.StatusPaused
 	case "decision":
-		return t.MenuJobDecision
+		return t.StatusDecision
+	case "failed":
+		return t.StatusFailed
+	case "canceled":
+		return t.StatusCanceled
 	case "completed":
-		return t.MenuJobCompleted
+		return t.StatusCompleted
 	default:
-		return t.MenuDetail
+		return t.JobsRow
 	}
+}
+
+// StatusStyleOn is StatusStyle's foreground and attributes on surface's background.
+func (t Theme) StatusStyleOn(status string, surface tcell.Style) tcell.Style {
+	return mergeForegroundOnSurface(t.StatusStyle(status), surface)
 }
 
 type styleSpec struct {
@@ -1022,7 +1053,6 @@ var requiredStyleKeys = []string{
 	"panel.row.mark.pinned",
 	"panel.row.mark.job",
 	"panel.row.mark.job.read",
-	"panel.row.mark.job.decision",
 	"panel.row.mark.job.move",
 	"panel.row.mark.job.delete",
 	"panel.row.tree.connector",
@@ -1056,11 +1086,17 @@ var requiredStyleKeys = []string{
 	"panel.blocked.row.cursor",
 	"panel.blocked.row.cursor.selected",
 	"panel.blocked.text",
-	"panel.icon.folder.scanning",
+	"status.scanning",
+	"status.queued",
+	"status.running",
+	"status.paused",
+	"status.decision",
+	"status.failed",
+	"status.canceled",
+	"status.completed",
 	"panel.icon.folder.excluded",
 	"panel.icon.preview.warm",
 	"panel.icon.preview.cold",
-	"menu.spinner",
 	"panel.usage.normal",
 	"panel.usage.selected",
 	"panel.git.not_modified",
@@ -1123,9 +1159,6 @@ var requiredStyleKeys = []string{
 	"message.warn",
 	"message.error",
 	"jobs.row",
-	"jobs.running",
-	"jobs.done",
-	"jobs.failed",
 	"jobs.progress.track",
 	"jobs.progress.fill",
 	"jobs.progress.label.on_fill",
@@ -1137,26 +1170,11 @@ var requiredStyleKeys = []string{
 	"jobs.progress.inactive.fill",
 	"jobs.progress.inactive.label.on_fill",
 	"jobs.progress.inactive.label.on_track",
-	"jobs.icons.scanning",
-	"jobs.icons.queued",
-	"jobs.icons.running",
-	"jobs.icons.paused",
-	"jobs.icons.canceled",
-	"jobs.icons.failed",
-	"jobs.icons.decision",
-	"jobs.icons.completed",
 	"compare.hashing",
 	"compare.equal",
 	"compare.content_diff",
 	"menu.progress.done",
 	"menu.progress.remaining",
-	"menu.job.scanning",
-	"menu.job.queued",
-	"menu.job.running",
-	"menu.job.paused",
-	"menu.job.failed",
-	"menu.job.decision",
-	"menu.job.completed",
 	"footer.key",
 	"footer.label",
 	"footer.label.shift",
@@ -1175,16 +1193,17 @@ var optionalStyleKeys = func() []string {
 			keys = append(keys, fmt.Sprintf("menu.progress.%s.gfx.%d", gfx, i))
 		}
 	}
-	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
-		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
+	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
+		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty", "panel.scrollbar.match",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing")
+	keys = append(keys, fileIndexStateStyleKeys()...)
 	return keys
 }()
 
 var optionalStyleKeySet = makeStyleKeySet(optionalStyleKeys)
 
 // styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
-var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare"}
+var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare", "status"}
 
 var styleSectionRootSet = makeStyleKeySet(styleSectionRoots)
 
@@ -1414,7 +1433,7 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 	if _, ok := raw["styles"]; ok {
-		return Theme{}, fmt.Errorf("[styles] is not supported; use [menu], [panel], [dialog], [jobs], [message], [footer], and [fuzzy] sections")
+		return Theme{}, fmt.Errorf("[styles] is not supported; use [status], [menu], [panel], [dialog], [jobs], [message], [footer], and [fuzzy] sections")
 	}
 	for key := range raw {
 		if key == "name" || key == "palette" || key == "icons" {
@@ -1493,15 +1512,15 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
-	jobsOperationSuccess, err := optionalStyle(specs, palette, "jobs.operations.success", styles["jobs.icons.completed"])
+	jobsOperationSuccess, err := optionalStyle(specs, palette, "jobs.operations.success", styles["status.completed"])
 	if err != nil {
 		return Theme{}, err
 	}
-	jobsOperationFailed, err := optionalStyle(specs, palette, "jobs.operations.failed", styles["jobs.icons.failed"])
+	jobsOperationFailed, err := optionalStyle(specs, palette, "jobs.operations.failed", styles["status.failed"])
 	if err != nil {
 		return Theme{}, err
 	}
-	jobsOperationSkipped, err := optionalStyle(specs, palette, "jobs.operations.skipped", styles["jobs.icons.paused"])
+	jobsOperationSkipped, err := optionalStyle(specs, palette, "jobs.operations.skipped", styles["status.paused"])
 	if err != nil {
 		return Theme{}, err
 	}
@@ -1518,6 +1537,21 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 	menuStatusSeparator, err := optionalStyle(specs, palette, "menu.status.separator", tcell.StyleDefault.Foreground(tcell.ColorGray))
+	if err != nil {
+		return Theme{}, err
+	}
+
+	footerHover, err := optionalStyle(specs, palette, "footer.hover", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorTeal))
+	if err != nil {
+		return Theme{}, err
+	}
+
+	footerHoverActive, err := optionalStyle(specs, palette, "footer.hover.active", tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorTeal))
+	if err != nil {
+		return Theme{}, err
+	}
+
+	jobsRowHover, err := optionalStyle(specs, palette, "jobs.row.hover", tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorGray))
 	if err != nil {
 		return Theme{}, err
 	}
@@ -1545,6 +1579,10 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	panelFileIndex, err := fileIndexStateStyles(specs, palette)
+	if err != nil {
+		return Theme{}, err
+	}
 	panelRowMarkRangeAnchor, err := optionalStyle(specs, palette, "panel.row.mark.range_anchor", tcell.StyleDefault.Foreground(tcell.ColorYellow))
 	if err != nil {
 		return Theme{}, err
@@ -1559,6 +1597,12 @@ func parse(data []byte) (Theme, error) {
 	}
 
 	panelEmpty, err := optionalStyle(specs, palette, "panel.empty", panelEmptyFallback)
+	if err != nil {
+		return Theme{}, err
+	}
+
+	fuzzyCursorFG, _, _ := styles["fuzzy.highlight.cursor"].Decompose()
+	panelScrollbarMatch, err := optionalStyle(specs, palette, "panel.scrollbar.match", tcell.StyleDefault.Foreground(fuzzyCursorFG))
 	if err != nil {
 		return Theme{}, err
 	}
@@ -1651,7 +1695,6 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkOtherMatchCursor:        panelRowMarkOtherMatchCursor,
 		PanelRowMarkJob:                     styles["panel.row.mark.job"],
 		PanelRowMarkJobRead:                 styles["panel.row.mark.job.read"],
-		PanelRowMarkJobDecision:             styles["panel.row.mark.job.decision"],
 		PanelRowMarkJobMove:                 styles["panel.row.mark.job.move"],
 		PanelRowMarkJobDelete:               styles["panel.row.mark.job.delete"],
 		PanelRowMarkJobRemoving:             panelRowMarkJobRemoving,
@@ -1684,6 +1727,7 @@ func parse(data []byte) (Theme, error) {
 		PanelStatusImageSixelTmux:           styles["panel.status.image_sixel_tmux"],
 		PanelScrollbarTrack:                 styles["panel.scrollbar.track"],
 		PanelScrollbarThumb:                 styles["panel.scrollbar.thumb"],
+		PanelScrollbarMatch:                 panelScrollbarMatch,
 		PanelFileIconFG:                     panelFileIconFG,
 
 		PanelBlockedFrame:             styles["panel.blocked.frame"],
@@ -1700,11 +1744,17 @@ func parse(data []byte) (Theme, error) {
 		PanelBlockedCursor:            styles["panel.blocked.row.cursor"],
 		PanelBlockedCursorSelected:    styles["panel.blocked.row.cursor.selected"],
 
-		PanelIconFolderScanning:          styles["panel.icon.folder.scanning"],
+		StatusScanning:                   styles["status.scanning"],
+		StatusQueued:                     styles["status.queued"],
+		StatusRunning:                    styles["status.running"],
+		StatusPaused:                     styles["status.paused"],
+		StatusDecision:                   styles["status.decision"],
+		StatusFailed:                     styles["status.failed"],
+		StatusCanceled:                   styles["status.canceled"],
+		StatusCompleted:                  styles["status.completed"],
 		PanelIconFolderExcluded:          styles["panel.icon.folder.excluded"],
 		PanelIconPreviewWarm:             styles["panel.icon.preview.warm"],
 		PanelIconPreviewCold:             styles["panel.icon.preview.cold"],
-		MenuSpinner:                      styles["menu.spinner"],
 		MenuProgressDone:                 styles["menu.progress.done"],
 		MenuProgressRemaining:            styles["menu.progress.remaining"],
 		MenuProgressDoneGfx:              menuProgressDoneGfx,
@@ -1713,13 +1763,6 @@ func parse(data []byte) (Theme, error) {
 		MenuSpeedCap:                     menuSpeedCap,
 		MenuSpeedText:                    menuSpeedText,
 		MenuStatusSeparator:              menuStatusSeparator,
-		MenuJobScanning:                  styles["menu.job.scanning"],
-		MenuJobQueued:                    styles["menu.job.queued"],
-		MenuJobRunning:                   styles["menu.job.running"],
-		MenuJobPaused:                    styles["menu.job.paused"],
-		MenuJobFailed:                    styles["menu.job.failed"],
-		MenuJobDecision:                  styles["menu.job.decision"],
-		MenuJobCompleted:                 styles["menu.job.completed"],
 		PanelUsageNormal:                 styles["panel.usage.normal"],
 		PanelUsageSelected:               styles["panel.usage.selected"],
 		PanelUsageCursorActive:           styles["panel.active.usage.cursor"],
@@ -1735,6 +1778,7 @@ func parse(data []byte) (Theme, error) {
 		PanelGitTypechange:  styles["panel.git.typechange"],
 		PanelGitIgnored:     styles["panel.git.ignored"],
 		PanelGitConflicted:  styles["panel.git.conflicted"],
+		PanelFileIndex:      panelFileIndex,
 
 		FuzzyInput:           styles["fuzzy.input"],
 		FuzzyInputNomatch:    styles["fuzzy.input.nomatch"],
@@ -1794,10 +1838,8 @@ func parse(data []byte) (Theme, error) {
 		MessageSweep:   messageSweep,
 		MessageSuccess: messageSuccess,
 
-		JobsRow:     styles["jobs.row"],
-		JobsRunning: styles["jobs.running"],
-		JobsDone:    styles["jobs.done"],
-		JobsFailed:  styles["jobs.failed"],
+		JobsRow:      styles["jobs.row"],
+		JobsRowHover: jobsRowHover,
 
 		JobsProgressTrack:        styles["jobs.progress.track"],
 		JobsProgressFill:         styles["jobs.progress.fill"],
@@ -1813,14 +1855,6 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressInactiveLabelOnFill:  styles["jobs.progress.inactive.label.on_fill"],
 		JobsProgressInactiveLabelOnTrack: styles["jobs.progress.inactive.label.on_track"],
 
-		JobsIconsScanning:    styles["jobs.icons.scanning"],
-		JobsIconsQueued:      styles["jobs.icons.queued"],
-		JobsIconsRunning:     styles["jobs.icons.running"],
-		JobsIconsPaused:      styles["jobs.icons.paused"],
-		JobsIconsCanceled:    styles["jobs.icons.canceled"],
-		JobsIconsFailed:      styles["jobs.icons.failed"],
-		JobsIconsDecision:    styles["jobs.icons.decision"],
-		JobsIconsCompleted:   styles["jobs.icons.completed"],
 		JobsOperationSuccess: jobsOperationSuccess,
 		JobsOperationFailed:  jobsOperationFailed,
 		JobsOperationSkipped: jobsOperationSkipped,
@@ -1832,9 +1866,11 @@ func parse(data []byte) (Theme, error) {
 		Icons:   icons,
 		palette: palette,
 
-		FooterKey:        styles["footer.key"],
-		FooterLabel:      styles["footer.label"],
-		FooterLabelShift: styles["footer.label.shift"],
+		FooterKey:         styles["footer.key"],
+		FooterLabel:       styles["footer.label"],
+		FooterLabelShift:  styles["footer.label.shift"],
+		FooterHover:       footerHover,
+		FooterHoverActive: footerHoverActive,
 
 		TerminalText: styles["terminal.text"],
 	}, nil

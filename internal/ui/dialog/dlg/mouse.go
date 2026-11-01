@@ -1,7 +1,9 @@
 package dlg
 
 import (
+	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
@@ -63,6 +65,32 @@ func Wheel(spec Spec, screenW, screenH int, focus *ID, x, y, delta int) (Event, 
 	return listMove(it, it.landOnRow(next, delta)), true
 }
 
+// HoveredListRow returns the screen rect of the list row under (x, y), placed as Draw places it,
+// for DrawListRowHover. Only the pointer highlights the row: the list cursor and focus stay put.
+// ok is false off a list, on a ScrollOnly list, a Header row, a row past the last, and on the
+// cursor row of a focused list (it already shows the cursor).
+func HoveredListRow(spec Spec, screenW, screenH int, focus ID, x, y int) (Rect, bool) {
+	pi, it, ok := hit(spec, screenW, screenH, x, y)
+	if !ok || pi.Kind != KindList || it.ScrollOnly {
+		return Rect{}, false
+	}
+	row := pi.Offset + (y - pi.Rect.Y)
+	if row >= it.rowCount() || it.row(row).Header || (row == it.Cursor && listFocused(spec, Focused(spec, focus), pi.ID)) {
+		return Rect{}, false
+	}
+	return Rect{X: pi.Rect.X, Y: y, Width: pi.Rect.Width, Height: 1}, true
+}
+
+// DrawListRowHover repaints the cells of row r (from HoveredListRow; zero width draws nothing)
+// on the jobs.row.hover background, keeping their text and foreground.
+func DrawListRowHover(screen tcell.Screen, r Rect, styles theme.Theme) {
+	_, bg, _ := styles.JobsRowHover.Decompose()
+	for x := r.X; x < r.X+r.Width; x++ {
+		str, st, _ := screen.Get(x, r.Y)
+		screen.Put(x, r.Y, str, st.Background(bg))
+	}
+}
+
 // hit places spec and returns the placed widget under (x, y) and its spec item (zero for a button).
 func hit(spec Spec, screenW, screenH, x, y int) (PlacedItem, Item, bool) {
 	p, placed := Place(screenW, screenH, spec)
@@ -100,4 +128,38 @@ func caretIndex(it Item, col int) int {
 		w += rw
 	}
 	return i
+}
+
+// ButtonHover is the strip button under the mouse pointer, as Place laid it out. Active is false
+// when the pointer is on no button.
+type ButtonHover struct {
+	Active      bool
+	ID          ID
+	Rect        Rect
+	Label       string
+	Mnemonic    rune
+	Destructive bool
+}
+
+// HoveredButton returns the strip button of spec under (x, y), placed as Draw places it.
+func HoveredButton(spec Spec, screenW, screenH, x, y int) ButtonHover {
+	pi, _, ok := hit(spec, screenW, screenH, x, y)
+	if !ok {
+		return ButtonHover{}
+	}
+	for _, b := range spec.Buttons {
+		if b.ID == pi.ID {
+			return ButtonHover{Active: true, ID: b.ID, Rect: pi.Rect, Label: b.Label, Mnemonic: b.Mnemonic, Destructive: b.Destructive}
+		}
+	}
+	return ButtonHover{}
+}
+
+// DrawButtonHover repaints the hovered button h in the focused button style, over the strip Draw
+// painted; focus itself does not move.
+func DrawButtonHover(screen tcell.Screen, h ButtonHover, styles theme.Theme) {
+	if !h.Active {
+		return
+	}
+	draw.DrawDialogButton(screen, h.Rect.X, h.Rect.Y, h.Label, h.Mnemonic, true, h.Destructive, false, styles)
 }

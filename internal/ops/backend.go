@@ -31,19 +31,18 @@ func useLocalFastPath(src, dst pathloc.Path) bool {
 	return src.Scheme() == pathloc.SchemeFile && dst.Scheme() == pathloc.SchemeFile
 }
 
-func sameSFTPHost(a, b pathloc.Path) bool {
-	if a.Scheme() != pathloc.SchemeSFTP || b.Scheme() != pathloc.SchemeSFTP {
+// sameRenameRoot reports whether one backend Rename can move a to b: the backend of a says so
+// (fsbackend.RenameRooter) for two paths of its own scheme.
+func sameRenameRoot(a, b pathloc.Path) bool {
+	if a.Scheme() != b.Scheme() {
 		return false
 	}
-	ha, err := pathloc.SFTPHostPart(a)
+	be, err := backendFor(a)
 	if err != nil {
 		return false
 	}
-	hb, err := pathloc.SFTPHostPart(b)
-	if err != nil {
-		return false
-	}
-	return ha == hb
+	rr, ok := be.(fsbackend.RenameRooter)
+	return ok && rr.SameRenameRoot(a, b)
 }
 
 func statEntry(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
@@ -81,10 +80,10 @@ func resolveChild(parent pathloc.Path, name string) (pathloc.Path, error) {
 	if name == "" {
 		return pathloc.Path{}, errors.New("empty name")
 	}
-	if strings.HasPrefix(name, "sftp://") {
+	if pathloc.HasURIPrefix(name) {
 		return pathloc.Parse(name)
 	}
-	if parent.IsRemote() {
+	if !parent.IsLocal() {
 		if strings.Contains(name, "/") || strings.Contains(name, string(filepath.Separator)) {
 			return pathloc.Path{}, fmt.Errorf("name must be a single path element")
 		}
@@ -141,6 +140,13 @@ func removePathRecursive(ctx context.Context, loc pathloc.Path) error {
 			return err
 		}
 		reportRemoved(ctx, loc, false)
+		return nil
+	}
+	if tr, ok := be.(fsbackend.TreeRemover); ok {
+		if err := tr.RemoveTree(ctx, loc); err != nil {
+			return err
+		}
+		reportRemoved(ctx, loc, true)
 		return nil
 	}
 	if loc.Scheme() == pathloc.SchemeFile {
@@ -453,7 +459,7 @@ func entryFromPathString(path string) (localfs.Entry, error) {
 	if err != nil {
 		return localfs.Entry{}, err
 	}
-	if loc.IsRemote() {
+	if !loc.IsLocal() {
 		ent, err := statEntry(context.Background(), loc)
 		if err != nil {
 			return localfs.Entry{}, err

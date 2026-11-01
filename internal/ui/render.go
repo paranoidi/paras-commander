@@ -202,6 +202,29 @@ type Model struct {
 	FolderColor func(path string) (tcell.Color, bool)
 	// UserHomeDir is filepath.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
 	UserHomeDir string
+	// PanelTitleHover is the mouse pointer on a browser panel's title row (set by App on motion).
+	PanelTitleHover PanelTitleHover
+	// PanelRowHover is the file list entry under the mouse pointer (set by App each render),
+	// painted in the inactive panel cursor style without moving the cursor.
+	PanelRowHover PanelRowHover
+	// DialogButtonHover is the top-most dialog's button under the mouse pointer (set by App each
+	// render), painted in the focused button style without moving focus.
+	DialogButtonHover dlg.ButtonHover
+	// DialogListHover is the top-most dialog's list row under the mouse pointer (set by App each
+	// render; zero width for none), drawn on the jobs.row.hover background.
+	DialogListHover dlg.Rect
+	// MenuBarHover is the menu title under the mouse pointer (set by App each render), drawn in
+	// the open menu's title style.
+	MenuBarHover MenuHover
+	// StatusCommandsHover is the mouse pointer on the status-command area (set by App each
+	// render), drawn in the open menu's title style.
+	StatusCommandsHover bool
+	// AuxListHover is the row under the mouse pointer in the open Jobs, Commands, Messages, Compare or Duplicates list
+	// (set by App each render), drawn in jobs.row.hover unless it is the cursor row.
+	AuxListHover ListRowHover
+	// FooterHover is the footer entry under the mouse pointer (set by App each render), drawn in
+	// footer.hover.
+	FooterHover FooterHover
 	// CursorNameHintPinOutPrimary / CursorNameHintPinOutSecondary are set by App for one paint
 	// and point at live panel.State.CursorNameHintPinned fields (not the Model snapshot copy).
 	CursorNameHintPinOutPrimary   *string
@@ -239,6 +262,7 @@ type Model struct {
 	HistoryDialog           dialog.HistoryDialogState
 	SFTPConnectDialog       dialog.SFTPConnectDialogState
 	FindDialog              dialog.FindDialogState
+	IndexFindDialog         dialog.IndexFindDialogState
 	// PinnedItems is the ad-hoc, session-only pin list (most-recently-pinned first),
 	// shared by the main panel, Find dialog, Compare view, and Dedup view. Never persisted.
 	PinnedItems []PinnedItem
@@ -352,7 +376,7 @@ func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
 		m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
-		m.FindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
+		m.FindDialog.Open || m.IndexFindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
 }
 
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
@@ -513,6 +537,60 @@ func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (tit
 	return ownPath, endLabel, true
 }
 
+// MenuHover names the menu bar title (Index) under the mouse pointer; Active is false off the
+// titles.
+type MenuHover struct {
+	Active bool
+	Index  int
+}
+
+// ListRowHover names the list row (Row, an index into the list's rows) under the mouse pointer;
+// Active is false off the rows. Copies names the Duplicates view's Copies pane (false: the main
+// tree); no other list reads it.
+type ListRowHover struct {
+	Active bool
+	Row    int
+	Copies bool
+}
+
+// FooterHover names the footer entry (Index into the drawn entries) under the mouse pointer and
+// whether the pointer is on its Shift-alternative word (Shift); Active is false off the entries.
+type FooterHover struct {
+	Active bool
+	Index  int
+	Shift  bool
+}
+
+// PanelRowHover names the browser panel entry (visible entry index) under the mouse pointer.
+type PanelRowHover struct {
+	Active bool
+	Panel  int
+	Entry  int
+}
+
+// at returns whether the pointer is on an entry of panelID and that entry's index.
+func (h PanelRowHover) at(panelID int) (bool, int) {
+	if !h.Active || h.Panel != panelID {
+		return false, -1
+	}
+	return true, h.Entry
+}
+
+// PanelTitleHover is the mouse pointer on a browser panel's title row.
+type PanelTitleHover struct {
+	Active bool
+	Panel  int
+	X      int
+}
+
+// at returns whether the pointer is on panelID's title row and its column there.
+func (h PanelTitleHover) at(panelID int) (bool, int) {
+	if !h.Active || h.Panel != panelID {
+		return false, -1
+	}
+	return true, h.X
+}
+
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
 // styles because a menu or modal has taken focus. The leader menu (Esc built-in / F2 user menu)
 // on its own is excluded: it docks above the footer without taking over navigation context, so the
@@ -548,7 +626,7 @@ func (m *Model) nonLeaderModalOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -560,7 +638,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.PinDialog.Open ||
+	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.PinDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open || m.StatusCommandsDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open ||
@@ -638,10 +716,10 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if model.ModalDialogOpen() {
 			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
 		} else {
-			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
+			drawMenuBar(screen, layout.Menu, model.Menu, model.MenuBarHover, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
 		}
 		if layout.StatusCmd.Width > 0 {
-			drawMenuBarStatusCommands(screen, layout.StatusCmd, model.StatusCommands, styles)
+			drawMenuBarStatusCommands(screen, layout.StatusCmd, model.StatusCommands, styles, model.StatusCommandsHover)
 		}
 	}
 	chromeBlocked := model.PanelsChromeBlocked()
@@ -675,6 +753,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			OpsBottom:              model.JobsOpsBottom,
 			OpsNewestLast:          model.JobsOpsNewestLast,
 			RateLimitBPS:           model.JobsTransferRateLimitBPS,
+			ListHover:              model.AuxListHover,
 		}, styles, now, chromeBlocked || model.JobsResultFilterDialog.Open)
 		if model.JobsResultFilterDialog.Open {
 			dialog.DrawJobsResultFilterDialog(screen, layout, model.JobsResultFilterDialog, styles)
@@ -684,12 +763,12 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if len(model.CommandsDisplay) > 0 {
 			cmdEntries = model.CommandsDisplay
 		}
-		drawCommandsView(screen, layout, model.CommandsView, cmdEntries, styles, chromeBlocked, model.UserHomeDir)
+		drawCommandsView(screen, layout, model.CommandsView, cmdEntries, styles, chromeBlocked, model.UserHomeDir, model.AuxListHover)
 	case ViewCompare:
 		filtered := comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter, model.CompareView.IgnoreEmpty, model.CompareView.NameFilter)
 		dimLeft, dimRight := compareDimmedSides(model.CompareFilterDialog)
 		drawCompareView(screen, layout, model.CompareView,
-			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary, RowMarks: withRangeAnchor(rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.CompareView.RangeAnchor), DimLeft: dimLeft, DimRight: dimRight},
+			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary, RowMarks: withRangeAnchor(rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.CompareView.RangeAnchor), DimLeft: dimLeft, DimRight: dimRight, Hover: model.AuxListHover},
 			styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
 		if model.CompareMergeDialog.Open {
 			dialog.DrawCompareMergeDialog(screen, layout, model.CompareMergeDialog, styles, model.UserHomeDir)
@@ -698,14 +777,16 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			dialog.DrawCompareFilterDialog(screen, layout, model.CompareFilterDialog, styles)
 		}
 	case ViewDedup:
-		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks), model.AuxListHover)
 		drawDedupBrowsePanel(screen, layout, model, styles, chromeBlocked)
 	case ViewMessages:
-		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation)
+		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation, model.AuxListHover)
 	default:
 		drawBrowserView(screen, layout, model, styles, chromeBlocked)
 	}
 	drawModalOverlays(screen, layout, model, menus, styles)
+	dlg.DrawButtonHover(screen, model.DialogButtonHover, styles)
+	dlg.DrawListRowHover(screen, model.DialogListHover, styles)
 	// Caller must invoke screen.Show() or screen.Sync() so the terminal updates.
 }
 
@@ -799,6 +880,8 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			panelCtx.TitlePath = titlePath
 			panelCtx.TitleEndLabel = endLabel
 		}
+		panelCtx.TitleHover, panelCtx.TitleHoverX = model.PanelTitleHover.at(side.PanelID)
+		panelCtx.RowHover, panelCtx.RowHoverEntry = model.PanelRowHover.at(side.PanelID)
 		otherNames, otherCursor, otherDir := otherPanelMatchNames(model, side.PanelID)
 		drawPanel(screen, side.FileRect, model.PanelForFileListRender(side.PanelID),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
@@ -940,6 +1023,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	if model.SFTPConnectDialog.Open {
 		dialog.DrawSFTPConnectDialog(screen, layout, model.SFTPConnectDialog, styles)
 	}
+	if model.IndexFindDialog.Open {
+		dialog.DrawIndexFindDialog(screen, layout, model.IndexFindDialog, dialogRenderContext(model, styles), rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+	}
 	if model.FindDialog.Open {
 		selectionLabel := FindDialogSelectionSizeLabel(
 			&model.FindDialog,
@@ -967,12 +1053,12 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawElevateDialog(screen, layout, model.ElevateDialog, styles)
 	}
 	if model.HelpView.Open {
-		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles)
+		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles, model.PanelScrollbar)
 	}
 	if model.LeaderMenu.Open {
 		DrawLeaderMenu(screen, layout, model.LeaderMenu, styles)
 	}
-	drawFooter(screen, layout.Footer, styles, model.FooterKeys)
+	drawFooter(screen, layout.Footer, styles, model.FooterKeys, model.FooterHover)
 	// Transient status must be drawn after modal chrome so it is not overwritten (e.g. theme picker).
 	// Draw before the generic message dialog so that modal stays the topmost curated surface when both apply.
 	PaintTransientStatusMessage(screen, layout, model, styles)

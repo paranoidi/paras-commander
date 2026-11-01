@@ -20,6 +20,7 @@ Press `:` (`app.leader-menu`; press again to close) for a grouped, multi-column 
 - `F3` toggles showing each action's direct key after its name (`[ui] leader_menu_show_direct_keys`).
 - `Esc` closes the strip.
 - `"` (`app.copy-menu`) opens the copy-to-clipboard menu (`[copy_menu]`) with file URL, directory URL, file name and git-relative paths. In the fullscreen preview of a text file it also copies the file's contents (the row is dimmed elsewhere). In the fullscreen preview, `:` opens a preview menu (`[preview_menu]`) instead.
+- `<` (`fileindex.menu`, also `<` in the `:` menu's Tools group) opens the [fileindex](fileindex.md) menu (`[fileindex_menu]`). Its letters are the actions' own shortcut letters in lowercase; those shortcuts are all `Alt+Shift` plus the letter (`t` for `Alt+Shift+T`).
 - `Alt+G` (`panel.git-filter-menu`) opens a small menu to filter by git state (staged, unstaged, tracked, untracked).
 - `Alt+Shift+C` (`panel.folder-color-menu`) opens a menu to set or clear the folder color (see `folder-colors.md`).
 
@@ -33,4 +34,4 @@ The Jobs, Commands, Messages, Compare and Duplicates views each have their own `
 
 ## User menu
 
-`F2` (or `§` or `;`; `app.user-menu`) opens your own command list from `menu.toml`, with submenus, optional hotkeys and conditions. `F9` inside it edits the file and reloads. Entries and fields are described in [Commands](commands.md) and [`[user_menu]`](config.md#user_menu).
+`F2` (or `§` or `;`; `app.user-menu`) opens your own command list from `menu.toml`, with submenus, optional hotkeys and conditions. `F9` inside it edits the file and reloads. When `menu.toml` has an error (or no entries to show), the menu still opens showing the full error in place of the entries, so `F9` can fix the file. Entries and fields are described in [Commands](commands.md) and [`[user_menu]`](config.md#user_menu).

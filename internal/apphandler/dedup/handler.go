@@ -21,6 +21,7 @@ import (
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -40,6 +41,7 @@ type Deps struct {
 	Config     config.Config
 	Gitignore  *gitignore.Cache
 	DiskIgnore diskusage.ShouldIgnoreFolder
+	FileIndex  *fileindex.Index
 }
 
 // Host is the app shell surface dedup needs.
@@ -67,6 +69,7 @@ type Handler struct {
 	config     config.Config
 	gitignore  *gitignore.Cache
 	diskIgnore diskusage.ShouldIgnoreFolder
+	fileIndex  *fileindex.Index
 
 	session *comparepkg.DedupSession
 	wake    host.WakeCoalescer
@@ -106,6 +109,7 @@ func New(d Deps) *Handler {
 		config:     d.Config,
 		gitignore:  d.Gitignore,
 		diskIgnore: d.DiskIgnore,
+		fileIndex:  d.FileIndex,
 	}
 }
 
@@ -135,7 +139,7 @@ func (h *Handler) Open() {
 	if h.model.ActivePanel == ui.SecondaryPanel {
 		p = &h.model.Secondary
 	}
-	if len(p.SelectedDirPaths) > 0 && !path.IsRemote() {
+	if len(p.SelectedDirPaths) > 0 && (path.IsLocal() || path.Scheme() == pathloc.SchemeFileIndex) {
 		dirs := slices.Sorted(maps.Keys(p.SelectedDirPaths))
 		h.model.DedupReturnDialog = dialog.DedupReturnDialogState{Open: true, Dir: path.String(), ScopeDirs: dirs}
 		return
@@ -285,8 +289,9 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		h.host.SetTransientMessage("Find duplicates: panel needs a path", ui.MessageUrgencyError)
 		return
 	}
-	if root.IsRemote() {
-		h.host.SetTransientMessage("Find duplicates: remote paths not supported", ui.MessageUrgencyError)
+	indexed := root.Scheme() == pathloc.SchemeFileIndex
+	if !root.IsLocal() && !indexed {
+		h.host.SetTransientMessage(pathloc.Unavailable("Find duplicates", root), ui.MessageUrgencyError)
 		return
 	}
 
@@ -310,7 +315,7 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 	}
 	hs := hashwalk.FromCompareConfig(h.config.Compare, h.diskIgnore, volGate)
 
-	h.session = startDedup(context.Background(), root, comparepkg.DedupOptions{
+	opts := comparepkg.DedupOptions{
 		Walk: comparepkg.WalkOptions{
 			ShowHidden:    p.ShowHidden,
 			Gitignore:     h.gitignore,
@@ -325,7 +330,14 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		FirstChunkBytes:   hs.FirstChunkBytes,
 		CacheFile:         comparepkg.DefaultHashCachePath(),
 		OnUpdate:          func(_ comparepkg.DedupSnapshot) { h.postWake() },
-	})
+	}
+	if indexed {
+		opts.CacheFile, opts.ConfirmHashBytes = "", 0
+		opts.Indexed = func(ctx context.Context) ([]comparepkg.FileRecord, map[string][32]byte, error) {
+			return h.fileIndex.DedupFiles(ctx, root)
+		}
+	}
+	h.session = startDedup(context.Background(), root, opts)
 	h.model.DedupSnapshot = h.session.Snapshot()
 }
 
@@ -805,6 +817,25 @@ func (h *Handler) SelectEdge(last bool) {
 	h.followMainCursor()
 }
 
+// FocusBrowsePanel focuses the browse panel (a mouse click), as cycling to it does.
+func (h *Handler) FocusBrowsePanel() { h.focusPane(dedupPaneBrowse) }
+
+// FocusPaneRow focuses the Copies pane (copies) or the main tree and moves that pane's cursor to
+// row (a mouse click). A main-pane move refreshes the copies pane.
+func (h *Handler) FocusPaneRow(copies bool, row int) {
+	if copies {
+		h.focusPane(dedupPaneCopies)
+	} else {
+		h.focusPane(dedupPaneMain)
+	}
+	pane, rows := h.focusedPane()
+	if row < 0 || row >= len(rows) {
+		return
+	}
+	pane.Selected = row
+	h.followMainCursor()
+}
+
 // SwitchPane cycles focus (Tab): main tree -> copies pane (if non-empty) -> browse panel (Dirs
 // view, results ready) -> main tree. FocusCopies keeps naming the source pane while the browse
 // panel is focused.
@@ -816,25 +847,52 @@ func (h *Handler) SwitchPanePrev() { h.cyclePane(-1) }
 // cyclePane moves focus dir steps through main tree (0), copies (1) and browse panel (2),
 // skipping an empty copies pane and the browse panel when it is not shown.
 func (h *Handler) cyclePane(dir int) {
-	st := &h.model.DedupView
 	avail := [3]bool{
 		true,
 		len(h.model.DedupCopiesList) > 0,
 		h.model.DedupSnapshot.Phase == comparepkg.DedupDone,
 	}
-	cur := 0
-	if st.FocusPanel {
-		cur = 2
-	} else if st.FocusCopies {
-		cur = 1
-	}
-	next := (cur + dir + 3) % 3
+	next := (h.focusedSlot() + dir + 3) % 3
 	for !avail[next] {
 		next = (next + dir + 3) % 3
 	}
+	h.dropPaneFilters()
+	h.focusPane(next)
+}
+
+// dropPaneFilters clears both tree panes' quick filters and the range anchor on a focus change.
+func (h *Handler) dropPaneFilters() {
+	st := &h.model.DedupView
 	st.Main.Filter, st.Copies.Filter = quickfilter.Filter{}, quickfilter.Filter{}
 	st.RangeAnchor = ""
-	st.FocusCopies, st.FocusPanel = next == 1, next == 2
+}
+
+// focusedSlot is the focused pane as a dedupPane* slot.
+func (h *Handler) focusedSlot() int {
+	switch st := &h.model.DedupView; {
+	case st.FocusPanel:
+		return dedupPaneBrowse
+	case st.FocusCopies:
+		return dedupPaneCopies
+	}
+	return dedupPaneMain
+}
+
+// Focus slots cyclePane and focusPane step through.
+const (
+	dedupPaneMain = iota
+	dedupPaneCopies
+	dedupPaneBrowse
+)
+
+// focusPane focuses pane (a dedupPane* slot). Moving to another pane drops the quick filters and
+// the range anchor, as cycling does.
+func (h *Handler) focusPane(pane int) {
+	if h.focusedSlot() != pane {
+		h.dropPaneFilters()
+	}
+	st := &h.model.DedupView
+	st.FocusCopies, st.FocusPanel = pane == dedupPaneCopies, pane == dedupPaneBrowse
 }
 
 // resyncPreservingCursor rebuilds the visible rows and re-locates the main

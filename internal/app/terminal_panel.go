@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -107,8 +109,8 @@ func (a *App) openTerminalPanel(focus bool) {
 		a.setTransientMessage("Terminal panel requires the persistent shell", ui.MessageUrgencyWarn)
 		return
 	}
-	if a.activePanel().Path.IsRemote() {
-		a.setTransientMessage("Terminal panel is not available on remote panels", ui.MessageUrgencyWarn)
+	if _, ok := a.activePanel().Path.HostPath(); !ok {
+		a.setTransientMessage(pathloc.Unavailable("Terminal panel", a.activePanel().Path), ui.MessageUrgencyWarn)
 		return
 	}
 	panelDir := a.localActivePanelDir()
@@ -161,7 +163,7 @@ func (a *App) closeTerminalPanel() {
 
 // syncPanelFromSubshellCwd mirrors [shell].sync_cwd_on_return when focus leaves the shell.
 func (a *App) syncPanelFromSubshellCwd() {
-	if !a.config.Shell.SyncCwdOnReturn || a.subshell == nil || a.activePanel().Path.IsRemote() {
+	if !a.config.Shell.SyncCwdOnReturn || a.subshell == nil || !a.activePanel().Path.IsLocal() {
 		return
 	}
 	if cwd, err := a.subshell.Cwd(); err == nil {

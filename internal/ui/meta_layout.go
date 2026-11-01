@@ -58,10 +58,18 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 
 // MetaHeaderText returns the padded header segment for meta columns.
 func MetaHeaderText(layouts []MetaColumnLayout) string {
+	text, _ := metaHeader(layouts)
+	return text
+}
+
+// metaHeader is MetaHeaderText plus the cell offset where each column's cell (its spilled sort
+// arrow included) starts in it.
+func metaHeader(layouts []MetaColumnLayout) (string, []int) {
 	if len(layouts) == 0 {
-		return ""
+		return "", nil
 	}
 	var b strings.Builder
+	starts := make([]int, len(layouts))
 	for i, lay := range layouts {
 		sep := "  "
 		cell := padMetaLineToWidth(lay.Title, lay.Width, lay.RightAlign)
@@ -80,9 +88,10 @@ func MetaHeaderText(layouts []MetaColumnLayout) string {
 		if i > 0 {
 			b.WriteString(sep)
 		}
+		starts[i] = runewidth.StringWidth(b.String())
 		b.WriteString(cell)
 	}
-	return b.String()
+	return b.String(), starts
 }
 
 // CarouselMeta lays out active meta columns for the carousel center column.
@@ -215,7 +224,7 @@ func layoutMetaCells(metaResults map[string]string, pending string) (metaColW in
 			if j < len(row) {
 				cell = row[j]
 			}
-			cells = append(cells, alignMetaCell(cell, colW[j], metaCellAllDigits(cell)))
+			cells = append(cells, alignMetaCell(cell, colW[j], metaCellNumeric(cell)))
 		}
 		formatted[path] = strings.Join(cells, " ")
 	}
@@ -229,7 +238,7 @@ func layoutMetaCells(metaResults map[string]string, pending string) (metaColW in
 
 	rightAlign = nCols == 1
 	for _, row := range parsed {
-		if !metaCellAllDigits(row[0]) {
+		if !metaCellNumeric(row[0]) {
 			rightAlign = false
 			break
 		}
@@ -291,16 +300,11 @@ func truncateMetaDisplay(s string, w int) string {
 	return runewidth.Truncate(s, w, string(primitive.Ellipsis))
 }
 
-func metaCellAllDigits(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
+// metaCellNumeric reports whether a cell reads as a number the way meta sorting does
+// (panel.MetaNumber), so numeric and size cells right-align.
+func metaCellNumeric(s string) bool {
+	_, ok := panel.MetaNumber(s)
+	return ok
 }
 
 // padMetaLineToWidth pads or truncates the full meta column string to w terminal cells.
@@ -333,7 +337,7 @@ func alignMetaCell(s string, colW int, rightDigits bool) string {
 	if runewidth.StringWidth(s) > colW {
 		t = truncateMetaDisplay(s, colW)
 	}
-	if rightDigits && metaCellAllDigits(t) {
+	if rightDigits && metaCellNumeric(t) {
 		return runewidth.FillLeft(t, colW)
 	}
 	return runewidth.FillRight(t, colW)

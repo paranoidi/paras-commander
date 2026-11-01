@@ -100,6 +100,24 @@ command = "true"
 	}
 }
 
+// assertUserMenuDisabled checks a broken menu.toml still opens the user-menu strip with a
+// the error as key-less title rows, so the edit-config key stays reachable.
+func assertUserMenuDisabled(t *testing.T, app *App) {
+	t.Helper()
+	st := app.model.LeaderMenu
+	if !st.Open || st.Kind != ui.LeaderMenuUser {
+		t.Fatalf("LeaderMenu = %+v, want open user menu", st)
+	}
+	if len(st.Items) == 0 {
+		t.Fatal("want the error as title rows")
+	}
+	for _, it := range st.Items {
+		if it.GroupTitle == "" {
+			t.Fatalf("items = %+v, want only title rows", st.Items)
+		}
+	}
+}
+
 func TestOpenUserMenuInvalidFileCritical(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
@@ -124,9 +142,7 @@ func TestOpenUserMenuInvalidFileCritical(t *testing.T) {
 	if called {
 		t.Fatal("editor should not run for invalid menu.toml")
 	}
-	if app.model.LeaderMenu.Open {
-		t.Fatal("user menu dialog should not open")
-	}
+	assertUserMenuDisabled(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
 		t.Fatalf("MessageUrgency = %v, want critical", app.model.MessageUrgency)
 	}
@@ -159,9 +175,7 @@ func TestOpenUserMenuExistingStubNoEditor(t *testing.T) {
 	if called {
 		t.Fatal("editor should not run when menu file exists but has no entries")
 	}
-	if app.model.LeaderMenu.Open {
-		t.Fatal("user menu dialog should not open without entries")
-	}
+	assertUserMenuDisabled(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
 		t.Fatalf("MessageUrgency = %v, want warn", app.model.MessageUrgency)
 	}
@@ -606,13 +620,11 @@ pool = "missing"
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
 
-	if app.model.LeaderMenu.Open {
-		t.Fatal("user menu dialog should not open for unknown pool")
-	}
+	assertUserMenuDisabled(t, app)
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
 		t.Fatalf("MessageUrgency = %v, want critical", app.model.MessageUrgency)
 	}
-	if !strings.Contains(app.model.Message, "unknown pool") {
+	if !strings.Contains(app.model.Message, "unknown pool") || !strings.Contains(app.model.LeaderMenu.Items[0].GroupTitle, "unknown pool") {
 		t.Fatalf("Message = %q, want unknown pool", app.model.Message)
 	}
 }

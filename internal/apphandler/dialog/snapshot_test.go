@@ -69,6 +69,8 @@ func (f *identityTestHost) ForgetComparePaths([]string)                 {}
 func (f *identityTestHost) OpenFileInExternalEditor(string) error       { return nil }
 func (f *identityTestHost) ExecuteSFTPPassword()                        {}
 func (f *identityTestHost) CancelSFTPPassword()                         {}
+func (f *identityTestHost) ExecuteIndexTags()                           {}
+func (f *identityTestHost) ExecuteIndexInit()                           {}
 func (f *identityTestHost) HandlePathPickerScrollingQueryKey(*tcell.EventKey) bool {
 	return false
 }
@@ -119,6 +121,7 @@ func (f *identityTestHost) DevMode() bool                              { return 
 func (f *identityTestHost) DiskUsagePainter() ui.DiskUsagePainter      { return nil }
 func (f *identityTestHost) PromptDanglingDirDelete([]string)           {}
 func (f *identityTestHost) AdjustJobsThroughputChartColumnMS(int)      {}
+func (f *identityTestHost) CopyToClipboard(string, string)             {}
 func (f *identityTestHost) LaunchedAsFileViewer() bool                 { return false }
 func (f *identityTestHost) SwitchPanel()                               {}
 func (f *identityTestHost) SyncFollowTargetPath(*panel.State) (string, bool) {

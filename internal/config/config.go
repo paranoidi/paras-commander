@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
@@ -115,6 +116,8 @@ type Config struct {
 	Compare CompareConfig `toml:"compare"`
 	// Dedup configures find-duplicates within a single directory.
 	Dedup DedupConfig `toml:"dedup"`
+	// FileIndex configures the built-in fileindex feature (index browsing, tags, scan).
+	FileIndex FileIndexConfig `toml:"fileindex"`
 }
 
 // PanelsConfig controls file panel browsing, sorting, and listing.
@@ -181,6 +184,45 @@ type CarouselConfig struct {
 	// it until carousel is off on both panels. With autohide in effect, quick view from a carousel
 	// panel puts the preview in the right (bottom) slot. Has no effect outside carousel mode.
 	AutohideInactivePanel bool `toml:"autohide_inactive_panel"`
+}
+
+// FileIndexConfig configures the built-in fileindex feature. Scan include/exclude rules come
+// from fileindex's own config.ini, so the fileindex CLI and pc index the same files.
+type FileIndexConfig struct {
+	// Database is the fileindex SQLite database (absolute or ~/…). Empty uses the database path
+	// from fileindex's config.ini.
+	Database string `toml:"database"`
+	// Workers is the number of hash workers a scan uses. Zero uses config.ini's
+	// parallel_workers (auto-scaling when that is unset or "auto").
+	Workers int `toml:"workers"`
+	// DefaultColumns are the meta column names (meta.toml entries or Go providers) switched on
+	// when a panel with no active meta columns enters fileindex://. Empty switches none on.
+	DefaultColumns []string `toml:"default_columns"`
+	// FolderScanMaxDepth is how many directory levels the automatic check of indexed folders
+	// descends while browsing with fileindex: N levels, -1 unlimited, 0 off (see AutoDriftDepth).
+	FolderScanMaxDepth int `toml:"folder_scan_max_depth"`
+	// Hash makes scans hash the files they index; false stops a scan after the walk and prune.
+	Hash bool `toml:"hash"`
+	// ScanCommitIntervalMS is how often a scan commits what it hashed (see ScanCommitInterval).
+	ScanCommitIntervalMS int `toml:"scan_commit_interval_ms"`
+}
+
+// ScanCommitInterval is ScanCommitIntervalMS as a duration.
+func (f FileIndexConfig) ScanCommitInterval() time.Duration {
+	return time.Duration(f.ScanCommitIntervalMS) * time.Millisecond
+}
+
+// AutoDriftDepth maps FolderScanMaxDepth to the panel's automatic drift depth: the directory
+// levels to check, 0 for unlimited, -1 for off. It is the one place that translates the
+// config meaning (-1 unlimited, 0 off) to the DirDrift meaning.
+func (f FileIndexConfig) AutoDriftDepth() int {
+	switch {
+	case f.FolderScanMaxDepth == FileIndexFolderScanMaxDepthUnlimited:
+		return 0
+	case f.FolderScanMaxDepth <= 0:
+		return -1
+	}
+	return f.FolderScanMaxDepth
 }
 
 // DedupConfig controls find-duplicates scanning.
@@ -842,6 +884,14 @@ func Default() Config {
 			HashConfirmBytes:  DefaultDedupHashConfirmBytes,
 			FileProgressBytes: DefaultDedupFileProgressBytes,
 		},
+		FileIndex: FileIndexConfig{
+			Database:             DefaultFileIndexDatabase,
+			Workers:              DefaultFileIndexWorkers,
+			DefaultColumns:       DefaultFileIndexColumns(),
+			FolderScanMaxDepth:   DefaultFileIndexFolderScanMaxDepth,
+			Hash:                 DefaultFileIndexHash,
+			ScanCommitIntervalMS: DefaultFileIndexScanCommitIntervalMS,
+		},
 	}
 }
 
@@ -1148,6 +1198,9 @@ func (c *Config) validateCompareDedupShell(builtin *Config) {
 	if c.Shell.TerminalPanelHeight < MinShellTerminalPanelHeight {
 		c.Shell.TerminalPanelHeight = builtin.Shell.TerminalPanelHeight
 	}
+	c.FileIndex.Workers = min(max(c.FileIndex.Workers, 0), FileIndexWorkersMax)
+	c.FileIndex.FolderScanMaxDepth = max(c.FileIndex.FolderScanMaxDepth, FileIndexFolderScanMaxDepthUnlimited)
+	c.FileIndex.ScanCommitIntervalMS = min(max(c.FileIndex.ScanCommitIntervalMS, FileIndexScanCommitIntervalMinMS), FileIndexScanCommitIntervalMaxMS)
 }
 
 func (c *Config) validateSortAndDelete(builtin *Config) {

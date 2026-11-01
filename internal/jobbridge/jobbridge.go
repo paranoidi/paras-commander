@@ -215,7 +215,7 @@ func ActivityDetailLabel(active *jobs.Job, ev jobs.Event) string {
 		if err1 != nil || err2 != nil {
 			goto baseLabel
 		}
-		if rootLoc.IsRemote() || dstLoc.IsRemote() {
+		if !rootLoc.IsLocal() || !dstLoc.IsLocal() {
 			if dstLoc.HasPrefix(rootLoc) && !dstLoc.Equal(rootLoc) {
 				rootS := rootLoc.String()
 				dstS := dstLoc.String()
@@ -456,7 +456,7 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 		RateLimit:                  rateWait,
 		SourceSizeHints:            job.SourceSizeHints,
 	}
-	if job.Destination.IsRemote() {
+	if !job.Destination.IsLocal() {
 		opts.CowFileCloning = false
 		opts.CopyFileRange = false
 		opts.SparseFileCopy = false
@@ -464,7 +464,7 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 		opts.DereferenceSymlinks = false
 	}
 	for _, src := range job.Sources {
-		if src.IsRemote() {
+		if !src.IsLocal() {
 			opts.CowFileCloning = false
 			opts.CopyFileRange = false
 			opts.SparseFileCopy = false

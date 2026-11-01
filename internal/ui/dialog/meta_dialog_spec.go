@@ -3,10 +3,14 @@ package dialog
 import "fmt"
 
 func metaEntryDisplayLabel(e MetaEntry) string {
-	if e.Description != "" {
-		return fmt.Sprintf("%s — %s", e.Name, e.Description)
+	name := e.Name
+	if e.Label != "" {
+		name = e.Label
 	}
-	return e.Name
+	if e.Description != "" {
+		return fmt.Sprintf("%s — %s", name, e.Description)
+	}
+	return name
 }
 
 // MetaEntryShortcuts returns the Alt mnemonic for each meta picker row. OK/Cancel

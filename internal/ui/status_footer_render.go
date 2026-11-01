@@ -55,12 +55,49 @@ func footerHintSpans(rect Rect, fkeys []menu.FunctionKey) []footerHintSpan {
 	return spans
 }
 
-func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu.FunctionKey) {
+// shiftStart is the column where the span's Shift-alternative word starts; ok is false when the
+// word is not drawn.
+func (span footerHintSpan) shiftStart() (int, bool) {
+	if !span.layout.showPrefix {
+		return 0, false
+	}
+	return span.X + span.Width - utf8.RuneCountInString(span.Item.HintShiftPrefix), true
+}
+
+// footerHit finds the footer entry drawn at (x, y) (its key label or its hint, not the gaps) and
+// whether x lies on its Shift-alternative word with a binding of its own (ShiftKeyLabel). An
+// informational suffix belongs to the entry's main part.
+func footerHit(rect Rect, fkeys []menu.FunctionKey, x, y int) (FooterHover, menu.FunctionKey) {
+	if rect.Height <= 0 || y != rect.Y {
+		return FooterHover{}, menu.FunctionKey{}
+	}
+	for i, span := range footerHintSpans(rect, fkeys) {
+		if x < span.X || x >= span.X+span.Width {
+			continue
+		}
+		start, drawn := span.shiftStart()
+		shift := drawn && span.Item.ShiftKeyLabel != "" && x >= start
+		return FooterHover{Active: true, Index: i, Shift: shift}, span.Item
+	}
+	return FooterHover{}, menu.FunctionKey{}
+}
+
+// drawFooter paints the footer row. The entry under the mouse pointer (hover) is drawn in
+// footer.hover, and the part a click there would press in footer.hover.active: the
+// Shift-alternative word, or the key label and main hint.
+func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu.FunctionKey, hover FooterHover) {
 	for col := rect.X; col < rect.X+rect.Width; col++ {
 		screen.SetContent(col, rect.Y, ' ', nil, styles.FooterLabel)
 	}
-	for _, span := range footerHintSpans(rect, fkeys) {
+	for i, span := range footerHintSpans(rect, fkeys) {
 		item, layout, x := span.Item, span.layout, span.X
+		keyStyle, labelStyle, shiftStyle := styles.FooterKey, styles.FooterLabel, styles.FooterLabelShift
+		if hover.Active && hover.Index == i {
+			keyStyle, labelStyle, shiftStyle = styles.FooterHoverActive, styles.FooterHoverActive, styles.FooterHover
+			if hover.Shift {
+				keyStyle, labelStyle, shiftStyle = styles.FooterHover, styles.FooterHover, styles.FooterHoverActive
+			}
+		}
 		keyRunes := utf8.RuneCountInString(item.KeyLabel)
 		prefix := ""
 		if layout.showPrefix {
@@ -68,19 +105,19 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 		}
 		prefixRunes := utf8.RuneCountInString(prefix)
 		primaryRunes := utf8.RuneCountInString(layout.primary)
-		primitive.TextOverlay(screen, x, rect.Y, keyRunes, item.KeyLabel, styles.FooterKey)
+		primitive.TextOverlay(screen, x, rect.Y, keyRunes, item.KeyLabel, keyStyle)
 		x += keyRunes
 		if prefixRunes+primaryRunes == 0 {
 			continue
 		}
-		screen.SetContent(x, rect.Y, ' ', nil, styles.FooterLabel)
+		screen.SetContent(x, rect.Y, ' ', nil, labelStyle)
 		x++
 		if primaryRunes > 0 {
-			primitive.TextOverlay(screen, x, rect.Y, primaryRunes, layout.primary, styles.FooterLabel)
+			primitive.TextOverlay(screen, x, rect.Y, primaryRunes, layout.primary, labelStyle)
 			x += primaryRunes
 		}
 		if prefixRunes > 0 {
-			primitive.TextOverlay(screen, x, rect.Y, prefixRunes, prefix, styles.FooterLabelShift)
+			primitive.TextOverlay(screen, x, rect.Y, prefixRunes, prefix, shiftStyle)
 		}
 	}
 }

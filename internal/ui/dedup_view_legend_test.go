@@ -77,7 +77,7 @@ func TestDrawDedupViewBottomBorderExplainsCursorRowIcons(t *testing.T) {
 			view.Main = DedupPane{Selected: tc.idx}
 			view.SourceRow = tc.idx
 			view.FocusCopies = tc.focus
-			drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
+			drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{})
 			got := dedupBottomRowText(screen, 13, 40)
 			if tc.want == "" {
 				if strings.Contains(got, "contains") {

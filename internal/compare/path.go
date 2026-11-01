@@ -23,8 +23,8 @@ func RelBase(rel string) string {
 
 // JoinRel joins root with a slash-relative path.
 func JoinRel(root pathloc.Path, rel string) (pathloc.Path, error) {
-	if root.IsRemote() {
-		return pathloc.Path{}, ErrRemoteUnsupported()
+	if !root.IsLocal() {
+		return pathloc.Path{}, unsupportedRoot(root)
 	}
 	host, err := root.FilePath()
 	if err != nil {

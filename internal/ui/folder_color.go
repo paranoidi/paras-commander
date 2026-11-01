@@ -8,7 +8,7 @@ import (
 // folderColorFor returns the folder-colour lookup for a panel, nil for remote panels (the colours
 // describe local directories only).
 func (m Model) folderColorFor(state panel.State) func(string) (tcell.Color, bool) {
-	if state.Path.IsRemote() {
+	if !state.Path.IsLocal() {
 		return nil
 	}
 	return m.FolderColor

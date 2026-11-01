@@ -17,6 +17,8 @@ func (h jobsHost) AdjustJobsThroughputChartColumnMS(deltaMS int) {
 	h.app.adjustJobsThroughputChartColumnMS(deltaMS)
 }
 
+func (h jobsHost) CopyToClipboard(text, done string) { h.app.setClipboard(text, done) }
+
 func (h jobsHost) SetUnsupportedMessage(msg string) {
 	h.app.setUnsupportedMessage(msg)
 }

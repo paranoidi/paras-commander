@@ -18,7 +18,13 @@ type Scheme string
 const (
 	SchemeFile Scheme = "file"
 	SchemeSFTP Scheme = "sftp"
+	// SchemeFileIndex browses the fileindex database: fileindex:// + an absolute host path.
+	SchemeFileIndex Scheme = "fileindex"
 )
+
+// FileIndexPrefix starts every SchemeFileIndex path; the host path follows, so the index
+// root is "fileindex:///". The UI may show it shorter (primitive.SetPathDisplayPrefixes).
+const FileIndexPrefix = "fileindex://"
 
 // Path is a canonical location (host file path or remote URI).
 type Path struct {
@@ -36,6 +42,9 @@ func Parse(raw string) (Path, error) {
 	}
 	if strings.HasPrefix(raw, "sftp://") {
 		return parseSFTP(raw)
+	}
+	if strings.HasPrefix(raw, FileIndexPrefix) {
+		return parseFileIndex(raw)
 	}
 	return parseFile(raw)
 }
@@ -77,9 +86,17 @@ func (p Path) IsZero() bool {
 	return p.s == ""
 }
 
-// IsRemote reports whether the location is not on the local host file backend.
-func (p Path) IsRemote() bool {
-	return p.Scheme() != SchemeFile
+// IsLocal reports whether the location is served by the local file backend
+// (plain host paths). SFTP and fileindex:// are not: their files go through
+// their fsbackend.Backend.
+func (p Path) IsLocal() bool {
+	return p.Scheme() == SchemeFile
+}
+
+// HasSubtreeSizes reports whether disk-usage totals exist for directories under the location:
+// walked on the local disk, or totalled from the index for fileindex://. SFTP has none.
+func (p Path) HasSubtreeSizes() bool {
+	return p.Scheme() == SchemeFile || p.Scheme() == SchemeFileIndex
 }
 
 // Equal reports whether two paths denote the same location.
@@ -98,6 +115,8 @@ func (p Path) HasPrefix(prefix Path) bool {
 	switch p.Scheme() {
 	case SchemeFile:
 		return hasFilePrefix(p.s, prefix.s)
+	case SchemeFileIndex:
+		return hasFilePrefix(p.indexHost(), prefix.indexHost())
 	case SchemeSFTP:
 		return hasSFTPPrefix(p.s, prefix.s)
 	default:
@@ -114,6 +133,8 @@ func (p Path) Base() string {
 			return ""
 		}
 		return path.Base(remote)
+	case SchemeFileIndex:
+		return filepath.Base(p.indexHost())
 	default:
 		return filepath.Base(p.FilePathMust())
 	}
@@ -124,6 +145,13 @@ func (p Path) Parent() Path {
 	switch p.Scheme() {
 	case SchemeSFTP:
 		return sftpParent(p)
+	case SchemeFileIndex:
+		host := p.indexHost()
+		parent := filepath.Dir(host)
+		if parent == host {
+			return p
+		}
+		return Path{scheme: SchemeFileIndex, s: FileIndexPrefix + parent}
 	default:
 		host := p.FilePathMust()
 		parent := filepath.Dir(host)
@@ -182,6 +210,8 @@ func (p Path) Join(name string) (Path, error) {
 	switch p.Scheme() {
 	case SchemeSFTP:
 		return sftpJoin(p, name)
+	case SchemeFileIndex:
+		return FileIndex(filepath.Join(p.indexHost(), name))
 	default:
 		return File(filepath.Join(p.FilePathMust(), name))
 	}
@@ -193,6 +223,25 @@ func (p Path) FilePath() (string, error) {
 		return "", fmt.Errorf("pathloc: not a file path: %s", p.s)
 	}
 	return p.s, nil
+}
+
+// HostPath returns the real local path loc names: a file:// path itself, a fileindex:// path's
+// indexed host path. SFTP has none.
+func (p Path) HostPath() (string, bool) {
+	if p.IsZero() {
+		return "", false
+	}
+	var host string
+	var err error
+	switch p.Scheme() {
+	case SchemeFile:
+		host, err = p.FilePath()
+	case SchemeFileIndex:
+		host, err = IndexHostPath(p)
+	default:
+		return "", false
+	}
+	return host, err == nil
 }
 
 // FilePathMust returns FilePath or panics.
@@ -225,6 +274,39 @@ func parseFile(raw string) (Path, error) {
 		return Path{}, fmt.Errorf("resolve path %q: %w", raw, err)
 	}
 	return Path{scheme: SchemeFile, s: filepath.Clean(abs)}, nil
+}
+
+func parseFileIndex(raw string) (Path, error) {
+	host := strings.TrimPrefix(raw, FileIndexPrefix)
+	if !filepath.IsAbs(host) {
+		return Path{}, fmt.Errorf("fileindex path must be absolute: %q", raw)
+	}
+	return Path{scheme: SchemeFileIndex, s: FileIndexPrefix + filepath.Clean(host)}, nil
+}
+
+// FileIndex returns the fileindex:// location of an absolute host path.
+func FileIndex(hostPath string) (Path, error) {
+	return parseFileIndex(FileIndexPrefix + hostPath)
+}
+
+// HasURIPrefix reports whether raw is written as a scheme URI (sftp:// or fileindex://) rather
+// than a host path, so it is parsed as given instead of resolved against a directory.
+func HasURIPrefix(raw string) bool {
+	return strings.HasPrefix(raw, "sftp://") || strings.HasPrefix(raw, FileIndexPrefix)
+}
+
+// IndexHostPath returns the host path a fileindex:// location names (the path the index
+// records, which may no longer exist on disk).
+func IndexHostPath(p Path) (string, error) {
+	if p.Scheme() != SchemeFileIndex {
+		return "", fmt.Errorf("pathloc: not a fileindex path: %s", p.s)
+	}
+	return p.indexHost(), nil
+}
+
+// indexHost is the host path of a SchemeFileIndex location.
+func (p Path) indexHost() string {
+	return strings.TrimPrefix(p.s, FileIndexPrefix)
 }
 
 func parseSFTP(raw string) (Path, error) {
@@ -410,4 +492,22 @@ func SFTPRemotePath(p Path) (string, error) {
 	}
 	_, remote, err := splitSFTP(p.s)
 	return remote, err
+}
+
+// Label names the scheme for user-facing messages.
+func (s Scheme) Label() string {
+	switch s {
+	case SchemeFile:
+		return "local"
+	case SchemeSFTP:
+		return "SFTP"
+	case SchemeFileIndex:
+		return "fileindex"
+	}
+	return string(s)
+}
+
+// Unavailable is the one refusal message for a feature that cannot run on loc's panel.
+func Unavailable(feature string, loc Path) string {
+	return fmt.Sprintf("%s is not available on %s panels", feature, loc.Scheme().Label())
 }

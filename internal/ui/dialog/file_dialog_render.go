@@ -68,6 +68,9 @@ func fileDialogOuterTitle(state FileDialogState) string {
 			return "Pattern history"
 		}
 	}
+	if state.DialogType == FileDialogIndexTags && state.IndexTagsRemove {
+		return "Remove tags"
+	}
 	if state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen {
 		return "History"
 	}
@@ -110,6 +113,10 @@ func fileDialogTitle(dialogType FileDialogType) string {
 		return "SFTP"
 	case FileDialogSFTPPassword:
 		return "SSH password"
+	case FileDialogIndexTags:
+		return "Add tags"
+	case FileDialogIndexInit:
+		return "fileindex"
 	default:
 		return ""
 	}
@@ -238,6 +245,13 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 		hw := utf8.RuneCountInString(theme.IconDialogInfoASCII) + 1 + utf8.RuneCountInString(ops.MassRenameReplacementSyntaxHint) + 4
 		if hw > minWidth {
 			minWidth = hw
+		}
+	}
+	if state.DialogType == FileDialogIndexInit {
+		// Fit the whole database path (and the question) when the screen allows; a narrower
+		// screen falls back to the path's FitPath shortening.
+		for _, it := range indexInitLabels(state) {
+			minWidth = max(minWidth, it.Indent+utf8.RuneCountInString(it.Label)+4)
 		}
 	}
 	if minWidth > screenWidth-4 {

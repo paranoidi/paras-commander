@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/entrymatch"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -21,7 +22,7 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 	if a.model.ViewMode != ui.ViewBrowser || !a.config.Panels.RunExecutablesOnEnter {
 		return "", false
 	}
-	if p.Path.IsRemote() {
+	if _, ok := p.Path.HostPath(); !ok {
 		return "", false
 	}
 
@@ -32,7 +33,7 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 		if !ok {
 			return "", false
 		}
-		path, mode = classifyEditPath(filepath.Clean(selPath))
+		path, mode = classifyEditPath(cleanHostPath(selPath))
 	} else {
 		entry, ok := p.CurrentEntry()
 		if !ok {
@@ -41,7 +42,7 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 		if entry.Type == localfs.EntryDirectory {
 			return "", false
 		}
-		path = filepath.Clean(entry.Path)
+		path = cleanHostPath(entry.Path)
 		runnable, err := localfs.PathLooksRunnable(path)
 		if err != nil || !runnable {
 			return "", false
@@ -104,8 +105,8 @@ func (a *App) runExecutableFromPanel(path string) {
 		return
 	}
 	p := a.activePanel()
-	if p.Path.IsRemote() {
-		a.setTransientMessage("Run is not available on remote panels", ui.MessageUrgencyWarn)
+	if _, ok := p.Path.HostPath(); !ok {
+		a.setTransientMessage(pathloc.Unavailable("Run", p.Path), ui.MessageUrgencyWarn)
 		return
 	}
 	path = filepath.Clean(path)

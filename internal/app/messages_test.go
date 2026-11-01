@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/clipboard"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -41,6 +42,31 @@ func TestMessagesViewViMotionHJKLOnlyWhenModeOn(t *testing.T) {
 	app.handleMessagesViewKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
 	if app.model.MessagesView.Selected != before {
 		t.Fatalf("vi-motion on: 'k' selection = %d, want %d (back from %d)", app.model.MessagesView.Selected, before, moved)
+	}
+}
+
+// TestMessagesViewQuoteCopiesSelectedMessage: messages.copy (") copies the selected message's
+// unwrapped text through the full key path instead of opening the global copy menu, and the
+// selection stays on it after the toast is logged above.
+func TestMessagesViewQuoteCopiesSelectedMessage(t *testing.T) {
+	prevWriter := clipboard.OSWriter
+	clipboard.OSWriter = func(string) error { return nil }
+	t.Cleanup(func() { clipboard.OSWriter = prevWriter; clipboard.Reset() })
+	app := testAppMinimal(t)
+	app.setTransientMessage("lantern copied to the harbor", ui.MessageUrgencyInfo)
+	app.setTransientMessage("meadow moved", ui.MessageUrgencyInfo)
+	app.openMessagesView()
+	app.moveMessagesSelection(1) // the older message
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, '"', tcell.ModNone))
+	if got := clipboard.LastSet(); got != "lantern copied to the harbor" {
+		t.Fatalf("clipboard = %q, want the selected message", got)
+	}
+	if app.model.LeaderMenu.Open {
+		t.Fatal(`" opened the copy menu in the Messages view`)
+	}
+	if got := app.model.MessageLog[app.model.MessagesView.Selected].Full; got != "lantern copied to the harbor" {
+		t.Fatalf("selection moved to %q", got)
 	}
 }
 

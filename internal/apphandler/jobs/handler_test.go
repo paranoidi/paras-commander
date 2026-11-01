@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"fmt"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"slices"
 	"strings"
 	"testing"
@@ -51,6 +52,7 @@ func (jobsHostStub) DiskUsagePainter() ui.DiskUsagePainter      { return nil }
 func (jobsHostStub) PromptDanglingDirDelete([]string)           {}
 func (jobsHostStub) ToggleLeaderMenu()                          {}
 func (jobsHostStub) AdjustJobsThroughputChartColumnMS(int)      {}
+func (jobsHostStub) CopyToClipboard(string, string)             {}
 func (jobsHostStub) DispatchLeaderLetter(*tcell.EventKey) bool  { return false }
 
 func TestOpenJobsViewFocusesFirstPendingBlocker(t *testing.T) {
@@ -1059,5 +1061,86 @@ func TestJobsViewCtrlSpaceTogglesOperationsAtBottom(t *testing.T) {
 	h.HandleJobsViewKey(ctrlSpace)
 	if _, back := h.jobsPaneLayout(); model.JobsOpsBottom || back[ui.JobsPaneOperations] != side[ui.JobsPaneOperations] {
 		t.Fatal("second Ctrl-Space did not restore the side layout")
+	}
+}
+
+// indexOnlyStub stands in for the fileindex backend: only its scheme and IndexOnly marker matter.
+type indexOnlyStub struct{ fsbackend.Backend }
+
+func (indexOnlyStub) Scheme() pathloc.Scheme { return pathloc.SchemeFileIndex }
+func (indexOnlyStub) IndexOnly()             {}
+
+func TestIndexTransferRefusal(t *testing.T) {
+	if err := fsbackend.RegisterDefault(indexOnlyStub{}); err != nil {
+		t.Fatal(err)
+	}
+	idx := pathloc.MustParse("fileindex:///orchard/harbor.txt")
+	idxDir := pathloc.MustParse("fileindex:///cedar")
+	disk := pathloc.MustParse("/tmp/meadow")
+	cases := []struct {
+		name  string
+		typ   jobs.Type
+		src   pathloc.Path
+		dest  pathloc.Path
+		allow bool
+	}{
+		{"copy out", jobs.TypeCopy, idx, disk, true},
+		{"move inside", jobs.TypeMove, idx, idxDir, true},
+		{"move out", jobs.TypeMove, idx, disk, false},
+		{"copy in", jobs.TypeCopy, disk, idxDir, false},
+		{"plain copy", jobs.TypeCopy, disk, disk, true},
+	}
+	for _, c := range cases {
+		if got := indexTransferRefusal(c.typ, []pathloc.Path{c.src}, c.dest) == ""; got != c.allow {
+			t.Errorf("%s: allowed = %v, want %v", c.name, got, c.allow)
+		}
+	}
+}
+
+type copyRecordHost struct {
+	jobsHostStub
+	copied *[]string
+}
+
+func (c copyRecordHost) CopyToClipboard(text, _ string) { *c.copied = append(*c.copied, text) }
+
+func TestJobsMessagesPaneCursorAndCopy(t *testing.T) {
+	t.Parallel()
+	h, model, _ := newMaximizeTestHandler(t)
+	var copied []string
+	h.host = copyRecordHost{jobsHostStub{}, &copied}
+	warns := []string{"orchard one", "meadow two", "lantern three", "thistle four", "quill five", "ember six", "harbor seven", "willow eight"}
+	model.JobsList[0].Warnings = warns
+	order, rects := h.jobsPaneLayout()
+	fp := slices.Index(order, ui.JobsPaneMessages)
+	if fp < 0 {
+		t.Fatalf("no Messages pane in order %v", order)
+	}
+	model.JobsView.FocusPane = fp
+	contentH := ui.JobsPanelContentRows(rects[ui.JobsPaneMessages])
+	if contentH >= len(warns) {
+		t.Skipf("pane shows all %d warnings; cannot test scroll", len(warns))
+	}
+	key := func(k tcell.Key) { h.HandleJobsViewKey(tcell.NewEventKey(k, 0, tcell.ModNone)) }
+	key(tcell.KeyUp)
+	if model.JobsView.MessagesSelected != 0 {
+		t.Fatalf("Up at top moved to %d", model.JobsView.MessagesSelected)
+	}
+	key(tcell.KeyEnd)
+	if got := model.JobsView.MessagesSelected; got != len(warns)-1 {
+		t.Fatalf("End selected %d", got)
+	}
+	if st := model.JobsView; st.MessagesScroll > st.MessagesSelected || st.MessagesSelected >= st.MessagesScroll+contentH {
+		t.Fatalf("cursor %d outside scroll window %d+%d", st.MessagesSelected, st.MessagesScroll, contentH)
+	}
+	key(tcell.KeyDown)
+	if model.JobsView.MessagesSelected != len(warns)-1 {
+		t.Fatal("Down past end did not clamp")
+	}
+	key(tcell.KeyHome)
+	key(tcell.KeyDown)
+	h.TryDispatch(keymap.ActionJobsCopyMessage)
+	if len(copied) != 1 || copied[0] != warns[1] {
+		t.Fatalf("copied %q, want %q", copied, warns[1])
 	}
 }
