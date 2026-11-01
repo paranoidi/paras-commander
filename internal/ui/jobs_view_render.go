@@ -342,7 +342,8 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 		sel = jobs[state.Selected]
 	}
 
-	all := detailStaticLines(sel, now, textW, userHomeDir, throughputChartEnabled)
+	all := detailLinesIcons(sel, now, textW, userHomeDir, throughputChartEnabled, styles.IconJobsList)
+	stepsAt := slices.Index(all, "Steps:       ")
 
 	scroll := state.DetailScroll
 	if scroll < 0 {
@@ -370,6 +371,11 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 				lineStyle = styles.JobsDetailPlot.Background(layout.ContentBG)
 			} else if n := jobsDetailLabelRunes(line); n > 0 {
 				spans = append(spans, primitive.Span{Start: 0, End: n, Style: styles.JobsDetailLabel.Background(layout.ContentBG)})
+			}
+			if k := i + scroll - stepsAt - 1; stepsAt >= 0 && k >= 0 && k < len(sel.Steps) {
+				st := jobTaskStepStatus(sel, k)
+				n := utf8.RuneCountInString(styles.IconJobsList(st))
+				spans = append(spans, primitive.Span{Start: 2, End: 2 + n, Style: styles.StatusStyle(st).Background(layout.ContentBG)})
 			}
 			if strings.HasPrefix(line, jobDetailFilesPrefix) {
 				spans = append(spans, jobFilesLineSpans(sel, styles, lineStyle)...)
@@ -581,6 +587,11 @@ func jobCountingInBackground(j JobEntry) bool {
 }
 
 func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir string, throughputChartEnabled bool) []string {
+	return detailLinesIcons(j, now, pathMax, userHomeDir, throughputChartEnabled, func(string) string { return "•" })
+}
+
+// detailLinesIcons is detailStaticLines with icon giving the glyph of a step's status.
+func detailLinesIcons(j JobEntry, now time.Time, pathMax int, userHomeDir string, throughputChartEnabled bool, icon func(status string) string) []string {
 	if pathMax < 1 {
 		pathMax = jobsDetailLineBudgetFallback
 	}
@@ -599,6 +610,12 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	lines = append(lines, fmt.Sprintf("Status:      %s", j.Status))
 	if j.Workers > 0 {
 		lines = append(lines, fmt.Sprintf("Workers:     %d", j.Workers))
+	}
+	if len(j.Steps) > 0 {
+		lines = append(lines, "Steps:       ")
+		for i, name := range j.Steps {
+			lines = append(lines, "  "+icon(jobTaskStepStatus(j, i))+" "+name)
+		}
 	}
 	if j.Undo != "" {
 		lines = append(lines, "Undo:        "+j.Undo)
@@ -776,4 +793,20 @@ func formatJobBytes(n int64) string {
 		return fmt.Sprintf("%.1fK", float64(n)/1024)
 	}
 	return fmt.Sprintf("%.1fM", float64(n)/(1024*1024))
+}
+
+// jobTaskStepStatus is the status shown for step i of a task job: completed before the running
+// step, the running step takes the job's status (running, failed, canceled), the rest are queued.
+func jobTaskStepStatus(j JobEntry, i int) string {
+	switch {
+	case j.Status == "completed":
+		return "completed"
+	case j.Status == "queued" || i > j.Step:
+		return "queued"
+	case i < j.Step:
+		return "completed"
+	case j.Status == "failed" || j.Status == "canceled":
+		return j.Status
+	}
+	return "running"
 }

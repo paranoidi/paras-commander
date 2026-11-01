@@ -694,12 +694,21 @@ func TestScanReporterStages(t *testing.T) {
 	if p := rep.last; p.DoneFiles != 4 || p.TotalFiles != 0 || p.CurrentPath != "/vol/orchard" {
 		t.Fatalf("walking = %+v, want 4 done, unknown total", p)
 	}
+	if rep.last.Step != 0 {
+		t.Fatalf("walking Step = %d, want 0", rep.last.Step)
+	}
 	s.Discovered(scan.Stats{Discovered: 6})
+	if rep.last.Step != 1 {
+		t.Fatalf("pruning Step = %d, want 1", rep.last.Step)
+	}
 	s.Prune("/vol/orchard/pebble", 2)
 	if p := rep.last; p.DoneFiles != 6 || p.TotalFiles != 0 || p.CurrentPath != "/vol/orchard/pebble" {
 		t.Fatalf("pruning = %+v, want 6 done, unknown total, current dir", p)
 	}
 	s.Pruned(scan.Stats{}, 9)
+	if rep.last.Step != 2 {
+		t.Fatalf("hashing Step = %d, want 2", rep.last.Step)
+	}
 	if p := rep.last; p.DoneFiles != 0 || p.TotalFiles != 9 {
 		t.Fatalf("hashing start = %+v, want 0 of 9", p)
 	}

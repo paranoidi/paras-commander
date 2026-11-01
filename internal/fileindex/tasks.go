@@ -19,9 +19,14 @@ const TaskLease = "fileindex"
 // config.ini rules). Each path is reported done (jobs.TaskReporter.FinishSource) once its files
 // are committed, while the others are still hashed, so its file-list mark clears.
 func (x *Index) ScanTask(paths []string) *jobs.Task {
+	steps := []string{"Walk filesystem", "Pruning", "Hash new files"}
+	if !x.cfg.Hash {
+		steps = steps[:2]
+	}
 	return &jobs.Task{
 		Title: "fileindex scan",
 		Lease: TaskLease,
+		Steps: steps,
 		Run: func(ctx context.Context, r jobs.TaskReporter) error {
 			defer x.changed()
 			d, err := x.DB()
@@ -182,6 +187,7 @@ func (s *scanReporter) Discovered(res scan.Stats) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.p.DoneFiles = res.Discovered
+	s.p.Step = 1
 	s.p.CurrentPath = ""
 	s.report()
 }
@@ -194,6 +200,7 @@ func (s *scanReporter) Pruned(_ scan.Stats, toHash int) {
 		return
 	}
 	s.hashing = true
+	s.p.Step = 2
 	s.p.TotalFiles = toHash
 	s.p.DoneFiles = 0
 	s.p.CurrentPath = ""

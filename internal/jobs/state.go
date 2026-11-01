@@ -591,6 +591,7 @@ func (s *State) ApplyEvent(ev Event) {
 			j.ProcessedItems = max(j.ProcessedItems, ev.ProcessedItems)
 			j.CurrentPath, j.CurrentDestPath = ev.CurrentPath, ev.CurrentDestPath
 			j.Workers = ev.Workers
+			j.Step = ev.Step
 			j.VerifyDone, j.VerifyTotal = 0, 0
 			now := time.Now()
 			ApplyProgressETA(j, ev.DoneBytes, ev.DoneFiles, now)

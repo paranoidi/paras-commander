@@ -260,3 +260,24 @@ func TestDetailStaticLinesShowsTaskWorkers(t *testing.T) {
 		}
 	}
 }
+
+func TestJobTaskStepStatus(t *testing.T) {
+	for _, tc := range []struct {
+		status string
+		step   int
+		want   [3]string
+	}{
+		{"running", 1, [3]string{"completed", "running", "queued"}},
+		{"completed", 2, [3]string{"completed", "completed", "completed"}},
+		{"canceled", 1, [3]string{"completed", "canceled", "queued"}},
+		{"failed", 0, [3]string{"failed", "queued", "queued"}},
+		{"queued", 0, [3]string{"queued", "queued", "queued"}},
+	} {
+		j := JobEntry{Status: tc.status, Step: tc.step, Steps: []string{"a", "b", "c"}}
+		for i, w := range tc.want {
+			if got := jobTaskStepStatus(j, i); got != w {
+				t.Errorf("%s step %d: status[%d] = %q, want %q", tc.status, tc.step, i, got, w)
+			}
+		}
+	}
+}

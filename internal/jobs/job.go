@@ -124,6 +124,8 @@ type Job struct {
 	CurrentDestPath string
 	// Workers is a task's parallel worker count from its last progress event (0 = none).
 	Workers int
+	// Step is the index in Task.Steps of a task's running stage, from its last progress event.
+	Step int
 	// VerifyDone and VerifyTotal track a running conflict content verification of CurrentPath
 	// (bytes read from both files); VerifyTotal is 0 when none runs. Never part of DoneBytes.
 	VerifyDone, VerifyTotal int64

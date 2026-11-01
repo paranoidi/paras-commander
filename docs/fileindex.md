@@ -242,7 +242,8 @@ index view both act on the real paths.
 
 Both run as **task** jobs in the [jobs view](jobs.md): the Details panel shows
 the files done, bytes hashed, current path and, while a scan hashes, how many
-hash workers it runs. The stage shows in the progress: while walking, the
+hash workers it runs. The Details panel lists the steps (walk filesystem, pruning, hash new files) with
+a status icon each, so the running one is visible. The stage also shows in the progress: while walking, the
 files done is the count saved so far with an unknown total (`?`) and the
 current path is the folder being walked; while removing, the total is still
 unknown and the path is the folder being checked; while hashing, it is

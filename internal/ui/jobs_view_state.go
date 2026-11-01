@@ -51,6 +51,8 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			CurrentPath:     j.CurrentPath,
 			CurrentDestPath: j.CurrentDestPath,
 			Workers:         j.Workers,
+			Steps:           taskSteps(j),
+			Step:            j.Step,
 			VerifyDone:      j.VerifyDone,
 			VerifyTotal:     j.VerifyTotal,
 			DoneFiles:       j.DoneFiles,
@@ -144,4 +146,12 @@ func (s *JobsViewState) EnsureSelectionVisible(rows []JobsListRow, visibleRows i
 // EnsureSelectionVisible clamps the selected compare row and scroll offset.
 func (s *CompareViewState) EnsureSelectionVisible(total int, visibleRows int) {
 	ensureSelectionVisible(&s.Selected, &s.ListScroll, total, visibleRows)
+}
+
+// taskSteps returns a task job's step names (nil for other jobs).
+func taskSteps(j *jobs.Job) []string {
+	if j.Task == nil {
+		return nil
+	}
+	return j.Task.Steps
 }

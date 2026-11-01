@@ -23,6 +23,9 @@ type JobEntry struct {
 	CurrentDestPath string
 	// Workers mirrors jobs.Job.Workers (a task's parallel workers; 0 = not shown).
 	Workers int
+	// Steps and Step mirror jobs.Task.Steps and jobs.Job.Step (nil Steps = no step list).
+	Steps []string
+	Step  int
 	// VerifyDone and VerifyTotal mirror jobs.Job: a running conflict content verification of
 	// CurrentPath (VerifyTotal 0 = none).
 	VerifyDone, VerifyTotal int64

@@ -20,6 +20,8 @@ type Task struct {
 	// Run does the work. A context.Canceled (or ErrUserCanceled) return ends the job canceled,
 	// any other error failed. r may be called from any goroutine.
 	Run func(ctx context.Context, r TaskReporter) error
+	// Steps names the task's stages in order (nil = no list); TaskProgress.Step indexes it.
+	Steps []string
 }
 
 // TaskProgress is a task's progress: the same fields a transfer reports. TotalFiles 0 means
@@ -31,6 +33,8 @@ type TaskProgress struct {
 	CurrentPath string
 	// Workers is how many parallel workers the task runs now (0 = not reported).
 	Workers int
+	// Step is the index in Task.Steps of the running stage.
+	Step int
 }
 
 // TaskReporter receives a task's progress and warnings. Implementations are safe for
@@ -116,6 +120,7 @@ func (r *taskReporter) emitUnlocked() {
 		DoneBytes:   r.last.DoneBytes,
 		CurrentPath: r.last.CurrentPath,
 		Workers:     r.last.Workers,
+		Step:        r.last.Step,
 	})
 }
 
