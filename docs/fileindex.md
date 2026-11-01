@@ -73,7 +73,7 @@ removals refresh the panel.
 | `missing` | only in index | Only in the index (ghost row) |
 | `excluded` | excluded | Not in the index, and the scan rules in fileindex's `config.ini` (`exclude_dirs`, `exclude_files`, file patterns) skip it |
 | `scanning` | scanning | A scan or prune task job is working on the row |
-| `differs` | differs below | An indexed directory with something different below it: a new, resized or missing file |
+| `differs` | differs below | An indexed directory with something different below it: a new, changed (size or modification time) or missing file |
 | `unchecked` | scan depth exceeded | An indexed directory with nothing different found in the folders the automatic check reached, but with deeper folders it did not look into |
 | `tagged` | tagged | Indexed and carrying tags |
 

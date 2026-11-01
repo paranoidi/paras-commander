@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/fileindex/db"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
@@ -166,19 +167,24 @@ func TestDirDrift(t *testing.T) {
 	writeFile(t, root, "pasture/clover/hay.txt", "hay")
 	writeFile(t, root, "marsh/reed/heron.txt", "heron")
 	writeFile(t, root, "quarry/stone/slate.txt", "slate")
-	overlayFixture(t, x, root, "orchard/apple/pear.txt", "pasture/clover/hay.txt", "marsh/reed/heron.txt", "quarry/stone/slate.txt")
+	writeFile(t, root, "meadow/brook/trout.txt", "trout")
+	overlayFixture(t, x, root, "orchard/apple/pear.txt", "pasture/clover/hay.txt", "marsh/reed/heron.txt", "quarry/stone/slate.txt", "meadow/brook/trout.txt")
 
 	writeFile(t, root, "orchard/apple/plum.txt", "new below")     // new file
 	writeFile(t, root, "pasture/clover/hay.txt", "hay, but more") // size differs
 	if err := os.Remove(filepath.Join(root, "marsh/reed/heron.txt")); err != nil {
 		t.Fatal(err)
 	}
+	later := time.Now().Add(time.Hour) // same size, new mtime
+	if err := os.Chtimes(filepath.Join(root, "meadow/brook/trout.txt"), later, later); err != nil {
+		t.Fatal(err)
+	}
 
-	got, err := x.DirDrift(context.Background(), root, []string{"orchard", "pasture", "marsh", "quarry"}, 0)
+	got, err := x.DirDrift(context.Background(), root, []string{"orchard", "pasture", "marsh", "quarry", "meadow"}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, want := range map[string]string{"orchard": StatusDiffers, "pasture": StatusDiffers, "marsh": StatusDiffers, "quarry": StatusIndexed} {
+	for name, want := range map[string]string{"orchard": StatusDiffers, "pasture": StatusDiffers, "marsh": StatusDiffers, "quarry": StatusIndexed, "meadow": StatusDiffers} {
 		if got[name] != want {
 			t.Errorf("drift[%s] = %q, want %q", name, got[name], want)
 		}

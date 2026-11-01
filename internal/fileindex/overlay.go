@@ -99,14 +99,13 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 }
 
 // DirDrift checks each of host's indexed subdirectories (names) against the index and returns
-// IndexStatusDiffers (a file the scan would add under the same rules, a file whose size differs,
-// or an indexed file gone from disk), IndexStatusUnchecked (nothing differs within maxDepth, but
+// IndexStatusDiffers (a file the scan would add under the same rules, a file whose size or
+// mtime differs, or an indexed file gone from disk), IndexStatusUnchecked (nothing differs within maxDepth, but
 // a directory lies deeper) or IndexStatusIndexed. maxDepth counts directory levels below the
 // subdirectory; 0 means unlimited (never unchecked). Only recorded files within the depth are
 // compared. It walks each subtree, so it runs on its own goroutine and stops when ctx is
 // cancelled.
-// ponytail: a full walk per subdir and size-only comparison (FilesUnder has no mtime); cache by
-// dir mtime or compare mtimes if it proves slow or too coarse. The depth-limited walk
+// ponytail: a full walk per subdir; cache by dir mtime if it proves slow. The depth-limited walk
 // re-implements scan.Rules.Walk's file filters; share them if fileindex exports a depth option.
 func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, maxDepth int) (map[string]string, error) {
 	if len(subdirs) == 0 {
@@ -134,10 +133,10 @@ func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, max
 		if err != nil {
 			return nil, err
 		}
-		size := make(map[string]int64, len(recorded))
+		want := make(map[string]db.Recorded, len(recorded))
 		for _, e := range recorded {
 			if maxDepth == 0 || dirDepth(root, e.Path) <= maxDepth {
-				size[e.Path] = e.Size
+				want[e.Path] = db.Recorded{Size: e.Size, Mtime: e.Mtime}
 			}
 		}
 		differs, seen, deeper := false, 0, false
@@ -145,13 +144,14 @@ func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, max
 			if ctx.Err() != nil {
 				return false
 			}
-			want, ok := size[p]
+			rec, ok := want[p]
 			if !ok {
 				differs = true
 				return false
 			}
 			seen++
-			if fi, err := os.Stat(p); err == nil && fi.Size() != want {
+			// the same comparison as a file row's status (entryStatuses)
+			if fi, err := os.Stat(p); err == nil && !rec.Unchanged(fi.Size(), fi.ModTime()) {
 				differs = true
 				return false
 			}
@@ -170,7 +170,7 @@ func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, max
 			return nil, ctx.Err()
 		}
 		switch {
-		case differs || seen < len(size):
+		case differs || seen < len(want):
 			out[name] = StatusDiffers
 		case deeper:
 			out[name] = StatusUnchecked
