@@ -154,7 +154,7 @@ tagged = { fg = "blue" }
 [panel.scrollbar]             # scrollbar track/thumb colors and search match markers
 track = { fg = "bright_black" }
 thumb = { fg = "white" }
-match = { fg = "bright_red" }
+match = { fg = "red" }
 
 [panel.usage]                 # disk usage bar colors
 normal = { fg = "white", bg = "bright_black" }
@@ -419,6 +419,7 @@ excluded = "\uf114"
 
 [icons.scrollbar]
 thumb = "┃"
+match = "◇"                  # rail rows holding a preview search match
 
 [icons.tree]
 continue = "│"

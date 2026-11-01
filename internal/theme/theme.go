@@ -664,6 +664,7 @@ const (
 	IconKeyFoldersMount             = "folders.mount"
 	IconKeyFoldersExcluded          = "folders.excluded"
 	IconKeyScrollbarThumb           = "scrollbar.thumb"
+	IconKeyScrollbarMatch           = "scrollbar.match"
 	IconKeyMetaRunning              = "meta.running"
 	IconKeyTreeExpand               = "tree.expand"
 	IconKeyTreeCollapse             = "tree.collapse"
@@ -891,6 +892,11 @@ func (t Theme) IconTreeEnd() string {
 // IconScrollbarThumb returns the panel scrollbar thumb-style position icon.
 func (t Theme) IconScrollbarThumb() rune {
 	return t.iconRuneOr(IconKeyScrollbarThumb, '\u25cf') // ●
+}
+
+// IconScrollbarMatch returns the scrollbar rail glyph for rows marked as search matches.
+func (t Theme) IconScrollbarMatch() rune {
+	return t.iconRuneOr(IconKeyScrollbarMatch, '\u2588') // █
 }
 
 // IconMenuProgressDone returns the filled segment icon for the menu-bar progress bar.

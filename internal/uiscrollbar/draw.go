@@ -17,7 +17,8 @@ type DrawParams struct {
 	Blocked    bool
 	FrameStyle tcell.Style
 	Theme      theme.Theme
-	// Marks flags visible rows (index = row) to paint with MarkStyle's foreground; may be nil/short.
+	// Marks flags visible rows (index = row) to paint with the scrollbar.match icon in MarkStyle's
+	// foreground; may be nil/short.
 	Marks     []bool
 	MarkStyle tcell.Style
 }
@@ -59,11 +60,11 @@ func drawThumb(p DrawParams, thumbStyle, frameStyle, markStyle tcell.Style) {
 		if row == thumbRow {
 			p.Screen.SetContent(p.X, y, p.Theme.IconScrollbarThumb(), nil, thumbStyle)
 		} else {
-			st := frameStyle
 			if row < len(p.Marks) && p.Marks[row] {
-				st = markStyle
+				p.Screen.SetContent(p.X, y, p.Theme.IconScrollbarMatch(), nil, markStyle)
+			} else {
+				p.Screen.SetContent(p.X, y, '│', nil, frameStyle)
 			}
-			p.Screen.SetContent(p.X, y, '│', nil, st)
 		}
 	}
 }
@@ -76,11 +77,11 @@ func drawBar(p DrawParams, trackStyle, thumbStyle, markStyle tcell.Style) {
 		if row >= m.ThumbStart && row < thumbEnd {
 			p.Screen.SetContent(p.X, y, '█', nil, thumbStyle)
 		} else {
-			st := trackStyle
 			if row < len(p.Marks) && p.Marks[row] {
-				st = markStyle
+				p.Screen.SetContent(p.X, y, p.Theme.IconScrollbarMatch(), nil, markStyle)
+			} else {
+				p.Screen.SetContent(p.X, y, '░', nil, trackStyle)
 			}
-			p.Screen.SetContent(p.X, y, '░', nil, st)
 		}
 	}
 }

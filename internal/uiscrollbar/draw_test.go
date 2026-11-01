@@ -144,7 +144,10 @@ func TestDraw_markedRowThumb(t *testing.T) {
 		FrameStyle: frame, Theme: theme.Default(),
 		Marks: []bool{false, false, true}, MarkStyle: tcell.StyleDefault.Foreground(tcell.ColorRed),
 	})
-	_, st, _ := screen.Get(3, 2)
+	cell, st, _ := screen.Get(3, 2)
+	if r, _ := utf8.DecodeRuneInString(cell); r != theme.Default().IconScrollbarMatch() {
+		t.Fatalf("marked row glyph = %q", cell)
+	}
 	if fg, bg, _ := st.Decompose(); fg != tcell.ColorRed || bg != tcell.ColorFuchsia {
 		t.Fatalf("marked row fg/bg = %v/%v", fg, bg)
 	}
