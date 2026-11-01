@@ -63,7 +63,7 @@ func indexFindTitle(st *IndexFindDialogState, styles theme.Theme) string {
 // query and OK / Cancel.
 func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg.Spec {
 	const gap = 5
-	query := dlg.Item{ID: IndexFindQuery, Kind: dlg.KindInput, Grow: true, Drives: IndexFindList,
+	query := dlg.Item{ID: IndexFindQuery, Kind: dlg.KindInput, Grow: true, Drives: IndexFindList, Invalid: st.NoMatches(),
 		Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll, LeadingIcon: ctx.Styles.IconSearchIcon()}
 	depth := dlg.Item{ID: IndexFindDepth, Kind: dlg.KindInput, Width: findDialogDepthFieldWidth(ctx.Styles) + findDialogDepthGap,
 		Value: st.DepthInput, Cursor: utf8.RuneCountInString(st.DepthInput), LeadingIcon: ctx.Styles.IconDialogDepth()}

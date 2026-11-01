@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
@@ -90,6 +91,12 @@ func (s *IndexFindDialogState) Apply(id dlg.ID) {
 		s.OnlyFiles = !s.OnlyFiles
 		s.OnlyDirs = s.OnlyDirs && !s.OnlyFiles
 	}
+}
+
+// NoMatches reports whether a typed query finished with no results (the query input is then
+// drawn in error style, as Find's).
+func (s *IndexFindDialogState) NoMatches() bool {
+	return strings.TrimSpace(s.Query) != "" && !s.Searching && s.Err == "" && len(s.Results) == 0
 }
 
 // MarkedLabel is the marked-selection summary for the button separator ("" = nothing marked).

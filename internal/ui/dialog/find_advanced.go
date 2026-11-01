@@ -97,6 +97,13 @@ func FindAdvancedMnemonic(chords []string) rune {
 	return 0
 }
 
+// NoMatches reports whether a typed query has no results that more indexing could change: the
+// index is complete and no match pass is pending (the query input is then drawn in error style,
+// like the panel quick filter's no-match input).
+func (s *FindDialogState) NoMatches() bool {
+	return strings.TrimSpace(s.Query) != "" && s.IndexDone && !s.Indexing && !s.RankPending && len(s.Ranked) == 0
+}
+
 // textInputFocused reports whether focus is on a text input (the query, depth or an advanced
 // field), where letters are text.
 func (s *FindDialogState) textInputFocused() bool {

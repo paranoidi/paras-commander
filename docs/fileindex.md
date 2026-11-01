@@ -163,7 +163,8 @@ In an index view:
 the index under the panel directory instead of walking the disk (files that
 have gone from disk are found too). `panel.jump-dialog` opens the same dialog
 for directories only. The query runs as you type; results are capped at
-`[ui.find].max_results` and the title shows `N+` when more matched.
+`[ui.find].max_results` and the title shows `N+` when more matched. A finished query
+without results turns the query red.
 
 Two query modes (radios; `find.cycle-match-mode` switches between them):
 

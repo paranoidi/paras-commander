@@ -49,3 +49,30 @@ func TestFindDialogAdvancedKeepsFrameHeight(t *testing.T) {
 		}
 	}
 }
+
+func TestFindDialogNoMatchesOnlyWhenIndexComplete(t *testing.T) {
+	st := &FindDialogState{Query: "zzq", IndexDone: true}
+	if !st.NoMatches() {
+		t.Fatal("finished index, no results: want NoMatches")
+	}
+	for name, mut := range map[string]func(*FindDialogState){
+		"indexing":     func(s *FindDialogState) { s.Indexing, s.IndexDone = true, false },
+		"rank pending": func(s *FindDialogState) { s.RankPending = true },
+		"has results":  func(s *FindDialogState) { s.Ranked = []int{0} },
+		"empty query":  func(s *FindDialogState) { s.Query = "  " },
+	} {
+		s := *st
+		mut(&s)
+		if s.NoMatches() {
+			t.Errorf("%s: NoMatches = true, want false", name)
+		}
+	}
+	idx := &IndexFindDialogState{Query: "zzq"}
+	if !idx.NoMatches() {
+		t.Fatal("index find: finished query without results: want NoMatches")
+	}
+	idx.Searching = true
+	if idx.NoMatches() {
+		t.Fatal("index find: searching: want false")
+	}
+}

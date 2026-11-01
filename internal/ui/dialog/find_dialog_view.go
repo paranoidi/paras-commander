@@ -49,7 +49,7 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 		queryIcon += " " + tag // the query is not fuzzy: say how it is read
 	}
 	query := dlg.Item{
-		ID: FindQuery, Kind: dlg.KindInput, Grow: true, Drives: FindList, Invalid: state.QueryInvalid,
+		ID: FindQuery, Kind: dlg.KindInput, Grow: true, Drives: FindList, Invalid: state.QueryInvalid || state.NoMatches(),
 		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: queryIcon,
 	}
 	depth := dlg.Item{
