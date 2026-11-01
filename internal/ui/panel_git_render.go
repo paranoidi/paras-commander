@@ -79,14 +79,18 @@ func indexRowState(entry localfs.Entry, jobMarks []JobPathMark) string {
 }
 
 // paintIndexColumn paints a row's fileindex state icon in the git strip while the panel browses
-// with fileindex; the second cell stays blank.
-func paintIndexColumn(screen tcell.Screen, x, y int, state string, rowStyle tcell.Style, styles theme.Theme, cursorRow bool) {
+// with fileindex; the second cell stays blank. While panel chrome is blocked the icon takes the
+// [panel.blocked] text colour instead of its state colour.
+func paintIndexColumn(screen tcell.Screen, x, y int, state string, rowStyle tcell.Style, styles theme.Theme, cursorRow, chromeBlocked bool) {
 	_, rowBG, rowAttrs := rowStyle.Decompose()
 	icon := ' '
 	s := tcell.StyleDefault.Background(rowBG).Attributes(rowAttrs)
 	if r := styles.IconFileIndexState(state); state != "" && r != 0 {
 		icon = r
 		fg, _, attrs := styles.PanelFileIndexStyle(state).Decompose()
+		if chromeBlocked {
+			fg, _, attrs = styles.PanelBlockedText.Decompose()
+		}
 		if cursorRow {
 			fg, _, _ = rowStyle.Decompose()
 			attrs = rowAttrs
