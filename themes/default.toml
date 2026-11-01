@@ -1,7 +1,9 @@
 name = "default"
 
-# Values may be hex "#RRGGBB", integers 0–255 (ANSI/xterm index), or "default" for the
-# emulator’s configured default foreground/background (separate from ANSI black/white).
+# [palette] values may be hex "#RRGGBB", integers 0–255 (ANSI/xterm index), or "default" for
+# the emulator’s configured default foreground/background (separate from ANSI black/white).
+# Style fg/bg/icon values are strings: a [palette] name, hex "#RRGGBB", or "default"; add a
+# palette entry to use another xterm index.
 [palette]
 black = 0
 red = 1
