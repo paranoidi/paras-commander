@@ -186,9 +186,9 @@ const (
 	findAdvPairW = findAdvLabelW + 2*(findAdvSubW+findAdvInputW)
 )
 
-// findAdvancedRows are the advanced section's rows for a row width of rowW cells: the three
-// time rows beside size / owner / exclude when two chunks fit side by side (else one chunk per
-// row), then the match mode, kind and file-type rows, each wrapping under its label.
+// findAdvancedRows are the advanced section's rows for a row width of rowW cells: the match
+// mode, kind and file-type rows on one aligned grid, then the three time rows beside size /
+// owner / exclude when two chunks fit side by side (else one chunk per row).
 func findAdvancedRows(a FindAdvancedState, rowW int) []dlg.Item {
 	input := func(f FindAdvField, w int) dlg.Item {
 		in := a.Fields[f]
@@ -218,7 +218,7 @@ func findAdvancedRows(a FindAdvancedState, rowW int) []dlg.Item {
 		},
 		{label("Exclude", findAdvLabelW), input(FindAdvExclude, 0)},
 	}
-	var rows []dlg.Item
+	rows := findAdvancedOptionRows(a, rowW)
 	sideBySide := rowW >= 2*findAdvPairW+findAdvChunkGap
 	for i := range left {
 		if sideBySide {
@@ -235,48 +235,72 @@ func findAdvancedRows(a FindAdvancedState, rowW int) []dlg.Item {
 		}
 	}
 
-	var modes []dlg.Item
-	for m, text := range findcrit.ModeLabels {
-		modes = append(modes, dlg.Item{ID: FindAdvModeID(findcrit.Mode(m)), Kind: dlg.KindRadio, Label: text, On: a.Mode == findcrit.Mode(m), Seg: 2, Gap: 1})
-	}
-	modes[len(modes)-1].Gap = findAdvChunkGap
-	modes = append(modes, dlg.Item{ID: FindAdvCase, Kind: dlg.KindCheckbox, Label: "Case sensitive", On: a.CaseSensitive, Seg: 3})
-	rows = append(rows, flowRows("Match", modes, rowW)...)
-
-	kinds := []dlg.Item{
-		{ID: FindAdvEmpty, Kind: dlg.KindCheckbox, Label: "Empty", On: a.Empty},
-		{ID: FindAdvSymlinks, Kind: dlg.KindCheckbox, Label: "Symlinks", On: a.Symlinks},
-		{ID: FindAdvBroken, Kind: dlg.KindCheckbox, Label: "Broken symlinks", On: a.Broken},
-		{ID: FindAdvExecutable, Kind: dlg.KindCheckbox, Label: "Executables", On: a.Executables},
-	}
-	for i := range kinds {
-		kinds[i].Seg, kinds[i].Gap = 4, 1
-	}
-	rows = append(rows, flowRows("Kind", kinds, rowW)...)
-
-	types := make([]dlg.Item, FilterTypeCount)
-	for i := range types {
-		types[i] = dlg.Item{ID: FindAdvTypeID(i), Kind: dlg.KindCheckbox, Label: FilterTypeLabels[i], On: a.Types[i], Seg: 5, Gap: 1}
-	}
-	return append(rows, flowRows("Types", types, rowW)...)
+	return rows
 }
 
-// flowRows lays items out after a label cell, wrapping onto further rows (indented under the
-// label) where the next item would not fit in rowW cells.
-func flowRows(name string, items []dlg.Item, rowW int) []dlg.Item {
-	head := dlg.Item{Kind: dlg.KindLabel, Label: name, Width: findAdvLabelW}
-	var rows []dlg.Item
-	cells := []dlg.Item{head}
-	used := findAdvLabelW
-	for _, it := range items {
-		w := draw.DialogOptionWidth(it.Label) + it.Gap
-		if len(cells) > 1 && used+w > rowW {
-			rows = append(rows, dlg.Item{Kind: dlg.KindRow, Cells: cells})
-			cells = []dlg.Item{{Kind: dlg.KindLabel, Width: findAdvLabelW}}
-			used = findAdvLabelW
-		}
-		cells = append(cells, it)
-		used += w
+// findAdvOptionGap is the blank cells after each option of the Match / Kind / Types grid.
+const findAdvOptionGap = 2
+
+// findAdvancedOptionRows are the Match, Kind and Types rows: their options share columns (each
+// column as wide as its widest option), with as many columns as fit in rowW cells; a row with
+// more options than columns continues on the next row, indented under its label.
+func findAdvancedOptionRows(a FindAdvancedState, rowW int) []dlg.Item {
+	var modes []dlg.Item
+	for m, text := range findcrit.ModeLabels {
+		modes = append(modes, dlg.Item{ID: FindAdvModeID(findcrit.Mode(m)), Kind: dlg.KindRadio, Label: text, On: a.Mode == findcrit.Mode(m), Seg: 2})
 	}
-	return append(rows, dlg.Item{Kind: dlg.KindRow, Cells: cells})
+	modes = append(modes, dlg.Item{ID: FindAdvCase, Kind: dlg.KindCheckbox, Label: "Case sensitive", On: a.CaseSensitive, Seg: 3})
+	kinds := []dlg.Item{
+		{ID: FindAdvEmpty, Kind: dlg.KindCheckbox, Label: "Empty", On: a.Empty, Seg: 4},
+		{ID: FindAdvSymlinks, Kind: dlg.KindCheckbox, Label: "Symlinks", On: a.Symlinks, Seg: 4},
+		{ID: FindAdvBroken, Kind: dlg.KindCheckbox, Label: "Broken symlinks", On: a.Broken, Seg: 4},
+		{ID: FindAdvExecutable, Kind: dlg.KindCheckbox, Label: "Executables", On: a.Executables, Seg: 4},
+	}
+	types := make([]dlg.Item, FilterTypeCount)
+	for i := range types {
+		types[i] = dlg.Item{ID: FindAdvTypeID(i), Kind: dlg.KindCheckbox, Label: FilterTypeLabels[i], On: a.Types[i], Seg: 5}
+	}
+	return optionGridRows([]string{"Match", "Kind", "Types"}, [][]dlg.Item{modes, kinds, types}, rowW)
+}
+
+// optionGridRows lays each labelled option row out on shared columns (see
+// findAdvancedOptionRows); the column count is the largest that fits rowW.
+func optionGridRows(names []string, groups [][]dlg.Item, rowW int) []dlg.Item {
+	maxItems := 0
+	for _, g := range groups {
+		maxItems = max(maxItems, len(g))
+	}
+	var widths []int
+	for cols := maxItems; cols >= 1; cols-- {
+		widths = make([]int, cols)
+		for _, g := range groups {
+			for i, it := range g {
+				widths[i%cols] = max(widths[i%cols], draw.DialogOptionWidth(it.Label)+findAdvOptionGap)
+			}
+		}
+		total := findAdvLabelW
+		for _, w := range widths {
+			total += w
+		}
+		if total <= rowW {
+			break
+		}
+	}
+	cols := len(widths)
+	var rows []dlg.Item
+	for gi, g := range groups {
+		for from := 0; from < len(g); from += cols {
+			head := dlg.Item{Kind: dlg.KindLabel, Width: findAdvLabelW}
+			if from == 0 {
+				head.Label = names[gi]
+			}
+			cells := []dlg.Item{head}
+			for i, it := range g[from:min(from+cols, len(g))] {
+				it.Width = widths[i]
+				cells = append(cells, it)
+			}
+			rows = append(rows, dlg.Item{Kind: dlg.KindRow, Cells: cells})
+		}
+	}
+	return rows
 }

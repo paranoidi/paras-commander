@@ -5,17 +5,19 @@
   ├────────────────────────────────────────────────────────────────┤  
   │ ( ) Only directories  ( ) Only files  [ ] Include hidden  [ ]  │  
   ├─────────────────────────── Advanced ───────────────────────────┤  
+  │ Match     (*) Fuzzy             ( ) Glob                       │  
+  │           ( ) Regex             [ ] Case sensitive             │  
+  │ Kind      [ ] Empty             [ ] Symlinks                   │  
+  │           [ ] Broken symlinks   [ ] Executables                │  
+  │ Types     [ ] Videos            [ ] Pictures                   │  
+  │           [ ] Archives          [ ] Audio                      │  
+  │           [ ] Documents                                        │  
   │ Modified  newer              older                             │  
   │ Changed   newer              older                             │  
   │ Accessed  newer              older                             │  
   │ Size      min                max                               │  
   │ Owner                   [ ] Not mine                           │  
   │ Exclude                                                        │  
-  │ Match     (*) Fuzzy  ( ) Glob  ( ) Regex    [ ] Case sensitive │  
-  │ Kind      [ ] Empty  [ ] Symlinks  [ ] Broken symlinks         │  
-  │           [ ] Executables                                      │  
-  │ Types     [ ] Videos  [ ] Pictures  [ ] Archives  [ ] Audio    │  
-  │           [ ] Documents                                        │  
   ├────────────────────────────────────────────────────────────────┤  
   │ 󰉋 amber                                                        ┃  
   │  amber/birch_delta.go                                         │  
@@ -33,8 +35,6 @@
   │ 󰈙 delta/ember_glacier.txt                                      │  
   │  delta/fable_ivory.toml                                       │  
   │  delta/glacier_kestrel.mp4                                    │  
-  │ 󰉋 ember                                                        │  
-  │  ember/fable_harbor.toml                                      │  
   ├────────────────────────────────────────────────────────────────┤  
   │                      [ OK ]    [ Cancel ]                      │  
   └────────────────────────────────────────────────────────────────┘  
@@ -61,17 +61,19 @@ aabbddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebddddddeeebfffffffffffffbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbggggggggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
-aabbbbbbbbbbbffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
@@ -89,8 +91,6 @@ aabbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabblbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbkbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbeeeneeeebbeeeneeeeeeeebbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa

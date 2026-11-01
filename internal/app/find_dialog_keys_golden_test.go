@@ -235,7 +235,7 @@ func findKeyScripts() []simpleKeyScript {
 		{"advanced-toggle-and-tab", "Alt+a Tab Tab Tab Tab Space Alt+a"},
 		{"advanced-space-on-toggle", "Tab Tab Space Space"},
 		{"match-mode-cycle", findQuery("*.md") + " Alt+m Alt+m Alt+m Alt+m"},
-		{"advanced-size-field", "Alt+a Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab " + findQuery("1x") + " Backspace k Tab"},
+		{"advanced-size-field", "Alt+a Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab " + findQuery("1x") + " Backspace k Tab"},
 		{"advanced-reset", "Alt+m Alt+a Alt+r"},
 	}
 }

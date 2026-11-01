@@ -9,8 +9,8 @@ focus=2 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs
 == Tab ==
 focus=3 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:only-dirs mode=0 invalid=false fields=[] summary=""
 == Tab ==
-focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-0 mode=0 invalid=false fields=[] summary=""
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-mode-0 mode=0 invalid=false fields=[] summary=""
 == Space ==
-focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-0 mode=0 invalid=false fields=[0:" "/false] summary=""
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-mode-0 mode=0 invalid=false fields=[] summary=""
 == Alt+a ==
 focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
