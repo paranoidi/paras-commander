@@ -7,7 +7,7 @@ focus=0 query="zz" qcursor=2 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=fal
 == q ==
 focus=0 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Down ==
-focus=2 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
+focus=3 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Up ==
 focus=0 query="zzq" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Enter ==

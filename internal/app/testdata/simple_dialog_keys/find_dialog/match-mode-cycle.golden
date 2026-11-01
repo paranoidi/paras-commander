@@ -1,0 +1,18 @@
+== open ==
+focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== * ==
+focus=0 query="*" qcursor=1 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== . ==
+focus=0 query="*." qcursor=2 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== m ==
+focus=0 query="*.m" qcursor=3 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== d ==
+focus=0 query="*.md" qcursor=4 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== Alt+m ==
+focus=0 query="*.md" qcursor=4 depth="" sel=0 cursor="willow_overview.md" scroll=0 ranked=3 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=false focusid=find:query mode=1 invalid=false fields=[] summary="Criteria: glob"
+== Alt+m ==
+focus=0 query="*.md" qcursor=4 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=false focusid=find:query mode=2 invalid=true fields=[] summary="Criteria: regex"
+== Alt+m ==
+focus=0 query="*.md" qcursor=4 depth="" sel=0 cursor="" scroll=0 ranked=0 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== Alt+m ==
+focus=0 query="*.md" qcursor=4 depth="" sel=0 cursor="willow_overview.md" scroll=0 ranked=3 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=false focusid=find:query mode=1 invalid=false fields=[] summary="Criteria: glob"

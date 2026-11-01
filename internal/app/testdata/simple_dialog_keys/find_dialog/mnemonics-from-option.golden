@@ -4,9 +4,11 @@ focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs
 focus=1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Tab ==
 focus=2 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== Tab ==
+focus=3 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Alt+i ==
-focus=4 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=23 dirs=false files=false hidden=true volume=true selections=false marked=[]
+focus=5 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=23 dirs=false files=false hidden=true volume=true selections=false marked=[]
 == Alt+y ==
-focus=3 query="" qcursor=0 depth="" sel=0 cursor="willow_overview.md" scroll=0 ranked=14 dirs=false files=true hidden=true volume=true selections=false marked=[]
+focus=4 query="" qcursor=0 depth="" sel=0 cursor="willow_overview.md" scroll=0 ranked=14 dirs=false files=true hidden=true volume=true selections=false marked=[]
 == Alt+v ==
-focus=5 query="" qcursor=0 depth="" sel=0 cursor=".willow_settings" scroll=0 ranked=14 dirs=false files=true hidden=true volume=false selections=false marked=[]
+focus=6 query="" qcursor=0 depth="" sel=0 cursor=".willow_settings" scroll=0 ranked=14 dirs=false files=true hidden=true volume=false selections=false marked=[]

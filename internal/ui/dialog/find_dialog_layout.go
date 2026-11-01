@@ -16,10 +16,16 @@ func findListHeight(layoutHeight int) int {
 }
 
 // FindDialogMetrics returns the find dialog's width, height and visible list row count, from its
-// placed spec. listH is the result list's height in FindDialogView and is used for list scroll
-// math; ok is false when the dialog does not fit.
-func FindDialogMetrics(layout Layout, showSearchSelectionsOption bool) (width, height, listH int, ok bool) {
-	spec := FindDialogView(&FindDialogState{ShowSearchSelectionsOption: showSearchSelectionsOption}, FindViewContext{Layout: layout})
+// placed spec for the rows state shows (selection scope, jump mode, advanced section). listH is
+// the result list's height in FindDialogView and is used for list scroll math; ok is false when
+// the dialog does not fit.
+func FindDialogMetrics(layout Layout, state *FindDialogState) (width, height, listH int, ok bool) {
+	shape := FindDialogState{
+		ShowSearchSelectionsOption: state.ShowSearchSelectionsOption,
+		JumpMode:                   state.JumpMode,
+		Advanced:                   state.Advanced,
+	}
+	spec := FindDialogView(&shape, FindViewContext{Layout: layout})
 	p, ok := dlg.Place(layout.Width, layout.Height, spec)
 	if !ok {
 		return 0, 0, 0, false

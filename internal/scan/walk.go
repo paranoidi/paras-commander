@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -27,6 +28,11 @@ type WalkOptions struct {
 	MaxDepth int
 	// Walk tunes the adaptive directory-read concurrency within a level; zero runs sequentially.
 	Walk fswalk.Params
+	// Stat is the metadata level collected per entry, on the directory-read workers.
+	Stat findcrit.StatLevel
+	// Exclude reports whether an entry (absolute path) is left out: neither indexed, recorded as
+	// skipped hidden, nor descended into. nil excludes nothing.
+	Exclude func(path string) bool
 }
 
 type rootWalk struct {
@@ -177,7 +183,7 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 		w.depth.Add(1)
 		w.levelDone.Store(0)
 		w.levelTotal.Store(int64(len(level)))
-		slots, stop := w.readLevel(ctx, level, adapt)
+		slots, stop := w.readLevel(ctx, level, adapt, opts)
 		for i, dir := range level {
 			if ctx.Err() != nil || w.tooDeep(w.depth.Load()) {
 				stop()
@@ -189,19 +195,22 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 				stop()
 				return
 			}
-			children, err := slots[i].children, slots[i].err
-			slots[i].children = nil
+			children, stats, err := slots[i].children, slots[i].stats, slots[i].err
+			slots[i].children, slots[i].stats = nil, nil
 			w.levelDone.Add(1)
 			if err != nil {
 				continue // unreadable dir: skip
 			}
-			for _, d := range children {
+			for ci, d := range children {
 				isDir := d.IsDir()
 				if opts.DirsOnly && !isDir {
 					continue
 				}
 				name := d.Name()
 				path := filepath.Join(dir, name)
+				if opts.Exclude != nil && opts.Exclude(path) {
+					continue
+				}
 				if !localfs.EntryVisible(name, dir, isDir, listOpts) {
 					w.recordSkippedHidden(path, isDir)
 					continue
@@ -209,6 +218,9 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 				entry, ok := buildEntry(w.root, path, d, isDir)
 				if !ok {
 					continue
+				}
+				if stats != nil {
+					entry = entry.withStat(stats[ci])
 				}
 				if batch.appendEntry(entry) {
 					batch.flush()
@@ -226,14 +238,15 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 
 type dirRead struct {
 	children []os.DirEntry
+	stats    []*entryStat // parallel to children when the walk stats (opts.Stat)
 	err      error
 	done     chan struct{}
 }
 
-// readLevel reads dirs concurrently, bounded by the adaptive semaphore. A slot's
-// done channel closes once its dir is read. stop cancels the remaining reads and
-// waits for every goroutine to exit.
-func (w *rootWalk) readLevel(ctx context.Context, dirs []string, adapt *fswalk.Adaptive) ([]dirRead, func()) {
+// readLevel reads dirs concurrently, bounded by the adaptive semaphore, and lstats
+// their children at opts.Stat on the same workers. A slot's done channel closes once
+// its dir is read. stop cancels the remaining reads and waits for every goroutine to exit.
+func (w *rootWalk) readLevel(ctx context.Context, dirs []string, adapt *fswalk.Adaptive, opts WalkOptions) ([]dirRead, func()) {
 	slots := make([]dirRead, len(dirs))
 	for i := range slots {
 		slots[i].done = make(chan struct{})
@@ -253,12 +266,31 @@ func (w *rootWalk) readLevel(ctx context.Context, dirs []string, adapt *fswalk.A
 				defer wg.Done()
 				defer sem.Release()
 				slots[i].children, slots[i].err = os.ReadDir(dir)
+				if opts.Stat >= findcrit.StatMeta && slots[i].err == nil {
+					slots[i].stats = statChildren(lctx, dir, slots[i].children, opts)
+				}
 				adapt.Bump()
 				close(slots[i].done)
 			}()
 		}
 	}()
 	return slots, func() { cancel(); wg.Wait() }
+}
+
+// statChildren lstats the children of dir that the walk can index (files are skipped in
+// DirsOnly walks); the result is parallel to children, nil where not statted.
+func statChildren(ctx context.Context, dir string, children []os.DirEntry, opts WalkOptions) []*entryStat {
+	out := make([]*entryStat, len(children))
+	for i, d := range children {
+		if ctx.Err() != nil {
+			return out
+		}
+		if opts.DirsOnly && !d.IsDir() {
+			continue
+		}
+		out[i] = statEntry(filepath.Join(dir, d.Name()), opts.Stat)
+	}
+	return out
 }
 
 func (w *rootWalk) recordSkippedHidden(path string, isDir bool) {

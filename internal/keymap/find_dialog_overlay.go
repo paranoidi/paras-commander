@@ -9,6 +9,9 @@ func DefaultFindDialogOverlayKeys() map[string][]string {
 		ActionFindSelectGroup:      {"F6"},
 		ActionFindUnselectGroup:    {"F7"},
 		ActionFindSelectParentDirs: {"F2"},
+		ActionFindToggleAdvanced:   {"M-e"},
+		ActionFindCycleMatchMode:   {"M-m"},
+		ActionFindResetAdvanced:    {"M-r"},
 	})
 }
 

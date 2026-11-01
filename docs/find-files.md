@@ -8,15 +8,46 @@ Find is a fuzzy, recursive search across everything below a panel's directory. R
 
 ## Searching
 
-Type to filter; matching is fuzzy against paths relative to the root, best matches first. The walk is breadth-first (level by level) and never reads sizes, so it stays responsive on millions of files. While indexing, the dialog title shows the count and the level being read, e.g. `Find (12.3K…) Depth 4 · 37%` plus a scanning icon (with Nerd Font icons on, a depth icon replaces the word `Depth`): the percentage is directories read at that depth out of all directories found for it (across all roots, the deepest level wins). Only the top `[ui.find].max_results` (default 200) ranked rows are displayed, but the whole index is searched, and select-all marks everything that matches.
+Type to filter; by default matching is fuzzy against paths relative to the root, best matches first (see [Match modes](#match-modes) for shell patterns and regular expressions). The walk is breadth-first (level by level) and reads no file metadata unless an [advanced criterion](#advanced-criteria) needs it, so it stays responsive on millions of files. While indexing, the dialog title shows the count and the level being read, e.g. `Find (12.3K…) Depth 4 · 37%` plus a scanning icon (with Nerd Font icons on, a depth icon replaces the word `Depth`): the percentage is directories read at that depth out of all directories found for it (across all roots, the deepest level wins). Only the top `[ui.find].max_results` (default 200) ranked rows are displayed, but the whole index is searched, and select-all marks everything that matches.
 
 Options in the dialog:
 
 - **Depth** (input at the right end of the query row, reached with Tab from the query; Up and Down in the query move the result list): limit the index to this many path levels below the root (`a` is depth 1, `a/b` depth 2). Typing a digit 1-9 sets it, `0`, Backspace or Delete clear it for unlimited; either applies it at once and returns focus to the query. Leaving the field (Tab, S-Tab, Up, Down, Left) or pressing Enter, which returns focus to the query, applies it: a lower limit drops the deeper results at once and stops the running scan from going deeper; a higher limit re-indexes to reach the extra levels. The limit starts unlimited each time the dialog opens.
 - **Include hidden** (`M-i`, default off): add dot-entries and git-ignored paths. This does not change the panel's own hidden-file setting.
 - **Stay on current volume** (`M-v`, default on): do not descend into other mounted file systems.
-- **Only directories** (`M-d`) / **Only files** (`M-l`): filter the result list without re-scanning.
+- **Only directories** (`M-n`) / **Only files** (`M-y`): filter the result list without re-scanning.
+- **Advanced** (checkbox at the end of the query row, or `M-e`): show the [advanced criteria](#advanced-criteria).
 - **Search only from selected directories** (`M-s`, shown only when directories are selected in the panel, default on): the search is limited to those directories; uncheck it to widen to the whole panel path.
+
+## Match modes
+
+`M-m` (`find.cycle-match-mode`) cycles how the query is read, or pick it on the **Match** row of the advanced section. A non-fuzzy mode shows its name after the search icon.
+
+| Mode | Query | Order |
+|---|---|---|
+| Fuzzy (default) | fzf-style terms: `^start`, `end$`, `'exact`, `!exclude`, space = AND | best match first |
+| Glob | shell pattern (`*`, `?`, `[a-z]`) on the basename; with a `/` it matches the whole relative path and `*` crosses directories (`src/*_test.go`). A word without wildcards finds names containing it | breadth-first (shallow first) |
+| Regex | Go regular expression on the relative path (`_test\.go$`, `^docs/`) | breadth-first |
+
+Matching ignores case when `[filter] case_insensitive` is on, unless **Case sensitive** is checked. A glob or regex that does not compile turns the query red and shows no results.
+
+## Advanced criteria
+
+`M-e` (`find.toggle-advanced`) or the **Advanced** checkbox opens a section under the options. Every filled field must hold; results update as you change it. Check boxes apply at once; text fields apply on Enter or when focus leaves them. A field that does not parse turns red and is ignored. While the section is closed, the criteria in effect are summarized on the line above the results, so nothing filters invisibly. `M-r` (`find.reset-advanced`) clears the mode and every criterion. The section and its values stay for the rest of the session.
+
+| Field | Keeps | Input |
+|---|---|---|
+| Modified / Changed / Accessed `newer` | entries whose mtime / ctime / atime is at or after the instant | an age before now (`30m`, `2h`, `3d`, `2w`, `6mo`, `1y`, sums such as `1w3d`) or a local date (`2026-10-01`, `2026-10-01 14:30`) |
+| Modified / Changed / Accessed `older` | entries whose time is before the instant | same |
+| Size `min` / `max` | files of at least / at most this size (directories never match) | `512`, `10k`, `4M`, `1.5G`; binary units, `K`, `KB` and `KiB` are the same |
+| Owner | entries owned by this user | user name or uid |
+| Not mine | entries owned by someone else | |
+| Exclude | everything except matches, which are not even scanned | shell patterns separated by commas or spaces (`node_modules, *.o`); a pattern with `/` matches the path relative to the root |
+| Match | the [match mode](#match-modes) and **Case sensitive** | |
+| Kind | **Empty** (zero-byte files and directories without entries), **Symlinks**, **Broken symlinks**, **Executables**; checked kinds are alternatives | |
+| Types | files of the checked [Filter type groups](panel-filter.md) (`[filter.types]`) | |
+
+Age, size, owner, executable and empty criteria need file metadata, so the first such criterion re-scans with it (Empty also looks inside every directory). Changing Exclude re-scans too. Accessed times are coarse on file systems mounted with `relatime`. Jump to directory has no advanced section.
 
 ## Working with results
 
@@ -29,6 +60,9 @@ Options in the dialog:
 | `F6` / `F7` | Mark / unmark by group pattern (`find.select-group`, `find.unselect-group`) |
 | `F2` | Replace the selection with the parent directories of the marked results (`find.select-parent-dirs`) |
 | `F3` | View the highlighted file fullscreen (`find.view`) |
+| `M-e` | Show / hide the advanced criteria (`find.toggle-advanced`) |
+| `M-m` | Next match mode (`find.cycle-match-mode`) |
+| `M-r` | Reset the match mode and criteria (`find.reset-advanced`) |
 | `S-←` / `S-→` | Open the result in the left / right panel and keep Find open |
 | `M-Insert` | Pin the row |
 | `Esc` | Cancel the scan and close |

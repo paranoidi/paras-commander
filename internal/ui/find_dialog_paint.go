@@ -8,8 +8,8 @@ import (
 )
 
 // FindDialogListRows returns the visible find-dialog list row count (matches DrawFindDialog).
-func FindDialogListRows(layout Layout, showSearchSelectionsOption bool) int {
-	_, _, listH, ok := dialog.FindDialogMetrics(layout, showSearchSelectionsOption)
+func FindDialogListRows(layout Layout, state *dialog.FindDialogState) int {
+	_, _, listH, ok := dialog.FindDialogMetrics(layout, state)
 	if !ok {
 		return 4
 	}

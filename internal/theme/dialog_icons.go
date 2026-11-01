@@ -14,6 +14,7 @@ const (
 	IconKeyDialogZoxide            = "dialog.zoxide"
 	IconKeyDialogHistory           = "dialog.history"
 	IconKeyDialogDepth             = "dialog.depth"
+	IconKeyDialogCriteria          = "dialog.criteria"
 	IconKeyMessageSuccess          = "message.success"
 
 	// IconDialogInfoASCII is the info marker used when Nerd Font icons are disabled; it is
@@ -75,6 +76,15 @@ func (t Theme) IconDialogDepth() string {
 		return "Depth"
 	}
 	return t.iconOr(IconKeyDialogDepth, "\uef81")
+}
+
+// IconDialogCriteria returns the marker before the find dialog's advanced-criteria summary.
+// When UseNerdfontIcons is false, returns "Criteria:".
+func (t Theme) IconDialogCriteria() string {
+	if !t.UseNerdfontIcons {
+		return "Criteria:"
+	}
+	return t.iconOr(IconKeyDialogCriteria, "\uf0b0")
 }
 
 // DialogMissingIconForeground is the missing-path mark color: dialog.option.active on the

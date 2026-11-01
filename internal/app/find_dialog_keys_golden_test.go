@@ -12,6 +12,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/find"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -84,7 +85,11 @@ func findKeyRel(app *App, p string) string {
 // findKeyFocus is the focused widget's position in the dialog's focus order (0 = the query, which
 // also drives the list; the selections row only when shown).
 func findKeyFocus(st *dialog.FindDialogState) int {
-	ids := []dlg.ID{dialog.FindQuery, dialog.FindDepth, dialog.FindOnlyDirs, dialog.FindOnlyFiles, dialog.FindHidden, dialog.FindStayOnVol}
+	ids := []dlg.ID{dialog.FindQuery, dialog.FindDepth}
+	if !st.JumpMode {
+		ids = append(ids, dialog.FindAdvanced)
+	}
+	ids = append(ids, dialog.FindOnlyDirs, dialog.FindOnlyFiles, dialog.FindHidden, dialog.FindStayOnVol)
 	if st.ShowSearchSelectionsOption {
 		ids = append(ids, dialog.FindSelections)
 	}
@@ -113,9 +118,20 @@ func findKeyState(app *App) string {
 		marked = append(marked, findKeyRel(app, p))
 	}
 	sort.Strings(marked)
-	return fmt.Sprintf("focus=%d query=%q qcursor=%d depth=%q sel=%d cursor=%q scroll=%d ranked=%d dirs=%v files=%v hidden=%v volume=%v selections=%v marked=%v",
+	line := fmt.Sprintf("focus=%d query=%q qcursor=%d depth=%q sel=%d cursor=%q scroll=%d ranked=%d dirs=%v files=%v hidden=%v volume=%v selections=%v marked=%v",
 		findKeyFocus(&st), st.Query, st.QueryCursor, st.DepthInput, st.Selected, cursor, st.ListScroll, len(st.Ranked),
 		st.OnlyDirectories, st.OnlyFiles, st.IncludeHidden, st.StayOnCurrentVolume, st.SearchOnlySelections, marked)
+	if a := st.Advanced; a.Expanded || a.Active() || st.QueryInvalid {
+		var fields []string
+		for i, in := range a.Fields {
+			if in.Value != "" || in.Invalid {
+				fields = append(fields, fmt.Sprintf("%d:%q/%v", i, in.Value, in.Invalid))
+			}
+		}
+		line += fmt.Sprintf(" advanced=%v focusid=%s mode=%d invalid=%v fields=%v summary=%q",
+			a.Expanded, st.Focus, a.Mode, st.QueryInvalid, fields, a.Summary(theme.Theme{}, 200))
+	}
+	return line
 }
 
 func findKeyOutcome(app *App, _ bool) string {
@@ -195,17 +211,17 @@ func findKeyScripts() []simpleKeyScript {
 		{"query-no-match", findQuery("zzq") + " Down Up Enter"},
 		{"depth-typing", "Tab 2 Tab 0 Tab x Backspace Enter"},
 		{"depth-digit-reindexes", "Tab 1"},
-		{"space-on-options", "Tab Tab Space Right Space Right Space Right Space"},
-		{"enter-on-options", "Tab Tab Enter Right Enter Right Enter"},
+		{"space-on-options", "Tab Tab Tab Space Right Space Right Space Right Space"},
+		{"enter-on-options", "Tab Tab Tab Enter Right Enter Right Enter"},
 		{"mnemonics-from-query", "Alt+n Alt+y Alt+i Alt+v Alt+n"},
-		{"mnemonics-from-option", "Tab Tab Alt+i Alt+y Alt+v"},
+		{"mnemonics-from-option", "Tab Tab Tab Alt+i Alt+y Alt+v"},
 		{"mnemonic-selections-absent", "Alt+s"},
-		{"plain-letters-on-option", "Tab Tab x o"},
-		{"plain-c-on-option", "Tab Tab c"},
-		{"space-ok", "Tab Tab Tab Tab Tab Tab Space"},
-		{"space-on-ok-button", "Down Tab Tab Tab Space"},
-		{"space-on-cancel-button", "Tab Tab Tab Right Space"},
-		{"space-cancel", "Tab Tab Tab Tab Tab Tab Tab Space"},
+		{"plain-letters-on-option", "Tab Tab Tab x o"},
+		{"plain-c-on-option", "Tab Tab Tab c"},
+		{"space-ok", "Tab Tab Tab Tab Tab Tab Tab Tab Space"},
+		{"space-on-ok-button", "Down Tab Tab Tab Tab Space"},
+		{"space-on-cancel-button", "Tab Tab Tab Tab Right Space"},
+		{"space-cancel", "Tab Tab Tab Tab Tab Tab Tab Tab Tab Space"},
 		{"enter-on-file", findQuery("kestrel") + " Enter"},
 		{"enter-on-dir", findQuery("juniper") + " Enter"},
 		{"mark-and-ok", "Down Insert Insert Down Insert Enter"},
@@ -214,8 +230,13 @@ func findKeyScripts() []simpleKeyScript {
 		{"alt-c", "Down Insert Alt+c"},
 		{"alt-enter", "Down Alt+Enter"},
 		{"esc", findQuery("har") + " Esc"},
-		{"esc-from-option", "Tab Tab Esc"},
+		{"esc-from-option", "Tab Tab Tab Esc"},
 		{"hidden-toggle-reindexes", "Alt+i Down Alt+i"},
+		{"advanced-toggle-and-tab", "Alt+e Tab Tab Tab Tab Space Alt+e"},
+		{"advanced-space-on-toggle", "Tab Tab Space Space"},
+		{"match-mode-cycle", findQuery("*.md") + " Alt+m Alt+m Alt+m Alt+m"},
+		{"advanced-size-field", "Alt+e Tab Tab Tab Tab Tab Tab Tab Tab Tab Tab " + findQuery("1x") + " Backspace k Tab"},
+		{"advanced-reset", "Alt+m Alt+e Alt+r"},
 	}
 }
 
@@ -226,7 +247,7 @@ func TestFindDialogKeyScripts(t *testing.T) {
 func TestFindDialogSelectionsKeyScripts(t *testing.T) {
 	runKeyGoldenScripts(t, findKeyDialog("find_dialog_selections", false, true), []simpleKeyScript{
 		{"mnemonic-selections", "Alt+s Down Alt+s"},
-		{"space-selections", "Tab Tab Tab Tab Tab Tab Space Space"},
+		{"space-selections", "Tab Tab Tab Tab Tab Tab Tab Tab Space Space"},
 	})
 }
 

@@ -165,7 +165,7 @@ have gone from disk are found too). `panel.jump-dialog` opens the same dialog
 for directories only. The query runs as you type; results are capped at
 `[ui.find].max_results` and the title shows `N+` when more matched.
 
-Two query modes (radios):
+Two query modes (radios; `find.cycle-match-mode` switches between them):
 
 - **Pattern** matches file and directory names, ignoring case. Plain text finds
   names containing it (`holiday`). With `*` (any run) or `?` (one character)
@@ -189,6 +189,8 @@ selection (`find.select-all`, `find.unselect-all`, `find.select-group`,
 pins it. OK without marks shows the result under the cursor in the panel: a
 directory itself, a file in its directory with the file highlighted. The
 marked summary counts files by their indexed size; directories add no size.
+Find's advanced criteria are not available: the index keeps no times, owners
+or modes to filter on.
 
 ## Columns
 

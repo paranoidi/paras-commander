@@ -5,6 +5,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
@@ -17,7 +18,6 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 		testHoldMatch()
 	}
 	n := len(entries)
-	q := search.Parse(req.Query)
 	maxResults := req.MaxResults
 	out := MatchOutput{
 		Gen:        req.Gen,
@@ -25,9 +25,13 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 		OnlyDirs:   req.OnlyDirs,
 		OnlyFiles:  req.OnlyFiles,
 	}
-	opts := search.Options{CaseInsensitive: req.CaseInsensitive}
+	filter := req.Criteria.Active()
+	matcher, err := findcrit.Compile(req.Query, req.Mode, req.CaseInsensitive)
+	if err != nil {
+		return out // the handler validates the query before it asks; nothing matches an invalid one
+	}
 
-	if q.Empty() {
+	if matcher.Empty() && !filter {
 		out.Ranked = emptyDisplayIndicesInPlace(entries, req.OnlyDirs, req.OnlyFiles, maxResults)
 		out.FullRanked = out.Ranked
 		out.DisplayRelLines = relLinesForIndicesInPlace(entries, out.Ranked)
@@ -69,7 +73,7 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 				if shouldCancel != nil && i%10000 == 0 && i > lo && shouldCancel() {
 					return
 				}
-				result := q.Match(entries[i].RelLine, opts)
+				result := matcher.Match(entries[i].RelLine)
 				if result.Matched {
 					local = append(local, search.RankedResult{Index: i, Result: result})
 				}
@@ -88,11 +92,13 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 			merged = append(merged, sh.results...)
 		}
 	}
-	sort.SliceStable(merged, func(i, j int) bool {
-		return merged[i].Result.Score > merged[j].Result.Score
-	})
+	if matcher.Ranked() {
+		sort.SliceStable(merged, func(i, j int) bool {
+			return merged[i].Result.Score > merged[j].Result.Score
+		})
+	}
 
-	filtered := filterRankedResults(entries, merged, req.OnlyDirs, req.OnlyFiles)
+	filtered := filterRankedResults(entries, merged, req)
 	out.FullRanked = indicesFromResults(filtered)
 
 	display := filtered
@@ -118,8 +124,10 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 	return out
 }
 
-func filterRankedResults(entries []Entry, raw []search.RankedResult, onlyDirs, onlyFiles bool) []search.RankedResult {
-	if !onlyDirs && !onlyFiles {
+// filterRankedResults keeps the results that pass Only dirs / Only files and the criteria.
+func filterRankedResults(entries []Entry, raw []search.RankedResult, req MatchRequest) []search.RankedResult {
+	filter := req.Criteria.Active()
+	if !req.OnlyDirs && !req.OnlyFiles && !filter {
 		return raw
 	}
 	filtered := make([]search.RankedResult, 0, len(raw))
@@ -128,10 +136,14 @@ func filterRankedResults(entries []Entry, raw []search.RankedResult, onlyDirs, o
 		if idx < 0 || idx >= len(entries) {
 			continue
 		}
-		if onlyDirs && !entries[idx].IsDir {
+		e := &entries[idx]
+		if req.OnlyDirs && !e.IsDir {
 			continue
 		}
-		if onlyFiles && entries[idx].IsDir {
+		if req.OnlyFiles && e.IsDir {
+			continue
+		}
+		if filter && !req.Criteria.Match(e.subject()) {
 			continue
 		}
 		filtered = append(filtered, r)

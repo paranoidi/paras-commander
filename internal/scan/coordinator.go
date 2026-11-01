@@ -2,12 +2,16 @@ package scan
 
 import (
 	"context"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
@@ -414,10 +418,51 @@ func (s *session) startWalk(root string, skipIndexedSelectionSubtrees bool) {
 		ShouldSkipDir: s.shouldSkipForRoot(root, skipIndexedSelectionSubtrees),
 		DirsOnly:      s.opts.DirsOnly,
 		Walk:          s.opts.Walk,
+		Stat:          s.opts.Stat,
+		Exclude:       s.excludeFunc(),
 	}
 	sess := startRootWalk(s.ctx, root, wopts)
 	s.walks[root] = &walkHandle{root: root, sess: sess}
 	go s.readWalk(sess, gen, root)
+}
+
+// excludeFunc is the walk's Exclude predicate for the session's patterns (nil when none).
+func (s *session) excludeFunc() func(string) bool {
+	if len(s.opts.Exclude) == 0 {
+		return nil
+	}
+	displayRoot := filepath.Clean(s.opts.DisplayRoot)
+	excl := s.opts.Exclude
+	return func(abs string) bool { return excl.Match(relLine(displayRoot, abs)) }
+}
+
+// enrichHidden drops excluded entries of a hidden-expansion batch and lstats the rest at the
+// session's Stat level (in place). Spliced hidden files arrive typed as plain files; the lstat
+// also tells symlinks (and broken ones) apart.
+func (s *session) enrichHidden(batch []Entry) []Entry {
+	if len(s.opts.Exclude) == 0 && s.opts.Stat < findcrit.StatMeta {
+		return batch
+	}
+	displayRoot := filepath.Clean(s.opts.DisplayRoot)
+	kept := batch[:0]
+	for _, e := range batch {
+		if s.opts.Exclude.Match(e.RelLine) {
+			continue
+		}
+		if s.opts.Stat >= findcrit.StatMeta && e.Meta == nil {
+			abs := filepath.Join(displayRoot, filepath.FromSlash(e.RelLine))
+			st := statEntry(abs, s.opts.Stat)
+			if st != nil && !e.IsDir && st.meta.Mode&fs.ModeSymlink != 0 {
+				e.Type = localfs.EntrySymlink
+				if _, err := os.Stat(abs); err != nil {
+					e.Broken = true
+				}
+			}
+			e = e.withStat(st)
+		}
+		kept = append(kept, e)
+	}
+	return kept
 }
 
 // depthOf is the number of path segments of a RelLine ("a/b" is 2; the root "." is 0).
@@ -611,7 +656,7 @@ func (s *session) emitIndexFinishedIfReady() {
 }
 
 func (s *session) ingestHiddenBatch(batch []Entry) {
-	batch = s.withinMaxDepth(batch)
+	batch = s.enrichHidden(s.withinMaxDepth(batch))
 	if len(batch) == 0 {
 		return
 	}
@@ -689,6 +734,9 @@ func (s *session) processHiddenOneStep() {
 		dir := s.hidden.expandPending[0]
 		s.hidden.expandPending = s.hidden.expandPending[1:]
 		limit--
+		if s.opts.Exclude.Match(relLine(filepath.Clean(displayRoot), dir)) {
+			continue
+		}
 		s.ingestHiddenBatch([]Entry{dirEntryForHiddenDir(displayRoot, dir)})
 		delete(s.completedRoots, filepath.Clean(dir))
 		s.startWalk(dir, false)

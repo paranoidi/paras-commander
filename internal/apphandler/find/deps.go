@@ -8,11 +8,14 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/scan"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
 // Deps wires the find handler at app construction.
@@ -54,6 +57,14 @@ type Handler struct {
 	findNavActive bool
 
 	lastIndexCountRenderAt time.Time
+
+	// criteria and exclude are the parsed advanced section (advanced.go); savedAdvanced keeps
+	// the section across dialogs for the session; advEditing is the advanced text input with
+	// uncommitted edits ("" = none).
+	criteria      findcrit.Criteria
+	exclude       findcrit.Excludes
+	savedAdvanced dialog.FindAdvancedState
+	advEditing    dlg.ID
 
 	sizeMu            sync.Mutex
 	fileSizeLookupGen uint64

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
@@ -204,6 +205,29 @@ func findGoldenCases() []findGolden {
 		findGolden{name: "80x14_short", w: 80, h: 14, icons: true},
 		findGolden{name: "80x13_short_selections", w: 80, h: 13, icons: true, state: func(st *dialog.FindDialogState) {
 			st.ShowSearchSelectionsOption = true
+		}},
+		findGolden{name: "130x40_advanced_expanded", w: 130, h: 40, icons: true, state: func(st *dialog.FindDialogState) {
+			st.Advanced.Expanded = true
+			st.Advanced.Mode = findcrit.ModeGlob
+			st.Advanced.Fields[dialog.FindAdvModifiedNewer].Value = "3d"
+			st.Advanced.Fields[dialog.FindAdvSizeMax].Value = "lots"
+			st.Advanced.Fields[dialog.FindAdvSizeMax].Invalid = true
+			st.Advanced.Executables = true
+			st.Advanced.Types[1] = true
+			st.Focus = dialog.FindAdvFieldID(dialog.FindAdvModifiedNewer)
+			rankQuery(st, "an")
+		}},
+		findGolden{name: "70x40_advanced_expanded_narrow", w: 70, h: 40, icons: true, state: func(st *dialog.FindDialogState) {
+			st.Advanced.Expanded = true
+			st.Focus = dialog.FindAdvBroken
+		}},
+		findGolden{name: "100x24_advanced_summary", w: 100, h: 24, icons: true, nerdfont: true, state: func(st *dialog.FindDialogState) {
+			st.Advanced.Mode = findcrit.ModeRegex
+			st.Advanced.Fields[dialog.FindAdvModifiedNewer].Value = "3d"
+			st.Advanced.Fields[dialog.FindAdvSizeMin].Value = "10M"
+			st.Advanced.Empty = true
+			st.QueryInvalid = true
+			st.Query, st.QueryCursor = "(an", 3
 		}},
 		findGolden{name: "57x24_too_narrow", w: 57, h: 24, icons: true},
 		findGolden{name: "80x10_too_short", w: 80, h: 10, icons: true},

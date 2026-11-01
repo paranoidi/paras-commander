@@ -64,6 +64,9 @@ const (
 	ActionFindSelectGroup             = "find.select-group"
 	ActionFindUnselectGroup           = "find.unselect-group"
 	ActionFindSelectParentDirs        = "find.select-parent-dirs"
+	ActionFindToggleAdvanced          = "find.toggle-advanced"
+	ActionFindCycleMatchMode          = "find.cycle-match-mode"
+	ActionFindResetAdvanced           = "find.reset-advanced"
 	ActionPanelRefresh                = "panel.refresh"
 	ActionPanelSelectToggle           = "panel.select-toggle"
 	ActionPanelSelectRange            = "panel.select-range"
@@ -409,6 +412,9 @@ var KnownActions = map[string]struct{}{
 	ActionFindSelectGroup:             {},
 	ActionFindUnselectGroup:           {},
 	ActionFindSelectParentDirs:        {},
+	ActionFindToggleAdvanced:          {},
+	ActionFindCycleMatchMode:          {},
+	ActionFindResetAdvanced:           {},
 	ActionPanelRefresh:                {},
 	ActionPanelSelectToggle:           {},
 	ActionPanelSelectRange:            {},

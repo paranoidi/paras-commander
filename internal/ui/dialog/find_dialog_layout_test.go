@@ -4,7 +4,7 @@ import "testing"
 
 func TestFindDialogMetricsListRowsFitDialogRect(t *testing.T) {
 	layout := Layout{Width: 80, Height: 24}
-	width, height, listH, ok := FindDialogMetrics(layout, true)
+	width, height, listH, ok := FindDialogMetrics(layout, &FindDialogState{ShowSearchSelectionsOption: true})
 	if !ok {
 		t.Fatal("FindDialogMetrics: want ok")
 	}

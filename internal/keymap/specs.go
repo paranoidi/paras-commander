@@ -1197,6 +1197,33 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"find dialog", "containing", "directories", "parent", "convert"},
 		},
 		{
+			ID:           ActionFindToggleAdvanced,
+			LeaderKey:    "d",
+			Title:        "Advanced options",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "M-e",
+			Keywords:     []string{"find dialog", "advanced", "criteria", "age", "mtime", "size", "owner", "exclude"},
+		},
+		{
+			ID:           ActionFindCycleMatchMode,
+			LeaderKey:    "c",
+			Title:        "Cycle match mode",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "M-m",
+			Keywords:     []string{"find dialog", "fuzzy", "glob", "regex", "regexp", "shell pattern", "mode"},
+		},
+		{
+			ID:           ActionFindResetAdvanced,
+			LeaderKey:    "r",
+			Title:        "Reset advanced",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "M-r",
+			Keywords:     []string{"find dialog", "advanced", "criteria", "clear", "reset"},
+		},
+		{
 			ID:           ActionCommandOutputToggleSelection,
 			Title:        "Toggle path selection",
 			Section:      "Commands",

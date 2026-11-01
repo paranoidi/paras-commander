@@ -5,14 +5,18 @@ focus=1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs
 == Tab ==
 focus=2 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Tab ==
-focus=7 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
+focus=3 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== Tab ==
+focus=8 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Tab ==
 focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Tab ==
 focus=1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Tab ==
 focus=2 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== Tab ==
+focus=3 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
 == Space ==
-focus=2 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=8 dirs=true files=false hidden=false volume=true selections=false marked=[]
+focus=3 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=8 dirs=true files=false hidden=false volume=true selections=false marked=[]
 == Space ==
-focus=2 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
+focus=3 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]

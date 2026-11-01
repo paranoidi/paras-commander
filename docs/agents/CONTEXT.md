@@ -89,6 +89,13 @@ _Avoid_: master/slave, source/target panel
 **Find**:
 Recursive name search under a panel's directory, backed by a background index.
 
+**Match mode**:
+How Find reads its query: fuzzy (ranked), glob (shell pattern) or regex. Find in index has its own Pattern / Boolean modes.
+
+**Advanced criteria**:
+Find's metadata filters (age, size, kind, owner, file-type groups, exclude patterns) in the dialog's collapsible Advanced section; every set criterion must hold.
+_Avoid_: filters (the panel Filter dialog), advanced search
+
 **Index view**:
 A panel showing the fileindex database as a filesystem (`fileindex://` + a host path): entries the index recorded, including files gone from disk; renames and deletes there change only the index.
 _Avoid_: index panel, database view

@@ -23,7 +23,7 @@ func TestDrawFindDialogSelectionSizeOnSeparator(t *testing.T) {
 
 	DrawFindDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil, selectionLabel, nil)
 
-	width, height, listH, ok := FindDialogMetrics(layout, false)
+	width, height, listH, ok := FindDialogMetrics(layout, &FindDialogState{})
 	if !ok {
 		t.Fatal("FindDialogMetrics: want ok")
 	}

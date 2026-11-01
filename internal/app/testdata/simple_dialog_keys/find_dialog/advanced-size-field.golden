@@ -1,0 +1,34 @@
+== open ==
+focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[]
+== Alt+e ==
+focus=0 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:query mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:depth mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=2 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:advanced mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=3 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:only-dirs mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-0 mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-1 mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-2 mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-3 mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-4 mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-5 mode=0 invalid=false fields=[] summary=""
+== Tab ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-6 mode=0 invalid=false fields=[] summary=""
+== 1 ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-6 mode=0 invalid=false fields=[6:"1"/false] summary="Criteria: size ≥1"
+== x ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-6 mode=0 invalid=false fields=[6:"1x"/true] summary=""
+== Backspace ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-6 mode=0 invalid=false fields=[6:"1"/false] summary="Criteria: size ≥1"
+== k ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="amber" scroll=0 ranked=20 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-6 mode=0 invalid=false fields=[6:"1k"/false] summary="Criteria: size ≥1k"
+== Tab ==
+focus=-1 query="" qcursor=0 depth="" sel=0 cursor="cinder/harbor_map.zip" scroll=0 ranked=3 dirs=false files=false hidden=false volume=true selections=false marked=[] advanced=true focusid=find:adv-field-7 mode=0 invalid=false fields=[6:"1k"/false] summary="Criteria: size ≥1k"

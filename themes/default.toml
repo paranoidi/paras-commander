@@ -365,6 +365,7 @@ missing = "\U000F09E7"   # trailing mark on history/bookmark/pin rows whose path
 zoxide = "\uf0e7"        # prefix on History rows that come from zoxide
 history = "\uf1da"       # prefix on History rows from the panel history
 depth = "\uef81"         # before the indexing depth in the find dialog title
+criteria = "\uf0b0"      # nf-fa-filter: before the find dialog's advanced-criteria summary
 
 [icons.message]
 success = "\uf05d"       # fa-circle_check, prefix on success toasts

@@ -121,7 +121,7 @@ func TestDrawFindDialogShowsPinIconOnlyForPinnedRow(t *testing.T) {
 
 	DrawFindDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil, "", rowMarks)
 
-	width, height, _, ok := FindDialogMetrics(layout, false)
+	width, height, _, ok := FindDialogMetrics(layout, &FindDialogState{})
 	if !ok {
 		t.Fatal("FindDialogMetrics: want ok")
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scan"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -56,8 +55,10 @@ func (h *Handler) openDialog(panelID int, jump bool) {
 		Indexing:                   true,
 		JumpMode:                   jump,
 		OnlyDirectories:            jump,
+		Advanced:                   h.savedAdvanced,
 	}
 	h.bindFindDialogPathMeta(&h.model.FindDialog)
+	h.loadAdvanced(&h.model.FindDialog)
 	h.startFindIndexer()
 	// Start the walk normally (above) so gitignore skips get recorded as usual,
 	// then flip Include Hidden on through the same path the checkbox uses — that
@@ -84,6 +85,10 @@ func rootGitignoreExcluded(gi *gitignore.Cache, root string) bool {
 }
 
 func (h *Handler) CloseDialog() {
+	if h.model.FindDialog.Open {
+		h.savedAdvanced = h.model.FindDialog.Advanced
+	}
+	h.advEditing = ""
 	h.stopFindIndexer()
 	h.cancelPendingRank()
 	h.sizeMu.Lock()
@@ -112,10 +117,10 @@ func (h *Handler) findScopeRoots(st *dialog.FindDialogState) []string {
 	return []string{filepath.Clean(st.RootPath)}
 }
 
-// findIndexingSkipsRank is true while a walk is running with an empty query.
-// Display rank still updates incrementally; only background fuzzy match is skipped.
-func findIndexingSkipsRank(st *dialog.FindDialogState) bool {
-	return st.Indexing && search.Parse(st.Query).Empty()
+// findIndexingSkipsRank is true while a walk is running and the dialog filters nothing.
+// Display rank still updates incrementally; only the background match is skipped.
+func (h *Handler) findIndexingSkipsRank(st *dialog.FindDialogState) bool {
+	return st.Indexing && h.findFilterEmpty(st)
 }
 
 func findIndexingCountThrottle(indexed int) time.Duration {
@@ -312,10 +317,10 @@ func (h *Handler) ToggleSearchOnlySelections() {
 
 func (h *Handler) syncFindDialogRanks() {
 	st := &h.model.FindDialog
-	if !st.Open || findIndexingSkipsRank(st) {
+	if !st.Open || h.findIndexingSkipsRank(st) {
 		return
 	}
-	if search.Parse(st.Query).Empty() {
+	if h.findFilterEmpty(st) {
 		h.applyEmptyQueryDisplayRank(st)
 		return
 	}
@@ -338,10 +343,12 @@ func (h *Handler) dispatchMatch(gen int) {
 	h.scan.RequestMatch(scan.MatchRequest{
 		Gen:             gen,
 		Query:           st.Query,
+		Mode:            h.matchMode(st),
 		OnlyDirs:        st.OnlyDirectories,
 		OnlyFiles:       st.OnlyFiles,
-		CaseInsensitive: h.config.Filter.CaseInsensitive,
+		CaseInsensitive: h.caseInsensitive(st),
 		MaxResults:      h.config.UI.Find.MaxResults,
+		Criteria:        h.criteria,
 	})
 }
 
@@ -351,7 +358,7 @@ func (h *Handler) scheduleFindRank(ms int) {
 	if !st.Open {
 		return
 	}
-	if findIndexingSkipsRank(st) {
+	if h.findIndexingSkipsRank(st) {
 		st.RankPending = false
 		return
 	}
@@ -436,7 +443,7 @@ func (h *Handler) scheduleFindRank(ms int) {
 // Returns true when the dialog is open, a wake was pending, and a rank was scheduled.
 func (h *Handler) HandleThrottleRankWake() bool {
 	st := &h.model.FindDialog
-	if !st.Open || findIndexingSkipsRank(st) {
+	if !st.Open || h.findIndexingSkipsRank(st) {
 		return false
 	}
 	h.rankMu.Lock()
@@ -700,7 +707,7 @@ func (h *Handler) applyPendingFindFileSizes() bool {
 func (h *Handler) findDialogListRows() int {
 	termW, termH := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(termW, termH)
-	return ui.FindDialogListRows(layout, h.model.FindDialog.ShowSearchSelectionsOption)
+	return ui.FindDialogListRows(layout, &h.model.FindDialog)
 }
 
 // ActivateDialogOK applies the find dialog OK action (navigate / apply marks).
@@ -940,8 +947,7 @@ func nonNilFindIndices(indices []int) []int {
 }
 
 func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
-	q := search.Parse(st.Query)
-	if q.Empty() {
+	if h.findFilterEmpty(st) {
 		return nil
 	}
 	h.rankMu.Lock()
@@ -973,7 +979,7 @@ func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
 //   - no usable FullRanked yet: empty indices, covered=0 (schedules a rank if none is pending,
 //     same as findDialogResultIndices).
 func (h *Handler) findResultIndicesCovered(st *dialog.FindDialogState) (indices []int, covered int) {
-	if search.Parse(st.Query).Empty() {
+	if h.findFilterEmpty(st) {
 		return nil, len(st.Entries)
 	}
 	h.rankMu.Lock()
@@ -992,7 +998,7 @@ func (h *Handler) findResultIndicesCovered(st *dialog.FindDialogState) (indices 
 
 func (h *Handler) findDialogSelectAll() {
 	st := &h.model.FindDialog
-	if search.Parse(st.Query).Empty() {
+	if h.findFilterEmpty(st) {
 		h.findDialogSelectAllEmptyQuery(st)
 		return
 	}
@@ -1138,7 +1144,7 @@ func (h *Handler) commitFindDepth() {
 	if next != 0 && (old == 0 || next < old) {
 		st.IndexDone = false
 		st.Indexing = true
-		st.RankPending = !search.Parse(st.Query).Empty()
+		st.RankPending = !h.findFilterEmpty(st)
 		h.scan.SetMaxDepth(next)
 		return
 	}
@@ -1183,9 +1189,9 @@ func (h *Handler) ToggleIncludeHidden() {
 	h.scan.SetIncludeHidden(st.IncludeHidden)
 	if st.IncludeHidden {
 		h.clearFindNavIdle()
-		if search.Parse(st.Query).Empty() && !st.Indexing {
+		if h.findFilterEmpty(st) && !st.Indexing {
 			h.applyEmptyQueryDisplayRank(st)
-		} else if !findIndexingSkipsRank(st) {
+		} else if !h.findIndexingSkipsRank(st) {
 			h.scheduleFindRank(0)
 		}
 		return
@@ -1193,7 +1199,7 @@ func (h *Handler) ToggleIncludeHidden() {
 	// Strip runs async; PollUpdates applies IndexReplaced when done.
 	st.IndexDone = false
 	st.Indexing = true
-	st.RankPending = !search.Parse(st.Query).Empty()
+	st.RankPending = !h.findFilterEmpty(st)
 }
 
 // ToggleOnlyDirectories toggles the only-directories result filter.
@@ -1293,8 +1299,9 @@ func (h *Handler) RunAction(id string) bool {
 		switch id {
 		case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindUnselectAll,
 			keymap.ActionFindSelectAll, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup,
-			keymap.ActionFindSelectParentDirs:
-			return true // marking and viewing do not apply to jump mode
+			keymap.ActionFindSelectParentDirs, keymap.ActionFindToggleAdvanced, keymap.ActionFindCycleMatchMode,
+			keymap.ActionFindResetAdvanced:
+			return true // marking, viewing and the advanced criteria do not apply to jump mode
 		}
 	}
 	switch id {
@@ -1314,6 +1321,12 @@ func (h *Handler) RunAction(id string) bool {
 		h.host.OpenGroupSelectDialog(GroupSelectModeUnselect, true)
 	case keymap.ActionFindSelectParentDirs:
 		h.findDialogSelectParentDirs()
+	case keymap.ActionFindToggleAdvanced:
+		h.ToggleAdvanced()
+	case keymap.ActionFindCycleMatchMode:
+		h.CycleMatchMode()
+	case keymap.ActionFindResetAdvanced:
+		h.ResetAdvanced()
 	case keymap.ActionOpenInPrimary:
 		h.OpenSelectedInPrimary()
 	case keymap.ActionOpenInSecondary:
@@ -1364,11 +1377,16 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	case dialog.FindQuery:
 		onChange := func() {
 			st.Selected = 0
+			h.validateQuery(st)
 			h.scheduleFindRank(-h.config.UI.Find.QueryDebounceMS)
 		}
 		h.host.HandleScrollingQueryKey(event, true, h.host.FindDialogScrollingQuery(st, h.queryWidth(), onChange))
 	case dialog.FindDepth:
 		h.handleFindDepthKey(event)
+	default:
+		if f, ok := dialog.FindAdvFieldOf(st.Focus); ok {
+			h.editAdvField(event, f)
+		}
 	}
 }
 
@@ -1393,6 +1411,10 @@ func (h *Handler) DialogSpec() dlg.Spec {
 // Cancel closes.
 func (h *Handler) ApplyDialogEvent(ev dlg.Event) {
 	st := &h.model.FindDialog
+	h.commitLeftAdvField() // focus moved off an edited advanced input (key or click)
+	if h.applyAdvancedEvent(ev) {
+		return
+	}
 	switch {
 	case ev.Kind == dlg.EventCaret:
 		if ev.ID == dialog.FindQuery {

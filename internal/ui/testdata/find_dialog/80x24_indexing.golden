@@ -3,7 +3,7 @@
                                                                                 
                                                                                 
   ┌─────────────────────── Find (12…) Depth 2 · 37% 󰋊 ───────────────────────┐  
-  │ /                                                              Depth     │  
+  │ /                                                Depth      [ ] Advanced │  
   ├──────────────────────────────────────────────────────────────────────────┤  
   │ ( ) Only directories  ( ) Only files  [ ] Include hidden  [ ] Stay on c… │  
   ├──────────────────────────────────────────────────────────────────────────┤  
@@ -43,7 +43,7 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbddefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbddddddgggbbaa
+aabbddefffffffffffffffffffffffffffffffffffffffffffffbddddddgggbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa

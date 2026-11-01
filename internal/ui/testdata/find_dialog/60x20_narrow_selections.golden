@@ -2,7 +2,7 @@
                                                             
                                                             
   ┌───────────────────── Find (49) ──────────────────────┐  
-  │ /                                          Depth     │  
+  │ /                            Depth      [ ] Advanced │  
   ├──────────────────────────────────────────────────────┤  
   │ ( ) Only directories  ( ) Only files  [ ] Include h… │  
   │ [ ] Search only from selected directories            │  
@@ -35,7 +35,7 @@ k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbbbbbbbbbbbbcccccccccccbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebddddddeeebbaa
+aabbddeeeeeeeeeeeeeeeeeeeeeeeeeebddddddeeebbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbcbbbbbbbbbbbaa
 aabfffffcffffffffffffffffffffffffffffffffffffbbbbbbbbbbbbbaa

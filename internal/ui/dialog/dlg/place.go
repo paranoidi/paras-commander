@@ -333,6 +333,18 @@ func frame(screenW, screenH int, spec Spec) (Rect, bool) {
 	return draw.ClampCenteredDialogRect(layout, prefW, prefH, spec.MinWidth, spec.MinHeight)
 }
 
+// RowWidth is the width a KindRow of a single-column group of spec gets on a screen of
+// screenW x screenH: the room its cells' boxes and gaps share before they narrow or clip. It is 0
+// when the dialog does not fit. A view that wraps cells onto several rows sizes them with it.
+func RowWidth(screenW, screenH int, spec Spec) int {
+	rect, ok := frame(screenW, screenH, spec)
+	if !ok {
+		return 0
+	}
+	x, right := Group{}.columnX(rect, 0)
+	return max(right-1-x, 0)
+}
+
 // FitSpec returns spec with its lists and spacers shortened to the heights Place gives them on a screen
 // of screenW x screenH, so a view that returns the fitted spec hands HandleKey the same list heights
 // (paging, scroll clamping) that Draw shows, and callers read a list's height from it (Spec.Item)

@@ -3,12 +3,12 @@ package find
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/scan"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -63,6 +63,8 @@ func (h *Handler) findStartOpts(st *dialog.FindDialogState) scan.StartOpts {
 		Walk:                 h.findWalkParams(),
 		DirsOnly:             st.JumpMode,
 		MaxDepth:             st.MaxDepth,
+		Stat:                 h.criteria.NeedsStat(),
+		Exclude:              h.exclude,
 	}
 }
 
@@ -126,7 +128,9 @@ func (h *Handler) startFindIndexer() {
 		return
 	}
 	h.scanGen++
-	h.scan.Start(h.findStartOpts(st))
+	opts := h.findStartOpts(st)
+	h.scan.Start(opts)
+	st.IndexStat, st.IndexExclude = opts.Stat, strings.Join(opts.Exclude, ",")
 	st.Indexing = true
 	st.IndexDone = false
 	st.IndexErr = ""
@@ -167,7 +171,7 @@ func (h *Handler) finishFindIndexing(st *dialog.FindDialogState) {
 	st.Depth, st.LevelDone, st.LevelTotal = 0, 0, 0
 	st.IndexedCount = len(st.Entries)
 	st.RankDisplayLines = nil
-	if search.Parse(st.Query).Empty() {
+	if h.findFilterEmpty(st) {
 		h.applyEmptyQueryDisplayRank(st)
 	} else {
 		h.scheduleFindRank(0)
@@ -182,7 +186,7 @@ func (h *Handler) applyScanEvent(st *dialog.FindDialogState, ev scan.Event) (nee
 	if len(ev.BatchAdded) > 0 {
 		prevLen := len(st.Entries)
 		h.appendFindDialogEntries(st, ev.BatchAdded)
-		if search.Parse(st.Query).Empty() {
+		if h.findFilterEmpty(st) {
 			prevRanked := len(st.Ranked)
 			h.extendEmptyQueryDisplayRank(st, prevLen)
 			if len(st.Ranked) > prevRanked && h.maybeRenderFindIndexing(st) {
@@ -214,7 +218,7 @@ func (h *Handler) applyScanEvent(st *dialog.FindDialogState, ev scan.Event) (nee
 		st.IndexDone = true
 		st.RankDisplayLines = nil
 		h.clearFindNavIdle()
-		if search.Parse(st.Query).Empty() {
+		if h.findFilterEmpty(st) {
 			h.applyEmptyQueryDisplayRank(st)
 		} else {
 			h.scheduleFindRank(0)
@@ -259,7 +263,7 @@ func (h *Handler) PollUpdates(_ WakePayload) bool {
 		if r {
 			needRender = true
 		}
-		if sync && !findIndexingSkipsRank(st) {
+		if sync && !h.findIndexingSkipsRank(st) {
 			throttle := 0
 			if st.Open && st.Indexing {
 				throttle = config.DefaultFindIndexingRankThrottleMS

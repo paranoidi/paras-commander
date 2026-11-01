@@ -2,6 +2,7 @@ package scan
 
 import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -22,6 +23,10 @@ type StartOpts struct {
 	DirsOnly bool
 	// MaxDepth limits indexed entries to this many path segments below DisplayRoot; 0 = unlimited.
 	MaxDepth int
+	// Stat is the per-entry metadata level the walks collect (advanced criteria).
+	Stat findcrit.StatLevel
+	// Exclude patterns are neither indexed nor descended into (relative to DisplayRoot).
+	Exclude findcrit.Excludes
 }
 
 // Event is sent from the scan coordinator to the UI thread.
@@ -68,8 +73,11 @@ type MatchOutput struct {
 type MatchRequest struct {
 	Gen             int
 	Query           string
+	Mode            findcrit.Mode
 	OnlyDirs        bool
 	OnlyFiles       bool
 	CaseInsensitive bool
 	MaxResults      int
+	// Criteria filter the matched entries (advanced find criteria).
+	Criteria findcrit.Criteria
 }

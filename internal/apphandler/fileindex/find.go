@@ -200,16 +200,20 @@ func (h *Handler) HandleFindKey(ev *tcell.EventKey) {
 }
 
 // runFindAction runs a [dialog.find] action this dialog supports; the other find.* actions are
-// swallowed, anything else is not handled (false).
+// swallowed, anything else is not handled (false). The advanced criteria need file metadata the
+// index does not keep, so their toggle and reset are swallowed; the match mode cycle steps
+// Pattern / Boolean.
 func (h *Handler) runFindAction(id string) bool {
 	st := &h.model.IndexFindDialog
 	switch id {
 	case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindUnselectAll,
 		keymap.ActionFindSelectAll, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup,
-		keymap.ActionFindSelectParentDirs:
+		keymap.ActionFindSelectParentDirs, keymap.ActionFindCycleMatchMode:
 		if st.JumpMode {
-			return true // marking and viewing do not apply to jump mode
+			return true // marking, viewing and the Boolean mode do not apply to jump mode
 		}
+	case keymap.ActionFindToggleAdvanced, keymap.ActionFindResetAdvanced:
+		return true
 	}
 	switch id {
 	case keymap.ActionPanelSelectToggle:
@@ -232,6 +236,13 @@ func (h *Handler) runFindAction(id string) bool {
 		h.host.OpenGroupSelectDialog(findctrl.GroupSelectModeUnselect)
 	case keymap.ActionFindSelectParentDirs:
 		h.selectParentDirs()
+	case keymap.ActionFindCycleMatchMode:
+		if st.Boolean {
+			st.Apply(dialog.IndexFindPattern)
+		} else {
+			st.Apply(dialog.IndexFindBoolean)
+		}
+		h.scheduleFind(0)
 	default:
 		return false
 	}

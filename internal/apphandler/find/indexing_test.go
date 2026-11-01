@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -73,18 +74,24 @@ func TestAppendEmptyQueryDisplayIndices(t *testing.T) {
 
 func TestFindIndexingSkipsRank(t *testing.T) {
 	t.Parallel()
+	h := &Handler{}
 	st := &dialog.FindDialogState{Indexing: true, Query: ""}
-	if !findIndexingSkipsRank(st) {
+	if !h.findIndexingSkipsRank(st) {
 		t.Fatal("empty query during indexing should skip rank")
 	}
 	st.Query = "foo"
-	if findIndexingSkipsRank(st) {
+	if h.findIndexingSkipsRank(st) {
 		t.Fatal("non-empty query during indexing should rank")
 	}
 	st.Indexing = false
 	st.Query = ""
-	if findIndexingSkipsRank(st) {
+	if h.findIndexingSkipsRank(st) {
 		t.Fatal("empty query after indexing should not skip rank via indexing guard")
+	}
+	st.Indexing = true
+	h.criteria = findcrit.Criteria{Symlinks: true}
+	if h.findIndexingSkipsRank(st) {
+		t.Fatal("active criteria during indexing should rank")
 	}
 }
 

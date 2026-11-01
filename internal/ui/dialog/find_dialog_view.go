@@ -41,14 +41,25 @@ type FindViewContext struct {
 // DrawFindDialog (see FindRowIconPainter).
 func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	styles := ctx.Styles
+	adv := state.Advanced
+	advanced := !state.JumpMode // jump mode is a plain fuzzy directory search
 
+	queryIcon := styles.IconSearchIcon()
+	if tag := adv.Mode.Tag(); advanced && tag != "" {
+		queryIcon += " " + tag // the query is not fuzzy: say how it is read
+	}
 	query := dlg.Item{
-		ID: FindQuery, Kind: dlg.KindInput, Grow: true, Drives: FindList,
-		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: styles.IconSearchIcon(),
+		ID: FindQuery, Kind: dlg.KindInput, Grow: true, Drives: FindList, Invalid: state.QueryInvalid,
+		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingIcon: queryIcon,
 	}
 	depth := dlg.Item{
 		ID: FindDepth, Kind: dlg.KindInput, Width: findDialogDepthFieldWidth(styles) + findDialogDepthGap,
 		Value: state.DepthInput, Cursor: utf8.RuneCountInString(state.DepthInput), LeadingIcon: styles.IconDialogDepth(),
+	}
+	queryRow := []dlg.Item{query, depth}
+	if advanced {
+		depth.Gap = 1
+		queryRow = []dlg.Item{query, depth, {ID: FindAdvanced, Kind: dlg.KindCheckbox, Label: "Advanced", On: adv.Expanded, Seg: 1}}
 	}
 	var options []dlg.Item
 	if !state.JumpMode {
@@ -62,23 +73,38 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 		dlg.Item{ID: FindStayOnVol, Kind: dlg.KindCheckbox, Label: "Stay on current volume", Mnemonic: 'V', On: state.StayOnCurrentVolume},
 	)
 	col := []dlg.Item{
-		{Kind: dlg.KindRow, Cells: []dlg.Item{query, depth}},
+		{Kind: dlg.KindRow, Cells: queryRow},
 		{Kind: dlg.KindSeparator},
 		{Kind: dlg.KindRow, Cells: options},
 	}
 	if state.ShowSearchSelectionsOption {
 		col = append(col, dlg.Item{ID: FindSelections, Kind: dlg.KindCheckbox, Label: "Search only from selected directories", Mnemonic: 'S', On: state.SearchOnlySelections})
 	}
-	col = append(col,
-		dlg.Item{Kind: dlg.KindSeparator},
-		dlg.Item{ID: FindList, Kind: dlg.KindList, Height: findListHeight(ctx.Layout.Height), MinHeight: findDialogMinListRows},
-	)
+	frame := dlg.Spec{Width: findDialogPreferredWidth, MinWidth: findDialogMinWidth, Buttons: dlg.OKCancelButtons()}
+	rowW := dlg.RowWidth(ctx.Layout.Width, ctx.Layout.Height, frame)
+	groups := []dlg.Group{{Columns: [][]dlg.Item{col}}}
+	listSep := dlg.Item{Kind: dlg.KindSeparator}
+	switch {
+	case advanced && adv.Expanded:
+		advCol := append([]dlg.Item{{Kind: dlg.KindSeparator, Label: "Advanced"}}, findAdvancedRows(adv, rowW)...)
+		groups = append(groups, dlg.Group{Columns: [][]dlg.Item{advCol}})
+	case advanced:
+		listSep.Label = adv.Summary(styles, rowW-4) // the separator pads its label by a cell each side
+	}
+	list := dlg.Item{ID: FindList, Kind: dlg.KindList, Height: findListHeight(ctx.Layout.Height), MinHeight: findDialogMinListRows}
+	groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{listSep, list}}})
 	spec := dlg.Spec{
-		Title: findDialogTitle(*state, styles), Width: findDialogPreferredWidth, MinWidth: findDialogMinWidth,
-		Groups:          []dlg.Group{{Columns: [][]dlg.Item{col}}},
-		Buttons:         dlg.OKCancelButtons(),
+		Title: findDialogTitle(*state, styles), Width: frame.Width, MinWidth: frame.MinWidth,
+		Groups:          groups,
+		Buttons:         frame.Buttons,
 		ButtonsLabel:    ctx.SelectionLabel,
 		PlainButtonKeys: true, ScrollbarStyle: ctx.ScrollbarStyle,
+	}
+	if _, fits := dlg.FitSpec(ctx.Layout.Width, ctx.Layout.Height, spec); !fits && advanced && adv.Expanded {
+		// On a short screen the open section may leave the results a single row rather than
+		// hiding the whole dialog.
+		last := &spec.Groups[len(spec.Groups)-1].Columns[0][1]
+		last.MinHeight = 1
 	}
 	// Only the visible results are built, so the list's fitted height comes first.
 	spec, _ = fillList(spec, ctx.Layout, FindList, func(height, _ int) dlg.Item {

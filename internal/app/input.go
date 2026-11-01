@@ -189,12 +189,12 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	}
 	if a.model.FindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.FindDialog.JumpMode), rest...)
+		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.FindDialog.JumpMode, true), rest...)
 		return footerWithEscClose(rest)
 	}
 	if a.model.IndexFindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.IndexFindDialog.JumpMode), rest...)
+		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog, a.model.IndexFindDialog.JumpMode, false), rest...)
 		return footerWithEscClose(rest)
 	}
 	if a.model.HistoryDialog.Open {
@@ -452,13 +452,21 @@ func footerWithEscClose(rest []menu.FunctionKey) []menu.FunctionKey {
 	return out
 }
 
-func findDialogOverlayFooterKeys(keys *keymap.Map, jumpMode bool) []menu.FunctionKey {
+// findDialogOverlayFooterKeys is the footer of Find and its twin Find in index: the marking keys
+// and the match mode cycle (not in jump mode), the advanced toggle (Find only, advanced) and Open.
+func findDialogOverlayFooterKeys(keys *keymap.Map, jumpMode, advanced bool) []menu.FunctionKey {
 	if keys == nil {
 		return nil
 	}
 	var out []menu.FunctionKey
 	if !jumpMode {
 		out = findDialogMarkingFooterKeys(keys)
+		if lbl := keys.MenuBindingLabel(keymap.ActionFindToggleAdvanced); advanced && lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Advanced"})
+		}
+		if lbl := keys.MenuBindingLabel(keymap.ActionFindCycleMatchMode); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Mode"})
+		}
 	}
 	return append(out, openInPanelFooterKeys(keys)...)
 }
