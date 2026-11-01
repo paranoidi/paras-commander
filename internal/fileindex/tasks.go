@@ -32,11 +32,12 @@ func (x *Index) ScanTask(paths []string) *jobs.Task {
 			if err != nil {
 				return err
 			}
-			rep := newScanReporter(r)
+			rep := newScanReporter(r, !x.cfg.Hash)
 			stats, err := scan.Run(ctx, d, paths, scan.Options{
 				Rules:         rules,
 				Workers:       workers,
 				MissingOnly:   true,
+				SkipHash:      !x.cfg.Hash,
 				BatchInterval: x.cfg.ScanCommitInterval(),
 			}, rep)
 			for _, e := range stats.Errors {
@@ -107,10 +108,12 @@ func (w *warnings) flush() {
 	}
 }
 
-// scanReporter maps scan.Reporter onto task progress: discovery sets the total, a hash worker
-// starting its next file counts the previous one done, Speed samples add the bytes hashed since
-// the last sample, pruning shows the directory being checked and a finished root finishes its
-// job source. Its methods are called from scan's goroutines concurrently.
+// scanReporter maps scan.Reporter (and scan.PhaseReporter) onto task progress, one stage after
+// the other. Walking: DoneFiles counts the files committed (searchable, unhashed) and TotalFiles
+// stays unknown. Pruning: TotalFiles is still unknown and CurrentPath is the directory being
+// checked. Hashing: TotalFiles is the number of files to hash, DoneFiles counts them (a hash
+// worker starting its next file counts the previous one done), Speed samples add the bytes hashed
+// since the last sample. A root whose files are committed finishes its job source. Its methods are called from scan's goroutines concurrently.
 type scanReporter struct {
 	r jobs.TaskReporter
 	w warnings
@@ -118,12 +121,14 @@ type scanReporter struct {
 	mu       sync.Mutex
 	p        jobs.TaskProgress
 	busy     map[int]bool
+	skipHash bool // the scan stops after pruning
+	hashing  bool // Pruned was reached and hashing follows
 	bytes    float64
 	lastTick time.Time
 }
 
-func newScanReporter(r jobs.TaskReporter) *scanReporter {
-	return &scanReporter{r: r, w: warnings{r: r}, busy: map[int]bool{}}
+func newScanReporter(r jobs.TaskReporter, skipHash bool) *scanReporter {
+	return &scanReporter{r: r, w: warnings{r: r}, busy: map[int]bool{}, skipHash: skipHash}
 }
 
 // report sends the current sample; caller holds s.mu.
@@ -155,22 +160,56 @@ func (s *scanReporter) Speed(workers int, bps float64) {
 	s.report()
 }
 
-func (s *scanReporter) Scan(dir string, _, newFiles, _ int) {
+func (s *scanReporter) Scan(dir string, _, _, _ int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.p.TotalFiles = max(s.p.TotalFiles, newFiles)
 	if dir != "" && len(s.busy) == 0 {
 		s.p.CurrentPath = dir
 	}
 	s.report()
 }
 
-// Hashed replaces the estimates with what was committed.
+// Indexed counts the files committed by the walk.
+func (s *scanReporter) Indexed(committed int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.p.DoneFiles = committed
+	s.report()
+}
+
+// Discovered ends the walk: the committed count is final and the current path is stale.
+func (s *scanReporter) Discovered(res scan.Stats) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.p.DoneFiles = res.Discovered
+	s.p.CurrentPath = ""
+	s.report()
+}
+
+// Pruned starts the hashing stage: the progress restarts at 0 of toHash.
+func (s *scanReporter) Pruned(_ scan.Stats, toHash int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.skipHash {
+		return
+	}
+	s.hashing = true
+	s.p.TotalFiles = toHash
+	s.p.DoneFiles = 0
+	s.p.CurrentPath = ""
+	s.report()
+}
+
+// Hashed replaces the hashing estimates with what was committed.
 func (s *scanReporter) Hashed(res scan.Stats) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.p.Workers = 0
+	if !s.hashing { // cut short before hashing, or SkipHash: keep the walk's count
+		s.report()
+		return
+	}
 	s.p.DoneFiles = res.Processed + res.Errored
-	s.p.Workers = 0 // hashing is over; pruning runs on one goroutine
 	s.p.TotalFiles = max(s.p.TotalFiles, s.p.DoneFiles)
 	s.bytes = float64(res.TotalSize)
 	s.report()
@@ -201,8 +240,9 @@ func (s *scanReporter) finish(stats scan.Stats) {
 	s.Hashed(stats)
 }
 
-// compile-time check: scanReporter is a scan.Reporter and a scan.RootReporter.
+// compile-time check: scanReporter is a scan.Reporter, a scan.PhaseReporter and a scan.RootReporter.
 var (
-	_ scan.Reporter     = (*scanReporter)(nil)
-	_ scan.RootReporter = (*scanReporter)(nil)
+	_ scan.Reporter      = (*scanReporter)(nil)
+	_ scan.PhaseReporter = (*scanReporter)(nil)
+	_ scan.RootReporter  = (*scanReporter)(nil)
 )

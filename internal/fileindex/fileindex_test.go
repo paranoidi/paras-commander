@@ -27,7 +27,7 @@ import (
 // testIndex returns an Index on dbPath that reads no user config.ini.
 func testIndex(t *testing.T, dbPath string) *Index {
 	t.Helper()
-	x := New(config.FileIndexConfig{Database: dbPath, Workers: 2})
+	x := New(config.FileIndexConfig{Database: dbPath, Workers: 2, Hash: true})
 	x.configPath = filepath.Join(t.TempDir(), "absent-config.ini")
 	t.Cleanup(func() { _ = x.Close() })
 	return x
@@ -672,7 +672,7 @@ func TestCloseIsFinal(t *testing.T) {
 // hashing is done.
 func TestScanReporterWorkers(t *testing.T) {
 	rep := &recReporter{}
-	s := newScanReporter(rep)
+	s := newScanReporter(rep, false)
 	s.Speed(3, 0)
 	if rep.last.Workers != 3 {
 		t.Fatalf("Workers after Speed = %d, want 3", rep.last.Workers)
@@ -680,5 +680,110 @@ func TestScanReporterWorkers(t *testing.T) {
 	s.Hashed(scan.Stats{})
 	if rep.last.Workers != 0 {
 		t.Fatalf("Workers after Hashed = %d, want 0", rep.last.Workers)
+	}
+}
+
+// TestScanReporterStages: the walk counts committed files with no total, pruning keeps the total
+// unknown, hashing restarts the count against the files to hash, and a scan that stops before
+// hashing keeps the walk's count.
+func TestScanReporterStages(t *testing.T) {
+	rep := &recReporter{}
+	s := newScanReporter(rep, false)
+	s.Scan("/vol/orchard", 4, 4, 0)
+	s.Indexed(4)
+	if p := rep.last; p.DoneFiles != 4 || p.TotalFiles != 0 || p.CurrentPath != "/vol/orchard" {
+		t.Fatalf("walking = %+v, want 4 done, unknown total", p)
+	}
+	s.Discovered(scan.Stats{Discovered: 6})
+	s.Prune("/vol/orchard/pebble", 2)
+	if p := rep.last; p.DoneFiles != 6 || p.TotalFiles != 0 || p.CurrentPath != "/vol/orchard/pebble" {
+		t.Fatalf("pruning = %+v, want 6 done, unknown total, current dir", p)
+	}
+	s.Pruned(scan.Stats{}, 9)
+	if p := rep.last; p.DoneFiles != 0 || p.TotalFiles != 9 {
+		t.Fatalf("hashing start = %+v, want 0 of 9", p)
+	}
+	s.Hashed(scan.Stats{Processed: 9, TotalSize: 40})
+	if p := rep.last; p.DoneFiles != 9 || p.TotalFiles != 9 || p.DoneBytes != 40 {
+		t.Fatalf("hashed = %+v, want 9 of 9 and 40 bytes", p)
+	}
+
+	rep = &recReporter{}
+	s = newScanReporter(rep, true)
+	s.Indexed(5)
+	s.Discovered(scan.Stats{Discovered: 5})
+	s.Pruned(scan.Stats{}, 5)
+	s.Hashed(scan.Stats{})
+	if p := rep.last; p.DoneFiles != 5 || p.TotalFiles != 0 {
+		t.Fatalf("skip hash = %+v, want the walk's 5 and no total", p)
+	}
+}
+
+// TestUnhashedFiles: with [fileindex].hash off a scan leaves files findable but unhashed; they
+// count their bytes in subtree sizes, show the unhashed status (changed wins), have no hash or
+// copies cell and are left out of duplicate detection. A hashing scan turns them indexed.
+func TestUnhashedFiles(t *testing.T) {
+	path := initIndex(t)
+	x := New(config.FileIndexConfig{Database: path, Workers: 2, Hash: false})
+	x.configPath = filepath.Join(t.TempDir(), "absent-config.ini")
+	t.Cleanup(func() { _ = x.Close() })
+	root := tree(t)
+	rep := &recReporter{}
+	if err := x.ScanTask([]string{root}).Run(context.Background(), rep); err != nil {
+		t.Fatal(err)
+	}
+	if rep.last.DoneFiles != 3 || rep.last.TotalFiles != 0 {
+		t.Fatalf("progress = %+v, want 3 files walked and no total", rep.last)
+	}
+	ctx := context.Background()
+	want := int64(len("anchor and rope") + len("clover") + len("bramble patch"))
+	if b, n, err := x.SubtreeSize(ctx, at(t, root).String()); err != nil || b != want || n != 3 {
+		t.Fatalf("SubtreeSize = %d bytes %d files %v, want %d 3", b, n, err, want)
+	}
+	d, err := x.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := func() []localfs.Entry {
+		var es []localfs.Entry
+		for _, n := range []string{"harbor.txt"} {
+			fi, err := os.Stat(filepath.Join(root, n))
+			if err != nil {
+				t.Fatal(err)
+			}
+			es = append(es, localfs.Entry{Name: n, Path: filepath.Join(root, n), Type: localfs.EntryFile, Size: fi.Size(), ModifiedAt: fi.ModTime()})
+		}
+		return es
+	}
+	status := func() string {
+		t.Helper()
+		st, err := entryStatuses(ctx, d, root, entries(), true, scan.Rules{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return st["harbor.txt"]
+	}
+	if got := status(); got != StatusUnhashed {
+		t.Fatalf("status = %q, want unhashed", got)
+	}
+	if v, err := x.Provider(HashColumn).Values(ctx, root, entries()); err != nil || len(v) != 0 {
+		t.Fatalf("hash column = %v, %v, want empty", v, err)
+	}
+	if files, hashes, err := x.DedupFiles(ctx, at(t, root)); err != nil || len(files) != 0 || len(hashes) != 0 {
+		t.Fatalf("DedupFiles = %v %v %v, want none", files, hashes, err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "harbor.txt"), []byte("anchor, rope and chain"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := status(); got != StatusChanged {
+		t.Fatalf("status after edit = %q, want changed", got)
+	}
+
+	hashing := testIndex(t, path)
+	if err := hashing.ScanTask([]string{root}).Run(ctx, &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := status(); got != StatusIndexed {
+		t.Fatalf("status after hashing = %q, want indexed", got)
 	}
 }

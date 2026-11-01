@@ -100,7 +100,7 @@ func (x *Index) Overlay(ctx context.Context, dir pathloc.Path, entries []fsbacke
 
 // DirDrift checks each of host's indexed subdirectories (names) against the index and returns
 // IndexStatusDiffers (a file the scan would add under the same rules, a file whose size or
-// mtime differs, or an indexed file gone from disk), IndexStatusUnchecked (nothing differs within maxDepth, but
+// mtime differs, or an indexed file gone from disk; unhashed files count as indexed), IndexStatusUnchecked (nothing differs within maxDepth, but
 // a directory lies deeper) or IndexStatusIndexed. maxDepth counts directory levels below the
 // subdirectory; 0 means unlimited (never unchecked). Only recorded files within the depth are
 // compared. It walks each subtree, so it runs on its own goroutine and stops when ctx is
@@ -150,8 +150,8 @@ func (x *Index) DirDrift(ctx context.Context, host string, subdirs []string, max
 				return false
 			}
 			seen++
-			// the same comparison as a file row's status (entryStatuses)
-			if fi, err := os.Stat(p); err == nil && !rec.Unchanged(fi.Size(), fi.ModTime()) {
+			// size and mtime only, as a file row's changed status; an unhashed file is pending work, not drift
+			if fi, err := os.Stat(p); err == nil && !rec.Same(fi.Size(), fi.ModTime()) {
 				differs = true
 				return false
 			}

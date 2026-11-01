@@ -34,6 +34,7 @@ const (
 const (
 	StatusIndexed   = localfs.IndexStatusIndexed
 	StatusChanged   = localfs.IndexStatusChanged
+	StatusUnhashed  = localfs.IndexStatusUnhashed
 	StatusNew       = localfs.IndexStatusNew
 	StatusMissing   = localfs.IndexStatusMissing
 	StatusExcluded  = localfs.IndexStatusExcluded
@@ -271,10 +272,12 @@ func entryStatuses(ctx context.Context, d *db.DB, host string, entries []localfs
 				out[e.Name] = StatusExcluded
 			case !ok:
 				out[e.Name] = StatusNew
-			case r.Unchanged(size, mtime):
-				out[e.Name] = StatusIndexed
-			default:
+			case !r.Same(size, mtime):
 				out[e.Name] = StatusChanged
+			case !r.Hashed:
+				out[e.Name] = StatusUnhashed
+			default:
+				out[e.Name] = StatusIndexed
 			}
 		case localfs.EntryDirectory:
 			switch {

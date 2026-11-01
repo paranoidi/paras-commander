@@ -48,6 +48,7 @@ type Entry struct {
 const (
 	IndexStatusIndexed   = "indexed"   // in the index and, for a file, the same size and mtime on disk
 	IndexStatusChanged   = "changed"   // a file whose size or mtime on disk differs from the index
+	IndexStatusUnhashed  = "unhashed"  // an indexed file (same size and mtime) that is not hashed yet
 	IndexStatusNew       = "new"       // on disk but not in the index
 	IndexStatusMissing   = "missing"   // in the index but gone from disk (a ghost row)
 	IndexStatusExcluded  = "excluded"  // on disk, not in the index, and the scan rules skip it

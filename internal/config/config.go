@@ -201,6 +201,8 @@ type FileIndexConfig struct {
 	// FolderScanMaxDepth is how many directory levels the automatic check of indexed folders
 	// descends while browsing with fileindex: N levels, -1 unlimited, 0 off (see AutoDriftDepth).
 	FolderScanMaxDepth int `toml:"folder_scan_max_depth"`
+	// Hash makes scans hash the files they index; false stops a scan after the walk and prune.
+	Hash bool `toml:"hash"`
 	// ScanCommitIntervalMS is how often a scan commits what it hashed (see ScanCommitInterval).
 	ScanCommitIntervalMS int `toml:"scan_commit_interval_ms"`
 }
@@ -887,6 +889,7 @@ func Default() Config {
 			Workers:              DefaultFileIndexWorkers,
 			DefaultColumns:       DefaultFileIndexColumns(),
 			FolderScanMaxDepth:   DefaultFileIndexFolderScanMaxDepth,
+			Hash:                 DefaultFileIndexHash,
 			ScanCommitIntervalMS: DefaultFileIndexScanCommitIntervalMS,
 		},
 	}

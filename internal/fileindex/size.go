@@ -13,8 +13,8 @@ import (
 const subtreeQuery = `WITH RECURSIVE t(id) AS (
   SELECT id FROM dir WHERE id IS ?1 OR (?1 IS NULL AND parent_id IS NULL)
   UNION ALL SELECT d.id FROM dir d JOIN t ON d.parent_id = t.id)
-SELECT COUNT(i.id), COALESCE(SUM(f.filesize), 0) FROM t
-LEFT JOIN instance i ON i.dir_id = t.id LEFT JOIN file f ON f.id = i.file_id`
+SELECT COUNT(i.id), COALESCE(SUM(i.size), 0) FROM t
+LEFT JOIN instance i ON i.dir_id = t.id`
 
 // SubtreeSize is the disk-usage total of a fileindex:// path, read from the index without
 // touching the disk (diskusage.SubtreeSizer): an indexed directory's files and bytes, or an

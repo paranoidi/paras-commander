@@ -18,6 +18,7 @@ var fileIndexStates = []struct {
 	{"scanning", "\U000F0CFF", "*", tcell.ColorDefault}, // nf-md-database_sync
 	{"differs", "\U000F163A", "!", tcell.ColorYellow},   // nf-md-database_alert
 	{"unchecked", "\U000F1920", "?", tcell.ColorYellow}, // nf-md-database_eye_off
+	{"unhashed", "\U000F163F", "h", tcell.ColorGray},    // nf-md-database_clock
 	{"tagged", "\U000F12F6", "#", tcell.ColorNavy},      // nf-md-database_marker
 }
 

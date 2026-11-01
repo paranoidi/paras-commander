@@ -52,6 +52,7 @@ var fileIndexLegendStates = []struct{ state, label string }{
 	{localfs.IndexStatusExcluded, "excluded"},
 	{localfs.IndexStatusNew, "not in index"},
 	{localfs.IndexStatusDiffers, "differs below"},
+	{localfs.IndexStatusUnhashed, "not hashed yet"},
 	{localfs.IndexStatusTagged, "tagged"},
 	{localfs.IndexStatusUnchecked, "scan depth exceeded"},
 	{localfs.IndexStatusIndexed, "indexed"},

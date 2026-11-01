@@ -143,6 +143,7 @@ typechange = { fg = "magenta" }
 
 [panel.fileindex]             # "browse with fileindex" state icon colors (replace git status)
 indexed = { fg = "bright_black" }
+unhashed = { fg = "bright_black" }
 changed = { fg = "yellow" }
 new = { fg = "red" }
 missing = { fg = "bright_red" }
@@ -354,6 +355,7 @@ scanning = "\U000F0CFF"   # nf-md-database_sync: a scan or prune job works on it
 differs = "\U000F163A"    # nf-md-database_alert: indexed directory with differences below
 unchecked = "\U000F1920"  # nf-md-database_eye_off: indexed directory too deep to check automatically
 tagged = "\U000F12F6"     # nf-md-database_marker: indexed and tagged
+unhashed = "\U000F163F"   # nf-md-database_clock: indexed, not hashed yet
 
 [icons.dialog]
 info = "\uf05a"

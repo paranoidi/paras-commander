@@ -11,7 +11,7 @@ the path from fileindex's `~/.config/fileindex/config.ini`. Which files a scan
 includes always comes from that `config.ini`, so the command and pc index the
 same files. `workers` sets the number of hash workers and
 `scan_commit_interval_ms` how often a scan saves its progress to the database
-(see [Config](config.md#fileindex)).
+and `hash` whether a scan hashes the files it indexes (see [Config](config.md#fileindex)).
 
 When there is no database at that location, the first fileindex action (or
 the tags column, or a `fileindex://` path) asks whether to create an empty one.
@@ -68,6 +68,7 @@ removals refresh the panel.
 | State | Legend | Meaning |
 |---|---|---|
 | `indexed` | indexed | In the index, the same size and modification time (files) |
+| `unhashed` | not hashed yet | A file in the index with the same size and modification time that has not been hashed yet (a scan is still hashing, or `hash` is off) |
 | `changed` | changed | A file whose size or modification time differs from the index |
 | `new` | not in index | On disk but not in the index |
 | `missing` | only in index | Only in the index (ghost row) |
@@ -78,7 +79,9 @@ removals refresh the panel.
 | `tagged` | tagged | Indexed and carrying tags |
 
 When several apply, the first of: scanning, missing, changed, excluded, new,
-differs, tagged, unchecked, indexed. Directories are checked in the background
+differs, unhashed, tagged, unchecked, indexed (a file that is both unhashed
+and tagged shows `unhashed`). A directory does not count unhashed files as a
+difference. Directories are checked in the background
 (flat layout only; sizes are compared, not modification times). After each
 listing, every indexed directory is checked down to `folder_scan_max_depth`
 levels (default 3). A difference within that depth shows as `differs`; if there
@@ -196,7 +199,7 @@ index views, and sort and filter like any meta column:
 
 | Column | Name | Shows |
 |---|---|---|
-| **Status** | `fileindex.status` | how the entry compares with the index: `indexed` (a file with the same size and modification time as when scanned, or a known directory), `changed` (a file whose size or modification time differs), `new` (not in the index), `excluded` (not in the index and skipped by the scan rules) or `missing` (in an index view, gone from disk) |
+| **Status** | `fileindex.status` | how the entry compares with the index: `indexed` (a file with the same size and modification time as when scanned, or a known directory), `changed` (a file whose size or modification time differs), `unhashed` (in the index but not hashed yet), `new` (not in the index), `excluded` (not in the index and skipped by the scan rules) or `missing` (in an index view, gone from disk) |
 | **Tags** | `fileindex.tags` | a file's or a directory's tags, comma separated |
 | **Copies** | `fileindex.copies` | how many indexed files have the same content, this one included; JPEGs compare their metadata-free hash, as [find duplicates](find-duplicates.md) does |
 | **First seen** | `fileindex.first-seen` | when the file or directory was first indexed at this path, in local time |
@@ -225,14 +228,25 @@ when the edit finishes.
 
 ## Scan and prune
 
-`fileindex.scan` hashes new and changed files under the chosen paths, then
-removes from the index whatever under them is gone from disk.
+`fileindex.scan` works in three stages on the chosen paths. First it walks
+them and records new and changed files by name: they are searchable (Find in
+index, the `fileindex://` view) as soon as each batch is saved, before any
+hashing, and show the `unhashed` state. Then it removes from the index
+whatever under them is gone from disk. Last it hashes the files that need it,
+including unhashed ones left by an earlier scan. With `hash = false` under
+`[fileindex]` the scan stops after the removal, so files stay unhashed (no hash
+or copies column, left out of duplicate detection) until a scan with hashing
+runs.
 `fileindex.prune` only does the removal, for the current directory. In an
 index view both act on the real paths.
 
 Both run as **task** jobs in the [jobs view](jobs.md): the Details panel shows
 the files done, bytes hashed, current path and, while a scan hashes, how many
-hash workers it runs; per-file errors and pruning removals are listed as
+hash workers it runs. The stage shows in the progress: while walking, the
+files done is the count saved so far with an unknown total (`?`) and the
+current path is the folder being walked; while removing, the total is still
+unknown and the path is the folder being checked; while hashing, it is
+`done / files to hash` with the workers and the file being hashed; per-file errors and pruning removals are listed as
 warnings. With `parallel_workers = auto` the worker count grows while more
 workers make hashing faster. A scan saves what it hashed every
 `scan_commit_interval_ms`. Cancel stops a scan between files and keeps
