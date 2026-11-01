@@ -553,7 +553,11 @@ func detailDurationOrETALine(j JobEntry, now time.Time) string {
 		}
 		return fmt.Sprintf("Took:        %s", label)
 	}
-	return fmt.Sprintf("ETA:         %s", formatJobETAFull(j, now))
+	eta := formatJobETAFull(j, now)
+	if eta == "—" && j.Status == "running" {
+		eta = "waiting for data" + string(primitive.Ellipsis)
+	}
+	return fmt.Sprintf("ETA:         %s", eta)
 }
 
 // jobDetailProgressLine formats the Details panel progress row. Byte totals are shown

@@ -21,7 +21,7 @@ func throughputStripMaxBins(columnDur, window time.Duration) int {
 //
 // When recordStrip is true each closed column also appends the current DisplaySpeedBPS to the
 // strip, so the chart scrolls exactly one column per columnDur while the job runs. Leading zero
-// columns before the first bytes move are not recorded (the UI shows "collecting samples" until
+// columns before the first bytes move are not recorded (the chart stays empty until
 // then). Returns true when the strip grew.
 func SampleThroughputColumns(job *Job, now time.Time, doneBytes int64, columnDur, window time.Duration, recordStrip bool) bool {
 	if job == nil || columnDur <= 0 || window <= 0 {

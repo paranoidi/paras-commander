@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 const throughputGraphBodyRows = 5
@@ -135,8 +134,8 @@ func ThroughputDetailLines(strip []float64, width int, running bool) []string {
 		chartCols = 1
 	}
 
-	if len(strip) == 0 {
-		return []string{primitive.TruncateRight("(collecting samples"+string(primitive.Ellipsis)+")", width)}
+	if len(strip) == 0 { // the ETA line says "waiting for data…"
+		return nil
 	}
 
 	buckets := jobs.ThroughputChartColumnBuckets(strip, chartCols)
