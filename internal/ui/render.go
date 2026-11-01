@@ -1053,7 +1053,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawElevateDialog(screen, layout, model.ElevateDialog, styles)
 	}
 	if model.HelpView.Open {
-		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles)
+		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles, model.PanelScrollbar)
 	}
 	if model.LeaderMenu.Open {
 		DrawLeaderMenu(screen, layout, model.LeaderMenu, styles)

@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Render goldens for the help dialog: both focus positions, browse mode with section headers and
@@ -81,7 +82,7 @@ func TestHelpGoldenRender(t *testing.T) {
 	var cases []simpleGolden
 	add := func(name string, w, h int, st HelpViewState, styles theme.Theme) {
 		cases = append(cases, simpleGolden{fmt.Sprintf("%dx%d_%s", w, h, name), w, h, func(s tcell.Screen, l Layout) {
-			DrawHelpDialog(s, l, st, styles)
+			DrawHelpDialog(s, l, st, styles, uiscrollbar.StyleThumb)
 		}})
 	}
 	ascii := asciiDialogStyles()
