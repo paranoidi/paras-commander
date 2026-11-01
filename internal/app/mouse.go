@@ -26,8 +26,8 @@ type mouseState struct {
 	// false until a report arrives and while reporting is off).
 	pointer bool
 	x, y    int
-	// keyed hides the file list and dialog list row hovers from a key press until the next mouse
-	// event.
+	// keyed hides the list row hovers (file list, dialog, Jobs, Commands, Messages) from a key
+	// press until the next mouse event.
 	keyed bool
 }
 
@@ -248,10 +248,10 @@ func (a *App) auxListHit() (hit func(ui.Layout, *ui.Model, int, int) (int, bool)
 // auxListHover is the row of the open Jobs, Commands or Messages list under the last pointer
 // position: a job or source row, a command entry, a whole message. It only highlights: the
 // selection stays put, so crossing the list on the way to the Details, Conflict or output panes
-// does not switch what they show.
+// does not switch what they show. A key press hides it until the pointer reports again.
 func (a *App) auxListHover() ui.ListRowHover {
 	hit, ok := a.auxListHit()
-	if !ok || !a.mouse.pointer || a.mouseGoesToDialog() {
+	if !ok || !a.mouse.pointer || a.mouse.keyed || a.mouseGoesToDialog() {
 		return ui.ListRowHover{}
 	}
 	w, h := a.screen.Size()

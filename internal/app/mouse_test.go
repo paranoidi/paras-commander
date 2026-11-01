@@ -415,6 +415,15 @@ func TestMouseAuxListHoverKeepsSelection(t *testing.T) {
 	if app.model.MessagesView.Selected != 0 {
 		t.Fatalf("selected = %d, want 0: hover must not move the selection", app.model.MessagesView.Selected)
 	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.AuxListHover.Active {
+		t.Fatal("a key press must hide the row hover")
+	}
+	app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone))
+	if !app.model.AuxListHover.Active {
+		t.Fatal("pointer motion must bring the row hover back")
+	}
 }
 
 func TestMouseCommandsListClickSelectsEntry(t *testing.T) {
