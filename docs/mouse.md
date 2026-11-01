@@ -17,10 +17,12 @@ In the file browser:
 | Pointer over the path in a panel's top border | Inverts the colors of the path element under it (`~`, `/`, a directory name). |
 | Left click on a path element | Focuses the panel and opens that directory, with the cursor on the directory you came from. |
 | Left click on the last path element | Focuses the panel and refreshes its directory (the panel's own directory). |
+| Left click on a column title (Name, Size, Modified, a meta column) | Focuses the panel and sorts by that column. Clicking the column already sorted on reverses the order. Name also counts as sorted while sorting by extension. |
+| Left click elsewhere on the column header row | Focuses the panel and opens its Sort order dialog. |
 
 A shortened element (`p` for `projects` in a narrow panel) opens the full directory it stands for. The path does not react while the panel's top border shows the quick filter or a quick-view directory.
 
-Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. While quick view or a file preview fills the inactive column, clicks and the wheel there are ignored.
+Panels in tree view behave the same as flat ones. A panel in carousel mode only takes focus on click. Picking a column turns the sort dialog's disk-usage size ordering off, so it does not take over again; while that ordering is in effect, Size counts as the sorted column. A narrow name-only panel shows one header title, so a click anywhere on its header opens the dialog. While quick view or a file preview fills the inactive column, clicks and the wheel there are ignored.
 
 In the menu bar and the footer:
 

@@ -84,3 +84,25 @@ func PanelTitleSegmentAt(file Rect, model *Model, panelID int, styles theme.Them
 	}
 	return PanelTitleSegment{}, false
 }
+
+// PanelHeaderColumnAt reports whether (x, y) lies on the column header row of panelID's file
+// list frame file and, when it is on a sortable column title, that column (onTitle). It reuses
+// drawPanel's header layout (newPanelHeaderRow). A carousel panel has no header row here.
+func PanelHeaderColumnAt(file Rect, model *Model, panelID, x, y int) (col PanelHeaderColumn, onTitle, onHeader bool) {
+	if file.Width <= 2 || PanelListRows(file) == 0 || y != file.Y+1 || x <= file.X || x >= file.X+file.Width-1 {
+		return PanelHeaderColumn{}, false, false
+	}
+	state := model.PanelForFileListRender(panelID)
+	if state.CarouselMode {
+		return PanelHeaderColumn{}, false, false
+	}
+	display := PanelDisplayConfig{ShowIcons: model.UseNerdfontIcons, NarrowPanelsNameOnly: model.NarrowPanelsNameOnly}
+	metaLayouts, _ := LayoutMetaColumns(model.MetaResults[panelID])
+	row := newPanelHeaderRow(panelColumnLayout(file, state, display), state, display.ShowIcons, metaLayouts)
+	for _, c := range row.Columns {
+		if x >= c.X && x < c.X+c.Width {
+			return c, true, true
+		}
+	}
+	return PanelHeaderColumn{}, false, true
+}

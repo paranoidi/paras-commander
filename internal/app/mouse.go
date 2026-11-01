@@ -411,6 +411,9 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		a.render()
 		return false, true
 	}
+	if handled, rendered := a.handlePanelHeaderMouse(layout, x, y, pressed); handled {
+		return false, rendered
+	}
 	id, row, ok := a.mouseHit(layout, x, y)
 	if !ok {
 		return false, false
@@ -442,6 +445,31 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 		return a.finishResolvedKeyboardAction(keymap.ActionPanelSelectToggle)
 	}
 	return false, false
+}
+
+// handlePanelHeaderMouse handles a left press on a file list's column header row: a sortable
+// column title sorts by it (reversing when already sorted by it), anywhere else opens the sort
+// dialog for that panel.
+func (a *App) handlePanelHeaderMouse(layout ui.Layout, x, y int, pressed tcell.ButtonMask) (handled, rendered bool) {
+	if pressed&tcell.Button1 == 0 {
+		return false, false
+	}
+	id, file, ok := a.mousePanelAt(layout, x, y)
+	if !ok {
+		return false, false
+	}
+	col, onTitle, onHeader := ui.PanelHeaderColumnAt(file, &a.model, id, x, y)
+	if !onHeader {
+		return false, false
+	}
+	a.focusPanelByMouse(id)
+	if onTitle {
+		a.applyPanelSort(id, a.panelByID(id).HeaderColumnSort(col.Mode, col.MetaColumn))
+	} else {
+		a.openSortDialogForPanel(id)
+	}
+	a.render()
+	return true, true
 }
 
 // scrollInactivePanel moves the cursor of a non-focused panel by delta rows.

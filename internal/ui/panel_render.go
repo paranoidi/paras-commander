@@ -297,17 +297,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	showMeta := len(metaLayouts) > 0
 	showMetaEffective := showMeta && !nameOnlyDisplay
 	listTextWidth := rowTextWidth
-	// In tree mode, panelColumnLayout zeroes iconStrip (icons move into each row's tree gutter
-	// instead of a shared strip), but drawPanelRow still reserves panelIconStripCells of gutter
-	// width at depth 0 (see treeGutterWidth there). The header has no per-depth gutter of its own,
-	// so shift/narrow it by that same fixed amount — this is the single place that offset is
-	// computed; row drawing keeps deriving its own (per-depth) gutter independently.
-	headerTreeGutter := 0
-	if state.ListLayout == panel.ListLayoutTree && panelIconStripCells > 0 && panelIconStripCells < listTextWidth {
-		headerTreeGutter = panelIconStripCells
-	}
-	headerTextWidth := listTextWidth - headerTreeGutter
-	header := panelListHeader(headerTextWidth, state, display.ShowIcons, showMetaEffective, metaLayouts, nameOnlyDisplay, showGit)
+	headerRow := newPanelHeaderRow(layoutRes, state, display.ShowIcons, metaLayouts)
+	headerTreeGutter := headerRow.TreeGutter
 	headerY := rect.Y + 1
 	if leftGutter > 0 {
 		for i := 0; i < leftGutter; i++ {
@@ -326,7 +317,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			screen.SetContent(listContentStart+i, headerY, ' ', nil, headerStyle)
 		}
 	}
-	primitive.Text(screen, listContentStart+headerTreeGutter, headerY, headerTextWidth, header, headerStyle)
+	primitive.Text(screen, headerRow.X, headerY, headerRow.Width, headerRow.Text, headerStyle)
 
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
 	// listTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
@@ -983,12 +974,80 @@ func metaSortArrowLayouts(layouts []MetaColumnLayout, state panel.State) []MetaC
 	return layouts
 }
 
-func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaLayouts []MetaColumnLayout, nameOnly, showGit bool) string {
+// PanelHeaderColumn is one sortable column title on the file list header row: the cells its
+// text (sort arrow included) occupies and the sort a click on it picks.
+type PanelHeaderColumn struct {
+	X, Width int
+	Mode     panel.SortMode
+	// MetaColumn is the meta column's EntryName when Mode is panel.SortMeta.
+	MetaColumn string
+}
+
+// panelHeaderRow is the file list header row layout, shared by drawPanel and
+// PanelHeaderColumnAt so a hit is exactly what is drawn: where the text starts, its width, the
+// text and its sortable column titles (screen x).
+type panelHeaderRow struct {
+	X, Width, TreeGutter int
+	Text                 string
+	Columns              []PanelHeaderColumn
+}
+
+func newPanelHeaderRow(layoutRes panelColumnLayoutResult, state panel.State, showIcons bool, metaLayouts []MetaColumnLayout) panelHeaderRow {
+	// In tree mode, panelColumnLayout zeroes iconStrip (icons move into each row's tree gutter
+	// instead of a shared strip), but drawPanelRow still reserves panelIconStripCells of gutter
+	// width at depth 0 (see treeGutterWidth there). The header has no per-depth gutter of its own,
+	// so shift/narrow it by that same fixed amount — this is the single place that offset is
+	// computed; row drawing keeps deriving its own (per-depth) gutter independently.
+	r := panelHeaderRow{}
+	if state.ListLayout == panel.ListLayoutTree && panelIconStripCells > 0 && panelIconStripCells < layoutRes.RowTextWidth {
+		r.TreeGutter = panelIconStripCells
+	}
+	r.X = layoutRes.IconStart + layoutRes.IconStrip + r.TreeGutter
+	r.Width = layoutRes.RowTextWidth - r.TreeGutter
+	showMeta := len(metaLayouts) > 0 && !layoutRes.NameOnlyDisplay
+	r.Text, r.Columns = panelListHeader(r.Width, state, showIcons, showMeta, metaLayouts, layoutRes.NameOnlyDisplay, layoutRes.ShowGit)
+	for i := range r.Columns {
+		r.Columns[i].X += r.X
+	}
+	return r
+}
+
+// headerTitleSpan trims the cells [start, end) of header to the title text drawn there.
+func headerTitleSpan(cells []rune, start, end int, mode panel.SortMode, metaColumn string) (PanelHeaderColumn, bool) {
+	end = min(end, len(cells))
+	for start < end && cells[start] == ' ' {
+		start++
+	}
+	for end > start && cells[end-1] == ' ' {
+		end--
+	}
+	if start >= end {
+		return PanelHeaderColumn{}, false
+	}
+	return PanelHeaderColumn{X: start, Width: end - start, Mode: mode, MetaColumn: metaColumn}, true
+}
+
+// headerCells is s one rune per terminal cell (a wide rune's second cell is 0, never a space).
+func headerCells(s string) []rune {
+	var out []rune
+	for _, r := range s {
+		out = append(out, r)
+		for range runewidth.RuneWidth(r) - 1 {
+			out = append(out, 0)
+		}
+	}
+	return out
+}
+
+// panelListHeader returns the header text and its sortable column titles (x relative to the
+// text). The name-only header shows one title and has no columns: a click there opens the sort
+// dialog.
+func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaLayouts []MetaColumnLayout, nameOnly, showGit bool) (string, []PanelHeaderColumn) {
 	if nameOnly {
 		nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 		title := panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle)
 		title = truncateHeaderRunes(rowTextWidth, title)
-		return fmt.Sprintf("%-*s", rowTextWidth, title)
+		return fmt.Sprintf("%-*s", rowTextWidth, title), nil
 	}
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
 	tw := panelListThirdColumnWidth(listFmt, false)
@@ -1004,18 +1063,42 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	if showMeta {
 		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaTotalW, listFmt, false, false)
 	}
-	metaHdr := MetaHeaderText(metaSortArrowLayouts(metaLayouts, state))
+	metaHdr, metaStarts := metaHeader(metaSortArrowLayouts(metaLayouts, state))
 	if showMeta && runewidth.StringWidth(metaHdr) > metaTotalW {
 		nameWidth-- // first meta column's sort arrow spills into the name→meta gap
 	}
 	nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 	nameTitle = truncateHeaderRunes(nameWidth, nameTitle)
 	sizeTitle = truncateHeaderRunes(panellist.SizeCells, sizeTitle)
-	if tw == 0 {
-		return panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true)
+	text := panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true)
+	joinW := runewidth.StringWidth(text)
+	if tw > 0 {
+		thirdTitle = truncateHeaderRunes(tw, thirdTitle)
+		text = fmt.Sprintf("%s  %-*s", text, tw, thirdTitle)
 	}
-	thirdTitle = truncateHeaderRunes(tw, thirdTitle)
-	return fmt.Sprintf("%s  %-*s", panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true), tw, thirdTitle)
+	cells := headerCells(text)
+	var cols []PanelHeaderColumn
+	add := func(start, end int, mode panel.SortMode, metaColumn string) {
+		if c, ok := headerTitleSpan(cells, start, end, mode, metaColumn); ok {
+			cols = append(cols, c)
+		}
+	}
+	add(0, nameWidth, panel.SortName, "")
+	if showMeta {
+		metaX := nameWidth + 2
+		for i, lay := range metaLayouts {
+			end := metaX + runewidth.StringWidth(metaHdr)
+			if i+1 < len(metaStarts) {
+				end = metaX + metaStarts[i+1]
+			}
+			add(metaX+metaStarts[i], end, panel.SortMeta, lay.EntryName)
+		}
+	}
+	add(joinW-panellist.SizeCells, joinW, panel.SortSize, "")
+	if tw > 0 && panel.EffectiveListFormat(state.ListFormat) == panel.ListFormatMtime {
+		add(joinW+2, joinW+2+tw, panel.SortMtime, "")
+	}
+	return text, cols
 }
 
 // panelRowOpts holds display options shared by formatEntry and matchSpans.

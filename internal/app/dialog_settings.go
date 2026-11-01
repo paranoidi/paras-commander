@@ -63,19 +63,25 @@ func (a *App) closeSortDialog() {
 }
 
 func (a *App) applySortDialog() {
-	target := a.panelByID(a.model.SortDialog.PanelID)
-	target.ApplySortFromDialog(panel.SortState{
+	a.applyPanelSort(a.model.SortDialog.PanelID, panel.SortState{
 		Mode:                  a.model.SortDialog.SortMode,
 		Reverse:               a.model.SortDialog.SortReverse,
 		DirectoriesFirst:      a.model.SortDialog.DirectoriesFirst,
 		DiskUsageIdleSizeSort: a.model.SortDialog.DiskUsageIdleSizeSort,
 		MetaColumn:            a.model.SortDialog.MetaColumn,
-	}, a.panelViewportRows(a.model.SortDialog.PanelID))
+	})
+	a.closeSortDialog()
+}
+
+// applyPanelSort is the one entry point that applies an explicit sort to a panel (the sort
+// dialog and header column clicks).
+func (a *App) applyPanelSort(panelID int, sort panel.SortState) {
+	target := a.panelByID(panelID)
+	target.ApplySortFromDialog(sort, a.panelViewportRows(panelID))
 	// An explicit apply always sorts immediately; any meta idle-resort timer left over from
 	// before this apply (same or different column, resolved or not) is now stale.
-	a.invalidateMetaIdleSortPanel(a.model.SortDialog.PanelID)
+	a.invalidateMetaIdleSortPanel(panelID)
 	a.setTransientMessage(fmt.Sprintf("Sort: %s", target.Sort.Mode.String()), ui.MessageUrgencyInfo)
-	a.closeSortDialog()
 }
 
 func (a *App) handleSortDialogKey(event *tcell.EventKey) {

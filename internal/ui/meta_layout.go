@@ -58,10 +58,18 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 
 // MetaHeaderText returns the padded header segment for meta columns.
 func MetaHeaderText(layouts []MetaColumnLayout) string {
+	text, _ := metaHeader(layouts)
+	return text
+}
+
+// metaHeader is MetaHeaderText plus the cell offset where each column's cell (its spilled sort
+// arrow included) starts in it.
+func metaHeader(layouts []MetaColumnLayout) (string, []int) {
 	if len(layouts) == 0 {
-		return ""
+		return "", nil
 	}
 	var b strings.Builder
+	starts := make([]int, len(layouts))
 	for i, lay := range layouts {
 		sep := "  "
 		cell := padMetaLineToWidth(lay.Title, lay.Width, lay.RightAlign)
@@ -80,9 +88,10 @@ func MetaHeaderText(layouts []MetaColumnLayout) string {
 		if i > 0 {
 			b.WriteString(sep)
 		}
+		starts[i] = runewidth.StringWidth(b.String())
 		b.WriteString(cell)
 	}
-	return b.String()
+	return b.String(), starts
 }
 
 // CarouselMeta lays out active meta columns for the carousel center column.

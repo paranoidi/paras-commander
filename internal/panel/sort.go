@@ -197,6 +197,29 @@ func (s *State) primarySortUsesDiskTotals() bool {
 	return s.Sort.DiskUsageIdleSizeSort && s.IdleDiskTotalsSort
 }
 
+// HeaderColumnSort is the sort a click on the header column for mode (meta: the column named
+// metaColumn) applies: the current sort reversed when entries are already ordered by that column
+// (Name covers the Extension sort, Size the disk-usage size sort), otherwise that column in its
+// default direction with the disk-usage idle size sort off, so the pick is not taken over again.
+func (s State) HeaderColumnSort(mode SortMode, metaColumn string) SortState {
+	next := s.Sort
+	var sorted bool
+	switch {
+	case s.primarySortUsesDiskTotals():
+		sorted = mode == SortSize
+	case mode == SortName:
+		sorted = s.Sort.Mode == SortName || s.Sort.Mode == SortExtension
+	default:
+		sorted = s.Sort.Mode == mode && (mode != SortMeta || s.Sort.MetaColumn == metaColumn)
+	}
+	if sorted {
+		next.Reverse = !next.Reverse
+		return next
+	}
+	next.Mode, next.MetaColumn, next.Reverse, next.DiskUsageIdleSizeSort = mode, metaColumn, false, false
+	return next
+}
+
 // ActiveMetaSortColumn returns the meta column entries are actually ordered by, or "" when
 // the sort is not by a meta column or the disk-usage size sort has taken over (see SortEntries).
 func (s *State) ActiveMetaSortColumn() string {
