@@ -368,11 +368,11 @@ func TestTransferDestinationFooterShowsActiveAndInactive(t *testing.T) {
 		t.Fatalf("Focus = %q, want the destination", app.model.TransferDialog.Focus)
 	}
 	keys := app.activeFooterKeys()
-	if !footerHasHint(keys, "Active path ◄", "S-left") {
-		t.Fatalf("footer = %+v, want Active S-left hint", keys)
+	if !footerHasHint(keys, "Active path ◄", "S-←") {
+		t.Fatalf("footer = %+v, want Active S-← hint", keys)
 	}
-	if !footerHasHint(keys, "Inactive path ►", "S-right") {
-		t.Fatalf("footer = %+v, want Inactive S-right hint", keys)
+	if !footerHasHint(keys, "Inactive path ►", "S-→") {
+		t.Fatalf("footer = %+v, want Inactive S-→ hint", keys)
 	}
 }
 
@@ -430,7 +430,7 @@ func TestTransferDestinationShortcutNoOpDuringSelfCopyRename(t *testing.T) {
 	want := app.model.TransferDialog.SelfCopyNewName.Value
 
 	keys := app.activeFooterKeys()
-	if footerHasHint(keys, "Active path ◄", "S-left") || footerHasHint(keys, "Inactive path ►", "S-right") {
+	if footerHasHint(keys, "Active path ◄", "S-←") || footerHasHint(keys, "Inactive path ►", "S-→") {
 		t.Fatalf("footer = %+v, must not show Active/Inactive during self-copy rename", keys)
 	}
 
@@ -742,11 +742,11 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 	if keys[5].Hint != "All" || keys[5].KeyLabel != "*" {
 		t.Fatalf("all footer = %+v, want * All", keys[5])
 	}
-	if !footerHasHint(keys, "Active path ◄", "S-left") {
-		t.Fatalf("footer = %+v, want Active S-left hint", keys)
+	if !footerHasHint(keys, "Active path ◄", "S-←") {
+		t.Fatalf("footer = %+v, want Active S-← hint", keys)
 	}
-	if !footerHasHint(keys, "Inactive path ►", "S-right") {
-		t.Fatalf("footer = %+v, want Inactive S-right hint", keys)
+	if !footerHasHint(keys, "Inactive path ►", "S-→") {
+		t.Fatalf("footer = %+v, want Inactive S-→ hint", keys)
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))

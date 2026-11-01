@@ -8,10 +8,10 @@ Paras Commander previews files in three places: **quick view** (the inactive pan
 
 | Surface | Default key | Action id | Menu / leader |
 |---|---|---|---|
-| Fullscreen preview | `F3` (also `Ctrl+V`) | `file.view` | Esc, `v` |
-| Quick view | `Shift+F3` (also `Ctrl+Alt+V`) | `file.quick-view` | Left/Right -> Quick view; Esc, `V` |
-| Carousel view | `Alt+V` | `panel.toggle-carousel` | Left/Right -> Carousel view |
-| Preview settings | `Alt+F3` | `preview.settings-dialog` | Options -> Preview settings |
+| Fullscreen preview | `F3` (also `C-v`) | `file.view` | Esc, `v` |
+| Quick view | `S-F3` (also `C-M-v`) | `file.quick-view` | Left/Right -> Quick view; Esc, `V` |
+| Carousel view | `M-v` | `panel.toggle-carousel` | Left/Right -> Carousel view |
+| Preview settings | `M-F3` | `preview.settings-dialog` | Options -> Preview settings |
 
 All keys are rebindable in `keybindings.toml`. From the command line, `pc -qp <path>` starts with quick view on, `pc <file>` opens the file in the fullscreen viewer (where `q` quits the app) and `pc --carousel` starts in carousel view.
 
@@ -20,7 +20,7 @@ All keys are rebindable in `keybindings.toml`. From the command line, `pc -qp <p
 Quick view is per panel: the panel you turn it on for becomes the driver, and the other panel shows a preview of whatever the driver's cursor is on. The driver's bottom border shows ` Quick view -> ` and an arrow glyph on the cursor row points at the preview. The inactive panel keeps its own path, cursor and selection and returns when quick view is switched off.
 
 - A directory under the cursor is listed in the preview pane (the directory is not entered and history is not touched).
-- `Ctrl+K` / `Ctrl+J` (`file.quick-view.preview-page-up` / `-down`) page the preview without leaving the file list.
+- `C-k` / `C-j` (`file.quick-view.preview-page-up` / `-down`) page the preview without leaving the file list.
 - `Tab` only swaps the active panel while quick view is on. With it off, `Tab` cycles file list, selected strip and the preview pane, so arrows scroll the preview when it has focus.
 - Quick view and [panel sync](navigation.md#latched-panel-sync) are mutually exclusive; turning one on turns the other off. Zoom is disabled while a preview is shown (even 50/50 split).
 - With `[preview].quick_view_disable_on_inactive_nav` (default on) quick view switches off when the inactive panel navigates elsewhere, for example through "open in other panel".
@@ -33,8 +33,8 @@ The preview takes the whole screen (no menu bar; the filename is the top row). B
 | Key | Action id | Does |
 |---|---|---|
 | `j` / `k` | `preview.scroll-down` / `-up` | Scroll a line |
-| `Ctrl+D` / `Ctrl+U` | `preview.half-page-down` / `-up` | Half page |
-| `Ctrl+F` / `Ctrl+B` | `preview.page-down` / `-up` | Full page |
+| `C-d` / `C-u` | `preview.half-page-down` / `-up` | Half page |
+| `C-f` / `C-b` | `preview.page-down` / `-up` | Full page |
 | `g` / `G` | `preview.top` / `preview.bottom` | Start / end |
 | `/` | `preview.search-start` | Search (case-insensitive, literal); Enter accepts, Esc cancels; match locations are marked on the scrollbar |
 | `n` / `p` | `preview.search-next` / `-prev` | Next / previous match (wraps) |
@@ -42,7 +42,7 @@ The preview takes the whole screen (no menu bar; the filename is the top row). B
 | `F6` | `preview.toggle-raw` | Markdown: switch between rendered and raw source |
 | `F9` | `preview.theme-picker` | Pick the syntax theme (live preview, Enter saves, Esc reverts) |
 | `:` | `preview.menu` | Preview menu |
-| `Ctrl+Alt+J` / `Ctrl+Alt+K` | `preview.diff-next-hunk` / `-prev-hunk` | Next / previous change in a diff (also in quick view) |
+| `C-M-j` / `C-M-k` | `preview.diff-next-hunk` / `-prev-hunk` | Next / previous change in a diff (also in quick view) |
 | `Esc`, `q`, `h` | `preview.close` | Close (`q` quits when pc was started with a file argument) |
 
 The preview menu (`:`) lists theme picker, raw toggle, reload, search, next/previous diff change, Edit, Delete and Quit, each on a letter key; the letters are configurable in the `[preview_menu]` section of `keybindings.toml`. F4 edits the file and returns to the preview. Image previews ignore `/` search and the F9 picker.
@@ -76,11 +76,11 @@ If the output begins with a Sixel or Kitty graphics sequence it is shown as an i
 
 ## Carousel view
 
-Carousel shows three columns for the active panel: the parent directory, the current directory and a child column that previews the item under the cursor (directory listing or file preview). Navigation, filter and group select act on the centre column; the side columns are read-only. The inactive panel is hidden while the carousel is active (`[carousel].autohide_inactive_panel`). `Ctrl+K` / `Ctrl+J` page a long child preview. Column widths and size columns are set in `[carousel]`. Listing format and tree view are not available in carousel mode.
+Carousel shows three columns for the active panel: the parent directory, the current directory and a child column that previews the item under the cursor (directory listing or file preview). Navigation, filter and group select act on the centre column; the side columns are read-only. The inactive panel is hidden while the carousel is active (`[carousel].autohide_inactive_panel`). `C-k` / `C-j` page a long child preview. Column widths and size columns are set in `[carousel]`. Listing format and tree view are not available in carousel mode.
 
 ## Preview settings dialog
 
-`Alt+F3` (Options -> Preview settings) records what the terminal supports (Sixel, Kitty, Kitty Unicode placeholders), the image protocol, the image metadata level and the video metadata line. `F5` auto-detects capabilities. OK writes the `[preview]` keys.
+`M-F3` (Options -> Preview settings) records what the terminal supports (Sixel, Kitty, Kitty Unicode placeholders), the image protocol, the image metadata level and the video metadata line. `F5` auto-detects capabilities. OK writes the `[preview]` keys.
 
 ## Options
 

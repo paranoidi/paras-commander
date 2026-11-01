@@ -4,7 +4,7 @@ Find is a fuzzy, recursive search across everything below a panel's directory. R
 
 ## Opening
 
-`Ctrl+F` (`panel.find-dialog`), Left/Right -> Find ..., or Esc then `f`. It searches below the active panel's path (the Left/Right menu uses that panel). Rebindable in `keybindings.toml`.
+`C-f` (`panel.find-dialog`), Left/Right -> Find ..., or Esc then `f`. It searches below the active panel's path (the Left/Right menu uses that panel). Rebindable in `keybindings.toml`.
 
 ## Searching
 
@@ -12,11 +12,11 @@ Type to filter; matching is fuzzy against paths relative to the root, best match
 
 Options in the dialog:
 
-- **Depth** (input at the right end of the query row, reached with Tab from the query; Up and Down in the query move the result list): limit the index to this many path levels below the root (`a` is depth 1, `a/b` depth 2). Typing a digit 1-9 sets it, `0`, Backspace or Delete clear it for unlimited; either applies it at once and returns focus to the query. Leaving the field (Tab, Shift+Tab, Up, Down, Left) or pressing Enter, which returns focus to the query, applies it: a lower limit drops the deeper results at once and stops the running scan from going deeper; a higher limit re-indexes to reach the extra levels. The limit starts unlimited each time the dialog opens.
-- **Include hidden** (`Alt+I`, default off): add dot-entries and git-ignored paths. This does not change the panel's own hidden-file setting.
-- **Stay on current volume** (`Alt+V`, default on): do not descend into other mounted file systems.
-- **Only directories** (`Alt+D`) / **Only files** (`Alt+L`): filter the result list without re-scanning.
-- **Search only from selected directories** (`Alt+S`, shown only when directories are selected in the panel, default on): the search is limited to those directories; uncheck it to widen to the whole panel path.
+- **Depth** (input at the right end of the query row, reached with Tab from the query; Up and Down in the query move the result list): limit the index to this many path levels below the root (`a` is depth 1, `a/b` depth 2). Typing a digit 1-9 sets it, `0`, Backspace or Delete clear it for unlimited; either applies it at once and returns focus to the query. Leaving the field (Tab, S-Tab, Up, Down, Left) or pressing Enter, which returns focus to the query, applies it: a lower limit drops the deeper results at once and stops the running scan from going deeper; a higher limit re-indexes to reach the extra levels. The limit starts unlimited each time the dialog opens.
+- **Include hidden** (`M-i`, default off): add dot-entries and git-ignored paths. This does not change the panel's own hidden-file setting.
+- **Stay on current volume** (`M-v`, default on): do not descend into other mounted file systems.
+- **Only directories** (`M-d`) / **Only files** (`M-l`): filter the result list without re-scanning.
+- **Search only from selected directories** (`M-s`, shown only when directories are selected in the panel, default on): the search is limited to those directories; uncheck it to widen to the whole panel path.
 
 ## Working with results
 
@@ -24,13 +24,13 @@ Options in the dialog:
 |---|---|
 | `Enter` | Navigate: a directory opens in the panel; a file opens its parent with the file highlighted. If rows are marked, they are added to the panel selection instead |
 | `Insert` or `Space` | Mark / unmark the row |
-| `F5` or `Alt+A` | Mark all matching results (`find.select-all`) |
+| `F5` or `M-a` | Mark all matching results (`find.select-all`) |
 | `F4` | Unmark all (`find.unselect-all`) |
 | `F6` / `F7` | Mark / unmark by group pattern (`find.select-group`, `find.unselect-group`) |
 | `F2` | Replace the selection with the parent directories of the marked results (`find.select-parent-dirs`) |
 | `F3` | View the highlighted file fullscreen (`find.view`) |
-| `Shift+Left` / `Shift+Right` | Open the result in the left / right panel and keep Find open |
-| `Alt+Insert` | Pin the row |
+| `S-←` / `S-→` | Open the result in the left / right panel and keep Find open |
+| `M-Insert` | Pin the row |
 | `Esc` | Cancel the scan and close |
 
 Marked results show their combined size on the separator line. Marking a directory removes conflicting marks of its contents or parents and says so in a toast. The footer shows the keys that apply.

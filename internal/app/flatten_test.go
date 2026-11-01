@@ -222,11 +222,11 @@ func TestFlattenDestinationFooterShowsActiveAndInactive(t *testing.T) {
 		t.Fatalf("Focus = %q, want the destination", app.model.FlattenDialog.Focus)
 	}
 	keys := app.activeFooterKeys()
-	if !footerHasHint(keys, "Active path ◄", "S-left") {
-		t.Fatalf("footer = %+v, want Active S-left hint", keys)
+	if !footerHasHint(keys, "Active path ◄", "S-←") {
+		t.Fatalf("footer = %+v, want Active S-← hint", keys)
 	}
-	if !footerHasHint(keys, "Inactive path ►", "S-right") {
-		t.Fatalf("footer = %+v, want Inactive S-right hint", keys)
+	if !footerHasHint(keys, "Inactive path ►", "S-→") {
+		t.Fatalf("footer = %+v, want Inactive S-→ hint", keys)
 	}
 }
 
@@ -267,7 +267,7 @@ func TestFlattenDestinationShortcutsNoOpWhenUnfocused(t *testing.T) {
 		t.Fatalf("Focus = %q, want recursive", app.model.FlattenDialog.Focus)
 	}
 	keys := app.activeFooterKeys()
-	if footerHasHint(keys, "Active path ◄", "S-left") || footerHasHint(keys, "Inactive path ►", "S-right") {
+	if footerHasHint(keys, "Active path ◄", "S-←") || footerHasHint(keys, "Inactive path ►", "S-→") {
 		t.Fatalf("footer = %+v, must not show Active/Inactive when destination unfocused", keys)
 	}
 	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))

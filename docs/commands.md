@@ -24,10 +24,10 @@ A line containing shell operators (`|`, `>>`, `&&`) runs through `sh -c`; any ot
 
 Runs one command once per selected item (or the highlighted item when nothing is selected).
 
-- **Open**: `Ctrl+Alt+R` (`file.run-for-each`), menu **Command -> Run for each...** (`f`), or Esc menu `R`.
+- **Open**: `C-M-r` (`file.run-for-each`), menu **Command -> Run for each...** (`f`), or Esc menu `R`.
 - The command must contain `%f`. The field validates as you type: an invalid command shows a red message, a valid one shows `-> <expanded command>` for the first item.
-- **Run in each selected directory** (`Alt+R`): runs the command with each selected directory as its working directory instead of the active panel's directory. Only directories may be selected in this mode, and `%f` becomes optional.
-- **Allocate pseudo-TTY (interactive)** (`Alt+T`): runs each item on a live terminal shown in the bottom [terminal panel](subshell.md#terminal-panel), for tools that need a real terminal. Only one foreground batch uses the panel at a time; others wait. The Commands view records the final screen of each run. Linux only; elsewhere it falls back to normal capture.
+- **Run in each selected directory** (`M-r`): runs the command with each selected directory as its working directory instead of the active panel's directory. Only directories may be selected in this mode, and `%f` becomes optional.
+- **Allocate pseudo-TTY (interactive)** (`M-t`): runs each item on a live terminal shown in the bottom [terminal panel](subshell.md#terminal-panel), for tools that need a real terminal. Only one foreground batch uses the panel at a time; others wait. The Commands view records the final screen of each run. Linux only; elsewhere it falls back to normal capture.
 - **Worker pool**: when `pools.toml` defines pools, radios let the batch share a limited number of parallel slots; see [Worker pools](#worker-pools).
 - **History** (`F3`, `file.run-for-each.history`): fuzzy picker over the command lines you ran earlier in this session.
 
@@ -35,14 +35,14 @@ The selection is cleared when the batch starts. A failed batch shows a summary t
 
 ## Commands view
 
-Open with `Alt+C` (`commands.open`), **Display -> Commands** or Esc menu `E`. The left list holds one row per run, newest at the top, with its phase and exit marker; opening the view selects the newest run; the command is shown as written, followed by one line per macro it used. Stdout and Stderr appear in two panes, wrapped to the pane width.
+Open with `M-c` (`commands.open`), **Display -> Commands** or Esc menu `E`. The left list holds one row per run, newest at the top, with its phase and exit marker; opening the view selects the newest run; the command is shown as written, followed by one line per macro it used. Stdout and Stderr appear in two panes, wrapped to the pane width.
 
 | Key | Action |
 |---|---|
-| `Tab` / `Shift+Tab` | Cycle list, stdout, stderr |
+| `Tab` / `S-Tab` | Cycle list, stdout, stderr |
 | `Up` `Down` `PgUp` `PgDn` `Home` `End` | Move through the run list as drawn (`Up` toward newer runs, `Home` the top row), or scroll the focused output pane. Panes follow the tail until you scroll up; reaching the bottom follows again |
 | `F8` | Terminate the selected running command (`commands.terminate`) |
-| `Shift+F8` | Kill it (`commands.kill`) |
+| `S-F8` | Kill it (`commands.kill`) |
 | a printable character | Type-to-jump filter over the command lines |
 | `Left` / `Esc` | Close the view (`commands.close`; Esc first closes an open filter) |
 
@@ -50,7 +50,7 @@ Quitting with commands still running asks for confirmation, like unfinished jobs
 
 ## User menu
 
-`F2` (`app.user-menu`, also `§` or `;`; menu **Command -> User menu**, Esc menu `X`) opens a strip of your own commands. Press the highlighted letter to run an entry; `Left` or `Backspace` leaves a submenu, `Esc` closes the menu. `F9` inside the menu, or `Shift+F2` (`app.user-menu-edit`) anywhere, opens `menu.toml` in `$EDITOR` and reloads it. A missing file is created with a commented reference of every field.
+`F2` (`app.user-menu`, also `§` or `;`; menu **Command -> User menu**, Esc menu `X`) opens a strip of your own commands. Press the highlighted letter to run an entry; `Left` or `Backspace` leaves a submenu, `Esc` closes the menu. `F9` inside the menu, or `S-F2` (`app.user-menu-edit`) anywhere, opens `menu.toml` in `$EDITOR` and reloads it. A missing file is created with a commented reference of every field.
 
 A `menu.toml` in the active directory (name from `local_names`, default `menu.toml`) takes precedence over the global one; see [Config](config.md#user_menu). The same trust rule as [Meta columns](meta-columns.md#open) applies: a group- or world-writable `menu.toml` (other than one writable only by your private group) or one owned by another user is skipped with a warning, and the user menu then shows that warning instead of opening the editor.
 
@@ -59,7 +59,7 @@ A `menu.toml` in the active directory (name from `local_names`, default `menu.to
 | Field | Behaviour |
 |---|---|
 | (none) | Output is captured, the Commands view opens and gets a row |
-| `dialog = true` | Output is shown in a dialog that opens at once and fills while the command runs. **Background** (`Esc`, `Alt+B`) leaves it running in the Commands view, **Cancel** (`Alt+C`) kills it |
+| `dialog = true` | Output is shown in a dialog that opens at once and fills while the command runs. **Background** (`Esc`, `M-b`) leaves it running in the Commands view, **Cancel** (`M-c`) kills it |
 | `background = true` | Runs silently; you are notified only on failure or stderr output; the panel refreshes when done |
 | `interactive = true` | Suspends the TUI and gives the command the terminal (vim, lazygit, htop) |
 | `detach = true` | Starts the process and forgets it (GUI helpers such as `xdg-open`) |

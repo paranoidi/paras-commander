@@ -49,7 +49,7 @@ func JoinDisplay(keys []string, preferredKey string) string {
 		if i > 0 {
 			out += " | "
 		}
-		out += HumanKey(k)
+		out += keymap.DisplayKey(k)
 	}
 	return out
 }
@@ -78,15 +78,6 @@ func ForDisplay(keys []string, preferredKey string) []string {
 		out = append(out, k)
 	}
 	return out
-}
-
-// HumanKey converts a TOML key string to a human-readable form.
-func HumanKey(s string) string {
-	ch, err := keymap.ParseKey(s)
-	if err != nil {
-		return s
-	}
-	return keymap.FormatChord(ch)
 }
 
 // ConcatKeywords joins keyword slices for fuzzy help search.

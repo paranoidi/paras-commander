@@ -8,9 +8,9 @@ Disk usage scans directory sizes in the background and draws a proportional bar 
 
 | Key | Action |
 |---|---|
-| `Alt+D` | `panel.disk-usage-scan`: scan the active panel's directory (leader `D`, Left/Right menu, Disk usage) |
-| `Alt+Space` | `panel.dir-size`: size only the directory under the cursor, then move down |
-| `Ctrl+Alt+D` | `panel.disk-usage-clear`: abort the scan and drop all the data |
+| `M-d` | `panel.disk-usage-scan`: scan the active panel's directory (leader `D`, Left/Right menu, Disk usage) |
+| `M-Space` | `panel.dir-size`: size only the directory under the cursor, then move down |
+| `C-M-d` | `panel.disk-usage-clear`: abort the scan and drop all the data |
 
 Both are rebindable in `keybindings.toml`.
 
@@ -18,7 +18,7 @@ Both are rebindable in `keybindings.toml`.
 
 A scan walks the listed directory and each directory directly in it. While it runs, the menu bar spinner is active, rows show a working icon, and the bars grow. Sizes are shown in the size column and as a bar relative to the largest entry. When the scan finishes a toast reports it.
 
-The scan scope is global: bars appear on whichever panel is inside the scanned directory or one of its children, and disappear when you navigate elsewhere (they return when you come back). Once the scan finishes, the scanned directory's own total is known too, so going up to its parent shows that directory's size in the size column. That total includes hidden entries even when the panel hides them. `Alt+Ctrl+D` clears the data, the bars and any size-based ordering on both panels.
+The scan scope is global: bars appear on whichever panel is inside the scanned directory or one of its children, and disappear when you navigate elsewhere (they return when you come back). Once the scan finishes, the scanned directory's own total is known too, so going up to its parent shows that directory's size in the size column. That total includes hidden entries even when the panel hides them. `C-M-d` clears the data, the bars and any size-based ordering on both panels.
 
 Size-based ordering: with `idle_size_sort` on (default), a panel sorted by size is re-sorted once the cursor has been idle for `idle_sort_delay_ms`, instead of jumping on every update. Sort by size from the [Sort dialog](panels.md#sorting).
 
@@ -26,7 +26,7 @@ Other places use the same cache: selected directories show their total in the [s
 
 Directories listed in `~/.goduignore` and mount points are skipped and shown dimmed with a special folder icon. Scans do not cross into other mounted filesystems unless `descend_into_mount_points` is on. The panel also shows the volume's free and total space on its top row.
 
-While a copy or move job is using the same volume, automatic scans and refreshes pause; explicit scans (`Alt+D`, delete summary) always run. See [Background scan throttle](background-scan-throttle.md).
+While a copy or move job is using the same volume, automatic scans and refreshes pause; explicit scans (`M-d`, delete summary) always run. See [Background scan throttle](background-scan-throttle.md).
 
 ## Options
 

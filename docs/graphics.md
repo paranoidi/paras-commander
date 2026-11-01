@@ -264,5 +264,5 @@ which shows them in a separate overlay window placed over the preview pane.
   both conditions hold and `terminal_sixel` is not `"yes"`. Set
   `image_protocol = "ueberzug"` (or pick Überzug++ in the **M-F3** dialog) to force it.
 - The overlay is removed while a menu or dialog is open and while an external editor or
-  the Ctrl+O shell has the terminal. Temporary PNGs are deleted on exit.
+  the C-o shell has the terminal. Temporary PNGs are deleted on exit.
 - Works under tmux; `ueberzugpp` handles the pane offset itself.

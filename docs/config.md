@@ -111,8 +111,8 @@ Rules are tried top-to-bottom against the executed file; the first rule whose `w
 decides the mode, and later rules are not tried. No match keeps the default: foreground, switching
 to the Commands view immediately and waiting for the process to finish. `background = true` runs
 the file without switching views — the file list stays visible, the run is tracked as a Commands
-view row you can open later (`commands.open`, default `Alt+C`) to inspect its output or
-terminate it (F8/Shift+F8) while it's still running, and a toast only appears if it fails to
+view row you can open later (`commands.open`, default `M-c`) to inspect its output or
+terminate it (F8/S-F8) while it's still running, and a toast only appears if it fails to
 launch, exits non-zero, or writes to stderr. The built-in default rule backgrounds AppImage
 launchers; add more rules for other GUI programs you run directly from a panel.
 
@@ -223,7 +223,7 @@ Panel quick-filter behavior.
 
 ### `[filter.types]`
 
-Regular expressions behind the file-type checkboxes of the panel Filter dialog (Alt+F; see [panel-filter.md](panel-filter.md)) and of the Select group / Unselect group dialogs (panel and Find results). Each is matched against the entry's file name only and ignores the dialog's "Case sensitive" box, so the defaults start with `(?i)`. An empty or non-compiling value falls back to the built-in default.
+Regular expressions behind the file-type checkboxes of the panel Filter dialog (M-f; see [panel-filter.md](panel-filter.md)) and of the Select group / Unselect group dialogs (panel and Find results). Each is matched against the entry's file name only and ignores the dialog's "Case sensitive" box, so the defaults start with `(?i)`. An empty or non-compiling value falls back to the built-in default.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -303,11 +303,11 @@ Application log file.
 
 ## `[history]`
 
-Directory History dialog (Alt+H).
+Directory History dialog (M-h).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `zoxide` | bool | `true` | Initial state of the History dialog's **Include zoxide** checkbox (Alt+I), shown only when `zoxide` is on `PATH`. When checked, zoxide directories (`zoxide query --list`, score order) follow the panel history, prefixed with `[icons.dialog] zoxide` (panel history rows use `[icons.dialog] history`); entries already in the history are not repeated. |
+| `zoxide` | bool | `true` | Initial state of the History dialog's **Include zoxide** checkbox (M-i), shown only when `zoxide` is on `PATH`. When checked, zoxide directories (`zoxide query --list`, score order) follow the panel history, prefixed with `[icons.dialog] zoxide` (panel history rows use `[icons.dialog] history`); entries already in the history are not repeated. |
 
 ## `[bookmarks]`
 
@@ -329,8 +329,8 @@ F2 user menu command definitions.
 A `menu.toml` entry with `dialog = true` opens its output dialog immediately with a running indicator
 ("Running" or "Queued" in the title while the entry's `pool` has no free slot) and shows the output as it arrives,
 following the tail until you scroll up (Up/Down/PgUp/PgDn/Home/End; End follows again). The Commands view panes stream and follow the same way. The run is always recorded in the Commands view: while it
-runs the dialog offers **Background** (also Esc, Alt+B), which closes the dialog and leaves the command running
-there (its result and any failure banner appear as for `background = true`), and **Cancel** (Alt+C), which
+runs the dialog offers **Background** (also Esc, M-b), which closes the dialog and leaves the command running
+there (its result and any failure banner appear as for `background = true`), and **Cancel** (M-c), which
 kills the command.
 
 When the command finishes, paths printed in the output (a whole line, or up to six whitespace-separated words, so names with spaces work, optionally
@@ -386,7 +386,7 @@ Preview pane (F3 / quick view / carousel).
 | `video_thumb_workers` | int | `2` | Number of ffmpeg processes run concurrently when generating one video's thumbnail grid (clamped 1–8). |
 | `prefetch` | bool | `true` | Background-decode nearby images and generate video thumbnails before the caret lands on them. Dispatch waits for the quick-view/carousel nav-coalesce debounce (`media_preview_debounce_ms`) to settle, so rapid key-repeat scrolling doesn't start decode work for entries the caret only passes through; the entry the caret lands on is always dequeued first. |
 | `prefetch_always` | bool | `false` | When `false` (default), prefetch only runs while quick view is latched or the active panel is in carousel mode. Set `true` to prefetch whenever `prefetch` is on, regardless of view mode. |
-| `quick_view_disable_on_inactive_nav` | bool | `true` | When `true` (default), turns off quick view and shows a toast whenever the inactive (non-driver) panel navigates to a new directory — e.g. via Alt+I/Alt+O, a bookmark "open in other panel", or find/compare/dedup/history/SFTP results — since quick view would otherwise overlay the freshly opened listing with a stale preview. |
+| `quick_view_disable_on_inactive_nav` | bool | `true` | When `true` (default), turns off quick view and shows a toast whenever the inactive (non-driver) panel navigates to a new directory — e.g. via M-i/M-o, a bookmark "open in other panel", or find/compare/dedup/history/SFTP results — since quick view would otherwise overlay the freshly opened listing with a stale preview. |
 | `prefetch_workers` | int | `4` | Worker-pool size for background prefetch (clamped 1–32). The effective count used is also capped to leave at least one CPU free for the UI thread (`min(configured, GOMAXPROCS-1)`, floor 1), so heavy decode work can't starve input handling and low-core machines stay safe regardless of this setting. Ignored when `prefetch` is `false`. |
 | `prefetch_window` | int | `5` | Number of entries fetched ahead of/behind the cursor (clamped 1–50), and also the size of the band fetched around each predicted PgUp/PgDn landing position (cursor ± the current viewport row count). Entries farther away from both the cursor and either landing position are never queued for background decode, so they can't evict already-warm near-cursor cache entries. The queue prioritizes the cursor's exact entry, then its immediate neighbors, then the two exact landing positions, then the rest of the cursor's window (biased toward the direction the cursor last moved), then the vicinity of each landing position's window. Ignored when `prefetch` is `false`. |
 | `image_max_edge_px` | int | `0` | Longest edge (px) for decoded stills and composited video-thumb grids, for protocols/contexts that don't need the tmux-Sixel safety clamp below (Kitty in any tmux state, or Sixel outside tmux). `0` (default) means unrestricted for stills: decode at native resolution and let the final cell-budget fit determine the displayed size. Set above `0` to also override the video-thumb-grid default (`video_thumb_max_edge_px`) for those same protocols/contexts. Applied even when `prefetch` is `false`; when set above `0`, clamped to a minimum of 64. |

@@ -4,7 +4,7 @@ Renames the selected entries (or the entry under the cursor) in one go. The dial
 live before/after preview with the changed text highlighted; nothing is renamed until you
 confirm. Swaps and chains (a to b, b to a) are handled safely.
 
-Open it with `Shift+F6` or `Ctrl+R` (`file.rename`) while entries are selected
+Open it with `S-F6` or `C-r` (`file.rename`) while entries are selected
 in the current directory; without a selection the same key opens the
 single-entry [Rename](fileoperations.md#rename) dialog. Rebind it in
 `keybindings.toml`. If any new name is a duplicate, collides with an existing
@@ -26,7 +26,7 @@ name with its new one character by character.
 
 **Show only modified** hides unchanged rows in the preview. **Case insensitive** applies to Simple and Regular expression matching. **Trim whitespace** strips leading and trailing whitespace from the new names.
 
-**Ignore extension** (on by default, `Alt+X`) limits Simple, Regular expression and Capitalize
+**Ignore extension** (on by default, `M-x`) limits Simple, Regular expression and Capitalize
 to the file name without its extension, so `.` to a space turns `lapland.hike.jpg` into
 `lapland hike.jpg`. The extension is the part after the last dot; dotfiles such as `.bashrc` and
 directories have none. External $EDITOR ignores this option. The setting is saved with patterns.
@@ -52,7 +52,7 @@ number to 3 digits* (F2 Load pattern) do exactly this.
 
 ## Apply, saved patterns and history
 
-- **Apply** (`Alt+A`) renames now and keeps the dialog open: the panels refresh, the batch is re-selected under its new names and the Find and Replace fields are cleared, ready for the next rule. OK renames and closes. Each successful pass shows a success message; once the dialog closes after any rename (OK, or Cancel after an Apply) the selection is cleared.
+- **Apply** (`M-a`) renames now and keeps the dialog open: the panels refresh, the batch is re-selected under its new names and the Find and Replace fields are cleared, ready for the next rule. OK renames and closes. Each successful pass shows a success message; once the dialog closes after any rename (OK, or Cancel after an Apply) the selection is cleared.
 - Patterns (mode, Find, Replace and options) can be saved and reused. In the dialog: `F2` Load pattern, `F5` Save pattern (asks for a name and description; `F5` again offers to overwrite an existing pattern), `F3` History (patterns used in this session only), `F8` deletes the selected saved pattern in the pickers.
 - Saved patterns live in `patterns.toml` (`[mass_rename] file`, default `<config dir>/patterns.toml`). Until the file exists, Load shows the two built-in pad patterns above. See [Config](config.md#mass_rename).
 - The dialog keys are under `[dialog.mass_rename]` in `keybindings.toml`.

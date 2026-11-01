@@ -8,10 +8,10 @@ A panel keeps a set of selected paths. File operations (copy, move, delete, run 
 |---|---|
 | `Insert` / `Space` | `panel.select-toggle`: toggle the cursor entry |
 | `+` | `panel.select-group`: Select group dialog |
-| `-` / `Alt+U` | `panel.unselect-group`: Unselect group dialog |
-| `*` / `Ctrl+I` | `panel.invert-selection` |
-| `Alt+K` | `panel.select-range`: first press sets the start, second press selects everything between it and the cursor |
-| `Ctrl+U` | `panel.clear-selection` |
+| `-` / `M-u` | `panel.unselect-group`: Unselect group dialog |
+| `*` / `C-i` | `panel.invert-selection` |
+| `M-k` | `panel.select-range`: first press sets the start, second press selects everything between it and the cursor |
+| `C-u` | `panel.clear-selection` |
 
 All are rebindable in `keybindings.toml`. Leader menu (`:`) Selection group: `k` range, `g` group, `i` invert, `U` clear. While a range start is pending, its row shows a marker and the cursor row turns yellow. Range select also works in the carousel, [Compare](compare-directories.md) and [Find duplicates](find-duplicates.md).
 
@@ -29,8 +29,8 @@ When selected paths lie outside the current directory, a Selected strip lists th
 
 | Key | Action |
 |---|---|
-| `Ctrl+S` | `panel.focus-selected`: focus the strip (shows it even when everything is local) |
-| `Ctrl+Alt+S` | `panel.open-selected-root`: change to the common root of the selection |
+| `C-s` | `panel.focus-selected`: focus the strip (shows it even when everything is local) |
+| `C-M-s` | `panel.open-selected-root`: change to the common root of the selection |
 | `Enter` (in strip) | Go to the directory containing the highlighted path |
 | `Insert` / `Delete` (in strip) | Unselect the row |
 | typing (in strip) | Fuzzy filter the strip |
@@ -40,7 +40,7 @@ Copying or moving a multi-location selection shows every source in the transfer 
 
 ## Stash
 
-Each panel has one stash slot. `Ctrl+Alt+Insert` (`panel.stash-toggle`):
+Each panel has one stash slot. `C-M-Insert` (`panel.stash-toggle`):
 
 - selection and empty stash: save the selection and clear it;
 - no selection and a stash: restore it;

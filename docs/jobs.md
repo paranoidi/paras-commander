@@ -6,7 +6,7 @@ summary: an icon with a count for each job state, a progress bar for the
 running job and, to its left, a pill with the current transfer speed while a
 transfer runs. A job waiting for your answer is shown as "N job(s) waiting".
 
-Open the jobs view with `Alt+J` (`jobs.open`, **Display -> Jobs**, Esc menu
+Open the jobs view with `M-j` (`jobs.open`, **Display -> Jobs**, Esc menu
 `j`). It has a Queue panel with Type, Status, ETA, Speed and Progress, plus
 Details and Operations panels for the selected job. When a job is
 waiting for an answer, opening the view selects it and focuses the conflict
@@ -17,7 +17,7 @@ first. Keys are rebindable under `[jobs]` in `keybindings.toml`.
 Operations spans the full width at the bottom of the screen, so long paths
 fit; the Queue and Details share the rows above it, as tall as Details needs
 (at least 15 rows).
-`Ctrl+Space` (`jobs.toggle-operations-layout`, **Jobs -> Operations layout**,
+`C-Space` (`jobs.toggle-operations-layout`, **Jobs -> Operations layout**,
 Esc menu `o`) moves Operations under Details in the right column, giving the
 Queue the full height; press it again to move it back. The toggle lasts for
 the session; set `operations_layout = "side"` under `[jobs]` in `config.toml`
@@ -25,9 +25,9 @@ to start with Operations in the right column. A terminal too short for the
 bottom layout uses the side layout.
 
 A job queued from several selected entries shows an expander icon after its
-type. `Alt+Right` (`jobs.expand`) lists each of its sources in a tree under
+type. `M-→` (`jobs.expand`) lists each of its sources in a tree under
 the job, each with its own status icon (queued, running, completed, failed,
-canceled) and done / failed / skipped counts; `Alt+Left` (`jobs.collapse`)
+canceled) and done / failed / skipped counts; `M-←` (`jobs.collapse`)
 folds them away. With the cursor on a source, the Operations panel shows only
 that source's rows and names the source on its top border. The source being
 worked on is drawn in the job's status color and followed by the file it is
@@ -45,16 +45,16 @@ total `(estimated)` until the exact size is counted (see
 
 | Key | Action |
 |---|---|
-| `Ctrl+C` | Cancel the selected job (`jobs.cancel`) |
-| `Ctrl+P` | Pause a queued job (`jobs.pause`) |
-| `Ctrl+R` | Resume a paused job or retry a failed or canceled one (`jobs.resume`) |
-| `Ctrl+Up` / `Ctrl+Down` | Move the job in the queue (`jobs.queue-up`, `jobs.queue-down`) |
+| `C-c` | Cancel the selected job (`jobs.cancel`) |
+| `C-p` | Pause a queued job (`jobs.pause`) |
+| `C-r` | Resume a paused job or retry a failed or canceled one (`jobs.resume`) |
+| `C-↑` / `C-↓` | Move the job in the queue (`jobs.queue-up`, `jobs.queue-down`) |
 | `F8` | Clear finished jobs (`jobs.clear-finished`) |
-| `Alt+Right` / `Alt+Left` | Expand / collapse a multi-source job into its sources (`jobs.expand`, `jobs.collapse`) |
-| `F3` / `Shift+F3` | Filter the Operations panel by result / reset its filters (`jobs.result-filter`, `jobs.reset-filter`) |
-| `+` / `-` / `Ctrl+U` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
+| `M-→` / `M-←` | Expand / collapse a multi-source job into its sources (`jobs.expand`, `jobs.collapse`) |
+| `F3` / `S-F3` | Filter the Operations panel by result / reset its filters (`jobs.result-filter`, `jobs.reset-filter`) |
+| `+` / `-` / `C-u` | Raise, lower or clear the transfer rate limit (Queue panel focused) |
 | `Tab` | Cycle the panels |
-| `Ctrl+Space` | Move the Operations panel between the right column and full width at the bottom (`jobs.toggle-operations-layout`) |
+| `C-Space` | Move the Operations panel between the right column and full width at the bottom (`jobs.toggle-operations-layout`) |
 | `Enter` | Maximize the focused Operations panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view (`jobs.close`) |
 
@@ -66,7 +66,7 @@ again instead. One task of each kind runs at a time, beside any copy or move.
 
 Jobs copy and move one at a time; deletes start immediately. Add a transfer
 paused from the copy or move dialog (**Advanced**, then **Add paused**) and start it later with
-`Ctrl+R`. See [File operations](fileoperations.md#operation-dialogs).
+`C-r`. See [File operations](fileoperations.md#operation-dialogs).
 
 # Transfer rate limit
 
@@ -88,7 +88,7 @@ With the Queue panel focused:
   10MB/s, or 100MB/s if nothing is running.
 - `+` raises the limit by 10MB/s. `-` lowers it by 10MB/s, down to a floor of
   10MB/s — it never drops all the way back to Unlimited on its own.
-- `Ctrl+U`, or **Jobs → Clear rate limit** in the menu, clears the limit back
+- `C-u`, or **Jobs → Clear rate limit** in the menu, clears the limit back
   to Unlimited.
 
 ## Where it's shown
@@ -142,11 +142,11 @@ Filter the list while the panel is focused:
 - Type to fuzzy-match the names, with the same matching as the file list's
   quick filter. This also works in the maximized panel, where every letter
   (including `q`) goes to the filter. Rows that don't match are hidden. `Backspace` edits the query,
-  `Ctrl+L` or `Ctrl+Backspace` clears it, and `Esc` closes the filter. `Esc`
+  `C-l` or `C-Backspace` clears it, and `Esc` closes the filter. `Esc`
   again leaves the jobs view.
 - `F3` opens the **Result** dialog: tick **Success**, **Failed**, **Skipped**,
   or **All**.
-- `Shift+F3` clears both filters.
+- `S-F3` clears both filters.
 
 The query is shown as `> report` at the top left of the panel's border, in
 place of its title, like the file list's quick filter. The result filter is
@@ -229,14 +229,14 @@ queue.
 
 A copy, move, flatten, delete, or extract job that fails (e.g. `permission
 denied` on the destination) stays in the Queue panel as a failed row instead
-of disappearing; a canceled one stays as a canceled row. Select it and press `Ctrl+R` — the footer shows **Retry**
+of disappearing; a canceled one stays as a canceled row. Select it and press `C-r` — the footer shows **Retry**
 and the `:` leader menu shows "Retry job" while a failed or canceled job is
 selected — to re-run it from scratch under the same job ID. A copy that
 failed only because it skipped items re-runs just those items. Any files
 already transferred before the failure hit the normal overwrite/skip
 conflict prompt on retry.
 
-`Ctrl+R` (**Jobs → Resume / retry job**) is the same key used to resume a
+`C-r` (**Jobs → Resume / retry job**) is the same key used to resume a
 paused job; it resumes when the selected job is paused and retries when it
 is failed or canceled.
 
@@ -291,7 +291,7 @@ target disk is too full the prompt offers Retry (`R`) and Abort (`B`).
 
 ### Answering from the file view
 
-You do not have to open the jobs view. `Ctrl+Q` or `Alt+Q`
+You do not have to open the jobs view. `C-q` or `M-q`
 (`jobs.answer-blocker`, Esc menu `a`) opens the quick dialog for the job that
 has waited longest. Postpone dismisses it and the job keeps waiting. After you
 answer, the next waiting job's dialog opens automatically.
@@ -319,12 +319,12 @@ applied to all conflicts).
 - **Greyed choices:** the time rows take precedence. A size choice is greyed out when a time row
   holds a different non-Ask action, since a file can be newer and smaller at once. Changing a time
   row resets any size choice it greys out to Ask.
-- **Apply to all conflicts** (Alt+A, on by default) makes the rules the job's policy, so later
+- **Apply to all conflicts** (M-a, on by default) makes the rules the job's policy, so later
   conflicts are decided without asking; uncheck it to apply the rules to the current file only.
 
 ### Compare files
 
-Ticking **Compare files** (Alt+F, off by default) compares the contents of the
+Ticking **Compare files** (M-f, off by default) compares the contents of the
 two files before any other row is looked at, and the **Same** and **Differ** rows decide first:
 
 | Row | Choices |
@@ -351,6 +351,6 @@ two files before any other row is looked at, and the **Same** and **Differ** row
 The rules replace a plain "match size" switch: use the Same size row (Skip or
 Overwrite) together with the time rows to express it.
 
-OK (Alt+O) submits; Cancel (or Esc) goes back to the File exists dialog.
+OK (M-o) submits; Cancel (or Esc) goes back to the File exists dialog.
 
 See also [Background scan throttling](background-scan-throttle.md) and [Running as root](elevation.md).

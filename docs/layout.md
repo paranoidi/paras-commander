@@ -6,11 +6,11 @@ How the screen is divided: menu bar, two panels, footer, and the options that ch
 
 | Action | Default key | Id |
 |---|---|---|
-| Toggle split orientation (side by side / stacked) | `Ctrl+Space` | `panel.toggle-split-orientation` |
-| Swap the panels | `Ctrl+Alt+Space` | `panel.swap-panes` |
-| Toggle zoom of the active panel | `Alt+Z` | `panel.toggle-zoom-active-panel` |
-| Hide the inactive panel | `Shift+Tab` | `panel.toggle-hide-inactive` |
-| Toggle carousel view | `Alt+V` | `panel.toggle-carousel` |
+| Toggle split orientation (side by side / stacked) | `C-Space` | `panel.toggle-split-orientation` |
+| Swap the panels | `C-M-Space` | `panel.swap-panes` |
+| Toggle zoom of the active panel | `M-z` | `panel.toggle-zoom-active-panel` |
+| Hide the inactive panel | `S-Tab` | `panel.toggle-hide-inactive` |
+| Toggle carousel view | `M-v` | `panel.toggle-carousel` |
 
 All are rebindable in `keybindings.toml` ([Keybindings](keybindings.md)). Split orientation and swap are also under the Command menu ("Toggle split orientation", "Swap panels").
 

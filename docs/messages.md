@@ -4,7 +4,7 @@
 
 Status toasts (the line above the footer: "Copied 3 files", errors, warnings) disappear after a few seconds. The Messages view keeps a log of them so you can read what you missed.
 
-Open it with `Alt+L` (`messages.open`, also Display -> Messages and leader `L`); the same key closes it. It fills both panels, newest message first.
+Open it with `M-l` (`messages.open`, also Display -> Messages and leader `L`); the same key closes it. It fills both panels, newest message first.
 
 - Each message carries a local `hh:mm:ss` on its first line; long messages wrap onto indented continuation lines. Up/Down move by message.
 - `"` (`messages.copy`, leader `y`, Actions -> Copy message) copies the selected message's whole text to the clipboard, unwrapped. With [mouse support](mouse.md) on, a click on a message does the same. In this view `"` copies the message instead of opening the copy menu.

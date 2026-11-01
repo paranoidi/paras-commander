@@ -21,11 +21,11 @@ If a local **rename, same-filesystem move, delete, mkdir, chmod, chown,
 symlink or hardlink** fails with a permission error, a **Permission denied**
 dialog offers to retry just that step as root:
 
-- **Elevate** (`Alt+E`, or `Enter` in the password field) runs the step through
+- **Elevate** (`M-e`, or `Enter` in the password field) runs the step through
   `sudo` with the password you typed (shown as `*`). A wrong password asks
   again.
-- **Skip** (`Alt+S`) leaves that item alone and carries on with the next one.
-- **Cancel** (`Alt+C`, `Esc`) stops the operation.
+- **Skip** (`M-s`) leaves that item alone and carries on with the next one.
+- **Cancel** (`M-c`, `Esc`) stops the operation.
 
 If `sudo` needs no password (for example a `NOPASSWD` rule or a cached
 credential), the password field is left out and the dialog just asks for

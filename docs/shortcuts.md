@@ -19,27 +19,27 @@ These work in every dialog, whatever has focus (`[dialog.input]` in `keybindings
 
 | Key | Action | |
 |---|---|---|
-| `Alt+O`, `Alt+Enter` | `ui.input.dialog-ok` | Press OK |
-| `Esc`, `Alt+C`, `F9` | `ui.input.dialog-cancel` | Press Cancel |
+| `M-o`, `M-Enter` | `ui.input.dialog-ok` | Press OK |
+| `Esc`, `M-c`, `F9` | `ui.input.dialog-cancel` | Press Cancel |
 
-A dialog with an inner layer (a sub-confirm, a rename tool page, an open completion list) closes that layer first. Where Esc means something else it keeps that meaning: in a running command-output dialog it leaves the command running. Some window managers take `Alt+Enter`; `Alt+O` always works. The Configuration and meta-column dialogs use `F9` for "edit config" instead.
+A dialog with an inner layer (a sub-confirm, a rename tool page, an open completion list) closes that layer first. Where Esc means something else it keeps that meaning: in a running command-output dialog it leaves the command running. Some window managers take `M-Enter`; `M-o` always works. The Configuration and meta-column dialogs use `F9` for "edit config" instead.
 
 ## Text input
 
-Readline-style editing in every dialog text field. Kills go to one shared kill buffer that `Ctrl+Y` pastes from.
+Readline-style editing in every dialog text field. Kills go to one shared kill buffer that `C-y` pastes from.
 
 | Key | Action | |
 |---|---|---|
-| `Ctrl+A` / `Ctrl+E` | `ui.input.line-start` / `ui.input.line-end` | Start / end of line |
-| `Alt+B` / `Alt+F` | `ui.input.backward-word` / `ui.input.forward-word` | Word left / right |
-| `Ctrl+W`, `Alt+Backspace` | `ui.input.kill-word-backward` | Delete previous word |
-| `Alt+D` | `ui.input.kill-word-forward` | Delete next word |
-| `Ctrl+U` / `Ctrl+K` | `ui.input.kill-line-backward` / `ui.input.kill-line-forward` | Delete to line start / end |
-| `Ctrl+L` | `ui.input.kill-line` | Delete the whole line |
-| `Ctrl+Y` | `ui.input.yank` | Paste the last deleted text |
-| `Alt+U` / `Alt+L` | `ui.input.upcase-word` / `ui.input.downcase-word` | Upper- / lowercase to end of word |
-| `Alt+T` | `ui.input.capitalize-word` | Capitalize word (`Alt+C` is Cancel) |
-| `Ctrl+R`, `Ctrl+D` | `ui.input.restore-default` | Restore the field's default value |
+| `C-a` / `C-e` | `ui.input.line-start` / `ui.input.line-end` | Start / end of line |
+| `M-b` / `M-f` | `ui.input.backward-word` / `ui.input.forward-word` | Word left / right |
+| `C-w`, `M-Backspace` | `ui.input.kill-word-backward` | Delete previous word |
+| `M-d` | `ui.input.kill-word-forward` | Delete next word |
+| `C-u` / `C-k` | `ui.input.kill-line-backward` / `ui.input.kill-line-forward` | Delete to line start / end |
+| `C-l` | `ui.input.kill-line` | Delete the whole line |
+| `C-y` | `ui.input.yank` | Paste the last deleted text |
+| `M-u` / `M-l` | `ui.input.upcase-word` / `ui.input.downcase-word` | Upper- / lowercase to end of word |
+| `M-t` | `ui.input.capitalize-word` | Capitalize word (`M-c` is Cancel) |
+| `C-r`, `C-d` | `ui.input.restore-default` | Restore the field's default value |
 | `*`, `\|` | `ui.input.path-picker-all` | In path fields: pick from bookmarks, history and pins |
 
 Inside Help (`F1`), `F2` lists these too.

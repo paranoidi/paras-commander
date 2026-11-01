@@ -54,8 +54,8 @@ func TestFormatChordCtrlSpace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseKey: %v", err)
 	}
-	if got := FormatChord(ch); got != "Ctrl-Space" {
-		t.Fatalf("FormatChord(C-space) = %q, want Ctrl-Space", got)
+	if got := FormatChord(ch); got != "C-Space" {
+		t.Fatalf("FormatChord(C-space) = %q, want C-Space", got)
 	}
 }
 
@@ -64,8 +64,8 @@ func TestFormatChordCtrlAltSpace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseKey: %v", err)
 	}
-	if got := FormatChord(ch); got != "Alt-Ctrl-Space" {
-		t.Fatalf("FormatChord(C-M-space) = %q, want Alt-Ctrl-Space", got)
+	if got := FormatChord(ch); got != "C-M-Space" {
+		t.Fatalf("FormatChord(C-M-space) = %q, want C-M-Space", got)
 	}
 }
 
@@ -79,20 +79,26 @@ func TestFormatChordSpace(t *testing.T) {
 	}
 }
 
-func TestFormatChordAltLetterUppercase(t *testing.T) {
-	ch, err := ParseKey("M-m")
-	if err != nil {
-		t.Fatalf("ParseKey: %v", err)
-	}
-	if got := FormatChord(ch); got != "Alt-M" {
-		t.Fatalf("FormatChord(M-m) = %q, want Alt-M", got)
-	}
-	ch2, err := ParseKey("M-M")
-	if err != nil {
-		t.Fatalf("ParseKey: %v", err)
-	}
-	if got := FormatChord(ch2); got != "Alt-M" {
-		t.Fatalf("FormatChord(M-M) = %q, want Alt-M", got)
+func TestFormatChordKeepsLetterCase(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"M-m", "M-m"},
+		{"M-M", "M-M"},
+		{"M-S-m", "M-M"},
+		{"C-f", "C-f"},
+		{"C-F", "C-f"},
+		{"M-C-d", "C-M-d"},
+		{"S-M-,", "M-S-,"},
+		{"S-tab", "S-Tab"},
+		{"S-F5", "S-F5"},
+		{"M-left", "M-←"},
+	} {
+		ch, err := ParseKey(tc.in)
+		if err != nil {
+			t.Fatalf("ParseKey(%q): %v", tc.in, err)
+		}
+		if got := FormatChord(ch); got != tc.want {
+			t.Fatalf("FormatChord(%q) = %q, want %q", tc.in, got, tc.want)
+		}
 	}
 }
 
@@ -591,15 +597,15 @@ func TestDefaultBundleFlattenDialogOverlayShiftArrows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
-	if got := bundle.FlattenDialog.MenuBindingLabel(ActionDestinationActivePanel); got != "S-left" {
-		t.Fatalf("FlattenDialog Active MenuBindingLabel = %q, want S-left", got)
+	if got := bundle.FlattenDialog.MenuBindingLabel(ActionDestinationActivePanel); got != "S-←" {
+		t.Fatalf("FlattenDialog Active MenuBindingLabel = %q, want S-←", got)
 	}
 	id, ok := bundle.FlattenDialog.Lookup(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
 	if !ok || id != ActionDestinationActivePanel {
 		t.Fatalf("FlattenDialog Shift+Left = %q %v, want %q", id, ok, ActionDestinationActivePanel)
 	}
-	if got := bundle.FlattenDialog.MenuBindingLabel(ActionDestinationInactivePanel); got != "S-right" {
-		t.Fatalf("FlattenDialog Inactive MenuBindingLabel = %q, want S-right", got)
+	if got := bundle.FlattenDialog.MenuBindingLabel(ActionDestinationInactivePanel); got != "S-→" {
+		t.Fatalf("FlattenDialog Inactive MenuBindingLabel = %q, want S-→", got)
 	}
 	id, ok = bundle.FlattenDialog.Lookup(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	if !ok || id != ActionDestinationInactivePanel {
@@ -612,15 +618,15 @@ func TestDefaultBundleTransferDialogOverlayShiftArrows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
-	if got := bundle.TransferDialog.MenuBindingLabel(ActionDestinationActivePanel); got != "S-left" {
-		t.Fatalf("TransferDialog Active MenuBindingLabel = %q, want S-left", got)
+	if got := bundle.TransferDialog.MenuBindingLabel(ActionDestinationActivePanel); got != "S-←" {
+		t.Fatalf("TransferDialog Active MenuBindingLabel = %q, want S-←", got)
 	}
 	id, ok := bundle.TransferDialog.Lookup(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
 	if !ok || id != ActionDestinationActivePanel {
 		t.Fatalf("TransferDialog Shift+Left = %q %v, want %q", id, ok, ActionDestinationActivePanel)
 	}
-	if got := bundle.TransferDialog.MenuBindingLabel(ActionDestinationInactivePanel); got != "S-right" {
-		t.Fatalf("TransferDialog Inactive MenuBindingLabel = %q, want S-right", got)
+	if got := bundle.TransferDialog.MenuBindingLabel(ActionDestinationInactivePanel); got != "S-→" {
+		t.Fatalf("TransferDialog Inactive MenuBindingLabel = %q, want S-→", got)
 	}
 	id, ok = bundle.TransferDialog.Lookup(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	if !ok || id != ActionDestinationInactivePanel {

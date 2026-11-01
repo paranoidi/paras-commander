@@ -24,6 +24,10 @@ Each action maps to a list of chords. A chord is an optional modifier prefix plu
 
 Examples: `C-f`, `M-v`, `S-F3`, `C-M-p`, `F5`, `left`, `space`. Prefixes combine in any order. Multi-key sequences are not supported.
 
+Letter case matters only with Alt: `M-i` is Alt+I, `M-I` (or `M-S-i`) is Alt+Shift+I. Ctrl letters ignore Shift, so `C-f` and `C-F` are the same chord.
+
+Help, menus and footers show keys in this same notation: `C-`, `M-`, `S-` in that order, Ctrl letters in lowercase, Alt letters in the case you press them, arrows as `←` `→` `↑` `↓`, and named keys capitalised (`Enter`, `Space`, `S-Tab`).
+
 ```toml
 [main]
 "file.copy" = ["F5", "C-c"]     # replaces the default list for this action
@@ -62,7 +66,7 @@ Fix the file or move it aside and run `pc` again.
 
 ## Terminal limits
 
-Terminals do not deliver every combination. Known traps: `Ctrl+H` arrives as Backspace, `Ctrl+Enter` is the same as Enter, `Shift+Enter` needs a terminal with the kitty keyboard protocol, `Ctrl+C`, `Ctrl+Space` and `Ctrl+O` can be intercepted by the terminal or shell, and `Alt+Enter` is taken by some window managers (use `M-o` for dialog OK). Ctrl+Alt combinations are unreliable. If a chord does nothing, try another or check what your terminal sends.
+Terminals do not deliver every combination. Known traps: `C-h` arrives as Backspace, `C-Enter` is the same as Enter, `S-Enter` needs a terminal with the kitty keyboard protocol, `C-c`, `C-Space` and `C-o` can be intercepted by the terminal or shell, and `M-Enter` is taken by some window managers (use `M-o` for dialog OK). Ctrl+Alt combinations are unreliable. If a chord does nothing, try another or check what your terminal sends.
 
 ## Related
 

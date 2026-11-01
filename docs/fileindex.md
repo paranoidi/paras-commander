@@ -37,13 +37,13 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 
 | Key | Menu | Action | |
 |---|---|---|---|
-| `Alt+Shift+I` | `i` | `fileindex.browse-with` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
-| `Alt+Shift+B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
-| `Alt+Shift+R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
-| `Alt+Shift+S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
-| `Alt+Shift+P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
-| `Alt+Shift+T` | `t` | `fileindex.tag-add` | Add tags |
-| `Alt+Shift+U` | `u` | `fileindex.tag-remove` | Remove tags |
+| `M-I` | `i` | `fileindex.browse-with` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
+| `M-B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
+| `M-R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
+| `M-S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
+| `M-P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
+| `M-T` | `t` | `fileindex.tag-add` | Add tags |
+| `M-U` | `u` | `fileindex.tag-remove` | Remove tags |
 
 ## Browsing with fileindex
 

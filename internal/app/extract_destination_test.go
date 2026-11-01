@@ -40,7 +40,7 @@ func TestExtractDestinationShortcutsAndFooter(t *testing.T) {
 	}
 
 	keys := app.activeFooterKeys()
-	if !footerHasHint(keys, "Active path ◄", "S-left") || !footerHasHint(keys, "Inactive path ►", "S-right") {
+	if !footerHasHint(keys, "Active path ◄", "S-←") || !footerHasHint(keys, "Inactive path ►", "S-→") {
 		t.Fatalf("footer = %+v, want Active/Inactive path hints", keys)
 	}
 	dest := func() string { return app.model.FileDialog.Fields[0].Value }

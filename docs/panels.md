@@ -8,7 +8,7 @@ Directories load in the background. A slow directory (network mount, SFTP) keeps
 
 ## Listing formats and columns
 
-Press `Alt+T` (`panel.cycle-listing-format`) to cycle the active panel through the three layouts, or use Left/Right menu, Listing format (`panel.listing-format-dialog`).
+Press `M-t` (`panel.cycle-listing-format`) to cycle the active panel through the three layouts, or use Left/Right menu, Listing format (`panel.listing-format-dialog`).
 
 | Format | Columns |
 |---|---|
@@ -16,7 +16,7 @@ Press `Alt+T` (`panel.cycle-listing-format`) to cycle the active panel through t
 | `mtime` | name, meta columns, size, modified time |
 | `perm` | as `mtime` plus permissions |
 
-`default_listing_format` in [config.md](config.md#panels) picks the startup format. A narrow panel can show only the name column (`[ui].shrunken_shows_name_only`, see [config.md](config.md#ui)). `Alt+Z` (`panel.toggle-zoom-active-panel`) zooms the active panel for the session, and `Shift+Tab` (`panel.toggle-hide-inactive`) hides the inactive one. See [Layout](layout.md).
+`default_listing_format` in [config.md](config.md#panels) picks the startup format. A narrow panel can show only the name column (`[ui].shrunken_shows_name_only`, see [config.md](config.md#ui)). `M-z` (`panel.toggle-zoom-active-panel`) zooms the active panel for the session, and `S-Tab` (`panel.toggle-hide-inactive`) hides the inactive one. See [Layout](layout.md).
 
 ### Long names
 
@@ -40,22 +40,22 @@ Garden….odt
 
 ## Sorting
 
-`Alt+S` (`panel.sort-dialog`, leader `s`, Left/Right menu, Sort...) opens the Sort dialog for the active panel: sort key (Name, Extension, Size, Modified, and any active [meta column](meta-columns.md)), reverse, directories first, and optional size ordering while a [disk usage](disk-usage.md) scan runs. The header arrow shows the sorted column and points toward larger values. `default_sort`, `sort_reverse` and `directories_first` set the startup behaviour. `panel.cycle-sort` and `panel.reverse-sort` are unbound by default and can be bound in `keybindings.toml`.
+`M-s` (`panel.sort-dialog`, leader `s`, Left/Right menu, Sort...) opens the Sort dialog for the active panel: sort key (Name, Extension, Size, Modified, and any active [meta column](meta-columns.md)), reverse, directories first, and optional size ordering while a [disk usage](disk-usage.md) scan runs. The header arrow shows the sorted column and points toward larger values. `default_sort`, `sort_reverse` and `directories_first` set the startup behaviour. `panel.cycle-sort` and `panel.reverse-sort` are unbound by default and can be bound in `keybindings.toml`.
 
 ## Hidden and ignored files
 
-`Alt+.` (`panel.toggle-hidden`, leader `.`, Left/Right menu, Toggle hidden) shows or hides dotfiles together with files ignored by git. The setting is global for both panels. With `respect_gitignore` on (default) and hidden files off, entries matched by `.gitignore` and `.git/info/exclude` are hidden inside a git work tree; outside one only dotfiles are affected. Copy, move, delete and scans always see the real filesystem. A "Gitignore" indicator on the panel's bottom border shows when ignore filtering is active.
+`M-.` (`panel.toggle-hidden`, leader `.`, Left/Right menu, Toggle hidden) shows or hides dotfiles together with files ignored by git. The setting is global for both panels. With `respect_gitignore` on (default) and hidden files off, entries matched by `.gitignore` and `.git/info/exclude` are hidden inside a git work tree; outside one only dotfiles are affected. Copy, move, delete and scans always see the real filesystem. A "Gitignore" indicator on the panel's bottom border shows when ignore filtering is active.
 
 ## Tree view
 
-Left/Right menu, Tree view (`panel.toggle-tree`, unbound by default) turns the panel into an expandable tree; a ` Tree ` chip appears on the border. Directories load lazily as they expand. Tree view and the carousel view (`Alt+V`) are mutually exclusive.
+Left/Right menu, Tree view (`panel.toggle-tree`, unbound by default) turns the panel into an expandable tree; a ` Tree ` chip appears on the border. Directories load lazily as they expand. Tree view and the carousel view (`M-v`) are mutually exclusive.
 
 | Key | Action |
 |---|---|
-| `Alt+Right` / `Alt+Left` | `panel.tree-expand` / `panel.tree-collapse`. Pressing expand again on an open directory opens one more level below it. Collapse on a file or closed row jumps to the parent. |
-| `Ctrl+Alt+Right` / `Alt+Shift+Right` | Expand all, one level per press / fully |
-| `Ctrl+Alt+Left` / `Alt+Shift+Left` | Collapse all, one level per press / fully |
-| `Alt+Up` / `Alt+Down` | Previous / next sibling directory |
+| `M-→` / `M-←` | `panel.tree-expand` / `panel.tree-collapse`. Pressing expand again on an open directory opens one more level below it. Collapse on a file or closed row jumps to the parent. |
+| `C-M-→` / `M-S-→` | Expand all, one level per press / fully |
+| `C-M-←` / `M-S-←` | Collapse all, one level per press / fully |
+| `M-↑` / `M-↓` | Previous / next sibling directory |
 
 Expand-all is capped (a depth limit for the shallow variant and a total row limit) and shows a `Depth: N/5` toast. The expanded set and cursor are remembered per directory for the session. Enter and Right still change into a directory.
 
@@ -76,9 +76,9 @@ Inside a local git work tree a two-cell status column appears before the name (n
 
 Directories show a summary of their contents. Status is read in the background with `git status`.
 
-- `Alt++` (`git.stage`) and `Alt+-` (`git.unstage`) stage or unstage the selected entries, or the cursor entry (then moving the cursor to the next entry).
-- `Alt+G` (`panel.git-filter-menu`) opens a menu that limits the panel to Staged, Unstaged, Tracked or Untracked entries. The filter is dropped when you leave the repository. Its **Commit** row runs `git commit` in your editor (the TUI is suspended meanwhile) when something is staged. **Push** (`P`) and **Pull** (`p`), matching lazygit, run `git push` / `git pull` in the background; credentials must come from an SSH agent or credential helper, since there is no terminal to prompt in.
-- Viewing (`F3`) or quick-viewing a modified file shows its diff; see [Quick view and preview](quick-view-preview.md). `Ctrl+Alt+J` / `Ctrl+Alt+K` jump between changes (`preview.diff-next-hunk` / `preview.diff-prev-hunk`).
+- `M-+` (`git.stage`) and `M--` (`git.unstage`) stage or unstage the selected entries, or the cursor entry (then moving the cursor to the next entry).
+- `M-g` (`panel.git-filter-menu`) opens a menu that limits the panel to Staged, Unstaged, Tracked or Untracked entries. The filter is dropped when you leave the repository. Its **Commit** row runs `git commit` in your editor (the TUI is suspended meanwhile) when something is staged. **Push** (`P`) and **Pull** (`p`), matching lazygit, run `git push` / `git pull` in the background; credentials must come from an SSH agent or credential helper, since there is no terminal to prompt in.
+- Viewing (`F3`) or quick-viewing a modified file shows its diff; see [Quick view and preview](quick-view-preview.md). `C-M-j` / `C-M-k` jump between changes (`preview.diff-next-hunk` / `preview.diff-prev-hunk`).
 
 ## Row indicators
 
@@ -94,13 +94,13 @@ After a copy or move into the other panel's directory, that panel's cursor jumps
 ## Opening files
 
 - `Enter` / `Right` (`nav.open`) enters a directory. On a local executable (`+x` with a shebang or ELF header) it runs the file when `run_executables_on_enter` is on; the output appears in the Commands view, or in the background for rules in `panels.execute_rules` (AppImages by default). Other files open with the desktop default application when `open_files_externally` is on; when `xdg-open` is not installed they open in the full-screen preview.
-- `F4` (`file.edit`, also `Alt+E`) edits the file in `$EDITOR`.
+- `F4` (`file.edit`, also `M-e`) edits the file in `$EDITOR`.
 - `F3` (`file.view`) opens the file preview.
 
 ## Staying current
 
-Panels re-read their directory every `refresh_interval_ms` (default 2500, `0` disables). Changes are applied without losing the cursor, selection or scroll position. A slow directory is polled less often. `Ctrl+Y` (`panel.refresh`) forces a full reload and also recalculates [meta columns](meta-columns.md).
+Panels re-read their directory every `refresh_interval_ms` (default 2500, `0` disables). Changes are applied without losing the cursor, selection or scroll position. A slow directory is polled less often. `C-y` (`panel.refresh`) forces a full reload and also recalculates [meta columns](meta-columns.md).
 
 Each panel remembers the focused entry per directory, so going back (see [Navigation](navigation.md)) lands on the item you left.
 
-`Alt+Y` (`panel.toggle-sync`) latches the active panel as driver: moving the cursor onto a directory shows it in the other panel. `Alt+O` / `Alt+I` open the cursor directory or the current path in the other panel.
+`M-y` (`panel.toggle-sync`) latches the active panel as driver: moving the cursor onto a directory shows it in the other panel. `M-o` / `M-i` open the cursor directory or the current path in the other panel.

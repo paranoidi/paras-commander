@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -54,21 +53,16 @@ func (m *Map) buildActionBindings() []Binding {
 	// Build reverse map: actionID -> []chord
 	rev := make(map[string][]Chord)
 	keyStrs := make(map[Chord]string)
-	// Pre-populate with TOML original forms from every default registry
-	// (specs + jobs overlay) so we keep canonical representations for
-	// display even when the chord would otherwise round-trip through
-	// FormatChord (e.g. "C-j" instead of "Ctrl-J").
+	// Pre-populate with the TOML strings from every default registry so KeyStr
+	// matches ActionSpec.DefaultKeys / PreferredKey for ordering and picking.
+	// Display formatting happens later, through DisplayKey.
 	rememberCanonical := func(ks string) {
 		ch, err := ParseKey(ks)
 		if err != nil {
 			return
 		}
 		if _, seen := keyStrs[ch]; !seen {
-			if fc := FormatChord(ch); fc != "" && fc != "?" && strings.EqualFold(ks, fc) {
-				keyStrs[ch] = fc
-			} else {
-				keyStrs[ch] = ks
-			}
+			keyStrs[ch] = ks
 		}
 	}
 	for _, spec := range DefaultActionSpecs() {
@@ -239,7 +233,7 @@ func menuBindingKeyPriority(key string) int {
 	return 60
 }
 
-// MenuBindingLabel returns one key string for pulldown menus: the PreferredKey from the action
+// MenuBindingLabel returns one key hint (DisplayKey form) for pulldown menus: the PreferredKey from the action
 // spec when it appears among bindings, otherwise the first binding from the map, otherwise the
 // first default key from the spec. Empty means unbound with no defaults to show.
 func (m *Map) MenuBindingLabel(actionID string) string {
@@ -251,7 +245,7 @@ func (m *Map) MenuBindingLabel(actionID string) string {
 	if len(keys) == 0 && hasSpec {
 		keys = append(keys, spec.DefaultKeys...)
 	}
-	return menuBindingLabelPick(actionID, spec, hasSpec, keys)
+	return DisplayKey(menuBindingLabelPick(actionID, spec, hasSpec, keys))
 }
 
 // MenuBindingLabelPreferOverlay resolves a menu hint using the overlay's chords when it
@@ -261,7 +255,7 @@ func MenuBindingLabelPreferOverlay(global, overlay *Map, actionID string) string
 	spec, hasSpec := SpecForAction(actionID)
 	if overlay != nil {
 		if ks := overlay.BindingsForAction(actionID); len(ks) > 0 {
-			return menuBindingLabelPick(actionID, spec, hasSpec, ks)
+			return DisplayKey(menuBindingLabelPick(actionID, spec, hasSpec, ks))
 		}
 	}
 	if global != nil {
@@ -270,63 +264,51 @@ func MenuBindingLabelPreferOverlay(global, overlay *Map, actionID string) string
 	return ""
 }
 
-// FormatChord returns a human-readable string for a parsed chord,
-// suitable for display in help screens.
-// Examples: "Ctrl-D", "Alt-←", "Shift-Tab", "F5", "Enter", "Ctrl-Alt-D".
+// FormatChord returns the display form of a parsed chord, in the same notation
+// keybindings.toml uses: "C-" (Ctrl), "M-" (Alt) and "S-" (Shift) prefixes in that
+// order, then the key. Letters keep their case, so "M-I" is Alt+Shift+I while "C-f"
+// and "M-i" need no Shift. Every help, menu and footer key hint goes through it.
+// Examples: "C-d", "M-←", "S-Tab", "F5", "Enter", "C-M-d".
 func FormatChord(ch Chord) string {
-	var parts []string
-
-	// Ctrl may be encoded in the key type (KeyCtrlA..KeyCtrlZ) after
-	// CanonicalChord clears the ModCtrl bit. Detect it here.
+	var b strings.Builder
+	// Ctrl may be encoded in the key type (KeyCtrlA..KeyCtrlZ, KeyCtrlSpace) after
+	// CanonicalChord clears the ModCtrl bit.
 	isCtrlKey := ch.Key == tcell.KeyCtrlSpace || (ch.Key >= tcell.KeyCtrlA && ch.Key <= tcell.KeyCtrlZ)
-
-	// Build in canonical order: modifiers first, then key name.
-	if mod := ch.Mod; mod != 0 {
-		if mod&tcell.ModCtrl != 0 {
-			parts = append(parts, "Ctrl")
-		}
-		if mod&tcell.ModAlt != 0 {
-			parts = append(parts, "Alt")
-		}
-		if mod&tcell.ModShift != 0 {
-			parts = append(parts, "Shift")
-		}
+	if ch.Mod&tcell.ModCtrl != 0 || isCtrlKey {
+		b.WriteString("C-")
 	}
-	// Add Ctrl for KeyCtrl* keys whose ModCtrl was cleared.
-	if isCtrlKey && !contains(parts, "Ctrl") {
-		parts = append(parts, "Ctrl")
+	if ch.Mod&tcell.ModAlt != 0 {
+		b.WriteString("M-")
 	}
-
+	if ch.Mod&tcell.ModShift != 0 {
+		b.WriteString("S-")
+	}
 	kn := chordKeyName(ch, isCtrlKey)
-	if kn != "" {
-		parts = append(parts, kn)
-	}
-	if len(parts) == 0 {
+	if kn == "" {
 		return "?"
 	}
-	return strings.Join(parts, "-")
+	b.WriteString(kn)
+	return b.String()
 }
 
-func contains(ss []string, s string) bool {
-	for _, v := range ss {
-		if v == s {
-			return true
-		}
+// DisplayKey converts a keybindings.toml key string to its FormatChord display form.
+// Strings that do not parse are returned unchanged.
+func DisplayKey(s string) string {
+	ch, err := ParseKey(s)
+	if err != nil {
+		return s
 	}
-	return false
+	return FormatChord(ch)
 }
 
 // chordKeyName returns the display name for a chord's key part.
 // isCtrlKey is true when the chord is a KeyCtrl* type — the function
-// returns the bare letter in that case (the "Ctrl-" prefix is added by FormatChord).
+// returns the bare lowercase letter in that case (the "C-" prefix is added by FormatChord).
 func chordKeyName(ch Chord, isCtrlKey bool) string {
 	if ch.Key == tcell.KeyRune {
 		r := ch.Rune
 		if r == ' ' {
 			return "Space"
-		}
-		if ch.Mod&tcell.ModAlt != 0 && unicode.IsLetter(r) {
-			r = unicode.ToUpper(r)
 		}
 		return string(r)
 	}
@@ -334,7 +316,7 @@ func chordKeyName(ch Chord, isCtrlKey bool) string {
 		return "Space"
 	}
 	if isCtrlKey {
-		return string('A' + rune(ch.Key-tcell.KeyCtrlA))
+		return string('a' + rune(ch.Key-tcell.KeyCtrlA))
 	}
 	switch ch.Key {
 	case tcell.KeyUp:
@@ -356,7 +338,7 @@ func chordKeyName(ch Chord, isCtrlKey bool) string {
 	case tcell.KeyTab:
 		return "Tab"
 	case tcell.KeyBacktab:
-		return "Shift-Tab"
+		return "S-Tab"
 	case tcell.KeyEnter:
 		return "Enter"
 	case tcell.KeyEsc:

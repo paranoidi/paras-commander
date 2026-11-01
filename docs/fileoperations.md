@@ -129,44 +129,44 @@ rebindable in `keybindings.toml`.
 
 | Operation | Key | Action id | Menu |
 |---|---|---|---|
-| Copy | `F5`, `Ctrl+C` | `file.copy` | File -> Copy |
+| Copy | `F5`, `C-c` | `file.copy` | File -> Copy |
 | Move | `F6` | `file.move` | File -> Move |
-| Rename | `Shift+F6`, `Ctrl+R` | `file.rename` | File -> Rename |
-| Duplicate | `Shift+F5` | `file.duplicate` | Esc menu `p` |
+| Rename | `S-F6`, `C-r` | `file.rename` | File -> Rename |
+| Duplicate | `S-F5` | `file.duplicate` | Esc menu `p` |
 | Mkdir | `F7` | `file.mkdir` | File -> Mkdir |
-| Mkdir and open | `Shift+F7` | `file.mkdir-open-in-other` | Esc menu `o` |
+| Mkdir and open | `S-F7` | `file.mkdir-open-in-other` | Esc menu `o` |
 | Delete | `F8`, `Delete` | `file.delete` | File -> Delete |
-| Symlink | `Ctrl+L` | `file.symlink` | File -> Symlink |
+| Symlink | `C-l` | `file.symlink` | File -> Symlink |
 | Hard link | unbound | `file.hardlink` | File -> Link |
-| Flatten | `Ctrl+Z` | `file.flatten` | File -> Flatten |
-| Extract archive | `Ctrl+X` | `file.extract` | File -> Extract |
+| Flatten | `C-z` | `file.flatten` | File -> Flatten |
+| Extract archive | `C-x` | `file.extract` | File -> Extract |
 
 Symlinks, hard links, chmod and chown are local-only. All dialogs accept
-`Alt+O` (OK) and `Esc` (Cancel).
+`M-o` (OK) and `Esc` (Cancel).
 
 ### Copy and move
 
 The destination field starts with the other panel's path; a leading `~` resolves against your home directory and a relative path against the active panel's directory. It supports path
-completion and the Bookmarks, History and Pinned pickers; `Shift+Left` and
-`Shift+Right` insert the active or inactive panel's path. While you type, the
+completion and the Bookmarks, History and Pinned pickers; `S-←` and
+`S-→` insert the active or inactive panel's path. While you type, the
 panel whose directory matches the destination is outlined (in a warning colour
 for move). Move always asks for a destination; renaming in place is Rename.
 
-- **Preserve permissions** (`Alt+R`), **Preserve timestamps** (`Alt+T`) and
-  **Dereference symlinks** (`Alt+D`) are copy-only checkboxes. Dereference
+- **Preserve permissions** (`M-r`), **Preserve timestamps** (`M-t`) and
+  **Dereference symlinks** (`M-d`) are copy-only checkboxes. Dereference
   copies what a symlink points to instead of recreating the link; it is
   available only between local locations. Defaults:
   `preserve_permissions`, `preserve_timestamps`, `dereference_symlinks`.
-- **Flatten into destination** (`Alt+I`) drops the directory structure and puts
+- **Flatten into destination** (`M-i`) drops the directory structure and puts
   every item directly into the destination. Without it the structure relative
   to the sources' common parent is kept, and when the selection spans several
   directories the dialog shows the common source and a preview of the result.
-- **Advanced** (`Alt+A`) switches the dialog to the Conflict rules screen, the
+- **Advanced** (`M-a`) switches the dialog to the Conflict rules screen, the
   same rule matrix the job offers at its first "File exists" prompt, so the
   rules can be set up front (the Delete source choices appear for a move). The
-  screen also has, for a move, **Remove empty directories** (`Alt+R`), which
+  screen also has, for a move, **Remove empty directories** (`M-r`), which
   removes the source directories the move left empty once it finishes, without
-  asking, and **Add paused** (`Alt+A`), which queues the job without starting
+  asking, and **Add paused** (`M-a`), which queues the job without starting
   it. OK queues the job; Cancel returns to the main screen and keeps what
   was set. Rules left untouched leave conflicts to ask as usual.
 - Copying or moving a single item onto itself asks for a new name; copying a
@@ -192,9 +192,9 @@ has created it.
 ### Rename
 
 Rename works within one directory and refuses path separators. The **Focus
-after rename** checkbox (`Alt+A`, default from `rename_focus_after`) selects
+after rename** checkbox (`M-a`, default from `rename_focus_after`) selects
 and centres the new name; for a directory, **Open in the other panel after
-rename** (`Alt+P`) also opens it in the inactive panel. Inside the name field:
+rename** (`M-p`) also opens it in the inactive panel. Inside the name field:
 
 | Key | Opens |
 |---|---|
@@ -208,7 +208,7 @@ selection, Rename becomes [Mass rename](mass-rename.md).
 ### Mkdir
 
 The name is prefilled from the highlighted entry (a file drops its last
-extension). After Create, the new directory is highlighted. `Shift+F7`
+extension). After Create, the new directory is highlighted. `S-F7`
 additionally opens the new directory in the inactive panel. With a selection,
 radios offer **Create**, **Create and copy** and **Create and move**: the
 selected items are queued into the new directory and the selection is cleared.
@@ -218,7 +218,7 @@ longest name part they share. Mkdir also works on SFTP panels.
 ### Delete
 
 The dialog lists the entries (scrollable when long) with a size summary that
-fills in while the disk-usage scan runs. `Alt+Y` and `Alt+N` answer from anywhere in the dialog. Deleting is queued as a job.
+fills in while the disk-usage scan runs. `M-y` and `M-n` answer from anywhere in the dialog. Deleting is queued as a job.
 Delete jobs start at once and run in parallel with each other and with a
 running copy or move, except when their paths overlap a running transfer,
 in which case they wait for it. Switch the confirmation off with
@@ -226,7 +226,7 @@ in which case they wait for it. Switch the confirmation off with
 
 ### Symlink
 
-`Ctrl+L` asks for the link target and the link path. Hard links (File -> Link) work
+`C-l` asks for the link target and the link path. Hard links (File -> Link) work
 the same way.
 
 ### Flatten

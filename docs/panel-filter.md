@@ -1,6 +1,6 @@
 # Panel filter
 
-Alt+F (`panel.filter-dialog`, leader `F`, rebindable in `keybindings.toml`) opens the Filter dialog, which narrows the active panel to matching entries. To mark entries instead of hiding the rest, use [Select group](selections.md#select-and-unselect-group). OK with an empty pattern and no type checked clears the filter.
+M-f (`panel.filter-dialog`, leader `F`, rebindable in `keybindings.toml`) opens the Filter dialog, which narrows the active panel to matching entries. To mark entries instead of hiding the rest, use [Select group](selections.md#select-and-unselect-group). OK with an empty pattern and no type checked clears the filter.
 
 ## Pattern
 
@@ -28,14 +28,14 @@ The panel border shows the active filter, for example `Filter: not report Videos
 
 ## Compare view
 
-In the Compare panels view Alt+F (`compare.filter-dialog` in `[compare]`, leader letter `f`) opens the same dialog and filters the result rows by file name (the basename of the row's path). It stacks with the category filter (F3) and the empty-file toggle, and merge (F5) only sees the rows that remain. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern after the category, for example `All · Filter: *.jpg`. OK with an empty pattern, or Shift+F3 (reset filter), clears it.
+In the Compare panels view M-f (`compare.filter-dialog` in `[compare]`, leader letter `f`) opens the same dialog and filters the result rows by file name (the basename of the row's path). It stacks with the category filter (F3) and the empty-file toggle, and merge (F5) only sees the rows that remain. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern after the category, for example `All · Filter: *.jpg`. OK with an empty pattern, or S-F3 (reset filter), clears it.
 
 ## Find duplicates view
 
-In the Find duplicates results view Alt+F (`dedup.filter-dialog` in `[dedup]`, leader letter `f`) opens the same dialog and filters whole duplicate groups: a group is shown when any of its copies has a file name that matches (types and pattern), and Invert shows the groups where no copy matches. A shown group keeps all its copies, in both the groups tree and the directory tree. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern, for example `View: Dirs · Filter: *.jpg`. OK with an empty pattern clears it, and a rescan resets it.
+In the Find duplicates results view M-f (`dedup.filter-dialog` in `[dedup]`, leader letter `f`) opens the same dialog and filters whole duplicate groups: a group is shown when any of its copies has a file name that matches (types and pattern), and Invert shows the groups where no copy matches. A shown group keeps all its copies, in both the groups tree and the directory tree. Rows are always files, so the meta and Files only / Directories only options are not shown. The border shows the pattern, for example `View: Dirs · Filter: *.jpg`. OK with an empty pattern clears it, and a rescan resets it.
 
 Marks on files in groups the filter hides are kept and still counted: deleting acts on every marked file, shown or not.
 
 ## Select group
 
-The Select group (see [Selections](selections.md#select-and-unselect-group)) (`+`) and Unselect group (`-`) dialogs, in the panel and in Find results, have the same mode radios and the same Videos, Pictures, Archives, Audio and Documents checkboxes (same `[filter.types]` config), and every option shared with Filter uses the same Alt letter. Checked types are OR-ed and AND-ed with the pattern; an empty pattern with types checked selects every entry of those types, and an empty pattern with no types selects nothing. Types always match the file name, even with "Match full path". As in Filter, "Directories only" disables the type checkboxes and ignores the types. There is no Invert. Match full path (Find results and the command output dialog) is Alt+H. In a finished user-menu output dialog the same dialogs act on the paths detected in the output (see the user menu section of [config.md](config.md)).
+The Select group (see [Selections](selections.md#select-and-unselect-group)) (`+`) and Unselect group (`-`) dialogs, in the panel and in Find results, have the same mode radios and the same Videos, Pictures, Archives, Audio and Documents checkboxes (same `[filter.types]` config), and every option shared with Filter uses the same Alt letter. Checked types are OR-ed and AND-ed with the pattern; an empty pattern with types checked selects every entry of those types, and an empty pattern with no types selects nothing. Types always match the file name, even with "Match full path". As in Filter, "Directories only" disables the type checkboxes and ignores the types. There is no Invert. Match full path (Find results and the command output dialog) is M-h. In a finished user-menu output dialog the same dialogs act on the paths detected in the output (see the user menu section of [config.md](config.md)).

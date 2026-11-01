@@ -43,13 +43,13 @@ func TestBuildHelpEntriesIncludesCrossPanelOpenActions(t *testing.T) {
 	if keysOpenDir == "" {
 		t.Fatal("help missing panel.open-dir-in-other (expected default Alt+O)")
 	}
-	if !strings.Contains(keysOpenDir, "Alt") || !strings.Contains(keysOpenDir, "O") {
+	if !strings.Contains(keysOpenDir, "M-o") {
 		t.Fatalf("unexpected keys display for open-dir-in-other: %q", keysOpenDir)
 	}
 	if keysOpenCwd == "" {
 		t.Fatal("help missing panel.open-active-path-in-other (expected default Alt+I)")
 	}
-	if !strings.Contains(keysOpenCwd, "Alt") || !strings.Contains(keysOpenCwd, "I") {
+	if !strings.Contains(keysOpenCwd, "M-i") {
 		t.Fatalf("unexpected keys display for open-active-path-in-other: %q", keysOpenCwd)
 	}
 }
@@ -191,7 +191,7 @@ func TestHelpF2TogglesTextEditPage(t *testing.T) {
 	}
 	found := false
 	for _, e := range st.Entries {
-		if e.ActionID == keymap.ActionDialogInputYank && strings.Contains(e.Keys, "Y") {
+		if e.ActionID == keymap.ActionDialogInputYank && strings.Contains(e.Keys, "C-y") {
 			found = true
 		}
 	}

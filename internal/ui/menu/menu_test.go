@@ -221,7 +221,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Bookmarks":    "C-b",
 		"Add bookmark": "C-M-b",
 		"Refresh":      "C-y",
-		"Swap panels":  "C-M-space",
+		"Swap panels":  "C-M-Space",
 	})
 	assertMenuItemKeyLabels(t, display, map[string]string{
 		"Commands":   "M-c",
@@ -246,16 +246,16 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Cancel job":         "C-c",
 		"Pause queued job":   "C-p",
 		"Resume / retry job": "C-r",
-		"Move up in queue":   "C-up",
-		"Move down in queue": "C-down",
+		"Move up in queue":   "C-↑",
+		"Move down in queue": "C-↓",
 		"Clear finished":     "F8",
 		"Undo job":           "C-z",
 		"Clear rate limit":   "C-u",
 		"Filter by result":   "F3",
 		"Reset filter":       "S-F3",
-		"Operations layout":  "C-space",
+		"Operations layout":  "C-Space",
 		"Copy message":       "\"",
-		"Back to file view":  "left",
+		"Back to file view":  "←",
 	}
 	for _, item := range defs[0].Items {
 		w := want[item.Label]
@@ -301,7 +301,7 @@ func TestMessagesDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	want := map[string]string{
 		"Copy message":      "\"",
 		"Clear messages":    "F8",
-		"Back to file view": "left",
+		"Back to file view": "←",
 	}
 	for _, item := range defs[0].Items {
 		w := want[item.Label]

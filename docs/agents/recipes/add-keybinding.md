@@ -21,11 +21,11 @@ Every user-requested shortcut must be configurable in `keybindings.toml` — nev
 
 Many combinations don't reach the app. Known traps:
 
-- **Ctrl+H** arrives as Backspace in many terminals (bound to `nav.parent`).
-- **Ctrl+Enter** is indistinguishable from Enter; **Shift+Enter** needs kitty-protocol terminals (works via tcell CSI-u).
-- **Shift+Alt+comma** may arrive as **Alt+;** — provide both when relevant (see `panel.meta-edit`).
-- **Ctrl+C / Ctrl+Space / Ctrl+O** may be intercepted by terminal or shell settings.
-- **Ctrl+Alt+Space** arrives as legacy `ESC NUL` without CSI-u (always under tmux 3.4); tcell decodes that as Alt+Ctrl+'`', which `CanonicalChord` folds back to Ctrl+Space with Alt.
+- **C-h** arrives as Backspace in many terminals (bound to `nav.parent`).
+- **C-Enter** is indistinguishable from Enter; **S-Enter** needs kitty-protocol terminals (works via tcell CSI-u).
+- **M-S-,** may arrive as **M-;** — provide both when relevant (see `panel.meta-edit`).
+- **C-c / C-Space / C-o** may be intercepted by terminal or shell settings.
+- **C-M-Space** arrives as legacy `ESC NUL` without CSI-u (always under tmux 3.4); tcell decodes that as C-M-'`', which `CanonicalChord` folds back to C-Space with Alt.
 - Probe tests in `internal/keymap/*_probe_test.go` document tcell chord behavior — check them before inventing a chord.
 
 If the requested chord is already taken in that context, pick a reasonable alternative and **tell the user** (repo CLAUDE.md rule).

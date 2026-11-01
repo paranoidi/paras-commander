@@ -33,7 +33,7 @@ func (h *Handler) OpenRunForEachDialog() {
 		"Other macros: %d active dir, %F/%D other panel, %t/%T tagged paths.\n" +
 		"Do not wrap % macros in quotes.\n" +
 		">> | && etc. run via sh -c; otherwise argv is parsed without a shell.\n\n" +
-		"Check \"Run in each selected directory\" (Alt+R) to cd into each selected directory " +
+		"Check \"Run in each selected directory\" (M-r) to cd into each selected directory " +
 		"instead.\n" +
 		"If enabled; %f becomes optional."
 	fields := []dialog.FileDialogField{{Label: "Command", Value: "", Cursor: 0}}

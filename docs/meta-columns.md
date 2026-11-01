@@ -4,7 +4,7 @@ Meta columns add computed columns to a panel by running a shell command per entr
 
 ## Open
 
-`Alt+,` (`panel.meta`, leader `,`, Left/Right menu, Meta) opens a checkbox picker of the defined entries; tick any subset. `Alt+;` (`panel.meta-edit`, also `Shift+Alt+,`) opens `meta.toml` in `$EDITOR`; `F9` in the picker does the same and reloads the list. Both are rebindable in `keybindings.toml`. A per-directory `meta.toml` (name from `[meta].local_names`) is preferred over the global one.
+`M-,` (`panel.meta`, leader `,`, Left/Right menu, Meta) opens a checkbox picker of the defined entries; tick any subset. `M-;` (`panel.meta-edit`, also `M-S-,`) opens `meta.toml` in `$EDITOR`; `F9` in the picker does the same and reloads the list. Both are rebindable in `keybindings.toml`. A per-directory `meta.toml` (name from `[meta].local_names`) is preferred over the global one.
 
 Because its commands run as you, a `meta.toml` is loaded only when it is a regular file owned by you (or root) that no one else can write: not world-writable, and group-writable only when its group is your own private group (named after your user, the usual setup with umask `0002`). An untrusted file is skipped with a warning. When the picker has nothing to offer it says why in place of the list: the file was skipped (with a `chmod` hint), it failed to parse, or no commands are defined yet.
 
@@ -49,10 +49,10 @@ Up to 8 columns can be active per panel, ordered by `order` then name. Output is
 
 A failing command leaves the cell empty and shows one warning toast per run, not one per file.
 
-`Ctrl+Y` (`panel.refresh`) drops the cache and recomputes all active columns for that panel. Changing directory runs the active columns for the new listing.
+`C-y` (`panel.refresh`) drops the cache and recomputes all active columns for that panel. Changing directory runs the active columns for the new listing.
 
 ## Sorting and filtering
 
-Active meta columns appear in the Sort dialog (`Alt+S`, up to four). Values that parse as numbers sort numerically, and so do byte sizes with a binary unit (`512`, `800K`, `5.6G`, `1.2 GiB`, `3 MB`), so `du -h`-style output sorts by size; empty, missing and still-running cells sort last. An all-numeric column sorts high-first, others A to Z; the header arrow points toward larger values. Once every value has arrived the panel re-sorts after `[disk_usage].idle_sort_delay_ms` of cursor inactivity rather than reshuffling while results stream in.
+Active meta columns appear in the Sort dialog (`M-s`, up to four). Values that parse as numbers sort numerically, and so do byte sizes with a binary unit (`512`, `800K`, `5.6G`, `1.2 GiB`, `3 MB`), so `du -h`-style output sorts by size; empty, missing and still-running cells sort last. An all-numeric column sorts high-first, others A to Z; the header arrow points toward larger values. Once every value has arrived the panel re-sorts after `[disk_usage].idle_sort_delay_ms` of cursor inactivity rather than reshuffling while results stream in.
 
 The [panel Filter](panel-filter.md) can match meta values with "Include meta" or "Only meta".
