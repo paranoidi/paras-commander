@@ -26,6 +26,8 @@ type mouseState struct {
 	// false until a report arrives and while reporting is off).
 	pointer bool
 	x, y    int
+	// keyed hides the file list row hover from a key press until the next mouse event.
+	keyed bool
 }
 
 // doubleClick records a left press on row of target and reports whether it completes a double
@@ -264,9 +266,9 @@ func (a *App) statusCommandsHover() bool {
 }
 
 // panelRowHover is the browser panel entry under the last pointer position (mouseHit), in
-// normal mode only.
+// normal mode only, hidden after a key press until the pointer reports again.
 func (a *App) panelRowHover() ui.PanelRowHover {
-	if !a.mouse.pointer || a.inputMode() != InputModeNormal || a.model.ViewMode != ui.ViewBrowser {
+	if !a.mouse.pointer || a.mouse.keyed || a.inputMode() != InputModeNormal || a.model.ViewMode != ui.ViewBrowser {
 		return ui.PanelRowHover{}
 	}
 	w, h := a.screen.Size()
@@ -331,7 +333,7 @@ func (a *App) handleMouse(ev *tcell.EventMouse) (quit, rendered bool) {
 	buttons := ev.Buttons()
 	pressed := buttons &^ a.mouse.buttons
 	a.mouse.buttons = buttons &^ (tcell.WheelUp | tcell.WheelDown | tcell.WheelLeft | tcell.WheelRight)
-	a.mouse.pointer = true
+	a.mouse.pointer, a.mouse.keyed = true, false
 	a.mouse.x, a.mouse.y = ev.Position()
 	if a.terminalPanelHasKeyFocus() {
 		return false, false

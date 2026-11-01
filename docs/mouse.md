@@ -13,7 +13,7 @@ In the file browser:
 | Double click on a row | Opens it, like Enter. |
 | Right click on a row | Focuses the panel, moves the cursor and toggles the row's selection. |
 | Wheel | Scrolls the panel under the pointer by a few rows. Focus does not change. |
-| Pointer over a row | Highlights the row in the inactive panel's cursor colors. The cursor does not move. |
+| Pointer over a row | Highlights the row in the inactive panel's cursor colors. The cursor does not move. A key press hides the highlight until the mouse moves again. |
 | Pointer over the path in a panel's top border | Inverts the colors of the path element under it (`~`, `/`, a directory name). |
 | Left click on a path element | Focuses the panel and opens that directory, with the cursor on the directory you came from. |
 | Left click on the last path element | Focuses the panel and refreshes its directory (the panel's own directory). |

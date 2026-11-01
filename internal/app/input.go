@@ -746,6 +746,7 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 }
 
 func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
+	a.mouse.keyed = true // hides the file list row hover until the pointer reports again
 	a.deferDiskIdleSortOnUserActivity()
 	a.deferMetaIdleSortOnUserActivity()
 	resolvedAction := a.actionFromKeyEvent(event)
