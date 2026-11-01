@@ -45,7 +45,7 @@ In dialogs:
 | Left click on a button | Presses it. |
 | Left click on a radio or checkbox | Selects the radio or toggles the checkbox, like Space. |
 | Left click in a text field | Focuses the field and puts the cursor under the pointer. |
-| Pointer over a list row | Highlights the row. The list cursor and focus stay where they were. |
+| Pointer over a list row | Highlights the row. The list cursor and focus stay where they were. A key press hides the highlight until the mouse moves again. |
 | Left click on a list row | Moves the list cursor to the row. |
 | Double click on a list row | Moves there and confirms, like Enter. |
 | Wheel over a list | Moves the list cursor. |

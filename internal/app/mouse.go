@@ -26,7 +26,8 @@ type mouseState struct {
 	// false until a report arrives and while reporting is off).
 	pointer bool
 	x, y    int
-	// keyed hides the file list row hover from a key press until the next mouse event.
+	// keyed hides the file list and dialog list row hovers from a key press until the next mouse
+	// event.
 	keyed bool
 }
 
@@ -190,7 +191,10 @@ func (a *App) dialogHovers() (dlg.ButtonHover, dlg.Rect) {
 		return dlg.ButtonHover{}, dlg.Rect{}
 	}
 	w, h := a.screen.Size()
-	row, _ := dlg.HoveredListRow(spec, w, h, *d.focus, a.mouse.x, a.mouse.y)
+	var row dlg.Rect
+	if !a.mouse.keyed {
+		row, _ = dlg.HoveredListRow(spec, w, h, *d.focus, a.mouse.x, a.mouse.y)
+	}
 	return dlg.HoveredButton(spec, w, h, a.mouse.x, a.mouse.y), row
 }
 

@@ -790,6 +790,15 @@ func TestMouseDialogListHoverKeepsCursor(t *testing.T) {
 	if _, rendered := app.handleMouse(mouseEv(x+1, y, tcell.ButtonNone)); rendered {
 		t.Fatal("motion within the same row must not render")
 	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.render()
+	if app.model.DialogListHover.Width != 0 {
+		t.Fatal("a key press must hide the row hover")
+	}
+	app.handleMouse(mouseEv(x, y, tcell.ButtonNone))
+	if app.model.DialogListHover.Width == 0 {
+		t.Fatal("pointer motion must bring the row hover back")
+	}
 }
 
 func TestMousePanelRowHoverHiddenByKeyboard(t *testing.T) {
