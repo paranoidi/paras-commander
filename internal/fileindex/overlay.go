@@ -219,7 +219,7 @@ func walkToDepth(rules scan.Rules, root string, maxDepth int, yield func(string)
 			if !rules.IncludeFile(e.Name()) {
 				continue
 			}
-			if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && fi.Size() > 0 && !yield(p) {
+			if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && !yield(p) {
 				return false
 			}
 		}
