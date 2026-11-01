@@ -612,6 +612,13 @@ func TestMouseHoverInvertsTitleSegment(t *testing.T) {
 	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); rendered {
 		t.Fatal("motion within the same segment must not render")
 	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.PanelTitleHover.Active {
+		t.Fatal("a key press must hide the title hover")
+	}
+	if _, rendered := app.handleMouse(mouseEv(x, y, tcell.ButtonNone)); !rendered || !app.model.PanelTitleHover.Active {
+		t.Fatal("pointer motion must bring the title hover back")
+	}
 	cx, cy := cellOf(t, app, ui.PrimaryPanel, 2)
 	if _, rendered := app.handleMouse(mouseEv(cx, cy, tcell.ButtonNone)); !rendered || app.model.PanelTitleHover.Active {
 		t.Fatalf("leaving the title must clear the hover and render (hover %+v)", app.model.PanelTitleHover)
@@ -702,6 +709,14 @@ func TestMouseHoverHighlightsDialogButton(t *testing.T) {
 	if _, rendered := app.handleMouse(mouseEv(x+4, y, tcell.ButtonNone)); rendered {
 		t.Fatal("motion within the same button must not render")
 	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.render()
+	if app.model.DialogButtonHover.Active {
+		t.Fatal("a key press must hide the button hover")
+	}
+	if app.handleMouse(mouseEv(x+3, y, tcell.ButtonNone)); !app.model.DialogButtonHover.Active {
+		t.Fatal("pointer motion must bring the button hover back")
+	}
 	if _, rendered := app.handleMouse(mouseEv(1, 1, tcell.ButtonNone)); !rendered {
 		t.Fatal("leaving the button must render")
 	}
@@ -722,6 +737,15 @@ func TestMouseHoverHighlightsMenuTitle(t *testing.T) {
 	}
 	if app.model.Menu.Open {
 		t.Fatal("hover opened the menu")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.render()
+	if app.model.MenuBarHover.Active {
+		t.Fatal("a key press must hide the title hover")
+	}
+	app.handleMouse(mouseEv(x+3, y, tcell.ButtonNone))
+	if !app.model.MenuBarHover.Active {
+		t.Fatal("pointer motion must bring the title hover back")
 	}
 	cx, cy := cellOf(t, app, ui.PrimaryPanel, 1)
 	app.handleMouse(mouseEv(cx, cy, tcell.ButtonNone))

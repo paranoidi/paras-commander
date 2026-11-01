@@ -746,7 +746,8 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 }
 
 func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
-	a.mouse.keyed = true // hides the list row hovers until the pointer reports again
+	a.mouse.keyed = true // hides every hover until the pointer reports again (mouseState.hovers)
+	a.clearPanelTitleHover()
 	a.deferDiskIdleSortOnUserActivity()
 	a.deferMetaIdleSortOnUserActivity()
 	resolvedAction := a.actionFromKeyEvent(event)

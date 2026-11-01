@@ -26,10 +26,13 @@ type mouseState struct {
 	// false until a report arrives and while reporting is off).
 	pointer bool
 	x, y    int
-	// keyed hides the list row hovers (file list, dialog, Jobs, Commands, Messages) from a key
-	// press until the next mouse event.
+	// keyed hides every hover highlight from a key press until the next mouse event.
 	keyed bool
 }
+
+// hovers reports whether pointer hover highlights show: the pointer has reported and no key was
+// pressed since. Every hover goes through it.
+func (m *mouseState) hovers() bool { return m.pointer && !m.keyed }
 
 // doubleClick records a left press on row of target and reports whether it completes a double
 // click: the previous press hit the same row within config.MouseDoubleClickMS. A third press
@@ -182,7 +185,7 @@ func (a *App) mouseGoesToDialog() bool {
 // render sets Model.DialogButtonHover and Model.DialogListHover from them, so the highlights follow
 // the dialog as it changes.
 func (a *App) dialogHovers() (dlg.ButtonHover, dlg.Rect) {
-	if !a.mouse.pointer || !a.mouseGoesToDialog() {
+	if !a.mouse.hovers() || !a.mouseGoesToDialog() {
 		return dlg.ButtonHover{}, dlg.Rect{}
 	}
 	d, ok := a.activeDialog(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
@@ -194,16 +197,13 @@ func (a *App) dialogHovers() (dlg.ButtonHover, dlg.Rect) {
 		return dlg.ButtonHover{}, dlg.Rect{}
 	}
 	w, h := a.screen.Size()
-	var row dlg.Rect
-	if !a.mouse.keyed {
-		row, _ = dlg.HoveredListRow(spec, w, h, *d.focus, a.mouse.x, a.mouse.y)
-	}
+	row, _ := dlg.HoveredListRow(spec, w, h, *d.focus, a.mouse.x, a.mouse.y)
 	return dlg.HoveredButton(spec, w, h, a.mouse.x, a.mouse.y), row
 }
 
 // menuBarHover is the menu title under the last pointer position, where a click would open it.
 func (a *App) menuBarHover() ui.MenuHover {
-	if !a.mouse.pointer || !a.menuBarAcceptsMouse() {
+	if !a.mouse.hovers() || !a.menuBarAcceptsMouse() {
 		return ui.MenuHover{}
 	}
 	w, h := a.screen.Size()
@@ -227,7 +227,7 @@ func (a *App) selectPulldownItemUnderPointer(layout ui.Layout, x, y int) bool {
 
 // footerHover is the footer entry under the last pointer position, where a click would press it.
 func (a *App) footerHover() ui.FooterHover {
-	if !a.mouse.pointer {
+	if !a.mouse.hovers() {
 		return ui.FooterHover{}
 	}
 	w, h := a.screen.Size()
@@ -257,7 +257,7 @@ func (a *App) auxListHit() (hit func(ui.Layout, *ui.Model, int, int) (int, bool)
 func (a *App) auxListHover() ui.ListRowHover {
 	hit, ok := a.auxListHit()
 	dedup := a.inputMode() == InputModeDedupView
-	if (!ok && !dedup) || !a.mouse.pointer || a.mouse.keyed || a.mouseGoesToDialog() {
+	if (!ok && !dedup) || !a.mouse.hovers() || a.mouseGoesToDialog() {
 		return ui.ListRowHover{}
 	}
 	w, h := a.screen.Size()
@@ -273,7 +273,7 @@ func (a *App) auxListHover() ui.ListRowHover {
 // statusCommandsHover reports whether the last pointer position is on the status-command area,
 // where a click would open the Status commands dialog.
 func (a *App) statusCommandsHover() bool {
-	if !a.mouse.pointer || !a.menuBarAcceptsMouse() {
+	if !a.mouse.hovers() || !a.menuBarAcceptsMouse() {
 		return false
 	}
 	w, h := a.screen.Size()
@@ -283,7 +283,7 @@ func (a *App) statusCommandsHover() bool {
 // panelRowHover is the browser panel entry under the last pointer position (mouseHit), in
 // normal mode only, hidden after a key press until the pointer reports again.
 func (a *App) panelRowHover() ui.PanelRowHover {
-	if !a.mouse.pointer || a.mouse.keyed {
+	if !a.mouse.hovers() {
 		return ui.PanelRowHover{}
 	}
 	w, h := a.screen.Size()
