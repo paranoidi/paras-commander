@@ -254,6 +254,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Filter by result":   "F3",
 		"Reset filter":       "S-F3",
 		"Operations layout":  "C-space",
+		"Copy message":       "\"",
 		"Back to file view":  "left",
 	}
 	for _, item := range defs[0].Items {

@@ -78,7 +78,9 @@ type JobsViewState struct {
 	ListScroll     int
 	DetailScroll   int
 	MessagesScroll int
-	OpsScroll      int
+	// MessagesSelected is the Messages pane cursor (index into the job's Warnings); MessagesScroll follows it.
+	MessagesSelected int
+	OpsScroll        int
 	// OpsResultHidden is the set of results the Operations pane hides (zero shows all; see
 	// OpsResultShown). OpsFilter holds the Operations fuzzy query; only its Query, Cursor and
 	// Editing are used (the jobs handler matches the operation log itself). OpsScroll is how
@@ -159,7 +161,7 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 	}
 	drawJobsDetailPanel(screen, rects.Detail, state, jobs, styles, now, chromeBlocked, focused == JobsPaneDetail, v.UserHomeDir, v.ThroughputChartEnabled)
 	if rects.Messages.Height > 0 {
-		drawJobsMessagesPanel(screen, rects.Messages, state.MessagesScroll, sel.Warnings, styles, chromeBlocked, focused == JobsPaneMessages)
+		drawJobsMessagesPanel(screen, rects.Messages, state.MessagesScroll, state.MessagesSelected, sel.Warnings, styles, chromeBlocked, focused == JobsPaneMessages)
 	}
 	if rects.Operations.Height > 0 {
 		drawJobsOperationsPanel(screen, rects.Operations, state, win, sourceLabel, styles, chromeBlocked, focused == JobsPaneOperations, false, v.OpsNewestLast)
@@ -390,7 +392,7 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 }
 
 // drawJobsMessagesPanel draws the job's warnings, one truncated line each, scrolled by scroll.
-func drawJobsMessagesPanel(screen tcell.Screen, rect Rect, scroll int, warnings []string, styles theme.Theme, chromeBlocked, focused bool) {
+func drawJobsMessagesPanel(screen tcell.Screen, rect Rect, scroll, selected int, warnings []string, styles theme.Theme, chromeBlocked, focused bool) {
 	layout := drawAuxPanelChrome(screen, rect, fmt.Sprintf(" Messages (%d) ", len(warnings)), "", focused, chromeBlocked, false, styles)
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	if !chromeBlocked {
@@ -400,7 +402,12 @@ func drawJobsMessagesPanel(screen tcell.Screen, rect Rect, scroll int, warnings 
 	contentH := rect.Height - 2
 	scroll = max(0, min(scroll, len(warnings)-contentH))
 	for i := 0; i < contentH && i+scroll < len(warnings); i++ {
-		primitive.Text(screen, rect.X+2, rect.Y+1+i, textW, primitive.TruncateMiddle(warnings[i+scroll], textW), body)
+		style := body
+		if focused && i+scroll == selected {
+			style = auxPanelListRowStyle(styles, body, true, chromeBlocked, true)
+			paintAuxPanelRowMargins(screen, rect, rect.X+2, textW, rect.Y+1+i, style)
+		}
+		primitive.Text(screen, rect.X+2, rect.Y+1+i, textW, primitive.TruncateMiddle(warnings[i+scroll], textW), style)
 	}
 }
 

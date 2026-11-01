@@ -1971,6 +1971,15 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"layout", "operations", "bottom", "full width", "split"},
 			LeaderKey:   "o",
 		},
+		{
+			ID:           ActionJobsCopyMessage,
+			Views:        HelpJobs,
+			Title:        "Copy selected job message to clipboard",
+			Section:      "Jobs",
+			DefaultKeys:  nil, // overlay: DefaultJobsOverlayKeys
+			PreferredKey: "\"",
+			Keywords:     []string{"clipboard", "yank", "quote", "warning", "messages"},
+		},
 
 		// ── Options dialogs ──
 		{

@@ -30,6 +30,7 @@ func DefaultJobsOverlayKeys() map[string][]string {
 		ActionJobsCollapse:          {"M-left"},
 
 		ActionJobsToggleOperationsLayout: {"C-space"},
+		ActionJobsCopyMessage:            {"\""}, // the global copy menu has nothing to copy here
 	}
 }
 

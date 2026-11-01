@@ -28,4 +28,6 @@ type Host interface {
 	PromptDanglingDirDelete(dirs []string)
 	// AdjustJobsThroughputChartColumnMS changes the graph tickrate by deltaMS at runtime (not persisted).
 	AdjustJobsThroughputChartColumnMS(deltaMS int)
+	// CopyToClipboard puts text on the system clipboard and toasts done (or a failure warning).
+	CopyToClipboard(text, done string)
 }

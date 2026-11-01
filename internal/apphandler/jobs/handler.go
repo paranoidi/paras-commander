@@ -64,7 +64,7 @@ func (h *Handler) focusJobsViewOnFirstPendingBlocker() {
 		h.model.JobsView.FocusPane = 1
 		h.model.JobsView.ConflictButtonFocus = 0
 		h.model.JobsView.DetailScroll = 0
-		h.model.JobsView.MessagesScroll = 0
+		h.model.JobsView.MessagesScroll, h.model.JobsView.MessagesSelected = 0, 0
 		h.model.JobsView.OpsScroll = 0
 	}
 	h.ensureJobsViewSelectionVisible()
@@ -296,6 +296,11 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		}
 		h.state.SetTransferRateLimit(0)
 		return true
+	case keymap.ActionJobsCopyMessage:
+		if h.model.ViewMode == ui.ViewJobs {
+			h.copySelectedMessage()
+		}
+		return true
 	case keymap.ActionJobsToggleOperationsLayout:
 		if h.model.ViewMode == ui.ViewJobs {
 			h.toggleOperationsLayout()
@@ -490,7 +495,7 @@ func (h *Handler) handleJobsPaneScrollKey(event *tcell.EventKey, fp int) {
 		}
 		scrollPane(event.Key(), &h.model.JobsView.DetailScroll, max(0, h.jobsDetailLineCountForSelection()-contentH))
 	case ui.JobsPaneMessages:
-		scrollPane(event.Key(), &h.model.JobsView.MessagesScroll, max(0, len(h.selectedJobEntry().Warnings)-contentH))
+		h.moveMessagesCursor(event.Key(), len(h.selectedJobEntry().Warnings), contentH)
 	case ui.JobsPaneOperations:
 		h.scrollOperations(event.Key(), contentH)
 	}
@@ -511,6 +516,49 @@ func (h *Handler) handleJobsDetailPaneKey(event *tcell.EventKey) bool {
 		return false
 	}
 	return true
+}
+
+// moveMessagesCursor applies Up/Down, PgUp/PgDn and Home/End to the Messages pane cursor
+// (clamped to [0, n-1]) and scrolls so it stays within the contentH visible rows.
+func (h *Handler) moveMessagesCursor(key tcell.Key, n, contentH int) {
+	st := &h.model.JobsView
+	sel := st.MessagesSelected
+	switch key {
+	case tcell.KeyHome:
+		sel = 0
+	case tcell.KeyEnd:
+		sel = n - 1
+	case tcell.KeyUp:
+		sel--
+	case tcell.KeyDown:
+		sel++
+	case tcell.KeyPgUp:
+		sel -= 5
+	case tcell.KeyPgDn:
+		sel += 5
+	}
+	st.MessagesSelected = max(0, min(sel, n-1))
+	if st.MessagesSelected < st.MessagesScroll {
+		st.MessagesScroll = st.MessagesSelected
+	} else if contentH > 0 && st.MessagesSelected >= st.MessagesScroll+contentH {
+		st.MessagesScroll = st.MessagesSelected - contentH + 1
+	}
+}
+
+// messagesFocused reports whether the Messages pane has focus.
+func (h *Handler) messagesFocused() bool {
+	order, _ := h.jobsPaneLayout()
+	fp := h.model.JobsView.FocusPane
+	return fp >= 0 && fp < len(order) && order[fp] == ui.JobsPaneMessages
+}
+
+// copySelectedMessage copies the Messages pane's selected warning (full text) to the clipboard.
+func (h *Handler) copySelectedMessage() {
+	w := h.selectedJobEntry().Warnings
+	if !h.messagesFocused() || h.model.JobsView.MessagesSelected >= len(w) {
+		return
+	}
+	h.host.CopyToClipboard(w[h.model.JobsView.MessagesSelected], "Copied message to clipboard")
 }
 
 // scrollPane applies Up/Down (one row), PgUp/PgDn (five rows) and Home/End (top/bottom) to
@@ -573,7 +621,7 @@ func (h *Handler) setSelection(rows []ui.JobsListRow, r ui.JobsListRow) {
 	st.SelectRow(r)
 	if beforeSel != st.Selected {
 		st.DetailScroll = 0
-		st.MessagesScroll = 0
+		st.MessagesScroll, st.MessagesSelected = 0, 0
 		st.ConflictButtonFocus = 0
 	}
 	if beforeSel != st.Selected || beforeSub != st.SelectedSub {

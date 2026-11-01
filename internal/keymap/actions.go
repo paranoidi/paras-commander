@@ -247,6 +247,7 @@ const (
 	ActionJobsCollapse          = "jobs.collapse"
 
 	ActionJobsToggleOperationsLayout = "jobs.toggle-operations-layout"
+	ActionJobsCopyMessage            = "jobs.copy-message"
 
 	// Commands screen + external command execution
 	ActionCommandsOpen      = "commands.open"
@@ -578,6 +579,7 @@ var KnownActions = map[string]struct{}{
 	ActionJobsCollapse:          {},
 
 	ActionJobsToggleOperationsLayout: {},
+	ActionJobsCopyMessage:            {},
 
 	ActionCommandsOpen:      {},
 	ActionCommandsClose:     {},

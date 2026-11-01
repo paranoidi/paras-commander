@@ -190,7 +190,9 @@ those. Tab cycles Queue, blocker
 When the selected job has warnings (non-fatal issues such as a symlink that
 had to be dereferenced, or fileindex scan problems), a **Messages (N)** panel
 lists them between Details and Operations. It is at most 8 rows tall and
-scrolls with the arrow, `PgUp`/`PgDn` and `Home`/`End` keys while focused.
+has a cursor line that moves with the arrow, `PgUp`/`PgDn` and `Home`/`End`
+keys while focused. `jobs.copy-message` (**Jobs -> Copy message**) copies the
+selected message's full text to the clipboard.
 
 With the Details panel focused, `+` and `-` shorten or lengthen the transfer
 graph's column time (the tickrate, and so how fast the Speed column reacts)
