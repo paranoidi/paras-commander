@@ -166,6 +166,9 @@ type Theme struct {
 	PanelStatusImageSixelTmux tcell.Style
 	PanelScrollbarTrack       tcell.Style
 	PanelScrollbarThumb       tcell.Style
+	// PanelScrollbarMatch marks search-match rows on the scrollbar rail; optional, falls back to the
+	// fuzzy.highlight.cursor foreground.
+	PanelScrollbarMatch tcell.Style
 	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
 	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
@@ -1185,7 +1188,7 @@ var optionalStyleKeys = func() []string {
 		}
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
-		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
+		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty", "panel.scrollbar.match",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing")
 	keys = append(keys, fileIndexStateStyleKeys()...)
 	return keys
@@ -1592,6 +1595,12 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	fuzzyCursorFG, _, _ := styles["fuzzy.highlight.cursor"].Decompose()
+	panelScrollbarMatch, err := optionalStyle(specs, palette, "panel.scrollbar.match", tcell.StyleDefault.Foreground(fuzzyCursorFG))
+	if err != nil {
+		return Theme{}, err
+	}
+
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
 		"panel.active.row.cursor":                     {},
@@ -1712,6 +1721,7 @@ func parse(data []byte) (Theme, error) {
 		PanelStatusImageSixelTmux:           styles["panel.status.image_sixel_tmux"],
 		PanelScrollbarTrack:                 styles["panel.scrollbar.track"],
 		PanelScrollbarThumb:                 styles["panel.scrollbar.thumb"],
+		PanelScrollbarMatch:                 panelScrollbarMatch,
 		PanelFileIconFG:                     panelFileIconFG,
 
 		PanelBlockedFrame:             styles["panel.blocked.frame"],

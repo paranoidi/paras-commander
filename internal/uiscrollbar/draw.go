@@ -17,6 +17,9 @@ type DrawParams struct {
 	Blocked    bool
 	FrameStyle tcell.Style
 	Theme      theme.Theme
+	// Marks flags visible rows (index = row) to paint with MarkStyle's foreground; may be nil/short.
+	Marks     []bool
+	MarkStyle tcell.Style
 }
 
 // Draw paints a vertical scroll indicator on column x for rows [listTopY, listTopY+visible).
@@ -32,15 +35,17 @@ func Draw(p DrawParams) {
 	_, railBG, _ := p.FrameStyle.Decompose()
 	track = track.Background(railBG)
 	thumb = thumb.Background(railBG)
+	markFG, _, _ := p.MarkStyle.Decompose()
+	mark := func(s tcell.Style) tcell.Style { return s.Foreground(markFG).Background(railBG) }
 	switch style {
 	case StyleThumb:
-		drawThumb(p, thumb, p.FrameStyle)
+		drawThumb(p, thumb, p.FrameStyle, mark(p.FrameStyle))
 	case StyleBar:
-		drawBar(p, track, thumb)
+		drawBar(p, track, thumb, mark(track))
 	}
 }
 
-func drawThumb(p DrawParams, thumbStyle, frameStyle tcell.Style) {
+func drawThumb(p DrawParams, thumbStyle, frameStyle, markStyle tcell.Style) {
 	m := p.Metrics
 	thumbRow := m.ThumbDotRow
 	if thumbRow < 0 {
@@ -54,12 +59,16 @@ func drawThumb(p DrawParams, thumbStyle, frameStyle tcell.Style) {
 		if row == thumbRow {
 			p.Screen.SetContent(p.X, y, p.Theme.IconScrollbarThumb(), nil, thumbStyle)
 		} else {
-			p.Screen.SetContent(p.X, y, '│', nil, frameStyle)
+			st := frameStyle
+			if row < len(p.Marks) && p.Marks[row] {
+				st = markStyle
+			}
+			p.Screen.SetContent(p.X, y, '│', nil, st)
 		}
 	}
 }
 
-func drawBar(p DrawParams, trackStyle, thumbStyle tcell.Style) {
+func drawBar(p DrawParams, trackStyle, thumbStyle, markStyle tcell.Style) {
 	m := p.Metrics
 	thumbEnd := m.ThumbStart + m.ThumbSize
 	for row := 0; row < p.Visible; row++ {
@@ -67,7 +76,11 @@ func drawBar(p DrawParams, trackStyle, thumbStyle tcell.Style) {
 		if row >= m.ThumbStart && row < thumbEnd {
 			p.Screen.SetContent(p.X, y, '█', nil, thumbStyle)
 		} else {
-			p.Screen.SetContent(p.X, y, '░', nil, trackStyle)
+			st := trackStyle
+			if row < len(p.Marks) && p.Marks[row] {
+				st = markStyle
+			}
+			p.Screen.SetContent(p.X, y, '░', nil, st)
 		}
 	}
 }

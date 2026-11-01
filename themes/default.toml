@@ -151,9 +151,10 @@ differs = { fg = "yellow", bold = true }
 unchecked = { fg = "yellow" }
 tagged = { fg = "blue" }
 
-[panel.scrollbar]             # scrollbar track/thumb colors
+[panel.scrollbar]             # scrollbar track/thumb colors and search match markers
 track = { fg = "bright_black" }
 thumb = { fg = "white" }
+match = { fg = "red" }
 
 [panel.usage]                 # disk usage bar colors
 normal = { fg = "white", bg = "bright_black" }
