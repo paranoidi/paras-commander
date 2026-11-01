@@ -56,7 +56,7 @@ Menu titles and the status commands take clicks in the file browser and in the j
 
 In the leader menu strip (and the user, copy-path, preview and git filter menus it hosts), a left click on an entry runs it, like its letter. A click outside the strip closes it.
 
-In the jobs, commands and messages views, a left click on a list row selects that job, command or message and focuses the list; the wheel over the list moves the selection. In the messages view a click on the second line of a wrapped message selects the whole message.
+In the jobs, commands and messages views, a left click on a list row selects that job, command or message and focuses the list; the wheel over the list moves the selection. In the jobs view the row under the pointer is highlighted. The selection does not follow it, so moving across the list to the details does not switch jobs. In the messages view a click on the second line of a wrapped message selects the whole message.
 
 Everything else ignores the mouse for now: the other panes of the jobs and commands views, the compare, duplicates and fullscreen preview views, the quick filter and the embedded terminal panel.
 

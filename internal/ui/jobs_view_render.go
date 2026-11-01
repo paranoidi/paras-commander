@@ -128,6 +128,7 @@ type jobsViewRender struct {
 	OpsBottom              bool
 	OpsNewestLast          bool
 	RateLimitBPS           int64
+	ListHover              ListRowHover
 }
 
 func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles theme.Theme, now time.Time, chromeBlocked bool) {
@@ -149,7 +150,7 @@ func drawJobsView(screen tcell.Screen, layout Layout, v jobsViewRender, styles t
 		drawJobsOperationsPanel(screen, JobsMaximizedRect(layout), state, win, sourceLabel, styles, chromeBlocked, true, true, v.OpsNewestLast)
 		return
 	}
-	drawJobsListPanel(screen, rects.List, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS)
+	drawJobsListPanel(screen, rects.List, state, jobs, styles, now, chromeBlocked, v.RateLimitBPS, v.ListHover)
 	showConflict := JobEntryShowsConflictPanel(sel)
 	focused := focusedJobsPane(state, JobsPaneOrder(showConflict, rects.Operations.Height > 0))
 	if rects.Conflict.Height > 0 {
@@ -172,7 +173,9 @@ func formatRateLimitLabel(bps int64) string {
 	return panelSelectionSizePadded(jobs.FormatThroughput(float64(bps)))
 }
 
-func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, rateLimitBPS int64) {
+// drawJobsListPanel paints the Queue pane; the row under the mouse pointer (hover), unless it is
+// the cursor row, takes the jobs.row.hover background under its own status colors.
+func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, rateLimitBPS int64, hover ListRowHover) {
 	active := state.FocusPane == 0
 	layout := drawAuxPanelChrome(screen, rect, " Queue ", formatRateLimitLabel(rateLimitBPS), active, chromeBlocked, false, styles)
 	bg := layout.ContentBG
@@ -212,6 +215,9 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		entry := jobs[r.Job]
 		selected := idx == selectedRow
 		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
+		if !selected && !chromeBlocked && hover.Active && hover.Row == idx {
+			lineStyle = styles.JobsRowHover
+		}
 		paintAuxPanelRowMargin(screen, rect.X+1, y, lineStyle)
 		xProg := contentX + jobsListColPrefix + jobsListColStatus + jobsListColETA + jobsListColSpeed
 		barW := max(rect.X+rect.Width-1-xProg, 0) // reach the border, no trailing margin

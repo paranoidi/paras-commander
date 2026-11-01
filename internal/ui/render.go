@@ -216,6 +216,9 @@ type Model struct {
 	// StatusCommandsHover is the mouse pointer on the status-command area (set by App each
 	// render), drawn in the open menu's title style.
 	StatusCommandsHover bool
+	// JobsListHover is the Jobs queue row under the mouse pointer (set by App each render),
+	// drawn in jobs.row.hover unless it is the cursor row.
+	JobsListHover ListRowHover
 	// FooterHover is the footer entry under the mouse pointer (set by App each render), drawn in
 	// footer.hover.
 	FooterHover FooterHover
@@ -538,6 +541,13 @@ type MenuHover struct {
 	Index  int
 }
 
+// ListRowHover names the list row (Row, an index into the list's rows) under the mouse pointer;
+// Active is false off the rows.
+type ListRowHover struct {
+	Active bool
+	Row    int
+}
+
 // FooterHover names the footer entry (Index into the drawn entries) under the mouse pointer and
 // whether the pointer is on its Shift-alternative word (Shift); Active is false off the entries.
 type FooterHover struct {
@@ -738,6 +748,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			OpsBottom:              model.JobsOpsBottom,
 			OpsNewestLast:          model.JobsOpsNewestLast,
 			RateLimitBPS:           model.JobsTransferRateLimitBPS,
+			ListHover:              model.JobsListHover,
 		}, styles, now, chromeBlocked || model.JobsResultFilterDialog.Open)
 		if model.JobsResultFilterDialog.Open {
 			dialog.DrawJobsResultFilterDialog(screen, layout, model.JobsResultFilterDialog, styles)

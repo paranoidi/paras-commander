@@ -307,6 +307,7 @@ after.error = { fg = "bright_red", bold = true }
 done = { fg = "bright_green", bold = true }
 failed = { fg = "bright_red", bold = true }
 row = { fg = "white" }
+row.hover = { fg = "bright_white", bg = "bright_black" }  # queue row under the mouse pointer
 running = { fg = "bright_cyan", bold = true }
 
 [jobs.progress]

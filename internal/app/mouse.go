@@ -246,6 +246,18 @@ func (a *App) footerHover() ui.FooterHover {
 	return ui.FooterHoverAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
 }
 
+// jobsListHover is the Jobs queue row under the last pointer position. It only highlights: the
+// selection stays put, so crossing the list on the way to the Details or Conflict pane does not
+// switch the job they show.
+func (a *App) jobsListHover() ui.ListRowHover {
+	if !a.mouse.pointer || a.inputMode() != InputModeJobsView || a.mouseGoesToDialog() {
+		return ui.ListRowHover{}
+	}
+	w, h := a.screen.Size()
+	row, ok := ui.JobsListEntryAt(a.layoutForTerminalSize(w, h), &a.model, a.mouse.x, a.mouse.y)
+	return ui.ListRowHover{Active: ok, Row: row}
+}
+
 // statusCommandsHover reports whether the last pointer position is on the status-command area,
 // where a click would open the Status commands dialog.
 func (a *App) statusCommandsHover() bool {
@@ -275,18 +287,19 @@ func (a *App) panelRowHover() ui.PanelRowHover {
 }
 
 // refreshPointerHovers sets the highlights that follow the last pointer position (dialog buttons,
-// menu titles, the status commands, footer entries, file list rows) and reports whether one
-// changed. render calls it, so they track the screen as it changes under a still pointer; motion
-// calls it and renders on a change.
+// menu titles, the status commands, footer entries, file list and Jobs queue rows) and reports
+// whether one changed. render calls it, so they track the screen as it changes under a still
+// pointer; motion calls it and renders on a change.
 func (a *App) refreshPointerHovers() bool {
 	button, menuTitle, footer := a.dialogButtonHover(), a.menuBarHover(), a.footerHover()
-	status, row := a.statusCommandsHover(), a.panelRowHover()
+	status, row, jobsRow := a.statusCommandsHover(), a.panelRowHover(), a.jobsListHover()
 	prev := a.model.DialogButtonHover
 	changed := button.Active != prev.Active || button.ID != prev.ID || button.Rect != prev.Rect ||
 		menuTitle != a.model.MenuBarHover || footer != a.model.FooterHover ||
-		status != a.model.StatusCommandsHover || row != a.model.PanelRowHover
+		status != a.model.StatusCommandsHover || row != a.model.PanelRowHover ||
+		jobsRow != a.model.JobsListHover
 	a.model.DialogButtonHover, a.model.MenuBarHover, a.model.FooterHover = button, menuTitle, footer
-	a.model.StatusCommandsHover, a.model.PanelRowHover = status, row
+	a.model.StatusCommandsHover, a.model.PanelRowHover, a.model.JobsListHover = status, row, jobsRow
 	return changed
 }
 

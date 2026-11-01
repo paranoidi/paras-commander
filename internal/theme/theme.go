@@ -308,10 +308,14 @@ type Theme struct {
 	// MessageSuccess styles success toasts (optional message.success, black on green).
 	MessageSuccess tcell.Style
 
-	JobsRow     tcell.Style
-	JobsRunning tcell.Style
-	JobsDone    tcell.Style
-	JobsFailed  tcell.Style
+	JobsRow tcell.Style
+	// JobsRowHover is a Jobs queue row under the mouse pointer (not the cursor row): its
+	// background (and plain text foreground) under the row's own status colors (optional
+	// jobs.row.hover; fallback white on grey).
+	JobsRowHover tcell.Style
+	JobsRunning  tcell.Style
+	JobsDone     tcell.Style
+	JobsFailed   tcell.Style
 	// Jobs list progress column (horizontal bar with centered percentage).
 	JobsProgressTrack        tcell.Style
 	JobsProgressFill         tcell.Style
@@ -1197,7 +1201,7 @@ var optionalStyleKeys = func() []string {
 			keys = append(keys, fmt.Sprintf("menu.progress.%s.gfx.%d", gfx, i))
 		}
 	}
-	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
+	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing")
 	keys = append(keys, fileIndexStateStyleKeys()...)
@@ -1555,6 +1559,11 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
+	jobsRowHover, err := optionalStyle(specs, palette, "jobs.row.hover", tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorGray))
+	if err != nil {
+		return Theme{}, err
+	}
+
 	messageSweep, err := optionalStyle(specs, palette, "message.sweep", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite))
 	if err != nil {
 		return Theme{}, err
@@ -1832,10 +1841,11 @@ func parse(data []byte) (Theme, error) {
 		MessageSweep:   messageSweep,
 		MessageSuccess: messageSuccess,
 
-		JobsRow:     styles["jobs.row"],
-		JobsRunning: styles["jobs.running"],
-		JobsDone:    styles["jobs.done"],
-		JobsFailed:  styles["jobs.failed"],
+		JobsRow:      styles["jobs.row"],
+		JobsRowHover: jobsRowHover,
+		JobsRunning:  styles["jobs.running"],
+		JobsDone:     styles["jobs.done"],
+		JobsFailed:   styles["jobs.failed"],
 
 		JobsProgressTrack:        styles["jobs.progress.track"],
 		JobsProgressFill:         styles["jobs.progress.fill"],
