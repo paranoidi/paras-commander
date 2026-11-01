@@ -7,7 +7,7 @@ Status toasts (the line above the footer: "Copied 3 files", errors, warnings) di
 Open it with `Alt+L` (`messages.open`, also Display -> Messages and leader `L`); the same key closes it. It fills both panels, newest message first.
 
 - Each message carries a local `hh:mm:ss` on its first line; long messages wrap onto indented continuation lines. Up/Down move by message.
-- With [mouse support](mouse.md) on, a click on a message copies its whole text to the clipboard.
+- `"` (`messages.copy`, leader `y`, Actions -> Copy message) copies the selected message's whole text to the clipboard, unwrapped. With [mouse support](mouse.md) on, a click on a message does the same. In this view `"` copies the message instead of opening the copy menu.
 - `F8` (`messages.clear`, leader `c`) empties the log and the banner.
 - `Left` or `Esc` (`messages.close`, leader `x`) returns to the file view.
 - `:` opens a menu scoped to this view; `F9` opens its menu bar ([Menus](menus.md)).

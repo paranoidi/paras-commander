@@ -293,6 +293,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 			LeaderMenuGroupDisplay: {ActionDedupOpen, ActionJobsOpen, ActionCommandsOpen},
 			LeaderMenuGroupMessages: {
 				ActionMessagesClose,
+				ActionMessagesCopy,
 				ActionMessagesClear,
 			},
 		},

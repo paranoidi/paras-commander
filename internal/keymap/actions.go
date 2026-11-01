@@ -259,6 +259,7 @@ const (
 	ActionMessagesOpen  = "messages.open"
 	ActionMessagesClose = "messages.close"
 	ActionMessagesClear = "messages.clear"
+	ActionMessagesCopy  = "messages.copy"
 
 	// UI dialog controls (handled internally, not in keybindings.toml)
 	ActionUILeft     = "ui.left"
@@ -587,6 +588,7 @@ var KnownActions = map[string]struct{}{
 	ActionMessagesOpen:  {},
 	ActionMessagesClose: {},
 	ActionMessagesClear: {},
+	ActionMessagesCopy:  {},
 
 	ActionUIOpenTheme:           {},
 	ActionUIOpenConfig:          {},

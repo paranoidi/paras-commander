@@ -11,6 +11,7 @@ func DefinitionsMessages() []Definition {
 			Label:      "Actions",
 			Shortcut:   'a',
 			Items: []Item{
+				{Action: keymap.ActionMessagesCopy, Label: "Copy message", Shortcut: 'm'},
 				{Action: keymap.ActionMessagesClear, Label: "Clear messages", Shortcut: 'c'},
 				{Action: keymap.ActionMessagesClose, Label: "Back to file view", Shortcut: 'b'},
 			},

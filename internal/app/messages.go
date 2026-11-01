@@ -65,6 +65,11 @@ func (a *App) tryDispatchMessages(actionID string) bool {
 	case keymap.ActionMessagesClear:
 		a.clearMessageLog()
 		return true
+	case keymap.ActionMessagesCopy:
+		if a.model.ViewMode == ui.ViewMessages {
+			a.copyMessage(a.model.MessagesView.Selected)
+		}
+		return true
 	default:
 		return false
 	}
@@ -98,7 +103,7 @@ func (a *App) selectMessage(idx int) {
 }
 
 // copyMessage selects message idx (a head row) and copies its whole text to the clipboard (a
-// click on the message). The selection stays on that message although the toast is logged above
+// click on the message, messages.copy on the selection). The selection stays on that message although the toast is logged above
 // it (appendMessageLogLines would otherwise move a top selection onto the toast).
 func (a *App) copyMessage(idx int) {
 	if idx < 0 || idx >= len(a.model.MessageLog) {

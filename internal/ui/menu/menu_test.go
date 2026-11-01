@@ -298,6 +298,7 @@ func TestMessagesDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		t.Fatalf("first menu = %s, want TopMessages", defs[0].ID)
 	}
 	want := map[string]string{
+		"Copy message":      "\"",
 		"Clear messages":    "F8",
 		"Back to file view": "left",
 	}

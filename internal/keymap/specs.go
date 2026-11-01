@@ -1768,6 +1768,16 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"log", "toast", "status"},
 			LeaderKey:   "c",
 		},
+		{
+			ID:           ActionMessagesCopy,
+			Views:        HelpMessages,
+			Title:        "Copy message to clipboard",
+			Section:      "Messages",
+			DefaultKeys:  nil, // overlay: DefaultMessagesOverlayKeys
+			PreferredKey: "\"",
+			Keywords:     []string{"clipboard", "yank", "quote", "log", "toast"},
+			LeaderKey:    "y",
+		},
 
 		{
 			ID:           ActionUIStatusCommands,
