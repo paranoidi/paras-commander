@@ -65,6 +65,10 @@ type Handler struct {
 	exclude       findcrit.Excludes
 	savedAdvanced dialog.FindAdvancedState
 	advEditing    dlg.ID
+	// indexStat and indexExclude are what the running index was started with; criteria
+	// needing more metadata, or other excludes, restart it.
+	indexStat    findcrit.StatLevel
+	indexExclude findcrit.Excludes
 
 	sizeMu            sync.Mutex
 	fileSizeLookupGen uint64

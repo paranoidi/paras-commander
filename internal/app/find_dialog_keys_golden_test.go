@@ -121,7 +121,7 @@ func findKeyState(app *App) string {
 	line := fmt.Sprintf("focus=%d query=%q qcursor=%d depth=%q sel=%d cursor=%q scroll=%d ranked=%d dirs=%v files=%v hidden=%v volume=%v selections=%v marked=%v",
 		findKeyFocus(&st), st.Query, st.QueryCursor, st.DepthInput, st.Selected, cursor, st.ListScroll, len(st.Ranked),
 		st.OnlyDirectories, st.OnlyFiles, st.IncludeHidden, st.StayOnCurrentVolume, st.SearchOnlySelections, marked)
-	if a := st.Advanced; a.Expanded || a.Active() || st.QueryInvalid {
+	if a := st.Advanced; a.Expanded || a.Summary(theme.Theme{}, 200) != "" || st.QueryInvalid {
 		var fields []string
 		for i, in := range a.Fields {
 			if in.Value != "" || in.Invalid {

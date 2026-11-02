@@ -3,7 +3,6 @@ package find
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -130,7 +129,7 @@ func (h *Handler) startFindIndexer() {
 	h.scanGen++
 	opts := h.findStartOpts(st)
 	h.scan.Start(opts)
-	st.IndexStat, st.IndexExclude = opts.Stat, strings.Join(opts.Exclude, ",")
+	h.indexStat, h.indexExclude = opts.Stat, opts.Exclude
 	st.Indexing = true
 	st.IndexDone = false
 	st.IndexErr = ""

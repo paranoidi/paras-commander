@@ -87,15 +87,11 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	list := dlg.Item{ID: FindList, Kind: dlg.KindList, Height: findListHeight(ctx.Layout.Height), MinHeight: findDialogMinListRows}
 	switch {
 	case advanced && adv.Expanded:
-		advCol := append([]dlg.Item{{Kind: dlg.KindSeparator, Label: "Advanced"}}, findAdvancedRows(adv, rowW, !state.textInputFocused())...)
+		advCol := append([]dlg.Item{{Kind: dlg.KindSeparator, Label: "Advanced"}}, findAdvancedRows(adv, rowW)...)
 		groups = append(groups, dlg.Group{Columns: [][]dlg.Item{advCol}})
-		// The open section takes its rows from the results: the frame keeps the height it
-		// has with the section closed (down to a one-row list).
-		closed := *state
-		closed.Advanced.Expanded = false
-		if _, _, listH, ok := FindDialogMetrics(ctx.Layout, &closed); ok {
-			list.Height = max(listH-len(advCol), 1)
-		}
+		// The open section takes its rows from the results, so the frame wants the height it
+		// has with the section closed (down to a one-row list); fitting shrinks both alike.
+		list.Height = max(list.Height-len(advCol), 1)
 		list.MinHeight = 1
 	case advanced:
 		listSep.Label = adv.Summary(styles, rowW-4) // the separator pads its label by a cell each side

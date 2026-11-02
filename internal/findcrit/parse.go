@@ -54,12 +54,6 @@ func ParseAge(s string, now time.Time) (int64, error) {
 	return 0, fmt.Errorf("age %q: want 30m, 2h, 3d, 2w, 6mo, 1y or YYYY-MM-DD", s)
 }
 
-// ValidAge reports whether s is empty or a valid age (ParseAge).
-func ValidAge(s string) bool {
-	_, err := ParseAge(s, time.Now())
-	return err == nil
-}
-
 // ParseSize turns a size field into bytes: a number with an optional binary unit (k, M, G, T,
 // P; "kb", "KiB" and "K" all mean 1024). An empty field returns ok false and no error.
 func ParseSize(s string) (n int64, ok bool, err error) {
@@ -84,10 +78,4 @@ func ParseSize(s string) (n int64, ok bool, err error) {
 		return 0, false, fmt.Errorf("size %q: too large", s)
 	}
 	return int64(v), true, nil
-}
-
-// ValidSize reports whether s is empty or a valid size (ParseSize).
-func ValidSize(s string) bool {
-	_, _, err := ParseSize(s)
-	return err == nil
 }

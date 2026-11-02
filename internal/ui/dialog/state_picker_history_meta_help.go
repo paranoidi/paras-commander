@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -160,10 +159,6 @@ type FindDialogState struct {
 	AdvancedMnemonic rune
 	// QueryInvalid marks a glob or regex query that does not compile (no match is run for it).
 	QueryInvalid bool
-	// IndexStat and IndexExclude are the metadata level and exclude patterns the running index
-	// was started with; criteria needing more metadata, or new excludes, restart it.
-	IndexStat    findcrit.StatLevel
-	IndexExclude string
 	// pathIndex maps each entry's cleaned absolute path to its index in Entries, giving
 	// PathMeta O(1) lookups instead of a linear scan of Entries. Kept in sync by
 	// RebuildPathIndex/ExtendPathIndex as Entries is replaced/appended.

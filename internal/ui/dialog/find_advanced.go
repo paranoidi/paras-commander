@@ -45,6 +45,7 @@ const (
 	FindAdvNotMine    = dlg.ID("find:adv-not-mine")
 	FindAdvCase       = dlg.ID("find:adv-case")
 
+	findAdvPrefix      = "find:adv-" // every advanced-section widget
 	findAdvFieldPrefix = "find:adv-field-"
 	findAdvModePrefix  = "find:adv-mode-"
 	findAdvTypePrefix  = "find:adv-type-"
@@ -104,33 +105,30 @@ func (s *FindDialogState) NoMatches() bool {
 	return strings.TrimSpace(s.Query) != "" && s.IndexDone && !s.Indexing && !s.RankPending && len(s.Ranked) == 0
 }
 
-// textInputFocused reports whether focus is on a text input (the query, depth or an advanced
-// field), where letters are text.
-func (s *FindDialogState) textInputFocused() bool {
-	if _, ok := FindAdvFieldOf(s.Focus); ok {
-		return true
-	}
-	return s.Focus == "" || s.Focus == FindQuery || s.Focus == FindDepth
+// AdvancedFocused reports whether focus is on a widget of the advanced section (the result
+// list's keys do not reach it then, so the list is drawn inert). Every section widget's ID
+// has the findAdvPrefix (the Advanced checkbox on the query row is not in the section).
+func (s *FindDialogState) AdvancedFocused() bool {
+	return strings.HasPrefix(string(s.Focus), findAdvPrefix)
 }
 
-// AdvancedFocused reports whether focus is on a widget of the advanced section (the result
-// list's keys do not reach it then, so the list is drawn inert).
-func (s *FindDialogState) AdvancedFocused() bool {
-	id := s.Focus
-	if _, ok := FindAdvFieldOf(id); ok {
-		return true
-	}
-	if _, ok := FindAdvModeOf(id); ok {
-		return true
-	}
-	if _, ok := FindAdvTypeOf(id); ok {
-		return true
-	}
+// Flag is the checkbox field behind advanced checkbox id (nil for any other widget).
+func (a *FindAdvancedState) Flag(id dlg.ID) *bool {
 	switch id {
-	case FindAdvEmpty, FindAdvSymlinks, FindAdvBroken, FindAdvExecutable, FindAdvNotMine, FindAdvCase:
-		return true
+	case FindAdvEmpty:
+		return &a.Empty
+	case FindAdvSymlinks:
+		return &a.Symlinks
+	case FindAdvBroken:
+		return &a.Broken
+	case FindAdvExecutable:
+		return &a.Executables
+	case FindAdvNotMine:
+		return &a.NotMine
+	case FindAdvCase:
+		return &a.CaseSensitive
 	}
-	return false
+	return nil
 }
 
 // FindAdvInput is one advanced text input: its text, caret, scroll and validity.
@@ -152,9 +150,6 @@ type FindAdvancedState struct {
 	Empty, Symlinks, Broken, Executables, NotMine, CaseSensitive bool
 	Types                                                        [FilterTypeCount]bool
 }
-
-// Active reports whether any criterion or a non-fuzzy match mode is set.
-func (a FindAdvancedState) Active() bool { return len(a.summaryTerms()) > 0 }
 
 // Clear resets the mode and every criterion, keeping Expanded.
 func (a *FindAdvancedState) Clear() { *a = FindAdvancedState{Expanded: a.Expanded} }
@@ -246,12 +241,13 @@ const (
 // findAdvancedRows are the advanced section's rows for a row width of rowW cells: the match
 // mode, kind and file-type rows on one aligned grid, then the three time rows beside size /
 // owner / exclude when two chunks fit side by side (else one chunk per row).
-func findAdvancedRows(a FindAdvancedState, rowW int, letters bool) []dlg.Item {
+func findAdvancedRows(a FindAdvancedState, rowW int) []dlg.Item {
 	rows := findAdvancedLayout(a, rowW)
-	if letters {
-		for i := range rows {
-			for j := range rows[i].Cells {
-				rows[i].Cells[j].Mnemonic = findAdvMnemonics[rows[i].Cells[j].ID]
+	for i := range rows {
+		for j := range rows[i].Cells {
+			c := &rows[i].Cells[j]
+			if r, ok := findAdvMnemonics[c.ID]; ok {
+				c.Mnemonic, c.MnemonicOutsideInputs = r, true
 			}
 		}
 	}
@@ -273,8 +269,9 @@ var findAdvHints = [FindAdvFieldCount]string{
 }
 
 // findAdvMnemonics are the letters of the advanced section's options. They are live (and
-// highlighted) only while focus is off the text inputs, where they work plain or with Alt; they
-// avoid the letters of the rest of the dialog (N, Y, I, V, S, the Advanced key, OK, Cancel).
+// highlighted) only while focus is off the text inputs (dlg Item.MnemonicOutsideInputs), where
+// they work plain or with Alt; they avoid the letters of the rest of the dialog (N, Y, I, V, S,
+// the Advanced key, OK, Cancel).
 var findAdvMnemonics = map[dlg.ID]rune{
 	FindAdvModeID(findcrit.ModeFuzzy): 'F',
 	FindAdvModeID(findcrit.ModeGlob):  'G',

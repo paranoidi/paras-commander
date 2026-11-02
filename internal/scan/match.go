@@ -30,6 +30,14 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 	if err != nil {
 		return out // the handler validates the query before it asks; nothing matches an invalid one
 	}
+	// keep applies Only dirs / Only files and the criteria, inside the match workers.
+	keep := func(e *Entry) bool {
+		switch {
+		case req.OnlyDirs && !e.IsDir, req.OnlyFiles && e.IsDir:
+			return false
+		}
+		return !filter || req.Criteria.Match(e.subject())
+	}
 
 	if matcher.Empty() && !filter {
 		out.Ranked = emptyDisplayIndicesInPlace(entries, req.OnlyDirs, req.OnlyFiles, maxResults)
@@ -74,7 +82,7 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 					return
 				}
 				result := matcher.Match(entries[i].RelLine)
-				if result.Matched {
+				if result.Matched && keep(&entries[i]) {
 					local = append(local, search.RankedResult{Index: i, Result: result})
 				}
 			}
@@ -98,10 +106,9 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 		})
 	}
 
-	filtered := filterRankedResults(entries, merged, req)
-	out.FullRanked = indicesFromResults(filtered)
+	out.FullRanked = indicesFromResults(merged)
 
-	display := filtered
+	display := merged
 	if maxResults > 0 && len(display) > maxResults {
 		display = display[:maxResults]
 	}
@@ -122,33 +129,6 @@ func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool
 		}
 	}
 	return out
-}
-
-// filterRankedResults keeps the results that pass Only dirs / Only files and the criteria.
-func filterRankedResults(entries []Entry, raw []search.RankedResult, req MatchRequest) []search.RankedResult {
-	filter := req.Criteria.Active()
-	if !req.OnlyDirs && !req.OnlyFiles && !filter {
-		return raw
-	}
-	filtered := make([]search.RankedResult, 0, len(raw))
-	for _, r := range raw {
-		idx := r.Index
-		if idx < 0 || idx >= len(entries) {
-			continue
-		}
-		e := &entries[idx]
-		if req.OnlyDirs && !e.IsDir {
-			continue
-		}
-		if req.OnlyFiles && e.IsDir {
-			continue
-		}
-		if filter && !req.Criteria.Match(e.subject()) {
-			continue
-		}
-		filtered = append(filtered, r)
-	}
-	return filtered
 }
 
 func indicesFromResults(raw []search.RankedResult) []int {

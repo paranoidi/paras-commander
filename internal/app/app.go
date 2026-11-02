@@ -54,6 +54,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 	"github.com/paranoidi/paras-commander/internal/workpool"
@@ -315,10 +316,9 @@ type App struct {
 
 	// folderColors is the in-memory Nemo-compatible folder-colour snapshot (internal/foldercolor).
 	folderColors *foldercolor.Store
-	// findOverlaySize is the find dialog frame (width, height) the last find-only partial paint
-	// drew; a different frame (the Advanced section opened or closed) needs a full render so
-	// the panels repaint where the old frame was.
-	findOverlaySize [2]int
+	// findOverlayFrame is the find dialog frame the last find-only partial paint drew; a
+	// different frame needs a full render so the panels repaint where the old frame was.
+	findOverlayFrame dlg.Rect
 	// lastFullRenderToast is the Model.Message last committed by a full render. Partial
 	// painters consult it so a shorter replacement cannot leave fragments of the previous banner.
 	lastFullRenderToast string

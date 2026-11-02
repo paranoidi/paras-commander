@@ -463,6 +463,15 @@ func MarkerWidth(styles theme.Theme) int {
 	)
 }
 
+// liveMnemonic is the Mnemonic it draws: none while a MnemonicOutsideInputs item's letter is
+// dead (focus in a text input).
+func liveMnemonic(it Item, inInput bool) rune {
+	if it.MnemonicOutsideInputs && inInput {
+		return 0
+	}
+	return it.Mnemonic
+}
+
 // Draw paints spec with focus on the widget named by focus (an empty or unknown ID focuses the
 // first widget). It returns the placement it drew, for callers that paint overlays on its rects;
 // ok is false when the dialog does not fit and nothing was drawn.
@@ -472,6 +481,8 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 		return p, false
 	}
 	focus = Focused(spec, focus)
+	cur, found := find(spec, focus)
+	inInput := found && isInput(spec, cur)
 	borderStyle := draw.DrawDialogFrame(screen, p.Rect, spec.Title, styles)
 	_, surface, _ := styles.DialogSurface.Decompose()
 	bottom := p.ContentBottom         // content stops above the button separator (or the bottom border)
@@ -516,11 +527,11 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 			drawList(screen, p.Rect, pi, it, listFocused(spec, focus, it.ID), spec.ScrollbarStyle, borderStyle, styles)
 		case KindCheckbox:
 			if pi.Rect.Width > 0 {
-				draw.DrawDialogCheckbox(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, it.Disabled || it.Inert, styles)
+				draw.DrawDialogCheckbox(screen, pi.Rect.X, pi.Rect.Y, pi.Label, liveMnemonic(it, inInput), it.On, focus == it.ID, it.Disabled || it.Inert, styles)
 			}
 		default:
 			if pi.Rect.Width > 0 {
-				draw.DrawDialogRadio(screen, pi.Rect.X, pi.Rect.Y, pi.Label, it.Mnemonic, it.On, focus == it.ID, it.Disabled || it.Inert, styles)
+				draw.DrawDialogRadio(screen, pi.Rect.X, pi.Rect.Y, pi.Label, liveMnemonic(it, inInput), it.On, focus == it.ID, it.Disabled || it.Inert, styles)
 			}
 		}
 	}

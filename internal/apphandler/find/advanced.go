@@ -2,6 +2,7 @@ package find
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -93,9 +94,11 @@ func validateAdvField(a *dialog.FindAdvancedState, f dialog.FindAdvField) {
 	in := &a.Fields[f]
 	switch {
 	case f.IsAge():
-		in.Invalid = !findcrit.ValidAge(in.Value)
+		_, err := findcrit.ParseAge(in.Value, time.Now())
+		in.Invalid = err != nil
 	case f.IsSize():
-		in.Invalid = !findcrit.ValidSize(in.Value)
+		_, _, err := findcrit.ParseSize(in.Value)
+		in.Invalid = err != nil
 	case f == dialog.FindAdvExclude:
 		_, err := findcrit.ParseExcludes(in.Value)
 		in.Invalid = err != nil
@@ -119,7 +122,7 @@ func (h *Handler) commitAdvanced() {
 		return
 	}
 	h.loadAdvanced(st)
-	if h.criteria.NeedsStat() > st.IndexStat || strings.Join(h.exclude, ",") != st.IndexExclude {
+	if h.criteria.NeedsStat() > h.indexStat || !slices.Equal(h.exclude, h.indexExclude) {
 		h.restartFindIndexer()
 		return
 	}
@@ -218,10 +221,7 @@ func (h *Handler) applyAdvancedEvent(ev dlg.Event) bool {
 		h.commitAdvanced()
 		return true
 	}
-	flag := map[dlg.ID]*bool{
-		dialog.FindAdvEmpty: &a.Empty, dialog.FindAdvSymlinks: &a.Symlinks, dialog.FindAdvBroken: &a.Broken,
-		dialog.FindAdvExecutable: &a.Executables, dialog.FindAdvNotMine: &a.NotMine, dialog.FindAdvCase: &a.CaseSensitive,
-	}[ev.ID]
+	flag := a.Flag(ev.ID)
 	if flag == nil {
 		return false
 	}

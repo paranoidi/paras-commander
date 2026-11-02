@@ -328,7 +328,9 @@ func HandleMnemonic(spec Spec, focus *ID, ev *tcell.EventKey) (Event, bool) {
 		}
 		return Event{ID: id}, true
 	}
-	match := func(it Item) bool { return it.Mnemonic != 0 && !it.Disabled && unicode.ToLower(it.Mnemonic) == r }
+	match := func(it Item) bool {
+		return liveMnemonic(it, inInput) != 0 && !it.Disabled && unicode.ToLower(it.Mnemonic) == r
+	}
 	for _, g := range spec.Groups {
 		for _, col := range g.Columns {
 			for _, it := range col {

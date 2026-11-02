@@ -105,14 +105,16 @@ func findDialogDepthFieldWidth(styles theme.Theme) int {
 
 const findDialogPreferredWidth = 125 // preferred frame width; clamped to the terminal in FindDialogMetrics
 
-// FindRowIconPainter draws file-list devicons for one find dialog row; nil skips icons.
-type FindRowIconPainter func(screen tcell.Screen, x, y int, entry FindEntry, styles theme.Theme)
+// FindRowIconPainter draws file-list devicons for one find dialog row (in the disabled style
+// when disabled); nil skips icons.
+type FindRowIconPainter func(screen tcell.Screen, x, y int, entry FindEntry, disabled bool, styles theme.Theme)
 
 // DrawFindDialog paints the find dialog from its widget spec (FindDialogView), then the row
 // devicons over the leading cells each list row reserves for them (the overlay escape hatch:
-// devicons are colored per entry type by the panel icon painter). selectionSizeLabel is the
-// unpadded marked-selection size ("" = none).
-func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, ctx DialogRenderContext, paintIcon FindRowIconPainter, selectionSizeLabel string, rowMarks RowMarksFunc) {
+// devicons are colored per entry type by the panel icon painter, greyed while the list is
+// inert). selectionSizeLabel is the unpadded marked-selection size ("" = none). It returns the
+// frame it painted (zero when the dialog does not fit).
+func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, ctx DialogRenderContext, paintIcon FindRowIconPainter, selectionSizeLabel string, rowMarks RowMarksFunc) dlg.Rect {
 	iconLead := ctx.IconLead
 	if !ctx.ShowIcons || paintIcon == nil {
 		iconLead = 0
@@ -122,27 +124,18 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 		SelectionLabel: selectionSizeLabel, RowMarks: rowMarks,
 	})
 	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
-	if !ok || iconLead == 0 {
-		return
+	if !ok {
+		return dlg.Rect{}
+	}
+	if iconLead == 0 {
+		return p.Rect
 	}
 	list, _ := p.Item(FindList)
 	inert := state.AdvancedFocused()
 	p.EachListRow(FindList, func(row, y int) {
 		if ent, ok := state.FindEntryAt(state.Ranked[row]); ok {
-			paintIcon(screen, list.Rect.X, y, ent, ctx.Styles)
-			if inert {
-				restyleCells(screen, list.Rect.X, y, iconLead, ctx.Styles.DialogOptionDisabledStyle())
-			}
+			paintIcon(screen, list.Rect.X, y, ent, inert, ctx.Styles)
 		}
 	})
-}
-
-// restyleCells redraws the cells in [x, x+w) on row y in style, keeping their content; a wide
-// glyph is redrawn once, from its first cell.
-func restyleCells(screen tcell.Screen, x, y, w int, style tcell.Style) {
-	for cx := x; cx < x+w; {
-		str, _, width := screen.Get(cx, y)
-		screen.Put(cx, y, str, style)
-		cx += max(width, 1)
-	}
+	return p.Rect
 }

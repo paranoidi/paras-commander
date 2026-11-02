@@ -56,8 +56,13 @@ func PaintDialogRowIcon(screen tcell.Screen, x, y int, entry localfs.Entry, styl
 	paintPanelIconStrip(screen, x, y, entry, iconStyle, styles, PanelIconStripContext{})
 }
 
-// PaintFindDialogRowIcon draws file-list devicons for one find dialog row.
-func PaintFindDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.FindEntry, styles theme.Theme) {
+// PaintFindDialogRowIcon draws file-list devicons for one find dialog row; disabled draws them
+// in the disabled option style (the blocked-chrome icon colours of the panel strip).
+func PaintFindDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.FindEntry, disabled bool, styles theme.Theme) {
+	if disabled {
+		paintPanelIconStrip(screen, x, y, findEntryLocalfs(entry), styles.DialogOptionDisabledStyle(), styles, PanelIconStripContext{ChromeBlocked: true})
+		return
+	}
 	PaintDialogRowIcon(screen, x, y, findEntryLocalfs(entry), styles)
 }
 

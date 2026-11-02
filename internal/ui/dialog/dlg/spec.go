@@ -96,7 +96,10 @@ type Item struct {
 	Kind     Kind
 	Label    string
 	Mnemonic rune // 0 = none
-	On       bool // radio selected / checkbox checked
+	// MnemonicOutsideInputs (radio and checkbox) keeps Mnemonic dead and undrawn while focus is
+	// in a text input, so its Alt+letter stays the input's (word motion and such).
+	MnemonicOutsideInputs bool
+	On                    bool // radio selected / checkbox checked
 
 	// Label rows only.
 	Indent int       // extra cells before the text

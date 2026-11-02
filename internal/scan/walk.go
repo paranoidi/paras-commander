@@ -183,7 +183,7 @@ func (w *rootWalk) runBFS(ctx context.Context, opts WalkOptions, listOpts localf
 		w.depth.Add(1)
 		w.levelDone.Store(0)
 		w.levelTotal.Store(int64(len(level)))
-		slots, stop := w.readLevel(ctx, level, adapt, opts)
+		slots, stop := w.readLevel(ctx, level, adapt, opts, listOpts)
 		for i, dir := range level {
 			if ctx.Err() != nil || w.tooDeep(w.depth.Load()) {
 				stop()
@@ -246,7 +246,7 @@ type dirRead struct {
 // readLevel reads dirs concurrently, bounded by the adaptive semaphore, and lstats
 // their children at opts.Stat on the same workers. A slot's done channel closes once
 // its dir is read. stop cancels the remaining reads and waits for every goroutine to exit.
-func (w *rootWalk) readLevel(ctx context.Context, dirs []string, adapt *fswalk.Adaptive, opts WalkOptions) ([]dirRead, func()) {
+func (w *rootWalk) readLevel(ctx context.Context, dirs []string, adapt *fswalk.Adaptive, opts WalkOptions, listOpts localfs.ListOptions) ([]dirRead, func()) {
 	slots := make([]dirRead, len(dirs))
 	for i := range slots {
 		slots[i].done = make(chan struct{})
@@ -267,7 +267,7 @@ func (w *rootWalk) readLevel(ctx context.Context, dirs []string, adapt *fswalk.A
 				defer sem.Release()
 				slots[i].children, slots[i].err = os.ReadDir(dir)
 				if opts.Stat >= findcrit.StatMeta && slots[i].err == nil {
-					slots[i].stats = statChildren(lctx, dir, slots[i].children, opts)
+					slots[i].stats = statChildren(lctx, dir, slots[i].children, opts, listOpts)
 				}
 				adapt.Bump()
 				close(slots[i].done)
@@ -277,18 +277,21 @@ func (w *rootWalk) readLevel(ctx context.Context, dirs []string, adapt *fswalk.A
 	return slots, func() { cancel(); wg.Wait() }
 }
 
-// statChildren lstats the children of dir that the walk can index (files are skipped in
-// DirsOnly walks); the result is parallel to children, nil where not statted.
-func statChildren(ctx context.Context, dir string, children []os.DirEntry, opts WalkOptions) []*entryStat {
+// statChildren lstats the children of dir that runBFS will index: not files in DirsOnly walks,
+// excluded entries or hidden ones (those are replayed by the hidden expansion, which stats
+// them itself). The result is parallel to children, nil where not statted.
+func statChildren(ctx context.Context, dir string, children []os.DirEntry, opts WalkOptions, listOpts localfs.ListOptions) []*entryStat {
 	out := make([]*entryStat, len(children))
 	for i, d := range children {
 		if ctx.Err() != nil {
 			return out
 		}
-		if opts.DirsOnly && !d.IsDir() {
+		isDir, name := d.IsDir(), d.Name()
+		path := filepath.Join(dir, name)
+		if (opts.DirsOnly && !isDir) || (opts.Exclude != nil && opts.Exclude(path)) || !localfs.EntryVisible(name, dir, isDir, listOpts) {
 			continue
 		}
-		out[i] = statEntry(filepath.Join(dir, d.Name()), opts.Stat)
+		out[i] = statEntry(path, opts.Stat)
 	}
 	return out
 }

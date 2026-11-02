@@ -1,12 +1,14 @@
 package find
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/findcrit"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -39,8 +41,8 @@ func TestCommitAdvancedRestartsOnlyForMissingMetadata(t *testing.T) {
 	gen := h.scanGen
 	a.Symlinks = true
 	h.commitAdvanced()
-	if h.scanGen != gen || st.IndexStat != findcrit.StatNone {
-		t.Fatalf("symlinks need no metadata: scanGen %d -> %d, IndexStat %d", gen, h.scanGen, st.IndexStat)
+	if h.scanGen != gen || h.indexStat != findcrit.StatNone {
+		t.Fatalf("symlinks need no metadata: scanGen %d -> %d, IndexStat %d", gen, h.scanGen, h.indexStat)
 	}
 	if !h.criteria.Symlinks {
 		t.Fatal("criteria not applied")
@@ -48,8 +50,8 @@ func TestCommitAdvancedRestartsOnlyForMissingMetadata(t *testing.T) {
 
 	a.Fields[dialog.FindAdvModifiedNewer].Value = "3d"
 	h.commitAdvanced()
-	if h.scanGen == gen || st.IndexStat != findcrit.StatMeta || h.criteria.Modified.Newer == 0 {
-		t.Fatalf("age criterion: want restart at StatMeta, got scanGen %d IndexStat %d criteria %+v", h.scanGen, st.IndexStat, h.criteria.Modified)
+	if h.scanGen == gen || h.indexStat != findcrit.StatMeta || h.criteria.Modified.Newer == 0 {
+		t.Fatalf("age criterion: want restart at StatMeta, got scanGen %d IndexStat %d criteria %+v", h.scanGen, h.indexStat, h.criteria.Modified)
 	}
 
 	gen = h.scanGen
@@ -61,8 +63,8 @@ func TestCommitAdvancedRestartsOnlyForMissingMetadata(t *testing.T) {
 
 	a.Empty = true
 	h.commitAdvanced()
-	if h.scanGen == gen || st.IndexStat != findcrit.StatMetaEmptyDirs {
-		t.Fatalf("empty: want restart at StatMetaEmptyDirs, got IndexStat %d", st.IndexStat)
+	if h.scanGen == gen || h.indexStat != findcrit.StatMetaEmptyDirs {
+		t.Fatalf("empty: want restart at StatMetaEmptyDirs, got IndexStat %d", h.indexStat)
 	}
 
 	gen = h.scanGen
@@ -81,8 +83,8 @@ func TestCommitAdvancedExcludeRestarts(t *testing.T) {
 	gen := h.scanGen
 	field.Value = "node_modules, *.o"
 	h.commitAdvanced()
-	if h.scanGen == gen || st.IndexExclude != "node_modules,*.o" {
-		t.Fatalf("exclude: want restart, got scanGen %d -> %d IndexExclude %q", gen, h.scanGen, st.IndexExclude)
+	if h.scanGen == gen || !slices.Equal(h.indexExclude, findcrit.Excludes{"node_modules", "*.o"}) {
+		t.Fatalf("exclude: want restart, got scanGen %d -> %d indexExclude %q", gen, h.scanGen, h.indexExclude)
 	}
 	gen = h.scanGen
 	field.Value = "node_modules   *.o"
@@ -115,7 +117,7 @@ func TestParseAdvancedFlagsInvalidFields(t *testing.T) {
 	if h.criteria.Active() || h.scanGen != gen {
 		t.Fatalf("invalid fields must not apply: criteria %+v, scanGen %d -> %d", h.criteria, gen, h.scanGen)
 	}
-	if a.Active() {
+	if a.Summary(theme.Theme{}, 200) != "" {
 		t.Fatal("invalid fields must not show in the summary")
 	}
 }

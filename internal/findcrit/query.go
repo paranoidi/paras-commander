@@ -2,11 +2,11 @@ package findcrit
 
 import (
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
@@ -51,20 +51,19 @@ func QueryEmpty(query string, m Mode) bool {
 // Matcher matches a compiled query against relative paths ('/'-separated). It is safe for
 // concurrent use.
 type Matcher struct {
-	mode          Mode
-	empty         bool
-	fuzzy         search.Query
-	fuzzyOpts     search.Options
-	glob          string
-	globFullPath  bool
-	caseSensitive bool
-	rx            *regexp.Regexp
+	mode         Mode
+	empty        bool
+	fuzzy        search.Query
+	fuzzyOpts    search.Options
+	glob         panel.GroupMatcher
+	globFullPath bool
+	rx           *regexp.Regexp
 }
 
 // Compile builds the matcher for query in mode m. caseInsensitive applies to every mode. An
 // empty query matches everything; an invalid glob or regexp returns an error.
 func Compile(query string, m Mode, caseInsensitive bool) (*Matcher, error) {
-	mt := &Matcher{mode: m, empty: QueryEmpty(query, m), caseSensitive: !caseInsensitive}
+	mt := &Matcher{mode: m, empty: QueryEmpty(query, m)}
 	if mt.empty {
 		return mt, nil
 	}
@@ -77,19 +76,17 @@ func Compile(query string, m Mode, caseInsensitive bool) (*Matcher, error) {
 		if !strings.ContainsAny(g, "*?[") {
 			g = "*" + g + "*" // a plain word finds names containing it (as Find in index's Pattern)
 		}
-		if caseInsensitive {
-			g = strings.ToLower(g)
-		}
-		// With a '/' the pattern matches the whole relative path and '*' crosses directories:
-		// '/' is swapped for NUL (never in a path) on both sides, as panel.NewGroupMatcherFullPath.
+		// With a '/' the pattern matches the whole relative path, where '*' crosses directories.
 		mt.globFullPath = strings.Contains(g, "/")
+		var err error
 		if mt.globFullPath {
-			g = strings.ReplaceAll(g, "/", "\x00")
+			mt.glob, err = panel.NewGroupMatcherFullPath(g, panel.GroupPatternShell, !caseInsensitive)
+		} else {
+			mt.glob, err = panel.NewGroupMatcher(g, panel.GroupPatternShell, !caseInsensitive)
 		}
-		if _, err := filepath.Match(g, "x"); err != nil {
+		if err != nil {
 			return nil, fmt.Errorf("invalid glob: %w", err)
 		}
-		mt.glob = g
 	case ModeRegex:
 		expr := strings.TrimSpace(query)
 		if caseInsensitive {
@@ -121,23 +118,13 @@ func (mt *Matcher) Match(rel string) search.Result {
 	case ModeFuzzy:
 		return mt.fuzzy.Match(rel, mt.fuzzyOpts)
 	case ModeGlob:
-		start := 0
-		value := rel
-		if !mt.globFullPath {
-			start = strings.LastIndexByte(rel, '/') + 1
-			value = rel[start:]
-		}
-		if !mt.caseSensitive {
-			value = strings.ToLower(value)
-		}
 		if mt.globFullPath {
-			value = strings.ReplaceAll(value, "/", "\x00")
+			// The whole row matched: nothing to single out.
+			return search.Result{Matched: mt.glob.Match(rel)}
 		}
-		if ok, _ := filepath.Match(mt.glob, value); !ok {
+		start := strings.LastIndexByte(rel, '/') + 1
+		if !mt.glob.Match(rel[start:]) {
 			return search.Result{}
-		}
-		if mt.globFullPath {
-			return search.Result{Matched: true} // the whole row matched: nothing to single out
 		}
 		from := utf8.RuneCountInString(rel[:start])
 		return search.Result{Matched: true, Ranges: []search.Range{{Start: from, End: from + utf8.RuneCountInString(rel[start:])}}}
