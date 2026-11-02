@@ -23,9 +23,9 @@
                │  ( ) Orchard Theme   │                                            │                
                │  ( ) Pebble Theme    ├────────────────────────────────────────────┤                
                │  ( ) Quartz Theme    │      [ Selected ]    [ Unselected ]        │                
-               │  ( ) River Theme     │                                            │                
+               │  ( ) River Theme     ├────────────────────────────────────────────┤                
                │  ( ) Saffron Theme   │                                            │                
-               │  ( ) Thistle Theme   │                                            │                
+               │  ( ) Thistle Theme   │  [i] Tooltips explain the focused widget.  │                
                │  ( ) Umber Theme     │                                            │                
                │  ( ) Velvet Theme    │                                            │                
                │  ( ) Willow Theme    │                                            │                
@@ -52,7 +52,9 @@ i fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 j fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 k fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
 l fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
-m fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
+m fg=0x100000000 bg=0x100000007 attrs=0 ul=0 ulc=0x0
+n fg=0x100000004 bg=0x100000007 attrs=0 ul=0 ulc=0x0
+o fg=0x10000000f bg=0x100000008 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -80,12 +82,12 @@ aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbgggjggggggggggbbkkklkkkkkkkkkkkkbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbmnnnnmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaabbmmmmmmmmmmmmmmmmmmmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaabbooooooooooooooooooobbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbgggjggggbbgggjggggggggbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa

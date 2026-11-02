@@ -6,8 +6,6 @@
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
-                                                                                                    
                ┌──────────────────────┬─────── Theme ──────────────────────────────┐                
                │ /                    │                                            │                
                │  ( ) Amber Theme     │ Inactive input with text:                  │                
@@ -27,10 +25,12 @@
                │  ( ) Orchard Theme   │                                            │                
                │  ( ) Pebble Theme    ├────────────────────────────────────────────┤                
                │  ( ) Quartz Theme    │      [ Selected ]    [ Unselected ]        │                
+               │                      ├────────────────────────────────────────────┤                
+               │                      │                                            │                
+               │                      │  [i] Tooltips explain the focused widget.  │                
                ├──────────────────────┴────────────────────────────────────────────┤                
                │                       [ OK ]    [ Cancel ]                        │                
                └───────────────────────────────────────────────────────────────────┘                
-                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     
@@ -53,9 +53,9 @@ j fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 l fg=0x100000000 bg=0x100000006 attrs=0 ul=0 ulc=0x0
 m fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
+n fg=0x100000000 bg=0x100000007 attrs=0 ul=0 ulc=0x0
+o fg=0x100000004 bg=0x100000007 attrs=0 ul=0 ulc=0x0
 -- styles --
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -83,9 +83,11 @@ aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbgggkggggggggggbblllmllllllllllllbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbnoooonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbgggkggggbbgggkggggggggbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

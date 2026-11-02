@@ -11,8 +11,12 @@ import (
 )
 
 // themePreviewRows is how many rows the preview pane paints (a blank row, four input demos of
-// three rows, two checkboxes, a blank row, a rule and the buttons); on a short screen it is cut off.
-const themePreviewRows = 18
+// three rows, two checkboxes, a blank row, a rule, the buttons, a rule, a blank row and a tooltip);
+// on a short screen it is cut off.
+const themePreviewRows = 21
+
+// themePreviewTooltip is the sample tooltip text painted at the bottom of the preview pane.
+const themePreviewTooltip = "Tooltips explain the focused widget."
 
 // themeMinListRows is the fewest theme rows the dialog shows; below that it is not drawn.
 const themeMinListRows = 4
@@ -110,7 +114,8 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 }
 
 // drawThemePreview paints the widget preview in the pane right of the list: the vertical rule
-// (with its tees on the frame), sample inputs, checkboxes and buttons in the theme being previewed.
+// (with its tees on the frame), sample inputs, checkboxes, buttons and a tooltip in the theme being
+// previewed.
 func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, styles theme.Theme) {
 	rect := p.Rect
 	_, dbg, _ := styles.DialogSurface.Decompose()
@@ -180,19 +185,24 @@ func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, styl
 	// --- Separator ---
 	previewY++ // blank
 
-	// Draw a simulated separator using ─ characters across the preview width,
-	// connecting to the dialog right border with ┤.
-	previewHSepY := previewY
-	previewSepStyle := borderStyle
+	// A horizontal rule across the preview width, joined to the dialog right border with ┤ (the
+	// tee on the vertical rule is painted last).
 	rightBorderCol := rect.X + rect.Width - 1 // dialog right border column
-	for x := previewLeft; x <= rightBorderCol && fits(previewHSepY); x++ {
-		ch := '─'
-		if x == rightBorderCol {
-			ch = '┤'
+	var hSepRows []int
+	drawHSep := func() {
+		if fits(previewY) {
+			for x := previewLeft; x <= rightBorderCol; x++ {
+				ch := '─'
+				if x == rightBorderCol {
+					ch = '┤'
+				}
+				screen.SetContent(x, previewY, ch, nil, borderStyle)
+			}
+			hSepRows = append(hSepRows, previewY)
 		}
-		screen.SetContent(x, previewHSepY, ch, nil, previewSepStyle)
+		previewY++
 	}
-	previewY++
+	drawHSep()
 
 	// --- Buttons ---
 	const btnGap = 2
@@ -206,12 +216,22 @@ func drawThemePreview(screen tcell.Screen, p dlg.Placement, pane draw.Rect, styl
 		btnStartX += draw.DialogButtonWidth("Selected") + btnGap
 		draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', true, false, false, styles)
 	}
+	previewY++
+
+	// --- Tooltip ---
+	drawHSep()
+	previewY++ // blank
+	if lines, width := draw.TooltipLines(themePreviewTooltip, previewWidth-1, styles); lines != nil {
+		if n := min(len(lines), outerSepY-previewY); n > 0 {
+			draw.PaintTooltip(screen, previewLeft+1, previewY, width, lines[:n], styles)
+		}
+	}
 
 	// Override box-drawing connector characters at the vertical separator column
 	// where it intersects horizontal lines. Must be after all draw calls.
 	screen.SetContent(sepCol, rect.Y, '┬', nil, borderStyle) // top border: tee down
-	if fits(previewHSepY) {
-		screen.SetContent(sepCol, previewHSepY, '├', nil, borderStyle) // preview separator: tee right
+	for _, y := range hSepRows {
+		screen.SetContent(sepCol, y, '├', nil, borderStyle) // preview separator: tee right
 	}
 	screen.SetContent(sepCol, outerSepY, '┴', nil, borderStyle) // outer separator: tee up (no vertical below)
 }
