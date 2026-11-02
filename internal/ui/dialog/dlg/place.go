@@ -421,7 +421,7 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 				case KindInput:
 					p.Items = append(p.Items, PlacedItem{
 						ID: it.ID, Kind: KindInput,
-						Rect: Rect{X: draw.DialogTextX(rect), Y: y + ri, Width: draw.DialogContentWidth(rect), Height: 1},
+						Rect: Rect{X: x + 1, Y: y + ri, Width: max(right-x-2, 0), Height: 1},
 					})
 					continue
 				}

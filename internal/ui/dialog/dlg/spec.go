@@ -40,8 +40,8 @@ const (
 	// focusable or a hit target, so its ID is optional; a group made only of separators and labels
 	// is not a Tab segment. It always spans the dialog, whatever column it sits in.
 	KindSeparator
-	// KindInput is a single-line text input across the content width (DialogTextX /
-	// DialogContentWidth). The engine only draws and places it: it does not edit text, the caller
+	// KindInput is a single-line text input across its column's text width (the content width,
+	// DialogTextX / DialogContentWidth, in a one-column group). The engine only draws and places it: it does not edit text, the caller
 	// keeps Value/Cursor/Scroll in its own state (see HandleKey for the key contract).
 	KindInput
 	// KindList is a scrollable list of plain-data rows (Item.Rows) with a cursor. The engine
@@ -367,7 +367,7 @@ type Rect = draw.Rect
 // PlacedItem is a widget's screen position. Label is the text actually drawn (a label in a later
 // column may be truncated to fit). Kind is KindLabel for static text rows and KindSeparator for
 // rules, which HitTest skips; a label's Rect spans the whole text cell range it paints, spaces
-// included, and a separator's the full dialog width. A KindInput's Rect is its full row.
+// included, and a separator's the full dialog width. A KindInput's Rect is its full row within its column.
 //
 // A KindList's Rect spans its visible rows and text width (the scrollbar column is outside it);
 // Offset is the first visible row and Rows the number of rows in the data, so rows past the end
