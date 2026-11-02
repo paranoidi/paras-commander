@@ -7,7 +7,7 @@
   ┌─────── Select group ───────┐  
   │ (*) Shell patterns         │  
   │ ( ) Regular expression     │  
-  │ ( ) Simple                 │  
+  │ ( ) Simple / auto shell    │  
   ├────────────────────────────┤  
   │ Pattern:               5  │  
   │ lantern                    │  

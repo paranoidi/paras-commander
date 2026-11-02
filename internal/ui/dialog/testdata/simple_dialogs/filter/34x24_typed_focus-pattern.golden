@@ -7,7 +7,7 @@
   ┌────────── Filter ──────────┐  
   │ (*) Shell patterns         │  
   │ ( ) Regular expression     │  
-  │ ( ) Simple                 │  
+  │ ( ) Simple / auto shell    │  
   ├────────────────────────────┤  
   │ Pattern:           3  2  │  
   │ *.mp4                      │  

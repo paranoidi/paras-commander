@@ -131,7 +131,7 @@ func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 	if got := app.model.GroupSelect.Text; got != "focus" {
 		t.Fatalf("pattern = %q, want focus", got)
 	}
-	if app.model.GroupSelect.FilesOnly || app.model.GroupSelect.CaseSensitive || app.model.GroupSelect.PatternMode != panel.GroupPatternShell {
+	if app.model.GroupSelect.FilesOnly || app.model.GroupSelect.CaseSensitive || app.model.GroupSelect.PatternMode != panel.GroupPatternSimple {
 		t.Fatalf("checkbox/mode state changed unexpectedly: %+v", app.model.GroupSelect)
 	}
 

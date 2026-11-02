@@ -102,9 +102,6 @@ func patternHintText(text string, mode panel.GroupPatternMode, caseSensitive boo
 	if hint := strings.TrimSpace(compileHint); hint != "" {
 		return hint
 	}
-	if mode != panel.GroupPatternRegex && mode != panel.GroupPatternShell {
-		return ""
-	}
 	pat := strings.TrimSpace(text)
 	if pat == "" {
 		return ""
@@ -142,13 +139,21 @@ func patternInvalid(text, hint string, previewShow bool, files, folders int) boo
 	return previewShow && files == 0 && folders == 0
 }
 
+// patternModeLabels are the mode radio labels in display order (Shell, Regex, Simple).
+var patternModeLabels = [...]string{"Shell patterns", "Regular expression", "Simple / auto shell"}
+
 // patternSpec builds the widget spec of the Filter and Select group dialogs. Radios and type
 // checkboxes share rows (the checkbox columns line up under the widest radio label), each option
 // row puts its second checkbox under the first type column, and the pattern row carries its live
 // preview at the right. The type checkboxes are disabled while Directories only is on.
 func patternSpec(v patternView) dlg.Spec {
-	// Column boxes derive from the widest labels so the checkboxes line up on every row.
-	radioBox := utf8.RuneCountInString(draw.RadioText("Regular expression", false)) + 2
+	// Column boxes derive from the widest labels so the checkboxes line up on every row. The radio
+	// box pads its widest label by one cell (the type cell adds a leading space), which keeps the
+	// second option column over OK so Down from Match full path reaches OK, not Cancel.
+	radioBox := 0
+	for _, l := range patternModeLabels {
+		radioBox = max(radioBox, utf8.RuneCountInString(draw.RadioText(l, false))+1)
+	}
 	typeBox := utf8.RuneCountInString(" "+draw.CheckboxText("Pictures", false)) + 2
 	radio := func(id dlg.ID, label string, mnemonic rune, mode panel.GroupPatternMode) dlg.Item {
 		return dlg.Item{ID: id, Kind: dlg.KindRadio, Label: label, Mnemonic: mnemonic, On: v.Mode == mode, Width: radioBox}
@@ -157,9 +162,9 @@ func patternSpec(v patternView) dlg.Spec {
 		return dlg.Item{ID: id, Kind: dlg.KindCheckbox, Label: label, Mnemonic: mnemonic, On: on, Width: radioBox}
 	}
 	radios := []dlg.Item{
-		radio(PatternShellRadio, "Shell patterns", PatternMnemonicShell, panel.GroupPatternShell),
-		radio(PatternRegexRadio, "Regular expression", PatternMnemonicRegex, panel.GroupPatternRegex),
-		radio(PatternSimpleRadio, "Simple", PatternMnemonicSimple, panel.GroupPatternSimple),
+		radio(PatternShellRadio, patternModeLabels[0], PatternMnemonicShell, panel.GroupPatternShell),
+		radio(PatternRegexRadio, patternModeLabels[1], PatternMnemonicRegex, panel.GroupPatternRegex),
+		radio(PatternSimpleRadio, patternModeLabels[2], PatternMnemonicSimple, panel.GroupPatternSimple),
 	}
 	// Head: a radio per row with the type checkboxes in two columns to its right. Radios and
 	// checkboxes are separate Tab stops (Seg).

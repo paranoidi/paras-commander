@@ -435,7 +435,7 @@ func (a *App) openGroupSelect(mode string, context string) {
 		Text:               "",
 		Mode:               mode,
 		Context:            context,
-		PatternMode:        panel.GroupPatternShell,
+		PatternMode:        panel.GroupPatternSimple,
 		FilesOnly:          false,
 		DirsOnly:           false,
 		CaseSensitive:      false,

@@ -134,3 +134,13 @@ func TestGroupSelectFocusTypes(t *testing.T) {
 		}
 	}
 }
+
+func TestPatternHintSimpleAutoShell(t *testing.T) {
+	t.Parallel()
+	if got := patternHintText("[", panel.GroupPatternSimple, false, ""); got != "" {
+		t.Fatalf("plain simple pattern hint = %q, want none", got)
+	}
+	if got := patternHintText("*[", panel.GroupPatternSimple, false, ""); got == "" {
+		t.Fatal("invalid auto-shell pattern should show a hint")
+	}
+}

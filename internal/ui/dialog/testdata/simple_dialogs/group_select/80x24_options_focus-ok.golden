@@ -7,7 +7,7 @@
           ┌────────────────────── Select group ──────────────────────┐          
           │ ( ) Shell patterns       [x] Videos     [ ] Audio        │          
           │ (*) Regular expression   [ ] Pictures   [ ] Documents    │          
-          │ ( ) Simple               [x] Archives                    │          
+          │ ( ) Simple / auto shell  [x] Archives                    │          
           ├──────────────────────────────────────────────────────────┤          
           │ Pattern:                                         9  1  │          
           │ *.zip                                                    │          
