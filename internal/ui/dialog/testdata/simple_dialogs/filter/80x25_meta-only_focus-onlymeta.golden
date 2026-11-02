@@ -5,9 +5,9 @@
                                                                                 
                                                                                 
           ┌───────────────────────── Filter ─────────────────────────┐          
-          │ (*) Shell patterns       [ ] Videos     [x] Audio        │          
-          │ ( ) Regular expression   [ ] Pictures   [ ] Documents    │          
-          │ ( ) Simple               [ ] Archives                    │          
+          │ ( ) Simple / auto shell  [ ] Videos     [x] Audio        │          
+          │ (*) Shell patterns       [ ] Pictures   [ ] Documents    │          
+          │ ( ) Regular expression   [ ] Archives                    │          
           ├──────────────────────────────────────────────────────────┤          
           │ Pattern:                                                 │          
           │                                                          │          
@@ -39,9 +39,9 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbccccccccbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabdddddcdddddddddddddbbbbbbbbbbbcbbbbbbbbbddddddcdddbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbcbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbddddddcdddbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabdddddcdddddddddddddbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbcbbbbbbaaaaaaaaaa
+aaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
 aaaaaaaaaabbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaaaaaaaaaa

@@ -1,18 +1,18 @@
 == open ==
-focus=pattern text="" cursor=0 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=false/0/0
+focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=false/0/0
 == * ==
-focus=pattern text="*" cursor=1 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/7/2
+focus=pattern text="*" cursor=1 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/7/2
 == . ==
-focus=pattern text="*." cursor=2 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="*." cursor=2 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="*.m" cursor=3 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="*.m" cursor=3 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == k ==
-focus=pattern text="*.mk" cursor=4 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="*.mk" cursor=4 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == v ==
-focus=pattern text="*.mkv" cursor=5 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
+focus=pattern text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == Up ==
-focus=simple text="*.mkv" cursor=5 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
+focus=regex text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == Up ==
-focus=regex text="*.mkv" cursor=5 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
+focus=shell text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == Alt+o ==
 CLOSED: message="Filtered: 1 files, 0 folders" visible=1

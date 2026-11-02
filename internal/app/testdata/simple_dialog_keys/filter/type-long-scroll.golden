@@ -1,178 +1,178 @@
 == open ==
-focus=pattern text="" cursor=0 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=false/0/0
+focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=false/0/0
 == m ==
-focus=pattern text="m" cursor=1 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="m" cursor=1 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/4/0
 == e ==
-focus=pattern text="me" cursor=2 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="me" cursor=2 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == a ==
-focus=pattern text="mea" cursor=3 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="mea" cursor=3 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == d ==
-focus=pattern text="mead" cursor=4 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="mead" cursor=4 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == o ==
-focus=pattern text="meado" cursor=5 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meado" cursor=5 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == w ==
-focus=pattern text="meadow" cursor=6 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow" cursor=6 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == - ==
-focus=pattern text="meadow-" cursor=7 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-" cursor=7 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-m" cursor=8 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-m" cursor=8 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-me" cursor=9 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-me" cursor=9 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-mea" cursor=10 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-mea" cursor=10 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-mead" cursor=11 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-mead" cursor=11 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meado" cursor=12 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meado" cursor=12 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow" cursor=13 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow" cursor=13 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-" cursor=14 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-" cursor=14 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-m" cursor=15 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-m" cursor=15 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-me" cursor=16 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-me" cursor=16 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-mea" cursor=17 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-mea" cursor=17 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-mead" cursor=18 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-mead" cursor=18 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meado" cursor=19 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meado" cursor=19 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow" cursor=20 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow" cursor=20 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-" cursor=21 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-" cursor=21 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-meadow-m" cursor=22 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-m" cursor=22 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-meadow-me" cursor=23 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-me" cursor=23 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-meadow-mea" cursor=24 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-mea" cursor=24 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-meadow-mead" cursor=25 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-mead" cursor=25 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meadow-meado" cursor=26 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meado" cursor=26 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow-meadow" cursor=27 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow" cursor=27 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-meadow-" cursor=28 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-" cursor=28 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-meadow-meadow-m" cursor=29 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-m" cursor=29 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-meadow-meadow-me" cursor=30 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-me" cursor=30 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-meadow-meadow-mea" cursor=31 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-mea" cursor=31 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-meadow-meadow-mead" cursor=32 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-mead" cursor=32 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meadow-meadow-meado" cursor=33 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meado" cursor=33 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow" cursor=34 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow" cursor=34 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-" cursor=35 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-" cursor=35 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-m" cursor=36 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-m" cursor=36 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-me" cursor=37 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-me" cursor=37 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-mea" cursor=38 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-mea" cursor=38 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-mead" cursor=39 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-mead" cursor=39 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meado" cursor=40 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meado" cursor=40 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow" cursor=41 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow" cursor=41 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-" cursor=42 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-" cursor=42 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=43 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=43 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=44 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=44 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=45 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=45 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=46 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=46 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=47 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=47 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=48 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=48 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=49 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=49 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=50 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=50 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=51 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=51 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=52 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=52 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=53 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=53 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=54 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=54 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=55 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=55 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=56 scroll=2 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=56 scroll=2 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=57 scroll=3 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=57 scroll=3 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=58 scroll=4 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=58 scroll=4 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=59 scroll=5 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=59 scroll=5 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=60 scroll=6 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=60 scroll=6 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=61 scroll=7 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=61 scroll=7 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=62 scroll=8 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=62 scroll=8 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=63 scroll=9 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=63 scroll=9 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=64 scroll=10 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=64 scroll=10 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=65 scroll=11 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=65 scroll=11 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=66 scroll=12 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=66 scroll=12 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=67 scroll=13 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=67 scroll=13 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=68 scroll=14 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=68 scroll=14 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=69 scroll=15 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=69 scroll=15 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=70 scroll=16 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=70 scroll=16 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=71 scroll=17 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=71 scroll=17 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=72 scroll=18 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=72 scroll=18 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=73 scroll=19 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=73 scroll=19 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=74 scroll=20 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=74 scroll=20 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=75 scroll=21 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=75 scroll=21 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=76 scroll=22 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=76 scroll=22 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=77 scroll=23 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=77 scroll=23 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == m ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=78 scroll=24 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-m" cursor=78 scroll=24 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == e ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=79 scroll=25 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-me" cursor=79 scroll=25 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == a ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=80 scroll=26 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mea" cursor=80 scroll=26 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == d ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=81 scroll=27 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-mead" cursor=81 scroll=27 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == o ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=82 scroll=28 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meado" cursor=82 scroll=28 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == w ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=83 scroll=29 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow" cursor=83 scroll=29 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == - ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=84 scroll=30 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=84 scroll=30 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == Home ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=0 scroll=0 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=0 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == End ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=84 scroll=30 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=84 scroll=30 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == Left ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=83 scroll=29 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=83 scroll=29 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
 == Left ==
-focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=82 scroll=29 mode=0 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0
+focus=pattern text="meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-meadow-" cursor=82 scroll=29 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/0/0

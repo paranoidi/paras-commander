@@ -32,7 +32,7 @@ func (h *Handler) OpenFilterDialog() {
 	h.model.FilterDialog = dialog.FilterDialogState{
 		Open:               true,
 		Target:             target,
-		PatternMode:        panel.GroupPatternShell,
+		PatternMode:        panel.GroupPatternSimple,
 		MetaColumnCount:    metaCount,
 		IncludeMetaColumns: metaCount > 0,
 		Focus:              dialog.PatternInput,

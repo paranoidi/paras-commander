@@ -31,14 +31,21 @@ func (m GroupSelectMeta) Match(matcher GroupMatcher, e localfs.Entry) bool {
 	return false
 }
 
-// GroupPatternMode selects shell glob, regexp, or simple substring matching for group select.
+// GroupPatternMode selects shell glob, regexp, or simple / auto shell matching for the Filter and
+// Select group dialogs.
 type GroupPatternMode int
 
 const (
 	GroupPatternShell GroupPatternMode = iota
 	GroupPatternRegex
+	// GroupPatternSimple is a plain substring match, or a shell pattern when the pattern contains
+	// a wildcard (autoShellWildcards).
 	GroupPatternSimple
 )
+
+// autoShellWildcards are the characters that switch GroupPatternSimple to shell matching. '[' is
+// left out so names like "[1080p]" still match as substrings.
+const autoShellWildcards = "*?"
 
 // GroupMatcher compiles a group-select pattern once and matches many basenames.
 type GroupMatcher struct {
@@ -77,10 +84,13 @@ func newGroupMatcher(pattern string, mode GroupPatternMode, caseSensitive bool, 
 		caseSensitive: caseSensitive,
 		fullPath:      fullPath,
 	}
+	if mode == GroupPatternSimple && strings.ContainsAny(pattern, autoShellWildcards) {
+		m.mode = GroupPatternShell
+	}
 	if !caseSensitive && mode != GroupPatternRegex {
 		m.pattern = strings.ToLower(pattern)
 	}
-	switch mode {
+	switch m.mode {
 	case GroupPatternShell:
 		if fullPath {
 			m.pattern = strings.ReplaceAll(m.pattern, "/", "\x00")

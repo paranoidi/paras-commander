@@ -119,11 +119,11 @@ func TestGroupSelectFocusTypes(t *testing.T) {
 		key  tcell.Key
 		want dlg.ID
 	}{
-		{"right from shell radio enters types", PatternShellRadio, tcell.KeyRight, first},
+		{"right from simple radio enters types", PatternSimpleRadio, tcell.KeyRight, first},
 		{"down within first type column", first, tcell.KeyDown, PatternTypeID(1)},
 		{"right to second type column", first, tcell.KeyRight, PatternTypeID(3)},
 		{"down from pattern is files only", PatternInput, tcell.KeyDown, PatternFilesOnly},
-		{"up from pattern is simple radio", PatternInput, tcell.KeyUp, PatternSimpleRadio},
+		{"up from pattern is regex radio", PatternInput, tcell.KeyUp, PatternRegexRadio},
 		{"tab from radios is first type", PatternRegexRadio, tcell.KeyTab, first},
 		{"tab from types is pattern", PatternTypeID(2), tcell.KeyTab, PatternInput},
 		{"backtab from pattern is first type", PatternInput, tcell.KeyBacktab, first},
@@ -132,5 +132,15 @@ func TestGroupSelectFocusTypes(t *testing.T) {
 		if got := patternStep(spec, tc.from, tc.key); got != tc.want {
 			t.Errorf("%s: got %q want %q", tc.name, got, tc.want)
 		}
+	}
+}
+
+func TestPatternHintSimpleAutoShell(t *testing.T) {
+	t.Parallel()
+	if got := patternHintText("[", panel.GroupPatternSimple, false, ""); got != "" {
+		t.Fatalf("plain simple pattern hint = %q, want none", got)
+	}
+	if got := patternHintText("*[", panel.GroupPatternSimple, false, ""); got == "" {
+		t.Fatal("invalid auto-shell pattern should show a hint")
 	}
 }

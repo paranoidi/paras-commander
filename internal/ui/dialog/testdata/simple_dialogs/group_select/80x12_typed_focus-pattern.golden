@@ -1,9 +1,9 @@
 -- text --
                                                                                 
           ┌────────────────────── Select group ──────────────────────┐          
-          │ (*) Shell patterns       [ ] Videos     [ ] Audio        │          
-          │ ( ) Regular expression   [ ] Pictures   [ ] Documents    │          
-          │ ( ) Simple               [ ] Archives                    │          
+          │ ( ) Simple / auto shell  [ ] Videos     [ ] Audio        │          
+          │ (*) Shell patterns       [ ] Pictures   [ ] Documents    │          
+          │ ( ) Regular expression   [ ] Archives                    │          
           ├──────────────────────────────────────────────────────────┤          
           │ Pattern:                                         3  2  │          
           │ *.mp4                                                    │          
@@ -23,9 +23,9 @@ h fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbccccccccccccccbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabdddddcdddddddddddddbbbbbbbbbbbcbbbbbbbbbbbbbbbcbbbbbbbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbcbbbbbbaaaaaaaaaa
-aaaaaaaaaabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbcbbbbbbbbbbbbaaaaaaaaaa
+aaaaaaaaaabdddddcdddddddddddddbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbcbbbbbbaaaaaaaaaa
+aaaaaaaaaabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
 aaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaa
 aaaaaaaaaabbeeeeefeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaaaaaaaaaa

@@ -81,7 +81,7 @@ func TestGroupSelectKeyScripts(t *testing.T) {
 		{"enter-cancel", typeTokens("*.zip") + " Down Down Down Right Enter"},
 		{"enter-in-pattern", typeTokens("*.mp3") + " Enter"},
 		{"enter-in-pattern-empty", "Enter"},
-		{"enter-bad-pattern", "[ Enter"},
+		{"enter-bad-pattern", typeTokens("*[") + " Enter"},
 		{"enter-bad-regex", "Alt+r ( Enter"},
 		{"esc", typeTokens("abc") + " Esc"},
 		{"esc-from-checkbox", "Down Space Esc"},

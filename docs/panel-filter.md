@@ -4,7 +4,7 @@ M-f (`panel.filter-dialog`, leader `F`, rebindable in `keybindings.toml`) opens 
 
 ## Pattern
 
-Pick how the pattern is read: Shell patterns (`*.log`), Regular expression, or Simple (plain substring). "Case sensitive" applies to every mode (regex included). With meta columns present, "Include meta" also matches column values and "Only meta" matches them exclusively.
+Pick how the pattern is read: Simple / auto shell (the default), Shell patterns (`*.log`), or Regular expression. Simple / auto shell matches the text anywhere in the name (`notes` finds `old-notes.txt`); as soon as the pattern contains `*` or `?` it is read as a shell pattern instead, which must match the whole name (`*.log`). `[` alone does not switch, so `[1080p]` still finds names containing it. "Case sensitive" applies to every mode (regex included). With meta columns present, "Include meta" also matches column values and "Only meta" matches them exclusively.
 
 ## File types
 
@@ -22,7 +22,7 @@ An entry is shown when it matches the checked types **and** the pattern; an empt
 
 ## Keys
 
-Alt+letter toggles the underlined option: Shell patterns S, Regular expression R, Simple L, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only Y, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N. Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
+Alt+letter toggles the underlined option: Simple / auto shell L, Shell patterns S, Regular expression R, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only Y, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N. Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
 
 The panel border shows the active filter, for example `Filter: not report Videos, Audio`. A live count of matches is shown beside the Pattern label.
 

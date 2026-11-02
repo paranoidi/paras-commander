@@ -19,7 +19,7 @@ Selecting a directory and one of its descendants cannot both stay selected: addi
 
 ## Select and unselect group
 
-The dialog has the same mode radios and type checkboxes as the [panel Filter](panel-filter.md): Shell patterns, Regular expression, Simple substring; Videos, Pictures, Archives, Audio, Documents (from `[filter.types]`); Files only, Directories only; Case sensitive. Option letters match Filter. Matching is on the file name. There is no Invert.
+The dialog has the same mode radios and type checkboxes as the [panel Filter](panel-filter.md): Simple / auto shell (the default: substring, or a shell pattern once it contains `*` or `?`), Shell patterns, Regular expression; Videos, Pictures, Archives, Audio, Documents (from `[filter.types]`); Files only, Directories only; Case sensitive. Option letters match Filter. Matching is on the file name. There is no Invert.
 
 A live count beside the Pattern label shows how many files and folders the pattern would newly select (or unselect). The input turns red when the pattern is invalid or matches nothing. With "Directories only" the type checkboxes are disabled. An empty pattern with types checked selects every entry of those types; an empty pattern and no types selects nothing. The dialog also works inside Find results (with "Match full path") and on the paths detected in a user-menu output dialog.
 

@@ -5,9 +5,9 @@
                                   
                                   
   ┌─────── Select group ───────┐  
+  │ ( ) Simple / auto shell    │  
   │ (*) Shell patterns         │  
   │ ( ) Regular expression     │  
-  │ ( ) Simple                 │  
   ├────────────────────────────┤  
   │ Pattern:               5  │  
   │ lantern                    │  
@@ -37,9 +37,9 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbccccccccccccccbbbbbbbbaa
+aabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaa
 aabdddddcdddddddddddddbbbbbbbbbbaa
 aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbeeeeeeeeeeeeeeeeeeeeeeeeeebbaa

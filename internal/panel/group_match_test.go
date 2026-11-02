@@ -80,6 +80,47 @@ func TestGroupMatcherSimpleCaseSensitive(t *testing.T) {
 	}
 }
 
+func TestGroupMatcherSimpleAutoShell(t *testing.T) {
+	cases := []struct {
+		pattern string
+		name    string
+		want    bool
+	}{
+		{"*.go", "Main.go", true},       // a wildcard switches to a whole-name shell match
+		{"*.go", "main.go.bak", false},  // ...so the pattern is no longer a substring
+		{"ma?n*", "main_test.go", true}, // '?' triggers too
+		{"ma?n", "main.go", false},
+		{"[1080p]", "show [1080p].mkv", true}, // '[' alone stays a substring
+		{"[1080p]", "show 1.mkv", false},
+	}
+	for _, tc := range cases {
+		m, err := NewGroupMatcher(tc.pattern, GroupPatternSimple, false)
+		if err != nil {
+			t.Fatalf("%q: %v", tc.pattern, err)
+		}
+		if got := m.Match(tc.name); got != tc.want {
+			t.Errorf("%q vs %q: got %v want %v", tc.pattern, tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestGroupMatcherSimpleAutoShellInvalid(t *testing.T) {
+	_, err := NewGroupMatcher("*[a", GroupPatternSimple, false)
+	if err == nil || !strings.Contains(err.Error(), "invalid shell pattern") {
+		t.Fatalf("err = %v, want invalid shell pattern", err)
+	}
+}
+
+func TestGroupMatcherSimpleAutoShellFullPath(t *testing.T) {
+	m, err := NewGroupMatcherFullPath("*harbor*", GroupPatternSimple, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.Match("/tmp/harbor/lantern.txt") {
+		t.Fatal("auto shell '*' should cross directory separators in full-path mode")
+	}
+}
+
 func TestGroupMatcherFullPathShellDoesNotCrossSeparatorByDefault(t *testing.T) {
 	m, err := NewGroupMatcher("*src*", GroupPatternShell, false)
 	if err != nil {

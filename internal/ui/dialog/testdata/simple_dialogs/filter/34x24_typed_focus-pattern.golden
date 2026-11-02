@@ -5,9 +5,9 @@
                                   
                                   
   ┌────────── Filter ──────────┐  
+  │ ( ) Simple / auto shell    │  
   │ (*) Shell patterns         │  
   │ ( ) Regular expression     │  
-  │ ( ) Simple                 │  
   ├────────────────────────────┤  
   │ Pattern:           3  2  │  
   │ *.mp4                      │  
@@ -39,9 +39,9 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbccccccccbbbbbbbbbbbaa
+aabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaa
 aabdddddcdddddddddddddbbbbbbbbbbaa
 aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbeeeeefeeeeeeeeeeeeeeeeeeeebbaa
