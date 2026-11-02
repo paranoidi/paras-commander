@@ -5,9 +5,9 @@
                                   
                                   
   ┌────────── Filter ──────────┐  
+  │ ( ) Simple / auto shell    │  
   │ ( ) Shell patterns         │  
   │ (*) Regular expression     │  
-  │ ( ) Simple / auto shell    │  
   ├────────────────────────────┤  
   │ Pattern:           9  1  │  
   │ *.zip                      │  
@@ -39,9 +39,9 @@ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aabbbbbbbbbbbccccccccbbbbbbbbbbbaa
+aabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbcbbbbbbbbbbbbbbbbbbbbbbbaa
 aabdddddcdddddddddddddddddbbbbbbaa
-aabbbbbbbbbbcbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbeeeeeeeeeeeeeeeeeeeeeeeeeebbaa

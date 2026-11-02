@@ -22,7 +22,7 @@ An entry is shown when it matches the checked types **and** the pattern; an empt
 
 ## Keys
 
-Alt+letter toggles the underlined option: Shell patterns S, Regular expression R, Simple / auto shell L, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only Y, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N. Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
+Alt+letter toggles the underlined option: Simple / auto shell L, Shell patterns S, Regular expression R, Videos V, Pictures P, Archives A, Audio U, Documents T, Files only Y, Directories only D, Invert I, Case sensitive E, Include meta M, Only meta N. Tab jumps between the mode radios, type checkboxes, pattern, options and buttons.
 
 The panel border shows the active filter, for example `Filter: not report Videos, Audio`. A live count of matches is shown beside the Pattern label.
 

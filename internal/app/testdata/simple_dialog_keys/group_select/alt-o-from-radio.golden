@@ -11,8 +11,8 @@ focus=pattern text="*.mk" cursor=4 scroll=0 mode=2 files=false dirs=false case=f
 == v ==
 focus=pattern text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false case=false fullpath=false meta=false/false types=[] preview=true/1/0
 == Up ==
-focus=simple text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false case=false fullpath=false meta=false/false types=[] preview=true/1/0
-== Up ==
 focus=regex text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false case=false fullpath=false meta=false/false types=[] preview=true/1/0
+== Up ==
+focus=shell text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false case=false fullpath=false meta=false/false types=[] preview=true/1/0
 == Alt+o ==
 CLOSED: message="Selected matching \"*.mkv\"" selected=1

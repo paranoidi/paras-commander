@@ -41,23 +41,21 @@ func TestDrawFilterDialogTypeColumnsBesideRadios(t *testing.T) {
 		t.Fatalf("no row contains %q:\n%s", sub, strings.Join(rows, "\n"))
 		return -1
 	}
-	reg := rows[find("Regular expression")]
-	for _, want := range []string{"Pictures", "Documents"} {
-		if !strings.Contains(reg, want) {
-			t.Fatalf("regex row %q missing %q", reg, want)
-		}
+	simple := rows[find("Simple / auto shell")]
+	if !strings.Contains(simple, "Videos") || !strings.Contains(simple, "Audio") {
+		t.Fatalf("simple row %q missing Videos/Audio", simple)
 	}
-	if y := find("Shell patterns"); !strings.Contains(rows[y], "Videos") || !strings.Contains(rows[y], "Audio") {
-		t.Fatalf("shell row %q missing Videos/Audio", rows[y])
+	if y := find("Shell patterns"); !strings.Contains(rows[y], "Pictures") || !strings.Contains(rows[y], "Documents") {
+		t.Fatalf("shell row %q missing Pictures/Documents", rows[y])
 	}
-	if y := find("Simple"); !strings.Contains(rows[y], "Archives") {
-		t.Fatalf("simple row %q missing Archives", rows[y])
+	if y := find("Regular expression"); !strings.Contains(rows[y], "Archives") {
+		t.Fatalf("regex row %q missing Archives", rows[y])
 	}
 	// Right margin: the char before the right border is blank on the widest row.
-	trimmed := strings.TrimRight(reg, " ")
+	trimmed := strings.TrimRight(simple, " ")
 	runes := []rune(trimmed)
 	if len(runes) < 3 || string(runes[len(runes)-1]) != "│" || string(runes[len(runes)-2]) != " " {
-		t.Fatalf("regex row lost its right margin: %q", reg)
+		t.Fatalf("simple row lost its right margin: %q", simple)
 	}
 	// The button strip sits directly under its separator (no blank row between them).
 	btn := find("OK")
@@ -87,13 +85,13 @@ func TestFilterFocusGrid(t *testing.T) {
 		meta  int
 		want  dlg.ID
 	}{
-		{"radio right to type", PatternShellRadio, tcell.KeyRight, shell, 0, videos},
+		{"radio right to type", PatternSimpleRadio, tcell.KeyRight, shell, 0, videos},
 		{"type right to audio col", videos, tcell.KeyRight, shell, 0, audio},
-		{"type left back to radio", videos, tcell.KeyLeft, shell, 0, PatternShellRadio},
+		{"type left back to radio", videos, tcell.KeyLeft, shell, 0, PatternSimpleRadio},
 		{"down keeps type column", videos, tcell.KeyDown, shell, 0, PatternTypeID(FilterTypePictures)},
 		{"down from empty cell falls left", documents, tcell.KeyDown, shell, 0, archives},
 		{"down from archives to pattern", archives, tcell.KeyDown, shell, 0, PatternInput},
-		{"up from pattern to simple radio", PatternInput, tcell.KeyUp, shell, 0, PatternSimpleRadio},
+		{"up from pattern to regex radio", PatternInput, tcell.KeyUp, shell, 0, PatternRegexRadio},
 		{"dirs down to case", PatternDirsOnly, tcell.KeyDown, shell, 0, PatternCase},
 		{"dirs down to case in regex", PatternDirsOnly, tcell.KeyDown, regex, 0, PatternCase},
 		{"invert right to case", PatternInvert, tcell.KeyRight, shell, 0, PatternCase},
@@ -108,9 +106,9 @@ func TestFilterFocusGrid(t *testing.T) {
 		{"tab types to pattern", documents, tcell.KeyTab, shell, 0, PatternInput},
 		{"tab pattern to options", PatternInput, tcell.KeyTab, shell, 0, PatternFilesOnly},
 		{"tab options to buttons", PatternInvert, tcell.KeyTab, shell, 0, dlg.OK},
-		{"tab buttons wraps", dlg.Cancel, tcell.KeyTab, shell, 0, PatternShellRadio},
+		{"tab buttons wraps", dlg.Cancel, tcell.KeyTab, shell, 0, PatternSimpleRadio},
 		{"backtab pattern to types", PatternInput, tcell.KeyBacktab, shell, 0, videos},
-		{"backtab radios wraps to buttons", PatternShellRadio, tcell.KeyBacktab, shell, 0, dlg.OK},
+		{"backtab radios wraps to buttons", PatternSimpleRadio, tcell.KeyBacktab, shell, 0, dlg.OK},
 	}
 	for _, s := range steps {
 		if got := patternStep(view(s.mode, s.meta), s.focus, s.key); got != s.want {

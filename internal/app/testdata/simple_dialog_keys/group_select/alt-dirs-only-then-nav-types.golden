@@ -5,20 +5,20 @@ focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=false case=false
 == Alt+d ==
 focus=pattern text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
 == Up ==
-focus=simple text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
-== Up ==
 focus=regex text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
 == Up ==
 focus=shell text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
+== Up ==
+focus=simple text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
 == Right ==
+focus=simple text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
+== Down ==
 focus=shell text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
 == Down ==
 focus=regex text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
-== Down ==
-focus=simple text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
 == Right ==
-focus=simple text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
+focus=regex text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
 == Left ==
-focus=simple text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
+focus=regex text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
 == Left ==
-focus=simple text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0
+focus=regex text="" cursor=0 scroll=0 mode=2 files=false dirs=true case=false fullpath=false meta=false/false types=[videos] preview=false/2/0

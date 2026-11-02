@@ -139,8 +139,8 @@ func patternInvalid(text, hint string, previewShow bool, files, folders int) boo
 	return previewShow && files == 0 && folders == 0
 }
 
-// patternModeLabels are the mode radio labels in display order (Shell, Regex, Simple).
-var patternModeLabels = [...]string{"Shell patterns", "Regular expression", "Simple / auto shell"}
+// patternModeLabels are the mode radio labels in display order (Simple, Shell, Regex).
+var patternModeLabels = [...]string{"Simple / auto shell", "Shell patterns", "Regular expression"}
 
 // patternSpec builds the widget spec of the Filter and Select group dialogs. Radios and type
 // checkboxes share rows (the checkbox columns line up under the widest radio label), each option
@@ -162,9 +162,9 @@ func patternSpec(v patternView) dlg.Spec {
 		return dlg.Item{ID: id, Kind: dlg.KindCheckbox, Label: label, Mnemonic: mnemonic, On: on, Width: radioBox}
 	}
 	radios := []dlg.Item{
-		radio(PatternShellRadio, patternModeLabels[0], PatternMnemonicShell, panel.GroupPatternShell),
-		radio(PatternRegexRadio, patternModeLabels[1], PatternMnemonicRegex, panel.GroupPatternRegex),
-		radio(PatternSimpleRadio, patternModeLabels[2], PatternMnemonicSimple, panel.GroupPatternSimple),
+		radio(PatternSimpleRadio, patternModeLabels[0], PatternMnemonicSimple, panel.GroupPatternSimple),
+		radio(PatternShellRadio, patternModeLabels[1], PatternMnemonicShell, panel.GroupPatternShell),
+		radio(PatternRegexRadio, patternModeLabels[2], PatternMnemonicRegex, panel.GroupPatternRegex),
 	}
 	// Head: a radio per row with the type checkboxes in two columns to its right. Radios and
 	// checkboxes are separate Tab stops (Seg).

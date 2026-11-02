@@ -11,6 +11,6 @@ focus=pattern text="*.mk" cursor=4 scroll=0 mode=2 files=false dirs=false invert
 == v ==
 focus=pattern text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == Up ==
-focus=simple text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
+focus=regex text="*.mkv" cursor=5 scroll=0 mode=2 files=false dirs=false invert=false case=false meta=false/false types=[] preview=true/1/0
 == Alt+c ==
 CLOSED: message="" visible=9
