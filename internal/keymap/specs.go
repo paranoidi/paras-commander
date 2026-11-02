@@ -459,11 +459,11 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionPanelGitFilterMenu,
 			Views:        HelpBrowser,
-			Title:        "Git filter menu",
+			Title:        "Git menu",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"M-g"},
 			PreferredKey: "M-g",
-			Keywords:     []string{"git", "filter", "staged", "unstaged", "tracked", "untracked"},
+			Keywords:     []string{"git", "filter", "staged", "unstaged", "tracked", "untracked", "stage", "untrack", "commit", "push", "pull"},
 		},
 		{
 			ID:           ActionPanelFolderColorMenu,
@@ -1086,6 +1086,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Git",
 			DefaultKeys: []string{"M--"},
 			Keywords:    []string{"git", "reset", "unstage", "index"},
+		},
+		{
+			ID:          ActionGitUntrack,
+			Views:       HelpBrowser,
+			Title:       "Git untrack",
+			Section:     "Git",
+			DefaultKeys: nil, // unbound by default; git menu letter R
+			Keywords:    []string{"git", "rm", "untrack", "cached", "index"},
 		},
 		{
 			ID:          ActionPanelToggleHidden,

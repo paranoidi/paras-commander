@@ -22,6 +22,27 @@ func TestAltGOpensGitFilterMenu(t *testing.T) {
 	}
 }
 
+func TestGitMenuActionsGroup(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.model.ViewMode = ui.ViewBrowser
+	app.toggleGitFilterMenu()
+	st := app.model.LeaderMenu
+	if !app.leaderMenuOpen(ui.LeaderMenuGitFilter) {
+		t.Fatal("expected git menu open")
+	}
+	want := map[rune]string{'S': keymap.ActionGitStage, 'U': keymap.ActionGitUnstage, 'R': keymap.ActionGitUntrack}
+	for key, action := range want {
+		i, ok := ui.LeaderMenuIndexForKey(st.Items, key)
+		if !ok || i >= len(app.leaderMenuActions) || app.leaderMenuActions[i] != action {
+			t.Fatalf("key %q -> row %d (ok=%v), want action %q", key, i, ok, action)
+		}
+	}
+	// Lowercase letters still pick the filters, not the actions.
+	if i, ok := ui.LeaderMenuIndexForKey(st.Items, 's'); !ok || app.leaderMenuActions[i] != "" {
+		t.Fatalf("key 's' -> row %d (ok=%v), want the Staged filter row", i, ok)
+	}
+}
+
 func TestAltGTogglesGitFilterMenuClosed(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser

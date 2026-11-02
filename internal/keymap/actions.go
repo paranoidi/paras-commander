@@ -97,6 +97,7 @@ const (
 	ActionPanelToggleHidden           = "panel.toggle-hidden"
 	ActionGitStage                    = "git.stage"
 	ActionGitUnstage                  = "git.unstage"
+	ActionGitUntrack                  = "git.untrack"
 	ActionBookmarkOpen                = "bookmark.open"
 	ActionBookmarkAdd                 = "bookmark.add"
 	ActionBookmarkDelete              = "bookmark.delete"
@@ -445,6 +446,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelToggleHidden:           {},
 	ActionGitStage:                    {},
 	ActionGitUnstage:                  {},
+	ActionGitUntrack:                  {},
 	ActionBookmarkOpen:                {},
 	ActionBookmarkAdd:                 {},
 	ActionBookmarkDelete:              {},

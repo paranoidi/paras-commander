@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestRunGitStage(t *testing.T) {
+func TestRunGitIndex(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not in PATH")
 	}
@@ -27,16 +27,27 @@ func TestRunGitStage(t *testing.T) {
 	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := runGitStage(root, true, []string{f}); err != nil {
+	if err := runGitIndex(root, gitStage, []string{f}); err != nil {
 		t.Fatal(err)
 	}
 	if got := git("diff", "--cached", "--name-only"); got != "harbor-lantern.txt" {
 		t.Fatalf("staged = %q", got)
 	}
-	if err := runGitStage(root, false, []string{f}); err != nil {
+	if err := runGitIndex(root, gitUnstage, []string{f}); err != nil {
 		t.Fatal(err)
 	}
 	if got := git("diff", "--cached", "--name-only"); got != "" {
 		t.Fatalf("still staged: %q", got)
+	}
+	git("add", "--", f)
+	git("commit", "-q", "-m", "init")
+	if err := runGitIndex(root, gitUntrack, []string{f}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(f); err != nil {
+		t.Fatalf("untrack removed the file from disk: %v", err)
+	}
+	if got := git("ls-files", "--cached"); got != "" {
+		t.Fatalf("still tracked: %q", got)
 	}
 }
