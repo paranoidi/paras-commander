@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
@@ -14,46 +15,6 @@ const (
 	messageDialogMaxInnerWidth = 72
 	messageDialogMaxBodyLines  = 18
 )
-
-// wrapMessageBody splits text into lines that fit maxCols runes, breaking at spaces when practical.
-func wrapMessageBody(text string, maxCols int) []string {
-	if maxCols < 1 {
-		return nil
-	}
-	text = strings.ReplaceAll(text, "\r\n", "\n")
-	var lines []string
-	for _, para := range strings.Split(text, "\n") {
-		para = strings.TrimRight(para, "\r")
-		if strings.TrimSpace(para) == "" {
-			lines = append(lines, "")
-			continue
-		}
-		runes := []rune(strings.TrimSpace(para))
-		for len(runes) > 0 {
-			if len(runes) <= maxCols {
-				lines = append(lines, strings.TrimSpace(string(runes)))
-				break
-			}
-			breakAt := maxCols
-			minBreak := max(maxCols/3, 1)
-			for i := maxCols - 1; i >= minBreak; i-- {
-				if runes[i] == ' ' {
-					breakAt = i
-					break
-				}
-			}
-			line := strings.TrimSpace(string(runes[:breakAt]))
-			if line != "" {
-				lines = append(lines, line)
-			}
-			runes = runes[breakAt:]
-			for len(runes) > 0 && runes[0] == ' ' {
-				runes = runes[1:]
-			}
-		}
-	}
-	return lines
-}
 
 // longestSingleLineRunes returns the longest trim-non-empty line length after splitting on newlines (no reflow).
 func longestSingleLineRunes(msg string) int {
@@ -132,7 +93,7 @@ func MessageDialogView(state MessageDialogState, layout Layout) dlg.Spec {
 		}
 	}
 
-	lines := wrapMessageBody(msg, innerW)
+	lines := primitive.WrapText(msg, innerW)
 	lines = truncateMessageLines(lines, innerW)
 
 	const minMsgDialogHeight = 6

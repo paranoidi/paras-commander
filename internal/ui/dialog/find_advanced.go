@@ -254,18 +254,21 @@ func findAdvancedRows(a FindAdvancedState, rowW int) []dlg.Item {
 	return rows
 }
 
-// findAdvHints are the example texts of the advanced inputs, shown while they are empty.
-var findAdvHints = [FindAdvFieldCount]string{
-	FindAdvModifiedNewer: "3d",
-	FindAdvModifiedOlder: "2026-01-31",
-	FindAdvChangedNewer:  "12h",
-	FindAdvChangedOlder:  "1w2d",
-	FindAdvAccessedNewer: "30m",
-	FindAdvAccessedOlder: "6mo",
-	FindAdvSizeMin:       "10M",
-	FindAdvSizeMax:       "1.5G",
-	FindAdvOwner:         "root or 1000",
-	FindAdvExclude:       "node_modules, .git, *.o, build/out",
+// findAdvAgeSyntax is the age syntax every time input's tooltip ends with (findcrit.ParseAge).
+const findAdvAgeSyntax = "Ages: 30m, 12h, 3d, 2w, 6mo, 1y, or a sum such as 1w2d. Dates: 2026-01-31 or 2026-01-31 14:30 (local time)."
+
+// findAdvTooltips explain the advanced inputs; each shows while its input holds focus.
+var findAdvTooltips = [FindAdvFieldCount]string{
+	FindAdvModifiedNewer: "Content modified (mtime) less than this long ago, or after this date. " + findAdvAgeSyntax,
+	FindAdvModifiedOlder: "Content modified (mtime) more than this long ago, or before this date. " + findAdvAgeSyntax,
+	FindAdvChangedNewer:  "Status changed (ctime: content, permissions, owner, renames) less than this long ago, or after this date. " + findAdvAgeSyntax,
+	FindAdvChangedOlder:  "Status changed (ctime: content, permissions, owner, renames) more than this long ago, or before this date. " + findAdvAgeSyntax,
+	FindAdvAccessedNewer: "Last read (atime) less than this long ago, or after this date. Coarse on relatime mounts. " + findAdvAgeSyntax,
+	FindAdvAccessedOlder: "Last read (atime) more than this long ago, or before this date. Coarse on relatime mounts. " + findAdvAgeSyntax,
+	FindAdvSizeMin:       "Files at least this big; directories never match. A number with an optional binary unit: 512, 10k, 4M, 1.5G, 2T.",
+	FindAdvSizeMax:       "Files at most this big; directories never match. A number with an optional binary unit: 512, 10k, 4M, 1.5G, 2T.",
+	FindAdvOwner:         "Entries owned by this user: a user name (root) or a numeric uid (1000).",
+	FindAdvExclude:       "Shell patterns the search skips entirely, matches and their subdirectories alike, separated by commas or spaces: node_modules, .git, *.o. A pattern with a / matches the path from the search root (build/out).",
 }
 
 // findAdvMnemonics are the letters of the advanced section's options. They are live (and
@@ -294,7 +297,7 @@ func findAdvancedLayout(a FindAdvancedState, rowW int) []dlg.Item {
 	input := func(f FindAdvField, w int) dlg.Item {
 		in := a.Fields[f]
 		it := dlg.Item{
-			ID: FindAdvFieldID(f), Kind: dlg.KindInput, Width: w, Hint: findAdvHints[f],
+			ID: FindAdvFieldID(f), Kind: dlg.KindInput, Width: w, Tooltip: findAdvTooltips[f],
 			Value: in.Value, Cursor: in.Cursor, Scroll: in.Scroll, Invalid: in.Invalid,
 		}
 		if w == 0 {

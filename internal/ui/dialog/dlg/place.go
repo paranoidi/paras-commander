@@ -535,9 +535,19 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 			}
 		}
 	}
-	if len(spec.Buttons) == 0 {
-		return p, true
+	if len(spec.Buttons) > 0 {
+		drawButtonStrip(screen, spec, p, focus, borderStyle, styles)
 	}
+	if found && !cur.isButton() {
+		if it := widgetAt(spec, cur); it.Tooltip != "" {
+			p.Tooltip = drawTooltip(screen, spec, p, it, styles)
+		}
+	}
+	return p, true
+}
+
+// drawButtonStrip paints the separator above the buttons (with ButtonsLabel) and the strip.
+func drawButtonStrip(screen tcell.Screen, spec Spec, p Placement, focus ID, borderStyle tcell.Style, styles theme.Theme) {
 	if spec.ButtonsLabel == "" {
 		draw.DrawDialogHSeparator(screen, p.Rect, p.SepY, borderStyle)
 	} else {
@@ -552,7 +562,38 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 		}
 		draw.DrawDialogButtonRowCentered(screen, p.Rect, p.ButtonY+ri, specs, styles)
 	}
-	return p, true
+}
+
+// drawTooltip paints the focused widget's Tooltip box inside the dialog's frame, above the
+// content bottom: over Spec.TooltipArea when it has the room, else below the widget, else above
+// it. It returns the box's rect; a box that fits nowhere is not drawn (empty rect).
+func drawTooltip(screen tcell.Screen, spec Spec, p Placement, it Item, styles theme.Theme) Rect {
+	left, right := p.Rect.X+1, p.Rect.X+p.Rect.Width-1 // inside the borders
+	top, bottom := p.Rect.Y+1, p.ContentBottom
+	lines, w := draw.TooltipLines(it.Tooltip, right-left, styles)
+	if len(lines) == 0 {
+		return Rect{}
+	}
+	h := len(lines)
+	at := func(x, y int) Rect {
+		box := Rect{X: max(min(x, right-w), left), Y: y, Width: w, Height: h}
+		draw.PaintTooltip(screen, box.X, box.Y, box.Width, lines, styles)
+		return box
+	}
+	if area, ok := p.Item(spec.TooltipArea); ok && area.Rect.Y+h <= bottom {
+		return at(area.Rect.X, area.Rect.Y)
+	}
+	pi, ok := p.Item(it.ID)
+	if !ok {
+		return Rect{}
+	}
+	switch r := pi.Rect; {
+	case r.Y+1+h <= bottom:
+		return at(r.X, r.Y+1)
+	case r.Y-h >= top:
+		return at(r.X, r.Y-h)
+	}
+	return Rect{}
 }
 
 func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.Theme) {
@@ -562,9 +603,6 @@ func drawInput(screen tcell.Screen, r Rect, it Item, focused bool, styles theme.
 	}
 	draw.PaintScrollingInputContent(screen, r.X, r.Y, r.Width, it.Value, it.CompletionSuffix, it.Cursor, it.Scroll,
 		focused, it.Invalid, focused, it.Placeholder, it.LeadingIcon, styles)
-	if it.Value == "" && it.CompletionSuffix == "" && it.Hint != "" {
-		draw.PaintInputHint(screen, r.X, r.Y, r.Width, it.Hint, it.LeadingIcon, focused, styles)
-	}
 }
 
 // InputTextWidth is how many cells input id's text scrolls in when spec is drawn on a screenW x

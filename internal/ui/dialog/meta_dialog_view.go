@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
@@ -39,7 +40,7 @@ func MetaDialogView(s MetaDialogState) dlg.Spec {
 		})
 	}
 	if len(s.Entries) == 0 && s.Notice != "" {
-		for _, line := range wrapMessageBody(s.Notice, metaDialogWidth-4) {
+		for _, line := range primitive.WrapText(s.Notice, metaDialogWidth-4) {
 			items = append(items, dlg.Item{Kind: dlg.KindLabel, Label: line, Style: dlg.TextWarn})
 		}
 		return metaSpec(append(groups, dlg.Group{Columns: [][]dlg.Item{items}}), s.MarkerWidth)

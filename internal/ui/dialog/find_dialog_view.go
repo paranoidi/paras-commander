@@ -103,6 +103,7 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 		Buttons:         frame.Buttons,
 		ButtonsLabel:    ctx.SelectionLabel,
 		PlainButtonKeys: true, PlainMnemonics: true, ScrollbarStyle: ctx.ScrollbarStyle,
+		TooltipArea: FindList, // inert while focus is in the advanced section, which the tooltips explain
 	}
 	// Only the visible results are built, so the list's fitted height comes first.
 	spec, _ = fillList(spec, ctx.Layout, FindList, func(height, _ int) dlg.Item {

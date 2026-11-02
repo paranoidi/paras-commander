@@ -650,3 +650,18 @@ func TestResolveColorUsesPalette(t *testing.T) {
 		t.Fatal("unknown color resolved")
 	}
 }
+
+func TestTooltipStylesFallBackWhenThemeOmitsThem(t *testing.T) {
+	styles, err := parse(testTheme(t, "custom", nil, nil))
+	if err != nil {
+		t.Fatalf("parse() error = %v", err)
+	}
+	if styles.TooltipText != styles.DialogCompletionItem {
+		t.Errorf("TooltipText = %v, want the dialog.completion.item fallback", styles.TooltipText)
+	}
+	wantFG, _, _ := styles.DialogAccent.Decompose()
+	_, wantBG, _ := styles.DialogCompletionItem.Decompose()
+	if fg, bg, _ := styles.TooltipInfoStyle().Decompose(); fg != wantFG || bg != wantBG {
+		t.Errorf("TooltipInfoStyle = (%v, %v), want the accent foreground on the tooltip box", fg, bg)
+	}
+}

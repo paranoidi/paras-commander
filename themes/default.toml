@@ -260,8 +260,6 @@ active.placeholder = { fg = "default" }
 inactive = { fg = "white", bg = "black" }
 inactive.error = { fg = "red", bg = "black" }
 inactive.placeholder = { fg = "white", bg = "black" }
-active.hint = { fg = "bright_black" }       # example text in an empty input (find advanced fields)
-inactive.hint = { fg = "bright_black", bg = "black" }
 
 [dialog.option]
 active = { fg = "yellow", bold = true }
@@ -297,6 +295,10 @@ item          = { fg = "white", bg = "black" }
 item.selected = { fg = "black", bg = "cyan", bold = true }
 match         = { fg = "yellow", bg = "black", bold = true }
 match.selected = { fg = "black", bg = "cyan", bold = true, underline = true }
+
+[tooltip]                  # explanation box of the focused dialog widget (dlg Item.Tooltip)
+text = { fg = "black", bg = "white" }
+info = { fg = "blue" }       # foreground of the info icon ([icons.dialog] info) on the box
 
 [dialog.massrename]
 before = { fg = "white" }

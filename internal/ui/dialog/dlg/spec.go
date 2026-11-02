@@ -119,10 +119,6 @@ type Item struct {
 	LeadingIcon      string
 	Invalid          bool // error styling
 	Placeholder      bool // Value is a suggested default: drawn in the placeholder style
-	// Hint is example text drawn in the hint style (dialog.input.*.hint) while Value is empty. It
-	// documents the input and is never part of its value, unlike Placeholder (a suggested default
-	// the first keystroke replaces).
-	Hint string
 	// Simple draws draw.DrawSimpleDialogInput (no scrolling, no ghost text, no icon) instead of the
 	// scrolling input.
 	Simple bool
@@ -194,6 +190,10 @@ type Item struct {
 	// style without a cursor row, while the keys that move it are elsewhere (find's results while
 	// focus is in its Advanced section).
 	Inert bool
+	// Tooltip (any focusable widget) is an explanation shown in a box while the widget holds
+	// focus: below it (above when the dialog has no room there), or over Spec.TooltipArea. The box
+	// is drawn last, over the dialog's content and inside its frame; it never takes focus or hits.
+	Tooltip string
 	// Seg names the Tab segment of an item inside its group (default 0). Items of one group that
 	// share a Seg are one Tab segment, whatever their layout order, so a grid whose rows hold a
 	// radio and its checkboxes can still Tab between the radios and the checkboxes. A segment
@@ -341,6 +341,11 @@ type Spec struct {
 	// PlainMnemonics makes a plain letter act as its Alt+letter mnemonic while focus is not in a
 	// text input (after PlainButtonKeys' buttons).
 	PlainMnemonics bool
+	// TooltipArea names a widget (a list the focused widget's keys do not reach, say) whose rect a
+	// tooltip covers from its top-left corner instead of sitting next to the focused widget, so no
+	// other control is hidden. A tooltip taller than the room down to the content bottom falls
+	// back to the default placement.
+	TooltipArea ID
 	// ButtonsLabel, when set, is drawn centered in the separator above the buttons, padded with one
 	// space on each side, in the selection-size status style (find's marked-selection size).
 	ButtonsLabel string
@@ -391,6 +396,8 @@ type Placement struct {
 	// ContentBottom is the first screen row content is not drawn on: the button separator, or
 	// the bottom border when there are no buttons.
 	ContentBottom int
+	// Tooltip is the box Draw painted for the focused widget's Item.Tooltip (empty when none).
+	Tooltip Rect
 }
 
 // Event reports an activation. A zero ID means the key was handled but only moved focus.
@@ -421,14 +428,17 @@ const (
 
 // EachListRow calls f for every drawn row of list id: its row index and screen row, from the
 // first visible row down to the last row or the content bottom. Overlays painted after Draw (row
-// devicons in the cells a row's Icon reserves) walk the rows with it.
+// devicons in the cells a row's Icon reserves) walk the rows with it; rows whose first cell lies
+// under the tooltip box are skipped, so those overlays never paint over it.
 func (p Placement) EachListRow(id ID, f func(row, y int)) {
 	pi, ok := p.Item(id)
 	if !ok || pi.Kind != KindList {
 		return
 	}
 	for i := 0; i < pi.Rect.Height && pi.Offset+i < pi.Rows && pi.Rect.Y+i < p.ContentBottom; i++ {
-		f(pi.Offset+i, pi.Rect.Y+i)
+		if !p.Tooltip.Contains(pi.Rect.X, pi.Rect.Y+i) {
+			f(pi.Offset+i, pi.Rect.Y+i)
+		}
 	}
 }
 

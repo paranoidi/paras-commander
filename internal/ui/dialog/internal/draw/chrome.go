@@ -482,27 +482,37 @@ func PaintScrollingInputContent(
 	return cursor, scroll
 }
 
-// PaintInputHint paints hint over an empty input row painted by PaintScrollingInputContent
-// (after leadingIcon's cells), in the hint style and clipped to the row; focused keeps the caret
-// on the first cell in the input's own caret style (the hint colour reversed can vanish into the
-// surface).
-func PaintInputHint(screen tcell.Screen, x, y, width int, hint, leadingIcon string, focused bool, styles theme.Theme) {
-	iconCols := LeadingIconCols(leadingIcon)
-	x, width = x+iconCols, width-iconCols
-	style := styles.DialogInputHintStyle(focused)
-	caret := styles.DialogInputBaseStyle(focused, false).Reverse(true)
-	col := 0
-	for _, r := range hint {
-		w := max(runewidth.RuneWidth(r), 1)
-		if col+w > width {
-			break
+// TooltipMaxWidth is the widest a tooltip box gets, in cells.
+const TooltipMaxWidth = 56
+
+// TooltipLines wraps text for a tooltip box at most maxWidth cells wide: it returns the lines and
+// the box width (one cell of padding at each end, the info icon after the first line's text). It
+// returns nil when even one character does not fit.
+func TooltipLines(text string, maxWidth int, styles theme.Theme) (lines []string, width int) {
+	iconW := runewidth.StringWidth(styles.IconDialogInfo())
+	textW := min(maxWidth, TooltipMaxWidth) - 3 - iconW // " " text " " icon " "
+	if textW < 1 {
+		return nil, 0
+	}
+	lines = primitive.WrapText(text, textW)
+	widest := 0
+	for _, l := range lines {
+		widest = max(widest, runewidth.StringWidth(l))
+	}
+	return lines, widest + 3 + iconW
+}
+
+// PaintTooltip paints a tooltip box of TooltipLines at (x, y), width cells wide: the lines in the
+// tooltip.text style, one cell of padding around them and the info icon at the right end of the
+// first line in the tooltip.info style.
+func PaintTooltip(screen tcell.Screen, x, y, width int, lines []string, styles theme.Theme) {
+	icon := styles.IconDialogInfo()
+	iconW := runewidth.StringWidth(icon)
+	for i, line := range lines {
+		primitive.Text(screen, x, y+i, width, " "+line, styles.TooltipText)
+		if i == 0 {
+			primitive.Text(screen, x+width-1-iconW, y, iconW+1, icon+" ", styles.TooltipInfoStyle())
 		}
-		st := style
-		if focused && col == 0 {
-			st = caret
-		}
-		screen.SetContent(x+col, y, r, nil, st)
-		col += w
 	}
 }
 

@@ -270,11 +270,6 @@ type Theme struct {
 	DialogInputInactive            tcell.Style
 	DialogInputInactivePlaceholder tcell.Style
 	DialogInputInactiveError       tcell.Style
-	// DialogInputActiveHint / DialogInputInactiveHint are the example text an empty input shows
-	// (optional dialog.input.active.hint / inactive.hint; fallback the placeholder style).
-	// Unlike the placeholder, a hint is never part of the value.
-	DialogInputActiveHint          tcell.Style
-	DialogInputInactiveHint        tcell.Style
 	DialogButtonInactive           tcell.Style
 	DialogButtonActive             tcell.Style
 	DialogButtonActiveDestructive  tcell.Style
@@ -301,6 +296,11 @@ type Theme struct {
 	DialogCompletionItemSelected   tcell.Style
 	DialogCompletionMatch          tcell.Style
 	DialogCompletionMatchSelected  tcell.Style
+	// TooltipText is a dialog tooltip's box and text (optional tooltip.text; fallback
+	// dialog.completion.item); TooltipInfo the foreground of its info icon on that box (optional
+	// tooltip.info, foreground only; fallback dialog.accent).
+	TooltipText tcell.Style
+	TooltipInfo tcell.Style
 
 	LeaderMenuSurface  tcell.Style
 	LeaderMenuGroup    tcell.Style
@@ -421,12 +421,10 @@ func (t Theme) DialogInputPair(focused bool) (base, placeholder tcell.Style) {
 	return t.DialogInputInactive, t.DialogInputInactivePlaceholder
 }
 
-// DialogInputHintStyle is the style of an empty input's example text.
-func (t Theme) DialogInputHintStyle(focused bool) tcell.Style {
-	if focused {
-		return t.DialogInputActiveHint
-	}
-	return t.DialogInputInactiveHint
+// TooltipInfoStyle is the tooltip's info icon: the tooltip.info foreground on the tooltip box.
+func (t Theme) TooltipInfoStyle() tcell.Style {
+	fg, _, _ := t.TooltipInfo.Decompose()
+	return t.TooltipText.Foreground(fg)
 }
 
 // DialogInputBaseStyle returns the row fill + committed text style for a simple one-line input
@@ -1209,7 +1207,7 @@ var optionalStyleKeys = func() []string {
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty", "panel.scrollbar.match",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing",
-		"dialog.input.active.hint", "dialog.input.inactive.hint")
+		"tooltip.text", "tooltip.info")
 	keys = append(keys, fileIndexStateStyleKeys()...)
 	return keys
 }()
@@ -1217,7 +1215,7 @@ var optionalStyleKeys = func() []string {
 var optionalStyleKeySet = makeStyleKeySet(optionalStyleKeys)
 
 // styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
-var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare", "status"}
+var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare", "status", "tooltip"}
 
 var styleSectionRootSet = makeStyleKeySet(styleSectionRoots)
 
@@ -1565,11 +1563,11 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
-	dialogInputActiveHint, err := optionalStyle(specs, palette, "dialog.input.active.hint", styles["dialog.input.active.placeholder"])
+	tooltipText, err := optionalStyle(specs, palette, "tooltip.text", styles["dialog.completion.item"])
 	if err != nil {
 		return Theme{}, err
 	}
-	dialogInputInactiveHint, err := optionalStyle(specs, palette, "dialog.input.inactive.hint", styles["dialog.input.inactive.placeholder"])
+	tooltipInfo, err := optionalStyle(specs, palette, "tooltip.info", styles["dialog.accent"])
 	if err != nil {
 		return Theme{}, err
 	}
@@ -1847,6 +1845,8 @@ func parse(data []byte) (Theme, error) {
 		DialogCompletionItemSelected:   styles["dialog.completion.item.selected"],
 		DialogCompletionMatch:          styles["dialog.completion.match"],
 		DialogCompletionMatchSelected:  styles["dialog.completion.match.selected"],
+		TooltipText:                    tooltipText,
+		TooltipInfo:                    tooltipInfo,
 
 		LeaderMenuSurface:  styles["leader_menu.surface"],
 		LeaderMenuGroup:    styles["leader_menu.group"],
@@ -1863,9 +1863,6 @@ func parse(data []byte) (Theme, error) {
 
 		JobsRow:      styles["jobs.row"],
 		JobsRowHover: jobsRowHover,
-
-		DialogInputActiveHint:   dialogInputActiveHint,
-		DialogInputInactiveHint: dialogInputInactiveHint,
 
 		JobsProgressTrack:        styles["jobs.progress.track"],
 		JobsProgressFill:         styles["jobs.progress.fill"],

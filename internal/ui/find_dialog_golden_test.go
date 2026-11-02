@@ -227,6 +227,11 @@ func findGoldenCases() []findGolden {
 			st.Advanced.Expanded = true
 			st.Focus = dialog.FindAdvBroken
 		}},
+		findGolden{name: "100x22_advanced_tooltip_fallback", w: 100, h: 22, icons: true, nerdfont: true, state: func(st *dialog.FindDialogState) {
+			// Too few result rows for the tooltip: it falls back above the focused input.
+			st.Advanced.Expanded = true
+			st.Focus = dialog.FindAdvFieldID(dialog.FindAdvExclude)
+		}},
 		findGolden{name: "100x24_advanced_summary", w: 100, h: 24, icons: true, nerdfont: true, state: func(st *dialog.FindDialogState) {
 			st.Advanced.Mode = findcrit.ModeRegex
 			st.Advanced.Fields[dialog.FindAdvModifiedNewer].Value = "3d"

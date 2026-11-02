@@ -11,16 +11,16 @@
   │ Kind      󰄱 Empty         󰄱 Symlinks     󰄱 Broken symlinks     󰄱 Executables                 │  
   │ Types     󰄱 Videos        󰄱 Pictures     󰄱 Archives            󰄱 Audio                       │  
   │           󰄱 Documents                                                                        │  
-  │ Modified  newer  3d          older  2026-01-31                                               │  
-  │ Changed   newer  12h         older  1w2d                                                     │  
-  │ Accessed  newer  30m         older  6mo                                                      │  
-  │ Size      min    10M         max    1.5G                                                     │  
-  │ Owner     root or 1000  󰄱 Not mine                                                           │  
-  │ Exclude   node_modules, .git, *.o, build/out                                                 │  
+  │ Modified  newer              older                                                           │  
+  │ Changed   newer              older                                                           │  
+  │ Accessed  newer              older                                                           │  
+  │ Size      min                max                                                             │  
+  │ Owner                   󰄱 Not mine                                                           │  
+  │ Exclude                                                                                      │  
   ├──────────────────────────────────────────────────────────────────────────────────────────────┤  
-  │ 󰉋 amber                                                                                      ┃  
-  │  amber/birch_delta.go                                                                       │  
-  │  amber/cinder_fable.md                                                                      │  
+  │  Files at least this big; directories never match. A                                        ┃  
+  │  number with an optional binary unit: 512, 10k, 4M,                                          │  
+  │  1.5G, 2T.                                                                                   │  
   │  amber/delta_harbor.png                                                                     │  
   │ 󰉋 birch                                                                                      │  
   ├──────────────────────────────────────────────────────────────────────────────────────────────┤  
@@ -36,10 +36,10 @@ c fg=0x100000007 bg=0x100000008 attrs=1 ul=0 ulc=0x0
 d fg=0x100000000 bg=0x100000008 attrs=0 ul=0 ulc=0x0
 e fg=0x100000007 bg=0x100000000 attrs=0 ul=0 ulc=0x0
 f fg=0x100000003 bg=0x100000008 attrs=0 ul=0 ulc=0x0
-g fg=0x100000008 bg=0x100000000 attrs=0 ul=0 ulc=0x0
-h fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
-i fg=0x100000008 bg=0x0 attrs=0 ul=0 ulc=0x0
-j fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+g fg=0x10000000f bg=0x0 attrs=5 ul=0 ulc=0x0
+h fg=0x10000000f bg=0x0 attrs=1 ul=0 ulc=0x0
+i fg=0x100000000 bg=0x100000007 attrs=0 ul=0 ulc=0x0
+j fg=0x100000004 bg=0x100000007 attrs=0 ul=0 ulc=0x0
 k fg=0x100000007 bg=0x100000000 attrs=1 ul=0 ulc=0x0
 -- styles --
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -54,16 +54,16 @@ aabbbbbbbbbbbffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbggeeeeeeeeebbbbbbbbggggggggggebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbgggeeeeeeeebbbbbbbbggggeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbgggeeeeeeeebbbbbbbbgggeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbbbbbbbbhiijjjjjjjjbbbbbbbbggggeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbggggggggggggebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbggggggggggggggggggggggggggggggggggeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
+aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbbbbbbbbghhhhhhhhhhbbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
-aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
-aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
+aabbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiijjdddddddddddddddddddddddddddddddddddddbbaa
+aabbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiidddddddddddddddddddddddddddddddddddddbbaa
+aabbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiidddddddddddddddddddddddddddddddddddddbbaa
 aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
 aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
