@@ -9,6 +9,19 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
+// RadioMarker is the padded radio marker (" ( ) " in the theme's icons) every radio row and
+// Markers list paints from DialogOptionX: the leading space fills the margin cell so the glyph
+// lands on DialogTextX.
+func RadioMarker(styles theme.Theme, selected bool) string {
+	return " " + styles.IconDialogRadio(selected) + " "
+}
+
+// CheckboxMarker is the padded checkbox marker (" [ ] " in the theme's icons), laid out like
+// RadioMarker.
+func CheckboxMarker(styles theme.Theme, checked bool) string {
+	return " " + styles.IconDialogCheckbox(checked) + " "
+}
+
 // CheckboxText returns the ASCII marker+label string for width calculations.
 // Always uses ASCII markers unconditionally; DrawDialogCheckbox renders the actual icons from the theme.
 // Since ASCII markers are always the same width or wider than icon icons, this remains a safe upper bound.
@@ -46,7 +59,7 @@ func DrawDialogCheckbox(
 		style = styles.DialogOptionDisabledStyle()
 		accent = style
 	}
-	marker := " " + styles.IconDialogCheckbox(checked) + " "
+	marker := CheckboxMarker(styles, checked)
 	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
 	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, accent)
 }
@@ -68,7 +81,7 @@ func DrawDialogRadio(
 		style = styles.DialogOptionDisabledStyle()
 		accent = style
 	}
-	marker := " " + styles.IconDialogRadio(selected) + " "
+	marker := RadioMarker(styles, selected)
 	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
 	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, accent)
 }

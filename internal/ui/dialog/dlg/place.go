@@ -464,8 +464,8 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 // MarkerWidth is the width of a radio or checkbox marker in the theme's icons, for Spec.MarkerWidth.
 func MarkerWidth(styles theme.Theme) int {
 	return max(
-		utf8.RuneCountInString(" "+styles.IconDialogRadio(false)+" "),
-		utf8.RuneCountInString(" "+styles.IconDialogCheckbox(false)+" "),
+		utf8.RuneCountInString(draw.RadioMarker(styles, false)),
+		utf8.RuneCountInString(draw.CheckboxMarker(styles, false)),
 	)
 }
 
@@ -686,7 +686,7 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 			if it.Inert {
 				style = styles.DialogOptionDisabledStyle()
 			}
-			part := " " + styles.IconDialogRadio(rw.Marked) + " "
+			part := draw.RadioMarker(styles, rw.Marked)
 			partW := runewidth.StringWidth(part)
 			primitive.Text(screen, r.X, y, partW, part, style)
 			match := styles.FuzzyHighlight

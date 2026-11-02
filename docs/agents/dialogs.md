@@ -75,7 +75,7 @@ Use `draw.DialogTextX(rect)`, `draw.DialogOptionX(rect)`, and `draw.DialogConten
 
 - `rect.X` — left border (`│`); `rect.X+1` — inner margin (blank dialog surface).
 - **Labels, hints, and input rows** — `DialogTextX(rect)` (`rect.X+2`): first content glyph one space inside the border (e.g. `Destination:`, `/path`, command field).
-- **Checkbox / radio rows** — pass `DialogOptionX(rect)` (`rect.X+1`) to `draw.DrawDialogCheckbox` / `draw.DrawDialogRadio` only. Markers are ` [ ] ` / ` ( ) ` with a **leading space** that fills the margin cell; the visible `[` or `(` must land on `DialogTextX`, not one column to the right.
+- **Checkbox / radio rows** — pass `DialogOptionX(rect)` (`rect.X+1`) to `draw.DrawDialogCheckbox` / `draw.DrawDialogRadio` only. Markers are ` [ ] ` / ` ( ) ` (`draw.CheckboxMarker` / `draw.RadioMarker`, also used by `dlg.MarkerWidth` and `Markers` lists) with a **leading space** that fills the margin cell; the visible `[` or `(` must land on `DialogTextX`, not one column to the right.
 - **Common bug:** `DrawDialogRadio(screen, rect.X+2, …)` paints an extra blank column before `( )`, so options look indented relative to labels (seen on Run-for-each pool rows). Copy/move checkboxes (`TransferView`) and Find checkboxes use `rect.X+1` — match that, not `rect.X+2`.
 - **Inner width** — `DialogContentWidth(rect)` (`rect.Width-4`) for full-width text and inputs between margins.
 
