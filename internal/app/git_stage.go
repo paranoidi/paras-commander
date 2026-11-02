@@ -14,29 +14,46 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// gitStageTimeout bounds a single git add/reset invocation.
+// gitStageTimeout bounds a single git add/reset/rm invocation.
 const gitStageTimeout = 30 * time.Second
 
 // gitRemoteTimeout bounds a git push/pull invocation.
 const gitRemoteTimeout = 5 * time.Minute
 
-// gitStageResultPayload delivers an async git add/reset result to the main loop.
+// gitIndexOp is a per-entry index operation run on the active panel's targets.
+type gitIndexOp int
+
+const (
+	gitStage   gitIndexOp = iota // git add
+	gitUnstage                   // git reset
+	gitUntrack                   // git rm --cached (files stay on disk)
+)
+
+// gitIndexOps holds each op's git arguments (before the paths), failure prefix and success verb.
+var gitIndexOps = map[gitIndexOp]struct {
+	args       []string
+	failPrefix string
+	doneVerb   string
+}{
+	gitStage:   {[]string{"add", "--"}, "git add failed", "Staged"},
+	gitUnstage: {[]string{"reset", "-q", "--"}, "git reset failed", "Unstaged"},
+	gitUntrack: {[]string{"rm", "-r", "--cached", "-q", "--"}, "git rm failed", "Untracked"},
+}
+
+// gitStageResultPayload delivers an async git index operation result to the main loop.
 type gitStageResultPayload struct {
 	panelID  int
 	workRoot string
-	stage    bool
+	op       gitIndexOp
 	n        int
 	err      error
 }
 
-// runGitStage stages (git add) or unstages (git reset) paths in the work tree at root.
-func runGitStage(root string, stage bool, paths []string) error {
+// runGitIndex runs op on paths in the work tree at root.
+func runGitIndex(root string, op gitIndexOp, paths []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), gitStageTimeout)
 	defer cancel()
-	args := []string{"-C", root, "add", "--"}
-	if !stage {
-		args = []string{"-C", root, "reset", "-q", "--"}
-	}
+	args := append([]string{"-C", root}, gitIndexOps[op].args...)
 	out, err := exec.CommandContext(ctx, "git", append(args, paths...)...).CombinedOutput()
 	if err != nil {
 		if msg := strings.TrimSpace(string(out)); msg != "" {
@@ -61,9 +78,9 @@ func (a *App) activeGitRoot() string {
 	return root
 }
 
-// gitStageActive stages or unstages the active panel's selection, or the cursor entry and
-// then advances the cursor.
-func (a *App) gitStageActive(stage bool) {
+// gitIndexActive runs op on the active panel's selection, or on the cursor entry and then
+// advances the cursor.
+func (a *App) gitIndexActive(op gitIndexOp) {
 	p := a.activePanel()
 	root := a.activeGitRoot()
 	if root == "" {
@@ -78,8 +95,8 @@ func (a *App) gitStageActive(stage bool) {
 	}
 	panelID := a.model.ActivePanel
 	go func() {
-		err := runGitStage(root, stage, paths)
-		_ = a.screen.PostEvent(tcell.NewEventInterrupt(gitStageResultPayload{panelID, root, stage, len(paths), err}))
+		err := runGitIndex(root, op, paths)
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(gitStageResultPayload{panelID, root, op, len(paths), err}))
 	}()
 }
 
@@ -126,19 +143,12 @@ func (a *App) applyGitRemoteResult(d gitRemoteResultPayload) {
 }
 
 func (a *App) applyGitStageResult(d gitStageResultPayload) {
+	op := gitIndexOps[d.op]
 	if d.err != nil {
-		prefix := "git reset failed"
-		if d.stage {
-			prefix = "git add failed"
-		}
-		a.setErrorMessage(prefix, d.err)
+		a.setErrorMessage(op.failPrefix, d.err)
 		return
 	}
-	msg := fmt.Sprintf("Unstaged %d item(s)", d.n)
-	if d.stage {
-		msg = fmt.Sprintf("Staged %d item(s)", d.n)
-	}
-	a.reloadGitPanels(d.panelID, d.workRoot, msg)
+	a.reloadGitPanels(d.panelID, d.workRoot, fmt.Sprintf("%s %d item(s)", op.doneVerb, d.n))
 }
 
 // reloadGitPanels reloads panelID with msg and refreshes the other panel when it shows the same

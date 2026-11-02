@@ -885,9 +885,11 @@ func (a *App) tryDispatchSelectionActions(actionID string) bool {
 			}
 		}
 	case keymap.ActionGitStage:
-		a.gitStageActive(true)
+		a.gitIndexActive(gitStage)
 	case keymap.ActionGitUnstage:
-		a.gitStageActive(false)
+		a.gitIndexActive(gitUnstage)
+	case keymap.ActionGitUntrack:
+		a.gitIndexActive(gitUntrack)
 	case keymap.ActionPanelSelectGroup:
 		a.openGroupSelect("select", "panel")
 	case keymap.ActionPanelUnselectGroup:

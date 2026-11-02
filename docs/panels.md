@@ -76,8 +76,8 @@ Inside a local git work tree a two-cell status column appears before the name (n
 
 Directories show a summary of their contents. Status is read in the background with `git status`.
 
-- `M-+` (`git.stage`) and `M--` (`git.unstage`) stage or unstage the selected entries, or the cursor entry (then moving the cursor to the next entry).
-- `M-g` (`panel.git-filter-menu`) opens a menu that limits the panel to Staged, Unstaged, Tracked or Untracked entries. The filter is dropped when you leave the repository. Its **Commit** row runs `git commit` in your editor (the TUI is suspended meanwhile) when something is staged. **Push** (`P`) and **Pull** (`p`), matching lazygit, run `git push` / `git pull` in the background; credentials must come from an SSH agent or credential helper, since there is no terminal to prompt in.
+- `M-+` (`git.stage`) and `M--` (`git.unstage`) stage or unstage the selected entries, or the cursor entry (then moving the cursor to the next entry). `git.untrack` (unbound by default) runs `git rm -r --cached` the same way: the entries leave the index but stay on disk.
+- `M-g` (`panel.git-filter-menu`) opens the git menu. Its Filter group limits the panel to Staged, Unstaged, Tracked or Untracked entries. Its Actions group runs **Stage** (`S`), **Unstage** (`U`) and **Untrack** (`R`), the uppercase twins of the matching filter letters; they are the same actions as above, and with chord hints on (F3) the rows show their shortcuts. The filter is dropped when you leave the repository. Its **Commit** row runs `git commit` in your editor (the TUI is suspended meanwhile) when something is staged. **Push** (`P`) and **Pull** (`p`), matching lazygit, run `git push` / `git pull` in the background; credentials must come from an SSH agent or credential helper, since there is no terminal to prompt in.
 - Viewing (`F3`) or quick-viewing a modified file shows its diff; see [Quick view and preview](quick-view-preview.md). `C-M-j` / `C-M-k` jump between changes (`preview.diff-next-hunk` / `preview.diff-prev-hunk`).
 
 ## Row indicators
