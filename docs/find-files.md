@@ -59,7 +59,7 @@ Age, size, owner, executable and empty criteria need file metadata, so the first
 | `S-F5` | Unmark all (`find.unselect-all`) |
 | `F6` / `S-F6` | Mark / unmark by group pattern (`find.select-group`, `find.unselect-group`) |
 | `F2` | Replace the selection with the parent directories of the marked results (`find.select-parent-dirs`) |
-| `F3` | View the highlighted file fullscreen (`find.view`) |
+| `F3` | View the highlighted file fullscreen (`find.view`); closing the viewer returns to Find as you left it |
 | `F4` | Edit the highlighted file in the external editor and keep Find open (`find.edit`) |
 | `M-a` | Show / hide the advanced criteria (`find.toggle-advanced`) |
 | `M-m` | Next match mode (`find.cycle-match-mode`) |

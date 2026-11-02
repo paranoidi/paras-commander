@@ -63,6 +63,7 @@ func (h *Handler) openFindDialog(panelID int, jump bool) {
 
 // CloseFindDialog closes the dialog and drops any query still in flight.
 func (h *Handler) CloseFindDialog() {
+	h.findHiddenForView = false
 	if h.findTimer != nil {
 		h.findTimer.Stop()
 		h.findTimer = nil
@@ -114,7 +115,7 @@ func relTo(root, path string) string {
 // HandleFind applies a finished query unless the dialog closed or the query changed since.
 func (h *Handler) HandleFind(p FindPayload) {
 	st := &h.model.IndexFindDialog
-	if !st.Open || p.Gen != st.Gen {
+	if (!st.Open && !h.findHiddenForView) || p.Gen != st.Gen {
 		return
 	}
 	st.Searching = false
@@ -406,10 +407,22 @@ func (h *Handler) viewCursor() {
 		h.host.SetTransientMessage("View: not a file", ui.MessageUrgencyWarn)
 		return
 	}
-	h.CloseFindDialog()
+	st := &h.model.IndexFindDialog
+	st.Open, h.findHiddenForView = false, true
 	if err := h.host.OpenFullscreenFilePreviewAt(r.Path, false); err != nil {
+		st.Open, h.findHiddenForView = true, false
 		h.host.SetTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
 	}
+}
+
+// ReopenFindAfterPreviewClose shows the find-in-index dialog again, as it was, when the
+// just-closed fullscreen viewer was opened from it (find.view); no-op otherwise.
+func (h *Handler) ReopenFindAfterPreviewClose() {
+	if !h.findHiddenForView {
+		return
+	}
+	h.findHiddenForView = false
+	h.model.IndexFindDialog.Open = true
 }
 
 // editCursor opens the result under the cursor in the external editor and keeps the dialog open;

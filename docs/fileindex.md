@@ -185,8 +185,8 @@ panel.
 Keys work as in Find: mark results and press OK to add them to the panel
 selection (`find.select-all`, `find.unselect-all`, `find.select-group`,
 `find.unselect-group`, `find.select-parent-dirs`, `panel.select-toggle`);
-`find.view` opens the real file in the viewer and `find.edit` in the external
-editor; `ui.open-primary` and
+`find.view` opens the real file in the viewer (closing it returns to the
+dialog as it was) and `find.edit` in the external editor; `ui.open-primary` and
 `ui.open-secondary` show a result in a panel without closing; `panel.pin-toggle`
 pins it. OK without marks shows the result under the cursor in the panel: a
 directory itself, a file in its directory with the file highlighted. The

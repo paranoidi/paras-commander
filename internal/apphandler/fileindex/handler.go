@@ -83,6 +83,10 @@ type Handler struct {
 	keys, keysFind, keysDialogInput *keymap.Map
 	// findTimer is the debounce of the find-in-index dialog's pending query (UI goroutine only).
 	findTimer *time.Timer
+	// findHiddenForView is set while the find-in-index dialog is hidden behind the fullscreen
+	// viewer it opened (find.view): IndexFindDialog.Open is false, a query in flight still lands,
+	// and ReopenFindAfterPreviewClose shows the dialog again as it was.
+	findHiddenForView bool
 	// pendingInit is the action waiting on the open "create the database?" prompt (nil: none).
 	pendingInit func()
 	// initRunning is set while a confirmed create or upgrade runs (menu-bar spinner).

@@ -123,7 +123,7 @@ func (h *Handler) replaceFindDialogEntries(st *dialog.FindDialogState, batch []s
 
 func (h *Handler) startFindIndexer() {
 	st := &h.model.FindDialog
-	if !st.Open || st.RootPath == "" {
+	if !h.live() || st.RootPath == "" {
 		return
 	}
 	h.scanGen++
@@ -139,7 +139,7 @@ func (h *Handler) restartFindIndexer() {
 	h.stopFindIndexer()
 	h.cancelPendingRank()
 	st := &h.model.FindDialog
-	if !st.Open || st.RootPath == "" {
+	if !h.live() || st.RootPath == "" {
 		return
 	}
 	st.IndexErr = ""
@@ -264,7 +264,7 @@ func (h *Handler) PollUpdates(_ WakePayload) bool {
 		}
 		if sync && !h.findIndexingSkipsRank(st) {
 			throttle := 0
-			if st.Open && st.Indexing {
+			if h.live() && st.Indexing {
 				throttle = config.DefaultFindIndexingRankThrottleMS
 			}
 			h.scheduleFindRank(throttle)

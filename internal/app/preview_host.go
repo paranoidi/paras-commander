@@ -122,10 +122,12 @@ func (h previewHost) OpenPreviewLeaderMenu() { h.app.togglePreviewLeaderMenu() }
 
 func (h previewHost) OpenPreviewCopyMenu() { h.app.toggleCopyMenu() }
 
-// FilePreviewFullscreenClosed reopens the Pin dialog, restored exactly as it was, when the
-// just-closed F3 preview was launched from there; no-op otherwise.
+// FilePreviewFullscreenClosed reopens the dialog the just-closed fullscreen viewer was opened
+// from (Pin, Find or Find in index), restored as it was; no-op otherwise.
 func (h previewHost) FilePreviewFullscreenClosed() {
 	h.app.pinCtrl.ReopenAfterPreviewClose()
+	h.app.findCtrl.ReopenAfterPreviewClose()
+	h.app.fileindexCtrl.ReopenFindAfterPreviewClose()
 }
 
 func (h previewHost) HandleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.FileDialogField, afterEdit func()) bool {

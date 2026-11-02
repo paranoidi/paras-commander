@@ -81,6 +81,9 @@ func (a *App) paintFileDialogOverlay() bool {
 
 // renderFindDialogUpdate repaints the find overlay when it is open; otherwise falls back to a full render.
 func (a *App) renderFindDialogUpdate() {
+	if a.findCtrl.HiddenForView() {
+		return // Find is behind the viewer it opened: nothing of it is on screen
+	}
 	if a.model.FindDialog.Open && a.paintFindDialogOverlay() {
 		return
 	}

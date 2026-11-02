@@ -3,6 +3,8 @@ package find
 import (
 	"testing"
 
+	"github.com/gdamore/tcell/v2"
+
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -61,5 +63,38 @@ func TestFindEditSwallowedInJumpMode(t *testing.T) {
 	}
 	if host.editedPath != "" {
 		t.Fatalf("jump mode edited %q", host.editedPath)
+	}
+}
+
+// A rank result that lands while Find is hidden behind the viewer it opened is applied, and the
+// reopened dialog shows it; a closed Find drops it.
+func TestFindRankAppliesWhileHiddenForView(t *testing.T) {
+	t.Parallel()
+	host := &fakeFindHost{}
+	model := editTestModel(0)
+	h := newTestFindHandler(host, model)
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+	h.screen = screen
+	h.RunAction(keymap.ActionFindView)
+	if model.FindDialog.Open || !h.HiddenForView() {
+		t.Fatal("find.view did not hide Find")
+	}
+	h.pendingRank = &rankResult{gen: h.rankGen, ranked: []int{0}}
+	if !h.ApplyPendingRank() {
+		t.Fatal("rank dropped while hidden for view")
+	}
+	h.ReopenAfterPreviewClose()
+	if !model.FindDialog.Open || len(model.FindDialog.Ranked) != 1 {
+		t.Fatalf("reopened open=%v ranked=%v", model.FindDialog.Open, model.FindDialog.Ranked)
+	}
+
+	h.CloseDialog()
+	h.pendingRank = &rankResult{gen: h.rankGen, ranked: []int{0}}
+	if h.ApplyPendingRank() {
+		t.Fatal("rank applied to a closed Find")
 	}
 }

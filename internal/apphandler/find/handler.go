@@ -31,7 +31,7 @@ func (h *Handler) openDialog(panelID int, jump bool) {
 	if h.host.InQuickFilterUI() {
 		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
 	}
-	if h.model.FindDialog.Open {
+	if h.live() {
 		h.CloseDialog()
 	}
 	p := h.host.PanelByID(panelID)
@@ -86,9 +86,10 @@ func rootGitignoreExcluded(gi *gitignore.Cache, root string) bool {
 }
 
 func (h *Handler) CloseDialog() {
-	if h.model.FindDialog.Open {
+	if h.live() {
 		h.savedAdvanced = h.model.FindDialog.Advanced
 	}
+	h.hiddenForView = false
 	h.advEditing = ""
 	h.stopFindIndexer()
 	h.cancelPendingRank()
@@ -318,7 +319,7 @@ func (h *Handler) ToggleSearchOnlySelections() {
 
 func (h *Handler) syncFindDialogRanks() {
 	st := &h.model.FindDialog
-	if !st.Open || h.findIndexingSkipsRank(st) {
+	if !h.live() || h.findIndexingSkipsRank(st) {
 		return
 	}
 	if h.findFilterEmpty(st) {
@@ -356,7 +357,7 @@ func (h *Handler) dispatchMatch(gen int) {
 // scheduleFindRank schedules a background match on the scan coordinator.
 func (h *Handler) scheduleFindRank(ms int) {
 	st := &h.model.FindDialog
-	if !st.Open {
+	if !h.live() {
 		return
 	}
 	if h.findIndexingSkipsRank(st) {
@@ -444,7 +445,7 @@ func (h *Handler) scheduleFindRank(ms int) {
 // Returns true when the dialog is open, a wake was pending, and a rank was scheduled.
 func (h *Handler) HandleThrottleRankWake() bool {
 	st := &h.model.FindDialog
-	if !st.Open || h.findIndexingSkipsRank(st) {
+	if !h.live() || h.findIndexingSkipsRank(st) {
 		return false
 	}
 	h.rankMu.Lock()
@@ -467,7 +468,7 @@ func (h *Handler) HandleThrottleRankWake() bool {
 // Returns true when the dialog is open, a wake was pending, and a rank was scheduled.
 func (h *Handler) HandleDebounceRankWake() bool {
 	st := &h.model.FindDialog
-	if !st.Open {
+	if !h.live() {
 		return false
 	}
 	h.rankMu.Lock()
@@ -523,8 +524,7 @@ func (h *Handler) clearFindNavIdle() {
 // It clears the nav-active flag and applies any deferred rank result.
 // Returns true if a result was applied and the UI needs a re-render.
 func (h *Handler) HandleFindNavIdle(epoch uint64) bool {
-	st := &h.model.FindDialog
-	if !st.Open {
+	if !h.live() {
 		return false
 	}
 	if epoch != h.findNavEpoch {
@@ -541,7 +541,7 @@ func (h *Handler) HandleFindNavIdle(epoch uint64) bool {
 // ApplyPendingRank applies the latest completed rank result (if any) to the dialog state.
 func (h *Handler) ApplyPendingRank() bool {
 	st := &h.model.FindDialog
-	if !st.Open {
+	if !h.live() {
 		return false
 	}
 	sizesApplied := h.applyPendingFindFileSizes()
@@ -614,7 +614,7 @@ func (h *Handler) noteFindMarksChanged(st *dialog.FindDialogState) {
 }
 
 func (h *Handler) scheduleFindMarkedFileSizes(st *dialog.FindDialogState) {
-	if !st.Open || len(st.MarkedPaths) == 0 {
+	if !h.live() || len(st.MarkedPaths) == 0 {
 		return
 	}
 	selGen := st.MarkedSelGen()
@@ -675,7 +675,7 @@ func (h *Handler) applyPendingFindFileSizes() bool {
 		return false
 	}
 	st := &h.model.FindDialog
-	if !st.Open || st.MarkedSelGen() != upd.selGen {
+	if !h.live() || st.MarkedSelGen() != upd.selGen {
 		return false
 	}
 	h.sizeMu.Lock()
@@ -923,10 +923,32 @@ func (h *Handler) OpenSelectedFullscreenPreview() {
 		h.host.SetTransientMessage("View: not a file", ui.MessageUrgencyWarn)
 		return
 	}
-	h.CloseDialog()
+	st.Open, h.hiddenForView = false, true
 	if err := h.host.OpenFullscreenFilePreviewAt(path, false); err != nil {
+		st.Open, h.hiddenForView = true, false
 		h.host.SetTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
 	}
+}
+
+// live reports whether Find exists: open, or hidden behind the viewer it opened. Background
+// work (ranking, size lookups) keeps applying while it is live.
+func (h *Handler) live() bool { return h.model.FindDialog.Open || h.hiddenForView }
+
+// HiddenForView reports whether Find is hidden behind the fullscreen viewer it opened; nothing
+// of it is on screen, so its updates need no repaint.
+func (h *Handler) HiddenForView() bool { return h.hiddenForView }
+
+// ReopenAfterPreviewClose shows Find again, as it was, when the just-closed fullscreen viewer
+// was opened from it (find.view); no-op otherwise.
+func (h *Handler) ReopenAfterPreviewClose() {
+	if !h.hiddenForView {
+		return
+	}
+	h.hiddenForView = false
+	st := &h.model.FindDialog
+	st.Open = true
+	st.InvalidateMarkedSelectionSizeLabel()
+	dialog.EnsureFindListScroll(st, h.findDialogListRows()) // the terminal may have resized
 }
 
 // EditSelected opens the highlighted result in the external editor and keeps Find open (its

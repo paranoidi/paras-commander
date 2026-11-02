@@ -58,6 +58,11 @@ type Handler struct {
 
 	lastIndexCountRenderAt time.Time
 
+	// hiddenForView is set while Find is hidden behind the fullscreen viewer it opened
+	// (find.view): FindDialog.Open is false but the walk, ranking and size lookups go on, and
+	// ReopenAfterPreviewClose shows the dialog again as it was.
+	hiddenForView bool
+
 	// criteria and exclude are the parsed advanced section (advanced.go); savedAdvanced keeps
 	// the section across dialogs for the session; advEditing is the advanced text input with
 	// uncommitted edits ("" = none).
