@@ -10,9 +10,9 @@
   │ Match     ( ) Fuzzy    (*) Glob       ( ) Regex             [ ] Case sensitive                                            │   
   │ Kind      [ ] Empty    [ ] Symlinks   [ ] Broken symlinks   [x] Executables                                               │   
   │ Types     [ ] Videos   [x] Pictures   [ ] Archives          [ ] Audio            [ ] Documents                            │   
-  │ Modified  newer  3d          older  2026-01-31     Size      min    10M         max    lots                               │   
-  │ Changed   newer  12h         older  1w2d           Owner     root or 1000  [ ] Not mine                                   │   
-  │ Accessed  newer  30m         older  6mo            Exclude   node_modules, .git, *.o, build/out                           │   
+  │ Modified  newer  3d          older  2026-01-31    Size      min    10M         max    lots                                │   
+  │ Changed   newer  12h         older  1w2d          Owner     root or 1000  [ ] Not mine                                    │   
+  │ Accessed  newer  30m         older  6mo           Exclude   node_modules, .git, *.o, build/out                            │   
   ├───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤   
   │  ember/harbor_lantern.zip                                                                                                │   
   │  glacier/ivory_lantern                                                                                                   │   
@@ -63,9 +63,9 @@ aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccbbbbbbbbbbb
 aabbbbbbbbbbbbbbbbbbbbbbbbfffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbffffffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbfffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbbbbbbbbbbbbbbbbbbghhhhhhhhhhbbbbbbbbiiiiiiiiiiebbbbbbbbbbbbbbbbbbbbbiiieeeeeeeebbbbbbbbjjjjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbbbbbbbbbbbbbbbbbbiiieeeeeeeebbbbbbbbiiiieeeeeeebbbbbbbbbbbbbbiiiiiiiiiiiiebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbbbbbbbbbbbbbbbbbbiiieeeeeeeebbbbbbbbiiieeeeeeeebbbbbbbbbbbbbbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiieeeeeeeeeeeeeeeeeeeeeeeeeebbaaa
+aabbbbbbbbbbbbbbbbbbbghhhhhhhhhhbbbbbbbbiiiiiiiiiiebbbbbbbbbbbbbbbbbbbbiiieeeeeeeebbbbbbbbjjjjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
+aabbbbbbbbbbbbbbbbbbbiiieeeeeeeebbbbbbbbiiiieeeeeeebbbbbbbbbbbbbiiiiiiiiiiiiebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
+aabbbbbbbbbbbbbbbbbbbiiieeeeeeeebbbbbbbbiiieeeeeeeebbbbbbbbbbbbbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiieeeeeeeeeeeeeeeeeeeeeeeeeeebbaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa

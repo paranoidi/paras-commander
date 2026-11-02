@@ -238,7 +238,7 @@ const (
 	findAdvSubW     = 7  // "newer", "older", "min", "max" (with the input's lead cell)
 	findAdvInputW   = 12
 	findAdvOwnerW   = 14
-	findAdvChunkGap = 3
+	findAdvChunkGap = 2
 	// findAdvPairW is the width of one "Label sub [input] sub [input]" chunk.
 	findAdvPairW = findAdvLabelW + 2*(findAdvSubW+findAdvInputW)
 )
