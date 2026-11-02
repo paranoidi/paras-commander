@@ -729,10 +729,7 @@ func (a *App) executeGroupSelect() {
 			return
 		}
 	}
-	a.closeGroupSelect()
-	if context == "find" && a.model.FindDialog.Open {
-		a.paintFindDialogOverlay()
-	}
+	a.closeGroupSelect() // every caller full-renders next, which also repaints Find under it
 }
 
 // confirmGroupSelectFromInput applies the pattern row then runs OK (Enter / Alt+O).

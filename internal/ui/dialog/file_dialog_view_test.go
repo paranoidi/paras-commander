@@ -30,8 +30,8 @@ func TestFileDialogApply(t *testing.T) {
 	}
 }
 
-// FileDialogRect is the placed rect of the spec, so the overlay repaint and the full render agree.
-func TestFileDialogRectIsThePlacedSpecRect(t *testing.T) {
+// The painted frame is the placed rect of the spec, so the partial repaint and the full render agree.
+func TestFileDialogFrameIsThePlacedSpecRect(t *testing.T) {
 	layout := Layout{Width: 80, Height: 24}
 	states := []FileDialogState{
 		{Open: true, DialogType: FileDialogRename, RenamePhase: RenamePhaseMain, Fields: []FileDialogField{{Label: "Name", Value: "alpha"}}},
@@ -40,10 +40,10 @@ func TestFileDialogRectIsThePlacedSpecRect(t *testing.T) {
 		{Open: true, DialogType: FileDialogDelete, DeleteSummary: "1 file", DeleteEntries: transferGoldenEntries(3)},
 	}
 	for _, st := range states {
-		got, ok := FileDialogRect(layout, st, 0)
+		got, ok := fileDialogFrame(layout, st, 0)
 		p, placed := dlg.Place(layout.Width, layout.Height, FileDialogView(st, FileDialogViewContext{Layout: layout}))
 		if !ok || !placed || got != p.Rect {
-			t.Errorf("type %d: FileDialogRect = %+v ok=%v, placed %+v", st.DialogType, got, ok, p.Rect)
+			t.Errorf("type %d: painted frame = %+v ok=%v, placed %+v", st.DialogType, got, ok, p.Rect)
 		}
 	}
 }

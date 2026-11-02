@@ -19,9 +19,9 @@ func PaintFileDialog(
 	styles theme.Theme,
 	showIcons bool,
 	scrollbarStyle uiscrollbar.Style,
-) {
+) dialog.PaintedArea {
 	if !state.Open {
-		return
+		return dialog.PaintedArea{}
 	}
 	ctx := dialog.DialogRenderContext{
 		Styles:         styles,
@@ -29,5 +29,5 @@ func PaintFileDialog(
 		IconLead:       DialogListIconLeadingWidth(showIcons),
 		ScrollbarStyle: scrollbarStyle,
 	}
-	dialog.DrawFileDialog(screen, layout, state, ctx, PaintDeleteDialogRowIcon)
+	return dialog.DrawFileDialog(screen, layout, state, ctx, PaintDeleteDialogRowIcon)
 }

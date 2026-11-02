@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestRenderFindDialogUpdateDoesNotCoverGroupSelect(t *testing.T) {
@@ -59,4 +60,40 @@ func screenHasText(screen tcell.SimulationScreen, want string) bool {
 		}
 	}
 	return false
+}
+
+// A partial repaint must give way to a full render when the overlay would paint a different
+// area than the screen shows (a taller frame before, a completion dropdown that closed).
+func TestOverlayPartialPaintDeclinesWhenAreaChanged(t *testing.T) {
+	app := newFindDialogTestApp(t)
+	app.render()
+	if app.overlays[ui.OverlayFind] == (dialog.PaintedArea{}) {
+		t.Fatal("full render should record the find dialog's area")
+	}
+	if !app.paintFindDialogOverlay() {
+		t.Fatal("same area: the partial repaint should go ahead")
+	}
+	app.overlays[ui.OverlayFind].Frame.Height++ // the screen shows a taller frame than the dialog now has
+	if app.paintFindDialogOverlay() {
+		t.Fatal("changed area: the partial repaint must decline")
+	}
+	if !app.paintFindDialogOverlay() {
+		t.Fatal("the declined repaint records the new area; the next one goes ahead")
+	}
+}
+
+func TestOverlayAreaChanged(t *testing.T) {
+	var onScreen dialog.PaintedArea
+	withDropdown := dialog.PaintedArea{Frame: dialog.Rect{X: 2, Y: 3, Width: 40, Height: 10}, Popup: dialog.Rect{X: 5, Y: 8, Width: 20, Height: 6}}
+	if !overlayAreaChanged(&onScreen, withDropdown) {
+		t.Fatal("nothing recorded: want changed")
+	}
+	if overlayAreaChanged(&onScreen, withDropdown) {
+		t.Fatal("same area: want unchanged")
+	}
+	closed := withDropdown
+	closed.Popup = dialog.Rect{}
+	if !overlayAreaChanged(&onScreen, closed) {
+		t.Fatal("dropdown closed: want changed")
+	}
 }

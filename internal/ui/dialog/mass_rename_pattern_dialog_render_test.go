@@ -38,7 +38,7 @@ func TestMassRenamePatternSearchLine(t *testing.T) {
 }
 
 // Each mass rename screen is a drawable dialog titled after the phase.
-func TestFileDialogRectMassRenameSubPhases(t *testing.T) {
+func TestFileDialogFrameMassRenameSubPhases(t *testing.T) {
 	layout := testLayout(120, 40)
 	for _, tc := range []struct {
 		phase MassRenamePhase
@@ -55,7 +55,7 @@ func TestFileDialogRectMassRenameSubPhases(t *testing.T) {
 			MassRenamePhase: tc.phase,
 			Fields:          []FileDialogField{{Label: "Name", Value: "harbor"}, {Label: "Description", Value: "strip camera prefix"}},
 		}
-		if _, ok := FileDialogRect(layout, state, 0); !ok {
+		if _, ok := fileDialogFrame(layout, state, 0); !ok {
 			t.Fatalf("phase %d: expected a drawable rect", tc.phase)
 		}
 		if title := fileDialogOuterTitle(state); title != tc.title {

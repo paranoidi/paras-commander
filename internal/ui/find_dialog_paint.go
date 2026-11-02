@@ -4,7 +4,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -35,7 +34,7 @@ func FindDialogSelectionSizeLabel(
 }
 
 // PaintFindDialog repaints the find dialog overlay without touching panels or the footer and
-// returns the frame it painted (zero when nothing was).
+// returns the area it painted (zero when nothing was).
 func PaintFindDialog(
 	screen tcell.Screen,
 	layout Layout,
@@ -46,9 +45,9 @@ func PaintFindDialog(
 	painter DiskUsagePainter,
 	pinnedItems []PinnedItem,
 	jobMarks []JobPathMark,
-) dlg.Rect {
+) dialog.PaintedArea {
 	if state == nil || !state.Open {
-		return dlg.Rect{}
+		return dialog.PaintedArea{}
 	}
 	selectionLabel := FindDialogSelectionSizeLabel(state, painter, styles.IconWorking())
 	ctx := dialog.DialogRenderContext{

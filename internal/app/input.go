@@ -804,16 +804,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 		return quit, true
 	case InputModeFileDialog:
-		before := a.dialogCtrl.FileDialogRect()
 		quit := a.dialogCtrl.HandleFileDialogKey(event)
-		// Overlay-repaint only the dialog rect when the dialog stayed open, no sub-modal
-		// opened (a path picker flips inputMode away), and the geometry is unchanged.
-		// Anything else (open/close, phase/mode switch, geometry change) needs a full render.
-		if a.model.FileDialog.Open && a.inputMode() == InputModeFileDialog && a.dialogCtrl.FileDialogRect() == before {
-			if !a.paintFileDialogOverlay() {
-				a.render()
-			}
-		} else {
+		// Overlay-repaint only the dialog when it stayed open and no sub-modal opened (a path
+		// picker flips inputMode away); paintFileDialogOverlay itself declines when the dialog's
+		// area changed. Anything else needs a full render.
+		if !a.model.FileDialog.Open || a.inputMode() != InputModeFileDialog || !a.paintFileDialogOverlay() {
 			a.render()
 		}
 		return quit, true

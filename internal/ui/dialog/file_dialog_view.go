@@ -337,27 +337,29 @@ func (st *FileDialogState) Apply(ev dlg.Event) {
 
 // drawFileDialogSpec paints a file dialog: the spec, then the overlays on its rects (the delete
 // list's devicons, the focused path field's completion dropdown).
-func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) {
+func drawFileDialogSpec(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) PaintedArea {
 	s := state.Screen(FileDialogViewContext{Layout: layout, IconLead: ctx.IconLead, Styles: ctx.Styles, ScrollbarStyle: ctx.ScrollbarStyle})
 	if fileDialogWidth(layout.Width, state, ctx.IconLead) < 20 {
-		return
+		return PaintedArea{}
 	}
 	p, ok := dlg.Draw(screen, layout.Width, layout.Height, s.Spec, *s.Focus, ctx.Styles)
 	if !ok {
-		return
+		return PaintedArea{}
 	}
+	area := PaintedArea{Frame: p.Rect}
 	if state.DialogType == FileDialogDelete {
 		if ctx.ShowIcons && paintDeleteIcon != nil && ctx.IconLead > 0 {
 			paintListIcons(p, fileDeleteList, func(row, x, y int) { paintDeleteIcon(screen, x, y, state.DeleteEntries[row], ctx.Styles) })
 		}
-		return
+		return area
 	}
 	if i := fileFocusedFieldIndex(state); i >= 0 && state.Fields[i].PathPicker && state.Fields[i].Completion.Open {
 		if in, ok := p.Item(FileFieldID(i)); ok {
 			f := state.Fields[i]
-			drawPathCompletionDropdown(screen, in.Rect.X, in.Rect.Y+1, f.Scroll, f.Completion, ctx.ScrollbarStyle, ctx.Styles)
+			area.Popup = drawPathCompletionDropdown(screen, in.Rect.X, in.Rect.Y+1, f.Scroll, f.Completion, ctx.ScrollbarStyle, ctx.Styles)
 		}
 	}
+	return area
 }
 
 // indexInitLabels is the FileDialogIndexInit message: the database path and the question,

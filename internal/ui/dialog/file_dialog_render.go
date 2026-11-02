@@ -1,7 +1,6 @@
 package dialog
 
 import (
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"strings"
 	"unicode/utf8"
 
@@ -15,25 +14,14 @@ import (
 // DeleteRowIconPainter draws file-list devicons for one delete dialog row; nil skips icons.
 type DeleteRowIconPainter func(screen tcell.Screen, x, y int, entry DeleteListEntry, styles theme.Theme)
 
-// FileDialogRect returns the outer rect DrawFileDialog will use for the given
-// state, and ok=false when the dialog is not drawable (closed or width < 20).
-// It is the single source of truth for the dialog's on-screen geometry, so the
-// app can compare it across a keystroke to decide whether a dialog-rect overlay
-// is valid (unchanged geometry) or a full render is required (shrunk geometry).
-func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (Rect, bool) {
-	if !state.Open || fileDialogWidth(layout.Width, state, deleteIconLead) < 20 {
-		return Rect{}, false
-	}
-	p, ok := dlg.Place(layout.Width, layout.Height, FileDialogView(state, FileDialogViewContext{Layout: layout, IconLead: deleteIconLead}))
-	return p.Rect, ok
-}
-
 // DrawFileDialog paints the open file dialog: the spec FileDialogView describes, then the overlays
-// on its rects (the delete list's devicons, the focused path field's completion dropdown).
-func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) {
-	if state.Open {
-		drawFileDialogSpec(screen, layout, state, ctx, paintDeleteIcon)
+// on its rects (the delete list's devicons, the focused path field's completion dropdown). It
+// returns the area it painted (zero when closed or not drawable).
+func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) PaintedArea {
+	if !state.Open {
+		return PaintedArea{}
 	}
+	return drawFileDialogSpec(screen, layout, state, ctx, paintDeleteIcon)
 }
 
 func renameToolActive(state FileDialogState) bool {

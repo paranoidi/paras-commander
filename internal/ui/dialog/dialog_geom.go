@@ -9,3 +9,11 @@ type (
 	Layout = geom.Layout
 	Rect   = geom.Rect
 )
+
+// PaintedArea is the screen area a dialog overlay painted: its frame and a popup drawn outside
+// it (a path-completion dropdown; zero when none). A partial repaint that would paint a
+// different area than the screen shows must give way to a full render, or what the old area
+// covered stays on screen.
+type PaintedArea struct {
+	Frame, Popup Rect
+}

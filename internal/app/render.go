@@ -10,7 +10,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
@@ -24,14 +23,12 @@ func (a *App) recordFullRenderToast() {
 	a.lastFullRenderToast = strings.TrimSpace(a.model.Message)
 }
 
-// paintFindDialogOverlay repaints only the find dialog without redrawing panels or the footer.
-// Find-only paint is allowed only while Find is the top input layer; a higher overlay
-// (Group Select opened from Find, a message dialog, …) must go through a full render so
-// that layer stays on top.
-func (a *App) paintFindDialogOverlay() bool {
-	if !a.model.FindDialog.Open || a.inputMode() != InputModeFindDialog {
-		return false
-	}
+// paintOverlay is the one partial repaint of a dialog overlay over the unchanged screen: paint
+// draws the dialog and returns the area it painted. It declines (false: the caller does a full
+// render) when a toast needs the full render, the terminal is too small, or the area differs
+// from the one on screen (a frame that shrank or moved, a dropdown that closed), so what the
+// old area covered is repainted rather than left as a ghost.
+func (a *App) paintOverlay(kind ui.OverlayKind, paint func(layout ui.Layout) dialog.PaintedArea) bool {
 	if a.toastNeedsFullRender() {
 		return false
 	}
@@ -40,40 +37,46 @@ func (a *App) paintFindDialogOverlay() bool {
 	if layout.TooSmall {
 		return false
 	}
-	frame := ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.UseNerdfontIcons, a.model.PanelScrollbar, a.model.DiskUsage, a.model.PinnedItems, a.model.JobPathMarks)
-	prev := a.findOverlayFrame
-	a.findOverlayFrame = frame
-	if prev != (dlg.Rect{}) && prev != frame {
-		return false // the frame moved or resized: the caller's full render repaints what the old one covered
+	if overlayAreaChanged(&a.overlays[kind], paint(layout)) {
+		return false
 	}
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true
 }
 
-// paintFileDialogOverlay repaints only the file dialog rect (rename, mkdir, copy/move,
-// mass rename, delete, …) on top of the unchanged panel buffer, without redrawing panels
-// or the footer. Returns false when the dialog is closed or the terminal is too small, so
-// callers fall back to a full render.
+// overlayAreaChanged records area as the overlay's area on screen and reports whether it
+// differs from the one recorded before.
+func overlayAreaChanged(onScreen *dialog.PaintedArea, area dialog.PaintedArea) bool {
+	prev := *onScreen
+	*onScreen = area
+	return prev != area
+}
+
+// paintFindDialogOverlay repaints only the find dialog (paintOverlay). It is allowed only while
+// Find is the top input layer; a higher overlay (Group Select opened from Find, a message
+// dialog, …) must go through a full render so that layer stays on top.
+func (a *App) paintFindDialogOverlay() bool {
+	if !a.model.FindDialog.Open || a.inputMode() != InputModeFindDialog {
+		return false
+	}
+	return a.paintOverlay(ui.OverlayFind, func(layout ui.Layout) dialog.PaintedArea {
+		return ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.UseNerdfontIcons, a.model.PanelScrollbar, a.model.DiskUsage, a.model.PinnedItems, a.model.JobPathMarks)
+	})
+}
+
+// paintFileDialogOverlay repaints only the file dialog (rename, mkdir, mass rename, delete, …;
+// paintOverlay).
 func (a *App) paintFileDialogOverlay() bool {
 	if !a.model.FileDialog.Open {
 		return false
 	}
-	if a.toastNeedsFullRender() {
-		return false
-	}
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
-	if layout.TooSmall {
-		return false
-	}
-	if a.model.FileDialog.DialogType == dialog.FileDialogMassRename && a.model.FileDialog.MassRenamePhase == dialog.MassRenamePhaseMain {
-		a.dialogCtrl.RecomputeMassRenamePreview()
-	}
-	ui.PaintFileDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.UseNerdfontIcons, a.model.PanelScrollbar)
-	ui.PaintTransientStatusMessage(a.screen, layout, a.model, a.styles)
-	a.emitScreenAfterPartialPaint()
-	return true
+	return a.paintOverlay(ui.OverlayFile, func(layout ui.Layout) dialog.PaintedArea {
+		if a.model.FileDialog.DialogType == dialog.FileDialogMassRename && a.model.FileDialog.MassRenamePhase == dialog.MassRenamePhaseMain {
+			a.dialogCtrl.RecomputeMassRenamePreview()
+		}
+		return ui.PaintFileDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.UseNerdfontIcons, a.model.PanelScrollbar)
+	})
 }
 
 // renderFindDialogUpdate repaints the find overlay when it is open; otherwise falls back to a full render.
@@ -309,7 +312,7 @@ func (a *App) render() {
 	modelSnapshot.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
 	modelSnapshot.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
 	modelSnapshot.SwapPanes = a.effectiveSwapPanes()
-	ui.Render(a.screen, modelSnapshot, a.styles)
+	a.overlays = ui.Render(a.screen, modelSnapshot, a.styles)
 	a.syncTerminalPanelCursor()
 	a.emitScreenAfterFullRender()
 	a.armSpinnerRedrawTimer()

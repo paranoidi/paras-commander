@@ -200,9 +200,9 @@ func HandlePathCompletionKey(ev *tcell.EventKey, c *PathCompletion, value *strin
 // fit in PathCompletionRows, a vertical scrollbar is painted in the box's own rightmost column
 // (the box is widened by one column so names are never overlapped). Draw this at the END of the
 // owning dialog's Draw function so later dialog content does not overdraw it.
-func drawPathCompletionDropdown(screen tcell.Screen, textX, y, scroll int, c PathCompletion, scrollbarStyle uiscrollbar.Style, styles theme.Theme) {
+func drawPathCompletionDropdown(screen tcell.Screen, textX, y, scroll int, c PathCompletion, scrollbarStyle uiscrollbar.Style, styles theme.Theme) Rect {
 	if !c.Open || len(c.Items) == 0 {
-		return
+		return Rect{}
 	}
 	segX := textX + max(0, c.Start-scroll)
 	if scroll > 0 {
@@ -227,7 +227,7 @@ func drawPathCompletionDropdown(screen tcell.Screen, textX, y, scroll int, c Pat
 		width = screenW
 	}
 	if width < 1 {
-		return
+		return Rect{}
 	}
 	if x+width > screenW {
 		x = screenW - width
@@ -279,4 +279,5 @@ func drawPathCompletionDropdown(screen tcell.Screen, textX, y, scroll int, c Pat
 		dropRect := draw.Rect{X: x, Y: y, Width: width, Height: rows}
 		draw.DrawDialogListScrollbar(screen, dropRect, y, rows, len(c.Items), c.Scroll, scrollbarStyle, itemStyle, styles)
 	}
+	return Rect{X: x, Y: y, Width: width, Height: rows}
 }

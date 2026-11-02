@@ -33,11 +33,11 @@ func TestExtractDialogRendersSkippedItemWarning(t *testing.T) {
 	withoutMsg := withMsg
 	withoutMsg.Message = ""
 
-	rectWith, ok := FileDialogRect(layout, withMsg, 0)
+	rectWith, ok := fileDialogFrame(layout, withMsg, 0)
 	if !ok {
 		t.Fatal("extract dialog with warning not drawable")
 	}
-	rectWithout, ok := FileDialogRect(layout, withoutMsg, 0)
+	rectWithout, ok := fileDialogFrame(layout, withoutMsg, 0)
 	if !ok {
 		t.Fatal("extract dialog without warning not drawable")
 	}

@@ -113,8 +113,8 @@ type FindRowIconPainter func(screen tcell.Screen, x, y int, entry FindEntry, dis
 // devicons over the leading cells each list row reserves for them (the overlay escape hatch:
 // devicons are colored per entry type by the panel icon painter, greyed while the list is
 // inert). selectionSizeLabel is the unpadded marked-selection size ("" = none). It returns the
-// frame it painted (zero when the dialog does not fit).
-func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, ctx DialogRenderContext, paintIcon FindRowIconPainter, selectionSizeLabel string, rowMarks RowMarksFunc) dlg.Rect {
+// area it painted (zero when the dialog does not fit).
+func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, ctx DialogRenderContext, paintIcon FindRowIconPainter, selectionSizeLabel string, rowMarks RowMarksFunc) PaintedArea {
 	iconLead := ctx.IconLead
 	if !ctx.ShowIcons || paintIcon == nil {
 		iconLead = 0
@@ -125,10 +125,10 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	})
 	p, ok := dlg.Draw(screen, layout.Width, layout.Height, spec, state.Focus, ctx.Styles)
 	if !ok {
-		return dlg.Rect{}
+		return PaintedArea{}
 	}
 	if iconLead == 0 {
-		return p.Rect
+		return PaintedArea{Frame: p.Rect}
 	}
 	list, _ := p.Item(FindList)
 	inert := state.AdvancedFocused()
@@ -137,5 +137,5 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 			paintIcon(screen, list.Rect.X, y, ent, inert, ctx.Styles)
 		}
 	})
-	return p.Rect
+	return PaintedArea{Frame: p.Rect}
 }

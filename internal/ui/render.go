@@ -674,9 +674,24 @@ func statusCmdWidth(model Model, reserveMenu bool) int {
 	return StatusCommandWidth(model.StatusCommands)
 }
 
+// OverlayKind names a dialog overlay that also repaints on its own over the unchanged screen
+// (App.paintOverlay). A dialog that gains such a partial repaint adds a kind here and records
+// its area in drawModalOverlays; App.paintOverlay then guards it against ghosting.
+type OverlayKind int
+
+const (
+	OverlayFind OverlayKind = iota
+	OverlayFile
+	overlayKindCount
+)
+
+// RenderedOverlays are the areas a full render painted for each OverlayKind (zero when not
+// drawn).
+type RenderedOverlays [overlayKindCount]dialog.PaintedArea
+
 // Render paints model into the screen's logical cell buffer. The caller must invoke
 // screen.Show() (or screen.Sync()) to flush to the terminal.
-func Render(screen tcell.Screen, model Model, styles theme.Theme) {
+func Render(screen tcell.Screen, model Model, styles theme.Theme) (out RenderedOverlays) {
 	width, height := screen.Size()
 	// Fullscreen file preview hides the menu entirely and reclaims its row (filename sits there, borderless).
 	reserveMenu := model.MenuBarLayoutReserved()
@@ -706,7 +721,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 
 	if layout.TooSmall {
 		primitive.Text(screen, 0, 0, width, "Terminal too small", styles.MessageInfo)
-		return
+		return out
 	}
 
 	menus := menu.ActiveDefinitions(model.MenuDefinitions)
@@ -784,10 +799,11 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	default:
 		drawBrowserView(screen, layout, model, styles, chromeBlocked)
 	}
-	drawModalOverlays(screen, layout, model, menus, styles)
+	out = drawModalOverlays(screen, layout, model, menus, styles)
 	dlg.DrawButtonHover(screen, model.DialogButtonHover, styles)
 	dlg.DrawListRowHover(screen, model.DialogListHover, styles)
 	// Caller must invoke screen.Show() or screen.Sync() so the terminal updates.
+	return out
 }
 
 // browserPanelSide carries the primary/secondary-specific inputs to drawBrowserPanel; fields
@@ -973,7 +989,7 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 	drawCursorNameHintScreenFallback(screen, layout, &cursorNameHintFallback, model.TerminalPanel.Visible)
 }
 
-func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, menus []menu.Definition, styles theme.Theme) {
+func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, menus []menu.Definition, styles theme.Theme) (out RenderedOverlays) {
 	if model.Menu.Open && model.MenuBarInteractive() {
 		drawPulldownMenu(screen, layout, model.Menu, menus, styles)
 	}
@@ -1032,7 +1048,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 			model.DiskUsage,
 			styles.IconWorking(),
 		)
-		dialog.DrawFindDialog(screen, layout, model.FindDialog, dialogRenderContext(model, styles), PaintFindDialogRowIcon, selectionLabel, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+		out[OverlayFind] = dialog.DrawFindDialog(screen, layout, model.FindDialog, dialogRenderContext(model, styles), PaintFindDialogRowIcon, selectionLabel, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	}
 	if model.GroupSelect.Open && !model.GroupSelectOverOutput() {
 		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
@@ -1044,7 +1060,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawMetaDialog(screen, layout, model.MetaDialog, styles)
 	}
 	if model.FileDialog.Open {
-		dialog.DrawFileDialog(screen, layout, model.FileDialog, dialogRenderContext(model, styles), PaintDeleteDialogRowIcon)
+		out[OverlayFile] = dialog.DrawFileDialog(screen, layout, model.FileDialog, dialogRenderContext(model, styles), PaintDeleteDialogRowIcon)
 	}
 	if model.HostKeyDialog.Open {
 		dialog.DrawHostKeyDialog(screen, layout, model.HostKeyDialog, styles)
@@ -1087,4 +1103,5 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 			dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
 		}
 	}
+	return out
 }
