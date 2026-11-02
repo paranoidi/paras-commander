@@ -10,13 +10,13 @@ import (
 
 const tooltipText = "Lantern meadow willow"
 
-func tooltipSpec(listHeight int, area ID) Spec {
+func tooltipSpec(listHeight int) Spec {
 	rows := make([]ListRow, 8)
 	for i := range rows {
 		rows[i] = ListRow{Text: "orchard", Icon: " "}
 	}
 	return Spec{
-		Title: "Harbor", Width: 50, MinWidth: 30, Unclamped: true, TooltipArea: area,
+		Title: "Harbor", Width: 50, MinWidth: 30, Unclamped: true,
 		Groups: []Group{{Columns: [][]Item{{
 			{ID: "top", Kind: KindInput},
 			{ID: "tip", Kind: KindInput, Tooltip: tooltipText},
@@ -54,11 +54,11 @@ func rowText(screen tcell.SimulationScreen, r Rect) string {
 }
 
 func TestTooltipShowsOnlyForFocusedWidget(t *testing.T) {
-	_, p := drawTooltipSpec(t, tooltipSpec(6, ""), "top")
+	_, p := drawTooltipSpec(t, tooltipSpec(6), "top")
 	if p.Tooltip != (Rect{}) {
 		t.Fatalf("tooltip drawn for an unfocused widget: %+v", p.Tooltip)
 	}
-	screen, p := drawTooltipSpec(t, tooltipSpec(6, ""), "tip")
+	screen, p := drawTooltipSpec(t, tooltipSpec(6), "tip")
 	tip, _ := p.Item("tip")
 	if p.Tooltip.Y != tip.Rect.Y+1 || p.Tooltip.X != tip.Rect.X {
 		t.Fatalf("tooltip at %+v, want just below the input at %+v", p.Tooltip, tip.Rect)
@@ -69,19 +69,10 @@ func TestTooltipShowsOnlyForFocusedWidget(t *testing.T) {
 	}
 }
 
-func TestTooltipCoversTooltipArea(t *testing.T) {
-	_, p := drawTooltipSpec(t, tooltipSpec(6, "rows"), "tip")
-	list, _ := p.Item("rows")
-	tip, _ := p.Item("tip")
-	if p.Tooltip.X != tip.Rect.X || p.Tooltip.Y != list.Rect.Y {
-		t.Fatalf("tooltip at %+v, want on the list's top row %d, left-aligned with the input at %d", p.Tooltip, list.Rect.Y, tip.Rect.X)
-	}
-}
-
 // A box wider than the room right of its widget shifts left just enough to fit, and list rows
 // whose first cell it covers are left to it by EachListRow.
 func TestTooltipShiftsLeftToFit(t *testing.T) {
-	spec := tooltipSpec(6, "rows")
+	spec := tooltipSpec(6)
 	spec.Groups[0].Columns[0][1] = Item{Kind: KindRow, Cells: []Item{
 		{Kind: KindLabel, Label: "ember", Width: 30},
 		{ID: "tip", Kind: KindInput, Tooltip: strings.Repeat("glacier quartz thistle ", 2)},
@@ -104,9 +95,9 @@ func TestTooltipShiftsLeftToFit(t *testing.T) {
 	}
 }
 
-func TestTooltipFallsBackWhenItDoesNotFit(t *testing.T) {
-	spec := tooltipSpec(2, "rows")
-	spec.Groups[0].Columns[0][1].Tooltip = strings.Repeat("glacier quartz thistle ", 5) // three lines: taller than the list
+func TestTooltipMultilineAndUnfitting(t *testing.T) {
+	spec := tooltipSpec(2)
+	spec.Groups[0].Columns[0][1].Tooltip = strings.Repeat("glacier quartz thistle ", 5) // three lines
 	_, p := drawTooltipSpec(t, spec, "tip")
 	tip, _ := p.Item("tip")
 	if p.Tooltip.Height != 3 || p.Tooltip.Y != tip.Rect.Y+1 {

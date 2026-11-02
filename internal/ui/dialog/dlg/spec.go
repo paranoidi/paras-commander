@@ -191,7 +191,8 @@ type Item struct {
 	// focus is in its Advanced section).
 	Inert bool
 	// Tooltip (any focusable widget) is an explanation shown in a box while the widget holds
-	// focus: below it (above when the dialog has no room there), or over Spec.TooltipArea. The box
+	// focus, on the row below it (above it when the dialog has no room there), aligned with its left
+	// edge. The box
 	// is drawn last, over the dialog's content and inside its frame; it never takes focus or hits.
 	Tooltip string
 	// Seg names the Tab segment of an item inside its group (default 0). Items of one group that
@@ -341,11 +342,6 @@ type Spec struct {
 	// PlainMnemonics makes a plain letter act as its Alt+letter mnemonic while focus is not in a
 	// text input (after PlainButtonKeys' buttons).
 	PlainMnemonics bool
-	// TooltipArea names a widget (a list the focused widget's keys do not reach, say) whose top
-	// row a tooltip starts on instead of the row next to the focused widget, so no other control
-	// is hidden; it stays aligned with the focused widget's left edge. A tooltip taller than the room down to the content bottom falls
-	// back to the default placement.
-	TooltipArea ID
 	// ButtonsLabel, when set, is drawn centered in the separator above the buttons, padded with one
 	// space on each side, in the selection-size status style (find's marked-selection size).
 	ButtonsLabel string

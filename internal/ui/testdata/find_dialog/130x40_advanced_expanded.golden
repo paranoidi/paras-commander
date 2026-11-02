@@ -11,13 +11,13 @@
   │ Kind      [ ] Empty    [ ] Symlinks   [ ] Broken symlinks   [x] Executables                                               │   
   │ Types     [ ] Videos   [x] Pictures   [ ] Archives          [ ] Audio            [ ] Documents                            │   
   │ Modified  newer  3d          older                Size      min                max    lots                                │   
-  │ Changed   newer              older                Owner                   [ ] Not mine                                    │   
-  │ Accessed  newer              older                Exclude                                                                 │   
-  ├───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤   
-  │  ember/harbor_la [i] Content modified (mtime) less than this long ago,                                                   │   
-  │  glacier/ivory_l     or after this date. Ages: 30m, 12h, 3d, 2w, 6mo,                                                    │   
-  │  ivory/juniper_l     1y, or a sum such as 1w2d. Dates: 2026-01-31 or                                                     │   
-  │  ivory/lantern_d     2026-01-31 14:30 (local time).                                                                      │   
+  │ Changed   newer   [i] Content modified (mtime) less than this long ago,   [ ] Not mine                                    │   
+  │ Accessed  newer       or after this date. Ages: 30m, 12h, 3d, 2w, 6mo,                                                    │   
+  ├──────────────────     1y, or a sum such as 1w2d. Dates: 2026-01-31 or   ──────────────────────────────────────────────────┤   
+  │  ember/harbor_la     2026-01-31 14:30 (local time).                                                                      │   
+  │  glacier/ivory_lantern                                                                                                   │   
+  │  ivory/juniper_lantern.go                                                                                                │   
+  │  ivory/lantern_delta.png                                                                                                 │   
   │  juniper/lantern_cinder.png                                                                                              │   
   │  kestrel/lantern_birch.png                                                                                               │   
   │ 󰉋 lantern                                                                                                                 │   
@@ -65,13 +65,13 @@ aabbbbbbbbbbbbbbbbbbbbbbbbfffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbffffffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbfffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
 aabbbbbbbbbbbbbbbbbbbghhhhhhhhhhbbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbiiiiiiiiiiibbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaaa
-aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbdddddddddddddddddjkkkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjdddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
+aabbbbbbbbbbbbbbbbbbbjkkkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
+aabbbbbbbbbbbbbbbbbbbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaaa
+aabbbbbbbbbbbbbbbbbbbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
 aabbdddddddddddddddddjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjdddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
-aabbdddddddddddddddddjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjdddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
-aabbdddddddddddddddddjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjdddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
+aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
+aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
+aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa

@@ -540,7 +540,7 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	}
 	if found && !cur.isButton() {
 		if it := widgetAt(spec, cur); it.Tooltip != "" {
-			p.Tooltip = drawTooltip(screen, spec, p, it, styles)
+			p.Tooltip = drawTooltip(screen, p, it, styles)
 		}
 	}
 	return p, true
@@ -565,11 +565,10 @@ func drawButtonStrip(screen tcell.Screen, spec Spec, p Placement, focus ID, bord
 }
 
 // drawTooltip paints the focused widget's Tooltip box inside the dialog's frame, above the
-// content bottom, its left edge on the widget's (shifted left only as far as it needs to fit):
-// over Spec.TooltipArea's top row when the area has the room down to the content bottom, else
-// below the widget, else above it. It returns the box's rect; a box that fits nowhere is not
+// content bottom, its left edge on the widget's (shifted left only as far as it needs to fit): on
+// the row below the widget, else (no room down to the content bottom) ending on the row above it. It returns the box's rect; a box that fits nowhere is not
 // drawn (empty rect).
-func drawTooltip(screen tcell.Screen, spec Spec, p Placement, it Item, styles theme.Theme) Rect {
+func drawTooltip(screen tcell.Screen, p Placement, it Item, styles theme.Theme) Rect {
 	pi, ok := p.Item(it.ID)
 	if !ok {
 		return Rect{}
@@ -587,9 +586,6 @@ func drawTooltip(screen tcell.Screen, spec Spec, p Placement, it Item, styles th
 		return box
 	}
 	r := pi.Rect
-	if area, ok := p.Item(spec.TooltipArea); ok && area.Rect.Y+h <= bottom {
-		return at(area.Rect.Y)
-	}
 	switch {
 	case r.Y+1+h <= bottom:
 		return at(r.Y + 1)
