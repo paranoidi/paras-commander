@@ -484,11 +484,13 @@ func PaintScrollingInputContent(
 
 // PaintInputHint paints hint over an empty input row painted by PaintScrollingInputContent
 // (after leadingIcon's cells), in the hint style and clipped to the row; focused keeps the caret
-// (the first cell) reversed.
+// on the first cell in the input's own caret style (the hint colour reversed can vanish into the
+// surface).
 func PaintInputHint(screen tcell.Screen, x, y, width int, hint, leadingIcon string, focused bool, styles theme.Theme) {
 	iconCols := LeadingIconCols(leadingIcon)
 	x, width = x+iconCols, width-iconCols
 	style := styles.DialogInputHintStyle(focused)
+	caret := styles.DialogInputBaseStyle(focused, false).Reverse(true)
 	col := 0
 	for _, r := range hint {
 		w := max(runewidth.RuneWidth(r), 1)
@@ -497,7 +499,7 @@ func PaintInputHint(screen tcell.Screen, x, y, width int, hint, leadingIcon stri
 		}
 		st := style
 		if focused && col == 0 {
-			st = style.Reverse(true)
+			st = caret
 		}
 		screen.SetContent(x+col, y, r, nil, st)
 		col += w
