@@ -402,9 +402,15 @@ func Place(screenW, screenH int, spec Spec) (Placement, bool) {
 					})
 					continue
 				case KindList:
+					// A Markers list paints its own leading space, so it starts at the option x like
+					// a radio; a plain list starts at the text x.
+					lx := x + 1
+					if it.Markers {
+						lx = x
+					}
 					p.Items = append(p.Items, PlacedItem{
 						ID: it.ID, Kind: KindList,
-						Rect:   Rect{X: x + 1, Y: y + ri, Width: max(right-x-2, 0), Height: it.span()},
+						Rect:   Rect{X: lx, Y: y + ri, Width: max(right-lx-1, 0), Height: it.span()},
 						Offset: it.ViewOffset(), Rows: it.rowCount(),
 					})
 					continue

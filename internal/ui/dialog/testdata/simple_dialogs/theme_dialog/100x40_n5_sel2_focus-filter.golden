@@ -8,11 +8,11 @@
                                                                                                     
                 ┌─────────────────────┬─────── Theme ──────────────────────────────┐                
                 │ /                   │                                            │                
-                │  ( ) Amber Theme    │ Inactive input with text:                  │                
-                │  ( ) Birch Theme    │ /home/user/demo.txt                        │                
-                │  (*) Cinder Theme   │                                            │                
-                │  ( ) Dune Theme     │ Inactive input with default value:         │                
-                │  ( ) Ember Theme    │ /home/user/demo.txt                        │                
+                │ ( ) Amber Theme     │ Inactive input with text:                  │                
+                │ ( ) Birch Theme     │ /home/user/demo.txt                        │                
+                │ (*) Cinder Theme    │                                            │                
+                │ ( ) Dune Theme      │ Inactive input with default value:         │                
+                │ ( ) Ember Theme     │ /home/user/demo.txt                        │                
                 │                     │                                            │                
                 │                     │ Active input with text:                    │                
                 │                     │ /home/user/demo.txt                        │                
@@ -67,7 +67,7 @@ aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaaaabbddefffffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaaabbhhhhhhhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaabhhhhhhhhhhhhhhhhhhhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa

@@ -2,23 +2,23 @@
                                                                                 
      ┌──────────────────────┬─────── Theme ──────────────────────────────┐      
      │ /                    │                                            │      
-     │  ( ) Nectar Theme    │ Inactive input with text:                  │      
-     │  ( ) Orchard Theme   │ /home/user/demo.txt                        │      
-     │  ( ) Pebble Theme    │                                            │      
-     │  ( ) Quartz Theme    │ Inactive input with default value:         │      
-     │  ( ) River Theme     │ /home/user/demo.txt                        │      
-     │  ( ) Saffron Theme   │                                            │      
-     │  ( ) Thistle Theme   │ Active input with text:                    │      
-     │  ( ) Umber Theme     │ /home/user/demo.txt                        │      
-     │  ( ) Velvet Theme    │                                            │      
-     │  ( ) Willow Theme    │ Active input with default value:           │      
-     │  ( ) Yarrow Theme    │ /home/user/demo.txt                        │      
-     │  ( ) Zephyr Theme    │                                            │      
-     │  ( ) Anchor Theme    │ [x] Selected                               │      
-     │  ( ) Breeze Theme    │ [ ] Unselected                             │      
-     │  ( ) Copper Theme    │                                            │      
-     │  ( ) Drift Theme     ├────────────────────────────────────────────┤      
-     │  (*) Fern Theme      │      [ Selected ]    [ Unselected ]        │      
+     │ ( ) Nectar Theme     │ Inactive input with text:                  │      
+     │ ( ) Orchard Theme    │ /home/user/demo.txt                        │      
+     │ ( ) Pebble Theme     │                                            │      
+     │ ( ) Quartz Theme     │ Inactive input with default value:         │      
+     │ ( ) River Theme      │ /home/user/demo.txt                        │      
+     │ ( ) Saffron Theme    │                                            │      
+     │ ( ) Thistle Theme    │ Active input with text:                    │      
+     │ ( ) Umber Theme      │ /home/user/demo.txt                        │      
+     │ ( ) Velvet Theme     │                                            │      
+     │ ( ) Willow Theme     │ Active input with default value:           │      
+     │ ( ) Yarrow Theme     │ /home/user/demo.txt                        │      
+     │ ( ) Zephyr Theme     │                                            │      
+     │ ( ) Anchor Theme     │ [x] Selected                               │      
+     │ ( ) Breeze Theme     │ [ ] Unselected                             │      
+     │ ( ) Copper Theme     │                                            │      
+     │ ( ) Drift Theme      ├────────────────────────────────────────────┤      
+     │ (*) Fern Theme       │      [ Selected ]    [ Unselected ]        │      
      ├──────────────────────┴────────────────────────────────────────────┤      
      │                       [ OK ]    [ Cancel ]                        │      
      └───────────────────────────────────────────────────────────────────┘      
@@ -57,7 +57,7 @@ aaaaabbbbbbbbbbbbbbbbbbbbbbbbiiiiiciiiiiiibbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbcbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbjjjjjjjjjjjjjjjjjjjbbbbbbbbgggkggggggggggbblllmllllllllllllbbbbbbbbaaaaaa
+aaaaabjjjjjjjjjjjjjjjjjjjjbbbbbbbbgggkggggggggggbblllmllllllllllllbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbgggkggggbbgggkggggggggbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa

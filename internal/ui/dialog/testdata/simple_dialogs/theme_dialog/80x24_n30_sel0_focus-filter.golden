@@ -2,23 +2,23 @@
                                                                                 
      ┌──────────────────────┬─────── Theme ──────────────────────────────┐      
      │ /                    │                                            │      
-     │  (*) Amber Theme     │ Inactive input with text:                  │      
-     │  ( ) Birch Theme     │ /home/user/demo.txt                        │      
-     │  ( ) Cinder Theme    │                                            │      
-     │  ( ) Dune Theme      │ Inactive input with default value:         │      
-     │  ( ) Ember Theme     │ /home/user/demo.txt                        │      
-     │  ( ) Fable Theme     │                                            │      
-     │  ( ) Glacier Theme   │ Active input with text:                    │      
-     │  ( ) Harbor Theme    │ /home/user/demo.txt                        │      
-     │  ( ) Ivory Theme     │                                            │      
-     │  ( ) Jasper Theme    │ Active input with default value:           │      
-     │  ( ) Kestrel Theme   │ /home/user/demo.txt                        │      
-     │  ( ) Lantern Theme   │                                            │      
-     │  ( ) Meadow Theme    │ [x] Selected                               │      
-     │  ( ) Nectar Theme    │ [ ] Unselected                             │      
-     │  ( ) Orchard Theme   │                                            │      
-     │  ( ) Pebble Theme    ├────────────────────────────────────────────┤      
-     │  ( ) Quartz Theme    │      [ Selected ]    [ Unselected ]        │      
+     │ (*) Amber Theme      │ Inactive input with text:                  │      
+     │ ( ) Birch Theme      │ /home/user/demo.txt                        │      
+     │ ( ) Cinder Theme     │                                            │      
+     │ ( ) Dune Theme       │ Inactive input with default value:         │      
+     │ ( ) Ember Theme      │ /home/user/demo.txt                        │      
+     │ ( ) Fable Theme      │                                            │      
+     │ ( ) Glacier Theme    │ Active input with text:                    │      
+     │ ( ) Harbor Theme     │ /home/user/demo.txt                        │      
+     │ ( ) Ivory Theme      │                                            │      
+     │ ( ) Jasper Theme     │ Active input with default value:           │      
+     │ ( ) Kestrel Theme    │ /home/user/demo.txt                        │      
+     │ ( ) Lantern Theme    │                                            │      
+     │ ( ) Meadow Theme     │ [x] Selected                               │      
+     │ ( ) Nectar Theme     │ [ ] Unselected                             │      
+     │ ( ) Orchard Theme    │                                            │      
+     │ ( ) Pebble Theme     ├────────────────────────────────────────────┤      
+     │ ( ) Quartz Theme     │      [ Selected ]    [ Unselected ]        │      
      ├──────────────────────┴────────────────────────────────────────────┤      
      │                       [ OK ]    [ Cancel ]                        │      
      └───────────────────────────────────────────────────────────────────┘      
@@ -41,7 +41,7 @@ m fg=0x100000007 bg=0x100000006 attrs=1 ul=0 ulc=0x0
 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbddeffffffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
-aaaaabbgggggggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
+aaaaabggggggggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa
 aaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaa

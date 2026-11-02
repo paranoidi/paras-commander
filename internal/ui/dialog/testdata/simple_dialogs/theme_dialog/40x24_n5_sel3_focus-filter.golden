@@ -2,11 +2,11 @@
                                         
   ┌───────────── Theme ─┬────────────┐  
   │ /                   │            │  
-  │  ( ) Amber Theme    │ Inactive input
-  │  ( ) Birch Theme    │ ◀ome/user/demo
-  │  ( ) Cinder Theme   │            │  
-  │  (*) Dune Theme     │ Inactive input
-  │  ( ) Ember Theme    │ ◀ome/user/demo
+  │ ( ) Amber Theme     │ Inactive input
+  │ ( ) Birch Theme     │ ◀ome/user/demo
+  │ ( ) Cinder Theme    │            │  
+  │ (*) Dune Theme      │ Inactive input
+  │ ( ) Ember Theme     │ ◀ome/user/demo
   │                     │            │  
   │                     │ Active input w
   │                     │ /home/user/dem
@@ -41,7 +41,7 @@ aabbddefffffffffffffffbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aabbbbbbbbbbbbbbbbbbbbbbbbgggggggggggggg
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbhhhhhhhhhhhhhhhhhhbbbbbbbbbbbbbbbbbb
+aabhhhhhhhhhhhhhhhhhhhbbbbbbbbbbbbbbbbbb
 aabbbbbbbbbbbbbbbbbbbbbbbbgggggggggggggg
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb

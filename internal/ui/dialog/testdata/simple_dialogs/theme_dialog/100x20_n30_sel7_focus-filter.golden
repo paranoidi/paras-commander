@@ -2,19 +2,19 @@
                                                                                                     
                ┌──────────────────────┬─────── Theme ──────────────────────────────┐                
                │ /                    │                                            │                
-               │  ( ) Amber Theme     │ Inactive input with text:                  │                
-               │  ( ) Birch Theme     │ /home/user/demo.txt                        │                
-               │  ( ) Cinder Theme    │                                            │                
-               │  ( ) Dune Theme      │ Inactive input with default value:         │                
-               │  ( ) Ember Theme     │ /home/user/demo.txt                        │                
-               │  ( ) Fable Theme     │                                            │                
-               │  ( ) Glacier Theme   │ Active input with text:                    │                
-               │  (*) Harbor Theme    │ /home/user/demo.txt                        │                
-               │  ( ) Ivory Theme     │                                            │                
-               │  ( ) Jasper Theme    │ Active input with default value:           │                
-               │  ( ) Kestrel Theme   │ /home/user/demo.txt                        │                
-               │  ( ) Lantern Theme   │                                            │                
-               │  ( ) Meadow Theme    │ [x] Selected                               │                
+               │ ( ) Amber Theme      │ Inactive input with text:                  │                
+               │ ( ) Birch Theme      │ /home/user/demo.txt                        │                
+               │ ( ) Cinder Theme     │                                            │                
+               │ ( ) Dune Theme       │ Inactive input with default value:         │                
+               │ ( ) Ember Theme      │ /home/user/demo.txt                        │                
+               │ ( ) Fable Theme      │                                            │                
+               │ ( ) Glacier Theme    │ Active input with text:                    │                
+               │ (*) Harbor Theme     │ /home/user/demo.txt                        │                
+               │ ( ) Ivory Theme      │                                            │                
+               │ ( ) Jasper Theme     │ Active input with default value:           │                
+               │ ( ) Kestrel Theme    │ /home/user/demo.txt                        │                
+               │ ( ) Lantern Theme    │                                            │                
+               │ ( ) Meadow Theme     │ [x] Selected                               │                
                ├──────────────────────┴────────────────────────────────────────────┤                
                │                       [ OK ]    [ Cancel ]                        │                
                └───────────────────────────────────────────────────────────────────┘                
@@ -42,7 +42,7 @@ aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
-aaaaaaaaaaaaaaabbhhhhhhhhhhhhhhhhhhhbbbbffffffffffffffffffefffffffffffffffffffffffbbaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaabhhhhhhhhhhhhhhhhhhhhbbbbffffffffffffffffffefffffffffffffffffffffffbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaa
 aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaiaaaaaaaaaaaaaaaaaaaaaaabbaaaaaaaaaaaaaaaa
