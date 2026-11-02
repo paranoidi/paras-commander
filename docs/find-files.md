@@ -56,10 +56,11 @@ Age, size, owner, executable and empty criteria need file metadata, so the first
 | `Enter` | Navigate: a directory opens in the panel; a file opens its parent with the file highlighted. If rows are marked, they are added to the panel selection instead |
 | `Insert` or `Space` | Mark / unmark the row |
 | `F5` or `C-a` | Mark all matching results (`find.select-all`) |
-| `F4` | Unmark all (`find.unselect-all`) |
-| `F6` / `F7` | Mark / unmark by group pattern (`find.select-group`, `find.unselect-group`) |
+| `S-F5` | Unmark all (`find.unselect-all`) |
+| `F6` / `S-F6` | Mark / unmark by group pattern (`find.select-group`, `find.unselect-group`) |
 | `F2` | Replace the selection with the parent directories of the marked results (`find.select-parent-dirs`) |
 | `F3` | View the highlighted file fullscreen (`find.view`) |
+| `F4` | Edit the highlighted file in the external editor and keep Find open (`find.edit`) |
 | `M-a` | Show / hide the advanced criteria (`find.toggle-advanced`) |
 | `M-m` | Next match mode (`find.cycle-match-mode`) |
 | `M-r` | Reset the match mode and criteria (`find.reset-advanced`) |
@@ -67,7 +68,7 @@ Age, size, owner, executable and empty criteria need file metadata, so the first
 | `M-Insert` | Pin the row |
 | `Esc` | Cancel the scan and close |
 
-Marked results show their combined size on the separator line. Marking a directory removes conflicting marks of its contents or parents and says so in a toast. The footer shows the keys that apply.
+Marked results show their combined size on the separator line. Marking a directory removes conflicting marks of its contents or parents and says so in a toast. The footer shows the keys that apply; the unmark keys appear as the grey Shift word after their mark key (`Select allUnselect`).
 
 ## Options
 

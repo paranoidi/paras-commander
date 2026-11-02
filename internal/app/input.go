@@ -495,17 +495,28 @@ func findDialogMarkingFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	if lbl := keys.MenuBindingLabel(keymap.ActionFindView); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "View"})
 	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionFindUnselectAll); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect all"})
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindEdit); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Edit"})
 	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectAll); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Select all"})
-	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectGroup); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Select group"})
-	}
-	if lbl := keys.MenuBindingLabel(keymap.ActionFindUnselectGroup); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect group"})
+	out = appendSelectFooterKey(out, keys, keymap.ActionFindSelectAll, keymap.ActionFindUnselectAll, "Select all")
+	return appendSelectFooterKey(out, keys, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup, "Select group")
+}
+
+// appendSelectFooterKey appends the footer entry of a select action with its unselect twin as
+// the Shift-alternative "Unselect" word (or as an entry of its own when the two bindings are not
+// a key and its Shift variant).
+func appendSelectFooterKey(out []menu.FunctionKey, keys *keymap.Map, selectID, unselectID, hint string) []menu.FunctionKey {
+	sel := keys.MenuBindingLabel(selectID)
+	unsel := keys.MenuBindingLabel(unselectID)
+	switch {
+	case sel != "" && unsel == "S-"+sel:
+		return append(out, menu.FunctionKey{KeyLabel: sel, Hint: hint, HintShiftPrefix: "Unselect", ShiftKeyLabel: unsel})
+	case sel != "" && unsel != "":
+		return append(out, menu.FunctionKey{KeyLabel: sel, Hint: hint}, menu.FunctionKey{KeyLabel: unsel, Hint: "Un" + strings.ToLower(hint[:1]) + hint[1:]})
+	case sel != "":
+		return append(out, menu.FunctionKey{KeyLabel: sel, Hint: hint})
+	case unsel != "":
+		return append(out, menu.FunctionKey{KeyLabel: unsel, Hint: "Un" + strings.ToLower(hint[:1]) + hint[1:]})
 	}
 	return out
 }

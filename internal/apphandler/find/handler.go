@@ -929,6 +929,24 @@ func (h *Handler) OpenSelectedFullscreenPreview() {
 	}
 }
 
+// EditSelected opens the highlighted result in the external editor and keeps Find open (its
+// results and marks stay); a directory says "Edit: not a file".
+func (h *Handler) EditSelected() {
+	st := &h.model.FindDialog
+	if len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
+		return
+	}
+	ent, ok := st.FindEntryAt(st.Ranked[st.Selected])
+	if !ok {
+		return
+	}
+	if ent.IsDir {
+		h.host.SetTransientMessage("Edit: not a file", ui.MessageUrgencyWarn)
+		return
+	}
+	h.host.EditFile(findEntryAbsPath(st, ent))
+}
+
 // testOnRankFindCorpus, if set, runs on a FullRanked cache miss (tests assert
 // a cached zero-match result does not take this path).
 var testOnRankFindCorpus func()
@@ -1298,11 +1316,11 @@ func (h *Handler) tryFindDialogActionKey(event *tcell.EventKey) bool {
 func (h *Handler) RunAction(id string) bool {
 	if h.model.FindDialog.JumpMode {
 		switch id {
-		case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindUnselectAll,
+		case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindEdit, keymap.ActionFindUnselectAll,
 			keymap.ActionFindSelectAll, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup,
 			keymap.ActionFindSelectParentDirs, keymap.ActionFindToggleAdvanced, keymap.ActionFindCycleMatchMode,
 			keymap.ActionFindResetAdvanced:
-			return true // marking, viewing and the advanced criteria do not apply to jump mode
+			return true // marking, viewing, editing and the advanced criteria do not apply to jump mode
 		}
 	}
 	switch id {
@@ -1312,6 +1330,8 @@ func (h *Handler) RunAction(id string) bool {
 		h.findDialogPinToggleCursor()
 	case keymap.ActionFindView:
 		h.OpenSelectedFullscreenPreview()
+	case keymap.ActionFindEdit:
+		h.EditSelected()
 	case keymap.ActionFindUnselectAll:
 		h.findDialogUnselectAll()
 	case keymap.ActionFindSelectAll:

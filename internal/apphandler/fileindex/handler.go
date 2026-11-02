@@ -51,6 +51,8 @@ type Host interface {
 	PinTogglePath(name, path string, isDir bool)
 	// OpenFullscreenFilePreviewAt opens path in the fullscreen file viewer.
 	OpenFullscreenFilePreviewAt(path string, isDir bool) error
+	// EditFile runs the external editor on the local file path; errors become an "Edit" message.
+	EditFile(path string)
 	// ToggleFileIndexMenu opens or closes the fileindex menu strip (app-owned leader-menu chrome).
 	ToggleFileIndexMenu()
 	// ReloadPanel re-reads the panel's listing (the overlay is applied or dropped by it).

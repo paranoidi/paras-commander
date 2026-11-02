@@ -138,7 +138,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 		order: []string{LeaderMenuGroupFind, LeaderMenuGroupSelection, LeaderMenuGroupApp},
 		actions: map[string][]string{
 			LeaderMenuGroupFind: {
-				ActionFindView, ActionOpenInPrimary, ActionOpenInSecondary, ActionPanelPinToggle,
+				ActionFindView, ActionFindEdit, ActionOpenInPrimary, ActionOpenInSecondary, ActionPanelPinToggle,
 				ActionFindToggleAdvanced, ActionFindCycleMatchMode, ActionFindResetAdvanced,
 			},
 			LeaderMenuGroupSelection: {

@@ -20,6 +20,7 @@ type fakeFindHost struct {
 	p            *panel.State
 	transientMsg string
 	transientUrg ui.MessageUrgency
+	editedPath   string
 }
 
 func (f *fakeFindHost) LayoutForTerminalSize(w, h int) ui.Layout { return ui.Layout{} }
@@ -48,6 +49,7 @@ func (f *fakeFindHost) PanelViewportRows(int) int                      { return 
 func (f *fakeFindHost) OpenGroupSelectDialog(GroupSelectMode, bool)    {}
 func (f *fakeFindHost) OpenFullscreenFilePreviewAt(string, bool) error { return nil }
 func (f *fakeFindHost) PinTogglePath(string, string, bool)             {}
+func (f *fakeFindHost) EditFile(path string)                           { f.editedPath = path }
 
 var _ Host = (*fakeFindHost)(nil)
 

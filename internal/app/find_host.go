@@ -55,6 +55,8 @@ func (h findHost) OpenFullscreenFilePreviewAt(path string, isDir bool) error {
 	return h.app.previewCtrl.OpenFullscreenFilePreviewAt(path, isDir)
 }
 
+func (h findHost) EditFile(path string) { h.app.editFileAt(path) }
+
 func (h findHost) PinTogglePath(name, path string, isDir bool) {
 	h.app.pinCtrl.TogglePath(name, path, isDir)
 }

@@ -1160,12 +1160,21 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"find dialog", "preview", "quick view", "fullscreen"},
 		},
 		{
+			ID:           ActionFindEdit,
+			LeaderKey:    "e",
+			Title:        "Edit",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "F4",
+			Keywords:     []string{"find dialog", "editor", "$EDITOR", "open"},
+		},
+		{
 			ID:           ActionFindUnselectAll,
 			LeaderKey:    "U",
 			Title:        "Unselect all",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
-			PreferredKey: "F4",
+			PreferredKey: "S-F5",
 			Keywords:     []string{"find dialog", "clear marks", "deselect all"},
 		},
 		{
@@ -1192,7 +1201,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Title:        "Unselect group",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
-			PreferredKey: "F7",
+			PreferredKey: "S-F6",
 			Keywords:     []string{"find dialog", "pattern", "glob", "deselect"},
 		},
 		{

@@ -639,12 +639,18 @@ func TestDefaultBundleFindDialogOverlayF5CtrlA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
-	if got := bundle.FindDialog.MenuBindingLabel(ActionFindUnselectAll); got != "F4" {
-		t.Fatalf("FindDialog UnselectAll MenuBindingLabel = %q, want F4", got)
-	}
 	id, ok := bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
-	if !ok || id != ActionFindUnselectAll {
-		t.Fatalf("FindDialog F4 = %q %v, want %q", id, ok, ActionFindUnselectAll)
+	if !ok || id != ActionFindEdit {
+		t.Fatalf("FindDialog F4 = %q %v, want %q", id, ok, ActionFindEdit)
+	}
+	for _, c := range []struct {
+		key    tcell.Key
+		action string
+	}{{tcell.KeyF5, ActionFindUnselectAll}, {tcell.KeyF6, ActionFindUnselectGroup}} {
+		id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(c.key, 0, tcell.ModShift))
+		if !ok || id != c.action {
+			t.Fatalf("FindDialog Shift+%v = %q %v, want %q", c.key, id, ok, c.action)
+		}
 	}
 	if got := bundle.FindDialog.MenuBindingLabel(ActionFindSelectAll); got != "F5" {
 		t.Fatalf("FindDialog MenuBindingLabel = %q, want F5", got)
@@ -664,10 +670,6 @@ func TestDefaultBundleFindDialogOverlayF5CtrlA(t *testing.T) {
 	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
 	if !ok || id != ActionFindSelectGroup {
 		t.Fatalf("FindDialog F6 = %q %v, want %q", id, ok, ActionFindSelectGroup)
-	}
-	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
-	if !ok || id != ActionFindUnselectGroup {
-		t.Fatalf("FindDialog F7 = %q %v, want %q", id, ok, ActionFindUnselectGroup)
 	}
 	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
 	if !ok || id != ActionOpenInPrimary {

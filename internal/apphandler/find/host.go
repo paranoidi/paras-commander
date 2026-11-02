@@ -27,6 +27,8 @@ type Host interface {
 	PanelViewportRows(panelID int) int
 	OpenGroupSelectDialog(mode GroupSelectMode, forFind bool)
 	OpenFullscreenFilePreviewAt(path string, isDir bool) error
+	// EditFile runs the external editor on the local file path; errors become an "Edit" message.
+	EditFile(path string)
 	// PinTogglePath pins/unpins path (add-or-remove) in the app-owned pin list and shows a
 	// transient "Pinned"/"Unpinned" status message using name (the entry's display basename).
 	PinTogglePath(name, path string, isDir bool)

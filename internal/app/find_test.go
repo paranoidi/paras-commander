@@ -471,9 +471,9 @@ func newFindDialogTestApp(t *testing.T) *App {
 	return app
 }
 
-func assertFindDialogGroupSelectViaKey(t *testing.T, app *App, key tcell.Key, wantMode string) {
+func assertFindDialogGroupSelectViaKey(t *testing.T, app *App, key tcell.Key, mod tcell.ModMask, wantMode string) {
 	t.Helper()
-	if quit, _ := app.handleKey(tcell.NewEventKey(key, 0, tcell.ModNone)); quit {
+	if quit, _ := app.handleKey(tcell.NewEventKey(key, 0, mod)); quit {
 		t.Fatalf("%v: handleKey quit", key)
 	}
 	if !app.model.GroupSelect.Open || app.model.GroupSelect.Mode != wantMode || app.model.GroupSelect.Context != "find" {
@@ -506,15 +506,15 @@ func TestFindDialogF6OpensGroupSelectForFindContext(t *testing.T) {
 	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone)); !ok || id != keymap.ActionFindSelectGroup {
 		t.Fatalf("F6 lookup = %q ok=%v", id, ok)
 	}
-	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF6, "select")
+	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF6, tcell.ModNone, "select")
 }
 
-func TestFindDialogF7OpensUnselectGroupSelectForFindContext(t *testing.T) {
+func TestFindDialogShiftF6OpensUnselectGroupSelectForFindContext(t *testing.T) {
 	app := newFindDialogTestApp(t)
-	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectGroup {
-		t.Fatalf("F7 lookup = %q ok=%v", id, ok)
+	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModShift)); !ok || id != keymap.ActionFindUnselectGroup {
+		t.Fatalf("Shift+F6 lookup = %q ok=%v", id, ok)
 	}
-	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF7, "unselect")
+	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF6, tcell.ModShift, "unselect")
 }
 
 func TestFindDialogGroupSelectGlobMarksFullCorpusResults(t *testing.T) {
@@ -583,10 +583,10 @@ func TestFindDialogUnselectAllClearsMarks(t *testing.T) {
 		t.Fatalf("select all marks = %v", app.model.FindDialog.MarkedPaths)
 	}
 
-	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectAll {
-		t.Fatalf("F4 lookup = %q ok=%v", id, ok)
+	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModShift)); !ok || id != keymap.ActionFindUnselectAll {
+		t.Fatalf("Shift+F5 lookup = %q ok=%v", id, ok)
 	}
-	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModShift))
 	if app.model.FindDialog.MarkedPaths != nil {
 		t.Fatalf("unselect all cleared marks = %v", app.model.FindDialog.MarkedPaths)
 	}

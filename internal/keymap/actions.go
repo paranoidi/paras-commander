@@ -59,6 +59,7 @@ const (
 	ActionPanelFindDialog             = "panel.find-dialog"
 	ActionPanelJumpDialog             = "panel.jump-dialog"
 	ActionFindView                    = "find.view"
+	ActionFindEdit                    = "find.edit"
 	ActionFindSelectAll               = "find.select-all"
 	ActionFindUnselectAll             = "find.unselect-all"
 	ActionFindSelectGroup             = "find.select-group"
@@ -408,6 +409,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelFindDialog:             {},
 	ActionPanelJumpDialog:             {},
 	ActionFindView:                    {},
+	ActionFindEdit:                    {},
 	ActionFindSelectAll:               {},
 	ActionFindUnselectAll:             {},
 	ActionFindSelectGroup:             {},

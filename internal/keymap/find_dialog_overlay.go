@@ -4,10 +4,11 @@ package keymap
 func DefaultFindDialogOverlayKeys() map[string][]string {
 	return withOpenInPanelKeys(map[string][]string{
 		ActionFindView:             {"F3"},
-		ActionFindUnselectAll:      {"F4"},
+		ActionFindEdit:             {"F4"},
+		ActionFindUnselectAll:      {"S-F5"},
 		ActionFindSelectAll:        {"F5", "C-a"},
 		ActionFindSelectGroup:      {"F6"},
-		ActionFindUnselectGroup:    {"F7"},
+		ActionFindUnselectGroup:    {"S-F6"},
 		ActionFindSelectParentDirs: {"F2"},
 		ActionFindToggleAdvanced:   {"M-a"},
 		ActionFindCycleMatchMode:   {"M-m"},

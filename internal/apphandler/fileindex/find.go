@@ -206,11 +206,11 @@ func (h *Handler) HandleFindKey(ev *tcell.EventKey) {
 func (h *Handler) runFindAction(id string) bool {
 	st := &h.model.IndexFindDialog
 	switch id {
-	case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindUnselectAll,
+	case keymap.ActionPanelSelectToggle, keymap.ActionFindView, keymap.ActionFindEdit, keymap.ActionFindUnselectAll,
 		keymap.ActionFindSelectAll, keymap.ActionFindSelectGroup, keymap.ActionFindUnselectGroup,
 		keymap.ActionFindSelectParentDirs, keymap.ActionFindCycleMatchMode:
 		if st.JumpMode {
-			return true // marking, viewing and the Boolean mode do not apply to jump mode
+			return true // marking, viewing, editing and the Boolean mode do not apply to jump mode
 		}
 	case keymap.ActionFindToggleAdvanced, keymap.ActionFindResetAdvanced:
 		return true
@@ -222,6 +222,8 @@ func (h *Handler) runFindAction(id string) bool {
 		h.pinCursor()
 	case keymap.ActionFindView:
 		h.viewCursor()
+	case keymap.ActionFindEdit:
+		h.editCursor()
 	case keymap.ActionFindUnselectAll:
 		st.Marked, st.MarkedDirs, st.MarkedSizes = nil, nil, nil
 	case keymap.ActionFindSelectAll:
@@ -408,6 +410,20 @@ func (h *Handler) viewCursor() {
 	if err := h.host.OpenFullscreenFilePreviewAt(r.Path, false); err != nil {
 		h.host.SetTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
 	}
+}
+
+// editCursor opens the result under the cursor in the external editor and keeps the dialog open;
+// a directory says "Edit: not a file".
+func (h *Handler) editCursor() {
+	r, ok := h.cursorResult()
+	if !ok {
+		return
+	}
+	if r.IsDir {
+		h.host.SetTransientMessage("Edit: not a file", ui.MessageUrgencyWarn)
+		return
+	}
+	h.host.EditFile(r.Path)
 }
 
 // pinCursor pins or unpins the result under the cursor by its fileindex:// path, the path

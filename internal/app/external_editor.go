@@ -79,6 +79,13 @@ func (a *App) editActiveFile() {
 		a.setErrorMessage("Edit", err)
 		return
 	}
+	a.editFileAt(path)
+}
+
+// editFileAt runs the external editor on the local file path (an "Edit" error message on
+// failure) and then refreshes the active panel in the file browser, so a changed size or mtime
+// shows. It is the one edit entry for a known path (file.edit, find.edit).
+func (a *App) editFileAt(path string) {
 	if err := a.openFileInExternalEditor(path); err != nil {
 		a.setErrorMessage("Edit", err)
 		return
