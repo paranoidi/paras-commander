@@ -404,6 +404,41 @@ func TestOpenInOtherPanelDisablesSync(t *testing.T) {
 	}
 }
 
+// Regression: opening a path the other panel already shows must not reload it or move its cursor.
+func TestOpenInOtherPanelKeepsCursorWhenAlreadyThere(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	for _, name := range []string{"lantern", "meadow", "orchard"} {
+		if err := os.MkdirAll(filepath.Join(alpha, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	navigatePanelIntoDir(t, app, screen, ui.SecondaryPanel, "alpha")
+	right := app.panelByID(ui.SecondaryPanel)
+	selectPanelEntryByName(t, right, "orchard")
+	wantCursor := right.Cursor
+
+	left := app.panelByID(ui.PrimaryPanel)
+	selectPanelEntryByName(t, left, "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	app.dispatch(keymap.ActionPanelOpenDirInOther)
+	if right.ListingPending || right.Cursor != wantCursor {
+		t.Fatalf("open-dir-in-other: pending=%v cursor=%d, want no reload and cursor %d",
+			right.ListingPending, right.Cursor, wantCursor)
+	}
+
+	navigatePanelIntoDir(t, app, screen, ui.PrimaryPanel, "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	app.dispatch(keymap.ActionPanelOpenActivePathInOther)
+	if right.ListingPending || right.Cursor != wantCursor {
+		t.Fatalf("open-active-path-in-other: pending=%v cursor=%d, want no reload and cursor %d",
+			right.ListingPending, right.Cursor, wantCursor)
+	}
+}
+
 func navigatePanelIntoDir(t *testing.T, app *App, screen tcell.SimulationScreen, panelID int, name string) {
 	t.Helper()
 	p := app.panelByID(panelID)

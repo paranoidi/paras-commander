@@ -416,6 +416,21 @@ func (a *App) navigatePanelToDirectory(panelID int, dirPath, selectedName string
 	return p.NavigateToPath(loc, selectedName, vr)
 }
 
+// openPathInInactivePanel navigates the inactive panel to dirPath. When that panel already
+// shows dirPath it is left untouched so its cursor (preselected row) does not move.
+func (a *App) openPathInInactivePanel(dirPath string) error {
+	loc, err := pathloc.Parse(dirPath)
+	if err != nil {
+		return err
+	}
+	id := a.inactivePanelID()
+	p := a.panelByID(id)
+	if p.Path.Equal(loc) {
+		return nil
+	}
+	return p.NavigateToPath(loc, "", a.panelViewportRows(id))
+}
+
 // navigatePanelToAncestor loads the directory depth levels above panelID's path, with the cursor
 // on the child it came from (as nav.parent does for one level).
 func (a *App) navigatePanelToAncestor(panelID, depth int) error {
@@ -807,7 +822,7 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		if !ok || !entry.ResolvesToDir() {
 			break
 		}
-		if err := a.navigatePanelToDirectory(a.inactivePanelID(), entry.Path, ""); err != nil {
+		if err := a.openPathInInactivePanel(entry.Path); err != nil {
 			a.setErrorMessage("Open in other panel failed", err)
 			break
 		}
@@ -819,7 +834,7 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		if a.model.ViewMode != ui.ViewBrowser {
 			break
 		}
-		if err := a.navigatePanelToDirectory(a.inactivePanelID(), activePanel.PathString(), ""); err != nil {
+		if err := a.openPathInInactivePanel(activePanel.PathString()); err != nil {
 			a.setErrorMessage("Open current path in other panel failed", err)
 			break
 		}
