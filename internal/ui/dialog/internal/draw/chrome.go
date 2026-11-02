@@ -486,11 +486,11 @@ func PaintScrollingInputContent(
 const TooltipMaxWidth = 56
 
 // TooltipLines wraps text for a tooltip box at most maxWidth cells wide: it returns the lines and
-// the box width (one cell of padding at each end, the info icon after the first line's text). It
+// the box width (one cell of padding at each end, the info icon before the text column). It
 // returns nil when even one character does not fit.
 func TooltipLines(text string, maxWidth int, styles theme.Theme) (lines []string, width int) {
 	iconW := runewidth.StringWidth(styles.IconDialogInfo())
-	textW := min(maxWidth, TooltipMaxWidth) - 3 - iconW // " " text " " icon " "
+	textW := min(maxWidth, TooltipMaxWidth) - 3 - iconW // " " icon " " text " "
 	if textW < 1 {
 		return nil, 0
 	}
@@ -503,17 +503,16 @@ func TooltipLines(text string, maxWidth int, styles theme.Theme) (lines []string
 }
 
 // PaintTooltip paints a tooltip box of TooltipLines at (x, y), width cells wide: the lines in the
-// tooltip.text style, one cell of padding around them and the info icon at the right end of the
-// first line in the tooltip.info style.
+// tooltip.text style, one cell of padding around them and the info icon at the left of the first
+// line in the tooltip.info style; later lines keep the text column under the icon free.
 func PaintTooltip(screen tcell.Screen, x, y, width int, lines []string, styles theme.Theme) {
 	icon := styles.IconDialogInfo()
-	iconW := runewidth.StringWidth(icon)
+	lead := 2 + runewidth.StringWidth(icon) // " " icon " "
 	for i, line := range lines {
-		primitive.Text(screen, x, y+i, width, " "+line, styles.TooltipText)
-		if i == 0 {
-			primitive.Text(screen, x+width-1-iconW, y, iconW+1, icon+" ", styles.TooltipInfoStyle())
-		}
+		primitive.Text(screen, x, y+i, lead, "", styles.TooltipText)
+		primitive.Text(screen, x+lead, y+i, width-lead, line, styles.TooltipText)
 	}
+	primitive.Text(screen, x+1, y, lead-1, icon, styles.TooltipInfoStyle())
 }
 
 // ScrollingInputState holds the content state for DrawScrollingDialogInput.

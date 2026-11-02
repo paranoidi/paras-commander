@@ -64,21 +64,43 @@ func TestTooltipShowsOnlyForFocusedWidget(t *testing.T) {
 		t.Fatalf("tooltip at %+v, want just below the input at %+v", p.Tooltip, tip.Rect)
 	}
 	got := rowText(screen, p.Tooltip)
-	if !strings.HasPrefix(got, " "+tooltipText) || !strings.HasSuffix(got, theme.IconDialogInfoASCII+" ") {
-		t.Fatalf("tooltip row = %q, want the text then the info icon at the right", got)
+	if want := " " + theme.IconDialogInfoASCII + " " + tooltipText + " "; got != want {
+		t.Fatalf("tooltip row = %q, want %q: the info icon at the left, then the text", got, want)
 	}
 }
 
 func TestTooltipCoversTooltipArea(t *testing.T) {
 	_, p := drawTooltipSpec(t, tooltipSpec(6, "rows"), "tip")
 	list, _ := p.Item("rows")
-	if p.Tooltip.X != list.Rect.X || p.Tooltip.Y != list.Rect.Y {
-		t.Fatalf("tooltip at %+v, want the list's top-left corner %+v", p.Tooltip, list.Rect)
+	tip, _ := p.Item("tip")
+	if p.Tooltip.X != tip.Rect.X || p.Tooltip.Y != list.Rect.Y {
+		t.Fatalf("tooltip at %+v, want on the list's top row %d, left-aligned with the input at %d", p.Tooltip, list.Rect.Y, tip.Rect.X)
 	}
+}
+
+// A box wider than the room right of its widget shifts left just enough to fit, and list rows
+// whose first cell it covers are left to it by EachListRow.
+func TestTooltipShiftsLeftToFit(t *testing.T) {
+	spec := tooltipSpec(6, "rows")
+	spec.Groups[0].Columns[0][1] = Item{Kind: KindRow, Cells: []Item{
+		{Kind: KindLabel, Label: "ember", Width: 30},
+		{ID: "tip", Kind: KindInput, Tooltip: strings.Repeat("glacier quartz thistle ", 2)},
+	}}
+	_, p := drawTooltipSpec(t, spec, "tip")
+	tip, _ := p.Item("tip")
+	right := p.Rect.X + p.Rect.Width - 1
+	if p.Tooltip.X >= tip.Rect.X || p.Tooltip.X+p.Tooltip.Width != right {
+		t.Fatalf("tooltip %+v, want it shifted left of the input (x %d) to end at the border (%d)", p.Tooltip, tip.Rect.X, right)
+	}
+	list, _ := p.Item("rows")
 	var drawn []int
 	p.EachListRow("rows", func(row, _ int) { drawn = append(drawn, row) })
-	if len(drawn) != list.Rect.Height-p.Tooltip.Height || drawn[0] != p.Tooltip.Height {
-		t.Fatalf("EachListRow rows = %v, want the rows below the %d-row tooltip", drawn, p.Tooltip.Height)
+	covered := 0
+	if p.Tooltip.Contains(list.Rect.X, list.Rect.Y) {
+		covered = p.Tooltip.Height
+	}
+	if len(drawn) != list.Rect.Height-covered {
+		t.Fatalf("EachListRow rows = %v, want %d rows (tooltip covers the first cell of %d)", drawn, list.Rect.Height-covered, covered)
 	}
 }
 

@@ -9,11 +9,11 @@
   │ Kind      󰄱 Empty         󰄱 Symlinks     󰄱 Broken symlinks     󰄱 Executables                 │  
   │ Types     󰄱 Videos        󰄱 Pictures     󰄱 Archives            󰄱 Audio                       │  
   │           󰄱 Documents                                                                        │  
-  │ Modified   Shell patterns the search skips entirely, matches                                │  
-  │ Changed    and their subdirectories alike, separated by commas                               │  
-  │ Accessed   or spaces: node_modules, .git, *.o. A pattern with                                │  
-  │ Size       a / matches the path from the search root                                         │  
-  │ Owner      (build/out).                                                                      │  
+  │ Modified    Shell patterns the search skips entirely, matches                               │  
+  │ Changed      and their subdirectories alike, separated by commas                             │  
+  │ Accessed     or spaces: node_modules, .git, *.o. A pattern with                              │  
+  │ Size         a / matches the path from the search root                                       │  
+  │ Owner        (build/out).                                                                    │  
   │ Exclude                                                                                      │  
   ├──────────────────────────────────────────────────────────────────────────────────────────────┤  
   │ 󰉋 amber                                                                                      ┃  
@@ -44,7 +44,7 @@ aabbbbbbbbbbbffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbbbbbbbbbbbggggggggggggggggggggggggggggggggggggggggggggggggggggghhbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
+aabbbbbbbbbbbbghhggggggggggggggggggggggggggggggggggggggggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbgggggggggggggggggggggggggggggggggggggggggggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbgggggggggggggggggggggggggggggggggggggggggggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbgggggggggggggggggggggggggggggggggggggggggggggggggggggggbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa

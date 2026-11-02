@@ -341,9 +341,9 @@ type Spec struct {
 	// PlainMnemonics makes a plain letter act as its Alt+letter mnemonic while focus is not in a
 	// text input (after PlainButtonKeys' buttons).
 	PlainMnemonics bool
-	// TooltipArea names a widget (a list the focused widget's keys do not reach, say) whose rect a
-	// tooltip covers from its top-left corner instead of sitting next to the focused widget, so no
-	// other control is hidden. A tooltip taller than the room down to the content bottom falls
+	// TooltipArea names a widget (a list the focused widget's keys do not reach, say) whose top
+	// row a tooltip starts on instead of the row next to the focused widget, so no other control
+	// is hidden; it stays aligned with the focused widget's left edge. A tooltip taller than the room down to the content bottom falls
 	// back to the default placement.
 	TooltipArea ID
 	// ButtonsLabel, when set, is drawn centered in the separator above the buttons, padded with one

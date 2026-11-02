@@ -18,9 +18,9 @@
   │ Owner                   󰄱 Not mine                                                           │  
   │ Exclude                                                                                      │  
   ├──────────────────────────────────────────────────────────────────────────────────────────────┤  
-  │  Files at least this big; directories never match. A                                        ┃  
-  │  number with an optional binary unit: 512, 10k, 4M,                                          │  
-  │  1.5G, 2T.                                                                                   │  
+  │ 󰉋 amber            Files at least this big; directories never match. A                      ┃  
+  │  amber/birch_del   number with an optional binary unit: 512, 10k, 4M,                       │  
+  │  amber/cinder_fa   1.5G, 2T.                                                                │  
   │  amber/delta_harbor.png                                                                     │  
   │ 󰉋 birch                                                                                      │  
   ├──────────────────────────────────────────────────────────────────────────────────────────────┤  
@@ -61,9 +61,9 @@ aabbbbbbbbbbbbbbbbbbbghhhhhhhhhhbbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aabbbbbbbbbbbbeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
 aabbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa
-aabbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiijjdddddddddddddddddddddddddddddddddddddbbaa
-aabbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiidddddddddddddddddddddddddddddddddddddbbaa
-aabbiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiidddddddddddddddddddddddddddddddddddddbbaa
+aabbdddddddddddddddddijjiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiddddddddddddddddddddbbaa
+aabbdddddddddddddddddiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiddddddddddddddddddddbbaa
+aabbdddddddddddddddddiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiddddddddddddddddddddbbaa
 aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
 aabbddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaa

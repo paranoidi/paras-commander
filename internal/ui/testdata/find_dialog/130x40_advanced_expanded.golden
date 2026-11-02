@@ -14,10 +14,10 @@
   │ Changed   newer              older                Owner                   [ ] Not mine                                    │   
   │ Accessed  newer              older                Exclude                                                                 │   
   ├───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤   
-  │  Content modified (mtime) less than this long ago, [i]                                                                    │   
-  │  or after this date. Ages: 30m, 12h, 3d, 2w, 6mo,                                                                         │   
-  │  1y, or a sum such as 1w2d. Dates: 2026-01-31 or                                                                          │   
-  │  2026-01-31 14:30 (local time).                                                                                           │   
+  │  ember/harbor_la [i] Content modified (mtime) less than this long ago,                                                   │   
+  │  glacier/ivory_l     or after this date. Ages: 30m, 12h, 3d, 2w, 6mo,                                                    │   
+  │  ivory/juniper_l     1y, or a sum such as 1w2d. Dates: 2026-01-31 or                                                     │   
+  │  ivory/lantern_d     2026-01-31 14:30 (local time).                                                                      │   
   │  juniper/lantern_cinder.png                                                                                              │   
   │  kestrel/lantern_birch.png                                                                                               │   
   │ 󰉋 lantern                                                                                                                 │   
@@ -68,10 +68,10 @@ aabbbbbbbbbbbbbbbbbbbghhhhhhhhhhbbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbeeeeeeeee
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbeeeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
 aabbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjkkkkddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
-aabbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
-aabbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
-aabbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
+aabbdddddddddddddddddjkkkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjdddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
+aabbdddddddddddddddddjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjdddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
+aabbdddddddddddddddddjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjdddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
+aabbdddddddddddddddddjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjdddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
