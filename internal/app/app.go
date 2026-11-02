@@ -551,6 +551,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, err
 	}
 	styles.UseNerdfontIcons = cfg.UI.UseNerdfontIcons
+	styles.HideTooltips = !cfg.UI.Tooltips
 	syncPathDisplayPrefixes(styles)
 	path, err := cwd()
 	if err != nil {
@@ -1382,9 +1383,11 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 	return out, true
 }
 
-// setStyles sets the app styles and stamps the theme with the current UseNerdfontIcons config.
+// setStyles sets the app styles and stamps the theme with the current UseNerdfontIcons and
+// Tooltips config.
 func (a *App) setStyles(t theme.Theme) {
 	t.UseNerdfontIcons = a.config.UI.UseNerdfontIcons
+	t.HideTooltips = !a.config.UI.Tooltips
 	a.styles = t
 	syncPathDisplayPrefixes(t)
 }

@@ -11,10 +11,10 @@
   │ Kind      [ ] Empty    [ ] Symlinks   [ ] Broken symlinks   [x] Executables                                               │   
   │ Types     [ ] Videos   [x] Pictures   [ ] Archives          [ ] Audio            [ ] Documents                            │   
   │ Modified  newer  3d          older                Size      min                max    lots                                │   
-  │ Changed   newer   [i] Content modified (mtime) less than this long ago,   [ ] Not mine                                    │   
-  │ Accessed  newer       or after this date. Ages: 30m, 12h, 3d, 2w, 6mo,                                                    │   
-  ├──────────────────     1y, or a sum such as 1w2d. Dates: 2026-01-31 or   ──────────────────────────────────────────────────┤   
-  │  ember/harbor_la     2026-01-31 14:30 (local time).                                                                      │   
+  │ Changed   newer   [i] Content modified (mtime) less than this long ago, or after this date.                               │   
+  │ Accessed  newer       Ages: 30m, 12h, 3d, 2w, 6mo, 1y, or a sum such as 1w2d.                                             │   
+  ├──────────────────     Dates: 2026-01-31 or 2026-01-31 14:30 (local time).                   ──────────────────────────────┤   
+  │  ember/harbor_lantern.zip                                                                                                │   
   │  glacier/ivory_lantern                                                                                                   │   
   │  ivory/juniper_lantern.go                                                                                                │   
   │  ivory/lantern_delta.png                                                                                                 │   
@@ -65,10 +65,10 @@ aabbbbbbbbbbbbbbbbbbbbbbbbfffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 aabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbffffffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
 aabbbbbbbbbbbbbbbbbbbbbbbbfffffffffffffbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
 aabbbbbbbbbbbbbbbbbbbghhhhhhhhhhbbbbbbbbeeeeeeeeeeebbbbbbbbbbbbbbbbbbbbeeeeeeeeeeebbbbbbbbiiiiiiiiiiibbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbbbbbbbbbbbbbbbbbbjkkkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjebbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbbbbbbbbbbbbbbbbbbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaaa
-aabbbbbbbbbbbbbbbbbbbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
-aabbdddddddddddddddddjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjdddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
+aabbbbbbbbbbbbbbbbbbbjkkkkjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
+aabbbbbbbbbbbbbbbbbbbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbaaa
+aabbbbbbbbbbbbbbbbbbbjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbaaa
+aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa
 aabbdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddbbaaa

@@ -360,6 +360,10 @@ const (
 	// DefaultMouse is the built-in [ui].mouse value. Mouse reporting is opt-in because it takes over
 	// the terminal's own text selection (Shift+drag selects instead) and needs `set -g mouse on` in tmux.
 	DefaultMouse = false
+
+	// DefaultTooltips is the built-in [ui].tooltips value: dialogs show the focused widget's
+	// tooltip (the find dialog's advanced fields explain their syntax).
+	DefaultTooltips = true
 	// MouseDoubleClickMS is the largest gap between two left presses on the same row that still
 	// counts as a double click.
 	MouseDoubleClickMS = 400

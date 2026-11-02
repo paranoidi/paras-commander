@@ -482,10 +482,11 @@ func PaintScrollingInputContent(
 	return cursor, scroll
 }
 
-// TooltipMaxWidth is the widest a tooltip box gets, in cells.
-const TooltipMaxWidth = 56
+// TooltipMaxWidth is the widest a tooltip box gets, in cells: room for a sentence per line.
+const TooltipMaxWidth = 80
 
-// TooltipLines wraps text for a tooltip box at most maxWidth cells wide: it returns the lines and
+// TooltipLines wraps text for a tooltip box at most maxWidth cells wide (a newline in text always
+// starts a new line, so a tooltip reads one sentence per line): it returns the lines and
 // the box width (one cell of padding at each end, the info icon before the text column). It
 // returns nil when even one character does not fit.
 func TooltipLines(text string, maxWidth int, styles theme.Theme) (lines []string, width int) {

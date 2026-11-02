@@ -192,7 +192,7 @@ type Item struct {
 	Inert bool
 	// Tooltip (any focusable widget) is an explanation shown in a box while the widget holds
 	// focus, on the row below it (above it when the dialog has no room there), aligned with its left
-	// edge. The box
+	// edge, unless the theme's HideTooltips ([ui] tooltips = false) turns them off. The box
 	// is drawn last, over the dialog's content and inside its frame; it never takes focus or hits.
 	Tooltip string
 	// Seg names the Tab segment of an item inside its group (default 0). Items of one group that

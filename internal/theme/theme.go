@@ -362,6 +362,9 @@ type Theme struct {
 	// UseNerdfontIcons is set at runtime from config.UI.UseNerdfontIcons; when false,
 	// dialogs use plain ASCII markers (forcing legacy mode regardless of theme icons).
 	UseNerdfontIcons bool
+	// HideTooltips is set at runtime from !config.UI.Tooltips; when true, dialogs draw no
+	// tooltips.
+	HideTooltips bool
 
 	FooterKey        tcell.Style
 	FooterLabel      tcell.Style

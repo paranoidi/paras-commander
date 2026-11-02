@@ -538,7 +538,7 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	if len(spec.Buttons) > 0 {
 		drawButtonStrip(screen, spec, p, focus, borderStyle, styles)
 	}
-	if found && !cur.isButton() {
+	if found && !cur.isButton() && !styles.HideTooltips {
 		if it := widgetAt(spec, cur); it.Tooltip != "" {
 			p.Tooltip = drawTooltip(screen, p, it, styles)
 		}

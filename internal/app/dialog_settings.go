@@ -357,6 +357,7 @@ func (a *App) resetConfigToDefaults() {
 	a.config = cfg
 	a.applyMouseConfig()
 	a.applyDiskUsageConfig()
+	a.setStyles(a.styles) // re-stamp the config-driven theme flags (icons, tooltips)
 	a.openConfigDialog()
 	a.setTransientMessage("Configuration reset to defaults", ui.MessageUrgencyInfo)
 }
@@ -416,6 +417,7 @@ func (a *App) openConfigTOMLInEditor(path string) {
 	a.config = cfg
 	a.applyMouseConfig()
 	a.applyDiskUsageConfig()
+	a.setStyles(a.styles) // re-stamp the config-driven theme flags (icons, tooltips)
 	a.openConfigDialog()
 	a.setTransientMessage("config.toml reloaded", ui.MessageUrgencyInfo)
 }

@@ -29,6 +29,11 @@ func tooltipSpec(listHeight int) Spec {
 
 func drawTooltipSpec(t *testing.T, spec Spec, focus ID) (tcell.SimulationScreen, Placement) {
 	t.Helper()
+	return drawTooltipSpecHidden(t, spec, focus, false)
+}
+
+func drawTooltipSpecHidden(t *testing.T, spec Spec, focus ID, hide bool) (tcell.SimulationScreen, Placement) {
+	t.Helper()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatal(err)
@@ -37,6 +42,7 @@ func drawTooltipSpec(t *testing.T, spec Spec, focus ID) (tcell.SimulationScreen,
 	screen.SetSize(80, 30)
 	styles := theme.Default()
 	styles.UseNerdfontIcons = false
+	styles.HideTooltips = hide
 	p, ok := Draw(screen, 80, 30, spec, focus, styles)
 	if !ok {
 		t.Fatal("dialog does not fit")
@@ -110,5 +116,25 @@ func TestTooltipMultilineAndUnfitting(t *testing.T) {
 	spec.Groups[0].Columns[0][1].Tooltip = strings.Repeat("glacier quartz thistle ", 30)
 	if _, p = drawTooltipSpec(t, spec, "tip"); p.Tooltip != (Rect{}) {
 		t.Fatalf("a tooltip that fits nowhere was drawn at %+v", p.Tooltip)
+	}
+}
+
+func TestTooltipHiddenByTheme(t *testing.T) {
+	if _, p := drawTooltipSpecHidden(t, tooltipSpec(6), "tip", true); p.Tooltip != (Rect{}) {
+		t.Fatalf("HideTooltips: tooltip drawn at %+v", p.Tooltip)
+	}
+}
+
+func TestTooltipNewlineStartsLine(t *testing.T) {
+	spec := tooltipSpec(6)
+	spec.Groups[0].Columns[0][1].Tooltip = "Lantern meadow.\nWillow orchard."
+	screen, p := drawTooltipSpec(t, spec, "tip")
+	if p.Tooltip.Height != 2 {
+		t.Fatalf("tooltip height = %d, want a line per sentence", p.Tooltip.Height)
+	}
+	second := p.Tooltip
+	second.Y++
+	if got := strings.TrimSpace(rowText(screen, second)); got != "Willow orchard." {
+		t.Fatalf("second line = %q", got)
 	}
 }
