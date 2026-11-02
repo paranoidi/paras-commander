@@ -66,7 +66,8 @@ func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg
 	query := dlg.Item{ID: IndexFindQuery, Kind: dlg.KindInput, Grow: true, Drives: IndexFindList, Invalid: st.NoMatches(),
 		Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll, LeadingIcon: ctx.Styles.IconSearchIcon()}
 	depth := dlg.Item{ID: IndexFindDepth, Kind: dlg.KindInput, Width: findDialogDepthFieldWidth(ctx.Styles) + findDialogDepthGap,
-		Value: st.DepthInput, Cursor: utf8.RuneCountInString(st.DepthInput), LeadingIcon: ctx.Styles.IconDialogDepth()}
+		Value: st.DepthInput, Cursor: utf8.RuneCountInString(st.DepthInput), LeadingIcon: ctx.Styles.IconDialogDepth(),
+		Tooltip: findDepthSyntax + "\nIt filters the indexed results; nothing is read from disk."}
 	col := []dlg.Item{{Kind: dlg.KindRow, Cells: []dlg.Item{query, depth}}}
 	options := []dlg.Item{}
 	if !st.JumpMode {

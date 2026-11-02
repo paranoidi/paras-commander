@@ -10,6 +10,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
+// findDepthSyntax opens the depth input's tooltip in Find and Find in index (twins).
+const findDepthSyntax = "At most this many path levels below the root: a is 1, a/b is 2.\n" +
+	"A digit 1-9 sets it; 0, Backspace or Delete clear it for unlimited."
+
+// findDepthTooltip explains Find's max depth input (see find.Handler.commitFindDepth).
+const findDepthTooltip = findDepthSyntax + "\nA lower limit drops deeper results at once; a higher one re-indexes."
+
 // Find dialog widget IDs. FindQuery drives FindList: list focus lives in the query input.
 const (
 	FindQuery       = dlg.ID("find:query")
@@ -55,6 +62,7 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	depth := dlg.Item{
 		ID: FindDepth, Kind: dlg.KindInput, Width: findDialogDepthFieldWidth(styles) + findDialogDepthGap,
 		Value: state.DepthInput, Cursor: utf8.RuneCountInString(state.DepthInput), LeadingIcon: styles.IconDialogDepth(),
+		Tooltip: findDepthTooltip,
 	}
 	queryRow := []dlg.Item{query, depth}
 	if advanced {

@@ -240,6 +240,9 @@ func findGoldenCases() []findGolden {
 			st.QueryInvalid = true
 			st.Query, st.QueryCursor = "(an", 3
 		}},
+		findGolden{name: "100x30_depth_tooltip", w: 100, h: 30, icons: true, nerdfont: true, state: func(st *dialog.FindDialogState) {
+			st.Focus = dialog.FindDepth
+		}},
 		findGolden{name: "57x24_too_narrow", w: 57, h: 24, icons: true},
 		findGolden{name: "80x10_too_short", w: 80, h: 10, icons: true},
 	)
