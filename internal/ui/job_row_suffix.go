@@ -28,7 +28,7 @@ func jobRowSuffix(absPath string, jobMarks []JobPathMark, th theme.Theme, indexS
 		if jobs.Type(m.Type) == jobs.TypeTask { // every task job is a fileindex scan or prune
 			s.JobIcon = 0
 			if !indexStateShown {
-				s.JobIcon = th.IconFileIndexState(localfs.IndexStatusScanning)
+				s.JobIcon, s.JobIndexScan = th.IconFileIndexState(localfs.IndexStatusScanning), true
 			}
 		}
 	}

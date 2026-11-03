@@ -44,6 +44,9 @@ type JobSuffix struct {
 	// JobWrite is true when JobIcon marks a job's write (destination) tree rather
 	// than its read (source) tree; see Theme.PanelJobMarkStyle.
 	JobWrite bool
+	// JobIndexScan is true when JobIcon is the fileindex scanning state glyph of a task job: it
+	// takes that state's style (Theme.PanelFileIndexStyle), as in the fileindex state column.
+	JobIndexScan bool
 }
 
 // RowSuffix selects which trailing indicators to reserve and paint on a listing row.
@@ -229,6 +232,9 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 	switch {
 	case r == suffix.JobIcon && suffix.JobIcon != 0:
 		base := th.PanelJobMarkStyle(jobStatus, suffix.JobWrite)
+		if suffix.JobIndexScan {
+			base = th.PanelFileIndexStyle(localfs.IndexStatusScanning)
+		}
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == suffix.JobQueuedIcon && suffix.JobQueuedIcon != 0:
 		fg, _, _ := th.StatusQueued.Decompose()
