@@ -261,7 +261,7 @@ type State struct {
 	// listing and the explicit one from RequestIndexDrift.
 	ScheduleIndexDrift IndexDriftScheduler
 	// IndexAutoDriftDepth is the depth of the automatic drift pass after a WithIndex listing:
-	// levels to check, 0 unlimited, negative off (set by app from [fileindex].folder_scan_max_depth).
+	// levels to check, 0 unlimited, negative off (set by app from [fileindex].browser_scan_max_depth).
 	IndexAutoDriftDepth int
 	// ScheduleTreeChildLoad runs a tree-mode directory's first-expand child listing off the UI
 	// thread (set by app; nil = synchronous fallback, see setTreeNodeExpanded).

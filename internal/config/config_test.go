@@ -1114,19 +1114,19 @@ func TestLoadFromPathsAdaptiveIOParams(t *testing.T) {
 	}
 }
 
-func TestFileIndexFolderScanMaxDepth(t *testing.T) {
+func TestFileIndexBrowserScanMaxDepth(t *testing.T) {
 	cfg := Default()
-	if cfg.FileIndex.FolderScanMaxDepth != 3 || cfg.FileIndex.AutoDriftDepth() != 3 {
-		t.Fatalf("default depth = %d (%d)", cfg.FileIndex.FolderScanMaxDepth, cfg.FileIndex.AutoDriftDepth())
+	if cfg.FileIndex.BrowserScanMaxDepth != 3 || cfg.FileIndex.AutoDriftDepth() != 3 {
+		t.Fatalf("default depth = %d (%d)", cfg.FileIndex.BrowserScanMaxDepth, cfg.FileIndex.AutoDriftDepth())
 	}
 	for in, want := range map[int]int{-1: 0, 0: -1, 5: 5} {
-		if got := (FileIndexConfig{FolderScanMaxDepth: in}).AutoDriftDepth(); got != want {
-			t.Errorf("folder_scan_max_depth %d maps to %d, want %d", in, got, want)
+		if got := (FileIndexConfig{BrowserScanMaxDepth: in}).AutoDriftDepth(); got != want {
+			t.Errorf("browser_scan_max_depth %d maps to %d, want %d", in, got, want)
 		}
 	}
-	cfg.FileIndex.FolderScanMaxDepth = -9
+	cfg.FileIndex.BrowserScanMaxDepth = -9
 	_ = cfg.Validate()
-	if cfg.FileIndex.FolderScanMaxDepth != FileIndexFolderScanMaxDepthUnlimited {
-		t.Fatalf("value below -1 = %d, want it clamped to -1", cfg.FileIndex.FolderScanMaxDepth)
+	if cfg.FileIndex.BrowserScanMaxDepth != FileIndexBrowserScanMaxDepthUnlimited {
+		t.Fatalf("value below -1 = %d, want it clamped to -1", cfg.FileIndex.BrowserScanMaxDepth)
 	}
 }

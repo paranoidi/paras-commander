@@ -801,7 +801,7 @@ func TestFileIndexDirSizeRequestsUnlimitedDrift(t *testing.T) {
 	var reqs []panel.IndexDriftRequest
 	openIndexedParent(t, a, screen, dir, &reqs)
 	for _, r := range reqs {
-		if r.MaxDepth != config.DefaultFileIndexFolderScanMaxDepth {
+		if r.MaxDepth != config.DefaultFileIndexBrowserScanMaxDepth {
 			t.Fatalf("listing load requested %+v, want only the automatic depth", r)
 		}
 	}
@@ -816,11 +816,11 @@ func TestFileIndexDirSizeRequestsUnlimitedDrift(t *testing.T) {
 	}
 }
 
-// folder_scan_max_depth = 0 turns the automatic pass off.
+// browser_scan_max_depth = 0 turns the automatic pass off.
 func TestFileIndexAutoDriftOff(t *testing.T) {
 	a, screen, dir, _ := fileIndexApp(t)
 	var reqs []panel.IndexDriftRequest
-	a.activePanel().IndexAutoDriftDepth = (config.FileIndexConfig{FolderScanMaxDepth: 0}).AutoDriftDepth()
+	a.activePanel().IndexAutoDriftDepth = (config.FileIndexConfig{BrowserScanMaxDepth: 0}).AutoDriftDepth()
 	openIndexedParent(t, a, screen, dir, &reqs)
 	if len(reqs) != 0 {
 		t.Fatalf("automatic pass ran with depth 0: %+v", reqs)
