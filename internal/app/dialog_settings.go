@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -446,15 +447,48 @@ func (a *App) openGroupSelect(mode string, context string) {
 		IncludeMetaColumns: metaCount > 0,
 		Focus:              dialog.PatternInput,
 	}
-	if name, isDir, ok := a.groupSelectCursorEntry(context); ok && !isDir {
-		if ext := filepath.Ext(name); ext != "" && ext != name {
+	if name, isDir, ok := a.groupSelectCursorEntry(context); ok {
+		if ghost := dialog.GhostExtPattern(name, isDir); ghost != "" {
 			gs := &a.model.GroupSelect
-			gs.Text = "*" + ext
-			gs.TextCursor = len([]rune(gs.Text))
-			gs.PrefillPending = true
+			gs.Text, gs.TextCursor, gs.PrefillPending = ghost, len([]rune(ghost)), true
 		}
 	}
 	a.groupSelectPreviewKey = groupSelectPreviewKey{}
+}
+
+// filterCursorEntry is the basename and kind of the row under the cursor of the Filter dialog's
+// target: the active panel entry, the Compare row (focused column's side, else the other), or the
+// focused Find duplicates pane row.
+func (a *App) filterCursorEntry(target dialog.FilterTarget) (name string, isDir, ok bool) {
+	switch target {
+	case dialog.FilterTargetCompare:
+		rows, sel := a.compareCtrl.FilteredRows(), a.model.CompareView.Selected
+		if sel < 0 || sel >= len(rows) {
+			return "", false, false
+		}
+		rel, other := rows[sel].PrimaryRel, rows[sel].SecondaryRel
+		if a.model.CompareView.FocusColumn == ui.CompareColumnSecondary {
+			rel, other = other, rel
+		}
+		if rel == "" {
+			rel = other
+		}
+		return filepath.Base(rel), false, rel != ""
+	case dialog.FilterTargetDedup:
+		pane, rows := &a.model.DedupView.Main, a.model.DedupList
+		if a.model.DedupView.FocusCopies {
+			pane, rows = &a.model.DedupView.Copies, a.model.DedupCopiesList
+		}
+		if pane.Selected < 0 || pane.Selected >= len(rows) {
+			return "", false, false
+		}
+		v := rows[pane.Selected].Value
+		if v.Kind == ui.DedupRowDir {
+			return path.Base(v.DirRel), true, true
+		}
+		return filepath.Base(v.File.Rel), false, true
+	}
+	return a.groupSelectCursorEntry("panel")
 }
 
 // groupSelectCursorEntry is the basename and kind of the entry under the cursor of the list the

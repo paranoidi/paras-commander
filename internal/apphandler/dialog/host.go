@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // Host supplies cross-cutting app services the dialog handler cannot import from internal/app.
@@ -21,6 +22,11 @@ type Host interface {
 	PanelByID(panelID int) *panel.State
 	ActiveViewportRows() int
 	PanelViewportRows(panelID int) int
+
+	// FilterCursorEntry is the basename and kind of the row under the cursor of what the Filter
+	// dialog targets (active panel, Compare or Find duplicates); its extension seeds the ghost
+	// pattern. ok is false when there is no cursor row.
+	FilterCursorEntry(target dialog.FilterTarget) (name string, isDir, ok bool)
 
 	// ForgetComparePaths prunes deleted paths from the open Compare view's results.
 	ForgetComparePaths(paths []string)

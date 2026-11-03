@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // dialogHost implements apphandler/dialog.Host for *App.
@@ -29,6 +30,10 @@ func (h dialogHost) ActiveViewportRows() int { return h.app.activeViewportRows()
 func (h dialogHost) PanelViewportRows(panelID int) int { return h.app.panelViewportRows(panelID) }
 
 func (h dialogHost) ClearTransientMessage() { h.app.clearTransientMessage() }
+
+func (h dialogHost) FilterCursorEntry(target dialog.FilterTarget) (string, bool, bool) {
+	return h.app.filterCursorEntry(target)
+}
 
 func (h dialogHost) ForgetComparePaths(paths []string) { h.app.compareCtrl.ForgetPaths(paths) }
 

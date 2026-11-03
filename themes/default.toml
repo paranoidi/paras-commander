@@ -259,10 +259,10 @@ inactive = { fg = "white", bg = "black" }
 [dialog.input]
 active = { fg = "bright_white", bold = true }
 active.error = { fg = "red" }
-active.placeholder = { fg = "default" }
+active.placeholder = { fg = "bright_black" }
 inactive = { fg = "white", bg = "black" }
 inactive.error = { fg = "red", bg = "black" }
-inactive.placeholder = { fg = "white", bg = "black" }
+inactive.placeholder = { fg = "bright_black", bg = "black" }
 
 [dialog.option]
 active = { fg = "yellow", bold = true }

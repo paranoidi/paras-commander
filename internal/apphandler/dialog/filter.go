@@ -14,8 +14,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
 
-// OpenFilterDialog opens the Filter modal with an empty pattern (no prefill from any filter
-// already active on the panel). The target is the active panel, or the Compare / Find
+// OpenFilterDialog opens the Filter modal with a ghost "*.ext" pattern from the cursor row (empty
+// when it has none; never from a filter already active on the panel). The target is the active panel, or the Compare / Find
 // duplicates rows when that view is showing.
 func (h *Handler) OpenFilterDialog() {
 	metaCount := len(h.model.MetaResults[h.model.ActivePanel])
@@ -37,12 +37,19 @@ func (h *Handler) OpenFilterDialog() {
 		IncludeMetaColumns: metaCount > 0,
 		Focus:              dialog.PatternInput,
 	}
+	if name, isDir, ok := h.host.FilterCursorEntry(target); ok {
+		if ghost := dialog.GhostExtPattern(name, isDir); ghost != "" {
+			fd := &h.model.FilterDialog
+			fd.Text, fd.TextCursor, fd.PrefillPending = ghost, len([]rune(ghost)), true
+		}
+	}
 }
 
 // CloseFilterDialog closes the Filter modal without changing the panel's active filter.
 func (h *Handler) CloseFilterDialog() {
 	h.model.FilterDialog.Open = false
 	h.model.FilterDialog.Text = ""
+	h.model.FilterDialog.PrefillPending = false
 	h.model.FilterDialog.PreviewShow = false
 }
 
@@ -303,7 +310,8 @@ func (h *Handler) FilterPatternKeys() PatternKeys {
 		Spec: h.FilterDialogView(), Focus: &fd.Focus,
 		Text: &fd.Text, Cursor: &fd.TextCursor, Scroll: &fd.TextScroll, QueryWidth: h.filterDialogQueryWidth,
 		Keys: h.keysDialogInput, OnEdit: h.updateFilterDialogPreview,
-		Confirm: h.confirmFilterDialogFromInput, Cancel: h.CloseFilterDialog,
+		PrefillPending: &fd.PrefillPending,
+		Confirm:        h.confirmFilterDialogFromInput, Cancel: h.CloseFilterDialog,
 		Apply: func(ev dlg.Event) {
 			if fd.Apply(ev) {
 				h.updateFilterDialogPreview()

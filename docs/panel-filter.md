@@ -2,6 +2,8 @@
 
 M-f (`panel.filter-dialog`, leader `F`, rebindable in `keybindings.toml`) opens the Filter dialog, which narrows the active panel to matching entries. To mark entries instead of hiding the rest, use [Select group](selections.md#select-and-unselect-group). OK with an empty pattern and no type checked clears the filter.
 
+The pattern opens prefilled with the extension of the file under the cursor (e.g. `*.stl`), shown dimmed: Enter uses it, typing replaces it, editing keys keep it. Directories and files without an extension open empty. In Compare and Find duplicates the cursor row is used the same way.
+
 ## Pattern
 
 Pick how the pattern is read: Simple / auto shell (the default), Shell patterns (`*.log`), or Regular expression. Simple / auto shell matches the text anywhere in the name (`notes` finds `old-notes.txt`); as soon as the pattern contains `*` or `?` it is read as a shell pattern instead, which must match the whole name (`*.log`). `[` alone does not switch, so `[1080p]` still finds names containing it. "Case sensitive" applies to every mode (regex included). With meta columns present, "Include meta" also matches column values and "Only meta" matches them exclusively.

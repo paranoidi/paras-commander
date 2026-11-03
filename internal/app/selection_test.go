@@ -555,3 +555,22 @@ func TestGroupSelectGhostExtensionPrefill(t *testing.T) {
 		t.Fatalf("extensionless: text=%q pending=%v", gs.Text, gs.PrefillPending)
 	}
 }
+
+func TestFilterDialogGhostExtensionPrefill(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "lantern.stl"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if !app.activePanel().SelectVisibleEntry("lantern.stl") {
+		t.Fatal("no entry lantern.stl")
+	}
+	app.dialogCtrl.OpenFilterDialog()
+	fd := &app.model.FilterDialog
+	if fd.Text != "*.stl" || !fd.PrefillPending {
+		t.Fatalf("on open: text=%q pending=%v", fd.Text, fd.PrefillPending)
+	}
+	app.dialogCtrl.HandleFilterDialogKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone))
+	if fd.Text != "q" || fd.PrefillPending {
+		t.Fatalf("after typing: text=%q pending=%v", fd.Text, fd.PrefillPending)
+	}
+}

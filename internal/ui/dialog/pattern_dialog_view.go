@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
@@ -78,6 +79,16 @@ type patternView struct {
 	Placeholder    bool // Text is a suggested default (Select group's ghost "*.ext")
 	Invalid        bool
 	Preview, Hint  string
+}
+
+// GhostExtPattern is the suggested pattern a pattern dialog (Filter, Select group) opens with:
+// "*.<ext>" of the cursor entry, or "" for a directory or a name without an extension.
+func GhostExtPattern(name string, isDir bool) string {
+	ext := filepath.Ext(name)
+	if isDir || ext == "" || ext == name {
+		return ""
+	}
+	return "*" + ext
 }
 
 // patternPreviewText formats the live match-count preview shown on the Pattern row:

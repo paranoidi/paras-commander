@@ -101,14 +101,17 @@ const (
 // a panel.EntryFilter). The hint text shown under the pattern row on an invalid pattern is
 // computed live from Text/PatternMode/CaseSensitive on every render rather than cached here.
 type FilterDialogState struct {
-	Open          bool
-	Text          string
-	TextCursor    int // rune offset of caret within Text (0..len(runes))
-	TextScroll    int // first visible rune offset for horizontal scrolling
-	PatternMode   panel.GroupPatternMode
-	FilesOnly     bool // mutually exclusive with DirsOnly
-	DirsOnly      bool
-	CaseSensitive bool
+	Open       bool
+	Text       string
+	TextCursor int // rune offset of caret within Text (0..len(runes))
+	TextScroll int // first visible rune offset for horizontal scrolling
+	// PrefillPending is true while Text still shows the suggested "*.ext" pattern from the cursor
+	// row (see GhostExtPattern): drawn as a placeholder until typed over or edited.
+	PrefillPending bool
+	PatternMode    panel.GroupPatternMode
+	FilesOnly      bool // mutually exclusive with DirsOnly
+	DirsOnly       bool
+	CaseSensitive  bool
 	// MetaColumnCount is the active panel's meta column count at dialog-open time; 0 hides the
 	// meta checkbox row entirely.
 	MetaColumnCount    int

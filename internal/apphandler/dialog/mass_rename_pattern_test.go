@@ -50,11 +50,14 @@ func (f *fakeMassRenamePatternHost) Styles() theme.Theme                        
 func (f *fakeMassRenamePatternHost) OpenMessageDialog(string, string)              {}
 func (f *fakeMassRenamePatternHost) InQuickFilterUI() bool                         { return false }
 func (f *fakeMassRenamePatternHost) ForgetComparePaths([]string)                   {}
-func (f *fakeMassRenamePatternHost) OpenFileInExternalEditor(string) error         { return nil }
-func (f *fakeMassRenamePatternHost) ExecuteSFTPPassword()                          {}
-func (f *fakeMassRenamePatternHost) CancelSFTPPassword()                           {}
-func (f *fakeMassRenamePatternHost) ExecuteIndexTags()                             {}
-func (f *fakeMassRenamePatternHost) ExecuteIndexInit()                             {}
+func (f *fakeMassRenamePatternHost) FilterCursorEntry(uidialog.FilterTarget) (string, bool, bool) {
+	return "", false, false
+}
+func (f *fakeMassRenamePatternHost) OpenFileInExternalEditor(string) error { return nil }
+func (f *fakeMassRenamePatternHost) ExecuteSFTPPassword()                  {}
+func (f *fakeMassRenamePatternHost) CancelSFTPPassword()                   {}
+func (f *fakeMassRenamePatternHost) ExecuteIndexTags()                     {}
+func (f *fakeMassRenamePatternHost) ExecuteIndexInit()                     {}
 func (f *fakeMassRenamePatternHost) HandlePathPickerScrollingQueryKey(*tcell.EventKey) bool {
 	return false
 }
