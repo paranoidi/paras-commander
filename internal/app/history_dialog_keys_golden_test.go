@@ -48,7 +48,7 @@ func historyKeyApp(t *testing.T, dir string, nHist, nZox int) *App {
 		if nHist > 2 {
 			zox[0], zox[1] = hist[1], hist[2]
 		}
-		app.applyHistoryZoxide(historyZoxidePayload{Paths: zox, Installed: true})
+		app.applyHistoryOpen(historyOpenPayload{Gen: app.historyOpenGen, Zoxide: zox, Installed: true})
 	}
 	app.model.Message = ""
 	return app

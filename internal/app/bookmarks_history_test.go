@@ -655,7 +655,7 @@ func TestHistoryDialogZoxideRowsCheckboxAndBothPanels(t *testing.T) {
 		t.Fatalf("history = %q, want %q without the current directory", history, []string{root})
 	}
 	// zoxide's alpha is the current directory: hidden too.
-	app.applyHistoryZoxide(historyZoxidePayload{Paths: []string{alpha, meadow}, Installed: true})
+	app.applyHistoryOpen(historyOpenPayload{Gen: app.historyOpenGen, Zoxide: []string{alpha, meadow}, Installed: true})
 	st := &app.model.HistoryDialog
 	want := append(append([]string(nil), history...), meadow)
 	if !st.ZoxideAvailable || !slices.Equal(st.Paths, want) || st.ZoxideFrom != len(history) {

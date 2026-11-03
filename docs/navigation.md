@@ -14,7 +14,7 @@ Each panel remembers every directory it visited (most recent first, up to 200). 
 
 The dialog lists the target panel's history, without its current directory. `F5` merges both panels (other panel first). Every row has a source prefix (history or zoxide) and rows whose directory has disappeared are shown in the invalid colour with a missing icon. Enter opens the highlighted directory in the panel; `S-←` / `S-→` open it in the left or right panel and keep the dialog open.
 
-If [zoxide](https://github.com/ajeetdsouza/zoxide) is installed, an **Include zoxide** checkbox (`M-i`) appends its ranked directories after the panel history. The initial state is `[history].zoxide` (default on). Without zoxide the checkbox is hidden.
+If [zoxide](https://github.com/ajeetdsouza/zoxide) is installed, an **Include zoxide** checkbox (`M-i`) appends its ranked directories after the panel history. The initial state is `[history].zoxide` (default on). Without zoxide the checkbox stays disabled. The dialog opens immediately at its final size; zoxide rows and missing-path dimming arrive together a moment later.
 
 ## Pinned items
 

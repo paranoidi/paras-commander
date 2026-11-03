@@ -68,7 +68,7 @@ func EnsureHistoryListScroll(state *HistoryDialogState, listRows int) {
 }
 
 // HistoryDialogView describes the History dialog: a filter input that steers the path list
-// below it, the "Include zoxide" checkbox when zoxide is installed, and OK / Cancel. rowMarks
+// below it, the "Include zoxide" checkbox (disabled unless zoxide is installed), and OK / Cancel. rowMarks
 // may be nil (no pinned / job marks).
 func HistoryDialogView(state HistoryDialogState, layout Layout, styles theme.Theme, scrollbarStyle uiscrollbar.Style, rowMarks RowMarksFunc) dlg.Spec {
 	spec, _ := fillList(historyFrame(state, layout, styles, scrollbarStyle), layout, HistoryList, func(height, _ int) dlg.Item {
@@ -83,10 +83,10 @@ func historyFrame(state HistoryDialogState, layout Layout, styles theme.Theme, s
 		ID: HistoryFilter, Kind: dlg.KindInput, Drives: HistoryList, LeadingIcon: styles.IconSearchIcon(),
 		Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll,
 	}}
-	if state.ZoxideAvailable {
-		items = append(items, dlg.Item{ID: HistoryZoxide, Kind: dlg.KindCheckbox, Label: "Include zoxide", Mnemonic: HistoryZoxideMnemonic, On: state.IncludeZoxide})
-	}
-	items = append(items, dlg.Item{Kind: dlg.KindSeparator},
+	// Always present so the dialog keeps one size; disabled until zoxide is found installed.
+	items = append(items,
+		dlg.Item{ID: HistoryZoxide, Kind: dlg.KindCheckbox, Label: "Include zoxide", Mnemonic: HistoryZoxideMnemonic, On: state.IncludeZoxide, Disabled: !state.ZoxideAvailable},
+		dlg.Item{Kind: dlg.KindSeparator},
 		dlg.Item{ID: HistoryList, Kind: dlg.KindList, Height: pickerListHeight(layout.Height), MinHeight: pickerMinListRows})
 	title := "History"
 	if state.BothPanels {

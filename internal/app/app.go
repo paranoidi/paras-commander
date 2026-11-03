@@ -251,6 +251,9 @@ type App struct {
 	// rebuilt (toggleHistoryDialogBothPanels); bumped by openHistoryDialog, closeHistoryDialog,
 	// and startHistoryMissingScan.
 	historyMissingGen uint64
+	// historyOpenGen ties openHistoryDialog's zoxide/missing payload and its historyOpenWait
+	// timer to that open; bumped by openHistoryDialog and closeHistoryDialog.
+	historyOpenGen uint64
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
 	messageExpiryGen   atomic.Uint64
@@ -1285,8 +1288,8 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 		a.render()
 		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
 	}
-	if p, ok := data.(historyZoxidePayload); ok {
-		a.applyHistoryZoxide(p)
+	if p, ok := data.(historyOpenPayload); ok {
+		a.applyHistoryOpen(p)
 		a.render()
 		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
 	}

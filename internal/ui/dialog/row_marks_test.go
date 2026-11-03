@@ -146,13 +146,15 @@ func TestDrawRowMarksSuffixMissingColorFollowsCursor(t *testing.T) {
 	}
 }
 
-func TestHistoryDialogListRowsCountsZoxideRow(t *testing.T) {
-	// Height 12 fits exactly 6 other rows + 4 list rows; the checkbox row tips it over.
-	layout := Layout{Width: 80, Height: 12}
-	if got := HistoryDialogListRows(HistoryDialogState{}, layout); got != 4 {
-		t.Fatalf("without checkbox = %d, want 4", got)
-	}
-	if got := HistoryDialogListRows(HistoryDialogState{ZoxideAvailable: true}, layout); got != 0 {
-		t.Fatalf("with checkbox = %d, want 0 (does not fit)", got)
+func TestHistoryDialogListRowsIgnoreZoxideAvailability(t *testing.T) {
+	// The checkbox row is always drawn, so zoxide arriving never changes the dialog's shape.
+	// Height 13 fits exactly the 7 other rows + 4 list rows; 12 does not fit.
+	for _, avail := range []bool{false, true} {
+		if got := HistoryDialogListRows(HistoryDialogState{ZoxideAvailable: avail}, Layout{Width: 80, Height: 13}); got != 4 {
+			t.Fatalf("zoxide=%v height 13 = %d, want 4", avail, got)
+		}
+		if got := HistoryDialogListRows(HistoryDialogState{ZoxideAvailable: avail}, Layout{Width: 80, Height: 12}); got != 0 {
+			t.Fatalf("zoxide=%v height 12 = %d, want 0 (does not fit)", avail, got)
+		}
 	}
 }

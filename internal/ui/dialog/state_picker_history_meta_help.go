@@ -213,17 +213,19 @@ func (s FindDialogState) FindDialogHasSelectionsCheckbox() bool {
 // HistoryDialogState is a fuzzy picker over one panel’s navigation history paths.
 type HistoryDialogState struct {
 	Open            bool
-	PanelID         int      // PrimaryPanel or SecondaryPanel
-	Paths           []string // current list (single panel or merged)
-	CurrentPath     string   // PanelID's directory at open (CleanPathString); hidden from the list
-	BothPanels      bool     // true when showing merged list
-	PanelPaths      []string // snapshot of PanelID history at open (for F5 toggle back)
-	Zoxide          []string // zoxide directories (loaded async), appended after the history when IncludeZoxide
-	ZoxideAvailable bool     // zoxide is installed; shows the "Include zoxide" checkbox
-	IncludeZoxide   bool     // "Include zoxide" checkbox; starts from [history].zoxide
-	ZoxideFrom      int      // index into Paths where zoxide rows start (== len(Paths) when none)
-	DisplayLines    []string // per-row UI text ("* path" / "  path"); len == len(Paths)
-	PathMissing     []bool   // len == len(Paths); true when the path no longer exists on disk
+	PanelID         int             // PrimaryPanel or SecondaryPanel
+	Paths           []string        // current list (single panel or merged)
+	CurrentPath     string          // PanelID's directory at open (CleanPathString); hidden from the list
+	BothPanels      bool            // true when showing merged list
+	PanelPaths      []string        // snapshot of PanelID history at open (for F5 toggle back)
+	Zoxide          []string        // zoxide directories (loaded async), appended after the history when IncludeZoxide
+	ZoxideAvailable bool            // zoxide is installed; enables the "Include zoxide" checkbox
+	Loading         bool            // openHistoryDialog's zoxide query + missing scan still running
+	IncludeZoxide   bool            // "Include zoxide" checkbox; starts from [history].zoxide
+	ZoxideFrom      int             // index into Paths where zoxide rows start (== len(Paths) when none)
+	DisplayLines    []string        // per-row UI text ("* path" / "  path"); len == len(Paths)
+	PathMissing     []bool          // len == len(Paths); true when the path no longer exists on disk
+	MissingByPath   map[string]bool // every missing-path scan result so far; fills PathMissing
 	Query           string
 	QueryCursor     int              // rune offset of caret within Query (0..len(runes))
 	QueryScroll     int              // first visible rune offset for horizontal scrolling

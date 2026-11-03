@@ -27,18 +27,25 @@ func StartPathsMissingScan(screen tcell.Screen, target string, gen uint64, panel
 		return
 	}
 	go func() {
-		missing := make(map[string]bool, len(paths))
-		for _, p := range paths {
-			if _, ok := missing[p]; ok {
-				continue
-			}
-			// ponytail: sftp:// existence checks dial SSH (pool.withSFTP); never do that from
-			// a background scan triggered just by opening a dialog. Left absent => not missing.
-			if strings.HasPrefix(p, "sftp://") {
-				continue
-			}
-			missing[p] = PathEntryMissing(panelPath, home, p)
-		}
+		missing := PathsMissing(panelPath, home, paths)
 		_ = screen.PostEvent(tcell.NewEventInterrupt(PathsMissingPayload{Target: target, Gen: gen, Missing: missing}))
 	}()
+}
+
+// PathsMissing stats paths (blocking; call off the UI goroutine) and reports which no longer
+// exist, keyed by path. sftp:// paths are left absent (not missing).
+func PathsMissing(panelPath, home string, paths []string) map[string]bool {
+	missing := make(map[string]bool, len(paths))
+	for _, p := range paths {
+		if _, ok := missing[p]; ok {
+			continue
+		}
+		// ponytail: sftp:// existence checks dial SSH (pool.withSFTP); never do that from
+		// a background scan triggered just by opening a dialog. Left absent => not missing.
+		if strings.HasPrefix(p, "sftp://") {
+			continue
+		}
+		missing[p] = PathEntryMissing(panelPath, home, p)
+	}
+	return missing
 }

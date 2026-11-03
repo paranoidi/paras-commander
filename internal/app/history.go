@@ -1,6 +1,7 @@
 package app
 
 import (
+	"maps"
 	"path/filepath"
 	"slices"
 
@@ -39,36 +40,67 @@ func (a *App) openHistoryDialog(panelID int) {
 		CurrentPath:   panel.CleanPathString(p.Path.String()),
 		PanelPaths:    panelPaths,
 		IncludeZoxide: a.config.History.Zoxide,
+		Loading:       a.screen != nil,
 	}
+	a.historyOpenGen++
 	a.rebuildHistoryDialogPaths()
-	// Always query: the checkbox is shown only when zoxide is installed, and toggling it on
-	// should not wait for another subprocess.
-	if a.screen != nil {
-		screen := a.screen
-		go func() {
-			paths, installed := zoxide.List()
-			_ = screen.PostEvent(tcell.NewEventInterrupt(historyZoxidePayload{Paths: paths, Installed: installed}))
-		}()
-	}
-}
-
-// historyZoxidePayload carries `zoxide query --list` results back to the UI goroutine.
-type historyZoxidePayload struct {
-	Paths     []string
-	Installed bool
-}
-
-// applyHistoryZoxide stores zoxide's directories on the open history dialog and shows its
-// "Include zoxide" checkbox.
-// ponytail: no generation guard; a late result for a since-reopened dialog carries the same data.
-func (a *App) applyHistoryZoxide(p historyZoxidePayload) {
-	st := &a.model.HistoryDialog
-	if !st.Open || !p.Installed {
+	if a.screen == nil {
 		return
 	}
-	st.ZoxideAvailable = true
-	st.Zoxide = p.Paths
+	// The dialog draws at once at its final size (the zoxide checkbox row is always there,
+	// disabled until zoxide is found) and gets zoxide's rows and missing-path styling in a
+	// single update: one goroutine queries zoxide, then stats every path the dialog can list
+	// (target, merged and zoxide), so later toggles need no rescan either.
+	screen, gen := a.screen, a.historyOpenGen
+	candidates := append(append([]string(nil), panelPaths...), a.mergedPanelHistories()...)
+	go func() {
+		zox, installed := zoxide.List()
+		missing := dialogctrl.PathsMissing("", "", append(candidates, zox...))
+		_ = screen.PostEvent(tcell.NewEventInterrupt(historyOpenPayload{
+			Gen: gen, Zoxide: zox, Installed: installed, Missing: missing,
+		}))
+	}()
+}
+
+// historyOpenPayload carries openHistoryDialog's zoxide list and missing-path scan.
+type historyOpenPayload struct {
+	Gen       uint64
+	Zoxide    []string
+	Installed bool
+	Missing   map[string]bool
+}
+
+// applyHistoryOpen applies the open's zoxide and missing-path results to the History dialog
+// in one rebuild. Ignored once the dialog closed or reopened.
+func (a *App) applyHistoryOpen(p historyOpenPayload) {
+	st := &a.model.HistoryDialog
+	if !st.Open || p.Gen != a.historyOpenGen {
+		return
+	}
+	st.Loading = false
+	if st.MissingByPath == nil {
+		st.MissingByPath = make(map[string]bool, len(p.Missing))
+	}
+	maps.Copy(st.MissingByPath, p.Missing)
+	if p.Installed {
+		st.ZoxideAvailable = true
+		st.Zoxide = p.Zoxide
+	}
 	a.rebuildHistoryDialogPaths()
+}
+
+// mergeHistoryMissing records scan results in MissingByPath, the dialog's single source for
+// PathMissing, so rebuilding the list keeps known missing rows styled instead of resetting them.
+func (a *App) mergeHistoryMissing(missing map[string]bool) {
+	st := &a.model.HistoryDialog
+	if st.MissingByPath == nil {
+		st.MissingByPath = make(map[string]bool, len(missing))
+	}
+	maps.Copy(st.MissingByPath, missing)
+	st.PathMissing = make([]bool, len(st.Paths))
+	for i, path := range st.Paths {
+		st.PathMissing[i] = st.MissingByPath[path]
+	}
 }
 
 // toggleHistoryIncludeZoxide flips the "Include zoxide" checkbox (Alt+I).
@@ -82,8 +114,8 @@ func (a *App) toggleHistoryIncludeZoxide() {
 }
 
 // rebuildHistoryDialogPaths sets Paths to the target-only or merged history followed, when
-// IncludeZoxide, by the zoxide directories not already in it, then re-ranks and rescans for
-// missing paths. CurrentPath is left out of both.
+// IncludeZoxide, by the zoxide directories not already in it, then re-ranks and scans the paths
+// not yet known for missing. CurrentPath is left out of both.
 func (a *App) rebuildHistoryDialogPaths() {
 	st := &a.model.HistoryDialog
 	base := append([]string(nil), st.PanelPaths...)
@@ -108,7 +140,7 @@ func (a *App) rebuildHistoryDialogPaths() {
 		}
 	}
 	st.Paths = base
-	st.PathMissing = make([]bool, len(st.Paths))
+	a.mergeHistoryMissing(nil)
 	a.reloadHistoryDialogList()
 	a.startHistoryMissingScan()
 }
@@ -116,6 +148,7 @@ func (a *App) rebuildHistoryDialogPaths() {
 func (a *App) closeHistoryDialog() {
 	a.model.HistoryDialog = dialog.HistoryDialogState{}
 	a.historyMissingGen++
+	a.historyOpenGen++
 }
 
 // startHistoryMissingScan bumps the history dialog's missing-scan generation and starts a
@@ -124,7 +157,16 @@ func (a *App) closeHistoryDialog() {
 func (a *App) startHistoryMissingScan() {
 	a.historyMissingGen++
 	st := &a.model.HistoryDialog
-	dialogctrl.StartPathsMissingScan(a.screen, "history", a.historyMissingGen, "", "", st.Paths)
+	if st.Loading {
+		return // the open's own scan covers every path
+	}
+	unknown := slices.DeleteFunc(slices.Clone(st.Paths), func(p string) bool {
+		_, known := st.MissingByPath[p]
+		return known
+	})
+	if len(unknown) > 0 {
+		dialogctrl.StartPathsMissingScan(a.screen, "history", a.historyMissingGen, "", "", unknown)
+	}
 }
 
 // applyPathsMissing routes a background missing-path scan's result (dialogctrl.PathsMissingPayload)
@@ -150,12 +192,7 @@ func (a *App) applyHistoryDialogMissing(p dialogctrl.PathsMissingPayload) {
 	if !st.Open || p.Gen != a.historyMissingGen {
 		return
 	}
-	for i := range st.PathMissing {
-		if i >= len(st.Paths) {
-			break
-		}
-		st.PathMissing[i] = p.Missing[st.Paths[i]]
-	}
+	a.mergeHistoryMissing(p.Missing)
 }
 
 func (a *App) toggleHistoryDialogBothPanels() {

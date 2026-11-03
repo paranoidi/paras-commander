@@ -3,7 +3,10 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -61,19 +64,53 @@ func TestHistoryDialogMissingScanAppliesAndIgnoresStaleGen(t *testing.T) {
 	if app.historyMissingGen == staleGen {
 		t.Fatal("expected toggle to bump historyMissingGen")
 	}
-	for i, missing := range app.model.HistoryDialog.PathMissing {
-		if missing {
-			t.Fatalf("PathMissing[%d] true right after toggle, want false (reset, scan pending)", i)
+	// Known results survive the rebuild, so a missing row does not flash back to normal.
+	for i, path := range app.model.HistoryDialog.Paths {
+		if app.model.HistoryDialog.PathMissing[i] != (path == missingPath) {
+			t.Fatalf("PathMissing[%d] = %v after toggle, want only %q missing", i, path != missingPath, missingPath)
 		}
 	}
 	app.applyHistoryDialogMissing(dialogctrl.PathsMissingPayload{
 		Target:  "history",
 		Gen:     staleGen,
-		Missing: map[string]bool{app.model.HistoryDialog.Paths[0]: true},
+		Missing: map[string]bool{missingPath: false},
 	})
-	for i, missing := range app.model.HistoryDialog.PathMissing {
-		if missing {
-			t.Fatalf("PathMissing[%d] true, want stale-gen payload ignored after toggle", i)
+	for i, path := range app.model.HistoryDialog.Paths {
+		if path == missingPath && !app.model.HistoryDialog.PathMissing[i] {
+			t.Fatal("stale-gen payload applied after toggle, want it ignored")
 		}
+	}
+}
+
+func TestHistoryDialogOpensAtOnceAndAppliesResultsOnce(t *testing.T) {
+	app := newApp(t, newScreen(t, 80, 24), t.TempDir())
+	gone, meadow := "/srv/lantern/orchard", "/opt/meadow/thistle"
+	app.model.Primary.History = []string{gone}
+	app.openHistoryDialog(ui.PrimaryPanel)
+	st := &app.model.HistoryDialog
+	if !st.Open || !st.Loading {
+		t.Fatalf("open=%v loading=%v, want drawn at once while loading", st.Open, st.Loading)
+	}
+	zox, ok := app.historyView().Item(dialog.HistoryZoxide)
+	if !ok || !zox.Disabled {
+		t.Fatal("zoxide checkbox should reserve its row, disabled, while loading")
+	}
+	rows := app.historyDialogListRows()
+
+	gen := app.historyOpenGen
+	app.applyHistoryOpen(historyOpenPayload{
+		Gen: gen, Zoxide: []string{meadow}, Installed: true,
+		Missing: map[string]bool{gone: true, meadow: false},
+	})
+	if st.Loading || !slices.Equal(st.Paths, []string{gone, meadow}) || !slices.Equal(st.PathMissing, []bool{true, false}) {
+		t.Fatalf("loading=%v paths=%q missing=%v", st.Loading, st.Paths, st.PathMissing)
+	}
+	if zox, _ := app.historyView().Item(dialog.HistoryZoxide); zox.Disabled || app.historyDialogListRows() != rows {
+		t.Fatal("dialog changed shape when results arrived")
+	}
+	app.closeHistoryDialog()
+	app.applyHistoryOpen(historyOpenPayload{Gen: gen, Installed: true})
+	if app.model.HistoryDialog.Open {
+		t.Fatal("stale payload reopened a closed dialog")
 	}
 }
