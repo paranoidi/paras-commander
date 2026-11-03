@@ -31,11 +31,25 @@ func (h *Handler) openDialog(panelID int, jump bool) {
 	if h.host.InQuickFilterUI() {
 		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
 	}
-	if st := &h.model.FindDialog; st.Parked && st.PanelID == panelID && st.JumpMode == jump {
-		st.Parked = false
-		h.show()
+	if st := &h.model.FindDialog; st.Parked {
+		if st.PanelID == panelID && st.JumpMode == jump && st.RootPath == filepath.Clean(h.host.PanelByID(panelID).PathString()) {
+			h.RestoreParked()
+			return
+		}
+		h.model.FindRelocate = dialog.FindRelocateState{Open: true, Focus: dialog.FindRelocateRestore, PanelID: panelID, Jump: jump, Root: st.RootPath}
 		return
 	}
+	h.OpenFresh(panelID, jump)
+}
+
+// RestoreParked shows the parked Find as it was, wherever it was parked.
+func (h *Handler) RestoreParked() {
+	h.model.FindDialog.Parked = false
+	h.show()
+}
+
+// OpenFresh drops any Find (open or parked) and starts a new one on panelID.
+func (h *Handler) OpenFresh(panelID int, jump bool) {
 	if h.live() {
 		h.CloseDialog()
 	}
@@ -955,7 +969,7 @@ func IsParkKey(id string, jump bool) bool {
 }
 
 // Park hides Find and keeps everything (walk, query, results, marks); opening Find again on
-// the same panel and mode shows it as it was.
+// the same panel, directory and mode shows it as it was, anywhere else asks (FindRelocate).
 func (h *Handler) Park() {
 	st := &h.model.FindDialog
 	st.Open, st.Parked = false, true

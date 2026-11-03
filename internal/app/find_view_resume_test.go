@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // find.view hides Find behind the viewer; closing the viewer brings it back as it was.
@@ -110,5 +111,47 @@ func TestFindKeyParksAndRestoresFind(t *testing.T) {
 	app.handleKey(ctrlF)
 	if !st.Open || st.Parked || len(st.MarkedPaths) != marked || marked == 0 {
 		t.Fatalf("restore: open=%v parked=%v marked=%d want %d", st.Open, st.Parked, len(st.MarkedPaths), marked)
+	}
+}
+
+// Opening Find elsewhere while one is parked asks: Esc keeps it parked, Restore shows the parked
+// search, New search here starts over on the other panel.
+func TestFindElsewhereAsksRestoreOrNew(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(100, 30)
+	app := newTestApp(t, screen, testOptions(root))
+	st := &app.model.FindDialog
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
+	waitFindIndexDone(t, app)
+	app.findCtrl.Park()
+
+	app.findCtrl.OpenDialog(ui.SecondaryPanel)
+	if !app.model.FindRelocate.Open || st.Open {
+		t.Fatalf("relocate=%v find open=%v, want the question", app.model.FindRelocate.Open, st.Open)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone))
+	if app.model.FindRelocate.Open || !st.Parked {
+		t.Fatal("Esc should close the question and keep Find parked")
+	}
+
+	app.findCtrl.OpenDialog(ui.SecondaryPanel)
+	app.answerFindRelocate(dialog.FindRelocateRestore)
+	if !st.Open || st.Parked || st.PanelID != ui.PrimaryPanel {
+		t.Fatalf("restore: open=%v parked=%v panel=%d", st.Open, st.Parked, st.PanelID)
+	}
+
+	app.findCtrl.Park()
+	app.findCtrl.OpenDialog(ui.SecondaryPanel)
+	app.answerFindRelocate(dialog.FindRelocateNew)
+	if !st.Open || st.Parked || st.PanelID != ui.SecondaryPanel {
+		t.Fatalf("new: open=%v parked=%v panel=%d", st.Open, st.Parked, st.PanelID)
 	}
 }

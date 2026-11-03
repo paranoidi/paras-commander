@@ -167,7 +167,7 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 	case PanelBottomIndicatorJobWrite:
 		return " " + string(ctx.Styles.IconFilelistJob()) + " "
 	case PanelBottomIndicatorFindParked:
-		return " " + ctx.Styles.IconSearchIcon() + " "
+		return " " + ctx.Styles.IconSearchIcon() + "  " // extra pad: the glyph renders wide
 	case PanelBottomIndicatorEntryFilter:
 		if f := ctx.State.ActiveEntryFilter; f != nil {
 			return " " + f.Label + " "

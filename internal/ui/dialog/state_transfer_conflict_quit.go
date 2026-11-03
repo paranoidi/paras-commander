@@ -21,6 +21,7 @@ const (
 	PrimaryModalQuit
 	PrimaryModalDedupEmptyDirs
 	PrimaryModalUndo
+	PrimaryModalFindRelocate
 )
 
 // TransferKind selects copy vs move in the shared destination dialog.

@@ -194,8 +194,9 @@ dialog as it was) and `find.edit` in the external editor; `ui.open-primary` and
 `ui.open-secondary` show a result in a panel without closing; `panel.pin-toggle`
 pins it. The key that opened the dialog (`fileindex.find`, `panel.find-dialog` or
 `panel.jump-dialog`) hides it with its query and marks kept; the panel shows a
-yellow search icon at its bottom right until the same key on that panel brings
-it back. OK without marks shows the result under the cursor in the panel: a
+yellow search icon at its bottom right until the same key on that panel and
+directory brings it back. Opening it anywhere else asks whether to restore the
+parked search or start a new one there. OK without marks shows the result under the cursor in the panel: a
 directory itself, a file in its directory with the file highlighted. The
 marked summary counts files by their indexed size; directories add no size.
 Find's advanced criteria are not available: the index keeps no times, owners

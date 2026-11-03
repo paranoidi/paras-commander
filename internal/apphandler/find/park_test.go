@@ -9,7 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// Parking hides Find with its state kept; opening it again on the same panel shows it as it
+// Parking hides Find with its state kept; restoring shows it as it
 // was, the panel reports the parked find meanwhile.
 func TestFindParkKeepsStateAndReopens(t *testing.T) {
 	t.Parallel()
@@ -26,7 +26,7 @@ func TestFindParkKeepsStateAndReopens(t *testing.T) {
 	if model.FindDialog.Open || !h.Hidden() || !h.live() || !model.FindParkedOn(ui.PrimaryPanel) {
 		t.Fatalf("park: open=%v hidden=%v live=%v", model.FindDialog.Open, h.Hidden(), h.live())
 	}
-	h.OpenDialog(ui.PrimaryPanel)
+	h.RestoreParked()
 	st := model.FindDialog
 	if !st.Open || st.Parked || st.Query != "lantern" || st.Selected != 1 || len(st.Entries) != 2 {
 		t.Fatalf("reopen lost state: %+v", st)

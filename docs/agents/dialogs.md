@@ -116,6 +116,7 @@ Each dialog's key handler is `dlg.HandleKey` followed by one event function (`ap
 | Jobs Operations result | `JobsResultFilterView`, `JobsResultFilterDialogState.Apply` | checkboxes, `All` is the master toggle |
 | Meta columns | `MetaDialogView`, `MetaDialogState.Apply` | checkboxes from `MetaEntryID(i)`, each `MetaEntry.Section` in its own group under a separator labelled with the section; a section whose longest label fits twice across (checked against the ASCII marker) is laid out by `metaSectionGroup` as `KindRow`s of two checkboxes filled column by column (first column gets the odd one), first boxes padded with `Gap` to the longest first-column label; `Spec.MarkerWidth` is `MetaDialogState.MarkerWidth`, cached at open from `Host.DialogMarkerWidth` (`dlg.MarkerWidth`) so draw, keys and mouse share one spec; F9 (edit config) is handled before the engine |
 | Undo confirm | `UndoConfirmView` | message labels, `UndoYes` / `UndoNo`, unclamped |
+| Parked find relocate | `FindRelocateView`, `App.handleFindRelocateKey`, `App.answerFindRelocate` | message label and parked root (`FitPath`), `FindRelocateRestore` / `FindRelocateNew`, Esc keeps the search parked; unclamped |
 | Quit confirm | `QuitConfirmView` | message labels, `QuitStay` / `QuitQuit`, unclamped |
 | Host key | `HostKeyView` | detail labels, `HostKeyAccept` / `HostKeySave` / `HostKeyReject`, unclamped |
 | Stash restore | `StashRestoreView` | message labels, five buttons (`StashReplace`, `StashMerge`, `StashDropStash`, `StashDropAll`, `dlg.Cancel`), unclamped |

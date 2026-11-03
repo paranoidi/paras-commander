@@ -263,6 +263,7 @@ type Model struct {
 	SFTPConnectDialog       dialog.SFTPConnectDialogState
 	FindDialog              dialog.FindDialogState
 	IndexFindDialog         dialog.IndexFindDialogState
+	FindRelocate            dialog.FindRelocateState
 	// PinnedItems is the ad-hoc, session-only pin list (most-recently-pinned first),
 	// shared by the main panel, Find dialog, Compare view, and Dedup view. Never persisted.
 	PinnedItems []PinnedItem
@@ -364,6 +365,8 @@ func (m *Model) PrimaryModal() dialog.PrimaryModal {
 		return dialog.PrimaryModalDedupEmptyDirs
 	case m.UndoConfirm.Open:
 		return dialog.PrimaryModalUndo
+	case m.FindRelocate.Open:
+		return dialog.PrimaryModalFindRelocate
 	default:
 		return dialog.PrimaryModalNone
 	}
@@ -649,14 +652,14 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.LeaderMenu.Open ||
-		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open
+		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.FindRelocate.Open
 }
 
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
 // dedicated Jobs/Commands view keyboard handling. inputMode checks this only after earlier cases have ruled
 // out other modals.
 func (m *Model) AuxiliaryViewDialogKeysBlocked() bool {
-	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.Menu.Open
+	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.DedupEmptyDirsConfirm.Open || m.UndoConfirm.Open || m.FindRelocate.Open || m.Menu.Open
 }
 
 // MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config
@@ -1015,6 +1018,8 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, dialogRenderContext(model, styles), PaintDedupEmptyDirsConfirmRowIcon)
 	case dialog.PrimaryModalUndo:
 		dialog.DrawUndoConfirmDialog(screen, layout, model.UndoConfirm, styles)
+	case dialog.PrimaryModalFindRelocate:
+		dialog.DrawFindRelocateDialog(screen, layout, model.FindRelocate, styles)
 	}
 	if model.ConfigDialog.Open {
 		dialog.DrawConfigDialog(screen, layout, model.ConfigDialog, styles)

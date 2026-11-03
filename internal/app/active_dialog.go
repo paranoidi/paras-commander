@@ -230,6 +230,11 @@ func (a *App) modalActiveDialog(event *tcell.EventKey) (activeDialog, bool) {
 			OK:     func() { a.answerUndoConfirm(m.UndoConfirm.Focus == dialog.UndoYes) },
 			Cancel: func() { a.answerUndoConfirm(false) },
 		})
+	case m.FindRelocate.Open:
+		return found(func() dlg.Spec { return dialog.FindRelocateView(m.FindRelocate) }, &m.FindRelocate.Focus, noQuit(a.applyFindRelocateEvent), dialogButtons{
+			OK:     func() { a.answerFindRelocate(m.FindRelocate.Focus) },
+			Cancel: func() { m.FindRelocate = dialog.FindRelocateState{} },
+		})
 	case m.StashRestoreDialog.Open:
 		return found(func() dlg.Spec { return dialog.StashRestoreView(m.StashRestoreDialog) }, &m.StashRestoreDialog.Focus, noQuit(a.applyStashRestoreEvent), dialogButtons{
 			OK:     func() { a.applyStashRestoreChoice(stashRestoreFocusAction(m.StashRestoreDialog.Focus)) },

@@ -37,16 +37,36 @@ func (h *Handler) openFindDialog(panelID int, jump bool) {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
 		return
 	}
-	if st := &h.model.IndexFindDialog; st.Parked && st.PanelID == panelID && st.JumpMode == jump {
-		st.Parked, st.Open = false, true
-		return
-	}
 	p := h.host.PanelByID(panelID)
 	root, err := hostPath(p.PathString())
 	if err != nil {
 		h.host.SetErrorMessage("Find in index", err)
 		return
 	}
+	if st := &h.model.IndexFindDialog; st.Parked {
+		if st.PanelID == panelID && st.JumpMode == jump && st.Root == root {
+			h.RestoreParkedFind()
+			return
+		}
+		h.model.FindRelocate = dialog.FindRelocateState{Open: true, Focus: dialog.FindRelocateRestore, Index: true, PanelID: panelID, Jump: jump, Root: st.Root}
+		return
+	}
+	h.openFreshFind(panelID, p, root, jump)
+}
+
+// RestoreParkedFind shows the parked Find in index as it was, wherever it was parked.
+func (h *Handler) RestoreParkedFind() {
+	st := &h.model.IndexFindDialog
+	st.Parked, st.Open = false, true
+}
+
+// OpenFreshFind drops any Find in index (open or parked) and starts a new one on panelID.
+func (h *Handler) OpenFreshFind(panelID int, jump bool) {
+	h.CloseFindDialog()
+	h.openFindDialog(panelID, jump)
+}
+
+func (h *Handler) openFreshFind(panelID int, p *panel.State, root string, jump bool) {
 	var selRoots []string
 	if !jump {
 		for _, uri := range panel.PruneNestedPaths(p.SelectedDirectoryPaths()) {
