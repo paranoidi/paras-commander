@@ -95,7 +95,10 @@ func (e FindEntry) AbsPath(rootPath string) string {
 // widgets are described by FindDialogView; Focus names the focused one (the Find* IDs, OK or
 // Cancel; empty = the query, which also drives the result list).
 type FindDialogState struct {
-	Open                bool
+	Open bool
+	// Parked: the dialog is hidden with its state kept (find.Handler.Park); the opener key
+	// on PanelID shows it again and the panel's bottom border shows a find icon meanwhile.
+	Parked              bool
 	PanelID             int
 	RootPath            string
 	IncludeHidden       bool

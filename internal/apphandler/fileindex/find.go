@@ -37,6 +37,10 @@ func (h *Handler) openFindDialog(panelID int, jump bool) {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
 		return
 	}
+	if st := &h.model.IndexFindDialog; st.Parked && st.PanelID == panelID && st.JumpMode == jump {
+		st.Parked, st.Open = false, true
+		return
+	}
 	p := h.host.PanelByID(panelID)
 	root, err := hostPath(p.PathString())
 	if err != nil {
@@ -114,7 +118,7 @@ func relTo(root, path string) string {
 // HandleFind applies a finished query unless the dialog closed or the query changed since.
 func (h *Handler) HandleFind(p FindPayload) {
 	st := &h.model.IndexFindDialog
-	if (!st.Open && !h.findHiddenForView) || p.Gen != st.Gen {
+	if (!st.Open && !st.Parked && !h.findHiddenForView) || p.Gen != st.Gen {
 		return
 	}
 	st.Searching = false
@@ -154,6 +158,10 @@ func (h *Handler) debounce() time.Duration {
 // toggling, the widget engine, then query editing.
 func (h *Handler) HandleFindKey(ev *tcell.EventKey) {
 	st := &h.model.IndexFindDialog
+	if id, ok := h.keys.Lookup(ev); ok && findctrl.IsParkKey(id, st.JumpMode) {
+		st.Open, st.Parked = false, true // hidden with its state kept; the opener key shows it again
+		return
+	}
 	if h.keysFind != nil {
 		if id, ok := h.keysFind.Lookup(ev); ok && h.runFindAction(id) {
 			return

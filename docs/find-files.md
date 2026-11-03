@@ -66,6 +66,7 @@ Age, size, owner, executable and empty criteria need file metadata, so the first
 | `M-r` | Reset the match mode and criteria (`find.reset-advanced`) |
 | `S-←` / `S-→` | Open the result in the left / right panel and keep Find open |
 | `M-Insert` | Pin the row |
+| `C-f` | Hide Find and keep it: scan, query, results and marks (`panel.find-dialog`; in Jump to directory `panel.jump-dialog`). The panel shows a yellow search icon at its bottom right; the same key on that panel brings Find back as you left it. Opening Find on the other panel starts a new search |
 | `Esc` | Cancel the scan and close |
 
 Marked results show their combined size on the separator line. Marking a directory removes conflicting marks of its contents or parents and says so in a toast. The footer shows the keys that apply; the unmark keys appear as the grey Shift word after their mark key (`Select allUnselect`).

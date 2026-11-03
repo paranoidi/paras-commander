@@ -379,6 +379,12 @@ func (m *Model) AnyModalOpen() bool {
 		m.FindDialog.Open || m.IndexFindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
 }
 
+// FindParkedOn reports whether Find or Find in index is parked (hidden, state kept) from panelID.
+func (m *Model) FindParkedOn(panelID int) bool {
+	return (m.FindDialog.Parked && m.FindDialog.PanelID == panelID) ||
+		(m.IndexFindDialog.Parked && m.IndexFindDialog.PanelID == panelID)
+}
+
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
 // or -1 when sync is disabled. The result is intended for renderers that need a sentinel
 // they can compare against the panel they are about to draw.
@@ -881,6 +887,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			CursorRowActive: side.FileListFocus && !model.LeaderMenu.Open, ChromeBlocked: side.ChromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: side.OtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
+			FindParked:       model.FindParkedOn(side.PanelID),
 			SplitOrientation: model.SplitOrientation, SelectedBottomHint: side.SelectedBottomHint,
 			ShowSelectionSizeOnBottom: side.SelectionSizeOnFileBottom,
 			IsTransferTarget:          side.IsTransferTarget,

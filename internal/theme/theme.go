@@ -158,6 +158,7 @@ type Theme struct {
 	PanelStatusEntryFilter    tcell.Style
 	PanelStatusSelectionSize  tcell.Style
 	PanelStatusOtherPanel     tcell.Style
+	PanelStatusFindParked     tcell.Style
 	// PanelStatusImageSixel/ImageSixelTmux style the bottom-right image-protocol indicator in
 	// the file preview panel (previewpanel.Draw) when the active image is Sixel — ImageSixelTmux
 	// specifically for Sixel-under-tmux, a combination with a known display gap (see
@@ -579,6 +580,7 @@ const (
 	PanelBottomIndicatorKeySync           = "sync"
 	PanelBottomIndicatorKeyQuickView      = "quick_view"
 	PanelBottomIndicatorKeyOtherPanel     = "other_panel"
+	PanelBottomIndicatorKeyFindParked     = "find_parked"
 )
 
 // PanelBottomIndicator returns the style for a file-panel bottom-border segment.
@@ -613,6 +615,11 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 			return t.PanelActiveFrame
 		}
 		return t.PanelInactiveFrame
+	case PanelBottomIndicatorKeyFindParked:
+		if t.PanelStatusFindParked != (tcell.Style{}) {
+			return t.PanelStatusFindParked
+		}
+		fallthrough
 	case PanelBottomIndicatorKeyStash:
 		if t.PanelStatusStash != (tcell.Style{}) {
 			return t.PanelStatusStash
@@ -1097,6 +1104,7 @@ var requiredStyleKeys = []string{
 	"panel.status.entry_filter",
 	"panel.status.selection_size",
 	"panel.status.other_panel",
+	"panel.status.find_parked",
 	"panel.status.image_sixel",
 	"panel.status.image_sixel_tmux",
 	"panel.scrollbar.track",
@@ -1762,6 +1770,7 @@ func parse(data []byte) (Theme, error) {
 		PanelStatusDotfilesHidden:           styles["panel.status.dotfiles_hidden"],
 		PanelStatusGitignore:                styles["panel.status.gitignore"],
 		PanelStatusStash:                    styles["panel.status.stash"],
+		PanelStatusFindParked:               styles["panel.status.find_parked"],
 		PanelStatusEntryFilter:              styles["panel.status.entry_filter"],
 		PanelStatusSelectionSize:            styles["panel.status.selection_size"],
 		PanelStatusOtherPanel:               styles["panel.status.other_panel"],

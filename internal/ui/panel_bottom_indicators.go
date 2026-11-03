@@ -24,6 +24,7 @@ const (
 	PanelBottomIndicatorSync           PanelBottomIndicatorID = "sync"
 	PanelBottomIndicatorQuickView      PanelBottomIndicatorID = "quick_view"
 	PanelBottomIndicatorOtherPanel     PanelBottomIndicatorID = "other_panel"
+	PanelBottomIndicatorFindParked     PanelBottomIndicatorID = "find_parked"
 )
 
 // PanelBottomEdge names which horizontal edge of the panel bottom row an indicator uses.
@@ -73,6 +74,8 @@ type PanelBottomIndicatorContext struct {
 	// inside a non-finished job's write (destination) tree; see PanelInsideJobWriteTree.
 	JobWriteMark   bool
 	JobWriteStatus string
+	// FindParked shows the parked-find icon (Model.FindParkedOn).
+	FindParked bool
 }
 
 type panelBottomIndicatorSpec struct {
@@ -88,7 +91,8 @@ var panelBottomIndicatorRegistry = []panelBottomIndicatorSpec{
 	{ID: PanelBottomIndicatorGitignore, Edge: PanelBottomEdgePhysicalLeft, Order: 1},
 	{ID: PanelBottomIndicatorStash, Edge: PanelBottomEdgePhysicalLeft, Order: 2},
 	{ID: PanelBottomIndicatorEntryFilter, Edge: PanelBottomEdgePhysicalLeft, Order: 4},
-	{ID: PanelBottomIndicatorJobWrite, Edge: PanelBottomEdgePhysicalRight, Order: 0},
+	{ID: PanelBottomIndicatorFindParked, Edge: PanelBottomEdgePhysicalRight, Order: 0},
+	{ID: PanelBottomIndicatorJobWrite, Edge: PanelBottomEdgePhysicalRight, Order: 1},
 	{ID: PanelBottomIndicatorSync, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorQuickView, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorOtherPanel, Edge: PanelBottomEdgeEnd, Order: 1},
@@ -126,6 +130,8 @@ func panelBottomIndicatorVisible(id PanelBottomIndicatorID, ctx PanelBottomIndic
 		return ctx.State.StashPathCount() > 0
 	case PanelBottomIndicatorJobWrite:
 		return ctx.JobWriteMark
+	case PanelBottomIndicatorFindParked:
+		return ctx.FindParked
 	case PanelBottomIndicatorEntryFilter:
 		return ctx.State.ActiveEntryFilter != nil
 	case PanelBottomIndicatorSync:
@@ -160,6 +166,8 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 		return fmt.Sprintf(" %s %d %s stashed ", sym, n, word)
 	case PanelBottomIndicatorJobWrite:
 		return " " + string(ctx.Styles.IconFilelistJob()) + " "
+	case PanelBottomIndicatorFindParked:
+		return " " + ctx.Styles.IconSearchIcon() + " "
 	case PanelBottomIndicatorEntryFilter:
 		if f := ctx.State.ActiveEntryFilter; f != nil {
 			return " " + f.Label + " "

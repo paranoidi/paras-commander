@@ -128,6 +128,7 @@ selection_size = { fg = "yellow" }
 dotfiles_hidden = { fg = "bright_black" }
 gitignore = { fg = "bright_black" }
 stash = { fg = "yellow", bold = true }
+find_parked = { fg = "yellow", bold = true }   # find dialog parked from this panel
 entry_filter = { fg = "yellow", bold = true }
 other_panel = { fg = "cyan", bold = true }
 image_sixel = { fg = "bright_black" }

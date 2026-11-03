@@ -80,7 +80,7 @@ func TestFindRankAppliesWhileHiddenForView(t *testing.T) {
 	t.Cleanup(screen.Fini)
 	h.screen = screen
 	h.RunAction(keymap.ActionFindView)
-	if model.FindDialog.Open || !h.HiddenForView() {
+	if model.FindDialog.Open || !h.Hidden() {
 		t.Fatal("find.view did not hide Find")
 	}
 	h.pendingRank = &rankResult{gen: h.rankGen, ranked: []int{0}}

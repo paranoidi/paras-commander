@@ -59,7 +59,7 @@ func TestFindViewResumesFindAfterViewerCloses(t *testing.T) {
 		t.Fatalf("restored selected=%d ranked=%d marked=%d, want %d %d %d",
 			st.Selected, len(st.Ranked), len(st.MarkedPaths), wantSelected, wantRanked, marked)
 	}
-	if app.findCtrl.HiddenForView() {
+	if app.findCtrl.Hidden() {
 		t.Fatal("still flagged hidden after reopening")
 	}
 
@@ -71,5 +71,44 @@ func TestFindViewResumesFindAfterViewerCloses(t *testing.T) {
 	app.previewCtrl.CloseFilePreviewFullscreen()
 	if st.Open {
 		t.Fatal("closing an unrelated viewer reopened Find")
+	}
+}
+
+// The find key parks Find (state kept, panel shows the parked icon); pressing it again on the
+// same panel brings it back as it was.
+func TestFindKeyParksAndRestoresFind(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"harbor.txt", "lantern.txt", "meadow.txt"} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(name), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(100, 30)
+	app := newTestApp(t, screen, testOptions(root))
+	ctrlF := tcell.NewEventKey(tcell.KeyCtrlF, 'f', tcell.ModCtrl)
+	app.handleKey(ctrlF)
+	if !app.model.FindDialog.Open {
+		t.Fatal("C-f did not open Find")
+	}
+	waitFindIndexDone(t, app)
+	st := &app.model.FindDialog
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)) // mark all
+	marked := len(st.MarkedPaths)
+
+	app.handleKey(ctrlF)
+	if st.Open || !app.model.FindParkedOn(ui.PrimaryPanel) || app.inputMode() == InputModeFindDialog {
+		t.Fatalf("C-f did not park Find: open=%v", st.Open)
+	}
+	if !screenHasText(screen, app.styles.IconSearchIcon()) {
+		t.Fatal("parked find icon not painted")
+	}
+	app.handleKey(ctrlF)
+	if !st.Open || st.Parked || len(st.MarkedPaths) != marked || marked == 0 {
+		t.Fatalf("restore: open=%v parked=%v marked=%d want %d", st.Open, st.Parked, len(st.MarkedPaths), marked)
 	}
 }

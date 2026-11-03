@@ -31,6 +31,11 @@ func (h *Handler) openDialog(panelID int, jump bool) {
 	if h.host.InQuickFilterUI() {
 		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
 	}
+	if st := &h.model.FindDialog; st.Parked && st.PanelID == panelID && st.JumpMode == jump {
+		st.Parked = false
+		h.show()
+		return
+	}
 	if h.live() {
 		h.CloseDialog()
 	}
@@ -930,13 +935,31 @@ func (h *Handler) OpenSelectedFullscreenPreview() {
 	}
 }
 
-// live reports whether Find exists: open, or hidden behind the viewer it opened. Background
-// work (ranking, size lookups) keeps applying while it is live.
-func (h *Handler) live() bool { return h.model.FindDialog.Open || h.hiddenForView }
+// live reports whether Find exists: open, parked, or hidden behind the viewer it opened.
+// Background work (ranking, size lookups) keeps applying while it is live.
+func (h *Handler) live() bool {
+	return h.model.FindDialog.Open || h.model.FindDialog.Parked || h.hiddenForView
+}
 
-// HiddenForView reports whether Find is hidden behind the fullscreen viewer it opened; nothing
-// of it is on screen, so its updates need no repaint.
-func (h *Handler) HiddenForView() bool { return h.hiddenForView }
+// Hidden reports whether Find is live but off screen (parked, or behind the fullscreen viewer
+// it opened), so its updates need no repaint.
+func (h *Handler) Hidden() bool { return h.hiddenForView || h.model.FindDialog.Parked }
+
+// IsParkKey reports whether action id parks an open find dialog: the action that opens it
+// (panel.jump-dialog in jump mode; panel.find-dialog or fileindex.find otherwise).
+func IsParkKey(id string, jump bool) bool {
+	if jump {
+		return id == keymap.ActionPanelJumpDialog
+	}
+	return id == keymap.ActionPanelFindDialog || id == keymap.ActionFileIndexFind
+}
+
+// Park hides Find and keeps everything (walk, query, results, marks); opening Find again on
+// the same panel and mode shows it as it was.
+func (h *Handler) Park() {
+	st := &h.model.FindDialog
+	st.Open, st.Parked = false, true
+}
 
 // ReopenAfterPreviewClose shows Find again, as it was, when the just-closed fullscreen viewer
 // was opened from it (find.view); no-op otherwise.
@@ -945,6 +968,11 @@ func (h *Handler) ReopenAfterPreviewClose() {
 		return
 	}
 	h.hiddenForView = false
+	h.show()
+}
+
+// show puts the kept Find state back on screen.
+func (h *Handler) show() {
 	st := &h.model.FindDialog
 	st.Open = true
 	st.InvalidateMarkedSelectionSizeLabel()
@@ -1382,6 +1410,10 @@ func (h *Handler) RunAction(id string) bool {
 
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.FindDialog
+	if id, ok := h.keys.Lookup(event); ok && IsParkKey(id, st.JumpMode) {
+		h.Park()
+		return
+	}
 	if h.tryFindDialogActionKey(event) {
 		return
 	}

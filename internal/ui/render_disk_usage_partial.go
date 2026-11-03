@@ -78,7 +78,7 @@ func paintBrowserPanelsInScope(
 	if inScope(PrimaryPanel) && layout.Primary.Width > 0 && !showLeftPreview {
 		primaryCtx := PanelContext{
 			FolderColor: model.folderColorFor(model.Primary),
-			PanelID:     PrimaryPanel, FileListActive: primaryFileListFocus,
+			PanelID:     PrimaryPanel, FileListActive: primaryFileListFocus, FindParked: model.FindParkedOn(PrimaryPanel),
 			CursorRowActive: primaryFileListFocus && !model.LeaderMenu.Open, ChromeBlocked: primaryChromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: primaryOtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
@@ -126,7 +126,7 @@ func paintBrowserPanelsInScope(
 	if inScope(SecondaryPanel) && layout.Secondary.Width > 0 && !showRightPreview {
 		secondaryCtx := PanelContext{
 			FolderColor: model.folderColorFor(model.Secondary),
-			PanelID:     SecondaryPanel, FileListActive: secondaryFileListFocus,
+			PanelID:     SecondaryPanel, FileListActive: secondaryFileListFocus, FindParked: model.FindParkedOn(SecondaryPanel),
 			CursorRowActive: secondaryFileListFocus && !model.LeaderMenu.Open, ChromeBlocked: chromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: secondaryOtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,

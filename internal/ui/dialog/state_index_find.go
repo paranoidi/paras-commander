@@ -20,7 +20,9 @@ type IndexFindResult struct {
 // fileindex:// panel. Its widgets are described by IndexFindDialogView; Focus names the focused
 // one (the IndexFind* IDs, OK or Cancel; empty = the query, which also drives the result list).
 type IndexFindDialogState struct {
-	Open    bool
+	Open bool
+	// Parked: hidden with its state kept, like FindDialogState.Parked.
+	Parked  bool
 	PanelID int
 	// FromIndexPanel is true when the dialog opened from a fileindex:// panel: results then
 	// navigate and select as fileindex:// paths, else as plain host paths.

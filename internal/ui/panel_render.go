@@ -108,13 +108,15 @@ type PanelContext struct {
 	// overlays like the bottom function menu dim only the row indicator on the active
 	// panel while leaving chrome untouched, so this is normally equal to FileListActive
 	// but can be forced false without affecting chrome.
-	CursorRowActive           bool
-	ChromeBlocked             bool
-	ActivePanel               int
-	OtherPanelPath            string
-	HideInactivePanel         bool
-	SyncDriverPanelID         int
-	QuickViewDriverPanelID    int
+	CursorRowActive        bool
+	ChromeBlocked          bool
+	ActivePanel            int
+	OtherPanelPath         string
+	HideInactivePanel      bool
+	SyncDriverPanelID      int
+	QuickViewDriverPanelID int
+	// FindParked: Find is parked from this panel (bottom-right find icon).
+	FindParked                bool
 	SplitOrientation          SplitOrientation
 	SelectedBottomHint        bool
 	ShowSelectionSizeOnBottom bool
@@ -241,6 +243,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		SplitOrientation:       ctx.SplitOrientation,
 		JobWriteMark:           jobWriteMark,
 		JobWriteStatus:         jobWriteStatus,
+		FindParked:             ctx.FindParked,
 	}
 	finalizeBottomCtx(rect, &bottomCtx)
 	drawPanelBottomIndicators(screen, rect, bottomCtx)
