@@ -21,6 +21,9 @@ type PatternKeys struct {
 	Confirm        func()      // OK, Enter in the pattern input or on a checkbox
 	Cancel         func()
 	Apply          func(dlg.Event) // a radio or checkbox activation
+	// PrefillPending, when non-nil and true, marks Text as a suggested default: the first plain
+	// printable rune replaces it, any other edit or a caret click commits it. Nil: no prefill.
+	PrefillPending *bool
 }
 
 // HandlePatternDialogKey routes a key for an open pattern dialog. The engine owns focus and the
@@ -37,6 +40,12 @@ func HandlePatternDialogKey(p PatternKeys, event *tcell.EventKey) {
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && dialog.PatternAltIsMnemonic(event.Rune()) {
 		return
 	}
+	if p.PrefillPending != nil && *p.PrefillPending {
+		*p.PrefillPending = false
+		if event.Key() == tcell.KeyRune && event.Modifiers()&(tcell.ModAlt|tcell.ModCtrl) == 0 {
+			*p.Text, *p.Cursor, *p.Scroll = "", 0, 0
+		}
+	}
 	scrollquery.HandleKey(p.Keys, event, true, scrollquery.NewEdit(p.Text, p.Cursor, p.Scroll, p.QueryWidth(), p.OnEdit))
 }
 
@@ -45,6 +54,9 @@ func ApplyPatternDialogEvent(p PatternKeys, ev dlg.Event) {
 	switch {
 	case ev.Kind == dlg.EventCaret:
 		*p.Cursor = ev.Index
+		if p.PrefillPending != nil {
+			*p.PrefillPending = false
+		}
 	case ev.ID == dlg.OK || ev.ID == dialog.PatternInput:
 		p.Confirm()
 	case ev.ID == dlg.Cancel:

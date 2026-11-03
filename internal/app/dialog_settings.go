@@ -446,13 +446,53 @@ func (a *App) openGroupSelect(mode string, context string) {
 		IncludeMetaColumns: metaCount > 0,
 		Focus:              dialog.PatternInput,
 	}
+	if name, isDir, ok := a.groupSelectCursorEntry(context); ok && !isDir {
+		if ext := filepath.Ext(name); ext != "" && ext != name {
+			gs := &a.model.GroupSelect
+			gs.Text = "*" + ext
+			gs.TextCursor = len([]rune(gs.Text))
+			gs.PrefillPending = true
+		}
+	}
 	a.groupSelectPreviewKey = groupSelectPreviewKey{}
+}
+
+// groupSelectCursorEntry is the basename and kind of the entry under the cursor of the list the
+// group select dialog acts on (context as in openGroupSelect); its extension seeds the ghost pattern.
+func (a *App) groupSelectCursorEntry(context string) (name string, isDir, ok bool) {
+	switch context {
+	case "panel":
+		if e, found := a.activePanel().CurrentEntry(); found {
+			return e.Name, e.IsDir(), true
+		}
+	case "find":
+		st := &a.model.FindDialog
+		if st.Selected >= 0 && st.Selected < len(st.Ranked) {
+			if e, found := st.FindEntryAt(st.Ranked[st.Selected]); found {
+				return filepath.Base(e.AbsPath(st.RootPath)), e.IsDir, true
+			}
+		}
+	case "index-find":
+		st := &a.model.IndexFindDialog
+		if st.Selected >= 0 && st.Selected < len(st.Results) {
+			r := st.Results[st.Selected]
+			return filepath.Base(r.Path), r.IsDir, true
+		}
+	case "output":
+		st := &a.model.CommandOutputDialog
+		if st.PathCursor >= 0 && st.PathCursor < len(st.Paths) {
+			m := st.Paths[st.PathCursor]
+			return filepath.Base(m.Path), m.IsDir, true
+		}
+	}
+	return "", false, false
 }
 
 func (a *App) closeGroupSelect() {
 	a.findCtrl.StopGroupCount()
 	a.model.GroupSelect.Open = false
 	a.model.GroupSelect.Text = ""
+	a.model.GroupSelect.PrefillPending = false
 	a.model.GroupSelect.PatternCompileHint = ""
 	a.model.GroupSelect.PreviewShow = false
 	a.groupSelectPreviewKey = groupSelectPreviewKey{}
@@ -759,8 +799,9 @@ func (a *App) groupSelectPatternKeys() dialogctrl.PatternKeys {
 	return dialogctrl.PatternKeys{
 		Spec: a.groupSelectView(), Focus: &gs.Focus,
 		Text: &gs.Text, Cursor: &gs.TextCursor, Scroll: &gs.TextScroll, QueryWidth: a.groupSelectQueryWidth,
-		Keys:    a.keys.DialogInput,
-		Confirm: a.confirmGroupSelectFromInput, Cancel: a.closeGroupSelect,
+		PrefillPending: &gs.PrefillPending,
+		Keys:           a.keys.DialogInput,
+		Confirm:        a.confirmGroupSelectFromInput, Cancel: a.closeGroupSelect,
 		Apply: func(ev dlg.Event) { gs.Apply(ev) },
 	}
 }

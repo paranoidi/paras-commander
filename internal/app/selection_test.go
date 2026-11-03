@@ -517,3 +517,41 @@ func TestGroupSelectDirsOnlyDisablesTypes(t *testing.T) {
 		t.Fatal("checked type must apply again once Directories only is off")
 	}
 }
+
+func TestGroupSelectGhostExtensionPrefill(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "lantern.stl"))
+	writeFile(t, filepath.Join(dir, "meadow"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	gs := &app.model.GroupSelect
+	open := func(name string) {
+		t.Helper()
+		if !app.activePanel().SelectVisibleEntry(name) {
+			t.Fatalf("no entry %q", name)
+		}
+		app.openGroupSelect("select", "panel")
+	}
+
+	open("lantern.stl")
+	if gs.Text != "*.stl" || !gs.PrefillPending || gs.TextCursor != 5 {
+		t.Fatalf("on open: text=%q pending=%v cursor=%d", gs.Text, gs.PrefillPending, gs.TextCursor)
+	}
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+	if gs.Text != "x" || gs.PrefillPending {
+		t.Fatalf("after typing: text=%q pending=%v", gs.Text, gs.PrefillPending)
+	}
+	app.closeGroupSelect()
+
+	open("lantern.stl")
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	if gs.Text != "*.st" || gs.PrefillPending {
+		t.Fatalf("after backspace: text=%q pending=%v", gs.Text, gs.PrefillPending)
+	}
+	app.closeGroupSelect()
+
+	open("meadow")
+	if gs.Text != "" || gs.PrefillPending {
+		t.Fatalf("extensionless: text=%q pending=%v", gs.Text, gs.PrefillPending)
+	}
+}

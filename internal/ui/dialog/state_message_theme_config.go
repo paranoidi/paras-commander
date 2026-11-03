@@ -146,10 +146,13 @@ type ListingFormatDialogState struct {
 
 // GroupSelectState is the renderable state for the group selection input modal.
 type GroupSelectState struct {
-	Open               bool
-	Text               string
-	TextCursor         int    // rune offset of caret within Text (0..len(runes))
-	TextScroll         int    // first visible rune offset for horizontal scrolling
+	Open       bool
+	Text       string
+	TextCursor int // rune offset of caret within Text (0..len(runes))
+	TextScroll int // first visible rune offset for horizontal scrolling
+	// PrefillPending is true while Text still shows the suggested "*.ext" pattern from the cursor
+	// entry: drawn as a placeholder, replaced by the first typed rune, committed by other edits.
+	PrefillPending     bool
 	Mode               string // "select" or "unselect"
 	Context            string // "" or "panel" (default), "find", "output"
 	PatternMode        panel.GroupPatternMode

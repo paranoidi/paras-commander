@@ -75,6 +75,7 @@ type patternView struct {
 
 	Text           string
 	Cursor, Scroll int
+	Placeholder    bool // Text is a suggested default (Select group's ghost "*.ext")
 	Invalid        bool
 	Preview, Hint  string
 }
@@ -196,7 +197,7 @@ func patternSpec(v patternView) dlg.Spec {
 			{Kind: dlg.KindLabel, Label: "Pattern:"},
 			{Kind: dlg.KindLabel, Label: preview, Grow: true, Right: true},
 		}},
-		{ID: PatternInput, Kind: dlg.KindInput, Value: v.Text, Cursor: v.Cursor, Scroll: v.Scroll, Invalid: v.Invalid},
+		{ID: PatternInput, Kind: dlg.KindInput, Value: v.Text, Cursor: v.Cursor, Scroll: v.Scroll, Invalid: v.Invalid, Placeholder: v.Placeholder},
 		// The row after the input is reserved for the compile-error hint so the dialog never
 		// grows when the hint appears.
 		{Kind: dlg.KindLabel, Label: v.Hint},

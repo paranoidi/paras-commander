@@ -18,7 +18,7 @@ func GroupSelectView(s GroupSelectState, layout Layout, styles theme.Theme) dlg.
 		Mode: s.PatternMode, Types: s.Types, FilesOnly: s.FilesOnly, DirsOnly: s.DirsOnly, CaseSensitive: s.CaseSensitive,
 		ShowFilesDirs: true, ShowFullPath: GroupSelectShowsFullPath(s), FullPath: s.FullPath,
 		MetaCount: s.MetaColumnCount, IncludeMeta: s.IncludeMetaColumns, OnlyMeta: s.OnlyMetaColumns,
-		Text: s.Text, Cursor: s.TextCursor, Scroll: s.TextScroll,
+		Text: s.Text, Cursor: s.TextCursor, Scroll: s.TextScroll, Placeholder: s.PrefillPending,
 		Invalid: groupSelectPatternInvalid(s), Hint: groupSelectPatternHintText(s),
 		Preview: patternPreviewText(s.PreviewShow, s.PreviewFiles, s.PreviewFolders, styles),
 	})
