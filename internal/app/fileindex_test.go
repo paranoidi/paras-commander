@@ -25,6 +25,7 @@ import (
 )
 
 var fileIndexActions = []string{
+	keymap.ActionFileIndexFind,
 	keymap.ActionFileIndexBrowseWith,
 	keymap.ActionFileIndexBrowse,
 	keymap.ActionFileIndexReveal,
@@ -508,6 +509,21 @@ func TestIndexFindEnterWithMarksAddsSelections(t *testing.T) {
 	}
 	if a.model.Message != "Added 2 to selection" {
 		t.Fatalf("message = %q", a.model.Message)
+	}
+}
+
+func TestFileIndexFindFromLocalPanelSelectsHostPaths(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	a.dispatch(keymap.ActionFileIndexFind)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.IndexFindDialog.Open })
+	if st := a.model.IndexFindDialog; st.Root != dir || st.FromIndexPanel {
+		t.Fatalf("root = %q fromIndex = %v, want %q local", st.Root, st.FromIndexPanel, dir)
+	}
+	typeIndexFindQuery(t, a, screen, ".txt", 2)
+	a.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if sel := a.activePanel().SelectedPaths; !sel[filepath.Join(dir, "harbor.txt")] {
+		t.Fatalf("harbor.txt not selected as a plain path: %v", sel)
 	}
 }
 

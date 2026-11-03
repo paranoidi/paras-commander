@@ -139,6 +139,10 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.withIndex(func() { h.OpenTagDialog(false) })
 	case keymap.ActionFileIndexTagRemove:
 		h.withIndex(func() { h.OpenTagDialog(true) })
+	case keymap.ActionFileIndexFind:
+		if h.localOrIndex() {
+			h.OpenFindDialog(h.model.ActivePanel, false)
+		}
 	case keymap.ActionFileIndexBrowseWith:
 		h.withIndex(h.BrowseWith)
 	case keymap.ActionFileIndexBrowse:

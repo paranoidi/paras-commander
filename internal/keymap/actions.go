@@ -227,6 +227,7 @@ const (
 	ActionFileIndexTagRemove  = "fileindex.tag-remove"
 	ActionFileIndexBrowse     = "fileindex.browse"
 	ActionFileIndexBrowseWith = "fileindex.browse-with"
+	ActionFileIndexFind       = "fileindex.find"
 	ActionFileIndexReveal     = "fileindex.reveal"
 
 	// Jobs dialog
@@ -563,6 +564,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileIndexTagRemove:  {},
 	ActionFileIndexBrowse:     {},
 	ActionFileIndexBrowseWith: {},
+	ActionFileIndexFind:       {},
 	ActionFileIndexReveal:     {},
 
 	ActionMenuFileChattr: {},

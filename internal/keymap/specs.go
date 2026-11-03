@@ -1379,6 +1379,16 @@ func DefaultActionSpecs() []ActionSpec {
 			FileIndexMenuKey: "i",
 		},
 		{
+			ID:               ActionFileIndexFind,
+			Views:            HelpBrowser,
+			Title:            "Find in index",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-F"},
+			PreferredKey:     "M-F",
+			Keywords:         []string{"fileindex", "index", "find", "search"},
+			FileIndexMenuKey: "f",
+		},
+		{
 			ID:               ActionFileIndexBrowse,
 			Views:            HelpBrowser,
 			Title:            "Browse fileindex",

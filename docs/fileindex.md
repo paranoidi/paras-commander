@@ -37,6 +37,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 
 | Key | Menu | Action | |
 |---|---|---|---|
+| `M-F` | `f` | `fileindex.find` | [Find in index](#find-in-index) from the current directory, on a local or `fileindex://` panel |
 | `M-I` | `i` | `fileindex.browse-with` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
 | `M-B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
 | `M-R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
@@ -162,7 +163,10 @@ In an index view:
 `panel.find-dialog` on an index view opens **Find in index**, which searches
 the index under the panel directory instead of walking the disk (files that
 have gone from disk are found too). `panel.jump-dialog` opens the same dialog
-for directories only. The query runs as you type; results are capped at
+for directories only. `fileindex.find` opens it from an ordinary local panel
+too, so you can search the index without leaving the real directory: Enter
+then shows the result in the real location (falling back to the index view when
+the directory is gone from disk). The query runs as you type; results are capped at
 `[ui.find].max_results` and the title shows `N+` when more matched. A finished query
 without results turns the query red.
 

@@ -27,8 +27,8 @@ type FindPayload struct {
 	Err       error
 }
 
-// OpenFindDialog opens the find-in-index dialog for the fileindex:// panel panelID (jump: the
-// directories-only "Jump to directory" form), once the index is known to open.
+// OpenFindDialog opens the find-in-index dialog for panel panelID, a fileindex:// or local panel
+// (jump: the directories-only "Jump to directory" form), once the index is known to open.
 func (h *Handler) OpenFindDialog(panelID int, jump bool) {
 	h.withIndex(func() { h.openFindDialog(panelID, jump) })
 }
@@ -37,18 +37,17 @@ func (h *Handler) openFindDialog(panelID int, jump bool) {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
 		return
 	}
-	root, err := pathloc.IndexHostPath(h.host.PanelByID(panelID).Path)
+	p := h.host.PanelByID(panelID)
+	root, err := hostPath(p.PathString())
 	if err != nil {
 		h.host.SetErrorMessage("Find in index", err)
 		return
 	}
 	var selRoots []string
 	if !jump {
-		for _, uri := range panel.PruneNestedPaths(h.host.PanelByID(panelID).SelectedDirectoryPaths()) {
-			if loc, err := pathloc.Parse(uri); err == nil {
-				if hp, err := pathloc.IndexHostPath(loc); err == nil {
-					selRoots = append(selRoots, hp)
-				}
+		for _, uri := range panel.PruneNestedPaths(p.SelectedDirectoryPaths()) {
+			if hp, err := hostPath(uri); err == nil {
+				selRoots = append(selRoots, hp)
 			}
 		}
 	}
@@ -56,7 +55,7 @@ func (h *Handler) openFindDialog(panelID int, jump bool) {
 	h.model.IndexFindDialog = dialog.IndexFindDialogState{
 		ShowSearchSelectionsOption: len(selRoots) > 0, SelectionDirRoots: selRoots,
 		Gen:  h.model.IndexFindDialog.Gen, // keeps counting up, so a result of an earlier dialog is stale
-		Open: true, PanelID: panelID, Root: root, Focus: dialog.IndexFindQuery,
+		Open: true, PanelID: panelID, FromIndexPanel: p.Path.Scheme() == pathloc.SchemeFileIndex, Root: root, Focus: dialog.IndexFindQuery,
 		JumpMode: jump, OnlyDirs: jump,
 	}
 }
@@ -340,7 +339,7 @@ func (h *Handler) applyMarks() {
 	var paths []string
 	isDir := map[string]bool{}
 	for host, on := range st.Marked {
-		loc, err := pathloc.FileIndex(host)
+		loc, err := h.panelPath(host)
 		if err != nil || !on {
 			continue
 		}
@@ -368,6 +367,15 @@ func (h *Handler) applyMarks() {
 	}
 }
 
+// panelPath is the path a result lives at in the dialog's panel: fileindex:// when the dialog
+// was opened from a fileindex:// panel, else the plain host path.
+func (h *Handler) panelPath(host string) (pathloc.Path, error) {
+	if h.model.IndexFindDialog.FromIndexPanel {
+		return pathloc.FileIndex(host)
+	}
+	return pathloc.File(host)
+}
+
 // navigateTo shows the result under the cursor in panelID (a directory itself, a file in its
 // parent with the file highlighted); it does not close the dialog.
 func (h *Handler) navigateTo(panelID int) (string, bool) {
@@ -379,9 +387,15 @@ func (h *Handler) navigateTo(panelID int) (string, bool) {
 	if !r.IsDir {
 		dir, name = filepath.Dir(r.Path), filepath.Base(r.Path)
 	}
-	loc, err := pathloc.FileIndex(dir)
+	loc, err := h.panelPath(dir)
 	if err == nil {
 		err = h.host.NavigatePanelToPath(panelID, loc.String(), name)
+	}
+	if err != nil && !h.model.IndexFindDialog.FromIndexPanel {
+		// ponytail: the real directory is gone, so show it as the index remembers it
+		if loc, ferr := pathloc.FileIndex(dir); ferr == nil {
+			err = h.host.NavigatePanelToPath(panelID, loc.String(), name)
+		}
 	}
 	if err != nil {
 		h.host.SetErrorMessage("Find in index", err)

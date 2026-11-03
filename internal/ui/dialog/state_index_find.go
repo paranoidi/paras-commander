@@ -22,6 +22,9 @@ type IndexFindResult struct {
 type IndexFindDialogState struct {
 	Open    bool
 	PanelID int
+	// FromIndexPanel is true when the dialog opened from a fileindex:// panel: results then
+	// navigate and select as fileindex:// paths, else as plain host paths.
+	FromIndexPanel bool
 	// Root is the host path of the panel directory the search runs under.
 	Root        string
 	Query       string

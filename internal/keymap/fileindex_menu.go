@@ -10,7 +10,7 @@ var fileIndexMenuGroups = []struct {
 	title   string
 	actions []string
 }{
-	{"Browse", []string{ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal}},
+	{"Browse", []string{ActionFileIndexFind, ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal}},
 	{"Tagging", []string{ActionFileIndexTagAdd, ActionFileIndexTagRemove}},
 	{"Actions", []string{ActionFileIndexScan, ActionFileIndexPrune}},
 }
