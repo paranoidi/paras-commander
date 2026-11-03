@@ -335,13 +335,12 @@ type Spec struct {
 	MaxHeight int
 	// MustFit makes the dialog not draw at all (Place and FitSpec report !ok) where any of its
 	// content would be cut off, instead of a MinHeight that restates the content's height.
-	MustFit         bool
-	Groups          []Group
-	Buttons         []Button // drawn after a horizontal separator, centered; also its own Tab segment
-	PlainButtonKeys bool     // plain (no Alt) button mnemonic letters press the button
-	// PlainMnemonics makes a plain letter act as its Alt+letter mnemonic while focus is not in a
-	// text input (after PlainButtonKeys' buttons).
-	PlainMnemonics bool
+	MustFit bool
+	Groups  []Group
+	Buttons []Button // drawn after a horizontal separator, centered; also its own Tab segment
+	// AltOnly makes mnemonics need Alt even outside text inputs. Set on dialogs that can appear
+	// without a keypress or confirm a deletion, where a stray letter must not answer them.
+	AltOnly bool
 	// ButtonsLabel, when set, is drawn centered in the separator above the buttons, padded with one
 	// space on each side, in the selection-size status style (find's marked-selection size).
 	ButtonsLabel string

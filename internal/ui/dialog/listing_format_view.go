@@ -19,7 +19,7 @@ func ListingFormatView(s ListingFormatDialogState) dlg.Spec {
 		})
 	}
 	return dlg.Spec{
-		Title: "Listing format", Width: 44, MinWidth: 28, MustFit: true, PlainButtonKeys: true,
+		Title: "Listing format", Width: 44, MinWidth: 28, MustFit: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
 			dlg.OKButton,

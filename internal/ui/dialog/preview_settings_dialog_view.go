@@ -76,7 +76,7 @@ func PreviewSettingsDialogView(s PreviewSettingsDialogState, markerWidth int) dl
 		previewRadioItems(PreviewSettingsDialogImageMetadataRadios(), s.ImageMetadata, PreviewMetadataID)...)
 	metadata = append(metadata, dlg.Item{Kind: dlg.KindSeparator})
 	return dlg.Spec{
-		Title: "Preview settings", Width: 46, MinWidth: 42, Unclamped: true, PlainButtonKeys: true,
+		Title: "Preview settings", Width: 46, MinWidth: 42, Unclamped: true,
 		MarkerWidth: markerWidth, // the capability rows follow the theme's marker icons (dlg.MarkerWidth)
 		Groups: []dlg.Group{
 			{Columns: [][]dlg.Item{caps}},

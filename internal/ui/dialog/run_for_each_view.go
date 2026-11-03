@@ -129,7 +129,7 @@ func pickerView(st FileDialogState, ctx FileDialogViewContext, count int, line f
 		Value: query, Cursor: cursor, Scroll: scroll,
 	}
 	return dlg.Spec{
-		Title: fileDialogOuterTitle(st), Width: fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), Unclamped: true, PlainButtonKeys: true,
+		Title: fileDialogOuterTitle(st), Width: fileDialogWidth(ctx.Layout.Width, st, ctx.IconLead), Unclamped: true,
 		Groups:  []dlg.Group{{Columns: [][]dlg.Item{{filter, {Kind: dlg.KindSeparator}, list}}}},
 		Buttons: dlg.OKCancelButtons(),
 	}

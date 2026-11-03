@@ -20,7 +20,7 @@ func HostKeyView(s HostKeyDialogState) dlg.Spec {
 		items[i] = dlg.Item{Kind: dlg.KindLabel, Label: line}
 	}
 	return dlg.Spec{
-		Title: "Host key", Width: 72, MinWidth: 44, Unclamped: true, PlainButtonKeys: true,
+		Title: "Host key", Width: 72, MinWidth: 44, Unclamped: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
 			{ID: HostKeyAccept, Label: "Accept", Mnemonic: 'A'},

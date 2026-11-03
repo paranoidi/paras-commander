@@ -417,7 +417,7 @@ func TestSegmentsAfterAnInputStartOver(t *testing.T) {
 
 func TestDisabledItems(t *testing.T) {
 	spec := Spec{
-		Title: "Harbor", Width: 40, MinWidth: 20, Unclamped: true, PlainButtonKeys: true,
+		Title: "Harbor", Width: 40, MinWidth: 20, Unclamped: true,
 		Groups: []Group{{Columns: [][]Item{{
 			radio("a", "Alpha", 'a'),
 			{Kind: KindRow, Cells: []Item{

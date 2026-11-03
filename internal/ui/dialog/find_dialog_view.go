@@ -107,10 +107,10 @@ func FindDialogView(state *FindDialogState, ctx FindViewContext) dlg.Spec {
 	groups = append(groups, dlg.Group{Columns: [][]dlg.Item{{listSep, list}}})
 	spec := dlg.Spec{
 		Title: findDialogTitle(*state, styles), Width: frame.Width, MinWidth: frame.MinWidth,
-		Groups:          groups,
-		Buttons:         frame.Buttons,
-		ButtonsLabel:    ctx.SelectionLabel,
-		PlainButtonKeys: true, PlainMnemonics: true, ScrollbarStyle: ctx.ScrollbarStyle,
+		Groups:         groups,
+		Buttons:        frame.Buttons,
+		ButtonsLabel:   ctx.SelectionLabel,
+		ScrollbarStyle: ctx.ScrollbarStyle,
 	}
 	// Only the visible results are built, so the list's fitted height comes first.
 	spec, _ = fillList(spec, ctx.Layout, FindList, func(height, _ int) dlg.Item {

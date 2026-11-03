@@ -43,7 +43,7 @@ func listSpec(list Item) Spec {
 // listOnlySpec is a focusable list with OK / Cancel (the theme picker shape).
 func listOnlySpec(list Item) Spec {
 	return Spec{
-		Title: "Harbor", Width: 40, MinWidth: 20, Unclamped: true, PlainButtonKeys: true,
+		Title: "Harbor", Width: 40, MinWidth: 20, Unclamped: true,
 		Groups:  []Group{{Columns: [][]Item{{list}}}},
 		Buttons: []Button{{ID: OK, Label: "OK", Mnemonic: 'O'}, {ID: Cancel, Label: "Cancel", Mnemonic: 'C'}},
 	}
@@ -172,17 +172,18 @@ func TestListEnterSpaceAndLetters(t *testing.T) {
 		}
 	}
 	focus := ID("hosts")
-	// plain letters are the caller's unless PlainButtonKeys presses a button
-	noPlain := listOnlySpec(listItem(30, 7, 3, 6))
-	noPlain.PlainButtonKeys = false
-	if ev, ok := HandleKey(noPlain, &focus, runeKey('x', tcell.ModNone)); ok || ev != (Event{}) {
+	// a plain letter without a mnemonic is the caller's; one with a mnemonic presses its button
+	if ev, ok := HandleKey(spec, &focus, runeKey('x', tcell.ModNone)); ok || ev != (Event{}) {
 		t.Errorf("plain letter: (%+v, %v), want (zero, false)", ev, ok)
 	}
-	if ev, ok := HandleKey(noPlain, &focus, runeKey('o', tcell.ModNone)); ok || ev != (Event{}) {
-		t.Errorf("plain o without PlainButtonKeys: (%+v, %v), want (zero, false)", ev, ok)
-	}
 	if ev, ok := HandleKey(spec, &focus, runeKey('o', tcell.ModNone)); !ok || ev.ID != OK {
-		t.Errorf("plain o with PlainButtonKeys: (%+v, %v), want OK", ev, ok)
+		t.Errorf("plain o: (%+v, %v), want OK", ev, ok)
+	}
+	focus = "hosts"
+	altOnly := listOnlySpec(listItem(30, 7, 3, 6))
+	altOnly.AltOnly = true
+	if ev, ok := HandleKey(altOnly, &focus, runeKey('o', tcell.ModNone)); ok || ev != (Event{}) {
+		t.Errorf("plain o with AltOnly: (%+v, %v), want (zero, false)", ev, ok)
 	}
 	if ev, ok := HandleKey(spec, &focus, runeKey('c', tcell.ModAlt)); !ok || ev.ID != Cancel || focus != Cancel {
 		t.Errorf("alt+c: (%+v, %v) focus %q, want Cancel", ev, ok, focus)

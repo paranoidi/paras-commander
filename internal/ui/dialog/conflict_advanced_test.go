@@ -264,3 +264,17 @@ func assertLabelsAreFollowedByContent(t *testing.T, rows []string) {
 		}
 	}
 }
+
+func TestConflictScreensAreAltOnly(t *testing.T) {
+	c := jobs.ConflictEvent{Source: "/a/harbor.txt", Destination: "/b/harbor.txt"}
+	d := jobs.DiskSpaceBlockerDetails{}
+	for name, st := range map[string]ConflictDialogState{
+		"file":  {Open: true, Blocker: jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &c}},
+		"disk":  {Open: true, Blocker: jobs.BlockerDetails{Kind: jobs.BlockerKindDiskSpace, DiskSpace: &d}},
+		"rules": rulesState(false),
+	} {
+		if !st.Screen("").Spec.AltOnly {
+			t.Errorf("%s screen: AltOnly not set", name)
+		}
+	}
+}

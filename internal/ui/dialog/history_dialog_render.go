@@ -94,9 +94,9 @@ func historyFrame(state HistoryDialogState, layout Layout, styles theme.Theme, s
 	}
 	return dlg.Spec{
 		Title: title, Width: min(78, layout.Width-4), MinWidth: historyMinWidth,
-		PlainButtonKeys: true, ScrollbarStyle: scrollbarStyle,
-		Groups:  []dlg.Group{{Columns: [][]dlg.Item{items}}},
-		Buttons: dlg.OKCancelButtons(),
+		ScrollbarStyle: scrollbarStyle,
+		Groups:         []dlg.Group{{Columns: [][]dlg.Item{items}}},
+		Buttons:        dlg.OKCancelButtons(),
 	}
 }
 

@@ -87,3 +87,9 @@ func TestDedupEmptyDirsConfirmGoldenRender(t *testing.T) {
 	add("n12_short12", 80, 12, dedupGoldenState(12, false, "yes"), true)
 	runSimpleGoldens(t, "dedup_empty_dirs", cases)
 }
+
+func TestDedupEmptyDirsConfirmIsAltOnly(t *testing.T) {
+	if !DedupEmptyDirsConfirmView(DedupEmptyDirsConfirmState{Dirs: dedupGoldenDirs(2, false)}, 0).AltOnly {
+		t.Error("AltOnly not set")
+	}
+}

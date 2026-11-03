@@ -47,3 +47,15 @@ func TestFileDialogFrameIsThePlacedSpecRect(t *testing.T) {
 		}
 	}
 }
+
+func TestFileDialogDeleteIsAltOnly(t *testing.T) {
+	ctx := FileDialogViewContext{Layout: Layout{Width: 80, Height: 24}}
+	del := FileDialogState{Open: true, DialogType: FileDialogDelete, DeleteSummary: "1 file", DeleteEntries: transferGoldenEntries(1)}
+	if !FileDialogView(del, ctx).AltOnly {
+		t.Error("delete dialog: AltOnly not set")
+	}
+	mk := FileDialogState{Open: true, DialogType: FileDialogMkdir, Fields: []FileDialogField{{Label: "Directory name"}}}
+	if FileDialogView(mk, ctx).AltOnly {
+		t.Error("mkdir dialog: AltOnly set")
+	}
+}

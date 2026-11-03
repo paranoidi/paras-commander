@@ -172,8 +172,8 @@ func tabTarget(spec Spec, id ID) ID {
 
 // HandleKey applies one key to focus. Navigation (arrows, Tab/Backtab) returns (Event{}, true).
 // Space and Enter return Event{ID: focus}; Alt+mnemonic focuses the widget and returns its Event;
-// with Spec.PlainButtonKeys a plain button mnemonic letter returns that button's Event without
-// moving focus. Anything else returns (Event{}, false). OK / Cancel / Esc chords are resolved by
+// a plain letter does the same while focus is not in a text input, unless Spec.AltOnly. Anything
+// else returns (Event{}, false). OK / Cancel / Esc chords are resolved by
 // the application before dialog keys reach here and are not handled.
 //
 // Up/Down move focus by where the widgets are drawn (spatialTarget): to the nearest row of
@@ -188,7 +188,7 @@ func tabTarget(spec Spec, id ID) ID {
 //   - Enter returns Event{ID: input}, which the caller treats as submit / OK;
 //   - Alt+mnemonic of a checkbox or radio returns that widget's Event but leaves focus in the
 //     input, so the user keeps typing (a button mnemonic still focuses the button);
-//   - Space, plain letters (also PlainButtonKeys letters), Left/Right, Home/End, Backspace,
+//   - Space, plain letters (no plain mnemonics in an input), Left/Right, Home/End, Backspace,
 //     Delete and every other key return (Event{}, false): the caller feeds them to its text
 //     editing code (lineedit, scrollquery, path completion...) and keeps Value/Cursor/Scroll in its
 //     own state.
@@ -202,8 +202,8 @@ func tabTarget(spec Spec, id ID) ID {
 //     list. An empty list is never focused (it is skipped by every focus move);
 //   - Enter and Space return an EventActivate event for the list with Index = the cursor row;
 //   - Tab/Backtab leave the list (every list is a Tab segment of its own); Left/Right do nothing;
-//   - plain letters return (Event{}, false) unless Spec.PlainButtonKeys, so a type-to-jump
-//     handler of the caller keeps working; Alt+mnemonic focuses and activates its widget.
+//   - a plain letter acts as its Alt+letter mnemonic (unless Spec.AltOnly), else it returns
+//     (Event{}, false); Alt+mnemonic focuses and activates its widget.
 //
 // An input with Item.Drives naming a list steers it while the input is focused and the list has
 // rows: Up/Down/PgUp/PgDn and Ctrl+Home/Ctrl+End return the list's EventListMove and focus stays in
@@ -383,7 +383,6 @@ func nextRadio(cells []Item) (ID, bool) {
 }
 
 func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, bool) {
-	r := unicode.ToLower(ev.Rune())
 	if keymap.AltLetterModifiers(ev.Modifiers()) {
 		return HandleMnemonic(spec, focus, ev)
 	}
@@ -396,15 +395,8 @@ func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, 
 	if ev.Rune() == ' ' {
 		return activation(spec, *focus), true
 	}
-	if spec.PlainButtonKeys {
-		for _, b := range spec.Buttons {
-			if b.Mnemonic != 0 && unicode.ToLower(b.Mnemonic) == r {
-				return Event{ID: b.ID}, true
-			}
-		}
+	if spec.AltOnly {
+		return Event{}, false
 	}
-	if spec.PlainMnemonics {
-		return HandleMnemonic(spec, focus, tcell.NewEventKey(tcell.KeyRune, ev.Rune(), tcell.ModAlt))
-	}
-	return Event{}, false
+	return HandleMnemonic(spec, focus, tcell.NewEventKey(tcell.KeyRune, ev.Rune(), tcell.ModAlt))
 }

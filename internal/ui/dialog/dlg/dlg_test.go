@@ -27,7 +27,7 @@ func check(id ID, label string, m rune) Item {
 // OK / Cancel.
 func testSpec() Spec {
 	return Spec{
-		Title: "Harbor", Width: 40, MinWidth: 20, MinHeight: 8, PlainButtonKeys: true,
+		Title: "Harbor", Width: 40, MinWidth: 20, MinHeight: 8,
 		Groups: []Group{
 			{Columns: [][]Item{
 				{radio("a0", "Anchor", 'a'), radio("a1", "Buoy", 'b'), radio("a2", "Cable", 'c')},
@@ -127,19 +127,46 @@ func TestMnemonics(t *testing.T) {
 	}
 }
 
-func TestPlainButtonKeys(t *testing.T) {
+func TestPlainMnemonics(t *testing.T) {
+	// a plain letter on a non-input focus presses a button (focus follows, like Alt+letter)
 	focus := ID("a1")
 	ev, ok := HandleKey(testSpec(), &focus, runeKey('o', tcell.ModNone))
-	if !ok || ev.ID != OK || focus != "a1" {
-		t.Fatalf("plain o: got (%q, %v, focus %q), want OK with focus unchanged", ev.ID, ok, focus)
+	if !ok || ev.ID != OK || focus != OK {
+		t.Fatalf("plain o: got (%q, %v, focus %q), want OK", ev.ID, ok, focus)
 	}
-	if ev, _ := HandleKey(testSpec(), &focus, runeKey('C', tcell.ModNone)); ev.ID != Cancel {
-		t.Fatalf("plain C = %q, want Cancel", ev.ID)
+	focus = "a1"
+	if ev, _ := HandleKey(testSpec(), &focus, runeKey('M', tcell.ModNone)); ev.ID != "c1" {
+		t.Fatalf("plain M = %q, want c1", ev.ID)
 	}
+	// ... and reaches a checkbox
+	focus = "a1"
+	if ev, ok := HandleKey(testSpec(), &focus, runeKey('l', tcell.ModNone)); !ok || ev.ID != "c0" || focus != "c0" {
+		t.Fatalf("plain l: got (%q, %v, focus %q), want c0", ev.ID, ok, focus)
+	}
+	// a letter without a mnemonic is unhandled
+	focus = "a1"
+	if ev, ok := HandleKey(testSpec(), &focus, runeKey('z', tcell.ModNone)); ok || ev != (Event{}) {
+		t.Fatalf("plain z: (%+v, %v), want unhandled", ev, ok)
+	}
+}
+
+func TestAltOnly(t *testing.T) {
 	spec := testSpec()
-	spec.PlainButtonKeys = false
-	if _, ok := HandleKey(spec, &focus, runeKey('o', tcell.ModNone)); ok {
-		t.Fatal("plain o handled without PlainButtonKeys")
+	spec.AltOnly = true
+	focus := ID("a1")
+	if ev, ok := HandleKey(spec, &focus, runeKey('o', tcell.ModNone)); ok || ev != (Event{}) || focus != "a1" {
+		t.Fatalf("plain o with AltOnly: (%+v, %v, focus %q), want unhandled", ev, ok, focus)
+	}
+	if ev, ok := HandleKey(spec, &focus, runeKey('l', tcell.ModNone)); ok || ev != (Event{}) {
+		t.Fatalf("plain l with AltOnly: (%+v, %v), want unhandled", ev, ok)
+	}
+	if ev, ok := HandleKey(spec, &focus, runeKey('o', tcell.ModAlt)); !ok || ev.ID != OK || focus != OK {
+		t.Fatalf("Alt+o with AltOnly: (%+v, %v, focus %q), want OK", ev, ok, focus)
+	}
+	// Space still activates the focused widget
+	focus = "c1"
+	if ev, ok := HandleKey(spec, &focus, runeKey(' ', tcell.ModNone)); !ok || ev.ID != "c1" {
+		t.Fatalf("Space with AltOnly: (%+v, %v), want c1", ev, ok)
 	}
 }
 
@@ -452,7 +479,7 @@ func sep(text string) Item { return Item{Kind: KindSeparator, Label: text} }
 // inputSpec: a label and two adjacent inputs, a separator, a checkbox/radio block and buttons.
 func inputSpec() Spec {
 	return Spec{
-		Title: "Harbor", Width: 40, MinWidth: 20, MinHeight: 6, PlainButtonKeys: true,
+		Title: "Harbor", Width: 40, MinWidth: 20, MinHeight: 6,
 		Groups: []Group{
 			{Columns: [][]Item{{label("Find:"), input("find", "anchor"), input("repl", ""), sep("")}}},
 			{Columns: [][]Item{{check("c0", "Lantern", 'l'), radio("r0", "Mast", 'm'), sep("Sails")}}},
@@ -563,7 +590,7 @@ func TestInputKeyContract(t *testing.T) {
 		key(tcell.KeyLeft), key(tcell.KeyRight), key(tcell.KeyHome), key(tcell.KeyEnd),
 		key(tcell.KeyBackspace), key(tcell.KeyBackspace2), key(tcell.KeyDelete), key(tcell.KeyEsc),
 		runeKey(' ', tcell.ModNone), runeKey('a', tcell.ModNone), runeKey('Z', tcell.ModNone),
-		runeKey('o', tcell.ModNone), runeKey('c', tcell.ModNone), // PlainButtonKeys letters are text here
+		runeKey('o', tcell.ModNone), runeKey('c', tcell.ModNone), // mnemonic letters are text here
 		runeKey('x', tcell.ModAlt),
 	}
 	for _, k := range unhandled {
@@ -608,7 +635,7 @@ func TestInputKeyContract(t *testing.T) {
 	if ev, ok := HandleKey(inputSpec(), &f, runeKey(' ', tcell.ModNone)); !ok || ev.ID != "c0" {
 		t.Errorf("Space on checkbox = (%q, %v)", ev.ID, ok)
 	}
-	if ev, ok := HandleKey(inputSpec(), &f, runeKey('o', tcell.ModNone)); !ok || ev.ID != OK || f != "c0" {
+	if ev, ok := HandleKey(inputSpec(), &f, runeKey('o', tcell.ModNone)); !ok || ev.ID != OK || f != OK {
 		t.Errorf("plain o on checkbox = (%q, %v, focus %q)", ev.ID, ok, f)
 	}
 	// Alt mnemonic from a non-input row still moves focus.

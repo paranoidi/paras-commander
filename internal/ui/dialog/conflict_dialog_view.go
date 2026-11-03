@@ -105,7 +105,7 @@ func conflictFileView(st ConflictDialogState, userHomeDir string) dlg.Spec {
 	items = append(items, conflictFileGroup(conflictDialogLabelExisting, c.Destination, c.DestSize, c.DestTime, userHomeDir)...)
 	items = append(items, dlg.Item{Kind: dlg.KindSeparator}, conflictText(ConflictPromptText(c)))
 	return dlg.Spec{
-		Title: "File exists", Width: 76, MinWidth: 48, Unclamped: true,
+		Title: "File exists", Width: 76, MinWidth: 48, Unclamped: true, AltOnly: true,
 		Groups:  []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: ConflictFileButtons(c),
 	}
@@ -165,7 +165,7 @@ func conflictDiskView(st ConflictDialogState, userHomeDir string) dlg.Spec {
 		dlg.Item{Kind: dlg.KindSeparator},
 		dlg.Item{Kind: dlg.KindLabel, Label: "Make space or retry.", Style: dlg.TextWarn})
 	return dlg.Spec{
-		Title: "Disk space", Width: 76, MinWidth: 48, Unclamped: true,
+		Title: "Disk space", Width: 76, MinWidth: 48, Unclamped: true, AltOnly: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
 			{ID: ConflictRetry, Label: "Retry", Mnemonic: 'R'},
@@ -254,7 +254,7 @@ func conflictRulesView(st ConflictDialogState) dlg.Spec {
 		{ID: ConflictApplyAll, Kind: dlg.KindCheckbox, Label: "Apply to all conflicts", Mnemonic: 'A', On: st.AdvAll},
 	}}})
 	return dlg.Spec{
-		Title: "Conflict rules", Width: 76, MinWidth: 72, Unclamped: true,
+		Title: "Conflict rules", Width: 76, MinWidth: 72, Unclamped: true, AltOnly: true,
 		Groups:  groups,
 		Buttons: dlg.OKCancelButtons(),
 	}

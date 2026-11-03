@@ -64,7 +64,7 @@ func DedupEmptyDirsConfirmView(state DedupEmptyDirsConfirmState, iconLead int) d
 		items = append(items, dlg.Item{Kind: dlg.KindLabel}) // an empty list keeps one blank row
 	}
 	return dlg.Spec{
-		Title: "Remove Empty Directories", Width: dedupEmptyDirsConfirmWidth(state, msg, iconLead), Unclamped: true,
+		Title: "Remove Empty Directories", Width: dedupEmptyDirsConfirmWidth(state, msg, iconLead), Unclamped: true, AltOnly: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{
 			{ID: DedupEmptyDirsYes, Label: "Yes", Mnemonic: 'Y'},

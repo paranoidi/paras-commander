@@ -32,7 +32,7 @@ func StatusCommandsDialogView(s StatusCommandsDialogState) dlg.Spec {
 		items[i] = dlg.Item{ID: dlg.ID(statusCommandPrefix + r.Name), Kind: dlg.KindCheckbox, Label: r.Label, On: r.Shown}
 	}
 	return dlg.Spec{
-		Title: "Status commands", Width: 40, MinWidth: 24, MustFit: true, PlainButtonKeys: true,
+		Title: "Status commands", Width: 40, MinWidth: 24, MustFit: true,
 		Groups:  []dlg.Group{{Columns: [][]dlg.Item{items}}},
 		Buttons: []dlg.Button{dlg.OKButton, dlg.CancelButton},
 	}

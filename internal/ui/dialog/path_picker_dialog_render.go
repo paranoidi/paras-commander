@@ -98,7 +98,7 @@ func pathPickerFrame(state PathPickerState, layout Layout, styles theme.Theme, s
 	}
 	return dlg.Spec{
 		Title: title, Width: pathPickerWidth(layout.Width), MinWidth: pathPickerMinWidth,
-		PlainButtonKeys: true, ScrollbarStyle: scrollbarStyle,
+		ScrollbarStyle: scrollbarStyle,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
 			filter, {Kind: dlg.KindSeparator},
 			{ID: PathPickerList, Kind: dlg.KindList, Height: pickerListHeight(layout.Height), MinHeight: pickerMinListRows},

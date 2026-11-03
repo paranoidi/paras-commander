@@ -94,7 +94,7 @@ func IndexFindDialogView(st *IndexFindDialogState, ctx IndexFindViewContext) dlg
 		Title: indexFindTitle(st, ctx.Styles), Width: findDialogPreferredWidth, MinWidth: findDialogMinWidth,
 		Groups:  []dlg.Group{{Columns: [][]dlg.Item{col}}},
 		Buttons: dlg.OKCancelButtons(), ButtonsLabel: st.MarkedLabel(),
-		PlainButtonKeys: true, ScrollbarStyle: ctx.ScrollbarStyle,
+		ScrollbarStyle: ctx.ScrollbarStyle,
 	}
 	spec, _ = fillList(spec, ctx.Layout, IndexFindList, func(height, _ int) dlg.Item {
 		from, to := dlg.ListWindow(st.Selected, st.ListScroll, height, len(st.Results))

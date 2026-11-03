@@ -121,6 +121,7 @@ func fileDialogView(st FileDialogState, ctx FileDialogViewContext) dlg.Spec {
 			{ID: dlg.OK, Label: "Yes", Mnemonic: 'Y', Destructive: true},
 			{ID: dlg.Cancel, Label: "No", Mnemonic: 'N'},
 		}
+		spec.AltOnly = true
 		spec.Groups = deleteViewGroups(st, ctx)
 		spec.MaxHeight = listDialogMaxHeight(ctx.Layout.Height)
 		spec.ScrollbarStyle = ctx.ScrollbarStyle

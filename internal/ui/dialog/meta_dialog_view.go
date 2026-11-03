@@ -50,7 +50,7 @@ func MetaDialogView(s MetaDialogState) dlg.Spec {
 
 func metaSpec(groups []dlg.Group, markerW int) dlg.Spec {
 	return dlg.Spec{
-		Title: "Meta", Width: metaDialogWidth, MinWidth: 28, MinHeight: 5, PlainButtonKeys: true,
+		Title: "Meta", Width: metaDialogWidth, MinWidth: 28, MinHeight: 5,
 		Groups: groups, MarkerWidth: markerW,
 		Buttons: []dlg.Button{
 			dlg.OKButton,
