@@ -515,8 +515,12 @@ func TestDrawListMarkers(t *testing.T) {
 	if got := row(1); got != " (*) buoy 1  " && got != " (*) buoy 1   " {
 		t.Errorf("marked row = %q", got)
 	}
-	if _, st, _ := screen.Get(it.Rect.X+6, it.Rect.Y+1); st != styles.DialogOptionRowStyle(true, true) {
-		t.Errorf("focused marked row style = %v", st)
+	markerSt, labelSt := styles.DialogOptionMarkerStyles(true, true)
+	if _, st, _ := screen.Get(it.Rect.X+6, it.Rect.Y+1); st != labelSt {
+		t.Errorf("focused marked row label style = %v, want %v", st, labelSt)
+	}
+	if _, st, _ := screen.Get(it.Rect.X+2, it.Rect.Y+1); st != markerSt {
+		t.Errorf("focused marked row marker style = %v, want %v", st, markerSt)
 	}
 	if _, st, _ := screen.Get(it.Rect.X+6, it.Rect.Y); st != styles.DialogOptionRowStyle(false, false) {
 		t.Errorf("other row style = %v", st)

@@ -461,6 +461,17 @@ func (t Theme) DialogOptionRowStyle(focused, selected bool) tcell.Style {
 	}
 }
 
+// DialogOptionMarkerStyles returns the marker and label styles of a radio/checkbox row: the label
+// follows focus only (dialog.option.active / .inactive), so the cursor row reads the same whether
+// or not it is checked; a checked marker alone takes dialog.option.selected.
+func (t Theme) DialogOptionMarkerStyles(focused, selected bool) (marker, label tcell.Style) {
+	label = t.DialogOptionRowStyle(focused, false)
+	if selected {
+		return t.DialogOptionRowStyle(false, true), label
+	}
+	return label, label
+}
+
 // DialogTextSelectStyle returns fg's foreground and attributes on the dialog.text_select
 // background, falling back to the dialog.surface background when the theme omits the key.
 func (t Theme) DialogTextSelectStyle(fg tcell.Style) tcell.Style {

@@ -682,13 +682,14 @@ func drawList(screen tcell.Screen, dialogRect Rect, pi PlacedItem, it Item, focu
 		rw := it.row(idx)
 		isCursor := focused && idx == it.Cursor && !it.Inert
 		if it.Markers {
-			style := styles.DialogOptionRowStyle(isCursor, rw.Marked)
+			markerStyle, style := styles.DialogOptionMarkerStyles(isCursor, rw.Marked)
 			if it.Inert {
 				style = styles.DialogOptionDisabledStyle()
+				markerStyle = style
 			}
 			part := draw.RadioMarker(styles, rw.Marked)
 			partW := runewidth.StringWidth(part)
-			primitive.Text(screen, r.X, y, partW, part, style)
+			primitive.Text(screen, r.X, y, partW, part, markerStyle)
 			match := styles.FuzzyHighlight
 			if isCursor {
 				match = styles.FuzzyHighlightCursor

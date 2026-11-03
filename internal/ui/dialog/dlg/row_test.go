@@ -514,7 +514,7 @@ func TestDrawRowsAndDisabled(t *testing.T) {
 	}
 	vid, _ := p.Item("v")
 	_, st, _ = screen.Get(vid.Rect.X+6, vid.Rect.Y)
-	if want := styles.DialogOptionRowStyle(true, true); st != want {
+	if _, want := styles.DialogOptionMarkerStyles(true, true); st != want {
 		t.Errorf("focused checked checkbox style = %v, want %v", st, want)
 	}
 }

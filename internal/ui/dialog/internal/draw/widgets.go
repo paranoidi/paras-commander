@@ -53,14 +53,14 @@ func DrawDialogCheckbox(
 	disabled bool,
 	styles theme.Theme,
 ) {
-	style := styles.DialogOptionRowStyle(focused, checked)
+	markerStyle, style := styles.DialogOptionMarkerStyles(focused, checked)
 	accent := styles.DialogAccent
 	if disabled {
 		style = styles.DialogOptionDisabledStyle()
-		accent = style
+		markerStyle, accent = style, style
 	}
 	marker := CheckboxMarker(styles, checked)
-	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
+	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, markerStyle)
 	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, accent)
 }
 
@@ -75,14 +75,14 @@ func DrawDialogRadio(
 	disabled bool,
 	styles theme.Theme,
 ) {
-	style := styles.DialogOptionRowStyle(focused, selected)
+	markerStyle, style := styles.DialogOptionMarkerStyles(focused, selected)
 	accent := styles.DialogAccent
 	if disabled {
 		style = styles.DialogOptionDisabledStyle()
-		accent = style
+		markerStyle, accent = style, style
 	}
 	marker := RadioMarker(styles, selected)
-	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
+	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, markerStyle)
 	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, accent)
 }
 

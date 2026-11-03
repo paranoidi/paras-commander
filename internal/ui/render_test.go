@@ -620,9 +620,9 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 		t.Fatal("Catppuccin Frappe substring not found in row")
 	}
 	_, rowStyle, _ := screen.Get(styleCol, 4)
-	wantStyle := styles.DialogOptionRowStyle(true, true)
+	_, wantStyle := styles.DialogOptionMarkerStyles(true, true)
 	if rowStyle != wantStyle {
-		t.Fatalf("selected theme row style = %v, want dialog.option.active.selected %v", rowStyle, wantStyle)
+		t.Fatalf("selected theme row style = %v, want dialog.option.active %v", rowStyle, wantStyle)
 	}
 }
 
