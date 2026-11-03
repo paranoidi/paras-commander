@@ -246,6 +246,8 @@ text_select = { bg = "black" }
 title = { bold = true }
 # bg matters for the path-picker trailing icon when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "white", bg = "black", bold = true }
+# shortcut letter that needs Alt: AltOnly dialogs, and every mnemonic while focus is in a text input
+accent_alt = { fg = "magenta", bold = true }
 search_icon = { fg = "black", bg = "bright_black" }
 
 [dialog.button]

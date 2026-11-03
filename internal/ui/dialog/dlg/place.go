@@ -478,6 +478,15 @@ func liveMnemonic(it Item, inInput bool) rune {
 	return it.Mnemonic
 }
 
+// mnemonicStyles is styles with the mnemonic letter accent (dialog.accent, the only accent the
+// draw helpers use) swapped for dialog.accent_alt when the letters need Alt.
+func mnemonicStyles(styles theme.Theme, alt bool) theme.Theme {
+	if alt {
+		styles.DialogAccent = styles.DialogAccentAlt
+	}
+	return styles
+}
+
 // Draw paints spec with focus on the widget named by focus (an empty or unknown ID focuses the
 // first widget). It returns the placement it drew, for callers that paint overlays on its rects;
 // ok is false when the dialog does not fit and nothing was drawn.
@@ -489,6 +498,7 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 	focus = Focused(spec, focus)
 	cur, found := find(spec, focus)
 	inInput := found && isInput(spec, cur)
+	styles = mnemonicStyles(styles, needsAlt(spec, inInput))
 	borderStyle := draw.DrawDialogFrame(screen, p.Rect, spec.Title, styles)
 	_, surface, _ := styles.DialogSurface.Decompose()
 	bottom := p.ContentBottom         // content stops above the button separator (or the bottom border)

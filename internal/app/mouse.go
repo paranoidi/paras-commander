@@ -198,7 +198,7 @@ func (a *App) dialogHovers() (dlg.ButtonHover, dlg.Rect) {
 	}
 	w, h := a.screen.Size()
 	row, _ := dlg.HoveredListRow(spec, w, h, *d.focus, a.mouse.x, a.mouse.y)
-	return dlg.HoveredButton(spec, w, h, a.mouse.x, a.mouse.y), row
+	return dlg.HoveredButton(spec, *d.focus, w, h, a.mouse.x, a.mouse.y), row
 }
 
 // menuBarHover is the menu title under the last pointer position, where a click would open it.

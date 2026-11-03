@@ -382,6 +382,11 @@ func nextRadio(cells []Item) (ID, bool) {
 	return radios[(on+1)%len(radios)].ID, true
 }
 
+// needsAlt reports whether a mnemonic letter needs Alt right now: the spec is AltOnly, or focus is
+// in a text input (where a plain letter is text). Key handling and drawing (the accent_alt style
+// of the mnemonic letter) both decide from this.
+func needsAlt(spec Spec, inInput bool) bool { return spec.AltOnly || inInput }
+
 func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, bool) {
 	if keymap.AltLetterModifiers(ev.Modifiers()) {
 		return HandleMnemonic(spec, focus, ev)
@@ -395,7 +400,7 @@ func handleRune(spec Spec, focus *ID, inInput bool, ev *tcell.EventKey) (Event, 
 	if ev.Rune() == ' ' {
 		return activation(spec, *focus), true
 	}
-	if spec.AltOnly {
+	if needsAlt(spec, inInput) {
 		return Event{}, false
 	}
 	return HandleMnemonic(spec, focus, tcell.NewEventKey(tcell.KeyRune, ev.Rune(), tcell.ModAlt))

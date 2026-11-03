@@ -139,17 +139,21 @@ type ButtonHover struct {
 	Label       string
 	Mnemonic    rune
 	Destructive bool
+	Alt         bool // the mnemonic needs Alt (needsAlt)
 }
 
 // HoveredButton returns the strip button of spec under (x, y), placed as Draw places it.
-func HoveredButton(spec Spec, screenW, screenH, x, y int) ButtonHover {
+func HoveredButton(spec Spec, focus ID, screenW, screenH, x, y int) ButtonHover {
+	focus = Focused(spec, focus)
+	cur, found := find(spec, focus)
+	alt := needsAlt(spec, found && isInput(spec, cur))
 	pi, _, ok := hit(spec, screenW, screenH, x, y)
 	if !ok {
 		return ButtonHover{}
 	}
 	for _, b := range spec.Buttons {
 		if b.ID == pi.ID {
-			return ButtonHover{Active: true, ID: b.ID, Rect: pi.Rect, Label: b.Label, Mnemonic: b.Mnemonic, Destructive: b.Destructive}
+			return ButtonHover{Active: true, ID: b.ID, Rect: pi.Rect, Label: b.Label, Mnemonic: b.Mnemonic, Destructive: b.Destructive, Alt: alt}
 		}
 	}
 	return ButtonHover{}
@@ -161,5 +165,5 @@ func DrawButtonHover(screen tcell.Screen, h ButtonHover, styles theme.Theme) {
 	if !h.Active {
 		return
 	}
-	draw.DrawDialogButton(screen, h.Rect.X, h.Rect.Y, h.Label, h.Mnemonic, true, h.Destructive, false, styles)
+	draw.DrawDialogButton(screen, h.Rect.X, h.Rect.Y, h.Label, h.Mnemonic, true, h.Destructive, false, mnemonicStyles(styles, h.Alt))
 }

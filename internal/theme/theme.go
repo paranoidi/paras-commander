@@ -261,8 +261,11 @@ type Theme struct {
 	DialogText    tcell.Style
 	DialogSurface tcell.Style
 	// DialogTextSelect is the optional background-only highlight for selectable text spans (dialog.text_select).
-	DialogTextSelect               tcell.Style
-	DialogAccent                   tcell.Style
+	DialogTextSelect tcell.Style
+	DialogAccent     tcell.Style
+	// DialogAccentAlt is the shortcut letter that needs Alt right now (optional dialog.accent_alt;
+	// fallback dialog.accent).
+	DialogAccentAlt                tcell.Style
 	DialogSearchIcon               tcell.Style
 	DialogInputActive              tcell.Style
 	DialogInputActivePlaceholder   tcell.Style
@@ -1219,7 +1222,7 @@ var optionalStyleKeys = func() []string {
 		}
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
-		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "panel.empty", "panel.scrollbar.match",
+		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "dialog.accent_alt", "panel.empty", "panel.scrollbar.match",
 		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing",
 		"tooltip.text", "tooltip.info")
 	keys = append(keys, fileIndexStateStyleKeys()...)
@@ -1605,6 +1608,10 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
+	dialogAccentAlt, err := optionalStyle(specs, palette, "dialog.accent_alt", styles["dialog.accent"])
+	if err != nil {
+		return Theme{}, err
+	}
 	panelRowMarkOtherMatch, err := optionalStyle(specs, palette, "panel.row.mark.other_match", tcell.StyleDefault.Foreground(tcell.ColorGray))
 	if err != nil {
 		return Theme{}, err
@@ -1826,6 +1833,7 @@ func parse(data []byte) (Theme, error) {
 		DialogSurface:                  styles["dialog.surface"],
 		DialogTextSelect:               dialogTextSelect,
 		DialogAccent:                   styles["dialog.accent"],
+		DialogAccentAlt:                dialogAccentAlt,
 		DialogSearchIcon:               styles["dialog.search_icon"],
 		DialogInputActive:              styles["dialog.input.active"],
 		DialogInputActivePlaceholder:   styles["dialog.input.active.placeholder"],

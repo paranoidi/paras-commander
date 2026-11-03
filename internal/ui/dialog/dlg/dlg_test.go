@@ -866,3 +866,71 @@ func TestInputTextWidth(t *testing.T) {
 		t.Errorf("unknown input: %d, want 0", got)
 	}
 }
+
+// mnemonicFG draws spec with focus and returns the foreground of the first cell showing r.
+func mnemonicFG(t *testing.T, spec Spec, focus ID, styles theme.Theme, r rune) tcell.Color {
+	t.Helper()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	Draw(screen, 80, 24, spec, focus, styles)
+	screen.Show()
+	for y := 0; y < 24; y++ {
+		for x := 0; x < 80; x++ {
+			if got, st, _ := screen.Get(x, y); got == string(r) {
+				fg, _, _ := st.Decompose()
+				return fg
+			}
+		}
+	}
+	t.Fatalf("%q not drawn", r)
+	return tcell.ColorDefault
+}
+
+func TestMnemonicAccentNeedsAlt(t *testing.T) {
+	styles := theme.Default()
+	styles.DialogAccent = tcell.StyleDefault.Foreground(tcell.ColorGreen)
+	styles.DialogAccentAlt = tcell.StyleDefault.Foreground(tcell.ColorRed)
+	altOnly := inputSpec()
+	altOnly.AltOnly = true
+	for _, c := range []struct {
+		name  string
+		spec  Spec
+		focus ID
+		want  tcell.Color
+	}{
+		{"checkbox focus", inputSpec(), "c0", tcell.ColorGreen},
+		{"input focus", inputSpec(), "find", tcell.ColorRed},
+		{"alt only", altOnly, "c0", tcell.ColorRed},
+	} {
+		for _, r := range []rune{'L', 'O'} { // a checkbox letter and a button letter
+			if got := mnemonicFG(t, c.spec, c.focus, styles, r); got != c.want {
+				t.Errorf("%s: %q fg = %v, want %v", c.name, r, got, c.want)
+			}
+		}
+	}
+	// the hovered button repaint follows the same rule
+	for focus, want := range map[ID]bool{"c0": false, "find": true} {
+		if got := HoveredButton(inputSpec(), focus, 80, 24, 0, 0); got.Alt {
+			t.Errorf("no button under the pointer: %+v", got)
+		}
+		spec := inputSpec()
+		p, _ := Place(80, 24, spec)
+		bx, by := p.Rect.X+p.Rect.Width/2-3, p.ButtonY
+		for x := p.Rect.X; x < p.Rect.X+p.Rect.Width; x++ {
+			if h := HoveredButton(spec, focus, 80, 24, x, by); h.Active {
+				if h.Alt != want {
+					t.Errorf("focus %q: hover Alt = %v, want %v", focus, h.Alt, want)
+				}
+				bx = -1
+				break
+			}
+		}
+		if bx != -1 {
+			t.Errorf("focus %q: no button hit on the strip", focus)
+		}
+	}
+}
