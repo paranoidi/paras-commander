@@ -1,14 +1,4 @@
 == open ==
 title="Build willow" focus=background running=true queued=false lines=40 scroll=0 follow=true paths=0 cursor=0(line -1) selected=0 cancels=0 groupselect=false
 == b ==
-title="Build willow" focus=background running=true queued=false lines=40 scroll=0 follow=true paths=0 cursor=0(line -1) selected=0 cancels=0 groupselect=false
-== c ==
-title="Build willow" focus=background running=true queued=false lines=40 scroll=0 follow=true paths=0 cursor=0(line -1) selected=0 cancels=0 groupselect=false
-== o ==
-title="Build willow" focus=background running=true queued=false lines=40 scroll=0 follow=true paths=0 cursor=0(line -1) selected=0 cancels=0 groupselect=false
-== x ==
-title="Build willow" focus=background running=true queued=false lines=40 scroll=0 follow=true paths=0 cursor=0(line -1) selected=0 cancels=0 groupselect=false
-== y ==
-title="Build willow" focus=background running=true queued=false lines=40 scroll=0 follow=true paths=0 cursor=0(line -1) selected=0 cancels=0 groupselect=false
-== Enter ==
 CLOSED: quit=false cancels=0 message=""

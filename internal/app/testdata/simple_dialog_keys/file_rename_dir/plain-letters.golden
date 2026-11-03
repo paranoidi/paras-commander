@@ -5,8 +5,8 @@ focus=opt0 phase=0 fields=["orchard"@7/0 pending=true dropdown=false/0] focusAft
 == Down ==
 focus=opt1 phase=0 fields=["orchard"@7/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
 == a ==
-focus=opt1 phase=0 fields=["orchard"@7/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
+focus=opt0 phase=0 fields=["orchard"@7/0 pending=true dropdown=false/0] focusAfter=true openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
 == p ==
-focus=opt1 phase=0 fields=["orchard"@7/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
+focus=opt1 phase=0 fields=["orchard"@7/0 pending=true dropdown=false/0] focusAfter=true openOther=true mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
 == x ==
-focus=opt1 phase=0 fields=["orchard"@7/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
+focus=opt1 phase=0 fields=["orchard"@7/0 pending=true dropdown=false/0] focusAfter=true openOther=true mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""

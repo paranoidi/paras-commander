@@ -1,10 +1,10 @@
 == open ==
 focus=item0 checked=[false true false]
 == l ==
-focus=item0 checked=[false true false]
+focus=item0 checked=[true true false]
 == r ==
-focus=item0 checked=[false true false]
+focus=item1 checked=[true false false]
 == v ==
-focus=item0 checked=[false true false]
+focus=item2 checked=[true false true]
 == x ==
-focus=item0 checked=[false true false]
+focus=item2 checked=[true false true]

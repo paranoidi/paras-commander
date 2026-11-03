@@ -3,14 +3,10 @@ focus=f0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is
 == Down ==
 focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
 == r ==
-focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== t ==
-focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== o ==
-focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== c ==
-focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== x ==
-focus=cb0 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== Space ==
 focus=cb0 cmd=""@0/0 pending=false inDirs=true pty=false pool="" err="Command is empty" preview="" invalid=true
+== t ==
+focus=cb1 cmd=""@0/0 pending=false inDirs=true pty=true pool="" err="Command is empty" preview="" invalid=true
+== o ==
+focus=ok cmd=""@0/0 pending=false inDirs=true pty=true pool="" err="Command is empty" preview="" invalid=true
+== c ==
+CLOSED: viewMode=0 message="" dialog=false

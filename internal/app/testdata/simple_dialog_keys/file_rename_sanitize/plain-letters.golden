@@ -1,12 +1,12 @@
 == open ==
 focus=ok phase=1 fields=["lantern orchard_willow.meadow txt"@5/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
 == o ==
-focus=ok phase=1 fields=["lantern orchard_willow.meadow txt"@5/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
+focus=f0 phase=0 fields=["lantern orchard willow meadow txt"@33/0 pending=false dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
 == c ==
-focus=ok phase=1 fields=["lantern orchard_willow.meadow txt"@5/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
+focus=f0 phase=0 fields=["lantern orchard willow meadow txtc"@34/0 pending=false dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
 == . ==
-focus=ok phase=1 fields=["lantern orchard_willow.meadow txt"@5/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
+focus=f0 phase=0 fields=["lantern orchard willow meadow txtc."@35/0 pending=false dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
 == _ ==
-focus=ok phase=1 fields=["lantern orchard_willow.meadow txt"@5/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
+focus=f0 phase=0 fields=["lantern orchard willow meadow txtc._"@36/0 pending=false dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
 == x ==
-focus=ok phase=1 fields=["lantern orchard_willow.meadow txt"@5/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""
+focus=f0 phase=0 fields=["lantern orchard willow meadow txtc._x"@37/0 pending=false dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=true/true slugify=. enc=0 delScroll=0 message=""

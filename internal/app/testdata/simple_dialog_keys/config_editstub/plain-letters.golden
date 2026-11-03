@@ -3,12 +3,8 @@ focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb
 == F9 ==
 edit-stub-confirm focus=0
 == y ==
-edit-stub-confirm focus=0
+focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg="config.toml reloaded"
 == n ==
-edit-stub-confirm focus=0
+focus=bar0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=none format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg="config.toml reloaded"
 == o ==
-edit-stub-confirm focus=0
-== c ==
-edit-stub-confirm focus=0
-== x ==
-edit-stub-confirm focus=0
+CLOSED: quit=false nerd=true zoom=true orientation=side_by_side mouse=false mode=edge bar=none format=brief split=[<<22% <44% *] editor-calls=1 file-exists=true message="Configuration saved"

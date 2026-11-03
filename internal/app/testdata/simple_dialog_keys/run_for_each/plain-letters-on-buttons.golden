@@ -9,6 +9,4 @@ focus=ok cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is
 == o ==
 focus=ok cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
 == c ==
-focus=ok cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== x ==
-focus=ok cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+CLOSED: viewMode=0 message="" dialog=false

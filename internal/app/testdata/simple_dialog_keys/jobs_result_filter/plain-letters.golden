@@ -1,14 +1,12 @@
 == open ==
 focus=item0 pending=All
 == a ==
-focus=item0 pending=All
+focus=item0 pending=None
 == s ==
-focus=item0 pending=All
+focus=item1 pending=Success
 == f ==
-focus=item0 pending=All
+focus=item2 pending=Success + Failed
 == k ==
-focus=item0 pending=All
+focus=item3 pending=All
 == o ==
-focus=item0 pending=All
-== c ==
-focus=item0 pending=All
+CLOSED: shown=All view=true

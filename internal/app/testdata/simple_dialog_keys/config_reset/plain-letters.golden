@@ -3,12 +3,8 @@ focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb
 == F8 ==
 reset-confirm focus=0
 == y ==
-reset-confirm focus=0
+focus=nerdfont nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg="Configuration reset to defaults"
 == n ==
-reset-confirm focus=0
+focus=bar0 nerd=true zoom=true stacked=false mouse=false mode=edge bar=none format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg="Configuration reset to defaults"
 == o ==
-reset-confirm focus=0
-== c ==
-reset-confirm focus=0
-== x ==
-reset-confirm focus=0
+CLOSED: quit=false nerd=true zoom=true orientation=side_by_side mouse=false mode=edge bar=none format=brief split=[<<22% <44% *] editor-calls=0 file-exists=true message="Configuration saved"

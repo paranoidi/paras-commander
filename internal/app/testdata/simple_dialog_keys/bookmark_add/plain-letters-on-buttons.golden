@@ -3,10 +3,4 @@ focus=f0 fields=["orchard"@7/0 pending=true dropdown=false/0] message="/srv/harb
 == Down ==
 focus=ok fields=["orchard"@7/0 pending=true dropdown=false/0] message="/srv/harbor/orchard"
 == o ==
-focus=ok fields=["orchard"@7/0 pending=true dropdown=false/0] message="/srv/harbor/orchard"
-== c ==
-focus=ok fields=["orchard"@7/0 pending=true dropdown=false/0] message="/srv/harbor/orchard"
-== a ==
-focus=ok fields=["orchard"@7/0 pending=true dropdown=false/0] message="/srv/harbor/orchard"
-== x ==
-focus=ok fields=["orchard"@7/0 pending=true dropdown=false/0] message="/srv/harbor/orchard"
+CLOSED: message="Bookmark added: orchard →" urgency=0 marks="orchard : /srv/harbor/orchard\n"

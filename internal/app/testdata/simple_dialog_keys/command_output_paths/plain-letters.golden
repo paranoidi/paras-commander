@@ -1,12 +1,4 @@
 == open ==
 title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=0(line 2) selected=0 cancels=0 groupselect=false
 == o ==
-title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=0(line 2) selected=0 cancels=0 groupselect=false
-== c ==
-title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=0(line 2) selected=0 cancels=0 groupselect=false
-== b ==
-title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=0(line 2) selected=0 cancels=0 groupselect=false
-== x ==
-title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=0(line 2) selected=0 cancels=0 groupselect=false
-== Down ==
-title="Build willow" focus=ok running=false queued=false lines=30 scroll=0 follow=false paths=5 cursor=2(line 3) selected=0 cancels=0 groupselect=false
+CLOSED: quit=false cancels=0 message=""

@@ -3,4 +3,4 @@ focus=stay
 == Right ==
 focus=quit
 == s ==
-focus=quit
+CLOSED: quit=false

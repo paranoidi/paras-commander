@@ -5,10 +5,4 @@ focus=location selected=0 scroll=0 query="" qcursor=0 ranked=20 location="sftp:/
 == Tab ==
 focus=ok selected=0 scroll=0 query="" qcursor=0 ranked=20 location="sftp://" lcursor=7 pending=true
 == o ==
-focus=ok selected=0 scroll=0 query="" qcursor=0 ranked=20 location="sftp://" lcursor=7 pending=true
-== c ==
-focus=ok selected=0 scroll=0 query="" qcursor=0 ranked=20 location="sftp://" lcursor=7 pending=true
-== y ==
-focus=ok selected=0 scroll=0 query="" qcursor=0 ranked=20 location="sftp://" lcursor=7 pending=true
-== n ==
-focus=ok selected=0 scroll=0 query="" qcursor=0 ranked=20 location="sftp://" lcursor=7 pending=true
+CLOSED: quit=false message="Connecting to sftp://user0@amber.example.net/~..."

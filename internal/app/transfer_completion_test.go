@@ -71,25 +71,25 @@ func TestTransferDialogCopyPreserveAltAndSpaceShortcuts(t *testing.T) {
 		t.Fatal("Alt+T should toggle preserve timestamps off")
 	}
 
-	// Mnemonics need Alt: a plain letter on the focused row does nothing; Space toggles.
+	// Off a text input a plain letter fires its mnemonic like Alt+letter; Space toggles too.
 	d.Focus = dialog.TransferPerm
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
-	if d.PreservePermissions {
-		t.Fatal("plain r on focused permissions row should not toggle")
+	if !d.PreservePermissions {
+		t.Fatal("plain r on focused permissions row should toggle on")
 	}
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
-	if !d.PreservePermissions {
-		t.Fatal("Space on focused permissions row should toggle on")
+	if d.PreservePermissions {
+		t.Fatal("Space on focused permissions row should toggle off")
 	}
 
 	d.Focus = dialog.TransferTimes
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
-	if d.PreserveTimestamps {
-		t.Fatal("plain t on focused timestamps row should not toggle")
+	if !d.PreserveTimestamps {
+		t.Fatal("plain t on focused timestamps row should toggle on")
 	}
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
-	if !d.PreserveTimestamps {
-		t.Fatal("Space on focused timestamps row should toggle on")
+	if d.PreserveTimestamps {
+		t.Fatal("Space on focused timestamps row should toggle off")
 	}
 }
 

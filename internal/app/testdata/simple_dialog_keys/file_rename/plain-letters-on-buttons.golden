@@ -5,10 +5,4 @@ focus=opt0 phase=0 fields=["lantern.txt"@11/0 pending=true dropdown=false/0] foc
 == Down ==
 focus=ok phase=0 fields=["lantern.txt"@11/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
 == o ==
-focus=ok phase=0 fields=["lantern.txt"@11/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
-== c ==
-focus=ok phase=0 fields=["lantern.txt"@11/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
-== a ==
-focus=ok phase=0 fields=["lantern.txt"@11/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
-== x ==
-focus=ok phase=0 fields=["lantern.txt"@11/0 pending=true dropdown=false/0] focusAfter=false openOther=false mkdirAction=0 sanitize=false/false slugify=. enc=0 delScroll=0 message=""
+CLOSED: message="rename: new name is the same as the current name" jobs=[] files=anchor.txt,lantern.txt,meadow,orchard,willow.txt

@@ -1,10 +1,4 @@
 == open ==
 focus=stash
 == d ==
-focus=stash
-== s ==
-focus=stash
-== c ==
-focus=stash
-== x ==
-focus=stash
+CLOSED: compare=true live=0 stash=0 message="1 selection(s) dropped"

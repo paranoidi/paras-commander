@@ -3,8 +3,8 @@ focus=dest dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false r
 == Down ==
 focus=recursive dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=false selected=0
 == r ==
-focus=recursive dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=false selected=0
-== e ==
-focus=recursive dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=false selected=0
-== Space ==
 focus=recursive dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=true removeEmpty=true dropdown=false selected=0
+== e ==
+focus=remove-empty dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=true removeEmpty=false dropdown=false selected=0
+== Space ==
+focus=remove-empty dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=true removeEmpty=true dropdown=false selected=0

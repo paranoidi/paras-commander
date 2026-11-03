@@ -53,26 +53,26 @@ focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace
 == l ==
 focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == a ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=apply phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == n ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=apply phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == t ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=o1 phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == e ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=r2 phase=0 mode=2 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""
 == r ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=r1 phase=0 mode=1 fields=[Pattern=""@0/0 pending=false invalid=false; Replacement="harbor"@6/0 pending=false invalid=false] case=true trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == n ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=r1 phase=0 mode=1 fields=[Pattern=""@0/0 pending=false invalid=false; Replacement="harbor"@6/0 pending=false invalid=false] case=true trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == Down ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=o1 phase=0 mode=1 fields=[Pattern=""@0/0 pending=false invalid=false; Replacement="harbor"@6/0 pending=false invalid=false] case=true trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == Right ==
-focus=apply phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=o2 phase=0 mode=1 fields=[Pattern=""@0/0 pending=false invalid=false; Replacement="harbor"@6/0 pending=false invalid=false] case=true trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == Enter ==
-focus=apply phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=o2 phase=0 mode=1 fields=[Pattern=""@0/0 pending=false invalid=false; Replacement="harbor"@6/0 pending=false invalid=false] case=false trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == F3 ==
-focus=list phase=3 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint="" picker[items=1 ranked=[0] query=""@0 sel=0 scroll=0]
+focus=list phase=3 mode=1 fields=[Pattern=""@0/0 pending=false invalid=false; Replacement="harbor"@6/0 pending=false invalid=false] case=false trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint="" picker[items=1 ranked=[0] query=""@0 sel=0 scroll=0]
 == Ctrl+End ==
-focus=list phase=3 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint="" picker[items=1 ranked=[0] query=""@0 sel=0 scroll=0]
+focus=list phase=3 mode=1 fields=[Pattern=""@0/0 pending=false invalid=false; Replacement="harbor"@6/0 pending=false invalid=false] case=false trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint="" picker[items=1 ranked=[0] query=""@0 sel=0 scroll=0]
 == Ctrl+Home ==
-focus=list phase=3 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint="" picker[items=1 ranked=[0] query=""@0 sel=0 scroll=0]
+focus=list phase=3 mode=1 fields=[Pattern=""@0/0 pending=false invalid=false; Replacement="harbor"@6/0 pending=false invalid=false] case=false trim=false ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint="" picker[items=1 ranked=[0] query=""@0 sel=0 scroll=0]

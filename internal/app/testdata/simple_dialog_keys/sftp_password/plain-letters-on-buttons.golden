@@ -3,10 +3,4 @@ focus=f0 fields=[""@0/0 pending=false dropdown=false/0] message=""
 == Down ==
 focus=ok fields=[""@0/0 pending=false dropdown=false/0] message=""
 == o ==
-focus=ok fields=[""@0/0 pending=false dropdown=false/0] message=""
-== c ==
-focus=ok fields=[""@0/0 pending=false dropdown=false/0] message=""
-== a ==
-focus=ok fields=[""@0/0 pending=false dropdown=false/0] message=""
-== x ==
-focus=ok fields=[""@0/0 pending=false dropdown=false/0] message=""
+CLOSED: password="" canceled=false

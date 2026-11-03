@@ -5,16 +5,4 @@ phase=0 focus=in1 value="0" cursor=1 preview="500" pcursor=3 status=""
 == Down ==
 phase=0 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
 == o ==
-phase=0 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
-== c ==
-phase=0 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
-== l ==
-phase=0 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
-== O ==
-phase=0 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
-== C ==
-phase=0 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
-== L ==
-phase=0 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
-== x ==
-phase=0 focus=ok value="0" cursor=1 preview="500" pcursor=3 status=""
+CLOSED: debounce=0 preview=500 message="Debounce set to 0 ms (media previews 500 ms)"

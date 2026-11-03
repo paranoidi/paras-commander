@@ -1,12 +1,10 @@
 == open ==
 focus=item0 pending=31
 == a ==
-focus=item0 pending=31
+focus=item0 pending=0
 == e ==
-focus=item0 pending=31
+focus=item1 pending=1
 == x ==
-focus=item0 pending=31
+focus=item1 pending=1
 == o ==
-focus=item0 pending=31
-== c ==
-focus=item0 pending=31
+CLOSED: view filter=1 message=""

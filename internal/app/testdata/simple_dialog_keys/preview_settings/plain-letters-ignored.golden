@@ -1,30 +1,30 @@
 == open ==
 focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
 == s ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=sixel-yes sixel=yes kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
 == k ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=kitty-yes sixel=yes kitty=yes placeholder=auto protocol=auto metadata=essentials video=true
 == p ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=placeholder-yes sixel=yes kitty=yes placeholder=yes protocol=auto metadata=essentials video=true
 == a ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=protocol-auto sixel=yes kitty=yes placeholder=yes protocol=auto metadata=essentials video=true
 == i ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=protocol-sixel sixel=yes kitty=yes placeholder=yes protocol=sixel metadata=essentials video=true
 == t ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=protocol-kitty sixel=yes kitty=yes placeholder=yes protocol=kitty metadata=essentials video=true
 == z ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=protocol-ueberzug sixel=yes kitty=yes placeholder=yes protocol=ueberzug metadata=essentials video=true
 == f ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=metadata-off sixel=yes kitty=yes placeholder=yes protocol=ueberzug metadata=off video=true
 == b ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=metadata-basic sixel=yes kitty=yes placeholder=yes protocol=ueberzug metadata=basic video=true
 == e ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=metadata-essentials sixel=yes kitty=yes placeholder=yes protocol=ueberzug metadata=essentials video=true
 == u ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=metadata-full sixel=yes kitty=yes placeholder=yes protocol=ueberzug metadata=full video=true
 == v ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=video sixel=yes kitty=yes placeholder=yes protocol=ueberzug metadata=full video=false
 == x ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=video sixel=yes kitty=yes placeholder=yes protocol=ueberzug metadata=full video=false
 == q ==
-focus=sixel-auto sixel=auto kitty=auto placeholder=auto protocol=auto metadata=essentials video=true
+focus=video sixel=yes kitty=yes placeholder=yes protocol=ueberzug metadata=full video=false

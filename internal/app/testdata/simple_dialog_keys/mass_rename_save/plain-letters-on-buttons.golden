@@ -37,6 +37,6 @@ focus=ok phase=1 mode=0 fields=[Name=""@0/0 pending=false invalid=false; Descrip
 == o ==
 focus=ok phase=1 mode=0 fields=[Name=""@0/0 pending=false invalid=false; Description=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=2 okEnabled=true external=0 hint=""
 == c ==
-focus=ok phase=1 mode=0 fields=[Name=""@0/0 pending=false invalid=false; Description=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=2 okEnabled=true external=0 hint=""
+focus=find phase=0 mode=0 fields=[Find="lantern"@7/0 pending=false invalid=false; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=2 okEnabled=true external=0 hint=""
 == x ==
-focus=ok phase=1 mode=0 fields=[Name=""@0/0 pending=false invalid=false; Description=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=2 okEnabled=true external=0 hint=""
+focus=find phase=0 mode=0 fields=[Find="lanternx"@8/0 pending=false invalid=true; Replace="harbor"@6/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=false external=0 hint=""

@@ -1,10 +1,10 @@
 == open ==
 focus=radio0 format=Name and size only
 == m ==
-focus=radio0 format=Name and size only
+focus=radio0 format=Modified column
 == p ==
-focus=radio0 format=Name and size only
+focus=radio1 format=Permissions column
 == b ==
-focus=radio0 format=Name and size only
+focus=radio2 format=Name and size only
 == x ==
-focus=radio0 format=Name and size only
+focus=radio2 format=Name and size only

@@ -7,8 +7,6 @@ focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace
 == o ==
 focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == a ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+focus=apply phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
 == c ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
-== x ==
-focus=ok phase=0 mode=0 fields=[Find=""@0/0 pending=false invalid=false; Replace=""@0/0 pending=false invalid=false] case=true trim=true ext=true modified=false word=false punct=false preview=7 scroll=0 matches=0 okEnabled=true external=0 hint=""
+CLOSED: message="Nothing to rename" files=anchor.txt,lantern-meadow.txt,lantern-willow.txt,marble-otter.txt,orchard-ribbon.txt,timber,velvet.txt patterns=""

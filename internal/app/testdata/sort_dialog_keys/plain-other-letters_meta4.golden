@@ -3,14 +3,14 @@ dialog: focus="mode:Name" mode=Name meta="" reverse=false dirsFirst=true diskUsa
 == n ==
 dialog: focus="mode:Name" mode=Name meta="" reverse=false dirsFirst=true diskUsage=true
 == s ==
-dialog: focus="mode:Name" mode=Name meta="" reverse=false dirsFirst=true diskUsage=true
+dialog: focus="mode:Size" mode=Size meta="" reverse=false dirsFirst=true diskUsage=true
 == x ==
-dialog: focus="mode:Name" mode=Name meta="" reverse=false dirsFirst=true diskUsage=true
+dialog: focus="mode:Size" mode=Size meta="" reverse=false dirsFirst=true diskUsage=true
 == u ==
-dialog: focus="mode:Name" mode=Name meta="" reverse=false dirsFirst=true diskUsage=true
+dialog: focus="opt:disk-usage" mode=Size meta="" reverse=false dirsFirst=true diskUsage=false
 == r ==
-dialog: focus="mode:Name" mode=Name meta="" reverse=false dirsFirst=true diskUsage=true
+dialog: focus="opt:reverse" mode=Size meta="" reverse=true dirsFirst=true diskUsage=false
 == d ==
-dialog: focus="mode:Name" mode=Name meta="" reverse=false dirsFirst=true diskUsage=true
+dialog: focus="opt:dirs-first" mode=Size meta="" reverse=true dirsFirst=false diskUsage=false
 == q ==
-dialog: focus="mode:Name" mode=Name meta="" reverse=false dirsFirst=true diskUsage=true
+dialog: focus="opt:dirs-first" mode=Size meta="" reverse=true dirsFirst=false diskUsage=false

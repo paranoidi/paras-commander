@@ -6,5 +6,5 @@ dialog: focus="opt:disk-usage" mode=Name meta="" reverse=false dirsFirst=true di
 dialog: focus="opt:disk-usage" mode=Name meta="" reverse=false dirsFirst=true diskUsage=false
 == O ==
 CLOSED: applied
-dialog: focus="opt:disk-usage" mode=Name meta="" reverse=false dirsFirst=true diskUsage=false
+dialog: focus="ok" mode=Name meta="" reverse=false dirsFirst=true diskUsage=false
 panel sort: mode=Name meta="" reverse=false dirsFirst=true diskUsage=false

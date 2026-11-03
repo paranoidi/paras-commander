@@ -23,6 +23,6 @@ focus=ok nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb forma
 == y ==
 focus=ok nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == z ==
-focus=ok nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=zoom nerd=true zoom=false stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
 == Backspace ==
-focus=ok nerd=true zoom=true stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""
+focus=zoom nerd=true zoom=false stacked=false mouse=false mode=edge bar=thumb format=2 split=[<<22%|<44%|*] cursors=[5|4|1] msg=""

@@ -5,10 +5,4 @@ focus=recursive dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=fa
 == Tab ==
 focus=ok dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=false selected=0
 == o ==
-focus=ok dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=false selected=0
-== c ==
-focus=ok dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=false selected=0
-== r ==
-focus=ok dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=false selected=0
-== e ==
-focus=ok dest="/srv/thicket-lantern/" cursor=21 pending=true recursive=false removeEmpty=true dropdown=false selected=0
+CLOSED: message="Flatten queued"

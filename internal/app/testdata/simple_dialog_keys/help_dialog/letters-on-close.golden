@@ -3,8 +3,4 @@ focus=list selected=0 scroll=0 query="" qcursor=0 qscroll=0 ranked=30 title="Hel
 == Tab ==
 focus=close selected=0 scroll=0 query="" qcursor=0 qscroll=0 ranked=30 title="Help"
 == c ==
-focus=close selected=0 scroll=0 query="" qcursor=0 qscroll=0 ranked=30 title="Help"
-== o ==
-focus=close selected=0 scroll=0 query="" qcursor=0 qscroll=0 ranked=30 title="Help"
-== x ==
-focus=close selected=0 scroll=0 query="" qcursor=0 qscroll=0 ranked=30 title="Help"
+CLOSED: quit=false active=0 hidden=false message=""

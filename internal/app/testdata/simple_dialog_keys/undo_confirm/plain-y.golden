@@ -1,4 +1,4 @@
 == open ==
 focus=no
 == y ==
-focus=no
+CLOSED: message="Could not undo job"

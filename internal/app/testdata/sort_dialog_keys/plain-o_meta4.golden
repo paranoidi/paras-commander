@@ -10,5 +10,5 @@ dialog: focus="opt:disk-usage" mode=Extension meta="" reverse=false dirsFirst=tr
 dialog: focus="opt:disk-usage" mode=Extension meta="" reverse=false dirsFirst=true diskUsage=false
 == o ==
 CLOSED: applied
-dialog: focus="opt:disk-usage" mode=Extension meta="" reverse=false dirsFirst=true diskUsage=false
+dialog: focus="ok" mode=Extension meta="" reverse=false dirsFirst=true diskUsage=false
 panel sort: mode=Extension meta="" reverse=false dirsFirst=true diskUsage=false

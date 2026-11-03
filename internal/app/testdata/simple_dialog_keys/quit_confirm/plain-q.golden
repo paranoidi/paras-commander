@@ -1,4 +1,4 @@
 == open ==
 focus=stay
 == q ==
-focus=stay
+CLOSED: quit=true

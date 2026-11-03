@@ -3,14 +3,4 @@ focus=input password="" cursor=0
 == Down ==
 focus=elevate password="" cursor=0
 == e ==
-focus=elevate password="" cursor=0
-== s ==
-focus=elevate password="" cursor=0
-== c ==
-focus=elevate password="" cursor=0
-== o ==
-focus=elevate password="" cursor=0
-== y ==
-focus=elevate password="" cursor=0
-== n ==
-focus=elevate password="" cursor=0
+CLOSED: decision=0 password=""

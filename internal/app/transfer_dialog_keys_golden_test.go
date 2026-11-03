@@ -226,7 +226,7 @@ func TestTransferMoveKeyScripts(t *testing.T) {
 		{"complete-open-tab", "~ / p r o j e c t s / Tab"},
 		{"up-walk", "Down Down Down Up Up Up Up"},
 		{"mnemonics-in-dest", "a Alt+r Alt+t Alt+d Alt+i b"},
-		{"plain-letters-on-buttons", "Down o c p x"},
+		{"plain-letters-on-buttons", "Down x c"},
 		{"dest-shortcut-active", "a Shift+Left"},
 		{"dest-shortcut-inactive", "a Shift+Right"},
 		{"enter-dest-queues", "@tmpdest Enter"},

@@ -11,10 +11,8 @@ focus=pool1 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command
 == b ==
 focus=pool1 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
 == r ==
-focus=pool1 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+focus=cb0 cmd=""@0/0 pending=false inDirs=true pty=false pool="" err="Command is empty" preview="" invalid=true
 == o ==
-focus=pool1 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+focus=ok cmd=""@0/0 pending=false inDirs=true pty=false pool="" err="Command is empty" preview="" invalid=true
 == c ==
-focus=pool1 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
-== x ==
-focus=pool1 cmd=""@0/0 pending=false inDirs=false pty=false pool="" err="Command is empty" preview="" invalid=true
+CLOSED: viewMode=0 message="" dialog=false

@@ -3,10 +3,4 @@ focus=f0 fields=["~/projects/meadow/"@18/0 pending=true dropdown=false/0] messag
 == Down ==
 focus=ok fields=["~/projects/meadow/"@18/0 pending=true dropdown=false/0] message="1 non-archive item(s) will be skipped."
 == o ==
-focus=ok fields=["~/projects/meadow/"@18/0 pending=true dropdown=false/0] message="1 non-archive item(s) will be skipped."
-== c ==
-focus=ok fields=["~/projects/meadow/"@18/0 pending=true dropdown=false/0] message="1 non-archive item(s) will be skipped."
-== a ==
-focus=ok fields=["~/projects/meadow/"@18/0 pending=true dropdown=false/0] message="1 non-archive item(s) will be skipped."
-== x ==
-focus=ok fields=["~/projects/meadow/"@18/0 pending=true dropdown=false/0] message="1 non-archive item(s) will be skipped."
+CLOSED: jobs=1 messageDialog=false title="" text="" message="Extract queued (2 archives)"

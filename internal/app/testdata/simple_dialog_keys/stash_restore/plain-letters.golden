@@ -1,14 +1,4 @@
 == open ==
 focus=replace
 == r ==
-focus=replace
-== m ==
-focus=replace
-== d ==
-focus=replace
-== a ==
-focus=replace
-== c ==
-focus=replace
-== x ==
-focus=replace
+CLOSED: live=1 stash=0 message="1 selection(s) restored (replaced)"
