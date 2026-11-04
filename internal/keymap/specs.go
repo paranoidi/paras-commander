@@ -1427,6 +1427,16 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:         []string{"fileindex", "reveal", "real", "location", "disk"},
 			FileIndexMenuKey: "r",
 		},
+		{
+			ID:               ActionFileIndexCopies,
+			Views:            HelpBrowser,
+			Title:            "Other copies",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-O"},
+			PreferredKey:     "M-O",
+			Keywords:         []string{"fileindex", "index", "copies", "duplicate", "same", "content"},
+			FileIndexMenuKey: "o",
+		},
 
 		// ── File operations ──
 		{

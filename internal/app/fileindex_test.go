@@ -28,6 +28,7 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexBrowseWith,
 	keymap.ActionFileIndexBrowse,
 	keymap.ActionFileIndexReveal,
+	keymap.ActionFileIndexCopies,
 	keymap.ActionFileIndexTagAdd,
 	keymap.ActionFileIndexTagRemove,
 	keymap.ActionFileIndexScan,
@@ -894,5 +895,92 @@ func TestFileIndexMenuSetsLegendOtherMenusDoNot(t *testing.T) {
 	a.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelGitFilterMenu)
 	if !a.leaderMenuOpen(ui.LeaderMenuGitFilter) || a.model.LeaderMenu.Legend != nil {
 		t.Fatalf("git filter menu = %+v, want no legend", a.model.LeaderMenu)
+	}
+}
+
+// copiesApp is an app whose cwd holds harbor.txt and thistle.txt, with meadow/harbor.txt a copy
+// of the first, all fully hashed in the index.
+func copiesApp(t *testing.T) (*App, tcell.SimulationScreen, string) {
+	t.Helper()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var batch []db.ScannedFile
+	for name, letter := range map[string]string{"harbor.txt": "a", "thistle.txt": "b", "meadow/harbor.txt": "a"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(name), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		sum := strings.Repeat(letter, 32)
+		batch = append(batch, db.ScannedFile{
+			Dir: filepath.Join(dir, filepath.Dir(name)), Name: filepath.Base(name), Size: int64(len(name)), Mtime: time.Now(), MD5: sum, SHA256: sum + sum,
+		})
+	}
+	dbPath := filepath.Join(t.TempDir(), "index.sqlite")
+	d, err := db.Open(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Init(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.CommitScanBatch(batch); err != nil {
+		t.Fatal(err)
+	}
+	_ = d.Close()
+	screen := newScreen(t, 100, 30)
+	opts := testOptions(dir)
+	opts.Config.FileIndex.Database = dbPath
+	a := newTestApp(t, screen, opts)
+	t.Cleanup(func() { _ = a.fileIndex.Close() })
+	return a, screen, dir
+}
+
+func TestFileIndexCopiesJumpsToChosenCopy(t *testing.T) {
+	for _, onIndex := range []bool{false, true} {
+		a, screen, dir := copiesApp(t)
+		wantDir := filepath.Join(dir, "meadow")
+		if onIndex {
+			a.dispatch(keymap.ActionFileIndexBrowse)
+			drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+				return a.activePanel().PathString() == "fileindex://"+dir && !a.activePanel().ListingPending
+			})
+			wantDir = "fileindex://" + wantDir
+		}
+		cursorTo(t, a, "harbor.txt")
+		a.dispatch(keymap.ActionFileIndexCopies)
+		drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.PathPicker.Open })
+		st := a.model.PathPicker
+		if st.Purpose != dialog.PathPickerPurposeNavigateFile || st.IndexPanel != onIndex || st.Title != "Other copies of harbor.txt (1)" ||
+			len(st.Items) != 1 || st.Items[0].Path != filepath.Join(dir, "meadow", "harbor.txt") {
+			t.Fatalf("onIndex=%v picker = %+v", onIndex, st)
+		}
+		a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+		drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+			p := a.activePanel()
+			e, ok := p.CurrentEntry()
+			return p.PathString() == wantDir && !p.ListingPending && ok && e.Name == "harbor.txt"
+		})
+		if a.model.PathPicker.Open {
+			t.Fatalf("onIndex=%v: picker still open after choosing", onIndex)
+		}
+	}
+}
+
+func TestFileIndexCopiesMessages(t *testing.T) {
+	a, screen, _ := copiesApp(t)
+	cursorTo(t, a, "thistle.txt")
+	a.dispatch(keymap.ActionFileIndexCopies)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message == "No other copies of thistle.txt" })
+	if a.model.PathPicker.Open {
+		t.Fatal("no copies must not open the picker")
+	}
+	cursorTo(t, a, "meadow")
+	a.dispatch(keymap.ActionFileIndexCopies)
+	if a.model.Message != "Other copies works on files" {
+		t.Fatalf("message = %q", a.model.Message)
 	}
 }

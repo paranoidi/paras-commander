@@ -1,9 +1,12 @@
 package fileindex
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
 	"io/fs"
 	"maps"
@@ -979,4 +982,82 @@ func TestUnhashedFiles(t *testing.T) {
 	if got := status(); got != StatusIndexed {
 		t.Fatalf("status after hashing = %q, want indexed", got)
 	}
+}
+
+// jpegWithExif is a small JPEG with an APP1 segment holding exif spliced in after SOI.
+func jpegWithExif(t *testing.T, exif string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, image.NewGray(image.Rect(0, 0, 8, 8)), nil); err != nil {
+		t.Fatal(err)
+	}
+	b := buf.Bytes()
+	n := len(exif) + 2
+	seg := append([]byte{0xFF, 0xE1, byte(n >> 8), byte(n)}, exif...)
+	return append(append(append([]byte{}, b[:2]...), seg...), b[2:]...)
+}
+
+func TestOtherCopies(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string][]byte{
+		"harbor/meadow.txt":   []byte("clover and thistle"),
+		"orchard/clover.txt":  []byte("clover and thistle"),
+		"orchard/bramble.txt": []byte("a lone patch"),
+		"harbor/lantern.jpg":  jpegWithExif(t, "camera A"),
+		"orchard/pebble.jpg":  jpegWithExif(t, "camera B, longer"),
+	}
+	for name, body := range files {
+		p := filepath.Join(root, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, body, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	at := func(name string) string { return filepath.Join(root, name) }
+	x := testIndex(t, initIndex(t))
+	for _, dir := range []string{"harbor", "orchard"} {
+		if err := x.ScanTask([]string{at(dir)}).Run(context.Background(), &recReporter{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	d, err := x.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A file the index knows without a full hash, as after a fast scan or an unfinished scan.
+	if _, err := d.Exec("UPDATE instance SET file_id = NULL WHERE filename = ?", "bramble.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	check := func(name string, wantState CopiesState, want ...string) {
+		t.Helper()
+		got, state, err := x.OtherCopies(at(name))
+		if err != nil || state != wantState {
+			t.Fatalf("OtherCopies(%s) = %v %v %v, want state %v", name, got, state, err, wantState)
+		}
+		for i := range want {
+			want[i] = at(want[i])
+		}
+		if !slices.Equal(got, want) {
+			t.Fatalf("OtherCopies(%s) = %v, want %v", name, got, want)
+		}
+	}
+	check("harbor/meadow.txt", CopiesHashed, "orchard/clover.txt")
+	check("orchard/clover.txt", CopiesHashed, "harbor/meadow.txt")
+	check("harbor/lantern.jpg", CopiesHashed, "orchard/pebble.jpg") // differs only in metadata
+	check("orchard/bramble.txt", CopiesNotHashed)
+	check("orchard/willow.txt", CopiesNotIndexed)
+	// Unique content: indexed and hashed, no other copy.
+	if err := os.WriteFile(at("harbor/reed.txt"), []byte("only one of me"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := x.ScanTask([]string{at("harbor")}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	check("harbor/reed.txt", CopiesHashed)
 }

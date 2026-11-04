@@ -57,6 +57,9 @@ type Host interface {
 	ToggleFileIndexMenu()
 	// ReloadPanel re-reads the panel's listing (the overlay is applied or dropped by it).
 	ReloadPanel(panelID int)
+	// OpenFileCopiesPicker opens the path picker over the host paths of files; confirming one
+	// shows it in the active panel (a fileindex:// path when indexPanel).
+	OpenFileCopiesPicker(title string, files []string, indexPanel bool)
 }
 
 // Deps wires the fileindex handler at app construction.
@@ -151,6 +154,8 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.withIndex(h.Browse)
 	case keymap.ActionFileIndexReveal:
 		h.Reveal()
+	case keymap.ActionFileIndexCopies:
+		h.Copies()
 	default:
 		return false
 	}
@@ -171,6 +176,8 @@ func (h *Handler) HandleWake(data any) bool {
 		h.HandleNavigate(p)
 	case FindPayload:
 		h.HandleFind(p)
+	case CopiesPayload:
+		h.HandleCopies(p)
 	default:
 		return false
 	}

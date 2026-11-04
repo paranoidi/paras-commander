@@ -231,6 +231,7 @@ const (
 	ActionFileIndexBrowseWith = "fileindex.browse-with"
 	ActionFileIndexFind       = "fileindex.find"
 	ActionFileIndexReveal     = "fileindex.reveal"
+	ActionFileIndexCopies     = "fileindex.other-copies"
 
 	// Jobs dialog
 	ActionJobsOpen          = "jobs.open"
@@ -570,6 +571,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileIndexBrowseWith: {},
 	ActionFileIndexFind:       {},
 	ActionFileIndexReveal:     {},
+	ActionFileIndexCopies:     {},
 
 	ActionMenuFileChattr: {},
 

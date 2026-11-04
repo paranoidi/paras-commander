@@ -74,7 +74,7 @@ func (h *Handler) SyncPathPickerRanks() {
 // resyncPathPickerCompletion recomputes filesystem completion for the path picker's query.
 func (h *Handler) resyncPathPickerCompletion() {
 	st := &h.model.PathPicker
-	if !st.Open {
+	if !st.Open || st.Purpose == dialog.PathPickerPurposeNavigateFile { // the query only filters the listed files
 		return
 	}
 	h.syncPathCompletion(&st.Completion, st.Query, st.QueryCursor, false)
@@ -160,9 +160,56 @@ func (h *Handler) activatePathPickerSelection() {
 		f.Prefill = ""
 		f.PrefillPending = false
 		h.ClosePathPicker()
+	case dialog.PathPickerPurposeNavigateFile:
+		if h.showFileInPanel(path, st.IndexPanel) {
+			h.ClosePathPicker()
+		}
 	default:
 		h.ClosePathPicker()
 	}
+}
+
+// showFileInPanel navigates the active panel to the directory of the host path file with the
+// file highlighted, as a fileindex:// path when indexPanel, else a local one (falling back to
+// the index's view when the real directory is gone). Errors are shown; it reports success.
+func (h *Handler) showFileInPanel(file string, indexPanel bool) bool {
+	dir, base := filepath.Dir(file), filepath.Base(file)
+	loc, err := pathloc.File(dir)
+	if indexPanel {
+		loc, err = pathloc.FileIndex(dir)
+	}
+	if err == nil {
+		err = h.host.NavigatePanelToPath(h.model.ActivePanel, loc.String(), base)
+	}
+	if err != nil && !indexPanel {
+		// ponytail: the real directory is gone, so show it as the index remembers it
+		if loc, ferr := pathloc.FileIndex(dir); ferr == nil {
+			err = h.host.NavigatePanelToPath(h.model.ActivePanel, loc.String(), base)
+		}
+	}
+	if err != nil {
+		h.host.SetErrorMessage("Other copies", err)
+		return false
+	}
+	h.host.ActivePanel().EnsureCursorVisible(h.host.ActiveViewportRows())
+	return true
+}
+
+// OpenFileCopiesPicker opens the path picker over the host paths of files (fileindex.other-copies);
+// confirming one shows it in the active panel, as a fileindex:// path when indexPanel.
+func (h *Handler) OpenFileCopiesPicker(title string, files []string, indexPanel bool) {
+	if h.host.InQuickFilterUI() {
+		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
+	}
+	items := make([]dialog.PathPickerItem, len(files))
+	for i, f := range files {
+		items[i] = dialog.PathPickerItem{Path: f}
+	}
+	h.pathPickerMissingGen++
+	h.model.PathPicker = dialog.PathPickerState{
+		Open: true, Title: title, Purpose: dialog.PathPickerPurposeNavigateFile, IndexPanel: indexPanel, Items: items,
+	}
+	h.SyncPathPickerRanks()
 }
 
 // HandlePathPickerKey routes a key event for the open fuzzy path/history picker.
@@ -444,7 +491,7 @@ func (h *Handler) OpenPathPickerForFileField(fieldIndex int, kind pathPickerList
 // existing path" check for the open path picker. The timer goroutine only computes an
 // immutable result; ApplyPathPickerValidatePayload mutates ui.Model on the event loop.
 func (h *Handler) ArmPathPickerValidateTimer() {
-	if !h.model.PathPicker.Open {
+	if !h.model.PathPicker.Open || h.model.PathPicker.Purpose == dialog.PathPickerPurposeNavigateFile {
 		return
 	}
 	st := &h.model.PathPicker

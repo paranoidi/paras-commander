@@ -38,6 +38,10 @@ func (h fileindexHost) ReloadPanel(panelID int) {
 	}
 }
 
+func (h fileindexHost) OpenFileCopiesPicker(title string, files []string, indexPanel bool) {
+	h.app.dialogCtrl.OpenFileCopiesPicker(title, files, indexPanel)
+}
+
 func (h fileindexHost) RefreshMetaColumns() {
 	h.app.reloadIndexPanels() // a tag edit changes the tagged state
 

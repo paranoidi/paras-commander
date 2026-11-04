@@ -41,6 +41,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-I` | `i` | `fileindex.browse-with` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
 | `M-B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
 | `M-R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
+| `M-O` | `o` | `fileindex.other-copies` | [Other copies](#other-copies) of the file under the cursor, from the index |
 | `M-S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
 | `M-A` | `S` | `fileindex.scan-fast` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
 | `M-P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
@@ -202,6 +203,26 @@ directory itself, a file in its directory with the file highlighted. The
 marked summary counts files by their indexed size; directories add no size.
 Find's advanced criteria are not available: the index keeps no times, owners
 or modes to filter on.
+
+## Other copies
+
+`fileindex.other-copies` lists where else the file under the cursor exists according
+to the index, and jumps to the one you choose: a picker titled "Other copies of
+name (N)" lists the full paths of the other copies, filtered as you type; Enter
+or OK shows the copy in the active panel, in its directory with the file
+highlighted. Pick from a local panel and the real directory opens (the index view of it when
+the directory is gone from disk); from an index view the copy opens in the index
+view. It works on local and index panels, on files only.
+
+- Copies are files with the same content hash. JPEGs differing only in metadata
+  count as copies, as in the Copies column below.
+- A file that is only partly hashed (a [fast scan](#scan-and-prune) hashed its
+  first 8 KB, or a scan has not reached it yet) has no known copies until it is fully hashed:
+  the action says "Not fully hashed yet". A file the index does not
+  know says "Not in the index", and one with no other copy "No other copies".
+- The answer is what the last scans recorded: the index may be stale, so a
+  listed copy can be gone from disk (it then opens in the index view) and a
+  new copy is missing until scanned.
 
 ## Columns
 

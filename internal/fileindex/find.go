@@ -109,3 +109,65 @@ func filterFound(found []db.Found, root string, q FindQuery, dedupe bool) []db.F
 	}
 	return out
 }
+
+// CopiesState says what the index knows about a file's copies.
+type CopiesState int
+
+const (
+	// CopiesNotIndexed: the path is not in the index.
+	CopiesNotIndexed CopiesState = iota
+	// CopiesNotHashed: the path is indexed but has no full hash yet (a fast scan or an
+	// unfinished scan), so its copies are unknown.
+	CopiesNotHashed
+	// CopiesHashed: the path is fully hashed; the returned list holds its copies.
+	CopiesHashed
+)
+
+// OtherCopies lists the indexed files with the same content as the file at path (a host path,
+// resolved like the index records it), sorted, without path itself. A JPEG also matches the
+// files that differ from it only in metadata, as the Copies column counts them. The list is
+// only meaningful for CopiesHashed.
+func (x *Index) OtherCopies(path string) ([]string, CopiesState, error) {
+	d, err := x.DB()
+	if err != nil {
+		return nil, CopiesNotIndexed, err
+	}
+	host, err := IndexPath(path)
+	if err != nil {
+		return nil, CopiesNotIndexed, err
+	}
+	rec, found, err := d.FileInfo(host)
+	if err != nil {
+		return nil, CopiesNotIndexed, err
+	}
+	if !found {
+		return nil, CopiesNotIndexed, nil
+	}
+	if !rec.Hashed {
+		return nil, CopiesNotHashed, nil
+	}
+	matches, err := d.FindByHash(rec.SHA256)
+	if err != nil {
+		return nil, CopiesHashed, err
+	}
+	for _, m := range matches {
+		if m.Path == host && m.NoExifJPEG != "" {
+			more, err := d.FindByHash(m.NoExifJPEG)
+			if err != nil {
+				return nil, CopiesHashed, err
+			}
+			matches = append(matches, more...)
+			break
+		}
+	}
+	seen := map[string]bool{host: true}
+	var out []string
+	for _, m := range matches {
+		if !seen[m.Path] {
+			seen[m.Path] = true
+			out = append(out, m.Path)
+		}
+	}
+	slices.Sort(out)
+	return out, CopiesHashed, nil
+}

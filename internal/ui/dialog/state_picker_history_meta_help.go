@@ -21,6 +21,9 @@ const (
 	PathPickerPurposeApplyFlattenDestination
 	// PathPickerPurposeApplyFileDialogField writes the path into FileDialog.Fields[FileFieldIndex].Value.
 	PathPickerPurposeApplyFileDialogField
+	// PathPickerPurposeNavigateFile shows the active panel the selected file in its directory
+	// (fileindex.other-copies); the items are file paths.
+	PathPickerPurposeNavigateFile
 )
 
 // PathPickerItem is one fuzzy-listed row with source, optional name, and filesystem path.
@@ -73,6 +76,9 @@ type PathPickerState struct {
 	QueryPathCheckPending bool
 	// Completion holds the filesystem-completion dropdown state for Query.
 	Completion PathCompletion
+	// IndexPanel makes PathPickerPurposeNavigateFile open fileindex:// paths (the panel it was
+	// started from was one) instead of local ones.
+	IndexPanel bool
 }
 
 // FilterFocused reports whether the query input (and with it the list) holds focus.
