@@ -478,6 +478,61 @@ func TestScanFastTaskHashesHeadOfLargerFiles(t *testing.T) {
 	}
 }
 
+// A fast-hashed file groups with a file of the same size and first 8 KB; a same-size file with
+// another head stays out, and a plain scan settles the set.
+func TestDedupFilesPotentialDuplicates(t *testing.T) {
+	root := t.TempDir()
+	write := func(name string, head byte) {
+		t.Helper()
+		b := make([]byte, 9000)
+		b[0] = head
+		if err := os.WriteFile(filepath.Join(root, name), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("anchor.bin", 'a')
+	write("meadow.bin", 'b')
+	x := testIndex(t, initIndex(t))
+	if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	write("willow.bin", 'a')
+	write("thistle.bin", 'c')
+	if err := x.ScanFastTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	files, hashes, err := x.DedupFiles(context.Background(), at(t, root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	potential := map[string]bool{}
+	for _, f := range files {
+		if f.Potential != ([32]byte{}) {
+			potential[f.Rel] = true
+		}
+	}
+	if len(potential) != 2 || !potential["anchor.bin"] || !potential["willow.bin"] {
+		t.Fatalf("potential = %v, want anchor.bin and willow.bin", potential)
+	}
+	if _, ok := hashes["willow.bin"]; ok {
+		t.Fatal("a fast-hashed file must have no content hash")
+	}
+	if _, ok := hashes["anchor.bin"]; !ok {
+		t.Fatal("a fully hashed member keeps its content hash")
+	}
+	if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	if files, _, err = x.DedupFiles(context.Background(), at(t, root)); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		if f.Potential != ([32]byte{}) {
+			t.Fatalf("%s still potential after a full scan", f.Rel)
+		}
+	}
+}
+
 func TestNewerSchemaAsksToUpgradePC(t *testing.T) {
 	path := initIndex(t)
 	d, err := db.Open(path)

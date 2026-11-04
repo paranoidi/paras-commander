@@ -176,6 +176,7 @@ row.mark.keep_subtree = { fg = "bright_green" }
 full_dir = { fg = "bright_magenta" }
 full_dir_content = { fg = "yellow" }
 full_dir_hidden = { fg = "red" }
+potential = { fg = "yellow" }
 
 [panel.active]
 disk_usage_overview = { fg = "blue"}
@@ -421,6 +422,7 @@ related = "\uf067"
 related_within = "\U000f17a9"
 full_dir = "\uee86"
 hidden = "\uf06e"
+potential = "\uf128"
 
 [icons.folders]
 folder = "\U000F024B"

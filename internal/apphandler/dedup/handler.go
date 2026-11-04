@@ -1728,6 +1728,18 @@ func (h *Handler) MarkedFiles() []comparepkg.DedupFile {
 	return out
 }
 
+// MarkedHasPotential reports whether a marked file is in a potential duplicate group.
+func (h *Handler) MarkedHasPotential() bool {
+	for _, g := range h.model.DedupSnapshot.Groups {
+		if g.Potential && slices.ContainsFunc(g.Files, func(f comparepkg.DedupFile) bool {
+			return h.model.DedupView.Marked[f.Abs.String()]
+		}) {
+			return true
+		}
+	}
+	return false
+}
+
 // MarkedPaths returns marked file paths that still exist in the current snapshot.
 func (h *Handler) MarkedPaths() []string {
 	files := h.MarkedFiles()

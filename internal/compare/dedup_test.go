@@ -1007,3 +1007,47 @@ func TestDedupIndexedGroupsScopeAndNoOpens(t *testing.T) {
 		t.Fatalf("opens = %d, want 0", opens)
 	}
 }
+
+// Potential keys group files whatever their hashes, flag the group, and never count as directory
+// duplicates.
+func TestRunIndexedPotentialGroup(t *testing.T) {
+	root, err := pathloc.FileIndex("/orchard")
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := func(rel string, key byte) FileRecord {
+		abs, err := pathloc.FileIndex("/orchard/" + rel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return FileRecord{Abs: abs, Rel: rel, Size: 9000, Potential: [32]byte{key}}
+	}
+	files := []FileRecord{record("pear/full.bin", 7), record("plum/fast.bin", 7), record("quince/a.bin", 0), record("rowan/a.bin", 0)}
+	hashes := map[string][32]byte{"pear/full.bin": {1}, "quince/a.bin": {2}, "rowan/a.bin": {2}}
+	done := make(chan DedupSnapshot, 4)
+	sess := StartDedup(context.Background(), root, DedupOptions{
+		Indexed: func(context.Context) ([]FileRecord, map[string][32]byte, error) { return files, hashes, nil },
+		OnUpdate: func(s DedupSnapshot) {
+			if s.Phase == DedupDone || s.Phase == DedupError {
+				done <- s
+			}
+		},
+	})
+	defer sess.Close()
+	snap := <-done
+	if len(snap.Groups) != 2 {
+		t.Fatalf("groups = %+v, want two", snap.Groups)
+	}
+	for _, g := range snap.Groups {
+		if want := g.Files[0].Rel == "pear/full.bin"; g.Potential != want {
+			t.Fatalf("group %+v: Potential = %v, want %v", g.Files, g.Potential, want)
+		}
+	}
+	for _, dg := range snap.DirGroups {
+		for _, m := range dg.Rels {
+			if m == "plum" || m == "pear" {
+				t.Fatalf("potential match made a directory duplicate: %+v", dg)
+			}
+		}
+	}
+}

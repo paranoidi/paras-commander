@@ -253,8 +253,9 @@ runs.
 `fileindex.scan-fast` is the same scan with its last stage reduced: it hashes
 only the first 8 KB of files larger than that, so a big tree is done in a
 fraction of the time, even with `hash = false`. Those files keep the `unhashed`
-state and stay out of duplicate detection and the hash and copies columns until
-a plain `fileindex.scan` hashes them fully; running a fast scan again skips them.
+state, count only as potential duplicates in [Find duplicates](find-duplicates.md)
+and stay out of the hash and copies columns until a plain `fileindex.scan` hashes
+them fully; running a fast scan again skips them.
 `fileindex.prune` only does the removal, for the current directory. In an
 index view all of them act on the real paths.
 

@@ -532,6 +532,7 @@ const (
 	dedupLegendJob           = "job in progress"
 	dedupLegendPinned        = "pinned"
 	dedupLegendRangeAnchor   = "range start"
+	dedupLegendPotential     = "potential duplicate, only the first 8 KB compared"
 )
 
 // dedupSuffixIcon is one trailing icon after the subtree mark. Legend is empty for icons the
@@ -542,8 +543,8 @@ type dedupSuffixIcon struct {
 	Legend string
 }
 
-// dedupRowSuffixIcons is the single source for a row's duplicate-dir, related-copy and
-// skipped-items icons, in paint order; drawDedupPathColumn paints it and dedupRowLegend explains it.
+// dedupRowSuffixIcons is the single source for a row's duplicate-dir, related-copy,
+// skipped-items and potential-duplicate icons, in paint order; drawDedupPathColumn paints it and dedupRowLegend explains it.
 func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d DedupRowData, hinted bool) []dedupSuffixIcon {
 	var out []dedupSuffixIcon
 	if d.DirDup != comparepkg.DirNone {
@@ -562,6 +563,9 @@ func dedupRowSuffixIcons(styles theme.Theme, p dedupPaneParams, d DedupRowData, 
 	}
 	if d.DirDup != comparepkg.DirNone && d.DirHidden {
 		out = append(out, dedupSuffixIcon{Icon: styles.IconDedupHidden(), Style: styles.PanelDedupFullDirHidden, Legend: dedupLegendHidden})
+	}
+	if d.Potential {
+		out = append(out, dedupSuffixIcon{Icon: styles.IconDedupPotential(), Style: styles.PanelDedupPotential, Legend: dedupLegendPotential})
 	}
 	return out
 }

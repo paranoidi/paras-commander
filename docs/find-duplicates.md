@@ -4,6 +4,8 @@ Find duplicates (`C-M-f`, Command menu, leader `P`) scans the active panel's dir
 
 On a `fileindex://` panel the duplicates come from the fileindex database: each indexed file's stored SHA-256 is compared (for JPEGs the hash of the image data without metadata, so photos that differ only in EXIF count as duplicates), so nothing on disk is walked, opened or hashed (files not yet indexed, or without a stored hash, are not considered; rescan to refresh the index). There is no hash-confirm prompt. Deleting a copy removes its index entry, like any other delete on a fileindex panel.
 
+Files a [fast scan](fileindex.md#scan-and-prune) hashed only partly show up as **potential duplicates** when another file has the same size and first 8 KB. Every file in such a group carries a yellow question mark icon, even a fully hashed one. Their contents may still differ, so the delete dialog warns when you have marked any of them. A plain scan hashes them fully and settles it.
+
 <video src="assets/find-duplicates.webm" autoplay loop muted playsinline></video>
 
 When the active panel has selected directories, a dialog first asks whether to search the current directory (**Directory**) or only the selected directories (**Selected**, the default). Selected-only scans walk just those directory trees (files selected alongside them are ignored), rooted at their closest common parent, and Refresh rescans the same selection.

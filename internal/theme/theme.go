@@ -90,6 +90,8 @@ type Theme struct {
 	PanelDedupFullDirContent tcell.Style
 	// PanelDedupFullDirHidden styles the hidden/skipped-items warning icon on duplicate directories.
 	PanelDedupFullDirHidden tcell.Style
+	// PanelDedupPotential styles the potential-duplicate suffix icon.
+	PanelDedupPotential tcell.Style
 	// PanelRowMarkSelectionSubtree styles the file-list suffix on directories with nested selections.
 	PanelRowMarkSelectionSubtree tcell.Style
 	// PanelRowMarkNew styles the file-list suffix for the latest transferred batch.
@@ -712,6 +714,7 @@ const (
 	IconKeyDedupRelatedWithin       = "dedup.related_within"
 	IconKeyDedupFullDir             = "dedup.full_dir"
 	IconKeyDedupHidden              = "dedup.hidden"
+	IconKeyDedupPotential           = "dedup.potential"
 )
 
 // Menu-bar jobs strip icon keys ([icons] table); optional — see IconMenuJob / IconMenuProgress*.
@@ -812,6 +815,11 @@ func (t Theme) IconDedupFullDir() rune {
 // directory holds entries the scan skipped (hidden, ignored, symlinks, empty dirs).
 func (t Theme) IconDedupHidden() rune {
 	return t.iconRuneOr(IconKeyDedupHidden, '\uf06e')
+}
+
+// IconDedupPotential returns the dedup view suffix icon for a file in a potential duplicate set.
+func (t Theme) IconDedupPotential() rune {
+	return t.iconRuneOr(IconKeyDedupPotential, '\uf128')
 }
 
 // IconFilelistNew returns the recently-transferred file suffix icon.
@@ -1079,6 +1087,7 @@ var requiredStyleKeys = []string{
 	"panel.dedup.full_dir",
 	"panel.dedup.full_dir_content",
 	"panel.dedup.full_dir_hidden",
+	"panel.dedup.potential",
 	"panel.row.mark.selection_subtree",
 	"panel.row.mark.new",
 	"panel.row.mark.new.previous",
@@ -1734,6 +1743,7 @@ func parse(data []byte) (Theme, error) {
 		PanelDedupFullDir:                   styles["panel.dedup.full_dir"],
 		PanelDedupFullDirContent:            styles["panel.dedup.full_dir_content"],
 		PanelDedupFullDirHidden:             styles["panel.dedup.full_dir_hidden"],
+		PanelDedupPotential:                 styles["panel.dedup.potential"],
 		PanelRowMarkSelectionSubtree:        styles["panel.row.mark.selection_subtree"],
 		PanelRowMarkNew:                     styles["panel.row.mark.new"],
 		PanelRowMarkNewPrevious:             styles["panel.row.mark.new.previous"],

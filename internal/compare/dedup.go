@@ -43,11 +43,13 @@ type DedupFile struct {
 	Abs pathloc.Path
 }
 
-// DedupGroup is a set of files with identical content (same size + SHA-256).
+// DedupGroup is a set of files with identical content (same size + SHA-256). A Potential group
+// only shares its size and first 8 KB (fast-hashed in the index), so its content may still differ.
 type DedupGroup struct {
-	Hash  [32]byte
-	Size  int64
-	Files []DedupFile
+	Hash      [32]byte
+	Size      int64
+	Files     []DedupFile
+	Potential bool
 }
 
 // DedupSnapshot is an immutable dedup result generation.
@@ -642,18 +644,26 @@ func (s *DedupSession) runIndexed(ctx context.Context) {
 		s.publish(DedupSnapshot{Root: s.root, Phase: DedupError, Err: err.Error()})
 		return
 	}
-	var files []FileRecord
+	var files, hashed []FileRecord
 	var hashes [][32]byte
+	potential := map[[32]byte]bool{}
 	var total int64
 	for _, f := range all {
 		h, ok := hashOf[f.Rel]
-		if !ok {
+		if !ok && f.Potential == ([32]byte{}) {
 			continue
 		}
 		if len(s.opts.Walk.Only) > 0 {
 			if inside, _ := walkScope(f.Rel, s.opts.Walk.Only); !inside {
 				continue
 			}
+		}
+		if ok {
+			hashed = append(hashed, f)
+		}
+		if f.Potential != ([32]byte{}) {
+			h = f.Potential
+			potential[h] = true
 		}
 		files = append(files, f)
 		hashes = append(hashes, h)
@@ -663,11 +673,16 @@ func (s *DedupSession) runIndexed(ctx context.Context) {
 	for i := range hashOK {
 		hashOK[i] = true
 	}
+	groups := groupByHash(files, hashes, hashOK)
+	for i := range groups {
+		groups[i].Potential = potential[groups[i].Hash]
+	}
 	s.publish(DedupSnapshot{
-		Root:           s.root,
-		Phase:          DedupDone,
-		Groups:         groupByHash(files, hashes, hashOK),
-		DirGroups:      groupDirsByDigest(files, hashOf, nil, nil, s.opts.Walk.Only),
+		Root:   s.root,
+		Phase:  DedupDone,
+		Groups: groups,
+		// Directory duplicates need real hashes: a potential match says nothing about content.
+		DirGroups:      groupDirsByDigest(hashed, hashOf, nil, nil, s.opts.Walk.Only),
 		Walked:         len(files),
 		Hashed:         len(files),
 		HashTotal:      len(files),

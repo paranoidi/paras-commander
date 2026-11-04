@@ -29,6 +29,7 @@ type DedupRowData struct {
 	GroupIdx    int                  // file rows: index into snapshot Groups; -1 for dirs
 	Size        int64                // file rows: group content size (mark accounting)
 	Copies      int
+	Potential   bool                    // file rows: the group is a potential duplicate set
 	DirDup      comparepkg.DedupDirKind // dir rows: whole directory duplicates another (exact or content-only)
 	DirHidden   bool                    // dir rows: DirDup member holds entries the scan skipped
 	DupCount    int                     // dir rows: duplicate files in the subtree
@@ -286,27 +287,29 @@ func dedupGroupRoots(snap comparepkg.DedupSnapshot, idxs []int, sortByWasted boo
 		root := treeflat.Node[DedupRowData]{
 			ID: dedupGroupID(g),
 			Value: DedupRowData{
-				Kind:     DedupRowFile,
-				File:     g.Files[0],
-				AbsKey:   g.Files[0].Abs.String(),
-				GroupIdx: gi,
-				Size:     g.Size,
-				Copies:   len(g.Files),
-				ShowSize: true,
-				Display:  g.Files[0].Rel,
+				Kind:      DedupRowFile,
+				File:      g.Files[0],
+				AbsKey:    g.Files[0].Abs.String(),
+				GroupIdx:  gi,
+				Size:      g.Size,
+				Copies:    len(g.Files),
+				Potential: g.Potential,
+				ShowSize:  true,
+				Display:   g.Files[0].Rel,
 			},
 		}
 		for _, f := range g.Files[1:] {
 			root.Children = append(root.Children, treeflat.Node[DedupRowData]{
 				ID: f.Abs.String(),
 				Value: DedupRowData{
-					Kind:     DedupRowFile,
-					File:     f,
-					AbsKey:   f.Abs.String(),
-					GroupIdx: gi,
-					Size:     g.Size,
-					Copies:   len(g.Files),
-					Display:  f.Rel,
+					Kind:      DedupRowFile,
+					File:      f,
+					AbsKey:    f.Abs.String(),
+					GroupIdx:  gi,
+					Size:      g.Size,
+					Copies:    len(g.Files),
+					Potential: g.Potential,
+					Display:   f.Rel,
 				},
 			})
 		}
@@ -348,14 +351,15 @@ func dedupDirRoots(snap comparepkg.DedupSnapshot, idxs []int, keep func(comparep
 			cur.files = append(cur.files, treeflat.Node[DedupRowData]{
 				ID: f.Abs.String(),
 				Value: DedupRowData{
-					Kind:     DedupRowFile,
-					File:     f,
-					AbsKey:   f.Abs.String(),
-					GroupIdx: gi,
-					Size:     g.Size,
-					Copies:   len(g.Files),
-					ShowSize: true,
-					Display:  parts[len(parts)-1],
+					Kind:      DedupRowFile,
+					File:      f,
+					AbsKey:    f.Abs.String(),
+					GroupIdx:  gi,
+					Size:      g.Size,
+					Copies:    len(g.Files),
+					Potential: g.Potential,
+					ShowSize:  true,
+					Display:   parts[len(parts)-1],
 				},
 			})
 		}

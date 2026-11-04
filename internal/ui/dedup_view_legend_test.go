@@ -112,3 +112,38 @@ func TestDedupRowLegendListsDirDupAndHiddenIcons(t *testing.T) {
 		t.Fatalf("related + legend %q, want empty", got)
 	}
 }
+
+func TestDedupPotentialRowShowsIconAndLegend(t *testing.T) {
+	styles := theme.Default()
+	d := DedupRowData{Kind: DedupRowFile, Potential: true}
+	icons := dedupRowSuffixIcons(styles, dedupPaneParams{}, d, false)
+	if len(icons) != 1 || icons[0].Icon != styles.IconDedupPotential() || icons[0].Style != styles.PanelDedupPotential {
+		t.Fatalf("icons = %+v", icons)
+	}
+	if got := dedupRowLegend(styles, dedupPaneParams{}, comparepkg.DedupSnapshot{}, d, false); !strings.Contains(got, dedupLegendPotential) {
+		t.Fatalf("legend = %q", got)
+	}
+	snap := comparepkg.DedupSnapshot{Phase: comparepkg.DedupDone, Groups: []comparepkg.DedupGroup{{
+		Size:      9000,
+		Potential: true,
+		Files: []comparepkg.DedupFile{
+			{Rel: "lantern.bin", Abs: pathloc.MustParse("/scan/lantern.bin")},
+			{Rel: "harbor.bin", Abs: pathloc.MustParse("/scan/harbor.bin")},
+		},
+	}}, Root: pathloc.MustParse("/scan")}
+	for _, treeDirs := range []bool{true, false} {
+		rows, _ := DedupRowsFromSnapshot(snap, DedupViewState{TreeDirs: treeDirs})
+		files := 0
+		for _, r := range rows {
+			if r.Value.Kind == DedupRowFile {
+				files++
+				if !r.Value.Potential {
+					t.Fatalf("treeDirs %v: row %+v not potential", treeDirs, r.Value)
+				}
+			}
+		}
+		if files != 2 {
+			t.Fatalf("treeDirs %v: %d file rows, want 2", treeDirs, files)
+		}
+	}
+}

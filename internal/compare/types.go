@@ -39,6 +39,9 @@ type FileRecord struct {
 	Size int64
 	// ModTime is the file's modification time in UnixNano (hash-cache key).
 	ModTime int64
+	// Potential, when not zero, is the key of the potential duplicate set the file belongs to
+	// (DedupOptions.Indexed only): it groups under this key instead of its content hash.
+	Potential [32]byte
 }
 
 // Row is one aligned primary/secondary compare result.

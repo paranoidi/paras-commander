@@ -38,6 +38,8 @@ func (h dedupHost) BrowserMenuDefinitions() []menu.Definition { return h.app.bro
 
 func (a *App) openFindDuplicates() { a.dedupCtrl.Open() }
 
+const dedupPotentialDeleteNote = "Some marked files are potential duplicates: only their first 8 KB were compared."
+
 // openDedupDeleteDialog opens the standard delete confirmation for the marked
 // duplicate files, reusing the browser dialog (list + impact summary + Yes/No).
 func (a *App) openDedupDeleteDialog() {
@@ -61,6 +63,9 @@ func (a *App) openDedupDeleteDialog() {
 		DeleteSummary: ui.FormatDeleteImpactSummary(int64(st.MarkedCount), st.MarkedReclaimBytes, false, a.styles.IconWorking()),
 		DeleteEntries: entries,
 		Focus:         dlg.Cancel, // No is the safe default
+	}
+	if a.dedupCtrl.MarkedHasPotential() {
+		fd.Note = dedupPotentialDeleteNote
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.UseNerdfontIcons))
 	a.model.FileDialog = fd
