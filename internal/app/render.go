@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
@@ -201,6 +202,7 @@ func (a *App) snapshotModelForBrowserPaint() ui.Model {
 // without redrawing the other panel (avoids disk-usage row work on the other column during scans).
 func (a *App) renderBrowserListNavUpdate(panelID int) {
 	if a.holdBrowserPaintForCarouselParent(panelID) {
+		a.navPaintDeferred = false // the carousel timer paints later; nothing left for the loop to flush
 		return
 	}
 	if a.toastNeedsFullRender() {
@@ -223,6 +225,30 @@ func (a *App) renderBrowserListNavUpdate(panelID int) {
 	a.emitScreenAfterPartialPaint()
 	if a.diskUsageScanBusy() {
 		a.disk.deferPoll.Store(true)
+	}
+	a.markNavPainted()
+}
+
+// markNavPainted records that the frame is current: clears a deferred nav paint and stamps the end
+// of the paint (after the blocking Show) so a slow terminal's write time is not counted as staleness.
+func (a *App) markNavPainted() {
+	a.navPaintDeferred = false
+	a.lastNavPaintAt = time.Now()
+}
+
+// shouldDeferNavPaint reports whether a cursor-only nav paint can be skipped because more events
+// are already queued and the last paint is recent. Only inside Run: direct handleKey callers
+// (tests) and idle queues keep painting synchronously.
+func (a *App) shouldDeferNavPaint() bool {
+	return a.runLoopActive && a.screen.HasPendingEvent() &&
+		time.Since(a.lastNavPaintAt) < config.NavPaintMaxStale
+}
+
+// flushDeferredNavPaint paints a skipped nav frame once the queue drains or the frame went stale.
+// renderPanelAsyncResult picks partial vs full paint and its paths clear navPaintDeferred.
+func (a *App) flushDeferredNavPaint() {
+	if a.navPaintDeferred && (!a.screen.HasPendingEvent() || time.Since(a.lastNavPaintAt) >= config.NavPaintMaxStale) {
+		a.renderPanelAsyncResult(a.navPaintDeferredPanel)
 	}
 }
 
@@ -319,6 +345,7 @@ func (a *App) render() {
 	a.syncTerminalPanelCursor()
 	a.emitScreenAfterFullRender()
 	a.armSpinnerRedrawTimer()
+	a.markNavPainted()
 }
 
 // emitScreenAfterFullRender flushes the terminal after ui.Render. When ScreenRenderHashCache is on,

@@ -379,6 +379,14 @@ type App struct {
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
 	lastScreenContentHash uint64
+	// runLoopActive is set by Run; nav paint coalescing (shouldDeferNavPaint) only applies inside it.
+	runLoopActive bool
+	// navPaintDeferred marks a cursor-only nav move applied without a paint because more events
+	// were queued; navPaintDeferredPanel is the panel to repaint, lastNavPaintAt the end of the
+	// last paint. See shouldDeferNavPaint / flushDeferredNavPaint.
+	navPaintDeferred      bool
+	navPaintDeferredPanel int
+	lastNavPaintAt        time.Time
 	// pendingCursor is the hardware-cursor state set by syncTerminalPanelCursor for the
 	// current frame; lastFlushedCursor is what the last Show flushed. Cursor-only moves
 	// (arrow keys in the terminal panel) change no cells, so the hash cache must also
@@ -1407,6 +1415,7 @@ func syncPathDisplayPrefixes(t theme.Theme) {
 
 // Run starts the event loop.
 func (a *App) Run() error {
+	a.runLoopActive = true
 	a.screen.HideCursor()
 	a.ensurePanelsVisible()
 	a.render()
@@ -1505,6 +1514,7 @@ func (a *App) Run() error {
 		if !a.disk.deferPoll.Swap(false) {
 			a.pollDiskUsageUpdates()
 		}
+		a.flushDeferredNavPaint()
 	}
 }
 

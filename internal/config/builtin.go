@@ -79,6 +79,11 @@ const (
 	// changes made by other programs (Nemo); a change triggers a background reload and repaint.
 	FolderColorRefreshInterval = 30 * time.Second
 
+	// NavPaintMaxStale bounds how long a file-list nav paint may be skipped while more events are
+	// queued: a held key still repaints at about 30fps however deep the queue. Built-in, not a
+	// config.toml field.
+	NavPaintMaxStale = 33 * time.Millisecond
+
 	// DefaultPanelRefreshSlowBackoffFactor sets the start-to-start spacing enforced on periodic
 	// panel refreshes: a refresh that started at start and took elapsed may next start no sooner
 	// than start + factor * elapsed. A 5ms local refresh yields a 20ms deadline (invisible under

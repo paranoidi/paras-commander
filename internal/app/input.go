@@ -889,6 +889,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	quit, rendered = a.finishResolvedKeyboardAction(nextAction)
 	if rendered {
 		if a.browserListNavPartialRenderEligibleFor(nextAction) {
+			if listNavAction(nextAction) && a.shouldDeferNavPaint() {
+				a.navPaintDeferred = true
+				a.navPaintDeferredPanel = a.model.ActivePanel
+				return quit, rendered
+			}
 			a.renderBrowserListNavUpdate(a.model.ActivePanel)
 		} else {
 			a.render()
