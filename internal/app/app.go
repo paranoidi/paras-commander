@@ -492,7 +492,7 @@ func Run(cfg LaunchConfig) (err error) {
 	}
 	defer screen.Fini()
 
-	app, err := NewWithOptions(vsStripScreen{screen}, Options{
+	app, err := NewWithOptions(vsStripScreen{newFrameScreen(screen)}, Options{
 		CWD:               os.Getwd,
 		Config:            startup.Config,
 		Theme:             startup.Theme,

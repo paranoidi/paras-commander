@@ -9,7 +9,7 @@ import (
 // vsStripScreen drops emoji/text variation selectors (U+FE0E/U+FE0F) before tcell sees
 // them: tcell (uniseg), go-runewidth and the terminal disagree on the width of
 // VS-modified clusters (e.g. ⚪︎ = 1 vs 2 cells), which shifts the rest of the row.
-// ponytail: only SetContent is overridden; nothing calls Put/PutStr — override those too if that changes.
+// ponytail: only SetContent is overridden; the only Put callers (panel title hover, dialog hover) pass strings read back through Get, which are already stripped — override Put/PutStr too if other callers appear.
 type vsStripScreen struct{ tcell.Screen }
 
 func isVS(r rune) bool { return r == '\uFE0E' || r == '\uFE0F' }
