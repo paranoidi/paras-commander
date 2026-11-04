@@ -850,6 +850,23 @@ func TestScanReporterWorkers(t *testing.T) {
 	}
 }
 
+// TestScanReporterFileDone: starting a file does not count it, FileDone does.
+func TestScanReporterFileDone(t *testing.T) {
+	rep := &recReporter{}
+	s := newScanReporter(rep, false)
+	s.Pruned(scan.Stats{}, 3)
+	s.Worker(0, "/vol/orchard/lantern")
+	s.Worker(0, "/vol/orchard/meadow")
+	if rep.last.DoneFiles != 0 {
+		t.Fatalf("after Worker = %d done, want 0", rep.last.DoneFiles)
+	}
+	s.FileDone()
+	s.FileDone()
+	if rep.last.DoneFiles != 2 {
+		t.Fatalf("after FileDone = %d done, want 2", rep.last.DoneFiles)
+	}
+}
+
 // TestScanReporterStages: the walk counts committed files with no total, pruning keeps the total
 // unknown, hashing restarts the count against the files to hash, and a scan that stops before
 // hashing keeps the walk's count.

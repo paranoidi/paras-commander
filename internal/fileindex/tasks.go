@@ -108,7 +108,7 @@ func (x *Index) HashPotentialTask(paths []string, done func()) *jobs.Task {
 			}
 			rep := newScanReporter(r, false)
 			rep.hashing, rep.p.TotalFiles = true, len(targets)
-			stats, err := scan.HashPaths(ctx, d, targets, workers, rep.Worker, rep.Speed)
+			stats, err := scan.HashPaths(ctx, d, targets, workers, rep.Worker, rep.Speed, rep.FileDone)
 			for _, e := range stats.Errors {
 				rep.Log(e)
 			}
@@ -180,8 +180,8 @@ func (w *warnings) flush() {
 // scanReporter maps scan.Reporter (and scan.PhaseReporter) onto task progress, one stage after
 // the other. Walking: DoneFiles counts the files committed (searchable, unhashed) and TotalFiles
 // stays unknown. Pruning: TotalFiles is still unknown and CurrentPath is the directory being
-// checked. Hashing: TotalFiles is the number of files to hash, DoneFiles counts them (a hash
-// worker starting its next file counts the previous one done), Speed samples add the bytes hashed
+// checked. Hashing: TotalFiles is the number of files to hash, DoneFiles counts the files whose
+// hashing finished or failed (FileDone, scan.FileReporter), Speed samples add the bytes hashed
 // since the last sample. A root whose files are committed finishes its job source. Its methods are called from scan's goroutines concurrently.
 type scanReporter struct {
 	r jobs.TaskReporter
@@ -189,7 +189,6 @@ type scanReporter struct {
 
 	mu       sync.Mutex
 	p        jobs.TaskProgress
-	busy     map[int]bool
 	skipHash bool // the scan stops after pruning
 	hashing  bool // Pruned was reached and hashing follows
 	bytes    float64
@@ -197,7 +196,7 @@ type scanReporter struct {
 }
 
 func newScanReporter(r jobs.TaskReporter, skipHash bool) *scanReporter {
-	return &scanReporter{r: r, w: warnings{r: r}, busy: map[int]bool{}, skipHash: skipHash}
+	return &scanReporter{r: r, w: warnings{r: r}, skipHash: skipHash}
 }
 
 // report sends the current sample; caller holds s.mu.
@@ -209,11 +208,14 @@ func (s *scanReporter) report() {
 func (s *scanReporter) Worker(id int, path string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.busy[id] {
-		s.p.DoneFiles++
-	}
-	s.busy[id] = true
 	s.p.CurrentPath = path
+	s.report()
+}
+
+func (s *scanReporter) FileDone() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.p.DoneFiles++
 	s.report()
 }
 
@@ -232,7 +234,7 @@ func (s *scanReporter) Speed(workers int, bps float64) {
 func (s *scanReporter) Scan(dir string, _, _, _ int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if dir != "" && len(s.busy) == 0 {
+	if dir != "" {
 		s.p.CurrentPath = dir
 	}
 	s.report()
@@ -311,9 +313,11 @@ func (s *scanReporter) finish(stats scan.Stats) {
 	s.Hashed(stats)
 }
 
-// compile-time check: scanReporter is a scan.Reporter, a scan.PhaseReporter and a scan.RootReporter.
+// compile-time check: scanReporter is a scan.Reporter, a scan.PhaseReporter, a scan.RootReporter and a
+// scan.FileReporter.
 var (
 	_ scan.Reporter      = (*scanReporter)(nil)
 	_ scan.PhaseReporter = (*scanReporter)(nil)
 	_ scan.RootReporter  = (*scanReporter)(nil)
+	_ scan.FileReporter  = (*scanReporter)(nil)
 )
