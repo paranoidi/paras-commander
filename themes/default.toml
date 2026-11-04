@@ -330,7 +330,6 @@ track = { fg = "bright_black", bg = "black" }
 
 [jobs.progress.completed]      # completed job progress (always a full bar)
 fill = { fg = "green", bg = "bright_black" }
-label.on_fill = { fg = "green" }
 
 [jobs.detail]                # jobs view Details panel body
 label = { fg = "white" }

@@ -46,7 +46,7 @@ func TestJobsProgressStylesCompleted(t *testing.T) {
 	if !stylesEqual(fill, th.JobsProgressCompletedFill) {
 		t.Fatal("completed fill style mismatch")
 	}
-	if !stylesEqual(labelOnFill, th.JobsProgressCompletedLabelOnFill) {
+	if !stylesEqual(labelOnFill, th.JobsProgressCompletedFill) {
 		t.Fatal("completed labelOnFill style mismatch")
 	}
 	if stylesEqual(fill, th.JobsProgressFill) {
@@ -56,16 +56,22 @@ func TestJobsProgressStylesCompleted(t *testing.T) {
 
 func TestJobsProgressCompletedFallsBackToActive(t *testing.T) {
 	t.Parallel()
-	data := testTheme(t, "completedfallback", nil, nil)
+	data := testTheme(t, "completedfallback", nil, map[string]string{
+		"jobs.progress.fill":          `{ fg = "black", bg = "yellow" }`,
+		"jobs.progress.label.on_fill": `{ fg = "white", bold = true }`,
+	})
 	th, err := parse(data)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if !stylesEqual(th.JobsProgressCompletedFill, th.JobsProgressFill) {
-		t.Fatal("completed fill should fall back to the active fill")
+	fg, bg, attrs := th.JobsProgressCompletedFill.Decompose()
+	labelFG, _, labelAttrs := th.JobsProgressLabelOnFill.Decompose()
+	_, fillBG, _ := th.JobsProgressFill.Decompose()
+	if fg != labelFG || attrs != labelAttrs {
+		t.Fatal("completed fill should fall back to the active label foreground and attrs")
 	}
-	if !stylesEqual(th.JobsProgressCompletedLabelOnFill, th.JobsProgressLabelOnFill) {
-		t.Fatal("completed labelOnFill should fall back to the active labelOnFill")
+	if bg != fillBG {
+		t.Fatal("completed fill should fall back to the active fill background")
 	}
 }
 
