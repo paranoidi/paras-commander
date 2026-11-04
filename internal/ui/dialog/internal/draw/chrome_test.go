@@ -212,7 +212,7 @@ func TestDrawScrollingDialogInputGhostSuffixUsesPlaceholderStyle(t *testing.T) {
 	screen.SetSize(40, 10)
 
 	th := theme.Default()
-	_, wantPhFG, _ := th.DialogInputActivePlaceholder.Decompose()
+	wantPhFG, _, _ := th.DialogInputActivePlaceholder.Decompose()
 	value := "/a"
 	suffix := "bc"
 	cursor := len([]rune(value))

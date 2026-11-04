@@ -102,7 +102,7 @@ func TestDrawInputFieldShowsGhostSuffixForSinglePrefixCandidateNoDropdown(t *tes
 		t.Fatalf("expected ghost suffix %q in row %q", suffix, got)
 	}
 
-	_, wantPhFG, _ := styles.DialogInputActivePlaceholder.Decompose()
+	wantPhFG, _, _ := styles.DialogInputActivePlaceholder.Decompose()
 	ghostCol := 1 + cursor + len(suffix) - 1
 	_, gotSt, _ := screen.Get(ghostCol, 1)
 	gotFG, _, _ := gotSt.Decompose()

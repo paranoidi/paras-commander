@@ -233,7 +233,7 @@ func TestDrawDedupViewFullyMarkedGroupUsesRedRowStyle(t *testing.T) {
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{})
 
 	wantFG, _, _ := styles.PanelDedupRowAllMarked.Decompose()
-	_, selectedFG, _ := styles.PanelActiveCursorSelected.Decompose()
+	selectedFG, _, _ := styles.PanelActiveCursorSelected.Decompose()
 	if wantFG == selectedFG {
 		t.Fatal("test requires distinct dedup all-marked and active cursor selected foregrounds")
 	}
@@ -562,7 +562,7 @@ func TestDrawDedupViewDirectoryFolderIconUsesDirectoryBlue(t *testing.T) {
 	gutterX := contentX
 	fg, _, _ := cellStyleAt(screen, gutterX, lineY).Decompose()
 	wantFG, _, _ := styles.PanelRowDirectory.Decompose()
-	_, jobsFG, _ := styles.JobsRow.Decompose()
+	jobsFG, _, _ := styles.JobsRow.Decompose()
 	if wantFG == jobsFG {
 		t.Fatal("test requires distinct panel.row.directory and jobs.row foregrounds")
 	}
@@ -669,7 +669,7 @@ func TestDrawDedupViewCursorSelectedDirFolderIconUsesDirectoryBlue(t *testing.T)
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{})
 
 	wantDirFG, _, _ := styles.PanelRowDirectory.Decompose()
-	_, cursorFG, _ := styles.PanelCursorActive.Decompose()
+	cursorFG, _, _ := styles.PanelCursorActive.Decompose()
 	if wantDirFG == cursorFG {
 		t.Fatal("test requires distinct panel.row.directory and panel.active.row.cursor foregrounds")
 	}
@@ -1249,7 +1249,7 @@ func TestDrawDedupViewCopiesPaneDirUsesSelectionStyleWhenFullyMarked(t *testing.
 	drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal, nil, ListRowHover{})
 
 	wantSelectedFG, _, _ := styles.PanelRowSelected.Decompose()
-	_, normalFG, _ := styles.PanelRowDirectory.Decompose()
+	normalFG, _, _ := styles.PanelRowDirectory.Decompose()
 	if wantSelectedFG == normalFG {
 		t.Fatal("test requires distinct panel.row.selected and panel.row.directory foregrounds")
 	}
@@ -1348,7 +1348,7 @@ func TestDrawDedupViewFileTreePaneDirUsesSelectionStyleWhenFullyMarked(t *testin
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{})
 
 	wantSelectedFG, _, _ := styles.PanelRowSelected.Decompose()
-	_, normalFG, _ := styles.PanelRowDirectory.Decompose()
+	normalFG, _, _ := styles.PanelRowDirectory.Decompose()
 	if wantSelectedFG == normalFG {
 		t.Fatal("test requires distinct panel.row.selected and panel.row.directory foregrounds")
 	}
