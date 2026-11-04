@@ -38,6 +38,37 @@ func TestJobsProgressStylesInactiveForPausedAndCanceled(t *testing.T) {
 	}
 }
 
+func TestJobsProgressStylesCompleted(t *testing.T) {
+	t.Parallel()
+	th := Default()
+
+	fill, _, labelOnFill, _ := th.JobsProgressStyles("completed")
+	if !stylesEqual(fill, th.JobsProgressCompletedFill) {
+		t.Fatal("completed fill style mismatch")
+	}
+	if !stylesEqual(labelOnFill, th.JobsProgressCompletedLabelOnFill) {
+		t.Fatal("completed labelOnFill style mismatch")
+	}
+	if stylesEqual(fill, th.JobsProgressFill) {
+		t.Fatal("completed fill must differ from the active fill")
+	}
+}
+
+func TestJobsProgressCompletedFallsBackToActive(t *testing.T) {
+	t.Parallel()
+	data := testTheme(t, "completedfallback", nil, nil)
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if !stylesEqual(th.JobsProgressCompletedFill, th.JobsProgressFill) {
+		t.Fatal("completed fill should fall back to the active fill")
+	}
+	if !stylesEqual(th.JobsProgressCompletedLabelOnFill, th.JobsProgressLabelOnFill) {
+		t.Fatal("completed labelOnFill should fall back to the active labelOnFill")
+	}
+}
+
 func stylesEqual(a, b tcell.Style) bool {
 	aFG, aBG, aAttrs := a.Decompose()
 	bFG, bBG, bAttrs := b.Decompose()

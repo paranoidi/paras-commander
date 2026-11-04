@@ -342,6 +342,10 @@ type Theme struct {
 	JobsProgressInactiveFill         tcell.Style
 	JobsProgressInactiveLabelOnFill  tcell.Style
 	JobsProgressInactiveLabelOnTrack tcell.Style
+	// JobsProgressCompleted* style a completed job's bar, always full, so it has no track keys
+	// (optional jobs.progress.completed.fill / .label.on_fill; default to the active fill keys).
+	JobsProgressCompletedFill        tcell.Style
+	JobsProgressCompletedLabelOnFill tcell.Style
 
 	// JobsOperationSuccess / JobsOperationFailed / JobsOperationSkipped style an Operations pane
 	// row's result icon and the Details result counts (jobs.operations.success / .failed /
@@ -1240,7 +1244,7 @@ var optionalStyleKeys = func() []string {
 	}
 	keys = append(keys, "menu.speed.cap", "menu.speed.text", "menu.status.separator", "message.sweep", "message.success", "footer.hover", "footer.hover.active", "jobs.row.hover", "panel.row.mark.other_match", "panel.row.mark.other_match.cursor",
 		"panel.row.mark.range_anchor", "panel.row.cursor.range", "panel.row.cursor.range.selected", "dialog.text_select", "dialog.accent_alt", "panel.empty", "panel.scrollbar.match",
-		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "panel.row.mark.job.removing",
+		"jobs.operations.success", "jobs.operations.failed", "jobs.operations.skipped", "jobs.progress.completed.fill", "jobs.progress.completed.label.on_fill", "panel.row.mark.job.removing",
 		"tooltip.text", "tooltip.info")
 	keys = append(keys, fileIndexStateStyleKeys()...)
 	return keys
@@ -1567,6 +1571,14 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 	jobsOperationSkipped, err := optionalStyle(specs, palette, "jobs.operations.skipped", styles["status.paused"])
+	if err != nil {
+		return Theme{}, err
+	}
+	jobsProgressCompletedFill, err := optionalStyle(specs, palette, "jobs.progress.completed.fill", styles["jobs.progress.fill"])
+	if err != nil {
+		return Theme{}, err
+	}
+	jobsProgressCompletedLabelOnFill, err := optionalStyle(specs, palette, "jobs.progress.completed.label.on_fill", styles["jobs.progress.label.on_fill"])
 	if err != nil {
 		return Theme{}, err
 	}
@@ -1918,6 +1930,9 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressInactiveFill:         styles["jobs.progress.inactive.fill"],
 		JobsProgressInactiveLabelOnFill:  styles["jobs.progress.inactive.label.on_fill"],
 		JobsProgressInactiveLabelOnTrack: styles["jobs.progress.inactive.label.on_track"],
+
+		JobsProgressCompletedFill:        jobsProgressCompletedFill,
+		JobsProgressCompletedLabelOnFill: jobsProgressCompletedLabelOnFill,
 
 		JobsOperationSuccess: jobsOperationSuccess,
 		JobsOperationFailed:  jobsOperationFailed,
