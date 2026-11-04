@@ -222,6 +222,7 @@ const (
 	// fileindex (the built-in index feature, internal/apphandler/fileindex)
 	ActionFileIndexMenu       = "fileindex.menu"
 	ActionFileIndexScan       = "fileindex.scan"
+	ActionFileIndexScanFast   = "fileindex.scan-fast"
 	ActionFileIndexPrune      = "fileindex.prune"
 	ActionFileIndexTagAdd     = "fileindex.tag-add"
 	ActionFileIndexTagRemove  = "fileindex.tag-remove"
@@ -559,6 +560,7 @@ var KnownActions = map[string]struct{}{
 
 	ActionFileIndexMenu:       {},
 	ActionFileIndexScan:       {},
+	ActionFileIndexScanFast:   {},
 	ActionFileIndexPrune:      {},
 	ActionFileIndexTagAdd:     {},
 	ActionFileIndexTagRemove:  {},

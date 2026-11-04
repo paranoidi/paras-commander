@@ -19,12 +19,23 @@ const TaskLease = "fileindex"
 // config.ini rules). Each path is reported done (jobs.TaskReporter.FinishSource) once its files
 // are committed, while the others are still hashed, so its file-list mark clears.
 func (x *Index) ScanTask(paths []string) *jobs.Task {
-	steps := []string{"Walk filesystem", "Pruning", "Hash new files"}
-	if !x.cfg.Hash {
+	return x.scanTask(paths, false, "fileindex scan", "Hash new files")
+}
+
+// ScanFastTask is ScanTask hashing only the first 8 KB of files larger than that (scan --fast):
+// they stay unhashed until a plain scan. Asked for explicitly, it hashes even with hash off.
+func (x *Index) ScanFastTask(paths []string) *jobs.Task {
+	return x.scanTask(paths, true, "fileindex fast scan", "Fast-hash new files")
+}
+
+func (x *Index) scanTask(paths []string, fast bool, title, hashStep string) *jobs.Task {
+	skipHash := !x.cfg.Hash && !fast
+	steps := []string{"Walk filesystem", "Pruning", hashStep}
+	if skipHash {
 		steps = steps[:2]
 	}
 	return &jobs.Task{
-		Title: "fileindex scan",
+		Title: title,
 		Lease: TaskLease,
 		Steps: steps,
 		Run: func(ctx context.Context, r jobs.TaskReporter) error {
@@ -37,12 +48,13 @@ func (x *Index) ScanTask(paths []string) *jobs.Task {
 			if err != nil {
 				return err
 			}
-			rep := newScanReporter(r, !x.cfg.Hash)
+			rep := newScanReporter(r, skipHash)
 			stats, err := scan.Run(ctx, d, paths, scan.Options{
 				Rules:         rules,
 				Workers:       workers,
 				MissingOnly:   true,
-				SkipHash:      !x.cfg.Hash,
+				SkipHash:      skipHash,
+				Fast:          fast,
 				BatchInterval: x.cfg.ScanCommitInterval(),
 			}, rep)
 			for _, e := range stats.Errors {

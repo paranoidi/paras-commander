@@ -42,6 +42,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
 | `M-R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
 | `M-S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
+| `M-A` | `S` | `fileindex.scan-fast` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
 | `M-P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
 | `M-T` | `t` | `fileindex.tag-add` | Add tags |
 | `M-U` | `u` | `fileindex.tag-remove` | Remove tags |
@@ -69,7 +70,7 @@ removals refresh the panel.
 | State | Legend | Meaning |
 |---|---|---|
 | `indexed` | indexed | In the index, the same size and modification time (files) |
-| `unhashed` | not hashed yet | A file in the index with the same size and modification time that has not been hashed yet (a scan is still hashing, or `hash` is off) |
+| `unhashed` | not hashed yet | A file in the index with the same size and modification time that has not been hashed yet (a scan is still hashing, `hash` is off, or a fast scan hashed only its first 8 KB) |
 | `changed` | changed | A file whose size or modification time differs from the index |
 | `new` | not in index | On disk but not in the index |
 | `missing` | only in index | Only in the index (ghost row) |
@@ -249,8 +250,13 @@ including unhashed ones left by an earlier scan. With `hash = false` under
 `[fileindex]` the scan stops after the removal, so files stay unhashed (no hash
 or copies column, left out of duplicate detection) until a scan with hashing
 runs.
+`fileindex.scan-fast` is the same scan with its last stage reduced: it hashes
+only the first 8 KB of files larger than that, so a big tree is done in a
+fraction of the time, even with `hash = false`. Those files keep the `unhashed`
+state and stay out of duplicate detection and the hash and copies columns until
+a plain `fileindex.scan` hashes them fully; running a fast scan again skips them.
 `fileindex.prune` only does the removal, for the current directory. In an
-index view both act on the real paths.
+index view all of them act on the real paths.
 
 Both run as **task** jobs in the [jobs view](jobs.md): the Details panel shows
 the files done, bytes hashed, current path and, while a scan hashes, how many

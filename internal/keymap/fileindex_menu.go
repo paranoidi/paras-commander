@@ -12,11 +12,12 @@ var fileIndexMenuGroups = []struct {
 }{
 	{"Browse", []string{ActionFileIndexFind, ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal}},
 	{"Tagging", []string{ActionFileIndexTagAdd, ActionFileIndexTagRemove}},
-	{"Actions", []string{ActionFileIndexScan, ActionFileIndexPrune}},
+	{"Actions", []string{ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune}},
 }
 
 // DefaultFileIndexMenuKeys returns built-in default fileindex-menu letters per action. Each is
-// its action's default chord letter in lowercase (every fileindex chord is Alt+Shift+letter).
+// its action's default chord letter in lowercase (every fileindex chord is Alt+Shift+letter),
+// except fileindex.scan-fast: uppercase of fileindex.scan's letter.
 func DefaultFileIndexMenuKeys() map[string]string {
 	out := make(map[string]string)
 	for _, spec := range DefaultActionSpecs() {

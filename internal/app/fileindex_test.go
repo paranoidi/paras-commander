@@ -1,7 +1,6 @@
 package app
 
 import (
-	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -32,6 +31,7 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexTagAdd,
 	keymap.ActionFileIndexTagRemove,
 	keymap.ActionFileIndexScan,
+	keymap.ActionFileIndexScanFast,
 	keymap.ActionFileIndexPrune,
 }
 
@@ -53,7 +53,7 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 	}
 
 	// The fileindex menu lists every action under the lowercase letter of its default chord, and
-	// every fileindex chord is Alt+Shift+letter.
+	// every fileindex chord is Alt+Shift+letter. Fast scan takes uppercase of scan's letter instead.
 	var inMenu, groups []string
 	for _, e := range a.keys.FileIndexMenuEntries() {
 		if e.GroupTitle != "" {
@@ -65,7 +65,11 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ch.Mod != tcell.ModAlt || !unicode.IsUpper(ch.Rune) || unicode.ToLower(ch.Rune) != e.Key {
+		wantKey := unicode.ToLower(ch.Rune)
+		if e.ActionID == keymap.ActionFileIndexScanFast {
+			wantKey = 'S'
+		}
+		if ch.Mod != tcell.ModAlt || !unicode.IsUpper(ch.Rune) || wantKey != e.Key {
 			t.Errorf("%s: menu key %q does not match its chord %s", e.ActionID, e.Key, keymap.FormatChord(ch))
 		}
 	}
@@ -83,6 +87,16 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 	}
 	if !slices.Contains(leader, keymap.ActionFileIndexMenu) || slices.Contains(leader, keymap.ActionFileIndexScan) {
 		t.Fatalf("leader menu actions = %v", leader)
+	}
+}
+
+// The menu's letters are case-sensitive: s is the plain scan, S the fast one.
+func TestFileIndexMenuScanLetters(t *testing.T) {
+	for key, want := range map[rune]string{'s': "fileindex scan queued", 'S': "fileindex fast scan queued"} {
+		a, screen, _, _ := fileIndexApp(t)
+		a.handleKey(tcell.NewEventKey(tcell.KeyRune, '<', tcell.ModNone))
+		a.handleKey(tcell.NewEventKey(tcell.KeyRune, key, tcell.ModNone))
+		drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.Message == want })
 	}
 }
 
@@ -131,7 +145,7 @@ func fileIndexApp(t *testing.T) (*App, tcell.SimulationScreen, string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := d.Init(io.Discard); err != nil {
+	if err := d.Init(); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := d.CommitScanBatch(batch); err != nil {

@@ -185,19 +185,19 @@ var ErrIndexExists = errors.New("fileindex database already exists")
 // file) and keeps it open for DB. It refuses an existing file, so it never migrates one.
 func (x *Index) Create() (string, error) { return x.initDB(false) }
 
-// NeedsUpgrade reports whether a DB error is a database that exists but fileindex's Init must
-// bring to the current schema: an older schema, or a file that was never initialised. A newer
+// NeedsUpgrade reports whether a DB error is a database that exists but Upgrade must bring to
+// the current schema: an older schema, or a file that was never initialised. A newer
 // schema is not: only a newer pc can open it (ErrNewerSchema).
 func NeedsUpgrade(err error) bool {
 	return errors.Is(err, db.ErrOutdatedSchema) || errors.Is(err, db.ErrNotInitialised)
 }
 
-// Upgrade runs fileindex's Init on the existing database (migrating an older schema, which
-// rebuilds its search indexes and can take minutes on a large index) and keeps it open.
+// Upgrade brings the existing database to the current schema (migrating an older one, which can
+// rebuild its search indexes and take minutes on a large index) and keeps it open.
 func (x *Index) Upgrade() (string, error) { return x.initDB(true) }
 
-// initDB runs fileindex's Init on the database at DatabasePath and keeps it open: upgrade
-// requires the file to exist (and checks the schema afterwards), otherwise it must not.
+// initDB creates or upgrades the database at DatabasePath and keeps it open: upgrade requires
+// the file to exist and initialises one that never was, otherwise the file must not exist.
 func (x *Index) initDB(upgrade bool) (string, error) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
@@ -222,15 +222,15 @@ func (x *Index) initDB(upgrade bool) (string, error) {
 	if err != nil {
 		return path, fmt.Errorf("%s: %w", path, err)
 	}
-	if err := d.Init(io.Discard); err != nil {
-		_ = d.Close()
-		return path, fmt.Errorf("%s %s: %w", verb, path, err)
-	}
 	if upgrade {
-		if err := d.RequireSchema(); err != nil {
-			_ = d.Close()
-			return path, fmt.Errorf("%s: %w", path, pcSchemaError(err))
-		}
+		err = d.Upgrade(io.Discard)
+	}
+	if !upgrade || errors.Is(err, db.ErrNotInitialised) {
+		err = d.Init()
+	}
+	if err != nil {
+		_ = d.Close()
+		return path, fmt.Errorf("%s %s: %w", verb, path, pcSchemaError(err))
 	}
 	if x.db != nil {
 		_ = x.db.Close()

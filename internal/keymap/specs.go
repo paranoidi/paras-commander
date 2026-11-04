@@ -1339,6 +1339,16 @@ func DefaultActionSpecs() []ActionSpec {
 			FileIndexMenuKey: "s",
 		},
 		{
+			ID:               ActionFileIndexScanFast,
+			Views:            HelpBrowser,
+			Title:            "Fast scan selection or directory",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-A"},
+			PreferredKey:     "M-A",
+			Keywords:         []string{"fileindex", "index", "hash", "scan", "fast", "quick"},
+			FileIndexMenuKey: "S",
+		},
+		{
 			ID:               ActionFileIndexPrune,
 			Views:            HelpBrowser,
 			Title:            "Prune index",

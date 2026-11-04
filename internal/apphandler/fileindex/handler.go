@@ -133,6 +133,8 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.host.ToggleFileIndexMenu()
 	case keymap.ActionFileIndexScan:
 		h.withIndex(h.Scan)
+	case keymap.ActionFileIndexScanFast:
+		h.withIndex(h.ScanFast)
 	case keymap.ActionFileIndexPrune:
 		h.withIndex(h.Prune)
 	case keymap.ActionFileIndexTagAdd:
@@ -227,7 +229,12 @@ func (h *Handler) queueTask(title string, task *jobs.Task, paths []string) {
 
 // Scan queues a scan of the selection, else the panel directory (the
 // real paths, also from a fileindex:// panel).
-func (h *Handler) Scan() {
+func (h *Handler) Scan() { h.queueScan("fileindex scan", h.index.ScanTask) }
+
+// ScanFast is Scan hashing only the first 8 KB of larger files.
+func (h *Handler) ScanFast() { h.queueScan("fileindex fast scan", h.index.ScanFastTask) }
+
+func (h *Handler) queueScan(title string, task func([]string) *jobs.Task) {
 	if !h.localOrIndex() {
 		return
 	}
@@ -245,7 +252,7 @@ func (h *Handler) Scan() {
 		}
 		paths = append(paths, p)
 	}
-	h.queueTask("fileindex scan", h.index.ScanTask(paths), paths)
+	h.queueTask(title, task(paths), paths)
 }
 
 // Prune queues a prune of the active panel's directory.

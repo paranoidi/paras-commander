@@ -41,7 +41,7 @@ func initIndex(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := d.Init(io.Discard); err != nil {
+	if err := d.Init(); err != nil {
 		t.Fatal(err)
 	}
 	_ = d.Close()
@@ -434,6 +434,47 @@ func TestUpgradeInitialisesExistingDatabase(t *testing.T) {
 	}
 	if _, err := testIndex(t, filepath.Join(t.TempDir(), "absent.sqlite")).Upgrade(); !errors.Is(err, ErrNoIndex) {
 		t.Fatalf("upgrade of a missing database = %v", err)
+	}
+}
+
+// A fast scan hashes only the first 8 KB of a larger file, even with hash off, and a plain scan
+// finishes it.
+func TestScanFastTaskHashesHeadOfLargerFiles(t *testing.T) {
+	root := t.TempDir()
+	for name, size := range map[string]int{"lantern.bin": 9000, "pebble.bin": 100} {
+		if err := os.WriteFile(filepath.Join(root, name), make([]byte, size), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	x := New(config.FileIndexConfig{Database: initIndex(t), Workers: 2})
+	x.configPath = filepath.Join(t.TempDir(), "absent-config.ini")
+	t.Cleanup(func() { _ = x.Close() })
+	if err := x.ScanFastTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	d, err := x.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	hashed := func(name string) (full, head bool) {
+		t.Helper()
+		if err := d.QueryRow("SELECT file_id IS NOT NULL, sha256_8kb IS NOT NULL FROM instance WHERE filename = ?", name).Scan(&full, &head); err != nil {
+			t.Fatal(err)
+		}
+		return full, head
+	}
+	if full, head := hashed("lantern.bin"); full || !head {
+		t.Fatalf("large file after fast scan: full %v, head %v", full, head)
+	}
+	if full, _ := hashed("pebble.bin"); !full {
+		t.Fatal("small file after fast scan is not fully hashed")
+	}
+	x.cfg.Hash = true
+	if err := x.ScanTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	if full, _ := hashed("lantern.bin"); !full {
+		t.Fatal("large file after plain scan is not fully hashed")
 	}
 }
 
