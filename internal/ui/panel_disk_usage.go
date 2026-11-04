@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 )
 
@@ -50,12 +51,16 @@ func entryDiskUsageBytes(entry localfs.Entry, show bool, painter DiskUsagePainte
 	return panellist.EntryUsageBytes(entry, painter)
 }
 
-func panelDiskUsageDenom(show bool, painter DiskUsagePainter, entries []localfs.Entry) int64 {
-	if !show || painter == nil || len(entries) == 0 {
+func panelDiskUsageDenom(show bool, painter DiskUsagePainter, state panel.State) int64 {
+	if !show || painter == nil {
 		return 0
 	}
 	var max int64
-	for _, e := range entries {
+	for i := range state.VisibleEntryCount() {
+		e, _, ok := state.VisibleEntry(i)
+		if !ok {
+			continue
+		}
 		sz := entryDiskUsageBytes(e, true, painter)
 		if sz > max {
 			max = sz

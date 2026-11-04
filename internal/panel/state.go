@@ -579,25 +579,6 @@ func (s State) treeVisibleEntry(index int) (localfs.Entry, int, bool) {
 	return s.treeRows[index].Value.Entry, index, true
 }
 
-// VisibleEntries returns the currently visible entries as a flat slice (Entries in flat mode,
-// flattened treeRows in tree mode). For callers that need every visible row's Entry but not the
-// per-row tree shape (e.g. the disk-usage bar denominator, which only needs byte sizes).
-func (s State) VisibleEntries() []localfs.Entry {
-	count := s.VisibleEntryCount()
-	if count == 0 {
-		return nil
-	}
-	out := make([]localfs.Entry, 0, count)
-	for i := 0; i < count; i++ {
-		entry, _, ok := s.VisibleEntry(i)
-		if !ok {
-			continue
-		}
-		out = append(out, entry)
-	}
-	return out
-}
-
 // FilterUniqueMatch reports whether the active quick filter has exactly one file-name match.
 func (s State) FilterUniqueMatch() bool {
 	return s.Filter.Active && s.Filter.MatchCount() == 1

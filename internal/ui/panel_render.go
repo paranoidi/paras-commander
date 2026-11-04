@@ -710,7 +710,7 @@ func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig)
 	}
 	gitStart := rect.X + 1 + leftGutter
 	iconStart := gitStart + gitStrip
-	diskDenom := panelDiskUsageDenom(display.ShowDiskUsage, display.Painter, state.VisibleEntries())
+	diskDenom := panelDiskUsageDenom(display.ShowDiskUsage, display.Painter, state)
 	return panelColumnLayoutResult{
 		LeftGutter: leftGutter, IconStrip: iconStrip, NameOnlyDisplay: nameOnlyDisplay,
 		ShowGit: showGit, GitStrip: gitStrip, RowTextWidth: rowTextWidth,

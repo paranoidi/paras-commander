@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -58,8 +59,28 @@ func TestEntryDiskUsageBytesDoesNotCallDiskScanExcluded(t *testing.T) {
 	if got := entryDiskUsageBytes(entries[1], true, painter); got != 0 {
 		t.Fatalf("unknown dir size = %d, want 0", got)
 	}
-	if got := panelDiskUsageDenom(true, painter, entries); got != 42 {
+	if got := panelDiskUsageDenom(true, painter, panel.State{Entries: entries}); got != 42 {
 		t.Fatalf("denom = %d, want 42", got)
+	}
+}
+
+func TestPanelDiskUsageDenomIsMaxOfVisibleEntries(t *testing.T) {
+	t.Parallel()
+	painter := panicStatDiskPainter{sizes: map[string]int64{
+		"/mnt/nas/quill":   7,
+		"/mnt/nas/rivet":   19,
+		"/mnt/nas/lantern": 3,
+	}}
+	state := panel.State{Entries: []localfs.Entry{
+		{Name: "quill", Path: "/mnt/nas/quill", Type: localfs.EntryDirectory},
+		{Name: "rivet", Path: "/mnt/nas/rivet", Type: localfs.EntryDirectory},
+		{Name: "lantern", Path: "/mnt/nas/lantern", Type: localfs.EntryDirectory},
+	}}
+	if got := panelDiskUsageDenom(true, painter, state); got != 19 {
+		t.Fatalf("denom = %d, want 19", got)
+	}
+	if got := panelDiskUsageDenom(false, painter, state); got != 0 {
+		t.Fatalf("hidden disk usage denom = %d, want 0", got)
 	}
 }
 
