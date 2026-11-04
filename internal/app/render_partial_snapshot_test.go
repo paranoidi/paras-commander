@@ -47,7 +47,7 @@ func TestPartialPaintersSnapshotModelUnderCommandsMu(t *testing.T) {
 	}()
 
 	for range 80 {
-		app.renderBrowserListNavUpdate(ui.PrimaryPanel)
+		app.renderBrowserListNavUpdate(ui.PrimaryPanel, false)
 		_ = app.paintDiskUsageBrowserUpdate()
 	}
 	close(stop)

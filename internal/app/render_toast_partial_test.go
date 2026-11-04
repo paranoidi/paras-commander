@@ -54,7 +54,7 @@ func TestPartialPaintShortToastMatchesFullRender(t *testing.T) {
 				app.model.ActiveSubFocus = ui.SubFocusFileList
 			},
 			paint: func(app *App) {
-				app.renderBrowserListNavUpdate(ui.PrimaryPanel)
+				app.renderBrowserListNavUpdate(ui.PrimaryPanel, false)
 			},
 		},
 		{

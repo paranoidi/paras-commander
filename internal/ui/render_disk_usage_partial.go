@@ -177,15 +177,27 @@ func paintBrowserPanelsInScope(
 	return painted
 }
 
+// browserNavPanelPaintable holds the guards shared by the single-panel list-nav paints.
+func browserNavPanelPaintable(layout Layout, model Model, panelID int) bool {
+	return model.ViewMode == ViewBrowser && !layout.TooSmall && (panelID == PrimaryPanel || panelID == SecondaryPanel)
+}
+
 // PaintBrowserListNavPanelOnly repaints one browser file-list column (and its selected strip
-// when visible) without touching the other twin panel or the rest of the frame.
+// when visible) without touching the rest of the frame. The other twin panel is repainted too when
+// the match marks are on, since a listing change in panelID changes which of its rows are marked.
 func PaintBrowserListNavPanelOnly(screen tcell.Screen, layout Layout, model Model, styles theme.Theme, panelID int) bool {
-	if model.ViewMode != ViewBrowser || layout.TooSmall {
+	if !browserNavPanelPaintable(layout, model, panelID) {
 		return false
 	}
-	if panelID != PrimaryPanel && panelID != SecondaryPanel {
-		return false
-	}
-	// The other panel's match marks follow this panel's cursor, so repaint both when they are on.
 	return paintBrowserPanelsInScope(screen, layout, model, styles, func(id int) bool { return id == panelID || model.OtherPanelMatchMarks })
+}
+
+// PaintBrowserCursorMovePanelOnly is PaintBrowserListNavPanelOnly for a cursor-only move: the
+// other panel is repainted only when otherPanelMarksFollowCursor holds.
+func PaintBrowserCursorMovePanelOnly(screen tcell.Screen, layout Layout, model Model, styles theme.Theme, panelID int) bool {
+	if !browserNavPanelPaintable(layout, model, panelID) {
+		return false
+	}
+	otherNeeded := otherPanelMarksFollowCursor(model, panelID)
+	return paintBrowserPanelsInScope(screen, layout, model, styles, func(id int) bool { return id == panelID || otherNeeded })
 }

@@ -102,3 +102,38 @@ func otherPanelMatchNames(model Model, panelID int) (names map[string]struct{}, 
 	}
 	return names, cursor, dir
 }
+
+// otherPanelMarksFollowCursor reports whether a cursor-only move in panelID can change what the
+// other panel draws: the match marks are on and some visible row of the other panel would carry a
+// mark (same row test as drawPanelRow). A move in a tree-layout panel also shifts its match dir
+// (otherMatchDir), which can add or clear marks, so that always counts.
+// ponytail: scans all visible entries rather than only viewport rows, a superset so it is safe;
+// narrow to the viewport if this ever shows in a profile.
+func otherPanelMarksFollowCursor(model Model, panelID int) bool {
+	if !model.OtherPanelMatchMarks {
+		return false
+	}
+	otherID := PrimaryPanel
+	moved, other := &model.Secondary, &model.Primary
+	if panelID == PrimaryPanel {
+		otherID = SecondaryPanel
+		moved, other = &model.Primary, &model.Secondary
+	}
+	if moved.ListLayout == panel.ListLayoutTree {
+		return true
+	}
+	names, _, dir := otherPanelMatchNames(model, otherID)
+	if len(names) == 0 {
+		return false
+	}
+	for i := range other.VisibleEntryCount() {
+		e, _, ok := other.VisibleEntry(i)
+		if !ok || e.Name == ".." || other.EntryDir(e).String() != dir {
+			continue
+		}
+		if _, hit := names[e.Name]; hit {
+			return true
+		}
+	}
+	return false
+}

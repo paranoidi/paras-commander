@@ -894,7 +894,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 				a.navPaintDeferredPanel = a.model.ActivePanel
 				return quit, rendered
 			}
-			a.renderBrowserListNavUpdate(a.model.ActivePanel)
+			a.renderBrowserListNavUpdate(a.model.ActivePanel, listNavAction(nextAction))
 		} else {
 			a.render()
 		}

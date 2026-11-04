@@ -131,7 +131,7 @@ func (a *App) browserListNavPartialRenderEligible() bool {
 // than going through browserListNavPartialRenderEligibleFor's per-action gate.
 func (a *App) renderPanelAsyncResult(panelID int) {
 	if a.browserListNavPartialRenderEligible() {
-		a.renderBrowserListNavUpdate(panelID)
+		a.renderBrowserListNavUpdate(panelID, false)
 	} else {
 		a.render()
 	}
@@ -199,8 +199,10 @@ func (a *App) snapshotModelForBrowserPaint() ui.Model {
 }
 
 // renderBrowserListNavUpdate repaints panelID's file-list column and menu-bar permission tail
-// without redrawing the other panel (avoids disk-usage row work on the other column during scans).
-func (a *App) renderBrowserListNavUpdate(panelID int) {
+// without a full render. The other panel is repainted only when its match marks can have changed:
+// after a listing change (cursorOnly false) whenever the marks are on, after a cursor-only move
+// only when ui.PaintBrowserCursorMovePanelOnly finds a row that would carry a mark.
+func (a *App) renderBrowserListNavUpdate(panelID int, cursorOnly bool) {
 	if a.holdBrowserPaintForCarouselParent(panelID) {
 		a.navPaintDeferred = false // the carousel timer paints later; nothing left for the loop to flush
 		return
@@ -216,7 +218,11 @@ func (a *App) renderBrowserListNavUpdate(panelID int) {
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
 	model := a.snapshotModelForBrowserPaint()
-	if layout.TooSmall || !ui.PaintBrowserListNavPanelOnly(a.screen, layout, model, a.styles, panelID) {
+	paint := ui.PaintBrowserListNavPanelOnly
+	if cursorOnly {
+		paint = ui.PaintBrowserCursorMovePanelOnly
+	}
+	if layout.TooSmall || !paint(a.screen, layout, model, a.styles, panelID) {
 		a.render()
 		return
 	}
@@ -245,10 +251,15 @@ func (a *App) shouldDeferNavPaint() bool {
 }
 
 // flushDeferredNavPaint paints a skipped nav frame once the queue drains or the frame went stale.
-// renderPanelAsyncResult picks partial vs full paint and its paths clear navPaintDeferred.
+// The deferred frame is cursor-only, so it takes the narrow partial paint; both paint paths clear
+// navPaintDeferred (markNavPainted), so an async apply landing in between supersedes it.
 func (a *App) flushDeferredNavPaint() {
 	if a.navPaintDeferred && (!a.screen.HasPendingEvent() || time.Since(a.lastNavPaintAt) >= config.NavPaintMaxStale) {
-		a.renderPanelAsyncResult(a.navPaintDeferredPanel)
+		if a.browserListNavPartialRenderEligible() {
+			a.renderBrowserListNavUpdate(a.navPaintDeferredPanel, true)
+		} else {
+			a.render()
+		}
 	}
 }
 
