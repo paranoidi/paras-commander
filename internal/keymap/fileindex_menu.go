@@ -13,12 +13,13 @@ var fileIndexMenuGroups = []struct {
 	{"Browse", []string{ActionFileIndexFind, ActionFileIndexBrowseWith, ActionFileIndexBrowse, ActionFileIndexReveal}},
 	{"Tagging", []string{ActionFileIndexTagAdd, ActionFileIndexTagRemove}},
 	{"Actions", []string{ActionFileIndexScan, ActionFileIndexScanFast, ActionFileIndexPrune}},
+	{"Duplicates", []string{ActionPanelFindDuplicates, ActionFileIndexCopies, ActionFileIndexCopiesOutside}},
 }
 
 // DefaultFileIndexMenuKeys returns built-in default fileindex-menu letters per action. Each is
 // its action's default chord letter in lowercase (every fileindex chord is Alt+Shift+letter),
-// except fileindex.scan-fast: uppercase of fileindex.scan's letter. fileindex.other-copies and
-// fileindex.copies-outside have no letter here: they live in the leader menu's Duplicates group.
+// except fileindex.scan-fast (uppercase of fileindex.scan's letter) and panel.find-duplicates
+// (uppercase of fileindex.find's letter).
 func DefaultFileIndexMenuKeys() map[string]string {
 	out := make(map[string]string)
 	for _, spec := range DefaultActionSpecs() {

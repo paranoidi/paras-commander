@@ -31,12 +31,11 @@ const (
 )
 
 // leaderMenuGroupColumn assigns each group to a macro column
-// (0=File, 1=Selection+View+Duplicates, 2=Navigation+Tools, 3=Add mark+Display+App).
+// (0=File, 1=Selection+View, 2=Navigation+Tools, 3=Add mark+Display+App).
 var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupFile:       0,
 	LeaderMenuGroupSelection:  1,
 	LeaderMenuGroupView:       1,
-	LeaderMenuGroupDuplicates: 1,
 	LeaderMenuGroupNavigation: 2,
 	LeaderMenuGroupTools:      2,
 	LeaderMenuGroupAddMark:    3,
@@ -48,7 +47,6 @@ var leaderMenuGroupOrder = []string{
 	LeaderMenuGroupFile,
 	LeaderMenuGroupSelection,
 	LeaderMenuGroupView,
-	LeaderMenuGroupDuplicates,
 	LeaderMenuGroupNavigation,
 	LeaderMenuGroupTools,
 	LeaderMenuGroupAddMark,
@@ -85,13 +83,9 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionPanelFilterDialog,
 		ActionPanelDiskUsageScan,
 	},
-	LeaderMenuGroupDuplicates: {
-		ActionPanelFindDuplicates,
-		ActionFileIndexCopies,
-		ActionFileIndexCopiesOutside,
-	},
 	LeaderMenuGroupTools: {
 		ActionPanelFindDialog,
+		ActionPanelFindDuplicates,
 		ActionPanelComparePanels,
 		ActionFileRunForEach,
 		ActionFileExtract,

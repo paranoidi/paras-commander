@@ -29,15 +29,12 @@ of running; it needs a newer pc.
 
 `<` (`fileindex.menu`) opens the **File Index menu** at the bottom of the screen;
 the `:` leader menu lists it under Tools with the same `<`. The menu groups
-its actions into Browse, Tagging and Actions columns. Each action's
+its actions into Browse, Tagging, Actions and Duplicates columns. Each action's
 letter in the menu is the letter of its own shortcut, in lowercase: every
-fileindex shortcut is `Alt+Shift` plus that letter. The exceptions are
-`fileindex.other-copies` and `fileindex.copies-outside`, which are not in this menu: the
-`:` leader menu lists them in its Duplicates group, after `panel.find-duplicates`, with
-the letters `T` and `I`. All actions are also in Help (`F1`) under
+fileindex shortcut is `Alt+Shift` plus that letter. The Duplicates column starts
+with [Find duplicates](find-duplicates.md) under `F`. All actions are also in Help (`F1`) under
 fileindex. The keys below are the defaults; rebind the shortcuts under
-`[main]`, the File Index menu letters under `[fileindex_menu]` and the
-Duplicates group letters under `[leader_key]` in `keybindings.toml`.
+`[main]` and the menu letters under `[fileindex_menu]` in `keybindings.toml`.
 
 | Key | Menu | Action | |
 |---|---|---|---|
@@ -45,8 +42,8 @@ Duplicates group letters under `[leader_key]` in `keybindings.toml`.
 | `M-I` | `i` | `fileindex.browse-with` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
 | `M-B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
 | `M-R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
-| `M-O` | `:` menu `T` | `fileindex.other-copies` | [Other copies](#other-copies) of the file under the cursor, from the index |
-| `M-D` | `:` menu `I` | `fileindex.copies-outside` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
+| `M-O` | `o` | `fileindex.other-copies` | [Other copies](#other-copies) of the file under the cursor, from the index |
+| `M-D` | `d` | `fileindex.copies-outside` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
 | `M-S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
 | `M-A` | `S` | `fileindex.scan-fast` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
 | `M-P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
