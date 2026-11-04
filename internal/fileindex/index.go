@@ -160,7 +160,7 @@ func statDBFile(path string) dbFile {
 func (x *Index) open() (string, *db.DB, error) {
 	path, err := x.DatabasePath()
 	if err != nil {
-		return "", nil, fmt.Errorf("fileindex: %w", err)
+		return "", nil, err
 	}
 	// db.Open creates the parent directory and SQLite the file: check first so a missing
 	// index stays missing.
@@ -169,11 +169,11 @@ func (x *Index) open() (string, *db.DB, error) {
 	}
 	d, err := db.Open(path)
 	if err != nil {
-		return path, nil, fmt.Errorf("fileindex: %w", err)
+		return path, nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if err := d.RequireSchema(); err != nil {
 		_ = d.Close()
-		return path, nil, fmt.Errorf("fileindex %s: %w", path, pcSchemaError(err))
+		return path, nil, fmt.Errorf("%s: %w", path, pcSchemaError(err))
 	}
 	return path, d, nil
 }
@@ -206,7 +206,7 @@ func (x *Index) initDB(upgrade bool) (string, error) {
 	}
 	path, err := x.DatabasePath()
 	if err != nil {
-		return "", fmt.Errorf("fileindex: %w", err)
+		return "", err
 	}
 	verb := "create"
 	_, statErr := os.Stat(path)
@@ -220,16 +220,16 @@ func (x *Index) initDB(upgrade bool) (string, error) {
 	}
 	d, err := db.Open(path)
 	if err != nil {
-		return path, fmt.Errorf("fileindex: %w", err)
+		return path, fmt.Errorf("%s: %w", path, err)
 	}
 	if err := d.Init(io.Discard); err != nil {
 		_ = d.Close()
-		return path, fmt.Errorf("fileindex: %s %s: %w", verb, path, err)
+		return path, fmt.Errorf("%s %s: %w", verb, path, err)
 	}
 	if upgrade {
 		if err := d.RequireSchema(); err != nil {
 			_ = d.Close()
-			return path, fmt.Errorf("fileindex %s: %w", path, pcSchemaError(err))
+			return path, fmt.Errorf("%s: %w", path, pcSchemaError(err))
 		}
 	}
 	if x.db != nil {
