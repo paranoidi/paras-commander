@@ -1140,3 +1140,34 @@ func TestDedupOutside(t *testing.T) {
 		t.Fatalf("index root = %v, %v", none, err)
 	}
 }
+
+// A local panel inside a symlinked directory finds the indexed duplicates, which are recorded
+// under the real path.
+func TestDedupFilesThroughSymlinkedDirectory(t *testing.T) {
+	real := t.TempDir()
+	for _, n := range []string{"anchor.bin", "meadow.bin"} {
+		if err := os.WriteFile(filepath.Join(real, n), []byte("lantern"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	link := filepath.Join(t.TempDir(), "harbor")
+	if err := os.Symlink(real, link); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	x := testIndex(t, initIndex(t))
+	if err := x.ScanTask([]string{real}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	files, hashes, err := x.DedupFiles(context.Background(), at(t, link))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 2 || len(hashes) != 2 || hashes["anchor.bin"] != hashes["meadow.bin"] {
+		t.Fatalf("files = %v, hashes = %v, want both copies through the symlink", files, hashes)
+	}
+	for _, f := range files {
+		if f.Rel != "anchor.bin" && f.Rel != "meadow.bin" {
+			t.Fatalf("Rel = %q, want relative to the resolved directory", f.Rel)
+		}
+	}
+}

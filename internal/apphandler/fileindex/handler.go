@@ -63,6 +63,9 @@ type Host interface {
 	// OpenDedupOutside opens the find-duplicates view over the files under the host dir dir that
 	// have a copy elsewhere in the index.
 	OpenDedupOutside(dir string)
+	// OpenDedupIndexed opens the find-duplicates view over the indexed files under the host dir
+	// dir, whatever kind of panel is active.
+	OpenDedupIndexed(dir string)
 }
 
 // Deps wires the fileindex handler at app construction.
@@ -161,6 +164,8 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.Copies()
 	case keymap.ActionFileIndexCopiesOutside:
 		h.withIndex(h.CopiesOutside)
+	case keymap.ActionFileIndexFindDuplicates:
+		h.withIndex(h.FindDuplicates)
 	default:
 		return false
 	}

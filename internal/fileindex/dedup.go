@@ -28,6 +28,15 @@ func (x *Index) DedupFiles(ctx context.Context, root pathloc.Path) ([]compare.Fi
 		return nil, nil, err
 	}
 	id, found, err := db.DirByPath(d, host)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !found { // the index records real paths: retry through symlinks (a gone directory stays as is)
+		if real, rerr := db.Resolve(host); rerr == nil && real != host {
+			host = real
+			id, found, err = db.DirByPath(d, host)
+		}
+	}
 	if err != nil || !found {
 		return nil, nil, err
 	}

@@ -192,6 +192,26 @@ func (h *Handler) OpenOutside(dir string) {
 	h.openRoot(root, nil)
 }
 
+// OpenIndexed opens the results view over the indexed files under dir (a host path), whatever
+// the active panel is: always a fresh index query, never a disk walk.
+// ponytail: directories selected in a local panel are ignored (a fileindex:// panel still gets the
+// scope dialog via Open); upgrade path is mapping the selection to `only`.
+func (h *Handler) OpenIndexed(dir string) {
+	if ui.IsAuxiliaryView(h.model.ViewMode) && h.model.ViewMode != ui.ViewDedup {
+		return
+	}
+	if h.activePanelPath().Scheme() == pathloc.SchemeFileIndex {
+		h.Open()
+		return
+	}
+	root, err := pathloc.FileIndex(dir)
+	if err != nil {
+		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyError)
+		return
+	}
+	h.openPlain(root, nil)
+}
+
 // HasResults reports whether a finished scan's results are kept in memory.
 func (h *Handler) HasResults() bool {
 	return h.session == nil && h.model.DedupSnapshot.Phase == comparepkg.DedupDone

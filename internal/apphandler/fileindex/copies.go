@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	copiesTitle        = "Other copies"
-	copiesOutsideTitle = "Copies outside directory"
+	copiesTitle         = "Other copies"
+	copiesOutsideTitle  = "Copies outside directory"
+	findDuplicatesTitle = "Find duplicates"
 )
 
 // CopiesPayload carries the outcome of one fileindex.other-copies lookup for the file at Path (the
@@ -66,6 +67,20 @@ func (h *Handler) CopiesOutside() {
 		return
 	}
 	h.host.OpenDedupOutside(dir)
+}
+
+// FindDuplicates opens the duplicates view over the indexed files in the active panel's
+// directory, also from a local panel (never reading the disk).
+func (h *Handler) FindDuplicates() {
+	if !h.localOrIndex() {
+		return
+	}
+	dir, err := hostPath(h.host.ActivePanel().PathString())
+	if err != nil {
+		h.host.SetErrorMessage(findDuplicatesTitle, err)
+		return
+	}
+	h.host.OpenDedupIndexed(dir)
 }
 
 // HandleCopies shows the lookup unless the user has moved on since it started.

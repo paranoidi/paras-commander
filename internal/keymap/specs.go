@@ -594,8 +594,6 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "C-M-f",
 			Keywords:     []string{"duplicate", "dedup", "dupes", "hash", "identical", "remove"},
 			LeaderKey:    "P",
-			// Not a fileindex action, so no fileindex chord to match: uppercase of fileindex.find's letter.
-			FileIndexMenuKey: "F",
 		},
 		{
 			ID:          ActionPanelFilterDialog,
@@ -1448,6 +1446,16 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey:     "M-D",
 			Keywords:         []string{"fileindex", "index", "copies", "duplicate", "outside", "elsewhere", "delete"},
 			FileIndexMenuKey: "d",
+		},
+		{
+			ID:               ActionFileIndexFindDuplicates,
+			Views:            HelpBrowser,
+			Title:            "Find duplicates",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-W"},
+			PreferredKey:     "M-W",
+			Keywords:         []string{"fileindex", "index", "duplicate", "dedup", "dupes", "identical"},
+			FileIndexMenuKey: "F", // uppercase of fileindex.find's letter
 		},
 
 		// ── File operations ──

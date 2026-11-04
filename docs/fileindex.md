@@ -32,7 +32,8 @@ the `:` leader menu lists it under Tools with the same `<`. The menu groups
 its actions into Browse, Tagging, Actions and Duplicates columns. Each action's
 letter in the menu is the letter of its own shortcut, in lowercase: every
 fileindex shortcut is `Alt+Shift` plus that letter. The Duplicates column starts
-with [Find duplicates](find-duplicates.md) under `F`. All actions are also in Help (`F1`) under
+with `fileindex.find-duplicates` ([Find duplicates](find-duplicates.md)) under `F`, the
+uppercase of `fileindex.find`'s letter. All actions are also in Help (`F1`) under
 fileindex. The keys below are the defaults; rebind the shortcuts under
 `[main]` and the menu letters under `[fileindex_menu]` in `keybindings.toml`.
 
@@ -42,6 +43,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-I` | `i` | `fileindex.browse-with` | Toggle [browsing with fileindex](#browsing-with-fileindex): the real directory plus the index's state per entry |
 | `M-B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
 | `M-R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
+| `M-W` | `F` | `fileindex.find-duplicates` | [Find duplicates](find-duplicates.md) from the index for the current directory, also from a normal panel: it never reads the disk, so it only sees indexed files (selected directories on a normal panel are ignored) |
 | `M-O` | `o` | `fileindex.other-copies` | [Other copies](#other-copies) of the file under the cursor, from the index |
 | `M-D` | `d` | `fileindex.copies-outside` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
 | `M-S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |

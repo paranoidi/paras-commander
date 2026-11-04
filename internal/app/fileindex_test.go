@@ -33,6 +33,7 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexScan,
 	keymap.ActionFileIndexScanFast,
 	keymap.ActionFileIndexPrune,
+	keymap.ActionFileIndexFindDuplicates,
 	keymap.ActionFileIndexCopies,
 	keymap.ActionFileIndexCopiesOutside,
 }
@@ -55,18 +56,15 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 	}
 
 	// The fileindex menu lists every action under the lowercase letter of its default chord, and
-	// every fileindex chord is Alt+Shift+letter. Fast scan takes uppercase of scan's letter instead.
+	// every fileindex chord is Alt+Shift+letter. Fast scan takes uppercase of scan's letter instead,
+	// and find duplicates uppercase of find's.
 	var inMenu, groups []string
 	for _, e := range a.keys.FileIndexMenuEntries() {
+		if e.ActionID == keymap.ActionPanelFindDuplicates {
+			t.Error("panel.find-duplicates must not be in the fileindex menu")
+		}
 		if e.GroupTitle != "" {
 			groups = append(groups, e.GroupTitle)
-			continue
-		}
-		// The Duplicates column starts with the plain scan, which is no fileindex action.
-		if e.ActionID == keymap.ActionPanelFindDuplicates {
-			if e.Key != 'F' || groups[len(groups)-1] != "Duplicates" || inMenu[len(inMenu)-1] != keymap.ActionFileIndexPrune {
-				t.Errorf("find duplicates: key %q, groups %v, after %v", e.Key, groups, inMenu)
-			}
 			continue
 		}
 		inMenu = append(inMenu, e.ActionID)
@@ -75,8 +73,11 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 			t.Fatal(err)
 		}
 		wantKey := unicode.ToLower(ch.Rune)
-		if e.ActionID == keymap.ActionFileIndexScanFast {
+		switch e.ActionID {
+		case keymap.ActionFileIndexScanFast:
 			wantKey = 'S'
+		case keymap.ActionFileIndexFindDuplicates:
+			wantKey = 'F'
 		}
 		if ch.Mod != tcell.ModAlt || !unicode.IsUpper(ch.Rune) || wantKey != e.Key {
 			t.Errorf("%s: menu key %q does not match its chord %s", e.ActionID, e.Key, keymap.FormatChord(ch))
@@ -93,6 +94,9 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 	var leader []string
 	for _, e := range a.keys.LeaderMenuEntries() {
 		leader = append(leader, e.ActionID)
+	}
+	if !slices.Contains(leader, keymap.ActionPanelFindDuplicates) {
+		t.Fatalf("leader menu lost panel.find-duplicates: %v", leader)
 	}
 	if !slices.Contains(leader, keymap.ActionFileIndexMenu) || slices.Contains(leader, keymap.ActionFileIndexScan) {
 		t.Fatalf("leader menu actions = %v", leader)

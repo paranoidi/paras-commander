@@ -83,3 +83,54 @@ func TestOpenOutsideModeSurvivesRefreshUntilPlainOpen(t *testing.T) {
 		t.Fatalf("plain Open kept the mode: indexed=%v partial=%v outsideOf=%q", got.Indexed != nil, got.IndexedPartial, model.DedupView.OutsideOf)
 	}
 }
+
+// OpenIndexed from a local panel always queries the index for that directory: no return dialog
+// even with kept results for it, Refresh stays on the index, and a later plain Open walks the disk.
+func TestOpenIndexedFromLocalPanelUsesIndex(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	var got comparepkg.DedupOptions
+	var gotRoot pathloc.Path
+	orig := startDedup
+	startDedup = func(ctx context.Context, root pathloc.Path, opts comparepkg.DedupOptions) *comparepkg.DedupSession {
+		got, gotRoot = opts, root
+		if opts.Indexed != nil { // no index in this test: the scan finds nothing
+			opts.Indexed = func(context.Context) ([]comparepkg.FileRecord, map[string][32]byte, error) { return nil, nil, nil }
+		}
+		return orig(ctx, root, opts)
+	}
+	t.Cleanup(func() { startDedup = orig })
+
+	dir := t.TempDir()
+	model := &ui.Model{ViewMode: ui.ViewBrowser}
+	model.Primary.Path = pathloc.MustParse(dir)
+	h := New(Deps{Host: &dedupHandlerHost{}, Model: model})
+	t.Cleanup(h.Close)
+
+	indexRoot, err := pathloc.FileIndex(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Kept results for exactly this directory would normally offer the Show/Rescan dialog.
+	model.DedupSnapshot = comparepkg.DedupSnapshot{Phase: comparepkg.DedupDone, Root: indexRoot}
+	h.OpenIndexed(dir)
+	if got.Indexed == nil || got.IndexedPartial || gotRoot.Scheme() != pathloc.SchemeFileIndex || !gotRoot.Equal(indexRoot) {
+		t.Fatalf("OpenIndexed: indexed=%v partial=%v root=%s", got.Indexed != nil, got.IndexedPartial, gotRoot)
+	}
+	if model.DedupReturnDialog.Open {
+		t.Fatal("OpenIndexed must not offer the return dialog from a local panel")
+	}
+
+	got, gotRoot = comparepkg.DedupOptions{}, pathloc.Path{}
+	model.ViewMode = ui.ViewDedup
+	h.Refresh()
+	if got.Indexed == nil || got.IndexedPartial || !gotRoot.Equal(indexRoot) {
+		t.Fatalf("Refresh left the index: indexed=%v partial=%v root=%s", got.Indexed != nil, got.IndexedPartial, gotRoot)
+	}
+
+	h.Close()
+	got, gotRoot = comparepkg.DedupOptions{}, pathloc.Path{}
+	h.Open()
+	if got.Indexed != nil || gotRoot.Scheme() == pathloc.SchemeFileIndex {
+		t.Fatalf("plain Open on a local panel used the index: indexed=%v root=%s", got.Indexed != nil, gotRoot)
+	}
+}
