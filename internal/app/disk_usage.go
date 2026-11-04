@@ -117,10 +117,10 @@ func (a *App) resortPanelsDiskUsageSorted() {
 	vrLeft := a.panelViewportRows(ui.PrimaryPanel)
 	vrRight := a.panelViewportRows(ui.SecondaryPanel)
 	if a.model.Primary.Sort.DiskUsageIdleSizeSort && a.model.Primary.IdleDiskTotalsSort {
-		a.model.Primary.RefreshDiskUsageOrdering(vrLeft, false)
+		a.model.Primary.RefreshDiskUsageOrdering(vrLeft)
 	}
 	if a.model.Secondary.Sort.DiskUsageIdleSizeSort && a.model.Secondary.IdleDiskTotalsSort {
-		a.model.Secondary.RefreshDiskUsageOrdering(vrRight, false)
+		a.model.Secondary.RefreshDiskUsageOrdering(vrRight)
 	}
 }
 
@@ -188,7 +188,7 @@ func (a *App) diskIdleSortSpec() idleSortSpec {
 			p := a.panelByID(panelID)
 			p.DiskUsageIdleSortActivated = true
 			p.IdleDiskTotalsSort = true
-			p.RefreshDiskUsageOrdering(a.panelViewportRows(panelID), true)
+			p.RefreshDiskUsageOrdering(a.panelViewportRows(panelID))
 		},
 	}
 }
@@ -424,7 +424,7 @@ func (a *App) handlePanelDirChanged(panelID int) {
 	if p.ListingFullyDiskCached() {
 		p.DiskUsageIdleSortActivated = true
 		p.IdleDiskTotalsSort = true
-		p.RefreshDiskUsageOrdering(a.panelViewportRows(panelID), true)
+		p.RefreshDiskUsageOrdering(a.panelViewportRows(panelID))
 		return
 	}
 }

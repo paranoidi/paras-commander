@@ -2476,7 +2476,7 @@ func TestRefreshDiskUsageOrderingKeepsCursor(t *testing.T) {
 	}
 	sizes[filepath.Clean(pathA)] = 1
 	sizes[filepath.Clean(pathB)] = 1000
-	state.RefreshDiskUsageOrdering(5, false)
+	state.RefreshDiskUsageOrdering(5)
 	if state.Entries[0].Name != "b.bin" || state.Entries[1].Name != "a.bin" {
 		t.Fatalf("got order %v / %v after refresh, want b.bin then a.bin", state.Entries[0].Name, state.Entries[1].Name)
 	}
@@ -2696,7 +2696,7 @@ func TestRefreshDiskUsageOrderingPreservesCenteredScrollWhenNotRequested(t *test
 	// Reorder neighbors only so the highlighted entry keeps a middle index (regression: resort must not undo Parent-style centering).
 	sizes[filepath.Clean(entries[6].Path)] = 1000
 	sizes[filepath.Clean(entries[8].Path)] = 1
-	state.RefreshDiskUsageOrdering(viewportRows, false)
+	state.RefreshDiskUsageOrdering(viewportRows)
 	if !state.cursorAppearsCentered(viewportRows) {
 		t.Fatalf("after disk reorder: scroll=%d cursor=%d, want centered viewport", state.ScrollOffset, state.Cursor)
 	}
@@ -2707,42 +2707,6 @@ func TestRefreshDiskUsageOrderingPreservesCenteredScrollWhenNotRequested(t *test
 			name = ent.Name
 		}
 		t.Fatalf("cursor entry = %q ok=%v want 7.dat", name, ok)
-	}
-}
-
-func TestRefreshDiskUsageOrderingCentersCursorWhenRequested(t *testing.T) {
-	entries := make([]localfs.Entry, 15)
-	sizes := map[string]int64{}
-	for i := range entries {
-		name := strconv.Itoa(i) + ".dat"
-		p := filepath.Join("/tmp", name)
-		entries[i] = localfs.Entry{Name: name, Path: p}
-		sizes[p] = int64(i)
-	}
-	state := State{
-		Path:               pathloc.MustParse("/tmp"),
-		Entries:            entries,
-		Sort:               SortState{Mode: SortName, DirectoriesFirst: false, DiskUsageIdleSizeSort: true},
-		IdleDiskTotalsSort: true,
-		Cursor:             7,
-		ScrollOffset:       0,
-	}
-	state.DiskSorter = func(abs string) (int64, bool) {
-		v, ok := sizes[filepath.Clean(abs)]
-		return v, ok
-	}
-	state.RefreshDiskUsageOrdering(5, true)
-	ent, ok := state.CurrentEntry()
-	if !ok || ent.Name != "7.dat" {
-		name := ""
-		if ok {
-			name = ent.Name
-		}
-		t.Fatalf("cursor entry = %q ok=%v want 7.dat", name, ok)
-	}
-	row := state.Cursor - state.ScrollOffset
-	if row != 2 {
-		t.Fatalf("cursor viewport row = %d, want 2 (centered in 5 rows)", row)
 	}
 }
 

@@ -1128,23 +1128,18 @@ func shouldCenterCursorOnListing(previousPath, listingLoc pathloc.Path, centerRe
 	return centerRecalled || selectedName != "" || indexFallback >= 0
 }
 
-// cursorAppearsCentered reports whether the highlight row sits in the centered (or tail-pinned) viewport
-// position produced by EnsureCursorCentered.
+// cursorAppearsCentered reports whether the highlight row sits in the viewport position produced by EnsureCursorCentered.
+// A cursor pinned to the last row does not count: it may simply have been scrolled there.
 func (s *State) cursorAppearsCentered(viewportRows int) bool {
 	n := s.VisibleEntryCount()
 	if viewportRows <= 0 || n == 0 {
 		return false
 	}
 	row := s.Cursor - s.ScrollOffset
-	mid := viewportRows / 2
-	if row == mid {
+	if row == viewportRows/2 {
 		return true
 	}
-	if n <= viewportRows {
-		return row == 0
-	}
-	maxOffset := n - viewportRows
-	return s.ScrollOffset == maxOffset && row == viewportRows-1
+	return n <= viewportRows && row == 0
 }
 
 // cursorAppearsEdged reports whether the highlight row sits at the edge-margin viewport position.
@@ -2330,10 +2325,9 @@ func (s *State) UnselectGroup(spec FilterSpec, meta GroupSelectMeta) (bool, erro
 	return true, nil
 }
 
-// RefreshDiskUsageOrdering reapplies cached disk-total ordering when subtree sizes update while staying in one directory.
-// When centerCursor is true (typically the first application after idle timeout), the highlighted row is kept by path and scroll is centered on it.
-func (s *State) RefreshDiskUsageOrdering(viewportRows int, centerCursor bool) {
-	if len(s.Entries) == 0 || !s.Sort.DiskUsageIdleSizeSort || !s.IdleDiskTotalsSort {
+// RefreshDiskUsageOrdering reapplies cached disk-total ordering when subtree sizes update while staying in one directory, keeping the highlighted row by path. It holds the current order while any directory's total is missing (the delete dialog drops and rescans the totals it reports on), since uncached rows sort last and the row under the cursor would jump to the tail and back.
+func (s *State) RefreshDiskUsageOrdering(viewportRows int) {
+	if len(s.Entries) == 0 || !s.Sort.DiskUsageIdleSizeSort || !s.IdleDiskTotalsSort || !s.ListingFullyDiskCached() {
 		return
 	}
 	entry, ok := s.CurrentEntry()
@@ -2350,7 +2344,7 @@ func (s *State) RefreshDiskUsageOrdering(viewportRows int, centerCursor bool) {
 		s.selectVisibleEntryByPath(selectedPath)
 	}
 	switch {
-	case centerCursor || s.ScrollMode == ScrollModeCenter || wasCentered:
+	case s.ScrollMode == ScrollModeCenter || wasCentered:
 		s.applyHighlightScroll(viewportRows, true)
 	case s.ScrollMode == ScrollModeEdge && wasEdged:
 		s.EnsureCursorEdge(liveVR)
