@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -1263,5 +1264,92 @@ func TestSyncFollowSkipsHistoryRecordingOnFollower(t *testing.T) {
 	// beyond whatever it already had at startup.
 	if len(right.History) != len(rightHistoryAtStart) {
 		t.Fatalf("right history length = %d, want %d (sync should not record history)", len(right.History), len(rightHistoryAtStart))
+	}
+}
+
+// quickViewDiskSortFixture lists root with two scanned subdirectories whose rows sort differently
+// by name and by disk total, with the driver already latched into disk-total ordering.
+func quickViewDiskSortFixture(t *testing.T, dirs ...string) (*App, *panel.State, tcell.SimulationScreen) {
+	t.Helper()
+	root := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	for _, dir := range dirs {
+		for _, child := range []string{"anchor", "meadow"} {
+			if err := os.MkdirAll(filepath.Join(root, dir, child), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	app := newApp(t, screen, root)
+	app.config.UI.KeyRepeatDebounceMS = 0
+	driver := app.panelByID(ui.PrimaryPanel)
+	follower := app.panelByID(ui.SecondaryPanel)
+	if err := follower.NavigateTo(t.TempDir(), "", app.panelViewportRows(ui.SecondaryPanel)); err != nil {
+		t.Fatalf("NavigateTo: %v", err)
+	}
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool { return !follower.ListingPending })
+	for _, dir := range dirs {
+		app.disk.engine.SetSize(filepath.Join(root, dir), 1, 300)
+		app.disk.engine.SetSize(filepath.Join(root, dir, "anchor"), 1, 100)
+		app.disk.engine.SetSize(filepath.Join(root, dir, "meadow"), 1, 200)
+	}
+	driver.Sort.DiskUsageIdleSizeSort = true
+	app.setDiskUsageShown(true)
+	driver.IdleDiskTotalsSort = true
+	app.model.ActivePanel = ui.PrimaryPanel
+	app.model.QuickViewEnabled = true
+	app.model.QuickViewPanel = ui.PrimaryPanel
+	return app, driver, screen
+}
+
+func overlayEntryNames(app *App) []string {
+	return entryNames(app.model.QuickViewDirOverlay.Entries)
+}
+
+// The overlay must paint disk-total sort state from its first frame: a pending frame that falls
+// back to the name sort shows the wrong sort column until the listing lands.
+func TestQuickViewDirOverlayKeepsDiskSortWhileLoading(t *testing.T) {
+	app, driver, screen := quickViewDiskSortFixture(t, "harbor", "lantern")
+	ov := &app.model.QuickViewDirOverlay
+	landed := func() bool { return !ov.ListingPending }
+
+	selectPanelEntryByName(t, driver, "harbor")
+	app.reconcileAfterEvent()
+	if !ov.ListingPending || !ov.IdleDiskTotalsSort {
+		t.Fatalf("first frame: pending=%v idleDiskTotals=%v, want both true", ov.ListingPending, ov.IdleDiskTotalsSort)
+	}
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, landed)
+	if got := strings.Join(overlayEntryNames(app), ","); got != "meadow,anchor" {
+		t.Fatalf("landed order = %q, want disk-total order", got)
+	}
+
+	selectPanelEntryByName(t, driver, "lantern")
+	app.reconcileAfterEvent()
+	if !ov.ListingPending || !ov.IdleDiskTotalsSort {
+		t.Fatalf("held frame: pending=%v idleDiskTotals=%v, want both true", ov.ListingPending, ov.IdleDiskTotalsSort)
+	}
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, landed)
+	if got := strings.Join(overlayEntryNames(app), ","); got != "meadow,anchor" {
+		t.Fatalf("landed order = %q, want disk-total order", got)
+	}
+}
+
+// A directory the scan skips must not hold the overlay in name order: the real panel listing the
+// same directory already sorts by disk totals.
+func TestQuickViewDirOverlaySortsByDiskTotalsWithExcludedChild(t *testing.T) {
+	app, driver, screen := quickViewDiskSortFixture(t, "harbor")
+	skipped := filepath.Join(driver.PathString(), "harbor", "bramble")
+	if err := os.Mkdir(skipped, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	app.disk.engine.MarkExcluded(skipped)
+
+	selectPanelEntryByName(t, driver, "harbor")
+	app.reconcileAfterEvent()
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.QuickViewDirOverlay.ListingPending
+	})
+	if got := strings.Join(overlayEntryNames(app), ","); got != "meadow,anchor,bramble" {
+		t.Fatalf("landed order = %q, want disk-total order with the excluded directory last", got)
 	}
 }

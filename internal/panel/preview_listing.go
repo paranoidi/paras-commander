@@ -127,7 +127,8 @@ func (s *State) ListingAtPath(dir string) bool {
 	return cleanPathString(s.Path.String()) == cleanPathString(dir) && s.VisibleEntryCount() > 0
 }
 
-// CloneListingFrom copies listing rows, cursor, scroll, and volume/git snapshot fields from src.
+// CloneListingFrom copies listing rows, cursor, scroll, the disk-total sort latch those rows were
+// ordered by, and volume/git snapshot fields from src.
 func (dst *State) CloneListingFrom(src *State) {
 	if dst == nil || src == nil {
 		return
@@ -136,6 +137,7 @@ func (dst *State) CloneListingFrom(src *State) {
 	dst.Entries = append([]localfs.Entry(nil), src.Entries...)
 	dst.Cursor = src.Cursor
 	dst.ScrollOffset = src.ScrollOffset
+	dst.IdleDiskTotalsSort = src.IdleDiskTotalsSort
 	dst.VolumeSpaceOK = src.VolumeSpaceOK
 	dst.VolumeAvailBytes = src.VolumeAvailBytes
 	dst.VolumeTotalBytes = src.VolumeTotalBytes
