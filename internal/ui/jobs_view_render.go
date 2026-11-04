@@ -796,7 +796,7 @@ func formatJobETAFull(j JobEntry, now time.Time) string {
 	if j.QueueETA != "" {
 		return j.QueueETA
 	}
-	return jobs.FormatETA(jobs.Status(j.Status), j.StartedAt, now, j.TotalBytes, j.DoneBytes, j.TotalFiles, j.DoneFiles, j.ETABytesPerSec, j.ETAFilesPerSec)
+	return jobs.FormatETA(jobs.Status(j.Status), j.ETAStart, now, j.TotalBytes, j.DoneBytes, j.TotalFiles, j.DoneFiles, j.ETABytesPerSec, j.ETAFilesPerSec)
 }
 
 // formatJobETA returns a shortened ETA for the Queue list column (jobsListColETA).

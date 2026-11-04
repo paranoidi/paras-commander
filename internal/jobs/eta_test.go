@@ -117,3 +117,70 @@ func TestResetProgressETA(t *testing.T) {
 		t.Fatal("ResetProgressETA did not clear display throughput fields")
 	}
 }
+
+func TestStepChangeRestartsETARatesAndClock(t *testing.T) {
+	s := NewState()
+	s.AddJob(&Job{ID: "scan-1", Type: TypeCopy, Status: StatusQueued})
+	s.ApplyEvent(Event{Type: EventStarted, JobID: "scan-1", Status: StatusRunning})
+	j := s.findJobUnlocked("scan-1")
+
+	// Step 0: the walk climbs fast (1000 files/s) for ten minutes.
+	walkStart := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	j.StartedAt = walkStart
+	for i := 0; i <= 10; i++ {
+		ApplyProgressETA(j, 0, i*1000, walkStart.Add(time.Duration(i)*time.Second))
+	}
+	j.DoneFiles = 600000
+	if j.ETAFilesPerSec < 900 {
+		t.Fatalf("walk rate = %v, want ~1000", j.ETAFilesPerSec)
+	}
+	if !j.StepStartedAt.IsZero() || !j.ETAStart().Equal(walkStart) {
+		t.Fatalf("before a step change ETAStart = %v, want StartedAt", j.ETAStart())
+	}
+
+	// Hashing starts: totals announced, then DoneFiles restarts at 0 on step 2.
+	s.ApplyEvent(Event{Type: EventPlanTotals, JobID: "scan-1", TotalFiles: 1000})
+	s.ApplyEvent(Event{Type: EventProgress, JobID: "scan-1", Step: 2, DoneFiles: 0})
+	if j.StepStartedAt.IsZero() || !j.ETAStart().Equal(j.StepStartedAt) {
+		t.Fatalf("ETAStart = %v, want StepStartedAt %v", j.ETAStart(), j.StepStartedAt)
+	}
+	if j.ETAFilesPerSec != 0 || j.LastProgressSnapshotAt.IsZero() || j.LastProgressDoneFiles != 0 {
+		t.Fatalf("step change left rates %v / baseline %v / %d",
+			j.ETAFilesPerSec, j.LastProgressSnapshotAt, j.LastProgressDoneFiles)
+	}
+
+	// Hashing runs slowly (10 files/s). Move the step's clock to a fixed instant.
+	hashStart := walkStart.Add(10 * time.Minute)
+	j.StepStartedAt, j.LastProgressSnapshotAt = hashStart, hashStart
+	for i := 1; i <= 10; i++ {
+		ApplyProgressETA(j, 0, i*10, hashStart.Add(time.Duration(i)*time.Second))
+	}
+	j.DoneFiles = 100
+	got := EstimateJobRemainingSecs(j, hashStart.Add(10*time.Second), 0, 0)
+	if got < 80 || got > 100 {
+		t.Fatalf("remaining = %v s, want ~90 (slow hash rate)", got)
+	}
+}
+
+func TestJobWithoutStepChangeUsesStartedAt(t *testing.T) {
+	s := NewState()
+	s.AddJob(&Job{ID: "copy-1", Type: TypeCopy, Status: StatusQueued})
+	s.ApplyEvent(Event{Type: EventStarted, JobID: "copy-1", Status: StatusRunning})
+	s.ApplyEvent(Event{Type: EventProgress, JobID: "copy-1", DoneFiles: 5})
+	j := s.findJobUnlocked("copy-1")
+	if !j.StepStartedAt.IsZero() {
+		t.Fatalf("StepStartedAt = %v, want zero without a step change", j.StepStartedAt)
+	}
+
+	start := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	j.StartedAt = start
+	j.TotalFiles, j.DoneFiles = 1000, 100
+	j.ETAFilesPerSec = 10
+	if !j.ETAStart().Equal(start) {
+		t.Fatalf("ETAStart = %v, want StartedAt", j.ETAStart())
+	}
+	got := EstimateJobRemainingSecs(j, start.Add(10*time.Second), 0, 0)
+	if got < 80 || got > 100 {
+		t.Fatalf("remaining = %v s, want ~90", got)
+	}
+}

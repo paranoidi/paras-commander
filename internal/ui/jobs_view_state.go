@@ -71,6 +71,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			SourcePhases:    sourcePhases,
 			RemovingSources: j.RemovingSources,
 			StartedAt:       j.StartedAt,
+			ETAStart:        j.ETAStart(),
 			FinishedAt:      j.FinishedAt,
 			ETABytesPerSec:  j.ETABytesPerSec,
 			ETAFilesPerSec:  j.ETAFilesPerSec,

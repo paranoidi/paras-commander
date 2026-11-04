@@ -74,16 +74,23 @@ func ApplyProgressETA(job *Job, doneBytes int64, doneFiles int, now time.Time) {
 	job.LastProgressDoneFiles = doneFiles
 }
 
-// ResetProgressETA clears ETA smoothing state (call when a job starts running).
-func ResetProgressETA(job *Job) {
-	if job == nil {
-		return
-	}
+// resetETARates clears the ETA's sampling baseline and smoothed rates only (the next
+// ApplyProgressETA takes a fresh baseline).
+func resetETARates(job *Job) {
 	job.LastProgressSnapshotAt = time.Time{}
 	job.LastProgressDoneBytes = 0
 	job.LastProgressDoneFiles = 0
 	job.ETABytesPerSec = 0
 	job.ETAFilesPerSec = 0
+}
+
+// ResetProgressETA clears ETA smoothing state and the speed display (call when a job starts running).
+func ResetProgressETA(job *Job) {
+	if job == nil {
+		return
+	}
+	resetETARates(job)
+	job.StepStartedAt = time.Time{}
 	job.DisplaySpeedBPS = 0
 	job.ThroughputStrip = nil
 	job.ThroughputStripOpenBin = 0
@@ -151,4 +158,13 @@ func max64(a, b float64) float64 {
 		return b
 	}
 	return a
+}
+
+// ETAStart is where the ETA's cumulative-rate clock starts: the current task step when it
+// changed, else StartedAt.
+func (j *Job) ETAStart() time.Time {
+	if !j.StepStartedAt.IsZero() {
+		return j.StepStartedAt
+	}
+	return j.StartedAt
 }

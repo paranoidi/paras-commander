@@ -24,10 +24,11 @@ func EstimateJobRemainingSecs(j *Job, now time.Time, refBytesPerSec, refFilesPer
 }
 
 func estimateRunningRemainSecs(j *Job, now time.Time) float64 {
-	if j.StartedAt.IsZero() {
+	start := j.ETAStart()
+	if start.IsZero() {
 		return -1
 	}
-	elapsed := now.Sub(j.StartedAt)
+	elapsed := now.Sub(start)
 	if elapsed < time.Second {
 		return -1
 	}
@@ -85,10 +86,10 @@ func estimateRemainFromTotals(totalBytes, doneBytes int64, totalFiles, doneFiles
 
 func referenceTransferRates(jobs []*Job, now time.Time) (bytesPerSec, filesPerSec float64) {
 	for _, j := range jobs {
-		if j == nil || j.Status != StatusRunning || j.StartedAt.IsZero() {
+		if j == nil || j.Status != StatusRunning || j.ETAStart().IsZero() {
 			continue
 		}
-		elapsed := now.Sub(j.StartedAt)
+		elapsed := now.Sub(j.ETAStart())
 		if elapsed < time.Second {
 			continue
 		}
@@ -123,7 +124,7 @@ func ComputeQueueETAs(jobs []*Job, now time.Time) map[string]string {
 			out[j.ID] = "—"
 			continue
 		}
-		if j.Status == StatusRunning && !j.StartedAt.IsZero() && now.Sub(j.StartedAt) < time.Second {
+		if j.Status == StatusRunning && !j.ETAStart().IsZero() && now.Sub(j.ETAStart()) < time.Second {
 			out[j.ID] = string(primitive.Ellipsis)
 			continue
 		}

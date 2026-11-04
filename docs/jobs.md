@@ -63,6 +63,7 @@ Some features run their own background work as a **task** job (for example a
 in the Details panel, reports items, bytes and the current path like a
 transfer, and can be canceled. It cannot be paused or retried; run the action
 again instead. One task of each kind runs at a time, beside any copy or move.
+A fileindex scan shows an ETA only once hashing starts, estimated from the file count.
 
 Jobs copy and move one at a time; deletes start immediately. Add a transfer
 paused from the copy or move dialog (**Advanced**, then **Add paused**) and start it later with

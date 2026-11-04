@@ -53,7 +53,9 @@ type JobEntry struct {
 	// RemovingSources matches jobs.Job.RemovingSources (a move removing its copied sources).
 	RemovingSources bool
 	StartedAt       time.Time
-	FinishedAt      time.Time
+	// ETAStart is jobs.Job.ETAStart(): where the ETA clock starts (the current step, else StartedAt).
+	ETAStart   time.Time
+	FinishedAt time.Time
 	// Undo is jobs.Job.UndoLabel: whether the job can be undone, and why not.
 	Undo string
 	// ETABytesPerSec is smoothed throughput from recent progress samples (bytes/s).

@@ -126,6 +126,9 @@ type Job struct {
 	Workers int
 	// Step is the index in Task.Steps of a task's running stage, from its last progress event.
 	Step int
+	// StepStartedAt is when the current Step began (zero until the first step change); the ETA
+	// clock starts there, see ETAStart.
+	StepStartedAt time.Time
 	// VerifyDone and VerifyTotal track a running conflict content verification of CurrentPath
 	// (bytes read from both files); VerifyTotal is 0 when none runs. Never part of DoneBytes.
 	VerifyDone, VerifyTotal int64
