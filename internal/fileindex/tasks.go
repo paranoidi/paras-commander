@@ -50,7 +50,7 @@ func (x *Index) ScanTask(paths []string) *jobs.Task {
 			}
 			rep.finish(stats)
 			if err != nil {
-				return err
+				return pcSchemaError(err)
 			}
 			if stats.Interrupted {
 				return context.Canceled

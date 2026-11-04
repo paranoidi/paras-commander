@@ -25,6 +25,18 @@ var ErrNoIndex = errors.New("no fileindex database")
 // ErrClosed is returned by DB after Close.
 var ErrClosed = errors.New("fileindex database closed")
 
+// ErrNewerSchema replaces db.ErrNewerSchema, which tells users of the fileindex command to
+// upgrade it: pc links the fileindex library, so only upgrading pc itself helps.
+var ErrNewerSchema = errors.New("database schema is newer than this paras-commander supports, upgrade paras-commander")
+
+// pcSchemaError returns err with a db.ErrNewerSchema reworded for pc.
+func pcSchemaError(err error) error {
+	if errors.Is(err, db.ErrNewerSchema) {
+		return ErrNewerSchema
+	}
+	return err
+}
+
 // Index is the shared fileindex database handle. DB opens it once, lazily, and checks its
 // schema. pc creates (Create) or upgrades (Upgrade) a database only when the user confirms.
 type Index struct {
@@ -75,7 +87,7 @@ func (x *Index) DatabasePath() (string, error) {
 }
 
 // DB returns the open database, opening it on first use. A missing database wraps ErrNoIndex;
-// one on another schema version fails with fileindex's own explanation. A failure is returned
+// one on an older schema fails with fileindex's own explanation, a newer one with ErrNewerSchema. A failure is returned
 // again without reopening until the database file appears or changes (an index created or
 // upgraded outside pc), or Create or Upgrade replaces it.
 func (x *Index) DB() (*db.DB, error) {
@@ -161,7 +173,7 @@ func (x *Index) open() (string, *db.DB, error) {
 	}
 	if err := d.RequireSchema(); err != nil {
 		_ = d.Close()
-		return path, nil, fmt.Errorf("fileindex %s: %w", path, err)
+		return path, nil, fmt.Errorf("fileindex %s: %w", path, pcSchemaError(err))
 	}
 	return path, d, nil
 }
@@ -175,7 +187,7 @@ func (x *Index) Create() (string, error) { return x.initDB(false) }
 
 // NeedsUpgrade reports whether a DB error is a database that exists but fileindex's Init must
 // bring to the current schema: an older schema, or a file that was never initialised. A newer
-// schema is not: only a newer pc can open it.
+// schema is not: only a newer pc can open it (ErrNewerSchema).
 func NeedsUpgrade(err error) bool {
 	return errors.Is(err, db.ErrOutdatedSchema) || errors.Is(err, db.ErrNotInitialised)
 }
@@ -217,7 +229,7 @@ func (x *Index) initDB(upgrade bool) (string, error) {
 	if upgrade {
 		if err := d.RequireSchema(); err != nil {
 			_ = d.Close()
-			return path, fmt.Errorf("fileindex %s: %w", path, err)
+			return path, fmt.Errorf("fileindex %s: %w", path, pcSchemaError(err))
 		}
 	}
 	if x.db != nil {

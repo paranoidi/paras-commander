@@ -437,6 +437,27 @@ func TestUpgradeInitialisesExistingDatabase(t *testing.T) {
 	}
 }
 
+func TestNewerSchemaAsksToUpgradePC(t *testing.T) {
+	path := initIndex(t)
+	d, err := db.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Exec("INSERT INTO schema_version (version) VALUES (?)", db.SchemaVersion+1); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Close(); err != nil {
+		t.Fatal(err)
+	}
+	_, err = testIndex(t, path).DB()
+	if !errors.Is(err, ErrNewerSchema) || NeedsUpgrade(err) {
+		t.Fatalf("open = %v, want ErrNewerSchema", err)
+	}
+	if !strings.Contains(err.Error(), "upgrade paras-commander") || strings.Contains(err.Error(), "upgrade fileindex") {
+		t.Fatalf("message = %q", err)
+	}
+}
+
 func TestDedupFilesUsesIndexedHashes(t *testing.T) {
 	x := testIndex(t, initIndex(t))
 	root, err := filepath.EvalSymlinks(t.TempDir())
