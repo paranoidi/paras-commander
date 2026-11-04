@@ -5,6 +5,9 @@ the file manager stays usable while they work. The menu bar shows a compact
 summary: an icon with a count for each job state, a progress bar for the
 running job and, to its left, a pill with the current transfer speed while a
 transfer runs. A job waiting for your answer is shown as "N job(s) waiting".
+The completed and failed counts cover only jobs that finished since you last
+left the jobs view; those jobs stay listed in the view until cleared
+(`jobs.clear-finished`).
 
 Open the jobs view with `M-j` (`jobs.open`, **Display -> Jobs**, Esc menu
 `j`). It has a Queue panel with Type, Status, ETA, Speed and Progress, plus

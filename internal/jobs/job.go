@@ -259,6 +259,9 @@ type Job struct {
 	UndoOf string
 	// Undone is set on the original job once an undo job has reversed (part of) it.
 	Undone bool
+	// Seen marks a finished job acknowledged by leaving the jobs view; the menu-bar strip stops
+	// counting it. Guarded by State.mu; RetryClone does not copy it.
+	Seen bool
 
 	// RemovingSources is true while a move's copy fallback is deleting its transferred sources.
 	RemovingSources bool

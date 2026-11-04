@@ -486,7 +486,7 @@ func (s *State) AllJobs() []*Job {
 	return out
 }
 
-// MenuBarStripStatuses returns job statuses for the menu-bar strip: finished retention
+// MenuBarStripStatuses returns job statuses for the menu-bar strip: unseen finished jobs
 // (left), then in-flight work (active, blocker, pending dequeue), then FIFO queued/paused
 // jobs (right)—matching a left-to-right “past → current → waiting” progress metaphor.
 // Each job ID appears at most once (same dedup rule as AllJobs).
@@ -701,6 +701,18 @@ func (s *State) ClearFinishedArchive() {
 	defer s.mu.Unlock()
 	closeOpLogs(s.finished)
 	s.finished = nil
+}
+
+// MarkFinishedSeen marks every finished job as seen, so the menu-bar strip stops counting
+// them. AllJobs still lists them.
+func (s *State) MarkFinishedSeen() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, j := range s.finished {
+		if j != nil {
+			j.Seen = true
+		}
+	}
 }
 
 // SetTransferFunc sets the copy/move function used by the worker.

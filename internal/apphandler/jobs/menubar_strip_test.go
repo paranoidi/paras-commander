@@ -44,3 +44,70 @@ func TestMenuBarStripMoveRemovingSourcesKeepsLayout(t *testing.T) {
 		t.Fatalf("groups = %v while removing, %v while copying", removing.Groups, copying.Groups)
 	}
 }
+
+func TestReconcileSeenFinishedMarksOnLeavingJobsView(t *testing.T) {
+	t.Parallel()
+	newDone := func(state *jobs.State) {
+		state.AddFinishedJob(&jobs.Job{
+			ID:          jobs.NewJobID(),
+			Type:        jobs.TypeCopy,
+			Sources:     []pathloc.Path{pathloc.MustParse("/orchard/lantern")},
+			Destination: pathloc.MustParse("/harbor"),
+		})
+	}
+	completed := func(h *Handler) int {
+		for _, g := range h.MenuBarStripSnapshot().Groups {
+			if g.Status == string(jobs.StatusCompleted) {
+				return g.Count
+			}
+		}
+		return 0
+	}
+	setup := func() (*Handler, *jobs.State, *ui.Model) {
+		state := jobs.NewState()
+		m := &ui.Model{}
+		h := New(Deps{Host: jobsHostStub{}, Model: m, State: state, Config: config.Default()})
+		newDone(state)
+		return h, state, m
+	}
+
+	t.Run("never visited", func(t *testing.T) {
+		t.Parallel()
+		h, _, m := setup()
+		m.ViewMode = ui.ViewBrowser
+		h.ReconcileSeenFinished()
+		if n := completed(h); n != 1 {
+			t.Fatalf("completed count = %d, want 1", n)
+		}
+	})
+
+	t.Run("not marked while visible", func(t *testing.T) {
+		t.Parallel()
+		h, _, m := setup()
+		m.ViewMode = ui.ViewJobs
+		h.ReconcileSeenFinished()
+		h.ReconcileSeenFinished()
+		if n := completed(h); n != 1 {
+			t.Fatalf("completed count = %d, want 1", n)
+		}
+	})
+
+	for name, to := range map[string]ui.ViewMode{"to browser": ui.ViewBrowser, "to commands": ui.ViewCommands} {
+		t.Run("marked on exit "+name, func(t *testing.T) {
+			t.Parallel()
+			h, state, m := setup()
+			m.ViewMode = ui.ViewJobs
+			h.ReconcileSeenFinished()
+			m.ViewMode = to
+			h.ReconcileSeenFinished()
+			if n := completed(h); n != 0 {
+				t.Fatalf("completed count after exit = %d, want 0", n)
+			}
+			newDone(state)
+			h.ReconcileSeenFinished()
+			if n := completed(h); n != 1 {
+				t.Fatalf("completed count after new finish = %d, want 1", n)
+			}
+		})
+	}
+}

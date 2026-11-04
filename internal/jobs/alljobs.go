@@ -28,12 +28,12 @@ func (s *State) collectAllJobsUnlocked() []*Job {
 	return all
 }
 
-// collectMenuBarStripJobsUnlocked gathers jobs for the menu-bar icon strip (finished first, then in-flight buckets).
+// collectMenuBarStripJobsUnlocked gathers jobs for the menu-bar icon strip (unseen finished first, then in-flight buckets).
 // Caller must hold s.mu and s.queue.mu.
 func (s *State) collectMenuBarStripJobsUnlocked() []*Job {
 	var all []*Job
 	for _, j := range s.finished {
-		if j != nil {
+		if j != nil && !j.Seen {
 			all = append(all, j)
 		}
 	}

@@ -80,6 +80,20 @@ func (h *Handler) closeJobsView() {
 	h.stopOpsWork()
 }
 
+// ReconcileSeenFinished marks finished jobs seen once the jobs view has been left. It is a
+// reconciler hook rather than part of closeJobsView because other views assign ViewMode
+// directly, leaving the jobs view without calling closeJobsView. Idempotent and cheap.
+func (h *Handler) ReconcileSeenFinished() {
+	if h.model.ViewMode == ui.ViewJobs {
+		h.jobsViewVisited = true
+		return
+	}
+	if h.jobsViewVisited {
+		h.jobsViewVisited = false
+		h.state.MarkFinishedSeen()
+	}
+}
+
 func (h *Handler) applyJobsRetention() {
 	h.state.ApplyRetention(jobs.RetentionPolicy{
 		ShowFinished: h.config.Jobs.ShowFinished,

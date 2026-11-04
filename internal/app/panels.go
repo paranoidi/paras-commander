@@ -494,6 +494,7 @@ func (a *App) toggleSyncFollow() {
 // that mutates panel state automatically triggers them via the Run-loop chokepoint.
 func (a *App) reconcileAfterEvent() {
 	a.reconcileSelectedStripFocus()
+	a.jobsCtrl.ReconcileSeenFinished()
 	a.reconcileSelectionSizeScans(ui.PrimaryPanel)
 	a.reconcileSelectionSizeScans(ui.SecondaryPanel)
 	a.dialogCtrl.ReconcileDeleteDialogScans()

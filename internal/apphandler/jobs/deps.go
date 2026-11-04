@@ -45,6 +45,7 @@ type Handler struct {
 	affectVisible             bool
 	lastBatchMenuBarStripOnly bool
 	listStale                 bool
+	jobsViewVisited           bool // jobs view was shown; cleared when finished jobs are marked seen
 	listVersion               uint64
 	pathMarksVersion          uint64
 

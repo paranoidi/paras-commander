@@ -889,6 +889,35 @@ func TestMenuBarStripStatusesOrderDoneOngoingQueued(t *testing.T) {
 	}
 }
 
+func TestMarkFinishedSeenHidesFinishedFromStrip(t *testing.T) {
+	s := NewState()
+	s.mu.Lock()
+	s.finished = []*Job{
+		{ID: "d1", Status: StatusCompleted},
+		{ID: "d2", Status: StatusFailed},
+	}
+	s.active = []*Job{{ID: "run", Status: StatusRunning}}
+	s.mu.Unlock()
+
+	s.MarkFinishedSeen()
+
+	got := s.MenuBarStripStatuses()
+	if len(got) != 1 || got[0] != string(StatusRunning) {
+		t.Fatalf("strip = %#v, want only running", got)
+	}
+	if n := len(s.AllJobs()); n != 3 {
+		t.Fatalf("AllJobs() len=%d want 3", n)
+	}
+
+	s.mu.Lock()
+	s.finished = append(s.finished, &Job{ID: "d3", Status: StatusCompleted})
+	s.mu.Unlock()
+	got = s.MenuBarStripStatuses()
+	if len(got) != 2 || got[0] != string(StatusCompleted) || got[1] != string(StatusRunning) {
+		t.Fatalf("strip after new finish = %#v, want completed, running", got)
+	}
+}
+
 func TestEmitDropsProgressWhenChannelFull(t *testing.T) {
 	t.Parallel()
 	s := NewState()
