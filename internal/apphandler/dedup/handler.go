@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/quickfilter"
 
@@ -48,6 +49,8 @@ type Deps struct {
 type Host interface {
 	host.PanelNavigationHost
 	EnqueueDeleteJob(paths []string, removeEmptyDirs bool)
+	// AddTaskJob queues a task job working on sources.
+	AddTaskJob(task *jobs.Task, sources []pathloc.Path)
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
 	DedupMenuDefinitions() []menu.Definition
 	BrowserMenuDefinitions() []menu.Definition
@@ -74,6 +77,9 @@ type Handler struct {
 	session *comparepkg.DedupSession
 	wake    host.WakeCoalescer
 	pending *dedupPendingState
+	// hashedRoot is the scan root of a finished HashPotential job, set from its goroutine:
+	// PollUpdates reopens the results if they still show that root.
+	hashedRoot atomic.Pointer[pathloc.Path]
 
 	// nav, while held, defers the copies pane / group hint rebuild (and, via the app, the
 	// browse-panel reload) until the cursor key is released; DedupView.SourceStale marks a
@@ -94,6 +100,8 @@ type dedupPendingState struct {
 	marked, kept                        map[string]bool
 	mainCollapsed, copiesCollapsed      map[string]bool
 	treeDirs, sortByWasted, ignoreEmpty bool
+	groupFilter                         func(comparepkg.DedupGroup) bool
+	nameFilterLabel                     string
 	prevExpandable                      []string
 	mainRowID, mainRowAbsKey            string
 	focusCopies                         bool
@@ -368,6 +376,11 @@ func (h *Handler) Close() {
 // PollUpdates applies the latest session snapshot. Returns true when the UI should repaint.
 func (h *Handler) PollUpdates(_ WakePayload) bool {
 	_ = h.wake.Take()
+	if root := h.hashedRoot.Swap(nil); root != nil && h.session == nil &&
+		h.model.ViewMode == ui.ViewDedup && h.model.DedupSnapshot.Root.Equal(*root) {
+		h.ReopenPreservingState()
+		return true
+	}
 	if h.applyVerified() {
 		return true
 	}
@@ -423,6 +436,7 @@ func (h *Handler) applyPending(snap comparepkg.DedupSnapshot) {
 	st.TreeDirs = p.treeDirs
 	st.SortByWasted = p.sortByWasted
 	st.IgnoreEmpty = p.ignoreEmpty
+	st.GroupFilter, st.NameFilterLabel = p.groupFilter, p.nameFilterLabel
 	st.Main.Collapsed = p.mainCollapsed
 	st.Copies.Collapsed = p.copiesCollapsed
 	// Only the restored mode keeps its collapse state; the other mode still gets
@@ -493,6 +507,43 @@ func (h *Handler) Refresh() {
 	h.openRoot(h.model.DedupSnapshot.Root, h.model.DedupSnapshot.Scope)
 }
 
+// HashPotential queues a job fully hashing the fast-hashed files of the potential duplicate
+// groups the view shows (so the Filter dialog narrows it). The results reopen when it ends.
+func (h *Handler) HashPotential() {
+	if h.session != nil || h.fileIndex == nil {
+		return
+	}
+	snap := h.model.DedupSnapshot
+	var paths []string
+	for _, g := range ui.DedupActiveGroups(snap, h.model.DedupView) {
+		if !g.Potential {
+			continue
+		}
+		for _, f := range g.Files {
+			if p, err := pathloc.IndexHostPath(f.Abs); err == nil {
+				paths = append(paths, p)
+			}
+		}
+	}
+	if len(paths) == 0 {
+		h.host.SetTransientMessage("No potential duplicates to hash", ui.MessageUrgencyInfo)
+		return
+	}
+	root := snap.Root
+	task := h.fileIndex.HashPotentialTask(paths, func() {
+		h.hashedRoot.Store(&root)
+		h.postWake()
+	})
+	var sources []pathloc.Path
+	if host, err := pathloc.IndexHostPath(root); err == nil {
+		if loc, err := pathloc.Parse(host); err == nil {
+			sources = append(sources, loc)
+		}
+	}
+	h.host.AddTaskJob(task, sources)
+	h.host.SetTransientMessage("Hashing potential duplicates queued", ui.MessageUrgencyInfo)
+}
+
 // ReopenPreservingState re-scans the previous snapshot root and, once the new
 // scan completes, restores marks, keeps, collapse state, and the cursor for
 // entries still present in the new results. Used as the return hook when
@@ -512,6 +563,8 @@ func (h *Handler) ReopenPreservingState() {
 		treeDirs:        st.TreeDirs,
 		sortByWasted:    st.SortByWasted,
 		ignoreEmpty:     st.IgnoreEmpty,
+		groupFilter:     st.GroupFilter,
+		nameFilterLabel: st.NameFilterLabel,
 		prevExpandable:  ui.DedupExpandableIDs(h.model.DedupSnapshot, st),
 	}
 	if row, ok := h.paneRow(&h.model.DedupView.Main, h.model.DedupList); ok {

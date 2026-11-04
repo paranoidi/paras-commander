@@ -154,6 +154,7 @@ const (
 	ActionDedupMarkKeep       = "dedup.mark-keep"
 	ActionDedupCompare        = "dedup.compare"
 	ActionDedupPrevPane       = "dedup.prev-pane"
+	ActionDedupHashPotential  = "dedup.hash-potential"
 
 	// Dialog actions
 	ActionDialogNext = "ui.next-field"
@@ -503,6 +504,7 @@ var KnownActions = map[string]struct{}{
 	ActionDedupNextDir:        {},
 	ActionDedupMarkKeep:       {},
 	ActionDedupCompare:        {},
+	ActionDedupHashPotential:  {},
 	ActionDedupPrevPane:       {},
 
 	ActionDialogNext: {},

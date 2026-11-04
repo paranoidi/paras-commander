@@ -819,6 +819,15 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"compare", "diff", "directory", "merge"},
 			LeaderKey:   "D",
 		},
+		{
+			ID:          ActionDedupHashPotential,
+			Views:       HelpDedup,
+			Title:       "Fully hash potential duplicates",
+			Section:     "Find duplicates",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"fileindex", "hash", "potential", "verify", "confirm", "fast"},
+			LeaderKey:   "P",
+		},
 
 		// ── Disk usage ──
 		{

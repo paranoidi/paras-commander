@@ -21,6 +21,7 @@ func DefaultDedupOverlayKeys() map[string][]string {
 		ActionDedupMarkKeep:       {"space", "C-k"},
 		ActionDedupPrevPane:       {"S-tab"}, // shadows global panel.toggle-hide-inactive in-view
 		ActionDedupCompare:        {"C-M-c"}, // matches global panel.compare-panels; overlay shadows it in-view
+		ActionDedupHashPotential:  {"M-H"},
 	})
 }
 

@@ -233,6 +233,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionFileDelete,
 				ActionDedupMarkKeep,
 				ActionDedupCompare,
+				ActionDedupHashPotential,
 				ActionDedupClose,
 			},
 		},

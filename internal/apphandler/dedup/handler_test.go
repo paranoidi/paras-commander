@@ -10,6 +10,7 @@ import (
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -25,6 +26,8 @@ func (h *dedupHandlerHost) NavigatePanelToPath(p int, path, sel string) error {
 	h.navPanel, h.navPath, h.navSelect = p, path, sel
 	return nil
 }
+func (*dedupHandlerHost) AddTaskJob(*jobs.Task, []pathloc.Path) {}
+
 func (h *dedupHandlerHost) EnqueueDeleteJob([]string, bool) {}
 func (h *dedupHandlerHost) Config() config.Config           { return config.Default() }
 func (h *dedupHandlerHost) SetTransientMessage(text string, _ ui.MessageUrgency) {

@@ -72,6 +72,58 @@ func (x *Index) scanTask(paths []string, fast bool, title, hashStep string) *job
 	}
 }
 
+// HashPotentialTask returns the task job fully hashing the only fast-hashed files among paths
+// (local host paths) that are in a potential duplicate set, which confirms or rules out the match.
+// done runs when it ends, however it ends.
+func (x *Index) HashPotentialTask(paths []string, done func()) *jobs.Task {
+	return &jobs.Task{
+		Title: "fileindex hash potential duplicates",
+		Lease: TaskLease,
+		Run: func(ctx context.Context, r jobs.TaskReporter) error {
+			defer done()
+			defer x.changed()
+			d, err := x.DB()
+			if err != nil {
+				return err
+			}
+			_, workers, err := x.scanSettings()
+			if err != nil {
+				return err
+			}
+			groups, err := d.PotentialDuplicates(nil, false)
+			if err != nil {
+				return err
+			}
+			asked := make(map[string]bool, len(paths))
+			for _, p := range paths {
+				asked[p] = true
+			}
+			var targets []string
+			for _, g := range groups {
+				for _, p := range g.Unverified {
+					if asked[p] {
+						targets = append(targets, p)
+					}
+				}
+			}
+			rep := newScanReporter(r, false)
+			rep.hashing, rep.p.TotalFiles = true, len(targets)
+			stats, err := scan.HashPaths(ctx, d, targets, workers, rep.Worker, rep.Speed)
+			for _, e := range stats.Errors {
+				rep.Log(e)
+			}
+			rep.finish(stats)
+			if err != nil {
+				return pcSchemaError(err)
+			}
+			if stats.Interrupted {
+				return context.Canceled
+			}
+			return nil
+		},
+	}
+}
+
 // PruneTask returns the task job removing from the index whatever under path (a local host path,
 // resolved like the index records it) is gone from disk, then the orphaned rows.
 func (x *Index) PruneTask(path string) *jobs.Task {

@@ -533,6 +533,56 @@ func TestDedupFilesPotentialDuplicates(t *testing.T) {
 	}
 }
 
+// Only the given fast-hashed files are hashed; done runs and the match is settled.
+func TestHashPotentialTask(t *testing.T) {
+	root := t.TempDir()
+	write := func(name string, head, tail byte) {
+		t.Helper()
+		b := make([]byte, 9000)
+		b[0], b[8999] = head, tail
+		if err := os.WriteFile(filepath.Join(root, name), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("anchor.bin", 'a', 1)
+	write("meadow.bin", 'a', 1)
+	write("willow.bin", 'a', 2)
+	write("clover.bin", 'c', 1)
+	write("thistle.bin", 'c', 1)
+	x := testIndex(t, initIndex(t))
+	if err := x.ScanFastTask([]string{root}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	var paths []string
+	for _, n := range []string{"anchor.bin", "meadow.bin", "willow.bin"} {
+		paths = append(paths, filepath.Join(root, n))
+	}
+	done := 0
+	rep := &recReporter{}
+	if err := x.HashPotentialTask(paths, func() { done++ }).Run(context.Background(), rep); err != nil {
+		t.Fatal(err)
+	}
+	if done != 1 || rep.last.DoneFiles != 3 || rep.last.TotalFiles != 3 {
+		t.Fatalf("done = %d, progress = %+v", done, rep.last)
+	}
+	files, hashes, err := x.DedupFiles(context.Background(), at(t, root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hashes["anchor.bin"] != hashes["meadow.bin"] || hashes["anchor.bin"] == hashes["willow.bin"] || len(hashes) != 3 {
+		t.Fatalf("hashes = %v", hashes)
+	}
+	potential := map[string]bool{}
+	for _, f := range files {
+		if f.Potential != ([32]byte{}) {
+			potential[f.Rel] = true
+		}
+	}
+	if len(potential) != 2 || !potential["clover.bin"] || !potential["thistle.bin"] {
+		t.Fatalf("potential = %v, want the files not asked for", potential)
+	}
+}
+
 func TestNewerSchemaAsksToUpgradePC(t *testing.T) {
 	path := initIndex(t)
 	d, err := db.Open(path)

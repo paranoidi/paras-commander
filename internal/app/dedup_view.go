@@ -6,8 +6,10 @@ import (
 	"github.com/gdamore/tcell/v2"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -28,6 +30,10 @@ func (h dedupHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool) {
 	// Deps.Dedup for the dedup-view branch); never double-prompt with the generic
 	// dangling-dirs cleanup.
 	h.app.jobsCtrl.EnqueueDeleteJob(paths, removeEmptyDirs, false)
+}
+
+func (h dedupHost) AddTaskJob(task *jobs.Task, sources []pathloc.Path) {
+	h.app.jobsCtrl.AddTaskJob(task, sources)
 }
 
 func (h dedupHost) Config() config.Config { return h.app.config }
@@ -212,6 +218,9 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 				a.compareCtrl.OpenPaths(p, s, showHidden, func() { a.dedupCtrl.ReopenPreservingState() })
 			})
 		}
+		return true
+	case keymap.ActionDedupHashPotential:
+		a.dedupCtrl.HashPotential()
 		return true
 	case keymap.ActionPanelClearSelection:
 		a.dedupCtrl.ClearMarks()
