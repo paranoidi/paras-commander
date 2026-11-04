@@ -6,7 +6,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
 // fileindexHost implements apphandler/fileindex.Host for *App.
@@ -47,10 +46,7 @@ func (h fileindexHost) OpenDedupOutside(dir string) { h.app.dedupCtrl.OpenOutsid
 func (h fileindexHost) OpenDedupIndexed(dir string) { h.app.dedupCtrl.OpenIndexed(dir) }
 
 func (h fileindexHost) RefreshMetaColumns() {
-	h.app.reloadIndexPanels() // a tag edit changes the tagged state
-
-	h.app.metaCtrl.RefreshPanel(ui.PrimaryPanel)
-	h.app.metaCtrl.RefreshPanel(ui.SecondaryPanel)
+	h.app.refreshIndexViews()
 }
 
 func (h fileindexHost) PanelByID(panelID int) *panel.State { return h.app.panelByID(panelID) }

@@ -19,16 +19,33 @@ const TaskLease = "fileindex"
 // config.ini rules). Each path is reported done (jobs.TaskReporter.FinishSource) once its files
 // are committed, while the others are still hashed, so its file-list mark clears.
 func (x *Index) ScanTask(paths []string) *jobs.Task {
-	return x.scanTask(paths, false, "fileindex scan", "Hash new files")
+	return x.scanTask(paths, false, "fileindex scan", "Hash new files", nil)
+}
+
+// ScanTagTask is ScanTask adding tags to each path (recursive as in EditTags) once the scan has
+// committed that path's files, so the tags do not wait for hashing and survive a cancel during
+// it. A path the scan did not record (its rules skip it) gets a warning.
+func (x *Index) ScanTagTask(paths, tags []string, recursive bool) *jobs.Task {
+	return x.scanTask(paths, false, "fileindex scan", "Hash new files", func(path string, warn func(string)) {
+		res, err := x.EditTags([]string{path}, tags, true, recursive)
+		switch {
+		case err != nil:
+			warn(fmt.Sprintf("Not tagged: %s: %v", path, err))
+		case len(res.Unknown) > 0:
+			warn("Not tagged, the scan did not index it: " + path)
+		}
+		x.changed() // the tags show now, not when hashing ends
+	})
 }
 
 // ScanFastTask is ScanTask hashing only the first 8 KB of files larger than that (scan --fast):
 // they stay unhashed until a plain scan. Asked for explicitly, it hashes even with hash off.
 func (x *Index) ScanFastTask(paths []string) *jobs.Task {
-	return x.scanTask(paths, true, "fileindex fast scan", "Fast-hash new files")
+	return x.scanTask(paths, true, "fileindex fast scan", "Fast-hash new files", nil)
 }
 
-func (x *Index) scanTask(paths []string, fast bool, title, hashStep string) *jobs.Task {
+// scanTask builds a scan job; rootDone (optional) runs for each path once its files are committed.
+func (x *Index) scanTask(paths []string, fast bool, title, hashStep string, rootDone func(path string, warn func(string))) *jobs.Task {
 	skipHash := !x.cfg.Hash && !fast
 	steps := []string{"Walk filesystem", "Pruning", hashStep}
 	if skipHash {
@@ -49,6 +66,9 @@ func (x *Index) scanTask(paths []string, fast bool, title, hashStep string) *job
 				return err
 			}
 			rep := newScanReporter(r, skipHash)
+			if rootDone != nil {
+				rep.rootDone = func(i int) { rootDone(paths[i], rep.Log) }
+			}
 			stats, err := scan.Run(ctx, d, paths, scan.Options{
 				Rules:         rules,
 				Workers:       workers,
@@ -189,8 +209,9 @@ type scanReporter struct {
 
 	mu       sync.Mutex
 	p        jobs.TaskProgress
-	skipHash bool // the scan stops after pruning
-	hashing  bool // Pruned was reached and hashing follows
+	skipHash bool        // the scan stops after pruning
+	rootDone func(i int) // optional, runs before the root's job source finishes
+	hashing  bool        // Pruned was reached and hashing follows
 	bytes    float64
 	lastTick time.Time
 }
@@ -298,7 +319,12 @@ func (s *scanReporter) Prune(dir string, _ int) {
 func (s *scanReporter) Log(msg string) { s.w.warn(msg) }
 
 // RootDone finishes source i: scan.Run's roots are ScanTask's paths, which are the job's sources.
-func (s *scanReporter) RootDone(i int) { s.r.FinishSource(i) }
+func (s *scanReporter) RootDone(i int) {
+	if s.rootDone != nil {
+		s.rootDone(i)
+	}
+	s.r.FinishSource(i)
+}
 
 // finish flushes the dropped-warning count and, for a scan that completed its hashing, the
 // committed counts.

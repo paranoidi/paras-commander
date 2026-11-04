@@ -282,9 +282,12 @@ leaves.
 selection, else the entry under the cursor, else the current directory. Type
 one or more tags separated by commas or spaces. **Recursive** applies the tags
 to a directory, every directory under it and every file in them, instead of
-the directory alone. Tags work on entries that are gone from disk too, and the
-message after OK counts paths the index does not know. The tags column updates
-when the edit finishes.
+the directory alone. Tags work on entries that are gone from disk too. Adding
+tags to a path the index does not know queues a scan of it (a task job, see
+below) that applies the tags once the walk has recorded the path, before
+hashing; a path the scan rules skip stays untagged and is listed as a warning
+on the job. Removing tags only counts such paths in the message after OK. The
+tags column updates when the edit finishes.
 
 ## Scan and prune
 

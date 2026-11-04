@@ -42,8 +42,9 @@ func (a *App) explicitDriftFor(panelID int) *explicitDriftNames {
 	return ex
 }
 
-// indexChangedPayload asks the event loop to reload every panel browsing with fileindex, after
-// the index changed (a scan or prune ended, an entry was removed or moved).
+// indexChangedPayload asks the event loop to refresh what shows index data (refreshIndexViews),
+// after the index changed (a scan or prune ended, a scan tagged a path, an entry was removed or
+// moved).
 type indexChangedPayload struct{}
 
 // indexDriftState is the per-panel cancel and directory of the drift passes: walks for
@@ -80,6 +81,14 @@ func (a *App) reloadIndexPanels() {
 			_ = p.Refresh(a.panelViewportRows(id))
 		}
 	}
+}
+
+// refreshIndexViews re-reads the panels browsing with fileindex and both panels' meta columns,
+// so index state and the tags column follow an index change (UI goroutine).
+func (a *App) refreshIndexViews() {
+	a.reloadIndexPanels()
+	a.metaCtrl.RefreshPanel(ui.PrimaryPanel)
+	a.metaCtrl.RefreshPanel(ui.SecondaryPanel)
 }
 
 // indexDriftScheduler runs fileindex.Index.DirDrift on its own goroutine for panelID. Requests
@@ -159,7 +168,7 @@ func (a *App) handleIndexOverlayPayload(data any) (eventOutcome, bool) {
 		}
 		return eventOutcome{}, true
 	case indexChangedPayload:
-		a.reloadIndexPanels()
+		a.refreshIndexViews()
 		return eventOutcome{}, true
 	}
 	return eventOutcome{}, false

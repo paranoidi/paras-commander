@@ -119,9 +119,11 @@ func New(deps Deps) *Handler {
 
 // TagsPayload carries the outcome of a tag edit.
 type TagsPayload struct {
-	Remove bool
-	Res    fi.TagEdit
-	Err    error
+	Remove    bool
+	Tags      []string
+	Recursive bool
+	Res       fi.TagEdit
+	Err       error
 }
 
 // NavigatePayload asks the event loop to show Dir in PanelID with Select highlighted, once a
@@ -317,11 +319,12 @@ func (h *Handler) SubmitTags() {
 	targets, remove, recursive := st.IndexTagsTargets, st.IndexTagsRemove, st.IndexTagsRecursive
 	go func() {
 		res, err := h.index.EditTags(targets, tags, !remove, recursive)
-		h.post(TagsPayload{Remove: remove, Res: res, Err: err})
+		h.post(TagsPayload{Remove: remove, Tags: tags, Recursive: recursive, Res: res, Err: err})
 	}()
 }
 
-// HandleTags reports a finished tag edit and refreshes the tags column.
+// HandleTags reports a finished tag edit and refreshes the tags column. Paths the index lacks are
+// counted when removing; when adding, a scan is queued that records and tags them.
 func (h *Handler) HandleTags(p TagsPayload) {
 	if p.Err != nil {
 		h.host.SetErrorMessage(messageTitle, p.Err)
@@ -335,8 +338,19 @@ func (h *Handler) HandleTags(p TagsPayload) {
 		p.Res.Targeted, jobbridge.Plural(p.Res.Targeted, "entry", "entries"))
 	urgency := ui.MessageUrgencySuccess
 	if n := len(p.Res.Unknown); n > 0 {
-		msg += fmt.Sprintf("; %d not in the index", n)
-		urgency = ui.MessageUrgencyWarn
+		if p.Remove {
+			msg += fmt.Sprintf("; %d not in the index", n)
+			urgency = ui.MessageUrgencyWarn
+		} else {
+			h.queueTask("fileindex scan", h.index.ScanTagTask(p.Res.Unknown, p.Tags, p.Recursive), p.Res.Unknown)
+			scanning := fmt.Sprintf("canning %d %s to tag", n, jobbridge.Plural(n, "entry", "entries"))
+			if p.Res.Targeted == 0 {
+				msg = "S" + scanning
+			} else {
+				msg += "; s" + scanning
+			}
+			urgency = ui.MessageUrgencyInfo
+		}
 	}
 	h.host.SetTransientMessage(msg, urgency)
 	h.host.RefreshMetaColumns()

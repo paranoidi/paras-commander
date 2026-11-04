@@ -300,6 +300,45 @@ func TestBackendIsReadOnlyButRenamesAndRemovesInIndex(t *testing.T) {
 	}
 }
 
+// TestScanTagTask: paths the index lacks are recorded and tagged by the scan; one the scan rules
+// skip gets a warning instead.
+func TestScanTagTask(t *testing.T) {
+	x := testIndex(t, initIndex(t))
+	root := tree(t)
+	harbor, lantern := filepath.Join(root, "harbor.txt"), filepath.Join(root, "lantern")
+	// A path the scan cannot record: the index database itself is never indexed.
+	d, err := x.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	own := d.Path
+
+	res, err := x.EditTags([]string{harbor}, []string{"clover"}, true, false)
+	if err != nil || !slices.Equal(res.Unknown, []string{harbor}) {
+		t.Fatalf("before the scan = %+v, %v", res, err)
+	}
+	rep := &recReporter{}
+	if err := x.ScanTagTask([]string{harbor, lantern, own}, []string{"clover"}, true).Run(context.Background(), rep); err != nil {
+		t.Fatal(err)
+	}
+	if len(rep.warns) != 1 || !strings.Contains(rep.warns[0], own) {
+		t.Fatalf("warnings = %v, want one for the unindexable path", rep.warns)
+	}
+	entries := []localfs.Entry{
+		{Name: "harbor.txt", Path: harbor, Type: localfs.EntryFile},
+		{Name: "lantern", Path: lantern, Type: localfs.EntryDirectory},
+	}
+	v, err := x.Provider(TagsColumn).Values(context.Background(), root, entries)
+	if err != nil || v[harbor] != "clover" || v[lantern] != "clover" {
+		t.Fatalf("tags = %v, %v", v, err)
+	}
+	meadow := filepath.Join(lantern, "meadow.txt")
+	v, err = x.Provider(TagsColumn).Values(context.Background(), lantern, []localfs.Entry{{Name: "meadow.txt", Path: meadow, Type: localfs.EntryFile}})
+	if err != nil || v[meadow] != "clover" {
+		t.Fatalf("recursive tags = %v, %v", v, err)
+	}
+}
+
 func TestTagsOnFileGoneFromDiskAndColumn(t *testing.T) {
 	x, root := scanned(t)
 	meadow := filepath.Join(root, "lantern", "meadow.txt")
