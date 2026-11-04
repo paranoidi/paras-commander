@@ -42,6 +42,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-B` | `b` | `fileindex.browse` | Toggle: show the current directory in the index, or from the index go to the real location |
 | `M-R` | `r` | `fileindex.reveal` | From the index, go to the entry's real location |
 | `M-O` | `o` | `fileindex.other-copies` | [Other copies](#other-copies) of the file under the cursor, from the index |
+| `M-D` | `d` | `fileindex.copies-outside` | [Copies outside directory](#copies-outside-directory): files under the current directory that also exist elsewhere in the index |
 | `M-S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
 | `M-A` | `S` | `fileindex.scan-fast` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
 | `M-P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
@@ -223,6 +224,28 @@ view. It works on local and index panels, on files only.
 - The answer is what the last scans recorded: the index may be stale, so a
   listed copy can be gone from disk (it then opens in the index view) and a
   new copy is missing until scanned.
+
+
+## Copies outside directory
+
+`fileindex.copies-outside` answers "is it safe to delete these because they exist
+elsewhere?". It opens the [Find duplicates](find-duplicates.md) results view for the active
+panel's directory, listing only the files under it that have a copy somewhere else in the
+index; each group shows the copies inside and outside the directory. Groups entirely inside
+the directory are what plain Find duplicates is for, and groups entirely outside it are not
+shown. The view title reads "Copies outside", the pane header shows the directory, and an empty result
+says "No copies outside" the directory. It works on local and `fileindex://` panels; the index
+root itself has nothing outside it.
+
+- Deleting from this view works as in Find duplicates: mark copies, confirm, and the delete
+  job removes them and their index entries. Refresh, and the refresh after hashing potential
+  duplicates, keep the view in this mode.
+- Folder duplicates are not offered: only files with a copy elsewhere are listed, so a folder
+  cannot be judged to match another as a whole.
+- A match where a file is only partly hashed (a [fast scan](#scan-and-prune)) shows as a
+  potential duplicate, as in Find duplicates.
+- Copies are matched as in [Other copies](#other-copies); the answer is what the last scans
+  recorded. A JPEG copy that differs only in metadata is listed with the group's smallest size.
 
 ## Columns
 

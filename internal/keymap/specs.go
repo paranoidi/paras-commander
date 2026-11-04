@@ -1437,6 +1437,16 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:         []string{"fileindex", "index", "copies", "duplicate", "same", "content"},
 			FileIndexMenuKey: "o",
 		},
+		{
+			ID:               ActionFileIndexCopiesOutside,
+			Views:            HelpBrowser,
+			Title:            "Copies outside directory",
+			Section:          "File Index",
+			DefaultKeys:      []string{"M-D"},
+			PreferredKey:     "M-D",
+			Keywords:         []string{"fileindex", "index", "copies", "duplicate", "outside", "elsewhere", "delete"},
+			FileIndexMenuKey: "d",
+		},
 
 		// ── File operations ──
 		{

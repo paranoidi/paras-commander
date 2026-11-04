@@ -29,6 +29,7 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexBrowse,
 	keymap.ActionFileIndexReveal,
 	keymap.ActionFileIndexCopies,
+	keymap.ActionFileIndexCopiesOutside,
 	keymap.ActionFileIndexTagAdd,
 	keymap.ActionFileIndexTagRemove,
 	keymap.ActionFileIndexScan,

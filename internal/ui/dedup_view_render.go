@@ -138,6 +138,11 @@ func drawDedupView(
 	}
 
 	rootHeader := primitive.PathWithHomeTilde(snap.EffectiveDisplayRoot().String(), userHomeDir)
+	emptyText := "No duplicate files found"
+	if view.OutsideOf != "" {
+		rootHeader = primitive.PathWithHomeTilde(view.OutsideOf, userHomeDir)
+		emptyText = "No copies outside " + rootHeader
+	}
 	markedDirs := dedupMarkedDirSet(snap, view.Marked)
 	dangerMarkedDirs := dedupDangerMarkedDirSet(snap, view.Marked)
 	keptDirs := dedupKeptDirSet(snap, view.Kept)
@@ -159,14 +164,14 @@ func drawDedupView(
 		mainAnchor, copiesAnchor = "", view.RangeAnchor
 	}
 	drawDedupTreePane(screen, layout.Primary, dedupPaneParams{
-		Title:            dedupViewTitle(snap, view.IgnoredEmptyCount, view.RecheckPercent()),
+		Title:            dedupViewTitle(snap, view.OutsideOf != "", view.IgnoredEmptyCount, view.RecheckPercent()),
 		EndLabel:         panelSelectionSizePadded(dedupEndLabel(view)),
 		Header:           rootHeader,
 		Rows:             list,
 		Pane:             view.Main,
 		Focused:          !view.FocusCopies && !view.FocusPanel,
 		RangePending:     !view.FocusCopies && !view.FocusPanel && view.RangeAnchor != "",
-		EmptyText:        dedupEmptyMessage(snap),
+		EmptyText:        emptyText,
 		ActiveGroup:      activeGroup,
 		HintDirs:         hintDirs,
 		TwinDirs:         twinDirs,
@@ -638,12 +643,16 @@ func dedupEndLabel(view DedupViewState) string {
 	return modeLabel
 }
 
-func dedupViewTitle(snap comparepkg.DedupSnapshot, ignoredEmpty, recheckPct int) string {
+func dedupViewTitle(snap comparepkg.DedupSnapshot, outside bool, ignoredEmpty, recheckPct int) string {
 	groups := "groups"
 	if len(snap.Groups) == 1 {
 		groups = "group"
 	}
-	title := fmt.Sprintf(" Duplicates (%d %s", len(snap.Groups), groups)
+	name := "Duplicates"
+	if outside {
+		name = "Copies outside"
+	}
+	title := fmt.Sprintf(" %s (%d %s", name, len(snap.Groups), groups)
 	if ignoredEmpty > 0 {
 		title += fmt.Sprintf(" · %d empty hidden", ignoredEmpty)
 	}
@@ -695,8 +704,4 @@ func dedupTreePrefix(styles theme.Theme, row DedupRow) string {
 		return connector
 	}
 	return connector + gutter + " "
-}
-
-func dedupEmptyMessage(snap comparepkg.DedupSnapshot) string {
-	return "No duplicate files found"
 }

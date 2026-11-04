@@ -114,6 +114,7 @@ type DedupViewState struct {
 	GroupsCollapsePending bool                               // groups mode: collapse all group headers on first DedupDone list build
 	RecheckDone           int                                // kept results being re-stat'ed on return: files checked so far
 	RecheckTotal          int                                // files to re-check; 0 = no check running
+	OutsideOf             string                             // host dir whose copies elsewhere in the index the view lists; "" = plain scan
 }
 
 // RecheckPercent is the re-check progress for the title, or -1 when no check runs.

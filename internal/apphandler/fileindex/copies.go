@@ -8,7 +8,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-const copiesTitle = "Other copies"
+const (
+	copiesTitle        = "Other copies"
+	copiesOutsideTitle = "Copies outside directory"
+)
 
 // CopiesPayload carries the outcome of one fileindex.other-copies lookup for the file at Path (the
 // active panel's cursor entry when it started).
@@ -45,6 +48,24 @@ func (h *Handler) Copies() {
 			h.post(res)
 		}()
 	})
+}
+
+// CopiesOutside opens the duplicates view over the files in the active panel's directory that
+// also exist elsewhere in the index.
+func (h *Handler) CopiesOutside() {
+	if !h.localOrIndex() {
+		return
+	}
+	dir, err := hostPath(h.host.ActivePanel().PathString())
+	if err != nil {
+		h.host.SetErrorMessage(copiesOutsideTitle, err)
+		return
+	}
+	if dir == "/" { // the index root: everything is inside it
+		h.host.SetTransientMessage("The index root has nothing outside it", ui.MessageUrgencyWarn)
+		return
+	}
+	h.host.OpenDedupOutside(dir)
 }
 
 // HandleCopies shows the lookup unless the user has moved on since it started.

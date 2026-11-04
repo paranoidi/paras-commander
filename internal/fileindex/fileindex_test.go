@@ -1061,3 +1061,82 @@ func TestOtherCopies(t *testing.T) {
 	}
 	check("harbor/reed.txt", CopiesHashed)
 }
+
+// DedupOutside keeps only groups spanning the directory boundary, with all their members.
+func TestDedupOutside(t *testing.T) {
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range map[string]string{
+		"willow/reed.txt":     "cattail",  // spans: copy outside
+		"marsh/sedge.txt":     "cattail",  //
+		"willow/rush.txt":     "bulrush",  // pair entirely inside
+		"willow/bog/rush.txt": "bulrush",  //
+		"marsh/fern.txt":      "bracken",  // pair entirely outside
+		"heath/fern.txt":      "bracken",  //
+		"willow/moss.txt":     "sphagnum", // unique
+	} {
+		p := filepath.Join(root, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	x := testIndex(t, initIndex(t))
+	if err := x.ScanTask([]string{filepath.Join(root, "willow"), filepath.Join(root, "marsh"), filepath.Join(root, "heath")}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+	// Added after the full scan, so this pair spanning the boundary is only fast-hashed.
+	for _, name := range []string{"willow/fast.bin", "marsh/fast.bin"} {
+		b := make([]byte, 9000)
+		b[0] = 'z'
+		if err := os.WriteFile(filepath.Join(root, name), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := x.ScanFastTask([]string{filepath.Join(root, "willow"), filepath.Join(root, "marsh")}).Run(context.Background(), &recReporter{}); err != nil {
+		t.Fatal(err)
+	}
+
+	files, hashes, err := x.DedupOutside(context.Background(), filepath.Join(root, "willow"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel := func(p string) string { return strings.TrimPrefix(filepath.Join(root, p), "/") }
+	got := map[string]bool{}
+	for _, f := range files {
+		got[f.Rel] = true
+		if f.Abs.String() != "fileindex:///"+f.Rel {
+			t.Fatalf("abs %s does not match rel %s", f.Abs, f.Rel)
+		}
+	}
+	for _, want := range []string{"willow/reed.txt", "marsh/sedge.txt", "willow/fast.bin", "marsh/fast.bin"} {
+		if !got[rel(want)] {
+			t.Errorf("missing %s in %v", want, got)
+		}
+	}
+	for _, name := range []string{"willow/rush.txt", "willow/bog/rush.txt", "marsh/fern.txt", "heath/fern.txt", "willow/moss.txt"} {
+		if got[rel(name)] {
+			t.Errorf("%s must not be listed", name)
+		}
+	}
+	if hashes[rel("willow/reed.txt")] != hashes[rel("marsh/sedge.txt")] || hashes[rel("willow/reed.txt")] == ([32]byte{}) {
+		t.Fatalf("confirmed pair needs one shared key: %v", hashes)
+	}
+	for _, f := range files {
+		_, hashed := hashes[f.Rel]
+		isPotential := f.Potential != ([32]byte{})
+		if strings.HasSuffix(f.Rel, "fast.bin") != isPotential || hashed == isPotential {
+			t.Errorf("%s: potential=%v hashed=%v", f.Rel, isPotential, hashed)
+		}
+	}
+	if none, _, err := x.DedupOutside(context.Background(), filepath.Join(root, "absent")); err != nil || len(none) != 0 {
+		t.Fatalf("missing dir = %v, %v", none, err)
+	}
+	if none, _, err := x.DedupOutside(context.Background(), "/"); err != nil || len(none) != 0 {
+		t.Fatalf("index root = %v, %v", none, err)
+	}
+}

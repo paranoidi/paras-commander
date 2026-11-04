@@ -185,8 +185,11 @@ type DedupOptions struct {
 	// Indexed, when set, supplies every file under the root with its known content
 	// hash (keyed by Rel) from an index. The session then neither walks nor reads
 	// anything and publishes the result at once.
-	Indexed  func(ctx context.Context) ([]FileRecord, map[string][32]byte, error)
-	OnUpdate func(DedupSnapshot)
+	Indexed func(ctx context.Context) ([]FileRecord, map[string][32]byte, error)
+	// IndexedPartial: Indexed lists only some files, so no folder can be called a duplicate
+	// and DirGroups stays empty.
+	IndexedPartial bool
+	OnUpdate       func(DedupSnapshot)
 }
 
 // DedupSession walks one root, size-prefilters, hashes candidates, and groups duplicates.
@@ -677,12 +680,16 @@ func (s *DedupSession) runIndexed(ctx context.Context) {
 	for i := range groups {
 		groups[i].Potential = potential[groups[i].Hash]
 	}
-	s.publish(DedupSnapshot{
-		Root:   s.root,
-		Phase:  DedupDone,
-		Groups: groups,
+	var dirGroups []DedupDirGroup
+	if !s.opts.IndexedPartial {
 		// Directory duplicates need real hashes: a potential match says nothing about content.
-		DirGroups:      groupDirsByDigest(hashed, hashOf, nil, nil, s.opts.Walk.Only),
+		dirGroups = groupDirsByDigest(hashed, hashOf, nil, nil, s.opts.Walk.Only)
+	}
+	s.publish(DedupSnapshot{
+		Root:           s.root,
+		Phase:          DedupDone,
+		Groups:         groups,
+		DirGroups:      dirGroups,
 		Walked:         len(files),
 		Hashed:         len(files),
 		HashTotal:      len(files),

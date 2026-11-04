@@ -1051,3 +1051,40 @@ func TestRunIndexedPotentialGroup(t *testing.T) {
 		}
 	}
 }
+
+// IndexedPartial lists only some files, so two folders whose listed files match are not called
+// duplicate folders (the unlisted files could differ).
+func TestRunIndexedPartialHasNoDirGroups(t *testing.T) {
+	root := pathloc.MustParse("fileindex:///")
+	same := [32]byte{3}
+	hashes := map[string][32]byte{"orchard/pear/a.txt": same, "orchard/plum/a.txt": same}
+	var files []FileRecord
+	for rel := range hashes {
+		abs, err := pathloc.FileIndex("/" + rel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, FileRecord{Abs: abs, Rel: rel, Size: 5})
+	}
+	run := func(partial bool) DedupSnapshot {
+		done := make(chan DedupSnapshot, 4)
+		sess := StartDedup(context.Background(), root, DedupOptions{
+			Indexed:        func(context.Context) ([]FileRecord, map[string][32]byte, error) { return files, hashes, nil },
+			IndexedPartial: partial,
+			OnUpdate: func(s DedupSnapshot) {
+				if s.Phase == DedupDone || s.Phase == DedupError {
+					done <- s
+				}
+			},
+		})
+		defer sess.Close()
+		return <-done
+	}
+	if snap := run(false); len(snap.DirGroups) == 0 {
+		t.Fatalf("complete listing: DirGroups empty, want the pear/plum pair (test would prove nothing)")
+	}
+	snap := run(true)
+	if len(snap.Groups) != 1 || len(snap.DirGroups) != 0 {
+		t.Fatalf("partial listing: groups = %d, dir groups = %+v, want one file group and no dir groups", len(snap.Groups), snap.DirGroups)
+	}
+}

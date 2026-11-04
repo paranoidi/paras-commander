@@ -75,6 +75,10 @@ type Handler struct {
 	fileIndex  *fileindex.Index
 
 	session *comparepkg.DedupSession
+	// outsideOf is the host dir whose copies elsewhere in the index the view lists
+	// (OpenOutside); "" = plain scan. Close keeps it so Refresh and ReopenPreservingState
+	// stay in the mode; every plain scan clears it (openPlain).
+	outsideOf string
 	wake    host.WakeCoalescer
 	pending *dedupPendingState
 	// hashedRoot is the scan root of a finished HashPotential job, set from its goroutine:
@@ -159,11 +163,33 @@ func (h *Handler) Open() {
 // they are for exactly that directory.
 func (h *Handler) openCurrent() {
 	path := h.activePanelPath()
-	if !h.HasResults() || !path.Equal(h.model.DedupSnapshot.Root) {
-		h.openRoot(path, nil)
+	// Outside-mode results answer a different question, even at the index root.
+	if h.outsideOf != "" || !h.HasResults() || !path.Equal(h.model.DedupSnapshot.Root) {
+		h.openPlain(path, nil)
 		return
 	}
 	h.model.DedupReturnDialog = dialog.DedupReturnDialogState{Open: true}
+}
+
+// openPlain starts a plain scan of root, leaving copies-outside mode.
+func (h *Handler) openPlain(root pathloc.Path, only []string) {
+	h.outsideOf = ""
+	h.openRoot(root, only)
+}
+
+// OpenOutside opens the results view over the files under dir (a host path) that also have a
+// copy elsewhere in the index; the scan is rooted at the index root.
+func (h *Handler) OpenOutside(dir string) {
+	if ui.IsAuxiliaryView(h.model.ViewMode) && h.model.ViewMode != ui.ViewDedup {
+		return
+	}
+	root, err := pathloc.FileIndex("/")
+	if err != nil {
+		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyError)
+		return
+	}
+	h.outsideOf = dir
+	h.openRoot(root, nil)
 }
 
 // HasResults reports whether a finished scan's results are kept in memory.
@@ -310,6 +336,7 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		TreeDirs:              true,
 		DirsCollapsePending:   true,
 		GroupsCollapsePending: true,
+		OutsideOf:             h.outsideOf,
 	}
 	h.model.DedupProgressDialog = dialog.DedupProgressDialogState{Open: true}
 
@@ -343,6 +370,12 @@ func (h *Handler) openRoot(root pathloc.Path, only []string) {
 		opts.CacheFile, opts.ConfirmHashBytes = "", 0
 		opts.Indexed = func(ctx context.Context) ([]comparepkg.FileRecord, map[string][32]byte, error) {
 			return h.fileIndex.DedupFiles(ctx, root)
+		}
+		if outside := h.outsideOf; outside != "" {
+			opts.IndexedPartial = true
+			opts.Indexed = func(ctx context.Context) ([]comparepkg.FileRecord, map[string][32]byte, error) {
+				return h.fileIndex.DedupOutside(ctx, outside)
+			}
 		}
 	}
 	h.session = startDedup(context.Background(), root, opts)

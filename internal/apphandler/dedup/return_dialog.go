@@ -39,7 +39,7 @@ func (h *Handler) returnDialogActivate(id dlg.ID) {
 		switch id {
 		case dialog.DedupReturnFirst:
 			root, only := scanScope(dirs)
-			h.openRoot(root, only)
+			h.openPlain(root, only)
 		case dialog.DedupReturnSecond:
 			h.openCurrent()
 		}
@@ -49,7 +49,7 @@ func (h *Handler) returnDialogActivate(id dlg.ID) {
 	case dialog.DedupReturnFirst:
 		h.VerifyAndShowKept()
 	case dialog.DedupReturnSecond:
-		h.openRoot(h.activePanelPath(), nil)
+		h.openPlain(h.activePanelPath(), nil)
 	}
 }
 

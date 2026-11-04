@@ -74,6 +74,96 @@ func (x *Index) DedupFiles(ctx context.Context, root pathloc.Path) ([]compare.Fi
 	return files, hashes, nil
 }
 
+// DedupOutside lists the files under dir (a host path) that also have a copy somewhere else in
+// the index, with every member of those groups, so the dedup view answers "is this safe to delete
+// because it exists elsewhere?". Groups entirely inside or entirely outside dir are left out.
+// Records are relative to the index root (Rel has no leading "/"). A group with a fast-hashed
+// member carries FileRecord.Potential and no hashes entry; a confirmed group's hashes entry is a
+// key derived from its Locations, which only needs to be a stable group identity.
+// ponytail: JPEG copies differing in metadata all show the group's smallest size, because DupGroup
+// carries no per-file size; upgrade path is a per-location size from the library.
+func (x *Index) DedupOutside(ctx context.Context, dir string) ([]compare.FileRecord, map[string][32]byte, error) {
+	host, err := IndexPath(dir)
+	if err != nil {
+		return nil, nil, err
+	}
+	d, err := x.DB()
+	if err != nil {
+		return nil, nil, err
+	}
+	id, found, err := db.DirByPath(d, host)
+	if err != nil || !found || id == nil { // the index root has nothing outside it
+		return nil, nil, err
+	}
+	filter, err := db.TreeIDs(d, id, true)
+	if err != nil {
+		return nil, nil, err
+	}
+	prefix := strings.TrimSuffix(host, "/") + "/"
+	// spans reports whether g has a member inside dir and one outside it.
+	spans := func(g db.DupGroup) bool {
+		in := slices.ContainsFunc(g.Locations, func(p string) bool { return strings.HasPrefix(p, prefix) })
+		out := slices.ContainsFunc(g.Locations, func(p string) bool { return !strings.HasPrefix(p, prefix) })
+		return in && out
+	}
+	potential, err := d.PotentialDuplicates(filter, false)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, nil, err
+	}
+	confirmed, err := d.Duplicates(filter, false)
+	if err != nil {
+		return nil, nil, err
+	}
+	var files []compare.FileRecord
+	hashes := map[string][32]byte{}
+	seen := map[string]bool{}
+	add := func(g db.DupGroup, path string, key [32]byte, isPotential bool) {
+		abs, err := pathloc.FileIndex(path)
+		if err != nil {
+			return
+		}
+		rel := strings.TrimPrefix(path, "/")
+		rec := compare.FileRecord{Abs: abs, Rel: rel, Size: g.Size}
+		if isPotential {
+			rec.Potential = key
+		} else {
+			hashes[rel] = key
+		}
+		files = append(files, rec)
+		seen[path] = true
+	}
+	for i, g := range potential {
+		if i%256 == 0 && ctx.Err() != nil {
+			return nil, nil, ctx.Err()
+		}
+		if len(g.Unverified) == 0 || !spans(g) {
+			continue
+		}
+		key := sha256.Sum256([]byte(strings.Join(g.Locations, "\x00")))
+		for _, p := range g.Locations {
+			add(g, p, key, true)
+		}
+	}
+	for i, g := range confirmed {
+		if i%256 == 0 && ctx.Err() != nil {
+			return nil, nil, ctx.Err()
+		}
+		if !spans(g) {
+			continue
+		}
+		key := sha256.Sum256([]byte(strings.Join(g.Locations, "\x00")))
+		for _, p := range g.Locations {
+			if !seen[p] { // a fully hashed member of a potential set stays in that set
+				add(g, p, key, false)
+			}
+		}
+	}
+	return files, hashes, nil
+}
+
 // potentialKeys maps the entries in a potential duplicate set to that set's key. A set needs two
 // entries with at least one only fast-hashed: without one, full hashes already decide it.
 // ponytail: a fully hashed member leaves its confirmed group for the potential set, so a JPEG

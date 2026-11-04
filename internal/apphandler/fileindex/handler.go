@@ -60,6 +60,9 @@ type Host interface {
 	// OpenFileCopiesPicker opens the path picker over the host paths of files; confirming one
 	// shows it in the active panel (a fileindex:// path when indexPanel).
 	OpenFileCopiesPicker(title string, files []string, indexPanel bool)
+	// OpenDedupOutside opens the find-duplicates view over the files under the host dir dir that
+	// have a copy elsewhere in the index.
+	OpenDedupOutside(dir string)
 }
 
 // Deps wires the fileindex handler at app construction.
@@ -156,6 +159,8 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.Reveal()
 	case keymap.ActionFileIndexCopies:
 		h.Copies()
+	case keymap.ActionFileIndexCopiesOutside:
+		h.withIndex(h.CopiesOutside)
 	default:
 		return false
 	}

@@ -481,7 +481,7 @@ func TestDrawDedupViewTitleBarKeepsFrameDashesAfterTitle(t *testing.T) {
 	view := DedupViewState{}
 	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil, ListRowHover{})
 
-	title := dedupViewTitle(snap, 0, -1)
+	title := dedupViewTitle(snap, false, 0, -1)
 	titleRunes := len([]rune(title))
 	_, frameBG, _ := styles.PanelActiveFrame.Decompose()
 	_, titleBG, _ := styles.PanelActiveTitle.Decompose()
@@ -1669,8 +1669,11 @@ func TestDrawDedupBrowsePanel(t *testing.T) {
 
 func TestDedupViewTitleRecheckSuffix(t *testing.T) {
 	snap := comparepkg.DedupSnapshot{Groups: make([]comparepkg.DedupGroup, 3)}
-	if got := dedupViewTitle(snap, 2, 42); got != " Duplicates (3 groups · 2 empty hidden · 42%) " {
+	if got := dedupViewTitle(snap, false, 2, 42); got != " Duplicates (3 groups · 2 empty hidden · 42%) " {
 		t.Fatalf("title = %q", got)
+	}
+	if got := dedupViewTitle(snap, true, 0, -1); got != " Copies outside (3 groups) " {
+		t.Fatalf("outside title = %q", got)
 	}
 	v := DedupViewState{RecheckTotal: 200, RecheckDone: 84}
 	if got := v.RecheckPercent(); got != 42 {

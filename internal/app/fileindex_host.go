@@ -42,6 +42,8 @@ func (h fileindexHost) OpenFileCopiesPicker(title string, files []string, indexP
 	h.app.dialogCtrl.OpenFileCopiesPicker(title, files, indexPanel)
 }
 
+func (h fileindexHost) OpenDedupOutside(dir string) { h.app.dedupCtrl.OpenOutside(dir) }
+
 func (h fileindexHost) RefreshMetaColumns() {
 	h.app.reloadIndexPanels() // a tag edit changes the tagged state
 
