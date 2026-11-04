@@ -28,13 +28,18 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexBrowseWith,
 	keymap.ActionFileIndexBrowse,
 	keymap.ActionFileIndexReveal,
-	keymap.ActionFileIndexCopies,
-	keymap.ActionFileIndexCopiesOutside,
 	keymap.ActionFileIndexTagAdd,
 	keymap.ActionFileIndexTagRemove,
 	keymap.ActionFileIndexScan,
 	keymap.ActionFileIndexScanFast,
 	keymap.ActionFileIndexPrune,
+}
+
+// leaderMenuFileIndexActions are the fileindex actions listed in the `:` menu's Duplicates group
+// instead of the fileindex menu; they still appear in Help.
+var leaderMenuFileIndexActions = []string{
+	keymap.ActionFileIndexCopies,
+	keymap.ActionFileIndexCopiesOutside,
 }
 
 func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
@@ -48,7 +53,7 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 			inHelp = append(inHelp, e.ActionID)
 		}
 	}
-	for _, id := range append([]string{keymap.ActionFileIndexMenu}, fileIndexActions...) {
+	for _, id := range slices.Concat([]string{keymap.ActionFileIndexMenu}, fileIndexActions, leaderMenuFileIndexActions) {
 		if !slices.Contains(inHelp, id) {
 			t.Errorf("%s missing from help", id)
 		}
@@ -82,14 +87,58 @@ func TestFileIndexActionsInHelpAndMenus(t *testing.T) {
 		t.Fatalf("fileindex menu groups = %v, want %v", groups, want)
 	}
 
-	// The `:` leader menu reaches the fileindex menu, not the actions themselves.
-	var leader []string
+	// The `:` leader menu reaches the fileindex menu and lists the two copies actions in its
+	// Duplicates group (find duplicates first), but none of the other fileindex actions.
+	var leader, duplicates []string
+	group := ""
 	for _, e := range a.keys.LeaderMenuEntries() {
+		if e.GroupTitle != "" {
+			group = e.GroupTitle
+			continue
+		}
 		leader = append(leader, e.ActionID)
+		if group == keymap.LeaderMenuGroupDuplicates {
+			duplicates = append(duplicates, e.ActionID)
+		}
 	}
 	if !slices.Contains(leader, keymap.ActionFileIndexMenu) || slices.Contains(leader, keymap.ActionFileIndexScan) {
 		t.Fatalf("leader menu actions = %v", leader)
 	}
+	wantDuplicates := []string{keymap.ActionPanelFindDuplicates, keymap.ActionFileIndexCopies, keymap.ActionFileIndexCopiesOutside}
+	if !slices.Equal(duplicates, wantDuplicates) {
+		t.Fatalf("leader menu Duplicates group = %v, want %v", duplicates, wantDuplicates)
+	}
+}
+
+// The Duplicates group's fileindex rows run through the `:` menu: the letter reaches the
+// fileindex handler.
+func TestLeaderMenuRunsFileIndexCopies(t *testing.T) {
+	openLeader := func(a *App, id string) {
+		t.Helper()
+		letter := []rune(a.keys.LeaderKey[id])
+		if len(letter) != 1 {
+			t.Fatalf("leader key of %s = %q", id, a.keys.LeaderKey[id])
+		}
+		a.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+		if !a.leaderMenuOpen(ui.LeaderMenuBuiltin) {
+			t.Fatalf("leader menu = %+v, want the built-in menu", a.model.LeaderMenu)
+		}
+		a.handleKey(tcell.NewEventKey(tcell.KeyRune, letter[0], tcell.ModNone))
+		if a.model.LeaderMenu.Open {
+			t.Fatal("activating an entry should close the menu")
+		}
+	}
+
+	a, _, _ := copiesApp(t)
+	cursorTo(t, a, "meadow")
+	openLeader(a, keymap.ActionFileIndexCopies)
+	if a.model.Message != "Other copies works on files" {
+		t.Fatalf("message = %q, want the fileindex handler's message", a.model.Message)
+	}
+
+	a, screen, _ := copiesApp(t)
+	openLeader(a, keymap.ActionFileIndexCopiesOutside)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.ViewMode == ui.ViewDedup })
 }
 
 // The menu's letters are case-sensitive: s is the plain scan, S the fast one.

@@ -122,11 +122,33 @@ func TestBuildLeaderMenuEntriesGroupColumns(t *testing.T) {
 	if colFor(LeaderMenuGroupNavigation) != 2 || colFor(LeaderMenuGroupDisplay) != 3 || colFor(LeaderMenuGroupApp) != 3 {
 		t.Fatalf("columns = nav %d display %d app %d, want 2 3 3", colFor(LeaderMenuGroupNavigation), colFor(LeaderMenuGroupDisplay), colFor(LeaderMenuGroupApp))
 	}
+	if colFor(LeaderMenuGroupDuplicates) != 1 {
+		t.Fatalf("duplicates column = %d, want 1", colFor(LeaderMenuGroupDuplicates))
+	}
+	if slices.Index(leaderMenuGroupOrder, LeaderMenuGroupView)+1 != slices.Index(leaderMenuGroupOrder, LeaderMenuGroupDuplicates) {
+		t.Fatal("Duplicates group must sit directly below View")
+	}
 	if colFor(LeaderMenuGroupAddMark) != 3 {
 		t.Fatalf("add mark column = %d, want 3", colFor(LeaderMenuGroupAddMark))
 	}
 	if slices.Index(leaderMenuGroupOrder, LeaderMenuGroupAddMark)+1 != slices.Index(leaderMenuGroupOrder, LeaderMenuGroupDisplay) {
 		t.Fatal("Add mark group must sit directly above Display")
+	}
+}
+
+func TestLeaderMenuDuplicatesGroup(t *testing.T) {
+	want := []string{ActionPanelFindDuplicates, ActionFileIndexCopies, ActionFileIndexCopiesOutside}
+	if got := leaderMenuGroupActions[LeaderMenuGroupDuplicates]; !slices.Equal(got, want) {
+		t.Fatalf("Duplicates group = %v, want %v", got, want)
+	}
+	if slices.Contains(leaderMenuGroupActions[LeaderMenuGroupTools], ActionPanelFindDuplicates) {
+		t.Fatal("find duplicates must not stay in Tools")
+	}
+	if _, ok := DefaultFileIndexMenuKeys()[ActionFileIndexCopies]; ok {
+		t.Fatal("other-copies must not have a fileindex menu letter")
+	}
+	if _, ok := DefaultFileIndexMenuKeys()[ActionFileIndexCopiesOutside]; ok {
+		t.Fatal("copies-outside must not have a fileindex menu letter")
 	}
 }
 
@@ -196,8 +218,8 @@ func TestDefaultBundleLeaderKey(t *testing.T) {
 			t.Fatalf("invalid entry: %+v", e)
 		}
 	}
-	if actions != 43 {
-		t.Fatalf("action entries = %d, want 43", actions)
+	if actions != 45 {
+		t.Fatalf("action entries = %d, want 45", actions)
 	}
 }
 

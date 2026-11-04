@@ -79,8 +79,8 @@ type Handler struct {
 	// (OpenOutside); "" = plain scan. Close keeps it so Refresh and ReopenPreservingState
 	// stay in the mode; every plain scan clears it (openPlain).
 	outsideOf string
-	wake    host.WakeCoalescer
-	pending *dedupPendingState
+	wake      host.WakeCoalescer
+	pending   *dedupPendingState
 	// hashedRoot is the scan root of a finished HashPotential job, set from its goroutine:
 	// PollUpdates reopens the results if they still show that root.
 	hashedRoot atomic.Pointer[pathloc.Path]
