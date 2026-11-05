@@ -24,7 +24,7 @@ bright_white = 15
 
 [status]                     # job and work states: menu-bar job strip, Jobs view, Commands view, file-list marks
 scanning = { fg = "bright_magenta", bold = true }   # also disk usage, fileindex scans, spinners
-queued = { fg = "bright_blue", bold = true }
+queued = { fg = "magenta", bold = true }
 running = { fg = "bright_green", bold = true }
 paused = { fg = "yellow", bold = true }
 decision = { fg = "cyan", bold = true }
