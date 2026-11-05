@@ -66,6 +66,8 @@ type State struct {
 	GitStatusThemeKey string
 	// Search tracks incremental "/" search state and matches within this preview.
 	Search SearchState
+	// Selection is the mouse text selection (fullscreen preview only).
+	Selection Selection
 	// ImagePayload is a raw sixel DCS or Kitty APC sequence for image previews (empty for text).
 	ImagePayload string
 	// ImagePxW / ImagePxH are the encoded image dimensions in pixels.

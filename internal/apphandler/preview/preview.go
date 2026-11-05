@@ -1410,6 +1410,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 	}
 	doneApplied := false
 	h.patchPreviewState(target, func(st *ui.FilePreviewState) {
+		st.ClearSelection()
 		if !st.Open || st.Path != path {
 			return
 		}

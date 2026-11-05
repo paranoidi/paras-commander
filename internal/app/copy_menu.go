@@ -224,11 +224,25 @@ func (a *App) copyToClipboard(actionID string) {
 // setClipboard puts text on the system clipboard and toasts done, or a warning when no clipboard
 // tool is available.
 func (a *App) setClipboard(text, done string) {
+	a.setClipboardToast(text, done, ui.MessageUrgencyInfo)
+}
+
+// setClipboardToast is setClipboard with the urgency of the done toast.
+func (a *App) setClipboardToast(text, done string, urgency ui.MessageUrgency) {
 	if err := clipboard.Set(text); err != nil {
 		a.setTransientMessage("Copy failed: no clipboard tool available", ui.MessageUrgencyWarn)
 		return
 	}
-	a.setTransientMessage(done, ui.MessageUrgencyInfo)
+	a.setTransientMessage(done, urgency)
+}
+
+// copyPreviewSelection copies the text selected with the mouse in the fullscreen preview.
+func (a *App) copyPreviewSelection(text string) {
+	if text == "" {
+		return
+	}
+	preview := textutil.TruncateBannerRunes(strings.Join(strings.Fields(text), " "), textutil.BannerMaxRunes)
+	a.setClipboardToast(text, "Copied: "+preview, ui.MessageUrgencySuccess)
 }
 
 // copyFileContentsToClipboard copies the fullscreen-previewed text file verbatim.

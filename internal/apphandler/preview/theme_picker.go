@@ -255,12 +255,21 @@ func (h *Handler) fullscreenPreviewUnionRect() (ui.Rect, bool) {
 	return ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, h.host.EffectivePaneSplitOrientation()), true
 }
 
-func (h *Handler) fullscreenPreviewTextWidth() (int, bool) {
+// fullscreenPreviewRect is the fullscreen preview panel's rect (ok false while the layout is too small).
+func (h *Handler) fullscreenPreviewRect() (ui.Rect, bool) {
 	union, ok := h.fullscreenPreviewUnionRect()
+	if !ok {
+		return ui.Rect{}, false
+	}
+	previewRect, _ := ui.SplitFullscreenPreviewRects(union, h.model.FilePreviewThemePicker.Open, h.model.FilePreviewThemePicker.Choices)
+	return previewRect, true
+}
+
+func (h *Handler) fullscreenPreviewTextWidth() (int, bool) {
+	previewRect, ok := h.fullscreenPreviewRect()
 	if !ok {
 		return 1, false
 	}
-	previewRect, _ := ui.SplitFullscreenPreviewRects(union, h.model.FilePreviewThemePicker.Open, h.model.FilePreviewThemePicker.Choices)
 	tw := previewRect.Width // borderless: no side border columns, only a right-side scrollbar gutter
 	if h.fullscreenPreviewRendersMarkdown() {
 		tw -= 2 // 1-space left margin + 1-space right margin/scrollbar gutter for rendered markdown

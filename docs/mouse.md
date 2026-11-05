@@ -62,11 +62,15 @@ In the leader menu strip (and the user, copy-path, preview and git filter menus 
 
 In the jobs, commands, messages, compare and duplicates views, a left click on a list row selects that job, command, message, compare row or duplicates row (in the duplicates view it also focuses the main tree, the Copies pane or the browse panel under the pointer); the wheel over the list moves the selection. The row under the pointer is highlighted (a whole command or message, across its lines; in the compare view both columns of the row); a key press hides the highlight until the mouse moves again. The selection does not follow it, so moving across the list to the details or output does not switch what they show. In the messages view a click also copies the whole message to the clipboard and confirms it with a toast; a click on the second line of a wrapped message selects and copies the whole message.
 
-Everything else ignores the mouse for now: the other panes of the jobs and commands views, the fullscreen preview view, the quick filter and the embedded terminal panel.
+In the fullscreen text preview, drag with the left button to select text. Releasing the button copies the selection to the clipboard and confirms it with a toast. The highlight stays until the next left press on the text or until the preview reloads. Dragging past the top or bottom edge scrolls one row per pointer report.
+
+The selection leaves out the scrollbar and the line numbers, and soft-wrapped rows copy as one line. The copied text is what the preview shows: tabs arrive as the spaces they expand to, rendered markdown as rendered, and line numbers printed by an external `[preview].command` (such as `bat -n`) count as text.
+
+Everything else ignores the mouse for now: the other panes of the jobs and commands views, the rest of the fullscreen preview view, the quick filter and the embedded terminal panel.
 
 ## Caveats
 
 - Mouse support asks the terminal for pointer motion reports (for the path highlight), not only clicks.
-- With mouse reporting on, the terminal no longer selects text on a plain drag. Hold Shift while dragging (or your terminal's own modifier) to select and copy text.
+- With mouse reporting on, the terminal no longer selects text on a plain drag (the fullscreen text preview has its own selection). Hold Shift while dragging (or your terminal's own modifier) to select and copy text anywhere.
 - Inside tmux, mouse events only reach the application when tmux has mouse mode on: `set -g mouse on`.
 - The mouse is switched off while another program owns the terminal (external editor, drop to shell, the persistent subshell) and switched on again when you return.
