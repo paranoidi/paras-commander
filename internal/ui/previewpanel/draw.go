@@ -339,6 +339,13 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	if scroll > maxStart {
 		scroll = maxStart
 	}
+	selLo, selHi, selecting := st.Selection.Range()
+	var selStarts []int
+	if selecting {
+		// ponytail: O(wrapped rows) per frame, and an external body is re-parsed too; both bounded
+		// by DefaultMaxPreviewBytes. Cache the offsets with the wrap if it ever shows up in a profile.
+		selStarts = rowOffsets(lines, st.bodyCellsRaw(body), st.wrapGutter())
+	}
 	for row := 0; row < contentH; row++ {
 		y := contentTop + row
 		if paintLeftMargin {
@@ -349,6 +356,9 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 			fillContentRow(screen, textX, y, textW, padStyle)
 		} else {
 			DrawCells(screen, textX, y, textW, lines[idx], padStyle)
+			if selecting {
+				paintSelection(screen, textX, y, textW, lines[idx], selStarts[idx], st.wrapGutter(), selLo, selHi)
+			}
 		}
 		if paintRightMargin {
 			screen.SetContent(rightMarginX, y, ' ', nil, marginStyle)

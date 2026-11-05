@@ -1007,3 +1007,74 @@ func TestMouseDedupBrowsePanelHoverAndClick(t *testing.T) {
 		t.Fatalf("focusPanel=%v cursor=%d, want true/%d", app.model.DedupView.FocusPanel, app.model.DedupPanel.Cursor, want)
 	}
 }
+
+// fullscreenTextPreviewApp opens a loaded fullscreen preview of guttered lines.
+func fullscreenTextPreviewApp(t *testing.T, lines int) *App {
+	t.Helper()
+	prevWriter := clipboard.OSWriter
+	clipboard.OSWriter = func(string) error { return nil }
+	t.Cleanup(func() { clipboard.OSWriter = prevWriter; clipboard.Reset() })
+	app, dir := mouseTestApp(t)
+	app.model.ViewMode = ui.ViewFilePreview
+	st := ui.FilePreviewState{
+		Open: true, Phase: ui.FilePreviewPhaseDone, Path: filepath.Join(dir, "walnut.txt"),
+		Source: ui.PreviewSourceInternalHighlighted, GutterWidth: 4,
+	}
+	var cells []ui.AnsiCell
+	for i := 1; i <= lines; i++ {
+		for _, r := range fmt.Sprintf("%3d harbor%d\n", i, i) {
+			cells = append(cells, ui.AnsiCell{R: r})
+		}
+	}
+	st.SetHighlightedCells(cells)
+	app.model.FullscreenFilePreview = st
+	app.render()
+	return app
+}
+
+func TestMousePreviewDragCopiesTextWithoutGutter(t *testing.T) {
+	app := fullscreenTextPreviewApp(t, 3)
+	// Row 0 is the filename; body row 1 is line 1, whose text starts after the 4-cell gutter.
+	app.handleMouse(mouseEv(4, 1, tcell.Button1))
+	app.handleMouse(mouseEv(6, 2, tcell.Button1))
+	if got := clipboard.LastSet(); got != "" {
+		t.Fatalf("copied %q before the release", got)
+	}
+	app.handleMouse(mouseEv(6, 2, tcell.ButtonNone))
+	if got, want := clipboard.LastSet(), "harbor1\nhar"; got != want {
+		t.Fatalf("clipboard = %q, want %q", got, want)
+	}
+	if got := app.model.MessageLog[0]; !strings.Contains(got.Text, "Copied: harbor1 har") {
+		t.Fatalf("toast = %q", got.Text)
+	}
+	if app.model.FullscreenFilePreview.Selection.Dragging {
+		t.Fatal("release must end the drag")
+	}
+}
+
+func TestMousePreviewClickAndNonTextPressesCopyNothing(t *testing.T) {
+	app := fullscreenTextPreviewApp(t, 3)
+	w, _ := app.screen.Size()
+	for _, p := range []struct{ x, y int }{{6, 1}, {6, 0}, {w - 1, 1}} { // text, filename row, scrollbar column
+		app.handleMouse(mouseEv(p.x, p.y, tcell.Button1))
+		app.handleMouse(mouseEv(p.x+1, p.y, tcell.ButtonNone))
+		if got := clipboard.LastSet(); got != "" {
+			t.Fatalf("press at %v copied %q", p, got)
+		}
+	}
+}
+
+func TestMousePreviewDragPastBottomEdgeScrolls(t *testing.T) {
+	app := fullscreenTextPreviewApp(t, 60)
+	_, h := app.screen.Size()
+	app.handleMouse(mouseEv(4, 1, tcell.Button1))
+	app.handleMouse(mouseEv(4, h-1, tcell.Button1))
+	app.handleMouse(mouseEv(5, h-1, tcell.Button1))
+	if got := app.model.FullscreenFilePreview.Scroll; got != 2 {
+		t.Fatalf("scroll = %d, want one row per report past the edge", got)
+	}
+	app.handleMouse(mouseEv(5, h-1, tcell.ButtonNone))
+	if got := clipboard.LastSet(); !strings.HasPrefix(got, "harbor1\n") {
+		t.Fatalf("clipboard = %q", got)
+	}
+}

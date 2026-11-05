@@ -28,11 +28,10 @@ func (h *Handler) fullscreenFilePreviewLayoutMetrics() (textW, contentH int, ok 
 	if !ok {
 		return 1, 0, false
 	}
-	union, ok := h.fullscreenPreviewUnionRect()
+	previewRect, ok := h.fullscreenPreviewRect()
 	if !ok {
 		return tw, 0, false
 	}
-	previewRect, _ := ui.SplitFullscreenPreviewRects(union, h.model.FilePreviewThemePicker.Open, h.model.FilePreviewThemePicker.Choices)
 	// Borderless: only the filename row is reserved (no top+bottom border), so subtract 1, not 2.
 	contentH = previewRect.Height - 1
 	if h.model.FullscreenFilePreview.Search.Editing {
