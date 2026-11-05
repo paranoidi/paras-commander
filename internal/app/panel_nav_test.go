@@ -319,6 +319,61 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 	}
 }
 
+func TestOpenSelectedDirectoryInInactivePanelAndFocus(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.MkdirAll(meadow, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "lantern.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.PrimaryPanel)
+	setCursor := func(name string) {
+		t.Helper()
+		for i := 0; i < left.VisibleEntryCount(); i++ {
+			entry, _, ok := left.VisibleEntry(i)
+			if ok && entry.Name == name {
+				left.Cursor = i
+				return
+			}
+		}
+		t.Fatalf("entry %q not found", name)
+	}
+
+	// File under the cursor: nothing happens, focus stays.
+	setCursor("lantern.txt")
+	app.model.ActivePanel = ui.PrimaryPanel
+	app.dispatch(keymap.ActionPanelOpenDirInOtherFocus)
+	if app.model.ActivePanel != ui.PrimaryPanel {
+		t.Fatalf("ActivePanel = %d after file dispatch, want primary", app.model.ActivePanel)
+	}
+
+	// Directory: other panel loads it and takes focus.
+	setCursor("meadow")
+	app.dispatch(keymap.ActionPanelOpenDirInOtherFocus)
+	applyNextInterruptEvent(t, app, screen)
+	if app.model.ActivePanel != ui.SecondaryPanel {
+		t.Fatalf("ActivePanel = %d, want secondary", app.model.ActivePanel)
+	}
+	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != filepath.Clean(root) {
+		t.Fatalf("left panel path = %q want %q", got, root)
+	}
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != filepath.Clean(meadow) {
+		t.Fatalf("right panel path = %q want %q", got, meadow)
+	}
+
+	// Other panel already shows the target: focus still moves.
+	app.model.ActivePanel = ui.PrimaryPanel
+	app.dispatch(keymap.ActionPanelOpenDirInOtherFocus)
+	if app.model.ActivePanel != ui.SecondaryPanel {
+		t.Fatalf("ActivePanel = %d for no-op open, want secondary", app.model.ActivePanel)
+	}
+}
+
 func TestOpenActivePathInInactivePanel(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")

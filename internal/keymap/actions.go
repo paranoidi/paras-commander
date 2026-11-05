@@ -113,6 +113,7 @@ const (
 	ActionPanelToggleHideInactive     = "panel.toggle-hide-inactive"
 	ActionPanelExternalBrowser        = "panel.external-browser"
 	ActionPanelOpenDirInOther         = "panel.open-dir-in-other"
+	ActionPanelOpenDirInOtherFocus    = "panel.open-dir-in-other-focus"
 	ActionPanelOpenActivePathInOther  = "panel.open-active-path-in-other"
 	ActionPanelToggleSync             = "panel.toggle-sync"
 	ActionPanelMeta                   = "panel.meta"
@@ -471,6 +472,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelToggleHideInactive:     {},
 	ActionPanelExternalBrowser:        {},
 	ActionPanelOpenDirInOther:         {},
+	ActionPanelOpenDirInOtherFocus:    {},
 	ActionPanelOpenActivePathInOther:  {},
 	ActionPanelToggleSync:             {},
 	ActionPanelMeta:                   {},

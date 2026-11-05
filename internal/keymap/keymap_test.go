@@ -238,6 +238,7 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModMeta), ActionPanelOpenActivePathInOther, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta|tcell.ModAlt), ActionPanelOpenDirInOther, true},
 		{tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift), ActionPanelOpenDirInOther, true},
+		{tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelOpenDirInOtherFocus, true},
 		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift), ActionPanelOpenActivePathInOther, true},
 		{tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt), ActionPanelSortDialog, true},
 		{tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModAlt), ActionPanelOpenSelectedRoot, true},
@@ -1109,9 +1110,6 @@ func TestPanelToggleSyncDefaultsToAltY(t *testing.T) {
 	}
 	if id, ok := m.Lookup(tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl)); ok && id == ActionPanelToggleSync {
 		t.Fatal("C-M-o should no longer map to panel.toggle-sync")
-	}
-	if _, ok := m.Lookup(tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl)); ok {
-		t.Fatal("C-M-o should no longer be bound to anything (rebound to terminal.toggle-panel = C-M-p)")
 	}
 }
 

@@ -816,7 +816,7 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		a.doListNav(func() { activePanel.Bottom(viewportRows) })
 	case keymap.ActionNavOpen:
 		return true, a.handleNavOpen(activePanel, viewportRows)
-	case keymap.ActionPanelOpenDirInOther:
+	case keymap.ActionPanelOpenDirInOther, keymap.ActionPanelOpenDirInOtherFocus:
 		if a.model.ViewMode != ui.ViewBrowser {
 			break
 		}
@@ -831,7 +831,11 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 		if a.disableSyncFollowIfEnabled() {
 			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
 		}
-		activePanel.CycleFilterMatch(1, viewportRows)
+		if actionID == keymap.ActionPanelOpenDirInOtherFocus {
+			a.switchPanel()
+		} else {
+			activePanel.CycleFilterMatch(1, viewportRows)
+		}
 	case keymap.ActionPanelOpenActivePathInOther:
 		if a.model.ViewMode != ui.ViewBrowser {
 			break

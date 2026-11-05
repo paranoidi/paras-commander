@@ -566,6 +566,15 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"inactive", "split", "cd", "other panel"},
 		},
 		{
+			ID:           ActionPanelOpenDirInOtherFocus,
+			Views:        HelpBrowser,
+			Title:        "Open directory in other panel and focus",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"C-M-o"},
+			PreferredKey: "C-M-o",
+			Keywords:     []string{"inactive", "split", "cd", "other panel", "focus", "switch"},
+		},
+		{
 			ID:           ActionPanelOpenActivePathInOther,
 			Views:        HelpBrowser,
 			Title:        "Open current path in other panel",

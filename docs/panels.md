@@ -109,4 +109,4 @@ Limits: changes made on another machine to an NFS or SMB mount are not seen by t
 
 Each panel remembers the focused entry per directory, so going back (see [Navigation](navigation.md)) lands on the item you left.
 
-`M-y` (`panel.toggle-sync`) latches the active panel as driver: moving the cursor onto a directory shows it in the other panel. `M-o` / `M-i` open the cursor directory or the current path in the other panel.
+`M-y` (`panel.toggle-sync`) latches the active panel as driver: moving the cursor onto a directory shows it in the other panel. `M-o` / `M-i` open the cursor directory or the current path in the other panel; `C-M-o` opens the cursor directory there and moves focus to that panel.
