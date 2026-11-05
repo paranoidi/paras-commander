@@ -37,6 +37,7 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 	if err != nil {
 		node.Value.LoadErr = err
 		delete(s.TreeExpanded, dirID)
+		s.TreeExpandGen++
 		return s.finishTreeChildLoadApply(dirID, viewportRows)
 	}
 	node.Value.LoadErr = nil
@@ -45,6 +46,7 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 		s.TreeExpanded = make(map[string]bool)
 	}
 	s.TreeExpanded[dirID] = true
+	s.TreeExpandGen++
 	// Cascades any remembered-but-not-yet-restored expansion nested under the directory that just
 	// finished loading (e.g. a recalled snapshot with several levels deep on an SFTP panel, where
 	// each level's children only become available after its own async load). Scoped to just

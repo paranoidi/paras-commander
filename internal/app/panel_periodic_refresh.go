@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"maps"
+	"slices"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -78,30 +79,46 @@ func (a *App) handlePanelRefreshTick() {
 	a.schedulePanelListingRefresh(ui.SecondaryPanel)
 }
 
-func (a *App) schedulePanelListingRefresh(panelID int) {
+// schedulePanelListingRefresh re-reads the panel's directory off the UI thread and applies the
+// result only when it differs. treeIDs are expanded tree directories that must be re-listed this
+// time (a directory watch saw them change) on top of the periodic plan. It reports retry=true when
+// it skipped for a transient reason (a pending load, the slow-refresh deadline, a read already in
+// flight), so a caller that must not lose the request can ask again shortly; a contended volume
+// is not transient (job reloads and the next tick cover it).
+func (a *App) schedulePanelListingRefresh(panelID int, treeIDs ...string) (retry bool) {
 	p := a.panelByID(panelID)
-	if p == nil || p.Path.IsZero() || p.ListingPending {
-		return
+	if p == nil || p.Path.IsZero() {
+		return false
+	}
+	if p.ListingPending {
+		return true
 	}
 	if panelID < 0 || panelID > ui.SecondaryPanel {
-		return
+		return false
 	}
 	if a.pathVolumeContendsWithActiveJob(p.PathString()) && !ui.PanelListsJobRemovedSources(p.PathString(), a.model.JobPathMarks) {
 		// A job is already saturating this volume; the next tick retries. The one exception is a
 		// directory the job is removing rows from, which must not keep listing what is gone.
-		return
+		return false
 	}
 	// A prior slow refresh for this panel set a start-to-start deadline; skipped ticks must
 	// never flip the in-flight flag, since nothing will clear it for them.
 	if time.Now().UnixNano() < a.panelRefreshNotBefore[panelID].Load() {
-		return
+		return true
 	}
 	if !a.panelRefreshInFlight[panelID].CompareAndSwap(false, true) {
-		return
+		return true
 	}
 	timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 	snap := p.ListingRefreshSnapshot(p.Path, timeout)
 	plan := p.TreeRefreshPlan(a.panelViewportRows(panelID), config.DefaultTreeRefreshOffscreenDirsPerTick)
+	// Directories the watcher saw change join the plan (the plan alone only guarantees the caret,
+	// the viewport and a round-robin slice), at the visible tier so they are not starved.
+	for _, id := range treeIDs {
+		if !slices.ContainsFunc(plan, func(r panel.TreeRefreshReq) bool { return r.ID == id }) {
+			plan = append(plan, panel.TreeRefreshReq{ID: id, Tier: panel.TreeRefreshVisible})
+		}
+	}
 	path := p.Path
 	epoch := p.ListingEpoch
 	baseline := panel.BackendEntriesFromPanel(p.Entries)
@@ -138,8 +155,9 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 				fetched = a.prefetchTreeChildren(snap, reqs, wait)
 			}
 		}
-		// ponytail: off-screen expanded dirs are refreshed round-robin, one per tick, so off-screen
-		// changes can take a while to show. Upgrade path: fs watching (inotify).
+		// Off-screen expanded dirs are refreshed round-robin, one per tick, unless the directory
+		// watcher (panel_dir_watch.go) names them; without a watcher (SFTP, non-Linux, watching
+		// off) an off-screen change can take a while to show.
 		treeChanged := !rootChanged && treeChildrenChanged(fetched, childBaseline)
 		if !rootChanged && !treeChanged {
 			return
@@ -165,6 +183,7 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 			TreeChanged:          treeChanged,
 		}))
 	}(panelID, snap, path, epoch, baseline)
+	return false
 }
 
 func (a *App) applyPanelListingRefresh(p panelRefreshApplyPayload) bool {

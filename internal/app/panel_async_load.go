@@ -51,7 +51,9 @@ type asyncWakeQueues struct {
 	git   coalescingQueue[gitStatusPayload]
 	// indexDrift holds fileindex directory-drift results (index_overlay.go).
 	indexDrift coalescingQueue[indexDriftPayload]
-	carousel   [ui.PanelIDCount]coalescingQueue[carouselSnapshotPayload]
+	// dirWatch holds the directories the inotify watcher reported (panel_dir_watch.go).
+	dirWatch coalescingQueue[string]
+	carousel [ui.PanelIDCount]coalescingQueue[carouselSnapshotPayload]
 }
 
 func asyncWakes(a *App) *asyncWakeQueues {

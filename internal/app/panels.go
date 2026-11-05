@@ -521,6 +521,7 @@ func (a *App) reconcileAfterEvent() {
 	a.previewCtrl.ReconcileCarouselFilePreview()
 	a.previewCtrl.ReconcileCarouselSidePreview(ui.PrimaryPanel)
 	a.previewCtrl.ReconcileCarouselSidePreview(ui.SecondaryPanel)
+	a.reconcileDirWatch()
 }
 
 // syncFollowTargetPath returns the absolute directory path the follower should mirror when

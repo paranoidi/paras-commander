@@ -285,6 +285,10 @@ type State struct {
 	// TreeExpanded tracks expand state by node ID (absolute path); default collapsed, so a path
 	// absent from the map means collapsed.
 	TreeExpanded map[string]bool
+	// TreeExpandGen increments on every change to TreeExpanded outside a re-root (which bumps
+	// ListingEpoch instead), so a caller can notice changes to the expanded set in O(1); collapsing
+	// flips an entry to false without changing len(TreeExpanded).
+	TreeExpandGen uint64
 	// treeRows caches the last treeflat.Flatten(TreeRoots, ...) output.
 	treeRows []treeflat.Row[TreeEntry]
 	// treeCursorID tracks the node ID the cursor should reattach to after a tree rebuild

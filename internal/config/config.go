@@ -129,7 +129,10 @@ type PanelsConfig struct {
 	SortReverse          bool   `toml:"sort_reverse"`
 	DirectoriesFirst     bool   `toml:"directories_first"`
 	// RefreshIntervalMS re-reads both panel directories on this interval in background goroutines (0 disables).
-	RefreshIntervalMS     int  `toml:"refresh_interval_ms"`
+	RefreshIntervalMS int `toml:"refresh_interval_ms"`
+	// WatchDirectories re-lists a panel as soon as the OS reports a change in its directory
+	// (inotify, Linux local paths only); the periodic refresh keeps running regardless.
+	WatchDirectories      bool `toml:"watch_directories"`
 	OpenFilesExternally   bool `toml:"open_files_externally"`
 	RunExecutablesOnEnter bool `toml:"run_executables_on_enter"`
 	// ExecuteRules chooses background vs. foreground mode for Enter-executed files (see
@@ -689,6 +692,7 @@ func Default() Config {
 			SortReverse:           false,
 			DirectoriesFirst:      true,
 			RefreshIntervalMS:     DefaultRefreshIntervalMS,
+			WatchDirectories:      DefaultWatchDirectories,
 			OpenFilesExternally:   true,
 			RunExecutablesOnEnter: true,
 			ShellPatterns:         true,

@@ -28,6 +28,7 @@ import (
 	pinctrl "github.com/paranoidi/paras-commander/internal/apphandler/pin"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/dirwatch"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/foldercolor"
@@ -333,6 +334,11 @@ type App struct {
 	// periodic refresh (see config.DefaultPanelRefreshSlowBackoffFactor). Written by the refresh
 	// goroutine, read on the main goroutine in schedulePanelListingRefresh, hence atomic.
 	panelRefreshNotBefore [2]atomic.Int64
+
+	// dirWatcher is nil when [panels].watch_directories is off; dirWatchSig is the per-panel
+	// signature the current watch set was computed from (panel_dir_watch.go).
+	dirWatcher  *dirwatch.Watcher
+	dirWatchSig [2]dirWatchSig
 
 	// statusCmds are the shown status commands (status.toml); statusCmdGen tags their results
 	// so a restart drops output from the previous set; statusCmdStopCh stops their tickers.
@@ -857,6 +863,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
 	}
+	if cfg.Panels.WatchDirectories {
+		app.dirWatcher = dirwatch.New(app.queueDirWatchWake)
+	}
 	if ms := cfg.Panels.RefreshIntervalMS; ms > 0 {
 		go app.runPanelRefreshTicker(time.Duration(ms)*time.Millisecond, app.jobStopCh)
 	}
@@ -1281,6 +1290,10 @@ func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
 	}
 	if out, ok := a.handleIndexOverlayPayload(data); ok {
 		return out, true
+	}
+	if _, ok := data.(dirWatchWakePayload); ok {
+		a.handleDirWatchWake()
+		return eventOutcome{}, true
 	}
 	if a.fileindexCtrl.HandleWake(data) {
 		a.render()

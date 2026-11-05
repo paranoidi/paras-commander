@@ -101,6 +101,12 @@ After a copy or move into the other panel's directory, that panel's cursor jumps
 
 Panels re-read their directory every `refresh_interval_ms` (default 2500, `0` disables). Changes are applied without losing the cursor, selection or scroll position. A slow directory is polled less often. `C-y` (`panel.refresh`) forces a full reload and also recalculates [meta columns](meta-columns.md).
 
+### Directory watching
+
+On Linux, local panels also re-read as soon as the system reports a change in the directory they show (and in expanded [tree view](#tree-view) directories), so files created, deleted, renamed or changed by other programs appear within a fraction of a second instead of after the next refresh tick. This includes panels browsing with [fileindex](fileindex.md#browsing-with-fileindex), where a file leaving the disk turns into a ghost row and back. The periodic refresh keeps running regardless, and `[panels] watch_directories = false` turns watching off.
+
+Limits: changes made on another machine to an NFS or SMB mount are not seen by the system, so those directories rely on the periodic refresh; SFTP panels, panels browsing the index directly (`fileindex://`) and every non-Linux platform use the periodic refresh alone. Very large trees are watched only in part (the panel directory first); the periodic refresh covers the rest.
+
 Each panel remembers the focused entry per directory, so going back (see [Navigation](navigation.md)) lands on the item you left.
 
 `M-y` (`panel.toggle-sync`) latches the active panel as driver: moving the cursor onto a directory shows it in the other panel. `M-o` / `M-i` open the cursor directory or the current path in the other panel.

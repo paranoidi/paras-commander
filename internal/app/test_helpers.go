@@ -140,6 +140,9 @@ func testOptions(dir string) Options {
 	cfg := config.Default()
 	// Never let a test open the user's real fileindex database; tests that need one set this.
 	cfg.FileIndex.Database = filepath.Join(dir, ".no-fileindex", "index.sqlite")
+	// Watch wakeups would race the tests that wait for one specific async event; the watcher's
+	// own tests turn it on.
+	cfg.Panels.WatchDirectories = false
 	return Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: cfg,

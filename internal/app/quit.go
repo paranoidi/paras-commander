@@ -38,6 +38,9 @@ func (a *App) stopWorker() {
 		a.jobStopOnce = true
 		close(a.jobStopCh)
 	}
+	if a.dirWatcher != nil {
+		a.dirWatcher.Close()
+	}
 	a.stopStatusCommands()
 	if a.throughputChartStopCh != nil {
 		close(a.throughputChartStopCh)

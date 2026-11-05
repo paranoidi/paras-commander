@@ -475,6 +475,7 @@ func (s *State) CollapseAllTreeFully(viewportRows int) {
 	}
 	targetID := s.treeRootAncestorID()
 	s.TreeExpanded = nil
+	s.TreeExpandGen++
 	s.treeExpandAllDepth = 0
 	s.treeExpandAllAuto = false
 	s.rebuildTreeRows()
@@ -696,6 +697,7 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet boo
 				node.Value.LoadErr = nil
 				s.attachTreeChildren(node, r.Entries)
 				s.TreeExpanded[id] = expand
+				s.TreeExpandGen++
 				return nil
 			}
 			if node.Value.Loading {
@@ -728,6 +730,7 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet boo
 		}
 	}
 	s.TreeExpanded[id] = expand
+	s.TreeExpandGen++
 	return nil
 }
 
@@ -778,6 +781,7 @@ func (s *State) restoreTreeExpansionsIn(nodes []treeflat.Node[TreeEntry], depth 
 		if node.Children == nil {
 			if err := s.setTreeNodeExpanded(node.ID, depth, true, false); err != nil {
 				delete(s.TreeExpanded, node.ID)
+				s.TreeExpandGen++
 				continue
 			}
 			if node.Children == nil {

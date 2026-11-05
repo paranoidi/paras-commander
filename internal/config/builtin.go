@@ -75,6 +75,16 @@ const (
 	// DefaultRefreshIntervalMS is how often both file panels re-read their directories from disk (0 disables).
 	DefaultRefreshIntervalMS = 2500
 
+	// DefaultWatchDirectories turns on inotify watching of the directories the panels show
+	// ([panels].watch_directories); a change triggers an early re-list ahead of the periodic refresh.
+	DefaultWatchDirectories = true
+	// DefaultDirWatchDebounce is the throttle window of directory-watch wakeups: changes within
+	// it share one panel re-list, and a continuous stream still re-lists once per window.
+	DefaultDirWatchDebounce = 250 * time.Millisecond
+	// DefaultDirWatchMaxPerPanel caps the directories watched per panel (the panel root first,
+	// then expanded tree directories); beyond it the periodic refresh covers the rest.
+	DefaultDirWatchMaxPerPanel = 512
+
 	// FolderColorRefreshInterval is how often the GVfs folder-color metadata is checked for
 	// changes made by other programs (Nemo); a change triggers a background reload and repaint.
 	FolderColorRefreshInterval = 30 * time.Second
