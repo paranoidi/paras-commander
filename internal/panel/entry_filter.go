@@ -64,6 +64,7 @@ func (s *State) ClearFilterIfInapplicable() {
 	}
 	s.ActiveEntryFilter = nil
 	s.filteredIdx = nil
+	s.bumpMatchNamesGen()
 }
 
 // translateVisibleIndex maps a display-space index (0..VisibleEntryCount()-1) to the raw backing
@@ -106,6 +107,7 @@ func (s State) cursorForRawIndex(rawIdx int) (int, bool) {
 // Must run before rebuildFilter's own logic, which ranks through VisibleEntryCount/VisibleEntry
 // and therefore needs filteredIdx already up to date.
 func (s *State) rebuildEntryFilter() {
+	s.bumpMatchNamesGen()
 	if s.ActiveEntryFilter == nil {
 		s.filteredIdx = nil
 		s.filteredTreeShape = nil

@@ -44,10 +44,30 @@ func TestOtherPanelMarksFollowCursor(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			m := Model{ActivePanel: PrimaryPanel, OtherPanelMatchMarks: tc.marks, Primary: tc.primary, Secondary: tc.secondary}
-			if got := otherPanelMarksFollowCursor(m, PrimaryPanel); got != tc.want {
+			if got := otherPanelMarksFollowCursor(m, PrimaryPanel, 100); got != tc.want {
 				t.Fatalf("got %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+// Only rows in the other panel's viewport count: a shared name scrolled out of view cannot gain
+// or lose a mark.
+func TestOtherPanelMarksFollowCursorViewport(t *testing.T) {
+	t.Parallel()
+	other := marksTestPanel("/meadow", "violin", "cedar", "willow", "ember", "anchor")
+	m := Model{ActivePanel: PrimaryPanel, OtherPanelMatchMarks: true, Primary: marksTestPanel("/harbor", "anchor"), Secondary: other}
+	const rows = 2
+	if otherPanelMarksFollowCursor(m, PrimaryPanel, rows) {
+		t.Fatal("shared name below the viewport must not count")
+	}
+	m.Secondary.ScrollOffset = 3
+	if !otherPanelMarksFollowCursor(m, PrimaryPanel, rows) {
+		t.Fatal("shared name inside the viewport must count")
+	}
+	m.Secondary.ScrollOffset = 5
+	if otherPanelMarksFollowCursor(m, PrimaryPanel, rows) {
+		t.Fatal("scroll offset past the last row must not count")
 	}
 }
 

@@ -135,6 +135,7 @@ func (dst *State) CloneListingFrom(src *State) {
 	}
 	dst.Path = src.Path
 	dst.Entries = append([]localfs.Entry(nil), src.Entries...)
+	dst.bumpMatchNamesGen()
 	dst.Cursor = src.Cursor
 	dst.ScrollOffset = src.ScrollOffset
 	dst.IdleDiskTotalsSort = src.IdleDiskTotalsSort

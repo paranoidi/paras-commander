@@ -198,6 +198,10 @@ func PaintBrowserCursorMovePanelOnly(screen tcell.Screen, layout Layout, model M
 	if !browserNavPanelPaintable(layout, model, panelID) {
 		return false
 	}
-	otherNeeded := otherPanelMarksFollowCursor(model, panelID)
+	otherRect := layout.Primary
+	if panelID == PrimaryPanel {
+		otherRect = layout.Secondary
+	}
+	otherNeeded := otherPanelMarksFollowCursor(model, panelID, PanelListRows(otherRect))
 	return paintBrowserPanelsInScope(screen, layout, model, styles, func(id int) bool { return id == panelID || otherNeeded })
 }

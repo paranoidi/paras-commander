@@ -75,6 +75,10 @@ type State struct {
 	SelectedDirPaths map[string]bool
 	// listingByPath maps entry.Path to listing index; rebuilt when Entries change.
 	listingByPath map[string]localfs.Entry
+	// matchNamesRowsGen / matchNames back NamesDirectlyIn (see match_names.go); the cache pointer
+	// is allocated by newState so State copies share it.
+	matchNamesRowsGen uint64
+	matchNames        *matchNamesCache
 	// treeByPath indexes loaded tree-mode children by path (filled by attachTreeChildren, reset
 	// whenever TreeRoots is re-rooted or dropped) so selection lookups never stat tree rows.
 	treeByPath map[string]localfs.Entry
@@ -370,6 +374,7 @@ func newState(opts localfs.ListOptions, gitignoreCache *gitignore.Cache) State {
 		ScrollOffset: 0,
 		ShowHidden:   opts.ShowHidden,
 		Gitignore:    gitignoreCache,
+		matchNames:   &matchNamesCache{},
 		Sort: SortState{
 			Mode:             SortName,
 			Reverse:          false,

@@ -7,6 +7,7 @@ import (
 )
 
 func (s *State) rebuildListingByPath() {
+	s.bumpMatchNamesGen()
 	if len(s.Entries) == 0 {
 		s.listingByPath = nil
 		return
