@@ -216,6 +216,10 @@ func (a *App) renderBrowserListNavUpdate(panelID int, cursorOnly bool) {
 	a.model.MenuBarPermission = a.menuBarPermissionText()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerVisible()
 	w, h := a.screen.Size()
+	if a.zoomLayoutChanged(w, h) {
+		a.render()
+		return
+	}
 	layout := a.layoutForTerminalSize(w, h)
 	model := a.snapshotModelForBrowserPaint()
 	paint := ui.PaintBrowserListNavPanelOnly
@@ -274,6 +278,9 @@ func (a *App) paintDiskUsageBrowserUpdate() bool {
 	}
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerVisible()
 	w, h := a.screen.Size()
+	if a.zoomLayoutChanged(w, h) {
+		return false
+	}
 	layout := a.layoutForTerminalSize(w, h)
 	if layout.TooSmall {
 		return false
@@ -605,7 +612,7 @@ func (a *App) layoutForTerminalSize(width, height int) ui.Layout {
 }
 
 // effectiveZoomActivePanel returns the saved zoom preference plus optional session-only override
-// (Alt+Z). It does not consider terminal width or file preview; see effectiveZoomActivePanelLayout.
+// (Alt+Z). It does not consider terminal size, name width or file preview; see effectiveZoomActivePanelLayout.
 func (a *App) effectiveZoomActivePanel() bool {
 	if a.zoomActivePanelOverride != nil {
 		return *a.zoomActivePanelOverride
@@ -613,9 +620,19 @@ func (a *App) effectiveZoomActivePanel() bool {
 	return a.config.UI.Zoom.ActivePanel
 }
 
-func (a *App) zoomActivePanelSuppressedByTerminalWidth(width int) bool {
-	n := a.config.UI.Zoom.DisabledAboveWidth
-	return n > 0 && width >= n
+// zoomActivePanelSuppressedByNameWidth reports whether the active panel's file-name column at an
+// even 50/50 split of a width-cell terminal is at least [ui.zoom].disabled_above_name_width. The
+// even split (width/2, whichever panel is active) is measured, never the current zoomed width, so
+// the decision cannot oscillate with its own result nor flip when Tab swaps panels on odd widths.
+// Icons, git strip, listing format and meta columns all count against the name column.
+func (a *App) zoomActivePanelSuppressedByNameWidth(width int) bool {
+	n := a.config.UI.Zoom.DisabledAboveNameWidth
+	if n <= 0 {
+		return false
+	}
+	nameW := ui.PanelNameColumnWidth(width/2, *a.activePanel(), a.model.UseNerdfontIcons,
+		a.model.NarrowPanelsNameOnly, a.model.MetaResults[a.model.ActivePanel])
+	return nameW >= n
 }
 
 func (a *App) zoomActivePanelSuppressedByTerminalHeight(height int) bool {
@@ -625,7 +642,8 @@ func (a *App) zoomActivePanelSuppressedByTerminalHeight(height int) bool {
 
 // effectiveZoomActivePanelLayout is the zoom flag used for layout and Model.PanelZoomEnabled:
 // preference from effectiveZoomActivePanel, disabled while preview/quick view owns the split,
-// and disabled on wide/tall terminals when the corresponding [ui] gate is > 0.
+// disabled when the active panel's file-name column at an even split is wide enough (side by
+// side) or the terminal is tall enough (stacked) per the [ui.zoom] gates (> 0).
 // Carousel view on the active panel always enables zoom (ignores saved preference, runtime override, and size gates).
 func (a *App) effectiveZoomActivePanelLayout(width, height int, filePreviewOpen bool) bool {
 	if filePreviewOpen || ui.LayoutHideInactivePanel(a.model.ViewMode, a.model.HideInactivePanel) {
@@ -634,15 +652,23 @@ func (a *App) effectiveZoomActivePanelLayout(width, height int, filePreviewOpen 
 	if a.activePanel().CarouselMode {
 		return true
 	}
-	orientation := a.effectivePaneSplitOrientation()
-	if orientation == ui.SplitVertical {
-		if a.zoomActivePanelSuppressedByTerminalHeight(height) {
-			return false
-		}
-	} else if a.zoomActivePanelSuppressedByTerminalWidth(width) {
-		return false
+	if !a.effectiveZoomActivePanel() {
+		return false // preference off: skip the gates (the name-width gate formats meta columns)
 	}
-	return a.effectiveZoomActivePanel()
+	// A stacked split does not change name width, so only the height gate applies there.
+	if a.effectivePaneSplitOrientation() == ui.SplitVertical {
+		return !a.zoomActivePanelSuppressedByTerminalHeight(height)
+	}
+	return !a.zoomActivePanelSuppressedByNameWidth(width)
+}
+
+// zoomLayoutChanged reports whether the zoom decision for the current terminal size differs from
+// the one the last full render stored in Model.PanelZoomEnabled. The decision depends on content
+// (meta and git columns, listing format), so it can change without a resize; a partial panel
+// paint over a stale split would leave the other panel at the wrong rect and must fall back to
+// a full render.
+func (a *App) zoomLayoutChanged(w, h int) bool {
+	return a.effectiveZoomActivePanelLayout(w, h, a.previewCtrl.FilePreviewOpen() || a.model.QuickViewDisplayActive()) != a.model.PanelZoomEnabled
 }
 
 // toggleRuntimeZoomActivePanel flips the zoom split the user currently sees (saved

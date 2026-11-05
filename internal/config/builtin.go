@@ -321,9 +321,12 @@ const (
 	DefaultZoomActivePanel          = true
 	DefaultPanelZoomActivePercent   = 70
 	DefaultPanelZoomInactivePercent = 30
-	// DefaultZoomActivePanelDisabledAboveWidth: when > 0 and terminal width (cells) is >= this value,
-	// panel zoom is suppressed (even split). Use 0 to never disable zoom based on width.
-	DefaultZoomActivePanelDisabledAboveWidth = 140
+	// DefaultZoomActivePanelDisabledAboveNameWidth: when > 0 and the active panel's file-name column
+	// at an even 50/50 split is >= this many cells, panel zoom is suppressed (even split). Use 0 to
+	// never disable zoom based on name width. 60 is the name column of a 142-cell terminal with icons
+	// on and no meta columns in the default brief listing: half the terminal is 71 cells, minus 2
+	// border, 1 icon gutter and 2 icon strip is 66 row text, minus 6 (space + 5-cell size) is 60.
+	DefaultZoomActivePanelDisabledAboveNameWidth = 60
 	// DefaultZoomActivePanelDisabledAboveHeight: when > 0 and terminal height (cells) is >= this value,
 	// panel zoom is suppressed in stacked layout. Use 0 to never disable zoom based on height.
 	DefaultZoomActivePanelDisabledAboveHeight = 45

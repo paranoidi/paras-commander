@@ -323,9 +323,12 @@ func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workD
 		return cmdrun.RunResult{LaunchErr: err, ExitCode: -1}
 	}
 
-	cols, rows, ok := h.terminalPanelDims()
-	if !ok {
-		cols, rows = 80, 24 // ponytail: fallback size when the layout can't be measured; still runs, just at a default size.
+	// ponytail: fallback size when the layout can't be measured; still runs, just at a default size.
+	cols, rows := 80, 24
+	if panelOwner != 0 { // a background PTY has no panel and no event-loop round trip to wait on
+		if c, r, ok := h.measureTerminalPanelDims(ctx); ok {
+			cols, rows = c, r
+		}
 	}
 	feed, err := sub.StartPanelFeed(cols, rows, h.PostRenderWake)
 	if err != nil {
@@ -361,12 +364,32 @@ func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workD
 	return cmdrun.RunResult{ExitCode: exitCode, Stdout: []byte(stdout)}
 }
 
+// measureTerminalPanelDims has the event loop run terminalPanelDims and returns its result to
+// the batch goroutine, which must not read layout (model state) itself. The result travels over
+// a buffered channel read without blocking: postPanelWakeAndWait can return early (ctx done,
+// PostEvent failed) while the main goroutine measures later, so shared locals would race. ok is
+// false when nothing arrived or the layout has no room for the strip.
+func (h *Handler) measureTerminalPanelDims(ctx context.Context) (cols, rows int, ok bool) {
+	res := make(chan [2]int, 1)
+	h.postPanelWakeAndWait(ctx, WakePayload{measure: func() {
+		if c, r, ok := h.terminalPanelDims(); ok {
+			res <- [2]int{c, r}
+		}
+	}})
+	select {
+	case d := <-res:
+		return d[0], d[1], true
+	default:
+		return 0, 0, false
+	}
+}
+
 // terminalPanelDims returns the content cols/rows for the bottom terminal panel strip, the same
 // rect drawTerminalPanel paints into. Only returns real dims once TerminalPanel.Visible is true
 // and ViewMode == ui.ViewBrowser (that's how the layout code reserves the strip — see
-// internal/app/terminal_panel.go's terminalLayoutRows) — runEntryPTY calls this only after the
-// batch-level panel setup in runForEachUnifiedBatch has already flipped those on. ok is false
-// when the layout has no room for the strip.
+// internal/app/terminal_panel.go's terminalLayoutRows) — measureTerminalPanelDims calls this on
+// the main goroutine after the batch-level panel setup in runForEachUnifiedBatch has already
+// flipped those on. ok is false when the layout has no room for the strip. Main goroutine only.
 func (h *Handler) terminalPanelDims() (cols, rows int, ok bool) {
 	w, ht := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(w, ht)

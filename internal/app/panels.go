@@ -1121,10 +1121,10 @@ func (a *App) toggleZoomActivePanelGuarded() {
 			), ui.MessageUrgencyInfo)
 			return
 		}
-	} else if a.zoomActivePanelSuppressedByTerminalWidth(tw) {
+	} else if a.zoomActivePanelSuppressedByNameWidth(tw) {
 		a.setTransientMessage(fmt.Sprintf(
-			"Panel zoom unavailable (terminal width ≥ %d)",
-			a.config.UI.Zoom.DisabledAboveWidth,
+			"Panel zoom unavailable (file name column ≥ %d)",
+			a.config.UI.Zoom.DisabledAboveNameWidth,
 		), ui.MessageUrgencyInfo)
 		return
 	}

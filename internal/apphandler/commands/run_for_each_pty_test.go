@@ -450,3 +450,41 @@ func (ptyHostStub) ToggleLeaderMenu()                                           
 func (ptyHostStub) DispatchLeaderLetter(*tcell.EventKey) bool                   { return false }
 
 var _ Host = ptyHostStub{}
+
+// TestMeasureTerminalPanelDims covers the event-loop measuring round trip: the result arrives
+// when the loop applies the wake, and a canceled ctx falls back (ok false) without blocking even
+// though the queued wake is applied later.
+func TestMeasureTerminalPanelDims(t *testing.T) {
+	t.Run("applied", func(t *testing.T) {
+		h := newPTYHandler(t, true)
+		cols, rows, ok := h.measureTerminalPanelDims(context.Background())
+		if !ok || cols != 100 || rows != 10 {
+			t.Fatalf("dims = %d x %d ok=%v, want 100 x 10", cols, rows, ok)
+		}
+	})
+
+	t.Run("canceled-ctx", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		h := newPTYHandlerCtx(t, ctx, false)
+		if _, _, ok := h.measureTerminalPanelDims(ctx); ok {
+			t.Fatal("canceled ctx must report no measurement")
+		}
+		// The wake is still queued; applying it late must not block on the abandoned channel.
+		ev, ok := h.screen.PollEvent().(*tcell.EventInterrupt)
+		if !ok {
+			t.Fatal("expected the queued wake interrupt")
+		}
+		p, ok := ev.Data().(WakePayload)
+		if !ok {
+			t.Fatalf("interrupt data = %T, want WakePayload", ev.Data())
+		}
+		done := make(chan struct{})
+		go func() { h.ApplyWake(p); close(done) }()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("late ApplyWake blocked")
+		}
+	})
+}

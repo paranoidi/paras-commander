@@ -233,8 +233,8 @@ func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
 	if got := Default().UI.Zoom.InactivePercent; got != DefaultPanelZoomInactivePercent {
 		t.Fatalf("Zoom.InactivePercent = %d, want %d", got, DefaultPanelZoomInactivePercent)
 	}
-	if got := Default().UI.Zoom.DisabledAboveWidth; got != DefaultZoomActivePanelDisabledAboveWidth {
-		t.Fatalf("Zoom.DisabledAboveWidth = %d, want %d", got, DefaultZoomActivePanelDisabledAboveWidth)
+	if got := Default().UI.Zoom.DisabledAboveNameWidth; got != DefaultZoomActivePanelDisabledAboveNameWidth {
+		t.Fatalf("Zoom.DisabledAboveNameWidth = %d, want %d", got, DefaultZoomActivePanelDisabledAboveNameWidth)
 	}
 	if got := Default().UI.NarrowPanelsNameOnly; got != DefaultNarrowPanelsNameOnly {
 		t.Fatalf("NarrowPanelsNameOnly = %v, want %v", got, DefaultNarrowPanelsNameOnly)
@@ -360,22 +360,22 @@ func TestValidateResetsInvalidPanelScrollbar(t *testing.T) {
 	}
 }
 
-func TestValidateClampsNegativeZoomActivePanelDisabledAboveWidth(t *testing.T) {
+func TestValidateClampsNegativeZoomActivePanelDisabledAboveNameWidth(t *testing.T) {
 	cfg := Default()
-	cfg.UI.Zoom.DisabledAboveWidth = -10
+	cfg.UI.Zoom.DisabledAboveNameWidth = -10
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.Zoom.DisabledAboveWidth != DefaultZoomActivePanelDisabledAboveWidth {
-		t.Fatalf("Zoom.DisabledAboveWidth = %d, want %d",
-			cfg.UI.Zoom.DisabledAboveWidth, DefaultZoomActivePanelDisabledAboveWidth)
+	if cfg.UI.Zoom.DisabledAboveNameWidth != DefaultZoomActivePanelDisabledAboveNameWidth {
+		t.Fatalf("Zoom.DisabledAboveNameWidth = %d, want %d",
+			cfg.UI.Zoom.DisabledAboveNameWidth, DefaultZoomActivePanelDisabledAboveNameWidth)
 	}
-	cfg.UI.Zoom.DisabledAboveWidth = 0
+	cfg.UI.Zoom.DisabledAboveNameWidth = 0
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.Zoom.DisabledAboveWidth != 0 {
-		t.Fatalf("Zoom.DisabledAboveWidth = %d, want 0", cfg.UI.Zoom.DisabledAboveWidth)
+	if cfg.UI.Zoom.DisabledAboveNameWidth != 0 {
+		t.Fatalf("Zoom.DisabledAboveNameWidth = %d, want 0", cfg.UI.Zoom.DisabledAboveNameWidth)
 	}
 }
 

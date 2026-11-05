@@ -16,7 +16,7 @@ All are rebindable in `keybindings.toml` ([Keybindings](keybindings.md)). Split 
 
 - **Orientation**: side by side (left | right) or stacked (top / bottom). The saved default is `[ui.zoom] orientation`; the key overrides it for the session. Stacked mode needs enough terminal rows. When the terminal is too small to draw, `pc` shows "Terminal too small".
 - **Swap** exchanges which panel is drawn first (left or top) for the session; the panels keep their contents and the Left/Right menus follow the screen position.
-- **Zoom** gives the active panel more room (default 70% active, 30% inactive). It is suppressed in favour of an even split on large terminals (`disabled_above_width` 140, `disabled_above_height` 45). See [`[ui.zoom]`](config.md#uizoom).
+- **Zoom** gives the active panel more room (default 70% active, 30% inactive). It is suppressed in favour of an even split when the active panel's file name column is already wide at an even split (`disabled_above_name_width` 60 cells; listing format, git and meta columns all narrow it, so a wider terminal still zooms when they take the row) or, when stacked, on tall terminals (`disabled_above_height` 45). See [`[ui.zoom]`](config.md#uizoom).
 - **Hide inactive panel** shows only the active panel at full width. In carousel view the inactive panel can hide automatically (`[carousel] autohide_inactive_panel`, default on).
 
 ## Carousel view

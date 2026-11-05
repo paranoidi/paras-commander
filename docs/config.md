@@ -175,7 +175,7 @@ Active/inactive panel width zoom and twin-panel orientation.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `active_panel` | bool | `true` | Widen the active panel and shrink the inactive one, sized by `active_percent` / `inactive_percent`. |
-| `disabled_above_width` | int | `140` | When greater than 0 and the terminal is at least this many cells wide, panel zoom is suppressed in favor of an even 50/50 split. `0` disables this width-based gate. |
+| `disabled_above_name_width` | int | `60` | When greater than 0 and the active panel's file name column, measured at an even 50/50 split, is at least this many cells wide, panel zoom is suppressed in favor of the even split (zoom is for narrow name columns). The listing format, git column, icons and meta columns all count against the name column, so the mtime format or an extra meta column makes zoom apply up to a wider terminal. The default equals a 142-cell terminal with icons on, the default listing format and no meta columns. Applies to the side-by-side layout. `0` disables this gate. |
 | `disabled_above_height` | int | `45` | Same as above but for terminal height, applied when panels are stacked top/bottom. `0` disables this gate. |
 | `orientation` | string | `"side_by_side"` | Twin-panel layout: `"side_by_side"` or `"stacked"`. |
 | `active_percent` | int | `70` | Width share given to the active panel when `active_panel` is enabled. Must sum to 100 with `inactive_percent`. |

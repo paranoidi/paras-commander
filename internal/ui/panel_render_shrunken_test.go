@@ -83,3 +83,25 @@ func TestRenderShrunkenNameOnlyOmitsMtimeOnFirstListRow(t *testing.T) {
 		t.Fatalf("shrunken name-only row should not contain formatted mtime, got %q", row)
 	}
 }
+
+func TestPanelNameColumnWidth(t *testing.T) {
+	cols := []MetaColumnState{{EntryName: "pebble", ColumnTitle: "Pebble", Results: map[string]string{"/harbor/a": "abcdefghij"}}}
+	st := panel.State{ListFormat: panel.ListFormatBrief}
+
+	// 70 cells: 2 border + 1 icon gutter + 2 icon strip leaves 65; brief reserves 6 after the name.
+	if got := PanelNameColumnWidth(70, st, true, true, nil); got != 59 {
+		t.Fatalf("icons on, no meta = %d, want 59", got)
+	}
+	// Without icons the gutter and strip are gone.
+	if got := PanelNameColumnWidth(70, st, false, true, nil); got != 62 {
+		t.Fatalf("icons off, no meta = %d, want 62", got)
+	}
+	// A 10-cell meta column costs its width plus the two-cell gap.
+	if got := PanelNameColumnWidth(70, st, true, true, cols); got != 47 {
+		t.Fatalf("with meta = %d, want 47", got)
+	}
+	// A narrow panel is name-only: meta and the size column are hidden, so the name takes the row.
+	if got := PanelNameColumnWidth(30, st, true, true, cols); got != 25 {
+		t.Fatalf("name-only = %d, want 25", got)
+	}
+}

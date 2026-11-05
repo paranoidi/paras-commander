@@ -493,10 +493,12 @@ type UIConfig struct {
 type UIZoomConfig struct {
 	// ActivePanel widens the active browser column; inactive column uses the remainder (see ActivePercent/InactivePercent).
 	ActivePanel bool `toml:"active_panel"`
-	// DisabledAboveWidth: when > 0 and terminal width (cells) is >= this value, zoom is not applied
-	// (50/50 split). Zero disables this gate (zoom follows active_panel and runtime toggle only).
-	// Default DefaultZoomActivePanelDisabledAboveWidth.
-	DisabledAboveWidth int `toml:"disabled_above_width"`
+	// DisabledAboveNameWidth: when > 0 and the active panel's file-name column at an even 50/50
+	// split (after border, icons, git strip, listing format and meta columns) is >= this many
+	// cells, zoom is not applied (50/50 split). Zero disables this gate (zoom follows
+	// active_panel and runtime toggle only).
+	// Default DefaultZoomActivePanelDisabledAboveNameWidth.
+	DisabledAboveNameWidth int `toml:"disabled_above_name_width"`
 	// DisabledAboveHeight: when > 0 and terminal height (cells) is >= this value, zoom is not
 	// applied in stacked (top/bottom) layout. Zero disables this gate.
 	// Default DefaultZoomActivePanelDisabledAboveHeight.
@@ -731,12 +733,12 @@ func Default() Config {
 			SelectedPanelMaxRows:        0,
 			SelectedPanelActivePercent:  DefaultSelectedPanelActivePercent,
 			Zoom: UIZoomConfig{
-				ActivePanel:         DefaultZoomActivePanel,
-				DisabledAboveWidth:  DefaultZoomActivePanelDisabledAboveWidth,
-				DisabledAboveHeight: DefaultZoomActivePanelDisabledAboveHeight,
-				Orientation:         DefaultPaneSplitOrientation,
-				ActivePercent:       DefaultPanelZoomActivePercent,
-				InactivePercent:     DefaultPanelZoomInactivePercent,
+				ActivePanel:            DefaultZoomActivePanel,
+				DisabledAboveNameWidth: DefaultZoomActivePanelDisabledAboveNameWidth,
+				DisabledAboveHeight:    DefaultZoomActivePanelDisabledAboveHeight,
+				Orientation:            DefaultPaneSplitOrientation,
+				ActivePercent:          DefaultPanelZoomActivePercent,
+				InactivePercent:        DefaultPanelZoomInactivePercent,
 			},
 			Scroll: UIScrollConfig{
 				Mode:              DefaultScrollMode,
@@ -1273,8 +1275,8 @@ func (c *Config) validateUIZoom(builtin *Config) {
 		c.UI.Zoom.ActivePercent = DefaultPanelZoomActivePercent
 		c.UI.Zoom.InactivePercent = DefaultPanelZoomInactivePercent
 	}
-	if c.UI.Zoom.DisabledAboveWidth < 0 {
-		c.UI.Zoom.DisabledAboveWidth = builtin.UI.Zoom.DisabledAboveWidth
+	if c.UI.Zoom.DisabledAboveNameWidth < 0 {
+		c.UI.Zoom.DisabledAboveNameWidth = builtin.UI.Zoom.DisabledAboveNameWidth
 	}
 	if c.UI.Zoom.DisabledAboveHeight < 0 {
 		c.UI.Zoom.DisabledAboveHeight = builtin.UI.Zoom.DisabledAboveHeight

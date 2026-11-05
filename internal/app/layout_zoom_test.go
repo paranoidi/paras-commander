@@ -206,7 +206,11 @@ func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 	}
 }
 
-func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveWidth(t *testing.T) {
+// newNameWidthZoomApp returns an app with default zoom config, icons explicitly on and a
+// terminal of the given width, so the name-column arithmetic is deterministic: with the default
+// brief listing and no meta columns the even-split name column is width/2 - 11 cells.
+func newNameWidthZoomApp(t *testing.T, width int) *App {
+	t.Helper()
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -214,12 +218,12 @@ func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveWidth(t *testing
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
-	defer screen.Fini()
-	screen.SetSize(160, 30)
+	t.Cleanup(screen.Fini)
+	screen.SetSize(width, 30)
 
 	cfg := config.Default()
+	cfg.UI.UseNerdfontIcons = true
 	cfg.UI.Zoom.ActivePanel = true
-	cfg.UI.Zoom.DisabledAboveWidth = 155
 	cfg.UI.Zoom.ActivePercent = 70
 	cfg.UI.Zoom.InactivePercent = 30
 
@@ -231,48 +235,107 @@ func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveWidth(t *testing
 		Paths:  config.Paths{}.WithResolvedLocations(),
 		Theme:  theme.Default(),
 	})
+	app.model.UseNerdfontIcons = true
+	return app
+}
+
+// wideMetaColumn is a meta column whose rendered cells are 15 cells wide (plus a two-cell gap).
+func wideMetaColumn() []ui.MetaColumnState {
+	return []ui.MetaColumnState{{
+		EntryName:   "bramble",
+		ColumnTitle: "Bramble",
+		Results:     map[string]string{"/lantern/a": strings.Repeat("x", 15)},
+	}}
+}
+
+func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveNameWidth(t *testing.T) {
+	app := newNameWidthZoomApp(t, 160)
 
 	lay := app.layoutForTerminalSize(160, 30)
 	if lay.Primary.Width != 80 || lay.Secondary.Width != 80 {
 		t.Fatalf("wide terminal Left=%d Right=%d want 50/50", lay.Primary.Width, lay.Secondary.Width)
 	}
 
-	layNarrow := app.layoutForTerminalSize(154, 30)
-	if layNarrow.Primary.Width != 107 || layNarrow.Secondary.Width != 47 {
-		t.Fatalf("below gate Left=%d Right=%d want 70%%/30%% of width", layNarrow.Primary.Width, layNarrow.Secondary.Width)
+	// With the default listing, icons on and no meta columns the default threshold falls at a
+	// 142-cell terminal: 142 is even, 141 zooms.
+	layBoundary := app.layoutForTerminalSize(142, 30)
+	if layBoundary.Primary.Width != 71 || layBoundary.Secondary.Width != 71 {
+		t.Fatalf("width 142 Left=%d Right=%d want 50/50", layBoundary.Primary.Width, layBoundary.Secondary.Width)
 	}
-
-	layBoundary := app.layoutForTerminalSize(155, 30)
-	if layBoundary.Primary.Width != 77 || layBoundary.Secondary.Width != 78 {
-		t.Fatalf("width == gate Left=%d Right=%d want ~50/50", layBoundary.Primary.Width, layBoundary.Secondary.Width)
+	layBelow := app.layoutForTerminalSize(141, 30)
+	if layBelow.Primary.Width <= layBelow.Secondary.Width || layBelow.Primary.Width+layBelow.Secondary.Width != 141 {
+		t.Fatalf("width 141 Left=%d Right=%d want zoomed split", layBelow.Primary.Width, layBelow.Secondary.Width)
 	}
 }
 
-func TestLayoutForTerminalSizeZoomNotSuppressedWhenDisabledAboveWidthIsZero(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
-
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("Init() error = %v", err)
+func TestLayoutForTerminalSizeZoomsWhenMetaColumnsSqueezeNameBelowThreshold(t *testing.T) {
+	app := newNameWidthZoomApp(t, 160)
+	if lay := app.layoutForTerminalSize(160, 30); lay.Primary.Width != 80 {
+		t.Fatalf("without meta Left=%d want 80", lay.Primary.Width)
 	}
-	defer screen.Fini()
-	screen.SetSize(300, 30)
 
-	cfg := config.Default()
-	cfg.UI.Zoom.ActivePanel = true
-	cfg.UI.Zoom.DisabledAboveWidth = 0
-	cfg.UI.Zoom.ActivePercent = 70
-	cfg.UI.Zoom.InactivePercent = 30
+	app.model.MetaResults[ui.PrimaryPanel] = wideMetaColumn()
+	lay := app.layoutForTerminalSize(160, 30)
+	if lay.Primary.Width != 112 || lay.Secondary.Width != 48 {
+		t.Fatalf("with meta Left=%d Right=%d want 70/30 of 160", lay.Primary.Width, lay.Secondary.Width)
+	}
 
-	app := newTestApp(t, screen, Options{
-		CWD: func() (string, error) {
-			return dir, nil
-		},
-		Config: cfg,
-		Paths:  config.Paths{}.WithResolvedLocations(),
-		Theme:  theme.Default(),
-	})
+	// Meta columns on the inactive panel do not count: the active panel's name column decides.
+	app.model.MetaResults[ui.PrimaryPanel] = nil
+	app.model.MetaResults[ui.SecondaryPanel] = wideMetaColumn()
+	if lay := app.layoutForTerminalSize(160, 30); lay.Primary.Width != 80 {
+		t.Fatalf("meta on inactive panel Left=%d want 80", lay.Primary.Width)
+	}
+}
+
+func TestLayoutForTerminalSizeZoomDecisionIsStable(t *testing.T) {
+	app := newNameWidthZoomApp(t, 143)
+	app.model.MetaResults[ui.PrimaryPanel] = wideMetaColumn()
+
+	first := app.layoutForTerminalSize(143, 30)
+	second := app.layoutForTerminalSize(143, 30)
+	if first.Primary != second.Primary || first.Secondary != second.Secondary {
+		t.Fatalf("layout changed between calls: %+v vs %+v", first, second)
+	}
+
+	app.model.MetaResults[ui.PrimaryPanel] = nil
+	for _, width := range []int{141, 142, 143} {
+		var want bool
+		for i, active := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
+			app.model.ActivePanel = active
+			got := app.effectiveZoomActivePanelLayout(width, 30, false)
+			if i == 0 {
+				want = got
+			} else if got != want {
+				t.Fatalf("width %d: switching the active panel flipped zoom %v -> %v", width, want, got)
+			}
+		}
+	}
+}
+
+func TestRenderBrowserListNavUpdateFullRendersWhenZoomDecisionChanged(t *testing.T) {
+	app := newNameWidthZoomApp(t, 160)
+	app.render()
+	if app.model.PanelZoomEnabled {
+		t.Fatal("zoom should be off at 160 cells without meta columns")
+	}
+
+	app.model.MetaResults[ui.PrimaryPanel] = wideMetaColumn()
+	if !app.zoomLayoutChanged(160, 30) {
+		t.Fatal("zoomLayoutChanged = false after meta columns squeezed the name column")
+	}
+	app.renderBrowserListNavUpdate(ui.PrimaryPanel, false)
+	if !app.model.PanelZoomEnabled {
+		t.Fatal("PanelZoomEnabled not updated: partial paint ran over a stale split")
+	}
+	if app.zoomLayoutChanged(160, 30) {
+		t.Fatal("zoomLayoutChanged = true after the full render")
+	}
+}
+
+func TestLayoutForTerminalSizeZoomNotSuppressedWhenDisabledAboveNameWidthIsZero(t *testing.T) {
+	app := newNameWidthZoomApp(t, 300)
+	app.config.UI.Zoom.DisabledAboveNameWidth = 0
 
 	lay := app.layoutForTerminalSize(300, 30)
 	if lay.Primary.Width != 210 || lay.Secondary.Width != 90 {
@@ -280,34 +343,14 @@ func TestLayoutForTerminalSizeZoomNotSuppressedWhenDisabledAboveWidthIsZero(t *t
 	}
 }
 
-func TestPanelToggleZoomNoOpOnWideTerminal(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
-
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
-	defer screen.Fini()
-	screen.SetSize(160, 30)
-
-	cfg := config.Default()
-	cfg.UI.Zoom.DisabledAboveWidth = 155
-
-	app := newTestApp(t, screen, Options{
-		CWD: func() (string, error) {
-			return dir, nil
-		},
-		Config: cfg,
-		Paths:  config.Paths{}.WithResolvedLocations(),
-		Theme:  theme.Default(),
-	})
+func TestPanelToggleZoomNoOpWhenNameColumnWide(t *testing.T) {
+	app := newNameWidthZoomApp(t, 160)
 
 	app.dispatch(keymap.ActionPanelToggleZoomActivePanel)
 	if app.zoomActivePanelOverride != nil {
 		t.Fatalf("zoom override = %v, want nil (toggle ignored)", app.zoomActivePanelOverride)
 	}
-	if !strings.Contains(app.model.Message, "≥ 155") {
+	if !strings.Contains(app.model.Message, "≥ 60") {
 		t.Fatalf("transient message = %q, want threshold mention", app.model.Message)
 	}
 }

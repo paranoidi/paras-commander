@@ -323,11 +323,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	primitive.Text(screen, headerRow.X, headerY, headerRow.Width, headerRow.Text, headerStyle)
 
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
-	// listTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
-	nameWidth := panelListNameWidth(listTextWidth, listFmt, nameOnlyDisplay, false)
-	if showMetaEffective {
-		nameWidth = panelListNameWidthWithMeta(listTextWidth, metaTotalW, listFmt, nameOnlyDisplay, false)
-	}
+	nameWidth := panelNameColumnWidth(layoutRes, listFmt, showMetaEffective, metaTotalW)
 	rowOpts := panelRowOpts{
 		ShowIcons: display.ShowIcons,
 		ShowMeta:  showMetaEffective,
@@ -683,6 +679,33 @@ func drawPanelRowIconStrip(screen tcell.Screen, p panelRowParams, rp panelRowPai
 	iconStripStyle := rp.BlendCell(p.LeftGutter + p.GitStrip)
 	paintPanelIconStrip(screen, p.IconStart, rp.Y, rp.Entry, iconStripStyle, p.PanelStyle.Styles,
 		panelIconStripContextFor(p.Display, p.Ctx, p.State, rp.Entry, rp.IconKey, rp.DiskPending, rp.DiskExcluded))
+}
+
+// panelNameColumnWidth is the file-name column width in cells: the row text left after the
+// listing format's trailing columns and, when showMeta is set, the meta columns (metaTotalW
+// plus their two-cell gap). drawPanel and PanelNameColumnWidth both use it.
+func panelNameColumnWidth(layoutRes panelColumnLayoutResult, f panel.ListFormat, showMeta bool, metaTotalW int) int {
+	// RowTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
+	if showMeta {
+		return panelListNameWidthWithMeta(layoutRes.RowTextWidth, metaTotalW, f, layoutRes.NameOnlyDisplay, false)
+	}
+	return panelListNameWidth(layoutRes.RowTextWidth, f, layoutRes.NameOnlyDisplay, false)
+}
+
+// PanelNameColumnWidth is the file-name column width drawPanel would give a panel panelWidth
+// cells wide (border, icon gutter/strip, git strip, listing format and meta columns all
+// counted). A name-only (narrow) panel hides meta, so the name takes the whole row.
+// ponytail: LayoutMetaColumns formats every row of every meta column, so this costs
+// O(rows x columns) per call while meta columns are on and the app calls it on each layout
+// (including mouse motion). Cache the meta total width on the meta handler if it shows in profiles.
+func PanelNameColumnWidth(panelWidth int, state panel.State, showIcons, narrowPanelsNameOnly bool, metaCols []MetaColumnState) int {
+	layoutRes := panelColumnLayout(Rect{Width: panelWidth}, state, PanelDisplayConfig{ShowIcons: showIcons, NarrowPanelsNameOnly: narrowPanelsNameOnly})
+	showMeta := len(metaCols) > 0 && !layoutRes.NameOnlyDisplay
+	metaTotalW := 0
+	if showMeta {
+		_, metaTotalW = LayoutMetaColumns(metaCols)
+	}
+	return panelNameColumnWidth(layoutRes, panel.EffectiveListFormat(state.ListFormat), showMeta, metaTotalW)
 }
 
 // panelColumnLayout computes the leading-column (gutter/git/icon) widths and offsets for a
