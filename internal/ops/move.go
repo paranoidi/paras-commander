@@ -212,7 +212,7 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		hints = nil
 	}
 	for i, src := range sources {
-		if err := ctx.Err(); err != nil {
+		if err := itemBoundaryErr(ctx); err != nil {
 			return doneFiles, doneBytes, err
 		}
 		r.opts.enterSource(int32(i))
@@ -288,6 +288,9 @@ type moveRun struct {
 	diskWait DiskWaitFunc
 	// pending collects the rename phase's set-aside work (collect appends, runTasks drains).
 	pending *[]moveTask
+	// journal is the job's real OnJournal while opts.OnJournal is nil for a copy task, so a soft
+	// stopped copy phase can journal the files it did move.
+	journal func(UndoStep)
 }
 
 // moveAndCount moves one entry right away (rename phase, then its own copy phase) and returns the
@@ -403,7 +406,7 @@ func (r moveRun) collectMerge(ctx context.Context, src, dst pathloc.Path, top bo
 		if c.Name == "." || c.Name == ".." {
 			continue
 		}
-		if err := ctx.Err(); err != nil {
+		if err := itemBoundaryErr(ctx); err != nil {
 			return false, err
 		}
 		csrc, err := src.Join(c.Name)
@@ -430,7 +433,7 @@ func (r moveRun) collectMerge(ctx context.Context, src, dst pathloc.Path, top bo
 // follows the work under it) and returns the updated done totals.
 func (r moveRun) runTasks(ctx context.Context, tasks []moveTask, doneFiles int, doneBytes int64) (int, int64, error) {
 	for _, t := range tasks {
-		if err := ctx.Err(); err != nil {
+		if err := itemBoundaryErr(ctx); err != nil {
 			return doneFiles, doneBytes, err
 		}
 		r.opts.enterSource(t.source)
@@ -465,6 +468,7 @@ func (r moveRun) runTasks(ctx context.Context, tasks []moveTask, doneFiles int, 
 func (r moveRun) copyTask(ctx context.Context, t moveTask, baseFiles int, baseBytes int64) (int, int64, error) {
 	orig := r.progress
 	fb := r
+	fb.journal = r.opts.OnJournal
 	fb.opts.OnJournal = nil // the move is journaled once below, not per copied file
 	if t.keepBoth {
 		fb.resolver = func(context.Context, string, string, FileConflictFacts) (ConflictResolution, error) {
@@ -532,11 +536,79 @@ func (r moveRun) moveCopyFallback(ctx context.Context, src, dst, destination pat
 	if err := EnsureDiskSpace(r.diskWait, planDest, tb, pathloc.Path{}); err != nil {
 		return 0, 0, err
 	}
-	doneFiles, doneBytes, transferred, err := executeCopyWithPlan(ctx, plan, sources, planDest, r.opts, r.throttle, r.progress, r.resolver, r.diskWait)
+	var moved []movedFile
+	renamed := map[string]pathloc.Path{}
+	opts := r.opts
+	opts.onTransferred = func(src, dst pathloc.Path, sourceDeleted bool) {
+		if to, ok := renamed[dst.String()]; ok {
+			dst = to
+		}
+		moved = append(moved, movedFile{src: src, dst: dst, journal: !sourceDeleted})
+	}
+	cctx := withRenameNote(ctx, func(from, to pathloc.Path) { renamed[from.String()] = to })
+	doneFiles, doneBytes, transferred, err := executeCopyWithPlan(cctx, plan, sources, planDest, opts, r.throttle, r.progress, r.resolver, r.diskWait)
+	if errors.Is(err, errSoftStopped) {
+		if rerr := r.finishSoftStoppedMove(ctx, src, transferred, moved); rerr != nil {
+			return doneFiles, doneBytes, rerr
+		}
+		return doneFiles, doneBytes, fmt.Errorf("move copy phase: %w", err)
+	}
 	if err != nil {
 		return doneFiles, doneBytes, fmt.Errorf("move copy phase: %w", err)
 	}
 	return finishMoveCopyPhase(ctx, sources, transferred, doneFiles, doneBytes, r.opts.OnRemoveSources)
+}
+
+// movedFile is one file or symlink a move's copy phase transferred: the source, where it landed,
+// and whether it counts as a move for undo (not when delete source kept an existing destination).
+type movedFile struct {
+	src, dst pathloc.Path
+	journal  bool
+}
+
+// finishSoftStoppedMove settles a copy-fallback source the copy phase soft stopped on: it removes
+// the sources of the files already copied, journals each as moved, and removes only the source
+// directories that held those files and are now empty. RemoveEmptyDirsUnder must not run here: it
+// would also delete empty source directories that were never copied.
+func (r moveRun) finishSoftStoppedMove(ctx context.Context, src pathloc.Path, transferred []pathloc.Path, moved []movedFile) error {
+	ctx = withoutSoftStop(ctx)
+	if onRemove := r.opts.OnRemoveSources; onRemove != nil {
+		onRemove(true)
+		defer onRemove(false)
+	}
+	// Journal first: a failed removal below must not lose the files already moved.
+	jo := r.opts
+	jo.OnJournal = r.journal
+	for _, f := range moved {
+		if f.journal {
+			jo.journalMoved(ctx, f.src, f.dst)
+		}
+	}
+	var dirs []pathloc.Path
+	seen := map[string]bool{}
+	for _, f := range transferred {
+		if err := removePathRecursive(ctx, f); err != nil {
+			return fmt.Errorf("move remove source %q: %w", f, err)
+		}
+		for d := f.Parent(); pathloc.EqualOrUnder(src, d) && !seen[d.String()]; d = d.Parent() {
+			seen[d.String()] = true
+			dirs = append(dirs, d)
+		}
+	}
+	if len(dirs) == 0 {
+		return nil
+	}
+	be, err := backendFor(src)
+	if err != nil {
+		return err
+	}
+	slices.SortFunc(dirs, func(a, b pathloc.Path) int { return len(b.String()) - len(a.String()) })
+	for _, d := range dirs {
+		if _, err := removeDirIfEmpty(ctx, be, d, "move"); err != nil {
+			return fmt.Errorf("move remove empty source dir %q: %w", d, err)
+		}
+	}
+	return nil
 }
 
 // finishMoveCopyPhase removes transferred sources and any now-empty source directory roots

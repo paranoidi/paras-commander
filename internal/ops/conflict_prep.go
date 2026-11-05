@@ -72,6 +72,9 @@ func resolveConflict(ctx context.Context, src, dst pathloc.Path, resolver Confli
 	}
 	if res.Action == ActionRename {
 		newDst, err := uniqueSiblingName(ctx, dst)
+		if err == nil {
+			noteRename(ctx, dst, newDst)
+		}
 		return ActionRename, newDst, err
 	}
 	return res.Action, dst, nil

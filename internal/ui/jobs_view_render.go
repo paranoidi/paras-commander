@@ -638,6 +638,9 @@ func detailLinesIcons(j JobEntry, now time.Time, pathMax int, userHomeDir string
 		lines = append(lines, "Task:        "+j.Title)
 	}
 	lines = append(lines, fmt.Sprintf("Status:      %s", j.Status))
+	if j.SoftStop && !jobs.Status(j.Status).IsFinished() {
+		lines = append(lines, "Stopping:    after current file")
+	}
 	if j.Workers > 0 {
 		lines = append(lines, fmt.Sprintf("Workers:     %d", j.Workers))
 	}

@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -251,6 +252,12 @@ func (s *copyRunState) countProcessed(item PlanItem) {
 	}
 }
 
+func (o Options) noteTransferred(item PlanItem, res copyResult) {
+	if o.onTransferred != nil {
+		o.onTransferred(item.Src, item.Dst, res == copySourceDeleted)
+	}
+}
+
 func (s *copyRunState) recordTransferred(src pathloc.Path) {
 	s.transferredOut = append(s.transferredOut, src)
 }
@@ -358,6 +365,7 @@ func copySymlinkItem(ctx context.Context, item PlanItem, opts Options, resolver 
 		return nil
 	}
 	state.recordTransferred(item.Src)
+	opts.noteTransferred(item, res)
 	if res == copySourceDeleted {
 		return nil
 	}
@@ -427,6 +435,7 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 		return nil
 	}
 	state.recordTransferred(item.Src)
+	opts.noteTransferred(item, res)
 	if res == copySourceDeleted {
 		return nil
 	}
@@ -488,9 +497,15 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 		defer func() { opts.OnItemsProcessed(state.processed) }()
 	}
 
+	var softStopped error
 	for {
-		if err := ctx.Err(); err != nil {
-			return state.doneFiles, state.doneBytes, state.transferredOut, err
+		if err := itemBoundaryErr(ctx); err != nil {
+			if !errors.Is(err, errSoftStopped) {
+				return state.doneFiles, state.doneBytes, state.transferredOut, err
+			}
+			// Finish cleanly below: completed files stay durable and directories get their metadata.
+			softStopped = err
+			break
 		}
 		item, ok, err := iter()
 		if !ok {
@@ -535,7 +550,7 @@ func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Pat
 		return state.doneFiles, state.doneBytes, state.transferredOut, err
 	}
 
-	return state.doneFiles, state.doneBytes, state.transferredOut, nil
+	return state.doneFiles, state.doneBytes, state.transferredOut, softStopped
 }
 
 // skipSourceItemError reports err through opts.OnItemError and returns true when the copy may

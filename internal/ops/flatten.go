@@ -133,7 +133,7 @@ func (w *flattenWalk) walk(ctx context.Context, dir pathloc.Path) error {
 		if e.Name == "." || e.Name == ".." {
 			continue
 		}
-		if err := ctx.Err(); err != nil {
+		if err := itemBoundaryErr(ctx); err != nil {
 			return err
 		}
 		dst, err := w.dstFor(e.Loc)

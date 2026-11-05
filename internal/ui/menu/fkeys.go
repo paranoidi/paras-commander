@@ -18,7 +18,7 @@ type FunctionKey struct {
 	// HintShiftPrefix names; a footer click on that word replays it. Empty when the suffix is
 	// informational only (the compare filter label), so a click on it presses the entry's key.
 	ShiftKeyLabel string
-	// RequiresActiveJob marks jobs-view actions (cancel/pause/resume/reorder) that are
+	// RequiresActiveJob marks jobs-view actions (cancel/soft stop/pause/resume/reorder) that are
 	// no-ops once the selected job has reached a terminal state; FunctionKeysJobsView
 	// hides them in that case.
 	RequiresActiveJob bool
@@ -81,6 +81,7 @@ var FunctionKeysJobs = []FunctionKey{
 	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
 	{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "Filter", ActionID: keymap.ActionJobsResultFilter},
 	{Key: tcell.KeyCtrlC, KeyLabel: "C-c", Hint: "Cancel", RequiresActiveJob: true, ActionID: keymap.ActionJobsCancel},
+	{Key: tcell.KeyCtrlS, KeyLabel: "C-s", Hint: "Soft stop", RequiresActiveJob: true, ActionID: keymap.ActionJobsSoftStop},
 	{Key: tcell.KeyCtrlP, KeyLabel: "C-p", Hint: "Pause", RequiresActiveJob: true, ActionID: keymap.ActionJobsPause},
 	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume", RequiresActiveJob: true, ActionID: keymap.ActionJobsResume},
 	{Key: tcell.KeyUp, Mod: tcell.ModCtrl, KeyLabel: "C-up", Hint: "Move up", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueUp},
@@ -103,7 +104,7 @@ var FunctionKeysJobsDetailView = []FunctionKey{
 }
 
 // FunctionKeysJobsView returns hints for the jobs screen footer. selectedFinished hides the
-// cancel/pause/resume/reorder actions, which are no-ops on a completed, failed, or canceled
+// cancel/soft stop/pause/resume/reorder actions, which are no-ops on a completed, failed, or canceled
 // job — except Resume, which selectedRetryable (failed or canceled) keeps around relabeled
 // "Retry" since it doubles as retry on such a job. Undo (RequiresFinishedJob) shows only on a finished job.
 func FunctionKeysJobsView(selectedFinished, selectedRetryable bool) []FunctionKey {

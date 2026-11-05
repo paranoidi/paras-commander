@@ -254,6 +254,7 @@ var leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
 				ActionPanelExternalBrowser,
 				ActionJobsAnswerBlocker,
 				ActionJobsCancel,
+				ActionJobsSoftStop,
 				ActionJobsPause,
 				ActionJobsResume,
 				ActionJobsQueueUp,

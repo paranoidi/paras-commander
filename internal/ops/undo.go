@@ -95,7 +95,7 @@ func ExecuteUndo(ctx context.Context, steps []UndoStep, opts Options, progress P
 	var done int
 	var bytes int64
 	for i := len(steps) - 1; i >= 0; i-- {
-		if err := ctx.Err(); err != nil {
+		if err := itemBoundaryErr(ctx); err != nil {
 			return done, bytes, err
 		}
 		s := steps[i]
@@ -104,7 +104,7 @@ func ExecuteUndo(ctx context.Context, steps []UndoStep, opts Options, progress P
 		var err error
 		switch s.Kind {
 		case UndoMoveBack:
-			done, bytes, err = undoMoveBack(ctx, r, s, done, bytes)
+			done, bytes, err = undoMoveBack(withoutSoftStop(ctx), r, s, done, bytes) // a step finishes whole
 		default:
 			err = undoRemoveCreated(ctx, s)
 			if err == nil {

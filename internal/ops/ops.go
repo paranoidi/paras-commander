@@ -114,6 +114,9 @@ type Options struct {
 	// (PlanItem.Source, UndoStep.Source). entered is false until the first enterSource.
 	source  int32
 	entered bool
+	// onTransferred, when set, hears each file or symlink the copy fully transferred (src, its
+	// destination before any keep-both rename, whether delete source kept the destination).
+	onTransferred func(src, dst pathloc.Path, sourceDeleted bool)
 }
 
 // enterSource makes i the source being processed, reporting OnSourceStart when it changes.

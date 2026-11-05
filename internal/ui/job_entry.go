@@ -52,7 +52,9 @@ type JobEntry struct {
 	SourcePhases []jobs.SourcePhase
 	// RemovingSources matches jobs.Job.RemovingSources (a move removing its copied sources).
 	RemovingSources bool
-	StartedAt       time.Time
+	// SoftStop matches jobs.Job.SoftStop (stop requested after the current file).
+	SoftStop  bool
+	StartedAt time.Time
 	// ETAStart is jobs.Job.ETAStart(): where the ETA clock starts (the current step, else StartedAt).
 	ETAStart   time.Time
 	FinishedAt time.Time

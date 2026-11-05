@@ -898,6 +898,7 @@ func TestDefaultBundleJobsOpenGlobalRestJobsOverlay(t *testing.T) {
 		humanKey string
 	}{
 		{tcell.NewEventKey(tcell.KeyCtrlC, 0, tcell.ModNone), ActionJobsCancel, "Ctrl+C"},
+		{tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModNone), ActionJobsSoftStop, "Ctrl+S"},
 		{tcell.NewEventKey(tcell.KeyCtrlP, 0, tcell.ModNone), ActionJobsPause, "Ctrl+P"},
 		{tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModNone), ActionJobsResume, "Ctrl+R"},
 		{tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModCtrl), ActionJobsQueueUp, "Ctrl+Up"},
