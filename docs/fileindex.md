@@ -49,6 +49,7 @@ fileindex. The keys below are the defaults; rebind the shortcuts under
 | `M-S` | `s` | `fileindex.scan` | Scan the selected entries, else the current directory (the menu says which) |
 | `M-A` | `S` | `fileindex.scan-fast` | [Fast scan](#scan-and-prune) the selected entries, else the current directory: hash only the first 8 KB of larger files |
 | `M-P` | `p` | `fileindex.prune` | Remove what is gone from disk under the current directory |
+| `M-E` | `e` | `fileindex.report-differences` | [Report differences](#report-differences) between the disk and the index under the directory under the cursor, else the current directory |
 | `M-T` | `t` | `fileindex.tag-add` | Add tags |
 | `M-U` | `u` | `fileindex.tag-remove` | Remove tags |
 
@@ -88,7 +89,7 @@ not watched.
 | `missing` | only in index | Only in the index (ghost row) |
 | `excluded` | excluded | Not in the index, and the scan rules in fileindex's `config.ini` (`exclude_dirs`, `exclude_files`, file patterns) skip it |
 | `scanning` | scanning | A scan or prune task job is working on the row |
-| `differs` | differs below | An indexed directory with something different below it: a new, changed (size or modification time) or missing file |
+| `differs` | differs below | An indexed directory with something different below it: a new file a scan would add, a file whose size or modification time changed, or an indexed file gone from disk |
 | `unchecked` | browser scan depth exceeded | An indexed directory with nothing different found in the folders the automatic check reached, but with deeper folders it did not look into |
 | `tagged` | tagged | Indexed and carrying tags |
 
@@ -96,7 +97,7 @@ When several apply, the first of: scanning, missing, changed, excluded, new,
 differs, unhashed, tagged, unchecked, indexed (a file that is both unhashed
 and tagged shows `unhashed`). A directory does not count unhashed files as a
 difference. Directories are checked in the background
-(flat layout only; sizes are compared, not modification times). After each
+(flat layout only). After each
 listing, every indexed directory is checked down to `browser_scan_max_depth`
 levels (default 3). A difference within that depth shows as `differs`; if there
 is none but the directory has folders deeper than that, it shows `unchecked`
@@ -120,9 +121,21 @@ On a ghost row:
 
 - **Delete** removes it from the index only (the delete dialog says so). A
   selection mixing ghost rows and real entries deletes the real ones from disk
-  and the ghost rows from the index.
+  and the ghost rows from the index; the index follows the real deletes too,
+  because the operation started from a Browse-with panel (see
+  [Operations and the index](#operations-and-the-index)).
 - **Copy, move, view and edit** are refused with "Only in the index: name":
   there is no file to read.
+
+A symlink to a file is judged by what it points to: its target's size and
+modification time are compared with the index, as a scan records them, and a
+dangling link shows `missing` when the index recorded it (a dangling link the
+index never saw gets no state). A link to a directory gets no state.
+
+A difference can hide from the panel: new files under dot or git-ignored names are
+not listed, and the cause can lie deeper than the automatic check looks. The
+[differences report](#report-differences) lists every difference, hidden files
+included.
 
 `fileindex.status` shows the same words as the overlay in its column.
 
@@ -146,12 +159,21 @@ In an index view:
 
 - **View and copy** read the real file, so copying out of the index works when
   the file is still on disk.
-- **Rename** and **move** inside the index record that the entry moved. They
-  do not touch the disk. The rename dialog says so.
-- **Delete** removes the entry, or a directory and everything under it, from
-  the index only. The delete dialog says so.
-- **New directories, copies into the index, and moves out of it** are
-  refused: the index is read-only for new content.
+- **Rename**, **move** and **flatten** act on the real files and directories
+  the entries name, and the index follows: the records move with them. An
+  entry that is gone from disk is only a record: renaming it changes the index
+  alone, and moving it fails because there is nothing to move. A rename is
+  refused when the new name exists on disk, even as a file the index does not
+  list. The rename dialog says it renames on disk and in the fileindex.
+- **Delete** deletes the entry, or a directory with everything in it, from disk,
+  including files the index does not list (`node_modules`, for example), and
+  removes the records. An entry that is gone from disk loses its record only.
+  The delete dialog says so.
+- **Copy and move into the index view** put the files in the real directory the
+  view names. A move of indexed files carries their records along; anything
+  that comes from outside the index shows in the view only after a scan
+  (`fileindex.scan`) has recorded it.
+- **New directories and symlinks** are refused: nothing there to create them in.
 - **Edit**, **run** (Enter on an executable), **drop to shell**, **send paths
   to shell** and the **terminal panel** work on the real files and
   directories the entries name. Edits change the real file; the index picks
@@ -336,5 +358,41 @@ state icon: in the state column while browsing with fileindex, else at the end
 of the row. A scan hashes all chosen entries together and clears each entry's
 icon as soon as its files are committed.
 
-The index does not yet follow renames, moves and deletes that pc makes on
-disk; rescan or prune to bring it up to date.
+## Operations and the index
+
+The index follows the renames, moves and deletes that pc makes on disk, when
+the operation was started from a panel that shows the index: a
+[Browse-with](#browsing-with-fileindex) panel or a `fileindex://` panel, or when
+it names a `fileindex://` path. The same operations started from an ordinary
+local panel leave the index alone; a deleted file then shows as a ghost row until
+a prune. Undoing a job that followed the index follows it too.
+
+Following moves or removes records that already exist. It never adds any: new
+files, copies and extracted files (also the ones a copy into a `fileindex://`
+panel puts on disk) wait for the next scan. A file moved by copy and delete (across
+file systems) loses its tags, because its record is removed rather than moved.
+Panels showing the index refresh when the records change.
+
+## Report differences
+
+`fileindex.report-differences` compares the disk with the index under a
+directory and lists every difference: the directory under the cursor, else the
+current directory, on a local or `fileindex://` panel. It runs as a task job in
+the [jobs view](jobs.md), with a progress count and cancel, beside a running scan
+(it only reads). When it ends, a picker titled "Differences under NAME (N)"
+lists the paths, filtered as you type, each with its state:
+
+| State | Meaning |
+|---|---|
+| `new` | on disk, included by the scan rules, not in the index |
+| `changed` | in the index with another size or modification time |
+| `missing` | in the index, gone from disk |
+
+Enter shows the path in the active panel, in its directory with the file
+highlighted (the real directory, or the index view when the report was started
+there). The report looks at the whole subtree, hidden files included, so it explains
+a `differs` icon the panel does not: it uses the same check as the icon. A record
+the scan rules would skip but that is still on disk (below an excluded directory,
+or in a directory pc cannot read) is not a difference. "No differences under NAME"
+and "NAME is not in the index" are shown as messages instead of a picker.
+

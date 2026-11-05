@@ -605,13 +605,16 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, err
 	}
 	jobState := jobs.NewState()
+	// The index handle exists before the job state so jobs following the index (fschange sink)
+	// get it; nothing is opened until it is used.
+	fileIndex := fileindex.New(cfg.FileIndex)
 	// app does not exist yet; the permission prompt is bound once it does.
 	var app *App
 	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs, cfg.Compare, jobState.Wait,
 		func(ctx context.Context, req ops.PermissionRequest) ops.PermissionAnswer {
 			return app.promptElevate(ctx, req)
 		},
-		duEngine))
+		duEngine, fileIndex))
 	jobState.SetThroughputChart(
 		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
 		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,
@@ -749,7 +752,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Keys:           keys.Global,
 		KeysFindDialog: keys.FindDialog,
 	})
-	app.fileIndex = fileindex.New(cfg.FileIndex)
+	app.fileIndex = fileIndex
 	if err := fileindex.Register(app.fileIndex); err != nil {
 		app.stopWorker()
 		return nil, fmt.Errorf("register fileindex backend: %w", err)
@@ -828,6 +831,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Dedup:                app.dedupCtrl,
 		DiskUsage:            app.disk.engine,
 		DiskUsageIgnore:      duIgnorer,
+		FileIndex:            app.fileIndex,
 		PromptElevate:        app.promptElevate,
 		Getenv:               func(k string) string { return app.getenv(k) },
 	})

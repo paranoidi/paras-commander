@@ -24,6 +24,7 @@ import (
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/sched"
@@ -113,6 +114,11 @@ type Deps struct {
 	DiskUsage       *diskusage.Engine
 	DiskUsageIgnore diskusage.ShouldIgnoreFolder
 
+	// FileIndex receives the filesystem changes of dialog operations started from a panel that
+	// follows the fileindex (panel.FollowsIndex). Nil disables it; a nil *fileindex.Index is
+	// harmless (Apply ignores its nil receiver) but pass a nil interface to mean "none".
+	FileIndex fschange.Sink
+
 	// PromptElevate asks the user whether a permission-denied local file step may be retried as
 	// root (the app's single permission prompt). Nil disables elevation.
 	PromptElevate ops.PermissionWaitFunc
@@ -163,6 +169,7 @@ type Handler struct {
 	dedup                *dedupctrl.Handler
 	diskUsage            *diskusage.Engine
 	diskUsageIgnore      diskusage.ShouldIgnoreFolder
+	indexSink            fschange.Sink
 	promptElevate        ops.PermissionWaitFunc
 	getenv               func(string) string // nil: bookmarks fall back to os.Getenv
 
@@ -257,6 +264,7 @@ func New(d Deps) *Handler {
 		dedup:                d.Dedup,
 		diskUsage:            d.DiskUsage,
 		diskUsageIgnore:      d.DiskUsageIgnore,
+		indexSink:            d.FileIndex,
 		promptElevate:        d.PromptElevate,
 		getenv:               d.Getenv,
 	}

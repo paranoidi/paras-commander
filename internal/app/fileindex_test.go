@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,6 +15,7 @@ import (
 	fileindexctrl "github.com/paranoidi/paras-commander/internal/apphandler/fileindex"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -33,6 +35,7 @@ var fileIndexActions = []string{
 	keymap.ActionFileIndexScan,
 	keymap.ActionFileIndexScanFast,
 	keymap.ActionFileIndexPrune,
+	keymap.ActionFileIndexReportDifferences,
 	keymap.ActionFileIndexFindDuplicates,
 	keymap.ActionFileIndexCopies,
 	keymap.ActionFileIndexCopiesOutside,
@@ -812,7 +815,7 @@ func TestFileIndexGhostRowRefusesCopyAndDeletesFromIndex(t *testing.T) {
 		t.Fatalf("message = %q", a.model.Message)
 	}
 
-	// Delete a local file together with the ghost row: each path goes to its own backend.
+	// Delete a local file together with the ghost row: the real file goes from disk, the ghost row from the index.
 	p := a.activePanel()
 	p.SelectedPaths = map[string]bool{
 		filepath.Join(dir, "harbor.txt"):                           true,
@@ -829,14 +832,14 @@ func TestFileIndexGhostRowRefusesCopyAndDeletesFromIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The delete started on a browse-with panel: the index follows the real delete, and the
+	// ghost row goes through the index backend.
 	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
-		_, found, _ := d.FileInfo(filepath.Join(dir, "meadow.txt"))
+		_, ghostFound, _ := d.FileInfo(filepath.Join(dir, "meadow.txt"))
+		_, realFound, _ := d.FileInfo(filepath.Join(dir, "harbor.txt"))
 		_, onDisk := os.Stat(filepath.Join(dir, "harbor.txt"))
-		return !found && onDisk != nil
+		return !ghostFound && !realFound && onDisk != nil
 	})
-	if _, found, _ := d.FileInfo(filepath.Join(dir, "harbor.txt")); !found {
-		t.Fatal("deleting a real file must leave its index entry for prune, not touch it")
-	}
 }
 
 // openIndexedParent browses the parent of the fixture directory with fileindex, recording the
@@ -1030,5 +1033,212 @@ func TestFileIndexCopiesMessages(t *testing.T) {
 	a.dispatch(keymap.ActionFileIndexCopies)
 	if a.model.Message != "Other copies works on files" {
 		t.Fatalf("message = %q", a.model.Message)
+	}
+}
+
+// openIndexPanel shows dir as a fileindex:// panel.
+func openIndexPanel(t *testing.T, a *App, screen tcell.SimulationScreen, dir string) {
+	t.Helper()
+	a.dispatch(keymap.ActionFileIndexBrowse)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		p := a.activePanel()
+		return p.PathString() == "fileindex://"+dir && !p.ListingPending
+	})
+}
+
+func TestFileIndexPanelDeleteActsOnDiskAndIndexAndRefreshes(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	// A file the index does not know sits in the directory: deleting the directory takes it too.
+	sub := filepath.Join(dir, "lantern")
+	if err := os.MkdirAll(filepath.Join(sub, "node_modules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"lamp.txt", "node_modules/pebble.txt"} {
+		if err := os.WriteFile(filepath.Join(sub, f), []byte(f), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	idx, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := strings.Repeat("c", 32)
+	if _, err := idx.CommitScanBatch([]db.ScannedFile{{Dir: sub, Name: "lamp.txt", Size: int64(len("lamp.txt")), Mtime: time.Now(), MD5: sum, SHA256: sum + sum}}); err != nil {
+		t.Fatal(err)
+	}
+	openIndexPanel(t, a, screen, dir)
+	cursorTo(t, a, "lantern")
+	dispatchFileOp(t, a, keymap.ActionFileDelete)
+	if !a.model.FileDialog.Open || !strings.Contains(a.model.FileDialog.Note, "Deletes from disk and the fileindex") {
+		t.Fatalf("delete dialog = open %v, note %q", a.model.FileDialog.Open, a.model.FileDialog.Note)
+	}
+	a.dialogCtrl.ExecuteDelete()
+	d, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		_, indexed, _ := d.FileInfo(filepath.Join(sub, "lamp.txt"))
+		_, listed := entryStatus(a, "lantern")
+		_, onDisk := os.Stat(sub)
+		return !indexed && !listed && onDisk != nil
+	})
+	if _, found, _ := db.DirByPath(d, sub); found {
+		t.Fatal("the directory record survived")
+	}
+}
+
+func TestFileIndexPanelRenameActsOnDiskAndIndex(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	openIndexPanel(t, a, screen, dir)
+	cursorTo(t, a, "harbor.txt")
+	dispatchFileOp(t, a, keymap.ActionFileRename)
+	if !strings.Contains(a.model.FileDialog.Note, "Renames on disk and in the fileindex") {
+		t.Fatalf("rename note = %q", a.model.FileDialog.Note)
+	}
+	a.model.FileDialog.Fields[0].Value = "anchor.txt"
+	a.dialogCtrl.ExecuteFileDialog()
+	d, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		_, oldIndexed, _ := d.FileInfo(filepath.Join(dir, "harbor.txt"))
+		_, newIndexed, _ := d.FileInfo(filepath.Join(dir, "anchor.txt"))
+		_, listed := entryStatus(a, "anchor.txt")
+		return !oldIndexed && newIndexed && listed
+	})
+	if _, err := os.Stat(filepath.Join(dir, "anchor.txt")); err != nil {
+		t.Fatalf("the file was not renamed on disk: %v", err)
+	}
+}
+
+func TestFileIndexPanelMoveCarriesFileOnDiskAndIndex(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	other := filepath.Join(dir, "meadow")
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	openIndexPanel(t, a, screen, dir)
+	cursorTo(t, a, "harbor.txt")
+	// The move dialog opened on a fileindex:// panel works end to end.
+	a.dialogCtrl.ActivateMoveAction()
+	if !a.model.TransferDialog.Open {
+		t.Fatalf("move dialog did not open: %q", a.model.Message)
+	}
+	a.model.TransferDialog.Destination.Value = other
+	a.dialogCtrl.TransferDialogOK()
+	d, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		_, oldIndexed, _ := d.FileInfo(filepath.Join(dir, "harbor.txt"))
+		_, newIndexed, _ := d.FileInfo(filepath.Join(other, "harbor.txt"))
+		_, listed := entryStatus(a, "harbor.txt")
+		return !oldIndexed && newIndexed && !listed
+	})
+	if _, err := os.Stat(filepath.Join(other, "harbor.txt")); err != nil {
+		t.Fatalf("the file did not move on disk: %v", err)
+	}
+}
+
+func TestFileIndexNormalLocalPanelDeleteLeavesIndexAlone(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	cursorTo(t, a, "harbor.txt")
+	dispatchFileOp(t, a, keymap.ActionFileDelete)
+	if strings.Contains(a.model.FileDialog.Note, "fileindex") {
+		t.Fatalf("a normal local panel's delete dialog mentions the index: %q", a.model.FileDialog.Note)
+	}
+	a.dialogCtrl.ExecuteDelete()
+	drainInterruptEventsUntil(t, a, screen, 5*time.Second, func() bool {
+		_, err := os.Stat(filepath.Join(dir, "harbor.txt"))
+		all := a.jobState.AllJobs()
+		return err != nil && len(all) == 1 && all[0].Status == jobs.StatusCompleted
+	})
+	d, err := a.fileIndex.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The sink would have been queued by now: its drain ends before the check.
+	a.fileIndex.WaitApplied()
+	if _, found, _ := d.FileInfo(filepath.Join(dir, "harbor.txt")); !found {
+		t.Fatal("a delete from a normal local panel must leave the index to prune")
+	}
+}
+
+// quietReporter is a jobs.TaskReporter that drops everything.
+type quietReporter struct{}
+
+func (quietReporter) Progress(jobs.TaskProgress) {}
+func (quietReporter) Warn(string)                {}
+func (quietReporter) FinishSource(int)           {}
+
+// rescan records dir's files with their real size and mtime (the fixture records "now").
+func rescan(t *testing.T, a *App, dir string) {
+	t.Helper()
+	if err := a.fileIndex.ScanTask([]string{dir}).Run(context.Background(), quietReporter{}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestFileIndexReportDifferences(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	rescan(t, a, dir)
+	a.dispatch(keymap.ActionFileIndexReportDifferences)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		return strings.HasPrefix(a.model.Message, "No differences under")
+	})
+
+	if err := os.Remove(filepath.Join(dir, "meadow.txt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "willow.txt"), []byte("fresh"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a.dispatch(keymap.ActionFileIndexReportDifferences)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return a.model.PathPicker.Open })
+	st := a.model.PathPicker
+	if want := "Differences under " + filepath.Base(dir) + " (2)"; st.Title != want || st.Purpose != dialog.PathPickerPurposeNavigateFile || st.IndexPanel {
+		t.Fatalf("picker = %q purpose %v index panel %v, want %q", st.Title, st.Purpose, st.IndexPanel, want)
+	}
+	got := map[string]dialog.PathPickerItem{}
+	for _, it := range st.Items {
+		got[filepath.Base(it.Path)] = it
+	}
+	if it := got["willow.txt"]; it.Source != "new" || it.PathMissing {
+		t.Errorf("willow.txt row = %+v, want a new, present path", it)
+	}
+	if it := got["meadow.txt"]; it.Source != "missing" || !it.PathMissing {
+		t.Errorf("meadow.txt row = %+v, want a missing path", it)
+	}
+	// Choosing a row shows the file in the panel.
+	a.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { return !a.model.PathPicker.Open })
+}
+
+func TestFileIndexReportDifferencesTargetsCursorDirectory(t *testing.T) {
+	a, screen, dir, _ := fileIndexApp(t)
+	sub := filepath.Join(dir, "lantern")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	a.dispatch(keymap.ActionPanelRefresh)
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool { _, ok := entryStatus(a, "lantern"); return ok })
+	cursorTo(t, a, "lantern")
+	a.dispatch(keymap.ActionFileIndexReportDifferences)
+	// The directory is not in the index: the report says so instead of listing the panel's files.
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		return a.model.Message == "lantern is not in the index"
+	})
+}
+
+func TestFileIndexReportDifferencesCanceledShowsNothing(t *testing.T) {
+	a, _, dir, _ := fileIndexApp(t)
+	a.fileindexCtrl.HandleDifferences(fileindexctrl.DifferencesPayload{
+		PanelID: a.model.ActivePanel, Root: dir, Err: context.Canceled,
+	})
+	if a.model.PathPicker.Open || a.model.Message != "" {
+		t.Fatalf("a canceled report showed something: picker %v, message %q", a.model.PathPicker.Open, a.model.Message)
 	}
 }

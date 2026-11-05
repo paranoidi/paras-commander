@@ -9,7 +9,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -1410,7 +1409,7 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 	for i, src := range sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	nSelf := ops.SelfTargetCount(srcLocs, destLoc, false)
+	nSelf := ops.SelfTargetCount(pathloc.Locals(srcLocs), destLoc.Local(), false) // as the job will see them
 	if nSelf > 0 {
 		if len(sources) > 1 {
 			h.host.SetTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
@@ -1458,10 +1457,10 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	if msg := indexTransferRefusal(req.Type, srcLocs, destLoc); msg != "" {
-		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
-		return
-	}
+	follow := h.followIndex(append(srcLocs[:len(srcLocs):len(srcLocs)], destLoc)...)
+	// A fileindex:// path names a real file: the job works on the disk (the backend lists indexed
+	// files only), and the index follows through the fschange sink.
+	srcLocs, destLoc = pathloc.Locals(srcLocs), destLoc.Local()
 	job := &jobs.Job{
 		ID:                  jobs.NewJobID(),
 		Type:                req.Type,
@@ -1469,6 +1468,7 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		Sources:             srcLocs,
 		Destination:         destLoc,
 		DestIsDir:           ops.DestinationIsDirAtEnqueue(destLoc),
+		FollowIndex:         follow,
 		PausedAfterScan:     req.StartPaused,
 		PreservePermissions: req.Preserve.PreservePermissions,
 		PreserveTimestamps:  req.Preserve.PreserveTimestamps,
@@ -1485,22 +1485,11 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 	h.commitJob(job)
 }
 
-// indexTransferRefusal explains why a transfer touching an index-only location (fsbackend.IndexOnly)
-// cannot be queued, or "": the index is read-only for copies into it, and a move across its
-// boundary would copy the file and then remove only its index entry. Copying out of it and
-// moving inside it are fine.
-func indexTransferRefusal(t jobs.Type, sources []pathloc.Path, dest pathloc.Path) string {
-	destIndex := fsbackend.Default().IsIndexOnly(dest)
-	for _, src := range sources {
-		srcIndex := fsbackend.Default().IsIndexOnly(src)
-		switch {
-		case destIndex && !srcIndex:
-			return "The fileindex is read-only: files cannot be copied or moved into it"
-		case srcIndex && !destIndex && t != jobs.TypeCopy:
-			return "Moving out of the fileindex is not supported: copy instead"
-		}
-	}
-	return ""
+// followIndex reports whether a job started now keeps the fileindex in step (panel.FollowsIndex
+// for the active panel and the job's paths). It is computed before the paths are translated to
+// disk paths.
+func (h *Handler) followIndex(paths ...pathloc.Path) bool {
+	return panel.FollowsIndex(h.host.ActivePanel(), paths...)
 }
 
 // applySizeEstimate seeds a copy or move job's byte total from what the active panel already
@@ -1553,6 +1542,7 @@ func (h *Handler) EnqueueDeleteJob(sources []string, removeEmptyDirs, promptDang
 		Sources:               srcLocs,
 		TotalFiles:            len(sources),
 		DeleteRemoveEmptyDirs: removeEmptyDirs,
+		FollowIndex:           h.followIndex(srcLocs...),
 		PromptDanglingDirs:    promptDangling && h.config.Operations.RemoveDanglingDirs,
 	}
 	h.commitJob(job)
@@ -1569,6 +1559,9 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue extract: %v", err), ui.MessageUrgencyError)
 		return
 	}
+	// An extract only creates files, which the index learns of on the next scan: no FollowIndex.
+	// A fileindex:// source or destination names a real path.
+	srcLocs, destLoc = pathloc.Locals(srcLocs), destLoc.Local()
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        jobs.TypeExtract,
@@ -1593,6 +1586,8 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
+	follow := h.followIndex(append(srcLocs[:len(srcLocs):len(srcLocs)], destLoc)...)
+	srcLocs, destLoc = pathloc.Locals(srcLocs), destLoc.Local() // see AddTransferJob
 	job := &jobs.Job{
 		ID:                 jobs.NewJobID(),
 		Type:               jobs.TypeFlatten,
@@ -1600,6 +1595,7 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		Sources:            srcLocs,
 		Destination:        destLoc,
 		DestIsDir:          ops.DestinationIsDirAtEnqueue(destLoc),
+		FollowIndex:        follow,
 		FlattenRemoveEmpty: req.RemoveEmpty,
 		FlattenRecursive:   req.Recursive,
 	}

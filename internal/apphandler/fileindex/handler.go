@@ -57,9 +57,9 @@ type Host interface {
 	ToggleFileIndexMenu()
 	// ReloadPanel re-reads the panel's listing (the overlay is applied or dropped by it).
 	ReloadPanel(panelID int)
-	// OpenFileCopiesPicker opens the path picker over the host paths of files; confirming one
-	// shows it in the active panel (a fileindex:// path when indexPanel).
-	OpenFileCopiesPicker(title string, files []string, indexPanel bool)
+	// OpenFilePicker opens the path picker over items, host file paths; confirming one shows it
+	// in the active panel (a fileindex:// path when indexPanel).
+	OpenFilePicker(title string, items []dialog.PathPickerItem, indexPanel bool)
 	// OpenDedupOutside opens the find-duplicates view over the files under the host dir dir that
 	// have a copy elsewhere in the index.
 	OpenDedupOutside(dir string)
@@ -164,6 +164,8 @@ func (h *Handler) Dispatch(actionID string) bool {
 		h.Reveal()
 	case keymap.ActionFileIndexCopies:
 		h.Copies()
+	case keymap.ActionFileIndexReportDifferences:
+		h.withIndex(h.ReportDifferences)
 	case keymap.ActionFileIndexCopiesOutside:
 		h.withIndex(h.CopiesOutside)
 	case keymap.ActionFileIndexFindDuplicates:
@@ -190,6 +192,8 @@ func (h *Handler) HandleWake(data any) bool {
 		h.HandleFind(p)
 	case CopiesPayload:
 		h.HandleCopies(p)
+	case DifferencesPayload:
+		h.HandleDifferences(p)
 	default:
 		return false
 	}

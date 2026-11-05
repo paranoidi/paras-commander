@@ -19,7 +19,7 @@ import (
 func runDiskUsageJob(t *testing.T, du *diskusage.Engine, job *jobs.Job) []ops.UndoStep {
 	t.Helper()
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs, cfg.Compare, nil, nil, du)
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, cfg.Compare, nil, nil, du, nil)
 	var journal []ops.UndoStep
 	emit := func(ev jobs.Event) {
 		if ev.Type == jobs.EventUndoJournal {

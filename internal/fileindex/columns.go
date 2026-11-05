@@ -228,7 +228,9 @@ func (x *Index) statusValues(ctx context.Context, d *db.DB, host string, entries
 // entryStatuses compares each entry with the index: a file by size and mtime, a directory by
 // whether the index has it; an entry the index lacks that the scan rules skip is excluded.
 // Entries of a local panel carry their disk state; entries of a fileindex:// panel are stat'ed.
-// Other entry types (symlinks, devices) get no status. It is the one status source for the
+// A symlink is judged by its target: a regular file like a file (the target's size and mtime, as
+// the scan records them), a dangling link only when the index recorded it (missing); a link to a
+// directory and other entry types (devices) get no status. It is the one status source for the
 // status column and the browse-with overlay.
 func entryStatuses(ctx context.Context, d *db.DB, host string, entries []localfs.Entry, onDisk bool, rules scan.Rules) (map[string]string, error) {
 	files, err := d.DirFiles(host)
@@ -263,6 +265,19 @@ func entryStatuses(ctx context.Context, d *db.DB, host string, entries []localfs
 				continue
 			}
 			typ, size, mtime = entryType(fi), fi.Size(), fi.ModTime()
+		}
+		if typ == localfs.EntrySymlink {
+			target, err := os.Stat(filepath.Join(host, e.Name))
+			switch {
+			case err != nil:
+				if _, recorded := files[e.Name]; recorded {
+					out[e.Name] = StatusMissing
+				}
+				continue
+			case !target.Mode().IsRegular():
+				continue
+			}
+			typ, size, mtime = localfs.EntryFile, target.Size(), target.ModTime()
 		}
 		switch typ {
 		case localfs.EntryFile:
@@ -310,10 +325,12 @@ func subdirNames(d *db.DB, id *int64) ([]string, error) {
 	return out, rows.Err()
 }
 
-// entryType is the listing type of a stat'ed path as far as statusValues cares: file,
-// directory or anything else.
+// entryType is the listing type of an Lstat'ed path as far as statusValues cares: file,
+// directory, symlink or anything else.
 func entryType(fi fs.FileInfo) localfs.EntryType {
 	switch {
+	case fi.Mode()&fs.ModeSymlink != 0:
+		return localfs.EntrySymlink
 	case fi.Mode().IsRegular():
 		return localfs.EntryFile
 	case fi.IsDir():

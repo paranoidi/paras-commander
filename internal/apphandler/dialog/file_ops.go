@@ -925,18 +925,18 @@ func (h *Handler) executeHardlink() {
 	h.host.SetTransientMessage(fmt.Sprintf("Created hardlink: %s", filepath.Base(plan.NewPath)), ui.MessageUrgencyInfo)
 }
 
-// Notes for the rename and delete dialogs on an index-only panel (fsbackend.IndexOnly), whose
-// wording otherwise assumes the disk changes.
+// Notes for the rename and delete dialogs on an index-only panel (fsbackend.IndexOnly): they act
+// on the disk and the index, which an entry shown from the index alone does not make obvious.
 const (
-	renameIndexNote = "Renames in the fileindex only; files on disk are not touched."
-	deleteIndexNote = "Removes from the fileindex only; files on disk are not touched."
+	renameIndexNote = "Renames on disk and in the fileindex."
+	deleteIndexNote = "Deletes from disk and the fileindex, including files in a directory that the index does not list."
 )
 
 // deleteGhostNote is the delete dialog note when some rows exist only in the index (ghost rows).
 const deleteGhostNote = "Rows only in the fileindex are removed from the index; everything else is deleted from disk."
 
-// deleteNote is the delete dialog note: the index-only one on a fileindex:// panel, the ghost one
-// when a local panel's selection includes ghost rows.
+// deleteNote is the delete dialog note: the ghost one when a local panel's selection includes
+// ghost rows, else the disk-and-index one on a fileindex:// panel.
 func (h *Handler) deleteNote(p *panel.State, paths []string) string {
 	if len(p.GhostSources(paths...)) > 0 {
 		return deleteGhostNote
