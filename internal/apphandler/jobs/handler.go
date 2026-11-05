@@ -1147,7 +1147,11 @@ func (h *Handler) applyJobEventBatch(batch []jobs.Event) {
 		h.refreshTerminal = true
 		h.refreshProgress = false
 		h.refreshDestListing = false
+		h.refreshSourceListing = false
 	} else {
+		if flags.SourceRemoved && !h.refreshTerminal {
+			h.refreshSourceListing = true
+		}
 		if flags.Progress && !h.refreshTerminal {
 			h.refreshProgress = true
 		}
@@ -1181,6 +1185,9 @@ type batchFlags struct {
 	// ActiveSource is set when a multi-source job's executor moved to another source: its
 	// path marks were updated in place (followActiveSource), without a SyncJobPathMarks rebuild.
 	ActiveSource bool
+	// SourceRemoved is set when a job reported one of its top-level sources gone from its
+	// directory, so panels listing that directory must re-list.
+	SourceRemoved bool
 }
 
 // scanBatchFlags applies each event in the batch to UI model state (jobs.State, activity log,
@@ -1203,6 +1210,7 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 			f.Terminal = true
 		case jobs.EventProgress, jobs.EventVerifyProgress:
 			f.Progress = true
+			f.SourceRemoved = f.SourceRemoved || ui.JobRemovedSourceRoot(h.model.JobPathMarks, ev.JobID, ev.CurrentPath)
 			if !slices.Contains(progressed, ev.JobID) {
 				progressed = append(progressed, ev.JobID)
 			}
@@ -1277,6 +1285,7 @@ func (h *Handler) ApplyRefreshes() bool {
 		h.refreshTerminal = false
 		h.refreshProgress = false
 		h.refreshDestListing = false
+		h.refreshSourceListing = false
 		h.applyJobsRetention()
 		h.SyncJobPathMarks()
 		h.host.RefreshBothPanels()
@@ -1287,30 +1296,36 @@ func (h *Handler) ApplyRefreshes() bool {
 		reloadDest := didProgress || h.refreshDestListing
 		h.refreshProgress = false
 		h.refreshDestListing = false
+		reloadSources := h.refreshSourceListing
+		h.refreshSourceListing = false
 		if didProgress && h.config.Jobs.FreeSpaceOnProgressWake {
 			h.host.RequestBothPanelsVolumeSpaceRefreshAsync()
 		}
-		if reloadDest {
-			h.reloadJobWriteDestinationPanels()
-		}
+		h.reloadJobPanels(reloadDest, reloadSources)
 		return false
 	}
 }
 
-// reloadJobWriteDestinationPanels re-lists panels whose cwd sits inside a non-finished job's
-// write (destination) tree so names appear in the file list as soon as they exist on disk.
+// reloadJobPanels re-lists panels a non-finished job is changing: with dest, those inside its
+// write (destination) tree so names appear as soon as they exist on disk; with sources, those
+// listing a source it removes so names leave once they are gone (the periodic refresh mostly
+// yields to the job's volume).
 // Uses panel.Refresh (async when a scheduler is wired); progress wakes are already debounced
 // via progress_ui_wake_debounce_ms, and same-directory loads supersede in-flight ones.
-func (h *Handler) reloadJobWriteDestinationPanels() {
+func (h *Handler) reloadJobPanels(dest, sources bool) {
 	marks := h.model.JobPathMarks
-	if len(marks) == 0 {
+	if len(marks) == 0 || (!dest && !sources) {
 		return
 	}
 	for _, pan := range []*panel.State{h.host.PrimaryPanel(), h.host.SecondaryPanel()} {
 		if pan == nil {
 			continue
 		}
-		if marked, _ := ui.PanelInsideJobWriteTree(pan.PathString(), marks); marked {
+		marked := false
+		if dest {
+			marked, _ = ui.PanelInsideJobWriteTree(pan.PathString(), marks)
+		}
+		if marked || (sources && ui.PanelListsJobRemovedSources(pan.PathString(), marks)) {
 			_ = pan.Refresh(0)
 		}
 	}

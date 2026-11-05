@@ -86,8 +86,9 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 	if panelID < 0 || panelID > ui.SecondaryPanel {
 		return
 	}
-	if a.pathVolumeContendsWithActiveJob(p.PathString()) {
-		// A job is already saturating this volume; the next tick retries.
+	if a.pathVolumeContendsWithActiveJob(p.PathString()) && !ui.PanelListsJobRemovedSources(p.PathString(), a.model.JobPathMarks) {
+		// A job is already saturating this volume; the next tick retries. The one exception is a
+		// directory the job is removing rows from, which must not keep listing what is gone.
 		return
 	}
 	// A prior slow refresh for this panel set a start-to-start deadline; skipped ticks must
@@ -172,6 +173,11 @@ func (a *App) applyPanelListingRefresh(p panelRefreshApplyPayload) bool {
 		return false
 	}
 	if !pan.Path.Equal(p.Path) {
+		return false
+	}
+	// A pending load is newer than this read. Applying this one would bump the epoch and get
+	// that load's result dropped as stale, leaving rows that are already gone.
+	if pan.ListingPending {
 		return false
 	}
 	if p.ListingEpoch != pan.ListingEpoch {

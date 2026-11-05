@@ -562,3 +562,50 @@ func TestPanelInsideJobWriteTreeFollowsActiveSource(t *testing.T) {
 		t.Fatal("the new active source's destination is not a write tree")
 	}
 }
+
+func TestJobRemovedSourceRoot(t *testing.T) {
+	t.Parallel()
+	marks := []JobPathMark{
+		{ID: "mv", Type: string(jobs.TypeMove), Status: string(jobs.StatusRunning), Sources: []string{"/src/alder"}},
+		{ID: "rm", Type: string(jobs.TypeDelete), Status: string(jobs.StatusRunning), Sources: []string{"/src/birch"}},
+		{ID: "cp", Type: string(jobs.TypeCopy), Status: string(jobs.StatusRunning), Sources: []string{"/src/cedar"}},
+	}
+	for _, tc := range []struct {
+		id, path string
+		want     bool
+	}{
+		{"mv", "/src/alder", true},
+		{"mv", "/src/alder/inner.txt", false}, // a file of a copy phase: the source is still there
+		{"rm", "/src/birch", true},
+		{"cp", "/src/cedar", false}, // a copy keeps its sources
+		{"mv", "", false},
+		{"gone", "/src/alder", false},
+	} {
+		if got := JobRemovedSourceRoot(marks, tc.id, tc.path); got != tc.want {
+			t.Errorf("JobRemovedSourceRoot(%q, %q) = %v, want %v", tc.id, tc.path, got, tc.want)
+		}
+	}
+}
+
+func TestPanelListsJobRemovedSources(t *testing.T) {
+	t.Parallel()
+	mv := JobPathMark{Type: string(jobs.TypeMove), Status: string(jobs.StatusRunning), Sources: []string{"/src/deep/alder"}}
+	cp := JobPathMark{Type: string(jobs.TypeCopy), Status: string(jobs.StatusRunning), Sources: []string{"/src/deep/alder"}}
+	done := JobPathMark{Type: string(jobs.TypeMove), Status: string(jobs.StatusCompleted), Sources: []string{"/src/deep/alder"}}
+	for _, tc := range []struct {
+		panel string
+		mark  JobPathMark
+		want  bool
+	}{
+		{"/src/deep", mv, true},
+		{"/src", mv, true}, // a tree view can show the row
+		{"/src/deep/alder", mv, false},
+		{"/other", mv, false},
+		{"/src/deep", cp, false},
+		{"/src/deep", done, false},
+	} {
+		if got := PanelListsJobRemovedSources(tc.panel, []JobPathMark{tc.mark}); got != tc.want {
+			t.Errorf("PanelListsJobRemovedSources(%q, %s %s) = %v, want %v", tc.panel, tc.mark.Type, tc.mark.Status, got, tc.want)
+		}
+	}
+}

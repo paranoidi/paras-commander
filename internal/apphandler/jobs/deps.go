@@ -41,6 +41,8 @@ type Handler struct {
 	refreshTerminal    bool
 	refreshProgress    bool
 	refreshDestListing bool
+	// refreshSourceListing: a job removed a top-level source; re-list the panels showing it.
+	refreshSourceListing bool
 
 	affectVisible             bool
 	lastBatchMenuBarStripOnly bool

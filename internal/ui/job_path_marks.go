@@ -250,6 +250,51 @@ func PanelTouchedByJobs(panelPath string, jobMarks []JobPathMark) bool {
 	return false
 }
 
+// removesSources reports whether a job of this type takes its sources off the disk.
+func (j JobPathMark) removesSources() bool {
+	switch jobs.Type(j.Type) {
+	case jobs.TypeMove, jobs.TypeFlatten, jobs.TypeDelete:
+		return true
+	}
+	return false
+}
+
+// JobRemovedSourceRoot reports whether path, from a progress event of job id, is a top-level
+// source of a job that removes its sources. Such an event follows the removal of that source
+// (a rename or delete). A copy fallback's progress on a top-level file comes ahead of its
+// removal and only costs a redundant re-list.
+func JobRemovedSourceRoot(jobMarks []JobPathMark, id, path string) bool {
+	if path == "" {
+		return false
+	}
+	for _, j := range jobMarks {
+		if j.ID == id {
+			_, ok := j.index().sources[path]
+			return ok && j.removesSources()
+		}
+	}
+	return false
+}
+
+// PanelListsJobRemovedSources reports whether panelPath shows a source of a non-finished job
+// that removes its sources: the source's parent is panelPath, or under it for a tree view.
+func PanelListsJobRemovedSources(panelPath string, jobMarks []JobPathMark) bool {
+	if panelPath == "" {
+		return false
+	}
+	for _, j := range jobMarks {
+		if jobs.Status(j.Status).IsFinished() || !j.removesSources() {
+			continue
+		}
+		for _, dir := range j.index().sourceDirs {
+			if pathloc.EqualOrUnderStrings(panelPath, dir) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // PanelInsideJobWriteTree reports whether panelPath is the destination dir of, or
 // at-or-under a resolved destination root of, any non-finished job with a
 // non-empty Destination; decision status wins over any other matched status. Of a multi-source
