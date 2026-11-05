@@ -22,6 +22,7 @@ Press `F1` or `?` (`app.show-help`) in any view to list the key bindings for tha
 - Up/Down, PgUp/PgDn, Home/End move through rows.
 - `Enter` runs the highlighted action, as if you pressed its key.
 - `F2` (`help.text-edit-keys`, `[dialog.help]`) switches to the text-input editing keys; `F2` again returns.
+- In the file browser, help also lists the file-list row icons in a legend at the bottom of the dialog (dropped on terminals too short to fit it).
 - `Esc` closes help. In text fields a literal `?` is typed, not treated as help.
 
 See [Keybindings](keybindings.md) for changing the keys.

@@ -18,7 +18,7 @@ func TestHelpAltHighlightStaysInKeysColumn(t *testing.T) {
 		FuzzyExtra: "panel.open-dir-in-other",
 	}
 	layout := Layout{Width: 80, Height: 24}
-	m, ok := ComputeHelpDialogListMetrics(layout)
+	m, ok := ComputeHelpDialogListMetrics(layout, nil)
 	if !ok {
 		t.Fatal("metrics")
 	}
@@ -88,7 +88,7 @@ func TestHelpAltPlusOHighlightsKeys(t *testing.T) {
 		FuzzyExtra: "panel.open-dir-in-other",
 	}
 	layout := Layout{Width: 80, Height: 24}
-	m, ok := ComputeHelpDialogListMetrics(layout)
+	m, ok := ComputeHelpDialogListMetrics(layout, nil)
 	if !ok {
 		t.Fatal("metrics")
 	}

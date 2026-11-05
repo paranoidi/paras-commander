@@ -4,6 +4,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -65,11 +66,11 @@ var fileIndexLegendStates = []struct{ state, label string }{
 
 // fileIndexLegend lists the index column's state icons with the theme's glyph and style, the
 // same lookups paintIndexColumn uses.
-func (a *App) fileIndexLegend() []ui.LeaderMenuLegendItem {
-	legend := make([]ui.LeaderMenuLegendItem, 0, len(fileIndexLegendStates))
+func (a *App) fileIndexLegend() []primitive.LegendItem {
+	legend := make([]primitive.LegendItem, 0, len(fileIndexLegendStates))
 	for _, s := range fileIndexLegendStates {
 		if r := a.styles.IconFileIndexState(s.state); r != 0 {
-			legend = append(legend, ui.LeaderMenuLegendItem{Icon: string(r), Style: a.styles.PanelFileIndexStyle(s.state), Label: s.label})
+			legend = append(legend, primitive.LegendItem{Icon: string(r), Style: a.styles.PanelFileIndexStyle(s.state), Label: s.label})
 		}
 	}
 	return legend

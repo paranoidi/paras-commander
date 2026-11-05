@@ -63,7 +63,7 @@ func helpGoldenState(n, selected, scroll int, focus string) HelpViewState {
 func helpGoldenFiltered(st HelpViewState, layout Layout, query string) HelpViewState {
 	st.Query, st.QueryCursor = query, len([]rune(query))
 	st.Ranked = nil
-	m, _ := ComputeHelpDialogListMetrics(layout)
+	m, _ := ComputeHelpDialogListMetrics(layout, nil)
 	q := search.Parse(query)
 	opts := search.Options{CaseInsensitive: true}
 	st.MatchRanges = make([][]search.Range, len(st.Entries))

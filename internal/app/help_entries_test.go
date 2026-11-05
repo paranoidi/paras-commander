@@ -215,3 +215,26 @@ func TestHelpF2TogglesTextEditPage(t *testing.T) {
 		t.Fatalf("state = %+v", a.model.HelpView)
 	}
 }
+
+func TestOpenHelpDialogLegendOnBrowserPageOnly(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	a.model.ViewMode = ui.ViewBrowser
+	a.openHelpDialog()
+	if len(a.model.HelpView.Legend) == 0 {
+		t.Fatal("browser help has no icon legend")
+	}
+	a.handleHelpDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	if !a.model.HelpView.TextEdit || a.model.HelpView.Legend != nil {
+		t.Fatalf("text-edit page legend = %v", a.model.HelpView.Legend)
+	}
+	a.handleHelpDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	if len(a.model.HelpView.Legend) == 0 {
+		t.Fatal("legend missing after returning to the key page")
+	}
+	a.closeHelpDialog()
+	a.model.ViewMode = ui.ViewJobs
+	a.openHelpDialog()
+	if a.model.HelpView.Legend != nil {
+		t.Fatalf("jobs help legend = %v", a.model.HelpView.Legend)
+	}
+}

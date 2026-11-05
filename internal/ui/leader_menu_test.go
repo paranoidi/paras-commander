@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
@@ -473,7 +474,7 @@ func legendTestState() LeaderMenuState {
 			{Key: 'a', Label: "Alpha", GroupColumn: 0},
 			{Key: 'b', Label: "Bravo", GroupColumn: 0},
 		},
-		Legend: []LeaderMenuLegendItem{
+		Legend: []primitive.LegendItem{
 			{Icon: "=", Style: tcell.StyleDefault.Foreground(tcell.ColorGreen), Label: "indexed"},
 			{Icon: "~", Style: tcell.StyleDefault.Foreground(tcell.ColorYellow), Label: "changed"},
 			{Icon: "+", Style: tcell.StyleDefault.Foreground(tcell.ColorRed), Label: "not in index"},
@@ -515,9 +516,9 @@ func TestDrawLeaderMenuLegendDrawsAndWraps(t *testing.T) {
 	}
 	lineW := 0
 	for _, it := range state.Legend {
-		lineW += leaderMenuLegendWidth(it)
+		lineW += it.Width()
 	}
-	lineW += leaderMenuLegendGap * (len(state.Legend) - 1)
+	lineW += primitive.LegendGap * (len(state.Legend) - 1)
 	right := rect.X + rect.Width - leaderMenuRightMargin
 	if want := rect.X + leaderMenuLeftMargin + (right-rect.X-leaderMenuLeftMargin-lineW)/2; strings.Index(row, "=") != want {
 		t.Fatalf("legend starts at %d, want centered at %d", strings.Index(row, "="), want)
