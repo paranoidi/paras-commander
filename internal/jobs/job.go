@@ -214,6 +214,11 @@ type Job struct {
 	// children (TypeFlatten only).
 	FlattenRecursive bool
 
+	// FollowIndex makes the job's filesystem changes also reach the fileindex (fschange sink): set at
+	// enqueue when the job was started from a Browse-with-fileindex or fileindex:// panel or names a
+	// fileindex:// path. Undo and retry copy it.
+	FollowIndex bool
+
 	// DeleteRemoveEmptyDirs enables post-delete removal of directories left empty
 	// under the parent directories of Sources (TypeDelete only).
 	DeleteRemoveEmptyDirs bool
@@ -403,6 +408,7 @@ func (j *Job) RetryClone() *Job {
 		FlattenRemoveEmpty:    j.FlattenRemoveEmpty,
 		FlattenRecursive:      j.FlattenRecursive,
 		DeleteRemoveEmptyDirs: j.DeleteRemoveEmptyDirs,
+		FollowIndex:           j.FollowIndex,
 		PromptDanglingDirs:    j.PromptDanglingDirs,
 		RemoveDanglingDirs:    j.RemoveDanglingDirs,
 		ConflictRules:         j.ConflictRules,

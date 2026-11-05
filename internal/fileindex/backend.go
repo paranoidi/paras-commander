@@ -198,7 +198,9 @@ func (b *Backend) Rename(_ context.Context, oldLoc, newLoc pathloc.Path) error {
 	if err != nil {
 		return err
 	}
+	b.idx().writeMu.Lock()
 	_, err = d.Move(src, dst, nil)
+	b.idx().writeMu.Unlock()
 	b.idx().changed()
 	return err
 }
@@ -219,7 +221,9 @@ func (b *Backend) Remove(ctx context.Context, loc pathloc.Path) error {
 	} else if isDir {
 		return b.RemoveTree(ctx, loc)
 	}
+	b.idx().writeMu.Lock()
 	_, err = d.RemoveInstance(host)
+	b.idx().writeMu.Unlock()
 	b.idx().changed()
 	return err
 }
@@ -234,7 +238,9 @@ func (b *Backend) RemoveTree(_ context.Context, dir pathloc.Path) error {
 	if err != nil {
 		return err
 	}
+	b.idx().writeMu.Lock()
 	_, err = d.RemoveTree(host)
+	b.idx().writeMu.Unlock()
 	b.idx().changed()
 	return err
 }

@@ -2,7 +2,11 @@ package fileindex
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +17,10 @@ import (
 
 // TaskLease serializes fileindex task jobs: one scan or prune at a time.
 const TaskLease = "fileindex"
+
+// DifferencesLease serializes the differences reports: one at a time, beside scans and prunes (a
+// report only reads, so it does not wait behind a long scan).
+const DifferencesLease = "fileindex.differences"
 
 // ScanTask returns the task job scanning paths (local host paths) into the index: hashing new
 // and changed files, then pruning what is gone under them (fileindex's scan.Run with its
@@ -347,3 +355,54 @@ var (
 	_ scan.RootReporter  = (*scanReporter)(nil)
 	_ scan.FileReporter  = (*scanReporter)(nil)
 )
+
+// DifferencesTask returns the task job listing where the files under root (a local host path,
+// resolved like the index records it) differ from the index: new files the scan rules include,
+// changed ones (size or mtime) and recorded ones gone from disk, over the whole subtree (the same
+// driftWalk as the directory state icon). The differences come sorted by path. done runs when the
+// task ends, however it ends: with the differences, or with the error (ErrNotIndexed when root is
+// not in the index, which does not fail the job; context.Canceled when it was canceled).
+func (x *Index) DifferencesTask(root string, done func([]Difference, error)) *jobs.Task {
+	return &jobs.Task{
+		Title: "fileindex differences",
+		Lease: DifferencesLease,
+		Run: func(ctx context.Context, r jobs.TaskReporter) error {
+			out, err := x.differences(ctx, r, root)
+			done(out, err)
+			if errors.Is(err, ErrNotIndexed) {
+				return nil
+			}
+			return err
+		},
+	}
+}
+
+// differences is DifferencesTask's work.
+func (x *Index) differences(ctx context.Context, r jobs.TaskReporter, root string) ([]Difference, error) {
+	d, err := x.DB()
+	if err != nil {
+		return nil, err
+	}
+	rules, _, err := x.scanSettings()
+	if err != nil {
+		return nil, err
+	}
+	host, err := IndexPath(root)
+	if err != nil {
+		return nil, err
+	}
+	var out []Difference
+	walked := 0
+	_, err = driftWalk(ctx, d, rules, host, 0, func(p string) {
+		walked++
+		r.Progress(jobs.TaskProgress{DoneFiles: walked, CurrentPath: filepath.Dir(p)})
+	}, func(df Difference) bool {
+		out = append(out, df)
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	slices.SortFunc(out, func(a, b Difference) int { return strings.Compare(a.Path, b.Path) })
+	return out, nil
+}

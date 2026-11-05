@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/fileindex/db"
 	"github.com/paranoidi/fileindex/scan"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fschange"
 )
 
 // ErrNoIndex is wrapped by DB when no index database exists at the configured path.
@@ -58,6 +59,15 @@ type Index struct {
 	// index holds: a scan or prune task ends, an entry is moved or removed, or the database is
 	// created or upgraded.
 	OnChange func()
+
+	// Apply's queue (follow.go): batches waiting for the one goroutine that applies them.
+	applyMu      sync.Mutex
+	applyPending [][]fschange.Change
+	applyRunning bool
+	applyDone    chan struct{} // closed when the running drain ends
+
+	// writeMu serializes pc's own index writes: Apply's drain and the backend's Rename and Remove.
+	writeMu sync.Mutex
 }
 
 // New returns an Index for pc's [fileindex] settings. Nothing is read until DB is called.
@@ -243,6 +253,12 @@ func (x *Index) initDB(upgrade bool) (string, error) {
 // Close closes the database if it was opened. The index stays closed: later calls fail with
 // ErrClosed instead of reopening the file.
 func (x *Index) Close() error {
+	err := x.closeDB()
+	x.WaitApplied() // a drain in flight sees the closed index and ends
+	return err
+}
+
+func (x *Index) closeDB() error {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	x.closed = true
