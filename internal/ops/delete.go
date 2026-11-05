@@ -68,7 +68,7 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 	var doneFiles int
 	var doneBytes int64
 	for i, path := range paths {
-		if err := ctx.Err(); err != nil {
+		if err := itemBoundaryErr(ctx); err != nil {
 			return doneFiles, doneBytes, err
 		}
 		if onSourceStart != nil {
@@ -163,7 +163,7 @@ func deletePathRecursive(ctx context.Context, loc pathloc.Path) error {
 		return err
 	}
 	for _, child := range children {
-		if err := ctx.Err(); err != nil {
+		if err := itemBoundaryErr(ctx); err != nil {
 			return err
 		}
 		if child.Name == "." || child.Name == ".." {
@@ -200,7 +200,7 @@ func removeLocalTree(ctx context.Context, host string) error {
 		return err
 	}
 	for _, e := range entries {
-		if err := ctx.Err(); err != nil {
+		if err := itemBoundaryErr(ctx); err != nil {
 			return err
 		}
 		if err := removeLocalTree(ctx, filepath.Join(host, e.Name())); err != nil {

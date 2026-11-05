@@ -406,6 +406,19 @@ func (s *State) PauseQueuedJob(id string) bool {
 	return s.queue.pauseQueuedJobUnlocked(id)
 }
 
+// SoftStopJob asks a running or waiting-decision job to stop once the file it is working on is
+// complete; the run then ends canceled. It returns false for any other job, or a task.
+func (s *State) SoftStopJob(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	j := s.findJobUnlocked(id)
+	if j == nil || !j.Type.SoftStoppable() || (j.Status != StatusRunning && j.Status != StatusWaitingDecision) {
+		return false
+	}
+	j.SoftStop = true
+	return true
+}
+
 // RetryJob re-queues a failed or canceled job as a fresh run with the same ID and spec.
 // Returns false when id is not such a job.
 func (s *State) RetryJob(id string) bool {
@@ -948,6 +961,11 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		return
 	}
 	jobCtx, cancel := context.WithCancel(parent)
+	jobCtx = ops.WithSoftStop(jobCtx, func() bool {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		return job.SoftStop
+	})
 	s.cancelRun[job.ID] = cancel
 	holder := s.leaseHolderUnlocked()
 	needLease := job.holdsTransferLease(holder)
@@ -1006,6 +1024,9 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	}
 
 	cancel()
+	if errors.Is(transferErr, context.Canceled) {
+		s.cancelJobScan(job.ID) // a soft stop ends the run without CancelJob: free a producer blocked on PlanCh
+	}
 
 	if n := s.takeItemFailures(job.ID); n > 0 && transferErr == nil {
 		transferErr = fmt.Errorf("%d item(s) failed", n)

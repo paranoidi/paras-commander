@@ -262,6 +262,9 @@ type Job struct {
 	// Seen marks a finished job acknowledged by leaving the jobs view; the menu-bar strip stops
 	// counting it. Guarded by State.mu; RetryClone does not copy it.
 	Seen bool
+	// SoftStop is set by State.SoftStopJob: the run stops at the next item boundary and ends
+	// canceled. Guarded by State.mu; RetryClone does not copy it.
+	SoftStop bool
 
 	// RemovingSources is true while a move's copy fallback is deleting its transferred sources.
 	RemovingSources bool
@@ -281,6 +284,10 @@ func (j *Job) Title() string {
 
 // Pausable reports whether a queued job of this type can be paused (every type but TypeTask).
 func (t Type) Pausable() bool { return t != TypeTask }
+
+// SoftStoppable reports whether a running job of this type can be asked to stop after the file it
+// is working on (every type but TypeTask).
+func (t Type) SoftStoppable() bool { return t != TypeTask }
 
 // Retryable reports whether State.RetryJob may re-run a finished job of this type.
 func (t Type) Retryable() bool { return t != TypeRename && t != TypeUndo && t != TypeTask }

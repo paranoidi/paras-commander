@@ -1935,6 +1935,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:   "j",
 		},
 		{
+			ID:          ActionJobsSoftStop,
+			Views:       HelpJobs,
+			Title:       "Soft stop job",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"stop", "finish", "graceful"},
+			LeaderKey:   "s",
+		},
+		{
 			ID:          ActionJobsPause,
 			Views:       HelpJobs,
 			Title:       "Pause queued job",

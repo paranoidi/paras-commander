@@ -139,7 +139,7 @@ func ExecuteExtract(ctx context.Context, plan ExtractPlan, progress ExtractProgr
 	claimedStream := make(map[string]string)
 
 	for _, item := range plan.Items {
-		if err := ctx.Err(); err != nil {
+		if err := itemBoundaryErr(ctx); err != nil {
 			return done, err
 		}
 		if plan.OnSourceStart != nil {

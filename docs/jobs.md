@@ -49,6 +49,7 @@ total `(estimated)` until the exact size is counted (see
 | Key | Action |
 |---|---|
 | `C-c` | Cancel the selected job (`jobs.cancel`) |
+| `C-s` | Soft stop the selected running job (`jobs.soft-stop`) |
 | `C-p` | Pause a queued job (`jobs.pause`) |
 | `C-r` | Resume a paused job or retry a failed or canceled one (`jobs.resume`) |
 | `C-↑` / `C-↓` | Move the job in the queue (`jobs.queue-up`, `jobs.queue-down`) |
@@ -60,6 +61,16 @@ total `(estimated)` until the exact size is counted (see
 | `C-Space` | Move the Operations panel between the right column and full width at the bottom (`jobs.toggle-operations-layout`) |
 | `Enter` | Maximize the focused Operations panel with wrapped lines (`jobs.maximize-pane`); `Esc`, `Enter` or `Left` restore it |
 | `Left` | Back to the file view (`jobs.close`) |
+
+**Soft stop** asks a running job to stop once the file it is working on is
+complete: that file finishes normally, nothing further starts, and the job ends
+as canceled with its completed work kept. The Details panel shows
+`Stopping: after current file` until it ends. Retry runs the whole job again,
+so a copy meets the files it already finished as conflicts. A move that had to
+copy across devices removes the sources of the files it finished
+(they are moved and can be undone) and leaves everything else where it was. A
+delete stops between files and an extract between archives. Cancel is still
+immediate, also after a soft stop was requested. Tasks cannot soft stop.
 
 Some features run their own background work as a **task** job (for example a
 [fileindex](fileindex.md) scan). A task shows `task` as its type and its name

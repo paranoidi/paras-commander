@@ -242,6 +242,7 @@ const (
 	ActionJobsMaximizePane  = "jobs.maximize-pane"
 	ActionJobsClearFinished = "jobs.clear-finished"
 	ActionJobsCancel        = "jobs.cancel"
+	ActionJobsSoftStop      = "jobs.soft-stop"
 	ActionJobsPause         = "jobs.pause"
 	ActionJobsResume        = "jobs.resume"
 	ActionJobsQueueUp       = "jobs.queue-up"
@@ -585,6 +586,7 @@ var KnownActions = map[string]struct{}{
 	ActionJobsMaximizePane:  {},
 	ActionJobsClearFinished: {},
 	ActionJobsCancel:        {},
+	ActionJobsSoftStop:      {},
 	ActionJobsPause:         {},
 	ActionJobsResume:        {},
 	ActionJobsQueueUp:       {},

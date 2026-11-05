@@ -14,6 +14,7 @@ func DefaultJobsOverlayKeys() map[string][]string {
 		ActionJobsClose:         {"left"},
 		ActionJobsMaximizePane:  {"enter"},
 		ActionJobsCancel:        {"C-c"},
+		ActionJobsSoftStop:      {"C-s"},
 		ActionJobsPause:         {"C-p"},
 		ActionJobsResume:        {"C-r"},
 		ActionJobsQueueUp:       {"C-up"},

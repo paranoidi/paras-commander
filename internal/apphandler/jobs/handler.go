@@ -257,7 +257,7 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		h.clearFinishedJobs()
 		return true
 	case keymap.ActionJobsQueueUp, keymap.ActionJobsQueueDown,
-		keymap.ActionJobsCancel,
+		keymap.ActionJobsCancel, keymap.ActionJobsSoftStop,
 		keymap.ActionJobsPause, keymap.ActionJobsResume:
 		if h.model.ViewMode != ui.ViewJobs {
 			return true
@@ -269,6 +269,8 @@ func (h *Handler) TryDispatch(actionID string) bool {
 			h.moveJobInQueue(1)
 		case keymap.ActionJobsCancel:
 			h.cancelSelectedJob()
+		case keymap.ActionJobsSoftStop:
+			h.softStopSelectedJob()
 		case keymap.ActionJobsPause:
 			h.pauseSelectedQueuedJob()
 		case keymap.ActionJobsResume:
@@ -864,6 +866,29 @@ func (h *Handler) cancelSelectedJob() {
 	h.SyncJobsList()
 	h.SyncJobPathMarks()
 	h.ensureJobsViewSelectionVisible()
+}
+
+// softStopSelectedJob asks the selected running job to stop once its current file is complete.
+func (h *Handler) softStopSelectedJob() {
+	sel := h.model.JobsView.Selected
+	if sel < 0 || sel >= len(h.model.JobsList) {
+		return
+	}
+	e := h.model.JobsList[sel]
+	if st := jobs.Status(e.Status); st != jobs.StatusRunning && st != jobs.StatusWaitingDecision {
+		h.host.SetTransientMessage("Only running jobs can soft stop", ui.MessageUrgencyWarn)
+		return
+	}
+	if !jobs.Type(e.Type).SoftStoppable() {
+		h.host.SetTransientMessage("Task jobs cannot soft stop", ui.MessageUrgencyWarn)
+		return
+	}
+	if !h.state.SoftStopJob(e.ID) {
+		h.host.SetTransientMessage("Could not soft stop job", ui.MessageUrgencyWarn)
+		return
+	}
+	h.host.SetTransientMessage("Stopping after the current file", ui.MessageUrgencyInfo)
+	h.SyncJobsList()
 }
 
 func (h *Handler) pauseSelectedQueuedJob() {

@@ -244,6 +244,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Terminate job":      "F8",
 		"Kill job":           "S-F8",
 		"Cancel job":         "C-c",
+		"Soft stop job":      "C-s",
 		"Pause queued job":   "C-p",
 		"Resume / retry job": "C-r",
 		"Move up in queue":   "C-↑",
