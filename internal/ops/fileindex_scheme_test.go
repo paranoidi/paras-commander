@@ -195,20 +195,10 @@ func indexLoc(t *testing.T, host string) string {
 	return loc.String()
 }
 
-func writeTemp(t *testing.T, path, body string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestFileIndexDeleteOfEntryOnDiskActsOnDisk(t *testing.T) {
 	root := t.TempDir()
 	file := filepath.Join(root, "harbor.txt")
-	writeTemp(t, file, "anchor")
+	writeTestFile(t, file, "anchor")
 	m := newMemIndex([]string{indexLoc(t, root)}, []string{indexLoc(t, file)})
 	useMemIndex(t, m)
 	sink := &recordSink{}
@@ -248,8 +238,8 @@ func TestFileIndexDeleteOfDirectoryRemovesUnindexedFilesToo(t *testing.T) {
 	dir := filepath.Join(root, "lantern")
 	indexed := filepath.Join(dir, "meadow.txt")
 	unindexed := filepath.Join(dir, "node_modules", "pebble.txt")
-	writeTemp(t, indexed, "clover")
-	writeTemp(t, unindexed, "gravel")
+	writeTestFile(t, indexed, "clover")
+	writeTestFile(t, unindexed, "gravel")
 	// The fake index lists the one indexed file only, as the real backend does.
 	m := newMemIndex([]string{indexLoc(t, root), indexLoc(t, dir)}, []string{indexLoc(t, indexed)})
 	useMemIndex(t, m)
@@ -267,7 +257,7 @@ func TestFileIndexDeleteOfDirectoryRemovesUnindexedFilesToo(t *testing.T) {
 func TestFileIndexRenameOnDisk(t *testing.T) {
 	root := t.TempDir()
 	oldP, newP := filepath.Join(root, "harbor.txt"), filepath.Join(root, "anchor.txt")
-	writeTemp(t, oldP, "rope")
+	writeTestFile(t, oldP, "rope")
 	m := newMemIndex([]string{indexLoc(t, root)}, []string{indexLoc(t, oldP)})
 	useMemIndex(t, m)
 	sink := &recordSink{}
@@ -306,8 +296,8 @@ func TestFileIndexRenameOfEntryGoneFromDiskIsIndexOnly(t *testing.T) {
 func TestFileIndexRenameOntoUnindexedFileOnDiskIsRefused(t *testing.T) {
 	root := t.TempDir()
 	oldP, newP := filepath.Join(root, "harbor.txt"), filepath.Join(root, "anchor.txt")
-	writeTemp(t, oldP, "rope")
-	writeTemp(t, newP, "chain") // on disk, not in the index: rename(2) would replace it silently
+	writeTestFile(t, oldP, "rope")
+	writeTestFile(t, newP, "chain") // on disk, not in the index: rename(2) would replace it silently
 	m := newMemIndex([]string{indexLoc(t, root)}, []string{indexLoc(t, oldP)})
 	useMemIndex(t, m)
 	plan := RenamePlan{SourcePath: indexLoc(t, oldP), NewName: "anchor.txt", NewPath: indexLoc(t, newP)}
@@ -322,7 +312,7 @@ func TestFileIndexRenameOntoUnindexedFileOnDiskIsRefused(t *testing.T) {
 func TestFileIndexParentCleanupNeverTouchesTheIndexBackend(t *testing.T) {
 	root := t.TempDir()
 	parent := filepath.Join(root, "orchard")
-	writeTemp(t, filepath.Join(parent, "node_modules", "pebble.txt"), "gravel") // unindexed content
+	writeTestFile(t, filepath.Join(parent, "node_modules", "pebble.txt"), "gravel") // unindexed content
 	emptyKid := filepath.Join(parent, "empty")
 	if err := os.MkdirAll(emptyKid, 0o755); err != nil {
 		t.Fatal(err)

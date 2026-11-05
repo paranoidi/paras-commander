@@ -13,14 +13,14 @@ import (
 // so the changes reach the cache and the index.
 func (h *Handler) fsCtx() context.Context {
 	// An interface holding a nil *Engine is not nil: only a real engine goes into the sink.
-	var sinks []fschange.Sink
+	var sink fschange.Sink
 	if h.diskUsage != nil {
-		sinks = append(sinks, h.diskUsage)
+		sink = h.diskUsage
 	}
 	if h.indexSink != nil && panel.FollowsIndex(h.host.ActivePanel()) {
-		sinks = append(sinks, h.indexSink)
+		sink = fschange.Multi(sink, h.indexSink)
 	}
-	return fschange.WithSink(context.Background(), fschange.Multi(sinks...))
+	return fschange.WithSink(context.Background(), sink)
 }
 
 // elevatedCtx is fsCtx with an Elevator that asks the user (Deps.PromptElevate) whether a

@@ -99,12 +99,11 @@ func TestFlattenJobTranslatesIndexPathsAndFollows(t *testing.T) {
 	}
 }
 
-func TestExtractJobTranslatesIndexPaths(t *testing.T) {
+func TestExtractJobDoesNotFollowIndex(t *testing.T) {
 	h, state := followHandler(t, "fileindex:///orchard", false)
-	h.EnqueueExtractJob([]string{"fileindex:///orchard/harbor.zip"}, "fileindex:///meadow")
-	j := onlyJob(t, state)
-	if j.FollowIndex || j.Sources[0].String() != "/orchard/harbor.zip" || j.Destination.String() != "/meadow" {
-		t.Fatalf("extract job = follow %v, %s -> %s; want disk paths and no follow (it only creates)", j.FollowIndex, j.Sources[0], j.Destination)
+	h.EnqueueExtractJob([]string{"/orchard/harbor.zip"}, "/meadow")
+	if onlyJob(t, state).FollowIndex {
+		t.Fatal("an extract only creates files: it must not follow the index")
 	}
 }
 

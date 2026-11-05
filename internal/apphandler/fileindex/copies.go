@@ -84,9 +84,15 @@ func (h *Handler) FindDuplicates() {
 	h.host.OpenDedupIndexed(dir)
 }
 
+// stillBrowsing reports whether a result started from panelID can still be shown: the browser is
+// up, no dialog is open and that panel is still active.
+func (h *Handler) stillBrowsing(panelID int) bool {
+	return h.model.ViewMode == ui.ViewBrowser && !h.model.ModalDialogOpen() && h.model.ActivePanel == panelID
+}
+
 // HandleCopies shows the lookup unless the user has moved on since it started.
 func (h *Handler) HandleCopies(p CopiesPayload) {
-	if h.model.ViewMode != ui.ViewBrowser || h.model.ModalDialogOpen() || h.model.ActivePanel != p.PanelID {
+	if !h.stillBrowsing(p.PanelID) {
 		return
 	}
 	if cur, ok := h.host.ActivePanel().CurrentEntry(); !ok || cur.Path != p.Path {

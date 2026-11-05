@@ -45,6 +45,7 @@ func ValidateFlattenSource(p *panel.State) ([]pathloc.Path, error) {
 // ValidateFlattenTarget rejects an empty root list, an invalid destination, and a destination
 // inside one of the roots.
 func ValidateFlattenTarget(roots []pathloc.Path, dest pathloc.Path) error {
+	roots, dest = pathloc.Locals(roots), dest.Local() // as the job will see them
 	if len(roots) == 0 {
 		return &Error{Op: "flatten", Text: "no directories to flatten"}
 	}

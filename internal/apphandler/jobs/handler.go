@@ -1409,7 +1409,7 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 	for i, src := range sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	nSelf := ops.SelfTargetCount(pathloc.Locals(srcLocs), destLoc.Local(), false) // as the job will see them
+	nSelf := ops.SelfTargetCount(srcLocs, destLoc, false)
 	if nSelf > 0 {
 		if len(sources) > 1 {
 			h.host.SetTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
@@ -1457,10 +1457,7 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	follow := h.followIndex(append(srcLocs[:len(srcLocs):len(srcLocs)], destLoc)...)
-	// A fileindex:// path names a real file: the job works on the disk (the backend lists indexed
-	// files only), and the index follows through the fschange sink.
-	srcLocs, destLoc = pathloc.Locals(srcLocs), destLoc.Local()
+	srcLocs, destLoc, follow := h.diskJobPaths(srcLocs, destLoc)
 	job := &jobs.Job{
 		ID:                  jobs.NewJobID(),
 		Type:                req.Type,
@@ -1486,10 +1483,18 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 }
 
 // followIndex reports whether a job started now keeps the fileindex in step (panel.FollowsIndex
-// for the active panel and the job's paths). It is computed before the paths are translated to
-// disk paths.
+// for the active panel and the job's paths).
 func (h *Handler) followIndex(paths ...pathloc.Path) bool {
 	return panel.FollowsIndex(h.host.ActivePanel(), paths...)
+}
+
+// diskJobPaths returns a transfer or flatten job's paths on disk and whether the job follows the
+// fileindex. A fileindex:// path names a real file: the job works on the disk (the backend lists
+// indexed files only), and the index follows through the fschange sink. The gate needs the paths
+// as given, so it runs before they are translated.
+func (h *Handler) diskJobPaths(srcs []pathloc.Path, dest pathloc.Path) ([]pathloc.Path, pathloc.Path, bool) {
+	follow := h.followIndex(srcs...) || h.followIndex(dest)
+	return pathloc.Locals(srcs), dest.Local(), follow
 }
 
 // applySizeEstimate seeds a copy or move job's byte total from what the active panel already
@@ -1560,8 +1565,6 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 		return
 	}
 	// An extract only creates files, which the index learns of on the next scan: no FollowIndex.
-	// A fileindex:// source or destination names a real path.
-	srcLocs, destLoc = pathloc.Locals(srcLocs), destLoc.Local()
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        jobs.TypeExtract,
@@ -1586,8 +1589,7 @@ func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	follow := h.followIndex(append(srcLocs[:len(srcLocs):len(srcLocs)], destLoc)...)
-	srcLocs, destLoc = pathloc.Locals(srcLocs), destLoc.Local() // see AddTransferJob
+	srcLocs, destLoc, follow := h.diskJobPaths(srcLocs, destLoc)
 	job := &jobs.Job{
 		ID:                 jobs.NewJobID(),
 		Type:               jobs.TypeFlatten,

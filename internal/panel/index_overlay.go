@@ -114,12 +114,18 @@ func GhostRefusal(names []string) string {
 	return "Only in the index: " + strings.Join(names, ", ")
 }
 
+// ShowsIndex reports whether the panel shows index data: browsing with fileindex or showing the
+// index itself (fileindex:// path).
+func (s *State) ShowsIndex() bool {
+	return s.WithIndex || s.Path.Scheme() == pathloc.SchemeFileIndex
+}
+
 // FollowsIndex reports whether a file operation keeps the fileindex in step with the disk: it was
 // started from a panel browsing with fileindex or showing the index (fileindex:// path; p may be
 // nil), or it names a fileindex:// path. Operations started from an ordinary local panel leave
 // the index alone. A pure string check, safe on the UI goroutine.
 func FollowsIndex(p *State, paths ...pathloc.Path) bool {
-	if p != nil && (p.WithIndex || p.Path.Scheme() == pathloc.SchemeFileIndex) {
+	if p != nil && p.ShowsIndex() {
 		return true
 	}
 	for _, loc := range paths {

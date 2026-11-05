@@ -55,7 +55,7 @@ func (h *Handler) HandleDifferences(p DifferencesPayload) {
 	if errors.Is(p.Err, context.Canceled) {
 		return
 	}
-	if h.model.ViewMode != ui.ViewBrowser || h.model.ModalDialogOpen() || h.model.ActivePanel != p.PanelID {
+	if !h.stillBrowsing(p.PanelID) {
 		return
 	}
 	name := filepath.Base(p.Root)

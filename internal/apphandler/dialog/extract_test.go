@@ -41,6 +41,61 @@ func TestExtractQueuedMessageDoesNotCallExistingUnsupportedTool(t *testing.T) {
 	}
 }
 
+// An extract on a fileindex:// panel plans and queues on the disk paths those paths name.
+func TestExecuteExtractTranslatesIndexPaths(t *testing.T) {
+	if archive.ProbeToolchain().Gzip == "" {
+		t.Skip("gzip not in PATH")
+	}
+	srcDir, destDir := t.TempDir(), t.TempDir()
+	archivePath := filepath.Join(srcDir, "meadow.gz")
+	writeGzipFile(t, archivePath, "incoming-thicket")
+	srcLoc, err := pathloc.FileIndex(archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	destLoc, err := pathloc.FileIndex(destDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	model := &ui.Model{}
+	if err := model.Primary.Load(srcDir); err != nil {
+		t.Fatalf("Load primary: %v", err)
+	}
+	cfg := config.Default()
+	cfg.Preview.Prefetch = false
+	host := &identityTestHost{model: model, cfg: cfg}
+	screen := uitest.Screen(t, 80, 24)
+	jobState := jobs.NewState()
+	h := New(Deps{
+		Host:   host,
+		Screen: screen,
+		Model:  model,
+		Jobs: jobsctrl.New(jobsctrl.Deps{
+			Host: host, Screen: screen, Model: model, State: jobState, Config: cfg,
+		}),
+		Preview: previewctrl.New(previewctrl.Deps{
+			Host: host, Screen: screen, Model: model, Ctx: context.Background(),
+		}),
+	})
+	h.model.FileDialog = uidialog.FileDialogState{
+		Open:           true,
+		DialogType:     uidialog.FileDialogExtract,
+		Fields:         []uidialog.FileDialogField{{Label: "Destination", Value: destLoc.String()}},
+		ExtractSources: []string{srcLoc.String()},
+	}
+
+	h.ExecuteExtract()
+
+	snap := jobState.Snapshot()
+	if len(snap) != 1 {
+		t.Fatalf("jobs = %d, want 1", len(snap))
+	}
+	if j := snap[0]; j.Sources[0].String() != archivePath || j.Destination.String() != destDir || j.FollowIndex {
+		t.Fatalf("job = %s -> %s, follow %v; want disk paths and no follow", j.Sources[0], j.Destination, j.FollowIndex)
+	}
+}
+
 func TestExecuteExtractQueuesExistingStreamWithoutUnsupportedToast(t *testing.T) {
 	if archive.ProbeToolchain().Gzip == "" {
 		t.Skip("gzip not in PATH")

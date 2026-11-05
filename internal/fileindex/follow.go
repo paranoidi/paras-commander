@@ -21,6 +21,9 @@ const (
 	// of waiting for its busy timeout.
 	busyRetries = 20
 	busyBackoff = 50 * time.Millisecond
+	// applyPause is the wait after a pass that changed records: the batches arriving meanwhile
+	// join one pass, so a job reporting many small changes costs a few panel reloads, not one each.
+	applyPause = 200 * time.Millisecond
 )
 
 // Apply makes the index follow filesystem changes pc made on disk (fschange.Sink, ADR 0023): a
@@ -36,11 +39,10 @@ func (x *Index) Apply(batch []fschange.Change) {
 	}
 	x.applyMu.Lock()
 	x.applyPending = append(x.applyPending, slices.Clone(batch))
-	if x.applyRunning {
+	if x.applyDone != nil {
 		x.applyMu.Unlock()
 		return
 	}
-	x.applyRunning = true
 	done := make(chan struct{})
 	x.applyDone = done
 	x.applyMu.Unlock()
@@ -56,7 +58,7 @@ func (x *Index) drainApplies(done chan struct{}) {
 		batches := x.applyPending
 		x.applyPending = nil
 		if len(batches) == 0 {
-			x.applyRunning = false
+			x.applyDone = nil
 			x.applyMu.Unlock()
 			return
 		}
@@ -75,6 +77,7 @@ func (x *Index) drainApplies(done chan struct{}) {
 		x.writeMu.Unlock()
 		if changed {
 			x.changed()
+			time.Sleep(applyPause)
 		}
 	}
 }
@@ -115,7 +118,7 @@ func applyBatch(d *db.DB, batch []fschange.Change) (changed bool) {
 	for _, c := range batch {
 		switch c.Kind {
 		case fschange.Removed:
-			if p, err := indexedPath(c.Path); err == nil && removeRecord(d, p) {
+			if p, err := indexedPath(c.Path); err == nil && removeRecord(d, p, c.IsDir) {
 				changed = true
 			}
 		case fschange.Renamed:
@@ -124,7 +127,7 @@ func applyBatch(d *db.DB, batch []fschange.Change) (changed bool) {
 			if err1 != nil || err2 != nil || from == to {
 				continue
 			}
-			if dir, ok := recordKind(d, from); ok {
+			if dir, ok := recordKind(d, from, c.IsDir); ok {
 				moves = append(moves, move{from: from, to: to, dir: dir})
 			}
 		}
@@ -143,18 +146,27 @@ func indexedPath(p string) (string, error) {
 	return filepath.Join(dir, filepath.Base(p)), nil
 }
 
-// recordKind reports whether the index has a record at p, and whether it is a directory.
-func recordKind(d *db.DB, p string) (dir, ok bool) {
-	if _, found, err := db.DirByPath(d, p); err == nil && found {
-		return true, true
+// recordKind reports whether the index has a record at p, and whether it is a directory. It looks
+// for the likely kind first: each lookup walks the path, and the change says which it probably is.
+func recordKind(d *db.DB, p string, likelyDir bool) (dir, ok bool) {
+	isDir := func() bool { _, found, err := db.DirByPath(d, p); return err == nil && found }
+	isFile := func() bool { _, found, err := d.InstanceID(p); return err == nil && found }
+	if likelyDir {
+		if isDir() {
+			return true, true
+		}
+		return false, isFile()
 	}
-	_, found, err := d.InstanceID(p)
-	return false, err == nil && found
+	if isFile() {
+		return false, true
+	}
+	dir = isDir()
+	return dir, dir
 }
 
 // removeRecord removes the directory tree or file record at p; false when the index has none.
-func removeRecord(d *db.DB, p string) bool {
-	dir, ok := recordKind(d, p)
+func removeRecord(d *db.DB, p string, likelyDir bool) bool {
+	dir, ok := recordKind(d, p, likelyDir)
 	if !ok {
 		return false
 	}
@@ -189,11 +201,7 @@ func moveRecords(d *db.DB, moves []move) (changed bool) {
 	for _, m := range moves {
 		froms[m.from] = true
 	}
-	chained := false
-	for _, m := range moves {
-		chained = chained || froms[m.to]
-	}
-	if !chained {
+	if !slices.ContainsFunc(moves, func(m move) bool { return froms[m.to] }) {
 		for _, m := range moves {
 			if moveRecord(d, m.from, m.to, m.dir) {
 				changed = true
@@ -226,14 +234,10 @@ func moveRecords(d *db.DB, moves []move) (changed bool) {
 // indexed directory merges, which db.Move does.
 func moveRecord(d *db.DB, from, to string, dir bool) bool {
 	if !dir {
-		if _, found, err := d.InstanceID(to); err == nil && found {
-			err := retryBusy(func() error { _, err := d.RemoveInstance(to); return err })
-			if err != nil && !isNotIndexed(err) {
-				return false
-			}
+		err := retryBusy(func() error { _, err := d.RemoveInstance(to); return err })
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return false
 		}
 	}
 	return retryBusy(func() error { _, err := d.Move(from, to, nil); return err }) == nil
 }
-
-func isNotIndexed(err error) bool { return err != nil && errors.Is(err, fs.ErrNotExist) }

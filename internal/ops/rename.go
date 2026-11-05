@@ -2,7 +2,6 @@ package ops
 
 import (
 	"context"
-	"os"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -50,7 +49,7 @@ func ExecuteRename(ctx context.Context, plan RenamePlan) error {
 	if err != nil {
 		return err
 	}
-	if oldLoc, newLoc, err = renameOnDisk(oldLoc, newLoc); err != nil {
+	if oldLoc, newLoc, err = renameOnDisk(ctx, oldLoc, newLoc); err != nil {
 		return err
 	}
 	be, err := backendFor(oldLoc)
@@ -71,7 +70,7 @@ func ExecuteRename(ctx context.Context, plan RenamePlan) error {
 // renameOnDisk translates a fileindex:// rename of an entry on disk to the real paths. The index
 // lists indexed files only, so the planner's target check cannot see an unindexed file that
 // rename(2) would silently replace: the target is checked on disk here.
-func renameOnDisk(oldLoc, newLoc pathloc.Path) (pathloc.Path, pathloc.Path, error) {
+func renameOnDisk(ctx context.Context, oldLoc, newLoc pathloc.Path) (pathloc.Path, pathloc.Path, error) {
 	if oldLoc.Scheme() != pathloc.SchemeFileIndex || newLoc.Scheme() != pathloc.SchemeFileIndex {
 		return oldLoc, newLoc, nil
 	}
@@ -80,13 +79,9 @@ func renameOnDisk(oldLoc, newLoc pathloc.Path) (pathloc.Path, pathloc.Path, erro
 		return oldLoc, newLoc, nil
 	}
 	target := newLoc.Local()
-	host, err := target.FilePath()
-	if err != nil {
-		return oldLoc, newLoc, err
-	}
-	if _, err := os.Lstat(host); err == nil {
+	if _, err := statEntry(ctx, target); err == nil {
 		return oldLoc, newLoc, &Error{Op: "rename", Text: "target already exists"}
-	} else if !notThere(err) {
+	} else if !isNotExist(err) {
 		return oldLoc, newLoc, &Error{Op: "rename", Text: "cannot stat target", Err: err}
 	}
 	return local, target, nil

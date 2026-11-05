@@ -80,7 +80,7 @@ func (a *App) wireIndexOverlay() {
 // jobs make on disk through the fschange sink (UI goroutine).
 func (a *App) reloadIndexPanels() {
 	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
-		if p := a.panelByID(id); (p.WithIndex || p.Path.Scheme() == pathloc.SchemeFileIndex) && !p.ListingPending {
+		if p := a.panelByID(id); p.ShowsIndex() && !p.ListingPending {
 			_ = p.Refresh(a.panelViewportRows(id))
 		}
 	}

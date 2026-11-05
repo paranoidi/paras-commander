@@ -160,8 +160,7 @@ func (h *Handler) confirmFlatten() {
 		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return
 	}
-	// fileindex:// paths name real directories: validate them as the job will see them.
-	if err := ops.ValidateFlattenTarget(pathloc.Locals(roots), destLoc.Local()); err != nil {
+	if err := ops.ValidateFlattenTarget(roots, destLoc); err != nil {
 		var opsErr *ops.Error
 		if errors.As(err, &opsErr) {
 			h.host.SetTransientMessage(opsErr.Text, ui.MessageUrgencyWarn)
