@@ -131,11 +131,11 @@ func helpDialogOverlayFooterKeys(keys *keymap.Map, textEdit bool) []menu.Functio
 		hint = "All keys"
 	}
 	var out []menu.FunctionKey
-	if lbl := keys.MenuBindingLabel(keymap.ActionHelpTextEditKeys); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint})
-	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionHelpLegend); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Icon legend"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionHelpTextEditKeys); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint})
 	}
 	return out
 }
