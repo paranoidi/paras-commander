@@ -31,6 +31,11 @@ type WakePayload struct {
 	TerminalPanelDrawer      ui.TerminalDrawer
 	TerminalPanelClearDrawer bool
 
+	// measure, when set, runs on the event loop after the panel changes above and before applied
+	// closes, so a batch goroutine can read layout (which touches main-goroutine state) without
+	// leaving the main goroutine.
+	measure func()
+
 	applied chan struct{}
 }
 
@@ -87,6 +92,9 @@ func (h *Handler) ApplyWake(p WakePayload) {
 		h.host.SetTransientMessageBanner(p.NotifyLog, p.NotifyBanner, p.NotifyUrg)
 	}
 	h.applyTerminalPanelWake(p)
+	if p.measure != nil {
+		p.measure()
+	}
 	if p.applied != nil {
 		close(p.applied)
 	}

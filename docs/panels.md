@@ -16,7 +16,7 @@ Press `M-t` (`panel.cycle-listing-format`) to cycle the active panel through the
 | `mtime` | name, meta columns, size, modified time |
 | `perm` | as `mtime` plus permissions |
 
-`default_listing_format` in [config.md](config.md#panels) picks the startup format. A narrow panel can show only the name column (`[ui].shrunken_shows_name_only`, see [config.md](config.md#ui)). `M-z` (`panel.toggle-zoom-active-panel`) zooms the active panel for the session, and `S-Tab` (`panel.toggle-hide-inactive`) hides the inactive one. See [Layout](layout.md).
+`default_listing_format` in [config.md](config.md#panels) picks the startup format. A narrow panel can show only the name column (`[ui].shrunken_shows_name_only`, see [config.md](config.md#ui)). `M-z` (`panel.toggle-zoom-active-panel`) zooms the active panel for the session (unless its file name column is already wide, see [`[ui.zoom]`](config.md#uizoom)), and `S-Tab` (`panel.toggle-hide-inactive`) hides the inactive one. See [Layout](layout.md).
 
 ### Long names
 

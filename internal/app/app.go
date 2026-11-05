@@ -285,7 +285,8 @@ type App struct {
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on
 	// Configuration OK so saved TOML is the sole persisted source of truth. Layout still suppresses
-	// zoom while quick view / file preview is active and when terminal width ≥ cfg.UI.ZoomActivePanelDisabledAboveWidth (when > 0).
+	// zoom while quick view / file preview is active and when the active panel's file-name column at an even
+	// split is ≥ cfg.UI.Zoom.DisabledAboveNameWidth (when > 0).
 	zoomActivePanelOverride *bool
 	// carouselAutohideOverride is set by the hide-inactive-panel toggle to keep the twin panel
 	// visible despite carousel autohide; cleared once carousel is off on both panels.
