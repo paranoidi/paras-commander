@@ -275,6 +275,12 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 	if a.model.MetaDialog.Open {
 		rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
+		if len(a.model.MetaDialog.Entries) > 0 {
+			// KeyLabel only: a footer click replays the binding, so a rebound chord still works.
+			if lbl := a.keys.MetaDialog.MenuBindingLabel(keymap.ActionPanelMetaSave); lbl != "" {
+				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Save"}}, rest...)
+			}
+		}
 	}
 	if a.dialogCtrl.BookmarkDialogDeleteFooterEligible() {
 		if lbl := a.keys.BookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete); lbl != "" {

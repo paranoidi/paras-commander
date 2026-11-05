@@ -1149,6 +1149,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"meta", "meta.toml", "editor", "column", "command"},
 		},
 
+		{
+			ID:          ActionPanelMetaSave,
+			Title:       "Save default meta columns",
+			Section:     "View",
+			DefaultKeys: nil, // overlay: DefaultMetaDialogOverlayKeys
+			Keywords:    []string{"meta", "column", "save", "default", "fileindex", "picker"},
+		},
+
 		// ── Bookmarks ──
 		{
 			ID:           ActionBookmarkOpen,

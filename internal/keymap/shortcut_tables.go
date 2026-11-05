@@ -16,6 +16,7 @@ const (
 	DialogBookmarkShortcutsTable      = "dialog.bookmark"
 	DialogFindShortcutsTable          = "dialog.find"
 	DialogHistoryShortcutsTable       = "dialog.history"
+	DialogMetaShortcutsTable          = "dialog.meta"
 	DialogPinShortcutsTable           = "dialog.pin"
 	DialogCommandOutputShortcutsTable = "dialog.command_output"
 	DialogHelpShortcutsTable          = "dialog.help"
@@ -39,6 +40,7 @@ var dialogShortcutSubtables = map[string]struct{}{
 	"bookmark":       {},
 	"find":           {},
 	"history":        {},
+	"meta":           {},
 	"flatten":        {},
 	"transfer":       {},
 	"run_for_each":   {},
@@ -63,6 +65,7 @@ func AllShortcutTablePaths() []string {
 		DialogBookmarkShortcutsTable,
 		DialogFindShortcutsTable,
 		DialogHistoryShortcutsTable,
+		DialogMetaShortcutsTable,
 		DialogFlattenShortcutsTable,
 		DialogTransferShortcutsTable,
 		DialogRunForEachShortcutsTable,

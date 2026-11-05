@@ -1,6 +1,8 @@
 package app
 
 import (
+	"errors"
+
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -28,6 +30,18 @@ func (h metaHost) DialogMarkerWidth() int  { return dlg.MarkerWidth(h.app.styles
 
 func (h metaHost) OpenFileInExternalEditor(path string) error {
 	return h.app.openFileInExternalEditor(path)
+}
+
+func (h metaHost) SaveDefaultColumns(names []string) error {
+	if !h.app.paths.CanPersist() {
+		return errors.New("config.toml location is unknown; cannot save")
+	}
+	patch := map[string]interface{}{"fileindex": map[string]interface{}{"default_columns": names}}
+	if err := h.app.persistPartial(patch); err != nil {
+		return err
+	}
+	h.app.config.FileIndex.DefaultColumns = names
+	return nil
 }
 
 func (h metaHost) MessageLogWrapCols() int { return h.app.messageLogWrapCols() }

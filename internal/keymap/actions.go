@@ -118,6 +118,7 @@ const (
 	ActionPanelToggleSync             = "panel.toggle-sync"
 	ActionPanelMeta                   = "panel.meta"
 	ActionPanelMetaEdit               = "panel.meta-edit"
+	ActionPanelMetaSave               = "panel.meta-save" // bound via [dialog.meta], not [main]
 	ActionPanelComparePanels          = "panel.compare-panels"
 	ActionPanelFindDuplicates         = "panel.find-duplicates"
 	ActionPanelFilterDialog           = "panel.filter-dialog"
@@ -477,6 +478,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelToggleSync:             {},
 	ActionPanelMeta:                   {},
 	ActionPanelMetaEdit:               {},
+	ActionPanelMetaSave:               {},
 	ActionPanelComparePanels:          {},
 	ActionPanelFindDuplicates:         {},
 	ActionPanelFilterDialog:           {},

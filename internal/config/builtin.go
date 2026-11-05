@@ -451,6 +451,8 @@ const (
 	FileIndexBrowserScanMaxDepthUnlimited = -1
 	// DefaultFileIndexHash is [fileindex].hash: scans hash the files they index.
 	DefaultFileIndexHash = true
+	// DefaultFileIndexStartBrowseWith is [fileindex].start_browse_with: panels start without the overlay.
+	DefaultFileIndexStartBrowseWith = false
 	// DefaultFileIndexScanCommitIntervalMS is [fileindex].scan_commit_interval_ms: a scan commits
 	// what it hashed this often. Every commit flushes the index's full-text index, so with many
 	// small files per-count batches made the single database writer the bottleneck.
@@ -683,7 +685,7 @@ const (
 )
 
 // DefaultFileIndexColumns is [fileindex].default_columns: the meta columns switched on when a
-// panel enters fileindex://.
+// panel enters fileindex:// or Browse with fileindex.
 func DefaultFileIndexColumns() []string {
 	return []string{FileIndexTagsColumn}
 }

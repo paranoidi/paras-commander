@@ -28,6 +28,9 @@ type Host interface {
 	// picker state at open so its two-column sections line up.
 	DialogMarkerWidth() int
 	OpenFileInExternalEditor(path string) error
+	// SaveDefaultColumns writes names to [fileindex].default_columns in config.toml and, on
+	// success, updates the app in-memory config. It fails when config cannot be persisted.
+	SaveDefaultColumns(names []string) error
 	MessageLogWrapCols() int
 	AppendTransientMessageLines(banner string, lines []string, urgency ui.MessageUrgency)
 	ClearTransientMessage()

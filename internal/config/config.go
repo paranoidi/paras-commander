@@ -199,13 +199,16 @@ type FileIndexConfig struct {
 	// parallel_workers (auto-scaling when that is unset or "auto").
 	Workers int `toml:"workers"`
 	// DefaultColumns are the meta column names (meta.toml entries or Go providers) switched on
-	// when a panel with no active meta columns enters fileindex://. Empty switches none on.
+	// when a panel with no active meta columns enters fileindex:// or Browse with fileindex. Empty
+	// switches none on.
 	DefaultColumns []string `toml:"default_columns"`
 	// BrowserScanMaxDepth is how many directory levels the automatic check of indexed folders
 	// descends while browsing with fileindex: N levels, -1 unlimited, 0 off (see AutoDriftDepth).
 	BrowserScanMaxDepth int `toml:"browser_scan_max_depth"`
 	// Hash makes scans hash the files they index; false stops a scan after the walk and prune.
 	Hash bool `toml:"hash"`
+	// StartBrowseWith makes both panels start in Browse with fileindex.
+	StartBrowseWith bool `toml:"start_browse_with"`
 	// ScanCommitIntervalMS is how often a scan commits what it hashed (see ScanCommitInterval).
 	ScanCommitIntervalMS int `toml:"scan_commit_interval_ms"`
 }
@@ -901,6 +904,7 @@ func Default() Config {
 			BrowserScanMaxDepth:  DefaultFileIndexBrowserScanMaxDepth,
 			Hash:                 DefaultFileIndexHash,
 			ScanCommitIntervalMS: DefaultFileIndexScanCommitIntervalMS,
+			StartBrowseWith:      DefaultFileIndexStartBrowseWith,
 		},
 	}
 }

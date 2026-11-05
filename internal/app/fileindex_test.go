@@ -141,6 +141,12 @@ func TestFileIndexMenuOpensOnLessThanAndRunsLetter(t *testing.T) {
 // index the app is configured to use.
 func fileIndexApp(t *testing.T) (*App, tcell.SimulationScreen, string, string) {
 	t.Helper()
+	return fileIndexAppWith(t, nil)
+}
+
+// fileIndexAppWith is fileIndexApp with tune applied to the options before the app is built.
+func fileIndexAppWith(t *testing.T, tune func(*Options)) (*App, tcell.SimulationScreen, string, string) {
+	t.Helper()
 	dir, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -169,6 +175,9 @@ func fileIndexApp(t *testing.T) (*App, tcell.SimulationScreen, string, string) {
 	screen := newScreen(t, 100, 30)
 	opts := testOptions(dir)
 	opts.Config.FileIndex.Database = dbPath
+	if tune != nil {
+		tune(&opts)
+	}
 	a := newTestApp(t, screen, opts)
 	t.Cleanup(func() { _ = a.fileIndex.Close() })
 	return a, screen, dir, dbPath
@@ -695,6 +704,33 @@ func entryStatus(a *App, name string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func TestFileIndexStartBrowseWith(t *testing.T) {
+	a, _, _, _ := fileIndexApp(t)
+	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
+		if a.panelByID(id).WithIndex {
+			t.Fatalf("panel %d starts with the overlay by default", id)
+		}
+	}
+
+	a, screen, _, _ := fileIndexAppWith(t, func(o *Options) { o.Config.FileIndex.StartBrowseWith = true })
+	for _, id := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
+		if !a.panelByID(id).WithIndex {
+			t.Fatalf("panel %d does not start in Browse with fileindex", id)
+		}
+	}
+	drainInterruptEventsUntil(t, a, screen, 3*time.Second, func() bool {
+		// The fixture's recorded mtime differs from the file's, so the row reads "changed";
+		// any status proves the overlay ran (a plain listing leaves it empty).
+		st, _ := entryStatus(a, "harbor.txt")
+		return st != ""
+	})
+	a.render() // Run's first render reconciles the panels, which switches the default columns on
+	cols := a.model.MetaResults[a.model.ActivePanel]
+	if len(cols) != 1 || cols[0].EntryName != config.FileIndexTagsColumn {
+		t.Fatalf("meta columns = %+v, want the %s column", cols, config.FileIndexTagsColumn)
+	}
 }
 
 func TestFileIndexBrowseWithOverlayAndToggle(t *testing.T) {

@@ -66,6 +66,9 @@ works on the disk), and the index is merged into it:
   **ghost rows** (icon `missing`), with their indexed size and modification
   time.
 
+`[fileindex] start_browse_with` ([config.toml](config.md)) starts both panels
+with the mode on.
+
 The mode stays on while you navigate to other local directories and turns off
 when the panel leaves local paths (SFTP; on an SFTP panel the action says
 fileindex covers local paths only). On a `fileindex://` panel the action goes to
@@ -277,8 +280,8 @@ index. A directory's indexed size shows in the size column of an index view
 
 A panel with no meta columns switches on the columns in
 `[fileindex] default_columns` ([config.toml](config.md); the tags column by
-default) when it enters an index view, and switches them off again when it
-leaves.
+default) when it enters an index view (a `fileindex://` panel or Browse with
+fileindex), and switches them off again when it leaves both.
 
 ## Tags
 

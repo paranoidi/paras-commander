@@ -64,6 +64,7 @@ func (a *App) wireIndexOverlay() {
 		p.IndexOverlay = a.fileIndex.Overlay
 		p.ScheduleIndexDrift = a.indexDriftScheduler(id)
 		p.IndexAutoDriftDepth = a.config.FileIndex.AutoDriftDepth()
+		p.WithIndex = a.config.FileIndex.StartBrowseWith
 	}
 	forget := a.disk.engine.ForgetSized
 	a.fileIndex.OnChange = func() {

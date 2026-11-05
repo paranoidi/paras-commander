@@ -763,6 +763,8 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Config:    cfg,
 		ConfigDir: resolvedPaths.ConfigDir,
 		Providers: app.fileIndex.Providers(),
+
+		KeysMetaDialog: keys.MetaDialog,
 	})
 	app.commandsCtrl = commandsctrl.New(commandsctrl.Deps{
 		Host:                    commandsHost{appShellHost: appShellHost{app: app}},
@@ -950,6 +952,7 @@ func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 		{&rk.BookmarkDialog, keymap.DefaultBookmarkDialogOverlayKeys, "bookmark dialog overlay"},
 		{&rk.FindDialog, keymap.DefaultFindDialogOverlayKeys, "find dialog overlay"},
 		{&rk.HistoryDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
+		{&rk.MetaDialog, keymap.DefaultMetaDialogOverlayKeys, "meta dialog overlay"},
 		{&rk.HelpDialog, keymap.DefaultHelpDialogOverlayKeys, "help dialog overlay"},
 		{&rk.UserMenu, keymap.DefaultUserMenuOverlayKeys, "user menu overlay"},
 		{&rk.FilePreview, keymap.DefaultFilePreviewOverlayKeys, "preview overlay"},

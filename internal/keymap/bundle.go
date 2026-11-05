@@ -25,6 +25,7 @@ type Bundle struct {
 	HelpDialog          *Map // F1 help dialog (switch to text-edit keys page)
 	UserMenu            *Map // F2 user menu strip (back to parent submenu)
 	CommandOutputDialog *Map // user-menu command output dialog (toggle path selection)
+	MetaDialog          *Map // meta columns picker (save default columns)
 	// LeaderKey maps action ID → single-letter Esc function-menu leader key (merged defaults + user).
 	LeaderKey map[string]string
 	// CopyMenuKey maps action ID → single-letter `"` copy-menu key (merged defaults + user).

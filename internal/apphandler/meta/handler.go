@@ -14,6 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -434,11 +435,7 @@ func (h *Handler) ActivateSelection() {
 		return
 	}
 
-	maxCols := config.DefaultMetaMaxActiveColumns
-	if len(activeNames) > maxCols {
-		h.host.SetTransientMessage(fmt.Sprintf("meta: showing first %d of %d selected columns", maxCols, len(activeNames)), ui.MessageUrgencyWarn)
-		activeNames = activeNames[:maxCols]
-	}
+	activeNames = h.limitActiveNames(activeNames)
 
 	if p := h.host.PanelByID(panelID); p != nil {
 		wasActive := make(map[string]bool, len(prevActive))
@@ -463,6 +460,17 @@ func (h *Handler) ActivateSelection() {
 	}
 
 	h.activate(panelID, activeNames)
+}
+
+// limitActiveNames returns the names a panel may have active at once (the first
+// config.DefaultMetaMaxActiveColumns), warning when it drops any.
+func (h *Handler) limitActiveNames(names []string) []string {
+	maxCols := config.DefaultMetaMaxActiveColumns
+	if len(names) <= maxCols {
+		return names
+	}
+	h.host.SetTransientMessage(fmt.Sprintf("meta: showing first %d of %d selected columns", maxCols, len(names)), ui.MessageUrgencyWarn)
+	return names[:maxCols]
 }
 
 // deactivate clears the panel's meta columns, falling back from a meta sort or filter.
@@ -512,19 +520,20 @@ func (h *Handler) activate(panelID int, activeNames []string) {
 
 // HandlePanelDirChanged re-runs active meta commands when the panel navigates to a new directory.
 // The meta file is resolved and loaded off the UI goroutine to avoid blocking on disk I/O.
-// A panel with no active columns entering fileindex:// switches on [fileindex].default_columns,
-// and leaving it switches them off again unless the picker changed the columns meanwhile.
+// A panel with no active columns entering an index view (fileindex:// or Browse with fileindex)
+// switches on [fileindex].default_columns, and leaving the index views switches them off again
+// unless the picker changed the columns meanwhile. Moving between the two views is not an edge.
 func (h *Handler) HandlePanelDirChanged(panelID int) {
 	p := h.host.PanelByID(panelID)
 	if p == nil {
 		return
 	}
-	inIndex := p.Path.Scheme() == pathloc.SchemeFileIndex
-	entered := inIndex && !h.inFileIndex[panelID]
-	left := !inIndex && h.inFileIndex[panelID]
-	h.inFileIndex[panelID] = inIndex
+	inIndex := p.Path.Scheme() == pathloc.SchemeFileIndex || p.WithIndex
+	entered := inIndex && !h.inIndexView[panelID]
+	left := !inIndex && h.inIndexView[panelID]
+	h.inIndexView[panelID] = inIndex
 	if entered && len(h.activeEntries[panelID]) == 0 && len(h.config.FileIndex.DefaultColumns) > 0 {
-		h.activate(panelID, h.config.FileIndex.DefaultColumns)
+		h.activate(panelID, h.limitActiveNames(h.config.FileIndex.DefaultColumns))
 		h.autoColumns[panelID] = true
 		return
 	}
@@ -575,7 +584,9 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 		// A broken meta.toml still leaves the Go column providers to run.
 		h.host.SetTransientMessage(d.LoadErr, ui.MessageUrgencyCritical)
 	}
-	if d.MF == nil {
+	// Without a file, columns the user picked stay until a load works again; default columns
+	// fall through and are dropped (an index view with no index database and no meta.toml).
+	if d.MF == nil && !h.autoColumns[d.PanelID] {
 		return
 	}
 	panel := h.host.PanelByID(d.PanelID)
@@ -590,8 +601,8 @@ func (h *Handler) HandleLoad(d LoadPayload) {
 	}
 	sorted := metacmds.SortEntriesForDisplay(d.ActiveNames, d.MF)
 	if len(sorted) == 0 {
-		// None of the names exist (e.g. a stale [fileindex].default_columns): drop the
-		// placeholder columns rather than leaving empty headers.
+		// None of the names exist (e.g. a stale [fileindex].default_columns, or no entries at
+		// all): drop the placeholder columns rather than leaving empty headers.
 		h.model.MetaResults[d.PanelID] = nil
 		h.activeEntries[d.PanelID] = nil
 		return
@@ -911,6 +922,10 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.MetaDialog
 	if event.Key() == tcell.KeyF9 {
 		h.editConfigFromDialog()
+		return
+	}
+	if id, ok := h.keysMetaDialog.Lookup(event); ok && id == keymap.ActionPanelMetaSave {
+		h.saveDefaultColumns()
 		return
 	}
 	if ev, ok := dlg.HandleKey(dialog.MetaDialogView(*st), &st.Focus, event); ok {

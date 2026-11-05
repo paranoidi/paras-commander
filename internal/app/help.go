@@ -304,6 +304,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if a.keys.HistoryDialog != nil {
 		add(a.keys.HistoryDialog.BindingsForAction(actionID))
 	}
+	if a.keys.MetaDialog != nil {
+		add(a.keys.MetaDialog.BindingsForAction(actionID))
+	}
 	if a.keys.HelpDialog != nil {
 		add(a.keys.HelpDialog.BindingsForAction(actionID))
 	}
@@ -339,6 +342,9 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 		add(od)
 	}
 	if od := keymap.DefaultHistoryDialogOverlayKeys()[actionID]; len(od) > 0 {
+		add(od)
+	}
+	if od := keymap.DefaultMetaDialogOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
 	if od := keymap.DefaultHelpDialogOverlayKeys()[actionID]; len(od) > 0 {

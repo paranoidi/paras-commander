@@ -10,6 +10,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/sched"
@@ -25,6 +26,8 @@ type Deps struct {
 	ConfigDir string
 	// Providers are the Go column providers offered beside the meta.toml entries.
 	Providers []*metacmds.Provider
+	// KeysMetaDialog is the [dialog.meta] overlay (save default columns); nil means no binding.
+	KeysMetaDialog *keymap.Map
 }
 
 // Handler owns meta.toml command dispatch and the meta checkbox dialog.
@@ -35,16 +38,18 @@ type Handler struct {
 	config    config.Config
 	configDir string
 	providers []*metacmds.Provider
+	// keysMetaDialog resolves the picker overlay chords before the widget engine sees the key.
+	keysMetaDialog *keymap.Map
 
 	// activeEntries holds ordered entry names for active meta columns per panel.
 	activeEntries [2][]string
 	// navPath holds the last panel path for which meta was run (used to detect navigation).
 	navPath [2]string
-	// inFileIndex is whether the panel was on fileindex:// at the last dir-change check, so
-	// default columns switch on only when it enters the index.
-	inFileIndex [2]bool
+	// inIndexView is whether the panel was in an index view (fileindex:// or Browse with
+	// fileindex) at the last dir-change check, so default columns switch on only when it enters one.
+	inIndexView [2]bool
 	// autoColumns is whether the panel's columns are the fileindex defaults switched on by
-	// entering the index (cleared when the picker applies), so leaving it switches them off.
+	// entering an index view (cleared when the picker applies), so leaving it switches them off.
 	autoColumns [2]bool
 	// run is the in-flight meta run per panel (nil if none), kept so ReconcileForPanel can
 	// dispatch only newly appeared entries into it.
@@ -79,6 +84,8 @@ func New(deps Deps) *Handler {
 		config:    deps.Config,
 		configDir: strings.TrimSpace(deps.ConfigDir),
 		providers: deps.Providers,
+
+		keysMetaDialog: deps.KeysMetaDialog,
 	}
 }
 

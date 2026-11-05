@@ -17,6 +17,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -34,12 +35,23 @@ type fakeHost struct {
 	resortCalls []int
 	// resolvedCalls records NoteMetaColumnResolved panelIDs, in call order.
 	resolvedCalls []int
+	// saveCalls records SaveDefaultColumns arguments; saveErr is returned from each call.
+	saveCalls [][]string
+	saveErr   error
+	// errMessages records SetErrorMessage errors; transient records urgencies by message.
+	errMessages []error
+	urgencies   []ui.MessageUrgency
 }
 
-func (f *fakeHost) SetTransientMessage(text string, _ ui.MessageUrgency) {
+func (f *fakeHost) SetTransientMessage(text string, u ui.MessageUrgency) {
 	f.messages = append(f.messages, text)
+	f.urgencies = append(f.urgencies, u)
 }
-func (f *fakeHost) SetErrorMessage(_ string, _ error) {}
+func (f *fakeHost) SetErrorMessage(_ string, err error) { f.errMessages = append(f.errMessages, err) }
+func (f *fakeHost) SaveDefaultColumns(names []string) error {
+	f.saveCalls = append(f.saveCalls, names)
+	return f.saveErr
+}
 func (f *fakeHost) PanelByID(id int) *panel.State {
 	if id < 0 || id > 1 {
 		return nil
@@ -917,5 +929,229 @@ func TestHandlePanelDirChanged_fileIndexDefaultColumns(t *testing.T) {
 	h.HandlePanelDirChanged(0)
 	if len(h.activeEntries[0]) != 1 {
 		t.Fatalf("activeEntries = %v, want picker columns kept", h.activeEntries[0])
+	}
+}
+
+func TestHandlePanelDirChanged_browseWithDefaultColumns(t *testing.T) {
+	fh := &fakeHost{}
+	fh.panels[0] = testPanel(t, t.TempDir(), nil)
+	fh.panels[0].WithIndex = true
+	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
+
+	h.HandlePanelDirChanged(0)
+	if got := h.activeEntries[0]; len(got) != 1 || got[0] != config.FileIndexTagsColumn {
+		t.Fatalf("activeEntries = %v, want [%s]", got, config.FileIndexTagsColumn)
+	}
+
+	// Turning Browse with fileindex off switches the defaults off.
+	fh.panels[0].WithIndex = false
+	h.HandlePanelDirChanged(0)
+	if len(h.activeEntries[0]) != 0 || h.model.MetaResults[0] != nil {
+		t.Fatalf("activeEntries = %v, want none after leaving the index", h.activeEntries[0])
+	}
+
+	// Columns picked by the user stay on after leaving.
+	fh.panels[0].WithIndex = true
+	h.HandlePanelDirChanged(0)
+	h.autoColumns[0] = false // as ActivateSelection does
+	fh.panels[0].WithIndex = false
+	h.HandlePanelDirChanged(0)
+	if len(h.activeEntries[0]) != 1 {
+		t.Fatalf("activeEntries = %v, want picker columns kept", h.activeEntries[0])
+	}
+
+	// Moving from fileindex:// to Browse with fileindex is not an edge.
+	fh2 := &fakeHost{}
+	fh2.panels[0] = testPanel(t, "fileindex:///orchard", nil)
+	h2 := &Handler{host: fh2, model: &ui.Model{}, config: config.Default()}
+	h2.HandlePanelDirChanged(0)
+	fh2.panels[0] = testPanel(t, t.TempDir(), nil)
+	fh2.panels[0].WithIndex = true
+	h2.HandlePanelDirChanged(0)
+	if len(h2.activeEntries[0]) != 1 || !h2.autoColumns[0] {
+		t.Fatalf("activeEntries = %v, autoColumns = %v, want columns and autoColumns kept", h2.activeEntries[0], h2.autoColumns[0])
+	}
+}
+
+func metaSaveHandler(t *testing.T, fh *fakeHost, entries []string, checked []bool) *Handler {
+	t.Helper()
+	keys, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default(), keysMetaDialog: keys.MetaDialog}
+	h.activeEntries[0] = []string{"orchard"}
+	st := dialog.MetaDialogState{Open: true, PanelID: 0, Checked: checked, Focus: dialog.MetaEntryID(1)}
+	for _, n := range entries {
+		st.Entries = append(st.Entries, dialog.MetaEntry{Name: n, Description: n})
+	}
+	h.model.MetaDialog = st
+	return h
+}
+
+func TestSaveDefaultColumns_savesCheckedInOrder(t *testing.T) {
+	fh := &fakeHost{}
+	h := metaSaveHandler(t, fh, []string{"meadow", "lantern", "harbor"}, []bool{true, false, true})
+	h.autoColumns[0] = true
+
+	h.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+
+	if len(fh.saveCalls) != 1 || strings.Join(fh.saveCalls[0], ",") != "meadow,harbor" {
+		t.Fatalf("saveCalls = %v, want [[meadow harbor]]", fh.saveCalls)
+	}
+	if got := strings.Join(h.config.FileIndex.DefaultColumns, ","); got != "meadow,harbor" {
+		t.Fatalf("config default columns = %q", got)
+	}
+	if len(fh.messages) != 1 || fh.messages[0] != "Saved 2 default columns" || fh.urgencies[0] != ui.MessageUrgencySuccess {
+		t.Fatalf("messages = %v urgencies = %v", fh.messages, fh.urgencies)
+	}
+	st := h.model.MetaDialog
+	if !st.Open || st.Focus != dialog.MetaEntryID(1) || !st.Checked[0] || st.Checked[1] || !st.Checked[2] {
+		t.Fatalf("dialog changed: %+v", st)
+	}
+	if got := h.activeEntries[0]; len(got) != 1 || got[0] != "orchard" || !h.autoColumns[0] {
+		t.Fatalf("panel columns changed: active=%v auto=%v", got, h.autoColumns[0])
+	}
+}
+
+func TestSaveDefaultColumns_singular(t *testing.T) {
+	fh := &fakeHost{}
+	h := metaSaveHandler(t, fh, []string{"meadow", "lantern"}, []bool{false, true})
+	h.saveDefaultColumns()
+	if len(fh.messages) != 1 || fh.messages[0] != "Saved 1 default column" {
+		t.Fatalf("messages = %v", fh.messages)
+	}
+}
+
+func TestSaveDefaultColumns_noneCheckedSavesEmptyList(t *testing.T) {
+	fh := &fakeHost{}
+	h := metaSaveHandler(t, fh, []string{"meadow"}, []bool{false})
+	h.saveDefaultColumns()
+	if len(fh.saveCalls) != 1 || fh.saveCalls[0] == nil || len(fh.saveCalls[0]) != 0 {
+		t.Fatalf("saveCalls = %#v, want one non-nil empty slice", fh.saveCalls)
+	}
+	if h.config.FileIndex.DefaultColumns == nil || len(h.config.FileIndex.DefaultColumns) != 0 {
+		t.Fatalf("config default columns = %#v", h.config.FileIndex.DefaultColumns)
+	}
+	if len(fh.messages) != 1 || fh.messages[0] != "Saved no default columns" {
+		t.Fatalf("messages = %v", fh.messages)
+	}
+}
+
+func TestSaveDefaultColumns_errorKeepsConfig(t *testing.T) {
+	fh := &fakeHost{saveErr: errors.New("disk full")}
+	h := metaSaveHandler(t, fh, []string{"meadow"}, []bool{true})
+	before := append([]string(nil), h.config.FileIndex.DefaultColumns...)
+	h.saveDefaultColumns()
+	if strings.Join(h.config.FileIndex.DefaultColumns, ",") != strings.Join(before, ",") {
+		t.Fatalf("config changed on error: %v -> %v", before, h.config.FileIndex.DefaultColumns)
+	}
+	if len(fh.errMessages) != 1 || len(fh.messages) != 0 {
+		t.Fatalf("errMessages = %v messages = %v", fh.errMessages, fh.messages)
+	}
+	if !h.model.MetaDialog.Open {
+		t.Fatal("dialog closed on error")
+	}
+}
+
+func TestSaveDefaultColumns_noEntriesDoesNothing(t *testing.T) {
+	fh := &fakeHost{}
+	h := metaSaveHandler(t, fh, nil, nil)
+	h.model.MetaDialog.Notice = "no commands defined"
+	h.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if len(fh.saveCalls) != 0 || len(fh.messages) != 0 || len(fh.errMessages) != 0 {
+		t.Fatalf("unexpected host activity: %+v", fh)
+	}
+}
+
+func TestSaveDefaultColumns_nilKeymapIsNoBinding(t *testing.T) {
+	fh := &fakeHost{}
+	h := metaSaveHandler(t, fh, []string{"meadow"}, []bool{true})
+	h.keysMetaDialog = nil
+	h.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if len(fh.saveCalls) != 0 {
+		t.Fatalf("saved without a binding: %v", fh.saveCalls)
+	}
+}
+
+// overLimitColumnNames returns one more column name than a panel may have active.
+func overLimitColumnNames(t *testing.T) []string {
+	t.Helper()
+	names := []string{"meadow", "lantern", "harbor", "willow", "copper", "thistle", "ember", "juniper", "saffron"}
+	if len(names) != config.DefaultMetaMaxActiveColumns+1 {
+		t.Fatalf("fixture has %d names, want the limit plus one", len(names))
+	}
+	return names
+}
+
+func TestHandlePanelDirChanged_defaultColumnsCapped(t *testing.T) {
+	names := overLimitColumnNames(t)
+	fh := &fakeHost{}
+	fh.panels[0] = testPanel(t, "fileindex:///orchard", nil)
+	cfg := config.Default()
+	cfg.FileIndex.DefaultColumns = names
+	h := &Handler{host: fh, model: &ui.Model{}, config: cfg}
+
+	h.HandlePanelDirChanged(0)
+
+	if got := strings.Join(h.activeEntries[0], ","); got != strings.Join(names[:config.DefaultMetaMaxActiveColumns], ",") {
+		t.Fatalf("activeEntries = %q, want the first %d", got, config.DefaultMetaMaxActiveColumns)
+	}
+	if len(fh.urgencies) != 1 || fh.urgencies[0] != ui.MessageUrgencyWarn {
+		t.Fatalf("messages = %v urgencies = %v, want one warning", fh.messages, fh.urgencies)
+	}
+}
+
+func TestSaveDefaultColumns_capsAtActiveLimit(t *testing.T) {
+	names := overLimitColumnNames(t)
+	checked := make([]bool, len(names))
+	for i := range checked {
+		checked[i] = true
+	}
+	fh := &fakeHost{}
+	h := metaSaveHandler(t, fh, names, checked)
+
+	h.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+
+	want := strings.Join(names[:config.DefaultMetaMaxActiveColumns], ",")
+	if len(fh.saveCalls) != 1 || strings.Join(fh.saveCalls[0], ",") != want {
+		t.Fatalf("saveCalls = %v, want the first %d", fh.saveCalls, config.DefaultMetaMaxActiveColumns)
+	}
+	if got := strings.Join(h.config.FileIndex.DefaultColumns, ","); got != want {
+		t.Fatalf("config default columns = %q", got)
+	}
+	wantMsg := fmt.Sprintf("Saved first %d of %d default columns", config.DefaultMetaMaxActiveColumns, len(names))
+	if len(fh.messages) != 1 || fh.messages[0] != wantMsg || fh.urgencies[0] != ui.MessageUrgencyWarn {
+		t.Fatalf("messages = %v urgencies = %v", fh.messages, fh.urgencies)
+	}
+}
+
+// An index view with no index database and no meta.toml has no entries at all: the default
+// columns must go instead of leaving empty placeholder headers.
+func TestHandleLoad_noFileDropsDefaultColumns(t *testing.T) {
+	fh := &fakeHost{}
+	fh.panels[0] = testPanel(t, t.TempDir(), nil)
+	fh.panels[0].WithIndex = true
+	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
+	h.HandlePanelDirChanged(0)
+
+	h.HandleLoad(LoadPayload{PanelID: 0, LoadGen: h.loadGen[0], Path: fh.panels[0].PathString(), ActiveNames: h.activeEntries[0]})
+
+	if len(h.activeEntries[0]) != 0 || h.model.MetaResults[0] != nil {
+		t.Fatalf("activeEntries = %v results = %v, want the placeholders gone", h.activeEntries[0], h.model.MetaResults[0])
+	}
+}
+
+// A meta.toml that stops loading must not wipe columns the user picked.
+func TestHandleLoad_noFileKeepsPickedColumns(t *testing.T) {
+	fh := &fakeHost{}
+	fh.panels[0] = testPanel(t, t.TempDir(), nil)
+	h := &Handler{host: fh, model: &ui.Model{}, config: config.Default()}
+	h.activate(0, []string{"meadow"})
+
+	h.HandleLoad(LoadPayload{PanelID: 0, LoadGen: h.loadGen[0], Path: fh.panels[0].PathString(), ActiveNames: h.activeEntries[0], LoadErr: "meta: broken"})
+
+	if len(h.activeEntries[0]) != 1 || len(h.model.MetaResults[0]) != 1 {
+		t.Fatalf("activeEntries = %v results = %v, want picked columns kept", h.activeEntries[0], h.model.MetaResults[0])
 	}
 }

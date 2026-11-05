@@ -57,11 +57,14 @@ file = "wc -l"
 	}
 
 	keys := app.activeFooterKeys()
-	if len(keys) != 3 {
-		t.Fatalf("meta dialog footer len = %d, want Esc + F9 + F10", len(keys))
+	if len(keys) != 4 {
+		t.Fatalf("meta dialog footer len = %d, want Esc + Save + F9 + F10", len(keys))
 	}
-	if keys[1].Key != tcell.KeyF9 || keys[1].Hint != menu.FunctionKeyEditConfig.Hint {
-		t.Fatalf("second footer key = %+v, want F9 Edit config", keys[1])
+	if keys[1].Hint != "Save" || keys[1].KeyLabel != "F5" {
+		t.Fatalf("second footer key = %+v, want F5 Save", keys[1])
+	}
+	if keys[2].Key != tcell.KeyF9 || keys[2].Hint != menu.FunctionKeyEditConfig.Hint {
+		t.Fatalf("third footer key = %+v, want F9 Edit config", keys[2])
 	}
 }
 
