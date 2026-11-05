@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -68,7 +69,9 @@ func (h *Handler) ExecuteExtract() {
 		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return
 	}
-	dest = destLoc.String()
+	// fileindex:// paths name real files and directories; the planner works on disk paths.
+	dest = destLoc.Local().String()
+	sources = localStrings(sources)
 	if h.useRemoteFileOp(dest) {
 		h.startRemoteExtractProbe(sources, dest)
 		return
@@ -145,4 +148,17 @@ func (h *Handler) finishExtractEnqueueSources(sources []string, dest string, ski
 	p.ClearSelection()
 	h.jobs.EnqueueExtractJob(sources, dest)
 	h.host.SetTransientMessage(extractQueuedMessage(len(sources), skipped), ui.MessageUrgencyInfo)
+}
+
+// localStrings translates fileindex:// path strings to the disk paths they name; other strings
+// (and unparsable ones) are kept.
+func localStrings(paths []string) []string {
+	out := make([]string, len(paths))
+	for i, p := range paths {
+		out[i] = p
+		if loc, err := pathloc.Parse(p); err == nil {
+			out[i] = loc.Local().String()
+		}
+	}
+	return out
 }

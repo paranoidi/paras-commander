@@ -244,6 +244,31 @@ func (p Path) HostPath() (string, bool) {
 	return host, err == nil
 }
 
+// Local returns the file path a fileindex:// path names; any other path (and a fileindex:// path
+// that does not convert) comes back unchanged. It is a string operation, with no disk access.
+func (p Path) Local() Path {
+	if p.Scheme() != SchemeFileIndex {
+		return p
+	}
+	host, ok := p.HostPath()
+	if !ok {
+		return p
+	}
+	if loc, err := File(host); err == nil {
+		return loc
+	}
+	return p
+}
+
+// Locals applies Local to each path.
+func Locals(paths []Path) []Path {
+	out := make([]Path, len(paths))
+	for i, p := range paths {
+		out[i] = p.Local()
+	}
+	return out
+}
+
 // FilePathMust returns FilePath or panics.
 func (p Path) FilePathMust() string {
 	s, err := p.FilePath()

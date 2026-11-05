@@ -166,7 +166,8 @@ func (h *Handler) applyCopyDefaults(st *dialog.TransferDialogState) {
 	st.PreservePermissions = cfg.Operations.PreservePermissions
 	st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
 	st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
-	st.SourceIsRemote = !h.host.ActivePanel().Path.IsLocal()
+	_, onHost := h.host.ActivePanel().Path.HostPath() // a fileindex:// panel names real files
+	st.SourceIsRemote = !onHost
 }
 
 // transferViewContext is what dialog.TransferView needs besides the state: the screen layout, the
@@ -360,7 +361,8 @@ func (h *Handler) confirmTransfer() {
 	for i, src := range sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	nSelf := ops.SelfTargetCount(srcLocs, destLoc, flat)
+	// fileindex:// paths name real files: compare as the job will see them.
+	nSelf := ops.SelfTargetCount(pathloc.Locals(srcLocs), destLoc.Local(), flat)
 	h.finishTransferEnqueue(st, nSelf, false, false)
 }
 

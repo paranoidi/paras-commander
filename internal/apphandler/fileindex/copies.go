@@ -6,6 +6,7 @@ import (
 	fi "github.com/paranoidi/paras-commander/internal/fileindex"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 const (
@@ -101,6 +102,10 @@ func (h *Handler) HandleCopies(p CopiesPayload) {
 	case len(p.Files) == 0:
 		h.host.SetTransientMessage("No other copies of "+p.Name, ui.MessageUrgencyInfo)
 	default:
-		h.host.OpenFileCopiesPicker(fmt.Sprintf("Other copies of %s (%d)", p.Name, len(p.Files)), p.Files, p.IndexPanel)
+		items := make([]dialog.PathPickerItem, len(p.Files))
+		for i, f := range p.Files {
+			items[i] = dialog.PathPickerItem{Path: f}
+		}
+		h.host.OpenFilePicker(fmt.Sprintf("Other copies of %s (%d)", p.Name, len(p.Files)), items, p.IndexPanel)
 	}
 }

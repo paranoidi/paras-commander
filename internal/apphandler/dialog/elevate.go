@@ -5,15 +5,22 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/fschange"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
-// fsCtx returns a background context carrying the disk-usage engine as its fschange sink, so the
-// filesystem changes a dialog operation makes reach the cache (ADR 0023).
+// fsCtx returns a background context carrying the fschange sink of a dialog operation (ADR 0023):
+// the disk-usage engine, and the fileindex when the active panel follows it (panel.FollowsIndex),
+// so the changes reach the cache and the index.
 func (h *Handler) fsCtx() context.Context {
-	if h.diskUsage == nil {
-		return context.Background()
+	// An interface holding a nil *Engine is not nil: only a real engine goes into the sink.
+	var sinks []fschange.Sink
+	if h.diskUsage != nil {
+		sinks = append(sinks, h.diskUsage)
 	}
-	return fschange.WithSink(context.Background(), h.diskUsage)
+	if h.indexSink != nil && panel.FollowsIndex(h.host.ActivePanel()) {
+		sinks = append(sinks, h.indexSink)
+	}
+	return fschange.WithSink(context.Background(), fschange.Multi(sinks...))
 }
 
 // elevatedCtx is fsCtx with an Elevator that asks the user (Deps.PromptElevate) whether a

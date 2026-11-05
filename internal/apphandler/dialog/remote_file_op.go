@@ -210,7 +210,8 @@ func (h *Handler) startRemoteTransferProbe(st transferProbeApply) {
 	for i, src := range st.sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	destLoc := st.destLoc
+	// fileindex:// paths name real files: probe them as the job will see them.
+	srcLocs, destLoc := pathloc.Locals(srcLocs), st.destLoc.Local()
 	flat := st.flat
 	go func() {
 		nSelf, destIsDir := remoteSelfTargetAndDestDir(backend, srcLocs, destLoc, flat)

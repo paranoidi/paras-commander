@@ -58,7 +58,8 @@ func entryPaths(entries []localfs.Entry) []string {
 	return paths
 }
 
-// ExecuteDeletePaths deletes the given canonical path strings.
+// ExecuteDeletePaths deletes the given canonical path strings. A fileindex:// path that exists on
+// disk is deleted from disk (OnDisk); one gone from disk is removed from the index only.
 // ctx is checked before each entry. progress is called after each successful deletion
 // with the deleted path, cumulative file count, and cumulative deleted bytes. onItem, when
 // set, reports each path deleted (ItemDone) or skipped after a permission error (ItemSkipped),
@@ -78,6 +79,9 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 		if err != nil {
 			return doneFiles, doneBytes, &Error{Op: "delete", Text: "invalid path " + path, Err: err}
 		}
+		// A fileindex:// path still on disk is deleted there (the index follows through the
+		// fschange sink); one gone from disk is an index record, removed by the backend.
+		loc = OnDisk(loc)
 		ent, err := statEntry(ctx, loc)
 		if err != nil {
 			if isNotExist(err) {

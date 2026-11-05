@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"os"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -36,7 +37,10 @@ func PlanRename(source localfs.Entry, newName string, panelPath string) (RenameP
 }
 
 // ExecuteRename performs the rename. A permission failure on a local path is retried as root
-// when ctx carries an Elevator (see WithElevator).
+// when ctx carries an Elevator (see WithElevator). A fileindex:// rename of an entry that
+// exists on disk renames it there and refuses a target that exists on disk, whether the index
+// lists it or not (the index follows through the fschange sink); an entry gone from disk is moved
+// in the index only.
 func ExecuteRename(ctx context.Context, plan RenamePlan) error {
 	oldLoc, err := pathloc.Parse(plan.SourcePath)
 	if err != nil {
@@ -44,6 +48,9 @@ func ExecuteRename(ctx context.Context, plan RenamePlan) error {
 	}
 	newLoc, err := pathloc.Parse(plan.NewPath)
 	if err != nil {
+		return err
+	}
+	if oldLoc, newLoc, err = renameOnDisk(oldLoc, newLoc); err != nil {
 		return err
 	}
 	be, err := backendFor(oldLoc)
@@ -59,4 +66,28 @@ func ExecuteRename(ctx context.Context, plan RenamePlan) error {
 		return nil
 	}
 	return do()
+}
+
+// renameOnDisk translates a fileindex:// rename of an entry on disk to the real paths. The index
+// lists indexed files only, so the planner's target check cannot see an unindexed file that
+// rename(2) would silently replace: the target is checked on disk here.
+func renameOnDisk(oldLoc, newLoc pathloc.Path) (pathloc.Path, pathloc.Path, error) {
+	if oldLoc.Scheme() != pathloc.SchemeFileIndex || newLoc.Scheme() != pathloc.SchemeFileIndex {
+		return oldLoc, newLoc, nil
+	}
+	local := OnDisk(oldLoc)
+	if local.Scheme() == pathloc.SchemeFileIndex {
+		return oldLoc, newLoc, nil
+	}
+	target := newLoc.Local()
+	host, err := target.FilePath()
+	if err != nil {
+		return oldLoc, newLoc, err
+	}
+	if _, err := os.Lstat(host); err == nil {
+		return oldLoc, newLoc, &Error{Op: "rename", Text: "target already exists"}
+	} else if !notThere(err) {
+		return oldLoc, newLoc, &Error{Op: "rename", Text: "cannot stat target", Err: err}
+	}
+	return local, target, nil
 }
