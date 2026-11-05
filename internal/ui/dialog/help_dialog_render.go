@@ -2,13 +2,11 @@ package dialog
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -22,19 +20,16 @@ const (
 
 // HelpDialogView is the help dialog's widget spec: the search filter, a rule, the entry list (the
 // filter drives it; section titles are Header rows, the key column a span) and a Close button,
-// fitted to the layout. With state.Legend a rule and the legend's centred label rows follow the
-// list, and the dialog grows by exactly those rows; when it would not fit with them the legend is
-// dropped. listH is the list's height; ok is false when the dialog does not fit the layout with at
-// least helpMinListRows of them.
+// fitted to the layout. listH is the list's height; ok is false when the dialog does not fit the
+// layout with at least helpMinListRows of them.
 func HelpDialogView(state HelpViewState, layout Layout, styles theme.Theme) (spec dlg.Spec, listH int, ok bool) {
 	prefW, height := helpDialogSize(layout)
 	title := state.Title
 	if title == "" {
 		title = "Help"
 	}
-	legendItems := helpLegendItems(state.Legend, prefW, styles)
 	spec = dlg.Spec{
-		Title: title, Width: prefW, MinWidth: prefW, MaxHeight: height + len(legendItems), Unclamped: true, Margin: true,
+		Title: title, Width: prefW, MinWidth: prefW, MaxHeight: height, Unclamped: true, Margin: true,
 		Groups: []dlg.Group{{Columns: [][]dlg.Item{{
 			{ID: HelpFilter, Kind: dlg.KindInput, Drives: helpList, LeadingIcon: styles.IconSearchIcon(), Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll},
 			{Kind: dlg.KindSeparator},
@@ -42,47 +37,13 @@ func HelpDialogView(state HelpViewState, layout Layout, styles theme.Theme) (spe
 		}}}},
 		Buttons: []dlg.Button{{ID: HelpClose, Label: "Close", Mnemonic: 'C'}},
 	}
-	spec.Groups[0].Columns[0] = append(spec.Groups[0].Columns[0], legendItems...)
 	// The rows are formatted to the list's placed width (key column, title).
 	spec, ok = fillList(spec, layout, helpList, func(height, width int) dlg.Item { return helpListItem(state, height, width, styles) })
 	if !ok {
-		if len(state.Legend) > 0 {
-			state.Legend = nil
-			return HelpDialogView(state, layout, styles)
-		}
 		return spec, 0, false
 	}
 	list, _ := spec.Item(helpList)
 	return spec, list.Height, true
-}
-
-// helpLegendItems is the rule and the centred label rows of the legend flowed to the width a label
-// row has in a dialog prefW wide (the content width), with the icons styled by spans. nil without
-// a legend.
-func helpLegendItems(legend []primitive.LegendItem, prefW int, styles theme.Theme) []dlg.Item {
-	if len(legend) == 0 {
-		return nil
-	}
-	_, bg, _ := styles.DialogSurface.Decompose()
-	items := []dlg.Item{{Kind: dlg.KindSeparator}}
-	for _, line := range primitive.LegendLines(legend, draw.DialogContentWidth(draw.Rect{Width: prefW})) {
-		var label strings.Builder
-		var spans []primitive.Span
-		n := 0 // runes so far
-		for j, idx := range line {
-			it := legend[idx]
-			if j > 0 {
-				label.WriteString(strings.Repeat(" ", primitive.LegendGap))
-				n += primitive.LegendGap
-			}
-			icon := utf8.RuneCountInString(it.Icon)
-			spans = append(spans, primitive.Span{Start: n, End: n + icon, Style: it.IconStyle(bg)})
-			label.WriteString(it.Icon + " " + it.Label)
-			n += it.Width()
-		}
-		items = append(items, dlg.Item{Kind: dlg.KindLabel, Center: true, Label: label.String(), Spans: spans})
-	}
-	return items
 }
 
 // helpListItem is the entry list: the visual rows of BuildHelpVisualRows (section Header rows and

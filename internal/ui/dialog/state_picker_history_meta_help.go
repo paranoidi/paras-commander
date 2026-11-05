@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 )
@@ -294,11 +293,10 @@ type HelpViewState struct {
 	QueryCursor int // rune offset of caret within Query (0..len(runes))
 	QueryScroll int // first visible rune offset for horizontal scrolling
 	Entries     []HelpEntry
-	Ranked      []int                  // indices into Entries (rank order)
-	MatchRanges [][]search.Range       // len == len(Entries); rune ranges on the painted padded row
-	Selected    int                    // index into Ranked
-	ListScroll  int                    // first visible row index into Ranked
-	Focus       dlg.ID                 // HelpFilter (the filter steering the list; "" too) or HelpClose
-	TextEdit    bool                   // true on the dialog text-input editing keys page
-	Legend      []primitive.LegendItem // icon legend under the list; nil = none
+	Ranked      []int            // indices into Entries (rank order)
+	MatchRanges [][]search.Range // len == len(Entries); rune ranges on the painted padded row
+	Selected    int              // index into Ranked
+	ListScroll  int              // first visible row index into Ranked
+	Focus       dlg.ID           // HelpFilter (the filter steering the list; "" too) or HelpClose
+	TextEdit    bool             // true on the dialog text-input editing keys page
 }

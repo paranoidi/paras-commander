@@ -34,6 +34,7 @@ func TestCentralDialogOKCancelKeys(t *testing.T) {
 		{"message", func(a *App) { a.openMessageDialog("Otter", "lantern") },
 			func(a *App) bool { return a.model.MessageDialog.Open }},
 		{"help", func(a *App) { a.openHelpDialog() }, func(a *App) bool { return a.model.HelpView.Open }},
+		{"icon legend", func(a *App) { a.openIconLegendDialog() }, func(a *App) bool { return a.model.IconLegendDialog.Open }},
 		{"listing format", func(a *App) { a.openListingFormatDialog() }, func(a *App) bool { return a.model.ListingFormatDialog.Open }},
 		{"transfer", func(a *App) { a.dialogCtrl.OpenCopyDialog() }, func(a *App) bool { return a.model.TransferDialog.Open }},
 		{"mkdir", func(a *App) { a.dispatch(keymap.ActionFileMkdir) }, func(a *App) bool { return a.model.FileDialog.Open }},

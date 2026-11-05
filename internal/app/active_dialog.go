@@ -110,6 +110,10 @@ func (a *App) activeDialog(event *tcell.EventKey) (activeDialog, bool) {
 			spec, _, fit := dialog.HelpDialogView(m.HelpView, layout(), a.styles)
 			return spec, fit
 		}, &m.HelpView.Focus, a.applyHelpEvent, dialogButtons{OK: a.closeHelpDialog, Cancel: a.closeHelpDialog})
+	case InputModeIconLegendDialog:
+		return found(func() (dlg.Spec, bool) {
+			return dialog.IconLegendDialogView(m.IconLegendDialog, layout(), a.styles)
+		}, &m.IconLegendDialog.Focus, noQuit(a.applyIconLegendEvent), dialogButtons{OK: a.closeIconLegendDialog, Cancel: a.closeIconLegendDialog})
 	case InputModeThemeDialog:
 		return found(fits(a.themeDialogView), &m.ThemeDialog.Focus, noQuit(a.applyThemeDialogEvent),
 			dialogButtons{OK: a.activateThemeDialogSelection, Cancel: a.cancelThemeDialog})

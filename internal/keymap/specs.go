@@ -491,6 +491,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"help dialog", "text editing", "input", "readline"},
 		},
 		{
+			ID:           ActionHelpLegend,
+			Title:        "Icon legend",
+			Section:      "Navigation",
+			DefaultKeys:  nil, // overlay: DefaultHelpDialogOverlayKeys
+			PreferredKey: "F1",
+			Keywords:     []string{"help dialog", "icons", "legend", "file list"},
+		},
+		{
 			ID:           ActionUserMenuBack,
 			Title:        "User menu: parent menu",
 			Section:      "Navigation",

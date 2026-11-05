@@ -54,6 +54,8 @@ const (
 	ActionPanelHistoryBothPanels = "panel.history-both-panels"
 	// ActionHelpTextEditKeys is bound via [dialog.help], not [main].
 	ActionHelpTextEditKeys = "help.text-edit-keys"
+	// ActionHelpLegend is bound via [dialog.help], not [main].
+	ActionHelpLegend = "help.legend"
 	// ActionUserMenuBack is bound via [dialog.user_menu], not [main].
 	ActionUserMenuBack                = "usermenu.back"
 	ActionPanelFindDialog             = "panel.find-dialog"
@@ -412,6 +414,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelFolderColorMenu:        {},
 	ActionPanelHistoryBothPanels:      {},
 	ActionHelpTextEditKeys:            {},
+	ActionHelpLegend:                  {},
 	ActionUserMenuBack:                {},
 	ActionPanelFindDialog:             {},
 	ActionPanelJumpDialog:             {},

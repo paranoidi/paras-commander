@@ -522,7 +522,7 @@ func Draw(screen tcell.Screen, screenW, screenH int, spec Spec, focus ID, styles
 			case TextWarn:
 				style = styles.MessageWarn.Background(surface)
 			}
-			primitive.StyledText(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, style, it.Spans)
+			primitive.Text(screen, pi.Rect.X, pi.Rect.Y, pi.Rect.Width, pi.Label, style)
 		case KindBar:
 			drawBar(screen, pi.Rect, pi.Label, it.Frac, styles)
 		case KindSeparator:

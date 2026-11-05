@@ -47,6 +47,7 @@ const (
 	InputModeMetaDialog
 	InputModeLeaderMenu
 	InputModeHelpView
+	InputModeIconLegendDialog
 	InputModeHostKeyDialog
 	InputModeElevateDialog
 	InputModeSFTPConnectDialog
@@ -92,6 +93,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeMetaDialog
 	case a.model.HelpView.Open:
 		return InputModeHelpView
+	case a.model.IconLegendDialog.Open:
+		return InputModeIconLegendDialog
 	case a.model.ThemeDialog.Open:
 		return InputModeThemeDialog
 	case a.model.SortDialog.Open:
@@ -224,6 +227,9 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
+	}
+	if a.model.IconLegendDialog.Open {
+		return footerWithEscClose([]menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}})
 	}
 	if a.model.HelpView.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
@@ -607,9 +613,24 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 		return true, false, false
 	}
 
+	// The one dispatch point of help.legend: from the open help dialog, whatever key it is bound to
+	// (F1 by default, which is also app.show-help and would otherwise close help).
+	if a.model.HelpView.Open && a.keys.HelpDialog != nil {
+		if id, ok := a.keys.HelpDialog.Lookup(event); ok && id == keymap.ActionHelpLegend {
+			a.openIconLegendDialog()
+			a.render()
+			return true, false, true
+		}
+	}
+
 	// Global show-help (F1 by default). Toggles: closes if already open,
 	// otherwise closes menu or quick filter first and opens.
 	if resolvedAction == keymap.ActionAppShowHelp {
+		if a.model.IconLegendDialog.Open { // no text field here, so a rune alias closes it too
+			a.closeIconLegendDialog()
+			a.render()
+			return true, false, true
+		}
 		if a.model.HelpView.Open {
 			a.closeHelpDialog()
 			a.render()
@@ -676,6 +697,10 @@ var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
 	},
 	InputModeMetaDialog: func(a *App, ev *tcell.EventKey) bool {
 		a.metaCtrl.HandleDialogKey(ev)
+		return false
+	},
+	InputModeIconLegendDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleIconLegendKey(ev)
 		return false
 	},
 	InputModeHelpView: func(a *App, ev *tcell.EventKey) bool {

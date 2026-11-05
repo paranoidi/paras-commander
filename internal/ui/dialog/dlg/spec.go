@@ -102,12 +102,11 @@ type Item struct {
 	On                    bool // radio selected / checkbox checked
 
 	// Label rows only.
-	Indent int              // extra cells before the text
-	Fit    Fit              // how an overlong Label (or list row text) is shortened
-	Prefix string           // fixed text drawn before Label; only Label is shortened (FitPath)
-	Style  TextStyle        // text style variant
-	Center bool             // center the text in the available width
-	Spans  []primitive.Span // pre-styled rune ranges of Label, for a label without Prefix
+	Indent int       // extra cells before the text
+	Fit    Fit       // how an overlong Label (or list row text) is shortened
+	Prefix string    // fixed text drawn before Label; only Label is shortened (FitPath)
+	Style  TextStyle // text style variant
+	Center bool      // center the text in the available width
 
 	// Bar rows only (KindBar): the filled fraction, clamped to [0, 1]. A started bar (Frac > 0)
 	// always shows at least one filled cell.

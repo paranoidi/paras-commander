@@ -180,7 +180,7 @@ func TestHelpF2TogglesTextEditPage(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	a.openHelpDialog()
 	normalTitle := a.model.HelpView.Title
-	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, false); len(lbl) != 1 || lbl[0].KeyLabel != "F2" || lbl[0].Hint != "Text edit keys" {
+	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, false); len(lbl) != 2 || lbl[0].KeyLabel != "F2" || lbl[0].Hint != "Text edit keys" || lbl[1].KeyLabel != "F1" || lbl[1].Hint != "Icon legend" {
 		t.Fatalf("footer = %+v", lbl)
 	}
 	f2 := tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone)
@@ -203,7 +203,7 @@ func TestHelpF2TogglesTextEditPage(t *testing.T) {
 			t.Fatalf("non-text-edit entry listed: %+v", e)
 		}
 	}
-	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, true); len(lbl) != 1 || lbl[0].Hint != "All keys" {
+	if lbl := helpDialogOverlayFooterKeys(a.keys.HelpDialog, true); len(lbl) != 2 || lbl[0].Hint != "All keys" || lbl[1].Hint != "Icon legend" {
 		t.Fatalf("footer = %+v", lbl)
 	}
 	a.handleHelpDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
@@ -216,25 +216,52 @@ func TestHelpF2TogglesTextEditPage(t *testing.T) {
 	}
 }
 
-func TestOpenHelpDialogLegendOnBrowserPageOnly(t *testing.T) {
+func TestHelpF1F1OpensIconLegendAndF1Closes(t *testing.T) {
 	a := newHelpEntriesApp(t)
-	a.model.ViewMode = ui.ViewBrowser
-	a.openHelpDialog()
-	if len(a.model.HelpView.Legend) == 0 {
-		t.Fatal("browser help has no icon legend")
+	f1 := tcell.NewEventKey(tcell.KeyF1, 0, tcell.ModNone)
+	a.handleKey(f1)
+	if !a.model.HelpView.Open || a.model.IconLegendDialog.Open {
+		t.Fatalf("first F1: help %v legend %v", a.model.HelpView.Open, a.model.IconLegendDialog.Open)
 	}
-	a.handleHelpDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
-	if !a.model.HelpView.TextEdit || a.model.HelpView.Legend != nil {
-		t.Fatalf("text-edit page legend = %v", a.model.HelpView.Legend)
+	a.handleKey(f1)
+	lg := a.model.IconLegendDialog
+	if a.model.HelpView.Open || !lg.Open || len(lg.Items) != len(a.fileListIconLegend()) || len(lg.Items) == 0 {
+		t.Fatalf("second F1: help %v legend %v items %d", a.model.HelpView.Open, lg.Open, len(lg.Items))
 	}
-	a.handleHelpDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
-	if len(a.model.HelpView.Legend) == 0 {
-		t.Fatal("legend missing after returning to the key page")
+	a.handleKey(f1)
+	if a.model.HelpView.Open || a.model.IconLegendDialog.Open {
+		t.Fatal("third F1 left a dialog open")
 	}
-	a.closeHelpDialog()
-	a.model.ViewMode = ui.ViewJobs
-	a.openHelpDialog()
-	if a.model.HelpView.Legend != nil {
-		t.Fatalf("jobs help legend = %v", a.model.HelpView.Legend)
+}
+
+func TestIconLegendFromTextEditPageAndF2(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	a.handleKey(tcell.NewEventKey(tcell.KeyF1, 0, tcell.ModNone))
+	a.handleKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	if !a.model.HelpView.TextEdit {
+		t.Fatal("F2 did not open the text-edit page")
+	}
+	a.handleKey(tcell.NewEventKey(tcell.KeyF1, 0, tcell.ModNone))
+	if a.model.HelpView.Open || !a.model.IconLegendDialog.Open {
+		t.Fatal("F1 on the text-edit page did not open the legend")
+	}
+}
+
+func TestIconLegendEscAndEnterOnCloseClose(t *testing.T) {
+	for _, key := range []*tcell.EventKey{
+		tcell.NewEventKey(tcell.KeyEscape, 0, tcell.ModNone),
+		tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone),
+	} {
+		a := newHelpEntriesApp(t)
+		a.openHelpDialog()
+		a.openIconLegendDialog()
+		a.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+		if a.model.IconLegendDialog.Scroll != 1 {
+			t.Fatalf("Down scroll = %d", a.model.IconLegendDialog.Scroll)
+		}
+		a.handleKey(key)
+		if a.model.IconLegendDialog.Open || a.model.HelpView.Open {
+			t.Fatalf("%s left a dialog open", key.Name())
+		}
 	}
 }

@@ -311,6 +311,7 @@ type Model struct {
 	// FilePreviewThemePicker is the inline theme list on the right side of F3 preview.
 	FilePreviewThemePicker dialog.FilePreviewThemePickerState
 	HelpView               dialog.HelpViewState
+	IconLegendDialog       dialog.IconLegendDialogState
 	FileDialog             dialog.FileDialogState
 	TransferDialog         dialog.TransferDialogState
 	FlattenDialog          dialog.FlattenDialogState
@@ -635,7 +636,7 @@ func (m *Model) nonLeaderModalOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
+	if m.SortDialog.Open || m.StatusCommandsDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.PreviewSettingsDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.IndexFindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.IconLegendDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.ElevateDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.DedupReturnDialog.Open || m.StashRestoreDialog.Open || m.CompareSelection.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -1082,6 +1083,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	}
 	if model.HelpView.Open {
 		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles, model.PanelScrollbar)
+	}
+	if model.IconLegendDialog.Open {
+		dialog.DrawIconLegendDialog(screen, layout, model.IconLegendDialog, styles, model.PanelScrollbar)
 	}
 	if model.LeaderMenu.Open {
 		DrawLeaderMenu(screen, layout, model.LeaderMenu, styles)

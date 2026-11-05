@@ -7,10 +7,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/search"
-	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
@@ -55,10 +53,6 @@ func (a *App) openHelpDialog() {
 	if entries == nil {
 		entries = []dialog.HelpEntry{}
 	}
-	var legend []primitive.LegendItem
-	if a.model.ViewMode == ui.ViewBrowser { // file rows are the browser's
-		legend = a.fileListIconLegend()
-	}
 	a.model.HelpView = dialog.HelpViewState{
 		Open:       true,
 		Title:      hc.title,
@@ -66,52 +60,8 @@ func (a *App) openHelpDialog() {
 		Entries:    entries,
 		Selected:   0,
 		ListScroll: 0,
-		Legend:     legend,
 	}
 	a.syncHelpRanks()
-}
-
-// fileListIconLegend lists the file-list row icons with the theme's glyph and the style the row
-// painters use (panellist suffix styles, FolderIcon colours). Fileindex states have their own
-// legend (fileIndexLegend).
-func (a *App) fileListIconLegend() []primitive.LegendItem {
-	th := a.styles
-	rows := []struct {
-		icon  string
-		style tcell.Style
-		label string
-	}{
-		{th.FolderIcon(theme.FolderIconOpen), th.PanelIconFolderOpen, "open in other panel"},
-		{th.FolderIcon(theme.FolderIconMount), th.PanelIconFolderMount, "mount point"},
-		{th.FolderIcon(theme.FolderIconScanning), th.StatusScanning, "sizing folder"},
-		{th.FolderIcon(theme.FolderIconExcluded), th.PanelIconFolderExcluded, "excluded from size"},
-		{string(th.IconFilelistPreviewLoading()), th.StatusScanning, "loading preview"},
-		{string(th.IconFilelistJob()), th.PanelRowMarkJob, "job writing"},
-		{string(th.IconFilelistJob()), th.PanelRowMarkJobRead, "job reading"},
-		{string(th.IconFilelistJob()), th.StatusDecision, "job awaits decision"},
-		{string(th.IconFilelistQueued()), th.StatusQueued, "job queued"},
-		{string(th.IconFilelistMove()), th.PanelRowMarkJobMove, "will move"},
-		{string(th.IconFilelistDelete()), th.PanelRowMarkJobDelete, "will delete"},
-		{string(th.IconFilelistMoveRemoving()), th.PanelRowMarkJobRemoving, "removing moved source"},
-		{string(th.IconFilelistNew()), th.PanelRowMarkNew, "new"},
-		{string(th.IconFilelistNew()), th.PanelRowMarkNewPrevious, "new, previous batch"},
-		{string(th.IconFilelistNew()), th.PanelRowMarkNewOlder, "new, older"},
-		{string(th.IconFilelistRenamed()), th.PanelRowMarkRenamed, "renamed"},
-		{string(th.IconFilelistWorking()), th.StatusScanning, "loading"},
-		{string(th.IconPinRune()), th.PanelRowMarkPinned, "pinned"},
-		{string(th.IconFilelistRangeAnchor()), th.PanelRowMarkRangeAnchor, "range start"},
-		{string(th.IconFilelistOtherMatch()), th.PanelRowMarkOtherMatch, "also in other panel"},
-		{string(th.IconFilelistOtherMatch()), th.PanelRowMarkOtherMatchCursor, "cursor file in other panel"},
-		{string(th.IconFilelistSelectionSubtree()), th.PanelRowMarkSelectionSubtree, "selection inside"},
-		{string(th.IconFilelistNoPermission()), th.PanelRowMarkNoPermission, "no permission"},
-	}
-	legend := make([]primitive.LegendItem, 0, len(rows))
-	for _, r := range rows {
-		if r.icon != "" && r.icon != "\x00" {
-			legend = append(legend, primitive.LegendItem{Icon: r.icon, Style: r.style, Label: r.label})
-		}
-	}
-	return legend
 }
 
 // textEditHelpPrefix selects the dialog text-input editing actions ([dialog.input]).
@@ -180,10 +130,14 @@ func helpDialogOverlayFooterKeys(keys *keymap.Map, textEdit bool) []menu.Functio
 	if textEdit {
 		hint = "All keys"
 	}
+	var out []menu.FunctionKey
 	if lbl := keys.MenuBindingLabel(keymap.ActionHelpTextEditKeys); lbl != "" {
-		return []menu.FunctionKey{{KeyLabel: lbl, Hint: hint}}
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint})
 	}
-	return nil
+	if lbl := keys.MenuBindingLabel(keymap.ActionHelpLegend); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Icon legend"})
+	}
+	return out
 }
 
 func (a *App) closeHelpDialog() {
@@ -208,7 +162,7 @@ func (a *App) syncHelpRanks() {
 		st.MatchRanges[i] = nil
 	}
 	w, h := a.screen.Size()
-	metrics, metricsOK := dialog.ComputeHelpDialogListMetrics(dialog.Layout{Width: w, Height: h}, st.Legend)
+	metrics, metricsOK := dialog.ComputeHelpDialogListMetrics(dialog.Layout{Width: w, Height: h})
 	for i, r := range ranked {
 		st.Ranked[i] = r.Index
 		idx := r.Index
@@ -238,7 +192,7 @@ func (a *App) syncHelpRanks() {
 // fitted help spec), so scroll bookkeeping stays in lockstep with what actually gets drawn.
 func (a *App) helpListRows() int {
 	w, h := a.screen.Size()
-	if m, ok := dialog.ComputeHelpDialogListMetrics(dialog.Layout{Width: w, Height: h}, a.model.HelpView.Legend); ok {
+	if m, ok := dialog.ComputeHelpDialogListMetrics(dialog.Layout{Width: w, Height: h}); ok {
 		return m.ListH
 	}
 	return 4

@@ -1,7 +1,6 @@
 package dialog
 
 import (
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/dlg"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
@@ -19,18 +18,17 @@ type HelpDialogListMetrics struct {
 }
 
 // helpDialogSize returns the help dialog's preferred outer width and its outer height for the
-// layout without a legend: a margin around it and between 12 and 36 rows. The entry list takes the
-// rows the filter and the button strip leave; a legend adds its rows to the height.
+// layout: a margin around it and between 12 and 36 rows. The entry list takes the rows the filter
+// and the button strip leave.
 func helpDialogSize(layout Layout) (prefW, height int) {
 	return min(max(layout.Width-14, 40), 90), min(max(layout.Height-14, 12), 36)
 }
 
 // ComputeHelpDialogListMetrics is the help dialog's list geometry, from the dialog's placement: the
-// widths FormatHelpRow formats entries to and the visible rows. legend is the dialog's
-// HelpViewState.Legend, so the rows match what is drawn. When ok is false, the help dialog would not render a
+// widths FormatHelpRow formats entries to and the visible rows. When ok is false, the help dialog would not render a
 // usable list at this terminal size.
-func ComputeHelpDialogListMetrics(layout Layout, legend []primitive.LegendItem) (m HelpDialogListMetrics, ok bool) {
-	spec, listH, fits := HelpDialogView(HelpViewState{Legend: legend}, layout, theme.Theme{})
+func ComputeHelpDialogListMetrics(layout Layout) (m HelpDialogListMetrics, ok bool) {
+	spec, listH, fits := HelpDialogView(HelpViewState{}, layout, theme.Theme{})
 	if !fits {
 		return m, false
 	}
