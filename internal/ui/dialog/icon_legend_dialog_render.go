@@ -37,10 +37,10 @@ type IconLegendDialogState struct {
 }
 
 // IconLegendDialogView is the legend's widget spec: a ScrollOnly list with one row per entry (the
-// icon in its own style, then the label) above a Close button, as tall as the entries unless the
+// icon in its own style on the file-list panel's surface, as it looks on a row, then the label) above a Close button, as tall as the entries unless the
 // screen is shorter. ok is false when the dialog does not fit the layout.
 func IconLegendDialogView(state IconLegendDialogState, layout Layout, styles theme.Theme) (spec dlg.Spec, ok bool) {
-	_, bg, _ := styles.DialogSurface.Decompose()
+	_, bg, _ := styles.PanelChrome(true, false).Surface.Decompose()
 	w := 0
 	for _, it := range state.Items {
 		w = max(w, runewidth.StringWidth(it.Icon+" "+it.Label))

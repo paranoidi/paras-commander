@@ -87,7 +87,9 @@ func TestIconLegendDrawsIconInOwnColourAndFullLabel(t *testing.T) {
 	})
 	state := IconLegendDialogState{Open: true, Items: items}
 	screen := newSimScreen(t, 100, 40)
-	DrawIconLegendDialog(screen, Layout{Width: 100, Height: 40}, state, theme.Default(), "")
+	th := theme.Default()
+	th.PanelActiveSurface = th.PanelActiveSurface.Background(tcell.NewRGBColor(1, 2, 3)) // differs from the dialog surface in any theme
+	DrawIconLegendDialog(screen, Layout{Width: 100, Height: 40}, state, th, "")
 	spec, _ := legendListOf(t, state, 100, 40)
 	p, ok := dlg.Place(100, 40, spec)
 	if !ok {
@@ -105,8 +107,12 @@ func TestIconLegendDrawsIconInOwnColourAndFullLabel(t *testing.T) {
 	}
 	for x := list.Rect.X; x < list.Rect.X+list.Rect.Width; x++ {
 		if str, st, _ := screen.Get(x, y); str == "Ω" {
-			if fg, _, _ := st.Decompose(); fg != tcell.NewRGBColor(250, 10, 20) {
+			fg, bg, _ := st.Decompose()
+			if fg != tcell.NewRGBColor(250, 10, 20) {
 				t.Fatalf("icon fg = %v", fg)
+			}
+			if _, want, _ := th.PanelChrome(true, false).Surface.Decompose(); bg != want {
+				t.Fatalf("icon bg = %v, want the panel surface %v", bg, want)
 			}
 			return
 		}
